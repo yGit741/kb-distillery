@@ -16,6 +16,7 @@ raw/**/*.pdf
 raw/**/*.epub
 raw/assets/
 
-# staging area for deletion — reviewed by hand, then removed
-_quarantine/
+# Ingest pipeline staging (session backups, claims, plans)
+meta/.ingest/
+
 .obsidian/graph.json
