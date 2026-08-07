@@ -1,0 +1,15 @@
+[project]
+name = "thesis-wiki"
+version = "0.1.0"
+description = "Thesis knowledge base tooling"
+channels = ["conda-forge"]
+platforms = ["osx-arm64", "osx-64", "linux-64"]
+
+[dependencies]
+python = ">=3.11"
+pymupdf = "*"
+
+[tasks]
+lint = "python3 meta/lint.py"
+lint-strict = "python3 meta/lint.py --ingest-strict"
+ingest-status = "python3 -m meta.ingest status"

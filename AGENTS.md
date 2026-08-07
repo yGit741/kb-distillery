@@ -81,7 +81,21 @@ The linter enforces the pattern and cross-checks the filename year against the d
 
 ## Workflow
 
-**Ingest:** read the raw file → write one `wiki/` page with a `raw:` field → run the linter (it flips the row to `digested`) → append to `meta/log.md`.
+**Ingest (transactional):** one paper at a time via `python3 -m meta.ingest`.
+
+```
+begin <raw_path>     open session, backup existing digest
+extract <sha>        PDF text + validate claims.json (agent fills claims — see meta/ingest/extract_prompt.md)
+map <sha>            plan.json: concepts → wiki slugs, MOC targets, q- stubs
+draft <sha>          render markdown to meta/.ingest/<sha>/staging/ only
+finalize <sha>       promote to wiki/, patch MOCs, lint --ingest-strict; rollback on fail
+abort <sha>          restore backups
+status | backlog     session list / queued papers
+```
+
+During an open session, `meta/guard.py` blocks direct writes to wiki paths the session owns — use `draft` + `finalize`. Session state lives in `meta/.ingest/` (gitignored).
+
+**Manual ingest (legacy):** read the raw file → write one `wiki/` page with a `raw:` field → run the linter → append to `meta/log.md`. Prefer the transactional pipeline for papers.
 
 **Triage:** anything in `raw/inbox/` gets moved to a kind folder or deleted. The inbox is a queue, not storage.
 
