@@ -1,0 +1,20 @@
+# Obsidian Copilot plugin state — tool output, not knowledge
+copilot/
+
+# Obsidian local UI state
+.obsidian/workspace*
+.obsidian/plugins/*/data.json
+.trash/
+
+# OS
+.DS_Store
+
+# raw/ binaries: 146MB+ of PDFs, already backed up by OneDrive.
+# git-lfs is not installed; tracking these would bloat the repo permanently.
+# Paths stay lint-checked on disk — only the bytes are untracked.
+raw/**/*.pdf
+raw/**/*.epub
+raw/assets/
+
+# staging area for deletion — reviewed by hand, then removed
+_quarantine/
