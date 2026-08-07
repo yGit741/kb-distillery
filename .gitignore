@@ -18,3 +18,4 @@ raw/assets/
 
 # staging area for deletion — reviewed by hand, then removed
 _quarantine/
+.obsidian/graph.json
