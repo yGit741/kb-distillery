@@ -1,175 +1,77 @@
-# Thesis ML Wiki — Agent Schema
+# Thesis Wiki — agent schema
 
-Personal knowledge base for theoretical ML thesis work (complex-valued NNs, implicit regularization, tensor factorization). Follows the [Karpathy LLM Wiki](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f) pattern.
+Personal knowledge base for an MSc in theoretical ML. **The thesis topic is not yet chosen** — the vault exists to explore candidate directions and decide. Follows the [Karpathy LLM Wiki](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f) pattern.
 
-## Three layers
+## Layers
 
 | Layer | Path | Rule |
 |-------|------|------|
-| **Raw** | `raw/` | Immutable sources. **Read only — never edit.** |
-| **Wiki** | everything else | LLM-owned synthesis. Create, update, cross-link. |
-| **Schema** | this file | Conventions and workflows. Co-evolve with the user. |
-
-## Directory map
+| **Raw** | `raw/` | User-owned inputs. **Immutable — never write here.** |
+| **Wiki** | `wiki/` | Agent-owned synthesis. Flat. Create, update, cross-link. |
+| **Meta** | `meta/` | Schema, templates, log. |
 
 ```
-raw/papers/       PDFs, arXiv originals
-raw/articles/     blogs, Substack, web clips (markdown)
-raw/notes/        meeting memos, lecture notes, handwriting scans
-raw/assets/       images downloaded from clipped articles
-concepts/         technical definitions and intuition
-questions/        open research questions
-people/           researchers (entities)
-papers/           per-paper digests (linked to raw/papers/)
-sources/          per-source summaries (articles, talks — linked to raw/)
-moc/              Maps of Content — topic hubs
-meta/             thesis-level metadata
-templates/        note templates (do not ingest as wiki pages)
-index.md          master catalog — update on every ingest
-log.md            append-only activity timeline
-00-home.md        human-facing overview / entry point
+raw/inbox/            reMarkable sync target. Any shape. MUST drain to zero.
+raw/papers/<course>/  academic PDFs
+raw/slides/<course>/  lecture decks, presentations
+raw/notes/<course>/   handwritten notes, recaps, scratch
+raw/web/  raw/assets/ clips, images (flat)
+wiki/                 every note, flat. q- = question, moc- = map of content
+_quarantine/          staged for deletion, gitignored, not part of the vault
 ```
 
-## Page types & frontmatter
+## meta/lint.py IS the schema
 
-All wiki pages use YAML frontmatter. Wikilinks: `[[path/without-extension|display]]`.
+Prose rules drift; this doesn't. If `python3 meta/lint.py` passes, the write is legal.
 
-### concept (`concepts/`)
+```
+python3 meta/lint.py                 check + reconcile the manifest
+python3 meta/lint.py --health        dashboard: inbox, backlog, drift, links
+python3 meta/lint.py --pending       the ingestion backlog
+python3 meta/lint.py --write-index   regenerate index.md
+```
+
+`meta/guard.py` runs as a PreToolUse hook and blocks illegal writes before they happen. `.git/hooks/pre-commit` runs the linter. Do not hand-edit `index.md` or `meta/corpus.tsv` — both are generated.
+
+## Frontmatter
+
 ```yaml
-type: concept
-area: [complex-nn]          # MOC slugs
-status: seed | growing | solid
-sources: [sources/foo]      # source digest pages that informed this
-related: [tensor-rank]      # other concept slugs (no path prefix)
+type: concept | question | person | paper | source | moc
+status: seed|growing|solid   (question: open|partial|resolved; paper: to-read|reading|digested)
+area: [info-theory]          # moc slugs, bare
+related: [tensor-rank]       # bare slugs — wiki/ is flat, so no paths
+raw: raw/papers/x/y.pdf      # paper/source only; `none` + a `url:` if read externally
 ```
 
-Sections: One-liner → Intuition → Formal → Why it matters (thesis angle) → Connections → Open questions.
+Wikilinks are always bare: `[[tensor-rank]]`, never `[[concepts/tensor-rank]]`. Paths into `raw/` go in backticks, not wikilinks.
 
-### question (`questions/`)
-```yaml
-type: question
-area: []
-status: open | partial | resolved
-priority: low | med | high
-```
+## The corpus manifest
 
-### paper (`papers/`)
-```yaml
-type: paper
-authors: []
-year:
-area: []
-status: unread | reading | digested
-citekey:
-url:
-raw: raw/papers/foo.pdf     # path into raw/ (required once ingested)
-```
+`meta/corpus.tsv` has one row per file in `raw/`. Nothing can be silently forgotten.
 
-### source (`sources/`) — Karpathy "sources" layer for non-paper raw files
-```yaml
-type: source
-raw: raw/articles/foo.md    # required
-format: article | talk | notes
-area: []
-status: digested
-```
+| disposition | meaning |
+|-------------|---------|
+| `queued` | keep, not yet written up — **the real backlog** |
+| `digested` | a wiki page cites it via `raw:` |
+| `skip` | explicitly not worth a note (a decision, not neglect) |
+| `dupe:<path>` | superseded by another file |
+| `ink:<path>` | reMarkable annotation overlay belonging to `<path>` |
 
-### person (`people/`)
-```yaml
-type: person
-role: thesis-instructor | researcher | ...
-optional: true              # mark optional contacts
-```
+The linter maintains it: a new file appears as `queued`; a file gone from disk is removed; **a sha1 change on a `digested` file re-opens it as `queued`** — so re-annotating a paper on the tablet automatically re-queues it.
 
-### moc (`moc/`)
-Topic hub listing concepts, questions, papers, thesis threads for one area.
+⚠️ reMarkable's `X (annotations).pdf` is an **ink-only overlay**, not the annotated document. It is typically a few KB against a multi-MB source. Never delete the source in favour of the overlay. An overlay of ≤700 bytes is a blank page — no annotation at all.
 
-## Naming
+## Note sections
 
-- Files: lowercase, hyphenated (`tensor-factorization.md`)
-- One primary concept per file; split when scope grows
-- Paper files: short slug from title or citekey
+- **concept** — One-liner → Intuition → Formal → Why it matters → Connections → Open questions
+- **question** — Question → Why it matters → What would answer it → Current state → Links
+- **paper** — Problem → Method → Result → Why it matters here → Connections
+- **moc** — Scope → Key concepts → Raw material → Threads
 
-## Workflows
+## Workflow
 
-### Ingest
+**Ingest:** read the raw file → write one `wiki/` page with a `raw:` field → run the linter (it flips the row to `digested`) → append to `meta/log.md`.
 
-User drops file into `raw/` and says e.g. *"Ingest `raw/papers/cohen-expressivity.pdf`"*.
+**Triage:** anything in `raw/inbox/` gets moved to a kind folder or deleted. The inbox is a queue, not storage.
 
-1. Read the raw file. **Do not modify `raw/`.**
-2. Discuss key takeaways with user if non-obvious.
-3. Create or update wiki pages:
-   - `sources/<slug>.md` or `papers/<slug>.md` (digest)
-   - Relevant `concepts/`, `questions/`, `people/`
-   - Link from relevant `moc/`
-4. Set `sources:` / `raw:` frontmatter links on updated pages.
-5. Update `index.md` (add or revise one-liner).
-6. Append entry to `log.md`:
-   ```
-   ## [YYYY-MM-DD] ingest | <title>
-   - Raw: `raw/...`
-   - Created: [[sources/...]], [[concepts/...]]
-   - Updated: [[concepts/...]], [[moc/...]]
-   ```
-
-A single source often touches 5–15 wiki pages.
-
-### Query
-
-User asks a research question.
-
-1. Read `index.md` first to find relevant pages.
-2. Read those pages; synthesize with citations to wiki pages and raw paths.
-3. If the answer is reusable (comparison, analysis, connection), **file it back** as a new concept, question, or moc section — do not leave it only in chat.
-4. Append `## [YYYY-MM-DD] query | <short topic>` to `log.md`.
-
-### Lint
-
-User says *"Lint the wiki"* (or run periodically).
-
-Check and report:
-- Contradictions between pages
-- Stale claims superseded by newer sources
-- Orphan pages (no inbound wikilinks)
-- Concepts mentioned without own page
-- Missing cross-references between related concepts
-- `sources:` frontmatter empty on `status: solid` concepts
-- Questions with `status: open` but no linked reading list
-
-Propose fixes; apply after user confirms.
-
-### New note (manual)
-
-1. Pick template from `templates/`.
-2. Place in correct folder.
-3. Link from relevant `moc/` and `00-home.md` if prominent.
-4. Add to `index.md`.
-
-## Status progression
-
-| Type | Flow |
-|------|------|
-| concept | `seed` → `growing` → `solid` (can explain without source open) |
-| paper | `unread` → `reading` → `digested` |
-| question | `open` → `partial` → `resolved` |
-
-## Thesis context
-
-- **Topic:** Theoretical ML — complex-valued NNs, implicit regularization, tensor factorization
-- **Instructor:** [[people/nadav-cohen]] (optional)
-- **Meta:** [[meta/thesis]]
-
-Prefer connections to thesis threads over generic ML summaries.
-
-## Obsidian
-
-- Vault root is this directory.
-- Graph view for connectivity; MOCs for navigation.
-- Optional: set attachment folder to `raw/assets/`.
-
-## Do not
-
-- Edit anything under `raw/`
-- Delete wiki pages without user approval
-- Create duplicate concept pages — merge and redirect links
-- Skip `index.md` / `log.md` updates on ingest
+**Query:** read `index.md` first, then follow wikilinks.
