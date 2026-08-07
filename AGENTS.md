@@ -59,7 +59,18 @@ Wikilinks are always bare: `[[tensor-rank]]`, never `[[concepts/tensor-rank]]`. 
 
 The linter maintains it: a new file appears as `queued`; a file gone from disk is removed; **a sha1 change on a `digested` file re-opens it as `queued`** — so re-annotating a paper on the tablet automatically re-queues it.
 
-⚠️ reMarkable's `X (annotations).pdf` is an **ink-only overlay**, not the annotated document. It is typically a few KB against a multi-MB source. Never delete the source in favour of the overlay. An overlay of ≤700 bytes is a blank page — no annotation at all.
+## Naming
+
+`raw/papers/` uses **`<year>-<kebab-title>.pdf`** — lowercase, hyphens, no spaces. Sortable, greppable, and the year is metadata you would otherwise have to open the file to find.
+
+```
+2023-toolformer.pdf
+1948-a-mathematical-theory-of-communication.pdf
+```
+
+The linter enforces the pattern and cross-checks the filename year against the digest's `year:` frontmatter, so the two cannot drift apart. Only `raw/papers/` is held to this: handwritten notes and lecture decks keep their original names, which are provenance.
+
+⚠️ reMarkable's `X (annotations).pdf` exports are **ink-only overlays**, not annotated documents — typically a few KB against a multi-MB source, and unreadable on their own. They have all been deleted. If new ones appear, do not delete the source document in their favour.
 
 ## Note sections
 
