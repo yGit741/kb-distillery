@@ -22,6 +22,9 @@ meta/.ingest/
 # Distill pipeline staging (session backups, plans)
 meta/.distill/
 
+# Semantic find bundles (transient LLM review packets)
+meta/.semfind/
+
 # Pixi environment
 .pixi/
 
