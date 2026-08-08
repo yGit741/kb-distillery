@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "hooks": {
+    "preToolUse": [
+      {
+        "matcher": "Write|StrReplace|EditNotebook|Delete",
+        "command": "python3 meta/guard.py",
+        "failClosed": true
+      }
+    ]
+  }
+}
