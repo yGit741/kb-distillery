@@ -8,6 +8,7 @@ Personal knowledge base for an MSc in theoretical ML. **The thesis topic is not 
 |-------|------|------|
 | **Raw** | `raw/` | User-owned inputs. **Immutable — never write here.** |
 | **Wiki** | `wiki/` | Agent-owned synthesis. Flat. Create, update, cross-link. |
+| **Think** | `wiki/think-*` | Human-owned slow space. Agents read; distill CLI writes agent zone only. |
 | **Meta** | `meta/` | Schema, templates, log. |
 
 ```
@@ -16,7 +17,7 @@ raw/papers/<course>/  academic PDFs
 raw/slides/<course>/  lecture decks, presentations
 raw/notes/<course>/   handwritten notes, recaps, scratch
 raw/web/  raw/assets/ clips, images (flat)
-wiki/                 every note, flat. q- = question, moc- = map of content
+wiki/                 every note, flat. q- = question, moc- = theme, think- = human slow space, source- = course index
 _quarantine/          staged for deletion, gitignored, not part of the vault
 ```
 
@@ -24,21 +25,32 @@ _quarantine/          staged for deletion, gitignored, not part of the vault
 
 Prose rules drift; this doesn't. If `python3 meta/lint.py` passes, the write is legal.
 
+**Environment:** one-time `curl -fsSL https://pixi.sh/install.sh | bash`, then restart the shell. All tasks below work via `pixi run <task>`.
+
 ```
-python3 meta/lint.py                 check + reconcile the manifest
-python3 meta/lint.py --health        dashboard: inbox, backlog, drift, links
-python3 meta/lint.py --pending       the ingestion backlog
-python3 meta/lint.py --write-index   regenerate index.md
+pixi run lint                      check + reconcile + regenerate index.md
+pixi run health                    terminal health summary
+pixi run dashboard                 localhost health UI (http://127.0.0.1:8765)
+pixi run lint-strict               ingest-finalize checks
+pixi run ingest-status             open ingest sessions
+pixi run distill-propose -- <slug> propose graph brief from think page
+pixi run distill-apply -- <slug>   apply distill plan to public KB
+pixi run sync-skills               copy meta/skills/ → .cursor/skills/
 ```
 
-`meta/guard.py` runs as a PreToolUse hook and blocks illegal writes before they happen. `.git/hooks/pre-commit` runs the linter. Do not hand-edit `index.md` or `meta/corpus.tsv` — both are generated.
+Without pixi, use `python3` equivalents (`python3 meta/lint.py`, `python3 -m meta.dashboard`, …).
+
+**Write guardrails:** `meta/guard.py` blocks illegal agent writes via preToolUse hooks in both `.cursor/hooks.json` (Cursor) and `.claude/settings.json` (Claude Code). Keep both pointed at the same script. `CLAUDE.md` imports this file for Claude instruction parity.
+
+**Commit gate:** `.git/hooks/pre-commit` runs `meta/lint.py`. Do not hand-edit `index.md` or `meta/corpus.tsv` — both are generated on every lint run. `python3 meta/lint.py --health` or `python3 -m meta.dashboard` for vault health.
 
 ## Frontmatter
 
 ```yaml
-type: concept | question | person | paper | source | moc
-status: seed|growing|solid   (question: open|partial|resolved; paper: to-read|reading|digested)
-area: [info-theory]          # moc slugs, bare
+type: concept | question | person | paper | source | moc | think
+status: seed|growing|solid   (question: open|partial|resolved; paper: to-read|reading|digested; think: active|archived)
+digestion-status: catalog|easy|full|deep   # papers only — depth of write-up
+area: [info-theory]          # papers: theme slugs only (whitelist in meta/schema.py THEME_SLUGS)
 related: [tensor-rank]       # bare slugs — wiki/ is flat, so no paths
 raw: raw/papers/x/y.pdf      # paper/source only; `none` + a `url:` if read externally
 ```
@@ -77,26 +89,53 @@ The linter enforces the pattern and cross-checks the filename year against the d
 - **concept** — One-liner → Intuition → Formal → Why it matters → Connections → Open questions
 - **question** — Question → Why it matters → What would answer it → Current state → Links
 - **paper** — Problem → Method → Result → Why it matters here → Connections
-- **moc** — Scope → Key concepts → Raw material → Threads
+- **moc** — Scope → Key concepts → Raw material → Threads (research themes only)
+- **think** — My thinking (human zone) → Distilled summary (agent zone, via distill)
+- **source** — Scope → Key concepts → Raw material → Threads (course provenance)
 
-## Workflow
+## Theme whitelist (paper `area:`)
 
-**Ingest (transactional):** one paper at a time via `python3 -m meta.ingest`.
+`statistics`, `optimization-theory`, `learning-theory`, `info-theory`, `implicit-regularization`, `tensor-factorization`, `complex-nn`, `quantum`. Course slugs use `source-*` pages, not MOCs.
+
+## Distill think
+
+Two-phase workflow for `think-*` pages:
 
 ```
-begin <raw_path>     open session, backup existing digest
-extract <sha>        PDF text + validate claims.json (agent fills claims — see meta/ingest/extract_prompt.md)
-map <sha>            plan.json: concepts → wiki slugs, MOC targets, q- stubs
-draft <sha>          render markdown to meta/.ingest/<sha>/staging/ only
-finalize <sha>       promote to wiki/, patch MOCs, lint --ingest-strict; rollback on fail
-abort <sha>          restore backups
-status | backlog     session list / queued papers
+python3 -m meta.distill propose think-<slug>   # graph brief + plan.json, no KB writes
+python3 -m meta.distill apply think-<slug>     # patch MOCs/q-*/concepts with rollback
+python3 -m meta.distill abort think-<slug>
 ```
 
-During an open session, `meta/guard.py` blocks direct writes to wiki paths the session owns — use `draft` + `finalize`. Session state lives in `meta/.ingest/` (gitignored).
+Human zone is never agent-edited. See `meta/skills/distill-think/SKILL.md`.
 
-**Manual ingest (legacy):** read the raw file → write one `wiki/` page with a `raw:` field → run the linter → append to `meta/log.md`. Prefer the transactional pipeline for papers.
+## Skill ladder
 
-**Triage:** anything in `raw/inbox/` gets moved to a kind folder or deleted. The inbox is a queue, not storage.
+Read `meta/skills/README.md` before any workflow. Run `pixi run sync-skills` after editing skills.
+
+| Skill | LLM tier | Budget (in) | Trigger |
+|-------|----------|-------------|---------|
+| `scrap-data` | none | 0 | scrap, download, save to inbox |
+| `ingest-to-catalog` | none | 0 | catalog, triage inbox, drain inbox |
+| `easy-digest` | light | ~2–4k | `easy-digest`, `easy digest`, `skim` |
+| `full-digest` | medium | ~8–12k | `full-digest`, `full digest` only |
+| `deep-digest` | heavy | ~25–40k+ | `deep-digest` + user confirms heavy |
+
+**`digest` alone → ask tier (easy / full / deep).** Bare "digest" never triggers `full-digest`.
+
+**Dedup:** always `resolve` before `scrap`. If FOUND → cite `[[slug]]`; don't re-download.
+
+```
+python3 -m meta.ingest resolve <url|arxiv|slug> # check vault first (0 LLM)
+python3 -m meta.ingest scrap <url>              # → raw/inbox/ (blocked if duplicate)
+python3 -m meta.ingest catalog <inbox-path>     # → raw/papers/ + wiki stub
+python3 -m meta.ingest easy-digest <slug|raw>   # light abstract skim
+python3 -m meta.ingest full-digest <raw>        # medium: begin→finalize
+python3 -m meta.ingest deep-digest <raw> --confirm-heavy
+```
+
+During `full-digest` / `deep-digest`, `meta/guard.py` blocks direct writes to session-owned wiki paths — use `draft` + `finalize`. Legacy `reingest-*` is bootstrap-only.
+
+**Triage:** anything in `raw/inbox/` gets cataloged or deleted. The inbox is a queue, not storage.
 
 **Query:** read `index.md` first, then follow wikilinks.

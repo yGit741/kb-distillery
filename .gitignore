@@ -19,4 +19,10 @@ raw/assets/
 # Ingest pipeline staging (session backups, claims, plans)
 meta/.ingest/
 
+# Distill pipeline staging (session backups, plans)
+meta/.distill/
+
+# Pixi environment
+.pixi/
+
 .obsidian/graph.json
