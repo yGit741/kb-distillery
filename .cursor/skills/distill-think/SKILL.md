@@ -1,55 +1,54 @@
 ---
 name: distill-think
-description: Two-phase distill of think-* human zones into graph brief + KB patches. Use for distill-think, distill think, graph brief.
+description: Distill think/ human notes into transient distilled-think pages + KB patches. Use for distill-think, distill think, graph brief.
 ---
 
 # Distill think
 
-Distill human deliberation from `think-*` pages into the public knowledge graph.
+Human deliberation lives in `think/` (schema-free, never agent-edited). Distill reads it and writes a review page `wiki/distilled-think-<name>.md` with `## Summary` and `## Proposed propagation`.
 
 ## Triggers
 
 - `distill-think`, `distill think`, `graph brief`
-- Phase 2 only on explicit `apply` or user says "apply distill"
+- Apply only on explicit user approval
 
 ## Rules
 
-1. **Never edit the human zone** (`<!-- human-zone -->` … `<!-- end-human-zone -->`).
-2. **Phase 1 always:** run propose, show the graph brief, stop.
-3. **Phase 2 only when asked:** run apply after user reviews `plan.json`.
+1. **Never edit `think/`** — blocked by `meta/guard.py`.
+2. **Propose first** — show Summary + proposal table; stop.
+3. **Apply only when asked** — use `--cleanup` to delete the distilled page after propagate.
 
 ## Phase 1 — propose
 
 ```bash
-python3 -m meta.distill propose think-<slug>
+python3 -m meta.distill propose my-true-research-start-here
+python3 -m meta.distill propose my-file --from path/to/bootstrap.md   # one-time bootstrap
 ```
 
-- Reads human zone only.
 - Writes `meta/.distill/<id>/plan.json`.
-- Replaces agent zone with collapsible graph brief.
+- Writes `wiki/distilled-think-<name>.md` (review only).
 - **No other wiki mutations.**
 
-Graph brief must include:
+## Revise
 
-- **Touches** — linked wiki slugs
-- **Themes detected**
-- **Weak / missing links**
-- **Proposed edits** table (target, action, rationale)
-- **Not promoting** — stays in think only
+```bash
+python3 -m meta.distill revise my-true-research-start-here
+```
+
+Re-reads `think/`, rebuilds proposals, **keeps** an edited `## Summary` if you changed it on the distilled page.
 
 ## Phase 2 — apply
 
 ```bash
-python3 -m meta.distill apply think-<slug>
-python3 -m meta.distill apply think-<slug> --only 2,4   # partial
-python3 -m meta.distill abort think-<slug>
+python3 -m meta.distill apply my-true-research-start-here
+python3 -m meta.distill apply my-true-research-start-here --cleanup   # delete distilled page after
+python3 -m meta.distill apply my-true-research-start-here --only 2,4
+python3 -m meta.distill abort my-true-research-start-here
 ```
 
 - Backs up targets, applies proposals, runs lint, rolls back on failure.
-- Updates agent zone with applied status.
 - Appends `meta/log.md`.
-
-When patching public pages, cite think pages as `[[think-...]]` in thread text.
+- Cite think paths as `` `think/...` `` in thread text — **not** `[[wikilinks]]` (think is outside wiki).
 
 ## Plan actions
 
@@ -62,5 +61,4 @@ When patching public pages, cite think pages as `[[think-...]]` in thread text.
 
 ## Agent constraints
 
-- Direct writes to `wiki/think-*.md` are blocked by `meta/guard.py`.
-- Use the CLI; do not StrReplace think files.
+- Direct writes to `think/` and `wiki/distilled-think-*.md` are blocked — use the CLI.

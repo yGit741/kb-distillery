@@ -8,7 +8,7 @@ Personal knowledge base for an MSc in theoretical ML. **The thesis topic is not 
 |-------|------|------|
 | **Raw** | `raw/` | User-owned inputs. **Immutable — never write here.** |
 | **Wiki** | `wiki/` | Agent-owned synthesis. Flat. Create, update, cross-link. |
-| **Think** | `wiki/think-*` | Human-owned slow space. Agents read; distill CLI writes agent zone only. |
+| **Think** | `think/` | Human-owned slow space. Schema-free. Agents never write here. |
 | **Meta** | `meta/` | Schema, templates, log. |
 
 ```
@@ -17,7 +17,8 @@ raw/papers/<course>/  academic PDFs
 raw/slides/<course>/  lecture decks, presentations
 raw/notes/<course>/   handwritten notes, recaps, scratch
 raw/web/  raw/assets/ clips, images (flat)
-wiki/                 every note, flat. q- = question, moc- = theme, think- = human slow space, source- = course index
+wiki/                 flat agent-owned notes
+think/                human slow space (not linted)
 _quarantine/          staged for deletion, gitignored, not part of the vault
 ```
 
@@ -47,8 +48,8 @@ Without pixi, use `python3` equivalents (`python3 meta/lint.py`, `python3 -m met
 ## Frontmatter
 
 ```yaml
-type: concept | question | person | paper | source | moc | think
-status: seed|growing|solid   (question: open|partial|resolved; paper: to-read|reading|digested; think: active|archived)
+type: concept | question | person | paper | source | moc | distilled-think
+status: seed|growing|solid   (question: open|partial|resolved; paper: to-read|reading|digested; distilled-think: review|applied|archived)
 digestion-status: catalog|easy|full|deep   # papers only — depth of write-up
 area: [info-theory]          # papers: theme slugs only (whitelist in meta/schema.py THEME_SLUGS)
 related: [tensor-rank]       # bare slugs — wiki/ is flat, so no paths
@@ -90,24 +91,49 @@ The linter enforces the pattern and cross-checks the filename year against the d
 - **question** — Question → Why it matters → What would answer it → Current state → Links
 - **paper** — Problem → Method → Result → Why it matters here → Connections
 - **moc** — Scope → Key concepts → Raw material → Threads (research themes only)
-- **think** — My thinking (human zone) → Distilled summary (agent zone, via distill)
+- **distilled-think** — Summary (review prose) → Proposed propagation → Not promoting (transient; use `--cleanup` after apply)
 - **source** — Scope → Key concepts → Raw material → Threads (course provenance)
 
 ## Theme whitelist (paper `area:`)
 
 `statistics`, `optimization-theory`, `learning-theory`, `info-theory`, `implicit-regularization`, `tensor-factorization`, `complex-nn`, `quantum`. Course slugs use `source-*` pages, not MOCs.
 
+## Semantic lint
+
+**Structural lint** (`meta/lint.py`): links, schema, inbox — unchanged.
+
+**Semantic lint** (`meta/coherence.py`): meaning-level checks, 0 LLM.
+
+| kind | meaning | action |
+|------|---------|--------|
+| `internal` | bad ingestion — wiki stale/wrong vs source | **fix** (re-digest / edit); score ≥ 70 → lint ERROR |
+| `external` | two digested papers disagree | **note** on each paper's `## Connections` / `## Links out` |
+| `cosmetic` | graph hygiene | warn only |
+
+```
+python3 meta/coherence.py status
+python3 meta/coherence.py fixed <id>    # internal resolved
+python3 meta/coherence.py noted <id>    # external recorded on paper
+python3 meta/coherence.py dismiss <id>
+python3 meta/semfind.py moc moc-info-theory
+```
+
+Manifest: `meta/coherence-warnings.tsv` (regenerated on lint; statuses persist).
+
+After full/deep digest or distill apply: `SEMFIND_READY` → `meta/skills/semantic-lint-hop/SKILL.md`. On-demand theme pass: `meta/skills/lint-moc/SKILL.md`.
+
 ## Distill think
 
-Two-phase workflow for `think-*` pages:
+Human writes in `think/*.md` (schema-free). Distill produces a transient `wiki/distilled-think-*.md` for review, then patches the public KB on apply.
 
 ```
-python3 -m meta.distill propose think-<slug>   # graph brief + plan.json, no KB writes
-python3 -m meta.distill apply think-<slug>     # patch MOCs/q-*/concepts with rollback
-python3 -m meta.distill abort think-<slug>
+python3 -m meta.distill propose <think-file>              # → distilled-think page + plan.json
+python3 -m meta.distill revise <think-file>               # re-read think/, keep edited Summary
+python3 -m meta.distill apply <think-file> --cleanup       # propagate + delete distilled page
+python3 -m meta.distill abort <think-file>
 ```
 
-Human zone is never agent-edited. See `meta/skills/distill-think/SKILL.md`.
+`think/` is never agent-edited. See `meta/skills/distill-think/SKILL.md`.
 
 ## Skill ladder
 
@@ -120,6 +146,10 @@ Read `meta/skills/README.md` before any workflow. Run `pixi run sync-skills` aft
 | `easy-digest` | light | ~2–4k | `easy-digest`, `easy digest`, `skim` |
 | `full-digest` | medium | ~8–12k | `full-digest`, `full digest` only |
 | `deep-digest` | heavy | ~25–40k+ | `deep-digest` + user confirms heavy |
+| `distill-think` | medium | ~8–12k propose | `distill-think`, `distill think`, `graph brief` |
+| `query-kb` | light–medium | ~3–15k | `query-kb`, `query kb`, `what do I know about` |
+| `semantic-lint-hop` | light–medium | ~3–12k | after full/deep digest finalize or distill apply |
+| `lint-moc` | medium | ~8–20k | `lint-moc`, `lint moc` |
 
 **`digest` alone → ask tier (easy / full / deep).** Bare "digest" never triggers `full-digest`.
 
@@ -138,4 +168,11 @@ During `full-digest` / `deep-digest`, `meta/guard.py` blocks direct writes to se
 
 **Triage:** anything in `raw/inbox/` gets cataloged or deleted. The inbox is a queue, not storage.
 
-**Query:** read `index.md` first, then follow wikilinks.
+**Query:** Karpathy Query operation — read wiki, cite `[[slugs]]`, file good answers back on request. See `meta/skills/query-kb/SKILL.md`.
+
+```
+python3 meta/query.py candidates "<keywords>"   # rank slugs (0 LLM)
+python3 meta/query.py mocs                      # theme entry points
+```
+
+Workflow: `index.md` → `candidates` → read 3–8 pages → synthesize. Not the same as `meta.ingest resolve` (ingest dedup).

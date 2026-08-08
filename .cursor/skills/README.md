@@ -13,7 +13,9 @@ Read `meta/skills/<skill>/SKILL.md` before running a workflow.
 | `easy-digest` | light | ~2–4k | only on `easy-digest` / `easy digest` / `skim` |
 | `full-digest` | medium | ~8–12k | only on `full-digest` / `full digest` |
 | `deep-digest` | heavy | ~25–40k+ | only on `deep-digest` + user confirms heavy |
-| `distill-think` | medium | ~8–12k propose; apply varies | `distill-think`, `distill think`, `graph brief` |
+| `query-kb` | light | ~3–15k | `query-kb`, `query kb`, `what do I know about` |
+| `semantic-lint-hop` | light–medium | ~3–12k | after full/deep digest or distill apply |
+| `lint-moc` | medium | ~8–20k | `lint-moc`, `lint moc` |
 
 ## Trigger rules
 
@@ -31,7 +33,10 @@ Read `meta/skills/<skill>/SKILL.md` before running a workflow.
 | [easy-digest](easy-digest/SKILL.md) | Abstract/metadata skim (light) |
 | [full-digest](full-digest/SKILL.md) | Standard paper note, 25 pp extract (medium) |
 | [deep-digest](deep-digest/SKILL.md) | Thesis-critical + neighbors (heavy, explicit only) |
-| [distill-think](distill-think/SKILL.md) | Propose/apply graph brief from `think-*` pages (medium) |
+| [distill-think](distill-think/SKILL.md) | Propose/apply from `think/` → transient `distilled-think-*` (medium) |
+| [query-kb](query-kb/SKILL.md) | Answer from wiki — index-first, citations, optional file-back |
+| [semantic-lint-hop](semantic-lint-hop/SKILL.md) | 1-hop review after ingest/distill — fix internal, note external on Connections |
+| [lint-moc](lint-moc/SKILL.md) | On-demand theme MOC semantic pass |
 
 ## CLI
 
@@ -43,8 +48,13 @@ python3 -m meta.ingest drain-inbox [--course misc]
 python3 -m meta.ingest easy-digest <slug|raw>
 python3 -m meta.ingest full-digest <raw>    # begin→extract→map→draft→finalize
 python3 -m meta.ingest deep-digest <raw> --confirm-heavy
-python3 -m meta.distill propose think-<slug>
-python3 -m meta.distill apply think-<slug>
+python3 -m meta.distill propose <think-file> [--from bootstrap.md]
+python3 -m meta.distill revise <think-file>
+python3 -m meta.distill apply <think-file> [--cleanup]
+python3 meta/query.py candidates "<keywords>"
+python3 meta/query.py mocs
+python3 meta/coherence.py status
+python3 meta/semfind.py moc moc-info-theory
 ```
 
 Legacy: `reingest-*` commands are bootstrap-only; prefer the skill ladder above.
