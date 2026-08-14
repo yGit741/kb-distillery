@@ -16,6 +16,7 @@ description: Thesis-critical deep digest with neighbor links (~25-40k+ tokens, H
 ## Do NOT
 
 - Auto-trigger from `digest`, `full-digest`, or paper mentions
+- Trigger on bare `digest` — ask tier first
 - Run without `--confirm-heavy` on CLI
 - Skip neighbor / MOC / q- stub planning
 

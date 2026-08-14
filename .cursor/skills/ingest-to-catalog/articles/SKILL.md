@@ -1,11 +1,19 @@
 ---
 name: ingest-to-catalog-articles
-description: Catalog a PDF from inbox to raw/papers/ and create a wiki stub with digestion-status catalog. Zero LLM.
+description: Catalog a PDF from inbox to raw/papers/ and create a wiki stub. Zero LLM. Do NOT digest from here.
 ---
 
 # ingest-to-catalog / articles
 
 **LLM tier:** none · **Budget:** 0 tokens
+
+## Triggers
+
+- `catalog` on inbox PDF
+
+## Do NOT
+
+- Digest — use easy/full/deep digest skills after catalog
 
 ## Behavior
 

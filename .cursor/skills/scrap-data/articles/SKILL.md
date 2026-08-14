@@ -1,11 +1,15 @@
 ---
 name: scrap-data-articles
-description: Download arXiv or PDF URLs to raw/inbox/. Use with scrap-data when the source is a paper or preprint URL.
+description: Download arXiv or PDF URLs to raw/inbox/. Use with scrap-data for paper URLs. Do NOT catalog or digest from here.
 ---
 
 # scrap-data / articles
 
 **LLM tier:** none · **Budget:** 0 tokens
+
+## Triggers
+
+- Paper or arXiv URL with `scrap-data --type articles`
 
 ## CLI
 
