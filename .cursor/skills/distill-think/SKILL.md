@@ -1,11 +1,18 @@
 ---
 name: distill-think
-description: Distill think/ human notes into transient distilled-think pages + KB patches. Use for distill-think, distill think, graph brief.
+description: Distill think/ human notes into transient distilled-think pages + KB patches. Use for distill-think, distill think, graph brief. Do NOT edit think/ directly.
 ---
 
 # Distill think
 
+**LLM tier:** medium · **Budget:** ~8–12k tokens propose
+
 Human deliberation lives in `think/` (schema-free, never agent-edited). Distill reads it and writes a review page `wiki/distilled-think-<name>.md` with `## Summary` and `## Proposed propagation`.
+
+## Do NOT
+
+- Edit `think/` directly — human-owned
+- Skip `propose` before `apply`
 
 ## Triggers
 
