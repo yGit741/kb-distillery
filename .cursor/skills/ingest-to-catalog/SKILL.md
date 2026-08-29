@@ -30,6 +30,8 @@ python3 -m meta.ingest drain-inbox [--course misc]
 |----------|------|
 | [detect](detect/SKILL.md) | Inspect file → route handler |
 | [articles](articles/SKILL.md) | PDF → `raw/papers/<course>/` + wiki stub |
+| [mail](mail/SKILL.md) | thread bundle → `raw/mail/<dir>/` + `type: source` stub |
+| [chat](chat/SKILL.md) | Gemini-style `.md` export → `raw/chats/` + `type: source` stub |
 | [notes](notes/SKILL.md) | notes handler (stub) |
 | [slides](slides/SKILL.md) | slides handler (stub) |
 | [web](web/SKILL.md) | web handler (stub) |
@@ -37,4 +39,5 @@ python3 -m meta.ingest drain-inbox [--course misc]
 
 ## Output
 
-Wiki stub with `digestion-status: catalog`, `status: to-read`. Run `pixi run lint` after.
+Wiki stub with `digestion-status: catalog`, `status: to-read` (`mail`/`chat` create
+`type: source` stubs instead — no `digestion-status`). Run `pixi run lint` after.
