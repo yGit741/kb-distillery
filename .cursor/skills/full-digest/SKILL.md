@@ -34,7 +34,9 @@ python3 -m meta.ingest abort <sha>
 
 ## Agent steps after `begin` / `full-digest`
 
-1. Run `extract` — read `meta/.ingest/<sha>/extracted.text` (first 25 pages).
+1. Run `extract` — read `meta/.ingest/<sha>/extracted.text` (first 25 pages). If
+   the raw entity has a `parsed.md` sidecar (e.g. `raw/mail/<thread>/parsed.md`),
+   `extracted.text` is that sidecar's content instead of raw PDF/thread text.
 2. Write `claims.json` with real LaTeX equations, results, concepts.
 3. Set `person` from `raw/papers/<person>/…` when applicable.
 4. Re-run `extract` to validate.
