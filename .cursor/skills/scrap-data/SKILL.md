@@ -11,6 +11,7 @@ description: Save URLs or files to raw/inbox/ with zero LLM tokens. Use for "scr
 
 - `scrap`, `download`, `save to inbox`, `fetch this URL`
 - `scrap article`, `download paper`
+- `pull from drive`, `google drive`, `notes to obsedian` → `gdrive` subskill
 
 ## Do NOT
 
@@ -25,6 +26,8 @@ description: Save URLs or files to raw/inbox/ with zero LLM tokens. Use for "scr
 python3 -m meta.ingest resolve <url|arxiv|slug|title>   # check vault first (0 LLM)
 python3 -m meta.ingest scrap <url|path> [--type articles|notes|slides|web|blog]
 python3 -m meta.ingest scrap <url> --force              # override dedup block
+python3 -m meta.ingest scrap-mail <mbox-or-eml> [--slug thread-slug] [--force]
+python3 -m meta.ingest scrap-gdrive --dry-run           # preview a Drive folder pull (0 bytes)
 ```
 
 Scrap is **blocked** when resolve finds a match or bytes already exist in `raw/`. Use `--force` only when intentional.
@@ -34,6 +37,8 @@ Scrap is **blocked** when resolve finds a match or bytes already exist in `raw/`
 | Subskill | Path | Status |
 |----------|------|--------|
 | [articles](articles/SKILL.md) | arXiv/PDF URL → inbox | implemented |
+| [mail](mail/SKILL.md) | local `.mbox`/`.eml` export → thread bundle | implemented |
+| [gdrive](gdrive/SKILL.md) | mounted Google Drive folder → inbox | implemented |
 | [notes](notes/SKILL.md) | reMarkable / handwritten | stub |
 | [slides](slides/SKILL.md) | lecture decks | stub |
 | [web](web/SKILL.md) | HTML/markdown clip | stub |
@@ -41,4 +46,4 @@ Scrap is **blocked** when resolve finds a match or bytes already exist in `raw/`
 
 ## Next step
 
-After scrap: `python3 -m meta.ingest catalog raw/inbox/<file>` or `drain-inbox`.
+After scrap: `python3 -m meta.ingest catalog raw/inbox/<file>` or `python3 -m meta.ingest drain-inbox`.
