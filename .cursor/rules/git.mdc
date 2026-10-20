@@ -1,0 +1,12 @@
+---
+description: Git policy — two lanes; agents never ad-hoc commit
+alwaysApply: true
+---
+
+# Git — two lanes on main
+
+- Knowledge (`wiki/ think/ raw/`, generated indexes, `meta/log.md`): `pixi run daily-sync`, nightly via launchd.
+- Tooling (code, skills, config, docs): `pixi run ship -- "feat: …"` — only when the user asks.
+- NEVER run raw `git commit`, `git push`, `gh pr create`, or amend.
+- After edits: `pixi run lint` if needed; leave changes unstaged. `pixi run lanes` shows what's pending where.
+- Lane membership: `meta/schema.py` (`KNOWLEDGE_PATHS`, `TOOLING_PATHS`).
