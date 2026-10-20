@@ -7,6 +7,13 @@
         "command": "python3 meta/guard.py",
         "failClosed": true
       }
+    ],
+    "beforeShellExecution": [
+      {
+        "command": ".cursor/hooks/block-git-write.sh",
+        "matcher": "git |gh pr|pixi run daily-sync|pixi run ship|meta/daily_sync|meta/ship",
+        "failClosed": true
+      }
     ]
   }
 }
