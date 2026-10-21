@@ -30,6 +30,9 @@ meta/.migrate/
 # Distill pipeline staging (session backups, plans)
 meta/.distill/
 
+# Catalog outcome log (events + failures; the dashboard's Ingestion status) — local, never committed
+meta/.catalog/
+
 # Semantic find bundles (transient LLM review packets)
 meta/.semfind/
 
@@ -42,8 +45,9 @@ meta/.ops/
 # LLM share bundles (meta/export.py)
 .exported/
 
-# Share build cache + deploy status (meta/share)
+# Share build cache + deploy status (meta/share); wrangler's local state
 .cache/
+.wrangler/
 
 # Obsidian artifacts — use raw/inbox/ for clips; canvases/bases belong in wiki/ or delete
 Clippings/

@@ -24,6 +24,7 @@ Read `meta/skills/<skill>/SKILL.md` before running a workflow.
 | `kb-undo` | none | 0 | only when the user asks to undo a step |
 | `kb-snapshot` | none | 0 | `snapshot`; restore only when the user asks |
 | `infra-pr` | none | 0 | only when the user asks to ship / open / merge a PR |
+| `share-kb` | none | 0 | `share the site`, `publish`, `deploy main`, `rollback the site`, `deploy status` (not `export-kb`) |
 
 ## Trigger rules
 
@@ -61,6 +62,7 @@ Tooling is unversioned and ships as `infra/<feature>` PRs merged as `… (#N)`.
 | [kb-snapshot](kb-snapshot/SKILL.md) | Tag `kb-x.y.z`, list snapshots, restore wiki/ to one (0 LLM) |
 | [kb-history](kb-history/SKILL.md) | Version, steps, PRs, sessions — read-only (0 LLM) |
 | [infra-pr](infra-pr/SKILL.md) | Ship tooling/schema via `infra/*` branch + PR, never squash (0 LLM, on request) |
+| [share-kb](share-kb/SKILL.md) | Deploy main to the private Cloudflare site, status, rollback; snapshots later (0 LLM) |
 
 ### Meta skills
 
@@ -118,6 +120,8 @@ pixi run ops -- status
 pixi run ops -- log --kb
 pixi run ops -- snapshot "label"
 pixi run ship -- status
+pixi run share -- status
+pixi run share -- deploy-main
 ```
 
 Legacy: `reingest-*` commands are bootstrap-only; prefer the skill ladder above.
