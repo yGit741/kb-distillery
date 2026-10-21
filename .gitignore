@@ -54,3 +54,7 @@ _quarantine/
 .claude/worktrees/
 .claude/settings.local.json
 .claude/scheduled_tasks.lock
+
+# Mail/chat screenshots (~36MB): binary noise for Gemini GitHub import
+raw/**/*.png
+meta/chats/**/*.png
