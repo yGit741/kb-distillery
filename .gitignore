@@ -3,7 +3,10 @@ copilot/
 
 # Obsidian local UI state
 .obsidian/workspace*
-.obsidian/plugins/*/data.json
+
+# Obsidian plugin code: 25MB of minified JS, reinstallable from community-plugins.json.
+# Kept out of git so Gemini's GitHub import reads the notes, not plugin bundles.
+.obsidian/plugins/
 .trash/
 
 # OS
