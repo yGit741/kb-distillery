@@ -40,7 +40,7 @@ Prose rules drift; this doesn't. If `python3 meta/lint.py` passes, the write is 
 ```
 pixi run lint                      check + reconcile + regenerate index.md
 pixi run health                    terminal health summary
-pixi run dashboard                 localhost health UI + graph explorer (http://127.0.0.1:8765, /graph, /digestion)
+pixi run dashboard                 localhost health UI + graph explorer (http://127.0.0.1:8765, /graph, /digestion, /chat)
 pixi run launch                    restart dashboard from current code (detached) + open browser
 pixi run lint-strict               ingest-finalize checks
 pixi run ingest-status             open ingest sessions
