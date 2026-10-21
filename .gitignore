@@ -29,6 +29,9 @@ meta/.researcher/
 # Distill pipeline staging (session backups, plans)
 meta/.distill/
 
+# Catalog outcome log (events + failures; the dashboard's Ingestion status) — local, never committed
+meta/.catalog/
+
 # Semantic find bundles (transient LLM review packets)
 meta/.semfind/
 
