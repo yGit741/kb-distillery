@@ -40,6 +40,9 @@ meta/.ops/
 # LLM share bundles (meta/export.py)
 .exported/
 
+# Share build cache + deploy status (meta/share)
+.cache/
+
 # Obsidian artifacts — use raw/inbox/ for clips; canvases/bases belong in wiki/ or delete
 Clippings/
 *.canvas
