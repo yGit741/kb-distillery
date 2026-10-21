@@ -33,6 +33,9 @@ pixi run ops -- next-version
 Plain git is fine for detail: `git log --first-parent --oneline`, `git show <sha>`, `git log -- wiki/<slug>.md`.
 The dashboard Lifecycle tab (`pixi run dashboard` → `/lifecycle`) shows the same data.
 
+Uncommitted knowledge from before the lifecycle (or a failed op) can be committed in labelled groups:
+`pixi run ops -- record catalog lior-wolf "Lior Wolf profile and 4 papers" wiki/lior-wolf.md …` — only on the user's request.
+
 ## Agent steps
 
 1. `pixi run ops -- status` for version, sessions, hooks and pending labels.
