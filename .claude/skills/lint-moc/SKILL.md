@@ -33,3 +33,7 @@ python3 meta/semfind.py moc moc-tensor-factorization --max-pairs 10
 ## Paper disagreement
 
 Not a failure. For each `external` pair, draft Connections bullets for both papers; user/agent adds them manually; `python3 meta/coherence.py noted <id>`.
+
+## Commit
+
+The MOC pass itself is read-only. Wrap any wiki fix in an ops session so it becomes one undoable commit: `pixi run ops -- begin refine <slug> "why"` → edit → `pixi run ops -- commit` (see `wiki-edit`).

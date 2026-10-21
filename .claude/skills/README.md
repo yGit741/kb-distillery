@@ -19,6 +19,11 @@ Read `meta/skills/<skill>/SKILL.md` before running a workflow.
 | `semantic-lint-hop` | light–medium | ~3–12k | after full/deep digest or distill apply |
 | `lint-moc` | medium | ~8–20k | `lint-moc`, `lint moc` |
 | `build-researcher-profile` | light | ~3–8k verify | `build researcher profile`, `index researcher` |
+| `wiki-edit` | none | 0 | any free-form wiki edit (split, merge, rename, file-back) |
+| `kb-history` | none | 0 | `kb history`, `kb status`, `what changed` |
+| `kb-undo` | none | 0 | only when the user asks to undo a step |
+| `kb-snapshot` | none | 0 | `snapshot`; restore only when the user asks |
+| `infra-pr` | none | 0 | only when the user asks to ship / open / merge a PR |
 
 ## Trigger rules
 
@@ -42,6 +47,20 @@ Read `meta/skills/<skill>/SKILL.md` before running a workflow.
 | [semantic-lint-hop](semantic-lint-hop/SKILL.md) | 1-hop review after ingest/distill — fix internal, note external on Connections |
 | [lint-moc](lint-moc/SKILL.md) | On-demand theme MOC semantic pass |
 | [build-researcher-profile](build-researcher-profile/SKILL.md) | Index full bib + catalog star papers only (light verify) |
+
+### Lifecycle skills (git history, versions, PRs)
+
+Every knowledge operation is one commit on main: `kb(<op>): <summary> (kb-x.y.z)` — x paradigm, y schema, z step.
+Writer CLIs (`meta.ingest`, `meta.distill`) commit themselves; free-form wiki edits go through `wiki-edit`.
+Tooling is unversioned and ships as `infra/<feature>` PRs merged as `… (#N)`.
+
+| Skill | Purpose |
+|-------|---------|
+| [wiki-edit](wiki-edit/SKILL.md) | Wrap free-form wiki edits in an ops session → one `kb(refine)` commit (0 LLM) |
+| [kb-undo](kb-undo/SKILL.md) | Reverse one knowledge step as a new `kb(undo)` commit — wiki/ only (0 LLM) |
+| [kb-snapshot](kb-snapshot/SKILL.md) | Tag `kb-x.y.z`, list snapshots, restore wiki/ to one (0 LLM) |
+| [kb-history](kb-history/SKILL.md) | Version, steps, PRs, sessions — read-only (0 LLM) |
+| [infra-pr](infra-pr/SKILL.md) | Ship tooling/schema via `infra/*` branch + PR, never squash (0 LLM, on request) |
 
 ### Meta skills
 
@@ -67,6 +86,8 @@ pixi run sync-skills    # fails if lint-skills fails
 
 **Vault guardrails** (any skill that touches data): `raw/` immutable (use CLI); `think/` human-only; open ingest session → no direct `wiki/` writes (`guard.py`); post-write → `python3 meta/lint.py`.
 
+**Every writing skill ends in one op commit.** Writer CLIs commit automatically (`--no-commit` to skip); any other wiki edit is wrapped in `pixi run ops -- begin …` / `pixi run ops -- commit` (see `wiki-edit`). Skills never run git writes themselves.
+
 **Digest rule:** bare `digest` → ask tier; never auto-pick `full-digest`.
 
 ## CLI
@@ -91,6 +112,10 @@ python3 meta/semfind.py bundle --seeds wiki/foo.md --source manual
 python3 meta/semfind.py moc moc-info-theory
 python3 meta/export.py
 pixi run lint-skills
+pixi run ops -- status
+pixi run ops -- log --kb
+pixi run ops -- snapshot "label"
+pixi run ship -- status
 ```
 
 Legacy: `reingest-*` commands are bootstrap-only; prefer the skill ladder above.

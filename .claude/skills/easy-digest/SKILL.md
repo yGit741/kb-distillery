@@ -32,3 +32,7 @@ Writes `meta/.ingest/easy/<sha>/abstract.text` for agent summary. Sets `digestio
 2. Read `abstract.text` (~2–4k tokens max)
 3. Update wiki: **Problem**, **Main result** from abstract only
 4. Run `pixi run lint`
+
+## Commit
+
+`easy-digest` opens an ops session for the page. After filling Problem / Main result, run `pixi run ops -- commit` to record it as one `kb(digest)` commit.

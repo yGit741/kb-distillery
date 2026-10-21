@@ -69,3 +69,7 @@ python3 -m meta.distill abort my-true-research-start-here
 ## Agent constraints
 
 - Direct writes to `think/` and `wiki/distilled-think-*.md` are blocked — use the CLI.
+
+## Commit
+
+The CLI commits this operation itself as `kb(distill): … (kb-x.y.z)` on main — only the files it changed (`--no-commit` to skip). Check with `pixi run ops -- log -n 1`. `apply` is the commit point; the distilled-think draft rides along.

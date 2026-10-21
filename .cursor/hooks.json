@@ -11,7 +11,7 @@
     "beforeShellExecution": [
       {
         "command": ".cursor/hooks/block-git-write.sh",
-        "matcher": "git |gh pr|pixi run daily-sync|pixi run ship|meta/daily_sync|meta/ship",
+        "matcher": "git|gh |pixi run|meta/daily_sync|meta/ship|meta/curate_history|meta\\.ops",
         "failClosed": true
       }
     ]
