@@ -1,49 +1,76 @@
 ---
 name: build-researcher-profile
 description: >-
-  Index full researcher bibliography (Semantic Scholar) and catalog star-tier
-  papers only (≥200 cites, max 10). Use for add researcher, build researcher profile,
-  index researcher, add <name>'s papers. Do NOT digest or catalog all papers.
+  Build or refresh a person page: index the Semantic Scholar bibliography, check every
+  handle (homepage, Scholar, GitHub, YouTube, blog feed, Wikipedia), fill roles, lineage and
+  open material, catalog star-tier papers only (≥200 cites, ≤10). Use for add researcher,
+  build researcher profile, index researcher, person profile, add <name>'s papers. Do NOT
+  digest or catalog all papers.
 ---
 
 # build-researcher-profile
 
 **LLM tier:** light · **Budget:** ~3–8k tokens (verify step only)
 
-Index all papers on a person page; catalog only influential (⭐) papers as PDF stubs. Never digest in this workflow.
+A person page is **handle-driven** (`meta/persons.py`): each frontmatter handle generates one
+section, `none` means "checked, there is none" (no section), `unknown` means "checked, not
+found", and a *missing* key means not checked yet. `verified: YYYY-MM-DD` is the only progress
+marker; `pixi run health` counts pages without one (`persons-unverified`).
+
+| Handle | Generates | Source |
+|---|---|---|
+| `wikipedia` | Roles & companies, Academic lineage | Wikidata (employer, founded, doctoral advisor/student) |
+| `url` (homepage) | Courses | agent reads the homepage |
+| `github` | Repos | top repos by stars |
+| `youtube` | Videos & talks | channel / playlist |
+| `blog` (feed) | Writing | RSS/Atom; a series page in the vault when one exists |
+| `scholar` | Bibliography, Cataloged in vault | Semantic Scholar rows (+ manual rows) |
+
+Edges `orgs`, `advisors`, `students` are bare slugs (`[]` = checked, nobody). Hand-owned:
+the intro sentence, `## Why it matters here` (must link a theme or concept), `## Meeting log`,
+any custom section — finalize never rewrites them.
 
 ## Triggers
 
-- `build researcher profile`, `index researcher`, `researcher profile`
+- `add researcher <name>`, `build researcher profile`, `index researcher`, `person profile`
 
 ## Do NOT
 
 - Run `easy-digest`, `full-digest`, or `deep-digest` in this workflow
-- Catalog papers below star tier (citationCount under 200)
+- Catalog papers below star tier (citationCount under 200) or mega-author reports (>20 authors) unless pinned
 - Auto-download the full bibliography — only up to 10 star-tier PDFs
-- Edit `manifest.json` paths without running `finalize` after verify
+- Edit the wiki page by hand for generated sections — edit `manifest.json`, then `finalize`
+- Guess between namesakes: an ambiguous search exits 2 with the top hits; rerun with `--author-id`
 
 ## Phase 1 — begin (0 LLM)
 
 ```bash
-python3 -m meta.ingest index-researcher begin "<name|scholar-url|ss-author-id>"
+python3 -m meta.ingest index-researcher begin "<name|scholar-url|ss-author-id>" [--author-id ID] [--slug slug]
 ```
 
-Creates `meta/.researcher/<slug>/manifest.json` from Semantic Scholar API.
+Creates `meta/.researcher/<slug>/manifest.json` (v2). Re-running on an existing person keeps
+the hand-filled items, handles, edges and pin/exclude marks and refreshes the Semantic Scholar rows.
 
 ## Phase 2 — verify (agent, required)
 
-1. Fetch Google Scholar profile + personal homepage (web fetch).
-2. Compare paper counts / top titles vs manifest.
-3. Edit `meta/.researcher/<slug>/manifest.json`:
-   - `books` — title, year, url, note (index only, no PDF)
-   - `courses` — title, url, note
-   - `verify` — `scholar_paper_count`, `verified_at`, `agent_notes`
-   - optional: `research_themes`, `related` concept slugs
-4. Optionally save HTML snapshots to session dir.
+One checklist for everyone — skip nothing, record what does not exist as `none`:
+
+1. **Wikipedia/Wikidata** → `handles.wikipedia`; `roles` (`{from, to, org, role, kind}`),
+   `lineage` (`{relation: Advisor|Student|Postdoc host, name, slug, where, years, note}`),
+   `edges.orgs/advisors/students` (slugs; a slug without a page is listed in health as a stub).
+2. **Homepage** → `handles.url`; `courses` (`{title, url, year, note}`); confirm affiliation.
+3. **GitHub** → `handles.github`; `repos` (`{title, url, metric, note, action}`), top ~5 by stars.
+4. **YouTube** → `handles.youtube`; `videos` (playlists/talks worth a `series-` or `video-` page).
+5. **Blog feed** → `handles.blog`; `writing` (key posts; link a `series-` page via `wiki:` when one exists).
+6. **Scholar** → compare paper count / top titles with the manifest; `pin: true` a paper the
+   citation count undersells, `exclude: true` one that is not really theirs.
+7. `verify` block: `scholar_paper_count`, `verified_at`, `agent_notes`; set `verified: YYYY-MM-DD`.
+
+Every item carries `source` (`wikipedia|github|youtube|blog|scholar|manual`) and an optional
+`action` (`index` default, `scrap`, `catalog`).
 
 ```bash
-python3 -m meta.ingest index-researcher verify <slug>
+python3 -m meta.ingest index-researcher verify <slug>     # prints what is still unchecked
 ```
 
 ## Phase 3 — finalize (0 LLM)
@@ -52,34 +79,31 @@ python3 -m meta.ingest index-researcher verify <slug>
 python3 -m meta.ingest index-researcher finalize <slug>
 ```
 
-Writes `wiki/<slug>.md` (person, bare slug) and catalogs star-tier papers (≤10) to
-`raw/printed-docs/<year>-<title>.pdf` with `paper-` stubs (`digestion-status: catalog`). Their
-corpus `collection` names the person page — that is the bibliography link (no per-person folder).
+Writes `wiki/<slug>.md` — generated sections from the manifest, hand sections preserved — and
+catalogs star-tier papers (≤10) to `raw/` with `digestion-status: catalog`. Then write
+`## Why it matters here` by hand if the page is new.
 
 ```bash
 python3 -m meta.ingest index-researcher abort <slug>
 python3 -m meta.ingest index-researcher status
+python3 -m meta.ingest index-researcher relink <slug>     # dangling bibliography links → titles
 ```
 
 ## Output
 
 | Artifact | Content |
 |----------|---------|
-| Person page | Full bibliography + books + courses |
+| Person page | handles + edges frontmatter, generated sections, Why it matters, Meeting log |
 | Paper stubs | ≤10 catalog-tier nodes only |
 | Corpus | Cataloged PDFs as `queued`, `collection` = person slug |
 
 ## Quality bar
 
-- Person page lists all SS papers with tier emoji
-- ≤10 papers have `raw:` + `digestion-status: catalog`
+- `pixi run lint` passes: every handle a URL/`none`/`unknown`, sections match handles, Why it matters links a theme or concept
+- `verified:` set, no `unknown` left that one more search could resolve
+- Lineage reciprocal where both pages exist (lint warns otherwise)
 - No paper has `digestion-status: full|easy|deep`
-- `verify.agent_notes` documents Scholar/homepage sanity check
 
 ## Next step
 
 User picks cataloged or suggested papers for `easy-digest` / `full-digest` explicitly.
-
-## Commit
-
-The CLI commits this operation itself as `kb(catalog): … (kb-x.y.z)` on main — only the files it changed (`--no-commit` to skip). Check with `pixi run ops -- log -n 1`. `index-researcher finalize` is the commit point.

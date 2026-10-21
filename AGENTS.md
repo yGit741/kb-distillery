@@ -118,7 +118,7 @@ Map what the user says to a skill before acting; read that skill's `SKILL.md`, t
 type: paper | part | lecture | article | video | conversation | ai-chat | blog-post   # reading units
       book | notebook | course | series                                              # collection hubs
       theme | concept | person | question | distilled-think                          # graph
-status: seed|growing|solid   (theme/concept/person; question: open|partial|resolved; reading units + hubs: to-read|reading|digested; distilled-think: review|applied|archived)
+status: seed|growing|solid   (theme/concept; question: open|partial|resolved; reading units + hubs: to-read|reading|digested; distilled-think: review|applied|archived; person: none — see below)
 digestion-status: catalog|easy|full|deep   # every reading unit — catalog ⇒ to-read|reading, easy/full/deep ⇒ digested
 area: [info-theory]          # reading units/hubs: theme slugs only (whitelist in meta/schema.py THEME_SLUGS)
 related: [tensor-rank]       # bare slugs — wiki/ is flat, so no paths
@@ -140,6 +140,27 @@ institution: runi            # course only, plus course_code:, semester:, lectur
 | `video-` | video | `theme-` | theme — exactly the 10 THEME_SLUGS |
 | `conversation-` | conversation (LLM chat / email thread) | `q-` | question |
 | `distilled-think-` | distilled-think | *(bare)* | concept, person |
+
+**Person pages are handle-driven** (`meta/persons.py`, schema 0.12). Frontmatter holds only
+handles, edges, contact and a date — no `status`, `area`, `related` or `affiliation`:
+
+```yaml
+url: https://…        # homepage      ⇒ ## Courses
+scholar: https://…    # Scholar       ⇒ ## Bibliography, ## Cataloged in vault
+github: none          # ⇒ ## Repos            none = checked, there is none (no section)
+youtube: unknown      # ⇒ ## Videos & talks   unknown = checked, not found; a missing key = not checked
+blog: https://…       # feed          ⇒ ## Writing
+wikipedia: https://…  # Wikidata      ⇒ ## Roles & companies, ## Academic lineage
+email: …              # contact, no section
+orgs: [..] advisors: [..] students: [..]    # bare slugs; [] = checked, nobody
+verified: 2026-10-21  # set by finalize; pages without it are the `persons-unverified` backlog
+```
+
+Each generated heading carries `<!-- from: <handle|manual> -->` and is rewritten by
+`index-researcher finalize` from `meta/.researcher/<slug>/manifest.json`; `## Why it matters
+here` (must link a theme or concept), `## Meeting log` and custom sections are hand-owned and
+never touched. Lint enforces the handle ⇒ section rules on verified pages and warns on
+non-reciprocal `advisors`/`students`. See `meta/skills/build-researcher-profile/SKILL.md`.
 
 Removed types: `source`, `moc`, `meta`. Wikilinks are always bare: `[[tensor-rank]]`, never `[[concepts/tensor-rank]]`. Paths into `raw/` go in backticks, not wikilinks.
 
