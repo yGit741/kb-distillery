@@ -1,0 +1,26 @@
+# PR checks (informational — no branch protection). Runs the same gates as `pixi run ship`.
+#
+# KB_CI=1 is required: 445 of the ~590 files under raw/ are gitignored binaries (PDFs, PNGs,
+# PPTX), so a cloud checkout has meta/corpus.tsv but not the bytes it lists. Without the flag,
+# meta/lint.py would treat them as gone — dropping manifest rows, regenerating index.md /
+# corpus.tsv and erroring on every `raw:` reference. KB_CI keeps the wiki checks (frontmatter,
+# links, slugs, book partitions, course tables, collections, coherence) and reads the committed
+# manifest as the truth instead of reconciling it against disk.
+#
+# macos-latest (arm64): pixi.lock is solved for osx-arm64 only; adding linux-64 means re-locking.
+name: ci
+on:
+  pull_request:
+  workflow_dispatch:
+jobs:
+  checks:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: prefix-dev/setup-pixi@v0.8.1
+        with:
+          pixi-version: v0.76.1
+          cache: true
+      - run: pixi run test
+      - run: pixi run lint-skills
+      - run: KB_CI=1 pixi run lint
