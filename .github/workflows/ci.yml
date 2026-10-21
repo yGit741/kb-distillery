@@ -15,6 +15,8 @@ on:
 jobs:
   checks:
     runs-on: macos-latest
+    env:
+      KB_CI: "1"     # for every step: tests that build dashboard snapshots run lint too (test_digestion_data)
     steps:
       - uses: actions/checkout@v4
         with:
@@ -26,4 +28,4 @@ jobs:
           cache: true
       - run: pixi run test
       - run: pixi run lint-skills
-      - run: KB_CI=1 pixi run lint
+      - run: pixi run lint
