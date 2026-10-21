@@ -31,6 +31,9 @@ meta/.distill/
 # Semantic find bundles (transient LLM review packets)
 meta/.semfind/
 
+# Knowledge ops runtime (lock, open edit session, pending commit label)
+meta/.ops/
+
 # Pixi environment
 .pixi/
 
