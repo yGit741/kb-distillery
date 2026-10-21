@@ -48,7 +48,7 @@ pixi run share -- snapshot <name> <ref>    # audit, then publish as snapshot-<YY
 pixi run share -- list [--json]            # our snapshots: version, behind-main, deployed at, views 7d, online
 pixi run share -- remove <name>            # type the worker name to confirm (--yes skips); never kb
 pixi run share -- prune [--apply]          # orphans (snapshot-* without a reachable manifest); foreign Workers only listed
-pixi run test-worker                       # node --test of worker/auth.js
+pixi run test-worker                       # node --test of worker/auth.js + admin.js
 ```
 
 Snapshots: `<ref>` is `main`, a commit, `kb-x.y.z` or `x.y.z`; the URL is
@@ -74,6 +74,32 @@ dashboard nav shows the chip (green deployed · deploying · skipped · red fail
    `share remove <name>` / `share prune` only after the user confirms what will be deleted.
 5. First-time setup (user-owned): Worker secrets `GOOGLE_CLIENT_SECRET`, `SESSION_SECRET`
    (`npx wrangler@4.151.3 secret put … --name kb`); client id via `share config` or `KB_SHARE_GOOGLE_CLIENT_ID`.
+
+## Snapshots panel (private site)
+
+The private site has a **Snapshots** tab (private builds only — public snapshots never contain it,
+its script, or any `/admin/` path). It lists every `snapshot-*` Worker with kb version, behind-main,
+7-day views, built date and online state, with Open / Copy link / Delete (type the Worker name to
+confirm), shows an orphan / "not ours" banner from a **dry-run** prune, and a "New snapshot" box
+that builds `pixi run share -- snapshot <name> kb-x.y.z` for you to run on the Mac (creating and
+`prune --apply` stay CLI-only).
+
+API (`meta/share/worker/admin.js`, behind the sign-in session + `ALLOWED_EMAILS` (or `ADMIN_EMAILS`)
++ header `X-KB-Admin: 1` + same-origin `Origin` for writes): `GET /admin/api/snapshots`,
+`DELETE /admin/api/snapshots/<worker>` with body `{"confirm": "<worker>"}`, `POST /admin/api/prune`
+(dry run). Behind-main in the panel is an approximation (patch difference within one x.y); the CLI's
+`share list` is exact.
+
+**One-time setup (user-owned):** Cloudflare dashboard → My Profile → API Tokens → Create custom
+token with **Account → Workers Scripts → Edit** (list + delete) and **Account → Account Analytics →
+Read** (views), scoped to this account. Copy it, then:
+
+```bash
+pbpaste | npx wrangler@4.151.3 secret put CF_API_TOKEN --name kb && pbcopy < /dev/null
+```
+
+`CF_ACCOUNT_ID` is rendered as a plain var by `deploy-main`. Until the secret exists the API answers
+503 and the tab shows this hint. Never paste the token into chat or `share.toml`.
 
 ## Output
 
