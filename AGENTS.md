@@ -44,6 +44,8 @@ pixi run sync-skills               copy meta/skills/ → .cursor/skills/ (after 
 pixi run export-kb                 zip wiki + think → .exported/ (LLM share)
 pixi run lanes                     pending changes per git lane
 pixi run ops -- status             knowledge version, sessions, hooks (also: log, snapshot, undo, restore)
+pixi run ops -- record <op> <target> "summary" <paths…>   commit already-modified knowledge as one op
+pixi run ship -- prune [--apply]   delete merged infra/* and worktree-* branches
 pixi run daily-sync                nightly: commit think/ edits + leftovers, push main + tags
 pixi run ship -- start|commit|pr|merge   tooling via infra/<feature> PRs (on demand)
 pixi run install-hooks             use meta/githooks (commit-msg, pre-commit, pre-push)
