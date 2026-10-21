@@ -96,6 +96,7 @@ pixi run sync-skills    # fails if lint-skills fails
 python3 -m meta.ingest resolve <url|arxiv|slug|title>  # check vault first (0 LLM)
 python3 -m meta.ingest scrap <url|path> [--type articles|notes|slides|web|blog]
 python3 -m meta.ingest scrap-gdrive --dry-run
+python3 -m meta.ingest scrap-wordpress <site> --prefix <hub short>   # whole WordPress.com blog → inbox
 python3 -m meta.ingest scrap-mail <mbox-or-eml> [--slug thread-slug] [--force]
 python3 -m meta.ingest catalog <inbox-path> [--collection <hub|person>] [--format <folder>] [--title T]
 python3 -m meta.ingest drain-inbox [--collection <hub|person>]

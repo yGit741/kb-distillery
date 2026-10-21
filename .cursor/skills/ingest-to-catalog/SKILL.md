@@ -47,6 +47,9 @@ for a slide-deck PDF). `--title` names the row added to a course/series `## Cont
 - `--collection <course-|series->`: corpus `collection` set **and** a `—` row appended to the
   hub's `## Contents` table. Other members are renamed `<short>-<topic>.<ext>` (hub `short:`).
 - `--collection <book-|person>`: corpus `collection` cell only (person = researcher bibliography).
+- An image named `<clip stem>-NN.<ext>` whose clip is in the inbox or `raw/web-clips/` is that clip's figure:
+  it goes to `raw/images/` with no collection and lint binds it as `asset:<clip>` (never backlog, never a hub row).
+  `drain-inbox` catalogs clips before figures and lints once at the end.
 - A paper gets a `wiki/paper-<year>-<title>.md` stub and a tagged blog post a `blog-…` page, both
   `digestion-status: catalog`, `status: to-read`. Emails, chats, handwriting and slides stay corpus
   rows until digested. Every outcome (success or refusal + reason) is logged in `meta/.catalog/`.
