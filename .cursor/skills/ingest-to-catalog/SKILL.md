@@ -22,7 +22,7 @@ description: Move inbox files to raw/ format folders, record collection membersh
 
 ```bash
 python3 -m meta.ingest catalog <inbox-path> [--collection <hub|person>] [--format <folder>] [--title T]
-python3 -m meta.ingest drain-inbox [--collection <hub|person>]
+python3 -m meta.ingest drain-inbox [--collection <hub|person>] [--match <name prefix>]
 ```
 
 `--course` is an alias of `--collection`. `--format` overrides detection (e.g. `presentations`
