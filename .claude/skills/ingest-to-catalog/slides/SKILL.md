@@ -1,18 +1,27 @@
 ---
 name: ingest-to-catalog-slides
-description: Catalog slides from inbox to raw/slides/. Stub. Do NOT digest from here.
+description: Catalog slide decks from inbox to raw/presentations/. Corpus row only. Do NOT digest from here.
 ---
 
 # ingest-to-catalog / slides
 
 **LLM tier:** none · **Budget:** 0 tokens
 
-**Status:** stub
-
 ## Triggers
 
-- `catalog slides` (stub)
+- `catalog` on an inbox `.ppt`/`.pptx`/`.key`, or a slide-deck PDF with `--format presentations`
 
 ## Do NOT
 
-- Digest until catalog route is implemented
+- Digest from here — a digested deck becomes a `lecture-` page via `full-digest <hub> --row N`
+
+## Behavior
+
+1. Move to `raw/presentations/<short>-<topic>.<ext>` (`short` = the collection hub's `short:`)
+2. Corpus row; with a course/series collection, a `—` Contents row is appended (`--title`)
+
+## CLI
+
+```bash
+python3 -m meta.ingest catalog raw/inbox/<deck>.pdf --format presentations --collection course-runi-rl --title "Lecture 3 · DP"
+```

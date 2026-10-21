@@ -18,16 +18,18 @@ description: Thesis-critical deep digest with neighbor links (~25-40k+ tokens, H
 - Auto-trigger from `digest`, `full-digest`, or paper mentions
 - Trigger on bare `digest` — ask tier first
 - Run without `--confirm-heavy` on CLI
-- Skip neighbor / MOC / q- stub planning
+- Skip neighbor / theme / q- stub planning
 
 ## CLI
 
 ```bash
 python3 -m meta.ingest deep-digest <raw> --confirm-heavy
+python3 -m meta.ingest deep-digest <hub-slug> --row N --confirm-heavy   # course/series row
 ```
 
-Same pipeline as `full-digest` plus extended `plan.json` (neighbor papers, q- stubs, MOC threads).
+Same pipeline as `full-digest` plus extended `plan.json` (neighbor papers, q- stubs, `theme-*` threads).
 Books are digested one part at a time (`--part N` / `--pages A-B`) — see full-digest § Books.
+Course/series rows use `--row N`; the page type follows the raw format — see full-digest § Course / series rows.
 
 ## Output
 

@@ -35,10 +35,10 @@ python3 -m meta.ingest abort <sha>
 ## Agent steps after `begin` / `full-digest`
 
 1. Run `extract` — read `meta/.ingest/<sha>/extracted.text` (first 25 pages). If
-   the raw entity has a `parsed.md` sidecar (e.g. `raw/mail/<thread>/parsed.md`),
+   the raw entity has a `parsed.md` sidecar (e.g. `raw/emails/<YYYY-MM-DD-thread>/parsed.md`),
    `extracted.text` is that sidecar's content instead of raw PDF/thread text.
 2. Write `claims.json` with real LaTeX equations, results, concepts.
-3. Set `person` from `raw/papers/<person>/…` when applicable.
+3. Set `person` when the raw file's corpus `collection` names a person page (researcher bibliography).
 4. Re-run `extract` to validate.
 5. `map` → `draft` → review `staging/` → `finalize`.
 
@@ -52,22 +52,40 @@ python3 -m meta.ingest toc <raw>                     # [x] digested · [ ] backl
 python3 -m meta.ingest full-digest <raw> --part N    # a row; --pages A-B carves a new one
 ```
 
-The session id is `<sha>-p<A>-<B>`. `map` names the page `<book-slug>-<topic>` with
-`type: part`; `finalize` ticks the row on the book page (creating it on the first part).
+The session id is `<sha>-p<A>-<B>`. `map` names the page `part-<book stem>-<topic>` with
+`type: part`; `finalize` ticks the row on the `book-<stem>` page (creating it on the first part;
+a long handwritten PDF gets a `notebook-<stem>` hub instead).
 `claims.json` `title` is the part's title; set `book_title` too when the book page is new.
 After the first part, write the book page's `## Overview` paragraph — lint warns until it exists.
+
+## Course / series rows
+
+A `course-`/`series-` hub's `## Contents` table lists its member raw files. Digest one row by
+passing the hub slug (the row's raw files are read together, e.g. slides + handwritten notes):
+
+```bash
+python3 -m meta.ingest full-digest course-runi-rl --row 3
+```
+
+The page type follows the raw format: `presentations/`, `handwritten/` → `lecture-`;
+`emails/` → `conversation-`; `web-clips/` or non-PDF `printed-docs/` → `article-` (a tagged blog
+post → `blog-`); `printed-docs/` PDF → `paper-`. LLM chats (`llm-chats/`) are not digested here —
+they become `chat-` pages through the chat pipeline, which needs their `meta/chats/` tree.
+`finalize` ticks the row (`full`) and links the new page. Passing a raw path that is a hub
+member auto-scopes to its row.
 
 ## Output
 
 `digestion-status: full`, `status: digested`, Key equations required at finalize.
-For a book: a `type: part` page plus an updated `type: book` partition row.
+For a book: a `type: part` page plus an updated partition row. For a hub row: a reading-unit
+page plus a ticked Contents row.
 
 ## Quality bar
 
 - Key equations: real LaTeX, not `—`
 - Concepts link to existing wiki slugs
-- MOC `## Papers` updated via finalize
-- Person link when raw is under researcher folders
+- `theme-*` `## Papers` updated via finalize
+- Person link when the raw file's `collection` names a researcher
 
 ## Commit
 

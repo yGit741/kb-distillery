@@ -52,7 +52,9 @@ python3 -m meta.ingest index-researcher verify <slug>
 python3 -m meta.ingest index-researcher finalize <slug>
 ```
 
-Writes `wiki/<slug>.md` and catalogs star-tier papers (≤10) to `raw/papers/<slug>/` with `digestion-status: catalog`.
+Writes `wiki/<slug>.md` (person, bare slug) and catalogs star-tier papers (≤10) to
+`raw/printed-docs/<year>-<title>.pdf` with `paper-` stubs (`digestion-status: catalog`). Their
+corpus `collection` names the person page — that is the bibliography link (no per-person folder).
 
 ```bash
 python3 -m meta.ingest index-researcher abort <slug>
@@ -65,7 +67,7 @@ python3 -m meta.ingest index-researcher status
 |----------|---------|
 | Person page | Full bibliography + books + courses |
 | Paper stubs | ≤10 catalog-tier nodes only |
-| Corpus | Cataloged PDFs as `queued` |
+| Corpus | Cataloged PDFs as `queued`, `collection` = person slug |
 
 ## Quality bar
 

@@ -61,8 +61,8 @@ python3 -m meta.distill abort my-true-research-start-here
 
 | action | target |
 |--------|--------|
-| `append_threads` | MOC `## Threads` |
-| `append_papers` | MOC `## Papers` |
+| `append_threads` | `theme-*` `## Threads` |
+| `append_papers` | `theme-*` `## Papers` |
 | `update_section` | q-* section (e.g. Current state) |
 | `append_related` | concept `related:` frontmatter |
 

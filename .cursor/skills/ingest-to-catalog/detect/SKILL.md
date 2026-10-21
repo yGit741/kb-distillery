@@ -1,6 +1,6 @@
 ---
 name: ingest-to-catalog-detect
-description: Detect inbox file type and route to ingest-to-catalog handler. Zero LLM. Do NOT digest from here.
+description: Detect an inbox file's format folder and route to the ingest-to-catalog handler. Zero LLM. Do NOT digest from here.
 ---
 
 # ingest-to-catalog / detect
@@ -17,24 +17,28 @@ description: Detect inbox file type and route to ingest-to-catalog handler. Zero
 
 ## Routing rules
 
-| Signal | Handler |
-|--------|---------|
-| `.pdf` + paper-like name (`YYYY-kebab.pdf`) | articles |
-| `.pdf` (other) | articles (rename on catalog) |
-| directory named `mail-*` | mail |
-| `.ppt`, `.pptx`, `.key` | slides (stub) |
-| `.md` matching You/Gemini turn markers (content-sniffed) | chat |
-| `.md`, `.html`, `.htm` (other) | web (stub) |
-| images (`.png`, `.jpg`, …) | notes (stub) |
-| default | articles if PDF else notes |
+`raw/` is split by format (how the bytes were produced). Typed → `printed-docs`, by hand →
+`handwritten`, slides → `presentations` whatever the extension.
+
+| Signal | Format folder | Handler |
+|--------|---------------|---------|
+| `.pdf` with a text layer (≥200 chars/page over the first pages) | `printed-docs` | articles |
+| `.pdf` without a text layer (reMarkable ink, scan) | `handwritten` | notes |
+| directory named `mail-*` | `emails` | mail |
+| `.ppt`, `.pptx`, `.key` | `presentations` | slides |
+| `.md` matching You/Gemini turn markers (content-sniffed) | `llm-chats` | chat |
+| `.md`, `.html`, `.htm` (other) | `web-clips` | web / blog |
+| images (`.png`, `.jpg`, …) | `images` | — |
+| anything else | error — pass `--format` | |
+
+A slide deck exported as PDF has a text layer and lands in `printed-docs` — pass
+`--format presentations`.
 
 ## CLI
 
-Detection runs inside:
-
 ```bash
-python3 -m meta.ingest catalog raw/inbox/<file>
+python3 -m meta.ingest catalog raw/inbox/<file> [--format <folder>]
 python3 -m meta.ingest drain-inbox
 ```
 
-Prints detected type before routing.
+Prints `format → <folder>` before routing.

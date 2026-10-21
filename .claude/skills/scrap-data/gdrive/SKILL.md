@@ -85,4 +85,4 @@ polls for up to 60 s. If it still fails, the account needs a manual sign-in.
 
 ## Next step
 
-`ingest-to-catalog` to route the inbox into typed `raw/` folders and create wiki stubs.
+`ingest-to-catalog` to route the inbox into `raw/<format>/` folders (with `--collection` for course material).

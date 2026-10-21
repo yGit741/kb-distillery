@@ -38,14 +38,14 @@ Read `meta/skills/<skill>/SKILL.md` before running a workflow.
 |-------|---------|
 | [export-kb](export-kb/SKILL.md) | Zip wiki + think for external LLM sharing (0 LLM) |
 | [scrap-data](scrap-data/SKILL.md) | Save bytes to `raw/inbox/` (0 LLM) |
-| [ingest-to-catalog](ingest-to-catalog/SKILL.md) | Route inbox → typed `raw/` + wiki stub (0 LLM) |
+| [ingest-to-catalog](ingest-to-catalog/SKILL.md) | Route inbox → `raw/<format>/` + corpus `collection` (+ `paper-` stub) (0 LLM) |
 | [easy-digest](easy-digest/SKILL.md) | Abstract/metadata skim (light) |
-| [full-digest](full-digest/SKILL.md) | Standard paper note, 25 pp extract (medium) |
+| [full-digest](full-digest/SKILL.md) | Standard note — paper, book part, or course/series row (medium) |
 | [deep-digest](deep-digest/SKILL.md) | Thesis-critical + neighbors (heavy, explicit only) |
 | [distill-think](distill-think/SKILL.md) | Propose/apply from `think/` → transient `distilled-think-*` (medium) |
 | [query-kb](query-kb/SKILL.md) | Answer from wiki — index-first, citations, optional file-back |
 | [semantic-lint-hop](semantic-lint-hop/SKILL.md) | 1-hop review after ingest/distill — fix internal, note external on Connections |
-| [lint-moc](lint-moc/SKILL.md) | On-demand theme MOC semantic pass |
+| [lint-moc](lint-moc/SKILL.md) | On-demand semantic pass over one `theme-` page |
 | [build-researcher-profile](build-researcher-profile/SKILL.md) | Index full bib + catalog star papers only (light verify) |
 
 ### Lifecycle skills (git history, versions, PRs)
@@ -97,19 +97,20 @@ python3 -m meta.ingest resolve <url|arxiv|slug|title>  # check vault first (0 LL
 python3 -m meta.ingest scrap <url|path> [--type articles|notes|slides|web|blog]
 python3 -m meta.ingest scrap-gdrive --dry-run
 python3 -m meta.ingest scrap-mail <mbox-or-eml> [--slug thread-slug] [--force]
-python3 -m meta.ingest catalog <inbox-path> [--course misc]
-python3 -m meta.ingest drain-inbox [--course misc]
+python3 -m meta.ingest catalog <inbox-path> [--collection <hub|person>] [--format <folder>] [--title T]
+python3 -m meta.ingest drain-inbox [--collection <hub|person>]
 python3 -m meta.ingest easy-digest <slug|raw>
 python3 -m meta.ingest full-digest <raw>    # begin→extract→map→draft→finalize
+python3 -m meta.ingest full-digest <hub-slug> --row N   # one course/series Contents row
 python3 -m meta.ingest deep-digest <raw> --confirm-heavy
 python3 -m meta.distill propose <think-file> [--from bootstrap.md]
 python3 -m meta.distill revise <think-file>
 python3 -m meta.distill apply <think-file> [--cleanup]
 python3 meta/query.py candidates "<keywords>"
-python3 meta/query.py mocs
+python3 meta/query.py mocs                    # theme- entry points
 python3 meta/coherence.py status
 python3 meta/semfind.py bundle --seeds wiki/foo.md --source manual
-python3 meta/semfind.py moc moc-info-theory
+python3 meta/semfind.py theme theme-info-theory   # `moc` alias kept
 python3 meta/export.py
 pixi run lint-skills
 pixi run ops -- status

@@ -25,5 +25,5 @@ python3 -m meta.ingest scrap <arxiv-or-pdf-url> --type articles
 
 ## Do NOT
 
-- Rename to final `raw/papers/` path — `ingest-to-catalog/articles` does that
+- Rename to final `raw/printed-docs/` path — `ingest-to-catalog/articles` does that
 - Read PDF content

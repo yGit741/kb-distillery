@@ -1,18 +1,27 @@
 ---
 name: ingest-to-catalog-web
-description: Catalog web clips from inbox to raw/web/. Stub. Do NOT digest from here.
+description: Catalog web clips from inbox to raw/web-clips/. Corpus row only. Do NOT digest from here.
 ---
 
 # ingest-to-catalog / web
 
 **LLM tier:** none · **Budget:** 0 tokens
 
-**Status:** stub
-
 ## Triggers
 
-- `catalog web` (stub)
+- `catalog` on an inbox `.md`/`.html`/`.htm` that is not a chat export
 
 ## Do NOT
 
-- Digest until catalog route is implemented
+- Digest from here — a digested clip becomes an `article-` page
+
+## Behavior
+
+1. Move to `raw/web-clips/<topic>.<ext>` (prefixed with the hub's `short:` when it joins one)
+2. Corpus row; with a course/series collection, a `—` Contents row is appended
+
+## CLI
+
+```bash
+python3 -m meta.ingest catalog raw/inbox/<clip>.md [--collection <hub>]
+```
