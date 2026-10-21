@@ -49,10 +49,10 @@ pixi run distill-apply -- <slug>   apply distill plan to public KB
 pixi run lint-skills               validate skill definitions
 pixi run sync-skills               copy meta/skills/ → .cursor/skills/ (after lint-skills)
 pixi run export-kb                 zip wiki + think → .exported/ (LLM share)
-pixi run lanes                     pending changes per git lane
+pixi run lanes                     pending changes per lane + nightly sync, stale worktrees, open PRs
 pixi run ops -- status             knowledge version, sessions, hooks (also: log, snapshot, undo, restore)
 pixi run ops -- record <op> <target> "summary" <paths…>   commit already-modified knowledge as one op
-pixi run ship -- prune [--apply]   delete merged infra/* and worktree-* branches
+pixi run ship -- prune [--apply]   delete merged infra/*, worktree-*, history/* branches + their clean worktrees
 pixi run daily-sync                nightly: commit think/ edits + leftovers, push main + tags
 pixi run ship -- start|commit|pr|merge   tooling via infra/<feature> PRs (on demand)
 pixi run install-hooks             use meta/githooks (commit-msg, pre-commit, pre-push)
@@ -70,10 +70,12 @@ Without pixi, use `python3` equivalents (`python3 meta/lint.py`, `python3 -m met
 | Track | Paths | Committed as | By |
 |-------|-------|--------------|----|
 | knowledge | `wiki/ think/ raw/ index.md meta/{corpus,coherence-warnings,aliases}.tsv meta/log.md meta/chats/` | `kb(<op>): <summary> (kb-x.y.z)` **directly on main, one commit per operation** — ops: `import catalog digest refine distill think undo restore`; trailers `KB-Version KB-Op KB-Target` (+`KB-Reverts`, `KB-Snapshot`) | writer CLIs (`meta.ingest`, `meta.distill`) automatically; free-form wiki edits via `pixi run ops -- begin …` / `commit` (skill `wiki-edit`); your `think/` edits as `kb(think)` before each op and nightly |
-| tooling | `meta/` (code, skills, dashboard, docs), `.cursor/ .claude/ .vscode/`, `pixi.*`, root `*.md`, `.gitignore` | `schema|feat|fix|chore|paradigm(<component>): <imperative summary>` on `infra/<feature>` (scope always required; docs/tests/refactors are `chore`), merged as a merge commit `… (#N)` that takes the highest type of its commits — **never squash** | `pixi run ship -- start/commit/pr/merge` (skill `infra-pr`) — whenever the user asks for a fix/change/feature; **merge only on their OK** |
+| tooling | `meta/` (code, skills, dashboard, docs), `.cursor/ .claude/ .vscode/ .obsidian/` (only `app`, `core-plugins`, `community-plugins` tracked), `pixi.*`, root `*.md`, `.gitignore` | `schema|feat|fix|chore|paradigm(<component>): <imperative summary>` on `infra/<feature>` (scope always required; docs/tests/refactors are `chore`), merged as a merge commit `… (#N)` that takes the highest type of its commits — **never squash** | `pixi run ship -- start/commit/pr/merge` (skill `infra-pr`) — whenever the user asks for a fix/change/feature; **merge only on their OK** |
 | other | anything else | never committed — `pixi run lanes` lists it; gitignore, move or delete | — |
 
-**Versions are knowledge-only:** `kb-x.y.z` — x paradigm, y schema (`SCHEMA_VERSION` in `meta/schema.py`), z step (computed). Tooling is unversioned; a `schema`/`paradigm` PR carries its migration (`meta/migrations/`, `pixi run ops -- migrate` on the branch), snapshots first and bumps y/x on merge. **Snapshots** are annotated tags `kb-x.y.z` (`pixi run ops -- snapshot "label"`). **Undo** one step: `pixi run ops -- undo <sha>`; **restore** a snapshot: `pixi run ops -- restore kb-x.y.z` — both new commits that rewrite only `wiki/`, `meta/aliases.tsv`, `meta/chats/` (never `raw/`, `think/`, `meta/log.md`, generated files) and only on the user's request.
+**Versions are knowledge-only:** `kb-x.y.z` — x paradigm, y schema (`SCHEMA_VERSION` in `meta/schema.py`), z step (computed). Tooling is unversioned; a `schema`/`paradigm` PR carries its migration (`meta/migrations/`, `pixi run ops -- migrate` on the branch), snapshots first (`pre-<feature>`) and again after the merge (`post-<feature>`, the new baseline) and bumps y/x.
+
+**Hygiene is built in, never a gate:** every `kb(...)` step pushes main right away (`--no-push` / `KB_NO_PUSH=1` to defer; the nightly sync is the backstop and `ops status` says whether it is installed and when it last ran); `ship merge` removes its own worktree and local branch; `ship prune --apply` removes merged, clean worktrees and never touches dirty ones; `pixi run lanes` lists stale worktrees, `worktree-*` session branches and open PRs. **Snapshots** are annotated tags `kb-x.y.z` (`pixi run ops -- snapshot "label"`). **Undo** one step: `pixi run ops -- undo <sha>`; **restore** a snapshot: `pixi run ops -- restore kb-x.y.z` — both new commits that rewrite only `wiki/`, `meta/aliases.tsv`, `meta/chats/` (never `raw/`, `think/`, `meta/log.md`, generated files) and only on the user's request.
 
 Agents never run raw `git commit`/`push`/`merge`/`tag`/`revert`/`reset` or `gh pr` — `.cursor/hooks/block-git-write.sh` (→ `meta/git_guard.py`, both Cursor and Claude Code) allows only a single `pixi run ops|ship|daily-sync|…` invocation. `meta/guard.py` warns on wiki writes without an open ops session (blocks once `OPS_STRICT`). Feature work shouldn't touch knowledge paths, except a schema PR's migration.
 
