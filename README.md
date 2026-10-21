@@ -4,6 +4,14 @@ Personal Obsidian knowledge base for exploring MSc thesis directions at RUNI (th
 
 Inspired by the [Karpathy LLM Wiki](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f) pattern: a flat, cross-linked graph of notes that agents can query and extend — with one deliberate addition described below.
 
+## Get started
+
+`pixi run launch` opens the dashboard; its **Start** tab (`/start`) is the guide:
+
+- **Edit knowledge** — say a trigger phrase to the agent (`scrap <url>`, `catalog`, `full-digest <raw>`, `split <concept>`, `distill think <file>`, `undo <step>`, `snapshot "week 43"` …). Each operation lands on main as one commit `kb(<op>): … (kb-x.y.z)`; your `think/` edits are committed as `kb(think)`.
+- **Develop a feature** — `pixi run ship -- start <feature> --worktree` → `ship -- commit "feat(<component>): add …"` → `ship -- pr` → approve → `ship -- merge` (skill `infra-pr`). Tooling never commits to main directly.
+- **Go deeper** — the **Lifecycle** tab (versions, history, snapshots, guardrails), `AGENTS.md`, `meta/skills/README.md`.
+
 ## Layers
 
 | Layer | Path | Who owns it | Rule |
@@ -88,7 +96,8 @@ One-time: `curl -fsSL https://pixi.sh/install.sh | bash`, then restart the shell
 ```bash
 pixi run lint          # schema check + regenerate index
 pixi run health        # vault summary
-pixi run dashboard     # http://127.0.0.1:8765
+pixi run dashboard     # http://127.0.0.1:8765 (Start tab: /start)
+pixi run ops -- status # knowledge version, sessions, hooks
 pixi run export-kb     # LLM share bundle
 ```
 
