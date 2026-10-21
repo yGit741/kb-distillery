@@ -1,6 +1,6 @@
 ---
 name: lint-moc
-description: On-demand theme MOC semantic lint. Fix internal issues; external paper tensions → Connections bullets.
+description: On-demand theme MOC semantic lint. Use for lint-moc, lint moc. Do NOT auto-edit wiki for external disagreements.
 ---
 
 # lint-moc
@@ -10,6 +10,11 @@ description: On-demand theme MOC semantic lint. Fix internal issues; external pa
 ## Triggers
 
 - `lint-moc`, `lint moc`, `check theme moc-info-theory`
+
+## Do NOT
+
+- Auto-edit wiki for `external` paper disagreements — suggest Connections bullets only
+- Run on entire vault — one MOC at a time
 
 ## Phase 1 — bundle (0 LLM)
 

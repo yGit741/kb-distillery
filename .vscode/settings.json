@@ -1,6 +1,17 @@
 {
   "obsidianPreview.vaultPath": "/Users/yonatanm/Library/CloudStorage/OneDrive-Mobileye/Documents/Personal/RUNI/Thesis Knowledge Base",
   "obsidianPreview.port": 27123,
+  "python.defaultInterpreterPath": "${workspaceFolder}/.pixi/envs/default/bin/python",
+  "files.exclude": {
+    "**/.agents": true,
+    "**/.claude": true,
+    "**/.copilot": true,
+    "**/.cursor": true,
+    "**/.opencode": true,
+    "**/.pixi": true,
+    "**/.exported": true,
+    "**/copilot": true
+  },
   "[markdown]": {
     "editor.wordWrap": "on",
     "editor.lineNumbers": "off",
