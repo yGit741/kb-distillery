@@ -1,6 +1,6 @@
 ---
 name: ingest-to-catalog-mail
-description: Catalog a raw/inbox/mail-.../ thread bundle to raw/mail/ and create a type source wiki stub. Zero LLM. Do NOT digest from here.
+description: Catalog a raw/inbox/mail-.../ thread bundle to raw/emails/ as a corpus row (no wiki stub). Zero LLM. Do NOT digest from here.
 ---
 
 # ingest-to-catalog / mail
@@ -13,22 +13,20 @@ description: Catalog a raw/inbox/mail-.../ thread bundle to raw/mail/ and create
 
 ## Do NOT
 
-- Digest — use easy/full/deep digest skills after catalog
-- Hand-edit `raw/mail/` — it is immutable once cataloged, same as any `raw/` content
+- Digest — use easy/full/deep digest skills after catalog (a digested thread is a `conversation-` page)
+- Hand-edit `raw/emails/` — immutable once cataloged; only the agent `parsed.md` sidecar may be added
+- Create a wiki stub — the thread stays a corpus row until it is worth digesting
 
 ## Behavior
 
-1. Move `raw/inbox/mail-<dir>/` → `raw/mail/<dir>/` (folder stays intact: `thread.md` +
-   flat attachments)
-2. Create `wiki/source-mail-<slug>.md` (slug = folder name minus the date prefix):
-   `type: source`, `format: email`, `status: to-read`, `raw:` pointing at the
-   **directory** (trailing slash) — same pattern as `format: course` pages
-3. Run lint (via caller)
+1. Move `raw/inbox/mail-<YYYY-MM-DD-thread>/` → `raw/emails/<YYYY-MM-DD-thread>/` (folder stays
+   intact: `thread.md` + flat attachments). `emails/` is the only nested raw folder.
+2. Optional `--collection` → corpus `collection` on `thread.md` (+ a Contents row on a
+   course/series hub)
+3. Lint runs at the end
 
 ## CLI
 
 ```bash
-python3 -m meta.ingest catalog raw/inbox/mail-<dir>
+python3 -m meta.ingest catalog raw/inbox/mail-<dir> [--collection <hub|person>]
 ```
-
-No `--course` — mail threads are flat under `raw/mail/`, not grouped by course.

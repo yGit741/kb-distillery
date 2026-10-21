@@ -16,8 +16,8 @@ Inspired by the [Karpathy LLM Wiki](https://gist.github.com/karpathy/442a6bf5559
 
 | Layer | Path | Who owns it | Rule |
 |-------|------|-------------|------|
-| **Raw** | `raw/` | You | Immutable inputs — PDFs, slides, handwritten notes. Agents never write here. |
-| **Wiki** | `wiki/` | Agents (+ you via Obsidian) | Public knowledge graph — concepts, papers, questions, MOCs. Schema-enforced. |
+| **Raw** | `raw/` | You | Immutable inputs, split by format: `printed-docs/ handwritten/ presentations/ llm-chats/ emails/ web-clips/ images/` + `inbox/`. Agents never write here. |
+| **Wiki** | `wiki/` | Agents (+ you via Obsidian) | Public knowledge graph — reading units (`paper-` `lecture-` …), hubs (`book-` `course-` …), `theme-` pages, concepts, questions. Schema-enforced. |
 | **Think** | `think/` | **You only** | Slow, schema-free deliberation. Messy, personal, advisor notes, gut feelings. |
 | **Meta** | `meta/` | Tooling | Linter, ingest/distill pipelines, skills, generated manifests. |
 
@@ -28,9 +28,9 @@ The wiki is the **published** graph. Think is the **private workshop**. That spl
 Most wikis mix rough notes and polished synthesis in one folder. Here they are separated on purpose:
 
 1. **You write freely in `think/`** — no frontmatter rules, no section templates, no agent edits. Guardrails block agents from touching it.
-2. **When ready, you distill** — an agent reads `think/`, produces a transient review page (`wiki/distilled-think-*.md`) with a prose **Summary** and a **Proposed propagation** table (which MOCs, questions, and concepts should change).
+2. **When ready, you distill** — an agent reads `think/`, produces a transient review page (`wiki/distilled-think-*.md`) with a prose **Summary** and a **Proposed propagation** table (which themes, questions, and concepts should change).
 3. **You review** — edit the Summary, accept or reject individual proposals. Nothing public changes until you say so.
-4. **You propagate** (`apply`) — approved edits land in the public wiki (thread bullets on MOCs, `Current state` on questions, `related:` on concepts). Lint runs; failures roll back.
+4. **You propagate** (`apply`) — approved edits land in the public wiki (thread bullets on theme pages, `Current state` on questions, `related:` on concepts). Lint runs; failures roll back.
 5. **Repeat periodically** — think accumulates between distill passes. The KB advances in deliberate batches, not continuous agent churn.
 
 Personal deliberation stays human-owned; the graph stays clean and citable. Exploration compounds instead of dying in a scratch file or a chat transcript.
@@ -44,7 +44,7 @@ flowchart LR
   Distilled["wiki/distilled-think-*.md\nSummary + proposals"]
   end
   subgraph public [Public KB]
-  Wiki["wiki/*.md\nconcepts · papers · q-* · moc-*"]
+  Wiki["wiki/*.md\nconcepts · paper-* · q-* · theme-*"]
   end
   Think -->|propose / revise| Distilled
   Distilled -->|apply when approved| Wiki
@@ -68,17 +68,17 @@ Parallel track for external sources — papers, slides, course notes:
 ```mermaid
 flowchart LR
   Inbox["raw/inbox/"] --> Catalog["catalog"]
-  Catalog --> Raw["raw/papers|notes|slides/"]
+  Catalog --> Raw["raw/&lt;format&gt;/ + corpus collection"]
   Raw --> Digest["easy / full / deep digest"]
-  Digest --> Wiki["wiki/slug.md"]
+  Digest --> Wiki["wiki/&lt;type&gt;-slug.md"]
   Wiki --> Lint["meta/lint.py"]
 ```
 
 | Step | What happens |
 |------|----------------|
 | **Scrap** | URL or file → `raw/inbox/` (dedup via `resolve` first) |
-| **Catalog** | Inbox → typed `raw/` path + wiki stub |
-| **Digest** | Agent writes paper note (`easy` skim · `full` standard · `deep` thesis-critical) |
+| **Catalog** | Inbox → `raw/<format>/` (flat; never moves again) + corpus row with its `collection` (course/series/book hub or researcher); papers also get a `paper-` stub |
+| **Digest** | Agent writes the note (`easy` skim · `full` standard · `deep` thesis-critical) — a paper, a book part, or a course/series row (`--row N` → `lecture-`/`article-`/`conversation-`/`paper-`) |
 | **Lint** | Regenerates `index.md`, `meta/corpus.tsv`; blocks illegal writes |
 
 `meta/corpus.tsv` tracks every raw file — nothing is silently forgotten. Re-annotating a digested PDF on the tablet re-queues it automatically.
@@ -86,7 +86,7 @@ flowchart LR
 ## Query and maintenance
 
 - **Query the vault:** `python3 meta/query.py candidates "<keywords>"` → read pages → answer with `[[wikilinks]]` (`query-kb` skill).
-- **Theme health:** `python3 meta/coherence.py status`, `python3 meta/semfind.py moc moc-info-theory`.
+- **Theme health:** `python3 meta/coherence.py status`, `python3 meta/semfind.py theme theme-info-theory`.
 - **Share with another LLM:** `python3 meta/export.py` → `.exported/yonatan-thesis-kb-<timestamp>.zip`.
 
 ## Environment

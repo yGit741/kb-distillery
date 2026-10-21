@@ -12,17 +12,24 @@ Personal knowledge base for an MSc in theoretical ML. **The thesis topic is not 
 | **Meta** | `meta/` | Schema, templates, log. |
 
 ```
-raw/inbox/            reMarkable sync target. Any shape. MUST drain to zero.
-raw/papers/<course>/  academic PDFs
-raw/slides/<course>/  lecture decks, presentations
-raw/notes/<course>/   handwritten notes, recaps, scratch
-raw/mail/<thread>/    email thread bundle (thread.md + flat attachments)
-raw/web/  raw/assets/ clips, images (flat)
-raw/chats/             LLM chat exports (flat)
-wiki/                 flat agent-owned notes
-think/                human slow space (not linted)
-_quarantine/          staged for deletion, gitignored, not part of the vault
+raw/inbox/              the single unclassified queue. Any shape. Drains (warn >30 days, error ≥50 files)
+raw/printed-docs/       typed: papers, books, course books, typed notes, blog posts
+raw/handwritten/        by hand: reMarkable notebooks, handwritten summaries
+raw/presentations/      slide decks (pdf, pptx, key)
+raw/llm-chats/          LLM conversation exports (md)
+raw/emails/<YYYY-MM-DD-thread>/  thread.md + attachments + parsed.md sidecar — the only nested folder
+raw/web-clips/          Web Clipper pages (md, html)
+raw/images/             screenshots, figures
+wiki/                   flat agent-owned notes; filename prefix = type
+think/                  human slow space (not linted)
+_quarantine/            staged for deletion, gitignored, not part of the vault
 ```
+
+`raw/` is split by **format** (how the bytes were produced), never by course or person, and is flat
+below the format folder. Split rule: typed → `printed-docs/` (even if annotated), by hand →
+`handwritten/` (catalog detects this from the PDF text layer), slides → `presentations/` whatever
+the extension. Membership lives in the corpus `collection` column — **a raw file never moves after
+catalog**; reclassifying it means editing that cell.
 
 ## meta/lint.py IS the schema
 
@@ -99,21 +106,38 @@ Map what the user says to a skill before acting; read that skill's `SKILL.md`, t
 ## Frontmatter
 
 ```yaml
-type: concept | question | person | paper | book | part | source | moc | distilled-think
-status: seed|growing|solid   (question: open|partial|resolved; paper/book/part: to-read|reading|digested; distilled-think: review|applied|archived)
-digestion-status: catalog|easy|full|deep   # papers and book parts — depth of write-up
-area: [info-theory]          # papers/books/parts: theme slugs only (whitelist in meta/schema.py THEME_SLUGS)
+type: paper | part | lecture | article | video | conversation | ai-chat | blog-post   # reading units
+      book | notebook | course | series                                              # collection hubs
+      theme | concept | person | question | distilled-think                          # graph
+status: seed|growing|solid   (theme/concept/person; question: open|partial|resolved; reading units + hubs: to-read|reading|digested; distilled-think: review|applied|archived)
+digestion-status: catalog|easy|full|deep   # every reading unit — catalog ⇒ to-read|reading, easy/full/deep ⇒ digested
+area: [info-theory]          # reading units/hubs: theme slugs only (whitelist in meta/schema.py THEME_SLUGS)
 related: [tensor-rank]       # bare slugs — wiki/ is flat, so no paths
-raw: raw/papers/x/y.pdf      # paper/source/book/part; `none` + a `url:` if read externally
-book_pages: 419              # book only — total PDF pages
+aliases: [old-slug]          # renamed pages keep their old slug; `meta.ingest resolve <old-slug>` finds them
+raw: raw/printed-docs/y.pdf  # reading units + book/notebook (a list for multi-file lectures); `none` + a `url:` if read externally
+book_pages: 419              # book/notebook only — total PDF pages
 book: <book-slug>            # part only — its hub; plus section: and section_pages: A-B
+course: <course-slug>        # lecture — its hub
+short: rl                    # course/series — filename prefix of its raw members
+institution: runi            # course only, plus course_code:, semester:, lecturer:
 ```
 
-Wikilinks are always bare: `[[tensor-rank]]`, never `[[concepts/tensor-rank]]`. Paths into `raw/` go in backticks, not wikilinks.
+| Prefix | Type | Prefix | Type |
+|--------|------|--------|------|
+| `paper-` | paper | `book-` | book (long PDF) |
+| `part-` | part (`part-<book stem>-<topic>`) | `notebook-` | notebook (long handwritten PDF) |
+| `lecture-` | lecture | `course-` | course (`course-<institution>-<name>`) |
+| `article-` | article (blog, web clip, tutorial) | `series-` | series (`series-<author>-<name>`) |
+| `video-` | video | `theme-` | theme — exactly the 10 THEME_SLUGS |
+| `conversation-` | conversation (LLM chat / email thread) | `q-` | question |
+| `distilled-think-` | distilled-think | *(bare)* | concept, person |
+
+Removed types: `source`, `moc`, `meta`. Wikilinks are always bare: `[[tensor-rank]]`, never `[[concepts/tensor-rank]]`. Paths into `raw/` go in backticks, not wikilinks.
 
 ## The corpus manifest
 
 `meta/corpus.tsv` has one row per file in `raw/`. Nothing can be silently forgotten.
+Columns: `path sha1 kind disposition slug collection` — hand-edit only `disposition` and `collection`.
 
 | disposition | meaning |
 |-------------|---------|
@@ -121,14 +145,40 @@ Wikilinks are always bare: `[[tensor-rank]]`, never `[[concepts/tensor-rank]]`. 
 | `digested` | a wiki page cites it via `raw:` |
 | `partial` | **a book with only some chapters digested** — the rest is still backlog |
 | `skip` | explicitly not worth a note (a decision, not neglect) |
+| `sidecar` | agent-written `parsed.md` inside an email thread folder |
 | `dupe:<path>` | superseded by another file |
 | `ink:<path>` | reMarkable annotation overlay belonging to `<path>` |
 
 The linter maintains it: a new file appears as `queued`; a file gone from disk is removed; **a sha1 change on a `digested` file re-opens it as `queued`** — so re-annotating a paper on the tablet automatically re-queues it.
 
+**`collection`** — comma-separated hub or person slugs the file belongs to (`course-runi-rl`,
+`book-…`, `series-…`, or a researcher's person page such as `nadav-cohen` for their
+bibliography). Lint checks every slug is a hub or person page, and that each course/series
+`## Contents` table lists **exactly** the files whose `collection` names it.
+
+## Course and series hubs
+
+A `course-` / `series-` page is a hub over member raw files: Overview → Contents → Threads
+(`meta/hubs.py`, `meta/templates/course.md`, `series.md`). Each Contents row is one reading unit —
+usually one file, sometimes several (slides + the handwritten notes taken in that lecture):
+
+```
+| # | Item | Raw | Status | Note |
+|---|------|-----|--------|------|
+| 1 | Lecture 1 · Introduction | `raw/presentations/rl-lecture-01-introduction.pdf` | full | [[lecture-rl-01-introduction]] |
+| 2 | Lecture 2 · MDPs | `raw/presentations/rl-02.pdf` `raw/handwritten/rl-mdp.pdf` | — | |
+| 3 | Course book | `raw/printed-docs/rl-course-book.pdf` | partial | [[book-rl-course-book]] |
+```
+
+Row status: `skip` | `—` (backlog) | `partial` (the row is itself a book/notebook hub) | `easy` |
+`full` | `deep`. **The table is the truth for member dispositions** — a `—` row is backlog.
+A row's identity is its raw paths; `#` is display order. The hub's `status` follows its rows.
+
 ## Naming
 
-`raw/papers/` uses **`<year>-<kebab-title>.pdf`** — lowercase, hyphens, no spaces. Sortable, greppable, and the year is metadata you would otherwise have to open the file to find.
+Every format folder except `emails/` is flat; names are lowercase ASCII kebab, unique across the
+vault. Papers and books use **`<year>-<kebab-title>.pdf`** — sortable, greppable, and the year is
+metadata you would otherwise have to open the file to find.
 
 ```
 2023-toolformer.pdf
@@ -137,7 +187,9 @@ The linter maintains it: a new file appears as `queued`; a file gone from disk i
 
 The linter enforces the pattern and cross-checks the filename year against the digest's `year:` frontmatter, so the two cannot drift apart.
 
-Non-paper sources are named **by origin**: `<source>-<sub-source>-<topic>`, lowercase ASCII kebab.
+Other members of a course/series are named **`<short>-<topic>.<ext>`**, where `short` is the hub's
+`short:` frontmatter (`rl-lecture-01-introduction.pdf`). Email thread folders are
+`<YYYY-MM-DD>-<kebab-thread>`. Older origin-named sources keep their prefixes:
 
 | Origin | Pattern | Example |
 |---|---|---|
@@ -145,7 +197,7 @@ Non-paper sources are named **by origin**: `<source>-<sub-source>-<topic>`, lowe
 | Linear Algebra 1 | `linear-algebra-1-<daniel-notes-on-maman\|course-book\|theorem-and-definitions>-<topic>` | `linear-algebra-1-daniel-notes-on-maman-01.pdf` |
 | Linear Algebra 2 | `linear-algebra-2-course-book-<part>` | `linear-algebra-2-course-book-part-a.pdf` |
 
-Provenance is kept, not lost: the original name lives in `meta/raw-renames.tsv` (old → new, applied by `meta/rename_raw.py`, which also carries `corpus.tsv` rows and rewrites wiki references) and, for `.md`, in frontmatter `original_name`/`title`/`aliases`. Raw `.md` files carry filter tags — `source/blog-not-exact`, `source/course-book`, `source/daniel-notes-on-maman`, `source/theorem-and-definitions`, `subject/<x>`, `course/<x>`; PDFs are filtered by filename prefix (`file:linear-algebra-1-`). Other notes, lecture decks, chats and mail still keep their original names until migrated the same way.
+Provenance is kept, not lost: the original name lives in `meta/raw-renames.tsv` (old → new, applied by `meta/rename_raw.py`, which also carries `corpus.tsv` rows and rewrites wiki references) and, for `.md`, in frontmatter `original_name`/`title`/`aliases`. Raw `.md` files carry filter tags — `source/blog-not-exact`, `source/course-book`, `source/daniel-notes-on-maman`, `source/theorem-and-definitions`, `subject/<x>`, `course/<x>`; PDFs are filtered by filename prefix (`file:linear-algebra-1-`). `meta/migrate_model.py` flattens every other old-layout file to `<short>-<topic>.<ext>`.
 
 ⚠️ reMarkable's `X (annotations).pdf` exports are **ink-only overlays**, not annotated documents — typically a few KB against a multi-MB source, and unreadable on their own. They have all been deleted. If new ones appear, do not delete the source document in their favour.
 
@@ -154,15 +206,22 @@ Provenance is kept, not lost: the original name lives in `meta/raw-renames.tsv` 
 - **concept** — One-liner → Intuition → Formal → Why it matters → Connections → Open questions
 - **question** — Question → Why it matters → What would answer it → Current state → Links
 - **paper** — Problem → Method → Result → Why it matters here → Connections
-- **book** — Overview (≥1 paragraph, required) → Partition → Key concepts → Threads. A hub node, not a reading unit
 - **part** — as paper, plus a `> Part of [[book]] · pp. A–B` line under the title
-- **moc** — Scope → Key concepts → Raw material → Threads (research themes only)
+- **lecture** — `> Lecture of [[course]]` line → Setup & assumptions → Key equations → Takeaways for my thesis → Connections → Links out
+- **article / conversation** — Key claims → Key equations → Takeaways for my thesis → Connections → Links out (conversation = an email thread)
+- **ai-chat** — rendered from its `meta/chats/` tree by the chat pipeline (`conversation:` names the tree)
+- **blog-post** — rendered by `meta/ingest/blog.py`: Blog Post Summary → Key concepts → Post
+- **video** — Key ideas → Key equations → Takeaways for my thesis → Connections → Links out
+- **book / notebook** — Overview (≥1 paragraph, required) → Partition → Key concepts → Threads. A hub node, not a reading unit
+- **course / series** — Overview (≥1 paragraph) → Contents → Threads. A hub node, not a reading unit
+- **theme** — Scope → Key concepts → Threads → Papers (research themes only; one per THEME_SLUGS entry)
 - **distilled-think** — Summary (review prose) → Proposed propagation → Not promoting (transient; use `--cleanup` after apply)
-- **source** — Scope → Key concepts → Raw material → Threads (course provenance)
 
-## Theme whitelist (paper `area:`)
+Templates for every type: `meta/templates/<type>.md`.
 
-`statistics`, `optimization-theory`, `learning-theory`, `info-theory`, `implicit-regularization`, `tensor-factorization`, `complex-nn`, `quantum`, `boolean-analysis`, `fourier-analysis`. Course slugs use `source-*` pages, not MOCs.
+## Theme whitelist (`area:`)
+
+`statistics`, `optimization-theory`, `learning-theory`, `info-theory`, `implicit-regularization`, `tensor-factorization`, `complex-nn`, `quantum`, `boolean-analysis`, `fourier-analysis`. Each has exactly one `theme-<slug>` page (formerly `moc-<slug>`). Courses are `course-*` hubs, not themes.
 
 ## Semantic lint
 
@@ -181,7 +240,7 @@ python3 meta/coherence.py status
 python3 meta/coherence.py fixed <id>    # internal resolved
 python3 meta/coherence.py noted <id>    # external recorded on paper
 python3 meta/coherence.py dismiss <id>
-python3 meta/semfind.py moc moc-info-theory
+python3 meta/semfind.py theme theme-info-theory   # `moc` kept as alias
 ```
 
 Manifest: `meta/coherence-warnings.tsv` (regenerated on lint; statuses persist).
@@ -229,24 +288,39 @@ python3 -m meta.ingest resolve <url|arxiv|slug> # check vault first (0 LLM)
 python3 -m meta.ingest scrap <url>              # → raw/inbox/ (blocked if duplicate)
 python3 -m meta.ingest scrap-mail <mbox-or-eml> # → raw/inbox/mail-.../ (thread + attachments)
 python3 -m meta.ingest scrap-gdrive --dry-run   # preview a mounted Drive folder pull (0 bytes)
-python3 -m meta.ingest catalog <inbox-path>     # → raw/papers/ + wiki stub
-python3 -m meta.ingest easy-digest <slug|raw>   # light abstract skim
+python3 -m meta.ingest catalog <inbox-path>     # → raw/<format>/ (+ paper- stub, papers only)
+python3 -m meta.ingest catalog <inbox-path> --collection <hub|person> [--format <folder>] [--title T]
+python3 -m meta.ingest easy-digest <slug|raw>   # light abstract skim (ticks a hub row if a member)
 python3 -m meta.ingest full-digest <raw>        # medium: begin→finalize
+python3 -m meta.ingest full-digest <hub-slug> --row N   # one course/series Contents row
 python3 -m meta.ingest deep-digest <raw> --confirm-heavy
 python3 -m meta.ingest toc <raw>                # book partition (or a proposed one) (0 LLM)
 ```
 
+**Catalog** routes an inbox file to its format folder (`--format` overrides detection, e.g.
+`presentations` for a slide-deck PDF) and writes the corpus row. `--collection` (alias `--course`)
+fills the `collection` cell; a course/series collection also appends a Contents row (`--title`).
+Papers get a `paper-` stub and tagged blog posts a `blog-` page at catalog — emails, chats,
+handwriting and slides stay corpus rows until something is digested from them. Every outcome,
+including a refusal and its reason, is logged in `meta/.catalog/` (the dashboard's Ingestion status).
+
+**Digesting a hub row:** `full-digest|deep-digest <hub-slug> --row N`. The page type follows the
+format: `presentations/`, `handwritten/` → `lecture-`; `emails/` → `conversation-`; `web-clips/`
+or non-PDF `printed-docs/` → `article-`; `printed-docs/` PDF → `paper-`. LLM chats become `chat-`
+pages through the chat pipeline instead. `finalize` ticks the row; `easy-digest` ticks it too and
+sets `status: digested`. A raw path that is a hub member auto-scopes to its row.
+
 **Books are a hub plus parts.** A PDF of ≥60 pages is a book. It gets one `type: book` page
-(slug = the PDF basename) holding an `## Overview` paragraph and a `## Partition` table that splits
+(slug `book-<PDF stem>`; a long handwritten PDF is a `notebook-<stem>`) holding an `## Overview` paragraph and a `## Partition` table that splits
 pages `1..book_pages` into **disjoint, exhaustive parts** — a part can be a chapter, merged short
 chapters or half a long one; front/back matter rows are `skip`. Each digested part is its own
-`type: part` page (slug `<book-slug>-<topic>`); undigested parts are table rows, not pages.
+`type: part` page (slug `part-<book stem>-<topic>`); undigested parts are table rows, not pages.
 
 ```
 | # | Part | Pages | Status | Note |
 |---|------|-------|--------|------|
 | 1 | Front matter · Prefaces | 1–18 | skip | |
-| 2 | Chapter 1. Boolean functions and the Fourier expansion | 19–42 | full | [[2014-analysis-of-boolean-functions-ch1-fourier-expansion]] |
+| 2 | Chapter 1. Boolean functions and the Fourier expansion | 19–42 | full | [[part-2014-analysis-of-boolean-functions-ch1-fourier-expansion]] |
 | 3 | Chapter 2. Basic concepts and social choice | 43–68 | — | |
 ```
 
@@ -280,7 +354,16 @@ During `full-digest` / `deep-digest`, `meta/guard.py` blocks direct writes to se
 
 ```
 python3 meta/query.py candidates "<keywords>"   # rank slugs (0 LLM)
-python3 meta/query.py mocs                      # theme entry points
+python3 meta/query.py mocs                      # theme- entry points
 ```
 
 Workflow: `index.md` → `candidates` → read 3–8 pages → synthesize. Not the same as `meta.ingest resolve` (ingest dedup).
+
+## Migration
+
+`python3 meta/migrate_model.py` (dry run → `meta/.migrate/plan.json`) / `--apply` moves an
+old-layout vault to this model: old raw folders → format folders, `collection` filled from
+`meta/migration/collections.tsv`, slugs prefixed, `moc-` → `theme-`, course MOC + source pages
+merged into `course-`/`series-` hubs, stub chat/mail pages quarantined to
+`_quarantine/migration-<stamp>/`. `--apply` refuses while `collections.tsv` has `TODO` cells or
+ingest sessions are open; `--rewrite-think` opts in to rewriting links inside `think/`. Idempotent.

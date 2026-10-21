@@ -1,6 +1,6 @@
 ---
 name: ingest-to-catalog
-description: Move inbox files to typed raw/ folders and create lean wiki stubs. Zero LLM. Use for "catalog", "triage inbox", "ingest to catalog". Do NOT read PDFs or digest.
+description: Move inbox files to raw/ format folders, record collection membership, and create lean paper stubs. Zero LLM. Use for "catalog", "triage inbox", "ingest to catalog". Do NOT read PDFs or digest.
 ---
 
 # ingest-to-catalog
@@ -16,31 +16,42 @@ description: Move inbox files to typed raw/ folders and create lean wiki stubs. 
 - Read PDF body text
 - Run any digest tier
 - Write wiki prose beyond the stub template
+- Move a raw file after catalog — reclassifying = editing its corpus `collection` cell
 
 ## CLI
 
 ```bash
-python3 -m meta.ingest catalog <inbox-path> [--course misc]
-python3 -m meta.ingest drain-inbox [--course misc]
+python3 -m meta.ingest catalog <inbox-path> [--collection <hub|person>] [--format <folder>] [--title T]
+python3 -m meta.ingest drain-inbox [--collection <hub|person>]
 ```
+
+`--course` is an alias of `--collection`. `--format` overrides detection (e.g. `presentations`
+for a slide-deck PDF). `--title` names the row added to a course/series `## Contents` table.
 
 ## Subskills
 
 | Subskill | Role |
 |----------|------|
-| [detect](detect/SKILL.md) | Inspect file → route handler |
-| [articles](articles/SKILL.md) | PDF → `raw/papers/<course>/` + wiki stub |
-| [mail](mail/SKILL.md) | thread bundle → `raw/mail/<dir>/` + `type: source` stub |
-| [chat](chat/SKILL.md) | Gemini-style `.md` export → `raw/chats/` + `type: source` stub |
-| [notes](notes/SKILL.md) | notes handler (stub) |
-| [slides](slides/SKILL.md) | slides handler (stub) |
-| [web](web/SKILL.md) | web handler (stub) |
-| [blog](blog/SKILL.md) | blog handler (stub) |
+| [detect](detect/SKILL.md) | Inspect file → format folder |
+| [articles](articles/SKILL.md) | typed PDF → `raw/printed-docs/` (+ `paper-` stub if not a course/series member) |
+| [mail](mail/SKILL.md) | thread bundle → `raw/emails/<YYYY-MM-DD-thread>/` (corpus row only) |
+| [chat](chat/SKILL.md) | Gemini-style `.md` export → `raw/llm-chats/` (corpus row only) |
+| [notes](notes/SKILL.md) | ink-only PDF → `raw/handwritten/` (corpus row only) |
+| [slides](slides/SKILL.md) | deck → `raw/presentations/` (corpus row only) |
+| [web](web/SKILL.md) | clip → `raw/web-clips/` (corpus row only) |
+| [blog](blog/SKILL.md) | blog post → `raw/web-clips/` or `raw/printed-docs/` (corpus row only) |
 
 ## Output
 
-Wiki stub with `digestion-status: catalog`, `status: to-read` (`mail`/`chat` create
-`type: source` stubs instead — no `digestion-status`). Run `pixi run lint` after.
+- Every format: the file lands flat in `raw/<format>/` and gets a `meta/corpus.tsv` row.
+- `--collection <course-|series->`: corpus `collection` set **and** a `—` row appended to the
+  hub's `## Contents` table. Other members are renamed `<short>-<topic>.<ext>` (hub `short:`).
+- `--collection <book-|person>`: corpus `collection` cell only (person = researcher bibliography).
+- A paper gets a `wiki/paper-<year>-<title>.md` stub and a tagged blog post a `blog-…` page, both
+  `digestion-status: catalog`, `status: to-read`. Emails, chats, handwriting and slides stay corpus
+  rows until digested. Every outcome (success or refusal + reason) is logged in `meta/.catalog/`.
+
+Lint runs at the end of each catalog.
 
 ## Commit
 

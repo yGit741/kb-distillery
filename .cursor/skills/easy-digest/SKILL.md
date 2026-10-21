@@ -24,7 +24,8 @@ description: Lightweight abstract/metadata skim (~2-4k tokens). Use ONLY for "ea
 python3 -m meta.ingest easy-digest <slug|raw>
 ```
 
-Writes `meta/.ingest/easy/<sha>/abstract.text` for agent summary. Sets `digestion-status: easy`, `status: to-read`.
+Writes `meta/.ingest/easy/<sha>/abstract.text` for agent summary. Sets `digestion-status: easy`, `status: digested` (lint requires `digested` for any easy/full/deep
+tier). If the raw file is a course/series member, its `## Contents` row is ticked `easy`.
 
 ## Agent steps
 
