@@ -28,6 +28,7 @@ python3 -m meta.ingest scrap <url|path> [--type articles|notes|slides|web|blog]
 python3 -m meta.ingest scrap <url> --force              # override dedup block
 python3 -m meta.ingest scrap-mail <mbox-or-eml> [--slug thread-slug] [--force]
 python3 -m meta.ingest scrap-gdrive --dry-run           # preview a Drive folder pull (0 bytes)
+python3 -m meta.ingest scrap-wordpress <site> --prefix <hub short> [--since YYYY-MM-DD] [--limit N] [--no-images] [--force]
 ```
 
 Scrap is **blocked** when resolve finds a match or bytes already exist in `raw/`. Use `--force` only when intentional.
@@ -42,7 +43,7 @@ Scrap is **blocked** when resolve finds a match or bytes already exist in `raw/`
 | [notes](notes/SKILL.md) | reMarkable / handwritten | stub |
 | [slides](slides/SKILL.md) | lecture decks | stub |
 | [web](web/SKILL.md) | HTML/markdown clip | stub |
-| [blog](blog/SKILL.md) | blog posts | stub |
+| [blog](blog/SKILL.md) | a whole WordPress.com blog → clips + figures | implemented (`scrap-wordpress`) |
 
 ## Next step
 

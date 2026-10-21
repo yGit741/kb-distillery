@@ -41,8 +41,9 @@ meta/.ops/
 # LLM share bundles (meta/export.py)
 .exported/
 
-# Share build cache + deploy status (meta/share)
+# Share build cache + deploy status (meta/share); wrangler's local state
 .cache/
+.wrangler/
 
 # Obsidian artifacts — use raw/inbox/ for clips; canvases/bases belong in wiki/ or delete
 Clippings/
@@ -73,6 +74,7 @@ raw/**/*.docx
 raw/**/*.jpg
 raw/**/*.jpeg
 raw/**/*.gif
+raw/**/*.webp
 raw/**/*.heic
 raw/**/*.zip
 

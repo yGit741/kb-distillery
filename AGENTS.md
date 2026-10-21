@@ -49,6 +49,7 @@ pixi run distill-apply -- <slug>   apply distill plan to public KB
 pixi run lint-skills               validate skill definitions
 pixi run sync-skills               copy meta/skills/ → .cursor/skills/ (after lint-skills)
 pixi run export-kb                 zip wiki + think → .exported/ (LLM share)
+pixi run share -- deploy-main      build main → private Cloudflare site (also: status, rollback, --dry-run)
 pixi run lanes                     pending changes per lane + nightly sync, stale worktrees, open PRs
 pixi run ops -- status             knowledge version, sessions, hooks (also: log, snapshot, undo, restore)
 pixi run ops -- record <op> <target> "summary" <paths…>   commit already-modified knowledge as one op
@@ -102,7 +103,8 @@ Map what the user says to a skill before acting; read that skill's `SKILL.md`, t
 | "undo that / revert the split" | `kb-undo` (confirm the step first) | `kb(undo)` |
 | "snapshot / freeze" · "go back to kb-x.y.z" | `kb-snapshot` | tag · `kb(restore)` |
 | "what changed / kb status / which version" | `kb-history` | nothing |
-| "share the KB / export for an LLM" | `export-kb` | zip |
+| "share the KB / export for an LLM" (a zip of the text) | `export-kb` | zip |
+| "share / publish the site", "deploy main", "deploy status", "rollback the site", "snapshot the site", "time machine" | `share-kb` (Cloudflare; `pixi run share -- …`) | Worker version, `.cache/share/status.json` |
 | "create a skill / new workflow" | `create-skill` → `infra-pr` | PR |
 
 **Tooling or knowledge?** The target decides: files under `wiki/`, `raw/`, `think/` are knowledge (ops, straight to main); code, skills, dashboard, docs and config are tooling (PR). When one request touches both, ship the tooling PR first, then do the knowledge step on main. When the target is unclear, ask one short question.
@@ -152,6 +154,7 @@ Columns: `path sha1 kind disposition slug collection` — hand-edit only `dispos
 | `sidecar` | agent-written `parsed.md` inside an email thread folder |
 | `dupe:<path>` | superseded by another file |
 | `ink:<path>` | reMarkable annotation overlay belonging to `<path>` |
+| `asset:<path>` | a figure downloaded with the web clip `<path>` (`raw/images/<clip stem>-NN.<ext>`) — part of the clip, never backlog or a hub member of its own |
 
 The linter maintains it: a new file appears as `queued`; a file gone from disk is removed; **a sha1 change on a `digested` file re-opens it as `queued`** — so re-annotating a paper on the tablet automatically re-queues it.
 
@@ -281,6 +284,7 @@ Read `meta/skills/README.md` (§ Adding a skill) before any workflow. Run `pixi 
 | `semantic-lint-hop` | light–medium | ~3–12k | after full/deep digest finalize or distill apply |
 | `lint-moc` | medium | ~8–20k | `lint-moc`, `lint moc` |
 | `build-researcher-profile` | light | ~3–8k verify | `build researcher profile`, `index researcher` |
+| `share-kb` | none | 0 | share/publish the site, deploy main, deploy status, rollback the site (not `export-kb`) |
 | `create-skill` | none | 0 | create skill, new skill (meta; not in digest ladder) |
 
 **`digest` alone → ask tier (easy / full / deep).** Bare "digest" never triggers `full-digest`.
@@ -292,6 +296,7 @@ python3 -m meta.ingest resolve <url|arxiv|slug> # check vault first (0 LLM)
 python3 -m meta.ingest scrap <url>              # → raw/inbox/ (blocked if duplicate)
 python3 -m meta.ingest scrap-mail <mbox-or-eml> # → raw/inbox/mail-.../ (thread + attachments)
 python3 -m meta.ingest scrap-gdrive --dry-run   # preview a mounted Drive folder pull (0 bytes)
+python3 -m meta.ingest scrap-wordpress <site> --prefix <hub short>   # every post of a WordPress.com blog + figures → inbox
 python3 -m meta.ingest catalog <inbox-path>     # → raw/<format>/ (+ paper- stub, papers only)
 python3 -m meta.ingest catalog <inbox-path> --collection <hub|person> [--format <folder>] [--title T]
 python3 -m meta.ingest easy-digest <slug|raw>   # light abstract skim (ticks a hub row if a member)
@@ -300,6 +305,13 @@ python3 -m meta.ingest full-digest <hub-slug> --row N   # one course/series Cont
 python3 -m meta.ingest deep-digest <raw> --confirm-heavy
 python3 -m meta.ingest toc <raw>                # book partition (or a proposed one) (0 LLM)
 ```
+
+**scrap-wordpress** pulls a whole WordPress.com blog through its public API (0 LLM): one Markdown clip per
+post with every formula restored losslessly from the LaTeX image URLs, embedded players as links, and the
+figures downloaded next to it as `<clip stem>-NN.<ext>` (original URL kept as the link title; a figure that
+cannot be fetched stays a remote link). `--since`/`--limit` resume or trial a pull; dedup is by post URL.
+Then `drain-inbox --collection <series-hub>`: clips become `raw/web-clips/` members of the hub, their
+figures `raw/images/` rows bound as `asset:<clip>` (lint derives this from the names), one lint at the end.
 
 **Catalog** routes an inbox file to its format folder (`--format` overrides detection, e.g.
 `presentations` for a slide-deck PDF) and writes the corpus row. `--collection` (alias `--course`)
