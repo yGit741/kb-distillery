@@ -73,6 +73,7 @@ raw/**/*.docx
 raw/**/*.jpg
 raw/**/*.jpeg
 raw/**/*.gif
+raw/**/*.webp
 raw/**/*.heic
 raw/**/*.zip
 

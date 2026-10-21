@@ -152,6 +152,7 @@ Columns: `path sha1 kind disposition slug collection` — hand-edit only `dispos
 | `sidecar` | agent-written `parsed.md` inside an email thread folder |
 | `dupe:<path>` | superseded by another file |
 | `ink:<path>` | reMarkable annotation overlay belonging to `<path>` |
+| `asset:<path>` | a figure downloaded with the web clip `<path>` (`raw/images/<clip stem>-NN.<ext>`) — part of the clip, never backlog or a hub member of its own |
 
 The linter maintains it: a new file appears as `queued`; a file gone from disk is removed; **a sha1 change on a `digested` file re-opens it as `queued`** — so re-annotating a paper on the tablet automatically re-queues it.
 
@@ -292,6 +293,7 @@ python3 -m meta.ingest resolve <url|arxiv|slug> # check vault first (0 LLM)
 python3 -m meta.ingest scrap <url>              # → raw/inbox/ (blocked if duplicate)
 python3 -m meta.ingest scrap-mail <mbox-or-eml> # → raw/inbox/mail-.../ (thread + attachments)
 python3 -m meta.ingest scrap-gdrive --dry-run   # preview a mounted Drive folder pull (0 bytes)
+python3 -m meta.ingest scrap-wordpress <site> --prefix <hub short>   # every post of a WordPress.com blog + figures → inbox
 python3 -m meta.ingest catalog <inbox-path>     # → raw/<format>/ (+ paper- stub, papers only)
 python3 -m meta.ingest catalog <inbox-path> --collection <hub|person> [--format <folder>] [--title T]
 python3 -m meta.ingest easy-digest <slug|raw>   # light abstract skim (ticks a hub row if a member)
@@ -300,6 +302,13 @@ python3 -m meta.ingest full-digest <hub-slug> --row N   # one course/series Cont
 python3 -m meta.ingest deep-digest <raw> --confirm-heavy
 python3 -m meta.ingest toc <raw>                # book partition (or a proposed one) (0 LLM)
 ```
+
+**scrap-wordpress** pulls a whole WordPress.com blog through its public API (0 LLM): one Markdown clip per
+post with every formula restored losslessly from the LaTeX image URLs, embedded players as links, and the
+figures downloaded next to it as `<clip stem>-NN.<ext>` (original URL kept as the link title; a figure that
+cannot be fetched stays a remote link). `--since`/`--limit` resume or trial a pull; dedup is by post URL.
+Then `drain-inbox --collection <series-hub>`: clips become `raw/web-clips/` members of the hub, their
+figures `raw/images/` rows bound as `asset:<clip>` (lint derives this from the names), one lint at the end.
 
 **Catalog** routes an inbox file to its format folder (`--format` overrides detection, e.g.
 `presentations` for a slide-deck PDF) and writes the corpus row. `--collection` (alias `--course`)
