@@ -2,8 +2,8 @@
 name: build-researcher-profile
 description: >-
   Index full researcher bibliography (Semantic Scholar) and catalog star-tier
-  papers only (≥200 cites, max 10). Use for build researcher profile, index
-  researcher. Do NOT digest or catalog all papers.
+  papers only (≥200 cites, max 10). Use for add researcher, build researcher profile,
+  index researcher, add <name>'s papers. Do NOT digest or catalog all papers.
 ---
 
 # build-researcher-profile

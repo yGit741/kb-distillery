@@ -63,7 +63,7 @@ Without pixi, use `python3` equivalents (`python3 meta/lint.py`, `python3 -m met
 | Track | Paths | Committed as | By |
 |-------|-------|--------------|----|
 | knowledge | `wiki/ think/ raw/ index.md meta/{corpus,coherence-warnings,aliases}.tsv meta/log.md meta/chats/` | `kb(<op>): <summary> (kb-x.y.z)` **directly on main, one commit per operation** — ops: `import catalog digest refine distill think undo restore`; trailers `KB-Version KB-Op KB-Target` (+`KB-Reverts`, `KB-Snapshot`) | writer CLIs (`meta.ingest`, `meta.distill`) automatically; free-form wiki edits via `pixi run ops -- begin …` / `commit` (skill `wiki-edit`); your `think/` edits as `kb(think)` before each op and nightly |
-| tooling | `meta/` (code, skills, dashboard, docs), `.cursor/ .claude/ .vscode/`, `pixi.*`, root `*.md`, `.gitignore` | `schema|feat|fix|chore|paradigm(<component>): <imperative summary>` on `infra/<feature>` (scope always required; docs/tests/refactors are `chore`), merged as a merge commit `… (#N)` that takes the highest type of its commits — **never squash** | `pixi run ship -- start/commit/pr/merge` (skill `infra-pr`) — **only when the user asks** |
+| tooling | `meta/` (code, skills, dashboard, docs), `.cursor/ .claude/ .vscode/`, `pixi.*`, root `*.md`, `.gitignore` | `schema|feat|fix|chore|paradigm(<component>): <imperative summary>` on `infra/<feature>` (scope always required; docs/tests/refactors are `chore`), merged as a merge commit `… (#N)` that takes the highest type of its commits — **never squash** | `pixi run ship -- start/commit/pr/merge` (skill `infra-pr`) — whenever the user asks for a fix/change/feature; **merge only on their OK** |
 | other | anything else | never committed — `pixi run lanes` lists it; gitignore, move or delete | — |
 
 **Versions are knowledge-only:** `kb-x.y.z` — x paradigm, y schema (`SCHEMA_VERSION` in `meta/schema.py`), z step (computed). Tooling is unversioned; a `schema`/`paradigm` PR carries its migration (`meta/migrations/`, `pixi run ops -- migrate` on the branch), snapshots first and bumps y/x on merge. **Snapshots** are annotated tags `kb-x.y.z` (`pixi run ops -- snapshot "label"`). **Undo** one step: `pixi run ops -- undo <sha>`; **restore** a snapshot: `pixi run ops -- restore kb-x.y.z` — both new commits that rewrite only `wiki/`, `meta/aliases.tsv`, `meta/chats/` (never `raw/`, `think/`, `meta/log.md`, generated files) and only on the user's request.
@@ -71,6 +71,30 @@ Without pixi, use `python3` equivalents (`python3 meta/lint.py`, `python3 -m met
 Agents never run raw `git commit`/`push`/`merge`/`tag`/`revert`/`reset` or `gh pr` — `.cursor/hooks/block-git-write.sh` (→ `meta/git_guard.py`, both Cursor and Claude Code) allows only a single `pixi run ops|ship|daily-sync|…` invocation. `meta/guard.py` warns on wiki writes without an open ops session (blocks once `OPS_STRICT`). Feature work shouldn't touch knowledge paths, except a schema PR's migration.
 
 **Nightly schedule:** `pixi run install-sync` installs `meta/launchd/com.thesis-kb.daily-sync.plist` into `~/Library/LaunchAgents/` (log: `~/Library/Logs/thesis-kb-daily-sync.log`). It must run on this Mac — a cloud agent can't see local edits. See [`meta/automation-daily-sync.md`](automation-daily-sync.md).
+
+## Intent router — casual requests → skills
+
+Map what the user says to a skill before acting; read that skill's `SKILL.md`, then follow it. A casual request **is** the ask: "fix the graph legend" means start the PR flow, not "suggest a fix".
+
+| The user says… | Do | Lands as |
+|---|---|---|
+| "fix / change / add / improve … the dashboard, explorer, graph, ingest, CLI, a skill, lint" — anything in tooling | `infra-pr`: `ship start <feature> --worktree` → implement → `ship commit "fix\|feat\|chore(<component>): …"` → `ship pr` → give the link. **Merge only when the user says merge** (or "fix and merge") | PR `… (#N)` |
+| "new note type / new field / lint should require …" | `infra-pr` as a **schema** PR: bump `SCHEMA_VERSION`, add `meta/migrations/NNNN_*.py`, `ops migrate` on the branch | PR, bumps y |
+| "what do I know about … / where did I read … / compare …" | `query-kb` (read-only) | nothing |
+| "add researcher <name>" / "index <name>'s papers" | `build-researcher-profile` | `kb(catalog)` |
+| "save / scrap <url or file>" | `scrap-data` | `kb(import)` |
+| "catalog / triage the inbox" | `ingest-to-catalog` | `kb(catalog)` |
+| "digest <paper>" (no tier) | **ask**: easy, full or deep | — |
+| "skim / easy-digest", "full-digest", "deep-digest" (+ confirm heavy) | that digest skill → `semantic-lint-hop` | `kb(digest)` |
+| "split / merge / rename / fix this note", "file that answer back" — anything in `wiki/` | `wiki-edit` (`ops begin` … `ops commit`) | `kb(refine)` |
+| "distill my think note …" | `distill-think` | `kb(distill)` |
+| "undo that / revert the split" | `kb-undo` (confirm the step first) | `kb(undo)` |
+| "snapshot / freeze" · "go back to kb-x.y.z" | `kb-snapshot` | tag · `kb(restore)` |
+| "what changed / kb status / which version" | `kb-history` | nothing |
+| "share the KB / export for an LLM" | `export-kb` | zip |
+| "create a skill / new workflow" | `create-skill` → `infra-pr` | PR |
+
+**Tooling or knowledge?** The target decides: files under `wiki/`, `raw/`, `think/` are knowledge (ops, straight to main); code, skills, dashboard, docs and config are tooling (PR). When one request touches both, ship the tooling PR first, then do the knowledge step on main. When the target is unclear, ask one short question.
 
 ## Frontmatter
 

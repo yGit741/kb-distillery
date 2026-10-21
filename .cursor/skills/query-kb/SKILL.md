@@ -1,6 +1,6 @@
 ---
 name: query-kb
-description: Answer questions from the wiki — index-first navigation, citations, optional file-back. Use for query-kb, query kb, what do I know about. Do NOT answer from memory without searching.
+description: Answer questions from the wiki — index-first navigation, citations, optional file-back. Use for query-kb, query kb, what do I know about, where did I read, compare, explain from my notes. Do NOT answer from memory without searching.
 ---
 
 # query-kb

@@ -1,9 +1,10 @@
 ---
 name: infra-pr
 description: >-
-  Ship tooling (dashboard, explorer, ingest CLI, skills, schema) through an infra/<feature> branch and a
-  GitHub PR merged with a real merge commit "(#N)". Use for ship, open PR, merge PR, infra change, schema
-  change, release tooling. Do NOT use for knowledge edits (they commit on main via ops) and only when the user asks.
+  Fix, change or add tooling (dashboard, explorer, graph, ingest CLI, skills, lint, schema) via an
+  infra/<feature> branch and a GitHub PR merged as "(#N)". Use for fix the …, change the …, add a feature,
+  bug in the dashboard or pipeline, ship, open PR, merge PR, schema change. Do NOT use for knowledge
+  edits in wiki/ (use wiki-edit) and do not merge until the user says merge.
 ---
 
 # infra-pr
@@ -13,7 +14,8 @@ description: >-
 ## Triggers
 
 - `ship`, `open a PR`, `merge the PR`, `ship the dashboard change`, `schema change`
-- Only on the user's request — never ship on your own initiative
+- Any user request to fix/change/add tooling ("fix the legend", "the graph should …") — start the flow and return the PR link
+- Never on your own initiative; merge only when the user says merge (or "fix and merge")
 
 ## Do NOT
 
