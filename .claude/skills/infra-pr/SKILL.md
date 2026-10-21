@@ -36,11 +36,11 @@ pixi run ops -- migrate --check
 
 ## Agent steps
 
-1. Work in a worktree: `pixi run ship -- start <feature> --worktree` (or, inside a session worktree, `ship -- start <feature>` renames its branch to `infra/<feature>`).
+1. Work in a worktree: `pixi run ship -- start <feature> --worktree` (or, inside a session worktree, `ship -- start <feature>` renames its `worktree-*` branch to `infra/<feature>` — do this **before the first edit**; a session must never end on a `worktree-*` branch: finish with `ship -- pr` or `ship -- prune --drop <branch>`).
 2. Commit with `ship -- commit "type(component): imperative summary"` — types by what changed: `schema` (note rules) › `feat` (new capability) › `fix` (wrong behaviour) › `chore` (no behaviour change: config, docs, tests, refactors); scope is a component (`vault raw books think ingest lint guard dashboard skills distill query export scrap git obsidian claude gemini`). Gates: unit tests, lint-skills, lint. Untracked raw PDFs are linked from the primary checkout automatically.
-3. `ship -- pr` pushes and opens the PR (idempotent). Pass `--title` when the branch has several commits.
-4. When the user approves: `ship -- merge` → merges main into the branch if needed, re-runs gates, merges as `<title> (#N)`, deletes the remote branch, fast-forwards the primary checkout.
-5. **Schema PR:** bump `SCHEMA_VERSION` in `meta/schema.py`, add `meta/migrations/NNNN_<name>.py` (`PRODUCES`, idempotent `apply(root)`), run `pixi run ops -- migrate` on the branch, commit as `schema(<scope>): …`. `ship -- merge` snapshots the current version and sets `KB-Version: x.(y+1).0` on the merge.
+3. `ship -- pr` pushes and opens the PR (idempotent). Pass `--title` when the branch has several commits. From now until it is merged or dropped, **end every reply** with `Awaiting your merge: #N <url> — say "merge" to merge it, or "drop" to discard it.` (the `Stop` hook `meta/merge_nudge.py` enforces it once per reply).
+4. When the user approves: `ship -- merge` → merges main into the branch if needed, re-runs gates, merges as `<title> (#N)`, deletes the remote branch, fast-forwards the primary checkout, then removes the worktree and local branch (continue in the primary checkout — its path is printed). `pixi run lanes` shows anything left behind (stale worktrees, open PRs, nightly sync); `ship -- prune --apply` clears merged clean worktrees.
+5. **Schema PR:** bump `SCHEMA_VERSION` in `meta/schema.py`, add `meta/migrations/NNNN_<name>.py` (`PRODUCES`, idempotent `apply(root)`), run `pixi run ops -- migrate` on the branch, commit as `schema(<scope>): …`. `ship -- merge` snapshots the current version (`pre-<feature>`), sets `KB-Version: x.(y+1).0` on the merge and tags it as the new baseline (`post-<feature>`).
 
 ## Output
 

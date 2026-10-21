@@ -1,12 +1,13 @@
 # Obsidian Copilot plugin state — tool output, not knowledge
 copilot/
 
-# Obsidian local UI state
-.obsidian/workspace*
-
-# Obsidian plugin code: 25MB of minified JS, reinstallable from community-plugins.json.
-# Kept out of git so Gemini's GitHub import reads the notes, not plugin bundles.
-.obsidian/plugins/
+# Obsidian: only app.json, core-plugins.json and community-plugins.json are tracked (what another
+# vault user needs to open it). Everything else — workspace, appearance, graph, plugin bundles
+# (25MB of minified JS, reinstallable from community-plugins.json) — is local state.
+.obsidian/*
+!.obsidian/app.json
+!.obsidian/core-plugins.json
+!.obsidian/community-plugins.json
 .trash/
 
 # OS
@@ -48,8 +49,6 @@ Clippings/
 *.canvas
 *.base
 
-.obsidian/graph.json
-
 # Python bytecode
 __pycache__/
 
@@ -58,6 +57,8 @@ _quarantine/
 
 # Claude Code local state
 .claude/worktrees/
+# Browser-automation output (Playwright MCP screenshots/traces)
+.playwright-mcp/
 .claude/settings.local.json
 .claude/scheduled_tasks.lock
 
