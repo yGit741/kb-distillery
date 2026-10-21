@@ -41,3 +41,7 @@ python3 -m meta.ingest drain-inbox [--course misc]
 
 Wiki stub with `digestion-status: catalog`, `status: to-read` (`mail`/`chat` create
 `type: source` stubs instead — no `digestion-status`). Run `pixi run lint` after.
+
+## Commit
+
+The CLI commits this operation itself as `kb(catalog): … (kb-x.y.z)` on main — only the files it changed (`--no-commit` to skip). Check with `pixi run ops -- log -n 1`. `drain-inbox` makes one commit for the whole drain.

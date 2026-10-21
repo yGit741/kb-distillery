@@ -77,3 +77,7 @@ python3 -m meta.ingest index-researcher status
 ## Next step
 
 User picks cataloged or suggested papers for `easy-digest` / `full-digest` explicitly.
+
+## Commit
+
+The CLI commits this operation itself as `kb(catalog): … (kb-x.y.z)` on main — only the files it changed (`--no-commit` to skip). Check with `pixi run ops -- log -n 1`. `index-researcher finalize` is the commit point.

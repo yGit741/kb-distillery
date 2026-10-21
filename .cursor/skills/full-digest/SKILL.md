@@ -52,3 +52,7 @@ python3 -m meta.ingest abort <sha>
 - Concepts link to existing wiki slugs
 - MOC `## Papers` updated via finalize
 - Person link when raw is under researcher folders
+
+## Commit
+
+The CLI commits this operation itself as `kb(digest): … (kb-x.y.z)` on main — only the files it changed (`--no-commit` to skip). Check with `pixi run ops -- log -n 1`. `finalize` is the commit point.

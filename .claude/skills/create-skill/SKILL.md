@@ -59,3 +59,7 @@ New or updated `meta/skills/**/SKILL.md`, README row, mirrored `.cursor/skills/`
 ## Next step
 
 Use the new skill's documented workflow; run `semantic-lint-hop` only after digest/distill skills.
+
+## Commit
+
+New or changed skills ship through `infra-pr` (an `infra/<feature>` PR), not on main. A skill that writes knowledge must end in an op commit (writer CLI or `ops begin`/`ops commit`).

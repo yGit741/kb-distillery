@@ -67,3 +67,7 @@ After filing: `python3 meta/lint.py` and optional `meta/log.md` entry:
 ## Scale note
 
 ~186 pages: **index + candidates is enough.** If the wiki grows past ~300–500 pages, consider [qmd](https://github.com/tobi/qmd) for hybrid search (optional; not wired yet).
+
+## Commit
+
+Answering is read-only. Filing an answer back is a wiki edit: Wrap any wiki fix in an ops session so it becomes one undoable commit: `pixi run ops -- begin refine <slug> "why"` → edit → `pixi run ops -- commit` (see `wiki-edit`).
