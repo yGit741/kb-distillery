@@ -55,7 +55,9 @@ pixi run lanes                     pending changes per lane + nightly sync, stal
 pixi run ops -- status             knowledge version, sessions, hooks (also: log, snapshot, undo, restore)
 pixi run ops -- record <op> <target> "summary" <paths…>   commit already-modified knowledge as one op
 pixi run ship -- prune [--apply]   delete merged infra/*, worktree-*, history/* branches + their clean worktrees
-pixi run daily-sync                nightly: commit think/ edits + leftovers, push main + tags
+pixi run daily-sync                nightly: commit think/ edits + leftovers, push main + tags, then hygiene checks
+pixi run hygiene                   git/ops hygiene report (stale worktrees, unpruned branches, unpushed steps, sessions, PRs, site, snapshots); --json
+pixi run notify-test               send a one-line test email (Gmail app password from the keychain, see meta/ops/sync.toml)
 pixi run ship -- start|commit|pr|merge   tooling via infra/<feature> PRs (on demand)
 pixi run install-hooks             use meta/githooks (commit-msg, pre-commit, pre-push)
 pixi run install-sync              install nightly daily-sync launchd job
@@ -83,7 +85,7 @@ Without pixi, use `python3` equivalents (`python3 meta/lint.py`, `python3 -m met
 
 Agents never run raw `git commit`/`push`/`merge`/`tag`/`revert`/`reset` or `gh pr` — `.cursor/hooks/block-git-write.sh` (→ `meta/git_guard.py`, both Cursor and Claude Code) allows only a single `pixi run ops|ship|daily-sync|…` invocation. `meta/guard.py` warns on wiki writes without an open ops session (blocks once `OPS_STRICT`). Feature work shouldn't touch knowledge paths, except a schema PR's migration.
 
-**Nightly schedule:** `pixi run install-sync` installs `meta/launchd/com.thesis-kb.daily-sync.plist` into `~/Library/LaunchAgents/` (log: `~/Library/Logs/thesis-kb-daily-sync.log`). It must run on this Mac — a cloud agent can't see local edits. See [`meta/automation-daily-sync.md`](automation-daily-sync.md).
+**Nightly schedule:** `pixi run install-sync` installs `meta/launchd/com.thesis-kb.daily-sync.plist` into `~/Library/LaunchAgents/` (log: `~/Library/Logs/thesis-kb-daily-sync.log`). It must run on this Mac — a cloud agent can't see local edits. After the sync it runs the hygiene checks (`meta/ops/hygiene.py`) and emails the report (`meta/notify.py`, config `meta/ops/sync.toml`, password in the macOS keychain) **only when something needs fixing** or the sync itself failed. See [`meta/automation-daily-sync.md`](automation-daily-sync.md).
 
 ## Intent router — casual requests → skills
 
