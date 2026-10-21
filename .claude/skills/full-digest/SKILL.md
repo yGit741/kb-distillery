@@ -42,9 +42,25 @@ python3 -m meta.ingest abort <sha>
 4. Re-run `extract` to validate.
 5. `map` → `draft` → review `staging/` → `finalize`.
 
+## Books (≥60 pages)
+
+A book is digested one **part** at a time — never whole. `toc` prints the book's partition
+(or a proposed one if the book has no `type: book` page yet):
+
+```bash
+python3 -m meta.ingest toc <raw>                     # [x] digested · [ ] backlog · [-] skip
+python3 -m meta.ingest full-digest <raw> --part N    # a row; --pages A-B carves a new one
+```
+
+The session id is `<sha>-p<A>-<B>`. `map` names the page `<book-slug>-<topic>` with
+`type: part`; `finalize` ticks the row on the book page (creating it on the first part).
+`claims.json` `title` is the part's title; set `book_title` too when the book page is new.
+After the first part, write the book page's `## Overview` paragraph — lint warns until it exists.
+
 ## Output
 
 `digestion-status: full`, `status: digested`, Key equations required at finalize.
+For a book: a `type: part` page plus an updated `type: book` partition row.
 
 ## Quality bar
 

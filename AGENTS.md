@@ -75,12 +75,14 @@ Agents never run raw `git commit`/`push`/`merge`/`tag`/`revert`/`reset` or `gh p
 ## Frontmatter
 
 ```yaml
-type: concept | question | person | paper | source | moc | distilled-think
-status: seed|growing|solid   (question: open|partial|resolved; paper: to-read|reading|digested; distilled-think: review|applied|archived)
-digestion-status: catalog|easy|full|deep   # papers only — depth of write-up
-area: [info-theory]          # papers: theme slugs only (whitelist in meta/schema.py THEME_SLUGS)
+type: concept | question | person | paper | book | part | source | moc | distilled-think
+status: seed|growing|solid   (question: open|partial|resolved; paper/book/part: to-read|reading|digested; distilled-think: review|applied|archived)
+digestion-status: catalog|easy|full|deep   # papers and book parts — depth of write-up
+area: [info-theory]          # papers/books/parts: theme slugs only (whitelist in meta/schema.py THEME_SLUGS)
 related: [tensor-rank]       # bare slugs — wiki/ is flat, so no paths
-raw: raw/papers/x/y.pdf      # paper/source only; `none` + a `url:` if read externally
+raw: raw/papers/x/y.pdf      # paper/source/book/part; `none` + a `url:` if read externally
+book_pages: 419              # book only — total PDF pages
+book: <book-slug>            # part only — its hub; plus section: and section_pages: A-B
 ```
 
 Wikilinks are always bare: `[[tensor-rank]]`, never `[[concepts/tensor-rank]]`. Paths into `raw/` go in backticks, not wikilinks.
@@ -128,6 +130,8 @@ Provenance is kept, not lost: the original name lives in `meta/raw-renames.tsv` 
 - **concept** — One-liner → Intuition → Formal → Why it matters → Connections → Open questions
 - **question** — Question → Why it matters → What would answer it → Current state → Links
 - **paper** — Problem → Method → Result → Why it matters here → Connections
+- **book** — Overview (≥1 paragraph, required) → Partition → Key concepts → Threads. A hub node, not a reading unit
+- **part** — as paper, plus a `> Part of [[book]] · pp. A–B` line under the title
 - **moc** — Scope → Key concepts → Raw material → Threads (research themes only)
 - **distilled-think** — Summary (review prose) → Proposed propagation → Not promoting (transient; use `--cleanup` after apply)
 - **source** — Scope → Key concepts → Raw material → Threads (course provenance)
@@ -205,27 +209,44 @@ python3 -m meta.ingest catalog <inbox-path>     # → raw/papers/ + wiki stub
 python3 -m meta.ingest easy-digest <slug|raw>   # light abstract skim
 python3 -m meta.ingest full-digest <raw>        # medium: begin→finalize
 python3 -m meta.ingest deep-digest <raw> --confirm-heavy
-python3 -m meta.ingest toc <raw>                # book contents + page ranges (0 LLM)
+python3 -m meta.ingest toc <raw>                # book partition (or a proposed one) (0 LLM)
 ```
 
-**Books are always scoped.** A PDF of ≥60 pages is a book: digesting it whole would skim 25 pages
-of front matter, so the CLI prints its table of contents and exits 2 instead of guessing. Pick a part:
+**Books are a hub plus parts.** A PDF of ≥60 pages is a book. It gets one `type: book` page
+(slug = the PDF basename) holding an `## Overview` paragraph and a `## Partition` table that splits
+pages `1..book_pages` into **disjoint, exhaustive parts** — a part can be a chapter, merged short
+chapters or half a long one; front/back matter rows are `skip`. Each digested part is its own
+`type: part` page (slug `<book-slug>-<topic>`); undigested parts are table rows, not pages.
 
 ```
-python3 -m meta.ingest toc <raw>                     # chapters with page ranges
-python3 -m meta.ingest full-digest <raw> --section 1 # chapter number, #index, or title text
-python3 -m meta.ingest full-digest <raw> --pages 19-42
-python3 -m meta.ingest full-digest <raw> --whole-book  # override the gate
+| # | Part | Pages | Status | Note |
+|---|------|-------|--------|------|
+| 1 | Front matter · Prefaces | 1–18 | skip | |
+| 2 | Chapter 1. Boolean functions and the Fourier expansion | 19–42 | full | [[2014-analysis-of-boolean-functions-ch1-fourier-expansion]] |
+| 3 | Chapter 2. Basic concepts and social choice | 43–68 | — | |
 ```
 
-One wiki page per chapter, slug `<year>-<book>-ch<N>-<topic>`, with `section:`, `section_pages:`
-and `book_pages:` in frontmatter, and a `## Chapters digested` table on the book's `source-*` page.
-The contents come from the PDF's embedded outline, falling back to parsing a printed contents page.
+Digesting a book is always scoped — the CLI prints the partition and exits 2 instead of guessing:
 
-**Partial coverage is tracked, not assumed.** Lint reads `section_pages:` against `book_pages:` and
-marks the raw file `partial` in `meta/corpus.tsv` — never `digested` — so an undigested chapter stays
-in the backlog. It also warns on every run, counts in `--health` as `partial-books`, and `toc` shows
-`[x]`/`[ ]` per chapter with the slug that covers it. Re-digesting a finished section is refused.
+```
+python3 -m meta.ingest toc <raw>                     # partition [x]/[ ]/[-]; --depth 2 adds the outline
+python3 -m meta.ingest full-digest <raw> --part 3    # a row of the partition
+python3 -m meta.ingest full-digest <raw> --pages 43-55  # carves a new part out of undigested rows
+python3 -m meta.ingest full-digest <raw> --section 2 # an outline entry (chapter number, #index, text)
+python3 -m meta.ingest full-digest <raw> --whole-book  # override the gate (writes a paper)
+```
+
+The first scoped digest creates the book page from `meta/templates/book.md` with a partition
+proposed from the PDF outline (split only at chapter/section boundaries, ≤60 pp per part); write
+its Overview by hand. `finalize` writes the `type: part` page and ticks its row. A part's identity
+is its page range — the `#` column is display order and renumbers when a row is split.
+
+**The partition is the truth** (`meta/books.py`, checked by lint): gaps or overlaps are errors,
+a part over 60 pages is a warning, a digested row must link its part page and match its
+`digestion-status`, and the part's `book:`/`raw:`/`section_pages:` must agree with its row.
+Coverage = digested pages ÷ non-skip pages; below 100% the raw file is `partial` in
+`meta/corpus.tsv` — never `digested` — warns on every run and counts in `--health` as
+`partial-books`. The book's `status` follows coverage. Re-digesting a finished part is refused.
 
 During `full-digest` / `deep-digest`, `meta/guard.py` blocks direct writes to session-owned wiki paths — use `draft` + `finalize`. Legacy `reingest-*` is bootstrap-only.
 

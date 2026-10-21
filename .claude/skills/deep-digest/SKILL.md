@@ -27,6 +27,7 @@ python3 -m meta.ingest deep-digest <raw> --confirm-heavy
 ```
 
 Same pipeline as `full-digest` plus extended `plan.json` (neighbor papers, q- stubs, MOC threads).
+Books are digested one part at a time (`--part N` / `--pages A-B`) — see full-digest § Books.
 
 ## Output
 
