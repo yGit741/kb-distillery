@@ -40,7 +40,7 @@ python3 -m meta.ingest scrap-wordpress <site> --prefix <short> --no-images      
 
 ## Next step
 
-`python3 -m meta.ingest drain-inbox --collection <series-hub>` — clips first, then their figures; one lint and one
+`python3 -m meta.ingest drain-inbox --collection <series-hub> --match <prefix>-` — clips first, then their figures; one lint and one
 `kb(catalog)` commit for the whole drain. Figures land in `raw/images/` as `asset:<clip>` rows.
 
 ## Commit
