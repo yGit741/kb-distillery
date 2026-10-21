@@ -19,6 +19,18 @@
           }
         ]
       }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/meta/merge_nudge.py\"",
+            "timeout": 20,
+            "statusMessage": "Checking for a PR awaiting merge…"
+          }
+        ]
+      }
     ]
   }
 }

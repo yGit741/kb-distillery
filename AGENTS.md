@@ -61,7 +61,7 @@ pixi run install-sync              install nightly daily-sync launchd job
 
 Without pixi, use `python3` equivalents (`python3 meta/lint.py`, `python3 -m meta.dashboard`, …).
 
-**Write guardrails:** `meta/guard.py` blocks illegal agent writes via preToolUse hooks in both `.cursor/hooks.json` (Cursor) and `.claude/settings.json` (Claude Code). Keep both pointed at the same script. `CLAUDE.md` imports this file for Claude instruction parity.
+**Write guardrails:** `meta/guard.py` blocks illegal agent writes via preToolUse hooks in both `.cursor/hooks.json` (Cursor) and `.claude/settings.json` (Claude Code). Keep both pointed at the same script. Claude Code also runs `meta/merge_nudge.py` on `Stop` (merge reminder; Cursor has no stop hook, so there the skill rule alone applies). `CLAUDE.md` imports this file for Claude instruction parity.
 
 **Commit gate:** `meta/githooks/` (`pixi run install-hooks`): `pre-commit` runs `meta/lint.py` (+ `lint_skills.py` for tooling), `commit-msg` and `pre-push` run `meta/commit_policy.py`. Do not hand-edit `index.md` or `meta/corpus.tsv` — both are generated on every lint run. `python3 meta/lint.py --health` or `python3 -m meta.dashboard` for vault health.
 
@@ -74,6 +74,8 @@ Without pixi, use `python3` equivalents (`python3 meta/lint.py`, `python3 -m met
 | other | anything else | never committed — `pixi run lanes` lists it; gitignore, move or delete | — |
 
 **Versions are knowledge-only:** `kb-x.y.z` — x paradigm, y schema (`SCHEMA_VERSION` in `meta/schema.py`), z step (computed). Tooling is unversioned; a `schema`/`paradigm` PR carries its migration (`meta/migrations/`, `pixi run ops -- migrate` on the branch), snapshots first (`pre-<feature>`) and again after the merge (`post-<feature>`, the new baseline) and bumps y/x.
+
+**An open PR is never silent:** while an `infra/*` branch has an open PR, every agent reply ends with `Awaiting your merge: #N <url> — say "merge" …`; the Claude Code `Stop` hook (`meta/merge_nudge.py`, `.claude/settings.json`) bounces a reply that forgot it, once.
 
 **Hygiene is built in, never a gate:** every `kb(...)` step pushes main right away (`--no-push` / `KB_NO_PUSH=1` to defer; the nightly sync is the backstop and `ops status` says whether it is installed and when it last ran); `ship merge` removes its own worktree and local branch; `ship prune --apply` removes merged, clean worktrees and never touches dirty ones; `pixi run lanes` lists stale worktrees, `worktree-*` session branches and open PRs. **Snapshots** are annotated tags `kb-x.y.z` (`pixi run ops -- snapshot "label"`). **Undo** one step: `pixi run ops -- undo <sha>`; **restore** a snapshot: `pixi run ops -- restore kb-x.y.z` — both new commits that rewrite only `wiki/`, `meta/aliases.tsv`, `meta/chats/` (never `raw/`, `think/`, `meta/log.md`, generated files) and only on the user's request.
 
