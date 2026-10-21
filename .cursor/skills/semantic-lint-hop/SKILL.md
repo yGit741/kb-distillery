@@ -38,3 +38,7 @@ Runs after `full-digest` / `deep-digest` finalize or `distill apply` when `SEMFI
 |------|--------|
 | internal | Fix ingestion — inconsistent wiki is debt |
 | external | Note on paper pages only — both digests stay |
+
+## Commit
+
+Wrap any wiki fix in an ops session so it becomes one undoable commit: `pixi run ops -- begin refine <slug> "why"` → edit → `pixi run ops -- commit` (see `wiki-edit`).

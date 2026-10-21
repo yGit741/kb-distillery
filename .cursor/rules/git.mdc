@@ -1,12 +1,12 @@
 ---
-description: Git policy — two lanes; agents never ad-hoc commit
+description: Git policy — KB Conventional Commits; agents never run git writes directly
 alwaysApply: true
 ---
 
-# Git — two lanes on main
+# Git — knowledge on main, tooling through PRs
 
-- Knowledge (`wiki/ think/ raw/`, generated indexes, `meta/log.md`): `pixi run daily-sync`, nightly via launchd.
-- Tooling (code, skills, config, docs): `pixi run ship -- "feat: …"` — only when the user asks.
-- NEVER run raw `git commit`, `git push`, `gh pr create`, or amend.
-- After edits: `pixi run lint` if needed; leave changes unstaged. `pixi run lanes` shows what's pending where.
-- Lane membership: `meta/schema.py` (`KNOWLEDGE_PATHS`, `TOOLING_PATHS`).
+- Knowledge (`wiki/ think/ raw/`, generated indexes, `meta/log.md`): one commit per operation, `kb(<op>): <summary> (kb-x.y.z)`, made by the tools — writer CLIs commit themselves; wrap free-form wiki edits in `pixi run ops -- begin <op> <slug> "why"` … `pixi run ops -- commit`.
+- Tooling (code, skills, config, docs): `pixi run ship -- start <feature> --worktree` → `ship -- commit "type(scope): …"` → `ship -- pr` → `ship -- merge` — only when the user asks. Merges are merge commits `… (#N)`, never squash.
+- Undo (`pixi run ops -- undo <sha>`), restore (`pixi run ops -- restore kb-x.y.z`) and snapshots (`pixi run ops -- snapshot`) only on the user's request.
+- NEVER run raw `git commit`, `push`, `merge`, `rebase`, `tag`, `revert`, `reset`, `gh pr create/merge`, or amend. Chained commands are refused by the hook.
+- Status: `pixi run ops -- status`, `pixi run ops -- log`, `pixi run lanes`. Lane membership: `meta/schema.py`.

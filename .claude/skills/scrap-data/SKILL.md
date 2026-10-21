@@ -47,3 +47,7 @@ Scrap is **blocked** when resolve finds a match or bytes already exist in `raw/`
 ## Next step
 
 After scrap: `python3 -m meta.ingest catalog raw/inbox/<file>` or `python3 -m meta.ingest drain-inbox`.
+
+## Commit
+
+The CLI commits this operation itself as `kb(import): … (kb-x.y.z)` on main — only the files it changed (`--no-commit` to skip). Check with `pixi run ops -- log -n 1`. Gitignored binaries (PDFs) are tracked by `meta/corpus.tsv`, not git.

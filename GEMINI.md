@@ -29,3 +29,9 @@ Adapted from `meta/skills/query-kb/SKILL.md`:
 5. Never say "the vault has nothing on X" without checking `index.md`.
 6. Read-only: you cannot write to the repo. If an answer deserves a new page,
    say so and the owner will file it from Claude Code or Cursor.
+
+## Reading the history
+
+Commit subjects tell you what changed: `kb(digest): <slug> (kb-0.7.5)` is one knowledge
+step on main (version `kb-x.y.z`: paradigm.schema.step); `feat(dashboard): … (#12)` is a
+tooling pull request (tooling has no version). Tags `kb-x.y.z` are frozen snapshots.

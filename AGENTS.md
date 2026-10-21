@@ -43,8 +43,10 @@ pixi run lint-skills               validate skill definitions
 pixi run sync-skills               copy meta/skills/ → .cursor/skills/ (after lint-skills)
 pixi run export-kb                 zip wiki + think → .exported/ (LLM share)
 pixi run lanes                     pending changes per git lane
-pixi run daily-sync                knowledge lane: lint → commit → push (nightly)
-pixi run ship -- "feat: …"         tooling lane: tests → lint → commit → push (on demand)
+pixi run ops -- status             knowledge version, sessions, hooks (also: log, snapshot, undo, restore)
+pixi run daily-sync                nightly: commit think/ edits + leftovers, push main + tags
+pixi run ship -- start|commit|pr|merge   tooling via infra/<feature> PRs (on demand)
+pixi run install-hooks             use meta/githooks (commit-msg, pre-commit, pre-push)
 pixi run install-sync              install nightly daily-sync launchd job
 ```
 
@@ -52,17 +54,19 @@ Without pixi, use `python3` equivalents (`python3 meta/lint.py`, `python3 -m met
 
 **Write guardrails:** `meta/guard.py` blocks illegal agent writes via preToolUse hooks in both `.cursor/hooks.json` (Cursor) and `.claude/settings.json` (Claude Code). Keep both pointed at the same script. `CLAUDE.md` imports this file for Claude instruction parity.
 
-**Commit gate:** `.git/hooks/pre-commit` runs `meta/lint.py` and `meta/lint_skills.py`. Do not hand-edit `index.md` or `meta/corpus.tsv` — both are generated on every lint run. `python3 meta/lint.py --health` or `python3 -m meta.dashboard` for vault health.
+**Commit gate:** `meta/githooks/` (`pixi run install-hooks`): `pre-commit` runs `meta/lint.py` (+ `lint_skills.py` for tooling), `commit-msg` and `pre-push` run `meta/commit_policy.py`. Do not hand-edit `index.md` or `meta/corpus.tsv` — both are generated on every lint run. `python3 meta/lint.py --health` or `python3 -m meta.dashboard` for vault health.
 
-**Git — two lanes, one branch (`main`).** Lane membership lives in `meta/schema.py` (`KNOWLEDGE_PATHS`, `TOOLING_PATHS`, `lane_of`).
+**Git lifecycle — KB Conventional Commits.** Lane membership lives in `meta/schema.py` (`KNOWLEDGE_PATHS`, `TOOLING_PATHS`, `lane_of`). The dashboard **Lifecycle** tab explains and shows all of it.
 
-| Lane | Paths | Committed by |
-|------|-------|--------------|
-| knowledge | `wiki/ think/ raw/ index.md meta/{corpus,coherence-warnings,aliases}.tsv meta/log.md meta/chats/` | `pixi run daily-sync` — nightly 22:00 via launchd, message from last `meta/log.md` heading |
-| tooling | `meta/` (code, skills, dashboard, docs), `.cursor/ .claude/ .vscode/`, `pixi.*`, root `*.md`, `.gitignore` | `pixi run ship -- "feat: …"` — tests + lint-skills + lint, then commit + push; **only when the user asks** |
-| other | anything else | never committed — `pixi run lanes` lists it; gitignore, move or delete |
+| Track | Paths | Committed as | By |
+|-------|-------|--------------|----|
+| knowledge | `wiki/ think/ raw/ index.md meta/{corpus,coherence-warnings,aliases}.tsv meta/log.md meta/chats/` | `kb(<op>): <summary> (kb-x.y.z)` **directly on main, one commit per operation** — ops: `import catalog digest refine distill think undo restore`; trailers `KB-Version KB-Op KB-Target` (+`KB-Reverts`, `KB-Snapshot`) | writer CLIs (`meta.ingest`, `meta.distill`) automatically; free-form wiki edits via `pixi run ops -- begin …` / `commit` (skill `wiki-edit`); your `think/` edits as `kb(think)` before each op and nightly |
+| tooling | `meta/` (code, skills, dashboard, docs), `.cursor/ .claude/ .vscode/`, `pixi.*`, root `*.md`, `.gitignore` | `feat|fix|refactor|test|docs|chore|schema|paradigm(scope): …` on `infra/<feature>`, merged as a merge commit `… (#N)` — **never squash** | `pixi run ship -- start/commit/pr/merge` (skill `infra-pr`) — **only when the user asks** |
+| other | anything else | never committed — `pixi run lanes` lists it; gitignore, move or delete | — |
 
-`pixi run lanes` shows pending changes per lane. Both commands skip while ingest/distill sessions are open. Agents never run raw `git commit`/`git push` (blocked by `.cursor/hooks/block-git-write.sh`, wired into both Cursor and Claude Code). KB work shouldn't touch tooling paths and feature work shouldn't touch knowledge paths, unless asked.
+**Versions are knowledge-only:** `kb-x.y.z` — x paradigm, y schema (`SCHEMA_VERSION` in `meta/schema.py`), z step (computed). Tooling is unversioned; a `schema`/`paradigm` PR carries its migration (`meta/migrations/`, `pixi run ops -- migrate` on the branch), snapshots first and bumps y/x on merge. **Snapshots** are annotated tags `kb-x.y.z` (`pixi run ops -- snapshot "label"`). **Undo** one step: `pixi run ops -- undo <sha>`; **restore** a snapshot: `pixi run ops -- restore kb-x.y.z` — both new commits that rewrite only `wiki/`, `meta/aliases.tsv`, `meta/chats/` (never `raw/`, `think/`, `meta/log.md`, generated files) and only on the user's request.
+
+Agents never run raw `git commit`/`push`/`merge`/`tag`/`revert`/`reset` or `gh pr` — `.cursor/hooks/block-git-write.sh` (→ `meta/git_guard.py`, both Cursor and Claude Code) allows only a single `pixi run ops|ship|daily-sync|…` invocation. `meta/guard.py` warns on wiki writes without an open ops session (blocks once `OPS_STRICT`). Feature work shouldn't touch knowledge paths, except a schema PR's migration.
 
 **Nightly schedule:** `pixi run install-sync` installs `meta/launchd/com.thesis-kb.daily-sync.plist` into `~/Library/LaunchAgents/` (log: `~/Library/Logs/thesis-kb-daily-sync.log`). It must run on this Mac — a cloud agent can't see local edits. See [`meta/automation-daily-sync.md`](automation-daily-sync.md).
 
