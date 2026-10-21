@@ -35,7 +35,7 @@ pixi run ops -- migrate --check
 ## Agent steps
 
 1. Work in a worktree: `pixi run ship -- start <feature> --worktree` (or, inside a session worktree, `ship -- start <feature>` renames its branch to `infra/<feature>`).
-2. Commit with `ship -- commit "type(scope): summary"` (types: feat fix refactor test docs chore schema paradigm). Gates: unit tests, lint-skills, lint. Untracked raw PDFs are linked from the primary checkout automatically.
+2. Commit with `ship -- commit "type(component): imperative summary"` — types by what changed: `schema` (note rules) › `feat` (new capability) › `fix` (wrong behaviour) › `chore` (no behaviour change: config, docs, tests, refactors); scope is a component (`vault raw books think ingest lint guard dashboard skills distill query export scrap git obsidian claude gemini`). Gates: unit tests, lint-skills, lint. Untracked raw PDFs are linked from the primary checkout automatically.
 3. `ship -- pr` pushes and opens the PR (idempotent). Pass `--title` when the branch has several commits.
 4. When the user approves: `ship -- merge` → merges main into the branch if needed, re-runs gates, merges as `<title> (#N)`, deletes the remote branch, fast-forwards the primary checkout.
 5. **Schema PR:** bump `SCHEMA_VERSION` in `meta/schema.py`, add `meta/migrations/NNNN_<name>.py` (`PRODUCES`, idempotent `apply(root)`), run `pixi run ops -- migrate` on the branch, commit as `schema(<scope>): …`. `ship -- merge` snapshots the current version and sets `KB-Version: x.(y+1).0` on the merge.
