@@ -75,6 +75,20 @@ dashboard nav shows the chip (green deployed · deploying · skipped · red fail
 5. First-time setup (user-owned): Worker secrets `GOOGLE_CLIENT_SECRET`, `SESSION_SECRET`
    (`npx wrangler@4.151.3 secret put … --name kb`); client id via `share config` or `KB_SHARE_GOOGLE_CLIENT_ID`.
 
+## What the private site contains
+
+The private site (`deploy-main`, Google sign-in) is the shell with six tabs: **Graph · Explore ·
+Health · Digestion · Lifecycle · Snapshots**. Health, Digestion and Lifecycle are the dashboard
+pages rendered read-only from the content commit at build time (lint snapshot under `KB_CI`
+semantics, the pipeline snapshot, the first-parent history with versions and `kb-*` snapshot tags);
+`generated_at` is the commit date, so the time machine (`share build <old ref>`) shows those tabs as
+of that commit and the bytes stay deterministic. Local state never ships: no working tree, open
+sessions, nightly job, worktrees, branches, catalog logs, server info, file ages, absolute paths or
+`think/` paths (the digestion snapshot keeps slug + proposal count for distill reviews). **Public
+snapshots** (`share snapshot`) carry only Graph and Explore — none of those three tabs, their data or
+the Snapshots panel — on top of the public profile's own cuts (no `distilled-think` pages, no
+`raw`/`path`/`email`/`original_name` fields).
+
 ## Snapshots panel (private site)
 
 The private site has a **Snapshots** tab (private builds only — public snapshots never contain it,
