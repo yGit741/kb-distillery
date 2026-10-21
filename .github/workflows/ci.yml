@@ -17,6 +17,8 @@ jobs:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0     # lifecycle data reads kb(...) history and kb-x.y.z tags
       - uses: prefix-dev/setup-pixi@v0.8.1
         with:
           pixi-version: v0.76.1
