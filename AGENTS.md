@@ -50,7 +50,8 @@ pixi run lint-skills               validate skill definitions
 pixi run sync-skills               copy meta/skills/ → .cursor/skills/ (after lint-skills)
 pixi run export-kb                 zip wiki + think → .exported/ (LLM share)
 pixi run share -- deploy-main      build main → private Cloudflare site (also: status, rollback, --dry-run)
-pixi run share -- snapshot <name> <ref>   audit + publish a PUBLIC snapshot Worker (also: audit, list, remove, prune)
+pixi run share -- snapshot <name> <ref>   audit + publish a PUBLIC snapshot Worker (also: audit, list, history, remove, prune;
+                                   `--replace` updates a sent snapshot at the same link, `rollback --worker <name>` undoes it)
 pixi run lanes                     pending changes per lane + nightly sync, stale worktrees, open PRs
 pixi run ops -- status             knowledge version, sessions, hooks (also: log, snapshot, undo, restore)
 pixi run ops -- record <op> <target> "summary" <paths…>   commit already-modified knowledge as one op
