@@ -121,6 +121,13 @@ Nothing in the vault. `.cache/share/status.json` (gitignored), the share log, an
 version at `https://kb.yonatan-magen-thesis.workers.dev` tagged `kb-share <sha> <version> <profile>`;
 snapshots are their own Workers (`.cache/share/status-snapshot-*.json`, never the main chip).
 
+## Limits
+
+The site is one `index.html` served from the Worker's static-assets directory: Cloudflare caps a
+file at **25 MiB**. The build prints its size against that limit, warns from 80 % and refuses above
+it (`MAX_HTML_BYTES` in `meta/share/build.py`). Growth comes from embedded page bodies, the graph
+and the digestion rows — shrink those, do not raise the constant.
+
 ## Quality bar
 
 The reported state matches `share status`; unauthenticated `curl -I` on the site gives 302 → `/auth/login`.
