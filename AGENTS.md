@@ -67,6 +67,8 @@ Without pixi, use `python3` equivalents (`python3 meta/lint.py`, `python3 -m met
 
 **Write guardrails:** `meta/guard.py` blocks illegal agent writes via preToolUse hooks in both `.cursor/hooks.json` (Cursor) and `.claude/settings.json` (Claude Code). Keep both pointed at the same script. Claude Code also runs `meta/merge_nudge.py` on `Stop` (merge reminder; Cursor has no stop hook, so there the skill rule alone applies). `CLAUDE.md` imports this file for Claude instruction parity.
 
+**Partial checkouts:** raw binaries are gitignored, so a clone, a CI run or a fresh worktree lacks them. Lint detects this (≥5 manifest rows of binaries missing from disk, or `KB_CI=1`) and keeps those rows exactly as committed instead of dropping them; everything on disk reconciles as usual. Fewer missing files count as a deliberate deletion.
+
 **Commit gate:** `meta/githooks/` (`pixi run install-hooks`): `pre-commit` runs `meta/lint.py` (+ `lint_skills.py` for tooling), `commit-msg` and `pre-push` run `meta/commit_policy.py`. Do not hand-edit `index.md` or `meta/corpus.tsv` — both are generated on every lint run. `python3 meta/lint.py --health` or `python3 -m meta.dashboard` for vault health.
 
 **Git lifecycle — KB Conventional Commits.** Lane membership lives in `meta/schema.py` (`KNOWLEDGE_PATHS`, `TOOLING_PATHS`, `lane_of`). The dashboard **Lifecycle** tab explains and shows all of it.
@@ -324,6 +326,7 @@ python3 -m meta.ingest scrap-wordpress <site> --prefix <hub short>   # every pos
 python3 -m meta.ingest catalog <inbox-path>     # → raw/<format>/ (+ paper- stub, papers only)
 python3 -m meta.ingest catalog <inbox-path> --collection <hub|person> [--format <folder>] [--title T]
 python3 -m meta.ingest easy-digest <slug|raw>   # light abstract skim (ticks a hub row if a member)
+python3 -m meta.ingest easy-digest <raw> --into <page> [--no-tick --no-lint]   # series page / batch mode
 python3 -m meta.ingest full-digest <raw>        # medium: begin→finalize
 python3 -m meta.ingest full-digest <hub-slug> --row N   # one course/series Contents row
 python3 -m meta.ingest deep-digest <raw> --confirm-heavy
