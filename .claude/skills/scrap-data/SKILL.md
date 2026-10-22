@@ -51,4 +51,4 @@ After scrap: `python3 -m meta.ingest catalog raw/inbox/<file>` or `python3 -m me
 
 ## Commit
 
-The CLI commits this operation itself as `kb(import): … (kb-x.y.z)` on main — only the files it changed (`--no-commit` to skip). Check with `pixi run ops -- log -n 1`. Gitignored binaries (PDFs) are tracked by `meta/corpus.tsv`, not git.
+Scraping a PDF commits nothing: the binary is gitignored and lands in `raw/inbox/`; its `meta/corpus.tsv` row (and the `kb(catalog)` commit) appears when you catalog it. Text clips and other tracked files are committed as `kb(import): … (kb-x.y.z)` (`--no-commit` to skip) — check with `pixi run ops -- log -n 1`. A non-arXiv `.pdf` URL is saved on the `articles` path and its source URL is remembered in `meta/.catalog/sources.jsonl`, so catalog fills the stub's `url:`.

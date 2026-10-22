@@ -238,7 +238,7 @@ Provenance is kept, not lost: the original name lives in `meta/raw-renames.tsv` 
 
 - **concept** — One-liner → Intuition → Formal → Why it matters → Connections → Open questions
 - **question** — Question → Why it matters → What would answer it → Current state → Links
-- **paper** — Problem → Method → Result → Why it matters here → Connections
+- **paper** — Setup & assumptions → Proof idea (sketch only) → Key equations → Takeaways for my thesis → Connections → Links out (`meta/templates/paper.md`; the catalog stub opens with **Problem:** / **Main result:** lines)
 - **part** — as paper, plus a `> Part of [[book]] · pp. A–B` line under the title
 - **lecture** — `> Lecture of [[course]]` line → Setup & assumptions → Key equations → Takeaways for my thesis → Connections → Links out
 - **article / conversation** — Key claims → Key equations → Takeaways for my thesis → Connections → Links out (conversation = an email thread)
