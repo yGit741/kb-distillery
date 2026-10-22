@@ -54,6 +54,9 @@ for a slide-deck PDF). `--title` names the row added to a course/series `## Cont
   `digestion-status: catalog`, `status: to-read`. Emails, chats, handwriting and slides stay corpus
   rows until digested. Every outcome (success or refusal + reason) is logged in `meta/.catalog/`.
 
+- An `arxiv-*.pdf` scrape whose arXiv metadata cannot be fetched (rate limit, outage) is **refused**
+  and stays in the inbox — never filed as `2000-untitled.pdf`. Run `drain-inbox` again later.
+
 Lint runs at the end of each catalog.
 
 ## Commit
