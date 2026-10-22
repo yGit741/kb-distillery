@@ -55,7 +55,9 @@ pixi run lanes                     pending changes per lane + nightly sync, stal
 pixi run ops -- status             knowledge version, sessions, hooks (also: log, snapshot, undo, restore)
 pixi run ops -- record <op> <target> "summary" <paths…>   commit already-modified knowledge as one op
 pixi run ship -- prune [--apply]   delete merged infra/*, worktree-*, history/* branches + their clean worktrees
-pixi run daily-sync                nightly: commit think/ edits + leftovers, push main + tags
+pixi run daily-sync                nightly: commit think/ edits + leftovers, push main + tags, then hygiene checks
+pixi run hygiene                   git/ops hygiene report (stale worktrees, unpruned branches, unpushed steps, sessions, PRs, site, snapshots); --json
+pixi run notify-test               send a one-line test email (Gmail app password from the keychain, see meta/ops/sync.toml)
 pixi run ship -- start|commit|pr|merge   tooling via infra/<feature> PRs (on demand)
 pixi run install-hooks             use meta/githooks (commit-msg, pre-commit, pre-push)
 pixi run install-sync              install nightly daily-sync launchd job
@@ -83,7 +85,7 @@ Without pixi, use `python3` equivalents (`python3 meta/lint.py`, `python3 -m met
 
 Agents never run raw `git commit`/`push`/`merge`/`tag`/`revert`/`reset` or `gh pr` — `.cursor/hooks/block-git-write.sh` (→ `meta/git_guard.py`, both Cursor and Claude Code) allows only a single `pixi run ops|ship|daily-sync|…` invocation. `meta/guard.py` warns on wiki writes without an open ops session (blocks once `OPS_STRICT`). Feature work shouldn't touch knowledge paths, except a schema PR's migration.
 
-**Nightly schedule:** `pixi run install-sync` installs `meta/launchd/com.thesis-kb.daily-sync.plist` into `~/Library/LaunchAgents/` (log: `~/Library/Logs/thesis-kb-daily-sync.log`). It must run on this Mac — a cloud agent can't see local edits. See [`meta/automation-daily-sync.md`](automation-daily-sync.md).
+**Nightly schedule:** `pixi run install-sync` installs `meta/launchd/com.thesis-kb.daily-sync.plist` into `~/Library/LaunchAgents/` (log: `~/Library/Logs/thesis-kb-daily-sync.log`). It must run on this Mac — a cloud agent can't see local edits. After the sync it runs the hygiene checks (`meta/ops/hygiene.py`) and emails the report (`meta/notify.py`, config `meta/ops/sync.toml`, password in the macOS keychain) **only when something needs fixing** or the sync itself failed. See [`meta/automation-daily-sync.md`](automation-daily-sync.md).
 
 ## Intent router — casual requests → skills
 
@@ -116,7 +118,7 @@ Map what the user says to a skill before acting; read that skill's `SKILL.md`, t
 type: paper | part | lecture | article | video | conversation | ai-chat | blog-post   # reading units
       book | notebook | course | series                                              # collection hubs
       theme | concept | person | question | distilled-think                          # graph
-status: seed|growing|solid   (theme/concept/person; question: open|partial|resolved; reading units + hubs: to-read|reading|digested; distilled-think: review|applied|archived)
+status: seed|growing|solid   (theme/concept; question: open|partial|resolved; reading units + hubs: to-read|reading|digested; distilled-think: review|applied|archived; person: none — see below)
 digestion-status: catalog|easy|full|deep   # every reading unit — catalog ⇒ to-read|reading, easy/full/deep ⇒ digested
 area: [info-theory]          # reading units/hubs: theme slugs only (whitelist in meta/schema.py THEME_SLUGS)
 related: [tensor-rank]       # bare slugs — wiki/ is flat, so no paths
@@ -138,6 +140,27 @@ institution: runi            # course only, plus course_code:, semester:, lectur
 | `video-` | video | `theme-` | theme — exactly the 10 THEME_SLUGS |
 | `conversation-` | conversation (LLM chat / email thread) | `q-` | question |
 | `distilled-think-` | distilled-think | *(bare)* | concept, person |
+
+**Person pages are handle-driven** (`meta/persons.py`, schema 0.12). Frontmatter holds only
+handles, edges, contact and a date — no `status`, `area`, `related` or `affiliation`:
+
+```yaml
+url: https://…        # homepage      ⇒ ## Courses
+scholar: https://…    # Scholar       ⇒ ## Bibliography, ## Cataloged in vault
+github: none          # ⇒ ## Repos            none = checked, there is none (no section)
+youtube: unknown      # ⇒ ## Videos & talks   unknown = checked, not found; a missing key = not checked
+blog: https://…       # feed          ⇒ ## Writing
+wikipedia: https://…  # Wikidata      ⇒ ## Roles & companies, ## Academic lineage
+email: …              # contact, no section
+orgs: [..] advisors: [..] students: [..]    # bare slugs; [] = checked, nobody
+verified: 2026-10-21  # set by finalize; pages without it are the `persons-unverified` backlog
+```
+
+Each generated heading carries `<!-- from: <handle|manual> -->` and is rewritten by
+`index-researcher finalize` from `meta/.researcher/<slug>/manifest.json`; `## Why it matters
+here` (must link a theme or concept), `## Meeting log` and custom sections are hand-owned and
+never touched. Lint enforces the handle ⇒ section rules on verified pages and warns on
+non-reciprocal `advisors`/`students`. See `meta/skills/build-researcher-profile/SKILL.md`.
 
 Removed types: `source`, `moc`, `meta`. Wikilinks are always bare: `[[tensor-rank]]`, never `[[concepts/tensor-rank]]`. Paths into `raw/` go in backticks, not wikilinks.
 

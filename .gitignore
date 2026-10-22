@@ -25,6 +25,7 @@ meta/.ingest/
 
 # Researcher profile staging (manifests, verify snapshots)
 meta/.researcher/
+meta/.migrate/
 
 # Distill pipeline staging (session backups, plans)
 meta/.distill/
