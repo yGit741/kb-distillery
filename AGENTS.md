@@ -331,6 +331,7 @@ python3 -m meta.ingest full-digest <raw>        # medium: begin→finalize
 python3 -m meta.ingest full-digest <hub-slug> --row N   # one course/series Contents row
 python3 -m meta.ingest deep-digest <raw> --confirm-heavy
 python3 -m meta.ingest toc <raw>                # book partition (or a proposed one) (0 LLM)
+python3 -m meta.ingest refetch-raw [--apply]    # replace paper PDFs stamped with another arXiv id than their page cites (0 LLM)
 ```
 
 **scrap-wordpress** pulls a whole WordPress.com blog through its public API (0 LLM): one Markdown clip per
@@ -339,6 +340,17 @@ figures downloaded next to it as `<clip stem>-NN.<ext>` (original URL kept as th
 cannot be fetched stays a remote link). `--since`/`--limit` resume or trial a pull; dedup is by post URL.
 Then `drain-inbox --collection <series-hub>`: clips become `raw/web-clips/` members of the hub, their
 figures `raw/images/` rows bound as `asset:<clip>` (lint derives this from the names), one lint at the end.
+
+**arXiv is never guessed.** The metadata client (`meta/ingest/arxiv_meta.py`) spaces calls 3 s apart
+and retries 429/5xx; when it still cannot answer, `catalog` refuses the file (it stays in the inbox
+with the reason in `meta/.catalog/failures.jsonl`) instead of filing it as `2000-untitled.pdf`, and
+`backfill-authors --fix-urls` leaves the url untouched instead of clearing it. The researcher
+pipeline fetches the record behind Semantic Scholar's arXiv id and downloads only when it is this
+paper (a known author or most of the title), else searches by title, else skips; the downloaded PDF's
+page-1 stamp must equal the id. Lint warns when a paper page's PDF is stamped with a different id
+than its `url:` (a wrong download; stamps are cached in `.cache/arxiv-stamps.json`), and
+`refetch-raw --apply` replaces such PDFs — the sha1 change re-queues the row, and the page must be
+re-digested because its digest is of the other paper.
 
 **Catalog** routes an inbox file to its format folder (`--format` overrides detection, e.g.
 `presentations` for a slide-deck PDF) and writes the corpus row. `--collection` (alias `--course`)

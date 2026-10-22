@@ -83,6 +83,12 @@ Writes `wiki/<slug>.md` — generated sections from the manifest, hand sections 
 catalogs star-tier papers (≤10) to `raw/` with `digestion-status: catalog`. Then write
 `## Why it matters here` by hand if the page is new.
 
+Semantic Scholar's arXiv id is **verified before download**: the record behind it must name a
+known author or share most of the title, else the paper is re-found by title search, else skipped
+(`arxiv_mismatch` in the finalize summary — look it up by hand). A downloaded PDF whose page-1
+stamp is another id is discarded (`wrong_pdf`). An arXiv outage lists the paper under
+`scrap_failed`; run finalize again later.
+
 ```bash
 python3 -m meta.ingest index-researcher abort <slug>
 python3 -m meta.ingest index-researcher status
