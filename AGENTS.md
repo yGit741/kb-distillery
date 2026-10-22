@@ -35,12 +35,12 @@ catalog**; reclassifying it means editing that cell.
 
 Prose rules drift; this doesn't. If `python3 meta/lint.py` passes, the write is legal.
 
-**Environment:** one-time `curl -fsSL https://pixi.sh/install.sh | bash`, then restart the shell. All tasks below work via `pixi run <task>`.
+**Environment:** one-time `curl -fsSL https://pixi.sh/install.sh | bash`, then restart the shell, then `pixi install` (again after any `pixi.toml` change — the Chat tab's agent backend needs the `claude-agent-sdk` PyPI package; behind a TLS-inspecting proxy run it with `SSL_CERT_FILE` pointing at a PEM of the keychain roots). All tasks below work via `pixi run <task>`.
 
 ```
 pixi run lint                      check + reconcile + regenerate index.md
 pixi run health                    terminal health summary
-pixi run dashboard                 localhost health UI + graph explorer (http://127.0.0.1:8765, /graph, /digestion, /chat)
+pixi run dashboard                 localhost health UI + graph explorer (http://127.0.0.1:8765, /graph, /digestion, /chat — a read-only research agent over the Claude Agent SDK, with the direct Messages call as fallback)
 pixi run launch                    restart dashboard from current code (detached) + open browser
 pixi run lint-strict               ingest-finalize checks
 pixi run ingest-status             open ingest sessions
