@@ -25,7 +25,7 @@ The one door from the wiki to `raw/`. The CLI prints text and metadata; you reas
 ## CLI
 
 ```bash
-python3 -m meta.explore_raw find "<question>" --limit 10 [--all]
+python3 -m meta.explore_raw find "<question>" --limit 10 [--all] [--scope scope-x]
 python3 -m meta.explore_raw read <raw-path> [--pages A-B] [--max-pages N]
 python3 -m meta.explore_raw check <raw-path> --pages-of <slug> [<slug>…] [--pages A-B]
 python3 -m meta.explore_raw recommend <raw-path>
@@ -33,7 +33,7 @@ python3 -m meta.explore_raw recommend <raw-path>
 
 ## Agent steps
 
-1. **Find** — `find` ranks corpus rows by filename, collection, cited page and (for text clips) the first lines. PDFs are matched by name and metadata only.
+1. **Find** — `find` ranks corpus rows by filename, collection, cited page and (for text clips) the first lines. PDFs are matched by name and metadata only. `--scope scope-x` restricts the ranking to that scope's rows (an unknown scope exits 2); inside a scoped question this is how you reach the scope's undigested files.
 2. **Pick rows** — 1–3 files. Rows marked `UNDIGESTED` are queued: no wiki page reflects them yet; say so explicitly.
 3. **Read / check** — `read` for excerpts; `check <raw> --pages-of <slug>` prints the source beside the page's claims and takeaways, and you compare. Cite the raw path and why you opened it for every sentence drawn from it.
 4. **Recommend** — `recommend <raw>`, then end with skip / easy / full / deep and a one-line reason. When pages already exist, add: run `query-knowledge` for what the wiki already says.

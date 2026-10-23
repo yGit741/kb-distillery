@@ -46,6 +46,24 @@ Never claim “nothing in the vault” until both index and `candidates` were ch
 3. Answer in chat — format as prose, table, or list depending on the question.
 4. Note gaps: queued raw, `to-read` papers, open questions (`status: open`).
 
+## Scoped questions
+
+A **scope** is a personal set of raw files (`/scopes`, `scope-*` page); its knowledge is a projection:
+the pages citing those files plus the concepts/questions at least two of them link. When the user asks
+"in scope scope-x …" (or the chat's Scope select is set), answer **only from that projection**.
+
+```bash
+python3 meta/query.py scope-status scope-x                    # title, coverage, page list, undigested files
+python3 meta/query.py candidates "<keywords>" --scope scope-x # rank within the scope's pages only
+```
+
+1. Run `scope-status` first; the page list is the whole universe for this answer.
+2. Locate with `candidates … --scope scope-x`, read 3–8 of those pages, cite only them as `[[slug]]`.
+3. If the scope's pages do not cover the question, say so — do not borrow from other pages or from general knowledge.
+4. **End every answer with** `Not yet digested in this scope: <uncovered files>` (from `scope-status`,
+   `NOT_YET_DIGESTED`); offer `explore-raw-data` (`find … --scope scope-x`) to look at them.
+5. Unknown scope → the command exits 2 with the known scopes; ask which one is meant.
+
 ## Phase 3 — file back (only when asked)
 
 Karpathy: explorations should compound, not die in chat.
