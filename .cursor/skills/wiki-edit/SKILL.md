@@ -13,7 +13,7 @@ description: >-
 ## Triggers
 
 - `split <concept>`, `merge <notes>`, `rename <note>`, `edit wiki`, `refine <slug>`
-- Any agent edit to `wiki/` outside a digest/distill CLI — including `semantic-lint-hop` fixes and `query-kb` file-backs
+- Any agent edit to `wiki/` outside a digest/distill CLI — including `semantic-lint-hop` fixes and `query-knowledge` file-backs
 
 ## Do NOT
 
