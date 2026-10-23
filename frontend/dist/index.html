@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Thesis KB</title>
+    <script>
+      // Apply the saved theme before first paint (no flash). Storage may throw: fall back to the OS setting.
+      (function () {
+        var dark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+        try {
+          var saved = localStorage.getItem("kb-theme");
+          if (saved === "dark") dark = true;
+          else if (saved === "light") dark = false;
+        } catch (e) {}
+        document.documentElement.classList.toggle("dark", dark);
+      })();
+    </script>
+    <script type="module" crossorigin src="/assets/index-DmrECTZz.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-xWJz0Wob.css">
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>

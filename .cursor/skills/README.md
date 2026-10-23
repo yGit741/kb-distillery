@@ -25,6 +25,7 @@ Read `meta/skills/<skill>/SKILL.md` before running a workflow.
 | `kb-undo` | none | 0 | only when the user asks to undo a step |
 | `kb-snapshot` | none | 0 | `snapshot`; restore only when the user asks |
 | `infra-pr` | none | 0 | only when the user asks to ship / open / merge a PR |
+| `app-ui` | none | 0 | `port the <screen>`, `add a screen`, `frontend`, `app shell` |
 | `share-kb` | none | 0 | `share the site`, `publish`, `deploy main`, `rollback the site`, `deploy status` (not `export-kb`) |
 
 ## Trigger rules
@@ -71,6 +72,7 @@ Tooling is unversioned and ships as `infra/<feature>` PRs merged as `… (#N)`.
 | Skill | Purpose |
 |-------|---------|
 | [create-skill](create-skill/SKILL.md) | Author new skills; runs through `lint-skills` gate (0 LLM) |
+| [app-ui](app-ui/SKILL.md) | Conventions for building screens in `frontend/` (tokens, palette, data-model words, porting checklist; 0 LLM) |
 
 Template: [`SKILL_TEMPLATE.md`](SKILL_TEMPLATE.md) (not synced to `.cursor/skills/`).
 
