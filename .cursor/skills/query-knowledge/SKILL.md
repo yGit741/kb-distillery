@@ -1,9 +1,9 @@
 ---
-name: query-kb
-description: Answer questions from the wiki — index-first navigation, citations, optional file-back. Use for query-kb, query kb, what do I know about, where did I read, compare, explain from my notes. Do NOT answer from memory without searching.
+name: query-knowledge
+description: Answer questions from the wiki — index-first navigation, citations, optional file-back. Use for query-knowledge, query-kb, query kb, what do I know about, where did I read, compare, explain from my notes. Do NOT answer from memory without searching; raw sources go through explore-raw-data.
 ---
 
-# query-kb
+# query-knowledge
 
 **LLM tier:** light–medium · **Budget:** ~3–15k tokens (index + 3–8 pages)
 
@@ -13,13 +13,14 @@ This is **not** `meta.ingest resolve` (dedup before scrap). This is **reading** 
 
 ## Triggers
 
-- `query-kb`, `query kb`, `search the vault`, `what do I know about …`
+- `query-knowledge` (aliases `query-kb`, `query kb`), `search the vault`, `what do I know about …`
 - Any question that should be answered **from this wiki first**, not from training data
 
 ## Do NOT
 
 - Answer from memory when the vault may have pages — search first
 - Ingest or write wiki pages unless the user asks to **file** the answer
+- Open `raw/` files directly — reach sources only through `explore-raw-data`
 - Confuse with `resolve` (ingest dedup) or `distill` (think → wiki propagate)
 
 ## Phase 1 — locate (0 LLM via CLI)
@@ -67,9 +68,16 @@ After filing: `python3 meta/lint.py` and optional `meta/log.md` entry:
 - **Activity:** `meta/log.md`
 - **Human scratch:** `think/my-true-research-start-here.md` (read if relevant; do not edit)
 
+## Reaching raw
+
+The wiki is the only thing this skill reads. When a source is needed — a contradiction between
+pages, an undigested source relevant to the question, or an explicit request about an undigested
+file — invoke `explore-raw-data` (`python3 -m meta.explore_raw find|read|check|recommend …`).
+Attribute every raw-derived sentence with the raw path and the reason you opened it.
+
 ## Scale note
 
-~186 pages: **index + candidates is enough.** If the wiki grows past ~300–500 pages, consider [qmd](https://github.com/tobi/qmd) for hybrid search (optional; not wired yet).
+~1100 pages: **index + candidates is still enough.** If search gets noisy, consider [qmd](https://github.com/tobi/qmd) for hybrid search (optional; not wired yet).
 
 ## Commit
 

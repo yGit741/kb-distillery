@@ -101,7 +101,8 @@ Map what the user says to a skill before acting; read that skill's `SKILL.md`, t
 |---|---|---|
 | "fix / change / add / improve … the dashboard, explorer, graph, ingest, CLI, a skill, lint" — anything in tooling | `infra-pr`: `ship start <feature> --worktree` → implement → `ship commit "fix\|feat\|chore(<component>): …"` → `ship pr` → give the link. **Merge only when the user says merge** (or "fix and merge") | PR `… (#N)` |
 | "new note type / new field / lint should require …" | `infra-pr` as a **schema** PR: bump `SCHEMA_VERSION`, add `meta/migrations/NNNN_*.py`, `ops migrate` on the branch | PR, bumps y |
-| "what do I know about … / where did I read … / compare …" | `query-kb` (read-only) | nothing |
+| "what do I know about … / where did I read … / compare …" | `query-knowledge` (read-only) | nothing |
+| "which sources do I have on … / what does this undigested paper say / is it worth digesting / check this source against my notes" | `explore-raw-data` (read-only) | nothing |
 | "add researcher <name>" / "index <name>'s papers" | `build-researcher-profile` | `kb(catalog)` |
 | "save / scrap <url or file>" | `scrap-data` | `kb(import)` |
 | "catalog / triage the inbox" | `ingest-to-catalog` | `kb(catalog)` |
@@ -310,7 +311,8 @@ Read `meta/skills/README.md` (§ Adding a skill) before any workflow. Run `pixi 
 | `deep-digest` | heavy | ~25–40k+ | `deep-digest` + user confirms heavy |
 | `distill-think` | medium | ~8–12k propose | `distill-think`, `distill think`, `graph brief` |
 | `export-kb` | none | 0 | `export-kb`, `export kb`, `share kb` |
-| `query-kb` | light–medium | ~3–15k | `query-kb`, `query kb`, `what do I know about` |
+| `query-knowledge` | light–medium | ~3–15k | `query-knowledge`, `query-kb`, `query kb`, `what do I know about` |
+| `explore-raw-data` | light | ~2–6k | `explore-raw-data`, `explore raw`, `which sources do I have on …`, `is this paper worth digesting` |
 | `semantic-lint-hop` | light–medium | ~3–12k | after full/deep digest finalize or distill apply |
 | `lint-moc` | medium | ~8–20k | `lint-moc`, `lint moc` |
 | `build-researcher-profile` | light | ~3–8k verify | `build researcher profile`, `index researcher` |
@@ -409,7 +411,7 @@ During `full-digest` / `deep-digest`, `meta/guard.py` blocks direct writes to se
 
 **Triage:** anything in `raw/inbox/` gets cataloged or deleted. The inbox is a queue, not storage.
 
-**Query:** Karpathy Query operation — read wiki, cite `[[slugs]]`, file good answers back on request. See `meta/skills/query-kb/SKILL.md`.
+**Query:** Karpathy Query operation — read wiki, cite `[[slugs]]`, file good answers back on request. See `meta/skills/query-knowledge/SKILL.md`. Raw sources are reached only through `explore-raw-data` (`python3 -m meta.explore_raw find|read|check|recommend`, cataloged files only, 0 LLM): `meta/skills/explore-raw-data/SKILL.md`.
 
 ```
 python3 meta/query.py candidates "<keywords>"   # rank slugs (0 LLM)

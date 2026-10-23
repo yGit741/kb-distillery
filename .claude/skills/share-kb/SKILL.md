@@ -20,13 +20,18 @@ description: >-
 - `audit`, `audit the public build`, `what would a snapshot expose`
 - `snapshot the site`, `public snapshot`, `publish a snapshot <name>`
 - `list snapshots`, `which snapshots are live`, `snapshot views`
+- `update the snapshot <name>`, `edit the snapshot I sent`, `point the <name> link at kb-x.y.z`, `snapshot history`,
+  `roll back the snapshot`
 - `remove snapshot <name>`, `delete the snapshot`, `prune snapshots`
 - `time machine` (lands in its own PR; say so if the subcommand is missing)
 
 ## Do NOT
 
 - Confuse with `export-kb` (zip of wiki + think for an external LLM) or `kb-snapshot` (version tag / restore)
-- Pass `--force` on your own — it bypasses the never-older guard; only when the user says force
+- Pass `--force` on your own — it bypasses the never-older guard (on `deploy-main` and on
+  `snapshot --replace` alike); only when the user says force
+- Update a sent snapshot without saying so: `--replace` changes what a link the user already
+  forwarded shows; name the old and new kb version in the reply (the CLI prints both)
 - Deploy a public snapshot past audit flags: `snapshot` runs `audit` itself and refuses on flags;
   pass `--allow-flags` only when the user has seen the flags and says so (snapshots are public, no sign-in)
 - Touch the live Worker `kb` with snapshot commands — `remove` / `prune` refuse it by name
@@ -44,8 +49,11 @@ pixi run share -- rollback                 # previous version, then the auth gat
 pixi run share -- rollback --to <ID>
 pixi run share -- config --google-client-id <id>   # store the OAuth client id (not secret)
 pixi run share -- audit <ref>              # public build of <ref> in a temp dir: pages by type + privacy flags (exit 1 on flags)
-pixi run share -- snapshot <name> <ref>    # audit, then publish as snapshot-<YYYYMMDD>-<name> (public); --replace, --allow-flags, --dry-run
-pixi run share -- list [--json]            # our snapshots: version, behind-main, deployed at, views 7d, online
+pixi run share -- snapshot <name> <ref>    # audit, then publish as snapshot-<YYYYMMDD>-<name> (public); --allow-flags, --dry-run
+pixi run share -- snapshot <name> <ref> --replace   # UPDATE a sent snapshot: same Worker, same link; refuses an older ref (--force)
+pixi run share -- list [--json]            # our snapshots: version, behind-main, deployed at, views 7d, updates (was kb-x), online
+pixi run share -- history <name> [--json]  # every version a snapshot served, newest first, * = live; version ids for rollback
+pixi run share -- rollback --worker <name> [--to <id>]   # a snapshot's previous version (no auth gate; kb is the default worker)
 pixi run share -- remove <name>            # type the worker name to confirm (--yes skips); never kb
 pixi run share -- prune [--apply]          # orphans (snapshot-* without a reachable manifest); foreign Workers only listed
 pixi run test-worker                       # node --test of worker/auth.js + admin.js
@@ -70,8 +78,17 @@ dashboard nav shows the chip (green deployed · deploying · skipped · red fail
    (the Google gate is down: fix the Worker vars/secrets, nothing was uploaded), `failed` (read the log).
 3. Rollback on request: `pixi run share -- rollback`; if the result says the auth gate is down, say so loudly.
 4. Snapshot on request: `share audit <ref>` → show the flag counts → `share snapshot <name> <ref>`
-   (`--replace` to redeploy an existing name in place) → give the URL. `share list` for status;
-   `share remove <name>` / `share prune` only after the user confirms what will be deleted.
+   → give the URL. `share list` for status; `share remove <name>` / `share prune` only after the
+   user confirms what will be deleted.
+5. **Update a snapshot that was already sent** ("edit the snapshot", "point the link at the new
+   version"): `share snapshot <name> <ref> --replace`. The link stays the same and starts serving
+   `<ref>`; the recipient sees the new kb version and build date in the footer (the URL keeps its
+   creation date). Safe because: the audit runs again; `skipped-same` means nothing to do;
+   `skipped-older` is refused — an older ref downgrades what the recipient already saw, so only
+   the user's explicit "force" adds `--force`; every earlier version stays on Cloudflare —
+   `share history <name>` is the audit trail, `share rollback --worker <name>` the undo. Report
+   the old → new version the CLI prints. Never `remove` + re-`snapshot` to "update": that
+   changes the URL (new date) and drops the history.
 5. First-time setup (user-owned): Worker secrets `GOOGLE_CLIENT_SECRET`, `SESSION_SECRET`
    (`npx wrangler@4.151.3 secret put … --name kb`); client id via `share config` or `KB_SHARE_GOOGLE_CLIENT_ID`.
 
@@ -93,10 +110,11 @@ the Snapshots panel — on top of the public profile's own cuts (no `distilled-t
 
 The private site has a **Snapshots** tab (private builds only — public snapshots never contain it,
 its script, or any `/admin/` path). It lists every `snapshot-*` Worker with kb version, behind-main,
-7-day views, built date and online state, with Open / Copy link / Delete (type the Worker name to
-confirm), shows an orphan / "not ours" banner from a **dry-run** prune, and a "New snapshot" box
-that builds `pixi run share -- snapshot <name> kb-x.y.z` for you to run on the Mac (creating and
-`prune --apply` stay CLI-only).
+7-day views, built date and online state, with Open / Copy link / Update… / Delete (type the Worker
+name to confirm), shows an orphan / "not ours" banner from a **dry-run** prune, and a "New
+snapshot" box that builds `pixi run share -- snapshot <name> kb-x.y.z` for you to run on the Mac;
+"Update…" fills the box in replace mode (`--replace`, same link) and warns when a typed name is
+already taken (creating, updating and `prune --apply` stay CLI-only).
 
 API (`meta/share/worker/admin.js`, behind the sign-in session + `ALLOWED_EMAILS` (or `ADMIN_EMAILS`)
 + header `X-KB-Admin: 1` + same-origin `Origin` for writes): `GET /admin/api/snapshots`,
