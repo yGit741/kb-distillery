@@ -27,5 +27,5 @@ description: Catalog blog posts from inbox to raw/web-clips/ (or raw/printed-doc
 ## CLI
 
 ```bash
-python3 -m meta.ingest catalog raw/inbox/<post>.md --collection <hub> [--format printed-docs]
+python3 -m meta.ingest catalog raw/inbox/<post>.md --collection <collection> [--format printed-docs]
 ```

@@ -1,7 +1,7 @@
 ---
 name: kb-undo
 description: >-
-  Reverse one knowledge step (e.g. a concept split that should not have happened) as a new kb(undo)
+  Reverse one knowledge step (e.g. an idea split that should not have happened) as a new kb(undo)
   commit that rewrites only wiki/. Use for undo, revert step, roll back <slug>. Do NOT use for infra
   changes, think/ edits, raw/ imports, or to go back to a whole earlier state (use kb-snapshot restore).
 ---

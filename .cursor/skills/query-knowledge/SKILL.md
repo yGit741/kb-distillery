@@ -27,15 +27,15 @@ This is **not** `meta.ingest resolve` (dedup before scrap). This is **reading** 
 
 ```bash
 python3 meta/query.py candidates "<question keywords>"
-python3 meta/query.py mocs                    # theme- entry points, for broad / thematic questions
+python3 meta/query.py mocs                    # topic pages (theme-*) as entry points, for broad questions
 python3 meta/lint.py --health                 # optional: orphans, broken links
 ```
 
-1. **Read `index.md`** — skim the relevant section (themes, questions, papers, concepts).
+1. **Read `index.md`** — skim the relevant section (topics, questions, sources, ideas).
 2. **Run `candidates`** — supplements index with full-text term hits.
-3. **Pick 3–8 slugs** — prefer `theme-*` + `q-*` for thesis questions; reading units
+3. **Pick 3–8 slugs** — prefer topic pages (`theme-*`) + `q-*` for thesis questions; Source pages
    (`paper-`, `part-`, `lecture-`, `article-`, `conversation-`) for citations.
-   Old slugs (`moc-…`, unprefixed papers) live in `aliases:` — `python3 -m meta.ingest resolve <old-slug>`.
+   Old slugs (pre-`theme-` topic slugs, unprefixed papers) live in `aliases:` — `python3 -m meta.ingest resolve <old-slug>`.
 
 Never claim “nothing in the vault” until both index and `candidates` were checked.
 
@@ -49,7 +49,7 @@ Never claim “nothing in the vault” until both index and `candidates` were ch
 ## Scoped questions
 
 A **scope** is a personal set of raw files (`/scopes`, `scope-*` page); its knowledge is a projection:
-the pages citing those files plus the concepts/questions at least two of them link. When the user asks
+the pages citing those files plus the ideas/questions at least two of them link. When the user asks
 "in scope scope-x …" (or the chat's Scope select is set), answer **only from that projection**.
 
 ```bash
@@ -70,10 +70,10 @@ Karpathy: explorations should compound, not die in chat.
 
 | User intent | Where to write |
 |-------------|----------------|
-| New stable concept | `wiki/<concept-slug>.md` (`type: concept`) |
+| New stable idea | `wiki/<idea-slug>.md` (`type: idea`, `layer: concept`) |
 | New research question | `wiki/q-<slug>.md` (`type: question`) |
 | Personal deliberation | `think/*.md` (human-owned; never agent-edit directly) |
-| Comparison / analysis worth keeping | concept or question page; cross-link sources |
+| Comparison / analysis worth keeping | idea or question page; cross-link sources |
 
 After filing: `python3 meta/lint.py` and optional `meta/log.md` entry:
 `## [YYYY-MM-DD] query | <short title>`
@@ -81,8 +81,8 @@ After filing: `python3 meta/lint.py` and optional `meta/log.md` entry:
 ## Entry points for this vault
 
 - **Thesis direction:** `[[theme-info-theory]]`, `[[theme-quantum]]`, `[[theme-tensor-factorization]]`, open `q-*` pages
-- **Course provenance:** `course-*` / `series-*` hubs — their `## Contents` table lists every member and its digest
-- **Books:** `book-*` / `notebook-*` hubs — `## Partition` links each digested `part-*`
+- **Course provenance:** `course-*` / `series-*` collections — their `## Contents` table lists every member and its digest
+- **Books:** `book-*` / `notebook-*` collections — `## Partition` links each digested `part-*`
 - **Activity:** `meta/log.md`
 - **Human scratch:** `think/my-true-research-start-here.md` (read if relevant; do not edit)
 

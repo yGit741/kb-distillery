@@ -14,8 +14,8 @@ description: Pull every post of a WordPress.com blog into raw/inbox/ as Markdown
 
 ## Do NOT
 
-- Pull without the hub: the clip prefix is the series hub's `short:` (create the `series-` page first, `wiki-edit`)
-- Catalog or digest from here — `drain-inbox --collection <series-hub>` is the next step
+- Pull without the collection: the clip prefix is the series collection's `short:` (create the `series-` page first, `wiki-edit`)
+- Catalog or digest from here — `drain-inbox --collection <series-slug>` is the next step
 - Pull a self-hosted WordPress (its API is `/wp-json/wp/v2/`, not supported yet) — scrap posts one by one
 
 ## CLI
@@ -40,7 +40,7 @@ python3 -m meta.ingest scrap-wordpress <site> --prefix <short> --no-images      
 
 ## Next step
 
-`python3 -m meta.ingest drain-inbox --collection <series-hub> --match <prefix>-` — clips first, then their figures; one lint and one
+`python3 -m meta.ingest drain-inbox --collection <series-slug> --match <prefix>-` — clips first, then their figures; one lint and one
 `kb(catalog)` commit for the whole drain. Figures land in `raw/images/` as `asset:<clip>` rows.
 
 ## Commit

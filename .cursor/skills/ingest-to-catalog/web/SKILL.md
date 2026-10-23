@@ -17,11 +17,11 @@ description: Catalog web clips from inbox to raw/web-clips/. Corpus row only. Do
 
 ## Behavior
 
-1. Move to `raw/web-clips/<topic>.<ext>` (prefixed with the hub's `short:` when it joins one)
+1. Move to `raw/web-clips/<topic>.<ext>` (prefixed with the collection's `short:` when it joins one)
 2. Corpus row; with a course/series collection, a `—` Contents row is appended
 
 ## CLI
 
 ```bash
-python3 -m meta.ingest catalog raw/inbox/<clip>.md [--collection <hub>]
+python3 -m meta.ingest catalog raw/inbox/<clip>.md [--collection <collection>]
 ```

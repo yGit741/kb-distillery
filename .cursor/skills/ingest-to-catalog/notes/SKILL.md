@@ -14,12 +14,12 @@ description: Catalog handwritten notes (ink-only PDFs) from inbox to raw/handwri
 ## Do NOT
 
 - Digest from here — a digested handwritten file becomes a `lecture-` page (or, ≥60 pages, a
-  `notebook-` hub with `part-` pages)
+  `notebook-` collection with `part-` pages)
 - Route typed notes here — typed notes belong in `printed-docs/`
 
 ## Behavior
 
-1. Move to `raw/handwritten/<short>-<topic>.pdf` (`short` = the collection hub's `short:`)
+1. Move to `raw/handwritten/<short>-<topic>.pdf` (`short` = the collection's `short:`)
 2. Corpus row; with a course/series collection, a `—` Contents row is appended (`--title`)
 
 ## CLI

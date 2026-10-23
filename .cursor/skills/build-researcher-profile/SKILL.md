@@ -27,7 +27,7 @@ marker; `pixi run health` counts pages without one (`persons-unverified`).
 | `scholar` | Bibliography, Cataloged in vault | Semantic Scholar rows (+ manual rows) |
 
 Edges `orgs`, `advisors`, `students` are bare slugs (`[]` = checked, nobody). Hand-owned:
-the intro sentence, `## Why it matters here` (must link a theme or concept), `## Meeting log`,
+the intro sentence, `## Why it matters here` (must link a topic or idea), `## Meeting log`,
 any custom section — finalize never rewrites them.
 
 ## Triggers
@@ -80,7 +80,7 @@ python3 -m meta.ingest index-researcher finalize <slug>
 ```
 
 Writes `wiki/<slug>.md` — generated sections from the manifest, hand sections preserved — and
-catalogs star-tier papers (≤10) to `raw/` with `digestion-status: catalog`. Then write
+catalogs star-tier papers (≤10) to `raw/` with `depth: listed`. Then write
 `## Why it matters here` by hand if the page is new.
 
 Semantic Scholar's arXiv id is **verified before download**: the record behind it must name a
@@ -100,15 +100,15 @@ python3 -m meta.ingest index-researcher relink <slug>     # dangling bibliograph
 | Artifact | Content |
 |----------|---------|
 | Person page | handles + edges frontmatter, generated sections, Why it matters, Meeting log |
-| Paper stubs | ≤10 catalog-tier nodes only |
+| Paper Source pages | ≤10, `depth: listed` only |
 | Corpus | Cataloged PDFs as `queued`, `collection` = person slug |
 
 ## Quality bar
 
-- `pixi run lint` passes: every handle a URL/`none`/`unknown`, sections match handles, Why it matters links a theme or concept
+- `pixi run lint` passes: every handle a URL/`none`/`unknown`, sections match handles, Why it matters links a topic or idea
 - `verified:` set, no `unknown` left that one more search could resolve
 - Lineage reciprocal where both pages exist (lint warns otherwise)
-- No paper has `digestion-status: full|easy|deep`
+- No paper has `depth: easy|full|deep`
 
 ## Next step
 
