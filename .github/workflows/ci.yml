@@ -7,14 +7,25 @@
 # links, slugs, book partitions, course tables, collections, coherence) and reads the committed
 # manifest as the truth instead of reconciling it against disk.
 #
-# macos-latest (arm64): pixi.lock is solved for osx-arm64 only; adding linux-64 means re-locking.
+# Self-hosted runner on the owner's Mac (osx-arm64, the only platform pixi.lock is solved for).
+# GitHub-hosted macOS minutes bill 10x and exhausted the Free plan's 2,000 min/month on a private
+# repo (every job refused from 2026-10-22); a self-hosted runner is free and unlimited. Jobs run
+# only while the Mac is awake and the runner service is up — otherwise they queue. Only the owner
+# pushes to this private repo, so running PR code on the Mac is no wider trust than `ship` itself.
+# Setup: repo Settings → Actions → Runners → New self-hosted runner (macOS, ARM64), then
+# `./svc.sh install && ./svc.sh start`. Behind the TLS-inspecting proxy, put SSL_CERT_FILE in the
+# runner's `.env` file so pixi can download packages.
+#
+# setup-pixi cache: false — checkout's `git clean -ffdx` removes .pixi/ each run, but the
+# runner keeps pixi's package cache (~/Library/Caches/rattler), so a reinstall is local and fast;
+# the GitHub cache would only add an upload/download round-trip.
 name: ci
 on:
   pull_request:
   workflow_dispatch:
 jobs:
   checks:
-    runs-on: macos-latest
+    runs-on: [self-hosted, macOS, ARM64]
     env:
       KB_CI: "1"     # for every step: tests that build dashboard snapshots run lint too (test_digestion_data)
     steps:
@@ -25,7 +36,7 @@ jobs:
       - uses: prefix-dev/setup-pixi@v0.8.1
         with:
           pixi-version: v0.76.1
-          cache: true
+          cache: false
       - run: pixi run test
       - run: pixi run lint-skills
       - run: pixi run lint
