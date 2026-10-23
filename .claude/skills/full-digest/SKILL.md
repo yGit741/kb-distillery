@@ -87,6 +87,13 @@ page plus a ticked Contents row.
 - `theme-*` `## Papers` updated via finalize
 - Person link when the raw file's `collection` names a researcher
 
+## Pitfalls
+
+- The negation-word polarity check is now a warning (score capped at 60): it only fires when a negation sits within a few tokens of topic words the other page asserts, and never between a paper and its own new stubs. Do not reword honest assumptions to silence it; `coherence dismiss <id>` if it is spurious.
+- A paper with long appendices (60+ pages) is treated as a paper when it has an abstract and no chapter outline; otherwise pass `--whole-book`.
+- Concept and `q-` stubs are registered with the session automatically (map and finalize), so an aborted finalize removes them and restores theme `## Papers` lines; the old `staging/` is kept as `staging-aborted-<time>/`, and `begin` restores `claims.json`/`plan.json` of an aborted session.
+- Theme slugs in `claims.json` `concepts` map to `area:`, not to new concept pages.
+
 ## Commit
 
 The CLI commits this operation itself as `kb(digest): … (kb-x.y.z)` on main — only the files it changed (`--no-commit` to skip). Check with `pixi run ops -- log -n 1`. `finalize` is the commit point.
