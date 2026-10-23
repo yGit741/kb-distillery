@@ -41,7 +41,7 @@ const Empty = ({ children }: { children: ReactNode }) => (
 
 function Section({ title, description, children }: { title: string; description?: string; children: ReactNode }) {
   return (
-    <Card>
+    <Card className="min-w-0">
       <CardHeader>
         <CardTitle>{title}</CardTitle>
         {description && <CardDescription>{description}</CardDescription>}
@@ -354,7 +354,7 @@ export function LifecycleScreen() {
       ? `${s.version ? "kb-" + s.version : "no version yet"} · ${s.stats.kb_steps} knowledge steps · ${s.stats.pr_merges} PR merges · generated ${s.generated_at}`
       : "";
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex min-w-0 flex-col gap-4">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <h1 className="text-2xl font-semibold">Lifecycle</h1>
@@ -391,7 +391,7 @@ export function LifecycleScreen() {
             <div key={i} role="note" className="rounded-lg border border-warn/40 bg-warn/10 px-3 py-2 text-sm">{a}</div>
           ))}
           <Timeline s={s} />
-          <div className="grid gap-4 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <Snapshots s={s} />
             <Working s={s} />
           </div>

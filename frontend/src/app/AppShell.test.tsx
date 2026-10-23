@@ -19,6 +19,7 @@ describe("AppShell", () => {
     render(<App source={ds} router={router} />);
     const nav = await screen.findByRole("navigation", { name: "Main" });
     expect(nav.querySelectorAll("a")).toHaveLength(ROUTES.length);
+    expect(nav).toHaveClass("overflow-x-auto", "min-w-0"); // scrolls inside itself on phones
     expect(screen.getAllByRole("button", { name: /switch to/i })).toHaveLength(1);
     expect(await screen.findByRole("link", { name: /open the legacy page/i })).toHaveAttribute("href", "/legacy/graph");
 

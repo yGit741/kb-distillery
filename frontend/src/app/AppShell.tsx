@@ -15,7 +15,7 @@ export function AppShell() {
     <div className="flex min-h-screen flex-col">
       <header className="sticky top-0 z-40 flex h-12 items-center gap-2 border-b bg-card px-4">
         <span className="shrink-0 text-sm font-semibold">Thesis KB</span>
-        <nav aria-label="Main" className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto">
+        <nav aria-label="Main" className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {ROUTES.map((r) => (
             <Link
               key={r.id}
@@ -41,7 +41,7 @@ export function AppShell() {
           {theme === "dark" ? <Sun aria-hidden /> : <Moon aria-hidden />}
         </Button>
       </header>
-      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-4">
+      <main className="mx-auto w-full min-w-0 max-w-6xl flex-1 px-4 py-4">
         <Outlet />
       </main>
       <CommandPalette />
