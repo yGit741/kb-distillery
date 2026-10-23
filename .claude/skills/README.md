@@ -15,7 +15,8 @@ Read `meta/skills/<skill>/SKILL.md` before running a workflow.
 | `full-digest` | medium | ~8–12k | only on `full-digest` / `full digest` |
 | `deep-digest` | heavy | ~25–40k+ | only on `deep-digest` + user confirms heavy |
 | `distill-think` | medium | ~8–12k propose | `distill-think`, `distill think`, `graph brief` |
-| `query-kb` | light | ~3–15k | `query-kb`, `query kb`, `what do I know about` |
+| `query-knowledge` | light | ~3–15k | `query-knowledge`, `query-kb`, `query kb`, `what do I know about` |
+| `explore-raw-data` | light | ~2–6k | `explore-raw-data`, `explore raw`, `which sources do I have on …`, `is this paper worth digesting` |
 | `semantic-lint-hop` | light–medium | ~3–12k | after full/deep digest or distill apply |
 | `lint-moc` | medium | ~8–20k | `lint-moc`, `lint moc` |
 | `build-researcher-profile` | light | ~3–8k verify | `build researcher profile`, `index researcher` |
@@ -44,7 +45,8 @@ Read `meta/skills/<skill>/SKILL.md` before running a workflow.
 | [full-digest](full-digest/SKILL.md) | Standard note — paper, book part, or course/series row (medium) |
 | [deep-digest](deep-digest/SKILL.md) | Thesis-critical + neighbors (heavy, explicit only) |
 | [distill-think](distill-think/SKILL.md) | Propose/apply from `think/` → transient `distilled-think-*` (medium) |
-| [query-kb](query-kb/SKILL.md) | Answer from wiki — index-first, citations, optional file-back |
+| [query-knowledge](query-knowledge/SKILL.md) | Answer from wiki — index-first, citations, optional file-back |
+| [explore-raw-data](explore-raw-data/SKILL.md) | Look at cataloged raw sources (0 LLM CLI): find, read, check against pages, recommend a digest tier |
 | [semantic-lint-hop](semantic-lint-hop/SKILL.md) | 1-hop review after ingest/distill — fix internal, note external on Connections |
 | [lint-moc](lint-moc/SKILL.md) | On-demand semantic pass over one `theme-` page |
 | [build-researcher-profile](build-researcher-profile/SKILL.md) | Index full bib + catalog star papers only (light verify) |
