@@ -50,10 +50,12 @@ pixi run lint-skills               validate skill definitions
 pixi run sync-skills               copy meta/skills/ → .cursor/skills/ (after lint-skills)
 pixi run export-kb                 zip wiki + think → .exported/ (LLM share)
 pixi run share -- deploy-main      build main → private Cloudflare site (also: status, rollback, --dry-run)
-pixi run share -- snapshot <name> <ref>   audit + publish a PUBLIC snapshot Worker (also: audit, list, remove, prune)
+pixi run share -- snapshot <name> <ref>   audit + publish a PUBLIC snapshot Worker (also: audit, list, history, remove, prune;
+                                   `--replace` updates a sent snapshot at the same link, `rollback --worker <name>` undoes it)
 pixi run lanes                     pending changes per lane + nightly sync, stale worktrees, open PRs
 pixi run ops -- status             knowledge version, sessions, hooks (also: log, snapshot, undo, restore)
 pixi run ops -- record <op> <target> "summary" <paths…>   commit already-modified knowledge as one op
+pixi run ops -- sync --prefer local|origin [--root <checkout>]   diverged main: replay local kb steps on origin/main keeping one side's text in conflicts
 pixi run ship -- prune [--apply]   delete merged infra/*, worktree-*, history/* branches + their clean worktrees
 pixi run daily-sync                nightly: commit think/ edits + leftovers, push main + tags, then hygiene checks
 pixi run hygiene                   git/ops hygiene report (stale worktrees, unpruned branches, unpushed steps, sessions, PRs, site, snapshots); --json
@@ -82,6 +84,8 @@ Without pixi, use `python3` equivalents (`python3 meta/lint.py`, `python3 -m met
 **Versions are knowledge-only:** `kb-x.y.z` — x paradigm, y schema (`SCHEMA_VERSION` in `meta/schema.py`), z step (computed). Tooling is unversioned; a `schema`/`paradigm` PR carries its migration (`meta/migrations/`, `pixi run ops -- migrate` on the branch), snapshots first (`pre-<feature>`) and again after the merge (`post-<feature>`, the new baseline) and bumps y/x.
 
 **An open PR is never silent:** while an `infra/*` branch has an open PR, every agent reply ends with `Awaiting your merge: #N <url> — say "merge" …`; the Claude Code `Stop` hook (`meta/merge_nudge.py`, `.claude/settings.json`) bounces a reply that forgot it, once.
+
+**Diverged main** (two sessions pushed the same pages from different bases): `ops sync` fast-forwards or replays unpushed `kb(...)` steps and aborts on a conflict; only the user's `--prefer local|origin` picks a side (a rebase `-X` strategy, whole conflicting hunks), and `--root` lets a worktree run it against the primary checkout. Generated files are rebuilt by the next lint.
 
 **Hygiene is built in, never a gate:** every `kb(...)` step pushes main right away (`--no-push` / `KB_NO_PUSH=1` to defer; the nightly sync is the backstop and `ops status` says whether it is installed and when it last ran); `ship merge` removes its own worktree and local branch; `ship prune --apply` removes merged, clean worktrees and never touches dirty ones; `pixi run lanes` lists stale worktrees, `worktree-*` session branches and open PRs. `.obsidian/` is tooling too, with only `app`, `core-plugins` and `community-plugins` tracked (the rest is gitignored). **Snapshots** are annotated tags `kb-x.y.z` (`pixi run ops -- snapshot "label"`). **Undo** one step: `pixi run ops -- undo <sha>`; **restore** a snapshot: `pixi run ops -- restore kb-x.y.z` — both new commits that rewrite only `wiki/`, `meta/aliases.tsv`, `meta/chats/` (never `raw/`, `think/`, `meta/log.md`, generated files) and only on the user's request.
 
