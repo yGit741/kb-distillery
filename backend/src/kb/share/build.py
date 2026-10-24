@@ -113,7 +113,8 @@ CDN_FILES = {
 KATEX_FONTS_URL = "https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/fonts/"
 
 PUBLIC_DROP_KEYS = ("raw", "path", "email", "original_name", "scopes")
-PUBLIC_EXCLUDE_TYPES = frozenset({"distilled-think", "scope"})   # scopes are private working sets
+# scopes are private working sets; email threads and LLM chats are private correspondence
+PUBLIC_EXCLUDE_TYPES = frozenset({"distilled-think", "scope", "conversation", "ai-chat"})
 
 # Routes the shim answers; the static scan in the tests checks nothing else is fetched.
 SHIMMED_API = ("/api/graph", "/api/schema", "/api/explore/index", "/api/explore/page", "/api/explore/search", "/api/explore/path",

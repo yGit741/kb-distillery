@@ -24,7 +24,7 @@ METRICS = {
     "hooks": {
         "label": "Guard hooks",
         "cluster": "integrity",
-        "help": "Whether Cursor and Claude guard hooks point at guard.py.",
+        "help": "Whether Cursor and Claude guard hooks point at the write guard (kb.git.guard).",
         "format": "hooks",
     },
     "broken": {

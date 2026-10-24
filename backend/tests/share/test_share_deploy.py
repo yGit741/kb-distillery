@@ -521,7 +521,8 @@ class WorkerAuthTests(unittest.TestCase):
         node = shutil.which("node")
         if not node:
             self.skipTest("node not available")
-        proc = subprocess.run([node, "--test", os.path.join(ROOT, "share", "auth.test.mjs")],
+        proc = subprocess.run([node, "--test", "--test-reporter=tap",   # newer Node defaults to spec
+                               os.path.join(ROOT, "share", "auth.test.mjs")],
                               capture_output=True, text=True, cwd=ROOT, timeout=120)
         self.assertEqual(proc.returncode, 0, proc.stdout[-2000:] + proc.stderr[-2000:])
         self.assertIn("# fail 0", proc.stdout)

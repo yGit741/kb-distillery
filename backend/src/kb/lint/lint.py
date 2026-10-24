@@ -73,6 +73,11 @@ def raw_exists(rel):
     return os.path.exists(os.path.join(ROOT, rel)) or rel in CI_RAW
 
 
+def _names_guard(text):
+    """The hook command runs the write guard: `python3 -m kb.git.guard`, or the pre-#69 `guard.py`."""
+    return "kb.git.guard" in text or "guard.py" in text
+
+
 def hooks_health():
     """Return (status_text, all_ok) for agent write-guard hook configs."""
     cursor_ok = claude_ok = False
@@ -81,13 +86,13 @@ def hooks_health():
     if os.path.isfile(cursor_path):
         try:
             with open(cursor_path, encoding="utf-8") as f:
-                cursor_ok = "guard.py" in json.dumps(json.load(f))
+                cursor_ok = _names_guard(json.dumps(json.load(f)))
         except (json.JSONDecodeError, OSError):
             pass
     if os.path.isfile(claude_path):
         try:
             with open(claude_path, encoding="utf-8") as f:
-                claude_ok = "guard.py" in f.read()
+                claude_ok = _names_guard(f.read())
         except OSError:
             pass
     status = f"cursor {'ok' if cursor_ok else 'MISS'}, claude {'ok' if claude_ok else 'MISS'}"

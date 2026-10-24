@@ -401,6 +401,7 @@ class ShareProfileTests(unittest.TestCase):
     def test_public_profile_drops_scope_pages_and_the_scopes_key(self):
         from kb.share import build as sb
         self.assertIn("scope", sb.PUBLIC_EXCLUDE_TYPES)
+        self.assertLessEqual({"conversation", "ai-chat"}, sb.PUBLIC_EXCLUDE_TYPES)   # private correspondence
         self.assertIn("scopes", sb.PUBLIC_DROP_KEYS)
         self.assertIn("/api/scopes", sb.SHIMMED_API)
         self.assertIn("/api/scope", sb.SHIMMED_API)
