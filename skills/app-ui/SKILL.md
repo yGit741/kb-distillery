@@ -56,6 +56,13 @@ The frontend speaks the shipped model (schema 1.0, `meta/schema.py` `LAYER_OF`; 
 
 The backend emits these names directly, so there is no translation layer and no `kind`: palette keys, props, stores, filters, labels and test names use `layer`, `type` and `depth` as the API returns them. Retired words (hub, MOC, reading unit, theme or bare concept as a type, `catalog` as a depth, `digestion-status`) must not appear.
 
+## Rendering rules
+
+1. Loading, empty and error states render inside the same container as the content, so the layout does not jump.
+2. A colour tint appears only when a value signals a problem; healthy values stay neutral.
+3. Add no controls the spec did not ask for.
+4. No Markdown syntax (`**`, backticks, `#`) inside JSX text; use elements, or `<Markdown>` for real Markdown.
+
 ## De-duplication rules
 
 1. One control per action, one place per setting. A PR lists the controls it removed or merged.
