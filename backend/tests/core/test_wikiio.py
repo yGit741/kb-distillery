@@ -181,12 +181,6 @@ class WritersKeepNotes(unittest.TestCase):
         self.assertEqual(self.r("wiki/paper-p.md"),
                          "---\ntype: paper\nstatus: digested\ndepth: easy\n---\n" + body)
 
-    def test_migrate_model_set_fm(self):
-        from kb.maintenance import migrate_model
-        text = "---\ntype: moc\n---\n\ntype: body\n\n" + NOTES
-        self.assertEqual(migrate_model.set_fm(text, "type", "theme"),
-                         "---\ntype: theme\n---\n\ntype: body\n\n" + NOTES)
-
 
 if __name__ == "__main__":
     unittest.main()

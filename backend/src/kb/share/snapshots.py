@@ -22,8 +22,9 @@ previous version stays on Cloudflare — `history <name>` lists them with their 
 snapshot was updated.
 
 `audit` scans the data embedded in the public build (`<script id="kb-data">`): page counts by
-type, and flags person pages, `conversation-` / `ai-chat` pages, email addresses, phone-number
-patterns, `raw/` paths in prose and any `distilled-think` page. `snapshot` runs it first and
+type, and flags email-derived pages (a `raw:` or prose path under `raw/emails/`), email addresses and
+phone-number patterns in text (third parties), and any `distilled-think` page. Person pages, LLM chats
+and ordinary `raw/` paths are public and not flagged. `snapshot` runs it first and
 refuses on flags unless `--allow-flags`.
 
 Cloudflare goes through `kb.share.cf_api` (mockable seams); the upload reuses
@@ -40,16 +41,16 @@ from typing import Optional
 
 from kb.share import cf_api
 from kb.share.contracts import (ACCOUNT_SUBDOMAIN, CACHE_DIR, DEPLOY_MESSAGE_PREFIX, REPO, SNAPSHOT_PREFIX,
-                                  WORKER_MAIN, snapshot_worker_name)
+                                  WORKER_MAIN, raw_is_email, snapshot_worker_name)
 
 MANIFEST_TIMEOUT = 10
 _DATA_RE = re.compile(r'<script type="application/json" id="kb-data">(.*?)</script>', re.S)
 _SNAPSHOT_RE = re.compile(rf"^{re.escape(SNAPSHOT_PREFIX)}(?P<date>\d{{8}})-(?P<name>[a-z0-9]([a-z0-9-]*[a-z0-9])?)$")
 _EMAIL_RE = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+")
 _PHONE_RE = re.compile(r"(?<![\w/-])(?<!\d\.)(?:\+\d{1,3}[\s.-]?)?(?:\(\d{2,4}\)|\d{2,4})[\s.-]\d{3}[\s.-]?\d{4}(?!\w|[./-]\d)")
-_RAW_RE = re.compile(r"(?<![\w/])raw/(?:inbox|papers|slides|notes|mail|web|assets|chats|printed-docs|handwritten|presentations|llm-chats|emails|web-clips|images)(?:/[^\s`'\")\]]*)?")
-_CHAT_RE = re.compile(r"(?:^|-)(?:conversation|ai-chat)(?:-|$)")
-FLAG_KINDS = ("person", "chat", "email", "phone", "raw-path", "distilled-think")
+# Only raw/emails/ paths are sensitive in prose (other raw/ paths are the owner's own sources).
+_RAW_EMAIL_RE = re.compile(r"(?<![\w/])raw/emails/[^\s`'\")\]]*")
+FLAG_KINDS = ("email-source", "email", "phone", "distilled-think")
 
 
 # ---------- audit ----------
@@ -88,19 +89,19 @@ def scan(data: dict) -> dict:
         card = cards.get(slug) or page.get("card") or {}
         ptype = card.get("type") or nodes.get(slug, {}).get("type") or "unknown"
         counts[ptype] += 1
-        if ptype == "person":
-            flag("person", slug, "person page")
         if ptype == "distilled-think":
             flag("distilled-think", slug, "distilled-think page survived the public profile")
-        if _CHAT_RE.search(slug) or ptype in ("conversation", "ai-chat"):
-            flag("chat", slug, "conversation / ai-chat page")
+        # Email-derived pages must have been dropped by the build (which also strips `raw:`); if one is still
+        # visible here, by its `raw:` or by a raw/emails/ path in its text, it slipped through.
+        if raw_is_email((page.get("frontmatter") or {}).get("raw")) or raw_is_email((nodes.get(slug, {}).get("properties") or {}).get("raw")):
+            flag("email-source", slug, "page derived from raw/emails/")
         text = "\n".join(_texts(page))
         for found in sorted(set(_EMAIL_RE.findall(text))):
             flag("email", slug, found)
         for found in sorted(set(m.group(0).strip() for m in _PHONE_RE.finditer(text))):
             flag("phone", slug, found)
-        for found in sorted(set(_RAW_RE.findall(text))):
-            flag("raw-path", slug, found)
+        for found in sorted(set(_RAW_EMAIL_RE.findall(text))):
+            flag("email-source", slug, found)
     return {"counts": dict(sorted(counts.items())), "flags": flags, "pages": len(slugs)}
 
 
@@ -121,6 +122,8 @@ def _audit_kw(args) -> dict:
     """Only what was asked for: no flag → no extra keyword, the legacy call is unchanged.
     `--viewer-worktree` is dev only (hidden): render with this checkout's code, as `share build` can."""
     kw = {"app": True} if getattr(args, "app", False) else {}
+    if getattr(args, "scope", None):
+        kw.update(scope=args.scope, hops=args.hops)
     if getattr(args, "viewer_worktree", False):
         kw["viewer_worktree"] = True
     return kw
@@ -521,6 +524,9 @@ def register(subparsers) -> None:
     a = subparsers.add_parser("audit", help="build <ref> with the public profile and scan it (no deploy)")
     a.add_argument("ref", help="main, a commit, kb-x.y.z or x.y.z")
     a.add_argument("--allow-flags", action="store_true", help="exit 0 even when flags are found")
+    a.add_argument("--scope", default=None, metavar="SLUG",
+                   help="publish only this scope / collection / person page, its members and (--hops 1) their neighbours")
+    a.add_argument("--hops", type=int, choices=(0, 1), default=1)
     a.add_argument("--app", action="store_true", help="opt in: audit the React-app layout build")
     a.add_argument("--viewer-worktree", action="store_true", help=argparse.SUPPRESS)
     a.set_defaults(func=cmd_audit)
@@ -534,6 +540,9 @@ def register(subparsers) -> None:
                    help="with --replace: allow serving an older or unrelated knowledge version than the live one")
     s.add_argument("--allow-flags", action="store_true", help="deploy despite audit flags")
     s.add_argument("--dry-run", action="store_true", help="audit and resolve the Worker, but do not deploy")
+    s.add_argument("--scope", default=None, metavar="SLUG",
+                   help="publish only this scope / collection / person page, its members and (--hops 1) their neighbours")
+    s.add_argument("--hops", type=int, choices=(0, 1), default=1)
     s.add_argument("--app", action="store_true", help="opt in: publish the React-app layout build instead of the iframe shell")
     s.add_argument("--viewer-worktree", action="store_true", help=argparse.SUPPRESS)
     s.set_defaults(func=cmd_snapshot)

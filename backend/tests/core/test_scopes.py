@@ -401,7 +401,7 @@ class ShareProfileTests(unittest.TestCase):
     def test_public_profile_drops_scope_pages_and_the_scopes_key(self):
         from kb.share import build as sb
         self.assertIn("scope", sb.PUBLIC_EXCLUDE_TYPES)
-        self.assertLessEqual({"conversation", "ai-chat"}, sb.PUBLIC_EXCLUDE_TYPES)   # private correspondence
+        self.assertTrue(sb.PUBLIC_EXCLUDE_TYPES.isdisjoint({"conversation", "ai-chat", "person"}))   # chats and profiles are public (only email-derived pages go)
         self.assertIn("scopes", sb.PUBLIC_DROP_KEYS)
         self.assertIn("/api/scopes", sb.SHIMMED_API)
         self.assertIn("/api/scope", sb.SHIMMED_API)
@@ -424,6 +424,28 @@ class ShareProfileTests(unittest.TestCase):
         self.assertNotIn("scopes", out["pages"]["paper-a"]["frontmatter"])
         self.assertNotIn("scopes", out["graph"]["nodes"][0]["properties"])
         self.assertNotIn("scope-s", json.dumps(out))
+
+    def test_scoped_public_build_keeps_only_the_scope_set_and_names_nothing_else(self):
+        from kb.share import build as sb
+        nodes = [dict(id="paper-a", type="paper", title="A", preview="see [[paper-b]]",
+                      properties=dict(related="paper-b, idea-x")),
+                 dict(id="paper-b", type="paper", title="Bee paper", properties=dict()),
+                 dict(id="idea-x", type="idea", title="X", properties=dict())]
+        links = [dict(source="paper-a", target="paper-b"), dict(source="paper-a", target="idea-x")]
+        data = dict(graph=dict(nodes=nodes, links=links, facets=dict()),
+                    index=dict(pages=[dict(id=n["id"], type=n["type"]) for n in nodes],
+                               links=[["paper-a", "paper-b"], ["paper-a", "idea-x"]], wanted=[]),
+                    pages={n["id"]: dict(card=dict(type=n["type"], title=n["title"]), frontmatter=dict(),
+                                         markdown="", backlinks=[], outbound=[], suggested=[]) for n in nodes})
+        data["pages"]["paper-a"].update(markdown="cites [[paper-b|B]] and [[paper-b]], uses [[idea-x]]",
+                                        frontmatter=dict(related=["paper-b", "idea-x"]), outbound=["paper-b", "idea-x"])
+        data["pages"]["paper-b"]["backlinks"] = [dict(id="paper-a")]
+        out = sb.apply_profile(data, "public", {"paper-a", "idea-x"})
+        self.assertEqual(sorted(out["pages"]), ["idea-x", "paper-a"])
+        self.assertEqual([l["target"] for l in out["graph"]["links"]], ["idea-x"])
+        self.assertEqual(out["pages"]["paper-a"]["markdown"], "cites B and Bee paper, uses [[idea-x]]")
+        self.assertEqual(out["pages"]["paper-a"]["frontmatter"]["related"], ["idea-x"])
+        self.assertNotIn("paper-b", json.dumps(out))
 
 
 if __name__ == "__main__":

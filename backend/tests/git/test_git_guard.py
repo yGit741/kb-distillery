@@ -51,6 +51,11 @@ class ViolationTests(unittest.TestCase):
         "gh api repos/x/y -f name=z",
         "gh repo edit --enable-squash-merge=false",
         "git log | xargs git commit",
+        "pixi run ship -- approve 12",
+        "python3 -m kb.git.ship approve 12",
+        "python3 backend/src/kb/git/ship.py approve 12",
+        "gh issue edit 12 --remove-label hold",
+        "gh label delete hold --yes",
     ]
     ALLOWED = [
         "git status",

@@ -31,6 +31,17 @@ PROFILES = ("private", "public")
 DeployState = Literal["deployed", "skipped-same", "skipped-older", "refused-no-access", "failed"]
 DEPLOY_STATES = ("deployed", "skipped-same", "skipped-older", "refused-no-access", "failed")
 
+# Correspondence with other people is the one source kind that never goes public: a page whose `raw:`
+# (a string or a list) points under this prefix, or a prose mention of such a path, is email-derived.
+EMAIL_RAW_PREFIX = "raw/emails/"
+
+
+def raw_is_email(raw) -> bool:
+    """True when a `raw:` frontmatter value (string or list) names a file under raw/emails/."""
+    items = raw if isinstance(raw, (list, tuple)) else [raw]
+    return any(isinstance(r, str) and r.strip().strip("`'\"").startswith(EMAIL_RAW_PREFIX) for r in items)
+
+
 WORKER_MAIN = "kb"
 ACCOUNT_SUBDOMAIN = "yonatan-magen-thesis"
 SNAPSHOT_PREFIX = "snapshot-"
@@ -59,11 +70,18 @@ class Manifest:
     # `sha256` is then the digest of the whole tree (build.tree_digest). Left out of the JSON when
     # legacy, so legacy manifests stay byte-identical.
     layout: str = "legacy"
+    # A scoped snapshot (`share snapshot … --scope <slug> --hops 0|1`): the seed page and hop count.
+    # Left out of the JSON when unscoped, so existing manifests stay byte-identical.
+    scope: Optional[str] = None
+    hops: Optional[int] = None
 
     def to_json(self) -> str:
         d = asdict(self)
         if d["layout"] == "legacy":
             del d["layout"]
+        for k in ("scope", "hops"):
+            if d[k] is None:
+                del d[k]
         return json.dumps(d, sort_keys=True, indent=2) + "\n"
 
     @classmethod

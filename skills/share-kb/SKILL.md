@@ -51,6 +51,7 @@ pixi run share -- config --google-client-id <id>   # store the OAuth client id (
 pixi run share -- audit <ref>              # public build of <ref> in a temp dir: pages by type + privacy flags (exit 1 on flags)
 pixi run share -- snapshot <name> <ref>    # audit, then publish as snapshot-<YYYYMMDD>-<name> (public); --allow-flags, --dry-run
 pixi run share -- snapshot <name> <ref> --replace   # UPDATE a sent snapshot: same Worker, same link; refuses an older ref (--force)
+pixi run share -- snapshot <name> <ref> --app --scope <slug> [--hops 0|1]   # SUBGRAPH: only a scope / collection / person page, its members and (hops 1, default) their neighbours; manifest records scope + hops
 pixi run share -- list [--json]            # our snapshots: version, behind-main, deployed at, views 7d, updates (was kb-x), online
 pixi run share -- history <name> [--json]  # every version a snapshot served, newest first, * = live; version ids for rollback
 pixi run share -- rollback --worker <name> [--to <id>]   # a snapshot's previous version (no auth gate; kb is the default worker)
@@ -61,8 +62,11 @@ pixi run test-worker                       # node --test of worker/auth.js + adm
 
 Snapshots: `<ref>` is `main`, a commit, `kb-x.y.z` or `x.y.z`; the URL is
 `https://snapshot-<YYYYMMDD>-<name>.yonatan-magen-thesis.workers.dev/` (date = deploy day, UTC).
-Audit flags: person pages, `conversation-` / `ai-chat` pages, e-mail addresses, phone-number
-patterns, `raw/` paths in prose, `distilled-think`. Cloudflare is the registry (`snapshot-`
+Public builds exclude only `distilled-think`, `scope` and anything derived from e-mail (`raw:` under
+`raw/emails/`, i.e. email-thread `conversation-` pages); person pages, LLM chats and ordinary `raw/`
+paths are public (owner decision 2026-10-24: mails involve someone else, chats and profiles do not).
+Audit flags: email-derived pages or `raw/emails/` paths in prose (`email-source`), e-mail addresses,
+phone-number patterns, `distilled-think`. Cloudflare is the registry (`snapshot-`
 prefix + `kb-share` deploy message); credentials come from `CLOUDFLARE_API_TOKEN` or wrangler's
 login. Views show `0*` with a note when analytics is unavailable.
 
@@ -150,18 +154,19 @@ and the digestion rows — shrink those, do not raise the constant.
 
 The reported state matches `share status`; unauthenticated `curl -I` on the site gives 302 → `/auth/login`.
 
-## App build (opt-in `--app`)
+## App build (default for `deploy-main`)
 
-Same site, built from the React app under `frontend/` instead of the iframe shell. Default OFF: without
-`--app` every command builds the legacy shell byte-for-byte as before (the daily private deploy and the
-public snapshots stay on it).
+Same site, built from the React app under `frontend/` instead of the iframe shell. `deploy-main` (the
+daily private deploy) builds it by default — `--legacy` builds the old shell instead, and a layout switch at
+an already-deployed sha needs `--force`. `build`, `audit` and `snapshot` still need `--app` (public
+snapshots stay on the legacy shell).
 
 ```bash
 pixi run share -- build main --profile public  --app    # graph + pages
 pixi run share -- build main --profile private --app    # + the read-only lifecycle view
 pixi run share -- audit main --app                      # same audit, on the app build
 pixi run share -- snapshot <name> main --app --dry-run  # audit + render the Worker dir, no deploy
-pixi run share -- deploy-main --app --dry-run
+pixi run share -- deploy-main --dry-run              # --legacy for the iframe shell
 ```
 
 - Output `.exported/share/<ref>-app/`: `index.html` (carries the data blob in `<script id="kb-data">`,

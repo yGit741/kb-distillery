@@ -3,6 +3,7 @@ import { node } from "../fixtures";
 import type { GLink, GNode, GraphModel } from "../types";
 import { louvain, pageGraph, pagerank, rng, themesOf } from "./core";
 import { notablePairs, spectrum } from "./fourier";
+import { influence } from "./influence";
 import { clusterJaccard, noiseStability } from "./noise";
 import { heldAt, thresholds } from "./threshold";
 
@@ -74,6 +75,23 @@ describe("fourier", () => {
     expect(s2.pairs[0]?.coef).toBeCloseTo(-1 / 3, 6);
   });
 
+  it("finds a hole: three themes that meet in every pair but never all together", () => {
+    const pairsOnly = [
+      ...["x", "y", "z"].flatMap((t) => Array.from({ length: 4 }, (_, i) => page(`${t}${i}`, [t]))),
+      ...Array.from({ length: 8 }, (_, i) => page(`xy${i}`, ["x", "y"])),
+      ...Array.from({ length: 8 }, (_, i) => page(`yz${i}`, ["y", "z"])),
+      ...Array.from({ length: 8 }, (_, i) => page(`xz${i}`, ["x", "z"])),
+    ];
+    const s = spectrum({ nodes: [topic("x"), topic("y"), topic("z"), ...pairsOnly], links: [], conceptLinks: [] }, { nullRuns: 1 });
+    expect(s.holes.map((h) => h.themes.join())).toEqual(["x,y,z"]);
+    expect(s.holes[0]?.all).toBe(0);
+    const filled = spectrum(
+      { nodes: [topic("x"), topic("y"), topic("z"), ...pairsOnly, page("xyz0", ["x", "y", "z"]), page("xyz1", ["x", "y", "z"])], links: [], conceptLinks: [] },
+      { nullRuns: 1 },
+    );
+    expect(filled.holes).toEqual([]);
+  });
+
   it("infers themes for an untagged page from its tagged neighbours", () => {
     const base = twoCliques();
     const m: GraphModel = { ...base, nodes: [...base.nodes, page("orphan", [])], links: [...base.links, link("orphan", "b1"), link("orphan", "b2")] };
@@ -131,8 +149,24 @@ describe("threshold", () => {
     const own = (t: string) => r.pairs.find((x) => x.a === t && x.b === t)?.p50 ?? 0;
     const ab = r.pairs.find((x) => x.a === "a" && x.b === "b");
     expect(ab?.p50).toBeGreaterThan(Math.max(own("a"), own("b")));
-    expect(ab?.bridge).not.toBeNull();
+    // the pair mostly tips on the one bridge link a5—b5, so one of its ends is the hinge
+    expect(["a5", "b5"]).toContain(ab?.hinge);
+    expect(ab?.hingeShare).toBeGreaterThan(0.5);
     expect(r.giant[0]?.share).toBeLessThan(r.giant[50]?.share as number);
+  });
+
+  it("influence: the hub of a star is pivotal for its theme, a leaf is not", async () => {
+    const leaves = Array.from({ length: 6 }, (_, i) => page(`s${i}`, ["s"]));
+    const m: GraphModel = {
+      nodes: [topic("s"), page("hub", ["s"]), ...leaves],
+      links: leaves.map((l) => link("hub", l.id)),
+      conceptLinks: [],
+    };
+    const inf = await influence(m, thresholds(m, { draws: 40 }), { draws: 10 });
+    // at p50 the theme holds in about half the draws, and whenever it holds the hub is pivotal
+    expect(inf.total.get("hub") ?? 0).toBeGreaterThan(0.25);
+    expect(inf.total.get("s0") ?? 0).toBeLessThan(inf.total.get("hub") ?? 0);
+    expect(inf.perTheme.get("s")?.[0]?.id).toBe("hub");
   });
 
   it("weighting keeps well-backed links earlier", () => {
