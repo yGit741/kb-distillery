@@ -65,8 +65,7 @@ export function buildGraphData(
 ): GraphData {
   const byId = new Map(model.nodes.map((n) => [n.id, n] as const));
   const nodes: SimNode[] = [];
-  for (const n of model.nodes) {
-    if (!visible.has(n.id)) continue;
+  const place = (n: GNode): SimNode => {
     const p = prev?.get(n.id);
     const node: SimNode = { ...n };
     if (p && p.x != null && p.y != null) {
@@ -75,12 +74,22 @@ export function buildGraphData(
       if (p.fx != null) node.fx = p.fx;
       if (p.fy != null) node.fy = p.fy;
     }
-    nodes.push(node);
+    return node;
+  };
+  for (const n of model.nodes) if (visible.has(n.id)) nodes.push(place(n));
+  // the data layer: piles are always drawn, tied to the pages they feed that are drawn too
+  const pileIds = new Set<string>();
+  for (const p of model.raw?.piles ?? []) {
+    pileIds.add(p.id);
+    nodes.push(place(p));
   }
   const links: GLink[] = model.links.filter((l) => visible.has(l.source) && visible.has(l.target));
   if (!sourcesDrawn(visible, byId)) {
     const linked = new Set(links.map((l) => `${l.source}|${l.target}`));
     links.push(...sharedSourceLinks(model.conceptLinks, visible, linked));
+  }
+  for (const l of model.raw?.links ?? []) {
+    if (pileIds.has(l.source) && (pileIds.has(l.target) || visible.has(l.target))) links.push(l);
   }
   return { nodes, links: links.map((l) => ({ ...l })) };
 }

@@ -15,6 +15,11 @@ export default function Graph() {
     () => ({
       openPage: (slug) => void navigate({ to: `/pages/${encodeURIComponent(slug)}` as "/" }),
       pageHref: (slug) => `${base}/pages/${encodeURIComponent(slug)}`,
+      go: (to, search) => void navigate({ to: to as "/", ...(search ? { search: search as never } : {}) }),
+      href: (to, search) => {
+        const qs = new URLSearchParams(search).toString();
+        return `${base}${to}${qs ? `?${qs}` : ""}`;
+      },
       clearParams: (keys) =>
         void navigate({
           to: ".",
