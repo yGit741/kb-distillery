@@ -61,6 +61,19 @@ mini chart). Generic hooks other tools can reuse: `../tools/experiments.ts` (fla
   pages; 0 with all three; 1.2 expected). It answers simplicial holes without a clique complex over the
   1 100 pages.
 
+## Round 3 (2026-10-24): Research directions (flag `directions`, compass button)
+
+Story: when I choose my thesis topic, I want the empty intersections of my vault as cards, each with what
+already sits there and my closest questions and ideas, so that I can shortlist directions with evidence.
+`directions.ts` turns the spectrum's gaps and holes into cards: sides (pages, read in depth), existing
+pages in the intersection vs expected, the closest `q-` questions and ideas (closeness to a theme = share
+of the page and its neighbours carrying it; a page ranks by its weakest side), and a foothold: strong
+(reach ≥ 0.3), thin, or greenfield.
+
+On the vault: 7 directions, 1 with a strong foothold — boolean-analysis × implicit-regularization (4 pages
+vs 30 expected), reached by the Ising-perceptron / sharp-threshold questions and the volume hypothesis.
+The quantum gaps are thin (reach ≤ 0.15) with 7 of 99 quantum pages read in depth: new ground, cold start.
+
 ## Open questions to decide together
 
 1. Which of the analyses earns a permanent place (graduate = drop the flag), and where: toolbar tool, a
