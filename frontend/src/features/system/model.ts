@@ -58,6 +58,32 @@ export interface Run {
   warnings?: number;
   sync?: { commits?: number; pushed?: boolean; failed?: boolean };
   deploy?: { state?: string } | null;
+  steps?: { name: string; status?: string }[];
+}
+
+/** Why a nightly run is not ok, most important first: a failed sync, a failed site deploy, then failed steps. */
+export function runReason(run: Run): string {
+  if (run.sync?.failed) return "sync failed";
+  if (run.deploy?.state === "failed") return "site deploy failed";
+  const bad = (run.steps ?? []).filter((s) => s.status === "error").map((s) => s.name);
+  if (bad.length) return `${bad.join(", ")} failed`;
+  if (run.errors) return `${run.errors} error${run.errors === 1 ? "" : "s"}`;
+  if (run.warnings) return `${run.warnings} warning${run.warnings === 1 ? "" : "s"}`;
+  return "";
+}
+
+/**
+ * The Nightly tile follows the LATEST RUN's own outcome (meta/.ops/runs.jsonl, the timeline's source), not the
+ * scheduler summary, which only says the job is installed and when it last started.
+ */
+function nightlyTile(ops: OpsLike | undefined, summary: string): Pick<Tile, "value" | "hint" | "tone"> {
+  if (!ops) return { value: "…", hint: "", tone: "" };
+  const last = [...(ops.runs ?? [])].sort((a, b) => Date.parse(b.started) - Date.parse(a.started))[0];
+  if (!last) return summary ? { value: "no runs yet", hint: summary, tone: "warn" } : { value: "not installed", hint: "", tone: "warn" };
+  const when = new Date(last.started).toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+  const t = tone(last.status) || (last.status === "failed" ? "bad" : "");
+  const reason = runReason(last);
+  return { value: last.status ?? "unknown", hint: [reason, when].filter(Boolean).join(" · "), tone: t || "warn" };
 }
 export interface OpsLike {
   threads?: Thread[];
@@ -128,9 +154,7 @@ export function tiles(lc?: LifecycleLike, ops?: OpsLike, health?: HealthLike): T
     {
       id: "nightly",
       label: "Nightly",
-      value: ops ? (nightly.startsWith("ok") ? "ok" : nightly ? "check" : "not installed") : "…",
-      hint: nightly.replace(/^ok\s*/, "").replace(/^\((.*)\)$/, "$1").replace("T", " "),
-      tone: ops ? (nightly.startsWith("ok") ? "ok" : "warn") : "",
+      ...nightlyTile(ops, nightly),
       tab: "overview",
     },
   ];

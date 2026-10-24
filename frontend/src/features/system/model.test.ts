@@ -1,5 +1,5 @@
 import { askAbout } from "@/features/graph/tools/chatDockStore";
-import { needsYou, tiles, timeline, type HealthLike, type LifecycleLike, type OpsLike } from "./model";
+import { needsYou, runReason, tiles, timeline, type HealthLike, type LifecycleLike, type OpsLike } from "./model";
 
 const lc: LifecycleLike = {
   version: "1.0.9",
@@ -30,7 +30,7 @@ describe("system model", () => {
     expect(t.find((x) => x.id === "hygiene")).toMatchObject({ value: "0 / 2", tone: "warn" });
     expect(t.find((x) => x.id === "lint")).toMatchObject({ value: "0 / 194", tone: "warn", tab: "health" });
     expect(t.find((x) => x.id === "backlog")).toMatchObject({ value: "385", tab: "pipeline" });
-    expect(t.find((x) => x.id === "nightly")).toMatchObject({ value: "ok", tone: "ok" });
+    expect(t.find((x) => x.id === "nightly")).toMatchObject({ value: "warn", tone: "warn" });
     expect(tiles().every((x) => x.value === "…" && x.tone === "")).toBe(true);
   });
 
@@ -45,6 +45,31 @@ describe("system model", () => {
   it("drafts a chat question about a selection, as wikilinks, capped", () => {
     expect(askAbout([{ id: "a" }, { id: "b" }])).toBe("About [[a]], [[b]]: ");
     expect(askAbout(Array.from({ length: 14 }, (_, i) => ({ id: `p${i}` })), 2)).toBe("About [[p0]], [[p1]] (and 12 more): ");
+  });
+
+  it("the Nightly tile follows the latest run, red with its reason when it failed", () => {
+    const failed: OpsLike = {
+      ...ops,
+      nightly: { summary: "ok (last run 2026-10-24T22:00)" },
+      runs: [
+        { started: "2026-10-23T19:00:00Z", status: "ok" },
+        {
+          started: "2026-10-24T19:00:26Z",
+          status: "error",
+          errors: 1,
+          deploy: { state: "failed" },
+          steps: [{ name: "hygiene", status: "error" }, { name: "report", status: "error" }, { name: "notify", status: "ok" }],
+        },
+      ],
+    };
+    const t = tiles(lc, failed, health).find((x) => x.id === "nightly");
+    expect(t).toMatchObject({ value: "error", tone: "bad" });
+    expect(t?.hint).toMatch(/^site deploy failed · /);
+    expect(runReason({ started: "", steps: [{ name: "hygiene", status: "error" }] })).toBe("hygiene failed");
+    expect(runReason({ started: "", sync: { failed: true }, deploy: { state: "failed" } })).toBe("sync failed");
+    const fine = tiles(lc, { ...ops, runs: [{ started: "2026-10-24T19:00:00Z", status: "ok" }] }, health).find((x) => x.id === "nightly");
+    expect(fine).toMatchObject({ value: "ok", tone: "ok" });
+    expect(tiles(lc, { ...ops, runs: [], nightly: {} }, health).find((x) => x.id === "nightly")).toMatchObject({ value: "not installed", tone: "warn" });
   });
 
   it("lists threads that need attention first", () => {
