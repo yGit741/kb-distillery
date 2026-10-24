@@ -161,7 +161,7 @@
   },
   {
    "areas": [],
-   "depth": "catalog",
+   "depth": "listed",
    "id": "chat-fixture-ai-chat",
    "in": 0,
    "out": 0,
@@ -213,8 +213,8 @@
    "preview": "One-liner: Gap between train and test risk.",
    "status": "seed",
    "title": "Generalization",
-   "type": "concept",
-   "words": 30,
+   "type": "idea",
+   "words": 45,
    "year": null
   },
   {
@@ -256,13 +256,13 @@
    "preview": "One-liner: Correlation of a function with its noisy copy.",
    "status": "seed",
    "title": "Noise stability",
-   "type": "concept",
-   "words": 33,
+   "type": "idea",
+   "words": 48,
    "year": null
   },
   {
    "areas": [],
-   "depth": "catalog",
+   "depth": "listed",
    "id": "paper-2019-fixture-book",
    "in": 0,
    "out": 0,
@@ -374,8 +374,8 @@
    "preview": "One-liner: Expected surprise of a random variable.",
    "status": "seed",
    "title": "Shannon entropy",
-   "type": "concept",
-   "words": 31,
+   "type": "idea",
+   "words": 46,
    "year": null
   },
   {
@@ -384,11 +384,11 @@
    "id": "theme-boolean-analysis",
    "in": 3,
    "out": 1,
-   "preview": "Fixture theme for the pipeline harness.",
+   "preview": "Fixture topic for the pipeline harness.",
    "status": "seed",
    "title": "Boolean Analysis",
-   "type": "theme",
-   "words": 20,
+   "type": "topic",
+   "words": 35,
    "year": null
   },
   {
@@ -397,11 +397,11 @@
    "id": "theme-complex-nn",
    "in": 0,
    "out": 0,
-   "preview": "Fixture theme for the pipeline harness.",
+   "preview": "Fixture topic for the pipeline harness.",
    "status": "seed",
    "title": "Complex Nn",
-   "type": "theme",
-   "words": 18,
+   "type": "topic",
+   "words": 33,
    "year": null
   },
   {
@@ -410,11 +410,11 @@
    "id": "theme-fourier-analysis",
    "in": 0,
    "out": 0,
-   "preview": "Fixture theme for the pipeline harness.",
+   "preview": "Fixture topic for the pipeline harness.",
    "status": "seed",
    "title": "Fourier Analysis",
-   "type": "theme",
-   "words": 18,
+   "type": "topic",
+   "words": 33,
    "year": null
   },
   {
@@ -423,11 +423,11 @@
    "id": "theme-implicit-regularization",
    "in": 0,
    "out": 0,
-   "preview": "Fixture theme for the pipeline harness.",
+   "preview": "Fixture topic for the pipeline harness.",
    "status": "seed",
    "title": "Implicit Regularization",
-   "type": "theme",
-   "words": 18,
+   "type": "topic",
+   "words": 33,
    "year": null
   },
   {
@@ -436,11 +436,11 @@
    "id": "theme-info-theory",
    "in": 3,
    "out": 1,
-   "preview": "Fixture theme for the pipeline harness.",
+   "preview": "Fixture topic for the pipeline harness.",
    "status": "seed",
    "title": "Info Theory",
-   "type": "theme",
-   "words": 20,
+   "type": "topic",
+   "words": 35,
    "year": null
   },
   {
@@ -449,11 +449,11 @@
    "id": "theme-learning-theory",
    "in": 5,
    "out": 3,
-   "preview": "Fixture theme for the pipeline harness.",
+   "preview": "Fixture topic for the pipeline harness.",
    "status": "seed",
    "title": "Learning Theory",
-   "type": "theme",
-   "words": 24,
+   "type": "topic",
+   "words": 39,
    "year": null
   },
   {
@@ -462,11 +462,11 @@
    "id": "theme-optimization-theory",
    "in": 0,
    "out": 0,
-   "preview": "Fixture theme for the pipeline harness.",
+   "preview": "Fixture topic for the pipeline harness.",
    "status": "seed",
    "title": "Optimization Theory",
-   "type": "theme",
-   "words": 18,
+   "type": "topic",
+   "words": 33,
    "year": null
   },
   {
@@ -475,11 +475,11 @@
    "id": "theme-quantum",
    "in": 0,
    "out": 0,
-   "preview": "Fixture theme for the pipeline harness.",
+   "preview": "Fixture topic for the pipeline harness.",
    "status": "seed",
    "title": "Quantum",
-   "type": "theme",
-   "words": 17,
+   "type": "topic",
+   "words": 32,
    "year": null
   },
   {
@@ -488,11 +488,11 @@
    "id": "theme-statistics",
    "in": 0,
    "out": 0,
-   "preview": "Fixture theme for the pipeline harness.",
+   "preview": "Fixture topic for the pipeline harness.",
    "status": "seed",
    "title": "Statistics",
-   "type": "theme",
-   "words": 17,
+   "type": "topic",
+   "words": 32,
    "year": null
   },
   {
@@ -501,11 +501,11 @@
    "id": "theme-tensor-factorization",
    "in": 0,
    "out": 0,
-   "preview": "Fixture theme for the pipeline harness.",
+   "preview": "Fixture topic for the pipeline harness.",
    "status": "seed",
    "title": "Tensor Factorization",
-   "type": "theme",
-   "words": 18,
+   "type": "topic",
+   "words": 33,
    "year": null
   },
   {

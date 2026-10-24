@@ -14,10 +14,9 @@ pixi run test                           # includes the fast unit tests (test_har
 
 ## What `harness` does
 
-1. `fixture_vault.build(root, inputs, model="legacy")` creates a scratch vault: a copy of the tool code
-   (`meta/`, minus vault data) plus a seed wiki (10 topic pages, ideas, one course, one series, one video source),
-   and one input file per source kind. `model` selects the front-matter form of the seed pages; only `legacy`
-   (the live 16-type model) exists today, a `v2` (type/kind/depth) set is added later without touching the runner.
+1. `fixture_vault.build(root, inputs)` creates a scratch vault: a copy of the tool code
+   (`backend/src/kb`, minus tests) plus a seed wiki in schema-1.0 form (10 topic pages, ideas ending with `## My notes`,
+   one course, one series, one video source), and one input file per source type.
 2. `run_pipeline.py` runs the real path with cwd = the scratch vault: `scrap` -> `catalog` (with collection) ->
    digest -> `lint` -> graph / explorer / chat-retrieval builders -> share build (`kb.share.build --inner`,
    public profile) -> nightly report preview. LLM steps are replaced by recordings in
@@ -27,7 +26,7 @@ pixi run test                           # includes the fast unit tests (test_har
    coherence file, share summary, nightly digest, step list). A mismatch prints a unified diff and exits 1.
    Goldens capture current main's real behaviour: they are the migration safety net, not a spec.
 
-## Coverage by source kind (new vocabulary; the live backend still emits the old names)
+## Coverage by layer and type (schema 1.0)
 
 | case | path exercised |
 |---|---|
@@ -54,19 +53,18 @@ snapshots; dashboard HTTP server (builders are called as pure functions); video 
 `KB_ROOT` is honoured by lint, coherence, semfind, graph/explorer/digestion data and the ingest `paths` module,
 but NOT everywhere: `ingest extract` derives the vault from the code location and `finalize` runs
 `<vault>/backend/src/kb/lint/lint.py`. So the scratch vault carries its own copy of the tool code and every command runs with
-`cwd=<scratch vault>` and `KB_ROOT` unset. After the `meta/` -> `backend/` move, change `META_SRC`/`CODE_EXCLUDE`
-in `fixture_vault.py` and the `-m meta.*` module names in `run_pipeline.py`; nothing else references code layout.
+`cwd=<scratch vault>` and `KB_ROOT` unset. Code layout is referenced only by `CODE_SRC`/`META_COPY` in
+`fixture_vault.py` and the `-m kb.*` module names in `run_pipeline.py`.
 
 ## Vault invariants
 
-`vault_invariants.py` is read-only over any vault. Reported with the NEW words (`type/kind`, `depth`):
-page count per `type/kind`, sources per `kind:depth`, links, dangling links, orphans, lint errors/warnings,
-open coherence warnings, raws resolvable, collection-table consistency, graph nodes/edges, a share-size
-estimate, and the SHA-256 of every page BODY (text after the closing front-matter delimiter, keyed by slug,
-independent of type, so it survives the migration unchanged). `legacy_model.py` is the ONE module that maps the
-old front matter to type/kind/depth (DELETE after data-model stage 7). `--compare` exits 1 on any body change or
-removal, or any count regression (fewer pages/links/graph items/resolvable raws; more dangling/orphans/lint
-errors/warnings/open coherence/inconsistent tables).
+`vault_invariants.py` is read-only over any vault and reads the schema-1.0 front matter directly. Reported:
+pages per `layer` and per `layer/type`, sources per `type:depth`, links, dangling links, orphans, lint
+errors/warnings, open coherence warnings, raws resolvable, collection-table consistency, graph nodes/edges, a
+share-size estimate, and the SHA-256 of every page BODY (text after the closing front-matter delimiter, keyed by
+slug, independent of front matter). `--compare` exits 1 on any body change or removal, or any count regression
+(fewer pages/links/graph items/resolvable raws; more dangling/orphans/lint errors/warnings/open coherence/inconsistent
+tables). Re-baseline (`--out`) after a deliberate wiki change.
 
 Partial checkouts (fresh worktree, CI): raw binaries are gitignored, so they are absent from disk. The report says
 how many (`raw_binaries_absent`); `raws_resolvable` and lint warnings depend on that, so compare baselines taken

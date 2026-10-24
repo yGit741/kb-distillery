@@ -1,5 +1,6 @@
 ---
 type: course
+layer: collection
 short: rl
 institution: runi
 course_code: 00000

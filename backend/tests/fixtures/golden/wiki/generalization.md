@@ -1,5 +1,6 @@
 ---
-type: concept
+type: idea
+layer: concept
 area: [learning-theory]
 status: seed
 sources: []
@@ -26,3 +27,7 @@ Fixture.
 
 ## Open questions
 -
+
+## My notes
+
+<!-- Yours: no tool rewrites this section, and it stays last. -->

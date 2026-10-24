@@ -1,12 +1,13 @@
 ---
 type: ai-chat
+layer: source
 status: to-read
+depth: listed
 title: "Fixture chat on VC dimension"
 provider: gemini
 raw: raw/llm-chats/fixture-ai-chat.md
 conversation: conv-940824dcb2a9
 clips: [raw/llm-chats/fixture-ai-chat.md]
-digestion-status: catalog
 ---
 
 # Fixture chat on VC dimension

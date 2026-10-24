@@ -1,6 +1,6 @@
 """Fixture vault builder: a tiny, deterministic scratch vault for the pipeline harness.
 
-`build(root, inputs, model="legacy")` writes
+`build(root, inputs)` writes
   * a copy of the tool code (everything in meta/ not in CODE_EXCLUDE) under <root>/meta/ — the ingest pipeline resolves some
     paths from the code location, so the scratch vault carries its own copy and every command runs
     with cwd=<root> (see README: KB_ROOT is honoured by lint/graph/explorer but not by
@@ -10,8 +10,7 @@
     them through `scrap` -> `catalog`, exactly like a user would.
 
 Fixtures are named with the new data-model vocabulary (source-paper-local, collection-book, ...).
-`model` selects the front-matter form of the SEED pages: only "legacy" (the live 16-type model)
-exists today; a "v2" set (type/kind/depth) is added later without touching the runner.
+Seed pages use the schema-1.0 front matter (layer, type, depth, topics, ideas ending with `## My notes`).
 """
 import os
 import shutil
@@ -26,7 +25,7 @@ META_COPY = ("templates", "ops")
 CODE_IGNORE = shutil.ignore_patterns("__pycache__", "*.pyc", ".ingest", ".catalog", ".ops", ".researcher",
                                      "test_*.py", "node_modules", "*.test.mjs")
 
-THEMES = ["statistics", "optimization-theory", "learning-theory", "info-theory", "implicit-regularization",
+TOPICS = ["statistics", "optimization-theory", "learning-theory", "info-theory", "implicit-regularization",
           "tensor-factorization", "complex-nn", "quantum", "boolean-analysis", "fourier-analysis"]
 
 RAW_DIRS = ["inbox", "printed-docs", "handwritten", "presentations", "llm-chats", "emails", "web-clips", "images"]
@@ -37,10 +36,11 @@ MANIFEST_HEADER = (
     "collection: comma-separated hub/person slugs · scopes: comma-separated scope-* slugs\n"
     "path\tsha1\tkind\tdisposition\tslug\tcollection\tscopes\n")
 
-# ---------------------------------------------------------------- seed pages (legacy model)
+# ---------------------------------------------------------------- seed pages (schema 1.0)
 
-_THEME = """---
-type: theme
+_TOPIC = """---
+type: topic
+layer: concept
 status: seed
 aliases: []
 related: []
@@ -50,17 +50,22 @@ related: []
 
 ## Scope
 
-Fixture theme for the pipeline harness.
+Fixture topic for the pipeline harness.
 
 ## Key concepts
 
 ## Threads
 
 ## Papers
+
+## My notes
+
+<!-- Yours: no tool rewrites this section, and it stays last. -->
 """
 
 _IDEA = """---
-type: concept
+type: idea
+layer: concept
 area: [{area}]
 status: seed
 sources: []
@@ -87,10 +92,15 @@ Fixture.
 
 ## Open questions
 -
+
+## My notes
+
+<!-- Yours: no tool rewrites this section, and it stays last. -->
 """
 
 _COURSE = """---
 type: course
+layer: collection
 short: rl
 institution: runi
 course_code: 00000
@@ -117,6 +127,7 @@ Links to [[theme-learning-theory]].
 
 _SERIES = """---
 type: series
+layer: collection
 short: kalai
 area: [boolean-analysis]
 status: to-read
@@ -139,11 +150,12 @@ Links to [[theme-boolean-analysis]].
 
 _VIDEO = """---
 type: video
+layer: source
 authors: [Fixture Speaker]
 year: 2024
 area: [info-theory]
 status: digested
-digestion-status: easy
+depth: easy
 raw: none
 url: https://example.org/watch/fixture-talk
 recommended_by: []
@@ -182,10 +194,8 @@ def _title(slug):
     return slug.replace("-", " ").title()
 
 
-def seed_pages(model):
-    if model != "legacy":
-        raise NotImplementedError(f"fixture model {model!r}: only 'legacy' (the live 16-type model) exists yet")
-    pages = {f"theme-{t}": _THEME.format(title=_title(t)) for t in THEMES}
+def seed_pages():
+    pages = {f"theme-{t}": _TOPIC.format(title=_title(t)) for t in TOPICS}
     pages["shannon-entropy"] = _IDEA.format(area="info-theory", title="Shannon entropy", one="Expected surprise of a random variable.")
     pages["noise-stability"] = _IDEA.format(area="boolean-analysis", title="Noise stability", one="Correlation of a function with its noisy copy.")
     pages["generalization"] = _IDEA.format(area="learning-theory", title="Generalization", one="Gap between train and test risk.")
@@ -312,10 +322,10 @@ def build_inputs(inputs):
 
 # ---------------------------------------------------------------- the vault
 
-def build(root, inputs, model="legacy"):
+def build(root, inputs):
     """Create the scratch vault at `root` (must not exist) and the input files at `inputs`."""
     root = Path(root)
-    pages = seed_pages(model)
+    pages = seed_pages()
     root.mkdir(parents=True)
     meta = root / "meta"
     meta.mkdir()

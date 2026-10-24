@@ -1,5 +1,6 @@
 ---
-type: theme
+type: topic
+layer: concept
 status: seed
 aliases: []
 related: []
@@ -9,10 +10,14 @@ related: []
 
 ## Scope
 
-Fixture theme for the pipeline harness.
+Fixture topic for the pipeline harness.
 
 ## Key concepts
 
 ## Threads
 
 ## Papers
+
+## My notes
+
+<!-- Yours: no tool rewrites this section, and it stays last. -->

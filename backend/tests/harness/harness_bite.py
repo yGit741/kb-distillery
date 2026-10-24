@@ -5,7 +5,7 @@
 Each mutation edits the tool code inside the SCRATCH vault only (never this checkout) and the harness
 must then exit non-zero:
 
-  field-rename     draft.py writes `depth:` instead of `digestion-status:` -> a hard gate (finalize's
+  field-rename     draft.py writes the retired `digestion-status:` instead of `depth:` -> a hard gate (finalize's
                    `lint --ingest-strict` / lint) must trip, i.e. the run FAILS at a step;
   silent-text      draft.py renames one section heading -> nothing errors, only the goldens notice,
                    i.e. the run FAILS with a unified diff.
@@ -27,7 +27,7 @@ def _edit(rel, old, new):
 
 
 MUTATIONS = {
-    "field-rename": (_edit("backend/src/kb/ingest/draft.py", "digestion-status: {digestion}", "depth: {digestion}"), "step-failure"),
+    "field-rename": (_edit("backend/src/kb/ingest/draft.py", "depth: {digestion}", "digestion-status: {digestion}"), "step-failure"),
     "silent-text": (_edit("backend/src/kb/ingest/draft.py", "## Proof idea (sketch only)", "## Proof sketch"), "golden-diff"),
 }
 

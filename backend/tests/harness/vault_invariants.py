@@ -10,9 +10,8 @@ Read-only: this reads `wiki/`, `meta/corpus.tsv`, `meta/coherence-warnings.tsv`;
 the vault. The numbers that need the vault's own tools (lint counts, graph nodes/edges, share-size
 estimate) are computed in a throwaway COPY of the vault under the system temp dir.
 
-Everything is keyed by the new data-model vocabulary (type / kind / depth); the one translation from
-the live 16-type vault lives in legacy_model.py (DELETE after data-model stage 7). Page bodies are
-hashed per slug, independent of type, so the hashes survive the migration unchanged.
+Everything is keyed by the schema-1.0 vocabulary (layer / type / depth), read straight from the front
+matter. Page bodies are hashed per slug, independent of type, so the hashes survive model changes.
 """
 import argparse
 import hashlib
@@ -25,8 +24,6 @@ import sys
 import tempfile
 from collections import Counter
 from pathlib import Path
-
-from .legacy_model import to_new_model
 
 REPO = Path(__file__).resolve().parents[3]
 LINK = re.compile(r"\[\[([^\]|#\\]+)")
@@ -124,14 +121,17 @@ def contents_raws(body):
 def structure_counts(root):
     pages = load_pages(root)
     c = {"pages_total": len(pages)}
-    by_kind, by_depth = Counter(), Counter()
+    by_layer, by_type, by_depth = Counter(), Counter(), Counter()
     for _slug, (fm, _body, _t) in pages.items():
-        typ, kind, depth = to_new_model(fm)
-        by_kind[f"{typ}/{kind}"] += 1
-        if typ == "source":
-            by_depth[f"{kind}:{depth or 'none'}"] += 1
-    c["pages_by_type_kind"] = dict(sorted(by_kind.items()))
-    c["sources_by_kind_depth"] = dict(sorted(by_depth.items()))
+        layer = (fm.get("layer") or "none").strip()
+        typ = (fm.get("type") or "unknown").strip()
+        by_layer[layer] += 1
+        by_type[f"{layer}/{typ}"] += 1
+        if layer == "source":
+            by_depth[f"{typ}:{(fm.get('depth') or 'none').strip()}"] += 1
+    c["pages_by_layer"] = dict(sorted(by_layer.items()))
+    c["pages_by_type"] = dict(sorted(by_type.items()))
+    c["sources_by_type_depth"] = dict(sorted(by_depth.items()))
 
     known = _known_targets(root, pages)
     pairs, dangling = set(), set()
@@ -170,8 +170,7 @@ def structure_counts(root):
             by_coll.setdefault(s, set()).add(r["path"])
     tables = 0
     for slug, (fm, body, _t) in pages.items():
-        typ, kind, _d = to_new_model(fm)
-        if typ == "collection" and kind in ("course", "series"):
+        if (fm.get("type") or "").strip() in ("course", "series"):
             tables += 1
             if contents_raws(body) != by_coll.get(slug, set()):
                 bad.append(slug)
@@ -228,7 +227,9 @@ def collect(root, tools=True):
 
 def headline(c):
     lines = [f"pages {c['pages_total']} | links {c['links_total']} | dangling {c['dangling_links']} | orphans {c['orphan_pages']}",
-             "by type/kind: " + ", ".join(f"{k}={v}" for k, v in c["pages_by_type_kind"].items())]
+             "by layer: " + ", ".join(f"{k}={v}" for k, v in c["pages_by_layer"].items()),
+             "by type: " + ", ".join(f"{k}={v}" for k, v in c["pages_by_type"].items()),
+             "sources by type:depth: " + ", ".join(f"{k}={v}" for k, v in c["sources_by_type_depth"].items())]
     if "lint_errors" in c:
         lines.append(f"lint errors {c['lint_errors']} | warnings {c['lint_warnings']} | graph {c.get('graph_nodes')} nodes / {c.get('graph_edges')} edges")
     lines.append(f"coherence open {c['coherence_open']} | raws resolvable {c['raws_resolvable']}/{c['raws_cited']} "

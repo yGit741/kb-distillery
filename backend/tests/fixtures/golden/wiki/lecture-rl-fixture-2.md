@@ -1,9 +1,10 @@
 ---
 type: lecture
+layer: source
 course: 
 area: []
 status: digested
-digestion-status: easy
+depth: easy
 raw: [raw/presentations/rl-fixture-lecture-2.pdf]
 date:
 ---

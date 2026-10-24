@@ -16,22 +16,22 @@ Read this first on any query.
 | [[log]] | Activity timeline |
 | [[AGENTS]] | Schema and workflows |
 
-## Themes
+## Topics
 
 | Page | Status | Summary |
 |------|--------|---------|
-| [[theme-boolean-analysis]] | seed | Fixture theme for the pipeline harness |
-| [[theme-complex-nn]] | seed | Fixture theme for the pipeline harness |
-| [[theme-fourier-analysis]] | seed | Fixture theme for the pipeline harness |
-| [[theme-implicit-regularization]] | seed | Fixture theme for the pipeline harness |
-| [[theme-info-theory]] | seed | Fixture theme for the pipeline harness |
-| [[theme-learning-theory]] | seed | Fixture theme for the pipeline harness |
-| [[theme-optimization-theory]] | seed | Fixture theme for the pipeline harness |
-| [[theme-quantum]] | seed | Fixture theme for the pipeline harness |
-| [[theme-statistics]] | seed | Fixture theme for the pipeline harness |
-| [[theme-tensor-factorization]] | seed | Fixture theme for the pipeline harness |
+| [[theme-boolean-analysis]] | seed | Fixture topic for the pipeline harness |
+| [[theme-complex-nn]] | seed | Fixture topic for the pipeline harness |
+| [[theme-fourier-analysis]] | seed | Fixture topic for the pipeline harness |
+| [[theme-implicit-regularization]] | seed | Fixture topic for the pipeline harness |
+| [[theme-info-theory]] | seed | Fixture topic for the pipeline harness |
+| [[theme-learning-theory]] | seed | Fixture topic for the pipeline harness |
+| [[theme-optimization-theory]] | seed | Fixture topic for the pipeline harness |
+| [[theme-quantum]] | seed | Fixture topic for the pipeline harness |
+| [[theme-statistics]] | seed | Fixture topic for the pipeline harness |
+| [[theme-tensor-factorization]] | seed | Fixture topic for the pipeline harness |
 
-## Concepts
+## Ideas
 
 | Page | Status | Summary |
 |------|--------|---------|

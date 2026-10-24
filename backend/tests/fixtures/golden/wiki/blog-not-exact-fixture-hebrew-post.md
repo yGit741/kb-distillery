@@ -1,7 +1,8 @@
 ---
 type: blog-post
+layer: source
 status: digested
-digestion-status: easy
+depth: easy
 title: "פוסט לדוגמה: מטריצות"
 blog: "לא מדויק"
 lang: he
