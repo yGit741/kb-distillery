@@ -45,7 +45,7 @@ export const DEFAULT_PREFS: GraphPrefs = {
   story: DEFAULT_STORY,
   layoutMode: "anchored",
   areaPull: 0.06,
-  railOpen: true,
+  railOpen: false,
   charge: -120,
   linkDistance: 70,
   gravity: 0.3,
