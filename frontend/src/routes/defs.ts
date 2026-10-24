@@ -18,7 +18,7 @@ export interface RouteDef {
 }
 
 const ALL_DEFS: readonly RouteDef[] = [
-  { id: "home", path: "/", label: "Home", legacy: "/", blurb: "Health, start page and recent activity." },
+  { id: "home", path: "/", label: "Home", legacy: "/", blurb: "Small live graphs that sample the vault; each opens in the full graph." },
   { id: "graph", path: "/graph", label: "Graph", legacy: "/graph", blurb: "Force-directed explorer of the whole vault." },
   { id: "pages", path: "/pages", label: "Pages", legacy: "/explore", blurb: "Read, search and trace notes (the Explore tab).", extraPaths: ["/pages/$slug"] },
   { id: "chat", path: "/chat", label: "Chat", legacy: "/chat", blurb: "Read-only research agent over the wiki." },
