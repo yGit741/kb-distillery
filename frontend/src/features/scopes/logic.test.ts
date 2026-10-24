@@ -1,4 +1,5 @@
-import { DRAFTS_KEY, NO_FILTER, checkSave, corpusToRow, filterRows, matchPages, matchRaw, newRows, normSlug, readDrafts, dropDraft, snapshot, stats, type ScopeRow } from "./logic";
+import { DRAFTS_KEY, NO_FILTER, checkSave, corpusToRow, filterRows, matchPages, matchRaw, newRows, normSlug, readDrafts, dropDraft, snapshot, stats } from "./logic";
+import type { ScopeRow } from "@/api/types";
 
 const row = (path: string, o: Partial<ScopeRow> = {}): ScopeRow => ({
   path, format: path.split("/")[1] ?? "", disposition: "queued", slug: null, page_type: null, digestion: "", collection: [], year: null, ...o,

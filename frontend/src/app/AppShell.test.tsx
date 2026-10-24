@@ -2,6 +2,7 @@ import { createMemoryHistory } from "@tanstack/react-router";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { App } from "./providers";
+import { resetEmbed } from "./embed";
 import { createAppRouter } from "./router";
 import type { DataSource } from "@/api";
 import { mockDataSource } from "@/test/datasource";
@@ -28,5 +29,14 @@ describe("AppShell", () => {
     await userEvent.type(box, "lifecycle");
     await userEvent.keyboard("{Enter}");
     await waitFor(() => expect(router.state.location.pathname).toBe("/lifecycle"));
+  });
+
+  it("hides the header and nav with ?embed=1", async () => {
+    resetEmbed();
+    const router = createAppRouter(createMemoryHistory({ initialEntries: ["/app/pages?embed=1"] }));
+    render(<App source={ds} router={router} />);
+    await screen.findByRole("main");
+    expect(screen.queryByRole("navigation", { name: "Main" })).toBeNull();
+    resetEmbed();
   });
 });

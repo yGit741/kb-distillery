@@ -17,7 +17,7 @@ const oneOf = <T extends string>(v: unknown, allowed: readonly T[]): T | undefin
 };
 
 export type ChatSearch = { session?: string; scope?: string; q?: string };
-export type PagesSearch = { q?: string; layer?: string; type?: string; status?: string; area?: string };
+export type PagesSearch = { q?: string; layer?: string; type?: string; status?: string; area?: string; embed?: string; a?: string; b?: string };
 export type GraphSearch = { select?: string; focus?: string; scope?: string; layer?: string; raw?: "1"; search?: string; pages?: string };
 export type ScopesSearch = { scope?: string; draft?: string };
 export type PipelineSearch = { format?: string; q?: string; depth?: string; collection?: string; status?: string; view?: string; group?: string; backlog?: "queued"; item?: string };
@@ -43,7 +43,7 @@ export const SEARCH: { [K in keyof SearchById]: (raw: Raw) => SearchById[K] } = 
   lifecycle: () => ({}),
   chat: (r) => clean({ session: str(r.session), scope: str(r.scope), q: str(r.q) }),
   pages: (r) =>
-    clean({ q: str(r.q), layer: str(r.layer), type: str(r.type), status: str(r.status), area: str(r.area) }),
+    clean({ q: str(r.q), layer: str(r.layer), type: str(r.type), status: str(r.status), area: str(r.area), embed: str(r.embed), a: str(r.a), b: str(r.b) }),
   graph: (r) =>
     clean({
       select: str(r.select),

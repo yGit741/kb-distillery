@@ -63,3 +63,15 @@ describe("http DataSource, other groups", () => {
     expect(f.mock.calls[0]?.[0]).toBe("/api/chat");
   });
 });
+
+describe("chatStream errors", () => {
+  const body = { question: "q" } as unknown as Parameters<ReturnType<typeof createHttpDataSource>["chatStream"]>[0];
+  it("puts the backend's error and hint in the message", async () => {
+    const ds = createHttpDataSource((() => json({ error: "No API key.", hint: "Add one in Settings." }, 400)) as unknown as typeof fetch);
+    await expect(ds.chatStream(body)).rejects.toMatchObject({ name: "ApiError", status: 400, message: "No API key. Add one in Settings." });
+  });
+  it("falls back to the status when the body is not JSON", async () => {
+    const ds = createHttpDataSource((() => Promise.resolve(new Response("oops", { status: 502 }))) as unknown as typeof fetch);
+    await expect(ds.chatStream(body)).rejects.toMatchObject({ status: 502, message: "/api/chat answered 502" });
+  });
+});
