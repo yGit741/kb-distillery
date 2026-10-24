@@ -570,3 +570,49 @@ class RealRepoTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+MAIL_PAGES = {
+    "hub.md": "---\ntype: concept\nstatus: seed\n---\n\n# Hub\n\nSee [[mail-thread]], [[mail-list]], [[llm-chat]] and [[jane]].\n",
+    "mail-thread.md": "---\ntype: conversation\nraw: raw/emails/2026-01-01-x/thread.md\n---\n\n# Mail thread\n\nMAIL-ONLY-TOKEN [[hub]]\n",
+    "mail-list.md": "---\ntype: conversation\nraw: [raw/printed-docs/a.pdf, raw/emails/2026-01-01-x/thread.md]\n---\n\n# Mail two\n\nMAIL-LIST-TOKEN\n",
+    "llm-chat.md": "---\ntype: ai-chat\nraw: raw/llm-chats/c.md\n---\n\n# LLM chat\n\nCHAT-VISIBLE-TOKEN [[hub]]\n",
+    "jane.md": "---\ntype: person\n---\n\n# Jane\n\nPERSON-VISIBLE-TOKEN [[hub]]\n",
+}
+
+
+class PublicRulesTests(unittest.TestCase):
+    """Public builds keep persons and LLM chats, and drop only distilled-think, scopes and email-derived pages."""
+
+    @classmethod
+    def setUpClass(cls):
+        if not _have_git():
+            raise unittest.SkipTest("git not available")
+        cls.tmp = tempfile.mkdtemp(prefix="share-rules-")
+        cls.repo = make_repo(cls.tmp, pages=MAIL_PAGES)
+        res = build_from(cls.repo, os.path.join(cls.tmp, "out"), "public", label="public")
+        cls.html = read_html(res)
+        cls.data = kb_data(cls.html)
+
+    @classmethod
+    def tearDownClass(cls):
+        shutil.rmtree(cls.tmp, ignore_errors=True)
+
+    def test_email_derived_pages_are_dropped_everywhere(self):
+        for tok in ("MAIL-ONLY-TOKEN", "MAIL-LIST-TOKEN", "raw/emails/"):
+            self.assertNotIn(tok, self.html)
+        d = self.data
+        self.assertEqual({n["id"] for n in d["graph"]["nodes"]}, {"hub", "llm-chat", "jane"})
+        self.assertEqual({c["id"] for c in d["index"]["pages"]}, {"hub", "llm-chat", "jane"})
+        self.assertEqual(set(d["pages"]), {"hub", "llm-chat", "jane"})
+        for l in d["graph"]["links"]:
+            self.assertNotIn("mail", l["source"] + l["target"])
+        self.assertEqual(d["graph"]["node_count"], 3)
+        self.assertEqual(d["graph"]["link_count"], len(d["graph"]["links"]))
+
+    def test_person_and_llm_chat_stay_public_and_audit_clean(self):
+        self.assertIn("PERSON-VISIBLE-TOKEN", self.html)
+        self.assertIn("CHAT-VISIBLE-TOKEN", self.html)
+        self.assertEqual(sb.PUBLIC_EXCLUDE_TYPES, {"distilled-think", "scope"})
+        from kb.share import snapshots
+        self.assertEqual(snapshots.scan(self.data)["flags"], [])

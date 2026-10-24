@@ -4,7 +4,7 @@ import json
 import os
 import sys
 
-from . import net, extract, map, draft, session, reingest, scrap, mail, catalog, easy_digest, resolve as resolve_mod, researcher
+from . import net, extract, map, draft, session, scrap, mail, catalog, easy_digest, resolve as resolve_mod, researcher
 from . import gdrive
 from . import book as book_mod
 from . import backfill as backfill_mod
@@ -249,20 +249,6 @@ def main(argv=None):
     sub.add_parser("status", help="list sessions")
     sub.add_parser("backlog", help="list shallow paper digests")
 
-    r = sub.add_parser("reingest", help="re-ingest one shallow digest through pipeline")
-    r.add_argument("slug")
-    r.add_argument("--dry-run", action="store_true")
-
-    ra = sub.add_parser("reingest-all", help="re-ingest all shallow digests")
-    ra.add_argument("--limit", type=int, default=None)
-    ra.add_argument("--dry-run", action="store_true")
-
-    rr = sub.add_parser("reingest-researchers", help="re-ingest all researcher-bibliography papers")
-    rr.add_argument("--limit", type=int, default=None)
-    rr.add_argument("--dry-run", action="store_true")
-
-    sub.add_parser("verify-persons", help="check paper→person links for researcher PDFs")
-
     ir = sub.add_parser("index-researcher", help="index researcher bib + catalog star papers (0 LLM)")
     ir_sub = ir.add_subparsers(dest="ir_cmd", required=True)
     ir_sub.add_parser("status", help="list open researcher sessions")
@@ -389,25 +375,6 @@ def main(argv=None):
         return cmd_status(args)
     if args.cmd == "backlog":
         return cmd_backlog(args)
-    if args.cmd == "reingest":
-        ok, msg = reingest.reingest_one(args.slug, dry_run=args.dry_run)
-        print(msg)
-        return 0 if ok else 1
-    if args.cmd == "reingest-all":
-        ok, fail = reingest.reingest_all(limit=args.limit, dry_run=args.dry_run)
-        return 0 if not fail else 1
-    if args.cmd == "reingest-researchers":
-        ok, fail = reingest.reingest_researchers(limit=args.limit, dry_run=args.dry_run)
-        return 0 if not fail else 1
-    if args.cmd == "verify-persons":
-        missing = reingest.verify_person_links()
-        if not missing:
-            print(f"ok — {len(reingest.researcher_paper_slugs())} researcher papers linked")
-            return 0
-        print(f"missing person link ({len(missing)}):")
-        for slug, person in missing:
-            print(f"  {slug} → [[{person}]]")
-        return 1
     if args.cmd == "index-researcher":
         if args.ir_cmd == "begin":
             return 0 if researcher.begin(args.query, slug=args.slug, author_id=args.author_id) else 2

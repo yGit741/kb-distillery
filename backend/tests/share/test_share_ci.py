@@ -145,7 +145,7 @@ class ExitCodeTests(unittest.TestCase):
             self.addCleanup(p.stop)
 
     def rc_for(self, state):
-        fake = lambda force=False, dry_run=False, build_dir=None: deploy.DeployResult(state=state, url="u")
+        fake = lambda force=False, dry_run=False, build_dir=None, app=True: deploy.DeployResult(state=state, url="u")
         with mock.patch.object(deploy, "deploy_main", fake):
             return deploy.cmd_deploy_main(types.SimpleNamespace(force=False, dry_run=False, dir=None))
 
@@ -161,7 +161,7 @@ class ExitCodeTests(unittest.TestCase):
 
     def test_pending_rerun_decides_the_exit_code(self):
         states = iter(["deployed", "failed"])
-        fake = lambda force=False, dry_run=False, build_dir=None: deploy.DeployResult(state=next(states), url="u")
+        fake = lambda force=False, dry_run=False, build_dir=None, app=True: deploy.DeployResult(state=next(states), url="u")
         deploy.pending_path().parent.mkdir(parents=True, exist_ok=True)
         deploy.pending_path().touch()
         with mock.patch.object(deploy, "deploy_main", fake):
