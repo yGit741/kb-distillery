@@ -84,7 +84,7 @@ Template: [`SKILL_TEMPLATE.md`](SKILL_TEMPLATE.md) (not a skill; it has no `SKIL
 2. Copy [`SKILL_TEMPLATE.md`](SKILL_TEMPLATE.md) → `skills/<name>/SKILL.md`.
 3. Required: YAML `name` + `description` (with Use for / Do NOT), `## Triggers`, `## Do NOT`, `**LLM tier:**`, real CLI in `bash` blocks.
 4. Register in this README (Token budgets row for ladder skills; Skills table always).
-5. Update `AGENTS.md` if triggers or ladder change.
+5. Update the Intent router in `AGENTS.md` if triggers change, and the Skill ladder in `meta/docs/workflows.md` if the ladder changes.
 6. Gate:
 
 ```bash
@@ -129,5 +129,3 @@ pixi run ship -- status
 pixi run share -- status
 pixi run share -- deploy-main
 ```
-
-Legacy: `reingest-*` commands are bootstrap-only; prefer the skill ladder above.
