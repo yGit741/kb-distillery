@@ -161,8 +161,22 @@ e2e("hovering a node labels it even when its type's labels are off", async () =>
   const n = await isolatedNode(off);
   assert.ok(n, `an isolated ${off} node`);
   Object.assign(n, await hoverNode(n.id));
+  // calm hover: the label follows the focus, which commits once the pointer has settled
+  await page.waitForFunction((id) => window.WikiGraph.labeledIds().includes(id), n.id, { timeout: 2000 }).catch(() => {});
   const labeled = await G(() => window.WikiGraph.labeledIds());
   assert.ok(labeled.includes(n.id), "hovered node is labeled");
+});
+
+e2e("calm hover: the focus commits only after the pointer settles", async () => {
+  await reset();
+  const n = await isolatedNode(null);
+  assert.ok(n, "an isolated node");
+  await page.mouse.move(5, 5);
+  await page.waitForFunction(() => !window.WikiGraph.focused(), null, { timeout: 2000 });
+  Object.assign(n, await hoverNode(n.id));
+  await page.waitForTimeout(450);
+  const late = await G(() => window.WikiGraph.focused());
+  assert.equal(late && late.id, n.id, "the settled pointer focuses the node");
 });
 
 e2e("clicking a node labels all its neighbours", async () => {
