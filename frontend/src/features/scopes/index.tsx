@@ -1,6 +1,4 @@
-import { LegacyCard } from "@/features/legacy/LegacyCard";
+import { ScopesScreen } from "./ScopesScreen";
 
-/** Placeholder: replace this file's default export with the real screen (see skills/app-ui, porting checklist). */
-export default function Screen() {
-  return <LegacyCard id="scopes" />;
-}
+export const ported = true;
+export default ScopesScreen;
