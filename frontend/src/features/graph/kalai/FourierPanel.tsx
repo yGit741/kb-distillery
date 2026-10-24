@@ -89,6 +89,11 @@ export function FourierPanel({ ctx }: { ctx: GraphToolContext }) {
     const both = members(p.b).filter((id) => a.has(id));
     ctx.select(both.length ? both : [...a, ...members(p.b)]);
   };
+  const pickHole = (ts: readonly string[]) => {
+    const sets = ts.map((t) => new Set(members(t)));
+    const inTwo = (id: string) => sets.filter((x) => x.has(id)).length >= 2;
+    ctx.select([...new Set(ts.flatMap(members))].filter(inTwo));
+  };
   const { over, gaps } = notablePairs(s);
   const [l2, l3] = s.levels;
   const r2 = l2 && l2.null ? l2.observed / l2.null : 0;
@@ -144,6 +149,31 @@ export function FourierPanel({ ctx }: { ctx: GraphToolContext }) {
           ))}
         </ul>
         <p className="text-muted-foreground">A gap lights both themes: two separate regions on the graph are a bridge nobody has built yet.</p>
+      </Section>
+
+      <Section
+        title="Holes: three themes that meet only in pairs"
+        hint="Each pair shares pages but (almost) no page carries all three; expected = Kirkwood estimate from the pairs"
+      >
+        {s.holes.length ? (
+          <ul className="flex flex-col gap-1">
+            {s.holes.slice(0, 5).map((h) => (
+              <li key={h.themes.join("|")} className="flex items-center justify-between gap-2">
+                <button type="button" className="truncate text-left hover:underline" onClick={() => pickHole(h.themes)} title={`pairs: ${h.pairs.join(", ")} pages`}>
+                  {h.themes.map(shortTheme).join(" · ")}
+                </button>
+                <span className="shrink-0 tabular-nums text-muted-foreground">
+                  {h.all} vs {num(h.expected, 1)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-muted-foreground">No holes: wherever three themes meet in pairs, some page also joins all three.</p>
+        )}
+        <p className="text-muted-foreground">
+          A hole is a triangle of ideas with no page in the middle. Clicking lights the three pair intersections: the page that fills it would be new.
+        </p>
       </Section>
 
       <Section title="What predicts my attention" hint="Level-1 and level-2 coefficients of the attention signal f = ±1">

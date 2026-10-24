@@ -23,6 +23,17 @@ export interface PairStat {
   coef: number;
 }
 
+/** Three themes that meet pairwise but (almost) never all together: a hole in the theme complex. */
+export interface Hole {
+  themes: [string, string, string];
+  /** pages carrying all three */
+  all: number;
+  /** pages per pair (ab, bc, ac) */
+  pairs: [number, number, number];
+  /** Kirkwood estimate from the pairs alone: n * p_ab p_bc p_ac / (p_a p_b p_c) */
+  expected: number;
+}
+
 export interface LevelEnergy {
   level: number;
   observed: number;
@@ -49,6 +60,7 @@ export interface Spectrum {
   levels: LevelEnergy[];
   attention: AttentionCoef[];
   attentionRate: number;
+  holes: Hole[];
   /** themed pages per theme id, to light them on the graph */
   members: Map<string, string[]>;
 }
@@ -204,7 +216,20 @@ export function spectrum(model: GraphModel, opts: SpectrumOptions = {}): Spectru
       attention.push({ set: S.map((i) => themes[i] as string), coef: s / n, support, rate: hit / support });
     }
   attention.sort((a, b) => Math.abs(b.coef) - Math.abs(a.coef));
-  return { themes, n, untagged, inferred, prevalence: p, pairs, levels, attention, attentionRate, members };
+  const pairCount = new Map(pairs.map((q) => [`${q.a}|${q.b}`, q.both]));
+  const holes: Hole[] = [];
+  for (const [i, j, k] of subsets(themes.length, 3) as Generator<[number, number, number]>) {
+    const [a, b, c] = [themes[i], themes[j], themes[k]] as [string, string, string];
+    const ab = pairCount.get(`${a}|${b}`) ?? 0;
+    const bc = pairCount.get(`${b}|${c}`) ?? 0;
+    const ac = pairCount.get(`${a}|${c}`) ?? 0;
+    if (ab < 2 || bc < 2 || ac < 2) continue;
+    const expected = (n * (ab / n) * (bc / n) * (ac / n)) / ((p[i] as number) * (p[j] as number) * (p[k] as number));
+    const all = pages.filter((pg) => pg.t.has(a) && pg.t.has(b) && pg.t.has(c)).length;
+    if (expected >= 1 && all <= expected / 3) holes.push({ themes: [a, b, c], all, pairs: [ab, bc, ac], expected });
+  }
+  holes.sort((x, y) => y.expected - y.all - (x.expected - x.all));
+  return { themes, n, untagged, inferred, prevalence: p, pairs, levels, attention, attentionRate, holes, members };
 }
 
 /** Pairs worth a look: over-represented intersections and the big pairs that (almost) never meet. */
