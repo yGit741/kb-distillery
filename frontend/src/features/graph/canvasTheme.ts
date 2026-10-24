@@ -4,6 +4,8 @@ export interface CanvasColors {
   link: string;
   ring: string;
   muted: string;
+  /** the --warn status token: experiment halos */
+  warn: string;
   font: string;
 }
 
@@ -13,6 +15,7 @@ const FALLBACK: CanvasColors = {
   link: "#71717a",
   ring: "#2563eb",
   muted: "#71717a",
+  warn: "#ca8a04",
   font: "system-ui, sans-serif",
 };
 
@@ -46,6 +49,7 @@ export function readCanvasColors(root: HTMLElement = document.documentElement): 
       link: v("--muted-foreground", FALLBACK.link),
       ring: v("--primary", FALLBACK.ring),
       muted: v("--muted-foreground", FALLBACK.muted),
+      warn: v("--warn", FALLBACK.warn),
       font: getComputedStyle(document.body).fontFamily || FALLBACK.font,
     };
   } catch {
