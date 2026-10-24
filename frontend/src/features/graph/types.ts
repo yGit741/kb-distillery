@@ -1,4 +1,5 @@
 import type { GraphNode, GraphSnapshot } from "@/api";
+import { parseRawLayer } from "./rawLayer";
 
 /** A node as the API returns it (layer, type, depth, areas, degrees, preview, properties). */
 export type GNode = GraphNode;
@@ -7,8 +8,39 @@ export type GNode = GraphNode;
 export interface GLink {
   source: string;
   target: string;
-  kind: "wikilink" | "related" | "book" | "shared";
+  kind: "wikilink" | "related" | "book" | "shared" | "pile-page" | "pile-pile";
   shared?: number;
+  /** pile links: source files behind the edge */
+  count?: number;
+}
+
+/** One raw file of the data layer (a corpus row as the graph API reports it). */
+export interface RawNode {
+  id: string;
+  path: string;
+  format: string;
+  ext: string;
+  disposition: string;
+  companion_of: string | null;
+  collection: string[];
+  slug: string | null;
+  year: number | null;
+  title: string;
+}
+
+/** A raw file that feeds a page (`raw:<path>` -> slug). */
+export interface RawLink {
+  source: string;
+  target: string;
+  kind: string;
+}
+
+/** The data layer: one pile per raw format, its edges to pages and to other piles, and the file rows. */
+export interface RawLayer {
+  piles: GNode[];
+  links: GLink[];
+  nodes: RawNode[];
+  rawLinks: RawLink[];
 }
 
 export interface Positioned {
@@ -67,10 +99,14 @@ export interface GraphModel {
   nodes: readonly GNode[];
   links: readonly GLink[];
   conceptLinks: readonly ConceptLink[];
+  /** Present while the data layer is loaded (`?raw=1`). Piles are drawn but are not pages: never in `nodes`. */
+  raw?: RawLayer;
 }
 
 export function toModel(snap: GraphSnapshot): GraphModel {
+  const raw = parseRawLayer(snap);
   return {
+    ...(raw ? { raw } : {}),
     nodes: snap.nodes,
     links: snap.links.map((l) => ({
       source: l.source,

@@ -8,6 +8,8 @@ import { ForceGraph, type ForceGraphHandle } from "./ForceGraph";
 import { buildGraphData, largestComponent, type NeighborMap } from "./graphData";
 import { declutter, hubCount, labelRanks, labelText, type Placed } from "./labels";
 import { pickMagnetic, type ScreenNode } from "./magnet";
+import { drawPile, formatOfPile, isPile, isPileId, pileRadius } from "./rawLayer";
+import { DRAG_PX } from "./selection";
 import { useGraphUi } from "./store";
 import { colorOf, nodeRadius } from "./style";
 import { degreeOf, type GNode, type GraphModel, type SimLink, type SimNode } from "./types";
@@ -28,6 +30,8 @@ interface Props {
   onOpenMenu: (id: string, x: number, y: number) => void;
   onBackgroundContext: () => void;
   onOpenReader: (id: string) => void;
+  /** A pile of the data layer was clicked: open the files of that format. */
+  onOpenPile?: (format: string) => void;
 }
 
 interface RenderState {
@@ -47,7 +51,7 @@ const DOUBLE_MS = 380;
  * right-click a node opens its menu. Box, lasso and path selection are tools (./tools), not here.
  */
 export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
-  { model, byId, neighbors, visible, className, onOpenMenu, onBackgroundContext, onOpenReader },
+  { model, byId, neighbors, visible, className, onOpenMenu, onBackgroundContext, onOpenReader, onOpenPile },
   ref,
 ) {
   const ui = useGraphUi();
@@ -63,13 +67,13 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
   const pendingFit = useRef(true);
   const lastClick = useRef<{ id: string | null; at: number }>({ id: null, at: 0 });
   const pressed = useRef(false);
-  const live = useRef({ ui, selection, byId, neighbors, visible, onOpenReader, onOpenMenu, onBackgroundContext });
-  live.current = { ui, selection, byId, neighbors, visible, onOpenReader, onOpenMenu, onBackgroundContext };
+  const live = useRef({ ui, selection, byId, neighbors, visible, onOpenReader, onOpenMenu, onBackgroundContext, onOpenPile });
+  live.current = { ui, selection, byId, neighbors, visible, onOpenReader, onOpenMenu, onBackgroundContext, onOpenPile };
 
   const radiusOpts = useMemo(() => ({ by: ui.sizeBy, base: ui.nodeSize }), [ui.sizeBy, ui.nodeSize]);
   const radiusRef = useRef(radiusOpts);
   radiusRef.current = radiusOpts;
-  const radius = useCallback((n: GNode) => nodeRadius(n, radiusRef.current), []);
+  const radius = useCallback((n: GNode) => (isPile(n) ? pileRadius(n) : nodeRadius(n, radiusRef.current)), []);
 
   const recompute = useCallback(() => {
     const { ui: u, selection: sel, byId: ids, neighbors: nb, visible: vis } = live.current;
@@ -127,7 +131,7 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
   // ---- fit (largest connected component: stray islands drift far out and would shrink everything)
   const fit = useCallback(() => {
     const core = largestComponent(live.current.visible, live.current.neighbors);
-    fg.current?.fit(core.size > 1 ? (n) => core.has(n.id) : undefined, 400);
+    fg.current?.fit(core.size > 1 ? (n) => core.has(n.id) || isPile(n) : undefined, 400);
     window.setTimeout(() => {
       fitK.current = fg.current?.zoom() ?? 1;
       k.current = fitK.current;
@@ -220,18 +224,48 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
     };
   }, [radius, setHover]);
 
-  // ---- right-click: a node opens its menu, empty space closes the panels and drops the selection
+  // ---- right-click: a node opens its menu, empty space closes the panels and drops the selection.
+  // A right-drag is the box / lasso selection (tools/RegionOverlay), so the click is decided on release:
+  // some systems fire `contextmenu` on press. Without a pressed right button (keyboard, long-press) it acts at once.
   useEffect(() => {
     const el = wrap.current;
     if (!el) return;
+    let press: { x: number; y: number; id: number; node: string | null; moved: boolean } | null = null;
+    const act = (x: number, y: number, node: string | null) => {
+      if (node && !isPileId(node)) live.current.onOpenMenu(node, x, y);
+      else if (!node) live.current.onBackgroundContext();
+    };
+    let released = -Infinity;
     const ctx = (e: MouseEvent) => {
       e.preventDefault();
-      const id = rs.current.hover;
-      if (id) live.current.onOpenMenu(id, e.clientX, e.clientY);
-      else live.current.onBackgroundContext();
+      // Windows and Linux fire `contextmenu` just after the release that already acted (or ended a drag)
+      if (!press && e.timeStamp - released > 150) act(e.clientX, e.clientY, rs.current.hover);
+    };
+    const down = (e: PointerEvent) => {
+      if (e.button === 2) press = { x: e.clientX, y: e.clientY, id: e.pointerId, node: rs.current.hover, moved: false };
+    };
+    const move = (e: PointerEvent) => {
+      if (press && e.pointerId === press.id && Math.hypot(e.clientX - press.x, e.clientY - press.y) >= DRAG_PX) press.moved = true;
+    };
+    const up = (e: PointerEvent) => {
+      if (!press || e.pointerId !== press.id) return;
+      const p = press;
+      press = null;
+      released = e.timeStamp;
+      if (e.type === "pointerup" && !p.moved) act(e.clientX, e.clientY, p.node);
     };
     el.addEventListener("contextmenu", ctx);
-    return () => el.removeEventListener("contextmenu", ctx);
+    el.addEventListener("pointerdown", down, true);
+    window.addEventListener("pointermove", move, true);
+    window.addEventListener("pointerup", up, true);
+    window.addEventListener("pointercancel", up, true);
+    return () => {
+      el.removeEventListener("contextmenu", ctx);
+      el.removeEventListener("pointerdown", down, true);
+      window.removeEventListener("pointermove", move, true);
+      window.removeEventListener("pointerup", up, true);
+      window.removeEventListener("pointercancel", up, true);
+    };
   }, []);
 
   useImperativeHandle(
@@ -251,6 +285,10 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
   // ---- clicks
   const clickNode = useCallback(
     (id: string, ev: MouseEvent) => {
+      if (isPileId(id)) {
+        live.current.onOpenPile?.(formatOfPile(id));
+        return;
+      }
       const now = Date.now();
       const last = lastClick.current;
       if (last.id === id && now - last.at < DOUBLE_MS) {
@@ -285,6 +323,10 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
     (n: SimNode, ctx: CanvasRenderingContext2D, scale: number) => {
       const { colors, focus, selected, hover } = rs.current;
       if (n.x == null || n.y == null) return;
+      if (isPile(n)) {
+        drawPile(n, ctx, scale, colors, hover === n.id);
+        return;
+      }
       const r = radius(n);
       const alpha = nodeOpacity(n.id, focus);
       const isSel = selected.has(n.id);

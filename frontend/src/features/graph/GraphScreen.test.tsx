@@ -30,7 +30,13 @@ vi.mock("force-graph", () => {
 });
 vi.mock("@/components/Markdown", () => ({ Markdown: ({ children }: { children: string }) => <div data-testid="md">{children}</div> }));
 
-const host: GraphHost = { openPage: vi.fn(), pageHref: (s) => `/app/pages/${s}`, clearParams: vi.fn() };
+const host: GraphHost = {
+  openPage: vi.fn(),
+  pageHref: (s) => `/app/pages/${s}`,
+  clearParams: vi.fn(),
+  go: vi.fn(),
+  href: (to, search) => `/app${to}${search ? `?${new URLSearchParams(search)}` : ""}`,
+};
 
 function wrap(ds: DataSource, ui: ReactNode) {
   return (

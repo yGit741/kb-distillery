@@ -1,4 +1,4 @@
-import { useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useDataSource } from "@/api";
 import { Empty, ErrorState, Loading } from "@/components/states";
@@ -7,6 +7,9 @@ import { useKb } from "@/lib/store";
 import { useApiQuery } from "@/lib/useApiQuery";
 import type { GraphSearch } from "@/routes/search";
 import { Finder, FINDER_ID } from "./Finder";
+import { HostContext, type ToolHost } from "./hostContext";
+import { useLayer } from "./layerStore";
+import "./tools/register";
 import { extendView, makeView, parsePages, scopeIds, type GraphView } from "./pageSearch";
 import { buildNeighborMap } from "./graphData";
 import { GraphCanvas, type CanvasHandle } from "./GraphCanvas";
@@ -23,25 +26,31 @@ import { toModel, type GNode } from "./types";
 import { LAYER_TYPES, type Layer } from "@/api/model";
 
 /** How the screen reaches the rest of the app (the router lives in index.tsx; tests pass plain functions). */
-export interface GraphHost {
-  openPage: (slug: string) => void;
+export interface GraphHost extends ToolHost {
   pageHref: (slug: string) => string;
   /** Drop URL params once the view they describe is cleared. */
   clearParams: (keys: string[]) => void;
 }
 
 const LIVE_MS = 10_000;
+/** The data layer carries the whole corpus: poll it slowly. */
+const LIVE_RAW_MS = 30_000;
 
 export function GraphScreen({ search, host }: { search: GraphSearch; host: GraphHost }) {
   const ds = useDataSource();
   const qc = useQueryClient();
   const live = useGraphUi((s) => s.liveSync);
-  const q = useApiQuery(["graph"], (d) => d.getGraph(), { refetchInterval: live ? LIVE_MS : false });
+  const rawOn = useLayer((s) => s.rawOn) && ds.kind !== "embedded";
+  const q = useApiQuery(["graph", rawOn], (d) => (rawOn ? d.getGraph({ raw: true }) : d.getGraph()), {
+    refetchInterval: live ? (rawOn ? LIVE_RAW_MS : LIVE_MS) : false,
+    // switching the data layer on or off keeps the canvas (and its positions) until the new snapshot lands
+    placeholderData: keepPreviousData,
+  });
   const snap = q.data;
 
   // The model is rebuilt only when the wiki changed (etag), not on every poll.
   const etag = snap?.etag;
-  const model = useMemo(() => (snap ? toModel(snap) : null), [etag]); // eslint-disable-line react-hooks/exhaustive-deps
+  const model = useMemo(() => (snap ? toModel(snap) : null), [etag, snap?.layer]); // eslint-disable-line react-hooks/exhaustive-deps
   const schema = useMemo(() => parseSchema(snap?.schema), [etag]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (q.isLoading) return <FullBleed><div className="p-4"><Loading label="Loading graph" rows={4} /></div></FullBleed>;
@@ -170,9 +179,10 @@ function Loaded({
   // ---- deep links: ?focus ?select ?search ?pages ?scope ?layer, applied once per distinct value
   const applied = useRef("");
   useEffect(() => {
-    const key = JSON.stringify([search.focus, search.select, search.search, search.pages, search.scope, search.layer]);
+    const key = JSON.stringify([search.focus, search.select, search.search, search.pages, search.scope, search.layer, search.raw]);
     if (applied.current === key) return;
     applied.current = key;
+    if (search.raw === "1" && dsKind !== "embedded") useLayer.getState().setRaw(true);
     if (search.layer && search.layer in LAYER_TYPES) {
       useGraphUi.setState({ shownTypes: new Set<string>(LAYER_TYPES[search.layer as Layer]) });
     }
@@ -187,7 +197,7 @@ function Loaded({
     }
     if (search.select) useKb.getState().setSelection(parsePages(search.select).filter((id) => byId.has(id)));
     if (search.focus && byId.has(search.focus)) useGraphUi.getState().requestFocus(search.focus);
-  }, [search, ds, byId, neighbors, showMentions, showPicked, setView]);
+  }, [search, ds, dsKind, byId, neighbors, showMentions, showPicked, setView]);
 
   // ---- actions shared by the menu, the inspector, the finder and the keyboard
   const openReader = useCallback((id: string) => useGraphUi.setState({ readerSlug: id }), []);
@@ -265,7 +275,7 @@ function Loaded({
   const showDetails = ui.detailsOpen && selected.length > 0;
 
   return (
-    <>
+    <HostContext.Provider value={host}>
       <GraphCanvas
         ref={canvas}
         model={model}
@@ -280,6 +290,7 @@ function Loaded({
           useKb.getState().clearSelection();
         }}
         onOpenReader={openReader}
+        onOpenPile={(format) => useLayer.getState().openDrawer({ kind: "format", format })}
       />
       <Finder
         nodes={model.nodes}
@@ -365,7 +376,7 @@ function Loaded({
       {TOOLS.map((t) => (
         <div key={t.id}>{t.overlay?.(toolContext)}</div>
       ))}
-    </>
+    </HostContext.Provider>
   );
 }
 

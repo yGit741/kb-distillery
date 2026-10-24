@@ -61,3 +61,29 @@ export const sampleSnapshot = (over: Partial<GraphSnapshot> = {}): GraphSnapshot
   },
   ...over,
 });
+
+/** A `?layer=raw` snapshot: two piles (and a skipped inbox), pile links, and the files of one paper with an ink companion. */
+export const rawSnapshot = () =>
+  ({
+    ...sampleSnapshot(),
+    layer: "raw",
+    piles: [
+      { format: "printed-docs", count: 10, source: 4, partial: 0, queued: 3, skip: 1, companions: 2, pages_fed: 2, links_to_pages: { "2019-fine-grained": 3, "idea-margin": 2, "not-a-page": 9 } },
+      { format: "emails", count: 3, source: 0, partial: 0, queued: 3, skip: 0, companions: 0, pages_fed: 0, links_to_pages: {} },
+      { format: "inbox", count: 5, source: 0, partial: 0, queued: 5, skip: 0, companions: 0, pages_fed: 0, links_to_pages: {} },
+      { format: "images", count: 0, source: 0, partial: 0, queued: 0, skip: 0, companions: 0, pages_fed: 0, links_to_pages: {} },
+    ],
+    pile_links: [
+      { source: "printed-docs", target: "emails", kind: "hub", count: 2 },
+      { source: "printed-docs", target: "emails", kind: "page", count: 9 },
+      { source: "printed-docs", target: "inbox", kind: "hub", count: 1 },
+    ],
+    raw_nodes: [
+      { id: "raw:raw/printed-docs/a.pdf", path: "raw/printed-docs/a.pdf", format: "printed-docs", ext: "pdf", disposition: "source", companion_of: null, collection: [], slug: "2019-fine-grained", year: 2019, title: "A" },
+      { id: "raw:raw/printed-docs/a-ink.pdf", path: "raw/printed-docs/a-ink.pdf", format: "printed-docs", ext: "pdf", disposition: "ink", companion_of: "raw/printed-docs/a.pdf", collection: [], slug: "2019-fine-grained", year: null, title: "ink" },
+    ],
+    raw_links: [
+      { source: "raw:raw/printed-docs/a.pdf", target: "2019-fine-grained", kind: "source" },
+      { source: "raw:raw/printed-docs/a-ink.pdf", target: "2019-fine-grained", kind: "source" },
+    ],
+  }) as unknown as GraphSnapshot;
