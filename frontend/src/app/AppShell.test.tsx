@@ -15,13 +15,13 @@ const ds: DataSource = mockDataSource({
 
 describe("AppShell", () => {
   it("has one nav, one theme toggle, and a palette that navigates", async () => {
-    const router = createAppRouter(createMemoryHistory({ initialEntries: ["/app/graph"] }));
+    const router = createAppRouter(createMemoryHistory({ initialEntries: ["/app/ops"] }));
     render(<App source={ds} router={router} />);
     const nav = await screen.findByRole("navigation", { name: "Main" });
     expect(nav.querySelectorAll("a")).toHaveLength(ROUTES.length);
     expect(nav).toHaveClass("overflow-x-auto", "min-w-0"); // scrolls inside itself on phones
     expect(screen.getAllByRole("button", { name: /switch to/i })).toHaveLength(1);
-    expect(await screen.findByRole("link", { name: /open the legacy page/i })).toHaveAttribute("href", "/legacy/graph");
+    expect(await screen.findByRole("link", { name: /open the legacy page/i })).toHaveAttribute("href", "/legacy/ops");
 
     await userEvent.keyboard("{Control>}k{/Control}");
     const box = await screen.findByPlaceholderText("Go to…");

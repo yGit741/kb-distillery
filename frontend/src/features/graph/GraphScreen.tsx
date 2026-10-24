@@ -1,0 +1,371 @@
+import { useQueryClient } from "@tanstack/react-query";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useDataSource } from "@/api";
+import { Empty, ErrorState, Loading } from "@/components/states";
+import { Button } from "@/components/ui/button";
+import { useKb } from "@/lib/store";
+import { useApiQuery } from "@/lib/useApiQuery";
+import type { GraphSearch } from "@/routes/search";
+import { Finder, FINDER_ID } from "./Finder";
+import { extendView, makeView, parsePages, scopeIds, type GraphView } from "./pageSearch";
+import { buildNeighborMap } from "./graphData";
+import { GraphCanvas, type CanvasHandle } from "./GraphCanvas";
+import { Inspector } from "./Inspector";
+import { Legend } from "./Legend";
+import { NodeMenu } from "./NodeMenu";
+import { computeVisible } from "./rules";
+import { parseSchema } from "./schema";
+import { SideReader } from "./SideReader";
+import { useGraphUi } from "./store";
+import { Toolbar } from "./Toolbar";
+import { TOOLS, type GraphToolContext } from "./tools";
+import { toModel, type GNode } from "./types";
+import { LAYER_TYPES, type Layer } from "@/api/model";
+
+/** How the screen reaches the rest of the app (the router lives in index.tsx; tests pass plain functions). */
+export interface GraphHost {
+  openPage: (slug: string) => void;
+  pageHref: (slug: string) => string;
+  /** Drop URL params once the view they describe is cleared. */
+  clearParams: (keys: string[]) => void;
+}
+
+const LIVE_MS = 10_000;
+
+export function GraphScreen({ search, host }: { search: GraphSearch; host: GraphHost }) {
+  const ds = useDataSource();
+  const qc = useQueryClient();
+  const live = useGraphUi((s) => s.liveSync);
+  const q = useApiQuery(["graph"], (d) => d.getGraph(), { refetchInterval: live ? LIVE_MS : false });
+  const snap = q.data;
+
+  // The model is rebuilt only when the wiki changed (etag), not on every poll.
+  const etag = snap?.etag;
+  const model = useMemo(() => (snap ? toModel(snap) : null), [etag]); // eslint-disable-line react-hooks/exhaustive-deps
+  const schema = useMemo(() => parseSchema(snap?.schema), [etag]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (q.isLoading) return <FullBleed><div className="p-4"><Loading label="Loading graph" rows={4} /></div></FullBleed>;
+  if (q.isError || !snap || !model)
+    return (
+      <FullBleed>
+        <div className="p-4">
+          <ErrorState title="Could not load the graph." error={q.error} onRetry={() => void q.refetch()} />
+        </div>
+      </FullBleed>
+    );
+  if (!model.nodes.length)
+    return (
+      <FullBleed>
+        <div className="p-4"><Empty>The vault has no pages yet.</Empty></div>
+      </FullBleed>
+    );
+  return (
+    <FullBleed>
+      <Loaded
+        model={model}
+        schema={schema}
+        host={host}
+        search={search}
+        generatedAt={snap.generated_at}
+        refreshing={q.isFetching}
+        onRefresh={() => void qc.invalidateQueries({ queryKey: ["graph"] })}
+        dsKind={ds.kind}
+      />
+    </FullBleed>
+  );
+}
+
+/** The screen sits under the 48px header and fills the rest of the viewport (the graph needs the room). */
+function FullBleed({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="fixed inset-x-0 bottom-0 top-12 z-30 overflow-hidden bg-background" data-testid="graph-screen">
+      {children}
+    </div>
+  );
+}
+
+const isTyping = (t: EventTarget | null) => t instanceof HTMLElement && t.matches("input, textarea, select, [contenteditable=true]");
+
+function Loaded({
+  model,
+  schema,
+  host,
+  search,
+  generatedAt,
+  refreshing,
+  onRefresh,
+  dsKind,
+}: {
+  model: ReturnType<typeof toModel>;
+  schema: ReturnType<typeof parseSchema>;
+  host: GraphHost;
+  search: GraphSearch;
+  generatedAt: string;
+  refreshing: boolean;
+  onRefresh: () => void;
+  dsKind: string;
+}) {
+  const ds = useDataSource();
+  const ui = useGraphUi();
+  const selection = useKb((s) => s.selection);
+  const canvas = useRef<CanvasHandle>(null);
+  const [menu, setMenu] = useState<{ id: string; x: number; y: number } | null>(null);
+  const [note, setNote] = useState("");
+
+  const byId = useMemo(() => new Map(model.nodes.map((n) => [n.id, n] as const)), [model]);
+  const neighbors = useMemo(() => buildNeighborMap(model.links), [model]);
+  const shownTypes = useMemo(
+    () => (ui.shownTypes === undefined ? new Set(schema.defaultVisible) : ui.shownTypes),
+    [ui.shownTypes, schema],
+  );
+  const visible = useMemo(
+    () =>
+      computeVisible(model.nodes, {
+        shownTypes,
+        shownDepths: ui.shownDepths,
+        search: ui.search,
+        rules: ui.rules,
+        restrict: ui.view?.shown ?? null,
+        force: !!ui.view,
+        revealed: ui.revealed,
+      }),
+    [model, shownTypes, ui.shownDepths, ui.search, ui.rules, ui.view, ui.revealed],
+  );
+  const stats = `${visible.size} of ${model.nodes.length} pages · ${model.links.length} links · ${generatedAt.slice(0, 16).replace("T", " ")}${dsKind === "embedded" ? " · snapshot" : ""}`;
+
+  // ---- views (search, picked pages, scope)
+  const setView = useCallback(
+    (view: GraphView | null, emptyNote = "") => {
+      useGraphUi.setState({ view });
+      setNote(view ? "" : emptyNote);
+      if (view) useKb.getState().setSelection(view.hits);
+    },
+    [],
+  );
+  const showPicked = useCallback(
+    (ids: string[]) => {
+      const next = makeView("picked", "picked", ids, byId, neighbors);
+      setView(extendView(useGraphUi.getState().view, next), "No such pages in the graph.");
+    },
+    [byId, neighbors, setView],
+  );
+  const showMentions = useCallback(
+    async (query: string) => {
+      try {
+        const res = await ds.search(query, 2000);
+        setView(makeView("search", query, res.hits.map((h) => h.id), byId, neighbors), `No pages mention “${query}”.`);
+      } catch (e) {
+        setNote(`Search failed: ${e instanceof Error ? e.message : String(e)}`);
+      }
+    },
+    [ds, byId, neighbors, setView],
+  );
+  const clearView = useCallback(() => {
+    useGraphUi.setState({ view: null });
+    setNote("");
+    useKb.getState().clearSelection();
+    host.clearParams(["search", "pages", "scope"]);
+  }, [host]);
+
+  // ---- deep links: ?focus ?select ?search ?pages ?scope ?layer, applied once per distinct value
+  const applied = useRef("");
+  useEffect(() => {
+    const key = JSON.stringify([search.focus, search.select, search.search, search.pages, search.scope, search.layer]);
+    if (applied.current === key) return;
+    applied.current = key;
+    if (search.layer && search.layer in LAYER_TYPES) {
+      useGraphUi.setState({ shownTypes: new Set<string>(LAYER_TYPES[search.layer as Layer]) });
+    }
+    if (search.search) void showMentions(search.search);
+    else if (search.pages) showPicked(parsePages(search.pages));
+    else if (search.scope) {
+      const slug = search.scope;
+      void ds
+        .getScope(slug)
+        .then((d) => setView(makeView("scope", slug, scopeIds(slug, d.projection), byId, neighbors), `Scope ${slug} has no pages in the graph.`))
+        .catch((e) => setNote(`Could not load scope ${slug}: ${e instanceof Error ? e.message : String(e)}`));
+    }
+    if (search.select) useKb.getState().setSelection(parsePages(search.select).filter((id) => byId.has(id)));
+    if (search.focus && byId.has(search.focus)) useGraphUi.getState().requestFocus(search.focus);
+  }, [search, ds, byId, neighbors, showMentions, showPicked, setView]);
+
+  // ---- actions shared by the menu, the inspector, the finder and the keyboard
+  const openReader = useCallback((id: string) => useGraphUi.setState({ readerSlug: id }), []);
+  const focus = useCallback((id: string, zoom = true) => useGraphUi.getState().requestFocus(id, zoom), []);
+  const closePanels = useCallback(() => {
+    useGraphUi.setState({ readerSlug: null, detailsOpen: false });
+  }, []);
+  const selected = useMemo(() => [...selection].map((id) => byId.get(id)).filter((n): n is GNode => !!n), [selection, byId]);
+  const closeMenu = useCallback(() => setMenu(null), []);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      const st = useGraphUi.getState();
+      if (e.key === "Escape") {
+        if (isTyping(e.target)) return;
+        if (st.readerSlug) st.set({ readerSlug: null });
+        else if (st.detailsOpen) st.set({ detailsOpen: false });
+        else if (st.flyout) st.set({ flyout: null });
+        else if (useKb.getState().selection.size) useKb.getState().clearSelection();
+        return;
+      }
+      if (isTyping(e.target)) return;
+      const onButton = e.target instanceof HTMLElement && e.target.matches("button, a, summary");
+      if (e.key === " " && !onButton) {
+        e.preventDefault();
+        const el = document.getElementById(FINDER_ID) as HTMLInputElement | null;
+        if (el) {
+          el.value = "";
+          el.focus();
+        }
+      } else if (e.key === "/") {
+        e.preventDefault();
+        document.getElementById(FINDER_ID)?.focus();
+      } else if (e.key === "f" || e.key === "F") {
+        e.preventDefault();
+        st.fit();
+      } else if (e.key === "+" || e.key === "=") {
+        e.preventDefault();
+        canvas.current?.zoomBy(1.25);
+      } else if (e.key === "-") {
+        e.preventDefault();
+        canvas.current?.zoomBy(1 / 1.25);
+      } else if ((e.key === "e" || e.key === "E") && useKb.getState().selection.size === 1) {
+        host.openPage([...useKb.getState().selection][0] as string);
+      }
+      const tool = TOOLS.find((t) => t.shortcut === e.key);
+      if (tool) st.openFlyout(tool.id);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [host]);
+
+  const toolContext = useMemo<GraphToolContext>(
+    () => ({
+      model,
+      byId,
+      visible,
+      selection,
+      select: (ids, opts) => {
+        const list = [...ids].filter((id) => byId.has(id));
+        const kb = useKb.getState();
+        kb.setSelection(opts?.additive ? [...kb.selection, ...list] : list);
+      },
+      clearSelection: () => useKb.getState().clearSelection(),
+      focus,
+      screenOf: (id) => canvas.current?.screenOf(id) ?? null,
+      openReader,
+    }),
+    [model, byId, visible, selection, focus, openReader],
+  );
+
+  const menuNode = menu ? byId.get(menu.id) : undefined;
+  const reader = ui.readerSlug ? byId.get(ui.readerSlug) : undefined;
+  const showDetails = ui.detailsOpen && selected.length > 0;
+
+  return (
+    <>
+      <GraphCanvas
+        ref={canvas}
+        model={model}
+        byId={byId}
+        neighbors={neighbors}
+        visible={visible}
+        className="absolute inset-0"
+        onOpenMenu={(id, x, y) => setMenu({ id, x, y })}
+        onBackgroundContext={() => {
+          closeMenu();
+          closePanels();
+          useKb.getState().clearSelection();
+        }}
+        onOpenReader={openReader}
+      />
+      <Finder
+        nodes={model.nodes}
+        byId={byId}
+        colorBy={ui.colorBy}
+        visible={visible}
+        onFocus={(id) => (visible.has(id) ? focus(id) : showPicked([id]))}
+        onRead={openReader}
+        onShowPicked={showPicked}
+        onShowMentions={(query) => void showMentions(query)}
+      />
+      {(ui.view || note) && (
+        <div className="pointer-events-auto absolute left-3 top-14 z-10 flex max-w-[min(28rem,calc(100%-4.5rem))] items-center gap-2 rounded-lg border bg-card px-2.5 py-1 text-xs shadow-[var(--shadow)]" role="status">
+          <span className="min-w-0 truncate">
+            {ui.view ? (
+              <>
+                <b>{ui.view.hits.size}</b> {ui.view.kind === "search" ? `page${ui.view.hits.size === 1 ? "" : "s"} mentioning “${ui.view.label}”` : ui.view.kind === "scope" ? `pages in ${ui.view.label}` : `picked page${ui.view.hits.size === 1 ? "" : "s"}`}{" "}
+                <span className="text-muted-foreground">+ neighbours</span>
+              </>
+            ) : (
+              note
+            )}
+          </span>
+          <button type="button" className="shrink-0 rounded px-1 hover:bg-accent" aria-label="Clear view" onClick={clearView}>
+            ×
+          </button>
+        </div>
+      )}
+      <Toolbar
+        onFit={() => ui.fit()}
+        onZoom={(f) => canvas.current?.zoomBy(f)}
+        onReheat={() => canvas.current?.reheat()}
+        onRefresh={onRefresh}
+        refreshing={refreshing}
+        stats={stats}
+        toolContext={toolContext}
+      />
+      <Legend nodes={model.nodes} visible={visible} schema={schema} shownTypes={shownTypes} stats={stats} />
+      {selected.length > 0 && !showDetails && !reader && (
+        <div className="pointer-events-auto absolute bottom-3 left-1/2 z-10 flex -translate-x-1/2 items-center gap-1 rounded-full border bg-card px-3 py-1 text-sm shadow-[var(--shadow)] max-sm:bottom-16">
+          <span>{selected.length === 1 ? (selected[0]?.title || selected[0]?.id) : `${selected.length} selected`}</span>
+          <Button size="sm" variant="ghost" onClick={() => ui.set({ detailsOpen: true })}>
+            Details
+          </Button>
+          <Button size="sm" variant="ghost" onClick={() => useKb.getState().clearSelection()}>
+            Clear
+          </Button>
+        </div>
+      )}
+      {showDetails && (
+        <Inspector
+          nodes={selected}
+          byId={byId}
+          neighbors={neighbors}
+          colorBy={ui.colorBy}
+          revealed={ui.revealed}
+          pageHref={host.pageHref}
+          onClose={() => ui.set({ detailsOpen: false })}
+          onClear={() => useKb.getState().clearSelection()}
+          onFocus={focus}
+          onRead={openReader}
+          onToggleSources={(ids) => ui.toggleReveal(ids)}
+        />
+      )}
+      {reader && <SideReader slug={reader.id} title={reader.title || reader.id} pageHref={host.pageHref(reader.id)} onClose={() => ui.set({ readerSlug: null })} />}
+      {menu && menuNode && (
+        <NodeMenu
+          node={menuNode}
+          x={menu.x}
+          y={menu.y}
+          colorBy={ui.colorBy}
+          onClose={closeMenu}
+          ctx={{
+            openReader,
+            openPage: host.openPage,
+            openDetails: (id) => {
+              if (!useKb.getState().selection.has(id)) useKb.getState().setSelection([id]);
+              useGraphUi.setState({ detailsOpen: true });
+            },
+          }}
+        />
+      )}
+      {TOOLS.map((t) => (
+        <div key={t.id}>{t.overlay?.(toolContext)}</div>
+      ))}
+    </>
+  );
+}
+

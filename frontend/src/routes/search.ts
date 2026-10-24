@@ -18,7 +18,7 @@ const oneOf = <T extends string>(v: unknown, allowed: readonly T[]): T | undefin
 
 export type ChatSearch = { session?: string; scope?: string; q?: string };
 export type PagesSearch = { q?: string; layer?: string; type?: string; status?: string; area?: string };
-export type GraphSearch = { select?: string; focus?: string; scope?: string; layer?: string; raw?: "1" };
+export type GraphSearch = { select?: string; focus?: string; scope?: string; layer?: string; raw?: "1"; search?: string; pages?: string };
 export type ScopesSearch = { scope?: string; draft?: string };
 export type PipelineSearch = { format?: string; q?: string; depth?: string; collection?: string; status?: string; view?: string; group?: string; backlog?: "queued"; item?: string };
 export type NoSearch = Record<string, never>;
@@ -50,6 +50,8 @@ export const SEARCH: { [K in keyof SearchById]: (raw: Raw) => SearchById[K] } = 
       focus: str(r.focus),
       scope: str(r.scope),
       layer: str(r.layer),
+      search: str(r.search),
+      pages: str(r.pages),
       raw: oneOf(r.raw, ["1"] as const),
     }),
   scopes: (r) => clean({ scope: str(r.scope), draft: str(r.draft) }),

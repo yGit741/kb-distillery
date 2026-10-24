@@ -1,0 +1,417 @@
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef } from "react";
+import { useKb } from "@/lib/store";
+import { cn } from "@/lib/utils";
+import { useTheme } from "@/theme/theme";
+import { readCanvasColors, withAlpha, type CanvasColors } from "./canvasTheme";
+import { computeFocus, linkOpacity, nodeOpacity, type Focus } from "./focus";
+import { ForceGraph, type ForceGraphHandle } from "./ForceGraph";
+import { buildGraphData, largestComponent, type NeighborMap } from "./graphData";
+import { declutter, hubCount, labelRanks, labelText, type Placed } from "./labels";
+import { pickMagnetic, type ScreenNode } from "./magnet";
+import { useGraphUi } from "./store";
+import { colorOf, nodeRadius } from "./style";
+import { degreeOf, type GNode, type GraphModel, type SimLink, type SimNode } from "./types";
+
+export interface CanvasHandle {
+  screenOf: (id: string) => { x: number; y: number } | null;
+  hovered: () => string | null;
+  zoomBy: (factor: number) => void;
+  reheat: () => void;
+}
+
+interface Props {
+  model: GraphModel;
+  byId: ReadonlyMap<string, GNode>;
+  neighbors: NeighborMap;
+  visible: ReadonlySet<string>;
+  className?: string;
+  onOpenMenu: (id: string, x: number, y: number) => void;
+  onBackgroundContext: () => void;
+  onOpenReader: (id: string) => void;
+}
+
+interface RenderState {
+  colors: CanvasColors;
+  ranks: Map<string, number>;
+  focus: Focus | null;
+  selected: ReadonlySet<string>;
+  hover: string | null;
+}
+
+const endId = (e: string | SimNode) => (typeof e === "string" ? e : e.id);
+const DOUBLE_MS = 380;
+
+/**
+ * The graph itself: force-graph plus the mouse scheme. Modeless: hover always labels a node and a click
+ * labels its neighbours; the wheel pans, pinch or Cmd+wheel zooms; double-click opens the side reader;
+ * right-click a node opens its menu. Box, lasso and path selection are tools (./tools), not here.
+ */
+export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
+  { model, byId, neighbors, visible, className, onOpenMenu, onBackgroundContext, onOpenReader },
+  ref,
+) {
+  const ui = useGraphUi();
+  const selection = useKb((s) => s.selection);
+  const theme = useTheme((s) => s.theme);
+  const fg = useRef<ForceGraphHandle>(null);
+  const wrap = useRef<HTMLDivElement>(null);
+
+  const rs = useRef<RenderState>({ colors: readCanvasColors(), ranks: new Map(), focus: null, selected: new Set(), hover: null });
+  const k = useRef(1);
+  const fitK = useRef(1);
+  const hubKey = useRef(0);
+  const pendingFit = useRef(true);
+  const lastClick = useRef<{ id: string | null; at: number }>({ id: null, at: 0 });
+  const pressed = useRef(false);
+  const live = useRef({ ui, selection, byId, neighbors, visible, onOpenReader, onOpenMenu, onBackgroundContext });
+  live.current = { ui, selection, byId, neighbors, visible, onOpenReader, onOpenMenu, onBackgroundContext };
+
+  const radiusOpts = useMemo(() => ({ by: ui.sizeBy, base: ui.nodeSize }), [ui.sizeBy, ui.nodeSize]);
+  const radiusRef = useRef(radiusOpts);
+  radiusRef.current = radiusOpts;
+  const radius = useCallback((n: GNode) => nodeRadius(n, radiusRef.current), []);
+
+  const recompute = useCallback(() => {
+    const { ui: u, selection: sel, byId: ids, neighbors: nb, visible: vis } = live.current;
+    const hover = rs.current.hover;
+    const ratio = k.current / (fitK.current || 1);
+    rs.current.selected = sel;
+    rs.current.focus = computeFocus(sel, hover, nb, u.highlight);
+    rs.current.ranks = labelRanks({
+      visible: vis,
+      byId: ids,
+      neighbors: nb,
+      hovered: hover,
+      selected: sel,
+      mode: u.labelMode,
+      typeLabels: u.typeLabels,
+      zoomRatio: ratio,
+    });
+    hubKey.current = hubCount(ratio);
+    fg.current?.refresh();
+  }, []);
+
+  const setHover = useCallback(
+    (id: string | null) => {
+      if (rs.current.hover === id) return;
+      rs.current.hover = id;
+      wrap.current?.classList.toggle("graph-pointer", id !== null);
+      recompute();
+    },
+    [recompute],
+  );
+
+  // ---- data: positions of nodes that stay are carried over
+  const data = useMemo(() => {
+    const prev = new Map(fg.current?.nodes().map((n) => [n.id, { x: n.x, y: n.y, fx: n.fx, fy: n.fy }]) ?? []);
+    return buildGraphData(model, visible, prev);
+  }, [model, visible]);
+
+  // ---- redraw when anything the draw reads changes
+  useEffect(() => {
+    rs.current.colors = readCanvasColors();
+    recompute();
+  }, [recompute, theme, visible, selection, byId, neighbors, ui.highlight, ui.labelMode, ui.labelField, ui.typeLabels, ui.colorBy, ui.linkOpacity, radiusOpts]);
+
+  // a changed set of pages is refitted once the layout settles (or after a moment if it never reports it)
+  useEffect(() => {
+    pendingFit.current = true;
+    const t = window.setTimeout(() => {
+      if (!pendingFit.current) return;
+      pendingFit.current = false;
+      fitRef.current();
+    }, 1600);
+    return () => window.clearTimeout(t);
+  }, [ui.shownTypes, ui.shownDepths, ui.view]);
+
+  // ---- fit (largest connected component: stray islands drift far out and would shrink everything)
+  const fit = useCallback(() => {
+    const core = largestComponent(live.current.visible, live.current.neighbors);
+    fg.current?.fit(core.size > 1 ? (n) => core.has(n.id) : undefined, 400);
+    window.setTimeout(() => {
+      fitK.current = fg.current?.zoom() ?? 1;
+      k.current = fitK.current;
+      recompute();
+    }, 450);
+  }, [recompute]);
+
+  const fitRef = useRef(fit);
+  fitRef.current = fit;
+  useEffect(() => {
+    if (ui.fitTick > 0) fit();
+  }, [ui.fitTick, fit]);
+
+  // ---- pending focus: wait for the page to be drawn and laid out, then centre on it
+  useEffect(() => {
+    const req = ui.focusRequest;
+    if (!req) return;
+    const node = byId.get(req.id);
+    if (!node) {
+      useGraphUi.setState({ focusRequest: null });
+      return;
+    }
+    if (!visible.has(req.id)) {
+      useGraphUi.setState({ revealed: new Set([...live.current.ui.revealed, req.id]) });
+      return;
+    }
+    let tries = 0;
+    let timer = 0;
+    const attempt = () => {
+      const n = fg.current?.nodes().find((m) => m.id === req.id);
+      if (n && Number.isFinite(n.x) && Number.isFinite(n.y)) {
+        useKb.getState().setSelection([req.id]);
+        fg.current?.centerOn(n.x as number, n.y as number, req.zoom && k.current < 1.6 ? 2.2 : undefined, 600);
+        useGraphUi.setState({ focusRequest: null });
+      } else if (tries++ < 40) {
+        timer = window.setTimeout(attempt, 100);
+      } else {
+        useGraphUi.setState({ focusRequest: null });
+      }
+    };
+    attempt();
+    return () => window.clearTimeout(timer);
+  }, [ui.focusRequest, byId, visible, data]);
+
+  // ---- the magnetic pointer: nearest page within its own reach
+  useEffect(() => {
+    const el = wrap.current;
+    if (!el) return;
+    let queued = false;
+    let last: { x: number; y: number } | null = null;
+    const retarget = () => {
+      queued = false;
+      const g = fg.current;
+      if (!g || !last || !live.current.ui.magnet || pressed.current) return;
+      const scale = g.zoom();
+      const list: ScreenNode[] = [];
+      for (const n of g.nodes()) {
+        const s = g.screenOf(n);
+        if (s) list.push({ id: n.id, x: s.x, y: s.y, r: radius(n) * scale });
+      }
+      setHover(pickMagnetic(list, last.x, last.y, rs.current.hover));
+    };
+    const move = (e: PointerEvent) => {
+      last = { x: e.clientX, y: e.clientY };
+      if (!live.current.ui.magnet || queued) return;
+      queued = true;
+      requestAnimationFrame(retarget);
+    };
+    const leave = () => {
+      last = null;
+      if (live.current.ui.magnet) setHover(null);
+    };
+    const down = (e: PointerEvent) => {
+      if (e.button === 0) pressed.current = true;
+    };
+    const up = () => {
+      if (!pressed.current) return;
+      pressed.current = false;
+      requestAnimationFrame(retarget);
+    };
+    el.addEventListener("pointermove", move, { passive: true });
+    el.addEventListener("pointerleave", leave);
+    el.addEventListener("pointerdown", down, true);
+    window.addEventListener("pointerup", up);
+    return () => {
+      el.removeEventListener("pointermove", move);
+      el.removeEventListener("pointerleave", leave);
+      el.removeEventListener("pointerdown", down, true);
+      window.removeEventListener("pointerup", up);
+    };
+  }, [radius, setHover]);
+
+  // ---- right-click: a node opens its menu, empty space closes the panels and drops the selection
+  useEffect(() => {
+    const el = wrap.current;
+    if (!el) return;
+    const ctx = (e: MouseEvent) => {
+      e.preventDefault();
+      const id = rs.current.hover;
+      if (id) live.current.onOpenMenu(id, e.clientX, e.clientY);
+      else live.current.onBackgroundContext();
+    };
+    el.addEventListener("contextmenu", ctx);
+    return () => el.removeEventListener("contextmenu", ctx);
+  }, []);
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      screenOf: (id) => {
+        const n = fg.current?.nodes().find((m) => m.id === id);
+        return n ? fg.current?.screenOf(n) ?? null : null;
+      },
+      hovered: () => rs.current.hover,
+      zoomBy: (f) => fg.current?.zoomBy(f),
+      reheat: () => fg.current?.reheat(),
+    }),
+    [],
+  );
+
+  // ---- clicks
+  const clickNode = useCallback(
+    (id: string, ev: MouseEvent) => {
+      const now = Date.now();
+      const last = lastClick.current;
+      if (last.id === id && now - last.at < DOUBLE_MS) {
+        lastClick.current = { id: null, at: 0 };
+        live.current.onOpenReader(id);
+        return;
+      }
+      lastClick.current = { id, at: now };
+      const kb = useKb.getState();
+      if (ev.shiftKey || ev.metaKey || ev.ctrlKey) kb.toggle(id);
+      else kb.setSelection([id]);
+    },
+    [],
+  );
+
+  const onNodeClick = useCallback((n: SimNode, ev: MouseEvent) => clickNode(n.id, ev), [clickNode]);
+  // with the magnet a near miss can land on an edge or the background: that click belongs to the pulled node
+  const onNearMiss = useCallback(
+    (ev: MouseEvent) => {
+      const id = rs.current.hover;
+      if (live.current.ui.magnet && id) {
+        clickNode(id, ev);
+        return;
+      }
+      if (!ev.shiftKey && !ev.metaKey && !ev.ctrlKey) useKb.getState().clearSelection();
+    },
+    [clickNode],
+  );
+
+  // ---- drawing
+  const drawNode = useCallback(
+    (n: SimNode, ctx: CanvasRenderingContext2D, scale: number) => {
+      const { colors, focus, selected, hover } = rs.current;
+      if (n.x == null || n.y == null) return;
+      const r = radius(n);
+      const alpha = nodeOpacity(n.id, focus);
+      const isSel = selected.has(n.id);
+      if (isSel || hover === n.id) {
+        ctx.beginPath();
+        ctx.arc(n.x, n.y, r + 3 / scale, 0, 2 * Math.PI);
+        ctx.strokeStyle = withAlpha(colors.ring, isSel ? 0.95 : 0.55);
+        ctx.lineWidth = (isSel ? 2 : 1.5) / scale;
+        ctx.stroke();
+      }
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, r, 0, 2 * Math.PI);
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = colorOf(n, live.current.ui.colorBy);
+      ctx.fill();
+      ctx.globalAlpha = alpha * 0.5;
+      ctx.strokeStyle = colors.background;
+      ctx.lineWidth = 0.8 / scale;
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+    },
+    [radius],
+  );
+
+  const drawFramePost = useCallback(
+    (ctx: CanvasRenderingContext2D, scale: number) => {
+      const { ranks, colors, hover, focus } = rs.current;
+      if (!ranks.size) return;
+      const field = live.current.ui.labelField;
+      const g = fg.current;
+      if (!g) return;
+      const size = Math.max(10 / scale, 2.5);
+      ctx.font = `${size}px ${colors.font}`;
+      const pad = 2 / scale;
+      const items: (Placed & { n: SimNode; text: string })[] = [];
+      for (const n of g.nodes()) {
+        const rank = ranks.get(n.id);
+        if (rank === undefined || n.x == null || n.y == null || !Number.isFinite(n.x)) continue;
+        const text = labelText(n, field, n.id === hover);
+        const w = ctx.measureText(text).width;
+        const x = n.x - w / 2;
+        const y = n.y + radius(n) + 3 / scale + size;
+        items.push({ id: n.id, rank, deg: degreeOf(n), n, text, box: { x1: x - pad, y1: y - size, x2: x + w + pad, y2: y + pad } });
+      }
+      for (const p of declutter(items, size * 6)) {
+        const it = items.find((m) => m.id === p.id);
+        if (!it) continue;
+        ctx.globalAlpha = nodeOpacity(it.id, focus) < 0.5 ? 0.35 : 1;
+        ctx.fillStyle = withAlpha(colors.background, 0.82);
+        ctx.fillRect(p.box.x1, p.box.y1, p.box.x2 - p.box.x1, p.box.y2 - p.box.y1);
+        ctx.fillStyle = colors.text;
+        ctx.fillText(it.text, p.box.x1 + pad, p.box.y2 - pad);
+      }
+      ctx.globalAlpha = 1;
+    },
+    [radius],
+  );
+
+  const drawLinkAfter = useCallback((l: SimLink, ctx: CanvasRenderingContext2D, scale: number) => {
+    if (l.kind !== "shared" || scale < 1.6) return;
+    const a = l.source as SimNode;
+    const b = l.target as SimNode;
+    if (typeof a === "string" || typeof b === "string" || a.x == null || b.x == null || a.y == null || b.y == null) return;
+    ctx.save();
+    ctx.font = `${Math.max(2.5, 9 / scale)}px ${rs.current.colors.font}`;
+    ctx.fillStyle = rs.current.colors.muted;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(String(l.shared ?? 1), (a.x + b.x) / 2, (a.y + b.y) / 2);
+    ctx.restore();
+  }, []);
+
+  const linkColor = useCallback((l: SimLink) => {
+    const { focus, colors } = rs.current;
+    return withAlpha(colors.link, linkOpacity(endId(l.source), endId(l.target), focus, live.current.ui.linkOpacity, l.kind));
+  }, []);
+  const linkWidth = useCallback((l: SimLink) => (l.kind === "shared" ? 0.35 + Math.min(l.shared ?? 1, 6) * 0.1 : 0.8), []);
+  const linkLabel = useCallback(
+    (l: SimLink) => (l.kind === "shared" ? `${l.shared} shared source${l.shared === 1 ? "" : "s"}` : ""),
+    [],
+  );
+
+  const onZoom = useCallback(
+    (z: number) => {
+      k.current = z;
+      if (hubCount(z / (fitK.current || 1)) !== hubKey.current) recompute();
+    },
+    [recompute],
+  );
+
+  const onEngineStop = useCallback(() => {
+    if (!pendingFit.current) return;
+    pendingFit.current = false;
+    fit();
+  }, [fit]);
+
+  const onNodeHover = useCallback(
+    (n: SimNode | null) => {
+      if (live.current.ui.magnet) return;
+      setHover(n ? n.id : null);
+    },
+    [setHover],
+  );
+
+  return (
+    <div ref={wrap} className={cn("size-full [&.graph-pointer_canvas]:cursor-pointer", className)}>
+      <ForceGraph
+        ref={fg}
+        className="size-full"
+        data={data}
+        forces={{ charge: ui.charge, linkDistance: ui.linkDistance, gravity: ui.gravity }}
+        arrows={ui.arrows}
+        nodeRadius={radius}
+        drawNode={drawNode}
+        drawFramePost={drawFramePost}
+        drawLinkAfter={drawLinkAfter}
+        linkColor={linkColor}
+        linkWidth={linkWidth}
+        linkLabel={linkLabel}
+        onNodeHover={onNodeHover}
+        onNodeClick={onNodeClick}
+        onLinkClick={onNearMiss}
+        onBackgroundClick={onNearMiss}
+        onZoom={onZoom}
+        onEngineStop={onEngineStop}
+      />
+    </div>
+  );
+});
+
