@@ -8,6 +8,7 @@ import { findPages, textHits } from "./pageSearch";
 import { colorOf, type ColorBy } from "./style";
 import type { GNode } from "./types";
 import { IS_SHARE } from "@/share/env";
+import { useChatDock } from "./tools/ChatDock";
 
 export const FINDER_ID = "graph-finder";
 
@@ -34,7 +35,7 @@ interface Props {
 
 /**
  * Space search: title and slug matches, full-text hits, "pages mentioning …", and a pick list (Tab) that is
- * shown all at once with its neighbours. "/" is the ask-an-agent placeholder.
+ * shown all at once with its neighbours. "/" sends the rest of the line to the chat dock.
  */
 export function Finder({ nodes, byId, colorBy, visible, onFocus, onRead, onShowPicked, onShowMentions }: Props) {
   const [raw, setRaw] = useState("");
@@ -99,7 +100,9 @@ export function Finder({ nodes, byId, colorBy, visible, onFocus, onRead, onShowP
   const run = (it: Item | undefined, shift: boolean) => {
     if (!it) return;
     if (it.kind === "agent") {
-      setAgentNote(it.question ? "The agent is not wired in yet: this is a placeholder." : "");
+      if (!it.question) return setAgentNote("Type a question after the slash.");
+      useChatDock.getState().ask(it.question);
+      close();
       return;
     }
     if (it.kind === "mention") {
@@ -232,7 +235,7 @@ export function Finder({ nodes, byId, colorBy, visible, onFocus, onRead, onShowP
               ) : (
                 <span className="flex-1">
                   {it.question ? `Ask: “${it.question}”` : "Type a question after the slash…"}{" "}
-                  <small className="text-muted-foreground">coming soon</small>
+                  <small className="text-muted-foreground">opens the chat</small>
                   {agentNote && <span className="mt-1 block text-xs text-muted-foreground">{agentNote}</span>}
                 </span>
               )}

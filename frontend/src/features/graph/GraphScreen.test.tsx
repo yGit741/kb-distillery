@@ -127,11 +127,11 @@ describe("search", () => {
     expect(useGraphUi.getState().focusRequest?.id).toBe("idea-margin");
   });
 
-  it("'/' is the agent placeholder", async () => {
+  it("'/' sends the question to the chat dock", async () => {
     render(wrap(withGraph(), <GraphScreen search={{}} host={host} />));
     const input = await screen.findByRole("combobox", { name: /search a page/i });
     await userEvent.type(input, "/what is margin");
-    expect(await screen.findByText(/coming soon/i)).toBeInTheDocument();
+    expect(await screen.findByText(/opens the chat/i)).toBeInTheDocument();
   });
 
   it("lists full-text hits that are not title matches", async () => {

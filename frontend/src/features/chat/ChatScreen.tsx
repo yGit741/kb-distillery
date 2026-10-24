@@ -1,7 +1,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSearch } from "@tanstack/react-router";
 import { Download, PanelRightOpen, Plus, SendHorizontal, Square } from "lucide-react";
-import { useMemo, useState, type FormEvent, type KeyboardEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent, type KeyboardEvent } from "react";
 import { useDataSource } from "@/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -22,7 +22,8 @@ const EXAMPLES: { q: string; template?: string; label: string }[] = [
   { q: "Teach me tensor rank from my notes.", template: "learn", label: "Teach me tensor rank" },
 ];
 
-export function ChatScreen() {
+/** `question` / `scope` override the URL's `?q` / `?scope` (the graph's chat dock passes them). */
+export function ChatScreen({ question, scope }: { question?: string; scope?: string } = {}) {
   const ds = useDataSource();
   const qc = useQueryClient();
   const search = useSearch({ strict: false }) as SearchById["chat"];
@@ -47,8 +48,8 @@ export function ChatScreen() {
       status={status.data}
       prompts={promptsQ.data.prompts}
       scopes={scopesQ.data?.scopes ?? []}
-      initialScope={search.scope ?? ""}
-      initialQuestion={search.q ?? ""}
+      initialScope={scope ?? search.scope ?? ""}
+      initialQuestion={question ?? search.q ?? ""}
     />
   );
 }
@@ -72,6 +73,10 @@ function ChatBody({ status: rawStatus, prompts: rawPrompts, scopes, initialScope
   const [modelPick, setModelPick] = useState(() => readJson("local", "kbchat.model", ""));
   const [scope, setScope] = useState(initialScope);
   const [question, setQuestion] = useState(initialQuestion);
+  // a new question handed in from outside (the graph's "/" ask) replaces the draft, keeping the history
+  useEffect(() => {
+    if (initialQuestion) setQuestion(initialQuestion);
+  }, [initialQuestion]);
   const [railOpen, setRailOpen] = useState(false);
   const [note, setNote] = useState<{ text: string; bad: boolean } | null>(null);
   const [saving, setSaving] = useState(false);
