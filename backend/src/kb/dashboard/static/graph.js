@@ -163,8 +163,10 @@
   const calmOn = () => !!el("calm-hover")?.checked;
   let pointedNode = null, intentTimer = 0;
   let prevLabels = new Set();                        // labels drawn before the focus changed: new ones fade in
+  let labelsBefore = new Set();                      // labeledNodeIds before the latest computeVisibility
   const lastMove = { x: 0, y: 0, t: 0, speed: 0 };   // pointer speed in px per 100 ms
   document.addEventListener("pointermove", (e) => notePointer(e), { passive: true });
+  document.addEventListener("change", (e) => { if (e.target.id === "calm-hover" && !e.target.checked) commitHover(pointedNode); });
   let selectedNodeIds = new Set();
   let selectedNodes = new Set();
   let visibleNodeIds = new Set();
@@ -710,6 +712,7 @@
     const labelFilters = getNodeFilters("label-filters");
 
     visibleNodeIds = new Set();
+    labelsBefore = labeledNodeIds;
     labeledNodeIds = new Set();
 
     for (const node of snapshot.nodes) {
@@ -1032,6 +1035,9 @@
 
     graph.graphData(data);
     reconcileSelectedNodes();
+    if (pointedNode && !visibleNodeIds.has(pointedNode.id)) pointedNode = null;
+    if (hoveredNode && !visibleNodeIds.has(hoveredNode.id)) hoveredNode = null;
+    if (!pointedNode) { clearTimeout(intentTimer); intentTimer = 0; }
     computeVisibility();
     if (savedView) applyView(savedView);
 
@@ -1118,7 +1124,7 @@
   let fadeT = 1, fadeFrom = 0, fadeMs = 0, fadeRaf = 0, focusKey = "";
   const ease = (t) => 1 - (1 - t) * (1 - t);
   function computeFocus() {
-    const before = { core: focusCore, lit: focusLit, dim: focusDim, labels: prevLabels };
+    const before = { core: focusCore, lit: focusLit, dim: focusDim };
     focusCore = focusLit = null;
     focusDim = selectedNodeIds.size ? 0.12 : hoverTuning.HOVER_DIM;
     if (el("highlight-path").checked && (hoveredNode || selectedNodeIds.size)) {
@@ -1133,6 +1139,7 @@
     const still = !calmOn() || matchMedia("(prefers-reduced-motion: reduce)").matches;
     fadeMs = still ? 0 : focusCore ? hoverTuning.FADE_IN : hoverTuning.FADE_OUT;
     prevFocus = fadeMs ? before : null;
+    if (fadeMs) prevLabels = labelsBefore;
     fadeT = fadeMs ? 0 : 1;
     fadeFrom = performance.now();
     if (fadeMs && !fadeRaf) fadeRaf = requestAnimationFrame(fadeStep);
@@ -1224,7 +1231,6 @@
   function commitHover(node) {
     clearTimeout(intentTimer); intentTimer = 0;
     if (sameNode(node, hoveredNode)) return;
-    prevLabels = new Set(labeledNodeIds);
     hoveredNode = node || null;
     computeVisibility();
     refreshVisuals();
