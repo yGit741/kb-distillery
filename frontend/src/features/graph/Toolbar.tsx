@@ -1,4 +1,4 @@
-import { CircleHelp, ListFilter, Maximize, Network, PanelLeftOpen, X, ZoomIn, ZoomOut } from "lucide-react";
+import { ArrowLeft, CircleHelp, ListFilter, Maximize, Network, SlidersHorizontal, X, ZoomIn, ZoomOut } from "lucide-react";
 import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -10,7 +10,7 @@ import { useVisibleTools, type GraphToolContext } from "./tools";
 const HELP: readonly [string, string][] = [
   ["Search everything", "Space"],
   ["Ask an agent", "/ (coming soon)"],
-  ["Pan", "scroll, two-finger swipe, or drag the background"],
+  ["Pan", "scroll, two-finger swipe, or drag with the wheel (middle button) pressed"],
   ["Zoom", "pinch, Cmd+scroll, + and −"],
   ["Fit to view", "F"],
   ["Labels", "hover a page; a click labels its neighbours"],
@@ -19,6 +19,7 @@ const HELP: readonly [string, string][] = [
   ["Open in Pages", "E (one selected)"],
   ["Page menu", "right-click a page"],
   ["Select several", "Shift or Cmd/Ctrl+click"],
+  ["Box select", "drag the background (Shift adds, Cmd/Ctrl draws a lasso)"],
   ["Clear / close", "Esc, or right-click empty space"],
 ];
 
@@ -30,6 +31,8 @@ interface Props {
   refreshing: boolean;
   stats: string;
   toolContext: GraphToolContext;
+  /** Set when the graph was opened from Home: a back button heads the bar. */
+  onBack?: () => void;
 }
 
 const TITLES: Record<string, string> = { filter: "Filters", layout: "Layout and sync", help: "Shortcuts" };
@@ -50,23 +53,33 @@ function IconButton({ label, active, onClick, children }: { label: string; activ
   );
 }
 
-/** The one toolbar: panels (filters, display, layout, help), zoom and fit, plus whatever TOOLS registers. */
-export function Toolbar({ onFit, onZoom, onReheat, onRefresh, refreshing, stats, toolContext }: Props) {
+/** The one toolbar, a slim bar on the left: the labels & views rail, panels (filters, display, layout, help), zoom and fit, plus whatever TOOLS registers. */
+export function Toolbar({ onFit, onZoom, onReheat, onRefresh, refreshing, stats, toolContext, onBack }: Props) {
   const flyout = useGraphUi((s) => s.flyout);
   const hasFilter = useGraphUi((s) => s.search !== "" || s.rules.length > 0);
-  const open = useGraphUi((s) => s.openFlyout);
+  const openFlyout = useGraphUi((s) => s.openFlyout);
+  const open = (id: string) => {
+    useGraphUi.setState({ railOpen: false });
+    openFlyout(id);
+  };
   const close = () => useGraphUi.setState({ flyout: null });
   const tools = useVisibleTools();
   const activeTool = tools.find((t) => t.id === flyout);
   const railOpen = useGraphUi((s) => s.railOpen);
   return (
     <>
-      <nav aria-label="Graph tools" className="pointer-events-auto absolute right-3 top-3 z-20 flex flex-col gap-0.5 rounded-lg border bg-card/95 p-0.5 shadow-[var(--shadow)]">
-        {!railOpen && (
-          <IconButton label="Labels & views" onClick={() => useGraphUi.setState({ railOpen: true })}>
-            <PanelLeftOpen aria-hidden />
-          </IconButton>
+      <nav aria-label="Graph tools" className="pointer-events-auto absolute left-3 top-3 z-20 flex flex-col gap-0.5 rounded-lg border bg-card/95 p-0.5 shadow-[var(--shadow)]">
+        {onBack && (
+          <>
+            <IconButton label="Back to Home" onClick={onBack}>
+              <ArrowLeft aria-hidden />
+            </IconButton>
+            <hr className="mx-1 my-0.5" />
+          </>
         )}
+        <IconButton label="Labels & views" active={railOpen} onClick={() => useGraphUi.setState({ railOpen: !railOpen, flyout: null })}>
+          <SlidersHorizontal aria-hidden />
+        </IconButton>
         <IconButton label={hasFilter ? "Filters (active)" : "Filters"} active={flyout === "filter" || hasFilter} onClick={() => open("filter")}>
           <ListFilter aria-hidden />
         </IconButton>
@@ -95,7 +108,7 @@ export function Toolbar({ onFit, onZoom, onReheat, onRefresh, refreshing, stats,
       {flyout && (
         <section
           aria-label={activeTool?.label ?? TITLES[flyout] ?? flyout}
-          className="pointer-events-auto absolute right-14 top-3 z-20 flex max-h-[calc(100%-1.5rem)] w-[min(20rem,calc(100%-4.5rem))] flex-col rounded-lg border bg-card shadow-[var(--shadow)] max-sm:top-14 max-sm:max-h-[calc(100%-4.5rem)]"
+          className="pointer-events-auto absolute left-14 top-3 z-20 flex max-h-[calc(100%-5rem)] w-[min(20rem,calc(100%-4.5rem))] flex-col rounded-lg border bg-card shadow-[var(--shadow)] max-sm:top-14 max-sm:max-h-[calc(100%-4.5rem)]"
         >
           <header className="flex items-center justify-between border-b px-3 py-1.5">
             <h2 className="text-sm font-semibold">{activeTool?.label ?? TITLES[flyout] ?? flyout}</h2>

@@ -36,10 +36,9 @@ function open(path: string, over: Partial<DataSource> = {}) {
 }
 
 describe("System screen", () => {
-  it("shows the status strip, what needs me and the timeline", async () => {
+  it("shows the version, what needs me and the timeline", async () => {
     open("/system");
     expect((await screen.findAllByText("kb-1.0.9")).length).toBeGreaterThan(0);
-    expect(await screen.findByRole("contentinfo", { name: "Status" })).toBeInTheDocument();
     expect(await screen.findByText("infra/x is merged — leftover worktree")).toBeInTheDocument();
     expect(screen.getByText("pixi run ship -- prune --apply")).toBeInTheDocument();
     expect(await screen.findByText("kb(digest): ramsey numbers (kb-1.0.9)")).toBeInTheDocument();

@@ -1,4 +1,4 @@
-import { PanelLeftClose } from "lucide-react";
+import { X } from "lucide-react";
 import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -221,6 +221,9 @@ function WhyRank({ node, imp, cfg }: { node: GNode; imp: Importance; cfg: LabCon
   );
 }
 
+/** The live label readouts (zoom, churn, …): a tuning aid, off for now. */
+const SHOW_HUD = false;
+
 function Hud() {
   const h = useLabHud();
   const cell = (label: string, value: string, warn = false) => (
@@ -245,16 +248,16 @@ function Hud() {
  * The left rail (ported from the Label Lab): a view (user story) at the top, what is on the graph (the legend),
  * the label knobs, nodes and links, why the selected page ranks where it does, and live readouts.
  */
-export function LabRail({ legend, imp, selected, className }: { legend: ReactNode; imp: Importance; selected: readonly GNode[]; className?: string }) {
+export function LabRail({ imp, selected, className }: { imp: Importance; selected: readonly GNode[]; className?: string }) {
   const ui = useGraphUi();
   const cfg = ui.lab;
   const story = storyById(ui.story);
   return (
-    <aside aria-label="Labels and views" className={cn("pointer-events-auto flex min-h-0 flex-col border-r bg-card/95 text-sm shadow-[var(--shadow)]", className)}>
+    <aside aria-label="Labels and views" className={cn("pointer-events-auto flex min-h-0 flex-col rounded-lg border bg-card/95 text-sm shadow-[var(--shadow)]", className)}>
       <header className="flex items-center gap-2 border-b px-3 py-2">
         <h2 className="flex-1 text-sm font-semibold">Labels &amp; views</h2>
         <Button variant="ghost" size="icon" className="size-7" aria-label="Hide the rail" title="Hide the rail" onClick={() => ui.set({ railOpen: false })}>
-          <PanelLeftClose aria-hidden />
+          <X aria-hidden />
         </Button>
       </header>
       <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-4">
@@ -272,8 +275,7 @@ export function LabRail({ legend, imp, selected, className }: { legend: ReactNod
             </p>
           )}
         </Section>
-        <Section title="What is on the graph" open>
-          {legend}
+        <Section title="Layout" open>
           <SelectField
             label="Layout"
             value={ui.layoutMode}
@@ -307,7 +309,7 @@ export function LabRail({ legend, imp, selected, className }: { legend: ReactNod
           </Section>
         )}
       </div>
-      <Hud />
+      {SHOW_HUD && <Hud />}
     </aside>
   );
 }

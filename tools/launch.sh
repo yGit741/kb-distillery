@@ -26,7 +26,7 @@ find backend -name __pycache__ -type d -prune -exec rm -rf {} + 2>/dev/null || t
 nohup python -m kb.api --port "$PORT" --no-open >"$LOG" 2>&1 &
 echo "started dashboard (pid $!), log: $LOG"
 
-for _ in $(seq 1 40); do
+for _ in $(seq 1 360); do   # up to 90 s: kb.api first rebuilds frontend/dist when the sources changed
   if curl -fsS -o /dev/null "$URL"; then
     open "$URL"
     echo "ready: $URL"
@@ -35,6 +35,6 @@ for _ in $(seq 1 40); do
   sleep 0.25
 done
 
-echo "dashboard did not come up in 10s; last log lines:" >&2
+echo "dashboard did not come up in 90s; last log lines:" >&2
 tail -20 "$LOG" >&2
 exit 1

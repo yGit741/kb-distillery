@@ -82,9 +82,9 @@ The app is served under `/app` (vite `base`, router `basepath`; `python -m kb.ap
 5. Cross-screen state (selected slugs, open scope draft) is `useKb()` from `src/lib/store.ts`; do not add a second store for it.
 6. Reuse the shared pieces: `<Markdown>` (`src/components/Markdown.tsx`, GFM + KaTeX + `[[slug]]` links to `/pages/<slug>`, `resolveSlug` prop), `Loading` / `Empty` / `ErrorState` / `ErrorBoundary` (`src/components/states.tsx`), `src/theme/palette.ts`, tokens. List the duplicates you removed.
 7. Tests next to the screen: render with `mockDataSource({...})` from `src/test/datasource.ts` (loading, error, empty, data) plus unit tests for pure logic.
-8. `pixi run web-check`, commit `frontend/dist`, then check `/app/<path>` in a browser (hard reload, light and dark, 390px without horizontal scroll, no console errors) against `python -m kb.api --port <spare>`.
+8. `pixi run web-check` (never commit `frontend/dist` — it is gitignored build output; restarting `kb.api` rebuilds it), then check `/app/<path>` in a browser (hard reload, light and dark, 390px without horizontal scroll, no console errors) against `python -m kb.api --port <spare>`.
 9. Delete the legacy page and its static files in the same PR.
 
 ## Output
 
-Changes under `frontend/` (including the committed `frontend/dist`); no vault changes.
+Changes under `frontend/` (sources only — `frontend/dist` is build output and never committed); no vault changes.

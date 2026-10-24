@@ -2,6 +2,7 @@ import createForceGraph, { type ForceGraphInstance, type NodeObject } from "forc
 import { useEffect, useRef, useState } from "react";
 import { readCanvasColors, withAlpha } from "@/features/graph/canvasTheme";
 import type { GNode } from "@/features/graph/types";
+import { cn } from "@/lib/utils";
 import { typeColor } from "@/theme/palette";
 import type { Sample } from "./samplers";
 
@@ -81,11 +82,14 @@ export function SampleGraph({
   byId,
   score,
   onOpen,
+  fill = false,
 }: {
   sample: Sample;
   byId: ReadonlyMap<string, GNode>;
   score: ReadonlyMap<string, number>;
   onOpen: (id: string) => void;
+  /** Take the parent's height instead of GRAPH_HEIGHT. */
+  fill?: boolean;
 }) {
   const box = useRef<HTMLDivElement>(null);
   const host = useRef<HTMLDivElement>(null);
@@ -115,7 +119,7 @@ export function SampleGraph({
     const g = createForceGraph()(el);
     fg.current = g;
     g.width(el.clientWidth || 300)
-      .height(GRAPH_HEIGHT)
+      .height(el.clientHeight || GRAPH_HEIGHT)
       .backgroundColor("rgba(0,0,0,0)")
       .graphData({ nodes, links })
       .nodeId("id")
@@ -178,7 +182,7 @@ export function SampleGraph({
         g.zoomToFit(0, FIT_PADDING);
         if (g.zoom() > MAX_ZOOM) g.zoom(MAX_ZOOM);
       });
-    const ro = new ResizeObserver(() => g.width(el.clientWidth || 300));
+    const ro = new ResizeObserver(() => g.width(el.clientWidth || 300).height(el.clientHeight || GRAPH_HEIGHT));
     ro.observe(el);
     return () => {
       ro.disconnect();
@@ -200,8 +204,8 @@ export function SampleGraph({
       tabIndex={0}
       role="img"
       aria-label={`Graph of ${sample.nodes.length} pages around ${byId.get(sample.focus)?.title ?? sample.focus}`}
-      className="relative overflow-hidden rounded-md bg-muted/30 outline-none focus-visible:ring-2 focus-visible:ring-ring"
-      style={{ height: GRAPH_HEIGHT }}
+      className={cn("relative overflow-hidden rounded-md bg-muted/30 outline-none focus-visible:ring-2 focus-visible:ring-ring", fill && "h-full min-h-0")}
+      style={fill ? undefined : { height: GRAPH_HEIGHT }}
       onFocus={() => fg.current?.enableZoomInteraction(true)}
       onBlur={() => fg.current?.enableZoomInteraction(false)}
       onKeyDown={(e) => {
