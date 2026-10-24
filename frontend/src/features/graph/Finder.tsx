@@ -7,6 +7,7 @@ import { Swatch } from "./controls";
 import { findPages, textHits } from "./pageSearch";
 import { colorOf, type ColorBy } from "./style";
 import type { GNode } from "./types";
+import { IS_SHARE } from "@/share/env";
 
 export const FINDER_ID = "graph-finder";
 
@@ -157,7 +158,7 @@ export function Finder({ nodes, byId, colorBy, visible, onFocus, onRead, onShowP
           type="search"
           autoComplete="off"
           spellCheck={false}
-          placeholder="Search pages  ·  Space  ·  / ask an agent"
+          placeholder={IS_SHARE ? "Search pages  ·  Space" : "Search pages  ·  Space  ·  / ask an agent"}
           className="h-9 w-full rounded-lg border bg-card/95 pl-8 pr-3 text-sm shadow-[var(--shadow)] placeholder:text-muted-foreground"
           value={raw}
           onFocus={() => setOpen(true)}

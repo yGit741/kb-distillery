@@ -55,9 +55,16 @@ class Manifest:
     profile: str
     sha256: str
     built_at: str  # ISO 8601, the content commit's date
+    # "legacy" = one index.html shell (the default); "app" = the React app build: index.html + assets/,
+    # `sha256` is then the digest of the whole tree (build.tree_digest). Left out of the JSON when
+    # legacy, so legacy manifests stay byte-identical.
+    layout: str = "legacy"
 
     def to_json(self) -> str:
-        return json.dumps(asdict(self), sort_keys=True, indent=2) + "\n"
+        d = asdict(self)
+        if d["layout"] == "legacy":
+            del d["layout"]
+        return json.dumps(d, sort_keys=True, indent=2) + "\n"
 
     @classmethod
     def from_json(cls, text: str) -> "Manifest":

@@ -92,5 +92,6 @@ repomix-output.xml
 *.canvas-llm
 Untitled*.md
 
-# Frontend (frontend/dist IS committed; deps are not)
+# Frontend (frontend/dist IS committed; deps are not; dist-share/ is the share build, rebuilt on demand)
 frontend/node_modules/
+frontend/dist-share/

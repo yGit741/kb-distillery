@@ -1,41 +1,83 @@
-import type { DataSource } from "./datasource";
+import type { ShareBlob } from "@/share/blob";
+import { findPaths, searchPages } from "@/share/search";
+import { ApiError, type DataSource } from "./datasource";
 
-/** Static share build: data baked into a global JSON blob. Not wired yet (Phase 5). */
-export function createEmbeddedDataSource(): DataSource {
-  const notBuilt = async (): Promise<never> => {
-    throw new Error("embedded data source: not built for share yet");
+const NOT_SHARED = "not available in the shared view";
+
+/**
+ * Static share build: the data is a JSON blob baked into the page (`<script id="kb-data">`, read into
+ * `globalThis.KB_EMBEDDED` by main.tsx). Read-only: graph, pages, page detail, search, shortest path,
+ * the lifecycle snapshot (private profile) and the share status chip (always empty here). Everything
+ * else (chat, ops, health, pipeline, raw, corpus, scopes, digest) rejects with a 404 ApiError; the
+ * share builds do not even include those screens, this is the safety net for shared components.
+ *
+ * Without a blob (unit tests, a normal app load) every method rejects, as before.
+ */
+export function createEmbeddedDataSource(blob: ShareBlob | undefined = globalThis.KB_EMBEDDED): DataSource {
+  const absent = async (): Promise<never> => {
+    throw new ApiError(blob ? NOT_SHARED : "embedded data source: no data baked into this page", 404);
   };
-  return {
+  const base: DataSource = {
     kind: "embedded",
-    getLifecycle: notBuilt,
-    getShareStatus: notBuilt,
-    getHealth: notBuilt,
-    getOps: notBuilt,
-    getGraph: notBuilt,
-    getGraphNodes: notBuilt,
-    getCitations: notBuilt,
-    listPages: notBuilt,
-    getPage: notBuilt,
-    search: notBuilt,
-    findPath: notBuilt,
-    getPipeline: notBuilt,
-    getCorpus: notBuilt,
-    getRawPreview: notBuilt,
-    digestRaw: notBuilt,
-    listScopes: notBuilt,
-    getScope: notBuilt,
-    resolveScope: notBuilt,
-    saveScope: notBuilt,
-    deleteScope: notBuilt,
-    duplicateScope: notBuilt,
-    getChatStatus: notBuilt,
-    getChatSettings: notBuilt,
-    updateChatSettings: notBuilt,
-    getChatPrompts: notBuilt,
-    getChatKeys: notBuilt,
-    addChatKey: notBuilt,
-    removeChatKey: notBuilt,
-    saveChat: notBuilt,
-    chatStream: notBuilt,
+    getLifecycle: absent,
+    getShareStatus: absent,
+    getHealth: absent,
+    getOps: absent,
+    getGraph: absent,
+    getGraphNodes: absent,
+    getCitations: absent,
+    listPages: absent,
+    getPage: absent,
+    search: absent,
+    findPath: absent,
+    getPipeline: absent,
+    getCorpus: absent,
+    getRawPreview: absent,
+    digestRaw: absent,
+    listScopes: absent,
+    getScope: absent,
+    resolveScope: absent,
+    saveScope: absent,
+    deleteScope: absent,
+    duplicateScope: absent,
+    getChatStatus: absent,
+    getChatSettings: absent,
+    updateChatSettings: absent,
+    getChatPrompts: absent,
+    getChatKeys: absent,
+    addChatKey: absent,
+    removeChatKey: absent,
+    saveChat: absent,
+    chatStream: absent,
+  };
+  if (!blob) return base;
+  const data = blob;
+  return {
+    ...base,
+    getGraph: async () => data.graph,
+    getGraphNodes: async () => data.graph.nodes,
+    listPages: async () => data.index,
+    getPage: async (slug) => {
+      const page = data.pages[slug];
+      if (!page) throw new ApiError("not found", 404);
+      return page;
+    },
+    search: async (q, limit) => searchPages(data, q, limit),
+    findPath: async (a, b) => {
+      const r = findPaths(data, a, b);
+      if (!r) throw new ApiError("not found", 404);
+      return r;
+    },
+    getCitations: async () => {
+      if (!data.citations) throw new ApiError(NOT_SHARED, 404);
+      return data.citations;
+    },
+    getLifecycle: async () => {
+      if (!data.lifecycle) throw new ApiError(NOT_SHARED, 404);
+      const l = data.lifecycle;
+      // The snapshot was captured by the share builder: no local policy state, JSON-safe stats keys.
+      return { ...l, policy: { ...l.policy, hooks_installed: l.policy?.hooks_installed ?? false } };
+    },
+    getShareStatus: async () => ({ status: null, chip: null }),
   };
 }

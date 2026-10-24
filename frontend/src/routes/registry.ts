@@ -7,17 +7,12 @@
  * live in defs.ts / search.ts; routes without a folder fall back to a legacy card.
  */
 import type { ComponentType } from "react";
+import { IS_SHARE } from "@/share/env";
 import { ROUTE_DEFS, legacyHref, type RouteDef } from "./defs";
+import { modules, type FeatureModule } from "@/routes/modules";
 
 export { legacyHref };
 export type { RouteDef };
-
-interface FeatureModule {
-  default: ComponentType;
-  ported?: boolean;
-}
-
-const modules = import.meta.glob<FeatureModule>("../features/*/index.tsx", { eager: true });
 
 const byId = new Map<string, FeatureModule>();
 for (const [file, mod] of Object.entries(modules)) {
@@ -30,7 +25,8 @@ export interface Route extends RouteDef {
   Screen?: ComponentType;
 }
 
-export const ROUTES: readonly Route[] = ROUTE_DEFS.map((d) => {
+/** A share build keeps only the routes whose screen it imported (modules.share-*.ts); the rest do not exist. */
+export const ROUTES: readonly Route[] = ROUTE_DEFS.filter((d) => !IS_SHARE || byId.has(d.id)).map((d) => {
   const mod = byId.get(d.id);
   return { ...d, ported: mod?.ported === true, Screen: mod?.default };
 });
