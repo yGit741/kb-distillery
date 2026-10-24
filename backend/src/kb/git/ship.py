@@ -234,9 +234,44 @@ def link_untracked_raw(root=ROOT):
     return made
 
 
+# The app's own gates, run only when the branch touches frontend/ (npm is slow to start).
+FRONTEND_GATES = [
+    ("web-typecheck", ["npm", "run", "typecheck", "--prefix", "frontend"]),
+    ("web-tests", ["npm", "run", "test", "--prefix", "frontend"]),
+]
+
+
+def frontend_changed(root=ROOT):
+    """True when the branch (committed or not) differs from main under frontend/."""
+    base = subprocess.run(["git", "merge-base", "origin/main", "HEAD"], cwd=root,
+                          capture_output=True, text=True, check=False).stdout
+    base = (base or "").strip()
+    diff = subprocess.run(["git", "diff", "--name-only", base or "HEAD", "--", "frontend/"], cwd=root,
+                          capture_output=True, text=True, check=False)
+    new = subprocess.run(["git", "ls-files", "--others", "--exclude-standard", "--", "frontend/src"],
+                         cwd=root, capture_output=True, text=True, check=False)
+    return bool((diff.stdout or "").strip() or (new.stdout or "").strip())
+
+
+def frontend_gates(root=ROOT):
+    """FRONTEND_GATES, installing node_modules first in a fresh worktree; None when the install fails."""
+    if not os.path.isdir(os.path.join(root, "frontend", "node_modules")):
+        print("gate: web-install (frontend/node_modules missing)")
+        if subprocess.run(["npm", "ci", "--prefix", "frontend"], cwd=root).returncode != 0:
+            print("error: web-install failed")
+            return None
+    return FRONTEND_GATES
+
+
 def run_gates(root=ROOT, skip_tests=False):
     link_untracked_raw(root)
-    for name, cmd in GATES:
+    gates = list(GATES)
+    if not skip_tests and frontend_changed(root):
+        extra = frontend_gates(root)
+        if extra is None:
+            return False
+        gates += extra
+    for name, cmd in gates:
         if name == "tests" and skip_tests:
             continue
         print(f"gate: {name}")
@@ -353,6 +388,17 @@ def legacy(argv):
 
 # ---------- PR flow ----------
 
+def link_pixi_env(root, worktree_path):
+    """Symlink the primary's `.pixi` into a fresh worktree so `pixi run` reuses its env (no ~1 GB install).
+    pixi.toml's [activation.env] PYTHONPATH makes `import kb` resolve to the worktree's own source."""
+    src = os.path.join(primary_checkout(root), ".pixi")
+    dst = os.path.join(worktree_path, ".pixi")
+    if os.path.isdir(src) and not os.path.lexists(dst):
+        os.symlink(src, dst)
+        print(f"linked {dst} -> {src} (pixi run reuses the primary's env, no install)")
+    print(f"import kb here: `pixi run python …` or `PYTHONPATH={worktree_path}/backend/src python3 …`")
+
+
 def cmd_start(feature, worktree=False, root=ROOT):
     if not FEATURE_RE.match(feature):
         print("error: feature must be kebab-case, e.g. kb-ops")
@@ -366,6 +412,7 @@ def cmd_start(feature, worktree=False, root=ROOT):
         print(_out(cp))
         if cp.returncode == 0:
             print(f"worktree ready: {path} on {branch}")
+            link_pixi_env(root, path)
             stale = [r for r in stale_worktrees(root) if r["merged"] and not r["dirty"] and not r["current"]]
             if stale:
                 print(f"note: {len(stale)} merged worktree(s) can go — pixi run ship -- prune --apply")
