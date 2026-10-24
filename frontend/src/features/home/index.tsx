@@ -14,6 +14,8 @@ export default function Home() {
     () => ({
       openGraph: (search) => void navigate({ to: "/graph" as "/", search: search as never }),
       graphHref: (search) => `${base}/graph?${new URLSearchParams(search).toString()}`,
+      openPage: (slug) => void navigate({ to: `/pages/${encodeURIComponent(slug)}` as "/" }),
+      pageHref: (slug) => `${base}/pages/${encodeURIComponent(slug)}`,
     }),
     [navigate],
   );

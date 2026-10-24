@@ -7,12 +7,58 @@ import type { Sample } from "./samplers";
 
 /** Card canvas height in CSS px; the width follows the card. */
 export const GRAPH_HEIGHT = 220;
-/** Labels drawn without hovering: the focus plus this many best-scored nodes. */
-const LABELS = 3;
+
+/** Labels wrap at this many screen px, on at most LABEL_LINES lines. */
+const LABEL_WIDTH = 150;
+const LABEL_LINES = 3;
+/** Fit leaves room for labels under the outer nodes; small samples stop at MAX_ZOOM. */
+const FIT_PADDING = 40;
+const MAX_ZOOM = 2;
 
 type Node = NodeObject & { id: string; title: string; type: string; r: number };
 
-const trunc = (s: string, n: number) => (s.length > n ? `${s.slice(0, n - 1)}…` : s);
+/** Most labels drawn at rest; the hovered node is always labelled on top of these. */
+const MAX_LABELS = 5;
+
+interface Box {
+  x0: number;
+  x1: number;
+  y0: number;
+  y1: number;
+}
+
+export const overlaps = (a: Box, b: Box): boolean => a.x0 < b.x1 && b.x0 < a.x1 && a.y0 < b.y1 && b.y0 < a.y1;
+
+/** Hovered node first, then the focus, then the rest by importance. */
+export function labelOrder<T extends { id: string }>(nodes: readonly T[], focus: string, hover: string | null, score: ReadonlyMap<string, number>): T[] {
+  const rank = (n: T) => (n.id === hover ? 2 : n.id === focus ? 1 : 0);
+  return [...nodes].sort((a, b) => rank(b) - rank(a) || (score.get(b.id) ?? 0) - (score.get(a.id) ?? 0) || a.id.localeCompare(b.id));
+}
+
+/** Greedy word wrap; only the last allowed line gets an ellipsis, and only if words remain. */
+export function wrap(text: string, width: number, measure: (s: string) => number, maxLines = LABEL_LINES): string[] {
+  const words = text.split(/\s+/).filter(Boolean);
+  const lines: string[] = [];
+  let cur = "";
+  for (let i = 0; i < words.length; i++) {
+    const next = cur ? `${cur} ${words[i]}` : (words[i] as string);
+    if (!cur || measure(next) <= width) {
+      cur = next;
+      continue;
+    }
+    lines.push(cur);
+    cur = words[i] as string;
+    if (lines.length === maxLines - 1) {
+      const rest = words.slice(i).join(" ");
+      if (measure(rest) <= width) return [...lines, rest];
+      let cut = rest;
+      while (cut.length > 1 && measure(`${cut}…`) > width) cut = cut.slice(0, -1);
+      return [...lines, `${cut.trimEnd()}…`];
+    }
+  }
+  if (cur) lines.push(cur);
+  return lines;
+}
 
 /** Radius 3–7 px by degree inside the sample, so the focus and its hubs read first. */
 export function radii(sample: Pick<Sample, "nodes" | "links">): Map<string, number> {
@@ -64,9 +110,6 @@ export function SampleGraph({
     if (!el || !visible) return;
     const colors = readCanvasColors();
     const r = radii(sample);
-    const labelled = new Set(
-      [...sample.nodes].sort((a, b) => (score.get(b) ?? 0) - (score.get(a) ?? 0)).slice(0, LABELS).concat(sample.focus),
-    );
     const nodes: Node[] = sample.nodes.map((id) => ({ id, title: byId.get(id)?.title || id, type: byId.get(id)?.type ?? "", r: r.get(id) ?? 3 }));
     const links = sample.links.map(([source, target]) => ({ source, target }));
     const g = createForceGraph()(el);
@@ -99,24 +142,42 @@ export function SampleGraph({
           ctx.strokeStyle = colors.ring;
           ctx.stroke();
         }
-        if (!labelled.has(n.id) && hoverRef.current !== n.id) return;
+      })
+      // labels last, in priority order (hovered, focus, best-scored), skipping any that would overlap one
+      // already drawn: a dense card shows fewer labels instead of a pile of text
+      .onRenderFramePost((ctx, scale) => {
         const size = 11 / scale;
         ctx.font = `${size}px ${colors.font}`;
         ctx.textAlign = "center";
         ctx.textBaseline = "top";
         ctx.lineWidth = 3 / scale;
         ctx.strokeStyle = colors.background;
-        const text = trunc(n.title, hoverRef.current === n.id ? 48 : 22);
-        ctx.strokeText(text, x, y + n.r + 2 / scale);
         ctx.fillStyle = colors.text;
-        ctx.fillText(text, x, y + n.r + 2 / scale);
+        const placed: Box[] = [];
+        for (const n of labelOrder(nodes, sample.focus, hoverRef.current, score)) {
+          const lines = wrap(n.title, LABEL_WIDTH / scale, (s) => ctx.measureText(s).width);
+          const w = Math.max(...lines.map((l) => ctx.measureText(l).width));
+          const top = (n.y ?? 0) + n.r + 2 / scale;
+          const box: Box = { x0: (n.x ?? 0) - w / 2, x1: (n.x ?? 0) + w / 2, y0: top, y1: top + lines.length * size * 1.2 };
+          const forced = n.id === hoverRef.current;
+          if (!forced && (placed.length >= MAX_LABELS || placed.some((b) => overlaps(b, box)))) continue;
+          placed.push(box);
+          lines.forEach((line, i) => {
+            ctx.strokeText(line, n.x ?? 0, top + i * size * 1.2);
+            ctx.fillText(line, n.x ?? 0, top + i * size * 1.2);
+          });
+        }
       })
       .onNodeHover((n) => {
         setHover((n as Node | null)?.id ?? null);
         el.style.cursor = n ? "pointer" : "";
       })
       .onNodeClick((n) => openRef.current((n as Node).id))
-      .onEngineStop(() => g.zoomToFit(300, 24));
+      .onEngineStop(() => {
+        // fit, but never blow a three-node sample up to giant discs
+        g.zoomToFit(0, FIT_PADDING);
+        if (g.zoom() > MAX_ZOOM) g.zoom(MAX_ZOOM);
+      });
     const ro = new ResizeObserver(() => g.width(el.clientWidth || 300));
     ro.observe(el);
     return () => {

@@ -76,16 +76,23 @@ function weightedPick(ids: readonly string[], weight: (id: string) => number, ra
 const pick = (ids: readonly string[], rand: () => number) => ids[Math.floor(rand() * ids.length)];
 const titleOf = (v: Vault, id: string) => v.byId.get(id)?.title || id;
 
-function linksAmong(v: Vault, ids: ReadonlySet<string>): [string, string][] {
+/**
+ * Links among `ids`, capped. The focus's own links go first so the cap never cuts a node loose: a node
+ * without links drifts to the edge and shrinks the rest of the card to a blob.
+ */
+function linksAmong(v: Vault, ids: ReadonlySet<string>, focus?: string): [string, string][] {
   const out: [string, string][] = [];
   const seen = new Set<string>();
-  for (const l of v.links) {
-    if (!ids.has(l.source) || !ids.has(l.target) || l.source === l.target) continue;
-    const k = l.source < l.target ? `${l.source}|${l.target}` : `${l.target}|${l.source}`;
-    if (seen.has(k)) continue;
-    seen.add(k);
-    out.push([l.source, l.target]);
-    if (out.length >= MAX_LINKS) break;
+  const touches = (l: Pick<GLink, "source" | "target">) => l.source === focus || l.target === focus;
+  for (const pass of [true, false]) {
+    for (const l of v.links) {
+      if (out.length >= MAX_LINKS) return out;
+      if (touches(l) !== pass || !ids.has(l.source) || !ids.has(l.target) || l.source === l.target) continue;
+      const k = l.source < l.target ? `${l.source}|${l.target}` : `${l.target}|${l.source}`;
+      if (seen.has(k)) continue;
+      seen.add(k);
+      out.push([l.source, l.target]);
+    }
   }
   return out;
 }
@@ -100,7 +107,7 @@ export function neighbourhood(v: Vault, focus: string, extra: readonly string[] 
     keep.add(id);
   }
   const nodes = [...keep].slice(0, MAX_NODES);
-  return { nodes, links: linksAmong(v, new Set(nodes)) };
+  return { nodes, links: linksAmong(v, new Set(nodes), focus) };
 }
 
 function make(v: Vault, kind: SampleKind, focus: string | undefined, caption: string): Sample | null {
@@ -117,7 +124,7 @@ export function curated(v: Vault, def: CardDef): Sample | null {
   if (!focus) return null;
   const nodes = pages.length >= MIN_NODES ? [...new Set([focus, ...pages])].slice(0, MAX_NODES) : neighbourhood(v, focus, pages).nodes;
   if (nodes.length < MIN_NODES) return null;
-  return { kind: "curated", title: def.title, caption: def.caption ?? "", focus, nodes, links: linksAmong(v, new Set(nodes)) };
+  return { kind: "curated", title: def.title, caption: def.caption ?? "", focus, nodes, links: linksAmong(v, new Set(nodes), focus) };
 }
 
 type Sampler = (v: Vault, rand: () => number) => Sample | null;
@@ -170,4 +177,78 @@ export function sampleAll(v: Vault, seeds: Readonly<Partial<Record<SampleKind, n
 /** `/graph` search params that open a sample in the full graph, centred on `focus`. */
 export function graphSearch(s: Pick<Sample, "nodes" | "focus">, focus = s.focus): Record<string, string> {
   return { pages: s.nodes.join(","), select: focus, focus };
+}
+
+/** Knowledge-node cards: one page shown as text (facts, opening, neighbours), not as a graph. */
+export type NodeKind = "idea" | "source" | "question";
+
+export const NODE_ORDER: readonly NodeKind[] = ["idea", "source", "question"];
+
+export const NODE_CAPTION: Record<NodeKind, string> = {
+  idea: "An idea or topic note",
+  source: "A digested source",
+  question: "A research question",
+};
+
+const NODE_FILTER: Record<NodeKind, (n: GNode) => boolean> = {
+  idea: (n) => n.type === "idea" || n.type === "topic",
+  source: (n) => n.layer === "source" && ["easy", "full", "deep"].includes(n.depth),
+  question: (n) => n.type === "question",
+};
+
+/** Most neighbours a node card lists. */
+export const NODE_NEIGHBOURS = 6;
+
+export interface NodeSample {
+  kind: NodeKind;
+  id: string;
+  /** Best-scored neighbours, for the chips under the excerpt. */
+  neighbours: string[];
+}
+
+/** One page of the given kind, weighted to well-read, well-linked pages. */
+export function sampleNode(v: Vault, kind: NodeKind, rand: () => number): NodeSample | null {
+  const pool = connected(v).filter((id) => {
+    const n = v.byId.get(id);
+    return !!n && NODE_FILTER[kind](n);
+  });
+  const id = weightedPick(pool, (i) => v.score.get(i) ?? 0, rand);
+  if (!id) return null;
+  const neighbours = [...new Set(v.neighbors.get(id) ?? [])]
+    .filter((j) => v.eligible.has(j))
+    .sort((a, b) => (v.score.get(b) ?? 0) - (v.score.get(a) ?? 0) || a.localeCompare(b))
+    .slice(0, NODE_NEIGHBOURS);
+  return { kind, id, neighbours };
+}
+
+export function sampleNodes(v: Vault, seeds: Readonly<Partial<Record<NodeKind, number>>>): NodeSample[] {
+  return NODE_ORDER.map((k) => sampleNode(v, k, rng(seeds[k] ?? 1))).filter((s): s is NodeSample => !!s);
+}
+
+/** About how much of a page a node card shows before "Read". */
+export const EXCERPT_CHARS = 600;
+
+/**
+ * The opening prose of a page for a card: no front matter, headings, tables or `> Part of` lines, nothing
+ * from `## My notes` on, and no paragraph that only repeats the title (question pages restate it). Whole
+ * paragraphs up to about EXCERPT_CHARS (at least one, so a long first paragraph still shows).
+ */
+export function excerpt(markdown: string, max = EXCERPT_CHARS, title = ""): string {
+  let body = markdown.replace(/^---\n[\s\S]*?\n---\n/, "");
+  const notes = body.search(/^##\s+My notes\b/m);
+  if (notes >= 0) body = body.slice(0, notes);
+  const plain = (s: string) => s.replace(/\*\*[^*]+:\*\*/g, "").replace(/[^\p{L}\p{N}]+/gu, " ").trim().toLowerCase();
+  const t = plain(title);
+  const paras = body
+    .split(/\n{2,}/)
+    .map((p) => p.trim())
+    .filter((p) => p && !/^#{1,6}\s/.test(p) && !/^\|/.test(p) && !/^>\s*(Part|Lecture) of/.test(p) && !(t && plain(p) === t));
+  const out: string[] = [];
+  let len = 0;
+  for (const p of paras) {
+    if (out.length && len + p.length > max) break;
+    out.push(p);
+    len += p.length;
+  }
+  return out.join("\n\n");
 }

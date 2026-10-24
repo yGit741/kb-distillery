@@ -28,7 +28,13 @@ const snapshot = {
   facets: { types: [], statuses: [], areas: [] },
 } as unknown as GraphSnapshot;
 
-const host: HomeHost = { openGraph: vi.fn(), graphHref: (s) => `/app/graph?${new URLSearchParams(s)}` };
+const host: HomeHost = {
+  openGraph: vi.fn(),
+  graphHref: (s) => `/app/graph?${new URLSearchParams(s)}`,
+  openPage: vi.fn(),
+  pageHref: (s) => `/app/pages/${s}`,
+};
+const getPage = async (slug: string) => ({ card: { id: slug }, markdown: `# ${slug}\n\nOpening of ${slug}.\n\n## My notes\n\nsecret` }) as never;
 
 function wrap(ds: DataSource, ui: ReactNode) {
   return render(
@@ -57,9 +63,9 @@ describe("Home screen", () => {
 
   it("renders curated cards first and opens a card in the full graph", async () => {
     const cards = [{ title: "Story one", pages: ["hub", "p0", "p1"], focus: "hub", caption: "why" }];
-    wrap(mockDataSource({ getGraph: async () => snapshot }), <HomeScreen host={host} cards={cards} />);
+    wrap(mockDataSource({ getGraph: async () => snapshot, getPage }), <HomeScreen host={host} cards={cards} />);
     expect(await screen.findByText("Story one")).toBeInTheDocument();
-    expect(screen.getByText("Explore more")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Stories" })).toBeInTheDocument();
     const links = screen.getAllByRole("link", { name: /open in full graph/i });
     expect(links[0]).toHaveAttribute("href", "/app/graph?pages=hub%2Cp0%2Cp1&select=hub&focus=hub");
     await userEvent.click(links[0]!);
@@ -67,10 +73,22 @@ describe("Home screen", () => {
   });
 
   it("rerolls a random card on demand", async () => {
-    wrap(mockDataSource({ getGraph: async () => snapshot }), <HomeScreen host={host} />);
+    wrap(mockDataSource({ getGraph: async () => snapshot, getPage }), <HomeScreen host={host} />);
     const again = await screen.findAllByRole("button", { name: /another/i });
     expect(again.length).toBeGreaterThan(0);
     await userEvent.click(again[0]!);
     expect(screen.getAllByRole("link", { name: /open in full graph/i }).length).toBeGreaterThan(0);
+  });
+
+  it("shows both sections, and a knowledge node with its excerpt, neighbours and links", async () => {
+    wrap(mockDataSource({ getGraph: async () => snapshot, getPage }), <HomeScreen host={host} />);
+    expect(await screen.findByRole("heading", { name: "Sample subgraphs" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Sample knowledge nodes" })).toBeInTheDocument();
+    expect(screen.getByText("A research question")).toBeInTheDocument();
+    expect(await screen.findByText("Opening of q-x.")).toBeInTheDocument();
+    expect(screen.queryByText("secret")).not.toBeInTheDocument();
+    expect(screen.getAllByText("Linked with").length).toBeGreaterThan(0);
+    const read = screen.getAllByRole("link", { name: /read/i })[0]!;
+    expect(read.getAttribute("href")).toMatch(/^\/app\/pages\//);
   });
 });

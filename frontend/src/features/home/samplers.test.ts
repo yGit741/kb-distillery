@@ -1,8 +1,35 @@
 import { node } from "@/features/graph/fixtures";
 import type { GNode } from "@/features/graph/types";
 import { parseCards } from "./curated";
-import { radii } from "./SampleGraph";
-import { MAX_LINKS, MAX_NODES, MIN_NODES, RANDOM_ORDER, SAMPLERS, curated, graphSearch, indexVault, neighbourhood, rng, sampleAll } from "./samplers";
+import { radii, wrap } from "./SampleGraph";
+import {
+  MAX_LINKS,
+  MAX_NODES,
+  MIN_NODES,
+  NODE_NEIGHBOURS,
+  RANDOM_ORDER,
+  SAMPLERS,
+  curated,
+  excerpt,
+  graphSearch,
+  indexVault,
+  neighbourhood,
+  rng,
+  sampleAll,
+  sampleNode,
+  sampleNodes,
+} from "./samplers";
+
+describe("label wrap", () => {
+  const len = (s: string) => s.length; // 1 unit per character
+  it("wraps whole words and keeps short titles on one line", () => {
+    expect(wrap("Information Theory", 30, len)).toEqual(["Information Theory"]);
+    expect(wrap("Richard Stanley: Enumerative and Algebraic Combinatorics", 20, len)).toEqual(["Richard Stanley:", "Enumerative and", "Algebraic Combinato…"]);
+  });
+  it("only adds an ellipsis when words are left over", () => {
+    expect(wrap("a b c", 1, len, 3)).toEqual(["a", "b", "c"]);
+  });
+});
 
 // a hub topic with 30 digested papers, an open question, a bridge idea between two areas, and listed stubs
 const papers = Array.from({ length: 30 }, (_, i) =>
@@ -86,6 +113,35 @@ describe("home samplers", () => {
     const r = radii({ nodes: ["a", "b", "c"], links: [["a", "b"], ["a", "c"]] });
     expect(r.get("a")).toBe(7);
     expect(r.get("b")).toBe(5);
+  });
+
+  it("samples one knowledge node per kind with its best neighbours, never a stub", () => {
+    const all = sampleNodes(vault, { idea: 2, source: 2, question: 2 });
+    expect(all.map((s) => s.kind)).toEqual(["idea", "source", "question"]);
+    expect(["bridge-idea", "thin-idea", "theme-a", "theme-b"]).toContain(all[0]?.id);
+    expect(vault.byId.get(all[1]!.id)?.layer).toBe("source");
+    expect(all[2]?.id).toBe("q-open");
+    for (const s of all) {
+      expect(s.neighbours).not.toContain("stub");
+      expect(s.neighbours.length).toBeLessThanOrEqual(NODE_NEIGHBOURS);
+    }
+    expect(sampleNode(vault, "idea", rng(5))).toEqual(sampleNode(vault, "idea", rng(5)));
+  });
+
+  it("excerpts the opening of a page without title, front matter or My notes", () => {
+    const md = "---\ntype: idea\n---\n# AdamW\n\n**One-liner:** Adam with decoupled decay.\n\n## Intuition\n\nShrink weights.\n\n## My notes\n\nprivate";
+    const ex = excerpt(md);
+    expect(ex).toContain("One-liner");
+    expect(ex).toContain("Shrink weights.");
+    expect(ex).not.toMatch(/# AdamW|type: idea|private|My notes/);
+    expect(excerpt("# T\n\n" + "a".repeat(900) + "\n\nsecond")).toBe("a".repeat(900));
+    expect(excerpt("| a | b |\n|---|---|\n| 1 | 2 |\n\nProse.")).toBe("Prose.");
+    expect(excerpt("**Question:** Why is it so?\n\nBecause.", undefined, "Why is it so?")).toBe("Because.");
+  });
+
+  it("keeps every card connected to its focus under the link cap", () => {
+    const hub = neighbourhood(vault, "theme-a");
+    for (const id of hub.nodes.slice(1)) expect(hub.links.some(([a, b]) => (a === "theme-a" && b === id) || (b === "theme-a" && a === id))).toBe(true);
   });
 
   it("parses profile cards and drops malformed ones", () => {

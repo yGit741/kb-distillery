@@ -5,14 +5,18 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Empty, ErrorState, Loading } from "@/components/states";
 import { useApiQuery } from "@/lib/useApiQuery";
 import type { GNode } from "@/features/graph/types";
-import { curated, graphSearch, indexVault, sampleAll, type CardDef, type Sample, type SampleKind, type Vault } from "./samplers";
+import { curated, graphSearch, indexVault, sampleAll, sampleNodes, type CardDef, type NodeKind, type Sample, type SampleKind, type Vault } from "./samplers";
 import { SampleGraph } from "./SampleGraph";
+import { NodeCard } from "./NodeCard";
 
 export interface HomeHost {
   /** Open the full graph with these search params. */
   openGraph: (search: Record<string, string>) => void;
   /** Same target as a real link, for middle-click and copy. */
   graphHref: (search: Record<string, string>) => string;
+  /** Read one page. */
+  openPage: (slug: string) => void;
+  pageHref: (slug: string) => string;
 }
 
 const newSeed = () => Math.floor(Math.random() * 2 ** 31);
@@ -22,7 +26,7 @@ function SampleCard({ sample, vault, host, onReroll }: { sample: Sample; vault: 
   return (
     <Card className="flex min-w-0 flex-col" data-tour={`home-card-${sample.kind}`}>
       <CardHeader>
-        <CardTitle className="truncate text-base" title={sample.title}>
+        <CardTitle className="line-clamp-2 text-base" title={sample.title}>
           {sample.title}
         </CardTitle>
         {sample.caption && <CardDescription className="line-clamp-2">{sample.caption}</CardDescription>}
@@ -79,15 +83,20 @@ export function HomeScreen({ host, cards = [] }: { host: HomeHost; cards?: reado
   }, [q.data]);
   const stories = useMemo(() => (vault ? cards.map((c) => curated(vault, c)).filter((s): s is Sample => !!s) : []), [vault, cards]);
   const samples = useMemo(() => (vault ? sampleAll(vault, seeds) : []), [vault, seeds]);
+  const [nodeSeeds, setNodeSeeds] = useState<Partial<Record<NodeKind, number>>>(() => ({ idea: newSeed(), source: newSeed(), question: newSeed() }));
+  const nodes = useMemo(() => (vault ? sampleNodes(vault, nodeSeeds) : []), [vault, nodeSeeds]);
 
   if (q.isPending) return <Loading label="Loading the graph" rows={4} />;
   if (q.isError) return <ErrorState title="Could not load the graph" error={q.error} onRetry={() => void q.refetch()} />;
-  if (!vault || (!stories.length && !samples.length)) return <Empty>Nothing to sample yet: digest a few sources and link them.</Empty>;
+  if (!vault || (!stories.length && !samples.length && !nodes.length)) return <Empty>Nothing to sample yet: digest a few sources and link them.</Empty>;
 
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-4">
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4 py-6">
       {stories.length > 0 && (
-        <section className="flex flex-col gap-3" aria-label="Stories">
+        <section className="flex flex-col gap-3" aria-labelledby="home-stories">
+          <h2 id="home-stories" className="text-lg font-semibold">
+            Stories
+          </h2>
           <div className={GRID}>
             {stories.map((s) => (
               <SampleCard key={`c-${s.title}`} sample={s} vault={vault} host={host} />
@@ -95,14 +104,30 @@ export function HomeScreen({ host, cards = [] }: { host: HomeHost; cards?: reado
           </div>
         </section>
       )}
-      <section className="flex flex-col gap-3" aria-label="Samples">
-        {stories.length > 0 && <h2 className="text-sm font-medium text-muted-foreground">Explore more</h2>}
-        <div className={GRID}>
-          {samples.map((s) => (
-            <SampleCard key={s.kind} sample={s} vault={vault} host={host} onReroll={() => setSeeds((p) => ({ ...p, [s.kind]: newSeed() }))} />
-          ))}
-        </div>
-      </section>
+      {samples.length > 0 && (
+        <section className="flex flex-col gap-3" aria-labelledby="home-subgraphs">
+          <h2 id="home-subgraphs" className="text-lg font-semibold">
+            Sample subgraphs
+          </h2>
+          <div className={GRID}>
+            {samples.map((s) => (
+              <SampleCard key={s.kind} sample={s} vault={vault} host={host} onReroll={() => setSeeds((p) => ({ ...p, [s.kind]: newSeed() }))} />
+            ))}
+          </div>
+        </section>
+      )}
+      {nodes.length > 0 && (
+        <section className="flex flex-col gap-3" aria-labelledby="home-nodes">
+          <h2 id="home-nodes" className="text-lg font-semibold">
+            Sample knowledge nodes
+          </h2>
+          <div className={GRID}>
+            {nodes.map((s) => (
+              <NodeCard key={s.kind} sample={s} vault={vault} host={host} onReroll={() => setNodeSeeds((p) => ({ ...p, [s.kind]: newSeed() }))} />
+            ))}
+          </div>
+        </section>
+      )}
     </div>
   );
 }
