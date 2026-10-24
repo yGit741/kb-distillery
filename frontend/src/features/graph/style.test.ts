@@ -48,3 +48,20 @@ describe("nodeRadius", () => {
     expect(nodeRadius(n, { by: "in", base: 5 })).toBeGreaterThan(3);
   });
 });
+
+describe("lab size and colour modes", () => {
+  it("tier sizes topics above ideas above sources", () => {
+    const o = { by: "tier" as const, base: 4, range: 2 };
+    expect(nodeRadius(node("t", { type: "topic" }), o)).toBeGreaterThan(nodeRadius(node("i", { type: "idea" }), o));
+    expect(nodeRadius(node("p", { type: "paper", layer: "source" }), o)).toBe(4);
+  });
+  it("metric modes read the importance signal, with perceptual scaling", () => {
+    const o = { by: "evidence" as const, base: 4, range: 2, metric: () => 0.25 };
+    expect(nodeRadius(node("a"), o)).toBeCloseTo(4 * (1 + 2 * 0.25));
+    expect(nodeRadius(node("a"), { ...o, perceptual: true })).toBeCloseTo(4 * (1 + 2 * Math.pow(0.25, 0.57)));
+  });
+  it("evidence colour is grey without a signal and sequential with one", () => {
+    expect(colorOf(node("a"), "evidence")).toBe(UNKNOWN_COLOR);
+    expect(colorOf(node("a"), "evidence", 1)).toBe("rgb(31, 91, 214)");
+  });
+});

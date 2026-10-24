@@ -4,15 +4,19 @@ import { cn } from "@/lib/utils";
 import { useTheme } from "@/theme/theme";
 import { readCanvasColors, withAlpha, type CanvasColors } from "./canvasTheme";
 import { computeFocus, linkOpacity, nodeOpacity, type Focus } from "./focus";
-import { ForceGraph, type ForceGraphHandle } from "./ForceGraph";
+import { ForceGraph, type Anchor, type ForceGraphHandle } from "./ForceGraph";
 import { buildGraphData, largestComponent, type NeighborMap } from "./graphData";
-import { declutter, hubCount, labelRanks, labelText, type Placed } from "./labels";
+import { drawHulls, drawLabelLayer, type FadeState } from "./lab/draw";
+import { useLabHud } from "./lab/hud";
+import { hopsFrom, type Importance } from "./lab/importance";
+import { FORCED } from "./lab/labelPlan";
+import { areaNames } from "./lab/regions";
 import { pickMagnetic, type ScreenNode } from "./magnet";
 import { drawPile, formatOfPile, isPile, isPileId, pileRadius } from "./rawLayer";
 import { DRAG_PX } from "./selection";
 import { useGraphUi } from "./store";
-import { colorOf, nodeRadius } from "./style";
-import { degreeOf, type GNode, type GraphModel, type SimLink, type SimNode } from "./types";
+import { colorOf, METRIC_COLORS, nodeRadius, type ColorBy, type SizeBy } from "./style";
+import type { GNode, GraphModel, SimLink, SimNode } from "./types";
 
 export interface CanvasHandle {
   screenOf: (id: string) => { x: number; y: number } | null;
@@ -26,6 +30,8 @@ interface Props {
   byId: ReadonlyMap<string, GNode>;
   neighbors: NeighborMap;
   visible: ReadonlySet<string>;
+  /** the importance score of the visible pages (lab/importance), shared with the rail */
+  imp: Importance;
   className?: string;
   onOpenMenu: (id: string, x: number, y: number) => void;
   onBackgroundContext: () => void;
@@ -36,10 +42,40 @@ interface Props {
 
 interface RenderState {
   colors: CanvasColors;
-  ranks: Map<string, number>;
+  imp: Importance;
+  forced: Map<string, number>;
+  hops: Map<string, number> | null;
   focus: Focus | null;
   selected: ReadonlySet<string>;
   hover: string | null;
+  /** pointer in CSS px of the canvas (the hover lens) */
+  pointer: { x: number; y: number } | null;
+}
+
+const EMPTY_IMPORTANCE: Importance = { score: new Map(), terms: new Map(), qrank: new Map(), maxScore: 1 };
+
+/** The 0..1 signal behind a size or colour mode that reads the importance score. */
+function metricOf(imp: Importance, n: GNode, by: SizeBy | ColorBy): number {
+  const t = imp.terms.get(n.id);
+  if (!t) return 0;
+  if (by === "evidence") return t.evidence;
+  if (by === "gap") return t.gap;
+  return (imp.score.get(n.id) ?? 0) / (imp.maxScore || 1);
+}
+
+/** Topics pinned on a ring, one per theme; their pages are pulled toward it (the anchored, map-like layout). */
+function themeAnchors(nodes: readonly SimNode[], linkDistance: number): Map<string, readonly [number, number]> {
+  const topics = nodes.filter((n) => n.type === "topic").sort((a, b) => a.id.localeCompare(b.id));
+  const radius = (10 * Math.sqrt(nodes.length) + 60) * (linkDistance / 28);
+  const out = new Map<string, readonly [number, number]>();
+  topics.forEach((t, i) => {
+    const a = -Math.PI / 2 + (2 * Math.PI * i) / Math.max(1, topics.length);
+    const p = [radius * Math.cos(a), radius * Math.sin(a)] as const;
+    t.fx = p[0];
+    t.fy = p[1];
+    if (t.areas[0] && !out.has(t.areas[0])) out.set(t.areas[0], p);
+  });
+  return out;
 }
 
 const endId = (e: string | SimNode) => (typeof e === "string" ? e : e.id);
@@ -51,7 +87,7 @@ const DOUBLE_MS = 380;
  * right-click a node opens its menu. Box, lasso and path selection are tools (./tools), not here.
  */
 export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
-  { model, byId, neighbors, visible, className, onOpenMenu, onBackgroundContext, onOpenReader, onOpenPile },
+  { model, byId, neighbors, visible, imp, className, onOpenMenu, onBackgroundContext, onOpenReader, onOpenPile },
   ref,
 ) {
   const ui = useGraphUi();
@@ -60,17 +96,40 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
   const fg = useRef<ForceGraphHandle>(null);
   const wrap = useRef<HTMLDivElement>(null);
 
-  const rs = useRef<RenderState>({ colors: readCanvasColors(), ranks: new Map(), focus: null, selected: new Set(), hover: null });
+  const rs = useRef<RenderState>({
+    colors: readCanvasColors(),
+    imp: EMPTY_IMPORTANCE,
+    forced: new Map(),
+    hops: null,
+    focus: null,
+    selected: new Set(),
+    hover: null,
+    pointer: null,
+  });
   const k = useRef(1);
-  const fitK = useRef(1);
-  const hubKey = useRef(0);
+  const fades = useRef(new Map<string, FadeState>());
+  const frame = useRef({ last: 0, churn: 0, hudAt: 0, raf: 0 });
   const pendingFit = useRef(true);
   const lastClick = useRef<{ id: string | null; at: number }>({ id: null, at: 0 });
   const pressed = useRef(false);
   const live = useRef({ ui, selection, byId, neighbors, visible, onOpenReader, onOpenMenu, onBackgroundContext, onOpenPile });
   live.current = { ui, selection, byId, neighbors, visible, onOpenReader, onOpenMenu, onBackgroundContext, onOpenPile };
 
-  const radiusOpts = useMemo(() => ({ by: ui.sizeBy, base: ui.nodeSize }), [ui.sizeBy, ui.nodeSize]);
+  rs.current.imp = imp;
+  const names = useMemo(() => areaNames(model.nodes), [model]);
+  const core = useMemo(() => largestComponent(visible, neighbors), [visible, neighbors]);
+  const coreRef = useRef(core);
+  coreRef.current = core;
+  const radiusOpts = useMemo(
+    () => ({
+      by: ui.sizeBy,
+      base: ui.nodeSize,
+      range: ui.lab.nodeRange,
+      perceptual: ui.lab.perceptual,
+      metric: (n: GNode) => metricOf(rs.current.imp, n, ui.sizeBy),
+    }),
+    [ui.sizeBy, ui.nodeSize, ui.lab.nodeRange, ui.lab.perceptual, imp], // eslint-disable-line react-hooks/exhaustive-deps
+  );
   const radiusRef = useRef(radiusOpts);
   radiusRef.current = radiusOpts;
   const radius = useCallback((n: GNode) => (isPile(n) ? pileRadius(n) : nodeRadius(n, radiusRef.current)), []);
@@ -78,20 +137,31 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
   const recompute = useCallback(() => {
     const { ui: u, selection: sel, byId: ids, neighbors: nb, visible: vis } = live.current;
     const hover = rs.current.hover;
-    const ratio = k.current / (fitK.current || 1);
+    const cfg = u.lab;
+    const score = rs.current.imp.score;
     rs.current.selected = sel;
-    rs.current.focus = computeFocus(sel, hover, nb, u.highlight);
-    rs.current.ranks = labelRanks({
-      visible: vis,
-      byId: ids,
-      neighbors: nb,
-      hovered: hover,
-      selected: sel,
-      mode: u.labelMode,
-      typeLabels: u.typeLabels,
-      zoomRatio: ratio,
-    });
-    hubKey.current = hubCount(ratio);
+    // focus by degree of interest: the selection's hops stay lit, the rest fades
+    const hops = cfg.doiHops > 0 && sel.size ? hopsFrom(sel, vis, nb, cfg.doiHops) : null;
+    rs.current.hops = hops;
+    rs.current.focus = hops ? { core: new Set(sel), lit: new Set(hops.keys()) } : computeFocus(sel, hover, nb, u.highlight);
+    // forced labels: hovered page, the selection, their best neighbours (capped), every page of an "Aa" type
+    const forced = new Map<string, number>();
+    const put = (id: string, r: number) => {
+      const cur = forced.get(id);
+      if (vis.has(id) && (cur === undefined || cur > r)) forced.set(id, r);
+    };
+    const topNeighbours = (id: string) =>
+      [...new Set(nb.get(id) ?? [])].filter((j) => vis.has(j)).sort((a, b) => (score.get(b) ?? 0) - (score.get(a) ?? 0)).slice(0, cfg.neighborCap);
+    if (hover) {
+      put(hover, FORCED.hover);
+      if (cfg.hoverNeighbors) topNeighbours(hover).forEach((j) => put(j, FORCED.near));
+    }
+    for (const id of sel) {
+      put(id, FORCED.selected);
+      topNeighbours(id).forEach((j) => put(j, FORCED.near));
+    }
+    if (u.typeLabels.size) for (const id of vis) if (u.typeLabels.has(ids.get(id)?.type ?? "")) put(id, FORCED.type);
+    rs.current.forced = forced;
     fg.current?.refresh();
   }, []);
 
@@ -111,11 +181,37 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
     return buildGraphData(model, visible, prev);
   }, [model, visible]);
 
+  // the anchored layout pins topics on a ring and pulls every page toward its theme; free unpins them
+  const anchors = useMemo(() => {
+    const nodes = data.nodes as SimNode[];
+    if (ui.layoutMode !== "anchored") {
+      for (const n of nodes) if (n.type === "topic") n.fx = n.fy = undefined;
+      return null;
+    }
+    return themeAnchors(nodes, ui.linkDistance);
+  }, [data, ui.layoutMode, ui.linkDistance]);
+  const anchor = useMemo<Anchor | null>(
+    () =>
+      anchors
+        ? {
+            strength: ui.areaPull,
+            target: (n) => {
+              const a = n.type === "topic" ? undefined : anchors.get(n.areas?.[0] ?? "");
+              return a ? [a[0] * 0.75, a[1] * 0.75] : null;
+            },
+          }
+        : null,
+    [anchors, ui.areaPull],
+  );
+  useEffect(() => {
+    fg.current?.reheat();
+  }, [ui.layoutMode, ui.areaPull]);
+
   // ---- redraw when anything the draw reads changes
   useEffect(() => {
     rs.current.colors = readCanvasColors();
     recompute();
-  }, [recompute, theme, visible, selection, byId, neighbors, ui.highlight, ui.labelMode, ui.labelField, ui.typeLabels, ui.colorBy, ui.linkOpacity, radiusOpts]);
+  }, [recompute, theme, visible, selection, byId, neighbors, ui.highlight, ui.lab, ui.typeLabels, ui.colorBy, ui.linkOpacity, radiusOpts, imp]);
 
   // a changed set of pages is refitted once the layout settles (or after a moment if it never reports it)
   useEffect(() => {
@@ -133,8 +229,7 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
     const core = largestComponent(live.current.visible, live.current.neighbors);
     fg.current?.fit(core.size > 1 ? (n) => core.has(n.id) || isPile(n) : undefined, 400);
     window.setTimeout(() => {
-      fitK.current = fg.current?.zoom() ?? 1;
-      k.current = fitK.current;
+      k.current = fg.current?.zoom() ?? 1;
       recompute();
     }, 450);
   }, [recompute]);
@@ -196,12 +291,16 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
     };
     const move = (e: PointerEvent) => {
       last = { x: e.clientX, y: e.clientY };
+      const r = el.getBoundingClientRect();
+      rs.current.pointer = { x: e.clientX - r.left, y: e.clientY - r.top };
+      if (live.current.ui.lab.lens) fg.current?.refresh();
       if (!live.current.ui.magnet || queued) return;
       queued = true;
       requestAnimationFrame(retarget);
     };
     const leave = () => {
       last = null;
+      rs.current.pointer = null;
       if (live.current.ui.magnet) setHover(null);
     };
     const down = (e: PointerEvent) => {
@@ -340,7 +439,8 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
       ctx.beginPath();
       ctx.arc(n.x, n.y, r, 0, 2 * Math.PI);
       ctx.globalAlpha = alpha;
-      ctx.fillStyle = colorOf(n, live.current.ui.colorBy);
+      const by = live.current.ui.colorBy;
+      ctx.fillStyle = colorOf(n, by, METRIC_COLORS.has(by) ? metricOf(rs.current.imp, n, by) : undefined);
       ctx.fill();
       ctx.globalAlpha = alpha * 0.5;
       ctx.strokeStyle = colors.background;
@@ -351,38 +451,74 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
     [radius],
   );
 
-  const drawFramePost = useCallback(
+  const drawFramePre = useCallback(
     (ctx: CanvasRenderingContext2D, scale: number) => {
-      const { ranks, colors, hover, focus } = rs.current;
-      if (!ranks.size) return;
-      const field = live.current.ui.labelField;
+      if (!live.current.ui.lab.hulls) return;
       const g = fg.current;
-      if (!g) return;
-      const size = Math.max(10 / scale, 2.5);
-      ctx.font = `${size}px ${colors.font}`;
-      const pad = 2 / scale;
-      const items: (Placed & { n: SimNode; text: string })[] = [];
-      for (const n of g.nodes()) {
-        const rank = ranks.get(n.id);
-        if (rank === undefined || n.x == null || n.y == null || !Number.isFinite(n.x)) continue;
-        const text = labelText(n, field, n.id === hover);
-        const w = ctx.measureText(text).width;
-        const x = n.x - w / 2;
-        const y = n.y + radius(n) + 3 / scale + size;
-        items.push({ id: n.id, rank, deg: degreeOf(n), n, text, box: { x1: x - pad, y1: y - size, x2: x + w + pad, y2: y + pad } });
-      }
-      for (const p of declutter(items, size * 6)) {
-        const it = items.find((m) => m.id === p.id);
-        if (!it) continue;
-        ctx.globalAlpha = nodeOpacity(it.id, focus) < 0.5 ? 0.35 : 1;
-        ctx.fillStyle = withAlpha(colors.background, 0.82);
-        ctx.fillRect(p.box.x1, p.box.y1, p.box.x2 - p.box.x1, p.box.y2 - p.box.y1);
-        ctx.fillStyle = colors.text;
-        ctx.fillText(it.text, p.box.x1 + pad, p.box.y2 - pad);
-      }
-      ctx.globalAlpha = 1;
+      if (g) drawHulls(ctx, g.nodes().filter((n) => !isPile(n)), scale, names);
     },
-    [radius],
+    [names],
+  );
+
+  const drawFramePost = useCallback(
+    (ctx: CanvasRenderingContext2D) => {
+      const g = fg.current;
+      const el = wrap.current;
+      if (!g || !el) return;
+      const { colors, focus, hover, imp: score, forced, hops, pointer } = rs.current;
+      const now = performance.now();
+      const f = frame.current;
+      const dt = f.last ? Math.min(100, now - f.last) : 16;
+      f.last = now;
+      const cfg = live.current.ui.lab;
+      const res = drawLabelLayer({
+        ctx,
+        nodes: g.nodes().filter((n) => !isPile(n)),
+        fitIds: coreRef.current,
+        width: el.clientWidth,
+        height: el.clientHeight,
+        cfg,
+        imp: score,
+        forced,
+        hops,
+        dim: (id) => nodeOpacity(id, focus) < 0.5,
+        radius,
+        colors,
+        areaNames: names,
+        fades: fades.current,
+        pointer: cfg.lens ? pointer : null,
+        hovered: hover,
+        dt,
+      });
+      f.churn = f.churn * 0.9 + res.changes * (1000 / Math.max(16, dt)) * 0.1;
+      if (now - f.hudAt > 250) {
+        f.hudAt = now;
+        const vis = live.current.visible;
+        const byIdNow = live.current.byId;
+        let conceptsVisible = 0;
+        for (const id of vis) if (byIdNow.get(id)?.layer === "concept") conceptsVisible++;
+        const onScreenLabels = res.plan.placed.filter((p) => p.box[2] > 0 && p.box[0] < el.clientWidth && p.box[3] > 0 && p.box[1] < el.clientHeight);
+        useLabHud.getState().set({
+          zoom: res.zr,
+          labels: res.plan.shownOnScreen,
+          onScreen: res.plan.onScreen,
+          concepts: onScreenLabels.filter((p) => p.n.layer === "concept").length,
+          conceptsVisible,
+          coverage: res.plan.coverage,
+          dropped: res.plan.dropped,
+          churn: f.churn,
+          minPx: res.plan.minPx,
+        });
+      }
+      // fades and the churn readout need frames even when force-graph would pause its redraw
+      if ((res.animating || f.churn > 0.2) && !f.raf) {
+        f.raf = requestAnimationFrame(() => {
+          f.raf = 0;
+          fg.current?.refresh();
+        });
+      }
+    },
+    [radius, names],
   );
 
   const drawLinkAfter = useCallback((l: SimLink, ctx: CanvasRenderingContext2D, scale: number) => {
@@ -409,13 +545,9 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
     [],
   );
 
-  const onZoom = useCallback(
-    (z: number) => {
-      k.current = z;
-      if (hubCount(z / (fitK.current || 1)) !== hubKey.current) recompute();
-    },
-    [recompute],
-  );
+  const onZoom = useCallback((z: number) => {
+    k.current = z;
+  }, []);
 
   const onEngineStop = useCallback(() => {
     if (!pendingFit.current) return;
@@ -442,6 +574,8 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
         nodeRadius={radius}
         drawNode={drawNode}
         drawFramePost={drawFramePost}
+        drawFramePre={drawFramePre}
+        anchor={anchor}
         drawLinkAfter={drawLinkAfter}
         linkColor={linkColor}
         linkWidth={linkWidth}

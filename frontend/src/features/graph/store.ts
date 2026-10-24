@@ -1,10 +1,11 @@
 import { create } from "zustand";
 import type { GraphView } from "./pageSearch";
-import type { LabelField, LabelMode } from "./labels";
+import { DEFAULT_LAB, sanitizeLab, type LabConfig } from "./lab/config";
+import { DEFAULT_STORY, storyById, storyLab, type LayoutMode } from "./lab/views";
 import { newRule, type Rule } from "./rules";
 import type { ColorBy, SizeBy } from "./style";
 
-/** "filter" | "look" | "layout" | "help", or the id of a registered tool (./tools). */
+/** "filter" | "layout" | "help", or the id of a registered tool (./tools). */
 export type Flyout = string;
 
 /** Settings worth keeping between visits; everything else is the state of this view. */
@@ -16,24 +17,35 @@ export interface GraphPrefs {
   arrows: boolean;
   highlight: boolean;
   magnet: boolean;
-  labelMode: LabelMode;
-  labelField: LabelField;
+  /** The label rail's settings (./lab). */
+  lab: LabConfig;
+  /** The view (user story) the settings came from; "" once a knob was changed by hand. */
+  story: string;
+  layoutMode: LayoutMode;
+  /** How strongly pages are pulled toward their theme's anchor in the anchored layout. */
+  areaPull: number;
+  railOpen: boolean;
   charge: number;
   linkDistance: number;
   gravity: number;
   liveSync: boolean;
 }
 
+const ORIENT = storyById(DEFAULT_STORY);
+
 export const DEFAULT_PREFS: GraphPrefs = {
-  colorBy: "type",
-  sizeBy: "connections",
+  colorBy: ORIENT?.colorBy ?? "type",
+  sizeBy: ORIENT?.sizeBy ?? "tier",
   nodeSize: 5,
   linkOpacity: 0.35,
   arrows: false,
   highlight: true,
   magnet: true,
-  labelMode: "auto",
-  labelField: "title",
+  lab: ORIENT ? storyLab(ORIENT) : DEFAULT_LAB,
+  story: DEFAULT_STORY,
+  layoutMode: "anchored",
+  areaPull: 0.06,
+  railOpen: true,
   charge: -120,
   linkDistance: 70,
   gravity: 0.3,
@@ -75,9 +87,13 @@ export interface GraphUiState extends GraphPrefs {
   fit: () => void;
   openFlyout: (f: Flyout | null) => void;
   resetFilters: () => void;
+  /** Change label-rail settings by hand: the view becomes "custom". */
+  setLab: (patch: Partial<LabConfig>) => void;
+  /** Apply a saved view: its label settings, colour and size, layout, drawn types and "Aa" types. */
+  applyStory: (id: string) => void;
 }
 
-const PREF_KEY = "kb-graph-prefs-v1";
+const PREF_KEY = "kb-graph-prefs-v2";
 
 export function loadPrefs(): GraphPrefs {
   try {
@@ -87,7 +103,8 @@ export function loadPrefs(): GraphPrefs {
     const out: Record<string, unknown> = { ...DEFAULT_PREFS };
     for (const k of Object.keys(DEFAULT_PREFS) as (keyof GraphPrefs)[]) {
       const v = parsed[k];
-      if (v !== undefined && typeof v === typeof DEFAULT_PREFS[k]) out[k] = v;
+      if (k === "lab") out[k] = sanitizeLab(v);
+      else if (v !== undefined && typeof v === typeof DEFAULT_PREFS[k]) out[k] = v;
     }
     return out as unknown as GraphPrefs;
   } catch {
@@ -109,13 +126,20 @@ const pickPrefs = (s: GraphPrefs): GraphPrefs => Object.fromEntries(PREF_KEYS.ma
 /** Normalise "every type on" to null so the Concepts/All shortcuts and the chips agree. */
 const normalize = (next: Set<string>, all: readonly string[]) => (all.every((t) => next.has(t)) ? null : next);
 
+/** A saved view brings its drawn types and "Aa" types back on the next visit (they are not stored themselves). */
+function initialView(p: GraphPrefs): Pick<GraphUiState, "shownTypes" | "typeLabels"> {
+  const st = storyById(p.story);
+  return st ? { shownTypes: new Set(st.types), typeLabels: new Set(st.typeLabels ?? []) } : { shownTypes: undefined, typeLabels: new Set() };
+}
+
+const INITIAL = loadPrefs();
+
 export const useGraphUi = create<GraphUiState>((set, get) => ({
-  ...loadPrefs(),
-  shownTypes: undefined,
+  ...INITIAL,
+  ...initialView(INITIAL),
   shownDepths: null,
   search: "",
   rules: [],
-  typeLabels: new Set(),
   view: null,
   revealed: new Set(),
   flyout: null,
@@ -167,6 +191,20 @@ export const useGraphUi = create<GraphUiState>((set, get) => ({
   fit: () => set((s) => ({ fitTick: s.fitTick + 1 })),
   openFlyout: (f) => set((s) => ({ flyout: s.flyout === f ? null : f })),
   resetFilters: () => set({ shownTypes: undefined, shownDepths: null, search: "", rules: [], view: null, revealed: new Set() }),
+  setLab: (patch) => set((s) => ({ lab: { ...s.lab, ...patch }, story: "" })),
+  applyStory: (id) => {
+    const st = storyById(id);
+    if (!st) return set({ story: "" });
+    set({
+      story: st.id,
+      lab: storyLab(st),
+      colorBy: st.colorBy,
+      sizeBy: st.sizeBy,
+      layoutMode: st.layoutMode,
+      shownTypes: new Set(st.types),
+      typeLabels: new Set(st.typeLabels ?? []),
+    });
+  },
 }));
 
 useGraphUi.subscribe((s, prev) => {

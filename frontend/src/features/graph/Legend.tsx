@@ -15,12 +15,14 @@ interface Props {
   schema: GraphSchema;
   shownTypes: ReadonlySet<string> | null;
   stats: string;
+  /** Inside the label rail: no floating card of its own. */
+  embedded?: boolean;
 }
 
 const wide = () => typeof window === "undefined" || window.innerWidth >= 640;
 
 /** Layer -> type -> depth legend. A row hides or shows its type; "Aa" labels every page of that type. */
-export function Legend({ nodes, visible, schema, shownTypes, stats }: Props) {
+export function Legend({ nodes, visible, schema, shownTypes, stats, embedded = false }: Props) {
   const ui = useGraphUi();
   const [open, setOpen] = useState(wide);
   const groups = useMemo(() => layerGroups(nodes, visible, schema, shownTypes), [nodes, visible, schema, shownTypes]);
@@ -33,7 +35,12 @@ export function Legend({ nodes, visible, schema, shownTypes, stats }: Props) {
   return (
     <section
       aria-label="Legend"
-      className="pointer-events-auto absolute bottom-3 left-3 z-10 flex max-h-[55%] w-[min(17rem,calc(100%-1.5rem))] flex-col rounded-lg border bg-card/95 text-sm shadow-[var(--shadow)]"
+      className={cn(
+        "pointer-events-auto flex flex-col text-sm",
+        embedded
+          ? "-mx-1"
+          : "absolute bottom-3 left-3 z-10 max-h-[55%] w-[min(17rem,calc(100%-1.5rem))] rounded-lg border bg-card/95 shadow-[var(--shadow)]",
+      )}
     >
       <header className="flex items-center gap-1 px-2.5 py-1.5">
         <button
