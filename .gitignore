@@ -40,7 +40,7 @@ meta/.semfind/
 meta/.ops/
 
 # Pixi environment
-.pixi/
+.pixi
 
 # LLM share bundles (backend/src/kb/maintenance/export.py)
 .exported/
@@ -93,5 +93,5 @@ repomix-output.xml
 Untitled*.md
 
 # Frontend (frontend/dist IS committed; deps are not; dist-share/ is the share build, rebuilt on demand)
-frontend/node_modules/
+frontend/node_modules
 frontend/dist-share/

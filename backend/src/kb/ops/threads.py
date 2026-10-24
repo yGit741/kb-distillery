@@ -227,7 +227,7 @@ def _branch_threads(root, now, prs=None):
             stale = hours is not None and hours >= STALE_PR_DAYS * 24
             t = Thread(f"pr:{pr['number']}", "pr", f"PR #{pr['number']} {pr.get('title') or name}",
                        "stale" if stale else "active", "warn" if stale else "ok",
-                       f'{cd}pixi run ship -- merge   # say "merge" — or: pixi run ship -- prune --drop {name}',
+                       f'{cd}pixi run ship -- merge   # held? the user runs: ship approve N — or: pixi run ship -- prune --drop {name}',
                        age_hours=hours, link=f"{gh}/pull/{pr['number']}" if gh else "")
         elif b["ahead"] == 0 and b["local"] and fresh_branch(root, name) is not None:
             created = _parse(fresh_branch(root, name))
