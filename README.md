@@ -59,7 +59,7 @@ python3 -m kb.distill revise <think-file>      # re-read think/, keep your edite
 python3 -m kb.distill apply <think-file> --cleanup   # propagate + delete review page
 ```
 
-Skill: `skills/distill-think/SKILL.md` (synced to `.cursor/skills/`).
+Skill: `skills/distill-think/SKILL.md` (`.claude/skills`, `.cursor/skills` are symlinks to `skills/`).
 
 ## The source cycle (raw → wiki)
 

@@ -19,6 +19,11 @@ uvicorn = ">=0.54.0,<0.55"
 pydantic = ">=2"
 httpx = ">=0.28.1,<0.29"
 
+[activation.env]
+# a worktree shares the primary's env (symlinked .pixi), whose editable install points at one fixed tree:
+# put this checkout's source first so `import kb` always resolves to the tree you run in
+PYTHONPATH = "$PIXI_PROJECT_ROOT/backend/src"
+
 [tasks]
 harness = { cmd = "python -m tests.harness.run_pipeline", env = { PYTHONPATH = "backend" } }
 harness-invariants = { cmd = "python -m tests.harness.vault_invariants", env = { PYTHONPATH = "backend" } }
@@ -61,7 +66,7 @@ test = "pytest backend/tests"
 web-install = "npm ci --prefix frontend"
 web-dev = "npm run dev --prefix frontend"
 web-build = "npm run build --prefix frontend"
-web-check = { cmd = "npm run typecheck --prefix frontend && npm run test --prefix frontend && npm run build --prefix frontend && git status --short frontend/dist" }
+web-check = { cmd = "npm run typecheck --prefix frontend && npm run test --prefix frontend && npm run build:check --prefix frontend && git status --short frontend/dist" }
 test-worker = "node --test share/*.test.mjs"
 test-e2e = "node --test backend/src/kb/dashboard/e2e/*.test.mjs"
 install-sync = "bash tools/launchd/install.sh"
