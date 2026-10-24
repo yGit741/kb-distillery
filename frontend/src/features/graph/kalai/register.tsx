@@ -1,6 +1,7 @@
-import { Activity, FlaskConical, Sigma, Waves } from "lucide-react";
+import { Activity, Compass, FlaskConical, Sigma, Waves } from "lucide-react";
 import { registerTool } from "../tools";
 import { EXPERIMENTS, registerExperiment, useExperiments } from "../tools/experiments";
+import { DirectionsPanel } from "./DirectionsPanel";
 import { FourierPanel } from "./FourierPanel";
 import { NoisePanel } from "./NoisePanel";
 import { ThresholdPanel } from "./ThresholdPanel";
@@ -26,6 +27,12 @@ registerExperiment({
   label: "Sharp thresholds",
   story: "When I want to know how well a theme is woven into my vault, I want to see at what link density it holds together and which single link tips it, so that I know where one more paper or note would matter most.",
   read: "Drag p or press play: links fade out above p. A late, wide transition means the theme hangs on a few bridges.",
+});
+registerExperiment({
+  id: "directions",
+  label: "Research directions",
+  story: "When I choose my thesis topic, I want the empty intersections of my vault as cards, each with what already sits there and my closest questions and ideas, so that I can shortlist directions with evidence rather than gut feeling.",
+  read: "Strong foothold = my own questions already reach every side; greenfield = new ground, cold start. 'Show on graph' lights the card's pages.",
 });
 
 function ExperimentsPanel() {
@@ -80,4 +87,12 @@ registerTool({
   icon: <Activity aria-hidden />,
   flag: "threshold",
   panel: (ctx) => <ThresholdPanel ctx={ctx} />,
+});
+
+registerTool({
+  id: "kalai-directions",
+  label: "Research directions",
+  icon: <Compass aria-hidden />,
+  flag: "directions",
+  panel: (ctx) => <DirectionsPanel ctx={ctx} />,
 });
