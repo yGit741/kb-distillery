@@ -8,7 +8,7 @@ Inspired by the [Karpathy LLM Wiki](https://gist.github.com/karpathy/442a6bf5559
 
 `pixi run launch` opens the dashboard; its **Start** tab (`/start`) is the guide:
 
-- **Edit knowledge** — say a trigger phrase to the agent (`scrap <url>`, `catalog`, `full-digest <raw>`, `split <concept>`, `distill think <file>`, `undo <step>`, `snapshot "week 43"` …). Each operation lands on main as one commit `kb(<op>): … (kb-x.y.z)`; your `think/` edits are committed as `kb(think)`.
+- **Edit knowledge** — say a trigger phrase to the agent (`scrap <url>`, `catalog`, `full-digest <raw>`, `split <idea>`, `distill think <file>`, `undo <step>`, `snapshot "week 43"` …). Each operation lands on main as one commit `kb(<op>): … (kb-x.y.z)`; your `think/` edits are committed as `kb(think)`.
 - **Develop a feature** — `pixi run ship -- start <feature> --worktree` → `ship -- commit "feat(<component>): add …"` → `ship -- pr` → approve → `ship -- merge` (skill `infra-pr`). Tooling never commits to main directly.
 - **Go deeper** — the **Lifecycle** tab (versions, history, snapshots, guardrails), `AGENTS.md`, `meta/skills/README.md`.
 
@@ -17,7 +17,7 @@ Inspired by the [Karpathy LLM Wiki](https://gist.github.com/karpathy/442a6bf5559
 | Layer | Path | Who owns it | Rule |
 |-------|------|-------------|------|
 | **Raw** | `raw/` | You | Immutable inputs, split by format: `printed-docs/ handwritten/ presentations/ llm-chats/ emails/ web-clips/ images/` + `inbox/`. Agents never write here. |
-| **Wiki** | `wiki/` | Agents (+ you via Obsidian) | Public knowledge graph — reading units (`paper-` `lecture-` …), hubs (`book-` `course-` …), `theme-` pages, concepts, questions. Schema-enforced. |
+| **Wiki** | `wiki/` | Agents (+ you via Obsidian) | Public knowledge graph in three page layers: **sources** (`paper-` `lecture-` …, one per raw item, at a reading `depth`), **collections** (`book-` `course-` …, tables of sources), **concepts** (ideas, topics `theme-`, questions `q-`, people). Schema-enforced. |
 | **Think** | `think/` | **You only** | Slow, schema-free deliberation. Messy, personal, advisor notes, gut feelings. |
 | **Meta** | `meta/` | Tooling | Linter, ingest/distill pipelines, skills, generated manifests. |
 
@@ -28,9 +28,9 @@ The wiki is the **published** graph. Think is the **private workshop**. That spl
 Most wikis mix rough notes and polished synthesis in one folder. Here they are separated on purpose:
 
 1. **You write freely in `think/`** — no frontmatter rules, no section templates, no agent edits. Guardrails block agents from touching it.
-2. **When ready, you distill** — an agent reads `think/`, produces a transient review page (`wiki/distilled-think-*.md`) with a prose **Summary** and a **Proposed propagation** table (which themes, questions, and concepts should change).
+2. **When ready, you distill** — an agent reads `think/`, produces a transient review page (`wiki/distilled-think-*.md`) with a prose **Summary** and a **Proposed propagation** table (which topics, questions, and ideas should change).
 3. **You review** — edit the Summary, accept or reject individual proposals. Nothing public changes until you say so.
-4. **You propagate** (`apply`) — approved edits land in the public wiki (thread bullets on theme pages, `Current state` on questions, `related:` on concepts). Lint runs; failures roll back.
+4. **You propagate** (`apply`) — approved edits land in the public wiki (thread bullets on topic pages, `Current state` on questions, `related:` on ideas). Lint runs; failures roll back.
 5. **Repeat periodically** — think accumulates between distill passes. The KB advances in deliberate batches, not continuous agent churn.
 
 Personal deliberation stays human-owned; the graph stays clean and citable. Exploration compounds instead of dying in a scratch file or a chat transcript.
@@ -44,7 +44,7 @@ flowchart LR
   Distilled["wiki/distilled-think-*.md\nSummary + proposals"]
   end
   subgraph public [Public KB]
-  Wiki["wiki/*.md\nconcepts · paper-* · q-* · theme-*"]
+  Wiki["wiki/*.md\nideas · paper-* · q-* · theme-*"]
   end
   Think -->|propose / revise| Distilled
   Distilled -->|apply when approved| Wiki
@@ -61,7 +61,7 @@ python3 -m meta.distill apply <think-file> --cleanup   # propagate + delete revi
 
 Skill: `meta/skills/distill-think/SKILL.md` (synced to `.cursor/skills/`).
 
-## The paper cycle (raw → wiki)
+## The source cycle (raw → wiki)
 
 Parallel track for external sources — papers, slides, course notes:
 
@@ -76,17 +76,17 @@ flowchart LR
 
 | Step | What happens |
 |------|----------------|
-| **Scrap** | URL or file → `raw/inbox/` (dedup via `resolve` first) |
-| **Catalog** | Inbox → `raw/<format>/` (flat; never moves again) + corpus row with its `collection` (course/series/book hub or researcher); papers also get a `paper-` stub |
-| **Digest** | Agent writes the note (`easy` skim · `full` standard · `deep` thesis-critical) — a paper, a book part, or a course/series row (`--row N` → `lecture-`/`article-`/`conversation-`/`paper-`) |
+| **Add** (scrap) | URL or file → `raw/inbox/` (dedup via `resolve` first) |
+| **Catalog** | Inbox → `raw/<format>/` (flat; never moves again) + corpus row with its `collection` (course/series/book collection or researcher); papers also get a `paper-` Source page at `depth: listed` |
+| **Digest** | Agent deepens the Source page in place (`depth`: `easy` skim · `full` full note · `deep` thesis-critical) — a paper, a book part, or a course/series row (`--row N` → `lecture-`/`article-`/`conversation-`/`paper-`) |
 | **Lint** | Regenerates `index.md`, `meta/corpus.tsv`; blocks illegal writes |
 
-`meta/corpus.tsv` tracks every raw file — nothing is silently forgotten. Re-annotating a digested PDF on the tablet re-queues it automatically.
+`meta/corpus.tsv` tracks every raw file — nothing is silently forgotten. Re-annotating a cited PDF (disposition `source`) on the tablet re-queues it automatically.
 
 ## Query and maintenance
 
 - **Query the vault:** `python3 meta/query.py candidates "<keywords>"` → read pages → answer with `[[wikilinks]]` (`query-kb` skill).
-- **Theme health:** `python3 meta/coherence.py status`, `python3 meta/semfind.py theme theme-info-theory`.
+- **Topic health:** `python3 meta/coherence.py status`, `python3 meta/semfind.py topic theme-info-theory`.
 - **Share with another LLM:** `python3 meta/export.py` → `.exported/yonatan-thesis-kb-<timestamp>.zip`.
 
 ## Environment
