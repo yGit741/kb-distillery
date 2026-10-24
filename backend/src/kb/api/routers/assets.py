@@ -1,22 +1,20 @@
-"""GET /api/assets/{name} — an image embedded in a page (Obsidian embed name), served from raw/ only."""
+"""GET /api/static/{name} — the dashboard's own css/js (what the legacy /static/ serves), nothing else."""
 import os
 
 from fastapi import APIRouter, HTTPException
 from starlette.responses import FileResponse
 
-from kb.services import pages
+from kb.dashboard.serve import STATIC_DIR
 
 router = APIRouter(tags=["assets"])
 
-IMAGE_TYPES = {".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
-               ".gif": "image/gif", ".svg": "image/svg+xml", ".webp": "image/webp"}
 
-
-@router.get("/api/assets/{name:path}", summary="An image asset under raw/",
-            responses={200: {"content": {"image/*": {}}}, 404: {"description": "no such asset"}})
-def get_asset(name: str):
-    full = pages.resolve_asset(name)       # image extensions only; confined to raw/ (no traversal)
-    if not full:
-        raise HTTPException(404, "no such asset")
-    return FileResponse(full, media_type=IMAGE_TYPES.get(os.path.splitext(full)[1].lower(),
-                                                        "application/octet-stream"))
+@router.get("/api/static/{name:path}", summary="A dashboard static file (css/js)",
+            responses={404: {"description": "no such file"}})
+def get_static(name: str):
+    root = os.path.realpath(STATIC_DIR)
+    full = os.path.realpath(os.path.join(root, os.path.normpath(name)))
+    if not full.startswith(root + os.sep) or not os.path.isfile(full) or ".." in name.split("/"):
+        raise HTTPException(404, "no such file")
+    return FileResponse(full, media_type="text/css" if full.endswith(".css") else "application/javascript",
+                        headers={"Cache-Control": "no-cache"})
