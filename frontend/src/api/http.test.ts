@@ -19,17 +19,14 @@ describe("http DataSource", () => {
     const ds = createHttpDataSource((() => Promise.reject(new Error("down"))) as unknown as typeof fetch);
     await expect(ds.getShareStatus()).rejects.toBeInstanceOf(ApiError);
   });
-  it("translates graph nodes to the data model at the boundary", async () => {
+  it("returns graph nodes as the backend emits them (layer, type, depth)", async () => {
     const nodes = [
-      { slug: "theme-quantum", title: "Quantum", type: "theme", status: "seed", areas: ["quantum"] },
-      { slug: "paper-x", type: "paper", status: "digested", depth: "full" },
-      { slug: "scope-a", type: "scope" },
+      { id: "theme-quantum", title: "Quantum", layer: "concept", type: "topic", status: "seed", depth: "", areas: ["quantum"] },
+      { id: "paper-x", title: "X", layer: "source", type: "paper", status: "digested", depth: "full", areas: [] },
     ];
-    const ds = createHttpDataSource((() => json({ nodes })) as unknown as typeof fetch);
-    const out = await ds.getGraphNodes();
-    expect(out.map((n) => [n.slug, n.type, n.kind, n.depth])).toEqual([
-      ["theme-quantum", "concept", "topic", undefined],
-      ["paper-x", "source", "paper", "full"],
-    ]);
+    const f = vi.fn((..._a: unknown[]) => json({ nodes }));
+    const ds = createHttpDataSource(f as unknown as typeof fetch);
+    expect(await ds.getGraphNodes()).toEqual(nodes);
+    expect(f.mock.calls[0]?.[0]).toBe("/api/graph");
   });
 });
