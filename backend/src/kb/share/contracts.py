@@ -70,11 +70,18 @@ class Manifest:
     # `sha256` is then the digest of the whole tree (build.tree_digest). Left out of the JSON when
     # legacy, so legacy manifests stay byte-identical.
     layout: str = "legacy"
+    # A scoped snapshot (`share snapshot … --scope <slug> --hops 0|1`): the seed page and hop count.
+    # Left out of the JSON when unscoped, so existing manifests stay byte-identical.
+    scope: Optional[str] = None
+    hops: Optional[int] = None
 
     def to_json(self) -> str:
         d = asdict(self)
         if d["layout"] == "legacy":
             del d["layout"]
+        for k in ("scope", "hops"):
+            if d[k] is None:
+                del d[k]
         return json.dumps(d, sort_keys=True, indent=2) + "\n"
 
     @classmethod
