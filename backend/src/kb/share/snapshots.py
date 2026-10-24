@@ -122,6 +122,8 @@ def _audit_kw(args) -> dict:
     """Only what was asked for: no flag → no extra keyword, the legacy call is unchanged.
     `--viewer-worktree` is dev only (hidden): render with this checkout's code, as `share build` can."""
     kw = {"app": True} if getattr(args, "app", False) else {}
+    if getattr(args, "scope", None):
+        kw.update(scope=args.scope, hops=args.hops)
     if getattr(args, "viewer_worktree", False):
         kw["viewer_worktree"] = True
     return kw
@@ -522,6 +524,9 @@ def register(subparsers) -> None:
     a = subparsers.add_parser("audit", help="build <ref> with the public profile and scan it (no deploy)")
     a.add_argument("ref", help="main, a commit, kb-x.y.z or x.y.z")
     a.add_argument("--allow-flags", action="store_true", help="exit 0 even when flags are found")
+    a.add_argument("--scope", default=None, metavar="SLUG",
+                   help="publish only this scope / collection / person page, its members and (--hops 1) their neighbours")
+    a.add_argument("--hops", type=int, choices=(0, 1), default=1)
     a.add_argument("--app", action="store_true", help="opt in: audit the React-app layout build")
     a.add_argument("--viewer-worktree", action="store_true", help=argparse.SUPPRESS)
     a.set_defaults(func=cmd_audit)
@@ -535,6 +540,9 @@ def register(subparsers) -> None:
                    help="with --replace: allow serving an older or unrelated knowledge version than the live one")
     s.add_argument("--allow-flags", action="store_true", help="deploy despite audit flags")
     s.add_argument("--dry-run", action="store_true", help="audit and resolve the Worker, but do not deploy")
+    s.add_argument("--scope", default=None, metavar="SLUG",
+                   help="publish only this scope / collection / person page, its members and (--hops 1) their neighbours")
+    s.add_argument("--hops", type=int, choices=(0, 1), default=1)
     s.add_argument("--app", action="store_true", help="opt in: publish the React-app layout build instead of the iframe shell")
     s.add_argument("--viewer-worktree", action="store_true", help=argparse.SUPPRESS)
     s.set_defaults(func=cmd_snapshot)

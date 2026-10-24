@@ -1,3 +1,5 @@
+import { SHARE_PROFILE } from "@/share/env";
+
 /**
  * Static route metadata. `legacy` is the real path of the server-rendered page (backend/src/kb/dashboard),
  * reached under /legacy/... until the screen is ported. Order = palette order; `nav` picks the three top-bar tabs (Home · Graph · System).
@@ -13,6 +15,8 @@ export interface RouteDef {
   extraPaths?: readonly string[];
   /** In the top bar. Everything else is reached from a screen or the ⌘K palette. */
   nav?: boolean;
+  /** `private`: exists only in the private share build (it needs the Worker's /admin/api). Absent: every build. */
+  profile?: "private";
 }
 
 export const ROUTE_DEFS: readonly RouteDef[] = [
@@ -24,7 +28,9 @@ export const ROUTE_DEFS: readonly RouteDef[] = [
   { id: "scopes", path: "/scopes", label: "Scopes", legacy: "/scopes", blurb: "Named subsets of the vault for focused work." },
   { id: "pipeline", path: "/pipeline", label: "Pipeline", legacy: "/pipeline", blurb: "Ingest and digestion status of every raw file." },
   { id: "lifecycle", path: "/lifecycle", label: "Lifecycle", legacy: "/lifecycle", blurb: "Versions, history, snapshots and working state." },
-];
+  { id: "share", path: "/share", label: "Share", legacy: "/", blurb: "Public snapshots of the private site.", profile: "private" as const, nav: true },
+  // Private-only routes are dropped here, so neither the live app nor the public build ever sees them.
+].filter((d: RouteDef) => d.profile !== "private" || SHARE_PROFILE === "private");
 
 export const legacyHref = (r: Pick<RouteDef, "legacy">): string =>
   `/legacy${r.legacy === "/" ? "" : r.legacy}`;

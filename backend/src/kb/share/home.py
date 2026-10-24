@@ -36,8 +36,11 @@ def load_home(path: Path = CONFIG_PATH) -> dict:
 
 
 def strip_my_notes(markdown: str) -> str:
-    """The page without its `## My notes` section (public builds publish the synthesis, not the notes)."""
-    return MY_NOTES.sub("", markdown or "").rstrip() + "\n"
+    """The page without its `## My notes` section (public builds publish the synthesis, not the notes).
+    A page without one comes back byte-identical."""
+    if not markdown or not MY_NOTES.search(markdown):
+        return markdown
+    return MY_NOTES.sub("", markdown).rstrip() + "\n"
 
 
 def apply_home(data: dict, home: dict) -> dict:

@@ -51,6 +51,7 @@ pixi run share -- config --google-client-id <id>   # store the OAuth client id (
 pixi run share -- audit <ref>              # public build of <ref> in a temp dir: pages by type + privacy flags (exit 1 on flags)
 pixi run share -- snapshot <name> <ref>    # audit, then publish as snapshot-<YYYYMMDD>-<name> (public); --allow-flags, --dry-run
 pixi run share -- snapshot <name> <ref> --replace   # UPDATE a sent snapshot: same Worker, same link; refuses an older ref (--force)
+pixi run share -- snapshot <name> <ref> --app --scope <slug> [--hops 0|1]   # SUBGRAPH: only a scope / collection / person page, its members and (hops 1, default) their neighbours; manifest records scope + hops
 pixi run share -- list [--json]            # our snapshots: version, behind-main, deployed at, views 7d, updates (was kb-x), online
 pixi run share -- history <name> [--json]  # every version a snapshot served, newest first, * = live; version ids for rollback
 pixi run share -- rollback --worker <name> [--to <id>]   # a snapshot's previous version (no auth gate; kb is the default worker)

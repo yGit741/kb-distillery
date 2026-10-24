@@ -23,6 +23,7 @@ class TestShareHome(unittest.TestCase):
         mid = "# T\n\n## My notes\n\nx\n\n## Later\n\nkept\n"
         self.assertIn("kept", strip_my_notes(mid))
         self.assertNotIn("\nx\n", strip_my_notes(mid))
+        self.assertEqual(strip_my_notes("no notes, no newline"), "no notes, no newline")
 
     def test_public_profile_drops_my_notes_private_keeps_them(self):
         from kb.share.build import apply_profile
