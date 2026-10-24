@@ -21,6 +21,10 @@ export type PagesSearch = { q?: string; layer?: string; type?: string; status?: 
 export type GraphSearch = { select?: string; focus?: string; scope?: string; layer?: string; raw?: "1"; search?: string; pages?: string };
 export type ScopesSearch = { scope?: string; draft?: string };
 export type PipelineSearch = { format?: string; q?: string; depth?: string; collection?: string; status?: string; view?: string; group?: string; backlog?: "queued"; item?: string };
+export type SystemTab = "overview" | "pipeline" | "history" | "health";
+export const SYSTEM_TABS: readonly SystemTab[] = ["overview", "pipeline", "history", "health"];
+/** System hosts the pipeline view, so it keeps the pipeline's params (its own `view` included) next to `tab`. */
+export type SystemSearch = PipelineSearch & { tab?: SystemTab };
 export type NoSearch = Record<string, never>;
 
 export interface SearchById {
@@ -30,16 +34,18 @@ export interface SearchById {
   chat: ChatSearch;
   scopes: ScopesSearch;
   pipeline: PipelineSearch;
-  ops: NoSearch;
+  system: SystemSearch;
   lifecycle: NoSearch;
 }
 
 const clean = <T extends object>(o: T): T =>
   Object.fromEntries(Object.entries(o).filter(([, v]) => v !== undefined)) as T;
 
+const pipelineSearch = (r: Raw): PipelineSearch =>
+  clean({ format: str(r.format), q: str(r.q), depth: str(r.depth), collection: str(r.collection), status: str(r.status), view: str(r.view), group: str(r.group), backlog: oneOf(r.backlog, ["queued"] as const), item: str(r.item) });
+
 export const SEARCH: { [K in keyof SearchById]: (raw: Raw) => SearchById[K] } = {
   home: () => ({}),
-  ops: () => ({}),
   lifecycle: () => ({}),
   chat: (r) => clean({ session: str(r.session), scope: str(r.scope), q: str(r.q) }),
   pages: (r) =>
@@ -55,5 +61,6 @@ export const SEARCH: { [K in keyof SearchById]: (raw: Raw) => SearchById[K] } = 
       raw: oneOf(r.raw, ["1"] as const),
     }),
   scopes: (r) => clean({ scope: str(r.scope), draft: str(r.draft) }),
-  pipeline: (r) => clean({ format: str(r.format), q: str(r.q), depth: str(r.depth), collection: str(r.collection), status: str(r.status), view: str(r.view), group: str(r.group), backlog: oneOf(r.backlog, ["queued"] as const), item: str(r.item) }),
+  system: (r) => clean({ ...pipelineSearch(r), tab: oneOf(r.tab, SYSTEM_TABS) }),
+  pipeline: (r) => pipelineSearch(r),
 };
