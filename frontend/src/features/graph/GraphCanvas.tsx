@@ -170,7 +170,12 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
 
   const recompute = useCallback(() => {
     const { ui: u, selection: sel, byId: ids, neighbors: nb, visible: vis } = live.current;
-    if (rs.current.hover && !vis.has(rs.current.hover)) rs.current.hover = null;   // filtered out or reloaded
+    const gone = intent.current?.pointed();
+    if (gone && !vis.has(gone)) {   // filtered out or reloaded: nothing may act on it any more
+      intent.current?.reset();
+      wrap.current?.classList.remove("graph-pointer");
+    }
+    if (rs.current.hover && !vis.has(rs.current.hover)) rs.current.hover = null;
     const hover = rs.current.hover;
     const cfg = u.lab;
     const score = rs.current.imp.score;
@@ -220,6 +225,7 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
     if (intent.current?.pointed() === id) return;
     wrap.current?.classList.toggle("graph-pointer", id !== null);
     intent.current?.request(id);
+    fg.current?.refresh(); // the ring follows the pointer at once
   }, []);
   useEffect(() => {
     if (!ui.calmHover) intent.current?.flush();
@@ -536,7 +542,9 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
   // ---- drawing
   const drawNode = useCallback(
     (n: SimNode, ctx: CanvasRenderingContext2D, scale: number) => {
-      const { colors, focus, selected, hover } = rs.current;
+      const { colors, focus, selected } = rs.current;
+      // the ring follows the pointer at once (small, local feedback); dim and labels wait for the intent
+      const hover = intent.current?.pointed() ?? null;
       if (n.x == null || n.y == null) return;
       if (isPile(n)) {
         drawPile(n, ctx, scale, colors, hover === n.id);

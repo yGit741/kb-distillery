@@ -83,5 +83,10 @@ export function createHoverIntent(o: HoverIntentOptions) {
     /** Apply what the pointer is on now, skipping the wait (calm hover switched off). */
     flush: commit,
     cancel: clear,
+    /** Forget the pointed page (it was filtered out or reloaded) without committing anything. */
+    reset() {
+      clear();
+      pointed = null;
+    },
   };
 }
