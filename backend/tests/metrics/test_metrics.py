@@ -161,10 +161,18 @@ class GoldenTest(unittest.TestCase):
         self.assertEqual(judge_cfg["samples"], 2)
 
     def test_env_cannot_push_or_reach_github_or_the_work_gateway(self):
-        with patch.dict(os.environ, {"ANTHROPIC_BASE_URL": "https://gw", "ANTHROPIC_AUTH_TOKEN": "t"}):
-            env = golden._env("/tmp/sink.git", tempfile.mkdtemp())
+        repo = os.path.join(tempfile.mkdtemp(), "kb-golden-x")
+        leaked = {"ANTHROPIC_BASE_URL": "https://gw", "ANTHROPIC_AUTH_TOKEN": "t", "KB_ROOT": "/elsewhere",
+                  "PIXI_PROJECT_ROOT": "/runner", "CONDA_PREFIX": "/runner/.pixi/envs/default",
+                  "PATH": "/runner/.pixi/envs/default/bin:/usr/bin"}
+        with patch.dict(os.environ, leaked):
+            env = golden._env("/tmp/sink.git", repo)
         self.assertNotIn("ANTHROPIC_BASE_URL", env)
         self.assertNotIn("ANTHROPIC_AUTH_TOKEN", env)
+        self.assertEqual(env["KB_ROOT"], repo)                         # writes land in the clone
+        self.assertEqual(env["PYTHONPATH"], os.path.join(repo, "backend", "src"))   # its own code runs
+        self.assertFalse(any(k.startswith(("PIXI_", "CONDA_")) for k in env))
+        self.assertEqual(env["PATH"], "/usr/bin")
         self.assertEqual(env["KB_NO_PUSH"], "1")
         self.assertEqual((env["GIT_CONFIG_KEY_0"], env["GIT_CONFIG_VALUE_0"]), ("remote.origin.pushurl", "/tmp/sink.git"))
         self.assertTrue(env["GH_CONFIG_DIR"].endswith("gh-empty"))

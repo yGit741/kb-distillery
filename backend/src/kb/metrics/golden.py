@@ -35,7 +35,7 @@ from kb.paths import vault_root
 TASKS_FILE = os.path.join("meta", "ops", "golden.toml")
 RUNS_DIR = os.path.expanduser("~/local-workspace/agent-metrics/golden")
 LINKED = (".pixi", "frontend/node_modules")
-AGENT_TIMEOUT = 45 * 60
+AGENT_TIMEOUT = 75 * 60   # a busy machine (parallel sessions running test suites) slows ship gates a lot
 CHECK_TIMEOUT = 15 * 60
 
 
@@ -74,7 +74,7 @@ def make_workspace(task, run_id, ref, primary):
         os.makedirs(os.path.dirname(dst), exist_ok=True)
         shutil.copy2(src, dst)
     for cmd in task.get("setup", []):
-        subprocess.run(cmd, shell=True, cwd=repo, check=True, capture_output=True, text=True, env=_env(sink, base))
+        subprocess.run(cmd, shell=True, cwd=repo, check=True, capture_output=True, text=True, env=_env(sink, repo))
     return repo, sink
 
 
@@ -96,12 +96,20 @@ def remove_workspace(repo, primary=None):
     shutil.rmtree(os.path.dirname(repo), ignore_errors=True)
 
 
-def _env(sink, base):
-    env = {k: v for k, v in os.environ.items()
-           if k not in ("ANTHROPIC_BASE_URL", "ANTHROPIC_AUTH_TOKEN", "ANTHROPIC_API_KEY")}  # subscription only
-    gh_dir = os.path.join(base, "gh-empty")
+SCRUBBED = ("ANTHROPIC_BASE_URL", "ANTHROPIC_AUTH_TOKEN", "ANTHROPIC_API_KEY",   # subscription only
+            "KB_ROOT", "PYTHONPATH", "VIRTUAL_ENV", "PYTHONHOME")
+SCRUBBED_PREFIXES = ("PIXI_", "CONDA_")   # the runner's own `pixi run` activation must not leak in
+
+
+def _env(sink, repo):
+    """The run's environment: this clone is the vault (KB_ROOT) and its own code is imported
+    (PYTHONPATH beats the shared env's editable install, which points at another checkout)."""
+    env = {k: v for k, v in os.environ.items() if k not in SCRUBBED and not k.startswith(SCRUBBED_PREFIXES)}
+    env["PATH"] = os.pathsep.join(p for p in env.get("PATH", "").split(os.pathsep) if "/.pixi/envs/" not in p)
+    gh_dir = os.path.join(os.path.dirname(repo), "gh-empty")
     os.makedirs(gh_dir, exist_ok=True)
     env.update({
+        "KB_ROOT": repo, "PYTHONPATH": os.path.join(repo, "backend", "src"),
         "KB_NO_PUSH": "1", "KB_GOLDEN": "1", "GH_CONFIG_DIR": gh_dir, "GH_TOKEN": "golden-run-no-github",
         "GIT_CONFIG_COUNT": "1", "GIT_CONFIG_KEY_0": "remote.origin.pushurl", "GIT_CONFIG_VALUE_0": sink,
     })
@@ -162,7 +170,7 @@ def run_task(task, judge_cfg, run_id, label, ref, primary, dry_run=False, keep=F
               f"{len(task.get('checks', []))} checks")
         return rec
     repo, sink = make_workspace(task, run_id, sha, primary)
-    env = _env(sink, os.path.dirname(repo))
+    env = _env(sink, repo)
     try:
         base = _git(["rev-parse", "HEAD"], cwd=repo).stdout.strip()   # after setup (a replayed bug is a commit)
         env["GOLDEN_BASE"] = base                                    # checks diff against it
@@ -195,6 +203,8 @@ def run(task_ids=None, label="adhoc", ref="HEAD", repeat=1, dry_run=False, keep=
     primary = primary_checkout(root or vault_root())
     chosen = [tasks[t] for t in task_ids] if task_ids else [t for t in tasks.values() if t.get("core", True)]
     run_id = datetime.datetime.now().strftime("%Y%m%d-%H%M") + "-" + uuid.uuid4().hex[:4]
+    ref = _git(["rev-parse", ref], cwd=primary).stdout.strip()   # pinned once: main may move mid-run
+    print(f"golden run {run_id} ({label}) at {ref[:8]}", flush=True)
     out = []
     for _ in range(repeat):
         for task in chosen:
@@ -204,5 +214,5 @@ def run(task_ids=None, label="adhoc", ref="HEAD", repeat=1, dry_run=False, keep=
                 j = rec["judge"]
                 print(f"{task['id']:24} {'PASS' if rec['passed'] else 'FAIL'}  ${rec['usd']:.2f}  "
                       f"{rec['minutes']}m  judge {j.get('score')}{' ⚑' if j.get('flagged') else ''}  "
-                      f"checks {sum(c['ok'] for c in rec['checks'])}/{len(rec['checks'])}")
+                      f"checks {sum(c['ok'] for c in rec['checks'])}/{len(rec['checks'])}", flush=True)
     return out
