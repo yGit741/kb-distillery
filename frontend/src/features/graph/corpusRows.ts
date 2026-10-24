@@ -1,5 +1,5 @@
 import type { CorpusRow } from "@/api";
-import type { ScopeRow } from "@/features/scopes/logic";
+import type { ScopeRow } from "@/api/types";
 import { dispositionHead, isCompanionDisposition } from "./rawLayer";
 
 /** One line of the drawer: a raw file, with the companions folded into it counted. */
