@@ -1,25 +1,37 @@
-/** The data model vocabulary. Three page types, each with a kind; sources have a depth. */
-export const SOURCE_KINDS = ["paper", "article", "blog-post", "video", "lecture", "conversation", "ai-chat", "part"] as const;
-export const COLLECTION_KINDS = ["book", "notebook", "course", "series"] as const;
-export const CONCEPT_KINDS = ["idea", "topic", "question", "person"] as const;
+/**
+ * The data model as shipped (schema 1.0; meta/schema.py LAYER_OF, AGENTS.md "Page layers").
+ * Every page has a `layer` and a `type` inside it; sources also carry a `depth`.
+ */
+export const LAYER_TYPES = {
+  source: ["paper", "part", "lecture", "article", "video", "conversation", "ai-chat", "blog-post"],
+  collection: ["book", "notebook", "course", "series", "scope"], // scope is aux
+  concept: ["idea", "topic", "question", "person", "distilled-think"], // distilled-think is aux
+} as const;
 
-export type SourceKind = (typeof SOURCE_KINDS)[number];
-export type CollectionKind = (typeof COLLECTION_KINDS)[number];
-export type ConceptKind = (typeof CONCEPT_KINDS)[number];
-export type Kind = SourceKind | CollectionKind | ConceptKind;
-export type PageType = "source" | "collection" | "concept";
+export type Layer = keyof typeof LAYER_TYPES;
+export type PageTypeOf<L extends Layer> = (typeof LAYER_TYPES)[L][number];
+export type SourceType = PageTypeOf<"source">;
+export type CollectionType = PageTypeOf<"collection">;
+export type ConceptType = PageTypeOf<"concept">;
+export type PageType = SourceType | CollectionType | ConceptType;
 
-export const DEPTHS = ["catalog", "easy", "full", "deep"] as const;
+export const LAYERS = Object.keys(LAYER_TYPES) as Layer[];
+
+/** Sources only, ordered: listed = cataloged, not read yet. */
+export const DEPTHS = ["listed", "easy", "full", "deep"] as const;
 export type Depth = (typeof DEPTHS)[number];
 
-/** A node of the vault graph, in new-model words (already translated at the API boundary). */
+/** status: sources and collections to-read/reading/digested; ideas and topics seed/growing/solid;
+ *  questions open/partial/resolved; distilled-think review/applied/archived; scopes active/parked. */
+export type Status = string;
+
+/** A node of the vault graph, as /api/graph emits it (fields the shell uses). */
 export interface GraphNode {
-  slug: string;
+  id: string; // slug
   title: string;
+  layer: Layer;
   type: PageType;
-  kind: Kind;
-  depth?: Depth;
-  draft?: boolean;
   status: string;
+  depth: Depth | ""; // "" for non-sources
   areas: string[];
 }
