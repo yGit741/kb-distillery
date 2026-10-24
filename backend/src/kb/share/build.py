@@ -43,7 +43,7 @@ so the same content + viewer + profile always yields the same bytes.
 
 The public profile carries none of it: no tab, no document, no data, no repo URL.
 
-**App layout (opt-in, `--app`, default off).** Instead of the iframe shell, the build is the React app
+**App layout (`--app`; the default of `deploy-main`, which takes `--legacy` to opt out).** Instead of the iframe shell, the build is the React app
 under `frontend/` (`vite build --mode share`, one build per profile so the route set is fixed at build
 time: public = graph + pages, private = + lifecycle; chat, ops, pipeline and scopes are not imported at
 all). The data comes from the same `collect_data` / `collect_lifecycle` / `apply_profile`, so the public

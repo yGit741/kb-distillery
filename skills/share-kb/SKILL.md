@@ -153,18 +153,19 @@ and the digestion rows — shrink those, do not raise the constant.
 
 The reported state matches `share status`; unauthenticated `curl -I` on the site gives 302 → `/auth/login`.
 
-## App build (opt-in `--app`)
+## App build (default for `deploy-main`)
 
-Same site, built from the React app under `frontend/` instead of the iframe shell. Default OFF: without
-`--app` every command builds the legacy shell byte-for-byte as before (the daily private deploy and the
-public snapshots stay on it).
+Same site, built from the React app under `frontend/` instead of the iframe shell. `deploy-main` (the
+daily private deploy) builds it by default — `--legacy` builds the old shell instead, and a layout switch at
+an already-deployed sha needs `--force`. `build`, `audit` and `snapshot` still need `--app` (public
+snapshots stay on the legacy shell).
 
 ```bash
 pixi run share -- build main --profile public  --app    # graph + pages
 pixi run share -- build main --profile private --app    # + the read-only lifecycle view
 pixi run share -- audit main --app                      # same audit, on the app build
 pixi run share -- snapshot <name> main --app --dry-run  # audit + render the Worker dir, no deploy
-pixi run share -- deploy-main --app --dry-run
+pixi run share -- deploy-main --dry-run              # --legacy for the iframe shell
 ```
 
 - Output `.exported/share/<ref>-app/`: `index.html` (carries the data blob in `<script id="kb-data">`,
