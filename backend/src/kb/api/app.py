@@ -9,6 +9,7 @@ import pkgutil
 from contextlib import asynccontextmanager
 
 from fastapi import Depends, FastAPI, Request
+from fastapi.responses import RedirectResponse
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from kb.api import security
@@ -17,6 +18,8 @@ from kb.api.spa import spa_router
 
 ROUTERS_PACKAGE = "kb.api.routers"
 ALLOWED_HOSTS = ["127.0.0.1", "localhost", "[::1]", "testserver"]
+# Legacy pages whose screen is ported: the old path redirects to the app (the old page stays at /legacy/...).
+PORTED = {"/graph": "/app/graph", "/graph.html": "/app/graph"}
 LEGACY_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"]
 
 
@@ -49,6 +52,12 @@ def create_app(routers_package=ROUTERS_PACKAGE, dist=None, legacy=True, allowed_
     for _name, router in discover_routers(routers_package):
         app.include_router(router)
     app.include_router(spa_router(dist))
+
+    @app.api_route("/graph", methods=["GET", "HEAD"], include_in_schema=False)
+    @app.api_route("/graph.html", methods=["GET", "HEAD"], include_in_schema=False)
+    async def ported(request: Request):
+        target = PORTED[request.url.path]
+        return RedirectResponse(target + (f"?{request.url.query}" if request.url.query else ""), status_code=307)
 
     if legacy:
         @app.api_route("/legacy/{path:path}", methods=LEGACY_METHODS, name=security.LEGACY_ROUTE,

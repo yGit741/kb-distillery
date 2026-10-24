@@ -217,7 +217,7 @@ class AppAuditTests(unittest.TestCase):
         app = snapshots.scan(snapshots.extract_data(
             (app_build(repo, out, self.dist, "public", label="a").dir / "index.html").read_text(encoding="utf-8")))
         self.assertEqual(app["flags"], legacy["flags"])
-        self.assertEqual({f["kind"] for f in app["flags"]}, {"raw-path"})       # the one prose leak in PAGES
+        self.assertEqual(app["flags"], [])       # raw/notes/scratch.md in PAGES prose is no longer sensitive (only raw/emails/)
 
 
 class AppGuardTests(_AppFixture):
