@@ -8,6 +8,7 @@
     "build": "tsc --noEmit && vite build",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "build:check": "tsc --noEmit && vite build --outDir \"${TMPDIR:-/tmp}/kb-web-check-dist\" --emptyOutDir",
     "build:share": "tsc --noEmit && vite build --mode share"
   },
   "dependencies": {
