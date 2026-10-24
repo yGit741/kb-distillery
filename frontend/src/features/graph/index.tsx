@@ -1,6 +1,28 @@
-import { LegacyCard } from "@/features/legacy/LegacyCard";
+import { useNavigate, useSearch } from "@tanstack/react-router";
+import { useMemo } from "react";
+import type { SearchById } from "@/routes/search";
+import { GraphScreen, type GraphHost } from "./GraphScreen";
 
-/** Placeholder: replace this file's default export with the real screen (see skills/app-ui, porting checklist). */
-export default function Screen() {
-  return <LegacyCard id="graph" />;
+export const ported = true;
+
+const base = (import.meta.env.BASE_URL as string).replace(/\/$/, "");
+
+/** The graph screen: the router supplies the typed search params and navigation; everything else is in GraphScreen. */
+export default function Graph() {
+  const search = useSearch({ strict: false }) as SearchById["graph"];
+  const navigate = useNavigate();
+  const host = useMemo<GraphHost>(
+    () => ({
+      openPage: (slug) => void navigate({ to: `/pages/${encodeURIComponent(slug)}` as "/" }),
+      pageHref: (slug) => `${base}/pages/${encodeURIComponent(slug)}`,
+      clearParams: (keys) =>
+        void navigate({
+          to: ".",
+          replace: true,
+          search: ((prev: Record<string, unknown>) => Object.fromEntries(Object.entries(prev).filter(([k]) => !keys.includes(k)))) as never,
+        }),
+    }),
+    [navigate],
+  );
+  return <GraphScreen search={search} host={host} />;
 }
