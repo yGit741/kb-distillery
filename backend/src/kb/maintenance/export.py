@@ -63,6 +63,14 @@ TEXT_META_FILES = (
     "meta/coherence-warnings.tsv",
     "meta/log.md",
     "skills/README.md",
+    # the docs AGENTS.md routes to
+    "meta/docs/page-model.md",
+    "meta/docs/raw-and-corpus.md",
+    "meta/docs/collections.md",
+    "meta/docs/lifecycle.md",
+    "meta/docs/dev.md",
+    "meta/docs/workflows.md",
+    "meta/docs/semantic-lint.md",
 )
 
 TEXT_GLOBS = (

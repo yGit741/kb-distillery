@@ -1,8 +1,9 @@
 # Gemini — start here
 
 You are reading this vault through a GitHub import, with no shell. You cannot run
-`meta/*.py`; navigate by reading files. This is a personal knowledge base for an MSc in
-theoretical ML; the thesis topic is not yet chosen. Full schema: `AGENTS.md`.
+the `backend/` code; navigate by reading files. This is a personal knowledge base for an MSc in
+theoretical ML; the thesis topic is not yet chosen. Core rules: `AGENTS.md`; its **Doc router** points to the
+detailed docs in `meta/docs/` (page model, raw and corpus, collections, lifecycle).
 
 ## Where the knowledge is
 
@@ -21,7 +22,7 @@ section is the owner's own text.
 
 ## Answering a question (query-kb, no-shell version)
 
-Adapted from `skills/query-kb/SKILL.md`:
+Adapted from `skills/query-knowledge/SKILL.md`:
 
 1. Read `index.md`; pick the relevant section (topics, questions, sources, ideas).
 2. For broad or thematic questions, open the matching topic page `wiki/theme-*.md` first; for a
