@@ -31,4 +31,11 @@ describe("magnetic pointer", () => {
   it("returns null for an empty graph", () => {
     expect(pickMagnetic([], 0, 0)).toBeNull();
   });
+  it("leave band: a current target is kept a little past its reach (no flicker at the edge)", () => {
+    const list = [n("a", 0, 0), n("b", 1000, 0)];
+    const reach = REACH_MAX; // sparse: the clamp
+    const x = 5 + reach * 1.15; // past the reach, inside LEAVE x reach
+    expect(pickMagnetic(list, x, 0, null)).toBeNull();
+    expect(pickMagnetic(list, x, 0, "a")).toBe("a");
+  });
 });
