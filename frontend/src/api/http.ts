@@ -99,7 +99,18 @@ export function createHttpDataSource(fetchImpl: Fetch = (...a) => fetch(...a), b
       } catch (e) {
         throw new ApiError(`Could not reach /api/chat: ${e instanceof Error ? e.message : String(e)}`);
       }
-      if (!res.ok) throw new ApiError(`/api/chat answered ${res.status}`, res.status);
+      if (!res.ok) {
+        let body: unknown;
+        try {
+          body = await res.json();
+        } catch {
+          body = undefined;
+        }
+        const o = body && typeof body === "object" ? (body as { error?: unknown; hint?: unknown }) : {};
+        const err = typeof o.error === "string" ? o.error : "";
+        const hint = typeof o.hint === "string" ? o.hint : "";
+        throw new ApiError(err ? (hint ? `${err} ${hint}` : err) : `/api/chat answered ${res.status}`, res.status);
+      }
       return res;
     },
   };

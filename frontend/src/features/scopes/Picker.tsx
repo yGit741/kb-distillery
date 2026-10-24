@@ -6,7 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useKb } from "@/lib/store";
-import { FORMATS, corpusToRow, formatOf, isDigested, matchPages, matchRaw, nameOf, newRows, type ScopeRow } from "./logic";
+import { FORMATS, corpusToRow, formatOf, isDigested, matchPages, matchRaw, nameOf, newRows } from "./logic";
+import type { ScopeRow } from "@/api/types";
 
 interface Props {
   have: ReadonlySet<string>;

@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { ApiError, useDataSource } from "@/api";
-import type { ScopeDetail } from "@/api/types";
+import type { ScopeDetail, ScopeRow } from "@/api/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
@@ -22,7 +22,6 @@ import {
   snapshot,
   stats,
   type RowFilter,
-  type ScopeRow,
 } from "./logic";
 
 export interface EditorInit {

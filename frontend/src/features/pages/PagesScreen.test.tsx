@@ -5,6 +5,7 @@ import { App } from "@/app/providers";
 import { createAppRouter } from "@/app/router";
 import { ApiError, type DataSource } from "@/api";
 import type { PageCard, PageDetail, PageIndex } from "@/api/types";
+import { resetEmbed } from "@/app/embed";
 import { mockDataSource } from "@/test/datasource";
 
 const card = (id: string, o: Partial<PageCard> = {}): PageCard => ({
@@ -47,7 +48,10 @@ function open(path: string, over: Partial<DataSource> = {}) {
 }
 
 describe("Pages screen", () => {
-  beforeEach(() => localStorage.clear());
+  beforeEach(() => {
+    localStorage.clear();
+    resetEmbed();
+  });
 
   it("shows the home overview from the index", async () => {
     open("/pages");
@@ -95,6 +99,22 @@ describe("Pages screen", () => {
     expect(screen.getByText(/1 hop/)).toBeInTheDocument();
   });
 
+  it("keeps the asked path in the URL and restores it from ?a=&b=", async () => {
+    const router = open("/pages/alpha");
+    await screen.findByRole("heading", { level: 1, name: "Title alpha" });
+    await userEvent.click(screen.getByRole("button", { name: "Connect to…" }));
+    await userEvent.type(screen.getByLabelText("To page"), "beta");
+    await userEvent.click(screen.getByRole("button", { name: "Find path" }));
+    await screen.findByText("alpha links beta");
+    await waitFor(() => expect(router.state.location.search).toMatchObject({ a: "alpha", b: "beta" }));
+  });
+
+  it("opens a shared path link straight to the result", async () => {
+    open("/pages?a=alpha&b=beta");
+    expect(await screen.findByText("alpha links beta")).toBeInTheDocument();
+    expect(screen.getByLabelText("From page")).toHaveValue("alpha");
+  });
+
   it("redirects old #/p/slug links", async () => {
     window.location.hash = "#/p/beta";
     const router = open("/pages");
@@ -114,12 +134,11 @@ describe("Pages screen", () => {
   });
 
   it("embed mode hides the toolbar and trail but keeps the content", async () => {
-    window.history.replaceState({}, "", "/?embed=1");
-    open("/pages/alpha");
+    open("/pages/alpha?embed=1");
     expect(await screen.findByRole("heading", { level: 1, name: "Title alpha" })).toBeInTheDocument();
     expect(screen.queryByLabelText("Search pages")).toBeNull();
     expect(screen.queryByRole("button", { name: "Connect to…" })).toBeNull();
     expect(screen.getByText("Linked from")).toBeInTheDocument();
-    window.history.replaceState({}, "", "/");
+    expect(screen.queryByRole("navigation", { name: "Main" })).toBeNull();
   });
 });

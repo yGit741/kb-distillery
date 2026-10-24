@@ -5,14 +5,17 @@ import { ROUTES } from "@/routes/registry";
 import { useTheme } from "@/theme/theme";
 import { CommandPalette } from "./CommandPalette";
 import { ShareChip } from "./ShareChip";
+import { useEmbed } from "./embed";
 import { useUi } from "./ui-store";
 
 /** One top nav, ONE theme toggle, ONE command palette, one share chip. Screens render in <Outlet/>. */
 export function AppShell() {
   const { theme, toggle } = useTheme();
   const setPaletteOpen = useUi((s) => s.setPaletteOpen);
+  const embed = useEmbed();
   return (
     <div className="flex min-h-screen flex-col">
+      {!embed && (
       <header className="sticky top-0 z-40 flex h-12 items-center gap-2 border-b bg-card px-4">
         <span className="shrink-0 text-sm font-semibold">Thesis KB</span>
         <nav aria-label="Main" className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -41,7 +44,8 @@ export function AppShell() {
           {theme === "dark" ? <Sun aria-hidden /> : <Moon aria-hidden />}
         </Button>
       </header>
-      <main className="mx-auto w-full min-w-0 max-w-6xl flex-1 px-4 py-4">
+      )}
+      <main className={embed ? "min-w-0 flex-1" : "mx-auto w-full min-w-0 max-w-6xl flex-1 px-4 py-4"}>
         <Outlet />
       </main>
       <CommandPalette />
