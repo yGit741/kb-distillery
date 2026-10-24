@@ -15,6 +15,7 @@ import { pickMagnetic, type ScreenNode } from "./magnet";
 import { drawPile, formatOfPile, isPile, isPileId, pileRadius } from "./rawLayer";
 import { DRAG_PX } from "./selection";
 import { useGraphUi } from "./store";
+import { useDecor } from "./tools/decor";
 import { colorOf, METRIC_COLORS, nodeRadius, type ColorBy, type SizeBy } from "./style";
 import type { GNode, GraphModel, SimLink, SimNode } from "./types";
 
@@ -206,6 +207,9 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
   useEffect(() => {
     fg.current?.reheat();
   }, [ui.layoutMode, ui.areaPull]);
+
+  // ---- tool decor (experiment halos, faded links) is read at draw time; a change only needs a redraw
+  useEffect(() => useDecor.subscribe(() => fg.current?.refresh()), []);
 
   // ---- redraw when anything the draw reads changes
   useEffect(() => {
@@ -429,6 +433,13 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
       const r = radius(n);
       const alpha = nodeOpacity(n.id, focus);
       const isSel = selected.has(n.id);
+      const halo = useDecor.getState().halo?.get(n.id);
+      if (halo) {
+        ctx.beginPath();
+        ctx.arc(n.x, n.y, r + (2 + 4 * halo) / scale, 0, 2 * Math.PI);
+        ctx.fillStyle = withAlpha(colors.warn, 0.15 + 0.55 * halo);
+        ctx.fill();
+      }
       if (isSel || hover === n.id) {
         ctx.beginPath();
         ctx.arc(n.x, n.y, r + 3 / scale, 0, 2 * Math.PI);
@@ -537,7 +548,10 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
 
   const linkColor = useCallback((l: SimLink) => {
     const { focus, colors } = rs.current;
-    return withAlpha(colors.link, linkOpacity(endId(l.source), endId(l.target), focus, live.current.ui.linkOpacity, l.kind));
+    const a = endId(l.source);
+    const b = endId(l.target);
+    const fade = useDecor.getState().linkFade?.(a, b) ?? 1;
+    return withAlpha(colors.link, fade * linkOpacity(a, b, focus, live.current.ui.linkOpacity, l.kind));
   }, []);
   const linkWidth = useCallback((l: SimLink) => (l.kind === "shared" ? 0.35 + Math.min(l.shared ?? 1, 6) * 0.1 : 0.8), []);
   const linkLabel = useCallback(

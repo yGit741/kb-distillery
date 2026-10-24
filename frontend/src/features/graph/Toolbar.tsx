@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 import { FiltersPanel } from "./FiltersPanel";
 import { LayoutPanel } from "./LayoutPanel";
 import { useGraphUi } from "./store";
-import { TOOLS, type GraphToolContext } from "./tools";
+import { useVisibleTools, type GraphToolContext } from "./tools";
 
 const HELP: readonly [string, string][] = [
   ["Search everything", "Space"],
@@ -56,7 +56,8 @@ export function Toolbar({ onFit, onZoom, onReheat, onRefresh, refreshing, stats,
   const hasFilter = useGraphUi((s) => s.search !== "" || s.rules.length > 0);
   const open = useGraphUi((s) => s.openFlyout);
   const close = () => useGraphUi.setState({ flyout: null });
-  const activeTool = TOOLS.find((t) => t.id === flyout);
+  const tools = useVisibleTools();
+  const activeTool = tools.find((t) => t.id === flyout);
   const railOpen = useGraphUi((s) => s.railOpen);
   return (
     <>
@@ -72,7 +73,7 @@ export function Toolbar({ onFit, onZoom, onReheat, onRefresh, refreshing, stats,
         <IconButton label="Layout and sync" active={flyout === "layout"} onClick={() => open("layout")}>
           <Network aria-hidden />
         </IconButton>
-        {TOOLS.map((t) => (
+        {tools.map((t) => (
           <IconButton key={t.id} label={t.label} active={flyout === t.id} onClick={() => open(t.id)}>
             {t.icon}
           </IconButton>

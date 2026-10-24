@@ -258,7 +258,9 @@ export const ForceGraph = forwardRef<ForceGraphHandle, ForceGraphProps & { class
         reheat: () => void g()?.d3ReheatSimulation(),
         refresh: () => {
           const inst = g();
+          // force-graph 1.x has no public refresh: a zero-length zoom to the current scale flags its redraw
           if (inst?.refresh) inst.refresh();
+          else if (inst) inst.zoom(inst.zoom());
         },
       };
     },
