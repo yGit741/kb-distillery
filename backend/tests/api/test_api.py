@@ -260,9 +260,10 @@ def test_a_dropped_in_module_is_picked_up(tmp_path, monkeypatch):
 
 # ── legacy fall-through and the React shell ──────────────────────────────────
 def test_legacy_pages_and_api_names_still_answer(client):
-    r = client.get("/graph")
+    r = client.get("/explore")
     assert r.status_code == 200 and "text/html" in r.headers["content-type"]
-    assert client.get("/legacy/graph").text == r.text                                  # the shell's link form
+    assert client.get("/legacy/explore").text == r.text                                # the shell's link form
+    assert client.get("/legacy/graph").status_code == 200                              # ported, old page kept
     assert client.get("/api/chat/status").json()["backend"] in ("agent", "direct")
     assert client.get("/nope-not-a-page").status_code == 404
 
@@ -285,3 +286,9 @@ def test_spa_fallback(tmp_path):
     assert c.get("/assets/a.js").text == "js"
     assert "shell" not in c.get("/assets/%2e%2e/index.html").text
     assert c.get("/app/%2e%2e/%2e%2e/etc/passwd").text == "<html>shell</html>"
+
+
+def test_ported_graph_redirects_to_the_app(client):
+    r = client.get("/graph?focus=x", follow_redirects=False)
+    assert r.status_code == 307 and r.headers["location"] == "/app/graph?focus=x"
+    assert client.get("/graph.html", follow_redirects=False).headers["location"] == "/app/graph"
