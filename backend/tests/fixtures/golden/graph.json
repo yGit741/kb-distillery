@@ -1,4 +1,46 @@
 {
+ "concept_links": [
+  {
+   "shared": 1,
+   "source": "generalization",
+   "target": "q-is-the-fixture-bound-tight-for-deep-models"
+  },
+  {
+   "shared": 1,
+   "source": "generalization",
+   "target": "theme-learning-theory"
+  },
+  {
+   "shared": 1,
+   "source": "noise-stability",
+   "target": "q-does-the-fixture-tail-bound-extend-to-dependent-variables"
+  },
+  {
+   "shared": 1,
+   "source": "noise-stability",
+   "target": "theme-boolean-analysis"
+  },
+  {
+   "shared": 1,
+   "source": "noise-stability",
+   "target": "theme-learning-theory"
+  },
+  {
+   "shared": 1,
+   "source": "q-does-the-fixture-tail-bound-extend-to-dependent-variables",
+   "target": "theme-learning-theory"
+  },
+  {
+   "shared": 1,
+   "source": "q-is-the-fixture-bound-tight-for-deep-models",
+   "target": "theme-learning-theory"
+  },
+  {
+   "shared": 2,
+   "source": "shannon-entropy",
+   "target": "theme-info-theory"
+  }
+ ],
  "facets": {
   "areas": [
    "boolean-analysis",
@@ -17,15 +59,15 @@
    "article",
    "blog-post",
    "book",
-   "concept",
    "conversation",
    "course",
+   "idea",
    "lecture",
    "paper",
    "part",
    "question",
    "series",
-   "theme",
+   "topic",
    "video"
   ]
  },
@@ -185,6 +227,7 @@
    "id": "article-kalai-fixture-post-one",
    "inDegree": 1,
    "label": "article-kalai-fixture-post-one",
+   "layer": "source",
    "outDegree": 0,
    "path": "wiki/article-kalai-fixture-post-one.md",
    "preview": "Problem: Is noise stability at most one? Main result: Trivially yes; the fixture post asks a toy question.",
@@ -207,6 +250,7 @@
    "id": "blog-not-exact-fixture-hebrew-post",
    "inDegree": 0,
    "label": "blog-not-exact-fixture-hebrew-post",
+   "layer": "source",
    "outDegree": 0,
    "path": "wiki/blog-not-exact-fixture-hebrew-post.md",
    "preview": "Rank of a fixture matrix. The rank is at most n.",
@@ -269,6 +313,7 @@
    "id": "book-2019-fixture-book",
    "inDegree": 2,
    "label": "book-2019-fixture-book",
+   "layer": "collection",
    "outDegree": 1,
    "path": "wiki/book-2019-fixture-book.md",
    "preview": "A fixture book of four chapters, used by the pipeline harness to exercise the page partition, part digests and the coverage line. It has no real content.",
@@ -290,10 +335,11 @@
   },
   {
    "areas": [],
-   "depth": "catalog",
+   "depth": "listed",
    "id": "chat-fixture-ai-chat",
    "inDegree": 0,
    "label": "chat-fixture-ai-chat",
+   "layer": "source",
    "outDegree": 0,
    "path": "wiki/chat-fixture-ai-chat.md",
    "preview": "_No visualizations in this chat._",
@@ -322,6 +368,7 @@
    "id": "conversation-2024-02-01-fixture-thread-about-a-lemma",
    "inDegree": 1,
    "label": "conversation-2024-02-01-fixture-thread-about-a-lemma",
+   "layer": "source",
    "outDegree": 2,
    "path": "wiki/conversation-2024-02-01-fixture-thread-about-a-lemma.md",
    "preview": "Problem: Does the lemma hold for non-monotone functions? Main result: Yes, by symmetrisation.",
@@ -349,6 +396,7 @@
    "id": "course-fixture-rl",
    "inDegree": 1,
    "label": "course-fixture-rl",
+   "layer": "collection",
    "outDegree": 3,
    "path": "wiki/course-fixture-rl.md",
    "preview": "A fixture course whose members are two slide decks, catalogued with a collection and a title. It exists only so the pipeline harness can exercise the Contents table of a course.",
@@ -378,6 +426,7 @@
    "id": "generalization",
    "inDegree": 1,
    "label": "generalization",
+   "layer": "concept",
    "outDegree": 1,
    "path": "wiki/generalization.md",
    "preview": "One-liner: Gap between train and test risk.",
@@ -387,11 +436,11 @@
     "links_out": "1",
     "slug": "generalization",
     "status": "seed",
-    "type": "concept"
+    "type": "idea"
    },
    "status": "seed",
    "title": "Generalization",
-   "type": "concept",
+   "type": "idea",
    "year": null
   },
   {
@@ -402,6 +451,7 @@
    "id": "lecture-rl-fixture-1",
    "inDegree": 2,
    "label": "lecture-rl-fixture-1",
+   "layer": "source",
    "outDegree": 2,
    "path": "wiki/lecture-rl-fixture-1.md",
    "preview": "Problem: Define a fixture MDP. Main result: The value function satisfies the Bellman equation.",
@@ -427,6 +477,7 @@
    "id": "lecture-rl-fixture-2",
    "inDegree": 1,
    "label": "lecture-rl-fixture-2",
+   "layer": "source",
    "outDegree": 0,
    "path": "wiki/lecture-rl-fixture-2.md",
    "preview": "Topic: Main result: Policy iteration converges in finitely many steps.",
@@ -451,6 +502,7 @@
    "id": "noise-stability",
    "inDegree": 2,
    "label": "noise-stability",
+   "layer": "concept",
    "outDegree": 1,
    "path": "wiki/noise-stability.md",
    "preview": "One-liner: Correlation of a function with its noisy copy.",
@@ -460,19 +512,20 @@
     "links_out": "1",
     "slug": "noise-stability",
     "status": "seed",
-    "type": "concept"
+    "type": "idea"
    },
    "status": "seed",
    "title": "Noise stability",
-   "type": "concept",
+   "type": "idea",
    "year": null
   },
   {
    "areas": [],
-   "depth": "catalog",
+   "depth": "listed",
    "id": "paper-2019-fixture-book",
    "inDegree": 0,
    "label": "paper-2019-fixture-book",
+   "layer": "source",
    "outDegree": 0,
    "path": "wiki/paper-2019-fixture-book.md",
    "preview": "Problem: Main result:",
@@ -498,6 +551,7 @@
    "id": "paper-2020-local-fixture-paper",
    "inDegree": 2,
    "label": "paper-2020-local-fixture-paper",
+   "layer": "source",
    "outDegree": 2,
    "path": "wiki/paper-2020-local-fixture-paper.md",
    "preview": "Problem: Bound the fixture risk of a linear model. Main result: The fixture risk is bounded by the complexity term.",
@@ -525,6 +579,7 @@
    "id": "paper-2021-arxiv-style-fixture",
    "inDegree": 1,
    "label": "paper-2021-arxiv-style-fixture",
+   "layer": "source",
    "outDegree": 2,
    "path": "wiki/paper-2021-arxiv-style-fixture.md",
    "preview": "Problem: Characterise fixture entropy. Main result: Entropy lower-bounds code length.",
@@ -553,6 +608,7 @@
    "id": "part-2019-fixture-book-ch2-concentration",
    "inDegree": 2,
    "label": "part-2019-fixture-book-ch2-concentration",
+   "layer": "source",
    "outDegree": 3,
    "part": {
     "book": "book-2019-fixture-book",
@@ -585,6 +641,7 @@
    "id": "q-does-the-fixture-tail-bound-extend-to-dependent-variables",
    "inDegree": 0,
    "label": "q-does-the-fixture-tail-bound-extend-to-dependent-variables",
+   "layer": "concept",
    "outDegree": 1,
    "path": "wiki/q-does-the-fixture-tail-bound-extend-to-dependent-variables.md",
    "preview": "Question: Does the fixture tail bound extend to dependent variables?",
@@ -610,6 +667,7 @@
    "id": "q-is-the-fixture-bound-tight-for-deep-models",
    "inDegree": 0,
    "label": "q-is-the-fixture-bound-tight-for-deep-models",
+   "layer": "concept",
    "outDegree": 1,
    "path": "wiki/q-is-the-fixture-bound-tight-for-deep-models.md",
    "preview": "Question: Is the fixture bound tight for deep models?",
@@ -635,6 +693,7 @@
    "id": "series-fixture-kalai-blog",
    "inDegree": 0,
    "label": "series-fixture-kalai-blog",
+   "layer": "collection",
    "outDegree": 2,
    "path": "wiki/series-fixture-kalai-blog.md",
    "preview": "A fixture blog series standing in for a WordPress blog of clips. It exists only so the pipeline harness can exercise the Contents table of a series.",
@@ -660,6 +719,7 @@
    "id": "shannon-entropy",
    "inDegree": 2,
    "label": "shannon-entropy",
+   "layer": "concept",
    "outDegree": 1,
    "path": "wiki/shannon-entropy.md",
    "preview": "One-liner: Expected surprise of a random variable.",
@@ -669,11 +729,11 @@
     "links_out": "1",
     "slug": "shannon-entropy",
     "status": "seed",
-    "type": "concept"
+    "type": "idea"
    },
    "status": "seed",
    "title": "Shannon entropy",
-   "type": "concept",
+   "type": "idea",
    "year": null
   },
   {
@@ -682,19 +742,20 @@
    "id": "theme-boolean-analysis",
    "inDegree": 3,
    "label": "theme-boolean-analysis",
+   "layer": "concept",
    "outDegree": 1,
    "path": "wiki/theme-boolean-analysis.md",
-   "preview": "Fixture theme for the pipeline harness.",
+   "preview": "Fixture topic for the pipeline harness.",
    "properties": {
     "links_in": "3",
     "links_out": "1",
     "slug": "theme-boolean-analysis",
     "status": "seed",
-    "type": "theme"
+    "type": "topic"
    },
    "status": "seed",
    "title": "Boolean Analysis",
-   "type": "theme",
+   "type": "topic",
    "year": null
   },
   {
@@ -703,19 +764,20 @@
    "id": "theme-complex-nn",
    "inDegree": 0,
    "label": "theme-complex-nn",
+   "layer": "concept",
    "outDegree": 0,
    "path": "wiki/theme-complex-nn.md",
-   "preview": "Fixture theme for the pipeline harness.",
+   "preview": "Fixture topic for the pipeline harness.",
    "properties": {
     "links_in": "0",
     "links_out": "0",
     "slug": "theme-complex-nn",
     "status": "seed",
-    "type": "theme"
+    "type": "topic"
    },
    "status": "seed",
    "title": "Complex Nn",
-   "type": "theme",
+   "type": "topic",
    "year": null
   },
   {
@@ -724,19 +786,20 @@
    "id": "theme-fourier-analysis",
    "inDegree": 0,
    "label": "theme-fourier-analysis",
+   "layer": "concept",
    "outDegree": 0,
    "path": "wiki/theme-fourier-analysis.md",
-   "preview": "Fixture theme for the pipeline harness.",
+   "preview": "Fixture topic for the pipeline harness.",
    "properties": {
     "links_in": "0",
     "links_out": "0",
     "slug": "theme-fourier-analysis",
     "status": "seed",
-    "type": "theme"
+    "type": "topic"
    },
    "status": "seed",
    "title": "Fourier Analysis",
-   "type": "theme",
+   "type": "topic",
    "year": null
   },
   {
@@ -745,19 +808,20 @@
    "id": "theme-implicit-regularization",
    "inDegree": 0,
    "label": "theme-implicit-regularization",
+   "layer": "concept",
    "outDegree": 0,
    "path": "wiki/theme-implicit-regularization.md",
-   "preview": "Fixture theme for the pipeline harness.",
+   "preview": "Fixture topic for the pipeline harness.",
    "properties": {
     "links_in": "0",
     "links_out": "0",
     "slug": "theme-implicit-regularization",
     "status": "seed",
-    "type": "theme"
+    "type": "topic"
    },
    "status": "seed",
    "title": "Implicit Regularization",
-   "type": "theme",
+   "type": "topic",
    "year": null
   },
   {
@@ -766,19 +830,20 @@
    "id": "theme-info-theory",
    "inDegree": 3,
    "label": "theme-info-theory",
+   "layer": "concept",
    "outDegree": 1,
    "path": "wiki/theme-info-theory.md",
-   "preview": "Fixture theme for the pipeline harness.",
+   "preview": "Fixture topic for the pipeline harness.",
    "properties": {
     "links_in": "3",
     "links_out": "1",
     "slug": "theme-info-theory",
     "status": "seed",
-    "type": "theme"
+    "type": "topic"
    },
    "status": "seed",
    "title": "Info Theory",
-   "type": "theme",
+   "type": "topic",
    "year": null
   },
   {
@@ -787,19 +852,20 @@
    "id": "theme-learning-theory",
    "inDegree": 5,
    "label": "theme-learning-theory",
+   "layer": "concept",
    "outDegree": 3,
    "path": "wiki/theme-learning-theory.md",
-   "preview": "Fixture theme for the pipeline harness.",
+   "preview": "Fixture topic for the pipeline harness.",
    "properties": {
     "links_in": "5",
     "links_out": "3",
     "slug": "theme-learning-theory",
     "status": "seed",
-    "type": "theme"
+    "type": "topic"
    },
    "status": "seed",
    "title": "Learning Theory",
-   "type": "theme",
+   "type": "topic",
    "year": null
   },
   {
@@ -808,19 +874,20 @@
    "id": "theme-optimization-theory",
    "inDegree": 0,
    "label": "theme-optimization-theory",
+   "layer": "concept",
    "outDegree": 0,
    "path": "wiki/theme-optimization-theory.md",
-   "preview": "Fixture theme for the pipeline harness.",
+   "preview": "Fixture topic for the pipeline harness.",
    "properties": {
     "links_in": "0",
     "links_out": "0",
     "slug": "theme-optimization-theory",
     "status": "seed",
-    "type": "theme"
+    "type": "topic"
    },
    "status": "seed",
    "title": "Optimization Theory",
-   "type": "theme",
+   "type": "topic",
    "year": null
   },
   {
@@ -829,19 +896,20 @@
    "id": "theme-quantum",
    "inDegree": 0,
    "label": "theme-quantum",
+   "layer": "concept",
    "outDegree": 0,
    "path": "wiki/theme-quantum.md",
-   "preview": "Fixture theme for the pipeline harness.",
+   "preview": "Fixture topic for the pipeline harness.",
    "properties": {
     "links_in": "0",
     "links_out": "0",
     "slug": "theme-quantum",
     "status": "seed",
-    "type": "theme"
+    "type": "topic"
    },
    "status": "seed",
    "title": "Quantum",
-   "type": "theme",
+   "type": "topic",
    "year": null
   },
   {
@@ -850,19 +918,20 @@
    "id": "theme-statistics",
    "inDegree": 0,
    "label": "theme-statistics",
+   "layer": "concept",
    "outDegree": 0,
    "path": "wiki/theme-statistics.md",
-   "preview": "Fixture theme for the pipeline harness.",
+   "preview": "Fixture topic for the pipeline harness.",
    "properties": {
     "links_in": "0",
     "links_out": "0",
     "slug": "theme-statistics",
     "status": "seed",
-    "type": "theme"
+    "type": "topic"
    },
    "status": "seed",
    "title": "Statistics",
-   "type": "theme",
+   "type": "topic",
    "year": null
   },
   {
@@ -871,19 +940,20 @@
    "id": "theme-tensor-factorization",
    "inDegree": 0,
    "label": "theme-tensor-factorization",
+   "layer": "concept",
    "outDegree": 0,
    "path": "wiki/theme-tensor-factorization.md",
-   "preview": "Fixture theme for the pipeline harness.",
+   "preview": "Fixture topic for the pipeline harness.",
    "properties": {
     "links_in": "0",
     "links_out": "0",
     "slug": "theme-tensor-factorization",
     "status": "seed",
-    "type": "theme"
+    "type": "topic"
    },
    "status": "seed",
    "title": "Tensor Factorization",
-   "type": "theme",
+   "type": "topic",
    "year": null
   },
   {
@@ -894,6 +964,7 @@
    "id": "video-fixture-talk",
    "inDegree": 0,
    "label": "video-fixture-talk",
+   "layer": "source",
    "outDegree": 2,
    "path": "wiki/video-fixture-talk.md",
    "preview": "Problem: What is entropy? Main result: Entropy measures surprise.",
@@ -914,5 +985,305 @@
    "type": "video",
    "year": 2024
   }
- ]
+ ],
+ "schema": {
+  "collection_types": [
+   "book",
+   "course",
+   "notebook",
+   "series"
+  ],
+  "concept_types": [
+   "idea",
+   "person",
+   "question",
+   "topic"
+  ],
+  "default_visible": [
+   "topic",
+   "idea",
+   "question"
+  ],
+  "depth": [
+   "listed",
+   "easy",
+   "full",
+   "deep"
+  ],
+  "dispositions": [
+   "partial",
+   "queued",
+   "sidecar",
+   "skip",
+   "source"
+  ],
+  "layers": [
+   {
+    "color": "#7aa2ff",
+    "id": "concept",
+    "label": "Concepts",
+    "types": [
+     "topic",
+     "idea",
+     "question",
+     "person",
+     "distilled-think"
+    ]
+   },
+   {
+    "color": "#2ac3de",
+    "id": "collection",
+    "label": "Collections",
+    "types": [
+     "course",
+     "series",
+     "book",
+     "notebook",
+     "scope"
+    ]
+   },
+   {
+    "color": "#ff6b7a",
+    "id": "source",
+    "label": "Sources",
+    "types": [
+     "paper",
+     "part",
+     "lecture",
+     "article",
+     "blog-post",
+     "video",
+     "ai-chat",
+     "conversation"
+    ]
+   }
+  ],
+  "source_types": [
+   "ai-chat",
+   "article",
+   "blog-post",
+   "conversation",
+   "lecture",
+   "paper",
+   "part",
+   "video"
+  ],
+  "types": [
+   {
+    "color": "#9ece6a",
+    "id": "topic",
+    "label": "Topic",
+    "layer": "concept",
+    "prefix": "theme-",
+    "statuses": [
+     "growing",
+     "seed",
+     "solid"
+    ]
+   },
+   {
+    "color": "#7aa2ff",
+    "id": "idea",
+    "label": "Idea",
+    "layer": "concept",
+    "prefix": "",
+    "statuses": [
+     "growing",
+     "seed",
+     "solid"
+    ]
+   },
+   {
+    "color": "#f6c177",
+    "id": "question",
+    "label": "Question",
+    "layer": "concept",
+    "prefix": "q-",
+    "statuses": [
+     "open",
+     "partial",
+     "resolved"
+    ]
+   },
+   {
+    "color": "#bb9af7",
+    "id": "person",
+    "label": "Person",
+    "layer": "concept",
+    "prefix": "",
+    "statuses": []
+   },
+   {
+    "color": "#2ac3de",
+    "id": "course",
+    "label": "Course",
+    "layer": "collection",
+    "prefix": "course-",
+    "statuses": [
+     "digested",
+     "reading",
+     "to-read"
+    ]
+   },
+   {
+    "color": "#7dcfff",
+    "id": "series",
+    "label": "Series",
+    "layer": "collection",
+    "prefix": "series-",
+    "statuses": [
+     "digested",
+     "reading",
+     "to-read"
+    ]
+   },
+   {
+    "color": "#d16bd8",
+    "id": "book",
+    "label": "Book",
+    "layer": "collection",
+    "prefix": "book-",
+    "statuses": [
+     "digested",
+     "reading",
+     "to-read"
+    ]
+   },
+   {
+    "color": "#c099ff",
+    "id": "notebook",
+    "label": "Notebook",
+    "layer": "collection",
+    "prefix": "notebook-",
+    "statuses": [
+     "digested",
+     "reading",
+     "to-read"
+    ]
+   },
+   {
+    "color": "#ff6b7a",
+    "id": "paper",
+    "label": "Paper",
+    "layer": "source",
+    "prefix": "paper-",
+    "statuses": [
+     "digested",
+     "reading",
+     "to-read"
+    ]
+   },
+   {
+    "color": "#eab0ee",
+    "id": "part",
+    "label": "Book part",
+    "layer": "source",
+    "prefix": "part-",
+    "statuses": [
+     "digested",
+     "reading",
+     "to-read"
+    ]
+   },
+   {
+    "color": "#ffc777",
+    "id": "lecture",
+    "label": "Lecture",
+    "layer": "source",
+    "prefix": "lecture-",
+    "statuses": [
+     "digested",
+     "reading",
+     "to-read"
+    ]
+   },
+   {
+    "color": "#4fd6be",
+    "id": "article",
+    "label": "Article",
+    "layer": "source",
+    "prefix": "article-",
+    "statuses": [
+     "digested",
+     "reading",
+     "to-read"
+    ]
+   },
+   {
+    "color": "#ff79c6",
+    "id": "blog-post",
+    "label": "Blog post",
+    "layer": "source",
+    "prefix": "blog-",
+    "statuses": [
+     "digested",
+     "reading",
+     "to-read"
+    ]
+   },
+   {
+    "color": "#f7768e",
+    "id": "video",
+    "label": "Video",
+    "layer": "source",
+    "prefix": "video-",
+    "statuses": [
+     "digested",
+     "reading",
+     "to-read"
+    ]
+   },
+   {
+    "color": "#ff9e64",
+    "id": "ai-chat",
+    "label": "AI chat",
+    "layer": "source",
+    "prefix": "chat-",
+    "statuses": [
+     "digested",
+     "reading",
+     "to-read"
+    ]
+   },
+   {
+    "color": "#73daca",
+    "id": "conversation",
+    "label": "Conversation",
+    "layer": "source",
+    "prefix": "conversation-",
+    "statuses": [
+     "digested",
+     "reading",
+     "to-read"
+    ]
+   },
+   {
+    "color": "#e0af68",
+    "id": "distilled-think",
+    "label": "Distilled",
+    "layer": "concept",
+    "prefix": "distilled-think-",
+    "statuses": [
+     "applied",
+     "archived",
+     "review"
+    ]
+   },
+   {
+    "color": "#e6c07b",
+    "id": "scope",
+    "label": "Scope",
+    "layer": "collection",
+    "prefix": "scope-",
+    "statuses": [
+     "active",
+     "parked"
+    ]
+   }
+  ],
+  "version": [
+   1,
+   0
+  ]
+ }
 }

@@ -1,10 +1,11 @@
 ---
 type: conversation
+layer: source
 authors: [Fixture Author]
 year: 2024
 area: [boolean-analysis]
 status: digested
-digestion-status: full
+depth: full
 raw: raw/emails/2024-02-01-fixture-thread-about-a-lemma/thread.md
 citekey: 
 url: 

@@ -1,10 +1,11 @@
 ---
 type: paper
+layer: source
 authors: []
 year: 2019
 area: []
 status: to-read
-digestion-status: catalog
+depth: listed
 raw: raw/printed-docs/2019-fixture-book.pdf
 citekey:
 url: 

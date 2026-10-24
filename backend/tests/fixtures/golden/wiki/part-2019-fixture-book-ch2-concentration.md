@@ -1,11 +1,12 @@
 ---
 type: part
+layer: source
 book: book-2019-fixture-book
 authors: [Fixture Author]
 year: 2019
 area: [learning-theory]
 status: digested
-digestion-status: full
+depth: full
 raw: raw/printed-docs/2019-fixture-book.pdf
 section: Chapter 2. Concentration
 section_pages: 16-30

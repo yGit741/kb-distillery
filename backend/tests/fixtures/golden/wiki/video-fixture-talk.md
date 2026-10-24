@@ -1,10 +1,11 @@
 ---
 type: video
+layer: source
 authors: [Fixture Speaker]
 year: 2024
 area: [info-theory]
 status: digested
-digestion-status: easy
+depth: easy
 raw: none
 url: https://example.org/watch/fixture-talk
 recommended_by: []

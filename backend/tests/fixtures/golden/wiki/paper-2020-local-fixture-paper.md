@@ -1,10 +1,11 @@
 ---
 type: paper
+layer: source
 authors: [Fixture Author]
 year: 2020
 area: [learning-theory]
 status: digested
-digestion-status: full
+depth: full
 raw: raw/printed-docs/2020-local-fixture-paper.pdf
 citekey: 
 url: 

@@ -6,13 +6,13 @@
  "collection_tables_inconsistent_slugs": [],
  "corpus_by_disposition": {
   "asset": 2068,
-  "digested": 1032,
   "dupe": 1,
   "ink": 2,
   "partial": 2,
   "queued": 390,
   "sidecar": 1,
-  "skip": 128
+  "skip": 128,
+  "source": 1032
  },
  "corpus_rows": 3624,
  "dangling_links": 15,
@@ -1162,7 +1162,12 @@
   "yoav-goldberg": "6c12b3e86ed5c046b1f3a3d5694cbd1e74b09ab793e1a568fdd1a4d359722521",
   "yoav-levine": "1e91c7cf5b7ee4e34968d225c411535ffaa979d8a3bfc89a561c015ad5044689"
  },
- "pages_by_type_kind": {
+ "pages_by_layer": {
+  "collection": 15,
+  "concept": 148,
+  "source": 973
+ },
+ "pages_by_type": {
   "collection/book": 2,
   "collection/course": 11,
   "collection/series": 2,
@@ -1182,18 +1187,18 @@
  "raws_cited": 1034,
  "raws_resolvable": 820,
  "raws_unresolvable": 214,
- "share_bytes_estimate": 3386925,
- "sources_by_kind_depth": {
+ "share_bytes_estimate": 3594361,
+ "sources_by_type_depth": {
   "ai-chat:easy": 2,
   "article:deep": 7,
   "article:easy": 668,
   "article:full": 21,
-  "blog-post:catalog": 40,
+  "blog-post:listed": 40,
   "conversation:easy": 13,
-  "paper:catalog": 63,
   "paper:deep": 12,
   "paper:easy": 63,
   "paper:full": 80,
+  "paper:listed": 63,
   "part:full": 4
  }
 }

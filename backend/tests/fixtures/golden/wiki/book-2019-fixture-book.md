@@ -1,5 +1,6 @@
 ---
 type: book
+layer: collection
 authors: [Fixture Author]
 year: 2019
 area: [learning-theory]

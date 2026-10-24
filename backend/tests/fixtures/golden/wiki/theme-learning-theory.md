@@ -1,5 +1,6 @@
 ---
-type: theme
+type: topic
+layer: concept
 status: seed
 aliases: []
 related: []
@@ -9,7 +10,7 @@ related: []
 
 ## Scope
 
-Fixture theme for the pipeline harness.
+Fixture topic for the pipeline harness.
 
 ## Key concepts
 
@@ -19,3 +20,7 @@ Fixture theme for the pipeline harness.
 - [[paper-2020-local-fixture-paper]]
 - [[book-2019-fixture-book]]
 - [[lecture-rl-fixture-1]]
+
+## My notes
+
+<!-- Yours: no tool rewrites this section, and it stays last. -->
