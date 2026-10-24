@@ -61,10 +61,10 @@ python3 -m meta.distill abort my-true-research-start-here
 
 | action | target |
 |--------|--------|
-| `append_threads` | `theme-*` `## Threads` |
-| `append_papers` | `theme-*` `## Papers` |
+| `append_threads` | topic page (`theme-*`) `## Threads` |
+| `append_papers` | topic page (`theme-*`) `## Papers` |
 | `update_section` | q-* section (e.g. Current state) |
-| `append_related` | concept `related:` frontmatter |
+| `append_related` | idea `related:` frontmatter |
 
 ## Agent constraints
 

@@ -21,7 +21,7 @@ description: Catalog a Gemini-style chat export .md from inbox to raw/llm-chats/
 ## Behavior
 
 1. Move `raw/inbox/<name>.md` → `raw/llm-chats/<ascii-slug>.md`
-2. Optional `--collection` → corpus `collection` (+ a Contents row on a course/series hub)
+2. Optional `--collection` → corpus `collection` (+ a Contents row on a course/series collection)
 3. If an existing `wiki/*.md` page's `raw:` equals the old inbox path (a prior hand-digest),
    rewrite that `raw:` line in place to the new path; `status`/content untouched
 4. Lint runs at the end
@@ -31,5 +31,5 @@ This is how `raw/inbox/` drains for chat exports already cited by a digest.
 ## CLI
 
 ```bash
-python3 -m meta.ingest catalog raw/inbox/<chat-export>.md [--collection <hub>]
+python3 -m meta.ingest catalog raw/inbox/<chat-export>.md [--collection <collection>]
 ```

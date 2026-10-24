@@ -1,6 +1,6 @@
 ---
 name: ingest-to-catalog
-description: Move inbox files to raw/ format folders, record collection membership, and create lean paper stubs. Zero LLM. Use for "catalog", "triage inbox", "ingest to catalog". Do NOT read PDFs or digest.
+description: Move inbox files to raw/ format folders, record collection membership, and create Source pages at depth listed (catalog stubs). Zero LLM. Use for "catalog", "triage inbox", "ingest to catalog". Do NOT read PDFs or digest.
 ---
 
 # ingest-to-catalog
@@ -21,8 +21,8 @@ description: Move inbox files to raw/ format folders, record collection membersh
 ## CLI
 
 ```bash
-python3 -m meta.ingest catalog <inbox-path> [--collection <hub|person>] [--format <folder>] [--title T]
-python3 -m meta.ingest drain-inbox [--collection <hub|person>] [--match <name prefix>]
+python3 -m meta.ingest catalog <inbox-path> [--collection <collection|person>] [--format <folder>] [--title T]
+python3 -m meta.ingest drain-inbox [--collection <collection|person>] [--match <name prefix>]
 ```
 
 `--course` is an alias of `--collection`. `--format` overrides detection (e.g. `presentations`
@@ -33,7 +33,7 @@ for a slide-deck PDF). `--title` names the row added to a course/series `## Cont
 | Subskill | Role |
 |----------|------|
 | [detect](detect/SKILL.md) | Inspect file → format folder |
-| [articles](articles/SKILL.md) | typed PDF → `raw/printed-docs/` (+ `paper-` stub if not a course/series member) |
+| [articles](articles/SKILL.md) | typed PDF → `raw/printed-docs/` (+ `paper-` Source page, depth listed, if not a course/series member) |
 | [mail](mail/SKILL.md) | thread bundle → `raw/emails/<YYYY-MM-DD-thread>/` (corpus row only) |
 | [chat](chat/SKILL.md) | Gemini-style `.md` export → `raw/llm-chats/` (corpus row only) |
 | [notes](notes/SKILL.md) | ink-only PDF → `raw/handwritten/` (corpus row only) |
@@ -45,13 +45,13 @@ for a slide-deck PDF). `--title` names the row added to a course/series `## Cont
 
 - Every format: the file lands flat in `raw/<format>/` and gets a `meta/corpus.tsv` row.
 - `--collection <course-|series->`: corpus `collection` set **and** a `—` row appended to the
-  hub's `## Contents` table. Other members are renamed `<short>-<topic>.<ext>` (hub `short:`).
+  collection's `## Contents` table. Other members are renamed `<short>-<topic>.<ext>` (collection `short:`).
 - `--collection <book-|person>`: corpus `collection` cell only (person = researcher bibliography).
 - An image named `<clip stem>-NN.<ext>` whose clip is in the inbox or `raw/web-clips/` is that clip's figure:
-  it goes to `raw/images/` with no collection and lint binds it as `asset:<clip>` (never backlog, never a hub row).
+  it goes to `raw/images/` with no collection and lint binds it as `asset:<clip>` (never backlog, never a collection row).
   `drain-inbox` catalogs clips before figures and lints once at the end.
-- A paper gets a `wiki/paper-<year>-<title>.md` stub and a tagged blog post a `blog-…` page, both
-  `digestion-status: catalog`, `status: to-read`. Emails, chats, handwriting and slides stay corpus
+- A paper gets a `wiki/paper-<year>-<title>.md` Source page and a tagged blog post a `blog-…` page, both
+  `layer: source`, `depth: listed`, `status: to-read` (Catalog creates the Source page; Digest deepens it). Emails, chats, handwriting and slides stay corpus
   rows until digested. Every outcome (success or refusal + reason) is logged in `meta/.catalog/`.
 
 - An `arxiv-*.pdf` scrape whose arXiv metadata cannot be fetched (rate limit, outage) is **refused**

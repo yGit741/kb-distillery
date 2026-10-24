@@ -13,11 +13,11 @@ description: Catalog slide decks from inbox to raw/presentations/. Corpus row on
 
 ## Do NOT
 
-- Digest from here — a digested deck becomes a `lecture-` page via `full-digest <hub> --row N`
+- Digest from here — a digested deck becomes a `lecture-` page via `full-digest <collection> --row N`
 
 ## Behavior
 
-1. Move to `raw/presentations/<short>-<topic>.<ext>` (`short` = the collection hub's `short:`)
+1. Move to `raw/presentations/<short>-<topic>.<ext>` (`short` = the collection's `short:`)
 2. Corpus row; with a course/series collection, a `—` Contents row is appended (`--title`)
 
 ## CLI

@@ -2,7 +2,7 @@
 name: wiki-edit
 description: >-
   Wrap free-form wiki edits (split, merge, rename, refine, file-back answers) in an ops session so they
-  become one undoable kb(refine) commit. Use for split concept, merge notes, rename note, edit wiki, file back.
+  become one undoable kb(refine) commit. Use for split idea, merge notes, rename note, edit wiki, file back.
   Do NOT use inside full/deep-digest sessions (use draft + finalize) or for think/.
 ---
 
@@ -12,7 +12,7 @@ description: >-
 
 ## Triggers
 
-- `split <concept>`, `merge <notes>`, `rename <note>`, `edit wiki`, `refine <slug>`
+- `split <idea>`, `merge <notes>`, `rename <note>`, `edit wiki`, `refine <slug>`
 - Any agent edit to `wiki/` outside a digest/distill CLI — including `semantic-lint-hop` fixes and `query-knowledge` file-backs
 
 ## Do NOT
@@ -33,8 +33,8 @@ pixi run ops -- status
 ## Agent steps
 
 1. `pixi run ops -- begin refine <slug> "<why, one line>"` — op is usually `refine` (`digest`/`catalog` also allowed).
-2. Make the edits in `wiki/` (guard warns on wiki writes without an open session; strict mode blocks them).
-3. `pixi run ops -- commit` — lints, then commits only the files changed since `begin` as `kb(refine): <why> (kb-x.y.z)`.
+2. Make the edits in `wiki/` — never inside a page's `## My notes` section, which is the user's (guard warns on wiki writes without an open session; strict mode blocks them).
+3. `pixi run ops -- commit` — lints, then commits only the files changed since `begin` as `kb(refine): <why> (kb-x.y.z)`. Write the why as intent in words (≤ 72 chars, e.g. "link the Chiang 2023 page where it was named"), not a slug — the pages touched are listed in the commit body automatically.
 4. Report the version printed by the commit.
 
 ## Output

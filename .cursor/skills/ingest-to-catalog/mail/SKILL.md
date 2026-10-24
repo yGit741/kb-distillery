@@ -22,11 +22,11 @@ description: Catalog a raw/inbox/mail-.../ thread bundle to raw/emails/ as a cor
 1. Move `raw/inbox/mail-<YYYY-MM-DD-thread>/` → `raw/emails/<YYYY-MM-DD-thread>/` (folder stays
    intact: `thread.md` + flat attachments). `emails/` is the only nested raw folder.
 2. Optional `--collection` → corpus `collection` on `thread.md` (+ a Contents row on a
-   course/series hub)
+   course/series collection)
 3. Lint runs at the end
 
 ## CLI
 
 ```bash
-python3 -m meta.ingest catalog raw/inbox/mail-<dir> [--collection <hub|person>]
+python3 -m meta.ingest catalog raw/inbox/mail-<dir> [--collection <collection|person>]
 ```

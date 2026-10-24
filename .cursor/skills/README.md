@@ -11,20 +11,21 @@ Read `meta/skills/<skill>/SKILL.md` before running a workflow.
 | `scrap-data` | none | 0 | yes |
 | `ingest-to-catalog` | none | 0 | yes |
 | `export-kb` | none | 0 | `export-kb`, `export kb`, `share kb` |
-| `easy-digest` | light | ~2–4k | only on `easy-digest` / `easy digest` / `skim` |
+| `easy-digest` | light (Haiku; ~5% Sonnet spot-check) | ~2–4k | only on `easy-digest` / `easy digest` / `skim` |
 | `full-digest` | medium | ~8–12k | only on `full-digest` / `full digest` |
 | `deep-digest` | heavy | ~25–40k+ | only on `deep-digest` + user confirms heavy |
 | `distill-think` | medium | ~8–12k propose | `distill-think`, `distill think`, `graph brief` |
 | `query-knowledge` | light | ~3–15k | `query-knowledge`, `query-kb`, `query kb`, `what do I know about` |
 | `explore-raw-data` | light | ~2–6k | `explore-raw-data`, `explore raw`, `which sources do I have on …`, `is this paper worth digesting` |
 | `semantic-lint-hop` | light–medium | ~3–12k | after full/deep digest or distill apply |
-| `lint-moc` | medium | ~8–20k | `lint-moc`, `lint moc` |
+| `lint-moc` | medium | ~8–20k | `lint-moc`, `lint moc`, `lint topic` (topic audit) |
 | `build-researcher-profile` | light | ~3–8k verify | `build researcher profile`, `index researcher` |
 | `wiki-edit` | none | 0 | any free-form wiki edit (split, merge, rename, file-back) |
 | `kb-history` | none | 0 | `kb history`, `kb status`, `what changed` |
 | `kb-undo` | none | 0 | only when the user asks to undo a step |
 | `kb-snapshot` | none | 0 | `snapshot`; restore only when the user asks |
 | `infra-pr` | none | 0 | only when the user asks to ship / open / merge a PR |
+| `app-ui` | none | 0 | `port the <screen>`, `add a screen`, `frontend`, `app shell` |
 | `share-kb` | none | 0 | `share the site`, `publish`, `deploy main`, `rollback the site`, `deploy status` (not `export-kb`) |
 
 ## Trigger rules
@@ -40,15 +41,15 @@ Read `meta/skills/<skill>/SKILL.md` before running a workflow.
 |-------|---------|
 | [export-kb](export-kb/SKILL.md) | Zip wiki + think for external LLM sharing (0 LLM) |
 | [scrap-data](scrap-data/SKILL.md) | Save bytes to `raw/inbox/` (0 LLM) |
-| [ingest-to-catalog](ingest-to-catalog/SKILL.md) | Route inbox → `raw/<format>/` + corpus `collection` (+ `paper-` stub) (0 LLM) |
-| [easy-digest](easy-digest/SKILL.md) | Abstract/metadata skim (light) |
-| [full-digest](full-digest/SKILL.md) | Standard note — paper, book part, or course/series row (medium) |
-| [deep-digest](deep-digest/SKILL.md) | Thesis-critical + neighbors (heavy, explicit only) |
+| [ingest-to-catalog](ingest-to-catalog/SKILL.md) | Route inbox → `raw/<format>/` + corpus `collection` (+ `paper-` Source page at depth listed) (0 LLM) |
+| [easy-digest](easy-digest/SKILL.md) | Abstract/metadata skim → depth easy (light, Haiku) |
+| [full-digest](full-digest/SKILL.md) | Full note with Key equations → depth full — paper, book part, or course/series row (medium) |
+| [deep-digest](deep-digest/SKILL.md) | Thesis-critical + neighbors → depth deep (heavy, explicit only) |
 | [distill-think](distill-think/SKILL.md) | Propose/apply from `think/` → transient `distilled-think-*` (medium) |
 | [query-knowledge](query-knowledge/SKILL.md) | Answer from wiki — index-first, citations, optional file-back |
 | [explore-raw-data](explore-raw-data/SKILL.md) | Look at cataloged raw sources (0 LLM CLI): find, read, check against pages, recommend a digest tier |
 | [semantic-lint-hop](semantic-lint-hop/SKILL.md) | 1-hop review after ingest/distill — fix internal, note external on Connections |
-| [lint-moc](lint-moc/SKILL.md) | On-demand semantic pass over one `theme-` page |
+| [lint-moc](lint-moc/SKILL.md) | Topic audit: on-demand semantic pass over one topic page (`theme-*`) |
 | [build-researcher-profile](build-researcher-profile/SKILL.md) | Index full bib + catalog star papers only (light verify) |
 
 ### Lifecycle skills (git history, versions, PRs)
@@ -71,6 +72,7 @@ Tooling is unversioned and ships as `infra/<feature>` PRs merged as `… (#N)`.
 | Skill | Purpose |
 |-------|---------|
 | [create-skill](create-skill/SKILL.md) | Author new skills; runs through `lint-skills` gate (0 LLM) |
+| [app-ui](app-ui/SKILL.md) | Conventions for building screens in `frontend/` (tokens, palette, data-model words, porting checklist; 0 LLM) |
 
 Template: [`SKILL_TEMPLATE.md`](SKILL_TEMPLATE.md) (not synced to `.cursor/skills/`).
 
@@ -100,22 +102,22 @@ pixi run sync-skills    # fails if lint-skills fails
 python3 -m meta.ingest resolve <url|arxiv|slug|title>  # check vault first (0 LLM)
 python3 -m meta.ingest scrap <url|path> [--type articles|notes|slides|web|blog]
 python3 -m meta.ingest scrap-gdrive --dry-run
-python3 -m meta.ingest scrap-wordpress <site> --prefix <hub short>   # whole WordPress.com blog → inbox
+python3 -m meta.ingest scrap-wordpress <site> --prefix <collection short>   # whole WordPress.com blog → inbox
 python3 -m meta.ingest scrap-mail <mbox-or-eml> [--slug thread-slug] [--force]
-python3 -m meta.ingest catalog <inbox-path> [--collection <hub|person>] [--format <folder>] [--title T]
-python3 -m meta.ingest drain-inbox [--collection <hub|person>]
+python3 -m meta.ingest catalog <inbox-path> [--collection <collection|person>] [--format <folder>] [--title T]
+python3 -m meta.ingest drain-inbox [--collection <collection|person>]
 python3 -m meta.ingest easy-digest <slug|raw>
 python3 -m meta.ingest full-digest <raw>    # begin→extract→map→draft→finalize
-python3 -m meta.ingest full-digest <hub-slug> --row N   # one course/series Contents row
+python3 -m meta.ingest full-digest <collection-slug> --row N   # one course/series Contents row
 python3 -m meta.ingest deep-digest <raw> --confirm-heavy
 python3 -m meta.distill propose <think-file> [--from bootstrap.md]
 python3 -m meta.distill revise <think-file>
 python3 -m meta.distill apply <think-file> [--cleanup]
 python3 meta/query.py candidates "<keywords>"
-python3 meta/query.py mocs                    # theme- entry points
+python3 meta/query.py mocs                    # topic pages (theme-*) as entry points
 python3 meta/coherence.py status
 python3 meta/semfind.py bundle --seeds wiki/foo.md --source manual
-python3 meta/semfind.py theme theme-info-theory   # `moc` alias kept
+python3 meta/semfind.py topic theme-info-theory   # `theme` / `moc` aliases kept
 python3 meta/export.py
 pixi run lint-skills
 pixi run ops -- status
