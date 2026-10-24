@@ -61,8 +61,11 @@ pixi run test-worker                       # node --test of worker/auth.js + adm
 
 Snapshots: `<ref>` is `main`, a commit, `kb-x.y.z` or `x.y.z`; the URL is
 `https://snapshot-<YYYYMMDD>-<name>.yonatan-magen-thesis.workers.dev/` (date = deploy day, UTC).
-Audit flags: person pages, `conversation-` / `ai-chat` pages, e-mail addresses, phone-number
-patterns, `raw/` paths in prose, `distilled-think`. Cloudflare is the registry (`snapshot-`
+Public builds exclude only `distilled-think`, `scope` and anything derived from e-mail (`raw:` under
+`raw/emails/`, i.e. email-thread `conversation-` pages); person pages, LLM chats and ordinary `raw/`
+paths are public (owner decision 2026-10-24: mails involve someone else, chats and profiles do not).
+Audit flags: email-derived pages or `raw/emails/` paths in prose (`email-source`), e-mail addresses,
+phone-number patterns, `distilled-think`. Cloudflare is the registry (`snapshot-`
 prefix + `kb-share` deploy message); credentials come from `CLOUDFLARE_API_TOKEN` or wrangler's
 login. Views show `0*` with a note when analytics is unavailable.
 
