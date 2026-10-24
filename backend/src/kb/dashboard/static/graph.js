@@ -158,6 +158,13 @@
   let snapshot = null;
   let graph = null;
   let hoveredNode = null;
+  // calm hover state (see requestHover)
+  const hoverTuning = { DWELL: 150, SWITCH_DWELL: 80, GRACE: 200, SPEED: 7, FADE_IN: 180, FADE_OUT: 100, HOVER_DIM: 0.35 };
+  const calmOn = () => !!el("calm-hover")?.checked;
+  let pointedNode = null, intentTimer = 0;
+  let prevLabels = new Set();                        // labels drawn before the focus changed: new ones fade in
+  const lastMove = { x: 0, y: 0, t: 0, speed: 0 };   // pointer speed in px per 100 ms
+  document.addEventListener("pointermove", (e) => notePointer(e), { passive: true });
   let selectedNodeIds = new Set();
   let selectedNodes = new Set();
   let visibleNodeIds = new Set();
@@ -927,7 +934,7 @@
   }
 
   function drawPile(node, ctx, globalScale) {
-    const r = pileRadius(node) * (hoveredNode && hoveredNode.id === node.id ? 1.12 : 1);
+    const r = pileRadius(node);
     const gs = globalScale;
     ctx.globalAlpha = 1;
     for (let i = 2; i >= 0; i--) {        // a stack of discs
@@ -1060,9 +1067,7 @@
   }
 
   function nodeDrawRadius(node) {
-    const r = nodeBaseRadius(node);
-    if (hoveredNode && node.id === hoveredNode.id && !isSelected(node)) return r * 1.45;
-    return r;
+    return nodeBaseRadius(node);
   }
 
   function nodeVisualRadius(node) {
@@ -1094,42 +1099,81 @@
     const width = ctx.measureText(text).width;
     const x = node.x - width / 2;
     const y = node.y + (nodeDrawRadius(node) + 2) / globalScale;
+    ctx.globalAlpha = labelAlpha(node.id);
     ctx.fillStyle = cssVar("--graph-label-bg", "rgba(12, 13, 16, 0.72)");
     ctx.fillRect(x - padding, y - fontSize, width + padding * 2, fontSize + padding);
     ctx.fillStyle = cssVar("--graph-label-text", "rgba(236, 239, 244, 0.92)");
     ctx.fillText(text, x, y);
+    ctx.globalAlpha = 1;
   }
 
   // The neighbourhood highlight covers the selection and the hovered node together: a selection keeps
   // its look while the pointer moves on (with the magnetic pointer something is nearly always hovered).
   let focusCore = null;   // selected + hovered ids, or null when nothing is highlighted
   let focusLit = null;    // focusCore + their neighbours
+  let focusDim = 0.12;    // context opacity: light under a hover alone, strong once something is selected
+  // Calm hover: the previous focus is kept so the context cross-fades into the new one (A → B never
+  // flashes back to the unfocused graph); the focus itself switches at once, only the context fades.
+  let prevFocus = null;   // {core, lit, dim, labels} at the moment the focus changed
+  let fadeT = 1, fadeFrom = 0, fadeMs = 0, fadeRaf = 0, focusKey = "";
+  const ease = (t) => 1 - (1 - t) * (1 - t);
   function computeFocus() {
+    const before = { core: focusCore, lit: focusLit, dim: focusDim, labels: prevLabels };
     focusCore = focusLit = null;
-    if (!el("highlight-path").checked || (!hoveredNode && !selectedNodeIds.size)) return;
-    focusCore = new Set(selectedNodeIds);
-    if (hoveredNode) focusCore.add(hoveredNode.id);
-    focusLit = new Set(focusCore);
-    focusCore.forEach((id) => (neighborMap.get(id) || []).forEach((n) => focusLit.add(n)));
+    focusDim = selectedNodeIds.size ? 0.12 : hoverTuning.HOVER_DIM;
+    if (el("highlight-path").checked && (hoveredNode || selectedNodeIds.size)) {
+      focusCore = new Set(selectedNodeIds);
+      if (hoveredNode) focusCore.add(hoveredNode.id);
+      focusLit = new Set(focusCore);
+      focusCore.forEach((id) => (neighborMap.get(id) || []).forEach((n) => focusLit.add(n)));
+    }
+    const key = focusCore ? [...focusCore].sort().join("|") + `@${focusDim}` : "";
+    if (key === focusKey) return;
+    focusKey = key;
+    const still = !calmOn() || matchMedia("(prefers-reduced-motion: reduce)").matches;
+    fadeMs = still ? 0 : focusCore ? hoverTuning.FADE_IN : hoverTuning.FADE_OUT;
+    prevFocus = fadeMs ? before : null;
+    fadeT = fadeMs ? 0 : 1;
+    fadeFrom = performance.now();
+    if (fadeMs && !fadeRaf) fadeRaf = requestAnimationFrame(fadeStep);
+  }
+  function fadeStep() {
+    fadeT = Math.min(1, (performance.now() - fadeFrom) / (fadeMs || 1));
+    if (fadeT >= 1) { fadeRaf = 0; prevFocus = null; prevLabels = new Set(labeledNodeIds); }
+    else fadeRaf = requestAnimationFrame(fadeStep);
+    if (graph && typeof graph.refresh === "function") graph.refresh();
+  }
+  const labelAlpha = (id) => (fadeT >= 1 || prevLabels.has(id) ? 1 : ease(fadeT));
+
+  function focusOpacity(f, node) {
+    if (!f.core || f.core.has(node.id)) return 1;
+    return f.lit.has(node.id) ? 0.95 : f.dim;
   }
 
   function nodeOpacity(node) {
     if (node.pile) return 1;
     if (window.Selection && window.Selection.dims(node)) return 0.12;
-    if (!focusCore) return 1;
-    if (focusCore.has(node.id)) return 1;
-    return focusLit.has(node.id) ? 0.95 : 0.12;
+    const now = focusOpacity({ core: focusCore, lit: focusLit, dim: focusDim }, node);
+    if (!prevFocus || (focusCore && focusLit.has(node.id))) return now;   // the focus shows at once
+    const was = focusOpacity(prevFocus, node);
+    return was + (now - was) * ease(fadeT);
   }
 
   function linkOpacity(link) {
     if (link.kind === "pile-page") return Math.min(0.75, 0.06 + 0.1 * Math.log2(1 + link.count));
     if (link.kind === "pile-pile") return 0.55;
     const base = Number(el("link-opacity").value) * (link.kind === "shared" ? 0.6 : 1);
-    if (!focusCore) return base;
     const s = link.source.id || link.source;
     const t = link.target.id || link.target;
-    if (focusCore.has(s) || focusCore.has(t)) return Math.min(base + 0.35, 0.95);
-    return base * 0.15;
+    const of = (core, dim) => {
+      if (!core) return base;
+      if (core.has(s) || core.has(t)) return Math.min(base + 0.35, 0.95);
+      return base * (dim < 0.2 ? 0.15 : 0.4);
+    };
+    const now = of(focusCore, focusDim);
+    if (!prevFocus) return now;
+    const was = of(prevFocus.core, prevFocus.dim);
+    return was + (now - was) * ease(fadeT);
   }
 
   function drawNode(node, ctx, globalScale) {
@@ -1138,11 +1182,12 @@
     const alpha = nodeOpacity(node);
     const selected = isSelected(node);
 
-    if (selected) {
+    const hovered = !selected && hoveredNode && node.id === hoveredNode.id;
+    if (selected || hovered) {
       ctx.beginPath();
       ctx.arc(node.x, node.y, r + 3 / globalScale, 0, 2 * Math.PI);
-      ctx.strokeStyle = "rgba(122, 162, 255, 0.9)";
-      ctx.lineWidth = 2 / globalScale;
+      ctx.strokeStyle = selected ? "rgba(122, 162, 255, 0.9)" : "rgba(122, 162, 255, 0.6)";
+      ctx.lineWidth = (selected ? 2 : 1.5) / globalScale;
       ctx.stroke();
     }
 
@@ -1163,6 +1208,39 @@
   }
 
   const magnetOn = () => !!el("magnet-pointer")?.checked;
+
+  // Hover intent (calm hover): `pointedNode` follows the pointer at once (cursor, clicks, drags, the magnet
+  // bubble); `hoveredNode` drives the focus and labels and commits only when the pointer settles
+  // (dwell + speed gate, after hoverIntent's 7 px / 100 ms), so a sweep across the graph changes nothing.
+  // Leaving keeps the focus for a short grace, so moving between close nodes cross-fades instead of blinking.
+  function notePointer(e) {
+    const now = performance.now(), dt = now - lastMove.t;
+    const d = Math.hypot(e.clientX - lastMove.x, e.clientY - lastMove.y);
+    lastMove.speed = dt > 0 && dt < 200 ? (d / dt) * 100 : 0;
+    Object.assign(lastMove, { x: e.clientX, y: e.clientY, t: now });
+  }
+  const pointerSpeed = () => (performance.now() - lastMove.t > 100 ? 0 : lastMove.speed);
+  const sameNode = (a, b) => (a && a.id) === (b && b.id);
+  function commitHover(node) {
+    clearTimeout(intentTimer); intentTimer = 0;
+    if (sameNode(node, hoveredNode)) return;
+    prevLabels = new Set(labeledNodeIds);
+    hoveredNode = node || null;
+    computeVisibility();
+    refreshVisuals();
+  }
+  function requestHover(node) {
+    pointedNode = node || null;
+    if (!calmOn()) { commitHover(pointedNode); return; }
+    clearTimeout(intentTimer);
+    if (sameNode(pointedNode, hoveredNode)) { intentTimer = 0; return; }
+    const wait = !pointedNode ? hoverTuning.GRACE : hoveredNode ? hoverTuning.SWITCH_DWELL : hoverTuning.DWELL;
+    const settle = () => {
+      if (pointedNode && pointerSpeed() > hoverTuning.SPEED) { intentTimer = setTimeout(settle, 40); return; }
+      commitHover(pointedNode);
+    };
+    intentTimer = setTimeout(settle, wait);
+  }
   const declutterOn = () => !!el("declutter-labels")?.checked;
 
   // Declutter (experiment): labels go on after every node, most important first, and a label that
@@ -1202,7 +1280,7 @@
       const hit = rank > 0 && ks.some((k) => (grid.get(k) || []).some((q) => box[0] < q[2] && box[2] > q[0] && box[1] < q[3] && box[3] > q[1]));
       if (hit) continue;
       ks.forEach((k) => { if (!grid.has(k)) grid.set(k, []); grid.get(k).push(box); });
-      ctx.globalAlpha = nodeOpacity(n) < 0.5 ? 0.35 : 1;
+      ctx.globalAlpha = (nodeOpacity(n) < 0.5 ? 0.35 : 1) * labelAlpha(n.id);
       ctx.fillStyle = bg;
       ctx.fillRect(box[0], box[1], box[2] - box[0], box[3] - box[1]);
       ctx.fillStyle = fg;
@@ -1500,18 +1578,17 @@
       .nodePointerAreaPaint(paintPointerArea)
       .linkColor(linkColorFn)
       .onNodeHover((node) => {
-        if (magnetOn() && !node) return;                 // a near miss: graph-magnet.js keeps the pulled node
-        hoveredNode = node || null;
         el("graph-root").style.cursor = node ? "pointer" : null;
-        computeVisibility();
-        refreshVisuals();
+        // graph-magnet.js owns the hover while it is on: taking force-graph's pick too would undo its hysteresis
+        if (magnetOn()) return;
+        requestHover(node);
       })
       .onNodeClick(handleNodeClick)
       // a near miss can land on an edge: with the magnet on, that click belongs to the pulled node
-      .onLinkClick((link, ev) => { if (magnetOn() && hoveredNode && !suppressGraphPick && !nodeClickHandled) handleNodeClick(hoveredNode, ev); })
+      .onLinkClick((link, ev) => { if (magnetOn() && pointedNode && !suppressGraphPick && !nodeClickHandled) handleNodeClick(pointedNode, ev); })
       .onBackgroundClick((ev) => {
         if (suppressGraphPick || nodeClickHandled) return;
-        if (magnetOn() && hoveredNode) { handleNodeClick(hoveredNode, ev); return; }   // a near miss clicks the pulled node
+        if (magnetOn() && pointedNode) { handleNodeClick(pointedNode, ev); return; }   // a near miss clicks the pulled node
         if (!ev.shiftKey && !ev.metaKey && !ev.ctrlKey && selectedNodeIds.size) clearSelection();
       })
       .onNodeDrag((node, translate) => {
@@ -1948,13 +2025,13 @@
       const p = graph.graph2ScreenCoords(n.x, n.y), o = rootOffset();
       return { x: p.x + o.x, y: p.y + o.y };
     },
-    hovered: () => hoveredNode,
+    hovered: () => pointedNode,                           // what the pointer is on now (clicks, drags)
+    focused: () => hoveredNode,                           // what the focus shows (after the hover intent)
     setHover: (node) => {                                // graph-magnet.js: the pulled node becomes the hovered one
-      if ((node && node.id) === (hoveredNode && hoveredNode.id)) return;
-      hoveredNode = node || null;
-      computeVisibility();
-      refreshVisuals();
+      if (sameNode(node, pointedNode)) return;
+      requestHover(node);
     },
+    hoverTuning,                                          // console tuning: WikiGraph.hoverTuning.DWELL = 200
     radiusOf: (node) => nodeVisualRadius(node),            // graph units
     labeledIds: () => [...labeledNodeIds],
     opacityOf: (id) => { const n = nodeById(id); return n ? nodeOpacity(n) : null; },
