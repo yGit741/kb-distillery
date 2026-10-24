@@ -668,6 +668,22 @@ def _deploy_state(root):
         return None
 
 
+def _nightly_metrics(root):
+    """Session logs → meta/.ops/metrics, then a copy to D1 when it is configured (kb.metrics).
+    Returns (status, fields) for the run log; never raises — Claude Code deletes old logs, so a
+    missed night only matters when the logs outlive the retention, and they now keep a year."""
+    try:
+        from kb.metrics import d1, sessions, store
+        recs = store.merge_sessions(list(sessions.scan()), root)
+        pushed = None
+        if d1.database_id(root):
+            pushed = d1.push(root) == 0
+        return ("ok" if pushed is not False else "warn"), {"sessions": len(recs), "d1": pushed}
+    except Exception as e:  # noqa: BLE001 — metrics must never fail the sync
+        print(f"note: metrics ingest failed — {type(e).__name__}: {e}")
+        return "warn", {"error": f"{type(e).__name__}: {e}"}
+
+
 def sync_hygiene(root=ROOT, failed=False, error=None, head_before=None, rc=None):
     """Run the hygiene checks + work threads after a nightly sync, mail the nightly report (every
     night in digest mode, else only with findings or a failed / skipped sync) and append the run
@@ -689,6 +705,8 @@ def sync_hygiene(root=ROOT, failed=False, error=None, head_before=None, rc=None)
         print(report.text())
         run.step("hygiene", "error" if report.errors else "warn" if report.findings else "ok",
                  checks=len(report.checks), elapsed=round(report.elapsed, 2))
+        m_status, m_fields = _nightly_metrics(root)
+        run.step("metrics", m_status, **m_fields)
         tail = notify.log_tail(NIGHTLY_LOG) if (failed or error) else None
         doc, threads = None, []
         try:

@@ -22,8 +22,9 @@ previous version stays on Cloudflare — `history <name>` lists them with their 
 snapshot was updated.
 
 `audit` scans the data embedded in the public build (`<script id="kb-data">`): page counts by
-type, and flags person pages, `conversation-` / `ai-chat` pages, email addresses, phone-number
-patterns, `raw/` paths in prose and any `distilled-think` page. `snapshot` runs it first and
+type, and flags email-derived pages (a `raw:` or prose path under `raw/emails/`), email addresses and
+phone-number patterns in text (third parties), and any `distilled-think` page. Person pages, LLM chats
+and ordinary `raw/` paths are public and not flagged. `snapshot` runs it first and
 refuses on flags unless `--allow-flags`.
 
 Cloudflare goes through `kb.share.cf_api` (mockable seams); the upload reuses
@@ -40,16 +41,16 @@ from typing import Optional
 
 from kb.share import cf_api
 from kb.share.contracts import (ACCOUNT_SUBDOMAIN, CACHE_DIR, DEPLOY_MESSAGE_PREFIX, REPO, SNAPSHOT_PREFIX,
-                                  WORKER_MAIN, snapshot_worker_name)
+                                  WORKER_MAIN, raw_is_email, snapshot_worker_name)
 
 MANIFEST_TIMEOUT = 10
 _DATA_RE = re.compile(r'<script type="application/json" id="kb-data">(.*?)</script>', re.S)
 _SNAPSHOT_RE = re.compile(rf"^{re.escape(SNAPSHOT_PREFIX)}(?P<date>\d{{8}})-(?P<name>[a-z0-9]([a-z0-9-]*[a-z0-9])?)$")
 _EMAIL_RE = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+")
 _PHONE_RE = re.compile(r"(?<![\w/-])(?<!\d\.)(?:\+\d{1,3}[\s.-]?)?(?:\(\d{2,4}\)|\d{2,4})[\s.-]\d{3}[\s.-]?\d{4}(?!\w|[./-]\d)")
-_RAW_RE = re.compile(r"(?<![\w/])raw/(?:inbox|papers|slides|notes|mail|web|assets|chats|printed-docs|handwritten|presentations|llm-chats|emails|web-clips|images)(?:/[^\s`'\")\]]*)?")
-_CHAT_RE = re.compile(r"(?:^|-)(?:conversation|ai-chat)(?:-|$)")
-FLAG_KINDS = ("person", "chat", "email", "phone", "raw-path", "distilled-think")
+# Only raw/emails/ paths are sensitive in prose (other raw/ paths are the owner's own sources).
+_RAW_EMAIL_RE = re.compile(r"(?<![\w/])raw/emails/[^\s`'\")\]]*")
+FLAG_KINDS = ("email-source", "email", "phone", "distilled-think")
 
 
 # ---------- audit ----------
@@ -88,19 +89,19 @@ def scan(data: dict) -> dict:
         card = cards.get(slug) or page.get("card") or {}
         ptype = card.get("type") or nodes.get(slug, {}).get("type") or "unknown"
         counts[ptype] += 1
-        if ptype == "person":
-            flag("person", slug, "person page")
         if ptype == "distilled-think":
             flag("distilled-think", slug, "distilled-think page survived the public profile")
-        if _CHAT_RE.search(slug) or ptype in ("conversation", "ai-chat"):
-            flag("chat", slug, "conversation / ai-chat page")
+        # Email-derived pages must have been dropped by the build (which also strips `raw:`); if one is still
+        # visible here, by its `raw:` or by a raw/emails/ path in its text, it slipped through.
+        if raw_is_email((page.get("frontmatter") or {}).get("raw")) or raw_is_email((nodes.get(slug, {}).get("properties") or {}).get("raw")):
+            flag("email-source", slug, "page derived from raw/emails/")
         text = "\n".join(_texts(page))
         for found in sorted(set(_EMAIL_RE.findall(text))):
             flag("email", slug, found)
         for found in sorted(set(m.group(0).strip() for m in _PHONE_RE.finditer(text))):
             flag("phone", slug, found)
-        for found in sorted(set(_RAW_RE.findall(text))):
-            flag("raw-path", slug, found)
+        for found in sorted(set(_RAW_EMAIL_RE.findall(text))):
+            flag("email-source", slug, found)
     return {"counts": dict(sorted(counts.items())), "flags": flags, "pages": len(slugs)}
 
 

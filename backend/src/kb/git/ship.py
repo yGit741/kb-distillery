@@ -3,8 +3,9 @@
 
     python3 -m kb.git.ship start <feature> [--worktree]   # name the branch infra/<feature>
     python3 -m kb.git.ship commit "feat(scope): msg"      # policy → gates → commit tooling paths
-    python3 -m kb.git.ship pr [--title "..."]             # gates → push → gh pr create (idempotent)
+    python3 -m kb.git.ship pr [--title "..."] [--hold]    # gates → push → gh pr create (idempotent)
     python3 -m kb.git.ship merge                          # sync main → gates → merge commit "<title> (#N)"
+    python3 -m kb.git.ship approve N                      # USER ONLY: lift the hold on PR #N
     python3 -m kb.git.ship merge --local --pr N           # offline: git merge --no-ff into main
     python3 -m kb.git.ship status                         # pending changes grouped by lane
     python3 -m kb.git.ship prune [--apply]                # delete merged infra/* / worktree-* branches + their clean worktrees
@@ -16,6 +17,11 @@ worktrees, open PRs and the nightly sync, `prune` only ever deletes what is merg
 
 Legacy (bootstrap only; refused once GIT_POLICY_MODE=enforce):
     python3 -m kb.git.ship "feat(dashboard): launch command" [--dry-run] [--no-push] [--skip-tests]
+
+Merging is the agent's default: `merge` runs as soon as the gates pass. A PR carrying the
+`hold` label waits for the user — `pr` puts it on every schema/paradigm PR and on any PR
+opened with `--hold` (the user asked to review it); `merge` refuses while it is there, and only
+`approve N` lifts it. `kb.git.git_guard` blocks agents from running `approve` or editing labels.
 
 PRs are always merged with a real merge commit — never squash or rebase — so the
 branch's commits stay visible. Schema/paradigm PRs snapshot the current knowledge
@@ -42,7 +48,7 @@ GATES = [
     ("lint-skills", [sys.executable, "-m", "kb.lint.lint_skills"]),
     ("lint", [sys.executable, "-m", "kb.lint.lint"]),
 ]
-SUBCOMMANDS = {"start", "commit", "pr", "merge", "sync", "status", "prune", "protect"}
+SUBCOMMANDS = {"start", "commit", "pr", "merge", "sync", "status", "prune", "protect", "approve"}
 GENERATED_FILES = {"index.md", "meta/corpus.tsv", "meta/coherence-warnings.tsv"}
 MIGRATED_GENERATED = {"meta/corpus.tsv"}   # a migration's output: committed by schema/paradigm commits
 FEATURE_RE = re.compile(r"^[a-z0-9][a-z0-9-]*$")
@@ -475,6 +481,17 @@ def pr_body(subjects, notes=""):
     return "\n".join(lines) + "\n"
 
 
+HOLD_LABEL = "hold"
+
+
+def _hold_reason(subjects, hold=False):
+    """Why a new PR must wait for the user, or None when the agent may merge it itself."""
+    kind = _schema_kind(subjects)
+    if kind:
+        return f"{kind} PR (migration + version bump)"
+    return "opened with --hold" if hold else None
+
+
 def _read_notes(path):
     """`ship pr --notes FILE`: findings, proofs and caveats appended to the PR body as ## Notes."""
     if not path:
@@ -483,7 +500,7 @@ def _read_notes(path):
         return f.read()
 
 
-def cmd_pr(title=None, skip_tests=False, root=ROOT, gates=True, notes_file=None):
+def cmd_pr(title=None, skip_tests=False, root=ROOT, gates=True, notes_file=None, hold=False):
     branch = current_branch(root)
     if not branch.startswith("infra/"):
         print(f"error: ship pr runs on an infra/<feature> branch (current: {branch or 'detached'})")
@@ -507,15 +524,36 @@ def cmd_pr(title=None, skip_tests=False, root=ROOT, gates=True, notes_file=None)
     print(_out(push))
     if push.returncode != 0:
         return 1
+    why = _hold_reason(subjects + [title], hold)
     existing = gh(["pr", "view", branch, "--json", "number,url"], root)
     if existing.returncode == 0 and existing.stdout.strip():
         info = json.loads(existing.stdout)
         print(f"PR #{info['number']} already open: {info['url']} (pushed new commits)")
+        if why:
+            gh(["pr", "edit", branch, "--add-label", HOLD_LABEL], root)
+            print(f"held for the user: {why}")
         return 0
-    created = gh(["pr", "create", "--base", "main", "--head", branch,
-                  "--title", title, "--body", pr_body(subjects, _read_notes(notes_file))], root)
+    args = ["pr", "create", "--base", "main", "--head", branch,
+            "--title", title, "--body", pr_body(subjects, _read_notes(notes_file))]
+    if why:
+        gh(["label", "create", HOLD_LABEL, "--force", "--color", "B60205",
+            "--description", "waits for the user's approval (pixi run ship -- approve N)"], root)
+        args += ["--label", HOLD_LABEL]
+    created = gh(args, root)
     print(_out(created))
+    if created.returncode == 0:
+        print(f"held for the user: {why} — they lift it with: pixi run ship -- approve N" if why
+              else "not held: run `pixi run ship -- merge` yourself once you are done")
     return created.returncode
+
+
+def cmd_approve(number, root=ROOT):
+    """The user's word, as a command: lift the hold so an agent's `ship merge` may proceed."""
+    cp = gh(["pr", "edit", str(number), "--remove-label", HOLD_LABEL], root)
+    print(_out(cp))
+    if cp.returncode == 0:
+        print(f"PR #{number} approved — `pixi run ship -- merge` on its branch will now merge it")
+    return cp.returncode
 
 
 def cmd_sync(cont=False, abort=False, root=ROOT, gates=True):
@@ -650,7 +688,7 @@ def cmd_merge(local=False, pr_number=None, title=None, skip_tests=False, no_push
     else:
         if not no_push:
             run_git(["push", "-u", "origin", branch], cwd=root)
-        view = gh(["pr", "view", branch, "--json", "number,title,state"], root)
+        view = gh(["pr", "view", branch, "--json", "number,title,state,labels"], root)
         if view.returncode != 0:
             print("error: no PR for this branch — run ship pr first")
             print(_out(view))
@@ -658,6 +696,10 @@ def cmd_merge(local=False, pr_number=None, title=None, skip_tests=False, no_push
         info = json.loads(view.stdout)
         if info.get("state") not in (None, "OPEN"):
             print(f"error: PR #{info['number']} is {info['state']}")
+            return 1
+        if HOLD_LABEL in {l.get("name") for l in info.get("labels") or []}:
+            print(f"error: PR #{info['number']} is held for the user's approval — ask them to run: "
+                  f"pixi run ship -- approve {info['number']}")
             return 1
         pr_number, title = info["number"], title or info["title"]
 
@@ -861,6 +903,9 @@ def main(argv=None):
     r.add_argument("--title")
     r.add_argument("--skip-tests", action="store_true")
     r.add_argument("--notes", metavar="FILE", help="markdown appended to the PR body as ## Notes")
+    r.add_argument("--hold", action="store_true", help="the user wants to review it: merge waits for `approve`")
+    ap = sub.add_parser("approve", help="USER ONLY: lift the hold on PR N (agents are blocked by git_guard)")
+    ap.add_argument("number", type=int)
     m = sub.add_parser("merge")
     m.add_argument("--local", action="store_true", help="merge --no-ff into main without GitHub")
     m.add_argument("--pr", type=int, help="PR number (required with --local)")
@@ -891,7 +936,9 @@ def main(argv=None):
     if args.cmd == "commit":
         return cmd_commit(args.message, args.skip_tests)
     if args.cmd == "pr":
-        return cmd_pr(args.title, args.skip_tests, notes_file=args.notes)
+        return cmd_pr(args.title, args.skip_tests, notes_file=args.notes, hold=args.hold)
+    if args.cmd == "approve":
+        return cmd_approve(args.number)
     return cmd_merge(args.local, args.pr, args.title, args.skip_tests, args.no_push)
 
 

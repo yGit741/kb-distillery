@@ -423,7 +423,7 @@ def rollback(worker: str, to: Optional[str] = None, *, require_access: bool = Tr
 
 # ---------- CLI ----------
 
-def deploy_main(force: bool = False, dry_run: bool = False, build_dir=None, app: bool = False, **seams) -> DeployResult:
+def deploy_main(force: bool = False, dry_run: bool = False, build_dir=None, app: bool = True, **seams) -> DeployResult:
     """Build main (private profile) and deploy it to the live Worker; `build_dir` skips the build."""
     status = status_file()
     if build_dir is None:
@@ -444,13 +444,13 @@ def cmd_deploy_main(args) -> int:
         pending_path().touch()
         print("another deploy is running — marked pending, it will rerun once")
         return 0
-    result = deploy_main(force=args.force, dry_run=args.dry_run, build_dir=getattr(args, "dir", None),
-                         **({"app": True} if getattr(args, "app", False) else {}))
+    app = not getattr(args, "legacy", False)
+    result = deploy_main(force=args.force, dry_run=args.dry_run, build_dir=getattr(args, "dir", None), app=app)
     print(_describe(result))
     if not args.dry_run and pending_path().exists():  # debounce: triggers that arrived meanwhile → one rerun
         pending_path().unlink()
         log("pending trigger found — rerunning deploy-main once")
-        result = deploy_main(force=args.force)
+        result = deploy_main(force=args.force, app=app)
         print(_describe(result))
     return deploy_main_exit_code(result.state)
 
@@ -542,7 +542,9 @@ def register(subparsers) -> None:
     p.add_argument("--force", action="store_true", help="skip the same/older guard (manual use only)")
     p.add_argument("--dry-run", action="store_true", help="render the Worker dir and print the wrangler command")
     p.add_argument("--dir", default=None, help="deploy an existing build dir (index.html + manifest.json) instead of building")
-    p.add_argument("--app", action="store_true", help="opt in: build main with the React-app layout instead of the iframe shell")
+    p.add_argument("--app", action="store_true", help="the React-app layout (the default; kept for old scripts)")
+    p.add_argument("--legacy", action="store_true",
+                   help="build the old iframe shell instead of the React app (after switching layout at the same sha, add --force)")
     p.set_defaults(func=cmd_deploy_main)
     s = subparsers.add_parser("status", help="last deploy outcome")
     s.set_defaults(func=cmd_status)

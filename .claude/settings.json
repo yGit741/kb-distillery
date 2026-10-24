@@ -32,5 +32,11 @@
         ]
       }
     ]
+  },
+  "permissions": {
+    "allow": [
+      "Bash(pixi run ship -- merge)",
+      "Bash(pixi run ship -- merge:*)"
+    ]
   }
 }

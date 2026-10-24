@@ -52,7 +52,6 @@ COHERENCE_PATH = vpath("meta", "coherence-warnings.tsv")
 RAW_RENAMES_PATH = vpath("meta", "raw-renames.tsv")
 CHATS_PATH = vpath("meta", "chats")
 TEMPLATES_PATH = vpath("meta", "templates")
-MIGRATION_PATH = vpath("meta", "migration")                 # data-model migration inputs (collections.tsv, ...)
 MIGRATIONS_APPLIED_PATH = vpath("meta", "migrations", "applied.tsv")
 
 # --- runtime state (gitignored) -------------------------------------------------------------------------
