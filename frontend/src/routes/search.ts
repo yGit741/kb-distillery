@@ -16,7 +16,7 @@ const oneOf = <T extends string>(v: unknown, allowed: readonly T[]): T | undefin
   return s && (allowed as readonly string[]).includes(s) ? (s as T) : undefined;
 };
 
-export type ChatSearch = { session?: string; scope?: string };
+export type ChatSearch = { session?: string; scope?: string; q?: string };
 export type PagesSearch = { q?: string; layer?: string; type?: string; status?: string; area?: string };
 export type GraphSearch = { select?: string; focus?: string; scope?: string; layer?: string; raw?: "1" };
 export type ScopesSearch = { scope?: string; draft?: string };
@@ -41,7 +41,7 @@ export const SEARCH: { [K in keyof SearchById]: (raw: Raw) => SearchById[K] } = 
   home: () => ({}),
   ops: () => ({}),
   lifecycle: () => ({}),
-  chat: (r) => clean({ session: str(r.session), scope: str(r.scope) }),
+  chat: (r) => clean({ session: str(r.session), scope: str(r.scope), q: str(r.q) }),
   pages: (r) =>
     clean({ q: str(r.q), layer: str(r.layer), type: str(r.type), status: str(r.status), area: str(r.area) }),
   graph: (r) =>
