@@ -1,28 +1,38 @@
 /**
  * The route registry: ONE list drives the top nav, the ⌘K palette and the router.
- * `legacy` is the real path of the server-rendered page (meta/dashboard/serve.py), reached under
- * /legacy/... until the screen is ported. Order = meta/dashboard/shell.py TABS (Explore -> Pages).
+ *
+ * Convention (no edits here to add a screen): a folder `src/features/<route id>/index.tsx` whose
+ * default export is the screen component. It may also `export const ported = true` once it replaces
+ * the legacy page (the palette then stops offering "Open legacy …"). Route ids and search schemas
+ * live in defs.ts / search.ts; routes without a folder fall back to a legacy card.
  */
-export interface RouteDef {
-  id: string;
-  path: string; // SPA path
-  label: string;
-  legacy: string; // legacy path on the stdlib dashboard
-  ported: boolean;
-  blurb: string;
+import type { ComponentType } from "react";
+import { ROUTE_DEFS, legacyHref, type RouteDef } from "./defs";
+
+export { legacyHref };
+export type { RouteDef };
+
+interface FeatureModule {
+  default: ComponentType;
+  ported?: boolean;
 }
 
-export const ROUTES: readonly RouteDef[] = [
-  { id: "home", path: "/", label: "Home", legacy: "/", ported: false, blurb: "Health, start page and recent activity." },
-  { id: "graph", path: "/graph", label: "Graph", legacy: "/graph", ported: false, blurb: "Force-directed explorer of the whole vault." },
-  { id: "pages", path: "/pages", label: "Pages", legacy: "/explore", ported: false, blurb: "Read, search and trace notes (the Explore tab)." },
-  { id: "chat", path: "/chat", label: "Chat", legacy: "/chat", ported: false, blurb: "Read-only research agent over the wiki." },
-  { id: "scopes", path: "/scopes", label: "Scopes", legacy: "/scopes", ported: false, blurb: "Named subsets of the vault for focused work." },
-  { id: "pipeline", path: "/pipeline", label: "Pipeline", legacy: "/pipeline", ported: false, blurb: "Ingest and digestion status of every raw file." },
-  { id: "ops", path: "/ops", label: "Ops", legacy: "/ops", ported: false, blurb: "Nightly sync, hygiene checks and report." },
-  { id: "lifecycle", path: "/lifecycle", label: "Lifecycle", legacy: "/lifecycle", ported: true, blurb: "Versions, history, snapshots and working state." },
-];
+const modules = import.meta.glob<FeatureModule>("../features/*/index.tsx", { eager: true });
 
-export const legacyHref = (r: RouteDef): string => `/legacy${r.legacy === "/" ? "" : r.legacy}`;
+const byId = new Map<string, FeatureModule>();
+for (const [file, mod] of Object.entries(modules)) {
+  const id = /features\/([^/]+)\/index\.tsx$/.exec(file)?.[1];
+  if (id) byId.set(id, mod);
+}
 
-export const routeById = (id: string): RouteDef | undefined => ROUTES.find((r) => r.id === id);
+export interface Route extends RouteDef {
+  ported: boolean;
+  Screen?: ComponentType;
+}
+
+export const ROUTES: readonly Route[] = ROUTE_DEFS.map((d) => {
+  const mod = byId.get(d.id);
+  return { ...d, ported: mod?.ported === true, Screen: mod?.default };
+});
+
+export const routeById = (id: string): Route | undefined => ROUTES.find((r) => r.id === id);

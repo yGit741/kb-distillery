@@ -1,12 +1,13 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider } from "@tanstack/react-query";
 import { RouterProvider } from "@tanstack/react-router";
 import { useState } from "react";
 import { DataSourceProvider, defaultDataSource, type DataSource } from "@/api";
+import { createQueryClient } from "@/lib/query";
 import { createAppRouter } from "./router";
 
 export function App({ source, router }: { source?: DataSource; router?: ReturnType<typeof createAppRouter> }) {
   const [ds] = useState(() => source ?? defaultDataSource());
-  const [client] = useState(() => new QueryClient({ defaultOptions: { queries: { staleTime: 15_000, retry: 1 } } }));
+  const [client] = useState(() => createQueryClient());
   const [rt] = useState(() => router ?? createAppRouter());
   return (
     <DataSourceProvider source={ds}>

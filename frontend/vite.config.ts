@@ -7,9 +7,12 @@ import { defineConfig } from "vite";
 // Dev server proxies the existing stdlib dashboard (pixi run dashboard, port 8765):
 //   /api    -> its JSON endpoints
 //   /legacy -> its HTML pages, with the prefix stripped (/legacy/graph -> /graph)
+// `python -m kb.api` also serves /api and /legacy on 8765, so the same proxy works against either server.
 const LEGACY = "http://127.0.0.1:8765";
 
+// The app is served under /app (python -m kb.api, FastAPI spa router) and in dev at http://localhost:5173/app/.
 export default defineConfig({
+  base: "/app/",
   plugins: [react(), tailwindcss()],
   resolve: { alias: { "@": path.resolve(__dirname, "src") } },
   server: {

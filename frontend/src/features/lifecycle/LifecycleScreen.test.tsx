@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { DataSourceProvider, type DataSource, type LifecycleSnapshot, type TimelineRow } from "@/api";
+import { mockDataSource } from "@/test/datasource";
 import { LifecycleScreen } from "./LifecycleScreen";
 
 const row = (o: Partial<TimelineRow>): TimelineRow => ({
@@ -28,11 +29,11 @@ const snap: LifecycleSnapshot = {
 };
 
 function renderWith(getLifecycle: DataSource["getLifecycle"]) {
-  const ds: DataSource = {
-    kind: "http", getLifecycle,
+  const ds: DataSource = mockDataSource({
+    getLifecycle,
     getShareStatus: async () => ({ status: null, chip: null }),
     getGraphNodes: async () => [],
-  };
+  });
   return render(
     <DataSourceProvider source={ds}>
       <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>

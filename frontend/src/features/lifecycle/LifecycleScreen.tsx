@@ -1,13 +1,13 @@
-import { useQuery } from "@tanstack/react-query";
 import { RefreshCw } from "lucide-react";
 import { useMemo, useState, type ReactNode } from "react";
-import { useDataSource, type LifecycleSnapshot, type TimelineRow } from "@/api";
+import { type LifecycleSnapshot, type TimelineRow } from "@/api";
 import { CopyButton } from "@/components/CopyButton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Empty, ErrorState, Loading } from "@/components/states";
+import { useApiQuery } from "@/lib/useApiQuery";
 import { cn } from "@/lib/utils";
 import { CONVENTIONS, GUARDRAILS, STORIES, VERSION_PARTS } from "./content";
 
@@ -33,10 +33,6 @@ export function filterTimeline(rows: TimelineRow[], filter: Filter, query: strin
 
 const Code = ({ children }: { children: ReactNode }) => (
   <code className="rounded bg-muted px-1 py-0.5 font-mono text-[0.85em] break-words">{children}</code>
-);
-
-const Empty = ({ children }: { children: ReactNode }) => (
-  <p className="py-4 text-center text-sm text-muted-foreground">{children}</p>
 );
 
 function Section({ title, description, children }: { title: string; description?: string; children: ReactNode }) {
@@ -118,7 +114,7 @@ export function alertsFor(s: LifecycleSnapshot): ReactNode[] {
   return out;
 }
 
-function CommitChip({ r, github }: { r: TimelineRow; github: string | null }) {
+function CommitChip({ r, github }: { r: TimelineRow; github?: string | null }) {
   if (r.kind === "kb") return <Badge variant="primary">kb-{r.kb_version}</Badge>;
   if (r.kind === "pr-merge") {
     const label = `${r.pr ? `#${r.pr}` : "retro"}${r.kb_version ? ` → kb-${r.kb_version}` : ""}`;
@@ -345,8 +341,7 @@ function Reference() {
 }
 
 export function LifecycleScreen() {
-  const ds = useDataSource();
-  const q = useQuery({ queryKey: ["lifecycle"], queryFn: () => ds.getLifecycle() });
+  const q = useApiQuery(["lifecycle"], (ds) => ds.getLifecycle());
   const s = q.data;
   const status = q.isPending
     ? "Loading…"
@@ -365,23 +360,10 @@ export function LifecycleScreen() {
         </Button>
       </div>
 
-      {q.isPending && (
-        <div className="flex flex-col gap-3" role="status" aria-label="Loading lifecycle">
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            {[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-16" />)}
-          </div>
-          <Skeleton className="h-64" />
-        </div>
-      )}
+      {q.isPending && <Loading label="Loading lifecycle" rows={4} />}
 
       {q.isError && (
-        <Card role="alert" className="border-bad">
-          <CardContent className="flex flex-col gap-2 p-4">
-            <p className="font-medium text-bad">Could not load the lifecycle snapshot.</p>
-            <p className="text-sm text-muted-foreground break-words">{q.error.message}</p>
-            <Button variant="secondary" size="sm" className="self-start" onClick={() => void q.refetch()}>Try again</Button>
-          </CardContent>
-        </Card>
+        <ErrorState title="Could not load the lifecycle snapshot." error={q.error} onRetry={() => void q.refetch()} />
       )}
 
       {s && (

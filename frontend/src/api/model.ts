@@ -24,14 +24,3 @@ export type Depth = (typeof DEPTHS)[number];
 /** status: sources and collections to-read/reading/digested; ideas and topics seed/growing/solid;
  *  questions open/partial/resolved; distilled-think review/applied/archived; scopes active/parked. */
 export type Status = string;
-
-/** A node of the vault graph, as /api/graph emits it (fields the shell uses). */
-export interface GraphNode {
-  id: string; // slug
-  title: string;
-  layer: Layer;
-  type: PageType;
-  status: string;
-  depth: Depth | ""; // "" for non-sources
-  areas: string[];
-}

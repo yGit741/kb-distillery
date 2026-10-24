@@ -4,18 +4,18 @@ import userEvent from "@testing-library/user-event";
 import { App } from "./providers";
 import { createAppRouter } from "./router";
 import type { DataSource } from "@/api";
+import { mockDataSource } from "@/test/datasource";
 import { ROUTES } from "@/routes/registry";
 
-const ds: DataSource = {
-  kind: "http",
+const ds: DataSource = mockDataSource({
   getLifecycle: () => new Promise(() => {}),
   getShareStatus: async () => ({ status: null, chip: null }),
   getGraphNodes: async () => [],
-};
+});
 
 describe("AppShell", () => {
   it("has one nav, one theme toggle, and a palette that navigates", async () => {
-    const router = createAppRouter(createMemoryHistory({ initialEntries: ["/graph"] }));
+    const router = createAppRouter(createMemoryHistory({ initialEntries: ["/app/graph"] }));
     render(<App source={ds} router={router} />);
     const nav = await screen.findByRole("navigation", { name: "Main" });
     expect(nav.querySelectorAll("a")).toHaveLength(ROUTES.length);

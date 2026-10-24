@@ -5,29 +5,33 @@ import {
   type RouterHistory,
 } from "@tanstack/react-router";
 import { LegacyCard } from "@/features/legacy/LegacyCard";
-import { LifecycleScreen } from "@/features/lifecycle/LifecycleScreen";
-import { ROUTES, type RouteDef } from "@/routes/registry";
+import { ROUTES, type Route } from "@/routes/registry";
+import { SEARCH } from "@/routes/search";
 import { AppShell } from "./AppShell";
+import { ErrorBoundary } from "@/components/states";
 
-const SCREENS: Record<string, () => React.ReactElement> = {
-  lifecycle: LifecycleScreen,
-};
+/** The app is served under /app (vite `base`, FastAPI spa router). */
+export const BASEPATH = import.meta.env.BASE_URL.replace(/\/$/, "");
 
 const rootRoute = createRootRoute({ component: AppShell });
 
-function screenRoute(def: RouteDef) {
-  const Screen = SCREENS[def.id];
-  return createRoute({
-    getParentRoute: () => rootRoute,
-    path: def.path,
-    component: Screen ?? (() => <LegacyCard route={def} />),
-  });
+function screenRoutes(def: Route) {
+  const Screen = def.Screen ?? (() => <LegacyCard id={def.id} />);
+  const validateSearch = SEARCH[def.id as keyof typeof SEARCH] as (raw: Record<string, unknown>) => Record<string, unknown>;
+  const component = () => (
+    <ErrorBoundary label={def.label}>
+      <Screen />
+    </ErrorBoundary>
+  );
+  return [def.path, ...(def.extraPaths ?? [])].map((path) =>
+    createRoute({ getParentRoute: () => rootRoute, path, component, validateSearch }),
+  );
 }
 
-const routeTree = rootRoute.addChildren(ROUTES.map(screenRoute));
+const routeTree = rootRoute.addChildren(ROUTES.flatMap(screenRoutes));
 
-export function createAppRouter(history?: RouterHistory) {
-  return createRouter({ routeTree, history, defaultPreload: "intent" });
+export function createAppRouter(history?: RouterHistory, basepath: string = BASEPATH) {
+  return createRouter({ routeTree, history, basepath: basepath || "/", defaultPreload: "intent" });
 }
 
 declare module "@tanstack/react-router" {
