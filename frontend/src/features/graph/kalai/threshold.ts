@@ -36,8 +36,13 @@ export interface PairThreshold {
   p50: number;
   p90: number;
   width: number;
-  /** the link whose addition made the property hold in draw 0 (the pivotal bridge of that draw) */
-  bridge: [string, string] | null;
+  /**
+   * The hinge: the page that most often sits at an end of the tipping link (the link whose addition made
+   * the property hold), over all draws. Single tipping links vary draw to draw; their pages do not.
+   */
+  hinge: string | null;
+  /** share of draws in which the hinge was an end of the tipping link */
+  hingeShare: number;
 }
 
 export interface ThresholdResult {
@@ -75,7 +80,7 @@ export function thresholds(model: GraphModel, opts: ThresholdOptions = {}): Thre
   for (const t of live) keys.push([t, t]);
   const keyIndex = new Map(keys.map(([i, j], k) => [i * T + j, k]));
   const crit: number[][] = keys.map(() => []);
-  const bridge: ([string, string] | null)[] = keys.map(() => null);
+  const tips: Map<number, number>[] = keys.map(() => new Map());
   const giant = new Float64Array(GRID.length);
   const linkCrit = new Map<string, number>();
   const rand = rng(opts.seed ?? 11);
@@ -115,7 +120,9 @@ export function thresholds(model: GraphModel, opts: ThresholdOptions = {}): Thre
           const k = keyIndex.get((full[x] as number) * T + (full[y] as number)) as number;
           if (held[k] === Infinity) {
             held[k] = c;
-            if (d === 0) bridge[k] = [g.ids[e.a] as string, g.ids[e.b] as string];
+            const tally = tips[k] as Map<number, number>;
+            tally.set(e.a, (tally.get(e.a) ?? 0) + 1);
+            tally.set(e.b, (tally.get(e.b) ?? 0) + 1);
           }
         }
       biggest = Math.max(biggest, uf.size[r] as number);
@@ -132,7 +139,9 @@ export function thresholds(model: GraphModel, opts: ThresholdOptions = {}): Thre
     const p10 = quantile(s, 0.1);
     const p50 = quantile(s, 0.5);
     const p90 = quantile(s, 0.9);
-    return { a: allThemes[i] as string, b: allThemes[j] as string, crit: s, p10, p50, p90, width: p90 - p10, bridge: bridge[k] ?? null };
+    let best: [number, number] | null = null;
+    for (const [v, c] of tips[k] as Map<number, number>) if (!best || c > best[1]) best = [v, c];
+    return { a: allThemes[i] as string, b: allThemes[j] as string, crit: s, p10, p50, p90, width: p90 - p10, hinge: best ? (g.ids[best[0]] as string) : null, hingeShare: best ? best[1] / draws : 0 };
   });
   return { themes, pairs, giant: GRID.map((p, i) => ({ p, share: giant[i] as number })), linkCrit, pageCount: n };
 }
