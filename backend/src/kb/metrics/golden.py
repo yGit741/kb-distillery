@@ -1,0 +1,199 @@
+"""Golden tasks: a fixed set of real workflows re-run before and after each change, graded by checks + a judge.
+
+    pixi run metrics -- golden list
+    pixi run metrics -- golden run [<task>…] --label baseline [--repeat 1] [--dry-run]
+
+Each run gets a throwaway git worktree of this vault at a pinned commit, outside the vault
+(`~/local-workspace/agent-metrics/golden/<run>/kb-golden-<task>`), with the primary checkout's `.pixi`,
+`frontend/node_modules` and untracked raw files symlinked in, and:
+
+- every push redirected to a local bare repo (`GIT_CONFIG_*` → `remote.origin.pushurl`), `KB_NO_PUSH=1`,
+  and `gh` pointed at an empty config — a golden run can never reach GitHub or the share site;
+- the agent run headless: `claude -p "[golden:<id>] <prompt>" --model --effort --permission-mode auto`,
+  stdin closed (a nested `claude -p` waits on it otherwise). Its JSON result is the official
+  usage: `total_cost_usd`, `modelUsage`, `num_turns`, `duration_ms`;
+- then the task's `checks` (shell commands, exit 0 = pass) and the judge (kb.metrics.judge) run.
+
+The record (golden.jsonl) holds the cost, the checks, both judge grades and whether they disagree.
+Tasks live in meta/ops/golden.toml; changing a task makes old runs of it incomparable, so bump its `v`.
+"""
+import datetime
+import json
+import os
+import shutil
+import subprocess
+import time
+import tomllib
+import uuid
+
+from kb.git.ship import link_untracked_raw, primary_checkout
+from kb.metrics import judge, store
+from kb.metrics.sessions import parse_session, PROJECTS_DIR
+from kb.paths import vault_root
+
+TASKS_FILE = os.path.join("meta", "ops", "golden.toml")
+RUNS_DIR = os.path.expanduser("~/local-workspace/agent-metrics/golden")
+LINKED = (".pixi", "frontend/node_modules")
+AGENT_TIMEOUT = 45 * 60
+CHECK_TIMEOUT = 15 * 60
+
+
+def load_tasks(root=None):
+    with open(os.path.join(root or vault_root(), TASKS_FILE), "rb") as f:
+        cfg = tomllib.load(f)
+    defaults = cfg.get("defaults", {})
+    return {t["id"]: {**defaults, **t} for t in cfg.get("task", [])}, cfg.get("judge", {})
+
+
+def _git(args, cwd, check=True):
+    return subprocess.run(["git", *args], cwd=cwd, check=check, capture_output=True, text=True)
+
+
+def make_workspace(task, run_id, ref, primary):
+    """A detached worktree at `ref` plus a bare push sink; returns (repo dir, sink dir)."""
+    base = os.path.join(RUNS_DIR, run_id)
+    repo, sink = os.path.join(base, f"kb-golden-{task['id']}"), os.path.join(base, "push-sink.git")
+    os.makedirs(base, exist_ok=True)
+    if not os.path.exists(sink):
+        _git(["init", "-q", "--bare", sink], cwd=base)
+    branch = f"golden/{run_id}-{task['id']}"
+    _git(["worktree", "add", "-q", "-b", branch, repo, ref], cwd=primary)
+    for rel in LINKED:
+        src, dst = os.path.join(primary, rel), os.path.join(repo, rel)
+        if os.path.exists(src) and not os.path.exists(dst):
+            os.symlink(src, dst)
+    link_untracked_raw(repo)
+    for rel in task.get("copy", []):            # inbox files and the like: copied so the task may move them
+        src, dst = os.path.join(primary, rel), os.path.join(repo, rel)
+        os.makedirs(os.path.dirname(dst), exist_ok=True)
+        shutil.copy2(src, dst)
+    for cmd in task.get("setup", []):
+        subprocess.run(cmd, shell=True, cwd=repo, check=True, capture_output=True, text=True, env=_env(sink, base))
+    return repo, sink
+
+
+def remove_workspace(repo, primary):
+    branch = _git(["rev-parse", "--abbrev-ref", "HEAD"], cwd=repo, check=False).stdout.strip()
+    _git(["worktree", "remove", "--force", repo], cwd=primary, check=False)
+    for b in {branch, *_golden_branches(primary, repo)}:
+        if b and b != "HEAD" and b != "main":
+            _git(["branch", "-D", b], cwd=primary, check=False)
+
+
+def _golden_branches(primary, repo):
+    """Branches a task created from its golden branch (e.g. `ship start` renamed it to infra/<x>)."""
+    tag = os.path.basename(repo)
+    out = _git(["for-each-ref", "--format=%(refname:short) %(worktreepath)", "refs/heads"], cwd=primary, check=False)
+    return [line.split()[0] for line in out.stdout.splitlines() if tag in line]
+
+
+def _env(sink, base):
+    env = {k: v for k, v in os.environ.items()
+           if k not in ("ANTHROPIC_BASE_URL", "ANTHROPIC_AUTH_TOKEN", "ANTHROPIC_API_KEY")}  # subscription only
+    gh_dir = os.path.join(base, "gh-empty")
+    os.makedirs(gh_dir, exist_ok=True)
+    env.update({
+        "KB_NO_PUSH": "1", "KB_GOLDEN": "1", "GH_CONFIG_DIR": gh_dir, "GH_TOKEN": "golden-run-no-github",
+        "GIT_CONFIG_COUNT": "1", "GIT_CONFIG_KEY_0": "remote.origin.pushurl", "GIT_CONFIG_VALUE_0": sink,
+    })
+    return env
+
+
+def run_agent(task, repo, env):
+    prompt = f"[golden:{task['id']}] {task['prompt'].strip()}"
+    cmd = ["claude", "-p", prompt, "--output-format", "json", "--model", task["model"],
+           "--permission-mode", task.get("permission_mode", "auto")]
+    if task.get("effort"):
+        cmd += ["--effort", task["effort"]]
+    t0 = time.monotonic()
+    try:
+        cp = subprocess.run(cmd, cwd=repo, env=env, stdin=subprocess.DEVNULL, capture_output=True, text=True,
+                            timeout=task.get("timeout", AGENT_TIMEOUT))
+        out = json.loads(cp.stdout or "{}")
+    except subprocess.TimeoutExpired:
+        out = {"is_error": True, "result": "timeout"}
+    except ValueError:
+        out = {"is_error": True, "result": (cp.stdout or cp.stderr)[-2000:]}
+    out["_wall_s"] = round(time.monotonic() - t0, 1)
+    return out
+
+
+def run_checks(task, repo, env):
+    results = []
+    for cmd in task.get("checks", []):
+        try:
+            cp = subprocess.run(cmd, shell=True, cwd=repo, env=env, stdin=subprocess.DEVNULL,
+                                capture_output=True, text=True, timeout=CHECK_TIMEOUT)
+            results.append({"cmd": cmd, "ok": cp.returncode == 0, "tail": (cp.stdout + cp.stderr)[-1500:]})
+        except subprocess.TimeoutExpired:
+            results.append({"cmd": cmd, "ok": False, "tail": "timeout"})
+    return results
+
+
+def diff_of(repo, ref):
+    """Everything the agent changed: commits since `ref` plus the working tree, raw/ binaries excluded."""
+    skip = [":!raw", ":!index.md", ":!meta/corpus.tsv", *(f":!{p}" for p in LINKED)]
+    _git(["add", "-A", "-N", "--", ".", *skip], cwd=repo, check=False)
+    return _git(["diff", ref, "--", ".", *skip], cwd=repo, check=False).stdout
+
+
+def _session_record(session_id, repo):
+    slug = "".join(c if c.isalnum() else "-" for c in os.path.realpath(repo))
+    p = os.path.join(PROJECTS_DIR, slug, f"{session_id}.jsonl")
+    return parse_session(p) if session_id and os.path.exists(p) else None
+
+
+def run_task(task, judge_cfg, run_id, label, ref, primary, dry_run=False, keep=False):
+    sha = _git(["rev-parse", ref], cwd=primary).stdout.strip()
+    rec = {"run": run_id, "label": label, "task": task["id"], "v": task.get("v", 1), "kind": task.get("kind"),
+           "sha": sha, "model": task["model"], "effort": task.get("effort"),
+           "started": datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds")}
+    if dry_run:
+        print(f"[dry-run] {task['id']}: {task['model']}/{task.get('effort')} at {sha[:8]}, "
+              f"{len(task.get('checks', []))} checks")
+        return rec
+    repo, sink = make_workspace(task, run_id, sha, primary)
+    env = _env(sink, os.path.dirname(repo))
+    try:
+        base = _git(["rev-parse", "HEAD"], cwd=repo).stdout.strip()   # after setup (a replayed bug is a commit)
+        env["GOLDEN_BASE"] = base                                    # checks diff against it
+        out = run_agent(task, repo, env)
+        checks = run_checks(task, repo, env)
+        diff = diff_of(repo, base)
+        sess = _session_record(out.get("session_id"), repo)
+        grade = judge.grade(task, out.get("result") or "", diff, checks, judge_cfg, env=env)
+        rec.update({
+            "session": out.get("session_id"), "ok": not out.get("is_error"),
+            "usd": round(out.get("total_cost_usd") or 0, 4), "turns": out.get("num_turns"),
+            "minutes": round((out.get("duration_ms") or out["_wall_s"] * 1000) / 60000, 1),
+            "models": {m: {"in": u.get("inputTokens", 0), "cw": u.get("cacheCreationInputTokens", 0),
+                           "cr": u.get("cacheReadInputTokens", 0), "out": u.get("outputTokens", 0)}
+                       for m, u in (out.get("modelUsage") or {}).items()},
+            "first_context": (sess or {}).get("first_context"), "subagents": (sess or {}).get("subagents"),
+            "checks": [{"cmd": c["cmd"], "ok": c["ok"]} for c in checks],
+            "diff_lines": diff.count("\n"), "judge": grade,
+            "passed": all(c["ok"] for c in checks) and bool(grade.get("pass")) and not out.get("is_error"),
+        })
+        store.append("golden.jsonl", rec)
+        return rec
+    finally:
+        if not keep:
+            remove_workspace(repo, primary)
+
+
+def run(task_ids=None, label="adhoc", ref="HEAD", repeat=1, dry_run=False, keep=False, root=None):
+    tasks, judge_cfg = load_tasks(root)
+    primary = primary_checkout(root or vault_root())
+    chosen = [tasks[t] for t in task_ids] if task_ids else [t for t in tasks.values() if t.get("core", True)]
+    run_id = datetime.datetime.now().strftime("%Y%m%d-%H%M") + "-" + uuid.uuid4().hex[:4]
+    out = []
+    for _ in range(repeat):
+        for task in chosen:
+            rec = run_task(task, judge_cfg, run_id, label, ref, primary, dry_run=dry_run, keep=keep)
+            out.append(rec)
+            if not dry_run:
+                j = rec["judge"]
+                print(f"{task['id']:24} {'PASS' if rec['passed'] else 'FAIL'}  ${rec['usd']:.2f}  "
+                      f"{rec['minutes']}m  judge {j.get('score')}{' ⚑' if j.get('flagged') else ''}  "
+                      f"checks {sum(c['ok'] for c in rec['checks'])}/{len(rec['checks'])}")
+    return out
