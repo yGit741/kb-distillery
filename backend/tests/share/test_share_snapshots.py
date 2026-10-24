@@ -47,7 +47,10 @@ CLEAN = data_of(page("tensor-rank", "concept", "Rank of a tensor; see [[cp-decom
                 page("2019-some-paper", "paper", "Problem: bounds on rank.", year="2019"))
 DIRTY = data_of(page("tensor-rank", "concept", "Rank of a tensor."),
                 page("jane-doe", "person", "Jane works at Example. Write to jane.doe@example.org or call 054-123-4567."),
-                page("2019-some-paper", "paper", "Scanned from `raw/papers/x/2019-some-paper.pdf`."))
+                page("2019-some-paper", "paper", "Scanned from `raw/papers/x/2019-some-paper.pdf`."),
+                page("chat-llm-session", "ai-chat", "My own chat, see `raw/llm-chats/c.md`.", raw="raw/llm-chats/c.md"),
+                page("thread-with-bob", "conversation", "Mail thread.", raw=["raw/emails/2026-01-01-x/thread.md"]),
+                page("mentions-mail", "paper", "Source: `raw/emails/2026-01-01-x/thread.md`."))
 
 
 def run_cli(argv):
@@ -153,10 +156,11 @@ class NameTests(unittest.TestCase):
 class AuditTests(unittest.TestCase):
     def test_scan_counts_and_flags(self):
         r = snapshots.scan(DIRTY)
-        self.assertEqual(r["counts"], {"concept": 1, "paper": 1, "person": 1})
+        self.assertEqual(r["counts"], {"ai-chat": 1, "concept": 1, "conversation": 1, "paper": 2, "person": 1})
         kinds = {(f["kind"], f["page"]) for f in r["flags"]}
-        self.assertEqual(kinds, {("person", "jane-doe"), ("email", "jane-doe"), ("phone", "jane-doe"),
-                                 ("raw-path", "2019-some-paper")})
+        # person pages, chats and ordinary raw/ paths are public; only PII text and email-derived material is flagged
+        self.assertEqual(kinds, {("email", "jane-doe"), ("phone", "jane-doe"),
+                                 ("email-source", "thread-with-bob"), ("email-source", "mentions-mail")})
         self.assertIn("jane.doe@example.org", [f["detail"] for f in r["flags"]])
 
     def test_scan_clean(self):
@@ -164,9 +168,15 @@ class AuditTests(unittest.TestCase):
         self.assertEqual(r["flags"], [])
         self.assertEqual(r["pages"], 2)
 
-    def test_scan_flags_chat_and_distilled(self):
-        r = snapshots.scan(data_of(page("conversation-2026-10-01-foo", "source"), page("x", "distilled-think")))
-        self.assertEqual({f["kind"] for f in r["flags"]}, {"chat", "distilled-think"})
+    def test_person_chat_and_plain_raw_paths_pass(self):
+        r = snapshots.scan(data_of(page("jane-doe", "person", "Researcher, see `raw/printed-docs/x.pdf`."),
+                                   page("conversation-2026-10-01-foo", "ai-chat", "LLM chat", raw="raw/llm-chats/c.md"),
+                                   page("conv-llm", "conversation", "From a chat.", raw=["raw/llm-chats/d.md"])))
+        self.assertEqual(r["flags"], [])
+
+    def test_scan_flags_distilled_and_email_source(self):
+        r = snapshots.scan(data_of(page("x", "distilled-think"), page("m", "conversation", "t", raw="raw/emails/a/thread.md")))
+        self.assertEqual({f["kind"] for f in r["flags"]}, {"distilled-think", "email-source"})
 
     def test_cli_exit_codes(self):
         with mock.patch.object(snapshots, "audit_build", StubBuild(DIRTY)):
