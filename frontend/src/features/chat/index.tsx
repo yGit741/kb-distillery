@@ -1,6 +1,12 @@
-import { LegacyCard } from "@/features/legacy/LegacyCard";
+import { ErrorBoundary } from "@/components/states";
+import { ChatScreen } from "./ChatScreen";
 
-/** Placeholder: replace this file's default export with the real screen (see skills/app-ui, porting checklist). */
+export const ported = true;
+
 export default function Screen() {
-  return <LegacyCard id="chat" />;
+  return (
+    <ErrorBoundary label="Chat">
+      <ChatScreen />
+    </ErrorBoundary>
+  );
 }
