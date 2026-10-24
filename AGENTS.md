@@ -44,7 +44,8 @@ backend/                Python app, package `kb` (src layout, pyproject.toml, ed
   src/kb/maintenance/   daily_sync, notify, sync_skills, rename_raw, migrate_model, export, fix_math
   src/kb/migrations/    schema migrations (code); the applied ledger stays in meta/migrations/applied.tsv
   src/kb/services/      former dashboard *_data modules (graph, pages, corpus, scopes, chat, pipeline, lifecycle, ops)
-  src/kb/dashboard/     legacy HTML pages + server until their screens are ported       src/kb/prompts/  chat prompts
+  src/kb/api/           FastAPI app (`pixi run app`): routers/ auto-discovered, models/, sse.py, security.py; README.md = add-a-router recipe
+  src/kb/dashboard/     legacy HTML pages + server until their screens are ported (served behind kb.api's catch-all)       src/kb/prompts/  chat prompts
   tests/                pytest, mirrored by package (tests/harness = the pipeline harness)
 share/                  Cloudflare Worker (auth.js, admin.js, wrangler template) + its node tests
 skills/                 agent skill sources (synced to .cursor/skills and .claude/skills)
@@ -53,6 +54,7 @@ meta/                   VAULT METADATA ONLY: corpus.tsv, log.md, aliases.tsv, co
                         chats/, templates/, migration/, migrations/applied.tsv, ops/sync.toml, thesis.md
 ```
 
+`pixi run api-schema` regenerates `frontend/src/api/schema.d.ts` from the API's OpenAPI (`api-schema-check` fails if stale).
 Run a module with `python -m kb.<package>.<module>` (pixi tasks do); `kb` is installed editable, so `pixi install`
 again after pulling this layout. Never `sys.path.insert`; take paths from `kb.paths`.
 

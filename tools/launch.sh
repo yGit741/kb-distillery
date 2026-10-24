@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Restart the dashboard from the current working tree, detached, then open it.
+# Restart the app server (kb.api: API + legacy pages + React shell) from the current working tree, detached, then open it.
 # Kills whatever already listens on the port so a stale server never answers.
 # Usage: pixi run launch [-- --port N]
 set -euo pipefail
@@ -23,7 +23,7 @@ fi
 
 find backend -name __pycache__ -type d -prune -exec rm -rf {} + 2>/dev/null || true
 
-nohup python -m kb.dashboard --port "$PORT" --no-open >"$LOG" 2>&1 &
+nohup python -m kb.api --port "$PORT" --no-open >"$LOG" 2>&1 &
 echo "started dashboard (pid $!), log: $LOG"
 
 for _ in $(seq 1 40); do
