@@ -6,7 +6,7 @@ export interface DataSource {
   readonly kind: "http" | "embedded";
   getLifecycle(): Promise<LifecycleSnapshot>;
   getShareStatus(): Promise<ShareStatus>;
-  /** Vault nodes in new-model words (type / kind / depth). */
+  /** Vault nodes: layer, type, depth, status, areas. */
   getGraphNodes(): Promise<GraphNode[]>;
 }
 
