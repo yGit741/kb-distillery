@@ -35,6 +35,7 @@ export function Legend({ nodes, visible, schema, shownTypes, stats, embedded = f
   return (
     <section
       aria-label="Legend"
+      data-tour="graph-legend"
       className={cn(
         "pointer-events-auto flex flex-col text-sm",
         embedded

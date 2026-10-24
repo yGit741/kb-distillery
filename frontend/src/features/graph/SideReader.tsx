@@ -13,6 +13,7 @@ export function SideReader({ slug, title, pageHref, onClose }: { slug: string; t
   return (
     <aside
       aria-label="Page reader"
+      data-tour="page-reader"
       className="pointer-events-auto absolute inset-y-0 right-0 z-30 flex w-[min(34rem,100%)] flex-col border-l bg-card text-card-foreground shadow-[var(--shadow)]"
     >
       <header className="flex items-center gap-2 border-b px-3 py-2">

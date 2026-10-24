@@ -1,3 +1,4 @@
+import { askAbout } from "@/features/graph/tools/ChatDock";
 import { needsYou, tiles, timeline, type HealthLike, type LifecycleLike, type OpsLike } from "./model";
 
 const lc: LifecycleLike = {
@@ -39,6 +40,11 @@ describe("system model", () => {
     expect(ev[0]).toMatchObject({ title: "feat(frontend): y (#93)", href: "https://github.com/o/r/commit/bbbbbbbbbbbb" });
     expect(ev[1]?.sub).toBe("89 s · 1 commit pushed · 2 warnings");
     expect(ev[2]?.sub).toBe("aaaaaaa · kb-1.0.9");
+  });
+
+  it("drafts a chat question about a selection, as wikilinks, capped", () => {
+    expect(askAbout([{ id: "a" }, { id: "b" }])).toBe("About [[a]], [[b]]: ");
+    expect(askAbout(Array.from({ length: 14 }, (_, i) => ({ id: `p${i}` })), 2)).toBe("About [[p0]], [[p1]] (and 12 more): ");
   });
 
   it("lists threads that need attention first", () => {

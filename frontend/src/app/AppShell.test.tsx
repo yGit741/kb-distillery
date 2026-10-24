@@ -28,7 +28,7 @@ describe("AppShell", () => {
     expect(await screen.findByRole("tablist", { name: "System sections" })).toBeInTheDocument();
 
     await userEvent.keyboard("{Control>}k{/Control}");
-    const box = await screen.findByPlaceholderText("Go to…");
+    const box = await screen.findByPlaceholderText(/^Go to…/);
     await userEvent.type(box, "lifecycle");
     await userEvent.keyboard("{Enter}");
     await waitFor(() => expect(router.state.location.pathname).toBe("/lifecycle"));

@@ -25,6 +25,13 @@ export const useChatDock = create<ChatDockState>((set) => ({
   set: (s) => set(s),
 }));
 
+/** A question draft about the selected pages: their wikilinks, so the agent reads exactly those first. */
+export function askAbout(pages: readonly { id: string }[], max = 12): string {
+  const links = pages.slice(0, max).map((p) => `[[${p.id}]]`).join(", ");
+  const more = pages.length > max ? ` (and ${pages.length - max} more)` : "";
+  return `About ${links}${more}: `;
+}
+
 /** The flyout body of the chat tool: one button, since the chat itself lives in the dock. */
 export function ChatToolPanel() {
   const { open, set } = useChatDock();

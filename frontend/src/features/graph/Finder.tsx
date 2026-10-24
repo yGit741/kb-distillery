@@ -153,6 +153,7 @@ export function Finder({ nodes, byId, colorBy, visible, onFocus, onRead, onShowP
         <input
           ref={input}
           id={FINDER_ID}
+          data-tour="graph-search"
           role="combobox"
           aria-expanded={showList}
           aria-controls={listId}
