@@ -474,7 +474,60 @@ def collect_lifecycle(meta_dir, built_at, git_root, content_sha, content_dir, co
     })
 
 
-def apply_profile(data, profile):
+def scope_keep(slug, hops=1):
+    """Slugs a scoped build keeps: the `slug` page (a scope, collection or person), its corpus members'
+    pages (`kb.core.scopes.projection`: hop0 + ideas/questions shared by >= 2 of them) and, with
+    `hops=1`, every page linked to or from that set. Read from KB_ROOT (the content checkout)."""
+    from kb.core import scopes as core
+    from kb.lint.lint import read_manifest
+    from kb.paths import vault_root
+    from kb.services.scopes import load_pages
+    root = vault_root()
+    pages = load_pages(root)
+    if slug not in pages:
+        raise BuildError(f"--scope {slug!r}: no such page at this ref")
+    manifest = read_manifest(root)
+    if pages[slug][1].get("type") == "scope":
+        rows = core.rows_of(slug, manifest)
+    else:
+        rows = sorted(p for p, r in manifest.items() if slug in core.collections_of(r))
+    index = core.build_index(pages)
+    proj = core.projection(rows, pages, manifest, index)
+    keep = {slug, *proj["hop0"], *proj["hop1"]}
+    if hops:
+        ring = set()
+        for s in keep:
+            ring |= set(index["out"].get(s, ()))
+            ring |= {t for t, outs in index["out"].items() if s in outs}
+        keep |= {s for s in ring if s in pages}
+    return keep
+
+
+_SCOPE_WIKILINK = re.compile(r"\[\[([^\]|#\\]+)(#[^\]|]+)?(?:\\?\|([^\]]+))?\]\]")
+
+_SLUG_LIST = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*(?:, [a-z0-9]+(?:-[a-z0-9]+)*)+$")
+
+
+def _unlink(value, drop, titles):
+    """A scoped build names no dropped page: `[[dropped|label]]` → label (else its title) as plain
+    text in strings, dropped slugs removed from lists — recursively through frontmatter/properties."""
+    if isinstance(value, str):
+        if value.strip() in drop:
+            return None
+        if _SLUG_LIST.match(value):              # graph properties join list fields with ", "
+            return ", ".join(s for s in value.split(", ") if s not in drop)
+        return _SCOPE_WIKILINK.sub(lambda m: (m.group(3) or titles.get(m.group(1).strip()) or m.group(1)).strip()
+                                   if m.group(1).strip() in drop else m.group(0), value)
+    if isinstance(value, list):
+        return [v for v in (_unlink(x, drop, titles) for x in value) if v is not None]
+    if isinstance(value, dict):
+        return {k: v for k, v in ((k, _unlink(x, drop, titles)) for k, x in value.items()) if v is not None}
+    return value
+
+
+def apply_profile(data, profile, scope_slugs=None):
+    """`scope_slugs` (public only): a set from `scope_keep` — every other page, node, card, link,
+    backlink and search entry is dropped through the same `drop` set as the type/email cuts."""
     if profile == "private":
         return data
     if profile != "public":
@@ -489,6 +542,25 @@ def apply_profile(data, profile):
     # backlinks) through the same `drop` set, wherever `raw:` is still visible (before PUBLIC_DROP_KEYS strips it).
     drop |= {n["id"] for n in graph["nodes"] if raw_is_email((n.get("properties") or {}).get("raw"))}
     drop |= {s for s, p in pages.items() if raw_is_email((p.get("frontmatter") or {}).get("raw"))}
+    if scope_slugs is not None:
+        drop |= {n["id"] for n in graph["nodes"] if n["id"] not in scope_slugs}
+        drop |= {c["id"] for c in index["pages"] if c["id"] not in scope_slugs}
+        drop |= {s for s in pages if s not in scope_slugs}
+        titles = {s: (p.get("card") or {}).get("title") for s, p in pages.items() if s in drop}
+        titles.update({n["id"]: n.get("title") for n in graph["nodes"] if n["id"] in drop and n.get("title")})
+        for n in graph["nodes"]:
+            if n["id"] not in drop:
+                n.update(_unlink({k: v for k, v in n.items() if k not in ("id", "type")}, drop, titles))
+        for c in index["pages"]:
+            if c["id"] not in drop:
+                c.update(_unlink({k: v for k, v in c.items() if k not in ("id", "type")}, drop, titles))
+        for slug, pg in pages.items():
+            if slug not in drop:
+                pg.update(_unlink({k: v for k, v in pg.items() if k not in ("backlinks", "outbound", "suggested", "card")},
+                                  drop, titles))
+                if pg.get("card"):
+                    pg["card"] = dict(pg["card"], **_unlink({k: v for k, v in pg["card"].items() if k not in ("id", "type")},
+                                                           drop, titles))
     keep = lambda s: s not in drop  # noqa: E731
 
     nodes = []
@@ -841,6 +913,10 @@ def render(meta_dir, data, manifest_fields, vendor_dir=None, shim_path=None, ver
     return shell_html(data, docs, manifest_fields, panel, github=github if private else None)
 
 
+def _scope_arg(args):
+    return scope_keep(args.scope, int(args.hops)) if getattr(args, "scope", None) else None
+
+
 def inner_build(args):
     """Runs inside the viewer checkout with KB_ROOT pointing at the content checkout."""
     meta_dir = Path(__file__).resolve().parents[1]
@@ -857,7 +933,7 @@ def inner_build(args):
             data["digestion"] = collect_digestion(meta_dir, args.built_at, git_root, args.content_sha)
             data["lifecycle"] = collect_lifecycle(meta_dir, args.built_at, git_root, args.content_sha,
                                                   os.environ.get("KB_ROOT", "."), args.content_ref)
-    data = apply_profile(data, args.profile)
+    data = apply_profile(data, args.profile, _scope_arg(args))
     versions = []
     vpath = os.environ.get(VERSIONS_ENV)
     if args.profile == "private" and vpath and os.path.isfile(vpath):
@@ -902,7 +978,7 @@ def inner_build_app(args):
     if args.profile == "private" and git_root and os.path.isdir(git_root):
         data["lifecycle"] = collect_lifecycle(meta_dir, args.built_at, git_root, args.content_sha,
                                               os.environ.get("KB_ROOT", "."), args.content_ref)
-    data = apply_profile(data, args.profile)      # the one place the public cuts live
+    data = apply_profile(data, args.profile, _scope_arg(args))      # the one place the public cuts live
     page = app_page(Path(args.app_index).read_text(encoding="utf-8"), data, fields)
     out = Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)
@@ -1000,7 +1076,8 @@ def schema_major(root, sha):
 
 
 def build(content_ref, viewer_ref="main", profile="private", *, root=REPO, viewer_root=None,
-          out_root=EXPORT_DIR, viewer_worktree=False, label=None, app=False, frontend_dist=None):
+          out_root=EXPORT_DIR, viewer_worktree=False, label=None, app=False, frontend_dist=None,
+          scope=None, hops=1):
     """Build `content_ref` with the viewer at `viewer_ref` → BuildResult(dir, manifest).
 
     `root` is the repo the content comes from; `viewer_root` (default: the same repo) is where
@@ -1012,6 +1089,8 @@ def build(content_ref, viewer_ref="main", profile="private", *, root=REPO, viewe
     """
     root = Path(root)
     viewer_root = Path(viewer_root or root)
+    if scope and profile != "public":
+        raise BuildError("--scope builds a public subset; use --profile public")
     if profile not in PROFILES:
         raise BuildError(f"unknown profile {profile!r}; choose one of {', '.join(PROFILES)}")
     content_sha = resolve_ref(root, content_ref)
@@ -1080,6 +1159,8 @@ def build(content_ref, viewer_ref="main", profile="private", *, root=REPO, viewe
                "--kb-version", kb_version, "--viewer-sha", viewer_sha, "--built-at", built_at]
         if app:
             cmd += [APP_FLAG, str(dist / "index.html")]
+        if scope:
+            cmd += ["--scope", scope, "--hops", str(int(hops))]
         proc = subprocess.run(cmd, cwd=viewer_dir, env=env, capture_output=True, text=True, check=False)
         if proc.returncode != 0:
             tail = (proc.stderr or proc.stdout or "").strip().splitlines()[-12:]
@@ -1095,7 +1176,7 @@ def build(content_ref, viewer_ref="main", profile="private", *, root=REPO, viewe
     if app:
         manifest = Manifest(content_ref=content_ref, content_sha=content_sha, kb_version=kb_version,
                             viewer_sha=viewer_sha, profile=profile, sha256=tree_digest(out_dir),
-                            built_at=built_at, layout="app")
+                            built_at=built_at, layout="app", scope=scope, hops=int(hops) if scope else None)
         (out_dir / "manifest.json").write_text(manifest.to_json(), encoding="utf-8")
         return BuildResult(dir=out_dir, manifest=manifest)
     page = html_path.read_bytes()
@@ -1104,7 +1185,8 @@ def build(content_ref, viewer_ref="main", profile="private", *, root=REPO, viewe
         print(f"share build: {warning}", file=sys.stderr)
     manifest = Manifest(content_ref=content_ref, content_sha=content_sha, kb_version=kb_version,
                         viewer_sha=viewer_sha, profile=profile,
-                        sha256=_sha256_bytes(page), built_at=built_at)
+                        sha256=_sha256_bytes(page), built_at=built_at,
+                        scope=scope, hops=int(hops) if scope else None)
     (out_dir / "manifest.json").write_text(manifest.to_json(), encoding="utf-8")
     return BuildResult(dir=out_dir, manifest=manifest)
 
@@ -1160,6 +1242,7 @@ def cmd_versions(args):
 def cmd_build(args):
     try:
         result = build(args.ref, viewer_ref=args.viewer, profile=args.profile, root=args.root,
+                       scope=args.scope, hops=args.hops,
                        viewer_worktree=args.viewer_worktree, app=args.app,
                        frontend_dist=args.frontend_dist)
     except BuildError as e:
@@ -1184,6 +1267,9 @@ def register(sub):
     b.add_argument("--profile", choices=PROFILES, default="private")
     b.add_argument("--viewer", default="main", help="ref whose dashboard code renders the page (default main)")
     b.add_argument("--open", action="store_true", help="open the result in the browser")
+    b.add_argument("--scope", default=None, metavar="SLUG",
+                   help="public only: keep this scope / collection / person page, its members and their neighbours")
+    b.add_argument("--hops", type=int, choices=(0, 1), default=1, help="with --scope: 1 adds linked neighbours (default)")
     b.add_argument("--viewer-worktree", action="store_true",
                    help="dev only: use this worktree's dashboard code instead of a committed ref")
     b.add_argument("--app", action="store_true",
@@ -1203,6 +1289,8 @@ def _inner_parser():
     p.add_argument("--inner", action="store_true", required=True)
     for name in ("out", "profile", "content-ref", "content-sha", "kb-version", "viewer-sha", "built-at"):
         p.add_argument(f"--{name}", required=True)
+    p.add_argument("--scope", default=None)
+    p.add_argument("--hops", default="1")
     p.add_argument(APP_FLAG, default=None, help="the built app's index.html: render the app layout, not the shell")
     return p
 
