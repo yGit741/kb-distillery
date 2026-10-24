@@ -3,6 +3,7 @@ import { node } from "../fixtures";
 import type { GLink, GNode, GraphModel } from "../types";
 import { louvain, pageGraph, pagerank, rng, themesOf } from "./core";
 import { notablePairs, spectrum } from "./fourier";
+import { directions, footholdOf } from "./directions";
 import { influence } from "./influence";
 import { clusterJaccard, noiseStability } from "./noise";
 import { heldAt, thresholds } from "./threshold";
@@ -175,5 +176,32 @@ describe("threshold", () => {
     const plain = thresholds(m, { draws: 60 }).pairs.find((x) => x.a === "a" && x.b === "b");
     const weighted = thresholds(m, { draws: 60, weighted: true }).pairs.find((x) => x.a === "a" && x.b === "b");
     expect(weighted?.p50).toBeLessThan(plain?.p50 as number);
+  });
+});
+
+describe("research directions", () => {
+  it("turns a gap into a card whose nearest question touches both sides", () => {
+    // big themes a and b share one page; one question links into both, another only into a
+    const as = Array.from({ length: 8 }, (_, i) => page(`pa${i}`, ["a"]));
+    const bs = Array.from({ length: 8 }, (_, i) => page(`pb${i}`, ["b"]));
+    const both = node("q-bridge", { type: "question", layer: "concept", areas: [] });
+    const oneSide = node("q-one-side", { type: "question", layer: "concept", areas: [] });
+    const m: GraphModel = {
+      nodes: [topic("a"), topic("b"), ...as, ...bs, page("ab", ["a", "b"]), both, oneSide],
+      links: [link("q-bridge", "pa0"), link("q-bridge", "pb0"), link("q-one-side", "pa1"), link("q-one-side", "pa2")],
+      conceptLinks: [],
+    };
+    const d = directions(m, spectrum(m, { nullRuns: 1 }));
+    const gap = d.find((x) => x.kind === "gap");
+    expect(gap?.sides.map((s) => s.theme)).toEqual(["a", "b"]);
+    expect(gap?.existing).toEqual(["ab"]);
+    expect(gap?.questions.map((q) => q.id)).toEqual(["q-bridge"]);
+    expect(gap?.foothold).toBe("strong");
+  });
+
+  it("foothold levels", () => {
+    expect(footholdOf(0.5)).toBe("strong");
+    expect(footholdOf(0.12)).toBe("thin");
+    expect(footholdOf(0.02)).toBe("none");
   });
 });
