@@ -150,6 +150,37 @@ and the digestion rows — shrink those, do not raise the constant.
 
 The reported state matches `share status`; unauthenticated `curl -I` on the site gives 302 → `/auth/login`.
 
+## App build (opt-in `--app`)
+
+Same site, built from the React app under `frontend/` instead of the iframe shell. Default OFF: without
+`--app` every command builds the legacy shell byte-for-byte as before (the daily private deploy and the
+public snapshots stay on it).
+
+```bash
+pixi run share -- build main --profile public  --app    # graph + pages
+pixi run share -- build main --profile private --app    # + the read-only lifecycle view
+pixi run share -- audit main --app                      # same audit, on the app build
+pixi run share -- snapshot <name> main --app --dry-run  # audit + render the Worker dir, no deploy
+pixi run share -- deploy-main --app --dry-run
+```
+
+- Output `.exported/share/<ref>-app/`: `index.html` (carries the data blob in `<script id="kb-data">`,
+  the id the audit scans) + `assets/` + `manifest.json` (`layout: "app"`, `sha256` = digest of the whole
+  tree). The 25 MiB guard applies to every file; the Worker gets `not_found_handling =
+  single-page-application` for this layout only.
+- Data is the legacy `collect_data` / `collect_lifecycle` / `apply_profile`, so the public privacy cuts are
+  the same code. The frontend is `vite build --mode share` per profile (`VITE_SHARE_PROFILE`), built into
+  `frontend/dist-share/<profile>/` (gitignored) and rebuilt when `frontend/src` changes; needs
+  `pixi run web-install` once. Chat, ops, pipeline, scopes and every mutation are not imported by the
+  share builds (`frontend/src/routes/modules.share-*.ts`), not hidden: `/chat` is "Not Found".
+- Frontend source comes from this checkout; a viewer ref older than this feature is refused (use
+  `--viewer-worktree` while it is unmerged). Same content + same frontend = same bytes.
+- **Switching the default later** (own PR, after the checks in the migration plan): pass `app=True` in
+  `deploy.deploy_main` and `snapshots.audit_build`, make `--app` default on in `build.register`, `deploy-main`
+  and `snapshots.register`, then delete the legacy shell, `static/kb-static.js`, the regex inliner and
+  `frontend/src/share/search.test.ts` (it compares against the shim). Old `kb-*` tags keep building through
+  their own viewer (`--viewer`).
+
 ## Next step
 
 `kb-history` to confirm which version is live vs. main; `export-kb` if an LLM needs the text instead.

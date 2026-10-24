@@ -10,6 +10,7 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import { legacyHref, ROUTES } from "@/routes/registry";
+import { IS_SHARE } from "@/share/env";
 import { useUi } from "./ui-store";
 
 /** The ONE ⌘K palette, mounted once in AppShell. Screens add commands by extending this list later. */
@@ -46,6 +47,7 @@ export function CommandPalette() {
             </CommandItem>
           ))}
         </CommandGroup>
+        {!IS_SHARE && (
         <CommandGroup heading="Legacy pages">
           {ROUTES.filter((r) => !r.ported).map((r) => (
             <CommandItem
@@ -61,6 +63,7 @@ export function CommandPalette() {
             </CommandItem>
           ))}
         </CommandGroup>
+        )}
       </CommandList>
     </CommandDialog>
   );

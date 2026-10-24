@@ -42,6 +42,15 @@ so the same content + viewer + profile always yields the same bytes.
   real repo at build time (`github_url`); omitted when there is no GitHub remote.
 
 The public profile carries none of it: no tab, no document, no data, no repo URL.
+
+**App layout (opt-in, `--app`, default off).** Instead of the iframe shell, the build is the React app
+under `frontend/` (`vite build --mode share`, one build per profile so the route set is fixed at build
+time: public = graph + pages, private = + lifecycle; chat, ops, pipeline and scopes are not imported at
+all). The data comes from the same `collect_data` / `collect_lifecycle` / `apply_profile`, so the public
+privacy cuts are the legacy ones, baked into `<script type="application/json" id="kb-data">` of the
+app's `index.html` (the id `share audit` already scans). The output directory is `index.html` +
+`assets/` + `manifest.json` (`layout: "app"`, `sha256` = tree digest); the Worker serves it with a
+single-page-application fallback. See skills/share-kb/SKILL.md.
 """
 import argparse
 import datetime as _dt
@@ -51,6 +60,7 @@ import io
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 import tarfile
@@ -61,6 +71,8 @@ from pathlib import Path
 from .contracts import EXPORT_DIR, PROFILES, REPO, BuildResult, Manifest
 
 SHARE_DIR = Path(__file__).resolve().parent
+FRONTEND_DIR = REPO / "frontend"
+APP_FLAG = "--app-index"      # the inner CLI flag a viewer must know to render the app layout
 VENDOR_DIR = SHARE_DIR / "vendor"
 VENDOR_LOCK = VENDOR_DIR / "vendor.lock"
 SHIM_PATH = SHARE_DIR / "static" / "kb-static.js"
@@ -136,15 +148,15 @@ MAX_HTML_BYTES = 25 * 1024 * 1024
 WARN_HTML_BYTES = int(MAX_HTML_BYTES * 0.8)
 
 
-def size_verdict(n_bytes):
+def size_verdict(n_bytes, name="index.html"):
     """None when fine, a warning string from WARN_HTML_BYTES, raises BuildError at MAX_HTML_BYTES."""
     mb = n_bytes / 1_048_576
     if n_bytes > MAX_HTML_BYTES:
-        raise BuildError(f"index.html is {mb:.1f} MB, over the {MAX_HTML_BYTES / 1_048_576:.0f} MB "
+        raise BuildError(f"{name} is {mb:.1f} MB, over the {MAX_HTML_BYTES / 1_048_576:.0f} MB "
                          "Cloudflare static-asset limit — it cannot be deployed; shrink the page "
                          "(embedded pages / digestion rows) before sharing")
     if n_bytes > WARN_HTML_BYTES:
-        return (f"index.html is {mb:.1f} MB — {100 * n_bytes / MAX_HTML_BYTES:.0f} % of the "
+        return (f"{name} is {mb:.1f} MB — {100 * n_bytes / MAX_HTML_BYTES:.0f} % of the "
                 f"{MAX_HTML_BYTES / 1_048_576:.0f} MB Cloudflare static-asset limit")
     return None
 
@@ -853,6 +865,113 @@ def inner_build(args):
     return 0
 
 
+# ---------- app layout ----------
+
+_DATA_TAG = '<script type="application/json" id="kb-data">%s</script>\n'
+_TITLE_RE = re.compile(r"<title>.*?</title>", re.S)
+
+
+def app_page(template, data, manifest_fields):
+    """The built app's index.html with the data blob baked in (before </head>) and a versioned title.
+
+    `data` = {graph, index, pages[, lifecycle]} after `apply_profile`; the blob also carries `meta`
+    (what the footer line shows). The module script runs after parsing, so it finds `#kb-data`."""
+    meta = {k: manifest_fields[k] for k in ("kb_version", "content_sha", "viewer_sha", "profile", "built_at")}
+    blob = dict(data, meta=meta)
+    title = f"<title>{_html.escape('Thesis Wiki — kb ' + manifest_fields['kb_version'])}</title>"
+    if "</head>" not in template or not _TITLE_RE.search(template):
+        raise BuildError("the app's index.html has no <title> / </head>; rebuild the frontend (pixi run web-install)")
+    page = _TITLE_RE.sub(lambda _m: title, template, count=1)
+    return page.replace("</head>", _DATA_TAG % embed_json(blob) + "</head>", 1)
+
+
+def inner_build_app(args):
+    """Inside the viewer checkout, KB_ROOT = content: the same data as the legacy build, in the app's page."""
+    meta_dir = Path(__file__).resolve().parents[1]
+    fields = {"content_ref": args.content_ref, "content_sha": args.content_sha,
+              "kb_version": args.kb_version, "viewer_sha": args.viewer_sha,
+              "profile": args.profile, "built_at": args.built_at}
+    data = collect_data(meta_dir, args.built_at, args.content_sha)
+    git_root = os.environ.get(GIT_ROOT_ENV)
+    if args.profile == "private" and git_root and os.path.isdir(git_root):
+        data["lifecycle"] = collect_lifecycle(meta_dir, args.built_at, git_root, args.content_sha,
+                                              os.environ.get("KB_ROOT", "."), args.content_ref)
+    data = apply_profile(data, args.profile)      # the one place the public cuts live
+    page = app_page(Path(args.app_index).read_text(encoding="utf-8"), data, fields)
+    out = Path(args.out)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(page, encoding="utf-8", newline="\n")
+    print(f"{out} ({len(data['graph']['nodes'])} nodes, {len(data['pages'])} pages, {out.stat().st_size // 1024} KB, app)")
+    return 0
+
+
+def frontend_source_hash(frontend=FRONTEND_DIR):
+    """Digest of what the share bundle is made of: the app sources (not tests), its config and lockfile."""
+    frontend = Path(frontend)
+    h = hashlib.sha256()
+    files = [p for p in (frontend / "src").rglob("*") if p.is_file() and ".test." not in p.name
+             and "test" not in p.relative_to(frontend / "src").parts[:1]]
+    files += [frontend / n for n in ("index.html", "vite.config.ts", "tsconfig.json", "package.json", "package-lock.json")
+              if (frontend / n).is_file()]
+    for p in sorted(files):
+        h.update(p.relative_to(frontend).as_posix().encode() + b"\0" + hashlib.sha256(p.read_bytes()).digest())
+    return h.hexdigest()
+
+
+def ensure_frontend_dist(profile, frontend=FRONTEND_DIR, runner=None):
+    """`frontend/dist-share/<profile>/` built from the current sources (rebuilt when they changed).
+
+    `vite build --mode share` with VITE_SHARE_PROFILE=<profile>; needs `pixi run web-install` once."""
+    frontend = Path(frontend)
+    dist = frontend / "dist-share" / profile
+    stamp = dist / ".src-hash"
+    want = frontend_source_hash(frontend)
+    if (dist / "index.html").is_file() and stamp.is_file() and stamp.read_text().strip() == want:
+        return dist
+    if not (frontend / "node_modules").is_dir():
+        raise BuildError("frontend/node_modules is missing — run `pixi run web-install` once, then retry")
+    env = dict(os.environ, VITE_SHARE_PROFILE=profile)
+    proc = (runner or subprocess.run)(["npm", "run", "build:share", "--prefix", str(frontend)], env=env,
+                                      capture_output=True, text=True, check=False)
+    if proc.returncode != 0:
+        tail = (proc.stderr or proc.stdout or "").strip().splitlines()[-12:]
+        raise BuildError("frontend share build failed:\n" + "\n".join(tail))
+    stamp.write_text(want + "\n")
+    return dist
+
+
+def tree_files(directory):
+    """Every file under `directory` as sorted POSIX relative paths."""
+    directory = Path(directory)
+    return sorted(p.relative_to(directory).as_posix() for p in directory.rglob("*") if p.is_file())
+
+
+def tree_digest(directory):
+    """sha256 over (relative path, file sha256) of every file except manifest.json — the app layout's `sha256`."""
+    directory = Path(directory)
+    h = hashlib.sha256()
+    for rel in tree_files(directory):
+        if rel == "manifest.json":
+            continue
+        h.update(rel.encode() + b"\0" + hashlib.sha256((directory / rel).read_bytes()).digest())
+    return h.hexdigest()
+
+
+def assemble_app(dist, page_path, out_dir):
+    """`out_dir` = a clean copy of the built app (minus its template index.html) + the data-carrying page."""
+    dist, out_dir = Path(dist), Path(out_dir)
+    for child in list(out_dir.iterdir()) if out_dir.is_dir() else []:
+        shutil.rmtree(child) if child.is_dir() else child.unlink()
+    out_dir.mkdir(parents=True, exist_ok=True)
+    for rel in tree_files(dist):
+        if rel == "index.html" or rel.startswith(".") or "/." in rel:
+            continue
+        dest = out_dir / rel
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(dist / rel, dest)
+    shutil.copyfile(page_path, out_dir / "index.html")
+
+
 # ---------- outer ----------
 
 def _safe_name(ref):
@@ -875,11 +994,15 @@ def schema_major(root, sha):
 
 
 def build(content_ref, viewer_ref="main", profile="private", *, root=REPO, viewer_root=None,
-          out_root=EXPORT_DIR, viewer_worktree=False, label=None):
+          out_root=EXPORT_DIR, viewer_worktree=False, label=None, app=False, frontend_dist=None):
     """Build `content_ref` with the viewer at `viewer_ref` → BuildResult(dir, manifest).
 
     `root` is the repo the content comes from; `viewer_root` (default: the same repo) is where
     the viewer code is taken from — a committed ref, or its working tree with `viewer_worktree`.
+
+    `app=True` (opt-in) builds the React app layout instead of the iframe shell: `frontend_dist` is
+    its built `dist-share/<profile>` (default: built/reused from this checkout's `frontend/`). The
+    legacy path below is untouched when `app` is False.
     """
     root = Path(root)
     viewer_root = Path(viewer_root or root)
@@ -900,8 +1023,12 @@ def build(content_ref, viewer_ref="main", profile="private", *, root=REPO, viewe
         viewer_sha = _rev_parse(viewer_root, "HEAD") or "worktree"
     else:
         viewer_sha = resolve_ref(viewer_root, viewer_ref)
-    out_dir = Path(out_root) / _safe_name(label or content_ref)
+    out_dir = Path(out_root) / (_safe_name(label or content_ref) + ("-app" if app and not label else ""))
     html_path = out_dir / "index.html"
+    if app:
+        dist = Path(frontend_dist) if frontend_dist else ensure_frontend_dist(profile)
+        if not (dist / "index.html").is_file():
+            raise BuildError(f"{dist} has no index.html — build the frontend first (pixi run web-install)")
     with tempfile.TemporaryDirectory(prefix="kb-share-") as tmp:
         content_dir = os.path.join(tmp, "content")
         archive(root, content_sha, content_dir)
@@ -918,6 +1045,11 @@ def build(content_ref, viewer_ref="main", profile="private", *, root=REPO, viewe
             raise BuildError(f"viewer {viewer_ref} ({viewer_sha[:7]}) has no share builder (backend/src/kb/share/build.py, or meta/share/build.py before the app layout) — "
                              "pick a viewer ref that contains the share builder (--viewer <branch|sha>), "
                              "or --viewer-worktree to use this checkout's code")
+        if app and (layout != "app" or APP_FLAG not in (Path(viewer_dir) / APP_LAYOUT).read_text(encoding="utf-8")):
+            raise BuildError(f"viewer {viewer_ref} ({viewer_sha[:7]}) predates the app layout (no {APP_FLAG}) — "
+                             "use --viewer-worktree, or a viewer ref that contains it")
+        if app:
+            html_path = Path(tmp) / "app-index.html"   # assembled into out_dir below, after the guard
         out_dir.mkdir(parents=True, exist_ok=True)
         # PYTHONHASHSEED=0: set iteration order in the viewer's data builders (e.g. tie-breaks in
         # explore_data._suggest) must not vary between runs or machines. KB_CI=1: the content
@@ -940,10 +1072,26 @@ def build(content_ref, viewer_ref="main", profile="private", *, root=REPO, viewe
                "--out", str(html_path), "--profile", profile,
                "--content-ref", content_ref, "--content-sha", content_sha,
                "--kb-version", kb_version, "--viewer-sha", viewer_sha, "--built-at", built_at]
+        if app:
+            cmd += [APP_FLAG, str(dist / "index.html")]
         proc = subprocess.run(cmd, cwd=viewer_dir, env=env, capture_output=True, text=True, check=False)
         if proc.returncode != 0:
             tail = (proc.stderr or proc.stdout or "").strip().splitlines()[-12:]
             raise BuildError("inner build failed in viewer %s:\n%s" % (viewer_sha[:7], "\n".join(tail)))
+        if app:
+            for rel in tree_files(dist):       # the 25 MiB guard applies to every file the Worker serves
+                if not (rel == "index.html" or rel.startswith(".")):
+                    size_verdict((dist / rel).stat().st_size, rel)
+            warning = size_verdict(html_path.stat().st_size)
+            if warning:
+                print(f"share build: {warning}", file=sys.stderr)
+            assemble_app(dist, html_path, out_dir)
+    if app:
+        manifest = Manifest(content_ref=content_ref, content_sha=content_sha, kb_version=kb_version,
+                            viewer_sha=viewer_sha, profile=profile, sha256=tree_digest(out_dir),
+                            built_at=built_at, layout="app")
+        (out_dir / "manifest.json").write_text(manifest.to_json(), encoding="utf-8")
+        return BuildResult(dir=out_dir, manifest=manifest)
     page = html_path.read_bytes()
     warning = size_verdict(len(page))          # BuildError above the deployable size
     if warning:
@@ -1006,13 +1154,17 @@ def cmd_versions(args):
 def cmd_build(args):
     try:
         result = build(args.ref, viewer_ref=args.viewer, profile=args.profile, root=args.root,
-                       viewer_worktree=args.viewer_worktree)
+                       viewer_worktree=args.viewer_worktree, app=args.app,
+                       frontend_dist=args.frontend_dist)
     except BuildError as e:
         print(f"share build: {e}", file=sys.stderr)
         return 1
     m = result.manifest
     html = result.dir / "index.html"
     print(f"{html}  ({html.stat().st_size / 1_048_576:.1f} MB of {MAX_HTML_BYTES / 1_048_576:.0f} MB)")
+    if m.layout == "app":
+        total = sum((result.dir / rel).stat().st_size for rel in tree_files(result.dir))
+        print(f"app layout: {len(tree_files(result.dir))} files, {total / 1_048_576:.1f} MB in total")
     print(f"kb {m.kb_version} · {m.content_sha[:7]} · viewer {m.viewer_sha[:7]} · {m.profile} · "
           f"built {m.built_at} · sha256 {m.sha256[:12]}")
     if args.open:
@@ -1028,6 +1180,9 @@ def register(sub):
     b.add_argument("--open", action="store_true", help="open the result in the browser")
     b.add_argument("--viewer-worktree", action="store_true",
                    help="dev only: use this worktree's dashboard code instead of a committed ref")
+    b.add_argument("--app", action="store_true",
+                   help="opt in: build the React app layout (index.html + assets/) instead of the iframe shell")
+    b.add_argument("--frontend-dist", default=None, help=argparse.SUPPRESS)
     b.add_argument("--root", default=str(REPO), help=argparse.SUPPRESS)
     b.set_defaults(func=cmd_build)
 
@@ -1042,12 +1197,14 @@ def _inner_parser():
     p.add_argument("--inner", action="store_true", required=True)
     for name in ("out", "profile", "content-ref", "content-sha", "kb-version", "viewer-sha", "built-at"):
         p.add_argument(f"--{name}", required=True)
+    p.add_argument(APP_FLAG, default=None, help="the built app's index.html: render the app layout, not the shell")
     return p
 
 
 if __name__ == "__main__":
     try:
-        sys.exit(inner_build(_inner_parser().parse_args()))
+        _args = _inner_parser().parse_args()
+        sys.exit((inner_build_app if _args.app_index else inner_build)(_args))
     except BuildError as e:
         print(f"share build: {e}", file=sys.stderr)
         sys.exit(1)

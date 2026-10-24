@@ -29,6 +29,7 @@ refuses on flags unless `--allow-flags`.
 Cloudflare goes through `kb.share.cf_api` (mockable seams); the upload reuses
 `kb.share.deploy.deploy(require_access=False)` with its own status file under CACHE_DIR.
 """
+import argparse
 import datetime as _dt
 import json
 import re
@@ -103,15 +104,26 @@ def scan(data: dict) -> dict:
     return {"counts": dict(sorted(counts.items())), "flags": flags, "pages": len(slugs)}
 
 
-def audit_build(ref: str, root: Path = REPO):
-    """Build `ref` with the public profile into a temp dir and scan it → (report, build_dir, tmpdir)."""
+def audit_build(ref: str, root: Path = REPO, app: bool = False, **build_kw):
+    """Build `ref` with the public profile into a temp dir and scan it → (report, build_dir, tmpdir).
+
+    `app=True` (opt-in) audits the React-app layout instead: its baked `kb-data` is scanned the same way."""
     from kb.share.build import build  # lazy: the builder is heavy and its own module
     tmp = tempfile.TemporaryDirectory(prefix="kb-share-audit-")
-    result = build(ref, profile="public", root=root, out_root=Path(tmp.name), label="public")
+    result = build(ref, profile="public", root=root, out_root=Path(tmp.name), label="public", **({"app": True} if app else {}), **build_kw)
     html = (Path(result.dir) / "index.html").read_text(encoding="utf-8")
     report = scan(extract_data(html))
     report["manifest"] = json.loads((Path(result.dir) / "manifest.json").read_text(encoding="utf-8"))
     return report, result.dir, tmp
+
+
+def _audit_kw(args) -> dict:
+    """Only what was asked for: no flag → no extra keyword, the legacy call is unchanged.
+    `--viewer-worktree` is dev only (hidden): render with this checkout's code, as `share build` can."""
+    kw = {"app": True} if getattr(args, "app", False) else {}
+    if getattr(args, "viewer_worktree", False):
+        kw["viewer_worktree"] = True
+    return kw
 
 
 def print_report(report: dict) -> None:
@@ -135,7 +147,7 @@ def print_report(report: dict) -> None:
 
 def cmd_audit(args) -> int:
     try:
-        report, _dir, tmp = audit_build(args.ref)
+        report, _dir, tmp = audit_build(args.ref, **_audit_kw(args))
     except Exception as e:  # noqa: BLE001 — the user wants the reason, not a traceback
         print(f"audit failed: {e}")
         return 1
@@ -211,7 +223,7 @@ def cmd_snapshot(args) -> int:
         print(f"snapshot: {e}")
         return 2
     try:
-        report, build_dir, tmp = audit_build(args.ref)
+        report, build_dir, tmp = audit_build(args.ref, **_audit_kw(args))
     except Exception as e:  # noqa: BLE001
         print(f"snapshot: build/audit failed: {e}")
         return 1
@@ -509,6 +521,8 @@ def register(subparsers) -> None:
     a = subparsers.add_parser("audit", help="build <ref> with the public profile and scan it (no deploy)")
     a.add_argument("ref", help="main, a commit, kb-x.y.z or x.y.z")
     a.add_argument("--allow-flags", action="store_true", help="exit 0 even when flags are found")
+    a.add_argument("--app", action="store_true", help="opt in: audit the React-app layout build")
+    a.add_argument("--viewer-worktree", action="store_true", help=argparse.SUPPRESS)
     a.set_defaults(func=cmd_audit)
 
     s = subparsers.add_parser("snapshot", help="publish <ref> as the public Worker snapshot-<date>-<name>")
@@ -520,6 +534,8 @@ def register(subparsers) -> None:
                    help="with --replace: allow serving an older or unrelated knowledge version than the live one")
     s.add_argument("--allow-flags", action="store_true", help="deploy despite audit flags")
     s.add_argument("--dry-run", action="store_true", help="audit and resolve the Worker, but do not deploy")
+    s.add_argument("--app", action="store_true", help="opt in: publish the React-app layout build instead of the iframe shell")
+    s.add_argument("--viewer-worktree", action="store_true", help=argparse.SUPPRESS)
     s.set_defaults(func=cmd_snapshot)
 
     ls = subparsers.add_parser("list", help="our snapshot Workers: version, behind-main, deployed, views, online")

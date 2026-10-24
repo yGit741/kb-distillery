@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "build:share": "tsc --noEmit && vite build --mode share"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.0",

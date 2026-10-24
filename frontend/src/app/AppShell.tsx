@@ -2,6 +2,7 @@ import { Link, Outlet } from "@tanstack/react-router";
 import { Command as CommandIcon, Moon, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ROUTES } from "@/routes/registry";
+import { ShareFooter } from "@/share/ShareFooter";
 import { useTheme } from "@/theme/theme";
 import { CommandPalette } from "./CommandPalette";
 import { ShareChip } from "./ShareChip";
@@ -48,6 +49,7 @@ export function AppShell() {
       <main className={embed ? "min-w-0 flex-1" : "mx-auto w-full min-w-0 max-w-6xl flex-1 px-4 py-4"}>
         <Outlet />
       </main>
+      <ShareFooter />
       <CommandPalette />
     </div>
   );

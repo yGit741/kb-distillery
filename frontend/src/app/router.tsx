@@ -2,8 +2,10 @@ import {
   createRootRoute,
   createRoute,
   createRouter,
+  redirect,
   type RouterHistory,
 } from "@tanstack/react-router";
+import { IS_SHARE } from "@/share/env";
 import { LegacyCard } from "@/features/legacy/LegacyCard";
 import { ROUTES, type Route } from "@/routes/registry";
 import { SEARCH } from "@/routes/search";
@@ -28,7 +30,12 @@ function screenRoutes(def: Route) {
   );
 }
 
-const routeTree = rootRoute.addChildren(ROUTES.flatMap(screenRoutes));
+// A share build has no Home screen: the entry point is the graph.
+const shareIndex = IS_SHARE
+  ? [createRoute({ getParentRoute: () => rootRoute, path: "/", beforeLoad: () => { throw redirect({ to: "/graph" } as never); } })]
+  : [];
+
+const routeTree = rootRoute.addChildren([...shareIndex, ...ROUTES.flatMap(screenRoutes)]);
 
 export function createAppRouter(history?: RouterHistory, basepath: string = BASEPATH) {
   return createRouter({ routeTree, history, basepath: basepath || "/", defaultPreload: "intent" });

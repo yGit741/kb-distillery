@@ -124,7 +124,7 @@ def save_config(cfg: dict, path: Path = None) -> Path:
 
 # ---------- Worker dir ----------
 
-def render_wrangler(worker: str, require_access: bool, cfg: dict) -> str:
+def render_wrangler(worker: str, require_access: bool, cfg: dict, spa: bool = False) -> str:
     template = (WORKER_DIR / "wrangler.template.jsonc").read_text(encoding="utf-8")
     if require_access:
         assets = {"directory": "./public", "binding": "ASSETS", "run_worker_first": True}
@@ -138,6 +138,8 @@ def render_wrangler(worker: str, require_access: bool, cfg: dict) -> str:
     else:
         assets = {"directory": "./public"}
         script = ""
+    if spa:      # the React-app layout: client-side routes (/graph, /pages/x) answer with index.html
+        assets["not_found_handling"] = "single-page-application"
     return (template.replace("{{name}}", worker)
             .replace("{{compatibility_date}}", cfg["compatibility_date"])
             .replace("{{assets}}", json.dumps(assets))
@@ -151,7 +153,8 @@ def render_worker_dir(build_dir: Path, worker: str, require_access: bool, cfg: d
         shutil.rmtree(dest)
     dest.mkdir(parents=True)
     shutil.copytree(build_dir, dest / "public")
-    (dest / "wrangler.jsonc").write_text(render_wrangler(worker, require_access, cfg), encoding="utf-8")
+    spa = Path(build_dir, "manifest.json").is_file() and read_manifest(build_dir).get("layout") == "app"
+    (dest / "wrangler.jsonc").write_text(render_wrangler(worker, require_access, cfg, spa=spa), encoding="utf-8")
     if require_access:
         for script in WORKER_SCRIPTS:
             shutil.copy2(WORKER_DIR / script, dest / script)
@@ -420,13 +423,13 @@ def rollback(worker: str, to: Optional[str] = None, *, require_access: bool = Tr
 
 # ---------- CLI ----------
 
-def deploy_main(force: bool = False, dry_run: bool = False, build_dir=None, **seams) -> DeployResult:
+def deploy_main(force: bool = False, dry_run: bool = False, build_dir=None, app: bool = False, **seams) -> DeployResult:
     """Build main (private profile) and deploy it to the live Worker; `build_dir` skips the build."""
     status = status_file()
     if build_dir is None:
         try:
             from kb.share.build import build  # lazy: the builder lands in its own PR
-            build_dir = build("main", profile="private").dir
+            build_dir = build("main", profile="private", **({"app": True} if app else {})).dir
         except Exception as e:  # noqa: BLE001
             status.write("failed", "", "", now_iso(), error=f"build failed: {type(e).__name__}: {e}",
                          url=worker_url(WORKER_MAIN))
@@ -441,7 +444,8 @@ def cmd_deploy_main(args) -> int:
         pending_path().touch()
         print("another deploy is running — marked pending, it will rerun once")
         return 0
-    result = deploy_main(force=args.force, dry_run=args.dry_run, build_dir=getattr(args, "dir", None))
+    result = deploy_main(force=args.force, dry_run=args.dry_run, build_dir=getattr(args, "dir", None),
+                         **({"app": True} if getattr(args, "app", False) else {}))
     print(_describe(result))
     if not args.dry_run and pending_path().exists():  # debounce: triggers that arrived meanwhile → one rerun
         pending_path().unlink()
@@ -538,6 +542,7 @@ def register(subparsers) -> None:
     p.add_argument("--force", action="store_true", help="skip the same/older guard (manual use only)")
     p.add_argument("--dry-run", action="store_true", help="render the Worker dir and print the wrangler command")
     p.add_argument("--dir", default=None, help="deploy an existing build dir (index.html + manifest.json) instead of building")
+    p.add_argument("--app", action="store_true", help="opt in: build main with the React-app layout instead of the iframe shell")
     p.set_defaults(func=cmd_deploy_main)
     s = subparsers.add_parser("status", help="last deploy outcome")
     s.set_defaults(func=cmd_status)
