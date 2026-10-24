@@ -11,6 +11,7 @@ import { Finder, FINDER_ID } from "./Finder";
 import { HostContext, type ToolHost } from "./hostContext";
 import { useLayer } from "./layerStore";
 import "./tools/register";
+import "./kalai/register";
 import { extendView, makeView, parsePages, scopeIds, type GraphView } from "./pageSearch";
 import { buildNeighborMap } from "./graphData";
 import { GraphCanvas, type CanvasHandle } from "./GraphCanvas";
@@ -24,7 +25,8 @@ import { parseSchema } from "./schema";
 import { SideReader } from "./SideReader";
 import { useGraphUi } from "./store";
 import { Toolbar } from "./Toolbar";
-import { TOOLS, type GraphToolContext } from "./tools";
+import { TOOLS, useVisibleTools, type GraphToolContext } from "./tools";
+import { flagOn, useExperiments } from "./tools/experiments";
 import { toModel, type GNode } from "./types";
 import { LAYER_TYPES, type Layer } from "@/api/model";
 
@@ -128,6 +130,7 @@ function Loaded({
   onRefresh: () => void;
   dsKind: string;
 }) {
+  const visibleTools = useVisibleTools();
   const ds = useDataSource();
   const ui = useGraphUi();
   const selection = useKb((s) => s.selection);
@@ -260,7 +263,7 @@ function Loaded({
       } else if ((e.key === "e" || e.key === "E") && useKb.getState().selection.size === 1) {
         host.openPage([...useKb.getState().selection][0] as string);
       }
-      const tool = TOOLS.find((t) => t.shortcut === e.key);
+      const tool = TOOLS.find((t) => t.shortcut === e.key && flagOn(t.flag, useExperiments.getState().on));
       if (tool) st.openFlyout(tool.id);
     };
     window.addEventListener("keydown", onKey);
@@ -394,7 +397,7 @@ function Loaded({
           }}
         />
       )}
-      {TOOLS.map((t) => (
+      {visibleTools.map((t) => (
         <div key={t.id}>{t.overlay?.(toolContext)}</div>
       ))}
       </div>
