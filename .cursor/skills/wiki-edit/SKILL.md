@@ -34,7 +34,7 @@ pixi run ops -- status
 
 1. `pixi run ops -- begin refine <slug> "<why, one line>"` — op is usually `refine` (`digest`/`catalog` also allowed).
 2. Make the edits in `wiki/` (guard warns on wiki writes without an open session; strict mode blocks them).
-3. `pixi run ops -- commit` — lints, then commits only the files changed since `begin` as `kb(refine): <why> (kb-x.y.z)`.
+3. `pixi run ops -- commit` — lints, then commits only the files changed since `begin` as `kb(refine): <why> (kb-x.y.z)`. Write the why as intent in words (≤ 72 chars, e.g. "link the Chiang 2023 page where it was named"), not a slug — the pages touched are listed in the commit body automatically.
 4. Report the version printed by the commit.
 
 ## Output

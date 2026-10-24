@@ -5,8 +5,8 @@ alwaysApply: true
 
 # Git — knowledge on main, tooling through PRs
 
-- Knowledge (`wiki/ think/ raw/`, generated indexes, `meta/log.md`): one commit per operation, `kb(<op>): <summary> (kb-x.y.z)`, made by the tools — writer CLIs commit themselves; wrap free-form wiki edits in `pixi run ops -- begin <op> <slug> "why"` … `pixi run ops -- commit`.
-- Tooling (code, skills, config, docs): `pixi run ship -- start <feature> --worktree` → `ship -- commit "type(scope): …"` → `ship -- pr` → `ship -- merge` — a user request to fix/change/add tooling is the ask (see the Intent router in AGENTS.md); merge only on the user's OK. Merges are merge commits `… (#N)`, never squash.
+- Knowledge (`wiki/ think/ raw/`, generated indexes, `meta/log.md`): one commit per operation, `kb(<op>): <summary> (kb-x.y.z)` — summary in words, pages in the body, `KB-Target` a slug, `KB-Tier` on digests — made by the tools — writer CLIs commit themselves; wrap free-form wiki edits in `pixi run ops -- begin <op> <slug> "why"` … `pixi run ops -- commit`.
+- Tooling (code, skills, config, docs): `pixi run ship -- start <feature> --worktree` → `ship -- commit "type(scope): …"` → `ship -- pr` → `ship -- merge` — a user request to fix/change/add tooling is the ask (see the Intent router in AGENTS.md); merge only on the user's OK. Merges are merge commits `… (#N)`, never squash; the PR title takes the highest commit type (paradigm › schema › feat › fix › chore) and the merge body lists the commits. Name a PR `#N title`, never a bare number.
 - Undo (`pixi run ops -- undo <sha>`), restore (`pixi run ops -- restore kb-x.y.z`) and snapshots (`pixi run ops -- snapshot`) only on the user's request.
 - NEVER run raw `git commit`, `push`, `merge`, `rebase`, `tag`, `revert`, `reset`, `gh pr create/merge`, or amend. Chained commands are refused by the hook.
 - Status: `pixi run ops -- status`, `pixi run ops -- log`, `pixi run lanes`. Lane membership: `meta/schema.py`.

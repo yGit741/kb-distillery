@@ -51,6 +51,7 @@ web-dev = "npm run dev --prefix frontend"
 web-build = "npm run build --prefix frontend"
 web-check = { cmd = "npm run typecheck --prefix frontend && npm run test --prefix frontend && npm run build --prefix frontend && git status --short frontend/dist" }
 test-worker = "node --test meta/share/worker/*.test.mjs"
+test-e2e = "node --test meta/dashboard/e2e/*.test.mjs"
 install-sync = "bash meta/launchd/install.sh"
 
 [pypi-dependencies]
