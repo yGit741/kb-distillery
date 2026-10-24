@@ -28,6 +28,7 @@ Read `skills/<skill>/SKILL.md` before running a workflow.
 | `app-ui` | none | 0 | `port the <screen>`, `add a screen`, `frontend`, `app shell` |
 | `backend-api` | none | 0 | `add an endpoint`, `new router`, `change the API`, `api-schema` |
 | `share-kb` | none | 0 | `share the site`, `publish`, `deploy main`, `rollback the site`, `deploy status` (not `export-kb`) |
+| `guided-tour` | light | ~2–4k | `guided tour`, `walkthrough`, `onboarding tour` |
 
 ## Trigger rules
 
@@ -41,6 +42,7 @@ Read `skills/<skill>/SKILL.md` before running a workflow.
 | Skill | Purpose |
 |-------|---------|
 | [export-kb](export-kb/SKILL.md) | Zip wiki + think for external LLM sharing (0 LLM) |
+| [guided-tour](guided-tour/SKILL.md) | Spotlight Next / Back tour over an HTML mockup, to pitch a UI before building it |
 | [scrap-data](scrap-data/SKILL.md) | Save bytes to `raw/inbox/` (0 LLM) |
 | [ingest-to-catalog](ingest-to-catalog/SKILL.md) | Route inbox → `raw/<format>/` + corpus `collection` (+ `paper-` Source page at depth listed) (0 LLM) |
 | [easy-digest](easy-digest/SKILL.md) | Abstract/metadata skim → depth easy (light, Haiku) |
