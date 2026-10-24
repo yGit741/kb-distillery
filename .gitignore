@@ -92,8 +92,10 @@ repomix-output.xml
 *.canvas-llm
 Untitled*.md
 
-# Frontend (frontend/dist IS committed; deps are not; dist-share/ is the share build, rebuilt on demand)
+# Frontend build output is never committed: kb.api rebuilds frontend/dist from source on start when the
+# sources changed, share builds dist-share/ on demand (web-check fails if either is tracked)
 frontend/node_modules
+frontend/dist/
 frontend/dist-share/
 
 # Other agents' skill folders (not ours; the one skill source is skills/)
