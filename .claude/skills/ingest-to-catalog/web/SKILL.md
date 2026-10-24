@@ -23,5 +23,5 @@ description: Catalog web clips from inbox to raw/web-clips/. Corpus row only. Do
 ## CLI
 
 ```bash
-python3 -m meta.ingest catalog raw/inbox/<clip>.md [--collection <collection>]
+python3 -m kb.ingest catalog raw/inbox/<clip>.md [--collection <collection>]
 ```

@@ -1,0 +1,7 @@
+wrote index.md
+warn  raw/printed-docs/2019-fixture-book.pdf: book partially digested — 15/62 pages (24%): p.16-30. Run `python3 -m kb.ingest toc <raw>` for what is left.
+warn  coherence: [cosmetic] score=20 asymmetric link to theme (generalization vs theme-learning-theory)
+warn  coherence: [cosmetic] score=20 asymmetric link to theme (noise-stability vs theme-boolean-analysis)
+warn  coherence: [cosmetic] score=20 asymmetric link to theme (shannon-entropy vs theme-info-theory)
+
+29 pages · 9 raw files · 0 queued · 0 errors · 4 warnings

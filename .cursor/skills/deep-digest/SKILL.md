@@ -23,8 +23,8 @@ description: Thesis-critical deep digest with neighbor links (~25-40k+ tokens, H
 ## CLI
 
 ```bash
-python3 -m meta.ingest deep-digest <raw> --confirm-heavy
-python3 -m meta.ingest deep-digest <collection-slug> --row N --confirm-heavy   # course/series row
+python3 -m kb.ingest deep-digest <raw> --confirm-heavy
+python3 -m kb.ingest deep-digest <collection-slug> --row N --confirm-heavy   # course/series row
 ```
 
 Same pipeline as `full-digest` plus extended `plan.json` (neighbor papers, q- stubs, topic-page `theme-*` threads).

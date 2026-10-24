@@ -1,0 +1,537 @@
+{
+ "links": [
+  [
+   "book-2019-fixture-book",
+   "part-2019-fixture-book-ch2-concentration"
+  ],
+  [
+   "conversation-2024-02-01-fixture-thread-about-a-lemma",
+   "noise-stability"
+  ],
+  [
+   "conversation-2024-02-01-fixture-thread-about-a-lemma",
+   "theme-boolean-analysis"
+  ],
+  [
+   "course-fixture-rl",
+   "lecture-rl-fixture-1"
+  ],
+  [
+   "course-fixture-rl",
+   "lecture-rl-fixture-2"
+  ],
+  [
+   "course-fixture-rl",
+   "theme-learning-theory"
+  ],
+  [
+   "generalization",
+   "theme-learning-theory"
+  ],
+  [
+   "lecture-rl-fixture-1",
+   "course-fixture-rl"
+  ],
+  [
+   "lecture-rl-fixture-1",
+   "theme-learning-theory"
+  ],
+  [
+   "noise-stability",
+   "theme-boolean-analysis"
+  ],
+  [
+   "paper-2020-local-fixture-paper",
+   "generalization"
+  ],
+  [
+   "paper-2020-local-fixture-paper",
+   "theme-learning-theory"
+  ],
+  [
+   "paper-2021-arxiv-style-fixture",
+   "shannon-entropy"
+  ],
+  [
+   "paper-2021-arxiv-style-fixture",
+   "theme-info-theory"
+  ],
+  [
+   "part-2019-fixture-book-ch2-concentration",
+   "book-2019-fixture-book"
+  ],
+  [
+   "part-2019-fixture-book-ch2-concentration",
+   "noise-stability"
+  ],
+  [
+   "part-2019-fixture-book-ch2-concentration",
+   "theme-learning-theory"
+  ],
+  [
+   "q-does-the-fixture-tail-bound-extend-to-dependent-variables",
+   "part-2019-fixture-book-ch2-concentration"
+  ],
+  [
+   "q-is-the-fixture-bound-tight-for-deep-models",
+   "paper-2020-local-fixture-paper"
+  ],
+  [
+   "series-fixture-kalai-blog",
+   "article-kalai-fixture-post-one"
+  ],
+  [
+   "series-fixture-kalai-blog",
+   "theme-boolean-analysis"
+  ],
+  [
+   "shannon-entropy",
+   "theme-info-theory"
+  ],
+  [
+   "theme-boolean-analysis",
+   "conversation-2024-02-01-fixture-thread-about-a-lemma"
+  ],
+  [
+   "theme-info-theory",
+   "paper-2021-arxiv-style-fixture"
+  ],
+  [
+   "theme-learning-theory",
+   "book-2019-fixture-book"
+  ],
+  [
+   "theme-learning-theory",
+   "lecture-rl-fixture-1"
+  ],
+  [
+   "theme-learning-theory",
+   "paper-2020-local-fixture-paper"
+  ],
+  [
+   "video-fixture-talk",
+   "shannon-entropy"
+  ],
+  [
+   "video-fixture-talk",
+   "theme-info-theory"
+  ]
+ ],
+ "pages": [
+  {
+   "areas": [],
+   "depth": "easy",
+   "id": "article-kalai-fixture-post-one",
+   "in": 1,
+   "out": 0,
+   "preview": "Problem: Is noise stability at most one? Main result: Trivially yes; the fixture post asks a toy question.",
+   "status": "digested",
+   "title": "Kalai Fixture Post One",
+   "type": "article",
+   "words": 43,
+   "year": null
+  },
+  {
+   "areas": [],
+   "depth": "easy",
+   "id": "blog-not-exact-fixture-hebrew-post",
+   "in": 0,
+   "out": 0,
+   "preview": "Rank of a fixture matrix. The rank is at most n.",
+   "status": "digested",
+   "title": "פוסט לדוגמה: מטריצות",
+   "type": "blog-post",
+   "words": 61,
+   "year": null
+  },
+  {
+   "areas": [
+    "learning-theory"
+   ],
+   "depth": "",
+   "id": "book-2019-fixture-book",
+   "in": 2,
+   "out": 1,
+   "preview": "A fixture book of four chapters, used by the pipeline harness to exercise the page partition, part digests and the coverage line. It has no real content.",
+   "status": "reading",
+   "title": "Fixture Book (2019)",
+   "type": "book",
+   "words": 139,
+   "year": 2019
+  },
+  {
+   "areas": [],
+   "depth": "catalog",
+   "id": "chat-fixture-ai-chat",
+   "in": 0,
+   "out": 0,
+   "preview": "_No visualizations in this chat._",
+   "status": "to-read",
+   "title": "Fixture chat on VC dimension",
+   "type": "ai-chat",
+   "words": 113,
+   "year": null
+  },
+  {
+   "areas": [
+    "boolean-analysis"
+   ],
+   "depth": "full",
+   "id": "conversation-2024-02-01-fixture-thread-about-a-lemma",
+   "in": 1,
+   "out": 2,
+   "preview": "Problem: Does the lemma hold for non-monotone functions? Main result: Yes, by symmetrisation.",
+   "status": "digested",
+   "title": "Fixture thread about a lemma",
+   "type": "conversation",
+   "words": 60,
+   "year": 2024
+  },
+  {
+   "areas": [
+    "learning-theory"
+   ],
+   "depth": "",
+   "id": "course-fixture-rl",
+   "in": 1,
+   "out": 3,
+   "preview": "A fixture course whose members are two slide decks, catalogued with a collection and a title. It exists only so the pipeline harness can exercise the Contents table of a course.",
+   "status": "digested",
+   "title": "Fixture RL course",
+   "type": "course",
+   "words": 90,
+   "year": null
+  },
+  {
+   "areas": [
+    "learning-theory"
+   ],
+   "depth": "",
+   "id": "generalization",
+   "in": 1,
+   "out": 1,
+   "preview": "One-liner: Gap between train and test risk.",
+   "status": "seed",
+   "title": "Generalization",
+   "type": "concept",
+   "words": 30,
+   "year": null
+  },
+  {
+   "areas": [
+    "learning-theory"
+   ],
+   "depth": "full",
+   "id": "lecture-rl-fixture-1",
+   "in": 2,
+   "out": 2,
+   "preview": "Problem: Define a fixture MDP. Main result: The value function satisfies the Bellman equation.",
+   "status": "digested",
+   "title": "Fixture RL lecture 1",
+   "type": "lecture",
+   "words": 68,
+   "year": null
+  },
+  {
+   "areas": [],
+   "depth": "easy",
+   "id": "lecture-rl-fixture-2",
+   "in": 1,
+   "out": 0,
+   "preview": "Topic: Main result: Policy iteration converges in finitely many steps.",
+   "status": "digested",
+   "title": "Rl Fixture 2",
+   "type": "lecture",
+   "words": 38,
+   "year": null
+  },
+  {
+   "areas": [
+    "boolean-analysis"
+   ],
+   "depth": "",
+   "id": "noise-stability",
+   "in": 2,
+   "out": 1,
+   "preview": "One-liner: Correlation of a function with its noisy copy.",
+   "status": "seed",
+   "title": "Noise stability",
+   "type": "concept",
+   "words": 33,
+   "year": null
+  },
+  {
+   "areas": [],
+   "depth": "catalog",
+   "id": "paper-2019-fixture-book",
+   "in": 0,
+   "out": 0,
+   "preview": "Problem: Main result:",
+   "status": "to-read",
+   "title": "Fixture Book",
+   "type": "paper",
+   "words": 30,
+   "year": 2019
+  },
+  {
+   "areas": [
+    "learning-theory"
+   ],
+   "depth": "full",
+   "id": "paper-2020-local-fixture-paper",
+   "in": 2,
+   "out": 2,
+   "preview": "Problem: Bound the fixture risk of a linear model. Main result: The fixture risk is bounded by the complexity term.",
+   "status": "digested",
+   "title": "Fixture local paper",
+   "type": "paper",
+   "words": 82,
+   "year": 2020
+  },
+  {
+   "areas": [
+    "info-theory"
+   ],
+   "depth": "deep",
+   "id": "paper-2021-arxiv-style-fixture",
+   "in": 1,
+   "out": 2,
+   "preview": "Problem: Characterise fixture entropy. Main result: Entropy lower-bounds code length.",
+   "status": "digested",
+   "title": "Fixture arXiv-style paper",
+   "type": "paper",
+   "words": 68,
+   "year": 2021
+  },
+  {
+   "areas": [
+    "learning-theory"
+   ],
+   "depth": "full",
+   "id": "part-2019-fixture-book-ch2-concentration",
+   "in": 2,
+   "out": 3,
+   "preview": "Problem: Show that fixture sums concentrate. Main result: Sums of independent fixture variables concentrate.",
+   "status": "digested",
+   "title": "Fixture book, chapter 2: concentration",
+   "type": "part",
+   "words": 82,
+   "year": 2019
+  },
+  {
+   "areas": [
+    "learning-theory"
+   ],
+   "depth": "",
+   "id": "q-does-the-fixture-tail-bound-extend-to-dependent-variables",
+   "in": 0,
+   "out": 1,
+   "preview": "Question: Does the fixture tail bound extend to dependent variables?",
+   "status": "open",
+   "title": "Does the fixture tail bound extend to dependent variables?",
+   "type": "question",
+   "words": 47,
+   "year": null
+  },
+  {
+   "areas": [
+    "learning-theory"
+   ],
+   "depth": "",
+   "id": "q-is-the-fixture-bound-tight-for-deep-models",
+   "in": 0,
+   "out": 1,
+   "preview": "Question: Is the fixture bound tight for deep models?",
+   "status": "open",
+   "title": "Is the fixture bound tight for deep models?",
+   "type": "question",
+   "words": 45,
+   "year": null
+  },
+  {
+   "areas": [
+    "boolean-analysis"
+   ],
+   "depth": "",
+   "id": "series-fixture-kalai-blog",
+   "in": 0,
+   "out": 2,
+   "preview": "A fixture blog series standing in for a WordPress blog of clips. It exists only so the pipeline harness can exercise the Contents table of a series.",
+   "status": "digested",
+   "title": "Fixture combinatorics blog",
+   "type": "series",
+   "words": 75,
+   "year": null
+  },
+  {
+   "areas": [
+    "info-theory"
+   ],
+   "depth": "",
+   "id": "shannon-entropy",
+   "in": 2,
+   "out": 1,
+   "preview": "One-liner: Expected surprise of a random variable.",
+   "status": "seed",
+   "title": "Shannon entropy",
+   "type": "concept",
+   "words": 31,
+   "year": null
+  },
+  {
+   "areas": [],
+   "depth": "",
+   "id": "theme-boolean-analysis",
+   "in": 3,
+   "out": 1,
+   "preview": "Fixture theme for the pipeline harness.",
+   "status": "seed",
+   "title": "Boolean Analysis",
+   "type": "theme",
+   "words": 20,
+   "year": null
+  },
+  {
+   "areas": [],
+   "depth": "",
+   "id": "theme-complex-nn",
+   "in": 0,
+   "out": 0,
+   "preview": "Fixture theme for the pipeline harness.",
+   "status": "seed",
+   "title": "Complex Nn",
+   "type": "theme",
+   "words": 18,
+   "year": null
+  },
+  {
+   "areas": [],
+   "depth": "",
+   "id": "theme-fourier-analysis",
+   "in": 0,
+   "out": 0,
+   "preview": "Fixture theme for the pipeline harness.",
+   "status": "seed",
+   "title": "Fourier Analysis",
+   "type": "theme",
+   "words": 18,
+   "year": null
+  },
+  {
+   "areas": [],
+   "depth": "",
+   "id": "theme-implicit-regularization",
+   "in": 0,
+   "out": 0,
+   "preview": "Fixture theme for the pipeline harness.",
+   "status": "seed",
+   "title": "Implicit Regularization",
+   "type": "theme",
+   "words": 18,
+   "year": null
+  },
+  {
+   "areas": [],
+   "depth": "",
+   "id": "theme-info-theory",
+   "in": 3,
+   "out": 1,
+   "preview": "Fixture theme for the pipeline harness.",
+   "status": "seed",
+   "title": "Info Theory",
+   "type": "theme",
+   "words": 20,
+   "year": null
+  },
+  {
+   "areas": [],
+   "depth": "",
+   "id": "theme-learning-theory",
+   "in": 5,
+   "out": 3,
+   "preview": "Fixture theme for the pipeline harness.",
+   "status": "seed",
+   "title": "Learning Theory",
+   "type": "theme",
+   "words": 24,
+   "year": null
+  },
+  {
+   "areas": [],
+   "depth": "",
+   "id": "theme-optimization-theory",
+   "in": 0,
+   "out": 0,
+   "preview": "Fixture theme for the pipeline harness.",
+   "status": "seed",
+   "title": "Optimization Theory",
+   "type": "theme",
+   "words": 18,
+   "year": null
+  },
+  {
+   "areas": [],
+   "depth": "",
+   "id": "theme-quantum",
+   "in": 0,
+   "out": 0,
+   "preview": "Fixture theme for the pipeline harness.",
+   "status": "seed",
+   "title": "Quantum",
+   "type": "theme",
+   "words": 17,
+   "year": null
+  },
+  {
+   "areas": [],
+   "depth": "",
+   "id": "theme-statistics",
+   "in": 0,
+   "out": 0,
+   "preview": "Fixture theme for the pipeline harness.",
+   "status": "seed",
+   "title": "Statistics",
+   "type": "theme",
+   "words": 17,
+   "year": null
+  },
+  {
+   "areas": [],
+   "depth": "",
+   "id": "theme-tensor-factorization",
+   "in": 0,
+   "out": 0,
+   "preview": "Fixture theme for the pipeline harness.",
+   "status": "seed",
+   "title": "Tensor Factorization",
+   "type": "theme",
+   "words": 18,
+   "year": null
+  },
+  {
+   "areas": [
+    "info-theory"
+   ],
+   "depth": "easy",
+   "id": "video-fixture-talk",
+   "in": 0,
+   "out": 2,
+   "preview": "Problem: What is entropy? Main result: Entropy measures surprise.",
+   "status": "digested",
+   "title": "Fixture talk on entropy",
+   "type": "video",
+   "words": 53,
+   "year": 2024
+  }
+ ],
+ "wanted": [
+  {
+   "count": 1,
+   "from": [
+    "book-2019-fixture-book"
+   ],
+   "id": "concept"
+  }
+ ],
+ "wanted_total": 1
+}

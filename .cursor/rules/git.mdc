@@ -9,4 +9,4 @@ alwaysApply: true
 - Tooling (code, skills, config, docs): `pixi run ship -- start <feature> --worktree` → `ship -- commit "type(scope): …"` → `ship -- pr` → `ship -- merge` — a user request to fix/change/add tooling is the ask (see the Intent router in AGENTS.md); merge only on the user's OK. Merges are merge commits `… (#N)`, never squash; the PR title takes the highest commit type (paradigm › schema › feat › fix › chore) and the merge body lists the commits. Name a PR `#N title`, never a bare number.
 - Undo (`pixi run ops -- undo <sha>`), restore (`pixi run ops -- restore kb-x.y.z`) and snapshots (`pixi run ops -- snapshot`) only on the user's request.
 - NEVER run raw `git commit`, `push`, `merge`, `rebase`, `tag`, `revert`, `reset`, `gh pr create/merge`, or amend. Chained commands are refused by the hook.
-- Status: `pixi run ops -- status`, `pixi run ops -- log`, `pixi run lanes`. Lane membership: `meta/schema.py`.
+- Status: `pixi run ops -- status`, `pixi run ops -- log`, `pixi run lanes`. Lane membership: `backend/src/kb/core/schema.py`.

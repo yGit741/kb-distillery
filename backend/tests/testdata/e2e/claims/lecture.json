@@ -1,0 +1,14 @@
+{
+  "raw": "raw/presentations/tml-slides-intro.pdf",
+  "title": "Lecture 1 · Introduction",
+  "problem": "What is generalization?",
+  "method": "Lecture overview.",
+  "results": ["Capacity alone does not explain generalization."],
+  "equations": [{"latex": "R(h) \\le \\hat R(h) + \\epsilon", "variables": {}, "label": "bound"}],
+  "concepts": ["tensor rank"],
+  "open_questions": [],
+  "citekey": "",
+  "url": "",
+  "year": null,
+  "authors": []
+}

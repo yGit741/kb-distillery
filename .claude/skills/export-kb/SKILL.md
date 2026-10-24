@@ -22,10 +22,10 @@ description: >-
 ## CLI
 
 ```bash
-python3 meta/export.py
-python3 meta/export.py --list
-python3 meta/export.py --skip-lint          # faster; index may be stale
-python3 meta/export.py --include-raw-pdfs   # full raw/ binaries (large)
+python3 -m kb.maintenance.export
+python3 -m kb.maintenance.export --list
+python3 -m kb.maintenance.export --skip-lint          # faster; index may be stale
+python3 -m kb.maintenance.export --include-raw-pdfs   # full raw/ binaries (large)
 ```
 
 Pixi: `pixi run export-kb`
@@ -45,6 +45,6 @@ PDFs omitted by default; paths remain in `meta/corpus.tsv`.
 
 ## Agent workflow
 
-1. Run `python3 meta/export.py` (lint runs first by default).
+1. Run `python3 -m kb.maintenance.export` (lint runs first by default).
 2. Print the absolute path and size for upload to the other LLM.
 3. Tell the recipient: start with `AGENTS.md` and `index.md`.

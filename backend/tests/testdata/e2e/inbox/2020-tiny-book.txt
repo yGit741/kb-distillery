@@ -1,0 +1,3 @@
+Tiny Book
+Chapter 1. Ranks of tensors
+Chapter 2. Bounds

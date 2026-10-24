@@ -12,7 +12,7 @@ description: >-
 
 **LLM tier:** light · **Budget:** ~3–8k tokens (verify step only)
 
-A person page is **handle-driven** (`meta/persons.py`): each frontmatter handle generates one
+A person page is **handle-driven** (`backend/src/kb/core/persons.py`): each frontmatter handle generates one
 section, `none` means "checked, there is none" (no section), `unknown` means "checked, not
 found", and a *missing* key means not checked yet. `verified: YYYY-MM-DD` is the only progress
 marker; `pixi run health` counts pages without one (`persons-unverified`).
@@ -45,7 +45,7 @@ any custom section — finalize never rewrites them.
 ## Phase 1 — begin (0 LLM)
 
 ```bash
-python3 -m meta.ingest index-researcher begin "<name|scholar-url|ss-author-id>" [--author-id ID] [--slug slug]
+python3 -m kb.ingest index-researcher begin "<name|scholar-url|ss-author-id>" [--author-id ID] [--slug slug]
 ```
 
 Creates `meta/.researcher/<slug>/manifest.json` (v2). Re-running on an existing person keeps
@@ -70,13 +70,13 @@ Every item carries `source` (`wikipedia|github|youtube|blog|scholar|manual`) and
 `action` (`index` default, `scrap`, `catalog`).
 
 ```bash
-python3 -m meta.ingest index-researcher verify <slug>     # prints what is still unchecked
+python3 -m kb.ingest index-researcher verify <slug>     # prints what is still unchecked
 ```
 
 ## Phase 3 — finalize (0 LLM)
 
 ```bash
-python3 -m meta.ingest index-researcher finalize <slug>
+python3 -m kb.ingest index-researcher finalize <slug>
 ```
 
 Writes `wiki/<slug>.md` — generated sections from the manifest, hand sections preserved — and
@@ -90,9 +90,9 @@ stamp is another id is discarded (`wrong_pdf`). An arXiv outage lists the paper 
 `scrap_failed`; run finalize again later.
 
 ```bash
-python3 -m meta.ingest index-researcher abort <slug>
-python3 -m meta.ingest index-researcher status
-python3 -m meta.ingest index-researcher relink <slug>     # dangling bibliography links → titles
+python3 -m kb.ingest index-researcher abort <slug>
+python3 -m kb.ingest index-researcher status
+python3 -m kb.ingest index-researcher relink <slug>     # dangling bibliography links → titles
 ```
 
 ## Output

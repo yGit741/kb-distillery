@@ -23,13 +23,13 @@ Replaces legacy `thesis-ingest`.
 ## Commands
 
 ```bash
-python3 -m meta.ingest full-digest <raw>   # opens session, prints next steps
-python3 -m meta.ingest begin <raw>         # same session API
-python3 -m meta.ingest extract <sha>       # fill claims.json — see meta/ingest/extract_prompt.md
-python3 -m meta.ingest map <sha>
-python3 -m meta.ingest draft <sha>
-python3 -m meta.ingest finalize <sha>      # lint --ingest-strict for depth full
-python3 -m meta.ingest abort <sha>
+python3 -m kb.ingest full-digest <raw>   # opens session, prints next steps
+python3 -m kb.ingest begin <raw>         # same session API
+python3 -m kb.ingest extract <sha>       # fill claims.json — see backend/src/kb/ingest/extract_prompt.md
+python3 -m kb.ingest map <sha>
+python3 -m kb.ingest draft <sha>
+python3 -m kb.ingest finalize <sha>      # lint --ingest-strict for depth full
+python3 -m kb.ingest abort <sha>
 ```
 
 ## Agent steps after `begin` / `full-digest`
@@ -48,8 +48,8 @@ A book is digested one **part** at a time — never whole. `toc` prints the book
 (or a proposed one if the book has no `type: book` page yet):
 
 ```bash
-python3 -m meta.ingest toc <raw>                     # [x] digested · [ ] backlog · [-] skip
-python3 -m meta.ingest full-digest <raw> --part N    # a row; --pages A-B carves a new one
+python3 -m kb.ingest toc <raw>                     # [x] digested · [ ] backlog · [-] skip
+python3 -m kb.ingest full-digest <raw> --part N    # a row; --pages A-B carves a new one
 ```
 
 The session id is `<sha>-p<A>-<B>`. `map` names the page `part-<book stem>-<topic>` with
@@ -64,7 +64,7 @@ A `course-`/`series-` collection's `## Contents` table lists its member raw file
 passing the collection slug (the row's raw files are read together, e.g. slides + handwritten notes):
 
 ```bash
-python3 -m meta.ingest full-digest course-runi-rl --row 3
+python3 -m kb.ingest full-digest course-runi-rl --row 3
 ```
 
 The page type follows the raw format: `presentations/`, `handwritten/` → `lecture-`;

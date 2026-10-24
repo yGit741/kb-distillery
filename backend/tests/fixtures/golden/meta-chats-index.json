@@ -1,0 +1,16 @@
+{
+  "by_clip": {
+    "raw/llm-chats/fixture-ai-chat.md": "conv-940824dcb2a9"
+  },
+  "by_turn": {
+    "67054ff043d4": [
+      "conv-940824dcb2a9"
+    ],
+    "940824dcb2a9": [
+      "conv-940824dcb2a9"
+    ]
+  },
+  "by_url": {},
+  "by_wiki": {},
+  "schema": "conversation-index/1"
+}

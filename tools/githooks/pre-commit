@@ -1,0 +1,14 @@
+#!/bin/bash
+# The schema is backend/src/kb/lint/lint.py: a commit that fails it breaks the vault.
+# backend/src/kb/ops lints once per operation and hands over a one-time token, so its
+# commits skip the second lint run. Installed by `pixi run install-hooks`.
+root="$(git rev-parse --show-toplevel)"
+export PYTHONPATH="$root/backend/src${PYTHONPATH:+:$PYTHONPATH}"
+token_file="$(git rev-parse --git-path kb-linted)"
+if [ -n "$KB_LINTED" ] && [ -f "$token_file" ] && [ "$(cat "$token_file")" = "$KB_LINTED" ]; then
+  exit 0
+fi
+python3 -m kb.lint.lint || { echo "pre-commit: lint failed — nothing committed" >&2; exit 1; }
+if git diff --cached --name-only | grep -qvE '^(wiki|think|raw)/|^index\.md$|^meta/(corpus|coherence-warnings|aliases)\.tsv$|^meta/log\.md$|^meta/chats/'; then
+  python3 -m kb.lint.lint_skills || exit 1
+fi

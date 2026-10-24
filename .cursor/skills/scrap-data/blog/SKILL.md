@@ -21,10 +21,10 @@ description: Pull every post of a WordPress.com blog into raw/inbox/ as Markdown
 ## CLI
 
 ```bash
-python3 -m meta.ingest scrap-wordpress gilkalai.wordpress.com --prefix kalai-blog           # whole blog
-python3 -m meta.ingest scrap-wordpress gilkalai.wordpress.com --prefix kalai-blog --limit 5 # trial run
-python3 -m meta.ingest scrap-wordpress gilkalai.wordpress.com --prefix kalai-blog --since 2026-01-01
-python3 -m meta.ingest scrap-wordpress <site> --prefix <short> --no-images                   # figures stay remote
+python3 -m kb.ingest scrap-wordpress gilkalai.wordpress.com --prefix kalai-blog           # whole blog
+python3 -m kb.ingest scrap-wordpress gilkalai.wordpress.com --prefix kalai-blog --limit 5 # trial run
+python3 -m kb.ingest scrap-wordpress gilkalai.wordpress.com --prefix kalai-blog --since 2026-01-01
+python3 -m kb.ingest scrap-wordpress <site> --prefix <short> --no-images                   # figures stay remote
 ```
 
 ## Behavior
@@ -36,11 +36,11 @@ python3 -m meta.ingest scrap-wordpress <site> --prefix <short> --no-images      
 3. Math: WordPress.com's `latex.php` images carry the TeX source in the URL → `$…$`, `\displaystyle` → `$$…$$`. Lossless.
 4. Figures: downloaded (8 in parallel) to `raw/inbox/<clip stem>-NN.<ext>`, linked as `../images/<file>` with the
    original URL as the link title; a figure that cannot be fetched keeps its remote URL. `<iframe>` → a link line.
-5. HTML → Markdown is `meta/ingest/htmlmd.py` (standard library only).
+5. HTML → Markdown is `backend/src/kb/ingest/htmlmd.py` (standard library only).
 
 ## Next step
 
-`python3 -m meta.ingest drain-inbox --collection <series-slug> --match <prefix>-` — clips first, then their figures; one lint and one
+`python3 -m kb.ingest drain-inbox --collection <series-slug> --match <prefix>-` — clips first, then their figures; one lint and one
 `kb(catalog)` commit for the whole drain. Figures land in `raw/images/` as `asset:<clip>` rows.
 
 ## Commit

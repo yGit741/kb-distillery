@@ -1,0 +1,198 @@
+{
+  "collection-book": {
+    "claims": {
+      "authors": [
+        "Fixture Author"
+      ],
+      "citekey": "",
+      "concepts": [
+        "noise-stability",
+        "learning-theory"
+      ],
+      "equations": [
+        {
+          "label": "Fixture equation",
+          "latex": "P(S>t)\\le e^{-t^2/2}",
+          "variables": {
+            "x": "a fixture variable"
+          }
+        }
+      ],
+      "method": "A fixture Chernoff bound.",
+      "open_questions": [
+        "Does the fixture tail bound extend to dependent variables?"
+      ],
+      "problem": "Show that fixture sums concentrate.",
+      "results": [
+        "Sums of independent fixture variables concentrate.",
+        "The tail decays exponentially."
+      ],
+      "title": "Fixture book, chapter 2: concentration",
+      "url": "",
+      "year": 2019
+    },
+    "depth": "full",
+    "overview": "A fixture book of four chapters, used by the pipeline harness to exercise the page partition, part digests and the coverage line. It has no real content.",
+    "raw": "raw/printed-docs/2019-fixture-book.pdf",
+    "scope": [
+      "--part",
+      "2"
+    ]
+  },
+  "collection-course-member-1": {
+    "claims": {
+      "authors": [
+        "Fixture Author"
+      ],
+      "citekey": "",
+      "concepts": [
+        "learning-theory"
+      ],
+      "equations": [
+        {
+          "label": "Fixture equation",
+          "latex": "x^2",
+          "variables": {
+            "x": "a fixture variable"
+          }
+        }
+      ],
+      "method": "Bellman equations.",
+      "open_questions": [],
+      "problem": "Define a fixture MDP.",
+      "results": [
+        "The value function satisfies the Bellman equation."
+      ],
+      "title": "Fixture RL lecture 1",
+      "url": "",
+      "year": null
+    },
+    "depth": "full",
+    "hub": "course-fixture-rl",
+    "raw": "raw/presentations/rl-fixture-lecture-1.pdf",
+    "row": "1"
+  },
+  "collection-course-member-2": {
+    "depth": "easy",
+    "main": "Policy iteration converges in finitely many steps.",
+    "problem": "Policy iteration in a fixture MDP.",
+    "raw": "raw/presentations/rl-fixture-lecture-2.pdf"
+  },
+  "source-ai-chat": {
+    "depth": "chat-pipeline",
+    "raw": "raw/llm-chats/fixture-ai-chat.md",
+    "title": "Fixture chat on VC dimension"
+  },
+  "source-article-web-clip": {
+    "depth": "easy",
+    "main": "Trivially yes; the fixture post asks a toy question.",
+    "problem": "Is noise stability at most one?",
+    "raw": "raw/web-clips/kalai-fixture-post-one.md"
+  },
+  "source-blog-post-hebrew": {
+    "depth": "easy",
+    "main": "The rank is at most n.",
+    "problem": "Rank of a fixture matrix.",
+    "raw": "raw/printed-docs/blog-not-exact-fixture-hebrew-post.md"
+  },
+  "source-conversation-email": {
+    "claims": {
+      "authors": [
+        "Fixture Author"
+      ],
+      "citekey": "",
+      "concepts": [
+        "noise-stability",
+        "boolean-analysis"
+      ],
+      "equations": [
+        {
+          "label": "Fixture equation",
+          "latex": "x^2",
+          "variables": {
+            "x": "a fixture variable"
+          }
+        }
+      ],
+      "method": "Symmetrisation.",
+      "open_questions": [],
+      "problem": "Does the lemma hold for non-monotone functions?",
+      "results": [
+        "Yes, by symmetrisation."
+      ],
+      "title": "Fixture thread about a lemma",
+      "url": "",
+      "year": 2024
+    },
+    "depth": "full",
+    "raw": "{email_thread}"
+  },
+  "source-paper-arxiv-style": {
+    "claims": {
+      "authors": [
+        "Fixture Author"
+      ],
+      "citekey": "",
+      "concepts": [
+        "shannon-entropy",
+        "info-theory"
+      ],
+      "equations": [
+        {
+          "label": "Fixture equation",
+          "latex": "H(X)=-\\sum p\\log p",
+          "variables": {
+            "x": "a fixture variable"
+          }
+        }
+      ],
+      "method": "A fixture coding argument.",
+      "open_questions": [],
+      "problem": "Characterise fixture entropy.",
+      "results": [
+        "Entropy lower-bounds code length.",
+        "Equality holds for dyadic sources."
+      ],
+      "title": "Fixture arXiv-style paper",
+      "url": "https://arxiv.org/abs/2105.10386",
+      "year": 2021
+    },
+    "depth": "deep",
+    "raw": "raw/printed-docs/2021-arxiv-style-fixture.pdf"
+  },
+  "source-paper-local": {
+    "claims": {
+      "authors": [
+        "Fixture Author"
+      ],
+      "citekey": "",
+      "concepts": [
+        "generalization",
+        "learning-theory"
+      ],
+      "equations": [
+        {
+          "label": "Fixture equation",
+          "latex": "x^2",
+          "variables": {
+            "x": "a fixture variable"
+          }
+        }
+      ],
+      "method": "Uniform convergence over a fixture class.",
+      "open_questions": [
+        "Is the fixture bound tight for deep models?"
+      ],
+      "problem": "Bound the fixture risk of a linear model.",
+      "results": [
+        "The fixture risk is bounded by the complexity term.",
+        "The bound is tight up to constants."
+      ],
+      "title": "Fixture local paper",
+      "url": "",
+      "year": 2020
+    },
+    "depth": "full",
+    "raw": "raw/printed-docs/2020-local-fixture-paper.pdf"
+  }
+}

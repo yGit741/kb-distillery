@@ -1,7 +1,7 @@
 ---
 name: create-skill
 description: >-
-  Add or extend a meta/skills workflow skill with lint gate. Use for create skill,
+  Add or extend a skills workflow skill with lint gate. Use for create skill,
   new skill, add skill workflow. Do NOT use for vault ingest, digest, or query.
 ---
 
@@ -32,7 +32,7 @@ Meta-skill for authoring skills. Not part of the ingest/digest ladder.
 
 ## Workflow
 
-1. Copy [`SKILL_TEMPLATE.md`](SKILL_TEMPLATE.md) to `meta/skills/<name>/SKILL.md` (or subdir).
+1. Copy [`SKILL_TEMPLATE.md`](SKILL_TEMPLATE.md) to `skills/<name>/SKILL.md` (or subdir).
 2. Fill frontmatter: `name` must match directory (`parent-child` for subskills).
 3. Register in [`README.md`](README.md):
    - Ladder skill → row in **Token budgets** + **Skills** tables
@@ -48,7 +48,7 @@ pixi run sync-skills
 
 ## Output
 
-New or updated `meta/skills/**/SKILL.md`, README row, mirrored `.cursor/skills/`.
+New or updated `skills/**/SKILL.md`, README row, mirrored `.cursor/skills/`.
 
 ## Quality bar
 
