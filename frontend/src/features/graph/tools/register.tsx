@@ -1,4 +1,5 @@
-import { Boxes, MousePointerSquareDashed, ShoppingBasket } from "lucide-react";
+import { Boxes, MessageSquare, MousePointerSquareDashed, ShoppingBasket } from "lucide-react";
+import { ChatDock, ChatToolPanel } from "./ChatDock";
 import { CorpusDrawer } from "../CorpusDrawer";
 import { useLayer } from "../layerStore";
 import { registerMenuItem } from "../menu";
@@ -12,6 +13,18 @@ import { registerTool } from ".";
  * The selection, basket and data-layer tools plus the citation genealogy menu entry. The core ships none
  * of them: importing this file (GraphScreen does) is the registration.
  */
+// the chat dock is part of the local app only; a share build has no chat (see ChatDock.tsx)
+if (import.meta.env.MODE !== "share") {
+  registerTool({
+    id: "chat",
+    label: "Ask (chat)",
+    icon: <MessageSquare aria-hidden />,
+    shortcut: "a",
+    panel: () => <ChatToolPanel />,
+    overlay: () => <ChatDock />,
+  });
+}
+
 registerTool({
   id: "selection",
   label: "Selection tools",

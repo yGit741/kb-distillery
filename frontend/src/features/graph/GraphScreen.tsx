@@ -4,6 +4,7 @@ import { useDataSource } from "@/api";
 import { Empty, ErrorState, Loading } from "@/components/states";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { IS_SHARE } from "@/share/env";
 import { useKb } from "@/lib/store";
 import { useApiQuery } from "@/lib/useApiQuery";
 import type { GraphSearch } from "@/routes/search";
@@ -11,6 +12,7 @@ import { Finder, FINDER_ID } from "./Finder";
 import { HostContext, type ToolHost } from "./hostContext";
 import { useLayer } from "./layerStore";
 import "./tools/register";
+import { askAbout, useChatDock } from "./tools/chatDockStore";
 import "./kalai/register";
 import { extendView, makeView, parsePages, scopeIds, type GraphView } from "./pageSearch";
 import { buildNeighborMap } from "./graphData";
@@ -92,7 +94,7 @@ export function GraphScreen({ search, host }: { search: GraphSearch; host: Graph
 /** The screen sits under the 48px header and fills the rest of the viewport (the graph needs the room). */
 function FullBleed({ children }: { children: React.ReactNode }) {
   return (
-    <div className="fixed inset-x-0 bottom-0 top-12 z-30 overflow-hidden bg-background" data-testid="graph-screen">
+    <div className={cn("fixed inset-x-0 top-12 z-30 overflow-hidden bg-background", IS_SHARE ? "bottom-0" : "bottom-7")} data-testid="graph-screen">
       {children}
     </div>
   );
@@ -359,6 +361,11 @@ function Loaded({
           <Button size="sm" variant="ghost" onClick={() => ui.set({ detailsOpen: true })}>
             Details
           </Button>
+          {!IS_SHARE && (
+            <Button size="sm" variant="ghost" onClick={() => useChatDock.getState().ask(askAbout(selected))}>
+              Ask
+            </Button>
+          )}
           <Button size="sm" variant="ghost" onClick={() => useKb.getState().clearSelection()}>
             Clear
           </Button>

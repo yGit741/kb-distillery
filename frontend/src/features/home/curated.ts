@@ -1,8 +1,8 @@
 import type { CardDef } from "./samplers";
 
 /**
- * Hand-picked Home cards. A share build bakes them into `globalThis.KB_HOME_CARDS` from its profile;
- * the local app has none. Anything malformed is dropped rather than shown.
+ * Hand-picked Home cards (share.toml `[home] cards`, baked into the share blob). Anything malformed is
+ * dropped rather than shown.
  */
 export function parseCards(raw: unknown): CardDef[] {
   if (!Array.isArray(raw)) return [];
@@ -22,4 +22,6 @@ export function parseCards(raw: unknown): CardDef[] {
   return out;
 }
 
-export const curatedCards = (): CardDef[] => parseCards((globalThis as { KB_HOME_CARDS?: unknown }).KB_HOME_CARDS);
+/** A share build's cards come from its blob (share.toml `[home]`, kb.share.home); the local app has none. */
+export const curatedCards = (): CardDef[] =>
+  parseCards(globalThis.KB_EMBEDDED?.home?.cards ?? (globalThis as { KB_HOME_CARDS?: unknown }).KB_HOME_CARDS);
