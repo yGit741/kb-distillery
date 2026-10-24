@@ -269,8 +269,8 @@ def test_legacy_pages_and_api_names_still_answer(client):
 
 def test_legacy_post_keeps_its_own_rules(client):
     legacy = {"Content-Type": "application/json"}
-    assert client.post("/api/chat", json={}).status_code == 400                         # reached the handler
-    foreign = client.post("/api/chat", json={}, headers={**legacy, "Origin": "https://evil.example"})
+    assert client.post("/api/raw-action", json={}).status_code == 400                         # reached the handler
+    foreign = client.post("/api/raw-action", json={}, headers={**legacy, "Origin": "https://evil.example"})
     assert foreign.status_code == 403
 
 
