@@ -16,11 +16,11 @@ const oneOf = <T extends string>(v: unknown, allowed: readonly T[]): T | undefin
   return s && (allowed as readonly string[]).includes(s) ? (s as T) : undefined;
 };
 
-export type ChatSearch = { session?: string; scope?: string };
+export type ChatSearch = { session?: string; scope?: string; q?: string };
 export type PagesSearch = { q?: string; layer?: string; type?: string; status?: string; area?: string };
 export type GraphSearch = { select?: string; focus?: string; scope?: string; layer?: string; raw?: "1" };
 export type ScopesSearch = { scope?: string; draft?: string };
-export type PipelineSearch = { format?: string; q?: string; depth?: string };
+export type PipelineSearch = { format?: string; q?: string; depth?: string; collection?: string; status?: string; view?: string; group?: string; backlog?: "queued"; item?: string };
 export type NoSearch = Record<string, never>;
 
 export interface SearchById {
@@ -41,7 +41,7 @@ export const SEARCH: { [K in keyof SearchById]: (raw: Raw) => SearchById[K] } = 
   home: () => ({}),
   ops: () => ({}),
   lifecycle: () => ({}),
-  chat: (r) => clean({ session: str(r.session), scope: str(r.scope) }),
+  chat: (r) => clean({ session: str(r.session), scope: str(r.scope), q: str(r.q) }),
   pages: (r) =>
     clean({ q: str(r.q), layer: str(r.layer), type: str(r.type), status: str(r.status), area: str(r.area) }),
   graph: (r) =>
@@ -53,5 +53,5 @@ export const SEARCH: { [K in keyof SearchById]: (raw: Raw) => SearchById[K] } = 
       raw: oneOf(r.raw, ["1"] as const),
     }),
   scopes: (r) => clean({ scope: str(r.scope), draft: str(r.draft) }),
-  pipeline: (r) => clean({ format: str(r.format), q: str(r.q), depth: str(r.depth) }),
+  pipeline: (r) => clean({ format: str(r.format), q: str(r.q), depth: str(r.depth), collection: str(r.collection), status: str(r.status), view: str(r.view), group: str(r.group), backlog: oneOf(r.backlog, ["queued"] as const), item: str(r.item) }),
 };
