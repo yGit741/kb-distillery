@@ -21,15 +21,15 @@ Human deliberation lives in `think/` (schema-free, never agent-edited). Distill 
 
 ## Rules
 
-1. **Never edit `think/`** — blocked by `meta/guard.py`.
+1. **Never edit `think/`** — blocked by `backend/src/kb/git/guard.py`.
 2. **Propose first** — show Summary + proposal table; stop.
 3. **Apply only when asked** — use `--cleanup` to delete the distilled page after propagate.
 
 ## Phase 1 — propose
 
 ```bash
-python3 -m meta.distill propose my-true-research-start-here
-python3 -m meta.distill propose my-file --from path/to/bootstrap.md   # one-time bootstrap
+python3 -m kb.distill propose my-true-research-start-here
+python3 -m kb.distill propose my-file --from path/to/bootstrap.md   # one-time bootstrap
 ```
 
 - Writes `meta/.distill/<id>/plan.json`.
@@ -39,7 +39,7 @@ python3 -m meta.distill propose my-file --from path/to/bootstrap.md   # one-time
 ## Revise
 
 ```bash
-python3 -m meta.distill revise my-true-research-start-here
+python3 -m kb.distill revise my-true-research-start-here
 ```
 
 Re-reads `think/`, rebuilds proposals, **keeps** an edited `## Summary` if you changed it on the distilled page.
@@ -47,10 +47,10 @@ Re-reads `think/`, rebuilds proposals, **keeps** an edited `## Summary` if you c
 ## Phase 2 — apply
 
 ```bash
-python3 -m meta.distill apply my-true-research-start-here
-python3 -m meta.distill apply my-true-research-start-here --cleanup   # delete distilled page after
-python3 -m meta.distill apply my-true-research-start-here --only 2,4
-python3 -m meta.distill abort my-true-research-start-here
+python3 -m kb.distill apply my-true-research-start-here
+python3 -m kb.distill apply my-true-research-start-here --cleanup   # delete distilled page after
+python3 -m kb.distill apply my-true-research-start-here --only 2,4
+python3 -m kb.distill abort my-true-research-start-here
 ```
 
 - Backs up targets, applies proposals, runs lint, rolls back on failure.

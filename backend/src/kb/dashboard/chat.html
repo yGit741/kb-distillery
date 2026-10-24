@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Thesis Wiki — Chat</title>
+  <script src="/static/shell.js"></script>
+  <link rel="stylesheet" href="/static/shell.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+  <link rel="stylesheet" href="/static/chat.css?v=4">
+  <script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" defer></script>
+  <script src="/static/chat.js?v=5" defer></script>
+</head>
+<body class="has-app-nav chat-page">
+  {{NAV}}
+
+  <div class="ch-layout">
+    <main class="ch-main">
+      <div class="ch-thread" id="ch-thread" aria-live="polite">
+        <div class="ch-empty" id="ch-empty">
+          <h1>Chat with your knowledge base</h1>
+          <p>In <strong>Agent</strong> mode Claude searches and reads your wiki itself (read-only) and shows every page it opened. <strong>Direct</strong> mode sends the top retrieved pages in one call. Answers cite pages as links into Explore.</p>
+          <div class="ch-examples" id="ch-examples">
+            <button type="button" data-q="What do I know about implicit regularization in matrix factorization?">Implicit regularization in matrix factorization</button>
+            <button type="button" data-q="Which open questions in my notes could become a thesis topic?" data-t="brainstorm">Open questions that could be a thesis</button>
+            <button type="button" data-q="Teach me tensor rank from my notes." data-t="learn">Teach me tensor rank</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="ch-compose">
+        <button type="button" class="ch-pill" id="ch-save" disabled
+                title="Save this chat to raw/inbox/ as an LLM chat (catalog files it under raw/llm-chats/)">
+          <svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"><path d="M8 2v8m0 0L5 7m3 3 3-3M3 12.5h10" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Save to inbox
+        </button>
+        <details class="ch-prompt" id="ch-prompt">
+          <summary>
+            <span>Prompt:</span> <strong id="ch-prompt-name">Query</strong>
+            <span class="ch-badge hidden" id="ch-custom-badge">custom</span>
+            <span class="ch-prompt-desc" id="ch-prompt-desc"></span>
+          </summary>
+          <div class="ch-prompt-body">
+            <div class="ch-prompt-row">
+              <label for="ch-template">Template</label>
+              <select id="ch-template"></select>
+              <button type="button" class="ch-btn ch-btn-quiet" id="ch-reset" title="Discard your edits to this template">Reset to template</button>
+            </div>
+            <textarea id="ch-system" rows="7" spellcheck="true" aria-label="System prompt"></textarea>
+            <p class="ch-hint">Edits are kept per template in this browser and apply from the next message. The retrieved pages and the citation rules are always appended.</p>
+          </div>
+        </details>
+
+        <form class="ch-input" id="ch-form">
+          <textarea id="ch-question" rows="2" placeholder="Ask your knowledge base…   (Enter to send, Shift+Enter for a new line)" aria-label="Your message"></textarea>
+          <button type="submit" class="ch-btn ch-btn-primary" id="ch-send">Send</button>
+          <button type="button" class="ch-btn hidden" id="ch-stop">Stop</button>
+        </form>
+      </div>
+    </main>
+
+    <aside class="ch-rail">
+      <section class="ch-card">
+        <h3>Session</h3>
+        <div class="ch-key" id="ch-key"><span class="ch-dot"></span><span>Checking API key…</span></div>
+        <div class="ch-keyname" id="ch-keyname"></div>
+
+        <label class="ch-field">Account
+          <select id="ch-auth" title="Which credentials pay for the next message"></select>
+        </label>
+        <div class="ch-hint ch-auth-hint" id="ch-auth-hint"></div>
+        <details class="ch-settings ch-keys">
+          <summary>Add or remove an API key</summary>
+          <label class="ch-field">Name
+            <input type="text" id="ch-key-name" placeholder="e.g. personal" maxlength="40" pattern="[a-z0-9-]+">
+          </label>
+          <label class="ch-field">Key
+            <input type="password" id="ch-key-value" placeholder="sk-ant-…" autocomplete="off">
+          </label>
+          <div class="ch-settings-row">
+            <button type="button" class="ch-btn" id="ch-key-add">Add &amp; use</button>
+            <button type="button" class="ch-btn ch-btn-quiet" id="ch-key-remove" title="Delete the selected stored key">Remove selected</button>
+          </div>
+          <span class="ch-hint" id="ch-key-msg"></span>
+          <p class="ch-hint">Keys are stored as files under <code id="ch-keys-dir">~/.config/thesis-kb/keys/</code> (mode 600) and never leave this machine.</p>
+        </details>
+
+        <div class="ch-budget hidden" id="ch-budget">
+          <div class="ch-budget-left"><strong id="ch-left">$—</strong> <span>left (est.)</span></div>
+          <div class="ch-bar" role="progressbar" aria-label="Credit used this cycle"><div class="ch-bar-fill" id="ch-bar"></div></div>
+          <div class="ch-budget-detail" id="ch-budget-detail"></div>
+          <p class="ch-hint">Counts this dashboard's requests only. Exact balance: <a href="https://console.anthropic.com/settings/billing" target="_blank" rel="noopener">console billing</a>.</p>
+          <details class="ch-settings">
+            <summary>Edit key name &amp; credit</summary>
+            <label class="ch-field">Key name
+              <input type="text" id="ch-set-name" placeholder="e.g. thesis-kb-dashboard" maxlength="80">
+            </label>
+            <div class="ch-settings-row">
+              <label class="ch-field">Monthly credit ($)
+                <input type="number" id="ch-set-credit" min="0" step="1">
+              </label>
+              <label class="ch-field">Resets on day
+                <input type="number" id="ch-set-day" min="1" max="31" step="1">
+              </label>
+            </div>
+            <button type="button" class="ch-btn" id="ch-set-save">Save</button>
+            <span class="ch-hint" id="ch-set-msg"></span>
+          </details>
+        </div>
+
+        <label class="ch-field">Backend
+          <select id="ch-backend">
+            <option value="agent">Agent — reads the vault itself</option>
+            <option value="direct">Direct — retrieval + one call</option>
+          </select>
+        </label>
+        <div class="ch-hint ch-backend-hint hidden" id="ch-backend-hint"></div>
+        <label class="ch-field">Model
+          <select id="ch-model"></select>
+        </label>
+        <label class="ch-field">Scope
+          <select id="ch-scope"><option value="">All knowledge</option></select>
+        </label>
+        <div class="ch-hint hidden" id="ch-scope-hint"></div>
+        <button type="button" class="ch-btn ch-btn-quiet" id="ch-new">New chat</button>
+      </section>
+
+      <section class="ch-card">
+        <h3>Sources this turn</h3>
+        <ul class="ch-sources" id="ch-sources"><li class="ch-muted">Ask something to see which pages were used.</li></ul>
+      </section>
+
+    </aside>
+  </div>
+  <div class="ch-toast hidden" id="ch-toast" role="status"></div>
+</body>
+</html>

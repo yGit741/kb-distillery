@@ -1,0 +1,5 @@
+Tiny Rank Paper
+Abstract. We show that gradient descent on a tensor factorization minimizes tensor rank. The result
+explains part of why over-parameterized networks generalize.
+1 Introduction
+Tensor rank is the number of rank-one terms.

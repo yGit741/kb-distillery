@@ -1,0 +1,14 @@
+{
+  "raw": "raw/printed-docs/2024-tiny-rank-paper.pdf",
+  "title": "Tiny Rank Paper",
+  "problem": "Why does gradient descent on a tensor factorization generalize?",
+  "method": "Analyze gradient flow on a rank-one-initialized factorization.",
+  "results": ["Gradient flow implicitly minimizes tensor rank."],
+  "equations": [{"latex": "T = \\sum_r a_r \\otimes b_r \\otimes c_r", "variables": {"T": "tensor"}, "label": "cp"}],
+  "concepts": ["tensor rank", "learning-theory", "gradient flow"],
+  "open_questions": ["Does rank explain generalization?"],
+  "citekey": "tiny2024",
+  "url": "https://example.org/tiny-rank",
+  "year": 2024,
+  "authors": ["A. Author"]
+}

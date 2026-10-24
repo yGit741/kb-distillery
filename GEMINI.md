@@ -21,7 +21,7 @@ section is the owner's own text.
 
 ## Answering a question (query-kb, no-shell version)
 
-Adapted from `meta/skills/query-kb/SKILL.md`:
+Adapted from `skills/query-kb/SKILL.md`:
 
 1. Read `index.md`; pick the relevant section (topics, questions, sources, ideas).
 2. For broad or thematic questions, open the matching topic page `wiki/theme-*.md` first; for a

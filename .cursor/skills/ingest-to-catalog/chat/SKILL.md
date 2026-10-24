@@ -31,5 +31,5 @@ This is how `raw/inbox/` drains for chat exports already cited by a digest.
 ## CLI
 
 ```bash
-python3 -m meta.ingest catalog raw/inbox/<chat-export>.md [--collection <collection>]
+python3 -m kb.ingest catalog raw/inbox/<chat-export>.md [--collection <collection>]
 ```

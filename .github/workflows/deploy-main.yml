@@ -1,7 +1,7 @@
 # Backstop deploy of the private site (Worker `kb`) from GitHub.
 #
 # The Mac deploys first: every kb(...) op and every merge triggers `share deploy-main` locally
-# (meta/share/autodeploy.py), and the nightly sync runs it again in the foreground. This workflow
+# (backend/src/kb/share/autodeploy.py), and the nightly sync runs it again in the foreground. This workflow
 # repeats the same command after each push to main so the live site never lags the repo when the
 # Mac was offline or autodeploy failed. It runs the same build, auth gate and guards as the Mac:
 #   - `skipped-same`  — the live Worker already serves this sha (the usual outcome; exit 0)

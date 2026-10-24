@@ -1,0 +1,17 @@
+/* Start tab — builds on shell.css tokens, digestion.css layout and lifecycle.css chips. */
+.st-places { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.9rem; }
+@media (max-width: 860px) { .st-places { grid-template-columns: 1fr; } }
+.st-place { border-left: 3px solid var(--border); padding: 0.1rem 0 0.1rem 0.8rem; font-size: 0.9rem; }
+.st-place p { margin: 0.3rem 0 0; color: var(--text); }
+.st-place.raw { border-color: var(--muted); }
+.st-place.wiki { border-color: var(--lc-kb); }
+.st-place.think { border-color: var(--lc-snap); }
+.st-table { overflow-x: auto; }
+.st-table table { min-width: 640px; }
+.st-table td { vertical-align: top; }
+.st-group td { font: 600 0.72rem var(--font); letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted);
+  padding-top: 0.9rem; border-bottom: 0; }
+.st-steps { margin: 0.25rem 0 1rem; padding-left: 1.3rem; display: grid; gap: 0.5rem; font-size: 0.92rem; }
+.st-cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; }
+@media (max-width: 1000px) { .st-cards { grid-template-columns: 1fr; } }
+.st-cards dd { margin: 0; font-size: 0.88rem; }

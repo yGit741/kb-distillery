@@ -1,0 +1,6 @@
+{
+  "name": "kb-share-worker",
+  "private": true,
+  "type": "module",
+  "description": "ESM marker so node --test and Workers both load auth.js as a module; no dependencies."
+}

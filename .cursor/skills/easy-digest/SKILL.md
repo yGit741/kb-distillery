@@ -21,9 +21,9 @@ description: Lightweight abstract/metadata skim of a Source page to depth easy (
 ## CLI
 
 ```bash
-python3 -m meta.ingest easy-digest <slug|raw>
-python3 -m meta.ingest easy-digest <raw> --into <series page>     # numbered parts share one page
-python3 -m meta.ingest easy-digest <raw> --no-tick --no-lint --no-commit   # batch: orchestrator ticks, lints, commits
+python3 -m kb.ingest easy-digest <slug|raw>
+python3 -m kb.ingest easy-digest <raw> --into <series page>     # numbered parts share one page
+python3 -m kb.ingest easy-digest <raw> --no-tick --no-lint --no-commit   # batch: orchestrator ticks, lints, commits
 ```
 
 **Series:** when posts are explicit parts of one thing (week 1…7, part I…III), create the page once, then
@@ -46,8 +46,8 @@ Easy digests run on **Haiku** by default — the cheapest model (e.g. a Task/age
 re-reads against the raw file; it logs a verdict per page to `meta/.ingest/easy/spotcheck.jsonl`:
 
 ```bash
-python3 -m meta.ingest easy-spotcheck pick <slug...>      # which of these slugs to re-read
-python3 -m meta.ingest easy-spotcheck log <slug> --model <m> --verdict ok|fix [--note "..."]
+python3 -m kb.ingest easy-spotcheck pick <slug...>      # which of these slugs to re-read
+python3 -m kb.ingest easy-spotcheck log <slug> --model <m> --verdict ok|fix [--note "..."]
 ```
 
 A `fix` verdict means the page is corrected (in an ops session, see `wiki-edit`) or re-digested.

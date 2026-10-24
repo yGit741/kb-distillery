@@ -1,0 +1,6 @@
+#!/bin/bash
+# KB Conventional Commits: kb(op): … (kb-x.y.z) on main, type(scope): … on infra/* branches.
+# Mode: KB_POLICY=warn|enforce (default backend/src/kb/core/schema.py GIT_POLICY_MODE).
+root="$(git rev-parse --show-toplevel)"
+export PYTHONPATH="$root/backend/src${PYTHONPATH:+:$PYTHONPATH}"
+exec python3 -m kb.git.commit_policy msg "$1"

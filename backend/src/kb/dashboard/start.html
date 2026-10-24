@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Thesis Wiki — Start here</title>
+  <script src="/static/shell.js"></script>
+  <link rel="stylesheet" href="/static/shell.css">
+  <link rel="stylesheet" href="/static/digestion.css">
+  <link rel="stylesheet" href="/static/lifecycle.css">
+  <link rel="stylesheet" href="/static/start.css">
+  <script src="/static/start.js" defer></script>
+</head>
+<body class="has-app-nav">
+  {{NAV}}
+  <header class="top">
+    <div>
+      <h1>Start here</h1>
+      <p class="subtle">How to add and edit knowledge, and how to build a new feature for the knowledge base. You talk to the agent (Claude Code or Cursor); the trigger phrases below pick the right skill, and every change lands as one reviewable git commit.</p>
+    </div>
+  </header>
+
+  <div class="grid-summary" id="now"></div>
+
+  <section class="card section">
+    <h2>Three places, three owners</h2>
+    <div class="st-places">
+      <div class="st-place raw"><b><code>raw/</code> — inputs</b><p>PDFs, slides, mail, chat exports. Yours and immutable: only the scrap/catalog CLIs add files; agents never edit them.</p></div>
+      <div class="st-place wiki"><b><code>wiki/</code> — knowledge</b><p>The notes in three layers: sources (papers, lectures, articles…), collections (books, courses, series) and concepts (ideas, topics, questions, people). Written by agents through skills; every change is a <code>kb(op)</code> commit you can undo.</p></div>
+      <div class="st-place think"><b><code>think/</code> — your thinking</b><p>Schema-free drafts that only you edit. Committed for you as <code>kb(think)</code>; promoted into the wiki with <code>distill-think</code>.</p></div>
+    </div>
+  </section>
+
+  <section class="card section">
+    <h2>Edit knowledge</h2>
+    <p class="chart-help">Say the phrase to the agent. The skill runs the CLI, which commits the result on main as <code>kb(&lt;op&gt;): … (kb-x.y.z)</code> — one commit per operation.</p>
+    <div class="st-table">
+      <table class="data-table">
+        <thead><tr><th>You want to…</th><th>Say</th><th>Skill</th><th>Lands as</th></tr></thead>
+        <tbody>
+          <tr class="st-group"><td colspan="4">Bring sources in</td></tr>
+          <tr><td>Save a paper, link or file</td><td><code>scrap &lt;url&gt;</code></td><td><code>scrap-data</code></td><td><span class="lc-chip kb">kb(import)</span></td></tr>
+          <tr><td>File the inbox into raw/ + listed Source pages</td><td><code>catalog</code> · <code>triage inbox</code></td><td><code>ingest-to-catalog</code></td><td><span class="lc-chip kb">kb(catalog)</span></td></tr>
+          <tr><td>Index a researcher's bibliography</td><td><code>build researcher profile &lt;name&gt;</code></td><td><code>build-researcher-profile</code></td><td><span class="lc-chip kb">kb(catalog)</span></td></tr>
+          <tr class="st-group"><td colspan="4">Write notes</td></tr>
+          <tr><td>Quick skim of a source (depth easy)</td><td><code>easy-digest &lt;slug&gt;</code> · <code>skim</code></td><td><code>easy-digest</code></td><td><span class="lc-chip kb">kb(digest)</span></td></tr>
+          <tr><td>Full note with key equations (depth full)</td><td><code>full-digest &lt;raw&gt;</code></td><td><code>full-digest</code></td><td><span class="lc-chip kb">kb(digest)</span></td></tr>
+          <tr><td>Thesis-critical note with neighbours (depth deep)</td><td><code>deep-digest &lt;raw&gt;</code> + confirm heavy</td><td><code>deep-digest</code></td><td><span class="lc-chip kb">kb(digest)</span></td></tr>
+          <tr><td>One chapter of a book</td><td><code>full-digest &lt;book&gt; part 3</code></td><td><code>full-digest</code> (<code>--part</code>)</td><td><span class="lc-chip kb">kb(digest)</span></td></tr>
+          <tr><td>Bare "digest"</td><td colspan="3">The agent asks which tier first — easy, full or deep. It never picks full on its own.</td></tr>
+          <tr class="st-group"><td colspan="4">Shape the graph</td></tr>
+          <tr><td>Split, merge, rename or fix notes</td><td><code>split &lt;idea&gt;</code> · <code>merge &lt;a&gt; and &lt;b&gt;</code></td><td><code>wiki-edit</code></td><td><span class="lc-chip kb">kb(refine)</span></td></tr>
+          <tr><td>Check links around a new note</td><td>runs after a digest</td><td><code>semantic-lint-hop</code></td><td><span class="lc-chip kb">kb(refine)</span></td></tr>
+          <tr><td>Audit a topic</td><td><code>lint-moc &lt;topic&gt;</code></td><td><code>lint-moc</code></td><td>read-only, fixes as <span class="lc-chip kb">kb(refine)</span></td></tr>
+          <tr class="st-group"><td colspan="4">Your own thinking</td></tr>
+          <tr><td>Write freely</td><td>edit <code>think/</code> yourself (Obsidian)</td><td>—</td><td><span class="lc-chip kb">kb(think)</span> automatically</td></tr>
+          <tr><td>Turn a think note into wiki changes</td><td><code>distill think &lt;file&gt;</code></td><td><code>distill-think</code></td><td><span class="lc-chip kb">kb(distill)</span></td></tr>
+          <tr class="st-group"><td colspan="4">Use, check, go back</td></tr>
+          <tr><td>Ask a question</td><td><code>what do I know about &lt;topic&gt;</code></td><td><code>query-knowledge</code></td><td>nothing (filing back = <span class="lc-chip kb">kb(refine)</span>)</td></tr>
+          <tr><td>See what changed</td><td><code>kb history</code> · <code>kb status</code></td><td><code>kb-history</code></td><td>read-only — or the <a href="/lifecycle">Lifecycle</a> tab</td></tr>
+          <tr><td>Undo one bad step</td><td><code>undo &lt;step&gt;</code></td><td><code>kb-undo</code></td><td><span class="lc-chip kb">kb(undo)</span> — wiki only</td></tr>
+          <tr><td>Freeze the current state</td><td><code>snapshot "week 43"</code></td><td><code>kb-snapshot</code></td><td>tag <span class="lc-chip snap">kb-x.y.z</span></td></tr>
+          <tr><td>Go back to a snapshot</td><td><code>restore kb-x.y.z</code></td><td><code>kb-snapshot</code></td><td><span class="lc-chip kb">kb(restore)</span></td></tr>
+          <tr><td>Hand the KB to another LLM</td><td><code>export kb</code></td><td><code>export-kb</code></td><td>zip in <code>.exported/</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="card section">
+    <h2>Develop a feature</h2>
+    <p class="chart-help">Tooling — dashboard, explorer, ingest CLI, skills, schema — never commits to main. It goes through a branch and a pull request you approve. Skill: <code>infra-pr</code>. Just say what you want — <code>fix the graph legend</code>, <code>add a filter to Digestion</code> — and the agent runs the steps below and gives you the PR link; say <code>merge</code> when you are happy. (The full phrase → skill table is the Intent router in <code>AGENTS.md</code>.)</p>
+    <ol class="st-steps">
+      <li><b>Branch.</b> <code>pixi run ship -- start &lt;feature&gt; --worktree</code> — an isolated copy on <code>infra/&lt;feature&gt;</code>, so your vault and the nightly sync stay on main.</li>
+      <li><b>Build and try it.</b> Edit code in the worktree. Try the dashboard from there with <code>pixi run dashboard -- --port 8799</code> (your usual one stays on 8765).</li>
+      <li><b>Commit.</b> <code>pixi run ship -- commit "feat(dashboard): add …"</code> — runs tests, lint-skills and lint first; commits tooling files only.</li>
+      <li><b>Open the PR.</b> <code>pixi run ship -- pr --title "feat(dashboard): add …"</code> — pushes and gives you the GitHub link to review.</li>
+      <li><b>Merge.</b> Approve, then say <code>merge</code> → <code>pixi run ship -- merge</code> makes a real merge commit <code>… (#N)</code> (never squash) and updates your checkout.</li>
+    </ol>
+    <div class="st-cards">
+      <div class="lc-group infra"><h3>A new skill</h3><dl>
+        <dd>Say <code>create skill &lt;name&gt;</code> (skill <code>create-skill</code>) → <code>pixi run lint-skills</code> → <code>pixi run sync-skills</code> → same PR flow, as <code>feat(skills): …</code>. A skill that writes knowledge must end in an op commit.</dd></dl></div>
+      <div class="lc-group snap"><h3>A schema change</h3><dl>
+        <dd>New note type, frontmatter field or rule that lint enforces: bump <code>SCHEMA_VERSION</code> in <code>backend/src/kb/core/schema.py</code>, add <code>backend/src/kb/migrations/NNNN_&lt;name&gt;.py</code>, run <code>pixi run ops -- migrate</code> on the branch, commit as <code>schema(&lt;component&gt;): …</code>. Merging snapshots first and bumps the middle digit.</dd></dl></div>
+      <div class="lc-group kb"><h3>A new kind of source</h3><dl>
+        <dd>Handler sub-skills (<code>scrap-data/&lt;type&gt;</code>, <code>ingest-to-catalog/&lt;type&gt;</code>) as <code>feat(scrap)</code>/<code>feat(ingest)</code>, plus naming and tags as <code>schema(raw)</code> — one PR. Then ingest the items as normal knowledge steps.</dd></dl></div>
+    </div>
+  </section>
+
+  <section class="card section">
+    <h2>Commit names at a glance</h2>
+    <div class="st-table">
+      <table class="data-table">
+        <thead><tr><th>Type</th><th>When</th><th>Example</th></tr></thead>
+        <tbody>
+          <tr><td><span class="lc-chip kb">kb(op)</span></td><td>any knowledge change — noun-phrase summary</td><td><code>kb(digest): 2017-failures-of-gradient-based-deep-learning (kb-0.7.5)</code></td></tr>
+          <tr><td><span class="lc-chip schema">schema</span></td><td>note rules change (+ migration)</td><td><code>schema(books): add book page and partition (#4)</code></td></tr>
+          <tr><td><span class="lc-chip pr">feat</span></td><td>new capability</td><td><code>feat(dashboard): add start page</code></td></tr>
+          <tr><td><span class="lc-chip pr">fix</span></td><td>wrong behaviour corrected</td><td><code>fix(guard): make tests branch-independent</code></td></tr>
+          <tr><td><span class="lc-chip other">chore</span></td><td>no behaviour change — config, docs, tests, refactors</td><td><code>chore(git): ignore png screenshots</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="chart-help">Scope is always a component: <code>vault raw books think ingest lint guard dashboard skills distill query export scrap git obsidian claude gemini</code>. Infra summaries start with a verb. Versions are knowledge-only: <code>kb-x.y.z</code> = paradigm · schema · step.</p>
+  </section>
+
+  <div class="lc-two">
+    <section class="card section">
+      <h2>Daily rhythm</h2>
+      <ul class="lc-guards">
+        <li><b>Morning:</b> <code>pixi run launch</code> opens this dashboard. <a href="/digestion">Digestion</a> shows the inbox and backlog.</li>
+        <li><b>During the day:</b> ask for skills; each finished operation is already committed.</li>
+        <li><b>22:00:</b> the nightly sync commits your <code>think/</code> edits, anything left over, and pushes main with its snapshot tags.</li>
+        <li><b>Weekly:</b> <code>snapshot "week NN"</code> to name a state you might share or return to.</li>
+      </ul>
+    </section>
+    <section class="card section">
+      <h2>Rules that protect you</h2>
+      <ul class="lc-guards">
+        <li>Agents never run git writes; only the <code>ops</code>, <code>ship</code> and <code>daily-sync</code> tools commit.</li>
+        <li><code>raw/</code> and <code>think/</code> are never edited by agents, never rewritten by undo or restore.</li>
+        <li>Undo and restore add commits — history is never rewritten.</li>
+        <li>Tooling changes need your PR approval; PRs are never squashed.</li>
+        <li>Full detail: <a href="/lifecycle">Lifecycle</a> tab · <code>AGENTS.md</code> · <code>skills/README.md</code>.</li>
+      </ul>
+    </section>
+  </div>
+
+  <footer class="footer">Tabs: <a href="/start">Start</a> · <a href="/">Health</a> · <a href="/graph">Graph</a> · <a href="/explore">Explore</a> · <a href="/chat">Chat</a> · <a href="/digestion">Digestion</a> · <a href="/lifecycle">Lifecycle</a></footer>
+</body>
+</html>

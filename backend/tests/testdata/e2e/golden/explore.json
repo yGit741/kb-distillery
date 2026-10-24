@@ -1,0 +1,328 @@
+{
+ "links": [
+  [
+   "book-2020-tiny-book",
+   "part-2020-tiny-book-pages-1-10"
+  ],
+  [
+   "course-test-ml",
+   "lecture-tml-slides-intro"
+  ],
+  [
+   "course-test-ml",
+   "theme-learning-theory"
+  ],
+  [
+   "lecture-tml-slides-intro",
+   "course-test-ml"
+  ],
+  [
+   "lecture-tml-slides-intro",
+   "tensor-rank"
+  ],
+  [
+   "lecture-tml-slides-intro",
+   "theme-learning-theory"
+  ],
+  [
+   "paper-2024-tiny-rank-paper",
+   "tensor-rank"
+  ],
+  [
+   "paper-2024-tiny-rank-paper",
+   "theme-learning-theory"
+  ],
+  [
+   "part-2020-tiny-book-pages-1-10",
+   "book-2020-tiny-book"
+  ],
+  [
+   "part-2020-tiny-book-pages-1-10",
+   "tensor-rank"
+  ],
+  [
+   "part-2020-tiny-book-pages-1-10",
+   "theme-learning-theory"
+  ],
+  [
+   "q-does-rank-explain-generalization",
+   "tensor-rank"
+  ],
+  [
+   "q-does-rank-explain-generalization",
+   "theme-learning-theory"
+  ],
+  [
+   "series-test-blog",
+   "article-tblog-post-one"
+  ],
+  [
+   "series-test-blog",
+   "theme-learning-theory"
+  ],
+  [
+   "tensor-rank",
+   "q-does-rank-explain-generalization"
+  ],
+  [
+   "tensor-rank",
+   "theme-learning-theory"
+  ],
+  [
+   "theme-learning-theory",
+   "paper-2024-tiny-rank-paper"
+  ],
+  [
+   "theme-learning-theory",
+   "q-does-rank-explain-generalization"
+  ],
+  [
+   "theme-learning-theory",
+   "tensor-rank"
+  ],
+  [
+   "video-tiny-talk",
+   "tensor-rank"
+  ],
+  [
+   "video-tiny-talk",
+   "theme-learning-theory"
+  ]
+ ],
+ "pages": [
+  {
+   "areas": [],
+   "depth": "easy",
+   "id": "article-clip-why-rank-matters",
+   "in": 0,
+   "out": 0,
+   "preview": "Problem: Is low rank a good bias? Main result: The article argues it is.",
+   "status": "digested",
+   "title": "Clip Why Rank Matters",
+   "type": "article",
+   "words": 39,
+   "year": null
+  },
+  {
+   "areas": [],
+   "depth": "easy",
+   "id": "article-tblog-post-one",
+   "in": 1,
+   "out": 0,
+   "preview": "Problem: Where does rank show up? Main result: Everywhere, says the post.",
+   "status": "digested",
+   "title": "Tblog Post One",
+   "type": "article",
+   "words": 36,
+   "year": null
+  },
+  {
+   "areas": [],
+   "depth": "listed",
+   "id": "blog-not-exact-blog-post",
+   "in": 0,
+   "out": 0,
+   "preview": "<div dir=\"rtl\"> פוסט קצר על צורת ז'ורדן. </div>",
+   "status": "to-read",
+   "title": "צורת ז'ורדן בפרקטיקה",
+   "type": "blog-post",
+   "words": 41,
+   "year": null
+  },
+  {
+   "areas": [
+    "learning-theory"
+   ],
+   "depth": "",
+   "id": "book-2020-tiny-book",
+   "in": 1,
+   "out": 1,
+   "preview": "Coverage: 10 / 61 pp (16%) · skip rows excluded · parts ≤ 60 pp",
+   "status": "reading",
+   "title": "Tiny Book (2020)",
+   "type": "book",
+   "words": 115,
+   "year": 2020
+  },
+  {
+   "areas": [],
+   "depth": "easy",
+   "id": "conversation-2026-01-02-rank-thread",
+   "in": 0,
+   "out": 0,
+   "preview": "Question asked: Where it landed:",
+   "status": "digested",
+   "title": "2026 01 02 Rank Thread",
+   "type": "conversation",
+   "words": 31,
+   "year": null
+  },
+  {
+   "areas": [
+    "learning-theory"
+   ],
+   "depth": "",
+   "id": "course-test-ml",
+   "in": 1,
+   "out": 2,
+   "preview": "A tiny fixture course for the end-to-end pipeline test: one slide deck, one lecture, and nothing else. It exists so that catalog, full-digest and the Contents table are exercised together.",
+   "status": "digested",
+   "title": "Test machine learning",
+   "type": "course",
+   "words": 78,
+   "year": null
+  },
+  {
+   "areas": [
+    "learning-theory"
+   ],
+   "depth": "full",
+   "id": "lecture-tml-slides-intro",
+   "in": 1,
+   "out": 3,
+   "preview": "Problem: What is generalization? Main result: Capacity alone does not explain generalization.",
+   "status": "digested",
+   "title": "Lecture 1 · Introduction",
+   "type": "lecture",
+   "words": 66,
+   "year": null
+  },
+  {
+   "areas": [],
+   "depth": "listed",
+   "id": "paper-2020-tiny-book",
+   "in": 0,
+   "out": 0,
+   "preview": "Problem: Main result:",
+   "status": "to-read",
+   "title": "Tiny Book",
+   "type": "paper",
+   "words": 30,
+   "year": 2020
+  },
+  {
+   "areas": [],
+   "depth": "easy",
+   "id": "paper-2023-easy-skim-paper",
+   "in": 0,
+   "out": 0,
+   "preview": "Problem: Is matrix completion biased to low rank? Main result: Yes, in a toy model.",
+   "status": "digested",
+   "title": "Easy Skim Paper",
+   "type": "paper",
+   "words": 43,
+   "year": 2023
+  },
+  {
+   "areas": [
+    "learning-theory"
+   ],
+   "depth": "full",
+   "id": "paper-2024-tiny-rank-paper",
+   "in": 1,
+   "out": 2,
+   "preview": "Problem: Why does gradient descent on a tensor factorization generalize? Main result: Gradient flow implicitly minimizes tensor rank.",
+   "status": "digested",
+   "title": "Tiny Rank Paper",
+   "type": "paper",
+   "words": 76,
+   "year": 2024
+  },
+  {
+   "areas": [
+    "learning-theory"
+   ],
+   "depth": "full",
+   "id": "part-2020-tiny-book-pages-1-10",
+   "in": 1,
+   "out": 3,
+   "preview": "Problem: What is the rank of a tensor? Main result: Tensor rank can exceed every flattening rank.",
+   "status": "digested",
+   "title": "Tiny Book",
+   "type": "part",
+   "words": 73,
+   "year": 2020
+  },
+  {
+   "areas": [
+    "learning-theory"
+   ],
+   "depth": "",
+   "id": "q-does-rank-explain-generalization",
+   "in": 2,
+   "out": 2,
+   "preview": "Question: Does a low-rank bias explain why big networks generalize?",
+   "status": "open",
+   "title": "Does rank explain generalization?",
+   "type": "question",
+   "words": 50,
+   "year": null
+  },
+  {
+   "areas": [],
+   "depth": "",
+   "id": "series-test-blog",
+   "in": 0,
+   "out": 2,
+   "preview": "A tiny fixture blog series for the end-to-end pipeline test: one post clipped from the web, skimmed with easy-digest so that its Contents row is ticked.",
+   "status": "digested",
+   "title": "Test blog",
+   "type": "series",
+   "words": 72,
+   "year": null
+  },
+  {
+   "areas": [
+    "learning-theory"
+   ],
+   "depth": "",
+   "id": "tensor-rank",
+   "in": 6,
+   "out": 2,
+   "preview": "One-liner: The smallest number of rank-one tensors that sum to a given tensor.",
+   "status": "seed",
+   "title": "Tensor rank",
+   "type": "idea",
+   "words": 74,
+   "year": null
+  },
+  {
+   "areas": [],
+   "depth": "",
+   "id": "theme-learning-theory",
+   "in": 8,
+   "out": 3,
+   "preview": "Generalization bounds and why over-parameterized networks still generalize; a candidate thesis direction for the e2e fixture vault.",
+   "status": "seed",
+   "title": "Learning theory",
+   "type": "topic",
+   "words": 35,
+   "year": null
+  },
+  {
+   "areas": [
+    "learning-theory"
+   ],
+   "depth": "easy",
+   "id": "video-tiny-talk",
+   "in": 0,
+   "out": 2,
+   "preview": "Problem: Why do big networks generalize? Main result: A talk-length argument that tensor-rank is the right lens.",
+   "status": "digested",
+   "title": "Tiny talk",
+   "type": "video",
+   "words": 48,
+   "year": null
+  }
+ ],
+ "wanted": [
+  {
+   "count": 1,
+   "from": [
+    "book-2020-tiny-book"
+   ],
+   "id": "concept"
+  }
+ ],
+ "wanted_total": 1
+}

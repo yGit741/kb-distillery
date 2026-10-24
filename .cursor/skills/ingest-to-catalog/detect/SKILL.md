@@ -37,8 +37,8 @@ A slide deck exported as PDF has a text layer and lands in `printed-docs` — pa
 ## CLI
 
 ```bash
-python3 -m meta.ingest catalog raw/inbox/<file> [--format <folder>]
-python3 -m meta.ingest drain-inbox
+python3 -m kb.ingest catalog raw/inbox/<file> [--format <folder>]
+python3 -m kb.ingest drain-inbox
 ```
 
 Prints `format → <folder>` before routing.

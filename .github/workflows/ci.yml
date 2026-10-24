@@ -2,7 +2,7 @@
 #
 # KB_CI=1 is required: 445 of the ~590 files under raw/ are gitignored binaries (PDFs, PNGs,
 # PPTX), so a cloud checkout has meta/corpus.tsv but not the bytes it lists. Without the flag,
-# meta/lint.py would treat them as gone — dropping manifest rows, regenerating index.md /
+# backend/src/kb/lint/lint.py would treat them as gone — dropping manifest rows, regenerating index.md /
 # corpus.tsv and erroring on every `raw:` reference. KB_CI keeps the wiki checks (frontmatter,
 # links, slugs, book partitions, course tables, collections, coherence) and reads the committed
 # manifest as the truth instead of reconciling it against disk.
