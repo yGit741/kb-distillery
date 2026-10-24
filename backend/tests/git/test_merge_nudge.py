@@ -18,7 +18,7 @@ ENV = {"GIT_CONFIG_GLOBAL": os.devnull, "GIT_CONFIG_NOSYSTEM": "1"}
 FAKE_GH = """#!/bin/bash
 # fake gh: state comes from $FAKE_PR_STATE (OPEN / MERGED / none)
 [ "$FAKE_PR_STATE" = "none" ] && exit 1
-echo '{"number": 16, "title": "'"$FAKE_PR_TITLE"'", "url": "https://example/pr/16", "state": "'"$FAKE_PR_STATE"'"}'
+echo '{"number": 16, "title": "'"$FAKE_PR_TITLE"'", "url": "https://example/pr/16", "state": "'"$FAKE_PR_STATE"'", "labels": ['"$FAKE_PR_LABELS"']}'
 """
 
 
@@ -42,7 +42,8 @@ class MergeNudgeTests(unittest.TestCase):
         with open(gh, "w") as f:
             f.write(FAKE_GH)
         os.chmod(gh, 0o755)
-        self.env = patch.dict(os.environ, {"GH_BIN": gh, "FAKE_PR_STATE": "OPEN", "FAKE_PR_TITLE": "", **ENV})
+        self.env = patch.dict(os.environ, {"GH_BIN": gh, "FAKE_PR_STATE": "OPEN", "FAKE_PR_TITLE": "",
+                                           "FAKE_PR_LABELS": '{"name": "hold"}', **ENV})
         self.env.start()
 
     def tearDown(self):
@@ -76,7 +77,8 @@ class MergeNudgeTests(unittest.TestCase):
                              ("tool", "ok"), ("assistant", "Done, all gates green."))
         out = merge_nudge.decide(self._payload(t))
         self.assertEqual(out["decision"], "block")
-        self.assertIn('Awaiting your merge: #16 https://example/pr/16 — say "merge"', out["reason"])
+        self.assertIn('Awaiting your merge: #16 https://example/pr/16 — run `! pixi run ship -- approve 16`',
+                      out["reason"])
         # second pass of the same stop: never loops
         self.assertIsNone(merge_nudge.decide(self._payload(t, stop_hook_active=True)))
 
@@ -90,6 +92,12 @@ class MergeNudgeTests(unittest.TestCase):
         t = self._transcript(("user", "fix it"), ("assistant", "Awaiting your merge: #16 …"),
                              ("user", "thanks, one more thing"), ("assistant", "Changed it."))
         self.assertEqual(merge_nudge.decide(self._payload(t))["decision"], "block")
+
+    def test_silent_when_the_pr_is_not_held(self):
+        g(self.repo, "checkout", "-q", "-b", "infra/thing")
+        t = self._transcript(("user", "fix it"), ("assistant", "Opened PR #16, merging it."))
+        with patch.dict(os.environ, {"FAKE_PR_LABELS": '{"name": "bug"}'}):
+            self.assertIsNone(merge_nudge.decide(self._payload(t)))
 
     def test_silent_when_pr_merged_or_missing_or_gh_broken(self):
         g(self.repo, "checkout", "-q", "-b", "infra/thing")
