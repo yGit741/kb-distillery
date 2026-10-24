@@ -15,6 +15,9 @@ nodejs = ">=22,<23"
 truststore = ">=0.9"
 
 [tasks]
+harness = "python -m meta.tests.harness.run_pipeline"
+harness-invariants = "python -m meta.tests.harness.vault_invariants"
+harness-bite = "python -m meta.tests.harness.harness_bite"
 lint = "python meta/lint.py"
 health = "python meta/lint.py --health"
 lint-strict = "python meta/lint.py --ingest-strict"
