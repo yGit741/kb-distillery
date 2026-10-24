@@ -35,7 +35,7 @@ pixi run lint-skills
 
 - `frontend/src/index.css` holds the shadcn CSS variables converted from `meta/dashboard/static/shell.css` (light in `:root`, dark in `.dark`). ONE accent (`--primary`, blue). Chrome status colours are `--ok --warn --bad` only.
 - Use Tailwind token classes (`bg-card`, `text-muted-foreground`, `border`, `text-primary`). Never a hex value in a component.
-- Data colours (type, kind, depth, status, area, raw pile) come from `src/theme/palette.ts` and nowhere else.
+- Data colours (type, layer, depth, status, area, raw pile) come from `src/theme/palette.ts` and nowhere else.
 - Theme: `src/theme/theme.ts` (zustand, saved in `localStorage` inside try/catch, `prefers-color-scheme` default). The toggle lives in AppShell only.
 - Layout: 16px side gutters (`px-4`), no horizontal page scroll at phone width. Wide tables go in an `overflow-x-auto` wrapper.
 
@@ -48,9 +48,13 @@ pixi run lint-skills
 
 ## Data-model vocabulary
 
-New code speaks only the data model: page `type` (`source`, `collection`, `concept`), `kind` (`paper article blog-post video lecture conversation ai-chat part`; `book notebook course series`; `idea topic question person`) and source `depth` (`catalog easy full deep`). Palette keys, props, stores, filters, labels and test names use only these words. Retired words (hub, MOC, theme as a type, container, reading unit, digestion-status as a field) must not appear.
+The frontend speaks the shipped model (schema 1.0, `meta/schema.py` `LAYER_OF`; `src/api/model.ts` mirrors it): every page has a `layer` (`source`, `collection`, `concept`) and a `type` inside it.
 
-The only place old names may appear is `src/api/legacyModel.ts` (marked DELETE after data-model stage 7). The http DataSource passes backend data through it at the boundary.
+- source: paper, part, lecture, article, video, conversation, ai-chat, blog-post. Sources alone carry `depth`: `listed`, `easy`, `full`, `deep`.
+- collection: book, notebook, course, series, plus aux `scope`.
+- concept: idea, topic, question, person, plus aux `distilled-think`.
+
+The backend emits these names directly, so there is no translation layer and no `kind`: palette keys, props, stores, filters, labels and test names use `layer`, `type` and `depth` as the API returns them. Retired words (hub, MOC, reading unit, theme or bare concept as a type, `catalog` as a depth, `digestion-status`) must not appear.
 
 ## De-duplication rules
 
@@ -63,7 +67,7 @@ The only place old names may appear is `src/api/legacyModel.ts` (marked DELETE a
 ## Porting checklist
 
 1. Read the legacy page, its `*_data.py` and its `/api/*` response; write the response types by hand in `src/api/types.ts` (generated once the OpenAPI schema lands).
-2. Add the method to the `DataSource` interface, `http.ts`, and the `embedded.ts` stub. Translate old names in `legacyModel.ts` only.
+2. Add the method to the `DataSource` interface, `http.ts`, and the `embedded.ts` stub. Keep the field names the backend emits.
 3. Build the screen in `src/features/<screen>/`; flip `ported: true` in the registry.
 4. Use the palette, tokens, and shared components; list removed duplicates.
 5. Tests: render test with a mocked DataSource (loading, error, empty, data) plus unit tests for pure logic.
