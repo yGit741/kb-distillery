@@ -1,6 +1,6 @@
 # Skill ladder
 
-Canonical skills live here. Cursor copies via `pixi run sync-skills` → `.cursor/skills/` (after `pixi run lint-skills` passes).
+Canonical skills live here. `.claude/skills` and `.cursor/skills` are symlinks to this folder (`pixi run sync-skills` creates/verifies them after `pixi run lint-skills` passes) — edit here only, never in the mirrors.
 
 Read `skills/<skill>/SKILL.md` before running a workflow.
 
@@ -74,7 +74,7 @@ Tooling is unversioned and ships as `infra/<feature>` PRs merged as `… (#N)`.
 | [create-skill](create-skill/SKILL.md) | Author new skills; runs through `lint-skills` gate (0 LLM) |
 | [app-ui](app-ui/SKILL.md) | Conventions for building screens in `frontend/` (tokens, palette, data-model words, porting checklist; 0 LLM) |
 
-Template: [`SKILL_TEMPLATE.md`](SKILL_TEMPLATE.md) (not synced to `.cursor/skills/`).
+Template: [`SKILL_TEMPLATE.md`](SKILL_TEMPLATE.md) (not a skill; it has no `SKILL.md`).
 
 ## Adding a skill
 

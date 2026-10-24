@@ -138,6 +138,54 @@ class LintSkillsFixtureTests(unittest.TestCase):
         self.assertGreater(n_err_strict, 0)
         shutil.rmtree(tmp)
 
+    def _warnings_for(self, description: str):
+        from kb.lint import lint_skills
+        tmp = self._make_tree()
+        skills = os.path.join(tmp, "skills")
+        path = os.path.join(skills, "test-skill", "SKILL.md")
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(_minimal_skill("test-skill", description))
+        n_err, _ = run_checks(skills_root=skills)
+        warns = list(lint_skills.warnings)
+        shutil.rmtree(tmp)
+        return n_err, warns
+
+    def test_description_without_use_trigger_warns(self):
+        n_err, warns = self._warnings_for("Does a thing for the vault. Do NOT use for anything else.")
+        self.assertEqual(n_err, 0)
+        self.assertTrue(any('"Use for/when' in w for w in warns), warns)
+
+    def test_description_without_do_not_clause_warns(self):
+        n_err, warns = self._warnings_for("Does a thing for the vault. Use for thing, do-thing. Never auto-run.")
+        self.assertEqual(n_err, 0)
+        self.assertTrue(any('"Do NOT use for' in w for w in warns), warns)
+
+    def test_good_description_has_no_trigger_warnings(self):
+        _, warns = self._warnings_for("Does a thing. Use for thing, do-thing. Do NOT use for other things.")
+        self.assertFalse(any("trigger line" in w or "near-miss" in w for w in warns), warns)
+
+
+class SkillLinkTests(unittest.TestCase):
+    def test_repo_mirrors_are_symlinks_to_skills(self):
+        from kb.maintenance.sync_skills import LINKS, link_ok
+        for link in LINKS:
+            self.assertTrue(link_ok(link), f"{link} must be a symlink to ../skills (pixi run sync-skills)")
+
+    def test_ensure_link_replaces_copied_dir(self):
+        from kb.maintenance import sync_skills
+        tmp = tempfile.mkdtemp()
+        try:
+            os.makedirs(os.path.join(tmp, "skills"))
+            stale = os.path.join(tmp, ".claude", "skills")
+            os.makedirs(stale)
+            with open(os.path.join(stale, "x"), "w") as f:
+                f.write("copy")
+            self.assertEqual(sync_skills.ensure_link(stale), "replaced")
+            self.assertTrue(sync_skills.link_ok(stale))
+            self.assertEqual(sync_skills.ensure_link(stale), "ok")
+        finally:
+            shutil.rmtree(tmp)
+
 
 if __name__ == "__main__":
     unittest.main()
