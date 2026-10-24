@@ -32,6 +32,7 @@ import argparse
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 
@@ -281,6 +282,61 @@ def run_gates(root=ROOT, skip_tests=False):
     return True
 
 
+def branch_files(root=ROOT):
+    """Paths the branch touches vs origin/main: committed, uncommitted and untracked."""
+    base = subprocess.run(["git", "merge-base", "origin/main", "HEAD"], cwd=root,
+                          capture_output=True, text=True, check=False).stdout.strip()
+    diff = subprocess.run(["git", "diff", "--name-only", base or "HEAD"], cwd=root,
+                          capture_output=True, text=True, check=False).stdout
+    new = subprocess.run(["git", "ls-files", "--others", "--exclude-standard"], cwd=root,
+                         capture_output=True, text=True, check=False).stdout
+    return sorted({p for p in (diff + "\n" + new).splitlines() if p.strip()})
+
+
+def checks_for(paths):
+    """The one lane -> checks mapping: [(name, argv)] for the lanes `paths` touch (no LLM, no I/O)."""
+    def hit(*prefixes):
+        return any(p.startswith(prefixes) for p in paths)
+    checks = []
+    if hit("frontend/"):
+        checks.append(("web-check", ["pixi", "run", "web-check"]))
+    if hit("backend/src/kb/api/", "frontend/src/api"):
+        checks.append(("api-schema-check", ["pixi", "run", "api-schema-check"]))
+    if hit("backend/src/kb/dashboard/"):
+        checks.append(("test-e2e", ["pixi", "run", "test-e2e"]))
+    return checks
+
+
+def e2e_available(root=ROOT):
+    """node plus the playwright npm package, which test-e2e needs."""
+    if not shutil.which("node"):
+        return False
+    return subprocess.run(["node", "-e", "require.resolve('playwright')"], cwd=root,
+                          capture_output=True, check=False).returncode == 0
+
+
+def run_checks(root=ROOT, skip_reason=None, paths=None):
+    """Gate before `ship pr` / `ship merge`: run the checks of the touched lanes. False on a failure."""
+    paths = branch_files(root) if paths is None else paths
+    checks = checks_for(paths)
+    if skip_reason:
+        if checks:
+            print(f"checks skipped ({', '.join(n for n, _ in checks)}): {skip_reason}")
+        return True
+    for name, cmd in checks:
+        if name == "test-e2e" and not e2e_available(root):
+            print("check: test-e2e skipped (node/playwright not available)")
+            continue
+        print(f"check: {name}")
+        cp = subprocess.run(cmd, cwd=root, capture_output=True, text=True, check=False)
+        if cp.returncode != 0:
+            tail = "\n".join(_out(cp).splitlines()[-40:])
+            print(tail)
+            print(f"error: check {name} failed (bypass with --skip-checks \"<reason>\")")
+            return False
+    return True
+
+
 def _out(cp):
     return ((cp.stdout or "") + (cp.stderr or "")).strip()
 
@@ -503,7 +559,7 @@ def _schema_kind(subjects):
     return "paradigm" if "paradigm" in types else ("schema" if "schema" in types else None)
 
 
-def pr_body(subjects, notes=""):
+def pr_body(subjects, notes="", skipped_checks=None):
     lines = ["## Summary", ""] + [f"- {s}" for s in subjects] + [
         "", "## Gates", "", "- unit tests · lint-skills · lint (run by `pixi run ship -- pr`)"]
     kind = _schema_kind(subjects)
@@ -511,6 +567,8 @@ def pr_body(subjects, notes=""):
         lines += ["", "## Schema", "",
                   f"This is a **{kind}** PR: merging snapshots the current knowledge version "
                   f"and bumps it ({'y+1' if kind == 'schema' else 'x+1'}). The migration run is included."]
+    if skipped_checks:
+        lines += ["", "## Checks skipped", "", f"`--skip-checks`: {skipped_checks}"]
     if notes.strip():
         lines += ["", "## Notes", "", notes.strip()]
     return "\n".join(lines) + "\n"
@@ -535,7 +593,7 @@ def _read_notes(path):
         return f.read()
 
 
-def cmd_pr(title=None, skip_tests=False, root=ROOT, gates=True, notes_file=None, hold=False):
+def cmd_pr(title=None, skip_tests=False, root=ROOT, gates=True, notes_file=None, hold=False, skip_checks=None):
     branch = current_branch(root)
     if not branch.startswith("infra/"):
         print(f"error: ship pr runs on an infra/<feature> branch (current: {branch or 'detached'})")
@@ -555,6 +613,8 @@ def cmd_pr(title=None, skip_tests=False, root=ROOT, gates=True, notes_file=None,
         return 1
     if gates and not run_gates(root, skip_tests):
         return 1
+    if gates and not run_checks(root, skip_checks):
+        return 1
     push = run_git(["push", "-u", "origin", branch], cwd=root)
     print(_out(push))
     if push.returncode != 0:
@@ -564,12 +624,14 @@ def cmd_pr(title=None, skip_tests=False, root=ROOT, gates=True, notes_file=None,
     if existing.returncode == 0 and existing.stdout.strip():
         info = json.loads(existing.stdout)
         print(f"PR #{info['number']} already open: {info['url']} (pushed new commits)")
+        if skip_checks:
+            gh(["pr", "edit", branch, "--body", pr_body(subjects, _read_notes(notes_file), skip_checks)], root)
         if why:
             gh(["pr", "edit", branch, "--add-label", HOLD_LABEL], root)
             print(f"held for the user: {why}")
         return 0
     args = ["pr", "create", "--base", "main", "--head", branch,
-            "--title", title, "--body", pr_body(subjects, _read_notes(notes_file))]
+            "--title", title, "--body", pr_body(subjects, _read_notes(notes_file), skip_checks)]
     if why:
         gh(["label", "create", HOLD_LABEL, "--force", "--color", "B60205",
             "--description", "waits for the user's approval (pixi run ship -- approve N)"], root)
@@ -686,7 +748,8 @@ def _snapshot_before_schema(primary, feature):
     return current, True
 
 
-def cmd_merge(local=False, pr_number=None, title=None, skip_tests=False, no_push=False, root=ROOT, gates=True):
+def cmd_merge(local=False, pr_number=None, title=None, skip_tests=False, no_push=False, root=ROOT, gates=True,
+              skip_checks=None):
     branch = current_branch(root)
     if not branch.startswith("infra/"):
         print(f"error: ship merge runs on an infra/<feature> branch (current: {branch or 'detached'})")
@@ -714,6 +777,8 @@ def cmd_merge(local=False, pr_number=None, title=None, skip_tests=False, no_push
             print("error: main does not merge cleanly into the branch — resolve by hand")
             return 1
     if gates and not run_gates(root, skip_tests):
+        return 1
+    if gates and not run_checks(root, skip_checks):
         return 1
 
     if local:
@@ -938,6 +1003,7 @@ def main(argv=None):
     r.add_argument("--title")
     r.add_argument("--skip-tests", action="store_true")
     r.add_argument("--notes", metavar="FILE", help="markdown appended to the PR body as ## Notes")
+    r.add_argument("--skip-checks", metavar="REASON", help="bypass the lane checks (web-check, api-schema-check, test-e2e); the reason goes in the PR body")
     r.add_argument("--hold", action="store_true", help="the user wants to review it: merge waits for `approve`")
     ap = sub.add_parser("approve", help="USER ONLY: lift the hold on PR N (agents are blocked by git_guard)")
     ap.add_argument("number", type=int)
@@ -947,6 +1013,7 @@ def main(argv=None):
     m.add_argument("--title", help="PR title (required with --local)")
     m.add_argument("--skip-tests", action="store_true")
     m.add_argument("--no-push", action="store_true")
+    m.add_argument("--skip-checks", metavar="REASON", help="bypass the lane checks; the reason is printed")
     sy = sub.add_parser("sync", help="merge origin/main into this infra branch (conflicts left to resolve)")
     sy.add_argument("--continue", dest="cont", action="store_true", help="gates, then commit the resolved merge")
     sy.add_argument("--abort", action="store_true")
@@ -971,10 +1038,10 @@ def main(argv=None):
     if args.cmd == "commit":
         return cmd_commit(args.message, args.skip_tests)
     if args.cmd == "pr":
-        return cmd_pr(args.title, args.skip_tests, notes_file=args.notes, hold=args.hold)
+        return cmd_pr(args.title, args.skip_tests, notes_file=args.notes, hold=args.hold, skip_checks=args.skip_checks)
     if args.cmd == "approve":
         return cmd_approve(args.number)
-    return cmd_merge(args.local, args.pr, args.title, args.skip_tests, args.no_push)
+    return cmd_merge(args.local, args.pr, args.title, args.skip_tests, args.no_push, skip_checks=args.skip_checks)
 
 
 if __name__ == "__main__":
