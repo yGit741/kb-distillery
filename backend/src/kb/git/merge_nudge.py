@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
-"""Claude Code `Stop` hook: never let a reply end while a PR silently waits for "merge".
+"""Claude Code `Stop` hook: never let a reply end while a held PR silently waits for the user.
 
-Reads the hook JSON on stdin. When the session's cwd is on an `infra/<feature>` branch that has
-an OPEN pull request and the reply just written does not carry the nudge line, it answers
+Agents merge their own PRs by default (`kb.git.ship`); only a PR labelled `hold` (schema/paradigm,
+or opened with `ship pr --hold`) waits for the user's `pixi run ship -- approve N`. When the
+session's cwd is on an `infra/<feature>` branch whose OPEN pull request is held and the reply just
+written does not carry the nudge line, it answers
 `{"decision": "block", "reason": …}` once, so the agent appends:
 
-    Awaiting your merge: #N <title> <url> — say "merge" to merge it, or "drop" to discard it.
+    Awaiting your merge: #N <title> <url> — run `! pixi run ship -- approve N` to merge it, or say "drop".
 
 A PR is always named "#N title", never a bare number: a nudge without the PR's title does not count.
 
@@ -34,14 +36,15 @@ def _git(cwd, *args):
 def open_pr(cwd, branch):
     """{number, title, url} of the OPEN PR for `branch`, or None (also when gh/network is unavailable)."""
     try:
-        cp = subprocess.run([os.environ.get("GH_BIN", "gh"), "pr", "view", branch, "--json", "number,title,url,state"],
+        cp = subprocess.run([os.environ.get("GH_BIN", "gh"), "pr", "view", branch, "--json", "number,title,url,state,labels"],
                             cwd=cwd, capture_output=True, text=True, check=False, timeout=GH_TIMEOUT)
         info = json.loads(cp.stdout) if cp.returncode == 0 and cp.stdout.strip() else None
     except (OSError, ValueError, subprocess.TimeoutExpired):
         return None
     if not info or info.get("state") != "OPEN":
         return None
-    return {"number": info.get("number"), "title": info.get("title", ""), "url": info.get("url", "")}
+    return {"number": info.get("number"), "title": info.get("title", ""), "url": info.get("url", ""),
+            "held": "hold" in {l.get("name") for l in info.get("labels") or [] if isinstance(l, dict)}}
 
 
 def last_reply(transcript_path):
@@ -70,7 +73,8 @@ def last_reply(transcript_path):
 
 def nudge_line(pr):
     title = f' {pr["title"]}' if pr.get("title") else ""
-    return f'Awaiting your merge: #{pr["number"]}{title} {pr["url"]} — say "merge" to merge it, or "drop" to discard it.'
+    return (f'Awaiting your merge: #{pr["number"]}{title} {pr["url"]} — '
+            f'run `! pixi run ship -- approve {pr["number"]}` to merge it, or say "drop".')
 
 
 def decide(payload):
@@ -82,8 +86,8 @@ def decide(payload):
     if not branch.startswith("infra/"):
         return None
     pr = open_pr(cwd, branch)
-    if not pr:
-        return None
+    if not pr or not pr.get("held"):
+        return None                                       # not held: the agent merges it itself
     text = payload.get("last_assistant_message") or last_reply(payload.get("transcript_path"))
     low = text.lower()
     if NUDGE_MARK in low and (pr.get("title") or "").lower() in low:

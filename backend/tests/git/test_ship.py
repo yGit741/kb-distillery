@@ -90,15 +90,22 @@ class ShipTests(unittest.TestCase):
 
 
 FAKE_GH = """#!/bin/bash
-# fake gh: records calls; 'pr view' succeeds once 'pr create' ran
+# fake gh: records calls; 'pr view' succeeds once 'pr create' ran; the hold label lives in a file
 log="$FAKE_GH_DIR/calls.log"
 echo "$*" >> "$log"
 if [ "$1 $2" = "pr view" ]; then
   [ -f "$FAKE_GH_DIR/created" ] || exit 1
-  echo '{"number": 7, "url": "https://example/pr/7", "title": "feat(ops): add thing", "state": "OPEN"}'
+  labels=""; [ -f "$FAKE_GH_DIR/held" ] && labels='{"name": "hold"}'
+  echo '{"number": 7, "url": "https://example/pr/7", "title": "feat(ops): add thing", "state": "OPEN", "labels": ['"$labels"']}'
   exit 0
 fi
-if [ "$1 $2" = "pr create" ]; then touch "$FAKE_GH_DIR/created"; echo "https://example/pr/7"; exit 0; fi
+if [ "$1 $2" = "pr create" ]; then
+  touch "$FAKE_GH_DIR/created"; case "$*" in *"--label hold"*) touch "$FAKE_GH_DIR/held";; esac
+  echo "https://example/pr/7"; exit 0
+fi
+if [ "$1 $2" = "pr edit" ]; then
+  case "$*" in *"--remove-label hold"*) rm -f "$FAKE_GH_DIR/held";; *"--add-label hold"*) touch "$FAKE_GH_DIR/held";; esac
+fi
 exit 0
 """
 
@@ -263,6 +270,33 @@ class PrFlowTests(unittest.TestCase):
         self.assertIn("--merge", merge_line)
         self.assertNotIn("--squash", merge_line)
         self.assertIn("feat(ops): add thing (#7)", merge_line)
+
+    def test_plain_pr_is_not_held_and_merges_without_approval(self):
+        wt = self._start()
+        self._write(wt, "meta/tool.py")
+        ship.cmd_commit("feat(ops): add thing", root=wt, gates=False)
+        self.assertEqual(ship.cmd_pr(root=wt, gates=False), 0)
+        self.assertFalse(os.path.exists(os.path.join(self.ghdir, "held")))
+
+    def test_held_pr_refuses_merge_until_approved(self):
+        wt = self._start()
+        self._write(wt, "meta/tool.py")
+        ship.cmd_commit("feat(ops): add thing", root=wt, gates=False)
+        self.assertEqual(ship.cmd_pr(root=wt, gates=False, hold=True), 0)
+        self.assertEqual(ship.cmd_merge(root=wt, gates=False), 1)
+        self.assertNotIn("pr merge", open(os.path.join(self.ghdir, "calls.log")).read())
+        self.assertEqual(ship.cmd_approve(7, root=wt), 0)
+        self.assertEqual(ship.cmd_merge(root=wt, gates=False), 0)
+
+    def test_approve_is_reachable_from_the_cli(self):
+        with patch.object(ship, "cmd_approve", return_value=0) as approve:
+            self.assertEqual(ship.main(["approve", "101"]), 0)
+        approve.assert_called_once_with(101)
+
+    def test_schema_pr_is_always_held(self):
+        self.assertIsNone(ship._hold_reason(["feat(ops): add thing"]))
+        self.assertIn("schema", ship._hold_reason(["schema(books): add hub"]))
+        self.assertIn("paradigm", ship._hold_reason(["feat(x): y", "paradigm(schema): z"]))
 
     def test_merge_local_creates_merge_commit(self):
         wt = self._start()
