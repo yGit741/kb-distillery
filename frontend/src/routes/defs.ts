@@ -17,7 +17,7 @@ export interface RouteDef {
   profile?: "private";
 }
 
-const ALL_DEFS: readonly RouteDef[] = [
+export const ROUTE_DEFS: readonly RouteDef[] = [
   { id: "home", path: "/", label: "Home", legacy: "/", blurb: "Small live graphs that sample the vault; each opens in the full graph." },
   { id: "graph", path: "/graph", label: "Graph", legacy: "/graph", blurb: "Force-directed explorer of the whole vault." },
   { id: "pages", path: "/pages", label: "Pages", legacy: "/explore", blurb: "Read, search and trace notes (the Explore tab).", extraPaths: ["/pages/$slug"] },
@@ -26,11 +26,9 @@ const ALL_DEFS: readonly RouteDef[] = [
   { id: "pipeline", path: "/pipeline", label: "Pipeline", legacy: "/pipeline", blurb: "Ingest and digestion status of every raw file." },
   { id: "ops", path: "/ops", label: "Ops", legacy: "/ops", blurb: "Nightly sync, hygiene checks and report." },
   { id: "lifecycle", path: "/lifecycle", label: "Lifecycle", legacy: "/lifecycle", blurb: "Versions, history, snapshots and working state." },
-  { id: "share", path: "/share", label: "Share", legacy: "/", blurb: "Public snapshots of the private site.", profile: "private" },
-];
-
-/** Private-only routes are dropped here, so neither the live app nor the public build ever sees them. */
-export const ROUTE_DEFS: readonly RouteDef[] = ALL_DEFS.filter((d) => d.profile !== "private" || SHARE_PROFILE === "private");
+  { id: "share", path: "/share", label: "Share", legacy: "/", blurb: "Public snapshots of the private site.", profile: "private" as const },
+  // Private-only routes are dropped here, so neither the live app nor the public build ever sees them.
+].filter((d: RouteDef) => d.profile !== "private" || SHARE_PROFILE === "private");
 
 export const legacyHref = (r: Pick<RouteDef, "legacy">): string =>
   `/legacy${r.legacy === "/" ? "" : r.legacy}`;
