@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import type { GraphModel, GNode } from "../types";
+import { flagOn, useExperiments } from "./experiments";
 
 /**
  * What a graph tool can see and do. Selection tools (box, lasso, path), expanders, the basket, raw
@@ -30,10 +31,18 @@ export interface GraphTool {
   panel?: (ctx: GraphToolContext) => ReactNode;
   /** Always-on overlay (a drag rectangle, a basket chip). Must not take pointer events during gestures. */
   overlay?: (ctx: GraphToolContext) => ReactNode;
+  /** An experiment id (./experiments): the tool exists only while that experiment is switched on. */
+  flag?: string;
 }
 
 /** The next PR appends here; the core ships none. */
 export const TOOLS: GraphTool[] = [];
+
+/** The tools to draw now: every tool whose experiment flag (if any) is on. */
+export function useVisibleTools(): GraphTool[] {
+  const on = useExperiments((s) => s.on);
+  return TOOLS.filter((t) => flagOn(t.flag, on));
+}
 
 export function registerTool(tool: GraphTool): void {
   const i = TOOLS.findIndex((t) => t.id === tool.id);

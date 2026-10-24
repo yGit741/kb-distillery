@@ -11,10 +11,11 @@ import { useLabHud } from "./lab/hud";
 import { hopsFrom, type Importance } from "./lab/importance";
 import { FORCED } from "./lab/labelPlan";
 import { areaNames } from "./lab/regions";
-import { pickMagnetic, type ScreenNode } from "./magnet";
+import { bubbleAim, drawBubble, magnetCursor, pickMagnetic, rgbOf, stepBubble, type Bubble, type ScreenNode } from "./magnet";
 import { drawPile, formatOfPile, isPile, isPileId, pileRadius } from "./rawLayer";
 import { DRAG_PX } from "./selection";
 import { useGraphUi } from "./store";
+import { useDecor } from "./tools/decor";
 import { colorOf, METRIC_COLORS, nodeRadius, type ColorBy, type SizeBy } from "./style";
 import type { GNode, GraphModel, SimLink, SimNode } from "./types";
 
@@ -95,6 +96,7 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
   const theme = useTheme((s) => s.theme);
   const fg = useRef<ForceGraphHandle>(null);
   const wrap = useRef<HTMLDivElement>(null);
+  const overlay = useRef<HTMLCanvasElement>(null);
 
   const rs = useRef<RenderState>({
     colors: readCanvasColors(),
@@ -207,6 +209,9 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
     fg.current?.reheat();
   }, [ui.layoutMode, ui.areaPull]);
 
+  // ---- tool decor (experiment halos, faded links) is read at draw time; a change only needs a redraw
+  useEffect(() => useDecor.subscribe(() => fg.current?.refresh()), []);
+
   // ---- redraw when anything the draw reads changes
   useEffect(() => {
     rs.current.colors = readCanvasColors();
@@ -277,17 +282,64 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
     if (!el) return;
     let queued = false;
     let last: { x: number; y: number } | null = null;
-    const retarget = () => {
-      queued = false;
+    const screenNodes = (): ScreenNode[] => {
       const g = fg.current;
-      if (!g || !last || !live.current.ui.magnet || pressed.current) return;
+      if (!g) return [];
       const scale = g.zoom();
       const list: ScreenNode[] = [];
       for (const n of g.nodes()) {
         const s = g.screenOf(n);
         if (s) list.push({ id: n.id, x: s.x, y: s.y, r: radius(n) * scale });
       }
-      setHover(pickMagnetic(list, last.x, last.y, rs.current.hover));
+      return list;
+    };
+    const retarget = () => {
+      queued = false;
+      if (!fg.current || !last || !live.current.ui.magnet || pressed.current) return;
+      setHover(pickMagnetic(screenNodes(), last.x, last.y, rs.current.hover));
+      kick();
+    };
+
+    // the soft bubble joining pointer and target, on a canvas laid over the graph
+    el.style.setProperty("--magnet-cursor", magnetCursor());
+    let bubble: Bubble = { r: 0, a: 0 };
+    let raf = 0;
+    let recheckAt = 0;
+    const paint = () => {
+      raf = 0;
+      const cv = overlay.current;
+      const ctx = cv?.getContext("2d");
+      if (!cv || !ctx) return;
+      const dpr = window.devicePixelRatio || 1;
+      const w = el.clientWidth;
+      const h = el.clientHeight;
+      if (cv.width !== Math.round(w * dpr) || cv.height !== Math.round(h * dpr)) {
+        cv.width = Math.round(w * dpr);
+        cv.height = Math.round(h * dpr);
+      }
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, w, h);
+      const aim = !!last && live.current.ui.magnet && !pressed.current;
+      // the layout can drift under a pointer that holds still: re-check the target a few times a second
+      const now = performance.now();
+      if (aim && last && now - recheckAt > 150) {
+        recheckAt = now;
+        setHover(pickMagnetic(screenNodes(), last.x, last.y, rs.current.hover));
+      }
+      const list = aim ? screenNodes() : [];
+      const t = list.find((n) => n.id === rs.current.hover) ?? null;
+      const { want, strength } = t && last ? bubbleAim(t, last.x, last.y, list) : { want: 0, strength: 0 };
+      bubble = stepBubble(bubble, want, strength, matchMedia("(prefers-reduced-motion: reduce)").matches);
+      const p = rs.current.pointer;
+      if (p) {
+        const box = el.getBoundingClientRect();
+        const rgb = rgbOf(getComputedStyle(document.documentElement).getPropertyValue("--primary"));
+        drawBubble(ctx, p.x, p.y, t && { ...t, x: t.x - box.left, y: t.y - box.top }, bubble, rgb);
+      }
+      if (t || bubble.a > 0.02) raf = requestAnimationFrame(paint);
+    };
+    const kick = () => {
+      if (!raf) raf = requestAnimationFrame(paint);
     };
     const move = (e: PointerEvent) => {
       last = { x: e.clientX, y: e.clientY };
@@ -302,20 +354,27 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
       last = null;
       rs.current.pointer = null;
       if (live.current.ui.magnet) setHover(null);
+      kick();
     };
     const down = (e: PointerEvent) => {
       if (e.button === 0) pressed.current = true;
+      kick();
     };
     const up = () => {
       if (!pressed.current) return;
       pressed.current = false;
       requestAnimationFrame(retarget);
     };
+    // the view moved under the pointer
+    const wheel = () => requestAnimationFrame(retarget);
     el.addEventListener("pointermove", move, { passive: true });
     el.addEventListener("pointerleave", leave);
     el.addEventListener("pointerdown", down, true);
     window.addEventListener("pointerup", up);
+    el.addEventListener("wheel", wheel, { passive: true });
     return () => {
+      cancelAnimationFrame(raf);
+      el.removeEventListener("wheel", wheel);
       el.removeEventListener("pointermove", move);
       el.removeEventListener("pointerleave", leave);
       el.removeEventListener("pointerdown", down, true);
@@ -429,6 +488,13 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
       const r = radius(n);
       const alpha = nodeOpacity(n.id, focus);
       const isSel = selected.has(n.id);
+      const halo = useDecor.getState().halo?.get(n.id);
+      if (halo) {
+        ctx.beginPath();
+        ctx.arc(n.x, n.y, r + (2 + 4 * halo) / scale, 0, 2 * Math.PI);
+        ctx.fillStyle = withAlpha(colors.warn, 0.15 + 0.55 * halo);
+        ctx.fill();
+      }
       if (isSel || hover === n.id) {
         ctx.beginPath();
         ctx.arc(n.x, n.y, r + 3 / scale, 0, 2 * Math.PI);
@@ -537,7 +603,10 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
 
   const linkColor = useCallback((l: SimLink) => {
     const { focus, colors } = rs.current;
-    return withAlpha(colors.link, linkOpacity(endId(l.source), endId(l.target), focus, live.current.ui.linkOpacity, l.kind));
+    const a = endId(l.source);
+    const b = endId(l.target);
+    const fade = useDecor.getState().linkFade?.(a, b) ?? 1;
+    return withAlpha(colors.link, fade * linkOpacity(a, b, focus, live.current.ui.linkOpacity, l.kind));
   }, []);
   const linkWidth = useCallback((l: SimLink) => (l.kind === "shared" ? 0.35 + Math.min(l.shared ?? 1, 6) * 0.1 : 0.8), []);
   const linkLabel = useCallback(
@@ -564,7 +633,14 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
   );
 
   return (
-    <div ref={wrap} className={cn("size-full [&.graph-pointer_canvas]:cursor-pointer", className)}>
+    <div
+      ref={wrap}
+      className={cn(
+        "relative size-full [&.graph-pointer_canvas]:cursor-pointer",
+        ui.magnet && "[&:not(.graph-pointer)_canvas]:[cursor:var(--magnet-cursor,default)]",
+        className,
+      )}
+    >
       <ForceGraph
         ref={fg}
         className="size-full"
@@ -587,6 +663,7 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
         onZoom={onZoom}
         onEngineStop={onEngineStop}
       />
+      <canvas ref={overlay} aria-hidden className="pointer-events-none absolute inset-0 size-full" />
     </div>
   );
 });
