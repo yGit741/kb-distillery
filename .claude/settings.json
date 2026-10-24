@@ -28,6 +28,12 @@
             "command": "PYTHONPATH=\"$CLAUDE_PROJECT_DIR/backend/src\" python3 -m kb.git.merge_nudge",
             "timeout": 20,
             "statusMessage": "Checking for a PR awaiting merge…"
+          },
+          {
+            "type": "command",
+            "command": "PYTHONPATH=\"$CLAUDE_PROJECT_DIR/backend/src\" python3 -m kb.git.proof_nudge",
+            "timeout": 10,
+            "statusMessage": "Checking the reply shows proof…"
           }
         ]
       }
