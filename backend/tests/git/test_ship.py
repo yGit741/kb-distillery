@@ -288,6 +288,11 @@ class PrFlowTests(unittest.TestCase):
         self.assertEqual(ship.cmd_approve(7, root=wt), 0)
         self.assertEqual(ship.cmd_merge(root=wt, gates=False), 0)
 
+    def test_approve_is_reachable_from_the_cli(self):
+        with patch.object(ship, "cmd_approve", return_value=0) as approve:
+            self.assertEqual(ship.main(["approve", "101"]), 0)
+        approve.assert_called_once_with(101)
+
     def test_schema_pr_is_always_held(self):
         self.assertIsNone(ship._hold_reason(["feat(ops): add thing"]))
         self.assertIn("schema", ship._hold_reason(["schema(books): add hub"]))
