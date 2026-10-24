@@ -228,9 +228,44 @@ def link_untracked_raw(root=ROOT):
     return made
 
 
+# The app's own gates, run only when the branch touches frontend/ (npm is slow to start).
+FRONTEND_GATES = [
+    ("web-typecheck", ["npm", "run", "typecheck", "--prefix", "frontend"]),
+    ("web-tests", ["npm", "run", "test", "--prefix", "frontend"]),
+]
+
+
+def frontend_changed(root=ROOT):
+    """True when the branch (committed or not) differs from main under frontend/."""
+    base = subprocess.run(["git", "merge-base", "origin/main", "HEAD"], cwd=root,
+                          capture_output=True, text=True, check=False).stdout
+    base = (base or "").strip()
+    diff = subprocess.run(["git", "diff", "--name-only", base or "HEAD", "--", "frontend/"], cwd=root,
+                          capture_output=True, text=True, check=False)
+    new = subprocess.run(["git", "ls-files", "--others", "--exclude-standard", "--", "frontend/src"],
+                         cwd=root, capture_output=True, text=True, check=False)
+    return bool((diff.stdout or "").strip() or (new.stdout or "").strip())
+
+
+def frontend_gates(root=ROOT):
+    """FRONTEND_GATES, installing node_modules first in a fresh worktree; None when the install fails."""
+    if not os.path.isdir(os.path.join(root, "frontend", "node_modules")):
+        print("gate: web-install (frontend/node_modules missing)")
+        if subprocess.run(["npm", "ci", "--prefix", "frontend"], cwd=root).returncode != 0:
+            print("error: web-install failed")
+            return None
+    return FRONTEND_GATES
+
+
 def run_gates(root=ROOT, skip_tests=False):
     link_untracked_raw(root)
-    for name, cmd in GATES:
+    gates = list(GATES)
+    if not skip_tests and frontend_changed(root):
+        extra = frontend_gates(root)
+        if extra is None:
+            return False
+        gates += extra
+    for name, cmd in gates:
         if name == "tests" and skip_tests:
             continue
         print(f"gate: {name}")
