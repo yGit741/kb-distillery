@@ -347,6 +347,17 @@ def legacy(argv):
 
 # ---------- PR flow ----------
 
+def link_pixi_env(root, worktree_path):
+    """Symlink the primary's `.pixi` into a fresh worktree so `pixi run` reuses its env (no ~1 GB install).
+    pixi.toml's [activation.env] PYTHONPATH makes `import kb` resolve to the worktree's own source."""
+    src = os.path.join(primary_checkout(root), ".pixi")
+    dst = os.path.join(worktree_path, ".pixi")
+    if os.path.isdir(src) and not os.path.lexists(dst):
+        os.symlink(src, dst)
+        print(f"linked {dst} -> {src} (pixi run reuses the primary's env, no install)")
+    print(f"import kb here: `pixi run python …` or `PYTHONPATH={worktree_path}/backend/src python3 …`")
+
+
 def cmd_start(feature, worktree=False, root=ROOT):
     if not FEATURE_RE.match(feature):
         print("error: feature must be kebab-case, e.g. kb-ops")
@@ -360,6 +371,7 @@ def cmd_start(feature, worktree=False, root=ROOT):
         print(_out(cp))
         if cp.returncode == 0:
             print(f"worktree ready: {path} on {branch}")
+            link_pixi_env(root, path)
             stale = [r for r in stale_worktrees(root) if r["merged"] and not r["dirty"] and not r["current"]]
             if stale:
                 print(f"note: {len(stale)} merged worktree(s) can go — pixi run ship -- prune --apply")

@@ -158,6 +158,21 @@ class PrFlowTests(unittest.TestCase):
         self.assertTrue(ship.is_linked_worktree(wt))
         self.assertEqual(os.path.realpath(ship.primary_checkout(wt)), os.path.realpath(self.repo))
 
+    def test_start_worktree_links_the_primary_pixi_env(self):
+        import contextlib, io
+        os.makedirs(os.path.join(self.repo, ".pixi", "envs"))
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            wt = self._start("pixi-link")
+        link = os.path.join(wt, ".pixi")
+        self.assertTrue(os.path.islink(link))
+        self.assertEqual(os.path.realpath(link), os.path.realpath(os.path.join(self.repo, ".pixi")))
+        self.assertIn(f"PYTHONPATH={wt}/backend/src".replace("/private", ""), buf.getvalue().replace("/private", ""))
+
+    def test_start_worktree_without_primary_pixi_makes_no_link(self):
+        wt = self._start("no-pixi")
+        self.assertFalse(os.path.lexists(os.path.join(wt, ".pixi")))
+
     def test_commit_policy_and_lanes(self):
         wt = self._start()
         self._write(wt, "meta/tool.py")
