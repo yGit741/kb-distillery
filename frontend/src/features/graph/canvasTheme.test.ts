@@ -19,8 +19,10 @@ describe("the wheel scheme", () => {
     expect(wheelUnits({ deltaMode: 1, deltaX: 1, deltaY: 2 } as WheelEvent, 800)).toEqual({ dx: 16, dy: 32 });
     expect(wheelUnits({ deltaMode: 2, deltaX: 0, deltaY: 1 } as WheelEvent, 800)).toEqual({ dx: 0, dy: 800 });
   });
-  it("pans on a plain wheel, sideways with shift", () => {
-    expect(wheelAction({ ctrlKey: false, metaKey: false, shiftKey: false }, 3, 7)).toEqual({ kind: "pan", dx: 3, dy: 7 });
+  it("zooms on a plain wheel, pans with shift (sideways for a vertical wheel)", () => {
+    const plain = wheelAction({ ctrlKey: false, metaKey: false, shiftKey: false }, 0, -100);
+    expect(plain.kind === "zoom" && plain.factor).toBeGreaterThan(1);
+    expect(wheelAction({ ctrlKey: false, metaKey: false, shiftKey: true }, 3, 7)).toEqual({ kind: "pan", dx: 3, dy: 7 });
     expect(wheelAction({ ctrlKey: false, metaKey: false, shiftKey: true }, 0, 7)).toEqual({ kind: "pan", dx: 7, dy: 0 });
   });
   it("zooms on pinch (ctrl) and Cmd+wheel, in on negative deltas", () => {

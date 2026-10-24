@@ -71,15 +71,15 @@ export function wheelUnits(ev: WheelEvent, pageHeight: number): { dx: number; dy
   return { dx: ev.deltaX * unit, dy: ev.deltaY * unit };
 }
 
-/** The scheme: wheel and two-finger scroll pan, pinch (ctrl+wheel) or Cmd+wheel zoom, shift+wheel pans sideways. */
+/**
+ * The scheme: the wheel zooms toward the cursor (pinch, ctrl+wheel, too); shift+wheel pans, sideways for a
+ * vertical wheel. Dragging with the wheel pressed pans as well.
+ */
 export function wheelAction(ev: Pick<WheelEvent, "ctrlKey" | "metaKey" | "shiftKey">, dx: number, dy: number) {
-  if (ev.ctrlKey || ev.metaKey) {
-    // a pinch arrives as ctrl+wheel with small deltas, a Cmd+mouse wheel as +-100 steps
-    const step = Math.max(-60, Math.min(60, dy));
-    return { kind: "zoom" as const, factor: Math.exp(-step * (ev.ctrlKey ? 0.012 : 0.004)) };
-  }
-  if (ev.shiftKey && !dx) return { kind: "pan" as const, dx: dy, dy: 0 };
-  return { kind: "pan" as const, dx, dy };
+  if (ev.shiftKey) return dx ? { kind: "pan" as const, dx, dy } : { kind: "pan" as const, dx: dy, dy: 0 };
+  // a pinch arrives as ctrl+wheel with small deltas, a mouse wheel as +-100 steps
+  const step = Math.max(-60, Math.min(60, dy));
+  return { kind: "zoom" as const, factor: Math.exp(-step * (ev.ctrlKey ? 0.012 : 0.004)) };
 }
 
 /**

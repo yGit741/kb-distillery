@@ -10,8 +10,8 @@ import { useVisibleTools, type GraphToolContext } from "./tools";
 const HELP: readonly [string, string][] = [
   ["Search everything", "Space"],
   ["Ask an agent", "/ (coming soon)"],
-  ["Pan", "scroll, two-finger swipe, or drag with the wheel (middle button) pressed"],
-  ["Zoom", "pinch, Cmd+scroll, + and −"],
+  ["Pan", "drag with the wheel (middle button) pressed, or Shift+scroll"],
+  ["Zoom", "scroll or pinch (toward the cursor), + and −"],
   ["Fit to view", "F"],
   ["Labels", "hover a page; a click labels its neighbours"],
   ["Move a page", "drag it"],
