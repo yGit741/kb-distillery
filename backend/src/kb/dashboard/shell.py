@@ -5,7 +5,7 @@ import html
 TABS = [
     ("start", "/start", "Start"),
     ("health", "/", "Health"),
-    ("graph", "/graph", "Graph"),
+    ("graph", "/app/graph", "Graph"),
     ("explore", "/explore", "Explore"),
     ("scopes", "/scopes", "Scopes"),
     ("chat", "/chat", "Chat"),

@@ -15,6 +15,7 @@ import hashlib
 import json
 import os
 import re
+import subprocess
 import sys
 import time
 
@@ -647,12 +648,46 @@ def check_raw():
     return raw_files
 
 
+def _git_ignored(names):
+    """Subset of `names` (vault-root entries) that git ignores; empty when not a git checkout."""
+    if not names:
+        return set()
+    try:
+        r = subprocess.run(["git", "check-ignore", "--", *names], cwd=ROOT, capture_output=True,
+                           text=True, timeout=20)
+    except (OSError, subprocess.SubprocessError):
+        return set()
+    return {l.strip().rstrip("/") for l in r.stdout.splitlines()} if r.returncode == 0 else set()
+
+
+def check_wiki_strays():
+    """Warn on anything in wiki/ that is not a flat `.md` page (subfolders, other files, excalidraw)."""
+    base = os.path.join(ROOT, WIKI_DIR)
+    if not os.path.isdir(base):
+        return
+    for dirpath, dirnames, filenames in os.walk(base):
+        dirnames[:] = sorted(d for d in dirnames if not d.startswith("."))
+        for d in dirnames:
+            rel = os.path.relpath(os.path.join(dirpath, d), ROOT).replace(os.sep, "/")
+            warn(rel, "subfolder in wiki/ — wiki is flat; move or delete (plugin leftovers do not belong here)")
+        for fn in sorted(filenames):
+            if fn.startswith("."):
+                continue
+            rel = os.path.relpath(os.path.join(dirpath, fn), ROOT).replace(os.sep, "/")
+            if fn.endswith(".excalidraw.md"):
+                warn(rel, "excalidraw drawing in wiki/ — not a wiki page; move it out or delete")
+            elif not fn.endswith(".md"):
+                warn(rel, "non-markdown file in wiki/ — wiki holds only .md pages")
+
+
 def check_root():
-    """Warn on unexpected files/folders at vault root (dot-tooling and ROOT_LINT_IGNORE exempt)."""
+    """Warn on unexpected files/folders at vault root (dot-tooling, ROOT_LINT_IGNORE and git-ignored exempt)."""
+    ignored = _git_ignored([n for n in os.listdir(ROOT) if not n.startswith(".")
+                            and n not in ROOT_LINT_IGNORE and n not in ROOT_DIRS and n not in ROOT_FILES])
     for name in sorted(os.listdir(ROOT)):
         if name.startswith("."):
             continue
-        if name in ROOT_LINT_IGNORE:
+        if name in ROOT_LINT_IGNORE or name in ignored:
             continue
         full = os.path.join(ROOT, name)
         if os.path.isdir(full):
@@ -1026,6 +1061,7 @@ def collect_snapshot(quiet=False):
     if not ci:
         check_pdf_magic(raw_files)
     check_root()
+    check_wiki_strays()
 
     t_wiki = time.perf_counter()
     pages = check_wiki()

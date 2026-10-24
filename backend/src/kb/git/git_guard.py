@@ -139,6 +139,8 @@ def _gh_violation(args):
         return None if action in GH_PR_READONLY else f"gh pr {action}"
     if sub == "repo" and rest and rest[0] in GH_REPO_BLOCKED:
         return f"gh repo {rest[0]}"
+    if sub in ("issue", "label") and rest and rest[0] in {"edit", "delete", "create"}:
+        return f"gh {sub} {rest[0]}"   # `gh issue edit --remove-label hold` would lift a PR's hold
     if sub == "release" and rest and rest[0] in {"create", "delete", "edit", "upload"}:
         return f"gh release {rest[0]}"
     if sub == "api":
@@ -155,8 +157,24 @@ def _gh_violation(args):
     return None
 
 
+def _user_only(command):
+    """`ship approve` is the user's word: an agent running it would approve its own PR."""
+    try:
+        toks = _tokens(command)
+    except ValueError:
+        return None
+    for i, tok in enumerate(toks):
+        if tok in ("ship", "kb.git.ship") or tok.endswith("/ship.py") or tok == "ship.py":
+            if "approve" in toks[i + 1:]:
+                return "ship approve (user only — the user lifts a hold with `! pixi run ship -- approve N`)"
+    return None
+
+
 def violation(command):
     """Return a reason string when the command must be blocked, else None."""
+    why = _user_only(command)
+    if why:
+        return why
     if is_allowlisted(command):
         return None
     try:
