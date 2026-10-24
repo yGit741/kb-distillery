@@ -357,11 +357,11 @@ class LockAndDebounceTests(ShareCase):
             self.assertEqual(spawned, [])
             self.assertTrue(deploy.pending_path().exists())
             runs = []
-            fake = lambda force=False, dry_run=False, build_dir=None: runs.append(force) or deploy.DeployResult(state="deployed")
+            fake = lambda force=False, dry_run=False, build_dir=None, app=True: runs.append(app) or deploy.DeployResult(state="deployed")
             with mock.patch.object(deploy, "deploy_main", fake):
                 rc = deploy.cmd_deploy_main(types.SimpleNamespace(force=False, dry_run=False))
             self.assertEqual(rc, 0)
-            self.assertEqual(len(runs), 2)  # the deploy + exactly one rerun
+            self.assertEqual(runs, [True, True])  # the deploy + exactly one rerun, both the app layout
             self.assertFalse(deploy.pending_path().exists())
             self.assertEqual(autodeploy.trigger("three"), "spawned")
             self.assertEqual(len(spawned), 1)
@@ -436,18 +436,19 @@ class CommitOpHookTests(unittest.TestCase):
         from kb.ops import core
         Path(self.root, "wiki/b.md").write_text("v2\n")
         started = []
+        procs = []
 
         def slow_trigger(reason, root=None):
             started.append((reason, root))
-            proc = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(6)"], start_new_session=True)
+            proc = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(60)"], start_new_session=True)
             self.addCleanup(proc.kill)
+            procs.append(proc)
             return "spawned"
         with mock.patch("kb.share.autodeploy.trigger", slow_trigger):
-            t0 = time.monotonic()
             sha = core.commit_op("refine", "b", paths=["wiki/b.md"], lint=False, root=self.root)
-            # The fake deploy takes 6 s: returning well before it proves commit_op does not wait,
-            # with headroom for a slow git commit on a loaded machine (was 2 s / 1.5 s, flaky).
-            self.assertLess(time.monotonic() - t0, 4.5)
+            # The fake deploy is still running when commit_op returns: it does not wait for it.
+            # (Not a wall-clock bound — git alone takes several seconds on a loaded machine.)
+            self.assertIsNone(procs[0].poll())
         self.assertTrue(sha)
         self.assertEqual(len(started), 1)
         self.assertIn("refine", started[0][0])

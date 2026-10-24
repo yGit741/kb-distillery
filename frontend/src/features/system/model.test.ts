@@ -1,4 +1,4 @@
-import { askAbout } from "@/features/graph/tools/ChatDock";
+import { askAbout } from "@/features/graph/tools/chatDockStore";
 import { needsYou, tiles, timeline, type HealthLike, type LifecycleLike, type OpsLike } from "./model";
 
 const lc: LifecycleLike = {

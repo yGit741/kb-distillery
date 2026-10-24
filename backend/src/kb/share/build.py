@@ -43,7 +43,7 @@ so the same content + viewer + profile always yields the same bytes.
 
 The public profile carries none of it: no tab, no document, no data, no repo URL.
 
-**App layout (opt-in, `--app`, default off).** Instead of the iframe shell, the build is the React app
+**App layout (`--app`; the default of `deploy-main`, which takes `--legacy` to opt out).** Instead of the iframe shell, the build is the React app
 under `frontend/` (`vite build --mode share`, one build per profile so the route set is fixed at build
 time: public = graph + pages, private = + lifecycle; chat, ops, pipeline and scopes are not imported at
 all). The data comes from the same `collect_data` / `collect_lifecycle` / `apply_profile`, so the public
@@ -68,7 +68,7 @@ import tempfile
 import webbrowser
 from pathlib import Path
 
-from .contracts import EXPORT_DIR, PROFILES, REPO, BuildResult, Manifest
+from .contracts import EXPORT_DIR, PROFILES, REPO, BuildResult, Manifest, raw_is_email
 from .home import apply_home, load_home, strip_my_notes
 
 SHARE_DIR = Path(__file__).resolve().parent
@@ -114,8 +114,9 @@ CDN_FILES = {
 KATEX_FONTS_URL = "https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/fonts/"
 
 PUBLIC_DROP_KEYS = ("raw", "path", "email", "original_name", "scopes")
-# scopes are private working sets; email threads and LLM chats are private correspondence
-PUBLIC_EXCLUDE_TYPES = frozenset({"distilled-think", "scope", "conversation", "ai-chat"})
+# Not content: scopes are private working sets and distilled-think pages are transient review drafts.
+# LLM chats and person pages (profiles built from public sources) are the owner's and are public.
+PUBLIC_EXCLUDE_TYPES = frozenset({"distilled-think", "scope"})
 
 # Routes the shim answers; the static scan in the tests checks nothing else is fetched.
 SHIMMED_API = ("/api/graph", "/api/schema", "/api/explore/index", "/api/explore/page", "/api/explore/search", "/api/explore/path",
@@ -485,6 +486,10 @@ def apply_profile(data, profile):
     drop = {n["id"] for n in graph["nodes"] if n.get("type") in PUBLIC_EXCLUDE_TYPES}
     drop |= {c["id"] for c in index["pages"] if c.get("type") in PUBLIC_EXCLUDE_TYPES}
     drop |= {s for s, p in pages.items() if (p.get("card") or {}).get("type") in PUBLIC_EXCLUDE_TYPES}
+    # Email-derived pages involve another person's correspondence: dropped (page, node, card, links, search,
+    # backlinks) through the same `drop` set, wherever `raw:` is still visible (before PUBLIC_DROP_KEYS strips it).
+    drop |= {n["id"] for n in graph["nodes"] if raw_is_email((n.get("properties") or {}).get("raw"))}
+    drop |= {s for s, p in pages.items() if raw_is_email((p.get("frontmatter") or {}).get("raw"))}
     keep = lambda s: s not in drop  # noqa: E731
 
     nodes = []

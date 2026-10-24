@@ -1,6 +1,6 @@
 import { useNavigate } from "@tanstack/react-router";
 import { ExternalLink, MessageSquare } from "lucide-react";
-import { useChatDock } from "@/features/graph/tools/ChatDock";
+import { useChatDock } from "@/features/graph/tools/chatDockStore";
 import { useApiQuery } from "@/lib/useApiQuery";
 import { SYSTEM_TABS } from "@/routes/search";
 import { useEffect } from "react";

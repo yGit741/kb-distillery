@@ -250,6 +250,32 @@ def check_nightly(root, now):
     return [Finding("warn", "nightly-not-installed", f"nightly sync {st['summary']}", st["hint"] or "pixi run install-sync")]
 
 
+QUARANTINE_WARN_MB = 100
+
+
+def _dir_bytes(path):
+    total = 0
+    for dp, _dn, fns in os.walk(path):
+        for fn in fns:
+            try:
+                total += os.lstat(os.path.join(dp, fn)).st_size
+            except OSError:
+                pass
+    return total
+
+
+def check_quarantine(root, now, limit_mb=QUARANTINE_WARN_MB):
+    """(j) `_quarantine/` is staged-for-deletion; warn when it grows large. Never deletes."""
+    path = os.path.join(root, "_quarantine")
+    if not os.path.isdir(path):
+        return []
+    size = _dir_bytes(path)
+    if size <= limit_mb * 1024 * 1024:
+        return []
+    return [Finding("warn", "quarantine-large", f"_quarantine/ holds {size / 1024 / 1024:.0f} MB (> {limit_mb} MB)",
+                    "review _quarantine/ and delete what you no longer need (nothing is deleted automatically)")]
+
+
 CHECKS = [
     ("worktrees", check_worktrees),
     ("branches", check_branches),
@@ -260,6 +286,7 @@ CHECKS = [
     ("snapshots", check_snapshots),
     ("other-lane", check_other_lane),
     ("nightly", check_nightly),
+    ("quarantine", check_quarantine),
 ]
 
 

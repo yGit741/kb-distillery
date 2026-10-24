@@ -1,36 +1,18 @@
 import { useSearch } from "@tanstack/react-router";
 import { Maximize2, MessageSquare, Minimize2, X } from "lucide-react";
-import { create } from "zustand";
-import { ErrorBoundary } from "@/components/states";
+import { lazy, Suspense } from "react";
+import { ErrorBoundary, Loading } from "@/components/states";
 import { Button } from "@/components/ui/button";
-import { ChatScreen } from "@/features/chat/ChatScreen";
 import { cn } from "@/lib/utils";
 import type { SearchById } from "@/routes/search";
+import { useChatDock } from "./chatDockStore";
 
-interface ChatDockState {
-  open: boolean;
-  wide: boolean;
-  /** The last question handed in by "/" in the finder; ChatScreen prefills it. */
-  question: string;
-  ask: (question: string) => void;
-  set: (s: Partial<Pick<ChatDockState, "open" | "wide">>) => void;
-}
+export { askAbout, useChatDock } from "./chatDockStore";
 
-/** The research chat docked on the right of the graph (it replaces the Chat tab). */
-export const useChatDock = create<ChatDockState>((set) => ({
-  open: false,
-  wide: false,
-  question: "",
-  ask: (question) => set({ open: true, question }),
-  set: (s) => set(s),
-}));
-
-/** A question draft about the selected pages: their wikilinks, so the agent reads exactly those first. */
-export function askAbout(pages: readonly { id: string }[], max = 12): string {
-  const links = pages.slice(0, max).map((p) => `[[${p.id}]]`).join(", ");
-  const more = pages.length > max ? ` (and ${pages.length - max} more)` : "";
-  return `About ${links}${more}: `;
-}
+// The chat screen loads on first open, and never in a share build: the MODE test is replaced at build time,
+// so a snapshot carries no chat code at all.
+const ChatScreen =
+  import.meta.env.MODE === "share" ? null : lazy(() => import("@/features/chat/ChatScreen").then((m) => ({ default: m.ChatScreen })));
 
 /** The flyout body of the chat tool: one button, since the chat itself lives in the dock. */
 export function ChatToolPanel() {
@@ -45,15 +27,16 @@ export function ChatToolPanel() {
   );
 }
 
-/** The dock itself: the full chat screen in a right-hand panel, widened on demand. */
+/** The dock itself: the full chat screen in a right-hand panel, widened on demand (replaces the Chat tab). */
 export function ChatDock() {
   const open = useChatDock((s) => s.open);
-  return open ? <OpenDock /> : null;
+  return open && ChatScreen ? <OpenDock /> : null;
 }
 
 function OpenDock() {
   const { wide, question, set } = useChatDock();
   const search = useSearch({ strict: false }) as SearchById["graph"];
+  if (!ChatScreen) return null;
   return (
     <aside
       aria-label="Chat"
@@ -74,7 +57,9 @@ function OpenDock() {
       </header>
       <div className="min-h-0 flex-1 overflow-y-auto p-3">
         <ErrorBoundary label="Chat">
-          <ChatScreen question={question} scope={search.scope} />
+          <Suspense fallback={<Loading label="Loading chat" rows={3} />}>
+            <ChatScreen question={question} scope={search.scope} />
+          </Suspense>
         </ErrorBoundary>
       </div>
     </aside>

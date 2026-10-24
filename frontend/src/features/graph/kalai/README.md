@@ -44,12 +44,28 @@ mini chart). Generic hooks other tools can reuse: `../tools/experiments.ts` (fla
   together through gil-kalai and the "why quantum computers cannot work" post. Theme pairs add nothing
   beyond the weaker theme's own cohesion: integration is limited by weak themes, not by missing bridges.
 
+## Round 2 (2026-10-24): influence, hinges, holes
+
+- **Influence (`influence.ts`, Thresholds panel → "Measure influence").** KKL: a page is pivotal for a
+  theme when, in a random kept graph at the theme's p50, the theme holds with the page and falls apart
+  without it; influence = Pr[pivotal], total = sum over themes (8 draws per theme, ~1.5 s). Halos can show
+  pivotal pages instead of hinges. On the vault: gil-kalai 2.50 (pivotal for statistics 75%, quantum
+  63%), then implicit-bias-of-gradient-descent and q-why-do-overparameterized-networks-generalize 1.13.
+- **Hinges replace the draw-0 bridge.** The most frequent single tipping *link* appears in only 2–6% of
+  draws: there is no one bridge link. Its *pages* are stable, so each theme now reports its hinge page and
+  how often it sits on the tipping link: quantum → gil-kalai 79%, statistics → gil-kalai 57%; the
+  well-woven themes have weak hinges (8–27%).
+- **Holes (Theme spectrum → "Holes").** Three themes that meet in every pair but never all together,
+  against the Kirkwood estimate n·p_ab·p_bc·p_ac / (p_a·p_b·p_c) built from the pairs alone. On the vault
+  there is exactly one: implicit-regularization · learning-theory · optimization-theory (pairs 21, 9, 6
+  pages; 0 with all three; 1.2 expected). It answers simplicial holes without a clique complex over the
+  1 100 pages.
+
 ## Open questions to decide together
 
-1. Which of the three earns a permanent place (graduate = drop the flag), and where: toolbar tool, a
+1. Which of the analyses earns a permanent place (graduate = drop the flag), and where: toolbar tool, a
    view in the label rail, or the nightly report?
-2. Spectrum: add level-3 lists (which triples), or a "thesis candidate" card that joins a gap pair with
-   the q- pages near it?
+2. Spectrum: a "thesis candidate" card that joins a gap pair or the hole with the q- pages near it?
 3. Noise: should "drop sources" use the real source → concept evidence (needs the API to expose which
    sources back a concept link)?
-4. Thresholds: per-theme bridge across *all* draws (most frequent pivotal link) instead of draw 0.
+4. Influence as a size/colour mode of the whole graph (needs a metric hook in style.ts), not only halos?

@@ -329,6 +329,27 @@ class OtherLaneAndNightly(Repo):
             self.assertEqual(hygiene.check_nightly(self.root, NOW), [])
 
 
+class Quarantine(Repo):
+    def _fill(self, nbytes):
+        d = os.path.join(self.root, "_quarantine", "x")
+        os.makedirs(d)
+        with open(os.path.join(d, "big.bin"), "wb") as f:
+            f.truncate(nbytes)
+
+    def test_large_quarantine_warns(self):
+        self._fill(3 * 1024 * 1024)
+        found = hygiene.check_quarantine(self.root, NOW, limit_mb=2)
+        self.assertEqual(kinds(found), ["quarantine-large"])
+        self.assertEqual(found[0].severity, "warn")
+        self.assertIn("3 MB", found[0].detail)
+        self.assertTrue(os.path.exists(os.path.join(self.root, "_quarantine", "x", "big.bin")))
+
+    def test_small_or_missing_quarantine_clean(self):
+        self.assertEqual(hygiene.check_quarantine(self.root, NOW), [])
+        self._fill(1024)
+        self.assertEqual(hygiene.check_quarantine(self.root, NOW), [])
+
+
 class Runner(unittest.TestCase):
     def test_slow_check_times_out_and_the_rest_still_run(self):
         def sleepy(root, now):

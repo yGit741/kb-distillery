@@ -8,7 +8,7 @@ import { findPages, textHits } from "./pageSearch";
 import { colorOf, type ColorBy } from "./style";
 import type { GNode } from "./types";
 import { IS_SHARE } from "@/share/env";
-import { useChatDock } from "./tools/ChatDock";
+import { useChatDock } from "./tools/chatDockStore";
 
 export const FINDER_ID = "graph-finder";
 

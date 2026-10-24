@@ -12,7 +12,7 @@ import { Finder, FINDER_ID } from "./Finder";
 import { HostContext, type ToolHost } from "./hostContext";
 import { useLayer } from "./layerStore";
 import "./tools/register";
-import { askAbout, useChatDock } from "./tools/ChatDock";
+import { askAbout, useChatDock } from "./tools/chatDockStore";
 import "./kalai/register";
 import { extendView, makeView, parsePages, scopeIds, type GraphView } from "./pageSearch";
 import { buildNeighborMap } from "./graphData";
