@@ -36,10 +36,14 @@ describe("buildGraphData", () => {
     expect(d.links.filter((l) => l.kind !== "shared")).toHaveLength(3);
   });
   it("adds thin shared-source edges while no source is drawn, only for unlinked concept pairs", () => {
-    const d = buildGraphData(model, new Set(["idea-margin", "topic-learning-theory", "q-why-big-nets-work"]));
+    const d = buildGraphData(model, new Set(["idea-margin", "topic-learning-theory", "q-why-big-nets-work"]), undefined, true);
     const shared = d.links.filter((l) => l.kind === "shared");
     // idea-margin <-> topic is already linked by a wikilink; idea-margin <-> question is not
     expect(shared).toEqual([{ source: "idea-margin", target: "q-why-big-nets-work", kind: "shared", shared: 3 }]);
+  });
+  it("hides shared edges by default (SHOW_SHARED_EDGES)", () => {
+    const d = buildGraphData(model, new Set(["idea-margin", "topic-learning-theory", "q-why-big-nets-work"]));
+    expect(d.links.some((l) => l.kind === "shared")).toBe(false);
   });
   it("draws no shared edges once a source page is on screen", () => {
     const d = buildGraphData(model, new Set(["idea-margin", "q-why-big-nets-work", "2019-fine-grained"]));

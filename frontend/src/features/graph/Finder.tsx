@@ -7,7 +7,6 @@ import { Swatch } from "./controls";
 import { findPages, textHits } from "./pageSearch";
 import { colorOf, type ColorBy } from "./style";
 import type { GNode } from "./types";
-import { IS_SHARE } from "@/share/env";
 import { useChatDock } from "./tools/chatDockStore";
 
 export const FINDER_ID = "graph-finder";
@@ -147,7 +146,7 @@ export function Finder({ nodes, byId, colorBy, visible, onFocus, onRead, onShowP
   const listId = "graph-finder-list";
   const showList = open && (items.length > 0 || !!q || picked.size > 0);
   return (
-    <div className="pointer-events-auto absolute left-3 top-3 z-20 w-[min(28rem,calc(100%-4.5rem))]">
+    <div className="pointer-events-auto absolute left-1/2 top-3 z-20 w-[min(28rem,calc(100%-8rem))] -translate-x-1/2">
       <div className="relative">
         <Search aria-hidden className="pointer-events-none absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
         <input
@@ -162,7 +161,7 @@ export function Finder({ nodes, byId, colorBy, visible, onFocus, onRead, onShowP
           type="search"
           autoComplete="off"
           spellCheck={false}
-          placeholder={IS_SHARE ? "Search pages  ·  Space" : "Search pages  ·  Space  ·  / ask an agent"}
+          placeholder="Search anything"
           className="h-9 w-full rounded-lg border bg-card/95 pl-8 pr-3 text-sm shadow-[var(--shadow)] placeholder:text-muted-foreground"
           value={raw}
           onFocus={() => setOpen(true)}

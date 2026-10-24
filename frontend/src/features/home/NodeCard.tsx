@@ -26,14 +26,14 @@ export function NodeCard({ sample, vault, host, onReroll }: { sample: NodeSample
   const graph = { pages: neighbourhood(vault, sample.id).nodes.join(","), select: sample.id, focus: sample.id };
   const titleOf = (id: string) => vault.byId.get(id)?.title || id;
   return (
-    <Card className="flex min-w-0 flex-col" data-tour={`home-node-${sample.kind}`}>
+    <Card className="flex h-full min-h-0 min-w-0 flex-col" data-tour={`home-node-${sample.kind}`}>
       <CardHeader>
         <CardDescription>{NODE_CAPTION[sample.kind]}</CardDescription>
         <CardTitle className="text-lg leading-snug">
           <a
             href={host.pageHref(sample.id)}
             title={n.title || n.id}
-            className="line-clamp-4 hover:underline"
+            className="hover:underline"
             onClick={inApp(() => host.openPage(sample.id))}
           >
             {n.title || n.id}
@@ -52,11 +52,11 @@ export function NodeCard({ sample, vault, host, onReroll }: { sample: NodeSample
           ))}
         </div>
       </CardHeader>
-      <CardContent className="flex flex-col gap-3 py-0">
+      <CardContent className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden py-0">
         {page.isPending && !text ? (
           <Loading label="Loading the page" rows={2} />
         ) : (
-          <div dir="auto" className="max-h-56 overflow-hidden text-sm [mask-image:linear-gradient(to_bottom,black_75%,transparent)]">
+          <div dir="auto" className="min-h-0 flex-1 overflow-hidden text-sm [mask-image:linear-gradient(to_bottom,black_75%,transparent)]">
             <Markdown resolveSlug={(s) => (vault.byId.has(s) ? s : null)}>{text}</Markdown>
           </div>
         )}

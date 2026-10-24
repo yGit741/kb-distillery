@@ -4,8 +4,6 @@ import { Button } from "@/components/ui/button";
 import { ROUTES } from "@/routes/registry";
 import { ShareFooter } from "@/share/ShareFooter";
 import { IS_SHARE } from "@/share/env";
-import { StatusBar } from "@/features/system/StatusBar";
-import { cn } from "@/lib/utils";
 import { useTheme } from "@/theme/theme";
 import { CommandPalette } from "./CommandPalette";
 import { Tour } from "./tour/Tour";
@@ -50,10 +48,9 @@ export function AppShell() {
         </Button>
       </header>
       )}
-      <main className={embed ? "min-w-0 flex-1" : cn("mx-auto w-full min-w-0 max-w-6xl flex-1 px-4 py-4", !IS_SHARE && "pb-11")}>
+      <main className={embed ? "min-w-0 flex-1" : "mx-auto w-full min-w-0 max-w-6xl flex-1 px-4 py-4"}>
         <Outlet />
       </main>
-      {!embed && !IS_SHARE && <StatusBar />}
       <ShareFooter />
       <CommandPalette />
       {IS_SHARE && !embed && <Tour id={globalThis.KB_EMBEDDED?.home?.tour} />}

@@ -1,11 +1,12 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { ApiError, DataSourceProvider, type DataSource, type GraphSnapshot } from "@/api";
 import { mockDataSource } from "@/test/datasource";
 import { node } from "@/features/graph/fixtures";
-import { HomeScreen, type HomeHost } from "./HomeScreen";
+import { drawConcept, drawSubgraph, HomeScreen, TITLE_MAX, type HomeHost } from "./HomeScreen";
+import { indexVault } from "./samplers";
 
 // jsdom has no canvas: stand in for force-graph with a chainable no-op instance.
 vi.mock("force-graph", () => {
@@ -61,15 +62,22 @@ describe("Home screen", () => {
     expect(await screen.findByText(/nothing to sample yet/i)).toBeInTheDocument();
   });
 
-  it("renders curated cards first and opens a card in the full graph", async () => {
-    const cards = [{ title: "Story one", pages: ["hub", "p0", "p1"], focus: "hub", caption: "why" }];
-    wrap(mockDataSource({ getGraph: async () => snapshot, getPage }), <HomeScreen host={host} cards={cards} />);
-    expect(await screen.findByText("Story one")).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Stories" })).toBeInTheDocument();
-    const links = screen.getAllByRole("link", { name: /open in full graph/i });
-    expect(links[0]).toHaveAttribute("href", "/app/graph?pages=hub%2Cp0%2Cp1&select=hub&focus=hub");
-    await userEvent.click(links[0]!);
-    expect(host.openGraph).toHaveBeenCalledWith({ pages: "hub,p0,p1", select: "hub", focus: "hub" });
+  it("draws one subgraph and opens it in the full graph", async () => {
+    wrap(mockDataSource({ getGraph: async () => snapshot, getPage }), <HomeScreen host={host} />);
+    const section = await screen.findByRole("region", { name: "Draw a Subgraph" });
+    const link = within(section).getByRole("link", { name: /open in full graph/i });
+    expect(link.getAttribute("href")).toMatch(/^\/app\/graph\?pages=/);
+    await userEvent.click(link);
+    expect(host.openGraph).toHaveBeenCalledWith(expect.objectContaining({ pages: expect.any(String), focus: expect.any(String) }));
+  });
+
+  it("only draws titles that fit whole", () => {
+    const long = node("long", { type: "question", status: "open", title: "x".repeat(TITLE_MAX + 1) });
+    const v = indexVault([long, ...papers], papers.map((p) => ({ source: p.id, target: "long" })));
+    for (let seed = 1; seed < 20; seed++) {
+      expect(drawConcept(v, seed)?.id).not.toBe("long");
+      expect(drawSubgraph(v, [], seed)?.title.length ?? 0).toBeLessThanOrEqual(TITLE_MAX);
+    }
   });
 
   it("rerolls a random card on demand", async () => {
@@ -80,12 +88,12 @@ describe("Home screen", () => {
     expect(screen.getAllByRole("link", { name: /open in full graph/i }).length).toBeGreaterThan(0);
   });
 
-  it("shows both sections, and a knowledge node with its excerpt, neighbours and links", async () => {
+  it("shows the intro, both draws, and a concept with its excerpt, neighbours and links", async () => {
     wrap(mockDataSource({ getGraph: async () => snapshot, getPage }), <HomeScreen host={host} />);
-    expect(await screen.findByRole("heading", { name: "Sample subgraphs" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Sample knowledge nodes" })).toBeInTheDocument();
-    expect(screen.getByText("A research question")).toBeInTheDocument();
-    expect(await screen.findByText("Opening of q-x.")).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Draw a Subgraph" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Draw a Concept" })).toBeInTheDocument();
+    expect(screen.getByText("Concept")).toBeInTheDocument();
+    expect(await screen.findByText(/^Opening of (q-x|hub)\.$/)).toBeInTheDocument();
     expect(screen.queryByText("secret")).not.toBeInTheDocument();
     expect(screen.getAllByText("Linked with").length).toBeGreaterThan(0);
     const read = screen.getAllByRole("link", { name: /read/i })[0]!;

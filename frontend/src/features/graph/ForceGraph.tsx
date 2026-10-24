@@ -114,7 +114,8 @@ export const ForceGraph = forwardRef<ForceGraphHandle, ForceGraphProps & { class
       .cooldownTicks(120)
       .nodeCanvasObjectMode(() => "replace")
       .enableNodeDrag(true)
-      .enablePanInteraction(true)
+      // left-drag on the background is the box selection (tools/RegionOverlay); the wheel button pans
+      .enablePanInteraction(false)
       .enableZoomInteraction(false)
       .nodeVal((n) => latest.current.nodeRadius(n as SimNode) ** 2)
       .nodeRelSize(1)
@@ -172,8 +173,29 @@ export const ForceGraph = forwardRef<ForceGraphHandle, ForceGraphProps & { class
     };
     // d3-zoom zooms in on a double-click; here a double-click opens the side reader instead
     const noDbl = (ev: Event) => ev.stopPropagation();
+    // pressing the wheel (middle button) and moving pans; no pointer capture (see above)
+    let pan: { id: number; x: number; y: number } | null = null;
+    const panDown = (ev: PointerEvent) => {
+      if (ev.button !== 1) return;
+      ev.preventDefault(); // no autoscroll
+      pan = { id: ev.pointerId, x: ev.clientX, y: ev.clientY };
+    };
+    const panMove = (ev: PointerEvent) => {
+      if (!pan || ev.pointerId !== pan.id) return;
+      panBy(pan.x - ev.clientX, pan.y - ev.clientY);
+      pan = { ...pan, x: ev.clientX, y: ev.clientY };
+    };
+    const panUp = (ev: PointerEvent) => {
+      if (pan && ev.pointerId === pan.id) pan = null;
+    };
+    const noAux = (ev: MouseEvent) => ev.button === 1 && ev.preventDefault();
     el.addEventListener("wheel", wheel, { passive: false });
     el.addEventListener("dblclick", noDbl, true);
+    el.addEventListener("pointerdown", panDown, true);
+    el.addEventListener("mousedown", noAux, true);
+    window.addEventListener("pointermove", panMove, true);
+    window.addEventListener("pointerup", panUp, true);
+    window.addEventListener("pointercancel", panUp, true);
 
     function zoomAt(factor: number, cx: number, cy: number) {
       const k0 = g.zoom();
@@ -196,6 +218,11 @@ export const ForceGraph = forwardRef<ForceGraphHandle, ForceGraphProps & { class
       ro.disconnect();
       el.removeEventListener("wheel", wheel);
       el.removeEventListener("dblclick", noDbl, true);
+      el.removeEventListener("pointerdown", panDown, true);
+      el.removeEventListener("mousedown", noAux, true);
+      window.removeEventListener("pointermove", panMove, true);
+      window.removeEventListener("pointerup", panUp, true);
+      window.removeEventListener("pointercancel", panUp, true);
       g._destructor();
       fg.current = null;
     };
