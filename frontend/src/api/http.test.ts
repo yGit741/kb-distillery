@@ -4,12 +4,14 @@ import { createHttpDataSource } from "./http";
 const json = (body: unknown, status = 200) =>
   Promise.resolve(new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } }));
 
+const urlOf = (f: { mock: { calls: unknown[][] } }) => (f.mock.calls[0]?.[0] as Request).url;
+
 describe("http DataSource", () => {
   it("fetches /api/lifecycle", async () => {
     const f = vi.fn((..._a: unknown[]) => json({ version: "0.13.1" }));
     const ds = createHttpDataSource(f as unknown as typeof fetch);
     expect((await ds.getLifecycle()).version).toBe("0.13.1");
-    expect(f.mock.calls[0]?.[0]).toBe("/api/lifecycle");
+    expect(urlOf(f)).toMatch(/\/api\/lifecycle$/);
   });
   it("turns HTTP errors into ApiError with the status", async () => {
     const ds = createHttpDataSource((() => json({}, 500)) as unknown as typeof fetch);
@@ -27,6 +29,37 @@ describe("http DataSource", () => {
     const f = vi.fn((..._a: unknown[]) => json({ nodes }));
     const ds = createHttpDataSource(f as unknown as typeof fetch);
     expect(await ds.getGraphNodes()).toEqual(nodes);
-    expect(f.mock.calls[0]?.[0]).toBe("/api/graph");
+    expect(urlOf(f)).toMatch(/\/api\/graph$/);
+  });
+});
+
+describe("http DataSource, other groups", () => {
+  it("sends typed query and path params", async () => {
+    const f = vi.fn((..._a: unknown[]) => json({ hits: [], total: 0 }));
+    const ds = createHttpDataSource(f as unknown as typeof fetch);
+    await ds.search("tensor rank", 5);
+    expect(urlOf(f)).toMatch(/\/api\/search\?q=tensor(%20|\+)rank&limit=5$/);
+    f.mockClear();
+    await ds.getPage("paper-x").catch(() => {});
+    expect(urlOf(f)).toMatch(/\/api\/pages\/paper-x$/);
+  });
+  it("posts a JSON body", async () => {
+    const f = vi.fn((..._a: unknown[]) => json({ ok: true, slug: "s" }));
+    const ds = createHttpDataSource(f as unknown as typeof fetch);
+    await ds.saveScope({ create: true, slug: "s", title: "S", why: "", paths: [] });
+    const req = f.mock.calls[0]?.[0] as Request;
+    expect(req.method).toBe("POST");
+    expect(await req.json()).toMatchObject({ slug: "s" });
+  });
+  it("surfaces the backend's error message", async () => {
+    const ds = createHttpDataSource((() => json({ error: "no such page" }, 404)) as unknown as typeof fetch);
+    await expect(ds.getPage("nope")).rejects.toMatchObject({ message: "no such page", status: 404 });
+  });
+  it("streams chat as the raw response", async () => {
+    const f = vi.fn((..._a: unknown[]) => Promise.resolve(new Response("data: x\n\n", { status: 200 })));
+    const ds = createHttpDataSource(f as unknown as typeof fetch);
+    const res = await ds.chatStream({ question: "hi", history: [] });
+    expect(await res.text()).toContain("data: x");
+    expect(f.mock.calls[0]?.[0]).toBe("/api/chat");
   });
 });

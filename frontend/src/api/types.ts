@@ -1,105 +1,60 @@
 /**
- * Hand-written response types. Lifecycle mirrors build_lifecycle_snapshot() in
- * meta/dashboard/lifecycle_data.py. Phase 2 replaces this file with generated OpenAPI types.
+ * Response and request types. Generated: `pixi run api-schema` rewrites schema.d.ts from the FastAPI
+ * routers; this file only gives its schemas short names. Do not hand-write a response shape.
  */
+import type { components } from "./schema";
 
-export type CommitKind = "kb" | "infra" | "pr-merge" | "sync-merge" | "unknown";
+type S = components["schemas"];
 
-export interface TimelineRow {
-  sha: string;
-  short: string;
-  date: string; // ISO 8601
-  subject: string;
-  kind: CommitKind;
-  type: string | null;
-  scope: string | null;
-  summary: string | null;
-  kb_version: string | null;
-  pr: number | null;
-  retro: boolean;
-  parents: string[];
-  op: string | null;
-  target: string | null;
-  reverts: string | null;
-  reverted_by: string | null;
-  snapshot_tag: string | null;
-}
+// lifecycle + share
+export type LifecycleSnapshot = S["LifecycleSnapshot"];
+export type TimelineRow = S["TimelineRow"];
+export type SnapshotTag = S["SnapshotTag"];
+export type InfraBranch = S["InfraBranch"];
+export type StaleWorktree = S["StaleWorktree"];
+export type WorkingState = S["WorkingState"];
+export type NightlyState = S["NightlyState"];
+export type ShareStatus = S["ShareStatus"];
+export type ShareChip = S["ShareChip"];
+export type CommitKind = TimelineRow["kind"];
 
-export interface SnapshotTag {
-  tag: string;
-  date: string;
-  label: string;
-}
+// graph, pages, search, path
+export type GraphSnapshot = S["GraphSnapshot"];
+export type GraphNode = S["GraphNode"];
+export type GraphLink = S["GraphLink"];
+export type PageIndex = S["PageIndex"];
+export type PageCard = S["PageCard"];
+export type PageDetail = S["PageDetail"];
+export type SearchResult = S["SearchResult"];
+export type SearchHit = S["SearchHit"];
+export type PathResult = S["PathResult"];
 
-export interface InfraBranch {
-  name: string;
-  date: string;
-  last: string;
-  ahead: number;
-  behind: number;
-}
+// corpus, raw, citations, pipeline, health, ops
+export type CorpusTable = S["CorpusTable"];
+export type CorpusRow = S["CorpusRow"];
+export type RawPreview = S["RawPreview"];
+export type DigestResult = S["DigestResult"];
+export type CitationGraph = S["CitationGraph"];
+export type PipelineSnapshot = S["PipelineSnapshot"];
+export type HealthSnapshot = S["HealthSnapshot"];
+export type OpsSnapshot = S["OpsSnapshot"];
 
-export interface StaleWorktree {
-  branch: string;
-  path: string;
-  merged: boolean;
-  ahead: number | string;
-  dirty: number;
-}
+// scopes
+export type ScopeList = S["ScopeList"];
+export type ScopeDetail = S["ScopeDetail"];
+export type ScopeResolved = S["ScopeResolved"];
+export type ScopeStep = S["ScopeStep"];
+export type ScopeSaveRequest = S["ScopeSaveRequest"];
+export type ScopeResolveRequest = S["ScopeResolveRequest"];
+export type ScopeDuplicateRequest = S["ScopeDuplicateRequest"];
 
-export interface WorkingState {
-  lanes: { knowledge: number; tooling: number; other?: number } & Record<string, number>;
-  knowledge: string[];
-  tooling: string[];
-  think_dirty: number;
-  sessions: {
-    ingest: { sha1?: string; raw?: string }[];
-    distill: { think?: string; mode?: string }[];
-    researcher: string[];
-    ops: { op: string; target: string; summary: string; started: string } | null;
-  };
-  unpushed: number | null;
-}
-
-export interface NightlyState {
-  plist_installed: boolean;
-  log: string;
-  installed?: boolean;
-  loaded?: boolean;
-  last_run?: string | null;
-  summary?: string;
-  hint?: string | null;
-}
-
-export interface LifecycleSnapshot {
-  generated_at: string;
-  branch: string;
-  head: string;
-  version: string | null;
-  next_version: string;
-  github: string | null;
-  schema: { version: string; applied: string[]; pending: string[] };
-  policy: { hooks_installed: boolean; mode: string; strict: boolean };
-  timeline: TimelineRow[];
-  snapshots: SnapshotTag[];
-  stats: { kb_steps: number; pr_merges: number; ops_30d: Record<string, number>; undone: number };
-  // Absent from a snapshot captured for the shared site (they are not fixed by a commit).
-  working?: WorkingState;
-  infra_branches?: InfraBranch[];
-  nightly?: NightlyState;
-  stale_worktrees?: StaleWorktree[];
-}
-
-/** /api/share/status */
-export interface ShareChip {
-  label: string;
-  cls: string;
-  title: string;
-  href: string;
-}
-export interface ShareStatus {
-  status: Record<string, unknown> | null;
-  chip: ShareChip | null;
-}
-
-export type { GraphNode } from "./model";
+// chat
+export type ChatRequest = S["ChatRequest"];
+export type ChatStatus = S["ChatStatus"];
+export type ChatSettings = S["ChatSettings"];
+export type ChatSettingsUpdate = S["ChatSettingsUpdate"];
+export type KeyList = S["KeyList"];
+export type KeyAdd = S["KeyAdd"];
+export type PromptsResponse = S["PromptsResponse"];
+export type SavedChat = S["SavedChat"];
+export type SavedChatResult = S["SavedChatResult"];
