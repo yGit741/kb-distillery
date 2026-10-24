@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ApiError } from "@/api";
 import { Empty, ErrorState, Loading } from "@/components/states";
 import { Button } from "@/components/ui/button";
+import { useEmbed } from "@/app/embed";
 import { useApiQuery } from "@/lib/useApiQuery";
 import type { PagesSearch } from "@/routes/search";
 import { cn } from "@/lib/utils";
@@ -25,13 +26,6 @@ import { SearchBox } from "./SearchBox";
 import { BrowseView, HomeView, PathView, SearchView } from "./Views";
 
 export const ported = true;
-
-/** `?embed=1` (the graph's side reader): once seen it sticks for the whole iframe session, so in-reader links keep it. */
-let embedSticky = false;
-function useEmbed(): boolean {
-  if (typeof window !== "undefined" && new URLSearchParams(window.location.search).has("embed")) embedSticky = true;
-  return embedSticky;
-}
 
 const isTyping = (t: EventTarget | null) =>
   t instanceof HTMLElement && (t.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(t.tagName));
@@ -66,7 +60,23 @@ export default function PagesScreen() {
   const search = useSearch({ strict: false }) as PagesSearch;
   const searchRef = useRef<HTMLInputElement>(null);
 
-  const [path, setPath] = useState<{ a: string; b: string } | null>(null);
+  // The finder is open when the URL carries a/b (shareable result) or the user opened it empty.
+  const [openPath, setPath] = useState<{ a: string; b: string } | null>(null);
+  const path = search.a || search.b ? { a: search.a ?? "", b: search.b ?? "" } : openPath;
+  const askPath = useCallback(
+    (a: string, b: string) =>
+      void navigate({
+        to: slug ? pageTo(slug) : PAGES_TO,
+        search: { ...(embed ? { embed: "1" } : {}), a, b } as never,
+        replace: true,
+      }),
+    [navigate, slug, embed],
+  );
+  const closePath = useCallback(() => {
+    setPath(null);
+    if (search.a || search.b)
+      void navigate({ to: slug ? pageTo(slug) : PAGES_TO, search: (embed ? { embed: "1" } : {}) as never, replace: true });
+  }, [navigate, slug, embed, search.a, search.b]);
   const [pins, setPins] = useState<string[]>(() => loadList(PINS_KEY));
   const [trail, setTrail] = useState<string[]>(() => loadList(TRAIL_KEY));
 
@@ -82,8 +92,7 @@ export default function PagesScreen() {
     else if (target.kind === "search") void navigate({ to: PAGES_TO, search: { q: target.q } as never, replace: true });
     else if (target.kind === "browse") void navigate({ to: PAGES_TO, search: { type: target.type } as never, replace: true });
     else {
-      void navigate({ to: PAGES_TO, replace: true });
-      setPath({ a: target.a ?? "", b: target.b ?? "" });
+      void navigate({ to: PAGES_TO, search: { a: target.a ?? "", b: target.b ?? "" } as never, replace: true });
     }
   }, [navigate]);
 
@@ -146,7 +155,7 @@ export default function PagesScreen() {
   if (index.isPending) body = <Loading label="Loading pages" rows={4} />;
   else if (index.isError || !g || !index.data)
     body = <ErrorState title="Could not load the page index." error={index.error} onRetry={() => void index.refetch()} />;
-  else if (path) body = <PathView key={`${path.a}|${path.b}`} g={g} initialA={path.a} initialB={path.b} />;
+  else if (path) body = <PathView key={`${path.a}|${path.b}`} g={g} initialA={path.a} initialB={path.b} onAsk={askPath} />;
   else if (slug) {
     if (detail.isPending) body = <Loading label="Loading page" rows={5} />;
     else if (detail.isError)
@@ -185,7 +194,7 @@ export default function PagesScreen() {
             <Button variant="outline" size="icon" onClick={surprise} disabled={!g} title="Random page (r)" aria-label="Random page">
               <Dices />
             </Button>
-            <Button variant={path ? "secondary" : "outline"} size="icon" onClick={() => setPath(path ? null : { a: slug ?? "", b: "" })} title="Connect two pages" aria-label="Connect two pages" aria-pressed={!!path}>
+            <Button variant={path ? "secondary" : "outline"} size="icon" onClick={() => (path ? closePath() : setPath({ a: slug ?? "", b: "" }))} title="Connect two pages" aria-label="Connect two pages" aria-pressed={!!path}>
               <RouteIcon />
             </Button>
           </div>

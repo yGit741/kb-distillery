@@ -7,12 +7,12 @@ import { useApiQuery } from "@/lib/useApiQuery";
 import { useKb } from "@/lib/store";
 import type { ScopesSearch } from "@/routes/search";
 import { Editor, type EditorInit } from "./Editor";
-import { newRows, readDrafts, type ScopeSummary } from "./logic";
+import type { ScopeSummary } from "@/api/types";
+import { newRows, readDrafts } from "./logic";
 
-type Summary = ScopeSummary;
 
 function ScopeList({ scopes, current, onOpen, onOpenDraft, onNew }: {
-  scopes: Summary[];
+  scopes: ScopeSummary[];
   current: string | null;
   onOpen: (slug: string) => void;
   onOpenDraft: (key: string) => void;

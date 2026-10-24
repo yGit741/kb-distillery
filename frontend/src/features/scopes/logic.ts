@@ -1,7 +1,4 @@
-import type { CorpusRow, PageCard, ScopeDetail, ScopeList } from "@/api/types";
-
-export type ScopeRow = ScopeDetail["rows"][number];
-export type ScopeSummary = ScopeList["scopes"][number];
+import type { CorpusRow, PageCard, ScopeRow } from "@/api/types";
 
 /** Raw formats a scope may hold files from (raw/inbox is refused by the backend). */
 export const FORMATS = [

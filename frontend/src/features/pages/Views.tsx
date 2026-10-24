@@ -210,7 +210,7 @@ export function SearchView({ g, q }: { g: LinkGraph; q: string }) {
   );
 }
 
-export function PathView({ g, initialA = "", initialB = "" }: { g: LinkGraph; initialA?: string; initialB?: string }) {
+export function PathView({ g, initialA = "", initialB = "", onAsk }: { g: LinkGraph; initialA?: string; initialB?: string; onAsk?: (a: string, b: string) => void }) {
   const [draft, setDraft] = useState({ a: initialA, b: initialB });
   const [ask, setAsk] = useState<{ a: string; b: string } | null>(initialA && initialB ? { a: initialA, b: initialB } : null);
   const res = useApiQuery(["pages", "path", ask?.a, ask?.b], (ds) => ds.findPath(ask!.a, ask!.b), {
@@ -219,8 +219,11 @@ export function PathView({ g, initialA = "", initialB = "" }: { g: LinkGraph; in
   });
   const submit = (e: FormEvent) => {
     e.preventDefault();
-    if (draft.a.trim() && draft.b.trim())
-      setAsk({ a: resolveInput(g, draft.a), b: resolveInput(g, draft.b) });
+    if (draft.a.trim() && draft.b.trim()) {
+      const next = { a: resolveInput(g, draft.a), b: resolveInput(g, draft.b) };
+      setAsk(next);
+      onAsk?.(next.a, next.b);
+    }
   };
   const names = [...g.byId.values()];
   return (
