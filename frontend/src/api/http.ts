@@ -1,5 +1,4 @@
 import { ApiError, type DataSource } from "./datasource";
-import { fromLegacy, type LegacyNode } from "./legacyModel";
 import type { GraphNode } from "./model";
 import type { LifecycleSnapshot, ShareStatus } from "./types";
 
@@ -21,20 +20,9 @@ export function createHttpDataSource(fetchImpl: Fetch = (...a) => fetch(...a), b
       throw new ApiError(`${base}${path} did not return JSON`, res.status);
     }
   }
-  interface RawGraph {
-    nodes: (LegacyNode & { slug: string; title?: string; areas?: string[] })[];
-  }
   return {
     kind: "http",
-    // Old backend vocabulary is translated here, at the boundary, and nowhere else.
-    getGraphNodes: async () => {
-      const g = await get<RawGraph>("/graph");
-      return g.nodes.flatMap((n): GraphNode[] => {
-        const tag = fromLegacy(n);
-        if (!tag) return [];
-        return [{ slug: n.slug, title: n.title ?? n.slug, status: n.status ?? "", areas: n.areas ?? [], ...tag }];
-      });
-    },
+    getGraphNodes: async () => (await get<{ nodes: GraphNode[] }>("/graph")).nodes,
     getLifecycle: () => get<LifecycleSnapshot>("/lifecycle"),
     getShareStatus: () => get<ShareStatus>("/share/status"),
   };
