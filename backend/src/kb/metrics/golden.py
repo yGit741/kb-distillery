@@ -3,11 +3,12 @@
     pixi run metrics -- golden list
     pixi run metrics -- golden run [<task>…] --label baseline [--repeat 1] [--dry-run]
 
-Each run gets a throwaway git worktree of this vault at a pinned commit, outside the vault
-(`~/local-workspace/agent-metrics/golden/<run>/kb-golden-<task>`), with the primary checkout's `.pixi`,
-`frontend/node_modules` and untracked raw files symlinked in, and:
+Each run gets a throwaway local clone of this vault on `main` at a pinned commit, outside the vault
+(`~/local-workspace/agent-metrics/golden/<run>/<task>/kb-golden-<task>`) — on main because knowledge
+steps (kb(digest), kb(catalog), kb(refine)) only commit there — with the primary checkout's `.pixi`,
+`frontend/node_modules` and untracked raw files symlinked in (files a task moves are real copies), and:
 
-- every push redirected to a local bare repo (`GIT_CONFIG_*` → `remote.origin.pushurl`), `KB_NO_PUSH=1`,
+- `origin` is a local bare sink seeded with the commit, plus `remote.origin.pushurl` → sink, `KB_NO_PUSH=1`
   and `gh` pointed at an empty config — a golden run can never reach GitHub or the share site;
 - the agent run headless: `claude -p "[golden:<id>] <prompt>" --model --effort --permission-mode auto`,
   stdin closed (a nested `claude -p` waits on it otherwise). Its JSON result is the official
@@ -26,7 +27,7 @@ import time
 import tomllib
 import uuid
 
-from kb.git.ship import link_untracked_raw, primary_checkout
+from kb.git.ship import primary_checkout
 from kb.metrics import judge, store
 from kb.metrics.sessions import parse_session, PROJECTS_DIR
 from kb.paths import vault_root
@@ -50,21 +51,26 @@ def _git(args, cwd, check=True):
 
 
 def make_workspace(task, run_id, ref, primary):
-    """A detached worktree at `ref` plus a bare push sink; returns (repo dir, sink dir)."""
-    base = os.path.join(RUNS_DIR, run_id)
+    """A local clone on `main` at `ref` whose `origin` is a bare sink seeded with that commit — knowledge
+    steps commit on main and push only into the sink, `ship` finds origin/main. Returns (repo, sink)."""
+    base = os.path.join(RUNS_DIR, run_id, task["id"])
     repo, sink = os.path.join(base, f"kb-golden-{task['id']}"), os.path.join(base, "push-sink.git")
     os.makedirs(base, exist_ok=True)
-    if not os.path.exists(sink):
-        _git(["init", "-q", "--bare", sink], cwd=base)
-    branch = f"golden/{run_id}-{task['id']}"
-    _git(["worktree", "add", "-q", "-b", branch, repo, ref], cwd=primary)
+    _git(["init", "-q", "--bare", sink], cwd=base)
+    _git(["clone", "-q", "--shared", "--no-checkout", primary, repo], cwd=base)
+    _git(["checkout", "-q", "-B", "main", ref], cwd=repo)
+    _git(["remote", "set-url", "origin", sink], cwd=repo)
+    _git(["push", "-q", "origin", "main"], cwd=repo)
+    _git(["fetch", "-q", "origin"], cwd=repo)
     for rel in LINKED:
         src, dst = os.path.join(primary, rel), os.path.join(repo, rel)
-        if os.path.exists(src) and not os.path.exists(dst):
+        if os.path.exists(src) and not os.path.lexists(dst):
             os.symlink(src, dst)
-    link_untracked_raw(repo)
-    for rel in task.get("copy", []):            # inbox files and the like: copied so the task may move them
+    link_raw(primary, repo)
+    for rel in task.get("copy", []):            # files the task may move or edit: real copies, never links
         src, dst = os.path.join(primary, rel), os.path.join(repo, rel)
+        if os.path.lexists(dst):
+            os.unlink(dst)
         os.makedirs(os.path.dirname(dst), exist_ok=True)
         shutil.copy2(src, dst)
     for cmd in task.get("setup", []):
@@ -72,19 +78,22 @@ def make_workspace(task, run_id, ref, primary):
     return repo, sink
 
 
-def remove_workspace(repo, primary):
-    branch = _git(["rev-parse", "--abbrev-ref", "HEAD"], cwd=repo, check=False).stdout.strip()
-    _git(["worktree", "remove", "--force", repo], cwd=primary, check=False)
-    for b in {branch, *_golden_branches(primary, repo)}:
-        if b and b != "HEAD" and b != "main":
-            _git(["branch", "-D", b], cwd=primary, check=False)
+def link_raw(primary, repo):
+    """Symlink the primary's gitignored raw/ files (PDFs…) into the clone, read-only use."""
+    out = _git(["ls-files", "-z", "--others", "--ignored", "--exclude-standard", "--", "raw/"], cwd=primary, check=False)
+    made = 0
+    for rel in filter(None, out.stdout.split("\0")):
+        dst = os.path.join(repo, rel)
+        if not os.path.lexists(dst):
+            os.makedirs(os.path.dirname(dst), exist_ok=True)
+            os.symlink(os.path.join(primary, rel), dst)
+            made += 1
+    return made
 
 
-def _golden_branches(primary, repo):
-    """Branches a task created from its golden branch (e.g. `ship start` renamed it to infra/<x>)."""
-    tag = os.path.basename(repo)
-    out = _git(["for-each-ref", "--format=%(refname:short) %(worktreepath)", "refs/heads"], cwd=primary, check=False)
-    return [line.split()[0] for line in out.stdout.splitlines() if tag in line]
+def remove_workspace(repo, primary=None):
+    """The clone, its sink and any worktrees a task made inside it are all under one directory."""
+    shutil.rmtree(os.path.dirname(repo), ignore_errors=True)
 
 
 def _env(sink, base):

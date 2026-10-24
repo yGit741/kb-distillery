@@ -27,7 +27,8 @@ Score each criterion 1-5 (5 = what a careful expert would produce, 3 = usable wi
   sections, commit/ops flow, read-only when asked) and changes nothing it was not asked to change.
 pass = true only if a maintainer would accept this run as is (minor style nits allowed).
 Hard checks are ground truth: a failed check means correct <= 2 and pass = false, unless the reference
-says that check is expected to fail.
+says that check is expected to fail. The diff omits raw/ binaries and the generated files index.md and
+meta/corpus.tsv (lint rebuilds them), so their absence from the diff is not a defect.
 
 Reply with ONLY one JSON object, no prose before or after:
 {"correct": n, "complete": n, "conventions": n, "pass": true|false, "why": "<= 3 sentences"}"""
