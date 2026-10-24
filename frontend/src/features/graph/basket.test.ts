@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { DRAFTS_KEY, readDrafts, type ScopeRow } from "@/features/scopes/logic";
+import type { ScopeRow } from "@/api/types";
+import { DRAFTS_KEY, readDrafts } from "@/features/scopes/logic";
 import { activeDraft, addRows, byFormat, discard, newTarget, removePath, UNTITLED, useBasket } from "./basket";
 
 const row = (path: string, over: Partial<ScopeRow> = {}): ScopeRow => ({ path, format: path.split("/")[1] ?? "", disposition: "queued", slug: null, page_type: null, digestion: "", collection: [], year: null, ...over });

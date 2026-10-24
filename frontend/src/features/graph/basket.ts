@@ -1,5 +1,6 @@
 import { create } from "zustand";
-import { DRAFTS_KEY, isCompanion, normSlug, readDrafts, type DraftStore, type ScopeDraft, type ScopeRow } from "@/features/scopes/logic";
+import type { ScopeRow } from "@/api/types";
+import { DRAFTS_KEY, isCompanion, normSlug, readDrafts, type DraftStore, type ScopeDraft } from "@/features/scopes/logic";
 
 /**
  * The basket is the scope draft the Scopes screen reads: the same localStorage key and shape
