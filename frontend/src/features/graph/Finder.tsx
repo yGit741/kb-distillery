@@ -7,7 +7,7 @@ import { Swatch } from "./controls";
 import { findPages, textHits } from "./pageSearch";
 import { colorOf, type ColorBy } from "./style";
 import type { GNode } from "./types";
-import { IS_SHARE } from "@/share/env";
+import { useChatDock } from "./tools/chatDockStore";
 
 export const FINDER_ID = "graph-finder";
 
@@ -34,7 +34,7 @@ interface Props {
 
 /**
  * Space search: title and slug matches, full-text hits, "pages mentioning …", and a pick list (Tab) that is
- * shown all at once with its neighbours. "/" is the ask-an-agent placeholder.
+ * shown all at once with its neighbours. "/" sends the rest of the line to the chat dock.
  */
 export function Finder({ nodes, byId, colorBy, visible, onFocus, onRead, onShowPicked, onShowMentions }: Props) {
   const [raw, setRaw] = useState("");
@@ -99,7 +99,9 @@ export function Finder({ nodes, byId, colorBy, visible, onFocus, onRead, onShowP
   const run = (it: Item | undefined, shift: boolean) => {
     if (!it) return;
     if (it.kind === "agent") {
-      setAgentNote(it.question ? "The agent is not wired in yet: this is a placeholder." : "");
+      if (!it.question) return setAgentNote("Type a question after the slash.");
+      useChatDock.getState().ask(it.question);
+      close();
       return;
     }
     if (it.kind === "mention") {
@@ -144,12 +146,13 @@ export function Finder({ nodes, byId, colorBy, visible, onFocus, onRead, onShowP
   const listId = "graph-finder-list";
   const showList = open && (items.length > 0 || !!q || picked.size > 0);
   return (
-    <div className="pointer-events-auto absolute left-3 top-3 z-20 w-[min(28rem,calc(100%-4.5rem))]">
+    <div className="pointer-events-auto absolute left-1/2 top-3 z-20 w-[min(28rem,calc(100%-8rem))] -translate-x-1/2">
       <div className="relative">
         <Search aria-hidden className="pointer-events-none absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
         <input
           ref={input}
           id={FINDER_ID}
+          data-tour="graph-search"
           role="combobox"
           aria-expanded={showList}
           aria-controls={listId}
@@ -158,7 +161,7 @@ export function Finder({ nodes, byId, colorBy, visible, onFocus, onRead, onShowP
           type="search"
           autoComplete="off"
           spellCheck={false}
-          placeholder={IS_SHARE ? "Search pages  ·  Space" : "Search pages  ·  Space  ·  / ask an agent"}
+          placeholder="Search anything"
           className="h-9 w-full rounded-lg border bg-card/95 pl-8 pr-3 text-sm shadow-[var(--shadow)] placeholder:text-muted-foreground"
           value={raw}
           onFocus={() => setOpen(true)}
@@ -232,7 +235,7 @@ export function Finder({ nodes, byId, colorBy, visible, onFocus, onRead, onShowP
               ) : (
                 <span className="flex-1">
                   {it.question ? `Ask: “${it.question}”` : "Type a question after the slash…"}{" "}
-                  <small className="text-muted-foreground">coming soon</small>
+                  <small className="text-muted-foreground">opens the chat</small>
                   {agentNote && <span className="mt-1 block text-xs text-muted-foreground">{agentNote}</span>}
                 </span>
               )}

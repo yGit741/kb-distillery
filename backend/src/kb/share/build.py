@@ -69,6 +69,7 @@ import webbrowser
 from pathlib import Path
 
 from .contracts import EXPORT_DIR, PROFILES, REPO, BuildResult, Manifest, raw_is_email
+from .home import apply_home, load_home, strip_my_notes
 
 SHARE_DIR = Path(__file__).resolve().parent
 FRONTEND_DIR = REPO / "frontend"
@@ -596,6 +597,8 @@ def apply_profile(data, profile, scope_slugs=None):
         if not keep(slug):
             continue
         p.pop("path", None)
+        if "markdown" in p:                      # the synthesis is public, the user's own notes are not
+            p["markdown"] = strip_my_notes(p["markdown"])
         fm = p.get("frontmatter") or {}
         for k in PUBLIC_DROP_KEYS:
             fm.pop(k, None)
@@ -979,6 +982,7 @@ def inner_build_app(args):
         data["lifecycle"] = collect_lifecycle(meta_dir, args.built_at, git_root, args.content_sha,
                                               os.environ.get("KB_ROOT", "."), args.content_ref)
     data = apply_profile(data, args.profile, _scope_arg(args))      # the one place the public cuts live
+    data = apply_home(data, load_home())          # Home cards + tour from share.toml `[home]`
     page = app_page(Path(args.app_index).read_text(encoding="utf-8"), data, fields)
     out = Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)

@@ -19,6 +19,8 @@ export interface ShareBlob {
   /** Only when the builder had a citation graph; the legacy build never had one. */
   citations?: CitationGraph;
   meta?: ShareMeta;
+  /** Home cards and the tour id from share.toml `[home]` (kb.share.home). */
+  home?: { cards?: unknown[]; tour?: string | null };
 }
 
 /** Parse the baked blob out of the document; null when the page has none (plain app, tests). */

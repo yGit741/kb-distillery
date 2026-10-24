@@ -4,6 +4,7 @@ import { useDataSource } from "@/api";
 import { Empty, ErrorState, Loading } from "@/components/states";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { IS_SHARE } from "@/share/env";
 import { useKb } from "@/lib/store";
 import { useApiQuery } from "@/lib/useApiQuery";
 import type { GraphSearch } from "@/routes/search";
@@ -11,6 +12,7 @@ import { Finder, FINDER_ID } from "./Finder";
 import { HostContext, type ToolHost } from "./hostContext";
 import { useLayer } from "./layerStore";
 import "./tools/register";
+import { askAbout, useChatDock } from "./tools/chatDockStore";
 import "./kalai/register";
 import { extendView, makeView, parsePages, scopeIds, type GraphView } from "./pageSearch";
 import { buildNeighborMap } from "./graphData";
@@ -92,7 +94,7 @@ export function GraphScreen({ search, host }: { search: GraphSearch; host: Graph
 /** The screen sits under the 48px header and fills the rest of the viewport (the graph needs the room). */
 function FullBleed({ children }: { children: React.ReactNode }) {
   return (
-    <div className="fixed inset-x-0 bottom-0 top-12 z-30 overflow-hidden bg-background" data-testid="graph-screen">
+    <div className={"fixed inset-x-0 bottom-0 top-12 z-30 overflow-hidden bg-background"} data-testid="graph-screen">
       {children}
     </div>
   );
@@ -293,12 +295,11 @@ function Loaded({
   const reader = ui.readerSlug ? byId.get(ui.readerSlug) : undefined;
   const showDetails = ui.detailsOpen && selected.length > 0;
 
-  const legend = <Legend nodes={model.nodes} visible={visible} schema={schema} shownTypes={shownTypes} stats={stats} embedded={ui.railOpen} />;
+  const legend = <Legend nodes={model.nodes} visible={visible} schema={schema} shownTypes={shownTypes} stats={stats} />;
 
   return (
     <HostContext.Provider value={host}>
-      {ui.railOpen && <LabRail legend={legend} imp={imp} selected={selected} className={cn("absolute inset-y-0 left-0 z-30", wide ? "w-72" : "w-[min(20rem,92%)]")} />}
-      <div className="absolute inset-y-0 right-0" style={{ left: ui.railOpen && wide ? "18rem" : 0 }} data-testid="graph-area">
+      <div className="absolute inset-0" data-testid="graph-area">
       <GraphCanvas
         ref={canvas}
         model={model}
@@ -327,7 +328,7 @@ function Loaded({
         onShowMentions={(query) => void showMentions(query)}
       />
       {(ui.view || note) && (
-        <div className="pointer-events-auto absolute left-3 top-14 z-10 flex max-w-[min(28rem,calc(100%-4.5rem))] items-center gap-2 rounded-lg border bg-card px-2.5 py-1 text-xs shadow-[var(--shadow)]" role="status">
+        <div className="pointer-events-auto absolute left-1/2 top-14 z-10 flex max-w-[min(28rem,calc(100%-8rem))] -translate-x-1/2 items-center gap-2 rounded-lg border bg-card px-2.5 py-1 text-xs shadow-[var(--shadow)]" role="status">
           <span className="min-w-0 truncate">
             {ui.view ? (
               <>
@@ -351,14 +352,21 @@ function Loaded({
         refreshing={refreshing}
         stats={stats}
         toolContext={toolContext}
+        onBack={search.from === "home" ? () => (window.history.length > 1 ? window.history.back() : host.go("/")) : undefined}
       />
-      {!ui.railOpen && legend}
+      {legend}
+      {ui.railOpen && <LabRail imp={imp} selected={selected} className={cn("absolute bottom-16 left-14 top-3 z-20", wide ? "w-72" : "w-[min(20rem,calc(100%-4.5rem))]")} />}
       {selected.length > 0 && !showDetails && !reader && (
-        <div className="pointer-events-auto absolute bottom-3 left-1/2 z-10 flex -translate-x-1/2 items-center gap-1 rounded-full border bg-card px-3 py-1 text-sm shadow-[var(--shadow)] max-sm:bottom-16">
+        <div className="pointer-events-auto absolute bottom-14 left-1/2 z-10 flex -translate-x-1/2 items-center gap-1 rounded-full border bg-card px-3 py-1 text-sm shadow-[var(--shadow)]">
           <span>{selected.length === 1 ? (selected[0]?.title || selected[0]?.id) : `${selected.length} selected`}</span>
           <Button size="sm" variant="ghost" onClick={() => ui.set({ detailsOpen: true })}>
             Details
           </Button>
+          {!IS_SHARE && (
+            <Button size="sm" variant="ghost" onClick={() => useChatDock.getState().ask(askAbout(selected))}>
+              Ask
+            </Button>
+          )}
           <Button size="sm" variant="ghost" onClick={() => useKb.getState().clearSelection()}>
             Clear
           </Button>

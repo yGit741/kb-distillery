@@ -286,6 +286,43 @@ def test_spa_fallback(tmp_path):
     assert c.get("/assets/a.js").text == "js"
     assert "shell" not in c.get("/assets/%2e%2e/index.html").text
     assert c.get("/app/%2e%2e/%2e%2e/etc/passwd").text == "<html>shell</html>"
+    (tmp_path / ".src-hash").write_text("abc")
+    assert c.get("/app/.src-hash").text == "<html>shell</html>"   # dotfiles stay private
+
+
+def _frontend(tmp_path):
+    fe = tmp_path / "frontend"
+    (fe / "src").mkdir(parents=True)
+    (fe / "src" / "main.tsx").write_text("v1")
+    (fe / "node_modules").mkdir()
+    return fe
+
+
+def test_ensure_app_dist_builds_only_when_sources_change(tmp_path):
+    from kb.api.spa import ensure_app_dist
+    fe = _frontend(tmp_path)
+    calls = []
+
+    def runner(cmd, **kw):
+        calls.append(cmd)
+        (fe / "dist").mkdir(exist_ok=True)
+        (fe / "dist" / "index.html").write_text("built")
+        return subprocess.CompletedProcess(cmd, 0, "", "")
+
+    assert ensure_app_dist(fe, runner) == "built"
+    assert ensure_app_dist(fe, runner) == "fresh" and len(calls) == 1
+    (fe / "src" / "main.tsx").write_text("v2")
+    assert ensure_app_dist(fe, runner) == "built" and len(calls) == 2
+
+
+def test_ensure_app_dist_keeps_old_dist_on_failure(tmp_path):
+    from kb.api.spa import ensure_app_dist
+    fe = _frontend(tmp_path)
+    fail = lambda cmd, **kw: subprocess.CompletedProcess(cmd, 1, "", "tsc: error TS1")
+    assert ensure_app_dist(fe, fail).startswith("frontend build failed")
+    assert not (fe / "dist" / ".src-hash").exists()
+    (fe / "node_modules").rmdir()
+    assert "web-install" in ensure_app_dist(fe, fail)
 
 
 def test_ported_graph_redirects_to_the_app(client):

@@ -36,7 +36,8 @@ Pixi: `pixi run export-kb`
 
 Includes:
 
-- `AGENTS.md`, `CLAUDE.md`, `index.md`
+- `AGENTS.md`, `CLAUDE.md`, `index.md`, `skills/README.md`
+- `meta/docs/*.md` (the docs the AGENTS.md doc router points to)
 - `wiki/*.md`, `think/*.md`
 - `meta/corpus.tsv`, `meta/log.md`, `meta/coherence-warnings.tsv` (if present)
 - `EXPORT_MANIFEST.txt` — file list + counts
@@ -47,4 +48,4 @@ PDFs omitted by default; paths remain in `meta/corpus.tsv`.
 
 1. Run `python3 -m kb.maintenance.export` (lint runs first by default).
 2. Print the absolute path and size for upload to the other LLM.
-3. Tell the recipient: start with `AGENTS.md` and `index.md`.
+3. Tell the recipient: start with `AGENTS.md` (its doc router names the `meta/docs/` file to read) and `index.md`.

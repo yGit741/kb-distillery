@@ -71,15 +71,15 @@ export function wheelUnits(ev: WheelEvent, pageHeight: number): { dx: number; dy
   return { dx: ev.deltaX * unit, dy: ev.deltaY * unit };
 }
 
-/** The scheme: wheel and two-finger scroll pan, pinch (ctrl+wheel) or Cmd+wheel zoom, shift+wheel pans sideways. */
+/**
+ * The scheme: the wheel zooms toward the cursor (pinch, ctrl+wheel, too); shift+wheel pans, sideways for a
+ * vertical wheel. Dragging with the wheel pressed pans as well.
+ */
 export function wheelAction(ev: Pick<WheelEvent, "ctrlKey" | "metaKey" | "shiftKey">, dx: number, dy: number) {
-  if (ev.ctrlKey || ev.metaKey) {
-    // a pinch arrives as ctrl+wheel with small deltas, a Cmd+mouse wheel as +-100 steps
-    const step = Math.max(-60, Math.min(60, dy));
-    return { kind: "zoom" as const, factor: Math.exp(-step * (ev.ctrlKey ? 0.012 : 0.004)) };
-  }
-  if (ev.shiftKey && !dx) return { kind: "pan" as const, dx: dy, dy: 0 };
-  return { kind: "pan" as const, dx, dy };
+  if (ev.shiftKey) return dx ? { kind: "pan" as const, dx, dy } : { kind: "pan" as const, dx: dy, dy: 0 };
+  // a pinch arrives as ctrl+wheel with small deltas, a mouse wheel as +-100 steps
+  const step = Math.max(-60, Math.min(60, dy));
+  return { kind: "zoom" as const, factor: Math.exp(-step * (ev.ctrlKey ? 0.012 : 0.004)) };
 }
 
 /**
@@ -114,7 +114,8 @@ export const ForceGraph = forwardRef<ForceGraphHandle, ForceGraphProps & { class
       .cooldownTicks(120)
       .nodeCanvasObjectMode(() => "replace")
       .enableNodeDrag(true)
-      .enablePanInteraction(true)
+      // left-drag on the background is the box selection (tools/RegionOverlay); the wheel button pans
+      .enablePanInteraction(false)
       .enableZoomInteraction(false)
       .nodeVal((n) => latest.current.nodeRadius(n as SimNode) ** 2)
       .nodeRelSize(1)
@@ -172,8 +173,29 @@ export const ForceGraph = forwardRef<ForceGraphHandle, ForceGraphProps & { class
     };
     // d3-zoom zooms in on a double-click; here a double-click opens the side reader instead
     const noDbl = (ev: Event) => ev.stopPropagation();
+    // pressing the wheel (middle button) and moving pans; no pointer capture (see above)
+    let pan: { id: number; x: number; y: number } | null = null;
+    const panDown = (ev: PointerEvent) => {
+      if (ev.button !== 1) return;
+      ev.preventDefault(); // no autoscroll
+      pan = { id: ev.pointerId, x: ev.clientX, y: ev.clientY };
+    };
+    const panMove = (ev: PointerEvent) => {
+      if (!pan || ev.pointerId !== pan.id) return;
+      panBy(pan.x - ev.clientX, pan.y - ev.clientY);
+      pan = { ...pan, x: ev.clientX, y: ev.clientY };
+    };
+    const panUp = (ev: PointerEvent) => {
+      if (pan && ev.pointerId === pan.id) pan = null;
+    };
+    const noAux = (ev: MouseEvent) => ev.button === 1 && ev.preventDefault();
     el.addEventListener("wheel", wheel, { passive: false });
     el.addEventListener("dblclick", noDbl, true);
+    el.addEventListener("pointerdown", panDown, true);
+    el.addEventListener("mousedown", noAux, true);
+    window.addEventListener("pointermove", panMove, true);
+    window.addEventListener("pointerup", panUp, true);
+    window.addEventListener("pointercancel", panUp, true);
 
     function zoomAt(factor: number, cx: number, cy: number) {
       const k0 = g.zoom();
@@ -196,6 +218,11 @@ export const ForceGraph = forwardRef<ForceGraphHandle, ForceGraphProps & { class
       ro.disconnect();
       el.removeEventListener("wheel", wheel);
       el.removeEventListener("dblclick", noDbl, true);
+      el.removeEventListener("pointerdown", panDown, true);
+      el.removeEventListener("mousedown", noAux, true);
+      window.removeEventListener("pointermove", panMove, true);
+      window.removeEventListener("pointerup", panUp, true);
+      window.removeEventListener("pointercancel", panUp, true);
       g._destructor();
       fg.current = null;
     };

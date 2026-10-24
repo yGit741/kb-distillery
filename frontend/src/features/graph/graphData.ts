@@ -48,6 +48,9 @@ export function sharedSourceLinks(
   return out;
 }
 
+/** Shared-source edges are hidden until their meaning is specified better; flip to draw them again. */
+export const SHOW_SHARED_EDGES = false;
+
 export interface GraphData {
   nodes: SimNode[];
   links: SimLink[];
@@ -62,6 +65,7 @@ export function buildGraphData(
   model: GraphModel,
   visible: ReadonlySet<string>,
   prev?: ReadonlyMap<string, Positioned>,
+  shared = SHOW_SHARED_EDGES,
 ): GraphData {
   const byId = new Map(model.nodes.map((n) => [n.id, n] as const));
   const nodes: SimNode[] = [];
@@ -84,7 +88,7 @@ export function buildGraphData(
     nodes.push(place(p));
   }
   const links: GLink[] = model.links.filter((l) => visible.has(l.source) && visible.has(l.target));
-  if (!sourcesDrawn(visible, byId)) {
+  if (shared && !sourcesDrawn(visible, byId)) {
     const linked = new Set(links.map((l) => `${l.source}|${l.target}`));
     links.push(...sharedSourceLinks(model.conceptLinks, visible, linked));
   }

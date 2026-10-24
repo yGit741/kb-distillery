@@ -3,7 +3,8 @@
 `python -m kb.api --port 8765` (`pixi run app`) serves, on one loopback port:
 
 - the typed API (`/api/...`, OpenAPI at `/openapi.json`, docs at `/docs`),
-- the React shell from `frontend/dist` under `/app` (SPA fallback),
+- the React shell from `frontend/dist` under `/app` (SPA fallback); `frontend/dist` is gitignored build
+  output that the server rebuilds from source on start when the sources changed (`--no-build` skips it),
 - everything else — the old pages and old `/api/*` names — from the legacy stdlib dashboard
   (`kb.dashboard.serve`) behind a catch-all (`legacy.py`). A typed router that claims a path wins; the
   shell also reaches the old pages as `/legacy/<tab>`.

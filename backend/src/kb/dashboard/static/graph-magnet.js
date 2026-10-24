@@ -6,11 +6,11 @@
   "use strict";
   const G = () => window.WikiGraph;
   const $ = (id) => document.getElementById(id);
-  const KEYS = { "magnet-pointer": "thesis-wiki-graph-magnet", "declutter-labels": "thesis-wiki-graph-declutter", "magnet-variant": "thesis-wiki-graph-magnet-variant" };
-  const REACH_MIN = 12, REACH_MAX = 90, REACH_SHARE = 0.6, STICKY = 1.2, GAPS_EVERY_MS = 1000;
+  const KEYS = { "magnet-pointer": "thesis-wiki-graph-magnet", "declutter-labels": "thesis-wiki-graph-declutter", "magnet-variant": "thesis-wiki-graph-magnet-variant", "calm-hover": "thesis-wiki-graph-calm-hover" };
+  const REACH_MIN = 12, REACH_MAX = 90, REACH_SHARE = 0.6, LEAVE = 1.3, SWITCH_PX = 6, SWITCH_SHARE = 0.25, GAPS_EVERY_MS = 1000;
   const FIXED_REACH = 80;        // the "crisp" variant: the first take, one reach for every node
   // Two variants to compare on real data: "soft" = blurred bubble + density-adaptive, sticky reach;
-  // "crisp" = outlined bubble + a fixed 80 px reach, no stickiness.
+  // "crisp" = outlined bubble + a fixed 80 px reach. Both share the same enter/leave hysteresis.
   const variant = () => ($("magnet-variant") && $("magnet-variant").value) || "soft";
   const UI = ".graph-toolbar, .hud, .hud-shell, .inspector-shell, .ui-edge-tab";
 
@@ -72,11 +72,13 @@
       const d = rim(n, px, py, k);
       if (d < bd) { bd = d; best = n; }
     }
-    if (variant() === "soft" && target && target !== best && list.includes(target)) {   // sticky: switch only when clearly closer
-      const td = rim(target, px, py, k);
-      if (td <= reachOf(target, k) && td < bd * STICKY + 3) return target;
+    // Hysteresis: a target is kept until the pointer is LEAVE x past its reach, and a rival takes over only once
+    // it is closer by a clear margin. Additive, not a ratio: rim distances go negative inside a node.
+    if (target && target !== best && list.includes(target)) {
+      const td = rim(target, px, py, k), reach = reachOf(target, k);
+      if (td <= reach * LEAVE && td - bd < Math.max(SWITCH_PX, reach * SWITCH_SHARE)) return target;
     }
-    return bd <= reachOf(best, k) ? best : null;
+    return bd <= reachOf(best, k) * (best === target ? LEAVE : 1) ? best : null;
   }
 
   // ---------------------------------------------------------------- overlay

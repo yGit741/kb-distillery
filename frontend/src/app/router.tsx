@@ -30,8 +30,8 @@ function screenRoutes(def: Route) {
   );
 }
 
-// A share build has no Home screen: the entry point is the graph.
-const shareIndex = IS_SHARE
+// A share build without the Home screen enters at the graph.
+const shareIndex = IS_SHARE && !ROUTES.some((r) => r.id === "home")
   ? [createRoute({ getParentRoute: () => rootRoute, path: "/", beforeLoad: () => { throw redirect({ to: "/graph" } as never); } })]
   : [];
 

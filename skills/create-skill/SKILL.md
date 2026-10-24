@@ -37,7 +37,7 @@ Meta-skill for authoring skills. Not part of the ingest/digest ladder.
 3. Register in [`README.md`](README.md):
    - Ladder skill → row in **Token budgets** + **Skills** tables
    - Meta skill (like this one) → **Skills** table only, add to `META_SKILLS` in `lint_skills.py` if needed
-4. Update [`AGENTS.md`](../../AGENTS.md) if triggers or ladder change.
+4. Update the Intent router in [`AGENTS.md`](../../AGENTS.md) if triggers change, and the Skill ladder in [`meta/docs/workflows.md`](../../meta/docs/workflows.md) if the ladder changes.
 5. Validate and sync:
 
 ```bash

@@ -51,6 +51,15 @@ class GraphUiTests(unittest.TestCase):
         self.assertIn("REACH_MIN = 12, REACH_MAX = 90", magnet)
         self.assertIn('insertAdjacentElement("afterend"', magnet)   # not inside force-graph's container
 
+    def test_calm_hover_gates_and_fades_the_focus(self):
+        self.assertIn('id="calm-hover" checked', self.html)
+        graph = (STATIC / "graph.js").read_text(encoding="utf-8")
+        for needle in ("function requestHover", "hoverTuning", "focused: () => hoveredNode", "prevFocus"):
+            self.assertIn(needle, graph)
+        self.assertNotIn("r * 1.45", graph)   # a ring marks the hovered node; growing it moves edges and labels
+        magnet = (STATIC / "graph-magnet.js").read_text(encoding="utf-8")
+        self.assertIn("LEAVE = 1.3", magnet)
+
     def test_no_browser_dialogs(self):
         for name in ("graph-mouse.js", "graph-shell.js", "datalayer.js", "graph-magnet.js"):
             text = (STATIC / name).read_text(encoding="utf-8")

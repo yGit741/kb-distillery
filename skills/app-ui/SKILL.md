@@ -48,13 +48,20 @@ pixi run lint-skills
 
 ## Data-model vocabulary
 
-The frontend speaks the shipped model (schema 1.0, `meta/schema.py` `LAYER_OF`; `src/api/model.ts` mirrors it): every page has a `layer` (`source`, `collection`, `concept`) and a `type` inside it.
+The frontend speaks the shipped model (schema 1.0, `backend/src/kb/core/schema.py` `LAYER_OF`; `src/api/model.ts` mirrors it): every page has a `layer` (`source`, `collection`, `concept`) and a `type` inside it.
 
 - source: paper, part, lecture, article, video, conversation, ai-chat, blog-post. Sources alone carry `depth`: `listed`, `easy`, `full`, `deep`.
 - collection: book, notebook, course, series, plus aux `scope`.
 - concept: idea, topic, question, person, plus aux `distilled-think`.
 
 The backend emits these names directly, so there is no translation layer and no `kind`: palette keys, props, stores, filters, labels and test names use `layer`, `type` and `depth` as the API returns them. Retired words (hub, MOC, reading unit, theme or bare concept as a type, `catalog` as a depth, `digestion-status`) must not appear.
+
+## Rendering rules
+
+1. Loading, empty and error states render inside the same container as the content, so the layout does not jump.
+2. A colour tint appears only when a value signals a problem; healthy values stay neutral.
+3. Add no controls the spec did not ask for.
+4. No Markdown syntax (`**`, backticks, `#`) inside JSX text; use elements, or `<Markdown>` for real Markdown.
 
 ## De-duplication rules
 
@@ -75,9 +82,9 @@ The app is served under `/app` (vite `base`, router `basepath`; `python -m kb.ap
 5. Cross-screen state (selected slugs, open scope draft) is `useKb()` from `src/lib/store.ts`; do not add a second store for it.
 6. Reuse the shared pieces: `<Markdown>` (`src/components/Markdown.tsx`, GFM + KaTeX + `[[slug]]` links to `/pages/<slug>`, `resolveSlug` prop), `Loading` / `Empty` / `ErrorState` / `ErrorBoundary` (`src/components/states.tsx`), `src/theme/palette.ts`, tokens. List the duplicates you removed.
 7. Tests next to the screen: render with `mockDataSource({...})` from `src/test/datasource.ts` (loading, error, empty, data) plus unit tests for pure logic.
-8. `pixi run web-check`, commit `frontend/dist`, then check `/app/<path>` in a browser (hard reload, light and dark, 390px without horizontal scroll, no console errors) against `python -m kb.api --port <spare>`.
+8. `pixi run web-check` (never commit `frontend/dist` — it is gitignored build output; restarting `kb.api` rebuilds it), then check `/app/<path>` in a browser (hard reload, light and dark, 390px without horizontal scroll, no console errors) against `python -m kb.api --port <spare>`.
 9. Delete the legacy page and its static files in the same PR.
 
 ## Output
 
-Changes under `frontend/` (including the committed `frontend/dist`); no vault changes.
+Changes under `frontend/` (sources only — `frontend/dist` is build output and never committed); no vault changes.

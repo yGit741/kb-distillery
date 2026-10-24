@@ -3,12 +3,15 @@ import { DRAG_PX, MIN_LASSO_POINTS, pickInRegion, type Pt, type Region } from ".
 import type { GraphToolContext } from ".";
 
 const SCREEN = '[data-testid="graph-screen"]';
+/** A left press this close (px) to a page grabs the page, not the background. */
+const NODE_PX = 10;
 
 /**
- * Right-drag on the canvas: a box selects what it covers (Shift adds to the selection), Cmd/Ctrl+drag
- * draws a freeform lasso that adds. A right-click without a drag stays the page menu (the canvas decides
- * that on release). Listeners are on the window and never capture the pointer, or force-graph would miss
- * the pointerup and stop reporting hovers.
+ * Left-drag on empty canvas (or right-drag anywhere): a box selects what it covers (Shift adds to the
+ * selection), Cmd/Ctrl+drag draws a freeform lasso that adds. A left-drag that starts on a page moves the
+ * page instead; a right-click without a drag stays the page menu (the canvas decides that on release).
+ * Listeners are on the window and never capture the pointer, or force-graph would miss the pointerup and
+ * stop reporting hovers.
  */
 export function RegionOverlay({ ctx }: { ctx: GraphToolContext }) {
   const live = useRef(ctx);
@@ -19,13 +22,19 @@ export function RegionOverlay({ ctx }: { ctx: GraphToolContext }) {
     const root = document.querySelector(SCREEN);
     if (!root) return;
     let drag: { id: number; start: Pt; lasso: boolean; additive: boolean; pts: Pt[]; moved: boolean } | null = null;
+    const onPage = (at: Pt) => {
+      const c = live.current;
+      const near = { kind: "box" as const, a: { x: at.x - NODE_PX, y: at.y - NODE_PX }, b: { x: at.x + NODE_PX, y: at.y + NODE_PX } };
+      return pickInRegion(near, c.visible, c.screenOf).length > 0;
+    };
     const regionOf = (d: NonNullable<typeof drag>, to: Pt): Region => (d.lasso ? { kind: "lasso", pts: d.pts } : { kind: "box", a: d.start, b: to });
 
     const down = (e: Event) => {
       const p = e as PointerEvent;
       // only the canvas itself starts a gesture; the panels and buttons float above it
-      if (p.button !== 2 || !(p.target instanceof HTMLCanvasElement)) return;
+      if ((p.button !== 0 && p.button !== 2) || !(p.target instanceof HTMLCanvasElement)) return;
       const start = { x: p.clientX, y: p.clientY };
+      if (p.button === 0 && onPage(start)) return;
       drag = { id: p.pointerId, start, lasso: p.metaKey || p.ctrlKey, additive: p.shiftKey, pts: [start], moved: false };
     };
     const move = (e: PointerEvent) => {

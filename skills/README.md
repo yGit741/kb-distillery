@@ -26,6 +26,7 @@ Read `skills/<skill>/SKILL.md` before running a workflow.
 | `kb-snapshot` | none | 0 | `snapshot`; restore only when the user asks |
 | `infra-pr` | none | 0 | only when the user asks to ship / open / merge a PR |
 | `app-ui` | none | 0 | `port the <screen>`, `add a screen`, `frontend`, `app shell` |
+| `backend-api` | none | 0 | `add an endpoint`, `new router`, `change the API`, `api-schema` |
 | `share-kb` | none | 0 | `share the site`, `publish`, `deploy main`, `rollback the site`, `deploy status` (not `export-kb`) |
 
 ## Trigger rules
@@ -72,6 +73,7 @@ Tooling is unversioned and ships as `infra/<feature>` PRs merged as `… (#N)`.
 | Skill | Purpose |
 |-------|---------|
 | [create-skill](create-skill/SKILL.md) | Author new skills; runs through `lint-skills` gate (0 LLM) |
+| [backend-api](backend-api/SKILL.md) | Add/change a FastAPI router, model, service and tests under `backend/`; regenerate `schema.d.ts` (0 LLM) |
 | [app-ui](app-ui/SKILL.md) | Conventions for building screens in `frontend/` (tokens, palette, data-model words, porting checklist; 0 LLM) |
 
 Template: [`SKILL_TEMPLATE.md`](SKILL_TEMPLATE.md) (not a skill; it has no `SKILL.md`).
@@ -82,7 +84,7 @@ Template: [`SKILL_TEMPLATE.md`](SKILL_TEMPLATE.md) (not a skill; it has no `SKIL
 2. Copy [`SKILL_TEMPLATE.md`](SKILL_TEMPLATE.md) → `skills/<name>/SKILL.md`.
 3. Required: YAML `name` + `description` (with Use for / Do NOT), `## Triggers`, `## Do NOT`, `**LLM tier:**`, real CLI in `bash` blocks.
 4. Register in this README (Token budgets row for ladder skills; Skills table always).
-5. Update `AGENTS.md` if triggers or ladder change.
+5. Update the Intent router in `AGENTS.md` if triggers change, and the Skill ladder in `meta/docs/workflows.md` if the ladder changes.
 6. Gate:
 
 ```bash
@@ -127,5 +129,3 @@ pixi run ship -- status
 pixi run share -- status
 pixi run share -- deploy-main
 ```
-
-Legacy: `reingest-*` commands are bootstrap-only; prefer the skill ladder above.

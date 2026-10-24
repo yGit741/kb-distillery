@@ -3,8 +3,10 @@ import { Command as CommandIcon, Moon, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ROUTES } from "@/routes/registry";
 import { ShareFooter } from "@/share/ShareFooter";
+import { IS_SHARE } from "@/share/env";
 import { useTheme } from "@/theme/theme";
 import { CommandPalette } from "./CommandPalette";
+import { Tour } from "./tour/Tour";
 import { ShareChip } from "./ShareChip";
 import { useEmbed } from "./embed";
 import { useUi } from "./ui-store";
@@ -20,11 +22,11 @@ export function AppShell() {
       <header className="sticky top-0 z-40 flex h-12 items-center gap-2 border-b bg-card px-4">
         <span className="shrink-0 text-sm font-semibold">Thesis KB</span>
         <nav aria-label="Main" className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {ROUTES.map((r) => (
+          {ROUTES.filter((r) => r.nav).map((r) => (
             <Link
               key={r.id}
               to={r.path}
-              activeOptions={{ exact: true }}
+              activeOptions={{ exact: r.path === "/", includeSearch: false }}
               className="shrink-0 rounded-md px-2.5 py-1.5 text-sm text-muted-foreground hover:bg-accent hover:text-accent-foreground [&.active]:bg-accent-soft [&.active]:text-primary"
             >
               {r.label}
@@ -51,6 +53,7 @@ export function AppShell() {
       </main>
       <ShareFooter />
       <CommandPalette />
+      {IS_SHARE && !embed && <Tour id={globalThis.KB_EMBEDDED?.home?.tour} />}
     </div>
   );
 }

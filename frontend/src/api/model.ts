@@ -1,5 +1,5 @@
 /**
- * The data model as shipped (schema 1.0; meta/schema.py LAYER_OF, AGENTS.md "Page layers").
+ * The data model as shipped (schema 1.0; meta/schema.py LAYER_OF, meta/docs/page-model.md "Page layers").
  * Every page has a `layer` and a `type` inside it; sources also carry a `depth`.
  */
 export const LAYER_TYPES = {
