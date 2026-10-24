@@ -1,8 +1,7 @@
-import { CircleHelp, ListFilter, Maximize, Network, Palette, X, ZoomIn, ZoomOut } from "lucide-react";
+import { CircleHelp, ListFilter, Maximize, Network, PanelLeftOpen, X, ZoomIn, ZoomOut } from "lucide-react";
 import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { DisplayPanel } from "./DisplayPanel";
 import { FiltersPanel } from "./FiltersPanel";
 import { LayoutPanel } from "./LayoutPanel";
 import { useGraphUi } from "./store";
@@ -33,7 +32,7 @@ interface Props {
   toolContext: GraphToolContext;
 }
 
-const TITLES: Record<string, string> = { filter: "Filters", look: "Display", layout: "Layout and sync", help: "Shortcuts" };
+const TITLES: Record<string, string> = { filter: "Filters", layout: "Layout and sync", help: "Shortcuts" };
 
 function IconButton({ label, active, onClick, children }: { label: string; active?: boolean; onClick: () => void; children: ReactNode }) {
   return (
@@ -58,14 +57,17 @@ export function Toolbar({ onFit, onZoom, onReheat, onRefresh, refreshing, stats,
   const open = useGraphUi((s) => s.openFlyout);
   const close = () => useGraphUi.setState({ flyout: null });
   const activeTool = TOOLS.find((t) => t.id === flyout);
+  const railOpen = useGraphUi((s) => s.railOpen);
   return (
     <>
       <nav aria-label="Graph tools" className="pointer-events-auto absolute right-3 top-3 z-20 flex flex-col gap-0.5 rounded-lg border bg-card/95 p-0.5 shadow-[var(--shadow)]">
+        {!railOpen && (
+          <IconButton label="Labels & views" onClick={() => useGraphUi.setState({ railOpen: true })}>
+            <PanelLeftOpen aria-hidden />
+          </IconButton>
+        )}
         <IconButton label={hasFilter ? "Filters (active)" : "Filters"} active={flyout === "filter" || hasFilter} onClick={() => open("filter")}>
           <ListFilter aria-hidden />
-        </IconButton>
-        <IconButton label="Display: labels, colour, size" active={flyout === "look"} onClick={() => open("look")}>
-          <Palette aria-hidden />
         </IconButton>
         <IconButton label="Layout and sync" active={flyout === "layout"} onClick={() => open("layout")}>
           <Network aria-hidden />
@@ -102,7 +104,6 @@ export function Toolbar({ onFit, onZoom, onReheat, onRefresh, refreshing, stats,
           </header>
           <div className="overflow-y-auto p-3">
             {flyout === "filter" && <FiltersPanel />}
-            {flyout === "look" && <DisplayPanel />}
             {flyout === "layout" && <LayoutPanel onReheat={onReheat} onRefresh={onRefresh} refreshing={refreshing} stats={stats} />}
             {flyout === "help" && (
               <table className="w-full text-xs">

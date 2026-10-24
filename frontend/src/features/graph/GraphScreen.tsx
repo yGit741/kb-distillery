@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useDataSource } from "@/api";
 import { Empty, ErrorState, Loading } from "@/components/states";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { useKb } from "@/lib/store";
 import { useApiQuery } from "@/lib/useApiQuery";
 import type { GraphSearch } from "@/routes/search";
@@ -14,6 +15,8 @@ import { extendView, makeView, parsePages, scopeIds, type GraphView } from "./pa
 import { buildNeighborMap } from "./graphData";
 import { GraphCanvas, type CanvasHandle } from "./GraphCanvas";
 import { Inspector } from "./Inspector";
+import { computeImportance } from "./lab/importance";
+import { LabRail } from "./lab/LabRail";
 import { Legend } from "./Legend";
 import { NodeMenu } from "./NodeMenu";
 import { computeVisible } from "./rules";
@@ -93,6 +96,17 @@ function FullBleed({ children }: { children: React.ReactNode }) {
   );
 }
 
+/** The rail sits beside the graph on a desktop and over it on a phone. */
+function useWide(): boolean {
+  const [wide, setWide] = useState(() => typeof window === "undefined" || window.innerWidth >= 640);
+  useEffect(() => {
+    const on = () => setWide(window.innerWidth >= 640);
+    window.addEventListener("resize", on);
+    return () => window.removeEventListener("resize", on);
+  }, []);
+  return wide;
+}
+
 const isTyping = (t: EventTarget | null) => t instanceof HTMLElement && t.matches("input, textarea, select, [contenteditable=true]");
 
 function Loaded({
@@ -140,6 +154,8 @@ function Loaded({
       }),
     [model, shownTypes, ui.shownDepths, ui.search, ui.rules, ui.view, ui.revealed],
   );
+  const imp = useMemo(() => computeImportance({ visible, byId, neighbors, cfg: ui.lab }), [visible, byId, neighbors, ui.lab]);
+  const wide = useWide();
   const stats = `${visible.size} of ${model.nodes.length} pages · ${model.links.length} links · ${generatedAt.slice(0, 16).replace("T", " ")}${dsKind === "embedded" ? " · snapshot" : ""}`;
 
   // ---- views (search, picked pages, scope)
@@ -274,14 +290,19 @@ function Loaded({
   const reader = ui.readerSlug ? byId.get(ui.readerSlug) : undefined;
   const showDetails = ui.detailsOpen && selected.length > 0;
 
+  const legend = <Legend nodes={model.nodes} visible={visible} schema={schema} shownTypes={shownTypes} stats={stats} embedded={ui.railOpen} />;
+
   return (
     <HostContext.Provider value={host}>
+      {ui.railOpen && <LabRail legend={legend} imp={imp} selected={selected} className={cn("absolute inset-y-0 left-0 z-30", wide ? "w-72" : "w-[min(20rem,92%)]")} />}
+      <div className="absolute inset-y-0 right-0" style={{ left: ui.railOpen && wide ? "18rem" : 0 }} data-testid="graph-area">
       <GraphCanvas
         ref={canvas}
         model={model}
         byId={byId}
         neighbors={neighbors}
         visible={visible}
+        imp={imp}
         className="absolute inset-0"
         onOpenMenu={(id, x, y) => setMenu({ id, x, y })}
         onBackgroundContext={() => {
@@ -328,7 +349,7 @@ function Loaded({
         stats={stats}
         toolContext={toolContext}
       />
-      <Legend nodes={model.nodes} visible={visible} schema={schema} shownTypes={shownTypes} stats={stats} />
+      {!ui.railOpen && legend}
       {selected.length > 0 && !showDetails && !reader && (
         <div className="pointer-events-auto absolute bottom-3 left-1/2 z-10 flex -translate-x-1/2 items-center gap-1 rounded-full border bg-card px-3 py-1 text-sm shadow-[var(--shadow)] max-sm:bottom-16">
           <span>{selected.length === 1 ? (selected[0]?.title || selected[0]?.id) : `${selected.length} selected`}</span>
@@ -376,6 +397,7 @@ function Loaded({
       {TOOLS.map((t) => (
         <div key={t.id}>{t.overlay?.(toolContext)}</div>
       ))}
+      </div>
     </HostContext.Provider>
   );
 }

@@ -1,12 +1,21 @@
 import { RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { CheckField, RangeField } from "./controls";
+import { CheckField, RangeField, SelectField } from "./controls";
 import { useGraphUi } from "./store";
 
 export function LayoutPanel({ onReheat, onRefresh, refreshing, stats }: { onReheat: () => void; onRefresh: () => void; refreshing: boolean; stats: string }) {
   const ui = useGraphUi();
   return (
     <div className="flex flex-col gap-3">
+      <SelectField
+        label="Layout"
+        value={ui.layoutMode}
+        options={[
+          { id: "anchored", label: "Themes anchored on a ring" },
+          { id: "free", label: "Free force layout" },
+        ]}
+        onChange={(layoutMode) => ui.set({ layoutMode, story: "" })}
+      />
       <RangeField label="Charge" value={ui.charge} min={-400} max={-20} step={10} onChange={(charge) => ui.set({ charge })} />
       <RangeField label="Link distance" value={ui.linkDistance} min={20} max={200} step={5} onChange={(linkDistance) => ui.set({ linkDistance })} />
       <RangeField label="Centre gravity" value={ui.gravity} min={0} max={1} step={0.05} onChange={(gravity) => ui.set({ gravity })} />

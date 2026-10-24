@@ -15,6 +15,12 @@ export interface Forces {
   gravity: number;
 }
 
+/** Pull each node toward a point (its theme's anchor), or leave it alone when `target` returns null. */
+export interface Anchor {
+  target: (n: SimNode) => readonly [number, number] | null;
+  strength: number;
+}
+
 /** What the canvas asks of the host. All callbacks may change identity between renders. */
 export interface ForceGraphProps {
   data: GraphData;
@@ -23,6 +29,10 @@ export interface ForceGraphProps {
   nodeRadius: (n: SimNode) => number;
   drawNode: (n: SimNode, ctx: CanvasRenderingContext2D, scale: number) => void;
   drawFramePost: (ctx: CanvasRenderingContext2D, scale: number) => void;
+  /** Drawn under the nodes and links (region hulls). */
+  drawFramePre?: (ctx: CanvasRenderingContext2D, scale: number) => void;
+  /** null = no anchoring force. */
+  anchor?: Anchor | null;
   drawLinkAfter: (l: SimLink, ctx: CanvasRenderingContext2D, scale: number) => void;
   linkColor: (l: SimLink) => string;
   linkWidth: (l: SimLink) => number;
@@ -126,8 +136,27 @@ export const ForceGraph = forwardRef<ForceGraphHandle, ForceGraphProps & { class
       .onLinkClick((_l, ev) => latest.current.onLinkClick(ev))
       .onBackgroundClick((ev) => latest.current.onBackgroundClick(ev))
       .onRenderFramePost((ctx, s) => latest.current.drawFramePost(ctx, s))
+      .onRenderFramePre((ctx, s) => latest.current.drawFramePre?.(ctx, s))
       .onZoom((t) => latest.current.onZoom(t.k))
       .onEngineStop(() => latest.current.onEngineStop());
+
+    // the anchor force reads the latest props each tick, so switching layouts needs no re-registration
+    let simNodes: SimNode[] = [];
+    const anchorForce = Object.assign(
+      (alpha: number) => {
+        const a = latest.current.anchor;
+        if (!a) return;
+        for (const n of simNodes) {
+          const t = a.target(n);
+          if (!t || n.x == null || n.y == null) continue;
+          const m = n as SimNode & { vx?: number; vy?: number };
+          m.vx = (m.vx ?? 0) + (t[0] - n.x) * a.strength * alpha;
+          m.vy = (m.vy ?? 0) + (t[1] - n.y) * a.strength * alpha;
+        }
+      },
+      { initialize: (ns: NodeObject[]) => void (simNodes = ns as SimNode[]) },
+    );
+    g.d3Force("anchor", anchorForce as unknown as Parameters<Instance["d3Force"]>[1]);
 
     const resize = () => g.width(el.clientWidth).height(el.clientHeight);
     resize();
