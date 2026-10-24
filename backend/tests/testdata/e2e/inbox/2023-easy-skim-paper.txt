@@ -1,0 +1,2 @@
+Easy Skim Paper
+Abstract. A short note on low-rank bias in matrix completion, skimmed with easy-digest.

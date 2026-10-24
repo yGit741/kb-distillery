@@ -16,19 +16,19 @@ description: Save URLs or files to raw/inbox/ with zero LLM tokens. Use for "scr
 ## Do NOT
 
 - Write to `raw/` via agent tools — run the CLI (guard blocks direct writes)
-- **Scrap without `resolve` first** — always run `python3 -m meta.ingest resolve <query>`; if FOUND, cite `[[slug]]` instead
+- **Scrap without `resolve` first** — always run `python3 -m kb.ingest resolve <query>`; if FOUND, cite `[[slug]]` instead
 - Catalog or digest — use `ingest-to-catalog` or digest skills next
 - Trigger any digest tier from here
 
 ## CLI
 
 ```bash
-python3 -m meta.ingest resolve <url|arxiv|slug|title>   # check vault first (0 LLM)
-python3 -m meta.ingest scrap <url|path> [--type articles|notes|slides|web|blog]
-python3 -m meta.ingest scrap <url> --force              # override dedup block
-python3 -m meta.ingest scrap-mail <mbox-or-eml> [--slug thread-slug] [--force]
-python3 -m meta.ingest scrap-gdrive --dry-run           # preview a Drive folder pull (0 bytes)
-python3 -m meta.ingest scrap-wordpress <site> --prefix <collection short> [--since YYYY-MM-DD] [--limit N] [--no-images] [--force]
+python3 -m kb.ingest resolve <url|arxiv|slug|title>   # check vault first (0 LLM)
+python3 -m kb.ingest scrap <url|path> [--type articles|notes|slides|web|blog]
+python3 -m kb.ingest scrap <url> --force              # override dedup block
+python3 -m kb.ingest scrap-mail <mbox-or-eml> [--slug thread-slug] [--force]
+python3 -m kb.ingest scrap-gdrive --dry-run           # preview a Drive folder pull (0 bytes)
+python3 -m kb.ingest scrap-wordpress <site> --prefix <collection short> [--since YYYY-MM-DD] [--limit N] [--no-images] [--force]
 ```
 
 Scrap is **blocked** when resolve finds a match or bytes already exist in `raw/`. Use `--force` only when intentional.
@@ -47,7 +47,7 @@ Scrap is **blocked** when resolve finds a match or bytes already exist in `raw/`
 
 ## Next step
 
-After scrap: `python3 -m meta.ingest catalog raw/inbox/<file>` or `python3 -m meta.ingest drain-inbox`.
+After scrap: `python3 -m kb.ingest catalog raw/inbox/<file>` or `python3 -m kb.ingest drain-inbox`.
 
 ## Commit
 

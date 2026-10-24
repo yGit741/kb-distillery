@@ -29,9 +29,9 @@ description: Catalog a typed PDF from inbox to raw/printed-docs/ and create a pa
 ## CLI
 
 ```bash
-python3 -m meta.ingest catalog raw/inbox/<file>.pdf
-python3 -m meta.ingest catalog raw/inbox/<file>.pdf --collection nadav-cohen
-python3 -m meta.ingest catalog raw/inbox/<file>.pdf --collection course-runi-rl --title "Course book"
+python3 -m kb.ingest catalog raw/inbox/<file>.pdf
+python3 -m kb.ingest catalog raw/inbox/<file>.pdf --collection nadav-cohen
+python3 -m kb.ingest catalog raw/inbox/<file>.pdf --collection course-runi-rl --title "Course book"
 ```
 
 A PDF of ≥60 pages is a book: digest it scoped (`toc`, `--part`), which creates its `book-` collection.

@@ -1,0 +1,13 @@
+build fixture vault: ok
+stage + catalog (scrap -> catalog, dedup gate): ok
+digests (easy / full / deep, recorded LLM): ok
+lint (structural + coherence): ok
+graph + explorer + chat-retrieval builders: ok
+share build (inner, public profile): ok
+nightly report preview: ok
+scrap by URL / arXiv id + arXiv metadata lookup: SKIPPED(network)
+scrap-wordpress / scrap-gdrive / scrap-mail --imap-thread / researcher index: SKIPPED(network)
+video ingest: SKIPPED(no ingest path: video pages are hand-authored (seeded page covers lint/graph/share))
+share outer build, deploy, snapshots, rollback: SKIPPED(needs a git ref of the scratch vault and Cloudflare)
+chat answer (agent / Messages API): SKIPPED(LLM + network; retrieval index is covered)
+dashboard HTTP server: SKIPPED(builders are called as pure functions instead)

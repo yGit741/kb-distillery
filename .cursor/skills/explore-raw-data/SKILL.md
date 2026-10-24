@@ -25,10 +25,10 @@ The one door from the wiki to `raw/`. The CLI prints text and metadata; you reas
 ## CLI
 
 ```bash
-python3 -m meta.explore_raw find "<question>" --limit 10 [--all] [--scope scope-x]
-python3 -m meta.explore_raw read <raw-path> [--pages A-B] [--max-pages N]
-python3 -m meta.explore_raw check <raw-path> --pages-of <slug> [<slug>…] [--pages A-B]
-python3 -m meta.explore_raw recommend <raw-path>
+python3 -m kb.search.explore_raw find "<question>" --limit 10 [--all] [--scope scope-x]
+python3 -m kb.search.explore_raw read <raw-path> [--pages A-B] [--max-pages N]
+python3 -m kb.search.explore_raw check <raw-path> --pages-of <slug> [<slug>…] [--pages A-B]
+python3 -m kb.search.explore_raw recommend <raw-path>
 ```
 
 ## Agent steps

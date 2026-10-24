@@ -10,7 +10,7 @@ Inspired by the [Karpathy LLM Wiki](https://gist.github.com/karpathy/442a6bf5559
 
 - **Edit knowledge** — say a trigger phrase to the agent (`scrap <url>`, `catalog`, `full-digest <raw>`, `split <idea>`, `distill think <file>`, `undo <step>`, `snapshot "week 43"` …). Each operation lands on main as one commit `kb(<op>): … (kb-x.y.z)`; your `think/` edits are committed as `kb(think)`.
 - **Develop a feature** — `pixi run ship -- start <feature> --worktree` → `ship -- commit "feat(<component>): add …"` → `ship -- pr` → approve → `ship -- merge` (skill `infra-pr`). Tooling never commits to main directly.
-- **Go deeper** — the **Lifecycle** tab (versions, history, snapshots, guardrails), `AGENTS.md`, `meta/skills/README.md`.
+- **Go deeper** — the **Lifecycle** tab (versions, history, snapshots, guardrails), `AGENTS.md`, `skills/README.md`.
 
 ## Layers
 
@@ -54,12 +54,12 @@ flowchart LR
 **Distill commands:**
 
 ```bash
-python3 -m meta.distill propose <think-file>     # read think/, write review page + plan
-python3 -m meta.distill revise <think-file>      # re-read think/, keep your edited Summary
-python3 -m meta.distill apply <think-file> --cleanup   # propagate + delete review page
+python3 -m kb.distill propose <think-file>     # read think/, write review page + plan
+python3 -m kb.distill revise <think-file>      # re-read think/, keep your edited Summary
+python3 -m kb.distill apply <think-file> --cleanup   # propagate + delete review page
 ```
 
-Skill: `meta/skills/distill-think/SKILL.md` (synced to `.cursor/skills/`).
+Skill: `skills/distill-think/SKILL.md` (synced to `.cursor/skills/`).
 
 ## The source cycle (raw → wiki)
 
@@ -71,7 +71,7 @@ flowchart LR
   Catalog --> Raw["raw/&lt;format&gt;/ + corpus collection"]
   Raw --> Digest["easy / full / deep digest"]
   Digest --> Wiki["wiki/&lt;type&gt;-slug.md"]
-  Wiki --> Lint["meta/lint.py"]
+  Wiki --> Lint["backend/src/kb/lint/lint.py"]
 ```
 
 | Step | What happens |
@@ -85,9 +85,9 @@ flowchart LR
 
 ## Query and maintenance
 
-- **Query the vault:** `python3 meta/query.py candidates "<keywords>"` → read pages → answer with `[[wikilinks]]` (`query-kb` skill).
-- **Topic health:** `python3 meta/coherence.py status`, `python3 meta/semfind.py topic theme-info-theory`.
-- **Share with another LLM:** `python3 meta/export.py` → `.exported/yonatan-thesis-kb-<timestamp>.zip`.
+- **Query the vault:** `python3 -m kb.search.query candidates "<keywords>"` → read pages → answer with `[[wikilinks]]` (`query-kb` skill).
+- **Topic health:** `python3 -m kb.core.coherence status`, `python3 -m kb.search.semfind topic theme-info-theory`.
+- **Share with another LLM:** `python3 -m kb.maintenance.export` → `.exported/yonatan-thesis-kb-<timestamp>.zip`.
 
 ## Environment
 
@@ -101,9 +101,9 @@ pixi run ops -- status # knowledge version, sessions, hooks
 pixi run export-kb     # LLM share bundle
 ```
 
-Without pixi: `python3 meta/lint.py`, `python3 -m meta.dashboard`, etc.
+Without pixi: `python3 -m kb.lint.lint`, `python3 -m kb.dashboard`, etc.
 
 ## For agents
 
 Full schema, skill ladder, and write guardrails: **`AGENTS.md`**.  
-Skills (canonical): `meta/skills/README.md` · sync: `pixi run sync-skills`.
+Skills (canonical): `skills/README.md` · sync: `pixi run sync-skills`.

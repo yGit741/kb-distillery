@@ -42,10 +42,10 @@ meta/.ops/
 # Pixi environment
 .pixi/
 
-# LLM share bundles (meta/export.py)
+# LLM share bundles (backend/src/kb/maintenance/export.py)
 .exported/
 
-# Share build cache + deploy status (meta/share); wrangler's local state
+# Share build cache + deploy status (backend/src/kb/share); wrangler's local state
 .cache/
 .wrangler/
 

@@ -4,14 +4,14 @@
     "preToolUse": [
       {
         "matcher": "Write|StrReplace|EditNotebook|Delete",
-        "command": "python3 meta/guard.py",
+        "command": "PYTHONPATH=backend/src python3 -m kb.git.guard",
         "failClosed": true
       }
     ],
     "beforeShellExecution": [
       {
         "command": ".cursor/hooks/block-git-write.sh",
-        "matcher": "git|gh |pixi run|meta/daily_sync|meta/ship|meta/curate_history|meta\\.ops",
+        "matcher": "git|gh |pixi run|kb\\.maintenance\\.daily_sync|kb\\.git\\.ship|kb\\.git\\.curate_history|kb\\.ops",
         "failClosed": true
       }
     ]

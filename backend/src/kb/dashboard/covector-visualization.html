@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Covector Visualization</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            padding: 20px;
+            background-color: #f4f4f9;
+        }
+        #panel {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            width: 320px;
+        }
+        .slider-container {
+            margin-bottom: 15px;
+            background: #f9f9f9;
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #eee;
+        }
+        label { display: block; font-weight: bold; margin-bottom: 5px; }
+        input[type=range] { width: 100%; }
+        .stats {
+            background: #2d3436;
+            color: white;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 20px;
+            font-size: 1.1em;
+        }
+        .highlight { color: #00cec9; font-weight: bold; }
+        .score { color: #ff7675; font-size: 1.3em; font-weight: bold; }
+        canvas {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            border: 1px solid #ccc;
+        }
+        h3 { margin-top: 0; color: #2d3436; }
+    </style>
+</head>
+<body>
+
+    <div id="panel">
+        <h3>1. Covector Generator (v)</h3>
+        <p style="font-size: 0.9em; color: #666;">This creates the measurement grid.</p>
+        <div class="slider-container">
+            <label>v_x: <span id="vx_val">3.0</span></label>
+            <input type="range" id="vx" min="-5" max="5" step="0.1" value="3">
+            <label>v_y: <span id="vy_val">4.0</span></label>
+            <input type="range" id="vy" min="-5" max="5" step="0.1" value="4">
+        </div>
+
+        <h3>2. Test Vector (u)</h3>
+        <p style="font-size: 0.9em; color: #666;">This is the arrow we are evaluating.</p>
+        <div class="slider-container">
+            <label>u_x: <span id="ux_val">2.0</span></label>
+            <input type="range" id="ux" min="-5" max="5" step="0.1" value="2">
+            <label>u_y: <span id="uy_val">1.0</span></label>
+            <input type="range" id="uy" min="-5" max="5" step="0.1" value="1">
+        </div>
+
+        <div class="stats">
+            <div>Generator Length ||v||: <span id="v_len" class="highlight">5.00</span></div>
+            <div>Grid Spacing (d): <span id="spacing" class="highlight">0.20</span> units</div>
+            <div style="margin-top: 10px;">Score k = ω(u): <span id="score" class="score">10.00</span></div>
+        </div>
+    </div>
+
+    <canvas id="simCanvas" width="600" height="600"></canvas>
+
+    <script>
+        const canvas = document.getElementById('simCanvas');
+        const ctx = canvas.getContext('2d');
+        const scale = 50; // 50 pixels = 1 math unit
+        const originX = canvas.width / 2;
+        const originY = canvas.height / 2;
+
+        // Inputs
+        const inputs = {
+            vx: document.getElementById('vx'),
+            vy: document.getElementById('vy'),
+            ux: document.getElementById('ux'),
+            uy: document.getElementById('uy')
+        };
+
+        // UI Outputs
+        const outputs = {
+            vx: document.getElementById('vx_val'),
+            vy: document.getElementById('vy_val'),
+            ux: document.getElementById('ux_val'),
+            uy: document.getElementById('uy_val'),
+            vLen: document.getElementById('v_len'),
+            spacing: document.getElementById('spacing'),
+            score: document.getElementById('score')
+        };
+
+        function drawArrow(fromX, fromY, toX, toY, color, width=2) {
+            const headlen = 10;
+            const dx = toX - fromX;
+            const dy = toY - fromY;
+            const angle = Math.atan2(dy, dx);
+            ctx.beginPath();
+            ctx.moveTo(fromX, fromY);
+            ctx.lineTo(toX, toY);
+            ctx.lineTo(toX - headlen * Math.cos(angle - Math.PI / 6), toY - headlen * Math.sin(angle - Math.PI / 6));
+            ctx.moveTo(toX, toY);
+            ctx.lineTo(toX - headlen * Math.cos(angle + Math.PI / 6), toY - headlen * Math.sin(angle + Math.PI / 6));
+            ctx.strokeStyle = color;
+            ctx.lineWidth = width;
+            ctx.stroke();
+        }
+
+        function draw() {
+            // Get values
+            const vx = parseFloat(inputs.vx.value);
+            const vy = parseFloat(inputs.vy.value); // Inverted for standard math plane
+            const ux = parseFloat(inputs.ux.value);
+            const uy = parseFloat(inputs.uy.value);
+
+            // Update Text
+            outputs.vx.innerText = vx.toFixed(1);
+            outputs.vy.innerText = vy.toFixed(1);
+            outputs.ux.innerText = ux.toFixed(1);
+            outputs.uy.innerText = uy.toFixed(1);
+
+            const vLen = Math.sqrt(vx*vx + vy*vy);
+            const score = (vx * ux) + (vy * uy);
+            
+            outputs.vLen.innerText = vLen.toFixed(2);
+            outputs.spacing.innerText = vLen > 0 ? (1/vLen).toFixed(2) : "∞";
+            outputs.score.innerText = score.toFixed(2);
+
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw coordinate axes
+            ctx.beginPath();
+            ctx.strokeStyle = '#e0e0e0';
+            ctx.lineWidth = 1;
+            ctx.moveTo(0, originY); ctx.lineTo(canvas.width, originY);
+            ctx.moveTo(originX, 0); ctx.lineTo(originX, canvas.height);
+            ctx.stroke();
+
+            if (vLen > 0) {
+                // Direction of v
+                const dirX = vx / vLen;
+                const dirY = vy / vLen;
+                
+                // Direction perpendicular to v (the slice direction)
+                const perpX = -dirY;
+                const perpY = dirX;
+
+                // Draw slices (level sets) for integer values of k
+                // We draw from k = -40 to k = 40 to cover the screen
+                for (let k = -40; k <= 40; k++) {
+                    // Find the physical center point of this slice
+                    const px = (k * dirX) / vLen;
+                    const py = (k * dirY) / vLen;
+
+                    // Convert to canvas coordinates
+                    const cx = originX + px * scale;
+                    const cy = originY - py * scale;
+
+                    // Draw the line extending in the perpendicular direction
+                    ctx.beginPath();
+                    // k=0 is the kernel, draw it thicker and dashed
+                    if (k === 0) {
+                        ctx.strokeStyle = 'rgba(255, 165, 0, 0.8)';
+                        ctx.setLineDash([5, 5]);
+                        ctx.lineWidth = 2;
+                    } else {
+                        ctx.strokeStyle = 'rgba(255, 165, 0, 0.3)';
+                        ctx.setLineDash([]);
+                        ctx.lineWidth = 1;
+                    }
+                    
+                    // Extend line far enough to go off screen (1000 pixels)
+                    ctx.moveTo(cx + perpX * 1000, cy - perpY * 1000);
+                    ctx.lineTo(cx - perpX * 1000, cy + perpY * 1000);
+                    ctx.stroke();
+                    ctx.setLineDash([]); // Reset dash
+                }
+            }
+
+            // Draw vector u (Test Vector)
+            drawArrow(originX, originY, originX + ux * scale, originY - uy * scale, '#ff7675', 3);
+
+            // Draw vector v (Covector Generator)
+            drawArrow(originX, originY, originX + vx * scale, originY - vy * scale, '#0984e3', 4);
+            
+            // Draw a dot at the tip of u to show where it lands on the grid
+            ctx.beginPath();
+            ctx.arc(originX + ux * scale, originY - uy * scale, 5, 0, 2 * Math.PI);
+            ctx.fillStyle = '#d63031';
+            ctx.fill();
+        }
+
+        // Attach listeners
+        Object.values(inputs).forEach(input => {
+            input.addEventListener('input', draw);
+        });
+
+        // Initial draw
+        draw();
+    </script>
+</body>
+</html>

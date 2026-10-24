@@ -2,7 +2,7 @@
 
 Canonical skills live here. Cursor copies via `pixi run sync-skills` → `.cursor/skills/` (after `pixi run lint-skills` passes).
 
-Read `meta/skills/<skill>/SKILL.md` before running a workflow.
+Read `skills/<skill>/SKILL.md` before running a workflow.
 
 ## Token budgets
 
@@ -55,7 +55,7 @@ Read `meta/skills/<skill>/SKILL.md` before running a workflow.
 ### Lifecycle skills (git history, versions, PRs)
 
 Every knowledge operation is one commit on main: `kb(<op>): <summary> (kb-x.y.z)` — x paradigm, y schema, z step.
-Writer CLIs (`meta.ingest`, `meta.distill`) commit themselves; free-form wiki edits go through `wiki-edit`.
+Writer CLIs (`kb.ingest`, `kb.distill`) commit themselves; free-form wiki edits go through `wiki-edit`.
 Tooling is unversioned and ships as `infra/<feature>` PRs merged as `… (#N)`.
 
 | Skill | Purpose |
@@ -79,7 +79,7 @@ Template: [`SKILL_TEMPLATE.md`](SKILL_TEMPLATE.md) (not synced to `.cursor/skill
 ## Adding a skill
 
 1. **Extend vs new** — see [create-skill](create-skill/SKILL.md) decision tree.
-2. Copy [`SKILL_TEMPLATE.md`](SKILL_TEMPLATE.md) → `meta/skills/<name>/SKILL.md`.
+2. Copy [`SKILL_TEMPLATE.md`](SKILL_TEMPLATE.md) → `skills/<name>/SKILL.md`.
 3. Required: YAML `name` + `description` (with Use for / Do NOT), `## Triggers`, `## Do NOT`, `**LLM tier:**`, real CLI in `bash` blocks.
 4. Register in this README (Token budgets row for ladder skills; Skills table always).
 5. Update `AGENTS.md` if triggers or ladder change.
@@ -90,7 +90,7 @@ pixi run lint-skills
 pixi run sync-skills    # fails if lint-skills fails
 ```
 
-**Vault guardrails** (any skill that touches data): `raw/` immutable (use CLI); `think/` human-only; open ingest session → no direct `wiki/` writes (`guard.py`); post-write → `python3 meta/lint.py`.
+**Vault guardrails** (any skill that touches data): `raw/` immutable (use CLI); `think/` human-only; open ingest session → no direct `wiki/` writes (`guard.py`); post-write → `python3 -m kb.lint.lint`.
 
 **Every writing skill ends in one op commit.** Writer CLIs commit automatically (`--no-commit` to skip); any other wiki edit is wrapped in `pixi run ops -- begin …` / `pixi run ops -- commit` (see `wiki-edit`). Skills never run git writes themselves.
 
@@ -99,26 +99,26 @@ pixi run sync-skills    # fails if lint-skills fails
 ## CLI
 
 ```bash
-python3 -m meta.ingest resolve <url|arxiv|slug|title>  # check vault first (0 LLM)
-python3 -m meta.ingest scrap <url|path> [--type articles|notes|slides|web|blog]
-python3 -m meta.ingest scrap-gdrive --dry-run
-python3 -m meta.ingest scrap-wordpress <site> --prefix <collection short>   # whole WordPress.com blog → inbox
-python3 -m meta.ingest scrap-mail <mbox-or-eml> [--slug thread-slug] [--force]
-python3 -m meta.ingest catalog <inbox-path> [--collection <collection|person>] [--format <folder>] [--title T]
-python3 -m meta.ingest drain-inbox [--collection <collection|person>]
-python3 -m meta.ingest easy-digest <slug|raw>
-python3 -m meta.ingest full-digest <raw>    # begin→extract→map→draft→finalize
-python3 -m meta.ingest full-digest <collection-slug> --row N   # one course/series Contents row
-python3 -m meta.ingest deep-digest <raw> --confirm-heavy
-python3 -m meta.distill propose <think-file> [--from bootstrap.md]
-python3 -m meta.distill revise <think-file>
-python3 -m meta.distill apply <think-file> [--cleanup]
-python3 meta/query.py candidates "<keywords>"
-python3 meta/query.py mocs                    # topic pages (theme-*) as entry points
-python3 meta/coherence.py status
-python3 meta/semfind.py bundle --seeds wiki/foo.md --source manual
-python3 meta/semfind.py topic theme-info-theory   # `theme` / `moc` aliases kept
-python3 meta/export.py
+python3 -m kb.ingest resolve <url|arxiv|slug|title>  # check vault first (0 LLM)
+python3 -m kb.ingest scrap <url|path> [--type articles|notes|slides|web|blog]
+python3 -m kb.ingest scrap-gdrive --dry-run
+python3 -m kb.ingest scrap-wordpress <site> --prefix <collection short>   # whole WordPress.com blog → inbox
+python3 -m kb.ingest scrap-mail <mbox-or-eml> [--slug thread-slug] [--force]
+python3 -m kb.ingest catalog <inbox-path> [--collection <collection|person>] [--format <folder>] [--title T]
+python3 -m kb.ingest drain-inbox [--collection <collection|person>]
+python3 -m kb.ingest easy-digest <slug|raw>
+python3 -m kb.ingest full-digest <raw>    # begin→extract→map→draft→finalize
+python3 -m kb.ingest full-digest <collection-slug> --row N   # one course/series Contents row
+python3 -m kb.ingest deep-digest <raw> --confirm-heavy
+python3 -m kb.distill propose <think-file> [--from bootstrap.md]
+python3 -m kb.distill revise <think-file>
+python3 -m kb.distill apply <think-file> [--cleanup]
+python3 -m kb.search.query candidates "<keywords>"
+python3 -m kb.search.query mocs                    # topic pages (theme-*) as entry points
+python3 -m kb.core.coherence status
+python3 -m kb.search.semfind bundle --seeds wiki/foo.md --source manual
+python3 -m kb.search.semfind topic theme-info-theory   # `theme` / `moc` aliases kept
+python3 -m kb.maintenance.export
 pixi run lint-skills
 pixi run ops -- status
 pixi run ops -- log --kb

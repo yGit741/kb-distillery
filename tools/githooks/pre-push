@@ -1,0 +1,6 @@
+#!/bin/bash
+# main only moves forward, by kb(...) steps (z+1) or PR merge commits "(#N)";
+# snapshot tags kb-x.y.z are annotated and match their commit's KB-Version.
+root="$(git rev-parse --show-toplevel)"
+export PYTHONPATH="$root/backend/src${PYTHONPATH:+:$PYTHONPATH}"
+exec python3 -m kb.git.commit_policy push "$@"

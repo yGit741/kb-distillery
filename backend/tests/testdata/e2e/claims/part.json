@@ -1,0 +1,15 @@
+{
+  "raw": "raw/printed-docs/2020-tiny-book.pdf",
+  "title": "Tiny Book",
+  "book_title": "Tiny Book",
+  "problem": "What is the rank of a tensor?",
+  "method": "Definitions and examples.",
+  "results": ["Tensor rank can exceed every flattening rank."],
+  "equations": [{"latex": "\\operatorname{rank}(T) \\ge \\operatorname{rank}(T_{(1)})", "variables": {}, "label": "flat"}],
+  "concepts": ["tensor rank"],
+  "open_questions": [],
+  "citekey": "",
+  "url": "",
+  "year": 2020,
+  "authors": ["B. Writer"]
+}

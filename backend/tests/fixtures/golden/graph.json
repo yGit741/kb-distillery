@@ -1,0 +1,1289 @@
+{
+ "concept_links": [
+  {
+   "shared": 1,
+   "source": "generalization",
+   "target": "q-is-the-fixture-bound-tight-for-deep-models"
+  },
+  {
+   "shared": 1,
+   "source": "generalization",
+   "target": "theme-learning-theory"
+  },
+  {
+   "shared": 1,
+   "source": "noise-stability",
+   "target": "q-does-the-fixture-tail-bound-extend-to-dependent-variables"
+  },
+  {
+   "shared": 1,
+   "source": "noise-stability",
+   "target": "theme-boolean-analysis"
+  },
+  {
+   "shared": 1,
+   "source": "noise-stability",
+   "target": "theme-learning-theory"
+  },
+  {
+   "shared": 1,
+   "source": "q-does-the-fixture-tail-bound-extend-to-dependent-variables",
+   "target": "theme-learning-theory"
+  },
+  {
+   "shared": 1,
+   "source": "q-is-the-fixture-bound-tight-for-deep-models",
+   "target": "theme-learning-theory"
+  },
+  {
+   "shared": 2,
+   "source": "shannon-entropy",
+   "target": "theme-info-theory"
+  }
+ ],
+ "facets": {
+  "areas": [
+   "boolean-analysis",
+   "info-theory",
+   "learning-theory"
+  ],
+  "statuses": [
+   "digested",
+   "open",
+   "reading",
+   "seed",
+   "to-read"
+  ],
+  "types": [
+   "ai-chat",
+   "article",
+   "blog-post",
+   "book",
+   "conversation",
+   "course",
+   "idea",
+   "lecture",
+   "paper",
+   "part",
+   "question",
+   "series",
+   "topic",
+   "video"
+  ]
+ },
+ "link_count": 29,
+ "links": [
+  {
+   "kind": "wikilink",
+   "source": "book-2019-fixture-book",
+   "target": "part-2019-fixture-book-ch2-concentration"
+  },
+  {
+   "kind": "wikilink",
+   "source": "conversation-2024-02-01-fixture-thread-about-a-lemma",
+   "target": "noise-stability"
+  },
+  {
+   "kind": "wikilink",
+   "source": "conversation-2024-02-01-fixture-thread-about-a-lemma",
+   "target": "theme-boolean-analysis"
+  },
+  {
+   "kind": "wikilink",
+   "source": "course-fixture-rl",
+   "target": "lecture-rl-fixture-1"
+  },
+  {
+   "kind": "wikilink",
+   "source": "course-fixture-rl",
+   "target": "lecture-rl-fixture-2"
+  },
+  {
+   "kind": "wikilink",
+   "source": "course-fixture-rl",
+   "target": "theme-learning-theory"
+  },
+  {
+   "kind": "wikilink",
+   "source": "generalization",
+   "target": "theme-learning-theory"
+  },
+  {
+   "kind": "wikilink",
+   "source": "lecture-rl-fixture-1",
+   "target": "course-fixture-rl"
+  },
+  {
+   "kind": "wikilink",
+   "source": "lecture-rl-fixture-1",
+   "target": "theme-learning-theory"
+  },
+  {
+   "kind": "wikilink",
+   "source": "noise-stability",
+   "target": "theme-boolean-analysis"
+  },
+  {
+   "kind": "wikilink",
+   "source": "paper-2020-local-fixture-paper",
+   "target": "generalization"
+  },
+  {
+   "kind": "wikilink",
+   "source": "paper-2020-local-fixture-paper",
+   "target": "theme-learning-theory"
+  },
+  {
+   "kind": "wikilink",
+   "source": "paper-2021-arxiv-style-fixture",
+   "target": "shannon-entropy"
+  },
+  {
+   "kind": "wikilink",
+   "source": "paper-2021-arxiv-style-fixture",
+   "target": "theme-info-theory"
+  },
+  {
+   "kind": "wikilink",
+   "source": "part-2019-fixture-book-ch2-concentration",
+   "target": "book-2019-fixture-book"
+  },
+  {
+   "kind": "wikilink",
+   "source": "part-2019-fixture-book-ch2-concentration",
+   "target": "noise-stability"
+  },
+  {
+   "kind": "wikilink",
+   "source": "part-2019-fixture-book-ch2-concentration",
+   "target": "theme-learning-theory"
+  },
+  {
+   "kind": "wikilink",
+   "source": "q-does-the-fixture-tail-bound-extend-to-dependent-variables",
+   "target": "part-2019-fixture-book-ch2-concentration"
+  },
+  {
+   "kind": "wikilink",
+   "source": "q-is-the-fixture-bound-tight-for-deep-models",
+   "target": "paper-2020-local-fixture-paper"
+  },
+  {
+   "kind": "wikilink",
+   "source": "series-fixture-kalai-blog",
+   "target": "article-kalai-fixture-post-one"
+  },
+  {
+   "kind": "wikilink",
+   "source": "series-fixture-kalai-blog",
+   "target": "theme-boolean-analysis"
+  },
+  {
+   "kind": "wikilink",
+   "source": "shannon-entropy",
+   "target": "theme-info-theory"
+  },
+  {
+   "kind": "wikilink",
+   "source": "theme-boolean-analysis",
+   "target": "conversation-2024-02-01-fixture-thread-about-a-lemma"
+  },
+  {
+   "kind": "wikilink",
+   "source": "theme-info-theory",
+   "target": "paper-2021-arxiv-style-fixture"
+  },
+  {
+   "kind": "wikilink",
+   "source": "theme-learning-theory",
+   "target": "book-2019-fixture-book"
+  },
+  {
+   "kind": "wikilink",
+   "source": "theme-learning-theory",
+   "target": "lecture-rl-fixture-1"
+  },
+  {
+   "kind": "wikilink",
+   "source": "theme-learning-theory",
+   "target": "paper-2020-local-fixture-paper"
+  },
+  {
+   "kind": "wikilink",
+   "source": "video-fixture-talk",
+   "target": "shannon-entropy"
+  },
+  {
+   "kind": "wikilink",
+   "source": "video-fixture-talk",
+   "target": "theme-info-theory"
+  }
+ ],
+ "node_count": 29,
+ "nodes": [
+  {
+   "areas": [],
+   "depth": "easy",
+   "id": "article-kalai-fixture-post-one",
+   "inDegree": 1,
+   "label": "article-kalai-fixture-post-one",
+   "layer": "source",
+   "outDegree": 0,
+   "path": "wiki/article-kalai-fixture-post-one.md",
+   "preview": "Problem: Is noise stability at most one? Main result: Trivially yes; the fixture post asks a toy question.",
+   "properties": {
+    "links_in": "1",
+    "links_out": "0",
+    "raw": "raw/web-clips/kalai-fixture-post-one.md",
+    "slug": "article-kalai-fixture-post-one",
+    "status": "digested",
+    "type": "article"
+   },
+   "status": "digested",
+   "title": "Kalai Fixture Post One",
+   "type": "article",
+   "year": null
+  },
+  {
+   "areas": [],
+   "depth": "easy",
+   "id": "blog-not-exact-fixture-hebrew-post",
+   "inDegree": 0,
+   "label": "blog-not-exact-fixture-hebrew-post",
+   "layer": "source",
+   "outDegree": 0,
+   "path": "wiki/blog-not-exact-fixture-hebrew-post.md",
+   "preview": "Rank of a fixture matrix. The rank is at most n.",
+   "properties": {
+    "blog": "\"לא מדויק\"",
+    "lang": "he",
+    "links_in": "0",
+    "links_out": "0",
+    "raw": "raw/printed-docs/blog-not-exact-fixture-hebrew-post.md",
+    "slug": "blog-not-exact-fixture-hebrew-post",
+    "status": "digested",
+    "title": "\"פוסט לדוגמה: מטריצות\"",
+    "type": "blog-post"
+   },
+   "status": "digested",
+   "title": "פוסט לדוגמה: מטריצות",
+   "type": "blog-post",
+   "year": null
+  },
+  {
+   "areas": [
+    "learning-theory"
+   ],
+   "book": {
+    "content": 62,
+    "done": 15,
+    "parts": [
+     {
+      "end": 15,
+      "slug": "",
+      "start": 1,
+      "status": "—",
+      "title": "Chapter 1. Foundations"
+     },
+     {
+      "end": 30,
+      "slug": "part-2019-fixture-book-ch2-concentration",
+      "start": 16,
+      "status": "full",
+      "title": "Chapter 2. Concentration"
+     },
+     {
+      "end": 46,
+      "slug": "",
+      "start": 31,
+      "status": "—",
+      "title": "Chapter 3. Learning"
+     },
+     {
+      "end": 62,
+      "slug": "",
+      "start": 47,
+      "status": "—",
+      "title": "Chapter 4. Applications"
+     }
+    ],
+    "total": 62
+   },
+   "depth": "",
+   "id": "book-2019-fixture-book",
+   "inDegree": 2,
+   "label": "book-2019-fixture-book",
+   "layer": "collection",
+   "outDegree": 1,
+   "path": "wiki/book-2019-fixture-book.md",
+   "preview": "A fixture book of four chapters, used by the pipeline harness to exercise the page partition, part digests and the coverage line. It has no real content.",
+   "properties": {
+    "area": "learning-theory",
+    "authors": "Fixture Author",
+    "links_in": "2",
+    "links_out": "1",
+    "raw": "raw/printed-docs/2019-fixture-book.pdf",
+    "slug": "book-2019-fixture-book",
+    "status": "reading",
+    "type": "book",
+    "year": "2019"
+   },
+   "status": "reading",
+   "title": "Fixture Book (2019)",
+   "type": "book",
+   "year": 2019
+  },
+  {
+   "areas": [],
+   "depth": "listed",
+   "id": "chat-fixture-ai-chat",
+   "inDegree": 0,
+   "label": "chat-fixture-ai-chat",
+   "layer": "source",
+   "outDegree": 0,
+   "path": "wiki/chat-fixture-ai-chat.md",
+   "preview": "_No visualizations in this chat._",
+   "properties": {
+    "clips": "raw/llm-chats/fixture-ai-chat.md",
+    "conversation": "conv-940824dcb2a9",
+    "links_in": "0",
+    "links_out": "0",
+    "provider": "gemini",
+    "raw": "raw/llm-chats/fixture-ai-chat.md",
+    "slug": "chat-fixture-ai-chat",
+    "status": "to-read",
+    "title": "\"Fixture chat on VC dimension\"",
+    "type": "ai-chat"
+   },
+   "status": "to-read",
+   "title": "Fixture chat on VC dimension",
+   "type": "ai-chat",
+   "year": null
+  },
+  {
+   "areas": [
+    "boolean-analysis"
+   ],
+   "depth": "full",
+   "id": "conversation-2024-02-01-fixture-thread-about-a-lemma",
+   "inDegree": 1,
+   "label": "conversation-2024-02-01-fixture-thread-about-a-lemma",
+   "layer": "source",
+   "outDegree": 2,
+   "path": "wiki/conversation-2024-02-01-fixture-thread-about-a-lemma.md",
+   "preview": "Problem: Does the lemma hold for non-monotone functions? Main result: Yes, by symmetrisation.",
+   "properties": {
+    "area": "boolean-analysis",
+    "authors": "Fixture Author",
+    "links_in": "1",
+    "links_out": "2",
+    "raw": "raw/emails/2024-02-01-fixture-thread-about-a-lemma/thread.md",
+    "slug": "conversation-2024-02-01-fixture-thread-about-a-lemma",
+    "status": "digested",
+    "type": "conversation",
+    "year": "2024"
+   },
+   "status": "digested",
+   "title": "Fixture thread about a lemma",
+   "type": "conversation",
+   "year": 2024
+  },
+  {
+   "areas": [
+    "learning-theory"
+   ],
+   "depth": "",
+   "id": "course-fixture-rl",
+   "inDegree": 1,
+   "label": "course-fixture-rl",
+   "layer": "collection",
+   "outDegree": 3,
+   "path": "wiki/course-fixture-rl.md",
+   "preview": "A fixture course whose members are two slide decks, catalogued with a collection and a title. It exists only so the pipeline harness can exercise the Contents table of a course.",
+   "properties": {
+    "area": "learning-theory",
+    "course_code": "00000",
+    "institution": "runi",
+    "lecturer": "Fixture Lecturer",
+    "links_in": "1",
+    "links_out": "3",
+    "semester": "2026a",
+    "short": "rl",
+    "slug": "course-fixture-rl",
+    "status": "digested",
+    "type": "course"
+   },
+   "status": "digested",
+   "title": "Fixture RL course",
+   "type": "course",
+   "year": null
+  },
+  {
+   "areas": [
+    "learning-theory"
+   ],
+   "depth": "",
+   "id": "generalization",
+   "inDegree": 1,
+   "label": "generalization",
+   "layer": "concept",
+   "outDegree": 1,
+   "path": "wiki/generalization.md",
+   "preview": "One-liner: Gap between train and test risk.",
+   "properties": {
+    "area": "learning-theory",
+    "links_in": "1",
+    "links_out": "1",
+    "slug": "generalization",
+    "status": "seed",
+    "type": "idea"
+   },
+   "status": "seed",
+   "title": "Generalization",
+   "type": "idea",
+   "year": null
+  },
+  {
+   "areas": [
+    "learning-theory"
+   ],
+   "depth": "full",
+   "id": "lecture-rl-fixture-1",
+   "inDegree": 2,
+   "label": "lecture-rl-fixture-1",
+   "layer": "source",
+   "outDegree": 2,
+   "path": "wiki/lecture-rl-fixture-1.md",
+   "preview": "Problem: Define a fixture MDP. Main result: The value function satisfies the Bellman equation.",
+   "properties": {
+    "area": "learning-theory",
+    "authors": "Fixture Author",
+    "course": "course-fixture-rl",
+    "links_in": "2",
+    "links_out": "2",
+    "raw": "raw/presentations/rl-fixture-lecture-1.pdf",
+    "slug": "lecture-rl-fixture-1",
+    "status": "digested",
+    "type": "lecture"
+   },
+   "status": "digested",
+   "title": "Fixture RL lecture 1",
+   "type": "lecture",
+   "year": null
+  },
+  {
+   "areas": [],
+   "depth": "easy",
+   "id": "lecture-rl-fixture-2",
+   "inDegree": 1,
+   "label": "lecture-rl-fixture-2",
+   "layer": "source",
+   "outDegree": 0,
+   "path": "wiki/lecture-rl-fixture-2.md",
+   "preview": "Topic: Main result: Policy iteration converges in finitely many steps.",
+   "properties": {
+    "links_in": "1",
+    "links_out": "0",
+    "raw": "raw/presentations/rl-fixture-lecture-2.pdf",
+    "slug": "lecture-rl-fixture-2",
+    "status": "digested",
+    "type": "lecture"
+   },
+   "status": "digested",
+   "title": "Rl Fixture 2",
+   "type": "lecture",
+   "year": null
+  },
+  {
+   "areas": [
+    "boolean-analysis"
+   ],
+   "depth": "",
+   "id": "noise-stability",
+   "inDegree": 2,
+   "label": "noise-stability",
+   "layer": "concept",
+   "outDegree": 1,
+   "path": "wiki/noise-stability.md",
+   "preview": "One-liner: Correlation of a function with its noisy copy.",
+   "properties": {
+    "area": "boolean-analysis",
+    "links_in": "2",
+    "links_out": "1",
+    "slug": "noise-stability",
+    "status": "seed",
+    "type": "idea"
+   },
+   "status": "seed",
+   "title": "Noise stability",
+   "type": "idea",
+   "year": null
+  },
+  {
+   "areas": [],
+   "depth": "listed",
+   "id": "paper-2019-fixture-book",
+   "inDegree": 0,
+   "label": "paper-2019-fixture-book",
+   "layer": "source",
+   "outDegree": 0,
+   "path": "wiki/paper-2019-fixture-book.md",
+   "preview": "Problem: Main result:",
+   "properties": {
+    "links_in": "0",
+    "links_out": "0",
+    "raw": "raw/printed-docs/2019-fixture-book.pdf",
+    "slug": "paper-2019-fixture-book",
+    "status": "to-read",
+    "type": "paper",
+    "year": "2019"
+   },
+   "status": "to-read",
+   "title": "Fixture Book",
+   "type": "paper",
+   "year": 2019
+  },
+  {
+   "areas": [
+    "learning-theory"
+   ],
+   "depth": "full",
+   "id": "paper-2020-local-fixture-paper",
+   "inDegree": 2,
+   "label": "paper-2020-local-fixture-paper",
+   "layer": "source",
+   "outDegree": 2,
+   "path": "wiki/paper-2020-local-fixture-paper.md",
+   "preview": "Problem: Bound the fixture risk of a linear model. Main result: The fixture risk is bounded by the complexity term.",
+   "properties": {
+    "area": "learning-theory",
+    "authors": "Fixture Author",
+    "links_in": "2",
+    "links_out": "2",
+    "raw": "raw/printed-docs/2020-local-fixture-paper.pdf",
+    "slug": "paper-2020-local-fixture-paper",
+    "status": "digested",
+    "type": "paper",
+    "year": "2020"
+   },
+   "status": "digested",
+   "title": "Fixture local paper",
+   "type": "paper",
+   "year": 2020
+  },
+  {
+   "areas": [
+    "info-theory"
+   ],
+   "depth": "deep",
+   "id": "paper-2021-arxiv-style-fixture",
+   "inDegree": 1,
+   "label": "paper-2021-arxiv-style-fixture",
+   "layer": "source",
+   "outDegree": 2,
+   "path": "wiki/paper-2021-arxiv-style-fixture.md",
+   "preview": "Problem: Characterise fixture entropy. Main result: Entropy lower-bounds code length.",
+   "properties": {
+    "area": "info-theory",
+    "authors": "Fixture Author",
+    "links_in": "1",
+    "links_out": "2",
+    "raw": "raw/printed-docs/2021-arxiv-style-fixture.pdf",
+    "slug": "paper-2021-arxiv-style-fixture",
+    "status": "digested",
+    "type": "paper",
+    "url": "https://arxiv.org/abs/2105.10386",
+    "year": "2021"
+   },
+   "status": "digested",
+   "title": "Fixture arXiv-style paper",
+   "type": "paper",
+   "year": 2021
+  },
+  {
+   "areas": [
+    "learning-theory"
+   ],
+   "depth": "full",
+   "id": "part-2019-fixture-book-ch2-concentration",
+   "inDegree": 2,
+   "label": "part-2019-fixture-book-ch2-concentration",
+   "layer": "source",
+   "outDegree": 3,
+   "part": {
+    "book": "book-2019-fixture-book",
+    "pages": "16-30",
+    "section": "Chapter 2. Concentration"
+   },
+   "path": "wiki/part-2019-fixture-book-ch2-concentration.md",
+   "preview": "Problem: Show that fixture sums concentrate. Main result: Sums of independent fixture variables concentrate.",
+   "properties": {
+    "area": "learning-theory",
+    "authors": "Fixture Author",
+    "links_in": "2",
+    "links_out": "3",
+    "raw": "raw/printed-docs/2019-fixture-book.pdf",
+    "slug": "part-2019-fixture-book-ch2-concentration",
+    "status": "digested",
+    "type": "part",
+    "year": "2019"
+   },
+   "status": "digested",
+   "title": "Fixture book, chapter 2: concentration",
+   "type": "part",
+   "year": 2019
+  },
+  {
+   "areas": [
+    "learning-theory"
+   ],
+   "depth": "",
+   "id": "q-does-the-fixture-tail-bound-extend-to-dependent-variables",
+   "inDegree": 0,
+   "label": "q-does-the-fixture-tail-bound-extend-to-dependent-variables",
+   "layer": "concept",
+   "outDegree": 1,
+   "path": "wiki/q-does-the-fixture-tail-bound-extend-to-dependent-variables.md",
+   "preview": "Question: Does the fixture tail bound extend to dependent variables?",
+   "properties": {
+    "area": "learning-theory",
+    "links_in": "0",
+    "links_out": "1",
+    "priority": "med",
+    "slug": "q-does-the-fixture-tail-bound-extend-to-dependent-variables",
+    "status": "open",
+    "type": "question"
+   },
+   "status": "open",
+   "title": "Does the fixture tail bound extend to dependent variables?",
+   "type": "question",
+   "year": null
+  },
+  {
+   "areas": [
+    "learning-theory"
+   ],
+   "depth": "",
+   "id": "q-is-the-fixture-bound-tight-for-deep-models",
+   "inDegree": 0,
+   "label": "q-is-the-fixture-bound-tight-for-deep-models",
+   "layer": "concept",
+   "outDegree": 1,
+   "path": "wiki/q-is-the-fixture-bound-tight-for-deep-models.md",
+   "preview": "Question: Is the fixture bound tight for deep models?",
+   "properties": {
+    "area": "learning-theory",
+    "links_in": "0",
+    "links_out": "1",
+    "priority": "med",
+    "slug": "q-is-the-fixture-bound-tight-for-deep-models",
+    "status": "open",
+    "type": "question"
+   },
+   "status": "open",
+   "title": "Is the fixture bound tight for deep models?",
+   "type": "question",
+   "year": null
+  },
+  {
+   "areas": [
+    "boolean-analysis"
+   ],
+   "depth": "",
+   "id": "series-fixture-kalai-blog",
+   "inDegree": 0,
+   "label": "series-fixture-kalai-blog",
+   "layer": "collection",
+   "outDegree": 2,
+   "path": "wiki/series-fixture-kalai-blog.md",
+   "preview": "A fixture blog series standing in for a WordPress blog of clips. It exists only so the pipeline harness can exercise the Contents table of a series.",
+   "properties": {
+    "area": "boolean-analysis",
+    "links_in": "0",
+    "links_out": "2",
+    "short": "kalai",
+    "slug": "series-fixture-kalai-blog",
+    "status": "digested",
+    "type": "series"
+   },
+   "status": "digested",
+   "title": "Fixture combinatorics blog",
+   "type": "series",
+   "year": null
+  },
+  {
+   "areas": [
+    "info-theory"
+   ],
+   "depth": "",
+   "id": "shannon-entropy",
+   "inDegree": 2,
+   "label": "shannon-entropy",
+   "layer": "concept",
+   "outDegree": 1,
+   "path": "wiki/shannon-entropy.md",
+   "preview": "One-liner: Expected surprise of a random variable.",
+   "properties": {
+    "area": "info-theory",
+    "links_in": "2",
+    "links_out": "1",
+    "slug": "shannon-entropy",
+    "status": "seed",
+    "type": "idea"
+   },
+   "status": "seed",
+   "title": "Shannon entropy",
+   "type": "idea",
+   "year": null
+  },
+  {
+   "areas": [],
+   "depth": "",
+   "id": "theme-boolean-analysis",
+   "inDegree": 3,
+   "label": "theme-boolean-analysis",
+   "layer": "concept",
+   "outDegree": 1,
+   "path": "wiki/theme-boolean-analysis.md",
+   "preview": "Fixture topic for the pipeline harness.",
+   "properties": {
+    "links_in": "3",
+    "links_out": "1",
+    "slug": "theme-boolean-analysis",
+    "status": "seed",
+    "type": "topic"
+   },
+   "status": "seed",
+   "title": "Boolean Analysis",
+   "type": "topic",
+   "year": null
+  },
+  {
+   "areas": [],
+   "depth": "",
+   "id": "theme-complex-nn",
+   "inDegree": 0,
+   "label": "theme-complex-nn",
+   "layer": "concept",
+   "outDegree": 0,
+   "path": "wiki/theme-complex-nn.md",
+   "preview": "Fixture topic for the pipeline harness.",
+   "properties": {
+    "links_in": "0",
+    "links_out": "0",
+    "slug": "theme-complex-nn",
+    "status": "seed",
+    "type": "topic"
+   },
+   "status": "seed",
+   "title": "Complex Nn",
+   "type": "topic",
+   "year": null
+  },
+  {
+   "areas": [],
+   "depth": "",
+   "id": "theme-fourier-analysis",
+   "inDegree": 0,
+   "label": "theme-fourier-analysis",
+   "layer": "concept",
+   "outDegree": 0,
+   "path": "wiki/theme-fourier-analysis.md",
+   "preview": "Fixture topic for the pipeline harness.",
+   "properties": {
+    "links_in": "0",
+    "links_out": "0",
+    "slug": "theme-fourier-analysis",
+    "status": "seed",
+    "type": "topic"
+   },
+   "status": "seed",
+   "title": "Fourier Analysis",
+   "type": "topic",
+   "year": null
+  },
+  {
+   "areas": [],
+   "depth": "",
+   "id": "theme-implicit-regularization",
+   "inDegree": 0,
+   "label": "theme-implicit-regularization",
+   "layer": "concept",
+   "outDegree": 0,
+   "path": "wiki/theme-implicit-regularization.md",
+   "preview": "Fixture topic for the pipeline harness.",
+   "properties": {
+    "links_in": "0",
+    "links_out": "0",
+    "slug": "theme-implicit-regularization",
+    "status": "seed",
+    "type": "topic"
+   },
+   "status": "seed",
+   "title": "Implicit Regularization",
+   "type": "topic",
+   "year": null
+  },
+  {
+   "areas": [],
+   "depth": "",
+   "id": "theme-info-theory",
+   "inDegree": 3,
+   "label": "theme-info-theory",
+   "layer": "concept",
+   "outDegree": 1,
+   "path": "wiki/theme-info-theory.md",
+   "preview": "Fixture topic for the pipeline harness.",
+   "properties": {
+    "links_in": "3",
+    "links_out": "1",
+    "slug": "theme-info-theory",
+    "status": "seed",
+    "type": "topic"
+   },
+   "status": "seed",
+   "title": "Info Theory",
+   "type": "topic",
+   "year": null
+  },
+  {
+   "areas": [],
+   "depth": "",
+   "id": "theme-learning-theory",
+   "inDegree": 5,
+   "label": "theme-learning-theory",
+   "layer": "concept",
+   "outDegree": 3,
+   "path": "wiki/theme-learning-theory.md",
+   "preview": "Fixture topic for the pipeline harness.",
+   "properties": {
+    "links_in": "5",
+    "links_out": "3",
+    "slug": "theme-learning-theory",
+    "status": "seed",
+    "type": "topic"
+   },
+   "status": "seed",
+   "title": "Learning Theory",
+   "type": "topic",
+   "year": null
+  },
+  {
+   "areas": [],
+   "depth": "",
+   "id": "theme-optimization-theory",
+   "inDegree": 0,
+   "label": "theme-optimization-theory",
+   "layer": "concept",
+   "outDegree": 0,
+   "path": "wiki/theme-optimization-theory.md",
+   "preview": "Fixture topic for the pipeline harness.",
+   "properties": {
+    "links_in": "0",
+    "links_out": "0",
+    "slug": "theme-optimization-theory",
+    "status": "seed",
+    "type": "topic"
+   },
+   "status": "seed",
+   "title": "Optimization Theory",
+   "type": "topic",
+   "year": null
+  },
+  {
+   "areas": [],
+   "depth": "",
+   "id": "theme-quantum",
+   "inDegree": 0,
+   "label": "theme-quantum",
+   "layer": "concept",
+   "outDegree": 0,
+   "path": "wiki/theme-quantum.md",
+   "preview": "Fixture topic for the pipeline harness.",
+   "properties": {
+    "links_in": "0",
+    "links_out": "0",
+    "slug": "theme-quantum",
+    "status": "seed",
+    "type": "topic"
+   },
+   "status": "seed",
+   "title": "Quantum",
+   "type": "topic",
+   "year": null
+  },
+  {
+   "areas": [],
+   "depth": "",
+   "id": "theme-statistics",
+   "inDegree": 0,
+   "label": "theme-statistics",
+   "layer": "concept",
+   "outDegree": 0,
+   "path": "wiki/theme-statistics.md",
+   "preview": "Fixture topic for the pipeline harness.",
+   "properties": {
+    "links_in": "0",
+    "links_out": "0",
+    "slug": "theme-statistics",
+    "status": "seed",
+    "type": "topic"
+   },
+   "status": "seed",
+   "title": "Statistics",
+   "type": "topic",
+   "year": null
+  },
+  {
+   "areas": [],
+   "depth": "",
+   "id": "theme-tensor-factorization",
+   "inDegree": 0,
+   "label": "theme-tensor-factorization",
+   "layer": "concept",
+   "outDegree": 0,
+   "path": "wiki/theme-tensor-factorization.md",
+   "preview": "Fixture topic for the pipeline harness.",
+   "properties": {
+    "links_in": "0",
+    "links_out": "0",
+    "slug": "theme-tensor-factorization",
+    "status": "seed",
+    "type": "topic"
+   },
+   "status": "seed",
+   "title": "Tensor Factorization",
+   "type": "topic",
+   "year": null
+  },
+  {
+   "areas": [
+    "info-theory"
+   ],
+   "depth": "easy",
+   "id": "video-fixture-talk",
+   "inDegree": 0,
+   "label": "video-fixture-talk",
+   "layer": "source",
+   "outDegree": 2,
+   "path": "wiki/video-fixture-talk.md",
+   "preview": "Problem: What is entropy? Main result: Entropy measures surprise.",
+   "properties": {
+    "area": "info-theory",
+    "authors": "Fixture Speaker",
+    "links_in": "0",
+    "links_out": "2",
+    "raw": "none",
+    "slug": "video-fixture-talk",
+    "status": "digested",
+    "type": "video",
+    "url": "https://example.org/watch/fixture-talk",
+    "year": "2024"
+   },
+   "status": "digested",
+   "title": "Fixture talk on entropy",
+   "type": "video",
+   "year": 2024
+  }
+ ],
+ "schema": {
+  "collection_types": [
+   "book",
+   "course",
+   "notebook",
+   "series"
+  ],
+  "concept_types": [
+   "idea",
+   "person",
+   "question",
+   "topic"
+  ],
+  "default_visible": [
+   "topic",
+   "idea",
+   "question"
+  ],
+  "depth": [
+   "listed",
+   "easy",
+   "full",
+   "deep"
+  ],
+  "dispositions": [
+   "partial",
+   "queued",
+   "sidecar",
+   "skip",
+   "source"
+  ],
+  "layers": [
+   {
+    "color": "#7aa2ff",
+    "id": "concept",
+    "label": "Concepts",
+    "types": [
+     "topic",
+     "idea",
+     "question",
+     "person",
+     "distilled-think"
+    ]
+   },
+   {
+    "color": "#2ac3de",
+    "id": "collection",
+    "label": "Collections",
+    "types": [
+     "course",
+     "series",
+     "book",
+     "notebook",
+     "scope"
+    ]
+   },
+   {
+    "color": "#ff6b7a",
+    "id": "source",
+    "label": "Sources",
+    "types": [
+     "paper",
+     "part",
+     "lecture",
+     "article",
+     "blog-post",
+     "video",
+     "ai-chat",
+     "conversation"
+    ]
+   }
+  ],
+  "source_types": [
+   "ai-chat",
+   "article",
+   "blog-post",
+   "conversation",
+   "lecture",
+   "paper",
+   "part",
+   "video"
+  ],
+  "types": [
+   {
+    "color": "#9ece6a",
+    "id": "topic",
+    "label": "Topic",
+    "layer": "concept",
+    "prefix": "theme-",
+    "statuses": [
+     "growing",
+     "seed",
+     "solid"
+    ]
+   },
+   {
+    "color": "#7aa2ff",
+    "id": "idea",
+    "label": "Idea",
+    "layer": "concept",
+    "prefix": "",
+    "statuses": [
+     "growing",
+     "seed",
+     "solid"
+    ]
+   },
+   {
+    "color": "#f6c177",
+    "id": "question",
+    "label": "Question",
+    "layer": "concept",
+    "prefix": "q-",
+    "statuses": [
+     "open",
+     "partial",
+     "resolved"
+    ]
+   },
+   {
+    "color": "#bb9af7",
+    "id": "person",
+    "label": "Person",
+    "layer": "concept",
+    "prefix": "",
+    "statuses": []
+   },
+   {
+    "color": "#2ac3de",
+    "id": "course",
+    "label": "Course",
+    "layer": "collection",
+    "prefix": "course-",
+    "statuses": [
+     "digested",
+     "reading",
+     "to-read"
+    ]
+   },
+   {
+    "color": "#7dcfff",
+    "id": "series",
+    "label": "Series",
+    "layer": "collection",
+    "prefix": "series-",
+    "statuses": [
+     "digested",
+     "reading",
+     "to-read"
+    ]
+   },
+   {
+    "color": "#d16bd8",
+    "id": "book",
+    "label": "Book",
+    "layer": "collection",
+    "prefix": "book-",
+    "statuses": [
+     "digested",
+     "reading",
+     "to-read"
+    ]
+   },
+   {
+    "color": "#c099ff",
+    "id": "notebook",
+    "label": "Notebook",
+    "layer": "collection",
+    "prefix": "notebook-",
+    "statuses": [
+     "digested",
+     "reading",
+     "to-read"
+    ]
+   },
+   {
+    "color": "#ff6b7a",
+    "id": "paper",
+    "label": "Paper",
+    "layer": "source",
+    "prefix": "paper-",
+    "statuses": [
+     "digested",
+     "reading",
+     "to-read"
+    ]
+   },
+   {
+    "color": "#eab0ee",
+    "id": "part",
+    "label": "Book part",
+    "layer": "source",
+    "prefix": "part-",
+    "statuses": [
+     "digested",
+     "reading",
+     "to-read"
+    ]
+   },
+   {
+    "color": "#ffc777",
+    "id": "lecture",
+    "label": "Lecture",
+    "layer": "source",
+    "prefix": "lecture-",
+    "statuses": [
+     "digested",
+     "reading",
+     "to-read"
+    ]
+   },
+   {
+    "color": "#4fd6be",
+    "id": "article",
+    "label": "Article",
+    "layer": "source",
+    "prefix": "article-",
+    "statuses": [
+     "digested",
+     "reading",
+     "to-read"
+    ]
+   },
+   {
+    "color": "#ff79c6",
+    "id": "blog-post",
+    "label": "Blog post",
+    "layer": "source",
+    "prefix": "blog-",
+    "statuses": [
+     "digested",
+     "reading",
+     "to-read"
+    ]
+   },
+   {
+    "color": "#f7768e",
+    "id": "video",
+    "label": "Video",
+    "layer": "source",
+    "prefix": "video-",
+    "statuses": [
+     "digested",
+     "reading",
+     "to-read"
+    ]
+   },
+   {
+    "color": "#ff9e64",
+    "id": "ai-chat",
+    "label": "AI chat",
+    "layer": "source",
+    "prefix": "chat-",
+    "statuses": [
+     "digested",
+     "reading",
+     "to-read"
+    ]
+   },
+   {
+    "color": "#73daca",
+    "id": "conversation",
+    "label": "Conversation",
+    "layer": "source",
+    "prefix": "conversation-",
+    "statuses": [
+     "digested",
+     "reading",
+     "to-read"
+    ]
+   },
+   {
+    "color": "#e0af68",
+    "id": "distilled-think",
+    "label": "Distilled",
+    "layer": "concept",
+    "prefix": "distilled-think-",
+    "statuses": [
+     "applied",
+     "archived",
+     "review"
+    ]
+   },
+   {
+    "color": "#e6c07b",
+    "id": "scope",
+    "label": "Scope",
+    "layer": "collection",
+    "prefix": "scope-",
+    "statuses": [
+     "active",
+     "parked"
+    ]
+   }
+  ],
+  "version": [
+   1,
+   0
+  ]
+ }
+}

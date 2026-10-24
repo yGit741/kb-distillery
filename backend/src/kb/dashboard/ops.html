@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Thesis Wiki — Ops</title>
+  <script src="/static/shell.js"></script>
+  <link rel="stylesheet" href="/static/shell.css">
+  <link rel="stylesheet" href="/static/digestion.css">
+  <link rel="stylesheet" href="/static/ops.css">
+  <script src="/static/ops.js" defer></script>
+</head>
+<body class="has-app-nav">
+  {{NAV}}
+  <header class="top">
+    <div>
+      <h1>Ops</h1>
+      <p class="subtle" id="status-line">Running the checks…</p>
+    </div>
+    <div class="top-actions">
+      <a class="refresh-btn" href="/ops/email-preview" target="_blank" rel="noopener">Email preview</a>
+      <button type="button" class="refresh-btn" id="btn-refresh">Re-run checks</button>
+    </div>
+  </header>
+
+  <div id="banner"></div>
+  <div class="grid-summary" id="summary-cards"></div>
+
+  <div class="ops-grid">
+    <section class="card section ops-threads" id="section-threads">
+      <div class="ops-head">
+        <h2>Open threads</h2>
+        <div class="ops-filters" id="thread-filters" role="group" aria-label="Filter threads"></div>
+      </div>
+      <div id="threads"></div>
+    </section>
+
+    <div class="ops-side">
+      <section class="card section" id="section-needs">
+        <h2>Needs you</h2>
+        <div id="needs"></div>
+      </section>
+      <section class="card section" id="section-runs">
+        <h2>Nightly runs</h2>
+        <p class="subtle">Last 30 runs of <code>pixi run daily-sync</code>, newest on the right. Click one for its report.</p>
+        <div class="ops-runs" id="runs"></div>
+        <div id="run-detail"></div>
+      </section>
+      <section class="card section" id="section-recent">
+        <h2>Last 24 hours</h2>
+        <div id="recent"></div>
+      </section>
+      <section class="card section" id="section-vault">
+        <h2>Vault</h2>
+        <div id="vault"></div>
+      </section>
+    </div>
+  </div>
+
+  <section class="card section" id="section-log">
+    <div class="ops-head">
+      <h2>Nightly log</h2>
+      <span class="subtle"><code>~/Library/Logs/thesis-kb-daily-sync.log</code> · last 120 lines, colours stripped</span>
+    </div>
+    <pre class="ops-log" id="log"></pre>
+  </section>
+
+  <footer class="footer">API <code>/api/ops</code> · CLI <code>pixi run nightly-report</code> · run log <code>meta/.ops/runs.jsonl</code></footer>
+</body>
+</html>

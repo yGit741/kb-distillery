@@ -116,7 +116,7 @@ snapshot" box that builds `pixi run share -- snapshot <name> kb-x.y.z` for you t
 "Update…" fills the box in replace mode (`--replace`, same link) and warns when a typed name is
 already taken (creating, updating and `prune --apply` stay CLI-only).
 
-API (`meta/share/worker/admin.js`, behind the sign-in session + `ALLOWED_EMAILS` (or `ADMIN_EMAILS`)
+API (`share/admin.js`, behind the sign-in session + `ALLOWED_EMAILS` (or `ADMIN_EMAILS`)
 + header `X-KB-Admin: 1` + same-origin `Origin` for writes): `GET /admin/api/snapshots`,
 `DELETE /admin/api/snapshots/<worker>` with body `{"confirm": "<worker>"}`, `POST /admin/api/prune`
 (dry run). Behind-main in the panel is an approximation (patch difference within one x.y); the CLI's
@@ -143,7 +143,7 @@ snapshots are their own Workers (`.cache/share/status-snapshot-*.json`, never th
 
 The site is one `index.html` served from the Worker's static-assets directory: Cloudflare caps a
 file at **25 MiB**. The build prints its size against that limit, warns from 80 % and refuses above
-it (`MAX_HTML_BYTES` in `meta/share/build.py`). Growth comes from embedded page bodies, the graph
+it (`MAX_HTML_BYTES` in `backend/src/kb/share/build.py`). Growth comes from embedded page bodies, the graph
 and the digestion rows — shrink those, do not raise the constant.
 
 ## Quality bar

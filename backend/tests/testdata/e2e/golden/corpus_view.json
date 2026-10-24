@@ -1,0 +1,427 @@
+{
+ "emails": {
+  "columns": [
+   {
+    "key": "path",
+    "label": "File"
+   },
+   {
+    "key": "disposition",
+    "label": "Disposition"
+   },
+   {
+    "key": "digestion",
+    "label": "Digest"
+   },
+   {
+    "key": "slug",
+    "label": "Page"
+   },
+   {
+    "key": "collection",
+    "label": "Collection"
+   },
+   {
+    "key": "year",
+    "label": "Year"
+   },
+   {
+    "key": "sha1",
+    "label": "sha1"
+   },
+   {
+    "key": "thread_date",
+    "label": "Thread date"
+   },
+   {
+    "key": "attachments",
+    "label": "Attachments"
+   }
+  ],
+  "count": 1,
+  "format": "emails",
+  "rows": [
+   {
+    "attachments": 0,
+    "collection": [],
+    "companion_of": null,
+    "digestion": "easy",
+    "disposition": "source",
+    "path": "raw/emails/2026-01-02-rank-thread/thread.md",
+    "sha1": "e11ed18f58",
+    "slug": "conversation-2026-01-02-rank-thread",
+    "thread_date": "2026-01-02",
+    "title": "2026 01 02 Rank Thread",
+    "year": null
+   }
+  ]
+ },
+ "handwritten": {
+  "columns": [
+   {
+    "key": "path",
+    "label": "File"
+   },
+   {
+    "key": "disposition",
+    "label": "Disposition"
+   },
+   {
+    "key": "digestion",
+    "label": "Digest"
+   },
+   {
+    "key": "slug",
+    "label": "Page"
+   },
+   {
+    "key": "collection",
+    "label": "Collection"
+   },
+   {
+    "key": "year",
+    "label": "Year"
+   },
+   {
+    "key": "sha1",
+    "label": "sha1"
+   },
+   {
+    "key": "pages",
+    "label": "Pages"
+   },
+   {
+    "key": "hub",
+    "label": "Notebook / course"
+   }
+  ],
+  "count": 0,
+  "format": "handwritten",
+  "rows": []
+ },
+ "images": {
+  "columns": [
+   {
+    "key": "path",
+    "label": "File"
+   },
+   {
+    "key": "disposition",
+    "label": "Disposition"
+   },
+   {
+    "key": "digestion",
+    "label": "Digest"
+   },
+   {
+    "key": "slug",
+    "label": "Page"
+   },
+   {
+    "key": "collection",
+    "label": "Collection"
+   },
+   {
+    "key": "year",
+    "label": "Year"
+   },
+   {
+    "key": "sha1",
+    "label": "sha1"
+   },
+   {
+    "key": "companion_of",
+    "label": "Belongs to"
+   }
+  ],
+  "count": 0,
+  "format": "images",
+  "rows": []
+ },
+ "llm-chats": {
+  "columns": [
+   {
+    "key": "path",
+    "label": "File"
+   },
+   {
+    "key": "disposition",
+    "label": "Disposition"
+   },
+   {
+    "key": "digestion",
+    "label": "Digest"
+   },
+   {
+    "key": "slug",
+    "label": "Page"
+   },
+   {
+    "key": "collection",
+    "label": "Collection"
+   },
+   {
+    "key": "year",
+    "label": "Year"
+   },
+   {
+    "key": "sha1",
+    "label": "sha1"
+   },
+   {
+    "key": "chat",
+    "label": "Chat page"
+   }
+  ],
+  "count": 0,
+  "format": "llm-chats",
+  "rows": []
+ },
+ "presentations": {
+  "columns": [
+   {
+    "key": "path",
+    "label": "File"
+   },
+   {
+    "key": "disposition",
+    "label": "Disposition"
+   },
+   {
+    "key": "digestion",
+    "label": "Digest"
+   },
+   {
+    "key": "slug",
+    "label": "Page"
+   },
+   {
+    "key": "collection",
+    "label": "Collection"
+   },
+   {
+    "key": "year",
+    "label": "Year"
+   },
+   {
+    "key": "sha1",
+    "label": "sha1"
+   },
+   {
+    "key": "pages",
+    "label": "Slides"
+   },
+   {
+    "key": "hub",
+    "label": "Course"
+   }
+  ],
+  "count": 1,
+  "format": "presentations",
+  "rows": [
+   {
+    "collection": [
+     "course-test-ml"
+    ],
+    "companion_of": null,
+    "digestion": "full",
+    "disposition": "source",
+    "hub": "course-test-ml",
+    "pages": 1,
+    "path": "raw/presentations/tml-slides-intro.pdf",
+    "sha1": "314176d9a2",
+    "slug": "lecture-tml-slides-intro",
+    "title": "Lecture 1 · Introduction",
+    "year": null
+   }
+  ]
+ },
+ "printed-docs": {
+  "columns": [
+   {
+    "key": "path",
+    "label": "File"
+   },
+   {
+    "key": "disposition",
+    "label": "Disposition"
+   },
+   {
+    "key": "digestion",
+    "label": "Digest"
+   },
+   {
+    "key": "slug",
+    "label": "Page"
+   },
+   {
+    "key": "collection",
+    "label": "Collection"
+   },
+   {
+    "key": "year",
+    "label": "Year"
+   },
+   {
+    "key": "sha1",
+    "label": "sha1"
+   },
+   {
+    "key": "title",
+    "label": "Title"
+   },
+   {
+    "key": "authors",
+    "label": "Authors"
+   },
+   {
+    "key": "url",
+    "label": "URL"
+   },
+   {
+    "key": "pages",
+    "label": "Pages"
+   },
+   {
+    "key": "stamp",
+    "label": "arXiv stamp"
+   }
+  ],
+  "count": 4,
+  "format": "printed-docs",
+  "rows": [
+   {
+    "authors": "B. Writer",
+    "collection": [],
+    "companion_of": null,
+    "digestion": "",
+    "disposition": "partial",
+    "pages": 61,
+    "path": "raw/printed-docs/2020-tiny-book.pdf",
+    "sha1": "f704a1e311",
+    "slug": "book-2020-tiny-book",
+    "stamp": "",
+    "title": "Tiny Book (2020)",
+    "url": "",
+    "year": 2020
+   },
+   {
+    "authors": "",
+    "collection": [],
+    "companion_of": null,
+    "digestion": "easy",
+    "disposition": "source",
+    "pages": 1,
+    "path": "raw/printed-docs/2023-easy-skim-paper.pdf",
+    "sha1": "5793387d56",
+    "slug": "paper-2023-easy-skim-paper",
+    "stamp": "",
+    "title": "Easy Skim Paper",
+    "url": "",
+    "year": 2023
+   },
+   {
+    "authors": "A. Author",
+    "collection": [],
+    "companion_of": null,
+    "digestion": "full",
+    "disposition": "source",
+    "pages": 1,
+    "path": "raw/printed-docs/2024-tiny-rank-paper.pdf",
+    "sha1": "63731fae52",
+    "slug": "paper-2024-tiny-rank-paper",
+    "stamp": "",
+    "title": "Tiny Rank Paper",
+    "url": "https://example.org/tiny-rank",
+    "year": 2024
+   },
+   {
+    "authors": "",
+    "collection": [],
+    "companion_of": null,
+    "digestion": "listed",
+    "disposition": "source",
+    "pages": null,
+    "path": "raw/printed-docs/blog-not-exact-blog-post.md",
+    "sha1": "88f727fdf2",
+    "slug": "blog-not-exact-blog-post",
+    "stamp": "",
+    "title": "צורת ז'ורדן בפרקטיקה",
+    "url": "",
+    "year": null
+   }
+  ]
+ },
+ "web-clips": {
+  "columns": [
+   {
+    "key": "path",
+    "label": "File"
+   },
+   {
+    "key": "disposition",
+    "label": "Disposition"
+   },
+   {
+    "key": "digestion",
+    "label": "Digest"
+   },
+   {
+    "key": "slug",
+    "label": "Page"
+   },
+   {
+    "key": "collection",
+    "label": "Collection"
+   },
+   {
+    "key": "year",
+    "label": "Year"
+   },
+   {
+    "key": "sha1",
+    "label": "sha1"
+   },
+   {
+    "key": "domain",
+    "label": "Source domain"
+   },
+   {
+    "key": "assets",
+    "label": "Assets"
+   }
+  ],
+  "count": 2,
+  "format": "web-clips",
+  "rows": [
+   {
+    "assets": 0,
+    "collection": [],
+    "companion_of": null,
+    "digestion": "easy",
+    "disposition": "source",
+    "domain": "",
+    "path": "raw/web-clips/clip-why-rank-matters.md",
+    "sha1": "78712c49c9",
+    "slug": "article-clip-why-rank-matters",
+    "title": "Clip Why Rank Matters",
+    "year": null
+   },
+   {
+    "assets": 0,
+    "collection": [
+     "series-test-blog"
+    ],
+    "companion_of": null,
+    "digestion": "easy",
+    "disposition": "source",
+    "domain": "",
+    "path": "raw/web-clips/tblog-post-one.md",
+    "sha1": "857f7de425",
+    "slug": "article-tblog-post-one",
+    "title": "Tblog Post One",
+    "year": null
+   }
+  ]
+ }
+}
