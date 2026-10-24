@@ -1,50 +1,52 @@
 #!/usr/bin/env python3
-"""Copy skills/ → .cursor/skills/ and .claude/skills/ (no symlinks)."""
+"""Make `.claude/skills` and `.cursor/skills` symlinks to `skills/` (one source, no copies).
+
+    python3 -m kb.maintenance.sync_skills           lint, then create/repair the links
+    python3 -m kb.maintenance.sync_skills --check   verify only (exit 1 if a link is wrong)
+
+Each link is relative (`../skills`), so it survives moving the vault and works in worktrees.
+"""
 import os
 import shutil
 import sys
 
 from kb.paths import vault_root
+
 ROOT = vault_root()
 SRC = os.path.join(ROOT, "skills")
-DSTS = [os.path.join(ROOT, ".cursor", "skills"), os.path.join(ROOT, ".claude", "skills")]
+LINK_TARGET = os.path.join("..", "skills")
+LINKS = [os.path.join(ROOT, ".cursor", "skills"), os.path.join(ROOT, ".claude", "skills")]
 
 DEPRECATED = {"thesis-ingest"}
 
 
-def sync_to(dst):
-    os.makedirs(dst, exist_ok=True)
-    copied = 0
-    for name in sorted(os.listdir(SRC)):
-        src_path = os.path.join(SRC, name)
-        if not os.path.isdir(src_path) and name != "README.md":
-            continue
-        if name in DEPRECATED:
-            continue
-        dst_path = os.path.join(dst, name)
-        if os.path.isdir(src_path):
-            if os.path.exists(dst_path):
-                shutil.rmtree(dst_path)
-            shutil.copytree(src_path, dst_path)
-            copied += 1
-            print(f"  {name}/")
-    # README at skills root for discoverability
-    readme = os.path.join(SRC, "README.md")
-    if os.path.isfile(readme):
-        shutil.copy2(readme, os.path.join(dst, "README.md"))
-    # Remove deprecated skills from mirror
-    for dep in DEPRECATED:
-        dep_path = os.path.join(dst, dep)
-        if os.path.isdir(dep_path):
-            shutil.rmtree(dep_path)
-            print(f"  removed deprecated {dep}/")
-    return copied
+def link_ok(path: str) -> bool:
+    return os.path.islink(path) and os.readlink(path) == LINK_TARGET and os.path.isdir(path)
 
 
-def main():
+def ensure_link(path: str) -> str:
+    """Create or repair one symlink; return 'ok', 'created' or 'replaced'."""
+    if link_ok(path):
+        return "ok"
+    status = "created"
+    if os.path.islink(path) or os.path.isfile(path):
+        os.remove(path)
+        status = "replaced"
+    elif os.path.isdir(path):
+        shutil.rmtree(path)  # a stale copied mirror
+        status = "replaced"
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    os.symlink(LINK_TARGET, path)
+    return status
+
+
+def main(argv=None) -> int:
+    args = argv if argv is not None else sys.argv[1:]
+    check = "--check" in args
+
     from kb.lint.lint_skills import main as lint_main
 
-    if lint_main() != 0:
+    if lint_main([]) != 0:
         print("sync-skills aborted: lint-skills failed")
         return 1
 
@@ -52,10 +54,18 @@ def main():
         print(f"missing {SRC}")
         return 1
 
-    for dst in DSTS:
-        copied = sync_to(dst)
-        print(f"synced {copied} skill(s) → {os.path.relpath(dst, ROOT)}/")
-    return 0
+    bad = 0
+    for link in LINKS:
+        rel = os.path.relpath(link, ROOT)
+        if check:
+            if link_ok(link):
+                print(f"ok {rel} -> {LINK_TARGET}")
+            else:
+                print(f"ERROR {rel} is not a symlink to {LINK_TARGET} (run pixi run sync-skills)")
+                bad += 1
+        else:
+            print(f"{ensure_link(link)} {rel} -> {LINK_TARGET}")
+    return 1 if bad else 0
 
 
 if __name__ == "__main__":

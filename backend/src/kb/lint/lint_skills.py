@@ -25,6 +25,8 @@ ALLOWED_TIERS = frozenset({
     "none", "light", "medium", "heavy", "light-medium", "light–medium",
 })
 NEGATIVE_TRIGGER_RE = re.compile(r"Do NOT|ONLY|never|Never", re.I)
+USE_TRIGGER_RE = re.compile(r"\bUse\b")
+DO_NOT_CLAUSE_RE = re.compile(r"Do NOT")
 LADDER_SKILL_RE = re.compile(r"^\|\s*`([^`]+)`\s*\|")
 SKILLS_LINK_RE = re.compile(r"\[([^\]]+)\]\(([^)]+/SKILL\.md)\)")
 BASH_BLOCK_RE = re.compile(r"```bash\s*\n(.*?)```", re.S)
@@ -296,6 +298,10 @@ def check_skill_md(rel_path: str, is_top_level: bool, parent: Optional[str] = No
 
     if desc and not NEGATIVE_TRIGGER_RE.search(desc):
         warn(rel_path, "description lacks negative trigger (Do NOT / ONLY / never)")
+    if desc and not USE_TRIGGER_RE.search(desc):
+        warn(rel_path, 'description lacks a "Use for/when ..." trigger line')
+    if desc and not DO_NOT_CLAUSE_RE.search(desc):
+        warn(rel_path, 'description lacks a "Do NOT use for ..." near-miss clause')
 
     if len(lines) > 400:
         warn(rel_path, f"SKILL.md too long ({len(lines)} lines, max 400)")
@@ -365,6 +371,13 @@ def run_checks(strict: bool = False, skills_root: Optional[str] = None) -> tuple
     if not os.path.isdir(root_skills):
         err(skills_prefix, "skills directory missing")
         return len(errors), len(warnings)
+
+    if skills_root is None:
+        from kb.maintenance.sync_skills import LINKS, LINK_TARGET, link_ok
+        for link in LINKS:
+            if not link_ok(link):
+                warn(os.path.relpath(link, ROOT).replace(os.sep, "/"),
+                     f"not a symlink to {LINK_TARGET} (run pixi run sync-skills)")
 
     for dep in DEPRECATED:
         dep_path = os.path.join(root_skills, dep)

@@ -32,7 +32,7 @@ Meta-skill for authoring skills. Not part of the ingest/digest ladder.
 
 ## Workflow
 
-1. Copy [`SKILL_TEMPLATE.md`](SKILL_TEMPLATE.md) to `skills/<name>/SKILL.md` (or subdir).
+1. Copy [`SKILL_TEMPLATE.md`](../SKILL_TEMPLATE.md) to `skills/<name>/SKILL.md` (or subdir).
 2. Fill frontmatter: `name` must match directory (`parent-child` for subskills).
 3. Register in [`README.md`](README.md):
    - Ladder skill → row in **Token budgets** + **Skills** tables
@@ -46,9 +46,26 @@ pixi run test-skills
 pixi run sync-skills
 ```
 
+## Writing the description
+
+The `description` is the only text the agent sees when choosing a skill, so it decides whether the skill fires. `lint-skills` warns when it lacks a `Use` trigger or a `Do NOT` clause.
+
+1. **Forceful trigger line** — `Use for <phrase>, <phrase>, <phrase>.` Name the exact words the user says, in their casual form, not an abstract category.
+2. **Explicit near-misses** — `Do NOT use for <neighbour case> (use <other-skill>).` Name the closest sibling skills and the requests most likely to be confused with this one.
+3. Keep it 20-500 characters; put detail in the body (`## Triggers`, `## Do NOT`), not the description.
+
+Before registering, write 4 prompts that should trigger and 4 that should not, and check each against the description. Example for `export-kb`:
+
+| Should trigger | Should NOT trigger |
+|----------------|--------------------|
+| "export kb" | "share the site" (`share-kb`) |
+| "zip the wiki for ChatGPT" | "snapshot the KB" (`kb-snapshot`) |
+| "share kb with an external LLM" | "what do I know about tensor rank" (`query-knowledge`) |
+| "make a text bundle of wiki and think" | "deploy main" (`share-kb`) |
+
 ## Output
 
-New or updated `skills/**/SKILL.md`, README row, mirrored `.cursor/skills/`.
+New or updated `skills/**/SKILL.md`, README row. `.claude/skills` and `.cursor/skills` are symlinks to `skills/` (`pixi run sync-skills` creates/verifies them), so there is nothing to copy.
 
 ## Quality bar
 
