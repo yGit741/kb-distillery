@@ -1,5 +1,6 @@
 ---
 type: series
+layer: collection
 short: kalai
 area: [boolean-analysis]
 status: digested

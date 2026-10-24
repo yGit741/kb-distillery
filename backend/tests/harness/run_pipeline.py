@@ -71,7 +71,7 @@ import sys
 from kb.ingest import chat_build, chat_render
 convs, _rows = chat_build.run(apply=True)          # clips -> meta/chats/ conversation trees
 for conv in convs.values():
-    page = chat_render.render(conv, sys.argv[1], extra={"digestion-status": "catalog"})
+    page = chat_render.render(conv, sys.argv[1])
     open("wiki/chat-" + conv["slug"] + ".md", "w", encoding="utf-8").write(page)
 '''
 
@@ -81,11 +81,10 @@ class StepFailed(Exception):
 
 
 class Run:
-    def __init__(self, work, model="legacy", mutate=None):
+    def __init__(self, work, mutate=None):
         self.work = Path(work)
         self.root = self.work / "vault"
         self.inputs = self.work / "inputs"
-        self.model = model
         self.mutate = mutate
         self.steps = []          # (name, status, seconds, detail)
         self.skips = []
@@ -138,7 +137,7 @@ class Run:
 
     # ------------------------------------------------------------ steps
     def build(self):
-        fixture_vault.build(self.root, self.inputs, model=self.model)
+        fixture_vault.build(self.root, self.inputs)
         if self.mutate:
             self.mutate(self.root)
         return f"{len(list((self.root / 'wiki').glob('*.md')))} seed pages"
@@ -319,11 +318,11 @@ class Run:
         return diffs, len(got)
 
 
-def run(update=False, keep=False, workdir=None, model="legacy", mutate=None, quiet=False):
+def run(update=False, keep=False, workdir=None, mutate=None, quiet=False):
     """Run the whole pipeline; returns (exit_code, Run). Importable by the bite test."""
     work = Path(workdir) if workdir else Path(tempfile.mkdtemp(prefix="kb-harness-"))
     work.mkdir(parents=True, exist_ok=True)
-    h = Run(work, model=model, mutate=mutate)
+    h = Run(work, mutate=mutate)
     t0 = time.time()
     h.step("build fixture vault", h.build)
     if not h.failures:
@@ -381,9 +380,8 @@ def main(argv=None):
     ap.add_argument("--update-goldens", action="store_true")
     ap.add_argument("--keep", action="store_true", help="keep the scratch vault and print its path")
     ap.add_argument("--workdir", default=None)
-    ap.add_argument("--model", default="legacy", help="fixture front-matter model (only 'legacy' today)")
     a = ap.parse_args(argv)
-    code, h = run(update=a.update_goldens, keep=a.keep, workdir=a.workdir, model=a.model)
+    code, h = run(update=a.update_goldens, keep=a.keep, workdir=a.workdir)
     if a.keep and not a.workdir:
         print(f"scratch vault kept: {h.work}")
     return code

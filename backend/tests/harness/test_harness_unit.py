@@ -7,7 +7,6 @@ import unittest
 from pathlib import Path
 
 from . import fixture_vault
-from . import legacy_model
 from . import vault_invariants as inv
 
 
@@ -25,24 +24,11 @@ def make_vault(pages, corpus=""):
 
 
 PAGES = {
-    "paper-a": "---\ntype: paper\ndigestion-status: full\nraw: raw/printed-docs/2020-a.pdf\n---\n\n# A\n\nSee [[idea-b]] and [[missing]] and `[[code]]`.\n",
-    "idea-b": "---\ntype: concept\n---\n\n# B\n\n[[paper-a]]\n",
-    "theme-x": "---\ntype: theme\n---\n\n# X\n",
-    "course-c": "---\ntype: course\nshort: c\n---\n\n# C\n\n## Contents\n\n| 1 | L | `raw/presentations/c-1.pdf` | — | |\n",
+    "paper-a": "---\ntype: paper\nlayer: source\ndepth: full\nraw: raw/printed-docs/2020-a.pdf\n---\n\n# A\n\nSee [[idea-b]] and [[missing]] and `[[code]]`.\n",
+    "idea-b": "---\ntype: idea\nlayer: concept\n---\n\n# B\n\n[[paper-a]]\n",
+    "theme-x": "---\ntype: topic\nlayer: concept\n---\n\n# X\n",
+    "course-c": "---\ntype: course\nlayer: collection\nshort: c\n---\n\n# C\n\n## Contents\n\n| 1 | L | `raw/presentations/c-1.pdf` | — | |\n",
 }
-
-
-class LegacyModelTest(unittest.TestCase):
-    def test_mapping(self):
-        f = legacy_model.to_new_model
-        self.assertEqual(f({"type": "paper", "digestion-status": "deep"}), ("source", "paper", "deep"))
-        self.assertEqual(f({"type": "part"})[:2], ("source", "part"))
-        self.assertEqual(f({"type": "book"})[:2], ("collection", "book"))
-        self.assertEqual(f({"type": "theme"}), ("concept", "topic", ""))
-        self.assertEqual(f({"type": "concept"}), ("concept", "idea", ""))
-        self.assertEqual(f({"type": "question"})[:2], ("concept", "question"))
-        self.assertEqual(f({"type": "distilled-think"})[0], "draft")
-        self.assertEqual(f({"type": "source", "kind": "paper", "depth": "full"}), ("source", "paper", "full"))
 
 
 class InvariantsTest(unittest.TestCase):
@@ -55,8 +41,10 @@ class InvariantsTest(unittest.TestCase):
         root = make_vault(PAGES, "raw/presentations/c-1.pdf\tabc\tpresentations\tqueued\t\tcourse-c\t\n")
         c = inv.structure_counts(root)
         self.assertEqual(c["pages_total"], 4)
-        self.assertEqual(c["pages_by_type_kind"]["source/paper"], 1)
-        self.assertEqual(c["pages_by_type_kind"]["concept/topic"], 1)
+        self.assertEqual(c["pages_by_type"]["source/paper"], 1)
+        self.assertEqual(c["pages_by_type"]["concept/topic"], 1)
+        self.assertEqual(c["pages_by_layer"], {"collection": 1, "concept": 2, "source": 1})
+        self.assertEqual(c["sources_by_type_depth"], {"paper:full": 1})
         self.assertEqual(c["dangling_links"], 1)            # [[missing]]; the one in code is ignored
         self.assertEqual(c["links_total"], 2)
         self.assertEqual(c["orphan_pages"], 2)              # theme-x and course-c have no inbound link
@@ -69,18 +57,13 @@ class InvariantsTest(unittest.TestCase):
         c = inv.structure_counts(make_vault(PAGES, ""))
         self.assertEqual(c["collection_tables_inconsistent_slugs"], ["course-c"])
 
-    def test_body_hash_ignores_front_matter_and_type(self):
+    def test_body_hash_ignores_front_matter(self):
         a = inv.structure_counts(make_vault(PAGES))["page_bodies_sha256"]
-        migrated = dict(PAGES, **{"paper-a": PAGES["paper-a"].replace("type: paper\ndigestion-status: full", "type: source\nkind: paper\ndepth: full")})
+        migrated = dict(PAGES, **{"paper-a": PAGES["paper-a"].replace("type: paper\nlayer: source\ndepth: full", "type: source\nkind: paper\ndepth: full")})
         b = inv.structure_counts(make_vault(migrated))["page_bodies_sha256"]
         self.assertEqual(a, b)
         c = inv.structure_counts(make_vault(dict(PAGES, **{"idea-b": PAGES["idea-b"] + "x\n"})))["page_bodies_sha256"]
         self.assertNotEqual(a["idea-b"], c["idea-b"])
-
-    def test_migrated_front_matter_has_same_type_kind_counts(self):
-        migrated = dict(PAGES, **{"idea-b": "---\ntype: concept\nkind: idea\n---\n\n# B\n\n[[paper-a]]\n"})
-        self.assertEqual(inv.structure_counts(make_vault(migrated))["pages_by_type_kind"],
-                         inv.structure_counts(make_vault(PAGES))["pages_by_type_kind"])
 
     def test_compare(self):
         base = inv.structure_counts(make_vault(PAGES))
@@ -101,19 +84,17 @@ class InvariantsTest(unittest.TestCase):
         self.assertTrue(failed)
         self.assertIn("BODY CHANGED idea-b", lines)
         dropped = json.loads(json.dumps(base))
-        del dropped["pages_by_type_kind"]["source/paper"]
+        del dropped["pages_by_type"]["source/paper"]
         self.assertTrue(inv.compare(base, dropped)[1])
 
 
 class FixtureVaultTest(unittest.TestCase):
-    def test_unknown_model_is_refused(self):
-        with self.assertRaises(NotImplementedError):
-            fixture_vault.seed_pages("v2")
-
-    def test_legacy_seed_has_all_themes(self):
-        pages = fixture_vault.seed_pages("legacy")
-        for t in fixture_vault.THEMES:
+    def test_seed_has_all_topics(self):
+        pages = fixture_vault.seed_pages()
+        for t in fixture_vault.TOPICS:
             self.assertIn(f"theme-{t}", pages)
+            self.assertIn("layer: concept", pages[f"theme-{t}"])
+            self.assertTrue(pages[f"theme-{t}"].rstrip().endswith("-->"))
 
     def test_inputs_one_per_kind(self):
         d = Path(tempfile.mkdtemp(prefix="kb-unit-in-"))

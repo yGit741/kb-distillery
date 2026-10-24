@@ -1,10 +1,11 @@
 ---
 type: article
+layer: source
 source: 
 author:
 area: []
 status: digested
-digestion-status: easy
+depth: easy
 raw: raw/web-clips/kalai-fixture-post-one.md
 url:
 date:

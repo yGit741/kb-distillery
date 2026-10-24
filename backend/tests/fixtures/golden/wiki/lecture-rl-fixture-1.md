@@ -1,11 +1,12 @@
 ---
 type: lecture
+layer: source
 course: course-fixture-rl
 authors: [Fixture Author]
 year: 
 area: [learning-theory]
 status: digested
-digestion-status: full
+depth: full
 raw: raw/presentations/rl-fixture-lecture-1.pdf
 citekey: 
 url: 
