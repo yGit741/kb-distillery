@@ -16,7 +16,7 @@
 //
 // `handle(request, env, deps)` is exported for tests: deps = {fetch, now} default to the globals.
 
-import { handleAdmin } from "./admin.js";
+import { handleAdmin, handleFlags } from "./admin.js";
 
 const GOOGLE_AUTH = "https://accounts.google.com/o/oauth2/v2/auth";
 const GOOGLE_TOKEN = "https://oauth2.googleapis.com/token";
@@ -215,6 +215,7 @@ export async function handle(request, env, deps = {}) {
   if (url.pathname === "/auth/logout") return redirect("/auth/login", [clearCookie(SESSION_COOKIE)]);
   const session = await verify(readCookie(request, SESSION_COOKIE), env.SESSION_SECRET, Math.floor(deps.now() / 1000));
   if (url.pathname === "/admin" || url.pathname.startsWith("/admin/")) return handleAdmin(request, env, deps, session);
+  if (url.pathname === "/api/flags" || url.pathname.startsWith("/api/flags/")) return handleFlags(request, env, session);
   if (session) return env.ASSETS.fetch(request);
   if (wantsHtml(request)) return redirect("/auth/login");
   return new Response("unauthorized", { status: 401, headers: { "Content-Type": "text/plain" } });
