@@ -41,7 +41,7 @@ META_DIR = os.path.join(vault_root(), "meta")
 ROOT = vault_root()
 
 from kb.maintenance.daily_sync import changed_paths, has_open_sessions, run_git
-from kb.git import commit_policy, events, rounds
+from kb.git import claims, commit_policy, events, rounds
 from kb.core.schema import GIT_POLICY_MODE, SCHEMA_VERSION
 
 GATES = [
@@ -49,7 +49,7 @@ GATES = [
     ("lint-skills", [sys.executable, "-m", "kb.lint.lint_skills"]),
     ("lint", [sys.executable, "-m", "kb.lint.lint"]),
 ]
-SUBCOMMANDS = {"events", "round", "queue", "start", "commit", "pr", "merge", "sync", "status", "prune", "protect", "approve"}
+SUBCOMMANDS = {"claims", "events", "round", "queue", "start", "commit", "pr", "merge", "sync", "status", "prune", "protect", "approve"}
 GENERATED_FILES = {"index.md", "meta/corpus.tsv", "meta/coherence-warnings.tsv"}
 MIGRATED_GENERATED = {"meta/corpus.tsv"}   # a migration's output: committed by schema/paradigm commits
 FEATURE_RE = re.compile(r"^[a-z0-9][a-z0-9-]*$")
@@ -459,7 +459,7 @@ def link_pixi_env(root, worktree_path):
     print(f"import kb here: `pixi run python …` or `PYTHONPATH={worktree_path}/backend/src python3 …`")
 
 
-def cmd_start(feature, worktree=False, root=ROOT, round_no=None):
+def cmd_start(feature, worktree=False, root=ROOT, round_no=None, paths=None):
     if not FEATURE_RE.match(feature):
         print("error: feature must be kebab-case, e.g. kb-ops")
         return 1
@@ -473,6 +473,7 @@ def cmd_start(feature, worktree=False, root=ROOT, round_no=None):
         if cp.returncode == 0:
             print(f"worktree ready: {path} on {branch}")
             _link_round(branch, round_no, root)
+            _claim(branch, paths, root)
             link_pixi_env(root, path)
             stale = [r for r in stale_worktrees(root) if r["merged"] and not r["dirty"] and not r["current"]]
             if stale:
@@ -486,12 +487,22 @@ def cmd_start(feature, worktree=False, root=ROOT, round_no=None):
     if current == branch:
         print(f"already on {branch}")
         _link_round(branch, round_no, root)
+        _claim(branch, paths, root)
         return 0
     cp = run_git(["branch", "-m", branch], cwd=root)
     print(_out(cp) or f"renamed {current} → {branch}")
     if cp.returncode == 0:
         _link_round(branch, round_no, root)
+        _claim(branch, paths, root)
     return cp.returncode
+
+
+def _claim(branch, paths, root):
+    """`start --paths`: store the claim, then warn about lanes already touching those paths."""
+    mine = claims.parse_paths(paths) if paths else []
+    if mine and claims.set_branch_claims(branch, mine, root):
+        print(f"claims: {', '.join(mine)} (ship pr writes `Claims:` into the PR body)")
+    claims.warn(mine, branch, root)
 
 
 def _link_round(branch, round_no, root):
@@ -572,8 +583,9 @@ def _schema_kind(subjects):
     return "paradigm" if "paradigm" in types else ("schema" if "schema" in types else None)
 
 
-def pr_body(subjects, notes="", skipped_checks=None, round_no=None):
-    lines = ([f"Round: #{round_no}", ""] if round_no else []) + ["## Summary", ""] + [f"- {s}" for s in subjects] + [
+def pr_body(subjects, notes="", skipped_checks=None, round_no=None, paths=None):
+    head = ([f"Round: #{round_no}"] if round_no else []) + ([claims.claims_line(paths)] if paths else [])
+    lines = (head + [""] if head else []) + ["## Summary", ""] + [f"- {s}" for s in subjects] + [
         "", "## Gates", "", "- unit tests · lint-skills · lint (run by `pixi run ship -- pr`)"]
     kind = _schema_kind(subjects)
     if kind:
@@ -634,18 +646,23 @@ def cmd_pr(title=None, skip_tests=False, root=ROOT, gates=True, notes_file=None,
         return 1
     why = _hold_reason(subjects + [title], hold)
     round_no = rounds.branch_round(branch, root)
+    paths = claims.branch_claims(branch, root)
+    try:
+        claims.warn(paths or claims.touched_dirs(branch_files(root)), branch, root)
+    except Exception as e:  # the overlap check never fails ship pr
+        print(f"note: overlap check skipped — {e}")
     existing = gh(["pr", "view", branch, "--json", "number,url"], root)
     if existing.returncode == 0 and existing.stdout.strip():
         info = json.loads(existing.stdout)
         print(f"PR #{info['number']} already open: {info['url']} (pushed new commits)")
         if skip_checks:
-            gh(["pr", "edit", branch, "--body", pr_body(subjects, _read_notes(notes_file), skip_checks, round_no)], root)
+            gh(["pr", "edit", branch, "--body", pr_body(subjects, _read_notes(notes_file), skip_checks, round_no, paths)], root)
         if why:
             gh(["pr", "edit", branch, "--add-label", HOLD_LABEL], root)
             print(f"held for the user: {why}")
         return 0
     args = ["pr", "create", "--base", "main", "--head", branch,
-            "--title", title, "--body", pr_body(subjects, _read_notes(notes_file), skip_checks, round_no)]
+            "--title", title, "--body", pr_body(subjects, _read_notes(notes_file), skip_checks, round_no, paths)]
     if why:
         gh(["label", "create", HOLD_LABEL, "--force", "--color", "B60205",
             "--description", "waits for the user's approval (pixi run ship -- approve N)"], root)
@@ -653,7 +670,7 @@ def cmd_pr(title=None, skip_tests=False, root=ROOT, gates=True, notes_file=None,
     created = gh(args, root)
     print(_out(created))
     if created.returncode == 0:
-        _post_claimed(created.stdout, branch, root, round_no)
+        _post_claimed(created.stdout, branch, root, round_no, paths)
         print(f"held for the user: {why} — they lift it with: pixi run ship -- approve N" if why
               else "not held: run `pixi run ship -- merge` yourself once you are done")
     return created.returncode
@@ -663,15 +680,17 @@ def _head_sha(root, ref="HEAD"):
     return run_git(["rev-parse", ref], cwd=root).stdout.strip() if root else ""
 
 
-def _post_claimed(create_stdout, branch, root, round_no=None):
+def _post_claimed(create_stdout, branch, root, round_no=None, paths=None):
     m = re.search(r"/(?:pull|pr)/(\d+)", create_stdout or "")
     if not m:
         return
     try:
-        dirs = sorted({p.split("/", 1)[0] for p in branch_files(root)})
+        files = branch_files(root)
+        dirs = sorted({p.split("/", 1)[0] for p in files})
+        paths = paths or claims.touched_dirs(files)
         sha = _head_sha(root)
         events.post(int(m.group(1)), "claimed", sha, root=root,
-                    branch=branch, dirs=",".join(dirs) or "-")
+                    branch=branch, dirs=",".join(dirs) or "-", paths=",".join(paths) or "-")
         rounds.on_event(round_no, branch[len("infra/"):], "claimed", sha, pr=int(m.group(1)), root=root)
     except Exception as e:  # events are best-effort: never fail ship pr
         print(f"note: claimed event not posted — {e}")
@@ -1068,6 +1087,8 @@ def main(argv=None):
     s.add_argument("feature")
     s.add_argument("--worktree", action="store_true", help="create .claude/worktrees/<feature> from origin/main")
     s.add_argument("--round", type=int, metavar="R", help="link the branch to round issue #R")
+    s.add_argument("--paths", metavar="A,B", help="claim the paths this branch will touch; overlaps are warned about")
+    sub.add_parser("claims", help="list every lane's claimed (or touched) paths")
     ro = sub.add_parser("round", help="round issues for multi-PR efforts (open / status)")
     rsub = ro.add_subparsers(dest="round_cmd", required=True)
     rop = rsub.add_parser("open", help="open a `round` issue with one checklist line per feature")
@@ -1115,6 +1136,8 @@ def main(argv=None):
         if args.round_cmd == "open":
             return rounds.cmd_open(args.title, args.features, ROOT)
         return rounds.cmd_status(args.number, ROOT)
+    if args.cmd == "claims":
+        return claims.cmd_claims(ROOT)
     if args.cmd == "events":
         return events.cmd_events(args.number, ROOT)
     if args.cmd == "queue":
@@ -1127,7 +1150,7 @@ def main(argv=None):
         print_status(changed_paths(), ROOT)
         return 0
     if args.cmd == "start":
-        return cmd_start(args.feature, args.worktree, round_no=args.round)
+        return cmd_start(args.feature, args.worktree, round_no=args.round, paths=args.paths)
     if args.cmd == "commit":
         return cmd_commit(args.message, args.skip_tests)
     if args.cmd == "pr":
