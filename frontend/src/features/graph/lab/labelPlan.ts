@@ -11,31 +11,80 @@ export const FORCED = { hover: 0, selected: 1, near: 2, type: 3 } as const;
 const STOP = new Set(["the", "a", "an", "of", "on", "and", "for", "in", "to", "with", "via", "from", "by", "at"]);
 const QUESTION_LEAD = /^(does|do|is|are|can|could|what|why|how|which|when|where|should|will)\s+((is|are|do|does|there)\s+)?((the|a|an)\s+)?/i;
 
+/** Trailing stop words go before the ellipsis ("bias of the…" -> "bias…"). */
+const trimStop = (s: string): string => {
+  let out = s;
+  while (out && STOP.has((out.split(" ").pop() ?? "").toLowerCase())) out = out.split(" ").slice(0, -1).join(" ");
+  return out;
+};
+
+/** The first words of `s` within `maxChars`, then "…"; a word longer than the budget is cut hard. */
+function cutWords(s: string, maxChars: number): string {
+  let out = "";
+  for (const w of s.split(/\s+/)) {
+    if ((out + " " + w).trim().length > maxChars) break;
+    out = (out + " " + w).trim();
+  }
+  return `${trimStop(out) || s.slice(0, maxChars)}…`;
+}
+
 /**
- * Label text. "short" drops a leading article, a subtitle after ":" or " - ", and parentheses, cuts at a word
- * boundary; a question loses its question word and gets a "?" marker ("Does the low-rank bias…" -> "? Low-rank bias…").
- * The hovered page (`full`) always shows its whole title.
+ * The label's words, uncut. "short" drops a leading article, a subtitle after ":" or " - ", and parentheses; a
+ * question loses its question word and gets a "?" marker ("Does the low-rank bias…" -> "? Low-rank bias…").
+ * `full` is the whole title as written.
  */
-export function labelText(n: GNode, field: LabConfig["textField"], maxChars: number, full = false): string {
+export function shortTitle(n: GNode, field: LabConfig["textField"], full = false): string {
   let s = field === "slug" ? n.id : n.title || n.id;
-  if (full || field === "slug") return full || s.length <= maxChars ? s : `${s.slice(0, maxChars - 1)}…`;
-  if (field === "title") return s.length <= maxChars ? s : `${s.slice(0, maxChars - 1)}…`;
+  if (full || field !== "short") return s;
   const question = n.type === "question";
   if (question) {
     s = s.replace(QUESTION_LEAD, "").replace(/\?$/, "");
     s = s.charAt(0).toUpperCase() + s.slice(1);
   }
   s = s.replace(/^(the|a|an)\s+/i, "").replace(/\s*[:(—–-]\s.*$/, "").replace(/\s*\(.*?\)\s*/g, " ").trim();
-  if (s.length > maxChars) {
-    let out = "";
-    for (const w of s.split(/\s+/)) {
-      if ((out + " " + w).trim().length > maxChars) break;
-      out = (out + " " + w).trim();
-    }
-    while (out && STOP.has((out.split(" ").pop() ?? "").toLowerCase())) out = out.split(" ").slice(0, -1).join(" ");
-    s = `${out || s.slice(0, maxChars)}…`;
-  }
   return question ? `? ${s}` : s;
+}
+
+/** One-line label: `shortTitle` cut at a word boundary to `maxChars` (the "? " marker is not counted); `full` is never cut. */
+export function labelText(n: GNode, field: LabConfig["textField"], maxChars: number, full = false): string {
+  const s = shortTitle(n, field, full);
+  if (full) return s;
+  if (field !== "short") return s.length <= maxChars ? s : `${s.slice(0, maxChars - 1)}…`;
+  const marked = n.type === "question" && s.startsWith("? ");
+  const body = marked ? s.slice(2) : s;
+  const cut = body.length > maxChars ? cutWords(body, maxChars) : body;
+  return marked ? `? ${cut}` : cut;
+}
+
+/**
+ * Word-boundary greedy fill into at most `maxLines` lines of `maxWidth` px; the last line ends in "…" (stop words
+ * trimmed) when words remain. A word is never split: one wider than the budget stands alone on its line.
+ * `maxWidth <= 0` is the one-line character cut of `labelText`.
+ */
+export function wrapLabel(s: string, maxWidth: number, maxLines: number, measure: (text: string) => number, maxChars: number): string[] {
+  if (maxWidth <= 0) return [s.length <= maxChars ? s : cutWords(s, maxChars)];
+  const words = s.split(/\s+/).filter(Boolean);
+  if (!words.length) return [s];
+  const lines: string[] = [];
+  let cur = "";
+  for (const w of words) {
+    const next = cur ? `${cur} ${w}` : w;
+    if (!cur || measure(next) <= maxWidth) {
+      cur = next;
+      continue;
+    }
+    if (lines.length + 1 >= Math.max(1, maxLines)) {
+      // the last line: shed words until the ellipsis fits too
+      let last = trimStop(cur) || cur;
+      while (last.includes(" ") && measure(`${last}…`) > maxWidth) last = trimStop(last.split(" ").slice(0, -1).join(" ")) || last.split(" ")[0]!;
+      // one word still too wide: a character cut rather than an overflow
+      return [...lines, measure(`${last}…`) > maxWidth ? cutWords(last, maxChars) : `${last}…`];
+    }
+    lines.push(cur);
+    cur = w;
+  }
+  if (cur) lines.push(cur);
+  return lines;
 }
 
 export function labelTier(n: GNode, cfg: LabConfig, imp: Importance): 1 | 2 | 3 {
@@ -116,13 +165,21 @@ export interface PlanInput {
 export interface Placed {
   id: string;
   n: GNode;
+  /** the lines joined by a space */
   text: string;
+  lines: string[];
   px: number;
+  /** line height in CSS px (the box is lines × lineH plus padding) */
+  lineH: number;
   weight: number;
   tier: 1 | 2 | 3;
   pos: number;
   box: Box;
   forced: boolean;
+  /** placed off the node on a ring, joined to it by a leader line */
+  leader: boolean;
+  /** node centre on screen */
+  anchor: [number, number];
 }
 
 export interface Plan {
@@ -136,12 +193,20 @@ export interface Plan {
   minPx: number;
 }
 
+/** Unit directions of the ring a squeezed-out forced label moves to: the eight compass points. */
+const RING = OFFSETS[8] as readonly (readonly [number, number])[];
+/** A clicked question shows its whole title: wrap width and lines. */
+const QUESTION_FULL = { width: 220, lines: 3 } as const;
+
 /**
  * Which labels show and where. Candidates are taken from the whole graph ("world") so panning never changes
  * them, or from the screen; forced labels first, then by score (+ a bonus for labels already shown). The budget
  * is a screen coverage, a count or a score threshold, growing as zoom^g on screen (g = 0.5 is the radical law).
- * Each label tries its previous offset first, then above/below/right/left; one that would overlap a placed label
- * (or a node, unless forced or a tier-1 label) is dropped, except the hovered page's.
+ * Text wraps to the tier's pixel width (tier 3 stays one line); questions hide, cut short or show by
+ * `questionLabels`, and a hovered or clicked one shows its whole title. Each label tries its previous offset
+ * first, then above/below/right/left; a box pushed off the canvas tries the mirrored side first (`edgeFlip`). One
+ * that would overlap a placed label (or a node, unless forced or a tier-1 label) is dropped, except a forced
+ * label, which moves out on a ring with a leader line (`leaderLines`) before it is given up.
  */
 export function planLabels(i: PlanInput): Plan {
   const { cfg, imp, width: W, height: H, zr } = i;
@@ -154,6 +219,7 @@ export function planLabels(i: PlanInput): Plan {
     if (f === undefined) {
       if (i.suppress) continue;
       if (cfg.pool === "hubs" && zr < 2 && tierOf(it.n.type) !== 1) continue;
+      if (cfg.questionLabels === "none" && it.n.type === "question") continue;
     }
     const was = i.prev.get(it.n.id);
     const bonus = was?.shown ? cfg.hysteresis : 0;
@@ -173,6 +239,7 @@ export function planLabels(i: PlanInput): Plan {
   const thr = cfg.strategy === "threshold" ? cfg.threshold / Math.pow(Math.max(1, zr), cfg.zoomGrowth) : -Infinity;
 
   const offsets = OFFSETS[cfg.positions] ?? (OFFSETS[4] as readonly (readonly [number, number])[]);
+  const inside = (b: Box) => b[0] >= 0 && b[1] >= 0 && b[2] <= W && b[3] <= H;
   const placed: Placed[] = [];
   let area = 0;
   let count = 0;
@@ -183,30 +250,72 @@ export function planLabels(i: PlanInput): Plan {
     const tier = labelTier(q.n, cfg, imp);
     const px = labelPx(q.n, cfg, imp, zr);
     const weight = cfg.weightTier && tier === 1 ? 700 : 400;
-    const text = labelText(q.n, cfg.textField, cfg.maxChars, q.f === FORCED.hover);
-    const w = i.measure(text, px, weight);
-    const h = px * 1.05;
+    const m = (t: string) => i.measure(t, px, weight);
+    // text: the tier's wrap width and lines; tier 3 one line; questions by `questionLabels`, the whole title when hovered or clicked
+    const tierChars = tier === 3 ? cfg.charsT3 : cfg.maxChars;
+    let lines: string[];
+    if (q.n.type === "question" && cfg.questionLabels !== "full" && cfg.textField === "short") {
+      if (q.f !== undefined && q.f <= FORCED.selected) lines = wrapLabel(shortTitle(q.n, cfg.textField, true), QUESTION_FULL.width, QUESTION_FULL.lines, m, cfg.maxChars);
+      else lines = [labelText(q.n, cfg.textField, Math.min(cfg.charsQuestion, tierChars))];
+    } else if (tier === 3) lines = wrapLabel(shortTitle(q.n, cfg.textField), cfg.wrapT3, 1, m, cfg.charsT3);
+    else lines = wrapLabel(shortTitle(q.n, cfg.textField), tier === 1 ? cfg.wrapT1 : cfg.wrapT2, cfg.maxLines, m, cfg.maxChars);
+    const w = Math.max(...lines.map(m));
+    const lineH = px * 1.15;
+    const h = lines.length * lineH;
+    const boxAt = (dx: number, dy: number, d: number): Box => {
+      const cx = q.sx + dx * (d + (dx ? w / 2 : 0));
+      const cy = q.sy + dy * (d + (dy ? h / 2 : 0));
+      return [cx - w / 2 - cfg.pad, cy - h / 2 - cfg.pad, cx + w / 2 + cfg.pad, cy + h / 2 + cfg.pad];
+    };
+    const free = (b: Box) => !cfg.declutter || !grid.hit(b, q.n.id, isForced || tier === 1);
     const prevPos = i.prev.get(q.n.id);
     const order = prevPos?.shown && offsets[prevPos.pos] ? [prevPos.pos, ...offsets.keys()] : [...offsets.keys()];
     let box: Box | null = null;
     let pos = 0;
+    let leader = false;
     for (const k of order) {
       const [dx, dy] = offsets[k] as readonly [number, number];
-      const cx = q.sx + dx * (q.r + 3 + (dx ? w / 2 : 0));
-      const cy = q.sy + dy * (q.r + 3 + h / 2);
-      const b: Box = [cx - w / 2 - cfg.pad, cy - h / 2 - cfg.pad, cx + w / 2 + cfg.pad, cy + h / 2 + cfg.pad];
-      if (!cfg.declutter || q.f === FORCED.hover || !grid.hit(b, q.n.id, isForced || tier === 1)) {
+      const b = boxAt(dx, dy, q.r + 3);
+      // a node on the canvas whose box leaves it: the mirrored side first
+      if (cfg.edgeFlip && !inside(b) && q.sx >= 0 && q.sx <= W && q.sy >= 0 && q.sy <= H) {
+        const mb = boxAt(-dx, -dy, q.r + 3);
+        if (inside(mb) && free(mb)) {
+          box = mb;
+          const mk = offsets.findIndex(([ox, oy]) => ox === -dx && oy === -dy);
+          pos = mk >= 0 ? mk : k;
+          break;
+        }
+      }
+      if (free(b)) {
         box = b;
         pos = k;
         break;
       }
+    }
+    // forced against forced: out on a ring, one to three box heights off the node (the hover label always)
+    if (!box && isForced && (cfg.leaderLines || q.f === FORCED.hover)) {
+      ring: for (let k = 1; k <= 3; k++)
+        for (const [dx, dy] of RING) {
+          const b = boxAt(dx, dy, q.r + 3 + h * k);
+          if (free(b)) {
+            box = b;
+            leader = true;
+            break ring;
+          }
+        }
+    }
+    // the hovered page is never without its label: its first slot, overlap or not
+    if (!box && q.f === FORCED.hover) {
+      const [dx, dy] = offsets[order[0] as number] as readonly [number, number];
+      box = boxAt(dx, dy, q.r + 3);
+      pos = order[0] as number;
     }
     if (!box) {
       dropped++;
       continue;
     }
     grid.add(box, q.n.id);
-    placed.push({ id: q.n.id, n: q.n, text, px, weight, tier, pos, box, forced: isForced });
+    placed.push({ id: q.n.id, n: q.n, text: lines.join(" "), lines, px, lineH, weight, tier, pos, box, forced: isForced, leader, anchor: [q.sx, q.sy] });
     if (!isForced) {
       count++;
       area += (box[2] - box[0]) * (box[3] - box[1]);

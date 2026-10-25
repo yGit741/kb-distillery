@@ -1,5 +1,5 @@
 import { sampleLinks, sampleNodes } from "./fixtures";
-import { buildGraphData, buildNeighborMap, largestComponent, sharedSourceLinks, sourcesDrawn, sourcesOf, withNeighbors } from "./graphData";
+import { buildGraphData, buildNeighborMap, edgeWeight, edgeWeights, largestComponent, sharedSourceLinks, sourcesDrawn, sourcesOf, withNeighbors } from "./graphData";
 import type { GraphModel } from "./types";
 
 const model: GraphModel = {
@@ -58,6 +58,25 @@ describe("buildGraphData", () => {
   it("does not share link objects with the model (force-graph mutates them)", () => {
     const d = buildGraphData(model, new Set(sampleNodes.map((n) => n.id)));
     expect(d.links[0]).not.toBe(sampleLinks[0]);
+  });
+});
+
+describe("edgeWeights", () => {
+  it("counts links in both directions and adds the shared-source count", () => {
+    const w = edgeWeights({
+      links: [
+        { source: "a", target: "b", kind: "wikilink" },
+        { source: "b", target: "a", kind: "related" },
+        { source: "a", target: "c", kind: "book" },
+        { source: "a", target: "d", kind: "shared", shared: 9 },
+      ],
+      conceptLinks: [{ source: "b", target: "a", shared: 3 }],
+    });
+    expect(edgeWeight(w, "a", "b")).toBe(5);
+    expect(edgeWeight(w, "b", "a")).toBe(5);
+    expect(edgeWeight(w, "c", "a")).toBe(1);
+    expect(edgeWeight(w, "a", "d")).toBe(0); // shared edges are derived, not links
+    expect(edgeWeight(w, "a", "z")).toBe(0);
   });
 });
 

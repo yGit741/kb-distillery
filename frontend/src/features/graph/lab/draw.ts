@@ -75,7 +75,7 @@ export function fitZoom(nodes: readonly { x?: number; y?: number }[], width: num
 const toScreen = (m: DOMMatrix, pr: number, x: number, y: number) => [(m.a * x + m.c * y + m.e) / pr, (m.b * x + m.d * y + m.f) / pr] as const;
 
 /** Faint hulls of each theme's core, under the nodes (graph coordinates: called with force-graph's transform). */
-export function drawHulls(ctx: CanvasRenderingContext2D, nodes: readonly SimNode[], scale: number, names: ReadonlyMap<string, string>): void {
+export function drawHulls(ctx: CanvasRenderingContext2D, nodes: readonly SimNode[], scale: number, names: ReadonlyMap<string, string>, sigma = 2): void {
   const groups = new Map<string, SimNode[]>();
   for (const n of nodes) {
     const a = n.areas[0];
@@ -85,7 +85,7 @@ export function drawHulls(ctx: CanvasRenderingContext2D, nodes: readonly SimNode
     else groups.set(a, [n]);
   }
   for (const [area, list] of groups) {
-    const hull = coreHull(list);
+    const hull = coreHull(list, 0.7, sigma);
     if (hull.length < 3) continue;
     // the hull grown by a disk of radius R (Minkowski sum): edges pushed out along their normals, every corner an arc
     const R = 30;
@@ -233,17 +233,40 @@ export function drawLabelLayer(i: LabelLayerInput): LabelLayerResult {
     const alpha = f.a * (i.dim(id) ? 0.35 : 1);
     ctx.globalAlpha = alpha;
     ctx.font = `${p.weight} ${p.px}px ${font}`;
-    if (cfg.bg === "box") {
+    // a squeezed-out forced label: a thin line from the node to the nearest point of its box
+    if (p.leader && cfg.leaderLines) {
+      ctx.strokeStyle = withAlpha(colors.muted, 0.6);
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(it.sx, it.sy);
+      ctx.lineTo(Math.max(cx - hw, Math.min(cx + hw, it.sx)), Math.max(cy - hh, Math.min(cy + hh, it.sy)));
+      ctx.stroke();
+    }
+    if (cfg.forcedPill && p.forced) {
+      ctx.beginPath();
+      ctx.roundRect(cx - hw, cy - hh, hw * 2, hh * 2, 4);
+      ctx.fillStyle = withAlpha(colors.background, 0.9);
+      ctx.fill();
+      ctx.strokeStyle = withAlpha(colors.ring, 0.5);
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    } else if (cfg.bg === "box") {
       ctx.fillStyle = withAlpha(colors.background, 0.82);
       ctx.fillRect(cx - hw, cy - hh, hw * 2, hh * 2);
-    } else if (cfg.bg === "halo") {
-      ctx.lineJoin = "round";
-      ctx.lineWidth = 3.5;
-      ctx.strokeStyle = withAlpha(colors.background, 0.9);
-      ctx.strokeText(p.text, cx, cy + 0.5);
     }
+    const { lines, lineH } = p;
+    const halo = cfg.bg === "halo" && !(cfg.forcedPill && p.forced);
     ctx.fillStyle = cfg.weightTier && p.tier === 3 && !p.forced ? colors.muted : colors.text;
-    ctx.fillText(p.text, cx, cy + 0.5);
+    lines.forEach((line, j) => {
+      const ly = cy + (j - (lines.length - 1) / 2) * lineH + 0.5;
+      if (halo) {
+        ctx.lineJoin = "round";
+        ctx.lineWidth = 3.5;
+        ctx.strokeStyle = withAlpha(colors.background, 0.9);
+        ctx.strokeText(line, cx, ly);
+      }
+      ctx.fillText(line, cx, ly);
+    });
   }
   ctx.globalAlpha = 1;
 

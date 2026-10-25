@@ -21,6 +21,7 @@ import { buildNeighborMap } from "./graphData";
 import { GraphCanvas, type CanvasHandle } from "./GraphCanvas";
 import { Inspector } from "./Inspector";
 import { computeImportance } from "./lab/importance";
+import { HoverCard } from "./lab/HoverCard";
 import { LabRail } from "./lab/LabRail";
 import { initialView } from "./defaultView";
 import { storyById } from "./lab/views";
@@ -422,6 +423,7 @@ function Loaded({
       />
       {legend}
       {ui.railOpen && <LabRail imp={imp} selected={selected} className={cn("absolute bottom-16 left-14 top-3 z-20", wide ? "w-72" : "w-[min(20rem,calc(100%-4.5rem))]")} />}
+      {!ui.railOpen && <HoverCard byId={byId} className="absolute bottom-16 left-14 z-20" />}
       {selected.length > 0 && !showDetails && !reader && (
         <div className="pointer-events-auto absolute bottom-14 left-1/2 z-10 flex -translate-x-1/2 items-center gap-1 rounded-full border bg-card px-3 py-1 text-sm shadow-[var(--shadow)]">
           <span>{selected.length === 1 ? (selected[0]?.title || selected[0]?.id) : `${selected.length} selected`}</span>
