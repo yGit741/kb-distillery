@@ -401,7 +401,7 @@ class ShareProfileTests(unittest.TestCase):
     def test_public_profile_drops_scope_pages_and_the_scopes_key(self):
         from kb.share import build as sb
         self.assertIn("scope", sb.PUBLIC_EXCLUDE_TYPES)
-        self.assertTrue(sb.PUBLIC_EXCLUDE_TYPES.isdisjoint({"conversation", "ai-chat", "person"}))   # chats and profiles are public (only email-derived pages go)
+        self.assertTrue(sb.PUBLIC_EXCLUDE_TYPES.isdisjoint({"mail", "ai-chat", "person"}))   # chats and profiles are public (only email-derived pages go)
         self.assertIn("scopes", sb.PUBLIC_DROP_KEYS)
         self.assertIn("/api/scopes", sb.SHIMMED_API)
         self.assertIn("/api/scope", sb.SHIMMED_API)

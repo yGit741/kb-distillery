@@ -1,8 +1,6 @@
 ---
-type: conversation
+type: mail
 layer: source
-medium: llm
-model: 
 area: []
 status: digested
 depth: easy
@@ -13,9 +11,9 @@ aliases: []
 
 # 2026 01 02 Rank Thread
 
-**Question asked:**
+**With:** [[]]
 
-**Where it landed:**
+**What it was about:**
 
 ## Key claims
 -

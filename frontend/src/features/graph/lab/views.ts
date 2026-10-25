@@ -29,7 +29,7 @@ export interface Story {
 
 const CONCEPTS = ["topic", "question", "idea"] as const;
 /** Map's drawn types: every page type except the collection hubs, whose course/book names duplicate the themes' labels. */
-const MAP_TYPES = ["topic", "idea", "question", "person", "paper", "part", "lecture", "article", "video", "conversation", "ai-chat", "blog-post"] as const;
+const MAP_TYPES = ["topic", "idea", "question", "person", "paper", "part", "lecture", "article", "video", "mail", "ai-chat", "blog-post"] as const;
 
 /**
  * The thesis spine: generalization of over-parameterized networks met through Boolean analysis. The themes,

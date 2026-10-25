@@ -574,8 +574,8 @@ if __name__ == "__main__":
 
 MAIL_PAGES = {
     "hub.md": "---\ntype: concept\nstatus: seed\n---\n\n# Hub\n\nSee [[mail-thread]], [[mail-list]], [[llm-chat]] and [[jane]].\n",
-    "mail-thread.md": "---\ntype: conversation\nraw: raw/emails/2026-01-01-x/thread.md\n---\n\n# Mail thread\n\nMAIL-ONLY-TOKEN [[hub]]\n",
-    "mail-list.md": "---\ntype: conversation\nraw: [raw/printed-docs/a.pdf, raw/emails/2026-01-01-x/thread.md]\n---\n\n# Mail two\n\nMAIL-LIST-TOKEN\n",
+    "mail-thread.md": "---\ntype: mail\nraw: raw/emails/2026-01-01-x/thread.md\n---\n\n# Mail thread\n\nMAIL-ONLY-TOKEN [[hub]]\n",
+    "mail-list.md": "---\ntype: mail\nraw: [raw/printed-docs/a.pdf, raw/emails/2026-01-01-x/thread.md]\n---\n\n# Mail two\n\nMAIL-LIST-TOKEN\n",
     "llm-chat.md": "---\ntype: ai-chat\nraw: raw/llm-chats/c.md\n---\n\n# LLM chat\n\nCHAT-VISIBLE-TOKEN [[hub]]\n",
     "jane.md": "---\ntype: person\n---\n\n# Jane\n\nPERSON-VISIBLE-TOKEN [[hub]]\n",
 }

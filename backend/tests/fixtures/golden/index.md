@@ -109,8 +109,8 @@ Read this first on any query.
 |------|--------|---------|
 | [[chat-fixture-ai-chat]] | to-read | _No visualizations in this chat._ |
 
-## Conversations
+## Mail
 
 | Page | Status | Summary |
 |------|--------|---------|
-| [[conversation-2024-02-01-fixture-thread-about-a-lemma]] | digested | Symmetrisation |
+| [[mail-2024-02-01-fixture-thread-about-a-lemma]] | digested | Symmetrisation |

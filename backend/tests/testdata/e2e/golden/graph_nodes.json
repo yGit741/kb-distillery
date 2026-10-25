@@ -28,13 +28,6 @@
   "type": "book"
  },
  {
-  "depth": "easy",
-  "id": "conversation-2026-01-02-rank-thread",
-  "layer": "source",
-  "status": "digested",
-  "type": "conversation"
- },
- {
   "depth": "",
   "id": "course-test-ml",
   "layer": "collection",
@@ -47,6 +40,13 @@
   "layer": "source",
   "status": "digested",
   "type": "lecture"
+ },
+ {
+  "depth": "easy",
+  "id": "mail-2026-01-02-rank-thread",
+  "layer": "source",
+  "status": "digested",
+  "type": "mail"
  },
  {
   "depth": "listed",

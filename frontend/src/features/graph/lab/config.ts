@@ -189,7 +189,7 @@ export const TYPE_RANK: Readonly<Record<string, number>> = {
   series: 0.5,
   paper: 0.4,
   part: 0.4,
-  conversation: 0.3,
+  mail: 0.3,
   "blog-post": 0.25,
   article: 0.2,
   "ai-chat": 0.2,
