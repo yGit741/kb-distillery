@@ -26,6 +26,7 @@ This file is the core every turn needs. Details live in `meta/docs/` — read th
 9. **`digest` alone → ask tier (easy / full / deep).** Bare "digest" never triggers `full-digest`.
 10. **Dedup:** always `resolve` before `scrap`. If FOUND → cite `[[slug]]`; don't re-download.
 11. Read the skill's `SKILL.md` (and `skills/README.md`, § Adding a skill, before any workflow) before running it.
+12. A feature that can't land in one PR ships dark behind a flag (`meta/flags.toml`) and merges in small PRs; release = flipping the flag (System → Flags), not deploying (`meta/docs/dev.md` § Feature flags).
 
 ## Intent router — casual requests → skills
 
