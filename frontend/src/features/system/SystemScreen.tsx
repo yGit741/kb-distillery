@@ -25,6 +25,8 @@ function StatusStrip({ items, onOpen }: { items: Tile[]; onOpen: (tab: SystemTab
         <button
           key={t.id}
           type="button"
+          data-testid={`tile-${t.id}`}
+          data-tone={t.tone}
           onClick={() => onOpen(t.tab)}
           className="flex min-w-0 flex-col gap-0.5 rounded-xl border bg-card p-3 text-left shadow-[var(--shadow)] hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
         >
@@ -32,7 +34,7 @@ function StatusStrip({ items, onOpen }: { items: Tile[]; onOpen: (tab: SystemTab
             <span aria-hidden className={cn("size-2 rounded-full", TONE_DOT[t.tone])} />
             {t.label}
           </span>
-          <span className={cn("text-lg font-semibold tabular-nums", TONE_TEXT[t.tone])}>{t.value}</span>
+          <span data-testid={`tile-${t.id}-value`} className={cn("text-lg font-semibold tabular-nums", TONE_TEXT[t.tone])}>{t.value}</span>
           <span className="truncate text-xs text-muted-foreground" title={t.hint}>
             {t.hint || " "}
           </span>
