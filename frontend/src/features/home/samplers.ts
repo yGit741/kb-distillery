@@ -179,8 +179,9 @@ export function sampleAll(v: Vault, seeds: Readonly<Partial<Record<SampleKind, n
 }
 
 /** `/graph` search params that open a sample in the full graph, centred on `focus`. */
-export function graphSearch(s: Pick<Sample, "nodes" | "focus">, focus = s.focus): Record<string, string> {
-  return { pages: s.nodes.join(","), select: focus, focus };
+export function graphSearch(s: Pick<Sample, "nodes" | "focus">, focus = s.focus, ring: string | null = null): Record<string, string> {
+  const select = [focus, ...(ring && ring !== focus && s.nodes.includes(ring) ? [ring] : [])];
+  return { pages: s.nodes.join(","), select: select.join(","), focus };
 }
 
 /** Knowledge-node cards: one page shown as text (facts, opening, neighbours), not as a graph. */

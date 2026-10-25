@@ -79,8 +79,8 @@ export function Glossary() {
       <h2 id="home-glossary" className="mb-2 mt-4 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
         How a page gets here
       </h2>
-      <div className="grid grid-cols-1 gap-2 [--gloss-h:160px] md:grid-cols-[1.25fr_auto_1fr_auto_1fr]">
-        <div className="min-w-0 rounded-lg border bg-muted/40 px-3 py-2.5 text-sm md:h-[var(--gloss-h)] md:overflow-hidden" data-gloss>
+      <div className="grid grid-cols-1 gap-2 md:grid-cols-[1.25fr_auto_1fr_auto_1fr]">
+        <div className="min-w-0 rounded-lg border bg-muted/40 px-3 py-2.5 text-sm" data-gloss>
           <h3 className="flex items-center gap-2 text-[15px] font-semibold">
             <Dot color={RAW_COLOR} />
             Raw
@@ -96,7 +96,7 @@ export function Glossary() {
           </ul>
         </div>
         <StageArrow label="catalog" />
-        <div className="min-w-0 rounded-lg border bg-muted/40 px-3 py-2.5 text-sm md:h-[var(--gloss-h)] md:overflow-hidden" data-gloss>
+        <div className="min-w-0 rounded-lg border bg-muted/40 px-3 py-2.5 text-sm" data-gloss>
           <h3 className="flex items-center gap-2 text-[15px] font-semibold">
             <Dot color={SOURCE_COLOR} />
             Source
@@ -105,7 +105,7 @@ export function Glossary() {
           <p className="text-center font-semibold">Paper · Lecture · Article · Blog post · Chat</p>
         </div>
         <StageArrow label="digest" />
-        <div className="min-w-0 rounded-lg border bg-muted/40 px-3 py-2.5 text-sm md:h-[var(--gloss-h)] md:overflow-hidden" data-gloss>
+        <div className="min-w-0 rounded-lg border bg-muted/40 px-3 py-2.5 text-sm" data-gloss>
           <h3 className="flex items-center gap-2 text-[15px] font-semibold">
             <ConceptDots />
             Concept
@@ -118,21 +118,24 @@ export function Glossary() {
                   <Dot color={typeColor(c.type)} />
                   {c.label}
                 </dt>
-                <dd className="truncate text-[13px] text-muted-foreground">{c.text}</dd>
+                <dd className="text-[13px] leading-snug text-muted-foreground">{c.text}</dd>
               </div>
             ))}
           </dl>
         </div>
       </div>
-      <p data-testid="home-depth" className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] text-muted-foreground lg:flex-nowrap lg:gap-x-2.5 lg:whitespace-nowrap lg:text-[11.5px]">
+      {/* one line when it fits; otherwise the label, then the four items as a tidy 2×2 grid (never a lone orphan) */}
+      <div data-testid="home-depth" className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] text-muted-foreground xl:flex-nowrap xl:whitespace-nowrap xl:text-[11.5px]">
         <span className="text-[10.5px] uppercase tracking-wider">Depth · how closely a source was read</span>
-        {DEPTHS.map((d) => (
-          <span key={d.depth} className="inline-flex items-center gap-1">
-            <DepthSwatch depth={d.depth} />
-            <b className="font-semibold text-foreground">{d.label}</b> {d.text}
-          </span>
-        ))}
-      </p>
+        <span className="grid grid-cols-1 gap-x-4 gap-y-0.5 sm:grid-cols-2 xl:flex xl:gap-x-2.5">
+          {DEPTHS.map((d) => (
+            <span key={d.depth} className="inline-flex items-center gap-1">
+              <DepthSwatch depth={d.depth} />
+              <b className="font-semibold text-foreground">{d.label}</b> {d.text}
+            </span>
+          ))}
+        </span>
+      </div>
     </section>
   );
 }

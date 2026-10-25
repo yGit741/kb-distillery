@@ -117,10 +117,19 @@ describe("Home screen", () => {
     expect(await screen.findByText("PDF · 32 pages · 1.4 MB")).toBeInTheDocument();
     expect(screen.getByText("added 2026-10-22")).toBeInTheDocument();
     expect(getRawCard).toHaveBeenCalledWith(expect.stringMatching(/^p\d$/), expect.stringMatching(/^raw\/printed-docs\/p\d\.pdf$/));
-    const full = screen.getByRole("link", { name: /full graph/i });
+    const full = screen.getByRole("link", { name: "Open in Full Graph" });
     expect(full.getAttribute("href")).toMatch(/^\/app\/graph\?pages=/);
     await userEvent.click(full);
     expect(host.openGraph).toHaveBeenCalledWith(expect.objectContaining({ focus: "hub" }));
+    // the link carries the drawn ego graph: its pages, the concept + the ringed source selected
+    const sent = (host.openGraph as ReturnType<typeof vi.fn>).mock.calls.at(-1)![0] as { pages: string; select: string };
+    const pages = sent.pages.split(",");
+    expect(pages).toContain("hub");
+    const [first, ring] = sent.select.split(",");
+    expect(first).toBe("hub");
+    expect(ring).toMatch(/^p\d$/);
+    expect(pages).toContain(ring);
+    expect(full.getAttribute("href")).toContain(`select=${encodeURIComponent(sent.select)}`);
   });
 
   it("the combobox lists concepts only and picks with the keyboard", async () => {
@@ -132,6 +141,37 @@ describe("Home screen", () => {
     expect(screen.getAllByRole("option").map((o) => o.textContent)).toEqual([expect.stringContaining("Why?")]);
     await userEvent.keyboard("{Enter}");
     expect(setConcept).toHaveBeenCalledWith("q-x");
+  });
+
+  it("puts Full Graph at the right end of the Pick a Concept bar, after the combobox", async () => {
+    wrap(mockDataSource({ getGraph: async () => snapshot, getPage, getRawCard: async () => rawCard }), <HomeScreen host={host} concept="hub" />);
+    const box = await screen.findByRole("combobox", { name: "Pick a concept" });
+    const full = screen.getByRole("link", { name: /full graph/i });
+    const bar = full.parentElement!;
+    expect(bar.contains(box)).toBe(true);
+    expect(bar.lastElementChild).toBe(full);
+    expect(screen.getByTestId("home-ego").contains(full)).toBe(false);
+    expect(box.closest("label")!.querySelector("svg")).toBeNull(); // no graph icon inside the combobox
+  });
+
+  it("a chip in Concepts it feeds picks that concept instead of opening the reader", async () => {
+    const setConcept = vi.fn();
+    const getPage2 = vi.fn(getPage);
+    wrap(mockDataSource({ getGraph: async () => snapshot, getPage: getPage2, getRawCard: async () => rawCard }), <HomeScreen host={{ ...host, setConcept }} concept="q-x" />);
+    await userEvent.click(await screen.findByRole("button", { name: "Pick idea The hub" }));
+    expect(setConcept).toHaveBeenCalledWith("hub");
+    expect(getPage2).not.toHaveBeenCalled();
+  });
+
+  it("tells apart two fed concepts that share a title by their type", async () => {
+    const twin = node("t-hub", { title: "The hub", type: "topic" });
+    const snap = { ...snapshot, nodes: [...snapshot.nodes, twin], links: [...snapshot.links, { source: "p0", target: "t-hub", kind: "wikilink" }, { source: "p1", target: "t-hub", kind: "wikilink" }] } as unknown as GraphSnapshot;
+    wrap(mockDataSource({ getGraph: async () => snap, getPage, getRawCard: async () => rawCard }), <HomeScreen host={host} concept="q-x" />);
+    const idea = await screen.findByRole("button", { name: "Pick idea The hub" });
+    const topic = screen.getByRole("button", { name: "Pick topic The hub" });
+    expect(idea).toHaveAttribute("title", "idea: The hub");
+    expect(topic).toHaveAttribute("title", "topic: The hub");
+    expect(within(topic).getByText("topic")).toBeInTheDocument();
   });
 
   it("the shuffle picks a concept and puts it in the URL", async () => {
