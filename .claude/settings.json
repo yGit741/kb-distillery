@@ -43,6 +43,19 @@
     "allow": [
       "Bash(pixi run ship -- merge)",
       "Bash(pixi run ship -- merge:*)"
+    ],
+    "deny": [
+      "Bash(pixi run share -- deploy*)",
+      "Bash(pixi run share deploy*)",
+      "Bash(pixi run share -- rollback*)",
+      "Bash(pixi run share rollback*)",
+      "Bash(*KB_SHARE_DIRECT*)",
+      "Bash(*wrangler deploy*)",
+      "Bash(*wrangler versions deploy*)",
+      "Bash(*wrangler versions upload*)",
+      "Bash(*wrangler rollback*)",
+      "Bash(*kb.share.owner run*)",
+      "Bash(*kb.share.owner once*)"
     ]
   }
 }

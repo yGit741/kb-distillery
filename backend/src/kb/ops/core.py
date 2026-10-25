@@ -346,8 +346,15 @@ def commit_op(op, target, summary=None, paths=None, lint=True, trailers=None, ro
 
 
 def share_autodeploy(reason, root=ROOT, foreground=False):
-    """Kick the share deploy (kb.share.autodeploy); detached by default, never raises."""
+    """Nudge the deploy owner (kb.share.owner: touch `.cache/share/wake`); never raises.
+
+    `KB_SHARE_DIRECT=1` (the user only) keeps the old path: `share deploy-main` from here, detached
+    by default, in the foreground for the nightly sync."""
     try:
+        if os.environ.get("KB_SHARE_DIRECT") != "1":
+            from kb.share import owner
+            owner.nudge(reason, root)
+            return
         from kb.share import autodeploy
         if foreground:
             autodeploy.run_foreground(reason, root)

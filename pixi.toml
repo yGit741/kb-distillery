@@ -66,10 +66,13 @@ test = "pytest backend/tests"
 web-install = "npm ci --prefix frontend"
 web-dev = "npm run dev --prefix frontend"
 web-build = "npm run build --prefix frontend"
-web-check = { cmd = "npm run typecheck --prefix frontend && npm run test --prefix frontend && npm run build:check --prefix frontend && bash tools/check-untracked-dist.sh" }
+flags-gen = "python -m kb.flags.codegen"
+flags-check = "python -m kb.flags.codegen --check"
+web-check = { cmd = "python -m kb.flags.codegen --check && npm run typecheck --prefix frontend && npm run test --prefix frontend && npm run build:check --prefix frontend && bash tools/check-untracked-dist.sh" }
 test-worker = "node --test share/*.test.mjs"
 test-e2e = "node --test backend/src/kb/dashboard/e2e/*.test.mjs"
 install-sync = "bash tools/launchd/install.sh"
+install-deploy-owner = "bash tools/launchd/install-deploy-owner.sh"
 
 [pypi-dependencies]
 kb = { path = "backend", editable = true }
