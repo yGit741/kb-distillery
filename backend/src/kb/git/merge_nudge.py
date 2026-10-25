@@ -39,7 +39,7 @@ def open_pr(cwd, branch):
         from kb.git import app_token
         cp = app_token.run_gh(["pr", "view", branch, "--json", "number,title,url,state,labels"], cwd, timeout=GH_TIMEOUT)
         info = json.loads(cp.stdout) if cp.returncode == 0 and cp.stdout.strip() else None
-    except (OSError, ValueError, subprocess.TimeoutExpired):
+    except Exception:  # a Stop hook must never crash the turn
         return None
     if not info or info.get("state") != "OPEN":
         return None
