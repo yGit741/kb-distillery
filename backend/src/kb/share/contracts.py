@@ -47,6 +47,8 @@ ACCOUNT_SUBDOMAIN = "yonatan-magen-thesis"
 SNAPSHOT_PREFIX = "snapshot-"
 DEPLOY_MESSAGE_PREFIX = "kb-share"
 WRANGLER_VERSION = "4.151.3"
+# Last known-good pin, kept for a quick rollback of the CLI itself (`versions upload/deploy` exist there too).
+WRANGLER_PREVIOUS = "4.149.0"
 
 LOG_PATH = Path.home() / "Library" / "Logs" / "thesis-kb-share.log"
 CACHE_DIR = REPO / ".cache" / "share"
