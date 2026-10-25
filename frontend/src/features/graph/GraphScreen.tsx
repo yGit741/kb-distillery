@@ -31,6 +31,7 @@ import { TOOLS, useVisibleTools, type GraphToolContext } from "./tools";
 import { flagOn, useExperiments } from "./tools/experiments";
 import { toModel, type GNode } from "./types";
 import { LAYER_TYPES, type Layer } from "@/api/model";
+import { installTours } from "@/features/tour/tours";
 
 /** How the screen reaches the rest of the app (the router lives in index.tsx; tests pass plain functions). */
 export interface GraphHost extends ToolHost {
@@ -196,6 +197,9 @@ function Loaded({
     useKb.getState().clearSelection();
     host.clearParams(["search", "pages", "scope"]);
   }, [host]);
+
+  // ---- guided tours: ?tour=<name>, or kbTour.start("<name>") from the console
+  useEffect(installTours, []);
 
   // ---- deep links: ?focus ?select ?search ?pages ?scope ?layer, applied once per distinct value
   const applied = useRef("");

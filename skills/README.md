@@ -42,7 +42,7 @@ Read `skills/<skill>/SKILL.md` before running a workflow.
 | Skill | Purpose |
 |-------|---------|
 | [export-kb](export-kb/SKILL.md) | Zip wiki + think for external LLM sharing (0 LLM) |
-| [guided-tour](guided-tour/SKILL.md) | Spotlight Next / Back tour over an HTML mockup, to pitch a UI before building it |
+| [guided-tour](guided-tour/SKILL.md) | Spotlight guided tours over the real app (`?tour=<name>`), fixed Back / Next dock |
 | [scrap-data](scrap-data/SKILL.md) | Save bytes to `raw/inbox/` (0 LLM) |
 | [ingest-to-catalog](ingest-to-catalog/SKILL.md) | Route inbox → `raw/<format>/` + corpus `collection` (+ `paper-` Source page at depth listed) (0 LLM) |
 | [easy-digest](easy-digest/SKILL.md) | Abstract/metadata skim → depth easy (light, Haiku) |
