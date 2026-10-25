@@ -32,13 +32,41 @@ def config_path():
     return os.environ.get("KB_APP_CONFIG") or os.path.join(os.path.expanduser("~"), ".config", "kb-agents", "app.toml")
 
 
+def _parse_toml(text):
+    """tomllib (3.11+), else tomli, else a flat `key = value` reader — Stop hooks run on the system python3 (3.9)."""
+    try:
+        import tomllib
+    except ImportError:
+        try:
+            import tomli as tomllib
+        except ImportError:
+            tomllib = None
+    if tomllib:
+        return tomllib.loads(text)
+    cfg = {}
+    for line in text.splitlines():
+        line = line.strip()
+        if not line or line.startswith(("#", "[")) or "=" not in line:
+            continue
+        key, val = (x.strip() for x in line.split("=", 1))
+        if val[:1] in ("'", '"'):
+            end = val.find(val[0], 1)
+            cfg[key] = val[1:end] if end > 0 else val[1:]
+            continue
+        val = val.split("#", 1)[0].strip()
+        try:
+            cfg[key] = int(val)
+        except ValueError:
+            cfg[key] = val
+    return cfg
+
+
 def load_config():
     """The App config dict, or None when the file is missing/unreadable/incomplete."""
     path = config_path()
     try:
-        import tomllib
-        with open(path, "rb") as f:
-            cfg = tomllib.load(f)
+        with open(path, encoding="utf-8") as f:
+            cfg = _parse_toml(f.read())
     except (OSError, ValueError):
         return None
     if not cfg.get("app_id") or not cfg.get("installation_id"):
