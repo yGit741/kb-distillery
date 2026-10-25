@@ -100,6 +100,9 @@ describe("home samplers", () => {
   it("links to the full graph with the subset selected and focused", () => {
     expect(graphSearch({ nodes: ["a", "b"], focus: "a" })).toEqual({ pages: "a,b", select: "a", focus: "a" });
     expect(graphSearch({ nodes: ["a", "b"], focus: "a" }, "b")).toEqual({ pages: "a,b", select: "b", focus: "b" });
+    // the drawn source is selected next to the concept; one outside the sample is ignored
+    expect(graphSearch({ nodes: ["a", "b", "s"], focus: "a" }, "a", "s")).toEqual({ pages: "a,b,s", select: "a,s", focus: "a" });
+    expect(graphSearch({ nodes: ["a", "b"], focus: "a" }, "a", "zz")).toEqual({ pages: "a,b", select: "a", focus: "a" });
   });
 
   it("sizes nodes R_MIN-R_MAX screen px by degree inside the sample", () => {
