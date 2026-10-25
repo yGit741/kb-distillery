@@ -49,7 +49,6 @@ function ConceptCombo({ nodes, value, onPick }: { nodes: readonly GNode[]; value
   return (
     <div className="relative min-w-0 flex-1">
       <label className="flex items-center gap-2 rounded-full border bg-card px-3 py-1 focus-within:ring-2 focus-within:ring-ring">
-        <Network aria-hidden className="size-3.5 shrink-0 text-muted-foreground" />
         <input
           type="text"
           role="combobox"
@@ -110,7 +109,7 @@ export function drawFor(vault: Vault, concept: string, source: string, sample: {
 
 /**
  * The inner card, stacked: Pick a Concept (shuffle) + combobox; the concept's ego graph at a fixed height (Full
- * Graph inside it); the pipeline of one source it relies on. Clicking a source node swaps the pipeline to it (and
+ * Graph at the bar's right end); the pipeline of one source it relies on. Clicking a source node swaps the pipeline to it (and
  * rings it), clicking a topic, idea or question picks it, anything else opens the reader. `seed` rerolls the
  * source; the concept lives in the URL (`?concept=`).
  */
@@ -162,21 +161,21 @@ export function ConceptExplorer({
           <span className="text-sm font-semibold">Pick a Concept</span>
         </button>
         <ConceptCombo nodes={nodes} value={node} onPick={onPick} />
+        <a
+          href={host.graphHref(search)}
+          onClick={(e) => {
+            if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
+            e.preventDefault();
+            host.openGraph(search);
+          }}
+          className="inline-flex shrink-0 items-center gap-1.5 self-stretch rounded-full px-2 text-sm text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <Network aria-hidden className="size-3.5" /> Full Graph
+        </a>
       </div>
       <div className="mt-2.5 flex flex-col gap-3">
         <div className="relative min-w-0 rounded-lg border bg-card" style={{ height: EGO_HEIGHT }} data-testid="home-ego">
           <SampleGraph fill sample={sample} byId={vault.byId} imp={vault.imp} ring={draw?.id ?? null} onPick={pickNode} />
-          <a
-            href={host.graphHref(search)}
-            onClick={(e) => {
-              if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
-              e.preventDefault();
-              host.openGraph(search);
-            }}
-            className="absolute bottom-2 right-2 z-10 inline-flex items-center gap-1 rounded-full border bg-card/90 px-2 py-0.5 text-[11.5px] text-muted-foreground hover:border-primary hover:text-foreground"
-          >
-            <Network aria-hidden className="size-3.5" /> Full Graph
-          </a>
         </div>
         <PipelineStrip vault={vault} concept={concept} draw={draw} onPick={onPick} onRead={setReader} />
       </div>

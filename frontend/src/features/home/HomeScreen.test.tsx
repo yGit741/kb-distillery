@@ -134,6 +134,37 @@ describe("Home screen", () => {
     expect(setConcept).toHaveBeenCalledWith("q-x");
   });
 
+  it("puts Full Graph at the right end of the Pick a Concept bar, after the combobox", async () => {
+    wrap(mockDataSource({ getGraph: async () => snapshot, getPage, getRawCard: async () => rawCard }), <HomeScreen host={host} concept="hub" />);
+    const box = await screen.findByRole("combobox", { name: "Pick a concept" });
+    const full = screen.getByRole("link", { name: /full graph/i });
+    const bar = full.parentElement!;
+    expect(bar.contains(box)).toBe(true);
+    expect(bar.lastElementChild).toBe(full);
+    expect(screen.getByTestId("home-ego").contains(full)).toBe(false);
+    expect(box.closest("label")!.querySelector("svg")).toBeNull(); // no graph icon inside the combobox
+  });
+
+  it("a chip in Concepts it feeds picks that concept instead of opening the reader", async () => {
+    const setConcept = vi.fn();
+    const getPage2 = vi.fn(getPage);
+    wrap(mockDataSource({ getGraph: async () => snapshot, getPage: getPage2, getRawCard: async () => rawCard }), <HomeScreen host={{ ...host, setConcept }} concept="q-x" />);
+    await userEvent.click(await screen.findByRole("button", { name: "Pick idea The hub" }));
+    expect(setConcept).toHaveBeenCalledWith("hub");
+    expect(getPage2).not.toHaveBeenCalled();
+  });
+
+  it("tells apart two fed concepts that share a title by their type", async () => {
+    const twin = node("t-hub", { title: "The hub", type: "topic" });
+    const snap = { ...snapshot, nodes: [...snapshot.nodes, twin], links: [...snapshot.links, { source: "p0", target: "t-hub", kind: "wikilink" }, { source: "p1", target: "t-hub", kind: "wikilink" }] } as unknown as GraphSnapshot;
+    wrap(mockDataSource({ getGraph: async () => snap, getPage, getRawCard: async () => rawCard }), <HomeScreen host={host} concept="q-x" />);
+    const idea = await screen.findByRole("button", { name: "Pick idea The hub" });
+    const topic = screen.getByRole("button", { name: "Pick topic The hub" });
+    expect(idea).toHaveAttribute("title", "idea: The hub");
+    expect(topic).toHaveAttribute("title", "topic: The hub");
+    expect(within(topic).getByText("topic")).toBeInTheDocument();
+  });
+
   it("the shuffle picks a concept and puts it in the URL", async () => {
     const setConcept = vi.fn();
     wrap(mockDataSource({ getGraph: async () => snapshot, getPage, getRawCard: async () => rawCard }), <HomeScreen host={{ ...host, setConcept }} />);

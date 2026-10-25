@@ -18,7 +18,8 @@ export default function Home() {
       graphHref: (search) => `${base}/graph?${new URLSearchParams({ ...withDefaultView(search), from: "home" }).toString()}`,
       openPage: (slug) => void navigate({ to: `/pages/${encodeURIComponent(slug)}` as "/" }),
       pageHref: (slug) => `${base}/pages/${encodeURIComponent(slug)}`,
-      setConcept: (slug) => void navigate({ to: "/", search: { concept: slug } as never }),
+      // replace + resetScroll:false: picking a concept must keep the page where it is
+      setConcept: (slug) => void navigate({ to: "/", search: { concept: slug } as never, replace: true, resetScroll: false }),
     }),
     [navigate],
   );
