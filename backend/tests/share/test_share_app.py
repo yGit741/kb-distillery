@@ -116,7 +116,7 @@ class AppLayoutTests(_AppFixture):
         """The privacy cuts are apply_profile's: same graph / index / pages as the legacy build, nothing more."""
         app = kb_data(self.html(self.public))
         legacy = kb_data((self.legacy_public.dir / "index.html").read_text(encoding="utf-8"))
-        self.assertEqual(set(app), {"graph", "index", "pages", "meta", "home"})
+        self.assertEqual(set(app), {"graph", "index", "pages", "meta", "home", "rawCards"})   # rawCards: Home pipeline (raw_card.public_card)
         for key in ("graph", "index", "pages"):
             self.assertEqual(app[key], legacy[key], key)
 

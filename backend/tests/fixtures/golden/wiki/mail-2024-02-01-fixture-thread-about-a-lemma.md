@@ -1,5 +1,5 @@
 ---
-type: conversation
+type: mail
 layer: source
 authors: [Fixture Author]
 year: 2024

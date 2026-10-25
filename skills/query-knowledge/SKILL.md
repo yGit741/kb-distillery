@@ -34,7 +34,7 @@ python3 -m kb.lint.lint --health                 # optional: orphans, broken lin
 1. **Read `index.md`** — skim the relevant section (topics, questions, sources, ideas).
 2. **Run `candidates`** — supplements index with full-text term hits.
 3. **Pick 3–8 slugs** — prefer topic pages (`theme-*`) + `q-*` for thesis questions; Source pages
-   (`paper-`, `part-`, `lecture-`, `article-`, `conversation-`) for citations.
+   (`paper-`, `part-`, `lecture-`, `article-`, `mail-`, `chat-`) for citations.
    Old slugs (pre-`theme-` topic slugs, unprefixed papers) live in `aliases:` — `python3 -m kb.ingest resolve <old-slug>`.
 
 Never claim “nothing in the vault” until both index and `candidates` were checked.

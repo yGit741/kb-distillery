@@ -194,9 +194,11 @@ function Loaded({
     [],
   );
   const showPicked = useCallback(
-    (ids: string[]) => {
+    (ids: string[], exact = false) => {
       const next = makeView("picked", "picked", ids, byId, neighbors);
-      setView(extendView(useGraphUi.getState().view, next), "No such pages in the graph.");
+      // a Home subgraph is shown as drawn: exactly its pages (no extra hop), replacing any earlier pick
+      if (exact && next) setView({ ...next, shown: new Set(next.hits) }, "No such pages in the graph.");
+      else setView(extendView(useGraphUi.getState().view, next), "No such pages in the graph.");
     },
     [byId, neighbors, setView],
   );
@@ -269,7 +271,7 @@ function Loaded({
       useGraphUi.setState({ shownTypes: new Set<string>(LAYER_TYPES[search.layer as Layer]) });
     }
     if (search.search) void showMentions(search.search);
-    else if (search.pages) showPicked(parsePages(search.pages));
+    else if (search.pages) showPicked(parsePages(search.pages), search.from === "home");
     else if (search.scope) {
       const slug = search.scope;
       void ds
@@ -278,7 +280,8 @@ function Loaded({
         .catch((e) => setNote(`Could not load scope ${slug}: ${e instanceof Error ? e.message : String(e)}`));
     }
     if (search.select) useKb.getState().setSelection(parsePages(search.select).filter((id) => byId.has(id)));
-    if (search.focus && byId.has(search.focus)) useGraphUi.getState().requestFocus(search.focus);
+    // a Home subgraph is fitted whole by the canvas (refit on a new view); zooming onto the focus would crop it
+    if (search.focus && byId.has(search.focus) && !(search.from === "home" && search.pages)) useGraphUi.getState().requestFocus(search.focus);
   }, [search, ds, dsKind, byId, neighbors, showMentions, showPicked, setView, applyView]);
 
   // ---- actions shared by the menu, the inspector, the finder and the keyboard

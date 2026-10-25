@@ -13,7 +13,7 @@ description: Catalog a raw/inbox/mail-.../ thread bundle to raw/emails/ as a cor
 
 ## Do NOT
 
-- Digest — use easy/full/deep digest skills after catalog (a digested thread is a `conversation-` page)
+- Digest — use easy/full/deep digest skills after catalog (a digested thread is a `mail-` page)
 - Hand-edit `raw/emails/` — immutable once cataloged; only the agent `parsed.md` sidecar may be added
 - Create a wiki stub — the thread stays a corpus row until it is worth digesting
 

@@ -78,7 +78,7 @@ flowchart LR
 |------|----------------|
 | **Add** (scrap) | URL or file → `raw/inbox/` (dedup via `resolve` first) |
 | **Catalog** | Inbox → `raw/<format>/` (flat; never moves again) + corpus row with its `collection` (course/series/book collection or researcher); papers also get a `paper-` Source page at `depth: listed` |
-| **Digest** | Agent deepens the Source page in place (`depth`: `easy` skim · `full` full note · `deep` thesis-critical) — a paper, a book part, or a course/series row (`--row N` → `lecture-`/`article-`/`conversation-`/`paper-`) |
+| **Digest** | Agent deepens the Source page in place (`depth`: `easy` skim · `full` full note · `deep` thesis-critical) — a paper, a book part, or a course/series row (`--row N` → `lecture-`/`article-`/`mail-`/`paper-`) |
 | **Lint** | Regenerates `index.md`, `meta/corpus.tsv`; blocks illegal writes |
 
 `meta/corpus.tsv` tracks every raw file — nothing is silently forgotten. Re-annotating a cited PDF (disposition `source`) on the tablet re-queues it automatically.

@@ -129,7 +129,7 @@ export default function PagesScreen() {
 
   const surprise = useCallback(() => {
     if (!g) return;
-    const pool = [...g.byId.values()].filter((p) => p.words > 150 && p.type !== "ai-chat" && p.type !== "conversation");
+    const pool = [...g.byId.values()].filter((p) => p.words > 150 && p.type !== "ai-chat" && p.type !== "mail");
     const p = pool[Math.floor(Math.random() * pool.length)];
     if (p) void navigate({ to: pageTo(p.id) });
   }, [g, navigate]);

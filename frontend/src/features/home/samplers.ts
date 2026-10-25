@@ -1,5 +1,5 @@
 import { buildNeighborMap, type NeighborMap } from "@/features/graph/graphData";
-import { betweenness, computeImportance, visibleAdjacency } from "@/features/graph/lab/importance";
+import { betweenness, computeImportance, visibleAdjacency, type Importance } from "@/features/graph/lab/importance";
 import { DEFAULT_LAB } from "@/features/graph/lab/config";
 import type { GLink, GNode } from "@/features/graph/types";
 
@@ -36,6 +36,10 @@ export interface Vault {
   score: ReadonlyMap<string, number>;
   between: ReadonlyMap<string, number>;
   links: readonly Pick<GLink, "source" | "target">[];
+  /** The importance behind `score`, for the label planner. */
+  imp: Importance;
+  /** Every link, listed stubs included: the source draw may fall back to a listed source. */
+  allNeighbors: NeighborMap;
 }
 
 const isStub = (n: GNode) => n.layer === "source" && (!n.depth || n.depth === "listed");
@@ -48,7 +52,7 @@ export function indexVault(nodes: readonly GNode[], links: readonly Pick<GLink, 
   const neighbors = buildNeighborMap(kept);
   const imp = computeImportance({ visible: eligible, byId, neighbors, cfg: DEFAULT_LAB });
   const between = betweenness(visibleAdjacency(eligible, neighbors));
-  return { byId, neighbors, eligible, score: imp.score, between, links: kept };
+  return { byId, neighbors, eligible, score: imp.score, between, links: kept, imp, allNeighbors: buildNeighborMap(links) };
 }
 
 /** mulberry32: small, seedable, good enough to pick cards. */
@@ -175,8 +179,9 @@ export function sampleAll(v: Vault, seeds: Readonly<Partial<Record<SampleKind, n
 }
 
 /** `/graph` search params that open a sample in the full graph, centred on `focus`. */
-export function graphSearch(s: Pick<Sample, "nodes" | "focus">, focus = s.focus): Record<string, string> {
-  return { pages: s.nodes.join(","), select: focus, focus };
+export function graphSearch(s: Pick<Sample, "nodes" | "focus">, focus = s.focus, ring: string | null = null): Record<string, string> {
+  const select = [focus, ...(ring && ring !== focus && s.nodes.includes(ring) ? [ring] : [])];
+  return { pages: s.nodes.join(","), select: select.join(","), focus };
 }
 
 /** Knowledge-node cards: one page shown as text (facts, opening, neighbours), not as a graph. */
@@ -251,4 +256,82 @@ export function excerpt(markdown: string, max = EXCERPT_CHARS, title = ""): stri
     len += p.length;
   }
   return out.join("\n\n");
+}
+
+// ---- the intro card: pick a concept, draw one source it relies on
+
+/** Concept types the intro card picks from. */
+export const PICK_TYPES: ReadonlySet<string> = new Set(["topic", "idea", "question"]);
+
+export const isPickable = (n: GNode | undefined): n is GNode => !!n && PICK_TYPES.has(n.type);
+
+/** Source tiers, best read first; `public` keeps only full/deep (the public snapshot's sources). */
+const TIERS: readonly (readonly string[])[] = [["full", "deep"], ["easy"], ["listed", ""]];
+
+const rawOf = (n: GNode): string => String((n.properties as Record<string, unknown> | undefined)?.raw ?? "");
+const isPdf = (n: GNode) => /\.pdf\b/i.test(rawOf(n));
+
+export interface SourceDraw {
+  id: string;
+  /** The idea the source reaches the concept through (a 2-hop draw), else null. */
+  via: string | null;
+}
+
+/** One pick from the best tier that has any: PDFs first inside a tier. */
+function fromTiers(v: Vault, ids: readonly string[], rand: () => number, publicOnly: boolean): string | undefined {
+  const sources = [...new Set(ids)].sort().filter((id) => v.byId.get(id)?.layer === "source");
+  for (const tier of publicOnly ? TIERS.slice(0, 1) : TIERS) {
+    const inTier = sources.filter((id) => tier.includes(v.byId.get(id)?.depth ?? ""));
+    if (!inTier.length) continue;
+    const pdfs = inTier.filter((id) => isPdf(v.byId.get(id)!));
+    return pick(pdfs.length ? pdfs : inTier, rand);
+  }
+  return undefined;
+}
+
+/**
+ * A source the concept relies on: a direct neighbour (full/deep, then easy, then listed; PDFs first), else one
+ * two hops away through an idea, else null ("no source yet").
+ */
+export function pickSource(v: Vault, concept: string, rand: () => number, publicOnly = false): SourceDraw | null {
+  const near = v.allNeighbors.get(concept) ?? [];
+  const direct = fromTiers(v, near, rand, publicOnly);
+  if (direct) return { id: direct, via: null };
+  const ideas = [...new Set(near)].sort().filter((id) => v.byId.get(id)?.type === "idea");
+  const viaOf = new Map<string, string>();
+  for (const idea of ideas) for (const s of v.allNeighbors.get(idea) ?? []) if (!viaOf.has(s) && s !== concept) viaOf.set(s, idea);
+  const far = fromTiers(v, [...viaOf.keys()], rand, publicOnly);
+  return far ? { id: far, via: viaOf.get(far) ?? null } : null;
+}
+
+/** Concepts a source feeds: its concept neighbours, the picked one first, then by score. */
+export function conceptsFed(v: Vault, source: string, picked: string): string[] {
+  const out = [...new Set(v.allNeighbors.get(source) ?? [])].filter((id) => isPickable(v.byId.get(id)));
+  out.sort((a, b) => (a === picked ? -1 : b === picked ? 1 : 0) || (v.score.get(b) ?? 0) - (v.score.get(a) ?? 0) || a.localeCompare(b));
+  return out;
+}
+
+/** Concepts the shuffle may land on (with `keep`, e.g. the public predicate), weighted to well-linked pages. */
+export function drawPickable(v: Vault, rand: () => number, keep: (n: GNode) => boolean = () => true): string | undefined {
+  const pool = connected(v).filter((id) => {
+    const n = v.byId.get(id);
+    return isPickable(n) && keep(n);
+  });
+  return weightedPick(pool, (i) => v.score.get(i) ?? 0, rand);
+}
+
+/** The ego graph of the intro card: the concept, its neighbourhood, and the drawn source (and its idea) kept in. */
+export function egoSample(v: Vault, concept: string, draw: SourceDraw | null): Sample {
+  const extra = draw ? [draw.id, ...(draw.via ? [draw.via] : [])] : [];
+  const { nodes } = neighbourhood(v, concept, []);
+  const keep = [...new Set([concept, ...extra, ...nodes])].slice(0, MAX_NODES);
+  const set = new Set(keep);
+  const links = linksAmong(v, set, concept);
+  // the drawn source may be a listed stub (not in v.links): join it by hand
+  if (draw) {
+    const from = draw.via ?? concept;
+    if (!links.some(([a, b]) => (a === draw.id && b === from) || (b === draw.id && a === from))) links.push([from, draw.id]);
+    if (draw.via && !links.some(([a, b]) => (a === draw.via && b === concept) || (b === draw.via && a === concept))) links.push([concept, draw.via]);
+  }
+  return { kind: "random", title: titleOf(v, concept), caption: "", focus: concept, nodes: keep, links };
 }

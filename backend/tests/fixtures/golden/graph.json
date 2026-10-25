@@ -59,7 +59,7 @@
    "article",
    "blog-post",
    "book",
-   "conversation",
+   "mail",
    "course",
    "idea",
    "lecture",
@@ -80,12 +80,12 @@
   },
   {
    "kind": "wikilink",
-   "source": "conversation-2024-02-01-fixture-thread-about-a-lemma",
+   "source": "mail-2024-02-01-fixture-thread-about-a-lemma",
    "target": "noise-stability"
   },
   {
    "kind": "wikilink",
-   "source": "conversation-2024-02-01-fixture-thread-about-a-lemma",
+   "source": "mail-2024-02-01-fixture-thread-about-a-lemma",
    "target": "theme-boolean-analysis"
   },
   {
@@ -186,7 +186,7 @@
   {
    "kind": "wikilink",
    "source": "theme-boolean-analysis",
-   "target": "conversation-2024-02-01-fixture-thread-about-a-lemma"
+   "target": "mail-2024-02-01-fixture-thread-about-a-lemma"
   },
   {
    "kind": "wikilink",
@@ -365,12 +365,12 @@
     "boolean-analysis"
    ],
    "depth": "full",
-   "id": "conversation-2024-02-01-fixture-thread-about-a-lemma",
+   "id": "mail-2024-02-01-fixture-thread-about-a-lemma",
    "inDegree": 1,
-   "label": "conversation-2024-02-01-fixture-thread-about-a-lemma",
+   "label": "mail-2024-02-01-fixture-thread-about-a-lemma",
    "layer": "source",
    "outDegree": 2,
-   "path": "wiki/conversation-2024-02-01-fixture-thread-about-a-lemma.md",
+   "path": "wiki/mail-2024-02-01-fixture-thread-about-a-lemma.md",
    "preview": "Problem: Does the lemma hold for non-monotone functions? Main result: Yes, by symmetrisation.",
    "properties": {
     "area": "boolean-analysis",
@@ -378,14 +378,14 @@
     "links_in": "1",
     "links_out": "2",
     "raw": "raw/emails/2024-02-01-fixture-thread-about-a-lemma/thread.md",
-    "slug": "conversation-2024-02-01-fixture-thread-about-a-lemma",
+    "slug": "mail-2024-02-01-fixture-thread-about-a-lemma",
     "status": "digested",
-    "type": "conversation",
+    "type": "mail",
     "year": "2024"
    },
    "status": "digested",
    "title": "Fixture thread about a lemma",
-   "type": "conversation",
+   "type": "mail",
    "year": 2024
   },
   {
@@ -1054,7 +1054,7 @@
      "blog-post",
      "video",
      "ai-chat",
-     "conversation"
+     "mail"
     ]
    }
   ],
@@ -1062,7 +1062,7 @@
    "ai-chat",
    "article",
    "blog-post",
-   "conversation",
+   "mail",
    "lecture",
    "paper",
    "part",
@@ -1247,10 +1247,10 @@
    },
    {
     "color": "#73daca",
-    "id": "conversation",
-    "label": "Conversation",
+    "id": "mail",
+    "label": "Mail",
     "layer": "source",
-    "prefix": "conversation-",
+    "prefix": "mail-",
     "statuses": [
      "digested",
      "reading",

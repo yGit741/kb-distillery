@@ -1,4 +1,4 @@
-import type { CitationGraph, LifecycleSnapshot, PageDetail, PageIndex } from "@/api/types";
+import type { CitationGraph, LifecycleSnapshot, PageDetail, PageIndex, RawCard } from "@/api/types";
 import type { GraphSnapshot } from "@/api/types";
 
 /** What the share builder (backend kb.share.build --app) bakes into `<script id="kb-data">`. */
@@ -19,6 +19,8 @@ export interface ShareBlob {
   /** Only when the builder had a citation graph; the legacy build never had one. */
   citations?: CitationGraph;
   meta?: ShareMeta;
+  /** Home pipeline cards per source slug (kb.services.raw_card.bake_cards); public: the privacy column applied. */
+  rawCards?: Record<string, RawCard>;
   /** Home cards and the tour id from share.toml `[home]` (kb.share.home); `view` = the graph view a
    *  snapshot built with `share snapshot … --view <id>` opens on when the URL has no `?view=`. */
   home?: { cards?: unknown[]; tour?: string | null; view?: string | null };

@@ -157,6 +157,13 @@ describe("deep links", () => {
     expect(screen.getByTestId("graph-stats")).toHaveTextContent("3 of 7 pages");
   });
 
+  it("?pages=&from=home shows exactly those pages (no extra hop) and keeps the select", async () => {
+    render(wrap(withGraph(), <GraphScreen search={{ pages: "idea-margin", select: "idea-margin", focus: "idea-margin", from: "home" }} host={host} />));
+    expect(await screen.findByText(/picked page/i)).toBeInTheDocument();
+    await waitFor(() => expect([...useKb.getState().selection]).toEqual(["idea-margin"]));
+    expect(screen.getByTestId("graph-stats")).toHaveTextContent("1 of 7 pages");
+  });
+
   it("?search= shows the pages that mention the query", async () => {
     const search = vi.fn(async () => ({ hits: [{ id: "jane-doe", title: "Jane", type: "person", score: 1, snippet: "" }], total: 1 }));
     render(wrap(withGraph({ search }), <GraphScreen search={{ search: "jane" }} host={host} />));

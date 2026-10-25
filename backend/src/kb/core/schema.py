@@ -18,7 +18,7 @@ SOURCE_TYPES = frozenset({
     "lecture",        # one class session: slides + own notes
     "article",        # non-academic writeup: web clip, tutorial
     "video",          # a talk or video, with own notes
-    "conversation",   # a substantive email thread
+    "mail",           # a substantive email thread (raw/emails/)
     "ai-chat",        # a substantive LLM chat (rendered from meta/chats/ trees)
     "blog-post",      # one post of a blog series
 })
@@ -57,7 +57,7 @@ YEARED = {"paper", "book", "part"}
 # the most-linked nodes and read better in prose. Topics keep their historical `theme-` prefix.
 SLUG_PREFIX = {
     "paper": "paper-", "part": "part-", "lecture": "lecture-", "article": "article-",
-    "video": "video-", "conversation": "conversation-", "ai-chat": "chat-", "blog-post": "blog-",
+    "video": "video-", "mail": "mail-", "ai-chat": "chat-", "blog-post": "blog-",
     "book": "book-", "notebook": "notebook-", "course": "course-", "series": "series-",
     "topic": "theme-", "question": "q-", "distilled-think": "distilled-think-",
     "scope": "scope-",
@@ -67,13 +67,13 @@ BARE_TYPES = {"idea", "person"}
 # Display metadata for the dashboard (served by /api/schema; the JS keeps no type lists).
 TYPE_LABEL = {
     "paper": "Paper", "part": "Book part", "lecture": "Lecture", "article": "Article",
-    "video": "Video", "conversation": "Conversation", "ai-chat": "AI chat", "blog-post": "Blog post",
+    "video": "Video", "mail": "Mail", "ai-chat": "AI chat", "blog-post": "Blog post",
     "book": "Book", "notebook": "Notebook", "course": "Course", "series": "Series",
     "topic": "Topic", "idea": "Idea", "question": "Question", "person": "Person",
     "distilled-think": "Distilled", "scope": "Scope",
 }
 TYPE_ORDER = ("topic", "idea", "question", "person", "course", "series", "book", "notebook",
-              "paper", "part", "lecture", "article", "blog-post", "video", "ai-chat", "conversation",
+              "paper", "part", "lecture", "article", "blog-post", "video", "ai-chat", "mail",
               "distilled-think", "scope")
 LAYER_LABEL = {"source": "Sources", "collection": "Collections", "concept": "Concepts"}
 assert set(TYPE_ORDER) == set(LAYER_OF) == set(TYPE_LABEL)
@@ -164,7 +164,7 @@ def unit_type_for_raw(raw_rel):
     if fmt == RAW_CHATS:
         return "ai-chat"
     if fmt == RAW_EMAILS:
-        return "conversation"
+        return "mail"
     if fmt == RAW_PRINTED and ext == "md" and parts[-1].startswith("blog-"):
         return "blog-post"
     if fmt == RAW_WEB or (fmt == RAW_PRINTED and ext != "pdf"):
@@ -183,7 +183,7 @@ def unit_slug_for_raw(raw_rel, page_type=None):
     word = SLUG_PREFIX.get(page_type, "").rstrip("-")
     if word and stem.startswith(f"{word}-"):
         stem = stem[len(word) + 1:]
-    stem = re.sub(rf"-{word}-", "-", stem) if word in ("lecture", "conversation") else stem
+    stem = re.sub(rf"-{word}-", "-", stem) if word in ("lecture", "mail") else stem
     return make_slug(page_type, stem)
 
 
@@ -330,7 +330,7 @@ def lane_of(path):
 # (x, y) changes only inside a schema/paradigm PR (with its migration); z is derived
 # from git (last first-parent KB-Version + 1). Tooling is not versioned — infra work
 # is identified by its PR number (#N). See backend/src/kb/git/commit_policy.py.
-SCHEMA_VERSION = (1, 1)     # 1.1: question = short H1 (≤ 80) + required ## Question (1.0: the source model)
+SCHEMA_VERSION = (1, 2)     # 1.2: type conversation → mail, legacy Gemini chats → ai-chat (1.1: question H1)
 
 # What undo/restore may rewrite. Never raw/ (immutable, PDFs untracked), think/
 # (human-owned), meta/log.md (append-only) or generated files (lint regenerates them).

@@ -6,6 +6,7 @@ import { ShareFooter } from "@/share/ShareFooter";
 import { useTheme } from "@/theme/theme";
 import { CommandPalette } from "./CommandPalette";
 import { ShareChip } from "./ShareChip";
+import { ToursMenu } from "./ToursMenu";
 import { useEmbed } from "./embed";
 import { HEADER_SLOT_ID } from "./headerSlot";
 import { useUi } from "./ui-store";
@@ -19,8 +20,8 @@ export function AppShell() {
     <div className="flex min-h-screen flex-col">
       {!embed && (
       <header className="sticky top-0 z-40 flex h-12 items-center gap-2 border-b bg-card px-4">
-        <span className="shrink-0 text-sm font-semibold">Thesis KB</span>
-        <nav aria-label="Main" className="flex min-w-0 shrink-0 items-center gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <span className="shrink-0 text-sm font-semibold">Thesis Knowledge Base</span>
+        <nav aria-label="Main" className="flex min-w-0 shrink items-center gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {ROUTES.filter((r) => r.nav).map((r) => (
             <Link
               key={r.id}
@@ -34,6 +35,7 @@ export function AppShell() {
         </nav>
         <div id={HEADER_SLOT_ID} className="min-w-0 flex-1 px-2" />
         <ShareChip />
+        <ToursMenu />
         <Button variant="secondary" size="sm" onClick={() => setPaletteOpen(true)} aria-label="Open command palette">
           <CommandIcon aria-hidden />
           <span className="hidden sm:inline">K</span>

@@ -14,6 +14,8 @@ function message(error: unknown, fallback: string): string {
   return fallback;
 }
 
+const encodePath = (p: string) => p.split("/").map(encodeURIComponent).join("/");
+
 /** Live backend, typed from the generated OpenAPI `paths`. Paths already start with /api. */
 export function createHttpDataSource(fetchImpl: Fetch = (...a) => fetch(...a), baseUrl?: string): DataSource {
   const client = createClient<paths>({
@@ -61,6 +63,12 @@ export function createHttpDataSource(fetchImpl: Fetch = (...a) => fetch(...a), b
     getPipeline: () => run(() => client.GET("/api/pipeline"), "/api/pipeline"),
     getCorpus: (format) =>
       run(() => client.GET("/api/corpus", { params: { query: format ? { format } : {} } }), "/api/corpus"),
+    getRawCard: async (_slug, path) => {
+      if (!path) throw new ApiError("this source has no raw file", 404);
+      return run(() => client.GET("/api/raw/{path}/card", { params: { path: { path } } }), `/api/raw/${path}/card`);
+    },
+    rawThumbUrl: (path, width) => `${baseUrl ?? (globalThis.location?.origin || "")}/api/raw/${encodePath(path)}/thumb?w=${width}`,
+    rawFileUrl: (path) => `${baseUrl ?? (globalThis.location?.origin || "")}/api/raw/${encodePath(path)}/file`,
     getRawPreview: (path) =>
       run(() => client.GET("/api/raw/{path}", { params: { path: { path } } }), `/api/raw/${path}`),
     digestRaw: (path) =>

@@ -68,7 +68,7 @@ python3 -m kb.ingest full-digest course-runi-rl --row 3
 ```
 
 The page type follows the raw format: `presentations/`, `handwritten/` → `lecture-`;
-`emails/` → `conversation-`; `web-clips/` or non-PDF `printed-docs/` → `article-` (a tagged blog
+`emails/` → `mail-`; `web-clips/` or non-PDF `printed-docs/` → `article-` (a tagged blog
 post → `blog-`); `printed-docs/` PDF → `paper-`. LLM chats (`llm-chats/`) are not digested here —
 they become `chat-` pages through the chat pipeline, which needs their `meta/chats/` tree.
 `finalize` ticks the row (`full`) and links the new page. Passing a raw path that is a collection

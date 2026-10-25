@@ -145,19 +145,6 @@
    "year": 2020
   },
   {
-   "areas": [],
-   "depth": "easy",
-   "id": "conversation-2026-01-02-rank-thread",
-   "in": 0,
-   "out": 0,
-   "preview": "Question asked: Where it landed:",
-   "status": "digested",
-   "title": "2026 01 02 Rank Thread",
-   "type": "conversation",
-   "words": 31,
-   "year": null
-  },
-  {
    "areas": [
     "learning-theory"
    ],
@@ -185,6 +172,19 @@
    "title": "Lecture 1 · Introduction",
    "type": "lecture",
    "words": 66,
+   "year": null
+  },
+  {
+   "areas": [],
+   "depth": "easy",
+   "id": "mail-2026-01-02-rank-thread",
+   "in": 0,
+   "out": 0,
+   "preview": "With: [[]] What it was about:",
+   "status": "digested",
+   "title": "2026 01 02 Rank Thread",
+   "type": "mail",
+   "words": 32,
    "year": null
   },
   {

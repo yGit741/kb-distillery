@@ -397,6 +397,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/raw/{path}/card": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One raw file as a Home pipeline card */
+        get: operations["get_raw_card_api_raw__path__card_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/raw/{path}/digest": {
         parameters: {
             query?: never;
@@ -767,6 +784,15 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
+        /** ChatTurn */
+        ChatTurn: {
+            /** Role */
+            role: string;
+            /** Text */
+            text: string;
+        } & {
+            [key: string]: unknown;
+        };
         /** CitationGraph */
         CitationGraph: {
             /** Links */
@@ -938,6 +964,17 @@ export interface components {
              * @default
              */
             stdout: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** EmailHeader */
+        EmailHeader: {
+            /** Date */
+            date?: string | null;
+            /** Sender */
+            sender?: string | null;
+            /** Subject */
+            subject?: string | null;
         } & {
             [key: string]: unknown;
         };
@@ -1674,6 +1711,63 @@ export interface components {
              * @default false
              */
             stale: boolean;
+        } & {
+            [key: string]: unknown;
+        };
+        /**
+         * RawCard
+         * @description One raw file as a Home pipeline card (kb.services.raw_card); `thumb` is a data URI on share builds only.
+         */
+        RawCard: {
+            /** Excerpt */
+            excerpt?: string | null;
+            /** Ext */
+            ext: string;
+            facts: components["schemas"]["RawFacts"];
+            /** Format */
+            format: string;
+            /**
+             * Has Thumb
+             * @default false
+             */
+            has_thumb: boolean;
+            header?: components["schemas"]["EmailHeader"] | null;
+            /** Kind */
+            kind: string;
+            /** Model */
+            model?: string | null;
+            /** Name */
+            name?: string | null;
+            /** Path */
+            path?: string | null;
+            /** Site */
+            site?: string | null;
+            /** Thumb */
+            thumb?: string | null;
+            /** Title */
+            title?: string | null;
+            /** Turn Count */
+            turn_count?: number | null;
+            /**
+             * Turns
+             * @default []
+             */
+            turns: components["schemas"]["ChatTurn"][];
+            /** Url */
+            url?: string | null;
+            /** Video Id */
+            video_id?: string | null;
+        } & {
+            [key: string]: unknown;
+        };
+        /** RawFacts */
+        RawFacts: {
+            /** Added */
+            added?: string | null;
+            /** Bytes */
+            bytes?: number | null;
+            /** Pages */
+            pages?: number | null;
         } & {
             [key: string]: unknown;
         };
@@ -2923,6 +3017,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RawPreview"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_raw_card_api_raw__path__card_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                path: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RawCard"];
                 };
             };
             /** @description Validation Error */

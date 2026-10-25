@@ -5,9 +5,13 @@ const NAMES = ["first-visit", "thesis-story", "boolean-bridge"];
 
 describe("Home → Graph tours", () => {
   it("registers the three journeys with a one-line summary each", () => {
-    const tours = listTours().filter((t) => NAMES.includes(t.name));
+    const tours = listTours({ all: true }).filter((t) => NAMES.includes(t.name));
     expect(tours.map((t) => t.name).sort()).toEqual([...NAMES].sort());
     for (const t of tours) expect(t.summary.length).toBeGreaterThan(10);
+  });
+
+  it("the Tours menu lists only the first-visit tour", () => {
+    expect(listTours().filter((t) => NAMES.includes(t.name)).map((t) => t.name)).toEqual(["first-visit"]);
   });
 
   it("every step has a title, a body of at most two sentences, and a string target", () => {
