@@ -6,74 +6,10 @@ import { colorKeyRows, LAYER_LABEL, layerGroups, type LayerGroup } from "./legen
 import { QUICK_OFF, QUICK_STEPS, type QuickFilters } from "./quickFilters";
 import type { GraphSchema } from "./schema";
 import { useGraphUi } from "./store";
-import { COLOR_BY, effectiveColorBy, MAIL_TYPES, markOf, METRIC_COLORS, neutralRamp, NO_AREA, OTHER_AREAS, RAMP_BY, RAMP_MEANING, RAMP_STEPS, TYPE_LABEL_OVERRIDE, type ColorBy, type NodeMark } from "./style";
+import { ShapeIcon, SourceIcon } from "./encoding/NodeMarkSvg";
+import { markOf, TYPE_LABEL_OVERRIDE } from "./encoding/spec";
+import { COLOR_BY, effectiveColorBy, METRIC_COLORS, neutralRamp, NO_AREA, OTHER_AREAS, RAMP_BY, RAMP_MEANING, RAMP_STEPS, type ColorBy } from "./style";
 import type { GNode } from "./types";
-
-/** A type's mark in the text colour (the canvas `drawMark` in SVG): the mark is the type, so the chip carries no colour. */
-function ShapeIcon({ shape }: { shape: NodeMark }) {
-  const ring = <circle cx="8" cy="8" r="5.6" fill="none" stroke="currentColor" strokeWidth="1.5" />;
-  return (
-    <svg viewBox="0 0 16 16" className="size-3.5 shrink-0" aria-hidden>
-      {shape === "source" && <circle cx="8" cy="8" r="6" fill="currentColor" />}
-      {shape === "person" && (
-        <>
-          <circle cx="8" cy="8" r="7" fill="currentColor" />
-          <text x="8" y="8.6" textAnchor="middle" dominantBaseline="middle" fontSize="6.4" fontWeight="700" className="fill-background">
-            GK
-          </text>
-        </>
-      )}
-      {shape === "question" && (
-        <>
-          {ring}
-          <text x="8" y="8.8" textAnchor="middle" dominantBaseline="middle" fontSize="7.5" fontWeight="700" fill="currentColor">
-            ?
-          </text>
-        </>
-      )}
-      {shape === "idea" && (
-        <>
-          {ring}
-          <circle cx="8" cy="8" r="2" fill="currentColor" />
-        </>
-      )}
-      {shape === "topic" && (
-        <>
-          {ring}
-          <path d="M5.6 5.9h4.8M5.6 8h4.8M5.6 10.1h4.8" stroke="currentColor" strokeWidth="1" strokeLinecap="round" />
-        </>
-      )}
-      {shape === "collection" && (
-        <>
-          <circle cx="8" cy="8" r="7.2" fill="none" stroke="currentColor" strokeWidth="0.9" />
-          <circle cx="8" cy="8" r="4.6" fill="none" stroke="currentColor" strokeWidth="1.4" />
-        </>
-      )}
-    </svg>
-  );
-}
-
-/** A source type's icon: the glyph the canvas draws inside a zoomed or hovered source dot. */
-function SourceIcon({ type }: { type: string }) {
-  const s = { fill: "none", stroke: "currentColor", strokeWidth: 1.3, strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
-  return (
-    <svg viewBox="0 0 16 16" className="size-3.5 shrink-0" aria-hidden>
-      {type === "paper" ? (
-        <path d="M4 2h5.5L12 4.5V14H4zM6 8h4M6 10.5h4" {...s} />
-      ) : type === "ai-chat" ? (
-        <path d="M8 1.8c.4 2.9 1.6 4.8 6.2 6.2-4.6 1.4-5.8 3.3-6.2 6.2-.4-2.9-1.6-4.8-6.2-6.2C6.4 6.6 7.6 4.7 8 1.8z" fill="currentColor" />
-      ) : MAIL_TYPES.has(type) ? (
-        <path d="M2.5 4h11v8h-11zM2.5 4 8 8.6 13.5 4" {...s} />
-      ) : type === "lecture" ? (
-        <path d="M5 3.5 12 8l-7 4.5z" fill="currentColor" />
-      ) : type === "part" || type === "book" ? (
-        <path d="M8 4.5C6.5 3.5 4.5 3.5 2.5 4v8c2-.5 4-.5 5.5.5 1.5-1 3.5-1 5.5-.5V4c-2-.5-4-.5-5.5.5zM8 4.5v8" {...s} />
-      ) : (
-        <path d="M3 5h10M3 8h10M3 11h6" {...s} />
-      )}
-    </svg>
-  );
-}
 
 interface Props {
   nodes: readonly GNode[];
@@ -184,8 +120,8 @@ export function Legend({ nodes, visible, schema, shownTypes, stats, quickHidden 
   const ui = useGraphUi();
   const theme = useTheme((s) => s.theme);
   const groups = useMemo(() => layerGroups(nodes, visible, schema, shownTypes), [nodes, visible, schema, shownTypes]);
-  const by = effectiveColorBy(ui.colorBy, ui.shapes);
-  const ramp = ui.shapes && RAMP_BY.has(by) ? theme : null;
+  const by = effectiveColorBy(ui.colorBy);
+  const ramp = RAMP_BY.has(by) ? theme : null;
   // every page the type filter lets through, so a value hidden by the key stays listed (and can be shown again)
   const keyPool = useMemo(() => {
     if (!ui.hiddenKeys.size) return visible;
@@ -196,7 +132,7 @@ export function Legend({ nodes, visible, schema, shownTypes, stats, quickHidden 
   const key = useMemo(() => (by === "type" ? [] : colorKeyRows(nodes, keyPool, by, 12, ramp)), [nodes, keyPool, by, ramp]);
   const allTypes = useMemo(() => groups.flatMap((g) => g.rows.map((r) => r.id)), [groups]);
   const defaults = schema.defaultVisible;
-  const hullsOn = ui.shapes && by !== "area";
+  const hullsOn = by !== "area";
   // two groups in the key: concepts, and sources with the collections folded in (courses, books, series are read too)
   const ordered = useMemo((): LayerGroup[] => {
     const concept = groups.find((g) => g.layer === "concept");

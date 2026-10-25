@@ -174,9 +174,9 @@ function Loaded({
         revealed: ui.revealed,
         keep: predicateFn(ui.predicate),
         hiddenKeys: ui.hiddenKeys,
-        keyOf: (n) => colorKey(n, effectiveColorBy(ui.colorBy, ui.shapes)),
+        keyOf: (n) => colorKey(n, effectiveColorBy(ui.colorBy)),
       }),
-    [model, shownTypes, ui.shownDepths, ui.search, ui.rules, ui.view, ui.revealed, ui.predicate, ui.hiddenKeys, ui.colorBy, ui.shapes],
+    [model, shownTypes, ui.shownDepths, ui.search, ui.rules, ui.view, ui.revealed, ui.predicate, ui.hiddenKeys, ui.colorBy],
   );
   // the legend's one-click filters run last, on what the others left (./quickFilters)
   const visible = useMemo(() => applyQuick(filtered, byId, neighbors, selection, ui.quick), [filtered, byId, neighbors, selection, ui.quick]);

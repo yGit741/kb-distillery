@@ -18,7 +18,9 @@ import { drawPile, formatOfPile, isPile, isPileId, pileRadius } from "./rawLayer
 import { DRAG_PX } from "./selection";
 import { useGraphUi } from "./store";
 import { useDecor } from "./tools/decor";
-import { colorOf, drawMark, drawSourceGlyph, effectiveColorBy, layeredRadii, markOf, METRIC_COLORS, nodeRadius, personInitials, semanticRadius, SOURCE_GLYPH_PX, type ColorBy, type SizeBy } from "./style";
+import { drawNode as drawNodeMark } from "./encoding/canvas";
+import { personInitials, SOURCE_GLYPH_PX } from "./encoding/spec";
+import { colorOf, effectiveColorBy, layeredRadii, METRIC_COLORS, nodeRadius, semanticRadius, type ColorBy, type SizeBy } from "./style";
 import type { GNode, GraphModel, SimLink, SimNode } from "./types";
 
 export interface CanvasHandle {
@@ -152,11 +154,8 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
   );
   const radiusRef = useRef(radiusOpts);
   radiusRef.current = radiusOpts;
-  // marks on: each layer sized on its own scale (./style layeredRadii), over the pages drawn
-  const layered = useMemo(
-    () => (ui.shapes ? layeredRadii(model.nodes.filter((n) => visible.has(n.id)), radiusOpts) : null),
-    [ui.shapes, model, visible, radiusOpts],
-  );
+  // each layer sized on its own scale (./style layeredRadii), over the pages drawn
+  const layered = useMemo(() => layeredRadii(model.nodes.filter((n) => visible.has(n.id)), radiusOpts), [model, visible, radiusOpts]);
   const layeredRef = useRef(layered);
   layeredRef.current = layered;
   const radius = useCallback(
@@ -307,7 +306,7 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
   useEffect(() => {
     rs.current.colors = readCanvasColors();
     recompute();
-  }, [recompute, theme, visible, selection, byId, neighbors, ui.highlight, ui.lab, ui.typeLabels, ui.spotlight, ui.colorBy, ui.shapes, ui.linkOpacity, radiusOpts, layered, imp]);
+  }, [recompute, theme, visible, selection, byId, neighbors, ui.highlight, ui.lab, ui.typeLabels, ui.spotlight, ui.colorBy, ui.linkOpacity, radiusOpts, layered, imp]);
 
   // a changed set of pages is framed after a moment and framed again once the layout settles: at the moment the
   // pages may still be drifting from their old places, and a single early fit left a view (Thesis) in a corner.
@@ -596,10 +595,9 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
         drawPile(n, ctx, scale, colors, hover === n.id);
         return;
       }
-      const shapes = live.current.ui.shapes;
-      // a spotlit type (legend hover) is drawn a third larger as well as lit; marks on: semantic zoom (./style)
+      // a spotlit type (legend hover) is drawn a third larger as well as lit; semantic zoom (./style)
       const r0 = radius(n) * (live.current.ui.spotlight?.has(n.type) ? 1.3 : 1);
-      const r = shapes ? semanticRadius(r0, scale, rs.current.zr) : r0;
+      const r = semanticRadius(r0, scale, rs.current.zr);
       const alpha = fadedNodeOpacity(n.id, focus, rs.current.prevFocus, rs.current.fadeT);
       const isSel = selected.has(n.id);
       const halo = useDecor.getState().halo?.get(n.id);
@@ -609,61 +607,25 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
         ctx.fillStyle = withAlpha(colors.warn, 0.15 + 0.55 * halo);
         ctx.fill();
       }
-      const by = effectiveColorBy(live.current.ui.colorBy, shapes);
-      // marks on: an ordered colouring is a neutral ramp (lightness), so it never fights the area hulls
-      const col = colorOf(n, by, METRIC_COLORS.has(by) ? metricOf(rs.current.imp, n, by) : undefined, shapes ? live.current.theme : null);
-      if (hover === n.id && !isSel && shapes) {
-        // the hovered page: a soft glow in its own colour, not a ring (the ring is the selection's)
-        const g = ctx.createRadialGradient(n.x, n.y, r, n.x, n.y, r + 14 / scale);
-        g.addColorStop(0, withAlpha(col, 0.45));
-        g.addColorStop(1, withAlpha(col, 0));
-        ctx.beginPath();
-        ctx.arc(n.x, n.y, r + 14 / scale, 0, 2 * Math.PI);
-        ctx.fillStyle = g;
-        ctx.fill();
-      } else if (isSel || hover === n.id) {
-        ctx.beginPath();
-        ctx.arc(n.x, n.y, r + 3 / scale, 0, 2 * Math.PI);
-        ctx.strokeStyle = withAlpha(colors.ring, isSel ? 0.95 : 0.55);
-        ctx.lineWidth = (isSel ? 2 : 1.5) / scale;
-        ctx.stroke();
-      }
-      if (shapes) {
-        // one mark per type, the same at every zoom (the 5 px floor is inside semanticRadius)
-        ctx.globalAlpha = alpha;
-        const rd = r;
-        const mark = markOf(n.type);
-        drawMark(ctx, mark, n.x, n.y, rd, col, colors.background, colors.font, initials.get(n.id));
-        // a source is a plain dot until it is big enough on screen (zoom) or under the pointer: then its type glyph
-        if (mark === "source" && (rd * scale >= SOURCE_GLYPH_PX || hover === n.id)) drawSourceGlyph(ctx, n.type, n.x, n.y, rd);
-        ctx.globalAlpha = 1;
-        return;
-      }
-      ctx.beginPath();
-      ctx.arc(n.x, n.y, r, 0, 2 * Math.PI);
-      ctx.globalAlpha = alpha;
-      if (n.type === "question") {
-        // a question is a hollow ring with a "?" inside: readable without a label
-        ctx.fillStyle = colors.background;
-        ctx.fill();
-        ctx.strokeStyle = col;
-        ctx.lineWidth = r * 0.22;
-        ctx.stroke();
-        ctx.fillStyle = col;
-        ctx.font = `600 ${r * 1.4}px ${colors.font}`;
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        ctx.fillText("?", n.x, n.y + r * 0.08);
-        ctx.globalAlpha = 1;
-        return;
-      }
-      ctx.fillStyle = col;
-      ctx.fill();
-      ctx.globalAlpha = alpha * 0.5;
-      ctx.strokeStyle = colors.background;
-      ctx.lineWidth = 0.8 / scale;
-      ctx.stroke();
-      ctx.globalAlpha = 1;
+      const by = effectiveColorBy(live.current.ui.colorBy);
+      // an ordered colouring is a neutral ramp (lightness), so it never fights the area hulls
+      const col = colorOf(n, by, METRIC_COLORS.has(by) ? metricOf(rs.current.imp, n, by) : undefined, live.current.theme);
+      // the shared encoding (./encoding): selection ring or hover glow, then the type's mark; a source is a plain dot
+      // until it is big enough on screen (zoom) or under the pointer, then its type glyph
+      drawNodeMark(ctx, n.type, {
+        x: n.x,
+        y: n.y,
+        r,
+        color: col,
+        background: colors.background,
+        font: colors.font,
+        ring: colors.ring,
+        initials: initials.get(n.id),
+        state: isSel ? "selected" : hover === n.id ? "hover" : null,
+        alpha,
+        glyph: r * scale >= SOURCE_GLYPH_PX || hover === n.id,
+        scale,
+      });
     },
     [radius, initials],
   );
@@ -676,7 +638,7 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
       if (arcs?.length) drawArcs(ctx, g.nodes(), arcs, scale, rs.current.colors);
       const u = live.current.ui;
       // marks on: hulls say where (area tints) and show only when the nodes do not already say it with their colour
-      const hulls = u.shapes ? effectiveColorBy(u.colorBy, u.shapes) !== "area" : u.lab.hulls;
+      const hulls = effectiveColorBy(u.colorBy) !== "area";
       if (hulls) drawHulls(ctx, g.nodes().filter((n) => !isPile(n)), scale, names, u.lab.hullSigma);
     },
     [names],
@@ -713,8 +675,8 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
         dt,
         nodeColor: (n) => {
           const u = live.current.ui;
-          const by = effectiveColorBy(u.colorBy, u.shapes);
-          return colorOf(n, by, METRIC_COLORS.has(by) ? metricOf(rs.current.imp, n, by) : undefined, u.shapes ? live.current.theme : null);
+          const by = effectiveColorBy(u.colorBy);
+          return colorOf(n, by, METRIC_COLORS.has(by) ? metricOf(rs.current.imp, n, by) : undefined, live.current.theme);
         },
       });
       f.churn = f.churn * 0.9 + res.changes * (1000 / Math.max(16, dt)) * 0.1;
