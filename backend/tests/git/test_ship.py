@@ -96,8 +96,12 @@ echo "$*" >> "$log"
 if [ "$1 $2" = "pr view" ]; then
   [ -f "$FAKE_GH_DIR/created" ] || exit 1
   labels=""; [ -f "$FAKE_GH_DIR/held" ] && labels='{"name": "hold"}'
-  echo '{"number": 7, "url": "https://example/pr/7", "title": "feat(ops): add thing", "state": "OPEN", "labels": ['"$labels"']}'
+  head=$(cat "$FAKE_GH_DIR/head" 2>/dev/null)
+  echo '{"number": 7, "url": "https://example/pr/7", "title": "feat(ops): add thing", "state": "OPEN", "headRefOid": "'"$head"'", "labels": ['"$labels"']}'
   exit 0
+fi
+if [ "$1" = "api" ]; then
+  case "$*" in *"/reviews"*) cat "$FAKE_GH_DIR/reviews.jsonl" 2>/dev/null; exit 0;; esac
 fi
 if [ "$1 $2" = "pr create" ]; then
   touch "$FAKE_GH_DIR/created"; case "$*" in *"--label hold"*) touch "$FAKE_GH_DIR/held";; esac
@@ -328,6 +332,76 @@ class PrFlowTests(unittest.TestCase):
         self.assertNotIn("pr merge", open(os.path.join(self.ghdir, "calls.log")).read())
         self.assertEqual(ship.cmd_approve(7, root=wt), 0)
         self.assertEqual(ship.cmd_merge(root=wt, gates=False), 0)
+
+    # ---- C2: the owner's GitHub Approve review lifts the hold ----
+    def _held(self):
+        wt = self._start()
+        self._write(wt, "meta/tool.py")
+        ship.cmd_commit("feat(ops): add thing", root=wt, gates=False)
+        self.assertEqual(ship.cmd_pr(root=wt, gates=False, hold=True), 0)
+        head = _g(wt, "rev-parse", "HEAD")
+        with open(os.path.join(self.ghdir, "head"), "w") as f:
+            f.write(head)
+        return wt, head
+
+    def _reviews(self, *rows):
+        import json
+        with open(os.path.join(self.ghdir, "reviews.jsonl"), "w") as f:   # gh api --paginate --jq '.[]'
+            f.writelines(json.dumps({"user": {"login": u}, "state": st, "commit_id": sha}) + "\n" for u, st, sha in rows)
+
+    def _calls(self):
+        return open(os.path.join(self.ghdir, "calls.log")).read()
+
+    def test_owner_approval_at_head_lifts_hold_and_merges(self):
+        wt, head = self._held()
+        self._reviews(("yGit741", "APPROVED", head))
+        with patch.object(ship.app_token, "owner_login", return_value="yGit741"):
+            self.assertEqual(ship.cmd_merge(root=wt, gates=False), 0)
+        calls = self._calls()
+        self.assertIn(f"--match-head-commit {head}", calls)
+        self.assertLess(calls.index("pr merge"), calls.index("--remove-label hold"))   # label lifted only after the merge
+        self.assertIn("kb-event", calls.split("--remove-label hold")[1])
+
+    def test_owner_approval_on_old_sha_is_refused(self):
+        wt, head = self._held()
+        self._reviews(("yGit741", "APPROVED", "0" * 40))
+        with patch.object(ship.app_token, "owner_login", return_value="yGit741"):
+            self.assertEqual(ship.review_approval(7, head, wt)[0], "stale")
+            self.assertIn("re-approve: new commits since your review", ship.review_approval(7, head, wt)[1])
+            self.assertEqual(ship.cmd_merge(root=wt, gates=False), 1)
+        self.assertNotIn("pr merge", self._calls())
+
+    def test_approval_by_another_login_or_the_bot_never_counts(self):
+        wt, head = self._held()
+        self._reviews(("someone", "APPROVED", head), ("thesis-knowledge-base[bot]", "APPROVED", head))
+        with patch.object(ship.app_token, "owner_login", return_value="yGit741"):
+            self.assertEqual(ship.review_approval(7, head, wt)[0], "none")
+            self.assertEqual(ship.cmd_merge(root=wt, gates=False), 1)
+        self.assertNotIn("pr merge", self._calls())
+
+    def test_latest_owner_verdict_wins(self):
+        wt, head = self._held()
+        self._reviews(("yGit741", "APPROVED", head), ("yGit741", "COMMENTED", head),
+                      ("yGit741", "CHANGES_REQUESTED", head))
+        with patch.object(ship.app_token, "owner_login", return_value="yGit741"):
+            self.assertEqual(ship.review_approval(7, head, wt)[0], "none")
+
+    def test_no_app_config_keeps_the_old_behaviour(self):
+        wt, head = self._held()
+        self._reviews(("yGit741", "APPROVED", head))
+        with patch.object(ship.app_token, "owner_login", return_value=None):
+            self.assertEqual(ship.review_approval(7, head, wt)[0], "off")
+            self.assertEqual(ship.cmd_merge(root=wt, gates=False), 1)
+            self.assertEqual(ship.cmd_approve(7, root=wt), 0)
+            self.assertEqual(ship.cmd_merge(root=wt, gates=False), 0)
+
+    def test_approval_labels_for_status(self):
+        with patch.object(ship, "review_approval", return_value=("ok", "")):
+            self.assertEqual(ship.approval_label(7, "abc"), "approved ✓ (sha ok)")
+        with patch.object(ship, "review_approval", return_value=("stale", "")):
+            self.assertEqual(ship.approval_label(7, "abc"), "approved on old sha")
+        with patch.object(ship, "review_approval", return_value=("none", "")):
+            self.assertEqual(ship.approval_label(7, "abc"), "awaiting review")
 
     def test_approve_is_reachable_from_the_cli(self):
         with patch.object(ship, "cmd_approve", return_value=0) as approve:

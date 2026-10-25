@@ -5,6 +5,7 @@ import { IS_SHARE } from "@/share/env";
 import { readBlob } from "@/share/blob";
 import { applyTheme, useTheme } from "@/theme/theme";
 import { installTours } from "@/features/tour/tours";
+import { loadFlagOverrides } from "@/flags/load";
 import "@/features/home/tours"; // the Home → Graph journeys, so `?tour=` works on any route
 import "./index.css";
 
@@ -13,6 +14,7 @@ if (IS_SHARE) globalThis.KB_EMBEDDED = readBlob() ?? undefined;
 
 applyTheme(useTheme.getState().theme);
 installTours();
+void loadFlagOverrides(); // server-side runtime overrides; useFlag() re-renders when they land
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

@@ -6,6 +6,12 @@
 //   DELETE /admin/api/snapshots/<worker>  delete one snapshot Worker; body {"confirm": "<worker>"}
 //   POST   /admin/api/prune               DRY RUN only: orphans (no reachable manifest) + "not ours" Workers
 //
+// Flags (routed by auth.js; `handleFlags`):
+//   GET    /api/flags         any signed-in viewer: {env: "private", overrides: {name: bool}} from KV
+//   PUT    /api/flags/<name>  owner only (ADMIN_EMAILS + X-KB-Admin + same Origin, as the panel);
+//                             body {"value": true|false|null}; runtime flags only (flags.gen.js)
+//   Binding: KV namespace FLAGS_KV (key "overrides"). Unbound → GET returns {} and PUT answers 503.
+//
 // Gate, in order: no valid session → 401; session email not in ADMIN_EMAILS (default ALLOWED_EMAILS)
 // → 403; header `X-KB-Admin: 1` missing → 403; non-GET whose `Origin` is not this site's origin
 // → 403 (CSRF: the custom header forces a CORS preflight cross-site, the Origin check covers the
@@ -24,6 +30,8 @@
 //
 // Bindings: var CF_ACCOUNT_ID, secret CF_API_TOKEN (Workers Scripts Edit + Account Analytics Read).
 // All Cloudflare calls go through deps.fetch with an AbortController timeout so tests can mock them.
+
+import { RUNTIME_FLAGS } from "./flags.gen.js";
 
 const API_BASE = "https://api.cloudflare.com/client/v4";
 const GRAPHQL_URL = `${API_BASE}/graphql`;
@@ -229,8 +237,8 @@ async function prune(env, deps) {
   return json(200, plan);
 }
 
-// session: the verified kb_session payload ({email, iat, exp}) or null.
-export async function handleAdmin(request, env, deps, session) {
+// The owner gate shared by the panel and flag PUTs; returns a refusal Response or null.
+function ownerGate(request, env, session) {
   const url = new URL(request.url);
   if (!session) return json(401, { error: "sign in first" });
   const admins = emails(env.ADMIN_EMAILS || env.ALLOWED_EMAILS);
@@ -239,6 +247,43 @@ export async function handleAdmin(request, env, deps, session) {
   if (request.method !== "GET" && request.method !== "HEAD" && request.headers.get("Origin") !== url.origin) {
     return json(403, { error: "cross-origin request refused" });
   }
+  return null;
+}
+
+async function readOverrides(env) {
+  if (!env.FLAGS_KV) return {};
+  const raw = await env.FLAGS_KV.get("overrides");
+  let data = {};
+  try { data = raw ? JSON.parse(raw) : {}; } catch { data = {}; }
+  return Object.fromEntries(Object.entries(data).filter(([k, v]) => RUNTIME_FLAGS.includes(k) && typeof v === "boolean"));
+}
+
+export async function handleFlags(request, env, session) {
+  const path = new URL(request.url).pathname.replace(/\/+$/, "");
+  if (!session) return json(401, { error: "sign in first" });
+  if (path === "/api/flags" && request.method === "GET") return json(200, { env: "private", overrides: await readOverrides(env) });
+  const m = /^\/api\/flags\/([^/]+)$/.exec(path);
+  if (!m || request.method !== "PUT") return json(404, { error: "no such flags route" });
+  const refused = ownerGate(request, env, session);
+  if (refused) return refused;
+  let name;
+  try { name = decodeURIComponent(m[1]); } catch { return json(400, { error: "bad flag name" }); }
+  if (!RUNTIME_FLAGS.includes(name)) return json(409, { error: `${name} is not a runtime flag` });
+  let body;
+  try { body = await request.json(); } catch { return json(400, { error: "body must be JSON {value}" }); }
+  if (!body || !(typeof body.value === "boolean" || body.value === null)) return json(400, { error: "value must be true, false or null" });
+  if (!env.FLAGS_KV) return json(503, { error: "flags not configured: bind KV namespace FLAGS_KV" });
+  const ov = await readOverrides(env);
+  if (body.value === null) delete ov[name]; else ov[name] = body.value;
+  await env.FLAGS_KV.put("overrides", JSON.stringify(ov));
+  return json(200, { env: "private", overrides: ov });
+}
+
+// session: the verified kb_session payload ({email, iat, exp}) or null.
+export async function handleAdmin(request, env, deps, session) {
+  const url = new URL(request.url);
+  const refused = ownerGate(request, env, session);
+  if (refused) return refused;
   if (!env.CF_API_TOKEN) return json(503, { error: "panel not configured: set CF_API_TOKEN" });
   if (!env.CF_ACCOUNT_ID) return json(503, { error: "panel not configured: set CF_ACCOUNT_ID" });
 

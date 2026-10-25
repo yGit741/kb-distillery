@@ -20,6 +20,25 @@ echo '{"number": 7, "title": "t", "url": "u", "state": "OPEN", "labels": []}'
 """
 
 
+class OwnerLoginTest(unittest.TestCase):
+    def test_owner_login_needs_config_and_env_overrides(self):
+        with tempfile.TemporaryDirectory() as d:
+            p = os.path.join(d, "app.toml")
+            with open(p, "w") as f:
+                f.write('app_id = 1\ninstallation_id = 2\nowner_login = "yGit741"\n')
+            with patch.dict(os.environ, {"KB_APP_CONFIG": p}):
+                os.environ.pop("KB_OWNER_LOGIN", None)
+                self.assertEqual(app_token.owner_login(), "yGit741")
+                with patch.dict(os.environ, {"KB_OWNER_LOGIN": "other"}):
+                    self.assertEqual(app_token.owner_login(), "yGit741")   # the toml wins
+            with open(p, "w") as f:
+                f.write('app_id = 1\ninstallation_id = 2\n')
+            with patch.dict(os.environ, {"KB_APP_CONFIG": p, "KB_OWNER_LOGIN": "other"}):
+                self.assertEqual(app_token.owner_login(), "other")
+            with patch.dict(os.environ, {"KB_APP_CONFIG": os.path.join(d, "missing.toml"), "KB_OWNER_LOGIN": "x"}):
+                self.assertIsNone(app_token.owner_login())
+
+
 class AppTokenTest(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()

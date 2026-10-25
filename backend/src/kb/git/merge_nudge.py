@@ -2,12 +2,12 @@
 """Claude Code `Stop` hook: never let a reply end while a held PR silently waits for the user.
 
 Agents merge their own PRs by default (`kb.git.ship`); only a PR labelled `hold` (schema/paradigm,
-or opened with `ship pr --hold`) waits for the user's `pixi run ship -- approve N`. When the
+or opened with `ship pr --hold`) waits for the user's GitHub Approve review (or `pixi run ship -- approve N`). When the
 session's cwd is on an `infra/<feature>` branch whose OPEN pull request is held and the reply just
 written does not carry the nudge line, it answers
 `{"decision": "block", "reason": …}` once, so the agent appends:
 
-    Awaiting your merge: #N <title> <url> — run `! pixi run ship -- approve N` to merge it, or say "drop".
+    Awaiting your merge: #N <title> <url> — approve the review on GitHub, or run `! pixi run ship -- approve N` to merge it, or say "drop".
 
 A PR is always named "#N title", never a bare number: a nudge without the PR's title does not count.
 
@@ -74,7 +74,7 @@ def last_reply(transcript_path):
 def nudge_line(pr):
     title = f' {pr["title"]}' if pr.get("title") else ""
     return (f'Awaiting your merge: #{pr["number"]}{title} {pr["url"]} — '
-            f'run `! pixi run ship -- approve {pr["number"]}` to merge it, or say "drop".')
+            f'approve the review on GitHub, or run `! pixi run ship -- approve {pr["number"]}` to merge it, or say "drop".')
 
 
 def decide(payload):

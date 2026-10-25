@@ -46,7 +46,7 @@ WORKER_DIR = REPO / "share"      # the Cloudflare Worker sources (auth.js, admin
 CONFIG_PATH = Path(__file__).resolve().parent / "share.toml"
 DEFAULT_ALLOWED = ["ygreenshpan@gmail.com"]
 CF_ACCOUNT_ID = "7803af2d776eeea4c226f8e594121a10"  # the panel's Cloudflare REST calls (not secret)
-WORKER_SCRIPTS = ("auth.js", "admin.js")  # private site: sign-in + snapshot panel API
+WORKER_SCRIPTS = ("auth.js", "admin.js", "flags.gen.js")  # private site: sign-in + panel API + runtime flag names
 DEFAULT_COMPAT = "2026-09-01"
 LOCK_NAME = "deploy.lock"
 PENDING_NAME = "pending"
@@ -109,6 +109,8 @@ def load_config(path: Path = None) -> dict:
         "google_client_id": os.environ.get("KB_SHARE_GOOGLE_CLIENT_ID") or auth.get("google_client_id", ""),
         "allowed_emails": list(auth.get("allowed_emails") or DEFAULT_ALLOWED),
         "compatibility_date": data.get("worker", {}).get("compatibility_date", DEFAULT_COMPAT),
+        # KV namespace for runtime flag overrides ([worker] flags_kv_id); empty → not bound
+        "flags_kv_id": os.environ.get("KB_SHARE_FLAGS_KV_ID") or data.get("worker", {}).get("flags_kv_id", ""),
     }
 
 
@@ -135,6 +137,8 @@ def render_wrangler(worker: str, require_access: bool, cfg: dict, spa: bool = Fa
         # which a same-account Worker otherwise cannot reach (Cloudflare error 1042).
         script = (f'  "main": "auth.js",\n  "vars": {json.dumps(variables)},\n'
                   '  "compatibility_flags": ["global_fetch_strictly_public"],\n')
+        if cfg.get("flags_kv_id"):   # runtime flag overrides (admin.js handleFlags); unset → GET {}, PUT 503
+            script += f'  "kv_namespaces": [{{"binding": "FLAGS_KV", "id": {json.dumps(cfg["flags_kv_id"])}}}],\n'
     else:
         assets = {"directory": "./public"}
         script = ""

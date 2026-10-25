@@ -55,6 +55,24 @@ _NETWORK_RE = re.compile(
     re.I)
 
 
+TLS_REASON = "TLS: proxy CA missing in launchd env — rerun pixi run install-deploy-owner from your normal shell"
+_TLS_RE = re.compile(
+    r"corporate proxy or VPN|certificate mismatch|UNABLE_TO_GET_ISSUER_CERT|SELF_SIGNED_CERT_IN_CHAIN|"
+    r"unable to (?:get local issuer|verify the first) certificate|CERTIFICATE_VERIFY_FAILED|self[- ]signed certificate",
+    re.I)
+
+
+def tls_reason(exc_or_text) -> Optional[str]:
+    """TLS_REASON when the failure looks like a missing proxy root CA (wrangler/node/git under launchd)."""
+    return TLS_REASON if _TLS_RE.search(str(exc_or_text)) else None
+
+
+def describe(exc) -> str:
+    """Error text for state/status: the TLS reason up front when it applies."""
+    reason = tls_reason(exc)
+    return f"{reason}; {str(exc)[-300:]}" if reason else str(exc)
+
+
 class NetworkError(RuntimeError):
     """A failure worth retrying."""
 
@@ -62,7 +80,7 @@ class NetworkError(RuntimeError):
 def is_network_error(exc_or_text) -> bool:
     if isinstance(exc_or_text, (NetworkError, TimeoutError, ConnectionError, subprocess.TimeoutExpired)):
         return True
-    return bool(_NETWORK_RE.search(str(exc_or_text)))
+    return bool(_NETWORK_RE.search(str(exc_or_text)) or _TLS_RE.search(str(exc_or_text)))
 
 
 def retry(fn: Callable, *, what: str, sleep: Callable = time.sleep, backoff=BACKOFF):
@@ -273,9 +291,9 @@ def cycle(root=None, *, runner=None, http=None, sleep=time.sleep, git=_git, buil
     try:
         sha = retry(lambda: fetch_main(root, git), what="fetch", sleep=sleep)
     except Exception as e:  # noqa: BLE001
-        state["last_error"] = str(e)[-300:]
+        state["last_error"] = describe(e)[-400:] if not tls_reason(e) else describe(e)
         save_state(state, root)
-        dp.log(f"owner: fetch failed — {e}")
+        dp.log(f"owner: fetch failed — {describe(e)}")
         return "failed-network" if is_network_error(e) else "failed"
     entry = (state.get("shas") or {}).get(sha) or {}
     if entry.get("state") in TERMINAL or entry.get("cycles", 0) >= MAX_CYCLES:
@@ -333,9 +351,11 @@ def cycle(root=None, *, runner=None, http=None, sleep=time.sleep, git=_git, buil
     except Exception as e:  # noqa: BLE001
         net = is_network_error(e)
         st = "failed-network" if net and cycles < MAX_CYCLES else "failed"
-        _record(state, sha, root, state=st, error=f"{type(e).__name__}: {e}"[-500:])
-        status.write("failed", sha, "", dp.now_iso(), error=f"owner: {e}"[-500:], url=dp.worker_url(WORKER_MAIN))
-        dp.log(f"owner: {sha[:9]} {st} — {e}")
+        tls = tls_reason(e)
+        err = f"{type(e).__name__}: {e}"[-400:]
+        _record(state, sha, root, state=st, error=f"{tls}; {err}" if tls else err)
+        status.write("failed", sha, "", dp.now_iso(), error=f"owner: {describe(e)}"[-500:] if not tls_reason(e) else f"owner: {describe(e)}", url=dp.worker_url(WORKER_MAIN))
+        dp.log(f"owner: {sha[:9]} {st} — {describe(e)}")
         return st
 
 
