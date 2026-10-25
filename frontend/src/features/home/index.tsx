@@ -1,5 +1,6 @@
 import { useNavigate } from "@tanstack/react-router";
 import { useMemo } from "react";
+import { withDefaultView } from "@/features/graph/defaultView";
 import { HomeScreen, type HomeHost } from "./HomeScreen";
 import { curatedCards } from "./curated";
 
@@ -12,9 +13,9 @@ export default function Home() {
   const navigate = useNavigate();
   const host = useMemo<HomeHost>(
     () => ({
-      // `from=home` gives the graph a way back
-      openGraph: (search) => void navigate({ to: "/graph" as "/", search: { ...search, from: "home" } as never }),
-      graphHref: (search) => `${base}/graph?${new URLSearchParams({ ...search, from: "home" }).toString()}`,
+      // `from=home` gives the graph a way back; a snapshot's default view (`--view`) rides along as `view`
+      openGraph: (search) => void navigate({ to: "/graph" as "/", search: { ...withDefaultView(search), from: "home" } as never }),
+      graphHref: (search) => `${base}/graph?${new URLSearchParams({ ...withDefaultView(search), from: "home" }).toString()}`,
       openPage: (slug) => void navigate({ to: `/pages/${encodeURIComponent(slug)}` as "/" }),
       pageHref: (slug) => `${base}/pages/${encodeURIComponent(slug)}`,
     }),

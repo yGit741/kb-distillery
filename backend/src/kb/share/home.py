@@ -11,7 +11,8 @@ Home cards and the guided tour are set per build in `share.toml`:
     focus = "theme-boolean-analysis"
     caption = "Where my reading on Fourier analysis of Boolean functions sits."
 
-They land in the kb-data blob as `home = {cards, tour}`. A card keeps only pages present in the build
+They land in the kb-data blob as `home = {cards, tour[, view]}` (`view` from `share … --view <id>`:
+the graph view the app opens on when the URL carries no `?view=`; the Home "Open in full graph" links carry it). A card keeps only pages present in the build
 (after the public cuts), and is dropped when none are left, so Home never opens on an empty card.
 """
 import re
@@ -43,8 +44,9 @@ def strip_my_notes(markdown: str) -> str:
     return MY_NOTES.sub("", markdown).rstrip() + "\n"
 
 
-def apply_home(data: dict, home: dict) -> dict:
-    """Add `home` to the blob (after `apply_profile`, so cards only name pages the build kept)."""
+def apply_home(data: dict, home: dict, view=None) -> dict:
+    """Add `home` to the blob (after `apply_profile`, so cards only name pages the build kept).
+    `view` (`share … --view <id>`) is the graph view the app opens on when the URL names none."""
     present = {n["id"] for n in data["graph"]["nodes"]}
     cards = []
     for c in home.get("cards", []):
@@ -58,4 +60,6 @@ def apply_home(data: dict, home: dict) -> dict:
             card["caption"] = c["caption"]
         cards.append(card)
     data["home"] = {"cards": cards, "tour": home.get("tour")}
+    if view:
+        data["home"]["view"] = view
     return data

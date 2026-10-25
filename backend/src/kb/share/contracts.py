@@ -76,12 +76,18 @@ class Manifest:
     # Left out of the JSON when unscoped, so existing manifests stay byte-identical.
     scope: Optional[str] = None
     hops: Optional[int] = None
+    # `share snapshot … --predicate public`: the page rule applied after the public profile
+    # (kb.share.predicate) and how many pages it dropped; `--view <id>`: the graph view the app opens on.
+    # Left out of the JSON when unset.
+    predicate: Optional[str] = None
+    dropped: Optional[int] = None
+    view: Optional[str] = None
 
     def to_json(self) -> str:
         d = asdict(self)
         if d["layout"] == "legacy":
             del d["layout"]
-        for k in ("scope", "hops"):
+        for k in ("scope", "hops", "predicate", "dropped", "view"):
             if d[k] is None:
                 del d[k]
         return json.dumps(d, sort_keys=True, indent=2) + "\n"
