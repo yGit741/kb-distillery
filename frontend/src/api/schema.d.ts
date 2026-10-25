@@ -871,6 +871,54 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
+        /** DeployState */
+        DeployState: {
+            /** Behind */
+            behind?: boolean | null;
+            /** Behind Minutes */
+            behind_minutes?: number | null;
+            /** Deploying */
+            deploying?: string | null;
+            /** Heartbeat Age */
+            heartbeat_age?: number | null;
+            /** Last Outcome */
+            last_outcome?: string | null;
+            /**
+             * Last Reason
+             * @default
+             */
+            last_reason: string;
+            /** Last Sha */
+            last_sha?: string | null;
+            /** Live At */
+            live_at?: string | null;
+            /** Live Sha */
+            live_sha?: string | null;
+            /** Main Sha */
+            main_sha?: string | null;
+            /**
+             * Owner Alive
+             * @default false
+             */
+            owner_alive: boolean;
+            /**
+             * Owner Installed
+             * @default false
+             */
+            owner_installed: boolean;
+            /**
+             * Queued
+             * @default []
+             */
+            queued: string[];
+            /**
+             * Rollbacks 7D
+             * @default 0
+             */
+            rollbacks_7d: number;
+        } & {
+            [key: string]: unknown;
+        };
         /** DigestResult */
         DigestResult: {
             /**
@@ -1372,6 +1420,7 @@ export interface components {
         };
         /** OpsSnapshot */
         OpsSnapshot: {
+            deploy?: components["schemas"]["DeployState"] | null;
             /**
              * Doc
              * @default {}
