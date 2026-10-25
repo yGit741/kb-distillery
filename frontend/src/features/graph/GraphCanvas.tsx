@@ -3,9 +3,11 @@ import { useKb } from "@/lib/store";
 import { cn } from "@/lib/utils";
 import { useTheme } from "@/theme/theme";
 import { readCanvasColors, withAlpha, type CanvasColors } from "./canvasTheme";
-import { computeFocus, linkOpacity, nodeOpacity, type Focus } from "./focus";
+import { computeFocus, fadedLinkOpacity, fadedNodeOpacity, focusKey, nodeOpacity, type Focus } from "./focus";
 import { ForceGraph, type Anchor, type ForceGraphHandle } from "./ForceGraph";
-import { buildGraphData, largestComponent, type NeighborMap } from "./graphData";
+import { buildGraphData, edgeWeight, edgeWeights, largestComponent, type NeighborMap } from "./graphData";
+import { createHoverIntent, createSpeedMeter, HOVER_TUNING } from "./hoverIntent";
+import { drawArcs } from "./lab/arcs";
 import { drawHulls, drawLabelLayer, type FadeState } from "./lab/draw";
 import { useLabHud } from "./lab/hud";
 import { hopsFrom, type Importance } from "./lab/importance";
@@ -47,7 +49,11 @@ interface RenderState {
   forced: Map<string, number>;
   hops: Map<string, number> | null;
   focus: Focus | null;
+  /** the focus being faded out, with the fade's progress 0..1 (calm hover) */
+  prevFocus: Focus | null;
+  fadeT: number;
   selected: ReadonlySet<string>;
+  /** the committed hover: drives the focus and hover labels (the pointer itself is `intent.pointed()`) */
   hover: string | null;
   /** pointer in CSS px of the canvas (the hover lens) */
   pointer: { x: number; y: number } | null;
@@ -104,6 +110,8 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
     forced: new Map(),
     hops: null,
     focus: null,
+    prevFocus: null,
+    fadeT: 1,
     selected: new Set(),
     hover: null,
     pointer: null,
@@ -119,6 +127,9 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
 
   rs.current.imp = imp;
   const names = useMemo(() => areaNames(model.nodes), [model]);
+  const weights = useMemo(() => edgeWeights(model), [model]);
+  const weightsRef = useRef(weights);
+  weightsRef.current = weights;
   const core = useMemo(() => largestComponent(visible, neighbors), [visible, neighbors]);
   const coreRef = useRef(core);
   coreRef.current = core;
@@ -136,45 +147,103 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
   radiusRef.current = radiusOpts;
   const radius = useCallback((n: GNode) => (isPile(n) ? pileRadius(n) : nodeRadius(n, radiusRef.current)), []);
 
+  // ---- calm hover: the rest of the graph cross-fades between foci instead of switching in one frame
+  const fade = useRef({ key: "", at: 0, ms: 0, raf: 0 });
+  const startFade = useCallback((prev: Focus | null, next: Focus | null, calm: boolean) => {
+    const f = fade.current;
+    const key = focusKey(next);
+    if (key === f.key) return;
+    f.key = key;
+    const still = !calm || matchMedia("(prefers-reduced-motion: reduce)").matches;
+    f.ms = still ? 0 : next ? HOVER_TUNING.fadeIn : HOVER_TUNING.fadeOut;
+    // a fade interrupted midway starts from the current focus: the brief jump is far smaller than a flash
+    rs.current.prevFocus = f.ms ? prev : null;
+    rs.current.fadeT = f.ms ? 0 : 1;
+    f.at = performance.now();
+    const step = () => {
+      const t = Math.min(1, (performance.now() - f.at) / (f.ms || 1));
+      rs.current.fadeT = t;
+      if (t >= 1) {
+        rs.current.prevFocus = null;
+        f.raf = 0;
+      } else f.raf = requestAnimationFrame(step);
+      fg.current?.refresh();
+    };
+    if (f.ms && !f.raf) f.raf = requestAnimationFrame(step);
+  }, []);
+
   const recompute = useCallback(() => {
     const { ui: u, selection: sel, byId: ids, neighbors: nb, visible: vis } = live.current;
+    const gone = intent.current?.pointed();
+    if (gone && !vis.has(gone)) {   // filtered out or reloaded: nothing may act on it any more
+      intent.current?.reset();
+      wrap.current?.classList.remove("graph-pointer");
+    }
+    if (rs.current.hover && !vis.has(rs.current.hover)) rs.current.hover = null;
     const hover = rs.current.hover;
+    if (useLabHud.getState().hover !== hover) useLabHud.setState({ hover });
     const cfg = u.lab;
     const score = rs.current.imp.score;
     rs.current.selected = sel;
     // focus by degree of interest: the selection's hops stay lit, the rest fades
     const hops = cfg.doiHops > 0 && sel.size ? hopsFrom(sel, vis, nb, cfg.doiHops) : null;
     rs.current.hops = hops;
-    rs.current.focus = hops ? { core: new Set(sel), lit: new Set(hops.keys()) } : computeFocus(sel, hover, nb, u.highlight);
+    const next = hops ? { core: new Set(sel), lit: new Set(hops.keys()) } : computeFocus(sel, hover, nb, u.highlight);
+    startFade(rs.current.focus, next, u.calmHover);
+    rs.current.focus = next;
     // forced labels: hovered page, the selection, their best neighbours (capped), every page of an "Aa" type
     const forced = new Map<string, number>();
     const put = (id: string, r: number) => {
       const cur = forced.get(id);
       if (vis.has(id) && (cur === undefined || cur > r)) forced.set(id, r);
     };
-    const topNeighbours = (id: string) =>
-      [...new Set(nb.get(id) ?? [])].filter((j) => vis.has(j)).sort((a, b) => (score.get(b) ?? 0) - (score.get(a) ?? 0)).slice(0, cfg.neighborCap);
+    // hover neighbours rank by score; a click's by edge weight (then score), so the same page always lights the same ones
+    const byScore = (a: string, b: string) => (score.get(b) ?? 0) - (score.get(a) ?? 0) || a.localeCompare(b);
+    const byWeight = (id: string) => (a: string, b: string) => edgeWeight(weightsRef.current, id, b) - edgeWeight(weightsRef.current, id, a) || byScore(a, b);
+    const topNeighbours = (id: string, cmp = byScore) => [...new Set(nb.get(id) ?? [])].filter((j) => vis.has(j)).sort(cmp).slice(0, cfg.neighborCap);
     if (hover) {
       put(hover, FORCED.hover);
       if (cfg.hoverNeighbors) topNeighbours(hover).forEach((j) => put(j, FORCED.near));
     }
     for (const id of sel) {
       put(id, FORCED.selected);
-      topNeighbours(id).forEach((j) => put(j, FORCED.near));
+      topNeighbours(id, cfg.neighborBy === "weight" ? byWeight(id) : byScore).forEach((j) => put(j, FORCED.near));
     }
     if (u.typeLabels.size) for (const id of vis) if (u.typeLabels.has(ids.get(id)?.type ?? "")) put(id, FORCED.type);
     rs.current.forced = forced;
     fg.current?.refresh();
-  }, []);
+  }, [startFade]);
 
-  const setHover = useCallback(
-    (id: string | null) => {
-      if (rs.current.hover === id) return;
+  // What the pointer is on follows it at once (cursor, clicks, drags, the bubble); the focus commits
+  // through the hover intent once the pointer settles (./hoverIntent).
+  const speed = useRef(createSpeedMeter());
+  const intent = useRef<ReturnType<typeof createHoverIntent> | null>(null);
+  intent.current ??= createHoverIntent({
+    commit: (id) => {
       rs.current.hover = id;
-      wrap.current?.classList.toggle("graph-pointer", id !== null);
       recompute();
     },
-    [recompute],
+    committed: () => rs.current.hover,
+    speed: () => speed.current.speed(performance.now()),
+    enabled: () => live.current.ui.calmHover,
+  });
+  const pointed = useCallback(() => intent.current?.pointed() ?? null, []);
+  const setHover = useCallback((id: string | null) => {
+    if (intent.current?.pointed() === id) return;
+    wrap.current?.classList.toggle("graph-pointer", id !== null);
+    intent.current?.request(id);
+    fg.current?.refresh(); // the ring follows the pointer at once
+  }, []);
+  useEffect(() => {
+    if (!ui.calmHover) intent.current?.flush();
+  }, [ui.calmHover]);
+  useEffect(
+    () => () => {
+      intent.current?.cancel();
+      cancelAnimationFrame(fade.current.raf);
+      fade.current.raf = 0;
+    },
+    [],
   );
 
   // ---- data: positions of nodes that stay are carried over
@@ -296,7 +365,7 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
     const retarget = () => {
       queued = false;
       if (!fg.current || !last || !live.current.ui.magnet || pressed.current) return;
-      setHover(pickMagnetic(screenNodes(), last.x, last.y, rs.current.hover));
+      setHover(pickMagnetic(screenNodes(), last.x, last.y, pointed()));
       kick();
     };
 
@@ -324,10 +393,10 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
       const now = performance.now();
       if (aim && last && now - recheckAt > 150) {
         recheckAt = now;
-        setHover(pickMagnetic(screenNodes(), last.x, last.y, rs.current.hover));
+        setHover(pickMagnetic(screenNodes(), last.x, last.y, pointed()));
       }
       const list = aim ? screenNodes() : [];
-      const t = list.find((n) => n.id === rs.current.hover) ?? null;
+      const t = list.find((n) => n.id === pointed()) ?? null;
       const { want, strength } = t && last ? bubbleAim(t, last.x, last.y, list) : { want: 0, strength: 0 };
       bubble = stepBubble(bubble, want, strength, matchMedia("(prefers-reduced-motion: reduce)").matches);
       const p = rs.current.pointer;
@@ -343,6 +412,7 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
     };
     const move = (e: PointerEvent) => {
       last = { x: e.clientX, y: e.clientY };
+      speed.current.note(e.clientX, e.clientY, performance.now());
       const r = el.getBoundingClientRect();
       rs.current.pointer = { x: e.clientX - r.left, y: e.clientY - r.top };
       if (live.current.ui.lab.lens) fg.current?.refresh();
@@ -380,7 +450,7 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
       el.removeEventListener("pointerdown", down, true);
       window.removeEventListener("pointerup", up);
     };
-  }, [radius, setHover]);
+  }, [radius, setHover, pointed]);
 
   // ---- right-click: a node opens its menu, empty space closes the panels and drops the selection.
   // A right-drag is the box / lasso selection (tools/RegionOverlay), so the click is decided on release:
@@ -397,10 +467,10 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
     const ctx = (e: MouseEvent) => {
       e.preventDefault();
       // Windows and Linux fire `contextmenu` just after the release that already acted (or ended a drag)
-      if (!press && e.timeStamp - released > 150) act(e.clientX, e.clientY, rs.current.hover);
+      if (!press && e.timeStamp - released > 150) act(e.clientX, e.clientY, pointed());
     };
     const down = (e: PointerEvent) => {
-      if (e.button === 2) press = { x: e.clientX, y: e.clientY, id: e.pointerId, node: rs.current.hover, moved: false };
+      if (e.button === 2) press = { x: e.clientX, y: e.clientY, id: e.pointerId, node: pointed(), moved: false };
     };
     const move = (e: PointerEvent) => {
       if (press && e.pointerId === press.id && Math.hypot(e.clientX - press.x, e.clientY - press.y) >= DRAG_PX) press.moved = true;
@@ -433,7 +503,7 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
         const n = fg.current?.nodes().find((m) => m.id === id);
         return n ? fg.current?.screenOf(n) ?? null : null;
       },
-      hovered: () => rs.current.hover,
+      hovered: pointed,
       zoomBy: (f) => fg.current?.zoomBy(f),
       reheat: () => fg.current?.reheat(),
     }),
@@ -466,7 +536,7 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
   // with the magnet a near miss can land on an edge or the background: that click belongs to the pulled node
   const onNearMiss = useCallback(
     (ev: MouseEvent) => {
-      const id = rs.current.hover;
+      const id = pointed();
       if (live.current.ui.magnet && id) {
         clickNode(id, ev);
         return;
@@ -479,14 +549,16 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
   // ---- drawing
   const drawNode = useCallback(
     (n: SimNode, ctx: CanvasRenderingContext2D, scale: number) => {
-      const { colors, focus, selected, hover } = rs.current;
+      const { colors, focus, selected } = rs.current;
+      // the ring follows the pointer at once (small, local feedback); dim and labels wait for the intent
+      const hover = intent.current?.pointed() ?? null;
       if (n.x == null || n.y == null) return;
       if (isPile(n)) {
         drawPile(n, ctx, scale, colors, hover === n.id);
         return;
       }
       const r = radius(n);
-      const alpha = nodeOpacity(n.id, focus);
+      const alpha = fadedNodeOpacity(n.id, focus, rs.current.prevFocus, rs.current.fadeT);
       const isSel = selected.has(n.id);
       const halo = useDecor.getState().halo?.get(n.id);
       if (halo) {
@@ -506,7 +578,23 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
       ctx.arc(n.x, n.y, r, 0, 2 * Math.PI);
       ctx.globalAlpha = alpha;
       const by = live.current.ui.colorBy;
-      ctx.fillStyle = colorOf(n, by, METRIC_COLORS.has(by) ? metricOf(rs.current.imp, n, by) : undefined);
+      const col = colorOf(n, by, METRIC_COLORS.has(by) ? metricOf(rs.current.imp, n, by) : undefined);
+      if (n.type === "question") {
+        // a question is a hollow ring with a "?" inside: readable without a label
+        ctx.fillStyle = colors.background;
+        ctx.fill();
+        ctx.strokeStyle = col;
+        ctx.lineWidth = r * 0.22;
+        ctx.stroke();
+        ctx.fillStyle = col;
+        ctx.font = `600 ${r * 1.4}px ${colors.font}`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText("?", n.x, n.y + r * 0.08);
+        ctx.globalAlpha = 1;
+        return;
+      }
+      ctx.fillStyle = col;
       ctx.fill();
       ctx.globalAlpha = alpha * 0.5;
       ctx.strokeStyle = colors.background;
@@ -519,9 +607,11 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
 
   const drawFramePre = useCallback(
     (ctx: CanvasRenderingContext2D, scale: number) => {
-      if (!live.current.ui.lab.hulls) return;
       const g = fg.current;
-      if (g) drawHulls(ctx, g.nodes().filter((n) => !isPile(n)), scale, names);
+      if (!g) return;
+      const arcs = useDecor.getState().arcs;
+      if (arcs?.length) drawArcs(ctx, g.nodes(), arcs, scale, rs.current.colors);
+      if (live.current.ui.lab.hulls) drawHulls(ctx, g.nodes().filter((n) => !isPile(n)), scale, names, live.current.ui.lab.hullSigma);
     },
     [names],
   );
@@ -602,11 +692,11 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
   }, []);
 
   const linkColor = useCallback((l: SimLink) => {
-    const { focus, colors } = rs.current;
+    const { focus, prevFocus, fadeT, colors } = rs.current;
     const a = endId(l.source);
     const b = endId(l.target);
     const fade = useDecor.getState().linkFade?.(a, b) ?? 1;
-    return withAlpha(colors.link, fade * linkOpacity(a, b, focus, live.current.ui.linkOpacity, l.kind));
+    return withAlpha(colors.link, fade * fadedLinkOpacity(a, b, focus, prevFocus, fadeT, live.current.ui.linkOpacity, l.kind));
   }, []);
   const linkWidth = useCallback((l: SimLink) => (l.kind === "shared" ? 0.35 + Math.min(l.shared ?? 1, 6) * 0.1 : 0.8), []);
   const linkLabel = useCallback(

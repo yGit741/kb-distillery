@@ -1,3 +1,4 @@
+import type { Predicate } from "../publicPredicate";
 import type { ColorBy, SizeBy } from "../style";
 import { DEFAULT_LAB, type LabConfig } from "./config";
 
@@ -16,11 +17,96 @@ export interface Story {
   types: readonly string[];
   /** types whose every page is labelled (the legend's "Aa") */
   typeLabels?: readonly string[];
+  /** A headline view: a pill in the views bar, with the questions it answers (hover) and a short hint. */
+  headline?: { label: string; questions: readonly string[]; hint: string };
+  /** Pages drawn at all, on top of the type filter (../publicPredicate). */
+  predicate?: Predicate;
+  /** Pages the view is built around: they and their neighbours are drawn, the rest hidden. */
+  seed?: readonly string[];
+  /** A tool panel the view opens (and the experiment flag it needs). */
+  tool?: { id: string; flag?: string };
 }
 
 const CONCEPTS = ["topic", "question", "idea"] as const;
+/** Map's drawn types: every page type except the collection hubs, whose course/book names duplicate the themes' labels. */
+const MAP_TYPES = ["topic", "idea", "question", "person", "paper", "part", "lecture", "article", "video", "conversation", "ai-chat", "blog-post"] as const;
+
+/**
+ * The thesis spine: generalization of over-parameterized networks met through Boolean analysis. The themes,
+ * the open questions that touch both, the papers the direction rests on, and the book; one hop out is drawn.
+ */
+export const THESIS_SEED: readonly string[] = [
+  "theme-boolean-analysis",
+  "theme-implicit-regularization",
+  "theme-learning-theory",
+  "q-why-do-overparameterized-networks-generalize",
+  "q-what-does-double-descent-say-about-implicit-regularization",
+  "q-does-the-gradient-variance-bound-explain-the-sparse-parity-s",
+  "q-what-are-the-discrete-counterparts-of-continuous-network-theory",
+  "volume-hypothesis",
+  "double-descent",
+  "parity-function",
+  "fourier-degree",
+  "noise-stability",
+  "paper-2019-implicit-regularization-in-deep-matrix-factorization",
+  "paper-2019-deep-double-descent-where-bigger-models-and-more-data-hurt",
+  "paper-2023-loss-landscapes-are-all-you-need",
+  "paper-2025-do-neural-networks-need-gradient-descent-to-generalize",
+  "book-2014-analysis-of-boolean-functions",
+  "gil-kalai",
+];
 
 export const STORIES: readonly Story[] = [
+  {
+    id: "map",
+    name: "Map: what is in my vault",
+    story: "As a reader who opens this vault for the first time, I want the territory at a glance: every theme on a ring, the ideas and questions inside each, and only the sources I actually read, so that breadth shows without the noise of imports and stubs.",
+    headline: {
+      label: "Map",
+      questions: ["What is in my vault?", "How broad is it?", "Which themes do my notes combine?"],
+      hint: "Themes on a ring, digested sources only",
+    },
+    predicate: "public",
+    lab: { degBasis: "nohub", coverage: 8, regions: "auto", regionZoom: 0.8, hulls: true, questionLabels: "none", wrapT2: 100 },
+    colorBy: "area",
+    sizeBy: "evidence",
+    layoutMode: "anchored",
+    types: MAP_TYPES,
+    typeLabels: ["topic"],
+  },
+  {
+    id: "thesis",
+    name: "Thesis: where I am heading",
+    story: "As a student choosing a thesis, I want the spine of my direction — generalization of over-parameterized networks seen through Boolean analysis — with the questions, papers and concepts one hop around it, so that I can see what the direction already rests on.",
+    headline: {
+      label: "Thesis",
+      questions: ["Which questions am I pursuing?", "What is the generalization ↔ Boolean-analysis core?", "What does the direction rest on?"],
+      hint: "The thesis spine and one hop around it",
+    },
+    seed: THESIS_SEED,
+    lab: { wTier: 0.5, wEvidence: 0.4, wOpen: 1.2, wBetween: 1.6, coverage: 14, positions: 8, questionLabels: "short" },
+    colorBy: "area",
+    sizeBy: "evidence",
+    layoutMode: "anchored",
+    types: ["topic", "idea", "question", "paper", "part", "book", "person"],
+    typeLabels: ["topic", "question"],
+  },
+  {
+    id: "explore",
+    name: "Explore: what is on my mind",
+    story: "As a student still choosing, I want the empty intersections of my vault as research-direction cards, with the thin spots lit on the graph, so that I can see where my curiosity is pulling me and what reading would pay most.",
+    headline: {
+      label: "Explore",
+      questions: ["What is on my mind?", "Where is my curiosity pulling me?", "Which themes do I touch but never connect?"],
+      hint: "Research directions from the gaps between themes",
+    },
+    tool: { id: "kalai-directions", flag: "directions" },
+    lab: { wTier: 0.3, wEvidence: 0, wDegree: 0.3, wGap: 1.5, sizeMode: "quantile" },
+    colorBy: "evidence",
+    sizeBy: "gap",
+    layoutMode: "anchored",
+    types: CONCEPTS,
+  },
   {
     id: "orient",
     name: "Orient: what is in my vault",
@@ -56,7 +142,7 @@ export const STORIES: readonly Story[] = [
     id: "questions",
     name: "Open questions first",
     story: "I want my open research questions as the landmarks, each with the concepts around it, to pick which one to push next.",
-    lab: { wTier: 0.6, wEvidence: 0.6, wOpen: 1.5, coverage: 14, positions: 8, t2: 13 },
+    lab: { wTier: 0.6, wEvidence: 0.6, wOpen: 1.5, coverage: 14, positions: 8, t2: 13, questionLabels: "short", charsQuestion: 26 },
     colorBy: "type",
     sizeBy: "evidence",
     layoutMode: "anchored",
@@ -133,6 +219,7 @@ export const STORIES: readonly Story[] = [
       wTier: 0, wEvidence: 0, wDegree: 1, wOpen: 0, norm: "global", degBasis: "all", scope: "screen", strategy: "count", count: 12,
       zoomGrowth: 1.5, pool: "hubs", positions: 1, avoidNodes: false, sizeMode: "uniform", base: 10, minPx: 2.5, textField: "title",
       maxChars: 42, bg: "box", weightTier: false, fade: 0, hysteresis: 0, perceptual: false,
+      wrapT1: 0, wrapT2: 0, wrapT3: 0, maxLines: 1, forcedPill: false, leaderLines: false, edgeFlip: false, neighborBy: "score",
     },
     colorBy: "type",
     sizeBy: "connections",
@@ -141,7 +228,12 @@ export const STORIES: readonly Story[] = [
   },
 ];
 
-export const DEFAULT_STORY = "orient";
+export const DEFAULT_STORY = "map";
+
+/** The pills of the views bar, in order. */
+export const HEADLINE_STORIES: readonly Story[] = STORIES.filter((s) => s.headline);
+/** Views reachable from "More": the rest, minus the lab leftovers that only compare label rules. */
+export const MORE_STORIES: readonly Story[] = STORIES.filter((s) => !s.headline && !["baseline", "compare", "orient"].includes(s.id));
 
 export const storyById = (id: string): Story | undefined => STORIES.find((s) => s.id === id);
 

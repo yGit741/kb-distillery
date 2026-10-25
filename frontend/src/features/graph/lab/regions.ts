@@ -68,13 +68,22 @@ export function convexHull(points: readonly Pt[]): Pt[] {
   return lower.slice(0, -1).concat(upper.slice(0, -1));
 }
 
-/** The hull of an area's core: the 70% of its pages closest to the median, so a few strays do not blow it up. */
-export function coreHull(members: readonly Positioned[], keep = 0.7): Pt[] {
+/**
+ * The hull of an area's core, so a few strays do not blow it up: the pages within mean + sigma·sd of their
+ * distance to the median (sigma <= 0: the closest `keep` share instead); fewer than 5 pages all count.
+ */
+export function coreHull(members: readonly Positioned[], keep = 0.7, sigma = 2): Pt[] {
   const pts = members.filter((n) => n.x != null && n.y != null).map((n) => [n.x as number, n.y as number] as const);
   if (pts.length < 3) return [];
+  if (pts.length < 5) return convexHull(pts);
   const cx = median(pts.map((p) => p[0]));
   const cy = median(pts.map((p) => p[1]));
-  const d = pts.map((p) => Math.hypot(p[0] - cx, p[1] - cy)).sort((a, b) => a - b);
-  const cut = d[Math.floor(d.length * keep)] ?? 0;
-  return convexHull(pts.filter((p) => Math.hypot(p[0] - cx, p[1] - cy) <= cut + 1e-9));
+  const d = pts.map((p) => Math.hypot(p[0] - cx, p[1] - cy));
+  let cut: number;
+  if (sigma > 0) {
+    const mean = d.reduce((a, x) => a + x, 0) / d.length;
+    const sd = Math.sqrt(d.reduce((a, x) => a + (x - mean) ** 2, 0) / d.length);
+    cut = mean + sigma * sd;
+  } else cut = [...d].sort((a, b) => a - b)[Math.floor(d.length * keep)] ?? 0;
+  return convexHull(pts.filter((_, k) => (d[k] as number) <= cut + 1e-9));
 }

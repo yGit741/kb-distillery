@@ -5,13 +5,24 @@ import { create } from "zustand";
  * and a fade per link (0..1 multiplies its opacity). One owner at a time; a tool clears its own decor when
  * its panel closes.
  */
+/** A chord between two theme pages (ids), weight 0..1; `apart` = the themes meet less than chance (drawn dashed). */
+export interface Arc {
+  a: string;
+  b: string;
+  w: number;
+  apart?: boolean;
+}
+
 export interface Decor {
   owner: string | null;
   halo: ReadonlyMap<string, number> | null;
   linkFade: ((a: string, b: string) => number) | null;
+  /** chords under the graph between theme pages (the spectrum): its own channel, outside the owner scheme */
+  arcs: readonly Arc[] | null;
   /** bumped on every change so the canvas redraws */
   tick: number;
   paint: (owner: string, patch: { halo?: ReadonlyMap<string, number> | null; linkFade?: ((a: string, b: string) => number) | null }) => void;
+  setArcs: (arcs: readonly Arc[] | null) => void;
   clear: (owner: string) => void;
 }
 
@@ -19,6 +30,7 @@ export const useDecor = create<Decor>((set, get) => ({
   owner: null,
   halo: null,
   linkFade: null,
+  arcs: null,
   tick: 0,
   paint: (owner, patch) => {
     const mine = get().owner === owner;
@@ -29,6 +41,7 @@ export const useDecor = create<Decor>((set, get) => ({
       tick: get().tick + 1,
     });
   },
+  setArcs: (arcs) => set({ arcs, tick: get().tick + 1 }),
   clear: (owner) => {
     if (get().owner === owner) set({ owner: null, halo: null, linkFade: null, tick: get().tick + 1 });
   },

@@ -1,6 +1,8 @@
 import { keepPreviousData, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useDataSource } from "@/api";
+import { HEADER_SLOT_ID } from "@/app/headerSlot";
 import { Empty, ErrorState, Loading } from "@/components/states";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -19,8 +21,13 @@ import { buildNeighborMap } from "./graphData";
 import { GraphCanvas, type CanvasHandle } from "./GraphCanvas";
 import { Inspector } from "./Inspector";
 import { computeImportance } from "./lab/importance";
+import { HoverCard } from "./lab/HoverCard";
 import { LabRail } from "./lab/LabRail";
+import { initialView } from "./defaultView";
+import { storyById } from "./lab/views";
 import { Legend } from "./Legend";
+import { predicateFn } from "./publicPredicate";
+import { ViewsBar } from "./views/ViewsBar";
 import { NodeMenu } from "./NodeMenu";
 import { computeVisible } from "./rules";
 import { parseSchema } from "./schema";
@@ -31,12 +38,15 @@ import { TOOLS, useVisibleTools, type GraphToolContext } from "./tools";
 import { flagOn, useExperiments } from "./tools/experiments";
 import { toModel, type GNode } from "./types";
 import { LAYER_TYPES, type Layer } from "@/api/model";
+import "./tours";
 
 /** How the screen reaches the rest of the app (the router lives in index.tsx; tests pass plain functions). */
 export interface GraphHost extends ToolHost {
   pageHref: (slug: string) => string;
   /** Drop URL params once the view they describe is cleared. */
   clearParams: (keys: string[]) => void;
+  /** Merge params into the URL (undefined or "" removes one); a view pill writes `view` so the link carries it. */
+  setParams: (patch: Record<string, string | undefined>) => void;
 }
 
 const LIVE_MS = 10_000;
@@ -156,8 +166,9 @@ function Loaded({
         restrict: ui.view?.shown ?? null,
         force: !!ui.view,
         revealed: ui.revealed,
+        keep: predicateFn(ui.predicate),
       }),
-    [model, shownTypes, ui.shownDepths, ui.search, ui.rules, ui.view, ui.revealed],
+    [model, shownTypes, ui.shownDepths, ui.search, ui.rules, ui.view, ui.revealed, ui.predicate],
   );
   const imp = useMemo(() => computeImportance({ visible, byId, neighbors, cfg: ui.lab }), [visible, byId, neighbors, ui.lab]);
   const wide = useWide();
@@ -197,12 +208,52 @@ function Loaded({
     host.clearParams(["search", "pages", "scope"]);
   }, [host]);
 
+  // ---- headline views: a story, plus its seed view (Thesis) or tool panel (Explore); the URL carries `view`
+  /** the view id this screen applied last: the URL echo of a pill click must not apply it a second time */
+  const lastView = useRef("");
+  const applyView = useCallback(
+    (id: string, fromUrl = false) => {
+      const st = storyById(id);
+      if (!st) return;
+      const g = useGraphUi.getState();
+      g.applyStory(id);
+      setNote("");
+      if (st.seed) {
+        // the seed and one hop out — but a view forces its pages past the type filter, so keep the hop to
+        // the story's own types (otherwise a person's 900 blog posts would flood the thesis spine)
+        const seed = st.seed.filter((s) => byId.has(s));
+        const view = makeView("picked", st.headline?.label ?? st.name, seed, byId, neighbors);
+        const types = new Set<string>(st.types);
+        useGraphUi.setState({
+          view: view ? { ...view, shown: new Set([...view.shown].filter((id) => view.hits.has(id) || types.has(byId.get(id)?.type ?? ""))) } : null,
+        });
+      }
+      useKb.getState().clearSelection();
+      if (st.tool) {
+        const ex = useExperiments.getState();
+        if (st.tool.flag && !ex.on.has(st.tool.flag)) ex.toggle(st.tool.flag);
+        useGraphUi.setState({ flyout: st.tool.id, railOpen: false });
+      } else if (g.flyout && TOOLS.some((t) => t.id === g.flyout)) {
+        useGraphUi.setState({ flyout: null });
+      }
+      g.fit();
+      lastView.current = id;
+      if (!fromUrl) host.setParams({ view: id, search: undefined, pages: undefined, scope: undefined });
+    },
+    [byId, neighbors, host],
+  );
+
   // ---- deep links: ?focus ?select ?search ?pages ?scope ?layer, applied once per distinct value
   const applied = useRef("");
+  /** a snapshot's default view (`KB_EMBEDDED.home.view`) stands in for a missing `?view=` on the first pass only */
+  const homeViewTried = useRef(false);
   useEffect(() => {
-    const key = JSON.stringify([search.focus, search.select, search.search, search.pages, search.scope, search.layer, search.raw]);
+    const key = JSON.stringify([search.focus, search.select, search.search, search.pages, search.scope, search.layer, search.raw, search.view]);
     if (applied.current === key) return;
     applied.current = key;
+    const view = homeViewTried.current ? (search.view && storyById(search.view) ? search.view : undefined) : initialView(search);
+    homeViewTried.current = true;
+    if (view && view !== lastView.current) applyView(view, true);
     if (search.raw === "1" && dsKind !== "embedded") useLayer.getState().setRaw(true);
     if (search.layer && search.layer in LAYER_TYPES) {
       useGraphUi.setState({ shownTypes: new Set<string>(LAYER_TYPES[search.layer as Layer]) });
@@ -218,7 +269,7 @@ function Loaded({
     }
     if (search.select) useKb.getState().setSelection(parsePages(search.select).filter((id) => byId.has(id)));
     if (search.focus && byId.has(search.focus)) useGraphUi.getState().requestFocus(search.focus);
-  }, [search, ds, dsKind, byId, neighbors, showMentions, showPicked, setView]);
+  }, [search, ds, dsKind, byId, neighbors, showMentions, showPicked, setView, applyView]);
 
   // ---- actions shared by the menu, the inspector, the finder and the keyboard
   const openReader = useCallback((id: string) => useGraphUi.setState({ readerSlug: id }), []);
@@ -296,6 +347,22 @@ function Loaded({
   const showDetails = ui.detailsOpen && selected.length > 0;
 
   const legend = <Legend nodes={model.nodes} visible={visible} schema={schema} shownTypes={shownTypes} stats={stats} />;
+  // the header's slot is looked up after the shell committed (a render-time lookup can run before it exists)
+  const [headerSlot, setHeaderSlot] = useState<HTMLElement | null>(null);
+  useLayoutEffect(() => setHeaderSlot(document.getElementById(HEADER_SLOT_ID)), []);
+  const finder = (
+    <Finder
+      nodes={model.nodes}
+      byId={byId}
+      colorBy={ui.colorBy}
+      visible={visible}
+      onFocus={(id) => (visible.has(id) ? focus(id) : showPicked([id]))}
+      onRead={openReader}
+      onShowPicked={showPicked}
+      onShowMentions={(query) => void showMentions(query)}
+      placement={headerSlot ? "header" : "canvas"}
+    />
+  );
 
   return (
     <HostContext.Provider value={host}>
@@ -317,22 +384,22 @@ function Loaded({
         onOpenReader={openReader}
         onOpenPile={(format) => useLayer.getState().openDrawer({ kind: "format", format })}
       />
-      <Finder
-        nodes={model.nodes}
-        byId={byId}
-        colorBy={ui.colorBy}
-        visible={visible}
-        onFocus={(id) => (visible.has(id) ? focus(id) : showPicked([id]))}
-        onRead={openReader}
-        onShowPicked={showPicked}
-        onShowMentions={(query) => void showMentions(query)}
-      />
+      {/* the search box lives in the app header when there is one (the embed has none: it floats over the canvas) */}
+      {headerSlot ? createPortal(finder, headerSlot) : finder}
+      <ViewsBar model={model} visible={visible} onPick={applyView} />
       {(ui.view || note) && (
-        <div className="pointer-events-auto absolute left-1/2 top-14 z-10 flex max-w-[min(28rem,calc(100%-8rem))] -translate-x-1/2 items-center gap-2 rounded-lg border bg-card px-2.5 py-1 text-xs shadow-[var(--shadow)]" role="status">
+        <div className={cn("pointer-events-auto absolute left-1/2 z-10 flex max-w-[min(28rem,calc(100%-8rem))] -translate-x-1/2 items-center gap-2 rounded-lg border bg-card px-2.5 py-1 text-xs shadow-[var(--shadow)]", headerSlot ? "top-14" : "top-24")} role="status">
           <span className="min-w-0 truncate">
             {ui.view ? (
               <>
-                <b>{ui.view.hits.size}</b> {ui.view.kind === "search" ? `page${ui.view.hits.size === 1 ? "" : "s"} mentioning “${ui.view.label}”` : ui.view.kind === "scope" ? `pages in ${ui.view.label}` : `picked page${ui.view.hits.size === 1 ? "" : "s"}`}{" "}
+                <b>{ui.view.hits.size}</b>{" "}
+                {ui.view.kind === "search"
+                  ? `page${ui.view.hits.size === 1 ? "" : "s"} mentioning “${ui.view.label}”`
+                  : ui.view.kind === "scope"
+                    ? `pages in ${ui.view.label}`
+                    : ui.story && storyById(ui.story)?.seed
+                      ? `pages on the ${ui.view.label.toLowerCase()} spine`
+                      : `picked page${ui.view.hits.size === 1 ? "" : "s"}`}{" "}
                 <span className="text-muted-foreground">+ neighbours</span>
               </>
             ) : (
@@ -356,8 +423,9 @@ function Loaded({
       />
       {legend}
       {ui.railOpen && <LabRail imp={imp} selected={selected} className={cn("absolute bottom-16 left-14 top-3 z-20", wide ? "w-72" : "w-[min(20rem,calc(100%-4.5rem))]")} />}
+      {!ui.railOpen && <HoverCard byId={byId} className="absolute bottom-16 left-14 z-20" />}
       {selected.length > 0 && !showDetails && !reader && (
-        <div className="pointer-events-auto absolute bottom-14 left-1/2 z-10 flex -translate-x-1/2 items-center gap-1 rounded-full border bg-card px-3 py-1 text-sm shadow-[var(--shadow)]">
+        <div data-tour="graph-selection" className="pointer-events-auto absolute bottom-14 left-1/2 [.gt-active_&]:bottom-24 z-10 flex -translate-x-1/2 items-center gap-1 rounded-full border bg-card px-3 py-1 text-sm shadow-[var(--shadow)]">
           <span>{selected.length === 1 ? (selected[0]?.title || selected[0]?.id) : `${selected.length} selected`}</span>
           <Button size="sm" variant="ghost" onClick={() => ui.set({ detailsOpen: true })}>
             Details

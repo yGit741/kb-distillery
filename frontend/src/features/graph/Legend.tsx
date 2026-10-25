@@ -109,10 +109,10 @@ export function Legend({ nodes, visible, schema, shownTypes, stats }: Props) {
       >
         Aa
       </button>
-      <button type="button" className={cn(CHIP, "text-muted-foreground")} title="The concept layer: topics, ideas and questions" onClick={() => useGraphUi.setState({ shownTypes: undefined })}>
+      <button type="button" className={cn(CHIP, "text-muted-foreground")} title="The concept layer: topics, ideas and questions" onClick={() => useGraphUi.setState({ shownTypes: undefined, predicate: null, story: "" })}>
         Concepts only
       </button>
-      <button type="button" className={cn(CHIP, "text-muted-foreground")} onClick={() => useGraphUi.setState({ shownTypes: null })}>
+      <button type="button" className={cn(CHIP, "text-muted-foreground")} onClick={() => useGraphUi.setState({ shownTypes: null, predicate: null, story: "" })}>
         Show all
       </button>
       <span className="sr-only" data-testid="graph-stats">

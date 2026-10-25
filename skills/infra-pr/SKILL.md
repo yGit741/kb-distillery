@@ -34,12 +34,17 @@ pixi run ship -- pr --hold                      # the user wants to review it
 pixi run ship -- merge
 pixi run ship -- approve 12                     # USER ONLY (blocked for agents)
 pixi run ship -- status
+pixi run ship -- claims                         # every lane's claimed / touched paths
+pixi run ship -- events 12                      # kb-event lines on PR 12 (claimed, queued, checks, merged)
+pixi run ship -- round open "Phase 2" --features a,b   # multi-PR effort: issue #R with a checklist
+pixi run ship -- start a --worktree --round 40    # link the branch; pr/merge mirror events + tick on #40
+pixi run ship -- round status 40                # checklist + latest event per feature (one line each)
 pixi run ops -- migrate --check
 ```
 
 ## Agent steps
 
-1. Work in a worktree: `pixi run ship -- start <feature> --worktree` (or, inside a session worktree, `ship -- start <feature>` renames its `worktree-*` branch to `infra/<feature>` — do this **before the first edit**; a session must never end on a `worktree-*` branch: finish with `ship -- pr` or `ship -- prune --drop <branch>`).
+1. Work in a worktree: `pixi run ship -- start <feature> --worktree --paths <dir>,<dir>` (`--paths` claims the dirs you will touch and prints an OVERLAP warning when another open PR or worktree touches them — tell the user, never stop on it; `ship -- claims` lists all lanes) (or, inside a session worktree, `ship -- start <feature>` renames its `worktree-*` branch to `infra/<feature>` — do this **before the first edit**; a session must never end on a `worktree-*` branch: finish with `ship -- pr` or `ship -- prune --drop <branch>`).
 2. Commit with `ship -- commit "type(component): imperative summary"` — types by what changed: `schema` (note rules) › `feat` (new capability) › `fix` (wrong behaviour) › `chore` (no behaviour change: config, docs, tests, refactors); scope is a component (`vault raw books think ingest lint guard dashboard skills distill query export scrap git obsidian claude gemini`). Gates: unit tests, lint-skills, lint. Untracked raw PDFs are linked from the primary checkout automatically.
 3. **Review first:** spawn the read-only `reviewer` subagent (`.claude/agents/reviewer.md`) on the branch and fix its blocking findings. Then `ship -- pr`, which also runs the scripted check gate (no LLM) for the lanes the branch touched vs origin/main: `frontend/` → `web-check`, `backend/src/kb/api/` or `frontend/src/api` → `api-schema-check`, `backend/src/kb/dashboard/` → `test-e2e` (skipped with a note when node/playwright is missing). It refuses on failure and prints the output tail; `--skip-checks "<reason>"` bypasses it and the reason lands in the PR body. `ship -- merge` runs the same gate.
    `ship -- pr` pushes and opens the PR (idempotent). Pass `--title` when the branch has several commits — its type must be the highest of them (paradigm › schema › feat › fix › chore) and the whole `<title> (#N)` must fit 100 chars; `ship` refuses otherwise. Add `--hold` when the user wants to review it; schema/paradigm PRs get the `hold` label automatically.

@@ -300,6 +300,7 @@ TOOLING_PATHS = [
     "AGENTS.md",
     "CLAUDE.md",
     "GEMINI.md",
+    ".integrator.toml",  # integrator skill config (~/.claude/skills/integrator)
     "pixi.toml",
     "pixi.lock",
     ".gitignore",
