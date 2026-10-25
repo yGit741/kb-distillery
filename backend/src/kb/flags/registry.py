@@ -6,6 +6,7 @@ overrides (G2) will layer on top of it for `kind = "runtime"` flags only.
 """
 from __future__ import annotations
 
+import contextlib
 import datetime as dt
 import re
 import tomllib
@@ -20,6 +21,25 @@ FLAGS_TOML = Path(ROOT) / "meta" / "flags.toml"
 ENVS = ("local", "private", "public")
 Env = Literal["local", "private", "public"]
 NAME_RE = re.compile(r"^[a-z][a-z0-9-]*(\.[a-z][a-z0-9-]*)*$")
+
+
+# Test seam: `override()` (used by the pytest `flag` marker, backend/tests/conftest.py) forces a value for
+# every env. Never set outside tests.
+_OVERRIDES: dict[str, bool] = {}
+
+
+@contextlib.contextmanager
+def override(name: str, on: bool):
+    """Force flag `name` to `on` in every env for the duration (tests only)."""
+    had, old = name in _OVERRIDES, _OVERRIDES.get(name)
+    _OVERRIDES[name] = bool(on)
+    try:
+        yield
+    finally:
+        if had:
+            _OVERRIDES[name] = old
+        else:
+            _OVERRIDES.pop(name, None)
 
 
 class FlagError(ValueError):
@@ -55,6 +75,8 @@ class Flag(BaseModel):
         return self
 
     def value(self, env: str) -> bool:
+        if self.name in _OVERRIDES:
+            return _OVERRIDES[self.name]
         return getattr(self.envs, env) if env in ENVS else self.default
 
 
