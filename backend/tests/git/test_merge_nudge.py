@@ -77,14 +77,21 @@ class MergeNudgeTests(unittest.TestCase):
                              ("tool", "ok"), ("assistant", "Done, all gates green."))
         out = merge_nudge.decide(self._payload(t))
         self.assertEqual(out["decision"], "block")
-        self.assertIn('Awaiting your merge: #16 https://example/pr/16 — run `! pixi run ship -- approve 16`',
-                      out["reason"])
+        self.assertIn('Awaiting your merge: #16 https://example/pr/16 — approve the review on GitHub, '
+                      'or run `! pixi run ship -- approve 16`', out["reason"])
         # second pass of the same stop: never loops
         self.assertIsNone(merge_nudge.decide(self._payload(t, stop_hook_active=True)))
 
     def test_silent_when_reply_already_carries_the_nudge(self):
         g(self.repo, "checkout", "-q", "-b", "infra/thing")
         t = self._transcript(("user", "fix it"), ("assistant", "Done.\n\nAwaiting your merge: #16 https://example/pr/16"))
+        self.assertIsNone(merge_nudge.decide(self._payload(t)))
+
+    def test_new_review_wording_of_the_nudge_line_is_accepted(self):
+        g(self.repo, "checkout", "-q", "-b", "infra/thing")
+        pr = {"number": 16, "title": "", "url": "https://example/pr/16"}
+        t = self._transcript(("user", "fix it"), ("assistant", "Done.\n\n" + merge_nudge.nudge_line(pr)))
+        self.assertIn("approve the review on GitHub", merge_nudge.nudge_line(pr))
         self.assertIsNone(merge_nudge.decide(self._payload(t)))
 
     def test_nudge_from_an_earlier_reply_does_not_count(self):
