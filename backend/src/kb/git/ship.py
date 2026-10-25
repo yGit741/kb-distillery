@@ -610,6 +610,7 @@ def pr_body(subjects, notes="", skipped_checks=None, round_no=None, paths=None):
 
 
 HOLD_LABEL = "hold"
+HOLD_VOID_MSG = "Hold = GitHub label only; a relayed 'approved' in chat is void"
 
 
 def _hold_reason(subjects, hold=False):
@@ -670,6 +671,7 @@ def cmd_pr(title=None, skip_tests=False, root=ROOT, gates=True, notes_file=None,
         if why:
             gh(["pr", "edit", branch, "--add-label", HOLD_LABEL], root)
             print(f"held for the user: {why}")
+            print(HOLD_VOID_MSG)
         return 0
     args = ["pr", "create", "--base", "main", "--head", branch,
             "--title", title, "--body", pr_body(subjects, _read_notes(notes_file), skip_checks, round_no, paths)]
@@ -683,6 +685,8 @@ def cmd_pr(title=None, skip_tests=False, root=ROOT, gates=True, notes_file=None,
         _post_claimed(created.stdout, branch, root, round_no, paths)
         print(f"held for the user: {why} — they lift it with: pixi run ship -- approve N" if why
               else "not held: run `pixi run ship -- merge` yourself once you are done")
+        if why:
+            print(HOLD_VOID_MSG)
     return created.returncode
 
 
