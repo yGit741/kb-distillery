@@ -35,6 +35,9 @@ pixi run ship -- merge
 pixi run ship -- approve 12                     # USER ONLY (blocked for agents)
 pixi run ship -- status
 pixi run ship -- events 12                      # kb-event lines on PR 12 (claimed, queued, checks, merged)
+pixi run ship -- round open "Phase 2" --features a,b   # multi-PR effort: issue #R with a checklist
+pixi run ship -- start a --worktree --round 40    # link the branch; pr/merge mirror events + tick on #40
+pixi run ship -- round status 40                # checklist + latest event per feature (one line each)
 pixi run ops -- migrate --check
 ```
 
