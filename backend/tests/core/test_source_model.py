@@ -73,9 +73,9 @@ class SpecMapTotality(unittest.TestCase):
         self.assertEqual(schema.CONCEPT_TYPES | {"distilled-think"}, layers["concept"])
 
     def test_migration_produces_the_schema(self):
-        self.assertEqual(tuple(load_migration().PRODUCES), schema.SCHEMA_VERSION)
-        self.assertEqual(tuple(self.spec["schema"]), schema.SCHEMA_VERSION)
-        self.assertEqual(schema.SCHEMA_VERSION, (1, 0))
+        self.assertEqual(tuple(load_migration().PRODUCES), (1, 0))       # the paradigm this migration produced
+        self.assertEqual(tuple(self.spec["schema"]), (1, 0))
+        self.assertGreaterEqual(schema.SCHEMA_VERSION, (1, 0))
 
 
 IDEA = "---\ntype: concept\nstatus: seed\n---\n\n# I\n\ntype: concept stays in the body\n\n## My notes\n\nmine\n"
@@ -200,9 +200,9 @@ class MajorVersionBump(unittest.TestCase):
         self.addCleanup(self.repo.close)
 
     def test_merge_version_from_013(self):
-        self.assertEqual(cp.merge_version(schema.SCHEMA_VERSION, (0, 13, 1), "paradigm"), (1, 0, 0))
+        self.assertEqual(cp.merge_version((1, 0), (0, 13, 1), "paradigm"), (1, 0, 0))
         with self.assertRaises(ValueError):                    # a schema (y+1) PR may not do this
-            cp.merge_version(schema.SCHEMA_VERSION, (0, 13, 1), "schema")
+            cp.merge_version((1, 0), (0, 13, 1), "schema")
         with self.assertRaises(ValueError):
             cp.merge_version((0, 14), (0, 13, 1), "paradigm")
 

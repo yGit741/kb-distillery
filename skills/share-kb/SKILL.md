@@ -52,6 +52,7 @@ pixi run share -- audit <ref>              # public build of <ref> in a temp dir
 pixi run share -- snapshot <name> <ref>    # audit, then publish as snapshot-<YYYYMMDD>-<name> (public); --allow-flags, --dry-run
 pixi run share -- snapshot <name> <ref> --replace   # UPDATE a sent snapshot: same Worker, same link; refuses an older ref (--force)
 pixi run share -- snapshot <name> <ref> --app --scope <slug> [--hops 0|1]   # SUBGRAPH: only a scope / collection / person page, its members and (hops 1, default) their neighbours; manifest records scope + hops
+pixi run share -- snapshot <name> <ref> --app --predicate public [--view map]   # MAP ONLY: after the public cuts keep just the pages the app's Map view draws (kb.share.predicate = publicPredicate.ts: topics; linked concepts/collections; full/deep sources; no scope/distilled-think) — links, cards, bodies and search entries of dropped pages go too; `--view <id>` opens the graph on that view (home.view). Manifest records predicate, dropped, view; `audit` takes both flags
 pixi run share -- list [--json]            # our snapshots: version, behind-main, deployed at, views 7d, updates (was kb-x), online
 pixi run share -- history <name> [--json]  # every version a snapshot served, newest first, * = live; version ids for rollback
 pixi run share -- rollback --worker <name> [--to <id>]   # a snapshot's previous version (no auth gate; kb is the default worker)

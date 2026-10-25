@@ -5,6 +5,7 @@ import { IS_SHARE } from "@/share/env";
 import { readBlob } from "@/share/blob";
 import { applyTheme, useTheme } from "@/theme/theme";
 import { installTours } from "@/features/tour/tours";
+import "@/features/home/tours"; // the Home → Graph journeys, so `?tour=` works on any route
 import "./index.css";
 
 // A share build carries its data in the page; the embedded DataSource reads it from this global.

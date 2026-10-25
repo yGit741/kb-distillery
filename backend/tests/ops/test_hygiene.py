@@ -124,9 +124,11 @@ class WorktreeChecks(Repo):
         import shutil
         path = self.worktree("gone", "infra/gone")
         shutil.rmtree(path)
-        found = hygiene.check_worktrees(self.root, NOW)
+        self.assertEqual(hygiene.check_worktrees(self.root, NOW), [])      # reported by check_stale instead
+        with patch.object(ship, "open_prs", return_value=[]):
+            found = hygiene.check_stale(self.root, NOW)
         self.assertEqual(kinds(found), ["missing-worktree"])
-        self.assertEqual(found[0].fix, "git worktree prune")
+        self.assertIn("git worktree prune", found[0].fix)
 
     def test_clean_repo_has_no_worktree_findings(self):
         self.assertEqual(hygiene.check_worktrees(self.root, NOW), [])
@@ -230,18 +232,22 @@ class SessionChecks(Repo):
 
 
 class PrChecks(unittest.TestCase):
-    def test_old_prs_only(self):
-        rows = [{"number": 3, "branch": "infra/a", "title": "A", "age": "9d", "hours": 9 * 24},
-                {"number": 4, "branch": "infra/b", "title": "B", "age": "2d", "hours": 50},
-                {"number": 5, "branch": "infra/c", "title": "C", "age": "?", "hours": None}]
-        with patch.object(ship, "open_prs", return_value=rows):
-            found = hygiene.check_prs("/nowhere", NOW)
-        self.assertEqual([f.detail for f in found], ["PR #3 infra/a open for 9d: A"])
-        self.assertIn("prune --drop infra/a", found[0].fix)
+    def test_idle_prs_only(self):
+        rows = [{"number": 3, "branch": "infra/a", "title": "A", "age": "9d", "hours": 9 * 24, "updated_hours": 80},
+                {"number": 4, "branch": "infra/b", "title": "B", "age": "9d", "hours": 9 * 24, "updated_hours": 5},
+                {"number": 5, "branch": "infra/c", "title": "C", "age": "?", "hours": None, "updated_hours": None}]
+        with tempfile.TemporaryDirectory() as tmp:
+            g(tmp, "init", "-q")
+            with patch.object(ship, "open_prs", return_value=rows):
+                found = hygiene.check_stale(tmp, NOW)
+        self.assertEqual(kinds(found), ["idle-pr"])
+        self.assertIn("PR #3", found[0].detail)
 
     def test_gh_unavailable_is_silent(self):
-        with patch.object(ship, "open_prs", return_value=[]):
-            self.assertEqual(hygiene.check_prs("/nowhere", NOW), [])
+        with tempfile.TemporaryDirectory() as tmp:
+            g(tmp, "init", "-q")
+            with patch.object(ship, "open_prs", return_value=[]):
+                self.assertEqual(hygiene.check_stale(tmp, NOW), [])
 
 
 class SiteChecks(Repo):

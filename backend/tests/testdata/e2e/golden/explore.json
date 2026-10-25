@@ -251,11 +251,11 @@
    "id": "q-does-rank-explain-generalization",
    "in": 2,
    "out": 2,
-   "preview": "Question: Does a low-rank bias explain why big networks generalize?",
+   "preview": "Does a low-rank bias explain why big networks generalize?",
    "status": "open",
    "title": "Does rank explain generalization?",
    "type": "question",
-   "words": 50,
+   "words": 51,
    "year": null
   },
   {

@@ -3,10 +3,8 @@ import { Command as CommandIcon, Moon, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ROUTES } from "@/routes/registry";
 import { ShareFooter } from "@/share/ShareFooter";
-import { IS_SHARE } from "@/share/env";
 import { useTheme } from "@/theme/theme";
 import { CommandPalette } from "./CommandPalette";
-import { Tour } from "./tour/Tour";
 import { ShareChip } from "./ShareChip";
 import { useEmbed } from "./embed";
 import { HEADER_SLOT_ID } from "./headerSlot";
@@ -55,7 +53,6 @@ export function AppShell() {
       </main>
       <ShareFooter />
       <CommandPalette />
-      {IS_SHARE && !embed && <Tour id={globalThis.KB_EMBEDDED?.home?.tour} />}
     </div>
   );
 }
