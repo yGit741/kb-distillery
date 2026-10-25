@@ -117,10 +117,19 @@ describe("Home screen", () => {
     expect(await screen.findByText("PDF · 32 pages · 1.4 MB")).toBeInTheDocument();
     expect(screen.getByText("added 2026-10-22")).toBeInTheDocument();
     expect(getRawCard).toHaveBeenCalledWith(expect.stringMatching(/^p\d$/), expect.stringMatching(/^raw\/printed-docs\/p\d\.pdf$/));
-    const full = screen.getByRole("link", { name: /full graph/i });
+    const full = screen.getByRole("link", { name: "Open in Full Graph" });
     expect(full.getAttribute("href")).toMatch(/^\/app\/graph\?pages=/);
     await userEvent.click(full);
     expect(host.openGraph).toHaveBeenCalledWith(expect.objectContaining({ focus: "hub" }));
+    // the link carries the drawn ego graph: its pages, the concept + the ringed source selected
+    const sent = (host.openGraph as ReturnType<typeof vi.fn>).mock.calls.at(-1)![0] as { pages: string; select: string };
+    const pages = sent.pages.split(",");
+    expect(pages).toContain("hub");
+    const [first, ring] = sent.select.split(",");
+    expect(first).toBe("hub");
+    expect(ring).toMatch(/^p\d$/);
+    expect(pages).toContain(ring);
+    expect(full.getAttribute("href")).toContain(`select=${encodeURIComponent(sent.select)}`);
   });
 
   it("the combobox lists concepts only and picks with the keyboard", async () => {

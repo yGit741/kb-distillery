@@ -1,4 +1,4 @@
-import { Network, Shuffle } from "lucide-react";
+import { Waypoints, Shuffle } from "lucide-react";
 import { useId, useMemo, useState, type KeyboardEvent } from "react";
 import { findPages } from "@/features/graph/pageSearch";
 import { isPublic } from "@/features/graph/publicPredicate";
@@ -48,7 +48,7 @@ function ConceptCombo({ nodes, value, onPick }: { nodes: readonly GNode[]; value
   };
   return (
     <div className="relative min-w-0 flex-1">
-      <label className="flex items-center gap-2 rounded-full border bg-card px-3 py-1 focus-within:ring-2 focus-within:ring-ring">
+      <label className="flex h-8 items-center gap-2 rounded-full bg-muted px-3 focus-within:ring-2 focus-within:ring-ring">
         <input
           type="text"
           role="combobox"
@@ -141,7 +141,7 @@ export function ConceptExplorer({
   const drawn = useMemo(() => pickSource(vault, concept, rng(seed), publicOnly), [vault, concept, seed, publicOnly]);
   const sample = useMemo(() => egoSample(vault, concept, drawn), [vault, concept, drawn]);
   const draw = useMemo(() => (chosen && chosen !== drawn?.id ? drawFor(vault, concept, chosen, sample) : drawn), [chosen, drawn, vault, concept, sample]);
-  const search = graphSearch(sample);
+  const search = graphSearch(sample, sample.focus, draw?.id ?? null);
   const pickNode = (id: string) => {
     const n = vault.byId.get(id);
     if (n?.layer === "source") setChosen(id);
@@ -150,7 +150,7 @@ export function ConceptExplorer({
   };
   return (
     <section aria-label="Pick a concept" data-tour="home-start" className="mt-4 rounded-xl border bg-muted/25 p-3 text-[13.5px]">
-      <div className="flex items-center gap-3">
+      <div className="flex h-11 items-center gap-3 rounded-xl border bg-card px-1.5">
         <button
           type="button"
           onClick={onShuffle}
@@ -168,9 +168,10 @@ export function ConceptExplorer({
             e.preventDefault();
             host.openGraph(search);
           }}
-          className="inline-flex shrink-0 items-center gap-1.5 self-stretch rounded-full px-2 text-sm text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="inline-flex shrink-0 items-center gap-1.5 rounded-full px-2 py-1 text-sm font-semibold text-foreground hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
-          <Network aria-hidden className="size-3.5" /> Full Graph
+          <Waypoints aria-hidden className="size-4" strokeWidth={2.4} />
+          <span>Open in Full Graph</span>
         </a>
       </div>
       <div className="mt-2.5 flex flex-col gap-3">
