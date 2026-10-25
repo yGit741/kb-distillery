@@ -70,6 +70,7 @@ web-check = { cmd = "npm run typecheck --prefix frontend && npm run test --prefi
 test-worker = "node --test share/*.test.mjs"
 test-e2e = "node --test backend/src/kb/dashboard/e2e/*.test.mjs"
 install-sync = "bash tools/launchd/install.sh"
+install-deploy-owner = "bash tools/launchd/install-deploy-owner.sh"
 
 [pypi-dependencies]
 kb = { path = "backend", editable = true }

@@ -434,6 +434,7 @@ class CommitOpHookTests(unittest.TestCase):
 
     def test_commit_op_returns_before_the_deploy_finishes_and_survives_trigger_errors(self):
         from kb.ops import core
+        self.enterContext(mock.patch.dict(os.environ, {"KB_SHARE_DIRECT": "1"}))  # the old direct path
         Path(self.root, "wiki/b.md").write_text("v2\n")
         started = []
         procs = []
