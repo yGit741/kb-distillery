@@ -4,7 +4,7 @@ import os
 from fastapi import APIRouter, Depends, Query
 from fastapi.responses import FileResponse, JSONResponse, Response
 
-from kb.api.models.corpus import CorpusTable, DigestResult, ErrorBody, RawPreview
+from kb.api.models.corpus import CorpusTable, DigestResult, ErrorBody, RawCard, RawPreview
 from kb.api.security import safe_raw_path
 from kb.services import corpus
 
@@ -43,6 +43,12 @@ def get_raw_thumb(full: str = Depends(safe_raw_path), w: int = Query(THUMB_WIDTH
     if not png:
         return JSONResponse({"error": "no thumbnail for this file"}, status_code=415)
     return Response(png, media_type="image/png")
+
+
+@router.get("/api/raw/{path:path}/card", response_model=RawCard, summary="One raw file as a Home pipeline card")
+def get_raw_card(full: str = Depends(safe_raw_path)):
+    from kb.services.raw_card import raw_card
+    return raw_card(full, rel_of(full), corpus.ROOT)
 
 
 @router.get("/api/raw/{path:path}/file", summary="The raw file itself (read-only)", response_class=Response)

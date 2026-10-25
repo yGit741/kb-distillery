@@ -26,6 +26,12 @@ export interface DataSource {
   getPipeline(): Promise<T.PipelineSnapshot>;
   getCorpus(format?: string): Promise<T.CorpusTable>;
   getRawPreview(path: string): Promise<T.RawPreview>;
+  /** One source's raw file as a Home card: live from `path` (local), baked per `slug` (share). */
+  getRawCard(slug: string, path: string | null): Promise<T.RawCard>;
+  /** Image URL of page 1 / the image itself, or null where only baked data URIs exist. */
+  rawThumbUrl(path: string, width: number): string | null;
+  /** The raw file itself (local only). */
+  rawFileUrl(path: string): string | null;
   digestRaw(path: string): Promise<T.DigestResult>;
 
   // scopes

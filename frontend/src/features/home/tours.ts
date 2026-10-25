@@ -11,8 +11,9 @@ import { useKb } from "@/lib/store";
  */
 
 const INTRO = '[aria-labelledby="home-intro"]';
-const SUBGRAPH = 'section[aria-labelledby="home-subgraph"]';
-const CONCEPT = 'section[aria-labelledby="home-concept"]';
+/** the inner card: Pick a Concept, its ego graph and the pipeline strip */
+const PICKER = '[data-tour="home-start"]';
+const PIPELINE = '[data-tour="home-pipeline"]';
 const VIEWS = "#graph-views";
 /** pills in the views bar, in HEADLINE_STORIES order */
 const PILL = (n: 1 | 2 | 3) => `${VIEWS} > button:nth-of-type(${n})`;
@@ -37,24 +38,24 @@ const welcome = (): TourStep => ({
   target: INTRO,
   place: "bottom",
   title: "What you are looking at",
-  // source: AGENTS.md (Karpathy LLM-wiki pattern, agent-owned wiki/ over user-owned raw/); features/home/HomeScreen.tsx
-  body: "Every paper, lecture and blog post I read is distilled by an agent into linked notes, in the pattern of Karpathy's LLM wiki. Home draws small slices of that graph so you can start anywhere.",
+  // source: AGENTS.md (Karpathy LLM-wiki pattern, agent-owned wiki/ over user-owned raw/); features/home/glossary.tsx (Raw → Source → Concept)
+  body: "Every paper, lecture and blog post I read is distilled by an agent into linked notes, in the pattern of Karpathy's LLM wiki. The strip below shows how a raw file becomes a source and then concepts.",
 });
 
-/** B2: a Home card is one slice of the graph */
+/** B2: the picker's ego graph is one slice of the graph */
 const subgraphCard = (): TourStep => ({
-  target: SUBGRAPH,
-  place: "left",
-  title: "A card is a slice of the graph",
-  // source: features/home/HomeScreen.tsx (SampleCard draws `sample.nodes` of the same graph snapshot; "Another" rerolls)
-  body: "This mini graph is the real data, not an illustration: the same pages and links you will meet in the full graph. Another draws a different slice.",
+  target: PICKER,
+  place: "bottom",
+  title: "Pick a concept",
+  // source: features/home/ConceptExplorer.tsx (egoSample: the concept's neighbourhood of the same graph snapshot; the shuffle draws another concept)
+  body: "This mini graph is the real data, not an illustration: one concept and the pages linked to it, as you will meet them in the full graph. The shuffle picks another concept.",
 });
 const conceptCard = (): TourStep => ({
-  target: CONCEPT,
-  place: "left",
-  title: "One concept at a time",
-  // source: features/home/HomeScreen.tsx (drawConcept: idea or question, with its neighbours; TERMS: question = an open problem, a thesis candidate)
-  body: "The second card draws a single concept — an idea or an open question — with the pages linked to it. Open questions are my thesis candidates; ideas are what they rest on.",
+  target: PIPELINE,
+  place: "top",
+  title: "One source behind it",
+  // source: features/home/samplers.ts (pickSource: full/deep first, then easy, then listed; PipelineStrip: Raw → Source → Concepts it feeds)
+  body: "Next to the graph is one source the concept relies on, followed from the raw file to the page and on to every concept it feeds. Questions are mine to answer; ideas are what they rest on.",
 });
 
 /** B3: into the full graph, landing in the Map view on a page */

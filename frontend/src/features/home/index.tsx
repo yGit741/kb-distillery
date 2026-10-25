@@ -1,8 +1,8 @@
-import { useNavigate } from "@tanstack/react-router";
+import { useNavigate, useSearch } from "@tanstack/react-router";
+import type { SearchById } from "@/routes/search";
 import { useMemo } from "react";
 import { withDefaultView } from "@/features/graph/defaultView";
 import { HomeScreen, type HomeHost } from "./HomeScreen";
-import { curatedCards } from "./curated";
 
 export const ported = true;
 
@@ -18,9 +18,10 @@ export default function Home() {
       graphHref: (search) => `${base}/graph?${new URLSearchParams({ ...withDefaultView(search), from: "home" }).toString()}`,
       openPage: (slug) => void navigate({ to: `/pages/${encodeURIComponent(slug)}` as "/" }),
       pageHref: (slug) => `${base}/pages/${encodeURIComponent(slug)}`,
+      setConcept: (slug) => void navigate({ to: "/", search: { concept: slug } as never }),
     }),
     [navigate],
   );
-  const cards = useMemo(() => curatedCards(), []);
-  return <HomeScreen host={host} cards={cards} />;
+  const { concept } = useSearch({ strict: false }) as SearchById["home"];
+  return <HomeScreen host={host} concept={concept} />;
 }

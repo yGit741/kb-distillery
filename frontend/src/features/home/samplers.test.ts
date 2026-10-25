@@ -1,7 +1,7 @@
 import { node } from "@/features/graph/fixtures";
 import type { GNode } from "@/features/graph/types";
 import { parseCards } from "./curated";
-import { radii, wrap } from "./SampleGraph";
+import { clampZoom, R_MAX, R_MIN, radii } from "./SampleGraph";
 import {
   MAX_LINKS,
   MAX_NODES,
@@ -18,18 +18,11 @@ import {
   sampleAll,
   sampleNode,
   sampleNodes,
+  pickSource,
+  conceptsFed,
+  egoSample,
+  drawPickable,
 } from "./samplers";
-
-describe("label wrap", () => {
-  const len = (s: string) => s.length; // 1 unit per character
-  it("wraps whole words and keeps short titles on one line", () => {
-    expect(wrap("Information Theory", 30, len)).toEqual(["Information Theory"]);
-    expect(wrap("Richard Stanley: Enumerative and Algebraic Combinatorics", 20, len)).toEqual(["Richard Stanley:", "Enumerative and", "Algebraic Combinato…"]);
-  });
-  it("only adds an ellipsis when words are left over", () => {
-    expect(wrap("a b c", 1, len, 3)).toEqual(["a", "b", "c"]);
-  });
-});
 
 // a hub topic with 30 digested papers, an open question, a bridge idea between two areas, and listed stubs
 const papers = Array.from({ length: 30 }, (_, i) =>
@@ -109,10 +102,11 @@ describe("home samplers", () => {
     expect(graphSearch({ nodes: ["a", "b"], focus: "a" }, "b")).toEqual({ pages: "a,b", select: "b", focus: "b" });
   });
 
-  it("sizes nodes 3-7 px by degree inside the sample", () => {
+  it("sizes nodes R_MIN-R_MAX screen px by degree inside the sample, and clamps the fit zoom", () => {
     const r = radii({ nodes: ["a", "b", "c"], links: [["a", "b"], ["a", "c"]] });
-    expect(r.get("a")).toBe(7);
-    expect(r.get("b")).toBe(5);
+    expect(r.get("a")).toBe(R_MAX);
+    expect(r.get("b")).toBe((R_MIN + R_MAX) / 2);
+    expect([clampZoom(0.1), clampZoom(1.3), clampZoom(9)]).toEqual([0.7, 1.3, 2]);
   });
 
   it("samples one knowledge node per kind with its best neighbours, never a stub", () => {
@@ -149,5 +143,53 @@ describe("home samplers", () => {
       { title: "x", pages: ["a"], focus: "a", caption: undefined },
     ]);
     expect(parseCards(undefined)).toEqual([]);
+  });
+});
+
+describe("intro card: pick a concept, draw a source", () => {
+  const raw = (path: string) => ({ properties: { raw: path } }) as Partial<GNode>;
+  const g = indexVault(
+    [
+      node("idea-x", { type: "idea" }),
+      node("idea-y", { type: "idea" }),
+      node("q-far", { type: "question", status: "open" }),
+      node("topic-none", { type: "topic" }),
+      node("s-deep-clip", { type: "article", layer: "source", depth: "deep", ...raw("raw/web-clips/a.md") }),
+      node("s-full-pdf", { type: "paper", layer: "source", depth: "full", ...raw("raw/printed-docs/b.pdf") }),
+      node("s-easy", { type: "paper", layer: "source", depth: "easy" }),
+      node("s-listed", { type: "paper", layer: "source", depth: "listed" }),
+      node("s-easy-2", { type: "paper", layer: "source", depth: "easy" }),
+    ],
+    [
+      { source: "s-deep-clip", target: "idea-x" },
+      { source: "s-full-pdf", target: "idea-x" },
+      { source: "s-easy", target: "idea-x" },
+      { source: "q-far", target: "idea-y" },
+      { source: "s-easy-2", target: "idea-y" },
+      { source: "s-listed", target: "idea-y" },
+    ],
+  );
+
+  it("draws a direct source from the best tier, PDFs first", () => {
+    for (let seed = 1; seed < 20; seed++) expect(pickSource(g, "idea-x", rng(seed))).toEqual({ id: "s-full-pdf", via: null });
+  });
+  it("falls back to a source two hops away through an idea", () => {
+    expect(pickSource(g, "q-far", rng(3))).toEqual({ id: "s-easy-2", via: "idea-y" });
+  });
+  it("public builds keep only full/deep sources; no source at all is null", () => {
+    expect(pickSource(g, "q-far", rng(3), true)).toBeNull();
+    expect(pickSource(g, "topic-none", rng(3))).toBeNull();
+  });
+  it("lists the concepts a source feeds, the picked one first", () => {
+    expect(conceptsFed(g, "s-easy-2", "idea-y")).toEqual(["idea-y"]);
+  });
+  it("the ego sample keeps the concept, the drawn source and its idea, joined", () => {
+    const s = egoSample(g, "q-far", { id: "s-listed", via: "idea-y" });
+    expect(s.focus).toBe("q-far");
+    expect(s.nodes).toEqual(expect.arrayContaining(["q-far", "s-listed", "idea-y"]));
+    expect(s.links).toEqual(expect.arrayContaining([["idea-y", "s-listed"]]));
+  });
+  it("the shuffle only lands on topics, ideas and questions", () => {
+    for (let seed = 1; seed < 10; seed++) expect(["topic", "idea", "question"]).toContain(vault.byId.get(drawPickable(vault, rng(seed)) ?? "")?.type);
   });
 });
