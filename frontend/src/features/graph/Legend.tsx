@@ -88,8 +88,8 @@ interface Props {
 }
 
 /** What the nodes can be coloured by from the legend: the colourings that answer a question about the vault. */
-const COLOUR_PICK: readonly ColorBy[] = ["area", "depth", "status", "degree", "evidence"];
-const COLOUR_PICK_LABEL: Partial<Record<ColorBy, string>> = { area: "Area", depth: "Depth", status: "Status", degree: "Links", evidence: "Evidence" };
+const COLOUR_PICK: readonly ColorBy[] = ["area", "depth", "status", "degree"];
+const COLOUR_PICK_LABEL: Partial<Record<ColorBy, string>> = { area: "Area", depth: "Depth", status: "Status", degree: "Links" };
 
 /** The colour key's header: "Colour ·" and the colouring, switchable among the ones that make sense. */
 function ColourBy({ by, className }: { by: ColorBy; className?: string }) {
@@ -154,6 +154,9 @@ function QuickChip({
           </button>
           <button type="button" className="border-l px-2 text-sm leading-5 hover:bg-accent disabled:opacity-30" aria-label={`${label}: more`} disabled={i >= steps.length - 1} onClick={() => onChange(steps[i + 1]!)}>
             +
+          </button>
+          <button type="button" className="border-l px-2 text-sm leading-5 hover:bg-accent" aria-label={`${label}: clear`} title={`Turn ${label} off`} onClick={() => onChange(0)}>
+            ×
           </button>
         </span>
       )}
@@ -251,6 +254,18 @@ export function Legend({ nodes, visible, schema, shownTypes, stats, quickHidden 
             onChange={(v) => setQuick({ connected: v })}
           />
           {quickHidden > 0 && <small className="px-1 text-muted-foreground" title="Pages these filters hide">−{quickHidden}</small>}
+          {/* one click clears every active filter: the quick chips and the rules of your own */}
+          {(q.recent > 0 || q.connected > 0 || filtered) && (
+            <button
+              type="button"
+              className={cn(CHIP, "text-primary")}
+              aria-label="Clear filters"
+              title="Clear every active filter"
+              onClick={() => useGraphUi.setState({ quick: QUICK_OFF, rules: [], story: "" })}
+            >
+              × Clear
+            </button>
+          )}
           <button
             type="button"
             className={cn(CHIP, "border-l px-2 text-muted-foreground", filtered && "text-primary")}

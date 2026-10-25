@@ -26,7 +26,7 @@ const SLOW = 8000;
 // ---- pages the stories visit (wiki slugs)
 const ALEXANDER_2025 = "paper-2025-do-neural-networks-need-gradient-descent-to-generalize";
 const VOLUME = "volume-hypothesis";
-const DOUBLE_DESCENT = "double-descent";
+const TOTAL_INFLUENCE = "total-influence";
 const PARITY = "parity-function";
 const ODONNELL = "book-2014-analysis-of-boolean-functions";
 
@@ -125,11 +125,11 @@ const touch = (slug: string, title: string, body: string): TourStep => ({
 });
 
 /** B9: back on Home, with what the tour left unseen */
-const homeAgain = (body: string): TourStep => ({
+const homeAgain = (body: string, title = "What I left for you"): TourStep => ({
   target: INTRO,
   go: "/",
   place: "bottom",
-  title: "What I left for you",
+  title,
   body,
 });
 
@@ -139,18 +139,19 @@ registerTour(
   [
     welcome(),
     subgraphCard(),
-    dive(DOUBLE_DESCENT),
+    dive(TOTAL_INFLUENCE),
     mapView(),
     sigma(),
     touch(
-      DOUBLE_DESCENT,
-      "A hub page",
-      // source: wiki/double-descent.md (one-liner: peak at the interpolation threshold, then a second descent; Connections list)
-      "Double descent: test risk peaks where the model first fits the training data exactly, then falls again as capacity grows. Several of my notes link here, which is why so many edges meet at this node.",
+      TOTAL_INFLUENCE,
+      "Where Kalai meets transformers",
+      // source: wiki/total-influence.md (one-liner; shared by three threads: Benjamini–Kalai–Schramm noise sensitivity, Hahn & Rofin's average sensitivity for transformers, sharp thresholds via Margulis–Russo)
+      "Total influence: how many coordinates, on average, can flip a Boolean function's output. The same quantity runs through Kalai's work on noise sensitivity and sharp thresholds and through Hahn & Rofin's explanation of why transformers struggle with sensitive functions like parity — which is why this node sits between those threads.",
     ),
     homeAgain(
-      // source: features/graph/views/ViewsBar.tsx (ⓘ "How this view is computed"); features/graph/NodeMenu.tsx + SideReader.tsx (right-click → reader); GraphCanvas question glyphs
-      "I skipped the Thesis and Explore views, the ⓘ next to each view that says how it is computed, and the side reader (double-click a node). The questions marked with a glyph are mine to answer.",
+      // source: features/graph/views/ViewsBar.tsx (Thesis and Explore pills, ⓘ "How this view is computed"); features/graph/SideReader.tsx (double-click opens the reader)
+      "Play around and let me know what you think — it's still a work in progress, and I'm open to feedback. Try the Thesis and Explore views, the ⓘ next to each view, and double-click any node to read it.",
+      "Play around",
     ),
   ],
   "What is in this vault, in 90 seconds",
