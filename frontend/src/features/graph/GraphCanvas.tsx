@@ -6,6 +6,7 @@ import { readCanvasColors, withAlpha, type CanvasColors } from "./canvasTheme";
 import { computeFocus, linkOpacity, nodeOpacity, type Focus } from "./focus";
 import { ForceGraph, type Anchor, type ForceGraphHandle } from "./ForceGraph";
 import { buildGraphData, largestComponent, type NeighborMap } from "./graphData";
+import { drawArcs } from "./lab/arcs";
 import { drawHulls, drawLabelLayer, type FadeState } from "./lab/draw";
 import { useLabHud } from "./lab/hud";
 import { hopsFrom, type Importance } from "./lab/importance";
@@ -519,9 +520,11 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
 
   const drawFramePre = useCallback(
     (ctx: CanvasRenderingContext2D, scale: number) => {
-      if (!live.current.ui.lab.hulls) return;
       const g = fg.current;
-      if (g) drawHulls(ctx, g.nodes().filter((n) => !isPile(n)), scale, names);
+      if (!g) return;
+      const arcs = useDecor.getState().arcs;
+      if (arcs?.length) drawArcs(ctx, g.nodes(), arcs, scale, rs.current.colors);
+      if (live.current.ui.lab.hulls) drawHulls(ctx, g.nodes().filter((n) => !isPile(n)), scale, names);
     },
     [names],
   );

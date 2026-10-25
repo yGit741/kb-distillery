@@ -53,6 +53,7 @@ const host = (): GraphHost => ({
   openPage: vi.fn(),
   pageHref: (s) => `/app/pages/${s}`,
   clearParams: vi.fn(),
+  setParams: vi.fn(),
   go: vi.fn(),
   href: (to, search) => `/app${to}${search ? `?${new URLSearchParams(search)}` : ""}`,
 });
