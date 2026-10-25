@@ -22,6 +22,7 @@ import { GraphCanvas, type CanvasHandle } from "./GraphCanvas";
 import { Inspector } from "./Inspector";
 import { computeImportance } from "./lab/importance";
 import { LabRail } from "./lab/LabRail";
+import { initialView } from "./defaultView";
 import { storyById } from "./lab/views";
 import { Legend } from "./Legend";
 import { predicateFn } from "./publicPredicate";
@@ -243,11 +244,15 @@ function Loaded({
 
   // ---- deep links: ?focus ?select ?search ?pages ?scope ?layer, applied once per distinct value
   const applied = useRef("");
+  /** a snapshot's default view (`KB_EMBEDDED.home.view`) stands in for a missing `?view=` on the first pass only */
+  const homeViewTried = useRef(false);
   useEffect(() => {
     const key = JSON.stringify([search.focus, search.select, search.search, search.pages, search.scope, search.layer, search.raw, search.view]);
     if (applied.current === key) return;
     applied.current = key;
-    if (search.view && search.view !== lastView.current && storyById(search.view)) applyView(search.view, true);
+    const view = homeViewTried.current ? (search.view && storyById(search.view) ? search.view : undefined) : initialView(search.view);
+    homeViewTried.current = true;
+    if (view && view !== lastView.current) applyView(view, true);
     if (search.raw === "1" && dsKind !== "embedded") useLayer.getState().setRaw(true);
     if (search.layer && search.layer in LAYER_TYPES) {
       useGraphUi.setState({ shownTypes: new Set<string>(LAYER_TYPES[search.layer as Layer]) });

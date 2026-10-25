@@ -70,6 +70,7 @@ from pathlib import Path
 
 from .contracts import EXPORT_DIR, PROFILES, REPO, BuildResult, Manifest, raw_is_email
 from .home import apply_home, load_home, strip_my_notes
+from .predicate import add_predicate_args, predicate_fn
 
 SHARE_DIR = Path(__file__).resolve().parent
 FRONTEND_DIR = REPO / "frontend"
@@ -117,6 +118,7 @@ PUBLIC_DROP_KEYS = ("raw", "path", "email", "original_name", "scopes")
 # Not content: scopes are private working sets and distilled-think pages are transient review drafts.
 # LLM chats and person pages (profiles built from public sources) are the owner's and are public.
 PUBLIC_EXCLUDE_TYPES = frozenset({"distilled-think", "scope"})
+_VIEW_ID = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")   # a story id in frontend/src/features/graph/lab/views.ts
 
 # Routes the shim answers; the static scan in the tests checks nothing else is fetched.
 SHIMMED_API = ("/api/graph", "/api/schema", "/api/explore/index", "/api/explore/page", "/api/explore/search", "/api/explore/path",
@@ -562,29 +564,41 @@ def apply_profile(data, profile, scope_slugs=None):
                 if pg.get("card"):
                     pg["card"] = dict(pg["card"], **_unlink({k: v for k, v in pg["card"].items() if k not in ("id", "type")},
                                                            drop, titles))
-    keep = lambda s: s not in drop  # noqa: E731
-
-    nodes = []
-    for n in graph["nodes"]:
-        if not keep(n["id"]):
-            continue
-        n.pop("path", None)
-        props = n.get("properties") or {}
-        for k in PUBLIC_DROP_KEYS:
-            props.pop(k, None)
-        nodes.append(n)
-    graph["nodes"] = nodes
-    graph["links"] = [l for l in graph["links"] if keep(l["source"]) and keep(l["target"])]
-    graph["concept_links"] = [l for l in graph.get("concept_links") or [] if keep(l["source"]) and keep(l["target"])]
+    drop_pages(data, drop)
+    graph, pages = data["graph"], data["pages"]
     schema = graph.get("schema")
     if schema:                                   # private-only types are not even named publicly
         schema["types"] = [t for t in schema["types"] if t["id"] not in PUBLIC_EXCLUDE_TYPES]
         for layer in schema.get("layers", []):
             layer["types"] = [t for t in layer["types"] if t not in PUBLIC_EXCLUDE_TYPES]
+    for n in graph["nodes"]:
+        n.pop("path", None)
+        props = n.get("properties") or {}
+        for k in PUBLIC_DROP_KEYS:
+            props.pop(k, None)
+    for p in pages.values():
+        p.pop("path", None)
+        if "markdown" in p:                      # the synthesis is public, the user's own notes are not
+            p["markdown"] = strip_my_notes(p["markdown"])
+        fm = p.get("frontmatter") or {}
+        for k in PUBLIC_DROP_KEYS:
+            fm.pop(k, None)
+    return data
+
+
+def drop_pages(data, drop):
+    """Remove every page in `drop` from the blob, wherever a slug can surface: graph nodes, links and
+    concept links, the explorer index (cards, link pairs, wanted-from), the page bodies and their
+    backlinks / outbound / suggested lists. Counts and type facets are recomputed. In place; returns `data`."""
+    graph, index, pages = data["graph"], data["index"], data["pages"]
+    keep = lambda s: s not in drop  # noqa: E731
+    graph["nodes"] = [n for n in graph["nodes"] if keep(n["id"])]
+    graph["links"] = [l for l in graph["links"] if keep(l["source"]) and keep(l["target"])]
+    graph["concept_links"] = [l for l in graph.get("concept_links") or [] if keep(l["source"]) and keep(l["target"])]
     graph["node_count"] = len(graph["nodes"])
     graph["link_count"] = len(graph["links"])
     facets = graph.get("facets") or {}
-    facets["types"] = sorted({n.get("type", "unknown") for n in nodes})
+    facets["types"] = sorted({n.get("type", "unknown") for n in graph["nodes"]})
     graph["facets"] = facets
 
     index["pages"] = [c for c in index["pages"] if keep(c["id"])]
@@ -596,12 +610,6 @@ def apply_profile(data, profile, scope_slugs=None):
     for slug, p in pages.items():
         if not keep(slug):
             continue
-        p.pop("path", None)
-        if "markdown" in p:                      # the synthesis is public, the user's own notes are not
-            p["markdown"] = strip_my_notes(p["markdown"])
-        fm = p.get("frontmatter") or {}
-        for k in PUBLIC_DROP_KEYS:
-            fm.pop(k, None)
         p["backlinks"] = [b for b in p.get("backlinks", []) if keep(b["id"])]
         p["outbound"] = [s for s in p.get("outbound", []) if keep(s)]
         sugg = []
@@ -614,6 +622,27 @@ def apply_profile(data, profile, scope_slugs=None):
         out_pages[slug] = p
     data["pages"] = out_pages
     return data
+
+
+def apply_predicate(data, predicate):
+    """After `apply_profile`: keep only the nodes passing `predicate` (`kb.share.predicate`), and drop
+    everything that names a failing page (links, cards, bodies, search entries — `drop_pages`).
+    Returns (data, dropped) where `dropped` is the number of pages removed; no predicate → (data, 0).
+
+    The test reads each node's `inDegree` / `outDegree` as the graph snapshot computed them on the
+    FULL graph, before the public profile or this cut removed any neighbour — the same numbers
+    `/api/graph` reports and the app's `isPublic` sees."""
+    test = predicate_fn(predicate)
+    if test is None:
+        return data, 0
+    graph = data["graph"]
+    drop = {n["id"] for n in graph["nodes"] if not test(n)}
+    present = {n["id"] for n in graph["nodes"]}
+    # a card or body without a graph node has no degrees to judge: it goes with the dropped ones
+    drop |= {c["id"] for c in data["index"]["pages"] if c["id"] not in present}
+    drop |= {s for s in data["pages"] if s not in present}
+    drop_pages(data, drop)
+    return data, len(drop)
 
 
 # ---------- html ----------
@@ -937,6 +966,7 @@ def inner_build(args):
             data["lifecycle"] = collect_lifecycle(meta_dir, args.built_at, git_root, args.content_sha,
                                                   os.environ.get("KB_ROOT", "."), args.content_ref)
     data = apply_profile(data, args.profile, _scope_arg(args))
+    data, dropped = apply_predicate(data, args.predicate)
     versions = []
     vpath = os.environ.get(VERSIONS_ENV)
     if args.profile == "private" and vpath and os.path.isfile(vpath):
@@ -945,9 +975,28 @@ def inner_build(args):
     out = Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(page, encoding="utf-8", newline="\n")
+    write_stats(out, dropped)
     print(f"{out} ({len(data['graph']['nodes'])} nodes, {len(data['pages'])} pages, "
           f"{out.stat().st_size // 1024} KB)")
     return 0
+
+
+STATS_SUFFIX = ".stats.json"
+
+
+def write_stats(out, dropped):
+    """What the inner build learnt that the manifest records: a sidecar next to the page, read and
+    removed by `build` (the outer process) — `{"dropped": n}`, the pages the predicate removed."""
+    Path(str(out) + STATS_SUFFIX).write_text(json.dumps({"dropped": dropped}), encoding="utf-8")
+
+
+def read_stats(html_path):
+    sidecar = Path(str(html_path) + STATS_SUFFIX)
+    if not sidecar.is_file():
+        return {}
+    stats = json.loads(sidecar.read_text(encoding="utf-8"))
+    sidecar.unlink()
+    return stats
 
 
 # ---------- app layout ----------
@@ -982,11 +1031,13 @@ def inner_build_app(args):
         data["lifecycle"] = collect_lifecycle(meta_dir, args.built_at, git_root, args.content_sha,
                                               os.environ.get("KB_ROOT", "."), args.content_ref)
     data = apply_profile(data, args.profile, _scope_arg(args))      # the one place the public cuts live
-    data = apply_home(data, load_home())          # Home cards + tour from share.toml `[home]`
+    data, dropped = apply_predicate(data, args.predicate)          # --predicate public: the Map view's pages only
+    data = apply_home(data, load_home(), view=args.view)   # Home cards + tour from share.toml `[home]`, --view
     page = app_page(Path(args.app_index).read_text(encoding="utf-8"), data, fields)
     out = Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(page, encoding="utf-8", newline="\n")
+    write_stats(out, dropped)
     print(f"{out} ({len(data['graph']['nodes'])} nodes, {len(data['pages'])} pages, {out.stat().st_size // 1024} KB, app)")
     return 0
 
@@ -1081,8 +1132,12 @@ def schema_major(root, sha):
 
 def build(content_ref, viewer_ref="main", profile="private", *, root=REPO, viewer_root=None,
           out_root=EXPORT_DIR, viewer_worktree=False, label=None, app=False, frontend_dist=None,
-          scope=None, hops=1):
+          scope=None, hops=1, predicate=None, view=None):
     """Build `content_ref` with the viewer at `viewer_ref` → BuildResult(dir, manifest).
+
+    `predicate="public"` (public profile only) keeps just the pages the app's Map view draws
+    (`kb.share.predicate.is_public`); `view` is the graph view id the app opens on (`home.view`
+    in the blob, app layout only). Both land in the manifest.
 
     `root` is the repo the content comes from; `viewer_root` (default: the same repo) is where
     the viewer code is taken from — a committed ref, or its working tree with `viewer_worktree`.
@@ -1095,6 +1150,19 @@ def build(content_ref, viewer_ref="main", profile="private", *, root=REPO, viewe
     viewer_root = Path(viewer_root or root)
     if scope and profile != "public":
         raise BuildError("--scope builds a public subset; use --profile public")
+    if predicate and profile != "public":
+        raise BuildError("--predicate builds a public subset; use --profile public")
+    try:
+        predicate_fn(predicate)
+    except ValueError as e:
+        raise BuildError(str(e)) from None
+    if view and not _VIEW_ID.match(view):
+        raise BuildError(f"--view {view!r}: a view id is lowercase [a-z0-9-]")
+    predicate = predicate or None
+    view = view or None
+    if view and not app:
+        print("share build: --view sets the app's opening graph view; the legacy shell has no Home and ignores it "
+              "(it is still recorded in the manifest)", file=sys.stderr)
     if profile not in PROFILES:
         raise BuildError(f"unknown profile {profile!r}; choose one of {', '.join(PROFILES)}")
     content_sha = resolve_ref(root, content_ref)
@@ -1165,10 +1233,16 @@ def build(content_ref, viewer_ref="main", profile="private", *, root=REPO, viewe
             cmd += [APP_FLAG, str(dist / "index.html")]
         if scope:
             cmd += ["--scope", scope, "--hops", str(int(hops))]
+        if predicate:
+            cmd += ["--predicate", predicate]
+        if view:
+            cmd += ["--view", view]
         proc = subprocess.run(cmd, cwd=viewer_dir, env=env, capture_output=True, text=True, check=False)
         if proc.returncode != 0:
             tail = (proc.stderr or proc.stdout or "").strip().splitlines()[-12:]
             raise BuildError("inner build failed in viewer %s:\n%s" % (viewer_sha[:7], "\n".join(tail)))
+        stats = read_stats(html_path)
+        dropped = int(stats.get("dropped", 0)) if predicate else None
         if app:
             for rel in tree_files(dist):       # the 25 MiB guard applies to every file the Worker serves
                 if not (rel == "index.html" or rel.startswith(".")):
@@ -1180,7 +1254,8 @@ def build(content_ref, viewer_ref="main", profile="private", *, root=REPO, viewe
     if app:
         manifest = Manifest(content_ref=content_ref, content_sha=content_sha, kb_version=kb_version,
                             viewer_sha=viewer_sha, profile=profile, sha256=tree_digest(out_dir),
-                            built_at=built_at, layout="app", scope=scope, hops=int(hops) if scope else None)
+                            built_at=built_at, layout="app", scope=scope, hops=int(hops) if scope else None,
+                            predicate=predicate, dropped=dropped, view=view)
         (out_dir / "manifest.json").write_text(manifest.to_json(), encoding="utf-8")
         return BuildResult(dir=out_dir, manifest=manifest)
     page = html_path.read_bytes()
@@ -1190,7 +1265,8 @@ def build(content_ref, viewer_ref="main", profile="private", *, root=REPO, viewe
     manifest = Manifest(content_ref=content_ref, content_sha=content_sha, kb_version=kb_version,
                         viewer_sha=viewer_sha, profile=profile,
                         sha256=_sha256_bytes(page), built_at=built_at,
-                        scope=scope, hops=int(hops) if scope else None)
+                        scope=scope, hops=int(hops) if scope else None,
+                        predicate=predicate, dropped=dropped, view=view)
     (out_dir / "manifest.json").write_text(manifest.to_json(), encoding="utf-8")
     return BuildResult(dir=out_dir, manifest=manifest)
 
@@ -1246,7 +1322,7 @@ def cmd_versions(args):
 def cmd_build(args):
     try:
         result = build(args.ref, viewer_ref=args.viewer, profile=args.profile, root=args.root,
-                       scope=args.scope, hops=args.hops,
+                       scope=args.scope, hops=args.hops, predicate=args.predicate, view=args.view,
                        viewer_worktree=args.viewer_worktree, app=args.app,
                        frontend_dist=args.frontend_dist)
     except BuildError as e:
@@ -1274,6 +1350,7 @@ def register(sub):
     b.add_argument("--scope", default=None, metavar="SLUG",
                    help="public only: keep this scope / collection / person page, its members and their neighbours")
     b.add_argument("--hops", type=int, choices=(0, 1), default=1, help="with --scope: 1 adds linked neighbours (default)")
+    add_predicate_args(b)
     b.add_argument("--viewer-worktree", action="store_true",
                    help="dev only: use this worktree's dashboard code instead of a committed ref")
     b.add_argument("--app", action="store_true",
@@ -1295,6 +1372,8 @@ def _inner_parser():
         p.add_argument(f"--{name}", required=True)
     p.add_argument("--scope", default=None)
     p.add_argument("--hops", default="1")
+    p.add_argument("--predicate", default=None)
+    p.add_argument("--view", default=None)
     p.add_argument(APP_FLAG, default=None, help="the built app's index.html: render the app layout, not the shell")
     return p
 
