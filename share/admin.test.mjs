@@ -275,3 +275,47 @@ test("non-admin path without a session still redirects to sign-in", async () => 
   assert.equal(res.status, 302);
   assert.equal(res.headers.get("Location"), "/auth/login");
 });
+
+// ---------- /api/flags (handleFlags) ----------
+
+function kv(initial = {}) {
+  const store = new Map(Object.entries(initial));
+  return { store, get: async (k) => store.get(k) ?? null, put: async (k, v) => void store.set(k, v) };
+}
+
+async function flagsReq(method, path, { email = "me@example.com", body, headers = {} } = {}) {
+  const h = { ...headers };
+  if (email) h.Cookie = await session(email);
+  return new Request(ORIGIN + path, { method, headers: h, body: body === undefined ? undefined : JSON.stringify(body) });
+}
+const ownerHeaders = { "X-KB-Admin": "1", Origin: ORIGIN, "Content-Type": "application/json" };
+
+test("flags: GET needs a session, returns KV overrides (runtime names only)", async () => {
+  const FLAGS_KV = kv({ overrides: JSON.stringify({ "ui.system-flags-tab": true, "screen.share": true }) });
+  const deps = { now: () => NOW };
+  assert.equal((await handle(await flagsReq("GET", "/api/flags", { email: null }), env({ FLAGS_KV }), deps)).status, 401);
+  const r = await handle(await flagsReq("GET", "/api/flags"), env({ FLAGS_KV }), deps);
+  assert.equal(r.status, 200);
+  assert.deepEqual(await r.json(), { env: "private", overrides: { "ui.system-flags-tab": true } });
+  const none = await handle(await flagsReq("GET", "/api/flags"), env(), deps);
+  assert.deepEqual((await none.json()).overrides, {});
+});
+
+test("flags: PUT is owner-only, runtime-only, persists to KV", async () => {
+  const FLAGS_KV = kv();
+  const e = env({ FLAGS_KV, ALLOWED_EMAILS: "me@example.com,friend@example.com", ADMIN_EMAILS: "me@example.com" });
+  const deps = { now: () => NOW };
+  const put = async (name, opts) => handle(await flagsReq("PUT", `/api/flags/${name}`, opts), e, deps);
+  assert.equal((await put("ui.system-flags-tab", { email: "friend@example.com", body: { value: true }, headers: ownerHeaders })).status, 403);
+  assert.equal((await put("ui.system-flags-tab", { body: { value: true }, headers: { Origin: ORIGIN } })).status, 403);
+  assert.equal((await put("ui.system-flags-tab", { body: { value: true }, headers: { ...ownerHeaders, Origin: "https://evil.example" } })).status, 403);
+  assert.equal((await put("screen.share", { body: { value: true }, headers: ownerHeaders })).status, 409);
+  assert.equal((await put("ui.system-flags-tab", { body: { value: "yes" }, headers: ownerHeaders })).status, 400);
+  const ok = await put("ui.system-flags-tab", { body: { value: true }, headers: ownerHeaders });
+  assert.equal(ok.status, 200);
+  assert.deepEqual(JSON.parse(FLAGS_KV.store.get("overrides")), { "ui.system-flags-tab": true });
+  await put("ui.system-flags-tab", { body: { value: null }, headers: ownerHeaders });
+  assert.deepEqual(JSON.parse(FLAGS_KV.store.get("overrides")), {});
+  const unbound = await handle(await flagsReq("PUT", "/api/flags/ui.system-flags-tab", { body: { value: true }, headers: ownerHeaders }), env(), deps);
+  assert.equal(unbound.status, 503);
+});
