@@ -5,7 +5,7 @@ import { useTheme } from "@/theme/theme";
 import { readCanvasColors, withAlpha, type CanvasColors } from "./canvasTheme";
 import { computeFocus, fadedLinkOpacity, fadedNodeOpacity, focusKey, nodeOpacity, type Focus } from "./focus";
 import { ForceGraph, type Anchor, type ForceGraphHandle } from "./ForceGraph";
-import { buildGraphData, largestComponent, type NeighborMap } from "./graphData";
+import { buildGraphData, edgeWeight, edgeWeights, largestComponent, type NeighborMap } from "./graphData";
 import { createHoverIntent, createSpeedMeter, HOVER_TUNING } from "./hoverIntent";
 import { drawArcs } from "./lab/arcs";
 import { drawHulls, drawLabelLayer, type FadeState } from "./lab/draw";
@@ -127,6 +127,9 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
 
   rs.current.imp = imp;
   const names = useMemo(() => areaNames(model.nodes), [model]);
+  const weights = useMemo(() => edgeWeights(model), [model]);
+  const weightsRef = useRef(weights);
+  weightsRef.current = weights;
   const core = useMemo(() => largestComponent(visible, neighbors), [visible, neighbors]);
   const coreRef = useRef(core);
   coreRef.current = core;
@@ -178,6 +181,7 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
     }
     if (rs.current.hover && !vis.has(rs.current.hover)) rs.current.hover = null;
     const hover = rs.current.hover;
+    if (useLabHud.getState().hover !== hover) useLabHud.setState({ hover });
     const cfg = u.lab;
     const score = rs.current.imp.score;
     rs.current.selected = sel;
@@ -193,15 +197,17 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
       const cur = forced.get(id);
       if (vis.has(id) && (cur === undefined || cur > r)) forced.set(id, r);
     };
-    const topNeighbours = (id: string) =>
-      [...new Set(nb.get(id) ?? [])].filter((j) => vis.has(j)).sort((a, b) => (score.get(b) ?? 0) - (score.get(a) ?? 0)).slice(0, cfg.neighborCap);
+    // hover neighbours rank by score; a click's by edge weight (then score), so the same page always lights the same ones
+    const byScore = (a: string, b: string) => (score.get(b) ?? 0) - (score.get(a) ?? 0) || a.localeCompare(b);
+    const byWeight = (id: string) => (a: string, b: string) => edgeWeight(weightsRef.current, id, b) - edgeWeight(weightsRef.current, id, a) || byScore(a, b);
+    const topNeighbours = (id: string, cmp = byScore) => [...new Set(nb.get(id) ?? [])].filter((j) => vis.has(j)).sort(cmp).slice(0, cfg.neighborCap);
     if (hover) {
       put(hover, FORCED.hover);
       if (cfg.hoverNeighbors) topNeighbours(hover).forEach((j) => put(j, FORCED.near));
     }
     for (const id of sel) {
       put(id, FORCED.selected);
-      topNeighbours(id).forEach((j) => put(j, FORCED.near));
+      topNeighbours(id, cfg.neighborBy === "weight" ? byWeight(id) : byScore).forEach((j) => put(j, FORCED.near));
     }
     if (u.typeLabels.size) for (const id of vis) if (u.typeLabels.has(ids.get(id)?.type ?? "")) put(id, FORCED.type);
     rs.current.forced = forced;
@@ -572,7 +578,23 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
       ctx.arc(n.x, n.y, r, 0, 2 * Math.PI);
       ctx.globalAlpha = alpha;
       const by = live.current.ui.colorBy;
-      ctx.fillStyle = colorOf(n, by, METRIC_COLORS.has(by) ? metricOf(rs.current.imp, n, by) : undefined);
+      const col = colorOf(n, by, METRIC_COLORS.has(by) ? metricOf(rs.current.imp, n, by) : undefined);
+      if (n.type === "question") {
+        // a question is a hollow ring with a "?" inside: readable without a label
+        ctx.fillStyle = colors.background;
+        ctx.fill();
+        ctx.strokeStyle = col;
+        ctx.lineWidth = r * 0.22;
+        ctx.stroke();
+        ctx.fillStyle = col;
+        ctx.font = `600 ${r * 1.4}px ${colors.font}`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText("?", n.x, n.y + r * 0.08);
+        ctx.globalAlpha = 1;
+        return;
+      }
+      ctx.fillStyle = col;
       ctx.fill();
       ctx.globalAlpha = alpha * 0.5;
       ctx.strokeStyle = colors.background;
@@ -589,7 +611,7 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
       if (!g) return;
       const arcs = useDecor.getState().arcs;
       if (arcs?.length) drawArcs(ctx, g.nodes(), arcs, scale, rs.current.colors);
-      if (live.current.ui.lab.hulls) drawHulls(ctx, g.nodes().filter((n) => !isPile(n)), scale, names);
+      if (live.current.ui.lab.hulls) drawHulls(ctx, g.nodes().filter((n) => !isPile(n)), scale, names, live.current.ui.lab.hullSigma);
     },
     [names],
   );
