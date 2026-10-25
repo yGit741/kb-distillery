@@ -40,6 +40,7 @@ from pathlib import Path
 from typing import Optional
 
 from kb.share import cf_api
+from kb.share.predicate import add_predicate_args
 from kb.share.contracts import (ACCOUNT_SUBDOMAIN, CACHE_DIR, DEPLOY_MESSAGE_PREFIX, REPO, SNAPSHOT_PREFIX,
                                   WORKER_MAIN, raw_is_email, snapshot_worker_name)
 
@@ -124,6 +125,10 @@ def _audit_kw(args) -> dict:
     kw = {"app": True} if getattr(args, "app", False) else {}
     if getattr(args, "scope", None):
         kw.update(scope=args.scope, hops=args.hops)
+    if getattr(args, "predicate", None):
+        kw["predicate"] = args.predicate
+    if getattr(args, "view", None):
+        kw["view"] = args.view
     if getattr(args, "viewer_worktree", False):
         kw["viewer_worktree"] = True
     return kw
@@ -133,6 +138,10 @@ def print_report(report: dict) -> None:
     m = report.get("manifest") or {}
     if m:
         print(f"public build of {m.get('content_ref')} — kb {m.get('kb_version')} · {str(m.get('content_sha', ''))[:7]}")
+        if m.get("predicate"):
+            print(f"predicate {m['predicate']}: {m.get('dropped', 0)} pages dropped after the public profile")
+        if m.get("view"):
+            print(f"default view: {m['view']}")
     print(f"{'type':<18}{'pages':>6}")
     for t, n in report["counts"].items():
         print(f"{t:<18}{n:>6}")
@@ -527,6 +536,7 @@ def register(subparsers) -> None:
     a.add_argument("--scope", default=None, metavar="SLUG",
                    help="publish only this scope / collection / person page, its members and (--hops 1) their neighbours")
     a.add_argument("--hops", type=int, choices=(0, 1), default=1)
+    add_predicate_args(a)
     a.add_argument("--app", action="store_true", help="opt in: audit the React-app layout build")
     a.add_argument("--viewer-worktree", action="store_true", help=argparse.SUPPRESS)
     a.set_defaults(func=cmd_audit)
@@ -543,6 +553,7 @@ def register(subparsers) -> None:
     s.add_argument("--scope", default=None, metavar="SLUG",
                    help="publish only this scope / collection / person page, its members and (--hops 1) their neighbours")
     s.add_argument("--hops", type=int, choices=(0, 1), default=1)
+    add_predicate_args(s)
     s.add_argument("--app", action="store_true", help="opt in: publish the React-app layout build instead of the iframe shell")
     s.add_argument("--viewer-worktree", action="store_true", help=argparse.SUPPRESS)
     s.set_defaults(func=cmd_snapshot)
