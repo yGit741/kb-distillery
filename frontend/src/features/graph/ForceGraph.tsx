@@ -58,6 +58,18 @@ export interface ForceGraphHandle {
   screenOf(n: { x?: number; y?: number }): { x: number; y: number } | null;
   reheat(): void;
   refresh(): void;
+  /** push the nodes around a screen point apart, gently, for about a second; the layout then settles and stays */
+  spreadAt(clientX: number, clientY: number, radiusPx?: number): void;
+}
+
+/** The "spread here" force: a radial push from a point that fades over `ms`; nothing when no spread is active. */
+interface Spread {
+  x: number;
+  y: number;
+  /** reach in graph units */
+  r: number;
+  t0: number;
+  ms: number;
 }
 
 type Instance = ForceGraphInstance & { refresh?: () => unknown };
@@ -93,6 +105,7 @@ export const ForceGraph = forwardRef<ForceGraphHandle, ForceGraphProps & { class
 ) {
   const host = useRef<HTMLDivElement>(null);
   const fg = useRef<Instance | null>(null);
+  const spread = useRef<Spread | null>(null);
   const latest = useRef(props);
   latest.current = props;
   const ops = useRef<{ zoomAt: (f: number, x: number, y: number) => void; panBy: (dx: number, dy: number) => void }>({
@@ -158,6 +171,33 @@ export const ForceGraph = forwardRef<ForceGraphHandle, ForceGraphProps & { class
       { initialize: (ns: NodeObject[]) => void (simNodes = ns as SimNode[]) },
     );
     g.d3Force("anchor", anchorForce as unknown as Parameters<Instance["d3Force"]>[1]);
+    // "spread here": nodes within reach get a push away from the point, strongest at the centre, fading with time
+    let spreadNodes: SimNode[] = [];
+    const spreadForce = Object.assign(
+      (alpha: number) => {
+        const s = spread.current;
+        if (!s) return;
+        const t = (performance.now() - s.t0) / s.ms;
+        if (t >= 1) {
+          spread.current = null;
+          return;
+        }
+        const k = (1 - t) * 1.6;
+        for (const n of spreadNodes) {
+          if (n.x == null || n.y == null) continue;
+          const dx = n.x - s.x;
+          const dy = n.y - s.y;
+          const d = Math.hypot(dx, dy) || 1e-3;
+          if (d > s.r) continue;
+          const push = ((1 - d / s.r) * k * alpha * s.r) / 6;
+          const m = n as SimNode & { vx?: number; vy?: number };
+          m.vx = (m.vx ?? 0) + (dx / d) * push;
+          m.vy = (m.vy ?? 0) + (dy / d) * push;
+        }
+      },
+      { initialize: (ns: NodeObject[]) => void (spreadNodes = ns as SimNode[]) },
+    );
+    g.d3Force("spread", spreadForce as unknown as Parameters<Instance["d3Force"]>[1]);
 
     const resize = () => g.width(el.clientWidth).height(el.clientHeight);
     resize();
@@ -283,6 +323,14 @@ export const ForceGraph = forwardRef<ForceGraphHandle, ForceGraphProps & { class
           return { x: p.x + r.left, y: p.y + r.top };
         },
         reheat: () => void g()?.d3ReheatSimulation(),
+        spreadAt: (cx, cy, radiusPx = 160) => {
+          const inst = g();
+          const r = host.current?.getBoundingClientRect();
+          if (!inst || !r) return;
+          const p = inst.screen2GraphCoords(cx - r.left, cy - r.top);
+          spread.current = { x: p.x, y: p.y, r: radiusPx / inst.zoom(), t0: performance.now(), ms: 1200 };
+          inst.d3ReheatSimulation();
+        },
         refresh: () => {
           const inst = g();
           // force-graph 1.x has no public refresh: a zero-length zoom to the current scale flags its redraw

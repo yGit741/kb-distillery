@@ -59,7 +59,7 @@ export function makeFixtureBlob(): ShareBlob {
       suggested: [],
     } as PageDetail;
   }
-  const nodes = Object.values(pages).map((p) => ({ id: p.card.id, label: p.card.title, title: p.card.title, type: p.card.type, layer: "concept", status: "seed", depth: "", areas: [], inDegree: 0, outDegree: 0, path: "", preview: "", properties: {} }));
+  const nodes = Object.values(pages).map((p) => ({ id: p.card.id, label: p.card.title, title: p.card.title, type: p.card.type, layer: "concept", status: "seed", depth: "", areas: [], inDegree: 0, outDegree: 0, path: "", added: "", changed: "", preview: "", properties: {} }));
   return {
     graph: { generated_at: "2026-01-01T00:00:00Z", etag: "e", node_count: nodes.length, link_count: links.length, nodes, links: links.map(([source, target]) => ({ source: source!, target: target!, kind: "wikilink" })), schema: {}, concept_links: [], facets: { types: [], statuses: [], areas: [] } },
     index: { generated_at: "2026-01-01T00:00:00Z", pages: Object.values(pages).map((p) => p.card), links, wanted: [], wanted_total: 0 },

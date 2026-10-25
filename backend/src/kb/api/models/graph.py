@@ -17,6 +17,8 @@ class GraphNode(ApiModel):
     inDegree: int = 0
     outDegree: int = 0
     path: str = ""
+    added: str = ""                      # YYYY-MM-DD: first commit that touched the page ("" without git history)
+    changed: str = ""                    # YYYY-MM-DD: last commit that touched it
     preview: str = ""
     properties: dict[str, str] = {}
 

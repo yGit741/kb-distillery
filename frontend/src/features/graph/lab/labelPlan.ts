@@ -1,3 +1,4 @@
+import { pageDisplay } from "../displayNames";
 import type { GNode } from "../types";
 import { tierOf, type LabConfig } from "./config";
 import type { Importance } from "./importance";
@@ -29,31 +30,28 @@ function cutWords(s: string, maxChars: number): string {
 }
 
 /**
- * The label's words, uncut. "short" drops a leading article, a subtitle after ":" or " - ", and parentheses; a
- * question loses its question word and gets a "?" marker ("Does the low-rank bias…" -> "? Low-rank bias…").
- * `full` is the whole title as written.
+ * The label's words, uncut. "short" takes the page's presentation name when it has one (./displayNames), else
+ * drops a leading article, a subtitle after ":" or " - ", and parentheses; a question loses its question word
+ * (its ring already says "question", so no "?" marker). `full` is the whole title as written.
  */
 export function shortTitle(n: GNode, field: LabConfig["textField"], full = false): string {
   let s = field === "slug" ? n.id : n.title || n.id;
   if (full || field !== "short") return s;
-  const question = n.type === "question";
-  if (question) {
+  const picked = pageDisplay(n);
+  if (picked) return picked;
+  if (n.type === "question") {
     s = s.replace(QUESTION_LEAD, "").replace(/\?$/, "");
     s = s.charAt(0).toUpperCase() + s.slice(1);
   }
-  s = s.replace(/^(the|a|an)\s+/i, "").replace(/\s*[:(—–-]\s.*$/, "").replace(/\s*\(.*?\)\s*/g, " ").trim();
-  return question ? `? ${s}` : s;
+  return s.replace(/^(the|a|an)\s+/i, "").replace(/\s*[:(—–-]\s.*$/, "").replace(/\s*\(.*?\)\s*/g, " ").trim();
 }
 
-/** One-line label: `shortTitle` cut at a word boundary to `maxChars` (the "? " marker is not counted); `full` is never cut. */
+/** One-line label: `shortTitle` cut at a word boundary to `maxChars`; `full` is never cut. */
 export function labelText(n: GNode, field: LabConfig["textField"], maxChars: number, full = false): string {
   const s = shortTitle(n, field, full);
   if (full) return s;
   if (field !== "short") return s.length <= maxChars ? s : `${s.slice(0, maxChars - 1)}…`;
-  const marked = n.type === "question" && s.startsWith("? ");
-  const body = marked ? s.slice(2) : s;
-  const cut = body.length > maxChars ? cutWords(body, maxChars) : body;
-  return marked ? `? ${cut}` : cut;
+  return s.length > maxChars ? cutWords(s, maxChars) : s;
 }
 
 /**
@@ -176,6 +174,8 @@ export interface Placed {
   pos: number;
   box: Box;
   forced: boolean;
+  /** the hovered page or the selection: only these get the pill (neighbours and "Aa" types stay plain) */
+  focus: boolean;
   /** placed off the node on a ring, joined to it by a leader line */
   leader: boolean;
   /** node centre on screen */
@@ -195,8 +195,8 @@ export interface Plan {
 
 /** Unit directions of the ring a squeezed-out forced label moves to: the eight compass points. */
 const RING = OFFSETS[8] as readonly (readonly [number, number])[];
-/** A clicked question shows its whole title: wrap width and lines. */
-const QUESTION_FULL = { width: 220, lines: 3 } as const;
+/** The hovered or clicked page shows its whole title, wrapped: width and lines. */
+const FOCUS_FULL = { width: 220, lines: 3 } as const;
 
 /**
  * Which labels show and where. Candidates are taken from the whole graph ("world") so panning never changes
@@ -249,15 +249,20 @@ export function planLabels(i: PlanInput): Plan {
     if (!isForced && (count >= budgetN || area >= budgetA || q.s < thr)) break;
     const tier = labelTier(q.n, cfg, imp);
     const px = labelPx(q.n, cfg, imp, zr);
-    const weight = cfg.weightTier && tier === 1 ? 700 : 400;
+    // emphasis by role, never by box: headline tier bold, the focus (hover, selection) bold, its neighbours semibold
+    const focus = q.f !== undefined && q.f <= FORCED.selected;
+    const near = q.f === FORCED.near;
+    const weight = (cfg.weightTier && tier === 1) || focus ? 700 : near ? 600 : 400;
     const m = (t: string) => i.measure(t, px, weight);
-    // text: the tier's wrap width and lines; tier 3 one line; questions by `questionLabels`, the whole title when hovered or clicked
+    // text: the focus shows its whole title wrapped; a neighbour wraps to two lines; the rest by tier (tier 3 one line)
     const tierChars = tier === 3 ? cfg.charsT3 : cfg.maxChars;
     let lines: string[];
-    if (q.n.type === "question" && cfg.questionLabels !== "full" && cfg.textField === "short") {
-      if (q.f !== undefined && q.f <= FORCED.selected) lines = wrapLabel(shortTitle(q.n, cfg.textField, true), QUESTION_FULL.width, QUESTION_FULL.lines, m, cfg.maxChars);
-      else lines = [labelText(q.n, cfg.textField, Math.min(cfg.charsQuestion, tierChars))];
-    } else if (tier === 3) lines = wrapLabel(shortTitle(q.n, cfg.textField), cfg.wrapT3, 1, m, cfg.charsT3);
+    if (focus) lines = wrapLabel(shortTitle(q.n, cfg.textField, true), FOCUS_FULL.width, FOCUS_FULL.lines, m, cfg.maxChars);
+    else if (near) lines = wrapLabel(shortTitle(q.n, cfg.textField), Math.max(cfg.wrapT2, 120), 2, m, cfg.maxChars);
+    // a question gets an idea's room (two wrapped lines); the overlap check still drops one with no space
+    else if (q.n.type === "question" && cfg.questionLabels !== "full" && cfg.textField === "short")
+      lines = wrapLabel(shortTitle(q.n, cfg.textField), cfg.wrapT2, cfg.maxLines, m, Math.max(cfg.charsQuestion, tierChars));
+    else if (tier === 3) lines = wrapLabel(shortTitle(q.n, cfg.textField), cfg.wrapT3, 1, m, cfg.charsT3);
     else lines = wrapLabel(shortTitle(q.n, cfg.textField), tier === 1 ? cfg.wrapT1 : cfg.wrapT2, cfg.maxLines, m, cfg.maxChars);
     const w = Math.max(...lines.map(m));
     const lineH = px * 1.15;
@@ -315,7 +320,7 @@ export function planLabels(i: PlanInput): Plan {
       continue;
     }
     grid.add(box, q.n.id);
-    placed.push({ id: q.n.id, n: q.n, text: lines.join(" "), lines, px, lineH, weight, tier, pos, box, forced: isForced, leader, anchor: [q.sx, q.sy] });
+    placed.push({ id: q.n.id, n: q.n, text: lines.join(" "), lines, px, lineH, weight, tier, pos, box, forced: isForced, focus: q.f !== undefined && q.f <= FORCED.selected, leader, anchor: [q.sx, q.sy] });
     if (!isForced) {
       count++;
       area += (box[2] - box[0]) * (box[3] - box[1]);

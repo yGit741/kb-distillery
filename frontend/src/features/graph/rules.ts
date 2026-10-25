@@ -91,6 +91,9 @@ export interface VisibilityOptions {
   revealed: ReadonlySet<string>;
   /** A view's own rule on top of the filters (./publicPredicate); null = none. */
   keep?: ((n: GNode) => boolean) | null;
+  /** Colour-key rows hidden from the legend, by the key `keyOf` gives a page (./style colorKey). */
+  hiddenKeys?: ReadonlySet<string>;
+  keyOf?: (n: GNode) => string;
 }
 
 export function passesText(node: GNode, search: string): boolean {
@@ -110,6 +113,7 @@ export function computeVisible(nodes: readonly GNode[], o: VisibilityOptions): S
     if (!typeShown(n.type, o.shownTypes)) continue;
     if (o.shownDepths && n.layer === "source" && n.depth && !o.shownDepths.has(n.depth)) continue;
     if (o.keep && !o.keep(n)) continue;
+    if (o.hiddenKeys?.size && o.keyOf && o.hiddenKeys.has(o.keyOf(n))) continue;
     if (o.restrict && !o.restrict.has(n.id)) continue;
     if (!passesText(n, o.search)) continue;
     if (o.rules.every((r) => matchRule(n, r))) out.add(n.id);

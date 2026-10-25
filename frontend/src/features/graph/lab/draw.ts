@@ -1,4 +1,4 @@
-import { areaColor } from "@/theme/palette";
+import { areaHue, semanticRadius } from "../style";
 import { withAlpha, type CanvasColors } from "../canvasTheme";
 import type { SimNode } from "../types";
 import type { LabConfig } from "./config";
@@ -40,6 +40,8 @@ export interface LabelLayerInput {
   pointer: { x: number; y: number } | null;
   hovered: string | null;
   dt: number;
+  /** a node's colour on the canvas: a leader line takes it, so it reads as part of its node */
+  nodeColor?: (n: SimNode) => string;
 }
 
 export interface LabelLayerResult {
@@ -75,7 +77,13 @@ export function fitZoom(nodes: readonly { x?: number; y?: number }[], width: num
 const toScreen = (m: DOMMatrix, pr: number, x: number, y: number) => [(m.a * x + m.c * y + m.e) / pr, (m.b * x + m.d * y + m.f) / pr] as const;
 
 /** Faint hulls of each theme's core, under the nodes (graph coordinates: called with force-graph's transform). */
-export function drawHulls(ctx: CanvasRenderingContext2D, nodes: readonly SimNode[], scale: number, names: ReadonlyMap<string, string>, sigma = 2): void {
+export function drawHulls(
+  ctx: CanvasRenderingContext2D,
+  nodes: readonly SimNode[],
+  scale: number,
+  names: ReadonlyMap<string, string>,
+  sigma = 2,
+): void {
   const groups = new Map<string, SimNode[]>();
   for (const n of nodes) {
     const a = n.areas[0];
@@ -109,7 +117,7 @@ export function drawHulls(ctx: CanvasRenderingContext2D, nodes: readonly SimNode
       ctx.arc(x, y, R, normal((i - 1 + n) % n), normal(i), s < 0);
     }
     ctx.closePath();
-    const col = areaColor(area);
+    const col = areaHue(area);
     ctx.fillStyle = withAlpha(col, 0.08);
     ctx.fill();
     ctx.strokeStyle = withAlpha(col, 0.12);
@@ -155,7 +163,7 @@ export function drawLabelLayer(i: LabelLayerInput): LabelLayerResult {
   for (const n of i.nodes) {
     if (n.x == null || n.y == null || !Number.isFinite(n.x) || !i.imp.score.has(n.id)) continue;
     const [sx, sy] = toScreen(m, pr, n.x, n.y);
-    items.push({ n, sx, sy, r: i.radius(n) * k });
+    items.push({ n, sx, sy, r: semanticRadius(i.radius(n), k, zr) * k });
   }
   const prev = new Map<string, { shown: boolean; pos: number }>();
   for (const [id, f] of i.fades) prev.set(id, { shown: f.target === 1, pos: f.pos });
@@ -235,14 +243,14 @@ export function drawLabelLayer(i: LabelLayerInput): LabelLayerResult {
     ctx.font = `${p.weight} ${p.px}px ${font}`;
     // a squeezed-out forced label: a thin line from the node to the nearest point of its box
     if (p.leader && cfg.leaderLines) {
-      ctx.strokeStyle = withAlpha(colors.muted, 0.6);
+      ctx.strokeStyle = withAlpha(i.nodeColor ? i.nodeColor(p.n as SimNode) : colors.muted, 0.75);
       ctx.lineWidth = 1;
       ctx.beginPath();
       ctx.moveTo(it.sx, it.sy);
       ctx.lineTo(Math.max(cx - hw, Math.min(cx + hw, it.sx)), Math.max(cy - hh, Math.min(cy + hh, it.sy)));
       ctx.stroke();
     }
-    if (cfg.forcedPill && p.forced) {
+    if (cfg.forcedPill && p.focus) {
       ctx.beginPath();
       ctx.roundRect(cx - hw, cy - hh, hw * 2, hh * 2, 4);
       ctx.fillStyle = withAlpha(colors.background, 0.9);
@@ -255,7 +263,7 @@ export function drawLabelLayer(i: LabelLayerInput): LabelLayerResult {
       ctx.fillRect(cx - hw, cy - hh, hw * 2, hh * 2);
     }
     const { lines, lineH } = p;
-    const halo = cfg.bg === "halo" && !(cfg.forcedPill && p.forced);
+    const halo = cfg.bg === "halo" && !(cfg.forcedPill && p.focus);
     ctx.fillStyle = cfg.weightTier && p.tier === 3 && !p.forced ? colors.muted : colors.text;
     lines.forEach((line, j) => {
       const ly = cy + (j - (lines.length - 1) / 2) * lineH + 0.5;

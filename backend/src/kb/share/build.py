@@ -1281,6 +1281,13 @@ def build(content_ref, viewer_ref="main", profile="private", *, root=REPO, viewe
             env["PYTHONPATH"] = os.path.join(viewer_dir, "backend", "src")
         env.pop(VERSIONS_ENV, None)
         env.pop(GIT_ROOT_ENV, None)
+        # the export has no history: the pages' added / changed dates, at the content commit, come in a file
+        from kb.services import graph as graph_data  # noqa: WPS433
+
+        dfile = os.path.join(tmp, "graph-dates.json")
+        with open(dfile, "w", encoding="utf-8") as f:
+            json.dump(graph_data._git_dates(str(root), content_sha), f)
+        env[graph_data.DATES_ENV] = dfile
         env[RAW_ROOT_ENV] = str(root)        # Home raw cards read raw/ from the working tree (both profiles)
         if profile == "private":
             env[GIT_ROOT_ENV] = str(root)

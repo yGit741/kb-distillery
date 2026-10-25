@@ -140,9 +140,39 @@ def _etag(pages):
     return hashlib.sha1("|".join(parts).encode()).hexdigest()[:16]
 
 
+DATES_ENV = "KB_GRAPH_DATES"   # a JSON file of {path: [added, changed]}: the share build's dates for its export
+
+
+def _git_dates(root=ROOT, rev="HEAD"):
+    """{wiki path: (added, changed)} as YYYY-MM-DD from one `git log` pass (newest first); {} without git."""
+    import subprocess
+
+    try:
+        out = subprocess.run(
+            ["git", "-C", root, "log", rev, "--format=@%cs", "--name-only", "--no-renames", "--", "wiki"],
+            capture_output=True, text=True, timeout=30, check=True,
+        ).stdout
+    except (OSError, subprocess.SubprocessError):
+        return {}
+    dates, day = {}, ""
+    for line in out.splitlines():
+        if line.startswith("@"):
+            day = line[1:]
+        elif line:
+            added, changed = dates.get(line, (day, day))
+            dates[line] = (day, changed)   # older commits come later: the last seen is when it was added
+    return dates
+
+
 def build_graph_snapshot(layer=None):
     pages = load_pages()
     inbound = inbound_index(pages)
+    dates = _git_dates()
+    if not dates and os.environ.get(DATES_ENV):   # a share build's export has no history: its dates come in a file
+        import json
+
+        with open(os.environ[DATES_ENV], encoding="utf-8") as f:
+            dates = {k: tuple(v) for k, v in json.load(f).items()}
     nodes = []
     links = []
     link_keys = set()
@@ -179,6 +209,9 @@ def build_graph_snapshot(layer=None):
                 "inDegree": len(inbound.get(slug, set())),
                 "outDegree": len(outbound_links(text, fm) & set(pages)),
                 "path": rel,
+                # when the page came into the vault and last changed (git); "" without history, never a guess
+                "added": dates.get(rel, ("", ""))[0],
+                "changed": dates.get(rel, ("", ""))[1],
                 "preview": _preview(text),
                 "properties": _properties(
                     fm, slug, len(inbound.get(slug, set())),

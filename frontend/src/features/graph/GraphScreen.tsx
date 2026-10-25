@@ -29,7 +29,9 @@ import { Legend } from "./Legend";
 import { predicateFn } from "./publicPredicate";
 import { ViewsBar } from "./views/ViewsBar";
 import { NodeMenu } from "./NodeMenu";
+import { applyQuick } from "./quickFilters";
 import { computeVisible } from "./rules";
+import { assignAreaColors, colorKey, effectiveColorBy } from "./style";
 import { parseSchema } from "./schema";
 import { SideReader } from "./SideReader";
 import { useGraphUi } from "./store";
@@ -148,15 +150,19 @@ function Loaded({
   const selection = useKb((s) => s.selection);
   const canvas = useRef<CanvasHandle>(null);
   const [menu, setMenu] = useState<{ id: string; x: number; y: number } | null>(null);
+  /** the right-click menu on empty space: spread the nodes around the point, or fit the view */
+  const [bgMenu, setBgMenu] = useState<{ x: number; y: number } | null>(null);
   const [note, setNote] = useState("");
 
+  // area colours by size, before anything below colours a node, a hull or a key row
+  useMemo(() => assignAreaColors(model.nodes), [model]);
   const byId = useMemo(() => new Map(model.nodes.map((n) => [n.id, n] as const)), [model]);
   const neighbors = useMemo(() => buildNeighborMap(model.links), [model]);
   const shownTypes = useMemo(
     () => (ui.shownTypes === undefined ? new Set(schema.defaultVisible) : ui.shownTypes),
     [ui.shownTypes, schema],
   );
-  const visible = useMemo(
+  const filtered = useMemo(
     () =>
       computeVisible(model.nodes, {
         shownTypes,
@@ -167,9 +173,13 @@ function Loaded({
         force: !!ui.view,
         revealed: ui.revealed,
         keep: predicateFn(ui.predicate),
+        hiddenKeys: ui.hiddenKeys,
+        keyOf: (n) => colorKey(n, effectiveColorBy(ui.colorBy, ui.shapes)),
       }),
-    [model, shownTypes, ui.shownDepths, ui.search, ui.rules, ui.view, ui.revealed, ui.predicate],
+    [model, shownTypes, ui.shownDepths, ui.search, ui.rules, ui.view, ui.revealed, ui.predicate, ui.hiddenKeys, ui.colorBy, ui.shapes],
   );
+  // the legend's one-click filters run last, on what the others left (./quickFilters)
+  const visible = useMemo(() => applyQuick(filtered, byId, neighbors, selection, ui.quick), [filtered, byId, neighbors, selection, ui.quick]);
   const imp = useMemo(() => computeImportance({ visible, byId, neighbors, cfg: ui.lab }), [visible, byId, neighbors, ui.lab]);
   const wide = useWide();
   const stats = `${visible.size} of ${model.nodes.length} pages · ${model.links.length} links · ${generatedAt.slice(0, 16).replace("T", " ")}${dsKind === "embedded" ? " · snapshot" : ""}`;
@@ -349,7 +359,9 @@ function Loaded({
   const reader = ui.readerSlug ? byId.get(ui.readerSlug) : undefined;
   const showDetails = ui.detailsOpen && selected.length > 0;
 
-  const legend = <Legend nodes={model.nodes} visible={visible} schema={schema} shownTypes={shownTypes} stats={stats} />;
+  const legend = (
+    <Legend nodes={model.nodes} visible={visible} schema={schema} shownTypes={shownTypes} stats={stats} quickHidden={filtered.size - visible.size} selected={selection.size} />
+  );
   // the header's slot is looked up after the shell committed (a render-time lookup can run before it exists)
   const [headerSlot, setHeaderSlot] = useState<HTMLElement | null>(null);
   useLayoutEffect(() => setHeaderSlot(document.getElementById(HEADER_SLOT_ID)), []);
@@ -379,10 +391,11 @@ function Loaded({
         imp={imp}
         className="absolute inset-0"
         onOpenMenu={(id, x, y) => setMenu({ id, x, y })}
-        onBackgroundContext={() => {
+        onBackgroundContext={(x, y) => {
           closeMenu();
           closePanels();
           useKb.getState().clearSelection();
+          setBgMenu({ x, y });
         }}
         onOpenReader={openReader}
         onOpenPile={(format) => useLayer.getState().openDrawer({ kind: "format", format })}
@@ -426,7 +439,41 @@ function Loaded({
       />
       {legend}
       {ui.railOpen && <LabRail imp={imp} selected={selected} className={cn("absolute bottom-16 left-14 top-3 z-20", wide ? "w-72" : "w-[min(20rem,calc(100%-4.5rem))]")} />}
-      {!ui.railOpen && <HoverCard byId={byId} className="absolute bottom-16 left-14 z-20" />}
+      {/* the hover card is the quick peek; the inspector and the reader are where a page is read, so it yields to them */}
+      {!ui.railOpen && !showDetails && !reader && <HoverCard byId={byId} className="absolute bottom-16 left-14 z-20" />}
+      {bgMenu && (
+        <div
+          role="menu"
+          aria-label="Graph"
+          className="pointer-events-auto fixed z-50 min-w-40 rounded-lg border bg-popover p-1 text-sm shadow-[var(--shadow)]"
+          style={{ left: bgMenu.x, top: bgMenu.y }}
+          onMouseLeave={() => setBgMenu(null)}
+        >
+          <button
+            type="button"
+            role="menuitem"
+            className="flex w-full items-center gap-2 rounded px-2 py-1 text-left hover:bg-accent"
+            title="Push the pages around this point apart, gently; the layout settles and stays"
+            onClick={() => {
+              canvas.current?.spreadAt(bgMenu.x, bgMenu.y);
+              setBgMenu(null);
+            }}
+          >
+            Spread here
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            className="flex w-full items-center gap-2 rounded px-2 py-1 text-left hover:bg-accent"
+            onClick={() => {
+              ui.set({ fitTick: ui.fitTick + 1 });
+              setBgMenu(null);
+            }}
+          >
+            Fit to view
+          </button>
+        </div>
+      )}
       {selected.length > 0 && !showDetails && !reader && (
         <div data-tour="graph-selection" className="pointer-events-auto absolute bottom-14 left-1/2 [.gt-active_&]:bottom-24 z-10 flex -translate-x-1/2 items-center gap-1 rounded-full border bg-card px-3 py-1 text-sm shadow-[var(--shadow)]">
           <span>{selected.length === 1 ? (selected[0]?.title || selected[0]?.id) : `${selected.length} selected`}</span>

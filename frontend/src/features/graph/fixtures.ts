@@ -14,6 +14,8 @@ export const node = (id: string, o: Partial<GNode> = {}): GNode => ({
   inDegree: 0,
   outDegree: 0,
   path: `wiki/${id}.md`,
+  added: "",
+  changed: "",
   preview: "",
   properties: {},
   ...o,

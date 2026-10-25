@@ -17,8 +17,8 @@ export interface Story {
   types: readonly string[];
   /** types whose every page is labelled (the legend's "Aa") */
   typeLabels?: readonly string[];
-  /** A headline view: a pill in the views bar, with the questions it answers (hover) and a short hint. */
-  headline?: { label: string; questions: readonly string[]; hint: string };
+  /** A headline view: a pill in the views bar; `goal` is the one sentence its hover shows, then the questions and hint. */
+  headline?: { label: string; goal: string; questions: readonly string[]; hint: string };
   /** Pages drawn at all, on top of the type filter (../publicPredicate). */
   predicate?: Predicate;
   /** Pages the view is built around: they and their neighbours are drawn, the rest hidden. */
@@ -63,6 +63,7 @@ export const STORIES: readonly Story[] = [
     story: "As a reader who opens this vault for the first time, I want the territory at a glance: every theme on a ring, the ideas and questions inside each, and only the sources I actually read, so that breadth shows without the noise of imports and stubs.",
     headline: {
       label: "Map",
+      goal: "See what is in the vault: every theme, with the ideas and questions inside it.",
       questions: ["What is in my vault?", "How broad is it?", "Which themes do my notes combine?"],
       hint: "Themes on a ring, digested sources only",
     },
@@ -80,6 +81,7 @@ export const STORIES: readonly Story[] = [
     story: "As a student choosing a thesis, I want the spine of my direction — generalization of over-parameterized networks seen through Boolean analysis — with the questions, papers and concepts one hop around it, so that I can see what the direction already rests on.",
     headline: {
       label: "Thesis",
+      goal: "See the thesis direction: its questions and what they rest on, one hop around the spine.",
       questions: ["Which questions am I pursuing?", "What is the generalization ↔ Boolean-analysis core?", "What does the direction rest on?"],
       hint: "The thesis spine and one hop around it",
     },
@@ -97,6 +99,7 @@ export const STORIES: readonly Story[] = [
     story: "As a student still choosing, I want the empty intersections of my vault as research-direction cards, with the thin spots lit on the graph, so that I can see where my curiosity is pulling me and what reading would pay most.",
     headline: {
       label: "Explore",
+      goal: "Find research directions in the gaps: themes I touch but never connect.",
       questions: ["What is on my mind?", "Where is my curiosity pulling me?", "Which themes do I touch but never connect?"],
       hint: "Research directions from the gaps between themes",
     },
