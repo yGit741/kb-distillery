@@ -22,9 +22,10 @@ const ops: OpsLike = {
 const health: HealthLike = { inbox_count: 4, values: { errors: 0, warnings: 194, queued: 385, partial_books: 2 }, statuses: { warnings: "warn" } };
 
 describe("system model", () => {
-  it("builds six tiles, each from one snapshot, with a placeholder while loading", () => {
+  it("builds seven tiles, each from one snapshot, with a placeholder while loading", () => {
     const t = tiles(lc, ops, health);
-    expect(t.map((x) => x.id)).toEqual(["version", "work", "hygiene", "lint", "backlog", "nightly"]);
+    expect(t.map((x) => x.id)).toEqual(["version", "work", "hygiene", "lint", "backlog", "nightly", "merges"]);
+    expect(t.find((x) => x.id === "merges")).toMatchObject({ value: "unknown", tone: "warn" });
     expect(t.find((x) => x.id === "version")).toMatchObject({ value: "kb-1.0.9", tone: "warn", tab: "history" });
     expect(t.find((x) => x.id === "work")).toMatchObject({ value: "2", hint: "1 need attention", tone: "warn" });
     expect(t.find((x) => x.id === "hygiene")).toMatchObject({ value: "0 / 2", tone: "warn" });
@@ -70,6 +71,19 @@ describe("system model", () => {
     const fine = tiles(lc, { ...ops, runs: [{ started: "2026-10-24T19:00:00Z", status: "ok" }] }, health).find((x) => x.id === "nightly");
     expect(fine).toMatchObject({ value: "ok", tone: "ok" });
     expect(tiles(lc, { ...ops, runs: [], nightly: {} }, health).find((x) => x.id === "nightly")).toMatchObject({ value: "not installed", tone: "warn" });
+  });
+
+  it("the Merges tile reads the live queue: idle ok, waiters warn, stale or dead holder bad", () => {
+    const m = (queue: OpsLike["queue"]) => tiles(lc, { ...ops, queue }, health).find((x) => x.id === "merges");
+    expect(m({ holder: null, waiters: [], stale_after: 1200 })).toMatchObject({ value: "idle", tone: "ok" });
+    expect(m({ holder: { pr: 7, held: 30, alive: true }, waiters: [], stale_after: 1200 })).toMatchObject({ value: "#7 merging", hint: "merging 30s", tone: "ok" });
+    expect(m({ holder: { pr: 7, held: 30, alive: true }, waiters: [{ pr: 8 }, { branch: "infra/x" }], stale_after: 1200 })).toMatchObject({
+      tone: "warn",
+      hint: "merging 30s · 2 waiting (#8, infra/x)",
+    });
+    expect(m({ holder: { pr: 7, held: 1500, alive: true }, waiters: [], stale_after: 1200 })).toMatchObject({ value: "#7 stuck", hint: "stale, held 25m", tone: "bad" });
+    expect(m({ holder: { pr: 7, pid: 42, held: 5, alive: false }, waiters: [{ pr: 8 }], stale_after: 1200 })).toMatchObject({ tone: "bad", hint: "pid 42 dead · 1 waiting (#8)" });
+    expect(tiles(lc, undefined, health).find((x) => x.id === "merges")).toMatchObject({ value: "…", tone: "" });
   });
 
   it("lists threads that need attention first", () => {

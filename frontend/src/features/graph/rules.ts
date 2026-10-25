@@ -89,6 +89,8 @@ export interface VisibilityOptions {
   force: boolean;
   /** Sources revealed by "See sources (N)", drawn whatever the type filter says. */
   revealed: ReadonlySet<string>;
+  /** A view's own rule on top of the filters (./publicPredicate); null = none. */
+  keep?: ((n: GNode) => boolean) | null;
 }
 
 export function passesText(node: GNode, search: string): boolean {
@@ -107,6 +109,7 @@ export function computeVisible(nodes: readonly GNode[], o: VisibilityOptions): S
     ids.add(n.id);
     if (!typeShown(n.type, o.shownTypes)) continue;
     if (o.shownDepths && n.layer === "source" && n.depth && !o.shownDepths.has(n.depth)) continue;
+    if (o.keep && !o.keep(n)) continue;
     if (o.restrict && !o.restrict.has(n.id)) continue;
     if (!passesText(n, o.search)) continue;
     if (o.rules.every((r) => matchRule(n, r))) out.add(n.id);

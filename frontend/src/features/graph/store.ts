@@ -2,6 +2,7 @@ import { create } from "zustand";
 import type { GraphView } from "./pageSearch";
 import { DEFAULT_LAB, sanitizeLab, type LabConfig } from "./lab/config";
 import { DEFAULT_STORY, storyById, storyLab, type LayoutMode } from "./lab/views";
+import type { Predicate } from "./publicPredicate";
 import { newRule, type Rule } from "./rules";
 import type { ColorBy, SizeBy } from "./style";
 
@@ -68,6 +69,8 @@ export interface GraphUiState extends GraphPrefs {
   rules: Rule[];
   typeLabels: ReadonlySet<string>;
   view: GraphView | null;
+  /** The story's own page rule (Map draws only public pages); null = none. */
+  predicate: Predicate | null;
   /** Sources revealed by "See sources (N)". */
   revealed: ReadonlySet<string>;
   flyout: Flyout | null;
@@ -78,6 +81,7 @@ export interface GraphUiState extends GraphPrefs {
   fitTick: number;
 
   set: (patch: Partial<GraphUiState>) => void;
+  /** Hand filters (types, layers, depths) also drop the view's predicate: a chip must mean what it says. */
   toggleType: (type: string, allTypes: readonly string[], defaults: readonly string[]) => void;
   setLayerTypes: (types: readonly string[], on: boolean, allTypes: readonly string[], defaults: readonly string[]) => void;
   toggleDepth: (depth: string, all: readonly string[]) => void;
@@ -103,6 +107,8 @@ export function loadPrefs(): GraphPrefs {
     const raw = localStorage.getItem(PREF_KEY);
     if (!raw) return DEFAULT_PREFS;
     const parsed = JSON.parse(raw) as Partial<GraphPrefs>;
+    // "orient" became the headline "map" view: carry everyone who had the old default over
+    if (parsed.story === "orient") parsed.story = DEFAULT_STORY;
     const out: Record<string, unknown> = { ...DEFAULT_PREFS };
     for (const k of Object.keys(DEFAULT_PREFS) as (keyof GraphPrefs)[]) {
       const v = parsed[k];
@@ -130,9 +136,11 @@ const pickPrefs = (s: GraphPrefs): GraphPrefs => Object.fromEntries(PREF_KEYS.ma
 const normalize = (next: Set<string>, all: readonly string[]) => (all.every((t) => next.has(t)) ? null : next);
 
 /** A saved view brings its drawn types and "Aa" types back on the next visit (they are not stored themselves). */
-function initialView(p: GraphPrefs): Pick<GraphUiState, "shownTypes" | "typeLabels"> {
+function initialView(p: GraphPrefs): Pick<GraphUiState, "shownTypes" | "typeLabels" | "predicate"> {
   const st = storyById(p.story);
-  return st ? { shownTypes: new Set(st.types), typeLabels: new Set(st.typeLabels ?? []) } : { shownTypes: undefined, typeLabels: new Set() };
+  return st
+    ? { shownTypes: new Set(st.types), typeLabels: new Set(st.typeLabels ?? []), predicate: st.predicate ?? null }
+    : { shownTypes: undefined, typeLabels: new Set(), predicate: null };
 }
 
 const INITIAL = loadPrefs();
@@ -156,7 +164,7 @@ export const useGraphUi = create<GraphUiState>((set, get) => ({
     const cur = get().shownTypes;
     const base = cur === undefined ? new Set(defaults) : new Set(cur ?? all);
     if (!base.delete(type)) base.add(type);
-    set({ shownTypes: normalize(base, all) });
+    set({ shownTypes: normalize(base, all), predicate: null, story: "" });
   },
   setLayerTypes: (types, on, all, defaults) => {
     const cur = get().shownTypes;
@@ -165,12 +173,12 @@ export const useGraphUi = create<GraphUiState>((set, get) => ({
       if (on) base.add(t);
       else base.delete(t);
     }
-    set({ shownTypes: normalize(base, all) });
+    set({ shownTypes: normalize(base, all), predicate: null, story: "" });
   },
   toggleDepth: (depth, all) => {
     const base = new Set(get().shownDepths ?? all);
     if (!base.delete(depth)) base.add(depth);
-    set({ shownDepths: all.every((d) => base.has(d)) ? null : base });
+    set({ shownDepths: all.every((d) => base.has(d)) ? null : base, predicate: null, story: "" });
   },
   toggleTypeLabels: (type) => {
     const next = new Set(get().typeLabels);
@@ -193,8 +201,8 @@ export const useGraphUi = create<GraphUiState>((set, get) => ({
   requestFocus: (id, zoom = true) => set({ focusRequest: { id, zoom } }),
   fit: () => set((s) => ({ fitTick: s.fitTick + 1 })),
   openFlyout: (f) => set((s) => ({ flyout: s.flyout === f ? null : f })),
-  resetFilters: () => set({ shownTypes: undefined, shownDepths: null, search: "", rules: [], view: null, revealed: new Set() }),
-  setLab: (patch) => set((s) => ({ lab: { ...s.lab, ...patch }, story: "" })),
+  resetFilters: () => set({ shownTypes: undefined, shownDepths: null, search: "", rules: [], view: null, revealed: new Set(), predicate: null, story: "" }),
+  setLab: (patch) => set((s) => ({ lab: { ...s.lab, ...patch }, story: "", predicate: null })),
   applyStory: (id) => {
     const st = storyById(id);
     if (!st) return set({ story: "" });
@@ -206,6 +214,10 @@ export const useGraphUi = create<GraphUiState>((set, get) => ({
       layoutMode: st.layoutMode,
       shownTypes: new Set(st.types),
       typeLabels: new Set(st.typeLabels ?? []),
+      predicate: st.predicate ?? null,
+      // a story is a whole view: a search, picked pages or a scope from before would fight it
+      view: null,
+      revealed: new Set(),
     });
   },
 }));

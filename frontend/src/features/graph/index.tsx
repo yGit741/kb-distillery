@@ -26,6 +26,13 @@ export default function Graph() {
           replace: true,
           search: ((prev: Record<string, unknown>) => Object.fromEntries(Object.entries(prev).filter(([k]) => !keys.includes(k)))) as never,
         }),
+      setParams: (patch) =>
+        void navigate({
+          to: ".",
+          replace: true,
+          search: ((prev: Record<string, unknown>) =>
+            Object.fromEntries(Object.entries({ ...prev, ...patch }).filter(([, v]) => v !== undefined && v !== ""))) as never,
+        }),
     }),
     [navigate],
   );

@@ -205,6 +205,23 @@ def summary(root):
     return f"merge queue: {describe(head)} merging" + (f", {len(rest)} waiting" if rest else "")
 
 
+def state(root, now=None):
+    """The queue as data for the System tab: {holder, waiters, stale_after}; holder is None when idle."""
+    now = time.time() if now is None else now
+    stale = _env_seconds("KB_MERGE_STALE", DEFAULT_STALE)
+    here = socket.gethostname()
+
+    def row(e):
+        local = e.get("host") == here
+        return {"pr": e.get("pr"), "branch": e.get("branch"), "pid": e.get("pid"), "host": e.get("host"),
+                "age": max(0, int(now - float(e.get("ts", now)))),
+                "held": max(0, int(now - float(e.get("hb", e.get("ts", now))))),
+                "alive": _pid_alive(e.get("pid")) if local else None,
+                "stale": is_stale(e, now=now, stale=stale)}
+    q = [row(e) for e in _read(common_dir(root))]   # lock-free: _write is an atomic os.replace
+    return {"holder": q[0] if q else None, "waiters": q[1:], "stale_after": int(stale)}
+
+
 def cmd_queue(root, drop=None, out=sys.stdout):
     qdir = common_dir(root)
     if drop is not None:

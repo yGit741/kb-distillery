@@ -114,8 +114,8 @@ export const ForceGraph = forwardRef<ForceGraphHandle, ForceGraphProps & { class
       .cooldownTicks(120)
       .nodeCanvasObjectMode(() => "replace")
       .enableNodeDrag(true)
-      // left-drag on the background is the box selection (tools/RegionOverlay); the wheel button pans
-      .enablePanInteraction(false)
+      // left-drag on the background pans; the box / lasso selection is a right-drag (tools/RegionOverlay)
+      .enablePanInteraction(true)
       .enableZoomInteraction(false)
       .nodeVal((n) => latest.current.nodeRadius(n as SimNode) ** 2)
       .nodeRelSize(1)

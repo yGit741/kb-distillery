@@ -30,13 +30,15 @@ interface Props {
   onShowPicked: (ids: string[]) => void;
   /** Show every page that mentions the query. */
   onShowMentions: (q: string) => void;
+  /** Where the box sits: floating over the canvas (default) or filling the app header's slot. */
+  placement?: "canvas" | "header";
 }
 
 /**
  * Space search: title and slug matches, full-text hits, "pages mentioning …", and a pick list (Tab) that is
  * shown all at once with its neighbours. "/" sends the rest of the line to the chat dock.
  */
-export function Finder({ nodes, byId, colorBy, visible, onFocus, onRead, onShowPicked, onShowMentions }: Props) {
+export function Finder({ nodes, byId, colorBy, visible, onFocus, onRead, onShowPicked, onShowMentions, placement = "canvas" }: Props) {
   const [raw, setRaw] = useState("");
   const [open, setOpen] = useState(false);
   const [idx, setIdx] = useState(0);
@@ -146,7 +148,13 @@ export function Finder({ nodes, byId, colorBy, visible, onFocus, onRead, onShowP
   const listId = "graph-finder-list";
   const showList = open && (items.length > 0 || !!q || picked.size > 0);
   return (
-    <div className="pointer-events-auto absolute left-1/2 top-3 z-20 w-[min(28rem,calc(100%-8rem))] -translate-x-1/2">
+    <div
+      className={cn(
+        "pointer-events-auto",
+        // on the canvas (the embed has no header) it sits under the views bar, not on it
+        placement === "header" ? "relative mx-auto w-full max-w-md" : "absolute left-1/2 top-14 z-20 w-[min(28rem,calc(100%-8rem))] -translate-x-1/2",
+      )}
+    >
       <div className="relative">
         <Search aria-hidden className="pointer-events-none absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
         <input
@@ -179,7 +187,10 @@ export function Finder({ nodes, byId, colorBy, visible, onFocus, onRead, onShowP
           id={listId}
           role="listbox"
           aria-label="Results"
-          className="mt-1 max-h-[60vh] overflow-y-auto rounded-lg border bg-popover p-1 text-sm shadow-[var(--shadow)]"
+          className={cn(
+            "mt-1 max-h-[60vh] overflow-y-auto rounded-lg border bg-popover p-1 text-sm shadow-[var(--shadow)]",
+            placement === "header" && "absolute left-0 right-0 z-50",
+          )}
           onMouseDown={(e) => e.preventDefault()}
         >
           {picked.size > 0 && (

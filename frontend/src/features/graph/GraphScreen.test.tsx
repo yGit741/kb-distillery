@@ -5,7 +5,7 @@ import type { ReactNode } from "react";
 import { DataSourceProvider, type DataSource } from "@/api";
 import { useKb } from "@/lib/store";
 import { mockDataSource } from "@/test/datasource";
-import { sampleSnapshot } from "./fixtures";
+import { node, sampleLinks, sampleNodes, sampleSnapshot } from "./fixtures";
 import { GraphScreen, type GraphHost } from "./GraphScreen";
 import { DEFAULT_PREFS, useGraphUi } from "./store";
 
@@ -34,6 +34,7 @@ const host: GraphHost = {
   openPage: vi.fn(),
   pageHref: (s) => `/app/pages/${s}`,
   clearParams: vi.fn(),
+  setParams: vi.fn(),
   go: vi.fn(),
   href: (to, search) => `/app${to}${search ? `?${new URLSearchParams(search)}` : ""}`,
 };
@@ -213,5 +214,30 @@ describe("selection, details, reader, menu", () => {
     expect(host.openPage).toHaveBeenCalledWith("idea-margin");
     await userEvent.keyboard(" ");
     expect(screen.getByRole("combobox", { name: /search a page/i })).toHaveFocus();
+  });
+});
+
+describe("views bar", () => {
+  it("?view=thesis applies the Thesis story and its seed view without writing the URL back", async () => {
+    vi.mocked(host.setParams).mockClear();
+    // the fixture needs one page of the thesis spine for the seed view to have a hit
+    const nodes = [...sampleNodes, node("theme-boolean-analysis", { inDegree: 2, outDegree: 1, areas: ["boolean-analysis"] })];
+    const links = [...sampleLinks, { source: "theme-boolean-analysis", target: "idea-margin", kind: "wikilink" as const }];
+    render(wrap(withGraph({ getGraph: async () => sampleSnapshot({ nodes, links, node_count: nodes.length }) }), <GraphScreen search={{ view: "thesis" }} host={host} />));
+    await screen.findByTestId("graph-stats");
+    await waitFor(() => expect(useGraphUi.getState().story).toBe("thesis"));
+    expect(useGraphUi.getState().view?.label).toBe("Thesis");
+    expect(screen.getByRole("button", { name: "Thesis" })).toHaveAttribute("aria-pressed", "true");
+    expect(host.setParams).not.toHaveBeenCalled();
+  });
+
+  it("clicking the Thesis pill applies the story and puts view=thesis in the URL", async () => {
+    vi.mocked(host.setParams).mockClear();
+    render(wrap(withGraph(), <GraphScreen search={{}} host={host} />));
+    await screen.findByTestId("graph-stats");
+    expect(screen.getByRole("button", { name: "Map" })).toHaveAttribute("aria-pressed", "true");
+    await userEvent.click(screen.getByRole("button", { name: "Thesis" }));
+    expect(useGraphUi.getState().story).toBe("thesis");
+    expect(host.setParams).toHaveBeenCalledWith(expect.objectContaining({ view: "thesis" }));
   });
 });

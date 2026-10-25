@@ -87,11 +87,21 @@ def _build():
     }
 
 
+def merge_queue():
+    """Live merge-queue state (cheap file read, never cached); None when it cannot be read."""
+    from kb.git import queue
+    try:
+        return queue.state(vault_root())
+    except Exception:  # noqa: BLE001 — the tile shows "unknown" rather than failing the snapshot
+        return None
+
+
 def build_ops_snapshot(refresh=False):
     with _lock:
         if refresh or not _cache["data"] or time.monotonic() - _cache["at"] > CACHE_SECONDS:
             _cache["data"], _cache["at"] = _build(), time.monotonic()
-        return _cache["data"]
+        data = _cache["data"]
+    return {**data, "queue": merge_queue()}
 
 
 def email_preview():
