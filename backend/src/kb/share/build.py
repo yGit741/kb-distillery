@@ -549,21 +549,7 @@ def apply_profile(data, profile, scope_slugs=None):
         drop |= {n["id"] for n in graph["nodes"] if n["id"] not in scope_slugs}
         drop |= {c["id"] for c in index["pages"] if c["id"] not in scope_slugs}
         drop |= {s for s in pages if s not in scope_slugs}
-        titles = {s: (p.get("card") or {}).get("title") for s, p in pages.items() if s in drop}
-        titles.update({n["id"]: n.get("title") for n in graph["nodes"] if n["id"] in drop and n.get("title")})
-        for n in graph["nodes"]:
-            if n["id"] not in drop:
-                n.update(_unlink({k: v for k, v in n.items() if k not in ("id", "type")}, drop, titles))
-        for c in index["pages"]:
-            if c["id"] not in drop:
-                c.update(_unlink({k: v for k, v in c.items() if k not in ("id", "type")}, drop, titles))
-        for slug, pg in pages.items():
-            if slug not in drop:
-                pg.update(_unlink({k: v for k, v in pg.items() if k not in ("backlinks", "outbound", "suggested", "card")},
-                                  drop, titles))
-                if pg.get("card"):
-                    pg["card"] = dict(pg["card"], **_unlink({k: v for k, v in pg["card"].items() if k not in ("id", "type")},
-                                                           drop, titles))
+        unlink_dropped(data, drop)
     drop_pages(data, drop)
     graph, pages = data["graph"], data["pages"]
     schema = graph.get("schema")
@@ -586,6 +572,29 @@ def apply_profile(data, profile, scope_slugs=None):
     return data
 
 
+def unlink_dropped(data, drop):
+    """A subset build names no dropped page: `[[dropped|label]]` → label (else its title) as plain text,
+    dropped slugs removed from list fields (related, sources, …) — in every kept node, card and body
+    (`_unlink`, recursive through frontmatter / properties). Before `drop_pages`, while titles are known."""
+    graph, index, pages = data["graph"], data["index"], data["pages"]
+    titles = {s: (p.get("card") or {}).get("title") for s, p in pages.items() if s in drop}
+    titles.update({n["id"]: n.get("title") for n in graph["nodes"] if n["id"] in drop and n.get("title")})
+    for n in graph["nodes"]:
+        if n["id"] not in drop:
+            n.update(_unlink({k: v for k, v in n.items() if k not in ("id", "type")}, drop, titles))
+    for c in index["pages"]:
+        if c["id"] not in drop:
+            c.update(_unlink({k: v for k, v in c.items() if k not in ("id", "type")}, drop, titles))
+    for slug, pg in pages.items():
+        if slug not in drop:
+            pg.update(_unlink({k: v for k, v in pg.items() if k not in ("backlinks", "outbound", "suggested", "card")},
+                              drop, titles))
+            if pg.get("card"):
+                pg["card"] = dict(pg["card"], **_unlink({k: v for k, v in pg["card"].items() if k not in ("id", "type")},
+                                                       drop, titles))
+    return data
+
+
 def drop_pages(data, drop):
     """Remove every page in `drop` from the blob, wherever a slug can surface: graph nodes, links and
     concept links, the explorer index (cards, link pairs, wanted-from), the page bodies and their
@@ -594,7 +603,14 @@ def drop_pages(data, drop):
     keep = lambda s: s not in drop  # noqa: E731
     graph["nodes"] = [n for n in graph["nodes"] if keep(n["id"])]
     graph["links"] = [l for l in graph["links"] if keep(l["source"]) and keep(l["target"])]
-    graph["concept_links"] = [l for l in graph.get("concept_links") or [] if keep(l["source"]) and keep(l["target"])]
+    concept_links = []
+    for l in graph.get("concept_links") or []:
+        if not (keep(l["source"]) and keep(l["target"])):
+            continue
+        if "via" in l:
+            l["via"] = [v for v in l["via"] if keep(v)]
+        concept_links.append(l)
+    graph["concept_links"] = concept_links
     graph["node_count"] = len(graph["nodes"])
     graph["link_count"] = len(graph["links"])
     facets = graph.get("facets") or {}
@@ -627,7 +643,7 @@ def drop_pages(data, drop):
 def apply_predicate(data, predicate):
     """After `apply_profile`: keep only the nodes passing `predicate` (`kb.share.predicate`), and drop
     everything that names a failing page (links, cards, bodies, search entries — `drop_pages`).
-    Returns (data, dropped) where `dropped` is the number of pages removed; no predicate → (data, 0).
+    Returns (data, dropped) where `dropped` is the number of graph nodes removed; no predicate → (data, 0).
 
     The test reads each node's `inDegree` / `outDegree` as the graph snapshot computed them on the
     FULL graph, before the public profile or this cut removed any neighbour — the same numbers
@@ -637,12 +653,14 @@ def apply_predicate(data, predicate):
         return data, 0
     graph = data["graph"]
     drop = {n["id"] for n in graph["nodes"] if not test(n)}
+    dropped = len(drop)                                   # graph nodes removed — what the manifest reports
     present = {n["id"] for n in graph["nodes"]}
     # a card or body without a graph node has no degrees to judge: it goes with the dropped ones
     drop |= {c["id"] for c in data["index"]["pages"] if c["id"] not in present}
     drop |= {s for s in data["pages"] if s not in present}
+    unlink_dropped(data, drop)                            # no kept page names a dropped slug
     drop_pages(data, drop)
-    return data, len(drop)
+    return data, dropped
 
 
 # ---------- html ----------
@@ -975,28 +993,23 @@ def inner_build(args):
     out = Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(page, encoding="utf-8", newline="\n")
-    write_stats(out, dropped)
+    write_stats(args.stats, dropped)
     print(f"{out} ({len(data['graph']['nodes'])} nodes, {len(data['pages'])} pages, "
           f"{out.stat().st_size // 1024} KB)")
     return 0
 
 
-STATS_SUFFIX = ".stats.json"
+def write_stats(path, dropped):
+    """What the inner build learnt that the manifest records — `{"dropped": n}`, the graph nodes the
+    predicate removed — written to `--stats <path>` (a file in the outer build's temp dir, never the
+    published directory); no path → nothing written."""
+    if path:
+        Path(path).write_text(json.dumps({"dropped": dropped}), encoding="utf-8")
 
 
-def write_stats(out, dropped):
-    """What the inner build learnt that the manifest records: a sidecar next to the page, read and
-    removed by `build` (the outer process) — `{"dropped": n}`, the pages the predicate removed."""
-    Path(str(out) + STATS_SUFFIX).write_text(json.dumps({"dropped": dropped}), encoding="utf-8")
-
-
-def read_stats(html_path):
-    sidecar = Path(str(html_path) + STATS_SUFFIX)
-    if not sidecar.is_file():
-        return {}
-    stats = json.loads(sidecar.read_text(encoding="utf-8"))
-    sidecar.unlink()
-    return stats
+def read_stats(path):
+    p = Path(path)
+    return json.loads(p.read_text(encoding="utf-8")) if p.is_file() else {}
 
 
 # ---------- app layout ----------
@@ -1037,7 +1050,7 @@ def inner_build_app(args):
     out = Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(page, encoding="utf-8", newline="\n")
-    write_stats(out, dropped)
+    write_stats(args.stats, dropped)
     print(f"{out} ({len(data['graph']['nodes'])} nodes, {len(data['pages'])} pages, {out.stat().st_size // 1024} KB, app)")
     return 0
 
@@ -1130,6 +1143,24 @@ def schema_major(root, sha):
     return None
 
 
+STORIES_FILE = "frontend/src/features/graph/lab/views.ts"
+_STORY_ID = re.compile(r'^\s*id:\s*"([a-z0-9-]+)"', re.M)
+
+
+def story_ids(viewer_root, viewer_sha=None):
+    """The graph view ids the viewer knows (`STORIES[].id` in views.ts): from the working tree when
+    `viewer_sha` is None, else from that commit. None when the file cannot be read."""
+    try:
+        if viewer_sha is None:
+            text = (Path(viewer_root) / STORIES_FILE).read_text(encoding="utf-8")
+        else:
+            text = _git(viewer_root, "show", f"{viewer_sha}:{STORIES_FILE}")
+    except (OSError, subprocess.CalledProcessError, BuildError):
+        return None
+    ids = _STORY_ID.findall(text or "")
+    return ids or None
+
+
 def build(content_ref, viewer_ref="main", profile="private", *, root=REPO, viewer_root=None,
           out_root=EXPORT_DIR, viewer_worktree=False, label=None, app=False, frontend_dist=None,
           scope=None, hops=1, predicate=None, view=None):
@@ -1162,7 +1193,8 @@ def build(content_ref, viewer_ref="main", profile="private", *, root=REPO, viewe
     view = view or None
     if view and not app:
         print("share build: --view sets the app's opening graph view; the legacy shell has no Home and ignores it "
-              "(it is still recorded in the manifest)", file=sys.stderr)
+              "(not recorded in a legacy manifest)", file=sys.stderr)
+        view = None
     if profile not in PROFILES:
         raise BuildError(f"unknown profile {profile!r}; choose one of {', '.join(PROFILES)}")
     content_sha = resolve_ref(root, content_ref)
@@ -1180,6 +1212,14 @@ def build(content_ref, viewer_ref="main", profile="private", *, root=REPO, viewe
         viewer_sha = _rev_parse(viewer_root, "HEAD") or "worktree"
     else:
         viewer_sha = resolve_ref(viewer_root, viewer_ref)
+    if view:
+        known = story_ids(viewer_root, None if viewer_worktree else viewer_sha)
+        if known is None:
+            print(f"share build: cannot read the viewer's view list ({STORIES_FILE}); --view {view!r} checked for syntax only",
+                  file=sys.stderr)
+        elif view not in known:
+            print(f"share build: --view {view!r} is not a view of this viewer ({', '.join(known)}); "
+                  "the app will ignore it", file=sys.stderr)
     out_dir = Path(out_root) / (_safe_name(label or content_ref) + ("-app" if app and not label else ""))
     html_path = out_dir / "index.html"
     if app:
@@ -1233,16 +1273,20 @@ def build(content_ref, viewer_ref="main", profile="private", *, root=REPO, viewe
             cmd += [APP_FLAG, str(dist / "index.html")]
         if scope:
             cmd += ["--scope", scope, "--hops", str(int(hops))]
+        stats_path = os.path.join(tmp, "stats.json")
         if predicate:
-            cmd += ["--predicate", predicate]
+            cmd += ["--predicate", predicate, "--stats", stats_path]
         if view:
             cmd += ["--view", view]
         proc = subprocess.run(cmd, cwd=viewer_dir, env=env, capture_output=True, text=True, check=False)
         if proc.returncode != 0:
             tail = (proc.stderr or proc.stdout or "").strip().splitlines()[-12:]
-            raise BuildError("inner build failed in viewer %s:\n%s" % (viewer_sha[:7], "\n".join(tail)))
-        stats = read_stats(html_path)
-        dropped = int(stats.get("dropped", 0)) if predicate else None
+            hint = ""
+            if (predicate or view) and "unrecognized arguments" in (proc.stderr or ""):
+                hint = ("\nhint: this viewer predates --predicate/--view — use --viewer-worktree or a viewer ref "
+                        "that has kb.share.predicate (--viewer <branch|sha>)")
+            raise BuildError("inner build failed in viewer %s:\n%s%s" % (viewer_sha[:7], "\n".join(tail), hint))
+        dropped = int(read_stats(stats_path).get("dropped", 0)) if predicate else None
         if app:
             for rel in tree_files(dist):       # the 25 MiB guard applies to every file the Worker serves
                 if not (rel == "index.html" or rel.startswith(".")):
@@ -1374,6 +1418,7 @@ def _inner_parser():
     p.add_argument("--hops", default="1")
     p.add_argument("--predicate", default=None)
     p.add_argument("--view", default=None)
+    p.add_argument("--stats", default=None, help="write {dropped} here (the outer build's temp dir)")
     p.add_argument(APP_FLAG, default=None, help="the built app's index.html: render the app layout, not the shell")
     return p
 

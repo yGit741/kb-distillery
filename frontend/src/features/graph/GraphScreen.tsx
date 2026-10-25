@@ -250,7 +250,7 @@ function Loaded({
     const key = JSON.stringify([search.focus, search.select, search.search, search.pages, search.scope, search.layer, search.raw, search.view]);
     if (applied.current === key) return;
     applied.current = key;
-    const view = homeViewTried.current ? (search.view && storyById(search.view) ? search.view : undefined) : initialView(search.view);
+    const view = homeViewTried.current ? (search.view && storyById(search.view) ? search.view : undefined) : initialView(search);
     homeViewTried.current = true;
     if (view && view !== lastView.current) applyView(view, true);
     if (search.raw === "1" && dsKind !== "embedded") useLayer.getState().setRaw(true);

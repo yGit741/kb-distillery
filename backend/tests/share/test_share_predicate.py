@@ -76,13 +76,13 @@ class TestApplyPredicate(unittest.TestCase):
 
     def test_drops_failing_pages_everywhere(self):
         data, dropped = apply_predicate(apply_profile(blob(), "public"), "public")
-        self.assertEqual(dropped, 2)                                  # a (easy article), o (orphan)
+        self.assertEqual(dropped, 2)                                  # graph nodes: a (easy article), o (orphan)
         kept = {n["id"] for n in data["graph"]["nodes"]}
         # i keeps its FULL-graph degree (1, from the easy article) and so stays: degrees are the API's, not recomputed
         self.assertEqual(kept, {"t", "p", "i"})
         g = data["graph"]
         self.assertEqual([(l["source"], l["target"]) for l in g["links"]], [("t", "p")])
-        self.assertEqual(g["concept_links"], [{"source": "t", "target": "i", "via": ["a"]}])
+        self.assertEqual(g["concept_links"], [{"source": "t", "target": "i", "via": []}])   # via filtered like suggested
         self.assertEqual((g["node_count"], g["link_count"]), (3, 1))
         self.assertEqual(g["facets"]["types"], ["idea", "paper", "topic"])
         self.assertEqual({c["id"] for c in data["index"]["pages"]}, {"t", "p", "i"})   # no card → "Show all" can't list it
@@ -104,9 +104,24 @@ class TestApplyPredicate(unittest.TestCase):
         data["index"]["pages"].append({"id": "ghost", "type": "idea"})
         data["pages"]["ghost"] = {"card": {"id": "ghost", "type": "idea"}, "markdown": "# ghost\n"}
         out, dropped = apply_predicate(data, "public")
-        self.assertEqual(dropped, 3)                                  # a, o and the ghost
+        self.assertEqual(dropped, 2)                                  # the ghost is no graph node: removed, not counted
         self.assertNotIn("ghost", out["pages"])
         self.assertNotIn("ghost", {c["id"] for c in out["index"]["pages"]})
+
+    def test_kept_pages_do_not_name_dropped_slugs(self):
+        data = blob()
+        data["pages"]["t"]["markdown"] = "# t\n\nSee [[a|the article]] and [[p]] and [[o]].\n"
+        data["pages"]["t"]["frontmatter"] = {"related": ["a", "p"], "sources": ["a"]}
+        data["pages"]["a"]["card"]["title"] = "The article"
+        data["pages"]["o"]["card"]["title"] = "Orphan"
+        data["graph"]["nodes"][0]["properties"] = {"related": "a, p"}
+        data["index"]["pages"][0]["related"] = ["a", "p"]
+        out, _ = apply_predicate(apply_profile(data, "public"), "public")
+        t = out["pages"]["t"]
+        self.assertEqual(t["markdown"], "# t\n\nSee the article and [[p]] and Orphan.\n")
+        self.assertEqual(t["frontmatter"], {"related": ["p"], "sources": []})
+        self.assertEqual(out["graph"]["nodes"][0]["properties"], {"related": "p"})
+        self.assertEqual(next(c for c in out["index"]["pages"] if c["id"] == "t")["related"], ["p"])
 
     def test_drop_pages_is_the_shared_cut(self):
         data = drop_pages(blob(), {"a"})
@@ -119,6 +134,21 @@ class TestApplyPredicate(unittest.TestCase):
                           view="map")
         self.assertEqual(data["home"], {"cards": [{"title": "K", "pages": ["t"]}], "tour": None, "view": "map"})
         self.assertNotIn("view", apply_home(blob(), {"cards": [], "tour": None})["home"])
+
+
+class TestStoryIds(unittest.TestCase):
+    def test_reads_views_ts_from_a_worktree_and_handles_a_missing_file(self):
+        import tempfile
+        from pathlib import Path
+        from kb.share.build import STORIES_FILE, story_ids
+        with tempfile.TemporaryDirectory() as d:
+            self.assertIsNone(story_ids(d))
+            f = Path(d) / STORIES_FILE
+            f.parent.mkdir(parents=True)
+            f.write_text('export const STORIES = [\n  {\n    id: "map",\n    name: "Map",\n  },\n  {\n    id: "thesis",\n  },\n];\n')
+            self.assertEqual(story_ids(d), ["map", "thesis"])
+        from kb.share.contracts import REPO
+        self.assertIn("map", story_ids(REPO))
 
 
 class TestManifest(unittest.TestCase):
