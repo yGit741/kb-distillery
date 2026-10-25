@@ -44,7 +44,11 @@ TICK_SECONDS = 2
 BACKOFF = (10, 60, 300)
 MAX_CYCLES = 3            # a sha whose network retries all failed is tried again on up to 3 cycles
 KEEP_BUILDS = 3
-TERMINAL = ("deployed", "rolled-back", "failed", "rollback-failed")
+TERMINAL = ("deployed", "rolled-back", "failed", "rollback-failed", "superseded")
+PENDING = ("building", "uploading", "deploying", "failed-network", "failed-module")
+CODE_DIR = Path(__file__).resolve().parent           # backend/src/kb/share
+CODE_JS = CODE_DIR.parents[3] / "share"              # repo share/*.js (worker modules)
+_MODULE_RE = re.compile(r"Could not resolve|Cannot find module|No such module|ERR_MODULE_NOT_FOUND", re.I)
 SETTLE_SECONDS = 15
 
 _NETWORK_RE = re.compile(
@@ -81,6 +85,34 @@ def is_network_error(exc_or_text) -> bool:
     if isinstance(exc_or_text, (NetworkError, TimeoutError, ConnectionError, subprocess.TimeoutExpired)):
         return True
     return bool(_NETWORK_RE.search(str(exc_or_text)) or _TLS_RE.search(str(exc_or_text)))
+
+
+def is_module_error(exc_or_text) -> bool:
+    """A build that could not resolve a worker module: usually this process runs stale code (see code_hash)."""
+    return bool(_MODULE_RE.search(str(exc_or_text)))
+
+
+def code_hash(dirs=None) -> str:
+    """Hash of the owner's own code on disk (share/*.py + share/*.js); a change means restart before building."""
+    import hashlib
+    h = hashlib.sha256()
+    for d, pat in dirs or ((CODE_DIR, "*.py"), (CODE_JS, "*.js")):
+        for f in sorted(Path(d).glob(pat)):
+            try:
+                h.update(f.name.encode() + b"\0" + f.read_bytes())
+            except OSError:
+                continue
+    return h.hexdigest()
+
+
+def supersede(state, live_sha) -> int:
+    """Pending entries other than the live sha are older (the owner deploys the tip): mark them superseded."""
+    n = 0
+    for s, e in (state.get("shas") or {}).items():
+        if s != live_sha and isinstance(e, dict) and e.get("state") in PENDING:
+            e.update(state="superseded", superseded_by=live_sha)
+            n += 1
+    return n
 
 
 def retry(fn: Callable, *, what: str, sleep: Callable = time.sleep, backoff=BACKOFF):
@@ -317,6 +349,7 @@ def cycle(root=None, *, runner=None, http=None, sleep=time.sleep, git=_git, buil
         with dp.deploy_lock():
             status.write("deploying", sha, version, dp.now_iso(), url=dp.worker_url(WORKER_MAIN))
             if (dp.parse_message(dp.live_message(WORKER_MAIN, runner)) or {}).get("sha") == sha:
+                supersede(state, sha)
                 _record(state, sha, root, state="deployed", note="already live")
                 status.write("skipped-same", sha, version, dp.now_iso(), url=dp.worker_url(WORKER_MAIN))
                 state["last_success_at"] = dp.now_iso()
@@ -339,6 +372,7 @@ def cycle(root=None, *, runner=None, http=None, sleep=time.sleep, git=_git, buil
                 bad = f"health check raised {type(e).__name__}: {e}"
             if bad:
                 return _roll_back(state, sha, root, vid, previous, bad, version, runner, http, sleep, poster, git)
+        supersede(state, sha)
         _record(state, sha, root, state="deployed", version_id=vid, error=None)
         state["last_success_at"] = dp.now_iso()
         save_state(state, root)
@@ -350,7 +384,10 @@ def cycle(root=None, *, runner=None, http=None, sleep=time.sleep, git=_git, buil
         return "deployed"
     except Exception as e:  # noqa: BLE001
         net = is_network_error(e)
-        st = "failed-network" if net and cycles < MAX_CYCLES else "failed"
+        mod = is_module_error(e) and not entry.get("module_retried")
+        st = "failed-module" if mod else "failed-network" if net and cycles < MAX_CYCLES else "failed"
+        if mod:  # retried once, after the code check restarts a stale process
+            state["shas"][sha]["module_retried"] = True
         tls = tls_reason(e)
         err = f"{type(e).__name__}: {e}"[-400:]
         _record(state, sha, root, state=st, error=f"{tls}; {err}" if tls else err)
@@ -397,9 +434,14 @@ def _roll_back(state, sha, root, vid, previous, reason, version, runner, http, s
     return "rolled-back"
 
 
-def run(root=None, *, poll=POLL_SECONDS, tick=TICK_SECONDS, max_cycles=None, **seams) -> int:
-    """The loop: a cycle on start, then on each wake touch or every `poll` seconds."""
+def run(root=None, *, poll=POLL_SECONDS, tick=TICK_SECONDS, max_cycles=None, hasher=code_hash, **seams) -> int:
+    """The loop: a cycle on start, then on each wake touch or every `poll` seconds.
+
+    Before each cycle it re-hashes its own code; when that changed (a merge touched kb/share or the
+    worker modules) it exits 0 so launchd (KeepAlive) restarts it on fresh code before building.
+    """
     root = Path(root or REPO)
+    started = hasher()
     try:
         with single_instance(root):
             dp.log(f"owner: started (pid {os.getpid()})")
@@ -412,6 +454,9 @@ def run(root=None, *, poll=POLL_SECONDS, tick=TICK_SECONDS, max_cycles=None, **s
                 now = time.monotonic()
                 if n == 0 or mtime != last_wake or now - last_run >= poll:
                     last_wake, last_run = mtime, now
+                    if hasher() != started:
+                        dp.log("owner: code changed on disk — exiting so launchd restarts it fresh")
+                        return 0
                     cycle(root, **seams)
                     n += 1
                     continue

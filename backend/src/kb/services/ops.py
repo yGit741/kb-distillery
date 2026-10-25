@@ -100,7 +100,7 @@ OWNER_PLIST = os.path.expanduser("~/Library/LaunchAgents/com.thesis-kb.deploy-ow
 OWNER_HEARTBEAT = 900   # the owner cycles every 300 s; three missed cycles = not running
 OUTCOMES = ("deployed", "rolled-back", "failed", "rollback-failed")
 IN_FLIGHT = ("building", "uploading", "deploying")
-PENDING = IN_FLIGHT + ("failed-network",)
+PENDING = IN_FLIGHT + ("failed-network", "failed-module")
 
 
 def _ts(iso):
@@ -172,7 +172,9 @@ def deploy_state(root=None, now=None, plist=OWNER_PLIST, main=None):
         "last_outcome": last[1].get("state") if last else None,
         "last_sha": last[0] if last else None,
         "last_reason": (last[1].get("error") or last[1].get("note") or "") if last else "",
-        "queued": [s for s, e in rows if e.get("state") in PENDING],
+        # pending entries recorded before the live deploy are superseded, not queued (older owners never marked them)
+        "queued": [s for s, e in rows if e.get("state") in PENDING and s != live
+                   and not (live_at and (_ts(e.get("at")) or 0) < live_at)],
         "rollbacks_7d": sum(1 for _, e in rows if e.get("state") == "rolled-back" and (_ts(e.get("at")) or 0) >= cutoff),
         "owner_installed": os.path.isfile(plist),
         "owner_alive": bool(beat and now - beat <= OWNER_HEARTBEAT),

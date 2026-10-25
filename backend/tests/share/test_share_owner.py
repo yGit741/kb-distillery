@@ -270,6 +270,43 @@ class TestSingleInstance(unittest.TestCase):
             cyc.assert_called_once()
 
 
+    def test_run_exits_for_restart_when_code_changes(self):
+        hashes = iter(["h1", "h1", "h2"])
+        with tempfile.TemporaryDirectory() as tmp, mock.patch.object(owner, "cycle") as cyc, \
+                mock.patch.object(owner.time, "sleep"):
+            self.assertEqual(owner.run(tmp, poll=0, max_cycles=5, hasher=lambda: next(hashes)), 0)
+        cyc.assert_called_once()  # the second cycle never ran: it exited on the changed hash
+
+    def test_code_hash_tracks_file_content(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            f = Path(tmp) / "a.js"
+            f.write_text("x")
+            h = owner.code_hash([(tmp, "*.js")])
+            self.assertEqual(h, owner.code_hash([(tmp, "*.js")]))
+            f.write_text("y")
+            self.assertNotEqual(h, owner.code_hash([(tmp, "*.js")]))
+
+    def test_supersede_marks_older_pending_only(self):
+        state = {"shas": {"a": {"state": "failed-network"}, "b": {"state": "deployed"},
+                          "c": {"state": "failed"}, "d": {"state": "failed-network"}}}
+        self.assertEqual(owner.supersede(state, "d"), 1)
+        self.assertEqual(state["shas"]["a"]["state"], "superseded")
+        self.assertEqual(state["shas"]["c"]["state"], "failed")
+        self.assertEqual(state["shas"]["d"]["state"], "failed-network")
+
+
+class ModuleErrorTests(unittest.TestCase):
+    def test_unresolvable_module_is_retried_once_then_terminal(self):
+        err = 'build failed: Could not resolve "./flags.gen.js"'
+        with tempfile.TemporaryDirectory() as tmp, mock.patch.object(owner, "fetch_main", return_value=SHA), \
+                mock.patch.object(owner, "_prune_builds"), mock.patch.object(dp, "status_file") as sf:
+            sf.return_value = mock.Mock()
+            boom = mock.Mock(side_effect=RuntimeError(err))
+            self.assertEqual(owner.cycle(tmp, builder=boom, sleep=lambda s: None), "failed-module")
+            self.assertEqual(owner.cycle(tmp, builder=boom, sleep=lambda s: None), "failed")
+            self.assertEqual(owner.cycle(tmp, builder=boom, sleep=lambda s: None), "idle")
+
+
 if __name__ == "__main__":
     unittest.main()
 

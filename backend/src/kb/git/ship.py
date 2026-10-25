@@ -224,6 +224,26 @@ def _migration_raw_moves(root):
     return moves
 
 
+def prune_dead_raw_links(root=ROOT):
+    """Remove symlinks under a linked worktree's raw/ whose target is gone (e.g. after an inbox drain moved
+    the primary's file). Only dangling symlinks; never regular files, never outside raw/, never in the primary."""
+    if not is_linked_worktree(root):
+        return 0
+    base = os.path.join(root, "raw")
+    if os.path.islink(base) or not os.path.isdir(base):
+        return 0
+    gone = 0
+    for d, dirs, files in os.walk(base):
+        for name in files + [x for x in dirs if os.path.islink(os.path.join(d, x))]:
+            p = os.path.join(d, name)
+            if os.path.islink(p) and not os.path.exists(p):
+                os.unlink(p)
+                gone += 1
+    if gone:
+        print(f"pruned {gone} dead raw links (target moved or deleted in the primary checkout)")
+    return gone
+
+
 def link_untracked_raw(root=ROOT):
     """In a linked worktree, symlink the primary checkout's gitignored raw/ files (PDFs…).
 
@@ -232,6 +252,7 @@ def link_untracked_raw(root=ROOT):
     """
     if not is_linked_worktree(root):
         return 0
+    prune_dead_raw_links(root)
     primary = primary_checkout(root)
     out = subprocess.run(["git", "ls-files", "-z", "--others", "--ignored", "--exclude-standard", "--", "raw/"],
                          cwd=primary, capture_output=True, text=True, check=False).stdout or ""
