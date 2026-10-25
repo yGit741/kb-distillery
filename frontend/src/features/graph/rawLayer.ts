@@ -158,7 +158,7 @@ export function drawPile(
   const info = pileOf(n);
   if (!info || n.x == null || n.y == null) return;
   const color = pileColor(info.format);
-  const r = pileRadius(n) * (hovered ? 1.12 : 1);
+  const r = pileRadius(n);   // a hovered pile keeps its size (a ring marks it): growth moves edges and labels
   for (let i = 2; i >= 0; i--) {
     ctx.beginPath();
     ctx.arc(n.x + i * r * 0.1, n.y - i * r * 0.1, r, 0, 2 * Math.PI);
@@ -176,6 +176,13 @@ export function drawPile(
     ctx.beginPath();
     ctx.arc(n.x, n.y, r + 3 / scale, -Math.PI / 2, -Math.PI / 2 + 2 * Math.PI * info.share);
     ctx.strokeStyle = c.ring;
+    ctx.stroke();
+  }
+  if (hovered) {
+    ctx.beginPath();
+    ctx.arc(n.x, n.y, r + 7 / scale, 0, 2 * Math.PI);
+    ctx.lineWidth = 1.5 / scale;
+    ctx.strokeStyle = withAlpha(c.ring, 0.55);
     ctx.stroke();
   }
   const size = Math.max(11 / scale, 3);
