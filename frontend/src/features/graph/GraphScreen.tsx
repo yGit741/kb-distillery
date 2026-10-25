@@ -416,7 +416,7 @@ function Loaded({
                     : ui.story && storyById(ui.story)?.seed
                       ? `pages on the ${ui.view.label.toLowerCase()} spine`
                       : `picked page${ui.view.hits.size === 1 ? "" : "s"}`}{" "}
-                <span className="text-muted-foreground">+ neighbours</span>
+                {ui.view.shown.size > ui.view.hits.size && <span className="text-muted-foreground">+ neighbours</span>}
               </>
             ) : (
               note
