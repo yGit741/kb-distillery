@@ -473,6 +473,8 @@ def check_wiki():
             for heading in ("Summary", "Proposed propagation"):
                 if f"## {heading}" not in text:
                     err(rel, f"distilled-think page missing ## {heading}")
+        if t == "question":
+            check_question_page(rel, text)
         if t == "scope":
             if scope_lib.WHY_HEADING not in text or not scope_lib.why_text(text):
                 err(rel, "scope page needs a non-empty ## Why (the reason this working set exists)")
@@ -493,6 +495,33 @@ def check_wiki():
         if TOPIC_PREFIX + theme not in pages:
             warn(WIKI_DIR, f"missing topic page [[{TOPIC_PREFIX}{theme}]] — every area: needs one")
     return pages
+
+
+# Question pages (schema 1.1): the H1 is the question's short *name*; the formal statement lives in
+# `## Question`. A long H1 is unreadable in the graph, the index and the explorer.
+QUESTION_TITLE_WARN = 60
+QUESTION_TITLE_MAX = 80
+QUESTION_HEADING = "## Question"
+
+
+def page_h1(text):
+    return next((l[2:].strip() for l in text.splitlines() if l.startswith("# ")), "")
+
+
+def has_section(text, heading):
+    return any(l.strip() == heading for l in text.splitlines())
+
+
+def check_question_page(rel, text):
+    """type: question — H1 ≤ 80 chars (error; > 60 warns) and a required `## Question` section."""
+    h1 = page_h1(text)
+    hint = "the short H1 is the question's name; the formal statement belongs in `## Question`"
+    if len(h1) > QUESTION_TITLE_MAX:
+        err(rel, f"question title is {len(h1)} chars (max {QUESTION_TITLE_MAX}) — {hint}")
+    elif len(h1) > QUESTION_TITLE_WARN:
+        warn(rel, f"question title is {len(h1)} chars (> {QUESTION_TITLE_WARN}) — {hint}")
+    if not has_section(text, QUESTION_HEADING):
+        err(rel, f"question page missing `{QUESTION_HEADING}` — the formal statement of the question")
 
 
 def _check_slug(rel, slug, t):

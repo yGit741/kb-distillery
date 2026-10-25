@@ -57,6 +57,7 @@ A `fix` verdict means the page is corrected (in an ops session, see `wiki-edit`)
 1. Run CLI to extract abstract text
 2. Read `abstract.text` (~2–4k tokens max)
 3. Update wiki: **Problem**, **Main result** from abstract only
+   (a `q-` page you touch: keep its H1 a short name ≤ 80 chars and fill `## Question` with the formal statement)
 4. Run `pixi run lint`
 5. For a batch: `easy-spotcheck pick` over the new slugs; have Sonnet re-read the picked ones and
    `easy-spotcheck log` each verdict

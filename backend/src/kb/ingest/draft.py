@@ -4,6 +4,7 @@ import os
 import sys
 
 from kb.core.schema import TOPIC_SLUGS
+from kb.lint.lint import QUESTION_TITLE_MAX
 
 from .paths import session_dir, load_session, wiki_slugs, resolve_wikilink_slug
 from .schemas import validate_claims, validate_plan
@@ -37,6 +38,16 @@ def _equations_block(equations):
             lines.append(f"Variables: {vline}")
         lines.append("")
     return "\n".join(lines) if lines else "—"
+
+
+def question_name(text, limit=QUESTION_TITLE_MAX):
+    """The H1 of a q- stub: the question's short name. Lint caps it at QUESTION_TITLE_MAX chars, so a long
+    `open_questions` sentence is clipped at a word boundary — the full statement goes in `## Question`."""
+    text = " ".join(str(text).split())
+    if len(text) <= limit:
+        return text
+    cut = text[:limit - 1].rsplit(" ", 1)[0].rstrip(" ,;:")
+    return cut + "…"
 
 
 def run_draft(sha):
@@ -160,9 +171,11 @@ priority: med
 discussed_with: []
 ---
 
-# {q.get("text", qslug)}
+# {question_name(q.get("text") or qslug)}
 
-**Question:** {q.get("text", "")}
+## Question
+
+{q.get("text", "")}
 
 ## Why I care
 
