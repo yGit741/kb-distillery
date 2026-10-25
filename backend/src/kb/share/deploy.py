@@ -421,6 +421,65 @@ def rollback(worker: str, to: Optional[str] = None, *, require_access: bool = Tr
     return result
 
 
+# ---------- versions upload / deploy (helpers; `deploy()` still uses `wrangler deploy`) ----------
+
+_UPLOAD_ID_RE = re.compile(r"Worker Version ID:\s*([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})")
+
+
+def upload_version_cmd(message: str, tag: Optional[str] = None) -> list:
+    return wrangler_cmd("versions", "upload", "--message", message, *(["--tag", tag] if tag else []))
+
+
+def parse_upload_output(stdout: str) -> Optional[str]:
+    """Version id from `wrangler versions upload` stdout (it has no --json); None when absent."""
+    m = _UPLOAD_ID_RE.search(stdout or "")
+    return m.group(1) if m else None
+
+
+def upload_version(dir, message: str, *, tag: Optional[str] = None, runner: Callable = None) -> str:
+    """Upload the rendered Worker dir (`wrangler.jsonc` inside) as a new, undeployed Version → its id."""
+    runner = runner or _default_runner
+    proc = runner(upload_version_cmd(message, tag), cwd=str(dir))
+    if proc.returncode != 0:
+        tail = ((proc.stderr or "") + (proc.stdout or "")).strip()[-600:]
+        raise RuntimeError(f"wrangler versions upload exited {proc.returncode}: {tail}")
+    vid = parse_upload_output(proc.stdout)
+    if not vid:
+        raise RuntimeError(f"wrangler versions upload printed no version id: {(proc.stdout or '').strip()[-300:]}")
+    return vid
+
+
+def deploy_version_cmd(worker: str, version_id: str, pct: int = 100, message: Optional[str] = None) -> list:
+    if not 0 < int(pct) <= 100:
+        raise ValueError(f"pct must be in 1..100, got {pct}")
+    return wrangler_cmd("versions", "deploy", f"{version_id}@{int(pct)}", "--name", worker, "--yes",
+                        *(["--message", message] if message else []))
+
+
+def deploy_version(worker: str, version_id: str, pct: int = 100, *, message: Optional[str] = None,
+                   runner: Callable = None) -> None:
+    """Route `pct`% of `worker`'s traffic to `version_id` (raises on a non-zero exit)."""
+    runner = runner or _default_runner
+    proc = runner(deploy_version_cmd(worker, version_id, pct, message), cwd=str(REPO))
+    if proc.returncode != 0:
+        tail = ((proc.stderr or "") + (proc.stdout or "")).strip()[-600:]
+        raise RuntimeError(f"wrangler versions deploy exited {proc.returncode}: {tail}")
+
+
+def parse_deployments(stdout: str) -> list:
+    """`wrangler deployments list --json` → [{id, created_on, message, versions: [(version_id, pct)]}], newest first."""
+    try:
+        rows = json.loads(stdout or "[]")
+    except json.JSONDecodeError:
+        return []
+    out = []
+    for d in rows if isinstance(rows, list) else []:
+        out.append({"id": d.get("id"), "created_on": d.get("created_on"),
+                    "message": (d.get("annotations") or {}).get("workers/message"),
+                    "versions": [(v.get("version_id"), v.get("percentage")) for v in d.get("versions") or []]})
+    return sorted(out, key=lambda d: d["created_on"] or "", reverse=True)
+
+
 # ---------- CLI ----------
 
 def deploy_main(force: bool = False, dry_run: bool = False, build_dir=None, app: bool = True, **seams) -> DeployResult:

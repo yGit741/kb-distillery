@@ -11,9 +11,11 @@ export interface LabHud {
   dropped: number;
   churn: number;
   minPx: number;
+  /** the committed hover (the hover card reads it; the canvas writes it once per change) */
+  hover: string | null;
 }
 
-export const useLabHud = create<LabHud & { set: (h: LabHud) => void }>((set) => ({
+export const useLabHud = create<LabHud & { set: (h: Omit<LabHud, "hover">) => void }>((set) => ({
   zoom: 1,
   labels: 0,
   onScreen: 0,
@@ -23,5 +25,6 @@ export const useLabHud = create<LabHud & { set: (h: LabHud) => void }>((set) => 
   dropped: 0,
   churn: 0,
   minPx: Infinity,
+  hover: null,
   set: (h) => set(h),
 }));

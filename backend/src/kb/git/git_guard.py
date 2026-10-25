@@ -33,6 +33,11 @@ BLOCKED_GIT = {
 GIT_GLOBAL_WITH_VALUE = {"-C", "-c", "--git-dir", "--work-tree", "--namespace", "--exec-path"}
 GH_PR_READONLY = {"view", "list", "status", "diff", "checks"}
 GH_REPO_BLOCKED = {"edit", "delete", "rename", "archive", "unarchive", "set-default"}
+GH_AUTH_ALLOWED = {"status"}   # login/switch/token/refresh/setup-git would change or leak the identity
+SECURITY_BLOCKED = {"find-generic-password", "find-internet-password", "dump-keychain", "export"}
+# GitHub App key used by ship (PR C1). Best effort: catches the path spelled out on the command line
+# (cat/head/less/cp/python open(...)), not one assembled at runtime from variables or globs.
+SECRET_PATH_RE = re.compile(r"\.config/kb-agents")
 OPERATOR_CHARS = set("();<>|&")
 
 DENY_MSG = ("Git write blocked — knowledge commits go through pixi run ops / daily-sync; "
@@ -131,12 +136,19 @@ def _git_violation(args):
 
 
 def _gh_violation(args):
+    while args and args[0] in {"-R", "--repo"}:   # global option before the subcommand
+        args = args[2:]
+    if args and args[0].startswith("--repo="):
+        args = args[1:]
     if not args:
         return None
     sub, rest = args[0], args[1:]
     if sub == "pr":
         action = rest[0] if rest else "list"
         return None if action in GH_PR_READONLY else f"gh pr {action}"
+    if sub == "auth":
+        action = rest[0] if rest else ""
+        return None if action in GH_AUTH_ALLOWED else f"gh auth {action}".rstrip()
     if sub == "repo" and rest and rest[0] in GH_REPO_BLOCKED:
         return f"gh repo {rest[0]}"
     if sub in ("issue", "label") and rest and rest[0] in {"edit", "delete", "create"}:
@@ -170,9 +182,26 @@ def _user_only(command):
     return None
 
 
+def _secret_access(command):
+    """Agents never touch credentials: the kb-agents App key or the macOS keychain."""
+    if SECRET_PATH_RE.search(command):
+        return "read of ~/.config/kb-agents (agent credentials are off-limits)"
+    try:
+        toks = _tokens(command)
+    except ValueError:
+        return "unparseable command mentioning security" if re.search(r"\bsecurity\b", command) else None
+    for seg in _segments(toks):
+        for k, tok in enumerate(seg):
+            if tok.rsplit("/", 1)[-1] == "security":
+                hit = next((t for t in seg[k + 1:] if t in SECURITY_BLOCKED), None)
+                if hit:
+                    return f"security {hit} (keychain access is user only)"
+    return None
+
+
 def violation(command):
     """Return a reason string when the command must be blocked, else None."""
-    why = _user_only(command)
+    why = _user_only(command) or _secret_access(command)
     if why:
         return why
     if is_allowlisted(command):

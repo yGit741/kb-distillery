@@ -19,8 +19,9 @@ export interface ShareBlob {
   /** Only when the builder had a citation graph; the legacy build never had one. */
   citations?: CitationGraph;
   meta?: ShareMeta;
-  /** Home cards and the tour id from share.toml `[home]` (kb.share.home). */
-  home?: { cards?: unknown[]; tour?: string | null };
+  /** Home cards and the tour id from share.toml `[home]` (kb.share.home); `view` = the graph view a
+   *  snapshot built with `share snapshot … --view <id>` opens on when the URL has no `?view=`. */
+  home?: { cards?: unknown[]; tour?: string | null; view?: string | null };
 }
 
 /** Parse the baked blob out of the document; null when the page has none (plain app, tests). */

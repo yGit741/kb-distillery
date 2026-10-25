@@ -33,7 +33,7 @@ pixi run ops -- status
 ## Agent steps
 
 1. `pixi run ops -- begin refine <slug> "<why, one line>"` — op is usually `refine` (`digest`/`catalog` also allowed).
-2. Make the edits in `wiki/` — never inside a page's `## My notes` section, which is the user's (guard warns on wiki writes without an open session; strict mode blocks them).
+2. Make the edits in `wiki/` — never inside a page's `## My notes` section, which is the user's (guard warns on wiki writes without an open session; strict mode blocks them). On a `q-` page keep the H1 a short name (≤ 80 chars) and put the formal statement in `## Question` (required).
 3. `pixi run ops -- commit` — lints, then commits only the files changed since `begin` as `kb(refine): <why> (kb-x.y.z)`. Write the why as intent in words (≤ 72 chars, e.g. "link the Chiang 2023 page where it was named"), not a slug — the pages touched are listed in the commit body automatically.
 4. Report the version printed by the commit.
 

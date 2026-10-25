@@ -8,7 +8,7 @@ Required fields:
 - `raw`, `title`, `problem`, `method`, `results` (array, non-empty)
 - `equations` (array, non-empty; each item: `latex`, `variables`, `label`)
 - `concepts` (bare slugs or phrases — `map` resolves via aliases.tsv)
-- `open_questions` (optional; spawn q- pages if novel)
+- `open_questions` (optional; spawn q- pages if novel — each a short question, ≤ 80 chars: the stub's H1 is its name, the sentence lands in `## Question`)
 - `year`, `authors`, `citekey`, `url` when known
 - `person` — bare slug from `raw/papers/<person>/…` (required for researcher bibliographies)
 

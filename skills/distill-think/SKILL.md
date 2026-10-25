@@ -63,7 +63,7 @@ python3 -m kb.distill abort my-true-research-start-here
 |--------|--------|
 | `append_threads` | topic page (`theme-*`) `## Threads` |
 | `append_papers` | topic page (`theme-*`) `## Papers` |
-| `update_section` | q-* section (e.g. Current state) |
+| `update_section` | q-* section (e.g. Current state; `## Question` holds the formal statement — the H1 stays a short name ≤ 80 chars) |
 | `append_related` | idea `related:` frontmatter |
 
 ## Agent constraints

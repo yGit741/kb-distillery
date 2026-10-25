@@ -42,6 +42,7 @@ Connections required.
 - A paper with long appendices (60+ pages) is treated as a paper when it has an abstract and no chapter outline; otherwise pass `--whole-book`.
 - Idea and `q-` stubs are registered with the session automatically (map and finalize), so an aborted finalize removes them and restores topic-page `## Papers` lines; the old `staging/` is kept as `staging-aborted-<time>/`, and `begin` restores `claims.json`/`plan.json` of an aborted session.
 - Topic slugs in `claims.json` `concepts` (a protocol key, kept) map to `area:`, not to new idea pages.
+- A `q-` stub's H1 is the question's short name (≤ 80 chars, lint errors above); write the formal statement under `## Question` (required) before `finalize`.
 
 ## Commit
 
