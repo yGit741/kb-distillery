@@ -70,17 +70,28 @@ phone-number patterns, `distilled-think`. Cloudflare is the registry (`snapshot-
 prefix + `kb-share` deploy message); credentials come from `CLOUDFLARE_API_TOKEN` or wrangler's
 login. Views show `0*` with a note when analytics is unavailable.
 
-Autodeploy: every `kb(op)` commit, `ship merge` and the nightly sync trigger `deploy-main` in the
-background (`KB_SHARE_AUTODEPLOY=0` opts out). Log: `~/Library/Logs/thesis-kb-share.log`;
+**One deploy owner — agents never deploy.** `kb.share.owner` (launchd `com.thesis-kb.deploy-owner`,
+KeepAlive) is the only process that deploys main: it fetches origin/main, builds each sha once into
+`.cache/share/build/<sha>`, `versions upload` → `versions deploy @100` → health (auth gate, `/app`, live
+version = uploaded) → rolls back to the previous version on failure; network errors retry 10 s/60 s/300 s.
+It posts `deployed`/`rolled-back` on the merged PR and its round. Every `kb(op)` commit, `ship merge` and
+the nightly sync only **nudge** it (touch `.cache/share/wake`; `KB_SHARE_AUTODEPLOY=0` opts out,
+`KB_SHARE_DIRECT=1` — the user only — runs the old `deploy-main` path). The user installs it once with
+`pixi run install-deploy-owner` (log `~/Library/Logs/thesis-kb-deploy-owner.log`); state:
+`pixi run python -m kb.share.owner status`. `deploy-main.yml` deploys daily only when the owner has not
+deployed for 24 h. `.claude/settings.json` denies agents `share -- deploy*`/`rollback*`, every wrangler
+deploy/upload/rollback and `owner run`; agents may run `share -- status`/`audit`/`build` and
+`owner status`/`nudge`. Log: `~/Library/Logs/thesis-kb-share.log`;
 dashboard nav shows the chip (green deployed · deploying · skipped · red failed → `/share-log`).
 
 ## Agent steps
 
 1. `pixi run share -- status` — read the chip state first; `deployed` + current version → nothing to do.
-2. On request: `pixi run share -- deploy-main` and report the state: `deployed`, `skipped-same`
+2. On request ("deploy main"): nudge the owner (`pixi run python -m kb.share.owner nudge`) and report
+   `owner status`; `owner once` and a direct `share -- deploy-main` are the user's commands. States: `deployed`, `skipped-same`
    (live already has this sha), `skipped-older` (live is newer — never downgrade), `refused-no-access`
    (the Google gate is down: fix the Worker vars/secrets, nothing was uploaded), `failed` (read the log).
-3. Rollback on request: `pixi run share -- rollback`; if the result says the auth gate is down, say so loudly.
+3. Rollback on request: give the user `! pixi run share -- rollback` (denied for agents); if the result says the auth gate is down, say so loudly.
 4. Snapshot on request: `share audit <ref>` → show the flag counts → `share snapshot <name> <ref>`
    → give the URL. `share list` for status; `share remove <name>` / `share prune` only after the
    user confirms what will be deleted.
