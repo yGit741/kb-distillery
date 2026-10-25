@@ -166,7 +166,7 @@ def raw_card(full, rel, root=None, with_added=True):
             card["excerpt"] = plain(text) or None
         else:
             body = re.sub(r"\A\s*#\s[^\n]*\n", "", text)
-            card["excerpt"] = plain(re.sub(r"^(Original|Source):.*$", "", body, flags=re.M)) or None
+            card["excerpt"] = plain(re.sub(r"^[>\s*_]*(Original|Source)[*_]*:.*$", "", body, flags=re.M)) or None
         if kind == "youtube":
             m = YOUTUBE.search(url)
             card["video_id"] = m.group(1) if m else None
@@ -191,6 +191,7 @@ def thumb_data_uri(full, kind, width=200, max_bytes=40_000):
 
 
 PRIVATE_KINDS = ("chat", "email")
+NO_PUBLIC_THUMB = ("handwritten", "image")   # personal notes and photos: facts only in a public build
 CHAT_HOSTS = ("gemini.google", "chatgpt.com", "chat.openai", "claude.ai")
 
 
@@ -200,6 +201,8 @@ def public_card(card):
     chat_host = any(h in (card.get("url") or "") for h in CHAT_HOSTS)      # a chat clipped into web-clips
     if card.get("kind") in PRIVATE_KINDS or card.get("kind") == "other" or chat_host:
         out.update(title=None, excerpt=None, turns=[], header=None, url=None, site=None)
+    if card.get("kind") in NO_PUBLIC_THUMB:
+        out.update(thumb=None, has_thumb=False)
     return out
 
 
@@ -236,6 +239,8 @@ def bake_cards(nodes, raw_of, raw_root, public=False, thumb_budget=6_000_000, wi
             continue
         card = raw_card(full, rel, raw_root, with_added=False)
         card["facts"]["added"] = added.get(rel)
+        if public and card["kind"] in NO_PUBLIC_THUMB:
+            card["has_thumb"] = False
         if card["has_thumb"] and spent < thumb_budget:
             card["thumb"] = thumb_data_uri(full, card["kind"], width)
             spent += len(card["thumb"] or "")

@@ -1,7 +1,7 @@
 import { node } from "@/features/graph/fixtures";
 import type { GNode } from "@/features/graph/types";
 import { parseCards } from "./curated";
-import { clampZoom, R_MAX, R_MIN, radii } from "./SampleGraph";
+import { R_MAX, R_MIN, radii } from "./SampleGraph";
 import {
   MAX_LINKS,
   MAX_NODES,
@@ -102,11 +102,10 @@ describe("home samplers", () => {
     expect(graphSearch({ nodes: ["a", "b"], focus: "a" }, "b")).toEqual({ pages: "a,b", select: "b", focus: "b" });
   });
 
-  it("sizes nodes R_MIN-R_MAX screen px by degree inside the sample, and clamps the fit zoom", () => {
+  it("sizes nodes R_MIN-R_MAX screen px by degree inside the sample", () => {
     const r = radii({ nodes: ["a", "b", "c"], links: [["a", "b"], ["a", "c"]] });
     expect(r.get("a")).toBe(R_MAX);
     expect(r.get("b")).toBe((R_MIN + R_MAX) / 2);
-    expect([clampZoom(0.1), clampZoom(1.3), clampZoom(9)]).toEqual([0.7, 1.3, 2]);
   });
 
   it("samples one knowledge node per kind with its best neighbours, never a stub", () => {

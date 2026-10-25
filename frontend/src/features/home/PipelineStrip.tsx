@@ -10,7 +10,29 @@ import { ConceptDots, DepthSwatch, Dot, KIND_ICON, RAW_COLOR, SOURCE_COLOR, Stag
 import { conceptsFed, type SourceDraw, type Vault } from "./samplers";
 
 /** Chips the "Concepts it feeds" stage shows before "+ N more". */
-export const FED_MAX = 5;
+export const FED_MAX = 4;
+/** Every stage's fixed height in px: the same on every draw, whatever the source. */
+export const STAGE_HEIGHT = 172;
+/** Areas the Source stage lists before "+N". */
+export const AREAS_MAX = 2;
+
+/** "Abbe, Boix" stays; three or more authors become "Abbe et al." (the first author's family name). */
+export function shortAuthors(s: string): string {
+  const names = s
+    .replace(/^\[|\]$/g, "")
+    .split(/\s*(?:,|;|\band\b|&)\s*/)
+    .map((x) => x.replace(/^["']|["']$/g, "").trim())
+    .filter(Boolean);
+  if (names.length <= 2) return names.join(", ");
+  const first = names[0]!.split(/\s+/);
+  return `${first[first.length - 1]} et al.`;
+}
+
+/** The first AREAS_MAX areas and "+N" for the rest. */
+export function shortAreas(areas: readonly string[]): string {
+  const head = areas.slice(0, AREAS_MAX).join(" · ");
+  return areas.length > AREAS_MAX ? `${head} +${areas.length - AREAS_MAX}` : head;
+}
 
 const props = (n: GNode) => (n.properties ?? {}) as Record<string, unknown>;
 const prop = (n: GNode, k: string) => {
@@ -47,9 +69,9 @@ const KIND_LABEL: Record<string, string> = {
   other: "File",
 };
 
-function Stage({ title, dots, children }: { title: string; dots: ReactNode; children: ReactNode }) {
+function Stage({ title, dots, children, className }: { title: string; dots: ReactNode; children: ReactNode; className?: string }) {
   return (
-    <div className="flex min-w-0 flex-col gap-1.5 rounded-lg border bg-muted/40 px-2.5 py-2">
+    <div className={cn("flex min-w-0 flex-col gap-1.5 overflow-hidden rounded-lg border bg-muted/40 px-2.5 py-2", className)} style={{ height: STAGE_HEIGHT }} data-stage={title}>
       <h3 className="flex items-center gap-1.5 text-[10.5px] font-semibold uppercase tracking-wider text-muted-foreground">
         {dots}
         {title}
@@ -100,7 +122,7 @@ function RawStage({ source }: { source: GNode }) {
     .join(" · ");
   return (
     <Stage title="Raw" dots={<Dot color={RAW_COLOR} />}>
-      <b className="block text-[12.5px] font-semibold leading-snug [overflow-wrap:anywhere]">{name}</b>
+      <b title={name} className="line-clamp-2 h-[2.75em] shrink-0 text-[12.5px] font-semibold leading-snug [overflow-wrap:anywhere]">{name}</b>
       <div className="flex items-stretch gap-2">
         <Mini label={`Preview ${name}`} onClick={() => setOpen(true)}>
           {src ? (
@@ -121,15 +143,15 @@ function RawStage({ source }: { source: GNode }) {
             </span>
           )}
         </Mini>
-        <div className="flex min-w-0 flex-col justify-center gap-0.5 text-[11px] text-muted-foreground">
+        <div className="flex min-w-0 flex-col justify-center gap-0.5 whitespace-nowrap text-[11px] text-muted-foreground [&>span]:truncate">
           {fmt && (
-            <span className="inline-flex items-center gap-1">
-              <Icon aria-hidden className="size-3.5" /> raw/{fmt}
+            <span className="flex items-center gap-1">
+              <Icon aria-hidden className="size-3.5 shrink-0" /> <span className="truncate">raw/{fmt}</span>
             </span>
           )}
           {facts && <span>{facts}</span>}
           {card?.model && <span>{card.model}</span>}
-          {card?.site && kind !== "chat" && <span className="truncate">{card.site}</span>}
+          {card?.site && kind !== "chat" && <span>{card.site}</span>}
           {card?.facts.added && <span>added {card.facts.added}</span>}
           <span>immutable</span>
         </div>
@@ -224,26 +246,26 @@ function RawPreviewDialog({
 }
 
 function SourceStage({ source, onRead }: { source: GNode; onRead: (slug: string) => void }) {
-  const authors = prop(source, "authors") || prop(source, "author");
+  const authors = shortAuthors(prop(source, "authors") || prop(source, "author"));
   const venue = prop(source, "source") || prop(source, "venue");
   const byline = [authors, [venue, source.year && !venue.includes(String(source.year)) ? source.year : ""].filter(Boolean).join(" ")].filter(Boolean).join(" · ");
   const out = Number(prop(source, "links_out") || source.outDegree || 0);
   const inn = Number(prop(source, "links_in") || source.inDegree || 0);
   return (
     <Stage title="Source" dots={<Dot color={SOURCE_COLOR} />}>
-      <b className="block text-[12.5px] font-semibold leading-snug [overflow-wrap:anywhere]">{source.title || source.id}</b>
+      <b title={source.title || source.id} className="line-clamp-2 h-[2.75em] shrink-0 text-[12.5px] font-semibold leading-snug [overflow-wrap:anywhere]">{source.title || source.id}</b>
       <div className="flex items-stretch gap-2">
         <Mini label={`Read ${source.title || source.id}`} onClick={() => onRead(source.id)} className="bg-muted/60">
           <span className="whitespace-pre p-1 font-mono text-[6px] leading-[1.2] text-foreground">
             {`---\ntype: ${source.type}\nlayer: source\n${source.year ? `year: ${source.year}\n` : ""}depth: ${source.depth}\n---\n# ${(source.title || source.id).split(/\s+/).slice(0, 6).join("\n")}`}
           </span>
         </Mini>
-        <div className="flex min-w-0 flex-col justify-center gap-0.5 text-[11px] text-muted-foreground">
-          {byline && <span>{byline}</span>}
-          <span className="inline-flex items-center gap-1">
+        <div className="flex min-w-0 flex-col justify-center gap-0.5 whitespace-nowrap text-[11px] text-muted-foreground [&>span]:truncate">
+          {byline && <span title={byline}>{byline}</span>}
+          <span className="flex items-center gap-1">
             <DepthSwatch depth={source.depth} /> {source.depth || "listed"}
           </span>
-          {source.areas.length > 0 && <span>{source.areas.join(" · ")}</span>}
+          {source.areas.length > 0 && <span title={source.areas.join(" · ")}>{shortAreas(source.areas)}</span>}
           <span>
             {out} links out · {inn} in
           </span>
@@ -289,29 +311,41 @@ function ConceptsStage({ vault, source, concept, onPick }: { vault: Vault; sourc
   );
 }
 
-/** Raw → Source → Concepts it feeds, for the drawn source; "no source yet" when the concept has none. */
+/** Raw → Source → Concepts it feeds, for the drawn source; "no source yet" when the concept has none. Fixed height. */
 export function PipelineStrip({ vault, concept, draw, onPick, onRead }: { vault: Vault; concept: string; draw: SourceDraw | null; onPick: (id: string) => void; onRead: (slug: string) => void }) {
   const source = draw ? vault.byId.get(draw.id) : undefined;
   const via = draw?.via ? vault.byId.get(draw.via) : undefined;
+  const empty = (title: string, dots: ReactNode, text: string) => (
+    <Stage title={title} dots={dots} className="border-dashed bg-transparent">
+      <p className="m-auto text-center text-xs text-muted-foreground">{text}</p>
+    </Stage>
+  );
   return (
-    <section aria-labelledby="home-pipeline" className="flex min-w-0 flex-col" data-tour="home-pipeline">
-      <h2 id="home-pipeline" className="mb-1.5 text-center text-[10.5px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+    <section aria-labelledby="home-pipeline" className="flex min-w-0 flex-col" data-tour="home-pipeline" data-testid="home-pipeline">
+      <h2 id="home-pipeline" className="text-center text-[10.5px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
         Knowledge pipeline for one source the concept relies on
       </h2>
-      {source ? (
-        <>
-          <div className="grid flex-1 grid-cols-1 items-stretch gap-3 md:grid-cols-[1fr_40px_1fr_40px_1fr]">
-            <RawStage source={source} />
+      <p className="mb-1.5 text-center text-[11px] text-muted-foreground">click any red node to see its pipeline</p>
+      <div className="grid grid-cols-1 items-stretch gap-3 md:grid-cols-[1fr_40px_1fr_40px_1fr]">
+        {source ? (
+          <>
+            <RawStage key={`raw-${source.id}`} source={source} />
             <StageArrow label="catalog" />
             <SourceStage source={source} onRead={onRead} />
             <StageArrow label="digest" />
             <ConceptsStage vault={vault} source={source.id} concept={concept} onPick={onPick} />
-          </div>
-          {via && <p className="mt-1.5 text-center text-xs text-muted-foreground">Reached through the idea {via.title || via.id}.</p>}
-        </>
-      ) : (
-        <div className="flex flex-1 items-center justify-center rounded-lg border border-dashed p-6 text-sm text-muted-foreground">No source yet: this concept is not backed by a source in the vault.</div>
-      )}
+          </>
+        ) : (
+          <>
+            {empty("Raw", <Dot color={RAW_COLOR} />, "No raw file yet.")}
+            <StageArrow label="catalog" />
+            {empty("Source", <Dot color={SOURCE_COLOR} />, "No source yet: this concept is not backed by a source in the vault.")}
+            <StageArrow label="digest" />
+            {empty("Concepts it feeds", <ConceptDots />, "Nothing fed yet.")}
+          </>
+        )}
+      </div>
+      <p className="mt-1.5 h-4 truncate text-center text-xs leading-4 text-muted-foreground">{via ? `Reached through the idea ${via.title || via.id}.` : ""}</p>
     </section>
   );
 }

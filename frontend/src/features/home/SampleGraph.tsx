@@ -1,47 +1,29 @@
 import createForceGraph, { type ForceGraphInstance, type NodeObject } from "force-graph";
 import { useEffect, useRef, useState } from "react";
 import { readCanvasColors, withAlpha, type CanvasColors } from "@/features/graph/canvasTheme";
-import { DEFAULT_LAB, type LabConfig } from "@/features/graph/lab/config";
 import type { Importance } from "@/features/graph/lab/importance";
-import { FORCED, planLabels, shortTitle, type ScreenItem } from "@/features/graph/lab/labelPlan";
+import { shortTitle, wrapLabel } from "@/features/graph/lab/labelPlan";
 import type { GNode } from "@/features/graph/types";
 import { cn } from "@/lib/utils";
 import { typeColor } from "@/theme/palette";
+import { fitToBox, placeCardLabels, type LabelAsk } from "./cardLayout";
 import type { Sample } from "./samplers";
 
 /** Card canvas height in CSS px when not filling its parent; the width follows the card. */
 export const GRAPH_HEIGHT = 220;
-/** Fit padding in screen px, and the zoom range a fit may land on (tiny samples never blow up). */
-export const FIT_PADDING = 40;
-export const ZOOM_MIN = 0.7;
-export const ZOOM_MAX = 2;
 /** Node radius in screen px, by degree inside the sample: the same size at any zoom. */
 export const R_MIN = 4;
 export const R_MAX = 14;
 /** Off-screen simulation ticks before the one and only draw: the card never shows the layout settling. */
 const WARMUP = 160;
-/** Unforced labels at rest (the picked concept and the drawn source are always labelled). */
-const HUB_LABELS = 3;
+/** Label text: 12 px, wrapped to two lines of LABEL_WRAP px. */
+const LABEL_PX = 12;
+const LABEL_WRAP = 150;
+/** Unforced labels at rest: one per LABEL_SPACING px of width, at most LABEL_MAX. */
+const LABEL_SPACING = 120;
+const LABEL_MAX = 9;
 
-/** The big graph's label rules, sized for a card: screen scope, a count budget, 12 px labels. */
-export const CARD_LAB: LabConfig = {
-  ...DEFAULT_LAB,
-  scope: "screen",
-  strategy: "count",
-  count: HUB_LABELS,
-  zoomGrowth: 0,
-  sizeMode: "uniform",
-  base: 12,
-  minPx: 12,
-  zoomScale: 0,
-  questionLabels: "short",
-  leaderLines: false,
-  wrapT1: 130,
-  wrapT2: 130,
-  maxLines: 2,
-};
-
-type Node = NodeObject & { id: string; g: GNode; r: number };
+type Node = NodeObject & { id: string; g: GNode; r: number; gx?: number; gy?: number };
 
 /** Screen radius R_MIN–R_MAX by degree inside the sample, so the focus and its hubs read first. */
 export function radii(sample: Pick<Sample, "nodes" | "links">): Map<string, number> {
@@ -54,7 +36,6 @@ export function radii(sample: Pick<Sample, "nodes" | "links">): Map<string, numb
   return new Map([...deg].map(([id, d]) => [id, R_MIN + ((R_MAX - R_MIN) * d) / max]));
 }
 
-export const clampZoom = (z: number) => Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, z));
 
 /** One node in screen px: the graph's palette, a question as a hollow ring with "?", the selection ring. */
 function drawNode(ctx: CanvasRenderingContext2D, n: GNode, x: number, y: number, r: number, colors: CanvasColors, ring: "focus" | "source" | null, hover: boolean) {
@@ -86,11 +67,11 @@ function drawNode(ctx: CanvasRenderingContext2D, n: GNode, x: number, y: number,
 }
 
 /**
- * The intro card's ego graph, static: the force layout settles off screen (`warmupTicks`), is drawn once and
- * fitted after the box is measured (and again on every resize), zoom clamped to [ZOOM_MIN, ZOOM_MAX]. Nodes and
- * 12 px labels are fixed screen sizes; labels come from the big graph's planner (forced: the focus and the
- * ringed source; then up to HUB_LABELS hubs; collisions flip or drop; hover shows the full title). No wheel zoom,
- * no pan, no drag: a click picks the node, the card's "Full Graph" is where you explore.
+ * The intro card's ego graph, static: the force layout settles off screen (`warmupTicks`), then is stretched to
+ * fill the measured box (`fitToBox`, again on every resize) and pinned, so graph coords are screen px. Nodes and
+ * 12 px labels are fixed sizes; labels (`placeCardLabels`): the focus, the ringed source and the hovered node
+ * first, then the top hubs by importance, each fully inside the canvas and clear of nodes and other labels; hover
+ * also shows the full title above. No wheel zoom, no pan, no drag: a click picks the node.
  */
 export function SampleGraph({
   sample,
@@ -113,6 +94,8 @@ export function SampleGraph({
   const [hover, setHover] = useState<string | null>(null);
   const hoverRef = useRef<string | null>(null);
   hoverRef.current = hover;
+  const ringRef = useRef(ring);
+  ringRef.current = ring;
   const pickRef = useRef(onPick);
   pickRef.current = onPick;
   const fg = useRef<ForceGraphInstance | null>(null);
@@ -128,16 +111,26 @@ export function SampleGraph({
       .map((g) => ({ id: g.id, g, r: r.get(g.id) ?? R_MIN }));
     const known = new Set(nodes.map((n) => n.id));
     const links = sample.links.filter(([a, b]) => known.has(a) && known.has(b)).map(([source, target]) => ({ source, target }));
+    const hubs = nodes
+      .map((n) => n.id)
+      .sort((a, b) => (imp.score.get(b) ?? 0) - (imp.score.get(a) ?? 0) || a.localeCompare(b));
     let settled = false;
     const g = createForceGraph()(el);
     fg.current = g;
+    const W = () => el.clientWidth || 300;
+    const H = () => el.clientHeight || GRAPH_HEIGHT;
     const fit = () => {
       if (!settled || !el.clientWidth || !el.clientHeight) return;
-      g.zoomToFit(0, FIT_PADDING + R_MAX);
-      g.zoom(clampZoom(g.zoom()), 0);
+      const pts = fitToBox(nodes.map((n) => ({ x: n.gx ?? 0, y: n.gy ?? 0 })), W(), H());
+      nodes.forEach((n, i) => {
+        n.x = n.fx = pts[i]!.x;
+        n.y = n.fy = pts[i]!.y;
+      });
+      g.zoom(1, 0);
+      g.centerAt(W() / 2, H() / 2, 0);
     };
-    g.width(el.clientWidth || 300)
-      .height(el.clientHeight || GRAPH_HEIGHT)
+    g.width(W())
+      .height(H())
       .backgroundColor("rgba(0,0,0,0)")
       .graphData({ nodes, links })
       .nodeId("id")
@@ -162,50 +155,48 @@ export function SampleGraph({
       })
       // nodes and labels in screen px, after the links: same size at any fit
       .onRenderFramePost((ctx) => {
+        if (!settled) return;
         const dpr = (ctx.canvas.width / (el.clientWidth || 1)) || 1;
         ctx.save();
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-        const items: ScreenItem[] = nodes.map((n) => {
+        const items = nodes.map((n) => {
           const p = g.graph2ScreenCoords(n.x ?? 0, n.y ?? 0);
-          return { n: n.g, sx: p.x, sy: p.y, r: n.r };
+          return { id: n.id, n: n.g, x: p.x, y: p.y, r: n.r };
         });
         const hov = hoverRef.current;
-        items.forEach((it) => drawNode(ctx, it.n, it.sx, it.sy, it.r, colors, it.n.id === sample.focus ? "focus" : it.n.id === ring ? "source" : null, it.n.id === hov));
-        const forced = new Map<string, number>([[sample.focus, FORCED.selected]]);
-        if (ring) forced.set(ring, FORCED.selected);
-        if (hov) forced.set(hov, FORCED.hover);
-        const plan = planLabels({
-          items,
-          width: el.clientWidth,
-          height: el.clientHeight,
-          zr: 1,
-          cfg: CARD_LAB,
-          imp,
-          forced,
-          hops: null,
-          prev: new Map(),
-          obstacles: [],
-          suppress: false,
-          measure: (t, px, w) => {
-            ctx.font = `${w} ${px}px ${colors.font}`;
-            return ctx.measureText(t).width;
-          },
+        const ringId = ringRef.current;
+        items.forEach((it) => drawNode(ctx, it.n, it.x, it.y, it.r, colors, it.id === sample.focus ? "focus" : it.id === ringId ? "source" : null, it.id === hov));
+        const forced = [sample.focus, ringId, hov].filter((id, i, a): id is string => !!id && known.has(id) && a.indexOf(id) === i);
+        const budget = Math.min(LABEL_MAX, Math.floor(W() / LABEL_SPACING));
+        const rest = hubs.filter((id) => !forced.includes(id)).slice(0, budget);
+        const asks: LabelAsk[] = [...forced, ...rest].map((id) => {
+          const n = byId.get(id)!;
+          const weight = id === sample.focus ? 600 : 400;
+          ctx.font = `${weight} ${LABEL_PX}px ${colors.font}`;
+          const m = (t: string) => ctx.measureText(t).width;
+          const lines = wrapLabel(shortTitle(n, "short"), LABEL_WRAP, 2, m, 40);
+          return { id, lines, w: Math.max(...lines.map(m)), forced: forced.includes(id) };
         });
+        const lineH = LABEL_PX * 1.2;
+        const placed = placeCardLabels(items, asks, W(), H(), lineH);
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
         ctx.lineJoin = "round";
-        for (const p of plan.placed) {
-          ctx.font = `${p.id === sample.focus ? 600 : 400} ${p.px}px ${colors.font}`;
+        for (const p of placed) {
+          ctx.font = `${p.id === sample.focus ? 600 : 400} ${LABEL_PX}px ${colors.font}`;
           const cx = (p.box[0] + p.box[2]) / 2;
-          const top = (p.box[1] + p.box[3]) / 2 - ((p.lines.length - 1) * p.lineH) / 2;
+          const top = (p.box[1] + p.box[3]) / 2 - ((p.lines.length - 1) * lineH) / 2;
           p.lines.forEach((line, i) => {
             ctx.lineWidth = 3;
             ctx.strokeStyle = colors.background;
-            ctx.strokeText(line, cx, top + i * p.lineH);
-            ctx.fillStyle = p.id === ring ? colors.ring : colors.text;
-            ctx.fillText(line, cx, top + i * p.lineH);
+            ctx.strokeText(line, cx, top + i * lineH);
+            ctx.fillStyle = p.id === ringId ? colors.ring : colors.text;
+            ctx.fillText(line, cx, top + i * lineH);
           });
         }
+        // for e2e checks: node centres (layer:id:x,y) and label boxes in canvas px
+        el.dataset.nodes = items.map((it) => `${it.n.layer}:${it.id}:${Math.round(it.x)},${Math.round(it.y)}`).join(";");
+        el.dataset.labels = placed.map((p) => `${p.id}:${p.box.map(Math.round).join(",")}`).join(";");
         ctx.restore();
       })
       .onNodeHover((n) => {
@@ -214,11 +205,16 @@ export function SampleGraph({
       })
       .onNodeClick((n) => pickRef.current((n as Node).id))
       .onEngineStop(() => {
+        if (settled) return;
+        for (const n of nodes) {
+          n.gx = n.x ?? 0;
+          n.gy = n.y ?? 0;
+        }
         settled = true;
         fit();
       });
     const ro = new ResizeObserver(() => {
-      g.width(el.clientWidth || 300).height(el.clientHeight || GRAPH_HEIGHT);
+      g.width(W()).height(H());
       fit();
     });
     ro.observe(el);
@@ -228,13 +224,14 @@ export function SampleGraph({
       fg.current = null;
       el.replaceChildren();
     };
-  }, [sample, byId, imp, ring]);
+  }, [sample, byId, imp]);
 
-  // labels follow the hover without restarting the layout
+  // labels and rings follow the hover and the ringed source without restarting the layout
   useEffect(() => {
-    const g = fg.current as (ForceGraphInstance & { refresh?: () => void }) | null;
-    g?.refresh?.();
-  }, [hover]);
+    // force-graph 1.x has no public refresh: a zero-length zoom to the current scale flags its redraw
+    const g = fg.current;
+    g?.zoom(g.zoom(), 0);
+  }, [hover, ring]);
 
   const hovered = hover ? byId.get(hover) : undefined;
   return (
@@ -250,7 +247,7 @@ export function SampleGraph({
     >
       <div ref={host} className="absolute inset-0" />
       {hovered && (
-        <p className="pointer-events-none absolute inset-x-2 top-2 truncate rounded bg-popover/90 px-2 py-1 text-xs text-popover-foreground shadow-sm">
+        <p className="pointer-events-none absolute inset-x-2 top-2 line-clamp-2 rounded bg-popover/90 px-2 py-1 text-xs text-popover-foreground shadow-sm">
           {shortTitle(hovered, "title", true)}
         </p>
       )}
