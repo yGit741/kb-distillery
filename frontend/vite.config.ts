@@ -14,9 +14,9 @@ const LEGACY = "http://127.0.0.1:8765";
 //
 // `vite build --mode share` is the static, read-only build for the shared site (kb.share.build --app):
 // served from the site root, with the screens it includes decided HERE, at build time. The profile comes
-// from VITE_SHARE_PROFILE (public = graph + pages, private = + lifecycle; anything else is public, the
-// safe side). The route registry then imports a literal screen list (src/routes/modules.share-*.ts), so
-// chat, ops, pipeline and scopes are not in the bundle at all.
+// from VITE_SHARE_PROFILE (anything but "private" is public, the safe side). The route registry then
+// imports a literal screen list (src/routes/modules.share-*.ts, generated from the screen.* build flags in
+// meta/flags.toml by `pixi run flags-gen`), so chat, ops, pipeline and scopes are not in the bundle at all.
 export default defineConfig(({ mode }) => {
   const share = mode === "share";
   const profile = process.env.VITE_SHARE_PROFILE === "private" ? "private" : "public";

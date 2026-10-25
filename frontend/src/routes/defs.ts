@@ -1,4 +1,4 @@
-import { SHARE_PROFILE } from "@/share/env";
+import { flag, type FlagName } from "@/flags";
 
 /**
  * Static route metadata. `legacy` is the real path of the server-rendered page (backend/src/kb/dashboard),
@@ -15,11 +15,11 @@ export interface RouteDef {
   extraPaths?: readonly string[];
   /** In the top bar. Everything else is reached from a screen or the ⌘K palette. */
   nav?: boolean;
-  /** `private`: exists only in the private share build (it needs the Worker's /admin/api). Absent: every build. */
-  profile?: "private";
+  /** A build flag (meta/flags.toml) that must be on in this env for the route to exist. Absent: always on. */
+  flag?: FlagName;
 }
 
-export const ROUTE_DEFS: readonly RouteDef[] = [
+const ALL_ROUTE_DEFS: readonly RouteDef[] = [
   { id: "home", path: "/", label: "Home", legacy: "/", blurb: "Sample subgraphs and knowledge nodes of the vault.", nav: true },
   { id: "graph", path: "/graph", label: "Graph", legacy: "/graph", blurb: "Explore, read and ask about the whole vault.", nav: true },
   { id: "system", path: "/system", label: "System", legacy: "/ops", blurb: "Status, open work, timeline, pipeline, history and health.", nav: true },
@@ -27,10 +27,12 @@ export const ROUTE_DEFS: readonly RouteDef[] = [
   { id: "chat", path: "/chat", label: "Chat", legacy: "/chat", blurb: "Read-only research agent over the wiki." },
   { id: "scopes", path: "/scopes", label: "Scopes", legacy: "/scopes", blurb: "Named subsets of the vault for focused work." },
   { id: "pipeline", path: "/pipeline", label: "Pipeline", legacy: "/pipeline", blurb: "Ingest and digestion status of every raw file." },
-  { id: "lifecycle", path: "/lifecycle", label: "Lifecycle", legacy: "/lifecycle", blurb: "Versions, history, snapshots and working state." },
-  { id: "share", path: "/share", label: "Share", legacy: "/", blurb: "Public snapshots of the private site.", profile: "private" as const, nav: true },
-  // Private-only routes are dropped here, so neither the live app nor the public build ever sees them.
-].filter((d: RouteDef) => d.profile !== "private" || SHARE_PROFILE === "private");
+  { id: "lifecycle", path: "/lifecycle", label: "Lifecycle", legacy: "/lifecycle", blurb: "Versions, history, snapshots and working state.", flag: "screen.lifecycle" },
+  { id: "share", path: "/share", label: "Share", legacy: "/", blurb: "Public snapshots of the private site.", flag: "screen.share", nav: true },
+  // A route whose flag is off in this env is dropped here (screen.share: private site only).
+];
+
+export const ROUTE_DEFS: readonly RouteDef[] = ALL_ROUTE_DEFS.filter((d) => !d.flag || flag(d.flag));
 
 export const legacyHref = (r: Pick<RouteDef, "legacy">): string =>
   `/legacy${r.legacy === "/" ? "" : r.legacy}`;

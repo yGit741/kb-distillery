@@ -21,6 +21,10 @@ class ChecksForTests(unittest.TestCase):
     def test_frontend(self):
         self.assertEqual(names(["frontend/src/App.tsx"]), ["web-check"])
 
+    def test_flag_registry(self):
+        self.assertEqual(names(["meta/flags.toml"]), ["flags-check"])
+        self.assertEqual(names(["backend/src/kb/flags/codegen.py"]), ["flags-check"])
+
     def test_api_router(self):
         self.assertEqual(names(["backend/src/kb/api/routers/x.py"]), ["api-schema-check"])
 
