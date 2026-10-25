@@ -13,6 +13,8 @@ export type TextField = "short" | "title" | "slug";
 export type LabelBg = "halo" | "box" | "none";
 export type Regions = "off" | "auto" | "with";
 export type Positions = 1 | 4 | 8;
+export type NeighborBy = "weight" | "score";
+export type QuestionLabels = "none" | "short" | "full";
 
 export interface LabConfig {
   // importance
@@ -48,6 +50,13 @@ export interface LabConfig {
   positions: Positions;
   avoidNodes: boolean;
   pad: number;
+  /** a label pushed off the canvas tries the mirrored offset before it is dropped */
+  edgeFlip: boolean;
+  /** a forced label squeezed out of every adjacent slot moves out on a ring with a leader line */
+  leaderLines: boolean;
+  /** which neighbours of a clicked page get a label: by edge weight (stable) or by score */
+  neighborBy: NeighborBy;
+  forcedPill: boolean;
   // typography
   sizeMode: SizeMode;
   base: number;
@@ -59,6 +68,15 @@ export interface LabConfig {
   weightTier: boolean;
   textField: TextField;
   maxChars: number;
+  /** wrap width per tier in px (0 = a character cut on one line) and the lines allowed */
+  wrapT1: number;
+  wrapT2: number;
+  wrapT3: number;
+  maxLines: number;
+  charsT3: number;
+  /** questions: hidden until hovered or clicked, cut to charsQuestion, or like any page */
+  questionLabels: QuestionLabels;
+  charsQuestion: number;
   bg: LabelBg;
   // stability
   fade: number;
@@ -68,6 +86,8 @@ export interface LabConfig {
   regionZoom: number;
   regionsSuppress: boolean;
   hulls: boolean;
+  /** hull core: pages within mean + sigma·sd of the median (0 = the closest 70%) */
+  hullSigma: number;
   // nodes
   nodeRange: number;
   perceptual: boolean;
@@ -103,6 +123,10 @@ export const DEFAULT_LAB: LabConfig = {
   positions: 4,
   avoidNodes: true,
   pad: 2,
+  edgeFlip: true,
+  leaderLines: true,
+  neighborBy: "weight",
+  forcedPill: true,
   sizeMode: "tiers",
   base: 12,
   t1: 17,
@@ -113,6 +137,13 @@ export const DEFAULT_LAB: LabConfig = {
   weightTier: true,
   textField: "short",
   maxChars: 28,
+  wrapT1: 160,
+  wrapT2: 110,
+  wrapT3: 0,
+  maxLines: 2,
+  charsT3: 18,
+  questionLabels: "none",
+  charsQuestion: 20,
   bg: "halo",
   fade: 250,
   hysteresis: 0.15,
@@ -120,6 +151,7 @@ export const DEFAULT_LAB: LabConfig = {
   regionZoom: 0.9,
   regionsSuppress: true,
   hulls: false,
+  hullSigma: 2,
   nodeRange: 2.2,
   perceptual: true,
 };
@@ -132,6 +164,9 @@ export function sanitizeLab(raw: unknown): LabConfig {
       const v = (raw as Record<string, unknown>)[k];
       if (v !== undefined && typeof v === typeof DEFAULT_LAB[k]) out[k] = v;
     }
+    // enumerations: an unknown value falls back to the default
+    if (!["none", "short", "full"].includes(out["questionLabels"] as string)) out["questionLabels"] = DEFAULT_LAB.questionLabels;
+    if (!["weight", "score"].includes(out["neighborBy"] as string)) out["neighborBy"] = DEFAULT_LAB.neighborBy;
   }
   return out as unknown as LabConfig;
 }

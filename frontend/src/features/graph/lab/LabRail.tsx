@@ -97,6 +97,13 @@ const SECTIONS: readonly { title: string; open?: boolean; knobs: readonly Knob[]
       ]),
       check("avoidNodes", "Labels avoid covering nodes"),
       range("pad", "Padding px", 0, 10, 1),
+      check("edgeFlip", "Flip a label back onto the canvas", { hint: "a box pushed off the edge tries the mirrored side before it is dropped" }),
+      check("leaderLines", "Leader lines for squeezed-out forced labels"),
+      check("forcedPill", "Pill behind hover / selection labels"),
+      select("neighborBy", "Neighbours labelled on click", [
+        { id: "weight", label: "by edge weight (links + shared sources)" },
+        { id: "score", label: "by importance score" },
+      ]),
     ],
   },
   {
@@ -121,6 +128,17 @@ const SECTIONS: readonly { title: string; open?: boolean; knobs: readonly Knob[]
         { id: "slug", label: "slug" },
       ]),
       range("maxChars", "Cut at characters", 10, 80, 1),
+      range("wrapT1", "Tier 1 wrap width px (0 = cut)", 0, 260, 10),
+      range("wrapT2", "Tier 2 wrap width px (0 = cut)", 0, 260, 10),
+      range("wrapT3", "Tier 3 wrap width px (0 = cut)", 0, 260, 10),
+      range("maxLines", "Lines per label", 1, 4, 1),
+      range("charsT3", "Tier 3 cut at characters", 8, 60, 1, { show: (c) => c.wrapT3 <= 0 }),
+      select("questionLabels", "Question labels", [
+        { id: "none", label: "only on hover / click (a ? glyph marks them)" },
+        { id: "short", label: "short, cut at the question budget" },
+        { id: "full", label: "like any page" },
+      ]),
+      range("charsQuestion", "Question cut at characters", 8, 60, 1, { show: (c) => c.questionLabels === "short" }),
       select("bg", "Background", [
         { id: "halo", label: "halo" },
         { id: "box", label: "box" },
@@ -146,6 +164,7 @@ const SECTIONS: readonly { title: string; open?: boolean; knobs: readonly Knob[]
       range("regionZoom", "Zoomed out means below ×", 0.3, 3, 0.1, { show: (c) => c.regions === "auto" }),
       check("regionsSuppress", "While regions show, only hover and selection get page labels", { show: (c) => c.regions === "auto" }),
       check("hulls", "Shade each theme's region", { hint: "common region groups more strongly than proximity (Palmer)" }),
+      range("hullSigma", "Hull core: within σ of the median", 0, 4, 0.5, { hint: "0 = the closest 70% of the pages", show: (c) => c.hulls }),
     ],
   },
 ];
