@@ -311,6 +311,8 @@ def checks_for(paths):
     def hit(*prefixes):
         return any(p.startswith(prefixes) for p in paths)
     checks = []
+    if hit("meta/flags.toml", "backend/src/kb/flags/") and not hit("frontend/"):  # web-check runs it too
+        checks.append(("flags-check", ["pixi", "run", "flags-check"]))
     if hit("frontend/"):
         checks.append(("web-check", ["pixi", "run", "web-check"]))
     if hit("backend/src/kb/api/", "frontend/src/api"):
