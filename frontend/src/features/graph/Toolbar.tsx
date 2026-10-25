@@ -10,7 +10,7 @@ import { useVisibleTools, type GraphToolContext } from "./tools";
 const HELP: readonly [string, string][] = [
   ["Search everything", "Space"],
   ["Ask an agent", "/ (coming soon)"],
-  ["Pan", "drag with the wheel (middle button) pressed, or Shift+scroll"],
+  ["Pan", "drag the background, or Shift+scroll"],
   ["Zoom", "scroll or pinch (toward the cursor), + and −"],
   ["Fit to view", "F"],
   ["Labels", "hover a page; a click labels its neighbours"],
@@ -19,7 +19,7 @@ const HELP: readonly [string, string][] = [
   ["Open in Pages", "E (one selected)"],
   ["Page menu", "right-click a page"],
   ["Select several", "Shift or Cmd/Ctrl+click"],
-  ["Box select", "drag the background (Shift adds, Cmd/Ctrl draws a lasso)"],
+  ["Box select", "right-drag (Shift adds, Cmd/Ctrl draws a lasso)"],
   ["Clear / close", "Esc, or right-click empty space"],
 ];
 

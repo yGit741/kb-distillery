@@ -5,26 +5,23 @@ export interface Focus {
   core: ReadonlySet<string>;
   /** core plus their neighbours: drawn, the rest dims. */
   lit: ReadonlySet<string>;
-  /** Opacity of the rest; 0.12 when absent. A hover alone dims lightly, a selection strongly. */
+  /** Opacity of the rest; 0.12 when absent. */
   dim?: number;
 }
 
-/** The rest of the graph under a hover alone: a light preview; a selection keeps the strong 0.12. */
-export const HOVER_DIM = 0.35;
-
-/** The neighbourhood highlight covers the selection and the hovered node together; null = nothing dims. */
+/** The neighbourhood highlight: only a selection dims the rest; a hover then joins it. null = nothing dims. */
 export function computeFocus(
   selected: ReadonlySet<string>,
   hovered: string | null,
   neighbors: NeighborMap,
   enabled: boolean,
 ): Focus | null {
-  if (!enabled || (!hovered && !selected.size)) return null;
+  if (!enabled || !selected.size) return null;
   const core = new Set(selected);
   if (hovered) core.add(hovered);
   const lit = new Set(core);
   core.forEach((id) => (neighbors.get(id) ?? []).forEach((n) => lit.add(n)));
-  return { core, lit, dim: selected.size ? 0.12 : HOVER_DIM };
+  return { core, lit };
 }
 
 export function nodeOpacity(id: string, focus: Focus | null): number {
