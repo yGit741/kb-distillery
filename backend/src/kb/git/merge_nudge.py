@@ -36,8 +36,8 @@ def _git(cwd, *args):
 def open_pr(cwd, branch):
     """{number, title, url} of the OPEN PR for `branch`, or None (also when gh/network is unavailable)."""
     try:
-        cp = subprocess.run([os.environ.get("GH_BIN", "gh"), "pr", "view", branch, "--json", "number,title,url,state,labels"],
-                            cwd=cwd, capture_output=True, text=True, check=False, timeout=GH_TIMEOUT)
+        from kb.git import app_token
+        cp = app_token.run_gh(["pr", "view", branch, "--json", "number,title,url,state,labels"], cwd, timeout=GH_TIMEOUT)
         info = json.loads(cp.stdout) if cp.returncode == 0 and cp.stdout.strip() else None
     except (OSError, ValueError, subprocess.TimeoutExpired):
         return None

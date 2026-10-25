@@ -50,9 +50,10 @@ def parse_line(line):
 
 
 def _gh(args, root):
+    from kb.git import app_token
     exe = os.environ.get("GH_BIN", "gh")
     try:
-        return subprocess.run([exe, *args], cwd=root, capture_output=True, text=True, check=False, timeout=60)
+        return app_token.run_gh(args, root, timeout=60)
     except (OSError, subprocess.SubprocessError) as e:
         return subprocess.CompletedProcess([exe, *args], 1, "", str(e))
 
