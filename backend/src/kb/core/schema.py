@@ -330,7 +330,7 @@ def lane_of(path):
 # (x, y) changes only inside a schema/paradigm PR (with its migration); z is derived
 # from git (last first-parent KB-Version + 1). Tooling is not versioned — infra work
 # is identified by its PR number (#N). See backend/src/kb/git/commit_policy.py.
-SCHEMA_VERSION = (1, 0)     # 1.0: the source model (layer + type, depth, disposition source)
+SCHEMA_VERSION = (1, 1)     # 1.1: question = short H1 (≤ 80) + required ## Question (1.0: the source model)
 
 # What undo/restore may rewrite. Never raw/ (immutable, PDFs untracked), think/
 # (human-owned), meta/log.md (append-only) or generated files (lint regenerates them).

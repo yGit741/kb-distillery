@@ -473,7 +473,7 @@
     "layer": "concept",
     "outDegree": 2,
     "path": "wiki/q-does-rank-explain-generalization.md",
-    "preview": "Question: Does a low-rank bias explain why big networks generalize?",
+    "preview": "Does a low-rank bias explain why big networks generalize?",
     "properties": {
      "area": "learning-theory",
      "links_in": "2",
@@ -888,7 +888,7 @@
    ],
    "version": [
     1,
-    0
+    1
    ]
   }
  },
@@ -1145,11 +1145,11 @@
     "id": "q-does-rank-explain-generalization",
     "in": 2,
     "out": 2,
-    "preview": "Question: Does a low-rank bias explain why big networks generalize?",
+    "preview": "Does a low-rank bias explain why big networks generalize?",
     "status": "open",
     "title": "Does rank explain generalization?",
     "type": "question",
-    "words": 50,
+    "words": 51,
     "year": null
    },
    {
@@ -1770,11 +1770,11 @@
     "id": "q-does-rank-explain-generalization",
     "in": 2,
     "out": 2,
-    "preview": "Question: Does a low-rank bias explain why big networks generalize?",
+    "preview": "Does a low-rank bias explain why big networks generalize?",
     "status": "open",
     "title": "Does rank explain generalization?",
     "type": "question",
-    "words": 50,
+    "words": 51,
     "year": null
    },
    "frontmatter": {
@@ -1786,7 +1786,7 @@
     "status": "open",
     "type": "question"
    },
-   "markdown": "# Does rank explain generalization?\n\n**Question:** Does a low-rank bias explain why big networks generalize?\n\n## Why I care\n\nIt would connect [[tensor-rank]] to [[theme-learning-theory]].\n\n## What I know so far\n- Nothing yet.\n\n## Hypotheses\n- Gradient descent prefers low rank.\n\n## Papers / concepts to read\n- [[tensor-rank]]\n",
+   "markdown": "# Does rank explain generalization?\n\n## Question\n\nDoes a low-rank bias explain why big networks generalize?\n\n## Why I care\n\nIt would connect [[tensor-rank]] to [[theme-learning-theory]].\n\n## What I know so far\n- Nothing yet.\n\n## Hypotheses\n- Gradient descent prefers low rank.\n\n## Papers / concepts to read\n- [[tensor-rank]]\n",
    "outbound": [
     "tensor-rank",
     "theme-learning-theory"
