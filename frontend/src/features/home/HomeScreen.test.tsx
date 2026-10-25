@@ -119,6 +119,7 @@ describe("Home screen", () => {
     expect(getRawCard).toHaveBeenCalledWith(expect.stringMatching(/^p\d$/), expect.stringMatching(/^raw\/printed-docs\/p\d\.pdf$/));
     const full = screen.getByRole("link", { name: "Open in Full Graph" });
     expect(full.getAttribute("href")).toMatch(/^\/app\/graph\?pages=/);
+    expect(full.querySelector('[data-testid="full-graph-icon"] circle')).not.toBeNull();
     await userEvent.click(full);
     expect(host.openGraph).toHaveBeenCalledWith(expect.objectContaining({ focus: "hub" }));
     // the link carries the drawn ego graph: its pages, the concept + the ringed source selected

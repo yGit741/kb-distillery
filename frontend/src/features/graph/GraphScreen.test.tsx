@@ -146,7 +146,7 @@ describe("search", () => {
 describe("deep links", () => {
   it("?pages= shows those pages and their neighbours as a view and selects them", async () => {
     render(wrap(withGraph(), <GraphScreen search={{ pages: "idea-margin" }} host={host} />));
-    expect(await screen.findByText(/picked page/i)).toBeInTheDocument();
+    expect((await screen.findByText(/picked page/i)).closest('[role="status"]')).toHaveTextContent(/1 picked page\s*\+ neighbours/);
     await waitFor(() => expect([...useKb.getState().selection]).toEqual(["idea-margin"]));
     // idea-margin plus its neighbours (topic, paper, listed paper), drawn past the type filter
     expect(screen.getByTestId("graph-stats")).toHaveTextContent("4 of 7 pages");
@@ -157,7 +157,9 @@ describe("deep links", () => {
 
   it("?pages=&from=home shows exactly those pages (no extra hop) and keeps the select", async () => {
     render(wrap(withGraph(), <GraphScreen search={{ pages: "idea-margin", select: "idea-margin", focus: "idea-margin", from: "home" }} host={host} />));
-    expect(await screen.findByText(/picked page/i)).toBeInTheDocument();
+    const chip = (await screen.findByText(/picked page/i)).closest('[role="status"]');
+    expect(chip).toHaveTextContent("1 picked page");
+    expect(chip).not.toHaveTextContent(/neighbours/);
     await waitFor(() => expect([...useKb.getState().selection]).toEqual(["idea-margin"]));
     expect(screen.getByTestId("graph-stats")).toHaveTextContent("1 of 7 pages");
   });
