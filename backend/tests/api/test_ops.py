@@ -7,7 +7,7 @@ from kb.api.app import create_app
 from kb.api.models.ops import OpsSnapshot
 
 CANNED = {"subject": "nightly", "doc": {"blocks": []}, "runs": [{"at": "t"}], "legacy_extra": 1,
-          "queue": {"holder": None, "waiters": [], "stale_after": 1200}}
+          "queue": {"holder": None, "waiters": [], "stale_after": 1200}, "deploy": None}
 
 
 def test_ops_model_and_refresh_flag():
@@ -47,3 +47,55 @@ def test_ops_snapshot_carries_live_queue(tmp_path, monkeypatch):
     assert [w["pr"] for w in q["waiters"]] == [8] and q["waiters"][0]["alive"] is False and q["waiters"][0]["stale"]
     (tmp_path / ".git" / "kb-merge-queue.jsonl").write_text("")
     assert ops.build_ops_snapshot()["queue"] == {"holder": None, "waiters": [], "stale_after": 1200}
+
+
+def _owner_fixture(root, shas, status, last_cycle):
+    import json
+    cache = root / ".cache" / "share"
+    cache.mkdir(parents=True)
+    (cache / "owner.json").write_text(json.dumps({"shas": shas, "last_cycle_at": last_cycle, "rollbacks": 1}))
+    (cache / "status.json").write_text(json.dumps(status))
+
+
+def test_deploy_state_from_owner_fixture(tmp_path):
+    """live / main / last outcome / queued / rollbacks / owner liveness, all from fixture files."""
+    import datetime
+    from kb.services import ops
+    now = datetime.datetime(2026, 10, 25, 12, 0, tzinfo=datetime.timezone.utc).timestamp()
+    iso = lambda m: datetime.datetime.fromtimestamp(now - m * 60, datetime.timezone.utc).isoformat()
+    _owner_fixture(tmp_path, {
+        "a" * 40: {"state": "deployed", "at": iso(120)},
+        "b" * 40: {"state": "rolled-back", "at": iso(60), "error": "unhealthy: /api/health 500"},
+        "c" * 40: {"state": "building", "at": iso(1), "cycles": 1},
+        "d" * 40: {"state": "rolled-back", "at": iso(60 * 24 * 9)},  # older than 7 days
+    }, {"state": "failed", "sha": "b" * 40, "at": iso(60)}, iso(2))
+    plist = tmp_path / "owner.plist"
+    plist.write_text("x")
+    d = ops.deploy_state(str(tmp_path), now=now, plist=str(plist), main=("c" * 40, now - 45 * 60))
+    from kb.api.models.ops import DeployState
+    DeployState.model_validate(d)
+    assert d["live_sha"] == "a" * 40 and d["main_sha"] == "c" * 40
+    assert d["behind"] is True and d["behind_minutes"] == 45
+    assert d["deploying"] == "c" * 40 and d["queued"] == ["c" * 40]
+    assert d["last_outcome"] == "rolled-back" and d["last_reason"] == "unhealthy: /api/health 500"
+    assert d["rollbacks_7d"] == 1
+    assert d["owner_installed"] is True and d["owner_alive"] is True and d["heartbeat_age"] == 60  # the in-flight step (1 min) is newer than the cycle start
+
+
+def test_deploy_state_missing_is_unknown_not_ok(tmp_path):
+    from kb.services import ops
+    d = ops.deploy_state(str(tmp_path), plist=str(tmp_path / "none.plist"), main=(None, None))
+    assert d["live_sha"] is None and d["behind"] is None and d["last_outcome"] is None
+    assert d["owner_installed"] is False and d["owner_alive"] is False
+
+
+def test_deploy_state_status_json_newer_direct_deploy(tmp_path):
+    """A direct deploy (status.json only) newer than the owner's last deployed sha is what is live."""
+    import datetime
+    from kb.services import ops
+    now = datetime.datetime(2026, 10, 25, 12, 0, tzinfo=datetime.timezone.utc).timestamp()
+    _owner_fixture(tmp_path, {"a" * 40: {"state": "deployed", "at": "2026-10-25T10:00:00+00:00"}},
+                   {"state": "deployed", "sha": "e" * 40, "at": "2026-10-25T11:00:00+00:00"}, "2026-10-25T09:00:00+00:00")
+    d = ops.deploy_state(str(tmp_path), now=now, plist=str(tmp_path / "none"), main=("e" * 40, now - 3600))
+    assert d["live_sha"] == "e" * 40 and d["behind"] is False and d["behind_minutes"] == 0
+    assert d["owner_alive"] is False  # last cycle 3 h ago

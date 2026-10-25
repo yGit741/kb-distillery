@@ -21,7 +21,25 @@ class MergeQueue(ApiModel):
     stale_after: int = 1200
 
 
+class DeployState(ApiModel):
+    live_sha: str | None = None
+    live_at: str | None = None
+    main_sha: str | None = None
+    behind: bool | None = None          # None when live or main is unknown
+    behind_minutes: int | None = None   # minutes since origin/main moved, while behind
+    deploying: str | None = None
+    last_outcome: str | None = None     # deployed | rolled-back | failed | rollback-failed
+    last_sha: str | None = None
+    last_reason: str = ""
+    queued: list[str] = []
+    rollbacks_7d: int = 0
+    owner_installed: bool = False       # launchd plist present
+    owner_alive: bool = False           # recent heartbeat (last_cycle_at)
+    heartbeat_age: int | None = None    # seconds since the owner's last cycle
+
+
 class OpsSnapshot(ApiModel):
     subject: str | None = None
     doc: dict[str, Any] = {}
     queue: MergeQueue | None = None
+    deploy: DeployState | None = None

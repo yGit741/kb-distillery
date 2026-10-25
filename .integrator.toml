@@ -82,3 +82,13 @@ endpoint = "/api/lifecycle"
 path = "version"
 match = "contains"
 selector = "[data-testid=tile-version-value]"
+
+[[data_checks]]
+tile = "deploy"
+screen = "/system"
+endpoint = "/api/ops"
+# deploy owner state (kb.share.owner) vs origin/main; bad = failed outcome, owner missing/dead, or live != main > 30 min
+path = "deploy.owner_installed|default:unknown|map:false=owner not installed,true="  # the tone carries the rest
+match = "contains"
+fail_tones = ["bad"]
+selector = "[data-testid=tile-deploy-value]"

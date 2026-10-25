@@ -22,9 +22,10 @@ const ops: OpsLike = {
 const health: HealthLike = { inbox_count: 4, values: { errors: 0, warnings: 194, queued: 385, partial_books: 2 }, statuses: { warnings: "warn" } };
 
 describe("system model", () => {
-  it("builds eight tiles, each from one snapshot, with a placeholder while loading", () => {
+  it("builds nine tiles, each from one snapshot, with a placeholder while loading", () => {
     const t = tiles(lc, ops, health);
-    expect(t.map((x) => x.id)).toEqual(["version", "work", "hygiene", "lint", "backlog", "nightly", "merges", "stale"]);
+    expect(t.map((x) => x.id)).toEqual(["version", "work", "hygiene", "lint", "backlog", "nightly", "merges", "deploy", "stale"]);
+    expect(t.find((x) => x.id === "deploy")).toMatchObject({ value: "unknown", tone: "warn" });
     expect(t.find((x) => x.id === "merges")).toMatchObject({ value: "unknown", tone: "warn" });
     expect(t.find((x) => x.id === "version")).toMatchObject({ value: "kb-1.0.9", tone: "warn", tab: "history" });
     expect(t.find((x) => x.id === "work")).toMatchObject({ value: "2", hint: "1 need attention", tone: "warn" });
@@ -98,6 +99,31 @@ describe("system model", () => {
     expect(m({ holder: { pr: 7, held: 1500, alive: true }, waiters: [], stale_after: 1200 })).toMatchObject({ value: "#7 stuck", hint: "stale, held 25m", tone: "bad" });
     expect(m({ holder: { pr: 7, pid: 42, held: 5, alive: false }, waiters: [{ pr: 8 }], stale_after: 1200 })).toMatchObject({ tone: "bad", hint: "pid 42 dead · 1 waiting (#8)" });
     expect(tiles(lc, undefined, health).find((x) => x.id === "merges")).toMatchObject({ value: "…", tone: "" });
+  });
+
+  it("the Deploy tile: ok only when live = main and the owner runs; failures, no owner and long lag are bad", () => {
+    const base = { live_sha: "a".repeat(40), main_sha: "a".repeat(40), behind: false, behind_minutes: 0, owner_installed: true, owner_alive: true, queued: [], rollbacks_7d: 0 };
+    const d = (deploy: OpsLike["deploy"]) => tiles(lc, { ...ops, deploy }, health).find((x) => x.id === "deploy");
+    expect(d(base)).toMatchObject({ value: "live = main", tone: "ok", hint: "aaaaaaa" });
+    expect(d({ ...base, behind: true, behind_minutes: 5, main_sha: "b".repeat(40), deploying: "b".repeat(40), queued: ["b".repeat(40)] })).toMatchObject({
+      value: "deploying bbbbbbb",
+      tone: "warn",
+      hint: "live aaaaaaa · queued bbbbbbb",
+    });
+    expect(d({ ...base, behind: true, behind_minutes: 12, main_sha: "b".repeat(40) })).toMatchObject({ value: "behind 12 min", tone: "warn" });
+    expect(d({ ...base, behind: true, behind_minutes: 45, main_sha: "b".repeat(40), deploying: "b".repeat(40) })).toMatchObject({ value: "behind 45 min", tone: "bad" });
+    expect(d({ ...base, last_outcome: "failed", last_sha: "c".repeat(40), last_reason: "versions upload: boom" })).toMatchObject({ value: "failed ccccccc", tone: "bad", hint: "versions upload: boom" });
+    expect(d({ ...base, last_outcome: "rollback-failed", last_sha: "c".repeat(40), last_reason: "x" })).toMatchObject({ tone: "bad" });
+    expect(d({ ...base, last_outcome: "rolled-back", last_reason: "unhealthy", rollbacks_7d: 2 })).toMatchObject({
+      value: "live = main",
+      tone: "ok",
+      hint: "aaaaaaa · last rolled back: unhealthy · 2 rollbacks in 7 d",
+    });
+    expect(d({ ...base, owner_installed: false })).toMatchObject({ value: "owner not installed", tone: "bad" });
+    expect(d({ ...base, owner_alive: false })).toMatchObject({ value: "owner not running", tone: "bad" });
+    expect(d({ ...base, behind: null })).toMatchObject({ value: "unknown", tone: "warn" });
+    expect(d(null)).toMatchObject({ value: "unknown", tone: "warn" });
+    expect(tiles(lc, undefined, health).find((x) => x.id === "deploy")).toMatchObject({ value: "…", tone: "" });
   });
 
   it("lists threads that need attention first", () => {

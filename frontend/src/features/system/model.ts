@@ -128,6 +128,55 @@ function mergesTile(ops: OpsLike | undefined): Pick<Tile, "value" | "hint" | "to
   };
 }
 
+export interface DeployLike {
+  live_sha?: string | null;
+  main_sha?: string | null;
+  behind?: boolean | null;
+  behind_minutes?: number | null;
+  deploying?: string | null;
+  last_outcome?: string | null;
+  last_sha?: string | null;
+  last_reason?: string;
+  queued?: string[];
+  rollbacks_7d?: number;
+  owner_installed?: boolean;
+  owner_alive?: boolean;
+}
+
+/** Minutes live may trail main before the Deploy tile turns bad. */
+export const DEPLOY_BEHIND_LIMIT = 30;
+const sha7 = (s?: string | null) => (s ? s.slice(0, 7) : "?");
+
+/**
+ * The Deploy tile reads the deploy owner (kb.share.owner) vs origin/main. Bad wins over everything: a failed or
+ * rollback-failed last outcome, the owner not installed / not running, or live != main past the limit. Missing
+ * data is "unknown" (warn), never ok — a green tile next to a failed reality is the bug this tile exists to avoid.
+ */
+function deployTile(ops: OpsLike | undefined): Pick<Tile, "value" | "hint" | "tone"> {
+  if (!ops) return { value: "…", hint: "", tone: "" };
+  const d = ops.deploy;
+  if (!d) return { value: "unknown", hint: "deploy state unavailable", tone: "warn" };
+  const rb = num(d.rollbacks_7d);
+  const extra = [
+    (d.queued ?? []).length ? `queued ${(d.queued ?? []).map(sha7).join(", ")}` : "",
+    rb ? `${plural(rb, "rollback")} in 7 d` : "",
+  ];
+  const hint = (...bits: string[]) => [...bits, ...extra].filter(Boolean).join(" · ");
+  const outcome = d.last_outcome ?? "";
+  const reason = (d.last_reason ?? "").slice(0, 120);
+  if (outcome === "failed" || outcome === "rollback-failed")
+    return { value: `${outcome} ${sha7(d.last_sha)}`, hint: hint(reason), tone: "bad" };
+  if (!d.owner_installed) return { value: "owner not installed", hint: hint("pixi run install-deploy-owner"), tone: "bad" };
+  if (!d.owner_alive) return { value: "owner not running", hint: hint("no heartbeat from kb.share.owner"), tone: "bad" };
+  if (d.behind == null) return { value: "unknown", hint: hint(d.live_sha ? "origin/main unreadable" : "no live sha recorded"), tone: "warn" };
+  const mins = num(d.behind_minutes);
+  if (d.behind && mins > DEPLOY_BEHIND_LIMIT)
+    return { value: `behind ${mins} min`, hint: hint(`live ${sha7(d.live_sha)} ≠ main ${sha7(d.main_sha)}`, outcome === "rolled-back" ? reason : ""), tone: "bad" };
+  if (d.deploying) return { value: `deploying ${sha7(d.deploying)}`, hint: hint(`live ${sha7(d.live_sha)}`), tone: "warn" };
+  if (d.behind) return { value: `behind ${mins} min`, hint: hint(`live ${sha7(d.live_sha)} ≠ main ${sha7(d.main_sha)}`), tone: "warn" };
+  return { value: "live = main", hint: hint(sha7(d.live_sha), outcome === "rolled-back" ? `last rolled back: ${reason}` : ""), tone: "ok" };
+}
+
 /** Hygiene finding kinds produced by the backend staleness rules (staleness.KINDS) — keep the two lists in step. */
 export const STALE_KINDS = ["idle-branch", "missing-worktree", "detached-worktree", "idle-pr"];
 
@@ -155,6 +204,7 @@ function staleTile(ops: OpsLike | undefined): Pick<Tile, "value" | "hint" | "ton
 
 export interface OpsLike {
   queue?: QueueLike | null;
+  deploy?: DeployLike | null;
   threads?: Thread[];
   hygiene?: { errors?: number; warnings?: number; findings?: Finding[] };
   runs?: Run[];
@@ -170,7 +220,7 @@ const num = (v: unknown) => (typeof v === "number" ? v : Number(v) || 0);
 const tone = (s?: string): Tone => (s === "ok" || s === "warn" || s === "bad" ? s : s === "error" ? "bad" : "");
 const plural = (n: number, w: string) => `${n} ${w}${n === 1 ? "" : "s"}`;
 
-/** Eight tiles; a tile whose snapshot has not arrived yet shows "…". */
+/** Nine tiles; a tile whose snapshot has not arrived yet shows "…". */
 export function tiles(lc?: LifecycleLike, ops?: OpsLike, health?: HealthLike): Tile[] {
   const threads = ops?.threads ?? [];
   const stale = threads.filter((t) => t.status === "warn" || t.status === "bad").length;
@@ -230,6 +280,12 @@ export function tiles(lc?: LifecycleLike, ops?: OpsLike, health?: HealthLike): T
       id: "merges",
       label: "Merges",
       ...mergesTile(ops),
+      tab: "overview",
+    },
+    {
+      id: "deploy",
+      label: "Deploy",
+      ...deployTile(ops),
       tab: "overview",
     },
     {
