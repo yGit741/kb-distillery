@@ -138,8 +138,9 @@ class D1Test(unittest.TestCase):
         self.assertEqual(len(row), len(d1.SESSION_COLS))
         self.assertNotIn("secret thesis idea", json.dumps(row))
         stmts = list(d1.upserts("sessions", d1.SESSION_COLS, [row] * 85))
-        self.assertEqual(len(stmts), 3)
-        self.assertEqual(len(stmts[0][1]), d1.BATCH * len(d1.SESSION_COLS))
+        per = d1.MAX_PARAMS // len(d1.SESSION_COLS)                  # D1's 100-value limit
+        self.assertEqual(len(stmts), -(-85 // per))
+        self.assertTrue(all(len(params) <= d1.MAX_PARAMS for _, params in stmts))
 
     def test_database_id_from_sync_toml(self):
         root = tempfile.mkdtemp()

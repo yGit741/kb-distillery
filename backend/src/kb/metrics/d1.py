@@ -32,7 +32,7 @@ SESSION_COLS = ["id", "start", "minutes", "branch", "task", "golden", "skills", 
 GOLDEN_COLS = ["run", "task", "label", "v", "kind", "sha", "model", "effort", "started", "ok", "passed", "usd",
                "turns", "minutes", "first_context", "subagents", "judge_score", "judge_pass", "judge_flagged",
                "judge_usd", "checks_ok", "checks_n", "diff_lines"]
-BATCH = 40
+MAX_PARAMS = 100   # D1 binds at most 100 values per statement
 
 
 def session_row(r):
@@ -54,8 +54,9 @@ def golden_row(r):
 
 def upserts(table, cols, rows):
     """(sql, params) batches of multi-row INSERT OR REPLACE."""
-    for i in range(0, len(rows), BATCH):
-        chunk = rows[i:i + BATCH]
+    per = max(1, MAX_PARAMS // len(cols))
+    for i in range(0, len(rows), per):
+        chunk = rows[i:i + per]
         marks = ",".join("(" + ",".join("?" * len(cols)) + ")" for _ in chunk)
         yield f"INSERT OR REPLACE INTO {table} ({','.join(cols)}) VALUES {marks}", [v for row in chunk for v in row]
 
