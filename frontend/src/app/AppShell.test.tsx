@@ -25,6 +25,7 @@ describe("AppShell", () => {
     expect(ROUTES.length).toBeGreaterThan(3); // the rest stay routable
     expect(nav).toHaveClass("overflow-x-auto", "min-w-0"); // scrolls inside itself on phones
     expect(screen.getAllByRole("button", { name: /switch to/i })).toHaveLength(1);
+    expect(screen.getByRole("button", { name: "Tours" })).toBeInTheDocument(); // left of the palette chip, on every screen
     expect(await screen.findByRole("tablist", { name: "System sections" })).toBeInTheDocument();
 
     await userEvent.keyboard("{Control>}k{/Control}");

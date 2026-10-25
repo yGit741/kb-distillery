@@ -6,7 +6,9 @@ import { ApiError, DataSourceProvider, type DataSource, type GraphSnapshot } fro
 import { mockDataSource } from "@/test/datasource";
 import { node } from "@/features/graph/fixtures";
 import { markSeen, registerTour } from "@/features/tour/tours";
-import { drawConcept, drawSubgraph, HomeScreen, TITLE_MAX, ToursMenu, type HomeHost } from "./HomeScreen";
+import { HomeScreen, resolveConcept, type HomeHost } from "./HomeScreen";
+import { ToursMenu } from "@/app/ToursMenu";
+import { matchConcepts } from "./ConceptExplorer";
 import "./tours";
 import { indexVault } from "./samplers";
 
@@ -19,13 +21,15 @@ vi.mock("force-graph", () => {
   return { default: () => () => make() };
 });
 
-const papers = Array.from({ length: 8 }, (_, i) => node(`p${i}`, { type: "paper", layer: "source", depth: "full", status: "digested", year: 2020 + i }));
+const papers = Array.from({ length: 8 }, (_, i) =>
+  node(`p${i}`, { type: "paper", layer: "source", depth: "full", status: "digested", year: 2020 + i, properties: { raw: `raw/printed-docs/p${i}.pdf`, authors: "Ada Author" } } as never),
+);
 const snapshot = {
   generated_at: "t",
   etag: "e",
   node_count: 10,
   link_count: 10,
-  nodes: [node("hub", { title: "The hub" }), node("q-x", { type: "question", status: "open", title: "Why?" }), ...papers],
+  nodes: [node("hub", { title: "The hub", type: "idea" }), node("q-x", { type: "question", status: "open", title: "Why?" }), ...papers],
   links: [...papers.map((p) => ({ source: p.id, target: "hub", kind: "wikilink" })), { source: "q-x", target: "p0", kind: "wikilink" }, { source: "q-x", target: "p1", kind: "wikilink" }],
   concept_links: [],
   facets: { types: [], statuses: [], areas: [] },
@@ -71,6 +75,18 @@ describe("Tours menu", () => {
   });
 });
 
+const rawCard = {
+  path: "raw/printed-docs/p0.pdf",
+  name: "p0.pdf",
+  format: "printed-docs",
+  ext: "pdf",
+  kind: "pdf",
+  facts: { bytes: 1468006, pages: 32, added: "2026-10-22" },
+  turns: [],
+  has_thumb: false,
+  thumb: null,
+} as never;
+
 describe("Home screen", () => {
   it("shows a loading state", () => {
     wrap(mockDataSource({ getGraph: () => new Promise(() => {}) }), <HomeScreen host={host} />);
@@ -82,47 +98,59 @@ describe("Home screen", () => {
     expect(await screen.findByText(/could not load the graph/i)).toBeInTheDocument();
   });
 
-  it("shows an empty state when nothing can be sampled", async () => {
-    const empty = { ...snapshot, nodes: [node("a")], links: [] } as unknown as GraphSnapshot;
+  it("shows an empty state when there is no concept to pick", async () => {
+    const empty = { ...snapshot, nodes: [node("a", { type: "paper", layer: "source" })], links: [] } as unknown as GraphSnapshot;
     wrap(mockDataSource({ getGraph: async () => empty }), <HomeScreen host={host} />);
-    expect(await screen.findByText(/nothing to sample yet/i)).toBeInTheDocument();
+    expect(await screen.findByText(/nothing to show yet/i)).toBeInTheDocument();
   });
 
-  it("draws one subgraph and opens it in the full graph", async () => {
-    wrap(mockDataSource({ getGraph: async () => snapshot, getPage }), <HomeScreen host={host} />);
-    const section = await screen.findByRole("region", { name: "Draw a Subgraph" });
-    const link = within(section).getByRole("link", { name: /open in full graph/i });
-    expect(link.getAttribute("href")).toMatch(/^\/app\/graph\?pages=/);
-    await userEvent.click(link);
-    expect(host.openGraph).toHaveBeenCalledWith(expect.objectContaining({ pages: expect.any(String), focus: expect.any(String) }));
+  it("shows the title, the glossary and the picked concept with one source's pipeline", async () => {
+    const getRawCard = vi.fn(async () => rawCard);
+    wrap(mockDataSource({ getGraph: async () => snapshot, getPage, getRawCard }), <HomeScreen host={host} concept="hub" />);
+    expect(await screen.findByRole("heading", { name: "A Map of the Knowledge That Interests Me" })).toBeInTheDocument();
+    expect(screen.getByText("Created by my research agent and me.")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "How a page gets here" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Draw a Subgraph" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Tours" })).toBeNull(); // the menu lives in the app header
+    expect(screen.getByRole("combobox", { name: "Pick a concept" })).toHaveValue("The hub");
+    expect(screen.getByRole("heading", { name: "Knowledge pipeline for one source the concept relies on" })).toBeInTheDocument();
+    expect(await screen.findByText("PDF · 32 pages · 1.4 MB")).toBeInTheDocument();
+    expect(screen.getByText("added 2026-10-22")).toBeInTheDocument();
+    expect(getRawCard).toHaveBeenCalledWith(expect.stringMatching(/^p\d$/), expect.stringMatching(/^raw\/printed-docs\/p\d\.pdf$/));
+    const full = screen.getByRole("link", { name: /full graph/i });
+    expect(full.getAttribute("href")).toMatch(/^\/app\/graph\?pages=/);
+    await userEvent.click(full);
+    expect(host.openGraph).toHaveBeenCalledWith(expect.objectContaining({ focus: "hub" }));
   });
 
-  it("only draws titles that fit whole", () => {
-    const long = node("long", { type: "question", status: "open", title: "x".repeat(TITLE_MAX + 1) });
-    const v = indexVault([long, ...papers], papers.map((p) => ({ source: p.id, target: "long" })));
-    for (let seed = 1; seed < 20; seed++) {
-      expect(drawConcept(v, seed)?.id).not.toBe("long");
-      expect(drawSubgraph(v, [], seed)?.title.length ?? 0).toBeLessThanOrEqual(TITLE_MAX);
-    }
+  it("the combobox lists concepts only and picks with the keyboard", async () => {
+    const setConcept = vi.fn();
+    wrap(mockDataSource({ getGraph: async () => snapshot, getPage, getRawCard: async () => rawCard }), <HomeScreen host={{ ...host, setConcept }} concept="hub" />);
+    const box = await screen.findByRole("combobox", { name: "Pick a concept" });
+    await userEvent.clear(box);
+    await userEvent.type(box, "why");
+    expect(screen.getAllByRole("option").map((o) => o.textContent)).toEqual([expect.stringContaining("Why?")]);
+    await userEvent.keyboard("{Enter}");
+    expect(setConcept).toHaveBeenCalledWith("q-x");
   });
 
-  it("rerolls a random card on demand", async () => {
-    wrap(mockDataSource({ getGraph: async () => snapshot, getPage }), <HomeScreen host={host} />);
-    const again = await screen.findAllByRole("button", { name: /another/i });
-    expect(again.length).toBeGreaterThan(0);
-    await userEvent.click(again[0]!);
-    expect(screen.getAllByRole("link", { name: /open in full graph/i }).length).toBeGreaterThan(0);
+  it("the shuffle picks a concept and puts it in the URL", async () => {
+    const setConcept = vi.fn();
+    wrap(mockDataSource({ getGraph: async () => snapshot, getPage, getRawCard: async () => rawCard }), <HomeScreen host={{ ...host, setConcept }} />);
+    await userEvent.click(await screen.findByRole("button", { name: /pick a concept/i }));
+    expect(["hub", "q-x"]).toContain(setConcept.mock.calls.at(-1)?.[0]);
   });
 
-  it("shows the intro, both draws, and a concept with its excerpt, neighbours and links", async () => {
-    wrap(mockDataSource({ getGraph: async () => snapshot, getPage }), <HomeScreen host={host} />);
-    expect(await screen.findByRole("heading", { name: "Draw a Subgraph" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Draw a Concept" })).toBeInTheDocument();
-    expect(screen.getByText("Concept")).toBeInTheDocument();
-    expect(await screen.findByText(/^Opening of (q-x|hub)\.$/)).toBeInTheDocument();
-    expect(screen.queryByText("secret")).not.toBeInTheDocument();
-    expect(screen.getAllByText("Linked with").length).toBeGreaterThan(0);
-    const read = screen.getAllByRole("link", { name: /read/i })[0]!;
-    expect(read.getAttribute("href")).toMatch(/^\/app\/pages\//);
+  it("falls back to facts when the raw card is not shared", async () => {
+    wrap(mockDataSource({ getGraph: async () => snapshot, getPage, getRawCard: async () => Promise.reject(new ApiError("not available in the shared view", 404)) }), <HomeScreen host={host} concept="hub" />);
+    expect(await screen.findByText("raw/printed-docs")).toBeInTheDocument();
+    expect(screen.getByText("immutable")).toBeInTheDocument();
+  });
+
+  it("resolves the URL concept only when it is pickable", () => {
+    const v = indexVault(snapshot.nodes as never, snapshot.links as never);
+    expect(resolveConcept(v, "q-x", 1, false)).toBe("q-x");
+    expect(["hub", "q-x"]).toContain(resolveConcept(v, "p0", 1, false));
+    expect(matchConcepts(snapshot.nodes as never, "p").every((n) => n.layer !== "source")).toBe(true);
   });
 });

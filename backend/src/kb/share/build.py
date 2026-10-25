@@ -87,6 +87,7 @@ VERSIONS_ENV = "KB_SHARE_VERSIONS"
 # The real repo (the one `git archive` read from): the inner build runs read-only history commands
 # there, at the content sha, for the Digestion and Lifecycle tabs. Unset → those tabs are omitted.
 GIT_ROOT_ENV = "KB_SHARE_GIT_ROOT"
+RAW_ROOT_ENV = "KB_SHARE_RAW_ROOT"
 LIFECYCLE_LIMIT = 150          # timeline rows, as the dashboard's default
 LIFECYCLE_WINDOW_DAYS = 30     # stats.ops_30d, counted back from the content commit date
 
@@ -1032,6 +1033,25 @@ def app_page(template, data, manifest_fields):
     return page.replace("</head>", _DATA_TAG % embed_json(blob) + "</head>", 1)
 
 
+def raw_paths_of(nodes):
+    """{source slug: its first raw/... file} from the graph nodes' `raw` property."""
+    out = {}
+    for n in nodes:
+        raw = (n.get("properties") or {}).get("raw") or ""
+        first = next((r.strip() for r in str(raw).replace("[", "").replace("]", "").split(",") if r.strip().startswith("raw/")), None)
+        if first:
+            out[n["id"]] = first
+    return out
+
+
+def bake_raw_cards(data, raw_of, profile):
+    """Home pipeline cards for the kept sources (kb.services.raw_card), read from the real working tree:
+    raw PDFs are not tracked, so the content checkout has none. Public: the privacy column, no file names."""
+    from kb.services.raw_card import bake_cards
+    root = os.environ.get(RAW_ROOT_ENV) or os.environ.get("KB_ROOT", ".")
+    return bake_cards(data["graph"]["nodes"], raw_of, root, public=profile != "private")
+
+
 def inner_build_app(args):
     """Inside the viewer checkout, KB_ROOT = content: the same data as the legacy build, in the app's page."""
     meta_dir = Path(__file__).resolve().parents[1]
@@ -1043,9 +1063,11 @@ def inner_build_app(args):
     if args.profile == "private" and git_root and os.path.isdir(git_root):
         data["lifecycle"] = collect_lifecycle(meta_dir, args.built_at, git_root, args.content_sha,
                                               os.environ.get("KB_ROOT", "."), args.content_ref)
+    raw_of = raw_paths_of(data["graph"]["nodes"])             # before the public cut drops `raw`
     data = apply_profile(data, args.profile, _scope_arg(args))      # the one place the public cuts live
     data, dropped = apply_predicate(data, args.predicate)          # --predicate public: the Map view's pages only
     data = apply_home(data, load_home(), view=args.view)   # Home cards + tour from share.toml `[home]`, --view
+    data["rawCards"] = bake_raw_cards(data, raw_of, args.profile)
     page = app_page(Path(args.app_index).read_text(encoding="utf-8"), data, fields)
     out = Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)
@@ -1259,6 +1281,7 @@ def build(content_ref, viewer_ref="main", profile="private", *, root=REPO, viewe
             env["PYTHONPATH"] = os.path.join(viewer_dir, "backend", "src")
         env.pop(VERSIONS_ENV, None)
         env.pop(GIT_ROOT_ENV, None)
+        env[RAW_ROOT_ENV] = str(root)        # Home raw cards read raw/ from the working tree (both profiles)
         if profile == "private":
             env[GIT_ROOT_ENV] = str(root)
             vfile = os.path.join(tmp, "versions.json")

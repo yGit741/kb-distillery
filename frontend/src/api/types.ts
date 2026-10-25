@@ -33,6 +33,7 @@ export type PathResult = S["PathResult"];
 export type CorpusTable = S["CorpusTable"];
 export type CorpusRow = S["CorpusRow"];
 export type RawPreview = S["RawPreview"];
+export type RawCard = S["RawCard"];
 export type DigestResult = S["DigestResult"];
 export type CitationGraph = S["CitationGraph"];
 export type PipelineSnapshot = S["PipelineSnapshot"];

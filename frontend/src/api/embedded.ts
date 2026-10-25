@@ -33,6 +33,9 @@ export function createEmbeddedDataSource(blob: ShareBlob | undefined = globalThi
     getPipeline: absent,
     getCorpus: absent,
     getRawPreview: absent,
+    getRawCard: absent,
+    rawThumbUrl: () => null,
+    rawFileUrl: () => null,
     digestRaw: absent,
     listScopes: absent,
     getScope: absent,
@@ -79,5 +82,10 @@ export function createEmbeddedDataSource(blob: ShareBlob | undefined = globalThi
       return { ...l, policy: { ...l.policy, hooks_installed: l.policy?.hooks_installed ?? false } };
     },
     getShareStatus: async () => ({ status: null, chip: null }),
+    getRawCard: async (slug) => {
+      const card = data.rawCards?.[slug];
+      if (!card) throw new ApiError(NOT_SHARED, 404);
+      return card;
+    },
   };
 }
