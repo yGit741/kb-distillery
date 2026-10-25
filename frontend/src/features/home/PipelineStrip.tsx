@@ -278,6 +278,9 @@ function SourceStage({ source, onRead }: { source: GNode; onRead: (slug: string)
 function ConceptsStage({ vault, source, concept, onPick }: { vault: Vault; source: string; concept: string; onPick: (id: string) => void }) {
   const fed = conceptsFed(vault, source, concept);
   const shown = fed.slice(0, FED_MAX);
+  // a topic and an idea can share a title: name the type next to any title that repeats
+  const titles = shown.map((id) => (vault.byId.get(id)!.title || id).toLowerCase());
+  const repeats = (id: string) => titles.filter((t) => t === (vault.byId.get(id)!.title || id).toLowerCase()).length > 1;
   return (
     <Stage title="Concepts it feeds" dots={<ConceptDots />}>
       <ul className="flex flex-col gap-1">
@@ -289,6 +292,8 @@ function ConceptsStage({ vault, source, concept, onPick }: { vault: Vault; sourc
               <button
                 type="button"
                 onClick={() => onPick(id)}
+                title={`${n.type}: ${n.title || id}`}
+                aria-label={`Pick ${n.type} ${n.title || id}`}
                 aria-current={hit || undefined}
                 className={cn(
                   "inline-flex max-w-full items-center gap-1.5 rounded-md border bg-card px-2 py-0.5 text-xs hover:border-primary",
@@ -297,6 +302,7 @@ function ConceptsStage({ vault, source, concept, onPick }: { vault: Vault; sourc
               >
                 <Dot color={typeColor(n.type)} />
                 <span className="truncate">{n.title || id}</span>
+                {repeats(id) && <span className="shrink-0 text-[10px] text-muted-foreground">{n.type}</span>}
               </button>
             </li>
           );
