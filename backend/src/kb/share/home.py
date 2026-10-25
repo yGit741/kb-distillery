@@ -4,7 +4,7 @@ makes to every public page.
 Home cards and the guided tour are set per build in `share.toml`:
 
     [home]
-    tour = "kalai"            # a tour id from frontend/src/app/tour/tours.ts, or omit for none
+    tour = "thesis-story"     # a tour name from frontend/src/features/home/tours.ts, or omit for none
     [[home.cards]]
     title = "Boolean analysis"
     pages = ["theme-boolean-analysis", "fourier-analysis-of-boolean-functions"]

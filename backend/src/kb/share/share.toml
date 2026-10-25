@@ -12,3 +12,8 @@ allowed_emails = ["ygreenshpan@gmail.com"]
 
 [worker]
 compatibility_date = "2026-09-01"
+
+# Home of a share build: the tour offered on the first visit (a name from frontend/src/features/home/tours.ts;
+# first-visit, thesis-story or boolean-bridge) and optional [[home.cards]] (see kb/share/home.py).
+[home]
+tour = "thesis-story"
