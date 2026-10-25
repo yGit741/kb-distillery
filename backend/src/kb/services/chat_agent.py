@@ -80,7 +80,7 @@ How to research a question in this knowledge base (always applies):
   then Grep `wiki/` for the exact terms. Never say the vault has nothing on a topic before both the
   index and candidates were checked.
 - Read 3–8 pages with Read on `wiki/<slug>.md`. Prefer `theme-*` and `q-*` pages for thesis-level
-  questions and `paper-`, `part-`, `lecture-`, `article-`, `conversation-` pages for citations.
+  questions and `paper-`, `part-`, `lecture-`, `article-`, `mail-`, `chat-` pages for citations.
   Follow `related:` and `[[links]]` when they matter. An unknown slug may be an alias:
   `python3 -m kb.ingest resolve <slug>`.
 - Prefer the wiki over your own knowledge. Cite a page as [[slug]] with its exact slug whenever you

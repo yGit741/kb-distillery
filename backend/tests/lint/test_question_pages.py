@@ -107,7 +107,7 @@ class QuestionTitleMigration(unittest.TestCase):
 
     def test_produces_the_current_schema(self):
         from kb.core.schema import SCHEMA_VERSION
-        self.assertEqual(tuple(self.mod.PRODUCES), tuple(SCHEMA_VERSION))
+        self.assertLessEqual(tuple(self.mod.PRODUCES), tuple(SCHEMA_VERSION))   # later migrations may follow
 
 
 if __name__ == "__main__":

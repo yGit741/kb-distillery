@@ -320,7 +320,7 @@ def catalog_paper(inbox_rel, collection="", slug=None, title=None, year=None, ur
 
 
 def catalog_email(inbox_rel, collection="", **_kwargs):
-    """raw/inbox/mail-<dir>/ → raw/emails/<dir>/. A corpus row only — a `conversation-` page
+    """raw/inbox/mail-<dir>/ → raw/emails/<dir>/. A corpus row only — a `mail-` page
     is written if the thread is ever worth digesting."""
     inbox_rel = _check_inbox(inbox_rel)
     dir_name = os.path.basename(inbox_rel)[len(MAIL_DIR_PREFIX):]

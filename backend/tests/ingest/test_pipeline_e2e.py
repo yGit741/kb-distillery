@@ -9,7 +9,7 @@ writes only into the temp vault. Commits are off (`KB_OPS_DISABLE=1`), arXiv is 
 easy-digest summary lines — is replaced by the recorded files in `testdata/e2e/claims/`.
 
 Steps: catalog (paper, book, web clip, blog post, slide deck into a course, clip into a series,
-mail thread) → easy-digest (paper, article, series member, conversation) → full-digest begin →
+mail thread) → easy-digest (paper, article, series member, mail) → full-digest begin →
 extract → map → draft → finalize (paper, course row → lecture, book pages → part) → lint →
 coherence status → graph / explore / digestion / corpus builders → share data + a public build.
 
@@ -300,7 +300,7 @@ class PipelineE2E(unittest.TestCase):
                      "article-tblog-post-one", "lecture-tml-slides-intro", "video-tiny-talk"):
             self.assertIn(f"wiki/{slug}.md", self.files, slug)
         self.assertTrue(any(k.startswith("wiki/part-2020-tiny-book") for k in self.files))
-        self.assertTrue(any(k.startswith("wiki/conversation-") for k in self.files))
+        self.assertTrue(any(k.startswith("wiki/mail-") for k in self.files))
         self.assertTrue(any(k.startswith("wiki/blog-") for k in self.files))
         self.assertIn("wiki/book-2020-tiny-book.md", self.files)
         self.assertTrue(self.outputs["share_html_ok"])

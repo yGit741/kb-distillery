@@ -25,6 +25,8 @@ OLD_TYPES = {"paper", "part", "lecture", "article", "video", "conversation", "ai
              "distilled-think", "scope"}
 OLD_DISPOSITIONS = {"queued", "digested", "partial", "skip", "sidecar"}
 OLD_DEPTHS = {"catalog", "easy", "full", "deep"}
+# Types renamed after 1.0 (the spec map is the frozen 1.0 artifact): 0010_mail_type.
+RENAMED_SINCE = {"conversation": "mail"}
 
 
 def load_migration():
@@ -41,10 +43,11 @@ class SpecMapTotality(unittest.TestCase):
 
     def test_every_old_and_new_type_is_mapped_to_its_schema_layer(self):
         self.assertTrue(OLD_TYPES <= set(self.spec["types"]))
-        self.assertTrue(set(schema.TYPE_STATUS) <= set(self.spec["types"]))      # re-runs map new names too
+        self.assertTrue(set(schema.TYPE_STATUS) <= {RENAMED_SINCE.get(t, t) for t in self.spec["types"]})
         for old, m in self.spec["types"].items():
-            self.assertIn(m["type"], schema.TYPE_STATUS, old)
-            self.assertEqual(m["layer"], schema.LAYER_OF[m["type"]], old)
+            now = RENAMED_SINCE.get(m["type"], m["type"])
+            self.assertIn(now, schema.TYPE_STATUS, old)
+            self.assertEqual(m["layer"], schema.LAYER_OF[now], old)
         self.assertEqual(self.spec["types"]["theme"]["type"], "topic")
         self.assertEqual(self.spec["types"]["concept"]["type"], "idea")
 
@@ -61,6 +64,8 @@ class SpecMapTotality(unittest.TestCase):
         self.assertEqual(self.spec["prefixes"]["topic"], "theme-")
         self.assertEqual(self.spec["prefixes"]["idea"], "")
         for t, p in self.spec["prefixes"].items():
+            if t in RENAMED_SINCE:
+                continue
             self.assertEqual(schema.SLUG_PREFIX.get(t, ""), p, t)
 
     def test_layers_partition_the_types(self):

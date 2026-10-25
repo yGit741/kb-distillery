@@ -14,7 +14,7 @@ description: Catalog a Gemini-style chat export .md from inbox to raw/llm-chats/
 
 ## Do NOT
 
-- Digest — use easy/full/deep digest skills after catalog (a digested chat is a `conversation-` page)
+- Digest — use easy/full/deep digest skills after catalog (a digested chat is an `ai-chat` `chat-` page)
 - Re-title a page that already digests this raw file — only the `raw:` field is rewritten
 - Create a wiki stub — chats stay corpus rows until something is digested from them
 

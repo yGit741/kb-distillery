@@ -16,7 +16,7 @@ export const TYPE_COLORS: Record<PageType, string> = {
   lecture: "#ffc777",
   article: "#4fd6be",
   video: "#f7768e",
-  conversation: "#73daca",
+  mail: "#73daca",
   "ai-chat": "#ff9e64",
   "blog-post": "#ff79c6",
   // collection

@@ -65,7 +65,7 @@ class SlugTest(unittest.TestCase):
         u = schema.unit_slug_for_raw
         self.assertEqual(u("raw/printed-docs/2023-toolformer.pdf"), "paper-2023-toolformer")
         self.assertEqual(u("raw/presentations/rl-lecture-01-intro.pdf"), "lecture-rl-01-intro")
-        self.assertEqual(u("raw/emails/2020-11-08-re/thread.md"), "conversation-2020-11-08-re")
+        self.assertEqual(u("raw/emails/2020-11-08-re/thread.md"), "mail-2020-11-08-re")
         self.assertEqual(u("raw/web-clips/2017-rowspace.md"), "article-2017-rowspace")
 
     def test_member_name_is_unique_and_kebab(self):

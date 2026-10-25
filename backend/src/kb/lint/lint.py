@@ -490,7 +490,9 @@ def check_wiki():
             if re.match(PLACEHOLDER_TITLE, str(fm.get("title") or "")) or re.match(PLACEHOLDER_TITLE, h1):
                 err(rel, "ai-chat needs an informative title, not a clipper placeholder")
             conv = str(fm.get("conversation") or "")
-            if not conv or not os.path.isfile(os.path.join(ROOT, CHATS_DIR, conv + ".json")):
+            if not conv and str(fm.get("legacy")).lower() == "true":
+                pass    # hand-digested before chat trees (schema 1.2 migration); body is the digest
+            elif not conv or not os.path.isfile(os.path.join(ROOT, CHATS_DIR, conv + ".json")):
                 err(rel, f"ai-chat conversation: {conv or '(missing)'} has no tree in {CHATS_DIR}/")
         if t == "distilled-think":
             src = str(fm.get("source") or "")
@@ -1217,7 +1219,7 @@ def collect_snapshot(quiet=False):
     snapshot["values"]["to_read_stubs"] = sum(
         1 for _rel, fm, _t in pages.values()
         if fm.get("depth") == "listed"
-        and fm.get("type") in ("paper", "part", "lecture", "article", "video", "conversation",
+        and fm.get("type") in ("paper", "part", "lecture", "article", "video", "mail",
                                "ai-chat", "blog-post"))
     return snapshot
 
@@ -1269,7 +1271,7 @@ SECTIONS = [("topic", "Topics"), ("idea", "Ideas"), ("question", "Open questions
             ("course", "Courses"), ("series", "Series"), ("book", "Books"),
             ("notebook", "Notebooks"), ("paper", "Papers"), ("part", "Book parts"),
             ("lecture", "Lectures"), ("article", "Articles"), ("blog-post", "Blog posts"),
-            ("video", "Videos"), ("ai-chat", "AI chats"), ("conversation", "Conversations"),
+            ("video", "Videos"), ("ai-chat", "AI chats"), ("mail", "Mail"),
             ("person", "People"),
             ("scope", "Scopes"),
             ("distilled-think", "Distilled thinking (review)")]
