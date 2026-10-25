@@ -98,6 +98,23 @@ export function buildGraphData(
   return { nodes, links: links.map((l) => ({ ...l })) };
 }
 
+/**
+ * How strongly two pages are tied, keyed "a\0b" with a < b: one per wikilink, related or book link in either
+ * direction, plus the shared-source count of a concept link. Orders a clicked page's neighbours stably.
+ */
+export function edgeWeights(model: Pick<GraphModel, "links" | "conceptLinks">): ReadonlyMap<string, number> {
+  const out = new Map<string, number>();
+  const add = (a: string, b: string, w: number) => {
+    const k = a < b ? `${a}\0${b}` : `${b}\0${a}`;
+    out.set(k, (out.get(k) ?? 0) + w);
+  };
+  for (const l of model.links) if (l.kind === "wikilink" || l.kind === "related" || l.kind === "book") add(l.source, l.target, 1);
+  for (const c of model.conceptLinks) add(c.source, c.target, c.shared);
+  return out;
+}
+
+export const edgeWeight = (w: ReadonlyMap<string, number>, a: string, b: string): number => w.get(a < b ? `${a}\0${b}` : `${b}\0${a}`) ?? 0;
+
 /** Pages reached from `ids` in one step, together with `ids` themselves (the "+ neighbours" of a view). */
 export function withNeighbors(ids: Iterable<string>, neighbors: NeighborMap): Set<string> {
   const out = new Set<string>();

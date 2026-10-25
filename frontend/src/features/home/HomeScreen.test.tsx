@@ -5,7 +5,9 @@ import type { ReactNode } from "react";
 import { ApiError, DataSourceProvider, type DataSource, type GraphSnapshot } from "@/api";
 import { mockDataSource } from "@/test/datasource";
 import { node } from "@/features/graph/fixtures";
-import { drawConcept, drawSubgraph, HomeScreen, TITLE_MAX, type HomeHost } from "./HomeScreen";
+import { markSeen, registerTour } from "@/features/tour/tours";
+import { drawConcept, drawSubgraph, HomeScreen, TITLE_MAX, ToursMenu, type HomeHost } from "./HomeScreen";
+import "./tours";
 import { indexVault } from "./samplers";
 
 // jsdom has no canvas: stand in for force-graph with a chainable no-op instance.
@@ -44,6 +46,30 @@ function wrap(ds: DataSource, ui: ReactNode) {
     </DataSourceProvider>,
   );
 }
+
+describe("Tours menu", () => {
+  afterEach(() => {
+    document.querySelector<HTMLButtonElement>(".gt-dock .gt-skip")?.click(); // end a running tour
+    localStorage.clear();
+  });
+
+  it("lists the three journeys with summaries, ticks seen ones and starts one", async () => {
+    registerTour("menu-demo", [{ target: "body", title: "t", body: "b" }], "A demo line");
+    markSeen("first-visit");
+    render(<ToursMenu />);
+    await userEvent.click(screen.getByRole("button", { name: "Tours" }));
+    const items = screen.getAllByRole("menuitem");
+    const names = items.map((i) => i.textContent);
+    for (const n of ["first-visit", "thesis-story", "boolean-bridge"]) expect(names.some((t) => t?.includes(n))).toBe(true);
+    expect(screen.getByText("Why over-parameterized networks generalize — the question I am chasing")).toBeInTheDocument();
+    const first = items.find((i) => i.textContent?.includes("first-visit"))!;
+    expect(within(first).getByLabelText("seen")).toBeInTheDocument();
+    expect(within(items.find((i) => i.textContent?.includes("thesis-story"))!).queryByLabelText("seen")).toBeNull();
+    await userEvent.click(items.find((i) => i.textContent?.includes("A demo line"))!);
+    expect(screen.queryByRole("menu")).toBeNull();
+    expect(document.querySelector('.gt-dock[aria-label="Guided tour"]')).not.toBeNull();
+  });
+});
 
 describe("Home screen", () => {
   it("shows a loading state", () => {

@@ -47,6 +47,8 @@ ACCOUNT_SUBDOMAIN = "yonatan-magen-thesis"
 SNAPSHOT_PREFIX = "snapshot-"
 DEPLOY_MESSAGE_PREFIX = "kb-share"
 WRANGLER_VERSION = "4.151.3"
+# Last known-good pin, kept for a quick rollback of the CLI itself (`versions upload/deploy` exist there too).
+WRANGLER_PREVIOUS = "4.149.0"
 
 LOG_PATH = Path.home() / "Library" / "Logs" / "thesis-kb-share.log"
 CACHE_DIR = REPO / ".cache" / "share"
@@ -74,12 +76,18 @@ class Manifest:
     # Left out of the JSON when unscoped, so existing manifests stay byte-identical.
     scope: Optional[str] = None
     hops: Optional[int] = None
+    # `share snapshot … --predicate public`: the page rule applied after the public profile
+    # (kb.share.predicate) and how many pages it dropped; `--view <id>`: the graph view the app opens on.
+    # Left out of the JSON when unset.
+    predicate: Optional[str] = None
+    dropped: Optional[int] = None
+    view: Optional[str] = None
 
     def to_json(self) -> str:
         d = asdict(self)
         if d["layout"] == "legacy":
             del d["layout"]
-        for k in ("scope", "hops"):
+        for k in ("scope", "hops", "predicate", "dropped", "view"):
             if d[k] is None:
                 del d[k]
         return json.dumps(d, sort_keys=True, indent=2) + "\n"

@@ -128,6 +128,31 @@ function mergesTile(ops: OpsLike | undefined): Pick<Tile, "value" | "hint" | "to
   };
 }
 
+/** Hygiene finding kinds produced by the backend staleness rules (staleness.KINDS) — keep the two lists in step. */
+export const STALE_KINDS = ["idle-branch", "missing-worktree", "detached-worktree", "idle-pr"];
+
+/** Short name of a stale finding for the tile hint: the branch / PR / path its detail starts with. */
+function staleName(f: Finding): string {
+  const d = f.detail ?? "";
+  const pr = /^PR #(\d+)/.exec(d);
+  if (pr) return `#${pr[1]}`;
+  const head = d.split(/[: ]/)[0] ?? "";
+  return head.split("/").slice(-2).join("/") || (f.kind ?? "?");
+}
+
+/**
+ * The Stale work tile counts the staleness findings of the ops snapshot's hygiene run (the same rules as
+ * `ship status` and `ship prune --stale`): none is ok, any is warn, and the hint names the first three.
+ */
+function staleTile(ops: OpsLike | undefined): Pick<Tile, "value" | "hint" | "tone"> {
+  const hy = ops?.hygiene;
+  if (!hy) return { value: "…", hint: "", tone: "" };
+  const items = (hy.findings ?? []).filter((f) => STALE_KINDS.includes(f.kind ?? ""));
+  if (!items.length) return { value: "none", hint: "no idle branches, worktrees or PRs", tone: "ok" };
+  const top = items.slice(0, 3).map(staleName).join(", ");
+  return { value: String(items.length), hint: items.length > 3 ? `${top}, …` : top, tone: "warn" };
+}
+
 export interface OpsLike {
   queue?: QueueLike | null;
   threads?: Thread[];
@@ -145,7 +170,7 @@ const num = (v: unknown) => (typeof v === "number" ? v : Number(v) || 0);
 const tone = (s?: string): Tone => (s === "ok" || s === "warn" || s === "bad" ? s : s === "error" ? "bad" : "");
 const plural = (n: number, w: string) => `${n} ${w}${n === 1 ? "" : "s"}`;
 
-/** Seven tiles; a tile whose snapshot has not arrived yet shows "…". */
+/** Eight tiles; a tile whose snapshot has not arrived yet shows "…". */
 export function tiles(lc?: LifecycleLike, ops?: OpsLike, health?: HealthLike): Tile[] {
   const threads = ops?.threads ?? [];
   const stale = threads.filter((t) => t.status === "warn" || t.status === "bad").length;
@@ -205,6 +230,12 @@ export function tiles(lc?: LifecycleLike, ops?: OpsLike, health?: HealthLike): T
       id: "merges",
       label: "Merges",
       ...mergesTile(ops),
+      tab: "overview",
+    },
+    {
+      id: "stale",
+      label: "Stale work",
+      ...staleTile(ops),
       tab: "overview",
     },
   ];
