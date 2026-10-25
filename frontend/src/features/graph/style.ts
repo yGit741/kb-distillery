@@ -16,7 +16,6 @@ export const COLOR_BY: readonly { id: ColorBy; label: string }[] = [
   { id: "status", label: "Status" },
   { id: "area", label: "Primary area" },
   { id: "degree", label: "Link count" },
-  { id: "evidence", label: "Evidence (digested sources)" },
   { id: "score", label: "Importance score" },
   { id: "none", label: "One colour" },
 ];
