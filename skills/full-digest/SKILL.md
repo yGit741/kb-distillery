@@ -40,7 +40,7 @@ python3 -m kb.ingest abort <sha>
 2. Write `claims.json` with real LaTeX equations, results, ideas.
 3. Set `person` when the raw file's corpus `collection` names a person page (researcher bibliography).
 4. Re-run `extract` to validate.
-5. `map` → `draft` → review `staging/` → `finalize`.
+5. `map` → `draft` → review `staging/` → `finalize`. Each new `q-` stub in `staging/` needs a short H1 (≤ 80 chars, the question's name) and its formal statement under `## Question` — fill it before `finalize`.
 
 ## Books (≥60 pages)
 

@@ -32,7 +32,7 @@ Read this first on any query.
 
 | Page | Status | Summary |
 |------|--------|---------|
-| [[q-does-rank-explain-generalization]] | open | It would connect [[tensor-rank]] to [[theme-learning-theory]] |
+| [[q-does-rank-explain-generalization]] | open | Does a low-rank bias explain why big networks generalize? |
 
 ## Courses
 

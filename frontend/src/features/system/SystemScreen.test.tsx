@@ -44,6 +44,14 @@ describe("System screen", () => {
     expect(await screen.findByText("kb(digest): ramsey numbers (kb-1.0.9)")).toBeInTheDocument();
   });
 
+  it("tiles carry stable test ids for the integrator's data checks", async () => {
+    open("/system");
+    await waitFor(() => expect(screen.getByTestId("tile-lint-value")).toHaveTextContent("0 / 3"));
+    expect(screen.getByTestId("tile-version-value")).toHaveTextContent("kb-1.0.9");
+    expect(screen.getByTestId("tile-lint")).toHaveAttribute("data-tone", "warn");
+    for (const id of ["nightly", "merges", "stale", "hygiene", "backlog", "work"]) expect(screen.getByTestId(`tile-${id}-value`)).toBeInTheDocument();
+  });
+
   it("a tile opens its tab and the tab lives in the URL", async () => {
     const router = open("/system");
     await userEvent.click(await screen.findByRole("button", { name: /^lint/i }));

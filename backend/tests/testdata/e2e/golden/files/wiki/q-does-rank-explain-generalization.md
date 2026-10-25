@@ -9,7 +9,9 @@ discussed_with: []
 
 # Does rank explain generalization?
 
-**Question:** Does a low-rank bias explain why big networks generalize?
+## Question
+
+Does a low-rank bias explain why big networks generalize?
 
 ## Why I care
 
