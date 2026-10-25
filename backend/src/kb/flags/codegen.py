@@ -3,7 +3,7 @@
     python -m kb.flags.codegen           # write the files
     python -m kb.flags.codegen --check   # exit 1 when any generated file is stale (web-check, ship lanes)
 
-Writes `frontend/src/flags/registry.gen.ts` (the typed `FlagName` union, metadata and a value per env) and
+Writes `share/flags.gen.js` (runtime flag names for the private Worker), `frontend/src/flags/registry.gen.ts` (the typed `FlagName` union, metadata and a value per env) and
 the share builds' route lists `frontend/src/routes/modules.share-{private,public}.ts`: the share core
 screens plus every `screen.<id>` build flag that is on in that env. vite.config.ts aliases
 `@/routes/modules` to one of them, so a screen whose flag is off is not in that bundle at all.
@@ -19,6 +19,7 @@ from kb.flags.registry import FLAGS_TOML, FlagError, Registry, load
 from kb.paths import ROOT
 
 GEN_TS = Path("frontend/src/flags/registry.gen.ts")
+GEN_WORKER = Path("share/flags.gen.js")   # the private Worker accepts overrides for these names only
 SHARE_ENVS = ("private", "public")
 # Always in every share build: the read-only site itself. Everything else is opt-in by a screen.* flag.
 SHARE_CORE_SCREENS = ("home", "graph", "pages")
@@ -58,8 +59,14 @@ def render_modules(reg: Registry, env: str) -> str:
             + f"export const modules = import.meta.glob<FeatureModule>([{files}], {{ eager: true }});\n")
 
 
+def render_worker(reg: Registry) -> str:
+    runtime = [f.name for f in reg.flags if f.kind == "runtime"]
+    return (HEADER + "/** Runtime flags: the only names PUT /api/flags/<name> on the private site accepts. */\n"
+            + f"export const RUNTIME_FLAGS = {json.dumps(runtime)};\n")
+
+
 def outputs(reg: Registry) -> dict[Path, str]:
-    out = {GEN_TS: render_registry(reg)}
+    out = {GEN_TS: render_registry(reg), GEN_WORKER: render_worker(reg)}
     out.update({modules_path(e): render_modules(reg, e) for e in SHARE_ENVS})
     return out
 

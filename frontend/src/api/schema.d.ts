@@ -210,6 +210,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/flags": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Flag registry + effective value per flag */
+        get: operations["get_flags_api_flags_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/flags/{name}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Set or clear a runtime flag override (owner token required) */
+        put: operations["put_flag_api_flags__name__put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/graph": {
         parameters: {
             query?: never;
@@ -865,6 +899,72 @@ export interface components {
             error: string;
             /** Formats */
             formats?: string[] | null;
+        } & {
+            [key: string]: unknown;
+        };
+        /** FlagEnvs */
+        FlagEnvs: {
+            /** Local */
+            local: boolean;
+            /** Private */
+            private: boolean;
+            /** Public */
+            public: boolean;
+        } & {
+            [key: string]: unknown;
+        };
+        /** FlagOverride */
+        FlagOverride: {
+            /** Value */
+            value: boolean | null;
+        };
+        /** FlagState */
+        FlagState: {
+            /** Created */
+            created: string;
+            /** Default */
+            default: boolean;
+            /** Description */
+            description: string;
+            envs: components["schemas"]["FlagEnvs"];
+            /** Expires */
+            expires: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "runtime" | "build";
+            /** Name */
+            name: string;
+            /** Overridden At */
+            overridden_at?: string | null;
+            /** Owner */
+            owner: string;
+            /** Registry Value */
+            registry_value: boolean;
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "registry" | "override";
+            /** Value */
+            value: boolean;
+        } & {
+            [key: string]: unknown;
+        };
+        /** FlagsSnapshot */
+        FlagsSnapshot: {
+            /**
+             * Env
+             * @enum {string}
+             */
+            env: "local" | "private" | "public";
+            /** Flags */
+            flags: components["schemas"]["FlagState"][];
+            /** Overrides */
+            overrides: {
+                [key: string]: boolean;
+            };
         } & {
             [key: string]: unknown;
         };
@@ -2445,6 +2545,63 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_flags_api_flags_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FlagsSnapshot"];
+                };
+            };
+        };
+    };
+    put_flag_api_flags__name__put: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-kb-owner-token"?: string | null;
+            };
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FlagOverride"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FlagsSnapshot"];
                 };
             };
             /** @description Validation Error */
