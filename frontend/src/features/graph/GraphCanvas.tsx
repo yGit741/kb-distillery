@@ -309,19 +309,35 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
     recompute();
   }, [recompute, theme, visible, selection, byId, neighbors, ui.highlight, ui.lab, ui.typeLabels, ui.spotlight, ui.colorBy, ui.shapes, ui.linkOpacity, radiusOpts, layered, imp]);
 
-  // a changed set of pages is refitted once the layout settles (or after a moment if it never reports it)
+  // a changed set of pages is framed after a moment and framed again once the layout settles: at the moment the
+  // pages may still be drifting from their old places, and a single early fit left a view (Thesis) in a corner.
+  // Panning or zooming in between cancels the settled fit, so it never takes the view away from the user.
   useEffect(() => {
     pendingFit.current = true;
     const t = window.setTimeout(() => {
-      if (!pendingFit.current) return;
-      pendingFit.current = false;
-      fitRef.current();
+      if (pendingFit.current) fitRef.current();
     }, 1600);
     return () => window.clearTimeout(t);
   }, [ui.shownTypes, ui.shownDepths, ui.view]);
+  useEffect(() => {
+    const el = wrap.current;
+    if (!el) return;
+    const mine = () => (pendingFit.current = false);
+    el.addEventListener("wheel", mine, { passive: true });
+    el.addEventListener("pointerdown", mine);
+    return () => {
+      el.removeEventListener("wheel", mine);
+      el.removeEventListener("pointerdown", mine);
+    };
+  }, []);
 
   // ---- fit (largest connected component: stray islands drift far out and would shrink everything)
   const fit = useCallback(() => {
+    // a canvas with no size yet (still laying out) would frame everything into its corner: try again shortly
+    if (!wrap.current?.clientWidth || !wrap.current.clientHeight) {
+      window.setTimeout(() => fitRef.current(), 200);
+      return;
+    }
     const core = largestComponent(live.current.visible, live.current.neighbors);
     fg.current?.fit(core.size > 1 ? (n) => core.has(n.id) || isPile(n) : undefined, 400);
     window.setTimeout(() => {
