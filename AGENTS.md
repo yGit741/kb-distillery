@@ -52,6 +52,7 @@ Map what the user says to a skill before acting; read that skill's `SKILL.md`, t
 | "share the KB / export for an LLM" (a zip of the text) | `export-kb` | zip |
 | "share / publish the site", "deploy main", "deploy status", "rollback the site", "snapshot the site", "list / remove snapshots", "audit", "time machine" | `share-kb` (Cloudflare; `pixi run share -- …`) | Worker version, `.cache/share/status.json` |
 | a multi-PR effort ("phase 2: E1–E3", several tooling PRs) | `infra-pr` with a round: `ship round open "<title>" --features a,b` → `ship start <f> --round R` per PR; read state with `ship round status R` | issue `#R` + PRs |
+| "integrate / verify the round / is it really done" | `integrator` (global skill `~/.claude/skills/integrator`, not in `skills/`; reads `.integrator.toml`: tests, build, every screen screenshotted, each tile vs its endpoint; deploy only by owner nudge) | report |
 | "create a skill / new workflow" | `create-skill` → `infra-pr` | PR |
 
 **Tooling or knowledge?** The target decides: files under `wiki/`, `raw/`, `think/` are knowledge (ops, straight to main); code, skills, dashboard, docs and config are tooling (PR). When one request touches both, ship the tooling PR first, then do the knowledge step on main. When the target is unclear, ask one short question.
