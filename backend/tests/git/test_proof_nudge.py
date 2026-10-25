@@ -41,9 +41,10 @@ class ProofNudgeTests(unittest.TestCase):
         self.assertNotIn("local URL", out["reason"])
         self.assertIsNone(self.decide(UI, reply=f"Proof: {LOCAL} {SITE}"))
 
-    def test_ui_screenshot_stands_in_for_deployed_not_local(self):
-        self.assertIsNone(self.decide(UI, reply=f"**Proof:** {LOCAL} shots/graph-after.png"))
-        self.assertIsNotNone(self.decide(UI, reply="Proof: shots/graph-after.png"))
+    def test_ui_screenshot_never_replaces_a_url(self):
+        self.assertIsNotNone(self.decide(UI, reply=f"**Proof:** {LOCAL} shots/graph-after.png"))
+        self.assertIsNotNone(self.decide(UI, reply=f"Proof: {SITE} shots/graph-after.png"))
+        self.assertIsNone(self.decide(UI, reply=f"**Proof:** {LOCAL} {SITE} shots/graph-after.png"))
 
     def test_knowledge_needs_page_and_version(self):
         w = ("Write", {"file_path": "wiki/tensor-rank.md"})
