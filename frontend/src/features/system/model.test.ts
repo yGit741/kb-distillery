@@ -22,9 +22,9 @@ const ops: OpsLike = {
 const health: HealthLike = { inbox_count: 4, values: { errors: 0, warnings: 194, queued: 385, partial_books: 2 }, statuses: { warnings: "warn" } };
 
 describe("system model", () => {
-  it("builds seven tiles, each from one snapshot, with a placeholder while loading", () => {
+  it("builds eight tiles, each from one snapshot, with a placeholder while loading", () => {
     const t = tiles(lc, ops, health);
-    expect(t.map((x) => x.id)).toEqual(["version", "work", "hygiene", "lint", "backlog", "nightly", "merges"]);
+    expect(t.map((x) => x.id)).toEqual(["version", "work", "hygiene", "lint", "backlog", "nightly", "merges", "stale"]);
     expect(t.find((x) => x.id === "merges")).toMatchObject({ value: "unknown", tone: "warn" });
     expect(t.find((x) => x.id === "version")).toMatchObject({ value: "kb-1.0.9", tone: "warn", tab: "history" });
     expect(t.find((x) => x.id === "work")).toMatchObject({ value: "2", hint: "1 need attention", tone: "warn" });
@@ -33,6 +33,20 @@ describe("system model", () => {
     expect(t.find((x) => x.id === "backlog")).toMatchObject({ value: "385", tab: "pipeline" });
     expect(t.find((x) => x.id === "nightly")).toMatchObject({ value: "warn", tone: "warn" });
     expect(tiles().every((x) => x.value === "…" && x.tone === "")).toBe(true);
+    expect(t.find((x) => x.id === "stale")).toMatchObject({ value: "none", tone: "ok" });
+  });
+
+  it("stale work tile counts staleness findings and names the first three", () => {
+    const f = (kind: string, detail: string) => ({ severity: "warn", kind, detail });
+    const findings = [
+      f("idle-branch", "infra/screen-home-ops: 3 commits not on main, no commit for 2.5 days, no open PR"),
+      f("idle-pr", "PR #12 feat(x): y (infra/x): no activity for 4.0 days"),
+      f("stale-worktree", "not a staleness kind"),
+      f("missing-worktree", ".claude/worktrees/gone is registered but gone from disk"),
+      f("detached-worktree", ".claude/worktrees/det is on no branch"),
+    ];
+    const t = tiles(lc, { ...ops, hygiene: { errors: 0, warnings: 5, findings } }, health).find((x) => x.id === "stale");
+    expect(t).toMatchObject({ value: "4", tone: "warn", hint: "infra/screen-home-ops, #12, worktrees/gone, …" });
   });
 
   it("merges kb steps, merges and nightly runs newest first", () => {

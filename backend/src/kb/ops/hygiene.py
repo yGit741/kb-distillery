@@ -27,7 +27,6 @@ from kb.report import sanitize
 BUDGET_SECONDS = 60.0
 CHECK_CAP_SECONDS = 25.0          # no single check may eat the whole budget
 SESSION_MAX_HOURS = 24
-PR_MAX_DAYS = 7
 SITE_MAX_HOURS = 24
 PRUNE_FIX = "pixi run ship -- prune --apply"
 SYNC_FIX = "pixi run daily-sync"
@@ -117,7 +116,7 @@ def _hours_since(when, now):
 # ---------- checks (each: (root, now) -> [Finding]) ----------
 
 def check_worktrees(root, now):
-    """(a) stale (merged / branch gone) and dirty worktrees under .claude/worktrees."""
+    """(a) merged, session and dirty worktrees under .claude/worktrees (missing / detached → check_stale)."""
     from kb.git.ship import _worktrees, stale_worktrees, worktree_dirty
 
     from .threads import fresh_branch
@@ -125,14 +124,8 @@ def check_worktrees(root, now):
     stale = {r["branch"]: r for r in stale_worktrees(root) if not r["current"]}
     for wt in _worktrees(root):
         path, branch = wt["path"], wt["branch"]
-        if not os.path.isdir(path):
-            out.append(Finding("warn", "missing-worktree", f"{path} is registered but gone from disk",
-                               "git worktree prune"))
-            continue
-        if not branch:
-            out.append(Finding("warn", "detached-worktree", f"{path} is on no branch (detached HEAD)",
-                               f"pixi run ship -- start <feature> inside {path}, or remove it"))
-            continue
+        if not os.path.isdir(path) or not branch:
+            continue                      # missing / detached: kb.git.staleness, reported by check_stale
         row = stale.get(branch)
         if row and row["merged"] and fresh_branch(root, branch) is not None:
             continue                      # just started: 0 ahead of main is not "merged", it is live work
@@ -186,12 +179,19 @@ def check_sessions(root, now, max_hours=SESSION_MAX_HOURS):
             for x in open_sessions(root, now) if (x["age_hours"] or 0) > max_hours]
 
 
-def check_prs(root, now, max_days=PR_MAX_DAYS):
-    """(e) open PRs older than a week (silently empty without gh / offline)."""
-    from kb.git.ship import open_prs
-    return [Finding("warn", "old-pr", f"PR #{p['number']} {p['branch']} open for {p['age']}: {p['title']}",
-                    f"pixi run ship -- merge   # in its worktree; or: pixi run ship -- prune --drop {p['branch']}")
-            for p in open_prs(root) if p.get("hours") is not None and p["hours"] >= max_days * 24]
+STALE_FIX = {
+    "idle-branch": "pixi run ship -- prune --stale   # dry run, then --apply: patch to _quarantine/, then removed",
+    "missing-worktree": "git worktree prune   # or: pixi run ship -- prune --stale --apply",
+    "detached-worktree": "pixi run ship -- start <feature> inside it, or: pixi run ship -- prune --stale --apply",
+    "idle-pr": "pixi run ship -- merge   # in its worktree; or close it on GitHub (never closed automatically)",
+}
+
+
+def check_stale(root, now):
+    """(e) stale work by the kb.git.staleness rules — idle branches (48 h, no PR), missing / detached
+    worktrees, open PRs idle for 3 days. The same rules as `ship status` and `ship prune --stale`."""
+    from kb.git import staleness
+    return [Finding("warn", i["kind"], i["detail"], STALE_FIX[i["kind"]]) for i in staleness.scan(root, now)]
 
 
 def check_site(root, now, status_path=None, max_hours=SITE_MAX_HOURS):
@@ -281,7 +281,7 @@ CHECKS = [
     ("branches", check_branches),
     ("main-sync", check_main_sync),
     ("sessions", check_sessions),
-    ("prs", check_prs),
+    ("stale", check_stale),
     ("site", check_site),
     ("snapshots", check_snapshots),
     ("other-lane", check_other_lane),

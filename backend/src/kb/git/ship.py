@@ -10,6 +10,7 @@
     python3 -m kb.git.ship status                         # pending changes grouped by lane
     python3 -m kb.git.ship prune [--apply]                # delete merged infra/* / worktree-* branches + their clean worktrees
     python3 -m kb.git.ship prune --drop <branch>          # delete one unmerged branch, patch saved to _quarantine/
+    python3 -m kb.git.ship prune --stale [--apply]        # idle unmerged work (48 h / 3 d rules) → _quarantine/ patch, then removed
 
 Hygiene is built into the commands that already run: `merge` removes its own worktree and
 local branch (and tags a post-migration snapshot after a schema PR), `status` reports stale
@@ -79,18 +80,22 @@ def print_status(lanes, root=ROOT):
     if line:
         print(line)
     prs = open_prs(root)
+    from kb.git import staleness
+    line = staleness.summary(staleness.scan(root, prs=prs))
+    if line:
+        print(line)
     if prs:
         print("open infra PRs: " + ", ".join(f"#{p['number']} {p['branch']} ({p['age']})" for p in prs)
               + " — pixi run ship -- merge (in its worktree) or prune --drop")
 
 
 def open_prs(root=ROOT):
-    """Open PRs on origin as [{number, branch, title, age, hours}] — empty when gh/network is unavailable
+    """Open PRs on origin as [{number, branch, title, age, hours, updated_hours}] — empty when gh/network is unavailable
     (`hours` is None when createdAt could not be parsed)."""
     import datetime
     try:
         cp = subprocess.run([os.environ.get("GH_BIN", "gh"), "pr", "list", "--state", "open",
-                             "--json", "number,headRefName,title,createdAt"],
+                             "--json", "number,headRefName,title,createdAt,updatedAt"],
                             cwd=root, capture_output=True, text=True, check=False, timeout=8)
         rows = json.loads(cp.stdout) if cp.returncode == 0 and cp.stdout.strip() else []
     except (OSError, ValueError, subprocess.TimeoutExpired):
@@ -104,8 +109,13 @@ def open_prs(root=ROOT):
             age = f"{hours // 24}d" if hours >= 48 else f"{hours}h"
         except ValueError:
             age, hours = "?", None
+        try:
+            updated = datetime.datetime.fromisoformat((r.get("updatedAt") or "").replace("Z", "+00:00"))
+            updated_hours = (now - updated).total_seconds() / 3600
+        except ValueError:
+            updated_hours = None
         out.append({"number": r.get("number"), "branch": r.get("headRefName", ""), "title": r.get("title", ""),
-                    "age": age, "hours": hours})
+                    "age": age, "hours": hours, "updated_hours": updated_hours})
     return out
 
 
@@ -1121,6 +1131,8 @@ def main(argv=None):
     pr_ = sub.add_parser("prune")
     pr_.add_argument("--apply", action="store_true", help="actually delete (default: dry run)")
     pr_.add_argument("--drop", metavar="BRANCH", help="delete one UNMERGED branch after saving it to _quarantine/")
+    pr_.add_argument("--stale", action="store_true",
+                     help="idle unmerged branches/worktrees (kb.git.staleness): patch to _quarantine/, then remove; lists idle PRs")
     qu = sub.add_parser("queue", help="show the merge queue (holder + waiters)")
     qu.add_argument("--drop", metavar="N", help="remove a dead/stale entry for PR N (or pid N)")
     ev = sub.add_parser("events", help="print PR N's kb-event lines (claimed, queued, checks, merged, deployed)")
@@ -1129,6 +1141,9 @@ def main(argv=None):
     args = p.parse_args(argv)
 
     if args.cmd == "prune":
+        if args.stale:
+            from kb.git import staleness
+            return staleness.cmd_prune_stale(apply=args.apply)
         return cmd_drop(args.drop) if args.drop else cmd_prune(args.apply)
     if args.cmd == "protect":
         return cmd_protect()
