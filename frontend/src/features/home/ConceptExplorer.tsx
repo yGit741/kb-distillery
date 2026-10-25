@@ -1,4 +1,5 @@
-import { Waypoints, Shuffle } from "lucide-react";
+import { Shuffle } from "lucide-react";
+import { FullGraphIcon } from "./FullGraphIcon";
 import { useId, useMemo, useState, type KeyboardEvent } from "react";
 import { findPages } from "@/features/graph/pageSearch";
 import { isPublic } from "@/features/graph/publicPredicate";
@@ -170,7 +171,7 @@ export function ConceptExplorer({
           }}
           className="inline-flex shrink-0 items-center gap-1.5 rounded-full px-2 py-1 text-sm font-semibold text-foreground hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
-          <Waypoints aria-hidden className="size-4" strokeWidth={2.4} />
+          <FullGraphIcon className="size-4 shrink-0" />
           <span>Open in Full Graph</span>
         </a>
       </div>
