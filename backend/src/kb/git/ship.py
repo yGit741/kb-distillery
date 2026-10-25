@@ -41,7 +41,7 @@ META_DIR = os.path.join(vault_root(), "meta")
 ROOT = vault_root()
 
 from kb.maintenance.daily_sync import changed_paths, has_open_sessions, run_git
-from kb.git import commit_policy, events
+from kb.git import commit_policy, events, rounds
 from kb.core.schema import GIT_POLICY_MODE, SCHEMA_VERSION
 
 GATES = [
@@ -49,7 +49,7 @@ GATES = [
     ("lint-skills", [sys.executable, "-m", "kb.lint.lint_skills"]),
     ("lint", [sys.executable, "-m", "kb.lint.lint"]),
 ]
-SUBCOMMANDS = {"events", "queue", "start", "commit", "pr", "merge", "sync", "status", "prune", "protect", "approve"}
+SUBCOMMANDS = {"events", "round", "queue", "start", "commit", "pr", "merge", "sync", "status", "prune", "protect", "approve"}
 GENERATED_FILES = {"index.md", "meta/corpus.tsv", "meta/coherence-warnings.tsv"}
 MIGRATED_GENERATED = {"meta/corpus.tsv"}   # a migration's output: committed by schema/paradigm commits
 FEATURE_RE = re.compile(r"^[a-z0-9][a-z0-9-]*$")
@@ -459,7 +459,7 @@ def link_pixi_env(root, worktree_path):
     print(f"import kb here: `pixi run python …` or `PYTHONPATH={worktree_path}/backend/src python3 …`")
 
 
-def cmd_start(feature, worktree=False, root=ROOT):
+def cmd_start(feature, worktree=False, root=ROOT, round_no=None):
     if not FEATURE_RE.match(feature):
         print("error: feature must be kebab-case, e.g. kb-ops")
         return 1
@@ -472,6 +472,7 @@ def cmd_start(feature, worktree=False, root=ROOT):
         print(_out(cp))
         if cp.returncode == 0:
             print(f"worktree ready: {path} on {branch}")
+            _link_round(branch, round_no, root)
             link_pixi_env(root, path)
             stale = [r for r in stale_worktrees(root) if r["merged"] and not r["dirty"] and not r["current"]]
             if stale:
@@ -484,10 +485,18 @@ def cmd_start(feature, worktree=False, root=ROOT):
     current = current_branch(root)
     if current == branch:
         print(f"already on {branch}")
+        _link_round(branch, round_no, root)
         return 0
     cp = run_git(["branch", "-m", branch], cwd=root)
     print(_out(cp) or f"renamed {current} → {branch}")
+    if cp.returncode == 0:
+        _link_round(branch, round_no, root)
     return cp.returncode
+
+
+def _link_round(branch, round_no, root):
+    if round_no and rounds.set_branch_round(branch, round_no, root):
+        print(f"round: #{round_no} (ship pr writes `Round: #{round_no}`; merged ticks it on the issue)")
 
 
 def cmd_commit(message, skip_tests=False, root=ROOT, gates=True):
@@ -563,8 +572,8 @@ def _schema_kind(subjects):
     return "paradigm" if "paradigm" in types else ("schema" if "schema" in types else None)
 
 
-def pr_body(subjects, notes="", skipped_checks=None):
-    lines = ["## Summary", ""] + [f"- {s}" for s in subjects] + [
+def pr_body(subjects, notes="", skipped_checks=None, round_no=None):
+    lines = ([f"Round: #{round_no}", ""] if round_no else []) + ["## Summary", ""] + [f"- {s}" for s in subjects] + [
         "", "## Gates", "", "- unit tests · lint-skills · lint (run by `pixi run ship -- pr`)"]
     kind = _schema_kind(subjects)
     if kind:
@@ -624,18 +633,19 @@ def cmd_pr(title=None, skip_tests=False, root=ROOT, gates=True, notes_file=None,
     if push.returncode != 0:
         return 1
     why = _hold_reason(subjects + [title], hold)
+    round_no = rounds.branch_round(branch, root)
     existing = gh(["pr", "view", branch, "--json", "number,url"], root)
     if existing.returncode == 0 and existing.stdout.strip():
         info = json.loads(existing.stdout)
         print(f"PR #{info['number']} already open: {info['url']} (pushed new commits)")
         if skip_checks:
-            gh(["pr", "edit", branch, "--body", pr_body(subjects, _read_notes(notes_file), skip_checks)], root)
+            gh(["pr", "edit", branch, "--body", pr_body(subjects, _read_notes(notes_file), skip_checks, round_no)], root)
         if why:
             gh(["pr", "edit", branch, "--add-label", HOLD_LABEL], root)
             print(f"held for the user: {why}")
         return 0
     args = ["pr", "create", "--base", "main", "--head", branch,
-            "--title", title, "--body", pr_body(subjects, _read_notes(notes_file), skip_checks)]
+            "--title", title, "--body", pr_body(subjects, _read_notes(notes_file), skip_checks, round_no)]
     if why:
         gh(["label", "create", HOLD_LABEL, "--force", "--color", "B60205",
             "--description", "waits for the user's approval (pixi run ship -- approve N)"], root)
@@ -643,7 +653,7 @@ def cmd_pr(title=None, skip_tests=False, root=ROOT, gates=True, notes_file=None,
     created = gh(args, root)
     print(_out(created))
     if created.returncode == 0:
-        _post_claimed(created.stdout, branch, root)
+        _post_claimed(created.stdout, branch, root, round_no)
         print(f"held for the user: {why} — they lift it with: pixi run ship -- approve N" if why
               else "not held: run `pixi run ship -- merge` yourself once you are done")
     return created.returncode
@@ -653,14 +663,16 @@ def _head_sha(root, ref="HEAD"):
     return run_git(["rev-parse", ref], cwd=root).stdout.strip() if root else ""
 
 
-def _post_claimed(create_stdout, branch, root):
+def _post_claimed(create_stdout, branch, root, round_no=None):
     m = re.search(r"/(?:pull|pr)/(\d+)", create_stdout or "")
     if not m:
         return
     try:
         dirs = sorted({p.split("/", 1)[0] for p in branch_files(root)})
-        events.post(int(m.group(1)), "claimed", _head_sha(root), root=root,
+        sha = _head_sha(root)
+        events.post(int(m.group(1)), "claimed", sha, root=root,
                     branch=branch, dirs=",".join(dirs) or "-")
+        rounds.on_event(round_no, branch[len("infra/"):], "claimed", sha, pr=int(m.group(1)), root=root)
     except Exception as e:  # events are best-effort: never fail ship pr
         print(f"note: claimed event not posted — {e}")
 
@@ -803,6 +815,7 @@ def cmd_merge(local=False, pr_number=None, title=None, skip_tests=False, no_push
 def _merge_locked(branch, local, pr_number, title, skip_tests, no_push, root, gates, skip_checks, ev_pr=None):
     feature = branch[len("infra/"):]
     primary = primary_checkout(root)
+    round_no = rounds.branch_round(branch, root)  # read before _finish_merge deletes the branch config
 
     run_git(["fetch", "-q", "origin"], cwd=root)
     base = "origin/main" if run_git(["rev-parse", "-q", "--verify", "origin/main"], cwd=root).returncode == 0 else "main"
@@ -839,7 +852,7 @@ def _merge_locked(branch, local, pr_number, title, skip_tests, no_push, root, ga
     else:
         if not no_push:
             run_git(["push", "-u", "origin", branch], cwd=root)
-        view = gh(["pr", "view", branch, "--json", "number,title,state,labels"], root)
+        view = gh(["pr", "view", branch, "--json", "number,title,state,labels,body"], root)
         if view.returncode != 0:
             print("error: no PR for this branch — run ship pr first")
             print(_out(view))
@@ -853,6 +866,7 @@ def _merge_locked(branch, local, pr_number, title, skip_tests, no_push, root, ga
                   f"pixi run ship -- approve {info['number']}")
             return 1
         pr_number, title = info["number"], title or info["title"]
+        round_no = round_no or rounds.round_from_pr_body(info.get("body"))
 
     subjects = _branch_commits(root)
     problems = commit_policy.check_pr_title(title, subjects)
@@ -906,6 +920,7 @@ def _merge_locked(branch, local, pr_number, title, skip_tests, no_push, root, ga
                 ops_core.share_autodeploy(f"merge {branch} (local)", primary)
         if cp.returncode == 0:
             events.post(ev_pr or pr_number, "merged", _head_sha(primary, "main"), root=root, branch=branch)
+            rounds.on_event(round_no, feature, "merged", _head_sha(primary, "main"), pr=ev_pr or pr_number, root=root)
         _finish_merge(branch, feature, kind, primary, root, push=not no_push)
         return rc
 
@@ -918,6 +933,7 @@ def _merge_locked(branch, local, pr_number, title, skip_tests, no_push, root, ga
     run_git(["push", "origin", "--delete", branch], cwd=root)
     run_git(["fetch", "-q", "origin", "main"], cwd=root)
     events.post(pr_number, "merged", _head_sha(root, "origin/main"), root=root, branch=branch)
+    rounds.on_event(round_no, feature, "merged", _head_sha(root, "origin/main"), pr=pr_number, root=root)
     from kb.ops import core as ops_core
     try:
         print(f"primary checkout: {ops_core.update_main(primary)}")
@@ -1051,6 +1067,14 @@ def main(argv=None):
     s = sub.add_parser("start")
     s.add_argument("feature")
     s.add_argument("--worktree", action="store_true", help="create .claude/worktrees/<feature> from origin/main")
+    s.add_argument("--round", type=int, metavar="R", help="link the branch to round issue #R")
+    ro = sub.add_parser("round", help="round issues for multi-PR efforts (open / status)")
+    rsub = ro.add_subparsers(dest="round_cmd", required=True)
+    rop = rsub.add_parser("open", help="open a `round` issue with one checklist line per feature")
+    rop.add_argument("title")
+    rop.add_argument("--features", required=True, help="comma-separated kebab-case features")
+    rst = rsub.add_parser("status", help="checklist + latest event per feature, one line each")
+    rst.add_argument("number", type=int)
     c = sub.add_parser("commit")
     c.add_argument("message")
     c.add_argument("--skip-tests", action="store_true")
@@ -1087,6 +1111,10 @@ def main(argv=None):
         return cmd_drop(args.drop) if args.drop else cmd_prune(args.apply)
     if args.cmd == "protect":
         return cmd_protect()
+    if args.cmd == "round":
+        if args.round_cmd == "open":
+            return rounds.cmd_open(args.title, args.features, ROOT)
+        return rounds.cmd_status(args.number, ROOT)
     if args.cmd == "events":
         return events.cmd_events(args.number, ROOT)
     if args.cmd == "queue":
@@ -1099,7 +1127,7 @@ def main(argv=None):
         print_status(changed_paths(), ROOT)
         return 0
     if args.cmd == "start":
-        return cmd_start(args.feature, args.worktree)
+        return cmd_start(args.feature, args.worktree, round_no=args.round)
     if args.cmd == "commit":
         return cmd_commit(args.message, args.skip_tests)
     if args.cmd == "pr":
