@@ -42,7 +42,7 @@ META_DIR = os.path.join(vault_root(), "meta")
 ROOT = vault_root()
 
 from kb.maintenance.daily_sync import changed_paths, has_open_sessions, run_git
-from kb.git import claims, commit_policy, events, rounds
+from kb.git import app_token, claims, commit_policy, events, rounds
 from kb.core.schema import GIT_POLICY_MODE, SCHEMA_VERSION
 
 GATES = [
@@ -50,7 +50,7 @@ GATES = [
     ("lint-skills", [sys.executable, "-m", "kb.lint.lint_skills"]),
     ("lint", [sys.executable, "-m", "kb.lint.lint"]),
 ]
-SUBCOMMANDS = {"claims", "events", "round", "queue", "start", "commit", "pr", "merge", "sync", "status", "prune", "protect", "approve"}
+SUBCOMMANDS = {"whoami", "claims", "events", "round", "queue", "start", "commit", "pr", "merge", "sync", "status", "prune", "protect", "approve"}
 GENERATED_FILES = {"index.md", "meta/corpus.tsv", "meta/coherence-warnings.tsv"}
 MIGRATED_GENERATED = {"meta/corpus.tsv"}   # a migration's output: committed by schema/paradigm commits
 FEATURE_RE = re.compile(r"^[a-z0-9][a-z0-9-]*$")
@@ -94,9 +94,8 @@ def open_prs(root=ROOT):
     (`hours` is None when createdAt could not be parsed)."""
     import datetime
     try:
-        cp = subprocess.run([os.environ.get("GH_BIN", "gh"), "pr", "list", "--state", "open",
-                             "--json", "number,headRefName,title,createdAt,updatedAt"],
-                            cwd=root, capture_output=True, text=True, check=False, timeout=8)
+        cp = app_token.run_gh(["pr", "list", "--state", "open", "--json", "number,headRefName,title,createdAt,updatedAt"],
+                              root, timeout=8)
         rows = json.loads(cp.stdout) if cp.returncode == 0 and cp.stdout.strip() else []
     except (OSError, ValueError, subprocess.TimeoutExpired):
         return []
@@ -378,9 +377,11 @@ def is_linked_worktree(root=ROOT):
     return bool(git_dir) and git_dir != _rev_parse(root, "--git-common-dir")
 
 
-def gh(args, root=ROOT):
-    exe = os.environ.get("GH_BIN", "gh")
-    return subprocess.run([exe, *args], cwd=root, capture_output=True, text=True, check=False)
+def gh(args, root=ROOT, user=False):
+    """gh as the GitHub App; `user=True` for the user's own acts (approve, repo settings)."""
+    if user:
+        return subprocess.run([os.environ.get("GH_BIN", "gh"), *args], cwd=root, capture_output=True, text=True, check=False)
+    return app_token.run_gh(args, root)
 
 
 def _policy_warn(message, branch, paths):
@@ -451,7 +452,7 @@ def legacy(argv):
         print("committed (no push)")
         return 0
 
-    push = run_git(["push", "origin", "HEAD"])
+    push = app_token.run_git_push(["push", "origin", "HEAD"], cwd=ROOT)
     print(_out(push))
     return push.returncode
 
@@ -651,7 +652,7 @@ def cmd_pr(title=None, skip_tests=False, root=ROOT, gates=True, notes_file=None,
         return 1
     if gates and not run_checks(root, skip_checks):
         return 1
-    push = run_git(["push", "-u", "origin", branch], cwd=root)
+    push = app_token.run_git_push(["push", "-u", "origin", branch], cwd=root)
     print(_out(push))
     if push.returncode != 0:
         return 1
@@ -721,7 +722,7 @@ def _pr_number(branch, root):
 
 def cmd_approve(number, root=ROOT):
     """The user's word, as a command: lift the hold so an agent's `ship merge` may proceed."""
-    cp = gh(["pr", "edit", str(number), "--remove-label", HOLD_LABEL], root)
+    cp = gh(["pr", "edit", str(number), "--remove-label", HOLD_LABEL], root, user=True)
     print(_out(cp))
     if cp.returncode == 0:
         print(f"PR #{number} approved — `pixi run ship -- merge` on its branch will now merge it")
@@ -819,7 +820,7 @@ def _snapshot_before_schema(primary, feature):
     print(_out(cp) or f"snapshot {tag} (pre-{feature})")
     if cp.returncode != 0:
         return current, False
-    run_git(["push", "origin", tag], cwd=primary)
+    app_token.run_git_push(["push", "origin", tag], cwd=primary)
     return current, True
 
 
@@ -884,7 +885,7 @@ def _merge_locked(branch, local, pr_number, title, skip_tests, no_push, root, ga
             return 1
     else:
         if not no_push:
-            run_git(["push", "-u", "origin", branch], cwd=root)
+            app_token.run_git_push(["push", "-u", "origin", branch], cwd=root)
         view = gh(["pr", "view", branch, "--json", "number,title,state,labels,body"], root)
         if view.returncode != 0:
             print("error: no PR for this branch — run ship pr first")
@@ -945,7 +946,7 @@ def _merge_locked(branch, local, pr_number, title, skip_tests, no_push, root, ga
             return 1
         rc = 0
         if not no_push:
-            push = run_git(["push", "origin", "main"], cwd=primary)
+            push = app_token.run_git_push(["push", "origin", "main"], cwd=primary)
             print(_out(push))
             rc = push.returncode
             if rc == 0:
@@ -963,7 +964,7 @@ def _merge_locked(branch, local, pr_number, title, skip_tests, no_push, root, ga
     print(_out(merged))
     if merged.returncode != 0:
         return 1
-    run_git(["push", "origin", "--delete", branch], cwd=root)
+    app_token.run_git_push(["push", "origin", "--delete", branch], cwd=root)
     run_git(["fetch", "-q", "origin", "main"], cwd=root)
     events.post(pr_number, "merged", _head_sha(root, "origin/main"), root=root, branch=branch)
     rounds.on_event(round_no, feature, "merged", _head_sha(root, "origin/main"), pr=pr_number, root=root)
@@ -995,14 +996,14 @@ def _snapshot_after_schema(primary, feature, push=True):
         print(f"note: no post-merge snapshot — {e}")
         return None
     if push and run_git(["remote"], cwd=primary).stdout.strip():
-        run_git(["push", "-q", "origin", tag], cwd=primary)
+        app_token.run_git_push(["push", "-q", "origin", tag], cwd=primary)
     return tag
 
 
 def cmd_protect(root=ROOT):
     """Repository settings that keep PR history intact: merge commits only (no squash, no rebase)."""
     cp = gh(["repo", "edit", "--enable-merge-commit=true", "--enable-squash-merge=false",
-             "--enable-rebase-merge=false", "--delete-branch-on-merge=true"], root)
+             "--enable-rebase-merge=false", "--delete-branch-on-merge=true"], root, user=True)
     print(_out(cp) or "GitHub: merge commits only; squash and rebase merges disabled")
     return cp.returncode
 
@@ -1029,7 +1030,7 @@ def cmd_drop(branch, root=ROOT):
     if run_git(["rev-parse", "-q", "--verify", f"refs/heads/{branch}"], cwd=root).returncode == 0:
         print(_out(run_git(["branch", "-D", branch], cwd=root)))
     if run_git(["rev-parse", "-q", "--verify", f"refs/remotes/origin/{branch}"], cwd=root).returncode == 0:
-        print(_out(run_git(["push", "origin", "--delete", branch], cwd=root)) or f"deleted origin/{branch}")
+        print(_out(app_token.run_git_push(["push", "origin", "--delete", branch], cwd=root)) or f"deleted origin/{branch}")
     return 0
 
 
@@ -1081,7 +1082,7 @@ def cmd_prune(apply=False, root=ROOT):
                     print("  failed")
                 continue
             cp = run_git(["branch", "-D", b], cwd=root) if where == "local" else \
-                run_git(["push", "origin", "--delete", b], cwd=root)
+                app_token.run_git_push(["push", "origin", "--delete", b], cwd=root)
             if cp.returncode != 0:
                 print(f"  failed: {_out(cp)}")
     for k in kept:
@@ -1141,6 +1142,7 @@ def main(argv=None):
     qu.add_argument("--drop", metavar="N", help="remove a dead/stale entry for PR N (or pid N)")
     ev = sub.add_parser("events", help="print PR N's kb-event lines (claimed, queued, checks, merged, deployed)")
     ev.add_argument("number", type=int)
+    sub.add_parser("whoami", help="which identity gh calls use (App bot or user fallback)")
     sub.add_parser("protect", help="GitHub settings: merge commits only, no squash/rebase")
     args = p.parse_args(argv)
 
@@ -1151,6 +1153,9 @@ def main(argv=None):
         return cmd_drop(args.drop) if args.drop else cmd_prune(args.apply)
     if args.cmd == "protect":
         return cmd_protect()
+    if args.cmd == "whoami":
+        print(app_token.whoami(ROOT))
+        return 0
     if args.cmd == "round":
         if args.round_cmd == "open":
             return rounds.cmd_open(args.title, args.features, ROOT)
