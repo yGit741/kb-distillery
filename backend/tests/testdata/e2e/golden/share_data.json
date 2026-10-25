@@ -150,7 +150,9 @@
   "node_count": 16,
   "nodes": [
    {
+    "added": "",
     "areas": [],
+    "changed": "",
     "depth": "easy",
     "id": "article-clip-why-rank-matters",
     "inDegree": 0,
@@ -173,7 +175,9 @@
     "year": null
    },
    {
+    "added": "",
     "areas": [],
+    "changed": "",
     "depth": "easy",
     "id": "article-tblog-post-one",
     "inDegree": 1,
@@ -196,7 +200,9 @@
     "year": null
    },
    {
+    "added": "",
     "areas": [],
+    "changed": "",
     "depth": "listed",
     "id": "blog-not-exact-blog-post",
     "inDegree": 0,
@@ -222,6 +228,7 @@
     "year": null
    },
    {
+    "added": "",
     "areas": [
      "learning-theory"
     ],
@@ -246,6 +253,7 @@
      ],
      "total": 61
     },
+    "changed": "",
     "depth": "",
     "id": "book-2020-tiny-book",
     "inDegree": 1,
@@ -271,7 +279,9 @@
     "year": 2020
    },
    {
+    "added": "",
     "areas": [],
+    "changed": "",
     "depth": "easy",
     "id": "conversation-2026-01-02-rank-thread",
     "inDegree": 0,
@@ -295,9 +305,11 @@
     "year": null
    },
    {
+    "added": "",
     "areas": [
      "learning-theory"
     ],
+    "changed": "",
     "depth": "",
     "id": "course-test-ml",
     "inDegree": 1,
@@ -325,9 +337,11 @@
     "year": null
    },
    {
+    "added": "",
     "areas": [
      "learning-theory"
     ],
+    "changed": "",
     "depth": "full",
     "id": "lecture-tml-slides-intro",
     "inDegree": 1,
@@ -352,7 +366,9 @@
     "year": null
    },
    {
+    "added": "",
     "areas": [],
+    "changed": "",
     "depth": "listed",
     "id": "paper-2020-tiny-book",
     "inDegree": 0,
@@ -376,7 +392,9 @@
     "year": 2020
    },
    {
+    "added": "",
     "areas": [],
+    "changed": "",
     "depth": "easy",
     "id": "paper-2023-easy-skim-paper",
     "inDegree": 0,
@@ -400,9 +418,11 @@
     "year": 2023
    },
    {
+    "added": "",
     "areas": [
      "learning-theory"
     ],
+    "changed": "",
     "depth": "full",
     "id": "paper-2024-tiny-rank-paper",
     "inDegree": 1,
@@ -430,9 +450,11 @@
     "year": 2024
    },
    {
+    "added": "",
     "areas": [
      "learning-theory"
     ],
+    "changed": "",
     "depth": "full",
     "id": "part-2020-tiny-book-pages-1-10",
     "inDegree": 1,
@@ -463,9 +485,11 @@
     "year": 2020
    },
    {
+    "added": "",
     "areas": [
      "learning-theory"
     ],
+    "changed": "",
     "depth": "",
     "id": "q-does-rank-explain-generalization",
     "inDegree": 2,
@@ -489,7 +513,9 @@
     "year": null
    },
    {
+    "added": "",
     "areas": [],
+    "changed": "",
     "depth": "",
     "id": "series-test-blog",
     "inDegree": 0,
@@ -514,9 +540,11 @@
     "year": null
    },
    {
+    "added": "",
     "areas": [
      "learning-theory"
     ],
+    "changed": "",
     "depth": "",
     "id": "tensor-rank",
     "inDegree": 6,
@@ -540,7 +568,9 @@
     "year": null
    },
    {
+    "added": "",
     "areas": [],
+    "changed": "",
     "depth": "",
     "id": "theme-learning-theory",
     "inDegree": 8,
@@ -563,9 +593,11 @@
     "year": null
    },
    {
+    "added": "",
     "areas": [
      "learning-theory"
     ],
+    "changed": "",
     "depth": "easy",
     "id": "video-tiny-talk",
     "inDegree": 0,

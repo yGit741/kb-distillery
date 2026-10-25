@@ -113,7 +113,8 @@ export const DEFAULT_LAB: LabConfig = {
   zoomGrowth: 0.5,
   pool: "all",
   hoverNeighbors: true,
-  neighborCap: 20,
+  // a click labels its few strongest neighbours, not twenty: emphasis stays meaningful
+  neighborCap: 6,
   lens: false,
   lensR: 90,
   lensMax: 20,
@@ -127,7 +128,8 @@ export const DEFAULT_LAB: LabConfig = {
   leaderLines: true,
   neighborBy: "weight",
   forcedPill: true,
-  sizeMode: "tiers",
+  // label size by importance rank (top 5% / next 20% / rest), so size and showing mean the same thing
+  sizeMode: "quantile",
   base: 12,
   t1: 17,
   t2: 13.5,
@@ -146,7 +148,8 @@ export const DEFAULT_LAB: LabConfig = {
   charsQuestion: 20,
   bg: "halo",
   fade: 250,
-  hysteresis: 0.15,
+  // labels already on screen hold their place harder, so a zoom reshuffles fewer of them
+  hysteresis: 0.35,
   regions: "off",
   regionZoom: 0.9,
   regionsSuppress: true,

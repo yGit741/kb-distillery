@@ -1,5 +1,5 @@
 import { node } from "./fixtures";
-import { colorKey, colorOf, nodeRadius } from "./style";
+import { AREA_PALETTE, areaHue, assignAreaColors, colorKey, colorOf, layeredRadii, nodeRadius, NONE_GREY, OTHER_GREY, RING_BOOST } from "./style";
 import { TYPE_COLORS, DEPTH_COLORS, LAYER_COLORS, UNKNOWN_COLOR } from "@/theme/palette";
 
 describe("colorOf", () => {
@@ -18,9 +18,48 @@ describe("colorOf", () => {
   it("names the key per colouring", () => {
     expect(colorKey(paper, "depth")).toBe("deep");
     expect(colorKey(node("c"), "depth")).toBe("(not a source)");
+    assignAreaColors([paper]);
     expect(colorKey(paper, "area")).toBe("info-theory");
+    expect(colorKey(node("o", { areas: ["quantum"] }), "area")).toBe("Other areas");
+    expect(colorKey(node("n", { areas: [] }), "area")).toBe("No area");
     expect(colorKey(node("c"), "status")).toBe("growing");
     expect(colorKey(node("c"), "none")).toBe("All pages");
+  });
+});
+
+describe("area colours", () => {
+  it("give the largest areas the palette in order, grey past it and for none", () => {
+    const pages = [
+      ...Array.from({ length: 3 }, (_, i) => node(`a${i}`, { areas: ["big"] })),
+      ...Array.from({ length: 2 }, (_, i) => node(`b${i}`, { areas: ["mid"] })),
+      ...Array.from({ length: 13 }, (_, i) => node(`s${i}`, { areas: [`small-${String(i).padStart(2, "0")}`] })),
+    ];
+    assignAreaColors(pages);
+    expect(areaHue("big")).toBe(AREA_PALETTE[0]);
+    expect(areaHue("mid")).toBe(AREA_PALETTE[1]);
+    expect(areaHue("small-12")).toBe(OTHER_GREY);
+    expect(areaHue("")).toBe(NONE_GREY);
+  });
+});
+
+describe("layeredRadii", () => {
+  it("keeps ideas at least the median paper, people at least the idea median, topics at least the largest idea", () => {
+    const pages = [
+      node("p1", { type: "paper", layer: "source", depth: "deep", inDegree: 20 }),
+      node("p2", { type: "paper", layer: "source", depth: "deep", inDegree: 20 }),
+      node("p3", { type: "paper", layer: "source", depth: "deep", inDegree: 20 }),
+      node("i1", { type: "idea", layer: "concept", inDegree: 0 }),
+      node("i2", { type: "idea", layer: "concept", inDegree: 40 }),
+      node("pe", { type: "person", layer: "concept", inDegree: 0 }),
+      node("t", { type: "topic", layer: "concept", inDegree: 0 }),
+    ];
+    const r = layeredRadii(pages, { by: "connections", base: 5 });
+    const paper = r.get("p1")!;
+    expect(r.get("i1")!).toBeGreaterThanOrEqual(paper);
+    expect(r.get("pe")!).toBeGreaterThanOrEqual(r.get("i1")! / RING_BOOST);
+    expect(r.get("t")!).toBeGreaterThanOrEqual(r.get("i2")!);
+    // sources stay under the typical idea
+    expect(paper).toBeLessThanOrEqual(r.get("i2")!);
   });
 });
 

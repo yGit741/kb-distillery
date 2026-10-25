@@ -71,6 +71,8 @@ function pileNode(p: Record<string, unknown>): GNode {
     inDegree: 0,
     outDegree: 0,
     path: "",
+    added: "",
+    changed: "",
     preview: "",
     properties: {},
     pile: { format, count, source, partial, queued: num(p["queued"]), skip, companions, share: nonSkip > 0 ? (source + partial) / nonSkip : 0 },

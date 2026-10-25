@@ -176,6 +176,8 @@ export interface Placed {
   pos: number;
   box: Box;
   forced: boolean;
+  /** the hovered page or the selection: only these get the pill (neighbours and "Aa" types stay plain) */
+  focus: boolean;
   /** placed off the node on a ring, joined to it by a leader line */
   leader: boolean;
   /** node centre on screen */
@@ -256,7 +258,8 @@ export function planLabels(i: PlanInput): Plan {
     let lines: string[];
     if (q.n.type === "question" && cfg.questionLabels !== "full" && cfg.textField === "short") {
       if (q.f !== undefined && q.f <= FORCED.selected) lines = wrapLabel(shortTitle(q.n, cfg.textField, true), QUESTION_FULL.width, QUESTION_FULL.lines, m, cfg.maxChars);
-      else lines = [labelText(q.n, cfg.textField, Math.min(cfg.charsQuestion, tierChars))];
+      // a question gets an idea's room (two wrapped lines); the overlap check still drops one with no space
+      else lines = wrapLabel(shortTitle(q.n, cfg.textField), cfg.wrapT2, cfg.maxLines, m, Math.max(cfg.charsQuestion, tierChars));
     } else if (tier === 3) lines = wrapLabel(shortTitle(q.n, cfg.textField), cfg.wrapT3, 1, m, cfg.charsT3);
     else lines = wrapLabel(shortTitle(q.n, cfg.textField), tier === 1 ? cfg.wrapT1 : cfg.wrapT2, cfg.maxLines, m, cfg.maxChars);
     const w = Math.max(...lines.map(m));
@@ -315,7 +318,7 @@ export function planLabels(i: PlanInput): Plan {
       continue;
     }
     grid.add(box, q.n.id);
-    placed.push({ id: q.n.id, n: q.n, text: lines.join(" "), lines, px, lineH, weight, tier, pos, box, forced: isForced, leader, anchor: [q.sx, q.sy] });
+    placed.push({ id: q.n.id, n: q.n, text: lines.join(" "), lines, px, lineH, weight, tier, pos, box, forced: isForced, focus: q.f !== undefined && q.f <= FORCED.selected, leader, anchor: [q.sx, q.sy] });
     if (!isForced) {
       count++;
       area += (box[2] - box[0]) * (box[3] - box[1]);

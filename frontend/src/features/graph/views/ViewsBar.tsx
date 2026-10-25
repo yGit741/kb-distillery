@@ -90,7 +90,7 @@ export function ViewsBar({ model, visible, onPick }: Props) {
             type="button"
             className={cn(PILL, on ? "bg-accent-soft font-medium text-primary" : "text-muted-foreground hover:bg-accent hover:text-accent-foreground")}
             aria-pressed={on}
-            title={`${s.headline?.questions.join("\n")}\n— ${s.headline?.hint}`}
+            title={`${s.headline?.goal}\n\n${s.headline?.questions.join("\n")}\n— ${s.headline?.hint}`}
             onClick={() => onPick(s.id)}
           >
             {s.headline?.label}

@@ -1,8 +1,11 @@
 import { node } from "../fixtures";
 import type { GNode } from "../types";
-import { DEFAULT_LAB, type LabConfig } from "./config";
+import { DEFAULT_LAB as LAB, type LabConfig } from "./config";
 import type { Importance } from "./importance";
 import { FORCED, labelPx, labelText, planLabels, shortTitle, wrapLabel, type PlanInput, type ScreenItem } from "./labelPlan";
+
+// these tests pin the label planner by type tier; the app's default sizes by importance rank instead
+const DEFAULT_LAB: LabConfig = { ...LAB, sizeMode: "tiers" };
 
 const measure = (text: string, px: number) => text.length * px * 0.55;
 
@@ -120,13 +123,13 @@ describe("wrapped labels", () => {
   });
   const q = node("q-x", { type: "question", title: "Does the low-rank bias of depth need gradient flow to emerge in practice?" });
   const qImp = { score: new Map([["q-x", 1]]), terms: new Map(), qrank: new Map(), maxScore: 1 };
-  it("questions: hidden by default, cut at charsQuestion with the ? marker when short, whole title wrapped when clicked", () => {
+  it("questions: hidden by default, wrapped like an idea with the ? marker when short, whole title wrapped when clicked", () => {
     const base = { items: [{ n: q, sx: 400, sy: 300, r: 5 }], imp: qImp };
     expect(planLabels(input({ ...base, cfg: { strategy: "all" } })).placed).toHaveLength(0);
     const short = planLabels(input({ ...base, cfg: { strategy: "all", questionLabels: "short" } })).placed[0]!;
-    expect(short.lines).toHaveLength(1);
+    expect(short.lines.length).toBeLessThanOrEqual(DEFAULT_LAB.maxLines);
     expect(short.text.startsWith("? ")).toBe(true);
-    expect(short.text.length).toBeLessThanOrEqual(DEFAULT_LAB.charsQuestion + 3);
+    expect(short.lines.every((x) => measure(x, short.px) <= DEFAULT_LAB.wrapT2)).toBe(true);
     const sel = planLabels(input({ ...base, forced: new Map([["q-x", FORCED.selected]]), cfg: { strategy: "all" } })).placed[0]!;
     expect(sel.forced).toBe(true);
     expect(sel.text).toBe(q.title);

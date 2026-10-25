@@ -3,6 +3,7 @@ import type { GraphView } from "./pageSearch";
 import { DEFAULT_LAB, sanitizeLab, type LabConfig } from "./lab/config";
 import { DEFAULT_STORY, storyById, storyLab, type LayoutMode } from "./lab/views";
 import type { Predicate } from "./publicPredicate";
+import { QUICK_OFF, type QuickFilters } from "./quickFilters";
 import { newRule, type Rule } from "./rules";
 import type { ColorBy, SizeBy } from "./style";
 
@@ -32,6 +33,8 @@ export interface GraphPrefs {
   linkDistance: number;
   gravity: number;
   liveSync: boolean;
+  /** Shape carries the type, so colour is free for the view's dimension (and hulls follow the colour). */
+  shapes: boolean;
 }
 
 const ORIENT = storyById(DEFAULT_STORY);
@@ -54,6 +57,7 @@ export const DEFAULT_PREFS: GraphPrefs = {
   linkDistance: 70,
   gravity: 0.3,
   liveSync: true,
+  shapes: true,
 };
 
 export interface FocusRequest {
@@ -65,9 +69,15 @@ export interface GraphUiState extends GraphPrefs {
   /** Types drawn at all. undefined = the schema's default (concepts, people off); null = every type. */
   shownTypes: ReadonlySet<string> | null | undefined;
   shownDepths: ReadonlySet<string> | null;
+  /** Colour-key rows clicked off in the legend (labels of ./style colorKey for the current colouring). */
+  hiddenKeys: ReadonlySet<string>;
   search: string;
   rules: Rule[];
   typeLabels: ReadonlySet<string>;
+  /** Types spotlit from the legend (a chip under the pointer): the rest fades, through the hover fade. null = none. */
+  spotlight: ReadonlySet<string> | null;
+  /** The legend's one-click filters (./quickFilters): Recent, Connected, Backbone, Neighbours, Path. */
+  quick: QuickFilters;
   view: GraphView | null;
   /** The story's own page rule (Map draws only public pages); null = none. */
   predicate: Predicate | null;
@@ -85,6 +95,7 @@ export interface GraphUiState extends GraphPrefs {
   toggleType: (type: string, allTypes: readonly string[], defaults: readonly string[]) => void;
   setLayerTypes: (types: readonly string[], on: boolean, allTypes: readonly string[], defaults: readonly string[]) => void;
   toggleDepth: (depth: string, all: readonly string[]) => void;
+  toggleKey: (label: string) => void;
   toggleTypeLabels: (type: string) => void;
   toggleReveal: (ids: readonly string[]) => void;
   addRule: () => void;
@@ -115,6 +126,8 @@ export function loadPrefs(): GraphPrefs {
       if (k === "lab") out[k] = sanitizeLab(v);
       else if (v !== undefined && typeof v === typeof DEFAULT_PREFS[k]) out[k] = v;
     }
+    // marks are the encoding now (no toggle any more): a saved "off" from the trial is not carried over
+    out.shapes = true;
     return out as unknown as GraphPrefs;
   } catch {
     return DEFAULT_PREFS;
@@ -149,6 +162,9 @@ export const useGraphUi = create<GraphUiState>((set, get) => ({
   ...INITIAL,
   ...initialView(INITIAL),
   shownDepths: null,
+  hiddenKeys: new Set(),
+  spotlight: null,
+  quick: QUICK_OFF,
   search: "",
   rules: [],
   view: null,
@@ -179,6 +195,11 @@ export const useGraphUi = create<GraphUiState>((set, get) => ({
     const base = new Set(get().shownDepths ?? all);
     if (!base.delete(depth)) base.add(depth);
     set({ shownDepths: all.every((d) => base.has(d)) ? null : base, predicate: null, story: "" });
+  },
+  toggleKey: (label) => {
+    const next = new Set(get().hiddenKeys);
+    if (!next.delete(label)) next.add(label);
+    set({ hiddenKeys: next, predicate: null, story: "" });
   },
   toggleTypeLabels: (type) => {
     const next = new Set(get().typeLabels);
@@ -215,8 +236,10 @@ export const useGraphUi = create<GraphUiState>((set, get) => ({
       shownTypes: new Set(st.types),
       typeLabels: new Set(st.typeLabels ?? []),
       predicate: st.predicate ?? null,
-      // a story is a whole view: a search, picked pages or a scope from before would fight it
+      // a story is a whole view: a search, picked pages, a scope or a colour-key filter from before would fight it
       view: null,
+      hiddenKeys: new Set(),
+      quick: QUICK_OFF,
       revealed: new Set(),
     });
   },

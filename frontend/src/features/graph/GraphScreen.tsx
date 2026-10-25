@@ -29,7 +29,9 @@ import { Legend } from "./Legend";
 import { predicateFn } from "./publicPredicate";
 import { ViewsBar } from "./views/ViewsBar";
 import { NodeMenu } from "./NodeMenu";
+import { applyQuick } from "./quickFilters";
 import { computeVisible } from "./rules";
+import { assignAreaColors, colorKey, effectiveColorBy } from "./style";
 import { parseSchema } from "./schema";
 import { SideReader } from "./SideReader";
 import { useGraphUi } from "./store";
@@ -150,13 +152,15 @@ function Loaded({
   const [menu, setMenu] = useState<{ id: string; x: number; y: number } | null>(null);
   const [note, setNote] = useState("");
 
+  // area colours by size, before anything below colours a node, a hull or a key row
+  useMemo(() => assignAreaColors(model.nodes), [model]);
   const byId = useMemo(() => new Map(model.nodes.map((n) => [n.id, n] as const)), [model]);
   const neighbors = useMemo(() => buildNeighborMap(model.links), [model]);
   const shownTypes = useMemo(
     () => (ui.shownTypes === undefined ? new Set(schema.defaultVisible) : ui.shownTypes),
     [ui.shownTypes, schema],
   );
-  const visible = useMemo(
+  const filtered = useMemo(
     () =>
       computeVisible(model.nodes, {
         shownTypes,
@@ -167,9 +171,13 @@ function Loaded({
         force: !!ui.view,
         revealed: ui.revealed,
         keep: predicateFn(ui.predicate),
+        hiddenKeys: ui.hiddenKeys,
+        keyOf: (n) => colorKey(n, effectiveColorBy(ui.colorBy, ui.shapes)),
       }),
-    [model, shownTypes, ui.shownDepths, ui.search, ui.rules, ui.view, ui.revealed, ui.predicate],
+    [model, shownTypes, ui.shownDepths, ui.search, ui.rules, ui.view, ui.revealed, ui.predicate, ui.hiddenKeys, ui.colorBy, ui.shapes],
   );
+  // the legend's one-click filters run last, on what the others left (./quickFilters)
+  const visible = useMemo(() => applyQuick(filtered, byId, neighbors, selection, ui.quick), [filtered, byId, neighbors, selection, ui.quick]);
   const imp = useMemo(() => computeImportance({ visible, byId, neighbors, cfg: ui.lab }), [visible, byId, neighbors, ui.lab]);
   const wide = useWide();
   const stats = `${visible.size} of ${model.nodes.length} pages · ${model.links.length} links · ${generatedAt.slice(0, 16).replace("T", " ")}${dsKind === "embedded" ? " · snapshot" : ""}`;
@@ -346,7 +354,9 @@ function Loaded({
   const reader = ui.readerSlug ? byId.get(ui.readerSlug) : undefined;
   const showDetails = ui.detailsOpen && selected.length > 0;
 
-  const legend = <Legend nodes={model.nodes} visible={visible} schema={schema} shownTypes={shownTypes} stats={stats} />;
+  const legend = (
+    <Legend nodes={model.nodes} visible={visible} schema={schema} shownTypes={shownTypes} stats={stats} quickHidden={filtered.size - visible.size} selected={selection.size} />
+  );
   // the header's slot is looked up after the shell committed (a render-time lookup can run before it exists)
   const [headerSlot, setHeaderSlot] = useState<HTMLElement | null>(null);
   useLayoutEffect(() => setHeaderSlot(document.getElementById(HEADER_SLOT_ID)), []);

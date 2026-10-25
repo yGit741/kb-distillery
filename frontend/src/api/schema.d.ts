@@ -1053,10 +1053,20 @@ export interface components {
         /** GraphNode */
         GraphNode: {
             /**
+             * Added
+             * @default
+             */
+            added: string;
+            /**
              * Areas
              * @default []
              */
             areas: string[];
+            /**
+             * Changed
+             * @default
+             */
+            changed: string;
             /**
              * Depth
              * @default

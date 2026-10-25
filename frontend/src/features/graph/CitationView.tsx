@@ -25,6 +25,8 @@ const asNode = (n: GenealogyNode): CiteNode => ({
   inDegree: 0,
   outDegree: 0,
   path: "",
+  added: "",
+  changed: "",
   preview: "",
   properties: {},
   role: n.role,

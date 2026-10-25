@@ -87,13 +87,15 @@ describe("legend and filters", () => {
     expect(await screen.findByTestId("graph-stats")).toHaveTextContent("4 of 7 pages");
   });
 
-  it("a layer header shows a whole layer; the depth chips filter sources", async () => {
+  it("'Sources:' shows or hides every source and collection; '+' opens the filters", async () => {
     render(wrap(withGraph(), <GraphScreen search={{}} host={host} />));
     const legend = await screen.findByRole("region", { name: "Legend" });
-    await userEvent.click(within(legend).getByRole("button", { name: /^sources/i }));
-    expect(screen.getByTestId("graph-stats")).toHaveTextContent("5 of 7 pages");
-    await userEvent.click(within(legend).getByRole("button", { name: /^listed/i }));
-    expect(screen.getByTestId("graph-stats")).toHaveTextContent("4 of 7 pages");
+    await userEvent.click(within(legend).getByRole("button", { name: "Sources:" }));
+    expect(screen.getByTestId("graph-stats")).toHaveTextContent("6 of 7 pages");
+    await userEvent.click(within(legend).getByRole("button", { name: "Sources:" }));
+    expect(screen.getByTestId("graph-stats")).toHaveTextContent("3 of 7 pages");
+    await userEvent.click(within(legend).getByRole("button", { name: "Add a filter" }));
+    expect(useGraphUi.getState().flyout).toBe("filter");
   });
 
   it("'Show all' and 'Concepts only' switch between the whole graph and the default", async () => {
