@@ -301,6 +301,7 @@ export function LabRail({ imp, selected, className }: { imp: Importance; selecte
           <RangeField label="Link opacity" value={ui.linkOpacity} min={0.05} max={0.9} step={0.05} onChange={(linkOpacity) => ui.set({ linkOpacity })} />
           <CheckField label="Directional arrows" checked={ui.arrows} onChange={(arrows) => ui.set({ arrows })} />
           <CheckField label="Highlight neighbourhood" checked={ui.highlight} onChange={(highlight) => ui.set({ highlight })} hint="Dim everything but the hovered or selected pages and their neighbours" />
+          <CheckField label="Calm hover" checked={ui.calmHover} onChange={(calmHover) => ui.set({ calmHover })} hint="Focus a page only once the pointer settles on it, and fade the rest of the graph instead of flashing it" />
           <CheckField label="Magnetic pointer" checked={ui.magnet} onChange={(magnet) => ui.set({ magnet })} hint="Hover takes the nearest page; how far it reaches follows how crowded the graph is around it" />
         </Section>
         {selected.length === 1 && selected[0] && (

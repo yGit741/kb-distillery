@@ -89,19 +89,28 @@ export function drawHulls(ctx: CanvasRenderingContext2D, nodes: readonly SimNode
     if (hull.length < 3) continue;
     const cx = hull.reduce((s, p) => s + p[0], 0) / hull.length;
     const cy = hull.reduce((s, p) => s + p[1], 0) / hull.length;
-    ctx.beginPath();
-    hull.forEach(([x, y], i) => {
+    // padded outward, then rounded: a quadratic curve through each edge midpoint, the vertex as control point
+    const pts = hull.map(([x, y]) => {
       const d = Math.hypot(x - cx, y - cy) || 1;
-      const X = x + ((x - cx) / d) * 14;
-      const Y = y + ((y - cy) / d) * 14;
-      if (i) ctx.lineTo(X, Y);
-      else ctx.moveTo(X, Y);
+      return [x + ((x - cx) / d) * 22, y + ((y - cy) / d) * 22] as const;
+    });
+    const mid = (i: number) => {
+      const a = pts[i]!;
+      const b = pts[(i + 1) % pts.length]!;
+      return [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2] as const;
+    };
+    ctx.beginPath();
+    const start = mid(pts.length - 1);
+    ctx.moveTo(start[0], start[1]);
+    pts.forEach(([x, y], i) => {
+      const m = mid(i);
+      ctx.quadraticCurveTo(x, y, m[0], m[1]);
     });
     ctx.closePath();
     const col = areaColor(area);
-    ctx.fillStyle = withAlpha(col, 0.07);
+    ctx.fillStyle = withAlpha(col, 0.06);
     ctx.fill();
-    ctx.strokeStyle = withAlpha(col, 0.25);
+    ctx.strokeStyle = withAlpha(col, 0.12);
     ctx.lineWidth = 1 / scale;
     ctx.stroke();
   }

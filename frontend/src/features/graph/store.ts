@@ -17,6 +17,8 @@ export interface GraphPrefs {
   arrows: boolean;
   highlight: boolean;
   magnet: boolean;
+  /** Focus a page only once the pointer settles on it, and fade the rest instead of flashing it. */
+  calmHover: boolean;
   /** The label rail's settings (./lab). */
   lab: LabConfig;
   /** The view (user story) the settings came from; "" once a knob was changed by hand. */
@@ -41,6 +43,7 @@ export const DEFAULT_PREFS: GraphPrefs = {
   arrows: false,
   highlight: true,
   magnet: true,
+  calmHover: true,
   lab: ORIENT ? storyLab(ORIENT) : DEFAULT_LAB,
   story: DEFAULT_STORY,
   layoutMode: "anchored",
