@@ -20,7 +20,7 @@ const TONE_DOT: Record<Tone, string> = { ok: "bg-ok", warn: "bg-warn", bad: "bg-
 
 function StatusStrip({ items, onOpen }: { items: Tile[]; onOpen: (tab: SystemTab) => void }) {
   return (
-    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6" aria-label="System status">
+    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-7" aria-label="System status">
       {items.map((t) => (
         <button
           key={t.id}

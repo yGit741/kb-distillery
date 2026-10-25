@@ -85,7 +85,51 @@ function nightlyTile(ops: OpsLike | undefined, summary: string): Pick<Tile, "val
   const reason = runReason(last);
   return { value: last.status ?? "unknown", hint: [reason, when].filter(Boolean).join(" · "), tone: t || "warn" };
 }
+export interface QueueEntry {
+  pr?: number | string | null;
+  branch?: string | null;
+  pid?: number | null;
+  age?: number;
+  held?: number;
+  alive?: boolean | null;
+  stale?: boolean;
+}
+export interface QueueLike {
+  holder?: QueueEntry | null;
+  waiters?: QueueEntry[];
+  stale_after?: number;
+}
+
+const ago = (sec: number) => (sec < 120 ? `${Math.round(sec)}s` : sec < 7200 ? `${Math.floor(sec / 60)}m` : `${Math.floor(sec / 3600)}h`);
+const who = (e: QueueEntry) => (e.pr ? `#${e.pr}` : e.branch ?? "?");
+
+/**
+ * The Merges tile reads the live merge queue (`ship merge` serialization): idle is ok, waiters are warn, and a
+ * holder past the stale limit or with a dead pid is bad (the next merger will reclaim it, but something hung).
+ * A snapshot without a queue field (old backend, unreadable file) is "unknown", never a silent ok.
+ */
+function mergesTile(ops: OpsLike | undefined): Pick<Tile, "value" | "hint" | "tone"> {
+  if (!ops) return { value: "…", hint: "", tone: "" };
+  const q = ops.queue;
+  if (!q) return { value: "unknown", hint: "queue state unavailable", tone: "warn" };
+  const h = q.holder;
+  if (!h) return { value: "idle", hint: "no merge running", tone: "ok" };
+  const waiters = q.waiters ?? [];
+  const held = num(h.held ?? h.age);
+  const limit = num(q.stale_after) || 1200;
+  const dead = h.alive === false;
+  const hung = dead || h.stale || held > limit;
+  const why = dead ? (h.pid != null ? `pid ${h.pid} dead` : "holder dead") : hung ? `stale, held ${ago(held)}` : `merging ${ago(held)}`;
+  const wait = waiters.length ? `${waiters.length} waiting (${waiters.map(who).join(", ")})` : "";
+  return {
+    value: hung ? `${who(h)} stuck` : `${who(h)} merging`,
+    hint: [why, wait].filter(Boolean).join(" · "),
+    tone: hung ? "bad" : waiters.length ? "warn" : "ok",
+  };
+}
+
 export interface OpsLike {
+  queue?: QueueLike | null;
   threads?: Thread[];
   hygiene?: { errors?: number; warnings?: number; findings?: Finding[] };
   runs?: Run[];
@@ -101,7 +145,7 @@ const num = (v: unknown) => (typeof v === "number" ? v : Number(v) || 0);
 const tone = (s?: string): Tone => (s === "ok" || s === "warn" || s === "bad" ? s : s === "error" ? "bad" : "");
 const plural = (n: number, w: string) => `${n} ${w}${n === 1 ? "" : "s"}`;
 
-/** Six tiles; a tile whose snapshot has not arrived yet shows "…". */
+/** Seven tiles; a tile whose snapshot has not arrived yet shows "…". */
 export function tiles(lc?: LifecycleLike, ops?: OpsLike, health?: HealthLike): Tile[] {
   const threads = ops?.threads ?? [];
   const stale = threads.filter((t) => t.status === "warn" || t.status === "bad").length;
@@ -155,6 +199,12 @@ export function tiles(lc?: LifecycleLike, ops?: OpsLike, health?: HealthLike): T
       id: "nightly",
       label: "Nightly",
       ...nightlyTile(ops, nightly),
+      tab: "overview",
+    },
+    {
+      id: "merges",
+      label: "Merges",
+      ...mergesTile(ops),
       tab: "overview",
     },
   ];
