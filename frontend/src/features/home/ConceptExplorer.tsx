@@ -1,5 +1,5 @@
 import { Network, Shuffle } from "lucide-react";
-import { useEffect, useId, useMemo, useState, type KeyboardEvent } from "react";
+import { useId, useMemo, useState, type KeyboardEvent } from "react";
 import { findPages } from "@/features/graph/pageSearch";
 import { isPublic } from "@/features/graph/publicPredicate";
 import { SideReader } from "@/features/graph/SideReader";
@@ -134,10 +134,13 @@ export function ConceptExplorer({
   const [reader, setReader] = useState<string | null>(null);
   const node = vault.byId.get(concept)!;
   const nodes = useMemo(() => [...vault.byId.values()].filter((n) => !publicOnly || isPublic(n)), [vault, publicOnly]);
-  const [chosen, setChosen] = useState<string | null>(null);
+  // a clicked source belongs to one (concept, seed) draw: ignored as soon as either changes
+  const [pick, setChosen0] = useState<{ key: string; id: string } | null>(null);
+  const key = `${concept}|${seed}`;
+  const chosen = pick?.key === key ? pick.id : null;
+  const setChosen = (id: string) => setChosen0({ key, id });
   const drawn = useMemo(() => pickSource(vault, concept, rng(seed), publicOnly), [vault, concept, seed, publicOnly]);
   const sample = useMemo(() => egoSample(vault, concept, drawn), [vault, concept, drawn]);
-  useEffect(() => setChosen(null), [concept, seed]);
   const draw = useMemo(() => (chosen && chosen !== drawn?.id ? drawFor(vault, concept, chosen, sample) : drawn), [chosen, drawn, vault, concept, sample]);
   const search = graphSearch(sample);
   const pickNode = (id: string) => {

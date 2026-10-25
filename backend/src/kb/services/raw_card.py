@@ -166,7 +166,7 @@ def raw_card(full, rel, root=None, with_added=True):
             card["excerpt"] = plain(text) or None
         else:
             body = re.sub(r"\A\s*#\s[^\n]*\n", "", text)
-            card["excerpt"] = plain(re.sub(r"^[>\s*_]*(Original|Source)[*_]*:.*$", "", body, flags=re.M)) or None
+            card["excerpt"] = plain(re.sub(r"^[ \t>*_]*(Original|Source)[*_]*:.*$", "", body, flags=re.M)) or None
         if kind == "youtube":
             m = YOUTUBE.search(url)
             card["video_id"] = m.group(1) if m else None
