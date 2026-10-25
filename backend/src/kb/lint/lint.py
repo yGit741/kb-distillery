@@ -329,6 +329,32 @@ def reconcile(raw_files, cited, on_disk, raw_to_slug=None, coverage=None, row_st
     return rows, sha1_ms
 
 
+FLAG_EXPIRY_WARN_DAYS = 14
+
+
+def check_flags(path=None, today=None):
+    """meta/flags.toml: invalid registry -> error; a flag expiring within 14 days -> warning; expired -> error."""
+    import datetime as dt
+
+    from kb.flags.registry import FlagError, load
+    path = path or os.path.join(ROOT, "meta", "flags.toml")
+    if not os.path.exists(path):
+        return
+    try:
+        reg = load(path)
+    except FlagError as e:
+        err("meta/flags.toml", str(e).replace("\n", " "))
+        return
+    today = today or dt.date.today()
+    for f in reg.flags:
+        left = (f.expires - today).days
+        tail = f"owner {f.owner} — remove it with the flag-cleanup PR template (meta/templates/flag-cleanup-pr.md)"
+        if left < 0:
+            err("meta/flags.toml", f"flag {f.name} expired on {f.expires}; {tail}")
+        elif left <= FLAG_EXPIRY_WARN_DAYS:
+            warn("meta/flags.toml", f"flag {f.name} expires in {left} day(s) on {f.expires}; {tail}")
+
+
 def check_dupes(rows):
     """Warn when byte-identical files exist under different paths."""
     by_sha = {}
@@ -1091,6 +1117,7 @@ def collect_snapshot(quiet=False):
         check_pdf_magic(raw_files)
     check_root()
     check_wiki_strays()
+    check_flags()
 
     t_wiki = time.perf_counter()
     pages = check_wiki()

@@ -32,7 +32,8 @@ const ALL_ROUTE_DEFS: readonly RouteDef[] = [
   // A route whose flag is off in this env is dropped here (screen.share: private site only).
 ];
 
-export const ROUTE_DEFS: readonly RouteDef[] = ALL_ROUTE_DEFS.filter((d) => !d.flag || flag(d.flag));
+export const routeDefsNow = (): RouteDef[] => ALL_ROUTE_DEFS.filter((d) => !d.flag || flag(d.flag));
+export const ROUTE_DEFS: readonly RouteDef[] = routeDefsNow();
 
 export const legacyHref = (r: Pick<RouteDef, "legacy">): string =>
   `/legacy${r.legacy === "/" ? "" : r.legacy}`;

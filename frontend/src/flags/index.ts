@@ -40,6 +40,15 @@ export function setFlagOverrides(next: Partial<Record<FlagName, boolean>>): void
   for (const fn of listeners) fn();
 }
 
+/** Test seam (vitest only, via withFlag in ./testing): forces any flag, build flags included. */
+let testOverrides: Partial<Record<FlagName, boolean>> = {};
+export function setTestFlagOverrides(next: Partial<Record<FlagName, boolean>>): void {
+  if (import.meta.env.MODE !== "test") return;
+  testOverrides = { ...next };
+  version += 1;
+  for (const fn of listeners) fn();
+}
+
 /** Build-time value of `name` in `env` (no overrides). */
 export function flagIn(name: FlagName, env: FlagEnv): boolean {
   const meta = FLAGS[name];
@@ -47,5 +56,5 @@ export function flagIn(name: FlagName, env: FlagEnv): boolean {
 }
 
 export function flag(name: FlagName): boolean {
-  return overrides[name] ?? flagIn(name, FLAG_ENV);
+  return testOverrides[name] ?? overrides[name] ?? flagIn(name, FLAG_ENV);
 }
