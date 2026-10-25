@@ -103,6 +103,9 @@ if [ "$1 $2" = "pr create" ]; then
   touch "$FAKE_GH_DIR/created"; case "$*" in *"--label hold"*) touch "$FAKE_GH_DIR/held";; esac
   echo "https://example/pr/7"; exit 0
 fi
+if [ "$1 $2" = "pr comment" ] && [ -n "$FAKE_COMMENT_FAIL" ]; then
+  echo "boom" >&2; exit 1
+fi
 if [ "$1 $2" = "pr edit" ]; then
   case "$*" in *"--remove-label hold"*) rm -f "$FAKE_GH_DIR/held";; *"--add-label hold"*) touch "$FAKE_GH_DIR/held";; esac
 fi
@@ -285,6 +288,29 @@ class PrFlowTests(unittest.TestCase):
         self.assertIn("--merge", merge_line)
         self.assertNotIn("--squash", merge_line)
         self.assertIn("feat(ops): add thing (#7)", merge_line)
+
+    def test_pr_and_merge_post_events(self):
+        wt = self._start()
+        self._write(wt, "meta/tool.py")
+        ship.cmd_commit("feat(ops): add thing", root=wt, gates=False)
+        self.assertEqual(ship.cmd_pr(root=wt, gates=False), 0)
+        self.assertEqual(ship.cmd_merge(root=wt, gates=False), 0)
+        posted = [l.split(" · ")[1] for l in open(os.path.join(self.ghdir, "calls.log")).read().splitlines()
+                  if l.startswith("pr comment 7 --body kb-event v1")]
+        self.assertEqual(posted, ["claimed", "queued", "checks-passed", "merged"])
+        claimed = [l for l in open(os.path.join(self.ghdir, "calls.log")) if "· claimed ·" in l][0]
+        self.assertIn("branch=infra/ops-thing dirs=meta", claimed)
+
+    def test_comment_failure_never_fails_merge(self):
+        wt = self._start()
+        self._write(wt, "meta/tool.py")
+        ship.cmd_commit("feat(ops): add thing", root=wt, gates=False)
+        with patch.dict(os.environ, {"FAKE_COMMENT_FAIL": "1"}):
+            self.assertEqual(ship.cmd_pr(root=wt, gates=False), 0)
+            self.assertEqual(ship.cmd_merge(root=wt, gates=False), 0)
+        calls = open(os.path.join(self.ghdir, "calls.log")).read()
+        self.assertEqual(calls.count("pr merge"), 1)
+        self.assertEqual(calls.count("pr comment"), 8)   # 4 events × (try + one retry)
 
     def test_plain_pr_is_not_held_and_merges_without_approval(self):
         wt = self._start()

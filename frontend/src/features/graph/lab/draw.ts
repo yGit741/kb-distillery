@@ -87,28 +87,30 @@ export function drawHulls(ctx: CanvasRenderingContext2D, nodes: readonly SimNode
   for (const [area, list] of groups) {
     const hull = coreHull(list);
     if (hull.length < 3) continue;
-    const cx = hull.reduce((s, p) => s + p[0], 0) / hull.length;
-    const cy = hull.reduce((s, p) => s + p[1], 0) / hull.length;
-    // padded outward, then rounded: a quadratic curve through each edge midpoint, the vertex as control point
-    const pts = hull.map(([x, y]) => {
-      const d = Math.hypot(x - cx, y - cy) || 1;
-      return [x + ((x - cx) / d) * 22, y + ((y - cy) / d) * 22] as const;
-    });
-    const mid = (i: number) => {
-      const a = pts[i]!;
-      const b = pts[(i + 1) % pts.length]!;
-      return [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2] as const;
+    // the hull grown by a disk of radius R (Minkowski sum): edges pushed out along their normals, every corner an arc
+    const R = 30;
+    const n = hull.length;
+    let area2 = 0;
+    for (let i = 0; i < n; i++) {
+      const [x0, y0] = hull[i]!;
+      const [x1, y1] = hull[(i + 1) % n]!;
+      area2 += x0 * y1 - x1 * y0;
+    }
+    const s = area2 >= 0 ? 1 : -1;
+    // outward normal angle of edge i (hull[i] → hull[i+1])
+    const normal = (i: number) => {
+      const [x0, y0] = hull[i]!;
+      const [x1, y1] = hull[(i + 1) % n]!;
+      return Math.atan2(-(x1 - x0) * s, (y1 - y0) * s);
     };
     ctx.beginPath();
-    const start = mid(pts.length - 1);
-    ctx.moveTo(start[0], start[1]);
-    pts.forEach(([x, y], i) => {
-      const m = mid(i);
-      ctx.quadraticCurveTo(x, y, m[0], m[1]);
-    });
+    for (let i = 0; i < n; i++) {
+      const [x, y] = hull[i]!;
+      ctx.arc(x, y, R, normal((i - 1 + n) % n), normal(i), s < 0);
+    }
     ctx.closePath();
     const col = areaColor(area);
-    ctx.fillStyle = withAlpha(col, 0.06);
+    ctx.fillStyle = withAlpha(col, 0.08);
     ctx.fill();
     ctx.strokeStyle = withAlpha(col, 0.12);
     ctx.lineWidth = 1 / scale;

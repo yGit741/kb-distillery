@@ -41,7 +41,7 @@ META_DIR = os.path.join(vault_root(), "meta")
 ROOT = vault_root()
 
 from kb.maintenance.daily_sync import changed_paths, has_open_sessions, run_git
-from kb.git import commit_policy
+from kb.git import commit_policy, events
 from kb.core.schema import GIT_POLICY_MODE, SCHEMA_VERSION
 
 GATES = [
@@ -49,7 +49,7 @@ GATES = [
     ("lint-skills", [sys.executable, "-m", "kb.lint.lint_skills"]),
     ("lint", [sys.executable, "-m", "kb.lint.lint"]),
 ]
-SUBCOMMANDS = {"queue", "start", "commit", "pr", "merge", "sync", "status", "prune", "protect", "approve"}
+SUBCOMMANDS = {"events", "queue", "start", "commit", "pr", "merge", "sync", "status", "prune", "protect", "approve"}
 GENERATED_FILES = {"index.md", "meta/corpus.tsv", "meta/coherence-warnings.tsv"}
 MIGRATED_GENERATED = {"meta/corpus.tsv"}   # a migration's output: committed by schema/paradigm commits
 FEATURE_RE = re.compile(r"^[a-z0-9][a-z0-9-]*$")
@@ -643,9 +643,35 @@ def cmd_pr(title=None, skip_tests=False, root=ROOT, gates=True, notes_file=None,
     created = gh(args, root)
     print(_out(created))
     if created.returncode == 0:
+        _post_claimed(created.stdout, branch, root)
         print(f"held for the user: {why} — they lift it with: pixi run ship -- approve N" if why
               else "not held: run `pixi run ship -- merge` yourself once you are done")
     return created.returncode
+
+
+def _head_sha(root, ref="HEAD"):
+    return run_git(["rev-parse", ref], cwd=root).stdout.strip() if root else ""
+
+
+def _post_claimed(create_stdout, branch, root):
+    m = re.search(r"/(?:pull|pr)/(\d+)", create_stdout or "")
+    if not m:
+        return
+    try:
+        dirs = sorted({p.split("/", 1)[0] for p in branch_files(root)})
+        events.post(int(m.group(1)), "claimed", _head_sha(root), root=root,
+                    branch=branch, dirs=",".join(dirs) or "-")
+    except Exception as e:  # events are best-effort: never fail ship pr
+        print(f"note: claimed event not posted — {e}")
+
+
+def _pr_number(branch, root):
+    """Best-effort PR number for events (None when there is no PR)."""
+    try:
+        view = gh(["pr", "view", branch, "--json", "number"], root)
+        return json.loads(view.stdout)["number"] if view.returncode == 0 else None
+    except (OSError, ValueError, KeyError, TypeError):
+        return None
 
 
 def cmd_approve(number, root=ROOT):
@@ -760,9 +786,12 @@ def cmd_merge(local=False, pr_number=None, title=None, skip_tests=False, no_push
     if not branch.startswith("infra/"):
         print(f"error: ship merge runs on an infra/<feature> branch (current: {branch or 'detached'})")
         return 1
+    ev_pr = pr_number or (None if local else _pr_number(branch, root))
+    events.post(ev_pr, "queued", _head_sha(root), root=root, branch=branch)
     try:
         with merge_queue.merge_slot(root, branch, pr=pr_number):
-            rc = _merge_locked(branch, local, pr_number, title, skip_tests, no_push, root, gates, skip_checks)
+            rc = _merge_locked(branch, local, pr_number, title, skip_tests, no_push, root, gates, skip_checks,
+                               ev_pr=ev_pr)
     except merge_queue.QueueTimeout as e:
         print(f"error: {e}")
         return 1
@@ -771,7 +800,7 @@ def cmd_merge(local=False, pr_number=None, title=None, skip_tests=False, no_push
     return rc
 
 
-def _merge_locked(branch, local, pr_number, title, skip_tests, no_push, root, gates, skip_checks):
+def _merge_locked(branch, local, pr_number, title, skip_tests, no_push, root, gates, skip_checks, ev_pr=None):
     feature = branch[len("infra/"):]
     primary = primary_checkout(root)
 
@@ -795,9 +824,13 @@ def _merge_locked(branch, local, pr_number, title, skip_tests, no_push, root, ga
             print("error: main does not merge cleanly into the branch — resolve by hand")
             return 1
     if gates and not run_gates(root, skip_tests):
+        events.post(ev_pr, "checks-failed", _head_sha(root), root=root, stage="gates")
         return 1
     if gates and not run_checks(root, skip_checks):
+        events.post(ev_pr, "checks-failed", _head_sha(root), root=root, stage="checks")
         return 1
+    events.post(ev_pr, "checks-passed", _head_sha(root), root=root,
+                gates="ran" if gates else "skipped", skip_checks=skip_checks)
 
     if local:
         if pr_number is None or not title:
@@ -871,6 +904,8 @@ def _merge_locked(branch, local, pr_number, title, skip_tests, no_push, root, ga
             if rc == 0:
                 from kb.ops import core as ops_core
                 ops_core.share_autodeploy(f"merge {branch} (local)", primary)
+        if cp.returncode == 0:
+            events.post(ev_pr or pr_number, "merged", _head_sha(primary, "main"), root=root, branch=branch)
         _finish_merge(branch, feature, kind, primary, root, push=not no_push)
         return rc
 
@@ -881,6 +916,8 @@ def _merge_locked(branch, local, pr_number, title, skip_tests, no_push, root, ga
     if merged.returncode != 0:
         return 1
     run_git(["push", "origin", "--delete", branch], cwd=root)
+    run_git(["fetch", "-q", "origin", "main"], cwd=root)
+    events.post(pr_number, "merged", _head_sha(root, "origin/main"), root=root, branch=branch)
     from kb.ops import core as ops_core
     try:
         print(f"primary checkout: {ops_core.update_main(primary)}")
@@ -1041,6 +1078,8 @@ def main(argv=None):
     pr_.add_argument("--drop", metavar="BRANCH", help="delete one UNMERGED branch after saving it to _quarantine/")
     qu = sub.add_parser("queue", help="show the merge queue (holder + waiters)")
     qu.add_argument("--drop", metavar="N", help="remove a dead/stale entry for PR N (or pid N)")
+    ev = sub.add_parser("events", help="print PR N's kb-event lines (claimed, queued, checks, merged, deployed)")
+    ev.add_argument("number", type=int)
     sub.add_parser("protect", help="GitHub settings: merge commits only, no squash/rebase")
     args = p.parse_args(argv)
 
@@ -1048,6 +1087,8 @@ def main(argv=None):
         return cmd_drop(args.drop) if args.drop else cmd_prune(args.apply)
     if args.cmd == "protect":
         return cmd_protect()
+    if args.cmd == "events":
+        return events.cmd_events(args.number, ROOT)
     if args.cmd == "queue":
         from kb.git import queue as merge_queue
         drop = int(args.drop) if args.drop and args.drop.isdigit() else args.drop

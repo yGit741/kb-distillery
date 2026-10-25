@@ -5,7 +5,7 @@ The turn (every tool call after the last human message) is classified into kinds
 for its own evidence on the reply's `Proof:` line(s). Every requirement is an any-of group, and all
 groups of every kind the turn touched must be met:
 
-    ui         frontend/, kb/dashboard/     local URL  +  deployed URL (or screenshot when not deployable yet)
+    ui         frontend/, kb/dashboard/     local URL  +  deployed URL (always both)
     api        kb/api/, kb/services/        local endpoint URL
     knowledge  wiki/, raw/, meta/, ops commit   page link  +  kb-x.y.z or commit URL
     pr         ship pr / merge              PR URL
@@ -30,14 +30,13 @@ PROOF_LINE = re.compile(r"^\W*proof\W*:(.*)$", re.I | re.M)
 # evidence: name -> (description, regex)
 LOCAL = ("a local URL (http://localhost:5173/… of the changed screen)", r"https?://(localhost|127\.0\.0\.1)(:\d+)?\S*")
 DEPLOYED = (f"the deployed URL ({DEPLOYED_SITE}/…)", r"https://\S+\.(workers|pages)\.dev\S*")
-SHOT = ("a screenshot/GIF path", r"\S+\.(png|jpe?g|gif|webp|mp4)\b")
 PAGE = ("a link to the wiki page (deployed or local)", r"https?://(localhost|127\.0\.0\.1|\S+\.(workers|pages)\.dev)\S*")
 VERSION = ("the kb-x.y.z version or commit URL", r"\bkb-\d+\.\d+\.\d+\b|github\.com/\S+/commit/[0-9a-f]{7,}")
 PR = ("the PR URL (github.com/…/pull/N)", r"github\.com/\S+/pull/\d+")
 
 # kind -> (path prefixes, command regex, [any-of evidence groups])
 KINDS = {
-    "ui": (("frontend/", "backend/src/kb/dashboard/"), None, [[LOCAL], [DEPLOYED, SHOT]]),
+    "ui": (("frontend/", "backend/src/kb/dashboard/"), None, [[LOCAL], [DEPLOYED]]),
     "api": (("backend/src/kb/api/", "backend/src/kb/services/"), None, [[LOCAL]]),
     "knowledge": (("wiki/", "raw/", "meta/"), r"\bops\s+--\s+commit\b", [[PAGE], [VERSION]]),
     "pr": ((), r"\bship\s+--\s+(pr|merge)\b", [[PR]]),
@@ -113,8 +112,8 @@ def decide(payload):
     return {"decision": "block",
             "reason": "This turn changed something the user will want to see. Before you finish, add "
                       f"`Proof:` line(s) with links covering:\n{lines}\n"
-                      "Start the app / take a Playwright screenshot / deploy if needed; a screenshot stands "
-                      "in for the deployed URL only when the change can't be deployed yet (held PR)."}
+                      "Start the app and deploy if needed (`pixi run share -- …`); a UI change always shows "
+                      "both its local and its deployed URL — a screenshot does not replace either."}
 
 
 def main():

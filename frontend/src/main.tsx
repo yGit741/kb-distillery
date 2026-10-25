@@ -4,12 +4,14 @@ import { App } from "@/app/providers";
 import { IS_SHARE } from "@/share/env";
 import { readBlob } from "@/share/blob";
 import { applyTheme, useTheme } from "@/theme/theme";
+import { installTours } from "@/features/tour/tours";
 import "./index.css";
 
 // A share build carries its data in the page; the embedded DataSource reads it from this global.
 if (IS_SHARE) globalThis.KB_EMBEDDED = readBlob() ?? undefined;
 
 applyTheme(useTheme.getState().theme);
+installTours();
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
