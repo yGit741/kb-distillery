@@ -36,6 +36,7 @@ import { TOOLS, useVisibleTools, type GraphToolContext } from "./tools";
 import { flagOn, useExperiments } from "./tools/experiments";
 import { toModel, type GNode } from "./types";
 import { LAYER_TYPES, type Layer } from "@/api/model";
+import "./tours";
 
 /** How the screen reaches the rest of the app (the router lives in index.tsx; tests pass plain functions). */
 export interface GraphHost extends ToolHost {
