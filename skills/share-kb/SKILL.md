@@ -78,7 +78,8 @@ version = uploaded) → rolls back to the previous version on failure; network e
 It posts `deployed`/`rolled-back` on the merged PR and its round. Every `kb(op)` commit, `ship merge` and
 the nightly sync only **nudge** it (touch `.cache/share/wake`; `KB_SHARE_AUTODEPLOY=0` opts out,
 `KB_SHARE_DIRECT=1` — the user only — runs the old `deploy-main` path). The user installs it once with
-`pixi run install-deploy-owner` (log `~/Library/Logs/thesis-kb-deploy-owner.log`); state:
+`pixi run install-deploy-owner` from their normal shell — it copies the proxy CA/proxy env (`NODE_EXTRA_CA_CERTS`, `SSL_CERT_FILE`,
+`HTTPS_PROXY`…, never tokens) + PATH into the plist; a `TLS: proxy CA missing` error means rerun it (log `~/Library/Logs/thesis-kb-deploy-owner.log`); state:
 `pixi run python -m kb.share.owner status`. `deploy-main.yml` deploys daily only when the owner has not
 deployed for 24 h. `.claude/settings.json` denies agents `share -- deploy*`/`rollback*`, every wrangler
 deploy/upload/rollback and `owner run`; agents may run `share -- status`/`audit`/`build` and

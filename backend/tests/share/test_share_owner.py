@@ -272,3 +272,36 @@ class TestSingleInstance(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+# ---------- launchd env capture + TLS reason ----------
+def test_tls_reason_classification():
+    from kb.share import owner as ow
+    wr = ("TypeError: fetch failed\n▲ [WARNING] ... a corporate proxy or VPN ... certificate mismatch")
+    assert ow.tls_reason(wr) == ow.TLS_REASON
+    assert ow.is_network_error(wr)  # still retried
+    assert ow.tls_reason("TypeError: fetch failed") is None
+    assert ow.describe(ow.NetworkError(wr)).startswith("TLS: proxy CA missing")
+    assert ow.describe(RuntimeError("boom")) == "boom"
+    assert ow.is_network_error("SSL certificate problem: unable to get local issuer certificate")
+
+
+def test_install_script_captures_env_without_secrets(tmp_path):
+    import os, plistlib, shutil, subprocess, sys
+    import pytest
+    if sys.platform != "darwin" or not shutil.which("plutil"):
+        pytest.skip("plutil (macOS) required")
+    script = Path(__file__).resolve().parents[3] / "tools/launchd/install-deploy-owner.sh"
+    plist = tmp_path / "p.plist"
+    plist.write_bytes(plistlib.dumps({"Label": "x"}))
+    env = {"HOME": str(tmp_path), "PATH": "/usr/bin:/bin",
+           "NODE_EXTRA_CA_CERTS": "/etc/ca dir/root.pem", "https_proxy": "http://proxy:8080",
+           "CLOUDFLARE_API_TOKEN": "s3cret", "HTTP_PROXY": "http://u:pw@p:1", "SOME_KEY": "k"}
+    out = subprocess.run(["bash", "-c", f'source "{script}" && capture_env "{plist}"'],
+                         env=env, capture_output=True, text=True, check=True).stdout
+    got = plistlib.loads(plist.read_bytes())["EnvironmentVariables"]
+    assert got["NODE_EXTRA_CA_CERTS"] == "/etc/ca dir/root.pem"
+    assert got["https_proxy"] == "http://proxy:8080"
+    assert "HTTP_PROXY" not in got and "CLOUDFLARE_API_TOKEN" not in got and "SOME_KEY" not in got
+    assert "/usr/bin" in got["PATH"]
+    assert "s3cret" not in out and "NODE_EXTRA_CA_CERTS" in out
