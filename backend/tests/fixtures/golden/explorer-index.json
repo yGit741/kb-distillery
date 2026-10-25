@@ -5,11 +5,11 @@
    "part-2019-fixture-book-ch2-concentration"
   ],
   [
-   "conversation-2024-02-01-fixture-thread-about-a-lemma",
+   "mail-2024-02-01-fixture-thread-about-a-lemma",
    "noise-stability"
   ],
   [
-   "conversation-2024-02-01-fixture-thread-about-a-lemma",
+   "mail-2024-02-01-fixture-thread-about-a-lemma",
    "theme-boolean-analysis"
   ],
   [
@@ -90,7 +90,7 @@
   ],
   [
    "theme-boolean-analysis",
-   "conversation-2024-02-01-fixture-thread-about-a-lemma"
+   "mail-2024-02-01-fixture-thread-about-a-lemma"
   ],
   [
    "theme-info-theory",
@@ -177,13 +177,13 @@
     "boolean-analysis"
    ],
    "depth": "full",
-   "id": "conversation-2024-02-01-fixture-thread-about-a-lemma",
+   "id": "mail-2024-02-01-fixture-thread-about-a-lemma",
    "in": 1,
    "out": 2,
    "preview": "Problem: Does the lemma hold for non-monotone functions? Main result: Yes, by symmetrisation.",
    "status": "digested",
    "title": "Fixture thread about a lemma",
-   "type": "conversation",
+   "type": "mail",
    "words": 60,
    "year": 2024
   },

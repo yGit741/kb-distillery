@@ -91,8 +91,8 @@ Read this first on any query.
 |------|--------|---------|
 | [[video-tiny-talk]] | digested |  |
 
-## Conversations
+## Mail
 
 | Page | Status | Summary |
 |------|--------|---------|
-| [[conversation-2026-01-02-rank-thread]] | digested |  |
+| [[mail-2026-01-02-rank-thread]] | digested |  |

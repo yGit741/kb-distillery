@@ -10,7 +10,7 @@ detailed docs in `meta/docs/` (page model, raw and corpus, collections, lifecycl
 | Path | What | Read it? |
 |------|------|----------|
 | `index.md` | Generated catalog of every wiki page, by type | **Always first** |
-| `wiki/*.md` | The notes; the filename prefix is the type: `paper-` `part-` `lecture-` `article-` `blog-` `video-` `conversation-` `chat-` (sources: one raw item each), `book-` `notebook-` `course-` `series-` (collections: tables of sources), `theme-` (topics: research directions), `q-` (questions); ideas and people are bare slugs | Yes — open by slug |
+| `wiki/*.md` | The notes; the filename prefix is the type: `paper-` `part-` `lecture-` `article-` `blog-` `video-` `mail-` `chat-` (sources: one raw item each), `book-` `notebook-` `course-` `series-` (collections: tables of sources), `theme-` (topics: research directions), `q-` (questions); ideas and people are bare slugs | Yes — open by slug |
 | `think/*.md` | Owner's free-form drafts, not reviewed | Only if asked |
 | `raw/` | Source files by format: `printed-docs/`, `handwritten/`, `presentations/`, `llm-chats/`, `emails/`, `web-clips/`, `images/` | No — inputs, not knowledge |
 | `meta/`, dot-folders | Tooling code, skills, config | No |

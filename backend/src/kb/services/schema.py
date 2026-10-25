@@ -14,7 +14,7 @@ from kb.core import schema
 
 TYPE_COLOR = {
     "paper": "#ff6b7a", "part": "#eab0ee", "lecture": "#ffc777", "article": "#4fd6be",
-    "video": "#f7768e", "conversation": "#73daca", "ai-chat": "#ff9e64", "blog-post": "#ff79c6",
+    "video": "#f7768e", "mail": "#73daca", "ai-chat": "#ff9e64", "blog-post": "#ff79c6",
     "book": "#d16bd8", "notebook": "#c099ff", "course": "#2ac3de", "series": "#7dcfff",
     "topic": "#9ece6a", "idea": "#7aa2ff", "question": "#f6c177", "person": "#bb9af7",
     "distilled-think": "#e0af68", "scope": "#e6c07b",

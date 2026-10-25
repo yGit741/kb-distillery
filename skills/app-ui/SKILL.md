@@ -50,7 +50,7 @@ pixi run lint-skills
 
 The frontend speaks the shipped model (schema 1.0, `backend/src/kb/core/schema.py` `LAYER_OF`; `src/api/model.ts` mirrors it): every page has a `layer` (`source`, `collection`, `concept`) and a `type` inside it.
 
-- source: paper, part, lecture, article, video, conversation, ai-chat, blog-post. Sources alone carry `depth`: `listed`, `easy`, `full`, `deep`.
+- source: paper, part, lecture, article, video, mail, ai-chat, blog-post. Sources alone carry `depth`: `listed`, `easy`, `full`, `deep`.
 - collection: book, notebook, course, series, plus aux `scope`.
 - concept: idea, topic, question, person, plus aux `distilled-think`.
 
