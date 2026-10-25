@@ -12,8 +12,11 @@ import { cn } from "@/lib/utils";
 import { SYSTEM_TABS, type SearchById, type SystemTab } from "@/routes/search";
 import { needsYou, tiles, timeline, type EventKind, type HealthLike, type LifecycleLike, type OpsLike, type Tile, type Tone } from "./model";
 import { HealthView } from "./HealthView";
+import { FlagsView } from "./FlagsView";
+import { FLAG_ENV } from "@/flags";
+import { useFlag } from "@/flags/useFlag";
 
-const TAB_LABEL: Record<SystemTab, string> = { overview: "Overview", pipeline: "Pipeline", history: "History", health: "Health" };
+const TAB_LABEL: Record<SystemTab, string> = { overview: "Overview", pipeline: "Pipeline", history: "History", health: "Health", flags: "Flags" };
 
 const TONE_TEXT: Record<Tone, string> = { ok: "text-ok", warn: "text-warn", bad: "text-bad", "": "text-foreground" };
 const TONE_DOT: Record<Tone, string> = { ok: "bg-ok", warn: "bg-warn", bad: "bg-bad", "": "bg-muted-foreground/40" };
@@ -180,7 +183,10 @@ function NeedsYou({ ops, error, onRetry }: { ops?: OpsLike; error?: unknown; onR
 export function SystemScreen() {
   const search = useSearch({ strict: false }) as SearchById["system"];
   const navigate = useNavigate();
-  const tab: SystemTab = search.tab ?? "overview";
+  // Flags tab: always in the local app (it is where ui.system-flags-tab itself is flipped); elsewhere gated by that flag.
+  const flagsTab = useFlag("ui.system-flags-tab") || FLAG_ENV === "local";
+  const tabs = SYSTEM_TABS.filter((t) => t !== "flags" || flagsTab);
+  const tab: SystemTab = search.tab && tabs.includes(search.tab) ? search.tab : "overview";
   const lc = useApiQuery(["lifecycle"], (d) => d.getLifecycle());
   const ops = useApiQuery(["ops"], (d) => d.getOps(), { staleTime: 60_000 });
   const health = useApiQuery(["health"], (d) => d.getHealth(), { staleTime: 60_000 });
@@ -194,7 +200,7 @@ export function SystemScreen() {
     <div className="flex flex-col gap-4">
       <StatusStrip items={strip} onOpen={open} />
       <div className="flex gap-1 border-b" role="tablist" aria-label="System sections">
-        {SYSTEM_TABS.map((t) => (
+        {tabs.map((t) => (
           <button
             key={t}
             role="tab"
@@ -214,6 +220,7 @@ export function SystemScreen() {
       )}
       {tab === "pipeline" && <PipelineScreen />}
       {tab === "history" && <LifecycleScreen />}
+      {tab === "flags" && <FlagsView />}
       {tab === "health" && <HealthView health={healthData} error={health.error} onRetry={() => void health.refetch()} />}
     </div>
   );

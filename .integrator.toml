@@ -25,6 +25,7 @@ screens = [
   { id = "home", path = "/" },
   { id = "graph", path = "/graph" },
   { id = "system", path = "/system", selector = "[data-testid=tile-nightly]" },
+  { id = "system-flags", path = "/system?tab=flags", selector = "[data-testid=flags-table]" },
   { id = "pages", path = "/pages" },
   { id = "chat", path = "/chat" },
   { id = "scopes", path = "/scopes" },
@@ -92,3 +93,11 @@ path = "deploy.owner_installed|default:unknown|map:false=owner not installed,tru
 match = "contains"
 fail_tones = ["bad"]
 selector = "[data-testid=tile-deploy-value]"
+
+[[data_checks]]
+tile = "flags"
+screen = "/system?tab=flags"
+endpoint = "/api/flags"
+# Flags tab row count == registry count (meta/flags.toml, served by GET /api/flags)
+path = "flags|count"
+selector = "[data-testid=flags-count]"

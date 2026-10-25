@@ -64,4 +64,14 @@ describe("System screen", () => {
     open("/system", { getOps: async () => Promise.reject(new ApiError("boom", 500)) });
     expect(await screen.findByText(/could not load open work/i, {}, { timeout: 4000 })).toBeInTheDocument();
   });
+  it("the Flags tab is always there in the local app", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ overrides: {} }), { status: 200 })));
+    open("/system?tab=flags");
+    expect(await screen.findByRole("tab", { name: "Flags" })).toHaveAttribute("aria-selected", "true");
+    try {
+      expect(await screen.findByTestId("flags-table")).toBeInTheDocument();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
 });
