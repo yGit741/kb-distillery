@@ -49,7 +49,7 @@ GATES = [
     ("lint-skills", [sys.executable, "-m", "kb.lint.lint_skills"]),
     ("lint", [sys.executable, "-m", "kb.lint.lint"]),
 ]
-SUBCOMMANDS = {"start", "commit", "pr", "merge", "sync", "status", "prune", "protect", "approve"}
+SUBCOMMANDS = {"queue", "start", "commit", "pr", "merge", "sync", "status", "prune", "protect", "approve"}
 GENERATED_FILES = {"index.md", "meta/corpus.tsv", "meta/coherence-warnings.tsv"}
 MIGRATED_GENERATED = {"meta/corpus.tsv"}   # a migration's output: committed by schema/paradigm commits
 FEATURE_RE = re.compile(r"^[a-z0-9][a-z0-9-]*$")
@@ -74,6 +74,10 @@ def print_status(lanes, root=ROOT):
     nightly = ops_core.nightly_status(root)
     print(f"nightly sync: {nightly['summary']}" + (f" — {nightly['hint']}" if nightly["hint"] else ""))
     ops_core.print_worktree_report(root)
+    from kb.git import queue as merge_queue
+    line = merge_queue.summary(root)
+    if line:
+        print(line)
     prs = open_prs(root)
     if prs:
         print("open infra PRs: " + ", ".join(f"#{p['number']} {p['branch']} ({p['age']})" for p in prs)
@@ -750,10 +754,24 @@ def _snapshot_before_schema(primary, feature):
 
 def cmd_merge(local=False, pr_number=None, title=None, skip_tests=False, no_push=False, root=ROOT, gates=True,
               skip_checks=None):
+    """Serialized through the merge queue (kb.git.queue): one merge at a time across all worktrees."""
+    from kb.git import queue as merge_queue
     branch = current_branch(root)
     if not branch.startswith("infra/"):
         print(f"error: ship merge runs on an infra/<feature> branch (current: {branch or 'detached'})")
         return 1
+    try:
+        with merge_queue.merge_slot(root, branch, pr=pr_number):
+            rc = _merge_locked(branch, local, pr_number, title, skip_tests, no_push, root, gates, skip_checks)
+    except merge_queue.QueueTimeout as e:
+        print(f"error: {e}")
+        return 1
+    if rc:
+        print("merge failed — dequeued; fix and rerun ship merge")
+    return rc
+
+
+def _merge_locked(branch, local, pr_number, title, skip_tests, no_push, root, gates, skip_checks):
     feature = branch[len("infra/"):]
     primary = primary_checkout(root)
 
@@ -1021,6 +1039,8 @@ def main(argv=None):
     pr_ = sub.add_parser("prune")
     pr_.add_argument("--apply", action="store_true", help="actually delete (default: dry run)")
     pr_.add_argument("--drop", metavar="BRANCH", help="delete one UNMERGED branch after saving it to _quarantine/")
+    qu = sub.add_parser("queue", help="show the merge queue (holder + waiters)")
+    qu.add_argument("--drop", metavar="N", help="remove a dead/stale entry for PR N (or pid N)")
     sub.add_parser("protect", help="GitHub settings: merge commits only, no squash/rebase")
     args = p.parse_args(argv)
 
@@ -1028,6 +1048,10 @@ def main(argv=None):
         return cmd_drop(args.drop) if args.drop else cmd_prune(args.apply)
     if args.cmd == "protect":
         return cmd_protect()
+    if args.cmd == "queue":
+        from kb.git import queue as merge_queue
+        drop = int(args.drop) if args.drop and args.drop.isdigit() else args.drop
+        return merge_queue.cmd_queue(ROOT, drop)
     if args.cmd == "sync":
         return cmd_sync(cont=args.cont, abort=args.abort)
     if args.cmd == "status":
