@@ -562,3 +562,27 @@ class PrFlowTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class PruneDeadRawLinksTests(unittest.TestCase):
+    def test_removes_only_dangling_symlinks_under_raw(self):
+        import tempfile
+        from unittest import mock
+        with tempfile.TemporaryDirectory() as wt, tempfile.TemporaryDirectory() as primary:
+            raw = os.path.join(wt, "raw", "papers")
+            os.makedirs(raw)
+            real = os.path.join(primary, "ok.pdf")
+            open(real, "w").close()
+            open(os.path.join(raw, "regular.pdf"), "w").close()
+            os.symlink(real, os.path.join(raw, "valid.pdf"))
+            os.symlink(os.path.join(primary, "moved.pdf"), os.path.join(raw, "dead.pdf"))
+            os.symlink(os.path.join(primary, "gone.pdf"), os.path.join(wt, "outside.pdf"))
+            with mock.patch.object(ship, "is_linked_worktree", return_value=True):
+                self.assertEqual(ship.prune_dead_raw_links(wt), 1)
+            self.assertTrue(os.path.isfile(os.path.join(raw, "regular.pdf")))
+            self.assertTrue(os.path.islink(os.path.join(raw, "valid.pdf")))
+            self.assertFalse(os.path.lexists(os.path.join(raw, "dead.pdf")))
+            self.assertTrue(os.path.islink(os.path.join(wt, "outside.pdf")))
+            with mock.patch.object(ship, "is_linked_worktree", return_value=False):  # primary: untouched
+                os.symlink("/nonexistent", os.path.join(raw, "dead2.pdf"))
+                self.assertEqual(ship.prune_dead_raw_links(wt), 0)

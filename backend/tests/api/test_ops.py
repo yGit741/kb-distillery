@@ -99,3 +99,19 @@ def test_deploy_state_status_json_newer_direct_deploy(tmp_path):
     d = ops.deploy_state(str(tmp_path), now=now, plist=str(tmp_path / "none"), main=("e" * 40, now - 3600))
     assert d["live_sha"] == "e" * 40 and d["behind"] is False and d["behind_minutes"] == 0
     assert d["owner_alive"] is False  # last cycle 3 h ago
+
+
+def test_deploy_state_stale_failed_network_is_not_queued(tmp_path):
+    """A failed-network entry recorded before the live deploy is superseded, not queued."""
+    import datetime
+    from kb.services import ops
+    now = datetime.datetime(2026, 10, 25, 12, 0, tzinfo=datetime.timezone.utc).timestamp()
+    iso = lambda m: datetime.datetime.fromtimestamp(now - m * 60, datetime.timezone.utc).isoformat()
+    _owner_fixture(tmp_path, {
+        "a" * 40: {"state": "deployed", "at": iso(10)},
+        "b" * 40: {"state": "failed-network", "at": iso(30)},
+        "c" * 40: {"state": "superseded", "at": iso(40)},
+        "e" * 40: {"state": "failed-network", "at": iso(1)},
+    }, {}, iso(1))
+    d = ops.deploy_state(str(tmp_path), now=now, plist=str(tmp_path / "none"), main=("e" * 40, now))
+    assert d["queued"] == ["e" * 40]
