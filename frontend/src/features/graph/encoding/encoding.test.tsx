@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { drawNode, drawNodeState } from "./canvas";
 import { NodeMarkSvg } from "./NodeMarkSvg";
 import { GEOMETRY, glyphOf, GLYPH_LABEL, markOf, MARK_KEY, personInitials, STATE, type NodeMark } from "./spec";
-import { GLYPH_SVG } from "./NodeMarkSvg";
+import { GLYPH_SVG } from "./spec";
 
 /** A 2D context that records what is drawn: arcs (radius, filled/stroked), lines, text. */
 function recorder() {

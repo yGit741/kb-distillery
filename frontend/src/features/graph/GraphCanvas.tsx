@@ -637,7 +637,7 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
       const arcs = useDecor.getState().arcs;
       if (arcs?.length) drawArcs(ctx, g.nodes(), arcs, scale, rs.current.colors);
       const u = live.current.ui;
-      // marks on: hulls say where (area tints) and show only when the nodes do not already say it with their colour
+      // hulls say where (area tints) and show only when the nodes do not already say it with their colour
       const hulls = effectiveColorBy(u.colorBy) !== "area";
       if (hulls) drawHulls(ctx, g.nodes().filter((n) => !isPile(n)), scale, names, u.lab.hullSigma);
     },

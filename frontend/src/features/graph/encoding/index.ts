@@ -6,4 +6,4 @@ export * from "./spec";
 export * from "./canvas";
 export * from "./theme";
 export * from "./label";
-export { NodeMarkSvg, ShapeIcon, SourceIcon, GLYPH_SVG } from "./NodeMarkSvg";
+export { NodeMarkSvg, ShapeIcon, SourceIcon } from "./NodeMarkSvg";

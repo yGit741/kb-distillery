@@ -1,5 +1,5 @@
 import { withAlpha } from "./theme";
-import { GEOMETRY as G, glyphOf, markOf, STATE, type NodeMark, type NodeState, type SourceGlyph } from "./spec";
+import { GEOMETRY as G, GLYPH_SVG, glyphOf, markOf, STATE, type NodeMark, type NodeState, type SourceGlyph } from "./spec";
 
 /** A source glyph (`glyphOf(type)`) of a dot of radius r at (x, y), in `color` (white inside a coloured dot). */
 export function drawSourceGlyph(ctx: CanvasRenderingContext2D, type: string, x: number, y: number, r: number, color = "#fff"): void {
@@ -59,41 +59,13 @@ export function drawGlyph(ctx: CanvasRenderingContext2D, glyph: SourceGlyph, x: 
     ctx.quadraticCurveTo(x + r * 0.3, y - r * 0.45, x, y - r * 0.32);
     ctx.lineTo(x, y + r * 0.42);
     ctx.stroke();
-  } else if (glyph === "clip") {
-    // scissors: two finger loops and crossed blades
-    ctx.arc(x - r * 0.3, y + r * 0.35, r * 0.17, 0, 2 * Math.PI);
-    ctx.moveTo(x + r * 0.47, y + r * 0.35);
-    ctx.arc(x + r * 0.3, y + r * 0.35, r * 0.17, 0, 2 * Math.PI);
-    ctx.moveTo(x - r * 0.2, y + r * 0.2);
-    ctx.lineTo(x + r * 0.35, y - r * 0.5);
-    ctx.moveTo(x + r * 0.2, y + r * 0.2);
-    ctx.lineTo(x - r * 0.35, y - r * 0.5);
-    ctx.stroke();
-  } else if (glyph === "slides") {
-    // a screen on a stand
-    ctx.rect(x - r * 0.55, y - r * 0.45, r * 1.1, r * 0.7);
-    ctx.moveTo(x, y + r * 0.25);
-    ctx.lineTo(x, y + r * 0.5);
-    ctx.moveTo(x - r * 0.25, y + r * 0.5);
-    ctx.lineTo(x + r * 0.25, y + r * 0.5);
-    ctx.stroke();
-  } else if (glyph === "image") {
-    // a frame with a hill
-    ctx.rect(x - r * 0.55, y - r * 0.45, r * 1.1, r * 0.9);
-    ctx.moveTo(x - r * 0.55, y + r * 0.3);
-    ctx.lineTo(x - r * 0.15, y - r * 0.05);
-    ctx.lineTo(x + r * 0.1, y + r * 0.2);
-    ctx.lineTo(x + r * 0.25, y + r * 0.05);
-    ctx.lineTo(x + r * 0.55, y + r * 0.3);
-    ctx.stroke();
-  } else if (glyph === "handwritten") {
-    // a pen stroke over a wavy line
-    ctx.moveTo(x - r * 0.35, y + r * 0.2);
-    ctx.lineTo(x + r * 0.35, y - r * 0.5);
-    ctx.moveTo(x - r * 0.55, y + r * 0.45);
-    ctx.quadraticCurveTo(x - r * 0.3, y + r * 0.25, x - r * 0.05, y + r * 0.45);
-    ctx.quadraticCurveTo(x + r * 0.2, y + r * 0.62, x + r * 0.5, y + r * 0.42);
-    ctx.stroke();
+  } else if (glyph === "clip" || glyph === "slides" || glyph === "image" || glyph === "handwritten") {
+    // the raw-format glyphs: the legend's SVG path (16 px box), scaled into the dot
+    const k = r / 10;
+    ctx.translate(x - 8 * k, y - 8 * k);
+    ctx.scale(k, k);
+    ctx.lineWidth = 1.2;
+    ctx.stroke(new Path2D(GLYPH_SVG[glyph].d));
   } else {
     // article, blog post and the rest: lines of text
     for (let i = -1; i <= 1; i++) {

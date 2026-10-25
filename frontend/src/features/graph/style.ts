@@ -83,7 +83,7 @@ export function assignAreaColors(nodes: readonly GNode[]): ReadonlyMap<string, s
 /** An area's colour: its slot, grey past the palette, lighter grey for none. */
 export const areaHue = (area?: string | null): string => (!area ? NONE_GREY : (AREA_SLOT.get(area) ?? OTHER_GREY));
 
-/** Colourings with an order (little -> much): with marks on they take the neutral ramp, not a hue. */
+/** Colourings with an order (little -> much): they take the neutral ramp, not a hue. */
 export const RAMP_BY: ReadonlySet<ColorBy> = new Set(["depth", "degree", "evidence", "score"]);
 const DEPTH_T: Readonly<Record<string, number>> = { listed: 0, easy: 1 / 3, full: 2 / 3, deep: 1 };
 
@@ -132,7 +132,7 @@ const RAMP_DARK = ["#2B4C8C", "#2C7FB8", "#41B6C4", "#7FCDBB", "#D2F0B4"].map(he
 
 /**
  * `metric` is the 0..1 signal behind the evidence and score colourings (grey without one). `ramp` ("light" |
- * "dark") puts the ordered colourings on the neutral ramp instead of a hue (marks on: colour is the view's).
+ * "dark") puts the ordered colourings on the neutral ramp instead of a hue (type is the mark: colour is the view's).
  */
 export function colorOf(n: GNode, by: ColorBy, metric?: number, ramp?: "light" | "dark" | null): string {
   if (ramp && RAMP_BY.has(by)) {
@@ -231,7 +231,7 @@ const median = (xs: number[]): number => {
 const SOURCE_LAYER = (n: GNode) => n.layer === "source";
 
 /**
- * Radii with marks on, each layer on its own scale. Sources keep the view's size signal (evidence) but stay
+ * Radii by layer, each layer on its own scale. Sources keep the view's size signal (evidence) but stay
  * under the typical idea; concepts and people grow with their links instead, from a floor at the median paper,
  * so an idea is never smaller than a typical paper and a person never smaller than an idea; a topic is never
  * smaller than the largest idea. Rings get `RING_BOOST`.
