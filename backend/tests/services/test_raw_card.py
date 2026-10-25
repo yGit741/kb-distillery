@@ -92,6 +92,8 @@ def test_public_card_is_the_privacy_column(vault):
     assert chat["facts"]["bytes"] and chat["model"] == "Gemini"
     web = public_card(card(vault, "raw/web-clips/w.md"))
     assert web["excerpt"] and web["path"] is None and web["name"] is None
+    clipped = public_card(dict(card(vault, "raw/web-clips/w.md"), url="https://chatgpt.com/share/x"))
+    assert clipped["excerpt"] is None and clipped["url"] is None
 
 
 def test_bake_budget_thumbs_best_read_first_and_no_raw_path_in_public(vault):

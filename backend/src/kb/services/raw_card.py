@@ -191,12 +191,14 @@ def thumb_data_uri(full, kind, width=200, max_bytes=40_000):
 
 
 PRIVATE_KINDS = ("chat", "email")
+CHAT_HOSTS = ("gemini.google", "chatgpt.com", "chat.openai", "claude.ai")
 
 
 def public_card(card):
     """The privacy column: no file name or path anywhere; chats and emails keep facts only."""
     out = dict(card, path=None, name=None)
-    if card.get("kind") in PRIVATE_KINDS or card.get("kind") == "other":
+    chat_host = any(h in (card.get("url") or "") for h in CHAT_HOSTS)      # a chat clipped into web-clips
+    if card.get("kind") in PRIVATE_KINDS or card.get("kind") == "other" or chat_host:
         out.update(title=None, excerpt=None, turns=[], header=None, url=None, site=None)
     return out
 
@@ -204,7 +206,7 @@ def public_card(card):
 def added_dates(root):
     """{raw/… path: first-commit date} for every tracked raw file, in one `git log` pass."""
     try:
-        p = subprocess.run(["git", "log", "--diff-filter=A", "--name-only", "--format=@%as", "--", "raw"], cwd=root,
+        p = subprocess.run(["git", "-c", "core.quotepath=off", "log", "--diff-filter=A", "--name-only", "--format=@%as", "--", "raw"], cwd=root,
                            capture_output=True, text=True, timeout=60, check=False)
     except Exception:  # noqa: BLE001
         return {}
