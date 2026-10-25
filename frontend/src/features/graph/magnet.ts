@@ -11,8 +11,12 @@ export interface ScreenNode {
 export const REACH_MIN = 12;
 export const REACH_MAX = 90;
 export const REACH_SHARE = 0.6;
-/** A current target is kept until another is this much closer, so a dense area does not flicker. */
-export const STICKY = 1.2;
+/** Hysteresis: a current target is kept until the pointer is LEAVE x past its reach, and a rival takes
+ *  over only when closer by max(SWITCH_PX, SWITCH_SHARE x reach). Additive, not a ratio: rim distances
+ *  go negative inside a node. */
+export const LEAVE = 1.3;
+export const SWITCH_PX = 6;
+export const SWITCH_SHARE = 0.25;
 
 const rim = (n: ScreenNode, px: number, py: number) => Math.hypot(n.x - px, n.y - py) - n.r;
 
@@ -51,9 +55,10 @@ export function pickMagnetic(
   const cur = current ? nodes.find((n) => n.id === current) : undefined;
   if (cur && cur !== best) {
     const td = rim(cur, px, py);
-    if (td <= reachOf(cur, nodes) && td < bd * STICKY + 3) return cur.id;
+    const reach = reachOf(cur, nodes);
+    if (td <= reach * LEAVE && td - bd < Math.max(SWITCH_PX, reach * SWITCH_SHARE)) return cur.id;
   }
-  return bd <= reachOf(best, nodes) ? best.id : null;
+  return bd <= reachOf(best, nodes) * (best === cur ? LEAVE : 1) ? best.id : null;
 }
 
 /** The eased bubble that joins the pointer to its magnetic target: radius (px) and strength (0..1). */
