@@ -1,4 +1,4 @@
-import { areaHue } from "../style";
+import { areaHue, semanticRadius } from "../style";
 import { withAlpha, type CanvasColors } from "../canvasTheme";
 import type { SimNode } from "../types";
 import type { LabConfig } from "./config";
@@ -163,7 +163,7 @@ export function drawLabelLayer(i: LabelLayerInput): LabelLayerResult {
   for (const n of i.nodes) {
     if (n.x == null || n.y == null || !Number.isFinite(n.x) || !i.imp.score.has(n.id)) continue;
     const [sx, sy] = toScreen(m, pr, n.x, n.y);
-    items.push({ n, sx, sy, r: i.radius(n) * k });
+    items.push({ n, sx, sy, r: semanticRadius(i.radius(n), k, zr) * k });
   }
   const prev = new Map<string, { shown: boolean; pos: number }>();
   for (const [id, f] of i.fades) prev.set(id, { shown: f.target === 1, pos: f.pos });

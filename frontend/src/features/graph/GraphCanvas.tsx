@@ -18,7 +18,7 @@ import { drawPile, formatOfPile, isPile, isPileId, pileRadius } from "./rawLayer
 import { DRAG_PX } from "./selection";
 import { useGraphUi } from "./store";
 import { useDecor } from "./tools/decor";
-import { colorOf, drawMark, drawSourceGlyph, effectiveColorBy, layeredRadii, markOf, METRIC_COLORS, nodeRadius, personInitials, SOURCE_GLYPH_PX, type ColorBy, type SizeBy } from "./style";
+import { colorOf, drawMark, drawSourceGlyph, effectiveColorBy, layeredRadii, markOf, METRIC_COLORS, nodeRadius, personInitials, semanticRadius, SOURCE_GLYPH_PX, type ColorBy, type SizeBy } from "./style";
 import type { GNode, GraphModel, SimLink, SimNode } from "./types";
 
 export interface CanvasHandle {
@@ -26,6 +26,8 @@ export interface CanvasHandle {
   hovered: () => string | null;
   zoomBy: (factor: number) => void;
   reheat: () => void;
+  /** a gentle, local spread of the nodes around a screen point (right-click menu "Spread here") */
+  spreadAt: (clientX: number, clientY: number) => void;
 }
 
 interface Props {
@@ -37,7 +39,8 @@ interface Props {
   imp: Importance;
   className?: string;
   onOpenMenu: (id: string, x: number, y: number) => void;
-  onBackgroundContext: () => void;
+  /** right-click on empty space, with where (client coordinates) */
+  onBackgroundContext: (x: number, y: number) => void;
   onOpenReader: (id: string) => void;
   /** A pile of the data layer was clicked: open the files of that format. */
   onOpenPile?: (format: string) => void;
@@ -52,6 +55,8 @@ interface RenderState {
   /** the focus being faded out, with the fade's progress 0..1 (calm hover) */
   prevFocus: Focus | null;
   fadeT: number;
+  /** zoom relative to "fit", from the last label frame: the semantic node size reads it */
+  zr: number;
   selected: ReadonlySet<string>;
   /** the committed hover: drives the focus and hover labels (the pointer itself is `intent.pointed()`) */
   hover: string | null;
@@ -112,6 +117,7 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
     focus: null,
     prevFocus: null,
     fadeT: 1,
+    zr: 1,
     selected: new Set(),
     hover: null,
     pointer: null,
@@ -477,7 +483,7 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
     let press: { x: number; y: number; id: number; node: string | null; moved: boolean } | null = null;
     const act = (x: number, y: number, node: string | null) => {
       if (node && !isPileId(node)) live.current.onOpenMenu(node, x, y);
-      else if (!node) live.current.onBackgroundContext();
+      else if (!node) live.current.onBackgroundContext(x, y);
     };
     let released = -Infinity;
     const ctx = (e: MouseEvent) => {
@@ -522,6 +528,7 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
       hovered: pointed,
       zoomBy: (f) => fg.current?.zoomBy(f),
       reheat: () => fg.current?.reheat(),
+      spreadAt: (x, y) => fg.current?.spreadAt(x, y),
     }),
     [],
   );
@@ -573,8 +580,10 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
         drawPile(n, ctx, scale, colors, hover === n.id);
         return;
       }
-      // a spotlit type (legend hover) is drawn a third larger as well as lit
-      const r = radius(n) * (live.current.ui.spotlight?.has(n.type) ? 1.3 : 1);
+      const shapes = live.current.ui.shapes;
+      // a spotlit type (legend hover) is drawn a third larger as well as lit; marks on: semantic zoom (./style)
+      const r0 = radius(n) * (live.current.ui.spotlight?.has(n.type) ? 1.3 : 1);
+      const r = shapes ? semanticRadius(r0, scale, rs.current.zr) : r0;
       const alpha = fadedNodeOpacity(n.id, focus, rs.current.prevFocus, rs.current.fadeT);
       const isSel = selected.has(n.id);
       const halo = useDecor.getState().halo?.get(n.id);
@@ -584,21 +593,29 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
         ctx.fillStyle = withAlpha(colors.warn, 0.15 + 0.55 * halo);
         ctx.fill();
       }
-      if (isSel || hover === n.id) {
+      const by = effectiveColorBy(live.current.ui.colorBy, shapes);
+      // marks on: an ordered colouring is a neutral ramp (lightness), so it never fights the area hulls
+      const col = colorOf(n, by, METRIC_COLORS.has(by) ? metricOf(rs.current.imp, n, by) : undefined, shapes ? live.current.theme : null);
+      if (hover === n.id && !isSel && shapes) {
+        // the hovered page: a soft glow in its own colour, not a ring (the ring is the selection's)
+        const g = ctx.createRadialGradient(n.x, n.y, r, n.x, n.y, r + 14 / scale);
+        g.addColorStop(0, withAlpha(col, 0.45));
+        g.addColorStop(1, withAlpha(col, 0));
+        ctx.beginPath();
+        ctx.arc(n.x, n.y, r + 14 / scale, 0, 2 * Math.PI);
+        ctx.fillStyle = g;
+        ctx.fill();
+      } else if (isSel || hover === n.id) {
         ctx.beginPath();
         ctx.arc(n.x, n.y, r + 3 / scale, 0, 2 * Math.PI);
         ctx.strokeStyle = withAlpha(colors.ring, isSel ? 0.95 : 0.55);
         ctx.lineWidth = (isSel ? 2 : 1.5) / scale;
         ctx.stroke();
       }
-      const shapes = live.current.ui.shapes;
-      const by = effectiveColorBy(live.current.ui.colorBy, shapes);
-      // marks on: an ordered colouring is a neutral ramp (lightness), so it never fights the area hulls
-      const col = colorOf(n, by, METRIC_COLORS.has(by) ? metricOf(rs.current.imp, n, by) : undefined, shapes ? live.current.theme : null);
       if (shapes) {
-        // one mark per type, the same at every zoom; never under 5 px on screen
+        // one mark per type, the same at every zoom (the 5 px floor is inside semanticRadius)
         ctx.globalAlpha = alpha;
-        const rd = Math.max(r, 5 / scale);
+        const rd = r;
         const mark = markOf(n.type);
         drawMark(ctx, mark, n.x, n.y, rd, col, colors.background, colors.font, initials.get(n.id));
         // a source is a plain dot until it is big enough on screen (zoom) or under the pointer: then its type glyph
@@ -685,6 +702,7 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
         },
       });
       f.churn = f.churn * 0.9 + res.changes * (1000 / Math.max(16, dt)) * 0.1;
+      rs.current.zr = res.zr;
       if (now - f.hudAt > 250) {
         f.hudAt = now;
         const vis = live.current.visible;

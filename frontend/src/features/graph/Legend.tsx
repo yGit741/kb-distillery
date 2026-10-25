@@ -264,14 +264,13 @@ export function Legend({ nodes, visible, schema, shownTypes, stats, quickHidden 
             +{filtered ? ` ${ui.rules.length}` : ""}
           </button>
         </div>
-        {/* the key: one group per layer; the chips scroll sideways on a narrow screen */}
         {/* the key wraps onto a second line rather than cutting a type off */}
         <div className={cn(PANEL, "flex min-w-0 max-w-full flex-wrap items-center gap-x-1 gap-y-0.5 px-1.5 py-1")} onMouseLeave={() => spot(null)}>
           {ordered.map((g) => (
             <div key={g.layer} className="flex flex-wrap items-center gap-0.5 border-r pr-1 last:border-r-0">
               <button
                 type="button"
-                className={cn(GROUP, g.state === "none" && "line-through opacity-50")}
+                className={cn(GROUP, g.state === "none" && "opacity-40")}
                 aria-pressed={g.state !== "none"}
                 title={g.state === "none" ? `Show every ${g.layer}` : `Hide every ${g.layer}`}
                 onMouseEnter={() => spot(g.rows.map((r) => r.id))}

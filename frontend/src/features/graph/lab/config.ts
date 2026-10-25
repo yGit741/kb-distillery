@@ -127,7 +127,8 @@ export const DEFAULT_LAB: LabConfig = {
   edgeFlip: true,
   leaderLines: true,
   neighborBy: "weight",
-  forcedPill: true,
+  // no pills: the hovered page's glow and its whole title mark the focus
+  forcedPill: false,
   // label size by importance rank (top 5% / next 20% / rest), so size and showing mean the same thing
   sizeMode: "quantile",
   base: 12,
@@ -143,9 +144,9 @@ export const DEFAULT_LAB: LabConfig = {
   wrapT2: 110,
   wrapT3: 0,
   maxLines: 2,
-  charsT3: 18,
+  charsT3: 26,
   questionLabels: "none",
-  charsQuestion: 20,
+  charsQuestion: 26,
   bg: "halo",
   fade: 250,
   // labels already on screen hold their place harder, so a zoom reshuffles fewer of them

@@ -1,4 +1,5 @@
 import { depthColor, layerColor, statusColor, typeColor, UNKNOWN_COLOR } from "@/theme/palette";
+import { areaDisplay } from "./displayNames";
 import { degreeOf, type GNode } from "./types";
 
 export type ColorBy = "type" | "layer" | "depth" | "status" | "area" | "degree" | "evidence" | "score" | "none";
@@ -175,7 +176,7 @@ export function colorKey(n: GNode, by: ColorBy): string {
       return n.status || "(none)";
     case "area":
       if (n.type === "person" && !n.areas[0]) return PEOPLE;
-      return !n.areas[0] ? NO_AREA : AREA_SLOT.has(n.areas[0]) ? n.areas[0] : OTHER_AREAS;
+      return !n.areas[0] ? NO_AREA : AREA_SLOT.has(n.areas[0]) ? areaDisplay(n.areas[0]) : OTHER_AREAS;
     case "degree":
       return degreeBand(n).label;
     case "none":
@@ -295,6 +296,19 @@ export const MARK_KEY: readonly { mark: NodeMark; label: string }[] = [
 export const MAIL_TYPES: ReadonlySet<string> = new Set(["mail", "email", "conversation"]);
 /** Legend names that differ from the schema's, until the schema catches up. */
 export const TYPE_LABEL_OVERRIDE: Readonly<Record<string, string>> = { conversation: "Mail" };
+
+/**
+ * Semantic zoom: a node's screen size grows as zoom^gamma, not with the zoom, so zooming in opens space between
+ * nodes instead of inflating them. `rGraph` is the layout radius (graph units), `scale` the current zoom and
+ * `zr` the zoom relative to "fit"; the result is a radius in graph units for the current frame. The 5px floor
+ * is on screen at fit, where it belongs.
+ */
+export const ZOOM_GAMMA = 0.5;
+export function semanticRadius(rGraph: number, scale: number, zr: number): number {
+  const kFit = scale / Math.max(zr, 1e-6);
+  const pxAtFit = Math.max(rGraph * kFit, 5);
+  return (pxAtFit * Math.pow(Math.max(zr, 1e-6), ZOOM_GAMMA)) / scale;
+}
 
 /** On-screen radius from which a source shows its type glyph (below it, a plain dot); a hovered source always does. */
 export const SOURCE_GLYPH_PX = 8;

@@ -19,7 +19,7 @@ describe("colorOf", () => {
     expect(colorKey(paper, "depth")).toBe("deep");
     expect(colorKey(node("c"), "depth")).toBe("(not a source)");
     assignAreaColors([paper]);
-    expect(colorKey(paper, "area")).toBe("info-theory");
+    expect(colorKey(paper, "area")).toBe("Information theory");
     expect(colorKey(node("o", { areas: ["quantum"] }), "area")).toBe("Other areas");
     expect(colorKey(node("n", { areas: [] }), "area")).toBe("No area");
     expect(colorKey(node("c"), "status")).toBe("growing");

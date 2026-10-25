@@ -128,7 +128,8 @@ describe("wrapped labels", () => {
     expect(planLabels(input({ ...base, cfg: { strategy: "all" } })).placed).toHaveLength(0);
     const short = planLabels(input({ ...base, cfg: { strategy: "all", questionLabels: "short" } })).placed[0]!;
     expect(short.lines.length).toBeLessThanOrEqual(DEFAULT_LAB.maxLines);
-    expect(short.text.startsWith("? ")).toBe(true);
+    // the ring already says "question": no "?" marker in the text
+    expect(short.text.startsWith("? ")).toBe(false);
     expect(short.lines.every((x) => measure(x, short.px) <= DEFAULT_LAB.wrapT2)).toBe(true);
     const sel = planLabels(input({ ...base, forced: new Map([["q-x", FORCED.selected]]), cfg: { strategy: "all" } })).placed[0]!;
     expect(sel.forced).toBe(true);
@@ -177,9 +178,9 @@ describe("wrapped labels", () => {
 
 describe("label text and size", () => {
   const q = node("q-x", { type: "question", title: "Does the low-rank bias of depth need gradient flow?" });
-  it("shortens a question to its subject with a ? marker", () => {
-    expect(labelText(q, "short", 28)).toBe("? Low-rank bias of depth need…");
-    expect(labelText(node("q-y", { type: "question", title: "Can AI-assisted proofs help?" }), "short", 28)).toBe("? AI-assisted proofs help");
+  it("shortens a question to its subject (its ring is the marker)", () => {
+    expect(labelText(q, "short", 28)).toBe("Low-rank bias of depth need…");
+    expect(labelText(node("q-y", { type: "question", title: "Can AI-assisted proofs help?" }), "short", 28)).toBe("AI-assisted proofs help");
   });
   it("drops subtitles and cuts at a word", () => {
     const n = node("p", { type: "paper", title: "Deep learning generalizes: a study of the implicit bias of gradient descent" });
