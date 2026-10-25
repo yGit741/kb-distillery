@@ -1222,6 +1222,22 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
+        /** MergeQueue */
+        MergeQueue: {
+            holder?: components["schemas"]["QueueEntry"] | null;
+            /**
+             * Stale After
+             * @default 1200
+             */
+            stale_after: number;
+            /**
+             * Waiters
+             * @default []
+             */
+            waiters: components["schemas"]["QueueEntry"][];
+        } & {
+            [key: string]: unknown;
+        };
         /** NightlyState */
         NightlyState: {
             /** Hint */
@@ -1263,6 +1279,7 @@ export interface components {
             doc: {
                 [key: string]: unknown;
             };
+            queue?: components["schemas"]["MergeQueue"] | null;
             /** Subject */
             subject?: string | null;
         } & {
@@ -1468,6 +1485,36 @@ export interface components {
             prompts: {
                 [key: string]: unknown;
             }[];
+        } & {
+            [key: string]: unknown;
+        };
+        /** QueueEntry */
+        QueueEntry: {
+            /**
+             * Age
+             * @default 0
+             */
+            age: number;
+            /** Alive */
+            alive?: boolean | null;
+            /** Branch */
+            branch?: string | null;
+            /**
+             * Held
+             * @default 0
+             */
+            held: number;
+            /** Host */
+            host?: string | null;
+            /** Pid */
+            pid?: number | null;
+            /** Pr */
+            pr?: number | string | null;
+            /**
+             * Stale
+             * @default false
+             */
+            stale: boolean;
         } & {
             [key: string]: unknown;
         };
