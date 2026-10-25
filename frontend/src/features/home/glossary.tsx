@@ -33,7 +33,7 @@ export const SOURCE_COLOR = layerColor("source");
 export const CONCEPT_TYPES = [
   { type: "topic", label: "Topic", text: "a theme that groups ideas" },
   { type: "idea", label: "Idea", text: "one claim, result or technique" },
-  { type: "question", label: "Question", text: "a problem that interests me" },
+  { type: "question", label: "Question", text: "an open problem I care about" },
 ] as const;
 
 export const DEPTHS: readonly { depth: Depth; label: string; text: string }[] = [
@@ -79,8 +79,8 @@ export function Glossary() {
       <h2 id="home-glossary" className="mb-2 mt-4 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
         How a page gets here
       </h2>
-      <div className="grid grid-cols-1 gap-2 md:grid-cols-[1.25fr_auto_1fr_auto_1fr]">
-        <div className="min-w-0 rounded-lg border bg-muted/40 px-3 py-2.5 text-sm">
+      <div className="grid grid-cols-1 gap-2 [--gloss-h:160px] md:grid-cols-[1.25fr_auto_1fr_auto_1fr]">
+        <div className="min-w-0 rounded-lg border bg-muted/40 px-3 py-2.5 text-sm md:h-[var(--gloss-h)] md:overflow-hidden" data-gloss>
           <h3 className="flex items-center gap-2 text-[15px] font-semibold">
             <Dot color={RAW_COLOR} />
             Raw
@@ -96,7 +96,7 @@ export function Glossary() {
           </ul>
         </div>
         <StageArrow label="catalog" />
-        <div className="min-w-0 rounded-lg border bg-muted/40 px-3 py-2.5 text-sm">
+        <div className="min-w-0 rounded-lg border bg-muted/40 px-3 py-2.5 text-sm md:h-[var(--gloss-h)] md:overflow-hidden" data-gloss>
           <h3 className="flex items-center gap-2 text-[15px] font-semibold">
             <Dot color={SOURCE_COLOR} />
             Source
@@ -105,7 +105,7 @@ export function Glossary() {
           <p className="text-center font-semibold">Paper · Lecture · Article · Blog post · Chat</p>
         </div>
         <StageArrow label="digest" />
-        <div className="min-w-0 rounded-lg border bg-muted/40 px-3 py-2.5 text-sm">
+        <div className="min-w-0 rounded-lg border bg-muted/40 px-3 py-2.5 text-sm md:h-[var(--gloss-h)] md:overflow-hidden" data-gloss>
           <h3 className="flex items-center gap-2 text-[15px] font-semibold">
             <ConceptDots />
             Concept
@@ -118,16 +118,16 @@ export function Glossary() {
                   <Dot color={typeColor(c.type)} />
                   {c.label}
                 </dt>
-                <dd className="text-muted-foreground">{c.text}</dd>
+                <dd className="truncate text-[13px] text-muted-foreground">{c.text}</dd>
               </div>
             ))}
           </dl>
         </div>
       </div>
-      <p className="mt-2 flex flex-wrap items-center gap-x-3.5 gap-y-1 text-[12.5px] text-muted-foreground">
-        <span className="text-[11px] uppercase tracking-wider">Depth · how closely a source was read</span>
+      <p data-testid="home-depth" className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] text-muted-foreground lg:flex-nowrap lg:gap-x-2.5 lg:whitespace-nowrap lg:text-[11.5px]">
+        <span className="text-[10.5px] uppercase tracking-wider">Depth · how closely a source was read</span>
         {DEPTHS.map((d) => (
-          <span key={d.depth} className="inline-flex items-center gap-1.5">
+          <span key={d.depth} className="inline-flex items-center gap-1">
             <DepthSwatch depth={d.depth} />
             <b className="font-semibold text-foreground">{d.label}</b> {d.text}
           </span>

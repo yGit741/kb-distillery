@@ -119,3 +119,28 @@ def test_card_route(vault):
         r = c.get("/api/raw/raw/printed-docs/2024-x.pdf/card")
         assert r.status_code == 200 and RawCard.model_validate(r.json()).facts.pages == 3
         assert c.get("/api/raw/raw/printed-docs/missing.pdf/card").status_code == 404
+
+
+def test_blockquote_original_line_is_stripped(vault):
+    (vault / "raw" / "web-clips" / "q.md").write_text("---\ntitle: Q\n---\n# Q\n\n> Original: https://gilkalai.wordpress.com/2008/04/29/hello-world/ · 2008-04-29\n\nHello world post.\n")
+    web = card(vault, "raw/web-clips/q.md")
+    assert "Original" not in web["excerpt"] and "gilkalai" not in web["excerpt"] and "Hello world" in web["excerpt"]
+
+
+def test_public_handwritten_and_images_get_facts_only(vault):
+    import fitz
+    (vault / "raw" / "handwritten").mkdir()
+    doc = fitz.open()
+    doc.new_page().insert_text((72, 72), "my notes")
+    doc.save(vault / "raw" / "handwritten" / "n.pdf")
+    rel = "raw/handwritten/n.pdf"
+    private = card(vault, rel)
+    assert private["kind"] == "handwritten" and private["has_thumb"]
+    pub = public_card(dict(private, thumb="data:image/jpeg;base64,xx"))
+    assert pub["thumb"] is None and not pub["has_thumb"] and pub["facts"]["pages"] == 1
+    assert public_card({"kind": "image", "facts": {}, "has_thumb": True, "thumb": "x"})["thumb"] is None
+    nodes = [{"id": "s-hw", "layer": "source", "depth": "deep", "properties": {"raw": rel}}]
+    raw_of = raw_paths_of(nodes)
+    assert bake_cards(nodes, raw_of, str(vault))["s-hw"]["thumb"]                    # private build keeps page 1
+    baked = bake_cards(nodes, raw_of, str(vault), public=True)["s-hw"]
+    assert baked["thumb"] is None and not baked["has_thumb"] and baked["facts"]["pages"] == 1

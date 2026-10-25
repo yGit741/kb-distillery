@@ -7,7 +7,7 @@ export type { TourStep } from "./engine";
  * its tours at import time; anyone starts one with `?tour=<name>`, `kbTour.start("<name>")` or `runTour`.
  * A finished or skipped tour is remembered in this browser (`kb.tour.seen.<name>`).
  */
-const TOURS = new Map<string, { steps: TourStep[]; summary: string }>();
+const TOURS = new Map<string, { steps: TourStep[]; summary: string; menu: boolean }>();
 
 export interface TourInfo {
   name: string;
@@ -16,8 +16,9 @@ export interface TourInfo {
   seen: boolean;
 }
 
-export function registerTour(name: string, steps: TourStep[], summary = ""): void {
-  TOURS.set(name, { steps, summary });
+/** `menu: false` keeps a tour startable (`?tour=`, `kbTour.start`) but out of the Tours menu. */
+export function registerTour(name: string, steps: TourStep[], summary = "", { menu = true }: { menu?: boolean } = {}): void {
+  TOURS.set(name, { steps, summary, menu });
 }
 
 const SEEN_KEY = (name: string) => `kb.tour.seen.${name}`;
@@ -49,7 +50,8 @@ export function runTour(name: string): boolean {
 /** The steps of a registered tour (empty when unknown); tours' own tests check their copy with it. */
 export const stepsOf = (name: string): readonly TourStep[] => TOURS.get(name)?.steps ?? [];
 
-export const listTours = (): TourInfo[] => [...TOURS].map(([name, t]) => ({ name, summary: t.summary, seen: seenTour(name) }));
+export const listTours = ({ all = false }: { all?: boolean } = {}): TourInfo[] =>
+  [...TOURS].filter(([, t]) => all || t.menu).map(([name, t]) => ({ name, summary: t.summary, seen: seenTour(name) }));
 
 /** A step `before` helper: click a button by its aria-label unless the section it opens is already there. */
 export function clickUnlessOpen(button: string, section: string) {

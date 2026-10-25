@@ -182,6 +182,7 @@ registerTour(
     ),
   ],
   "Why over-parameterized networks generalize — the question I am chasing",
+  { menu: false },
 );
 
 registerTour(
@@ -209,4 +210,5 @@ registerTour(
     ),
   ],
   "Where Boolean analysis meets learning theory in my notes",
+  { menu: false },
 );
