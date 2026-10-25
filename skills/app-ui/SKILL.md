@@ -71,6 +71,84 @@ The backend emits these names directly, so there is no translation layer and no 
 4. One data palette; no per-screen colour maps.
 5. No re-parenting or clicking hidden legacy buttons: a ported screen has one toolbar.
 
+## Design layers
+
+This skill is the **project** layer. Two global skills sit above it and win on conflict:
+
+1. `ui-principles` — rules that are always right (stability, no overlap, contrast, colour meaning and Stroop,
+   one central status/ramp scheme, cognitive load, icon consistency, motion, legends vs data).
+2. `ui-taste` — the owner's preferences (calm and soft, minimal chrome, icons chosen from several options,
+   modest copy, desktop first).
+
+Precedence: principles > taste > this file > convenience. Before merging a UI PR, run `ui-review` on the changed
+screens. Code that still breaks a rule is a backlog item for its own PR, not an exception in this file.
+
+## Graph feature design
+
+The graph (`src/features/graph`) is the app's core view. These rules apply to every view of it and to every
+mini-graph embedded elsewhere (Home cards). **A view (story) only chooses what counts as important; it never breaks
+a rule below.**
+
+### Consistency across screens
+1. **The same view everywhere.** A mini-graph and the full graph use the same marks, legend and colouring; moving
+   between screens never changes what a colour or shape means. "Open in Full Graph" shows exactly the pages the
+   card drew, in the same colouring.
+2. **One central colour scheme**: status (ok / warn / fail) and every ordered ramp come from `src/theme/palette.ts`;
+   no view defines its own.
+
+### Labels
+3. **Budget**: about 12% of the canvas, roughly 20–40 labels at fit (Bobák 2024).
+4. **Chosen over the whole graph, not what is on screen**, so panning never changes the set (pan churn fell from
+   71–174 to 5–18 label changes/s in the Label Lab; Been 2006).
+5. **Ranked by degree of interest normalised per type, never raw degree** (imports skew degree: the Kalai blog
+   series has 1,401 links; Furnas; van Ham & Perer).
+6. **Size follows importance rank** (top 5% / next 20% / rest), so being shown and being big mean the same thing;
+   label size grows with √zoom and never drops below 11 px (Töpfer).
+7. **Display names, not slugs**; drop what the mark already says (no leading "?" on a question).
+8. **Never cut a word; no "…" when there is room.** Long-titled types (questions) show their glyph at rest and the
+   full title on hover or click. A label that can't sit beside its node moves out with a leader line in the node's
+   own colour.
+9. **Hover**: a soft glow in the page's own colour and its full title, no solid pills. A click labels at most ~6
+   strongest neighbours, chosen by stable edge weight.
+
+### Colour meaning (no Stroop conflicts)
+10. **Shape is the type, colour is the view.** Type is carried by the mark in a sticky key; colour answers the
+    current view's question in its own key. Colouring by type in a view that already shows type by shape is a
+    conflict, so that view colours by area instead (`effectiveColorBy`).
+11. **A colour never contradicts its learned meaning**: red/amber only for problems; people, "No area" and edges
+    each get a colour no other meaning uses (people a deep ink, "No area" a ring, edges a light grey).
+12. **Categories**: ≤ 12 area hues assigned by size, the rest "Other areas" in grey; "Other" and "No area" always
+    sort last. **Ordered measures**: one lightness ramp with a stepped bar legend, never unordered hues.
+13. **Colour-by offers only colourings that answer a real question**; remove ones that change nothing.
+
+### Marks
+14. **One mark per type, the same at every zoom**: source = dot (glyph from ~7 px radius or on hover: page = paper,
+    sparkle = AI chat, envelope = mail, play = lecture, book = part), question = ring with "?", idea = ring with dot,
+    topic = ring with lines, collection = double ring, person = initials. Hollow marks drawn ~15% larger.
+15. **Size means importance per layer**: an idea is never smaller than a median paper, a person never smaller than
+    a median idea; node screen size grows with √zoom (semantic zoom).
+
+### Legend and filters
+16. **The legend lists every encoding on screen**: "Concepts: … | Sources: …" (collections folded into sources),
+    wrapping rather than cutting, with counts that say what they count.
+17. **The legend is a filter**: a group toggles its layer, a chip its type, hover spotlights with the same
+    hysteresis as node hover; hidden rows stay listed.
+18. **Quick filters are filters, not insights** (Recent, Connected); every active filter shows a × and a "Clear"
+    appears while any is on.
+
+### Layout and interaction
+19. **Fit after the layout settles**, and stop refitting once the user pans or zooms.
+20. **Topics anchored on a ring**; hulls truly round (Minkowski sum) and shown only when colour doesn't already
+    say the same thing.
+21. **Hover dims lightly or not at all; only a selection dims the rest.** Hover commits on intent (dwell ~150 ms,
+    fade 180 ms in / 100 ms out) with hysteresis against flicker.
+22. **Mouse**: left-drag pans, wheel zooms at the cursor, right-click opens the node menu, right-click on empty
+    space clears the selection, double-click opens the side reader.
+23. **Default views are sparse**: concepts first, sources on demand.
+24. **Embedded mini-graphs never capture page scroll** and a tiny sample never blows up to fill its card.
+25. **Engine facts**: force-graph radius = √nodeVal; size the canvas after layout; fit to the dense core; never
+    `setPointerCapture` or put pointer-taking overlays over the canvas; cursors as blob URLs.
+
 ## Porting checklist
 
 The app is served under `/app` (vite `base`, router `basepath`; `python -m kb.api` and `pixi run web-dev` both work). The groundwork is shared, so a screen port adds **only files inside its own folder** and never edits a shared file.
