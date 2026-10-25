@@ -48,6 +48,18 @@ def load_config():
     return cfg
 
 
+def owner_login():
+    """The user's GitHub login whose Approve review lifts a hold, or None in fallback mode (no App config).
+
+    Env `KB_OWNER_LOGIN` is a fallback only when the toml has no `owner_login` (so an agent cannot
+    rename the owner from its own command line); without an App config agents act
+    as the user, so no review can be told apart from theirs and only `ship approve` counts."""
+    cfg = load_config()
+    if cfg is None:
+        return None
+    return cfg.get("owner_login") or os.environ.get("KB_OWNER_LOGIN") or None
+
+
 def _jwt(cfg, now=None):
     import jwt  # PyJWT (+ cryptography) ships in the pixi env
     now = int(now if now is not None else time.time())

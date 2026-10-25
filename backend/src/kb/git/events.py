@@ -13,7 +13,7 @@ import subprocess
 
 PREFIX = "kb-event v1"
 SEP = " · "
-EVENTS = ("claimed", "queued", "checks-passed", "checks-failed", "merged", "deployed", "rolled-back")
+EVENTS = ("claimed", "queued", "checks-passed", "checks-failed", "approved", "merged", "deployed", "rolled-back")
 
 
 def _now():

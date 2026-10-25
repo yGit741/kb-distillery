@@ -22,7 +22,7 @@ Legacy (bootstrap only; refused once GIT_POLICY_MODE=enforce):
 Merging is the agent's default: `merge` runs as soon as the gates pass. A PR carrying the
 `hold` label waits for the user — `pr` puts it on every schema/paradigm PR and on any PR
 opened with `--hold` (the user asked to review it); `merge` refuses while it is there, and only
-`approve N` lifts it. `kb.git.git_guard` blocks agents from running `approve` or editing labels.
+the owner's GitHub Approve review on the head sha (then `merge` lifts it) or `approve N` lifts it. `kb.git.git_guard` blocks agents from running `approve` or editing labels.
 
 PRs are always merged with a real merge commit — never squash or rebase — so the
 branch's commits stay visible. Schema/paradigm PRs snapshot the current knowledge
@@ -87,6 +87,9 @@ def print_status(lanes, root=ROOT):
     if prs:
         print("open infra PRs: " + ", ".join(f"#{p['number']} {p['branch']} ({p['age']})" for p in prs)
               + " — pixi run ship -- merge (in its worktree) or prune --drop")
+        for p in prs:
+            if p.get("held"):
+                print(f"held #{p['number']} {p['title']}: {approval_label(p['number'], p.get('head'), root)}")
 
 
 def open_prs(root=ROOT):
@@ -94,7 +97,7 @@ def open_prs(root=ROOT):
     (`hours` is None when createdAt could not be parsed)."""
     import datetime
     try:
-        cp = app_token.run_gh(["pr", "list", "--state", "open", "--json", "number,headRefName,title,createdAt,updatedAt"],
+        cp = app_token.run_gh(["pr", "list", "--state", "open", "--json", "number,headRefName,title,createdAt,updatedAt,labels,headRefOid"],
                               root, timeout=8)
         rows = json.loads(cp.stdout) if cp.returncode == 0 and cp.stdout.strip() else []
     except (OSError, ValueError, subprocess.TimeoutExpired):
@@ -114,7 +117,9 @@ def open_prs(root=ROOT):
         except ValueError:
             updated_hours = None
         out.append({"number": r.get("number"), "branch": r.get("headRefName", ""), "title": r.get("title", ""),
-                    "age": age, "hours": hours, "updated_hours": updated_hours})
+                    "age": age, "hours": hours, "updated_hours": updated_hours,
+                    "held": HOLD_LABEL in {l.get("name") for l in r.get("labels") or [] if isinstance(l, dict)},
+                    "head": r.get("headRefOid") or ""})
     return out
 
 
@@ -680,13 +685,13 @@ def cmd_pr(title=None, skip_tests=False, root=ROOT, gates=True, notes_file=None,
             "--title", title, "--body", pr_body(subjects, _read_notes(notes_file), skip_checks, round_no, paths)]
     if why:
         gh(["label", "create", HOLD_LABEL, "--force", "--color", "B60205",
-            "--description", "waits for the user's approval (pixi run ship -- approve N)"], root)
+            "--description", "waits for the owner's GitHub Approve review (or pixi run ship -- approve N)"], root)
         args += ["--label", HOLD_LABEL]
     created = gh(args, root)
     print(_out(created))
     if created.returncode == 0:
         _post_claimed(created.stdout, branch, root, round_no, paths)
-        print(f"held for the user: {why} — they lift it with: pixi run ship -- approve N" if why
+        print(f"held for the user: {why} — they approve the review on GitHub, or run: pixi run ship -- approve N" if why
               else "not held: run `pixi run ship -- merge` yourself once you are done")
         if why:
             print(HOLD_VOID_MSG)
@@ -720,6 +725,46 @@ def _pr_number(branch, root):
         return json.loads(view.stdout)["number"] if view.returncode == 0 else None
     except (OSError, ValueError, KeyError, TypeError):
         return None
+
+
+REVIEW_STATES = ("APPROVED", "CHANGES_REQUESTED", "DISMISSED")  # COMMENTED never changes a verdict
+
+
+def review_approval(number, head_sha, root=ROOT):
+    """Does the owner's latest GitHub review approve PR `number` at `head_sha`?
+
+    Returns (verdict, detail): "ok" (APPROVED on the head sha), "stale" (APPROVED on an older sha),
+    "none" (no approving owner review), "off" (fallback mode: no App config, only `ship approve`).
+    Reviews by anyone but the owner login (the bot included) never count."""
+    owner = app_token.owner_login()
+    if not owner:
+        return "off", "no GitHub App config: the user lifts the hold with `ship approve`"
+    try:
+        cp = app_token.run_gh(["api", "--paginate", "--jq", ".[]",
+                               f"repos/{{owner}}/{{repo}}/pulls/{number}/reviews?per_page=100"], root, timeout=15)
+        if cp.returncode != 0:
+            print(f"note: could not read reviews of #{number}: {_out(cp)[:200]}")
+        reviews = [json.loads(l) for l in cp.stdout.splitlines() if l.strip()] if cp.returncode == 0 else []
+    except (OSError, ValueError, subprocess.SubprocessError) as e:
+        print(f"note: could not read reviews of #{number}: {e}")
+        reviews = []
+    mine = [r for r in reviews if isinstance(r, dict)
+            and ((r.get("user") or {}).get("login") or "").lower() == owner.lower()
+            and r.get("state") in REVIEW_STATES]
+    if not mine or mine[-1].get("state") != "APPROVED":
+        return "none", f"awaiting review by {owner}"
+    sha = mine[-1].get("commit_id") or ""
+    if head_sha and sha == head_sha:
+        return "ok", f"approved by {owner} at {sha[:7]}"
+    return "stale", f"re-approve: new commits since your review ({sha[:7]} -> {(head_sha or '?')[:7]})"
+
+
+APPROVAL_LABELS = {"ok": "approved ✓ (sha ok)", "stale": "approved on old sha", "none": "awaiting review",
+                   "off": "awaiting `ship approve` (no App config)"}
+
+
+def approval_label(number, head_sha, root=ROOT):
+    return APPROVAL_LABELS[review_approval(number, head_sha, root)[0]]
 
 
 def cmd_approve(number, root=ROOT):
@@ -849,6 +894,7 @@ def cmd_merge(local=False, pr_number=None, title=None, skip_tests=False, no_push
 
 
 def _merge_locked(branch, local, pr_number, title, skip_tests, no_push, root, gates, skip_checks, ev_pr=None):
+    approved_head = None
     feature = branch[len("infra/"):]
     primary = primary_checkout(root)
     round_no = rounds.branch_round(branch, root)  # read before _finish_merge deletes the branch config
@@ -888,7 +934,7 @@ def _merge_locked(branch, local, pr_number, title, skip_tests, no_push, root, ga
     else:
         if not no_push:
             app_token.run_git_push(["push", "-u", "origin", branch], cwd=root)
-        view = gh(["pr", "view", branch, "--json", "number,title,state,labels,body"], root)
+        view = gh(["pr", "view", branch, "--json", "number,title,state,labels,body,headRefOid"], root)
         if view.returncode != 0:
             print("error: no PR for this branch — run ship pr first")
             print(_out(view))
@@ -898,9 +944,16 @@ def _merge_locked(branch, local, pr_number, title, skip_tests, no_push, root, ga
             print(f"error: PR #{info['number']} is {info['state']}")
             return 1
         if HOLD_LABEL in {l.get("name") for l in info.get("labels") or []}:
-            print(f"error: PR #{info['number']} is held for the user's approval — ask them to run: "
-                  f"pixi run ship -- approve {info['number']}")
-            return 1
+            head = info.get("headRefOid") or ""
+            verdict, detail = review_approval(info["number"], head, root)
+            if verdict != "ok":
+                print(f"error: PR #{info['number']} is held for the user's approval ({detail}) — ask them to "
+                      f"approve the review on GitHub, or run: pixi run ship -- approve {info['number']}")
+                return 1
+            # the label stays until the merge succeeds: a failed step leaves the PR held, so new
+            # commits are re-checked on the next run; the merge itself is pinned to the approved sha
+            approved_head = head
+            print(f"PR #{info['number']} {detail} — merging the approved sha")
         pr_number, title = info["number"], title or info["title"]
         round_no = round_no or rounds.round_from_pr_body(info.get("body"))
 
@@ -961,11 +1014,16 @@ def _merge_locked(branch, local, pr_number, title, skip_tests, no_push, root, ga
         return rc
 
     args = ["pr", "merge", str(pr_number), "--merge", "--subject", subject, "--body", body]
+    if approved_head:
+        args += ["--match-head-commit", approved_head]   # a push after the review never rides along
     assert not FORBIDDEN_MERGE_FLAGS & set(args), "ship never squashes or rebases"
     merged = gh(args, root)
     print(_out(merged))
     if merged.returncode != 0:
         return 1
+    if approved_head:
+        gh(["pr", "edit", str(pr_number), "--remove-label", HOLD_LABEL], root)
+        events.post(pr_number, "approved", approved_head, root=root, by=app_token.owner_login(), via="review")
     app_token.run_git_push(["push", "origin", "--delete", branch], cwd=root)
     run_git(["fetch", "-q", "origin", "main"], cwd=root)
     events.post(pr_number, "merged", _head_sha(root, "origin/main"), root=root, branch=branch)
