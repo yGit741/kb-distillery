@@ -169,13 +169,36 @@ class GoldenTest(unittest.TestCase):
             env = golden._env("/tmp/sink.git", repo)
         self.assertNotIn("ANTHROPIC_BASE_URL", env)
         self.assertNotIn("ANTHROPIC_AUTH_TOKEN", env)
-        self.assertEqual(env["KB_ROOT"], repo)                         # writes land in the clone
-        self.assertEqual(env["PYTHONPATH"], os.path.join(repo, "backend", "src"))   # its own code runs
+        self.assertNotIn("KB_ROOT", env)                               # the checkout in use is the vault
+        self.assertEqual(env["PYTHONPATH"], os.path.join("backend", "src"))   # relative: its own code runs
         self.assertFalse(any(k.startswith(("PIXI_", "CONDA_")) for k in env))
         self.assertEqual(env["PATH"], "/usr/bin")
         self.assertEqual(env["KB_NO_PUSH"], "1")
         self.assertEqual((env["GIT_CONFIG_KEY_0"], env["GIT_CONFIG_VALUE_0"]), ("remote.origin.pushurl", "/tmp/sink.git"))
         self.assertTrue(env["GH_CONFIG_DIR"].endswith("gh-empty"))
+
+
+class WorkDirTest(unittest.TestCase):
+    def g(self, cwd, *args):
+        import subprocess
+        return subprocess.run(["git", "-c", "user.name=t", "-c", "user.email=t@t", *args], cwd=cwd, check=True,
+                              capture_output=True, text=True).stdout.strip()
+
+    def test_picks_the_infra_worktree_with_work_else_the_clone(self):
+        repo = tempfile.mkdtemp()
+        self.g(repo, "init", "-q", "-b", "main")
+        open(os.path.join(repo, "a.txt"), "w").write("a")
+        self.g(repo, "add", "a.txt")
+        self.g(repo, "commit", "-q", "-m", "base")
+        base = self.g(repo, "rev-parse", "HEAD")
+        self.assertEqual(golden.work_dir(repo, base), repo)            # no worktree yet
+        wt = os.path.join(repo, ".claude", "worktrees", "x")
+        self.g(repo, "worktree", "add", "-q", "-b", "infra/x", wt)
+        self.assertEqual(golden.work_dir(repo, base), repo)            # a worktree with no work doesn't count
+        open(os.path.join(wt, "b.txt"), "w").write("b")
+        self.g(wt, "add", "b.txt")
+        self.g(wt, "commit", "-q", "-m", "feat")
+        self.assertEqual(os.path.realpath(golden.work_dir(repo, base)), os.path.realpath(wt))
 
 
 if __name__ == "__main__":

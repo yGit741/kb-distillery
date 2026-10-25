@@ -60,8 +60,6 @@ def make_workspace(task, run_id, ref, primary):
     _git(["clone", "-q", "--shared", "--no-checkout", primary, repo], cwd=base)
     _git(["checkout", "-q", "-B", "main", ref], cwd=repo)
     _git(["remote", "set-url", "origin", sink], cwd=repo)
-    _git(["push", "-q", "origin", "main"], cwd=repo)
-    _git(["fetch", "-q", "origin"], cwd=repo)
     for rel in LINKED:
         src, dst = os.path.join(primary, rel), os.path.join(repo, rel)
         if os.path.exists(src) and not os.path.lexists(dst):
@@ -75,7 +73,30 @@ def make_workspace(task, run_id, ref, primary):
         shutil.copy2(src, dst)
     for cmd in task.get("setup", []):
         subprocess.run(cmd, shell=True, cwd=repo, check=True, capture_output=True, text=True, env=_env(sink, repo))
+    # seed the sink only now: origin/main must include the setup (a replayed bug), or `ship start --worktree`
+    # branches from the fixed code
+    _git(["push", "-q", "origin", "main"], cwd=repo)
+    _git(["fetch", "-q", "origin"], cwd=repo)
     return repo, sink
+
+
+def work_dir(repo, base):
+    """Where the agent's result is: the clone, or the nested `infra/*` worktree it made with
+    `ship start --worktree` (the newest one with commits past `base`)."""
+    out = _git(["worktree", "list", "--porcelain"], cwd=repo, check=False).stdout
+    best, best_t = repo, None
+    for block in out.strip().split("\n\n"):
+        lines = dict(l.split(" ", 1) for l in block.splitlines() if " " in l)
+        path, branch = lines.get("worktree"), lines.get("branch", "")
+        if not path or os.path.realpath(path) == os.path.realpath(repo) or not branch.startswith("refs/heads/infra/"):
+            continue
+        if _git(["rev-list", "--count", f"{base}..HEAD"], cwd=path, check=False).stdout.strip() in ("", "0") \
+                and not _git(["status", "--porcelain"], cwd=path, check=False).stdout.strip():
+            continue
+        t = _git(["log", "-1", "--format=%ct"], cwd=path, check=False).stdout.strip()
+        if best_t is None or t > best_t:
+            best, best_t = path, t
+    return best
 
 
 def link_raw(primary, repo):
@@ -109,7 +130,10 @@ def _env(sink, repo):
     gh_dir = os.path.join(os.path.dirname(repo), "gh-empty")
     os.makedirs(gh_dir, exist_ok=True)
     env.update({
-        "KB_ROOT": repo, "PYTHONPATH": os.path.join(repo, "backend", "src"),
+        # relative on purpose: whichever checkout the agent stands in (the clone, or a worktree it made
+        # with `ship start --worktree`) imports its own code and so is its own vault; outside one, kb
+        # fails to import instead of writing to some other vault. No KB_ROOT for the same reason.
+        "PYTHONPATH": os.path.join("backend", "src"),
         "KB_NO_PUSH": "1", "KB_GOLDEN": "1", "GH_CONFIG_DIR": gh_dir, "GH_TOKEN": "golden-run-no-github",
         "GIT_CONFIG_COUNT": "1", "GIT_CONFIG_KEY_0": "remote.origin.pushurl", "GIT_CONFIG_VALUE_0": sink,
     })
@@ -175,8 +199,9 @@ def run_task(task, judge_cfg, run_id, label, ref, primary, dry_run=False, keep=F
         base = _git(["rev-parse", "HEAD"], cwd=repo).stdout.strip()   # after setup (a replayed bug is a commit)
         env["GOLDEN_BASE"] = base                                    # checks diff against it
         out = run_agent(task, repo, env)
-        checks = run_checks(task, repo, env)
-        diff = diff_of(repo, base)
+        where = work_dir(repo, base)                                 # the clone, or the worktree the agent made
+        checks = run_checks(task, where, env)
+        diff = diff_of(where, base)
         sess = _session_record(out.get("session_id"), repo)
         grade = judge.grade(task, out.get("result") or "", diff, checks, judge_cfg, env=env)
         rec.update({
@@ -206,9 +231,9 @@ def run(task_ids=None, label="adhoc", ref="HEAD", repeat=1, dry_run=False, keep=
     ref = _git(["rev-parse", ref], cwd=primary).stdout.strip()   # pinned once: main may move mid-run
     print(f"golden run {run_id} ({label}) at {ref[:8]}", flush=True)
     out = []
-    for _ in range(repeat):
-        for task in chosen:
-            rec = run_task(task, judge_cfg, run_id, label, ref, primary, dry_run=dry_run, keep=keep)
+    for i in range(repeat):
+        for task in chosen:   # each pass in its own directory: a second clone into the same path fails
+            rec = run_task(task, judge_cfg, f"{run_id}-r{i + 1}", label, ref, primary, dry_run=dry_run, keep=keep)
             out.append(rec)
             if not dry_run:
                 j = rec["judge"]

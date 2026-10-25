@@ -87,21 +87,32 @@ export function drawHulls(ctx: CanvasRenderingContext2D, nodes: readonly SimNode
   for (const [area, list] of groups) {
     const hull = coreHull(list);
     if (hull.length < 3) continue;
-    const cx = hull.reduce((s, p) => s + p[0], 0) / hull.length;
-    const cy = hull.reduce((s, p) => s + p[1], 0) / hull.length;
+    // the hull grown by a disk of radius R (Minkowski sum): edges pushed out along their normals, every corner an arc
+    const R = 30;
+    const n = hull.length;
+    let area2 = 0;
+    for (let i = 0; i < n; i++) {
+      const [x0, y0] = hull[i]!;
+      const [x1, y1] = hull[(i + 1) % n]!;
+      area2 += x0 * y1 - x1 * y0;
+    }
+    const s = area2 >= 0 ? 1 : -1;
+    // outward normal angle of edge i (hull[i] → hull[i+1])
+    const normal = (i: number) => {
+      const [x0, y0] = hull[i]!;
+      const [x1, y1] = hull[(i + 1) % n]!;
+      return Math.atan2(-(x1 - x0) * s, (y1 - y0) * s);
+    };
     ctx.beginPath();
-    hull.forEach(([x, y], i) => {
-      const d = Math.hypot(x - cx, y - cy) || 1;
-      const X = x + ((x - cx) / d) * 14;
-      const Y = y + ((y - cy) / d) * 14;
-      if (i) ctx.lineTo(X, Y);
-      else ctx.moveTo(X, Y);
-    });
+    for (let i = 0; i < n; i++) {
+      const [x, y] = hull[i]!;
+      ctx.arc(x, y, R, normal((i - 1 + n) % n), normal(i), s < 0);
+    }
     ctx.closePath();
     const col = areaColor(area);
-    ctx.fillStyle = withAlpha(col, 0.07);
+    ctx.fillStyle = withAlpha(col, 0.08);
     ctx.fill();
-    ctx.strokeStyle = withAlpha(col, 0.25);
+    ctx.strokeStyle = withAlpha(col, 0.12);
     ctx.lineWidth = 1 / scale;
     ctx.stroke();
   }

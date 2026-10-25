@@ -1,17 +1,18 @@
 #!/usr/bin/env python3
-"""Claude Code `Stop` hook: a reply that finished frontend or data work must show its proof.
+"""Claude Code `Stop` hook: a reply that finished user-visible work must show its proof.
 
-When the turn (every tool call after the last human message) wrote to a frontend or data path —
-`frontend/`, `backend/src/kb/dashboard/`, `wiki/`, `raw/`, `meta/` — or ran a knowledge/PR step
-(`ops -- commit`, `ship -- pr|merge`, `share -- …`), the reply must carry a line
+The turn (every tool call after the last human message) is classified into kinds; each kind asks
+for its own evidence on the reply's `Proof:` line(s). Every requirement is an any-of group, and all
+groups of every kind the turn touched must be met:
 
-    Proof: <link> [<link> …]
+    ui         frontend/, kb/dashboard/     local URL  +  deployed URL (always both)
+    api        kb/api/, kb/services/        local endpoint URL
+    knowledge  wiki/, raw/, meta/, ops commit   page link  +  kb-x.y.z or commit URL
+    pr         ship pr / merge              PR URL
+    deploy     share -- …                   deployed URL
 
-with at least one clickable thing the user can open to see the result: an http(s) URL (localhost
-page, PR, deployed site, artifact) or a path to a screenshot/GIF (.png/.jpg/.gif/.webp/.mp4).
-Otherwise it answers `{"decision": "block", "reason": …}` once and the agent adds it.
-
-Read-only turns, tooling-only turns and the second pass exit 0 silently. Test by hand:
+Missing evidence answers `{"decision": "block", "reason": …}` once, naming what is missing.
+Read-only turns, other tooling and the second pass exit 0 silently. Test by hand:
 
     echo '{"cwd": ".", "transcript_path": "/dev/null"}' | python3 -m kb.git.proof_nudge
 """
@@ -22,11 +23,25 @@ import sys
 
 from kb.git.merge_nudge import last_reply
 
-PROOF_PATHS = ("frontend/", "backend/src/kb/dashboard/", "wiki/", "raw/", "meta/")
-PROOF_COMMANDS = re.compile(r"\bops\s+--\s+commit\b|\bship\s+--\s+(pr|merge)\b|\bshare\s+--\s+\w")
+DEPLOYED_SITE = "https://kb.yonatan-magen-thesis.workers.dev"
 WRITE_TOOLS = {"Write", "Edit", "NotebookEdit"}
-LINK = re.compile(r"https?://\S+|\S+\.(png|jpe?g|gif|webp|mp4)\b", re.I)
 PROOF_LINE = re.compile(r"^\W*proof\W*:(.*)$", re.I | re.M)
+
+# evidence: name -> (description, regex)
+LOCAL = ("a local URL (http://localhost:5173/… of the changed screen)", r"https?://(localhost|127\.0\.0\.1)(:\d+)?\S*")
+DEPLOYED = (f"the deployed URL ({DEPLOYED_SITE}/…)", r"https://\S+\.(workers|pages)\.dev\S*")
+PAGE = ("a link to the wiki page (deployed or local)", r"https?://(localhost|127\.0\.0\.1|\S+\.(workers|pages)\.dev)\S*")
+VERSION = ("the kb-x.y.z version or commit URL", r"\bkb-\d+\.\d+\.\d+\b|github\.com/\S+/commit/[0-9a-f]{7,}")
+PR = ("the PR URL (github.com/…/pull/N)", r"github\.com/\S+/pull/\d+")
+
+# kind -> (path prefixes, command regex, [any-of evidence groups])
+KINDS = {
+    "ui": (("frontend/", "backend/src/kb/dashboard/"), None, [[LOCAL], [DEPLOYED]]),
+    "api": (("backend/src/kb/api/", "backend/src/kb/services/"), None, [[LOCAL]]),
+    "knowledge": (("wiki/", "raw/", "meta/"), r"\bops\s+--\s+commit\b", [[PAGE], [VERSION]]),
+    "pr": ((), r"\bship\s+--\s+(pr|merge)\b", [[PR]]),
+    "deploy": ((), r"\bshare\s+--\s+\w", [[DEPLOYED]]),
+}
 
 
 def turn_tool_calls(transcript_path):
@@ -54,42 +69,51 @@ def turn_tool_calls(transcript_path):
     return calls
 
 
-def needs_proof(calls):
-    """Why this turn needs proof (a short phrase), or '' when it does not."""
+def _under(path, prefix):
+    return f"/{prefix}" in path or path.startswith(prefix)
+
+
+def turn_kinds(calls):
+    """Kinds of work this turn did, in KINDS order."""
+    hit = set()
     for name, inp in calls:
-        if name in WRITE_TOOLS:
-            path = str(inp.get("file_path") or inp.get("notebook_path") or "")
-            hit = next((p for p in PROOF_PATHS if f"/{p}" in path or path.startswith(p)), None)
-            if hit:
-                return f"it edited {hit}"
-        elif name == "Bash":
-            cmd = str(inp.get("command") or "")
-            m = PROOF_COMMANDS.search(cmd)
-            if m:
-                return f"it ran `{m.group(0)}`"
-    return ""
+        path = str(inp.get("file_path") or inp.get("notebook_path") or "") if name in WRITE_TOOLS else ""
+        cmd = str(inp.get("command") or "") if name == "Bash" else ""
+        for kind, (prefixes, cmd_re, _) in KINDS.items():
+            if (path and any(_under(path, p) for p in prefixes)) or (cmd and cmd_re and re.search(cmd_re, cmd)):
+                hit.add(kind)
+    return [k for k in KINDS if k in hit]
 
 
-def has_proof(text):
-    return any(LINK.search(m.group(1)) for m in PROOF_LINE.finditer(text or ""))
+def missing_proof(kinds, text):
+    """{kind: [missing requirement descriptions]} given the reply's Proof: lines."""
+    proof = "\n".join(m.group(1) for m in PROOF_LINE.finditer(text or ""))
+    out = {}
+    for kind in kinds:
+        miss = [" or ".join(d for d, _ in group) for group in KINDS[kind][2]
+                if not any(re.search(rx, proof, re.I) for _, rx in group)]
+        if miss:
+            out[kind] = miss
+    return out
 
 
 def decide(payload):
     """Return the hook's JSON output (dict) or None for a silent exit."""
     if payload.get("stop_hook_active"):
         return None                                       # already asked once this stop
-    why = needs_proof(turn_tool_calls(payload.get("transcript_path")))
-    if not why:
+    kinds = turn_kinds(turn_tool_calls(payload.get("transcript_path")))
+    if not kinds:
         return None
     text = payload.get("last_assistant_message") or last_reply(payload.get("transcript_path"))
-    if has_proof(text):
+    miss = missing_proof(kinds, text)
+    if not miss:
         return None
+    lines = "\n".join(f"- {k}: " + "; ".join(m) for k, m in miss.items())
     return {"decision": "block",
-            "reason": f"This turn changed something the user will want to see ({why}). Before you finish, "
-                      "add a line `Proof: <link> …` with links that show the result clearly: the "
-                      "localhost page or deployed URL of the screen you changed, a screenshot/GIF path "
-                      "you captured, the PR URL, or the wiki page / commit (kb-x.y.z) you wrote. If it can't "
-                      "be shown yet, take a screenshot first (Playwright) rather than skipping it."}
+            "reason": "This turn changed something the user will want to see. Before you finish, add "
+                      f"`Proof:` line(s) with links covering:\n{lines}\n"
+                      "Start the app and deploy if needed (`pixi run share -- …`); a UI change always shows "
+                      "both its local and its deployed URL — a screenshot does not replace either."}
 
 
 def main():
