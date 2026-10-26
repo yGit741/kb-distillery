@@ -130,6 +130,9 @@ export const GLYPH_SVG: Readonly<Record<SourceGlyph, { d: string; fill?: boolean
   handwritten: { d: "M5 10 12 3M2.5 13.5c1.5-1.5 3-1.5 4 0s3 1.5 6.5-.5" },
 };
 
+/** A mark's radius in a 16 px icon box, so every mark (stroke included) fills about the same square. */
+export const ICON_R: Readonly<Record<NodeMark, number>> = { source: 6.6, person: 6.8, question: 5.8, idea: 5.8, topic: 5.8, collection: 5.2 };
+
 /** On-screen radius from which a source shows its type glyph (below it, a plain dot); a hovered source always does. */
 export const SOURCE_GLYPH_PX = 8;
 

@@ -1,6 +1,7 @@
 /** Pure logic of the Pages screen: link graph, legacy-link redirects, trail and pins, markdown prep, ring layout. */
 import { LAYER_TYPES, type Layer } from "@/api/model";
 import type { PageCard, PageIndex } from "@/api/types";
+import type { GNode } from "@/features/graph/types";
 
 // ---------- data model ----------
 
@@ -302,4 +303,26 @@ export function ringLayout(g: LinkGraph, slug: string, max = RING_MAX, size = 32
   const cross: [string, string][] = [];
   for (const s of ring) for (const t of g.out.get(s) ?? []) if (t !== slug && inRing.has(t)) cross.push([s, t]);
   return { size, centre, total: all.length, nodes, cross };
+}
+
+/** A page card as a graph node, for the shared encoding (marks, colour channels, legend). */
+export function cardNode(c: PageCard): GNode {
+  return {
+    id: c.id,
+    label: c.title || c.id,
+    title: c.title || c.id,
+    type: c.type,
+    layer: layerOf(c.type) ?? "source",
+    status: c.status,
+    depth: c.depth,
+    areas: c.areas,
+    year: null,
+    inDegree: 0,
+    outDegree: 0,
+    path: "",
+    added: "",
+    changed: "",
+    preview: c.preview,
+    properties: {},
+  };
 }

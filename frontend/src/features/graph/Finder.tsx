@@ -3,9 +3,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { SearchHit } from "@/api";
 import { useApiQuery } from "@/lib/useApiQuery";
 import { cn } from "@/lib/utils";
-import { Swatch } from "./controls";
 import { findPages, textHits } from "./pageSearch";
-import { colorOf, type ColorBy } from "./style";
+import { NodeSwatch } from "./encoding/NodeMarkSvg";
+import { colorOf, effectiveColorBy, type ColorBy } from "./style";
 import type { GNode } from "./types";
 import { useChatDock } from "./tools/chatDockStore";
 
@@ -197,7 +197,7 @@ export function Finder({ nodes, byId, colorBy, visible, onFocus, onRead, onShowP
             <li className="flex flex-wrap gap-1 px-1 pb-1" aria-label="Picked pages">
               {[...picked.values()].map((n) => (
                 <span key={n.id} className="flex items-center gap-1 rounded-md bg-accent-soft px-1.5 py-0.5 text-xs">
-                  <Swatch color={colorOf(n, colorBy)} className="size-2" />
+                  <NodeSwatch type={n.type} color={colorOf(n, effectiveColorBy(colorBy))} className="size-3" />
                   <span className="max-w-40 truncate">{n.title || n.id}</span>
                   <button type="button" aria-label={`Unpick ${n.title || n.id}`} onClick={() => togglePick(n)}>
                     ×
@@ -229,7 +229,7 @@ export function Finder({ nodes, byId, colorBy, visible, onFocus, onRead, onShowP
                   >
                     {picked.has(it.node.id) ? "✓" : ""}
                   </button>
-                  <Swatch color={colorOf(it.node, colorBy)} className="mt-1.5" />
+                  <NodeSwatch type={it.node.type} color={colorOf(it.node, effectiveColorBy(colorBy))} className="mt-1 size-3" />
                   <span className="min-w-0 flex-1">
                     <span className="block truncate">{it.node.title || it.node.id}</span>
                     {it.snippet && <span className="block truncate text-xs text-muted-foreground">{it.snippet}</span>}

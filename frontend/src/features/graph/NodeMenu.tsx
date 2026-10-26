@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { Swatch } from "./controls";
 import { visibleItems, type MenuContext, type MenuItem } from "./menu";
-import { colorOf, type ColorBy } from "./style";
+import { NodeSwatch } from "./encoding/NodeMarkSvg";
+import { colorOf, effectiveColorBy, type ColorBy } from "./style";
 import type { GNode } from "./types";
 
 interface Props {
@@ -67,7 +67,7 @@ export function NodeMenu({ node, x, y, colorBy, ctx, items, onClose }: Props) {
       style={pos}
     >
       <div className="flex items-center gap-2 border-b px-2 py-1.5 text-xs text-muted-foreground">
-        <Swatch color={colorOf(node, colorBy)} />
+        <NodeSwatch type={node.type} color={colorOf(node, effectiveColorBy(colorBy))} />
         <span className="max-w-64 truncate">{node.title || node.id}</span>
       </div>
       {list.map((it) => {

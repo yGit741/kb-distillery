@@ -1,13 +1,37 @@
 import { Link } from "@tanstack/react-router";
-import { typeColor } from "@/theme/palette";
-import { ringLayout, titleOf, type LinkGraph } from "./lib";
+import { useMemo } from "react";
+import { colorChannel, GraphLegend, NodeMarkG, personInitials } from "@/features/graph/encoding";
+import { areaSlots } from "@/features/graph/style";
+import type { GNode } from "@/features/graph/types";
+import { cardNode, ringLayout, titleOf, type LinkGraph } from "./lib";
 import { pageTo } from "./parts";
 
 const trunc = (s: string, n: number) => (s.length > n ? `${s.slice(0, n - 1)}…` : s);
 
-/** The page and its neighbours on a ring: solid = links to, dashed = linked from, thick = both. */
+/** From this radius (SVG px) a source shows its type glyph inside its dot. */
+const GLYPH_R = 7;
+/** The ring sizes a neighbour by its links (./lib ringLayout). */
+const SIZE = { by: "degree", title: "links" } as const;
+
+/**
+ * The page and its neighbours on a ring: solid = links to, dashed = linked from, thick = both. Nodes use the shared
+ * encoding (type = mark, colour = theme like the Full Graph's Map) and the compact legend sits under the ring.
+ */
 export function MiniGraph({ g, slug }: { g: LinkGraph; slug: string }) {
-  const ring = ringLayout(g, slug);
+  const ring = useMemo(() => ringLayout(g, slug), [g, slug]);
+  // theme colours ranked over every page, the way the Full Graph ranks its model
+  const color = useMemo(() => colorChannel("area", { areas: areaSlots([...g.byId.values()]) }), [g]);
+  const nodes = useMemo(
+    () => [slug, ...ring.nodes.map((n) => n.id)].map((id) => g.byId.get(id)).filter((c) => !!c).map(cardNode),
+    [g, slug, ring],
+  );
+  const byId = useMemo(() => new Map<string, GNode>(nodes.map((n) => [n.id, n])), [nodes]);
+  const initials = useMemo(() => personInitials(nodes), [nodes]);
+  const mark = (id: string, x: number, y: number, r: number) => {
+    const n = byId.get(id);
+    if (!n) return null;
+    return <NodeMarkG type={n.type} x={x} y={y} r={r} color={color.color(n)} background="var(--card)" initials={initials.get(id)} glyph={r >= GLYPH_R} />;
+  };
   if (!ring.total) return <p className="text-sm text-muted-foreground">No links yet.</p>;
   const { size, centre } = ring;
   const labelled = ring.nodes.length <= 20;
@@ -40,14 +64,18 @@ export function MiniGraph({ g, slug }: { g: LinkGraph; slug: string }) {
             strokeDasharray={n.dir === "in" ? "4 3" : undefined}
           />
         ))}
-        <circle cx={centre} cy={centre} r={11} fill={typeColor(g.byId.get(slug)?.type)} className="stroke-foreground" strokeWidth={1.5} />
+        {/* the page itself: the focus ring of the shared state language */}
+        <circle cx={centre} cy={centre} r={11 + 3} fill="none" className="stroke-primary" strokeWidth={2.5} />
+        {mark(slug, centre, centre, 11)}
         {ring.nodes.map((n) => {
           const right = Math.cos(n.angle) >= 0;
           const title = titleOf(g, n.id);
           return (
-            <Link key={n.id} to={pageTo(n.id)} aria-label={title} className="outline-none [&:focus-visible_circle]:stroke-primary [&:focus-visible_circle]:stroke-2">
+            <Link key={n.id} to={pageTo(n.id)} aria-label={title} className="outline-none [&:focus-visible_.focus-ring]:stroke-primary">
               <title>{title}</title>
-              <circle cx={n.x} cy={n.y} r={n.radius} fill={typeColor(g.byId.get(n.id)?.type)} />
+              {/* keyboard focus: a ring of its own, so the mark keeps its strokes */}
+              <circle cx={n.x} cy={n.y} r={n.radius + 3} fill="none" stroke="transparent" strokeWidth={2} className="focus-ring" />
+              {mark(n.id, n.x, n.y, n.radius)}
               {labelled && (
                 <text
                   x={n.x + (right ? n.radius + 3 : -n.radius - 3)}
@@ -63,6 +91,7 @@ export function MiniGraph({ g, slug }: { g: LinkGraph; slug: string }) {
           );
         })}
       </svg>
+      <GraphLegend nodes={nodes} color={color} size={SIZE} density="compact" />
       <p className="flex flex-wrap items-center gap-x-3 text-xs text-muted-foreground">
         <span>solid: links to</span>
         <span>dashed: linked from</span>
