@@ -1,5 +1,5 @@
 import { colorKeyRows, type KeyRow } from "../legendModel";
-import { colorOf, METRIC_COLORS, RAMP_BY, RAMP_MEANING, type ColorBy, type SizeBy } from "../style";
+import { colorOf, METRIC_COLORS, OTHER_GREY, RAMP_BY, RAMP_MEANING, type ColorBy, type SizeBy } from "../style";
 import type { GNode } from "../types";
 
 export type { KeyRow };
@@ -76,7 +76,7 @@ export function fixedChannel<K extends string>(by: string, title: string, keyOf:
   return {
     by,
     title,
-    color: (n) => at.get(keyOf(n))?.color ?? "#7C808B",
+    color: (n) => at.get(keyOf(n))?.color ?? OTHER_GREY,
     rows: (nodes) => {
       const count = new Map<K, number>();
       for (const n of nodes) count.set(keyOf(n), (count.get(keyOf(n)) ?? 0) + 1);

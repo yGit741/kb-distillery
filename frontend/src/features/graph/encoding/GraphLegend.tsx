@@ -71,7 +71,8 @@ export function GraphLegend({ nodes, color, size, density = "full", maxColors = 
   const glyphs = glyphRows(nodes);
   const all = color.rows(nodes);
   const compact = density === "compact";
-  const shown = compact ? all.slice(0, maxColors) : all;
+  // an ordered ramp is never cut: its steps read only as a whole
+  const shown = compact && !color.ramp ? all.slice(0, maxColors) : all;
   const rest = all.slice(shown.length);
   const item = "inline-flex shrink-0 items-center gap-1";
   const row = compact ? "contents" : "flex flex-wrap items-center gap-x-2.5 gap-y-0.5";

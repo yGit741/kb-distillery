@@ -56,6 +56,19 @@ describe("GraphLegend", () => {
   });
 });
 
+describe("GraphLegend ramp", () => {
+  it("shows an ordered colouring whole, between its two ends", () => {
+    const nodes = ["listed", "easy", "full", "deep"].map((d, i) => node(`s${i}`, { type: "paper", layer: "source", depth: d }));
+    render(<GraphLegend nodes={nodes} color={colorChannel("depth", { ramp: "light" })} density="compact" maxColors={2} />);
+    const r = row("colour")!;
+    expect(within(r).getByText("Colour = depth")).toBeInTheDocument();
+    expect(within(r).getByText("listed")).toBeInTheDocument();
+    expect(within(r).getByText("deep")).toBeInTheDocument();
+    expect(within(r).queryByText(/^\+/)).toBeNull();
+    expect(r.querySelectorAll("i")).toHaveLength(4);
+  });
+});
+
 describe("ShapeIcon", () => {
   it("draws the canvas geometry (fractions of r)", () => {
     const { container } = render(<ShapeIcon shape="idea" />);

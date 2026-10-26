@@ -27,6 +27,8 @@ interface Props {
 /** What the nodes can be coloured by from the legend: the colourings that answer a question about the vault. */
 const COLOUR_PICK: readonly ColorBy[] = ["area", "depth", "status", "degree"];
 
+const cap = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
+
 /** The colour key's header, the shared legend title: "Colour = theme", switchable among the colourings that make sense. */
 function ColourBy({ by, className }: { by: ColorBy; className?: string }) {
   return (
@@ -38,10 +40,10 @@ function ColourBy({ by, className }: { by: ColorBy; className?: string }) {
         aria-label="Colour by"
         onChange={(e) => useGraphUi.setState({ colorBy: e.target.value as ColorBy, hiddenKeys: new Set(), story: "" })}
       >
-        {!COLOUR_PICK.includes(by) && <option value="">{COLOR_TITLE[by]}</option>}
+        {!COLOUR_PICK.includes(by) && <option value="">{cap(COLOR_TITLE[by])}</option>}
         {COLOUR_PICK.map((c) => (
           <option key={c} value={c}>
-            {COLOR_TITLE[c]}
+            {cap(COLOR_TITLE[c])}
           </option>
         ))}
       </select>
@@ -56,7 +58,9 @@ function SizeKey({ by, sources }: { by: Parameters<typeof sizeChannel>[0]; sourc
     <div className="flex flex-wrap items-baseline gap-x-1 border-t px-1 pt-1 text-[11px]" data-row="size">
       <LegendTitle>Size =</LegendTitle>
       <span>links</span>
-      {sources && src && src.title !== "links" && <span className="w-full text-[10px] text-muted-foreground">sources by {src.title}</span>}
+      {/* concepts and people always grow with their links (./style layeredRadii); sources follow the size mode, except
+          under the type tier (one size for every source) and uniform */}
+      {sources && src && by !== "tier" && by !== "logdeg" && <span className="w-full text-[10px] text-muted-foreground">sources by {src.title}</span>}
     </div>
   );
 }
