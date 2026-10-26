@@ -138,6 +138,9 @@ export function prepareMarkdown(md: string, titleFor?: (slug: string) => string 
     /```dataviewjs\n[\s\S]*?const path = "([^"]+)";[\s\S]*?```/g,
     (_m, p: string) => `[Open the visualization](/api/assets/chat?path=${encodeURIComponent(p)})`,
   );
+  // `![alt](../raw/…)` (an image in raw/, written relative to wiki/ as Obsidian reads it) → the vault image route
+  s = s.replace(/!\[([^\]]*)\]\(\.\.\/(raw\/[^)\s]+)\)/g, (_m, alt: string, path: string) =>
+    `![${alt}](/api/assets/vault?name=${encodeURIComponent(path)})`);
   s = s.replace(/!\[\[([^\]|]+)(?:\\?\|[^\]]*)?\]\]/g, (_m, name: string) => {
     const n = name.trim();
     return `![${n}](/api/assets/vault?name=${encodeURIComponent(n)})`;

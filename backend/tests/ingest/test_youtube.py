@@ -137,48 +137,69 @@ def test_dedup_slides_keeps_the_fullest_build_and_separates_templated_slides():
     assert [k["t"] for k in kept] == [5, 9]
 
 
-def test_budget_shares_frames_over_sections():
-    secs = [{"start": 0, "end": 1800}, {"start": 1800, "end": 3600}]
-    frames = [{"t": t, "score": t % 7} for t in range(0, 3600, 60)]
-    out = fx.budget(frames, secs, per_hour=10, duration=3600)
-    assert len(out) == 10
-    assert sum(f["t"] < 1800 for f in out) == 5
+def test_signals_merge_into_anchors_with_reasons_and_summed_scores():
+    a = _analysis([0] * 400, [0.0] * 400)
+    a["delta"] = np.zeros(400)
+    a["delta"][[50, 200]] = 20                                      # two slide changes
+    cues = [(45.0, "and as you can see here"), (300.0, "nothing to see")]
+    sig = fx.signals(a, "slides", cues, [{"title": "Intro", "start_time": 0}])
+    anchors = fx.merge(sig)
+    first = [x for x in anchors if abs(x["t"] - 52) <= fx.MERGE_S][0]
+    assert set(first["why"]) == {"slide-change", "cue: as you can see"} and first["score"] == 4
+    assert any(x["why"] == ["chapter: Intro"] for x in anchors)
 
 
-def test_pick_vibe_one_per_third():
-    scored = [{"t": t, "score": s} for t, s in [(10, 1), (20, 9), (40, 0), (70, 3), (80, 5)]]
-    assert [p["t"] for p in fx.pick_vibe(scored, 90)] == [20, 80]
+def test_cover_fills_every_long_gap_with_its_most_stable_second():
+    delta = np.full(400, 9.0)
+    delta[150] = 0.5
+    out = fx.cover([{"t": 10, "why": ["x"], "score": 3}], delta, cover_s=90)
+    ts = [x["t"] for x in out]
+    assert 150 in ts and all(b - a <= 90 for a, b in zip(ts, ts[1:] + [399]))
+    assert all(x["score"] == 0 for x in out if x["why"] == ["coverage"])
 
 
-def test_mode_of():
-    assert fx.mode_of({"board": np.array([0.6] * 7 + [0.0] * 3)}) == "board"
-    assert fx.mode_of({"board": np.array([0.0] * 9 + [0.6])}) == "slides"
+def test_mode_of_needs_a_board_and_chalk_on_it():
+    board = np.array([0.6] * 7 + [0.0] * 3)
+    assert fx.mode_of({"board": board, "ink": np.full(10, 1500)}) == "board"
+    assert fx.mode_of({"board": board, "ink": np.full(10, 4)}) == "slides"       # a black table under paper
+    assert fx.mode_of({"board": np.array([0.0] * 9 + [0.6]), "ink": np.full(10, 1500)}) == "slides"
+
+
+def test_adjust_sinks_room_shots_in_a_slide_lecture_and_sponsor_stretches():
+    anchors = [{"t": t, "score": 9, "why": ["slide-change"], "flat": f} for t, f in
+               [(10, 0.8), (20, 0.75), (30, 0.36), (40, 0.7), (980, 0.8)]]
+    fx.adjust(anchors, "slides", [{"title": "Talent", "start_time": 900, "end_time": 960}], 1000)
+    by = {x["t"]: x for x in anchors}
+    assert by[30]["score"] == 6 and "camera shot" in by[30]["why"] and by[10]["score"] == 9
+    assert by[980]["score"] == 5                                   # last 3% of the video
+    paper = [{"t": t, "score": 5, "why": [], "flat": 0.44} for t in range(0, 500, 50)]
+    fx.adjust(paper, "slides", [], 1000)
+    assert all(x["score"] == 5 for x in paper)                     # no clean slides: nothing is a room shot
 
 
 # --- bundle and vault wiring --------------------------------------------------------------------
 
 META = {"id": "abcdefghijk", "title": "Lecture 16: SVM", "url": "https://www.youtube.com/watch?v=abcdefghijk",
         "channel": "MIT", "duration": 600, "uploaded": "2014-01-10", "description": "See https://ocw.mit.edu",
-        "chapters": [{"title": "Intro", "start": 0, "end": 300}], "subs_kind": "manual", "tier": "frames"}
+        "chapters": [{"title": "Intro", "start": 0, "end": 300}], "subs_kind": "manual"}
 
 
-def test_render_md_puts_frames_in_their_section():
-    secs = [{"chapter": "Intro", "start": 0, "end": 300, "text": "Hello."},
+def test_render_md_lists_anchors_under_their_section():
+    secs = [{"chapter": "Intro", "start": 10, "end": 300, "text": "Hello."},
             {"chapter": "Intro", "start": 300, "end": 600, "text": "Lagrange."}]
-    frames = [{"t": 400, "file": "frame-00400.jpg", "kind": "board", "ocr": ["L = 1/2 w"],
-               "read": {"text": "$$L = \\tfrac12\\|w\\|^2$$"}}]
-    md = bundle.render_md(META, secs, frames, [])
-    assert md.startswith("---\ntitle: \"Lecture 16: SVM\"")
-    assert md.index("Lagrange.") < md.index("frame-00400.jpg") and "$$L" in md
-    assert "## Intro" in md and md.count("## Intro") == 1 and "## Chapters" in md
+    anchors = [{"t": 4, "thumb": "a-00004.jpg", "kind": "board", "score": 0},
+               {"t": 400, "thumb": "a-00400.jpg", "kind": "board", "score": 7}]
+    md = bundle.render_md(META, secs, anchors, [])
+    assert md.startswith("---\ntitle: \"Lecture 16: SVM\"") and "anchors: 2" in md
+    assert md.index("Hello.") < md.index("a-00004.jpg") < md.index("Lagrange.") < md.index("a-00400.jpg")
+    assert md.count("## Intro") == 1 and "## Chapters" in md
 
 
 def test_abstract_reads_the_bundle_data(tmp_path):
-    d = {**META, "sections": [{"chapter": "Intro", "start": 0, "end": 600, "text": " ".join(["w"] * 2000)}],
-         "frames": [{"t": 5, "ocr": ["SUPPORT VECTOR MACHINES"]}]}
+    d = {**META, "sections": [{"chapter": "Intro", "start": 0, "end": 600, "text": " ".join(["w"] * 2000)}]}
     (tmp_path / "video.json").write_text(json.dumps(d))
     text = bundle.abstract(str(tmp_path / "video.md"))
-    assert "Title: Lecture 16: SVM" in text and "SUPPORT VECTOR MACHINES" in text and "[…]" in text
+    assert "Title: Lecture 16: SVM" in text and "Chapters:" in text and "[…]" in text
 
 
 def test_dir_name_is_kebab_and_unique(tmp_path):
@@ -228,26 +249,76 @@ def test_ops_target_of_a_video_bundle_is_its_folder():
     assert _target(["raw/inbox/video-svm/frame-00042.jpg", "raw/inbox/video-svm/video.md"], ["scrap-youtube"]) == "svm"
 
 
-def test_budget_keeps_frames_without_sections_and_before_the_first_caption():
-    frames = [{"t": t, "score": 1} for t in range(0, 3600, 60)]
-    assert len(fx.budget(frames, [], per_hour=30, duration=3600)) == 30          # no transcript
-    secs = [{"start": 100, "end": 3600}]
-    out = fx.budget(frames, secs, per_hour=30, duration=3600)
-    assert len(out) == 30
+def _thumbs(tmp_path, anchors, same=()):
+    """Write a distinct (or, for `same`, an identical) picture per anchor; returns the anchors with paths."""
+    from PIL import Image
+    rng = np.random.default_rng(0)
+    base = rng.integers(0, 255, (90, 160), dtype=np.uint8)
+    for x in anchors:
+        px = base if x["t"] in same else rng.integers(0, 255, (90, 160), dtype=np.uint8)
+        Image.fromarray(px).save(tmp_path / f"a-{x['t']:05d}.jpg")
+        x["thumb_path"] = f"a-{x['t']:05d}.jpg"
+    return anchors
 
 
-def test_budget_over_many_short_sections_keeps_the_best_across_the_video():
-    secs = [{"start": i * 90, "end": (i + 1) * 90} for i in range(40)]
-    frames = [{"t": i * 90 + 10, "score": i % 4} for i in range(40)]
-    out = fx.budget(frames, secs, per_hour=10, duration=3600)
-    assert len(out) == 10 and max(f["t"] for f in out) > 1800 and all(f["score"] == 3 for f in out)
+def test_pick_takes_the_best_anchors_with_a_gap_and_no_repeated_picture(tmp_path):
+    from kb.ingest.youtube import digest
+    anchors = _thumbs(tmp_path, [{"t": t, "score": s} for t, s in
+                                 [(100, 9), (150, 8), (400, 7), (900, 7), (1500, 0), (2000, 6), (2600, 6)]],
+                      same=(900, 2600))
+    chosen = digest.pick(anchors, duration=3600, tier="full", root=str(tmp_path))
+    ts = [x["t"] for x in chosen]
+    assert 150 not in ts                       # 50 s after a better one: full keeps 2 min apart
+    assert 1500 not in ts                      # score 0 (coverage only) is never read
+    assert not (900 in ts and 2600 in ts)      # the same picture shown twice is read once
+    assert ts == sorted(ts) and 100 in ts and 400 in ts
 
 
-def test_force_reuses_the_videos_own_inbox_folder(tmp_path):
+def test_frames_section_and_drafted_equations():
+    from kb.ingest.youtube import digest
+    chosen = [{"t": 1311, "kind": "board", "thumb_path": "raw/videos/svm/a-01311.jpg",
+               "read": {"text": "$$y_i(\\vec w\\cdot x_i + b) \\geq 1$$ and text\n$$\nL = \\tfrac12\\|w\\|^2\n$$"}},
+              {"t": 1877, "kind": "board", "thumb_path": "raw/videos/svm/a-01877.jpg",
+               "read": {"text": "$$y_i(\\bar w \\cdot x_i+b)\\ \\ge 1$$"}}]
+    sec = digest.frames_section(chosen, "https://www.youtube.com/watch?v=abcdefghijk")
+    assert "![0:21:51](../raw/videos/svm/a-01311.jpg)" in sec and "\n$$\ny_i(\\vec w\\cdot x_i + b) \\geq 1\n$$\n" in sec
+    assert len(digest.equations(chosen)) == 2                    # \geq and \ge are one formula
+    page = "# T\n\n## Key equations\n\n## Takeaways for my thesis\n\n## Links out\n- x\n"
+    page = digest.put_section(page, "## Frames", sec)
+    assert page.index("## Frames") < page.index("## Takeaways") and digest.section_empty(page, "## Key equations")
+    again = digest.put_section(page, "## Frames", "## Frames\n\nnew\n")
+    assert again.count("## Frames") == 1 and "new" in again and "a-01311" not in again
+
+
+def test_force_reuses_the_videos_own_folder(tmp_path):
     d = tmp_path / "raw" / "inbox" / "video-svm-lecture"
     d.mkdir(parents=True)
     (d / "info.json").write_text(json.dumps({"id": "abcdefghijk"}))
     assert bundle.dir_name("SVM lecture", "abcdefghijk", str(tmp_path)) == "svm-lecture"
+    c = tmp_path / "raw" / "videos" / "svm-2014"
+    c.mkdir(parents=True)
+    (c / "info.json").write_text(json.dumps({"id": "zyxwvutsrqp"}))
+    assert bundle.dir_name("Other title", "zyxwvutsrqp", str(tmp_path)) == "svm-2014"   # a cataloged one
+
+
+def test_subtitles_retry_after_a_rate_limit(tmp_path, monkeypatch):
+    import yt_dlp
+    from kb.ingest.youtube import fetch
+    calls, waits = [], []
+
+    class FakeYDL:
+        def __init__(self, opts): self.opts = opts
+        def __enter__(self): return self
+        def __exit__(self, *a): return False
+        def extract_info(self, url, download):
+            calls.append(self.opts["subtitleslangs"])
+            if len(calls) < 3:
+                raise yt_dlp.utils.DownloadError("HTTP Error 429: Too Many Requests")
+            (tmp_path / "abcdefghijk.en-US.vtt").write_text("WEBVTT\n")
+    monkeypatch.setattr(yt_dlp, "YoutubeDL", FakeYDL)
+    info = {"subtitles": {"en-US": []}, "automatic_captions": {"en": []}}
+    path = fetch.fetch_subs("abcdefghijk", info, str(tmp_path), waits=(0, 1, 2, 3), sleep=waits.append)
+    assert path.endswith(".en-US.vtt") and calls == [["en-US"]] * 3 and waits == [1, 2]
 
 
 def test_parse_vtt_auto_without_word_tags():

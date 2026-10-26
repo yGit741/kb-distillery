@@ -24,7 +24,7 @@ INGEST = {
     ("index-researcher", "finalize"): ("catalog", True),
     ("index-researcher", "relink"): ("refine", False),
 }
-INGEST_BEGIN = {("easy-digest", None): "digest"}  # agent keeps editing; skill ends with `ops commit`
+INGEST_BEGIN = {("easy-digest", None): "digest", ("video-digest", None): "digest"}  # agent keeps editing; skill ends with `ops commit`
 DISTILL = {("apply", None): ("distill", True)}
 
 # kb summaries are noun phrases — the op in kb(<op>) is already the verb

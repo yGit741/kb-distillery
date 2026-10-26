@@ -1,7 +1,6 @@
 import { ExternalLink } from "lucide-react";
-import type { VideoBundle, VideoFrame, VideoSection } from "@/api/types";
+import type { VideoAnchor, VideoBundle, VideoSection } from "@/api/types";
 import { useDataSource } from "@/api";
-import { Markdown } from "@/components/Markdown";
 import { ErrorState, Loading } from "@/components/states";
 import { cn } from "@/lib/utils";
 import { useApiQuery } from "@/lib/useApiQuery";
@@ -17,12 +16,10 @@ const clock = (s: number) => {
 const at = (url: string, s: number) => `${url}&t=${Math.floor(s)}s`;
 const stampSeconds = (stamp: string) => stamp.split(":").reduce((a, x) => a * 60 + Number(x), 0);
 
-/** `$$x$$` on one line is inline math to remark-math; give each one its own display block. */
-export const displayMath = (t: string) => t.replace(/^\s*\$\$(.+?)\$\$\s*$/gm, (_m, x: string) => `\n$$\n${x}\n$$\n`);
-
 /**
- * The video under its page: chapters, description and comments, then the transcript by chapter with each kept
- * frame beside what was read from it. Local only — a share build has no raw files, so it shows nothing.
+ * The raw video under its page: chapters, description and comments, then the transcript by chapter with the
+ * section's anchors (candidate frames, scored) as thumbnails. The frames a digest read live in the page body
+ * (## Frames). Local only — a share build has no raw files, so it shows nothing.
  */
 export function VideoView({ raw, className }: { raw: string; className?: string }) {
   const ds = useDataSource();
@@ -35,27 +32,27 @@ export function VideoView({ raw, className }: { raw: string; className?: string 
       ) : !q.data ? (
         <Loading label="Loading the video" rows={3} />
       ) : (
-        <Bundle v={q.data} frameUrl={(f) => ds.rawFileUrl(f.path)} />
+        <Bundle v={q.data} thumbUrl={(a) => ds.rawFileUrl(a.path)} />
       )}
     </section>
   );
 }
 
-function Bundle({ v, frameUrl }: { v: VideoBundle; frameUrl: (f: VideoFrame) => string | null }) {
+function Bundle({ v, thumbUrl }: { v: VideoBundle; thumbUrl: (a: VideoAnchor) => string | null }) {
+  const sections = v.sections ?? [];
+  const anchors = v.anchors ?? [];
+  const chapters = v.chapters ?? [];
+  const links = v.links ?? [];
+  const comments = v.comments ?? [];
   const byChapter: { chapter: string; sections: VideoSection[] }[] = [];
-  for (const s of v.sections ?? []) {
+  for (const s of sections) {
     const last = byChapter[byChapter.length - 1];
     if (last && last.chapter === s.chapter) last.sections.push(s);
     else byChapter.push({ chapter: s.chapter, sections: [s] });
   }
-  const frames = v.frames ?? [];
-  const chapters = v.chapters ?? [];
-  const links = v.links ?? [];
-  const comments = v.comments ?? [];
-  // each frame in the last section starting at or before it (one shown before the first caption goes first)
-  const sections = v.sections ?? [];
-  const home = (t: number) => sections.reduce((at, s, i) => (s.start <= t ? i : at), 0);
-  const inSection = (s: VideoSection) => frames.filter((f) => sections[home(f.t)] === s);
+  // each anchor in the last section starting at or before it (one before the first caption goes first)
+  const home = (t: number) => sections.reduce((i, s, k) => (s.start <= t ? k : i), 0);
+  const inSection = (s: VideoSection) => anchors.filter((a) => sections[home(a.t)] === s);
   return (
     <>
       <header className="flex flex-col gap-2">
@@ -64,9 +61,8 @@ function Bundle({ v, frameUrl }: { v: VideoBundle; frameUrl: (f: VideoFrame) => 
           <span className="tabular-nums">{clock(v.duration)}</span>
           {v.channel && <span>{v.channel}</span>}
           <span>{chapters.length} chapters</span>
-          <span>{frames.length} frames</span>
+          <span>{anchors.length} anchors</span>
           <span>transcript {v.subs_kind ?? "none"}</span>
-          <span>tier {v.tier}</span>
           <a className="inline-flex items-center gap-1 text-primary hover:underline" href={v.url} target="_blank" rel="noopener noreferrer">
             YouTube <ExternalLink className="size-3" aria-hidden />
           </a>
@@ -123,12 +119,15 @@ function Bundle({ v, frameUrl }: { v: VideoBundle; frameUrl: (f: VideoFrame) => 
         </Fold>
       </div>
 
+      {anchors.length === 0 && (
+        <p className="text-sm text-muted-foreground">No anchors in this bundle — re-scrap the video to find them.</p>
+      )}
       {byChapter.length === 0 && <p className="text-sm text-muted-foreground">No English transcript was downloaded for this video.</p>}
-      {byChapter.map(({ chapter, sections }) => (
-        <div key={`${chapter}-${sections[0]?.start}`} className="flex flex-col gap-4">
+      {byChapter.map(({ chapter, sections: secs }) => (
+        <div key={`${chapter}-${secs[0]?.start}`} className="flex flex-col gap-4">
           {chapter && <h3 className="text-base font-semibold">{chapter}</h3>}
-          {sections.map((s) => (
-            <div key={s.start} className="flex flex-col gap-3 border-b pb-4 last:border-b-0">
+          {secs.map((s) => (
+            <div key={s.start} className="flex flex-col gap-2 border-b pb-4 last:border-b-0">
               <div className="max-w-3xl">
                 <a href={at(v.url, s.start)} target="_blank" rel="noopener noreferrer"
                   className="text-sm font-medium tabular-nums text-primary hover:underline">
@@ -136,7 +135,11 @@ function Bundle({ v, frameUrl }: { v: VideoBundle; frameUrl: (f: VideoFrame) => 
                 </a>
                 <p className="mt-1 text-sm leading-relaxed">{s.text}</p>
               </div>
-              {inSection(s).map((f) => <FrameCard key={f.file} f={f} url={frameUrl(f)} />)}
+              {inSection(s).length > 0 && (
+                <ul aria-label={`Anchors ${clock(s.start)}`} className="flex gap-2 overflow-x-auto pb-1">
+                  {inSection(s).map((a) => <AnchorThumb key={a.t} a={a} url={thumbUrl(a)} videoUrl={v.url} />)}
+                </ul>
+              )}
             </div>
           ))}
         </div>
@@ -145,43 +148,22 @@ function Bundle({ v, frameUrl }: { v: VideoBundle; frameUrl: (f: VideoFrame) => 
   );
 }
 
-/** One frame: the image (sticky beside a long read) and what was read from it, wide enough for display math. */
-function FrameCard({ f, url }: { f: VideoFrame; url: string | null }) {
-  const read = f.read?.text ?? "";
-  const ocr = f.ocr ?? [];
+/** One anchor: its thumbnail (opens full size), the time (opens the video there) and its score and reasons. */
+function AnchorThumb({ a, url, videoUrl }: { a: VideoAnchor; url: string | null; videoUrl: string }) {
+  const why = (a.why ?? []).join(" · ");
   return (
-    <figure className="grid gap-4 rounded-lg border bg-card p-3 lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)]">
-      <div className="flex flex-col gap-1 self-start lg:sticky lg:top-16">
-        {url && (
-          <a href={url} target="_blank" rel="noopener noreferrer">
-            <img src={url} alt={`Frame at ${clock(f.t)}`} loading="lazy" className="w-full rounded" />
-          </a>
-        )}
-        <figcaption className="flex justify-between text-xs tabular-nums text-muted-foreground">
-          <span>{clock(f.t)}</span>
-          <span>{f.kind}</span>
-        </figcaption>
+    <li className={cn("w-40 shrink-0 rounded-md border bg-card p-1 text-xs", a.score < 1 && "opacity-60")}
+      title={`score ${a.score}${why ? ` · ${why}` : ""}`}>
+      {url && (
+        <a href={url} target="_blank" rel="noopener noreferrer">
+          <img src={url} alt={`Anchor at ${clock(a.t)}`} loading="lazy" className="w-full rounded" />
+        </a>
+      )}
+      <div className="mt-1 flex justify-between tabular-nums text-muted-foreground">
+        <a href={at(videoUrl, a.t)} target="_blank" rel="noopener noreferrer" className="hover:underline">{clock(a.t)}</a>
+        <span>score {a.score}</span>
       </div>
-      <div className="flex min-w-0 flex-col gap-2">
-        {read ? (
-          <Markdown className="text-sm [&_.katex-display]:my-1 [&_.katex-display]:overflow-x-auto [&_.katex-display]:overflow-y-hidden">
-            {displayMath(read)}
-          </Markdown>
-        ) : ocr.length > 0 ? (
-          <div className="flex flex-col gap-1">
-            <span className="text-xs text-muted-foreground">Local OCR{f.conf != null ? ` · confidence ${f.conf}` : ""}</span>
-            <pre className="whitespace-pre-wrap font-mono text-xs">{ocr.join("\n")}</pre>
-          </div>
-        ) : (
-          <p className="text-sm text-muted-foreground">No text on this frame.</p>
-        )}
-        {read && ocr.length > 0 && (
-          <details className="text-xs">
-            <summary className="cursor-pointer text-muted-foreground">Local OCR ({ocr.length} lines)</summary>
-            <pre className="mt-1 whitespace-pre-wrap font-mono">{ocr.join("\n")}</pre>
-          </details>
-        )}
-      </div>
-    </figure>
+      {why && <p className="truncate text-muted-foreground">{why}</p>}
+    </li>
   );
 }

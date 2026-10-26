@@ -2,6 +2,7 @@
 import glob
 import os
 import re
+import sys
 
 from ..paths import ROOT
 
@@ -46,28 +47,72 @@ def pick_subs(folder, vid, info):
     return None, None
 
 
+SUB_WAITS = (0, 30, 90, 180, 300)       # seconds before each subtitle attempt: YouTube answers bursts with 429
+
+
+def _base_opts(folder):
+    return {"outtmpl": os.path.join(folder, "%(id)s.%(ext)s"), "noplaylist": True,
+            "retries": 5, "extractor_retries": 3, "quiet": True, "no_warnings": True, "noprogress": True}
+
+
+def wanted_track(info):
+    """(lang, manual?) of the one English track to fetch: a manual track first, then auto captions."""
+    manual, auto = info.get("subtitles") or {}, info.get("automatic_captions") or {}
+    for lang in SUB_LANGS:
+        if lang in manual:
+            return lang, True
+    for lang in ("en-orig", "en", "en-US", "en-GB"):
+        if lang in auto:
+            return lang, False
+    return None, None
+
+
+def fetch_subs(vid, info, folder, waits=SUB_WAITS, sleep=None):
+    """Download only the chosen English track, retrying with backoff on HTTP 429. Returns its path or None."""
+    import time
+    import yt_dlp
+    lang, manual = wanted_track(info)
+    if not lang:
+        return None
+    path = os.path.join(folder, f"{vid}.{lang}.vtt")
+    if os.path.isfile(path):
+        return path
+    opts = {**_base_opts(folder), "skip_download": True, "subtitlesformat": "vtt", "subtitleslangs": [lang],
+            "writesubtitles": manual, "writeautomaticsub": not manual}
+    last = None
+    for wait in waits:
+        if wait:
+            print(f"subtitles rate-limited — retrying in {wait}s", file=sys.stderr)
+            (sleep or time.sleep)(wait)
+        try:
+            with yt_dlp.YoutubeDL(opts) as ydl:
+                ydl.extract_info(f"https://www.youtube.com/watch?v={vid}", download=True)
+        except yt_dlp.utils.DownloadError as e:
+            last = e
+            continue
+        if os.path.isfile(path):
+            return path
+    raise RuntimeError(f"subtitles for {vid} could not be downloaded after {len(waits)} tries ({last}) — "
+                       "the video is cached, rerun later")
+
+
 def fetch(url, video=True, comments=True, cache=CACHE):
-    """Download what a tier needs. Reruns reuse the cache (yt-dlp skips files already there)."""
+    """Video, metadata and comments first, then the one English subtitle track (with backoff). Reruns reuse
+    the cache: yt-dlp skips files already there."""
     import yt_dlp
     vid = video_id(url)
     folder = os.path.join(cache, vid)
     os.makedirs(folder, exist_ok=True)
-    opts = {
-        "outtmpl": os.path.join(folder, "%(id)s.%(ext)s"),
-        "noplaylist": True,
-        "writesubtitles": True, "writeautomaticsub": True,
-        "subtitleslangs": list(SUB_LANGS), "subtitlesformat": "vtt",
-        "skip_download": not video,
-        "format": "bv*[height<=720][ext=mp4]+ba[ext=m4a]/b[height<=720]/b",
-        "merge_output_format": "mp4",
-        "ffmpeg_location": ffmpeg_exe(),
-        "getcomments": comments,
-        "extractor_args": {"youtube": {"max_comments": ["40", "all", "0"], "comment_sort": ["top"]}},
-        "sleep_interval_subtitles": 5,          # YouTube answers fast subtitle pulls with HTTP 429
-        "quiet": True, "no_warnings": True, "noprogress": True,
-    }
+    opts = {**_base_opts(folder),
+            "skip_download": not video,
+            "format": "bv*[height<=720][ext=mp4]+ba[ext=m4a]/b[height<=720]/b",
+            "merge_output_format": "mp4",
+            "ffmpeg_location": ffmpeg_exe(),
+            "getcomments": comments,
+            "extractor_args": {"youtube": {"max_comments": ["40", "all", "0"], "comment_sort": ["top"]}}}
     with yt_dlp.YoutubeDL(opts) as ydl:
         info = ydl.sanitize_info(ydl.extract_info(f"https://www.youtube.com/watch?v={vid}", download=True))
+    fetch_subs(vid, info, folder)
     subs, kind = pick_subs(folder, vid, info)
     videos = [p for p in glob.glob(os.path.join(folder, f"{vid}.*"))
               if os.path.splitext(p)[1] in (".mp4", ".webm", ".mkv", ".mov")]   # a non-merged format keeps its own

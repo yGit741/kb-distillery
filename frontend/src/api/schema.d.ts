@@ -2345,8 +2345,41 @@ export interface components {
             /** Error Type */
             type: string;
         };
+        /**
+         * VideoAnchor
+         * @description A timestamp the screen likely shows something worth reading; a digest tier reads the top ones.
+         */
+        VideoAnchor: {
+            /** Kind */
+            kind: string;
+            /**
+             * Ocr
+             * @default []
+             */
+            ocr: string[];
+            /** Path */
+            path: string;
+            /** Score */
+            score: number;
+            /** T */
+            t: number;
+            /** Thumb */
+            thumb: string;
+            /**
+             * Why
+             * @default []
+             */
+            why: string[];
+        } & {
+            [key: string]: unknown;
+        };
         /** VideoBundle */
         VideoBundle: {
+            /**
+             * Anchors
+             * @default []
+             */
+            anchors: components["schemas"]["VideoAnchor"][];
             /** Channel */
             channel?: string | null;
             /**
@@ -2368,11 +2401,6 @@ export interface components {
             description: string;
             /** Duration */
             duration: number;
-            /**
-             * Frames
-             * @default []
-             */
-            frames: components["schemas"]["VideoFrame"][];
             /** Id */
             id: string;
             /**
@@ -2396,8 +2424,6 @@ export interface components {
             };
             /** Subs Kind */
             subs_kind?: string | null;
-            /** Tier */
-            tier: string;
             /** Title */
             title: string;
             /** Uploaded */
@@ -2431,43 +2457,6 @@ export interface components {
             stamps: string[];
             /** Text */
             text: string;
-        } & {
-            [key: string]: unknown;
-        };
-        /** VideoFrame */
-        VideoFrame: {
-            /** Conf */
-            conf?: number | null;
-            /** File */
-            file: string;
-            /** Kind */
-            kind: string;
-            /**
-             * Ocr
-             * @default []
-             */
-            ocr: string[];
-            /** Path */
-            path: string;
-            read?: components["schemas"]["VideoRead"] | null;
-            /** T */
-            t: number;
-        } & {
-            [key: string]: unknown;
-        };
-        /** VideoRead */
-        VideoRead: {
-            /** Model */
-            model?: string | null;
-            /**
-             * Text
-             * @default
-             */
-            text: string;
-            /** Tokens In */
-            tokens_in?: number | null;
-            /** Tokens Out */
-            tokens_out?: number | null;
         } & {
             [key: string]: unknown;
         };

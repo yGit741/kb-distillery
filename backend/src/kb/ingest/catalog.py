@@ -341,10 +341,21 @@ def catalog_video(inbox_rel, collection="", title=None, **_kwargs):
     inbox_rel = _check_inbox(inbox_rel)
     dir_name = os.path.basename(inbox_rel)[len(VIDEO_DIR_PREFIX):]
     dest_rel = f"raw/{RAW_VIDEOS}/{dir_name}"
-    moved = _move(os.path.join(ROOT, inbox_rel), os.path.join(ROOT, dest_rel))
+    import json
+    dest = os.path.join(ROOT, dest_rel)
+
+    def _vid(folder):
+        try:
+            with open(os.path.join(folder, "info.json"), encoding="utf-8") as f:
+                return json.load(f).get("id")
+        except (OSError, ValueError):
+            return None
+    if os.path.isdir(dest) and _vid(dest) and _vid(dest) == _vid(os.path.join(ROOT, inbox_rel)):
+        shutil.rmtree(dest)                       # scrap-youtube --force: the same video's refreshed bundle
+        print(f"refreshing {dest_rel}/ (same video)")
+    moved = _move(os.path.join(ROOT, inbox_rel), dest)
     print(f"{'moved' if moved else 'already at'} → {dest_rel}/")
     if not title:
-        import json
         try:
             with open(os.path.join(ROOT, dest_rel, "video.json"), encoding="utf-8") as f:
                 title = json.load(f).get("title")

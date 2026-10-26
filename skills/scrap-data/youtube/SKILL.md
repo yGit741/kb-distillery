@@ -1,11 +1,11 @@
 ---
 name: scrap-data-youtube
-description: Turn a YouTube lecture or video into a raw/inbox/video-<name>/ bundle — transcript by chapter, description, filtered comments and key frames (0 LLM unless --read). Use for scrap youtube, save this lecture, save this video, youtube URL. Do NOT catalog or digest from here.
+description: Turn a YouTube lecture or video into a raw/inbox/video-<name>/ bundle — transcript by chapter, description, filtered comments, and anchors (scored timestamps worth a frame, with thumbnails), 0 LLM. Use for scrap youtube, save this lecture, save this video, a youtube URL. Do NOT catalog or digest from here.
 ---
 
 # scrap-data / youtube
 
-**LLM tier:** none (`--read`: Sonnet, ~2k tokens per frame) · **Budget:** 0 tokens by default
+**LLM tier:** none · **Budget:** 0 tokens (frame reads belong to the digest tiers)
 
 ## Triggers
 
@@ -15,49 +15,55 @@ description: Turn a YouTube lecture or video into a raw/inbox/video-<name>/ bund
 ## Do NOT
 
 - Scrap without `resolve` first — `python3 -m kb.ingest resolve <url>` finds a bundle by its YouTube id
-- Use `--read` unless the user asked for frame reads (it spends LLM tokens: about $0.01 per frame on the API, $0.08 through the CLI)
+- Read frames here — that is `video-digest` (full / deep), which spends LLM tokens
 - Catalog or digest from here — `catalog raw/inbox/video-<name>` is the next step
 
 ## CLI
 
 ```bash
-python3 -m kb.ingest scrap-youtube <url>                      # tier vibe (default): transcript + 1-3 frames
-python3 -m kb.ingest scrap-youtube <url> --tier transcript    # transcript, description, chapters, comments only
-python3 -m kb.ingest scrap-youtube <url> --tier frames        # full frame selection, budget 30/hour, local OCR
-python3 -m kb.ingest scrap-youtube <url> --tier frames --read # + a Claude read of each frame (LaTeX + diagrams)
-python3 -m kb.ingest scrap-youtube <url> --force              # again, although the video is in the vault
+python3 -m kb.ingest scrap-youtube <url>            # one standard bundle, 0 LLM
+python3 -m kb.ingest scrap-youtube <url> --force    # refresh the bundle of a video already in the vault
 ```
 
-## Tiers
+## Bundle (one format, no tiers)
 
-| tier | what | cost | typical size |
+`raw/inbox/video-<kebab title>/` → after catalog `raw/videos/<kebab title>/` (one nested level):
+
+- `video.md` — the raw item: frontmatter (title, url, channel, duration, transcript kind, anchors), description,
+  chapters, top comments (with a timestamp, link or question), then the transcript by chapter in ~3 min sections,
+  each followed by its anchors (time, kind, score)
+- `video.json` — the same, structured, for the app; `info.json` (slim metadata); `transcript.vtt`
+- `a-<seconds>.jpg` — one 640 px thumbnail per anchor (~25 KB), gitignored like every raw image, `asset:` rows of
+  `video.md` in `meta/corpus.tsv`; a clone or the shared site has the text, not the images
+
+**Anchors** (`backend/src/kb/ingest/youtube/frames.py`) aim at recall: every timestamp where the screen likely shows
+something worth reading, scored, never dropped. Signals: the fullest board before each erase or camera cut
+(blackboard lectures), the last frame before each slide change scored by its OCR words (slides), transcript cues
+("as you can see", "this equation"), chapter starts, and coverage (the most stable second of any 90 s stretch with
+no anchor — animation, paper, screencast). Audience shots and half-written boards stay with a low score. Expect
+~100–150 anchors per hour of blackboard, fewer for slides.
+
+Subtitles: one English track, manual first; YouTube rate-limits subtitle bursts (HTTP 429), so the fetch retries
+with backoff for ~10 min and then fails with "rerun later" — the video stays cached, the rerun is cheap. The video
+file stays in `.cache/youtube/<id>/` and never enters `raw/`. Local processing ≈ 1 min per 10 min of video.
+
+## Digest tiers for a video page
+
+| tier | command | reads | cost |
 |---|---|---|---|
-| `transcript` | subtitles (manual track first, else auto captions), description + links, chapters, top comments with a timestamp/link/question | 0 LLM, no video download | ~10–14k tokens per hour |
-| `vibe` | + 1–3 frames: 24 evenly spaced samples, the most informative per third (OCR words or board chalk), local OCR | 0 LLM, 720p download | + ~0.3k |
-| `frames` | + slides: last frame before each change, deduplicated on OCR words; blackboards: fullest board before each erase or camera cut, close-ups kept; budget per chapter | 0 LLM, ~1 min of analysis per 5 min of video | + ~0.1k per frame |
-| `frames --read` | + Claude read per frame with the nearby transcript as context | ~1.5k in + 0.6k out per frame | + ~0.6k per frame |
+| easy | `easy-digest raw/videos/<name>/video.md` | transcript skim (metadata, chapters, start and end) | ~3k tokens, Haiku |
+| full | `video-digest raw/videos/<name>/video.md --tier full` | top anchors ~15/hour, ≥ 2 min apart, each read by Claude with the transcript around it | ~1.4k in + 0.5k out per frame (≈ $0.15 per lecture-hour on the API) |
+| deep | `video-digest … --tier deep` | ~30/hour, ≥ 1 min apart, + Connections into the wiki | ≈ twice full |
 
-The mode (slides or board) is decided per video from a 1 fps pass (`backend/src/kb/ingest/youtube/frames.py`).
-Paper-and-marker, animation (3Blue1Brown) and screencast videos fall back to the slide picker; their own pickers
-are follow-ups.
-
-## Bundle
-
-`raw/inbox/video-<kebab title>/` → after catalog `raw/videos/<kebab title>/`:
-
-- `video.md` — the raw item an agent reads: frontmatter (title, url, channel, duration, transcript kind, tier),
-  description, chapters, top comments, then the transcript by chapter in ~3 min sections, each frame inline in the
-  section where it was shown with its read (or OCR)
-- `video.json` — the same, structured, for the app; `info.json` (slim yt-dlp metadata); `transcript.vtt`
-- `frame-<seconds>.jpg` — gitignored binaries like PDFs (git stays text-only), `asset:` rows of `video.md` in
-  `meta/corpus.tsv`; a clone or the shared site has the text and the frame links, not the images
-
-The video file stays in `.cache/youtube/<id>/` and never enters `raw/`.
+`video-digest` writes `## Frames` on the page (thumbnail + read per frame, math as display blocks) and drafts
+`## Key equations` from the reads; the agent then reads `meta/.ingest/video/<sha>/abstract.text` (full transcript +
+reads), writes Problem, Main result, Key ideas, curates Key equations, Takeaways (deep: Connections), runs
+`pixi run lint` and `pixi run ops -- commit`.
 
 ## Next step
 
 `python3 -m kb.ingest catalog raw/inbox/video-<name> [--collection course-…]` (a course lecture joins the course's
-Contents table), then a digest tier — `easy-digest raw/videos/<name>/video.md` writes the `video-<name>` page.
+Contents table), then a digest tier.
 
 ## Commit
 
