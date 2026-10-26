@@ -32,7 +32,9 @@ python3 -m kb.ingest easy-digest <raw> --no-tick --no-lint --no-commit   # batch
 batch, ticks rows (`course.record_row`), lints once and commits once (`kb(digest)`). `KB_CI=1` lets this
 run in a clone without the raw binaries: their manifest rows are kept as they are.
 
-Writes `meta/.ingest/easy/<sha>/abstract.text` for agent summary. Deepens the Source page in place
+Writes `meta/.ingest/easy/<sha>/abstract.text` for agent summary. A video bundle (`raw/videos/<name>/video.md`,
+from `scrap-youtube`) is skimmed from its metadata, description, chapters, frame text and the start and end of the
+transcript; the new `video-<name>` page gets its title, url and channel from the bundle. Deepens the Source page in place
 (a `depth: listed` catalog stub becomes `depth: easy`, `status: digested` — lint requires `digested`
 for any easy/full/deep depth). If the raw file is a course/series member, its `## Contents` row is
 ticked `easy`.

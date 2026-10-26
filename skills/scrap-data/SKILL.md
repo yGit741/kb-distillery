@@ -12,6 +12,7 @@ description: Save URLs or files to raw/inbox/ with zero LLM tokens. Use for "scr
 - `scrap`, `download`, `save to inbox`, `fetch this URL`
 - `scrap article`, `download paper`
 - `pull from drive`, `google drive`, `notes to obsedian` → `gdrive` subskill
+- a YouTube link, `save this lecture/video` → `youtube` subskill
 
 ## Do NOT
 
@@ -29,6 +30,7 @@ python3 -m kb.ingest scrap <url> --force              # override dedup block
 python3 -m kb.ingest scrap-mail <mbox-or-eml> [--slug thread-slug] [--force]
 python3 -m kb.ingest scrap-gdrive --dry-run           # preview a Drive folder pull (0 bytes)
 python3 -m kb.ingest scrap-wordpress <site> --prefix <collection short> [--since YYYY-MM-DD] [--limit N] [--no-images] [--force]
+python3 -m kb.ingest scrap-youtube <url> [--tier transcript|vibe|frames] [--read] [--force]
 ```
 
 Scrap is **blocked** when resolve finds a match or bytes already exist in `raw/`. Use `--force` only when intentional.
@@ -44,6 +46,7 @@ Scrap is **blocked** when resolve finds a match or bytes already exist in `raw/`
 | [slides](slides/SKILL.md) | lecture decks | stub |
 | [web](web/SKILL.md) | HTML/markdown clip | stub |
 | [blog](blog/SKILL.md) | a whole WordPress.com blog → clips + figures | implemented (`scrap-wordpress`) |
+| [youtube](youtube/SKILL.md) | a YouTube lecture/video → `video-<name>/` bundle: transcript by chapter + key frames | implemented (`scrap-youtube`) |
 
 ## Next step
 

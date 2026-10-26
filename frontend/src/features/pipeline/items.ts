@@ -42,7 +42,7 @@ export const DEPTH_TIP: Record<Depth, string> = {
   deep: "A close, thesis-critical read with proofs and neighbours (~25-40k+ tokens).",
 };
 
-export const FORMAT_ORDER = ["inbox", "printed-docs", "handwritten", "presentations", "llm-chats", "emails", "web-clips", "images"];
+export const FORMAT_ORDER = ["inbox", "printed-docs", "handwritten", "presentations", "llm-chats", "emails", "web-clips", "images", "videos"];
 
 export const VIEWS = ["list", "board", "timeline"] as const;
 export type View = (typeof VIEWS)[number];

@@ -8,7 +8,8 @@ import { defineConfig } from "vite";
 //   /api    -> its JSON endpoints
 //   /legacy -> its HTML pages, with the prefix stripped (/legacy/graph -> /graph)
 // `python -m kb.api` also serves /api and /legacy on 8765, so the same proxy works against either server.
-const LEGACY = "http://127.0.0.1:8765";
+// KB_API points a worktree's dev server at its own backend (e.g. KB_API=http://127.0.0.1:8790).
+const LEGACY = process.env.KB_API || "http://127.0.0.1:8765";
 
 // The app is served under /app (python -m kb.api, FastAPI spa router) and in dev at http://localhost:5173/app/.
 //

@@ -38,6 +38,9 @@ export type DigestResult = S["DigestResult"];
 export type CitationGraph = S["CitationGraph"];
 export type PipelineSnapshot = S["PipelineSnapshot"];
 export type HealthSnapshot = S["HealthSnapshot"];
+export type VideoBundle = S["VideoBundle"];
+export type VideoFrame = S["VideoFrame"];
+export type VideoSection = S["VideoSection"];
 export type OpsSnapshot = S["OpsSnapshot"];
 
 // scopes

@@ -6,22 +6,10 @@ import { Markdown } from "@/components/Markdown";
 import { Button } from "@/components/ui/button";
 import { agoLabel, bareSlug, fmList, fmString, layerOf, mtimeOf, prepareMarkdown, titleOf, type LinkGraph } from "./lib";
 import { MiniGraph } from "./MiniGraph";
-import { PAGES_TO, FactBadges, PageLink, TypeDot } from "./parts";
+import { PAGES_TO, FactBadges, Fold, PageLink, TypeDot } from "./parts";
+import { VideoView, isVideoRaw } from "./VideoView";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
-
-function Fold({ title, count, children }: { title: string; count?: number; children: ReactNode }) {
-  return (
-    <details className="group rounded-lg border bg-card">
-      <summary className="flex cursor-pointer items-center gap-2 px-3 py-2 text-sm font-medium marker:content-none">
-        <span aria-hidden className="text-muted-foreground transition-transform group-open:rotate-90">›</span>
-        {title}
-        {count != null && <span className="text-xs font-normal text-muted-foreground">{count}</span>}
-      </summary>
-      <div className="border-t px-3 py-2 text-sm">{children}</div>
-    </details>
-  );
-}
 
 function PageList({ g, items, empty }: { g: LinkGraph; items: { id: string; note?: ReactNode }[]; empty: string }) {
   if (!items.length) return <p className="text-muted-foreground">{empty}</p>;
@@ -203,6 +191,8 @@ export function PageReader({ g, detail, embed, pinned, onTogglePin, onConnect }:
           />
         </Fold>
       </aside>
+
+      {isVideoRaw(raw) && <VideoView raw={raw} className="lg:col-span-2" />}
     </div>
   );
 }

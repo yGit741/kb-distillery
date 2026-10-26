@@ -33,6 +33,8 @@ export interface DataSource {
   /** The raw file itself (local only). */
   rawFileUrl(path: string): string | null;
   digestRaw(path: string): Promise<T.DigestResult>;
+  /** A scrap-youtube bundle by its raw item `raw/videos/<dir>/video.md` (local only). */
+  getVideo(path: string): Promise<T.VideoBundle>;
 
   // scopes
   listScopes(): Promise<T.ScopeList>;

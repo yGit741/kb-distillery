@@ -16,6 +16,7 @@ INGEST = {
     ("scrap-mail", None): ("import", True),
     ("scrap-gdrive", None): ("import", True),
     ("scrap-wordpress", None): ("import", True),
+    ("scrap-youtube", None): ("import", True),
     ("catalog", None): ("catalog", True),
     ("drain-inbox", None): ("catalog", True),
     ("finalize", None): ("digest", True),
@@ -32,6 +33,7 @@ SUMMARY = {
     "scrap-mail": "mail thread {target} into the inbox",
     "scrap-gdrive": "{n} Google Drive files into the inbox",
     "scrap-wordpress": "{n} WordPress clips and figures into the inbox",
+    "scrap-youtube": "video {target} into the inbox",
     "drain-inbox": "inbox drain ({n} items)",
     "backfill-authors": "authors and arXiv URLs ({n} pages)",
     "index-researcher": "{target} researcher profile",
@@ -62,6 +64,10 @@ def _target(paths, pos):
     for p in paths:
         if p.startswith("wiki/") and p.endswith(".md") and "/distilled-think-" not in p:
             return os.path.basename(p)[:-3]
+    for p in paths:
+        parts = p.split("/")
+        if p.startswith(("raw/inbox/video-", "raw/videos/")) and len(parts) > 3:
+            return parts[2].removeprefix("video-")           # a video bundle is named by its folder
     for p in paths:
         if p.startswith("raw/"):
             return os.path.splitext(os.path.basename(p))[0]

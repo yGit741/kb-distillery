@@ -77,6 +77,7 @@ export const PILE_COLORS = {
   emails: "#73daca",
   "web-clips": "#4fd6be",
   images: "#7dcfff",
+  videos: "#e0af68",
 } as const;
 
 const lookup = (map: Readonly<Record<string, string>>, key: string | null | undefined): string =>
