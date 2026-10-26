@@ -1,11 +1,9 @@
 import createForceGraph, { type ForceGraphInstance, type NodeObject } from "force-graph";
 import { useEffect, useRef, useState } from "react";
-import { readCanvasColors, withAlpha, type CanvasColors } from "@/features/graph/canvasTheme";
+import { drawNode, inkRadius, LABEL, outerRadius, personInitials, readCanvasColors, shortTitle, SOURCE_GLYPH_PX, withAlpha, wrapLabel, type ColorChannel, type NodeState } from "@/features/graph/encoding";
 import type { Importance } from "@/features/graph/lab/importance";
-import { shortTitle, wrapLabel } from "@/features/graph/lab/labelPlan";
 import type { GNode } from "@/features/graph/types";
 import { cn } from "@/lib/utils";
-import { typeColor } from "@/theme/palette";
 import { fitToBox, placeCardLabels, type LabelAsk } from "./cardLayout";
 import type { Sample } from "./samplers";
 
@@ -37,35 +35,6 @@ export function radii(sample: Pick<Sample, "nodes" | "links">): Map<string, numb
 }
 
 
-/** One node in screen px: the graph's palette, a question as a hollow ring with "?", the selection ring. */
-function drawNode(ctx: CanvasRenderingContext2D, n: GNode, x: number, y: number, r: number, colors: CanvasColors, ring: "focus" | "source" | null, hover: boolean) {
-  const col = typeColor(n.type);
-  if (ring || hover) {
-    ctx.beginPath();
-    ctx.arc(x, y, r + 3, 0, 2 * Math.PI);
-    ctx.strokeStyle = withAlpha(colors.ring, ring ? 0.95 : 0.55);
-    ctx.lineWidth = ring === "focus" ? 2.5 : 2;
-    ctx.stroke();
-  }
-  ctx.beginPath();
-  ctx.arc(x, y, r, 0, 2 * Math.PI);
-  if (n.type === "question") {
-    ctx.fillStyle = colors.background;
-    ctx.fill();
-    ctx.strokeStyle = col;
-    ctx.lineWidth = Math.max(1.5, r * 0.22);
-    ctx.stroke();
-    ctx.fillStyle = col;
-    ctx.font = `600 ${r * 1.4}px ${colors.font}`;
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillText("?", x, y + r * 0.08);
-    return;
-  }
-  ctx.fillStyle = col;
-  ctx.fill();
-}
-
 /**
  * The intro card's ego graph, static: the force layout settles off screen (`warmupTicks`), then is stretched to
  * fill the measured box (`fitToBox`, again on every resize) and pinned, so graph coords are screen px. Nodes and
@@ -78,6 +47,7 @@ export function SampleGraph({
   byId,
   imp,
   ring = null,
+  color,
   onPick,
   fill = false,
 }: {
@@ -86,6 +56,8 @@ export function SampleGraph({
   imp: Importance;
   /** A second ringed node (the drawn source). */
   ring?: string | null;
+  /** The card's colour channel (Home: theme, like Map); the legend under the card titles it. */
+  color: ColorChannel;
   onPick: (id: string) => void;
   /** Take the parent's height instead of GRAPH_HEIGHT. */
   fill?: boolean;
@@ -96,6 +68,8 @@ export function SampleGraph({
   hoverRef.current = hover;
   const ringRef = useRef(ring);
   ringRef.current = ring;
+  const colorRef = useRef(color);
+  colorRef.current = color;
   const pickRef = useRef(onPick);
   pickRef.current = onPick;
   const fg = useRef<ForceGraphInstance | null>(null);
@@ -108,8 +82,9 @@ export function SampleGraph({
     const nodes: Node[] = sample.nodes
       .map((id) => byId.get(id))
       .filter((g): g is GNode => !!g)
-      .map((g) => ({ id: g.id, g, r: r.get(g.id) ?? R_MIN }));
+      .map((g) => ({ id: g.id, g, r: inkRadius(g.type, r.get(g.id) ?? R_MIN) }));
     const known = new Set(nodes.map((n) => n.id));
+    const initials = personInitials(nodes.map((n) => n.g));
     const links = sample.links.filter(([a, b]) => known.has(a) && known.has(b)).map(([source, target]) => ({ source, target }));
     const hubs = nodes
       .map((n) => n.id)
@@ -161,11 +136,28 @@ export function SampleGraph({
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
         const items = nodes.map((n) => {
           const p = g.graph2ScreenCoords(n.x ?? 0, n.y ?? 0);
-          return { id: n.id, n: n.g, x: p.x, y: p.y, r: n.r };
+          // labels keep clear of the whole mark (a collection's outer ring, a ring's stroke)
+          return { id: n.id, n: n.g, x: p.x, y: p.y, r: outerRadius(n.g.type, n.r) };
         });
         const hov = hoverRef.current;
         const ringId = ringRef.current;
-        items.forEach((it) => drawNode(ctx, it.n, it.x, it.y, it.r, colors, it.id === sample.focus ? "focus" : it.id === ringId ? "source" : null, it.id === hov));
+        // the shared encoding (@/features/graph/encoding): the same marks, glyphs and state rings as the Full Graph
+        nodes.forEach((n, i) => {
+          const it = items[i]!;
+          const state: NodeState = it.id === sample.focus ? "focus" : it.id === ringId ? "drawn" : it.id === hov ? "hover" : null;
+          drawNode(ctx, n.g.type, {
+            x: it.x,
+            y: it.y,
+            r: n.r,
+            color: colorRef.current.color(n.g),
+            background: colors.background,
+            font: colors.font,
+            ring: colors.ring,
+            initials: initials.get(n.id),
+            state,
+            glyph: n.r >= SOURCE_GLYPH_PX || it.id === hov,
+          });
+        });
         const forced = [sample.focus, ringId, hov].filter((id, i, a): id is string => !!id && known.has(id) && a.indexOf(id) === i);
         const budget = Math.min(LABEL_MAX, Math.floor(W() / LABEL_SPACING));
         const rest = hubs.filter((id) => !forced.includes(id)).slice(0, budget);
@@ -187,7 +179,7 @@ export function SampleGraph({
           const cx = (p.box[0] + p.box[2]) / 2;
           const top = (p.box[1] + p.box[3]) / 2 - ((p.lines.length - 1) * lineH) / 2;
           p.lines.forEach((line, i) => {
-            ctx.lineWidth = 3;
+            ctx.lineWidth = LABEL.halo;
             ctx.strokeStyle = colors.background;
             ctx.strokeText(line, cx, top + i * lineH);
             ctx.fillStyle = p.id === ringId ? colors.ring : colors.text;
@@ -231,7 +223,7 @@ export function SampleGraph({
     // force-graph 1.x has no public refresh: a zero-length zoom to the current scale flags its redraw
     const g = fg.current;
     g?.zoom(g.zoom(), 0);
-  }, [hover, ring]);
+  }, [hover, ring, color]);
 
   const hovered = hover ? byId.get(hover) : undefined;
   return (

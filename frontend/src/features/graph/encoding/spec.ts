@@ -34,6 +34,19 @@ export const MARK_KEY: readonly { mark: NodeMark; label: string }[] = [
 /** Hollow marks carry less ink than a solid dot of the same radius: drawn this much larger to read the same size. */
 export const RING_BOOST = 1.15;
 
+/** A mark's drawn radius for a size r: hollow marks get `RING_BOOST`, so a ring reads as big as a dot of radius r. */
+export const inkRadius = (type: string, r: number): number => {
+  const m = markOf(type);
+  return m === "source" || m === "person" ? r : r * RING_BOOST;
+};
+
+/** How far a mark of radius r reaches, stroke included (a collection's outer ring): labels keep clear of this. */
+export function outerRadius(type: string, r: number): number {
+  const m = markOf(type);
+  if (m === "collection") return r * (GEOMETRY.collectionOuter + GEOMETRY.collectionOuterStroke / 2);
+  return m === "source" || m === "person" ? r : r * (1 + GEOMETRY.ringStroke / 2);
+}
+
 /**
  * Mark geometry as fractions of the radius r, read by both the canvas (`drawMark`) and the SVG (`NodeMarkSvg`), so
  * the two never drift: the ring's stroke, the idea's centre dot, the topic's three lines, the question's "?", the

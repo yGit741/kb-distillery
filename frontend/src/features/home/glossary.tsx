@@ -1,6 +1,7 @@
 import { FileText, Image, Mail, MessageSquare, Newspaper, PenLine, Presentation, Scissors, Youtube, type LucideIcon } from "lucide-react";
 import type { Depth } from "@/api/model";
-import { depthColor, layerColor, typeColor, UNKNOWN_COLOR } from "@/theme/palette";
+import { ShapeIcon, SourceIcon } from "@/features/graph/encoding";
+import { depthColor, layerColor, UNKNOWN_COLOR } from "@/theme/palette";
 
 /** The intro card's vocabulary (approved mock v16): Raw → Source → Concept, plus depth. */
 export const RAW_FORMATS: readonly { label: string; icon: LucideIcon }[] = [
@@ -36,6 +37,15 @@ export const CONCEPT_TYPES = [
   { type: "question", label: "Question", text: "an open problem I care about" },
 ] as const;
 
+/** The source types a page can be, each with the glyph the graphs draw inside its dot. */
+export const SOURCE_TYPES = [
+  { type: "paper", label: "Paper" },
+  { type: "lecture", label: "Lecture" },
+  { type: "article", label: "Article" },
+  { type: "blog-post", label: "Blog post" },
+  { type: "ai-chat", label: "Chat" },
+] as const;
+
 export const DEPTHS: readonly { depth: Depth; label: string; text: string }[] = [
   { depth: "listed", label: "Listed", text: "cataloged, not read" },
   { depth: "easy", label: "Easy", text: "skimmed" },
@@ -51,11 +61,12 @@ export function DepthSwatch({ depth }: { depth: string }) {
   return <span aria-hidden className="inline-block size-2.5 shrink-0 rounded-[2px]" style={{ background: depthColor(depth) }} />;
 }
 
+/** The concept marks (topic, idea, question): the shapes the graphs draw. */
 export function ConceptDots() {
   return (
     <>
       {CONCEPT_TYPES.map((c) => (
-        <Dot key={c.type} color={typeColor(c.type)} />
+        <ShapeIcon key={c.type} shape={c.type} className="size-3.5" />
       ))}
     </>
   );
@@ -98,11 +109,18 @@ export function Glossary() {
         <StageArrow label="catalog" />
         <div className="min-w-0 rounded-lg border bg-muted/40 px-3 py-2.5 text-sm" data-gloss>
           <h3 className="flex items-center gap-2 text-[15px] font-semibold">
-            <Dot color={SOURCE_COLOR} />
+            <ShapeIcon shape="source" className="size-3.5" />
             Source
           </h3>
           <p className="mb-2 mt-0.5 text-muted-foreground">One raw file ingested, cataloged and standardized into a Markdown page.</p>
-          <p className="text-center font-semibold">Paper · Lecture · Article · Blog post · Chat</p>
+          <ul className="flex flex-wrap justify-center gap-x-3 gap-y-1 font-semibold">
+            {SOURCE_TYPES.map((t) => (
+              <li key={t.type} className="inline-flex items-center gap-1.5 whitespace-nowrap">
+                <SourceIcon type={t.type} />
+                {t.label}
+              </li>
+            ))}
+          </ul>
         </div>
         <StageArrow label="digest" />
         <div className="min-w-0 rounded-lg border bg-muted/40 px-3 py-2.5 text-sm" data-gloss>
@@ -115,7 +133,7 @@ export function Glossary() {
             {CONCEPT_TYPES.map((c) => (
               <div key={c.type} className="grid grid-cols-[auto_1fr] items-baseline gap-2">
                 <dt className="flex items-center gap-1.5 whitespace-nowrap font-semibold">
-                  <Dot color={typeColor(c.type)} />
+                  <ShapeIcon shape={c.type} className="size-3.5" />
                   {c.label}
                 </dt>
                 <dd className="text-[13px] leading-snug text-muted-foreground">{c.text}</dd>

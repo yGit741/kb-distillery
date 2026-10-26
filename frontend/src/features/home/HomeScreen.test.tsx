@@ -115,6 +115,12 @@ describe("Home screen", () => {
     expect(screen.getByRole("combobox", { name: "Pick a concept" })).toHaveValue("The hub");
     expect(screen.getByRole("heading", { name: "Knowledge pipeline for one source the concept relies on" })).toBeInTheDocument();
     expect(await screen.findByText("PDF · 32 pages · 1.4 MB")).toBeInTheDocument();
+    // the shared compact legend under the graph: its colour row is titled (theme, like the Full Graph's Map)
+    const legend = within(screen.getByTestId("home-legend")).getByRole("group", { name: "Legend" });
+    expect(legend).toHaveAttribute("data-density", "compact");
+    expect(within(legend).getByText("Colour = theme")).toBeInTheDocument();
+    expect(within(legend).getByText("Size = links")).toBeInTheDocument();
+    expect(legend.querySelector("[data-row=\"type\"] svg[data-mark]")).not.toBeNull();
     expect(screen.getByText("added 2026-10-22")).toBeInTheDocument();
     expect(getRawCard).toHaveBeenCalledWith(expect.stringMatching(/^p\d$/), expect.stringMatching(/^raw\/printed-docs\/p\d\.pdf$/));
     const full = screen.getByRole("link", { name: "Open in Full Graph" });
