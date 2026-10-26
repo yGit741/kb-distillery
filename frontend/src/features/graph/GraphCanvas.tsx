@@ -296,10 +296,12 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
     [anchors, ui.areaPull],
   );
   // the first layout already uses the mode and pull (settled off screen); only the user's later change animates
-  const layoutSet = useRef(false);
+  // (compared by value, so StrictMode's second mount run doesn't count as a change)
+  const layoutWas = useRef<string | null>(null);
   useEffect(() => {
-    if (layoutSet.current) fg.current?.reheat();
-    layoutSet.current = true;
+    const now = `${ui.layoutMode}|${ui.areaPull}`;
+    if (layoutWas.current !== null && layoutWas.current !== now) fg.current?.reheat();
+    layoutWas.current = now;
   }, [ui.layoutMode, ui.areaPull]);
 
   // ---- tool decor (experiment halos, faded links) is read at draw time; a change only needs a redraw
@@ -341,11 +343,13 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
     // a canvas with no size yet (still laying out) would frame everything into its corner: try again shortly,
     // but never after unmount (a canvas that never gets a size, as in jsdom, would retry forever)
     if (!wrap.current?.clientWidth || !wrap.current.clientHeight) {
-      window.setTimeout(() => mounted.current && fitRef.current(), 200);
+      window.setTimeout(() => mounted.current && fitRef.current(ms), 200);
       return;
     }
+    if (!live.current.visible.size) return;
     const core = largestComponent(live.current.visible, live.current.neighbors);
     fg.current?.fit(core.size > 1 ? (n) => core.has(n.id) || isPile(n) : undefined, ms);
+    framed.current = true;
     window.setTimeout(() => {
       k.current = fg.current?.zoom() ?? 1;
       recompute();
@@ -754,7 +758,6 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
     pendingFit.current = false;
     // the first frame is framed at once: a zoom animation on load is motion that explains nothing
     fit(framed.current ? 400 : 0);
-    framed.current = true;
   }, [fit]);
 
   const onNodeHover = useCallback(
