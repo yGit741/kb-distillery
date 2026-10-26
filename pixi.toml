@@ -77,3 +77,7 @@ install-deploy-owner = "bash tools/launchd/install-deploy-owner.sh"
 [pypi-dependencies]
 kb = { path = "backend", editable = true }
 claude-agent-sdk = ">=0.1.0"
+yt-dlp = { version = ">=2025.1", extras = ["default", "curl-cffi"] }
+opencv-python-headless = ">=4.10"
+imageio-ffmpeg = ">=0.5"
+ocrmac = ">=1.0"

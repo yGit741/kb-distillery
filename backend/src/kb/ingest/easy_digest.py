@@ -32,6 +32,15 @@ def _new_page(page_type, slug, raw_rel):
     body = open(os.path.join(ROOT, "meta", "templates", f"{page_type}.md"), encoding="utf-8").read()
     title = re.sub(r"^[a-z]+-", "", slug).replace("-", " ").title()
     body = body.replace("raw: raw/printed-docs/", f"raw: {raw_rel}")
+    if page_type == "video":                          # a scrap-youtube bundle knows its own metadata
+        import json
+        try:
+            with open(os.path.join(ROOT, os.path.dirname(raw_rel), "video.json"), encoding="utf-8") as f:
+                meta = json.load(f)
+            title = meta.get("title") or title
+            body = body.replace("{{url}}", meta.get("url") or "").replace("{{author}}", meta.get("channel") or "")
+        except (OSError, ValueError):
+            pass
     body = body.replace("{{raw}}", raw_rel).replace("{{title}}", title)
     return re.sub(r"\{\{[a-z_]+\}\}", "", body)
 
@@ -103,7 +112,11 @@ def easy_digest(arg, into=None, tick=True, lint=True):
             print(f"added {raw_rel} to raw: of {into}")
 
     raw_path = os.path.join(ROOT, raw_rel)
-    abstract = extract_text(raw_path, max_pages=3) or ""
+    if page_type == "video":
+        from .youtube import bundle
+        abstract = bundle.abstract(raw_path)          # metadata + chapters + frame text + transcript ends
+    else:
+        abstract = extract_text(raw_path, max_pages=3) or ""
     sha = sha1_file(raw_rel)
     out_dir = os.path.join(EASY_DIR, sha)
     os.makedirs(out_dir, exist_ok=True)

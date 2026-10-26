@@ -182,6 +182,15 @@ def resolve(query):
     if aid and not matches:
         matches.extend(_title_fallback(idx, aid))
 
+    yt = re.search(r"(?:youtube\.com/.*[?&]v=|youtu\.be/)([A-Za-z0-9_-]{11})", query)
+    if yt:                                    # a scrap-youtube bundle, digested or not
+        from .youtube.bundle import ITEM, existing
+        for folder in existing(yt.group(1), ROOT):
+            raw = f"{folder}/{ITEM}"
+            slug = idx.by_raw.get(raw)
+            matches.append(_match_entry(idx.by_slug[slug], f"youtube:{yt.group(1)}") if slug in idx.by_slug
+                           else {"slug": None, "raw": raw, "reason": f"youtube:{yt.group(1)}"})
+
     qnorm = query.replace(os.sep, "/").lstrip("./")
     if qnorm.startswith("raw/") and qnorm in idx.by_raw:
         slug = idx.by_raw[qnorm]

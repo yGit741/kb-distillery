@@ -27,7 +27,7 @@ from kb.core.schema import (ASSET_NAME, ASSET_PREFIX, BARE_TYPES, BLANK_PDF_BYTE
                     INBOX_ERROR, INBOX_STALE_DAYS, INK_SUFFIX,
                     MANIFEST, MANIFEST_COLS, META_DIR, NEEDS_RAW, SOURCE_TYPES, PARSED_FILENAME,
                     PLACEHOLDER_TITLE, RAW_NAME, RAW_NESTED, RAW_DIR, RAW_EMAILS, RAW_INBOX,
-                    RAW_PRINTED, RAW_SUBDIRS, RESERVED_PREFIXES, ROOT_DIRS, ROOT_FILES,
+                    RAW_PRINTED, RAW_SUBDIRS, RAW_VIDEOS, VIDEO_ITEM, RESERVED_PREFIXES, ROOT_DIRS, ROOT_FILES,
                     ROOT_LINT_IGNORE, ROOT_MD, CONTENTS_COLLECTIONS, SIDECAR_ELIGIBLE_KINDS, SLUG_PREFIX,
                     TOPIC_PREFIX, TOPIC_SLUGS, THINK_DIR, TYPE_STATUS, WIKI_DIR, YEARED, strip_prefix,
                     LAYER_OF, RETIRED_DEPTH, RETIRED_DISPOSITIONS, RETIRED_KEYS, RETIRED_TYPES)
@@ -155,8 +155,12 @@ _ASSET_NAME = re.compile(ASSET_NAME, re.I)
 
 def asset_source(rel, on_disk):
     """`raw/images/<clip stem>-NN.png` -> `raw/web-clips/<clip stem>.md` when that clip exists:
-    a figure scrap-wordpress downloaded with its post."""
+    a figure scrap-wordpress downloaded with its post. Inside a video bundle every file but
+    video.md (transcript, data, frames) is an asset of video.md."""
     parts = rel.split('/')
+    if len(parts) == 4 and parts[1] == RAW_VIDEOS and parts[3] != VIDEO_ITEM:
+        item = f"raw/{RAW_VIDEOS}/{parts[2]}/{VIDEO_ITEM}"     # a video bundle's transcript, data, frames
+        return item if item in on_disk else None
     if len(parts) != 3 or parts[1] != RAW_IMAGES:
         return None
     m = _ASSET_NAME.match(parts[2])

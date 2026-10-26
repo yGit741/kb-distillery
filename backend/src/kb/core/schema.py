@@ -145,10 +145,13 @@ RAW_CHATS = "llm-chats"              # LLM conversation exports (md)
 RAW_EMAILS = "emails"                # emails/<YYYY-MM-DD-thread>/ thread.md + attachments
 RAW_WEB = "web-clips"                # Web Clipper pages (md, html)
 RAW_IMAGES = "images"                # screenshots, figures
+RAW_VIDEOS = "videos"                # videos/<dir>/ video.md + video.json + transcript + frames (scrap-youtube)
 RAW_SUBDIRS = [RAW_INBOX, RAW_PRINTED, RAW_HANDWRITTEN, RAW_PRESENTATIONS, RAW_CHATS,
-               RAW_EMAILS, RAW_WEB, RAW_IMAGES]
-# Only emails/ nests (one thread folder); every other format folder is flat.
-RAW_NESTED = {RAW_EMAILS}
+               RAW_EMAILS, RAW_WEB, RAW_IMAGES, RAW_VIDEOS]
+# Only emails/ and videos/ nest (one folder per thread / video); every other format folder is flat.
+RAW_NESTED = {RAW_EMAILS, RAW_VIDEOS}
+# A video bundle's raw item; every other file in its folder is an `asset:` of it.
+VIDEO_ITEM = "video.md"
 # Flat format folders: lowercase ascii kebab names, unique across the vault.
 RAW_NAME = r"^[a-z0-9]+([._-][a-z0-9]+)*\.[a-z0-9]+$"
 
@@ -165,6 +168,8 @@ def unit_type_for_raw(raw_rel):
         return "ai-chat"
     if fmt == RAW_EMAILS:
         return "mail"
+    if fmt == RAW_VIDEOS:
+        return "video"
     if fmt == RAW_PRINTED and ext == "md" and parts[-1].startswith("blog-"):
         return "blog-post"
     if fmt == RAW_WEB or (fmt == RAW_PRINTED and ext != "pdf"):
@@ -173,12 +178,12 @@ def unit_type_for_raw(raw_rel):
 
 
 def unit_slug_for_raw(raw_rel, page_type=None):
-    """`raw/printed-docs/2023-toolformer.pdf` → `paper-2023-toolformer`. Email threads take the
-    thread folder name; a stem already naming its type (`rl-lecture-01`) isn't repeated."""
+    """`raw/printed-docs/2023-toolformer.pdf` → `paper-2023-toolformer`. Email threads and videos take
+    their folder name; a stem already naming its type (`rl-lecture-01`) isn't repeated."""
     import re
     page_type = page_type or unit_type_for_raw(raw_rel)
     parts = (raw_rel or "").replace("\\", "/").rstrip("/").split("/")
-    name = parts[2] if len(parts) > 3 and parts[1] == RAW_EMAILS else parts[-1]
+    name = parts[2] if len(parts) > 3 and parts[1] in RAW_NESTED else parts[-1]
     stem = re.sub(r"[^a-z0-9]+", "-", name.rsplit(".", 1)[0].lower()).strip("-")
     word = SLUG_PREFIX.get(page_type, "").rstrip("-")
     if word and stem.startswith(f"{word}-"):
