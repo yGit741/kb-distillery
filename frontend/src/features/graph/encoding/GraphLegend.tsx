@@ -75,7 +75,8 @@ export function GraphLegend({ nodes, color, size, density = "full", maxColors = 
   const shown = compact && !color.ramp ? all.slice(0, maxColors) : all;
   const rest = all.slice(shown.length);
   const item = "inline-flex shrink-0 items-center gap-1";
-  const row = compact ? "contents" : "flex flex-wrap items-center gap-x-2.5 gap-y-0.5";
+  // compact: each row is one unit (its title never wraps away from its values)
+  const row = compact ? "inline-flex max-w-full flex-wrap items-center gap-x-2 gap-y-0.5" : "flex flex-wrap items-center gap-x-2.5 gap-y-0.5";
   const sep = compact ? <span aria-hidden className="h-3 border-l" /> : null;
   return (
     <div

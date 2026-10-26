@@ -3,11 +3,11 @@ import { FullGraphIcon } from "./FullGraphIcon";
 import { useId, useMemo, useState, type KeyboardEvent } from "react";
 import { findPages } from "@/features/graph/pageSearch";
 import { isPublic } from "@/features/graph/publicPredicate";
+import { colorChannel, GraphLegend, NodeMarkSvg } from "@/features/graph/encoding";
 import { SideReader } from "@/features/graph/SideReader";
+import { areaSlots } from "@/features/graph/style";
 import type { GNode } from "@/features/graph/types";
 import { cn } from "@/lib/utils";
-import { typeColor } from "@/theme/palette";
-import { Dot } from "./glossary";
 import { PipelineStrip } from "./PipelineStrip";
 import { egoSample, graphSearch, isPickable, pickSource, rng, type SourceDraw, type Vault } from "./samplers";
 import { SampleGraph } from "./SampleGraph";
@@ -85,7 +85,7 @@ function ConceptCombo({ nodes, value, onPick }: { nodes: readonly GNode[]; value
               onMouseEnter={() => setActive(i)}
               className={cn("flex cursor-pointer items-center gap-2 rounded-md px-2 py-1", i === active && "bg-accent")}
             >
-              <Dot color={typeColor(n.type)} />
+              <NodeMarkSvg type={n.type} className="size-3.5 text-muted-foreground" />
               <span className="truncate">{n.title || n.id}</span>
               <span className="ml-auto shrink-0 text-xs text-muted-foreground">{n.type}</span>
             </li>
@@ -96,8 +96,12 @@ function ConceptCombo({ nodes, value, onPick }: { nodes: readonly GNode[]; value
   );
 }
 
-/** The graph card's fixed height in px: the page below never moves between draws. */
+/** The graph card's fixed height in px, legend included: the page below never moves between draws. */
 export const EGO_HEIGHT = 330;
+/** The card sizes a node by its links inside the sample (./SampleGraph radii). */
+const SIZE = { by: "degree", title: "links" } as const;
+/** The compact legend's fixed strip at the card's foot (two lines at most), inside EGO_HEIGHT. */
+export const LEGEND_HEIGHT = 44;
 
 /** A clicked source in the ego graph as a draw: direct when it links the concept, else through a linked idea. */
 export function drawFor(vault: Vault, concept: string, source: string, sample: { nodes: readonly string[] }): SourceDraw {
@@ -143,6 +147,10 @@ export function ConceptExplorer({
   const sample = useMemo(() => egoSample(vault, concept, drawn), [vault, concept, drawn]);
   const draw = useMemo(() => (chosen && chosen !== drawn?.id ? drawFor(vault, concept, chosen, sample) : drawn), [chosen, drawn, vault, concept, sample]);
   const search = graphSearch(sample, sample.focus, draw?.id ?? null);
+  // colour = theme, like the Full Graph's Map: area slots ranked over the whole vault (as the Full Graph ranks its
+  // model), passed to the channel rather than set globally, so a theme keeps its colour and nothing else is touched
+  const color = useMemo(() => colorChannel("area", { areas: areaSlots([...vault.byId.values()]) }), [vault]);
+  const drawnNodes = useMemo(() => sample.nodes.map((id) => vault.byId.get(id)).filter((n): n is GNode => !!n), [sample, vault]);
   const pickNode = (id: string) => {
     const n = vault.byId.get(id);
     if (n?.layer === "source") setChosen(id);
@@ -176,8 +184,14 @@ export function ConceptExplorer({
         </a>
       </div>
       <div className="mt-2.5 flex flex-col gap-3">
-        <div className="relative min-w-0 rounded-lg border bg-card" style={{ height: EGO_HEIGHT }} data-testid="home-ego">
-          <SampleGraph fill sample={sample} byId={vault.byId} imp={vault.imp} ring={draw?.id ?? null} onPick={pickNode} />
+        <div className="relative flex min-w-0 flex-col rounded-lg border bg-card" style={{ height: EGO_HEIGHT }} data-testid="home-ego">
+          <div className="relative min-h-0 flex-1">
+            <SampleGraph fill sample={sample} byId={vault.byId} imp={vault.imp} ring={draw?.id ?? null} color={color} onPick={pickNode} />
+          </div>
+          {/* the shared legend, compact, in a fixed strip: its content changes with the draw, its height never */}
+          <div className="flex shrink-0 items-center justify-center overflow-hidden border-t px-3 py-1" style={{ height: LEGEND_HEIGHT }} data-testid="home-legend">
+            <GraphLegend nodes={drawnNodes} color={color} size={SIZE} density="compact" maxColors={6} className="justify-center" />
+          </div>
         </div>
         <PipelineStrip vault={vault} concept={concept} draw={draw} onPick={onPick} onRead={setReader} />
       </div>

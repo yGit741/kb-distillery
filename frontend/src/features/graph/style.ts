@@ -71,17 +71,25 @@ export const OTHER_AREAS = "Other areas";
 export const NO_AREA = "No area";
 let AREA_SLOT = new Map<string, string>();
 
-/** Give the areas their colours by size (pages whose first area it is), largest first; ties by name. */
-export function assignAreaColors(nodes: readonly GNode[]): ReadonlyMap<string, string> {
+/** The areas' colours by size (pages whose first area it is), largest first; ties by name. Pure: no global set. */
+export function areaSlots(nodes: readonly Pick<GNode, "areas">[]): ReadonlyMap<string, string> {
   const count = new Map<string, number>();
   for (const n of nodes) if (n.areas[0]) count.set(n.areas[0], (count.get(n.areas[0]) ?? 0) + 1);
   const ranked = [...count].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).slice(0, AREA_PALETTE.length);
-  AREA_SLOT = new Map(ranked.map(([a], i) => [a, AREA_PALETTE[i]!]));
+  return new Map(ranked.map(([a], i) => [a, AREA_PALETTE[i]!]));
+}
+
+/** The Full Graph's area colours (`areaSlots` over its model), the default for every colouring by area. */
+export function assignAreaColors(nodes: readonly GNode[]): ReadonlyMap<string, string> {
+  AREA_SLOT = new Map(areaSlots(nodes));
   return AREA_SLOT;
 }
 
+/** Area slots a surface passes explicitly (Home: over the whole vault); undefined = the Full Graph's. */
+export type AreaSlots = ReadonlyMap<string, string>;
+
 /** An area's colour: its slot, grey past the palette, lighter grey for none. */
-export const areaHue = (area?: string | null): string => (!area ? NONE_GREY : (AREA_SLOT.get(area) ?? OTHER_GREY));
+export const areaHue = (area?: string | null, slots: AreaSlots = AREA_SLOT): string => (!area ? NONE_GREY : (slots.get(area) ?? OTHER_GREY));
 
 /** Colourings with an order (little -> much): they take the neutral ramp, not a hue. */
 export const RAMP_BY: ReadonlySet<ColorBy> = new Set(["depth", "degree", "evidence", "score"]);
@@ -134,7 +142,7 @@ const RAMP_DARK = ["#2B4C8C", "#2C7FB8", "#41B6C4", "#7FCDBB", "#D2F0B4"].map(he
  * `metric` is the 0..1 signal behind the evidence and score colourings (grey without one). `ramp` ("light" |
  * "dark") puts the ordered colourings on the neutral ramp instead of a hue (type is the mark: colour is the view's).
  */
-export function colorOf(n: GNode, by: ColorBy, metric?: number, ramp?: "light" | "dark" | null): string {
+export function colorOf(n: GNode, by: ColorBy, metric?: number, ramp?: "light" | "dark" | null, slots?: AreaSlots): string {
   if (ramp && RAMP_BY.has(by)) {
     const t = ordinalOf(n, by, metric);
     // a continuous signal snaps to the legend bar's steps: neighbours stay apart, and the node matches its step
@@ -153,7 +161,7 @@ export function colorOf(n: GNode, by: ColorBy, metric?: number, ramp?: "light" |
     case "status":
       return statusColor(n.status);
     case "area":
-      return n.type === "person" && !n.areas[0] ? PERSON_INK : areaHue(n.areas[0]);
+      return n.type === "person" && !n.areas[0] ? PERSON_INK : areaHue(n.areas[0], slots);
     case "degree":
       return degreeBand(n).color;
     default:
@@ -162,7 +170,7 @@ export function colorOf(n: GNode, by: ColorBy, metric?: number, ramp?: "light" |
 }
 
 /** The key a colour stands for, for the colour key shown when the colouring is not by type. */
-export function colorKey(n: GNode, by: ColorBy): string {
+export function colorKey(n: GNode, by: ColorBy, slots: AreaSlots = AREA_SLOT): string {
   switch (by) {
     case "evidence":
       return "Evidence: light = little, dark = much";
@@ -176,7 +184,7 @@ export function colorKey(n: GNode, by: ColorBy): string {
       return n.status || "(none)";
     case "area":
       if (n.type === "person" && !n.areas[0]) return PEOPLE;
-      return !n.areas[0] ? NO_AREA : AREA_SLOT.has(n.areas[0]) ? areaDisplay(n.areas[0]) : OTHER_AREAS;
+      return !n.areas[0] ? NO_AREA : slots.has(n.areas[0]) ? areaDisplay(n.areas[0]) : OTHER_AREAS;
     case "degree":
       return degreeBand(n).label;
     case "none":

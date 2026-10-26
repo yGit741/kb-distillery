@@ -1,5 +1,5 @@
 import { DEPTHS, LAYERS, type Layer } from "@/api/model";
-import { colorKey, colorOf, NO_AREA, ordinalOf, OTHER_AREAS, PEOPLE, RAMP_BY, type ColorBy } from "./style";
+import { colorKey, colorOf, NO_AREA, ordinalOf, OTHER_AREAS, PEOPLE, RAMP_BY, type AreaSlots, type ColorBy } from "./style";
 import { presentTypes, type GraphSchema, type TypeInfo } from "./schema";
 import type { GNode } from "./types";
 
@@ -75,12 +75,12 @@ export interface KeyRow {
  * The colour key for any colouring but "type" (there the legend rows are the key): most common first, or
  * light to dark on the neutral ramp (`ramp`). Hidden keys still count, so a filtered-out row stays clickable.
  */
-export function colorKeyRows(nodes: readonly GNode[], visible: ReadonlySet<string>, by: ColorBy, limit = 10, ramp: "light" | "dark" | null = null): KeyRow[] {
+export function colorKeyRows(nodes: readonly GNode[], visible: ReadonlySet<string>, by: ColorBy, limit = 10, ramp: "light" | "dark" | null = null, slots?: AreaSlots): KeyRow[] {
   const rows = new Map<string, KeyRow>();
   for (const n of nodes) {
     if (!visible.has(n.id)) continue;
-    const label = colorKey(n, by);
-    const r = rows.get(label) ?? { label, color: colorOf(n, by, undefined, ramp), count: 0, t: ordinalOf(n, by) };
+    const label = colorKey(n, by, slots);
+    const r = rows.get(label) ?? { label, color: colorOf(n, by, undefined, ramp, slots), count: 0, t: ordinalOf(n, by) };
     r.count += 1;
     rows.set(label, r);
   }
