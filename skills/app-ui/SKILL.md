@@ -89,6 +89,26 @@ The graph (`src/features/graph`) is the app's core view. These rules apply to ev
 mini-graph embedded elsewhere (Home cards). **A view (story) only chooses what counts as important; it never breaks
 a rule below.**
 
+### Graph encoding (the contract; guarded by `features/graph/encoding/consistency.test.ts`)
+- **One place knows how a page looks as a node:** `src/features/graph/encoding/` (`spec.ts` marks, geometry, glyphs,
+  state rings, label style; `canvas.ts` `drawNode`; `NodeMarkSvg.tsx` `NodeMarkG` / `NodeMarkSvg` / `NodeSwatch` for SVG
+  and chips, drawn from the same `GEOMETRY` and `GLYPH_SVG`; `channels.ts`; `GraphLegend.tsx`). Canvas and SVG match.
+- **Type = mark, everywhere** (source dot + format glyph, idea ring + dot, topic ring + lines, question ring + "?",
+  person initials, collection double ring). Never `typeColor(` for a node and never your own `ctx.arc(` for a node.
+- **Every graph has the legend under it** (`GraphLegend`, full or compact): Type row, Sources row, a **titled Colour
+  row** ("Colour = theme", "Colour = citation role"), and a Size row when size varies. A surface may colour by
+  anything, but only through a `ColorChannel` with a title; area colours come from `areaSlots` (passed explicitly,
+  never a global set from another surface).
+- **Explorer chips use the same symbols**: titles, links, results, trail, side reader and Home pipeline show
+  `NodeMarkSvg` / `NodeSwatch`, not coloured dots.
+- **Inheritance boundary:** Full-Graph-only features (views and stories, lab rail, filters and quick filters, hulls,
+  Fourier arcs, raw piles, magnet hover, semantic zoom (`style.semanticRadius`, called by GraphCanvas only), the
+  interactive legend, basket, node menu, Finder) stay in `features/graph/` and are never imported by other surfaces;
+  other surfaces import `@/features/graph/encoding` plus the guard's `SHARED_OK` data modules (each with who may use
+  it); `encoding/` imports itself and the guard's `ENCODING_DEPS` only. Circles drawn outside `encoding/` and
+  `typeColor` uses are pinned per file with a reason.
+- **A new graph surface** registers in the guard's `SURFACES` with the file that renders its legend.
+
 ### Consistency across screens
 1. **The same view everywhere.** A mini-graph and the full graph use the same marks, legend and colouring; moving
    between screens never changes what a colour or shape means. "Open in Full Graph" shows exactly the pages the
