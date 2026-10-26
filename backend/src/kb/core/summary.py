@@ -1,0 +1,70 @@
+"""The `summary:` field: one English "what it is + main point" line per page, and its staleness hash.
+
+`summary_from` stores `summary_hash(text)` of the page the summary was written from. The hash covers only
+the parts that carry the page's point — the H1, the `**Problem:**` / `**Main result:**` lead lines and
+the `## Key claims` section — so link, typo and Connections edits never mark a summary stale.
+"""
+import hashlib
+import re
+
+SUMMARY_MIN = 80
+SUMMARY_MAX = 320
+EXEMPT_TYPES = {"course"}
+DIGESTED = {"easy", "full", "deep"}
+
+_LEAD = re.compile(r"^\*\*(?:Problem|Main result):\*\*.*$", re.M)
+_H1 = re.compile(r"^# .+$", re.M)
+_HEBREW = re.compile(r"[֐-׿]")
+
+
+def body_of(text):
+    """The page without its frontmatter."""
+    if text.startswith("---"):
+        end = text.find("\n---", 3)
+        if end != -1:
+            return text[end + 4:]
+    return text
+
+
+def section(body, heading):
+    """The text under `## heading` up to the next `## `, or ''."""
+    m = re.search(rf"^## {re.escape(heading)}\s*$(.*?)(?=^## |\Z)", body, re.M | re.S)
+    return m.group(1).strip() if m else ""
+
+
+def summary_hash(text):
+    """Short sha256 of the parts of a page a summary depends on (whitespace-normalised)."""
+    body = body_of(text)
+    parts = _H1.findall(body)[:1] + _LEAD.findall(body) + [section(body, "Key claims")]
+    norm = "\n".join(" ".join(p.split()) for p in parts if p)
+    return hashlib.sha256(norm.encode()).hexdigest()[:12]
+
+
+def unquote(v):
+    v = (v or "").strip() if isinstance(v, str) else ""
+    return v[1:-1] if len(v) >= 2 and v[0] == v[-1] == '"' else v
+
+
+def problems(summary):
+    """Why a summary is not acceptable ([] = fine). Mirrors what lint enforces."""
+    s = summary or ""
+    out = []
+    if not SUMMARY_MIN <= len(s) <= SUMMARY_MAX:
+        out.append(f"length {len(s)} not in {SUMMARY_MIN}-{SUMMARY_MAX}")
+    if "\n" in s:
+        out.append("contains a newline")
+    if "#" in s or '"' in s:
+        out.append('contains # or " (breaks the flat frontmatter parser)')
+    if _HEBREW.search(s):
+        out.append("not English (Hebrew letters)")
+    return out
+
+
+def needs_summary(fm):
+    """Does this page's frontmatter call for a summary at all?
+
+    Sources need one once digested (`depth` easy/full/deep; a `listed` stub has nothing to summarise);
+    concept and collection pages carry no depth and always need one — except courses."""
+    if fm.get("type") in EXEMPT_TYPES:
+        return False
+    return fm.get("depth") in DIGESTED if fm.get("depth") else True
