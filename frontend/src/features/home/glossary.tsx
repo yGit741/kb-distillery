@@ -1,7 +1,7 @@
 import { FileText, Image, Mail, MessageSquare, Newspaper, PenLine, Presentation, Scissors, Youtube, type LucideIcon } from "lucide-react";
 import type { Depth } from "@/api/model";
 import { ShapeIcon, SourceIcon } from "@/features/graph/encoding";
-import { depthColor, layerColor, UNKNOWN_COLOR } from "@/theme/palette";
+import { depthColor, UNKNOWN_COLOR } from "@/theme/palette";
 
 /** The intro card's vocabulary (approved mock v16): Raw → Source → Concept, plus depth. */
 export const RAW_FORMATS: readonly { label: string; icon: LucideIcon }[] = [
@@ -30,7 +30,6 @@ export const KIND_ICON: Record<string, LucideIcon> = {
 };
 
 export const RAW_COLOR = UNKNOWN_COLOR;
-export const SOURCE_COLOR = layerColor("source");
 export const CONCEPT_TYPES = [
   { type: "topic", label: "Topic", text: "a theme that groups ideas" },
   { type: "idea", label: "Idea", text: "one claim, result or technique" },

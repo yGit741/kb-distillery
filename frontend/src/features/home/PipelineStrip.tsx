@@ -4,9 +4,9 @@ import { useDataSource, type RawCard } from "@/api";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { useApiQuery } from "@/lib/useApiQuery";
 import { cn } from "@/lib/utils";
-import { typeColor } from "@/theme/palette";
+import { NodeMarkSvg, ShapeIcon } from "@/features/graph/encoding";
 import type { GNode } from "@/features/graph/types";
-import { ConceptDots, DepthSwatch, Dot, KIND_ICON, RAW_COLOR, SOURCE_COLOR, StageArrow } from "./glossary";
+import { ConceptDots, DepthSwatch, Dot, KIND_ICON, RAW_COLOR, StageArrow } from "./glossary";
 import { conceptsFed, type SourceDraw, type Vault } from "./samplers";
 
 /** Chips the "Concepts it feeds" stage shows before "+ N more". */
@@ -252,7 +252,7 @@ function SourceStage({ source, onRead }: { source: GNode; onRead: (slug: string)
   const out = Number(prop(source, "links_out") || source.outDegree || 0);
   const inn = Number(prop(source, "links_in") || source.inDegree || 0);
   return (
-    <Stage title="Source" dots={<Dot color={SOURCE_COLOR} />}>
+    <Stage title="Source" dots={<NodeMarkSvg type={source.type} className="size-3.5 text-muted-foreground" />}>
       <b title={source.title || source.id} className="line-clamp-2 h-[2.75em] shrink-0 text-[12.5px] font-semibold leading-snug [overflow-wrap:anywhere]">{source.title || source.id}</b>
       <div className="flex items-stretch gap-2">
         <Mini label={`Read ${source.title || source.id}`} onClick={() => onRead(source.id)} className="bg-muted/60">
@@ -300,7 +300,7 @@ function ConceptsStage({ vault, source, concept, onPick }: { vault: Vault; sourc
                   hit ? "border-primary font-semibold ring-2 ring-primary/25" : "opacity-70 hover:opacity-100",
                 )}
               >
-                <Dot color={typeColor(n.type)} />
+                <NodeMarkSvg type={n.type} className="size-3.5 text-muted-foreground" />
                 <span className="truncate">{n.title || id}</span>
                 {repeats(id) && <span className="shrink-0 text-[10px] text-muted-foreground">{n.type}</span>}
               </button>
@@ -331,7 +331,7 @@ export function PipelineStrip({ vault, concept, draw, onPick, onRead }: { vault:
       <h2 id="home-pipeline" className="text-center text-[10.5px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
         Knowledge pipeline for one source the concept relies on
       </h2>
-      <p className="mb-1.5 text-center text-[11px] text-muted-foreground">click any red node to see its pipeline</p>
+      <p className="mb-1.5 text-center text-[11px] text-muted-foreground">click any source node to see its pipeline</p>
       <div className="grid grid-cols-1 items-stretch gap-3 md:grid-cols-[1fr_40px_1fr_40px_1fr]">
         {source ? (
           <>
@@ -345,7 +345,7 @@ export function PipelineStrip({ vault, concept, draw, onPick, onRead }: { vault:
           <>
             {empty("Raw", <Dot color={RAW_COLOR} />, "No raw file yet.")}
             <StageArrow label="catalog" />
-            {empty("Source", <Dot color={SOURCE_COLOR} />, "No source yet: this concept is not backed by a source in the vault.")}
+            {empty("Source", <ShapeIcon shape="source" className="size-3.5 text-muted-foreground" />, "No source yet: this concept is not backed by a source in the vault.")}
             <StageArrow label="digest" />
             {empty("Concepts it feeds", <ConceptDots />, "Nothing fed yet.")}
           </>
