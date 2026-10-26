@@ -109,3 +109,17 @@ export function Row({ card, right }: { card: PageCard; right?: ReactNode }) {
     </li>
   );
 }
+
+/** A collapsible card: the reader's side folds and the video view's description and comments. */
+export function Fold({ title, count, children }: { title: string; count?: number; children: ReactNode }) {
+  return (
+    <details className="group rounded-lg border bg-card">
+      <summary className="flex cursor-pointer items-center gap-2 px-3 py-2 text-sm font-medium marker:content-none">
+        <span aria-hidden className="text-muted-foreground transition-transform group-open:rotate-90">›</span>
+        {title}
+        {count != null && <span className="text-xs font-normal text-muted-foreground">{count}</span>}
+      </summary>
+      <div className="border-t px-3 py-2 text-sm">{children}</div>
+    </details>
+  );
+}

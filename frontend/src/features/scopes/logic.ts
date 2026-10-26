@@ -9,6 +9,7 @@ export const FORMATS = [
   "emails",
   "web-clips",
   "images",
+  "videos",
 ] as const;
 
 export const DRAFTS_KEY = "thesis-wiki-scope-drafts";

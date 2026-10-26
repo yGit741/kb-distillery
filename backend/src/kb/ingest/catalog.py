@@ -14,7 +14,7 @@ import sys
 from . import blog
 from .paths import ROOT, person_from_raw, set_collection, _page_type
 from .verify import existing_digest_for_raw
-from kb.core.schema import (ASSET_NAME, RAW_CHATS, RAW_EMAILS, RAW_HANDWRITTEN, RAW_IMAGES,  # noqa: E402
+from kb.core.schema import (ASSET_NAME, RAW_CHATS, RAW_EMAILS, RAW_VIDEOS, VIDEO_ITEM, RAW_HANDWRITTEN, RAW_IMAGES,  # noqa: E402
                     RAW_PRESENTATIONS, RAW_PRINTED, RAW_WEB, CONTENTS_COLLECTIONS, make_slug, strip_prefix)
 
 PAPER_NAME = re.compile(r"^(1[89]|20)\d{2}-[a-z0-9]+(-[a-z0-9]+)*\.pdf$")
@@ -25,12 +25,13 @@ WEB_EXTS = {".html", ".htm", ".md"}
 IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".gif", ".webp"}
 
 MAIL_DIR_PREFIX = "mail-"
+VIDEO_DIR_PREFIX = "video-"     # scrap-youtube bundles
 _ASSET_NAME = re.compile(ASSET_NAME, re.I)
 _LINT_DEFERRED = False      # drain-inbox lints once at the end instead of after every file
 CHAT_SIGNATURE = re.compile(r"\*\*You\*\*|\*\*Gemini\*\*|gemini\.google\.com", re.I)
 WEB_CLIP_TAG = re.compile(r"^tags:.*\bsource/(wordpress|web-clip)\b", re.M)   # a scrap-wordpress / clipper clip
 FORMATS = (RAW_PRINTED, RAW_HANDWRITTEN, RAW_PRESENTATIONS, RAW_CHATS, RAW_EMAILS, RAW_WEB,
-           RAW_IMAGES)
+           RAW_IMAGES, RAW_VIDEOS)
 
 
 def _looks_like_chat(full_path):
@@ -88,7 +89,9 @@ def detect_format(inbox_rel):
     if os.path.isdir(full):
         if name.startswith(MAIL_DIR_PREFIX):
             return RAW_EMAILS
-        raise ValueError(f"{inbox_rel}/ is a folder — only mail-<thread>/ folders are cataloged whole")
+        if name.startswith(VIDEO_DIR_PREFIX) and os.path.isfile(os.path.join(full, VIDEO_ITEM)):
+            return RAW_VIDEOS
+        raise ValueError(f"{inbox_rel}/ is a folder — only mail-<thread>/ and video-<name>/ folders are cataloged whole")
     ext = os.path.splitext(name.lower())[1]
     if ext == ".pdf":
         return RAW_PRINTED if has_text_layer(full) else RAW_HANDWRITTEN
@@ -332,6 +335,26 @@ def catalog_email(inbox_rel, collection="", **_kwargs):
     return dest_rel, None
 
 
+def catalog_video(inbox_rel, collection="", title=None, **_kwargs):
+    """raw/inbox/video-<dir>/ (scrap-youtube) → raw/videos/<dir>/. A corpus row only — the `video-`
+    page is written by easy-digest, or a course row points at the bundle."""
+    inbox_rel = _check_inbox(inbox_rel)
+    dir_name = os.path.basename(inbox_rel)[len(VIDEO_DIR_PREFIX):]
+    dest_rel = f"raw/{RAW_VIDEOS}/{dir_name}"
+    moved = _move(os.path.join(ROOT, inbox_rel), os.path.join(ROOT, dest_rel))
+    print(f"{'moved' if moved else 'already at'} → {dest_rel}/")
+    if not title:
+        import json
+        try:
+            with open(os.path.join(ROOT, dest_rel, "video.json"), encoding="utf-8") as f:
+                title = json.load(f).get("title")
+        except (OSError, ValueError):
+            title = None
+    _join(f"{dest_rel}/{VIDEO_ITEM}", collection, title or dir_name)
+    _run_lint()
+    return dest_rel, None
+
+
 def catalog_chat(inbox_rel, collection="", **_kwargs):
     """A chat-export .md → raw/llm-chats/, repointing an existing digest that cited the inbox path."""
     inbox_rel = _check_inbox(inbox_rel)
@@ -446,6 +469,8 @@ def catalog(inbox_rel, collection="", fmt=None, title=None):
         print(f"format → {fmt}")
         if fmt == RAW_EMAILS:
             dest, slug = catalog_email(rel, collection=collection)
+        elif fmt == RAW_VIDEOS:
+            dest, slug = catalog_video(rel, collection=collection, title=title)
         elif fmt == RAW_CHATS:
             dest, slug = catalog_chat(rel, collection=collection)
         elif fmt == RAW_PRINTED and rel.lower().endswith(".md") and _looks_like_blog(os.path.join(ROOT, rel)):

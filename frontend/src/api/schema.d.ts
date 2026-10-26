@@ -586,6 +586,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/videos/{path}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One video bundle (raw/videos/<dir>/video.md) as structured data */
+        get: operations["get_video_api_videos__path__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -2216,6 +2233,145 @@ export interface components {
             /** Error Type */
             type: string;
         };
+        /** VideoBundle */
+        VideoBundle: {
+            /** Channel */
+            channel?: string | null;
+            /**
+             * Chapters
+             * @default []
+             */
+            chapters: components["schemas"]["VideoChapter"][];
+            /** Comment Count */
+            comment_count?: number | null;
+            /**
+             * Comments
+             * @default []
+             */
+            comments: components["schemas"]["VideoComment"][];
+            /**
+             * Description
+             * @default
+             */
+            description: string;
+            /** Duration */
+            duration: number;
+            /**
+             * Frames
+             * @default []
+             */
+            frames: components["schemas"]["VideoFrame"][];
+            /** Id */
+            id: string;
+            /**
+             * Links
+             * @default []
+             */
+            links: string[];
+            /** Raw */
+            raw: string;
+            /**
+             * Sections
+             * @default []
+             */
+            sections: components["schemas"]["VideoSection"][];
+            /**
+             * Stats
+             * @default {}
+             */
+            stats: {
+                [key: string]: unknown;
+            };
+            /** Subs Kind */
+            subs_kind?: string | null;
+            /** Tier */
+            tier: string;
+            /** Title */
+            title: string;
+            /** Uploaded */
+            uploaded?: string | null;
+            /** Url */
+            url: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** VideoChapter */
+        VideoChapter: {
+            /** End */
+            end?: number | null;
+            /** Start */
+            start: number;
+            /** Title */
+            title: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** VideoComment */
+        VideoComment: {
+            /** Author */
+            author: string;
+            /** Likes */
+            likes: number;
+            /**
+             * Stamps
+             * @default []
+             */
+            stamps: string[];
+            /** Text */
+            text: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** VideoFrame */
+        VideoFrame: {
+            /** Conf */
+            conf?: number | null;
+            /** File */
+            file: string;
+            /** Kind */
+            kind: string;
+            /**
+             * Ocr
+             * @default []
+             */
+            ocr: string[];
+            /** Path */
+            path: string;
+            read?: components["schemas"]["VideoRead"] | null;
+            /** T */
+            t: number;
+        } & {
+            [key: string]: unknown;
+        };
+        /** VideoRead */
+        VideoRead: {
+            /** Model */
+            model?: string | null;
+            /**
+             * Text
+             * @default
+             */
+            text: string;
+            /** Tokens In */
+            tokens_in?: number | null;
+            /** Tokens Out */
+            tokens_out?: number | null;
+        } & {
+            [key: string]: unknown;
+        };
+        /** VideoSection */
+        VideoSection: {
+            /** Chapter */
+            chapter: string;
+            /** End */
+            end: number;
+            /** Start */
+            start: number;
+            /** Text */
+            text: string;
+        } & {
+            [key: string]: unknown;
+        };
         /** WantedLink */
         WantedLink: {
             /** Count */
@@ -3417,6 +3573,44 @@ export interface operations {
                 };
             };
             /** @description no such file */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_video_api_videos__path__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                path: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VideoBundle"];
+                };
+            };
+            /** @description not a video bundle */
             404: {
                 headers: {
                     [name: string]: unknown;

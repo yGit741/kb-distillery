@@ -16,7 +16,7 @@ from kb.core.hubs import parse_contents
 from kb.lint.lint import collections_of, raw_paths, read_manifest
 
 ROOT = vault_root()
-FORMATS = ("printed-docs", "handwritten", "presentations", "llm-chats", "emails", "web-clips", "images", "inbox")
+FORMATS = ("printed-docs", "handwritten", "presentations", "llm-chats", "emails", "web-clips", "images", "videos", "inbox")
 COMPANIONS = ("asset", "ink", "dupe")
 from kb.core.schema import COLLECTION_TYPES
 _YEAR = re.compile(r"^((?:18|19|20)\d{2})-")
