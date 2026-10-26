@@ -16,6 +16,9 @@ description: Turn a YouTube lecture or video into a raw/inbox/video-<name>/ bund
 
 - Scrap without `resolve` first — `python3 -m kb.ingest resolve <url>` finds a bundle by its YouTube id
 - Read frames here — that is `video-digest` (full / deep), which spends LLM tokens
+- Scrap animation-led videos such as 3Blue1Brown (Grant Sanderson): the content lives in continuous animation,
+  which a frame budget cannot digest well — the owner's call (2026-10-26). Lectures (slides, blackboard), paper-
+  and-marker explainers and slide-style explainers (StatQuest) are in scope
 - Catalog or digest from here — `catalog raw/inbox/video-<name>` is the next step
 
 ## CLI
@@ -40,7 +43,7 @@ python3 -m kb.ingest scrap-youtube <url> --force    # refresh the bundle of a vi
 something worth reading, scored, never dropped. Signals: the fullest board before each erase or camera cut
 (blackboard lectures), the last frame before each slide change scored by its OCR words (slides), transcript cues
 ("as you can see", "this equation"), chapter starts, and coverage (the most stable second of any 90 s stretch with
-no anchor — animation, paper, screencast). Audience shots and half-written boards stay with a low score. Expect
+no anchor — paper, screencast, whatever the detectors miss). Audience shots and half-written boards stay with a low score. Expect
 ~100–150 anchors per hour of blackboard, fewer for slides.
 
 Subtitles: one English track, manual first; YouTube rate-limits subtitle bursts (HTTP 429), so the fetch retries

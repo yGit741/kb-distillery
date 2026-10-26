@@ -11,7 +11,8 @@ anchor of little value is kept with a low score, never dropped. Signals:
   chapter   the first content of each chapter
   coverage  the most stable second of any gap longer than COVER_S without an anchor (animation, paper,
             screencast: whatever the detectors miss)
-Parameters come from the PoC runs (Stanford CME295 slides, MIT 6.034 blackboard, ritvikmath, StatQuest, 3b1b).
+Parameters come from the PoC runs (Stanford CME295 slides, MIT 6.034 blackboard, ritvikmath, StatQuest); animation-led
+videos (3Blue1Brown) were tried and left out of scope — a frame budget cannot digest them well.
 """
 import os
 import re
