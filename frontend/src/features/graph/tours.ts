@@ -4,7 +4,7 @@ const RAIL = 'nav[aria-label="Graph tools"]';
 const PANEL = 'section[aria-label="Experiments"]';
 
 registerTour("experiments", [
-  { target: `${RAIL} button[aria-label="Experiments"]`, title: "Experiments live here", body: "The flask opens prototypes you can try and judge. Switching one on never changes the graph for anyone else." },
+  { go: "/graph", target: `${RAIL} button[aria-label="Experiments"]`, title: "Experiments live here", body: "The flask opens prototypes you can try and judge. Switching one on never changes the graph for anyone else." },
   { target: PANEL, title: "The Experiments panel", body: "One card per prototype: its user story in plain text, then how to read the result.", before: clickUnlessOpen(`${RAIL} button[aria-label="Experiments"]`, PANEL) },
   { target: `${PANEL} p`, title: "Share a setup", body: "Switches are kept in this browser. Add ?exp=fourier,noise to a link to hand someone the same setup." },
   { target: `${PANEL} label:nth-of-type(1)`, title: "Theme spectrum", body: "Which themes appear together more, or less, than chance. Gaps point at big pairs that never meet." },

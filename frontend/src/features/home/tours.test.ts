@@ -20,7 +20,7 @@ describe("Home → Graph tours", () => {
       expect(steps.length).toBeGreaterThanOrEqual(6);
       for (const s of steps) {
         expect(typeof s.target).toBe("string");
-        expect(s.target.length).toBeGreaterThan(0);
+        expect(s.target!.length).toBeGreaterThan(0);
         expect(s.title.trim().length).toBeGreaterThan(0);
         expect(s.body.trim().length).toBeGreaterThan(0);
         expect(s.body.trim().split(/[.?!]\s/).length, `${name}: "${s.title}"`).toBeLessThanOrEqual(2);
