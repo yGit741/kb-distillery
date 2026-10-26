@@ -1,5 +1,6 @@
 import { node } from "./fixtures";
-import { AREA_PALETTE, areaHue, assignAreaColors, colorKey, colorOf, layeredRadii, nodeRadius, NONE_GREY, OTHER_GREY, RING_BOOST } from "./style";
+import { AREA_PALETTE, areaHue, assignAreaColors, colorKey, colorOf, layeredRadii, nodeRadius, NONE_GREY, OTHER_GREY } from "./style";
+import { RING_BOOST } from "./encoding/spec";
 import { TYPE_COLORS, DEPTH_COLORS, LAYER_COLORS, UNKNOWN_COLOR } from "@/theme/palette";
 
 describe("colorOf", () => {

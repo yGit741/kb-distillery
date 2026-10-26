@@ -1,5 +1,6 @@
 import { depthColor, layerColor, statusColor, typeColor, UNKNOWN_COLOR } from "@/theme/palette";
 import { areaDisplay } from "./displayNames";
+import { markOf, RING_BOOST } from "./encoding/spec";
 import { degreeOf, type GNode } from "./types";
 
 export type ColorBy = "type" | "layer" | "depth" | "status" | "area" | "degree" | "evidence" | "score" | "none";
@@ -82,7 +83,7 @@ export function assignAreaColors(nodes: readonly GNode[]): ReadonlyMap<string, s
 /** An area's colour: its slot, grey past the palette, lighter grey for none. */
 export const areaHue = (area?: string | null): string => (!area ? NONE_GREY : (AREA_SLOT.get(area) ?? OTHER_GREY));
 
-/** Colourings with an order (little -> much): with marks on they take the neutral ramp, not a hue. */
+/** Colourings with an order (little -> much): they take the neutral ramp, not a hue. */
 export const RAMP_BY: ReadonlySet<ColorBy> = new Set(["depth", "degree", "evidence", "score"]);
 const DEPTH_T: Readonly<Record<string, number>> = { listed: 0, easy: 1 / 3, full: 2 / 3, deep: 1 };
 
@@ -131,7 +132,7 @@ const RAMP_DARK = ["#2B4C8C", "#2C7FB8", "#41B6C4", "#7FCDBB", "#D2F0B4"].map(he
 
 /**
  * `metric` is the 0..1 signal behind the evidence and score colourings (grey without one). `ramp` ("light" |
- * "dark") puts the ordered colourings on the neutral ramp instead of a hue (marks on: colour is the view's).
+ * "dark") puts the ordered colourings on the neutral ramp instead of a hue (type is the mark: colour is the view's).
  */
 export function colorOf(n: GNode, by: ColorBy, metric?: number, ramp?: "light" | "dark" | null): string {
   if (ramp && RAMP_BY.has(by)) {
@@ -228,11 +229,9 @@ const median = (xs: number[]): number => {
   return s[Math.floor(s.length / 2)]!;
 };
 const SOURCE_LAYER = (n: GNode) => n.layer === "source";
-/** Hollow marks carry less ink than a solid dot of the same radius: drawn this much larger to read the same size. */
-export const RING_BOOST = 1.15;
 
 /**
- * Radii with marks on, each layer on its own scale. Sources keep the view's size signal (evidence) but stay
+ * Radii by layer, each layer on its own scale. Sources keep the view's size signal (evidence) but stay
  * under the typical idea; concepts and people grow with their links instead, from a floor at the median paper,
  * so an idea is never smaller than a typical paper and a person never smaller than an idea; a topic is never
  * smaller than the largest idea. Rings get `RING_BOOST`.
@@ -264,39 +263,6 @@ export function layeredRadii(nodes: readonly GNode[], o: SizeOptions): Map<strin
 }
 
 /**
- * Node marks when type is carried by the mark and colour is free for the view (`shapes` pref). Every node is a
- * circle and the mark only scales with zoom: sources and people solid (a person with initials), concepts a
- * hollow ring with one symbol inside, collections a ring inside a ring.
- */
-export type NodeMark = "source" | "person" | "question" | "idea" | "topic" | "collection";
-const MARK: Readonly<Record<string, NodeMark>> = {
-  person: "person",
-  question: "question",
-  idea: "idea",
-  topic: "topic",
-  course: "collection",
-  book: "collection",
-  series: "collection",
-  part: "collection",
-};
-export const markOf = (type: string): NodeMark => MARK[type] ?? "source";
-
-/** The legend's mark key, in reading order. */
-export const MARK_KEY: readonly { mark: NodeMark; label: string }[] = [
-  { mark: "source", label: "Source" },
-  { mark: "person", label: "Person" },
-  { mark: "question", label: "Question" },
-  { mark: "idea", label: "Idea" },
-  { mark: "topic", label: "Topic" },
-  { mark: "collection", label: "Collection" },
-];
-
-/** Mail threads: still typed `conversation` in the vault until the schema renames it to `mail`. */
-export const MAIL_TYPES: ReadonlySet<string> = new Set(["mail", "email", "conversation"]);
-/** Legend names that differ from the schema's, until the schema catches up. */
-export const TYPE_LABEL_OVERRIDE: Readonly<Record<string, string>> = { conversation: "Mail" };
-
-/**
  * Semantic zoom: a node's screen size grows as zoom^gamma, not with the zoom, so zooming in opens space between
  * nodes instead of inflating them. `rGraph` is the layout radius (graph units), `scale` the current zoom and
  * `zr` the zoom relative to "fit"; the result is a radius in graph units for the current frame. The 5px floor
@@ -309,154 +275,5 @@ export function semanticRadius(rGraph: number, scale: number, zr: number): numbe
   return (pxAtFit * Math.pow(Math.max(zr, 1e-6), ZOOM_GAMMA)) / scale;
 }
 
-/** On-screen radius from which a source shows its type glyph (below it, a plain dot); a hovered source always does. */
-export const SOURCE_GLYPH_PX = 8;
-
-/**
- * A source type's glyph, in white inside its dot: page (paper), text lines (article, post), sparkle (AI chat),
- * envelope (mail), bubble (conversation), play (lecture), book (part).
- */
-export function drawSourceGlyph(ctx: CanvasRenderingContext2D, type: string, x: number, y: number, r: number): void {
-  ctx.save();
-  ctx.strokeStyle = "#fff";
-  ctx.fillStyle = "#fff";
-  ctx.lineWidth = r * 0.12;
-  ctx.lineCap = "round";
-  ctx.lineJoin = "round";
-  ctx.beginPath();
-  if (type === "paper") {
-    const w = r * 0.9, h = r * 1.15, f = r * 0.32, l = x - w / 2, t = y - h / 2;
-    ctx.moveTo(l, t);
-    ctx.lineTo(l + w - f, t);
-    ctx.lineTo(l + w, t + f);
-    ctx.lineTo(l + w, t + h);
-    ctx.lineTo(l, t + h);
-    ctx.closePath();
-    for (let i = 0; i < 3; i++) {
-      ctx.moveTo(l + r * 0.2, t + h * (0.42 + i * 0.18));
-      ctx.lineTo(l + w - r * 0.2, t + h * (0.42 + i * 0.18));
-    }
-    ctx.stroke();
-  } else if (type === "ai-chat") {
-    // a four-point sparkle: the mark AI assistants use
-    const k = r * 0.62, w = r * 0.16;
-    ctx.moveTo(x, y - k);
-    ctx.quadraticCurveTo(x + w, y - w, x + k, y);
-    ctx.quadraticCurveTo(x + w, y + w, x, y + k);
-    ctx.quadraticCurveTo(x - w, y + w, x - k, y);
-    ctx.quadraticCurveTo(x - w, y - w, x, y - k);
-    ctx.fill();
-  } else if (MAIL_TYPES.has(type)) {
-    const w = r * 1.1, h = r * 0.78, l = x - w / 2, t = y - h / 2;
-    ctx.rect(l, t, w, h);
-    ctx.moveTo(l, t);
-    ctx.lineTo(x, y + h * 0.08);
-    ctx.lineTo(l + w, t);
-    ctx.stroke();
-  } else if (type === "conversation") {
-    ctx.ellipse(x, y - r * 0.08, r * 0.55, r * 0.4, 0, 0, 2 * Math.PI);
-    ctx.moveTo(x - r * 0.25, y + r * 0.25);
-    ctx.lineTo(x - r * 0.42, y + r * 0.55);
-    ctx.lineTo(x - r * 0.02, y + r * 0.3);
-    ctx.stroke();
-  } else if (type === "lecture") {
-    ctx.moveTo(x - r * 0.28, y - r * 0.42);
-    ctx.lineTo(x + r * 0.45, y);
-    ctx.lineTo(x - r * 0.28, y + r * 0.42);
-    ctx.closePath();
-    ctx.fill();
-  } else if (type === "part" || type === "book") {
-    ctx.moveTo(x, y - r * 0.32);
-    ctx.quadraticCurveTo(x - r * 0.3, y - r * 0.45, x - r * 0.58, y - r * 0.32);
-    ctx.lineTo(x - r * 0.58, y + r * 0.42);
-    ctx.quadraticCurveTo(x - r * 0.3, y + r * 0.3, x, y + r * 0.42);
-    ctx.quadraticCurveTo(x + r * 0.3, y + r * 0.3, x + r * 0.58, y + r * 0.42);
-    ctx.lineTo(x + r * 0.58, y - r * 0.32);
-    ctx.quadraticCurveTo(x + r * 0.3, y - r * 0.45, x, y - r * 0.32);
-    ctx.lineTo(x, y + r * 0.42);
-    ctx.stroke();
-  } else {
-    // article, blog post and the rest: lines of text
-    for (let i = -1; i <= 1; i++) {
-      ctx.moveTo(x - r * 0.45, y + i * r * 0.3);
-      ctx.lineTo(x + (i === 1 ? r * 0.12 : r * 0.45), y + i * r * 0.3);
-    }
-    ctx.stroke();
-  }
-  ctx.restore();
-}
-
-/** Draw a node's mark of radius r at (x, y) in `col`; `bg` fills the hollow ones, `text` is a person's initials. */
-export function drawMark(ctx: CanvasRenderingContext2D, mark: NodeMark, x: number, y: number, r: number, col: string, bg: string, font: string, text = ""): void {
-  const sw = r * 0.24;
-  const ring = (rr: number) => {
-    ctx.beginPath();
-    ctx.arc(x, y, rr, 0, 2 * Math.PI);
-    ctx.fillStyle = bg;
-    ctx.fill();
-    ctx.strokeStyle = col;
-    ctx.lineWidth = sw;
-    ctx.stroke();
-  };
-  const label = (s: string, px: number, color: string) => {
-    ctx.fillStyle = color;
-    ctx.font = `700 ${px}px ${font}`;
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillText(s, x, y + r * 0.08);
-  };
-  if (mark === "question") {
-    ring(r);
-    label("?", r * 1.25, col);
-  } else if (mark === "idea") {
-    ring(r);
-    ctx.beginPath();
-    ctx.arc(x, y, r * 0.36, 0, 2 * Math.PI);
-    ctx.fillStyle = col;
-    ctx.fill();
-  } else if (mark === "topic") {
-    ring(r);
-    ctx.beginPath();
-    for (let i = -1; i <= 1; i++) {
-      ctx.moveTo(x - r * 0.42, y + i * r * 0.36);
-      ctx.lineTo(x + r * 0.42, y + i * r * 0.36);
-    }
-    ctx.strokeStyle = col;
-    ctx.lineWidth = r * 0.16;
-    ctx.lineCap = "round";
-    ctx.stroke();
-    ctx.lineCap = "butt";
-  } else if (mark === "collection") {
-    ctx.beginPath();
-    ctx.arc(x, y, r * 1.35, 0, 2 * Math.PI);
-    ctx.strokeStyle = col;
-    ctx.lineWidth = r * 0.14;
-    ctx.stroke();
-    ring(r);
-  } else {
-    ctx.beginPath();
-    ctx.arc(x, y, r, 0, 2 * Math.PI);
-    ctx.fillStyle = col;
-    ctx.fill();
-    if (mark === "person" && text) label(text, r * (text.length > 2 ? 0.78 : 0.95), "#fff");
-  }
-}
-
-/** A person's initials: first + last name; people who would share them get the surname's second letter too. */
-export function personInitials(nodes: readonly GNode[]): Map<string, string> {
-  const base = new Map<string, { two: string; three: string }>();
-  for (const n of nodes) {
-    if (n.type !== "person") continue;
-    const words = (n.title || n.id).replace(/[^\p{L}\s-]/gu, " ").split(/[\s-]+/).filter(Boolean);
-    const first = words[0] ?? "?";
-    const last = words.length > 1 ? words[words.length - 1]! : "";
-    const two = (first[0]! + (last[0] ?? "")).toUpperCase();
-    base.set(n.id, { two, three: two + (last[1] ?? "").toLowerCase() });
-  }
-  const count = new Map<string, number>();
-  for (const { two } of base.values()) count.set(two, (count.get(two) ?? 0) + 1);
-  return new Map([...base].map(([id, b]) => [id, (count.get(b.two) ?? 0) > 1 ? b.three : b.two]));
-}
-
-/** With shapes on, colour by type would repeat the shape: such a view colours by area instead. */
-export const effectiveColorBy = (by: ColorBy, shapes: boolean): ColorBy => (shapes && by === "type" ? "area" : by);
+/** Type is the mark (./encoding), so colour by type would repeat the shape: such a view colours by area instead. */
+export const effectiveColorBy = (by: ColorBy): ColorBy => (by === "type" ? "area" : by);

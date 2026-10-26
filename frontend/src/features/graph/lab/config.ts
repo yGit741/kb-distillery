@@ -1,3 +1,4 @@
+import type { TextField } from "../encoding/label";
 /**
  * Settings of the label rail (ported from the Label Lab artifact). Every field is a knob in ./LabRail; the
  * defaults are the research-backed ones (coverage ~12%, radical-law growth, three tiers >= 11 px, top-first
@@ -9,7 +10,7 @@ export type Strategy = "coverage" | "count" | "threshold" | "all";
 export type LabelScope = "world" | "screen";
 export type Pool = "all" | "hubs";
 export type SizeMode = "tiers" | "quantile" | "continuous" | "uniform";
-export type TextField = "short" | "title" | "slug";
+export type { TextField };
 export type LabelBg = "halo" | "box" | "none";
 export type Regions = "off" | "auto" | "with";
 export type Positions = 1 | 4 | 8;

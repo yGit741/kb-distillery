@@ -33,8 +33,6 @@ export interface GraphPrefs {
   linkDistance: number;
   gravity: number;
   liveSync: boolean;
-  /** Shape carries the type, so colour is free for the view's dimension (and hulls follow the colour). */
-  shapes: boolean;
 }
 
 const ORIENT = storyById(DEFAULT_STORY);
@@ -57,7 +55,6 @@ export const DEFAULT_PREFS: GraphPrefs = {
   linkDistance: 70,
   gravity: 0.3,
   liveSync: true,
-  shapes: true,
 };
 
 export interface FocusRequest {
@@ -126,8 +123,6 @@ export function loadPrefs(): GraphPrefs {
       if (k === "lab") out[k] = sanitizeLab(v);
       else if (v !== undefined && typeof v === typeof DEFAULT_PREFS[k]) out[k] = v;
     }
-    // marks are the encoding now (no toggle any more): a saved "off" from the trial is not carried over
-    out.shapes = true;
     return out as unknown as GraphPrefs;
   } catch {
     return DEFAULT_PREFS;
