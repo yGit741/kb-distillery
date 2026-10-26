@@ -1,5 +1,6 @@
 import { useNavigate } from "@tanstack/react-router";
-import { ExternalLink, MessageSquare } from "lucide-react";
+import { ExternalLink, Feather, MessageSquare } from "lucide-react";
+import { flag } from "@/flags";
 import { useChatDock } from "@/features/graph/tools/chatDockStore";
 import { useApiQuery } from "@/lib/useApiQuery";
 import { SYSTEM_TABS } from "@/routes/search";
@@ -58,6 +59,19 @@ export function CommandPalette() {
           ))}
         </CommandGroup>
         <CommandGroup heading="Actions">
+          {!IS_SHARE && flag("screen.think") && (
+            <CommandItem
+              value="quick thought capture think note"
+              onSelect={() => {
+                setPaletteOpen(false);
+                useUi.getState().setCaptureOpen(true);
+              }}
+            >
+              <Feather aria-hidden />
+              <span>Quick thought</span>
+              <span className="text-xs text-muted-foreground">to think/inbox.md · ⌘⇧Space anywhere</span>
+            </CommandItem>
+          )}
           {!IS_SHARE && (
             <CommandItem
               value="ask the vault chat agent question"

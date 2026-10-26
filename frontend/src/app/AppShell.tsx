@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { Link, Outlet } from "@tanstack/react-router";
 import { Command as CommandIcon, Moon, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -10,6 +11,10 @@ import { ToursMenu } from "./ToursMenu";
 import { useEmbed } from "./embed";
 import { HEADER_SLOT_ID } from "./headerSlot";
 import { useUi } from "./ui-store";
+import { flag } from "@/flags";
+
+// Quick capture ships with the think feature; the lazy import keeps it out of builds where the flag is off.
+const QuickCapture = lazy(() => import("@/features/think/QuickCapture"));
 
 /** One top nav, ONE theme toggle, ONE command palette, one share chip. Screens render in <Outlet/>. */
 export function AppShell() {
@@ -55,6 +60,11 @@ export function AppShell() {
       </main>
       <ShareFooter />
       <CommandPalette />
+      {flag("screen.think") && (
+        <Suspense fallback={null}>
+          <QuickCapture />
+        </Suspense>
+      )}
     </div>
   );
 }

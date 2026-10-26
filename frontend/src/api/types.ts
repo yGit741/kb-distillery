@@ -61,3 +61,10 @@ export type KeyAdd = S["KeyAdd"];
 export type PromptsResponse = S["PromptsResponse"];
 export type SavedChat = S["SavedChat"];
 export type SavedChatResult = S["SavedChatResult"];
+
+// think
+export type ThinkList = S["ThinkList"];
+export type ThinkNote = S["ThinkNote"];
+export type ThinkNoteMeta = S["ThinkNoteMeta"];
+export type ThinkWriteResult = S["ThinkWriteResult"];
+export type ThinkSaveRequest = S["ThinkSaveRequest"];

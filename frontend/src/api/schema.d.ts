@@ -586,6 +586,58 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/think": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Top-level think notes, newest first */
+        get: operations["list_notes_api_think_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/think/capture": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Append a quick thought to the inbox note */
+        post: operations["capture_api_think_capture_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/think/{name}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One think note */
+        get: operations["get_note_api_think__name__get"];
+        /** Save a think note (optimistic lock on base_mtime) */
+        put: operations["save_note_api_think__name__put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -2158,6 +2210,66 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
+        /** ThinkCaptureRequest */
+        ThinkCaptureRequest: {
+            /** Text */
+            text: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** ThinkList */
+        ThinkList: {
+            /** Capture Note */
+            capture_note: string;
+            /** Notes */
+            notes: components["schemas"]["ThinkNoteMeta"][];
+        } & {
+            [key: string]: unknown;
+        };
+        /** ThinkNote */
+        ThinkNote: {
+            /** Mtime */
+            mtime: number;
+            /** Name */
+            name: string;
+            /** Text */
+            text: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** ThinkNoteMeta */
+        ThinkNoteMeta: {
+            /** Mtime */
+            mtime: number;
+            /** Name */
+            name: string;
+            /** Size */
+            size: number;
+        } & {
+            [key: string]: unknown;
+        };
+        /** ThinkSaveRequest */
+        ThinkSaveRequest: {
+            /** Base Mtime */
+            base_mtime?: number | null;
+            /** Create */
+            create?: boolean | null;
+            /** Text */
+            text: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** ThinkWriteResult */
+        ThinkWriteResult: {
+            /** Created */
+            created: boolean;
+            /** Mtime */
+            mtime: number;
+            /** Name */
+            name: string;
+        } & {
+            [key: string]: unknown;
+        };
         /** TimelineRow */
         TimelineRow: {
             /** Date */
@@ -3422,6 +3534,125 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_notes_api_think_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ThinkList"];
+                };
+            };
+        };
+    };
+    capture_api_think_capture_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ThinkCaptureRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ThinkWriteResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_note_api_think__name__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ThinkNote"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    save_note_api_think__name__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ThinkSaveRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ThinkWriteResult"];
+                };
             };
             /** @description Validation Error */
             422: {

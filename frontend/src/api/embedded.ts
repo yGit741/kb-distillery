@@ -52,6 +52,10 @@ export function createEmbeddedDataSource(blob: ShareBlob | undefined = globalThi
     removeChatKey: absent,
     saveChat: absent,
     chatStream: absent,
+    listThink: absent,
+    getThinkNote: absent,
+    saveThinkNote: absent,
+    captureThink: absent,
   };
   if (!blob) return base;
   const data = blob;

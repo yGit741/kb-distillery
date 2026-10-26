@@ -53,6 +53,12 @@ export interface DataSource {
   saveChat(body: T.SavedChat): Promise<T.SavedChatResult>;
   /** POST /api/chat; the caller reads `response.body` as server-sent events. */
   chatStream(body: T.ChatRequest, signal?: AbortSignal): Promise<Response>;
+
+  // think (local app only; never in share builds)
+  listThink(): Promise<T.ThinkList>;
+  getThinkNote(name: string): Promise<T.ThinkNote>;
+  saveThinkNote(name: string, body: T.ThinkSaveRequest): Promise<T.ThinkWriteResult>;
+  captureThink(text: string): Promise<T.ThinkWriteResult>;
 }
 
 export class ApiError extends Error {
