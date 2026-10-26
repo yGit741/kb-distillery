@@ -88,6 +88,12 @@ export function createHttpDataSource(fetchImpl: Fetch = (...a) => fetch(...a), b
         `/api/scopes/${slug}/duplicate`,
       ),
 
+    listThink: () => run(() => client.GET("/api/think"), "/api/think"),
+    getThinkNote: (name) => run(() => client.GET("/api/think/{name}", { params: { path: { name } } }), `/api/think/${name}`),
+    saveThinkNote: (name, body) =>
+      run(() => client.PUT("/api/think/{name}", { params: { path: { name } }, body }), `/api/think/${name}`),
+    captureThink: (text) => run(() => client.POST("/api/think/capture", { body: { text } }), "/api/think/capture"),
+
     getChatStatus: () => run(() => client.GET("/api/chat/status"), "/api/chat/status"),
     getChatSettings: () => run(() => client.GET("/api/chat/settings"), "/api/chat/settings"),
     updateChatSettings: (body) => run(() => client.POST("/api/chat/settings", { body }), "/api/chat/settings"),

@@ -26,6 +26,8 @@ export const SYSTEM_TABS: readonly SystemTab[] = ["overview", "pipeline", "histo
 /** System hosts the pipeline view, so it keeps the pipeline's params (its own `view` included) next to `tab`. */
 export type SystemSearch = PipelineSearch & { tab?: SystemTab };
 export type NoSearch = Record<string, never>;
+/** Think: the open note (`?note=<name>.md`), so a reload or link restores it. */
+export type ThinkSearch = { note?: string };
 /** Home: the concept picked in the intro card (`?concept=<slug>`), so Back and shared links restore it. */
 export type HomeSearch = { concept?: string };
 
@@ -38,6 +40,7 @@ export interface SearchById {
   pipeline: PipelineSearch;
   system: SystemSearch;
   lifecycle: NoSearch;
+  think: ThinkSearch;
 }
 
 const clean = <T extends object>(o: T): T =>
@@ -49,6 +52,7 @@ const pipelineSearch = (r: Raw): PipelineSearch =>
 export const SEARCH: { [K in keyof SearchById]: (raw: Raw) => SearchById[K] } = {
   home: (r) => clean({ concept: str(r.concept) }),
   lifecycle: () => ({}),
+  think: (r) => clean({ note: str(r.note) }),
   chat: (r) => clean({ session: str(r.session), scope: str(r.scope), q: str(r.q) }),
   pages: (r) =>
     clean({ q: str(r.q), layer: str(r.layer), type: str(r.type), status: str(r.status), area: str(r.area), embed: str(r.embed), a: str(r.a), b: str(r.b) }),

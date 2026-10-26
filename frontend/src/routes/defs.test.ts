@@ -23,6 +23,10 @@ describe("screen flags gate their route", () => {
     withFlag("screen.share", true, () => expect(ids()).toContain("share")));
   it("screen.share off → no /share", () =>
     withFlag("screen.share", false, () => expect(ids()).not.toContain("share")));
+  it("screen.think on → /think exists", () =>
+    withFlag("screen.think", true, () => expect(ids()).toContain("think")));
+  it("screen.think off → no /think", () =>
+    withFlag("screen.think", false, () => expect(ids()).not.toContain("think")));
   it("withFlag restores the built value", () => {
     withFlag("screen.share", true, () => undefined);
     expect(ids()).not.toContain("share");

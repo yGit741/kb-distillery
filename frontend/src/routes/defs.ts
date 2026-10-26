@@ -29,6 +29,7 @@ const ALL_ROUTE_DEFS: readonly RouteDef[] = [
   { id: "pipeline", path: "/pipeline", label: "Pipeline", legacy: "/pipeline", blurb: "Ingest and digestion status of every raw file." },
   { id: "lifecycle", path: "/lifecycle", label: "Lifecycle", legacy: "/lifecycle", blurb: "Versions, history, snapshots and working state.", flag: "screen.lifecycle" },
   { id: "share", path: "/share", label: "Share", legacy: "/", blurb: "Public snapshots of the private site.", flag: "screen.share", nav: true },
+  { id: "think", path: "/think", label: "Think", legacy: "/", blurb: "Your own slow notes: edit, and capture quick thoughts.", flag: "screen.think" },
   // A route whose flag is off in this env is dropped here (screen.share: private site only).
 ];
 
