@@ -3,21 +3,23 @@ import type { ReactNode } from "react";
 import type { PageCard } from "@/api/types";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { depthColor, typeColor } from "@/theme/palette";
+import { NodeMarkSvg } from "@/features/graph/encoding";
+import { depthColor } from "@/theme/palette";
 import { layerOf, type LinkGraph } from "./lib";
 
 /** Router targets are registered as plain strings by the route registry, so cast once here. */
 export const pageTo = (slug: string) => `/pages/${encodeURIComponent(slug)}` as "/";
 export const PAGES_TO = "/pages" as "/";
 
+/**
+ * A page's type as the graphs draw it: its mark (a concept's ring, a source's glyph), the same symbol as on every
+ * graph; the type's name on hover.
+ */
 export function TypeDot({ type, className }: { type?: string | null; className?: string }) {
   return (
-    <span
-      aria-hidden
-      title={type ?? undefined}
-      className={cn("inline-block size-2.5 shrink-0 rounded-full", className)}
-      style={{ background: typeColor(type) }}
-    />
+    <span title={type ?? undefined} className={cn("inline-flex shrink-0 text-muted-foreground", className)} data-type-mark={type ?? ""}>
+      <NodeMarkSvg type={type ?? ""} className="size-3.5" />
+    </span>
   );
 }
 

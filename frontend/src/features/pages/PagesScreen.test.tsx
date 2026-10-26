@@ -61,7 +61,9 @@ describe("Pages screen", () => {
 
   it("reads a page: facts as badges, raw link, wikilinks, wanted links, collapsed neighbours", async () => {
     open("/pages/alpha");
-    expect(await screen.findByRole("heading", { level: 1, name: "Title alpha" })).toBeInTheDocument();
+    const h1 = await screen.findByRole("heading", { level: 1, name: "Title alpha" });
+    // the title carries the page's mark, as on every graph (a paper: its glyph)
+    expect(h1.querySelector('[data-type-mark="paper"] svg')).not.toBeNull();
     const facts = screen.getByLabelText("Page facts");
     expect(within(facts).getByText("source")).toBeInTheDocument();
     expect(within(facts).getByText("paper")).toBeInTheDocument();
