@@ -73,3 +73,94 @@ export function NodeMarkSvg({ type, className }: { type: string; className?: str
   const mark = markOf(type);
   return mark === "source" ? <SourceIcon type={type} className={className} /> : <ShapeIcon shape={mark} className={className} />;
 }
+/**
+ * One page as a node in SVG at (x, y), radius r: the canvas `drawNode` in SVG (the same GEOMETRY, the same glyph
+ * paths), for SVG graphs (page mini graph) and icons. `color` fills or strokes the mark; `background` fills a ring.
+ */
+export function NodeMarkG({
+  type,
+  x,
+  y,
+  r,
+  color,
+  background = "none",
+  initials = "",
+  glyph = false,
+  glyphColor = "#fff",
+}: {
+  type: string;
+  x: number;
+  y: number;
+  r: number;
+  color: string;
+  background?: string;
+  initials?: string;
+  glyph?: boolean;
+  glyphColor?: string;
+}) {
+  const mark = markOf(type);
+  const ring = <circle cx={x} cy={y} r={r} fill={background} stroke={color} strokeWidth={r * G.ringStroke} />;
+  const text = (s: string, px: number, fill: string) => (
+    <text x={x} y={y + r * G.textDy} textAnchor="middle" dominantBaseline="central" fontSize={px} fontWeight="700" fill={fill}>
+      {s}
+    </text>
+  );
+  if (mark === "question")
+    return (
+      <g data-mark={mark}>
+        {ring}
+        {text("?", r * G.questionText, color)}
+      </g>
+    );
+  if (mark === "idea")
+    return (
+      <g data-mark={mark}>
+        {ring}
+        <circle cx={x} cy={y} r={r * G.ideaDot} fill={color} />
+      </g>
+    );
+  if (mark === "topic") {
+    const line = (i: number) => `M${x - r * G.topicLineHalf} ${y + i * r * G.topicLineGap}h${2 * r * G.topicLineHalf}`;
+    return (
+      <g data-mark={mark}>
+        {ring}
+        <path d={[-1, 0, 1].map(line).join("")} stroke={color} strokeWidth={r * G.topicLineStroke} strokeLinecap="round" />
+      </g>
+    );
+  }
+  if (mark === "collection")
+    return (
+      <g data-mark={mark}>
+        <circle cx={x} cy={y} r={r * G.collectionOuter} fill="none" stroke={color} strokeWidth={r * G.collectionOuterStroke} />
+        {ring}
+      </g>
+    );
+  const k = r / 10;
+  const g = GLYPH_SVG[glyphOf(type)];
+  return (
+    <g data-mark={mark}>
+      <circle cx={x} cy={y} r={r} fill={color} />
+      {mark === "person" && initials && text(initials, r * (initials.length > 2 ? G.initials3 : G.initials2), glyphColor)}
+      {mark === "source" && glyph && (
+        <path
+          d={g.d}
+          transform={`translate(${x - 8 * k} ${y - 8 * k}) scale(${k})`}
+          {...(g.fill ? { fill: glyphColor } : { fill: "none", stroke: glyphColor, strokeWidth: 1.2, strokeLinecap: "round" as const, strokeLinejoin: "round" as const })}
+        />
+      )}
+    </g>
+  );
+}
+
+/**
+ * A page's chip: its node exactly as the graphs draw it (mark, colour, a source's glyph), for lists and panels.
+ * Without a colour it takes the text colour, so the mark alone says the type.
+ */
+export function NodeSwatch({ type, color = "currentColor", className = "size-3.5" }: { type: string; color?: string; className?: string }) {
+  const r = markOf(type) === "collection" ? 5.2 : markOf(type) === "source" || markOf(type) === "person" ? 6.6 : 5.8;
+  return (
+    <svg viewBox="0 0 16 16" className={cn(className, "shrink-0")} aria-hidden data-swatch={markOf(type)}>
+      <NodeMarkG type={type} x={8} y={8} r={r} color={color} glyph glyphColor="var(--card)" />
+    </svg>
+  );
+}

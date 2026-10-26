@@ -77,13 +77,14 @@ export function GraphLegend({ nodes, color, size, density = "full", maxColors = 
   const item = "inline-flex shrink-0 items-center gap-1";
   // compact: each row is one unit (its title never wraps away from its values)
   const row = compact ? "inline-flex max-w-full flex-wrap items-center gap-x-2 gap-y-0.5" : "flex flex-wrap items-center gap-x-2.5 gap-y-0.5";
-  const sep = compact ? <span aria-hidden className="h-3 border-l" /> : null;
+  // rows are set apart by space, not rules: a rule would dangle at a line end when the legend wraps
+  const sep = null;
   return (
     <div
       role="group"
       aria-label="Legend"
       data-density={density}
-      className={cn(compact ? "flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] leading-4" : "flex flex-col gap-1 text-xs", "text-foreground", className)}
+      className={cn(compact ? "flex flex-wrap items-center gap-x-4 gap-y-0.5 text-[11px] leading-4" : "flex flex-col gap-1 text-xs", "text-foreground", className)}
     >
       <div className={row} data-row="type">
         <LegendTitle>Type</LegendTitle>

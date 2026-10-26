@@ -2,10 +2,10 @@ import { X } from "lucide-react";
 import { useMemo } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Swatch } from "./controls";
 import { sourcesOf, type NeighborMap } from "./graphData";
 import { LAYER_LABEL } from "./legendModel";
-import { colorOf, type ColorBy } from "./style";
+import { NodeSwatch } from "./encoding/NodeMarkSvg";
+import { colorOf, effectiveColorBy, type ColorBy } from "./style";
 import { bookOf, degreeOf, partOf, type GNode } from "./types";
 import type { Layer } from "@/api/model";
 
@@ -30,7 +30,7 @@ function Row({ n, colorBy, onGo, children }: { n: GNode; colorBy: ColorBy; onGo:
   return (
     <li>
       <button type="button" className="flex w-full items-center gap-2 rounded px-1.5 py-1 text-left text-sm hover:bg-accent" onClick={onGo}>
-        <Swatch color={colorOf(n, colorBy)} />
+        <NodeSwatch type={n.type} color={colorOf(n, effectiveColorBy(colorBy))} />
         <span className="min-w-0 flex-1 truncate">{n.title || n.id}</span>
         {children}
       </button>
@@ -91,7 +91,7 @@ function One({ n, byId, neighbors, colorBy, revealed, pageHref, onFocus, onRead,
   return (
     <div className="flex flex-col gap-2.5 overflow-y-auto p-3 pr-9">
       <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
-        <Swatch color={colorOf(n, colorBy)} />
+        <NodeSwatch type={n.type} color={colorOf(n, effectiveColorBy(colorBy))} />
         <span>{layerLabel ? `${layerLabel} · ${n.type}` : n.type}</span>
         {n.depth && <Badge variant="primary">{n.depth}</Badge>}
         {n.status && <Badge>{n.status}</Badge>}

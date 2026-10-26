@@ -2,8 +2,8 @@ import { X } from "lucide-react";
 import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { typeColor } from "@/theme/palette";
-import { CheckField, RangeField, SelectField, Swatch } from "../controls";
+import { NodeSwatch } from "../encoding/NodeMarkSvg";
+import { CheckField, RangeField, SelectField } from "../controls";
 import { useGraphUi } from "../store";
 import { COLOR_BY, SIZE_BY } from "../style";
 import type { GNode } from "../types";
@@ -209,7 +209,7 @@ function WhyRank({ node, imp, cfg }: { node: GNode; imp: Importance; cfg: LabCon
   return (
     <div className="flex flex-col gap-1 text-xs">
       <div className="flex items-center gap-1.5 font-medium">
-        <Swatch color={typeColor(node.type)} /> <span className="truncate">{node.title || node.id}</span>
+        <NodeSwatch type={node.type} className="size-3.5 text-muted-foreground" /> <span className="truncate">{node.title || node.id}</span>
       </div>
       <table className="w-full font-mono text-[11px]">
         <tbody>

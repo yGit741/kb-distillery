@@ -3,14 +3,26 @@ import { Empty, ErrorState, Loading } from "@/components/states";
 import { useApiQuery } from "@/lib/useApiQuery";
 import { typeColor } from "@/theme/palette";
 import { readCanvasColors, withAlpha } from "./canvasTheme";
+import { fixedChannel, type ColorChannel } from "./encoding/channels";
+import { drawNode, SOURCE_GLYPH_PX } from "./encoding";
+import { GraphLegend } from "./encoding/GraphLegend";
 import { ForceGraph, type ForceGraphHandle } from "./ForceGraph";
 import { GENEALOGY_HOPS, genealogyOf, type GenealogyNode } from "./genealogy";
 import type { SimLink, SimNode } from "./types";
 
 type CiteNode = SimNode & { role: GenealogyNode["role"]; citations: number };
 
-/** cited = blue (idea), citing = red (paper), the focus is ringed in the accent: palette colours, no map of its own. */
-const roleColor = (role: GenealogyNode["role"], ring: string) => (role === "focus" ? ring : role === "cited" ? typeColor("idea") : typeColor("paper"));
+/**
+ * Colour = citation role: cited = blue, citing = red (palette colours, no map of its own), the paper itself in the
+ * accent and ringed. Type stays the mark (every node here is a paper: a source dot with the page glyph).
+ */
+const roleChannel = (ring: string): ColorChannel =>
+  fixedChannel("role", "citation role", (n) => (n as CiteNode).role, [
+    { key: "focus", label: "this paper", color: ring },
+    { key: "cited", label: "it cites", color: typeColor("idea") },
+    { key: "citing", label: "cites it", color: typeColor("paper") },
+  ]);
+const SIZE = { by: "citations", title: "citations" } as const;
 
 const asNode = (n: GenealogyNode): CiteNode => ({
   id: n.id,
@@ -47,6 +59,7 @@ export function CitationView({ focus, isSource, titleOf, onPick }: Props) {
   const fg = useRef<ForceGraphHandle>(null);
   const hover = useRef<string | null>(null);
   const colors = useRef(readCanvasColors());
+  const channel = useMemo(() => roleChannel(colors.current.ring), []);
 
   const g = useMemo(() => (q.data && !q.data.missing ? genealogyOf(q.data, focus, isSource) : null), [q.data, focus, isSource]);
   const data = useMemo(
@@ -60,14 +73,21 @@ export function CitationView({ focus, isSource, titleOf, onPick }: Props) {
       if (n.x == null || n.y == null) return;
       const c = colors.current;
       const role = (n as CiteNode).role;
-      ctx.beginPath();
-      ctx.arc(n.x, n.y, radius(n), 0, 2 * Math.PI);
-      ctx.fillStyle = roleColor(role, c.ring);
-      ctx.fill();
+      const r = radius(n);
+      // the shared encoding: the paper's mark and glyph, the focus ring, the hover glow
+      drawNode(ctx, n.type, {
+        x: n.x,
+        y: n.y,
+        r,
+        color: channel.color(n),
+        background: c.background,
+        font: c.font,
+        ring: c.ring,
+        state: role === "focus" ? "focus" : hover.current === n.id ? "hover" : null,
+        glyph: r * scale >= SOURCE_GLYPH_PX || hover.current === n.id,
+        scale,
+      });
       if (role === "focus" || hover.current === n.id) {
-        ctx.lineWidth = 2 / scale;
-        ctx.strokeStyle = c.text;
-        ctx.stroke();
         const size = Math.max(11 / scale, 3);
         ctx.font = `${size}px ${c.font}`;
         const text = `${n.title}${n.year ? ` (${n.year})` : ""}`;
@@ -78,7 +98,7 @@ export function CitationView({ focus, isSource, titleOf, onPick }: Props) {
         ctx.fillText(text, n.x - w / 2, n.y + radius(n) + 3 / scale + size);
       }
     },
-    [radius],
+    [radius, channel],
   );
 
   if (q.isLoading) return <Loading label="Loading citations" rows={2} />;
@@ -94,13 +114,10 @@ export function CitationView({ focus, isSource, titleOf, onPick }: Props) {
         <span>
           Genealogy of <b>{titleOf(focus)}</b> · {GENEALOGY_HOPS} hops
         </span>
-        <span className="flex items-center gap-1">
-          <i className="inline-block size-2.5 rounded-full" style={{ background: roleColor("cited", colors.current.ring) }} />
-          it cites {g.cited}
-        </span>
-        <span className="flex items-center gap-1">
-          <i className="inline-block size-2.5 rounded-full" style={{ background: roleColor("citing", colors.current.ring) }} />
-          cite it {g.citing}
+        {/* the shared legend: type (a paper), colour = citation role, size = citations */}
+        <GraphLegend nodes={data.nodes} color={channel} size={SIZE} density="compact" />
+        <span className="text-muted-foreground">
+          it cites {g.cited} · cite it {g.citing}
         </span>
       </div>
       <div className="relative min-h-0 flex-1">

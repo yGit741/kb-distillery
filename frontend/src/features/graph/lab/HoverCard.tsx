@@ -1,6 +1,5 @@
 import { cn } from "@/lib/utils";
-import { typeColor } from "@/theme/palette";
-import { Swatch } from "../controls";
+import { NodeSwatch } from "../encoding/NodeMarkSvg";
 import { degreeOf, type GNode } from "../types";
 import { useLabHud } from "./hud";
 
@@ -21,7 +20,7 @@ export function HoverCard({ byId, className }: { byId: ReadonlyMap<string, GNode
       className={cn("pointer-events-none w-72 max-w-[calc(100%-4.5rem)] rounded-lg border bg-card/95 px-3 py-2 text-sm shadow-[var(--shadow)] [@media(pointer:coarse)]:hidden max-sm:hidden", className)}
     >
       <div className="flex items-center gap-1.5 font-medium">
-        <Swatch color={typeColor(n.type)} /> <span className="truncate">{n.title || n.id}</span>
+        <NodeSwatch type={n.type} className="size-3.5 text-muted-foreground" /> <span className="truncate">{n.title || n.id}</span>
       </div>
       <p className="text-xs text-muted-foreground">
         {n.type} · {degreeOf(n)} link{degreeOf(n) === 1 ? "" : "s"}
