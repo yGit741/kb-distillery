@@ -7,3 +7,5 @@ export * from "./canvas";
 export * from "./theme";
 export * from "./label";
 export { NodeMarkSvg, ShapeIcon, SourceIcon } from "./NodeMarkSvg";
+export * from "./channels";
+export { GraphLegend, LegendSwatch, LegendTitle, glyphRows, typeRows } from "./GraphLegend";

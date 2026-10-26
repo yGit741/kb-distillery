@@ -1,14 +1,15 @@
 import { useEffect, useMemo, useRef } from "react";
 import { cn } from "@/lib/utils";
 import { useTheme } from "@/theme/theme";
-import { Swatch } from "./controls";
-import { colorKeyRows, LAYER_LABEL, layerGroups, type LayerGroup } from "./legendModel";
+import { LAYER_LABEL, layerGroups, type LayerGroup } from "./legendModel";
 import { QUICK_OFF, QUICK_STEPS, type QuickFilters } from "./quickFilters";
 import type { GraphSchema } from "./schema";
 import { useGraphUi } from "./store";
+import { COLOR_TITLE, colorChannel, sizeChannel } from "./encoding/channels";
+import { LegendSwatch, LegendTitle } from "./encoding/GraphLegend";
 import { ShapeIcon, SourceIcon } from "./encoding/NodeMarkSvg";
 import { markOf, TYPE_LABEL_OVERRIDE } from "./encoding/spec";
-import { COLOR_BY, effectiveColorBy, METRIC_COLORS, neutralRamp, NO_AREA, OTHER_AREAS, RAMP_BY, RAMP_MEANING, RAMP_STEPS, type ColorBy } from "./style";
+import { effectiveColorBy, METRIC_COLORS, neutralRamp, NO_AREA, OTHER_AREAS, RAMP_BY, RAMP_MEANING, RAMP_STEPS, type ColorBy } from "./style";
 import type { GNode } from "./types";
 
 interface Props {
@@ -25,27 +26,38 @@ interface Props {
 
 /** What the nodes can be coloured by from the legend: the colourings that answer a question about the vault. */
 const COLOUR_PICK: readonly ColorBy[] = ["area", "depth", "status", "degree"];
-const COLOUR_PICK_LABEL: Partial<Record<ColorBy, string>> = { area: "Area", depth: "Depth", status: "Status", degree: "Links" };
 
-/** The colour key's header: "Colour ·" and the colouring, switchable among the ones that make sense. */
+/** The colour key's header, the shared legend title: "Colour = theme", switchable among the colourings that make sense. */
 function ColourBy({ by, className }: { by: ColorBy; className?: string }) {
   return (
-    <label className={cn("flex items-center gap-1 text-[10px] font-medium uppercase tracking-wide text-muted-foreground", className)}>
-      Colour ·
+    <label className={cn("flex items-center gap-1", className)}>
+      <LegendTitle>Colour =</LegendTitle>
       <select
-        className="rounded border bg-transparent px-1 py-0.5 text-[11px] font-semibold normal-case tracking-normal text-foreground hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className="rounded border bg-transparent px-1 py-0.5 text-[11px] font-semibold text-foreground hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         value={COLOUR_PICK.includes(by) ? by : ""}
         aria-label="Colour by"
         onChange={(e) => useGraphUi.setState({ colorBy: e.target.value as ColorBy, hiddenKeys: new Set(), story: "" })}
       >
-        {!COLOUR_PICK.includes(by) && <option value="">{COLOR_BY.find((c) => c.id === by)?.label ?? by}</option>}
+        {!COLOUR_PICK.includes(by) && <option value="">{COLOR_TITLE[by]}</option>}
         {COLOUR_PICK.map((c) => (
           <option key={c} value={c}>
-            {COLOUR_PICK_LABEL[c]}
+            {COLOR_TITLE[c]}
           </option>
         ))}
       </select>
     </label>
+  );
+}
+
+/** The size key under the colour key: concepts and people grow with their links, drawn sources with the view's size. */
+function SizeKey({ by, sources }: { by: Parameters<typeof sizeChannel>[0]; sources: boolean }) {
+  const src = sizeChannel(by);
+  return (
+    <div className="flex flex-wrap items-baseline gap-x-1 border-t px-1 pt-1 text-[11px]" data-row="size">
+      <LegendTitle>Size =</LegendTitle>
+      <span>links</span>
+      {sources && src && src.title !== "links" && <span className="w-full text-[10px] text-muted-foreground">sources by {src.title}</span>}
+    </div>
   );
 }
 
@@ -129,10 +141,11 @@ export function Legend({ nodes, visible, schema, shownTypes, stats, quickHidden 
     for (const n of nodes) if (!shownTypes || shownTypes.has(n.type)) pool.add(n.id);
     return pool;
   }, [nodes, visible, shownTypes, ui.hiddenKeys]);
-  const key = useMemo(() => (by === "type" ? [] : colorKeyRows(nodes, keyPool, by, 12, ramp)), [nodes, keyPool, by, ramp]);
+  const key = useMemo(() => (by === "type" ? [] : colorChannel(by, { ramp }).rows(nodes.filter((n) => keyPool.has(n.id)))), [nodes, keyPool, by, ramp]);
   const allTypes = useMemo(() => groups.flatMap((g) => g.rows.map((r) => r.id)), [groups]);
   const defaults = schema.defaultVisible;
   const hullsOn = by !== "area";
+  const sourcesShown = useMemo(() => nodes.some((n) => n.layer === "source" && visible.has(n.id)), [nodes, visible]);
   // two groups in the key: concepts, and sources with the collections folded in (courses, books, series are read too)
   const ordered = useMemo((): LayerGroup[] => {
     const concept = groups.find((g) => g.layer === "concept");
@@ -291,6 +304,7 @@ export function Legend({ nodes, visible, schema, shownTypes, stats, quickHidden 
             <span>{RAMP_MEANING[by]!.low}</span>
             <span>{RAMP_MEANING[by]!.high}</span>
           </div>
+          <SizeKey by={ui.sizeBy} sources={sourcesShown} />
           {hullsOn && <div className="border-t pt-1 text-[10px] text-muted-foreground">Tinted regions: themes (area)</div>}
         </aside>
       )}
@@ -308,17 +322,13 @@ export function Legend({ nodes, visible, schema, shownTypes, stats, quickHidden 
                 title={`${hidden ? "Show" : "Hide"} ${r.label}`}
                 onClick={() => ui.toggleKey(r.label)}
               >
-                {r.label === NO_AREA ? (
-                  // "No area" is the faint grey: a ring in the key so it never reads as "Other areas"
-                  <i aria-hidden className="inline-block size-2.5 shrink-0 rounded-full border-2" style={{ borderColor: r.color }} />
-                ) : (
-                  <Swatch color={r.color} className={cn("size-2.5", ramp && "rounded-sm")} />
-                )}
+                <LegendSwatch row={r} className={cn(ramp && "rounded-sm")} />
                 <span className={cn("min-w-0 truncate", (r.label === NO_AREA || r.label === OTHER_AREAS) && "italic text-muted-foreground")}>{r.label}</span>
                 <small className="ml-auto pl-1 text-muted-foreground">{r.count}</small>
               </button>
             );
           })}
+          <SizeKey by={ui.sizeBy} sources={sourcesShown} />
           {hullsOn && <div className="border-t px-1 pt-1 text-[10px] text-muted-foreground">Tinted regions: themes (area)</div>}
         </aside>
       )}
