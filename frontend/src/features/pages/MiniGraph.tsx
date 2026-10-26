@@ -18,7 +18,7 @@ const SIZE = { by: "degree", title: "links" } as const;
  * encoding (type = mark, colour = theme like the Full Graph's Map) and the compact legend sits under the ring.
  */
 export function MiniGraph({ g, slug }: { g: LinkGraph; slug: string }) {
-  const ring = ringLayout(g, slug);
+  const ring = useMemo(() => ringLayout(g, slug), [g, slug]);
   // theme colours ranked over every page, the way the Full Graph ranks its model
   const color = useMemo(() => colorChannel("area", { areas: areaSlots([...g.byId.values()]) }), [g]);
   const nodes = useMemo(
@@ -71,8 +71,10 @@ export function MiniGraph({ g, slug }: { g: LinkGraph; slug: string }) {
           const right = Math.cos(n.angle) >= 0;
           const title = titleOf(g, n.id);
           return (
-            <Link key={n.id} to={pageTo(n.id)} aria-label={title} className="outline-none [&:focus-visible_circle]:stroke-primary [&:focus-visible_circle]:stroke-2">
+            <Link key={n.id} to={pageTo(n.id)} aria-label={title} className="outline-none [&:focus-visible_.focus-ring]:stroke-primary">
               <title>{title}</title>
+              {/* keyboard focus: a ring of its own, so the mark keeps its strokes */}
+              <circle cx={n.x} cy={n.y} r={n.radius + 3} fill="none" stroke="transparent" strokeWidth={2} className="focus-ring" />
               {mark(n.id, n.x, n.y, n.radius)}
               {labelled && (
                 <text

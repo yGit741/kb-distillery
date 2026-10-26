@@ -1,5 +1,7 @@
 import { cn } from "@/lib/utils";
 import { NodeSwatch } from "../encoding/NodeMarkSvg";
+import { useGraphUi } from "../store";
+import { colorOf, effectiveColorBy } from "../style";
 import { degreeOf, type GNode } from "../types";
 import { useLabHud } from "./hud";
 
@@ -8,6 +10,7 @@ import { useLabHud } from "./hud";
  * committed hover the canvas writes to the HUD store; nothing on touch screens, where there is no hover.
  */
 export function HoverCard({ byId, className }: { byId: ReadonlyMap<string, GNode>; className?: string }) {
+  const colorBy = useGraphUi((u) => u.colorBy);
   const id = useLabHud((s) => s.hover);
   const n = id ? byId.get(id) : undefined;
   if (!n) return null;
@@ -20,7 +23,7 @@ export function HoverCard({ byId, className }: { byId: ReadonlyMap<string, GNode
       className={cn("pointer-events-none w-72 max-w-[calc(100%-4.5rem)] rounded-lg border bg-card/95 px-3 py-2 text-sm shadow-[var(--shadow)] [@media(pointer:coarse)]:hidden max-sm:hidden", className)}
     >
       <div className="flex items-center gap-1.5 font-medium">
-        <NodeSwatch type={n.type} className="size-3.5 text-muted-foreground" /> <span className="truncate">{n.title || n.id}</span>
+        <NodeSwatch type={n.type} color={colorOf(n, effectiveColorBy(colorBy))} /> <span className="truncate">{n.title || n.id}</span>
       </div>
       <p className="text-xs text-muted-foreground">
         {n.type} · {degreeOf(n)} link{degreeOf(n) === 1 ? "" : "s"}

@@ -1,8 +1,6 @@
 import { cn } from "@/lib/utils";
-import { GEOMETRY as G, glyphOf, GLYPH_SVG, markOf, type NodeMark } from "./spec";
+import { GEOMETRY as G, glyphOf, GLYPH_SVG, ICON_R, markOf, type NodeMark } from "./spec";
 
-/** Each mark's radius in the 16 px icon box, so every mark (with its stroke) fills about the same square. */
-const ICON_R: Readonly<Record<NodeMark, number>> = { source: 6, person: 6.8, question: 5.8, idea: 5.8, topic: 5.8, collection: 5.2 };
 
 /**
  * A type's mark in the text colour: the canvas `drawMark`, drawn from the same `GEOMETRY` (fractions of r), so a
@@ -157,7 +155,7 @@ export function NodeMarkG({
  * Without a colour it takes the text colour, so the mark alone says the type.
  */
 export function NodeSwatch({ type, color = "currentColor", className = "size-3.5" }: { type: string; color?: string; className?: string }) {
-  const r = markOf(type) === "collection" ? 5.2 : markOf(type) === "source" || markOf(type) === "person" ? 6.6 : 5.8;
+  const r = ICON_R[markOf(type)];
   return (
     <svg viewBox="0 0 16 16" className={cn(className, "shrink-0")} aria-hidden data-swatch={markOf(type)}>
       <NodeMarkG type={type} x={8} y={8} r={r} color={color} glyph glyphColor="var(--card)" />
