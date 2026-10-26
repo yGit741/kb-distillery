@@ -17,8 +17,8 @@ export const PAGES_TO = "/pages" as "/";
  */
 export function TypeDot({ type, className }: { type?: string | null; className?: string }) {
   return (
-    <span title={type ?? undefined} className={cn("inline-flex shrink-0 text-muted-foreground", className)} data-type-mark={type ?? ""}>
-      <NodeMarkSvg type={type ?? ""} className="size-3.5" />
+    <span aria-hidden title={type ?? undefined} className="inline-flex shrink-0 text-muted-foreground" data-type-mark={type ?? ""}>
+      <NodeMarkSvg type={type ?? ""} className={cn("size-3.5", className)} />
     </span>
   );
 }

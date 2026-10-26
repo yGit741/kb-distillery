@@ -95,8 +95,8 @@ export function PageReader({ g, detail, embed, pinned, onTogglePin, onConnect }:
     <div className="grid min-w-0 gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
       <article className="flex min-w-0 flex-col gap-4">
         <header className="flex flex-col gap-2">
-          <h1 className="flex items-center gap-2 text-2xl font-semibold leading-tight">
-            <TypeDot type={card.type} className="[&>svg]:size-5" />
+          <h1 className="flex items-start gap-2 text-2xl font-semibold leading-tight">
+            <TypeDot type={card.type} className="mt-1 size-5" />
             {card.title}
           </h1>
           <FactBadges card={card} />

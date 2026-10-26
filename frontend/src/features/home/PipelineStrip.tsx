@@ -331,7 +331,7 @@ export function PipelineStrip({ vault, concept, draw, onPick, onRead }: { vault:
       <h2 id="home-pipeline" className="text-center text-[10.5px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
         Knowledge pipeline for one source the concept relies on
       </h2>
-      <p className="mb-1.5 text-center text-[11px] text-muted-foreground">click any source (a filled dot) to see its pipeline</p>
+      <p className="mb-1.5 text-center text-[11px] text-muted-foreground">click any source node to see its pipeline</p>
       <div className="grid grid-cols-1 items-stretch gap-3 md:grid-cols-[1fr_40px_1fr_40px_1fr]">
         {source ? (
           <>
