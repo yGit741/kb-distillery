@@ -226,11 +226,41 @@ def test_a_video_bundle_is_a_video_source_named_by_its_folder():
 
 def test_lint_binds_bundle_files_to_video_md():
     from kb.lint.lint import asset_source
-    on_disk = {"raw/videos/svm/video.md", "raw/videos/svm/frame-00042.jpg", "raw/videos/svm/video.json"}
-    assert asset_source("raw/videos/svm/frame-00042.jpg", on_disk) == "raw/videos/svm/video.md"
+    on_disk = {"raw/videos/svm/video.md", "raw/videos/svm/a-00042.jpg", "raw/videos/svm/video.json"}
+    assert asset_source("raw/videos/svm/a-00042.jpg", on_disk) == "raw/videos/svm/video.md"
     assert asset_source("raw/videos/svm/video.json", on_disk) == "raw/videos/svm/video.md"
     assert asset_source("raw/videos/svm/video.md", on_disk) is None
-    assert asset_source("raw/videos/other/frame-1.jpg", on_disk) is None
+    assert asset_source("raw/videos/other/a-00001.jpg", on_disk) is None
+
+
+def _bundle(folder, vid, anchors=True):
+    folder.mkdir(parents=True)
+    (folder / "video.md").write_text("# v\n")
+    (folder / "info.json").write_text(json.dumps({"id": vid}))
+    (folder / "video.json").write_text(json.dumps({"title": "SVM", "anchors": [{"t": 1}] if anchors else []}))
+
+
+def test_catalog_refresh_keeps_the_old_bundle_aside_and_refuses_strangers(tmp_path, monkeypatch):
+    from kb.ingest import catalog
+    monkeypatch.setattr(catalog, "ROOT", str(tmp_path))
+    monkeypatch.setattr(catalog, "_run_lint", lambda: None)
+    monkeypatch.setattr(catalog, "_join", lambda *a: None)
+    _bundle(tmp_path / "raw" / "videos" / "svm", "abcdefghijk")
+    (tmp_path / "raw" / "videos" / "svm" / "old-read.txt").write_text("paid")
+    _bundle(tmp_path / "raw" / "inbox" / "video-svm", "abcdefghijk")
+    catalog.catalog_video("raw/inbox/video-svm")                   # same video: refreshed
+    assert not (tmp_path / "raw" / "videos" / "svm" / "old-read.txt").exists()
+    kept = list((tmp_path / "_quarantine").glob("videos-svm-*/old-read.txt"))
+    assert kept and kept[0].read_text() == "paid"                  # the old bundle is kept, not deleted
+    _bundle(tmp_path / "raw" / "inbox" / "video-svm", "zzzzzzzzzzz")
+    with pytest.raises(ValueError, match="destination exists"):     # another video with the same name
+        catalog.catalog_video("raw/inbox/video-svm")
+    import shutil
+    shutil.rmtree(tmp_path / "raw" / "inbox" / "video-svm")
+    _bundle(tmp_path / "raw" / "inbox" / "video-svm", "abcdefghijk", anchors=False)
+    with pytest.raises(ValueError, match="no anchors"):            # would replace anchors with none
+        catalog.catalog_video("raw/inbox/video-svm")
+    assert (tmp_path / "raw" / "videos" / "svm" / "video.md").exists()
 
 
 def test_catalog_detects_a_video_bundle(tmp_path, monkeypatch):
@@ -246,7 +276,85 @@ def test_catalog_detects_a_video_bundle(tmp_path, monkeypatch):
 
 def test_ops_target_of_a_video_bundle_is_its_folder():
     from kb.ops.wrap import _target
-    assert _target(["raw/inbox/video-svm/frame-00042.jpg", "raw/inbox/video-svm/video.md"], ["scrap-youtube"]) == "svm"
+    assert _target(["raw/inbox/video-svm/a-00042.jpg", "raw/inbox/video-svm/video.md"], ["scrap-youtube"]) == "svm"
+
+
+def test_pick_reads_nothing_when_no_anchor_is_worth_it(tmp_path):
+    from kb.ingest.youtube import digest
+    anchors = _thumbs(tmp_path, [{"t": t, "score": 0} for t in (10, 200, 400)])
+    assert digest.pick(anchors, duration=600, tier="full", root=str(tmp_path)) == []
+
+
+def test_render_md_without_a_transcript_still_lists_the_anchors():
+    md = bundle.render_md(META, [], [{"t": 4, "thumb": "a-00004.jpg", "kind": "slide", "score": 3}], [])
+    assert "No English transcript" in md and "## Anchors" in md and "a-00004.jpg" in md
+
+
+def _tiny_video(path, seconds=260):
+    """A 1 fps grey video: a dark 'board' whose chalk lines grow, so analyse has something to measure."""
+    cv2 = fx._cv()
+    out = cv2.VideoWriter(str(path), cv2.VideoWriter_fourcc(*"mp4v"), 1, (320, 180))
+    for s in range(seconds):
+        g = _board_frame(chalk_lines=1 + (s // 40) % 5)
+        out.write(cv2.cvtColor(g, cv2.COLOR_GRAY2BGR))
+    out.release()
+    return str(path)
+
+
+def test_analyse_runs_the_board_pass_in_worker_processes(tmp_path):
+    from kb.ingest.youtube.fetch import ffmpeg_exe
+    mp4 = _tiny_video(tmp_path / "v.mp4")
+    a = fx.analyse(mp4, ffmpeg_exe(), workers=2)                      # 260 frames = 3 chunks → the pool path
+    assert len(a["board"]) == len(a["ink"]) == len(a["delta"]) == len(a["fr"]) >= 250
+    assert float(a["board"].mean()) > fx.MIN_BOARD and int(a["ink"].max()) > 0
+    assert fx.mode_of(a) == "board"
+
+
+def _digest_env(tmp_path, monkeypatch, reads):
+    """A vault in tmp_path with one bundle + page, the video and the Claude reads stubbed."""
+    from kb.ingest import easy_digest as ed, course
+    from kb.ingest.youtube import digest, readers
+    folder = tmp_path / "raw" / "videos" / "svm"
+    folder.mkdir(parents=True)
+    anchors = _thumbs(folder, [{"t": t, "score": 5, "kind": "board", "why": ["board-erase"], "ocr": []}
+                               for t in (30, 200)])
+    for x in anchors:
+        x["thumb"] = x.pop("thumb_path")
+    (folder / "video.json").write_text(json.dumps({**META, "sections": [{"chapter": "", "start": 0, "end": 260,
+                                                                         "text": "Lagrange."}], "anchors": anchors}))
+    (folder / "video.md").write_text("# SVM\n")
+    (tmp_path / "wiki").mkdir()
+    page = tmp_path / "wiki" / "video-svm.md"
+    page.write_text("---\ntype: video\nlayer: source\nstatus: digested\ndepth: deep\nraw: raw/videos/svm/video.md\n---\n\n"
+                    "# SVM\n\n## Key equations\n\n## Takeaways for my thesis\n\n## My notes\n\nmine\n")
+    monkeypatch.setattr(digest, "ROOT", str(tmp_path))
+    monkeypatch.setattr(digest, "CACHE", str(tmp_path / "cache"))
+    monkeypatch.setattr(digest, "sha1_file", lambda rel: "sha")
+    monkeypatch.setattr(digest, "_video", lambda url: _tiny_video(tmp_path / "v.mp4"))
+    monkeypatch.setattr(ed, "_resolve_raw", lambda arg: "raw/videos/svm/video.md")
+    monkeypatch.setattr(ed, "existing_digest_for_raw", lambda raw: "wiki/video-svm.md")
+    monkeypatch.setattr(course, "hub_row_for_raw", lambda raw: (None, None, None))
+    monkeypatch.setattr(readers, "claude_read", lambda path, ctx, model: dict(reads))
+    return digest, page
+
+
+def test_video_digest_writes_frames_and_never_downgrades_depth(tmp_path, monkeypatch):
+    digest, page = _digest_env(tmp_path, monkeypatch, {"text": "$$L = \\tfrac12\\|w\\|^2 - \\sum_i \\alpha_i$$",
+                                                         "tokens_in": 1000, "tokens_out": 300})
+    digest.video_digest("raw/videos/svm/video.md", tier="full")
+    text = page.read_text()
+    assert "depth: deep" in text                                       # full over deep keeps deep
+    assert text.count("### [") == 2 and "../raw/videos/svm/a-00030.jpg" in text
+    assert text.index("## Frames") < text.index("## Takeaways") < text.index("## My notes") and "mine" in text
+    assert "_Draft from the frame reads" in text
+
+
+def test_video_digest_leaves_the_page_alone_when_no_read_succeeds(tmp_path, monkeypatch):
+    digest, page = _digest_env(tmp_path, monkeypatch, {"text": "", "error": "usage limit"})
+    before = page.read_text()
+    with pytest.raises(ValueError, match="no frame could be read"):
+        digest.video_digest("raw/videos/svm/video.md", tier="full")
+    assert page.read_text() == before
 
 
 def _thumbs(tmp_path, anchors, same=()):

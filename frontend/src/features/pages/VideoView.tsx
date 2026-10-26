@@ -122,7 +122,16 @@ function Bundle({ v, thumbUrl }: { v: VideoBundle; thumbUrl: (a: VideoAnchor) =>
       {anchors.length === 0 && (
         <p className="text-sm text-muted-foreground">No anchors in this bundle — re-scrap the video to find them.</p>
       )}
-      {byChapter.length === 0 && <p className="text-sm text-muted-foreground">No English transcript was downloaded for this video.</p>}
+      {byChapter.length === 0 && (
+        <>
+          <p className="text-sm text-muted-foreground">No English transcript was downloaded for this video.</p>
+          {anchors.length > 0 && (
+            <ul aria-label="Anchors" className="flex flex-wrap gap-2">
+              {anchors.map((a) => <AnchorThumb key={a.t} a={a} url={thumbUrl(a)} videoUrl={v.url} />)}
+            </ul>
+          )}
+        </>
+      )}
       {byChapter.map(({ chapter, sections: secs }) => (
         <div key={`${chapter}-${secs[0]?.start}`} className="flex flex-col gap-4">
           {chapter && <h3 className="text-base font-semibold">{chapter}</h3>}

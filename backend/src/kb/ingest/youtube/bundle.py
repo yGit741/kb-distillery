@@ -117,6 +117,8 @@ def render_md(meta, secs, anchors, comments):
                                          for c in comments] + [""]
     if not secs:
         md += ["## Transcript", "", "_No English transcript was downloaded for this video._", ""]
+        if anchors:
+            md += ["## Anchors", ""] + [f"- [{ts(x['t'])}]({x['thumb']}) {x['kind']} {x['score']}" for x in anchors] + [""]
     home = section_of(secs)
     chapter = None
     for k, s in enumerate(secs):

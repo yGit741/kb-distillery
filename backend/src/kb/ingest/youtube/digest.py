@@ -45,8 +45,12 @@ def pick(anchors, duration, tier, root):
         words = fx.words(x.get("ocr") or [])
         same = next((c for c in chosen if _same_words(words, fx.words(c.get("ocr") or []))), None)
         if same is not None:                       # the same page or slide again: keep its fuller state
-            if len(words) > len(fx.words(same.get("ocr") or [])):
+            others = [c for c in chosen if c is not same]
+            if len(words) > len(fx.words(same.get("ocr") or [])) and \
+                    not any(abs(x["t"] - c["t"]) < gap for c in others):
                 chosen[chosen.index(same)] = x
+                if h is not None:
+                    hashes.append(h)
             continue
         chosen.append(x)
         if h is not None:
@@ -100,16 +104,25 @@ def equations(chosen, limit=14):
 
 def put_section(text, heading, body, before=("## Takeaways for my thesis", "## Connections", "## Links out",
                                               "## My notes")):
-    """Replace `heading`'s section, or insert it before the first of `before` (else at the end)."""
+    """Replace `heading`'s section, or insert it before whichever of `before` comes first in the page (so
+    never inside or after `## My notes`), else at the end."""
     lines = body.rstrip() + "\n\n"
     m = re.search(rf"^{re.escape(heading)}\s*$.*?(?=^## |\Z)", text, re.M | re.S)
     if m:
         return text[:m.start()] + lines + text[m.end():]
-    for b in before:
-        i = text.find(f"\n{b}")
-        if i >= 0:
-            return text[:i + 1] + lines + text[i + 1:]
+    hits = [i for i in (text.find(f"\n{b}") for b in before) if i >= 0]
+    if hits:
+        i = min(hits)
+        return text[:i + 1] + lines + text[i + 1:]
     return text.rstrip() + "\n\n" + lines
+
+
+def frames_on_page(text):
+    """How many read frames the page's ## Frames section already holds."""
+    m = re.search(r"^## Frames\s*$(.*?)(?=^## |\Z)", text, re.M | re.S)
+    if not m:
+        return 0
+    return sum(1 for blk in re.split(r"^### ", m.group(1), flags=re.M)[1:] if "_(no read)_" not in blk)
 
 
 def section_empty(text, heading):
@@ -132,6 +145,8 @@ def video_digest(arg, tier="full", model=readers.READ_MODEL, workers=4):
     if not anchors:
         raise ValueError(f"{raw_rel} has no anchors — re-scrap it with this version (scrap-youtube --force)")
     chosen = pick(anchors, d["duration"], tier, ROOT)
+    if not chosen:
+        raise ValueError(f"{raw_rel}: no anchor scores 1 or more — nothing worth reading (easy-digest it instead)")
     print(f"{tier}: {len(chosen)} of {len(anchors)} anchors → reading …")
 
     work = os.path.join(CACHE, sha1_file(raw_rel))
@@ -161,12 +176,24 @@ def video_digest(arg, tier="full", model=readers.READ_MODEL, workers=4):
         json.dump({"stats": stats, "frames": [{k: x[k] for k in ("t", "kind", "score", "why", "thumb_path", "read")}
                                               for x in chosen]}, fh, ensure_ascii=False, indent=1)
 
+    if not ok:
+        errors = {x["read"].get("error") for x in chosen if x["read"].get("error")}
+        raise ValueError(f"no frame could be read{f' ({sorted(errors)[0]})' if errors else ''} — is `claude` "
+                         "logged in / within its usage limit? The page is unchanged; rerun later")
     page_type = "video"
     slug = os.path.basename(ed.existing_digest_for_raw(raw_rel) or "")[:-3] or \
         ed.unit_slug_for_raw(raw_rel, page_type)
     wiki_path = os.path.join(ROOT, "wiki", f"{slug}.md")
     text = open(wiki_path, encoding="utf-8").read() if os.path.isfile(wiki_path) else ed._new_page(page_type, slug, raw_rel)
-    text = wikiio.set_key(text, "depth", tier, after="status")
+    had = frames_on_page(text)
+    if len(ok) < had:
+        raise ValueError(f"only {len(ok)} of {len(chosen)} frames were read, the page already holds {had} — "
+                         "kept the page as it is; rerun later (reads are in meta/.ingest/video/)")
+    from kb.core.schema import DEPTH
+    from kb.lint.lint import parse_frontmatter
+    old = (parse_frontmatter(text) or {}).get("depth")
+    depth = max([d_ for d_ in (old, tier) if d_ in DEPTH], key=DEPTH.index)   # never downgrade deep to full
+    text = wikiio.set_key(text, "depth", depth, after="status")
     text = wikiio.set_key(text, "status", "digested")
     text = put_section(text, "## Frames", frames_section(chosen, d["url"]))
     eqs = equations(ok)
@@ -177,9 +204,14 @@ def video_digest(arg, tier="full", model=readers.READ_MODEL, workers=4):
     wikiio.write_page(wiki_path, text)
     with open(os.path.join(work, "abstract.text"), "w", encoding="utf-8") as fh:
         fh.write(_full_text(d, chosen))
+    from .. import course                      # a course lecture's Contents row shows its new depth
+    hub, n, row = course.hub_row_for_raw(raw_rel)
+    if hub:
+        course.record_row(hub, row["raws"], slug, depth)
+        print(f"ticked [[{hub}]] row {n} ({depth})")
     print(f"read {len(ok)}/{len(chosen)} frames · {stats['tokens_in']:,} tokens in, {stats['tokens_out']:,} out "
           f"(CLI ${stats['usd_cli']})")
-    print(f"updated {wiki_path} ({page_type}, depth: {tier}) — ## Frames written, ## Key equations drafted")
+    print(f"updated {wiki_path} ({page_type}, depth: {depth}) — ## Frames written, ## Key equations drafted")
     print(f"Agent: read {os.path.join(work, 'abstract.text')} (transcript + reads), write Problem, Main result, "
           f"Key ideas, curate Key equations, Takeaways{', Connections ([[links]] into the wiki)' if tier == 'deep' else ''}; "
           "then pixi run lint and pixi run ops -- commit")
@@ -217,7 +249,7 @@ def _video(url):
         p = os.path.join(folder, vid + ext)
         if os.path.isfile(p):
             return p
-    f = fetch_mod.fetch(url, video=True, comments=False)
+    f = fetch_mod.fetch(url, video=True, comments=False, subs=False)   # only the pixels are needed here
     if not f.mp4:
         raise ValueError(f"could not download the video {url}")
     return f.mp4
