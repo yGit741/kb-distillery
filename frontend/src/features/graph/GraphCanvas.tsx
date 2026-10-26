@@ -331,10 +331,13 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
   }, []);
 
   // ---- fit (largest connected component: stray islands drift far out and would shrink everything)
+  const mounted = useRef(true);
+  useEffect(() => () => void (mounted.current = false), []);
   const fit = useCallback(() => {
-    // a canvas with no size yet (still laying out) would frame everything into its corner: try again shortly
+    // a canvas with no size yet (still laying out) would frame everything into its corner: try again shortly,
+    // but never after unmount (a canvas that never gets a size, as in jsdom, would retry forever)
     if (!wrap.current?.clientWidth || !wrap.current.clientHeight) {
-      window.setTimeout(() => fitRef.current(), 200);
+      window.setTimeout(() => mounted.current && fitRef.current(), 200);
       return;
     }
     const core = largestComponent(live.current.visible, live.current.neighbors);

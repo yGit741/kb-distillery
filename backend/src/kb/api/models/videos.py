@@ -17,21 +17,15 @@ class VideoComment(ApiModel):
     stamps: list[str] = []
 
 
-class VideoRead(ApiModel):
-    text: str = ""
-    model: str | None = None
-    tokens_in: int | None = None
-    tokens_out: int | None = None
-
-
-class VideoFrame(ApiModel):
+class VideoAnchor(ApiModel):
+    """A timestamp the screen likely shows something worth reading; a digest tier reads the top ones."""
     t: float
-    file: str
+    thumb: str
     path: str
     kind: str
+    score: int
+    why: list[str] = []
     ocr: list[str] = []
-    conf: float | None = None
-    read: VideoRead | None = None
 
 
 class VideoSection(ApiModel):
@@ -55,7 +49,6 @@ class VideoBundle(ApiModel):
     comments: list[VideoComment] = []
     comment_count: int | None = None
     subs_kind: str | None = None
-    tier: str
     sections: list[VideoSection] = []
-    frames: list[VideoFrame] = []
+    anchors: list[VideoAnchor] = []
     stats: dict[str, Any] = {}

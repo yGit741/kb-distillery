@@ -33,8 +33,8 @@ batch, ticks rows (`course.record_row`), lints once and commits once (`kb(digest
 run in a clone without the raw binaries: their manifest rows are kept as they are.
 
 Writes `meta/.ingest/easy/<sha>/abstract.text` for agent summary. A video bundle (`raw/videos/<name>/video.md`,
-from `scrap-youtube`) is skimmed from its metadata, description, chapters, frame text and the start and end of the
-transcript; the new `video-<name>` page gets its title, url and channel from the bundle. Deepens the Source page in place
+from `scrap-youtube`) is skimmed from its metadata, description, chapters and the start and end of the transcript (no frames —
+reading frames is `video-digest --tier full|deep`, see `skills/scrap-data/youtube/SKILL.md`); the new `video-<name>` page gets its title, url and channel from the bundle. Deepens the Source page in place
 (a `depth: listed` catalog stub becomes `depth: easy`, `status: digested` — lint requires `digested`
 for any easy/full/deep depth). If the raw file is a course/series member, its `## Contents` row is
 ticked `easy`.

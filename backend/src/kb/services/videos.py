@@ -1,4 +1,4 @@
-"""A scrap-youtube bundle as the app shows it: video.json next to the bundle's video.md, frames as raw paths."""
+"""A scrap-youtube bundle as the app shows it: video.json next to the bundle's video.md, anchors with raw paths."""
 import json
 import os
 
@@ -25,7 +25,8 @@ def load_bundle(rel):
     except (OSError, ValueError):
         return None
     folder = "/".join(parts[:3])
-    for fr in data.get("frames") or []:
-        fr["path"] = f"{folder}/{fr['file']}"
+    for a in data.get("anchors") or []:
+        a["path"] = f"{folder}/{a['thumb']}"
+    data.pop("frames", None)                     # a bundle from before anchors: re-scrap it to get them
     data["raw"] = rel
     return data

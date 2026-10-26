@@ -17,6 +17,8 @@ Replaces legacy `thesis-ingest`.
 
 - Trigger on bare `digest` — ask tier first
 - Trigger on `easy-digest` or `deep-digest`
+- Run the paper session on a video (`raw/videos/…/video.md`): a video's full tier is
+  `python3 -m kb.ingest video-digest <raw> --tier full` (`skills/scrap-data/youtube/SKILL.md`)
 - Write `wiki/` directly during an open session
 - Mark as heavy tier
 

@@ -19,6 +19,8 @@ description: Thesis-critical deep digest with neighbor links (~25-40k+ tokens, H
 - Trigger on bare `digest` — ask tier first
 - Run without `--confirm-heavy` on CLI
 - Skip neighbor / topic / q- stub planning
+- Run the paper session on a video (`raw/videos/…/video.md`): a video's deep tier is
+  `python3 -m kb.ingest video-digest <raw> --tier deep` and then the neighbor/Connections work by hand
 
 ## CLI
 

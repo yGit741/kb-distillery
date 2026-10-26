@@ -24,7 +24,7 @@ INGEST = {
     ("index-researcher", "finalize"): ("catalog", True),
     ("index-researcher", "relink"): ("refine", False),
 }
-INGEST_BEGIN = {("easy-digest", None): "digest"}  # agent keeps editing; skill ends with `ops commit`
+INGEST_BEGIN = {("easy-digest", None): "digest", ("video-digest", None): "digest"}  # agent keeps editing; skill ends with `ops commit`
 DISTILL = {("apply", None): ("distill", True)}
 
 # kb summaries are noun phrases — the op in kb(<op>) is already the verb
@@ -101,8 +101,12 @@ def run(cli_main, argv=None, table=INGEST, begin_table=None):
     if begin_op:
         try:
             target = pos[1] if len(pos) > 1 else key[0]
+            parts = target.replace(os.sep, "/").split("/")
+            # a video bundle's item is always video.md: name the session after its folder
+            name = parts[-2] if len(parts) > 3 and parts[:2] == ["raw", "videos"] else \
+                os.path.splitext(os.path.basename(target))[0]
             # no summary: the subject becomes the page title, the tier goes in a KB-Tier trailer
-            core.begin(begin_op, os.path.splitext(os.path.basename(target))[0], root=core.ROOT)
+            core.begin(begin_op, name, root=core.ROOT)
         except core.OpsError as e:
             print(f"ops: no session opened — {e}")
         return cli_main(argv)

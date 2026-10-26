@@ -157,14 +157,14 @@ def main(argv=None):
     sw.add_argument("--no-images", action="store_true", help="keep figures as remote links, download nothing")
     sw.add_argument("--force", action="store_true", help="re-pull posts already in the vault")
 
-    sy = sub.add_parser("scrap-youtube", help="a YouTube lecture/video → raw/inbox/video-<name>/ bundle (0 LLM unless --read)")
+    sy = sub.add_parser("scrap-youtube", help="a YouTube lecture/video → raw/inbox/video-<name>/ bundle: transcript + anchors (0 LLM)")
     sy.add_argument("url")
-    sy.add_argument("--tier", choices=["transcript", "vibe", "frames"], default="vibe",
-                    help="transcript only · + 1-3 representative frames (default) · full frame selection")
-    sy.add_argument("--read", action="store_true", help="frames tier: a Claude read of each kept frame (LLM, ~2k tokens/frame)")
-    sy.add_argument("--per-hour", type=int, default=30, help="frames tier: frame budget per video hour")
-    sy.add_argument("--model", default="sonnet", help="model for --read")
-    sy.add_argument("--force", action="store_true", help="scrap again although the video is in the vault")
+    sy.add_argument("--force", action="store_true", help="scrap again although the video is in the vault (refreshes its bundle)")
+
+    vd = sub.add_parser("video-digest", help="full/deep digest of a video page: read the top anchors with Claude (LLM)")
+    vd.add_argument("target", help="raw/videos/<name>/video.md or its video- page slug")
+    vd.add_argument("--tier", choices=["full", "deep"], default="full", help="full ~15 frames/hour · deep ~30/hour")
+    vd.add_argument("--model", default="sonnet", help="model for the frame reads")
 
     sm = sub.add_parser("scrap-mail", help="parse .mbox/.eml export, or fetch via IMAP, to raw/inbox/mail-.../ (0 LLM)")
     sm.add_argument("source", nargs="?", default=None, help="path to a local .mbox or .eml export")
@@ -313,11 +313,18 @@ def main(argv=None):
             print(e, file=sys.stderr)
             return 1
         return 0
+    if args.cmd == "video-digest":
+        from .youtube import digest
+        try:
+            digest.video_digest(args.target, tier=args.tier, model=args.model)
+        except ValueError as e:
+            print(f"video-digest: {e}", file=sys.stderr)
+            return 1
+        return 0
     if args.cmd == "scrap-youtube":
         from .youtube import bundle
         try:
-            bundle.scrap_youtube(args.url, tier=args.tier, force=args.force, read=args.read,
-                                 per_hour=args.per_hour, model=args.model)
+            bundle.scrap_youtube(args.url, force=args.force)
         except resolve_mod.DuplicateBlocked:
             return 1
         except Exception as e:                       # yt-dlp raises its own DownloadError

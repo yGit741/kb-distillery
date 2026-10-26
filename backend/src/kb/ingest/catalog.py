@@ -335,21 +335,43 @@ def catalog_email(inbox_rel, collection="", **_kwargs):
     return dest_rel, None
 
 
+def _bundle_json(folder, name):
+    import json
+    try:
+        with open(os.path.join(folder, name), encoding="utf-8") as f:
+            return json.load(f)
+    except (OSError, ValueError):
+        return {}
+
+
 def catalog_video(inbox_rel, collection="", title=None, **_kwargs):
     """raw/inbox/video-<dir>/ (scrap-youtube) → raw/videos/<dir>/. A corpus row only — the `video-`
     page is written by easy-digest, or a course row points at the bundle."""
     inbox_rel = _check_inbox(inbox_rel)
     dir_name = os.path.basename(inbox_rel)[len(VIDEO_DIR_PREFIX):]
     dest_rel = f"raw/{RAW_VIDEOS}/{dir_name}"
-    moved = _move(os.path.join(ROOT, inbox_rel), os.path.join(ROOT, dest_rel))
+    dest, src = os.path.join(ROOT, dest_rel), os.path.join(ROOT, inbox_rel)
+    old, new = _bundle_json(dest, "info.json"), _bundle_json(src, "info.json")
+    aside = None
+    if os.path.isdir(dest) and old.get("id") and old.get("id") == new.get("id"):
+        # scrap-youtube --force: the same video's refreshed bundle. The old one goes to _quarantine/ (kept,
+        # gitignored) rather than being deleted, so paid reads in an older bundle are never lost.
+        if _bundle_json(dest, "video.json").get("anchors") and not _bundle_json(src, "video.json").get("anchors"):
+            raise ValueError(f"{inbox_rel} has no anchors (no video downloaded?) — it would replace "
+                             f"{dest_rel} which has them; re-scrap it first")
+        from datetime import datetime
+        aside = os.path.join(ROOT, "_quarantine", f"videos-{dir_name}-{datetime.now():%Y%m%d-%H%M%S}")
+        os.makedirs(os.path.dirname(aside), exist_ok=True)
+        shutil.move(dest, aside)
+        print(f"refreshing {dest_rel}/ (same video) — the previous bundle is in {os.path.relpath(aside, ROOT)}/")
+    try:
+        moved = _move(src, dest)
+    except (OSError, ValueError):
+        if aside:
+            shutil.move(aside, dest)                   # put the previous bundle back
+        raise
     print(f"{'moved' if moved else 'already at'} → {dest_rel}/")
-    if not title:
-        import json
-        try:
-            with open(os.path.join(ROOT, dest_rel, "video.json"), encoding="utf-8") as f:
-                title = json.load(f).get("title")
-        except (OSError, ValueError):
-            title = None
+    title = title or _bundle_json(dest, "video.json").get("title")
     _join(f"{dest_rel}/{VIDEO_ITEM}", collection, title or dir_name)
     _run_lint()
     return dest_rel, None
