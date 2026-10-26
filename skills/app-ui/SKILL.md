@@ -102,9 +102,11 @@ a rule below.**
 - **Explorer chips use the same symbols**: titles, links, results, trail, side reader and Home pipeline show
   `NodeMarkSvg` / `NodeSwatch`, not coloured dots.
 - **Inheritance boundary:** Full-Graph-only features (views and stories, lab rail, filters and quick filters, hulls,
-  Fourier arcs, raw piles, magnet hover, semantic zoom, the interactive legend, basket, node menu, Finder) stay in
-  `features/graph/` and are never imported by other surfaces; other surfaces import `@/features/graph/encoding` plus
-  the short list of shared data modules in the guard; `encoding/` imports no Full Graph feature.
+  Fourier arcs, raw piles, magnet hover, semantic zoom (`style.semanticRadius`, called by GraphCanvas only), the
+  interactive legend, basket, node menu, Finder) stay in `features/graph/` and are never imported by other surfaces;
+  other surfaces import `@/features/graph/encoding` plus the guard's `SHARED_OK` data modules (each with who may use
+  it); `encoding/` imports itself and the guard's `ENCODING_DEPS` only. Circles drawn outside `encoding/` and
+  `typeColor` uses are pinned per file with a reason.
 - **A new graph surface** registers in the guard's `SURFACES` with the file that renders its legend.
 
 ### Consistency across screens
