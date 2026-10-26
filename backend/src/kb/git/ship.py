@@ -30,6 +30,7 @@ version first and carry the bumped KB-Version on their merge commit.
 Knowledge-lane paths are never staged here (except migrated files in a schema PR).
 """
 import argparse
+import glob
 import json
 import os
 import re
@@ -343,15 +344,18 @@ def checks_for(paths):
         checks.append(("web-check", ["pixi", "run", "web-check"]))
     if hit("backend/src/kb/api/", "frontend/src/api"):
         checks.append(("api-schema-check", ["pixi", "run", "api-schema-check"]))
-    if hit("backend/src/kb/dashboard/"):
+    # the graph's motion lives in the canvas: only the e2e still-canvas test sees it (frontend/e2e)
+    if hit("backend/src/kb/dashboard/", "frontend/src/features/graph/", "frontend/e2e/"):
         checks.append(("test-e2e", ["pixi", "run", "test-e2e"]))
     return checks
 
 
 def e2e_available(root=ROOT):
-    """node plus the playwright npm package, which test-e2e needs."""
+    """node plus the playwright npm package, which test-e2e needs (resolved, $PLAYWRIGHT_MODULE or the npx cache)."""
     if not shutil.which("node"):
         return False
+    if os.environ.get("PLAYWRIGHT_MODULE") or glob.glob(os.path.expanduser("~/.npm/_npx/*/node_modules/playwright/index.mjs")):
+        return True
     return subprocess.run(["node", "-e", "require.resolve('playwright')"], cwd=root,
                           capture_output=True, check=False).returncode == 0
 
