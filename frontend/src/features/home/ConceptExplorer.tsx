@@ -5,7 +5,7 @@ import { findPages } from "@/features/graph/pageSearch";
 import { isPublic } from "@/features/graph/publicPredicate";
 import { colorChannel, GraphLegend, NodeMarkSvg } from "@/features/graph/encoding";
 import { SideReader } from "@/features/graph/SideReader";
-import { assignAreaColors } from "@/features/graph/style";
+import { areaSlots } from "@/features/graph/style";
 import type { GNode } from "@/features/graph/types";
 import { cn } from "@/lib/utils";
 import { PipelineStrip } from "./PipelineStrip";
@@ -147,11 +147,9 @@ export function ConceptExplorer({
   const sample = useMemo(() => egoSample(vault, concept, drawn), [vault, concept, drawn]);
   const draw = useMemo(() => (chosen && chosen !== drawn?.id ? drawFor(vault, concept, chosen, sample) : drawn), [chosen, drawn, vault, concept, sample]);
   const search = graphSearch(sample, sample.focus, draw?.id ?? null);
-  // colour = theme, like the Full Graph's Map: area colours assigned over the whole vault, so a theme keeps its colour
-  const color = useMemo(() => {
-    assignAreaColors([...vault.byId.values()]);
-    return colorChannel("area");
-  }, [vault]);
+  // colour = theme, like the Full Graph's Map: area slots ranked over the whole vault (as the Full Graph ranks its
+  // model), passed to the channel rather than set globally, so a theme keeps its colour and nothing else is touched
+  const color = useMemo(() => colorChannel("area", { areas: areaSlots([...vault.byId.values()]) }), [vault]);
   const drawnNodes = useMemo(() => sample.nodes.map((id) => vault.byId.get(id)).filter((n): n is GNode => !!n), [sample, vault]);
   const pickNode = (id: string) => {
     const n = vault.byId.get(id);
@@ -192,7 +190,7 @@ export function ConceptExplorer({
           </div>
           {/* the shared legend, compact, in a fixed strip: its content changes with the draw, its height never */}
           <div className="flex shrink-0 items-center justify-center overflow-hidden border-t px-3 py-1" style={{ height: LEGEND_HEIGHT }} data-testid="home-legend">
-            <GraphLegend nodes={drawnNodes} color={color} size={SIZE} density="compact" className="justify-center" />
+            <GraphLegend nodes={drawnNodes} color={color} size={SIZE} density="compact" maxColors={6} className="justify-center" />
           </div>
         </div>
         <PipelineStrip vault={vault} concept={concept} draw={draw} onPick={onPick} onRead={setReader} />

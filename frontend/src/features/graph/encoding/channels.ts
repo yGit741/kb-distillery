@@ -1,5 +1,5 @@
 import { colorKeyRows, type KeyRow } from "../legendModel";
-import { colorOf, METRIC_COLORS, OTHER_GREY, RAMP_BY, RAMP_MEANING, type ColorBy, type SizeBy } from "../style";
+import { colorOf, METRIC_COLORS, OTHER_GREY, RAMP_BY, RAMP_MEANING, type AreaSlots, type ColorBy, type SizeBy } from "../style";
 import type { GNode } from "../types";
 
 export type { KeyRow };
@@ -51,15 +51,18 @@ export const SIZE_TITLE: Readonly<Record<SizeBy, string | null>> = {
   uniform: null,
 };
 
-/** The vault's colourings (./style colorOf) as a channel; `ramp` puts the ordered ones on the neutral ramp. */
-export function colorChannel(by: ColorBy, o: { ramp?: "light" | "dark" | null; metric?: (n: GNode) => number | undefined; limit?: number } = {}): ColorChannel {
+/**
+ * The vault's colourings (./style colorOf) as a channel; `ramp` puts the ordered ones on the neutral ramp, `areas`
+ * gives a surface its own area slots (`areaSlots`) instead of the Full Graph's.
+ */
+export function colorChannel(by: ColorBy, o: { ramp?: "light" | "dark" | null; metric?: (n: GNode) => number | undefined; limit?: number; areas?: AreaSlots } = {}): ColorChannel {
   const ramp = o.ramp ?? null;
   const meaning = ramp && RAMP_BY.has(by) ? RAMP_MEANING[by] : undefined;
   return {
     by,
     title: COLOR_TITLE[by],
-    color: (n) => colorOf(n, by, METRIC_COLORS.has(by) ? o.metric?.(n) : undefined, ramp),
-    rows: (nodes) => colorKeyRows(nodes, new Set(nodes.map((n) => n.id)), by, o.limit ?? 12, ramp),
+    color: (n) => colorOf(n, by, METRIC_COLORS.has(by) ? o.metric?.(n) : undefined, ramp, o.areas),
+    rows: (nodes) => colorKeyRows(nodes, new Set(nodes.map((n) => n.id)), by, o.limit ?? 12, ramp, o.areas),
     ramp: meaning ? { low: meaning.low, high: meaning.high } : undefined,
   };
 }

@@ -4,6 +4,7 @@ import { drawNode, inkRadius, LABEL, outerRadius, personInitials, readCanvasColo
 import type { Importance } from "@/features/graph/lab/importance";
 import type { GNode } from "@/features/graph/types";
 import { cn } from "@/lib/utils";
+import { useTheme } from "@/theme/theme";
 import { fitToBox, placeCardLabels, type LabelAsk } from "./cardLayout";
 import type { Sample } from "./samplers";
 
@@ -68,6 +69,8 @@ export function SampleGraph({
   hoverRef.current = hover;
   const ringRef = useRef(ring);
   ringRef.current = ring;
+  const theme = useTheme((t) => t.theme);
+  const colorsRef = useRef(readCanvasColors());
   const colorRef = useRef(color);
   colorRef.current = color;
   const pickRef = useRef(onPick);
@@ -77,7 +80,8 @@ export function SampleGraph({
   useEffect(() => {
     const el = host.current;
     if (!el) return;
-    const colors = readCanvasColors();
+    // the chrome colours follow the theme without restarting the layout (colorsRef, refreshed below)
+    const colors = colorsRef.current;
     const r = radii(sample);
     const nodes: Node[] = sample.nodes
       .map((id) => byId.get(id))
@@ -224,6 +228,13 @@ export function SampleGraph({
     const g = fg.current;
     g?.zoom(g.zoom(), 0);
   }, [hover, ring, color]);
+
+  // a theme switch: re-read the chrome colours in place (the effect above draws through the same object), then redraw
+  useEffect(() => {
+    Object.assign(colorsRef.current, readCanvasColors());
+    const g = fg.current;
+    g?.zoom(g.zoom(), 0);
+  }, [theme]);
 
   const hovered = hover ? byId.get(hover) : undefined;
   return (
