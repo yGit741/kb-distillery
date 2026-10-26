@@ -226,3 +226,37 @@ def test_catalog_detects_a_video_bundle(tmp_path, monkeypatch):
 def test_ops_target_of_a_video_bundle_is_its_folder():
     from kb.ops.wrap import _target
     assert _target(["raw/inbox/video-svm/frame-00042.jpg", "raw/inbox/video-svm/video.md"], ["scrap-youtube"]) == "svm"
+
+
+def test_budget_keeps_frames_without_sections_and_before_the_first_caption():
+    frames = [{"t": t, "score": 1} for t in range(0, 3600, 60)]
+    assert len(fx.budget(frames, [], per_hour=30, duration=3600)) == 30          # no transcript
+    secs = [{"start": 100, "end": 3600}]
+    out = fx.budget(frames, secs, per_hour=30, duration=3600)
+    assert len(out) == 30
+
+
+def test_budget_over_many_short_sections_keeps_the_best_across_the_video():
+    secs = [{"start": i * 90, "end": (i + 1) * 90} for i in range(40)]
+    frames = [{"t": i * 90 + 10, "score": i % 4} for i in range(40)]
+    out = fx.budget(frames, secs, per_hour=10, duration=3600)
+    assert len(out) == 10 and max(f["t"] for f in out) > 1800 and all(f["score"] == 3 for f in out)
+
+
+def test_force_reuses_the_videos_own_inbox_folder(tmp_path):
+    d = tmp_path / "raw" / "inbox" / "video-svm-lecture"
+    d.mkdir(parents=True)
+    (d / "info.json").write_text(json.dumps({"id": "abcdefghijk"}))
+    assert bundle.dir_name("SVM lecture", "abcdefghijk", str(tmp_path)) == "svm-lecture"
+
+
+def test_parse_vtt_auto_without_word_tags():
+    rolling = "WEBVTT\n\n00:00:00.000 --> 00:00:02.000\nhello\n\n00:00:02.000 --> 00:00:04.000\nhello\nworld\n"
+    assert [t for _, t in tr.parse_vtt(rolling, auto=True)] == ["hello", "world"]
+
+
+def test_resolve_prints_a_bundle_without_a_page():
+    from kb.ingest.resolve import ResolveResult, format_human
+    text = format_human(ResolveResult(status="found", matches=[{"slug": None, "raw": "raw/videos/x/video.md",
+                                                                "reason": "youtube:abcdefghijk"}], query="q"))
+    assert "wiki/None" not in text and "(no page yet)" in text

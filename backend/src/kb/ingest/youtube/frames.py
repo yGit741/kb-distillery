@@ -238,16 +238,28 @@ def drop_wide(frames, window=120):
 
 
 def budget(frames, sections, per_hour, duration):
-    """At most `per_hour` frames, shared over sections by length; the highest-scoring ones win."""
+    """At most `per_hour` frames, shared over sections by length, the highest-scoring ones first. A frame
+    belongs to the last section starting at or before it (one before the first caption to the first);
+    no sections (no transcript) means one window over the whole video."""
     cap = max(1, round(per_hour * duration / 3600))
     if len(frames) <= cap:
         return frames
-    out = []
-    for s in sections:
-        mine = [f for f in frames if s["start"] <= f["t"] < s["end"]]
-        n = max(1 if mine else 0, round(cap * (s["end"] - s["start"]) / max(duration, 1)))
-        out += sorted(mine, key=lambda f: -f.get("score", 0))[:n]
-    return sorted(out, key=lambda f: f["t"])[:cap] if len(out) > cap else sorted(out, key=lambda f: f["t"])
+    wins = [(s["start"], s["end"]) for s in sections] or [(0, duration or 1)]
+    home = lambda t: max([i for i, (a, _) in enumerate(wins) if a <= t] or [0])
+    groups = {}
+    for f in frames:
+        groups.setdefault(home(f["t"]), []).append(f)
+    picked = []
+    for i, mine in groups.items():
+        a, b = wins[i]
+        n = max(1, round(cap * (b - a) / max(duration, 1)))
+        picked += sorted(mine, key=lambda f: -f.get("score", 0))[:n]
+    if len(picked) > cap:                                   # many short sections: best `cap` overall
+        picked = sorted(picked, key=lambda f: -f.get("score", 0))[:cap]
+    elif len(picked) < cap:                                 # spare room: next best anywhere
+        rest = sorted((f for f in frames if f not in picked), key=lambda f: -f.get("score", 0))
+        picked += rest[:cap - len(picked)]
+    return sorted(picked, key=lambda f: f["t"])
 
 
 def grab(cap, t):

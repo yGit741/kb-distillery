@@ -69,8 +69,16 @@ def fetch(url, video=True, comments=True, cache=CACHE):
     with yt_dlp.YoutubeDL(opts) as ydl:
         info = ydl.sanitize_info(ydl.extract_info(f"https://www.youtube.com/watch?v={vid}", download=True))
     subs, kind = pick_subs(folder, vid, info)
-    mp4 = os.path.join(folder, f"{vid}.mp4")
-    return Fetched(vid, folder, info, subs, kind, mp4 if os.path.isfile(mp4) else None)
+    videos = [p for p in glob.glob(os.path.join(folder, f"{vid}.*"))
+              if os.path.splitext(p)[1] in (".mp4", ".webm", ".mkv", ".mov")]   # a non-merged format keeps its own
+    videos.sort(key=lambda p: not p.endswith(".mp4"))
+    return Fetched(vid, folder, info, subs, kind, videos[0] if videos else None)
+
+
+def has_english(info):
+    """YouTube lists an English track (manual or auto) for this video."""
+    tracks = set((info.get("subtitles") or {}).keys()) | set((info.get("automatic_captions") or {}).keys())
+    return bool(tracks & set(SUB_LANGS))
 
 
 def slim_info(info):

@@ -37,6 +37,7 @@ export function createEmbeddedDataSource(blob: ShareBlob | undefined = globalThi
     rawThumbUrl: () => null,
     rawFileUrl: () => null,
     digestRaw: absent,
+    getVideo: absent,
     listScopes: absent,
     getScope: absent,
     resolveScope: absent,

@@ -38,7 +38,8 @@ def _new_page(page_type, slug, raw_rel):
             with open(os.path.join(ROOT, os.path.dirname(raw_rel), "video.json"), encoding="utf-8") as f:
                 meta = json.load(f)
             title = meta.get("title") or title
-            body = body.replace("{{url}}", meta.get("url") or "").replace("{{author}}", meta.get("channel") or "")
+            body = body.replace("{{url}}", meta.get("url") or "")
+            body = body.replace("{{author}}", json.dumps(meta.get("channel") or "", ensure_ascii=False))  # quoted YAML
         except (OSError, ValueError):
             pass
     body = body.replace("{{raw}}", raw_rel).replace("{{title}}", title)
@@ -96,6 +97,8 @@ def easy_digest(arg, into=None, tick=True, lint=True):
     where the orchestrator ticks rows and lints once at the end."""
     raw_rel = _resolve_raw(arg)
     page_type = unit_type_for_raw(raw_rel)
+    if page_type == "video" and not raw_rel.endswith("/video.md"):
+        raise ValueError(f"{raw_rel}: a video bundle is digested through its video.md")
     slug = unit_slug_for_raw(raw_rel, page_type)
     existing = existing_digest_for_raw(raw_rel)
     if existing:

@@ -39,6 +39,9 @@ def existing(vid, root=ROOT):
 
 
 def dir_name(title, vid, root=ROOT):
+    for hit in existing(vid, root):                     # --force over this video's own inbox bundle
+        if hit.startswith("raw/inbox/video-"):
+            return hit.split("/")[-1][len("video-"):]
     base = kebab(title)
     taken = os.path.exists(os.path.join(root, "raw", "inbox", f"video-{base}")) or \
         os.path.exists(os.path.join(root, "raw", "videos", base))
@@ -123,7 +126,7 @@ def render_md(meta, secs, frames, comments):
         md += ["## Top comments", ""] + [f"- **{c['author']}** ({c['likes']} likes): " + c["text"].replace("\n", " ")
                                          for c in comments] + [""]
     if not secs:
-        md += ["## Transcript", "", "_No English transcript on YouTube for this video._", ""]
+        md += ["## Transcript", "", "_No English transcript was downloaded for this video._", ""]
     chapter, fi = None, 0
     for s in secs:
         if s["chapter"] != chapter or chapter is None:
@@ -161,7 +164,12 @@ def scrap_youtube(url, tier="vibe", force=False, read=False, per_hour=PER_HOUR, 
     f = fetch_mod.fetch(url, video=tier != "transcript")
     info = f.info
     duration = int(info.get("duration") or 0)
-    cues = parse_vtt(open(f.subs, encoding="utf-8").read()) if f.subs else []
+    cues = parse_vtt(open(f.subs, encoding="utf-8").read(), auto=f.subs_kind == "auto") if f.subs else []
+    if not f.subs and fetch_mod.has_english(info):
+        print("warning: YouTube lists English subtitles but none were downloaded (rate limit?) — "
+              "rerun with --force later", file=sys.stderr)
+    if tier != "transcript" and not f.mp4:
+        print("warning: no video file was downloaded — the bundle has no frames", file=sys.stderr)
     chapters = [{"title": c.get("title") or "", "start": c["start_time"], "end": c.get("end_time")}
                 for c in info.get("chapters") or []]
     secs = sections(cues, info.get("chapters"), duration)

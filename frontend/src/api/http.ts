@@ -71,6 +71,8 @@ export function createHttpDataSource(fetchImpl: Fetch = (...a) => fetch(...a), b
     rawFileUrl: (path) => `${baseUrl ?? (globalThis.location?.origin || "")}/api/raw/${encodePath(path)}/file`,
     getRawPreview: (path) =>
       run(() => client.GET("/api/raw/{path}", { params: { path: { path } } }), `/api/raw/${path}`),
+    getVideo: (path) =>
+      run(() => client.GET("/api/videos/{path}", { params: { path: { path } } }), `/api/videos/${path}`),
     digestRaw: (path) =>
       run(() => client.POST("/api/raw/{path}/digest", { params: { path: { path } } }), `/api/raw/${path}/digest`),
 

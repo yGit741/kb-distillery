@@ -49,7 +49,8 @@ are follow-ups.
   description, chapters, top comments, then the transcript by chapter in ~3 min sections, each frame inline in the
   section where it was shown with its read (or OCR)
 - `video.json` — the same, structured, for the app; `info.json` (slim yt-dlp metadata); `transcript.vtt`
-- `frame-<seconds>.jpg` — gitignored binaries like PDFs, `asset:` rows of `video.md` in `meta/corpus.tsv`
+- `frame-<seconds>.jpg` — gitignored binaries like PDFs (git stays text-only), `asset:` rows of `video.md` in
+  `meta/corpus.tsv`; a clone or the shared site has the text and the frame links, not the images
 
 The video file stays in `.cache/youtube/<id>/` and never enters `raw/`.
 

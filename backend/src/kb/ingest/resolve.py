@@ -182,7 +182,7 @@ def resolve(query):
     if aid and not matches:
         matches.extend(_title_fallback(idx, aid))
 
-    yt = re.search(r"(?:youtube\.com/.*[?&]v=|youtu\.be/)([A-Za-z0-9_-]{11})", query)
+    yt = re.search(r"(?:youtube\.com/.*[?&]v=|youtu\.be/|youtube\.com/(?:shorts|live|embed)/)([A-Za-z0-9_-]{11})", query)
     if yt:                                    # a scrap-youtube bundle, digested or not
         from .youtube.bundle import ITEM, existing
         for folder in existing(yt.group(1), ROOT):
@@ -254,7 +254,8 @@ def format_human(result):
     else:
         lines.append(f"FOUND  {result.query}")
     for m in result.matches:
-        lines.append(f"  wiki/{m['slug']}  {m.get('raw') or '(no raw)'}")
+        page = f"wiki/{m['slug']}" if m.get("slug") else "(no page yet)"
+        lines.append(f"  {page}  {m.get('raw') or '(no raw)'}")
         if m.get("url"):
             lines.append(f"       url: {m['url']}")
         if m.get("reason"):

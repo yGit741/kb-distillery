@@ -1177,8 +1177,10 @@ def collect_snapshot(quiet=False):
         pages, rows, err_fn=err, warn_fn=warn, fresh=_ingest_strict_slugs())
 
     inbox = [r for r in raw_files if r.startswith(f"{RAW_DIR}/{RAW_INBOX}/")]
-    if len(inbox) >= INBOX_ERROR:
-        err("raw/inbox", f"{len(inbox)} files — triage them, the inbox must drain")
+    # a folder bundle (mail-<thread>/, video-<name>/) is one item to triage, however many files it holds
+    items = {"/".join(r.split("/")[:3]) for r in inbox}
+    if len(items) >= INBOX_ERROR:
+        err("raw/inbox", f"{len(items)} items — triage them, the inbox must drain")
     now = time.time()
     for rel in inbox:
         age = (now - os.path.getmtime(os.path.join(ROOT, rel))) / 86400

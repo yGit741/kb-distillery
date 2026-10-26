@@ -14,10 +14,11 @@ def ts(s):
     return f"{s // 3600}:{s % 3600 // 60:02d}:{s % 60:02d}"
 
 
-def parse_vtt(text):
+def parse_vtt(text, auto=None):
     """[(start_seconds, text)]. A manual track has one caption per block. Auto captions roll: each
-    block repeats the previous line and adds a word-timed new one, so only new last lines are kept."""
-    auto = "<c>" in text
+    block repeats the previous line and adds a word-timed new one, so only new last lines are kept.
+    `auto` None: guess from the word-timing tags."""
+    auto = "<c>" in text if auto is None else auto
     cues, prev = [], ""
     for block in re.split(r"\n\s*\n", text):
         m = _TIME.search(block)
