@@ -74,6 +74,20 @@ interface Spread {
 
 type Instance = ForceGraphInstance & { refresh?: () => unknown };
 
+/** The layout counts as settled below this alpha; d3's default decay reaches it in about 300 ticks. */
+export const ALPHA_MIN = 0.001;
+export const WARMUP_TICKS = 400;
+
+const prefersReducedMotion = () =>
+  typeof window !== "undefined" && !!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+
+/** Restart the layout: animated, or settled at once (off screen) when the viewer asked for reduced motion. */
+function reheat(g: Instance) {
+  // setting the same nodes again re-runs the off-screen warm-up from their current places
+  if (prefersReducedMotion()) g.graphData({ ...g.graphData() });
+  else g.d3ReheatSimulation();
+}
+
 const asSim = (n: NodeObject | null) => n as SimNode | null;
 const asLink = (l: LinkObject) => l as unknown as SimLink;
 
@@ -124,6 +138,10 @@ export const ForceGraph = forwardRef<ForceGraphHandle, ForceGraphProps & { class
       .linkLineDash((l) => (asLink(l as LinkObject).kind === "shared" ? [2, 2] : null))
       .linkCanvasObjectMode((l) => (asLink(l as LinkObject).kind === "shared" ? "after" : undefined as unknown as string))
       .linkDirectionalParticles(0)
+      // new data is laid out off screen and first drawn settled (ui-principles §29: nothing moves unasked);
+      // only a user's action (drag, spread, a layout or force change) animates the layout
+      .d3AlphaMin(ALPHA_MIN)
+      .warmupTicks(WARMUP_TICKS)
       .cooldownTicks(120)
       .nodeCanvasObjectMode(() => "replace")
       .enableNodeDrag(true)
@@ -268,18 +286,21 @@ export const ForceGraph = forwardRef<ForceGraphHandle, ForceGraphProps & { class
     };
   }, []);
 
-  // data: nodes keep their coordinates (the host merged them); a new array restarts the layout gently
+  // data: nodes keep their coordinates (the host merged them); a new array is settled off screen (warmupTicks)
   useEffect(() => {
     fg.current?.graphData(props.data as unknown as { nodes: NodeObject[]; links: LinkObject[] });
   }, [props.data]);
 
+  // the forces are set before the first layout; only a later change (the user's) restarts it
+  const forcesSet = useRef(false);
   useEffect(() => {
     const g = fg.current;
     if (!g) return;
     g.d3Force("charge")?.strength?.(props.forces.charge);
     g.d3Force("link")?.distance?.(props.forces.linkDistance);
     g.d3Force("center")?.strength?.(props.forces.gravity);
-    g.d3ReheatSimulation();
+    if (forcesSet.current) reheat(g);
+    forcesSet.current = true;
   }, [props.forces.charge, props.forces.linkDistance, props.forces.gravity]);
 
   useEffect(() => {
@@ -322,7 +343,10 @@ export const ForceGraph = forwardRef<ForceGraphHandle, ForceGraphProps & { class
           const p = inst.graph2ScreenCoords(n.x, n.y);
           return { x: p.x + r.left, y: p.y + r.top };
         },
-        reheat: () => void g()?.d3ReheatSimulation(),
+        reheat: () => {
+          const inst = g();
+          if (inst) reheat(inst);
+        },
         spreadAt: (cx, cy, radiusPx = 160) => {
           const inst = g();
           const r = host.current?.getBoundingClientRect();

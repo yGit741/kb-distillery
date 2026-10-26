@@ -295,8 +295,11 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
         : null,
     [anchors, ui.areaPull],
   );
+  // the first layout already uses the mode and pull (settled off screen); only the user's later change animates
+  const layoutSet = useRef(false);
   useEffect(() => {
-    fg.current?.reheat();
+    if (layoutSet.current) fg.current?.reheat();
+    layoutSet.current = true;
   }, [ui.layoutMode, ui.areaPull]);
 
   // ---- tool decor (experiment halos, faded links) is read at draw time; a change only needs a redraw
@@ -333,7 +336,8 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
   // ---- fit (largest connected component: stray islands drift far out and would shrink everything)
   const mounted = useRef(true);
   useEffect(() => () => void (mounted.current = false), []);
-  const fit = useCallback(() => {
+  const framed = useRef(false);
+  const fit = useCallback((ms = 400) => {
     // a canvas with no size yet (still laying out) would frame everything into its corner: try again shortly,
     // but never after unmount (a canvas that never gets a size, as in jsdom, would retry forever)
     if (!wrap.current?.clientWidth || !wrap.current.clientHeight) {
@@ -341,11 +345,11 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
       return;
     }
     const core = largestComponent(live.current.visible, live.current.neighbors);
-    fg.current?.fit(core.size > 1 ? (n) => core.has(n.id) || isPile(n) : undefined, 400);
+    fg.current?.fit(core.size > 1 ? (n) => core.has(n.id) || isPile(n) : undefined, ms);
     window.setTimeout(() => {
       k.current = fg.current?.zoom() ?? 1;
       recompute();
-    }, 450);
+    }, ms + 50);
   }, [recompute]);
 
   const fitRef = useRef(fit);
@@ -748,7 +752,9 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
   const onEngineStop = useCallback(() => {
     if (!pendingFit.current) return;
     pendingFit.current = false;
-    fit();
+    // the first frame is framed at once: a zoom animation on load is motion that explains nothing
+    fit(framed.current ? 400 : 0);
+    framed.current = true;
   }, [fit]);
 
   const onNodeHover = useCallback(

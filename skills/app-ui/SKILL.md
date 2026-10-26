@@ -157,7 +157,10 @@ a rule below.**
     appears while any is on.
 
 ### Layout and interaction
-19. **Fit after the layout settles**, and stop refitting once the user pans or zooms.
+19. **The graph is first drawn settled and still**: the layout runs off screen (`warmupTicks` to `d3AlphaMin`)
+    and the first fit is instant. The layout moves only on the user's action (drag, spread, a layout or force
+    change); mount never restarts it, and under `prefers-reduced-motion` a restart settles at once. Later fits
+    animate, and stop once the user pans or zooms. `[auto]` `frontend/e2e/graph-still.test.mjs`.
 20. **Topics anchored on a ring**; hulls truly round (Minkowski sum) and shown only when colour doesn't already
     say the same thing.
 21. **Hover dims lightly or not at all; only a selection dims the rest.** Hover commits on intent (dwell ~150 ms,
