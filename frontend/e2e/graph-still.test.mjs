@@ -123,3 +123,121 @@ e2e("the graph is still after its first frame with reduced motion", async () => 
   const share = await changedShare("reduce");
   assert.ok(share <= MAX_CHANGED, `${(share * 100).toFixed(1)}% of the canvas moved after the first frame`);
 });
+
+// ---- the user's hand: a click or a selection moves nothing; a drag moves the dragged page only
+
+const places = (page) => page.evaluate(() => window.__kbGraph.nodes());
+
+/** The largest distance any page other than `except` moved between two reads (screen px; graph units with ["gx", "gy"]). */
+function drift(before, after, except, [kx, ky] = ["x", "y"]) {
+  const at = new Map(after.map((n) => [n.id, n]));
+  let worst = { id: "", d: 0 };
+  for (const n of before) {
+    const m = at.get(n.id);
+    if (!m || n.id === except || !Number.isFinite(n[kx]) || !Number.isFinite(m[kx])) continue;
+    const d = Math.hypot(m[kx] - n[kx], m[ky] - n[ky]);
+    if (d > worst.d) worst = { id: n.id, d };
+  }
+  return worst;
+}
+
+/** A page well inside the canvas with no other page within `gap` px, so a click lands on it alone. */
+async function lonePage(page, skip = new Set(), gap = 24) {
+  const ns = await places(page);
+  const vw = 1440, vh = 900;
+  const ok = ns.filter((n) => !skip.has(n.id) && n.x > vw * 0.3 && n.x < vw * 0.7 && n.y > vh * 0.25 && n.y < vh * 0.75
+    && ns.every((o) => o === n || Math.hypot(o.x - n.x, o.y - n.y) > gap));
+  assert.ok(ok.length, "no isolated page to click");
+  return ok.sort((a, b) => (b.deg ?? 0) - (a.deg ?? 0))[0]; // the best-linked one: a drag pulls its neighbours
+}
+
+async function settledPage() {
+  const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+  await page.goto(`${base}/app/graph`);
+  await firstFrame(page);
+  await page.waitForFunction(() => window.__kbGraph && window.__kbGraph.nodes().length > 5, null, { timeout: 30000 });
+  await page.waitForTimeout(2500); // whatever the load does, it has done it
+  return page;
+}
+
+e2e("clicking a page (select) moves nothing", async () => {
+  const page = await settledPage();
+  try {
+    const n = await lonePage(page);
+    const before = await places(page);
+    await page.mouse.click(n.x, n.y);
+    await page.waitForTimeout(2000);
+    assert.ok(await page.evaluate(() => window.__kbGraph.selected()) > 0, `the click on ${n.id} selected nothing`);
+    const w = drift(before, await places(page));
+    assert.ok(w.d < 1, `clicking ${n.id} moved ${w.id} by ${w.d.toFixed(1)} px`);
+  } finally {
+    await page.close();
+  }
+});
+
+e2e("adding to the selection (Cmd+click) and clearing it moves nothing", async () => {
+  const page = await settledPage();
+  try {
+    const a = await lonePage(page);
+    await page.mouse.click(a.x, a.y);
+    await page.waitForTimeout(800);
+    const b = await lonePage(page, new Set([a.id]));
+    const before = await places(page);
+    await page.keyboard.down("Meta");
+    await page.mouse.click(b.x, b.y);
+    await page.keyboard.up("Meta");
+    await page.waitForTimeout(800);
+    assert.equal(await page.evaluate(() => window.__kbGraph.selected()), 2, "Cmd+click did not add the second page");
+    await page.keyboard.press("Escape");
+    await page.waitForTimeout(1500);
+    const w = drift(before, await places(page));
+    assert.ok(w.d < 1, `selecting moved ${w.id} by ${w.d.toFixed(1)} px`);
+  } finally {
+    await page.close();
+  }
+});
+
+e2e("selecting a page and dragging it moves that page only", async () => {
+  const page = await settledPage();
+  try {
+    const n = await lonePage(page, new Set(), 40);
+    const before = await places(page);
+    // select it, then drag it right away: the way people move a page they just picked
+    await page.mouse.click(n.x, n.y);
+    await page.waitForTimeout(150);
+    await page.mouse.move(n.x, n.y);
+    await page.mouse.down();
+    for (let i = 1; i <= 10; i++) await page.mouse.move(n.x + i * 8, n.y + i * 5, { steps: 2 });
+    await page.mouse.up();
+    await page.waitForTimeout(2000);
+    const after = await places(page);
+    const me = after.find((m) => m.id === n.id);
+    assert.ok(Math.hypot(me.x - n.x, me.y - n.y) > 40, `the dragged page ${n.id} did not follow the pointer`);
+    const w = drift(before, after, n.id);
+    assert.ok(w.d < 1, `dragging ${n.id} moved ${w.id} by ${w.d.toFixed(1)} px`);
+  } finally {
+    await page.close();
+  }
+});
+
+e2e("a filter change moves none of the pages that stay", async () => {
+  const page = await settledPage();
+  try {
+    const before = await places(page);
+    // "Connected" hides the orphans; the pages that stay must stay put
+    await page.locator('[title^="Only pages with at least"]').first().click();
+    await page.waitForTimeout(2000);
+    const fewer = await places(page);
+    assert.ok(fewer.length < before.length, "the Connected filter hid nothing");
+    let w = drift(before, fewer);
+    assert.ok(w.d < 1, `filtering moved ${w.id} by ${w.d.toFixed(1)} px`);
+    // and back: the hidden pages are placed off screen, the others keep their place in the layout (the view may
+    // re-frame for a new set of types: that is the camera, so this compares graph coordinates)
+    await page.getByRole("button", { name: "Show all" }).click();
+    await page.waitForTimeout(2000);
+    w = drift(fewer, await places(page), undefined, ["gx", "gy"]);
+    assert.ok(w.d < 0.5, `showing the hidden pages again moved ${w.id} by ${w.d.toFixed(1)} graph units`);
+  } finally {
+    await page.close();
+  }
+});

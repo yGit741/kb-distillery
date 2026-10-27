@@ -5,7 +5,7 @@ import { useTheme } from "@/theme/theme";
 import { readCanvasColors, withAlpha, type CanvasColors } from "./canvasTheme";
 import { computeFocus, fadedLinkOpacity, fadedNodeOpacity, focusKey, nodeOpacity, type Focus } from "./focus";
 import { ForceGraph, type Anchor, type ForceGraphHandle } from "./ForceGraph";
-import { buildGraphData, edgeWeight, edgeWeights, largestComponent, type NeighborMap } from "./graphData";
+import { buildGraphData, edgeWeight, edgeWeights, largestComponent, sameSet, type NeighborMap } from "./graphData";
 import { createHoverIntent, createSpeedMeter, HOVER_TUNING } from "./hoverIntent";
 import { drawArcs } from "./lab/arcs";
 import { drawHulls, drawLabelLayer, type FadeState } from "./lab/draw";
@@ -77,22 +77,36 @@ function metricOf(imp: Importance, n: GNode, by: SizeBy | ColorBy): number {
   return (imp.score.get(n.id) ?? 0) / (imp.maxScore || 1);
 }
 
-/** Topics pinned on a ring, one per theme; their pages are pulled toward it (the anchored, map-like layout). */
-function themeAnchors(nodes: readonly SimNode[], linkDistance: number): Map<string, readonly [number, number]> {
-  const topics = nodes.filter((n) => n.type === "topic").sort((a, b) => a.id.localeCompare(b.id));
-  const radius = (10 * Math.sqrt(nodes.length) + 60) * (linkDistance / 28);
+/**
+ * The ring: every topic of the vault at a fixed angle (by id), at a radius sized once from the first drawn set.
+ * Computed from the whole vault, not the drawn set, so a filter never re-spaces the map (ui-principles §29).
+ */
+export function themeRing(topicIds: readonly string[], drawnCount: number, linkDistance: number): Map<string, readonly [number, number]> {
+  const ids = [...topicIds].sort((a, b) => a.localeCompare(b));
+  const radius = (10 * Math.sqrt(drawnCount) + 60) * (linkDistance / 28);
+  return new Map(
+    ids.map((id, i) => {
+      const a = -Math.PI / 2 + (2 * Math.PI * i) / Math.max(1, ids.length);
+      return [id, [radius * Math.cos(a), radius * Math.sin(a)] as const];
+    }),
+  );
+}
+
+/** Topics pinned on the ring; their pages are pulled toward it (the anchored, map-like layout). */
+function themeAnchors(nodes: readonly SimNode[], ring: ReadonlyMap<string, readonly [number, number]>): Map<string, readonly [number, number]> {
   const out = new Map<string, readonly [number, number]>();
-  topics.forEach((t, i) => {
-    const a = -Math.PI / 2 + (2 * Math.PI * i) / Math.max(1, topics.length);
-    const p = [radius * Math.cos(a), radius * Math.sin(a)] as const;
+  for (const t of [...nodes].filter((n) => n.type === "topic").sort((a, b) => a.id.localeCompare(b.id))) {
+    const p = ring.get(t.id);
+    if (!p) continue;
     t.fx = p[0];
     t.fy = p[1];
     if (t.areas[0] && !out.has(t.areas[0])) out.set(t.areas[0], p);
-  });
+  }
   return out;
 }
 
 const endId = (e: string | SimNode) => (typeof e === "string" ? e : e.id);
+
 const DOUBLE_MS = 380;
 
 /**
@@ -139,7 +153,13 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
   const weights = useMemo(() => edgeWeights(model), [model]);
   const weightsRef = useRef(weights);
   weightsRef.current = weights;
-  const core = useMemo(() => largestComponent(visible, neighbors), [visible, neighbors]);
+  // the drawn set, swapped only when its members change: `visible` is a new Set on every selection change (the
+  // quick filters read the selection), and the force data built from it restarts the layout (a click used to move
+  // the graph). Everything keyed on the drawn set uses `shown`.
+  const drawn = useRef(visible);
+  if (!sameSet(drawn.current, visible)) drawn.current = visible;
+  const shown = drawn.current;
+  const core = useMemo(() => largestComponent(shown, neighbors), [shown, neighbors]);
   const coreRef = useRef(core);
   coreRef.current = core;
   const radiusOpts = useMemo(
@@ -155,7 +175,7 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
   const radiusRef = useRef(radiusOpts);
   radiusRef.current = radiusOpts;
   // each layer sized on its own scale (./style layeredRadii), over the pages drawn
-  const layered = useMemo(() => layeredRadii(model.nodes.filter((n) => visible.has(n.id)), radiusOpts), [model, visible, radiusOpts]);
+  const layered = useMemo(() => layeredRadii(model.nodes.filter((n) => shown.has(n.id)), radiusOpts), [model, shown, radiusOpts]);
   const layeredRef = useRef(layered);
   layeredRef.current = layered;
   const radius = useCallback(
@@ -270,18 +290,25 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
   // ---- data: positions of nodes that stay are carried over
   const data = useMemo(() => {
     const prev = new Map(fg.current?.nodes().map((n) => [n.id, { x: n.x, y: n.y, fx: n.fx, fy: n.fy }]) ?? []);
-    return buildGraphData(model, visible, prev);
-  }, [model, visible]);
+    return buildGraphData(model, shown, prev);
+  }, [model, shown]);
 
   // the anchored layout pins topics on a ring and pulls every page toward its theme; free unpins them
+  // the ring is sized once per vault and link distance (from the first drawn set), then stays where it is
+  const ringRef = useRef<{ model: GraphModel; linkDistance: number; ring: Map<string, readonly [number, number]> } | null>(null);
   const anchors = useMemo(() => {
     const nodes = data.nodes as SimNode[];
     if (ui.layoutMode !== "anchored") {
       for (const n of nodes) if (n.type === "topic") n.fx = n.fy = undefined;
       return null;
     }
-    return themeAnchors(nodes, ui.linkDistance);
-  }, [data, ui.layoutMode, ui.linkDistance]);
+    const r = ringRef.current;
+    if (!r || r.model !== model || r.linkDistance !== ui.linkDistance) {
+      const topics = model.nodes.filter((n) => n.type === "topic").map((n) => n.id);
+      ringRef.current = { model, linkDistance: ui.linkDistance, ring: themeRing(topics, nodes.length, ui.linkDistance) };
+    }
+    return themeAnchors(nodes, ringRef.current!.ring);
+  }, [data, model, ui.layoutMode, ui.linkDistance]);
   const anchor = useMemo<Anchor | null>(
     () =>
       anchors
@@ -371,7 +398,7 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
       useGraphUi.setState({ focusRequest: null });
       return;
     }
-    if (!visible.has(req.id)) {
+    if (!shown.has(req.id)) {
       useGraphUi.setState({ revealed: new Set([...live.current.ui.revealed, req.id]) });
       return;
     }
@@ -391,7 +418,7 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
     };
     attempt();
     return () => window.clearTimeout(timer);
-  }, [ui.focusRequest, byId, visible, data]);
+  }, [ui.focusRequest, byId, shown, data]);
 
   // ---- the magnetic pointer: nearest page within its own reach
   useEffect(() => {
@@ -558,6 +585,16 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
     }),
     [],
   );
+  // read-only probe for the e2e motion tests (frontend/e2e): every drawn page's id and screen position
+  useEffect(() => {
+    const w = window as unknown as { __kbGraph?: unknown };
+    w.__kbGraph = {
+      selected: () => live.current.selection.size,
+      nodes: () =>
+        (fg.current?.nodes() ?? []).map((n) => ({ id: n.id, type: n.type, deg: live.current.neighbors.get(n.id)?.length ?? 0, gx: n.x, gy: n.y, ...(fg.current?.screenOf(n) ?? { x: NaN, y: NaN }) })),
+    };
+    return () => void delete w.__kbGraph;
+  }, []);
 
   // ---- clicks
   const clickNode = useCallback(

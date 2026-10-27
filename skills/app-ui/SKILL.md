@@ -157,10 +157,13 @@ a rule below.**
     appears while any is on.
 
 ### Layout and interaction
-19. **The graph is first drawn settled and still**: the layout runs off screen (`warmupTicks` to `d3AlphaMin`)
-    and the first fit is instant. The layout moves only on the user's action (drag, spread, a layout or force
-    change); mount never restarts it, and under `prefers-reduced-motion` a restart settles at once. Later fits
-    animate, and stop once the user pans or zooms. `[auto]` `frontend/e2e/graph-still.test.mjs`.
+19. **A drawn page moves only when the user moves it.** The first layout runs off screen (`warmupTicks` to
+    `d3AlphaMin`) and the first fit is instant. Clicking, selecting, hovering and filtering never move a drawn
+    page: the force data is rebuilt only when the drawn set really changes (compared by members, never by Set
+    identity), and pages that stay are held (fx/fy) while newcomers are placed off screen. A drag moves the
+    dragged page only (no alphaTarget warm-up). Only explicit layout commands (spread, a layout or force change)
+    animate; under `prefers-reduced-motion` they settle at once. `[auto]` `frontend/e2e/graph-still.test.mjs`
+    (first frame, click, Cmd+click, select-then-drag; positions via `window.__kbGraph`).
 20. **Topics anchored on a ring**; hulls truly round (Minkowski sum) and shown only when colour doesn't already
     say the same thing.
 21. **Hover dims lightly or not at all; only a selection dims the rest.** Hover commits on intent (dwell ~150 ms,

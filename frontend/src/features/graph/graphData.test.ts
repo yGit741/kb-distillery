@@ -1,5 +1,5 @@
 import { sampleLinks, sampleNodes } from "./fixtures";
-import { buildGraphData, buildNeighborMap, edgeWeight, edgeWeights, largestComponent, sharedSourceLinks, sourcesDrawn, sourcesOf, withNeighbors } from "./graphData";
+import { buildGraphData, buildNeighborMap, edgeWeight, edgeWeights, largestComponent, sameSet, sharedSourceLinks, sourcesDrawn, sourcesOf, withNeighbors } from "./graphData";
 import type { GraphModel } from "./types";
 
 const model: GraphModel = {
@@ -97,5 +97,13 @@ describe("withNeighbors / largestComponent", () => {
   });
   it("copes with an empty set", () => {
     expect(largestComponent(new Set(), nb).size).toBe(0);
+  });
+});
+
+describe("sameSet", () => {
+  it("compares members, not Set identity", () => {
+    expect(sameSet(new Set(["a", "b"]), new Set(["b", "a"]))).toBe(true);
+    expect(sameSet(new Set(["a"]), new Set(["a", "b"]))).toBe(false);
+    expect(sameSet(new Set(["a", "c"]), new Set(["a", "b"]))).toBe(false);
   });
 });
