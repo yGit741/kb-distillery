@@ -143,6 +143,28 @@ describe("search", () => {
     await userEvent.type(await screen.findByRole("combobox", { name: /search a page/i }), "margin");
     expect(await screen.findByText("mentions margin")).toBeInTheDocument();
   });
+
+  it("shows meaning-based related hits under their own heading, and Enter centres on one", async () => {
+    const search = vi.fn(async () => ({
+      hits: [],
+      total: 0,
+      related: [{ id: "q-why-big-nets-work", title: "x", type: "question", score: 80, snippet: "Asks why overparameterized nets generalize." }],
+    }));
+    render(wrap(withGraph({ search }), <GraphScreen search={{}} host={host} />));
+    await userEvent.type(await screen.findByRole("combobox", { name: /search a page/i }), "why do big nets work");
+    expect(await screen.findByText("Related ideas")).toBeInTheDocument();
+    expect(screen.getByText("Asks why overparameterized nets generalize.")).toBeInTheDocument();
+    await userEvent.keyboard("{Enter}");
+    expect(useGraphUi.getState().focusRequest?.id).toBe("q-why-big-nets-work");
+  });
+
+  it("shows no related heading when the server sends none (flag off)", async () => {
+    const search = vi.fn(async () => ({ hits: [], total: 0, related: [] }));
+    render(wrap(withGraph({ search }), <GraphScreen search={{}} host={host} />));
+    await userEvent.type(await screen.findByRole("combobox", { name: /search a page/i }), "why do big nets work");
+    expect(await screen.findByText(/mentioning/i)).toBeInTheDocument();
+    expect(screen.queryByText("Related ideas")).not.toBeInTheDocument();
+  });
 });
 
 describe("deep links", () => {
