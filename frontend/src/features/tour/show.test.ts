@@ -24,8 +24,9 @@ describe("show-me", () => {
     expect(decodeShow(encodeShow({ title: "x", steps: [] }))).toBeNull();
   });
 
-  it("card text escapes HTML, keeps **bold** and numbers [n] references", () => {
-    expect(richText('<img src=x> **new** see [2]')).toBe('&lt;img src=x&gt; <strong>new</strong> see <span class="gt-n">2</span>');
+  it("card text escapes HTML, keeps **bold**, and a [n] reference wears its own mark's colour", () => {
+    expect(richText('<img src=x> **new** see [2]', ["new", "issue"])).toBe('&lt;img src=x&gt; <strong>new</strong> see <span class="gt-n gt-k-issue">2</span>');
+    expect(richText("[1]")).toBe('<span class="gt-n gt-k-focus">1</span>');
   });
 
   it("rings every mark in its colour with a numbered label, and performs `do` actions", async () => {
@@ -41,7 +42,7 @@ describe("show-me", () => {
     await tick(30);
     const rings = [...document.querySelectorAll(".gt-ring")];
     expect(rings.map((r) => r.className)).toEqual(["gt-ring gt-k-focus", "gt-ring gt-k-new"]);   // a missing mark is dropped
-    expect(rings[1]!.querySelector(".gt-tag")?.textContent).toBe("1new box");
+    expect(rings[1]!.querySelector(".gt-chip")?.textContent).toBe("1new box");
   });
 
   it("?show= plays the script after an intro card, without registering it", async () => {

@@ -70,8 +70,9 @@ committed or deployed; it plays on any build that has the engine. Keep the scrip
 
 UX rules it encodes (keep them): one idea per step (cognitive load); the spotlight and the dim do the pointing,
 the text only says *why* (signalling); a mark always has a number and label, colour is never the only cue;
-the same colour means the same thing in every show-me; act it out rather than say "click X" (show, don't
-tell); 3–6 steps.
+the same colour means the same thing in every show-me, and a `[n]` in the text wears its mark's colour; act it out rather than say "click X" (show, don't
+tell); 3–6 steps. Target a real box (a panel, an `aside`, a button), not a `display: contents` wrapper whose
+children are spread over the screen.
 
 ## Output
 
