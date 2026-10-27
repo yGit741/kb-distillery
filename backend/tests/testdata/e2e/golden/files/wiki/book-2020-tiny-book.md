@@ -10,6 +10,7 @@ book_pages: 61
 status: reading
 recommended_by: []
 related: []
+summary:
 ---
 
 # Tiny Book (2020)
