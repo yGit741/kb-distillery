@@ -12,7 +12,7 @@ import { useChatDock } from "./tools/chatDockStore";
 export const FINDER_ID = "graph-finder";
 
 type Item =
-  | { kind: "page"; node: GNode; snippet?: string }
+  | { kind: "page"; node: GNode; snippet?: string; related?: boolean }
   | { kind: "show"; label: string }
   | { kind: "mention"; q: string }
   | { kind: "agent"; question: string };
@@ -35,8 +35,9 @@ interface Props {
 }
 
 /**
- * Space search: title and slug matches, full-text hits, "pages mentioning …", and a pick list (Tab) that is
- * shown all at once with its neighbours. "/" sends the rest of the line to the chat dock.
+ * Space search: title and slug matches, full-text hits, "Related ideas" (meaning-based hits over the pages'
+ * summaries, when the server's semantic-search flag is on), "pages mentioning …", and a pick list (Tab)
+ * that is shown all at once with its neighbours. "/" sends the rest of the line to the chat dock.
  */
 export function Finder({ nodes, byId, colorBy, visible, onFocus, onRead, onShowPicked, onShowMentions, placement = "canvas" }: Props) {
   const [raw, setRaw] = useState("");
@@ -54,7 +55,7 @@ export function Finder({ nodes, byId, colorBy, visible, onFocus, onRead, onShowP
     return () => window.clearTimeout(t);
   }, [q]);
 
-  const text = useApiQuery<{ hits: SearchHit[] }>(["graph-text", debounced], (ds) => ds.search(debounced, 12), {
+  const text = useApiQuery<{ hits: SearchHit[]; related?: SearchHit[] | null }>(["graph-text", debounced], (ds) => ds.search(debounced, 12), {
     enabled: !agent && debounced.length >= 2,
     staleTime: 60_000,
   });
@@ -63,6 +64,10 @@ export function Finder({ nodes, byId, colorBy, visible, onFocus, onRead, onShowP
   const texts = useMemo(
     () => (agent || debounced !== q ? [] : textHits(text.data?.hits ?? [], byId, pages)),
     [text.data, byId, pages, agent, debounced, q],
+  );
+  const related = useMemo(
+    () => (agent || debounced !== q ? [] : textHits(text.data?.related ?? [], byId, [...pages, ...texts.map((h) => byId.get(h.id)!)], 5)),
+    [text.data, byId, pages, texts, agent, debounced, q],
   );
 
   const items = useMemo<Item[]>(() => {
@@ -74,9 +79,13 @@ export function Finder({ nodes, byId, colorBy, visible, onFocus, onRead, onShowP
       const node = byId.get(h.id);
       if (node) out.push({ kind: "page", node, snippet: h.snippet });
     });
+    related.forEach((h) => {
+      const node = byId.get(h.id);
+      if (node) out.push({ kind: "page", node, snippet: h.snippet, related: true });
+    });
     if (q.length >= 2) out.push({ kind: "mention", q: raw.trim() });
     return out;
-  }, [agent, raw, picked, pages, texts, byId, q]);
+  }, [agent, raw, picked, pages, texts, related, byId, q]);
 
   useEffect(() => setIdx(picked.size && !q ? 0 : picked.size ? 1 : 0), [items.length, picked.size, q]);
 
@@ -206,9 +215,14 @@ export function Finder({ nodes, byId, colorBy, visible, onFocus, onRead, onShowP
               ))}
             </li>
           )}
-          {items.map((it, i) => (
+          {items.map((it, i) => [
+            it.kind === "page" && it.related && !(items[i - 1]?.kind === "page" && (items[i - 1] as { related?: boolean }).related) && (
+              <li key="related-heading" role="presentation" className="px-2 pb-0.5 pt-2 text-xs text-muted-foreground">
+                Related ideas
+              </li>
+            ),
             <li
-              key={it.kind === "page" ? `${it.node.id}:${it.snippet ? "t" : "p"}` : it.kind}
+              key={it.kind === "page" ? `${it.node.id}:${it.related ? "r" : it.snippet ? "t" : "p"}` : it.kind}
               role="option"
               aria-selected={i === idx}
               className={cn("flex cursor-pointer items-start gap-2 rounded px-2 py-1.5", i === idx && "bg-accent")}
@@ -250,8 +264,8 @@ export function Finder({ nodes, byId, colorBy, visible, onFocus, onRead, onShowP
                   {agentNote && <span className="mt-1 block text-xs text-muted-foreground">{agentNote}</span>}
                 </span>
               )}
-            </li>
-          ))}
+            </li>,
+          ])}
           {!items.length && <li className="px-2 py-2 text-muted-foreground">Nothing matches.</li>}
         </ul>
       )}
