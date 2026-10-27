@@ -21,7 +21,8 @@ from kb.core.schema import make_slug
 HANDLES = ("url", "scholar", "github", "youtube", "blog", "wikipedia")
 EDGES = ("orgs", "advisors", "students")
 CONTACT = ("email",)
-FIELDS = {"type", "layer", "verified", *HANDLES, *EDGES, *CONTACT}
+SUMMARY_FIELDS = ("summary", "summary_from", "summary_by")   # schema 1.3, every page type (kb.core.summary)
+FIELDS = {"type", "layer", "verified", *HANDLES, *EDGES, *CONTACT, *SUMMARY_FIELDS}
 # Keys the pre-0.12 layouts used; migration 0006 moves their content into the body.
 LEGACY_FIELDS = ("status", "area", "related", "affiliation", "lab", "role", "optional", "tau_profile")
 NONE, UNKNOWN = "none", "unknown"
@@ -278,7 +279,7 @@ def check(slug, fm, body, pages):
             errors.append(f"`{k}:` is not a person field since schema 0.12 — run the person-v2 migration")
     for k in fm:
         if k not in FIELDS and k not in LEGACY_FIELDS:
-            errors.append(f"unknown person field `{k}:` — handles {HANDLES}, edges {EDGES}, email, verified")
+            errors.append(f"unknown person field `{k}:` — handles {HANDLES}, edges {EDGES}, email, verified, summary")
     for k in HANDLES:
         v = fm.get(k)
         if v is None:
