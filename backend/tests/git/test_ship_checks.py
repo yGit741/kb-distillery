@@ -19,7 +19,7 @@ class ChecksForTests(unittest.TestCase):
         self.assertEqual(names(["backend/src/kb/git/ship.py", "wiki/x.md"]), [])
 
     def test_frontend(self):
-        self.assertEqual(names(["frontend/src/App.tsx"]), ["web-check"])
+        self.assertEqual(names(["frontend/src/App.tsx"]), ["web-check", "test-ui-principles"])
 
     def test_flag_registry(self):
         self.assertEqual(names(["meta/flags.toml"]), ["flags-check"])
@@ -32,10 +32,10 @@ class ChecksForTests(unittest.TestCase):
         self.assertEqual(names(["backend/src/kb/dashboard/graph.html"]), ["test-e2e"])
 
     def test_graph_runs_the_still_canvas_e2e(self):
-        self.assertEqual(names(["frontend/src/features/graph/ForceGraph.tsx"]), ["web-check", "test-e2e"])
+        self.assertEqual(names(["frontend/src/features/graph/ForceGraph.tsx"]), ["web-check", "test-ui-principles", "test-e2e"])
 
     def test_frontend_api_runs_both(self):
-        self.assertEqual(names(["frontend/src/api/schema.d.ts"]), ["web-check", "api-schema-check"])
+        self.assertEqual(names(["frontend/src/api/schema.d.ts"]), ["web-check", "test-ui-principles", "api-schema-check"])
 
 
 class RunChecksTests(unittest.TestCase):
