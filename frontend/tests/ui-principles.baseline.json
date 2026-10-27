@@ -1,5 +1,5 @@
 {
-  "chat|*|4|button.inline-flex.items-center × button.inline-flex.items-center": 2,
+  "chat|*|4|button.inline-flex.items-center \u00d7 button.inline-flex.items-center": 2,
   "chat|light|5|p.max-w-prose.text-sm": 1,
   "chat|light|5|strong": 2,
   "graph|*|25|button.flex.shrink-#": 66,
@@ -59,6 +59,7 @@
   "system|light|5|span[tile-deploy-value].text-lg.font-semibold": 1,
   "system|light|5|span[tile-hygiene-value].text-lg.font-semibold": 1,
   "system|light|5|span[tile-lint-value].text-lg.font-semibold": 1,
+  "system|light|5|span[tile-merges-value].text-lg.font-semibold": 1,
   "system|light|5|span[tile-nightly-value].text-lg.font-semibold": 1,
   "system|light|5|span[tile-stale-value].text-lg.font-semibold": 1,
   "system|light|5|span[tile-version-value].text-lg.font-semibold": 1,
@@ -69,7 +70,7 @@
   "think|light|5|span.block.text-[#px]": 4,
   "think|light|5|span.block.truncate": 4,
   "think|light|5|span.shrink-#.text-xs": 1,
-  "think|light|5|span.ͼ#.ͼe": 4,
-  "think|light|5|span.ͼg": 31,
-  "think|light|5|span.ͼh": 1
+  "think|light|5|span.\u037c#.\u037ce": 4,
+  "think|light|5|span.\u037cg": 31,
+  "think|light|5|span.\u037ch": 1
 }
