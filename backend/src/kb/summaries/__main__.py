@@ -23,6 +23,7 @@ def cmd_run(a):
     if not a.redo:
         pages = [p for p in pages if not (p["slug"] in done and not done[p["slug"]]["problems"]
                                           and done[p["slug"]]["summary_from"] == P.summary_hash(p["text"]))]
+    pages.sort(key=lambda p: p["slug"] in done)           # pages that failed before go last, not first
     if a.slugs:
         want = set(a.slugs.split(","))
         pages = [p for p in pages if p["slug"] in want]
@@ -31,14 +32,13 @@ def cmd_run(a):
         print("nothing to do")
         return
     print(f"proposing {len(pages)} summaries with {a.model} ({P.PER_CALL}/call, {P.WORKERS} in flight)")
-    rows = P.propose(pages, model=a.model)
-    P.save(rows)
+    rows = P.propose(pages, model=a.model, on_rows=P.save)
     ok = sum(not r["problems"] for r in rows)
     usd = sum(r["usd"] for r in rows)
     print(f"{ok}/{len(rows)} valid · ${usd:.3f} as the CLI reports it (subscription) → {P.PROPOSALS}")
     for r in rows:
         if r["problems"]:
-            print(f"  ✗ {r['slug']}: {'; '.join(r['problems'])}")
+            print(f"  ✗ {r['slug']}: {'; '.join(r['problems'])}" + (f" [{r['error']}]" if r.get("error") else ""))
     sys.exit(0 if ok == len(rows) else 1)
 
 

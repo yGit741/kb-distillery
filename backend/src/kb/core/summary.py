@@ -32,9 +32,17 @@ def section(body, heading):
     return m.group(1).strip() if m else ""
 
 
+def _point_text(body):
+    """The body minus fenced code and the user/link sections, where H1 and lead lines can't count."""
+    body = re.sub(r"^```.*?^```", "", body, flags=re.M | re.S)
+    for h in ("My notes", "Links out"):
+        body = re.sub(rf"^## {re.escape(h)}\s*$.*?(?=^## |\Z)", "", body, flags=re.M | re.S)
+    return body
+
+
 def summary_hash(text):
     """Short sha256 of the parts of a page a summary depends on (whitespace-normalised)."""
-    body = body_of(text)
+    body = _point_text(body_of(text))
     parts = _H1.findall(body)[:1] + _LEAD.findall(body) + [section(body, "Key claims")]
     norm = "\n".join(" ".join(p.split()) for p in parts if p)
     return hashlib.sha256(norm.encode()).hexdigest()[:12]
@@ -46,7 +54,7 @@ def unquote(v):
 
 
 def problems(summary):
-    """Why a summary is not acceptable ([] = fine). Mirrors what lint enforces."""
+    """Why a summary is not acceptable ([] = fine). Lint (schema 1.3) enforces the same list."""
     s = summary or ""
     out = []
     if not SUMMARY_MIN <= len(s) <= SUMMARY_MAX:
@@ -55,6 +63,8 @@ def problems(summary):
         out.append("contains a newline")
     if "#" in s or '"' in s:
         out.append('contains # or " (breaks the flat frontmatter parser)')
+    if "\\" in s or "[[" in s or "]]" in s:
+        out.append("contains a backslash or a wikilink")
     if _HEBREW.search(s):
         out.append("not English (Hebrew letters)")
     return out

@@ -32,7 +32,7 @@ Reply with ONLY one JSON object mapping each slug to its grade, no prose:
 
 def _items(rows, pages):
     return "\n\n".join(f"<item slug=\"{r['slug']}\">\n{P.page_input(pages[r['slug']])}\n"
-                       f"<summary>{r['summary']}</summary>\n</item>" for r in rows)
+                       f"<summary>{r['summary'].replace('<', '‹')}</summary>\n</item>" for r in rows)
 
 
 def grade_chunk(rows, pages, model=JUDGE_MODEL):
@@ -41,11 +41,13 @@ def grade_chunk(rows, pages, model=JUDGE_MODEL):
     out = []
     for r in rows:
         g = got.get(r["slug"])
-        if isinstance(g, dict) and all(k in g for k in CRITERIA):
-            g["score"] = round(sum(float(g[k]) for k in CRITERIA) / len(CRITERIA), 2)
-            g["faithful_fail"] = bool(g.get("faithful_fail"))
-        else:
-            g = {"score": None, "why": err or "judge returned no grade"}
+        try:
+            vals = [float(g[k]) for k in CRITERIA]
+            if not all(1 <= v <= 5 for v in vals):
+                raise ValueError("score out of 1-5")
+            g = {**g, "score": round(sum(vals) / len(vals), 2), "faithful_fail": bool(g.get("faithful_fail"))}
+        except (TypeError, KeyError, ValueError) as e:
+            g = {"score": None, "why": err or f"judge returned no usable grade ({type(e).__name__})"}
         out.append({"slug": r["slug"], "summary": r["summary"], **g, "usd": round(usd / len(rows), 5)})
     return out
 
@@ -53,7 +55,8 @@ def grade_chunk(rows, pages, model=JUDGE_MODEL):
 def judge(slugs=None, model=JUDGE_MODEL, workers=4, log=print):
     pages = {p["slug"]: p for p in P.load_pages()}
     rows = [r for r in P.latest().values()
-            if not r["problems"] and r["slug"] in pages and (not slugs or r["slug"] in slugs)]
+            if not r["problems"] and r["slug"] in pages and (not slugs or r["slug"] in slugs)
+            and r["summary_from"] == P.summary_hash(pages[r["slug"]]["text"])]   # graded against the page it came from
     chunks = [rows[i:i + PER_CALL] for i in range(0, len(rows), PER_CALL)]
     grades = []
     with cf.ThreadPoolExecutor(workers) as ex:
