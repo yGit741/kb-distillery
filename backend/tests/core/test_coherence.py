@@ -137,3 +137,23 @@ status: digested
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class IndexDriftTest(unittest.TestCase):
+    def test_summary_in_index_is_not_drift(self):
+        import tempfile
+        from unittest import mock
+        from kb.core import coherence
+        summary = "A paper proving tensor rank bounds for deep linear networks and what they imply."
+        path, fm, text = _paper("paper-s", "We prove tensor rank bounds for deep linear networks")
+        fm = {**fm, "summary": f'"{summary}"'}
+        with tempfile.TemporaryDirectory() as root:
+            with open(os.path.join(root, "index.md"), "w") as f:
+                f.write(f"| [[paper-s]] | digested | {summary} |\n")
+            with mock.patch.object(coherence, "ROOT", root):
+                hits = check_coherence({"paper-s": (path, fm, text)}, rows={})
+                self.assertFalse(any("index summary" in h["summary"] for h in hits))
+                fm2 = {k: v for k, v in fm.items() if k != "summary"}       # no summary: first line must match
+                text2 = text.replace("**Main result:**", "A plain first line about something else entirely.\n\n**Main result:**")
+                hits = check_coherence({"paper-s": (path, fm2, text2)}, rows={})
+                self.assertTrue(any("index summary" in h["summary"] for h in hits))
