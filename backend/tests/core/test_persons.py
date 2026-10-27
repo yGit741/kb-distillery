@@ -109,6 +109,10 @@ class CheckTest(unittest.TestCase):
         self.assertTrue(any("`status:` is not a person field" in e for e in errs))
         self.assertTrue(any("`area:` is not a person field" in e for e in errs))
 
+    def test_summary_fields_are_person_fields(self):
+        errs, _w, _s = self.check(V2.replace("type: person", 'type: person\nsummary: "x"\nsummary_from: abc\nsummary_by: me'))
+        self.assertFalse(any("summary" in e for e in errs))
+
     def test_unverified_page_is_backlog_not_error(self):
         text = V2.replace("verified: 2026-10-21\n", "")
         errs, warns, stats = self.check(text)

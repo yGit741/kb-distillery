@@ -82,7 +82,7 @@
     limit = limit || 40;
     const d = data();
     const q = (query || "").trim().toLowerCase();
-    if (!d || q.length < 2) return { query: query, total: 0, hits: [] };
+    if (!d || q.length < 2) return { query: query, total: 0, hits: [], related: [] };
     const terms = q.split(/\s+/).filter(Boolean);
     const hits = [];
     for (const slug of Object.keys(d.pages)) {
@@ -108,10 +108,10 @@
           break;
         }
       }
-      hits.push({ id: slug, title, type: page.card.type || "unknown", snippet: snippet || page.card.preview || "", score });
+      hits.push({ id: slug, title, type: page.card.type || "unknown", depth: page.card.depth || "", snippet: snippet || page.card.preview || "", score });
     }
     hits.sort((a, b) => (b.score - a.score) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
-    return { query: query, total: hits.length, hits: hits.slice(0, limit) };
+    return { query: query, total: hits.length, hits: hits.slice(0, limit), related: [] };   // related: local qmd only
   }
 
   function adjacency(d) {

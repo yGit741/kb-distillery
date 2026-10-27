@@ -60,8 +60,9 @@ A `fix` verdict means the page is corrected (in an ops session, see `wiki-edit`)
 2. Read `abstract.text` (~2–4k tokens max)
 3. Update wiki: **Problem**, **Main result** from abstract only
    (a `q-` page you touch: keep its H1 a short name ≤ 80 chars and fill `## Question` with the formal statement)
-4. Run `pixi run lint`
-5. For a batch: `easy-spotcheck pick` over the new slugs; have Sonnet re-read the picked ones and
+4. Then refresh the page's `summary:` (schema 1.3): `pixi run summarize -- run --slugs <slug>` then `pixi run summarize -- apply --slugs <slug>` inside the open ops session — a deeper page always gets a new one; skip pages marked `summary_by: me`
+5. Run `pixi run lint`
+6. For a batch: `easy-spotcheck pick` over the new slugs; have Sonnet re-read the picked ones and
    `easy-spotcheck log` each verdict
 
 ## Commit

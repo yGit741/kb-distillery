@@ -42,6 +42,10 @@ scrap-gdrive = "python -m kb.ingest scrap-gdrive"
 distill-propose = "python -m kb.distill propose"
 distill-apply = "python -m kb.distill apply"
 query-candidates = "python -m kb.search.query candidates"
+summarize = "python -m kb.summaries"
+qmd-install = "npm ci --no-fund --no-audit --prefix tools/qmd"
+qmd-serve = "node tools/qmd/server.mjs"
+qmd-cards = "python -m kb.search.cards"
 coherence-status = "python -m kb.core.coherence status"
 semfind-bundle = "python -m kb.search.semfind bundle"
 semfind-moc = "python -m kb.search.semfind moc"
@@ -72,6 +76,7 @@ flags-check = "python -m kb.flags.codegen --check && python -m kb.flags.coverage
 web-check = { cmd = "python -m kb.flags.codegen --check && python -m kb.flags.coverage && npm run typecheck --prefix frontend && npm run test --prefix frontend && npm run build:check --prefix frontend && bash tools/check-untracked-dist.sh" }
 test-worker = "node --test share/*.test.mjs"
 test-e2e = "node --test backend/src/kb/dashboard/e2e/*.test.mjs frontend/e2e/*.test.mjs"
+test-ui-principles = "node --test frontend/tests/ui-principles.test.mjs"
 install-sync = "bash tools/launchd/install.sh"
 install-deploy-owner = "bash tools/launchd/install-deploy-owner.sh"
 

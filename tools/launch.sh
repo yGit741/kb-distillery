@@ -23,6 +23,24 @@ fi
 
 find backend -name __pycache__ -type d -prune -exec rm -rf {} + 2>/dev/null || true
 
+# The qmd search service (tools/qmd, `pixi run qmd-install` once): long-running so its model stays warm.
+# Main checkout only — a worktree would start a second index and download the models again. Restarted
+# like the dashboard so a changed server.mjs takes effect.
+QMD_PORT="${KB_QMD_PORT:-8766}"
+QMD_LOG="${TMPDIR:-/tmp}/thesis-kb-qmd.log"
+if [[ "$PWD" == */.claude/worktrees/* ]]; then
+  echo "qmd search service: not started from a worktree (the main checkout's service serves search)"
+elif [[ ! -d tools/qmd/node_modules ]]; then
+  echo "qmd search service: not installed (pixi run qmd-install) — search shows keyword hits only"
+elif ! command -v node >/dev/null 2>&1 || (( $(node -p 'process.versions.node.split(".")[0]') < 22 )); then
+  echo "qmd search service: needs node >= 22 — search shows keyword hits only"
+else
+  old=$(lsof -ti "tcp:${QMD_PORT}" -sTCP:LISTEN 2>/dev/null || true)
+  [[ -n "$old" ]] && { kill $old 2>/dev/null || true; sleep 1; }
+  nohup node tools/qmd/server.mjs >"$QMD_LOG" 2>&1 &
+  echo "started qmd search service (pid $!), log: $QMD_LOG"
+fi
+
 nohup python -m kb.api --port "$PORT" --no-open >"$LOG" 2>&1 &
 echo "started dashboard (pid $!), log: $LOG"
 

@@ -95,6 +95,7 @@ Untitled*.md
 # Frontend build output is never committed: kb.api rebuilds frontend/dist from source on start when the
 # sources changed, share builds dist-share/ on demand (web-check fails if either is tracked)
 frontend/node_modules
+tools/qmd/node_modules
 frontend/dist/
 frontend/dist-share/
 

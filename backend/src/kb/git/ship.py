@@ -342,6 +342,8 @@ def checks_for(paths):
         checks.append(("flags-check", ["pixi", "run", "flags-check"]))
     if hit("frontend/"):
         checks.append(("web-check", ["pixi", "run", "web-check"]))
+        # the [auto] ui-principles (overlap, clipping, targets, contrast, colour literals, load errors), every screen
+        checks.append(("test-ui-principles", ["pixi", "run", "test-ui-principles"]))
     if hit("backend/src/kb/api/", "frontend/src/api"):
         checks.append(("api-schema-check", ["pixi", "run", "api-schema-check"]))
     # the graph's motion lives in the canvas: only the e2e still-canvas test sees it (frontend/e2e)
@@ -369,8 +371,8 @@ def run_checks(root=ROOT, skip_reason=None, paths=None):
             print(f"checks skipped ({', '.join(n for n, _ in checks)}): {skip_reason}")
         return True
     for name, cmd in checks:
-        if name == "test-e2e" and not e2e_available(root):
-            print("check: test-e2e skipped (node/playwright not available)")
+        if name in ("test-e2e", "test-ui-principles") and not e2e_available(root):
+            print(f"check: {name} skipped (node/playwright not available)")
             continue
         print(f"check: {name}")
         cp = subprocess.run(cmd, cwd=root, capture_output=True, text=True, check=False)
@@ -1203,7 +1205,7 @@ def main(argv=None):
     r.add_argument("--title")
     r.add_argument("--skip-tests", action="store_true")
     r.add_argument("--notes", metavar="FILE", help="markdown appended to the PR body as ## Notes")
-    r.add_argument("--skip-checks", metavar="REASON", help="bypass the lane checks (web-check, api-schema-check, test-e2e); the reason goes in the PR body")
+    r.add_argument("--skip-checks", metavar="REASON", help="bypass the lane checks (web-check, test-ui-principles, api-schema-check, test-e2e); the reason goes in the PR body")
     r.add_argument("--hold", action="store_true", help="the user wants to review it: merge waits for `approve`")
     ap = sub.add_parser("approve", help="USER ONLY: lift the hold on PR N (agents are blocked by git_guard)")
     ap.add_argument("number", type=int)
