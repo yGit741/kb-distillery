@@ -72,6 +72,7 @@ flags-check = "python -m kb.flags.codegen --check && python -m kb.flags.coverage
 web-check = { cmd = "python -m kb.flags.codegen --check && python -m kb.flags.coverage && npm run typecheck --prefix frontend && npm run test --prefix frontend && npm run build:check --prefix frontend && bash tools/check-untracked-dist.sh" }
 test-worker = "node --test share/*.test.mjs"
 test-e2e = "node --test backend/src/kb/dashboard/e2e/*.test.mjs frontend/e2e/*.test.mjs"
+test-ui-principles = "node --test frontend/tests/ui-principles.test.mjs"
 install-sync = "bash tools/launchd/install.sh"
 install-deploy-owner = "bash tools/launchd/install-deploy-owner.sh"
 
