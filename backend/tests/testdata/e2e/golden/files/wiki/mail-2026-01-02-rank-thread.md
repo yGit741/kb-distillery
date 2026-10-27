@@ -7,6 +7,7 @@ depth: easy
 raw: raw/emails/2026-01-02-rank-thread/thread.md
 date:
 aliases: []
+summary:
 ---
 
 # 2026 01 02 Rank Thread
