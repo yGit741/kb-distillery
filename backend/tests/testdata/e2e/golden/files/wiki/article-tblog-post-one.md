@@ -9,6 +9,7 @@ depth: easy
 raw: raw/web-clips/tblog-post-one.md
 url:
 date:
+summary:
 ---
 
 # Tblog Post One
