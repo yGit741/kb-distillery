@@ -37,6 +37,7 @@ from kb.core.books import (DIGESTED, OVERVIEW_HEADING, OVERVIEW_MIN_CHARS, PARTI
 from kb.core import hubs
 from kb.core import persons
 from kb.core import scopes as scope_lib
+from kb.core import summary as summary_lib
 from kb.core import wikiio
 try:
     from kb.ingest import arxiv_meta          # page-1 arXiv stamps (check_arxiv_stamps)
@@ -423,6 +424,7 @@ def _coherence_only_main():
 # --------------------------------------------------------------------------
 def check_wiki():
     pages = {}
+    no_summary = []
     for rel in walk(WIKI_DIR, ".md"):
         parts = rel.split("/")
         text = open(os.path.join(ROOT, rel), encoding="utf-8").read()
@@ -507,6 +509,8 @@ def check_wiki():
                     err(rel, f"distilled-think page missing ## {heading}")
         if t == "question":
             check_question_page(rel, text)
+        if not check_summary(rel, fm, text):
+            no_summary.append(rel)
         if t == "scope":
             if scope_lib.WHY_HEADING not in text or not scope_lib.why_text(text):
                 err(rel, "scope page needs a non-empty ## Why (the reason this working set exists)")
@@ -526,6 +530,8 @@ def check_wiki():
     for theme in sorted(TOPIC_SLUGS):
         if TOPIC_PREFIX + theme not in pages:
             warn(WIKI_DIR, f"missing topic page [[{TOPIC_PREFIX}{theme}]] — every area: needs one")
+    if no_summary:      # one line, not one per page, while the backfill runs
+        warn(WIKI_DIR, f"{len(no_summary)} page(s) have no summary: — `pixi run summarize -- plan` lists them")
     return pages
 
 
@@ -554,6 +560,24 @@ def check_question_page(rel, text):
         warn(rel, f"question title is {len(h1)} chars (> {QUESTION_TITLE_WARN}) — {hint}")
     if not has_section(text, QUESTION_HEADING):
         err(rel, f"question page missing `{QUESTION_HEADING}` — the formal statement of the question")
+
+
+def check_summary(rel, fm, text):
+    """`summary:` — one English line, "what it is + main point" (kb.core.summary). Missing warns for now
+    (the backfill is running; check_wiki reports them as one line); a malformed one is an error;
+    `summary_from` ≠ the page's hash warns stale. Returns False only when a needed summary is missing."""
+    s = summary_lib.unquote(fm.get("summary"))
+    if not s:
+        return not summary_lib.needs_summary(fm)
+    for p in summary_lib.problems(s):
+        err(rel, f"summary: {p}")
+    by = fm.get("summary_by")
+    if by and by != "me":
+        err(rel, f"summary_by: {by} — the only value is `me` (a summary you wrote; digests never overwrite it)")
+    if by != "me" and fm.get("summary_from") != summary_lib.summary_hash(text):
+        warn(rel, "summary may be stale (Key claims / main result changed since it was written) — "
+                  "re-run `pixi run summarize -- run --slugs <slug>`, or keep it with summary_by: me")
+    return True
 
 
 def _check_slug(rel, slug, t):
@@ -1327,7 +1351,7 @@ def write_index(pages, quiet=False):
             rel, fm, text = pages[slug]
             if fm.get("type") != t:
                 continue
-            s = first_line(text).replace("|", "\\|")
+            s = (summary_lib.unquote(fm.get("summary")) or first_line(text)).replace("|", "\\|")
             if len(s) > 110:
                 s = s[:107] + "..."
             rows.append(f"| [[{slug}]] | {fm.get('status','')} | {s} |")

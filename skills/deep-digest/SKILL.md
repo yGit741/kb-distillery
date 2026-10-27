@@ -46,6 +46,10 @@ Connections required.
 - Topic slugs in `claims.json` `concepts` (a protocol key, kept) map to `area:`, not to new idea pages.
 - A `q-` stub's H1 is the question's short name (≤ 80 chars, lint errors above); write the formal statement under `## Question` (required) before `finalize`.
 
+## Summary
+
+After finalize, refresh the page's `summary:` (schema 1.3): `pixi run summarize -- run --slugs <slug>` then `pixi run summarize -- apply --slugs <slug>` inside the open ops session — a deeper page always gets a new one; skip pages marked `summary_by: me`.
+
 ## Commit
 
 The CLI commits this operation itself as `kb(digest): … (kb-x.y.z)` on main — only the files it changed (`--no-commit` to skip). Check with `pixi run ops -- log -n 1`. `finalize` is the commit point.

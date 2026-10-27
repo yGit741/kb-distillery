@@ -62,17 +62,18 @@ export const ACTIVE_CLASS = "gt-active";
 
 const CSS = `
 .gt-veil{position:fixed;inset:0;z-index:9997;width:100vw;height:100vh;pointer-events:none}
-.gt-ring{position:fixed;z-index:9998;border-radius:10px;pointer-events:none;border:2px solid var(--gt-c);box-shadow:0 0 0 4px color-mix(in srgb,var(--gt-c) 22%,transparent);transition:all .28s ease}
-.gt-tag{position:absolute;top:-11px;left:-11px;display:flex;align-items:center;gap:6px;font:600 12px/1 system-ui,sans-serif;white-space:nowrap}
-.gt-tag b{display:grid;place-items:center;width:22px;height:22px;border-radius:999px;background:var(--gt-c);color:#fff;box-shadow:0 2px 6px rgba(0,0,0,.3)}
-.gt-tag span{background:var(--card,#fff);color:var(--foreground,#18202b);border:1px solid var(--gt-c);border-radius:6px;padding:4px 6px}
+.gt-ring{position:fixed;z-index:9998;border-radius:10px;pointer-events:none;border:1.5px solid var(--gt-c);box-shadow:0 0 0 3px color-mix(in srgb,var(--gt-c) 16%,transparent);transition:all .28s ease}
+.gt-chip{position:absolute;left:-1.5px;bottom:calc(100% + 6px);display:flex;align-items:center;gap:6px;padding:3px 9px 3px 3px;border-radius:999px;background:var(--card,#fff);color:var(--foreground,#18202b);border:1px solid color-mix(in srgb,var(--gt-c) 40%,var(--border,#e4e4e7));box-shadow:0 4px 14px rgba(0,0,0,.14);font:500 12px/16px system-ui,sans-serif;white-space:nowrap}
+.gt-chip.gt-below{bottom:auto;top:calc(100% + 6px)}
+.gt-chip:not(:has(span)){padding:3px}
+.gt-n{display:inline-grid;place-items:center;width:16px;height:16px;border-radius:999px;background:var(--gt-c);color:#fff;font:600 10.5px/1 system-ui,sans-serif;font-variant-numeric:tabular-nums}
 .gt-k-focus{--gt-c:var(--primary,#2563eb)}.gt-k-new{--gt-c:var(--ok,#16a34a)}.gt-k-changed{--gt-c:var(--warn,#ca8a04)}.gt-k-issue{--gt-c:var(--bad,#dc2626)}
 .gt-dot{position:fixed;z-index:10000;width:18px;height:18px;margin:-9px 0 0 -9px;border-radius:999px;background:color-mix(in srgb,var(--primary,#2563eb) 35%,transparent);border:2px solid var(--primary,#2563eb);pointer-events:none;transition:left .45s ease,top .45s ease,transform .15s}
 .gt-dot.gt-press{transform:scale(.6)}
 .gt-card{position:fixed;z-index:9999;width:min(320px,calc(100vw - 32px));background:var(--card,#fff);color:var(--foreground,#18202b);border:1px solid var(--border,#dde2ea);border-left:4px solid var(--gt-c,var(--primary,#2563eb));border-radius:10px;padding:12px 14px;box-shadow:0 12px 32px rgba(0,0,0,.28);font:14px/1.5 system-ui,sans-serif;transition:top .28s,left .28s;pointer-events:none}
 .gt-card h4{margin:0 0 4px;font-size:15px;font-weight:600}.gt-card p{margin:0;color:var(--muted-foreground,#5b6676)}
 .gt-card strong{color:var(--foreground,#18202b);font-weight:600}
-.gt-card .gt-n{display:inline-grid;place-items:center;width:18px;height:18px;border-radius:999px;background:var(--gt-c);color:#fff;font:600 11px/1 system-ui,sans-serif;vertical-align:1px}
+.gt-card .gt-n{vertical-align:1px}
 .gt-dock{position:fixed;z-index:9999;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);display:flex;align-items:center;gap:10px;background:var(--card,#fff);color:var(--foreground,#18202b);border:1px solid var(--border,#dde2ea);border-radius:999px;padding:6px 8px 6px 14px;box-shadow:0 8px 24px rgba(0,0,0,.25);font:13px system-ui,sans-serif;pointer-events:auto}
 .gt-dock button{font:inherit;border:0;border-radius:999px;padding:6px 14px;cursor:pointer;background:transparent;color:inherit}
 .gt-dock button:disabled{opacity:.35;cursor:default}
@@ -114,13 +115,28 @@ export const routesOf = (steps: readonly TourStep[]): string[] => {
 const inField = (t: EventTarget | null) =>
   t instanceof HTMLElement && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable);
 
-/** Card text: plain text with `**bold**` and ①-style references `[1]` to the step's numbered marks. */
-export function richText(text: string): string {
+/**
+ * Card text: plain text with `**bold**` and `[1]`-style references to the step's numbered marks. A reference
+ * wears its mark's colour (`kinds[n-1]`), so ③ is the same red in the text as on the screen.
+ */
+export function richText(text: string, kinds: readonly MarkKind[] = []): string {
   const esc = text.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
-  return esc.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>").replace(/\[(\d)\]/g, '<span class="gt-n">$1</span>');
+  return esc
+    .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+    .replace(/\[(\d)\]/g, (_, n: string) => `<span class="gt-n gt-k-${kinds[Number(n) - 1] ?? "focus"}">${n}</span>`);
 }
 
 const SVG = "http://www.w3.org/2000/svg";
+
+/** An element's box; a `display: contents` wrapper has none, so it is the union of its children's. */
+export function rectOf(el: Element): DOMRect {
+  const r = el.getBoundingClientRect();
+  if (r.width || r.height || !el.children.length) return r;
+  const rs = [...el.children].map(rectOf).filter((c) => c.width || c.height);
+  if (!rs.length) return r;
+  const left = Math.min(...rs.map((c) => c.left)), top = Math.min(...rs.map((c) => c.top));
+  return new DOMRect(left, top, Math.max(...rs.map((c) => c.right)) - left, Math.max(...rs.map((c) => c.bottom)) - top);
+}
 /** true while a scripted `press` is dispatched: that key belongs to the app, not to the tour */
 let scripted = false;
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
@@ -214,7 +230,7 @@ export function startTour(steps: TourStep[], opts: TourOptions = {}): void {
     const s = steps[i]!;
     const pad = s.pad ?? 6;
     shade.setAttribute("fill-opacity", String(Math.min(0.85, Math.max(0, s.dim ?? 0.55))));
-    const boxes = lit.map((l) => l.el.getBoundingClientRect());
+    const boxes = lit.map((l) => rectOf(l.el));
     // one cut per lit element (kept in order, so the mask animates between steps), extras removed
     const cuts = [...mask.querySelectorAll("rect.gt-cut")];
     boxes.forEach((r, k) => {
@@ -231,11 +247,25 @@ export function startTour(steps: TourStep[], opts: TourOptions = {}): void {
       let ring = ringEls[k];
       if (!ring) { ring = div("gt-ring"); rings.append(ring); }
       ring.className = `gt-ring gt-k-${l.kind}`;
-      ring.innerHTML = l.n ? `<div class="gt-tag"><b>${l.n}</b>${l.label ? "<span></span>" : ""}</div>` : "";
-      if (l.label && l.n) ring.querySelector("span")!.textContent = l.label;
+      // one chip per mark: number + label, above the ring, or below it when the ring hugs the top edge
+      ring.innerHTML = l.n ? `<div class="gt-chip${r.top - pad < 40 ? " gt-below" : ""}"><b class="gt-n">${l.n}</b>${l.label ? "<span></span>" : ""}</div>` : "";
+      if (l.label && l.n) ring.querySelector(".gt-chip span")!.textContent = l.label;
       Object.assign(ring.style, { top: `${r.top - pad}px`, left: `${r.left - pad}px`, width: `${r.width + pad * 2}px`, height: `${r.height + pad * 2}px` });
     });
     ringEls.slice(lit.length).forEach((r) => r.remove());
+    // a chip that lands on an earlier one moves to the other side of its ring; boxes come from the targets,
+    // not the rings, which are still gliding into place
+    const placed: number[][] = [];
+    lit.forEach((_, k) => {
+      const chip = rings.children[k]?.querySelector<HTMLElement>(".gt-chip");
+      if (!chip) return;
+      const r = boxes[k]!, w = chip.offsetWidth, h = chip.offsetHeight, x = r.left - pad;
+      const at = (below: boolean) => [x, below ? r.bottom + pad + 6 : r.top - pad - 6 - h, x + w, below ? r.bottom + pad + 6 + h : r.top - pad - 6];
+      const hits = (b: number[]) => placed.some((p) => b[0]! < p[2]! && p[0]! < b[2]! && b[1]! < p[3]! + 4 && p[1]! < b[3]! + 4);
+      let below = chip.classList.contains("gt-below");
+      if (hits(at(below))) chip.classList.toggle("gt-below", (below = !below));
+      placed.push(at(below));
+    });
 
     const main = lit[0]?.n ? null : boxes[0];   // a step with no target has only numbered marks
     card.className = `gt-card gt-k-${s.kind ?? "focus"}`;
@@ -284,7 +314,7 @@ export function startTour(steps: TourStep[], opts: TourOptions = {}): void {
     lit = [...(target ? [{ el: target, kind: s.kind ?? "focus" }] : []), ...marks.filter((m) => m.el)] as typeof lit;
     card.innerHTML = `<h4></h4><p></p>`;
     card.querySelector("h4")!.textContent = s.title;
-    card.querySelector("p")!.innerHTML = richText(s.body);
+    card.querySelector("p")!.innerHTML = richText(s.body, (s.marks ?? []).map((m) => m.kind ?? "focus"));
     count.textContent = `${i + 1} / ${steps.length}`;
     backB.disabled = i === 0;
     nextB.textContent = i === steps.length - 1 ? "Done" : "Next ›";

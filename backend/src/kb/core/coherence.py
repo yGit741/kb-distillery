@@ -18,6 +18,7 @@ from kb.core.graph import (  # noqa: E402
 )
 
 from kb.paths import vault_root
+from kb.core.summary import unquote
 ROOT = vault_root()  # KB_ROOT: share build
 WARNINGS_PATH = os.path.join(ROOT, "meta", "coherence-warnings.tsv")
 WARNINGS_COLS = ["id", "score", "kind", "slugs", "summary", "status"]
@@ -178,8 +179,8 @@ def check_coherence(pages, rows=None, err_fn=None, warn_fn=None, prior=None, fre
         for slug, (rel, fm, text) in pages.items():
             if f"[[{slug}]]" not in index_text:
                 continue
-            fl = _first_line(text)
-            if fl and fl[:40] not in index_text:
+            fl = unquote(fm.get("summary")) or _first_line(text)     # index.md shows the summary when set
+            if fl and fl[:40].replace("|", "\\|") not in index_text:
                 add("cosmetic", [slug], "index summary may be stale vs page body", 15)
 
     # Route to lint err/warn
