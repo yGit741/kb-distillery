@@ -120,6 +120,8 @@ export const ForceGraph = forwardRef<ForceGraphHandle, ForceGraphProps & { class
   const host = useRef<HTMLDivElement>(null);
   const fg = useRef<Instance | null>(null);
   const spread = useRef<Spread | null>(null);
+  /** pages that stayed through a data change, pinned until the engine stops (see the data effect) */
+  const held = useRef<SimNode[]>([]);
   const latest = useRef(props);
   latest.current = props;
   const ops = useRef<{ zoomAt: (f: number, x: number, y: number) => void; panBy: (dx: number, dy: number) => void }>({
@@ -138,8 +140,7 @@ export const ForceGraph = forwardRef<ForceGraphHandle, ForceGraphProps & { class
       .linkLineDash((l) => (asLink(l as LinkObject).kind === "shared" ? [2, 2] : null))
       .linkCanvasObjectMode((l) => (asLink(l as LinkObject).kind === "shared" ? "after" : undefined as unknown as string))
       .linkDirectionalParticles(0)
-      // new data is laid out off screen and first drawn settled (ui-principles §29: nothing moves unasked);
-      // only a user's action (drag, spread, a layout or force change) animates the layout
+      // new data is laid out off screen and first drawn settled (ui-principles §29: nothing moves unasked)
       .d3AlphaMin(ALPHA_MIN)
       .warmupTicks(WARMUP_TICKS)
       .cooldownTicks(120)
@@ -170,7 +171,14 @@ export const ForceGraph = forwardRef<ForceGraphHandle, ForceGraphProps & { class
       .onRenderFramePost((ctx, s) => latest.current.drawFramePost(ctx, s))
       .onRenderFramePre((ctx, s) => latest.current.drawFramePre?.(ctx, s))
       .onZoom((t) => latest.current.onZoom(t.k))
-      .onEngineStop(() => latest.current.onEngineStop());
+      // dragging moves the dragged page only: force-graph warms the whole layout up while a node is dragged
+      // (alphaTarget 0.3), which set every other page drifting
+      .onNodeDrag(() => void (g as unknown as { d3AlphaTarget(t: number): unknown }).d3AlphaTarget(0))
+      .onEngineStop(() => {
+        for (const n of held.current) n.fx = n.fy = undefined;
+        held.current = [];
+        latest.current.onEngineStop();
+      });
 
     // the anchor force reads the latest props each tick, so switching layouts needs no re-registration
     let simNodes: SimNode[] = [];
@@ -286,14 +294,23 @@ export const ForceGraph = forwardRef<ForceGraphHandle, ForceGraphProps & { class
     };
   }, []);
 
-  // data: nodes keep their coordinates (the host merged them). A first layout (no carried places) is settled off
-  // screen; a changed set (a filter, the user's) drifts gently from where it was, or settles at once under
-  // reduced motion
+  // data: a first layout is settled off screen. A changed set (a filter) never moves the pages that stay: they are
+  // held where they are (fx/fy) while only the newcomers are placed off screen, and released once the engine stops.
+  // So the only thing that moves a drawn page is the user's hand (drag, spread, a layout or force change).
   useEffect(() => {
     const g = fg.current;
     if (!g) return;
-    const carried = props.data.nodes.some((n) => (n as SimNode).x != null);
-    g.warmupTicks(carried && !prefersReducedMotion() ? 0 : WARMUP_TICKS);
+    const nodes = props.data.nodes as SimNode[];
+    // our own pins may have been carried into the new nodes (the engine hadn't stopped yet): drop them first
+    const wasHeld = new Set(held.current.map((n) => n.id));
+    for (const n of [...held.current, ...nodes.filter((m) => wasHeld.has(m.id))]) n.fx = n.fy = undefined;
+    held.current = nodes.filter((n) => n.x != null && n.fx == null);
+    for (const n of held.current) {
+      n.fx = n.x;
+      n.fy = n.y;
+    }
+    // nothing new to place: no warm-up; the engine ticks out over held nodes and nothing moves
+    g.warmupTicks(held.current.length === nodes.length ? 0 : WARMUP_TICKS);
     g.graphData(props.data as unknown as { nodes: NodeObject[]; links: LinkObject[] });
   }, [props.data]);
 

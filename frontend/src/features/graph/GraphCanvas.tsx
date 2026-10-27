@@ -93,6 +93,13 @@ function themeAnchors(nodes: readonly SimNode[], linkDistance: number): Map<stri
 }
 
 const endId = (e: string | SimNode) => (typeof e === "string" ? e : e.id);
+
+export function sameSet<T>(a: ReadonlySet<T>, b: ReadonlySet<T>): boolean {
+  if (a === b) return true;
+  if (a.size !== b.size) return false;
+  for (const x of a) if (!b.has(x)) return false;
+  return true;
+}
 const DOUBLE_MS = 380;
 
 /**
@@ -267,11 +274,16 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
     [],
   );
 
-  // ---- data: positions of nodes that stay are carried over
+  // ---- data: rebuilt only when the drawn set really changes. `visible` is a new Set on every selection change
+  // (the quick filters read the selection), and a rebuild restarts the layout: a click used to move the graph.
+  const drawn = useRef(visible);
+  if (!sameSet(drawn.current, visible)) drawn.current = visible;
+  const shown = drawn.current;
+  // positions of nodes that stay are carried over
   const data = useMemo(() => {
     const prev = new Map(fg.current?.nodes().map((n) => [n.id, { x: n.x, y: n.y, fx: n.fx, fy: n.fy }]) ?? []);
-    return buildGraphData(model, visible, prev);
-  }, [model, visible]);
+    return buildGraphData(model, shown, prev);
+  }, [model, shown]);
 
   // the anchored layout pins topics on a ring and pulls every page toward its theme; free unpins them
   const anchors = useMemo(() => {
@@ -558,6 +570,15 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
     }),
     [],
   );
+  // read-only probe for the e2e motion tests (frontend/e2e): every drawn page's id and screen position
+  useEffect(() => {
+    const w = window as unknown as { __kbGraph?: unknown };
+    w.__kbGraph = {
+      nodes: () =>
+        (fg.current?.nodes() ?? []).map((n) => ({ id: n.id, type: n.type, deg: live.current.neighbors.get(n.id)?.length ?? 0, ...(fg.current?.screenOf(n) ?? { x: NaN, y: NaN }) })),
+    };
+    return () => void delete w.__kbGraph;
+  }, []);
 
   // ---- clicks
   const clickNode = useCallback(
