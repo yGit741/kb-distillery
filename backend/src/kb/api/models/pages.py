@@ -57,6 +57,7 @@ class SearchHit(ApiModel):
     id: str
     title: str = ""
     type: str = "unknown"
+    depth: str | None = None             # set on related hits and in the search ports; legacy hits may omit it
     snippet: str = ""
     score: int = 0
 
@@ -65,6 +66,7 @@ class SearchResult(ApiModel):
     query: str | None = None
     total: int
     hits: list[SearchHit]
+    related: list[SearchHit] | None = None   # meaning-based hits (qmd over summaries), flag semantic-search
 
 
 class PathHop(ApiModel):

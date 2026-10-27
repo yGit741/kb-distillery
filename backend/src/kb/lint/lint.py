@@ -1191,6 +1191,7 @@ def collect_snapshot(quiet=False):
         print(f"partial checkout: {len(missing)} raw binaries not here (gitignored) — their manifest rows "
               "are kept as is; pdf/ink checks skipped")
     write_index(pages, quiet=quiet)
+    sync_search_cards()
 
     queued_count = sum(1 for r in rows.values() if r.get("disposition") == "queued")
     h_status, h_ok = hooks_health()
@@ -1293,6 +1294,24 @@ def first_line(text):
         if seen_h1 and s and not s.startswith(("#", ">", "-", "|", "*")):
             return s.rstrip(".")
     return ""
+
+def sync_search_cards():
+    """Keep .cache/qmd-cards/ (title + summary per page) in step with wiki/ for the qmd search service.
+    Only for the live vault — the main checkout this code runs from — never a share build's content
+    checkout, a worktree, CI or a test's temp root. A cache, never an error."""
+    from kb import paths
+    from kb.search import cards, qmd_client
+    live = os.path.realpath(ROOT) == os.path.realpath(paths.CHECKOUT_ROOT) and not os.environ.get("KB_ROOT")
+    if not live or ci_mode() or f"{os.sep}.claude{os.sep}worktrees{os.sep}" in os.path.realpath(ROOT):
+        return
+    try:
+        r = cards.build(os.path.join(ROOT, WIKI_DIR), os.path.join(ROOT, ".cache", "qmd-cards"))
+    except OSError as e:
+        notices.append(f"search cards not synced: {e}")
+        return
+    if r["written"] or r["removed"]:
+        qmd_client.refresh(timeout=0.5)      # the service re-indexes now instead of within 10 min
+
 
 def write_index(pages, quiet=False):
     out = ["---", "type: meta", "---", "", "# Wiki index", "",

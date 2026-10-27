@@ -59,7 +59,7 @@ def test_search(client, index):
 
 def test_search_short_query_is_empty_and_bad_limit_defaults(client):
     body = client.get("/api/search", params={"q": "a", "limit": "x"}).json()
-    assert body == {"query": "a", "total": 0, "hits": []}
+    assert body == {"query": "a", "total": 0, "hits": [], "related": []}
     assert client.get("/api/search", params={"q": "ab", "limit": "nope"}).status_code == 200
 
 

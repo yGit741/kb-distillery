@@ -12,12 +12,17 @@ META_DIR = os.path.join(vault_root(), "meta")
 from kb.core.graph import outbound_links
 from kb.search.semfind import load_pages
 from kb.services.graph import _areas, _preview, _title, _year
+from kb.core.summary import unquote
+from kb.search import qmd_client
 
 ROOT = vault_root()
 WIKILINK = re.compile(r"\[\[([^\]|#\\]+)(?:#[^\]|]+)?(?:\\?\|([^\]]+))?\]\]")
 IMAGE_EXT = (".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp")
 MAX_PATHS = 4
 MAX_SUGGESTIONS = 6
+RELATED_FLAG = "semantic-search"
+RELATED_MAX = 8          # meaning-based hits shown under the keyword hits
+RELATED_PER_COLLECTION = 3   # so one big series (738 Kalai posts) can't fill the list
 
 
 def _now():
@@ -209,7 +214,7 @@ def build_page(slug):
 def search(query, limit=40):
     q = (query or "").strip().lower()
     if len(q) < 2:
-        return {"query": query, "total": 0, "hits": []}
+        return {"query": query, "total": 0, "hits": [], "related": []}
     terms = [t for t in re.split(r"\s+", q) if t]
     pages = load_pages()
     _graph(pages)
@@ -239,11 +244,61 @@ def search(query, limit=40):
             "id": slug,
             "title": title,
             "type": fm.get("type", "unknown"),
+            "depth": fm.get("depth", ""),
             "snippet": snippet or _preview(text, 200),
             "score": score,
         })
     hits.sort(key=lambda h: (-h["score"], h["id"]))
-    return {"query": query, "total": len(hits), "hits": hits[:limit]}
+    out = {"query": query, "total": len(hits), "hits": hits[:limit], "related": []}
+    if _flag_on(RELATED_FLAG):
+        out["related"] = related(query, pages, {h["id"] for h in out["hits"]})
+    return out
+
+
+def _flag_on(name):
+    """Effective runtime value (registry + this server's override); a test's forced state wins."""
+    from kb.flags import registry
+    from kb.services import flags
+    forced = registry.forced(name)
+    if forced is not None:
+        return forced
+    try:
+        return next(f["value"] for f in flags.list_flags()["flags"] if f["name"] == name)
+    except Exception:                                    # unreadable registry: the safe side is off
+        return False
+
+
+def _collection(fm):
+    """The series/book/course a source belongs to, for the per-collection cap ('' = none)."""
+    for k in ("blog", "book", "course", "series"):
+        if fm.get(k):
+            return f"{k}:{unquote(str(fm[k]))}"
+    return ""
+
+
+def related(query, pages, exclude=()):
+    """Meaning-based hits from the qmd service (title + summary cards), not already among the keyword
+    hits, at most RELATED_PER_COLLECTION per collection. [] when the service is down."""
+    found = qmd_client.search(query, limit=RELATED_MAX * 3)
+    if not found:
+        return []
+    by_key = {qmd_client.qmd_key(s): s for s in pages}     # qmd renames `a.b` to `a-b`
+    out, per = [], {}
+    for key, score in found:
+        slug = by_key.get(key)
+        if not slug or slug in exclude:
+            continue
+        _rel, fm, text = pages[slug]
+        coll = _collection(fm)
+        if coll and per.get(coll, 0) >= RELATED_PER_COLLECTION:
+            continue
+        per[coll] = per.get(coll, 0) + 1
+        out.append({"id": slug, "title": _title(text, slug), "type": fm.get("type", "unknown"),
+                    "depth": fm.get("depth", ""), "snippet": unquote(fm.get("summary")) or _preview(text, 200),
+                    "score": round(score * 100)})
+        if len(out) >= RELATED_MAX:
+            break
+    return out
 
 
 def find_paths(a, b):
