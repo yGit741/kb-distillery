@@ -145,7 +145,9 @@ class TestDedupe(OwnerBase):
 class TestRetry(OwnerBase):
     def test_classifier(self):
         for text in ("TypeError: fetch failed", "read ECONNRESET", "connect ETIMEDOUT 1.2.3.4:443",
-                     "tunneling socket could not be established", "502 Bad Gateway", "HTTP 503"):
+                     "tunneling socket could not be established", "502 Bad Gateway", "HTTP 503",
+                     "START CF API RESPONSE: Internal Server Error 500",
+                     "failed. An unknown error has occurred. If this error persists, ... [code: 10013]"):
             self.assertTrue(owner.is_network_error(text), text)
         for text in ("Authentication error [code: 10000]", "SyntaxError in auth.js", "no manifest.json"):
             self.assertFalse(owner.is_network_error(text), text)
