@@ -31,6 +31,9 @@ class ChecksForTests(unittest.TestCase):
     def test_dashboard(self):
         self.assertEqual(names(["backend/src/kb/dashboard/graph.html"]), ["test-e2e"])
 
+    def test_graph_runs_the_still_canvas_e2e(self):
+        self.assertEqual(names(["frontend/src/features/graph/ForceGraph.tsx"]), ["web-check", "test-e2e"])
+
     def test_frontend_api_runs_both(self):
         self.assertEqual(names(["frontend/src/api/schema.d.ts"]), ["web-check", "api-schema-check"])
 

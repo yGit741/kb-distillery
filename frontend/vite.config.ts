@@ -45,6 +45,8 @@ export default defineConfig(({ mode }) => {
       globals: true,
       setupFiles: ["./src/test/setup.ts"],
       css: false,
+      // e2e/ runs under node --test with a real browser (pixi run test-e2e), not vitest
+      include: ["src/**/*.test.{ts,tsx}"],
     },
   };
 });
