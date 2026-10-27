@@ -121,7 +121,12 @@ export const ForceGraph = forwardRef<ForceGraphHandle, ForceGraphProps & { class
   const fg = useRef<Instance | null>(null);
   const spread = useRef<Spread | null>(null);
   /** pages that stayed through a data change, pinned until the engine stops (see the data effect) */
-  const held = useRef<SimNode[]>([]);
+  const held = useRef<{ n: SimNode; x: number; y: number }[]>([]);
+  /** Drop our holds, but never a pin someone else set since (the anchored layout pins topics on its ring). */
+  const releaseHeld = () => {
+    for (const h of held.current) if (h.n.fx === h.x && h.n.fy === h.y) h.n.fx = h.n.fy = undefined;
+    held.current = [];
+  };
   const latest = useRef(props);
   latest.current = props;
   const ops = useRef<{ zoomAt: (f: number, x: number, y: number) => void; panBy: (dx: number, dy: number) => void }>({
@@ -175,8 +180,7 @@ export const ForceGraph = forwardRef<ForceGraphHandle, ForceGraphProps & { class
       // (alphaTarget 0.3), which set every other page drifting
       .onNodeDrag(() => void (g as unknown as { d3AlphaTarget(t: number): unknown }).d3AlphaTarget(0))
       .onEngineStop(() => {
-        for (const n of held.current) n.fx = n.fy = undefined;
-        held.current = [];
+        releaseHeld();
         latest.current.onEngineStop();
       });
 
@@ -302,12 +306,16 @@ export const ForceGraph = forwardRef<ForceGraphHandle, ForceGraphProps & { class
     if (!g) return;
     const nodes = props.data.nodes as SimNode[];
     // our own pins may have been carried into the new nodes (the engine hadn't stopped yet): drop them first
-    const wasHeld = new Set(held.current.map((n) => n.id));
-    for (const n of [...held.current, ...nodes.filter((m) => wasHeld.has(m.id))]) n.fx = n.fy = undefined;
-    held.current = nodes.filter((n) => n.x != null && n.fx == null);
-    for (const n of held.current) {
-      n.fx = n.x;
-      n.fy = n.y;
+    const pins = new Map(held.current.map((h) => [h.n.id, h] as const));
+    for (const m of nodes) {
+      const h = pins.get(m.id);
+      if (h && m.fx === h.x && m.fy === h.y) m.fx = m.fy = undefined;
+    }
+    releaseHeld();
+    held.current = nodes.filter((n) => n.x != null && n.y != null && n.fx == null).map((n) => ({ n, x: n.x!, y: n.y! }));
+    for (const h of held.current) {
+      h.n.fx = h.x;
+      h.n.fy = h.y;
     }
     // nothing new to place: no warm-up; the engine ticks out over held nodes and nothing moves
     g.warmupTicks(held.current.length === nodes.length ? 0 : WARMUP_TICKS);
@@ -324,7 +332,10 @@ export const ForceGraph = forwardRef<ForceGraphHandle, ForceGraphProps & { class
     g.d3Force("link")?.distance?.(props.forces.linkDistance);
     g.d3Force("center")?.strength?.(props.forces.gravity);
     const now = `${props.forces.charge}|${props.forces.linkDistance}|${props.forces.gravity}`;
-    if (forcesWere.current !== null && forcesWere.current !== now) reheat(g);
+    if (forcesWere.current !== null && forcesWere.current !== now) {
+      releaseHeld(); // an explicit command must move the held pages too
+      reheat(g);
+    }
     forcesWere.current = now;
   }, [props.forces.charge, props.forces.linkDistance, props.forces.gravity]);
 
@@ -370,7 +381,9 @@ export const ForceGraph = forwardRef<ForceGraphHandle, ForceGraphProps & { class
         },
         reheat: () => {
           const inst = g();
-          if (inst) reheat(inst);
+          if (!inst) return;
+          releaseHeld();
+          reheat(inst);
         },
         spreadAt: (cx, cy, radiusPx = 160) => {
           const inst = g();
@@ -378,6 +391,7 @@ export const ForceGraph = forwardRef<ForceGraphHandle, ForceGraphProps & { class
           if (!inst || !r) return;
           const p = inst.screen2GraphCoords(cx - r.left, cy - r.top);
           spread.current = { x: p.x, y: p.y, r: radiusPx / inst.zoom(), t0: performance.now(), ms: 1200 };
+          releaseHeld();
           inst.d3ReheatSimulation();
         },
         refresh: () => {

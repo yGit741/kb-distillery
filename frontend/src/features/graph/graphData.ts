@@ -146,3 +146,11 @@ export function largestComponent(visible: ReadonlySet<string>, neighbors: Neighb
   }
   return best;
 }
+
+/** Same members, whatever the Set objects (a new Set with the same pages is not a change of the drawn set). */
+export function sameSet<T>(a: ReadonlySet<T>, b: ReadonlySet<T>): boolean {
+  if (a === b) return true;
+  if (a.size !== b.size) return false;
+  for (const x of a) if (!b.has(x)) return false;
+  return true;
+}
