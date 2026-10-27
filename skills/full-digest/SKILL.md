@@ -96,6 +96,10 @@ page plus an updated partition row. For a collection row: a Source page plus a t
 - Idea and `q-` stubs are registered with the session automatically (map and finalize), so an aborted finalize removes them and restores topic-page `## Papers` lines; the old `staging/` is kept as `staging-aborted-<time>/`, and `begin` restores `claims.json`/`plan.json` of an aborted session.
 - Topic slugs in `claims.json` `concepts` (a protocol key, kept) map to `area:`, not to new idea pages.
 
+## Summary
+
+After finalize, refresh the page's `summary:` (schema 1.3): `pixi run summarize -- run --slugs <slug>` then `pixi run summarize -- apply --slugs <slug>` inside the open ops session — a deeper page always gets a new one; skip pages marked `summary_by: me`.
+
 ## Commit
 
 The CLI commits this operation itself as `kb(digest): … (kb-x.y.z)` on main — only the files it changed (`--no-commit` to skip). Check with `pixi run ops -- log -n 1`. `finalize` is the commit point.
