@@ -42,6 +42,11 @@ def override(name: str, on: bool):
             _OVERRIDES.pop(name, None)
 
 
+def forced(name: str) -> bool | None:
+    """The state a test forced with `override`, or None."""
+    return _OVERRIDES.get(name)
+
+
 class FlagError(ValueError):
     """meta/flags.toml is missing, unreadable or invalid; the message lists every problem."""
 

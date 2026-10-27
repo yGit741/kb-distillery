@@ -1,0 +1,10 @@
+{
+  "name": "kb-qmd-service",
+  "private": true,
+  "description": "Long-running local search service: qmd (hybrid BM25 + vectors + re-ranking) over the title+summary cards.",
+  "type": "module",
+  "engines": { "node": ">=22" },
+  "dependencies": {
+    "@tobilu/qmd": "2.8.3"
+  }
+}

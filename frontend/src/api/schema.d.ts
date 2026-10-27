@@ -2087,6 +2087,8 @@ export interface components {
         };
         /** SearchHit */
         SearchHit: {
+            /** Depth */
+            depth?: string | null;
             /** Id */
             id: string;
             /**
@@ -2118,6 +2120,8 @@ export interface components {
             hits: components["schemas"]["SearchHit"][];
             /** Query */
             query?: string | null;
+            /** Related */
+            related?: components["schemas"]["SearchHit"][] | null;
             /** Total */
             total: number;
         } & {

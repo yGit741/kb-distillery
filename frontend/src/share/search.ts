@@ -48,7 +48,7 @@ function count(hay: string, needle: string): number {
 export function searchPages(blob: Pick<ShareBlob, "pages">, query: string, limit?: number): SearchResult {
   const cap = Math.min(limit || 40, 5000);
   const q = (query || "").trim().toLowerCase();
-  if (q.length < 2) return { query, total: 0, hits: [] };
+  if (q.length < 2) return { query, total: 0, hits: [], related: [] };
   const pages = blob.pages;
   const terms = q.split(/\s+/).filter(Boolean);
   const hits: SearchHit[] = [];
@@ -77,10 +77,10 @@ export function searchPages(blob: Pick<ShareBlob, "pages">, query: string, limit
         break;
       }
     }
-    hits.push({ id: slug, title, type: page.card.type || "unknown", snippet: snippet || page.card.preview || "", score });
+    hits.push({ id: slug, title, type: page.card.type || "unknown", depth: page.card.depth || "", snippet: snippet || page.card.preview || "", score });
   }
   hits.sort((a, b) => b.score - a.score || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
-  return { query, total: hits.length, hits: hits.slice(0, cap) };
+  return { query, total: hits.length, hits: hits.slice(0, cap), related: [] };   // related comes from the local qmd service only
 }
 
 interface Adjacency {
