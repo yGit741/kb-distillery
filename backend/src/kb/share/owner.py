@@ -55,7 +55,9 @@ _NETWORK_RE = re.compile(
     r"fetch failed|ECONNRESET|ETIMEDOUT|ECONNREFUSED|EAI_AGAIN|ENOTFOUND|socket hang up|"
     r"CONNECT tunnel|tunneling socket|proxy|Could not resolve host|Connection (?:reset|refused|timed out)|"
     r"timed out|Temporary failure in name resolution|Network is unreachable|"
-    r"\b5\d\d\b (?:Internal|Bad Gateway|Service Unavailable|Gateway Time)|status(?: code)?:? 5\d\d|HTTP 5\d\d",
+    r"\b5\d\d\b (?:Internal|Bad Gateway|Service Unavailable|Gateway Time)|status(?: code)?:? 5\d\d|HTTP 5\d\d|"
+    # wrangler words a Cloudflare API 5xx the other way round, then as an "unknown error" with code 10013
+    r"(?:Internal Server Error|Bad Gateway|Service Unavailable|Gateway Timeout) 5\d\d|An unknown error has occurred|code: 10013",
     re.I)
 
 
