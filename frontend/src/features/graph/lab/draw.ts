@@ -4,7 +4,7 @@ import type { SimNode } from "../types";
 import type { LabConfig } from "./config";
 import type { Importance } from "./importance";
 import { labelText, planLabels, type Box, type Placed, type Plan } from "./labelPlan";
-import { coreHull, regionsOf } from "./regions";
+import { coreHull, regionKey, regionsOf } from "./regions";
 
 /** Per-label fade state: opacity, where it is heading, its offset and its last placement (kept while fading out). */
 export interface FadeState {
@@ -86,7 +86,7 @@ export function drawHulls(
 ): void {
   const groups = new Map<string, SimNode[]>();
   for (const n of nodes) {
-    const a = n.areas[0];
+    const a = regionKey(n, names);
     if (!a || !names.has(a)) continue;
     const g = groups.get(a);
     if (g) g.push(n);

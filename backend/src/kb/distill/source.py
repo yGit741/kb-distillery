@@ -2,6 +2,8 @@
 import os
 
 from kb.paths import vault_root
+
+from .paths import think_abs
 ROOT = vault_root()
 
 
@@ -15,7 +17,7 @@ def _strip_frontmatter(text):
 
 
 def read_think_body(think_rel):
-    path = os.path.join(ROOT, think_rel)
+    path = think_abs(think_rel)
     text = open(path, encoding="utf-8").read()
     body = _strip_frontmatter(text)
     if "<!-- human-zone -->" in text:

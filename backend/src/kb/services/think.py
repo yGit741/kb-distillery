@@ -13,9 +13,10 @@ import datetime
 import os
 import re
 
-from kb.paths import vault_root
+from kb.paths import THINK_PATH, vault_root
 
 DEFAULT_ROOT = vault_root()
+_LIVE_ROOT = os.path.realpath(DEFAULT_ROOT)     # the real vault; a test's patched DEFAULT_ROOT never matches it
 CAPTURE_NOTE = "inbox.md"
 MAX_NOTE_BYTES = 2 * 1024 * 1024  # a note, not an attachment
 _NAME = re.compile(r"[^\\/\0\r\n]{1,180}\.md")  # one path segment, .md — subfolders stay Obsidian-only
@@ -28,7 +29,9 @@ class ThinkError(Exception):
 
 
 def _think_dir(root):
-    return os.path.join(root, "think")
+    """The live vault's think is the shared space (`kb.paths.THINK_PATH`); any other root (a test's temp vault,
+    a patched DEFAULT_ROOT) has its own think/ so tests never touch the shared notes."""
+    return THINK_PATH if os.path.realpath(root) == _LIVE_ROOT else os.path.join(root, "think")
 
 
 def _note_path(root, name):

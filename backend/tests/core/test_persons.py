@@ -126,10 +126,10 @@ class CheckTest(unittest.TestCase):
     def test_why_needs_theme_or_concept_link(self):
         text = V2.replace("- [[theme-learning-theory]] — the thread", "- nothing linked")
         errs, _w, _s = self.check(text)
-        self.assertTrue(any("links no topic or idea" in e for e in errs))
+        self.assertTrue(any("links no concept page" in e for e in errs))
         errs, warns, _s = self.check(text.replace("verified: 2026-10-21\n", ""))
         self.assertEqual(errs, [])
-        self.assertTrue(any("links no topic or idea" in w for w in warns))
+        self.assertTrue(any("links no concept page" in w for w in warns))
 
     def test_lineage_reciprocity_and_stubs(self):
         pages = {**PAGES, "charles-babbage": {"type": "person", "students": []}}

@@ -148,7 +148,7 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
   live.current = { ui, theme, selection, byId, neighbors, visible, onOpenReader, onOpenMenu, onBackgroundContext, onOpenPile };
 
   rs.current.imp = imp;
-  const names = useMemo(() => areaNames(model.nodes), [model]);
+  const names = useMemo(() => areaNames(model.nodes, model.kbs), [model]);
   const initials = useMemo(() => personInitials(model.nodes), [model]);
   const weights = useMemo(() => edgeWeights(model), [model]);
   const weightsRef = useRef(weights);
@@ -363,6 +363,8 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
   }, []);
 
   // ---- fit (largest connected component: stray islands drift far out and would shrink everything)
+  const multiKb = useRef(false);
+  multiKb.current = (model.kbs?.length ?? 0) > 1;
   const mounted = useRef(true);
   useEffect(() => () => void (mounted.current = false), []);
   const framed = useRef(false);
@@ -374,7 +376,8 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
       return;
     }
     if (!live.current.visible.size) return;
-    const core = largestComponent(live.current.visible, live.current.neighbors);
+    // several knowledge bases are separate islands by design: frame them all, not the largest one
+    const core = multiKb.current ? new Set<string>() : largestComponent(live.current.visible, live.current.neighbors);
     fg.current?.fit(core.size > 1 ? (n) => core.has(n.id) || isPile(n) : undefined, ms);
     framed.current = true;
     window.setTimeout(() => {
@@ -685,8 +688,9 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
       const arcs = useDecor.getState().arcs;
       if (arcs?.length) drawArcs(ctx, g.nodes(), arcs, scale, rs.current.colors);
       const u = live.current.ui;
-      // hulls say where (area tints) and show only when the nodes do not already say it with their colour
-      const hulls = effectiveColorBy(u.colorBy) !== "area";
+      // hulls say where (area tints, or one per knowledge base when several share the canvas) and show only
+      // when the nodes do not already say it with their colour
+      const hulls = effectiveColorBy(u.colorBy) !== "area" || [...names.keys()].some((k) => k.startsWith("kb:"));
       if (hulls) drawHulls(ctx, g.nodes().filter((n) => !isPile(n)), scale, names, u.lab.hullSigma);
     },
     [names],

@@ -3,4 +3,5 @@
 # snapshot tags kb-x.y.z are annotated and match their commit's KB-Version.
 root="$(git rev-parse --show-toplevel)"
 export PYTHONPATH="$root/backend/src${PYTHONPATH:+:$PYTHONPATH}"
+export KB_ROOT="$root"      # this repo is the vault these hooks judge, whatever knowledge base $KB selects
 exec python3 -m kb.git.commit_policy push "$@"

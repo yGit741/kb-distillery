@@ -1,0 +1,69 @@
+# Feature-flag registry — the single source for backend and frontend (see meta/docs/dev.md § Feature flags).
+# One [[flag]] table per flag. `pixi run flags-gen` regenerates frontend/src/flags/registry.gen.ts and the
+# share route lists (frontend/src/routes/modules.share-*.ts); `pixi run flags-check` fails when they are stale.
+#
+#   kind = "build"   decided when the bundle is built (a screen that is not in a build is not in its JS at all)
+#   kind = "runtime" read at run time; server-side overrides arrive with the flags API (G2)
+#   envs             value per environment: local (the app on this Mac), private / public (the share builds)
+#   default          the value for an environment the registry does not know (fail-safe side: off)
+#   screen.<id>      a build flag that includes src/features/<id>/ in the share builds where it is on
+
+[[flag]]
+name = "screen.lifecycle"
+description = "Lifecycle screen (versions, history, snapshots). Read-only on the private site; never in public snapshots."
+owner = "yonatanm"
+created = 2026-10-25
+expires = 2027-10-25
+kind = "build"
+default = false
+envs = { local = true, private = true, public = false }
+
+[[flag]]
+name = "screen.share"
+description = "Share admin panel (public snapshots). Needs the Worker's /admin/api, so only the private site has it."
+owner = "yonatanm"
+created = 2026-10-25
+expires = 2027-10-25
+kind = "build"
+default = false
+envs = { local = false, private = true, public = false }
+
+[[flag]]
+name = "ui.system-flags-tab"
+description = "Flags tab on the System screen (G3): list flags and flip runtime overrides. Exercises the flags API."
+owner = "yonatanm"
+created = 2026-10-25
+expires = 2027-01-23
+kind = "runtime"
+default = false
+envs = { local = false, private = false, public = false }
+
+[[flag]]
+name = "screen.think"
+description = "Think screen (edit think/ notes, quick capture). Private notes: local app only, never in share builds."
+owner = "yonatanm"
+created = 2026-10-26
+expires = 2027-01-24
+kind = "build"
+default = false
+envs = { local = true, private = false, public = false }
+
+[[flag]]
+name = "semantic-search"
+description = "Search adds a 'related' group: meaning-based hits from the local qmd service over title+summary cards (tools/qmd)."
+owner = "yonatanm"
+created = 2026-10-27
+expires = 2027-01-24
+kind = "runtime"
+default = false
+envs = { local = false, private = false, public = false }
+
+[[flag]]
+name = "kb-view"
+description = "Graph: pick other knowledge bases to view read-only, several on one canvas (one region each); System → Knowledge bases gets a View button."
+owner = "yonatanm"
+created = 2026-10-28
+expires = 2027-01-26
+kind = "runtime"
+default = false
+envs = { local = true, private = false, public = false }

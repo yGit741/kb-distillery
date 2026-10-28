@@ -13,7 +13,7 @@ import sys
 from pathlib import Path
 
 from kb.flags.registry import FLAGS_TOML, FlagError, load
-from kb.paths import ROOT
+from kb.paths import CHECKOUT_ROOT as ROOT   # generated files and tests are code: the explorer, not the vault
 
 PY_RE = re.compile(r"""mark\.flag\(\s*["']([^"']+)["']\s*,\s*(True|False)\b""")
 TS_RE = re.compile(r"""withFlag\(\s*["']([^"']+)["']\s*,\s*(true|false)\b""")
@@ -55,7 +55,8 @@ def main(argv=None, root: Path | str = ROOT) -> int:
     ap.add_argument("--flags", default=None, help="registry path (default meta/flags.toml)")
     args = ap.parse_args(argv)
     try:
-        reg = load(args.flags or (root / FLAGS_TOML.relative_to(Path(ROOT))))
+        from kb.flags.codegen import _registry_for
+        reg = load(args.flags or _registry_for(root))
     except FlagError as e:
         print(e, file=sys.stderr)
         return 2

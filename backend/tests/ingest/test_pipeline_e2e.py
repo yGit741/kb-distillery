@@ -26,7 +26,7 @@ import tempfile
 import time
 import unittest
 
-from kb.paths import CODE_DIR, vault_root
+from kb.paths import CHECKOUT_ROOT, CODE_DIR, vault_root
 META = os.path.join(vault_root(), "meta")
 REPO = vault_root()
 DATA = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "testdata", "e2e")
@@ -54,11 +54,21 @@ def _pdf(path, text, pages=1):
 
 def build_vault(root):
     os.makedirs(os.path.join(root, "meta"))
-    for name in ("templates", "ops"):          # vault-side inputs the tools read
-        os.symlink(os.path.join(META, name), os.path.join(root, "meta", name))
+    # vault-side inputs the tools read: templates from the explorer's meta-defaults/, ops config from the vault's meta/
+    os.symlink(os.path.join(CHECKOUT_ROOT, "meta-defaults", "templates"), os.path.join(root, "meta", "templates"))
+    if os.path.isdir(os.path.join(META, "ops")):
+        os.symlink(os.path.join(META, "ops"), os.path.join(root, "meta", "ops"))
     os.makedirs(os.path.join(root, "backend", "src"))
     os.symlink(CODE_DIR, os.path.join(root, "backend", "src", "kb"))     # the checkout's code
     shutil.copytree(os.path.join(DATA, "seed", "wiki"), os.path.join(root, "wiki"))
+    # the fixture is a knowledge base of its own with the default types; its areas are the thesis set the goldens
+    # were recorded with (the kb the suite runs under declares them), else the seed's theme pages
+    from kb.core.schema import TOPIC_SLUGS
+    areas = sorted(TOPIC_SLUGS) or sorted(f[len("theme-"):-3] for f in os.listdir(os.path.join(DATA, "seed", "wiki"))
+                                          if f.startswith("theme-"))
+    with open(os.path.join(root, "kb.toml"), "w", encoding="utf-8") as f:
+        f.write('[kb]\nid = "e2e"\nname = "E2E fixture vault"\nschema_version = "1.3"\n\n[types]\nareas = ['
+                + ", ".join(f'"{a}"' for a in areas) + "]\n")
     for name in os.listdir(os.path.join(DATA, "seed", "meta")):
         shutil.copy(os.path.join(DATA, "seed", "meta", name), os.path.join(root, "meta", name))
     inbox = os.path.join(root, "raw", "inbox")
@@ -87,7 +97,7 @@ class Pipeline:
 
     def __init__(self, root):
         self.root = root
-        self.env = {**{k: v for k, v in os.environ.items() if not k.startswith("KB_")},
+        self.env = {**{k: v for k, v in os.environ.items() if not k.startswith("KB_") and k != "KB"},
                     "KB_OPS_DISABLE": "1", "KB_NO_PUSH": "1", "PYTHONDONTWRITEBYTECODE": "1",
                     "PYTHONHASHSEED": "0", "TZ": "UTC", "NO_PROXY": "*",
                     "PYTHONPATH": os.path.join(root, "backend", "src")}

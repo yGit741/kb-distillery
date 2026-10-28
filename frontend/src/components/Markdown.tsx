@@ -70,6 +70,8 @@ export interface MarkdownProps {
   resolveSlug?: (slug: string) => string | null | undefined;
   /** Rewrites relative image/link targets (e.g. vault assets). */
   transformUrl?: (url: string) => string;
+  /** Search params every [[slug]] link carries (`{ kb }` keeps a read-only page's links in its knowledge base). */
+  linkSearch?: Record<string, string>;
 }
 
 /**
@@ -77,7 +79,7 @@ export interface MarkdownProps {
  * to /pages/<slug>. Raw HTML in the source is not rendered (react-markdown escapes it), so there is
  * nothing to sanitise and no dangerouslySetInnerHTML.
  */
-export function Markdown({ children, className, resolveSlug, transformUrl }: MarkdownProps) {
+export function Markdown({ children, className, resolveSlug, transformUrl, linkSearch }: MarkdownProps) {
   const components = useMemo<ComponentProps<typeof ReactMarkdown>["components"]>(
     () => ({
       a({ href, children: kids, node: _node, ...rest }) {
@@ -92,7 +94,7 @@ export function Markdown({ children, className, resolveSlug, transformUrl }: Mar
             );
           }
           return (
-            <Link to={`/pages/${encodeURIComponent(resolved)}` as "/"} className="wikilink">
+            <Link to={`/pages/${encodeURIComponent(resolved)}` as "/"} search={(linkSearch ?? {}) as never} className="wikilink">
               {kids}
             </Link>
           );
@@ -109,7 +111,7 @@ export function Markdown({ children, className, resolveSlug, transformUrl }: Mar
         return <img src={url} alt={alt ?? ""} loading="lazy" />;
       },
     }),
-    [resolveSlug, transformUrl],
+    [resolveSlug, transformUrl, linkSearch],
   );
   return (
     <div className={cn("kb-prose", className)}>

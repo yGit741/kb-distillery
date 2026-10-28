@@ -7,8 +7,8 @@ import tempfile
 import unittest
 from typing import Optional
 
-from kb.paths import vault_root
-ROOT = vault_root()
+from kb.paths import CHECKOUT_ROOT
+ROOT = CHECKOUT_ROOT          # skills are code
 
 from kb.lint.lint_skills import run_checks
 

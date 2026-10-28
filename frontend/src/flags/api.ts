@@ -14,7 +14,7 @@ export const setOwnerToken = (t: string | null): void => {
 };
 
 export type Overrides = Partial<Record<FlagName, boolean>>;
-export type FlagsRead = { overrides: Overrides };
+export type FlagsRead = { overrides: Overrides; registry?: "explorer" | "kb" };
 export type FlagWrite = { ok: true; overrides: Overrides } | { ok: false; status: number; message: string };
 
 export const OWNER_ONLY = "Only the owner can change flags (token from keychain item kb-flags-owner).";
@@ -26,8 +26,8 @@ export async function readFlags(fetchImpl: typeof fetch = defaultFetch): Promise
   if (SHARE_PROFILE === "public") return { overrides: {} };
   const res = await fetchImpl("/api/flags", { headers: { Accept: "application/json" }, cache: "no-store" });
   if (!res.ok) throw new Error(`GET /api/flags → ${res.status}`);
-  const body = (await res.json()) as { overrides?: Overrides };
-  return { overrides: body.overrides ?? {} };
+  const body = (await res.json()) as { overrides?: Overrides; registry?: "explorer" | "kb" };
+  return { overrides: body.overrides ?? {}, registry: body.registry };
 }
 
 export async function writeFlag(name: FlagName, value: boolean | null, fetchImpl: typeof fetch = defaultFetch): Promise<FlagWrite> {

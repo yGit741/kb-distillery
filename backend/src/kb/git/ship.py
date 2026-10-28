@@ -38,9 +38,9 @@ import shutil
 import subprocess
 import sys
 
-from kb.paths import vault_root
+from kb.paths import CHECKOUT_ROOT, vault_root
 META_DIR = os.path.join(vault_root(), "meta")
-ROOT = vault_root()
+ROOT = CHECKOUT_ROOT     # the tooling lane is the explorer repo; knowledge commits go through kb.ops in the kb's repo
 
 from kb.maintenance.daily_sync import changed_paths, has_open_sessions, run_git
 from kb.git import app_token, claims, commit_policy, events, rounds
@@ -338,7 +338,7 @@ def checks_for(paths):
     def hit(*prefixes):
         return any(p.startswith(prefixes) for p in paths)
     checks = []
-    if hit("meta/flags.toml", "backend/src/kb/flags/") and not hit("frontend/"):  # web-check runs it too
+    if hit("meta/flags.toml", "meta-defaults/flags.toml", "backend/src/kb/flags/") and not hit("frontend/"):  # web-check runs it too
         checks.append(("flags-check", ["pixi", "run", "flags-check"]))
     if hit("frontend/"):
         checks.append(("web-check", ["pixi", "run", "web-check"]))

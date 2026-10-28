@@ -103,3 +103,6 @@ frontend/dist-share/
 .agents/
 .opencode/
 .copilot/
+
+# Machine-local registry of knowledge bases linked by path (kb.kbconfig); folders under ../knowledge-bases need none.
+knowledge-bases.toml

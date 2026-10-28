@@ -5,8 +5,7 @@ import re
 import sys
 import unittest
 
-from kb.paths import vault_root
-ROOT = vault_root()
+from kb.paths import CHECKOUT_ROOT as ROOT   # dashboard, skills: code, not vault content
 
 from kb.dashboard.shell import TABS, inject_nav
 

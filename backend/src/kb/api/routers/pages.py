@@ -5,6 +5,7 @@ from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse, JSONResponse, Response
 
 from kb.api.models.pages import PageDetail, PageIndex, PathResult, SearchResult
+from kb.services import kbview
 from kb.services import pages as svc
 
 router = APIRouter(tags=["pages"])
@@ -14,15 +15,24 @@ IMAGE_TYPES = {".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
 NOT_FOUND = {"error": "not found"}
 
 
-@router.get("/api/pages", response_model=PageIndex, summary="Every page as a card, plus links and wanted pages")
-def list_pages():
-    return svc.build_index()
+@router.get("/api/pages", response_model=PageIndex, summary="Every page as a card, plus links and wanted pages",
+            responses={404: {"description": "unknown knowledge base"}})
+def list_pages(kb: str = ""):
+    try:
+        v = kbview.view(kb or None)
+    except KeyError:
+        return JSONResponse(NOT_FOUND, status_code=404)
+    return svc.build_index(None if v.active else v)
 
 
 @router.get("/api/pages/{slug}", response_model=PageDetail, summary="One page: markdown, backlinks, suggestions",
             responses={404: {"description": "unknown slug"}})
-def get_page(slug: str):
-    data = svc.build_page(slug)
+def get_page(slug: str, kb: str = ""):
+    try:
+        v = kbview.view(kb or None)
+    except KeyError:
+        return JSONResponse(NOT_FOUND, status_code=404)
+    data = svc.build_page(slug, None if v.active else v)
     if data is None:
         return JSONResponse(NOT_FOUND, status_code=404)
     return data

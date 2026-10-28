@@ -38,6 +38,12 @@ export type DigestResult = S["DigestResult"];
 export type CitationGraph = S["CitationGraph"];
 export type PipelineSnapshot = S["PipelineSnapshot"];
 export type HealthSnapshot = S["HealthSnapshot"];
+
+// the knowledge base behind this app, and the ones the explorer can load
+export type KbInfo = S["KbInfo"];
+export type KbList = S["KbList"];
+export type KbRow = S["KbRow"];
+export type KbType = S["KbType"];
 export type VideoBundle = S["VideoBundle"];
 export type VideoAnchor = S["VideoAnchor"];
 export type VideoSection = S["VideoSection"];

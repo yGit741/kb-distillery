@@ -9,7 +9,7 @@ import os
 import re
 import sys
 
-from kb.paths import vault_root
+from kb.paths import META_DEFAULTS_PATH, vault_root
 META_DIR = os.path.join(vault_root(), "meta")
 
 from kb.git import commit_policy as cp
@@ -136,6 +136,12 @@ def _validate_paths(paths, manifest):
     return sorted(set(paths))
 
 
+def _template(root):
+    """meta/templates/scope.md from the vault, else the explorer's meta-defaults/templates/scope.md."""
+    own = _read(root, TEMPLATE)
+    return own if own is not None else _read(META_DEFAULTS_PATH, TEMPLATE.split("/", 1)[1])
+
+
 def _read(root, rel):
     try:
         with open(os.path.join(root, rel), encoding="utf-8") as f:
@@ -210,7 +216,7 @@ def save_scope(payload, root=None, lint=True, push=True):
     title = (payload.get("title") or "").strip().replace("\n", " ")
     if create and not title:
         title = slug[len(sc.PREFIX):].replace("-", " ").capitalize()
-    template = _read(root, TEMPLATE)
+    template = _template(root)
     if create and template is None:
         raise ScopeError(500, "meta/templates/scope.md is missing")
     rel, before = _apply(root, slug, title, why, paths, create, manifest, pages, template)
@@ -245,7 +251,7 @@ def duplicate_scope(payload, root=None, lint=True, push=True):
         raise ScopeError(409, dst + " already exists")
     title = (payload.get("title") or "").strip() or sc.title_of(pages[src][2], src) + " (copy)"
     paths = sc.rows_of(src, manifest)
-    template = _read(root, TEMPLATE)
+    template = _template(root)
     if template is None:
         raise ScopeError(500, "meta/templates/scope.md is missing")
     rel, before = _apply(root, dst, title, sc.why_text(pages[src][2]), paths, True, manifest, pages, template)

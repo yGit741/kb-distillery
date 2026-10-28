@@ -1,6 +1,13 @@
 #!/usr/bin/env python3
 """Scoped query: `candidates --scope`, `scope-status`, `explore_raw find --scope`, `citations missing
 --scope`, the chat policy / system prompt / direct retrieval inside a scope. A temp vault, no network."""
+import pytest
+
+from kb.core import schema as _schema
+
+if "paper" not in _schema.SOURCE_TYPES:   # this module builds `paper` pages: it needs the explorer's default types
+    pytest.skip("needs the default source types (run with KB=yonatan-thesis or a kb that defines `paper`)", allow_module_level=True)
+
 import asyncio
 import contextlib
 import io

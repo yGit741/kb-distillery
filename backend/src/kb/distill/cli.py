@@ -12,6 +12,7 @@ from .paths import (
     ROOT,
     distilled_wiki_rel,
     resolve_think_path,
+    think_abs,
     save_session_by_think,
     session_dir_for_think,
     think_basename,
@@ -53,7 +54,7 @@ def _write_distilled(think_rel, plan, summary, applied=False):
 
 def cmd_propose(think_arg, from_path=None):
     think_rel = resolve_think_path(think_arg)
-    think_full = os.path.join(ROOT, think_rel)
+    think_full = think_abs(think_rel)
     if not os.path.isfile(think_full):
         print(f"missing {think_rel}")
         return 1

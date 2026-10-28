@@ -28,7 +28,7 @@ import subprocess
 import sys
 from dataclasses import dataclass, field
 
-from kb.paths import vault_root
+from kb.paths import THINK_PATH, vault_root
 META_DIR = os.path.join(vault_root(), "meta")
 ROOT = vault_root()
 from kb.core.schema import GIT_POLICY_MODE, SCHEMA_VERSION, lane_of
@@ -115,11 +115,11 @@ def parse_message(message):
     return Commit(subject, "unknown", trailers=trailers)
 
 
-def check_message(message, branch, paths, is_merge=False):
+def check_message(message, branch, paths, is_merge=False, think_repo=False):
     """Violations for one commit about to be made on `branch` touching `paths`."""
     c = parse_message(message)
     v = []
-    lanes = {p: lane_of(p) for p in paths}
+    lanes = {p: "knowledge" if think_repo else lane_of(p) for p in paths}
     on_main = branch == "main"
     if c.kind == "unknown":
         return [f"subject does not follow KB Conventional Commits: {c.subject!r}"]
@@ -158,7 +158,8 @@ def check_message(message, branch, paths, is_merge=False):
         bad = [p for p, lane in lanes.items() if lane != "knowledge"]
         if bad:
             v.append(f"kb commits may only touch knowledge paths: {bad[:5]}")
-        think = [p for p in paths if p.startswith("think/")]
+        # In the shared think repo (knowledge-bases/think, its own history) every path is a think note.
+        think = list(paths) if think_repo else [p for p in paths if p.startswith("think/")]
         if c.scope == "think" and len(think) != len(paths):
             v.append("kb(think) commits only touch think/")
         if c.scope != "think" and think:
@@ -355,7 +356,8 @@ def hook_msg(msg_file, root=ROOT):
     branch = _git(root, "symbolic-ref", "--short", "-q", "HEAD").stdout.strip()
     paths = [p for p in _git(root, "diff", "--cached", "--name-only", "-z").stdout.split("\0") if p]
     merge_head = _git(root, "rev-parse", "-q", "--verify", "MERGE_HEAD").returncode == 0
-    return _report(check_message(message, branch, paths, is_merge=merge_head), "commit-msg")
+    think_repo = os.path.realpath(root) == os.path.realpath(THINK_PATH)
+    return _report(check_message(message, branch, paths, is_merge=merge_head, think_repo=think_repo), "commit-msg")
 
 
 def hook_push(stdin, root=ROOT):

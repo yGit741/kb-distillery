@@ -1,4 +1,11 @@
-"""Single source of truth for the vault schema. Imported by guard.py and lint.py."""
+"""Single source of truth for the vault schema. Imported by guard.py and lint.py.
+
+Three core kinds belong to the explorer — Source, Collection, Concept (the layers) — and the page *types*
+inside them come from the knowledge base's `kb.toml` `[types]` (see `kb.core.kbtypes`): each knowledge base
+names its own sources, collections and concepts. The constants below keep their historical names so the
+rest of the code reads them as before; without a kb.toml (legacy layout) they hold the explorer defaults.
+"""
+from kb.core import kbtypes as _types
 
 # The source model (schema 1.0): every page has a `layer` and a `type` inside that layer.
 #   source      the digest of one raw item, faithful to it; `depth` says how far it is read
@@ -9,74 +16,44 @@ LAYERS = ("concept", "collection", "source")
 # Reading depth of a source, deepened in place — separate from its reading lifecycle `status`.
 DEPTH = ("listed", "easy", "full", "deep")          # ordered: listed = cataloged, not read yet
 
-_READ = {"to-read", "reading", "digested"}
-_GROW = {"seed", "growing", "solid"}
+_READ = _types.READ_STATUS
+_GROW = _types.GROW_STATUS
 
-SOURCE_TYPES = frozenset({
-    "paper",          # academic work
-    "part",           # a page range of a book or notebook
-    "lecture",        # one class session: slides + own notes
-    "article",        # non-academic writeup: web clip, tutorial
-    "video",          # a talk or video, with own notes
-    "mail",           # a substantive email thread (raw/emails/)
-    "ai-chat",        # a substantive LLM chat (rendered from meta/chats/ trees)
-    "blog-post",      # one post of a blog series
-})
+_T = _types.load()                                  # the active knowledge base's types (or the defaults)
+SOURCE_TYPES = _T.source_types
 # Collections whose table is a page partition of their own raw PDF.
-PARTITION_COLLECTIONS = frozenset({"book", "notebook"})
+PARTITION_COLLECTIONS = _T.partition_collections
 # Collections whose table lists member raw files (corpus.tsv `collection` must agree).
-CONTENTS_COLLECTIONS = frozenset({"course", "series"})
+CONTENTS_COLLECTIONS = _T.contents_collections
 COLLECTION_TYPES = PARTITION_COLLECTIONS | CONTENTS_COLLECTIONS
-CONCEPT_TYPES = frozenset({"idea", "topic", "question", "person"})
+CONCEPT_TYPES = _T.concept_types
 # Tool-owned auxiliary types: a scope is a personal working set of raw files (collection layer),
 # a distilled-think page a transient proposal from think/ (concept layer). Neither is a hub.
-AUX_LAYER = {"scope": "collection", "distilled-think": "concept"}
+AUX_LAYER = _types.AUX_LAYER
 
-LAYER_OF = {**{t: "source" for t in SOURCE_TYPES}, **{t: "collection" for t in COLLECTION_TYPES},
-            **{t: "concept" for t in CONCEPT_TYPES}, **AUX_LAYER}
-
-TYPE_STATUS = {
-    **{t: _READ for t in SOURCE_TYPES},
-    **{t: _READ for t in COLLECTION_TYPES},
-    "topic":        _GROW,   # exactly one per TOPIC_SLUGS entry
-    "idea":         _GROW,
-    "person":       set(),   # no status: progress is `verified:` (backend/src/kb/core/persons.py, schema 0.12)
-    "question":     {"open", "partial", "resolved"},
-    "distilled-think": {"review", "applied", "archived"},
-    "scope":        {"active", "parked"},   # a personal working set of raw files (backend/src/kb/core/scopes.py, schema 0.13)
-}
+LAYER_OF = _T.layer_of
+TYPE_STATUS = _T.type_status
 assert set(TYPE_STATUS) == set(LAYER_OF)
 
 # Types whose pages must carry a `raw:` provenance field (a path, a list of paths, or `none`).
 NEEDS_RAW = SOURCE_TYPES | PARTITION_COLLECTIONS
 # Types whose printed-docs/ filename year must agree with `year:`.
-YEARED = {"paper", "book", "part"}
+YEARED = _T.yeared
 
 # Filename prefix per type. wiki/ is flat, so the prefix is the type at a glance: the type
-# requires the prefix and the prefix requires the type. idea and person stay bare: they are
-# the most-linked nodes and read better in prose. Topics keep their historical `theme-` prefix.
-SLUG_PREFIX = {
-    "paper": "paper-", "part": "part-", "lecture": "lecture-", "article": "article-",
-    "video": "video-", "mail": "mail-", "ai-chat": "chat-", "blog-post": "blog-",
-    "book": "book-", "notebook": "notebook-", "course": "course-", "series": "series-",
-    "topic": "theme-", "question": "q-", "distilled-think": "distilled-think-",
-    "scope": "scope-",
-}
-BARE_TYPES = {"idea", "person"}
+# requires the prefix and the prefix requires the type. A type with an empty prefix stays bare
+# (idea, person in the thesis kb): the most-linked nodes read better in prose.
+SLUG_PREFIX = _T.slug_prefix
+BARE_TYPES = _T.bare_types
 
 # Display metadata for the dashboard (served by /api/schema; the JS keeps no type lists).
-TYPE_LABEL = {
-    "paper": "Paper", "part": "Book part", "lecture": "Lecture", "article": "Article",
-    "video": "Video", "mail": "Mail", "ai-chat": "AI chat", "blog-post": "Blog post",
-    "book": "Book", "notebook": "Notebook", "course": "Course", "series": "Series",
-    "topic": "Topic", "idea": "Idea", "question": "Question", "person": "Person",
-    "distilled-think": "Distilled", "scope": "Scope",
-}
-TYPE_ORDER = ("topic", "idea", "question", "person", "course", "series", "book", "notebook",
-              "paper", "part", "lecture", "article", "blog-post", "video", "ai-chat", "mail",
-              "distilled-think", "scope")
+TYPE_LABEL = _T.type_label
+TYPE_ORDER = _T.type_order
+TYPE_COLOR = _T.type_color
 LAYER_LABEL = {"source": "Sources", "collection": "Collections", "concept": "Concepts"}
-assert set(TYPE_ORDER) == set(LAYER_OF) == set(TYPE_LABEL)
+assert set(TYPE_ORDER) == set(LAYER_OF) == set(TYPE_LABEL) == set(TYPE_COLOR)
+# Extra frontmatter fields a knowledge base's source pages carry (thesis: authors, venue, arxiv-id).
+SOURCE_FIELDS = _T.source_fields
 
 
 # Retired names (schema 0.x). There is no read compatibility: lint names the replacement in its
@@ -124,9 +101,13 @@ ROOT_MD = {"index.md", "AGENTS.md", "CLAUDE.md", "README.md", "GEMINI.md"}
 # Top-level vault shape — only these dirs/files may sit at the root (dot-* tooling exempt).
 FRONTEND_DIR = "frontend"            # React app (tooling lane); node_modules is gitignored
 # Code and tooling folders beside the vault content (tooling lane; see TOOLING_PATHS).
-CODE_TOP_DIRS = frozenset({"backend", "frontend", "share", "skills", "tools"})
-ROOT_DIRS = frozenset({WIKI_DIR, RAW_DIR, THINK_DIR, META_DIR, QUARANTINE_DIR, FRONTEND_DIR}) | CODE_TOP_DIRS
-ROOT_FILES = frozenset(ROOT_MD) | frozenset({"pixi.toml", "pixi.lock", ".gitignore"})
+META_DEFAULTS_DIR = "meta-defaults"     # the explorer's generic meta (flags, templates, docs, digest defaults)
+CODE_TOP_DIRS = frozenset({"backend", "frontend", "share", "skills", "tools", META_DEFAULTS_DIR})
+# A knowledge base folder also carries its kb.toml and digest/ instructions (kb.kbconfig, kb.core.kbtypes).
+KB_CONFIG = "kb.toml"
+DIGEST_DIR = "digest"
+ROOT_DIRS = frozenset({WIKI_DIR, RAW_DIR, THINK_DIR, META_DIR, QUARANTINE_DIR, FRONTEND_DIR, DIGEST_DIR}) | CODE_TOP_DIRS
+ROOT_FILES = frozenset(ROOT_MD) | frozenset({"pixi.toml", "pixi.lock", ".gitignore", KB_CONFIG})
 # Obsidian/plugin state at root — gitignored, not KB content; lint skips, guard still blocks agents.
 ROOT_LINT_IGNORE = frozenset({"copilot"})
 
@@ -249,28 +230,13 @@ INGEST_STALE_HOURS = 24
 
 DISTILL_DIR = "meta/.distill"
 
-# Research topics: the `area:` whitelist; each has exactly one `theme-<slug>` topic page.
-TOPIC_SLUGS = frozenset({
-    "statistics",
-    "boolean-analysis",
-    "fourier-analysis",
-    "optimization-theory",
-    "learning-theory",
-    "info-theory",
-    "implicit-regularization",
-    "tensor-factorization",
-    "complex-nn",
-    "quantum",
-})
-
-DEPRECATED_AREA_SLUGS = frozenset({
-    "why-things-work",
-    "adv-ml", "adv-nlp", "adv-stats", "nlp", "rl", "prob-models", "ak-summaries",
-    "thesis-directions",
-})
+# Research areas: the `area:` whitelist of this knowledge base (`[types] areas` in kb.toml); each has exactly
+# one `<topic prefix><slug>` topic page when the kb has a `topic` concept type.
+TOPIC_SLUGS = _T.areas
+DEPRECATED_AREA_SLUGS = _T.deprecated_areas
 
 DISTILLED_THINK_PREFIX = SLUG_PREFIX["distilled-think"]
-TOPIC_PREFIX = SLUG_PREFIX["topic"]
+TOPIC_PREFIX = SLUG_PREFIX.get("topic", "theme-")
 # Placeholder titles a chat clip arrives with — never acceptable on an ai-chat page.
 PLACEHOLDER_TITLE = r"^New (chat|notebook)\b"
 
@@ -280,6 +246,8 @@ PLACEHOLDER_TITLE = r"^New (chat|notebook)\b"
 # Knowledge wins on overlap (meta/log.md is knowledge, meta/ is tooling).
 # Directories end in "/".
 KNOWLEDGE_PATHS = [
+    "kb.toml",
+    "digest/",
     "wiki/",
     "think/",
     "raw/",
@@ -297,6 +265,7 @@ TOOLING_PATHS = [
     # (what another vault user needs); the rest is gitignored. Ships with any infra PR.
     ".obsidian/",
     "meta/",
+    "meta-defaults/",
     "backend/",
     "share/",
     "skills/",
@@ -336,6 +305,8 @@ def lane_of(path):
 # from git (last first-parent KB-Version + 1). Tooling is not versioned — infra work
 # is identified by its PR number (#N). See backend/src/kb/git/commit_policy.py.
 SCHEMA_VERSION = (1, 3)     # 1.3: `summary:` field (1.2: conversation → mail/ai-chat; 1.1: question H1)
+from kb.kbconfig import SCHEMA_VERSION as _KB_SCHEMA_VERSION
+assert SCHEMA_VERSION == _KB_SCHEMA_VERSION, "kb.kbconfig.SCHEMA_VERSION must follow this value"
 
 # What undo/restore may rewrite. Never raw/ (immutable, PDFs untracked), think/
 # (human-owned), meta/log.md (append-only) or generated files (lint regenerates them).

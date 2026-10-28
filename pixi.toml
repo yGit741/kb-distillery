@@ -1,7 +1,7 @@
 [workspace]
-name = "thesis-wiki"
+name = "knowledge-base-explorer"
 version = "0.1.0"
-description = "Thesis knowledge base tooling"
+description = "Knowledge base explorer: the engine behind every knowledge-bases/kb-* folder"
 channels = ["conda-forge"]
 platforms = ["osx-arm64"]
 
@@ -29,6 +29,9 @@ harness = { cmd = "python -m tests.harness.run_pipeline", env = { PYTHONPATH = "
 harness-invariants = { cmd = "python -m tests.harness.vault_invariants", env = { PYTHONPATH = "backend" } }
 harness-bite = { cmd = "python -m tests.harness.harness_bite", env = { PYTHONPATH = "backend" } }
 lint = "python -m kb.lint.lint"
+kb-list = "python -m kb.kbconfig list"
+kb-show = "python -m kb.kbconfig show"
+digest-instructions = "python -m kb.core.digest"
 health = "python -m kb.lint.lint --health"
 lint-strict = "python -m kb.lint.lint --ingest-strict"
 dashboard = "python -m kb.dashboard"
@@ -69,6 +72,7 @@ curate-history = "python -m kb.git.curate_history"
 ops = "python -m kb.ops"
 metrics = "python -m kb.metrics"
 install-hooks = "git config core.hooksPath tools/githooks"
+install-kb-hooks = "bash tools/install-kb-hooks.sh"
 test = "pytest backend/tests"
 web-install = "npm ci --prefix frontend"
 web-dev = "npm run dev --prefix frontend"

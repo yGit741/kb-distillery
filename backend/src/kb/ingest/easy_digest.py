@@ -1,5 +1,7 @@
 """Lightweight abstract extraction for easy-digest. Agent fills summary."""
 import os
+
+from kb.paths import meta_file
 import re
 import subprocess
 import sys
@@ -29,7 +31,7 @@ def _resolve_raw(arg):
 
 def _new_page(page_type, slug, raw_rel):
     """A fresh page from the type's template, every {{placeholder}} filled or blanked."""
-    body = open(os.path.join(ROOT, "meta", "templates", f"{page_type}.md"), encoding="utf-8").read()
+    body = open(meta_file("templates", f"{page_type}.md"), encoding="utf-8").read()
     title = re.sub(r"^[a-z]+-", "", slug).replace("-", " ").title()
     body = body.replace("raw: raw/printed-docs/", f"raw: {raw_rel}")
     if page_type == "video":                          # a scrap-youtube bundle knows its own metadata

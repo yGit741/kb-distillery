@@ -7,6 +7,7 @@ import { LAYER_LABEL } from "./legendModel";
 import { NodeSwatch } from "./encoding/NodeMarkSvg";
 import { colorOf, effectiveColorBy, type ColorBy } from "./style";
 import { bookOf, degreeOf, partOf, type GNode } from "./types";
+import { useToolHost } from "./hostContext";
 import type { Layer } from "@/api/model";
 
 const NB_MAX = 40;
@@ -74,6 +75,7 @@ function Many({ nodes, byId: _b, colorBy, onFocus, onClear }: Props) {
 }
 
 function One({ n, byId, neighbors, colorBy, revealed, pageHref, onFocus, onRead, onToggleSources }: Props & { n: GNode }) {
+  const host = useToolHost();
   const nbs = useMemo(
     () =>
       (neighbors.get(n.id) ?? [])
@@ -117,9 +119,11 @@ function One({ n, byId, neighbors, colorBy, revealed, pageHref, onFocus, onRead,
             {sourcesOn ? "Hide" : "See"} sources ({sources.length})
           </Button>
         )}
-        <Button asChild variant="ghost" size="sm">
-          <a href={obsidianUri(n.path || `wiki/${n.id}.md`)}>Obsidian</a>
-        </Button>
+        {!host.foreignKb?.(n.id) && (
+          <Button asChild variant="ghost" size="sm">
+            <a href={obsidianUri(n.path || `wiki/${n.id}.md`)}>Obsidian</a>
+          </Button>
+        )}
       </div>
       <p className={n.preview ? "text-sm leading-relaxed" : "text-sm text-muted-foreground"}>
         {n.preview || "No summary yet: this page is still a stub."}

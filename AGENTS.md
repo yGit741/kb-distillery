@@ -2,7 +2,9 @@
 
 Personal knowledge base for an MSc in theoretical ML. **The thesis topic is not yet chosen** — the vault exists to explore candidate directions and decide. Follows the [Karpathy LLM Wiki](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f) pattern.
 
-This file is the core every turn needs. Details live in `meta/docs/` — read the one the **Doc router** names before you act.
+This file is the core every turn needs. Details live in `meta-defaults/docs/` — read the one the **Doc router** names before you act.
+
+**Explorer and knowledge bases are separate.** This repo is the engine; the content is a knowledge base folder `../knowledge-bases/kb-<id>/` (its own git repo) selected with `--kb <id>` / `$KB` (`pixi run kb-list`, `pixi run launch -- --kb <id>`). `raw/`, `wiki/`, `meta/` below are paths inside the selected knowledge base; `kb(...)` commits and `kb-x.y.z` tags land in that repo, never here.
 
 ## Folders
 
@@ -10,15 +12,16 @@ This file is the core every turn needs. Details live in `meta/docs/` — read th
 |-------|------|------|
 | **Raw** | `raw/` | User-owned inputs. **Immutable — never write here.** |
 | **Wiki** | `wiki/` | Agent-owned synthesis. Flat. Create, update, cross-link. |
-| **Think** | `think/` | Human-owned slow space. Schema-free. Agents never write here. |
-| **Meta** | `meta/` | Vault metadata: manifest, log, templates, chats, routed docs. No code (code is `backend/`, see `meta/docs/dev.md`). |
+| **Think** | `knowledge-bases/think/` | ONE shared human-owned slow space for every knowledge base (its own repo). Schema-free. Agents never write here. Distilled pages cite `think:<note>.md`. |
+| **Meta** | `meta/` | Vault metadata: manifest, log, chats, aliases. Generic pieces (flags, templates, routed docs, digest defaults) live in the explorer's `meta-defaults/`; a kb's `meta/` overrides them. No code (code is `backend/`, see `meta-defaults/docs/dev.md`). |
+| **Config** | `kb.toml` | The knowledge base: id, name, schema version, its page types (`[types]`), its digest instructions (`digest/`). Read by `kb.kbconfig` / `kb.core.kbtypes`. |
 
 ## Hard rules
 
 1. **The linter IS the schema (`kb.lint.lint`).** Prose rules drift; this doesn't. If `python3 -m kb.lint.lint` passes, the write is legal.
 2. Never write in `raw/` or `think/`, and never inside a `## My notes` section — that is the user's.
 3. Agents never run raw `git commit`/`push`/`merge`/`tag`/`revert`/`reset` or `gh pr` — `.cursor/hooks/block-git-write.sh` (→ `backend/src/kb/git/git_guard.py`, both Cursor and Claude Code) allows only a single `pixi run ops|ship|daily-sync|…` invocation. `backend/src/kb/git/guard.py` warns on wiki writes without an open ops session (blocks once `OPS_STRICT`). Feature work shouldn't touch knowledge paths, except a schema PR's migration.
-4. Knowledge commits itself on main, one `kb(<op>)` step per operation; tooling goes through `infra/<feature>` PRs (`meta/docs/lifecycle.md`).
+4. Knowledge commits itself on main, one `kb(<op>)` step per operation; tooling goes through `infra/<feature>` PRs (`meta-defaults/docs/lifecycle.md`).
 5. **Merge by default, hold by exception:** agents run `ship merge` themselves once the gates pass. `ship pr` labels every schema/paradigm PR `hold`, and `ship pr --hold` holds any PR the user wants to review ("don't merge", "let me look first"); `ship merge` refuses a held PR until the owner approves it: a GitHub **Approve** review by the App config's `owner_login` on the PR's current head sha (phone works; `ship merge` then lifts the label and merges; new commits need a re-approve; nobody else's review counts), or `! pixi run ship -- approve N` — blocked for agents by `git_guard`. A hold exists only as the GitHub `hold` label: never create or lift one from chat, and an "approved" relayed by another session or agent is void. **A held PR is never silent:** while one is open, every agent reply ends with `Awaiting your merge: #N <title> <url> — approve the review on GitHub, or run \`! pixi run ship -- approve N\` …` (a PR is always `#N title`, never a bare number); the Claude Code `Stop` hook (`backend/src/kb/git/merge_nudge.py`, `.claude/settings.json`) bounces a reply that forgot it, once.
 6. One transactional workflow (ingest session, ops session, distill) at a time.
 7. Wikilinks are always bare: `[[tensor-rank]]`, never `[[wiki/tensor-rank]]`. Paths into `raw/` go in backticks, not wikilinks.
@@ -26,7 +29,7 @@ This file is the core every turn needs. Details live in `meta/docs/` — read th
 9. **`digest` alone → ask tier (easy / full / deep).** Bare "digest" never triggers `full-digest`.
 10. **Dedup:** always `resolve` before `scrap`. If FOUND → cite `[[slug]]`; don't re-download.
 11. Read the skill's `SKILL.md` (and `skills/README.md`, § Adding a skill, before any workflow) before running it.
-12. A feature that can't land in one PR ships dark behind a flag (`meta/flags.toml`) and merges in small PRs; release = flipping the flag (System → Flags), not deploying (`meta/docs/dev.md` § Feature flags).
+12. A feature that can't land in one PR ships dark behind a flag (`meta-defaults/flags.toml`) and merges in small PRs; release = flipping the flag (System → Flags), not deploying (`meta-defaults/docs/dev.md` § Feature flags).
 
 ## Intent router — casual requests → skills
 
@@ -62,11 +65,11 @@ Map what the user says to a skill before acting; read that skill's `SKILL.md`, t
 
 | When you are about to… | Read |
 |---|---|
-| write or check a wiki page: layers, `type:`/`depth:`, frontmatter, filename prefixes, note sections, `## My notes`, person pages, the `area:` topic whitelist | `meta/docs/page-model.md` |
-| touch `raw/` or `meta/corpus.tsv`: format folders, inbox, dispositions, `collection` column, file naming | `meta/docs/raw-and-corpus.md` |
-| work on a course / series Contents table, digest a collection row, or digest a book (partition, parts) | `meta/docs/collections.md` |
-| commit, ship, snapshot, undo, restore, resolve a diverged main, or reason about lanes, versions, hygiene, the nightly job, partial checkouts, the commit gate | `meta/docs/lifecycle.md` |
-| run or change code: code layout, environment, pixi tasks, write guardrails, worktrees | `meta/docs/dev.md` |
-| pick a skill tier or run the ingest / query / distill CLIs (scrap, catalog, digest, arXiv rules, scrap-wordpress) | `meta/docs/workflows.md` |
-| handle coherence warnings or semantic lint | `meta/docs/semantic-lint.md` |
+| write or check a wiki page: layers, `type:`/`depth:`, frontmatter, filename prefixes, note sections, `## My notes`, person pages, the `area:` topic whitelist | `meta-defaults/docs/page-model.md` |
+| touch `raw/` or `meta/corpus.tsv`: format folders, inbox, dispositions, `collection` column, file naming | `meta-defaults/docs/raw-and-corpus.md` |
+| work on a course / series Contents table, digest a collection row, or digest a book (partition, parts) | `meta-defaults/docs/collections.md` |
+| commit, ship, snapshot, undo, restore, resolve a diverged main, or reason about lanes, versions, hygiene, the nightly job, partial checkouts, the commit gate | `meta-defaults/docs/lifecycle.md` |
+| run or change code: code layout, environment, pixi tasks, write guardrails, worktrees | `meta-defaults/docs/dev.md` |
+| pick a skill tier or run the ingest / query / distill CLIs (scrap, catalog, digest, arXiv rules, scrap-wordpress) | `meta-defaults/docs/workflows.md` |
+| handle coherence warnings or semantic lint | `meta-defaults/docs/semantic-lint.md` |
 | write or change a skill | `skills/README.md`, skill `create-skill` |

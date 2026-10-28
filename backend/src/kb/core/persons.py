@@ -16,7 +16,7 @@ progress is the `verified` date, and `--health` counts pages without one.
 """
 import re
 
-from kb.core.schema import make_slug
+from kb.core.schema import CONCEPT_TYPES, make_slug
 
 HANDLES = ("url", "scholar", "github", "youtube", "blog", "wikipedia")
 EDGES = ("orgs", "advisors", "students")
@@ -311,8 +311,10 @@ def check(slug, fm, body, pages):
     else:
         why = next(s for s in sections if s["title"] == WHY)
         links = [l.strip() for l in LINK.findall(why["body"])]
-        if not any(pages.get(l, {}).get("type") in ("topic", "idea") for l in links):
-            msg = f"## {WHY} links no topic or idea page"
+        # the reason must tie the person to the knowledge: a link to a concept page of this kb (not another person)
+        knowledge = frozenset(CONCEPT_TYPES) - {"person"}
+        if not any(pages.get(l, {}).get("type") in knowledge for l in links):
+            msg = f"## {WHY} links no concept page ({', '.join(sorted(knowledge))})"
             (errors if verified else warnings).append(msg)
     for s in sections:
         t = s["title"]

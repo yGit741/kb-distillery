@@ -16,7 +16,7 @@ import sys
 import zipfile
 from datetime import datetime, timezone
 
-from kb.paths import vault_root
+from kb.paths import THINK_PATH, think_path, vault_root
 ROOT = vault_root()
 EXPORT_DIR = os.path.join(ROOT, ".exported")
 PREFIX = "yonatan-thesis-kb"
@@ -117,14 +117,16 @@ def _collect_files(include_raw_pdfs: bool) -> list[str]:
             files.append(rel)
 
     for top in TEXT_GLOBS:
-        base = os.path.join(ROOT, top)
+        # think is the shared space beside the vault (kb.paths.THINK_PATH); it is bundled as think/ all the same
+        base = THINK_PATH if top == "think" else os.path.join(ROOT, top)
         if not os.path.isdir(base):
             continue
         for dirpath, dirnames, filenames in os.walk(base):
             dirnames[:] = [d for d in dirnames if d not in SKIP_DIR_NAMES]
             for fn in filenames:
                 full = os.path.join(dirpath, fn)
-                rel = os.path.relpath(full, ROOT).replace("\\", "/")
+                rel = (os.path.join(top, os.path.relpath(full, base)) if top == "think"
+                       else os.path.relpath(full, ROOT)).replace("\\", "/")
                 if _should_skip(rel):
                     continue
                 ext = os.path.splitext(fn)[1].lower()
@@ -202,7 +204,7 @@ def create_export(
     with zipfile.ZipFile(archive, "w", compression=zipfile.ZIP_DEFLATED) as zf:
         zf.writestr("EXPORT_MANIFEST.txt", manifest)
         for rel in files:
-            zf.write(os.path.join(ROOT, rel), rel)
+            zf.write(think_path(rel) if rel.startswith("think/") else os.path.join(ROOT, rel), rel)
 
     return archive
 

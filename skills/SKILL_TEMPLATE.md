@@ -51,6 +51,6 @@ Handoff to the next skill in the ladder (e.g. `full-digest` → `semantic-lint-h
 **Registration checklist**
 
 - [ ] Row in `skills/README.md` (Token budgets + Skills tables)
-- [ ] `AGENTS.md` Intent router if triggers change; `meta/docs/workflows.md` Skill ladder if the ladder changes
+- [ ] `AGENTS.md` Intent router if triggers change; `meta-defaults/docs/workflows.md` Skill ladder if the ladder changes
 - [ ] `pixi run lint-skills`
 - [ ] `pixi run sync-skills`

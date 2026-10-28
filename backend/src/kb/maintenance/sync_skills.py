@@ -10,9 +10,9 @@ import os
 import shutil
 import sys
 
-from kb.paths import vault_root
+from kb.paths import CHECKOUT_ROOT, vault_root
 
-ROOT = vault_root()
+ROOT = CHECKOUT_ROOT          # skills are code: they live with the explorer
 SRC = os.path.join(ROOT, "skills")
 LINK_TARGET = os.path.join("..", "skills")
 LINKS = [os.path.join(ROOT, ".cursor", "skills"), os.path.join(ROOT, ".claude", "skills")]

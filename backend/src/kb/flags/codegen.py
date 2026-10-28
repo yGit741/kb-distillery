@@ -16,7 +16,7 @@ import sys
 from pathlib import Path
 
 from kb.flags.registry import FLAGS_TOML, FlagError, Registry, load
-from kb.paths import ROOT
+from kb.paths import CHECKOUT_ROOT as ROOT   # generated files and tests are code: the explorer, not the vault
 
 GEN_TS = Path("frontend/src/flags/registry.gen.ts")
 GEN_WORKER = Path("share/flags.gen.js")   # the private Worker accepts overrides for these names only
@@ -71,6 +71,16 @@ def outputs(reg: Registry) -> dict[Path, str]:
     return out
 
 
+def _registry_for(root: Path) -> Path:
+    """`<root>/meta/flags.toml` (a vault's own), else `<root>/meta-defaults/flags.toml` (the explorer's), else the
+    registry this process resolved (kb.flags.registry.FLAGS_TOML)."""
+    for rel in (("meta", "flags.toml"), ("meta-defaults", "flags.toml")):
+        p = root.joinpath(*rel)
+        if p.is_file():
+            return p
+    return FLAGS_TOML
+
+
 def main(argv=None, root: Path | str = ROOT) -> int:
     root = Path(root)
     ap = argparse.ArgumentParser(prog="kb.flags.codegen", description=__doc__.splitlines()[0])
@@ -78,7 +88,7 @@ def main(argv=None, root: Path | str = ROOT) -> int:
     ap.add_argument("--flags", default=None, help="registry path (default meta/flags.toml)")
     args = ap.parse_args(argv)
     try:
-        reg = load(args.flags or (root / FLAGS_TOML.relative_to(Path(ROOT))))
+        reg = load(args.flags or _registry_for(root))
     except FlagError as e:
         print(e, file=sys.stderr)
         return 2

@@ -10,11 +10,12 @@ DEFAULT_PORT = 8765
 
 
 def main(argv=None):
-    parser = argparse.ArgumentParser(description="Thesis KB app server")
+    parser = argparse.ArgumentParser(description="Knowledge base explorer app server")
     parser.add_argument("--port", type=int, default=DEFAULT_PORT)
     parser.add_argument("--host", default="127.0.0.1", help="loopback only")
     parser.add_argument("--no-open", action="store_true", help="do not open a browser tab")
     parser.add_argument("--no-build", action="store_true", help="serve frontend/dist as is (skip the rebuild check)")
+    parser.add_argument("--kb", default=None, help="knowledge base id (else $KB; see `pixi run kb-list`)")
     args = parser.parse_args(argv)
     assert_loopback_bind(args.host)
 

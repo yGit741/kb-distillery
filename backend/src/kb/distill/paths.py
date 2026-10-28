@@ -7,14 +7,20 @@ import sys
 
 from kb.core.schema import DISTILL_DIR, DISTILLED_THINK_PREFIX, THINK_DIR, WIKI_DIR
 
-from kb.paths import vault_root
+from kb.paths import think_path, vault_root
 ROOT = vault_root()
 DISTILL_ROOT = os.path.join(ROOT, DISTILL_DIR)
 
+# A distilled page cites its note as `think:<file>`: think is the shared space beside every knowledge base
+# (`knowledge-bases/think/`), not a folder of this vault. `think/<file>` is the legacy spelling.
+THINK_CITE = f"{THINK_DIR}:"
+
 
 def resolve_think_path(arg):
-    """Resolve CLI arg to repo-relative think/ path."""
+    """Resolve a CLI arg (`note`, `note.md`, `think/note.md`, `think:note.md`) to the `think/<file>` key."""
     arg = arg.strip().replace("\\", "/")
+    if arg.startswith(THINK_CITE):
+        arg = arg[len(THINK_CITE):]
     if arg.startswith(f"{THINK_DIR}/"):
         rel = arg
     else:
@@ -23,6 +29,16 @@ def resolve_think_path(arg):
     if not rel.startswith(f"{THINK_DIR}/") or ".." in rel:
         raise ValueError(f"think path must be under {THINK_DIR}/")
     return rel
+
+
+def think_cite(think_rel):
+    """`think/note.md` → `think:note.md`, the `source:` a distilled page carries."""
+    return THINK_CITE + think_rel[len(THINK_DIR) + 1:] if think_rel.startswith(f"{THINK_DIR}/") else think_rel
+
+
+def think_abs(think_rel):
+    """`think/note.md` → its file in the shared think space."""
+    return think_path(think_rel)
 
 
 def think_basename(think_rel):

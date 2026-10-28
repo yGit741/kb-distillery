@@ -8,17 +8,22 @@ export interface DataSource {
   getLifecycle(): Promise<T.LifecycleSnapshot>;
   getShareStatus(): Promise<T.ShareStatus>;
   getHealth(): Promise<T.HealthSnapshot>;
+  /** The knowledge base this app serves (kb.toml, folder, git, types) and the ones the explorer can load. */
+  getKb(): Promise<T.KbInfo>;
+  listKbs(): Promise<T.KbList>;
   getOps(refresh?: boolean): Promise<T.OpsSnapshot>;
 
   // graph
-  getGraph(opts?: { raw?: boolean }): Promise<T.GraphSnapshot>;
+  /** `kbs`: other knowledge bases to show (read-only); several share one canvas with ids `<kb>:<slug>`. */
+  getGraph(opts?: { raw?: boolean; kbs?: readonly string[] }): Promise<T.GraphSnapshot>;
   /** Vault nodes: layer, type, depth, status, areas. */
   getGraphNodes(): Promise<T.GraphNode[]>;
   getCitations(): Promise<T.CitationGraph>;
 
   // pages
-  listPages(): Promise<T.PageIndex>;
-  getPage(slug: string): Promise<T.PageDetail>;
+  listPages(opts?: { kb?: string }): Promise<T.PageIndex>;
+  /** `kb`: read the page from another knowledge base (the result is `read_only`). */
+  getPage(slug: string, opts?: { kb?: string }): Promise<T.PageDetail>;
   search(q: string, limit?: number): Promise<T.SearchResult>;
   findPath(a: string, b: string): Promise<T.PathResult>;
 

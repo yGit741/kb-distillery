@@ -12,6 +12,7 @@ import re
 import sys
 
 from .paths import ROOT
+from kb.paths import meta_file
 from kb.core import wikiio
 from kb.lint.lint import parse_frontmatter
 from kb.core.schema import PARTITION_COLLECTIONS, RAW_HANDWRITTEN, SLUG_PREFIX, make_slug, strip_prefix
@@ -280,7 +281,7 @@ def hub_type(raw_rel):
 
 
 def template_for(page_type):
-    return os.path.join(ROOT, "meta", "templates", f"{page_type}.md")
+    return meta_file("templates", f"{page_type}.md")
 
 
 def find_hub(raw_rel):

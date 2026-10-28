@@ -17,7 +17,7 @@ import re
 import sys
 import unicodedata
 
-from kb.paths import vault_root
+from kb.paths import THINK_PATH, vault_root
 ROOT = vault_root()
 MAP = os.path.join(ROOT, "meta", "raw-renames.tsv")
 MANIFEST = os.path.join(ROOT, "meta", "corpus.tsv")
@@ -83,9 +83,9 @@ def rewrite_text(text, rows):
 
 
 def ref_files():
-    pats = ["wiki/**/*.md", "think/**/*.md", "index.md"]
-    for p in pats:
+    for p in ("wiki/**/*.md", "index.md"):
         yield from glob.glob(os.path.join(ROOT, p), recursive=True)
+    yield from glob.glob(os.path.join(THINK_PATH, "**", "*.md"), recursive=True)   # the shared think space
 
 
 def main():

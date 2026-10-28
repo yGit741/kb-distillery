@@ -18,7 +18,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from kb.flags.registry import FLAGS_TOML, load
+from kb.flags.registry import FLAGS_SOURCE, FLAGS_TOML, load
 from kb.paths import OPS_PATH
 
 OVERRIDES_PATH = Path(OPS_PATH) / "flags.json"
@@ -56,7 +56,7 @@ def list_flags(env: str = ENV, registry_path=FLAGS_TOML, overrides_path: Path | 
             "source": "override" if o else "registry",
             "overridden_at": o.get("at") if o else None,
         })
-    return {"env": env, "flags": flags,
+    return {"env": env, "flags": flags, "registry": FLAGS_SOURCE if registry_path == FLAGS_TOML else "kb",
             "overrides": {x["name"]: x["value"] for x in flags if x["source"] == "override"}}
 
 

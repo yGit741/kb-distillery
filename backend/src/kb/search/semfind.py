@@ -21,10 +21,11 @@ def _now():
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
-def walk(d, ext=None):
-    """Like lint.walk, but relative to this module's ROOT (honours KB_ROOT)."""
+def walk(d, ext=None, root=None):
+    """Like lint.walk, but relative to this module's ROOT (honours KB_ROOT), or to `root`."""
+    root = root or ROOT
     out = []
-    base = os.path.join(ROOT, d)
+    base = os.path.join(root, d)
     if not os.path.isdir(base):
         return out
     for dirpath, dirnames, filenames in os.walk(base):
@@ -32,16 +33,18 @@ def walk(d, ext=None):
         for fn in filenames:
             if fn.startswith(".") or (ext and not fn.endswith(ext)):
                 continue
-            out.append(os.path.relpath(os.path.join(dirpath, fn), ROOT).replace(os.sep, "/"))
+            out.append(os.path.relpath(os.path.join(dirpath, fn), root).replace(os.sep, "/"))
     return sorted(out)
 
 
-def load_pages():
+def load_pages(root=None):
+    """{slug: (rel, frontmatter, text)} of the active knowledge base's wiki, or of the one at `root`."""
+    root = root or ROOT
     pages = {}
-    for rel in walk(WIKI_DIR, ".md"):
+    for rel in walk(WIKI_DIR, ".md", root):
         if "excalidraw" in rel:
             continue
-        text = open(os.path.join(ROOT, rel), encoding="utf-8").read()
+        text = open(os.path.join(root, rel), encoding="utf-8").read()
         slug = os.path.basename(rel)[:-3]
         fm = parse_frontmatter(text)
         if fm:

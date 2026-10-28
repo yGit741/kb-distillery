@@ -15,9 +15,11 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, ValidationError, model_validator
 
-from kb.paths import ROOT
+from kb.paths import META_DEFAULTS_PATH, ROOT, meta_file
 
-FLAGS_TOML = Path(ROOT) / "meta" / "flags.toml"
+# The explorer's `meta-defaults/flags.toml`, unless the knowledge base carries its own `meta/flags.toml`.
+FLAGS_TOML = Path(meta_file("flags.toml"))
+FLAGS_SOURCE = "kb" if not str(FLAGS_TOML).startswith(META_DEFAULTS_PATH) else "explorer"
 ENVS = ("local", "private", "public")
 Env = Literal["local", "private", "public"]
 NAME_RE = re.compile(r"^[a-z][a-z0-9-]*(\.[a-z][a-z0-9-]*)*$")
@@ -105,7 +107,7 @@ def _where(loc) -> str:
     return ".".join(str(p) for p in loc) or "(flag)"
 
 
-def parse(data: dict, source: str = "meta/flags.toml") -> Registry:
+def parse(data: dict, source: str = "flags.toml") -> Registry:
     """Validate parsed TOML; collect every error before raising."""
     extra = set(data) - {"flag"}
     errors = [f"unknown top-level key(s) {sorted(extra)}; use [[flag]] tables"] if extra else []
