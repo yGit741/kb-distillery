@@ -36,7 +36,7 @@ import { parseSchema } from "./schema";
 import { SideReader } from "./SideReader";
 import { useGraphUi } from "./store";
 import { Toolbar } from "./Toolbar";
-import { KbPicker, parseKbs } from "./KbPicker";
+import { parseKbs } from "@/lib/kbSelection";
 import { useFlag } from "@/flags/useFlag";
 import { TOOLS, useVisibleTools, type GraphToolContext } from "./tools";
 import { flagOn, useExperiments } from "./tools/experiments";
@@ -62,10 +62,14 @@ export function GraphScreen({ search, host }: { search: GraphSearch; host: Graph
   const qc = useQueryClient();
   const live = useGraphUi((s) => s.liveSync);
   const kbViewOn = useFlag("kb-view") && ds.kind !== "embedded";
-  const kbs = useMemo(() => (kbViewOn ? parseKbs(search.kbs) : []), [kbViewOn, search.kbs]);
+  // which knowledge bases (the header menu writes `?kbs=`): [] = the server's own; `none` = nothing picked
+  const picked = kbViewOn ? parseKbs(search.kbs) : null;
+  const noneShown = picked !== null && !picked.length;
+  const kbs = useMemo(() => picked ?? [], [picked?.join(",")]); // eslint-disable-line react-hooks/exhaustive-deps
   // the data layer is the server's own knowledge base's: it is off while other knowledge bases are shown
   const rawOn = useLayer((s) => s.rawOn) && ds.kind !== "embedded" && !kbs.length;
   const q = useApiQuery(["graph", rawOn, kbs.join(",")], (d) => d.getGraph({ ...(rawOn ? { raw: true } : {}), ...(kbs.length ? { kbs } : {}) }), {
+    enabled: !noneShown,
     refetchInterval: live ? (rawOn ? LIVE_RAW_MS : LIVE_MS) : false,
     // switching the data layer on or off keeps the canvas (and its positions) until the new snapshot lands
     placeholderData: keepPreviousData,
@@ -107,13 +111,19 @@ export function GraphScreen({ search, host }: { search: GraphSearch; host: Graph
     if (shown && schema.defaultVisible.some((t) => !shown.has(t)))
       useGraphUi.setState({ shownTypes: new Set([...shown, ...schema.defaultVisible]) });
   }, [kbsKey, etag]); // eslint-disable-line react-hooks/exhaustive-deps
-  const picker = kbViewOn ? <KbPicker selected={kbs} onChange={(ids) => host.setParams({ kbs: ids.join(",") || undefined })} /> : null;
 
+  if (noneShown)
+    return (
+      <FullBleed>
+        <div className="p-4">
+          <Empty>No knowledge base is shown. Pick one from the menu on the knowledge base name, top left.</Empty>
+        </div>
+      </FullBleed>
+    );
   if (q.isLoading) return <FullBleed><div className="p-4"><Loading label="Loading graph" rows={4} /></div></FullBleed>;
   if (q.isError || !snap || !model)
     return (
       <FullBleed>
-        {picker}
         <div className="p-4">
           <ErrorState title="Could not load the graph." error={q.error} onRetry={() => void q.refetch()} />
         </div>
@@ -122,13 +132,11 @@ export function GraphScreen({ search, host }: { search: GraphSearch; host: Graph
   if (!model.nodes.length)
     return (
       <FullBleed>
-        {picker}
         <div className="p-4"><Empty>The vault has no pages yet.</Empty></div>
       </FullBleed>
     );
   return (
     <FullBleed>
-      {picker}
       <Loaded
         model={model}
         schema={schema}

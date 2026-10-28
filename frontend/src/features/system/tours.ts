@@ -70,25 +70,32 @@ registerTour(
   [
     {
       go: "/graph",
-      target: '[data-tour="graph-kbs"]',
+      target: '[data-tour="kb-badge"]',
       wait: 4000,
       place: "bottom",
-      title: "Show other knowledge bases",
-      // source: features/graph/KbPicker.tsx; GET /api/graph?kb=a,b (backend/src/kb/api/routers/graph.py)
-      body: "Tick any knowledge base the explorer found. The choice goes into the link (**?kbs=**), so a presentation link opens the same view.",
+      title: "Pick the knowledge bases",
+      // source: app/KbBadge.tsx (KbMenu); GET /api/graph?kb=a,b (backend/src/kb/api/routers/graph.py)
+      body: "The name at the top left is a menu. Tick any knowledge base, or none. The choice goes into the link (**?kbs=**), so a presentation link opens the same view.",
+    },
+    {
+      target: '[data-tour="kb-badge"]',
+      place: "bottom",
+      title: "Add one from anywhere",
+      // source: app/KbBadge.tsx AddFolder; POST /api/kb/register → kbconfig.register (knowledge-bases.toml)
+      body: "Paste the path of a knowledge base folder on this machine. It needs a kb.toml at this explorer's schema and its own **repository**, and is saved for next time.",
     },
     {
       target: '[data-testid="graph-screen"]',
       title: "One region per knowledge base",
-      // source: lab/regions.ts regionKey; services/graph.py merge_snapshots (ids <kb>:<slug>)
-      body: "With several ticked they share one canvas, each in its own labelled **region**. Colour still means page type.",
+      // source: lab/kbRegions.ts (anchors, dashed outline, name above); services/graph.py merge_snapshots
+      body: "Each sits in its own dashed **region**, named above it. Drag the name to move the whole region; colour still means page type.",
     },
     {
-      target: '[data-tour="graph-kbs"]',
+      target: '[data-testid="graph-screen"]',
       title: "Pages are view only",
       // source: features/pages/PageReader.tsx viewOnly; services/kbview.py (writes take no kb)
       body: "Double-click a node of another knowledge base to read it. Pin, Connect and Obsidian are hidden, since **edits** stay on this app's own knowledge base.",
     },
   ],
-  "Pick other knowledge bases on the graph and read their pages, view only.",
+  "Pick knowledge bases from the header, add one from disk, read their pages view only.",
 );

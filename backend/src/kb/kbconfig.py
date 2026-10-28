@@ -200,6 +200,30 @@ def load(kb_id: str, strict: bool = True) -> KbConfig:
     return load_dir(known[kb_id], kb_id, strict=strict)
 
 
+def register(path: str) -> KbConfig:
+    """Save a knowledge base folder in the registry (`[[kb]] id, path`) after checking this explorer can open it:
+    a kb.toml at this explorer's schema version, in a folder that is its own git repository. Idempotent."""
+    root = _expand(path)
+    if not os.path.isdir(root):
+        raise KbConfigError(f"{root}: no such folder")
+    cfg = load_dir(root, strict=True)
+    if cfg.git_root is None:
+        raise KbConfigError(f"{root} is not a git repository — a knowledge base is its own repo (git init there first)")
+    known = discover()
+    if cfg.id in known:
+        if os.path.realpath(known[cfg.id]) == cfg.root:
+            return cfg
+        raise KbConfigError(f"a knowledge base {cfg.id!r} is already known at {known[cfg.id]}")
+    import json
+    reg = registry_path()
+    new = not os.path.isfile(reg) or not os.path.getsize(reg)
+    with open(reg, "a", encoding="utf-8") as f:
+        if new:
+            f.write("# Knowledge bases outside the bases dir (machine-local, gitignored).\n")
+        f.write(f"\n[[kb]]\nid = {json.dumps(cfg.id)}\npath = {json.dumps(cfg.root)}\n")
+    return cfg
+
+
 def schema_mismatch(cfg: "KbConfig | None") -> str | None:
     """Lint's view of a version mismatch: the message, or None when the kb matches this explorer."""
     if cfg and cfg.schema_version != SCHEMA_VERSION:

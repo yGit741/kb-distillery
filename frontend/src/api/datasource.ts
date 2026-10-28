@@ -11,6 +11,8 @@ export interface DataSource {
   /** The knowledge base this app serves (kb.toml, folder, git, types) and the ones the explorer can load. */
   getKb(): Promise<T.KbInfo>;
   listKbs(): Promise<T.KbList>;
+  /** Save a knowledge base folder from anywhere on disk (kb.toml at this schema, its own git repository). */
+  registerKb(path: string): Promise<T.KbList>;
   getOps(refresh?: boolean): Promise<T.OpsSnapshot>;
 
   // graph

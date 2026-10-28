@@ -45,6 +45,7 @@ export function createHttpDataSource(fetchImpl: Fetch = (...a) => fetch(...a), b
     getHealth: () => run(() => client.GET("/api/health"), "/api/health"),
     getKb: () => run(() => client.GET("/api/kb"), "/api/kb"),
     listKbs: () => run(() => client.GET("/api/kb/list"), "/api/kb/list"),
+    registerKb: (path) => run(() => client.POST("/api/kb/register", { body: { path } }), "/api/kb/register"),
     getOps: (refresh) =>
       run(() => client.GET("/api/ops", { params: { query: refresh ? { refresh: "1" } : {} } }), "/api/ops"),
 

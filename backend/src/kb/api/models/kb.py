@@ -57,6 +57,10 @@ class KbRow(ApiModel):
     active: bool
 
 
+class KbRegister(ApiModel):
+    path: str                            # a knowledge base folder: kb.toml at this schema, its own git repository
+
+
 class KbList(ApiModel):
     bases_dir: str
     registry: str

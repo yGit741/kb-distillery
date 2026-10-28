@@ -59,6 +59,12 @@ def active():
     }
 
 
+def register(path):
+    """Add a knowledge base folder to the registry (`kbconfig.register`); the updated listing."""
+    kbconfig.register(path)
+    return listing()
+
+
 def listing():
     rows = []
     for kb_id, root in kbconfig.discover().items():
