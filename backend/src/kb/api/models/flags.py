@@ -29,6 +29,7 @@ class FlagState(ApiModel):
 
 class FlagsSnapshot(ApiModel):
     env: Literal["local", "private", "public"]
+    registry: Literal["explorer", "kb"] = "explorer"   # explorer meta-defaults/flags.toml or the kb's own meta/flags.toml
     flags: list[FlagState]
     overrides: dict[str, bool]                    # name -> value, only flags with an override
 

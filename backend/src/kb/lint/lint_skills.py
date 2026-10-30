@@ -12,9 +12,9 @@ import sys
 from typing import Optional
 
 from kb.maintenance.sync_skills import DEPRECATED
-from kb.paths import CODE_DIR, vault_root
+from kb.paths import CHECKOUT_ROOT, CODE_DIR, vault_root
 
-ROOT = vault_root()
+ROOT = CHECKOUT_ROOT          # skills are code: they live with the explorer
 SKILLS_ROOT = os.path.join(ROOT, "skills")
 README_PATH = os.path.join(SKILLS_ROOT, "README.md")
 PIXI_TOML = os.path.join(ROOT, "pixi.toml")

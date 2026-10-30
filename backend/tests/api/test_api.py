@@ -63,6 +63,13 @@ def test_health_service_drops_private_rows():
         assert "_rows" not in build_health_snapshot()
 
 
+def _real_kb_with_history():
+    from kb import kbconfig
+    cfg = kbconfig.current()
+    return bool(os.environ.get("KB")) and not os.environ.get("KB_ROOT") and bool(cfg and cfg.git_root)
+
+
+@pytest.mark.skipif(not _real_kb_with_history(), reason="reads a real knowledge base with git history: run with KB=<id>")
 def test_lifecycle_on_the_real_vault(client):
     r = client.get("/api/lifecycle?limit=5")
     assert r.status_code == 200

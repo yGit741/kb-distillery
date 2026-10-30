@@ -3,6 +3,7 @@ import { Check, Copy, ExternalLink, Pin, PinOff } from "lucide-react";
 import { useCallback, useMemo, useState, type ReactNode } from "react";
 import type { PageDetail } from "@/api/types";
 import { Markdown } from "@/components/Markdown";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { agoLabel, bareSlug, fmList, fmString, layerOf, mtimeOf, prepareMarkdown, titleOf, type LinkGraph } from "./lib";
 import { MiniGraph } from "./MiniGraph";
@@ -55,9 +56,14 @@ export interface PageReaderProps {
   pinned: boolean;
   onTogglePin: () => void;
   onConnect: () => void;
+  /** The knowledge base's name when the page is from another one than the server's own (read-only). */
+  viewOnly?: string;
 }
 
-export function PageReader({ g, detail, embed, pinned, onTogglePin, onConnect }: PageReaderProps) {
+export function PageReader({ g, detail, embed, pinned, onTogglePin, onConnect, viewOnly }: PageReaderProps) {
+  // a page of another knowledge base: no pin, connect or Obsidian (they act on the server's own), links stay in it
+  const kb = viewOnly ? (detail.kb ?? undefined) : undefined;
+  const linkSearch = useMemo(() => (kb ? { kb } : undefined), [kb]);
   const { card, frontmatter: fm } = detail;
   const layer = layerOf(card.type);
   const resolveSlug = useCallback((raw: string) => (g.byId.has(bareSlug(raw)) ? bareSlug(raw) : null), [g]);
@@ -120,27 +126,36 @@ export function PageReader({ g, detail, embed, pinned, onTogglePin, onConnect }:
             </p>
           )}
           <div className="flex flex-wrap items-center gap-2">
-            <Button variant="outline" size="sm" onClick={onTogglePin} aria-pressed={pinned}>
-              {pinned ? <PinOff /> : <Pin />} {pinned ? "Unpin" : "Pin"}
-            </Button>
+            {viewOnly && (
+              <Badge variant="outline" data-tour="page-view-only" title="This page is from another knowledge base: you can read it here, not change it.">
+                View only · {viewOnly}
+              </Badge>
+            )}
+            {!viewOnly && (
+              <Button variant="outline" size="sm" onClick={onTogglePin} aria-pressed={pinned}>
+                {pinned ? <PinOff /> : <Pin />} {pinned ? "Unpin" : "Pin"}
+              </Button>
+            )}
             <Button variant="outline" size="sm" asChild>
-              <a href={`${BASE}/graph?focus=${encodeURIComponent(card.id)}`} {...topLink}>Show in graph</a>
+              <a href={`${BASE}/graph?${kb ? `kbs=${encodeURIComponent(kb)}&` : ""}focus=${encodeURIComponent(card.id)}`} {...topLink}>Show in graph</a>
             </Button>
-            {!embed && (
+            {!embed && !viewOnly && (
               <Button variant="outline" size="sm" onClick={onConnect}>
                 Connect to…
               </Button>
             )}
-            <Button variant="ghost" size="sm" asChild>
-              <a href={`obsidian://open?file=${encodeURIComponent(detail.path)}`}>Open in Obsidian</a>
-            </Button>
+            {!viewOnly && (
+              <Button variant="ghost" size="sm" asChild>
+                <a href={`obsidian://open?file=${encodeURIComponent(detail.path)}`}>Open in Obsidian</a>
+              </Button>
+            )}
             <span className="text-xs text-muted-foreground">
               {card.words} words{mtimeOf(card) ? ` · edited ${agoLabel(mtimeOf(card))}` : ""}
             </span>
           </div>
         </header>
 
-        <Markdown resolveSlug={resolveSlug}>{markdown}</Markdown>
+        <Markdown resolveSlug={resolveSlug} linkSearch={linkSearch}>{markdown}</Markdown>
 
         {detail.broken.length > 0 && (
           <p className="rounded-lg border border-warn/40 bg-warn/10 p-3 text-sm">

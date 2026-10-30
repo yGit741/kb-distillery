@@ -21,7 +21,8 @@ import {
   type LinkGraph,
 } from "./lib";
 import { noPage, PageReader } from "./PageReader";
-import { PAGES_TO, TypeDot, pageTo } from "./parts";
+import { PAGES_TO, PageKb, TypeDot, pageTo } from "./parts";
+import { useFlag } from "@/flags/useFlag";
 import { SearchBox } from "./SearchBox";
 import { BrowseView, HomeView, PathView, SearchView } from "./Views";
 
@@ -58,11 +59,14 @@ export default function PagesScreen() {
   const navigate = useNavigate();
   const { slug } = useParams({ strict: false }) as { slug?: string };
   const search = useSearch({ strict: false }) as PagesSearch;
+  // `?kb=<id>`: pages of another knowledge base, read-only (flag kb-view)
+  const kbViewOn = useFlag("kb-view");
+  const kb = kbViewOn ? search.kb : undefined;
   const searchRef = useRef<HTMLInputElement>(null);
 
   // The finder is open when the URL carries a/b (shareable result) or the user opened it empty.
   const [openPath, setPath] = useState<{ a: string; b: string } | null>(null);
-  const path = search.a || search.b ? { a: search.a ?? "", b: search.b ?? "" } : openPath;
+  const path = !kb && (search.a || search.b) ? { a: search.a ?? "", b: search.b ?? "" } : openPath;
   const askPath = useCallback(
     (a: string, b: string) =>
       void navigate({
@@ -80,9 +84,15 @@ export default function PagesScreen() {
   const [pins, setPins] = useState<string[]>(() => loadList(PINS_KEY));
   const [trail, setTrail] = useState<string[]>(() => loadList(TRAIL_KEY));
 
-  const index = useApiQuery(["pages", "index"], (ds) => ds.listPages(), { staleTime: 60_000 });
+  const kbList = useApiQuery(["kb-list"], (ds) => ds.listKbs(), { enabled: !!kb });
+  const kbRow = kbList.data?.kbs.find((r) => r.id === kb);
+  const index = useApiQuery(["pages", "index", kb ?? ""], (ds) => (kb ? ds.listPages({ kb }) : ds.listPages()), { staleTime: 60_000 });
   const g = useMemo(() => (index.data ? buildGraph(index.data) : undefined), [index.data]);
-  const detail = useApiQuery(["pages", "page", slug], (ds) => ds.getPage(slug!), { enabled: !!slug, retry: false });
+  const detail = useApiQuery(["pages", "page", slug, kb ?? ""], (ds) => (kb ? ds.getPage(slug!, { kb }) : ds.getPage(slug!)), {
+    enabled: !!slug,
+    retry: false,
+  });
+  const viewOnly = detail.data?.read_only ? kbRow?.name || detail.data.kb || kb : undefined;
 
   // old `#/p/slug`, `#/search/q`, `#/browse/type`, `#/path/a/b` links
   useEffect(() => {
@@ -109,12 +119,13 @@ export default function PagesScreen() {
   const detailOk = detail.data && slug === detail.data.card.id;
   useEffect(() => {
     if (!detailOk || !slug) return;
+    document.title = `${detail.data.card.title} - Pages`;
+    if (kb) return;                    // the trail is the server's own pages; a read-only page is not on it
     setTrail((t) => {
       const next = withTrail(t, slug);
       saveList(TRAIL_KEY, next);
       return next;
     });
-    document.title = `${detail.data.card.title} - Pages`;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [detailOk, slug]);
 
@@ -142,14 +153,15 @@ export default function PagesScreen() {
         e.preventDefault();
         searchRef.current?.focus();
         searchRef.current?.select();
-      } else if (e.key === "r") surprise();
+      } else if (e.key === "r" && !kb) surprise();
       else if (e.key === "h") void navigate({ to: PAGES_TO });
-      else if (e.key === "p") togglePin();
-      else if (e.key === "g" && slug) window.location.assign(`${import.meta.env.BASE_URL}graph?focus=${encodeURIComponent(slug)}`);
+      else if (e.key === "p" && !kb) togglePin();      // pins are the server's own pages
+      else if (e.key === "g" && slug)
+        window.location.assign(`${import.meta.env.BASE_URL}graph?${kb ? `kbs=${encodeURIComponent(kb)}&` : ""}focus=${encodeURIComponent(slug)}`);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [embed, surprise, togglePin, navigate, slug]);
+  }, [embed, surprise, togglePin, navigate, slug, kb]);
 
   let body;
   if (index.isPending) body = <Loading label="Loading pages" rows={4} />;
@@ -174,15 +186,22 @@ export default function PagesScreen() {
           pinned={pins.includes(slug)}
           onTogglePin={togglePin}
           onConnect={() => setPath({ a: slug, b: "" })}
+          viewOnly={viewOnly}
         />
       );
-  } else if (search.q) body = <SearchView g={g} q={search.q} />;
+  } else if (search.q && !kb) body = <SearchView g={g} q={search.q} />;
   else if (search.type || search.layer) body = <BrowseView g={g} type={search.type} layer={search.layer} />;
   else body = <HomeView g={g} index={index.data} />;
 
   const content = (
     <div className="flex min-w-0 flex-col gap-4">
-      {!embed && (
+      {!embed && kb && (
+        <p className="text-sm text-muted-foreground">
+          Reading <b>{kbRow?.name || kb}</b>, view only.{" "}
+          <Link to={PAGES_TO} className="text-primary hover:underline">Back to this app's pages</Link>
+        </p>
+      )}
+      {!embed && !kb && (
         <div className="flex flex-col gap-2">
           <div className="flex flex-wrap items-center gap-2">
             <SearchBox ref={searchRef} g={g} initial={search.q} key={search.q ?? ""} />
@@ -206,10 +225,12 @@ export default function PagesScreen() {
     </div>
   );
 
-  if (!embed) return content;
-  return (
+  const shown = !embed ? (
+    content
+  ) : (
     <div className="fixed inset-0 z-50 overflow-auto bg-background px-4 py-4" data-embed="true">
       {slug || index.isError ? content : <Empty>Pick a page.</Empty>}
     </div>
   );
+  return kb ? <PageKb.Provider value={kb}>{shown}</PageKb.Provider> : shown;
 }

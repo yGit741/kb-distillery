@@ -4,7 +4,7 @@ import type { SimNode } from "../types";
 import type { LabConfig } from "./config";
 import type { Importance } from "./importance";
 import { labelText, planLabels, type Box, type Placed, type Plan } from "./labelPlan";
-import { coreHull, regionsOf } from "./regions";
+import { coreHull, regionKey, regionsOf } from "./regions";
 
 /** Per-label fade state: opacity, where it is heading, its offset and its last placement (kept while fading out). */
 export interface FadeState {
@@ -77,6 +77,33 @@ export function fitZoom(nodes: readonly { x?: number; y?: number }[], width: num
 const toScreen = (m: DOMMatrix, pr: number, x: number, y: number) => [(m.a * x + m.c * y + m.e) / pr, (m.b * x + m.d * y + m.f) / pr] as const;
 
 /** Faint hulls of each theme's core, under the nodes (graph coordinates: called with force-graph's transform). */
+/** Trace `hull` grown by a disk of radius R as the current path (not drawn); false when it is too small. */
+export function traceRoundedHull(ctx: CanvasRenderingContext2D, hull: readonly (readonly [number, number])[], R: number): boolean {
+  if (hull.length < 3) return false;
+  // the hull grown by a disk of radius R (Minkowski sum): edges pushed out along their normals, every corner an arc
+  const n = hull.length;
+  let area2 = 0;
+  for (let i = 0; i < n; i++) {
+    const [x0, y0] = hull[i]!;
+    const [x1, y1] = hull[(i + 1) % n]!;
+    area2 += x0 * y1 - x1 * y0;
+  }
+  const s = area2 >= 0 ? 1 : -1;
+  // outward normal angle of edge i (hull[i] → hull[i+1])
+  const normal = (i: number) => {
+    const [x0, y0] = hull[i]!;
+    const [x1, y1] = hull[(i + 1) % n]!;
+    return Math.atan2(-(x1 - x0) * s, (y1 - y0) * s);
+  };
+  ctx.beginPath();
+  for (let i = 0; i < n; i++) {
+    const [x, y] = hull[i]!;
+    ctx.arc(x, y, R, normal((i - 1 + n) % n), normal(i), s < 0);
+  }
+  ctx.closePath();
+  return true;
+}
+
 export function drawHulls(
   ctx: CanvasRenderingContext2D,
   nodes: readonly SimNode[],
@@ -86,7 +113,7 @@ export function drawHulls(
 ): void {
   const groups = new Map<string, SimNode[]>();
   for (const n of nodes) {
-    const a = n.areas[0];
+    const a = regionKey(n, names);
     if (!a || !names.has(a)) continue;
     const g = groups.get(a);
     if (g) g.push(n);
@@ -94,29 +121,7 @@ export function drawHulls(
   }
   for (const [area, list] of groups) {
     const hull = coreHull(list, 0.7, sigma);
-    if (hull.length < 3) continue;
-    // the hull grown by a disk of radius R (Minkowski sum): edges pushed out along their normals, every corner an arc
-    const R = 30;
-    const n = hull.length;
-    let area2 = 0;
-    for (let i = 0; i < n; i++) {
-      const [x0, y0] = hull[i]!;
-      const [x1, y1] = hull[(i + 1) % n]!;
-      area2 += x0 * y1 - x1 * y0;
-    }
-    const s = area2 >= 0 ? 1 : -1;
-    // outward normal angle of edge i (hull[i] → hull[i+1])
-    const normal = (i: number) => {
-      const [x0, y0] = hull[i]!;
-      const [x1, y1] = hull[(i + 1) % n]!;
-      return Math.atan2(-(x1 - x0) * s, (y1 - y0) * s);
-    };
-    ctx.beginPath();
-    for (let i = 0; i < n; i++) {
-      const [x, y] = hull[i]!;
-      ctx.arc(x, y, R, normal((i - 1 + n) % n), normal(i), s < 0);
-    }
-    ctx.closePath();
+    if (!traceRoundedHull(ctx, hull, 30)) continue;
     const col = areaHue(area);
     ctx.fillStyle = withAlpha(col, 0.08);
     ctx.fill();

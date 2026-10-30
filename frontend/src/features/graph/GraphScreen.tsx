@@ -36,6 +36,8 @@ import { parseSchema } from "./schema";
 import { SideReader } from "./SideReader";
 import { useGraphUi } from "./store";
 import { Toolbar } from "./Toolbar";
+import { parseKbs } from "@/lib/kbSelection";
+import { useFlag } from "@/flags/useFlag";
 import { TOOLS, useVisibleTools, type GraphToolContext } from "./tools";
 import { flagOn, useExperiments } from "./tools/experiments";
 import { toModel, type GNode } from "./types";
@@ -44,7 +46,7 @@ import "./tours";
 
 /** How the screen reaches the rest of the app (the router lives in index.tsx; tests pass plain functions). */
 export interface GraphHost extends ToolHost {
-  pageHref: (slug: string) => string;
+  pageHref: (slug: string, kb?: string) => string;
   /** Drop URL params once the view they describe is cleared. */
   clearParams: (keys: string[]) => void;
   /** Merge params into the URL (undefined or "" removes one); a view pill writes `view` so the link carries it. */
@@ -59,8 +61,15 @@ export function GraphScreen({ search, host }: { search: GraphSearch; host: Graph
   const ds = useDataSource();
   const qc = useQueryClient();
   const live = useGraphUi((s) => s.liveSync);
-  const rawOn = useLayer((s) => s.rawOn) && ds.kind !== "embedded";
-  const q = useApiQuery(["graph", rawOn], (d) => (rawOn ? d.getGraph({ raw: true }) : d.getGraph()), {
+  const kbViewOn = useFlag("kb-view") && ds.kind !== "embedded";
+  // which knowledge bases (the header menu writes `?kbs=`): [] = the server's own; `none` = nothing picked
+  const picked = kbViewOn ? parseKbs(search.kbs) : null;
+  const noneShown = picked !== null && !picked.length;
+  const kbs = useMemo(() => picked ?? [], [picked?.join(",")]); // eslint-disable-line react-hooks/exhaustive-deps
+  // the data layer is the server's own knowledge base's: it is off while other knowledge bases are shown
+  const rawOn = useLayer((s) => s.rawOn) && ds.kind !== "embedded" && !kbs.length;
+  const q = useApiQuery(["graph", rawOn, kbs.join(",")], (d) => d.getGraph({ ...(rawOn ? { raw: true } : {}), ...(kbs.length ? { kbs } : {}) }), {
+    enabled: !noneShown,
     refetchInterval: live ? (rawOn ? LIVE_RAW_MS : LIVE_MS) : false,
     // switching the data layer on or off keeps the canvas (and its positions) until the new snapshot lands
     placeholderData: keepPreviousData,
@@ -71,7 +80,46 @@ export function GraphScreen({ search, host }: { search: GraphSearch; host: Graph
   const etag = snap?.etag;
   const model = useMemo(() => (snap ? toModel(snap) : null), [etag, snap?.layer]); // eslint-disable-line react-hooks/exhaustive-deps
   const schema = useMemo(() => parseSchema(snap?.schema), [etag]); // eslint-disable-line react-hooks/exhaustive-deps
+  // a node of another knowledge base opens its page read-only (`?kb=`); ids may be `<kb>:<slug>`
+  const kbHost = useMemo<GraphHost>(() => {
+    if (!model) return host;
+    const own = new Set((snap?.kbs ?? []).filter((k) => k.active).map((k) => k.id));
+    const nodes = new Map(model.nodes.map((n) => [n.id, n]));
+    const ref = (id: string): [string, string | undefined] => {
+      const n = nodes.get(id);
+      return n ? [n.slug ?? n.id, n.kb && !own.has(n.kb) ? n.kb : undefined] : [id, undefined];
+    };
+    return {
+      ...host,
+      openPage: (id) => {
+        const [slug, kb] = ref(id);
+        if (kb) host.openPage(slug, kb);
+        else host.openPage(slug);
+      },
+      pageHref: (id) => {
+        const [slug, kb] = ref(id);
+        return kb ? host.pageHref(slug, kb) : host.pageHref(slug);
+      },
+      foreignKb: (id) => ref(id)[1],
+    };
+  }, [host, model, snap?.kbs]);
+  // picking knowledge bases shows each one's default types, even over a type filter saved for the server's own
+  const kbsKey = kbs.join(",");
+  useEffect(() => {
+    if (!kbsKey || !etag) return;
+    const shown = useGraphUi.getState().shownTypes;
+    if (shown && schema.defaultVisible.some((t) => !shown.has(t)))
+      useGraphUi.setState({ shownTypes: new Set([...shown, ...schema.defaultVisible]) });
+  }, [kbsKey, etag]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  if (noneShown)
+    return (
+      <FullBleed>
+        <div className="p-4">
+          <Empty>No knowledge base is shown. Pick one from the menu on the knowledge base name, top left.</Empty>
+        </div>
+      </FullBleed>
+    );
   if (q.isLoading) return <FullBleed><div className="p-4"><Loading label="Loading graph" rows={4} /></div></FullBleed>;
   if (q.isError || !snap || !model)
     return (
@@ -92,7 +140,7 @@ export function GraphScreen({ search, host }: { search: GraphSearch; host: Graph
       <Loaded
         model={model}
         schema={schema}
-        host={host}
+        host={kbHost}
         search={search}
         generatedAt={snap.generated_at}
         refreshing={q.isFetching}
@@ -505,7 +553,7 @@ function Loaded({
           onToggleSources={(ids) => ui.toggleReveal(ids)}
         />
       )}
-      {reader && <SideReader slug={reader.id} title={reader.title || reader.id} pageHref={host.pageHref(reader.id)} onClose={() => ui.set({ readerSlug: null })} />}
+      {reader && <SideReader slug={reader.slug ?? reader.id} kb={host.foreignKb?.(reader.id)} title={reader.title || reader.id} pageHref={host.pageHref(reader.id)} onClose={() => ui.set({ readerSlug: null })} />}
       {menu && menuNode && (
         <NodeMenu
           node={menuNode}

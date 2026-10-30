@@ -103,3 +103,8 @@ frontend/dist-share/
 .agents/
 .opencode/
 .copilot/
+
+# Knowledge bases live in kbs/<id> (kb.kbconfig). Each is its own git repo and its knowledge never enters the
+# engine repo; only the public demo is tracked here.
+kbs/*
+!kbs/demo/

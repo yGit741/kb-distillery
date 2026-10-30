@@ -2,7 +2,7 @@
 import os
 import re
 
-from .paths import ROOT, wiki_slugs
+from .paths import ROOT, think_cite, wiki_slugs
 
 LINK = re.compile(r"\[\[([^\]|#]+)")
 
@@ -73,7 +73,7 @@ def build_plan(think_rel, human_text):
         not_promoted.append("Personal / advisor commentary — keep in think only unless you promote manually")
 
     return {
-        "source": think_rel,
+        "source": think_cite(think_rel),
         "touches": sorted(touches),
         "themes_detected": themes,
         "weak_links": weak,

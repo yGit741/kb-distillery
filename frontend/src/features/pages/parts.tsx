@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import type { ReactNode } from "react";
+import { createContext, useContext, type ReactNode } from "react";
 import type { PageCard } from "@/api/types";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -10,6 +10,14 @@ import { layerOf, type LinkGraph } from "./lib";
 /** Router targets are registered as plain strings by the route registry, so cast once here. */
 export const pageTo = (slug: string) => `/pages/${encodeURIComponent(slug)}` as "/";
 export const PAGES_TO = "/pages" as "/";
+
+/** The knowledge base the pages on screen come from when it is not the server's own (read-only), else undefined. */
+export const PageKb = createContext<string | undefined>(undefined);
+/** Link `search` that keeps a page link inside that knowledge base. */
+export const usePageSearch = () => {
+  const kb = useContext(PageKb);
+  return (kb ? { kb } : {}) as never;
+};
 
 /**
  * A page's type as the graphs draw it: its mark (a concept's ring, a source's glyph), the same symbol as on every
@@ -25,6 +33,7 @@ export function TypeDot({ type, className }: { type?: string | null; className?:
 
 /** A link to a page, or a muted label if the page does not exist (a wanted page). */
 export function PageLink({ g, slug, label }: { g?: LinkGraph; slug: string; label?: string }) {
+  const search = usePageSearch();
   if (g && !g.byId.has(slug)) {
     return (
       <span className="text-muted-foreground" title={`No page yet: ${slug}`}>
@@ -33,7 +42,7 @@ export function PageLink({ g, slug, label }: { g?: LinkGraph; slug: string; labe
     );
   }
   return (
-    <Link to={pageTo(slug)} className="text-primary hover:underline">
+    <Link to={pageTo(slug)} search={search} className="text-primary hover:underline">
       {label ?? (g ? (g.byId.get(slug)?.title ?? slug) : slug)}
     </Link>
   );
@@ -80,9 +89,11 @@ export function PageCardTile({ g, card }: { g: LinkGraph; card: PageCard }) {
   const meta = [card.year, card.depth || card.status, `${g.inn.get(card.id)?.size ?? 0}↘ ${g.out.get(card.id)?.size ?? 0}↗`]
     .filter(Boolean)
     .join(" · ");
+  const search = usePageSearch();
   return (
     <Link
       to={pageTo(card.id)}
+      search={search}
       className="flex min-w-0 flex-col gap-1 rounded-lg border bg-card p-3 text-sm hover:bg-accent"
     >
       <span className="flex items-center gap-2 font-medium">
@@ -99,10 +110,11 @@ export function Rows({ children }: { children: ReactNode }) {
   return <ul className="flex flex-col divide-y rounded-lg border bg-card text-sm">{children}</ul>;
 }
 export function Row({ card, right }: { card: PageCard; right?: ReactNode }) {
+  const search = usePageSearch();
   return (
     <li className="flex min-w-0 items-center gap-2 px-3 py-1.5">
       <TypeDot type={card.type} />
-      <Link to={pageTo(card.id)} className="min-w-0 flex-1 truncate text-primary hover:underline">
+      <Link to={pageTo(card.id)} search={search} className="min-w-0 flex-1 truncate text-primary hover:underline">
         {card.title}
       </Link>
       {right != null && <span className="shrink-0 text-xs text-muted-foreground">{right}</span>}

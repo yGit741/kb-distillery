@@ -1,6 +1,8 @@
 """Render distilled-think wiki pages."""
 from datetime import datetime, timezone
 
+from .paths import think_cite
+
 
 def render_summary(plan, think_text, prior_summary=""):
     if prior_summary and prior_summary.strip():
@@ -61,7 +63,7 @@ def render_distilled_page(plan, think_rel, summary, applied=False):
 type: distilled-think
 layer: concept
 status: {status}
-source: {think_rel}
+source: {think_cite(think_rel)}
 distilled_at: {ts}
 ---
 

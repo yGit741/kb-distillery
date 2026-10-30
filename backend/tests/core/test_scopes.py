@@ -1,6 +1,13 @@
 #!/usr/bin/env python3
 """Scopes (schema 0.13): the pure projection, the lint checks, the 0007 migration, the dashboard
 API (one kb(refine) step per write, in a temp git vault) and the public share profile."""
+import pytest
+
+from kb.core import schema as _schema
+
+if "paper" not in _schema.SOURCE_TYPES:   # this module builds `paper` pages: it needs the explorer's default types
+    pytest.skip("needs the default source types (run with KB=yonatan-thesis or a kb that defines `paper`)", allow_module_level=True)
+
 import contextlib
 import importlib.util
 import io
@@ -14,7 +21,7 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from kb.paths import vault_root
+from kb.paths import CHECKOUT_ROOT, meta_file, vault_root
 ROOT = vault_root()
 
 from kb.core import coherence
@@ -246,7 +253,7 @@ class LintVaultTests(unittest.TestCase):
 
 class MigrationTests(unittest.TestCase):
     def load(self):
-        path = os.path.join(ROOT, "backend", "src", "kb", "migrations", "0007_scopes_column.py")
+        path = os.path.join(CHECKOUT_ROOT, "backend", "src", "kb", "migrations", "0007_scopes_column.py")
         spec = importlib.util.spec_from_file_location("m0007", path)
         mod = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(mod)
@@ -303,7 +310,7 @@ class ApiTests(unittest.TestCase):
         files["meta/log.md"] = "# log\n"
         files[".gitignore"] = "meta/.ops/\n"
         files["index.md"] = "v1\n"
-        files["meta/templates/scope.md"] = Path(ROOT, "meta", "templates", "scope.md").read_text()
+        files["meta/templates/scope.md"] = Path(meta_file("templates", "scope.md")).read_text()
         for slug, text in TEXTS.items():
             files[f"wiki/{slug}.md"] = text
         m = manifest()

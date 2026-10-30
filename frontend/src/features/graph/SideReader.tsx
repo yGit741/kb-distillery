@@ -1,4 +1,5 @@
 import { ExternalLink, X } from "lucide-react";
+import { useMemo } from "react";
 import { Markdown } from "@/components/Markdown";
 import { Empty, ErrorState, Loading } from "@/components/states";
 import { Button } from "@/components/ui/button";
@@ -9,8 +10,10 @@ import { NodeMarkSvg } from "./encoding";
  * The page next to the graph, read without leaving it. Uses the shared <Markdown> over /api/pages/{slug}
  * (no second renderer, no iframe), so it works whether or not the Pages screen has an embed mode.
  */
-export function SideReader({ slug, title, pageHref, onClose }: { slug: string; title: string; pageHref: string; onClose: () => void }) {
-  const q = useApiQuery(["page", slug], (ds) => ds.getPage(slug));
+export function SideReader({ slug, kb, title, pageHref, onClose }: { slug: string; kb?: string; title: string; pageHref: string; onClose: () => void }) {
+  // `kb` is the node's knowledge base; the server's own answers as usual, another one read-only
+  const q = useApiQuery(["page", slug, kb ?? ""], (ds) => (kb ? ds.getPage(slug, { kb }) : ds.getPage(slug)));
+  const linkSearch = useMemo(() => (kb ? { kb } : undefined), [kb]);
   return (
     <aside
       aria-label="Page reader"
@@ -38,7 +41,7 @@ export function SideReader({ slug, title, pageHref, onClose }: { slug: string; t
         ) : q.isError ? (
           <ErrorState title="Could not load this page." error={q.error} onRetry={() => void q.refetch()} />
         ) : q.data?.markdown ? (
-          <Markdown>{q.data.markdown}</Markdown>
+          <Markdown linkSearch={linkSearch}>{q.data.markdown}</Markdown>
         ) : (
           <Empty>This page has no text yet.</Empty>
         )}

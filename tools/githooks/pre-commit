@@ -4,6 +4,7 @@
 # commits skip the second lint run. Installed by `pixi run install-hooks`.
 root="$(git rev-parse --show-toplevel)"
 export PYTHONPATH="$root/backend/src${PYTHONPATH:+:$PYTHONPATH}"
+export KB_ROOT="$root"      # this repo is the vault these hooks judge, whatever knowledge base $KB selects
 token_file="$(git rev-parse --git-path kb-linted)"
 if [ -n "$KB_LINTED" ] && [ -f "$token_file" ] && [ "$(cat "$token_file")" = "$KB_LINTED" ]; then
   exit 0

@@ -40,8 +40,9 @@ def _body(text):
 _TITLES = {}
 
 
-def _plain(s):
-    s = WIKILINK.sub(lambda m: (m.group(2) or _TITLES.get(m.group(1).strip()) or m.group(1)).strip(), s)
+def _plain(s, titles=None):
+    titles = _TITLES if titles is None else titles
+    s = WIKILINK.sub(lambda m: (m.group(2) or titles.get(m.group(1).strip()) or m.group(1)).strip(), s)
     s = re.sub(r"\[([^\]]+)\]\([^)]+\)", r"\1", s)
     s = re.sub(r"[*_`>#]+", "", s)
     return re.sub(r"\s+", " ", s).strip()
@@ -65,9 +66,9 @@ def _words(text):
     return len(_body(text).split())
 
 
-def _mtime(rel):
+def _mtime(rel, root=None):
     try:
-        return int(os.stat(os.path.join(ROOT, rel)).st_mtime)
+        return int(os.stat(os.path.join(root or ROOT, rel)).st_mtime)
     except OSError:
         return 0
 
@@ -80,8 +81,9 @@ def _as_list(v):
     return [str(x) for x in v if x]
 
 
-def _link_context(text, fm, target):
+def _link_context(text, fm, target, titles=None):
     """Sentence-ish snippet of `text` showing why it links to `target`."""
+    titles = _TITLES if titles is None else titles
     needle = f"[[{target}"
     heading = ""
     for line in _body(text).splitlines():
@@ -93,11 +95,11 @@ def _link_context(text, fm, target):
         where = f" under “{heading}”" if heading else ""
         if line.lstrip().startswith("|"):
             return f"listed in a table{where}"
-        plain = re.sub(r"^[-*]\s+", "", _plain(line))
+        plain = re.sub(r"^[-*]\s+", "", _plain(line, titles))
         bare = re.sub(r"^[-*\d.\s]+", "", plain)
-        if len(bare) <= len(_TITLES.get(target, target)) + 12:
+        if len(bare) <= len(titles.get(target, target)) + 12:
             return f"listed{where}" if where else "listed"
-        label = _plain(line[pos:line.find("]]", pos) + 2])
+        label = _plain(line[pos:line.find("]]", pos) + 2], titles)
         centre = plain.find(label) if label else 0
         return _clip(plain, max(centre, 0))
     if target in _as_list(fm.get("related")) or target in _as_list(fm.get("recommended_by")):
@@ -105,9 +107,15 @@ def _link_context(text, fm, target):
     return ""
 
 
-def _graph(pages):
-    _TITLES.clear()
-    _TITLES.update({s: _title(t, s) for s, (_r, _f, t) in pages.items()})
+def _titles(pages):
+    return {s: _title(t, s) for s, (_r, _f, t) in pages.items()}
+
+
+def _graph(pages, titles=None):
+    """(out, in, wanted) link maps; refreshes the shared `_TITLES` unless the caller keeps its own `titles`."""
+    if titles is None:
+        _TITLES.clear()
+        _TITLES.update(_titles(pages))
     out = {}
     wanted = {}
     for slug, (_rel, fm, text) in pages.items():
@@ -123,7 +131,7 @@ def _graph(pages):
     return out, inn, wanted
 
 
-def _card(slug, pages, out, inn):
+def _card(slug, pages, out, inn, root=None):
     rel, fm, text = pages[slug]
     return {
         "id": slug,
@@ -136,15 +144,17 @@ def _card(slug, pages, out, inn):
         "in": len(inn[slug]),
         "out": len(out[slug]),
         "words": _words(text),
-        "mtime": _mtime(rel),
+        "mtime": _mtime(rel, root),
         "preview": _preview(text, 320),
     }
 
 
-def build_index():
-    pages = load_pages()
-    out, inn, wanted = _graph(pages)
-    cards = [_card(s, pages, out, inn) for s in sorted(pages)]
+def build_index(view=None):
+    """Every page as a card, of the active knowledge base or of `view` (a `kbview.KbView`)."""
+    root = view.root if view else None
+    pages = load_pages(root)
+    out, inn, wanted = _graph(pages, _titles(pages) if view else None)
+    cards = [_card(s, pages, out, inn, root) for s in sorted(pages)]
     links = [[s, t] for s in sorted(out) for t in sorted(out[s])]
     wanted_rows = sorted(
         ({"id": t, "count": len(src), "from": sorted(src)[:6]} for t, src in wanted.items()),
@@ -183,15 +193,18 @@ def _suggest(slug, out, inn):
     ]
 
 
-def build_page(slug):
-    pages = load_pages()
+def build_page(slug, view=None):
+    """One page of the active knowledge base, or of `view` (a `kbview.KbView`; read-only when not active)."""
+    root = view.root if view else None
+    pages = load_pages(root)
     if slug not in pages:
         return None
-    out, inn, _wanted = _graph(pages)
+    titles = _titles(pages)
+    out, inn, _wanted = _graph(pages, titles)
     rel, fm, text = pages[slug]
     all_out = outbound_links(text, fm) - {slug}
     backlinks = [
-        {"id": s, "context": _link_context(pages[s][2], pages[s][1], slug)}
+        {"id": s, "context": _link_context(pages[s][2], pages[s][1], slug, titles)}
         for s in sorted(inn[slug], key=lambda s: (-len(inn[s]), s))
     ]
     fm_clean = {}
@@ -200,7 +213,9 @@ def build_page(slug):
             continue
         fm_clean[k] = v if isinstance(v, list) else str(v)
     return {
-        "card": _card(slug, pages, out, inn),
+        "card": _card(slug, pages, out, inn, root),
+        "kb": view.id if view else _active_id(),
+        "read_only": bool(view and not view.active),
         "path": rel,
         "frontmatter": fm_clean,
         "markdown": _body(text),
@@ -209,6 +224,11 @@ def build_page(slug):
         "broken": sorted(t for t in all_out if t and t not in pages),
         "suggested": _suggest(slug, out, inn),
     }
+
+
+def _active_id():
+    from kb import paths
+    return paths.KB.id if paths.KB else ""
 
 
 def search(query, limit=40):

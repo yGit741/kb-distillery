@@ -1,0 +1,10 @@
+# Test fixture knowledge base: the explorer's default page types and a small area whitelist.
+# backend/tests/conftest.py points KB_ROOT here when the caller picked no knowledge base.
+[kb]
+id = "fixture"
+name = "Test Fixture"
+schema_version = "1.3"
+
+[types]
+areas = ["statistics", "learning-theory", "info-theory", "boolean-analysis", "fourier-analysis"]
+source_fields = ["authors", "venue", "arxiv-id"]

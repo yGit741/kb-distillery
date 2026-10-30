@@ -51,6 +51,8 @@ class PageDetail(ApiModel):
     outbound: list[str] = []
     broken: list[str] = []
     suggested: list[SuggestedPage] = []
+    kb: str | None = None                # the knowledge base the page is from
+    read_only: bool | None = None             # true for a page of a knowledge base other than the server's own
 
 
 class SearchHit(ApiModel):

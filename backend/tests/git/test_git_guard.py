@@ -6,8 +6,7 @@ import subprocess
 import sys
 import unittest
 
-from kb.paths import vault_root
-ROOT = vault_root()
+from kb.paths import CHECKOUT_ROOT as ROOT   # the hook script is code
 
 from kb.git import git_guard
 

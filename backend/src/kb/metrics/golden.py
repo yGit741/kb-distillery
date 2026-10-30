@@ -118,7 +118,7 @@ def remove_workspace(repo, primary=None):
 
 
 SCRUBBED = ("ANTHROPIC_BASE_URL", "ANTHROPIC_AUTH_TOKEN", "ANTHROPIC_API_KEY",   # subscription only
-            "KB_ROOT", "PYTHONPATH", "VIRTUAL_ENV", "PYTHONHOME")
+            "KB_ROOT", "KB", "KB_BASES_DIR", "PYTHONPATH", "VIRTUAL_ENV", "PYTHONHOME")
 SCRUBBED_PREFIXES = ("PIXI_", "CONDA_")   # the runner's own `pixi run` activation must not leak in
 
 

@@ -7,4 +7,5 @@ if ! command -v python3 >/dev/null 2>&1; then
   echo "git guard: python3 not found — refusing (fail closed)" >&2
   exit 2
 fi
-PYTHONPATH="$root/backend/src${PYTHONPATH:+:$PYTHONPATH}" exec python3 -m kb.git.git_guard
+py="$root/.pixi/envs/default/bin/python"; [ -x "$py" ] || py=python3
+PYTHONPATH="$root/backend/src${PYTHONPATH:+:$PYTHONPATH}" exec "$py" -m kb.git.git_guard

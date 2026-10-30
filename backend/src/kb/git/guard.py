@@ -15,7 +15,7 @@ from kb.paths import vault_root
 META_DIR = os.path.join(vault_root(), "meta")
 VAULT_ROOT = vault_root()
 
-from kb.core.schema import (DISTILL_DIR, DISTILLED_THINK_PREFIX, GENERATED, INGEST_DIR, INGEST_STALE_HOURS,
+from kb.core.schema import (DIGEST_DIR, DISTILL_DIR, DISTILLED_THINK_PREFIX, GENERATED, INGEST_DIR, INGEST_STALE_HOURS,
                     META_DIR as SCHEMA_META_DIR, OPS_DIR, OPS_STRICT, PARSED_FILENAME, QUARANTINE_DIR,
                     CODE_TOP_DIRS, RAW_DIR, ROOT_DIRS, ROOT_FILES, ROOT_MD, SIDECAR_ELIGIBLE_KINDS,
                     THINK_DIR, WIKI_DIR)
@@ -95,6 +95,17 @@ def _think_guard(rel):
     if rel == THINK_DIR or rel.startswith(f"{THINK_DIR}/"):
         deny(f"BLOCKED: {rel} is human-owned slow space under {THINK_DIR}/. "
              "Use `python3 -m kb.distill` — never edit think/ via agent tools.")
+
+
+def _shared_think_guard(abs_path):
+    """The shared think space (`kbs/think/`, kb.paths.THINK_PATH) sits beside every vault, so it is
+    judged by absolute path before the vault-relative rules."""
+    from kb.paths import THINK_PATH
+    think = os.path.realpath(THINK_PATH)
+    target = os.path.realpath(abs_path)
+    if target == think or target.startswith(think + os.sep):
+        deny(f"BLOCKED: {abs_path} is in the shared think space ({THINK_PATH}), human-owned. "
+             "Use `python3 -m kb.distill` — never edit think via agent tools.")
 
 
 def _ingest_guard(rel, root):
@@ -254,9 +265,9 @@ def check_path(rel, root):
         _think_guard(rel)
 
     if rel.endswith(".md"):
-        allowed = top in (WIKI_DIR, SCHEMA_META_DIR) or top in CODE_TOP_DIRS or rel in ROOT_MD
+        allowed = top in (WIKI_DIR, SCHEMA_META_DIR, DIGEST_DIR) or top in CODE_TOP_DIRS or rel in ROOT_MD
         if not allowed:
-            deny(f"BLOCKED: {rel} — markdown lives in wiki/, meta/ or the code folders (backend/ skills/ tools/ share/ frontend/). "
+            deny(f"BLOCKED: {rel} — markdown lives in wiki/, meta/, digest/ or the code folders (backend/ skills/ tools/ share/ frontend/ meta-defaults/). "
                  f"Allowed at root: {', '.join(sorted(ROOT_MD))}.")
         if top == WIKI_DIR and len(parts) > 2 and "excalidraw" not in parts:
             deny(f"BLOCKED: {rel} — wiki/ is flat. Use a filename prefix "
@@ -289,6 +300,7 @@ def main():
         sys.exit(0)
 
     root = _resolve_root(payload)
+    _shared_think_guard(path)
     rel = _rel_path(path, root)
     if not rel:
         sys.exit(0)  # outside the vault

@@ -43,16 +43,29 @@ export function createHttpDataSource(fetchImpl: Fetch = (...a) => fetch(...a), b
     getLifecycle: () => run(() => client.GET("/api/lifecycle"), "/api/lifecycle"),
     getShareStatus: () => run(() => client.GET("/api/share/status"), "/api/share/status"),
     getHealth: () => run(() => client.GET("/api/health"), "/api/health"),
+    getKb: () => run(() => client.GET("/api/kb"), "/api/kb"),
+    listKbs: () => run(() => client.GET("/api/kb/list"), "/api/kb/list"),
     getOps: (refresh) =>
       run(() => client.GET("/api/ops", { params: { query: refresh ? { refresh: "1" } : {} } }), "/api/ops"),
 
     getGraph: (opts) =>
-      run(() => client.GET("/api/graph", { params: { query: opts?.raw ? { layer: "raw" } : {} } }), "/api/graph"),
+      run(
+        () =>
+          client.GET("/api/graph", {
+            params: { query: { ...(opts?.raw ? { layer: "raw" } : {}), ...(opts?.kbs?.length ? { kb: opts.kbs.join(",") } : {}) } },
+          }),
+        "/api/graph",
+      ),
     getGraphNodes: async () => (await run(() => client.GET("/api/graph"), "/api/graph")).nodes,
     getCitations: () => run(() => client.GET("/api/citations"), "/api/citations"),
 
-    listPages: () => run(() => client.GET("/api/pages"), "/api/pages"),
-    getPage: (slug) => run(() => client.GET("/api/pages/{slug}", { params: { path: { slug } } }), `/api/pages/${slug}`),
+    listPages: (opts) =>
+      run(() => client.GET("/api/pages", { params: { query: opts?.kb ? { kb: opts.kb } : {} } }), "/api/pages"),
+    getPage: (slug, opts) =>
+      run(
+        () => client.GET("/api/pages/{slug}", { params: { path: { slug }, query: opts?.kb ? { kb: opts.kb } : {} } }),
+        `/api/pages/${slug}`,
+      ),
     search: (q, limit) =>
       run(
         () => client.GET("/api/search", { params: { query: { q, ...(limit ? { limit: String(limit) } : {}) } } }),

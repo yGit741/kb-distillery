@@ -13,10 +13,12 @@ import { SYSTEM_TABS, type SearchById, type SystemTab } from "@/routes/search";
 import { needsYou, tiles, timeline, type EventKind, type HealthLike, type LifecycleLike, type OpsLike, type Tile, type Tone } from "./model";
 import { HealthView } from "./HealthView";
 import { FlagsView } from "./FlagsView";
+import { KnowledgeBasesView } from "./KnowledgeBasesView";
+import "./tours";
 import { FLAG_ENV } from "@/flags";
 import { useFlag } from "@/flags/useFlag";
 
-const TAB_LABEL: Record<SystemTab, string> = { overview: "Overview", pipeline: "Pipeline", history: "History", health: "Health", flags: "Flags" };
+const TAB_LABEL: Record<SystemTab, string> = { overview: "Overview", pipeline: "Pipeline", history: "History", health: "Health", flags: "Flags", kbs: "Knowledge bases" };
 
 const TONE_TEXT: Record<Tone, string> = { ok: "text-ok", warn: "text-warn", bad: "text-bad", "": "text-foreground" };
 const TONE_DOT: Record<Tone, string> = { ok: "bg-ok", warn: "bg-warn", bad: "bg-bad", "": "bg-muted-foreground/40" };
@@ -221,6 +223,7 @@ export function SystemScreen() {
       {tab === "pipeline" && <PipelineScreen />}
       {tab === "history" && <LifecycleScreen />}
       {tab === "flags" && <FlagsView />}
+      {tab === "kbs" && <KnowledgeBasesView />}
       {tab === "health" && <HealthView health={healthData} error={health.error} onRetry={() => void health.refetch()} />}
     </div>
   );

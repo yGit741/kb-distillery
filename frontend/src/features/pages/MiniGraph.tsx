@@ -4,7 +4,7 @@ import { colorChannel, GraphLegend, NodeMarkG, personInitials } from "@/features
 import { areaSlots } from "@/features/graph/style";
 import type { GNode } from "@/features/graph/types";
 import { cardNode, ringLayout, titleOf, type LinkGraph } from "./lib";
-import { pageTo } from "./parts";
+import { pageTo, usePageSearch } from "./parts";
 
 const trunc = (s: string, n: number) => (s.length > n ? `${s.slice(0, n - 1)}…` : s);
 
@@ -19,6 +19,7 @@ const SIZE = { by: "degree", title: "links" } as const;
  */
 export function MiniGraph({ g, slug }: { g: LinkGraph; slug: string }) {
   const ring = useMemo(() => ringLayout(g, slug), [g, slug]);
+  const search = usePageSearch();
   // theme colours ranked over every page, the way the Full Graph ranks its model
   const color = useMemo(() => colorChannel("area", { areas: areaSlots([...g.byId.values()]) }), [g]);
   const nodes = useMemo(
@@ -71,7 +72,7 @@ export function MiniGraph({ g, slug }: { g: LinkGraph; slug: string }) {
           const right = Math.cos(n.angle) >= 0;
           const title = titleOf(g, n.id);
           return (
-            <Link key={n.id} to={pageTo(n.id)} aria-label={title} className="outline-none [&:focus-visible_.focus-ring]:stroke-primary">
+            <Link key={n.id} to={pageTo(n.id)} search={search} aria-label={title} className="outline-none [&:focus-visible_.focus-ring]:stroke-primary">
               <title>{title}</title>
               {/* keyboard focus: a ring of its own, so the mark keeps its strokes */}
               <circle cx={n.x} cy={n.y} r={n.radius + 3} fill="none" stroke="transparent" strokeWidth={2} className="focus-ring" />

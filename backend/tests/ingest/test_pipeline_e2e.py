@@ -26,7 +26,7 @@ import tempfile
 import time
 import unittest
 
-from kb.paths import CODE_DIR, vault_root
+from kb.paths import CHECKOUT_ROOT, CODE_DIR, vault_root
 META = os.path.join(vault_root(), "meta")
 REPO = vault_root()
 DATA = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "testdata", "e2e")
@@ -34,6 +34,8 @@ GOLDEN = os.path.join(DATA, "golden")
 # meta/ entries that are data, not code: the temp vault gets its own (or none)
 NOT_CODE = {"corpus.tsv", "log.md", "coherence-warnings.tsv", "aliases.tsv", "chats", "testdata",
             "migration", "raw-renames.tsv", "__pycache__", "thesis.md"}
+GOLDEN_AREAS = ("statistics", "boolean-analysis", "fourier-analysis", "optimization-theory", "learning-theory",
+                "info-theory", "implicit-regularization", "tensor-factorization", "complex-nn", "quantum")
 BUILT_AT = "2026-01-01T00:00:00Z"
 FIXED_NOW = 1767225600       # 2026-01-01, for mtimes the builders read
 
@@ -54,11 +56,19 @@ def _pdf(path, text, pages=1):
 
 def build_vault(root):
     os.makedirs(os.path.join(root, "meta"))
-    for name in ("templates", "ops"):          # vault-side inputs the tools read
-        os.symlink(os.path.join(META, name), os.path.join(root, "meta", name))
+    # vault-side inputs the tools read: templates from the explorer's meta-defaults/, ops config from the vault's meta/
+    os.symlink(os.path.join(CHECKOUT_ROOT, "meta-defaults", "templates"), os.path.join(root, "meta", "templates"))
+    if os.path.isdir(os.path.join(META, "ops")):
+        os.symlink(os.path.join(META, "ops"), os.path.join(root, "meta", "ops"))
     os.makedirs(os.path.join(root, "backend", "src"))
     os.symlink(CODE_DIR, os.path.join(root, "backend", "src", "kb"))     # the checkout's code
     shutil.copytree(os.path.join(DATA, "seed", "wiki"), os.path.join(root, "wiki"))
+    # the fixture is a knowledge base of its own with the default types; its areas are pinned to the thesis set the
+    # goldens were recorded with, so the test gives the same answer whichever kb the suite runs under
+    areas = sorted(GOLDEN_AREAS)
+    with open(os.path.join(root, "kb.toml"), "w", encoding="utf-8") as f:
+        f.write('[kb]\nid = "e2e"\nname = "E2E fixture vault"\nschema_version = "1.3"\n\n[types]\nareas = ['
+                + ", ".join(f'"{a}"' for a in areas) + "]\n")
     for name in os.listdir(os.path.join(DATA, "seed", "meta")):
         shutil.copy(os.path.join(DATA, "seed", "meta", name), os.path.join(root, "meta", name))
     inbox = os.path.join(root, "raw", "inbox")
@@ -87,7 +97,8 @@ class Pipeline:
 
     def __init__(self, root):
         self.root = root
-        self.env = {**{k: v for k, v in os.environ.items() if not k.startswith("KB_")},
+        self.env = {**{k: v for k, v in os.environ.items() if not k.startswith("KB_") and k != "KB"},
+                    "KB_ROOT": root,       # the temp vault is the kb (the code symlinked into it no longer finds it by itself)
                     "KB_OPS_DISABLE": "1", "KB_NO_PUSH": "1", "PYTHONDONTWRITEBYTECODE": "1",
                     "PYTHONHASHSEED": "0", "TZ": "UTC", "NO_PROXY": "*",
                     "PYTHONPATH": os.path.join(root, "backend", "src")}

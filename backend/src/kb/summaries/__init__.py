@@ -1,7 +1,7 @@
-"""Propose and apply `summary:` lines for wiki pages (Sonnet via `claude -p`, on the subscription).
+"""Propose and apply `summary:` lines for wiki pages (Sonnet through kb.llm; `--backend subscription|api|batch`).
 
     pixi run summarize -- plan                 # which pages need one (missing or stale)
-    pixi run summarize -- run --batch 50 [--sample]   # propose → .cache/summaries/proposals.jsonl
+    pixi run summarize -- run --batch 50 [--sample] [--backend batch]   # propose → .cache/summaries/proposals.jsonl
     pixi run summarize -- show [--last 20]     # proposals next to each page's lead lines
     pixi run summarize -- judge [--slugs a,b]  # a stronger model (Fable 5.1) grades the proposals
     pixi run summarize -- apply [--slugs a,b]  # write them into wiki/ (inside an ops session)

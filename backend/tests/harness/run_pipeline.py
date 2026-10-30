@@ -96,8 +96,9 @@ class Run:
 
     # ------------------------------------------------------------ plumbing
     def env(self, **extra):
-        e = {k: v for k, v in os.environ.items() if k not in ("KB_ROOT", "KB_CI")}
-        e.update(PYTHONDONTWRITEBYTECODE="1", PYTHONHASHSEED="0", NO_COLOR="1",
+        # the scratch vault is the knowledge base: no KB selection or CI mode leaks in from the caller
+        e = {k: v for k, v in os.environ.items() if k not in ("KB_ROOT", "KB_CI", "KB", "KB_BASES_DIR")}
+        e.update(PYTHONDONTWRITEBYTECODE="1", PYTHONHASHSEED="0", NO_COLOR="1", KB_ROOT=str(self.root),
                  PYTHONPATH=str(self.root / "backend" / "src"))     # the scratch vault runs its own copy of kb
         e.update(extra)
         return e

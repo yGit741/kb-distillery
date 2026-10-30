@@ -17,18 +17,29 @@ const median = (xs: number[]): number => {
   return s.length % 2 ? (s[m] as number) : ((s[m - 1] as number) + (s[m] as number)) / 2;
 };
 
-/** Area slug -> its topic page's title ("implicit-regularization" -> "Implicit regularization"). */
-export function areaNames(nodes: readonly GNode[]): Map<string, string> {
+/** Area slug -> its topic page's title ("implicit-regularization" -> "Implicit regularization"). With several
+ * knowledge bases on the canvas the regions are the knowledge bases instead: `kb:<id>` -> its name. */
+export function areaNames(nodes: readonly GNode[], kbs: readonly { id: string; name?: string }[] = []): Map<string, string> {
   const out = new Map<string, string>();
+  if (kbs.length > 1) {
+    for (const k of kbs) out.set(`kb:${k.id}`, k.name || k.id);
+    return out;
+  }
   for (const n of nodes) if (n.type === "topic" && n.areas[0]) out.set(n.areas[0], n.title || n.id);
   return out;
+}
+
+/** The region a node belongs to: its knowledge base when `names` holds knowledge bases, else its primary area. */
+export function regionKey(n: GNode, names: ReadonlyMap<string, string>): string | undefined {
+  const kb = `kb:${n.kb ?? ""}`;
+  return names.has(kb) ? kb : n.areas[0];
 }
 
 /** One region per primary area with at least `min` drawn pages, at the median of their positions, largest first. */
 export function regionsOf(nodes: readonly Positioned[], names: ReadonlyMap<string, string>, min = 3): Region[] {
   const groups = new Map<string, Positioned[]>();
   for (const n of nodes) {
-    const a = n.areas[0];
+    const a = regionKey(n, names);
     if (!a || n.x == null || n.y == null || !Number.isFinite(n.x)) continue;
     const g = groups.get(a);
     if (g) g.push(n);

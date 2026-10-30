@@ -18,10 +18,11 @@ from pathlib import Path
 
 CHECKOUT = Path(__file__).resolve().parents[3]           # this checkout (backend/tests/harness/ -> repo root)
 CODE_SRC = CHECKOUT / "backend" / "src" / "kb"           # the tool code (package kb)
-META_SRC = CHECKOUT / "meta"                             # vault metadata that is also tooling input
+META_SRC = CHECKOUT / "meta-defaults"                    # the explorer's generic meta (templates, flags, docs)
 
-# meta/ holds vault data only now; the scratch vault copies just these (templates the writers read, ops config).
-META_COPY = ("templates", "ops")
+# The scratch vault copies the templates the writers read from the explorer's meta-defaults/ (a knowledge
+# base's own meta/ would override them; the fixture has none).
+META_COPY = ("templates",)
 CODE_IGNORE = shutil.ignore_patterns("__pycache__", "*.pyc", ".ingest", ".catalog", ".ops", ".researcher",
                                      "test_*.py", "node_modules", "*.test.mjs")
 
@@ -333,6 +334,8 @@ def build(root, inputs):
     for name in META_COPY:
         if (META_SRC / name).is_dir():
             shutil.copytree(META_SRC / name, meta / name, ignore=CODE_IGNORE)
+    (root / "kb.toml").write_text('[kb]\nid = "harness"\nname = "Harness fixture vault"\nschema_version = "1.3"\n'
+                                  '\n[types]\nareas = [' + ", ".join(f'"{t}"' for t in TOPICS) + ']\n', encoding="utf-8")
     (meta / "corpus.tsv").write_text(MANIFEST_HEADER, encoding="utf-8")
     (meta / "aliases.tsv").write_text("", encoding="utf-8")
     (meta / "log.md").write_text("# Log\n", encoding="utf-8")

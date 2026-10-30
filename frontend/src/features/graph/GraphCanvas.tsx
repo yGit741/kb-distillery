@@ -13,6 +13,7 @@ import { useLabHud } from "./lab/hud";
 import { hopsFrom, type Importance } from "./lab/importance";
 import { FORCED } from "./lab/labelPlan";
 import { areaNames } from "./lab/regions";
+import { drawKbOutlines, kbAnchors, kbGroups, kbLabelSpot } from "./lab/kbRegions";
 import { bubbleAim, drawBubble, magnetCursor, pickMagnetic, rgbOf, stepBubble, type Bubble, type ScreenNode } from "./magnet";
 import { drawPile, formatOfPile, isPile, isPileId, pileRadius } from "./rawLayer";
 import { DRAG_PX } from "./selection";
@@ -114,6 +115,8 @@ const DOUBLE_MS = 380;
  * labels its neighbours; the wheel pans, pinch or Cmd+wheel zooms; double-click opens the side reader;
  * right-click a node opens its menu. Box, lasso and path selection are tools (./tools), not here.
  */
+const NO_NAMES: ReadonlyMap<string, string> = new Map();
+
 export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
   { model, byId, neighbors, visible, imp, className, onOpenMenu, onBackgroundContext, onOpenReader, onOpenPile },
   ref,
@@ -148,7 +151,7 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
   live.current = { ui, theme, selection, byId, neighbors, visible, onOpenReader, onOpenMenu, onBackgroundContext, onOpenPile };
 
   rs.current.imp = imp;
-  const names = useMemo(() => areaNames(model.nodes), [model]);
+  const names = useMemo(() => areaNames(model.nodes, model.kbs), [model]);
   const initials = useMemo(() => personInitials(model.nodes), [model]);
   const weights = useMemo(() => edgeWeights(model), [model]);
   const weightsRef = useRef(weights);
@@ -309,9 +312,20 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
     }
     return themeAnchors(nodes, ringRef.current!.ring);
   }, [data, model, ui.layoutMode, ui.linkDistance]);
+  // several knowledge bases: each is pulled toward its own anchor (a row, left to right), so its pages stay one
+  // region and a page with no links cannot drift off; dragging a region's name moves its anchor
+  const kbIds = useMemo(() => ((model.kbs?.length ?? 0) > 1 ? model.kbs!.map((k) => k.id) : []), [model]);
+  const kbAnchor = useRef(new Map<string, [number, number]>());
+  useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const n of model.nodes) if (n.kb) counts.set(n.kb, (counts.get(n.kb) ?? 0) + 1);
+    kbAnchor.current = kbAnchors(kbIds, counts, ui.linkDistance);
+  }, [kbIds, model, ui.linkDistance]);
   const anchor = useMemo<Anchor | null>(
     () =>
-      anchors
+      kbIds.length
+        ? { strength: 0.12, target: (n) => (n.kb ? (kbAnchor.current.get(n.kb) ?? null) : null) }
+        : anchors
         ? {
             strength: ui.areaPull,
             target: (n) => {
@@ -320,7 +334,7 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
             },
           }
         : null,
-    [anchors, ui.areaPull],
+    [anchors, ui.areaPull, kbIds],
   );
   // the first layout already uses the mode and pull (settled off screen); only the user's later change animates
   // (compared by value, so StrictMode's second mount run doesn't count as a change)
@@ -363,6 +377,8 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
   }, []);
 
   // ---- fit (largest connected component: stray islands drift far out and would shrink everything)
+  const multiKb = useRef(false);
+  multiKb.current = (model.kbs?.length ?? 0) > 1;
   const mounted = useRef(true);
   useEffect(() => () => void (mounted.current = false), []);
   const framed = useRef(false);
@@ -374,7 +390,8 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
       return;
     }
     if (!live.current.visible.size) return;
-    const core = largestComponent(live.current.visible, live.current.neighbors);
+    // several knowledge bases are separate islands by design: frame them all, not the largest one
+    const core = multiKb.current ? new Set<string>() : largestComponent(live.current.visible, live.current.neighbors);
     fg.current?.fit(core.size > 1 ? (n) => core.has(n.id) || isPile(n) : undefined, ms);
     framed.current = true;
     window.setTimeout(() => {
@@ -678,6 +695,60 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
     [radius, initials],
   );
 
+  // ---- knowledge base names: DOM labels above each region (clear of the top nodes' own labels), placed every
+  // frame, draggable (moves the region)
+  const kbLabels = useRef(new Map<string, HTMLButtonElement>());
+  const placeKbLabels = () => {
+    const g = fg.current;
+    const el = wrap.current;
+    if (!g || !el || !kbLabels.current.size) return;
+    const box = el.getBoundingClientRect();
+    const groups = kbGroups(g.nodes().filter((n) => !isPile(n)));
+    for (const [id, label] of kbLabels.current) {
+      const list = groups.get(id);
+      const spot = list?.length ? kbLabelSpot(list) : null;
+      const p = spot ? g.screenOf({ x: spot.x, y: spot.top }) : null;
+      if (!p) {
+        label.style.visibility = "hidden";
+        continue;
+      }
+      label.style.visibility = "visible";
+      label.style.transform = `translate(${p.x - box.left}px, ${p.y - box.top}px) translate(-50%, calc(-100% - 34px))`;
+    }
+  };
+  const kbDrag = useRef<{ id: string; x: number; y: number; nodes: SimNode[] } | null>(null);
+  const startKbDrag = (id: string, e: React.PointerEvent) => {
+    const g = fg.current;
+    if (!g || e.button !== 0) return;
+    e.currentTarget.setPointerCapture(e.pointerId);
+    const nodes = kbGroups(g.nodes()).get(id) ?? [];
+    for (const n of nodes) [n.fx, n.fy] = [n.x, n.y];
+    kbDrag.current = { id, x: e.clientX, y: e.clientY, nodes };
+  };
+  const moveKbDrag = (e: React.PointerEvent) => {
+    const d = kbDrag.current;
+    const g = fg.current;
+    if (!d || !g) return;
+    const k = g.zoom() || 1;
+    const dx = (e.clientX - d.x) / k;
+    const dy = (e.clientY - d.y) / k;
+    d.x = e.clientX;
+    d.y = e.clientY;
+    for (const n of d.nodes) {
+      n.x = n.fx = (n.x as number) + dx;
+      n.y = n.fy = (n.y as number) + dy;
+    }
+    const a = kbAnchor.current.get(d.id);
+    if (a) kbAnchor.current.set(d.id, [a[0] + dx, a[1] + dy]);
+    g.refresh();
+  };
+  const endKbDrag = () => {
+    const d = kbDrag.current;
+    if (!d) return;
+    for (const n of d.nodes) n.fx = n.fy = undefined;   // the moved anchor holds the region where it was dropped
+    kbDrag.current = null;
+  };
+
   const drawFramePre = useCallback(
     (ctx: CanvasRenderingContext2D, scale: number) => {
       const g = fg.current;
@@ -685,11 +756,16 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
       const arcs = useDecor.getState().arcs;
       if (arcs?.length) drawArcs(ctx, g.nodes(), arcs, scale, rs.current.colors);
       const u = live.current.ui;
-      // hulls say where (area tints) and show only when the nodes do not already say it with their colour
+      // hulls say where (area tints, or one per knowledge base when several share the canvas) and show only
+      // when the nodes do not already say it with their colour
+      if (kbIds.length) {
+        drawKbOutlines(ctx, kbGroups(g.nodes().filter((n) => !isPile(n))), scale, rs.current.colors.muted);
+        return;
+      }
       const hulls = effectiveColorBy(u.colorBy) !== "area";
       if (hulls) drawHulls(ctx, g.nodes().filter((n) => !isPile(n)), scale, names, u.lab.hullSigma);
     },
-    [names],
+    [names, kbIds],
   );
 
   const drawFramePost = useCallback(
@@ -716,7 +792,7 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
         dim: (id) => nodeOpacity(id, focus) < 0.5,
         radius,
         colors,
-        areaNames: names,
+        areaNames: kbIds.length ? NO_NAMES : names,   // knowledge base names are the DOM labels below
         fades: fades.current,
         pointer: cfg.lens ? pointer : null,
         hovered: hover,
@@ -727,6 +803,7 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
           return colorOf(n, by, METRIC_COLORS.has(by) ? metricOf(rs.current.imp, n, by) : undefined, live.current.theme);
         },
       });
+      placeKbLabels();
       f.churn = f.churn * 0.9 + res.changes * (1000 / Math.max(16, dt)) * 0.1;
       rs.current.zr = res.zr;
       if (now - f.hudAt > 250) {
@@ -756,7 +833,7 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
         });
       }
     },
-    [radius, names],
+    [radius, names, kbIds],
   );
 
   const drawLinkAfter = useCallback((l: SimLink, ctx: CanvasRenderingContext2D, scale: number) => {
@@ -837,6 +914,23 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
         onEngineStop={onEngineStop}
       />
       <canvas ref={overlay} aria-hidden className="pointer-events-none absolute inset-0 size-full" />
+      {kbIds.map((id) => (
+        <button
+          key={id}
+          type="button"
+          ref={(el) => void (el ? kbLabels.current.set(id, el) : kbLabels.current.delete(id))}
+          data-kb-region={id}
+          title="Drag to move this knowledge base"
+          className="absolute left-0 top-0 cursor-grab touch-none select-none whitespace-nowrap rounded px-1 text-sm font-bold uppercase tracking-wide text-muted-foreground hover:text-foreground active:cursor-grabbing"
+          style={{ visibility: "hidden" }}
+          onPointerDown={(e) => startKbDrag(id, e)}
+          onPointerMove={moveKbDrag}
+          onPointerUp={endKbDrag}
+          onPointerCancel={endKbDrag}
+        >
+          {model.kbs?.find((k) => k.id === id)?.name ?? id}
+        </button>
+      ))}
     </div>
   );
 });

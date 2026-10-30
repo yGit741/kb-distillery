@@ -17,12 +17,12 @@ const oneOf = <T extends string>(v: unknown, allowed: readonly T[]): T | undefin
 };
 
 export type ChatSearch = { session?: string; scope?: string; q?: string };
-export type PagesSearch = { q?: string; layer?: string; type?: string; status?: string; area?: string; embed?: string; a?: string; b?: string };
-export type GraphSearch = { select?: string; focus?: string; scope?: string; layer?: string; raw?: "1"; search?: string; pages?: string; from?: "home"; view?: string };
+export type PagesSearch = { kb?: string; q?: string; layer?: string; type?: string; status?: string; area?: string; embed?: string; a?: string; b?: string };
+export type GraphSearch = { select?: string; focus?: string; scope?: string; layer?: string; raw?: "1"; search?: string; pages?: string; from?: "home"; view?: string; kbs?: string };
 export type ScopesSearch = { scope?: string; draft?: string };
 export type PipelineSearch = { format?: string; q?: string; depth?: string; collection?: string; status?: string; view?: string; group?: string; backlog?: "queued"; item?: string };
-export type SystemTab = "overview" | "pipeline" | "history" | "health" | "flags";
-export const SYSTEM_TABS: readonly SystemTab[] = ["overview", "pipeline", "history", "health", "flags"];
+export type SystemTab = "overview" | "pipeline" | "history" | "health" | "flags" | "kbs";
+export const SYSTEM_TABS: readonly SystemTab[] = ["overview", "pipeline", "history", "health", "flags", "kbs"];
 /** System hosts the pipeline view, so it keeps the pipeline's params (its own `view` included) next to `tab`. */
 export type SystemSearch = PipelineSearch & { tab?: SystemTab };
 export type NoSearch = Record<string, never>;
@@ -55,9 +55,10 @@ export const SEARCH: { [K in keyof SearchById]: (raw: Raw) => SearchById[K] } = 
   think: (r) => clean({ note: str(r.note) }),
   chat: (r) => clean({ session: str(r.session), scope: str(r.scope), q: str(r.q) }),
   pages: (r) =>
-    clean({ q: str(r.q), layer: str(r.layer), type: str(r.type), status: str(r.status), area: str(r.area), embed: str(r.embed), a: str(r.a), b: str(r.b) }),
+    clean({ kb: str(r.kb), q: str(r.q), layer: str(r.layer), type: str(r.type), status: str(r.status), area: str(r.area), embed: str(r.embed), a: str(r.a), b: str(r.b) }),
   graph: (r) =>
     clean({
+      kbs: str(r.kbs),
       select: str(r.select),
       focus: str(r.focus),
       scope: str(r.scope),

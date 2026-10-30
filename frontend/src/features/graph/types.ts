@@ -1,4 +1,6 @@
 import type { GraphNode, GraphSnapshot } from "@/api";
+
+type GraphKb = NonNullable<GraphSnapshot["kbs"]>[number];
 import { parseRawLayer } from "./rawLayer";
 
 /** A node as the API returns it (layer, type, depth, areas, degrees, preview, properties). */
@@ -99,6 +101,8 @@ export interface GraphModel {
   nodes: readonly GNode[];
   links: readonly GLink[];
   conceptLinks: readonly ConceptLink[];
+  /** The knowledge bases on the canvas (several: ids are `<kb>:<slug>` and the regions are the knowledge bases). */
+  kbs?: readonly GraphKb[];
   /** Present while the data layer is loaded (`?raw=1`). Piles are drawn but are not pages: never in `nodes`. */
   raw?: RawLayer;
 }
@@ -108,6 +112,7 @@ export function toModel(snap: GraphSnapshot): GraphModel {
   return {
     ...(raw ? { raw } : {}),
     nodes: snap.nodes,
+    kbs: snap.kbs ?? [],
     links: snap.links.map((l) => ({
       source: l.source,
       target: l.target,

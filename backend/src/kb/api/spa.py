@@ -6,9 +6,9 @@ from pathlib import Path
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse
 
-from kb.paths import vault_root
+from kb.paths import CHECKOUT_ROOT, vault_root
 
-FRONTEND = os.path.join(vault_root(), "frontend")
+FRONTEND = os.path.join(CHECKOUT_ROOT, "frontend")     # code, not vault content
 DIST = os.path.join(FRONTEND, "dist")
 STAMP = ".src-hash"
 

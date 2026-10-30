@@ -320,21 +320,21 @@ def collect_data(meta_dir, built_at, content_sha):
     from kb.search.semfind import load_pages
 
     pages = load_pages()
-    cached = lambda: pages  # noqa: E731
+    cached = lambda root=None: pages  # noqa: E731
     graph_data.load_pages = cached
     explore_data.load_pages = cached
     graph_memo = {}
     orig_graph = explore_data._graph
 
-    def memo_graph(p):
+    def memo_graph(p, titles=None):
         if id(p) not in graph_memo:
-            graph_memo[id(p)] = orig_graph(p)
+            graph_memo[id(p)] = orig_graph(p, titles)
         return graph_memo[id(p)]
 
     explore_data._graph = memo_graph
     epoch = _epoch(built_at)
-    explore_data._mtime = lambda rel: epoch
-    graph_data._etag = lambda p: content_sha[:16]
+    explore_data._mtime = lambda rel, root=None: epoch
+    graph_data._etag = lambda p, root=None: content_sha[:16]
     graph_data._now = lambda: built_at
     explore_data._now = lambda: built_at
 

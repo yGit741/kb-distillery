@@ -83,8 +83,9 @@ def _names_guard(text):
 def hooks_health():
     """Return (status_text, all_ok) for agent write-guard hook configs."""
     cursor_ok = claude_ok = False
-    cursor_path = os.path.join(ROOT, ".cursor", "hooks.json")
-    claude_path = os.path.join(ROOT, ".claude", "settings.json")
+    from kb import paths
+    cursor_path = os.path.join(paths.CHECKOUT_ROOT, ".cursor", "hooks.json")     # hook configs are code: the explorer
+    claude_path = os.path.join(paths.CHECKOUT_ROOT, ".claude", "settings.json")
     if os.path.isfile(cursor_path):
         try:
             with open(cursor_path, encoding="utf-8") as f:
@@ -342,7 +343,8 @@ def check_flags(path=None, today=None):
     import datetime as dt
 
     from kb.flags.registry import FlagError, load
-    path = path or os.path.join(ROOT, "meta", "flags.toml")
+    from kb.flags.registry import FLAGS_TOML
+    path = path or str(FLAGS_TOML)
     if not os.path.exists(path):
         return
     try:
@@ -353,7 +355,7 @@ def check_flags(path=None, today=None):
     today = today or dt.date.today()
     for f in reg.flags:
         left = (f.expires - today).days
-        tail = f"owner {f.owner} — remove it with the flag-cleanup PR template (meta/templates/flag-cleanup-pr.md)"
+        tail = f"owner {f.owner} — remove it with the flag-cleanup PR template (meta-defaults/templates/flag-cleanup-pr.md)"
         if left < 0:
             err("meta/flags.toml", f"flag {f.name} expired on {f.expires}; {tail}")
         elif left <= FLAG_EXPIRY_WARN_DAYS:
@@ -489,7 +491,8 @@ def check_wiki():
             elif ds != "listed" and fm.get("status") != "digested":
                 err(rel, f"depth {ds} means read — status must be digested")
         _check_slug(rel, slug, t)
-        if t == "topic" and slug[len(TOPIC_PREFIX):] not in TOPIC_SLUGS:
+        # a kb that declares `[types] areas` pins its topic pages to them; one that declares none accepts any topic
+        if t == "topic" and TOPIC_SLUGS and slug[len(TOPIC_PREFIX):] not in TOPIC_SLUGS:
             err(rel, f"topic page must be one of {sorted(TOPIC_PREFIX + s for s in TOPIC_SLUGS)}")
         if t == "ai-chat":
             h1 = next((l[2:].strip() for l in text.splitlines() if l.startswith("# ")), "")
@@ -502,8 +505,10 @@ def check_wiki():
                 err(rel, f"ai-chat conversation: {conv or '(missing)'} has no tree in {CHATS_DIR}/")
         if t == "distilled-think":
             src = str(fm.get("source") or "")
-            if not src.startswith(f"{THINK_DIR}/"):
-                err(rel, f"type distilled-think requires source: under {THINK_DIR}/")
+            if src.startswith(f"{THINK_DIR}/"):
+                warn(rel, f"source: {src} — think is the shared space; cite it as {THINK_DIR}:{src[len(THINK_DIR) + 1:]}")
+            elif not src.startswith(f"{THINK_DIR}:"):
+                err(rel, f"type distilled-think requires source: {THINK_DIR}:<note>.md (the shared think space)")
             for heading in ("Summary", "Proposed propagation"):
                 if f"## {heading}" not in text:
                     err(rel, f"distilled-think page missing ## {heading}")
@@ -603,7 +608,7 @@ def _check_paper_areas(rel, fm):
     for a in areas:
         if a in DEPRECATED_AREA_SLUGS:
             warn(rel, f"area: {a!r} is deprecated — use a topic slug from {sorted(TOPIC_SLUGS)}")
-        elif a not in TOPIC_SLUGS:
+        elif TOPIC_SLUGS and a not in TOPIC_SLUGS:
             warn(rel, f"area: {a!r} not in topic whitelist {sorted(TOPIC_SLUGS)}")
 
 TABLE_PIPE = re.compile(r"\[\[[^\]\\|]*(?<!\\)\|[^\]]*\]\]")
@@ -1148,6 +1153,9 @@ def collect_snapshot(quiet=False):
     check_root()
     check_wiki_strays()
     check_flags()
+    from kb import kbconfig, paths as _paths
+    if (mismatch := kbconfig.schema_mismatch(_paths.KB)):
+        err("kb.toml", mismatch)
 
     t_wiki = time.perf_counter()
     pages = check_wiki()
@@ -1325,7 +1333,9 @@ def sync_search_cards():
     checkout, a worktree, CI or a test's temp root. A cache, never an error."""
     from kb import paths
     from kb.search import cards, qmd_client
-    live = os.path.realpath(ROOT) == os.path.realpath(paths.CHECKOUT_ROOT) and not os.environ.get("KB_ROOT")
+    # The explorer and its knowledge bases are separate checkouts, so "live" is explicit: KB_LIVE=1 (launch.sh
+    # sets it for the dashboard's own lint runs); a share build, CI, a worktree or a test root never sync.
+    live = os.environ.get("KB_LIVE") == "1" and not os.environ.get("KB_ROOT")
     if not live or ci_mode() or f"{os.sep}.claude{os.sep}worktrees{os.sep}" in os.path.realpath(ROOT):
         return
     try:

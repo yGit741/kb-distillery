@@ -8,12 +8,12 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from kb.paths import CODE_DIR, vault_root
+from kb.paths import CHECKOUT_ROOT, CODE_DIR, vault_root
 ROOT = vault_root()
 
 from kb.ops import migrate
 
-ENV = {"GIT_CONFIG_GLOBAL": os.devnull, "GIT_CONFIG_NOSYSTEM": "1"}
+ENV = {"GIT_CONFIG_GLOBAL": os.devnull, "GIT_CONFIG_NOSYSTEM": "1", "KB": "", "KB_ROOT": ""}   # the temp repo is its own vault
 
 
 def g(cwd, *args, env=None, check=True):
@@ -76,11 +76,11 @@ class GitHooksTests(unittest.TestCase):
         for k, v in (("user.name", "t"), ("user.email", "t@t")):
             g(self.root, "config", k, v)
         kb = os.path.join(self.root, "backend", "src", "kb")
-        for rel in ("__init__.py", "paths.py", "core/__init__.py", "core/schema.py", "git/__init__.py",
-                    "git/commit_policy.py"):
+        for rel in ("__init__.py", "paths.py", "kbconfig.py", "core/__init__.py", "core/schema.py", "core/kbtypes.py",
+                    "git/__init__.py", "git/commit_policy.py"):
             os.makedirs(os.path.dirname(os.path.join(kb, rel)), exist_ok=True)
             shutil.copy(os.path.join(CODE_DIR, rel), os.path.join(kb, rel))
-        shutil.copytree(os.path.join(ROOT, "tools", "githooks"), os.path.join(self.root, "tools", "githooks"))
+        shutil.copytree(os.path.join(CHECKOUT_ROOT, "tools", "githooks"), os.path.join(self.root, "tools", "githooks"))
         os.makedirs(os.path.join(kb, "lint"))
         for rel, text in (("__init__.py", ""),
                           ("lint.py", "import os, sys\nsys.exit(1 if os.path.exists('LINT_FAIL') else 0)\n"),

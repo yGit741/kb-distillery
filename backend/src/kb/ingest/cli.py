@@ -11,6 +11,14 @@ from . import backfill as backfill_mod
 from .paths import INGEST_ROOT, ROOT, load_session, session_dir
 
 
+def _add_llm_flags(sp, default_model):
+    """--backend / --model for steps that call Claude through kb.llm."""
+    from kb import llm
+    sp.add_argument("--backend", choices=llm.BACKENDS, default=None,
+                    help=f"subscription / api / batch (default: ${llm.ENV_BACKEND}, then {llm.DEFAULT_BACKEND})")
+    sp.add_argument("--model", default=default_model, help=f"model alias or id (default {default_model})")
+
+
 def _add_scope_flags(sp):
     sp.add_argument("--part", default=None, metavar="N",
                     help="row number of the book's partition, as printed by `toc`")
@@ -164,7 +172,7 @@ def main(argv=None):
     vd = sub.add_parser("video-digest", help="full/deep digest of a video page: read the top anchors with Claude (LLM)")
     vd.add_argument("target", help="raw/videos/<name>/video.md or its video- page slug")
     vd.add_argument("--tier", choices=["full", "deep"], default="full", help="full ~15 frames/hour · deep ~30/hour")
-    vd.add_argument("--model", default="sonnet", help="model for the frame reads")
+    _add_llm_flags(vd, default_model="sonnet")
 
     sm = sub.add_parser("scrap-mail", help="parse .mbox/.eml export, or fetch via IMAP, to raw/inbox/mail-.../ (0 LLM)")
     sm.add_argument("source", nargs="?", default=None, help="path to a local .mbox or .eml export")
@@ -199,10 +207,12 @@ def main(argv=None):
     di.add_argument("--match", default="", help="only inbox entries whose name starts with this prefix")
 
     ed = sub.add_parser("easy-digest", help="abstract skim (light LLM)")
-    ed.add_argument("target")
+    ed.add_argument("target", nargs="+", help="one or more slugs / raw paths (several → one fill run)")
     ed.add_argument("--into", default=None, help="existing page that covers this clip too (a series of numbered posts)")
     ed.add_argument("--no-tick", action="store_true", help="batch: leave the hub row for the orchestrator")
     ed.add_argument("--no-lint", action="store_true", help="batch: lint once at the end instead")
+    ed.add_argument("--fill", action="store_true", help="kb.llm writes Problem + Main result (else the agent does)")
+    _add_llm_flags(ed, default_model="haiku")
 
     sc = sub.add_parser("easy-spotcheck", help="~5%% of easy digests re-read by a stronger model (0 LLM here)")
     sc_sub = sc.add_subparsers(dest="sc_cmd", required=True)
@@ -242,6 +252,8 @@ def main(argv=None):
 
     e = sub.add_parser("extract", help="extract PDF text; validate claims.json")
     e.add_argument("session")
+    e.add_argument("--fill", action="store_true", help="kb.llm fills the claims.json template (else the agent does)")
+    _add_llm_flags(e, default_model="sonnet")
 
     m = sub.add_parser("map", help="build plan.json from claims")
     m.add_argument("session")
@@ -316,7 +328,7 @@ def main(argv=None):
     if args.cmd == "video-digest":
         from .youtube import digest
         try:
-            digest.video_digest(args.target, tier=args.tier, model=args.model)
+            digest.video_digest(args.target, tier=args.tier, model=args.model, backend=args.backend)
         except ValueError as e:
             print(f"video-digest: {e}", file=sys.stderr)
             return 1
@@ -354,8 +366,17 @@ def main(argv=None):
         catalog.drain_inbox(collection=args.collection, match=args.match)
         return 0
     if args.cmd == "easy-digest":
-        easy_digest.easy_digest(args.target, into=args.into, tick=not args.no_tick, lint=not args.no_lint)
-        return 0
+        llm_kw = {"fill": args.fill, "backend": args.backend, "model": args.model}
+        if len(args.target) == 1:
+            easy_digest.easy_digest(args.target[0], into=args.into, tick=not args.no_tick, lint=not args.no_lint,
+                                    **llm_kw)
+            return 0
+        if args.into:
+            print("easy-digest: --into takes one target", file=sys.stderr)
+            return 2
+        _, rows, failed = easy_digest.easy_digest_many(args.target, tick=not args.no_tick, lint=not args.no_lint,
+                                                       **llm_kw)
+        return 1 if failed or any(r.get("error") for r in rows) else 0
     if args.cmd == "easy-spotcheck":
         from . import spotcheck
         if args.sc_cmd == "pick":
@@ -386,8 +407,7 @@ def main(argv=None):
         session.begin(args.raw_path, scope=scope)
         return 0
     if args.cmd == "extract":
-        extract.run_extract(args.session)
-        return 0
+        return extract.run_extract(args.session, fill=args.fill, backend=args.backend, model=args.model)
     if args.cmd == "map":
         map.run_map(args.session)
         return 0

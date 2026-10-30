@@ -13,8 +13,8 @@ export default function Graph() {
   const navigate = useNavigate();
   const host = useMemo<GraphHost>(
     () => ({
-      openPage: (slug) => void navigate({ to: `/pages/${encodeURIComponent(slug)}` as "/" }),
-      pageHref: (slug) => `${base}/pages/${encodeURIComponent(slug)}`,
+      openPage: (slug, kb) => void navigate({ to: `/pages/${encodeURIComponent(slug)}` as "/", search: (kb ? { kb } : {}) as never }),
+      pageHref: (slug, kb) => `${base}/pages/${encodeURIComponent(slug)}${kb ? `?kb=${encodeURIComponent(kb)}` : ""}`,
       go: (to, search) => void navigate({ to: to as "/", ...(search ? { search: search as never } : {}) }),
       href: (to, search) => {
         const qs = new URLSearchParams(search).toString();

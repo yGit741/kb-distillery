@@ -5,7 +5,9 @@ from kb.api.models.base import ApiModel
 
 
 class GraphNode(ApiModel):
-    id: str
+    id: str                              # the slug; `<kb>:<slug>` when several knowledge bases share the canvas
+    kb: str | None = None                # the knowledge base the page is from
+    slug: str | None = None
     label: str = ""
     title: str = ""
     type: str = ""
@@ -41,6 +43,12 @@ class GraphFacets(ApiModel):
     areas: list[str] = []
 
 
+class GraphKb(ApiModel):
+    id: str
+    name: str = ""
+    active: bool = False                 # the server's own knowledge base (the only one that can be edited)
+
+
 class GraphSnapshot(ApiModel):
     generated_at: str
     etag: str
@@ -52,3 +60,4 @@ class GraphSnapshot(ApiModel):
     concept_links: list[ConceptLink] = []
     facets: GraphFacets = GraphFacets()
     layer: str | None = None             # "raw" when the data layer is merged in
+    kbs: list[GraphKb] | None = None     # the knowledge bases on the canvas

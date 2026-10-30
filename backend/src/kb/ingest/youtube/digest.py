@@ -11,7 +11,6 @@ The page gets a `## Frames` section (thumbnail embed + read per frame) and, when
 import json
 import os
 import re
-from concurrent.futures import ThreadPoolExecutor
 
 from ..paths import ROOT, sha1_file
 from . import bundle, fetch as fetch_mod, frames as fx, readers
@@ -130,8 +129,9 @@ def section_empty(text, heading):
     return m is None or len(m.group(1).strip()) < 8
 
 
-def video_digest(arg, tier="full", model=readers.READ_MODEL, workers=4):
-    """Read the chosen frames and write them onto the video page (depth full/deep). Returns the page path."""
+def video_digest(arg, tier="full", model=readers.READ_MODEL, workers=4, backend=None):
+    """Read the chosen frames and write them onto the video page (depth full/deep). Returns the page path.
+    `backend`: kb.llm's subscription / api / batch for the frame reads (all frames in one run)."""
     from kb.core import wikiio
     from .. import easy_digest as ed
     if tier not in TIERS:
@@ -162,24 +162,27 @@ def video_digest(arg, tier="full", model=readers.READ_MODEL, workers=4):
         box = fx.board_crop_box(img) if x["kind"] == "board" else None
         (img.crop(box) if box else img).convert("RGB").save(p := os.path.join(work, f"f-{x['t']:05d}.jpg"), quality=88)
         paths[x["t"]] = p
-    with ThreadPoolExecutor(workers) as ex:
-        reads = list(ex.map(lambda x: readers.claude_read(paths[x["t"]], _context(d, x["t"]), model)
-                            if x["t"] in paths else {"text": ""}, chosen))
-    for x, r in zip(chosen, reads):
-        x["read"] = r
+    grabbed = [x for x in chosen if x["t"] in paths]
+    reads = dict(zip((x["t"] for x in grabbed),
+                     readers.claude_reads([(paths[x["t"]], _context(d, x["t"])) for x in grabbed], model=model,
+                                          backend=backend, workers=workers)))
+    for x in chosen:
+        x["read"] = reads.get(x["t"], {"text": ""})
     ok = [x for x in chosen if x["read"].get("text")]
     stats = {"tier": tier, "anchors": len(anchors), "chosen": len(chosen), "read": len(ok),
              "tokens_in": sum(x["read"].get("tokens_in") or 0 for x in ok),
              "tokens_out": sum(x["read"].get("tokens_out") or 0 for x in ok),
-             "usd_cli": round(sum(x["read"].get("usd") or 0 for x in ok), 3)}
+             "usd": round(sum(x["read"].get("usd") or 0 for x in ok), 3),
+             "backend": next((x["read"]["backend"] for x in chosen if x["read"].get("backend")), "")}
     with open(os.path.join(work, "reads.json"), "w", encoding="utf-8") as fh:
         json.dump({"stats": stats, "frames": [{k: x[k] for k in ("t", "kind", "score", "why", "thumb_path", "read")}
                                               for x in chosen]}, fh, ensure_ascii=False, indent=1)
 
     if not ok:
         errors = {x["read"].get("error") for x in chosen if x["read"].get("error")}
-        raise ValueError(f"no frame could be read{f' ({sorted(errors)[0]})' if errors else ''} — is `claude` "
-                         "logged in / within its usage limit? The page is unchanged; rerun later")
+        raise ValueError(f"no frame could be read{f' ({sorted(errors)[0]})' if errors else ''} — subscription: is "
+                         "`claude` logged in / within its usage limit? api/batch: is the key set and funded? "
+                         "The page is unchanged; rerun later")
     page_type = "video"
     slug = os.path.basename(ed.existing_digest_for_raw(raw_rel) or "")[:-3] or \
         ed.unit_slug_for_raw(raw_rel, page_type)
@@ -210,7 +213,7 @@ def video_digest(arg, tier="full", model=readers.READ_MODEL, workers=4):
         course.record_row(hub, row["raws"], slug, depth)
         print(f"ticked [[{hub}]] row {n} ({depth})")
     print(f"read {len(ok)}/{len(chosen)} frames · {stats['tokens_in']:,} tokens in, {stats['tokens_out']:,} out "
-          f"(CLI ${stats['usd_cli']})")
+          f"({stats['backend']} ${stats['usd']})")
     print(f"updated {wiki_path} ({page_type}, depth: {depth}) — ## Frames written, ## Key equations drafted")
     print(f"Agent: read {os.path.join(work, 'abstract.text')} (transcript + reads), write Problem, Main result, "
           f"Key ideas, curate Key equations, Takeaways{', Connections ([[links]] into the wiki)' if tier == 'deep' else ''}; "

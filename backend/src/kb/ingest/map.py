@@ -36,7 +36,7 @@ def _themes_for_areas(areas, known):
     themes = []
     for a in areas or []:
         bare = a[len(TOPIC_PREFIX):] if a.startswith(TOPIC_PREFIX) else a
-        if bare not in TOPIC_SLUGS:
+        if TOPIC_SLUGS and bare not in TOPIC_SLUGS:   # no `[types] areas` declared = any area
             continue
         candidate = f"{TOPIC_PREFIX}{bare}"
         if candidate in known:

@@ -45,7 +45,7 @@ from kb.services import chat as chat_data
 
 WIKI = os.path.join(ROOT, "wiki")
 RAW = os.path.join(ROOT, "raw")
-THINK = os.path.join(ROOT, "think")
+from kb.paths import THINK_PATH as THINK      # the shared think space, outside the vault
 INDEX = os.path.join(ROOT, "index.md")
 READ_ROOTS = (WIKI, RAW, THINK)
 RAW_TEXT_EXT = {".md", ".txt", ".html", ".eml", ".json", ".tsv", ".csv"}
@@ -234,7 +234,9 @@ def _real(p):
     if not isinstance(p, str) or not p:
         return None
     if not os.path.isabs(p):
-        p = os.path.join(ROOT, p)
+        q = p.replace("\\", "/")
+        # `think/<note>`: the shared think space beside the vault, not a folder of it (kb.paths.THINK_PATH)
+        p = os.path.join(THINK, q[len("think/"):]) if q == "think" or q.startswith("think/") else os.path.join(ROOT, p)
     return os.path.realpath(p)
 
 

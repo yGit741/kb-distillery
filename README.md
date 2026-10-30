@@ -10,7 +10,7 @@ Inspired by the [Karpathy LLM Wiki](https://gist.github.com/karpathy/442a6bf5559
 
 - **Edit knowledge** — say a trigger phrase to the agent (`scrap <url>`, `catalog`, `full-digest <raw>`, `split <idea>`, `distill think <file>`, `undo <step>`, `snapshot "week 43"` …). Each operation lands on main as one commit `kb(<op>): … (kb-x.y.z)`; your `think/` edits are committed as `kb(think)`.
 - **Develop a feature** — `pixi run ship -- start <feature> --worktree` → `ship -- commit "feat(<component>): add …"` → `ship -- pr` → approve → `ship -- merge` (skill `infra-pr`). Tooling never commits to main directly.
-- **Go deeper** — the **Lifecycle** tab (versions, history, snapshots, guardrails), `AGENTS.md` (+ its doc router into `meta/docs/`), `skills/README.md`.
+- **Go deeper** — the **Lifecycle** tab (versions, history, snapshots, guardrails), `AGENTS.md` (+ its doc router into `meta-defaults/docs/`), `skills/README.md`.
 
 ## Layers
 
@@ -105,5 +105,5 @@ Without pixi: `python3 -m kb.lint.lint`, `python3 -m kb.dashboard`, etc.
 
 ## For agents
 
-Core rules and the doc router: **`AGENTS.md`**; schema, skill ladder and write guardrails in `meta/docs/`.  
+Core rules and the doc router: **`AGENTS.md`**; schema, skill ladder and write guardrails in `meta-defaults/docs/`.  
 Skills (canonical): `skills/README.md` · sync: `pixi run sync-skills`.

@@ -1,5 +1,12 @@
 """Scopes API against a temp git vault (the real vault is never written): reads, the four writes as one
 kb(refine) step each, legacy error shapes and the Origin rule."""
+import pytest
+
+from kb.core import schema as _schema
+
+if "paper" not in _schema.SOURCE_TYPES:   # this module builds `paper` pages: it needs the explorer's default types
+    pytest.skip("needs the default source types (run with KB=yonatan-thesis or a kb that defines `paper`)", allow_module_level=True)
+
 import os
 import subprocess
 from pathlib import Path
@@ -10,7 +17,7 @@ from fastapi.testclient import TestClient
 
 from kb.api.app import create_app
 from kb.api.models.scopes import ScopeDetail, ScopeList, ScopeResolved, ScopeStep
-from kb.paths import vault_root
+from kb.paths import meta_file, vault_root
 from kb.services import scopes as scopes_data
 from tests.core.test_scopes import A, B, C, IMG, TEXTS
 
@@ -28,7 +35,7 @@ def vault(tmp_path):
     from tests.core.test_scopes import manifest
     root = str(tmp_path)
     files = {"meta/stub.py": "x = 1\n", "meta/log.md": "# log\n", ".gitignore": "meta/.ops/\n", "index.md": "v1\n",
-             "meta/templates/scope.md": Path(vault_root(), "meta", "templates", "scope.md").read_text()}
+             "meta/templates/scope.md": Path(meta_file("templates", "scope.md")).read_text()}
     for slug, text in TEXTS.items():
         files[f"wiki/{slug}.md"] = text
     lines = ["path\tsha1\tkind\tdisposition\tslug\tcollection\tscopes"]

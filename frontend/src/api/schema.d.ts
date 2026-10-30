@@ -329,6 +329,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/kb": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The active knowledge base: kb.toml, folder, git, types */
+        get: operations["get_kb_api_kb_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/kb/list": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Knowledge bases the explorer can load */
+        get: operations["list_kbs_api_kb_list_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/lifecycle": {
         parameters: {
             query?: never;
@@ -1185,6 +1219,12 @@ export interface components {
             overrides: {
                 [key: string]: boolean;
             };
+            /**
+             * Registry
+             * @default explorer
+             * @enum {string}
+             */
+            registry: "explorer" | "kb";
         } & {
             [key: string]: unknown;
         };
@@ -1205,6 +1245,23 @@ export interface components {
              * @default []
              */
             types: string[];
+        } & {
+            [key: string]: unknown;
+        };
+        /** GraphKb */
+        GraphKb: {
+            /**
+             * Active
+             * @default false
+             */
+            active: boolean;
+            /** Id */
+            id: string;
+            /**
+             * Name
+             * @default
+             */
+            name: string;
         } & {
             [key: string]: unknown;
         };
@@ -1251,6 +1308,8 @@ export interface components {
              * @default 0
              */
             inDegree: number;
+            /** Kb */
+            kb?: string | null;
             /**
              * Label
              * @default
@@ -1283,6 +1342,8 @@ export interface components {
             properties: {
                 [key: string]: string;
             };
+            /** Slug */
+            slug?: string | null;
             /**
              * Status
              * @default
@@ -1322,6 +1383,8 @@ export interface components {
             facets: components["schemas"]["GraphFacets"];
             /** Generated At */
             generated_at: string;
+            /** Kbs */
+            kbs?: components["schemas"]["GraphKb"][] | null;
             /** Layer */
             layer?: string | null;
             /** Link Count */
@@ -1453,6 +1516,125 @@ export interface components {
             last: string;
             /** Name */
             name: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** KbDigestPart */
+        KbDigestPart: {
+            /**
+             * Origin
+             * @enum {string}
+             */
+            origin: "kb" | "explorer";
+            /** Part */
+            part: string;
+            /** Path */
+            path: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** KbGitState */
+        KbGitState: {
+            /** Branch */
+            branch: string;
+            /** Dirty */
+            dirty: number;
+            /** Last Tag */
+            last_tag: string;
+            /** Repo */
+            repo: boolean;
+        } & {
+            [key: string]: unknown;
+        };
+        /**
+         * KbInfo
+         * @description The knowledge base this app serves: kb.toml facts, where it is, its types, what it overrides.
+         */
+        KbInfo: {
+            /** Areas */
+            areas: string[];
+            /** Bases Dir */
+            bases_dir: string;
+            /** Config */
+            config: string | null;
+            /** Digest */
+            digest: components["schemas"]["KbDigestPart"][];
+            /**
+             * Flags Registry
+             * @enum {string}
+             */
+            flags_registry: "explorer" | "kb";
+            git: components["schemas"]["KbGitState"];
+            /** Id */
+            id: string | null;
+            /** Meta Overrides */
+            meta_overrides: string[];
+            /** Name */
+            name: string;
+            /** Relaunch */
+            relaunch: string;
+            /** Root */
+            root: string;
+            /** Schema Version */
+            schema_version: string;
+            /** Source Fields */
+            source_fields: string[];
+            think_git: components["schemas"]["KbGitState"];
+            /** Think Root */
+            think_root: string;
+            /** Types */
+            types: components["schemas"]["KbType"][];
+        } & {
+            [key: string]: unknown;
+        };
+        /** KbList */
+        KbList: {
+            /** Active */
+            active: string | null;
+            /** Bases Dir */
+            bases_dir: string;
+            /** Kbs */
+            kbs: components["schemas"]["KbRow"][];
+            /** Think Root */
+            think_root: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** KbRow */
+        KbRow: {
+            /** Active */
+            active: boolean;
+            /** Error */
+            error: string;
+            git: components["schemas"]["KbGitState"];
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /** Root */
+            root: string;
+            /** Schema Version */
+            schema_version: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** KbType */
+        KbType: {
+            /** Color */
+            color: string;
+            /** Id */
+            id: string;
+            /** Label */
+            label: string;
+            /**
+             * Layer
+             * @enum {string}
+             */
+            layer: "source" | "collection" | "concept";
+            /** Prefix */
+            prefix: string;
+            /** Statuses */
+            statuses: string[];
         } & {
             [key: string]: unknown;
         };
@@ -1710,6 +1892,8 @@ export interface components {
             frontmatter: {
                 [key: string]: unknown;
             };
+            /** Kb */
+            kb?: string | null;
             /** Markdown */
             markdown: string;
             /**
@@ -1719,6 +1903,8 @@ export interface components {
             outbound: string[];
             /** Path */
             path: string;
+            /** Read Only */
+            read_only?: boolean | null;
             /**
              * Suggested
              * @default []
@@ -3147,6 +3333,8 @@ export interface operations {
             query?: {
                 /** @description `raw` adds the data layer; anything else is ignored */
                 layer?: string;
+                /** @description comma-separated knowledge base ids; empty = the server's own */
+                kb?: string;
             };
             header?: never;
             path?: never;
@@ -3162,6 +3350,20 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["GraphSnapshot"];
                 };
+            };
+            /** @description raw layer of another knowledge base */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description unknown knowledge base */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {
@@ -3296,6 +3498,46 @@ export interface operations {
             };
         };
     };
+    get_kb_api_kb_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KbInfo"];
+                };
+            };
+        };
+    };
+    list_kbs_api_kb_list_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KbList"];
+                };
+            };
+        };
+    };
     get_lifecycle_api_lifecycle_get: {
         parameters: {
             query?: {
@@ -3360,7 +3602,9 @@ export interface operations {
     };
     list_pages_api_pages_get: {
         parameters: {
-            query?: never;
+            query?: {
+                kb?: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -3376,11 +3620,29 @@ export interface operations {
                     "application/json": components["schemas"]["PageIndex"];
                 };
             };
+            /** @description unknown knowledge base */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
         };
     };
     get_page_api_pages__slug__get: {
         parameters: {
-            query?: never;
+            query?: {
+                kb?: string;
+            };
             header?: never;
             path: {
                 slug: string;

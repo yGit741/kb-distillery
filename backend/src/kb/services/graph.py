@@ -130,11 +130,11 @@ def _part_info(fm):
             "section": str(fm.get("section") or "")}
 
 
-def _etag(pages):
+def _etag(pages, root=ROOT):
     parts = []
     for slug in sorted(pages):
         rel = pages[slug][0]
-        path = os.path.join(ROOT, rel)
+        path = os.path.join(root, rel)
         st = os.stat(path)
         parts.append(f"{slug}:{st.st_mtime_ns}:{st.st_size}")
     return hashlib.sha1("|".join(parts).encode()).hexdigest()[:16]
@@ -164,10 +164,30 @@ def _git_dates(root=ROOT, rev="HEAD"):
     return dates
 
 
-def build_graph_snapshot(layer=None):
-    pages = load_pages()
+_DATES_CACHE = {}    # root → (HEAD sha, dates): another kb's history is read once per commit
+
+
+def _dates_for(root):
+    from kb.services.kbview import head
+    sha = head(root)
+    hit = _DATES_CACHE.get(root)
+    if sha and hit and hit[0] == sha:
+        return hit[1]
+    dates = _git_dates(root)
+    if sha:
+        _DATES_CACHE[root] = (sha, dates)
+    return dates
+
+
+def build_graph_snapshot(layer=None, view=None):
+    """The link graph of the active knowledge base, or of `view` (a `kbview.KbView`, read-only).
+    Every node carries its `kb` and `slug`; `id` is the slug here (`merge_snapshots` namespaces it)."""
+    root = view.root if view else ROOT
+    layer_of = view.types.layer_of if view else LAYER_OF
+    kb_id = view.id if view else _active_id()
+    pages = load_pages(root)
     inbound = inbound_index(pages)
-    dates = _git_dates()
+    dates = _git_dates() if view is None or view.active else _dates_for(root)
     if not dates and os.environ.get(DATES_ENV):   # a share build's export has no history: its dates come in a file
         import json
 
@@ -198,10 +218,12 @@ def build_graph_snapshot(layer=None):
             {
                 **extra,
                 "id": slug,
+                "kb": kb_id,
+                "slug": slug,
                 "label": slug,
                 "title": _title(text, slug),
                 "type": ntype,
-                "layer": fm.get("layer") or LAYER_OF.get(ntype, ""),
+                "layer": fm.get("layer") or layer_of.get(ntype, ""),
                 "status": status,
                 "depth": fm.get("depth", ""),
                 "areas": node_areas,
@@ -238,12 +260,12 @@ def build_graph_snapshot(layer=None):
 
     snap = {
         "generated_at": _now(),
-        "etag": _etag(pages),
+        "etag": _etag(pages, root),
         "node_count": len(nodes),
         "link_count": len(links),
         "nodes": nodes,
         "links": links,
-        "schema": _schema(),
+        "schema": _schema(view.types if view else None),
         "concept_links": concept_links(nodes, links),
         "facets": {
             "types": sorted(types),
@@ -259,9 +281,81 @@ def build_graph_snapshot(layer=None):
     return snap
 
 
-def _schema():
+def _schema(types=None):
     from kb.services.schema import schema_payload
-    return schema_payload()
+    return schema_payload(types)
+
+
+def _active_id():
+    from kb import paths
+    return paths.KB.id if paths.KB else ""
+
+
+def merge_snapshots(snaps):
+    """One canvas from several knowledge bases' snapshots [(view, snap)]: ids become `<kb>:<slug>` so equal
+    slugs never collide, links are rewritten the same way, and the schema is the union of the types. A type
+    id two knowledge bases both declare is shared only when they agree on its layer; otherwise the later kb's
+    nodes get the type `<kb>:<type>` so one colour never means two things."""
+    nodes, links, concept, kbs, visible = [], [], [], [], set()
+    types, type_rows, facets = {}, [], {"types": set(), "statuses": set(), "areas": set()}
+    layer_types = {}
+    etags = []
+    for view, snap in snaps:
+        kbs.append({"id": view.id, "name": view.name, "active": view.active})
+        etags.append(snap["etag"])
+        rename = {}
+        for t in snap["schema"].get("types", []):
+            prev = types.get(t["id"])
+            if prev is None:
+                types[t["id"]] = t
+                type_rows.append(t)
+            elif prev["layer"] != t["layer"]:
+                new_id = f"{view.id}:{t['id']}"
+                rename[t["id"]] = new_id
+                row = {**t, "id": new_id, "label": f"{t['label']} ({view.name})"}
+                types[new_id] = row
+                type_rows.append(row)
+        for l in snap["schema"].get("layers", []):
+            bucket = layer_types.setdefault(l["id"], {**l, "types": []})
+            for t in l["types"]:
+                tid = rename.get(t, t)
+                if tid not in bucket["types"]:
+                    bucket["types"].append(tid)
+        visible.update(rename.get(t, t) for t in snap["schema"].get("default_visible", []))
+        ns = lambda s, v=view.id: f"{v}:{s}"
+        for n in snap["nodes"]:
+            ntype = rename.get(n["type"], n["type"])
+            extra = {}
+            if "book" in n:             # a book's partition rows link its parts by slug
+                extra["book"] = {**n["book"], "parts": [{**p, "slug": ns(p["slug"]) if p["slug"] else ""}
+                                                       for p in n["book"]["parts"]]}
+            if "part" in n and n["part"].get("book"):
+                extra["part"] = {**n["part"], "book": ns(n["part"]["book"])}
+            nodes.append({**n, **extra, "id": ns(n["id"]), "type": ntype})
+            facets["types"].add(ntype)
+        for l in snap["links"]:
+            links.append({**l, "source": ns(l["source"]), "target": ns(l["target"])})
+        for c in snap.get("concept_links", []):
+            concept.append({**c, "source": ns(c["source"]), "target": ns(c["target"])})
+        facets["statuses"].update(snap["facets"]["statuses"])
+        facets["areas"].update(snap["facets"]["areas"])
+    first = snaps[0][1]["schema"] if snaps else {}
+    schema_ = {**first, "layers": list(layer_types.values()), "types": type_rows,
+               "default_visible": sorted(visible)}
+    for key in ("source", "collection", "concept"):
+        schema_[f"{key}_types"] = sorted(t["id"] for t in type_rows if t["layer"] == key)
+    return {
+        "generated_at": _now(),
+        "etag": hashlib.sha1("|".join(etags).encode()).hexdigest()[:16],
+        "node_count": len(nodes),
+        "link_count": len(links),
+        "nodes": nodes,
+        "links": links,
+        "schema": schema_,
+        "concept_links": concept,
+        "facets": {k: sorted(v) for k, v in facets.items()},
+        "kbs": kbs,
+    }
 
 
 def concept_links(nodes, links):

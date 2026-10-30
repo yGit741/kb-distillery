@@ -19,7 +19,7 @@ import secrets
 import subprocess
 import sys
 
-from kb.paths import vault_root
+from kb.paths import THINK_PATH, vault_root
 META_DIR = os.path.join(vault_root(), "meta")
 ROOT = vault_root()
 
@@ -287,18 +287,31 @@ def nightly_status(root=ROOT):
     return {"installed": installed, "loaded": loaded, "last_run": last_run, "summary": summary, "hint": hint}
 
 
+def think_repo(root=ROOT):
+    """Where kb(think) commits go: the shared think repo (`kbs/think/`, its own git history) when
+    it is one, else the vault itself (legacy layout, think/ inside the vault)."""
+    shared = THINK_PATH if root == ROOT else os.path.join(root, "think")
+    return shared if os.path.exists(os.path.join(shared, ".git")) else root
+
+
 def sync_human(root=ROOT):
-    """Commit dirty think/ files on their own as kb(think) — human edits never mix with agent work."""
-    think = [p for p in changed_paths(root)["knowledge"] if is_human_path(p)]
+    """Commit dirty think files on their own as kb(think) — human edits never mix with agent work. In the
+    shared think repo every dirty file is a human edit; in a legacy vault only think/ paths are."""
+    repo = think_repo(root)
+    if repo == root:
+        think = [p for p in changed_paths(root)["knowledge"] if is_human_path(p)]
+    else:
+        think = [p for lane in changed_paths(repo).values() for p in lane]
     if not think:
         return None
-    _require_main(root)
-    version = cp.next_version(root)
+    if repo == root:
+        _require_main(root)
+    version = cp.next_version(repo)
     msg = _message("think", f"human edits ({len(think)} file{'s' if len(think) != 1 else ''})", version,
                    "think", {"KB-Actor": "human"})
-    sha = _commit_paths(root, think, msg)
+    sha = _commit_paths(repo, think, msg)
     if sha:
-        print(f"committed human think/ edits as kb-{cp.fmt_version(version)}")
+        print(f"committed human think edits as kb-{cp.fmt_version(version)} in {repo}")
     return sha
 
 

@@ -28,10 +28,10 @@ import subprocess
 import sys
 from dataclasses import dataclass, field
 
-from kb.paths import vault_root
+from kb.paths import THINK_PATH, vault_root
 META_DIR = os.path.join(vault_root(), "meta")
 ROOT = vault_root()
-from kb.core.schema import GIT_POLICY_MODE, SCHEMA_VERSION, lane_of
+from kb.core.schema import GIT_POLICY_MODE, SCHEMA_VERSION, is_kb_tooling, lane_of
 
 KB_OPS = ("import", "catalog", "digest", "refine", "distill", "think", "undo", "restore")
 INFRA_TYPES = ("feat", "fix", "chore", "schema", "paradigm")
@@ -115,11 +115,21 @@ def parse_message(message):
     return Commit(subject, "unknown", trailers=trailers)
 
 
-def check_message(message, branch, paths, is_merge=False):
+def _is_kb_repo(root):
+    """A knowledge base's own repo: kb.toml at its top, and not the shared think repo."""
+    return os.path.isfile(os.path.join(root, "kb.toml")) and os.path.realpath(root) != os.path.realpath(THINK_PATH)
+
+
+def _is_kb_chore(c, paths, kb_repo):
+    """`chore(<scope>)` on a kb repo's main that touches only kb tooling paths (hooks, CLAUDE.md, kb.toml, …)."""
+    return bool(kb_repo and c.kind == "infra" and c.type == "chore" and paths and all(is_kb_tooling(p) for p in paths))
+
+
+def check_message(message, branch, paths, is_merge=False, think_repo=False, kb_repo=False):
     """Violations for one commit about to be made on `branch` touching `paths`."""
     c = parse_message(message)
     v = []
-    lanes = {p: lane_of(p) for p in paths}
+    lanes = {p: "knowledge" if think_repo else lane_of(p) for p in paths}
     on_main = branch == "main"
     if c.kind == "unknown":
         return [f"subject does not follow KB Conventional Commits: {c.subject!r}"]
@@ -158,16 +168,20 @@ def check_message(message, branch, paths, is_merge=False):
         bad = [p for p, lane in lanes.items() if lane != "knowledge"]
         if bad:
             v.append(f"kb commits may only touch knowledge paths: {bad[:5]}")
-        think = [p for p in paths if p.startswith("think/")]
+        # In the shared think repo (kbs/think, its own history) every path is a think note.
+        think = list(paths) if think_repo else [p for p in paths if p.startswith("think/")]
         if c.scope == "think" and len(think) != len(paths):
             v.append("kb(think) commits only touch think/")
         if c.scope != "think" and think:
             v.append("agent kb commits must not include think/ (human edits get their own kb(think) commit)")
         return v
     # infra
-    if on_main:
+    kb_chore = on_main and _is_kb_chore(c, paths, kb_repo)   # a kb repo's own tooling commits straight onto its main
+    if on_main and not kb_chore:
         v.append(f"{c.type} commits go through an infra/<feature> branch + PR, not main")
-    if c.type not in ("schema", "paradigm"):
+    if kb_chore:
+        pass
+    elif c.type not in ("schema", "paradigm"):
         bad = [p for p, lane in lanes.items() if lane != "tooling"]
         if bad:
             v.append(f"{c.type} commits may only touch tooling paths (knowledge/other: {bad[:5]})")
@@ -304,6 +318,11 @@ def check_push_range(root, old, new, ref="refs/heads/main"):
                 v.append(f"{short}: only schema/paradigm merges carry KB-Version")
             continue
         if c.kind != "kb":
+            files = [f for f in _git(root, "diff-tree", "--no-commit-id", "--name-only", "-r", "-z", sha).stdout.split("\0") if f]
+            if _is_kb_chore(c, files, _is_kb_repo(root)):    # unversioned: the kb-x.y.z sequence skips it
+                if c.trailers.get("KB-Version"):
+                    v.append(f"{short}: infra commits are not versioned (no KB-Version)")
+                continue
             v.append(f"{short}: only kb(...) commits or PR merges may land on main ({c.subject!r})")
             continue
         if prev:
@@ -355,7 +374,9 @@ def hook_msg(msg_file, root=ROOT):
     branch = _git(root, "symbolic-ref", "--short", "-q", "HEAD").stdout.strip()
     paths = [p for p in _git(root, "diff", "--cached", "--name-only", "-z").stdout.split("\0") if p]
     merge_head = _git(root, "rev-parse", "-q", "--verify", "MERGE_HEAD").returncode == 0
-    return _report(check_message(message, branch, paths, is_merge=merge_head), "commit-msg")
+    think_repo = os.path.realpath(root) == os.path.realpath(THINK_PATH)
+    return _report(check_message(message, branch, paths, is_merge=merge_head, think_repo=think_repo,
+                                 kb_repo=_is_kb_repo(root)), "commit-msg")
 
 
 def hook_push(stdin, root=ROOT):
