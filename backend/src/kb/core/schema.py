@@ -301,6 +301,16 @@ def lane_of(path):
     return "other"
 
 
+# A knowledge base repo's own tooling: all a `chore(<scope>)` commit may touch directly on that repo's main
+# (hooks, agent instructions, ignore rules, kb.toml). Never knowledge paths. See kb.git.commit_policy.
+KB_TOOLING_PATHS = [".claude/", ".cursor/", ".obsidian/", "CLAUDE.md", "AGENTS.md", ".gitignore", "kb.toml"]
+
+
+def is_kb_tooling(path):
+    path = path.replace("\\", "/").removeprefix("./")
+    return _matches(path, KB_TOOLING_PATHS)
+
+
 # Knowledge versioning: kb-x.y.z — x = paradigm, y = schema, z = knowledge step.
 # (x, y) changes only inside a schema/paradigm PR (with its migration); z is derived
 # from git (last first-parent KB-Version + 1). Tooling is not versioned — infra work
