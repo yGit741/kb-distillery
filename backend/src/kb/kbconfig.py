@@ -15,6 +15,7 @@ Nothing here imports the rest of `kb`, so `kb.paths` and `kb.core.schema` can bu
 
     python -m kb.kbconfig list     every knowledge base and where it is
     python -m kb.kbconfig show     the selected one, resolved
+    python -m kb.kbconfig root     just its folder (what tools/qmd/with-kb.sh hands node as $KB_ROOT)
 """
 from __future__ import annotations
 
@@ -295,6 +296,19 @@ def main(argv=None):
             return 1
         for k, v in describe(cfg).items():
             print(f"{k:<16} {v}")
+        return 0
+    if cmd == "root":
+        try:
+            cfg = current()
+        except KbConfigError as e:
+            print(f"error: {e}", file=sys.stderr)
+            return 1
+        # Non-Python tools (tools/qmd/*.mjs) get their vault from here, never from where their file lives:
+        # an explorer checkout without wiki/ is not a vault, so refuse instead of guessing it.
+        if cfg is None and not os.environ.get("KB_ROOT") and not os.path.isdir(os.path.join(CHECKOUT_ROOT, "wiki")):
+            print("error: no knowledge base selected — pass --kb <id> or set KB (`pixi run kb-list`)", file=sys.stderr)
+            return 1
+        print(vault_root())
         return 0
     print(__doc__)
     return 2

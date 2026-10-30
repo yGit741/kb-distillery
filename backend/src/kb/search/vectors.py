@@ -3,9 +3,12 @@ page from its title + summary, the same model the qmd search service uses. For g
 now, link closeness later — never for stating facts.
 
     python -m kb.search.vectors neighbours <slug> [-k 8]     (pixi run vectors -- neighbours aep)
-    python -m kb.search.vectors status
+    python -m kb.search.vectors status                         (exit 1 when missing or behind the cards)
+
+The store is per knowledge base (`<kb>/.cache/`); `pixi run vectors-build [-- --kb <id>]` writes it there.
 """
 import argparse
+import hashlib
 import os
 import sqlite3
 import sys
@@ -15,6 +18,7 @@ import numpy as np          # installed with opencv-python-headless (pixi pypi d
 from kb import paths
 
 DB_PATH = os.path.join(paths.CACHE_PATH, "vectors.sqlite")
+CARDS_DIR = os.path.join(paths.CACHE_PATH, "qmd-cards")    # = kb.search.cards.CARDS_DIR, what vectors.mjs embeds
 
 
 class Vectors:
@@ -66,6 +70,49 @@ def load(db_path=None):
     return Vectors([r[0] for r in rows], m, rows[0][1])
 
 
+def _card_hash(text):
+    """The hash vectors.mjs stores: sha256 of the trimmed card text, first 16 hex chars."""
+    return hashlib.sha256(text.strip().encode("utf-8")).hexdigest()[:16]
+
+
+def freshness(db_path=None, cards_dir=None):
+    """How the store compares with the cards it is built from → {'cards', 'vectors', 'missing', 'changed',
+    'removed'} (slug lists for the last three), or None when there is no store. Up to date = all three empty."""
+    db_path, cards_dir = db_path or DB_PATH, cards_dir or CARDS_DIR
+    if not os.path.exists(db_path):
+        return None
+    cards = {}
+    if os.path.isdir(cards_dir):
+        for f in os.listdir(cards_dir):
+            if f.endswith(".md"):
+                with open(os.path.join(cards_dir, f), encoding="utf-8") as fh:
+                    cards[f[:-3]] = _card_hash(fh.read())
+    con = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
+    try:
+        have = dict(con.execute("SELECT slug, hash FROM vectors").fetchall())
+    finally:
+        con.close()
+    return {"cards": len(cards), "vectors": len(have),
+            "missing": sorted(set(cards) - set(have)),
+            "changed": sorted(s for s in cards.keys() & have.keys() if cards[s] != have[s]),
+            "removed": sorted(set(have) - set(cards))}
+
+
+def status(db_path=None, cards_dir=None):
+    """(ok, one line) for `vectors status` and the launcher: missing or behind the cards is not ok."""
+    db_path = db_path or DB_PATH
+    f = freshness(db_path, cards_dir)
+    if f is None:
+        return False, f"no vector store at {db_path} — run `pixi run vectors-build`"
+    if not f["cards"]:
+        return False, f"no cards in {cards_dir or CARDS_DIR} — run `pixi run qmd-cards` (or lint) first"
+    behind = [f"{len(f[k])} {k}" for k in ("missing", "changed", "removed") if f[k]]
+    line = f"{f['vectors']} vectors for {f['cards']} cards"
+    if behind:
+        return False, f"{line}, behind ({', '.join(behind)}) — run `pixi run vectors-build`"
+    return True, line
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(prog="vectors")
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -74,13 +121,15 @@ def main(argv=None):
     n.add_argument("-k", type=int, default=8)
     sub.add_parser("status")
     a = ap.parse_args(argv)
+    if a.cmd == "status":
+        ok, line = status()
+        v = load() if ok else None
+        print(f"{line} · {v.m.shape[1] if v and len(v) else 0} dims · {v.model}" if v else line)
+        return 0 if ok else 1
     v = load()
     if v is None:
         print(f"no vector store at {DB_PATH} — run `pixi run vectors-build`")
         return 1
-    if a.cmd == "status":
-        print(f"{len(v)} vectors · {v.m.shape[1] if len(v) else 0} dims · {v.model}")
-        return 0
     hits = v.neighbours(a.slug, a.k)
     if not hits:
         print(f"{a.slug}: no vector (no summary yet, or a course)")

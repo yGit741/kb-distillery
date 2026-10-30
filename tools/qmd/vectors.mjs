@@ -6,24 +6,32 @@
 //
 // Writes `.cache/vectors.sqlite`: vectors(slug PRIMARY KEY, hash, model, dim, vec BLOB float32, at).
 // Only cards whose text changed are re-embedded; cards that disappeared are deleted; a different model
-// re-embeds everything. Paths come from KB_ROOT (default: the checkout this file lives in).
+// re-embeds everything. The knowledge base is $KB_ROOT (tools/qmd/kbroot.mjs) — `pixi run vectors-build
+// [-- --kb <id>]` sets it; there is no default, so a store is never built in the wrong folder.
 import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
-import { fileURLToPath } from "node:url";
 import { DatabaseSync } from "node:sqlite";
 import { getLlama, resolveModelFile } from "node-llama-cpp";
+import { kbRoot } from "./kbroot.mjs";
 
-const ROOT = process.env.KB_ROOT || path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
+const ROOT = kbRoot();
 const CACHE = path.join(ROOT, ".cache");
 const CARDS = path.join(CACHE, "qmd-cards");
 const MODEL = process.env.QMD_EMBED_MODEL || "hf:Qwen/Qwen3-Embedding-0.6B-GGUF/Qwen3-Embedding-0.6B-Q8_0.gguf";
+
+// Embedding nothing would leave an empty store that reads as "no neighbours" everywhere: refuse instead.
+const cardFiles = fs.existsSync(CARDS) ? fs.readdirSync(CARDS).filter((f) => f.endsWith(".md")) : [];
+if (!cardFiles.length) {
+  console.error(`vectors: no cards in ${CARDS} — run \`pixi run qmd-cards\` (or lint) for this knowledge base first`);
+  process.exit(1);
+}
 
 const db = new DatabaseSync(path.join(CACHE, "vectors.sqlite"));
 db.exec(`CREATE TABLE IF NOT EXISTS vectors (slug TEXT PRIMARY KEY, hash TEXT NOT NULL, model TEXT NOT NULL,
          dim INTEGER NOT NULL, vec BLOB NOT NULL, at TEXT NOT NULL)`);
 
-const cards = Object.fromEntries(fs.readdirSync(CARDS).filter((f) => f.endsWith(".md")).map((f) => {
+const cards = Object.fromEntries(cardFiles.map((f) => {
   const text = fs.readFileSync(path.join(CARDS, f), "utf8").trim();
   return [f.slice(0, -3), { text, hash: crypto.createHash("sha256").update(text).digest("hex").slice(0, 16) }];
 }));

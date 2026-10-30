@@ -52,8 +52,12 @@ elif ! command -v node >/dev/null 2>&1 || (( $(node -p 'process.versions.node.sp
 else
   old=$(lsof -ti "tcp:${QMD_PORT}" -sTCP:LISTEN 2>/dev/null || true)
   [[ -n "$old" ]] && { kill $old 2>/dev/null || true; sleep 1; }
-  nohup node tools/qmd/server.mjs >"$QMD_LOG" 2>&1 &
+  KB_ROOT="$KB_ROOT_DIR" nohup node tools/qmd/server.mjs >"$QMD_LOG" 2>&1 &   # the selected kb, never the checkout
   echo "started qmd search service (pid $!), log: $QMD_LOG"
+fi
+# The card vectors are per kb too (graph math): say so when this kb has none or they lag its cards.
+if ! VEC_STATUS="$(python -m kb.search.vectors status 2>&1)"; then
+  echo "card vectors: $VEC_STATUS"
 fi
 
 nohup python -m kb.api --port "$PORT" --no-open >"$LOG" 2>&1 &
