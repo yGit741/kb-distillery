@@ -92,7 +92,7 @@ def test_run_returns_jsonable_nodes_and_truncates(g):
     ("MATCH (n) SET n.title = 1 RETURN n", "read-only"),
     ("MATCH (q:Question) OPTIONAL MATCH (p)-[:ADDRESSES]->(q) RETURN q", "OPTIONAL"),
     ("MATCH p = shortestPath((a)-[*]-(b)) RETURN p", "shortest-path"),
-    ("MATCH (q:Question) WHERE NOT ()-[:ADDRESSES]->(q) RETURN q", "unaddressed-questions"),
+    ("MATCH (q:Question) WHERE NOT ()-[:ADDRESSES]->(q) RETURN q", "named query"),
     ("MATCH (m) WHERE COUNT { (m)-->() } = 1 RETURN m", "subqueries"),
     ('MATCH (a)-[r]-(b) WHERE a.slug = "x" RETURN b', "neighbourhood"),
     ("MATCH (a)--(b) RETURN b", "undirected"),
@@ -148,4 +148,45 @@ def test_run_named_params(g):
         cypher.run_named("gaps", {"bad": "1"}, graph=g)
     with pytest.raises(cypher.QueryError, match="bad parameter"):
         cypher.run_named("gaps", {"min_shared": "many"}, graph=g)
-    assert {q["name"] for q in cypher.named_list()} == set(cypher.NAMED)
+    assert {q["name"] for q in cypher.named_list()} == set(cypher.available())
+
+
+def _cfg(edges):
+    from kb import kbconfig
+    return kbconfig.KbConfig("t", "T", "/x", "/x/kb.toml", (1, 3), None, {"edges": edges})
+
+
+LINKED = {"nodes": [{"id": "a", "type": "idea", "layer": "concept"}, {"id": "b", "type": "idea", "layer": "concept"}],
+          "links": [{"source": "a", "target": "b", "kind": "addresses"}], "concept_links": []}
+
+
+def test_edge_config_defaults_are_what_the_graph_always_had():
+    c = cypher.edge_config(_cfg({}))
+    assert c["labels"] == {"wikilink": "MENTIONS", "related": "MENTIONS"}
+    assert c["symmetric"] == {"SHARES_SOURCE"}
+
+
+def test_a_kb_extends_the_edge_kinds_in_its_edges_table():
+    c = cypher.edge_config(_cfg({"labels": {"addresses": "addresses"}, "symmetric": ["pairs"]}))
+    assert c["labels"] == {"wikilink": "MENTIONS", "related": "MENTIONS", "addresses": "ADDRESSES"}
+    assert c["symmetric"] == {"SHARES_SOURCE", "PAIRS"}
+    junk = cypher.edge_config(_cfg({"labels": "nope", "symmetric": "nope"}))      # malformed tables never break a query
+    assert junk == cypher.edge_config(_cfg({}))
+
+
+def test_snapshot_kinds_become_labels_and_symmetric_ones_go_both_ways():
+    one_way = cypher.to_graph(LINKED, cypher.edge_config(_cfg({"labels": {"addresses": "ADDRESSES"}})))
+    assert cypher.kinds(one_way, "a", "b") == {"ADDRESSES"} and cypher.kinds(one_way, "b", "a") == set()
+    both = cypher.to_graph(LINKED, cypher.edge_config(_cfg({"labels": {"addresses": "PAIRS"}, "symmetric": ["pairs"]})))
+    assert cypher.kinds(both, "b", "a") == {"PAIRS"}
+
+
+def test_unaddressed_questions_is_offered_only_when_the_kb_has_its_edge_kinds(g):
+    default = cypher.edge_config(_cfg({}))
+    assert "unaddressed-questions" not in cypher.available(default)
+    assert "unaddressed-questions" not in {q["name"] for q in cypher.named_list(default)}
+    with pytest.raises(cypher.QueryError, match="needs the edge kinds ADDRESSES, OPEN_PROBLEM_IN"):
+        cypher.run_named("unaddressed-questions", graph=g, config=default)
+    declared = cypher.edge_config(_cfg({"labels": {"addresses": "ADDRESSES", "open-in": "OPEN_PROBLEM_IN"}}))
+    assert "unaddressed-questions" in cypher.available(declared)
+    assert cypher.run_named("unaddressed-questions", graph=g, config=declared)["row_count"] == 1

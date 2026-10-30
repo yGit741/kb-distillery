@@ -86,8 +86,9 @@ How to research a question in this knowledge base (always applies):
 - Structural questions (what links to X, which ideas share sources, paths between pages) go to the
   graph: `python3 -m kb.search.cypher run 'MATCH (s:Source)-[:MENTIONS]->(i:Idea) WHERE i.slug = "x"
   RETURN s.slug'` (one single-quoted query, strings in double quotes, arrows always directed) or a named
-  query: `python3 -m kb.search.cypher list`, then `… named gaps|unaddressed-questions|shortest-path|
-  neighbourhood --param key=value`. A rejected query says what to use instead.
+  query: `python3 -m kb.search.cypher list` shows which this knowledge base has (always `gaps`,
+  `shortest-path`, `neighbourhood`), then `… named <name> --param key=value`. A rejected query says what
+  to use instead.
 - Prefer the wiki over your own knowledge. Cite a page as [[slug]] with its exact slug whenever you
   draw on it. Note gaps: `to-read` papers, queued raw files, open `q-*` questions.
 - If the wiki does not cover something, say so plainly before adding anything from general

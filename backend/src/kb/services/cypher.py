@@ -21,14 +21,32 @@ from datetime import datetime, timezone
 
 import networkx as nx
 
+from kb import kbconfig
 from kb.paths import CACHE_PATH
 
 MAX_ROWS = 500
 TIMEOUT_S = 10.0
 REJECTED_LOG = os.path.join(CACHE_PATH, "cypher-rejected.jsonl")
-SYMMETRIC = {"SHARES_SOURCE"}
-# snapshot link kind → edge label; wikilink and related are both "the page mentions the other"
-KIND_LABEL = {"wikilink": "MENTIONS", "related": "MENTIONS"}
+# Edge kinds are the knowledge base's: its kb.toml `[edges]` adds to these defaults (a template owns them from
+# Phase 2). `labels` maps a snapshot link kind → edge label; wikilink and related are both "the page mentions the
+# other". `symmetric` labels are stored in both directions.
+DEFAULT_LABELS = {"wikilink": "MENTIONS", "related": "MENTIONS"}
+DEFAULT_SYMMETRIC = frozenset({"SHARES_SOURCE"})
+# named queries that mean nothing unless the kb produces these edge labels
+NEEDS = {"unaddressed-questions": frozenset({"ADDRESSES", "OPEN_PROBLEM_IN"})}
+
+
+def edge_config(cfg=None):
+    """{labels, symmetric} for a knowledge base: the defaults plus its `[edges]` table (`labels`, `symmetric`).
+    `cfg` None = the knowledge base this process works on."""
+    cfg = cfg if cfg is not None else kbconfig.current()
+    section = cfg.section("edges") if cfg else {}
+    given = section.get("labels")
+    labels = dict(DEFAULT_LABELS)
+    labels.update({str(k): str(v).upper() for k, v in given.items()} if isinstance(given, dict) else {})
+    extra = section.get("symmetric")
+    symmetric = set(DEFAULT_SYMMETRIC) | {str(s).upper() for s in extra if s} if isinstance(extra, list) else set(DEFAULT_SYMMETRIC)
+    return {"labels": labels, "symmetric": symmetric}
 
 _WRITE = re.compile(r"\b(CREATE|MERGE|SET|DELETE|DETACH|REMOVE|DROP|CALL|LOAD|FOREACH)\b", re.I)
 _UNSUPPORTED = [   # (pattern, message): checked on the query with string literals blanked out
@@ -36,7 +54,7 @@ _UNSUPPORTED = [   # (pattern, message): checked on the query with string litera
     (re.compile(r"\b(all)?shortestPath\s*\(", re.I), "shortestPath is not supported; use the named query `shortest-path`"),
     (re.compile(r"\b(EXISTS|COUNT|COLLECT)\s*\{", re.I), "subqueries ({ … }) are not supported"),
     (re.compile(r"\bNOT\s*\(", re.I),
-     "NOT (pattern) is not supported; use the named queries `gaps` or `unaddressed-questions`"),
+     "NOT (pattern) is not supported; use a named query (`list` shows them), e.g. `gaps`"),
     (re.compile(r"\)\s*-\s*(\[[^\]]*\])?\s*-\s*\("),
      "undirected patterns (a)-[r]-(b) are not supported; give the arrow a direction, or use `neighbourhood`"),
     (re.compile(r"\bUNION\b|\bWITH\b|\bUNWIND\b", re.I), "UNION / WITH / UNWIND are not supported"),
@@ -64,8 +82,9 @@ def add_edge(g, a, b, kind, **attrs):
         g.add_edge(a, b, kind=kind, __labels__={kind}, **attrs)
 
 
-def to_graph(snapshot):
-    """The snapshot dict (`build_graph_snapshot`) → nx.MultiDiGraph with GrandCypher labels."""
+def to_graph(snapshot, config=None):
+    """The snapshot dict (`build_graph_snapshot`) → nx.MultiDiGraph with GrandCypher labels (`config`: `edge_config()`)."""
+    config = config or edge_config()
     g = nx.MultiDiGraph()
     for n in snapshot.get("nodes", []):
         labels = {lbl for lbl in (_label(n.get("type")), _label(n.get("layer"))) if lbl}
@@ -75,8 +94,10 @@ def to_graph(snapshot):
                    __labels__=labels or {"Page"})
     for l in snapshot.get("links", []):
         if l["source"] in g and l["target"] in g:
-            kind = KIND_LABEL.get(l.get("kind", "wikilink"), _label(l.get("kind", "")).upper())
+            kind = config["labels"].get(l.get("kind", "wikilink"), _label(l.get("kind", "")).upper())
             add_edge(g, l["source"], l["target"], kind, via=l.get("kind", ""), origin="computed")
+            if kind in config["symmetric"]:
+                add_edge(g, l["target"], l["source"], kind, via=l.get("kind", ""), origin="computed")
     for c in snapshot.get("concept_links", []):
         for a, b in ((c["source"], c["target"]), (c["target"], c["source"])):
             if a in g and b in g:
@@ -254,14 +275,25 @@ NAMED = {
 }
 
 
-def named_list():
-    return [{"name": k, "description": d, "params": p} for k, (_, d, p) in NAMED.items()]
+def available(config=None):
+    """Named queries this knowledge base can answer: those whose edge labels it produces (see NEEDS)."""
+    produced = set((config or edge_config())["labels"].values())
+    return [name for name in NAMED if NEEDS.get(name, frozenset()) <= produced]
 
 
-def run_named(name, params=None, limit=MAX_ROWS, graph=None):
+def named_list(config=None):
+    names = available(config)
+    return [{"name": k, "description": d, "params": p} for k, (_, d, p) in NAMED.items() if k in names]
+
+
+def run_named(name, params=None, limit=MAX_ROWS, graph=None, config=None):
     """Run a named query with string params → the same table shape as `run`. Raises QueryError."""
     if name not in NAMED:
-        raise QueryError(f"unknown named query `{name}`; known: {', '.join(NAMED)}")
+        raise QueryError(f"unknown named query `{name}`; known: {', '.join(available(config))}")
+    if name not in available(config):
+        raise QueryError(f"`{name}` needs the edge kinds {', '.join(sorted(NEEDS[name]))}; this knowledge base "
+                         f"declares none: map link kinds to them in kb.toml [edges.labels]. "
+                         f"Known: {', '.join(available(config))}")
     fn, _, allowed = NAMED[name]
     params = dict(params or {})
     extra = set(params) - set(allowed)

@@ -48,7 +48,10 @@ def test_named_queries(client):
     r = client.get("/api/graph/queries")
     assert r.status_code == 200
     names = {NamedQuery.model_validate(q).name for q in r.json()}
-    assert {"gaps", "unaddressed-questions", "shortest-path", "neighbourhood"} <= names
+    assert {"gaps", "shortest-path", "neighbourhood"} <= names
+    assert "unaddressed-questions" not in names           # the kb declares no ADDRESSES / OPEN_PROBLEM_IN edges
+    r = client.post("/api/graph/queries/unaddressed-questions", headers=ORIGIN, json={})
+    assert r.status_code == 400 and "needs the edge kinds" in r.json()["detail"]
     r = client.post("/api/graph/queries/neighbourhood", headers=ORIGIN, json={"params": {"slug": "a"}})
     assert r.status_code == 200
     assert QueryTable.model_validate(r.json()).rows[0][0]["slug"] == "b"
