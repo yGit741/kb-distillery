@@ -1364,6 +1364,32 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
+        /**
+         * GraphRelation
+         * @description A typed relation (flag `graph-relations`, kb.graph.relations), keyed (source, target, kind).
+         */
+        GraphRelation: {
+            /** Kind */
+            kind: string;
+            /**
+             * Note
+             * @default
+             */
+            note: string;
+            /** Origin */
+            origin: string;
+            /** Source */
+            source: string;
+            /** Target */
+            target: string;
+            /**
+             * Weight
+             * @default 1
+             */
+            weight: number;
+        } & {
+            [key: string]: unknown;
+        };
         /** GraphSnapshot */
         GraphSnapshot: {
             /**
@@ -1395,6 +1421,8 @@ export interface components {
             node_count: number;
             /** Nodes */
             nodes: components["schemas"]["GraphNode"][];
+            /** Relations */
+            relations?: components["schemas"]["GraphRelation"][] | null;
             /** Schema */
             schema?: {
                 [key: string]: unknown;

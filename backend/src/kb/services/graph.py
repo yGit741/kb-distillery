@@ -273,12 +273,40 @@ def build_graph_snapshot(layer=None, view=None):
             "areas": sorted(areas),
         },
     }
+    if relations_on():      # typed relations, a separate list: `links` (what the canvas draws) stays as it was
+        snap["relations"] = _relations(pages, nodes, links, snap["concept_links"], root, view)
     if layer == "raw":      # private data layer; the share build never passes a layer
         from kb.services import raw_layer
         snap.update(raw_layer.build_raw_layer(pages))
         snap["etag"] = raw_layer.layer_etag(snap["etag"])
         snap["layer"] = "raw"
     return snap
+
+
+RELATIONS_FLAG = "graph-relations"
+
+
+def relations_on():
+    from kb.services.pages import _flag_on
+    return _flag_on(RELATIONS_FLAG)
+
+
+def _relations(pages, nodes, links, concept, root, view=None):
+    """kb.graph.relations for this knowledge base, with its own `[edges]` table (another kb's for a view)."""
+    from kb import kbconfig
+    from kb.graph import relations
+    from kb.services.cypher import edge_config
+
+    cfg = None
+    if view is not None and not view.active:
+        try:
+            cfg = kbconfig.load_dir(view.root, view.id, strict=False)
+        except kbconfig.KbConfigError:
+            cfg = None
+        config = edge_config(cfg) if cfg else {"types": [], "note_required": set()}
+    else:
+        config = edge_config()
+    return relations.build(pages, nodes, links, concept, config, root)
 
 
 def _schema(types=None):
@@ -297,6 +325,7 @@ def merge_snapshots(snaps):
     id two knowledge bases both declare is shared only when they agree on its layer; otherwise the later kb's
     nodes get the type `<kb>:<type>` so one colour never means two things."""
     nodes, links, concept, kbs, visible = [], [], [], [], set()
+    relations = None
     types, type_rows, facets = {}, [], {"types": set(), "statuses": set(), "areas": set()}
     layer_types = {}
     etags = []
@@ -337,6 +366,9 @@ def merge_snapshots(snaps):
             links.append({**l, "source": ns(l["source"]), "target": ns(l["target"])})
         for c in snap.get("concept_links", []):
             concept.append({**c, "source": ns(c["source"]), "target": ns(c["target"])})
+        if snap.get("relations") is not None:
+            relations = (relations or []) + [{**r, "source": ns(r["source"]), "target": ns(r["target"])}
+                                             for r in snap["relations"]]
         facets["statuses"].update(snap["facets"]["statuses"])
         facets["areas"].update(snap["facets"]["areas"])
     first = snaps[0][1]["schema"] if snaps else {}
@@ -344,7 +376,7 @@ def merge_snapshots(snaps):
                "default_visible": sorted(visible)}
     for key in ("source", "collection", "concept"):
         schema_[f"{key}_types"] = sorted(t["id"] for t in type_rows if t["layer"] == key)
-    return {
+    out = {
         "generated_at": _now(),
         "etag": hashlib.sha1("|".join(etags).encode()).hexdigest()[:16],
         "node_count": len(nodes),
@@ -356,6 +388,9 @@ def merge_snapshots(snaps):
         "facets": {k: sorted(v) for k, v in facets.items()},
         "kbs": kbs,
     }
+    if relations is not None:
+        out["relations"] = relations
+    return out
 
 
 def concept_links(nodes, links):

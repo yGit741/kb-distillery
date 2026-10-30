@@ -163,13 +163,14 @@ LINKED = {"nodes": [{"id": "a", "type": "idea", "layer": "concept"}, {"id": "b",
 def test_edge_config_defaults_are_what_the_graph_always_had():
     c = cypher.edge_config(_cfg({}))
     assert c["labels"] == {"wikilink": "MENTIONS", "related": "MENTIONS"}
-    assert c["symmetric"] == {"SHARES_SOURCE"}
+    assert c["symmetric"] == {"SHARES_SOURCE", "COLLABORATES_WITH", "SIMILAR_TO"}   # the symmetric computed kinds
+    assert c["types"] == [] and c["note_required"] == set()                        # no stored kind unless declared
 
 
 def test_a_kb_extends_the_edge_kinds_in_its_edges_table():
     c = cypher.edge_config(_cfg({"labels": {"addresses": "addresses"}, "symmetric": ["pairs"]}))
     assert c["labels"] == {"wikilink": "MENTIONS", "related": "MENTIONS", "addresses": "ADDRESSES"}
-    assert c["symmetric"] == {"SHARES_SOURCE", "PAIRS"}
+    assert c["symmetric"] == {"SHARES_SOURCE", "COLLABORATES_WITH", "SIMILAR_TO", "PAIRS"}
     junk = cypher.edge_config(_cfg({"labels": "nope", "symmetric": "nope"}))      # malformed tables never break a query
     assert junk == cypher.edge_config(_cfg({}))
 

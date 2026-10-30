@@ -31,6 +31,15 @@ class GraphLink(ApiModel):
     kind: str = "wikilink"               # wikilink | related | book
 
 
+class GraphRelation(GraphLink):
+    """A typed relation (flag `graph-relations`, kb.graph.relations), keyed (source, target, kind)."""
+    kind: str                            # a stored kind from kb.toml [edges] types, or mentions | shares-source |
+                                         # advisor-of | student-of | name-match | collaborates-with | similar-to
+    origin: str                          # stored (the page's `relations:` block) | computed
+    note: str = ""
+    weight: float = 1.0
+
+
 class ConceptLink(ApiModel):
     source: str
     target: str
@@ -61,3 +70,4 @@ class GraphSnapshot(ApiModel):
     facets: GraphFacets = GraphFacets()
     layer: str | None = None             # "raw" when the data layer is merged in
     kbs: list[GraphKb] | None = None     # the knowledge bases on the canvas
+    relations: list[GraphRelation] | None = None   # typed relations; null while the graph-relations flag is off

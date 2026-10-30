@@ -22,6 +22,7 @@ from datetime import datetime, timezone
 import networkx as nx
 
 from kb import kbconfig
+from kb.graph.relations import edge_label, kind_name
 from kb.paths import CACHE_PATH
 
 MAX_ROWS = 500
@@ -29,24 +30,36 @@ TIMEOUT_S = 10.0
 REJECTED_LOG = os.path.join(CACHE_PATH, "cypher-rejected.jsonl")
 # Edge kinds are the knowledge base's: its kb.toml `[edges]` adds to these defaults (a template owns them from
 # Phase 2). `labels` maps a snapshot link kind → edge label; wikilink and related are both "the page mentions the
-# other". `symmetric` labels are stored in both directions.
+# other". `symmetric` labels are stored in both directions. `types` are the relation kinds a page may state in
+# its `relations:` block (kb.graph.relations; none by default), `note_required` the ones that need a note.
 DEFAULT_LABELS = {"wikilink": "MENTIONS", "related": "MENTIONS"}
-DEFAULT_SYMMETRIC = frozenset({"SHARES_SOURCE"})
+DEFAULT_SYMMETRIC = frozenset({"SHARES_SOURCE", "COLLABORATES_WITH", "SIMILAR_TO"})   # the symmetric computed kinds
 # named queries that mean nothing unless the kb produces these edge labels
 NEEDS = {"unaddressed-questions": frozenset({"ADDRESSES", "OPEN_PROBLEM_IN"})}
 
 
+def _names(value):
+    return [str(v) for v in value if v] if isinstance(value, list) else []
+
+
 def edge_config(cfg=None):
-    """{labels, symmetric} for a knowledge base: the defaults plus its `[edges]` table (`labels`, `symmetric`).
-    `cfg` None = the knowledge base this process works on."""
+    """{labels, symmetric, types, note_required} for a knowledge base: the defaults plus its `[edges]` table
+    (`labels`, `symmetric`, `types`, `note_required`). `cfg` None = the knowledge base this process works on."""
     cfg = cfg if cfg is not None else kbconfig.current()
     section = cfg.section("edges") if cfg else {}
     given = section.get("labels")
     labels = dict(DEFAULT_LABELS)
-    labels.update({str(k): str(v).upper() for k, v in given.items()} if isinstance(given, dict) else {})
-    extra = section.get("symmetric")
-    symmetric = set(DEFAULT_SYMMETRIC) | {str(s).upper() for s in extra if s} if isinstance(extra, list) else set(DEFAULT_SYMMETRIC)
-    return {"labels": labels, "symmetric": symmetric}
+    labels.update({str(k): edge_label(v) for k, v in given.items()} if isinstance(given, dict) else {})
+    symmetric = set(DEFAULT_SYMMETRIC) | {edge_label(s) for s in _names(section.get("symmetric"))}
+    types = sorted({kind_name(t) for t in _names(section.get("types"))})
+    note_required = {kind_name(t) for t in _names(section.get("note_required"))} & set(types)
+    return {"labels": labels, "symmetric": symmetric, "types": types, "note_required": note_required}
+
+
+def relation_label(kind, config):
+    """The edge label of a relation kind: a kb `labels` mapping wins, else `open-problem-in` → OPEN_PROBLEM_IN."""
+    return config["labels"].get(kind) or edge_label(kind)
+
 
 _WRITE = re.compile(r"\b(CREATE|MERGE|SET|DELETE|DETACH|REMOVE|DROP|CALL|LOAD|FOREACH)\b", re.I)
 _UNSUPPORTED = [   # (pattern, message): checked on the query with string literals blanked out
@@ -94,7 +107,7 @@ def to_graph(snapshot, config=None):
                    __labels__=labels or {"Page"})
     for l in snapshot.get("links", []):
         if l["source"] in g and l["target"] in g:
-            kind = config["labels"].get(l.get("kind", "wikilink"), _label(l.get("kind", "")).upper())
+            kind = config["labels"].get(l.get("kind", "wikilink")) or edge_label(l.get("kind", ""))
             add_edge(g, l["source"], l["target"], kind, via=l.get("kind", ""), origin="computed")
             if kind in config["symmetric"]:
                 add_edge(g, l["target"], l["source"], kind, via=l.get("kind", ""), origin="computed")
@@ -102,6 +115,13 @@ def to_graph(snapshot, config=None):
         for a, b in ((c["source"], c["target"]), (c["target"], c["source"])):
             if a in g and b in g:
                 add_edge(g, a, b, "SHARES_SOURCE", weight=c.get("shared", 0), origin="computed")
+    for r in snapshot.get("relations") or []:      # typed relations (flag graph-relations); mentions came as links
+        if r["source"] in g and r["target"] in g:
+            kind = relation_label(r["kind"], config)
+            attrs = {"origin": r.get("origin", ""), "note": r.get("note", ""), "weight": r.get("weight", 1.0)}
+            add_edge(g, r["source"], r["target"], kind, **attrs)
+            if kind in config["symmetric"]:
+                add_edge(g, r["target"], r["source"], kind, **attrs)
     return g
 
 
@@ -110,13 +130,14 @@ _lock = threading.Lock()
 
 
 def current_graph():
-    """The vault graph, rebuilt only when the snapshot etag changes."""
+    """The vault graph, rebuilt only when the snapshot etag (or whether it carries relations) changes."""
     from kb.services.graph import build_graph_snapshot
 
     snap = build_graph_snapshot()
+    key = (snap["etag"], snap.get("relations") is not None)
     with _lock:
-        if _cache["etag"] != snap["etag"]:
-            _cache.update(etag=snap["etag"], graph=to_graph(snap))
+        if _cache["etag"] != key:
+            _cache.update(etag=key, graph=to_graph(snap))
         return _cache["graph"]
 
 
@@ -276,8 +297,10 @@ NAMED = {
 
 
 def available(config=None):
-    """Named queries this knowledge base can answer: those whose edge labels it produces (see NEEDS)."""
-    produced = set((config or edge_config())["labels"].values())
+    """Named queries this knowledge base can answer: those whose edge labels it produces (see NEEDS), i.e. a link
+    kind it maps in `[edges] labels` or a relation kind it declares in `[edges] types`."""
+    config = config or edge_config()
+    produced = set(config["labels"].values()) | {relation_label(t, config) for t in config.get("types", ())}
     return [name for name in NAMED if NEEDS.get(name, frozenset()) <= produced]
 
 
@@ -292,7 +315,7 @@ def run_named(name, params=None, limit=MAX_ROWS, graph=None, config=None):
         raise QueryError(f"unknown named query `{name}`; known: {', '.join(available(config))}")
     if name not in available(config):
         raise QueryError(f"`{name}` needs the edge kinds {', '.join(sorted(NEEDS[name]))}; this knowledge base "
-                         f"declares none: map link kinds to them in kb.toml [edges.labels]. "
+                         f"declares none: declare them in kb.toml [edges] types. "
                          f"Known: {', '.join(available(config))}")
     fn, _, allowed = NAMED[name]
     params = dict(params or {})
