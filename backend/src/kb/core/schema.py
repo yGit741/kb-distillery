@@ -268,6 +268,7 @@ TOOLING_PATHS = [
     "meta-defaults/",
     "backend/",
     "docs/",
+    "kbs/demo/",         # the public demo knowledge base is part of the engine repo; every other kbs/<id> is its own repo
     "share/",
     "skills/",
     "tools/",

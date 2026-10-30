@@ -311,9 +311,16 @@ def frontend_gates(root=ROOT):
     return FRONTEND_GATES
 
 
+def lint_command(root=ROOT):
+    """The lint gate: the demo knowledge base of THIS checkout when it has one (a worktree lints its own copy),
+    else whichever knowledge base is selected."""
+    demo = os.path.join(root, "kbs", "demo")
+    return [sys.executable, "-m", "kb.lint.lint", *(["--kb", demo] if os.path.isdir(demo) else [])]
+
+
 def run_gates(root=ROOT, skip_tests=False):
     link_untracked_raw(root)
-    gates = list(GATES)
+    gates = [(name, lint_command(root) if name == "lint" else cmd) for name, cmd in GATES]
     if not skip_tests and frontend_changed(root):
         extra = frontend_gates(root)
         if extra is None:
