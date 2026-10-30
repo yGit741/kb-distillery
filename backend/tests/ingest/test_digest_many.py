@@ -114,7 +114,7 @@ def vault(tmp_path, monkeypatch):
                                       "| Date | Post | Topic | Rel. | Categories |\n|---|---|---|---|---|\n" + rows)
     monkeypatch.setattr(digest_many, "ROOT", str(tmp_path))
     monkeypatch.setattr(digest_many, "scope_for", lambda raw: {})
-    monkeypatch.setattr(digest_many, "sha1_file", lambda rel: "sha" + rel.rsplit("-", 1)[-1][:-3])
+    monkeypatch.setattr(digest_many.book_mod, "is_book", lambda path: False)
     monkeypatch.setattr(extract, "extract_text", lambda path, **k: open(path).read())
     monkeypatch.setattr(extract, "_template", lambda raw, scope: {"raw": raw})
     return tmp_path
@@ -127,7 +127,7 @@ def test_select_filters_by_topic_and_depth_and_orders_by_relevance(vault):
 
 def args(**kw):
     base = dict(run="r", hub="series-k", topics="comb", types="", depth="easy", raws_file=None, limit=None,
-                model="sonnet", max_usd=10.0, dry_run=False, wait=1, max=0)
+                model="sonnet", max_usd=10.0, dry_run=False, wait=1, max=0, retry=False)
     return SimpleNamespace(**{**base, **kw})
 
 
@@ -150,7 +150,7 @@ def test_submit_collect_drive_resume(vault, monkeypatch):
     status = {raw: t["status"] for raw, t in state["targets"].items()}
     assert sorted(status.values()) == ["filled", "rejected"]
     filled = next(raw for raw, s in status.items() if s == "filled")
-    assert (vault / ".cache/digest-many/r/claims" / f"{state['targets'][filled]['sha']}.json").is_file()
+    assert (vault / ".cache/digest-many/r/claims" / f"{state['targets'][filled]['id']}.json").is_file()
     assert any((vault / ".cache/digest-many/r/drafts").iterdir())
 
     done = []
@@ -163,7 +163,7 @@ def test_submit_collect_drive_resume(vault, monkeypatch):
 def test_drive_stops_after_three_failures_in_a_row(vault, monkeypatch):
     state = digest_many._load("r")
     for n in range(5):
-        state["targets"][f"raw/{n}.md"] = {"sha": f"s{n}", "status": "filled", "usd": 0, "note": ""}
+        state["targets"][f"raw/{n}.md"] = {"id": f"s{n}", "status": "filled", "usd": 0, "note": ""}
     digest_many._save(state)
     calls = []
 
@@ -178,3 +178,53 @@ def test_drive_stops_after_three_failures_in_a_row(vault, monkeypatch):
 def test_submit_refuses_a_run_over_the_cap(vault, monkeypatch):
     monkeypatch.setattr(llm, "submit", lambda *a, **k: pytest.fail("over the cap: nothing is sent"))
     assert digest_many.cmd_submit(args(max_usd=0.0)) == 2
+
+
+def test_identical_clips_get_distinct_request_ids_and_books_are_skipped(vault, monkeypatch):
+    (vault / "raw/web-clips/k-9.md").write_text((vault / "raw/web-clips/k-1.md").read_text())    # same bytes
+    a, _ = digest_many.build_request("raw/web-clips/k-1.md")
+    b, _ = digest_many.build_request("raw/web-clips/k-9.md")
+    assert a.id != b.id
+    monkeypatch.setattr(digest_many.book_mod, "is_book", lambda path: True)
+    req, why = digest_many.build_request("raw/web-clips/k-1.md")
+    assert req is None and "book" in why
+
+
+def test_submit_registers_targets_only_when_their_batch_exists_and_retry_resends(vault, monkeypatch):
+    def boom(reqs, root=None):
+        raise llm.LLMError("api down")
+
+    monkeypatch.setattr(llm, "submit", boom)
+    with pytest.raises(llm.LLMError):
+        digest_many.cmd_submit(args())
+    assert digest_many._load("r")["targets"] == {}                      # nothing recorded: a re-run resends them
+    monkeypatch.setattr(llm, "submit", lambda reqs, root=None: "b1")
+    assert digest_many.cmd_submit(args()) == 0
+    state = digest_many._load("r")
+    state["targets"]["raw/web-clips/k-1.md"]["status"] = "rejected"
+    digest_many._save(state)
+    sent = []
+    monkeypatch.setattr(llm, "submit", lambda reqs, root=None: sent.append([r.id for r in reqs]) or "b2")
+    digest_many.cmd_submit(args())
+    assert sent == []                                                  # rejected stays put without --retry
+    digest_many.cmd_submit(args(retry=True))
+    assert sent == [[digest_many.request_id("raw/web-clips/k-1.md")]]
+
+
+def test_drive_refuses_a_source_with_an_open_session_and_skips_an_already_full_page(vault, monkeypatch):
+    state = digest_many._load("r")
+    state["targets"]["raw/web-clips/k-1.md"] = {"id": "a", "status": "filled", "usd": 0, "note": ""}
+    state["targets"]["raw/web-clips/k-4.md"] = {"id": "b", "status": "filled", "usd": 0, "note": ""}
+    digest_many._save(state)
+    monkeypatch.setattr(digest_many, "existing_digest_for_raw",
+                        lambda raw: "wiki/blog-k-4.md" if raw.endswith("k-4.md") else None)
+    monkeypatch.setattr(digest_many.session_mod, "find_open_session", lambda raw: "abc")
+    assert digest_many.cmd_drive(args()) == 0
+    after = digest_many._load("r")["targets"]
+    assert after["raw/web-clips/k-4.md"]["status"] == "finalized"         # depth: full already: no second session
+    assert after["raw/web-clips/k-1.md"]["status"] == "failed" and "already open" in after["raw/web-clips/k-1.md"]["note"]
+
+
+def test_merge_handles_crlf_pages():
+    out = merge_frontmatter(OLD.replace("\n", "\r\n"), NEW)
+    assert fields(out)["blog"] == '"Combinatorics and More"' and fields(out)["depth"] == "full"

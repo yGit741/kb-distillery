@@ -7,6 +7,7 @@ ingest session open at a time (hard rule 6), the cached claims dropped into the 
 them, `map` / `draft` / `finalize` as for a hand digest, so each source ends in its own `kb(digest)` commit.
 Everything is resumable: state.json holds each source's status, so re-running continues where it stopped."""
 import argparse
+import hashlib
 import json
 import os
 import re
@@ -15,15 +16,17 @@ import subprocess
 import sys
 import time
 
+from . import book as book_mod
 from . import course, draft, extract
 from . import map as map_mod
 from . import session as session_mod
 from .fm_merge import parse, split
-from .paths import ROOT, session_dir, sha1_file
+from .paths import ROOT, session_dir
+from .verify import existing_digest_for_raw
 
 MODEL = "sonnet"
 MAX_TEXT = 60_000          # chars of source text per request: a ceiling on cost, not a summary
-OUT_TOKENS = 3_000         # expected reply size, for the up-front estimate only
+OUT_TOKENS = 4_000         # expected reply size, for the up-front estimate only (the ceiling is extract.FILL_MAX_TOKENS)
 STOP_AFTER = 3             # consecutive failed sessions that stop `drive`
 CHUNK = 1_000              # requests per batch
 TIERS = {"★★★": 0, "★★": 1, "★": 2, "–": 3}
@@ -66,7 +69,7 @@ def page_index():
             continue
         with open(os.path.join(wiki, fn), encoding="utf-8", errors="ignore") as f:
             fm = dict((k, lines[0].split(":", 1)[1].strip()) for k, lines in parse(split(f.read())[0]))
-        raw = fm.get("raw", "")
+        raw = fm.get("raw", "").strip("\"'")
         if not raw or raw.startswith("["):
             continue
         out.append({"slug": fn[:-3], "type": fm.get("type", ""), "depth": fm.get("depth", ""), "raw": raw,
@@ -104,24 +107,31 @@ def scope_for(raw_rel):
     return {"hub": hub, "row": n, "raws": row["raws"], "label": row["title"]}
 
 
+def request_id(raw_rel):
+    """The batch custom_id: a hash of the raw PATH, so two clips with identical bytes never share one."""
+    return hashlib.sha1(raw_rel.encode("utf-8")).hexdigest()[:20]
+
+
 def build_request(raw_rel, model=MODEL):
-    """(llm.Request, template) for one source, or (None, reason) when it has no text to read."""
+    """(llm.Request, template) for one source, or (None, reason) when it cannot be filled in bulk."""
     from kb import llm
     scope = scope_for(raw_rel)
+    if book_mod.is_book(os.path.join(ROOT, raw_rel)):
+        return None, "a book: digest it by part (full-digest --pages / --section)"
     text = extract.extract_text(os.path.join(ROOT, raw_rel))
     if not text or not text.strip():
         return None, "no text extracted"
     template = extract._template(raw_rel, scope)
     prompt = extract.fill_prompt(template, text[:MAX_TEXT])
-    return llm.Request(prompt, id=sha1_file(raw_rel), model=model, effort=extract.FILL_EFFORT,
+    return llm.Request(prompt, id=request_id(raw_rel), model=model, effort=extract.FILL_EFFORT,
                        max_tokens=extract.FILL_MAX_TOKENS), template
 
 
-def estimate_usd(reqs, model=MODEL):
-    """Batch price of these requests: input at ~3.5 chars a token, a fixed reply size."""
+def estimate_usd(reqs, model=MODEL, out_tokens=OUT_TOKENS):
+    """Batch price of these requests: input at ~3.5 chars a token, a fixed reply size each."""
     from kb import llm
     tokens_in = sum(len(r.prompt) for r in reqs) / 3.5
-    return llm.cost(model, {"input_tokens": tokens_in, "output_tokens": OUT_TOKENS * len(reqs)}, batch=True)
+    return llm.cost(model, {"input_tokens": tokens_in, "output_tokens": out_tokens * len(reqs)}, batch=True)
 
 
 # --- commands --------------------------------------------------------------------------------------------
@@ -132,19 +142,16 @@ def cmd_submit(a):
     raws = [r.strip() for r in open(a.raws_file, encoding="utf-8")] if a.raws_file else \
         select(a.hub, set(filter(None, (a.topics or "").split(","))), a.depth,
                set(filter(None, (a.types or "").split(","))), a.limit)
-    raws = [r for r in raws if r]
-    fresh = [r for r in raws if r not in state["targets"]]
+    retry = ("failed", "rejected") if a.retry else ()
+    fresh = [r for r in dict.fromkeys(raws) if r and (r not in state["targets"] or state["targets"][r]["status"] in retry)]
     reqs, skipped = [], []
     for raw in fresh:
         req, why = build_request(raw, a.model)
-        if req is None:
-            skipped.append((raw, why))
-            continue
-        state["targets"][raw] = {"sha": req.id, "status": "new", "usd": 0.0, "note": ""}
-        reqs.append(req)
+        (reqs if req else skipped).append(req or (raw, why))
     est = estimate_usd(reqs, a.model)
-    print(f"{len(raws)} selected, {len(fresh)} new, {len(reqs)} requests, {len(skipped)} without text; "
-          f"estimate ${est:.2f} on {a.model} (batch)")
+    worst = estimate_usd(reqs, a.model, extract.FILL_MAX_TOKENS)
+    print(f"{len(raws)} selected, {len(fresh)} to send, {len(reqs)} requests, {len(skipped)} skipped; "
+          f"estimate ${est:.2f} on {a.model} (batch; worst case ${worst:.2f} if every reply hit the token ceiling)")
     for raw, why in skipped[:10]:
         print(f"  skipped {raw}: {why}")
     if state["spent"] + est > a.max_usd:
@@ -152,13 +159,13 @@ def cmd_submit(a):
         return 2
     if a.dry_run or not reqs:
         return 0
+    by_id = {request_id(r): r for r in fresh}
     for i in range(0, len(reqs), CHUNK):
         chunk = reqs[i:i + CHUNK]
-        bid = llm.submit(chunk)
-        raws_in = [raw for raw, t in state["targets"].items() if t["sha"] in {r.id for r in chunk}]
-        for raw in raws_in:
-            state["targets"][raw]["status"] = "submitted"
-        state["batches"].append({"id": bid, "raws": raws_in, "collected": False})
+        bid = llm.submit(chunk)             # a crash right here leaves a paid batch in .cache/llm/batches/ unrecorded
+        for r in chunk:                     # targets are registered per chunk, only once their batch exists
+            state["targets"][by_id[r.id]] = {"id": r.id, "status": "submitted", "usd": 0.0, "note": ""}
+        state["batches"].append({"id": bid, "raws": [by_id[r.id] for r in chunk], "collected": False})
         _save(state)
         _log(state, event="submitted", batch=bid, n=len(chunk))
         print(f"batch {bid}: {len(chunk)} requests")
@@ -168,17 +175,17 @@ def cmd_submit(a):
 def cmd_collect(a):
     from kb import llm
     state = _load(a.run)
-    by_sha = {t["sha"]: raw for raw, t in state["targets"].items()}
+    by_id = {t["id"]: raw for raw, t in state["targets"].items()}
     for b in state["batches"]:
         if b["collected"]:
             continue
         results = llm.collect(b["id"], wait_s=a.wait)
-        if results and all("still" in (r.error or "") for r in results):
+        if results and all("collect it later" in (r.error or "") for r in results):
             print(f"batch {b['id']}: not ended yet (collect again later)")
             continue
         ok = bad = 0
         for r in results:
-            raw = by_sha.get(r.id)
+            raw = by_id.get(r.id)
             if raw is None:
                 continue
             t = state["targets"][raw]
@@ -204,6 +211,8 @@ def cmd_collect(a):
 
 def digest_one(raw, claims_path):
     """One full-digest session from cached claims → the sha (after finalize committed it)."""
+    if session_mod.find_open_session(raw):
+        raise RuntimeError("an ingest session is already open for this source; finish or abort it first")
     sha = session_mod.begin(raw, depth="full", scope=scope_for(raw))
     try:
         shutil.copy(claims_path, os.path.join(session_dir(sha), "claims.json"))
@@ -221,6 +230,15 @@ def digest_one(raw, claims_path):
     return sha
 
 
+def _already_deepened(raw):
+    page = existing_digest_for_raw(raw)
+    if not page:
+        return False
+    with open(os.path.join(ROOT, page), encoding="utf-8", errors="ignore") as f:
+        fm = dict((k, lines[0].split(":", 1)[1].strip()) for k, lines in parse(split(f.read())[0]))
+    return fm.get("depth") in ("full", "deep")
+
+
 def cmd_drive(a):
     state = _load(a.run)
     todo = [raw for raw, t in state["targets"].items() if t["status"] == "filled"]
@@ -228,8 +246,12 @@ def cmd_drive(a):
     for raw in todo[:a.max] if a.max else todo:
         t = state["targets"][raw]
         t0 = time.monotonic()
+        if _already_deepened(raw):                                # finalized, but the crash came before state was saved
+            t["status"], t["note"] = "finalized", "page already full/deep"
+            _save(state)
+            continue
         try:
-            digest_one(raw, os.path.join(run_dir(a.run), "claims", f"{t['sha']}.json"))
+            digest_one(raw, os.path.join(run_dir(a.run), "claims", f"{t['id']}.json"))
             t["status"], failed_row = "finalized", 0
             done += 1
         except Exception as e:                                   # a failed session rolled itself back
@@ -275,6 +297,7 @@ def run(argv):
     s.add_argument("--model", default=MODEL)
     s.add_argument("--max-usd", type=float, default=10.0, help="refuse a run whose estimate passes this")
     s.add_argument("--dry-run", action="store_true", help="count and estimate, send nothing")
+    s.add_argument("--retry", action="store_true", help="resubmit sources that failed or were rejected earlier")
     c = sub.add_parser("collect", help="wait for the batches, validate, cache the claims")
     c.add_argument("--run", required=True)
     c.add_argument("--wait", type=int, default=24 * 3600, help="seconds to wait per batch")

@@ -52,7 +52,7 @@ def _items(value):
 
 def merge_frontmatter(existing_text, new_text):
     """The new page text with the existing page's frontmatter merged in (see the module docstring)."""
-    ex_fm, _ = split(existing_text)
+    ex_fm, _ = split(existing_text.replace("\r\n", "\n"))
     nw_fm, body = split(new_text)
     if not ex_fm:
         return new_text
