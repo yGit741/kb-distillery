@@ -113,7 +113,7 @@ def kind_config(cfg=None):
     cfg = cfg if cfg is not None else kbconfig.current()
     ec = edge_config(cfg)
     declared = list(ec.get("types") or [])
-    if not declared and cfg is not None:            # an edge_config that does not read `types` yet
+    if not declared and cfg is not None:            # edge_config on main has no `types` yet: read the table itself
         given = cfg.section("edges").get("types")
         declared = [str(t) for t in given if t] if isinstance(given, list) else []
     kinds = tuple(dict.fromkeys(declared)) or KINDS
@@ -283,7 +283,8 @@ def validate(subject, items, cand_slugs, pages, kc, kinds=None):
     accepted, rejected, seen = [], [], set()
     for item in items:
         to = item.get("to")
-        if isinstance(to, int) or (isinstance(to, str) and to.strip().isdigit()):      # "3" → the 3rd candidate
+        if to not in cand_slugs and (isinstance(to, int) or (isinstance(to, str) and to.strip().isdigit())):
+            # a bare number that is not itself a candidate slug → the Nth listed candidate
             n = int(to)
             to = cand_slugs[n - 1] if 1 <= n <= len(cand_slugs) else str(to)
         to = str(to or "").strip().strip("[]").strip()
@@ -427,9 +428,13 @@ def cmd_submit(a):
     kc = kind_config()
     pages = load_pages()
     state = _load(a.run)
-    retry = ("failed", "rejected") if a.retry else ()
+    collected = {b["id"] for b in state["batches"] if b["collected"]}
+
+    def resend(t):          # --retry: failed / rejected, or still "submitted" although its batch was collected
+        return a.retry and (t["status"] in ("failed", "rejected")
+                            or (t["status"] == "submitted" and t.get("batch") in collected))
     subjects = [(s, e) for s, e in select(pages, a.include_easy, a.include_people)
-                if s not in state["subjects"] or state["subjects"][s]["status"] in retry]
+                if s not in state["subjects"] or resend(state["subjects"][s])]
     subjects = subjects[:a.limit] if a.limit else subjects
     planned = plan(pages, subjects, kc, a.model, load_vectors())
     reqs = [r for _, r, _ in planned]
@@ -471,7 +476,19 @@ def cmd_submit(a):
         chunk = reqs[k:k + DIRECT_CHUNK]
         bid = f"{backend}-{_now()}-{k}"
         register(chunk, bid)
-        for res in llm.run(chunk, backend=backend):
+        try:
+            results = llm.run(chunk, backend=backend)
+        except Exception as e:                                # keep what earlier chunks got; this one is retryable
+            for r in chunk:
+                t = state["subjects"][info[r.id][0]]
+                t["status"], t["note"] = "failed", f"{type(e).__name__}: {e}"[:300]
+            state["batches"].append({"id": bid, "ids": [r.id for r in chunk], "collected": True})
+            _save(state)
+            _log(state, event="failed", backend=backend, n=len(chunk), error=str(e)[:300])
+            print(f"stopped: {e} (re-run with --retry)", file=sys.stderr)
+            write_proposals(state)
+            return 1
+        for res in results:
             done += _ingest(state, res, pages, kc)
         state["batches"].append({"id": bid, "ids": [r.id for r in chunk], "collected": True})
         _save(state)
@@ -519,7 +536,7 @@ def review_text(state, pages, min_conf=MIN_CONFIDENCE):
         lines += [f"## {title(slug)} (`{slug}`)", ""]
         for r in props:
             other = r["to"] if r["from"] == slug else r["from"]
-            arrow = "↔" if r["from"] != slug else "→"
+            arrow = "↔" if r["kind"] in SYMMETRIC else "→"
             low = " · low tier" if r.get("tier") == "low" else ""
             lines.append(f"- **{r['kind']}** {arrow} {title(other)} (`{other}`) · confidence {r['confidence']:.2f}{low}")
             if r.get("note"):

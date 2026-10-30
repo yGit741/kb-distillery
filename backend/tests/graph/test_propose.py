@@ -245,3 +245,22 @@ def test_direct_backend_and_easy_tier(vault, monkeypatch, capsys):
     assert blog and blog[0]["tier"] == "low" and blog[0]["kind"] == "example-of"
     assert all(r.get("tier") != "low" for r in rows if r["from"] != "blog-e")
     assert propose._load("easy")["batches"][0]["collected"] is True
+
+
+def test_direct_failure_is_saved_and_retryable(vault, monkeypatch):
+    monkeypatch.setattr(llm, "run", lambda reqs, backend=None: (_ for _ in ()).throw(llm.LLMError("boom")))
+    assert propose.cmd_submit(args(backend="api", run="f")) == 1
+    state = propose._load("f")
+    assert {t["status"] for t in state["subjects"].values()} == {"failed"}
+    monkeypatch.setattr(llm, "run", lambda reqs, backend=None: [llm.Result(id=r.id, text="[]") for r in reqs])
+    assert propose.cmd_submit(args(backend="api", run="f")) == 0
+    assert {t["status"] for t in propose._load("f")["subjects"].values()} == {"failed"}       # not resent without --retry
+    assert propose.cmd_submit(args(backend="api", run="f", retry=True)) == 0
+    assert {t["status"] for t in propose._load("f")["subjects"].values()} == {"done"}
+
+
+def test_a_numeric_slug_that_is_a_candidate_wins_over_the_index(vault):
+    pages = pages_of(vault)
+    pages["2"] = {**pages["paper-b"], "slug": "2"}
+    acc, _ = propose.validate("paper-a", [{"to": "2", "kind": "uses", "confidence": 0.9}], ["idea-x", "2"], pages, KC)
+    assert acc[0]["to"] == "2"
