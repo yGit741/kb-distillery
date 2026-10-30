@@ -9,6 +9,9 @@ description = "Thesis knowledge base: vault tooling, services and API (package k
 requires-python = ">=3.11"
 dependencies = []          # pixi owns the environment; see ../pixi.toml
 
+[project.scripts]
+kbd = "kb.cli:main"
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/kb"]
 
