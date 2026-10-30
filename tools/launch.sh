@@ -23,7 +23,7 @@ echo "knowledge base: ${KB_ID:-legacy} ($KB_ROOT_DIR)"
 export KB_LIVE=1                    # this dashboard's lint runs keep the qmd search cards in step
 export KB_SHARE_AUTODEPLOY="${KB_SHARE_AUTODEPLOY:-0}"   # POC: nothing deploys from the split layout
 URL="http://127.0.0.1:${PORT}/start"
-LOG="${TMPDIR:-/tmp}/kb-explorer-${KB_ID:-legacy}-dashboard.log"
+LOG="${TMPDIR:-/tmp}/kb-distillery-${KB_ID:-legacy}-dashboard.log"
 
 pids=$(lsof -ti "tcp:${PORT}" -sTCP:LISTEN 2>/dev/null || true)
 if [[ -n "$pids" ]]; then
@@ -42,7 +42,7 @@ find backend -name __pycache__ -type d -prune -exec rm -rf {} + 2>/dev/null || t
 # Main checkout only — a worktree would start a second index and download the models again. Restarted
 # like the dashboard so a changed server.mjs takes effect.
 QMD_PORT="${KB_QMD_PORT:-8766}"
-QMD_LOG="${TMPDIR:-/tmp}/thesis-kb-qmd.log"
+QMD_LOG="${TMPDIR:-/tmp}/kb-distillery-qmd.log"
 if [[ "$PWD" == */.claude/worktrees/* ]]; then
   echo "qmd search service: not started from a worktree (the main checkout's service serves search)"
 elif [[ ! -d tools/qmd/node_modules ]]; then

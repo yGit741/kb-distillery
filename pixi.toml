@@ -1,7 +1,7 @@
 [workspace]
-name = "knowledge-base-explorer"
+name = "kb-distillery"
 version = "0.1.0"
-description = "Knowledge base explorer: the engine behind every knowledge-bases/kb-* folder"
+description = "kb-distillery: the engine behind every knowledge base in kbs/"
 channels = ["conda-forge"]
 platforms = ["osx-arm64"]
 
