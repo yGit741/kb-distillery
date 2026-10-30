@@ -191,6 +191,70 @@ class VersionAndPushTests(unittest.TestCase):
         self.assertTrue(cp.check_tag(self.repo.path, "kb-0.7.9", sha_light))
 
 
+class KbToolingChoreTests(unittest.TestCase):
+    """A kb repo's own tooling (hooks, CLAUDE.md, kb.toml) may land as `chore(<scope>)` straight on its main."""
+    TOOLING = [".claude/hooks/env.sh", "CLAUDE.md", "kb.toml"]
+
+    def test_chore_on_kb_main_with_tooling_paths_is_ok(self):
+        self.assertEqual(cp.check_message("chore(hooks): resolve the engine", "main", self.TOOLING, kb_repo=True), [])
+
+    def test_chore_touching_knowledge_is_refused(self):
+        self.assertTrue(cp.check_message("chore(hooks): x", "main", [".claude/a.sh", "wiki/a.md"], kb_repo=True))
+        self.assertTrue(cp.check_message("chore(hooks): x", "main", ["raw/a.md"], kb_repo=True))
+
+    def test_other_infra_types_are_refused_on_a_kb_main(self):
+        for subject in ("feat(hooks): x", "fix(hooks): x", "schema(hooks): x"):
+            self.assertTrue(cp.check_message(subject, "main", self.TOOLING, kb_repo=True), subject)
+
+    def test_chore_on_the_engine_main_is_still_refused(self):
+        self.assertTrue(cp.check_message("chore(hooks): x", "main", ["tools/a.sh"], kb_repo=False))
+        self.assertTrue(cp.check_message("chore(hooks): x", "main", self.TOOLING, kb_repo=False))
+
+    def test_chore_with_no_paths_is_refused_on_main(self):
+        self.assertTrue(cp.check_message("chore(hooks): x", "main", [], kb_repo=True))
+
+    def test_is_kb_repo_needs_kb_toml_and_not_think(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            self.assertFalse(cp._is_kb_repo(tmp))
+            with open(os.path.join(tmp, "kb.toml"), "w") as f:
+                f.write("[kb]\n")
+            self.assertTrue(cp._is_kb_repo(tmp))
+        self.assertFalse(cp._is_kb_repo(cp.THINK_PATH))
+
+
+class KbToolingChorePushTests(unittest.TestCase):
+    def setUp(self):
+        self.repo = TempRepo()
+        self.repo.commit("chore: init (retro)", "README.md", "kb.toml")
+        self.old = self.repo.commit(kb_msg("digest", "a", "0.7.1"), "wiki/a.md")
+
+    def tearDown(self):
+        self.repo.close()
+
+    def test_chore_between_kb_steps_keeps_the_version_sequence(self):
+        self.repo.commit("chore(hooks): resolve the engine", ".claude/hooks/env.sh", "CLAUDE.md")
+        self.repo.commit(kb_msg("refine", "b", "0.7.2"), "wiki/b.md")
+        self.assertEqual(cp.check_push_range(self.repo.path, self.old, self.repo.head()), [])
+
+    def test_chore_touching_wiki_is_rejected(self):
+        self.repo.commit("chore(hooks): sneaky", ".claude/hooks/env.sh", "wiki/b.md")
+        self.assertTrue(cp.check_push_range(self.repo.path, self.old, self.repo.head()))
+
+    def test_versioned_chore_is_rejected(self):
+        self.repo.commit("chore(hooks): x\n\nKB-Version: 0.7.2\n", "CLAUDE.md")
+        self.assertTrue(cp.check_push_range(self.repo.path, self.old, self.repo.head()))
+
+    def test_chore_in_a_repo_without_kb_toml_is_rejected(self):
+        plain = TempRepo()
+        try:
+            plain.commit("chore: init (retro)", "README.md")
+            base = plain.commit(kb_msg("digest", "a", "0.7.1"), "wiki/a.md")
+            plain.commit("chore(hooks): x", "CLAUDE.md")
+            self.assertTrue(cp.check_push_range(plain.path, base, plain.head()))
+        finally:
+            plain.close()
+
+
 class ConventionHardeningTests(unittest.TestCase):
     def test_hash_target_rejected(self):
         msg = kb_msg("digest", "a", "0.7.1").replace("KB-Target: x", "KB-Target: 86c9846f6151")
