@@ -58,6 +58,10 @@ file stays in `.cache/youtube/<id>/` and never enters `raw/`. Local processing �
 | full | `video-digest raw/videos/<name>/video.md --tier full` | top anchors ~15/hour, ≥ 2 min apart, each read by Claude with the transcript around it | ~1.4k in + 0.5k out per frame (≈ $0.15 per lecture-hour on the API) |
 | deep | `video-digest … --tier deep` | ~30/hour, ≥ 1 min apart, + Connections into the wiki | ≈ twice full |
 
+Frame reads go through `kb.llm`: `--backend subscription|api|batch` (default `$KB_LLM_BACKEND`, then
+subscription), `--model` (default sonnet). All of a video's frames are one run, so `--backend batch` is one
+half-price Message Batch per video (results within hours; the command waits).
+
 `video-digest` writes `## Frames` on the page (thumbnail + read per frame, math as display blocks) and drafts
 `## Key equations` from the reads; the agent then reads `meta/.ingest/video/<sha>/abstract.text` (full transcript +
 reads), writes Problem, Main result, Key ideas, curates Key equations, Takeaways (deep: Connections), runs

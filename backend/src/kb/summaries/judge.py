@@ -2,13 +2,14 @@
 
 Each summary gets four 1-5 scores and a hard `faithful_fail` flag (it states something the page does not
 say). The bar for a batch: mean >= 4 and no faithfulness failures. The judge sees only the page (minus
-`## My notes`) and the summary — never the summarizer's prompt — and runs with no tools from an empty dir.
+`## My notes`) and the summary — never the summarizer's prompt — and runs with no tools (kb.llm, any backend).
 """
 import concurrent.futures as cf
 import json
 import os
 import time
 
+from kb import llm
 from kb.summaries import pipeline as P
 
 JUDGE_MODEL = "claude-fable-5-1"
@@ -35,8 +36,12 @@ def _items(rows, pages):
                        f"<summary>{r['summary'].replace('<', '‹')}</summary>\n</item>" for r in rows)
 
 
-def grade_chunk(rows, pages, model=JUDGE_MODEL):
-    text, usd, err = P.ask(RUBRIC.format(items=_items(rows, pages)), model=model, effort="medium")
+def grade_chunk(rows, pages, model=JUDGE_MODEL, backend=None):
+    text, usd, err = P.ask(RUBRIC.format(items=_items(rows, pages)), model=model, effort="medium", backend=backend)
+    return grades_from(rows, text, usd, err)
+
+
+def grades_from(rows, text, usd, err):
     got = P.parse_json_obj(text) or {}
     out = []
     for r in rows:
@@ -52,17 +57,24 @@ def grade_chunk(rows, pages, model=JUDGE_MODEL):
     return out
 
 
-def judge(slugs=None, model=JUDGE_MODEL, workers=4, log=print):
+def judge(slugs=None, model=JUDGE_MODEL, workers=4, log=print, backend=None):
     pages = {p["slug"]: p for p in P.load_pages()}
     rows = [r for r in P.latest().values()
             if not r["problems"] and r["slug"] in pages and (not slugs or r["slug"] in slugs)
             and r["summary_from"] == P.summary_hash(pages[r["slug"]]["text"])]   # graded against the page it came from
     chunks = [rows[i:i + PER_CALL] for i in range(0, len(rows), PER_CALL)]
     grades = []
-    with cf.ThreadPoolExecutor(workers) as ex:
-        for i, got in enumerate(ex.map(lambda c: grade_chunk(c, pages, model), chunks), 1):
-            grades += got
-            log(f"  judged {i}/{len(chunks)}")
+    if llm.resolve_backend(backend) == "batch":          # every chunk in one batch
+        res = llm.run([llm.Request(RUBRIC.format(items=_items(c, pages)), id=f"j{i}", model=model, effort="medium",
+                                   max_tokens=P.MAX_TOKENS) for i, c in enumerate(chunks)], backend="batch")
+        for c, r in zip(chunks, res):
+            grades += grades_from(c, r.text, r.usd, r.error or None)
+        log(f"  judged {len(chunks)} chunk(s) in one batch")
+    else:
+        with cf.ThreadPoolExecutor(workers) as ex:
+            for i, got in enumerate(ex.map(lambda c: grade_chunk(c, pages, model, backend), chunks), 1):
+                grades += got
+                log(f"  judged {i}/{len(chunks)}")
     scored = [g for g in grades if g["score"] is not None]
     report = {
         "ts": time.strftime("%Y-%m-%dT%H:%M:%S"), "judge": model, "n": len(grades), "graded": len(scored),

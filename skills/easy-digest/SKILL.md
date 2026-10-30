@@ -24,7 +24,15 @@ description: Lightweight abstract/metadata skim of a Source page to depth easy (
 python3 -m kb.ingest easy-digest <slug|raw>
 python3 -m kb.ingest easy-digest <raw> --into <series page>     # numbered parts share one page
 python3 -m kb.ingest easy-digest <raw> --no-tick --no-lint --no-commit   # batch: orchestrator ticks, lints, commits
+python3 -m kb.ingest easy-digest <slug|raw> --fill                     # kb.llm fills Problem + Main result (Haiku)
+python3 -m kb.ingest easy-digest <a> <b> <c> … --fill --backend batch  # backlog: one half-price Message Batch
 ```
+
+**Fill (`--fill`).** `kb.llm` reads `abstract.text` and writes the page's empty **Problem** and **Main result**
+lines (never a line that already has text; an invalid reply leaves the page as it was and is reported).
+`--backend subscription|api|batch` (default `$KB_LLM_BACKEND`, then subscription) and `--model` (default
+haiku). Several targets are prepared one by one (0 LLM), then filled in one run — with `batch` that is one
+batch for the whole backlog. Without `--fill` the agent fills the lines, as before.
 
 **Series:** when posts are explicit parts of one thing (week 1…7, part I…III), create the page once, then
 `--into` adds each clip to its `raw:` list and ticks that row with the same page. **Batch:** with `--no-tick
@@ -56,7 +64,7 @@ A `fix` verdict means the page is corrected (in an ops session, see `wiki-edit`)
 
 ## Agent steps
 
-1. Run CLI to extract abstract text
+1. Run CLI to extract abstract text (with `--fill`, steps 2–3 are done by `kb.llm`: check the filled lines)
 2. Read `abstract.text` (~2–4k tokens max)
 3. Update wiki: **Problem**, **Main result** from abstract only
    (a `q-` page you touch: keep its H1 a short name ≤ 80 chars and fill `## Question` with the formal statement)

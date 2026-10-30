@@ -157,12 +157,49 @@ def test_page_input_cannot_forge_blocks():
     assert s.count("<page ") == 1 and s.count("</page>") == 1
 
 
-def test_ask_once_treats_failed_cli_as_error(monkeypatch):
-    class CP:
-        returncode, stdout, stderr = 1, "", "not logged in"
-    monkeypatch.setattr(P.subprocess, "run", lambda *a, **k: CP())
-    text, usd, err = P._ask_once("p", "sonnet", "low", 5)
+def test_ask_goes_through_kb_llm(monkeypatch):
+    from kb import llm
+    seen = []
+
+    def fake_run(reqs, backend=None, **kw):
+        seen.append((reqs, backend))
+        return [llm.Result(id="r0", error="claude exited 1: not logged in", usd=0.0)]
+    monkeypatch.setattr(llm, "run", fake_run)
+    text, usd, err = P.ask("p", "sonnet", backend="api")
     assert text == "" and "not logged in" in err
+    (req,), backend = seen[0]
+    assert backend == "api" and req.model == "sonnet" and req.effort == "low" and req.max_tokens == P.MAX_TOKENS
+
+
+def test_propose_batch_is_one_submission_and_retries_as_a_second(monkeypatch):
+    from kb import llm
+    good = "An idea page arguing that norm-based capacity bounds, not raw parameter counts, explain generalization in big nets."
+    pages = [{"slug": s, "fm": {"type": "idea"}, "text": PAGE} for s in ("a", "b", "c")]
+    runs = []
+
+    def fake_run(reqs, backend=None, **kw):
+        runs.append((backend, [r.id for r in reqs], [r.prompt for r in reqs]))
+        if len(runs) == 1:      # chunk c0 = a,b ; chunk c1 = c — b comes back invalid, c's request errored
+            return [llm.Result(id="c0", text='{"a": "%s", "b": "short"}' % good, usd=0.004),
+                    llm.Result(id="c1", error="expired")]
+        return [llm.Result(id=r.id, text='{"%s": "%s"}' % (s, good), usd=0.001)
+                for r, s in zip(reqs, ("b", "c"))]
+    monkeypatch.setattr(llm, "run", fake_run)
+    monkeypatch.setattr(P, "ask", lambda *a, **k: (_ for _ in ()).throw(AssertionError("no per-chunk calls in batch")))
+    saved = []
+    rows = P.propose(pages, per_call=2, log=lambda *_: None, on_rows=saved.extend, backend="batch")
+    assert [b for b, _, _ in runs] == ["batch", "batch"]
+    assert runs[0][1] == ["c0", "c1"] and len(runs[1][1]) == 2
+    assert 'slug="a"' in runs[0][2][0] and 'slug="b"' in runs[0][2][0] and 'slug="c"' in runs[0][2][1]
+    assert [r["slug"] for r in rows] == ["a", "b", "c"] and all(not r["problems"] for r in rows)
+    assert rows[0]["usd"] == 0.002 and len(saved) == 5                  # 3 first-pass rows + 2 retried
+
+
+def test_propose_batch_submit_failure_marks_rows_not_raises(monkeypatch):
+    from kb import llm
+    monkeypatch.setattr(llm, "run", lambda *a, **k: (_ for _ in ()).throw(llm.HTTPFail(400, "too large")))
+    rows = P.propose([{"slug": "a", "fm": {"type": "idea"}, "text": PAGE}], log=lambda *_: None, backend="batch")
+    assert rows[0]["problems"] == ["call failed"] and "too large" in rows[0]["error"]
 
 
 def test_propose_survives_a_crashing_call_and_saves_incrementally(monkeypatch):

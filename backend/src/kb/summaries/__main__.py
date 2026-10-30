@@ -3,6 +3,7 @@ import argparse
 import collections
 import sys
 
+from kb import llm
 from kb.summaries import pipeline as P
 
 
@@ -31,11 +32,14 @@ def cmd_run(a):
     if not pages:
         print("nothing to do")
         return
-    print(f"proposing {len(pages)} summaries with {a.model} ({P.PER_CALL}/call, {P.WORKERS} in flight)")
-    rows = P.propose(pages, model=a.model, on_rows=P.save)
+    backend = llm.resolve_backend(a.backend)
+    print(f"proposing {len(pages)} summaries with {a.model} on {backend} ({P.PER_CALL}/call"
+          + (", one batch)" if backend == "batch" else f", {P.WORKERS} in flight)"))
+    rows = P.propose(pages, model=a.model, on_rows=P.save, backend=backend)
     ok = sum(not r["problems"] for r in rows)
     usd = sum(r["usd"] for r in rows)
-    print(f"{ok}/{len(rows)} valid · ${usd:.3f} as the CLI reports it (subscription) → {P.PROPOSALS}")
+    note = "as the CLI reports it, not charged per call" if backend == "subscription" else "API list price"
+    print(f"{ok}/{len(rows)} valid · ${usd:.3f} ({backend}, {note}) → {P.PROPOSALS}")
     for r in rows:
         if r["problems"]:
             print(f"  ✗ {r['slug']}: {'; '.join(r['problems'])}" + (f" [{r['error']}]" if r.get("error") else ""))
@@ -62,7 +66,7 @@ def cmd_apply(a):
 
 def cmd_judge(a):
     from kb.summaries.judge import judge
-    rep = judge(set(a.slugs.split(",")) if a.slugs else None, model=a.model)
+    rep = judge(set(a.slugs.split(",")) if a.slugs else None, model=a.model, backend=a.backend)
     print(f"judge {rep['judge']}: {rep['graded']}/{rep['n']} graded · mean {rep['mean']} · "
           f"{rep['per_criterion']} · faithful fails {len(rep['faithful_fails'])} · "
           f"{'PASS' if rep['pass'] else 'FAIL'} → {rep['path']}")
@@ -81,6 +85,8 @@ def main(argv=None):
     r.add_argument("--slugs", default="")
     r.add_argument("--model", default=P.MODEL)
     r.add_argument("--redo", action="store_true", help="propose again even when a valid proposal exists")
+    r.add_argument("--backend", choices=llm.BACKENDS, help="subscription / api / batch (default: $KB_LLM_BACKEND, "
+                   f"then {llm.DEFAULT_BACKEND})")
     s = sub.add_parser("show")
     s.add_argument("--last", type=int, default=20)
     ap_ = sub.add_parser("apply")
@@ -89,6 +95,7 @@ def main(argv=None):
     j.add_argument("--slugs", default="")
     j.add_argument("--model", default="claude-fable-5-1")
     j.add_argument("--worst", type=int, default=8)
+    j.add_argument("--backend", choices=llm.BACKENDS)
     a = ap.parse_args(argv)
     {"plan": cmd_plan, "run": cmd_run, "show": cmd_show, "apply": cmd_apply, "judge": cmd_judge}[a.cmd](a)
 

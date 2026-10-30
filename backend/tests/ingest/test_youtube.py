@@ -334,8 +334,54 @@ def _digest_env(tmp_path, monkeypatch, reads):
     monkeypatch.setattr(ed, "_resolve_raw", lambda arg: "raw/videos/svm/video.md")
     monkeypatch.setattr(ed, "existing_digest_for_raw", lambda raw: "wiki/video-svm.md")
     monkeypatch.setattr(course, "hub_row_for_raw", lambda raw: (None, None, None))
-    monkeypatch.setattr(readers, "claude_read", lambda path, ctx, model: dict(reads))
+    calls = []
+    monkeypatch.setattr(readers, "claude_reads", lambda frames, model, backend=None, workers=4: (
+        calls.append({"frames": frames, "model": model, "backend": backend}), [dict(reads) for _ in frames])[1])
+    digest.read_calls = calls
     return digest, page
+
+
+def test_video_digest_reads_all_frames_in_one_run_on_the_chosen_backend(tmp_path, monkeypatch):
+    digest, page = _digest_env(tmp_path, monkeypatch, {"text": "$$x$$", "tokens_in": 10, "tokens_out": 5,
+                                                         "usd": 0.01, "backend": "batch"})
+    digest.video_digest("raw/videos/svm/video.md", tier="full", model="haiku", backend="batch")
+    (call,) = digest.read_calls
+    assert call["backend"] == "batch" and call["model"] == "haiku" and len(call["frames"]) == 2
+    assert all(p.endswith(".jpg") and isinstance(ctx, str) for p, ctx in call["frames"])
+    stats = json.loads((tmp_path / "cache" / "sha" / "reads.json").read_text())["stats"]
+    assert stats["backend"] == "batch" and stats["usd"] == 0.02 and stats["read"] == 2
+
+
+def test_claude_reads_builds_image_requests(tmp_path, monkeypatch):
+    from kb import llm
+    from kb.ingest.youtube import readers
+    img = tmp_path / "f-00030.jpg"
+    img.write_bytes(b"\xff\xd8\xff")
+    seen = []
+
+    def run(reqs, backend=None, workers=4):
+        seen.append((reqs, backend))
+        return [llm.Result(id=reqs[0].id, text=" $$a$$ \n", usd=0.003, backend="api", model="claude-sonnet-5-5",
+                           usage={"input_tokens": 1500, "output_tokens": 40}),
+                llm.Result(id=reqs[1].id, error="API 400: image too large", backend="api", model="claude-sonnet-5-5")]
+    monkeypatch.setattr(llm, "run", run)
+    out = readers.claude_reads([(str(img), 'he says "Lagrange"'), (str(img), "")], backend="api")
+    (reqs, backend), = seen
+    assert backend == "api" and [r.images for r in reqs] == [(str(img),), (str(img),)]
+    assert reqs[0].effort == readers.READ_EFFORT and "he says 'Lagrange'" in reqs[0].prompt
+    assert "Read the image" not in reqs[0].prompt           # kb.llm attaches the image per backend
+    assert out[0] == {"text": "$$a$$", "model": "claude-sonnet-5-5", "backend": "api", "tokens_in": 1500,
+                      "tokens_out": 40, "usd": 0.003}
+    assert out[1]["text"] == "" and out[1]["error"] == "API 400: image too large"
+
+
+def test_claude_read_subscription_counts_the_turn_that_saw_the_image():
+    from kb import llm
+    from kb.ingest.youtube import readers
+    r = llm.Result(id="f0", text="ok", backend="subscription", model="claude-sonnet-5-5", usage={
+        "output_tokens": 90, "iterations": [{"input_tokens": 3, "cache_creation_input_tokens": 50},
+                                            {"input_tokens": 2, "cache_creation_input_tokens": 1700}]})
+    assert readers._read(r)["tokens_in"] == 1702
 
 
 def test_video_digest_writes_frames_and_never_downgrades_depth(tmp_path, monkeypatch):
