@@ -233,6 +233,25 @@ class TestPolicy(unittest.TestCase):
         self.deny("Bash", {"command": "python3 -m kb.search.citations fetch --limit 5"})
         self.deny("Bash", {"command": "python3 -m kb.search.citations fetch"})
 
+    def test_cypher_queries(self):
+        self.allow("Bash", {"command": "python3 -m kb.search.cypher run 'MATCH (s:Source)-[:MENTIONS]->(i:Idea) "
+                                       "WHERE i.slug = \"x\" RETURN s.slug' --limit 20"})
+        self.allow("Bash", {"command": "python3 -m kb.search.cypher named gaps --param min_shared=3"})
+        self.allow("Bash", {"command": "python3 -m kb.search.cypher list"})
+        # the carve-out is one single-quoted argument, nothing after it but --limit/--json
+        self.deny("Bash", {"command": "python3 -m kb.search.cypher run 'MATCH (n) RETURN n' ; rm -rf wiki"})
+        self.deny("Bash", {"command": "python3 -m kb.search.cypher run 'MATCH (n) RETURN n' | tee x"})
+        self.deny("Bash", {"command": "python3 -m kb.search.cypher run 'a' 'b'"})
+        self.deny("Bash", {"command": "python3 -m kb.search.cypher run \"MATCH (n) RETURN $(id)\""})
+        self.deny("Bash", {"command": "python3 -m kb.search.cypher run 'x'\nrm -rf wiki"})
+        self.deny("Bash", {"command": "python3 -m kb.search.cypher bogus"})
+
+    def test_cypher_denied_in_scope(self):
+        scope = {"slug": "scope-x", "rows": []}
+        for cmd in ("python3 -m kb.search.cypher list",
+                    "python3 -m kb.search.cypher run 'MATCH (n) RETURN n.slug'"):
+            self.assertFalse(chat_agent._bash_allowed(cmd, scope), cmd)
+
     def test_other_tools_denied(self):
         self.deny("Write", {"file_path": "wiki/x.md", "content": "y"})
         self.deny("Edit", {"file_path": "wiki/x.md"})

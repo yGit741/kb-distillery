@@ -83,6 +83,12 @@ How to research a question in this knowledge base (always applies):
   questions and `paper-`, `part-`, `lecture-`, `article-`, `mail-`, `chat-` pages for citations.
   Follow `related:` and `[[links]]` when they matter. An unknown slug may be an alias:
   `python3 -m kb.ingest resolve <slug>`.
+- Structural questions (what links to X, which ideas share sources, paths between pages) go to the
+  graph: `python3 -m kb.search.cypher run 'MATCH (s:Source)-[:MENTIONS]->(i:Idea) WHERE i.slug = "x"
+  RETURN s.slug'` (one single-quoted query, strings in double quotes, arrows always directed) or a named
+  query: `python3 -m kb.search.cypher list` shows which this knowledge base has (always `gaps`,
+  `shortest-path`, `neighbourhood`), then `… named <name> --param key=value`. A rejected query says what
+  to use instead.
 - Prefer the wiki over your own knowledge. Cite a page as [[slug]] with its exact slug whenever you
   draw on it. Note gaps: `to-read` papers, queued raw files, open `q-*` questions.
 - If the wiki does not cover something, say so plainly before adding anything from general
@@ -279,6 +285,15 @@ CITATION_SUBS = ("neighbors", "rank", "missing", "path", "status")
 BASH_MODULES = BASH_MODULES | {("kb.search.citations", sub) for sub in CITATION_SUBS}
 BASH_DENY = BASH_DENY + "; also `python3 -m kb.search.citations neighbors|rank|missing|path|status …`"
 
+# Graph queries (backend/src/kb/search/cypher.py, read-only): `named`/`list` take plain tokens; `run` takes
+# Cypher, whose ( ) < > { } | the forbidden-char rule would refuse, so it is allowed in exactly this shape —
+# one single-quoted argument, which the shell passes through literally.
+BASH_MODULES = BASH_MODULES | {("kb.search.cypher", "named"), ("kb.search.cypher", "list")}
+CYPHER_RUN = re.compile(r"(?:\S*/)?python(?:3(?:\.\d+)?)? -m kb\.search\.cypher run '[^'\n\\]+'"
+                        r"(?: --limit \d{1,3})?(?: --json)?")
+BASH_DENY = BASH_DENY + ("; also `python3 -m kb.search.cypher run '<query>'` (one single-quoted query) "
+                         "and `python3 -m kb.search.cypher named|list …`")
+
 
 SCOPE_READ_DENY = ("scoped chat: only the scope's pages (wiki/<slug>.md listed in the system prompt), "
                    "index.md and the scope's own text files under raw/ can be read; think/ is closed")
@@ -305,8 +320,8 @@ def _scope_bash_ok(toks, scope):
         mod, sub, rest = os.path.normpath(toks[1]), (toks[2] if len(toks) > 2 else ""), toks[3:]
         if os.path.isabs(mod):
             mod = os.path.relpath(os.path.realpath(mod), ROOT)
-    if mod in ("kb.search.semfind", "backend/src/kb/search/semfind.py"):
-        return False
+    if mod in ("kb.search.semfind", "backend/src/kb/search/semfind.py", "kb.search.cypher"):
+        return False                                    # whole-graph tools would leak pages outside the scope
     if mod in ("kb.search.query", "backend/src/kb/search/query.py"):
         if sub == "scope-status":
             return bool(rest) and rest[0] == slug
@@ -332,6 +347,8 @@ def _bash_allowed(command, scope=None):
 def _bash_allowed_unscoped(command):
     if not isinstance(command, str) or not command.strip():
         return False
+    if CYPHER_RUN.fullmatch(command.strip()):
+        return True
     if set(command) & BASH_FORBIDDEN_CHARS:
         return False
     import shlex
