@@ -64,14 +64,16 @@ def _db_hashed(path, cards):
 
 def test_store_and_cards_live_in_the_selected_kb_cache():
     """The kb-split regression: the reader must look in the selected kb's .cache, next to the cards it embeds
-    — never in the explorer checkout (which holds no vault since the split)."""
+    — never in the engine's own `.cache` (the engine holds no vault; a kb under kbs/ sits inside its checkout)."""
     from kb import paths
     from kb.search import cards
     assert vectors.DB_PATH == os.path.join(paths.CACHE_PATH, "vectors.sqlite")
     assert vectors.CARDS_DIR == cards.CARDS_DIR
     assert os.path.realpath(paths.CACHE_PATH) == os.path.realpath(os.path.join(paths.ROOT, ".cache"))
     if paths.KB is not None:            # split layout: the vault is a kb folder, not this checkout
-        assert not os.path.realpath(vectors.DB_PATH).startswith(os.path.realpath(paths.CHECKOUT_ROOT) + os.sep)
+        db = os.path.realpath(vectors.DB_PATH)
+        assert not db.startswith(os.path.join(os.path.realpath(paths.CHECKOUT_ROOT), ".cache") + os.sep)
+        assert db.startswith(os.path.realpath(paths.ROOT) + os.sep)
 
 
 def test_status_missing_store_is_not_ok(tmp_path):
