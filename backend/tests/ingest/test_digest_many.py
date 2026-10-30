@@ -228,3 +228,12 @@ def test_drive_refuses_a_source_with_an_open_session_and_skips_an_already_full_p
 def test_merge_handles_crlf_pages():
     out = merge_frontmatter(OLD.replace("\n", "\r\n"), NEW)
     assert fields(out)["blog"] == '"Combinatorics and More"' and fields(out)["depth"] == "full"
+
+
+def test_map_plans_the_existing_page_not_a_second_one(vault, monkeypatch):
+    from kb.ingest import map as map_mod
+    monkeypatch.setattr(map_mod, "ROOT", str(vault))
+    monkeypatch.setattr(map_mod, "existing_digest_for_raw", lambda raw: "wiki/blog-k-1.md" if raw.endswith("k-1.md") else None)
+    (vault / "wiki" / "blog-k-1.md").write_text("---\ntype: blog-post\nraw: raw/web-clips/k-1.md\n---\n# P\n")
+    assert map_mod._existing_page("raw/web-clips/k-1.md", "article", "article-k-1") == ("blog-post", "blog-k-1")
+    assert map_mod._existing_page("raw/web-clips/k-9.md", "article", "article-k-9") == ("article", "article-k-9")
