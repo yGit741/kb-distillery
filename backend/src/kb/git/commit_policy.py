@@ -168,7 +168,7 @@ def check_message(message, branch, paths, is_merge=False, think_repo=False, kb_r
         bad = [p for p, lane in lanes.items() if lane != "knowledge"]
         if bad:
             v.append(f"kb commits may only touch knowledge paths: {bad[:5]}")
-        # In the shared think repo (knowledge-bases/think, its own history) every path is a think note.
+        # In the shared think repo (kbs/think, its own history) every path is a think note.
         think = list(paths) if think_repo else [p for p in paths if p.startswith("think/")]
         if c.scope == "think" and len(think) != len(paths):
             v.append("kb(think) commits only touch think/")

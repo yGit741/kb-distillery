@@ -2,7 +2,7 @@
 # Restart the app server (kb.api: API + legacy pages + React shell) from the current working tree, detached, then open it.
 # Kills whatever already listens on the port so a stale server never answers.
 # Usage: pixi run launch [-- --kb <id>] [-- --port N]
-# The knowledge base: --kb <id> (else $KB, the registry default, the only one; `pixi run kb-list`).
+# The knowledge base: --kb <id|path> (else $KB, the only one; `kbd kb-list`).
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
@@ -19,11 +19,11 @@ KB_SHOW="$(python -m kb.kbconfig show)" || { echo "$KB_SHOW" >&2; exit 1; }
 KB_ID="$(printf '%s\n' "$KB_SHOW" | sed -n 's/^id  *//p')"
 [[ "$KB_ID" == "None" ]] && KB_ID=""
 KB_ROOT_DIR="$(printf '%s\n' "$KB_SHOW" | sed -n 's/^root  *//p')"
-echo "knowledge base: ${KB_ID:-legacy} ($KB_ROOT_DIR)"
+echo "knowledge base: ${KB_ID:-none} ($KB_ROOT_DIR)"
 export KB_LIVE=1                    # this dashboard's lint runs keep the qmd search cards in step
 export KB_SHARE_AUTODEPLOY="${KB_SHARE_AUTODEPLOY:-0}"   # POC: nothing deploys from the split layout
 URL="http://127.0.0.1:${PORT}/start"
-LOG="${TMPDIR:-/tmp}/kb-distillery-${KB_ID:-legacy}-dashboard.log"
+LOG="${TMPDIR:-/tmp}/kb-distillery-${KB_ID:-none}-dashboard.log"
 
 pids=$(lsof -ti "tcp:${PORT}" -sTCP:LISTEN 2>/dev/null || true)
 if [[ -n "$pids" ]]; then

@@ -15,7 +15,7 @@ const detail = (kb: string, readOnly: boolean): PageDetail => ({
   backlinks: [], outbound: ["note"], broken: [], suggested: [], kb, read_only: readOnly,
 });
 const kbs: KbList = {
-  bases_dir: "/b", registry: "/r", registry_exists: false, think_root: "/t", active: "alpha",
+  bases_dir: "/b", think_root: "/t", active: "alpha",
   kbs: [
     { id: "alpha", name: "Alpha", root: "/b/kb-alpha", schema_version: "1.3", error: "", active: true, git: { repo: false } as KbList["kbs"][number]["git"] },
     { id: "beta", name: "Beta", root: "/b/kb-beta", schema_version: "1.3", error: "", active: false, git: { repo: false } as KbList["kbs"][number]["git"] },

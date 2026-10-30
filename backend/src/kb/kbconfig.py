@@ -1,16 +1,15 @@
 """Which knowledge base this process works on: discovery, `kb.toml`, selection.
 
-The explorer is code only. A knowledge base is any folder holding a `kb.toml`; it may be its own git
-repository (then every `kb(...)` commit and `kb-x.y.z` tag lands there, see `git_root`). Knowledge bases are
-found in two places, merged (registry wins on the same id):
+The engine is code only. A knowledge base is a folder holding a `kb.toml`; it may be its own git repository (then every
+`kb(...)` commit and `kb-x.y.z` tag lands there, see `git_root`). One discovery path:
 
-  1. `<bases dir>/kb-<id>/kb.toml` — the bases dir is `$KB_BASES_DIR`, else `<explorer>/../knowledge-bases`.
-     Symlinks are followed, so `kb-<id>` may point anywhere on disk.
-  2. `<explorer>/knowledge-bases.toml` (gitignored, machine-local): `default = "<id>"` and
-     `[[kb]] id = "...", path = "~/anywhere"` entries.
+  1. `<bases dir>/<id>/kb.toml` — the bases dir is `<engine>/kbs` (the main checkout's, also from a linked worktree),
+     or `$KB_BASES_DIR` (a test override). The folder name is the id. Symlinks are followed.
+  2. `--kb <path>` — any folder with a `kb.toml`, anywhere.
 
-Selection, first hit wins: `--kb <id>` on the command line, `$KB`, the registry's `default`, the only
-knowledge base there is. `$KB_ROOT` (legacy, used by the share build) still points straight at a folder.
+`--kb` and `$KB` take an id or a path: a value containing `/` or starting with `.` or `~` is a path, anything else an id.
+Selection, first hit wins: `--kb`, `$KB`, the only knowledge base there is. `$KB_ROOT` is internal: tools set it to hand
+a resolved folder to the processes they start (the share build, qmd, hooks); users never do.
 Nothing here imports the rest of `kb`, so `kb.paths` and `kb.core.schema` can build on it at import time.
 
     python -m kb.kbconfig list     every knowledge base and where it is
@@ -34,8 +33,7 @@ except ModuleNotFoundError:          # python < 3.11 (the macOS system python ru
 CODE_DIR = os.path.dirname(os.path.abspath(__file__))
 CHECKOUT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(CODE_DIR)))
 CONFIG_NAME = "kb.toml"
-REGISTRY_NAME = "knowledge-bases.toml"
-FOLDER_PREFIX = "kb-"
+BASES_DIR_NAME = "kbs"
 THINK_DIR_NAME = "think"
 # `[kb] schema_version` a knowledge base must carry to be opened by this explorer (major.minor of kb-x.y.z).
 # Kept here, not in kb.core.schema, so this module stays import-free; the schema asserts both agree.
@@ -65,13 +63,37 @@ class KbConfig:
         return str(self.section("git").get("tag_prefix") or "kb-")
 
 
+def primary_root() -> str:
+    """The engine's main working tree. From a linked worktree (its `.git` is a file naming `<git dir>/worktrees/x`,
+    whose `commondir` points at the shared git dir) that is not CHECKOUT_ROOT. Read without a subprocess because
+    this module is imported by nearly everything."""
+    dot_git = os.path.join(CHECKOUT_ROOT, ".git")
+    if os.path.isfile(dot_git):
+        try:
+            with open(dot_git, encoding="utf-8") as f:
+                first = f.readline().strip()
+            if first.startswith("gitdir:"):
+                git_dir = os.path.realpath(os.path.join(CHECKOUT_ROOT, first[len("gitdir:"):].strip()))
+                with open(os.path.join(git_dir, "commondir"), encoding="utf-8") as f:
+                    return os.path.dirname(os.path.realpath(os.path.join(git_dir, f.read().strip())))
+        except OSError:
+            pass
+    return CHECKOUT_ROOT
+
+
 def bases_dir() -> str:
     env = os.environ.get("KB_BASES_DIR")
-    return os.path.realpath(env) if env else os.path.realpath(os.path.join(CHECKOUT_ROOT, os.pardir, "knowledge-bases"))
+    return os.path.realpath(env) if env else os.path.join(primary_root(), BASES_DIR_NAME)
 
 
-def registry_path() -> str:
-    return os.path.join(CHECKOUT_ROOT, REGISTRY_NAME)
+def hooks_path_for(kb_root: str) -> str:
+    """`core.hooksPath` for a knowledge base repo: relative (survives renaming the engine folder) for a kb at
+    `<engine>/kbs/<id>`, else the absolute path of the main checkout's `tools/kb-hooks`. Git resolves a relative
+    value from the top of the work tree, where the hooks run."""
+    primary = os.path.realpath(primary_root())
+    if os.path.dirname(os.path.realpath(kb_root)) == os.path.join(primary, BASES_DIR_NAME):
+        return "../../tools/kb-hooks"
+    return os.path.join(primary, "tools", "kb-hooks")
 
 
 def _toml_load(f):
@@ -80,35 +102,24 @@ def _toml_load(f):
     return tomllib.load(f)
 
 
-def _read_registry() -> dict:
-    try:
-        with open(registry_path(), "rb") as f:
-            return _toml_load(f)
-    except FileNotFoundError:
-        return {}
-    except tomllib.TOMLDecodeError as e:
-        raise KbConfigError(f"{registry_path()}: TOML syntax error: {e}") from None
-
-
 def _expand(path: str) -> str:
     return os.path.realpath(os.path.expanduser(os.path.expandvars(path)))
 
 
+def looks_like_path(ref: str) -> bool:
+    """A `--kb` / `$KB` value is a path when it has a `/` or starts with `.` or `~`, else an id."""
+    return os.sep in ref or "/" in ref or ref.startswith((".", "~"))
+
+
 def discover() -> dict[str, str]:
-    """id → knowledge base folder, folders first, then the registry (which may override an id)."""
+    """id → knowledge base folder, for every `<bases dir>/<id>/kb.toml` (the folder name is the id)."""
     found: dict[str, str] = {}
     base = bases_dir()
     if os.path.isdir(base):
         for name in sorted(os.listdir(base)):
-            if not name.startswith(FOLDER_PREFIX):
-                continue
             folder = os.path.join(base, name)
-            if os.path.isdir(folder) and os.path.isfile(os.path.join(folder, CONFIG_NAME)):
-                found[name[len(FOLDER_PREFIX):]] = os.path.realpath(folder)
-    for entry in _read_registry().get("kb") or []:
-        if not isinstance(entry, dict) or not entry.get("id") or not entry.get("path"):
-            raise KbConfigError(f"{registry_path()}: every [[kb]] needs `id` and `path`")
-        found[str(entry["id"])] = _expand(str(entry["path"]))
+            if not name.startswith(".") and os.path.isdir(folder) and os.path.isfile(os.path.join(folder, CONFIG_NAME)):
+                found[name] = os.path.realpath(folder)
     return found
 
 
@@ -121,8 +132,8 @@ def think_root(vault_root: str | None = None) -> str:
 
 
 def _consume_argv_kb() -> str | None:
-    """Read `--kb <id>` / `--kb=<id>` from sys.argv once and remove it, so every CLI (lint, ops, ingest, api…)
-    accepts it without declaring it. Exported as $KB so child processes see the same choice."""
+    """Read `--kb <id|path>` / `--kb=<id|path>` from sys.argv once and remove it, so every CLI (lint, ops, ingest,
+    api…) accepts it without declaring it. Exported as $KB so child processes see the same choice."""
     argv = sys.argv
     for i, a in enumerate(argv):
         if a == "--kb" and i + 1 < len(argv):
@@ -135,6 +146,8 @@ def _consume_argv_kb() -> str | None:
             break
     else:
         return None
+    if looks_like_path(pick):
+        pick = _expand(pick)            # children may start elsewhere: hand them a path that opens from anywhere
     os.environ["KB"] = pick
     return pick
 
@@ -147,14 +160,11 @@ def explicit_kb() -> str | None:
     return _ARGV_KB
 
 
-def selected_id() -> str | None:
-    """`--kb`, `$KB`, the registry default, or the only knowledge base; None when nothing decides."""
+def selected() -> str | None:
+    """`--kb`, `$KB`, or the only knowledge base: an id or a path; None when nothing decides."""
     pick = _ARGV_KB or os.environ.get("KB")
     if pick:
         return pick
-    default = _read_registry().get("default")
-    if default:
-        return str(default)
     known = discover()
     return next(iter(known)) if len(known) == 1 else None
 
@@ -184,7 +194,7 @@ def load_dir(root: str, id_hint: str | None = None, strict: bool = True) -> KbCo
             raise KbConfigError(f"{path}: [kb] {key} is required")
     kb_id = str(kb["id"])
     if id_hint and id_hint != kb_id:
-        raise KbConfigError(f"{path}: [kb] id = {kb_id!r} but the folder/registry calls it {id_hint!r}")
+        raise KbConfigError(f"{path}: [kb] id = {kb_id!r} but the folder is named {id_hint!r} (folder name = id)")
     version = _version(kb["schema_version"], path)
     if version != SCHEMA_VERSION:
         msg = (f"{path}: schema_version {version[0]}.{version[1]} but this explorer speaks "
@@ -197,37 +207,16 @@ def load_dir(root: str, id_hint: str | None = None, strict: bool = True) -> KbCo
                     git_root=git_root, data=data)
 
 
-def load(kb_id: str, strict: bool = True) -> KbConfig:
+def load(ref: str, strict: bool = True) -> KbConfig:
+    """A knowledge base by id (a folder of the bases dir) or by path (`./x`, `~/x`, `/abs/x`)."""
+    if looks_like_path(ref):
+        return load_dir(_expand(ref), strict=strict)
     known = discover()
-    if kb_id not in known:
+    if ref not in known:
         have = ", ".join(sorted(known)) or "none"
-        raise KbConfigError(f"no knowledge base {kb_id!r} (known: {have}; bases dir {bases_dir()}, "
-                            f"registry {registry_path()})")
-    return load_dir(known[kb_id], kb_id, strict=strict)
-
-
-def register(path: str) -> KbConfig:
-    """Save a knowledge base folder in the registry (`[[kb]] id, path`) after checking this explorer can open it:
-    a kb.toml at this explorer's schema version, in a folder that is its own git repository. Idempotent."""
-    root = _expand(path)
-    if not os.path.isdir(root):
-        raise KbConfigError(f"{root}: no such folder")
-    cfg = load_dir(root, strict=True)
-    if cfg.git_root is None:
-        raise KbConfigError(f"{root} is not a git repository — a knowledge base is its own repo (git init there first)")
-    known = discover()
-    if cfg.id in known:
-        if os.path.realpath(known[cfg.id]) == cfg.root:
-            return cfg
-        raise KbConfigError(f"a knowledge base {cfg.id!r} is already known at {known[cfg.id]}")
-    import json
-    reg = registry_path()
-    new = not os.path.isfile(reg) or not os.path.getsize(reg)
-    with open(reg, "a", encoding="utf-8") as f:
-        if new:
-            f.write("# Knowledge bases outside the bases dir (machine-local, gitignored).\n")
-        f.write(f"\n[[kb]]\nid = {json.dumps(cfg.id)}\npath = {json.dumps(cfg.root)}\n")
-    return cfg
+        raise KbConfigError(f"no knowledge base {ref!r} (known: {have}; bases dir {bases_dir()}) — "
+                            f"or pass a folder: --kb ./path")
+    return load_dir(known[ref], ref, strict=strict)
 
 
 def schema_mismatch(cfg: "KbConfig | None") -> str | None:
@@ -242,8 +231,8 @@ _current: KbConfig | None | bool = False   # False = not resolved yet
 
 
 def current() -> KbConfig | None:
-    """The knowledge base this process works on, resolved once. None = legacy mode (no kb.toml anywhere:
-    `$KB_ROOT`/the checkout is the vault, types are the explorer defaults)."""
+    """The knowledge base this process works on, resolved once. None = none selected: engine-only commands
+    (ship, lanes, the skills lint) run against the checkout and use the default types."""
     global _current
     if _current is not False:
         return _current
@@ -251,22 +240,20 @@ def current() -> KbConfig | None:
     if env_root:
         _current = load_dir(env_root, strict=False) if os.path.isfile(os.path.join(env_root, CONFIG_NAME)) else None
         return _current
-    kb_id = selected_id()
-    if kb_id:
-        _current = load(kb_id, strict=False)
-    elif os.path.isfile(os.path.join(CHECKOUT_ROOT, CONFIG_NAME)):
-        _current = load_dir(CHECKOUT_ROOT, strict=False)
+    ref = selected()
+    if ref:
+        _current = load(ref, strict=False)
     else:
         _current = None
         known = discover()
-        if len(known) > 1 and not os.path.isdir(os.path.join(CHECKOUT_ROOT, "wiki")):
+        if len(known) > 1:
             print(f"warning: {len(known)} knowledge bases ({', '.join(sorted(known))}) and none selected — "
-                  f"pass --kb <id> or set KB; using the checkout as the vault (legacy layout)", file=sys.stderr)
+                  f"pass --kb <id|path> or set KB; engine-only commands run against the checkout", file=sys.stderr)
     return _current
 
 
 def vault_root() -> str:
-    """`$KB_ROOT`, else the selected knowledge base, else the checkout (legacy monorepo layout)."""
+    """`$KB_ROOT`, else the selected knowledge base, else the checkout (none selected: engine-only commands)."""
     env_root = os.environ.get("KB_ROOT")
     if env_root:
         return env_root
@@ -287,7 +274,7 @@ def main(argv=None):
     if cmd == "list":
         known = discover()
         if not known:
-            print(f"no knowledge bases in {bases_dir()} or {registry_path()}")
+            print(f"no knowledge bases in {bases_dir()} (pass --kb <path> for one elsewhere)")
             return 1
         for kb_id, root in known.items():
             git = "git" if os.path.exists(os.path.join(root, ".git")) else "   "
@@ -309,9 +296,9 @@ def main(argv=None):
             print(f"error: {e}", file=sys.stderr)
             return 1
         # Non-Python tools (tools/qmd/*.mjs) get their vault from here, never from where their file lives:
-        # an explorer checkout without wiki/ is not a vault, so refuse instead of guessing it.
-        if cfg is None and not os.environ.get("KB_ROOT") and not os.path.isdir(os.path.join(CHECKOUT_ROOT, "wiki")):
-            print("error: no knowledge base selected — pass --kb <id> or set KB (`pixi run kb-list`)", file=sys.stderr)
+        # the engine checkout is not a vault, so refuse instead of guessing it.
+        if cfg is None and not os.environ.get("KB_ROOT"):
+            print("error: no knowledge base selected — pass --kb <id|path> or set KB (`kbd kb-list`)", file=sys.stderr)
             return 1
         print(vault_root())
         return 0

@@ -1,8 +1,8 @@
 import { registerTour } from "@/features/tour/tours";
 
 /**
- * The knowledge-base tour: what this app loads and from where. The explorer is the engine; the content is one
- * `knowledge-bases/kb-<id>/` folder (its own git repo) chosen at launch, its page types come from that folder's
+ * The knowledge-base tour: what this app loads and from where. The engine is code only; the content is one
+ * `kbs/<id>/` folder (its own git repo) or a `--kb <path>` chosen at launch, its page types come from that folder's
  * kb.toml, its digest instructions and flags fall back to the explorer's defaults, and think is one shared
  * space beside every knowledge base. One idea per step; targets are real elements (aria-label, data-tour).
  */
@@ -24,8 +24,8 @@ registerTour(
       wait: 3000,
       place: "bottom",
       title: "Loaded from a local folder",
-      // source: backend/src/kb/services/kb.py (active); kbconfig.discover: knowledge-bases/kb-*/ or the registry
-      body: "System → Knowledge bases shows the folder behind this app. It was found under knowledge-bases/ or linked by path in the registry, and **relaunching** with --kb picks another.",
+      // source: backend/src/kb/services/kb.py (active); kbconfig.discover: kbs/<id>/ or --kb <path>
+      body: "System → Knowledge bases shows the folder behind this app. It was found under kbs/ (the folder name is the id) or passed as a path, and **relaunching** with --kb picks another.",
     },
     {
       target: '[data-tour="kb-git"]',
@@ -42,7 +42,7 @@ registerTour(
     {
       target: '[data-tour="kb-think"]',
       title: "Think is shared",
-      // source: kb.paths.THINK_PATH = knowledge-bases/think; git/guard.py _shared_think_guard; distill cites think:<note>
+      // source: kb.paths.THINK_PATH = kbs/think; git/guard.py _shared_think_guard; distill cites think:<note>
       body: "One think space sits beside every knowledge base, in its own repo. Agents are blocked from writing there, and a distilled page cites its note as **think:**name.md.",
     },
     {
@@ -76,13 +76,6 @@ registerTour(
       title: "Pick the knowledge bases",
       // source: app/KbBadge.tsx (KbMenu); GET /api/graph?kb=a,b (backend/src/kb/api/routers/graph.py)
       body: "The name at the top left is a menu. Tick any knowledge base, or none. The choice goes into the link (**?kbs=**), so a presentation link opens the same view.",
-    },
-    {
-      target: '[data-tour="kb-badge"]',
-      place: "bottom",
-      title: "Add one from anywhere",
-      // source: app/KbBadge.tsx AddFolder; POST /api/kb/register → kbconfig.register (knowledge-bases.toml)
-      body: "Paste the path of a knowledge base folder on this machine. It needs a kb.toml at this explorer's schema and its own **repository**, and is saved for next time.",
     },
     {
       target: '[data-testid="graph-screen"]',

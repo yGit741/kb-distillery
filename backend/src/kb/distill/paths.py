@@ -12,7 +12,7 @@ ROOT = vault_root()
 DISTILL_ROOT = os.path.join(ROOT, DISTILL_DIR)
 
 # A distilled page cites its note as `think:<file>`: think is the shared space beside every knowledge base
-# (`knowledge-bases/think/`), not a folder of this vault. `think/<file>` is the legacy spelling.
+# (`kbs/think/`), not a folder of this vault. `think/<file>` is the legacy spelling.
 THINK_CITE = f"{THINK_DIR}:"
 
 

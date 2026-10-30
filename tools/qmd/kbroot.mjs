@@ -1,5 +1,5 @@
 // The knowledge base the qmd tools work on: $KB_ROOT, set by tools/qmd/with-kb.sh (pixi tasks) or
-// tools/launch.sh from `python -m kb.kbconfig root` — the one resolver for --kb / $KB / the registry.
+// tools/launch.sh from `python -m kb.kbconfig root` — the one resolver for --kb / $KB.
 // There is no fallback to the checkout this file lives in: since the kb split the explorer holds no vault,
 // and guessing it silently built and read caches in the wrong folder.
 import fs from "node:fs";

@@ -50,7 +50,6 @@ function Active({ kb }: { kb: KbInfo }) {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           {kb.name} {kb.id && <Badge variant="outline">{kb.id}</Badge>}
-          {kb.legacy && <Badge variant="outline">legacy layout</Badge>}
         </CardTitle>
         <CardDescription>
           The knowledge base this app was launched with. Schema {kb.schema_version}
@@ -123,9 +122,8 @@ export function KnowledgeBasesView() {
         <CardHeader>
           <CardTitle>Available knowledge bases</CardTitle>
           <CardDescription>
-            Folders <code className="text-xs">kb-*</code> in <code className="text-xs">{list.data?.bases_dir ?? kb.data.bases_dir}</code>
-            {" "}and entries in <code className="text-xs">{list.data?.registry ?? kb.data.registry}</code>
-            {list.data && !list.data.registry_exists && " (no registry file yet)"}. To switch: <code className="text-xs">{kb.data.relaunch}</code>
+            Every folder with a <code className="text-xs">kb.toml</code> in <code className="text-xs">{list.data?.bases_dir ?? kb.data.bases_dir}</code>
+            {" "}(the folder name is the id), or any folder passed as <code className="text-xs">--kb &lt;path&gt;</code>. To switch: <code className="text-xs">{kb.data.relaunch}</code>
           </CardDescription>
         </CardHeader>
         <CardContent>

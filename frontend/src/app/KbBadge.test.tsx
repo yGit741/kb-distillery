@@ -3,7 +3,7 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { App } from "@/app/providers";
 import { createAppRouter } from "@/app/router";
-import { ApiError, type DataSource } from "@/api";
+import type { DataSource } from "@/api";
 import type { KbInfo, KbList } from "@/api/types";
 import { sampleSnapshot } from "@/features/graph/fixtures";
 import { withFlag } from "@/flags/testing";
@@ -16,12 +16,12 @@ vi.mock("@/features/graph/GraphCanvas", async () => {
 });
 
 const git = { repo: true, branch: "main" } as KbList["kbs"][number]["git"];
-const row = (id: string, name: string, active = false) => ({ id, name, root: `/b/kb-${id}`, schema_version: "1.3", error: "", active, git });
+const row = (id: string, name: string, active = false) => ({ id, name, root: `/b/${id}`, schema_version: "1.3", error: "", active, git });
 const list = (extra: ReturnType<typeof row>[] = []): KbList => ({
-  bases_dir: "/b", registry: "/r", registry_exists: false, think_root: "/t", active: "alpha",
+  bases_dir: "/b", think_root: "/t", active: "alpha",
   kbs: [row("alpha", "Alpha", true), row("beta", "Beta"), ...extra],
 });
-const info = { id: "alpha", name: "Alpha", root: "/b/kb-alpha", git } as unknown as KbInfo;
+const info = { id: "alpha", name: "Alpha", root: "/b/alpha", git } as unknown as KbInfo;
 
 function open(path: string, over: Partial<DataSource> = {}) {
   const graphs: (readonly string[] | undefined)[] = [];
@@ -54,27 +54,14 @@ describe("header knowledge base menu (kb-view)", () => {
       expect(await screen.findByText(/No knowledge base is shown/)).toBeInTheDocument();
     }));
 
-  it("adds a folder from disk and shows it; a refused folder shows why", () =>
+  it("lists the knowledge bases of the bases dir and offers no add-folder form (one discovery path)", () =>
     withFlag("kb-view", true, async () => {
-      let calls = 0;
-      const { router } = open("/graph", {
-        registerKb: async (path) => {
-          calls++;
-          if (path.includes("bad")) throw new ApiError("/x is not a git repository", 400);
-          return list([row("far", "Far")]);
-        },
-      });
+      open("/graph");
       await userEvent.click(await screen.findByRole("button", { name: "Knowledge bases" }));
-      const input = await screen.findByLabelText(/Add a folder/);
-      await userEvent.type(input, "/somewhere/bad");
-      await userEvent.click(screen.getByRole("button", { name: /^Add$/ }));
-      const menu = screen.getByRole("dialog", { name: /Knowledge bases on the graph/ });
-      expect(await within(menu).findByRole("alert")).toHaveTextContent("not a git repository");
-      await userEvent.clear(input);
-      await userEvent.type(input, "/somewhere/far");
-      await userEvent.click(screen.getByRole("button", { name: /^Add$/ }));
-      await waitFor(() => expect(router.state.location.search).toMatchObject({ kbs: "alpha,far" }));
-      expect(calls).toBe(2);
+      const menu = await screen.findByRole("dialog", { name: /Knowledge bases on the graph/ });
+      expect(within(menu).getAllByRole("checkbox")).toHaveLength(2);
+      expect(within(menu).queryByLabelText(/Add a folder/)).toBeNull();
+      expect(within(menu).queryByRole("button", { name: /^Add$/ })).toBeNull();
     }));
 
   it("flag off: the title is the plain link to System → Knowledge bases", () =>

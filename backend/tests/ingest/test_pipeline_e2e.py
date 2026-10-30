@@ -98,6 +98,7 @@ class Pipeline:
     def __init__(self, root):
         self.root = root
         self.env = {**{k: v for k, v in os.environ.items() if not k.startswith("KB_") and k != "KB"},
+                    "KB_ROOT": root,       # the temp vault is the kb (the code symlinked into it no longer finds it by itself)
                     "KB_OPS_DISABLE": "1", "KB_NO_PUSH": "1", "PYTHONDONTWRITEBYTECODE": "1",
                     "PYTHONHASHSEED": "0", "TZ": "UTC", "NO_PROXY": "*",
                     "PYTHONPATH": os.path.join(root, "backend", "src")}

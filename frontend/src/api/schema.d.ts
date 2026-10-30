@@ -312,23 +312,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/kb/register": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Save a knowledge base folder from anywhere on disk */
-        post: operations["register_kb_api_kb_register_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/lifecycle": {
         parameters: {
             query?: never;
@@ -1518,14 +1501,10 @@ export interface components {
             git: components["schemas"]["KbGitState"];
             /** Id */
             id: string | null;
-            /** Legacy */
-            legacy: boolean;
             /** Meta Overrides */
             meta_overrides: string[];
             /** Name */
             name: string;
-            /** Registry */
-            registry: string;
             /** Relaunch */
             relaunch: string;
             /** Root */
@@ -1550,19 +1529,8 @@ export interface components {
             bases_dir: string;
             /** Kbs */
             kbs: components["schemas"]["KbRow"][];
-            /** Registry */
-            registry: string;
-            /** Registry Exists */
-            registry_exists: boolean;
             /** Think Root */
             think_root: string;
-        } & {
-            [key: string]: unknown;
-        };
-        /** KbRegister */
-        KbRegister: {
-            /** Path */
-            path: string;
         } & {
             [key: string]: unknown;
         };
@@ -3351,46 +3319,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["KbList"];
-                };
-            };
-        };
-    };
-    register_kb_api_kb_register_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["KbRegister"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["KbList"];
-                };
-            };
-            /** @description not a knowledge base this explorer can open */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

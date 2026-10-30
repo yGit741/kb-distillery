@@ -288,7 +288,7 @@ def nightly_status(root=ROOT):
 
 
 def think_repo(root=ROOT):
-    """Where kb(think) commits go: the shared think repo (`knowledge-bases/think/`, its own git history) when
+    """Where kb(think) commits go: the shared think repo (`kbs/think/`, its own git history) when
     it is one, else the vault itself (legacy layout, think/ inside the vault)."""
     shared = THINK_PATH if root == ROOT else os.path.join(root, "think")
     return shared if os.path.exists(os.path.join(shared, ".git")) else root

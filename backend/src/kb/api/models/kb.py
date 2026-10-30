@@ -29,7 +29,6 @@ class KbInfo(ApiModel):
     """The knowledge base this app serves: kb.toml facts, where it is, its types, what it overrides."""
     id: str | None
     name: str
-    legacy: bool                    # no kb.toml: the checkout / $KB_ROOT is the vault, types are defaults
     root: str
     config: str | None
     schema_version: str
@@ -43,7 +42,6 @@ class KbInfo(ApiModel):
     flags_registry: Literal["explorer", "kb"]
     meta_overrides: list[str]
     bases_dir: str
-    registry: str
     relaunch: str
 
 
@@ -57,14 +55,8 @@ class KbRow(ApiModel):
     active: bool
 
 
-class KbRegister(ApiModel):
-    path: str                            # a knowledge base folder: kb.toml at this schema, its own git repository
-
-
 class KbList(ApiModel):
     bases_dir: str
-    registry: str
-    registry_exists: bool
     think_root: str
     active: str | None
     kbs: list[KbRow]
