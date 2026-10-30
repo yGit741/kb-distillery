@@ -4,8 +4,10 @@ import os
 import re
 import sys
 
+from kb.lint.lint import parse_frontmatter
 from .paths import ROOT, load_session, save_session, session_dir, wiki_slugs, person_from_raw
 from .schemas import validate_claims
+from .verify import existing_digest_for_raw
 
 from kb.core.schema import TOPIC_PREFIX, TOPIC_SLUGS, unit_slug_for_raw, unit_type_for_raw
 
@@ -55,6 +57,17 @@ def _match_questions(open_questions, known):
     return updates
 
 
+def _existing_page(raw, page_type, wiki_slug):
+    """Deepening a source that already has a page (an easy blog post, say) rewrites THAT page — its own slug and
+    type — instead of planning a second one by the raw file's naming rule."""
+    rel = existing_digest_for_raw(raw)
+    if not rel:
+        return page_type, wiki_slug
+    with open(os.path.join(ROOT, rel), encoding="utf-8") as f:
+        fm = parse_frontmatter(f.read()) or {}
+    return str(fm.get("type") or page_type), os.path.basename(rel)[:-3]
+
+
 def run_map(sha, no_questions=False):
     """`no_questions`: a bulk digest leaves `open_questions` in claims.json but spawns no q- stub from them."""
     session = load_session(sha)
@@ -98,6 +111,8 @@ def run_map(sha, no_questions=False):
         from .book import part_slug
         page_type = "part"
         wiki_slug = part_slug(book, scope.get("label") or f"pages-{scope['pages'][0]}")
+    else:
+        page_type, wiki_slug = _existing_page(claims["raw"], page_type, wiki_slug)
     person = claims.get("person") or person_from_raw(claims["raw"])
     areas = list(dict.fromkeys(theme_areas + [c for c in claims.get("concepts", [])
                                               if c not in theme_areas]))[:5]
