@@ -142,6 +142,11 @@ def _consume_argv_kb() -> str | None:
 _ARGV_KB = _consume_argv_kb()
 
 
+def explicit_kb() -> str | None:
+    """The `--kb` given on this command line (not `$KB`): for commands that act on a kb only when asked to."""
+    return _ARGV_KB
+
+
 def selected_id() -> str | None:
     """`--kb`, `$KB`, the registry default, or the only knowledge base; None when nothing decides."""
     pick = _ARGV_KB or os.environ.get("KB")

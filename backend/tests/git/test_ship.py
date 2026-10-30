@@ -560,6 +560,94 @@ class PrFlowTests(unittest.TestCase):
         self.assertIn("feat(ops): add thing (#9)", merges)
 
 
+class ShipTagTests(unittest.TestCase):
+    """`ship tag` and the no-remote base ref, in throwaway repos with no origin."""
+
+    def setUp(self):
+        self._tmp = tempfile.TemporaryDirectory()
+        self.repo = os.path.realpath(self._tmp.name)
+        env = {"GIT_CONFIG_GLOBAL": os.devnull, "GIT_CONFIG_SYSTEM": os.devnull,
+               "GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@t", "GIT_COMMITTER_NAME": "t", "GIT_COMMITTER_EMAIL": "t@t"}
+        patcher = patch.dict(os.environ, env)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        self.addCleanup(self._tmp.cleanup)
+        _git(self.repo, "init", "-q", "-b", "main")
+        self.first = self._commit("a.txt")
+
+    def _commit(self, name):
+        with open(os.path.join(self.repo, name), "w") as f:
+            f.write(name)
+        _git(self.repo, "add", name)
+        _git(self.repo, "commit", "-q", "-m", f"chore(t): {name}")
+        return subprocess.run(["git", "rev-parse", "HEAD"], cwd=self.repo, capture_output=True, text=True).stdout.strip()
+
+    def _tag(self, name, **kw):
+        return ship.cmd_tag(name, repo=self.repo, **kw)
+
+    def test_creates_annotated_tag(self):
+        self.assertEqual(self._tag("pre-distillery"), 0)
+        kind = subprocess.run(["git", "cat-file", "-t", "pre-distillery"], cwd=self.repo, capture_output=True, text=True)
+        self.assertEqual(kind.stdout.strip(), "tag")
+
+    def test_at_an_older_commit(self):
+        self._commit("b.txt")
+        self.assertEqual(self._tag("old", at=self.first), 0)
+        sha = subprocess.run(["git", "rev-parse", "old^{commit}"], cwd=self.repo, capture_output=True, text=True)
+        self.assertEqual(sha.stdout.strip(), self.first)
+
+    def test_refuses_kb_snapshot_names_and_bad_names(self):
+        self.assertEqual(self._tag("kb-1.0.0"), 1)
+        self.assertEqual(self._tag("Bad Name"), 1)
+
+    def test_refuses_existing_tag(self):
+        self.assertEqual(self._tag("once"), 0)
+        self.assertEqual(self._tag("once"), 1)
+
+    def test_refuses_dirty_tracked_tree(self):
+        with open(os.path.join(self.repo, "a.txt"), "w") as f:
+            f.write("changed")
+        self.assertEqual(self._tag("dirty"), 1)
+
+    def test_refuses_off_main(self):
+        _git(self.repo, "checkout", "-q", "-b", "side")
+        self.assertEqual(self._tag("side-tag"), 1)
+
+    def test_refuses_rev_not_on_main(self):
+        _git(self.repo, "checkout", "-q", "-b", "side")
+        off = self._commit("side.txt")
+        _git(self.repo, "checkout", "-q", "main")
+        self.assertEqual(self._tag("x", at=off), 1)
+
+    def test_refuses_a_subfolder_of_a_repo(self):
+        os.makedirs(os.path.join(self.repo, "sub"))
+        self.assertEqual(ship.cmd_tag("sub-tag", repo=os.path.join(self.repo, "sub")), 1)
+
+    def test_base_ref_falls_back_to_main_without_origin(self):
+        self.assertEqual(ship._base_ref(self.repo), "main")
+
+    def test_branch_files_sees_committed_work_without_origin(self):
+        _git(self.repo, "checkout", "-q", "-b", "infra/x")
+        self._commit("frontend_new.txt")
+        self.assertIn("frontend_new.txt", ship.branch_files(self.repo))
+
+    def test_drop_writes_a_non_empty_patch_without_origin(self):
+        _git(self.repo, "checkout", "-q", "-b", "infra/gone")
+        self._commit("work.txt")
+        _git(self.repo, "checkout", "-q", "main")
+        self.assertEqual(ship.cmd_drop("infra/gone", root=self.repo), 0)
+        patch_file = os.path.join(self.repo, "_quarantine", "dropped-infra-gone.patch")
+        with open(patch_file) as f:
+            self.assertIn("work.txt", f.read())
+
+    def test_guard_allows_the_tag_subcommand(self):
+        from kb.git import git_guard
+        self.assertTrue(git_guard.is_allowlisted("pixi run ship tag pre-distillery"))
+
+    def test_docs_is_a_tooling_lane(self):
+        self.assertEqual(lane_of("docs/ROADMAP.md"), "tooling")
+
+
 if __name__ == "__main__":
     unittest.main()
 
