@@ -4,7 +4,7 @@ Personal knowledge base for an MSc in theoretical ML. **The thesis topic is not 
 
 This file is the core every turn needs. Details live in `meta-defaults/docs/` — read the one the **Doc router** names before you act.
 
-**Explorer and knowledge bases are separate.** This repo is the engine; the content is a knowledge base folder `../knowledge-bases/kb-<id>/` (its own git repo) selected with `--kb <id>` / `$KB` (`pixi run kb-list`, `pixi run launch -- --kb <id>`). `raw/`, `wiki/`, `meta/` below are paths inside the selected knowledge base; `kb(...)` commits and `kb-x.y.z` tags land in that repo, never here.
+**Explorer and knowledge bases are separate.** This repo is the engine; the content is a knowledge base folder `kbs/<id>/` (its own git repo; only `kbs/demo` is tracked here) or any folder given as `--kb <path>`, selected with `--kb <id|path>` / `$KB` (`kbd kb-list`, `kbd launch --kb <id>`). `raw/`, `wiki/`, `meta/` below are paths inside the selected knowledge base; `kb(...)` commits and `kb-x.y.z` tags land in that repo, never here.
 
 ## Folders
 
@@ -12,7 +12,7 @@ This file is the core every turn needs. Details live in `meta-defaults/docs/` �
 |-------|------|------|
 | **Raw** | `raw/` | User-owned inputs. **Immutable — never write here.** |
 | **Wiki** | `wiki/` | Agent-owned synthesis. Flat. Create, update, cross-link. |
-| **Think** | `knowledge-bases/think/` | ONE shared human-owned slow space for every knowledge base (its own repo). Schema-free. Agents never write here. Distilled pages cite `think:<note>.md`. |
+| **Think** | `kbs/think/` | ONE shared human-owned slow space for every knowledge base (its own repo). Schema-free. Agents never write here. Distilled pages cite `think:<note>.md`. |
 | **Meta** | `meta/` | Vault metadata: manifest, log, chats, aliases. Generic pieces (flags, templates, routed docs, digest defaults) live in the explorer's `meta-defaults/`; a kb's `meta/` overrides them. No code (code is `backend/`, see `meta-defaults/docs/dev.md`). |
 | **Config** | `kb.toml` | The knowledge base: id, name, schema version, its page types (`[types]`), its digest instructions (`digest/`). Read by `kb.kbconfig` / `kb.core.kbtypes`. |
 

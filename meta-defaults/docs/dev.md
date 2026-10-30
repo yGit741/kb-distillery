@@ -8,7 +8,10 @@ Code, tools and the vault are separate top-level folders; `meta/` is vault metad
 
 ```
 backend/                Python app, package `kb` (src layout, pyproject.toml, editable install via pixi)
-  src/kb/paths.py       the ONE vault-root resolver (KB_ROOT, else this checkout) + every data path constant
+  src/kb/cli.py         `kbd`: one front door to the commands below (see § kbd and knowledge bases)
+  src/kb/kbconfig.py    kb discovery and selection: `kbs/<id>` or `--kb <path>`, `kb.toml`
+  src/kb/paths.py       the ONE vault-root resolver (the selected kb, else this checkout) + every data path constant
+  src/kb/llm/           `kb.llm`: the one door to Claude (see § Billing)
   src/kb/core/          schema, graph, hubs, scopes, persons, books, mathnorm, coherence, health
   src/kb/lint/          lint, lint_skills            src/kb/search/       query, semfind, explore_raw, citations
   src/kb/ingest|distill|ops|report|share/            src/kb/git/          guard, git_guard, commit_policy, ship, merge_nudge, curate_history
@@ -20,7 +23,9 @@ backend/                Python app, package `kb` (src layout, pyproject.toml, ed
   tests/                pytest, mirrored by package (tests/harness = the pipeline harness)
 share/                  Cloudflare Worker (auth.js, admin.js, wrangler template) + its node tests
 skills/                 agent skill sources (.cursor/skills and .claude/skills are symlinks to it)
-tools/                  githooks/, launchd/, launch.sh
+tools/                  githooks/, kb-hooks/, launchd/, launch.sh
+docs/                   ROADMAP.md: the migration to the open-source kb-distillery, phase by phase
+kbs/                    knowledge bases: kbs/<id> is one kb (its own git repo); only kbs/demo is tracked here, the rest is gitignored
 meta/                   VAULT METADATA ONLY: corpus.tsv, log.md, aliases.tsv, coherence-warnings.tsv, raw-renames.tsv,
                         chats/, templates/, migration/, migrations/applied.tsv, ops/sync.toml, thesis.md,
                         docs/ (the routed agent docs)
@@ -29,6 +34,42 @@ meta/                   VAULT METADATA ONLY: corpus.tsv, log.md, aliases.tsv, co
 `pixi run api-schema` regenerates `frontend/src/api/schema.d.ts` from the API's OpenAPI (`api-schema-check` fails if stale).
 Run a module with `python -m kb.<package>.<module>` (pixi tasks do); `kb` is installed editable, so `pixi install`
 again after pulling this layout. Never `sys.path.insert`; take paths from `kb.paths`.
+
+## kbd and knowledge bases
+
+`kbd <command> [args…]` (pixi installs it; `pixi run kbd --help`) runs the module or script the matching
+`pixi run <task>` runs, with the rest of the command line passed through, so `--kb` goes after the command.
+It imports nothing from `kb`, so `--help` works with no knowledge base selected.
+
+| Command | Same as | What |
+|---|---|---|
+| `kbd kb-list` / `kb-show` | `pixi run kb-list` / `kb-show` | every kb and where it is / the selected one, resolved |
+| `kbd lint` / `health` | `pixi run lint` / `health` | the schema is the linter |
+| `kbd app` | `pixi run app` | API + React shell (default port 8765) |
+| `kbd launch` | `pixi run launch` | restart the app detached and open it |
+| `kbd ship …` / `kbd ops …` | `pixi run ship` / `ops` | tooling PRs / knowledge operations |
+| `kbd install-kb-hooks` | `pixi run install-kb-hooks` | git + Claude Code hooks into a kb |
+
+**One discovery path.** A knowledge base is a folder with a `kb.toml`: `kbs/<id>/` in the main checkout (the folder
+name is the id; a linked worktree uses the main checkout's `kbs/`), or any folder given as `--kb <path>`. A `--kb` /
+`$KB` value containing `/` or starting with `.` or `~` is a path, anything else an id. Selection: `--kb`, then `$KB`,
+then the only kb there is. `$KB_ROOT` is internal (tools set it to hand a resolved folder to the processes they
+start, e.g. the share build, qmd, the hooks); users never do. `$KB_BASES_DIR` replaces `kbs/` for tests only.
+`kbs/demo` is the one kb tracked by this repo (a made-up job search, public); every other `kbs/<id>` is its own git
+repo and never enters this one. Hooks in a kb repo find the engine at `../..`; `KBD_DIR` overrides.
+
+**Tags.** `pixi run ship -- tag <name> [--at REV] [--kb ID|PATH | --repo DIR]` puts an annotated tag on main of the
+engine, a kb or any repo (local, never pushed; refuses `kb-*`, which are `ops snapshot`'s). `ship merge --local --pr N
+--title "…" --no-push` merges without GitHub when there is no remote.
+
+## Billing
+
+Every LLM call goes through `kb.llm` (`pixi run llm -- ask|submit|status|collect`); a test fails on a new `claude -p`,
+SDK or HTTP call elsewhere. One flag picks the backend per run: `--backend subscription|api|batch` or `$KB_LLM_BACKEND`.
+**Default: `subscription`** (`claude -p`, the API-key variables scrubbed, so it runs on the login, not on credits).
+`api` is the Messages API on `ANTHROPIC_API_KEY` (or `~/.config/thesis-kb/anthropic_key`); `batch` is the Message
+Batches API (half price, asynchronous: `submit` then `collect`, a manifest under `.cache/llm/batches/`). All three stay
+selectable on every run; a feature that calls an LLM says in its plan which backend it defaults to.
 
 ## Environment and tasks
 
