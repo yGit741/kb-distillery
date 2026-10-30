@@ -303,7 +303,8 @@ def test_batch_end_to_end_out_of_order(monkeypatch):
     assert sleeps == [7, 7]
     sent = api.calls[0]["body"]["requests"]
     assert [s["custom_id"] for s in sent] == list("abcde")
-    assert sent[2]["params"]["model"] == "claude-sonnet-5-5" and sent[0]["params"]["max_tokens"] == 1024
+    assert sent[2]["params"]["model"] == "claude-sonnet-5-5"
+    assert sent[0]["params"]["max_tokens"] == llm.Request("x").max_tokens == 8192
 
 
 def test_batch_submit_then_collect_elsewhere(monkeypatch, tmp_path):
@@ -364,6 +365,84 @@ def test_env_switches_every_caller(monkeypatch):
     assert llm.ask("q").backend == "api"
 
 
+# --- images ----------------------------------------------------------------------------------------------
+JPEG = b"\xff\xd8\xff\xe0fake-jpeg-bytes"
+
+
+def test_api_image_blocks_before_text(monkeypatch, tmp_path):
+    import base64
+    img = tmp_path / "f-00012.jpg"
+    img.write_bytes(JPEG)
+    png = tmp_path / "b.PNG"
+    png.write_bytes(b"\x89PNG")
+    api = FakeAPI({("POST", "/v1/messages"): [message("$$x$$")]})
+    monkeypatch.setattr(llm, "_http", api)
+    r = llm.ask("transcribe", backend="api", images=[str(img), str(png)])
+    assert r.ok
+    content = api.calls[0]["body"]["messages"][0]["content"]
+    assert [b["type"] for b in content] == ["image", "image", "text"] and content[2]["text"] == "transcribe"
+    assert content[0]["source"] == {"type": "base64", "media_type": "image/jpeg",
+                                    "data": base64.b64encode(JPEG).decode()}
+    assert content[1]["source"]["media_type"] == "image/png"
+
+
+def test_subscription_image_uses_read_only_from_image_dir(monkeypatch, tmp_path):
+    img = tmp_path / "frames" / "f.jpg"
+    img.parent.mkdir()
+    img.write_bytes(JPEG)
+    seen = {}
+    monkeypatch.setattr(llm, "_cli", lambda cmd, cwd, env, timeout: (seen.update(cmd=cmd, cwd=cwd), cli_ok("ok"))[1])
+    assert llm.ask("transcribe", images=[str(img)]).ok
+    cmd = seen["cmd"]
+    assert cmd[cmd.index("--tools") + 1] == "Read" and cmd[cmd.index("--allowedTools") + 1] == "Read"
+    assert seen["cwd"] == str(img.parent)
+    assert cmd[2].startswith(f"Read the image file {img} first.") and cmd[2].endswith("transcribe")
+
+
+def test_text_only_subscription_keeps_no_tools(monkeypatch):
+    seen = {}
+    monkeypatch.setattr(llm, "_cli", lambda cmd, cwd, env, timeout: (seen.update(cmd=cmd), cli_ok())[1])
+    llm.ask("q")
+    assert "--allowedTools" not in seen["cmd"] and seen["cmd"][seen["cmd"].index("--tools") + 1] == ""
+
+
+@pytest.mark.parametrize("name,write,err", [("x.bmp", True, "images must be"), ("gone.jpg", False, "no such image")])
+def test_bad_images_rejected_before_any_call(tmp_path, name, write, err):
+    p = tmp_path / name
+    if write:
+        p.write_bytes(b"x")
+    with pytest.raises(llm.LLMError, match=err):
+        llm.run([llm.Request("q", images=[str(p)])], backend="batch")
+
+
+def test_batch_carries_images(monkeypatch, tmp_path):
+    img = tmp_path / "f.jpg"
+    img.write_bytes(JPEG)
+    api = FakeAPI({("POST", "/v1/messages/batches"): [{"id": "im"}]})
+    monkeypatch.setattr(llm, "_http", api)
+    llm.submit([llm.Request("q", images=[str(img)])])
+    content = api.calls[0]["body"]["requests"][0]["params"]["messages"][0]["content"]
+    assert content[0]["type"] == "image" and content[-1] == {"type": "text", "text": "q"}
+
+
+def test_fable_priced():
+    assert llm.model_id("fable") == "claude-fable-5-1"
+    assert llm.cost("fable", {"input_tokens": 1_000_000, "output_tokens": 100_000}) == pytest.approx(15.0)
+
+
+@pytest.mark.parametrize("text,want", [
+    ('{"a": 1}', {"a": 1}),
+    ('Sure!\n```json\n{"a": {"b": [1, 2]}}\n```\nDone.', {"a": {"b": [1, 2]}}),
+    ("no json here", None),
+    ("{broken", None),
+    ("[1, 2]", None),
+    ("", None),
+    (None, None),
+])
+def test_json_object(text, want):
+    assert llm.json_object(text) == want
+
+
 def test_tls_needs_no_knowledge_base():
     """Regression: TLS came from kb.services.chat, which loads the vault on import; with an unknown KB the
     fallback was Python's bare CA bundle and every call behind the proxy failed CERTIFICATE_VERIFY_FAILED."""
@@ -396,11 +475,9 @@ def test_cli_submit_jsonl(monkeypatch, tmp_path, capsys):
 
 
 # --- the rule: one door ----------------------------------------------------------------------------------
-# Callers that predate kb.llm, to be moved onto it (easy-digest, summaries, extract, video frames). The list may
-# only shrink: a new direct `claude -p` or api.anthropic.com call anywhere else fails this test.
+# Callers that predate kb.llm and still call Claude directly (summaries, easy-digest, extract and video frames
+# have moved). The list may only shrink: a new direct `claude -p` or api.anthropic.com call anywhere else fails.
 LEGACY = {
-    "summaries/pipeline.py",
-    "ingest/youtube/readers.py",
     "metrics/judge.py",
     "metrics/golden.py",
     "services/chat.py",           # dashboard chat (interactive, streaming)

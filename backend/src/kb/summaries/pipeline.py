@@ -1,26 +1,24 @@
-"""Plan, propose (claude -p), validate, show and apply page summaries. See kb.summaries."""
+"""Plan, propose (kb.llm), validate, show and apply page summaries. See kb.summaries."""
 import concurrent.futures as cf
 import json
 import os
 import random
 import re
-import subprocess
-import tempfile
 import time
 
-from kb import paths
+from kb import llm, paths
 from kb.core import schema
 from kb.core.summary import body_of, needs_summary, problems, section, summary_hash, unquote
 from kb.lint.lint import parse_frontmatter
 
 MODEL = "sonnet"
-PER_CALL = 10                 # pages per claude -p call
-WORKERS = 4                   # calls in flight
+PER_CALL = 10                 # pages per model call
+WORKERS = 4                   # calls in flight (subscription / api; a batch is one submission)
+MAX_TOKENS = 16000            # ten summaries plus thinking
 INPUT_CAP = 6000              # characters of page body sent per page
 DROP_SECTIONS = ("My notes", "Links out")
 OUT_DIR = os.path.join(paths.CACHE_PATH, "summaries")
 PROPOSALS = os.path.join(OUT_DIR, "proposals.jsonl")
-_SCRUBBED = ("ANTHROPIC_BASE_URL", "ANTHROPIC_AUTH_TOKEN", "ANTHROPIC_API_KEY")
 _HEBREW = re.compile(r"[֐-׿]")
 
 PROMPT = """You write the `summary` line for pages of a personal research wiki (theoretical ML,
@@ -109,52 +107,14 @@ def page_input(page):
 
 
 # --- the model call ------------------------------------------------------------------------------------
-def _env():
-    return {k: v for k, v in os.environ.items() if k not in _SCRUBBED and not k.startswith(("PIXI_", "CONDA_"))}
+def ask(prompt, model=MODEL, effort="low", backend=None):
+    """One prompt through kb.llm → (result text, usd, error). `backend`: subscription / api / batch
+    (None: $KB_LLM_BACKEND, then kb.llm's default). kb.llm retries failed launches and transient API errors."""
+    r = llm.ask(prompt, backend=backend, model=model, effort=effort, max_tokens=MAX_TOKENS)
+    return r.text, r.usd, r.error or None
 
 
-def ask(prompt, model=MODEL, effort="low", timeout=600, retries=2):
-    """One `claude -p` call from an empty dir with no tools → (result text, usd, error).
-
-    A failed launch (the CLI mid-update, a timeout, an API error) is retried after a short pause."""
-    for attempt in range(retries + 1):
-        text, usd, err = _ask_once(prompt, model, effort, timeout)
-        if not err:
-            return text, usd, None
-        if attempt < retries:
-            time.sleep(5 * (attempt + 1))
-    return text, usd, err
-
-
-def _ask_once(prompt, model, effort, timeout):
-    with tempfile.TemporaryDirectory(prefix="kb-summ-") as cwd:
-        cmd = ["claude", "-p", prompt, "--output-format", "json", "--model", model, "--effort", effort,
-               "--tools", "", "--strict-mcp-config", "--no-session-persistence"]
-        try:
-            cp = subprocess.run(cmd, cwd=cwd, env=_env(), stdin=subprocess.DEVNULL, capture_output=True,
-                                text=True, timeout=timeout)
-            out = json.loads(cp.stdout) if cp.stdout.strip() else None
-        except (OSError, subprocess.TimeoutExpired, ValueError) as e:
-            return "", 0.0, str(e)[:200]
-    if not isinstance(out, dict):
-        return "", 0.0, f"claude exited {cp.returncode}: {(cp.stderr or cp.stdout or '')[:200]}"
-    usd = out.get("total_cost_usd") or 0.0
-    if out.get("is_error") or cp.returncode != 0:
-        return "", usd, f"claude exited {cp.returncode}: {str(out.get('result'))[:200]}"
-    if not out.get("result"):
-        return "", usd, "empty result"
-    return out["result"], usd, None
-
-
-def parse_json_obj(text):
-    m = re.search(r"\{.*\}", text or "", re.S)
-    if not m:
-        return None
-    try:
-        v = json.loads(m.group(0))
-    except ValueError:
-        return None
-    return v if isinstance(v, dict) else None
+parse_json_obj = llm.json_object
 
 
 def clean(s):
@@ -164,10 +124,18 @@ def clean(s):
     return " ".join(s.split()).replace('"', "'")
 
 
-def propose_chunk(chunk, model=MODEL):
+def chunk_prompt(chunk):
+    return PROMPT.format(pages="\n\n".join(page_input(p) for p in chunk))
+
+
+def propose_chunk(chunk, model=MODEL, backend=None):
     """Pages → [{slug, summary?, problems, usd, error?}] for one call."""
-    prompt = PROMPT.format(pages="\n\n".join(page_input(p) for p in chunk))
-    text, usd, err = ask(prompt, model)
+    text, usd, err = ask(chunk_prompt(chunk), model, backend=backend)
+    return chunk_rows(chunk, text, usd, err, model)
+
+
+def chunk_rows(chunk, text, usd, err, model):
+    """One reply → a row per page of its chunk."""
     got = parse_json_obj(text) or {}
     share = round(usd / max(len(chunk), 1), 5)
     rows = []
@@ -179,17 +147,34 @@ def propose_chunk(chunk, model=MODEL):
     return rows
 
 
-def _safe_chunk(chunk, model):
+def _failed(chunk, model, e):
+    return [{"slug": p["slug"], "summary": "", "problems": ["call failed"], "error": f"{type(e).__name__}: {e}"[:200],
+             "summary_from": summary_hash(p["text"]), "model": model, "usd": 0.0} for p in chunk]
+
+
+def _safe_chunk(chunk, model, backend=None):
     try:
-        return propose_chunk(chunk, model)
+        return propose_chunk(chunk, model, backend=backend)
     except Exception as e:                                # one bad call never loses the batch
-        return [{"slug": p["slug"], "summary": "", "problems": ["call failed"], "error": f"{type(e).__name__}: {e}"[:200],
-                 "summary_from": summary_hash(p["text"]), "model": model, "usd": 0.0} for p in chunk]
+        return _failed(chunk, model, e)
 
 
-def propose(pages, model=MODEL, per_call=PER_CALL, workers=WORKERS, log=print, on_rows=None):
+def _batch_chunks(chunks, model):
+    """Every chunk as one request of a single Message Batch (half price; waits until the batch ends)."""
+    try:
+        res = llm.run([llm.Request(chunk_prompt(c), id=f"c{i}", model=model, max_tokens=MAX_TOKENS)
+                       for i, c in enumerate(chunks)], backend="batch")
+    except Exception as e:                                # the submit failed: nothing was paid for
+        return [_failed(c, model, e) for c in chunks]
+    return [chunk_rows(c, r.text, r.usd, r.error or None, model) for c, r in zip(chunks, res)]
+
+
+def propose(pages, model=MODEL, per_call=PER_CALL, workers=WORKERS, log=print, on_rows=None, backend=None):
     """All pages, `per_call` per call, `workers` calls in flight; failed pages get one solo retry.
-    `on_rows(rows)` runs as each call finishes (the CLI saves there, so Ctrl-C keeps what was paid for)."""
+    `on_rows(rows)` runs as each call finishes (the CLI saves there, so Ctrl-C keeps what was paid for).
+    `backend="batch"` sends all chunks as one batch, and the retries as a second one."""
+    batch = llm.resolve_backend(backend) == "batch"
+
     def done(rs):
         stamp = time.strftime("%Y-%m-%dT%H:%M:%S")
         for r in rs:
@@ -198,20 +183,25 @@ def propose(pages, model=MODEL, per_call=PER_CALL, workers=WORKERS, log=print, o
             on_rows(rs)
         return rs
 
+    def calls(chunks):
+        if batch:
+            yield from map(done, _batch_chunks(chunks, model))
+            return
+        with cf.ThreadPoolExecutor(workers) as ex:
+            yield from ex.map(lambda c: done(_safe_chunk(c, model, backend)), chunks)
+
     chunks = [pages[i:i + per_call] for i in range(0, len(pages), per_call)]
     rows = []
-    with cf.ThreadPoolExecutor(workers) as ex:
-        for i, got in enumerate(ex.map(lambda c: done(_safe_chunk(c, model)), chunks), 1):
-            rows += got
-            errs = {r["error"] for r in got if r.get("error")}
-            log(f"  call {i}/{len(chunks)}: {sum(not r['problems'] for r in got)}/{len(got)} ok"
-                + (f" ({'; '.join(errs)})" if errs else ""))
+    for i, got in enumerate(calls(chunks), 1):
+        rows += got
+        errs = {r["error"] for r in got if r.get("error")}
+        log(f"  call {i}/{len(chunks)}: {sum(not r['problems'] for r in got)}/{len(got)} ok"
+            + (f" ({'; '.join(errs)})" if errs else ""))
     bad = {r["slug"] for r in rows if r["problems"]}
     if bad:
         retry = [p for p in pages if p["slug"] in bad]
         log(f"  retrying {len(retry)} page(s) one by one")
-        with cf.ThreadPoolExecutor(workers) as ex:
-            again = {r["slug"]: r for rs in ex.map(lambda p: done(_safe_chunk([p], model)), retry) for r in rs}
+        again = {r["slug"]: r for rs in calls([[p] for p in retry]) for r in rs}
         rows = [again.get(r["slug"], r) if r["problems"] else r for r in rows]
     return rows
 

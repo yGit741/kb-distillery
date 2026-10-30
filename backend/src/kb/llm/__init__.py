@@ -26,13 +26,17 @@ BACKENDS = ("subscription", "api", "batch")
 DEFAULT_BACKEND = "subscription"
 ENV_BACKEND = "KB_LLM_BACKEND"
 
-MODELS = {"haiku": "claude-haiku-5-5", "sonnet": "claude-sonnet-5-5", "opus": "claude-opus-5-5"}
+MODELS = {"haiku": "claude-haiku-5-5", "sonnet": "claude-sonnet-5-5", "opus": "claude-opus-5-5",
+          "fable": "claude-fable-5-1"}
 # USD per million tokens, Anthropic first-party list prices (checked 2026-10-30, same table as kb.services.chat).
 PRICES = {
     "claude-haiku-5-5": {"in": 0.10, "out": 0.50, "cache_read": 0.01},
     "claude-sonnet-5-5": {"in": 2.00, "out": 10.00, "cache_read": 0.20},
     "claude-opus-5-5": {"in": 4.00, "out": 20.00, "cache_read": 0.20},
+    "claude-fable-5-1": {"in": 10.00, "out": 50.00, "cache_read": 0.25},
 }
+IMAGE_TYPES = {".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png", ".gif": "image/gif",
+               ".webp": "image/webp"}
 CACHE_WRITE_5M = 1.25
 BATCH_DISCOUNT = 0.5
 
@@ -54,9 +58,10 @@ class Request:
     prompt: str
     id: str = ""                  # custom_id; "r<index>" when empty
     system: str = ""
-    model: str = "haiku"          # alias (haiku / sonnet / opus) or a full model id
-    max_tokens: int = 1024
+    model: str = "haiku"          # alias (haiku / sonnet / opus / fable) or a full model id
+    max_tokens: int = 8192        # a ceiling, not a cost: thinking counts against it, billing is per token used
     effort: str = "low"
+    images: tuple = ()            # image file paths shown before the prompt
 
 
 @dataclasses.dataclass
@@ -100,6 +105,18 @@ def cost(model, usage, batch=False):
     return usd * BATCH_DISCOUNT if batch else usd
 
 
+def json_object(text):
+    """The first {...} span of a reply as a dict (models wrap JSON in prose or fences); None when absent or invalid."""
+    m = re.search(r"\{.*\}", text or "", re.S)
+    if not m:
+        return None
+    try:
+        v = json.loads(m.group(0))
+    except ValueError:
+        return None
+    return v if isinstance(v, dict) else None
+
+
 def normalize(requests):
     """Coerce strings to Requests, fill ids, check ids and models up front so a bad batch never leaves the machine."""
     out, seen = [], set()
@@ -112,6 +129,12 @@ def normalize(requests):
             raise LLMError(f"duplicate request id {r.id!r}")
         seen.add(r.id)
         model_id(r.model)
+        r.images = tuple(r.images)
+        for p in r.images:
+            if os.path.splitext(p)[1].lower() not in IMAGE_TYPES:
+                raise LLMError(f"{p}: images must be one of {', '.join(sorted(IMAGE_TYPES))}")
+            if not os.path.isfile(p):
+                raise LLMError(f"{p}: no such image")
         out.append(r)
     return out
 
@@ -147,12 +170,20 @@ def _cli(cmd, cwd, env, timeout):
 
 
 def _ask_cli(r, timeout=600, retries=2):
+    """No tools and an empty dir; with images, only Read, run from the first image's folder (the CLI takes no
+    image argument, so the model opens the files itself)."""
     res = Result(id=r.id, backend="subscription", model=model_id(r.model))
     prompt = f"{r.system}\n\n{r.prompt}" if r.system else r.prompt
+    tools = ["--tools", ""]
+    if r.images:
+        paths = [os.path.abspath(p) for p in r.images]
+        prompt = f"Read the image file{'s' if len(paths) > 1 else ''} {', '.join(paths)} first.\n\n{prompt}"
+        tools = ["--tools", "Read", "--allowedTools", "Read"]
     for attempt in range(retries + 1):
-        with tempfile.TemporaryDirectory(prefix="kb-llm-") as cwd:
+        with tempfile.TemporaryDirectory(prefix="kb-llm-") as tmp:
+            cwd = os.path.dirname(os.path.abspath(r.images[0])) if r.images else tmp
             cmd = ["claude", "-p", prompt, "--output-format", "json", "--model", res.model, "--effort", r.effort,
-                   "--tools", "", "--strict-mcp-config", "--no-session-persistence"]
+                   *tools, "--strict-mcp-config", "--no-session-persistence"]
             try:
                 cp = _cli(cmd, cwd, _env(), timeout)
                 out = json.loads(cp.stdout) if cp.stdout.strip() else None
@@ -199,7 +230,7 @@ class HTTPFail(Exception):
         self.status = status
 
 
-def _http(method, url, key, body=None, timeout=300):
+def _http(method, url, key, body=None, timeout=600):
     """→ response bytes; raises HTTPFail (status 0 when the API was unreachable)."""
     data = json.dumps(body).encode("utf-8") if body is not None else None
     req = urllib.request.Request(url, data=data, method=method, headers={
@@ -231,9 +262,18 @@ def _call(method, path, body=None, retries=3):
             _sleep(2 ** attempt * 2)
 
 
+def _image_block(path):
+    import base64
+    with open(path, "rb") as f:
+        data = base64.b64encode(f.read()).decode("ascii")
+    return {"type": "image", "source": {"type": "base64", "media_type": IMAGE_TYPES[os.path.splitext(path)[1].lower()],
+                                        "data": data}}
+
+
 def params(r):
+    content = ([*map(_image_block, r.images), {"type": "text", "text": r.prompt}] if r.images else r.prompt)
     p = {"model": model_id(r.model), "max_tokens": r.max_tokens,
-         "messages": [{"role": "user", "content": r.prompt}],
+         "messages": [{"role": "user", "content": content}],
          "output_config": {"effort": r.effort}}
     if r.system:
         p["system"] = r.system

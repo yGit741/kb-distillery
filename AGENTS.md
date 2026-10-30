@@ -30,6 +30,7 @@ This file is the core every turn needs. Details live in `meta-defaults/docs/` �
 10. **Dedup:** always `resolve` before `scrap`. If FOUND → cite `[[slug]]`; don't re-download.
 11. Read the skill's `SKILL.md` (and `skills/README.md`, § Adding a skill, before any workflow) before running it.
 12. A feature that can't land in one PR ships dark behind a flag (`meta-defaults/flags.toml`) and merges in small PRs; release = flipping the flag (System → Flags), not deploying (`meta-defaults/docs/dev.md` § Feature flags).
+13. **Every LLM call goes through `kb.llm`** (`backend/src/kb/llm`): one `--backend subscription|api|batch` choice (`$KB_LLM_BACKEND`, default subscription), never a new `claude -p`, SDK or HTTP call — `backend/tests/llm/test_llm.py` fails on one. A plan for an LLM feature has a short **Billing** section: which backend by default, all three kept selectable. CLI: `pixi run llm -- ask|submit|status|collect`.
 
 ## Intent router — casual requests → skills
 

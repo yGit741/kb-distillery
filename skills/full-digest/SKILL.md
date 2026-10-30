@@ -28,6 +28,7 @@ Replaces legacy `thesis-ingest`.
 python3 -m kb.ingest full-digest <raw>   # opens session, prints next steps
 python3 -m kb.ingest begin <raw>         # same session API
 python3 -m kb.ingest extract <sha>       # fill claims.json — see backend/src/kb/ingest/extract_prompt.md
+python3 -m kb.ingest extract <sha> --fill [--backend subscription|api|batch] [--model sonnet]   # kb.llm fills it
 python3 -m kb.ingest map <sha>
 python3 -m kb.ingest draft <sha>
 python3 -m kb.ingest finalize <sha>      # lint --ingest-strict for depth full
@@ -39,7 +40,10 @@ python3 -m kb.ingest abort <sha>
 1. Run `extract` — read `meta/.ingest/<sha>/extracted.text` (first 25 pages). If
    the raw entity has a `parsed.md` sidecar (e.g. `raw/emails/<YYYY-MM-DD-thread>/parsed.md`),
    `extracted.text` is that sidecar's content instead of raw PDF/thread text.
-2. Write `claims.json` with real LaTeX equations, results, ideas.
+2. Write `claims.json` with real LaTeX equations, results, ideas — or run `extract <sha> --fill`: `kb.llm`
+   fills the template from `extracted.text` with the same `extract_prompt.md` (Sonnet; `--backend`, default
+   `$KB_LLM_BACKEND` then subscription). A reply that fails `validate_claims` goes to `claims.draft.json` and
+   claims.json stays the template; a filled claims.json is never replaced. Review the filled claims before `map`.
 3. Set `person` when the raw file's corpus `collection` names a person page (researcher bibliography).
 4. Re-run `extract` to validate.
 5. `map` → `draft` → review `staging/` → `finalize`. Each new `q-` stub in `staging/` needs a short H1 (≤ 80 chars, the question's name) and its formal statement under `## Question` — fill it before `finalize`.
