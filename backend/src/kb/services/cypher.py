@@ -49,8 +49,9 @@ def edge_config(cfg=None):
     section = cfg.section("edges") if cfg else {}
     given = section.get("labels")
     labels = dict(DEFAULT_LABELS)
-    labels.update({str(k): edge_label(v) for k, v in given.items()} if isinstance(given, dict) else {})
-    symmetric = set(DEFAULT_SYMMETRIC) | {edge_label(s) for s in _names(section.get("symmetric"))}
+    labels.update({str(k): str(v).upper() for k, v in given.items()} if isinstance(given, dict) else {})
+    # a symmetric name counts in both spellings: as written upper-cased (a link label) and as a relation kind
+    symmetric = set(DEFAULT_SYMMETRIC) | {f(s) for s in _names(section.get("symmetric")) for f in (str.upper, edge_label)}
     types = sorted({kind_name(t) for t in _names(section.get("types"))})
     note_required = {kind_name(t) for t in _names(section.get("note_required"))} & set(types)
     return {"labels": labels, "symmetric": symmetric, "types": types, "note_required": note_required}
@@ -107,7 +108,7 @@ def to_graph(snapshot, config=None):
                    __labels__=labels or {"Page"})
     for l in snapshot.get("links", []):
         if l["source"] in g and l["target"] in g:
-            kind = config["labels"].get(l.get("kind", "wikilink")) or edge_label(l.get("kind", ""))
+            kind = config["labels"].get(l.get("kind", "wikilink"), _label(l.get("kind", "")).upper())
             add_edge(g, l["source"], l["target"], kind, via=l.get("kind", ""), origin="computed")
             if kind in config["symmetric"]:
                 add_edge(g, l["target"], l["source"], kind, via=l.get("kind", ""), origin="computed")
@@ -115,7 +116,8 @@ def to_graph(snapshot, config=None):
         for a, b in ((c["source"], c["target"]), (c["target"], c["source"])):
             if a in g and b in g:
                 add_edge(g, a, b, "SHARES_SOURCE", weight=c.get("shared", 0), origin="computed")
-    for r in snapshot.get("relations") or []:      # typed relations (flag graph-relations); mentions came as links
+    for r in snapshot.get("relations") or []:      # typed relations (flag graph-relations); their mentions and
+                                                   # shares-source repeat the edges above and add_edge drops them
         if r["source"] in g and r["target"] in g:
             kind = relation_label(r["kind"], config)
             attrs = {"origin": r.get("origin", ""), "note": r.get("note", ""), "weight": r.get("weight", 1.0)}
@@ -298,9 +300,14 @@ NAMED = {
 
 def available(config=None):
     """Named queries this knowledge base can answer: those whose edge labels it produces (see NEEDS), i.e. a link
-    kind it maps in `[edges] labels` or a relation kind it declares in `[edges] types`."""
+    kind it maps in `[edges] labels`, or (while the graph-relations flag is on) a relation kind it declares in
+    `[edges] types`."""
+    from kb.services.graph import relations_on
+
     config = config or edge_config()
-    produced = set(config["labels"].values()) | {relation_label(t, config) for t in config.get("types", ())}
+    produced = set(config["labels"].values())
+    if relations_on():
+        produced |= {relation_label(t, config) for t in config.get("types", ())}
     return [name for name in NAMED if NEEDS.get(name, frozenset()) <= produced]
 
 

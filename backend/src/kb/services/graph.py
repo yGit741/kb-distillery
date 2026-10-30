@@ -275,6 +275,7 @@ def build_graph_snapshot(layer=None, view=None):
     }
     if relations_on():      # typed relations, a separate list: `links` (what the canvas draws) stays as it was
         snap["relations"] = _relations(pages, nodes, links, snap["concept_links"], root, view)
+        snap["etag"] = _relations_etag(snap["etag"], root)
     if layer == "raw":      # private data layer; the share build never passes a layer
         from kb.services import raw_layer
         snap.update(raw_layer.build_raw_layer(pages))
@@ -289,6 +290,19 @@ RELATIONS_FLAG = "graph-relations"
 def relations_on():
     from kb.services.pages import _flag_on
     return _flag_on(RELATIONS_FLAG)
+
+
+def _relations_etag(etag, root):
+    """The page etag plus what relations read besides pages (kb.toml [edges], aliases, card vectors), so a
+    snapshot with relations never shares an etag with one without, nor with one built from older inputs."""
+    parts = [etag, "relations"]
+    for rel in ("kb.toml", os.path.join("meta", "aliases.tsv"), os.path.join(".cache", "vectors.sqlite")):
+        try:
+            st = os.stat(os.path.join(root, rel))
+            parts.append(f"{rel}:{st.st_mtime_ns}:{st.st_size}")
+        except OSError:
+            parts.append(f"{rel}:-")
+    return hashlib.sha1("|".join(parts).encode()).hexdigest()[:16]
 
 
 def _relations(pages, nodes, links, concept, root, view=None):

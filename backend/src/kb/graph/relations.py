@@ -27,8 +27,6 @@ import os
 import re
 import unicodedata
 
-import yaml
-
 STORED, COMPUTED = "stored", "computed"
 MENTIONS, SHARES_SOURCE, NAME_MATCH = "mentions", "shares-source", "name-match"
 ADVISOR_OF, STUDENT_OF, COLLABORATES_WITH, SIMILAR_TO = "advisor-of", "student-of", "collaborates-with", "similar-to"
@@ -36,7 +34,6 @@ COMPUTED_KINDS = (MENTIONS, SHARES_SOURCE, ADVISOR_OF, STUDENT_OF, NAME_MATCH, C
 SIMILAR_K = 3            # each page's closest pages …
 SIMILAR_MIN = 0.75       # … at or above this cosine (thesis cards: ~200 pairs)
 
-_KEY = re.compile(r"^([A-Za-z_][\w-]*)\s*:")
 _LINK = re.compile(r"^\[\[([^\]|#]+)(?:[|#][^\]]*)?\]\]$")
 
 
@@ -70,8 +67,8 @@ def relations_block(text):
             if re.match(r"^relations\s*:", line):
                 out = [line]
             continue
-        if line.strip() and not line.startswith((" ", "\t", "-")) and _KEY.match(line):
-            break
+        if line.strip() and not line.startswith((" ", "\t", "-")):
+            break                                         # the next top-level key ends the block
         out.append(line)
     return "\n".join(out) if out else None
 
@@ -87,6 +84,8 @@ def parse_relations(text):
     block = relations_block(text)
     if not block:
         return []
+    import yaml          # only pages with a block need it; kb.services.cypher imports this module
+
     try:
         data = yaml.safe_load(block)
     except yaml.YAMLError:
@@ -262,21 +261,34 @@ def similar_edges(pages, root, k=SIMILAR_K, min_cos=SIMILAR_MIN):
     v = _vectors(root)
     if v is None or len(v) < 2:
         return []
+    store = os.path.join(root, ".cache", "vectors.sqlite")
+    key = (store, _VEC_CACHE.get(store, (0,))[0], frozenset(pages), k, min_cos)
+    if _SIM_CACHE.get("key") == key:
+        return [dict(e) for e in _SIM_CACHE["edges"]]
     keep = [i for i, s in enumerate(v.slugs) if s in pages and np.all(np.isfinite(v.m[i]))]
-    if len(keep) < 2:
-        return []
-    m = v.m[keep].astype(np.float64)
-    slugs = [v.slugs[i] for i in keep]
-    with np.errstate(all="ignore"):
-        sims = np.nan_to_num(m @ m.T, nan=-1.0, posinf=-1.0, neginf=-1.0)
-    np.fill_diagonal(sims, -1.0)
-    best = {}
-    for i in range(len(slugs)):
-        for j in np.argsort(-sims[i])[:k]:
-            c = float(sims[i, j])
-            if c >= min_cos:
-                best[_pair(slugs[i], slugs[int(j)])] = round(c, 3)
-    return [_edge(a, b, SIMILAR_TO, COMPUTED, f"cosine {c:.2f}", c) for (a, b), c in sorted(best.items())]
+    edges = []
+    if len(keep) >= 2:
+        m = v.m[keep].astype(np.float32)
+        slugs = [v.slugs[i] for i in keep]
+        best = {}
+        for start in range(0, len(slugs), 512):          # row blocks: never the whole n×n matrix at once
+            with np.errstate(all="ignore"):
+                block = np.nan_to_num(m[start:start + 512] @ m.T, nan=-1.0, posinf=-1.0, neginf=-1.0)
+            for r in range(block.shape[0]):
+                block[r, start + r] = -1.0
+            kk = min(k, block.shape[1] - 1)
+            top = np.argpartition(-block, kk, axis=1)[:, :kk] if kk > 0 else np.zeros((block.shape[0], 0), int)
+            for r, row in enumerate(top):
+                for j in row:
+                    c = float(block[r, j])
+                    if c >= min_cos:
+                        best[_pair(slugs[start + r], slugs[int(j)])] = round(c, 3)
+        edges = [_edge(a, b, SIMILAR_TO, COMPUTED, f"cosine {c:.2f}", c) for (a, b), c in sorted(best.items())]
+    _SIM_CACHE.update(key=key, edges=edges)
+    return [dict(e) for e in edges]
+
+
+_SIM_CACHE = {}          # one entry: (store, its mtime, page set, k, min) → edges
 
 
 def build(pages, nodes, links, concept_links, config, root=None):
