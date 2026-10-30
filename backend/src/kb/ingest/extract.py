@@ -99,6 +99,24 @@ def fill_prompt(template, text):
                               text=text.replace("</source", "‹/source"))
 
 
+def claims_from_result(r, template):
+    """A kb.llm Result → (claims, None) when its reply is a valid claims.json, else (draft, reason).
+    `draft` is what a human can fix: the parsed object, or {"reply": text} when it held no JSON.
+    Shared by `--fill` (one call) and `digest-many` (one batch)."""
+    from kb import llm
+    got = llm.json_object(r.text)
+    claims = {**(got or {}), **{k: template[k] for k in LOCKED if k in template}}
+    try:
+        if got is None:
+            raise ValueError("the reply holds no JSON object")
+        if r.error:
+            raise ValueError(r.error)                    # e.g. cut at max_tokens: the JSON may be partial
+        validate_claims(claims)
+    except ValueError as e:
+        return (claims if got is not None else {"reply": r.text}), str(e)
+    return claims, None
+
+
 def fill_claims(template, text, sdir, backend=None, model=FILL_MODEL):
     """kb.llm fills the template from `text` → 0 (claims.json written) or 1 (nothing written; an invalid
     reply lands in claims.draft.json with the reason, so the agent can fix it instead of starting over)."""
@@ -109,20 +127,13 @@ def fill_claims(template, text, sdir, backend=None, model=FILL_MODEL):
     if not r.ok and not r.text:
         print(f"fill failed ({where}): {r.error}", file=sys.stderr)
         return 1
-    got = llm.json_object(r.text)
-    claims = {**(got or {}), **{k: template[k] for k in LOCKED if k in template}}
-    try:
-        if got is None:
-            raise ValueError("the reply holds no JSON object")
-        if r.error:
-            raise ValueError(r.error)                    # e.g. cut at max_tokens: the JSON may be partial
-        validate_claims(claims)
-    except ValueError as e:
+    claims, reason = claims_from_result(r, template)
+    if reason:
         draft = os.path.join(sdir, "claims.draft.json")
         with open(draft, "w", encoding="utf-8") as f:
-            json.dump(claims if got is not None else {"reply": r.text}, f, indent=2, ensure_ascii=False)
+            json.dump(claims, f, indent=2, ensure_ascii=False)
             f.write("\n")
-        print(f"fill rejected ({where}): {e} — draft at {draft}; claims.json left as the template", file=sys.stderr)
+        print(f"fill rejected ({where}): {reason} — draft at {draft}; claims.json left as the template", file=sys.stderr)
         return 1
     with open(os.path.join(sdir, "claims.json"), "w", encoding="utf-8") as f:
         json.dump(claims, f, indent=2, ensure_ascii=False)

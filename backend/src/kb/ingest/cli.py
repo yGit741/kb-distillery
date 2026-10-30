@@ -228,6 +228,8 @@ def main(argv=None):
     fd.add_argument("raw_path")
     _add_scope_flags(fd)
 
+    dm = sub.add_parser("digest-many", help="batch-fill claims for many sources, then full-digest them one by one (LLM)")
+    dm.add_argument("dm_args", nargs=argparse.REMAINDER, help="submit|collect|drive|status … (see digest-many -h)")
     dd = sub.add_parser("deep-digest", help="thesis-critical digest (heavy LLM)")
     dd.add_argument("raw_path")
     dd.add_argument("--confirm-heavy", action="store_true")
@@ -392,6 +394,9 @@ def main(argv=None):
         return cmd_full_digest(args)
     if args.cmd == "deep-digest":
         return cmd_deep_digest(args)
+    if args.cmd == "digest-many":
+        from . import digest_many
+        return digest_many.run(args.dm_args)
     if args.cmd == "toc":
         return cmd_toc(args)
     if args.cmd == "refetch-raw":
