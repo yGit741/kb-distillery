@@ -48,6 +48,23 @@ python3 -m kb.ingest abort <sha>
 4. Re-run `extract` to validate.
 5. `map` → `draft` → review `staging/` → `finalize`. Each new `q-` stub in `staging/` needs a short H1 (≤ 80 chars, the question's name) and its formal statement under `## Question` — fill it before `finalize`.
 
+## Many sources at once (backlog)
+
+`python3 -m kb.ingest digest-many` batches the claim-fill for a whole selection (Message Batches, half price), then
+runs the sessions one at a time from the cached claims — each source ends in its own `kb(digest)` commit. Resumable
+(`.cache/digest-many/<run>/state.json`); never forces a reply that fails `validate_claims` (it lands in `drafts/`).
+
+```bash
+python3 -m kb.ingest digest-many submit --run kalai --hub series-gil-kalai-blog --topics comb,prob --dry-run   # count + $ estimate
+python3 -m kb.ingest digest-many submit --run kalai --hub series-gil-kalai-blog --topics comb,prob --max-usd 10
+python3 -m kb.ingest digest-many collect --run kalai [--wait 3600]   # batches take minutes to hours
+python3 -m kb.ingest digest-many drive --run kalai [--max 10]        # stops after 3 failed sessions in a row
+python3 -m kb.ingest digest-many status --run kalai
+```
+
+Deepening an existing page keeps its frontmatter (`blog`, `date`, `url`, `summary`, …) and its `## My notes`; `area`
+is never guessed for it, and `open_questions` spawn no `q-` stubs in a bulk run.
+
 ## Books (≥60 pages)
 
 A book is digested one **part** at a time — never whole. `toc` prints the book's partition

@@ -55,7 +55,8 @@ def _match_questions(open_questions, known):
     return updates
 
 
-def run_map(sha):
+def run_map(sha, no_questions=False):
+    """`no_questions`: a bulk digest leaves `open_questions` in claims.json but spawns no q- stub from them."""
     session = load_session(sha)
     claims_path = os.path.join(session_dir(sha), "claims.json")
     if not os.path.isfile(claims_path):
@@ -119,7 +120,7 @@ def run_map(sha):
         "link_existing": link_existing,
         "create_concepts": create_concepts,
         "moc_updates": moc_updates,
-        "question_updates": _match_questions(claims.get("open_questions"), known),
+        "question_updates": [] if no_questions else _match_questions(claims.get("open_questions"), known),
         "aliases_resolved": aliases_resolved,
         "areas": areas,
         "link_slugs": link_slugs,

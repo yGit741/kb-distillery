@@ -6,7 +6,8 @@ import sys
 from kb.core.schema import TOPIC_SLUGS
 from kb.lint.lint import QUESTION_TITLE_MAX
 
-from .paths import session_dir, load_session, wiki_slugs, resolve_wikilink_slug
+from .fm_merge import merge_frontmatter
+from .paths import ROOT, session_dir, load_session, wiki_slugs, resolve_wikilink_slug
 from .schemas import validate_claims, validate_plan
 
 
@@ -63,9 +64,14 @@ def run_draft(sha):
 
     slug = plan["wiki_slug"]
     known = wiki_slugs()
+    existing = None                       # deepening a page in place: its frontmatter survives (merge below)
+    existing_path = os.path.join(ROOT, "wiki", f"{slug}.md")
+    if os.path.isfile(existing_path):
+        with open(existing_path, encoding="utf-8") as f:
+            existing = f.read()
     areas = _theme_areas(plan.get("areas") or claims.get("concepts", []))
     if not areas:
-        areas = ["learning-theory"]
+        areas = [] if existing else ["learning-theory"]     # never file an existing page under a guessed topic
     link_slugs = plan.get("link_slugs") or list((plan.get("link_existing") or {}).values())
     area_links = [s for a in areas if (s := resolve_wikilink_slug(a, known))]
     related = list(dict.fromkeys([*link_slugs, *(plan.get("link_existing") or {}).values(), *area_links]))[:8]
@@ -143,6 +149,9 @@ discussed_with: []
 
 - Concepts: {concepts_links}
 {links_person}"""
+
+    if existing:
+        body = merge_frontmatter(existing, body)
 
     staging = os.path.join(sdir, "staging")
     os.makedirs(staging, exist_ok=True)
