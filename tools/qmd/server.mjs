@@ -11,13 +11,14 @@
 //   POST /refresh  (header X-KB-Refresh: 1)   re-index changed cards and embed them (also every 10 min)
 //
 // Binds 127.0.0.1 and answers only requests addressed to it (Host check, no browser Origin), so a web
-// page cannot read the vault through it. Paths come from KB_ROOT (default: the checkout this file is in).
+// page cannot read the vault through it. The knowledge base is $KB_ROOT (tools/qmd/kbroot.mjs): `pixi run qmd-serve
+// [-- --kb <id>]` and `pixi run launch` set it; there is no default.
 import http from "node:http";
 import path from "node:path";
 import fs from "node:fs";
-import { fileURLToPath } from "node:url";
+import { kbRoot } from "./kbroot.mjs";
 
-const ROOT = process.env.KB_ROOT || path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
+const ROOT = kbRoot();
 const CACHE = path.join(ROOT, ".cache");
 const CARDS = path.join(CACHE, "qmd-cards");
 const PORT = Number(process.env.KB_QMD_PORT || 8766);
@@ -30,6 +31,9 @@ process.env.XDG_CACHE_HOME ||= CACHE;
 
 const { createStore } = await import("@tobilu/qmd");
 fs.mkdirSync(CARDS, { recursive: true });
+if (!fs.readdirSync(CARDS).some((f) => f.endsWith(".md"))) {
+  console.warn(`[kb-qmd] no cards in ${CARDS} — search stays empty until \`pixi run qmd-cards\` (or lint) runs for this kb`);
+}
 const store = await createStore({
   dbPath: path.join(CACHE, "qmd", "index.sqlite"),
   config: { collections: { cards: { path: CARDS, pattern: "*.md" } } },

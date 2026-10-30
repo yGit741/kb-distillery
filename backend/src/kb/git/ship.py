@@ -51,7 +51,7 @@ GATES = [
     ("lint-skills", [sys.executable, "-m", "kb.lint.lint_skills"]),
     ("lint", [sys.executable, "-m", "kb.lint.lint"]),
 ]
-SUBCOMMANDS = {"whoami", "claims", "events", "round", "queue", "start", "commit", "pr", "merge", "sync", "status", "prune", "protect", "approve"}
+SUBCOMMANDS = {"whoami", "claims", "events", "round", "queue", "start", "commit", "pr", "merge", "sync", "status", "prune", "protect", "approve", "tag"}
 GENERATED_FILES = {"index.md", "meta/corpus.tsv", "meta/coherence-warnings.tsv"}
 MIGRATED_GENERATED = {"meta/corpus.tsv"}   # a migration's output: committed by schema/paradigm commits
 FEATURE_RE = re.compile(r"^[a-z0-9][a-z0-9-]*$")
@@ -282,9 +282,16 @@ FRONTEND_GATES = [
 ]
 
 
+def _base_ref(root=ROOT):
+    """`origin/main` when there is a remote main, else the local `main` (no remote, offline)."""
+    ok = subprocess.run(["git", "rev-parse", "-q", "--verify", "origin/main"], cwd=root,
+                        capture_output=True, text=True, check=False).returncode == 0
+    return "origin/main" if ok else "main"
+
+
 def frontend_changed(root=ROOT):
     """True when the branch (committed or not) differs from main under frontend/."""
-    base = subprocess.run(["git", "merge-base", "origin/main", "HEAD"], cwd=root,
+    base = subprocess.run(["git", "merge-base", _base_ref(root), "HEAD"], cwd=root,
                           capture_output=True, text=True, check=False).stdout
     base = (base or "").strip()
     diff = subprocess.run(["git", "diff", "--name-only", base or "HEAD", "--", "frontend/"], cwd=root,
@@ -323,8 +330,8 @@ def run_gates(root=ROOT, skip_tests=False):
 
 
 def branch_files(root=ROOT):
-    """Paths the branch touches vs origin/main: committed, uncommitted and untracked."""
-    base = subprocess.run(["git", "merge-base", "origin/main", "HEAD"], cwd=root,
+    """Paths the branch touches vs main (origin/main when there is one): committed, uncommitted and untracked."""
+    base = subprocess.run(["git", "merge-base", _base_ref(root), "HEAD"], cwd=root,
                           capture_output=True, text=True, check=False).stdout.strip()
     diff = subprocess.run(["git", "diff", "--name-only", base or "HEAD"], cwd=root,
                           capture_output=True, text=True, check=False).stdout
@@ -1112,12 +1119,63 @@ def cmd_drop(branch, root=ROOT):
     os.makedirs(quarantine, exist_ok=True)
     patch = os.path.join(quarantine, f"dropped-{branch.replace('/', '-')}.patch")
     with open(patch, "w") as f:
-        f.write(run_git(["format-patch", "--stdout", f"origin/main..{ref}"], cwd=root).stdout)
+        f.write(run_git(["format-patch", "--stdout", f"{_base_ref(root)}..{ref}"], cwd=root).stdout)
     print(f"saved {os.path.relpath(patch, primary_checkout(root))}")
     if run_git(["rev-parse", "-q", "--verify", f"refs/heads/{branch}"], cwd=root).returncode == 0:
         print(_out(run_git(["branch", "-D", branch], cwd=root)))
     if run_git(["rev-parse", "-q", "--verify", f"refs/remotes/origin/{branch}"], cwd=root).returncode == 0:
         print(_out(app_token.run_git_push(["push", "origin", "--delete", branch], cwd=root)) or f"deleted origin/{branch}")
+    return 0
+
+
+TAG_NAME_RE = re.compile(r"^[a-z0-9][a-z0-9._-]*$")
+
+
+def cmd_tag(name, at=None, kb=None, repo=None, message=None, root=ROOT):
+    """Annotated tag on main of the engine (default), of one kb (`--kb`, id or path) or of any repo
+    (`--repo`, e.g. think). Local only, never pushed. `kb-*` tags are the time machine's (`ops snapshot`)."""
+    if not TAG_NAME_RE.match(name):
+        print(f"error: tag name {name!r} must match {TAG_NAME_RE.pattern}")
+        return 1
+    if name.startswith("kb-"):
+        print("error: kb-* tags are knowledge snapshots — use: pixi run ops -- snapshot \"<label>\"")
+        return 1
+    if repo:
+        target = os.path.realpath(os.path.expanduser(repo))
+    elif kb:
+        from kb import kbconfig
+        git_root = kbconfig.load(kb).git_root
+        if not git_root:
+            print(f"error: knowledge base {kb} is not a git repository")
+            return 1
+        target = git_root
+    else:
+        target = primary_checkout(root)
+    top = _rev_parse(target, "--show-toplevel") if os.path.isdir(target) else ""
+    if not top or os.path.realpath(top) != os.path.realpath(target):
+        print(f"error: {target} is not the top of a git repository")
+        return 1
+    if current_branch(target) != "main":
+        print(f"error: {target} is not on main (tags go on main)")
+        return 1
+    if run_git(["status", "--porcelain", "--untracked-files=no"], cwd=target).stdout.strip():
+        print(f"error: {target} has uncommitted changes to tracked files")
+        return 1
+    if run_git(["rev-parse", "-q", "--verify", f"refs/tags/{name}"], cwd=target).returncode == 0:
+        print(f"error: tag {name} already exists in {target}")
+        return 1
+    rev = at or "main"
+    if run_git(["rev-parse", "-q", "--verify", f"{rev}^{{commit}}"], cwd=target).returncode != 0:
+        print(f"error: no commit {rev} in {target}")
+        return 1
+    if run_git(["merge-base", "--is-ancestor", rev, "main"], cwd=target).returncode != 0:
+        print(f"error: {rev} is not reachable from main")
+        return 1
+    cp = run_git(["tag", "-a", name, rev, "-m", message or name], cwd=target)
+    if cp.returncode != 0:
+        print(_out(cp))
+        return 1
+    print(f"tagged {name} → {run_git(['rev-parse', '--short', rev], cwd=target).stdout.strip()} in {target}")
     return 0
 
 
@@ -1231,6 +1289,12 @@ def main(argv=None):
     ev.add_argument("number", type=int)
     sub.add_parser("whoami", help="which identity gh calls use (App bot or user fallback)")
     sub.add_parser("protect", help="GitHub settings: merge commits only, no squash/rebase")
+    tg = sub.add_parser("tag", help="annotated tag on main of the engine, a kb (--kb) or another repo (--repo); never pushed")
+    tg.add_argument("name", help="e.g. pre-distillery (kb-* names belong to `ops snapshot`)")
+    tg.add_argument("--at", metavar="REV", help="commit to tag (default main; must be reachable from main)")
+    tg.add_argument("--kb", metavar="ID|PATH", help="tag this knowledge base's repo (consumed by kbconfig before parsing)")
+    tg.add_argument("--repo", metavar="DIR", help="tag any git repo, e.g. kbs/think (it has no kb.toml)")
+    tg.add_argument("-m", dest="message", help="tag message (default: the name)")
     args = p.parse_args(argv)
 
     if args.cmd == "prune":
@@ -1268,6 +1332,9 @@ def main(argv=None):
         return cmd_pr(args.title, args.skip_tests, notes_file=args.notes, hold=args.hold, skip_checks=args.skip_checks)
     if args.cmd == "approve":
         return cmd_approve(args.number)
+    if args.cmd == "tag":
+        from kb import kbconfig
+        return cmd_tag(args.name, args.at, kbconfig.explicit_kb(), args.repo, args.message)
     return cmd_merge(args.local, args.pr, args.title, args.skip_tests, args.no_push, skip_checks=args.skip_checks)
 
 
