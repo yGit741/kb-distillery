@@ -98,7 +98,7 @@ def _think_guard(rel):
 
 
 def _shared_think_guard(abs_path):
-    """The shared think space (`knowledge-bases/think/`, kb.paths.THINK_PATH) sits beside every vault, so it is
+    """The shared think space (`kbs/think/`, kb.paths.THINK_PATH) sits beside every vault, so it is
     judged by absolute path before the vault-relative rules."""
     from kb.paths import THINK_PATH
     think = os.path.realpath(THINK_PATH)

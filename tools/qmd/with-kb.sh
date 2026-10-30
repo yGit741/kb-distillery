@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Run a tools/qmd script against the selected knowledge base: resolves --kb <id> / $KB / the registry
+# Run a tools/qmd script against the selected knowledge base: resolves --kb <id|path> / $KB
 # through `python -m kb.kbconfig root` and hands node the folder as $KB_ROOT (tools/qmd/kbroot.mjs).
-# Usage: bash tools/qmd/with-kb.sh <script.mjs> [--kb <id>] [args...]   ($KB_ROOT already set wins)
+# Usage: bash tools/qmd/with-kb.sh <script.mjs> [--kb <id|path>] [args...]   ($KB_ROOT already set wins)
 set -euo pipefail
 
 script="$1"; shift

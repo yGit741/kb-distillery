@@ -62,7 +62,7 @@ class Chain(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.mkdtemp()
         self.addCleanup(shutil.rmtree, self.tmp, ignore_errors=True)
-        self.bases = os.path.join(self.tmp, "knowledge-bases")
+        self.bases = os.path.join(self.tmp, "kbs")
         self.kb = self._kb("vecprobe")
         self.probe = os.path.join(self.tmp, "probe.mjs")
         with open(self.probe, "w", encoding="utf-8") as f:
@@ -70,7 +70,7 @@ class Chain(unittest.TestCase):
                     "try { console.log(kbRoot()); } catch (e) { console.error(e.message); process.exit(1); }\n")
 
     def _kb(self, kb_id):
-        root = os.path.join(self.bases, f"kb-{kb_id}")
+        root = os.path.join(self.bases, kb_id)
         os.makedirs(root)
         with open(os.path.join(root, "kb.toml"), "w", encoding="utf-8") as f:
             f.write(MINIMAL.format(id=kb_id))

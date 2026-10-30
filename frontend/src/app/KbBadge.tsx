@@ -1,19 +1,16 @@
-import { useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
-import { ChevronDown, Database, FolderPlus } from "lucide-react";
+import { ChevronDown, Database } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useDataSource } from "@/api";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { useFlag } from "@/flags/useFlag";
 import { formatKbs, parseKbs } from "@/lib/kbSelection";
 import { useApiQuery } from "@/lib/useApiQuery";
 
 /**
  * The knowledge base this app serves, as the header title: its name from kb.toml, its id as a chip. The
- * explorer is the engine; the content is whichever `knowledge-bases/kb-<id>/` it was launched with. A share
+ * engine is code only; the content is whichever `kbs/<id>/` (or `--kb <path>`) it was launched with. A share
  * build (embedded data) has no /api/kb and shows the plain title. With flag kb-view the title is also the
- * menu that picks which knowledge bases the graph shows (other ones view only), and adds a folder from disk.
+ * menu that picks which knowledge bases the graph shows (other ones view only).
  */
 export function KbBadge() {
   const ds = useDataSource();
@@ -44,7 +41,7 @@ export function KbBadge() {
   );
 }
 
-/** The header menu: tick the knowledge bases the graph shows (none is allowed), add a folder from anywhere on disk. */
+/** The header menu: tick the knowledge bases the graph shows (none is allowed). */
 function KbMenu({ title, active }: { title: React.ReactNode; active: string | null }) {
   const [open, setOpen] = useState(false);
   const box = useRef<HTMLDivElement>(null);
@@ -71,7 +68,7 @@ function KbMenu({ title, active }: { title: React.ReactNode; active: string | nu
   }, [open]);
 
   const show = (ids: string[]) => {
-    // the menu's order; one just added is not in `rows` yet and goes last
+    // the menu's order
     const rank = (id: string) => (rows.findIndex((r) => r.id === id) + 1 || Infinity);
     const sorted = [...ids].sort((a, b) => rank(a) - rank(b));
     void navigate({
@@ -124,7 +121,6 @@ function KbMenu({ title, active }: { title: React.ReactNode; active: string | nu
               <span className="shrink-0 text-xs text-muted-foreground">{r.error ? "can't open" : r.active ? "this app" : "view only"}</span>
             </label>
           ))}
-          <AddFolder onAdded={(kb) => show([...shown.filter((k) => k !== kb), kb])} />
           <div className="mt-1 border-t px-1.5 pt-1.5 text-xs">
             <Link to={"/system" as never} search={{ tab: "kbs" } as never} className="text-primary hover:underline" onClick={() => setOpen(false)}>
               Manage in System → Knowledge bases
@@ -133,50 +129,5 @@ function KbMenu({ title, active }: { title: React.ReactNode; active: string | nu
         </div>
       )}
     </div>
-  );
-}
-
-/** Add a knowledge base folder from anywhere on disk: a kb.toml at this explorer's schema, its own git repo. */
-function AddFolder({ onAdded }: { onAdded: (id: string) => void }) {
-  const ds = useDataSource();
-  const qc = useQueryClient();
-  const [path, setPath] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
-  const add = async () => {
-    const want = path.trim();
-    if (!want) return;
-    setBusy(true);
-    setError("");
-    try {
-      const before = new Set((qc.getQueryData(["kb-list"]) as { kbs: { id: string }[] } | undefined)?.kbs.map((k) => k.id));
-      const next = await ds.registerKb(want);
-      qc.setQueryData(["kb-list"], next);
-      const added = next.kbs.find((k) => !before.has(k.id));
-      setPath("");
-      if (added) onAdded(added.id);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-    } finally {
-      setBusy(false);
-    }
-  };
-  return (
-    <form
-      className="mt-1 flex flex-col gap-1 border-t px-1.5 pt-2"
-      onSubmit={(e) => {
-        e.preventDefault();
-        void add();
-      }}
-    >
-      <label htmlFor="kb-add-path" className="text-xs text-muted-foreground">Add a folder from another place</label>
-      <div className="flex gap-1">
-        <Input id="kb-add-path" value={path} onChange={(e) => setPath(e.target.value)} placeholder="~/path/to/kb-folder" className="h-8 text-xs" spellCheck={false} />
-        <Button type="submit" size="sm" variant="outline" className="h-8 gap-1" disabled={busy || !path.trim()}>
-          <FolderPlus aria-hidden className="size-3.5" /> Add
-        </Button>
-      </div>
-      {error && <p role="alert" className="text-xs text-bad">{error}</p>}
-    </form>
   );
 }

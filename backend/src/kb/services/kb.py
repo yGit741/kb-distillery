@@ -1,7 +1,7 @@
 """The knowledge base behind this app (`/api/kb`) and every one the explorer can see (`/api/kb/list`).
 
 Facts only, read from kb.toml, the folder and its git repo: no writes. Switching the active knowledge base
-is a relaunch (`pixi run launch -- --kb <id>`): ROOT is resolved when the process starts.
+is a relaunch (`kbd launch --kb <id|path>`): ROOT is resolved when the process starts.
 """
 import os
 import subprocess
@@ -46,36 +46,29 @@ def active():
     cfg = paths.KB
     root = paths.ROOT
     return {
-        "id": cfg.id if cfg else None, "name": cfg.name if cfg else "Knowledge base (legacy layout)",
-        "legacy": cfg is None, "root": root, "config": cfg.path if cfg else None,
+        "id": cfg.id if cfg else None, "name": cfg.name if cfg else "No knowledge base selected",
+        "root": root, "config": cfg.path if cfg else None,
         "schema_version": ".".join(map(str, cfg.schema_version if cfg else schema.SCHEMA_VERSION)),
         "git": git_state(root),
         "think_root": paths.THINK_PATH, "think_git": git_state(paths.THINK_PATH),
         "types": _types(), "areas": sorted(schema.TOPIC_SLUGS), "source_fields": list(schema.SOURCE_FIELDS),
         "digest": [{"part": part, "origin": origin, "path": path} for part, (path, origin) in instruction_files().items()],
         "flags_registry": FLAGS_SOURCE, "meta_overrides": _meta_overrides(root),
-        "bases_dir": kbconfig.bases_dir(), "registry": kbconfig.registry_path(),
-        "relaunch": "pixi run launch -- --kb <id>",
+        "bases_dir": kbconfig.bases_dir(),
+        "relaunch": "kbd launch --kb <id|path>",
     }
-
-
-def register(path):
-    """Add a knowledge base folder to the registry (`kbconfig.register`); the updated listing."""
-    kbconfig.register(path)
-    return listing()
 
 
 def listing():
     rows = []
     for kb_id, root in kbconfig.discover().items():
         row = {"id": kb_id, "root": root, "name": "", "schema_version": "", "error": "", "git": git_state(root),
-               "active": bool(paths.KB and paths.KB.id == kb_id)}
+               "active": bool(paths.KB and os.path.realpath(paths.KB.root) == os.path.realpath(root))}
         try:
             cfg = kbconfig.load_dir(root, kb_id)
             row["name"], row["schema_version"] = cfg.name, ".".join(map(str, cfg.schema_version))
         except kbconfig.KbConfigError as e:
             row["error"] = str(e)
         rows.append(row)
-    return {"bases_dir": kbconfig.bases_dir(), "registry": kbconfig.registry_path(),
-            "registry_exists": os.path.isfile(kbconfig.registry_path()),
+    return {"bases_dir": kbconfig.bases_dir(),
             "think_root": paths.THINK_PATH, "active": paths.KB.id if paths.KB else None, "kbs": rows}

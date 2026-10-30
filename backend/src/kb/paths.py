@@ -19,17 +19,17 @@ CHECKOUT_ROOT = kbconfig.CHECKOUT_ROOT                                       # t
 
 def vault_root():
     """The vault (one knowledge base): $KB_ROOT, else the selected knowledge base (`kb.kbconfig`: `--kb`, $KB,
-    registry default, the only one), else the checkout this code runs from (legacy monorepo layout)."""
+    the only one), else the checkout this code runs from (none selected: engine-only commands)."""
     return kbconfig.vault_root()
 
 
 ROOT = vault_root()
-KB = kbconfig.current()                    # the knowledge base's kb.toml, or None in legacy mode
-# A knowledge base that is a plain folder (no .git) must never make git walk up into an enclosing repository
-# (a home directory under git, say): every git call this process or its children make stops at these parents.
+KB = kbconfig.current()                    # the knowledge base's kb.toml, or None when none is selected
+# A knowledge base that is a plain folder (no .git, like kbs/demo inside the engine repo) must never make git walk
+# up into an enclosing repository: every git call this process or its children make stops at these parents.
+# Never add the bases dir's parent (the engine itself): git would stop before it and lose the engine's own repo.
 os.environ.setdefault("GIT_CEILING_DIRECTORIES", os.pathsep.join(sorted({
-    os.path.dirname(os.path.realpath(ROOT)), os.path.dirname(os.path.realpath(CHECKOUT_ROOT)),
-    os.path.dirname(os.path.realpath(kbconfig.bases_dir()))})))
+    os.path.dirname(os.path.realpath(ROOT)), os.path.dirname(os.path.realpath(CHECKOUT_ROOT))})))
 META_DIR = os.path.join(ROOT, "meta")      # vault metadata only (no code lives here any more)
 META_DEFAULTS_PATH = os.path.join(CHECKOUT_ROOT, "meta-defaults")   # explorer-owned defaults a kb's meta/ overrides
 
@@ -68,8 +68,8 @@ def _rel(name, default):
 # --- vault content ---------------------------------------------------------------------------------
 WIKI_PATH = vpath(_rel("WIKI_DIR", "wiki"))
 RAW_PATH = vpath(_rel("RAW_DIR", "raw"))
-# Think is ONE shared human space for every knowledge base (`knowledge-bases/think/`, its own repo); a vault's
-# own think/ only in the legacy layout. Repo-relative think paths are spelled `think/<file>` everywhere.
+# Think is ONE shared human space for every knowledge base (`kbs/think/`, its own repo); a vault's own think/
+# only when that is absent. Repo-relative think paths are spelled `think/<file>` everywhere.
 THINK_PATH = kbconfig.think_root(ROOT)
 INDEX_PATH = vpath("index.md")
 QUARANTINE_PATH = vpath(_rel("QUARANTINE_DIR", "_quarantine"))

@@ -84,7 +84,16 @@ class KbService(unittest.TestCase):
         self.assertIn(info["flags_registry"], ("explorer", "kb"))
         listing = svc.listing()
         if not os.environ.get("KB_ROOT"):    # a $KB_ROOT folder (the test fixture) is not in the bases dir
-            self.assertTrue(any(r["active"] for r in listing["kbs"]) or info["legacy"])
+            self.assertTrue(any(r["active"] for r in listing["kbs"]) or info["id"] is None)
+        self.assertNotIn("registry", listing)
+        self.assertNotIn("legacy", info)
+
+    def test_git_ceiling_never_hides_the_engines_own_repo(self):
+        ceilings = {os.path.realpath(p) for p in os.environ["GIT_CEILING_DIRECTORIES"].split(os.pathsep) if p}
+        self.assertNotIn(os.path.realpath(paths.CHECKOUT_ROOT), ceilings)
+        top = subprocess.run(["git", "rev-parse", "--show-toplevel"], cwd=os.path.join(paths.CHECKOUT_ROOT, "backend"),
+                             capture_output=True, text=True, check=False)
+        self.assertEqual(os.path.realpath(top.stdout.strip()), os.path.realpath(paths.CHECKOUT_ROOT), top.stderr)
 
     def test_git_state_of_a_plain_folder_never_walks_up(self):
         from kb.services.kb import git_state
