@@ -1,0 +1,80 @@
+# Demo knowledge base: a made-up job search, tracked by the engine repo and used as its public demo and test kb.
+[kb]
+id = "demo"
+name = "Job Search (demo)"
+schema_version = "1.3"
+
+[git]
+tag_prefix = "kb-"
+
+[digest]
+focus = "digest/focus.md"
+types = "digest/types.md"
+
+[types]
+order = ["company", "role", "person", "interview", "skill",
+         "process",
+         "posting", "mail", "chat", "notes", "document"]
+# Extra frontmatter on source pages (the thesis has authors/venue/arxiv-id; a job search has these).
+source_fields = ["company", "date", "stage"]
+
+# --- Sources -----------------------------------------------------------------------------------------------
+[types.source.posting]
+label = "Job posting"
+prefix = "posting-"
+color = "#4fd6be"
+
+[types.source.mail]
+label = "Mail"
+prefix = "mail-"
+color = "#73daca"
+
+[types.source.chat]
+label = "AI chat"
+prefix = "chat-"
+color = "#ff9e64"
+
+[types.source.notes]
+label = "Notes"
+prefix = "notes-"
+color = "#ffc777"
+
+[types.source.document]
+label = "Document"
+prefix = "doc-"
+color = "#eab0ee"
+
+# --- Collections --------------------------------------------------------------------------------------------
+[types.collection.process]
+label = "Hiring process"
+prefix = "process-"
+kind = "contents"             # one per company: the posting, mails, chats and notes of that application
+color = "#2ac3de"
+
+# --- Concepts -----------------------------------------------------------------------------------------------
+[types.concept.company]
+label = "Company"
+prefix = "company-"
+color = "#9ece6a"
+
+[types.concept.role]
+label = "Role"
+prefix = "role-"
+color = "#7aa2ff"
+
+[types.concept.person]
+label = "Person"
+prefix = ""
+status = []
+color = "#bb9af7"
+
+[types.concept.interview]
+label = "Interview"
+prefix = "interview-"
+status = ["scheduled", "done", "cancelled"]
+color = "#f6c177"
+
+[types.concept.skill]
+label = "Skill"
+prefix = "skill-"
+color = "#ff79c6"

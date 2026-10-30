@@ -7,7 +7,7 @@ session temp folder first, so tests that run lint or write pages never dirty the
 Two groups of tests are tied to the vault they run against, and skip instead of failing on any other:
   * TYPE_BOUND modules build pages of the explorer's default types (paper, book, person, ...) and read the
     type tables `kb.core.schema` built at import time from the active kb.toml, so they run only when that
-    kb declares the default types (the fixture and kb-yonatan-thesis do; kb-job-search does not);
+    kb declares the default types (the fixture and the thesis kb do; kbs/demo does not);
   * THESIS_DATA modules read content only the thesis kb has (its raw chats, migration state, ops config):
     they run only with KB=yonatan-thesis.
 `real_kb()` is for tests that read a real knowledge base (KB=<id>) rather than the fixture."""
