@@ -102,7 +102,7 @@ ROOT_MD = {"index.md", "AGENTS.md", "CLAUDE.md", "README.md", "GEMINI.md"}
 FRONTEND_DIR = "frontend"            # React app (tooling lane); node_modules is gitignored
 # Code and tooling folders beside the vault content (tooling lane; see TOOLING_PATHS).
 META_DEFAULTS_DIR = "meta-defaults"     # the explorer's generic meta (flags, templates, docs, digest defaults)
-CODE_TOP_DIRS = frozenset({"backend", "frontend", "share", "skills", "tools", META_DEFAULTS_DIR})
+CODE_TOP_DIRS = frozenset({"backend", "docs", "frontend", "share", "skills", "tools", META_DEFAULTS_DIR})
 # A knowledge base folder also carries its kb.toml and digest/ instructions (kb.kbconfig, kb.core.kbtypes).
 KB_CONFIG = "kb.toml"
 DIGEST_DIR = "digest"
@@ -267,6 +267,7 @@ TOOLING_PATHS = [
     "meta/",
     "meta-defaults/",
     "backend/",
+    "docs/",
     "share/",
     "skills/",
     "tools/",
