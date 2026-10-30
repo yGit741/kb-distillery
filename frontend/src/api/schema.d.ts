@@ -261,6 +261,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/graph/cypher": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Run a read-only Cypher query (supported subset) on the wiki graph */
+        post: operations["post_cypher_api_graph_cypher_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/graph/queries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Named graph queries */
+        get: operations["get_named_queries_api_graph_queries_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/graph/queries/{name}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Run a named graph query */
+        post: operations["post_named_query_api_graph_queries__name__post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/health": {
         parameters: {
             query?: never;
@@ -966,6 +1017,21 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
+        /** CypherRequest */
+        CypherRequest: {
+            /**
+             * Limit
+             * @default 500
+             */
+            limit: number;
+            /**
+             * Query
+             * @description Cypher (supported subset); strings in double quotes
+             */
+            query: string;
+        } & {
+            [key: string]: unknown;
+        };
         /** DeployState */
         DeployState: {
             /** Behind */
@@ -1502,6 +1568,37 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
+        /** NamedQuery */
+        NamedQuery: {
+            /** Description */
+            description: string;
+            /** Name */
+            name: string;
+            /**
+             * Params
+             * @default []
+             */
+            params: string[];
+        } & {
+            [key: string]: unknown;
+        };
+        /** NamedQueryRequest */
+        NamedQueryRequest: {
+            /**
+             * Limit
+             * @default 500
+             */
+            limit: number;
+            /**
+             * Params
+             * @default {}
+             */
+            params: {
+                [key: string]: string;
+            };
+        } & {
+            [key: string]: unknown;
+        };
         /** NightlyState */
         NightlyState: {
             /** Hint */
@@ -1750,6 +1847,22 @@ export interface components {
             prompts: {
                 [key: string]: unknown;
             }[];
+        } & {
+            [key: string]: unknown;
+        };
+        /** QueryTable */
+        QueryTable: {
+            /** Columns */
+            columns: string[];
+            /** Row Count */
+            row_count: number;
+            /** Rows */
+            rows: unknown[][];
+            /**
+             * Truncated
+             * @default false
+             */
+            truncated: boolean;
         } & {
             [key: string]: unknown;
         };
@@ -3049,6 +3162,108 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["GraphSnapshot"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_cypher_api_graph_cypher_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CypherRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QueryTable"];
+                };
+            };
+            /** @description Query rejected: `detail` says why and what to use instead */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_named_queries_api_graph_queries_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NamedQuery"][];
+                };
+            };
+        };
+    };
+    post_named_query_api_graph_queries__name__post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NamedQueryRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QueryTable"];
+                };
+            };
+            /** @description Query rejected: `detail` says why and what to use instead */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

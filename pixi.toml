@@ -89,3 +89,5 @@ yt-dlp = { version = ">=2025.1", extras = ["default", "curl-cffi"] }
 opencv-python-headless = ">=4.10"
 imageio-ffmpeg = ">=0.5"
 ocrmac = ">=1.0"
+grand-cypher = ">=1.2"
+networkx = ">=3.4"
