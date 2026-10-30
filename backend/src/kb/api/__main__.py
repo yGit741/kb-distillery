@@ -10,7 +10,7 @@ DEFAULT_PORT = 8765
 
 
 def main(argv=None):
-    parser = argparse.ArgumentParser(description="Knowledge base explorer app server")
+    parser = argparse.ArgumentParser(description="kb-distillery app server")
     parser.add_argument("--port", type=int, default=DEFAULT_PORT)
     parser.add_argument("--host", default="127.0.0.1", help="loopback only")
     parser.add_argument("--no-open", action="store_true", help="do not open a browser tab")
