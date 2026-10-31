@@ -53,6 +53,10 @@ python3 -m kb.graph.propose --kb <id> apply --min-confidence 0.9 … --write    
 
 `<kb>/.cache/relations-proposals.jsonl` rows `{from, to, kind, note, confidence, evidence, origin: "llm", model, run, at}` (`tier: "low"` for `--include-easy` subjects). `apply --write` edits `relations:` blocks in `wiki/` pages, committed as `kb(refine)`.
 
+## In the graph
+
+With the `graph-relations` flag on, every proposal is also an edge of the query graph (`origin = "proposed"`, with `confidence`), so a Cypher query filters at query time: `MATCH (a)-[r:USES]->(b) WHERE r.confidence >= 0.8 RETURN a.title, b.title`. Stored relations carry `confidence = 1.0`. The named queries ignore proposals unless given `min_confidence` (e.g. `unaddressed-questions` with `min_confidence=0.8`). Proposals are never in the graph snapshot, so the graph screen and the published site are unchanged.
+
 ## Quality bar
 
 - Dry-run shown before any spend; the run stayed under `--max-usd`
