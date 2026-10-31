@@ -120,7 +120,8 @@ def to_graph(snapshot, config=None):
                                                    # shares-source repeat the edges above and add_edge drops them
         if r["source"] in g and r["target"] in g:
             kind = relation_label(r["kind"], config)
-            attrs = {"origin": r.get("origin", ""), "note": r.get("note", ""), "weight": r.get("weight", 1.0)}
+            attrs = {"origin": r.get("origin", ""), "note": r.get("note", ""), "weight": r.get("weight", 1.0),
+                     "confidence": 1.0}          # a relation a person wrote is certain
             add_edge(g, r["source"], r["target"], kind, **attrs)
             if kind in config["symmetric"]:
                 add_edge(g, r["target"], r["source"], kind, **attrs)
@@ -131,15 +132,51 @@ _cache = {"etag": None, "graph": None}
 _lock = threading.Lock()
 
 
+def add_proposed(g, config=None, root=None):
+    """Every LLM relation proposal as an edge `origin="proposed"` with its `confidence` (also `weight`), so a query
+    filters at query time: `MATCH (a)-[r:USES]->(b) WHERE r.confidence >= 0.8 RETURN a.slug, b.slug`. Stored and
+    computed edges win over a proposal for the same (source, target, kind). Only kinds the kb declares count.
+    The proposals are NOT in the graph snapshot (that is what the app draws and the share build publishes)."""
+    from kb.graph.relations import PROPOSED, read_proposals
+
+    config = config or edge_config()
+    declared = set(config.get("types") or ())
+    n = 0
+    for r in read_proposals(root):
+        if r["kind"] not in declared or r["from"] not in g or r["to"] not in g:
+            continue
+        kind = relation_label(r["kind"], config)
+        attrs = {"origin": PROPOSED, "note": r["note"], "weight": r["confidence"], "confidence": r["confidence"]}
+        add_edge(g, r["from"], r["to"], kind, **attrs)
+        if kind in config["symmetric"]:
+            add_edge(g, r["to"], r["from"], kind, **attrs)
+        n += 1
+    return n
+
+
+def _proposals_stamp(root=None):
+    from kb import paths
+    from kb.graph.relations import PROPOSALS_FILE
+    try:
+        st = os.stat(os.path.join(root or paths.ROOT, ".cache", PROPOSALS_FILE))
+        return (st.st_mtime_ns, st.st_size)
+    except OSError:
+        return None
+
+
 def current_graph():
-    """The vault graph, rebuilt only when the snapshot etag (or whether it carries relations) changes."""
-    from kb.services.graph import build_graph_snapshot
+    """The vault graph, rebuilt only when the snapshot etag, whether it carries relations, or the proposals change."""
+    from kb.services.graph import build_graph_snapshot, relations_on
 
     snap = build_graph_snapshot()
-    key = (snap["etag"], snap.get("relations") is not None)
+    with_proposals = relations_on()
+    key = (snap["etag"], snap.get("relations") is not None, _proposals_stamp() if with_proposals else None)
     with _lock:
         if _cache["etag"] != key:
-            _cache.update(etag=key, graph=to_graph(snap))
+            g = to_graph(snap)
+            if with_proposals:                       # proposals ride the same flag as stored relations
+                add_proposed(g)
+            _cache.update(etag=key, graph=g)
         return _cache["graph"]
 
 
@@ -227,10 +264,17 @@ def log_rejected(query, reason, path=None):
 
 # ---- named queries: what GrandCypher cannot express, in plain NetworkX ------------------------------------
 
-def _undirected(g):
+def _counts(d, min_confidence):
+    """Does an edge count? A proposed edge only when a `min_confidence` was asked for and it reaches it."""
+    if d.get("origin") != "proposed":
+        return True
+    return min_confidence is not None and float(d.get("confidence", 0)) >= float(min_confidence)
+
+
+def _undirected(g, min_confidence=None):
     u = nx.Graph()
     u.add_nodes_from(g.nodes(data=True))
-    u.add_edges_from((a, b) for a, b in g.edges() if a != b)
+    u.add_edges_from((a, b) for a, b, d in g.edges(data=True) if a != b and _counts(d, min_confidence))
     return u
 
 
@@ -241,9 +285,9 @@ def _node(g, slug):
     return {"slug": slug, "title": d.get("title", ""), "type": d.get("type", "")}
 
 
-def gaps(g, min_shared=2, layer="concept", limit=MAX_ROWS):
+def gaps(g, min_shared=2, layer="concept", min_confidence=None, limit=MAX_ROWS):
     """Pairs with ≥ min_shared common neighbours and no edge between them (either direction)."""
-    u = _undirected(g)
+    u = _undirected(g, min_confidence)
     keep = [n for n, d in u.nodes(data=True) if not layer or d.get("layer") == layer]
     keep_set = set(keep)
     found = []
@@ -259,42 +303,44 @@ def gaps(g, min_shared=2, layer="concept", limit=MAX_ROWS):
     return _table(["a", "b", "shared"], rows, limit)
 
 
-def unaddressed_questions(g, limit=MAX_ROWS):
-    """Question pages no page `ADDRESSES`, with what each is an open problem in."""
+def unaddressed_questions(g, min_confidence=None, limit=MAX_ROWS):
+    """Question pages no page `ADDRESSES`, with what each is an open problem in. Proposed relations count only
+    when `min_confidence` is given (and they reach it); stored relations always count."""
     rows = []
     for q, d in sorted(g.nodes(data=True)):
         if d.get("type") != "question":
             continue
-        if any(d.get("kind") == "ADDRESSES" for _, _, d in g.in_edges(q, data=True)):
+        if any(d.get("kind") == "ADDRESSES" and _counts(d, min_confidence) for _, _, d in g.in_edges(q, data=True)):
             continue
-        in_ = sorted({t for _, t, d in g.out_edges(q, data=True) if d.get("kind") == "OPEN_PROBLEM_IN"})
+        in_ = sorted({t for _, t, d in g.out_edges(q, data=True)
+                      if d.get("kind") == "OPEN_PROBLEM_IN" and _counts(d, min_confidence)})
         rows.append([_node(g, q), in_])
     return _table(["question", "open_problem_in"], rows, limit)
 
 
-def shortest_path(g, source, target, limit=MAX_ROWS):
+def shortest_path(g, source, target, min_confidence=None, limit=MAX_ROWS):
     """The shortest chain of pages between two slugs, ignoring direction."""
     _node(g, source), _node(g, target)
     try:
-        path = nx.shortest_path(_undirected(g), source, target)
+        path = nx.shortest_path(_undirected(g, min_confidence), source, target)
     except nx.NetworkXNoPath:
         return _table(["path", "length"], [], limit)
     return _table(["path", "length"], [[[_node(g, s) for s in path], len(path) - 1]], limit)
 
 
-def neighbourhood(g, slug, hops=1, limit=MAX_ROWS):
+def neighbourhood(g, slug, hops=1, min_confidence=None, limit=MAX_ROWS):
     """Pages within `hops` links of `slug` in either direction, nearest first."""
     _node(g, slug)
-    dist = nx.single_source_shortest_path_length(_undirected(g), slug, cutoff=max(1, min(int(hops), 3)))
+    dist = nx.single_source_shortest_path_length(_undirected(g, min_confidence), slug, cutoff=max(1, min(int(hops), 3)))
     rows = [[_node(g, s), d] for s, d in sorted(dist.items(), key=lambda t: (t[1], t[0])) if s != slug]
     return _table(["page", "hops"], rows, limit)
 
 
 NAMED = {
-    "gaps": (gaps, "pairs sharing ≥ min_shared neighbours with no link between them", ["min_shared", "layer"]),
-    "unaddressed-questions": (unaddressed_questions, "question pages nothing addresses", []),
-    "shortest-path": (shortest_path, "shortest chain of pages between source and target", ["source", "target"]),
-    "neighbourhood": (neighbourhood, "pages within `hops` links of `slug`, any direction", ["slug", "hops"]),
+    "gaps": (gaps, "pairs sharing ≥ min_shared neighbours with no link between them", ["min_shared", "layer", "min_confidence"]),
+    "unaddressed-questions": (unaddressed_questions, "question pages nothing addresses (min_confidence also counts proposed relations)", ["min_confidence"]),
+    "shortest-path": (shortest_path, "shortest chain of pages between source and target", ["source", "target", "min_confidence"]),
+    "neighbourhood": (neighbourhood, "pages within `hops` links of `slug`, any direction", ["slug", "hops", "min_confidence"]),
 }
 
 
@@ -332,6 +378,8 @@ def run_named(name, params=None, limit=MAX_ROWS, graph=None, config=None):
     g = current_graph() if graph is None else graph
     limit = max(1, min(int(limit), MAX_ROWS))
     try:
+        if "min_confidence" in params:                       # checked up front, not only when a proposed edge is compared
+            params["min_confidence"] = float(params["min_confidence"]) if params["min_confidence"] not in (None, "") else None
         return fn(g, **params, limit=limit)
     except TypeError as e:
         raise QueryError(f"`{name}` needs {', '.join(allowed)}: {e}") from None

@@ -27,7 +27,8 @@ import os
 import re
 import unicodedata
 
-STORED, COMPUTED = "stored", "computed"
+STORED, COMPUTED, PROPOSED = "stored", "computed", "proposed"
+PROPOSALS_FILE = "relations-proposals.jsonl"      # `<kb>/.cache/`, written by kb.graph.propose (every valid proposal)
 MENTIONS, SHARES_SOURCE, NAME_MATCH = "mentions", "shares-source", "name-match"
 ADVISOR_OF, STUDENT_OF, COLLABORATES_WITH, SIMILAR_TO = "advisor-of", "student-of", "collaborates-with", "similar-to"
 COMPUTED_KINDS = (MENTIONS, SHARES_SOURCE, ADVISOR_OF, STUDENT_OF, NAME_MATCH, COLLABORATES_WITH, SIMILAR_TO)
@@ -327,3 +328,25 @@ def build(pages, nodes, links, concept_links, config, root=None):
                 seen.add(key)
                 out.append(e)
     return out
+
+
+def read_proposals(root=None):
+    """Every LLM relation proposal of a knowledge base: [{from, to, kind, note, confidence, run}], one per
+    (from, to, kind), best confidence first. [] when it has none. Read-only; nothing here is knowledge."""
+    from kb import paths
+    path = os.path.join(root or paths.ROOT, ".cache", PROPOSALS_FILE)
+    if not os.path.isfile(path):
+        return []
+    best = {}
+    with open(path, encoding="utf-8") as f:
+        for line in f:
+            try:
+                r = json.loads(line)
+                conf = float(r["confidence"])
+                key = (r["from"], r["to"], kind_name(r["kind"]))
+            except (ValueError, KeyError, TypeError):
+                continue
+            if key not in best or conf > best[key]["confidence"]:
+                best[key] = {"from": key[0], "to": key[1], "kind": key[2], "note": str(r.get("note") or ""),
+                             "confidence": conf, "run": str(r.get("run") or "")}
+    return sorted(best.values(), key=lambda r: (-r["confidence"], r["from"], r["to"], r["kind"]))
