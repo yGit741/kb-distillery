@@ -1,9 +1,10 @@
-import { Boxes, MessageSquare, MousePointerSquareDashed, ShoppingBasket } from "lucide-react";
+import { Boxes, MessageSquare, MousePointerSquareDashed, ShoppingBasket, TextSearch } from "lucide-react";
 import { ChatDock, ChatToolPanel } from "./ChatDock";
 import { CorpusDrawer } from "../CorpusDrawer";
 import { useLayer } from "../layerStore";
 import { registerMenuItem } from "../menu";
 import { BasketPanel } from "./BasketPanel";
+import { QueryPanel } from "./QueryPanel";
 import { RawPanel } from "./RawPanel";
 import { RegionOverlay } from "./RegionOverlay";
 import { SelectionPanel } from "./SelectionPanel";
@@ -50,6 +51,17 @@ registerTool({
   panel: (ctx) => <RawPanel ctx={ctx} />,
   overlay: (ctx) => <CorpusDrawer ctx={ctx} />,
 });
+
+// read-only graph queries over the local API; a share build has no query endpoint
+if (import.meta.env.MODE !== "share") {
+  registerTool({
+    id: "query",
+    label: "Graph query",
+    icon: <TextSearch aria-hidden />,
+    panel: (ctx) => <QueryPanel ctx={ctx} />,
+    featureFlag: "graph-relations",
+  });
+}
 
 registerMenuItem(
   {

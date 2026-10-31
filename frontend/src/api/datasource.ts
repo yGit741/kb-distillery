@@ -19,6 +19,10 @@ export interface DataSource {
   /** Vault nodes: layer, type, depth, status, areas. */
   getGraphNodes(): Promise<T.GraphNode[]>;
   getCitations(): Promise<T.CitationGraph>;
+  /** Read-only graph queries (local app only): the named ones, a Cypher query (supported subset), a named one. */
+  listGraphQueries(): Promise<T.NamedQuery[]>;
+  runCypher(query: string): Promise<T.QueryTable>;
+  runGraphQuery(name: string, params: Record<string, string>): Promise<T.QueryTable>;
 
   // pages
   listPages(opts?: { kb?: string }): Promise<T.PageIndex>;

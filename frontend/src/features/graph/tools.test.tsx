@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { DataSourceProvider, type DataSource } from "@/api";
 import { DRAFTS_KEY } from "@/features/scopes/logic";
 import { useKb } from "@/lib/store";
+import { withFlag } from "@/flags/testing";
 import { mockDataSource } from "@/test/datasource";
 import { useBasket } from "./basket";
 import { rawSnapshot, sampleSnapshot } from "./fixtures";
@@ -387,4 +388,73 @@ describe("citation genealogy", () => {
     act(() => useLayer.getState().openDrawer({ kind: "genealogy", focus: "2019-fine-grained" }));
     expect(await screen.findByText(/no citation data yet/i)).toBeInTheDocument();
   });
+});
+
+describe("typed relations (flag graph-relations)", () => {
+  const relations = [
+    { source: "idea-margin", target: "topic-learning-theory", kind: "extends", origin: "stored", note: "the margin argument carries over", weight: 1 },
+    { source: "2019-fine-grained", target: "idea-margin", kind: "mentions", origin: "computed", note: "", weight: 1 },
+    { source: "2020-listed-paper", target: "idea-margin", kind: "mentions", origin: "computed", note: "", weight: 1 },
+  ];
+  const withRelations = (o: Partial<DataSource> = {}) => make({ getGraph: vi.fn(async () => sampleSnapshot({ relations })), ...o });
+  const details = async () => {
+    await screen.findByTestId("graph-stats");
+    act(() => useKb.getState().setSelection(["idea-margin"]));
+    await userEvent.click(await screen.findByRole("button", { name: "Details" }));
+    return screen.findByRole("complementary", { name: "Selected page" });
+  };
+
+  it("flag off: no query tool and the inspector lists connected pages as before", () =>
+    withFlag("graph-relations", false, async () => {
+      const listGraphQueries = vi.fn(async () => []);
+      render(wrap(withRelations({ listGraphQueries }), <GraphScreen search={{}} host={host()} />));
+      const panel = await details();
+      expect(screen.queryByRole("button", { name: "Graph query" })).not.toBeInTheDocument();
+      expect(panel.querySelectorAll("details")).toHaveLength(2);
+      expect(within(panel).queryByText(/extends/)).not.toBeInTheDocument();
+      expect(listGraphQueries).not.toHaveBeenCalled();
+    }));
+
+  it("flag on: connected pages are grouped by kind, stated kinds open and computed ones collapsed", () =>
+    withFlag("graph-relations", true, async () => {
+      render(wrap(withRelations(), <GraphScreen search={{}} host={host()} />));
+      const panel = await details();
+      const groups = [...panel.querySelectorAll("details details")] as HTMLDetailsElement[];
+      expect(groups.map((g) => g.querySelector("summary")?.textContent)).toEqual(["extends · 1", "mentions · 2 · computed"]);
+      expect(groups.map((g) => g.open)).toEqual([true, false]);
+      expect(within(groups[0] as HTMLElement).getByText("the margin argument carries over")).toBeInTheDocument();
+    }));
+
+  it("flag on without relations in the snapshot: the inspector stays the flat list", () =>
+    withFlag("graph-relations", true, async () => {
+      render(wrap(make(), <GraphScreen search={{}} host={host()} />));
+      const panel = await details();
+      expect(panel.querySelectorAll("details details")).toHaveLength(0);
+    }));
+
+  it("flag on: the query panel runs a named query and highlights the pages it returns", () =>
+    withFlag("graph-relations", true, async () => {
+      const listGraphQueries = vi.fn(async () => [{ name: "unaddressed-questions", description: "question pages nothing addresses", params: [] }]);
+      const runGraphQuery = vi.fn(async () => ({ columns: ["slug", "title"], rows: [["q-why-big-nets-work", "Why big nets work"], ["not-a-page", "x"]], row_count: 2, truncated: false }));
+      render(wrap(withRelations({ listGraphQueries, runGraphQuery }), <GraphScreen search={{}} host={host()} />));
+      await open(/^graph query/i);
+      await userEvent.selectOptions(await screen.findByRole("combobox", { name: "Named query" }), "unaddressed-questions");
+      await userEvent.click(screen.getByRole("button", { name: "Run named query" }));
+      expect(runGraphQuery).toHaveBeenCalledWith("unaddressed-questions", {});
+      expect(await screen.findByRole("cell", { name: "Why big nets work" })).toBeInTheDocument();
+      await userEvent.click(screen.getByRole("button", { name: "Highlight 1" }));
+      expect([...useKb.getState().selection]).toEqual(["q-why-big-nets-work"]);
+    }));
+
+  it("flag on: a rejected Cypher query shows the reason", () =>
+    withFlag("graph-relations", true, async () => {
+      const runCypher = vi.fn(async () => {
+        throw new Error("unsupported clause CREATE");
+      });
+      render(wrap(withRelations({ listGraphQueries: async () => [], runCypher }), <GraphScreen search={{}} host={host()} />));
+      await open(/^graph query/i);
+      await userEvent.type(screen.getByRole("textbox", { name: /cypher/i }), "CREATE (n)");
+      await userEvent.click(screen.getByRole("button", { name: "Run Cypher" }));
+      expect(await screen.findByRole("alert")).toHaveTextContent("unsupported clause CREATE");
+    }));
 });

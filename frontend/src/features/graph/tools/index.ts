@@ -1,4 +1,5 @@
-import type { ReactNode } from "react";
+import { useSyncExternalStore, type ReactNode } from "react";
+import { flag, flagsVersion, subscribeFlags, type FlagName } from "@/flags";
 import type { GraphModel, GNode } from "../types";
 import { flagOn, useExperiments } from "./experiments";
 
@@ -33,15 +34,23 @@ export interface GraphTool {
   overlay?: (ctx: GraphToolContext) => ReactNode;
   /** An experiment id (./experiments): the tool exists only while that experiment is switched on. */
   flag?: string;
+  /** A feature flag (meta-defaults/flags.toml, `@/flags`): the tool exists only while that flag is on. */
+  featureFlag?: FlagName;
 }
 
 /** The next PR appends here; the core ships none. */
 export const TOOLS: GraphTool[] = [];
 
-/** The tools to draw now: every tool whose experiment flag (if any) is on. */
+/** Whether `t` exists now: its experiment (if any) is switched on and its feature flag (if any) is on. */
+export function toolOn(t: GraphTool, experiments: ReadonlySet<string>): boolean {
+  return flagOn(t.flag, experiments) && (!t.featureFlag || flag(t.featureFlag));
+}
+
+/** The tools to draw now: every tool that is on (re-renders when an experiment or a flag override changes). */
 export function useVisibleTools(): GraphTool[] {
   const on = useExperiments((s) => s.on);
-  return TOOLS.filter((t) => flagOn(t.flag, on));
+  useSyncExternalStore(subscribeFlags, flagsVersion, flagsVersion);
+  return TOOLS.filter((t) => toolOn(t, on));
 }
 
 export function registerTool(tool: GraphTool): void {
