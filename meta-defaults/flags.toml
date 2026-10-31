@@ -67,3 +67,13 @@ expires = 2027-01-26
 kind = "runtime"
 default = false
 envs = { local = true, private = false, public = false }
+
+[[flag]]
+name = "graph-relations"
+description = "Graph: typed relations (a page's `relations:` block plus computed kinds) in /api/graph, the Cypher edge types, the inspector's grouped connections and the query panel."
+owner = "yonatanm"
+created = 2026-10-30
+expires = 2027-01-28
+kind = "runtime"
+default = false
+envs = { local = false, private = false, public = false }
