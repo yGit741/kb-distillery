@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Make `.claude/skills` and `.cursor/skills` symlinks to `skills/` (one source, no copies).
+"""Make `.claude/skills` a symlink to `skills/` (one source, no copies).
 
     python3 -m kb.maintenance.sync_skills           lint, then create/repair the links
     python3 -m kb.maintenance.sync_skills --check   verify only (exit 1 if a link is wrong)
@@ -15,7 +15,7 @@ from kb.paths import CHECKOUT_ROOT, vault_root
 ROOT = CHECKOUT_ROOT          # skills are code: they live with the explorer
 SRC = os.path.join(ROOT, "skills")
 LINK_TARGET = os.path.join("..", "skills")
-LINKS = [os.path.join(ROOT, ".cursor", "skills"), os.path.join(ROOT, ".claude", "skills")]
+LINKS = [os.path.join(ROOT, ".claude", "skills")]
 
 DEPRECATED = {"thesis-ingest"}
 

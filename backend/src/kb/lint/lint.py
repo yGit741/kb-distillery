@@ -81,25 +81,17 @@ def _names_guard(text):
 
 
 def hooks_health():
-    """Return (status_text, all_ok) for agent write-guard hook configs."""
-    cursor_ok = claude_ok = False
+    """Return (status_text, all_ok) for the agent write-guard hook config (Claude Code's `.claude/settings.json`)."""
+    claude_ok = False
     from kb import paths
-    cursor_path = os.path.join(paths.CHECKOUT_ROOT, ".cursor", "hooks.json")     # hook configs are code: the explorer
-    claude_path = os.path.join(paths.CHECKOUT_ROOT, ".claude", "settings.json")
-    if os.path.isfile(cursor_path):
-        try:
-            with open(cursor_path, encoding="utf-8") as f:
-                cursor_ok = _names_guard(json.dumps(json.load(f)))
-        except (json.JSONDecodeError, OSError):
-            pass
+    claude_path = os.path.join(paths.CHECKOUT_ROOT, ".claude", "settings.json")     # hook configs are code: the explorer's
     if os.path.isfile(claude_path):
         try:
             with open(claude_path, encoding="utf-8") as f:
                 claude_ok = _names_guard(f.read())
         except OSError:
             pass
-    status = f"cursor {'ok' if cursor_ok else 'MISS'}, claude {'ok' if claude_ok else 'MISS'}"
-    return status, cursor_ok and claude_ok
+    return f"claude {'ok' if claude_ok else 'MISS'}", claude_ok
 
 def err(f, m):  errors.append(f"{f}: {m}")
 def warn(f, m): warnings.append(f"{f}: {m}")

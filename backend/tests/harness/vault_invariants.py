@@ -29,7 +29,7 @@ REPO = Path(__file__).resolve().parents[3]
 LINK = re.compile(r"\[\[([^\]|#\\]+)")
 CODE = re.compile(r"^\s*(?:>\s*)*(```|~~~).*?^\s*(?:>\s*)*\1[^\n]*$|`[^`\n]+`", re.M | re.S)
 RAW_BINARY_EXTS = {".pdf", ".png", ".jpg", ".jpeg", ".gif", ".webp", ".pptx", ".ppt", ".key"}
-ROOT_MD = {"index", "AGENTS", "CLAUDE", "README", "GEMINI"}
+ROOT_MD = {"index", "AGENTS", "CLAUDE", "README"}
 LINT_LINE = re.compile(r"(\d+) pages · (\d+) raw files · (\d+) queued · (\d+) errors · (\d+) warnings")
 
 # direction of "worse" per count: "down" = a decrease is a regression, "up" = an increase is
@@ -184,7 +184,7 @@ def structure_counts(root):
 
 def vault_copy(root, dest):
     """Throwaway copy for running the vault's own lint/graph (they write index.md / corpus.tsv)."""
-    skip = shutil.ignore_patterns(".git", ".pixi", ".cache", ".claude", ".cursor", ".github", "node_modules",
+    skip = shutil.ignore_patterns(".git", ".pixi", ".cache", ".claude", ".github", "node_modules",
                                   "_quarantine", "__pycache__", ".ingest", ".exported", "*.pyc")
     shutil.copytree(root, dest, ignore=skip, symlinks=True)
 

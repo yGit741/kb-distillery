@@ -22,7 +22,7 @@ backend/                Python app, package `kb` (src layout, pyproject.toml, ed
   src/kb/dashboard/     legacy HTML pages + server until their screens are ported (served behind kb.api's catch-all)       src/kb/prompts/  chat prompts
   tests/                pytest, mirrored by package (tests/harness = the pipeline harness)
 share/                  Cloudflare Worker (auth.js, admin.js, wrangler template) + its node tests
-skills/                 agent skill sources (.cursor/skills and .claude/skills are symlinks to it)
+skills/                 agent skill sources (.claude/skills is a symlink to it)
 tools/                  githooks/, kb-hooks/, launchd/, launch.sh
 docs/                   ROADMAP.md: the migration to the open-source kb-distillery, phase by phase
 kbs/                    knowledge bases: kbs/<id> is one kb (its own git repo); only kbs/demo is tracked here, the rest is gitignored
@@ -93,7 +93,7 @@ pixi run distill-apply -- <slug>   apply distill plan to public KB
 pixi run test-e2e                  graph page mouse/keyboard scheme in headless Chromium (needs the playwright npm package)
 pixi run test-ui-principles        every app screen, light + dark, against the [auto] ui-principles (see § PR gates)
 pixi run lint-skills               validate skill definitions
-pixi run sync-skills               create/verify the .claude/skills and .cursor/skills symlinks (after lint-skills)
+pixi run sync-skills               create/verify the .claude/skills symlink (after lint-skills)
 pixi run export-kb                 zip wiki + think → .exported/ (LLM share)
 pixi run share -- deploy-main      build main → private Cloudflare site (also: status, rollback, --dry-run)
 pixi run install-deploy-owner      (user) install the launchd deploy owner — the only deployer; agents nudge it (`python -m kb.share.owner nudge|once|status`)
@@ -118,7 +118,7 @@ pixi run install-sync              install nightly daily-sync launchd job
 
 Without pixi, use `python3` equivalents (`python3 -m kb.lint.lint`, `python3 -m kb.dashboard`, …).
 
-**Write guardrails:** `backend/src/kb/git/guard.py` blocks illegal agent writes via preToolUse hooks in both `.cursor/hooks.json` (Cursor) and `.claude/settings.json` (Claude Code). Keep both pointed at the same script. Claude Code also runs `backend/src/kb/git/merge_nudge.py` on `Stop` (merge reminder; Cursor has no stop hook, so there the skill rule alone applies). `CLAUDE.md` imports this file for Claude instruction parity.
+**Write guardrails:** `backend/src/kb/git/guard.py` blocks illegal agent writes via a PreToolUse hook in `.claude/settings.json` (Claude Code); the Bash git-write guard is `tools/hooks/block-git-write.sh`. Claude Code also runs `backend/src/kb/git/merge_nudge.py` on `Stop` (merge reminder; Cursor has no stop hook, so there the skill rule alone applies). `CLAUDE.md` imports this file for Claude instruction parity.
 
 ## Search service (qmd)
 

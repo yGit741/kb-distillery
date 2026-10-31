@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """PreToolUse hook: refuse writes that would violate the vault schema.
 
-Used by Claude Code (.claude/settings.json) and Cursor (.cursor/hooks.json).
+Used by Claude Code (.claude/settings.json).
 Reads the tool call JSON on stdin. Exit 2 blocks the call; stderr carries the
 message for Claude; Cursor also receives JSON stdout when hook_event_name is set.
 Prompt-level rules in AGENTS.md are a summary of what this file enforces.
@@ -245,7 +245,7 @@ def _root_location_guard(rel):
         deny(f"BLOCKED: {rel} — vault root files are limited to "
              f"{', '.join(sorted(ROOT_FILES))}. Move content to wiki/, raw/inbox/, or think/.")
     deny(f"BLOCKED: {rel} — unexpected location. Top-level dirs allowed: "
-         f"{', '.join(sorted(ROOT_DIRS))} (+ dot-tooling like .cursor/). "
+         f"{', '.join(sorted(ROOT_DIRS))} (+ dot-tooling like .claude/). "
          "Use raw/inbox/ for new inputs.")
 
 

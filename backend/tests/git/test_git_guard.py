@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Tests for backend/src/kb/git/git_guard.py and its .cursor/hooks/block-git-write.sh wrapper."""
+"""Tests for backend/src/kb/git/git_guard.py and its tools/hooks/block-git-write.sh wrapper."""
 import json
 import os
 import subprocess
@@ -10,7 +10,7 @@ from kb.paths import CHECKOUT_ROOT as ROOT   # the hook script is code
 
 from kb.git import git_guard
 
-HOOK = os.path.join(ROOT, ".cursor", "hooks", "block-git-write.sh")
+HOOK = os.path.join(ROOT, "tools", "hooks", "block-git-write.sh")
 
 
 def run_hook(payload):
