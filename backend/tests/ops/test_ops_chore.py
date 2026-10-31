@@ -38,6 +38,9 @@ class OpsChore(unittest.TestCase):
         p = patch.dict(os.environ, ENV)
         p.start()
         self.addCleanup(p.stop)
+        lint = patch.object(core, "run_lint")                  # the temp kb.toml is not a full kb; lint has its own tests
+        self.lint = lint.start()
+        self.addCleanup(lint.stop)
 
     def chore(self, *a, **k):
         return core.chore(*a, root=self.root, **k)
@@ -57,6 +60,18 @@ class OpsChore(unittest.TestCase):
         self.chore("hooks", "claude notes", paths=["CLAUDE.md"])
         self.assertEqual(g(self.root, "show", "--name-only", "--format=", "HEAD").split(), ["CLAUDE.md"])
         self.assertEqual(g(self.root, "status", "--porcelain", "-uno").strip(), "M kb.toml")
+
+    def test_a_kb_toml_that_fails_lint_is_not_committed(self):
+        self.lint.side_effect = core.OpsError("lint failed - nothing committed")
+        write(self.root, "kb.toml", '[kb]\nid = "broken"\n')
+        with self.assertRaises(core.OpsError):
+            self.chore("schema", "bad")
+        self.assertEqual(g(self.root, "rev-list", "--count", "HEAD").strip(), "1")
+
+    def test_lint_runs_only_when_kb_toml_is_in_the_commit(self):
+        write(self.root, "CLAUDE.md", "two\n")
+        self.chore("hooks", "notes")
+        self.lint.assert_not_called()
 
     def test_a_knowledge_path_is_refused(self):
         write(self.root, "wiki/a.md", "x\n")

@@ -258,6 +258,8 @@ def chore(scope, summary, paths=None, root=ROOT, push=True):
             chosen = [p for p in dirty if is_kb_tooling(p)]
         if not chosen:
             return None
+        if "kb.toml" in chosen:
+            run_lint(root)          # a kb.toml the engine cannot read must not reach main (the hook skips lint here)
         sha = _commit_paths(root, chosen, f"chore({scope}): {summary}\n")
         if sha:
             print(f"committed chore({scope}): {summary}")
