@@ -36,18 +36,32 @@ def ensure_app_dist(frontend=FRONTEND, runner=None):
     return "built"
 
 
+# The shell (index.html) names the hashed bundle, so it must be revalidated on every load (it is under 1 KB, so a
+# plain re-fetch is cheap); without a Cache-Control the browser caches it heuristically and keeps running a rebuilt
+# app's old bundle.
+# Files under assets/ carry a content hash in their name, so a name never changes meaning: cache them for good.
+NO_CACHE = "no-cache"
+IMMUTABLE = "public, max-age=31536000, immutable"
+
+
+def _cache_for(full, assets_dir):
+    return {"Cache-Control": IMMUTABLE if full.startswith(os.path.realpath(assets_dir) + os.sep) else NO_CACHE}
+
+
 def spa_router(dist=None) -> APIRouter:
     dist = os.path.realpath(dist or DIST)
     router = APIRouter(include_in_schema=False)
 
+    assets_dir = os.path.join(dist, "assets")
+
     def serve(rel):
         full = os.path.realpath(os.path.join(dist, rel))
         if rel and full.startswith(dist + os.sep) and os.path.isfile(full) and not os.path.basename(full).startswith("."):
-            return FileResponse(full)
+            return FileResponse(full, headers=_cache_for(full, assets_dir))
         index = os.path.join(dist, "index.html")
         if not os.path.isfile(index):
             raise HTTPException(404, "frontend/dist is not built (pixi run web-build)")
-        return FileResponse(index)
+        return FileResponse(index, headers={"Cache-Control": NO_CACHE})
 
     @router.get("/app")
     @router.get("/app/{path:path}")
@@ -59,6 +73,6 @@ def spa_router(dist=None) -> APIRouter:
         full = os.path.realpath(os.path.join(dist, "assets", path))
         if not full.startswith(os.path.join(dist, "assets") + os.sep) or not os.path.isfile(full):
             raise HTTPException(404)
-        return FileResponse(full)
+        return FileResponse(full, headers=_cache_for(full, assets_dir))
 
     return router
