@@ -57,10 +57,10 @@ class AcademicResearch(unittest.TestCase):
         self.assertEqual(set(t.concept_types), {"topic", "idea", "question", "person"})
         self.assertEqual(len(t.type_order), 18)                              # 16 kb types + the two tool-owned
 
-    def test_areas(self):
-        self.assertEqual(set(kbtypes.load(self.cfg).areas),
-                         {"statistics", "boolean-analysis", "fourier-analysis", "optimization-theory", "learning-theory",
-                          "info-theory", "implicit-regularization", "tensor-factorization", "complex-nn", "quantum"})
+    def test_areas_are_the_kbs_own(self):
+        """Each area needs a theme-<area> page, so a template that listed some would break lint for every kb."""
+        self.assertEqual(set(kbtypes.load(self.cfg).areas), set())
+        self.assertEqual(kbtypes.load(self.cfg).source_fields, ("authors", "venue", "arxiv-id"))
 
     def test_the_seven_relation_types(self):
         edges = edge_config(self.cfg)
