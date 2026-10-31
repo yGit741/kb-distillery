@@ -55,3 +55,43 @@ needs a publisher. The deploy owner (launchd) is its own process and is untouche
 Nothing in core imports `kb.share` (`backend/tests/publish/test_core_without_share.py` blocks it and loads core). With no
 publisher the API and dashboard report `chip.label = "no publisher"`, the hygiene checks find nothing, and a `kb(op)` commit
 nudges nobody. `GET /api/share/status` keeps its shape.
+
+## The Cloudflare publisher on your own account
+
+The publisher works for any Cloudflare account; nothing about an account is fixed in its code. (The older `kb.share` code keeps
+the original owner's values as the defaults used when nothing is configured, so existing sites and links do not change.)
+
+What the account needs:
+
+- an **account id** (Cloudflare dashboard, Workers & Pages, right-hand side);
+- an **API token** with permission to edit Workers scripts, read account analytics (view counts) and, only for the metrics
+  store (`metrics d1`), edit D1 databases. Put it in `CLOUDFLARE_API_TOKEN` (or log in with `npx wrangler login`); it never goes in a
+  file that is committed;
+- a `workers.dev` **subdomain** registered on the account, and `node`/`npx` for wrangler.
+
+Configuration (kb.toml, or the same table in the engine config):
+
+```toml
+[publish]
+publisher = "cloudflare"
+[publish.options]
+account_id = "<your account id>"
+subdomain  = "<your workers.dev subdomain>"
+worker     = "<name of the live site Worker>"     # default "kb"
+```
+
+The same three values can come from `KB_CLOUDFLARE_ACCOUNT_ID`, `KB_CLOUDFLARE_SUBDOMAIN`, `KB_CLOUDFLARE_WORKER`. A process uses one
+account: the options must be set before the first publish. The sign-in allow-list and Google client id of the private site are
+stored with `share config`.
+
+Publishing a static snapshot (public, no sign-in; **not run here**, shown for the account owner):
+
+```bash
+pixi run share -- audit kb-1.2.3                     # what a public build would expose; exit 1 on flags
+pixi run share -- snapshot my-snapshot kb-1.2.3 --dry-run
+pixi run share -- snapshot my-snapshot kb-1.2.3      # -> https://snapshot-<YYYYMMDD>-my-snapshot.<subdomain>.workers.dev/
+pixi run share -- list                               # the snapshots on the account
+```
+
+Existing snapshots are never touched by the plugin: their Worker names and URL shape
+(`https://snapshot-<YYYYMMDD>-<name>.<subdomain>.workers.dev/`) are pinned by `backend/tests/publish/test_snapshot_shape.py`.

@@ -11,12 +11,19 @@ from __future__ import annotations
 
 import argparse
 import os
+import sys
 from pathlib import Path
 from typing import Optional
 
 from kb.publish import PublishError, PublishResult, Publisher, Snapshot
 
 LOG_LINES = 200
+
+# `[publish.options]` key -> the variable the share code reads when it is imported
+SETTINGS = {"account_id": "KB_CLOUDFLARE_ACCOUNT_ID", "subdomain": "KB_CLOUDFLARE_SUBDOMAIN", "worker": "KB_CLOUDFLARE_WORKER"}
+# the same, where the share code keeps them once imported: (module, attribute)
+_LOADED = {"account_id": ("kb.share.cf_api", "ACCOUNT_ID"), "subdomain": ("kb.share.contracts", "ACCOUNT_SUBDOMAIN"),
+           "worker": ("kb.share.contracts", "WORKER_MAIN")}
 
 
 def _result(r) -> PublishResult:
@@ -42,6 +49,22 @@ class CloudflarePublisher(Publisher):
     def __init__(self, root: Optional[str] = None, *, seams: Optional[dict] = None, **options):
         super().__init__(root, **options)
         self.seams = dict(seams or {})
+        self._apply_settings()
+
+    def _apply_settings(self) -> None:
+        """Account id, site (Worker) name and workers.dev subdomain come from `[publish.options]`; the token from
+        CLOUDFLARE_API_TOKEN or wrangler's login. The share code reads them when it loads, so a process uses one account:
+        asking for different values after it loaded is refused rather than half applied."""
+        for key, env in SETTINGS.items():
+            value = str(self.options.get(key) or "").strip()
+            if not value:
+                continue
+            module, attr = _LOADED[key]
+            loaded = sys.modules.get(module)
+            if loaded is not None and getattr(loaded, attr) != value:
+                raise PublishError(f"[publish.options] {key} = {value!r} differs from {getattr(loaded, attr)!r}, which this "
+                                   f"process already loaded; set it before the first publish (or in the environment: {env})")
+            os.environ[env] = value
 
     def available(self) -> bool:
         """Credentials are present (CLOUDFLARE_API_TOKEN or wrangler's login). A local read: nothing is refreshed."""

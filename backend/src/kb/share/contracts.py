@@ -42,8 +42,10 @@ def raw_is_email(raw) -> bool:
     return any(isinstance(r, str) and r.strip().strip("`'\"").startswith(EMAIL_RAW_PREFIX) for r in items)
 
 
-WORKER_MAIN = "kb"
-ACCOUNT_SUBDOMAIN = "yonatan-magen-thesis"
+# Any Cloudflare account: the publisher (`[publish.options]`) or these variables set the values; unset = the defaults the
+# code always used, so existing sites and links are unchanged.
+WORKER_MAIN = os.environ.get("KB_CLOUDFLARE_WORKER") or "kb"
+ACCOUNT_SUBDOMAIN = os.environ.get("KB_CLOUDFLARE_SUBDOMAIN") or "yonatan-magen-thesis"
 SNAPSHOT_PREFIX = "snapshot-"
 DEPLOY_MESSAGE_PREFIX = "kb-share"
 WRANGLER_VERSION = "4.151.3"
