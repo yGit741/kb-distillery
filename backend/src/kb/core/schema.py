@@ -284,6 +284,12 @@ TOOLING_PATHS = [
     ".claude/",
     ".github/",
     "LICENSE",           # open-source files at the repo root
+    ".cursor/",          # removed in the next commit; listed so ship commit sees the deletions
+    ".vscode/",
+    "GEMINI.md",
+    "ARCHITECTURE.md",
+    "CONTRIBUTING.md",
+    "CODE_OF_CONDUCT.md",
 ]
 
 
