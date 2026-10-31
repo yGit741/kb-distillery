@@ -24,7 +24,20 @@ connector = "local-folder"
 [storage.options]        # keyword arguments after the kb root
 ```
 
-In code: `from kb.storage import for_kb; store = for_kb()`.
+In code, engine modules use the facade, which is bound to the current kb's connector:
+
+```python
+from kb.storage import raw
+raw.exists("raw/web-clips/x.md")   raw.read_text(key)   raw.read_bytes(key)   raw.list("raw/printed-docs/")
+raw.info(key).short                # the 12 hex characters meta/corpus.tsv stores
+raw.path(key)                      # a local file valid for the process (the file itself for a local store)
+raw.is_raw_key(value)              # the check serving code runs before it looks: valid key inside raw/
+raw.put(key, data)                 # refused when the key exists: raw is immutable
+```
+
+`kb.storage.for_kb()` returns the connector itself, for code that needs `local_copy` or `auth`. `raw.path` is for a web handler or a tool that needs a file after the call returns; `local_copy` is the scoped version that cleans up.
+
+`python -m kb.lint.raw_access` lists the modules that still touch `raw/` directly; `backend/tests/storage/raw_access_baseline.txt` is their allowance, and a module you migrate must leave it.
 
 ## Writing a connector in a package
 

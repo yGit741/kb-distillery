@@ -81,6 +81,13 @@ class LocalFolder(Connector):
             raise NotFound(f"no object {key!r} in {self.root}")
         yield path
 
+    def cached_path(self, key: str) -> str:
+        """The file itself, no copy and no hashing: this is the hot path for serving and reading local sources."""
+        path = self._path(key)
+        if not os.path.isfile(path):
+            raise NotFound(f"no object {key!r} in {self.root}")
+        return path
+
     def auth(self) -> AuthStatus:
         if os.path.isdir(self.root):
             return AuthStatus(True)

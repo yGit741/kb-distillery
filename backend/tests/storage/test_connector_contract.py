@@ -80,6 +80,21 @@ class ConnectorContract:
             with open(path, "rb") as f:
                 self.assertEqual(f.read(), b"file bytes")
 
+    def test_cached_path_outlives_the_call_and_follows_the_content(self):
+        self.c.put("raw/pdf/c.pdf", b"first")
+        path = self.c.cached_path("raw/pdf/c.pdf")
+        self.assertTrue(path.endswith("c.pdf"))
+        with open(path, "rb") as f:
+            self.assertEqual(f.read(), b"first")
+        self.assertEqual(self.c.cached_path("raw/pdf/c.pdf"), path)              # stable while unchanged
+        self.c.put("raw/pdf/c.pdf", b"second, longer", overwrite=True)
+        with open(self.c.cached_path("raw/pdf/c.pdf"), "rb") as f:
+            self.assertEqual(f.read(), b"second, longer")                        # never a stale copy
+
+    def test_cached_path_of_a_missing_key_is_not_found(self):
+        with self.assertRaises(NotFound):
+            self.c.cached_path("raw/missing.pdf")
+
     def test_auth_reports_a_status(self):
         status = self.c.auth()
         self.assertIsInstance(status, AuthStatus)
