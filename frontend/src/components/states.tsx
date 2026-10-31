@@ -16,7 +16,7 @@ export function Loading({ label = "Loading", rows = 3 }: { label?: string; rows?
 
 /** Nothing to show (a filter with no match, a list with no rows). */
 export const Empty = ({ children }: { children: ReactNode }) => (
-  <p className="py-4 text-center text-sm text-muted-foreground">{children}</p>
+  <p className="py-4 text-center text-sm text-foreground/75">{children}</p>
 );
 
 /** Error card with a retry button. */

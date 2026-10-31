@@ -1,14 +1,14 @@
-"""Relation proposals for the browser screen: every proposal a run made, accepted or not, filterable by confidence.
+"""Relation proposals for the browser screen: every proposal a run made, filterable by confidence.
 
-Two sources in the kb's `.cache/` (written by `python -m kb.graph.propose`): `relations-proposals.jsonl` holds the
-accepted ones (confidence >= 0.5, valid endpoints), and each run's `relations-propose/<run>/state.json` keeps the
-rejected ones. A proposal rejected only for low confidence is shown too, marked `low-confidence`; one rejected for a
-structural reason (an edge type the kb does not allow between those pages) is not a proposal and is left out.
+Source: the kb's `.cache/relations-proposals.jsonl` (written by `python -m kb.graph.propose`). It holds EVERY valid
+proposal, weak ones included; confidence is data and the cutoff is chosen here, at query time. A row below
+`propose.MIN_CONFIDENCE` (0.5, the default review cutoff) is labelled `low-confidence`. A proposal that failed a
+structural check (an edge type the kb does not allow between those pages) was never a proposal and is not in the
+file. A file written by an older run that dropped weak rows is completed with `propose repack --run <name>`.
 Nothing is written. Read-only, no LLM.
 """
 from __future__ import annotations
 
-import glob
 import json
 import os
 
@@ -35,22 +35,7 @@ def _accepted() -> list[dict]:
             except ValueError:
                 continue
             if isinstance(r, dict) and r.get("from") and r.get("to") and r.get("kind"):
-                rows.append({**r, "status": PROPOSED})
-    return rows
-
-
-def _low_confidence() -> list[dict]:
-    rows = []
-    for state in sorted(glob.glob(os.path.join(_cache(), "relations-propose", "*", "state.json"))):
-        try:
-            with open(state, encoding="utf-8") as f:
-                data = json.load(f)
-        except (OSError, ValueError):
-            continue
-        for t in (data.get("subjects") or {}).values():
-            for r in t.get("rejected") or []:
-                if str(r.get("reason", "")).startswith("confidence") and "missing" not in str(r.get("reason")):
-                    rows.append({**r, "status": LOW, "run": data.get("run")})
+                rows.append(r)
     return rows
 
 
@@ -61,9 +46,9 @@ def _titles(slugs: set[str]) -> dict[str, str]:
 
 
 def load() -> list[dict]:
-    """Every proposal once, per (from, to, kind): an accepted one wins over a low-confidence one."""
+    """Every proposal once, per (from, to, kind), with its `status` label derived from the confidence."""
     seen, out = set(), []
-    for r in _accepted() + _low_confidence():
+    for r in _accepted():
         key = (r["from"], r["to"], r["kind"])
         if key in seen:
             continue
@@ -72,6 +57,7 @@ def load() -> list[dict]:
             r["confidence"] = float(r["confidence"])
         except (TypeError, ValueError):
             continue
+        r["status"] = LOW if r["confidence"] < propose.MIN_CONFIDENCE else PROPOSED
         out.append(r)
     return out
 

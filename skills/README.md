@@ -30,6 +30,7 @@ Read `skills/<skill>/SKILL.md` before running a workflow.
 | `share-kb` | none | 0 | `share the site`, `publish`, `deploy main`, `rollback the site`, `deploy status` (not `export-kb`) |
 | `guided-tour` | light | ~2–4k | `guided tour`, `walkthrough`, `onboarding tour` |
 | `propose-relations` | light | ~1–2k per subject (batch) | `propose relations`, `relation proposals` (dry-run first; spends) |
+| `send-to-backlog` | none | 0 | `send to backlog`, `backlog this`, `save this plan for later` |
 
 ## Trigger rules
 
@@ -56,6 +57,7 @@ Read `skills/<skill>/SKILL.md` before running a workflow.
 | [lint-moc](lint-moc/SKILL.md) | Topic audit: on-demand semantic pass over one topic page (`theme-*`) |
 | [build-researcher-profile](build-researcher-profile/SKILL.md) | Index full bib + catalog star papers only (light verify) |
 | [propose-relations](propose-relations/SKILL.md) | Batch-LLM typed relation proposals between pages → `.cache/` only, per-subject review digest |
+| [send-to-backlog](send-to-backlog/SKILL.md) | Park an idea, bug or unstarted plan as a card in the local `.backlog/` (0 LLM); plan cards show drift |
 
 ### Lifecycle skills (git history, versions, PRs)
 

@@ -5,6 +5,7 @@ import { CopyButton } from "@/components/CopyButton";
 import { Empty, ErrorState, Loading } from "@/components/states";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { BacklogView, useOpenBacklogCount } from "@/features/backlog/BacklogView";
 import { LifecycleScreen } from "@/features/lifecycle/LifecycleScreen";
 import { PipelineScreen } from "@/features/pipeline/PipelineScreen";
 import { useApiQuery } from "@/lib/useApiQuery";
@@ -18,7 +19,7 @@ import "./tours";
 import { FLAG_ENV } from "@/flags";
 import { useFlag } from "@/flags/useFlag";
 
-const TAB_LABEL: Record<SystemTab, string> = { overview: "Overview", pipeline: "Pipeline", history: "History", health: "Health", flags: "Flags", kbs: "Knowledge bases" };
+const TAB_LABEL: Record<SystemTab, string> = { overview: "Overview", backlog: "Backlog", pipeline: "Pipeline", history: "History", health: "Health", flags: "Flags", kbs: "Knowledge bases" };
 
 const TONE_TEXT: Record<Tone, string> = { ok: "text-ok", warn: "text-warn", bad: "text-bad", "": "text-foreground" };
 const TONE_DOT: Record<Tone, string> = { ok: "bg-ok", warn: "bg-warn", bad: "bg-bad", "": "bg-muted-foreground/40" };
@@ -187,7 +188,9 @@ export function SystemScreen() {
   const navigate = useNavigate();
   // Flags tab: always in the local app (it is where ui.system-flags-tab itself is flipped); elsewhere gated by that flag.
   const flagsTab = useFlag("ui.system-flags-tab") || FLAG_ENV === "local";
-  const tabs = SYSTEM_TABS.filter((t) => t !== "flags" || flagsTab);
+  // Backlog tab: the local app only (the cards are local files; the share API has no backlog).
+  const tabs = SYSTEM_TABS.filter((t) => (t !== "flags" || flagsTab) && (t !== "backlog" || FLAG_ENV === "local"));
+  const openBacklog = useOpenBacklogCount();
   const tab: SystemTab = search.tab && tabs.includes(search.tab) ? search.tab : "overview";
   const lc = useApiQuery(["lifecycle"], (d) => d.getLifecycle());
   const ops = useApiQuery(["ops"], (d) => d.getOps(), { staleTime: 60_000 });
@@ -211,6 +214,7 @@ export function SystemScreen() {
             className="-mb-px border-b-2 border-transparent px-3 py-2 text-sm text-muted-foreground hover:text-foreground aria-selected:border-primary aria-selected:text-foreground"
           >
             {TAB_LABEL[t]}
+            {t === "backlog" && openBacklog ? <Badge className="ml-1.5" aria-label={`${openBacklog} open`}>{openBacklog}</Badge> : null}
           </button>
         ))}
       </div>
@@ -220,6 +224,7 @@ export function SystemScreen() {
           <Timeline lc={lcData} ops={opsData} />
         </div>
       )}
+      {tab === "backlog" && <BacklogView />}
       {tab === "pipeline" && <PipelineScreen />}
       {tab === "history" && <LifecycleScreen />}
       {tab === "flags" && <FlagsView />}
