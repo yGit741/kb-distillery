@@ -46,9 +46,13 @@ class IndexLinks(unittest.TestCase):
         self.assertNotIn("[[AGENTS]]", text)
         self.assertEqual(lint.check_index_links({}), 0)
 
+    def test_thesis_in_meta_dir_is_listed(self):
+        self.touch("meta/thesis.md")
+        self.assertIn("[[thesis]]", self.index())
+
     def test_a_dangling_link_in_index_is_an_error(self):
-        self.touch("index.md")
-        open(os.path.join(self.root, "index.md"), "w").write("| [[ghost]] | x |\n")
+        with open(os.path.join(self.root, "index.md"), "w") as f:
+            f.write("| [[ghost]] | x |\n")
         self.assertEqual(lint.check_index_links({}), 1)
         self.assertTrue(any("ghost" in e for e in lint.errors))
 

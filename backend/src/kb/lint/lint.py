@@ -1398,11 +1398,16 @@ def sync_search_cards():
         qmd_client.refresh(timeout=0.5)      # the service re-indexes now instead of within 10 min
 
 
-# (slug, summary, exists?) — the Meta rows of index.md; a row is written only when its page is there.
+def _page_file_exists(*parts):
+    return os.path.isfile(os.path.join(ROOT, *parts))
+
+
+# (slug, summary, exists?) — the Meta rows of index.md; a row is written only when its file is there.
 META_PAGES = [
-    ("thesis", "Thesis topic, instructor, institution", lambda pages: "thesis" in pages or os.path.isfile(os.path.join(ROOT, "thesis.md"))),
-    ("log", "Activity timeline", lambda pages: os.path.isfile(os.path.join(ROOT, META_DIR, "log.md"))),
-    ("AGENTS", "Schema and workflows", lambda pages: os.path.isfile(os.path.join(ROOT, "AGENTS.md"))),
+    ("thesis", "Thesis topic, instructor, institution",
+     lambda pages: "thesis" in pages or _page_file_exists("thesis.md") or _page_file_exists(META_DIR, "thesis.md")),
+    ("log", "Activity timeline", lambda pages: _page_file_exists(META_DIR, "log.md")),
+    ("AGENTS", "Schema and workflows", lambda pages: _page_file_exists("AGENTS.md")),
 ]
 
 
