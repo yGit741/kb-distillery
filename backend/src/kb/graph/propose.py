@@ -10,7 +10,10 @@ A subject is a source page at depth full/deep or a concept page (idea, question)
 links or is linked from (wikilinks, `related:`) plus its closest card vectors, capped and filtered to the types a
 relation from it may reach. One request per subject (kb.llm: batch by default) → a JSON list of
 {to, kind, note, confidence, evidence}. Every proposal is validated (candidate slug, allowed kind, endpoint types,
-contradicts note, confidence ≥ 0.5); a failing one lands in the run's `rejected` bucket with its reason.
+contradicts note, confidence in 0..1); a failing one lands in the run's `rejected` bucket with its reason. The
+confidence is DATA, not a gate: every structurally valid proposal is stored, weak ones included, and a cutoff is a
+query-time choice (`review --min-confidence`, `apply --min-confidence`, the Relations screen). `submit --keep-above X`
+sets a cutoff at creation instead (default 0: keep everything).
 
 Writes ONLY under `<kb>/.cache/`: run state in `relations-propose/<run>/`, accepted rows in
 `relations-proposals.jsonl` (one row per (from, to, kind), `origin: "llm"`, rewritten per run on collect).
@@ -58,7 +61,8 @@ MEANING = {
 CONCEPT_SUBJECTS = frozenset({"idea", "question"})
 DEEP = frozenset({"full", "deep"})
 SHALLOW = frozenset({"easy", "listed"})
-MIN_CONFIDENCE = 0.5
+MIN_CONFIDENCE = 0.5       # the default REVIEW cutoff and the screen's "below the cut" mark, not a validation gate
+KEEP_ABOVE = 0.0           # creation-time cutoff: a proposal below it is rejected when the reply is read (0 = keep all)
 MAX_CANDIDATES = 20
 VECTOR_K = 5
 EXCERPT = 1500
@@ -276,7 +280,7 @@ def _pair(kind, a, b, kc):
     return tuple(sorted((a, b))) if kind in kc["symmetric"] else (a, b)
 
 
-def validate(subject, items, cand_slugs, pages, kc, kinds=None):
+def validate(subject, items, cand_slugs, pages, kc, kinds=None, keep_above=KEEP_ABOVE):
     """(accepted, rejected): accepted are {from, to, kind, note, confidence, evidence}; rejected keep the proposal
     and a `reason`. Symmetric kinds are stored once with the slugs in sorted order."""
     kinds = set(kinds or kc["kinds"])
@@ -308,8 +312,8 @@ def validate(subject, items, cand_slugs, pages, kc, kinds=None):
             reason = f"{kind} needs a note"
         elif conf is None or not 0 <= conf <= 1:
             reason = "confidence missing or outside 0..1"
-        elif conf < MIN_CONFIDENCE:
-            reason = f"confidence {conf} < {MIN_CONFIDENCE}"
+        elif conf < keep_above:
+            reason = f"confidence {conf} < {keep_above}"
         row = {"from": subject, "to": to, "kind": kind, "note": note, "confidence": conf, "evidence": evidence}
         if not reason:
             a, b = _pair(kind, subject, to, kc)
@@ -380,7 +384,7 @@ def _ingest(state, result, pages, kc):
     if slug not in pages:
         t["status"], t["note"], t["proposals"], t["rejected"] = "failed", "subject page is gone", [], []
         return False
-    acc, rej = validate(slug, items, t["candidates"], pages, kc, t["kinds"])
+    acc, rej = validate(slug, items, t["candidates"], pages, kc, t["kinds"], state.get("keep_above", KEEP_ABOVE))
     stamp = {"origin": "llm", "model": result.model or t["model"], "run": state["run"], "at": _now()}
     for row in acc:
         row.update(stamp)
@@ -390,15 +394,35 @@ def _ingest(state, result, pages, kc):
     return True
 
 
+def _legacy_low(state, kc):
+    """Rows an older run rejected ONLY for low confidence (reason `confidence x < 0.5`), shaped like accepted ones.
+    A run that recorded `keep_above` cut those rows on purpose at creation, so it promotes nothing."""
+    out = []
+    if "keep_above" in state:
+        return out
+    for slug, t in state["subjects"].items():
+        for r in t.get("rejected") or []:
+            if not str(r.get("reason", "")).startswith("confidence ") or "missing" in str(r.get("reason")):
+                continue
+            row = {k: r.get(k, "") for k in ("from", "to", "kind", "note", "confidence", "evidence")}
+            row["from"], row["to"] = _pair(row["kind"], row["from"], row["to"], kc)
+            row.update({"origin": "llm", "model": t.get("model", ""), "run": state["run"], "at": r.get("at") or _now()})
+            if t.get("easy"):
+                row["tier"] = "low"
+            out.append(row)
+    return out
+
+
 def run_rows(state):
-    """This run's accepted rows, deduped across subjects on (from, to, kind)."""
+    """This run's rows, deduped across subjects on (from, to, kind): accepted ones first, then low-confidence rows an
+    older run kept only in its `rejected` bucket (so a rewrite of the file never loses them)."""
     rows, seen = [], set()
-    for t in state["subjects"].values():
-        for r in t.get("proposals") or []:
-            key = (r["from"], r["to"], r["kind"])
-            if key not in seen:
-                seen.add(key)
-                rows.append(r)
+    legacy = _legacy_low(state, kind_config())
+    for r in [r for t in state["subjects"].values() for r in t.get("proposals") or []] + legacy:
+        key = (r["from"], r["to"], r["kind"])
+        if key not in seen:
+            seen.add(key)
+            rows.append(r)
     return rows
 
 
@@ -428,6 +452,7 @@ def cmd_submit(a):
     kc = kind_config()
     pages = load_pages()
     state = _load(a.run)
+    state["keep_above"] = getattr(a, "keep_above", KEEP_ABOVE)
     collected = {b["id"] for b in state["batches"] if b["collected"]}
 
     def resend(t):          # --retry: failed / rejected, or still "submitted" although its batch was collected
@@ -633,6 +658,17 @@ def cmd_apply(a):
     return 0
 
 
+def cmd_repack(a):
+    """Rewrite the proposals file from a run's saved state (no LLM): picks up rows an older run kept only as rejected."""
+    state = _load(a.run)
+    if not state["subjects"]:
+        print(f"run {a.run}: nothing submitted")
+        return 1
+    n = write_proposals(state)
+    print(f"run {a.run}: {n} proposal row(s) in {OUT_FILE}")
+    return 0
+
+
 def cmd_status(a):
     base = os.path.join(cache_dir(), "relations-propose")
     runs = [a.run] if a.run else sorted(os.listdir(base)) if os.path.isdir(base) else []
@@ -664,6 +700,8 @@ def run(argv=None):
                    help=f"also easy/listed pages ({EASY_MODEL}; example-of/addresses/open-problem-in only, tier low)")
     s.add_argument("--include-people", action="store_true", help="also person pages (student-of only)")
     s.add_argument("--limit", type=int)
+    s.add_argument("--keep-above", type=float, default=KEEP_ABOVE,
+                   help="drop proposals below this confidence when the reply is read (default 0: keep all)")
     s.add_argument("--max-usd", type=float, default=6.0, help="refuse a run whose estimate passes this")
     s.add_argument("--dry-run", action="store_true", help="count and estimate, send and write nothing")
     s.add_argument("--retry", action="store_true", help="resend subjects that failed or were rejected")
@@ -673,6 +711,8 @@ def run(argv=None):
     r = sub.add_parser("review", help="per-subject markdown digest of a run's proposals")
     r.add_argument("--run", required=True)
     r.add_argument("--min-confidence", type=float, default=MIN_CONFIDENCE)
+    rp = sub.add_parser("repack", help="rewrite the proposals file from a run's saved state (no LLM)")
+    rp.add_argument("--run", required=True)
     st = sub.add_parser("status")
     st.add_argument("--run")
     ap_ = sub.add_parser("apply", help="write chosen proposals into pages as stated relations (dry run unless --write)")
@@ -683,7 +723,7 @@ def run(argv=None):
     ap_.add_argument("--limit", type=int, help="touch at most this many pages (strongest first)")
     ap_.add_argument("--write", action="store_true", help="edit the pages; wrap in `ops begin refine` / `ops commit`")
     a = ap.parse_args(argv)
-    return {"submit": cmd_submit, "collect": cmd_collect, "review": cmd_review, "status": cmd_status,
+    return {"submit": cmd_submit, "collect": cmd_collect, "review": cmd_review, "status": cmd_status, "repack": cmd_repack,
             "apply": cmd_apply}[a.cmd](a)
 
 

@@ -18,15 +18,11 @@ def row(a, b, kind, conf, **kw):
 @pytest.fixture
 def client(tmp_path, monkeypatch):
     cache = tmp_path / ".cache"
-    (cache / "relations-propose" / "r1").mkdir(parents=True)
-    accepted = [row("a", "b", "uses", 0.9), row("a", "c", "extends", 0.6), row("b", "c", "uses", 1.0)]
-    (cache / "relations-proposals.jsonl").write_text("".join(json.dumps(r) + "\n" for r in accepted))
-    rejected = [{**row("c", "a", "uses", 0.35), "reason": "confidence 0.35 < 0.5"},
-                {**row("c", "b", "extends", 0.05), "reason": "confidence 0.05 < 0.5"},
-                {**row("c", "a", "addresses", 0.4), "reason": "addresses does not join paper → idea"},
-                {**row("a", "b", "uses", 0.3), "reason": "confidence 0.3 < 0.5"}]            # same key as an accepted one
-    state = {"run": "r1", "subjects": {"c": {"status": "done", "proposals": [], "rejected": rejected}}}
-    (cache / "relations-propose" / "r1" / "state.json").write_text(json.dumps(state))
+    cache.mkdir()
+    rows = [row("a", "b", "uses", 0.9), row("a", "c", "extends", 0.6), row("b", "c", "uses", 1.0),
+            row("c", "a", "uses", 0.35), row("c", "b", "extends", 0.05),                       # weak rows are stored too
+            row("a", "b", "uses", 0.3)]                                                       # same key as the first: dropped
+    (cache / "relations-proposals.jsonl").write_text("".join(json.dumps(r) + "\n" for r in rows))
     monkeypatch.setattr(paths, "ROOT", str(tmp_path))
     monkeypatch.setattr("kb.services.relation_proposals._titles", lambda slugs: {s: s.upper() for s in slugs})
     with TestClient(create_app()) as c:
@@ -42,7 +38,7 @@ def get(client, **params):
 
 def test_everything_is_returned_best_first_with_the_json_key_from(client):
     raw, body = get(client)
-    assert body.total == body.shown == 5                      # 3 accepted + 2 low-confidence; structural + duplicate dropped
+    assert body.total == body.shown == 5                      # 3 strong + 2 weak; the duplicate key is dropped
     assert [r["confidence"] for r in raw["rows"]] == [1.0, 0.9, 0.6, 0.35, 0.05]
     assert raw["rows"][0]["from"] == "b" and raw["rows"][0]["from_title"] == "B"
 
@@ -68,9 +64,10 @@ def test_the_histogram_has_ten_buckets_and_one_point_zero_lands_in_the_last(clie
     assert raw["histogram"][9] == 2 and raw["histogram"][0] == 1      # 0.9 and 1.0 ; 0.05
 
 
-def test_accepted_wins_over_a_low_confidence_duplicate(client):
+def test_the_first_row_of_a_key_wins_and_the_label_follows_the_confidence(client):
     raw, _ = get(client, min=0.0, max=1.0, kind="uses")
-    assert sorted(r["confidence"] for r in raw["rows"]) == [0.35, 0.9, 1.0]       # 0.3 duplicate of a->b uses dropped
+    assert sorted(r["confidence"] for r in raw["rows"]) == [0.35, 0.9, 1.0]       # the 0.3 duplicate of a->b is dropped
+    assert {r["confidence"]: r["status"] for r in raw["rows"]} == {0.35: "low-confidence", 0.9: "proposed", 1.0: "proposed"}
 
 
 def test_out_of_range_parameters_are_a_422(client):

@@ -88,6 +88,17 @@ def test_type_gates():
 
 
 # --- validation -----------------------------------------------------------------------------------------------
+def test_confidence_is_data_so_weak_proposals_are_kept_unless_a_cutoff_is_asked_for(vault):
+    pages = pages_of(vault)
+    item = [{"to": "idea-x", "kind": "example-of", "confidence": 0.1, "evidence": "e"}]
+    acc, rej = propose.validate("paper-a", item, ["idea-x"], pages, KC)
+    assert [r["confidence"] for r in acc] == [0.1] and rej == []
+    acc, rej = propose.validate("paper-a", item, ["idea-x"], pages, KC, keep_above=0.5)
+    assert acc == [] and rej[0]["reason"].startswith("confidence 0.1")
+    acc, _ = propose.validate("paper-a", [{"to": "idea-x", "kind": "example-of", "confidence": 1.4}], ["idea-x"], pages, KC)
+    assert acc == []                                                              # outside 0..1 is still invalid
+
+
 def test_validate_rules_and_symmetric_dedupe(vault):
     pages = pages_of(vault)
     cands = ["paper-b", "idea-x"]
@@ -101,16 +112,16 @@ def test_validate_rules_and_symmetric_dedupe(vault):
         {"to": "paper-a", "kind": "uses", "confidence": 0.9},                             # self
         {"to": "paper-b", "kind": "addresses", "confidence": 0.9},                        # gate
         {"to": "paper-b", "kind": "cites", "confidence": 0.9},                            # unknown kind
-        {"to": "idea-x", "kind": "example-of", "confidence": 0.3},                        # low confidence
+        {"to": "idea-x", "kind": "example-of", "confidence": 0.3},                        # weak: kept by default
         {"to": "idea-x", "kind": "example-of", "confidence": "high"},                     # not a number
-    ], cands, pages, KC)
+    ], cands, pages, KC, keep_above=0.5)
     assert [(r["from"], r["to"], r["kind"]) for r in acc] == [
         ("paper-a", "paper-b", "extends"), ("paper-a", "idea-x", "uses"), ("paper-a", "paper-b", "contradicts")]
     reasons = [r["reason"] for r in rej]
     assert reasons[0] == "duplicate" and reasons[1] == "contradicts needs a note"
     assert "not a candidate" in reasons[2] and reasons[3] == "self-relation"
     assert "does not join" in reasons[4] and "not allowed" in reasons[5]
-    assert reasons[6].startswith("confidence 0.3") and "missing" in reasons[7]
+    assert reasons[6].startswith("confidence 0.3") and "missing" in reasons[7]      # below an explicit keep_above
 
     acc, _ = propose.validate("paper-b", [{"to": "paper-a", "kind": "contradicts", "note": "n", "confidence": 0.6}],
                               ["paper-a"], pages, KC)
@@ -202,17 +213,19 @@ def test_submit_collect_review_batch(vault, monkeypatch, capsys):
     assert propose.cmd_collect(args()) == 0
     rows = [json.loads(l) for l in open(vault / ".cache" / propose.OUT_FILE)]
     assert {(r["from"], r["to"], r["kind"]) for r in rows} == {
-        ("paper-a", "paper-b", "extends"), ("paper-a", "paper-b", "contradicts")}      # both subjects' contradicts → one row
+        ("paper-a", "paper-b", "extends"), ("paper-a", "paper-b", "contradicts"),      # both subjects' contradicts → one row
+        ("paper-a", "idea-x", "uses")}                                                  # the weak one is kept: confidence is data
+    assert [r["confidence"] for r in rows if r["kind"] == "uses"] == [0.2]
     assert all(r["origin"] == "llm" and r["run"] == "r1" and r["model"] == "claude-sonnet-5-5" and r["at"] for r in rows)
     state = propose._load("r1")
     assert state["subjects"]["q-1"]["status"] == "rejected" and state["spent"] == pytest.approx(0.04)
-    assert state["subjects"]["paper-a"]["rejected"][0]["reason"].startswith("confidence 0.2")
+    assert not any(str(r.get("reason", "")).startswith("confidence") for r in state["subjects"]["paper-a"]["rejected"])
 
     capsys.readouterr()
     assert propose.cmd_review(args()) == 0
     md = capsys.readouterr().out
     assert "## Paper A (`paper-a`)" in md and "**extends** → Paper B (`paper-b`) · confidence 0.90" in md
-    assert "evidence: A extends B" in md and "note: A: x; B: not x" in md and "_1 rejected_" in md
+    assert "evidence: A extends B" in md and "note: A: x; B: not x" in md and "1 rejected." in md and "confidence 0.20" not in md   # review hides the weak row at 0.5
     assert propose.cmd_review(args(min_confidence=0.95)) == 0 and "Paper A" not in capsys.readouterr().out.split("\n", 3)[-1]
 
     state["batches"][0]["collected"] = False                                     # re-collect: the run's rows replace
@@ -221,7 +234,7 @@ def test_submit_collect_review_batch(vault, monkeypatch, capsys):
         f.write(json.dumps({"from": "x", "to": "y", "kind": "uses", "run": "other"}) + "\n")
     propose.cmd_collect(args())
     rows = [json.loads(l) for l in open(vault / ".cache" / propose.OUT_FILE)]
-    assert len(rows) == 3 and sum(r["run"] == "other" for r in rows) == 1
+    assert len(rows) == 4 and sum(r["run"] == "other" for r in rows) == 1       # this run's 3 (weak one included) + the other run's
     assert tree(str(vault)) == before                                            # nothing outside .cache changed
 
 
@@ -264,3 +277,47 @@ def test_a_numeric_slug_that_is_a_candidate_wins_over_the_index(vault):
     pages["2"] = {**pages["paper-b"], "slug": "2"}
     acc, _ = propose.validate("paper-a", [{"to": "2", "kind": "uses", "confidence": 0.9}], ["idea-x", "2"], pages, KC)
     assert acc[0]["to"] == "2"
+
+
+# --- confidence is data: weak rows are stored; a cutoff is asked for ------------------------------------------------
+def old_run_state():
+    """A run saved before weak rows were kept: one strong row, and rejected ones with three different reasons."""
+    strong = {"from": "paper-a", "to": "paper-b", "kind": "extends", "note": "", "confidence": 0.9, "evidence": "e",
+              "origin": "llm", "model": "m", "run": "old", "at": "t"}
+    weak = {"from": "paper-a", "to": "idea-x", "kind": "uses", "note": "", "confidence": 0.4, "evidence": "e2",
+            "reason": "confidence 0.4 < 0.5"}
+    selfrel = {"from": "paper-a", "to": "paper-a", "kind": "uses", "note": "", "confidence": 0.9, "reason": "self-relation"}
+    missing = {"from": "paper-a", "to": "idea-x", "kind": "extends", "note": "", "confidence": None,
+               "reason": "confidence missing or outside 0..1"}
+    return {"run": "old", "spent": 0.0, "batches": [], "subjects": {
+        "paper-a": {"id": "s1", "status": "done", "easy": False, "model": "m", "proposals": [strong],
+                    "rejected": [weak, selfrel, missing]}}}
+
+
+def test_run_rows_promote_only_confidence_rejections_of_an_older_run(vault):
+    rows = propose.run_rows(old_run_state())
+    assert [(r["from"], r["to"], r["kind"], r["confidence"]) for r in rows] == [
+        ("paper-a", "paper-b", "extends", 0.9), ("paper-a", "idea-x", "uses", 0.4)]      # not the self-relation, not the NaN
+    assert all(r["origin"] == "llm" and r["run"] == "old" for r in rows)
+
+
+def test_repack_rewrites_the_file_from_saved_state_and_is_idempotent(vault, capsys):
+    propose._save(old_run_state())
+    assert propose.cmd_repack(SimpleNamespace(run="old")) == 0
+    first = open(vault / ".cache" / propose.OUT_FILE).read()
+    assert [json.loads(l)["confidence"] for l in first.splitlines()] == [0.9, 0.4]
+    assert propose.cmd_repack(SimpleNamespace(run="old")) == 0
+    assert open(vault / ".cache" / propose.OUT_FILE).read() == first                 # same rows, no duplicates
+
+
+def test_submit_keep_above_is_remembered_and_applied_when_the_reply_is_read(vault, monkeypatch):
+    sent = {}
+    monkeypatch.setattr(llm, "submit", lambda reqs, root=None: sent.update({r.id: r for r in reqs}) or "batch_1")
+    assert propose.cmd_submit(args(keep_above=0.5)) == 0
+    assert propose._load("r1")["keep_above"] == 0.5
+    monkeypatch.setattr(llm, "collect", lambda bid, wait_s=0, root=None: fake_results(sent, list(PAGES)))
+    assert propose.cmd_collect(args()) == 0
+    rows = [json.loads(l) for l in open(vault / ".cache" / propose.OUT_FILE)]
+    assert all(r["confidence"] >= 0.5 for r in rows)                                 # the 0.2 row was cut at creation
+    assert any(str(r.get("reason", "")).startswith("confidence 0.2")
+               for t in propose._load("r1")["subjects"].values() for r in t.get("rejected") or [])
