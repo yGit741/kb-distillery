@@ -9,6 +9,8 @@ part of the contract: it stays the same whether the bytes sit in a folder, a Dri
     put(key, data)     store bytes; raw sources are immutable, so an existing key is refused unless overwrite=True
     info(key)          size, mtime and sha1 (the manifest keeps the first 12 hex characters)
     local_copy(key)    a context manager yielding a readable local file path, for tools that need a file
+    cached_path(key)   a local file path that stays valid for the process (not a connector method to implement:
+                       the base class copies to a temp cache, a local store returns the file itself)
     auth()             whether the connector can reach its store right now, and what to do if not
 
 Third parties implement `Connector` in a package and register it under the `kb.storage.connectors` entry-point group;
@@ -16,6 +18,9 @@ Third parties implement `Connector` in a package and register it under the `kb.s
 """
 from __future__ import annotations
 
+import hashlib
+import os
+import tempfile
 from abc import ABC, abstractmethod
 from contextlib import AbstractContextManager
 from dataclasses import dataclass
@@ -93,3 +98,26 @@ class Connector(ABC):
         except NotFound:
             return False
         return True
+
+    def cached_path(self, key: str) -> str:
+        """A local file for `key` that stays valid for the life of the process: a web handler returning a file, a
+        tool started later. A local store returns the file itself (it overrides this). Any other store gets this
+        default: a copy kept in the system temp dir under the object's sha1, reused while the sha1 is unchanged."""
+        info = self.info(key)
+        who = f"{type(self).__module__}.{type(self).__qualname__}:{getattr(self, 'root', '')}"
+        folder = os.path.join(tempfile.gettempdir(), "kb-raw-cache", hashlib.sha1(who.encode()).hexdigest()[:12],
+                              info.short)
+        path = os.path.join(folder, os.path.basename(key))
+        if os.path.isfile(path) and os.path.getsize(path) == info.size:
+            return path
+        os.makedirs(folder, exist_ok=True)
+        fd, tmp = tempfile.mkstemp(dir=folder, prefix=".part-")
+        try:
+            with os.fdopen(fd, "wb") as f:
+                f.write(self.get(key))
+            os.replace(tmp, path)
+        except BaseException:
+            if os.path.exists(tmp):
+                os.remove(tmp)
+            raise
+        return path
