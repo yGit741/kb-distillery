@@ -146,7 +146,8 @@ def test_llm_none_is_info_only():
 def test_frontend(tmp_path):
     fe = str(tmp_path)
     assert doctor.check_frontend(fe, False).status == WARN
-    assert doctor.check_frontend(fe, True).status == WARN
+    first = doctor.check_frontend(fe, True)
+    assert first.status == INFO and "first launch" in first.fix           # a fresh clone is not a problem: launch builds it
     os.makedirs(tmp_path / "node_modules")
     assert doctor.check_frontend(fe, True).status == PASS
     os.makedirs(tmp_path / "dist")
