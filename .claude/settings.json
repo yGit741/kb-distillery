@@ -15,7 +15,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"$CLAUDE_PROJECT_DIR/.cursor/hooks/block-git-write.sh\""
+            "command": "bash \"$CLAUDE_PROJECT_DIR/tools/hooks/block-git-write.sh\""
           }
         ]
       }

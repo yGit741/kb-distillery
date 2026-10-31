@@ -96,7 +96,7 @@ THINK_DIR = "think"  # human sandbox at vault root — not linted
 QUARANTINE_DIR = "_quarantine"
 
 # Markdown allowed at the vault root.
-ROOT_MD = {"index.md", "AGENTS.md", "CLAUDE.md", "README.md", "GEMINI.md"}
+ROOT_MD = {"index.md", "AGENTS.md", "CLAUDE.md", "README.md"}
 
 # Top-level vault shape — only these dirs/files may sit at the root (dot-* tooling exempt).
 FRONTEND_DIR = "frontend"            # React app (tooling lane); node_modules is gitignored
@@ -274,22 +274,16 @@ TOOLING_PATHS = [
     "templates/",        # ontology templates (kb.core.template): part of the engine, versioned with it
     "tools/",
     "README.md",
-    "ARCHITECTURE.md",
     "AGENTS.md",
     "CLAUDE.md",
-    "GEMINI.md",
     ".integrator.toml",  # integrator skill config (~/.claude/skills/integrator)
     "pixi.toml",
     "pixi.lock",
     ".gitignore",
     "frontend/",
-    ".cursor/",
     ".claude/",
-    ".vscode/",
     ".github/",
     "LICENSE",           # open-source files at the repo root
-    "CONTRIBUTING.md",
-    "CODE_OF_CONDUCT.md",
 ]
 
 
@@ -309,7 +303,7 @@ def lane_of(path):
 
 # A knowledge base repo's own tooling: all a `chore(<scope>)` commit may touch directly on that repo's main
 # (hooks, agent instructions, ignore rules, kb.toml). Never knowledge paths. See kb.git.commit_policy.
-KB_TOOLING_PATHS = [".claude/", ".cursor/", ".obsidian/", "CLAUDE.md", "AGENTS.md", ".gitignore", "kb.toml",
+KB_TOOLING_PATHS = [".claude/", ".obsidian/", "CLAUDE.md", "AGENTS.md", ".gitignore", "kb.toml",
                     "meta/migrations/"]
 
 

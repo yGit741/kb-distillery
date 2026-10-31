@@ -3,7 +3,7 @@
 
 Shared by Cursor (beforeShellExecution: {"command": ...}, JSON verdict on stdout)
 and Claude Code (PreToolUse Bash: {"tool_input": {"command": ...}}, exit 2 to deny).
-Wired through .cursor/hooks/block-git-write.sh.
+Wired through tools/hooks/block-git-write.sh (Claude Code PreToolUse Bash).
 
 Rules:
   - A command that is exactly ONE allowlisted invocation (pixi run ship, ops, …)

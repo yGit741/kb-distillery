@@ -23,7 +23,7 @@ class LaneOfTests(unittest.TestCase):
 
     def test_tooling(self):
         for p in ("backend/src/kb/dashboard/serve.py", "skills/x/SKILL.md", "tools/launch.sh",
-                  "pixi.toml", "AGENTS.md", ".cursor/hooks.json", ".claude/settings.json",
+                  "pixi.toml", "AGENTS.md", "tools/hooks/block-git-write.sh", ".claude/settings.json",
                   ".obsidian/app.json", "frontend/src/main.tsx", "frontend/dist/index.html"):
             self.assertEqual(lane_of(p), "tooling", p)
 

@@ -26,7 +26,6 @@ SKIP_DIR_NAMES = {
     ".git",
     ".pixi",
     ".obsidian",
-    ".cursor",
     ".claude",
     "copilot",
     "_quarantine",
