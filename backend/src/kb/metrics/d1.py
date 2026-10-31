@@ -3,7 +3,7 @@
     pixi run metrics -- d1 init        create the `kb-metrics` database once (wrangler) and save its id
     pixi run metrics -- d1 push [--dry-run]   upsert sessions + golden runs (idempotent)
 
-Auth is the share site's (`kb.share.cf_api`: CLOUDFLARE_API_TOKEN, else wrangler's OAuth token); the
+Auth is the publisher's cloud account (`Publisher.account_api()`; the Cloudflare one: CLOUDFLARE_API_TOKEN, else wrangler's OAuth token); the
 database id lives in meta/ops/sync.toml `[metrics] d1_database_id`. Only numbers and labels are sent —
 never prompt text, replies, diffs or file contents (`first_prompt` stays local).
 """
@@ -70,22 +70,29 @@ def database_id(root=None):
     return m.group(1) if m else None
 
 
+def _account():
+    """The publisher's cloud account API (D1 lives in the same Cloudflare account as the site); raises PublishError
+    when no publisher is configured or it has none."""
+    from kb import publish
+    return publish.current().account_api()
+
+
 def _query(db, sql, params):
-    from kb.share import cf_api
-    return cf_api._rest("POST", f"/accounts/{cf_api.ACCOUNT_ID}/d1/database/{db}/query", {"sql": sql, "params": params})
+    api = _account()
+    return api.rest("POST", f"/accounts/{api.account_id}/d1/database/{db}/query", {"sql": sql, "params": params})
 
 
 def init(root=None):
     """Create the database (or find it) and record its id in meta/ops/sync.toml `[metrics]`."""
-    from kb.share import cf_api
     db = database_id(root)
     if db:
         print(f"d1: {DB_NAME} already configured ({db})")
         return 0
-    found = [d for d in cf_api._rest("GET", f"/accounts/{cf_api.ACCOUNT_ID}/d1/database").get("result") or []
+    api = _account()
+    found = [d for d in api.rest("GET", f"/accounts/{api.account_id}/d1/database").get("result") or []
              if d.get("name") == DB_NAME]
     db = found[0]["uuid"] if found else \
-        cf_api._rest("POST", f"/accounts/{cf_api.ACCOUNT_ID}/d1/database", {"name": DB_NAME})["result"]["uuid"]
+        api.rest("POST", f"/accounts/{api.account_id}/d1/database", {"name": DB_NAME})["result"]["uuid"]
     with open(os.path.join(root or vault_root(), SYNC_TOML), "a", encoding="utf-8") as f:
         f.write(f'\n# Agent metrics (kb.metrics.d1): numbers only, no prompt text.\n[metrics]\nd1_database_id = "{db}"\n')
     for sql in SCHEMA:

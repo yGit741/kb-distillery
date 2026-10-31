@@ -7,13 +7,8 @@ router = APIRouter(tags=["share"])
 
 
 def share_status():
-    try:
-        from kb.share.contracts import StatusFile
-        status = StatusFile().read()
-    except Exception:  # noqa: BLE001 — must render without the share package
-        status = None
-    from kb.dashboard.shell import share_chip
-    return {"status": status, "chip": share_chip(status)}
+    from kb.dashboard.shell import share_state    # the publisher decides; no publisher = a chip that says so
+    return share_state()
 
 
 @router.get("/api/share/status", response_model=ShareStatus, summary="Last deploy of the private site")
