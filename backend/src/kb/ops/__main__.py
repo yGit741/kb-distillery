@@ -12,6 +12,7 @@
     sync [--no-push] [--dry-run]         nightly: think/ edits, leftovers, push
     migrate [--check]                    run pending schema migrations (infra/* branch, or a kb repo's own main)
     next-version                         print the next kb-x.y.z
+    chore <scope> "summary" [paths…]     commit a kb repo's own tooling files (kb.toml, .claude/, CLAUDE.md…) as chore(<scope>)
     record <op> <target> "summary" <paths…>   commit already-modified files as one knowledge op
     adopt-history <bundle> [--checkout P]     fast-forward main to a curated history bundle
 """
@@ -55,6 +56,11 @@ def main(argv=None):
     m = sub.add_parser("migrate")
     m.add_argument("--check", action="store_true")
     sub.add_parser("next-version")
+    ch = sub.add_parser("chore")
+    ch.add_argument("scope")
+    ch.add_argument("summary")
+    ch.add_argument("paths", nargs="*")
+    ch.add_argument("--no-push", action="store_true")
     rc = sub.add_parser("record")
     rc.add_argument("op")
     rc.add_argument("target")
@@ -96,6 +102,9 @@ def main(argv=None):
         elif args.cmd == "migrate":
             ids = migrate_mod.run(core.ROOT, core.current_branch(), check=args.check)
             print(("pending: " if args.check else "applied: ") + (", ".join(ids) or "none"))
+        elif args.cmd == "chore":
+            if not core.chore(args.scope, args.summary, args.paths or None, root=core.ROOT):
+                print("no kb tooling file changed")
         elif args.cmd == "next-version":
             print("kb-" + core.cp.fmt_version(core.cp.next_version(core.ROOT, "main")))
         elif args.cmd == "record":
