@@ -3,11 +3,18 @@
     python -m kb.lint.raw_access            # table of modules and how many lines match
     python -m kb.lint.raw_access --names    # just the module paths, the format of the baseline file
 
-A line matches when it names the raw tree: `RAW_PATH` / `RAW_DIR`, or a string that starts with `raw/` or is `raw`.
-The check is deliberately broad (a rule path or a doc string also matches): the baseline file lists the modules
-allowed to match today, `backend/tests/storage/test_raw_access_ratchet.py` fails on a module that is not listed and
-on a listed module that no longer matches, so the list only shrinks. Exempt: the connectors themselves, migrations
-(they rewrite old layouts on purpose) and the two files that define the raw constants.
+A module is flagged when it
+  * uses the raw-tree constants `RAW_PATH` / `RAW_DIR` (it builds raw paths itself), or
+  * has a line that names the raw tree (a string starting with `raw/`, or `raw`) next to a filesystem call
+    (`open(`, `os.path.*`, `os.listdir`, `Path(`, `shutil.`, `subprocess`, ...).
+A frontmatter key `"raw"`, a docstring or a path rule is not access and does not match. The check is a floor, not a
+proof: indirect access through a variable that holds a raw path is invisible to it, so migrating a module means
+replacing all of its raw I/O, not only the flagged lines.
+
+`backend/tests/storage/raw_access_baseline.txt` lists the modules allowed to match today;
+`backend/tests/storage/test_raw_access_ratchet.py` fails on a module that is not listed and on a listed module that no
+longer matches, so the list only shrinks. Exempt: the connectors themselves, migrations (they rewrite old layouts on
+purpose) and the files that define the raw constants.
 """
 from __future__ import annotations
 
@@ -15,13 +22,19 @@ import os
 import re
 import sys
 
-PATTERN = re.compile(r"""\bRAW_PATH\b|\bRAW_DIR\b|["']raw/|["']raw["']""")
+CONSTANT = re.compile(r"\bRAW_PATH\b|\bRAW_DIR\b")
+RAW_LITERAL = re.compile(r"""["']raw/|["']raw["']""")
+FS_CALL = re.compile(r"""\bopen\(|os\.(path\.(join|isfile|isdir|exists|getsize|getmtime|relpath|realpath)|listdir|walk|scandir|stat|makedirs|remove|rename|replace)|\bPath\(|shutil\.|glob\.|\.read_text|\.read_bytes|\.write_text|\.write_bytes|subprocess|\bsha1\(""")
 EXEMPT_DIRS = ("storage/", "migrations/")
 EXEMPT_FILES = frozenset({"paths.py", "core/schema.py", "lint/raw_access.py"})
 
 
 def src_root() -> str:
     return os.path.dirname(os.path.dirname(os.path.abspath(__file__)))          # backend/src/kb
+
+
+def matches(line: str) -> bool:
+    return bool(CONSTANT.search(line) or (RAW_LITERAL.search(line) and FS_CALL.search(line)))
 
 
 def scan(root: str | None = None) -> dict[str, int]:
@@ -37,7 +50,7 @@ def scan(root: str | None = None) -> dict[str, int]:
             if rel in EXEMPT_FILES or rel.startswith(EXEMPT_DIRS):
                 continue
             with open(os.path.join(dirpath, fn), encoding="utf-8") as f:
-                n = sum(1 for line in f if PATTERN.search(line))
+                n = sum(1 for line in f if matches(line))
             if n:
                 out[rel] = n
     return out
