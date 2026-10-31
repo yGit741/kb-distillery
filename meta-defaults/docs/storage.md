@@ -64,7 +64,7 @@ Subclass `kb.storage.Connector` (constructor `Cls(root, **options)`), then regis
 my-store = "my_pkg.store:MyStore"
 ```
 
-A package cannot take a built-in name (`local-folder`). Run the contract suite against your class: copy the `MemoryStoreContract` pattern in the test file and give it a `make()`.
+A package cannot take a built-in name (`local-folder`, `gdrive`). Run the contract suite against your class: copy the `MemoryStoreContract` pattern in the test file and give it a `make()`.
 
 ## Rules
 

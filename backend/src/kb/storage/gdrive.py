@@ -81,8 +81,12 @@ class GDrive(LocalFolder):
         raise StorageError(f"no folder {self.folder!r} in {my_drive}: create it in Drive or fix `folder`")
 
     @property
-    def root(self) -> str:                         # LocalFolder reads self.root for every path
-        return self._locate()
+    def root(self) -> str:                         # LocalFolder reads self.root for every path (once per listed file)
+        cached = getattr(self, "_located", "")
+        if cached and os.path.isdir(cached):       # one stat per call; the search runs only when it fails
+            return cached
+        self._located = self._locate()
+        return self._located
 
     @root.setter
     def root(self, value):                         # LocalFolder.__init__ is not called; keep the setter harmless
@@ -90,7 +94,7 @@ class GDrive(LocalFolder):
 
     def auth(self) -> AuthStatus:
         try:
-            self._locate()
+            self._located = self._locate()
         except StorageError as e:
             return AuthStatus(False, str(e))
         return AuthStatus(True)
