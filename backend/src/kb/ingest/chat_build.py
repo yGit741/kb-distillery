@@ -16,21 +16,21 @@ import shutil
 
 from . import chat, chat_merge, chat_store
 from .paths import ROOT
+from kb.storage import for_kb
 from kb.core.schema import RAW_CHATS
 
 ASSETS = "assets"
 
 
 def load_clip(clip_rel, root=ROOT):
-    with open(os.path.join(root, clip_rel), encoding="utf-8") as f:
-        text = f.read()
+    text = for_kb(root=root).get(clip_rel).decode("utf-8")
     fm, turns = chat.parse_clip(text)
     return fm or {}, turns, hashlib.sha1(text.encode("utf-8")).hexdigest()
 
 
 def clip_paths(root=ROOT):
-    return sorted(os.path.relpath(p, root).replace(os.sep, "/")
-                  for p in glob.glob(os.path.join(root, "raw", RAW_CHATS, "*.md")))
+    prefix = f"raw/{RAW_CHATS}/"
+    return sorted(k for k in for_kb(root=root).list(prefix) if k.endswith(".md") and "/" not in k[len(prefix):])
 
 
 def _index(convs):
