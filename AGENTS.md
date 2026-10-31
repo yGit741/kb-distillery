@@ -45,6 +45,7 @@ Map what the user says to a skill before acting; read that skill's `SKILL.md`, t
 | "what do I know about … / where did I read … / compare …" | `query-knowledge` (read-only) | nothing |
 | "which sources do I have on … / what does this undigested paper say / is it worth digesting / check this source against my notes" | `explore-raw-data` (read-only) | nothing |
 | "add researcher <name>" / "index <name>'s papers" | `build-researcher-profile` | `kb(catalog)` |
+| "send to backlog / backlog this / park this idea / save this plan for later" | `send-to-backlog` (local `.backlog/`, gitignored: no PR, no commit) | card |
 | "save / scrap <url or file>" | `scrap-data` | `kb(import)` |
 | "catalog / triage the inbox" | `ingest-to-catalog` | `kb(catalog)` |
 | "digest <paper>" (no tier) | **ask**: easy, full or deep | — |

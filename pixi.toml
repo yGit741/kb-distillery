@@ -29,6 +29,7 @@ harness = { cmd = "python -m tests.harness.run_pipeline", env = { PYTHONPATH = "
 harness-invariants = { cmd = "python -m tests.harness.vault_invariants", env = { PYTHONPATH = "backend" } }
 harness-bite = { cmd = "python -m tests.harness.harness_bite", env = { PYTHONPATH = "backend" } }
 lint = "python -m kb.lint.lint"
+backlog = "python -m kb.services.backlog"
 kb-list = "python -m kb.kbconfig list"
 kb-show = "python -m kb.kbconfig show"
 digest-instructions = "python -m kb.core.digest"
