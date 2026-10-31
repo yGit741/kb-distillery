@@ -46,7 +46,9 @@ def think_basename(think_rel):
 
 
 def distilled_slug(think_rel):
-    return f"{DISTILLED_THINK_PREFIX}{think_basename(think_rel)}"
+    """One naming rule for the skill and `kbd distill` (kb.distill.fanout.slug_for), so they share one page."""
+    from .fanout import slug_for
+    return slug_for(think_rel[len(THINK_DIR) + 1:] if think_rel.startswith(f"{THINK_DIR}/") else think_rel)
 
 
 def distilled_wiki_rel(think_rel):

@@ -51,6 +51,7 @@ Map what the user says to a skill before acting; read that skill's `SKILL.md`, t
 | "skim / easy-digest", "full-digest", "deep-digest" (+ confirm heavy) | that digest skill → `semantic-lint-hop` | `kb(digest)` |
 | "split / merge / rename / fix this note", "file that answer back" — anything in `wiki/` | `wiki-edit` (`ops begin` … `ops commit`) | `kb(refine)` |
 | "distill my think note …" | `distill-think` | `kb(distill)` |
+| "send / distill this think note into kb a, b" | `kbd distill <note> --to a,b` (`meta-defaults/docs/think.md`) | `kb(distill)` per kb |
 | "undo that / revert the split" | `kb-undo` (confirm the step first) | `kb(undo)` |
 | "snapshot / freeze" · "go back to kb-x.y.z" | `kb-snapshot` | tag · `kb(restore)` |
 | "what changed / kb status / which version" | `kb-history` | nothing |
@@ -73,6 +74,7 @@ Map what the user says to a skill before acting; read that skill's `SKILL.md`, t
 | work on a course / series Contents table, digest a collection row, or digest a book (partition, parts) | `meta-defaults/docs/collections.md` |
 | commit, ship, snapshot, undo, restore, resolve a diverged main, or reason about lanes, versions, hygiene, the nightly job, partial checkouts, the commit gate | `meta-defaults/docs/lifecycle.md` |
 | run or change code: code layout, environment, pixi tasks, write guardrails, worktrees | `meta-defaults/docs/dev.md` |
+| send a think note into kbs, see where a note went, think provenance, `think:` citations | `meta-defaults/docs/think.md` |
 | pick a skill tier or run the ingest / query / distill CLIs (scrap, catalog, digest, arXiv rules, scrap-wordpress) | `meta-defaults/docs/workflows.md` |
 | handle coherence warnings or semantic lint | `meta-defaults/docs/semantic-lint.md` |
 | write or change a skill | `skills/README.md`, skill `create-skill` |
