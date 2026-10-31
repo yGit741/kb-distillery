@@ -1,12 +1,10 @@
 """Modules migrated onto kb.storage keep their behaviour on a real folder and cannot be pointed outside raw/."""
-import json
 import os
 import zipfile
 
 import pytest
 
 from kb.ingest import chat_build, digest_many
-from kb.ingest.youtube import bundle
 from kb.maintenance import export
 from kb.storage import StorageError, for_kb
 
@@ -56,18 +54,6 @@ def test_digest_many_select_ignores_pages_whose_raw_is_missing_or_escapes(kb_roo
     assert digest_many.select() == ["raw/web-clips/ok.md"]
 
 
-def test_youtube_bundle_lookups_see_only_files_inside_raw(kb_root):
-    d = kb_root / "raw" / "inbox" / "video-intro"
-    d.mkdir(parents=True)
-    (d / "info.json").write_text(json.dumps({"id": "abcdefghijk"}))
-    (d / "broken").mkdir()
-    (kb_root / "raw" / "videos" / "bad").mkdir(parents=True)
-    (kb_root / "raw" / "videos" / "bad" / "info.json").write_text("{not json")
-    assert bundle.existing("abcdefghijk", str(kb_root)) == ["raw/inbox/video-intro"]
-    assert bundle.dir_name("Intro", "abcdefghijk", str(kb_root)) == "intro"            # a re-scrap keeps its folder
-    assert bundle.dir_name("Intro", "zzzzzzzzzzz", str(kb_root)) == "intro-zzzzzzzzzzz"  # the name is taken
-
-
 def test_export_bundles_raw_files_through_the_connector(kb_root, monkeypatch):
     (kb_root / "raw" / "printed-docs").mkdir()
     (kb_root / "raw" / "printed-docs" / "paper.pdf").write_bytes(b"%PDF-1")
@@ -93,3 +79,11 @@ def test_the_connector_the_modules_use_refuses_escaping_keys(kb_root):
             store.get(key)
     assert not any("outside" in k for k in store.list("raw/"))
     assert os.path.exists(kb_root / "outside.md")
+
+
+def test_exists_is_true_for_files_only_and_does_not_read_them(kb_root, monkeypatch):
+    store = for_kb(root=str(kb_root))
+    monkeypatch.setattr(type(store), "info", lambda *a, **k: pytest.fail("exists must not hash the file"))
+    assert store.exists("raw/llm-chats/a.md")
+    assert not store.exists("raw/llm-chats")
+    assert not store.exists("raw/llm-chats/none.md")

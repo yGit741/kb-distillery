@@ -206,7 +206,6 @@ def test_dir_name_is_kebab_and_unique(tmp_path):
     assert bundle.dir_name("Lecture 16: Support Vector Machines!", "abcdefghijk", str(tmp_path)) == \
         "lecture-16-support-vector-machines"
     os.makedirs(tmp_path / "raw" / "videos" / "lecture-16-support-vector-machines")
-    (tmp_path / "raw" / "videos" / "lecture-16-support-vector-machines" / "info.json").write_text("{}")   # a bundle has files
     assert bundle.dir_name("Lecture 16: Support Vector Machines!", "AbC_defghij", str(tmp_path)) == \
         "lecture-16-support-vector-machines-abc-defghij"
 
