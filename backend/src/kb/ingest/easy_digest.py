@@ -241,6 +241,9 @@ def prepare(arg, into=None, tick=True):
     page_type = unit_type_for_raw(raw_rel)
     if page_type == "video" and not raw_rel.endswith("/video.md"):
         raise ValueError(f"{raw_rel}: a video bundle is digested through its video.md")
+    from . import book as book_mod
+    if book_mod.is_book(os.path.join(ROOT, raw_rel)):
+        raise ValueError(f"{raw_rel} is a book: skim it by part (full-digest --part N / --pages A-B; see `toc`)")
     slug = unit_slug_for_raw(raw_rel, page_type)
     existing = existing_digest_for_raw(raw_rel)
     if existing:

@@ -37,7 +37,7 @@ python3 -m kb.ingest abort <sha>
 
 ## Agent steps after `begin` / `full-digest`
 
-1. Run `extract` — read `meta/.ingest/<sha>/extracted.text` (first 25 pages). If
+1. Run `extract` — read `meta/.ingest/<sha>/extracted.text` (the whole document; a book must be scoped with `--part`/`--pages`). If
    the raw entity has a `parsed.md` sidecar (e.g. `raw/emails/<YYYY-MM-DD-thread>/parsed.md`),
    `extracted.text` is that sidecar's content instead of raw PDF/thread text.
 2. Write `claims.json` with real LaTeX equations, results, ideas — or run `extract <sha> --fill`: `kb.llm`
