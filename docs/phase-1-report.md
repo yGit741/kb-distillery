@@ -22,10 +22,11 @@ Tag `phase-1-done` (engine, `5bd9410`). This report closes roadmap 1.6.
   because the thesis ones show kb content.
 
 ## Waivers and findings
-- **"knowledge-base-thesis untouched" (1.6) is waived.** At the owner's request the old folder was moved to the Trash
-  on 2026-10-30, and it is no longer in the Trash. Before the move its `raw/`, `wiki/`, tracked `meta/` and Think notes were
-  compared with `kbs/yonatan-thesis` and `kbs/think` and were identical; the old remote holds its pushed history;
-  `backups/pre-distillery-20261030.tgz` and the raw manifest remain.
+- **"knowledge-base-thesis untouched" (1.6) passes.** The old folder was briefly moved to the Trash at the owner's
+  request (2026-10-30) and restored by the owner to `~/local-workspace-personal/backups/knowledge-base-thesis`. Checked
+  2026-10-31: HEAD `9b74d91` (kb-1.3.14), `main` equals `origin/main`, only the same three untracked Think files, 3789 raw
+  files. Before the move its `raw/`, `wiki/`, tracked `meta/` and Think notes were also compared with
+  `kbs/yonatan-thesis` and `kbs/think` and were identical. `backups/pre-distillery-20261030.tgz` and the raw manifest remain.
 - **Live jobs.** `com.thesis-kb.daily-sync` and `com.thesis-kb.deploy-owner` were failing (their `cd` target
   `~/local-workspace/personal-knowledge-base` does not exist; deploy-owner was in a respawn loop). They were unloaded and
   disabled on 2026-10-31. The live site is frozen at its last deployed version until the switchover phase.
