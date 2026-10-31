@@ -17,7 +17,7 @@ def ensure_app_dist(frontend=FRONTEND, runner=None):
     """Build `frontend/dist` from the current sources when they changed since the last build.
 
     Returns "fresh", "built" or a warning string; a failed or impossible build keeps the old dist."""
-    from kb.share.build import frontend_source_hash
+    from kb.webbuild import frontend_source_hash
 
     frontend = Path(frontend)
     dist = frontend / "dist"

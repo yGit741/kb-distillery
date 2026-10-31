@@ -16,7 +16,7 @@ from kb.dashboard.render import render_page
 from kb.services.graph import build_graph_snapshot
 from kb.services.pipeline import build_digestion_snapshot
 from kb.services.lifecycle import build_lifecycle_snapshot
-from kb.dashboard.shell import inject_nav, share_chip
+from kb.dashboard.shell import inject_nav, share_chip, share_state
 from kb.services import pages as explore_data
 from kb.services import chat as chat_data
 from kb.services import corpus as corpus_data
@@ -79,23 +79,16 @@ SHARE_LOG_LINES = 200
 
 
 def share_status():
-    """{status, chip} from backend/src/kb/share's status file — the chip in the nav."""
-    try:
-        from kb.share.contracts import StatusFile
-        status = StatusFile().read()
-    except Exception:  # noqa: BLE001 — the dashboard must render without the share package
-        status = None
-    return {"status": status, "chip": share_chip(status)}
+    """{status, chip} of the configured publisher's last publish — the chip in the nav."""
+    return share_state()
 
 
 def share_log_tail(n=SHARE_LOG_LINES):
     try:
-        from kb.share.contracts import LOG_PATH
-        with open(LOG_PATH, encoding="utf-8", errors="replace") as f:
-            lines = f.readlines()
+        from kb import publish
+        return publish.current().log_tail(n)
     except Exception:  # noqa: BLE001
         return "no share log yet\n"
-    return "".join(lines[-n:]) or "share log is empty\n"
 
 
 class Handler(BaseHTTPRequestHandler):

@@ -3,7 +3,7 @@
     python -m kb.lint.privacy            # table of files and how many lines match
     python -m kb.lint.privacy --names    # just the file paths, the format of the baseline file
 
-A line matches when it holds the owner's local path or handles, the private site's host, or a token-shaped string
+A line matches when it holds the owner's local path or handles, the private site's name, or a token-shaped string
 (an Anthropic, AWS, GitHub or Slack key, a Google API key, a private-key header). Knowledge never lives here (the
 kbs are their own repos and `kbs/` is skipped), so a match is code, a test, a doc or a config naming a person.
 
@@ -18,7 +18,8 @@ import os
 import re
 import sys
 
-PERSONAL = re.compile(r"/Users/yonatanm|yonatanm|ygreenshpan|yGit741|yonatan-magen|workers\.dev|yonatan-thesis-kb")
+# `workers.dev` alone is Cloudflare's own domain, not personal: the owner's site is caught by its name (yonatan-magen).
+PERSONAL = re.compile(r"/Users/yonatanm|yonatanm|ygreenshpan|yGit741|yonatan-magen|yonatan-thesis-kb")
 SECRET = re.compile(
     r"sk-ant-[A-Za-z0-9_-]{10,}|AKIA[0-9A-Z]{16}|ghp_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}"
     r"|xox[bpoa]-[A-Za-z0-9-]{10,}|-----BEGIN [A-Z ]*PRIVATE KEY-----|AIza[0-9A-Za-z_-]{30,}")

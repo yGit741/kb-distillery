@@ -391,20 +391,13 @@ def commit_op(op, target, summary=None, paths=None, lint=True, trailers=None, ro
 
 
 def share_autodeploy(reason, root=ROOT, foreground=False):
-    """Nudge the deploy owner (kb.share.owner: touch `.cache/share/wake`); never raises.
+    """Ask the configured publisher to publish main soon (`Publisher.request_publish`); never raises; no publisher = nothing.
 
-    `KB_SHARE_DIRECT=1` (the user only) keeps the old path: `share deploy-main` from here, detached
-    by default, in the foreground for the nightly sync."""
+    With the Cloudflare publisher that nudges the deploy owner (touch `.cache/share/wake`); `KB_SHARE_DIRECT=1` (the user
+    only) keeps the old path: `share deploy-main` from here, detached by default, in the foreground for the nightly sync."""
     try:
-        if os.environ.get("KB_SHARE_DIRECT") != "1":
-            from kb.share import owner
-            owner.nudge(reason, root)
-            return
-        from kb.share import autodeploy
-        if foreground:
-            autodeploy.run_foreground(reason, root)
-        else:
-            autodeploy.trigger(reason, root)
+        from kb import publish
+        publish.current(root=root).request_publish(reason, root, foreground)
     except Exception as e:  # noqa: BLE001 — a deploy hiccup must never fail a knowledge op
         print(f"note: share autodeploy not triggered — {e}")
 
