@@ -1,15 +1,13 @@
 /**
- * Backlog screen: the local `.backlog/` cards (send-to-backlog skill), read-only, grouped by status.
- * A plan card says whether it has a plan file and, from git alone, whether the plan is still relevant.
- * Local app only: this folder is not listed in the share builds, so it is not in those bundles.
+ * Backlog view (System → Backlog): the local `.backlog/` cards (send-to-backlog skill), read-only, grouped
+ * by status. A plan card says whether it has a plan file and, from git alone, whether the plan is still
+ * relevant. Local app only: System shows the tab only when FLAG_ENV is "local"; the share API has no backlog.
  */
 import type { BacklogItem } from "@/api/types";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Empty, ErrorState, Loading } from "@/components/states";
 import { useApiQuery } from "@/lib/useApiQuery";
-
-export const ported = true;
 
 const STATUS_ORDER = ["inbox", "next", "doing", "done", "dropped"] as const;
 const STATUS_LABEL: Record<(typeof STATUS_ORDER)[number], string> = {
@@ -65,18 +63,21 @@ function BacklogCard({ item }: { item: BacklogItem }) {
   );
 }
 
-export default function BacklogScreen() {
-  const list = useApiQuery(["backlog"], (d) => d.listBacklog());
+/** Items still to do (inbox, next, doing): the number on the System tab. Same query key as the view, so one fetch. */
+export function useOpenBacklogCount(): number | undefined {
+  const list = useApiQuery(["backlog"], (d) => d.listBacklog(), { retry: false, staleTime: 30_000 });
+  return list.data?.items.filter((i) => ["inbox", "next", "doing"].includes(i.status)).length;
+}
+
+export function BacklogView() {
+  const list = useApiQuery(["backlog"], (d) => d.listBacklog(), { retry: false, staleTime: 30_000 });
   const items = list.data?.items ?? [];
 
   return (
-    <main className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 py-6">
-      <header className="flex flex-col gap-1">
-        <h1 className="text-xl font-semibold">Backlog</h1>
-        <p className="text-sm text-muted-foreground">
-          Ideas, bugs and unstarted plans. Add one by asking Claude to send it to the backlog.
-        </p>
-      </header>
+    <div className="flex flex-col gap-6">
+      <p className="text-sm text-muted-foreground">
+        Ideas, bugs and unstarted plans. Add one by asking Claude to send it to the backlog.
+      </p>
       {list.isPending && <Loading label="Loading backlog" />}
       {list.isError && <ErrorState title="Could not load the backlog" error={list.error} onRetry={() => void list.refetch()} />}
       {list.isSuccess && items.length === 0 && <Empty>Nothing parked yet.</Empty>}
@@ -97,6 +98,6 @@ export default function BacklogScreen() {
             </section>
           );
         })}
-    </main>
+    </div>
   );
 }

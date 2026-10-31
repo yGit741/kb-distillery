@@ -5,7 +5,7 @@ import { createAppRouter } from "@/app/router";
 import { ApiError } from "@/api";
 import type { BacklogItem } from "@/api/types";
 import { mockDataSource } from "@/test/datasource";
-import { driftChip } from "./index";
+import { driftChip } from "./BacklogView";
 
 const item = (over: Partial<BacklogItem>): BacklogItem => ({
   id: "20261031-x",
@@ -34,11 +34,18 @@ function setup(items: BacklogItem[] | Error) {
     listPages: async () => ({ generated_at: "", pages: [], links: [], wanted: [], wanted_total: 0 }),
     getShareStatus: async () => ({ status: null, chip: null }),
   });
-  const router = createAppRouter(createMemoryHistory({ initialEntries: ["/app/backlog"] }));
+  const router = createAppRouter(createMemoryHistory({ initialEntries: ["/app/system?tab=backlog"] }));
   render(<App source={ds} router={router} />);
 }
 
-describe("BacklogScreen", () => {
+describe("System → Backlog", () => {
+  it("is a tab next to Overview, with the open count", async () => {
+    setup([item({ id: "a" }), item({ id: "b", status: "done" }), item({ id: "c", status: "next" })]);
+    expect(await screen.findByLabelText("2 open")).toBeInTheDocument();
+    const tabs = screen.getAllByRole("tab");
+    expect(tabs.slice(0, 2).map((t) => t.textContent)).toEqual(["Overview", "Backlog2"]);
+  });
+
   it("groups cards by status and shows plan status", async () => {
     setup([
       item({ id: "a", title: "Idea card" }),
