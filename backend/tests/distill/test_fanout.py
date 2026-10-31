@@ -96,6 +96,11 @@ class Fanout(unittest.TestCase):
             self.run_note()
         self.assertFalse(os.path.exists(os.path.join(self.a, "wiki", "distilled-think-thesis-decision.md")))
 
+    def test_the_skill_and_the_command_name_the_page_alike(self):
+        from kb.distill import paths
+        for name in ("0. Mathematical Prerequisite", "1.  my-true-research-start-here", "Points to Meeting with GIl", "lab/idea"):
+            self.assertEqual(paths.distilled_slug(f"think/{name}.md"), fanout.slug_for(f"{name}.md"))
+
     def test_think_citations_resolve_in_both_spellings(self):
         self.assertTrue(fanout.resolve_cite("think:Thesis Decision.md", self.think).endswith("Thesis Decision.md"))
         self.assertTrue(fanout.resolve_cite("think/lab/idea.md", self.think).endswith("idea.md"))
