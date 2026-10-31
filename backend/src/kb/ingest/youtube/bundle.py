@@ -15,6 +15,8 @@ import re
 import shutil
 import sys
 
+from kb.storage import StorageError, for_kb
+
 from ..paths import ROOT
 from . import fetch as fetch_mod
 from . import frames as fx
@@ -33,13 +35,15 @@ def kebab(text, n=60):
 
 def existing(vid, root=ROOT):
     """Bundles (inbox or cataloged) of this YouTube id."""
-    hits = []
-    for pat in ("raw/inbox/video-*/info.json", "raw/videos/*/info.json"):
-        for p in glob.glob(os.path.join(root, pat)):
+    store, hits = for_kb(root=root), []
+    for pat in (r"raw/inbox/video-[^/]*/info\.json", r"raw/videos/[^/]*/info\.json"):
+        for key in store.list(pat.split("[", 1)[0]):
+            if not re.fullmatch(pat, key):
+                continue
             try:
-                if json.load(open(p, encoding="utf-8")).get("id") == vid:
-                    hits.append(os.path.relpath(os.path.dirname(p), root))
-            except (OSError, ValueError):
+                if json.loads(store.get(key).decode("utf-8")).get("id") == vid:
+                    hits.append(key.rsplit("/", 1)[0])
+            except (StorageError, ValueError):
                 pass
     return hits
 
@@ -50,8 +54,9 @@ def dir_name(title, vid, root=ROOT):
         name = hit.split("/")[-1]
         return name[len("video-"):] if hit.startswith("raw/inbox/") else name
     base = kebab(title)
-    taken = os.path.exists(os.path.join(root, "raw", "inbox", f"video-{base}")) or \
-        os.path.exists(os.path.join(root, "raw", "videos", base))
+    store = for_kb(root=root)
+    taken = any(True for _ in store.list(f"raw/inbox/video-{base}/")) or \
+        any(True for _ in store.list(f"raw/videos/{base}/"))
     return base if not taken else f"{base}-{kebab(vid, 11)}"
 
 

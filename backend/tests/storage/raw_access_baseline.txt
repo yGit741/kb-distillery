@@ -3,15 +3,11 @@ dashboard/serve.py
 git/guard.py
 git/ship.py
 ingest/catalog.py
-ingest/chat_build.py
-ingest/digest_many.py
 ingest/gdrive.py
 ingest/mail.py
 ingest/scrap.py
 ingest/wordpress.py
-ingest/youtube/bundle.py
 lint/lint.py
-maintenance/export.py
 ops/invariants.py
 ops/nightly_report.py
 services/chat.py
