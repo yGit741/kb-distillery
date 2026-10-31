@@ -36,6 +36,7 @@ import os
 import re
 import shutil
 import subprocess
+import time
 import sys
 
 from kb.paths import CHECKOUT_ROOT, vault_root
@@ -329,11 +330,34 @@ def run_gates(root=ROOT, skip_tests=False):
     for name, cmd in gates:
         if name == "tests" and skip_tests:
             continue
-        print(f"gate: {name}")
-        if subprocess.run(cmd, cwd=root).returncode != 0:
-            print(f"error: {name} failed")
+        if not run_gate(name, cmd, root):
             return False
     return True
+
+
+GATE_TAIL_LINES = 25          # what a failing gate shows; the rest is in its log
+
+
+def run_gate(name, cmd, root=ROOT):
+    """Run one gate with its full output in `.cache/ship-gates/<time>-<name>.log` instead of in the terminal (a test
+    run is thousands of lines: in a conversation they are re-read on every later turn). Prints one line when it
+    passes, and the last GATE_TAIL_LINES lines plus the log path when it fails. True on a pass."""
+    log_dir = os.path.join(root, ".cache", "ship-gates")
+    os.makedirs(log_dir, exist_ok=True)
+    log = os.path.join(log_dir, f"{time.strftime('%Y%m%d-%H%M%S')}-{name}.log")
+    started = time.monotonic()
+    with open(log, "w", encoding="utf-8") as f:
+        rc = subprocess.run(cmd, cwd=root, stdout=f, stderr=subprocess.STDOUT).returncode
+    secs = int(time.monotonic() - started)
+    shown = os.path.relpath(log, root)
+    if rc == 0:
+        print(f"gate: {name} ok ({secs}s, log {shown})")
+        return True
+    print(f"gate: {name} FAILED ({secs}s, log {shown})")
+    with open(log, encoding="utf-8", errors="replace") as f:
+        print("".join(f.readlines()[-GATE_TAIL_LINES:]).rstrip("\n"))
+    print(f"error: {name} failed")
+    return False
 
 
 def branch_files(root=ROOT):
@@ -1244,8 +1268,20 @@ def cmd_prune(apply=False, root=ROOT):
     return 0
 
 
+RESULT_COMMANDS = ("commit", "pr", "merge", "sync")
+
+
 def main(argv=None):
+    """Run a ship command and end with ONE unmissable line, `RESULT: ok (...)` or `RESULT: FAILED (...)`, so a caller that
+    only reads the last line (`| tail -1`) can never mistake a failure for a success."""
     argv = sys.argv[1:] if argv is None else list(argv)
+    code = _main(argv)
+    if argv and argv[0] in RESULT_COMMANDS:
+        print(f"RESULT: {'FAILED' if code else 'ok'} (ship {argv[0]}, exit {int(code or 0)})")
+    return code
+
+
+def _main(argv):
     if not argv or argv[0] not in SUBCOMMANDS:
         return legacy(argv)
     p = argparse.ArgumentParser(prog="ship", description="Ship tooling through infra/* PRs")
