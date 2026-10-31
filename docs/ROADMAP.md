@@ -92,7 +92,7 @@ tests need it). `$KB_ROOT` stays as an internal subprocess hand-off, set by
 tools, never by users. kb hooks resolve the engine via `../..`; in the thesis
 repo that is one `chore(hooks)` commit. The commit policy gains a rule for it:
 on a kb repo's main, `chore(<scope>)` is allowed when every path is a kb
-tooling path (`.claude/`, `.cursor/`, `.obsidian/`, `CLAUDE.md`, `AGENTS.md`,
+tooling path (`.claude/`, `.obsidian/`, `CLAUDE.md`, `AGENTS.md`,
 `.gitignore`, `kb.toml`); no `--no-verify`. There is no `refactor:` type.
 Tests: discovery (list, unknown id, path override) and hook resolution.
 *DoD:* `kbd kb-list` shows `demo`, `yonatan-thesis` and not `think`; old code

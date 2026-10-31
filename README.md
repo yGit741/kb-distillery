@@ -33,7 +33,7 @@ pixi run kbd launch --kb <id>
 | **Think** | one slow, human-only journal; `kbd distill <note> --to a,b` sends a note into knowledge bases with provenance on both sides. [`think.md`](meta-defaults/docs/think.md) |
 | **Publisher** | optional: publish a static snapshot of a knowledge base. Cloudflare is the first. [`publish.md`](meta-defaults/docs/publish.md) |
 
-The picture, the data flow and the invariants are in [`ARCHITECTURE.md`](ARCHITECTURE.md). To change the code, read [`CONTRIBUTING.md`](CONTRIBUTING.md). The roadmap is [`docs/ROADMAP.md`](docs/ROADMAP.md).
+The picture, the data flow and the invariants are in [`ARCHITECTURE.md`](docs/ARCHITECTURE.md). To change the code, read [`CONTRIBUTING.md`](.github/CONTRIBUTING.md). The roadmap is [`docs/ROADMAP.md`](docs/ROADMAP.md).
 
 ## Everyday commands
 

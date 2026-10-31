@@ -106,6 +106,6 @@ color = "#bb9af7"
 # --- Edges: the typed relations a page may state in its `relations:` block ---------------------------------
 # Read by kb.services.cypher.edge_config and checked by lint (check_relations). This table lives in the template.
 [edges]
-types = ["extends", "uses", "contradicts", "example-of", "open-problem-in", "addresses", "student-of"]
+types = ["extends", "uses", "contradicts", "example-of", "open-problem-in", "addresses", "discusses", "student-of"]
 symmetric = ["contradicts"]
 note_required = ["contradicts"]

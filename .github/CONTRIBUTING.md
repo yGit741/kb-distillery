@@ -37,12 +37,12 @@ Keep a PR to one concern and, where you can, under about 400 changed lines. A fe
 
 | You want to add | Guide | Where the code goes |
 |---|---|---|
-| A **template** (the schema a kb follows: page types, edges, fields) | [`meta-defaults/docs/templates.md`](meta-defaults/docs/templates.md) | `templates/<name>/template.toml` |
-| A **storage connector** (where raw sources live) | [`meta-defaults/docs/storage.md`](meta-defaults/docs/storage.md) | `backend/src/kb/storage/`, or a package with its own entry point |
-| A **publisher** (a way to share a kb as a site) | [`meta-defaults/docs/publish.md`](meta-defaults/docs/publish.md) | a package in the `kb.publishers` entry-point group |
+| A **template** (the schema a kb follows: page types, edges, fields) | [`meta-defaults/docs/templates.md`](../meta-defaults/docs/templates.md) | `templates/<name>/template.toml` |
+| A **storage connector** (where raw sources live) | [`meta-defaults/docs/storage.md`](../meta-defaults/docs/storage.md) | `backend/src/kb/storage/`, or a package with its own entry point |
+| A **publisher** (a way to share a kb as a site) | [`meta-defaults/docs/publish.md`](../meta-defaults/docs/publish.md) | a package in the `kb.publishers` entry-point group |
 
-Each guide names the contract test your implementation must pass. Think notes and `kbd distill` are described in [`meta-defaults/docs/think.md`](meta-defaults/docs/think.md); the code layout and pixi tasks are in [`meta-defaults/docs/dev.md`](meta-defaults/docs/dev.md).
+Each guide names the contract test your implementation must pass. Think notes and `kbd distill` are described in [`meta-defaults/docs/think.md`](../meta-defaults/docs/think.md); the code layout and pixi tasks are in [`meta-defaults/docs/dev.md`](../meta-defaults/docs/dev.md).
 
 ## Conduct
 
-Be kind. See [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md). By contributing you agree your work is released under the [MIT license](LICENSE).
+Be kind. See [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md). By contributing you agree your work is released under the [MIT license](../LICENSE).

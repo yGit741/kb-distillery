@@ -65,7 +65,7 @@ Before registering, write 4 prompts that should trigger and 4 that should not, a
 
 ## Output
 
-New or updated `skills/**/SKILL.md`, README row. `.claude/skills` and `.cursor/skills` are symlinks to `skills/` (`pixi run sync-skills` creates/verifies them), so there is nothing to copy.
+New or updated `skills/**/SKILL.md`, README row. `.claude/skills` is a symlink to `skills/` (`pixi run sync-skills` creates/verifies it), so there is nothing to copy.
 
 ## Quality bar
 

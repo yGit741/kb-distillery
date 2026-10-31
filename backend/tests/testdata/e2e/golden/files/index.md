@@ -12,9 +12,7 @@ Read this first on any query.
 
 | Page | Summary |
 |------|---------|
-| [[thesis]] | Thesis topic, instructor, institution |
 | [[log]] | Activity timeline |
-| [[AGENTS]] | Schema and workflows |
 
 ## Topics
 

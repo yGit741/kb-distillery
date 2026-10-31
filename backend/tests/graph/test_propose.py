@@ -142,8 +142,9 @@ def test_subjects_and_candidates(vault):
     assert [s for s, _ in propose.select(pages)] == ["idea-x", "paper-a", "paper-b", "q-1"]
     assert ("blog-e", True) in propose.select(pages, include_easy=True)
     assert "person-p" in dict(propose.select(pages, include_people=True))
-    # outbound first (related q-1 via addresses); topic-t links paper-a but no kind reaches a topic
-    assert propose.candidates("paper-a", pages, propose.kinds_for("paper", KC)) == ["idea-x", "paper-b", "q-1"]
+    # outbound first (related q-1 via addresses); topic-t links paper-a and `discusses` reaches a topic
+    assert propose.candidates("paper-a", pages, propose.kinds_for("paper", KC)) == ["idea-x", "paper-b", "q-1", "topic-t"]
+    assert propose.candidates("paper-a", pages, [k for k in propose.kinds_for("paper", KC) if k != "discusses"]) == ["idea-x", "paper-b", "q-1"]
     assert propose.candidates("q-1", pages, propose.kinds_for("question", KC)) == ["paper-a", "blog-e"]
     assert propose.candidates("paper-a", pages, propose.kinds_for("paper", KC), cap=1) == ["idea-x"]
 
@@ -321,3 +322,47 @@ def test_submit_keep_above_is_remembered_and_applied_when_the_reply_is_read(vaul
     assert all(r["confidence"] >= 0.5 for r in rows)                                 # the 0.2 row was cut at creation
     assert any(str(r.get("reason", "")).startswith("confidence 0.2")
                for t in propose._load("r1")["subjects"].values() for r in t.get("rejected") or [])
+
+
+# --- discusses: about, not merely linked ------------------------------------------------------------------------
+def test_discusses_runs_from_a_source_to_a_concept_and_never_between_posts(vault):
+    assert "discusses" in propose.kinds_for("paper", KC) and "discusses" in propose.kinds_for("blog-post", KC)
+    assert "discusses" not in propose.kinds_for("idea", KC) and "discusses" not in propose.kinds_for("question", KC)
+    assert propose.gate_ok("discusses", "blog-post", "idea") and propose.gate_ok("discusses", "paper", "topic")
+    assert propose.gate_ok("discusses", "blog-post", "question")
+    assert not propose.gate_ok("discusses", "blog-post", "blog-post") and not propose.gate_ok("discusses", "idea", "idea")
+
+
+def test_a_post_is_offered_the_nearest_concepts_not_only_its_sibling_posts(vault):
+    pages = pages_of(vault)
+
+    class Vecs:
+        def neighbours(self, slug, k):
+            return [("paper-b", 0.9), ("blog-e", 0.8), ("idea-x", 0.7), ("topic-t", 0.6)][:k]
+
+    kinds = propose.kinds_for("blog-post", KC)
+    got = propose.candidates("blog-e", pages, kinds, Vecs())
+    assert got.index("idea-x") < got.index("paper-b")             # the concept comes before the generic neighbours
+    assert {"idea-x", "topic-t"} <= set(got)
+    without = propose.candidates("blog-e", pages, [k for k in kinds if k != "discusses"], Vecs())
+    assert "topic-t" not in without                                # only `discusses` brings concept neighbours in
+
+
+def test_a_run_can_ask_only_one_kind_of_one_page_type(vault, monkeypatch, capsys):
+    pages = pages_of(vault)
+    planned = propose.plan(pages, [("paper-a", False), ("paper-b", False)], KC, vecs=None, only_kinds={"discusses"})
+    assert planned and all(info["kinds"] == ["discusses"] for _, _, info in planned)
+    assert "ALLOWED KINDS" in planned[0][1].prompt and "- discusses:" in planned[0][1].prompt and "- extends:" not in planned[0][1].prompt
+    monkeypatch.setattr(llm, "submit", lambda *a, **k: pytest.fail("a dry run sends nothing"))
+    assert propose.cmd_submit(args(dry_run=True, kinds="discusses", types="paper")) == 0
+    assert "2 subjects" in capsys.readouterr().out                 # the two papers, not the 4 default subjects
+    assert propose.cmd_submit(args(dry_run=True, kinds="nonsense")) == 2
+
+
+def test_resuming_an_old_run_does_not_drop_its_weak_rows(vault):
+    """`submit` on an old run stamps keep_above = 0.0 on it; its confidence-only rejections must still be promoted."""
+    state = old_run_state()
+    state["keep_above"] = 0.0
+    assert [r["confidence"] for r in propose.run_rows(state)] == [0.9, 0.4]
+    state["keep_above"] = 0.5                                  # a deliberate cutoff promotes nothing
+    assert [r["confidence"] for r in propose.run_rows(state)] == [0.9]

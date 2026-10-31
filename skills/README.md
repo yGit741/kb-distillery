@@ -1,6 +1,6 @@
 # Skill ladder
 
-Canonical skills live here. `.claude/skills` and `.cursor/skills` are symlinks to this folder (`pixi run sync-skills` creates/verifies them after `pixi run lint-skills` passes) — edit here only, never in the mirrors.
+Canonical skills live here. `.claude/skills` is a symlink to this folder (`pixi run sync-skills` creates/verifies them after `pixi run lint-skills` passes) — edit here only, never in the mirrors.
 
 Read `skills/<skill>/SKILL.md` before running a workflow.
 

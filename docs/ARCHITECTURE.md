@@ -13,7 +13,7 @@ kb-distillery turns sources you collect (papers, slides, mail, web clips) into a
 | **Publisher** | Sharing a kb as a site, as a plugin outside core. With none configured core runs unchanged. The Cloudflare publisher is the first (code in `backend/src/kb/share/` and `share/`). Third parties use the `kb.publishers` entry-point group. | `backend/src/kb/publish/` |
 | **Think** | One human-owned, schema-free journal outside every kb. `kbd distill <note> --to a,b` sends a note into chosen kbs with provenance on both sides. Agents never edit it. | `<kbs dir>/think` (its own repo) |
 
-Guides for the three extension points: [templates](meta-defaults/docs/templates.md), [storage](meta-defaults/docs/storage.md), [publish](meta-defaults/docs/publish.md); think in [think](meta-defaults/docs/think.md).
+Guides for the three extension points: [templates](../meta-defaults/docs/templates.md), [storage](../meta-defaults/docs/storage.md), [publish](../meta-defaults/docs/publish.md); think in [think](../meta-defaults/docs/think.md).
 
 ```
                          engine (this repo)
@@ -75,4 +75,4 @@ Guides for the three extension points: [templates](meta-defaults/docs/templates.
 
 ## Not built yet
 
-`kbd init` and `kbd doctor` exist (see the README quick start). What is still open: moving the remaining `raw/` access onto connectors (a short list of modules is allowed to read `raw/` directly, see [`docs/phase-3-report.md`](docs/phase-3-report.md)), greying out AI features in the app until a login or key exists, and publishing the repository. The roadmap, phase by phase, is [`docs/ROADMAP.md`](docs/ROADMAP.md).
+`kbd init` and `kbd doctor` exist (see the README quick start). What is still open: moving the remaining `raw/` access onto connectors (a short list of modules is allowed to read `raw/` directly, see [`docs/phase-3-report.md`](phase-3-report.md)), greying out AI features in the app until a login or key exists, and publishing the repository. The roadmap, phase by phase, is [`docs/ROADMAP.md`](ROADMAP.md).
