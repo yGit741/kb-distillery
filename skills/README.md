@@ -29,6 +29,7 @@ Read `skills/<skill>/SKILL.md` before running a workflow.
 | `backend-api` | none | 0 | `add an endpoint`, `new router`, `change the API`, `api-schema` |
 | `share-kb` | none | 0 | `share the site`, `publish`, `deploy main`, `rollback the site`, `deploy status` (not `export-kb`) |
 | `guided-tour` | light | ~2–4k | `guided tour`, `walkthrough`, `onboarding tour` |
+| `propose-relations` | light | ~1–2k per subject (batch) | `propose relations`, `relation proposals` (dry-run first; spends) |
 
 ## Trigger rules
 
@@ -54,6 +55,7 @@ Read `skills/<skill>/SKILL.md` before running a workflow.
 | [semantic-lint-hop](semantic-lint-hop/SKILL.md) | 1-hop review after ingest/distill — fix internal, note external on Connections |
 | [lint-moc](lint-moc/SKILL.md) | Topic audit: on-demand semantic pass over one topic page (`theme-*`) |
 | [build-researcher-profile](build-researcher-profile/SKILL.md) | Index full bib + catalog star papers only (light verify) |
+| [propose-relations](propose-relations/SKILL.md) | Batch-LLM typed relation proposals between pages → `.cache/` only, per-subject review digest |
 
 ### Lifecycle skills (git history, versions, PRs)
 
