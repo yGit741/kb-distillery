@@ -10,7 +10,7 @@
     restore <kb-x.y.z>                   bring wiki/ back to a snapshot (new kb(restore) commit)
     snapshot ["label"]                   tag the newest knowledge step as kb-x.y.z
     sync [--no-push] [--dry-run]         nightly: think/ edits, leftovers, push
-    migrate [--check]                    run pending schema migrations (infra/* branch only)
+    migrate [--check]                    run pending schema migrations (infra/* branch, or a kb repo's own main)
     next-version                         print the next kb-x.y.z
     record <op> <target> "summary" <paths…>   commit already-modified files as one knowledge op
     adopt-history <bundle> [--checkout P]     fast-forward main to a curated history bundle

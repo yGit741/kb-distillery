@@ -304,7 +304,8 @@ def lane_of(path):
 
 # A knowledge base repo's own tooling: all a `chore(<scope>)` commit may touch directly on that repo's main
 # (hooks, agent instructions, ignore rules, kb.toml). Never knowledge paths. See kb.git.commit_policy.
-KB_TOOLING_PATHS = [".claude/", ".cursor/", ".obsidian/", "CLAUDE.md", "AGENTS.md", ".gitignore", "kb.toml"]
+KB_TOOLING_PATHS = [".claude/", ".cursor/", ".obsidian/", "CLAUDE.md", "AGENTS.md", ".gitignore", "kb.toml",
+                    "meta/migrations/"]
 
 
 def is_kb_tooling(path):
