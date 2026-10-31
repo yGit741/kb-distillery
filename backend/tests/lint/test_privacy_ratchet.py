@@ -35,7 +35,8 @@ class Scanner(unittest.TestCase):
     def test_it_flags_each_kind_and_skips_knowledge_and_build_output(self):
         with tempfile.TemporaryDirectory() as root:
             self.put(root, "a.py", 'HOME = "/Users/yonatanm/x"\n')
-            self.put(root, "b.md", "see https://kb.example.workers.dev/x\n")
+            self.put(root, "b.md", "see https://kb.yonatan-magen-x.workers.dev/x\n")
+            self.put(root, "generic.md", "any account: https://kb.acme.workers.dev/x\n")      # Cloudflare's domain alone is fine
             self.put(root, "c.toml", 'key = "sk-ant-api03-' + "A" * 20 + '"\n')
             self.put(root, "clean.py", "x = 1\n")
             self.put(root, "kbs/thesis/wiki/n.md", "/Users/yonatanm\n")                 # knowledge: never scanned
