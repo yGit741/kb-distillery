@@ -34,7 +34,7 @@ ROOT = paths.ROOT
 MODEL = "sonnet"
 EASY_MODEL = "haiku"
 DEFAULT_BACKEND = "batch"     # this tool's default when neither --backend nor $KB_LLM_BACKEND is set
-KINDS = ("extends", "uses", "contradicts", "example-of", "open-problem-in", "addresses", "student-of")
+KINDS = ("extends", "uses", "contradicts", "example-of", "open-problem-in", "addresses", "discusses", "student-of")
 EASY_KINDS = frozenset({"example-of", "addresses", "open-problem-in"})
 SYMMETRIC = frozenset({"contradicts"})
 NOTE_REQUIRED = frozenset({"contradicts"})
@@ -47,6 +47,7 @@ GATES = {           # kind → (from types, to types); a declared kind without a
     "example-of": (WORK, frozenset({"idea"})),
     "open-problem-in": (frozenset({"question"}), WORK),
     "addresses": (PAPER_LIKE, frozenset({"question"})),
+    "discusses": (PAPER_LIKE, frozenset({"idea", "topic", "question"})),
     "student-of": (frozenset({"person"}), frozenset({"person"})),
 }
 MEANING = {
@@ -56,6 +57,7 @@ MEANING = {
     "example-of": "is a concrete instance or example of the target idea",
     "open-problem-in": "is an open problem raised in or about the target",
     "addresses": "answers or makes progress on the target question",
+    "discusses": "is substantially ABOUT the target (its main subject or one of them), whether or not it links the target; a passing mention, a list entry or a navigation link is not enough",
     "student-of": "is a student (PhD or postdoc) of the target person",
 }
 CONCEPT_SUBJECTS = frozenset({"idea", "question"})
@@ -215,11 +217,25 @@ def neighbours(vecs, slug, k=VECTOR_K):
         return []
 
 
+def concept_neighbours(vecs, slug, pages, types, k=VECTOR_K, pool=60):
+    """The k nearest pages of one of `types` by card vector. The plain neighbours of a blog post are other blog
+    posts, so a post could never be offered the idea it is about unless it linked it."""
+    if vecs is None:
+        return []
+    try:
+        near = [s for s, c in vecs.neighbours(slug, pool) if c == c]
+    except Exception:
+        return []
+    return [s for s in near if s in pages and pages[s]["type"] in types][:k]
+
+
 def candidates(slug, pages, kinds, vecs=None, cap=MAX_CANDIDATES):
-    """Linked pages (outbound, then vector neighbours, then inbound) a relation of one of `kinds` may reach."""
+    """Linked pages (outbound, then nearest concepts for `discusses`, then vector neighbours, then inbound) a
+    relation of one of `kinds` may reach."""
     p = pages[slug]
+    concepts = concept_neighbours(vecs, slug, pages, GATES["discusses"][1]) if "discusses" in kinds else []
     out = []
-    for c in [*p["out"], *neighbours(vecs, slug), *p["in"]]:
+    for c in [*p["out"], *concepts, *neighbours(vecs, slug), *p["in"]]:
         if c == slug or c in out or c not in pages:
             continue
         if any(gate_ok(k, p["type"], pages[c]["type"]) for k in kinds):
@@ -332,8 +348,9 @@ def request_id(slug):
     return "s" + hashlib.sha1(slug.encode("utf-8")).hexdigest()[:20]
 
 
-def plan(pages, subjects, kc, model=MODEL, vecs=None):
-    """[(slug, llm.Request, info)] for subjects with at least one allowed kind and one candidate."""
+def plan(pages, subjects, kc, model=MODEL, vecs=None, only_kinds=None):
+    """[(slug, llm.Request, info)] for subjects with at least one allowed kind and one candidate.
+    `only_kinds` limits what is asked (a cheap run for one new kind)."""
     from kb import llm
     out = []
     for slug, easy in subjects:
@@ -341,6 +358,8 @@ def plan(pages, subjects, kc, model=MODEL, vecs=None):
         kinds = kinds_for(p["type"], kc, easy)
         if p["type"] == "person":
             kinds = [k for k in kinds if k == "student-of" or k not in GATES]
+        if only_kinds:
+            kinds = [k for k in kinds if k in only_kinds]
         cands = candidates(slug, pages, kinds, vecs) if kinds else []
         if not cands:
             continue
@@ -460,8 +479,16 @@ def cmd_submit(a):
                             or (t["status"] == "submitted" and t.get("batch") in collected))
     subjects = [(s, e) for s, e in select(pages, a.include_easy, a.include_people)
                 if s not in state["subjects"] or resend(state["subjects"][s])]
+    types = {t for t in (getattr(a, "types", None) or "").split(",") if t}
+    only_kinds = {k for k in (getattr(a, "kinds", None) or "").split(",") if k}
+    unknown = only_kinds - set(kc["kinds"])
+    if unknown:
+        print(f"error: kinds this kb does not declare: {', '.join(sorted(unknown))} (declared: {', '.join(kc['kinds'])})", file=sys.stderr)
+        return 2
+    if types:
+        subjects = [(s, e) for s, e in subjects if pages[s]["type"] in types]
     subjects = subjects[:a.limit] if a.limit else subjects
-    planned = plan(pages, subjects, kc, a.model, load_vectors())
+    planned = plan(pages, subjects, kc, a.model, load_vectors(), only_kinds or None)
     reqs = [r for _, r, _ in planned]
     batch = backend == "batch"
     est, worst = estimate_usd(reqs, batch), estimate_usd(reqs, batch, MAX_TOKENS)
@@ -700,6 +727,8 @@ def run(argv=None):
                    help=f"also easy/listed pages ({EASY_MODEL}; example-of/addresses/open-problem-in only, tier low)")
     s.add_argument("--include-people", action="store_true", help="also person pages (student-of only)")
     s.add_argument("--limit", type=int)
+    s.add_argument("--kinds", help="ask only these relation kinds, comma-separated (a cheap run for one new kind)")
+    s.add_argument("--types", help="only subject pages of these types, comma-separated (e.g. blog-post)")
     s.add_argument("--keep-above", type=float, default=KEEP_ABOVE,
                    help="drop proposals below this confidence when the reply is read (default 0: keep all)")
     s.add_argument("--max-usd", type=float, default=6.0, help="refuse a run whose estimate passes this")

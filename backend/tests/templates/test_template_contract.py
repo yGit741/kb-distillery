@@ -62,10 +62,10 @@ class AcademicResearch(unittest.TestCase):
         self.assertEqual(set(kbtypes.load(self.cfg).areas), set())
         self.assertEqual(kbtypes.load(self.cfg).source_fields, ("authors", "venue", "arxiv-id"))
 
-    def test_the_seven_relation_types(self):
+    def test_the_eight_relation_types(self):
         edges = edge_config(self.cfg)
         self.assertEqual(edges["types"], sorted(["extends", "uses", "contradicts", "example-of", "open-problem-in",
-                                                 "addresses", "student-of"]))
+                                                 "addresses", "discusses", "student-of"]))
         self.assertEqual(edges["note_required"], {"contradicts"})
         self.assertIn("CONTRADICTS", edges["symmetric"])
 
