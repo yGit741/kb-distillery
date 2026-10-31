@@ -17,6 +17,10 @@ import shutil
 import tempfile
 
 os.environ["KB_APP_CONFIG"] = os.path.join(os.sep, "nonexistent", "kb-app.toml")
+# Sharing is a plugin that is off by default; the suite runs as the owner's machine does, with the Cloudflare publisher
+# selected (every fake-backed share test relies on it). Tests of "no publisher" clear it themselves.
+os.environ["KB_PUBLISHER"] = "cloudflare"
+os.environ["KB_ENGINE_CONFIG"] = os.path.join(os.sep, "nonexistent", "kb-engine.toml")
 FIXTURE_KB = os.path.join(os.path.dirname(os.path.abspath(__file__)), "fixtures", "kb", "kb-fixture")
 if not os.environ.get("KB") and not os.environ.get("KB_ROOT"):
     _tmp = os.path.realpath(tempfile.mkdtemp(prefix="kb-fixture-"))   # realpath: /var -> /private/var on macOS

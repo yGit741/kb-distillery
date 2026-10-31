@@ -336,3 +336,40 @@ def test_ported_graph_redirects_to_the_app(client):
     r = client.get("/graph?focus=x", follow_redirects=False)
     assert r.status_code == 307 and r.headers["location"] == "/app/graph?focus=x"
     assert client.get("/graph.html", follow_redirects=False).headers["location"] == "/app/graph"
+
+
+def test_ensure_app_dist_installs_dependencies_on_a_fresh_clone_then_builds(tmp_path):
+    import shutil
+    from kb.api.spa import ensure_app_dist
+    fe = _frontend(tmp_path)
+    shutil.rmtree(fe / "node_modules")
+    calls = []
+
+    def runner(cmd, **kw):
+        calls.append(cmd[:2])
+        if cmd[1] == "ci":
+            (fe / "node_modules").mkdir()
+        else:
+            (fe / "dist").mkdir(exist_ok=True)
+            (fe / "dist" / "index.html").write_text("built")
+        return subprocess.CompletedProcess(cmd, 0, "", "")
+
+    assert ensure_app_dist(fe, runner) == "built"
+    assert calls == [["npm", "ci"], ["npm", "run"]]                   # install once, then build
+    assert ensure_app_dist(fe, runner) == "fresh" and len(calls) == 2
+
+
+def test_ensure_app_dist_says_what_to_do_when_the_install_fails(tmp_path):
+    import shutil
+    from kb.api.spa import ensure_app_dist
+    fe = _frontend(tmp_path)
+    shutil.rmtree(fe / "node_modules")
+    calls = []
+
+    def runner(cmd, **kw):
+        calls.append(cmd[1])
+        return subprocess.CompletedProcess(cmd, 1, "", "npm ERR! network")
+
+    msg = ensure_app_dist(fe, runner)
+    assert msg.startswith("frontend dependencies could not be installed") and "pixi run web-install" in msg
+    assert "network" in msg and calls == ["ci"]                       # no build is attempted after a failed install

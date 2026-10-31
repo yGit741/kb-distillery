@@ -68,6 +68,8 @@ import tempfile
 import webbrowser
 from pathlib import Path
 
+from kb.webbuild import frontend_source_hash as _frontend_source_hash
+
 from .contracts import EXPORT_DIR, PROFILES, REPO, BuildResult, Manifest, raw_is_email
 from .home import apply_home, load_home, strip_my_notes
 from .predicate import add_predicate_args, predicate_fn
@@ -1078,16 +1080,8 @@ def inner_build_app(args):
 
 
 def frontend_source_hash(frontend=FRONTEND_DIR):
-    """Digest of what the share bundle is made of: the app sources (not tests), its config and lockfile."""
-    frontend = Path(frontend)
-    h = hashlib.sha256()
-    files = [p for p in (frontend / "src").rglob("*") if p.is_file() and ".test." not in p.name
-             and "test" not in p.relative_to(frontend / "src").parts[:1]]
-    files += [frontend / n for n in ("index.html", "vite.config.ts", "tsconfig.json", "package.json", "package-lock.json")
-              if (frontend / n).is_file()]
-    for p in sorted(files):
-        h.update(p.relative_to(frontend).as_posix().encode() + b"\0" + hashlib.sha256(p.read_bytes()).digest())
-    return h.hexdigest()
+    """Digest of what the share bundle is made of (the algorithm lives in `kb.webbuild`, which core uses too)."""
+    return _frontend_source_hash(frontend)
 
 
 def ensure_frontend_dist(profile, frontend=FRONTEND_DIR, runner=None):

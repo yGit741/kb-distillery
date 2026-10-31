@@ -17,7 +17,7 @@ def ensure_app_dist(frontend=FRONTEND, runner=None):
     """Build `frontend/dist` from the current sources when they changed since the last build.
 
     Returns "fresh", "built" or a warning string; a failed or impossible build keeps the old dist."""
-    from kb.share.build import frontend_source_hash
+    from kb.webbuild import frontend_source_hash
 
     frontend = Path(frontend)
     dist = frontend / "dist"
@@ -25,10 +25,16 @@ def ensure_app_dist(frontend=FRONTEND, runner=None):
     stamp = dist / STAMP
     if (dist / "index.html").is_file() and stamp.is_file() and stamp.read_text().strip() == want:
         return "fresh"
+    run = runner or subprocess.run
     if not (frontend / "node_modules").is_dir():
-        return "frontend/node_modules is missing — run `pixi run web-install` once, then restart"
-    proc = (runner or subprocess.run)(["npm", "run", "build", "--prefix", str(frontend)],
-                                      capture_output=True, text=True, check=False)
+        # a fresh clone has no node_modules: install them once (same as `pixi run web-install`, needs the network)
+        print("frontend: installing dependencies (first run only)…", flush=True)
+        got = run(["npm", "ci", "--prefix", str(frontend)], capture_output=True, text=True, check=False)
+        if got.returncode != 0:
+            tail = (got.stderr or got.stdout or "").strip().splitlines()[-6:]
+            return ("frontend dependencies could not be installed (needs network and node; or run "
+                    "`pixi run web-install` yourself):\n" + "\n".join(tail))
+    proc = run(["npm", "run", "build", "--prefix", str(frontend)], capture_output=True, text=True, check=False)
     if proc.returncode != 0:
         tail = (proc.stderr or proc.stdout or "").strip().splitlines()[-8:]
         return "frontend build failed (serving the previous dist):\n" + "\n".join(tail)

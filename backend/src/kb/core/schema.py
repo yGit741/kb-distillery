@@ -274,6 +274,7 @@ TOOLING_PATHS = [
     "templates/",        # ontology templates (kb.core.template): part of the engine, versioned with it
     "tools/",
     "README.md",
+    "ARCHITECTURE.md",
     "AGENTS.md",
     "CLAUDE.md",
     "GEMINI.md",
@@ -286,6 +287,9 @@ TOOLING_PATHS = [
     ".claude/",
     ".vscode/",
     ".github/",
+    "LICENSE",           # open-source files at the repo root
+    "CONTRIBUTING.md",
+    "CODE_OF_CONDUCT.md",
 ]
 
 

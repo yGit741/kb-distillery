@@ -1,12 +1,10 @@
 # Files allowed to carry personal strings today (Phase 7). Clean one up, or move the name behind configuration, and delete its line.
-README.md
 backend/src/kb/git/proof_nudge.py
 backend/src/kb/ingest/wordpress.py
 backend/src/kb/maintenance/export.py
 backend/src/kb/share/contracts.py
 backend/src/kb/share/deploy.py
 backend/src/kb/share/share.toml
-backend/src/kb/share/snapshots.py
 backend/tests/git/test_app_token.py
 backend/tests/git/test_proof_nudge.py
 backend/tests/git/test_ship.py
@@ -17,11 +15,9 @@ backend/tests/share/test_share_deploy.py
 backend/tests/share/test_share_snapshots.py
 docs/phase-1-report.md
 frontend/src/features/chat/ChatScreen.test.tsx
-frontend/src/features/share/ShareScreen.test.tsx
 frontend/src/flags/registry.gen.ts
 meta-defaults/flags.toml
 share/admin.js
 share/admin.test.mjs
-share/auth.test.mjs
 skills/export-kb/SKILL.md
 skills/share-kb/SKILL.md
