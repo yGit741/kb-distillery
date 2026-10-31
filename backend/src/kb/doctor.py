@@ -168,10 +168,11 @@ def check_frontend(frontend_dir: str, node: bool) -> Check:
     if os.path.isfile(os.path.join(frontend_dir, "dist", "index.html")):
         return Check("frontend", PASS, "frontend/dist is built")
     if not node:
-        return Check("frontend", WARN, "frontend/dist is not built and node is missing", "run `pixi install`, then `pixi run web-install`")
+        return Check("frontend", WARN, "frontend/dist is not built and node is missing", "run `pixi install` (it provides node), then launch again")
     if os.path.isdir(os.path.join(frontend_dir, "node_modules")):
         return Check("frontend", PASS, "frontend/dist is built on first launch (node_modules present)")
-    return Check("frontend", WARN, "frontend/dist is not built and node_modules is missing", "run `pixi run web-install` once; `kbd app` then builds it")
+    return Check("frontend", INFO, "frontend/dist is not built yet and node_modules is missing",
+                 "nothing to do: the first launch installs the frontend dependencies and builds the app (needs the network, takes a minute or two)")
 
 
 # --- run -----------------------------------------------------------------------------------------------------
