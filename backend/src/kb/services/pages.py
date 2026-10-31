@@ -14,6 +14,7 @@ from kb.search.semfind import load_pages
 from kb.services.graph import _areas, _preview, _title, _year
 from kb.core.summary import unquote
 from kb.search import qmd_client
+from kb.storage import raw
 
 ROOT = vault_root()
 WIKILINK = re.compile(r"\[\[([^\]|#\\]+)(?:#[^\]|]+)?(?:\\?\|([^\]]+))?\]\]")
@@ -388,14 +389,13 @@ def resolve_chat_asset(rel):
 
 
 def resolve_asset(name):
-    """Map an Obsidian embed name to a readable image path under raw/, or None."""
+    """Map an Obsidian embed name to a readable image path under raw/, or None (looked up by logical key through the
+    kb's storage connector; a key with `..` or a leading `/` names nothing)."""
     name = (name or "").replace("\\", "/").lstrip("/")
     if not name.lower().endswith(IMAGE_EXT):
         return None
     base = os.path.basename(name)
-    raw_root = os.path.join(ROOT, "raw") + os.sep
-    for rel in (name, os.path.join("raw", "images", base), os.path.join("raw", "web-clips", base)):
-        full = os.path.normpath(os.path.join(ROOT, rel))
-        if full.startswith(raw_root) and os.path.isfile(full):
-            return full
+    for key in (name, f"raw/images/{base}", f"raw/web-clips/{base}"):
+        if raw.is_raw_key(key) and raw.exists(key):
+            return raw.path(key)
     return None
