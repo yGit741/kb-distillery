@@ -1,6 +1,9 @@
 # Obsidian Copilot plugin state — tool output, not knowledge
 copilot/
 
+# Backlog items: local state, one file per idea or unstarted plan (kb.services.backlog)
+.backlog/
+
 # Obsidian: only app.json, core-plugins.json and community-plugins.json are tracked (what another
 # vault user needs to open it). Everything else — workspace, appearance, graph, plugin bundles
 # (25MB of minified JS, reinstallable from community-plugins.json) — is local state.
