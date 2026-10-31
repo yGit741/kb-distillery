@@ -22,7 +22,7 @@ from .base import Connector, StorageError
 
 GROUP = "kb.storage.connectors"
 DEFAULT = "local-folder"
-BUILTIN = {"local-folder": "kb.storage.localfolder:LocalFolder"}
+BUILTIN = {"local-folder": "kb.storage.localfolder:LocalFolder", "gdrive": "kb.storage.gdrive:GDrive"}
 
 
 def _entry_points() -> dict:

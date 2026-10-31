@@ -73,6 +73,10 @@ class LocalFolder(Connector):
             raise NotFound(f"no object {key!r} in {self.root}") from None
         return ObjectInfo(key=key, size=st.st_size, mtime_ns=st.st_mtime_ns, sha1=h.hexdigest())
 
+    def exists(self, key: str) -> bool:
+        """A stat, not a hash: `info` reads the whole file, which a presence check must not."""
+        return os.path.isfile(self._path(key))
+
     @contextmanager
     def local_copy(self, key: str):
         """The file itself: nothing is copied for a local store."""

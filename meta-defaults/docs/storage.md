@@ -39,6 +39,21 @@ raw.put(key, data)                 # refused when the key exists: raw is immutab
 
 `python -m kb.lint.raw_access` lists the modules that still touch `raw/` directly; `backend/tests/storage/raw_access_baseline.txt` is their allowance, and a module you migrate must leave it.
 
+## Google Drive (`gdrive`)
+
+Reads the macOS Google Drive for desktop mount (`~/Library/CloudStorage/GoogleDrive-<account>/My Drive`). No OAuth, no API: the mount is a folder, Drive.app syncs it.
+
+```toml
+[storage]
+connector = "gdrive"
+[storage.options]
+folder  = "Notes to Obsedian"   # folder under My Drive that plays the kb root; case/space/hyphen drift is tolerated
+account = "me@gmail.com"        # only when several accounts are mounted
+# mount = "/path/to/GoogleDrive-x"   # the mount itself, overriding the search (tests, odd setups)
+```
+
+Keys keep their shape: `raw/printed-docs/a.pdf` is `My Drive/<folder>/raw/printed-docs/a.pdf`. The mount is located on every call, so a kb with this connector still loads when Drive is not running; `auth()` then returns `ok=False` with what to do (install and sign in to Google Drive for desktop, open Google Drive.app, set `account`, fix `folder`), and reads and writes raise `StorageError` with the same message. `put` is refused for an existing key (raw stays immutable); `local_copy`/`cached_path` return the mounted file itself (Drive downloads it on first read). Contract tests run it against a temp directory standing in for the mount (`GDriveContract`). An API/OAuth variant is not built.
+
 ## Writing a connector in a package
 
 Subclass `kb.storage.Connector` (constructor `Cls(root, **options)`), then register it:
@@ -49,7 +64,7 @@ Subclass `kb.storage.Connector` (constructor `Cls(root, **options)`), then regis
 my-store = "my_pkg.store:MyStore"
 ```
 
-A package cannot take a built-in name (`local-folder`). Run the contract suite against your class: copy the `MemoryStoreContract` pattern in the test file and give it a `make()`.
+A package cannot take a built-in name (`local-folder`, `gdrive`). Run the contract suite against your class: copy the `MemoryStoreContract` pattern in the test file and give it a `make()`.
 
 ## Rules
 

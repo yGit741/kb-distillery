@@ -17,6 +17,7 @@ import zipfile
 from datetime import datetime, timezone
 
 from kb.paths import THINK_PATH, think_path, vault_root
+from kb.storage import for_kb
 ROOT = vault_root()
 EXPORT_DIR = os.path.join(ROOT, ".exported")
 PREFIX = "yonatan-thesis-kb"
@@ -134,17 +135,9 @@ def _collect_files(include_raw_pdfs: bool) -> list[str]:
                     files.append(rel)
 
     if include_raw_pdfs:
-        raw_base = os.path.join(ROOT, "raw")
-        if os.path.isdir(raw_base):
-            for dirpath, dirnames, filenames in os.walk(raw_base):
-                dirnames[:] = [d for d in dirnames if d not in SKIP_DIR_NAMES]
-                for fn in filenames:
-                    full = os.path.join(dirpath, fn)
-                    rel = os.path.relpath(full, ROOT).replace("\\", "/")
-                    if _should_skip(rel):
-                        continue
-                    if rel not in files:
-                        files.append(rel)
+        for rel in for_kb(root=ROOT).list("raw/"):
+            if not _should_skip(rel) and rel not in files:
+                files.append(rel)
 
     return sorted(set(files))
 
@@ -201,10 +194,13 @@ def create_export(
         raise RuntimeError("nothing to export")
 
     manifest = _manifest(files, include_raw_pdfs, stamp)
+    store = for_kb(root=ROOT)
     with zipfile.ZipFile(archive, "w", compression=zipfile.ZIP_DEFLATED) as zf:
         zf.writestr("EXPORT_MANIFEST.txt", manifest)
         for rel in files:
-            zf.write(think_path(rel) if rel.startswith("think/") else os.path.join(ROOT, rel), rel)
+            zf.write(think_path(rel) if rel.startswith("think/")
+                     else store.cached_path(rel) if rel.startswith("raw/")
+                     else os.path.join(ROOT, rel), rel)
 
     return archive
 

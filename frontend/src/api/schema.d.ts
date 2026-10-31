@@ -38,6 +38,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/backlog": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Backlog items with plan status and drift */
+        get: operations["list_backlog_api_backlog_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/chat": {
         parameters: {
             query?: never;
@@ -770,6 +787,60 @@ export interface components {
             context: string;
             /** Id */
             id: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** BacklogDrift */
+        BacklogDrift: {
+            /** Commits */
+            commits: number;
+            /** Level */
+            level: string;
+            /** Maybe Done */
+            maybe_done: string[];
+            /** Missing */
+            missing: string[];
+        } & {
+            [key: string]: unknown;
+        };
+        /** BacklogItem */
+        BacklogItem: {
+            /** Area */
+            area: string;
+            /** Base Sha */
+            base_sha: string;
+            /** Branch */
+            branch: string;
+            /** Created */
+            created: string;
+            drift: components["schemas"]["BacklogDrift"];
+            /** Id */
+            id: string;
+            /** Kind */
+            kind: string;
+            /** Paths */
+            paths: string[];
+            /** Plan Status */
+            plan_status: string;
+            /** Size */
+            size: string;
+            /** Source */
+            source: string;
+            /** Status */
+            status: string;
+            /** Title */
+            title: string;
+            /** Why */
+            why: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** BacklogList */
+        BacklogList: {
+            /** Dir */
+            dir: string;
+            /** Items */
+            items: components["schemas"]["BacklogItem"][];
         } & {
             [key: string]: unknown;
         };
@@ -2982,6 +3053,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_backlog_api_backlog_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BacklogList"];
                 };
             };
         };

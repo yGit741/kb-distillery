@@ -8,6 +8,7 @@ from unittest.mock import patch
 from kb import kbconfig
 from kb.storage import (AuthStatus, Connector, NotFound, ObjectInfo, StorageError, connector_names, for_kb, load_class)
 from kb.storage import registry
+from kb.storage.gdrive import GDrive
 from kb.storage.localfolder import LocalFolder
 from tests.storage.dummy_connector import MemoryStore
 
@@ -137,6 +138,68 @@ class MemoryStoreContract(ConnectorContract, unittest.TestCase):
         return MemoryStore("/unused")
 
 
+class GDriveContract(ConnectorContract, unittest.TestCase):
+    """The Drive connector against a temp directory standing in for the GoogleDrive-<account> mount."""
+
+    def make(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.mount = os.path.join(self.tmp.name, "GoogleDrive-me@x.com")
+        os.makedirs(os.path.join(self.mount, "My Drive", "Notes to Obsedian"))
+        return GDrive("/unused-kb-root", mount=self.mount, folder="notes-to-obsedian")
+
+    def test_keys_land_under_the_folder_in_my_drive(self):
+        self.c.put("raw/a.md", b"x")
+        self.assertTrue(os.path.isfile(os.path.join(self.mount, "My Drive", "Notes to Obsedian", "raw", "a.md")))
+
+    def test_dotfiles_are_not_listed(self):
+        self.c.put("raw/a.md", b"x")
+        with open(os.path.join(self.mount, "My Drive", "Notes to Obsedian", "raw", ".tmp.drivedownload"), "wb") as f:
+            f.write(b"junk")
+        self.assertEqual(list(self.c.list()), ["raw/a.md"])
+
+    def test_no_folder_option_means_my_drive_itself(self):
+        c = GDrive("/unused", mount=self.mount)
+        c.put("raw/a.md", b"x")
+        self.assertTrue(os.path.isfile(os.path.join(self.mount, "My Drive", "raw", "a.md")))
+
+    def test_auth_says_what_to_do_when_the_mount_is_missing(self):
+        with patch("kb.storage.gdrive.MOUNT_GLOB", os.path.join(self.tmp.name, "nothing-*")):
+            status = GDrive("/unused").auth()
+        self.assertFalse(status.ok)
+        self.assertIn("Google Drive for desktop", status.message)
+
+    def test_auth_names_a_missing_folder_or_a_bad_mount(self):
+        status = GDrive("/unused", mount=self.mount, folder="Elsewhere").auth()
+        self.assertFalse(status.ok)
+        self.assertIn("Elsewhere", status.message)
+        self.assertFalse(GDrive("/unused", mount=os.path.join(self.tmp.name, "gone")).auth().ok)
+
+    def test_a_missing_mount_makes_reads_fail_loudly_not_silently_empty(self):
+        c = GDrive("/unused", mount=os.path.join(self.tmp.name, "gone"))
+        with self.assertRaises(StorageError):
+            c.get("raw/a.md")
+        with self.assertRaises(StorageError):
+            c.put("raw/a.md", b"x")
+
+    def test_two_accounts_need_an_account_option(self):
+        for acct in ("a@x.com", "b@x.com"):
+            os.makedirs(os.path.join(self.tmp.name, f"GoogleDrive-{acct}", "My Drive"))
+        glob = os.path.join(self.tmp.name, "GoogleDrive-*")
+        with patch("kb.storage.gdrive.MOUNT_GLOB", glob):
+            self.assertIn("account", GDrive("/unused").auth().message)
+            self.assertTrue(GDrive("/unused", account="a@x.com").auth().ok)
+
+    def test_a_folder_cannot_escape_my_drive_and_unknown_options_are_refused(self):
+        with self.assertRaises(StorageError):
+            GDrive("/unused", mount=self.mount, folder="../x")
+        with self.assertRaises(StorageError):
+            GDrive("/unused", token="x")
+
+    def test_the_registry_loads_it_by_name(self):
+        self.assertIs(load_class("gdrive"), GDrive)
+
+
 class Registry(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
@@ -162,7 +225,7 @@ class Registry(unittest.TestCase):
             c = for_kb(self.kb('\n[storage]\nconnector = "memory"\n[storage.options]\nbucket = "b"\n'))
             self.assertIsInstance(c, MemoryStore)
             self.assertEqual(c.options, {"bucket": "b"})
-            self.assertEqual(connector_names(), ["local-folder", "memory"])
+            self.assertEqual(connector_names(), ["gdrive", "local-folder", "memory"])
 
     def test_a_package_cannot_replace_a_built_in(self):
         fake = {"local-folder": "tests.storage.dummy_connector:MemoryStore"}
