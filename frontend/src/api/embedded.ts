@@ -31,6 +31,7 @@ export function createEmbeddedDataSource(blob: ShareBlob | undefined = globalThi
     listGraphQueries: absent,
     runCypher: absent,
     runGraphQuery: absent,
+    getRelationProposals: absent,
     listPages: absent,
     getPage: absent,
     search: absent,

@@ -32,6 +32,7 @@ python3 -m kb.graph.propose --kb <id> submit --run <name> [--backend batch|api|s
 python3 -m kb.graph.propose --kb <id> collect --run <name> [--wait 3600]
 python3 -m kb.graph.propose --kb <id> review --run <name> [--min-confidence 0.7]
 python3 -m kb.graph.propose --kb <id> status [--run <name>]
+python3 -m kb.graph.propose --kb <id> repack --run <name>        # rebuild the proposals file from saved run state (no LLM): older runs kept weak rows only as rejected
 python3 -m kb.graph.propose --kb <id> apply --min-confidence 0.9 [--run <name>] [--kinds uses,extends] [--subjects a,b] [--limit N]          # dry run: lists what it would write
 python3 -m kb.graph.propose --kb <id> apply --min-confidence 0.9 … --write                                                                    # inside an ops session
 ```
@@ -40,7 +41,7 @@ python3 -m kb.graph.propose --kb <id> apply --min-confidence 0.9 … --write    
 
 1. **Estimate** — `submit --dry-run`; tell the user the subject count, estimate and worst case. Backend: `--backend`, else `$KB_LLM_BACKEND`, else batch.
 2. **Submit** only after the user agrees to the spend; `--max-usd` refuses a run whose estimate passes it. Re-running `submit` sends only new subjects (`--retry` resends failed/rejected).
-3. **Collect** — batches end within hours; `collect` again later if one is still running. It validates every proposal (candidate slug, allowed kind, endpoint types, contradicts note, confidence ≥ 0.5) and keeps the rest in the run's `rejected` bucket with a reason.
+3. **Collect** — batches end within hours; `collect` again later if one is still running. It validates every proposal (candidate slug, allowed kind, endpoint types, contradicts note, confidence within 0..1) and keeps the rest in the run's `rejected` bucket with a reason. **Confidence is data, not a gate:** weak proposals are stored too, and the cutoff is chosen when you look (`review`/`apply --min-confidence`, the Relations screen). `submit --keep-above X` sets a cutoff at creation instead (default 0, keep all).
 4. **Review** — `review` prints a per-subject markdown digest (kind, target title, note, evidence, confidence); hand it to the user and ask which to accept (a cutoff, kinds, or subjects).
 5. **Apply** — `ops -- snapshot "before relations"`, then `apply …` as a dry run and show the list. After the user's go (the write guard warns on wiki edits outside an open ops session): `ops begin refine relations "<why>"`, `apply … --write` (small batches with `--limit`), `ops commit`. `apply` takes a row only when lint would accept it (kind declared in `[edges]`, target exists, a note where required), skips relations a page already states (and a symmetric pair stated from the other side), and merges into an existing `relations:` block; nothing else in a page changes.
 

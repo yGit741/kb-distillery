@@ -31,6 +31,8 @@ export type PathResult = S["PathResult"];
 export type GraphRelation = S["GraphRelation"];
 export type NamedQuery = S["NamedQuery"];
 export type QueryTable = S["QueryTable"];
+export type RelationProposals = S["RelationProposals"];
+export type RelationProposal = S["RelationProposal"];
 
 // corpus, raw, citations, pipeline, health, ops
 export type CorpusTable = S["CorpusTable"];

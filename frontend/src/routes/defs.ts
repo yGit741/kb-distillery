@@ -25,6 +25,7 @@ const ALL_ROUTE_DEFS: readonly RouteDef[] = [
   { id: "system", path: "/system", label: "System", legacy: "/ops", blurb: "Status, open work, timeline, pipeline, history and health.", nav: true },
   { id: "pages", path: "/pages", label: "Pages", legacy: "/explore", blurb: "Read, search and trace notes (the Explore tab).", extraPaths: ["/pages/$slug"] },
   { id: "chat", path: "/chat", label: "Chat", legacy: "/chat", blurb: "Read-only research agent over the wiki." },
+  { id: "relations", path: "/relations", label: "Relations", legacy: "/", blurb: "Review the LLM relation proposals by confidence." },
   { id: "scopes", path: "/scopes", label: "Scopes", legacy: "/scopes", blurb: "Named subsets of the vault for focused work." },
   { id: "pipeline", path: "/pipeline", label: "Pipeline", legacy: "/pipeline", blurb: "Ingest and digestion status of every raw file." },
   { id: "lifecycle", path: "/lifecycle", label: "Lifecycle", legacy: "/lifecycle", blurb: "Versions, history, snapshots and working state.", flag: "screen.lifecycle" },

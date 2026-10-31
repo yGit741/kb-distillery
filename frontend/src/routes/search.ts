@@ -26,6 +26,8 @@ export const SYSTEM_TABS: readonly SystemTab[] = ["overview", "backlog", "pipeli
 /** System hosts the pipeline view, so it keeps the pipeline's params (its own `view` included) next to `tab`. */
 export type SystemSearch = PipelineSearch & { tab?: SystemTab };
 export type NoSearch = Record<string, never>;
+/** Relation proposals: the confidence range in whole percent (`?min=90&max=100`) and one kind. */
+export type RelationsSearch = { min?: string; max?: string; kind?: string };
 /** Think: the open note (`?note=<name>.md`), so a reload or link restores it. */
 export type ThinkSearch = { note?: string };
 /** Home: the concept picked in the intro card (`?concept=<slug>`), so Back and shared links restore it. */
@@ -41,6 +43,7 @@ export interface SearchById {
   system: SystemSearch;
   lifecycle: NoSearch;
   think: ThinkSearch;
+  relations: RelationsSearch;
 }
 
 const clean = <T extends object>(o: T): T =>
@@ -72,4 +75,5 @@ export const SEARCH: { [K in keyof SearchById]: (raw: Raw) => SearchById[K] } = 
   scopes: (r) => clean({ scope: str(r.scope), draft: str(r.draft) }),
   system: (r) => clean({ ...pipelineSearch(r), tab: oneOf(r.tab, SYSTEM_TABS) }),
   pipeline: (r) => pipelineSearch(r),
+  relations: (r) => clean({ min: str(r.min), max: str(r.max), kind: str(r.kind) }),
 };
