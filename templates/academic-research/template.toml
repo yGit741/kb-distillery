@@ -6,11 +6,8 @@ description = "Academic research: papers, books and lectures digested into ideas
 [types]
 order = ["topic", "idea", "question", "person", "course", "series", "book", "notebook",
          "paper", "part", "lecture", "article", "blog-post", "video", "ai-chat", "mail"]
-# The `area:` whitelist: each area has exactly one theme-<area> topic page.
-areas = ["statistics", "boolean-analysis", "fourier-analysis", "optimization-theory", "learning-theory",
-         "info-theory", "implicit-regularization", "tensor-factorization", "complex-nn", "quantum"]
-deprecated_areas = ["why-things-work", "adv-ml", "adv-nlp", "adv-stats", "nlp", "rl", "prob-models",
-                    "ak-summaries", "thesis-directions"]
+# No `areas` here on purpose: the `area:` whitelist is a kb's own choice of topics (each needs a theme-<area> page),
+# so a kb adds it under its own [types] (areas, deprecated_areas).
 # Extra frontmatter on source pages, beyond the explorer's common fields.
 source_fields = ["authors", "venue", "arxiv-id"]
 

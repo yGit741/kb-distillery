@@ -37,6 +37,8 @@ description = "..."
 [edges]    # types, symmetric, note_required, labels: see backend/src/kb/services/cypher.py (edge_config)
 ```
 
+**Areas are the kb's, not the template's.** `areas` and `deprecated_areas` (the `area:` whitelist) stay out of a template: every area needs its own `theme-<area>` topic page, so a template that listed some would make lint fail for every kb that follows it. A kb adds them under its own `[types]`.
+
 Any other top-level table is rejected until a phase gives it a meaning. Reserved: lint rules, skills and prompts, views, migrations, samples, page skeletons (today `meta-defaults/templates/*.md`).
 
 ## Errors you will meet
