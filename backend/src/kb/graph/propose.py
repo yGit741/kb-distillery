@@ -563,6 +563,76 @@ def cmd_review(a):
     return 0
 
 
+def plan_apply(rows, pages, config, min_conf, kinds=None, subjects=None, limit=None):
+    """Which proposals to write as stated relations: ({slug: [new {to, kind, note}]}, [(row, why skipped)]).
+
+    A row is taken when it meets `min_conf` (and `kinds` / `subjects` when given) and passes the same check lint runs
+    on a stated relation (kind declared in kb.toml [edges], target exists and is another page, a note where the kind
+    needs one). A relation the page already states is skipped, and so is a symmetric one the other page states.
+    `limit` caps how many pages are touched. Best confidence first, so a cap keeps the strongest."""
+    from kb.graph import relations as R
+    symmetric = set(config.get("symmetric") or ())
+    stated = {slug: R.parse_relations(p["text"]) for slug, p in pages.items()}
+
+    def has(a, b, kind):
+        return any(r["to"] == b and r["kind"] == kind for r in stated.get(a, ()))
+
+    out, skipped = {}, []
+    for r in sorted(rows, key=lambda r: (-r["confidence"], r["from"], r["to"], r["kind"])):
+        if r["confidence"] < min_conf or (kinds and r["kind"] not in kinds) or (subjects and r["from"] not in subjects):
+            continue
+        rel = {"to": r["to"], "kind": R.kind_name(r["kind"]), "note": (r.get("note") or "").strip()}
+        why = R._check(r["from"], rel, pages, config)
+        if why:
+            skipped.append((r, why.split(": ", 1)[1]))
+            continue
+        a, b = r["from"], r["to"]
+        if has(a, b, rel["kind"]) or (rel["kind"] in symmetric and has(b, a, rel["kind"])):
+            skipped.append((r, "already stated"))
+            continue
+        if limit and a not in out and len(out) >= limit:
+            continue
+        out.setdefault(a, []).append(rel)
+        stated.setdefault(a, []).append(rel)
+    return out, skipped
+
+
+def cmd_apply(a):
+    """Write the chosen proposals into the pages' `relations:` blocks (dry run unless --write)."""
+    from kb.graph import relations as R
+    from kb.services.cypher import edge_config
+    path = os.path.join(cache_dir(), OUT_FILE)
+    if not os.path.isfile(path):
+        print(f"no proposals file ({path}) — run submit and collect first")
+        return 1
+    with open(path, encoding="utf-8") as f:
+        rows = [json.loads(l) for l in f if l.strip()]
+    if a.run:
+        rows = [r for r in rows if r.get("run") == a.run]
+    pages = load_pages()
+    kinds = set(a.kinds.split(",")) if a.kinds else None
+    subjects = set(a.subjects.split(",")) if a.subjects else None
+    plan, skipped = plan_apply(rows, pages, edge_config(), a.min_confidence, kinds, subjects, a.limit)
+    n = sum(len(v) for v in plan.values())
+    print(f"{n} relation(s) on {len(plan)} page(s) at confidence >= {a.min_confidence}; {len(skipped)} skipped")
+    for slug, rels in sorted(plan.items()):
+        for r in rels:
+            print(f"  {slug} --{r['kind']}--> {r['to']}" + (f"  ({r['note'][:70]})" if r["note"] else ""))
+    for r, why in skipped[:10]:
+        print(f"  skipped {r['from']} --{r['kind']}--> {r['to']}: {why}")
+    if not a.write:
+        print("dry run: nothing written (add --write inside `ops begin refine …` / `ops commit`)")
+        return 0
+    for slug, rels in sorted(plan.items()):
+        file = os.path.join(ROOT, "wiki", f"{slug}.md")
+        with open(file, encoding="utf-8") as f:
+            text = f.read()
+        with open(file, "w", encoding="utf-8") as f:
+            f.write(R.set_relations(text, R.parse_relations(text) + rels))
+    print(f"wrote {n} relation(s) on {len(plan)} page(s)")
+    return 0
+
+
 def cmd_status(a):
     base = os.path.join(cache_dir(), "relations-propose")
     runs = [a.run] if a.run else sorted(os.listdir(base)) if os.path.isdir(base) else []
@@ -605,8 +675,16 @@ def run(argv=None):
     r.add_argument("--min-confidence", type=float, default=MIN_CONFIDENCE)
     st = sub.add_parser("status")
     st.add_argument("--run")
+    ap_ = sub.add_parser("apply", help="write chosen proposals into pages as stated relations (dry run unless --write)")
+    ap_.add_argument("--min-confidence", type=float, required=True, help="no default: you choose what counts as accepted")
+    ap_.add_argument("--run", help="only this run's rows (default: every run in the proposals file)")
+    ap_.add_argument("--kinds", help="comma-separated relation kinds to take")
+    ap_.add_argument("--subjects", help="comma-separated page slugs to take proposals for")
+    ap_.add_argument("--limit", type=int, help="touch at most this many pages (strongest first)")
+    ap_.add_argument("--write", action="store_true", help="edit the pages; wrap in `ops begin refine` / `ops commit`")
     a = ap.parse_args(argv)
-    return {"submit": cmd_submit, "collect": cmd_collect, "review": cmd_review, "status": cmd_status}[a.cmd](a)
+    return {"submit": cmd_submit, "collect": cmd_collect, "review": cmd_review, "status": cmd_status,
+            "apply": cmd_apply}[a.cmd](a)
 
 
 if __name__ == "__main__":
