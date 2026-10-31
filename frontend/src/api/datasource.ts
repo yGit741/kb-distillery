@@ -23,6 +23,8 @@ export interface DataSource {
   listGraphQueries(): Promise<T.NamedQuery[]>;
   runCypher(query: string): Promise<T.QueryTable>;
   runGraphQuery(name: string, params: Record<string, string>): Promise<T.QueryTable>;
+  /** LLM relation proposals in a confidence range 0..1 (local app only), best first, with a 10-bucket histogram. */
+  getRelationProposals(opts: { min: number; max: number; kind?: string }): Promise<T.RelationProposals>;
 
   // pages
   listPages(opts?: { kb?: string }): Promise<T.PageIndex>;
