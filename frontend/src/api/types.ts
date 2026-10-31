@@ -28,6 +28,9 @@ export type PageDetail = S["PageDetail"];
 export type SearchResult = S["SearchResult"];
 export type SearchHit = S["SearchHit"];
 export type PathResult = S["PathResult"];
+export type GraphRelation = S["GraphRelation"];
+export type NamedQuery = S["NamedQuery"];
+export type QueryTable = S["QueryTable"];
 
 // corpus, raw, citations, pipeline, health, ops
 export type CorpusTable = S["CorpusTable"];
