@@ -2,7 +2,7 @@
 [kb]
 id = "demo"
 name = "Job Search (demo)"
-schema_version = "1.3"
+schema_version = "1.4"
 
 [git]
 tag_prefix = "kb-"

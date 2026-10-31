@@ -86,7 +86,7 @@ class EndToEndTests(unittest.TestCase):
             folder = os.path.join(bases, "kb-probe")
             os.makedirs(folder)
             with open(os.path.join(folder, "kb.toml"), "w") as f:
-                f.write('[kb]\nid = "probe"\nname = "Probe"\nschema_version = "1.3"\n')
+                f.write('[kb]\nid = "probe"\nname = "Probe"\nschema_version = "1.4"\n')
             cp = _run(["kb-list"], {"KB_BASES_DIR": bases})
         self.assertEqual(cp.returncode, 0, cp.stderr)
         self.assertIn("probe", cp.stdout)
