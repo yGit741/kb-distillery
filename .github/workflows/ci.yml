@@ -7,6 +7,9 @@
 # links, slugs, book partitions, course tables, collections, coherence) and reads the committed
 # manifest as the truth instead of reconciling it against disk.
 #
+# Runs on every push and every pull request. When the repo goes public, a self-hosted runner must NOT
+# run pull requests from forks: switch this job to a GitHub-hosted arm64 macOS runner first (Phase 8).
+#
 # Self-hosted runner on the owner's Mac (osx-arm64, the only platform pixi.lock is solved for).
 # GitHub-hosted macOS minutes bill 10x and exhausted the Free plan's 2,000 min/month on a private
 # repo (every job refused from 2026-10-22); a self-hosted runner is free and unlimited. Jobs run
@@ -21,8 +24,12 @@
 # the GitHub cache would only add an upload/download round-trip.
 name: ci
 on:
+  push:
   pull_request:
   workflow_dispatch:
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true     # a newer push to the same branch or PR replaces the running check
 jobs:
   checks:
     runs-on: [self-hosted, macOS, ARM64]
@@ -38,5 +45,7 @@ jobs:
           pixi-version: v0.76.1
           cache: false
       - run: pixi run test
+      - name: Privacy ratchet (no personal strings or token shapes in new files; also part of the suite above)
+        run: pixi run pytest backend/tests/lint/test_privacy_ratchet.py
       - run: pixi run lint-skills
       - run: pixi run lint
