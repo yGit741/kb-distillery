@@ -1,0 +1,74 @@
+"""Contract every shipped template (templates/<name>/template.toml) must meet, plus what academic-research defines."""
+import os
+import tempfile
+import unittest
+
+from kb import kbconfig
+from kb.core import kbtypes, template
+from kb.services.cypher import edge_config
+
+SCHEMA = "%d.%d" % kbconfig.SCHEMA_VERSION
+
+
+def kb_naming(tmp, name):
+    root = os.path.join(tmp, "kbs", "x")
+    os.makedirs(root)
+    with open(os.path.join(root, "kb.toml"), "w") as f:
+        f.write(f'[kb]\nid = "x"\nname = "X"\nschema_version = "{SCHEMA}"\ntemplate = "{name}"\n')
+    return kbconfig.load_dir(root)
+
+
+class EveryTemplate(unittest.TestCase):
+    def test_there_are_templates_to_check(self):
+        self.assertIn("academic-research", template.names())
+
+    def test_each_template_loads_builds_types_and_reads_edges(self):
+        for name in template.names():
+            with self.subTest(template=name), tempfile.TemporaryDirectory() as tmp:
+                data = template.load(name)                                  # name == folder, version, known tables only
+                self.assertEqual(data["template"]["name"], name)
+                cfg = kb_naming(tmp, name)
+                types = kbtypes.load(cfg)                                   # a valid [types]: layers, prefixes, order
+                self.assertTrue(types.source_types or types.concept_types)
+                edges = edge_config(cfg)
+                self.assertTrue(set(edges["note_required"]) <= set(edges["types"]))
+
+    def test_a_kb_naming_the_template_and_nothing_else_equals_the_template(self):
+        for name in template.names():
+            with self.subTest(template=name), tempfile.TemporaryDirectory() as tmp:
+                cfg = kb_naming(tmp, name)
+                self.assertEqual(cfg.section("types"), template.load(name).get("types", {}))
+                self.assertEqual(cfg.section("edges"), template.load(name).get("edges", {}))
+
+
+class AcademicResearch(unittest.TestCase):
+    """The thesis kb's ontology, as lifted into the template; a change here is a decision, not a drift."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.cfg = kb_naming(self.tmp.name, "academic-research")
+
+    def test_types(self):
+        t = kbtypes.load(self.cfg)
+        self.assertEqual(set(t.source_types), {"paper", "part", "lecture", "article", "video", "mail", "ai-chat", "blog-post"})
+        self.assertEqual(set(t.partition_collections), {"book", "notebook"})
+        self.assertEqual(set(t.contents_collections), {"course", "series"})
+        self.assertEqual(set(t.concept_types), {"topic", "idea", "question", "person"})
+        self.assertEqual(len(t.type_order), 18)                              # 16 kb types + the two tool-owned
+
+    def test_areas(self):
+        self.assertEqual(set(kbtypes.load(self.cfg).areas),
+                         {"statistics", "boolean-analysis", "fourier-analysis", "optimization-theory", "learning-theory",
+                          "info-theory", "implicit-regularization", "tensor-factorization", "complex-nn", "quantum"})
+
+    def test_the_seven_relation_types(self):
+        edges = edge_config(self.cfg)
+        self.assertEqual(edges["types"], sorted(["extends", "uses", "contradicts", "example-of", "open-problem-in",
+                                                 "addresses", "student-of"]))
+        self.assertEqual(edges["note_required"], {"contradicts"})
+        self.assertIn("CONTRADICTS", edges["symmetric"])
+
+
+if __name__ == "__main__":
+    unittest.main()

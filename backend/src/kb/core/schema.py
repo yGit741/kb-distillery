@@ -271,6 +271,7 @@ TOOLING_PATHS = [
     "kbs/demo/",         # the public demo knowledge base is part of the engine repo; every other kbs/<id> is its own repo
     "share/",
     "skills/",
+    "templates/",        # ontology templates (kb.core.template): part of the engine, versioned with it
     "tools/",
     "README.md",
     "AGENTS.md",
