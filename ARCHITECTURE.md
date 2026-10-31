@@ -55,7 +55,7 @@ Guides for the three extension points: [templates](meta-defaults/docs/templates.
 | `llm/` | `kb.llm`, the only door to a model |
 | `storage/`, `publish/` | connector and publisher interfaces, registries and built-ins |
 | `services/`, `api/` | data services and the FastAPI routers (auto-discovered), typed client for the frontend |
-| `share/` | the Cloudflare publisher's code (**in progress**: being moved behind `publish/`; core modules still import it today) |
+| `share/` | the Cloudflare publisher's code, reached only through `publish/` (core never imports it; off unless a kb or the engine config selects it) |
 | `backend/tests/` | pytest, mirroring the package layout |
 | `frontend/` | the React app (Vite, TypeScript) |
 | `templates/` | `academic-research` and `starter` |
@@ -75,4 +75,4 @@ Guides for the three extension points: [templates](meta-defaults/docs/templates.
 
 ## Not built yet
 
-`kbd init` and `kbd doctor` (guided first-run setup and checks) are planned; today you select or point at a kb with `--kb`. Moving the remaining `raw/` access onto connectors, and removing core's imports of `kb.share`, are in progress. The roadmap, phase by phase, is [`docs/ROADMAP.md`](docs/ROADMAP.md).
+`kbd init` and `kbd doctor` exist (see the README quick start). What is still open: moving the remaining `raw/` access onto connectors (a short list of modules is allowed to read `raw/` directly, see [`docs/phase-3-report.md`](docs/phase-3-report.md)), greying out AI features in the app until a login or key exists, and publishing the repository. The roadmap, phase by phase, is [`docs/ROADMAP.md`](docs/ROADMAP.md).
