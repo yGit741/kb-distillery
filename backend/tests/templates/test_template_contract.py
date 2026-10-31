@@ -70,5 +70,25 @@ class AcademicResearch(unittest.TestCase):
         self.assertIn("CONTRADICTS", edges["symmetric"])
 
 
+class DemoFollowsStarter(unittest.TestCase):
+    """kbs/demo is built from the starter template and adds the job-search types on top."""
+
+    def setUp(self):
+        self.cfg = kbconfig.load_dir(os.path.join(kbconfig.CHECKOUT_ROOT, "kbs", "demo"))
+
+    def test_the_demo_names_the_starter(self):
+        self.assertEqual(self.cfg.template, "starter")
+
+    def test_it_has_the_starters_types_and_its_own(self):
+        starter = set(kbtypes.build(template.load("starter")["types"]).layer_of)
+        t = kbtypes.load(self.cfg)
+        self.assertTrue(starter <= set(t.layer_of))
+        self.assertTrue({"posting", "process", "company", "interview"} <= set(t.layer_of))
+
+    def test_no_two_types_share_a_colour(self):
+        colours = list(kbtypes.load(self.cfg).type_color.values())
+        self.assertEqual(len(colours), len(set(colours)))
+
+
 if __name__ == "__main__":
     unittest.main()
