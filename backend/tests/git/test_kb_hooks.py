@@ -106,7 +106,7 @@ class InstallScriptTests(unittest.TestCase):
         kb = os.path.join(tmp, "notes")
         _init_repo(kb)
         with open(os.path.join(kb, "kb.toml"), "w", encoding="utf-8") as f:
-            f.write('[kb]\nid = "notes"\nname = "Notes"\nschema_version = "1.3"\n')
+            f.write('[kb]\nid = "notes"\nname = "Notes"\nschema_version = "1.4"\n')
         env = {**GIT_ENV, "PATH": os.path.dirname(sys.executable) + os.pathsep + os.environ["PATH"],
                "PYTHONPATH": os.path.join(ENGINE, "backend", "src")}
         for k in ("KB", "KB_ROOT", "KB_BASES_DIR"):

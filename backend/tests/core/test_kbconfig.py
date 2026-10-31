@@ -21,7 +21,7 @@ def _sh(cwd, *args):
     subprocess.run(["git", *args], cwd=cwd, check=True, capture_output=True, env=env)
 
 
-MINIMAL = '[kb]\nid = "demo"\nname = "Demo"\nschema_version = "1.3"\n'
+MINIMAL = '[kb]\nid = "demo"\nname = "Demo"\nschema_version = "1.4"\n'
 
 
 class Discovery(unittest.TestCase):
@@ -68,7 +68,7 @@ class Discovery(unittest.TestCase):
         _write(os.path.join(self.bases, "bad"), '[kb]\nid = "bad"\nname = "Bad"\n')
         with self.assertRaisesRegex(kbconfig.KbConfigError, "schema_version is required"):
             kbconfig.load("bad")
-        _write(os.path.join(self.bases, "old"), MINIMAL.replace('"demo"', '"old"').replace("1.3", "0.9"))
+        _write(os.path.join(self.bases, "old"), MINIMAL.replace('"demo"', '"old"').replace("1.4", "0.9"))
         with self.assertRaisesRegex(kbconfig.KbConfigError, "schema_version 0.9"):
             kbconfig.load("old")
         _write(os.path.join(self.bases, "mismatch"), MINIMAL)                     # folder says mismatch, file says demo

@@ -58,6 +58,13 @@ export function createHttpDataSource(fetchImpl: Fetch = (...a) => fetch(...a), b
       ),
     getGraphNodes: async () => (await run(() => client.GET("/api/graph"), "/api/graph")).nodes,
     getCitations: () => run(() => client.GET("/api/citations"), "/api/citations"),
+    listGraphQueries: () => run(() => client.GET("/api/graph/queries"), "/api/graph/queries"),
+    runCypher: (query) => run(() => client.POST("/api/graph/cypher", { body: { query, limit: 500 } }), "/api/graph/cypher"),
+    runGraphQuery: (name, params) =>
+      run(
+        () => client.POST("/api/graph/queries/{name}", { params: { path: { name } }, body: { params, limit: 500 } }),
+        `/api/graph/queries/${name}`,
+      ),
 
     listPages: (opts) =>
       run(() => client.GET("/api/pages", { params: { query: opts?.kb ? { kb: opts.kb } : {} } }), "/api/pages"),

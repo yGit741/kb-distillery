@@ -38,8 +38,9 @@ import { useGraphUi } from "./store";
 import { Toolbar } from "./Toolbar";
 import { parseKbs } from "@/lib/kbSelection";
 import { useFlag } from "@/flags/useFlag";
-import { TOOLS, useVisibleTools, type GraphToolContext } from "./tools";
-import { flagOn, useExperiments } from "./tools/experiments";
+import { relationIndex } from "./relationGroups";
+import { TOOLS, toolOn, useVisibleTools, type GraphToolContext } from "./tools";
+import { useExperiments } from "./tools/experiments";
 import { toModel, type GNode } from "./types";
 import { LAYER_TYPES, type Layer } from "@/api/model";
 import "./tours";
@@ -206,6 +207,7 @@ function Loaded({
   useMemo(() => assignAreaColors(model.nodes), [model]);
   const byId = useMemo(() => new Map(model.nodes.map((n) => [n.id, n] as const)), [model]);
   const neighbors = useMemo(() => buildNeighborMap(model.links), [model]);
+  const relations = useMemo(() => (model.relations ? relationIndex(model.relations) : undefined), [model]);
   const shownTypes = useMemo(
     () => (ui.shownTypes === undefined ? new Set(schema.defaultVisible) : ui.shownTypes),
     [ui.shownTypes, schema],
@@ -377,7 +379,7 @@ function Loaded({
       } else if ((e.key === "e" || e.key === "E") && useKb.getState().selection.size === 1) {
         host.openPage([...useKb.getState().selection][0] as string);
       }
-      const tool = TOOLS.find((t) => t.shortcut === e.key && flagOn(t.flag, useExperiments.getState().on));
+      const tool = TOOLS.find((t) => t.shortcut === e.key && toolOn(t, useExperiments.getState().on));
       if (tool) st.openFlyout(tool.id);
     };
     window.addEventListener("keydown", onKey);
@@ -551,6 +553,7 @@ function Loaded({
           onFocus={focus}
           onRead={openReader}
           onToggleSources={(ids) => ui.toggleReveal(ids)}
+          relations={relations}
         />
       )}
       {reader && <SideReader slug={reader.slug ?? reader.id} kb={host.foreignKb?.(reader.id)} title={reader.title || reader.id} pageHref={host.pageHref(reader.id)} onClose={() => ui.set({ readerSlug: null })} />}

@@ -51,6 +51,8 @@ area: [info-theory]          # topic slugs only (whitelist TOPIC_SLUGS in backen
 summary: "…"                 # one English line, 80–320 chars: what the page is + its main point (schema 1.3)
 summary_from: 3f9a1c0b7e21   # hash of H1 + Problem/Main result + Key claims it was written from (stale check)
 summary_by: me               # optional: you wrote it — tools never overwrite it
+relations:                   # optional typed links to other pages (schema 1.4); see below
+  - {to: other-slug, kind: extends, note: "why it holds"}
 related: [tensor-rank]       # bare slugs — wiki/ is flat, so no paths
 aliases: [old-slug]          # renamed pages keep their old slug; `kb.ingest resolve <old-slug>` finds them
 raw: raw/printed-docs/y.pdf  # sources + book/notebook (a list for multi-file lectures); `none` + a `url:` if read externally
@@ -72,6 +74,14 @@ institution: runi            # course only, plus course_code:, semester:, lectur
 | `mail-` | mail (source; email thread) | `q-` | question (concept) |
 | `chat-` | ai-chat (source; LLM chat) | *(bare)* | idea, person (concept) |
 | `distilled-think-` | distilled-think (concept, aux) | | |
+
+**`relations:`** (schema 1.4, `backend/src/kb/graph/relations.py`) — typed links a page states about other pages: `to`
+(a slug), `kind` and a `note`. The kinds a knowledge base accepts are its `kb.toml` `[edges] types` (the thesis kb:
+extends, uses, contradicts, example-of, open-problem-in, addresses, student-of); `symmetric` kinds (contradicts) are
+stored once, and `note_required` kinds need a one-sentence note. Lint errors on an undeclared kind, a missing or
+self target, a missing note, a repeated (kind, target), a malformed block, and on a source page that is not depth
+`full` or `deep` (a concept page may always state relations). Relations are proposed by `python -m kb.graph.propose`
+and applied only after review; the graph reads them behind the `graph-relations` flag.
 
 **`summary:`** (schema 1.3, `backend/src/kb/core/summary.py`) — every page except courses and `listed`
 sources carries one English line saying what the page is and its main point, in the same template for

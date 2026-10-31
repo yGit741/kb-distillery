@@ -316,7 +316,7 @@ def is_kb_tooling(path):
 # (x, y) changes only inside a schema/paradigm PR (with its migration); z is derived
 # from git (last first-parent KB-Version + 1). Tooling is not versioned — infra work
 # is identified by its PR number (#N). See backend/src/kb/git/commit_policy.py.
-SCHEMA_VERSION = (1, 3)     # 1.3: `summary:` field (1.2: conversation → mail/ai-chat; 1.1: question H1)
+SCHEMA_VERSION = (1, 4)     # 1.4: `relations:` field (1.3: `summary:` field; 1.2: conversation → mail/ai-chat; 1.1: question H1)
 from kb.kbconfig import SCHEMA_VERSION as _KB_SCHEMA_VERSION
 assert SCHEMA_VERSION == _KB_SCHEMA_VERSION, "kb.kbconfig.SCHEMA_VERSION must follow this value"
 

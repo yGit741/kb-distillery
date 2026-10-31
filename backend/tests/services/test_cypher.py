@@ -153,7 +153,7 @@ def test_run_named_params(g):
 
 def _cfg(edges):
     from kb import kbconfig
-    return kbconfig.KbConfig("t", "T", "/x", "/x/kb.toml", (1, 3), None, {"edges": edges})
+    return kbconfig.KbConfig("t", "T", "/x", "/x/kb.toml", (1, 4), None, {"edges": edges})
 
 
 LINKED = {"nodes": [{"id": "a", "type": "idea", "layer": "concept"}, {"id": "b", "type": "idea", "layer": "concept"}],
@@ -163,13 +163,14 @@ LINKED = {"nodes": [{"id": "a", "type": "idea", "layer": "concept"}, {"id": "b",
 def test_edge_config_defaults_are_what_the_graph_always_had():
     c = cypher.edge_config(_cfg({}))
     assert c["labels"] == {"wikilink": "MENTIONS", "related": "MENTIONS"}
-    assert c["symmetric"] == {"SHARES_SOURCE"}
+    assert c["symmetric"] == {"SHARES_SOURCE", "COLLABORATES_WITH", "SIMILAR_TO"}   # the symmetric computed kinds
+    assert c["types"] == [] and c["note_required"] == set()                        # no stored kind unless declared
 
 
 def test_a_kb_extends_the_edge_kinds_in_its_edges_table():
     c = cypher.edge_config(_cfg({"labels": {"addresses": "addresses"}, "symmetric": ["pairs"]}))
     assert c["labels"] == {"wikilink": "MENTIONS", "related": "MENTIONS", "addresses": "ADDRESSES"}
-    assert c["symmetric"] == {"SHARES_SOURCE", "PAIRS"}
+    assert c["symmetric"] == {"SHARES_SOURCE", "COLLABORATES_WITH", "SIMILAR_TO", "PAIRS"}
     junk = cypher.edge_config(_cfg({"labels": "nope", "symmetric": "nope"}))      # malformed tables never break a query
     assert junk == cypher.edge_config(_cfg({}))
 
@@ -190,3 +191,19 @@ def test_unaddressed_questions_is_offered_only_when_the_kb_has_its_edge_kinds(g)
     declared = cypher.edge_config(_cfg({"labels": {"addresses": "ADDRESSES", "open-in": "OPEN_PROBLEM_IN"}}))
     assert "unaddressed-questions" in cypher.available(declared)
     assert cypher.run_named("unaddressed-questions", graph=g, config=declared)["row_count"] == 1
+
+
+@pytest.mark.flag("graph-relations", False)
+def test_flag_off_keeps_link_labels_and_ignores_declared_relation_types():
+    c = cypher.edge_config(_cfg({"labels": {"open-in": "open-problem-in"}, "types": ["addresses", "open-problem-in"]}))
+    assert c["labels"]["open-in"] == "OPEN-PROBLEM-IN"                             # spelled as it always was
+    assert "unaddressed-questions" not in cypher.available(c)
+
+
+@pytest.mark.flag("graph-relations", True)
+def test_flag_on_declared_relation_types_offer_their_named_queries():
+    c = cypher.edge_config(_cfg({"types": ["Addresses", "open_problem_in"], "symmetric": ["contradicts"],
+                                 "note_required": ["contradicts", "addresses"]}))
+    assert c["types"] == ["addresses", "open-problem-in"] and c["note_required"] == {"addresses"}
+    assert "CONTRADICTS" in c["symmetric"]
+    assert "unaddressed-questions" in cypher.available(c)
