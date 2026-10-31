@@ -66,6 +66,12 @@ export function createHttpDataSource(fetchImpl: Fetch = (...a) => fetch(...a), b
         `/api/graph/queries/${name}`,
       ),
 
+    getRelationProposals: ({ min, max, kind }) =>
+      run(
+        () => client.GET("/api/relations/proposals", { params: { query: { min, max, ...(kind ? { kind } : {}) } } }),
+        "/api/relations/proposals",
+      ),
+
     listPages: (opts) =>
       run(() => client.GET("/api/pages", { params: { query: opts?.kb ? { kb: opts.kb } : {} } }), "/api/pages"),
     getPage: (slug, opts) =>
