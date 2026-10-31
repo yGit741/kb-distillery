@@ -23,6 +23,15 @@ class EngineRootGuard(unittest.TestCase):
         self.assertIn("no knowledge base selected", err.getvalue())
         self.assertEqual(os.listdir(engine), [])
 
+    def test_coherence_only_is_refused_too(self):
+        engine = tempfile.mkdtemp(prefix="kb-engine-")
+        with mock.patch.object(lint, "ROOT", engine), mock.patch.object(paths, "CHECKOUT_ROOT", engine), \
+                mock.patch.object(sys, "argv", ["lint", "--coherence-only"]), \
+                contextlib.redirect_stderr(io.StringIO()), \
+                mock.patch.object(lint, "_coherence_only_main", side_effect=AssertionError("must not run")):
+            self.assertEqual(lint.main(), 2)
+        self.assertEqual(os.listdir(engine), [])
+
     def test_a_checkout_that_is_itself_a_vault_gets_past_the_guard(self):
         root = tempfile.mkdtemp(prefix="kb-legacy-")
         os.makedirs(os.path.join(root, "wiki"))

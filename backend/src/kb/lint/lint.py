@@ -1298,15 +1298,15 @@ def main():
         argv = [a for a in sys.argv[1:] if a != "--dashboard"]
         return dash_main(argv or None)
 
-    if "--coherence-only" in sys.argv:
-        return _coherence_only_main()
-
     from kb import paths as _paths
     if os.path.realpath(ROOT) == os.path.realpath(_paths.CHECKOUT_ROOT) and not os.path.isdir(os.path.join(ROOT, "wiki")):
         # No knowledge base selected: ROOT is an engine checkout with no vault in it, and lint would write index.md and meta/ there.
         print("error: no knowledge base selected — lint would write index.md and meta/ into the engine checkout.\n"
               "       pass --kb <id|path> or set KB (pixi run kb-list shows them).", file=sys.stderr)
         return 2
+
+    if "--coherence-only" in sys.argv:
+        return _coherence_only_main()
 
     quiet = "--health" in sys.argv
     snapshot = collect_snapshot(quiet=quiet)
