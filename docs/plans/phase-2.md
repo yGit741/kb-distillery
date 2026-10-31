@@ -24,6 +24,14 @@ None.
 
 - The spec PR is a schema PR: held, you approve it.
 
+## Findings from the code review (2026-10-31)
+
+- Resolve the template inside `kbtypes.load` and `kbconfig.load_dir`. `core/schema.py` does `_T = _types.load()` at import time, so every constant (`SOURCE_TYPES`, ...) is frozen per process: the loader must not depend on import order.
+- Name collision: `meta-defaults/templates/*.md` are page skeletons. Move them to `templates/<name>/pages/` so "templates" means ontology templates only.
+- "Thesis-free" is bigger than it sounds: the demo run skips 527 tests ("needs default page types" 17 sites, "share build assumes monorepo layout" 12, "reads thesis content" 5, "needs `paper`" 3). Move those fixtures into template `samples/`.
+- Relations: the 7 relation types, their endpoint and depth rules, `symmetric` and `note_required` are declared as DATA in the template's `[edges]` (not in `lint.py`), so the relations lint needs no separate schema bump. If this lands first, the schema PR C is folded into this PR (one held approval, one SCHEMA bump).
+- Two schema PRs in a row (PR C, then this spec) each bump the version and migration number: they are two sequential approvals, never one batch.
+
 ## Standing rules
 
 `KB_SHARE_AUTODEPLOY=0`; the thesis kb is never pushed to the old monorepo URL; every branch merged or deleted, no stale worktrees; tag `phase-2-done` with `ship tag`; every earlier test layer stays green.

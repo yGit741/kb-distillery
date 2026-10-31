@@ -21,6 +21,11 @@ Public repo live, CI green on GitHub, a fresh clone passes `kbd doctor`.
 
 - Outward-facing and irreversible once public: runs only if its line in preapprovals.md is ticked.
 
+## Findings from the code review (2026-10-31)
+
+- Make the engine public only via the new repo from Phase 7. The thesis kb and think get NEW private remotes (never `yonatan-thesis-kb`), because today their only copy is local plus the pre-distillery tarball.
+- The standing rule "no remotes before Phase 8" no longer holds (private `origin`, PRs #1-#4); read it as "no public remote, never the old kb URL".
+
 ## Standing rules
 
 `KB_SHARE_AUTODEPLOY=0`; the thesis kb is never pushed to the old monorepo URL; every branch merged or deleted, no stale worktrees; tag `phase-8-done` with `ship tag`; every earlier test layer stays green.

@@ -23,6 +23,12 @@ A stranger following only the README succeeds (fresh clone in a temp dir).
 
 - Rewriting history or starting from a fresh initial commit needs your pre-approval (see preapprovals.md).
 
+## Findings from the code review (2026-10-31)
+
+- Known audit hits: `.vscode/settings.json`, one test file (`backend/tests/core/test_demo_kb.py`) and 5 commits mention a personal path or employer; the plists reference a corporate CA file; D1 account ids appear in logs. Check that `_quarantine/` stays untracked.
+- gitleaks is not installed: the agent installs it into the pixi env. The audit is read-only.
+- Recommended history strategy: a FRESH initial commit into a NEW public repo (no force-push); the private `yGit741/kb-distillery` stays as the archive of PRs #1-#4 and onward.
+
 ## Standing rules
 
 `KB_SHARE_AUTODEPLOY=0`; the thesis kb is never pushed to the old monorepo URL; every branch merged or deleted, no stale worktrees; tag `phase-7-done` with `ship tag`; every earlier test layer stays green.
