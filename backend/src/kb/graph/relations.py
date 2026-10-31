@@ -128,12 +128,15 @@ def _check(slug, rel, pages, config):
 
 
 def stored_edges(pages, config):
-    """Edges the pages state that the knowledge base accepts."""
+    """Edges the pages state that the knowledge base accepts. A symmetric kind is stored once (source < target),
+    so a pair that states it from both pages is one edge; the first page (by slug) keeps its note."""
+    symmetric = set(config.get("symmetric") or ())
     out = []
     for slug, (_rel, _fm, text) in sorted(pages.items()):
         for r in parse_relations(text):
             if _check(slug, r, pages, config) is None:
-                out.append(_edge(slug, r["to"], r["kind"], STORED, r["note"], 1.0))
+                a, b = _pair(slug, r["to"]) if r["kind"] in symmetric else (slug, r["to"])
+                out.append(_edge(a, b, r["kind"], STORED, r["note"], 1.0))
     return out
 
 

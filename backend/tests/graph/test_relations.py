@@ -169,3 +169,11 @@ def test_stored_wins_over_a_computed_edge_with_the_same_key():
     out = R.build(pages, [], [], [], CONFIG)
     (e,) = [e for e in out if e["kind"] == "student-of"]
     assert e["origin"] == "stored" and e["note"] == "PhD 2019"
+
+
+def test_a_symmetric_kind_stated_from_both_pages_is_one_edge():
+    rel = lambda to: ["relations:", f"  - to: {to}", "    kind: contradicts", f"    note: vs {to}"]
+    pages = _pages({"b": _page(rel("a")), "a": _page(rel("b"))})
+    config = {**CONFIG, "symmetric": {"contradicts"}}
+    out = [e for e in R.build(pages, [], [], [], config) if e["kind"] == "contradicts"]
+    assert [(e["source"], e["target"], e["note"]) for e in out] == [("a", "b", "vs b")]
