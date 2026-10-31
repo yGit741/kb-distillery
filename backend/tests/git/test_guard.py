@@ -264,6 +264,25 @@ class GuardSubfolderCwdTests(unittest.TestCase):
         self.assertEqual(code, 2)
         self.assertIn("raw/", err)
 
+    def test_a_kb_nested_in_the_repo_stays_its_own_root(self):
+        kb = os.path.join(self.repo, "kbs", "demo")
+        os.makedirs(os.path.join(kb, "raw"))
+        with open(os.path.join(kb, "kb.toml"), "w") as f:
+            f.write('[kb]\nid = "demo"\n')
+        code, _, err = run_guard({"tool_name": "Write", "cwd": kb,
+                                  "tool_input": {"file_path": os.path.join(kb, "raw", "foo.md"), "content": "x"}},
+                                 env={"CLAUDE_PROJECT_DIR": self.repo})
+        self.assertEqual(code, 2)                                      # raw/ inside the kb is still immutable
+        self.assertIn("raw/", err)
+
+    def test_the_project_dir_setting_is_used_as_given(self):
+        kb = os.path.join(self.repo, "kbs", "demo")
+        os.makedirs(os.path.join(kb, "raw"))
+        code, _, err = run_guard({"tool_name": "Write",
+                                  "tool_input": {"file_path": os.path.join(kb, "raw", "foo.md"), "content": "x"}},
+                                 env={"CLAUDE_PROJECT_DIR": kb})
+        self.assertEqual(code, 2, err)
+
     def test_a_path_outside_the_checkout_is_not_judged(self):
         other = os.path.join(os.path.dirname(self.repo), "elsewhere.md")
         code, _, _ = run_guard({"tool_name": "Write", "cwd": os.path.join(self.repo, "frontend"),

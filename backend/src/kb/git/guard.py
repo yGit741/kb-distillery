@@ -182,14 +182,14 @@ def _extract_path(payload):
 
 
 def _repo_top(start):
-    """The checkout `start` belongs to: the nearest folder at or above it that has a `.git` (a folder, or the file a
-    linked worktree has). A shell standing in a subfolder (`frontend/`) must not make that subfolder the root, or
-    every path under it is judged as if it sat at the top (`src/api/x.ts`: "unexpected location").
-    Falls back to `start` when no checkout is found."""
-    here = os.path.realpath(start)
-    probe = here
+    """The root a shell standing in `start` belongs to: the nearest folder at or above it that is a knowledge base
+    (has a `kb.toml`) or a checkout (has a `.git`, a folder or the file a linked worktree has). A shell in a subfolder
+    (`frontend/`) must not make that subfolder the root, or every path under it is judged as if it sat at the top
+    (`src/api/x.ts`: "unexpected location"). A knowledge base nested in the repo (`kbs/demo`) stays its own root,
+    so its `raw/` and `wiki/` rules keep applying. Falls back to `start` when neither marker is found."""
+    probe = os.path.realpath(start)
     while True:
-        if os.path.exists(os.path.join(probe, ".git")):
+        if os.path.exists(os.path.join(probe, ".git")) or os.path.isfile(os.path.join(probe, "kb.toml")):
             return probe
         parent = os.path.dirname(probe)
         if parent == probe:
@@ -204,9 +204,9 @@ def _resolve_root(payload):
     cwd = payload.get("cwd")
     if cwd:
         return _repo_top(cwd)
-    env_root = os.environ.get("CLAUDE_PROJECT_DIR")
+    env_root = os.environ.get("CLAUDE_PROJECT_DIR")     # a deliberate root (possibly a kb nested in the repo): as given
     if env_root:
-        return _repo_top(env_root)
+        return env_root
     return VAULT_ROOT
 
 
