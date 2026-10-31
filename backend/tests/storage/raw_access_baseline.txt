@@ -17,6 +17,5 @@ ops/nightly_report.py
 services/chat.py
 services/chat_agent.py
 services/corpus.py
-services/pages.py
 services/pipeline.py
 services/raw_card.py
