@@ -769,8 +769,8 @@ def check_relations(pages):
             err(rel, f"`relations:` is not valid YAML ({str(e).splitlines()[0]})")
             continue
         items = data.get("relations") if isinstance(data, dict) else None
-        if items is None:
-            continue                                             # `relations:` left empty
+        if items is None or items == []:
+            continue                                             # `relations:` left empty or `[]`: states nothing
         if not isinstance(items, list) or any(not isinstance(i, dict) or not i.get("to") or not i.get("kind") for i in items):
             err(rel, "`relations:` must be a list of {to, kind, note} entries (to and kind required)")
             continue

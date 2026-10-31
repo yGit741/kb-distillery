@@ -20,7 +20,9 @@ def run(*pairs, config=CONFIG):
         lint.check_relations(dict(pairs))
     finally:
         cy.edge_config = old
-    return list(lint.errors)
+        got = list(lint.errors)
+        lint.errors.clear()
+    return got
 
 
 class RelationsLint(unittest.TestCase):
@@ -28,6 +30,11 @@ class RelationsLint(unittest.TestCase):
         errs = run(page("a", "relations:\n  - to: b\n    kind: extends\n"), page("b"))
         self.assertEqual(errs, [])
         self.assertEqual(run(page("a"), page("b")), [])
+
+    def test_an_empty_list_states_nothing_even_on_an_easy_source_page(self):
+        slug, (rel, fm, text) = page("p", "relations: []\n", ptype="paper")
+        fm["depth"] = "easy"
+        self.assertEqual(run((slug, (rel, fm, text)), page("b")), [])
 
     def test_each_rule_has_its_own_message(self):
         cases = {
