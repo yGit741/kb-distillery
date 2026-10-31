@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { QueryTable } from "@/api";
 import { useDataSource } from "@/api";
 import { Button } from "@/components/ui/button";
@@ -19,16 +19,23 @@ export function cellIds(value: unknown, resolve: (slug: string) => string | unde
   });
 }
 
-/** Bare slug → page id: the id itself, or the one `<kb>:<slug>` that ends in it (a canvas of several knowledge bases). */
+/**
+ * Bare slug → page id: the id itself, or the one `<kb>:<slug>` that ends in it. The suffix match is used only when
+ * the canvas holds a single knowledge base: a query runs against one kb, so on a multi-kb canvas a bare slug could
+ * belong to another kb's page and must not be highlighted.
+ */
 export function slugResolver(byId: ReadonlyMap<string, GNode>): (slug: string) => string | undefined {
   const bySuffix = new Map<string, string | null>();
+  const kbs = new Set<string>();
   for (const id of byId.keys()) {
     const i = id.indexOf(":");
     if (i < 0) continue;
+    kbs.add(id.slice(0, i));
     const bare = id.slice(i + 1);
     bySuffix.set(bare, bySuffix.has(bare) ? null : id);
   }
-  return (slug) => (byId.has(slug) ? slug : bySuffix.get(slug) ?? undefined);
+  const single = kbs.size === 1;
+  return (slug) => (byId.has(slug) ? slug : single ? bySuffix.get(slug) ?? undefined : undefined);
 }
 
 const show = (v: unknown): string => (Array.isArray(v) ? v.map(show).join(" → ") : v == null ? "" : typeof v === "object" ? JSON.stringify(v) : String(v));
@@ -47,6 +54,7 @@ export function QueryPanel({ ctx }: { ctx: GraphToolContext }) {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const resolve = useMemo(() => slugResolver(ctx.byId), [ctx.byId]);
+  useEffect(() => setResult(null), [ctx.byId]);                    // a table of another graph is not an answer here
   const picked = named.data?.find((q) => q.name === name);
   const ids = useMemo(() => [...new Set((result?.rows ?? []).flatMap((r) => r.flatMap((c) => cellIds(c, resolve))))], [result, resolve]);
 
@@ -125,7 +133,7 @@ export function QueryPanel({ ctx }: { ctx: GraphToolContext }) {
             onKeyDown={(e) => {
               if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
                 e.preventDefault();
-                if (cypher.trim()) void run(() => ds.runCypher(cypher));
+                if (cypher.trim() && !busy) void run(() => ds.runCypher(cypher));
               }
             }}
           />
@@ -140,9 +148,9 @@ export function QueryPanel({ ctx }: { ctx: GraphToolContext }) {
         </p>
       )}
       {result && (
-        <div className="flex flex-col gap-2" role="status" aria-live="polite">
+        <div className="flex flex-col gap-2">
           <div className="flex items-center justify-between gap-2 text-xs">
-            <span>
+            <span role="status" aria-live="polite">
               {result.row_count} row{result.row_count === 1 ? "" : "s"}
               {result.truncated ? " (first 500)" : ""}
             </span>

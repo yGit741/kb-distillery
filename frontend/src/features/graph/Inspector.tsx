@@ -180,7 +180,7 @@ function One({ n, byId, neighbors, colorBy, revealed, pageHref, onFocus, onRead,
         {typed ? (
           groups.length ? (
             groups.map((g) => (
-              <details key={g.kind} open={!g.computed} className="py-0.5">
+              <details key={`${n.id}:${g.kind}`} open={!g.computed} className="py-0.5">
                 <summary className="cursor-pointer px-1.5 py-1 text-sm">
                   {g.kind} · {g.rows.length}
                   {g.computed && <span className="text-muted-foreground"> · computed</span>}

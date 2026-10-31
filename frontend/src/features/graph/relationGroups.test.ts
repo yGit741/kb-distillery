@@ -23,12 +23,20 @@ describe("relationGroups", () => {
 });
 
 describe("query cells", () => {
-  it("resolve bare slugs, also against <kb>:<slug> ids when unique, and lists of slugs", () => {
-    const byId = new Map(["x:a", "x:b", "y:b", "c"].map((id) => [id, node(id)] as const));
+  it("resolve bare slugs, also against <kb>:<slug> ids on a single-kb canvas, and lists of slugs", () => {
+    const byId = new Map(["x:a", "x:b", "c"].map((id) => [id, node(id)] as const));
     const resolve = slugResolver(byId);
     expect(cellIds("c", resolve)).toEqual(["c"]);
     expect(cellIds("a", resolve)).toEqual(["x:a"]);
-    expect(cellIds("b", resolve)).toEqual([]);
+    expect(cellIds("zzz", resolve)).toEqual([]);
     expect(cellIds(["a", "c", 3], resolve)).toEqual(["x:a", "c"]);
+  });
+
+  it("never guesses across several knowledge bases: a bare slug there may belong to another kb", () => {
+    const byId = new Map(["x:a", "y:a", "y:b", "c"].map((id) => [id, node(id)] as const));
+    const resolve = slugResolver(byId);
+    expect(cellIds("c", resolve)).toEqual(["c"]);
+    expect(cellIds("a", resolve)).toEqual([]);
+    expect(cellIds("b", resolve)).toEqual([]);
   });
 });
