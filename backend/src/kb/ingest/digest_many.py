@@ -22,6 +22,7 @@ from . import map as map_mod
 from . import session as session_mod
 from .fm_merge import parse, split
 from .paths import ROOT, session_dir
+from kb.storage import StorageError, for_kb
 from .verify import existing_digest_for_raw
 
 MODEL = "sonnet"
@@ -87,7 +88,15 @@ def hub_labels(hub):
 
 def select(hub=None, topics=None, depth="easy", types=None, limit=None):
     """Raw paths of the pages to deepen, most relevant first (hub rows carry a relevance tier)."""
-    pages = [p for p in page_index() if p["depth"] == depth and os.path.isfile(os.path.join(ROOT, p["raw"]))]
+    store = for_kb(root=ROOT)
+
+    def present(key):
+        try:
+            return store.exists(key)
+        except StorageError:                      # a key that is not a clean raw path names nothing
+            return False
+
+    pages = [p for p in page_index() if p["depth"] == depth and present(p["raw"])]
     if types:
         pages = [p for p in pages if p["type"] in types]
     if hub:
