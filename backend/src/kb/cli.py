@@ -24,6 +24,7 @@ COMMANDS: dict[str, tuple[str, str, tuple[str, ...], str]] = {
     "app": ("module", "kb.api", (), "serve the app (API + React shell), default port 8765"),
     "ship": ("module", "kb.git.ship", (), "ship tooling through infra/* branches (start, commit, merge, tag, …)"),
     "ops": ("module", "kb.ops", (), "knowledge operations: sessions, snapshots, undo, restore, status"),
+    "distill": ("module", "kb.distill.send", (), "send a think note into kbs: kbd distill <note> --to a,b"),
     "launch": ("script", "tools/launch.sh", (), "restart the app detached and open it"),
     "install-kb-hooks": ("script", "tools/install-kb-hooks.sh", (), "install the git + Claude Code hooks into a kb"),
 }
