@@ -67,7 +67,7 @@ def build_vault(root):
     # goldens were recorded with, so the test gives the same answer whichever kb the suite runs under
     areas = sorted(GOLDEN_AREAS)
     with open(os.path.join(root, "kb.toml"), "w", encoding="utf-8") as f:
-        f.write('[kb]\nid = "e2e"\nname = "E2E fixture vault"\nschema_version = "1.3"\n\n[types]\nareas = ['
+        f.write('[kb]\nid = "e2e"\nname = "E2E fixture vault"\nschema_version = "1.4"\n\n[types]\nareas = ['
                 + ", ".join(f'"{a}"' for a in areas) + "]\n")
     for name in os.listdir(os.path.join(DATA, "seed", "meta")):
         shutil.copy(os.path.join(DATA, "seed", "meta", name), os.path.join(root, "meta", name))

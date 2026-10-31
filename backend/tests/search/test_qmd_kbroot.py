@@ -14,7 +14,7 @@ from kb import paths
 
 QMD = os.path.join(paths.CHECKOUT_ROOT, "tools", "qmd")
 NODE = shutil.which("node")
-MINIMAL = '[kb]\nid = "{id}"\nname = "Probe"\nschema_version = "1.3"\n'
+MINIMAL = '[kb]\nid = "{id}"\nname = "Probe"\nschema_version = "1.4"\n'
 
 
 def _node_ok():

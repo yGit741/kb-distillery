@@ -153,7 +153,7 @@ def test_run_named_params(g):
 
 def _cfg(edges):
     from kb import kbconfig
-    return kbconfig.KbConfig("t", "T", "/x", "/x/kb.toml", (1, 3), None, {"edges": edges})
+    return kbconfig.KbConfig("t", "T", "/x", "/x/kb.toml", (1, 4), None, {"edges": edges})
 
 
 LINKED = {"nodes": [{"id": "a", "type": "idea", "layer": "concept"}, {"id": "b", "type": "idea", "layer": "concept"}],

@@ -750,6 +750,42 @@ def _git_ignored(names):
     return {l.strip().rstrip("/") for l in r.stdout.splitlines()} if r.returncode == 0 else set()
 
 
+def check_relations(pages):
+    """Stated `relations:` blocks (schema 1.4): valid YAML list of {to, kind, note}; the kind is declared in kb.toml
+    `[edges] types`; the target page exists and is not the page itself; a note where `note_required`; no repeated
+    (kind, target); and only a full/deep source page may state one (a concept page may always)."""
+    stated = {s: v for s, v in pages.items() if "\nrelations:" in v[2][:60000]}
+    if not stated:
+        return
+    import yaml
+    from kb.graph import relations as R
+    from kb.services.cypher import edge_config
+    config = edge_config()
+    for slug, (rel, fm, text) in sorted(stated.items()):
+        block = R.relations_block(text)
+        try:
+            data = yaml.safe_load(block) if block else None
+        except yaml.YAMLError as e:
+            err(rel, f"`relations:` is not valid YAML ({str(e).splitlines()[0]})")
+            continue
+        items = data.get("relations") if isinstance(data, dict) else None
+        if items is None:
+            continue                                             # `relations:` left empty
+        if not isinstance(items, list) or any(not isinstance(i, dict) or not i.get("to") or not i.get("kind") for i in items):
+            err(rel, "`relations:` must be a list of {to, kind, note} entries (to and kind required)")
+            continue
+        if fm.get("type") in SOURCE_TYPES and fm.get("depth") not in ("full", "deep"):
+            err(rel, f"`relations:` on a source page needs depth full or deep (this one is {fm.get('depth') or 'unset'})")
+        seen = set()
+        for r in R.parse_relations(text):
+            msg = R._check(slug, r, {s: 1 for s in pages}, config)
+            if msg:
+                err(rel, msg.split(": ", 1)[1])
+            if (r["kind"], r["to"]) in seen:
+                err(rel, f"relation `{r['kind']}` → `{r['to']}` is stated twice")
+            seen.add((r["kind"], r["to"]))
+
+
 def check_wiki_strays():
     """Warn on anything in wiki/ that is not a flat `.md` page (subfolders, other files, excalidraw)."""
     base = os.path.join(ROOT, WIKI_DIR)
@@ -1159,6 +1195,7 @@ def collect_snapshot(quiet=False):
 
     t_wiki = time.perf_counter()
     pages = check_wiki()
+    check_relations(pages)
     wiki_ms = (time.perf_counter() - t_wiki) * 1000
     if not ci:
         check_arxiv_stamps(pages)
