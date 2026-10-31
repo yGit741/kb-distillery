@@ -16,6 +16,7 @@ import dataclasses
 import json
 import os
 import re
+import shutil
 import subprocess
 import tempfile
 import time
@@ -157,6 +158,55 @@ def run(requests, backend=None, workers=4, poll_every=30, wait_s=24 * 3600):
     one = _ask_cli if b == "subscription" else _ask_api
     with cf.ThreadPoolExecutor(max_workers=max(1, min(workers, len(reqs)))) as ex:
         return list(ex.map(one, reqs))
+
+
+# --- availability: which backends could run, without calling any ---------------------------------------
+def _probe(cmd, timeout=8):
+    """Run a read-only CLI query → (returncode, stdout). One place to fake in tests; never starts a session."""
+    cp = subprocess.run(cmd, env={**_env(), "ANTHROPIC_API_KEY": ""}, stdin=subprocess.DEVNULL,
+                        capture_output=True, text=True, timeout=timeout)
+    return cp.returncode, cp.stdout
+
+
+def _which(name):
+    return shutil.which(name)
+
+
+def api_key_source():
+    """Where `api_key()` would find a key ("env ANTHROPIC_API_KEY", the key file path) or None. Never the key."""
+    if os.environ.get("ANTHROPIC_API_KEY", "").strip():
+        return "env ANTHROPIC_API_KEY"
+    return KEY_FILE if api_key() else None
+
+
+def _subscription():
+    fix = "install Claude Code, then run `claude login` (a Claude subscription)"
+    if not _which("claude"):
+        return {"ok": False, "why": "the claude CLI is not on PATH", "fix": fix}
+    try:
+        _, out = _probe(["claude", "auth", "status"])
+        start = out.find("{")
+        data = json.loads(out[start:]) if start >= 0 else {}      # the CLI may print an escape before the JSON
+    except (OSError, subprocess.SubprocessError, ValueError):
+        return {"ok": False, "why": "could not read the claude login status", "fix": "run `claude login` in a terminal"}
+    if isinstance(data, dict) and data.get("loggedIn") and data.get("authMethod") == "claude.ai":
+        return {"ok": True, "why": "logged in to a Claude subscription", "fix": ""}
+    return {"ok": False, "why": "the claude CLI is not logged in with a subscription", "fix": "run `claude login`"}
+
+
+def _keyed(backend):
+    src = api_key_source()
+    if src:
+        return {"ok": True, "why": f"API key found ({src})", "fix": ""}
+    return {"ok": False, "why": "no API key",
+            "fix": f"set ANTHROPIC_API_KEY or put the key in {KEY_FILE} (the {backend} backend bills the API)"}
+
+
+def availability():
+    """{backend: {ok, why, fix}} for subscription, api and batch, without any LLM call, network or session.
+    Subscription = the `claude` CLI is on PATH and `claude auth status` says logged in; api and batch = a key is
+    findable by `api_key()`. The app greys AI features out when no backend is ok."""
+    return {"subscription": _subscription(), "api": _keyed("api"), "batch": _keyed("batch")}
 
 
 # --- subscription: claude -p ---------------------------------------------------------------------------
