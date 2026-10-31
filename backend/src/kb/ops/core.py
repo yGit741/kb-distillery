@@ -236,6 +236,36 @@ def _commit_paths(root, paths, message):
     return _git(root, "rev-parse", "HEAD").stdout.strip()
 
 
+def chore(scope, summary, paths=None, root=ROOT, push=True):
+    """Commit a kb repo's own tooling files (`KB_TOOLING_PATHS`: kb.toml, .claude/, CLAUDE.md, ...) as one
+    `chore(<scope>): <summary>` on its main. Unversioned, like any chore there. Only tooling paths are taken
+    (`paths` narrows the choice, and must all be tooling); knowledge edits in the same tree are never touched.
+    Returns the new sha, or None when no tooling file changed."""
+    from kb.core.schema import is_kb_tooling
+    from kb.git.commit_policy import _is_kb_repo
+    if not _is_kb_repo(root):
+        raise OpsError("ops chore is for a knowledge base that is its own git repo (kb.toml at its top)")
+    with ops_lock(root):
+        _require_main(root)
+        out = _git(root, "status", "--porcelain", "-z", "--untracked-files=all").stdout
+        dirty = sorted({e[3:] for e in out.split("\0") if len(e) > 3})
+        if paths:
+            bad = [p for p in paths if not is_kb_tooling(p)]
+            if bad:
+                raise OpsError(f"not kb tooling paths (use ops commit for knowledge): {', '.join(bad)}")
+            chosen = [p for p in paths if p in dirty]
+        else:
+            chosen = [p for p in dirty if is_kb_tooling(p)]
+        if not chosen:
+            return None
+        sha = _commit_paths(root, chosen, f"chore({scope}): {summary}\n")
+        if sha:
+            print(f"committed chore({scope}): {summary}")
+            if push:
+                push_main(root, quiet=True)
+        return sha
+
+
 def is_human_path(path):
     """think/ notes: human-owned, committed on their own as kb(think)."""
     return path.startswith(HUMAN_PREFIXES)
