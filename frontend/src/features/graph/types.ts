@@ -105,12 +105,26 @@ export interface GraphModel {
   kbs?: readonly GraphKb[];
   /** Present while the data layer is loaded (`?raw=1`). Piles are drawn but are not pages: never in `nodes`. */
   raw?: RawLayer;
+  /** Typed relations (flag `graph-relations`): present only when the snapshot carries them. Never drawn. */
+  relations?: readonly GRelation[];
+}
+
+/** A typed relation between two page ids: stated on a page (`stored`) or derived from vault data (`computed`). */
+export interface GRelation {
+  source: string;
+  target: string;
+  kind: string;
+  origin: string;
+  note: string;
 }
 
 export function toModel(snap: GraphSnapshot): GraphModel {
   const raw = parseRawLayer(snap);
   return {
     ...(raw ? { raw } : {}),
+    ...(snap.relations
+      ? { relations: snap.relations.map((r) => ({ source: r.source, target: r.target, kind: r.kind, origin: r.origin, note: r.note ?? "" })) }
+      : {}),
     nodes: snap.nodes,
     kbs: snap.kbs ?? [],
     links: snap.links.map((l) => ({

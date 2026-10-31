@@ -8,7 +8,10 @@ import { NodeSwatch } from "./encoding/NodeMarkSvg";
 import { colorOf, effectiveColorBy, type ColorBy } from "./style";
 import { bookOf, degreeOf, partOf, type GNode } from "./types";
 import { useToolHost } from "./hostContext";
+import { relationGroups } from "./relationGroups";
 import type { Layer } from "@/api/model";
+import { useFlag } from "@/flags/useFlag";
+import type { GRelation } from "./types";
 
 const NB_MAX = 40;
 export const obsidianUri = (path: string) => `obsidian://open?file=${encodeURIComponent(path)}`;
@@ -25,6 +28,8 @@ interface Props {
   onFocus: (id: string, zoom?: boolean) => void;
   onRead: (id: string) => void;
   onToggleSources: (ids: string[]) => void;
+  /** Typed relations by page id (flag `graph-relations`); absent while the snapshot carries none. */
+  relations?: ReadonlyMap<string, readonly GRelation[]>;
 }
 
 function Row({ n, colorBy, onGo, children }: { n: GNode; colorBy: ColorBy; onGo: () => void; children?: React.ReactNode }) {
@@ -74,8 +79,10 @@ function Many({ nodes, byId: _b, colorBy, onFocus, onClear }: Props) {
   );
 }
 
-function One({ n, byId, neighbors, colorBy, revealed, pageHref, onFocus, onRead, onToggleSources }: Props & { n: GNode }) {
+function One({ n, byId, neighbors, colorBy, revealed, pageHref, onFocus, onRead, onToggleSources, relations }: Props & { n: GNode }) {
   const host = useToolHost();
+  const typed = useFlag("graph-relations") && !!relations;
+  const groups = useMemo(() => (typed && relations ? relationGroups(n.id, relations, byId, degreeOf) : []), [typed, relations, n.id, byId]);
   const nbs = useMemo(
     () =>
       (neighbors.get(n.id) ?? [])
@@ -170,16 +177,52 @@ function One({ n, byId, neighbors, colorBy, revealed, pageHref, onFocus, onRead,
         <summary className="cursor-pointer text-sm font-medium">
           Connected pages · {n.inDegree}↘ {n.outDegree}↗
         </summary>
-        {nbs.length ? (
-          <ul>
-            {nbs.slice(0, NB_MAX).map((m) => (
-              <Row key={m.id} n={m} colorBy={colorBy} onGo={() => onFocus(m.id, false)} />
-            ))}
-          </ul>
+        {typed ? (
+          groups.length ? (
+            groups.map((g) => (
+              <details key={g.kind} open={!g.computed} className="py-0.5">
+                <summary className="cursor-pointer px-1.5 py-1 text-sm">
+                  {g.kind} · {g.rows.length}
+                  {g.computed && <span className="text-muted-foreground"> · computed</span>}
+                </summary>
+                <ul>
+                  {g.rows.slice(0, NB_MAX).map(({ page, note }) => (
+                    <li key={page.id}>
+                      <button
+                        type="button"
+                        className="flex w-full flex-col rounded px-1.5 py-1 text-left text-sm hover:bg-accent"
+                        title={note || undefined}
+                        onClick={() => onFocus(page.id, false)}
+                      >
+                        <span className="flex w-full items-center gap-2">
+                          <NodeSwatch type={page.type} color={colorOf(page, effectiveColorBy(colorBy))} />
+                          <span className="min-w-0 flex-1 truncate">{page.title || page.id}</span>
+                        </span>
+                        {note && <span className="line-clamp-2 pl-5 text-xs text-muted-foreground">{note}</span>}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+                {g.rows.length > NB_MAX && <p className="pb-1 text-xs text-muted-foreground">…and {g.rows.length - NB_MAX} more</p>}
+              </details>
+            ))
+          ) : (
+            <p className="py-1 text-sm text-muted-foreground">No links yet.</p>
+          )
         ) : (
-          <p className="py-1 text-sm text-muted-foreground">No links yet.</p>
+          <>
+            {nbs.length ? (
+              <ul>
+                {nbs.slice(0, NB_MAX).map((m) => (
+                  <Row key={m.id} n={m} colorBy={colorBy} onGo={() => onFocus(m.id, false)} />
+                ))}
+              </ul>
+            ) : (
+              <p className="py-1 text-sm text-muted-foreground">No links yet.</p>
+            )}
+            {nbs.length > NB_MAX && <p className="pb-1 text-xs text-muted-foreground">…and {nbs.length - NB_MAX} more: open the page to see all.</p>}
+          </>
         )}
-        {nbs.length > NB_MAX && <p className="pb-1 text-xs text-muted-foreground">…and {nbs.length - NB_MAX} more: open the page to see all.</p>}
       </details>
       <details className="rounded-md border px-2 py-1">
         <summary className="cursor-pointer text-sm font-medium">Properties</summary>
