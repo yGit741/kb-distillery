@@ -45,7 +45,7 @@ from kb.share.contracts import (ACCOUNT_SUBDOMAIN, CACHE_DIR, DEPLOY_MESSAGE_PRE
 WORKER_DIR = REPO / "share"      # the Cloudflare Worker sources (auth.js, admin.js, wrangler template)
 CONFIG_PATH = Path(__file__).resolve().parent / "share.toml"
 DEFAULT_ALLOWED = ["ygreenshpan@gmail.com"]
-CF_ACCOUNT_ID = "7803af2d776eeea4c226f8e594121a10"  # the panel's Cloudflare REST calls (not secret)
+CF_ACCOUNT_ID = os.environ.get("KB_CLOUDFLARE_ACCOUNT_ID") or "7803af2d776eeea4c226f8e594121a10"  # the panel's REST calls (not secret)
 WORKER_SCRIPTS = ("auth.js", "admin.js", "flags.gen.js")  # private site: sign-in + panel API + runtime flag names
 DEFAULT_COMPAT = "2026-09-01"
 LOCK_NAME = "deploy.lock"

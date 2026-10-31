@@ -26,7 +26,7 @@ from typing import Callable, Optional
 
 from kb.share.contracts import REPO, WRANGLER_VERSION
 
-ACCOUNT_ID = "7803af2d776eeea4c226f8e594121a10"
+ACCOUNT_ID = os.environ.get("KB_CLOUDFLARE_ACCOUNT_ID") or "7803af2d776eeea4c226f8e594121a10"
 API_BASE = "https://api.cloudflare.com/client/v4"
 GRAPHQL_URL = f"{API_BASE}/graphql"
 WRANGLER_CONFIG = Path.home() / "Library" / "Preferences" / ".wrangler" / "config" / "default.toml"
