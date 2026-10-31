@@ -181,16 +181,32 @@ def _extract_path(payload):
     return None
 
 
+def _repo_top(start):
+    """The checkout `start` belongs to: the nearest folder at or above it that has a `.git` (a folder, or the file a
+    linked worktree has). A shell standing in a subfolder (`frontend/`) must not make that subfolder the root, or
+    every path under it is judged as if it sat at the top (`src/api/x.ts`: "unexpected location").
+    Falls back to `start` when no checkout is found."""
+    here = os.path.realpath(start)
+    probe = here
+    while True:
+        if os.path.exists(os.path.join(probe, ".git")):
+            return probe
+        parent = os.path.dirname(probe)
+        if parent == probe:
+            return start
+        probe = parent
+
+
 def _resolve_root(payload):
     roots = payload.get("workspace_roots")
     if isinstance(roots, list) and roots:
         return roots[0]
     cwd = payload.get("cwd")
     if cwd:
-        return cwd
+        return _repo_top(cwd)
     env_root = os.environ.get("CLAUDE_PROJECT_DIR")
     if env_root:
-        return env_root
+        return _repo_top(env_root)
     return VAULT_ROOT
 
 
