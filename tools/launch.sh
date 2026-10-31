@@ -63,7 +63,7 @@ fi
 nohup python -m kb.api --port "$PORT" --no-open >"$LOG" 2>&1 &
 echo "started dashboard (pid $!), log: $LOG"
 
-for _ in $(seq 1 360); do   # up to 90 s: kb.api first rebuilds frontend/dist when the sources changed
+for _ in $(seq 1 1200); do   # up to 5 min: kb.api installs the frontend dependencies on a fresh clone and rebuilds frontend/dist when the sources changed
   if curl -fsS -o /dev/null "$URL"; then
     open "$URL"
     echo "ready: $URL"
@@ -72,6 +72,6 @@ for _ in $(seq 1 360); do   # up to 90 s: kb.api first rebuilds frontend/dist wh
   sleep 0.25
 done
 
-echo "dashboard did not come up in 90s; last log lines:" >&2
+echo "dashboard did not come up in 5 min (a first run installs and builds the frontend and needs the network); last log lines:" >&2
 tail -20 "$LOG" >&2
 exit 1

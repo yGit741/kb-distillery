@@ -1,5 +1,4 @@
 # Files allowed to carry personal strings today (Phase 7). Clean one up, or move the name behind configuration, and delete its line.
-README.md
 backend/src/kb/git/proof_nudge.py
 backend/src/kb/ingest/wordpress.py
 backend/src/kb/maintenance/export.py
