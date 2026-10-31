@@ -45,6 +45,10 @@ python3 -m kb.graph.propose --kb <id> apply --min-confidence 0.9 … --write    
 4. **Review** — `review` prints a per-subject markdown digest (kind, target title, note, evidence, confidence); hand it to the user and ask which to accept (a cutoff, kinds, or subjects).
 5. **Apply** — `ops -- snapshot "before relations"`, then `apply …` as a dry run and show the list. After the user's go (the write guard warns on wiki edits outside an open ops session): `ops begin refine relations "<why>"`, `apply … --write` (small batches with `--limit`), `ops commit`. `apply` takes a row only when lint would accept it (kind declared in `[edges]`, target exists, a note where required), skips relations a page already states (and a symmetric pair stated from the other side), and merges into an existing `relations:` block; nothing else in a page changes.
 
+## `discusses` is not `MENTIONS`
+
+`MENTIONS` is mechanical: a link exists (every post links its series page and its people, which is navigation, and a `see also` is a mention too). `discusses` is a judgement: this page is substantially ABOUT the target, linked or not. A post can discuss an idea it never links, and mention one it does not discuss. Posts and papers are offered their nearest concept pages by meaning for it, since their plain neighbours are other posts. A cheap run for just this kind: `submit --run discusses --kinds discusses --types blog-post,paper --dry-run`.
+
 ## Output
 
 `<kb>/.cache/relations-proposals.jsonl` rows `{from, to, kind, note, confidence, evidence, origin: "llm", model, run, at}` (`tier: "low"` for `--include-easy` subjects). `apply --write` edits `relations:` blocks in `wiki/` pages, committed as `kb(refine)`.
