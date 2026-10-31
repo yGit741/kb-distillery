@@ -55,8 +55,20 @@ class KbConfig:
     data: dict = field(default_factory=dict, repr=False)
 
     def section(self, name: str) -> dict:
+        """A kb.toml table. `[types]` and `[edges]` of a kb that names a template come back as the template's tables
+        extended by the kb's own (kb.core.template); every other table is read as written."""
         d = self.data.get(name)
-        return d if isinstance(d, dict) else {}
+        d = d if isinstance(d, dict) else {}
+        if self.template and name in ("types", "edges"):
+            from kb.core import template        # lazy: this module stays import-free
+            return template.section(self.template, name, d, self.path)
+        return d
+
+    @property
+    def template(self) -> str:
+        """`[kb] template`: the ontology template this kb follows ("" = none, the kb.toml carries its own schema)."""
+        kb = self.data.get("kb")
+        return str(kb.get("template") or "") if isinstance(kb, dict) else ""
 
     @property
     def tag_prefix(self) -> str:
@@ -202,6 +214,11 @@ def load_dir(root: str, id_hint: str | None = None, strict: bool = True) -> KbCo
         if strict:
             raise KbConfigError(msg)
         print(f"warning: {msg}", file=sys.stderr)
+    if kb.get("template") is not None:
+        from kb.core import template
+        if not isinstance(kb["template"], str) or not template.exists(kb["template"]):
+            raise KbConfigError(f"{path}: [kb] template = {kb['template']!r} is not a known template "
+                                f"(known: {', '.join(template.names()) or 'none'}; templates dir {template.templates_dir()})")
     git_root = root if os.path.exists(os.path.join(root, ".git")) else None
     return KbConfig(id=kb_id, name=str(kb["name"]), root=root, path=path, schema_version=version,
                     git_root=git_root, data=data)

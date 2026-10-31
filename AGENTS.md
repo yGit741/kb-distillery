@@ -67,6 +67,7 @@ Map what the user says to a skill before acting; read that skill's `SKILL.md`, t
 | When you are about to… | Read |
 |---|---|
 | write or check a wiki page: layers, `type:`/`depth:`, frontmatter, filename prefixes, note sections, `## My notes`, person pages, the `area:` topic whitelist | `meta-defaults/docs/page-model.md` |
+| write or change an ontology template, or `[kb] template` / `[types]` / `[edges]` in a kb.toml: what a kb may extend, what it may not | `meta-defaults/docs/templates.md` |
 | touch `raw/` or `meta/corpus.tsv`: format folders, inbox, dispositions, `collection` column, file naming | `meta-defaults/docs/raw-and-corpus.md` |
 | work on a course / series Contents table, digest a collection row, or digest a book (partition, parts) | `meta-defaults/docs/collections.md` |
 | commit, ship, snapshot, undo, restore, resolve a diverged main, or reason about lanes, versions, hygiene, the nightly job, partial checkouts, the commit gate | `meta-defaults/docs/lifecycle.md` |
