@@ -345,8 +345,5 @@ def _apply_moc_updates(plan):
 
 
 def _append_log(session, plan):
-    log_path = os.path.join(ROOT, "meta", "log.md")
-    line = (f"\n## [{_now()[:10]}] ingest | {plan.get('wiki_slug', '?')} "
-            f"← `{session['raw']}`\n")
-    with open(log_path, "a", encoding="utf-8") as f:
-        f.write(line)
+    from kb.core import log as kblog
+    kblog.append(ROOT, "ingest", plan.get("wiki_slug", "?"), (session["raw"],), when=_now())
