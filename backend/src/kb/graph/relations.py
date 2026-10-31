@@ -112,6 +112,19 @@ def format_relations(rels):
     return "\n".join(lines)
 
 
+def set_relations(text, rels):
+    """`text` with its frontmatter `relations:` block replaced by `rels`, or added after the last frontmatter key
+    when the page had none. Nothing else in the page changes. Raises ValueError when there is no frontmatter."""
+    end = text.find("\n---", 3) if text.startswith("---") else -1
+    if end == -1:
+        raise ValueError("page has no frontmatter")
+    new = format_relations(rels)
+    block = relations_block(text)
+    if block:
+        return text.replace(block.rstrip("\n"), new, 1)
+    return text[:end] + "\n" + new + text[end:]
+
+
 # ---- stored edges ---------------------------------------------------------------------------------------
 
 def _check(slug, rel, pages, config):
