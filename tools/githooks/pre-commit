@@ -9,7 +9,9 @@ token_file="$(git rev-parse --git-path kb-linted)"
 if [ -n "$KB_LINTED" ] && [ -f "$token_file" ] && [ "$(cat "$token_file")" = "$KB_LINTED" ]; then
   exit 0
 fi
-python3 -m kb.lint.lint || { echo "pre-commit: lint failed — nothing committed" >&2; exit 1; }
+if [ -d "$root/wiki" ]; then   # the engine checkout holds no vault (kbs/<id> are linted by the ship gate): lint would only write into it
+  python3 -m kb.lint.lint || { echo "pre-commit: lint failed — nothing committed" >&2; exit 1; }
+fi
 if git diff --cached --name-only | grep -qvE '^(wiki|think|raw)/|^index\.md$|^meta/(corpus|coherence-warnings|aliases)\.tsv$|^meta/log\.md$|^meta/chats/'; then
   python3 -m kb.lint.lint_skills || exit 1
 fi

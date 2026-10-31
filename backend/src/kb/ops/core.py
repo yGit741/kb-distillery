@@ -25,6 +25,7 @@ ROOT = vault_root()
 
 from kb.git import commit_policy as cp
 from kb.maintenance.daily_sync import changed_paths, has_open_sessions, run_git
+from kb.core import log as kblog
 from kb.core.schema import OPS_DIR, RESTORABLE_PATHS, lane_of, strip_prefix
 
 GENERATED_KNOWLEDGE = ("index.md", "meta/corpus.tsv", "meta/coherence-warnings.tsv")
@@ -339,12 +340,24 @@ def sync_human(root=ROOT):
     if repo == root:
         _require_main(root)
     version = cp.next_version(repo)
-    msg = _message("think", f"human edits ({len(think)} file{'s' if len(think) != 1 else ''})", version,
-                   "think", {"KB-Actor": "human"})
+    summary = f"human edits ({len(think)} file{'s' if len(think) != 1 else ''})"
+    msg = _message("think", summary, version, "think", {"KB-Actor": "human"})
+    if repo == root:  # the shared think repo has no meta/log.md; the legacy vault logs the step in the same commit
+        if LOG_PATH not in set(changed_paths(root)["knowledge"]):  # a dirty log is another writer's pending line
+            _log_step(root, "think", "think", summary, set())
+            think = think + [LOG_PATH]
     sha = _commit_paths(repo, think, msg)
     if sha:
         print(f"committed human think edits as kb-{cp.fmt_version(version)} in {repo}")
     return sha
+
+
+def _log_step(root, op, target, summary, dirty):
+    """Give the step its meta/log.md line unless the writer already logged it (log.md is dirty)."""
+    if LOG_PATH in dirty:
+        return
+    shown = summary if summary and summary != target else short_title(target)
+    kblog.append(root, op, _shorten(shown), (target,))
 
 
 def commit_op(op, target, summary=None, paths=None, lint=True, trailers=None, root=ROOT, _locked=False,
@@ -370,9 +383,11 @@ def commit_op(op, target, summary=None, paths=None, lint=True, trailers=None, ro
                   if lane_of(p) == "knowledge" and not is_human_path(p) and p not in owned]
         if not chosen:
             return None
-        chosen += [p for p in (*GENERATED_KNOWLEDGE, LOG_PATH) if p in dirty and p not in chosen]
         version = cp.next_version(root)
         target = _target_of(target, chosen)
+        _log_step(root, op, target, summary, dirty)
+        dirty = set(changed_paths(root)["knowledge"])
+        chosen += [p for p in (*GENERATED_KNOWLEDGE, LOG_PATH) if p in dirty and p not in chosen]
         trailers = dict(trailers or {})
         pages = _pages(chosen)
         tier = _tier(root, op, target, pages)
@@ -487,9 +502,9 @@ def _blob(root, rev, path):
 
 
 def _append_log(root, line):
-    path = os.path.join(root, LOG_PATH)
-    with open(path, "a", encoding="utf-8") as f:
-        f.write(f"\n## [{datetime.date.today().isoformat()}] {line}\n")
+    """undo/restore log themselves before commit_op (which then sees a dirty log and adds nothing)."""
+    op, _, rest = line.partition(" | ")
+    kblog.append(root, op, rest)
 
 
 def _set_from(root, rev, path):

@@ -176,11 +176,9 @@ def cmd_apply(think_arg, only=None, cleanup=False):
 
 
 def _append_log(think_rel, n, cleanup=False):
-    log_path = os.path.join(ROOT, "meta", "log.md")
+    from kb.core import log as kblog
     tag = " (cleanup)" if cleanup else ""
-    line = f"\n## [{_now()[:10]}] distill | {think_rel}{tag} — {n} proposal(s) applied\n"
-    with open(log_path, "a", encoding="utf-8") as f:
-        f.write(line)
+    kblog.append(ROOT, "distill", f"{think_rel}{tag} — {n} proposal(s) applied", when=_now())
 
 
 def cmd_status(_args):
