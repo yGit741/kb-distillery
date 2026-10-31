@@ -286,6 +286,9 @@ TOOLING_PATHS = [
     ".claude/",
     ".vscode/",
     ".github/",
+    "LICENSE",           # open-source files at the repo root
+    "CONTRIBUTING.md",
+    "CODE_OF_CONDUCT.md",
 ]
 
 
