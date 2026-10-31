@@ -47,6 +47,21 @@ def _age(at, now):
     return f"{secs // 86400} d ago"
 
 
+def share_state(publisher=None):
+    """{status, chip} of the configured publisher's last publish. With no publisher the chip says so (the dashboard and
+    the API must render without one); a publisher that cannot be read counts as nothing published."""
+    from kb import publish
+    pub = publisher or publish.current()
+    try:
+        status = pub.status()
+    except Exception:  # noqa: BLE001 — a publisher hiccup must not take the screen down
+        status = None
+    chip = share_chip(status)
+    if chip is None and isinstance(pub, publish.NullPublisher):
+        chip = {"label": "no publisher", "cls": "is-skipped", "title": f"share: {pub.reason}", "href": ""}
+    return {"status": status, "chip": chip}
+
+
 def share_chip(status, now=None):
     """Chip for the share deploy status file: {label, cls, title, href} or None when nothing was deployed yet.
 

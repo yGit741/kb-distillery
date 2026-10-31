@@ -85,9 +85,9 @@ def vault_counts(root):
 
 def site_status(root):
     try:
-        from kb.share.contracts import StatusFile
-        return StatusFile(os.path.join(root, ".cache", "share", "status.json")).read() or {}
-    except Exception:  # noqa: BLE001 — the report renders without the share package
+        from kb import publish
+        return publish.current(root=root).status(root) or {}
+    except Exception:  # noqa: BLE001 — the report renders without a publisher
         return {}
 
 
