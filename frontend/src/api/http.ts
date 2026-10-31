@@ -108,6 +108,7 @@ export function createHttpDataSource(fetchImpl: Fetch = (...a) => fetch(...a), b
         `/api/scopes/${slug}/duplicate`,
       ),
 
+    listBacklog: () => run(() => client.GET("/api/backlog"), "/api/backlog"),
     listThink: () => run(() => client.GET("/api/think"), "/api/think"),
     getThinkNote: (name) => run(() => client.GET("/api/think/{name}", { params: { path: { name } } }), `/api/think/${name}`),
     saveThinkNote: (name, body) =>

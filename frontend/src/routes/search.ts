@@ -41,6 +41,7 @@ export interface SearchById {
   system: SystemSearch;
   lifecycle: NoSearch;
   think: ThinkSearch;
+  backlog: NoSearch;
 }
 
 const clean = <T extends object>(o: T): T =>
@@ -52,6 +53,7 @@ const pipelineSearch = (r: Raw): PipelineSearch =>
 export const SEARCH: { [K in keyof SearchById]: (raw: Raw) => SearchById[K] } = {
   home: (r) => clean({ concept: str(r.concept) }),
   lifecycle: () => ({}),
+  backlog: () => ({}),
   think: (r) => clean({ note: str(r.note) }),
   chat: (r) => clean({ session: str(r.session), scope: str(r.scope), q: str(r.q) }),
   pages: (r) =>

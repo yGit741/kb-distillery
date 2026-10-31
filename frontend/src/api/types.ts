@@ -74,6 +74,10 @@ export type PromptsResponse = S["PromptsResponse"];
 export type SavedChat = S["SavedChat"];
 export type SavedChatResult = S["SavedChatResult"];
 
+// backlog
+export type BacklogList = S["BacklogList"];
+export type BacklogItem = S["BacklogItem"];
+
 // think
 export type ThinkList = S["ThinkList"];
 export type ThinkNote = S["ThinkNote"];

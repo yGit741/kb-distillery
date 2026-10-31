@@ -70,6 +70,9 @@ export interface DataSource {
   getThinkNote(name: string): Promise<T.ThinkNote>;
   saveThinkNote(name: string, body: T.ThinkSaveRequest): Promise<T.ThinkWriteResult>;
   captureThink(text: string): Promise<T.ThinkWriteResult>;
+
+  // backlog (local app only; never in share builds)
+  listBacklog(): Promise<T.BacklogList>;
 }
 
 export class ApiError extends Error {
