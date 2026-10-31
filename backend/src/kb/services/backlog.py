@@ -13,6 +13,7 @@ CLI: `pixi run backlog -- add|list|show|status`.
 """
 import argparse
 import datetime
+import functools
 import json
 import os
 import re
@@ -47,11 +48,14 @@ def _git(*args, cwd=None):
     return r.stdout if r.returncode == 0 else None
 
 
+@functools.cache
 def primary_root():
     """The primary checkout: a worktree shares its backlog with the checkout it was cut from."""
-    out = subprocess.run(["git", "rev-parse", "--path-format=absolute", "--git-common-dir"], cwd=CHECKOUT_ROOT,
-                         capture_output=True, text=True, stdin=subprocess.DEVNULL).stdout.strip() \
-        if os.path.isdir(CHECKOUT_ROOT) else ""
+    try:
+        out = subprocess.run(["git", "rev-parse", "--path-format=absolute", "--git-common-dir"], cwd=CHECKOUT_ROOT,
+                             capture_output=True, text=True, stdin=subprocess.DEVNULL, timeout=30).stdout.strip()
+    except (OSError, subprocess.TimeoutExpired):
+        out = ""
     return os.path.dirname(out) if out.endswith(".git") else CHECKOUT_ROOT
 
 
@@ -60,7 +64,11 @@ def backlog_dir():
 
 
 def _main_ref():
-    return "main" if _git("rev-parse", "--verify", "-q", "main") else "HEAD"
+    """Where the repo stands for a plan: origin/main (what `ship merge` updates first), else main, else HEAD."""
+    for ref in ("origin/main", "main"):
+        if _git("rev-parse", "--verify", "-q", ref):
+            return ref
+    return "HEAD"
 
 
 def _slug(title):
@@ -69,35 +77,60 @@ def _slug(title):
 
 
 # ── file format ──────────────────────────────────────────────────────────────────────────────────
+# The two text sections are cut at marker lines that no plan contains, never at markdown headings: a plan
+# has its own `## Why` / `## Plan`. The plan comes last and runs to the end of the file.
+WHY_MARK = "<!-- backlog:why -->"
+PLAN_MARK = "<!-- backlog:plan -->"
+_DEFAULTS = dict(title="(untitled)", kind="idea", area="", size="m", status="inbox", created="", source="",
+                 plan_status="no-plan", base_sha="", branch="")
+
+
 def _dump(meta, why, plan):
     lines = ["---"]
     for k in _FIELDS:
         v = meta.get(k, "")
-        lines.append(f"{k}: {json.dumps(v) if isinstance(v, list) else str(v).replace(chr(10), ' ')}")
+        lines.append(f"{k}: {json.dumps(v) if isinstance(v, list) else str(v).replace(chr(10), ' ')}".rstrip())
     lines.append("---")
-    body = f"\n## Why\n\n{why.strip()}\n" if why.strip() else ""
+    body = f"\n{WHY_MARK}\n{why.strip()}\n" if why.strip() else ""
     if plan.strip():
-        body += f"\n## Plan\n\n{plan.strip()}\n"
+        body += f"\n{PLAN_MARK}\n{plan.strip()}\n"
     return "\n".join(lines) + "\n" + body
 
 
 def _load(path):
+    """One item. A hand-edited file is read leniently: a missing field gets its default, a bad kind, size or
+    status falls back to one the screen can show, and bad `paths` JSON means no paths."""
     text = open(path, encoding="utf-8").read()
     m = re.match(r"---\n(.*?)\n---\n?(.*)", text, re.S)
     if not m:
         raise BacklogError(422, f"{os.path.basename(path)}: no frontmatter")
-    meta = {}
+    raw = {}
     for line in m.group(1).splitlines():
-        k, _, v = line.partition(": ")
-        meta[k.strip()] = v.strip()
-    meta["paths"] = json.loads(meta["paths"]) if meta.get("paths", "").startswith("[") else []
+        k, _, v = line.partition(":")
+        raw[k.strip()] = v.strip()
+    meta = {**_DEFAULTS, **{k: v for k, v in raw.items() if k in _DEFAULTS and v != ""}}
+    for key, allowed in (("kind", KINDS), ("size", SIZES), ("status", STATUSES)):
+        if meta[key] not in allowed:
+            meta[key] = _DEFAULTS[key]
+    meta["plan_status"] = meta["plan_status"] if meta["plan_status"] in ("has-plan", "no-plan") else "no-plan"
+    try:
+        paths = json.loads(raw.get("paths") or "[]")
+        meta["paths"] = [p for p in paths if isinstance(p, str)] if isinstance(paths, list) else []
+    except ValueError:
+        meta["paths"] = []
     body = m.group(2)
-    parts = re.split(r"^## (Why|Plan)\n", body, flags=re.M)
-    sections = {parts[i]: parts[i + 1].strip() for i in range(1, len(parts) - 1, 2)}
+    head, _, plan = body.partition(PLAN_MARK)
+    meta["why"] = head.partition(WHY_MARK)[2].strip() if WHY_MARK in head else ""
+    meta["plan"] = plan.strip()
     meta["id"] = os.path.basename(path)[:-3]
-    meta["why"] = sections.get("Why", "")
-    meta["plan"] = sections.get("Plan", "")
     return meta
+
+
+def _write(path, meta, why, plan):
+    tmp = path + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        f.write(_dump(meta, why, plan))
+    os.replace(tmp, path)
 
 
 # ── plan intake ──────────────────────────────────────────────────────────────────────────────────
@@ -109,7 +142,7 @@ def tracked_paths(text, sha):
     files = set(tree.splitlines())
     found = []
     for tok in re.findall(r"[\w./@+-]+", text):
-        tok = tok.strip(".").removeprefix("./")
+        tok = tok.rstrip(".,:;").removeprefix("./")       # keep a leading dot: .cursor/…, .gitignore
         if tok in files and tok not in found:
             found.append(tok)
     return found[:MAX_PATHS]
@@ -140,8 +173,7 @@ def add_item(title, why="", kind="idea", area="", size="m", plan_file=None, sour
     iid, n = base, 2
     while os.path.exists(os.path.join(d, iid + ".md")):
         iid, n = f"{base}-{n}", n + 1
-    with open(os.path.join(d, iid + ".md"), "w", encoding="utf-8") as f:
-        f.write(_dump(meta, why, plan))
+    _write(os.path.join(d, iid + ".md"), meta, why, plan)
     return {**meta, "id": iid, "why": why.strip(), "plan": plan.strip()}
 
 
@@ -152,16 +184,23 @@ def _title_in(subject, title):
     return t in s or (len(words) >= 3 and all(w in s for w in words))
 
 
-def drift(item):
+def _repo_state():
+    """The ref and file set every item is compared with; a listing resolves them once, not per card."""
+    ref = _main_ref()
+    return ref, set((_git("ls-tree", "-r", "--name-only", ref) or "").splitlines())
+
+
+def drift(item, state=None):
     """{level, commits, missing, maybe_done}: fresh | drifted | stale | maybe-done | closed | none.
-    `none`: the item names no tracked paths to compare (an idea, or a plan that names no files)."""
+    `none`: the item names no tracked paths to compare (an idea, or a plan that names no files).
+    Only files count, not folders: a plan that names `a/b/` records no path for it."""
     if item["status"] not in OPEN:
         return {"level": "closed", "commits": 0, "missing": [], "maybe_done": []}
-    sha, paths, ref = item.get("base_sha"), item.get("paths") or [], _main_ref()
+    sha, paths = item.get("base_sha"), item.get("paths") or []
     if not sha or not paths or _git("cat-file", "-e", sha) is None:
         return {"level": "none", "commits": 0, "missing": [], "maybe_done": []}
+    ref, tree = state or _repo_state()
     touched = (_git("log", "--format=%h %s", f"{sha}..{ref}", "--", *paths) or "").splitlines()
-    tree = set((_git("ls-tree", "-r", "--name-only", ref) or "").splitlines())
     missing = [p for p in paths if p not in tree]
     subjects = (_git("log", "--format=%h %s", f"{sha}..{ref}") or "").splitlines()
     done = [s for s in subjects if _title_in(s.split(" ", 1)[-1], item["title"])][:3]
@@ -182,16 +221,18 @@ def get_item(iid, root=None):
 def list_items(status=None, root=None):
     d = root or backlog_dir()
     names = sorted(n for n in os.listdir(d) if n.endswith(".md")) if os.path.isdir(d) else []
-    items = []
+    items, state = [], None
     for n in names:
         try:
             item = _load(os.path.join(d, n))
-        except (BacklogError, ValueError, KeyError, OSError):
-            continue                                    # a hand-edited file never breaks the list
-        if status and item.get("status") != status:
+        except (BacklogError, ValueError, OSError):
+            continue                                    # a file that is not a card never breaks the list
+        if status and item["status"] != status:
             continue
         item["plan"] = ""                               # the list is cards; `show` returns the plan text
-        items.append({**item, "drift": drift(item)})
+        if state is None and item["status"] in OPEN and item["paths"]:
+            state = _repo_state()
+        items.append({**item, "drift": drift(item, state)})
     order = {s: i for i, s in enumerate(STATUSES)}
     items.sort(key=lambda i: i.get("created", ""), reverse=True)
     items.sort(key=lambda i: order.get(i.get("status"), 99))
@@ -206,8 +247,7 @@ def set_status(iid, status, root=None):
         raise BacklogError(404, f"no backlog item {iid}")
     item = _load(path)
     item["status"] = status
-    with open(path, "w", encoding="utf-8") as f:
-        f.write(_dump(item, item["why"], item["plan"]))
+    _write(path, item, item["why"], item["plan"])
     return get_item(iid, root)
 
 

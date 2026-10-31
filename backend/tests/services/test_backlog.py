@@ -99,6 +99,56 @@ def test_status_move_keeps_plan_and_closed_items_do_not_drift(repo, tmp_path):
         bl.set_status(i["id"], "someday")
 
 
+def test_plan_with_its_own_headings_survives_a_status_move(repo, tmp_path):
+    text = "## Why\nbecause\n\n## Plan\n1. do it\n\n## Why again\n<!-- not a marker -->\n## Steps\nx\n"
+    i = bl.add_item("Headings", why="short why", plan_file=plan(tmp_path, text))
+    assert bl.get_item(i["id"])["plan"] == text.strip()
+    assert bl.get_item(i["id"])["why"] == "short why"
+    bl.set_status(i["id"], "next")
+    again = bl.get_item(i["id"])
+    assert again["plan"] == text.strip() and again["why"] == "short why"
+
+
+def test_title_with_colon_and_dashes_roundtrips(repo):
+    i = bl.add_item("Fix: the --- thing: now")
+    assert bl.get_item(i["id"])["title"] == "Fix: the --- thing: now"
+
+
+def test_hand_edited_card_is_read_leniently(repo):
+    good = bl.add_item("Good")
+    path = os.path.join(bl.backlog_dir(), "hand.md")
+    with open(path, "w") as f:   # area stripped of its trailing space, size missing, odd status, bad paths JSON
+        f.write("---\ntitle: By hand\nkind: epic\narea:\nstatus: todo\npaths: [oops\n---\n")
+    items = {x["id"]: x for x in bl.list_items()["items"]}
+    assert set(items) == {good["id"], "hand"}
+    hand = items["hand"]
+    assert (hand["area"], hand["size"], hand["kind"], hand["status"], hand["paths"]) == ("", "m", "idea", "inbox", [])
+    assert bl.get_item("hand")["title"] == "By hand"       # show / status do not crash either
+
+
+def test_id_is_a_basename_not_a_path(repo, tmp_path):
+    (tmp_path / "secret.md").write_text("---\ntitle: leaked\n---\n")
+    bl.add_item("x")
+    with pytest.raises(bl.BacklogError):
+        bl.get_item("../secret")
+
+
+def test_dot_directories_and_dotfiles_are_tracked(repo, tmp_path):
+    (repo / ".cursor").mkdir()
+    (repo / ".cursor" / "rule.mdc").write_text("1\n")
+    (repo / ".gitignore").write_text("x\n")
+    vcs(repo, "add", ".")
+    vcs(repo, "commit", "-qm", "dot files")
+    i = bl.add_item("Dots", plan_file=plan(tmp_path, "See .cursor/rule.mdc, ./src/a.py, and .gitignore."))
+    assert i["paths"] == [".cursor/rule.mdc", "src/a.py", ".gitignore"]
+
+
+def test_list_filters_by_status(repo):
+    a, _ = bl.add_item("A"), bl.add_item("B")
+    bl.set_status(a["id"], "next")
+    assert [x["id"] for x in bl.list_items(status="next")["items"]] == [a["id"]]
+
+
 def test_list_orders_by_status_and_skips_broken_files(repo):
     a, b = bl.add_item("A"), bl.add_item("B")
     bl.set_status(a["id"], "doing")
