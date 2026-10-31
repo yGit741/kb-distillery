@@ -415,9 +415,10 @@ def _ingest(state, result, pages, kc):
 
 def _legacy_low(state, kc):
     """Rows an older run rejected ONLY for low confidence (reason `confidence x < 0.5`), shaped like accepted ones.
-    A run that recorded `keep_above` cut those rows on purpose at creation, so it promotes nothing."""
+    A run that cut rows on purpose at creation (`keep_above` above 0) promotes nothing. `keep_above = 0` means nothing
+    was cut on purpose, so it still promotes: resuming an old run with `submit` stamps that 0 on it."""
     out = []
-    if "keep_above" in state:
+    if (state.get("keep_above") or 0) > 0:
         return out
     for slug, t in state["subjects"].items():
         for r in t.get("rejected") or []:

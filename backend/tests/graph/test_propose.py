@@ -357,3 +357,12 @@ def test_a_run_can_ask_only_one_kind_of_one_page_type(vault, monkeypatch, capsys
     assert propose.cmd_submit(args(dry_run=True, kinds="discusses", types="paper")) == 0
     assert "2 subjects" in capsys.readouterr().out                 # the two papers, not the 4 default subjects
     assert propose.cmd_submit(args(dry_run=True, kinds="nonsense")) == 2
+
+
+def test_resuming_an_old_run_does_not_drop_its_weak_rows(vault):
+    """`submit` on an old run stamps keep_above = 0.0 on it; its confidence-only rejections must still be promoted."""
+    state = old_run_state()
+    state["keep_above"] = 0.0
+    assert [r["confidence"] for r in propose.run_rows(state)] == [0.9, 0.4]
+    state["keep_above"] = 0.5                                  # a deliberate cutoff promotes nothing
+    assert [r["confidence"] for r in propose.run_rows(state)] == [0.9]
