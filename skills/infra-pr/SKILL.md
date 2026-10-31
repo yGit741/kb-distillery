@@ -22,6 +22,7 @@ description: >-
 
 - Commit tooling on main, squash or rebase a PR — `ship` refuses; merges are always merge commits
 - Mix knowledge edits into a feature PR — only `schema`/`paradigm` PRs carry migrated notes
+- Pipe `ship` through `| tail` hoping to catch a failure: every `commit`, `pr`, `merge` and `sync` ends with one `RESULT: ok|FAILED (...)` line, and a gate's full output is in `.cache/ship-gates/*.log` (a failing gate also prints its last 25 lines). Read a log or a big file with an offset and a limit, never whole: it stays in the conversation and is re-read on every later turn
 - Run `git commit` / `git push` / `gh pr` directly — blocked; `pixi run ship` is the path
 
 ## CLI
