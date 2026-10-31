@@ -15,11 +15,13 @@ def page(slug, fm_extra="", ptype="idea"):
 def run(*pairs, config=CONFIG):
     import kb.services.cypher as cy
     old, cy.edge_config = cy.edge_config, lambda cfg=None: config
+    old_types, lint.SOURCE_TYPES = lint.SOURCE_TYPES, frozenset({"paper"})   # independent of the active kb's types
     lint.errors.clear()
     try:
         lint.check_relations(dict(pairs))
     finally:
         cy.edge_config = old
+        lint.SOURCE_TYPES = old_types
         got = list(lint.errors)
         lint.errors.clear()
     return got
