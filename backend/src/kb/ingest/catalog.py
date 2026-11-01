@@ -124,13 +124,17 @@ def asset_clip(inbox_rel):
     return None
 
 
-def _suggest_paper_name(filename):
-    if PAPER_NAME.match(filename):
+def _suggest_paper_name(filename, year=None):
+    """A `<year>-<title>.pdf` name. The year is `year`, else read from the name; with neither there is
+    no honest name: refuse instead of inventing `2000-…` (pass --year)."""
+    if PAPER_NAME.match(filename) and not year:
         return filename
     base = re.sub(r"[^\w.\-]+", "-", os.path.splitext(filename)[0]).strip("-").lower()
     base = re.sub(r"^arxiv-", "", base)
     year_m = re.search(r"(1[89]\d{2}|20\d{2})", base)
-    year = year_m.group(1) if year_m else "2000"
+    year = str(year) if year else (year_m.group(1) if year_m else "")
+    if not year:
+        raise ValueError(f"cannot tell the year of {filename!r} — pass --year YYYY (left in inbox)")
     title = re.sub(r"^\d{4}-?", "", base)
     title = re.sub(r"^[\d.\-v]+-?", "", title) or "untitled"
     return f"{year}-{title}.pdf"
@@ -291,14 +295,14 @@ def catalog_paper(inbox_rel, collection="", slug=None, title=None, year=None, ur
         slug = strip_prefix(slug)
         filename = f"{slug}.pdf" if not slug.lower().endswith(".pdf") else slug
         if not PAPER_NAME.match(filename):
-            filename = _suggest_paper_name(filename)
+            filename = _suggest_paper_name(filename, year)
     elif title and not PAPER_NAME.match(filename):
-        # not an arXiv scrape: --title names the paper (year from the inbox name, as before)
-        filename = _suggest_paper_name(filename)
+        # not an arXiv scrape: --title names the paper (year from --year or the inbox name)
+        filename = _suggest_paper_name(filename, year)
         year_part = str(year) if year else filename[:4]
         filename = f"{year_part}-{_ascii_slug(title)[:80].strip('-')}.pdf"
     else:
-        filename = _suggest_paper_name(filename)
+        filename = _suggest_paper_name(filename, year)
     stem = os.path.splitext(filename)[0]
     if year is None:
         year = stem[:4] if stem[:4].isdigit() else ""
@@ -481,7 +485,7 @@ def log_event(kind, **fields):
         f.write(json.dumps(fields, ensure_ascii=False) + "\n")
 
 
-def catalog(inbox_rel, collection="", fmt=None, title=None):
+def catalog(inbox_rel, collection="", fmt=None, title=None, year=None):
     """Detect the format (or take --format) and route. A typed PDF is a paper unless it joins a
     course/series, where it is a member row (a course book, typed notes) instead.
     Every outcome is logged: a refusal keeps its reason so the inbox can show why a file is stuck."""
@@ -502,7 +506,7 @@ def catalog(inbox_rel, collection="", fmt=None, title=None):
             dest, slug = catalog_file(rel, fmt)              # lint binds it as asset:<clip>
         elif (fmt == RAW_PRINTED and rel.lower().endswith(".pdf")
                 and _page_type(collection) not in CONTENTS_COLLECTIONS):
-            dest, slug = catalog_paper(rel, collection=collection, title=title)
+            dest, slug = catalog_paper(rel, collection=collection, title=title, year=year)
         else:
             dest, slug = catalog_file(rel, fmt, collection=collection, title=title)
     except (ValueError, NotImplementedError, OSError) as e:

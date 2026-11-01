@@ -102,6 +102,14 @@ def cmd_toc(args):
     """The book's partition (from its hub page, or proposed); --depth 2+ adds the PDF outline."""
     raw_rel = book_mod.verify_for_scope(args.raw_path)
     raw_abs = os.path.join(ROOT, raw_rel)
+    if not os.path.isfile(raw_abs):
+        print(f"toc: no such file: {args.raw_path} (looked for {raw_abs})", file=sys.stderr)
+        return 1
+    if not raw_abs.lower().endswith(".pdf"):
+        print(f"toc: {args.raw_path} is not a PDF", file=sys.stderr)
+        return 1
+    if book_mod._fitz() is None:
+        return 1
     rows, total, hub_rel = book_mod.partition_for(raw_rel, raw_abs)
     if rows:
         print(book_mod.format_partition(rows, total, raw_rel, hub_rel))
@@ -201,6 +209,8 @@ def main(argv=None):
     cat.add_argument("--format", default=None, choices=catalog.FORMATS,
                      help="override detection (e.g. presentations for a slide-deck PDF)")
     cat.add_argument("--title", default=None, help="row title on the hub's Contents table")
+    cat.add_argument("--year", type=int, default=None,
+                     help="publication year, for a PDF whose name does not carry it (never guessed)")
 
     di = sub.add_parser("drain-inbox", help="catalog all inbox files (0 LLM)")
     di.add_argument("--collection", "--course", default="")
@@ -359,7 +369,7 @@ def main(argv=None):
     if args.cmd == "catalog":
         try:
             catalog.catalog(args.inbox_path, collection=args.collection, fmt=args.format,
-                            title=args.title)
+                            title=args.title, year=args.year)
         except (ValueError, NotImplementedError, OSError) as e:
             print(f"catalog failed: {e}\n(logged — the dashboard's Ingestion status shows it)", file=sys.stderr)
             return 1

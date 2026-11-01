@@ -79,7 +79,7 @@ def run_draft(sha):
 
     results = claims.get("results") or []
     main_result = results[0] if results else ""
-    extra_results = "\n".join(f"- {r}" for r in results[1:3])
+    extra_results = "\n".join(f"- {r}" for r in results[1:])
 
     year = claims.get("year") or ""
     authors = claims.get("authors") or []
