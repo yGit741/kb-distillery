@@ -1,6 +1,6 @@
 import pytest
 
-from kb.parse import layer, mutate, reconcile
+from kb_distillery.parse import layer, mutate, reconcile
 
 from . import pdfs
 
@@ -70,7 +70,7 @@ def test_numbers_out_of_order():
 
 
 def test_blackboard_class_is_part_of_the_glyph():
-    from kb.parse.layer import Glyph, PageLayer, Word
+    from kb_distillery.parse.layer import Glyph, PageLayer, Word
     g = Glyph("R", "MSBM10", 10, (100, 100, 108, 110), "mathbb")
     lay = PageLayer(1, 600, 800, [g], [Word("R", g.bbox, [g])])
     assert reconcile.reconcile_page("$\\mathbb{R}$", lay) == []

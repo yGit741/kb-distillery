@@ -3,8 +3,8 @@ import os
 
 import pytest
 
-from kb.parse import FLAG, enabled, store
-from kb.parse.reconcile import Flag
+from kb_distillery.parse import FLAG, enabled, store
+from kb_distillery.parse.reconcile import Flag
 
 SHA = store.sha1_bytes(b"%PDF-1.4 fixture")
 
@@ -75,6 +75,6 @@ def test_flag_off():
 
 
 def test_flag_is_registered_and_dark_by_default():
-    from kb.flags import registry
+    from kb_distillery.flags import registry
     f = registry.load().get(FLAG)
     assert f.default is False and not any([f.envs.local, f.envs.private, f.envs.public])

@@ -1,4 +1,4 @@
-from kb.parse import layer, structure
+from kb_distillery.parse import layer, structure
 
 from . import pdfs
 
@@ -43,7 +43,7 @@ def test_caption_numbers_in_sequence():
 
 def test_page_count_mismatch_is_an_error_not_a_silent_skip():
     import pytest
-    from kb.parse import reconcile
+    from kb_distillery.parse import reconcile
     with pytest.raises(ValueError):
         structure.check_structure(MD, LAYERS[:2])
     with pytest.raises(ValueError):

@@ -1,7 +1,7 @@
 import fitz
 
-from kb.parse import layer
-from kb.parse.layer import Glyph, font_class, glyph_latex
+from kb_distillery.parse import layer
+from kb_distillery.parse.layer import Glyph, font_class, glyph_latex
 
 from . import pdfs
 
