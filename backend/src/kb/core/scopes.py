@@ -19,6 +19,7 @@ import sys
 
 from kb.core.graph import outbound_links
 from kb.core.schema import COLLECTION_TYPES, SOURCE_TYPES, SLUG_PREFIX
+from kb.core.links import WIKILINK_TARGET
 
 PREFIX = SLUG_PREFIX["scope"]
 MEMBERS_HEADING = "## Members"
@@ -29,7 +30,7 @@ HOP1_MIN = 2
 HOP1_TYPES = ("idea", "question")
 SLUG_RE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 _COMMENT = re.compile(r"<!--.*?-->", re.S)
-_WIKILINK = re.compile(r"\[\[([^\]|#\\]+)")
+_WIKILINK = WIKILINK_TARGET
 
 
 # ---------------------------------------------------------------- rows

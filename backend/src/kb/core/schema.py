@@ -96,18 +96,19 @@ THINK_DIR = "think"  # human sandbox at vault root — not linted
 QUARANTINE_DIR = "_quarantine"
 
 # Markdown allowed at the vault root.
-ROOT_MD = {"index.md", "AGENTS.md", "CLAUDE.md", "README.md"}
+ROOT_MD = {"index.md", "AGENTS.md", "CLAUDE.md", "README.md", "CHANGELOG.md", "CONTRIBUTING.md"}
 
 # Top-level vault shape — only these dirs/files may sit at the root (dot-* tooling exempt).
 FRONTEND_DIR = "frontend"            # React app (tooling lane); node_modules is gitignored
 # Code and tooling folders beside the vault content (tooling lane; see TOOLING_PATHS).
 META_DEFAULTS_DIR = "meta-defaults"     # the explorer's generic meta (flags, templates, docs, digest defaults)
-CODE_TOP_DIRS = frozenset({"backend", "docs", "frontend", "kbs", "share", "skills", "templates", "tools", META_DEFAULTS_DIR})
+# src/ tests/ web/ examples/ scripts/ are the OSS-restructure names; the old ones go in the last PR of the lane that empties them.
+CODE_TOP_DIRS = frozenset({"backend", "docs", "examples", "frontend", "kbs", "scripts", "share", "skills", "src", "templates", "tests", "tools", "web", META_DEFAULTS_DIR})
 # A knowledge base folder also carries its kb.toml and digest/ instructions (kb.kbconfig, kb.core.kbtypes).
 KB_CONFIG = "kb.toml"
 DIGEST_DIR = "digest"
 ROOT_DIRS = frozenset({WIKI_DIR, RAW_DIR, THINK_DIR, META_DIR, QUARANTINE_DIR, FRONTEND_DIR, DIGEST_DIR}) | CODE_TOP_DIRS
-ROOT_FILES = frozenset(ROOT_MD) | frozenset({"pixi.toml", "pixi.lock", ".gitignore", KB_CONFIG})
+ROOT_FILES = frozenset(ROOT_MD) | frozenset({"pixi.toml", "pixi.lock", "pyproject.toml", ".gitignore", KB_CONFIG})
 # Obsidian/plugin state at root — gitignored, not KB content; lint skips, guard still blocks agents.
 ROOT_LINT_IGNORE = frozenset({"copilot"})
 
@@ -273,7 +274,15 @@ TOOLING_PATHS = [
     "skills/",
     "templates/",        # ontology templates (kb.core.template): part of the engine, versioned with it
     "tools/",
+    "src/",
+    "tests/",
+    "web/",
+    "examples/",
+    "scripts/",
     "README.md",
+    "CHANGELOG.md",
+    "CONTRIBUTING.md",
+    "pyproject.toml",
     "AGENTS.md",
     "CLAUDE.md",
     ".integrator.toml",  # integrator skill config (~/.claude/skills/integrator)
@@ -285,6 +294,21 @@ TOOLING_PATHS = [
     ".github/",
     "LICENSE",           # open-source files at the repo root
 ]
+
+
+# Path prefixes `ship` keys its gates on (git.ship.checks_for). Old and new layout side by side so a move
+# cannot silence a gate; a test checks every group still matches a real path and every prefix is a known root.
+GATE_PREFIXES = {
+    "frontend": ("frontend/", "web/"),
+    "frontend_src": ("frontend/src", "web/src"),
+    "frontend_api": ("frontend/src/api", "web/src/api"),
+    "graph_ui": ("frontend/src/features/graph/", "web/src/features/graph/"),
+    "e2e": ("frontend/e2e/", "web/e2e/"),
+    "flags_registry": ("meta/flags.toml", "meta-defaults/flags.toml"),
+    "flags_code": ("backend/src/kb/flags/", "src/kb_distillery/flags/"),
+    "api": ("backend/src/kb/api/", "src/kb_distillery/api/"),
+    "dashboard": ("backend/src/kb/dashboard/", "src/kb_distillery/dashboard/"),
+}
 
 
 def _matches(path, prefixes):

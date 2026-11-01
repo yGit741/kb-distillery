@@ -1,8 +1,9 @@
 """Wiki graph helpers — links, sections, token overlap (0 LLM)."""
 import os
 import re
+from kb.core.links import WIKILINK_TARGET
 
-LINK = re.compile(r"\[\[([^\]|#\\]+)")
+LINK = WIKILINK_TARGET
 TOKEN = re.compile(r"[a-z0-9]+")
 
 NEGATION = frozenset({

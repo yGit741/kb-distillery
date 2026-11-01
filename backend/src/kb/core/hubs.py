@@ -17,13 +17,14 @@ Page-range hubs (book, notebook) live in books.py; this module is their sibling.
 import re
 
 from kb.core.books import DIGESTED, SKIP, TODO, section
+from kb.core.links import WIKILINK_TARGET
 
 CONTENTS_HEADING = "## Contents"
 PARTIAL = "partial"          # the row is itself a book/notebook hub, digested only in part
 ROW_STATUS = {SKIP, TODO, PARTIAL, *DIGESTED}
 
 _PATH = re.compile(r"`(raw/[^`]+)`")
-_LINK = re.compile(r"\[\[([^\]|#\\]+)")
+_LINK = WIKILINK_TARGET
 
 
 def _status(cell):
