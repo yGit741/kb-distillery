@@ -34,6 +34,8 @@ RETIRED = {
     "meta-defaults/": re.compile(r"meta-defaults|META_DEFAULTS_DIR"),
     "root skills/ folder, sync-skills or SKILL_TEMPLATE": re.compile(
         r"(?<![\w./~-])skills/|sync[-_]skills|SKILL_TEMPLATE|(?<![\w])\.\./skills\b"),
+    "scripts/kb-hooks (now the kit's src/kb_distillery/kits/base/hooks) or the install script and env.sh": re.compile(
+        r"scripts/kb-hooks|install-kb-hooks\.sh|kb-hooks/env\.sh|\bKBD_DIR\b"),
     "templates/ kit folder, template.toml, core.template or $KB_TEMPLATES_DIR": re.compile(
         r"(?<![\w./-])templates/(?:starter|academic-research|<name>)|template\.toml|KB_TEMPLATES_DIR"
         r"|kb_distillery[./]core[./]template\b|core import template\b|core/template\.py"),
@@ -43,10 +45,16 @@ RETIRED = {
 ALLOWED = {
     "*": {"tests/test_no_old_paths.py"},
     "python -m kb.": {"src/kb_distillery/share/build.py"},
-    "tools/": {"src/kb_distillery/core/schema.py"},               # TOOLING_PATHS keeps tools/ for the stubs until Phase 9
+    "tools/": {"src/kb_distillery/core/schema.py", "tests/git/test_kb_hooks.py"},               # TOOLING_PATHS keeps tools/ for the stubs until Phase 9
     "backend/src or backend/tests": {"src/kb_distillery/share/build.py", "tests/share/test_share_app.py", "tests/share/test_share_versions.py", "pixi.toml"},
 }
 # The roadmap is the record of what was planned and done under the old names; it is not rewritten.
+# the transitional forwarding stubs of kbs wired before the move (deleted in C.6) and the tests of those stubs
+ALLOWED["scripts/kb-hooks (now the kit's src/kb_distillery/kits/base/hooks) or the install script and env.sh"] = {
+    "scripts/kb-hooks/pre-commit", "scripts/kb-hooks/commit-msg", "scripts/kb-hooks/pre-push",
+    "tools/kb-hooks/pre-commit", "tools/kb-hooks/commit-msg", "tools/kb-hooks/pre-push",
+    "tests/git/test_kb_hooks.py", "docs/ROADMAP.md",
+    "src/kb_distillery/kits/base/defaults/docs/dev.md"}          # dev.md names the stub folders once
 ALLOWED["meta-defaults/"] = {"docs/ROADMAP.md"}
 ALLOWED["root skills/ folder, sync-skills or SKILL_TEMPLATE"] = {"docs/ROADMAP.md"}
 ALLOWED["templates/ kit folder, template.toml, core.template or $KB_TEMPLATES_DIR"] = {"docs/ROADMAP.md"}
@@ -68,6 +76,8 @@ RETIRED_FILES = ("src/kb_distillery/maintenance/fix_math.py", "src/kb_distillery
                  "src/kb_distillery/maintenance/export.py", "src/kb_distillery/report/", "src/kb_distillery/cli.py",
                  "tests/maintenance/", "tests/report/",
                  "src/kb_distillery/core/template.py", "tests/core/test_template.py", "tests/templates/",
+                 "scripts/install-kb-hooks.sh", "scripts/kb-hooks/env.sh", "scripts/kb-hooks/kb-guard.sh",
+                 "scripts/kb-hooks/kb-git-guard.sh", "scripts/kb-hooks/claude-settings.json",
                  "skills/", "src/kb_distillery/maintenance/")
 
 

@@ -1,3 +1,12 @@
 #!/bin/bash
-# Forwarding stub (removed in Phase 9): see tools/kb-hooks/pre-commit.
-exec "$(dirname "$0")/../../scripts/kb-hooks/commit-msg" "$@"
+# Transitional forwarding stub (deleted with Lane C.6): a knowledge base set up before the hooks moved into the kit
+# still has core.hooksPath pointing here. It runs the kit hook and says how to fix the kb for good.
+here="$(cd "$(dirname "$0")" && pwd)"
+engine="$(cd "$here/../.." && pwd)"
+kit="$engine/src/kb_distillery/kits/base/hooks"
+[ -x "$kit/commit-msg" ] || { echo "kb hook commit-msg: kit hooks not found at $kit - refusing (fail closed)" >&2; exit 2; }
+top="$(git rev-parse --show-toplevel 2>/dev/null)"
+echo "kb hook: this repo's core.hooksPath still points at the retired $(basename "$(dirname "$here")")/$(basename "$here"). Fix: git -C \"${top:-<kb>}\" config core.hooksPath \"$kit\"   (or: distill hooks install --kb \"${top:-<kb>}\")" >&2
+[ -x "$engine/.pixi/envs/default/bin/distill" ] || echo "kb hook: no distill in $engine/.pixi/envs/default/bin; using the one on PATH" >&2
+PATH="$engine/.pixi/envs/default/bin:$PATH"
+exec "$kit/commit-msg" "$@"

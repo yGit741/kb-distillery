@@ -14,8 +14,8 @@ from kb_distillery.config.resources import require_repo_root
 
 REPO = require_repo_root("tests/test_hooks_resolve.py")
 HOOKS_PY = REPO / "scripts" / "hooks-python.sh"
-# kit settings name `$CLAUDE_PROJECT_DIR/.claude/hooks/<x>.sh`, installed from this folder (Lane C: kits/base/hooks)
-KIT_HOOKS = REPO / "scripts" / "kb-hooks"
+# kit settings name `$CLAUDE_PROJECT_DIR/.claude/hooks/<x>.sh`, installed from this folder
+KIT_HOOKS = REPO / "src" / "kb_distillery" / "kits" / "base" / "hooks"
 SETTINGS = [(REPO / ".claude" / "settings.json", REPO), (KIT_HOOKS / "claude-settings.json", KIT_HOOKS)]
 
 
@@ -113,3 +113,22 @@ def test_the_modules_exit_code_comes_through(tmp_path):
 def test_a_real_module_runs_through_the_wrapper():
     cp = _run(REPO, "kb_distillery.config.resources")
     assert cp.returncode == 0, cp.stderr
+
+
+def test_every_kit_hook_calls_a_distill_hook_that_exists_and_imports():
+    """The kit hooks (git and Claude Code) are `distill hook <name>`; each name is a command whose module imports, and the
+    hook file is executable (git and the installer rely on it)."""
+    import importlib.util
+    from kb_distillery.cli import tree
+
+    seen = set()
+    for hook in sorted(p for p in KIT_HOOKS.iterdir() if p.name != "claude-settings.json"):
+        assert os.access(hook, os.X_OK), f"{hook.name} is not executable"
+        names = re.findall(r"distill hook ([\w-]+)", hook.read_text(encoding="utf-8"))
+        assert names, f"{hook.name} does not call `distill hook <name>`"
+        for name in names:
+            cmd = tree.COMMANDS["hook"].sub[name]
+            assert cmd.fail_closed, name
+            assert importlib.util.find_spec(cmd.target), f"{hook.name}: {cmd.target} does not import"
+            seen.add(name)
+    assert seen == set(tree.COMMANDS["hook"].sub), "every `distill hook <name>` is called by some kit hook"

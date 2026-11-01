@@ -201,6 +201,7 @@ class DispatchTests(TempHome):
             ("llm", "status"): ("kb_distillery.llm", ["status"]),
             ("share", "status"): ("kb_distillery.share", ["status"]),
             ("propose", "review"): ("kb_distillery.graph.propose", ["review"]),
+            ("hooks", "install", "--kb", "demo"): ("kb_distillery.git.install_hooks", ["--kb", "demo"]),
             ("hook", "guard"): ("kb_distillery.git.guard", []),
             ("hook", "git-guard"): ("kb_distillery.git.git_guard", []),
             ("hook", "pre-commit"): ("kb_distillery.lint.lint", []),
@@ -225,21 +226,54 @@ class DispatchTests(TempHome):
         calls = []
         with patch.object(tree.subprocess, "call", side_effect=lambda cmd: calls.append(cmd) or 0), \
                 patch.object(tree, "repo_root", return_value=ROOT):
-            self.assertEqual(tree.main(["hooks", "install", "--kb", "demo"]), 0)
             self.assertEqual(tree.main(["launch", "--port", "9000"]), 0)
-        self.assertEqual(calls[0], ["bash", os.path.join(ROOT, "scripts/install-kb-hooks.sh"), "--kb", "demo"])
-        self.assertEqual(calls[1], ["bash", os.path.join(ROOT, "scripts/launch.sh"), "--port", "9000"])
+        self.assertEqual(calls[0], ["bash", os.path.join(ROOT, "scripts/launch.sh"), "--port", "9000"])
 
         def refuse(what):
             raise NotInCheckout(f"{what} needs a checkout")
 
         with patch.object(tree, "require_repo_root", side_effect=refuse):
-            code, _, err = call(tree.main, ["hooks", "install"])
-            self.assertEqual(code, 2)
-            self.assertIn("needs a checkout", err)
             code, _, err = call(tree.main, ["ship", "status"])
             self.assertEqual(code, 2)
             self.assertIn("distill ship needs a checkout", err)
+
+    def test_the_hooks_commands_work_outside_a_checkout(self):
+        """The hooks ship in the wheel: `hooks install` and every `hook <name>` need no repository."""
+        with patch.object(tree, "repo_root", return_value=None):
+            for argv, module in ((["hooks", "install", "--kb", "x"], "kb_distillery.git.install_hooks"),
+                                 (["hook", "guard"], "kb_distillery.git.guard"), (["hook", "pre-commit"], "kb_distillery.lint.lint")):
+                code, seen = self.run_with_fake(argv)
+                self.assertEqual((code, seen["module"]), (0, module), argv)
+            self.assertNotIn("hooks", [n for n, c in tree.COMMANDS.items() if c.checkout_only])
+            self.assertFalse(any(c.checkout_only for c in tree.COMMANDS["hooks"].sub.values()))
+
+    def test_every_hook_fails_closed(self):
+        """A hook allows (0) or denies (2): an import error, a crash or any other exit code denies. Claude Code lets a tool
+        call through on every code but 2, so exit 1 from a guard would be a hole."""
+        for name, cmd in tree.COMMANDS["hook"].sub.items():
+            self.assertTrue(cmd.fail_closed, name)
+            for raised, want in ((ImportError("No module named 'x'"), 2), (RuntimeError("boom"), 2), (SystemExit(1), 2),
+                                 (SystemExit(2), 2), (SystemExit(127), 2), (SystemExit(0), 0), (SystemExit(None), 0)):
+                with patch.object(tree.runpy, "run_module", side_effect=raised):
+                    code, _, err = call(tree.main, ["hook", name])
+                self.assertEqual(code, want, (name, raised))
+                if isinstance(raised, (ImportError, RuntimeError)):
+                    self.assertIn("fail closed", err)
+            with patch.object(tree.runpy, "run_module", return_value=None):
+                self.assertEqual(call(tree.main, ["hook", name])[0], 0)
+
+    def test_other_commands_still_pass_exit_codes_and_errors_through(self):
+        with patch.object(tree.runpy, "run_module", side_effect=SystemExit(1)):
+            self.assertEqual(call(tree.main, ["lint"])[0], 1)
+        with patch.object(tree.runpy, "run_module", side_effect=ImportError("x")), self.assertRaises(ImportError):
+            tree.main(["lint"])
+
+    def test_a_real_missing_module_denies(self):
+        with patch.dict(tree.COMMANDS["hook"].sub, {"guard": tree.Cmd("x", target="kb_distillery.git.no_such_module",
+                                                                     config_check=False, fail_closed=True)}):
+            code, _, err = call(tree.main, ["hook", "guard"])
+        self.assertEqual(code, 2)
+        self.assertIn("fail closed", err)
 
     def test_launch_outside_a_checkout_serves_the_app_in_the_foreground(self):
         with patch.object(tree, "repo_root", return_value=None):
@@ -353,12 +387,10 @@ class ConfigMigrationTests(TempHome):
         self.assertEqual(call(tree.main, ["--help"])[0], 0)
         self.assertEqual(call(tree.main, ["lint", "--help"])[0], 0)
         with patch.object(tree.runpy, "run_module") as run, patch.object(tree, "repo_root", return_value=ROOT):
-            for argv in (["doctor"], ["hook", "guard"], ["hook", "pre-push"], ["ship", "status"], ["kb", "list"], ["lint"]):
+            for argv in (["doctor"], ["hook", "guard"], ["hook", "pre-push"], ["ship", "status"], ["kb", "list"], ["lint"],
+                         ["hooks", "install"]):
                 self.assertEqual(tree.main(argv), 0, argv)
-            self.assertEqual(run.call_count, 6)
-        with patch.object(tree.subprocess, "call", return_value=0) as call_, patch.object(tree, "repo_root", return_value=ROOT):
-            self.assertEqual(tree.main(["hooks", "install"]), 0)
-        call_.assert_called_once()
+            self.assertEqual(run.call_count, 7)
 
     def test_a_forwarded_help_is_not_blocked_either(self):
         self.legacy_only()

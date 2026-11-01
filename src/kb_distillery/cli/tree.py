@@ -35,6 +35,7 @@ class Cmd:
     target: str = ""
     fixed: tuple[str, ...] = ()
     forward_help: bool = False
+    fail_closed: bool = False           # a guard: allow (0) or deny (2), nothing else; an import error or crash denies
     checkout_only: bool = False         # hidden from --help and refused when the package runs outside a checkout
     config_check: bool = True           # refuse while only the old config folder exists (userdir.check)
     sub: dict[str, "Cmd"] = field(default_factory=dict)
@@ -52,18 +53,18 @@ COMMANDS: dict[str, Cmd] = {
     "launch": Cmd("restart the app detached and open it (outside a checkout: serve it in the foreground)", "launch",
                   "scripts/launch.sh"),
     "hooks": Cmd("git and Claude Code hooks", "group", sub={
-        "install": Cmd("install the git + Claude Code hooks into a kb", "script", "scripts/install-kb-hooks.sh",
-                       checkout_only=True, config_check=False),
+        "install": Cmd("install the git + Claude Code hooks into a kb (--kb <id|path>)", target="kb_distillery.git.install_hooks",
+                       forward_help=True, config_check=False),
     }),
     "hook": Cmd("stable entry for the kb-side hooks (git hooks and Claude Code guards call these)", "group", sub={
-        "guard": Cmd("Claude Code write guard: may this file be edited?", target="kb_distillery.git.guard", config_check=False),
+        "guard": Cmd("Claude Code write guard: may this file be edited?", target="kb_distillery.git.guard", config_check=False, fail_closed=True),
         "git-guard": Cmd("Claude Code Bash guard: block ad-hoc git writes", target="kb_distillery.git.git_guard",
-                         config_check=False),
-        "pre-commit": Cmd("git pre-commit: the linter is the schema", target="kb_distillery.lint.lint", config_check=False),
+                         config_check=False, fail_closed=True),
+        "pre-commit": Cmd("git pre-commit: the linter is the schema", target="kb_distillery.lint.lint", config_check=False, fail_closed=True),
         "commit-msg": Cmd("git commit-msg: kb(op) conventional commits", target="kb_distillery.git.commit_policy",
-                          fixed=("msg",), config_check=False),
+                          fixed=("msg",), config_check=False, fail_closed=True),
         "pre-push": Cmd("git pre-push: main only moves forward by kb steps", target="kb_distillery.git.commit_policy",
-                        fixed=("push",), config_check=False),
+                        fixed=("push",), config_check=False, fail_closed=True),
     }),
     "ops": Cmd("knowledge operations: sessions, snapshots, undo, restore, status, migrate", target="kb_distillery.ops",
                forward_help=True),
@@ -197,7 +198,13 @@ def run(path: tuple[str, ...], cmd: Cmd, rest: list[str]) -> int:
         runpy.run_module(target, run_name="__main__", alter_sys=True)
     except SystemExit as e:
         code = e.code
-        return code if isinstance(code, int) else (0 if code is None else 1)
+        code = code if isinstance(code, int) else (0 if code is None else 1)
+        return (2 if code else 0) if cmd.fail_closed else code
+    except BaseException as e:                  # noqa: BLE001 - a hook that cannot run must deny, never allow
+        if not cmd.fail_closed:
+            raise
+        sys.stderr.write(f"{prog}: cannot run {target} ({type(e).__name__}: {e}) - refusing (fail closed)\n")
+        return 2
     finally:
         sys.argv = saved
     return 0
