@@ -201,7 +201,8 @@ def _keyed(backend):
     if src:
         return {"ok": True, "why": f"API key found ({src})", "fix": ""}
     return {"ok": False, "why": "no API key",
-            "fix": f"set ANTHROPIC_API_KEY or put the key in {KEY_FILE} (the {backend} backend bills the API)"}
+            "fix": (userdir.migration_command() if userdir.migration_needed() else
+                    f"set ANTHROPIC_API_KEY or put the key in {KEY_FILE} (the {backend} backend bills the API)")}
 
 
 def availability():

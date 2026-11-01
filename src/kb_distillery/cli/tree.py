@@ -36,7 +36,7 @@ class Cmd:
     fixed: tuple[str, ...] = ()
     forward_help: bool = False
     checkout_only: bool = False         # hidden from --help and refused when the package runs outside a checkout
-    config_check: bool = True           # refuse while only the old ~/.config/thesis-kb exists (userdir.check)
+    config_check: bool = True           # refuse while only the old config folder exists (userdir.check)
     sub: dict[str, "Cmd"] = field(default_factory=dict)
 
 
@@ -46,14 +46,14 @@ COMMANDS: dict[str, Cmd] = {
     "doctor": Cmd("check the environment and a kb, with a fix for each problem (--json)", target="kb_distillery.doctor",
                   forward_help=True, config_check=False),
     "kb": Cmd("knowledge bases", "group", sub={
-        "list": Cmd("every knowledge base and where it is", target="kb_distillery.kbconfig", fixed=("list",)),
-        "show": Cmd("the selected knowledge base, resolved", target="kb_distillery.kbconfig", fixed=("show",)),
+        "list": Cmd("every knowledge base and where it is", target="kb_distillery.kbconfig", fixed=("list",), config_check=False),
+        "show": Cmd("the selected knowledge base, resolved", target="kb_distillery.kbconfig", fixed=("show",), config_check=False),
     }),
     "launch": Cmd("restart the app detached and open it (outside a checkout: serve it in the foreground)", "launch",
                   "scripts/launch.sh"),
     "hooks": Cmd("git and Claude Code hooks", "group", sub={
         "install": Cmd("install the git + Claude Code hooks into a kb", "script", "scripts/install-kb-hooks.sh",
-                       checkout_only=True),
+                       checkout_only=True, config_check=False),
     }),
     "hook": Cmd("stable entry for the kb-side hooks (git hooks and Claude Code guards call these)", "group", sub={
         "guard": Cmd("Claude Code write guard: may this file be edited?", target="kb_distillery.git.guard", config_check=False),
@@ -77,12 +77,12 @@ COMMANDS: dict[str, Cmd] = {
         "deep": Cmd("thesis-critical digest (heavy LLM)", target="kb_distillery.ingest", fixed=("deep-digest",), forward_help=True),
         "many": Cmd("batch-fill claims for many sources, then full-digest them one by one (LLM)",
                     target="kb_distillery.ingest", fixed=("digest-many",), forward_help=True),
-        "instructions": Cmd("the digest focus of the selected kb", target="kb_distillery.core.digest"),
+        "instructions": Cmd("the digest focus of the selected kb", target="kb_distillery.core.digest", config_check=False),
     }),
     "send": Cmd("send a think note into knowledge bases: distill send <note> --to a,b", target="kb_distillery.distill.send",
                 forward_help=True),
     "lint": Cmd("lint the selected knowledge base (the schema is the linter); --health adds the summary",
-                target="kb_distillery.lint.lint"),
+                target="kb_distillery.lint.lint", config_check=False),
     "llm": Cmd("the one door to Claude: ask, submit, status, collect", target="kb_distillery.llm", forward_help=True),
     "share": Cmd("publish the wiki graph + explorer as a site (build, snapshot, status, …)", target="kb_distillery.share",
                  forward_help=True),
@@ -191,19 +191,25 @@ def run(path: tuple[str, ...], cmd: Cmd, rest: list[str]) -> int:
             sys.stderr.write(f"{PROG}: {e}\n")
             return 2
         return subprocess.call(["bash", os.path.join(root, target), *cmd.fixed, *rest])
+    saved = sys.argv
     sys.argv = [prog, *cmd.fixed, *rest]
     try:
         runpy.run_module(target, run_name="__main__", alter_sys=True)
     except SystemExit as e:
         code = e.code
         return code if isinstance(code, int) else (0 if code is None else 1)
+    finally:
+        sys.argv = saved
     return 0
 
 
 def main(argv: list[str] | None = None) -> int:
     argv = sys.argv[1:] if argv is None else list(argv)
     if not argv or argv[0] in (*HELP_WORDS, "help"):
-        if argv[:1] == ["help"] and argv[1:2] and argv[1] in COMMANDS:    # distill help kb list
+        if argv[:1] == ["help"] and argv[1:2]:                            # distill help kb list
+            if argv[1] not in COMMANDS:
+                sys.stderr.write(f"{PROG}: unknown command {argv[1]!r}\n\n{help_text()}")
+                return 2
             found = resolve(argv[1:])
             sys.stdout.write(help_text(found[0] if found else (argv[1],)))
             return 0

@@ -327,13 +327,13 @@ class EntryPointTests(unittest.TestCase):
 
 
 class ConfigMigrationTests(TempHome):
-    """Only the old ~/.config/thesis-kb exists: print the exact mv and exit 1; never move anything."""
+    """Only the old config folder exists: print the exact mv and exit 1; never move anything."""
 
     def test_a_command_stops_with_the_exact_mv(self):
         self.legacy_only()
         old, new = os.path.join(self.home, ".config", "thesis-kb"), os.path.join(self.home, ".config", "kb-distillery")
         with patch.object(tree.runpy, "run_module") as run:
-            code, _, err = call(tree.main, ["lint"])
+            code, _, err = call(tree.main, ["llm", "status"])
         self.assertEqual(code, 1)
         self.assertIn(f"mv {old} {new}", err)
         run.assert_not_called()
@@ -342,7 +342,7 @@ class ConfigMigrationTests(TempHome):
 
     def test_end_to_end_in_a_subprocess(self):
         self.legacy_only()
-        cp = run_cli(["kb", "list"], self.home)
+        cp = run_cli(["llm", "status"], self.home)
         self.assertEqual(cp.returncode, 1)
         self.assertIn("mv ", cp.stderr)
         self.assertIn(".config/kb-distillery", cp.stderr)
@@ -353,9 +353,12 @@ class ConfigMigrationTests(TempHome):
         self.assertEqual(call(tree.main, ["--help"])[0], 0)
         self.assertEqual(call(tree.main, ["lint", "--help"])[0], 0)
         with patch.object(tree.runpy, "run_module") as run, patch.object(tree, "repo_root", return_value=ROOT):
-            for argv in (["doctor"], ["hook", "guard"], ["hook", "pre-push"], ["ship", "status"]):
+            for argv in (["doctor"], ["hook", "guard"], ["hook", "pre-push"], ["ship", "status"], ["kb", "list"], ["lint"]):
                 self.assertEqual(tree.main(argv), 0, argv)
-            self.assertEqual(run.call_count, 4)
+            self.assertEqual(run.call_count, 6)
+        with patch.object(tree.subprocess, "call", return_value=0) as call_, patch.object(tree, "repo_root", return_value=ROOT):
+            self.assertEqual(tree.main(["hooks", "install"]), 0)
+        call_.assert_called_once()
 
     def test_a_forwarded_help_is_not_blocked_either(self):
         self.legacy_only()
@@ -367,12 +370,19 @@ class ConfigMigrationTests(TempHome):
         self.legacy_only()
         os.makedirs(os.path.join(self.home, ".config", "kb-distillery"))
         with patch.object(tree.runpy, "run_module") as run:
-            self.assertEqual(tree.main(["lint"]), 0)
+            self.assertEqual(tree.main(["llm", "status"]), 0)
         run.assert_called_once()
+
+    def test_unknown_help_target_exits_2_and_argv_is_restored(self):
+        self.assertEqual(call(tree.main, ["help", "nope"])[0], 2)
+        before = list(sys.argv)
+        with patch.object(tree.runpy, "run_module"):
+            tree.main(["lint", "--x"])
+        self.assertEqual(sys.argv, before)
 
     def test_not_blocked_with_no_config_folder_at_all(self):
         with patch.object(tree.runpy, "run_module") as run:
-            self.assertEqual(tree.main(["lint"]), 0)
+            self.assertEqual(tree.main(["llm", "status"]), 0)
         run.assert_called_once()
 
 
