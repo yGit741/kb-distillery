@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Tests for src/kb_distillery/maintenance/daily_sync.py."""
+"""Tests for src/kb_distillery/ops/daily_sync.py."""
 import json
 import os
 import subprocess
@@ -11,7 +11,7 @@ from unittest.mock import patch
 from kb_distillery.paths import vault_root
 ROOT = vault_root()
 
-from kb_distillery.maintenance.daily_sync import (
+from kb_distillery.ops.daily_sync import (
     commit_message_from_log,
     existing_stage_paths,
     has_open_sessions,

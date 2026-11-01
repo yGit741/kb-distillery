@@ -14,8 +14,8 @@ src/kb_distillery/      Python app, package `kb_distillery` (src layout; `backen
   src/kb_distillery/llm/           `kb_distillery.llm`: the one door to Claude (see § Billing)
   src/kb_distillery/core/          schema, graph, hubs, scopes, persons, books, mathnorm, coherence, health
   src/kb_distillery/lint/          lint, lint_skills            src/kb_distillery/search/       query, semfind, explore_raw, citations
-  src/kb_distillery/ingest|distill|ops|report|share/            src/kb_distillery/git/          guard, git_guard, commit_policy, ship, merge_nudge, curate_history
-  src/kb_distillery/maintenance/   daily_sync, notify, sync_skills, rename_raw, export, fix_math
+  src/kb_distillery/ingest|distill|ops (daily_sync, notify, report/)|share/            src/kb_distillery/git/          guard, git_guard, commit_policy, ship, merge_nudge, curate_history
+  src/kb_distillery/maintenance/   sync_skills (Lane C relinks, then it goes); export lives in publish/
   src/kb_distillery/migrations/    schema migrations (code); the applied ledger stays in meta/migrations/applied.tsv
   src/kb_distillery/services/      former dashboard *_data modules (graph, pages, corpus, scopes, chat, pipeline, lifecycle, ops)
   src/kb_distillery/api/           FastAPI app (`pixi run app`): routers/ auto-discovered, models/, sse.py, security.py; README.md = add-a-router recipe

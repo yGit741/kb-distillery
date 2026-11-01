@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Tests for src/kb_distillery/maintenance/notify.py — the nightly email: when it is sent, what it says, how it fails."""
+"""Tests for src/kb_distillery/ops/notify.py — the nightly email: when it is sent, what it says, how it fails."""
 import datetime
 import json
 import os
@@ -12,7 +12,7 @@ from unittest.mock import patch
 from kb_distillery.paths import vault_root
 ROOT = vault_root()
 
-from kb_distillery.maintenance import notify
+from kb_distillery.ops import notify
 from kb_distillery.ops import hygiene
 
 NOW = datetime.datetime(2026, 10, 22, 22, 0, tzinfo=datetime.timezone.utc)

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Tests for src/kb_distillery/report/ — the generic report blocks, their renderers and the text sanitizers."""
+"""Tests for src/kb_distillery/ops/report/ — the generic report blocks, their renderers and the text sanitizers."""
 import json
 import os
 import sys
@@ -8,8 +8,8 @@ import unittest
 from kb_distillery.paths import vault_root
 ROOT = vault_root()
 
-from kb_distillery.report import model as m
-from kb_distillery.report import render_html, render_text, sanitize
+from kb_distillery.ops.report import model as m
+from kb_distillery.ops.report import render_html, render_text, sanitize
 
 WRANGLER = ("wrangler deploy exited 1: tion issues\n\nPlease check your network connection and try again.\n\n\n"
             "\x1b[31m✘ \x1b[41;31m[\x1b[41;97mERROR\x1b[41;31m]\x1b[0m \x1b[1mfetch failed\x1b[0m\n\n\n"

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Email the nightly report — every night (mode "digest") or only when something needs fixing ("problems").
 
-    python3 -m kb_distillery.maintenance.notify --test          # one-line test email (says clearly when the keychain item is missing)
-    python3 -m kb_distillery.maintenance.notify --show-config
+    python3 -m kb_distillery.ops.notify --test          # one-line test email (says clearly when the keychain item is missing)
+    python3 -m kb_distillery.ops.notify --show-config
 
 Config: meta/ops/sync.toml `[notify]` (email, mode, on = severities, min_interval_hours).
 The body is the nightly report Doc (src/kb_distillery/ops/nightly_report.py) as HTML with a plain-text
@@ -171,7 +171,7 @@ def notify_report(report, root=ROOT, sync_failed=False, error=None, tail=None, c
             pass
     if doc is not None:
         from kb_distillery.ops.nightly_report import subject
-        from kb_distillery.report import render_html, render_text
+        from kb_distillery.ops.report import render_html, render_text
         ok = (send or send_email)(subject(doc, report, SUBJECT_PREFIX), render_text.render(doc), cfg.get("email", ""),
                                   html=render_html.render(doc))
     else:

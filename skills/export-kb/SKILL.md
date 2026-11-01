@@ -22,10 +22,10 @@ description: >-
 ## CLI
 
 ```bash
-python3 -m kb_distillery.maintenance.export
-python3 -m kb_distillery.maintenance.export --list
-python3 -m kb_distillery.maintenance.export --skip-lint          # faster; index may be stale
-python3 -m kb_distillery.maintenance.export --include-raw-pdfs   # full raw/ binaries (large)
+python3 -m kb_distillery.publish.export
+python3 -m kb_distillery.publish.export --list
+python3 -m kb_distillery.publish.export --skip-lint          # faster; index may be stale
+python3 -m kb_distillery.publish.export --include-raw-pdfs   # full raw/ binaries (large)
 ```
 
 Pixi: `pixi run export-kb`
@@ -46,6 +46,6 @@ PDFs omitted by default; paths remain in `meta/corpus.tsv`.
 
 ## Agent workflow
 
-1. Run `python3 -m kb_distillery.maintenance.export` (lint runs first by default).
+1. Run `python3 -m kb_distillery.publish.export` (lint runs first by default).
 2. Print the absolute path and size for upload to the other LLM.
 3. Tell the recipient: start with `AGENTS.md` (its doc router names the `meta-defaults/docs/` file to read) and `index.md`.

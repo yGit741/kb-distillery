@@ -441,7 +441,7 @@ class SyncHook(Repo):
             self.assertEqual(core.sync(push=False, root=self.root), 0)
 
     def test_clean_sync_runs_hygiene_and_reports(self):
-        from kb_distillery.maintenance import notify
+        from kb_distillery.ops import notify
         report = hygiene.Report(checks=["x"])
         with patch.object(hygiene, "run", return_value=report) as run, \
                 patch.object(notify, "notify_report", return_value="clean") as nr:
@@ -450,7 +450,7 @@ class SyncHook(Repo):
         self.assertEqual(nr.call_args.kwargs["sync_failed"], False)
 
     def test_sync_exception_is_emailed_then_reraised(self):
-        from kb_distillery.maintenance import notify
+        from kb_distillery.ops import notify
         with patch.object(core, "_sync", side_effect=RuntimeError("push exploded")), \
                 patch.object(hygiene, "run", return_value=hygiene.Report()), \
                 patch.object(notify, "notify_report", return_value="sent") as nr, \
@@ -462,7 +462,7 @@ class SyncHook(Repo):
         self.assertEqual(nr.call_args.kwargs["tail"], "log line\n")
 
     def test_ops_error_skip_becomes_a_finding(self):
-        from kb_distillery.maintenance import notify
+        from kb_distillery.ops import notify
         with patch.object(core, "_sync", side_effect=core.OpsError("lint failed — nothing committed")), \
                 patch.object(hygiene, "run", return_value=hygiene.Report()), \
                 patch.object(notify, "notify_report", return_value="sent") as nr:
