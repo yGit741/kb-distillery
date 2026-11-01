@@ -81,10 +81,28 @@ def test_import_failure_exits_2_and_says_it_failed_closed(tmp_path):
 
 
 def test_a_module_in_the_checkout_runs_with_no_pythonpath_set(tmp_path):
-    """No env PYTHONPATH: the wrapper bootstraps from <checkout>/src only when the installed package lacks the module."""
+    """No env PYTHONPATH: the wrapper puts <checkout>/src on the path itself."""
     root = _tmp_root(tmp_path, with_module=True)
     cp = _run(root, "kb_distillery.run")
     assert cp.returncode == 0 and cp.stdout.strip() == "hook ran", cp.stderr
+
+
+def test_the_checkouts_code_wins_over_an_installed_copy(tmp_path):
+    """An editable/installed kb_distillery elsewhere (here a user-site .pth) must not shadow the checkout's own src/:
+    a worktree's hooks enforce the worktree's rules."""
+    (tmp_path / "co").mkdir()
+    root = _tmp_root(tmp_path / "co", with_module=True, module_body="print('checkout')\n")
+    inst = tmp_path / "inst" / "kb_distillery"
+    inst.mkdir(parents=True)
+    (inst / "__init__.py").write_text("")
+    (inst / "run.py").write_text("print('installed')\n")
+    base = tmp_path / "ubase"
+    site = subprocess.run(["python3", "-c", "import site; print(site.getusersitepackages())"], capture_output=True, text=True,
+                          env={**os.environ, "PYTHONUSERBASE": str(base)}).stdout.strip()
+    Path(site).mkdir(parents=True)
+    (Path(site) / "inst.pth").write_text(str(tmp_path / "inst") + "\n")
+    cp = _run(root, "kb_distillery.run", extra_env={"PYTHONUSERBASE": str(base)})
+    assert cp.returncode == 0 and cp.stdout.strip() == "checkout", cp.stdout + cp.stderr
 
 
 def test_the_modules_exit_code_comes_through(tmp_path):
