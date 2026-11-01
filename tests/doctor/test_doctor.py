@@ -97,8 +97,8 @@ def test_kb_config_errors_name_their_fix():
         return loader
     c, cfg = doctor.check_kb_config("x", boom("kb.toml: schema_version 1.3 but this explorer speaks 1.4"))
     assert c.status == FAIL and cfg is None and "migrate" in c.fix
-    c, _ = doctor.check_kb_config("x", boom("[kb] template = 'q' is not a known template"))
-    assert c.status == FAIL and "template" in c.fix
+    c, _ = doctor.check_kb_config("x", boom("[kb] kit = 'q' is not a known kit"))
+    assert c.status == FAIL and "kit" in c.fix
     c, _ = doctor.check_kb_config("x", boom("no knowledge base 'x'"))
     assert c.status == FAIL
 
@@ -106,9 +106,9 @@ def test_kb_config_errors_name_their_fix():
 def test_kb_config_ok_and_layout(tmp_path):
     root = tmp_path / "k"
     root.mkdir()
-    cfg = types.SimpleNamespace(id="k", schema_version=(1, 4), template="starter", root=str(root), git_root=None)
+    cfg = types.SimpleNamespace(id="k", schema_version=(1, 4), kit="base", root=str(root), git_root=None)
     c, got = doctor.check_kb_config("k", lambda ref: cfg)
-    assert c.status == PASS and got is cfg and "starter" in c.detail
+    assert c.status == PASS and got is cfg and "base" in c.detail
     assert doctor.check_kb_layout(cfg).status == WARN            # no wiki/ meta/
     for d in ("wiki", "meta"):
         (root / d).mkdir()

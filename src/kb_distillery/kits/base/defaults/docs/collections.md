@@ -1,6 +1,6 @@
 # Collections: courses, series, books
 
-> Contents tables, partitions and how their rows are digested. Part of the doc router in [`AGENTS.md`](../../AGENTS.md).
+> Contents tables, partitions and how their rows are digested. Part of the doc router in [`AGENTS.md`](../../../../../../AGENTS.md).
 
 ## Course and series collections
 

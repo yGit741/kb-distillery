@@ -137,7 +137,7 @@ def _validate_paths(paths, manifest):
 
 
 def _template(root):
-    """meta/templates/scope.md from the vault, else the explorer's meta-defaults/templates/scope.md."""
+    """meta/templates/scope.md from the vault, else the explorer's src/kb_distillery/kits/base/defaults/templates/scope.md."""
     own = _read(root, TEMPLATE)
     return own if own is not None else _read(META_DEFAULTS_PATH, TEMPLATE.split("/", 1)[1])
 

@@ -349,7 +349,7 @@ def check_flags(path=None, today=None):
     today = today or dt.date.today()
     for f in reg.flags:
         left = (f.expires - today).days
-        tail = f"owner {f.owner} — remove it with the flag-cleanup PR template (meta-defaults/templates/flag-cleanup-pr.md)"
+        tail = f"owner {f.owner} — remove it with the flag-cleanup PR template (src/kb_distillery/kits/base/defaults/templates/flag-cleanup-pr.md)"
         if left < 0:
             err("meta/flags.toml", f"flag {f.name} expired on {f.expires}; {tail}")
         elif left <= FLAG_EXPIRY_WARN_DAYS:

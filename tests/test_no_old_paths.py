@@ -1,6 +1,8 @@
 """The retired layout (backend/, frontend/, tools/, kbs/demo, package `kb`) stays gone, and so do the Lane D moves:
 `maintenance/{daily_sync,notify,export,fix_math,rename_raw}`, the top-level `report/` package, the per-user folder
-`~/.config/thesis-kb` (now `~/.config/kb-distillery`, `config/userdir.py`) and the keychain service `thesis-kb-gmail`.
+`~/.config/thesis-kb` (now `~/.config/kb-distillery`, `config/userdir.py`) and the keychain service `thesis-kb-gmail`,
+and the Lane C moves: `templates/` (now `src/kb_distillery/kits/<kit>/kit.toml`, read by `vault/kit.py`) and
+`meta-defaults/` (now `src/kb_distillery/kits/base/defaults/`).
 
 There are no import shims: a star-import shim breaks mock.patch, `python -m` and -W error filters. Instead this scan
 fails on any tracked file that still names the old module or path strings. Inputs come from `git ls-files` only (the
@@ -27,6 +29,10 @@ RETIRED = {
     "top-level report package": re.compile(r"kb_distillery\.report\b|src/kb_distillery/report/"),
     "~/.config/thesis-kb": re.compile(r"\.config/thesis-kb"),
     "keychain service thesis-kb-gmail": re.compile(r"thesis-kb-gmail"),
+    "meta-defaults/": re.compile(r"meta-defaults|META_DEFAULTS_DIR"),
+    "templates/ kit folder, template.toml, core.template or $KB_TEMPLATES_DIR": re.compile(
+        r"(?<![\w./-])templates/(?:starter|academic-research|<name>)|template\.toml|KB_TEMPLATES_DIR"
+        r"|kb_distillery[./]core[./]template\b|core import template\b|core/template\.py"),
 }
 # (pattern name -> files that may name it): the hook forwarding stubs (until Phase 9), the share builder that still builds
 # refs from before the move, and this test.
@@ -36,6 +42,9 @@ ALLOWED = {
     "tools/": {"src/kb_distillery/core/schema.py"},               # TOOLING_PATHS keeps tools/ for the stubs until Phase 9
     "backend/src or backend/tests": {"src/kb_distillery/share/build.py", "tests/share/test_share_app.py", "tests/share/test_share_versions.py", "pixi.toml"},
 }
+# The roadmap is the record of what was planned and done under the old names; it is not rewritten.
+ALLOWED["meta-defaults/"] = {"docs/ROADMAP.md", "src/kb_distillery/core/schema.py"}   # schema.py: until the last commit of this PR
+ALLOWED["templates/ kit folder, template.toml, core.template or $KB_TEMPLATES_DIR"] = {"docs/ROADMAP.md"}
 ALLOWED["keychain service thesis-kb-gmail"] = {"src/kb_distillery/config/userdir.py",      # the read-only lookup of the old name
                                                "tests/ops/test_notify.py", "tests/config/test_userdir.py"}
 ALLOWED["~/.config/thesis-kb"] = {"tests/config/test_userdir.py", "src/kb_distillery/config/userdir.py"}
@@ -52,7 +61,8 @@ def tracked():
 RETIRED_FILES = ("src/kb_distillery/maintenance/fix_math.py", "src/kb_distillery/maintenance/rename_raw.py",
                  "src/kb_distillery/maintenance/daily_sync.py", "src/kb_distillery/maintenance/notify.py",
                  "src/kb_distillery/maintenance/export.py", "src/kb_distillery/report/", "src/kb_distillery/cli.py",
-                 "tests/maintenance/", "tests/report/")
+                 "tests/maintenance/", "tests/report/",
+                 "src/kb_distillery/core/template.py", "tests/core/test_template.py", "tests/templates/")
 
 
 class NoOldPathsTests(unittest.TestCase):
@@ -63,8 +73,13 @@ class NoOldPathsTests(unittest.TestCase):
 
     def test_old_directories_are_gone(self):
         files = tracked()
-        for old in ("backend/src", "backend/tests", "frontend/", "kbs/"):
+        for old in ("backend/src", "backend/tests", "frontend/", "kbs/", "templates/", "meta-defaults/"):
             self.assertEqual([p for p in files if p.startswith(old)], [], old)
+
+    def test_the_kits_live_in_the_package(self):
+        for rel in ("src/kb_distillery/kits/base/kit.toml", "src/kb_distillery/kits/research/kit.toml",
+                    "src/kb_distillery/kits/base/defaults/flags.toml"):
+            self.assertTrue(os.path.isfile(os.path.join(ROOT, rel)), rel)
 
     def test_no_tracked_file_names_a_retired_path_or_module(self):
         hits = []

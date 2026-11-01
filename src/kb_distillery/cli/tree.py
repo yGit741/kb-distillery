@@ -41,7 +41,7 @@ class Cmd:
 
 
 COMMANDS: dict[str, Cmd] = {
-    "init": Cmd("create a first knowledge base from a template (own git repo), then run doctor", target="kb_distillery.init_kb",
+    "init": Cmd("create a first knowledge base from a kit (own git repo), then run doctor", target="kb_distillery.init_kb",
                 forward_help=True),
     "doctor": Cmd("check the environment and a kb, with a fix for each problem (--json)", target="kb_distillery.doctor",
                   forward_help=True, config_check=False),

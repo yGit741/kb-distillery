@@ -16,7 +16,7 @@ class RawAccessRatchet(unittest.TestCase):
     def test_a_new_module_must_use_a_storage_connector(self):
         new = sorted(set(raw_access.scan()) - baseline())
         self.assertEqual(new, [], "these modules reach raw/ directly: use kb_distillery.storage.for_kb() instead "
-                                  "(see meta-defaults/docs/storage.md), or add them to raw_access_baseline.txt "
+                                  "(see src/kb_distillery/kits/base/defaults/docs/storage.md), or add them to raw_access_baseline.txt "
                                   "only with a reason in the PR")
 
     def test_a_cleaned_up_module_leaves_the_baseline(self):

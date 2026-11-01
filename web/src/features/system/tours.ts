@@ -48,14 +48,14 @@ registerTour(
     {
       target: '[data-tour="kb-digest"]',
       title: "Digest instructions per knowledge base",
-      // source: src/kb_distillery/core/digest.py (digest/focus.md, types.md; meta-defaults/digest fallback)
+      // source: src/kb_distillery/core/digest.py (digest/focus.md, types.md; kits/base/defaults/digest fallback)
       body: "Ingest is identical everywhere; digest is one engine plus these instructions. A knowledge base's digest/ folder **overrides** the explorer's default focus and concept kinds.",
     },
     {
       target: '[data-tour="kb-meta"]',
       title: "Generic meta lives in the explorer",
-      // source: kb_distillery.paths.meta_file; flags/registry.py FLAGS_SOURCE; meta-defaults/{flags.toml,templates,docs}
-      body: "Flags, templates and the routed docs moved to the explorer's meta-defaults/. A knowledge base keeps only its own metadata and may **override** any of them in its meta/.",
+      // source: kb_distillery.paths.meta_file; flags/registry.py FLAGS_SOURCE; kits/base/defaults/{flags.toml,templates,docs}
+      body: "Flags, templates and the routed docs moved to the explorer's base kit (kits/base/defaults/). A knowledge base keeps only its own metadata and may **override** any of them in its meta/.",
     },
   ],
   "How this app loads a knowledge base: the folder, its git repo, its types, the shared think space, what it overrides.",

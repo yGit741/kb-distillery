@@ -1,5 +1,5 @@
 """Digest instructions: the knowledge base's `digest/` (focus.md, types.md and any prompt override) with the
-explorer's `meta-defaults/digest/` behind it. Ingest is identical for every knowledge base; digest is one
+explorer's `src/kb_distillery/kits/base/defaults/digest/` behind it. Ingest is identical for every knowledge base; digest is one
 engine plus these per-kb instructions.
 
     python -m kb_distillery.core.digest            print the resolved instructions (the digest skills read this first)

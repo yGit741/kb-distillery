@@ -1,6 +1,6 @@
 # Developer guide
 
-> Code layout, environment, pixi tasks, write guardrails, worktrees. Part of the doc router in [`AGENTS.md`](../../AGENTS.md).
+> Code layout, environment, pixi tasks, write guardrails, worktrees. Part of the doc router in [`AGENTS.md`](../../../../../../AGENTS.md).
 
 ## Code layout
 

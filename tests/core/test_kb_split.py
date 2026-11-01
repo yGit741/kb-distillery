@@ -1,5 +1,5 @@
-"""The explorer / knowledge-base split: meta-defaults fallback, digest instructions, the shared think guard, the
-think-repo commit policy, lanes for kb.toml / digest/ / meta-defaults/, and /api/kb's facts."""
+"""The explorer / knowledge-base split: the base kit's defaults fallback, digest instructions, the shared think guard, the
+think-repo commit policy, lanes for kb.toml / digest/ / the kit defaults, and /api/kb's facts."""
 import io
 import json
 import os
@@ -12,12 +12,20 @@ from unittest import mock
 
 from kb_distillery import paths
 from kb_distillery import kbconfig
+from kb_distillery.config import resources
 from kb_distillery.core import digest, schema
 from kb_distillery.git import commit_policy as cp
 from kb_distillery.git import guard
 
 
 class MetaDefaults(unittest.TestCase):
+    def test_the_defaults_are_the_base_kits_package_data(self):
+        self.assertEqual(paths.META_DEFAULTS_PATH, str(resources.resource("kits/base/defaults")))
+        self.assertTrue(os.path.isfile(os.path.join(paths.META_DEFAULTS_PATH, "flags.toml")))
+        own = paths.vpath("digest")           # the kb's own digest/ wins; without one the base kit's defaults/digest answers
+        self.assertEqual(paths.DIGEST_INSTRUCTIONS_PATH, own if os.path.isdir(own) else os.path.join(paths.META_DEFAULTS_PATH, "digest"))
+        self.assertTrue(os.path.isfile(os.path.join(paths.META_DEFAULTS_PATH, "digest", "focus.md")))
+
     def test_kb_meta_overrides_the_explorer_default(self):
         with tempfile.TemporaryDirectory() as d:
             self.assertEqual(paths.meta_file("flags.toml", root=d), os.path.join(paths.META_DEFAULTS_PATH, "flags.toml"))
@@ -61,16 +69,16 @@ class SharedThink(unittest.TestCase):
 
 
 class Lanes(unittest.TestCase):
-    def test_kb_config_and_digest_are_knowledge_and_meta_defaults_is_tooling(self):
+    def test_kb_config_and_digest_are_knowledge_and_the_kit_defaults_are_tooling(self):
         self.assertEqual(schema.lane_of("kb.toml"), "knowledge")
         self.assertEqual(schema.lane_of("digest/focus.md"), "knowledge")
-        self.assertEqual(schema.lane_of("meta-defaults/flags.toml"), "tooling")
-        self.assertIn("meta-defaults", schema.ROOT_DIRS)
+        self.assertEqual(schema.lane_of("src/kb_distillery/kits/base/defaults/flags.toml"), "tooling")
         self.assertIn("digest", schema.ROOT_DIRS)
         self.assertIn("kb.toml", schema.ROOT_FILES)
 
-    def test_guard_allows_markdown_under_digest_and_meta_defaults(self):
-        for rel in ("digest/focus.md", "meta-defaults/docs/dev.md", "meta-defaults/digest/types.md"):
+    def test_guard_allows_markdown_under_digest_and_the_kit_defaults(self):
+        for rel in ("digest/focus.md", "src/kb_distillery/kits/base/defaults/docs/dev.md",
+                    "src/kb_distillery/kits/base/defaults/digest/types.md"):
             with tempfile.TemporaryDirectory() as d:
                 guard.check_path(rel, d)      # no SystemExit
 

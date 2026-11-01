@@ -106,18 +106,18 @@ def check_kb_found(known: dict, bases_dir: str, ref: str | None) -> Check:
 
 
 def check_kb_config(ref: str, loader=kbconfig.load):
-    """→ (Check, KbConfig | None). Schema mismatch and an unknown template are FAILs that name the fix."""
+    """→ (Check, KbConfig | None). Schema mismatch and an unknown kit are FAILs that name the fix."""
     try:
         cfg = loader(ref)
     except kbconfig.KbConfigError as e:
         msg = str(e)
         if "schema_version" in msg:
             return Check("kb.toml", FAIL, msg, "run `pixi run ops -- migrate` on that knowledge base"), None
-        if "not a known template" in msg:
-            return Check("kb template", FAIL, msg, "set `[kb] template` to a known template, or remove it"), None
+        if "not a known kit" in msg:
+            return Check("kb kit", FAIL, msg, "set `[kb] kit` to a known kit, or remove it"), None
         return Check("kb.toml", FAIL, msg, "fix kb.toml, or create a new kb with `kbd init`"), None
     out = Check("kb.toml", PASS, f"{cfg.id}: schema {'.'.join(map(str, cfg.schema_version))}"
-                + (f", template {cfg.template}" if cfg.template else ""))
+                + (f", kit {cfg.kit}" if cfg.kit else ""))
     return out, cfg
 
 

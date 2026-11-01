@@ -58,8 +58,8 @@ def _pdf(path, text, pages=1):
 
 def build_vault(root):
     os.makedirs(os.path.join(root, "meta"))
-    # vault-side inputs the tools read: templates from the explorer's meta-defaults/, ops config from the vault's meta/
-    os.symlink(os.path.join(CHECKOUT_ROOT, "meta-defaults", "templates"), os.path.join(root, "meta", "templates"))
+    # vault-side inputs the tools read: templates from the base kit's defaults/, ops config from the vault's meta/
+    os.symlink(os.path.join(CHECKOUT_ROOT, "src", "kb_distillery", "kits", "base", "defaults", "templates"), os.path.join(root, "meta", "templates"))
     if os.path.isdir(os.path.join(META, "ops")):
         os.symlink(os.path.join(META, "ops"), os.path.join(root, "meta", "ops"))
     os.makedirs(os.path.join(root, "src"))

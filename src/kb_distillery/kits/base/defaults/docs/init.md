@@ -10,11 +10,11 @@ kbd launch --kb <id>
 
 ## `kbd init`
 
-`kbd init [--kb-id ID] [--name NAME] [--template starter|academic-research] [--dir PATH] [--yes]`
+`kbd init [--kb-id ID] [--name NAME] [--kit base|research] [--dir PATH] [--yes]`
 
 - Creates `<dir>/<id>/` (`--dir` defaults to the bases dir, `kbs/`, or `$KB_BASES_DIR`) as its **own git repository**:
-  `kb.toml` (current `schema_version`, `[kb] template`), `wiki/`, `raw/inbox/`, `meta/`, a minimal `.gitignore`, and one
-  first commit `kb(import): create <id> from template <t> (kb-x.y.0)` on `main`.
+  `kb.toml` (current `schema_version`, `[kb] kit`), `wiki/`, `raw/inbox/`, `meta/`, a minimal `.gitignore`, and one
+  first commit `kb(import): create <id> from kit <k> (kb-x.y.0)` on `main`.
 - The folder is built in a hidden sibling and renamed into place, so a failure leaves nothing half made.
 - Git code path: `kb_distillery.ops.core._git` / `_commit_paths` (the helpers `ops` commits with: no hooks, no lint, no push).
   `commit_policy` has no `init` op, so the commit uses `import`. Identity: your git config; if none, a local fallback

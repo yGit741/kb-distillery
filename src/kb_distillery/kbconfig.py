@@ -63,20 +63,25 @@ class KbConfig:
     data: dict = field(default_factory=dict, repr=False)
 
     def section(self, name: str) -> dict:
-        """A kb.toml table. `[types]` and `[edges]` of a kb that names a template come back as the template's tables
-        extended by the kb's own (kb_distillery.core.template); every other table is read as written."""
+        """A kb.toml table. `[types]` and `[edges]` of a kb that names a kit come back as the kit's tables
+        extended by the kb's own (kb_distillery.vault.kit); every other table is read as written."""
         d = self.data.get(name)
         d = d if isinstance(d, dict) else {}
-        if self.template and name in ("types", "edges"):
-            from kb_distillery.core import template        # lazy: this module stays import-free
-            return template.section(self.template, name, d, self.path)
+        if self.kit and name in ("types", "edges"):
+            from kb_distillery.vault import kit             # lazy: this module stays import-free
+            return kit.section(self.kit, name, d, self.path)
         return d
 
     @property
-    def template(self) -> str:
-        """`[kb] template`: the ontology template this kb follows ("" = none, the kb.toml carries its own schema)."""
+    def kit(self) -> str:
+        """The kit this kb follows ("" = none, the kb.toml carries its own schema): `[kb] kit`, else the older
+        `[kb] template`; the old names `starter` and `academic-research` come back as `base` and `research`."""
         kb = self.data.get("kb")
-        return str(kb.get("template") or "") if isinstance(kb, dict) else ""
+        raw = str((kb.get("kit") or kb.get("template") or "") if isinstance(kb, dict) else "")
+        if not raw:
+            return ""
+        from kb_distillery.vault import kit
+        return kit.canonical(raw)
 
     @property
     def tag_prefix(self) -> str:
@@ -294,11 +299,19 @@ def load_dir(root: str, id_hint: str | None = None, strict: bool = True) -> KbCo
         if strict:
             raise KbConfigError(msg)
         print(f"warning: {msg}", file=sys.stderr)
-    if kb.get("template") is not None:
-        from kb_distillery.core import template
-        if not isinstance(kb["template"], str) or not template.exists(kb["template"]):
-            raise KbConfigError(f"{path}: [kb] template = {kb['template']!r} is not a known template "
-                                f"(known: {', '.join(template.names()) or 'none'}; templates dir {template.templates_dir()})")
+    from kb_distillery.vault import kit
+    named = {key: kb[key] for key in ("kit", "template") if kb.get(key) not in (None, "")}
+    for key, value in named.items():
+        if not isinstance(value, str) or not kit.exists(value):
+            raise KbConfigError(f"{path}: [kb] {key} = {value!r} is not a known kit "
+                                f"(known: {', '.join(kit.names()) or 'none'}; kits dir {kit.kits_dir()})")
+        try:
+            kit.chain(value)
+        except kit.KitError as e:
+            raise KbConfigError(f"{path}: [kb] {key}: {e}") from None
+    if len({kit.canonical(v) for v in named.values()}) > 1:
+        raise KbConfigError(f"{path}: [kb] kit = {named['kit']!r} and template = {named['template']!r} name different kits "
+                            f"(template is the older spelling of kit; keep one)")
     git_root = root if os.path.exists(os.path.join(root, ".git")) else None
     return KbConfig(id=kb_id, name=str(kb["name"]), root=root, path=path, schema_version=version,
                     git_root=git_root, data=data)

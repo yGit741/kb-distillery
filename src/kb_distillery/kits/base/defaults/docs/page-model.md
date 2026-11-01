@@ -1,6 +1,6 @@
 # Page model
 
-> Page layers, depth, frontmatter, prefixes, `## My notes`, person pages, note sections, topic whitelist. Part of the doc router in [`AGENTS.md`](../../AGENTS.md).
+> Page layers, depth, frontmatter, prefixes, `## My notes`, person pages, note sections, topic whitelist. Part of the doc router in [`AGENTS.md`](../../../../../../AGENTS.md).
 
 ## Page layers
 
