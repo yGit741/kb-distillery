@@ -265,12 +265,54 @@ class FingerprintTests(RepoCase):
         _write(self.root, "staged.py")
         _g(self.root, "add", "staged.py")
         _write(self.root, "untracked.py")
-        mine = self.temp_indexes()
         before, status = self.index_state(), _g(self.root, "status", "--porcelain")
-        self.assertIsNotNone(gate_cache.tree_sha(self.root, ["index.md"]))
+        # a private temp dir: other lanes' runs create ship-index-* in the shared system temp and raced this check
+        with tempfile.TemporaryDirectory() as private, patch.object(tempfile, "tempdir", private):
+            self.assertEqual(self.temp_indexes(), set())
+            self.assertIsNotNone(gate_cache.tree_sha(self.root, ["index.md"]))
+            self.assertEqual(self.temp_indexes(), set())      # tree_sha leaves no ship-index-* behind
         self.assertEqual(self.index_state(), before)
         self.assertEqual(_g(self.root, "status", "--porcelain"), status)
-        self.assertEqual(self.temp_indexes(), mine)
+
+
+class XdistRefusalTests(RepoCase):
+    """The tests gate runs with -n: without pytest-xdist in the shared env, refuse before running any gate."""
+
+    def _with_n(self):
+        gates = [(n, self._gate(n)) for n in ("tests", "lint-skills", "lint")]
+        gates[0] = ("tests", gates[0][1] + ["-n", "6"])      # `python -c <code> -n 6`: runs, extra args ignored
+        return patch.object(ship, "GATES", gates)
+
+    def _run(self, spec):
+        out = io.StringIO()
+        with self._with_n(), patch("importlib.util.find_spec", return_value=spec), contextlib.redirect_stdout(out):
+            ok = ship.run_gates(self.root)
+        return ok, out.getvalue()
+
+    def test_missing_xdist_refuses_before_any_gate(self):
+        ok, out = self._run(None)
+        self.assertFalse(ok)
+        self.assertIn("pixi install", out)
+        self.assertIn("PRIMARY checkout", out)
+        self.assertEqual(self.runs(), [])                    # not even lint-skills ran
+
+    def test_xdist_present_runs_the_gates(self):
+        ok, out = self._run(object())
+        self.assertTrue(ok, out)
+        self.assertEqual(sorted(self.runs()), ["lint", "lint-skills", "tests"])
+
+    def test_a_reused_tests_gate_needs_no_xdist(self):
+        self._run(object())
+        ok, out = self._run(None)
+        self.assertTrue(ok, out)
+        self.assertIn("gate: tests reused", out)
+
+    def test_mocked_runner_never_hits_the_check(self):
+        out = io.StringIO()
+        with self._with_n(), patch("importlib.util.find_spec", return_value=None), \
+                patch.object(ship, "_REAL_RUN", object()), contextlib.redirect_stdout(out):
+            self.assertTrue(ship._xdist_ok(ship.GATES, {"tests": "full"}, {}, self.root, None))
+        self.assertNotIn("pixi install", out.getvalue())
 
 
 class RecordLocationTests(RepoCase):
