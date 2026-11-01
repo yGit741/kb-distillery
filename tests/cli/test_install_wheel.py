@@ -4,8 +4,10 @@ Slow (builds a wheel, resolves and installs every dependency from the network), 
 `pixi run test-wheel` (KB_TEST_WHEEL=1); CI job `wheel` runs exactly that. The default suite and its
 `test_fast_and_offline` 60 s limit never include it.
 
-What it proves: `distill doctor` and `distill init` work with no repository anywhere, `import kb_distillery` resolves
-inside the venv (not the checkout), the packaged templates are found, and the root-level folders reach `_data/`."""
+What it proves: `distill doctor`, `distill init` and `distill init --refresh` work with no repository anywhere
+(skills, docs, hooks, settings and AGENTS.md come out of the wheel's kits and the installed git hooks run),
+`import kb_distillery` resolves inside the venv (not the checkout), the packaged templates are found, and the
+root-level folders reach `_data/`."""
 import os
 import shutil
 import subprocess
@@ -74,7 +76,8 @@ def test_the_wheel_carries_the_root_level_folders_under_data(wheel):
 
 def test_the_wheel_carries_the_kits_as_package_data(wheel):
     names = zipfile.ZipFile(wheel).namelist()
-    for want in ("kb_distillery/kits/base/kit.toml", "kb_distillery/kits/research/kit.toml",
+    for want in ("kb_distillery/kits/base/AGENTS.template.md", "kb_distillery/kits/base/README.template.md",
+                 "kb_distillery/kits/research/AGENTS.template.md", "kb_distillery/kits/base/kit.toml", "kb_distillery/kits/research/kit.toml",
                  "kb_distillery/kits/base/defaults/flags.toml", "kb_distillery/kits/base/defaults/docs/",
                  "kb_distillery/kits/base/defaults/templates/", "kb_distillery/kits/base/defaults/digest/",
                  "kb_distillery/kits/base/skills/query-knowledge/SKILL.md", "kb_distillery/kits/base/skills/README.md",
@@ -123,3 +126,46 @@ def test_distill_init_creates_a_kb_under_the_home_folder_and_finds_it_from_insid
     assert listed.returncode == 0 and "wheel-kb" in listed.stdout, listed.stdout + listed.stderr
     inside = _run(venv, ["distill", "kb", "show"], env, home / "wheel-kb")           # no KB, no --kb: found from the folder
     assert inside.returncode == 0 and "wheel-kb" in inside.stdout, inside.stdout + inside.stderr
+
+
+def test_distill_init_writes_the_kits_files_from_the_wheel_and_refresh_resyncs_them(venv, clean_env, tmp_path):
+    env, home = clean_env
+    cp = _run(venv, ["distill", "init", "--kb-id", "full-kb", "--kit", "research", "--name", "Full KB", "--yes"], env, tmp_path)
+    assert cp.returncode == 0, cp.stdout + cp.stderr
+    kb = home / "full-kb"
+    for rel in (".claude/skills/query-knowledge/SKILL.md", ".claude/skills/build-researcher-profile/SKILL.md",   # parent + child
+                ".claude/skills/ingest-to-catalog/mail/SKILL.md", ".claude/skills/README.md", ".claude/docs/page-model.md",
+                ".claude/hooks/kb-guard.sh", ".claude/hooks/kb-git-guard.sh", ".claude/settings.json", "AGENTS.md", "README.md"):
+        assert (kb / rel).is_file(), rel
+    agents = (kb / "AGENTS.md").read_text()
+    assert "# Full KB" in agents and "Research kit additions" in agents and "{{" not in agents
+    settings = (kb / ".claude/settings.json").read_text()
+    assert "kb-guard.sh" in settings and "src/kb_distillery" not in settings and "pixi" not in settings
+    assert os.access(kb / ".claude/hooks/kb-guard.sh", os.X_OK)
+    git = lambda *a: subprocess.run(["git", "-C", str(kb), *a], capture_output=True, text=True, env=env)       # noqa: E731
+    assert git("status", "--porcelain").stdout == ""                                      # all of it in the first commit
+    hooks_path = git("config", "core.hooksPath").stdout.strip()
+    assert Path(hooks_path).is_absolute() and Path(hooks_path).is_relative_to(venv)       # the installed kit, not a checkout
+    assert os.access(Path(hooks_path) / "pre-commit", os.X_OK), "the wheel lost the git hooks' executable bit"
+    # the installed git hooks are live: with `distill` on PATH a commit that breaks the policy is refused by the commit-msg hook
+    live = dict(env, PATH=f"{venv / 'bin'}{os.pathsep}{env['PATH']}", GIT_AUTHOR_NAME="t", GIT_AUTHOR_EMAIL="t@x",
+                GIT_COMMITTER_NAME="t", GIT_COMMITTER_EMAIL="t@x")
+    refused = subprocess.run(["git", "-C", str(kb), "commit", "--allow-empty", "-q", "-m", "not a kb commit"],
+                             capture_output=True, text=True, env=live)
+    assert refused.returncode != 0 and "not found" not in refused.stderr, refused.stdout + refused.stderr
+    # refresh: nothing to do on a fresh kb, then drift is repaired and reported, knowledge and AGENTS.md untouched
+    again = _run(venv, ["distill", "init", "--refresh", "--kb", str(kb)], env, tmp_path)
+    assert again.returncode == 0 and "already up to date" in again.stdout, again.stdout + again.stderr
+    (kb / ".claude/skills/query-knowledge/SKILL.md").write_text("drifted\n")
+    (kb / ".claude/settings.json").write_text("{}\n")
+    (kb / "AGENTS.md").write_text(agents + "\nMine.\n")
+    (kb / "wiki" / "keep.md").write_text("keep\n")
+    fixed = _run(venv, ["distill", "init", "--refresh", "--kb", str(kb)], env, tmp_path)
+    assert fixed.returncode == 0, fixed.stdout + fixed.stderr
+    assert "updated .claude/skills/query-knowledge/SKILL.md" in fixed.stdout and "updated .claude/settings.json" in fixed.stdout
+    assert "AGENTS.md: yours" in fixed.stdout and (kb / "AGENTS.md").read_text().endswith("Mine.\n")
+    assert (kb / "wiki" / "keep.md").read_text() == "keep\n" and (kb / ".claude/skills/query-knowledge/SKILL.md").read_text() != "drifted\n"
+    again = _run(venv, ["distill", "init", "--refresh", "--kb", str(kb)], env, tmp_path)
+    assert "already up to date" in again.stdout, again.stdout
+    inside = _run(venv, ["distill", "init", "--refresh"], env, kb)                         # no --kb: found from inside the folder
+    assert inside.returncode == 0 and "already up to date" in inside.stdout, inside.stdout + inside.stderr

@@ -18,6 +18,7 @@ from datetime import datetime, timezone
 
 from kb_distillery.paths import THINK_PATH, think_path, vault_root
 from kb_distillery.storage import for_kb
+from kb_distillery.vault.kit import KB_DOCS
 ROOT = vault_root()
 EXPORT_DIR = os.path.join(ROOT, ".exported")
 PREFIX = "yonatan-thesis-kb"
@@ -62,8 +63,9 @@ TEXT_META_FILES = (
     "meta/corpus.tsv",
     "meta/coherence-warnings.tsv",
     "meta/log.md",
-    ".claude/skills/README.md",
-    # the docs AGENTS.md routes to
+    ".claude/skills/README.md",             # a kb's copy of its kit's skills index (`distill init` writes it)
+    # the docs AGENTS.md routes to: a kb's copies from its kit, and its own overrides
+    *(f".claude/docs/{n}.md" for n in KB_DOCS),
     "meta/docs/page-model.md",
     "meta/docs/raw-and-corpus.md",
     "meta/docs/collections.md",

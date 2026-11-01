@@ -38,7 +38,7 @@ TASK_RULES = [
     ("digest", r"(easy|full|deep)-digest|kb(?:_distillery)?\.ingest (draft|finalize)"),
     ("catalog", r"kb(?:_distillery)?\.ingest (catalog|scrap|drain-inbox)|scrap-wordpress|ingest-to-catalog|scrap-data"),
     ("researcher", r"index-researcher|build-researcher-profile"),
-    ("feature", r"ship -- (start|commit|pr)|edit:(backend|frontend|skills|share|tools)/"),
+    ("feature", r"ship -- (start|commit|pr)|edit:(src|web|share|scripts|tests|\.claude/skills)/"),
     ("wiki-edit", r"ops -- (begin|commit)|edit:wiki/|wiki-edit"),
     ("query", r"kb(?:_distillery)?\.search|query candidates|query-knowledge|explore-raw"),
     ("research", r"tool:Web(Search|Fetch)|deep-research"),
