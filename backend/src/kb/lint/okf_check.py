@@ -79,7 +79,11 @@ def check_page(rel, text, root):
         if fm:
             if "status" in fm and str(fm["status"]) not in STATUSES:
                 out.append(("status", f"status {fm['status']!r} is not draft, stable or deprecated"))
-            for entry in fm.get("sources") or []:
+            srcs = fm.get("sources") or []
+            if not isinstance(srcs, list):
+                out.append(("sources", f"`sources` is not a list: {srcs!r}"))
+                srcs = []
+            for entry in srcs:
                 if not (isinstance(entry, dict) and entry.get("resource")):
                     out.append(("sources", f"source entry without `resource`: {entry!r}"))
             gen = fm.get("generated")
@@ -126,8 +130,11 @@ def check(root):
     findings, count = {}, 0
     for rel, path in pages(root):
         count += 1
-        with open(path, encoding="utf-8") as f:
-            found = check_page(rel, f.read(), root)
+        try:
+            with open(path, encoding="utf-8") as f:
+                found = check_page(rel, f.read(), root)
+        except (OSError, ValueError, TypeError) as e:       # report-only: a bad page is a finding, never a crash
+            found = [("read", f"{type(e).__name__}: {e}")]
         if found:
             findings[rel] = found
     return findings, count
@@ -138,7 +145,11 @@ def main(argv=None):
     as_json = "--json" in argv
     from kb.paths import vault_root
     root = vault_root()
-    findings, count = check(root)
+    try:
+        findings, count = check(root)
+    except Exception as e:                                  # report-only: always exit 0
+        print(f"okf-check (report-only): could not run: {type(e).__name__}: {e}")
+        return 0
     totals = Counter(rule for found in findings.values() for rule, _ in found)
     if as_json:
         print(json.dumps({"pages": count, "findings": {p: [list(f) for f in fs] for p, fs in findings.items()},

@@ -52,6 +52,13 @@ class OkfCheck(unittest.TestCase):
         self.page("index.md", "# Index\n")
         self.assertEqual(okf_check.check(self.root)[0], {})
 
+    def test_unreadable_and_odd_pages_do_not_crash(self):
+        with open(os.path.join(self.root, "wiki", "bin.md"), "wb") as f:
+            f.write(b"\xff\xfe\x00bad")
+        self.page("wiki/s.md", "---\ntype: idea\nsources: 5\n---\n\nx\n")
+        self.assertEqual(self.rules("wiki/bin.md"), ["read"])
+        self.assertEqual(self.rules("wiki/s.md"), ["sources"])
+
     def test_main_is_report_only(self):
         self.page("wiki/a.md", "[[x]]\n")
         with mock.patch("kb.paths.vault_root", return_value=self.root):
