@@ -22,8 +22,8 @@ TOPIC_SLUGS entry). The skill keeps its historical name `lint-moc`.
 ## Phase 1 — bundle (0 LLM)
 
 ```bash
-python3 -m kb.search.semfind topic theme-info-theory
-python3 -m kb.search.semfind topic theme-tensor-factorization --max-pairs 10
+python3 -m kb_distillery.search.semfind topic theme-info-theory
+python3 -m kb_distillery.search.semfind topic theme-tensor-factorization --max-pairs 10
 ```
 
 `theme` and `moc` are kept as CLI aliases of `topic`.
@@ -37,7 +37,7 @@ python3 -m kb.search.semfind topic theme-tensor-factorization --max-pairs 10
 
 ## Paper disagreement
 
-Not a failure. For each `external` pair, draft Connections bullets for both pages; user/agent adds them manually; `python3 -m kb.core.coherence noted <id>`.
+Not a failure. For each `external` pair, draft Connections bullets for both pages; user/agent adds them manually; `python3 -m kb_distillery.core.coherence noted <id>`.
 
 ## Commit
 

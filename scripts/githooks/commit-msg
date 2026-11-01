@@ -1,0 +1,7 @@
+#!/bin/bash
+# KB Conventional Commits: kb(op): … (kb-x.y.z) on main, type(scope): … on infra/* branches.
+# Mode: KB_POLICY=warn|enforce (default src/kb_distillery/core/schema.py GIT_POLICY_MODE).
+root="$(git rev-parse --show-toplevel)"
+export PYTHONPATH="$root/src${PYTHONPATH:+:$PYTHONPATH}"
+export KB_ROOT="$root"      # this repo is the vault these hooks judge, whatever knowledge base $KB selects
+exec python3 -m kb_distillery.git.commit_policy msg "$1"

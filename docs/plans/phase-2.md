@@ -6,9 +6,9 @@ A template is a versioned folder `templates/<name>/` that defines a knowledge ba
 
 ## PRs
 
-1. Spec + loader (`templates/<name>/template.toml`, read by `kb.core.kbtypes` / `kb.kbconfig`), built from today's `kbtypes.py` and `meta-defaults/{templates,digest}`. SCHEMA PR, held.
+1. Spec + loader (`templates/<name>/template.toml`, read by `kb_distillery.core.kbtypes` / `kb_distillery.kbconfig`), built from today's `kbtypes.py` and `meta-defaults/{templates,digest}`. SCHEMA PR, held.
 2. `templates/academic-research`: the thesis types, areas, skills and views; edge types (the 7 relation types) move here from the kb's `[edges]` table.
-3. `templates/starter` and `kbs/demo` built from it.
+3. `templates/starter` and `examples/demo` built from it.
 4. Thesis `kb.toml` -> `template = "academic-research"` (extend only; the engine rejects template edits). A `chore(schema)` commit on the kb repo.
 5. Engine tests on demo + template samples; a contract test per template.
 

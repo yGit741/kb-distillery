@@ -1,0 +1,18 @@
+# Modules allowed to reach raw/ directly today (Phase 3). Migrate one onto kb_distillery.storage and delete its line.
+dashboard/serve.py
+git/guard.py
+git/ship.py
+ingest/catalog.py
+ingest/gdrive.py
+ingest/mail.py
+ingest/scrap.py
+ingest/wordpress.py
+ingest/youtube/bundle.py
+lint/lint.py
+ops/invariants.py
+ops/nightly_report.py
+services/chat.py
+services/chat_agent.py
+services/corpus.py
+services/pipeline.py
+services/raw_card.py

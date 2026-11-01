@@ -62,7 +62,7 @@ Read `skills/<skill>/SKILL.md` before running a workflow.
 ### Lifecycle skills (git history, versions, PRs)
 
 Every knowledge operation is one commit on main: `kb(<op>): <summary> (kb-x.y.z)` — x paradigm, y schema, z step.
-Writer CLIs (`kb.ingest`, `kb.distill`) commit themselves; free-form wiki edits go through `wiki-edit`.
+Writer CLIs (`kb_distillery.ingest`, `kb_distillery.distill`) commit themselves; free-form wiki edits go through `wiki-edit`.
 Tooling is unversioned and ships as `infra/<feature>` PRs merged as `… (#N)`.
 
 | Skill | Purpose |
@@ -79,8 +79,8 @@ Tooling is unversioned and ships as `infra/<feature>` PRs merged as `… (#N)`.
 | Skill | Purpose |
 |-------|---------|
 | [create-skill](create-skill/SKILL.md) | Author new skills; runs through `lint-skills` gate (0 LLM) |
-| [backend-api](backend-api/SKILL.md) | Add/change a FastAPI router, model, service and tests under `backend/`; regenerate `schema.d.ts` (0 LLM) |
-| [app-ui](app-ui/SKILL.md) | Conventions for building screens in `frontend/` (tokens, palette, data-model words, porting checklist; 0 LLM) |
+| [backend-api](backend-api/SKILL.md) | Add/change a FastAPI router, model, service and tests under `src/kb_distillery/`; regenerate `schema.d.ts` (0 LLM) |
+| [app-ui](app-ui/SKILL.md) | Conventions for building screens in `web/` (tokens, palette, data-model words, porting checklist; 0 LLM) |
 
 Template: [`SKILL_TEMPLATE.md`](SKILL_TEMPLATE.md) (not a skill; it has no `SKILL.md`).
 
@@ -98,7 +98,7 @@ pixi run lint-skills
 pixi run sync-skills    # fails if lint-skills fails
 ```
 
-**Vault guardrails** (any skill that touches data): `raw/` immutable (use CLI); `think/` human-only; open ingest session → no direct `wiki/` writes (`guard.py`); post-write → `python3 -m kb.lint.lint`.
+**Vault guardrails** (any skill that touches data): `raw/` immutable (use CLI); `think/` human-only; open ingest session → no direct `wiki/` writes (`guard.py`); post-write → `python3 -m kb_distillery.lint.lint`.
 
 **Every writing skill ends in one op commit.** Writer CLIs commit automatically (`--no-commit` to skip); any other wiki edit is wrapped in `pixi run ops -- begin …` / `pixi run ops -- commit` (see `wiki-edit`). Skills never run git writes themselves.
 
@@ -107,26 +107,26 @@ pixi run sync-skills    # fails if lint-skills fails
 ## CLI
 
 ```bash
-python3 -m kb.ingest resolve <url|arxiv|slug|title>  # check vault first (0 LLM)
-python3 -m kb.ingest scrap <url|path> [--type articles|notes|slides|web|blog]
-python3 -m kb.ingest scrap-gdrive --dry-run
-python3 -m kb.ingest scrap-wordpress <site> --prefix <collection short>   # whole WordPress.com blog → inbox
-python3 -m kb.ingest scrap-mail <mbox-or-eml> [--slug thread-slug] [--force]
-python3 -m kb.ingest catalog <inbox-path> [--collection <collection|person>] [--format <folder>] [--title T]
-python3 -m kb.ingest drain-inbox [--collection <collection|person>]
-python3 -m kb.ingest easy-digest <slug|raw>
-python3 -m kb.ingest full-digest <raw>    # begin→extract→map→draft→finalize
-python3 -m kb.ingest full-digest <collection-slug> --row N   # one course/series Contents row
-python3 -m kb.ingest deep-digest <raw> --confirm-heavy
-python3 -m kb.distill propose <think-file> [--from bootstrap.md]
-python3 -m kb.distill revise <think-file>
-python3 -m kb.distill apply <think-file> [--cleanup]
-python3 -m kb.search.query candidates "<keywords>"
-python3 -m kb.search.query mocs                    # topic pages (theme-*) as entry points
-python3 -m kb.core.coherence status
-python3 -m kb.search.semfind bundle --seeds wiki/foo.md --source manual
-python3 -m kb.search.semfind topic theme-info-theory   # `theme` / `moc` aliases kept
-python3 -m kb.maintenance.export
+python3 -m kb_distillery.ingest resolve <url|arxiv|slug|title>  # check vault first (0 LLM)
+python3 -m kb_distillery.ingest scrap <url|path> [--type articles|notes|slides|web|blog]
+python3 -m kb_distillery.ingest scrap-gdrive --dry-run
+python3 -m kb_distillery.ingest scrap-wordpress <site> --prefix <collection short>   # whole WordPress.com blog → inbox
+python3 -m kb_distillery.ingest scrap-mail <mbox-or-eml> [--slug thread-slug] [--force]
+python3 -m kb_distillery.ingest catalog <inbox-path> [--collection <collection|person>] [--format <folder>] [--title T]
+python3 -m kb_distillery.ingest drain-inbox [--collection <collection|person>]
+python3 -m kb_distillery.ingest easy-digest <slug|raw>
+python3 -m kb_distillery.ingest full-digest <raw>    # begin→extract→map→draft→finalize
+python3 -m kb_distillery.ingest full-digest <collection-slug> --row N   # one course/series Contents row
+python3 -m kb_distillery.ingest deep-digest <raw> --confirm-heavy
+python3 -m kb_distillery.distill propose <think-file> [--from bootstrap.md]
+python3 -m kb_distillery.distill revise <think-file>
+python3 -m kb_distillery.distill apply <think-file> [--cleanup]
+python3 -m kb_distillery.search.query candidates "<keywords>"
+python3 -m kb_distillery.search.query mocs                    # topic pages (theme-*) as entry points
+python3 -m kb_distillery.core.coherence status
+python3 -m kb_distillery.search.semfind bundle --seeds wiki/foo.md --source manual
+python3 -m kb_distillery.search.semfind topic theme-info-theory   # `theme` / `moc` aliases kept
+python3 -m kb_distillery.maintenance.export
 pixi run lint-skills
 pixi run ops -- status
 pixi run ops -- log --kb

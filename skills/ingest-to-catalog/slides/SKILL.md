@@ -23,5 +23,5 @@ description: Catalog slide decks from inbox to raw/presentations/. Corpus row on
 ## CLI
 
 ```bash
-python3 -m kb.ingest catalog raw/inbox/<deck>.pdf --format presentations --collection course-runi-rl --title "Lecture 3 · DP"
+python3 -m kb_distillery.ingest catalog raw/inbox/<deck>.pdf --format presentations --collection course-runi-rl --title "Lecture 3 · DP"
 ```

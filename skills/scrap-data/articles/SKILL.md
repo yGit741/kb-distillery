@@ -14,7 +14,7 @@ description: Download arXiv or PDF URLs to raw/inbox/. Use with scrap-data for p
 ## CLI
 
 ```bash
-python3 -m kb.ingest scrap <arxiv-or-pdf-url> --type articles
+python3 -m kb_distillery.ingest scrap <arxiv-or-pdf-url> --type articles
 ```
 
 ## Behavior

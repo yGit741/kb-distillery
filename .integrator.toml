@@ -12,15 +12,15 @@ round_open = "pixi run ship -- round open"
 round_status = "pixi run ship -- round status"  # + round number
 events = "pixi run ship -- events"  # + PR number
 claims = "pixi run ship -- claims"
-# Agents never deploy: they nudge the deploy owner (kb.share.owner, PR #140) and wait for its status.
-deploy_request = "pixi run python -m kb.share.owner nudge"
-deploy_status = "pixi run python -m kb.share.owner status"
+# Agents never deploy: they nudge the deploy owner (kb_distillery.share.owner, PR #140) and wait for its status.
+deploy_request = "pixi run python -m kb_distillery.share.owner nudge"
+deploy_status = "pixi run python -m kb_distillery.share.owner status"
 deployed_match = "deployed"
 
 settle_ms = 1500
 error_texts = ["Could not load", "Something went wrong", "Not Found"]
 
-# From frontend/src/routes/defs.ts (Share is private-profile only, absent from the local app).
+# From web/src/routes/defs.ts (Share is private-profile only, absent from the local app).
 screens = [
   { id = "home", path = "/" },
   { id = "graph", path = "/graph" },
@@ -72,7 +72,7 @@ selector = "[data-testid=tile-merges-value]"
 tile = "stale"
 screen = "/system"
 endpoint = "/api/ops"
-# kinds mirror STALE_KINDS in frontend/src/features/system/model.ts
+# kinds mirror STALE_KINDS in web/src/features/system/model.ts
 path = "hygiene.findings|filter:kind=idle-branch,missing-worktree,detached-worktree,idle-pr|count|map:0=none"
 selector = "[data-testid=tile-stale-value]"
 
@@ -88,7 +88,7 @@ selector = "[data-testid=tile-version-value]"
 tile = "deploy"
 screen = "/system"
 endpoint = "/api/ops"
-# deploy owner state (kb.share.owner) vs origin/main; bad = failed outcome, owner missing/dead, or live != main > 30 min
+# deploy owner state (kb_distillery.share.owner) vs origin/main; bad = failed outcome, owner missing/dead, or live != main > 30 min
 path = "deploy.owner_installed|default:unknown|map:false=owner not installed,true="  # the tone carries the rest
 match = "contains"
 fail_tones = ["bad"]

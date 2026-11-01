@@ -9,7 +9,7 @@ description: Answer questions from the wiki — index-first navigation, citation
 
 Karpathy **Query** operation: search the wiki, read pages, synthesize with citations. Good answers can be filed back as new wiki pages.
 
-This is **not** `kb.ingest resolve` (dedup before scrap). This is **reading** the knowledge base.
+This is **not** `kb_distillery.ingest resolve` (dedup before scrap). This is **reading** the knowledge base.
 
 ## Triggers
 
@@ -26,16 +26,16 @@ This is **not** `kb.ingest resolve` (dedup before scrap). This is **reading** th
 ## Phase 1 — locate (0 LLM via CLI)
 
 ```bash
-python3 -m kb.search.query candidates "<question keywords>"
-python3 -m kb.search.query mocs                    # topic pages (theme-*) as entry points, for broad questions
-python3 -m kb.lint.lint --health                 # optional: orphans, broken links
+python3 -m kb_distillery.search.query candidates "<question keywords>"
+python3 -m kb_distillery.search.query mocs                    # topic pages (theme-*) as entry points, for broad questions
+python3 -m kb_distillery.lint.lint --health                 # optional: orphans, broken links
 ```
 
 1. **Read `index.md`** — skim the relevant section (topics, questions, sources, ideas).
 2. **Run `candidates`** — supplements index with full-text term hits.
 3. **Pick 3–8 slugs** — prefer topic pages (`theme-*`) + `q-*` for thesis questions; Source pages
    (`paper-`, `part-`, `lecture-`, `article-`, `mail-`, `chat-`) for citations.
-   Old slugs (pre-`theme-` topic slugs, unprefixed papers) live in `aliases:` — `python3 -m kb.ingest resolve <old-slug>`.
+   Old slugs (pre-`theme-` topic slugs, unprefixed papers) live in `aliases:` — `python3 -m kb_distillery.ingest resolve <old-slug>`.
 
 Never claim “nothing in the vault” until both index and `candidates` were checked.
 
@@ -53,8 +53,8 @@ the pages citing those files plus the ideas/questions at least two of them link.
 "in scope scope-x …" (or the chat's Scope select is set), answer **only from that projection**.
 
 ```bash
-python3 -m kb.search.query scope-status scope-x                    # title, coverage, page list, undigested files
-python3 -m kb.search.query candidates "<keywords>" --scope scope-x # rank within the scope's pages only
+python3 -m kb_distillery.search.query scope-status scope-x                    # title, coverage, page list, undigested files
+python3 -m kb_distillery.search.query candidates "<keywords>" --scope scope-x # rank within the scope's pages only
 ```
 
 1. Run `scope-status` first; the page list is the whole universe for this answer.
@@ -75,7 +75,7 @@ Karpathy: explorations should compound, not die in chat.
 | Personal deliberation | `think/*.md` (human-owned; never agent-edit directly) |
 | Comparison / analysis worth keeping | idea or question page; cross-link sources |
 
-After filing: `python3 -m kb.lint.lint` and optional `meta/log.md` entry:
+After filing: `python3 -m kb_distillery.lint.lint` and optional `meta/log.md` entry:
 `## [YYYY-MM-DD] query | <short title>`
 
 ## Entry points for this vault
@@ -90,7 +90,7 @@ After filing: `python3 -m kb.lint.lint` and optional `meta/log.md` entry:
 
 The wiki is the only thing this skill reads. When a source is needed — a contradiction between
 pages, an undigested source relevant to the question, or an explicit request about an undigested
-file — invoke `explore-raw-data` (`python3 -m kb.search.explore_raw find|read|check|recommend …`).
+file — invoke `explore-raw-data` (`python3 -m kb_distillery.search.explore_raw find|read|check|recommend …`).
 Attribute every raw-derived sentence with the raw path and the reason you opened it.
 
 ## Scale note

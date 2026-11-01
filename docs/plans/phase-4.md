@@ -12,7 +12,7 @@ Think lives outside every kb. `kbd distill <note> --to a,b` sends a note into ch
 
 ## Billing
 
-**Billing.** Distill proposals go through `kb.llm`. Default backend: subscription (`claude -p`, your login). `api` and `batch` stay selectable per run (`--backend`, `$KB_LLM_BACKEND`); batch bills the Anthropic key, half price, asynchronous.
+**Billing.** Distill proposals go through `kb_distillery.llm`. Default backend: subscription (`claude -p`, your login). `api` and `batch` stay selectable per run (`--backend`, `$KB_LLM_BACKEND`); batch bills the Anthropic key, half price, asynchronous.
 
 ## Done when
 

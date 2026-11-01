@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Thesis Wiki</title>
+  <script src="/static/shell.js"></script>
+  <link rel="stylesheet" href="/static/shell.css">
+  <link rel="stylesheet" href="/static/dashboard.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" defer></script>
+  <script src="/static/dashboard.js" defer></script>
+</head>
+<body class="has-app-nav">
+  {{NAV}}
+  <header class="top">
+    <div>
+      <h1>Thesis Wiki Health</h1>
+      <p class="subtle">Updated {{GENERATED_AT}} · reload to refresh</p>
+    </div>
+    <div class="top-actions">
+      <button type="button" class="refresh-btn" id="btn-refresh" onclick="location.reload()">Refresh</button>
+    </div>
+  </header>
+
+  <div class="grid-metrics">{{CARDS}}</div>
+
+  <div class="grid-charts">
+    <section class="card chart-card">
+      <h2>Inbound links</h2>
+      <p class="chart-help">Pages by how many other wiki pages link to them (0 = orphan).</p>
+      <canvas id="chart-indegree"></canvas>
+    </section>
+    <section class="card chart-card">
+      <h2>Lint phases</h2>
+      <p class="chart-help">Where time goes during a full health collection run.</p>
+      <canvas id="chart-lint"></canvas>
+    </section>
+    <section class="card chart-card">
+      <h2>Coherence by kind</h2>
+      <p class="chart-help">Open semantic coherence warnings grouped by disposition kind.</p>
+      <canvas id="chart-coherence"></canvas>
+    </section>
+    <section class="card chart-card">
+      <h2>Lint issues</h2>
+      <p class="chart-help">Errors and warnings by source category (schema, links, coherence, …).</p>
+      <canvas id="chart-lint-issues"></canvas>
+    </section>
+  </div>
+
+  {{EXTRA}}
+  {{ORPHAN_NOTE}}
+
+  <footer class="footer">Run <code>python3 -m kb_distillery.dashboard</code> · API <code>/api/health</code></footer>
+
+  <script id="snapshot" type="application/json">{{SNAPSHOT_JSON}}</script>
+</body>
+</html>

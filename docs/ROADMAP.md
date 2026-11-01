@@ -14,7 +14,7 @@ enters the repo. The thesis kb is user zero.
 ## Target architecture
 
 1. One builder repo: engine + `templates/` + `kbs/`. `kbs/` is gitignored
-   except `kbs/demo`. Each kb is its own git repo inside `kbs/` (the demo is
+   except `examples/demo`. Each kb is its own git repo inside `kbs/` (the demo is
    the one exception: the engine repo tracks it). No submodules.
 2. Templates own the schema (goal, node types, typed edges, fields, areas, lint
    rules, skills/prompts, views, migrations, samples). Versioned. A kb's
@@ -38,7 +38,7 @@ enters the repo. The thesis kb is user zero.
 - No remotes, no push before Phase 8.
 - No git debt: each phase ends with every branch merged or deleted, no stale
   worktrees, clean `git status`, and a `phase-N-done` tag.
-- Knowledge never enters the engine repo; only `kbs/demo` is tracked.
+- Knowledge never enters the engine repo; only `examples/demo` is tracked.
 - Every LLM feature goes through the shared LLM tool (subscription, API,
   Batch). A phase that adds or changes one has a **Billing** section.
 - Plan → approval → autonomous work. UI changes are proven with screenshots.
@@ -79,11 +79,11 @@ docs and skills. No compatibility alias.
 `kbd --help` works; tests green.
 
 **1.3 Layout move.** `kb-yonatan-thesis` → `kbs/yonatan-thesis` (`.git` and
-`raw/` move with it; same disk, instant). `kb-job-search` → `kbs/demo`
+`raw/` move with it; same disk, instant). `kb-job-search` → `examples/demo`
 (tracked; check it is public-safe first). `think` → `kbs/think` (own repo).
-`.gitignore`: `kbs/*`, `!kbs/demo/`. Delete the empty `knowledge-bases/`.
+`.gitignore`: `kbs/*`, `!examples/demo/`. Delete the empty `knowledge-bases/`.
 *DoD:* thesis `git log` full and `git fsck` clean; engine `git status` shows
-only `kbs/demo` as new; `raw/` matches the 1.1 manifest.
+only `examples/demo` as new; `raw/` matches the 1.1 manifest.
 
 **1.4 One discovery path.** A kb is a folder in `kbs/`, or `--kb <path>`.
 Delete `knowledge-bases.toml` and its loader, the `../knowledge-bases/`
@@ -127,7 +127,7 @@ Depends on: Phase 1.
 - ∥ Template spec: versioned format (goal, types, typed edges, fields, areas,
   lint rules, skills/prompts, views, migrations, samples).
 - ∥ `templates/academic-research` from the thesis types, areas, skills, views.
-- ∥ `templates/starter`, used by `kbs/demo`.
+- ∥ `templates/starter`, used by `examples/demo`.
 - Thesis `kb.toml` → `template = "academic-research"`, extend only; engine
   rejects template edits. Cypher edge types come from the template.
 - Engine tests run on demo + template samples; contract tests per template.
@@ -170,7 +170,7 @@ dashboard in minutes, no LLM.
 ## Phase 6 · Decouple sharing
 
 Depends on: Phase 5.
-- Publisher interface outside core; remove the 8 core imports of `kb.share`.
+- Publisher interface outside core; remove the 8 core imports of `kb_distillery.share`.
 - Cloudflare becomes the first publisher plugin, off by default; live site
   untouched.
 

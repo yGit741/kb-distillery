@@ -32,7 +32,7 @@ pixi run your-task
 
 1. Step one
 2. Step two
-3. Run `python3 -m kb.lint.lint` after vault writes
+3. Run `python3 -m kb_distillery.lint.lint` after vault writes
 
 ## Output
 

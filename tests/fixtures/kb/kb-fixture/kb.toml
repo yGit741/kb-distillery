@@ -1,0 +1,11 @@
+# Test fixture knowledge base: follows the academic-research template (so the suite exercises the template path)
+# and adds a small area whitelist. tests/conftest.py points KB_ROOT here when the caller picked no kb.
+[kb]
+id = "fixture"
+name = "Test Fixture"
+schema_version = "1.4"
+template = "academic-research"
+
+[types]
+areas = ["statistics", "learning-theory", "info-theory", "boolean-analysis", "fourier-analysis"]
+source_fields = ["authors", "venue", "arxiv-id"]
