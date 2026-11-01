@@ -45,8 +45,9 @@ except ImportError:                         # pragma: no cover
     arxiv_meta = None
 
 from kb.paths import vault_root
+from kb.core.links import WIKILINK_TARGET
 ROOT = vault_root()  # KB_ROOT: share build
-LINK = re.compile(r"\[\[([^\]|#\\]+)")
+LINK = WIKILINK_TARGET
 # Fenced blocks and inline code: `[[1, 2], [3, 4]]` in a code sample is not a wikilink.
 CODE = re.compile(r"^\s*(?:>\s*)*(```|~~~).*?^\s*(?:>\s*)*\1[^\n]*$|`[^`\n]+`", re.M | re.S)
 errors, warnings, notices = [], [], []
