@@ -5,7 +5,8 @@ import re
 import sys
 import unittest
 
-from kb_distillery.paths import CHECKOUT_ROOT as ROOT   # dashboard, skills: code, not vault content
+from kb_distillery.kbconfig import checkout_root
+ROOT = checkout_root()   # code, not vault content
 
 from kb_distillery.dashboard.shell import TABS, inject_nav
 

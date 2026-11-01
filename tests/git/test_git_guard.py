@@ -6,7 +6,8 @@ import subprocess
 import sys
 import unittest
 
-from kb_distillery.paths import CHECKOUT_ROOT as ROOT   # the hook script is code
+from kb_distillery.kbconfig import checkout_root
+ROOT = checkout_root()   # code, not vault content
 
 from kb_distillery.git import git_guard
 

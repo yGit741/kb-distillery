@@ -40,9 +40,12 @@ import subprocess
 import time
 import sys
 
-from kb_distillery.paths import CHECKOUT_ROOT, vault_root
+from kb_distillery.kbconfig import checkout_root
+from kb_distillery.paths import vault_root
 META_DIR = os.path.join(vault_root(), "meta")
-ROOT = CHECKOUT_ROOT     # the tooling lane is the explorer repo; knowledge commits go through kb_distillery.ops in the kb's repo
+# The tooling lane is the explorer repo (knowledge commits go through kb_distillery.ops in the kb's repo). None for an
+# installed package, which has no repository to ship: `_main` refuses with require_repo_root.
+ROOT = checkout_root()
 
 from kb_distillery.maintenance.daily_sync import changed_paths, has_open_sessions, run_git
 from kb_distillery.git import app_token, claims, commit_policy, events, rounds
@@ -1340,6 +1343,12 @@ def main(argv=None):
 
 
 def _main(argv):
+    from kb_distillery.config.resources import NotInCheckout, require_repo_root
+    try:
+        require_repo_root("ship")
+    except NotInCheckout as e:
+        print(f"error: {e}", file=sys.stderr)
+        return 2
     if not argv or argv[0] not in SUBCOMMANDS:
         return legacy(argv)
     p = argparse.ArgumentParser(prog="ship", description="Ship tooling through infra/* PRs")

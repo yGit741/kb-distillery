@@ -13,7 +13,7 @@ import sys
 from pathlib import Path
 
 from kb_distillery.flags.registry import FLAGS_TOML, FlagError, load
-from kb_distillery.paths import CHECKOUT_ROOT as ROOT   # generated files and tests are code: the explorer, not the vault
+from kb_distillery.config.resources import require_repo_root   # generated files and tests are code: the explorer, not the vault
 
 PY_RE = re.compile(r"""mark\.flag\(\s*["']([^"']+)["']\s*,\s*(True|False)\b""")
 TS_RE = re.compile(r"""withFlag\(\s*["']([^"']+)["']\s*,\s*(true|false)\b""")
@@ -49,8 +49,8 @@ def missing(names, found) -> list[str]:
             if not found.get(n, {}).get(on)]
 
 
-def main(argv=None, root: Path | str = ROOT) -> int:
-    root = Path(root)
+def main(argv=None, root: Path | str | None = None) -> int:
+    root = Path(root) if root is not None else require_repo_root("flags coverage")
     ap = argparse.ArgumentParser(prog="kb_distillery.flags.coverage", description=__doc__.splitlines()[0])
     ap.add_argument("--flags", default=None, help="registry path (default meta/flags.toml)")
     args = ap.parse_args(argv)

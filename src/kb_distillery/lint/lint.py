@@ -85,8 +85,9 @@ def hooks_health():
     """Return (status_text, all_ok) for the agent write-guard hook config (Claude Code's `.claude/settings.json`)."""
     claude_ok = False
     from kb_distillery import paths
-    claude_path = os.path.join(paths.CHECKOUT_ROOT, ".claude", "settings.json")     # hook configs are code: the explorer's
-    if os.path.isfile(claude_path):
+    from kb_distillery.kbconfig import checkout_root
+    claude_path = os.path.join(checkout_root() or "", ".claude", "settings.json")   # hook configs are code: the explorer's
+    if checkout_root() and os.path.isfile(claude_path):
         try:
             with open(claude_path, encoding="utf-8") as f:
                 claude_ok = _names_guard(f.read())
@@ -1321,8 +1322,8 @@ def main():
         argv = [a for a in sys.argv[1:] if a != "--dashboard"]
         return dash_main(argv or None)
 
-    from kb_distillery import paths as _paths
-    if os.path.realpath(ROOT) == os.path.realpath(_paths.CHECKOUT_ROOT) and not os.path.isdir(os.path.join(ROOT, "wiki")):
+    from kb_distillery.kbconfig import checkout_root
+    if checkout_root() and os.path.realpath(ROOT) == os.path.realpath(checkout_root()) and not os.path.isdir(os.path.join(ROOT, "wiki")):
         # No knowledge base selected: ROOT is an engine checkout with no vault in it, and lint would write index.md and meta/ there.
         print("error: no knowledge base selected — lint would write index.md and meta/ into the engine checkout.\n"
               "       pass --kb <id|path> or set KB (pixi run kb-list shows them).", file=sys.stderr)

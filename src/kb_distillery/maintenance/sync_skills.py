@@ -10,9 +10,10 @@ import os
 import shutil
 import sys
 
-from kb_distillery.paths import CHECKOUT_ROOT, vault_root
+from kb_distillery.kbconfig import checkout_root
+from kb_distillery.paths import vault_root
 
-ROOT = CHECKOUT_ROOT          # skills are code: they live with the explorer
+ROOT = checkout_root() or os.getcwd()          # skills are code: they live with the explorer (dev tool: a checkout)
 SRC = os.path.join(ROOT, "skills")
 LINK_TARGET = os.path.join("..", "skills")
 LINKS = [os.path.join(ROOT, ".claude", "skills")]

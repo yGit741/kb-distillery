@@ -11,7 +11,7 @@ from unittest.mock import patch
 
 from kb_distillery import kbconfig
 
-CHECKOUT = kbconfig.CHECKOUT_ROOT
+CHECKOUT = kbconfig.checkout_root()
 DEMO = os.path.join(CHECKOUT, "examples", "demo")
 GENERATED = ("index.md", "meta/corpus.tsv", "meta/coherence-warnings.tsv")
 

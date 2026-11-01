@@ -11,6 +11,7 @@ from contextlib import redirect_stderr
 from unittest import mock
 
 from kb_distillery import paths
+from kb_distillery import kbconfig
 from kb_distillery.core import digest, schema
 from kb_distillery.git import commit_policy as cp
 from kb_distillery.git import guard
@@ -90,10 +91,10 @@ class KbService(unittest.TestCase):
 
     def test_git_ceiling_never_hides_the_engines_own_repo(self):
         ceilings = {os.path.realpath(p) for p in os.environ["GIT_CEILING_DIRECTORIES"].split(os.pathsep) if p}
-        self.assertNotIn(os.path.realpath(paths.CHECKOUT_ROOT), ceilings)
-        top = subprocess.run(["git", "rev-parse", "--show-toplevel"], cwd=os.path.join(paths.CHECKOUT_ROOT, "backend"),
+        self.assertNotIn(os.path.realpath(kbconfig.checkout_root()), ceilings)
+        top = subprocess.run(["git", "rev-parse", "--show-toplevel"], cwd=os.path.join(kbconfig.checkout_root(), "src"),
                              capture_output=True, text=True, check=False)
-        self.assertEqual(os.path.realpath(top.stdout.strip()), os.path.realpath(paths.CHECKOUT_ROOT), top.stderr)
+        self.assertEqual(os.path.realpath(top.stdout.strip()), os.path.realpath(kbconfig.checkout_root()), top.stderr)
 
     def test_git_state_of_a_plain_folder_never_walks_up(self):
         from kb_distillery.services.kb import git_state
@@ -106,7 +107,7 @@ class KbFlag(unittest.TestCase):
         code = ("import sys; sys.argv += ['--kb', 'nope', 'status']; import os; os.environ.pop('KB', None); "
                 "import kb_distillery.kbconfig as k; print(sys.argv[1:], os.environ.get('KB'), k._ARGV_KB)")
         out = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True,
-                             env=dict(os.environ, PYTHONPATH=os.path.join(paths.CHECKOUT_ROOT, "src")))
+                             env=dict(os.environ, PYTHONPATH=os.path.join(kbconfig.checkout_root(), "src")))
         self.assertEqual(out.stdout.strip(), "['status'] nope nope", out.stderr)
 
 

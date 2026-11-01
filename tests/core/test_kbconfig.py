@@ -138,7 +138,7 @@ class PathRefs(unittest.TestCase):
 
 
 class PrimaryRoot(unittest.TestCase):
-    """`kbs/` is the main checkout's, also when the code runs from a linked worktree."""
+    """The primary working tree is found from a linked worktree; hooks point into it (it outlives the worktree)."""
 
     def setUp(self):
         self.tmp = os.path.realpath(tempfile.mkdtemp())
@@ -155,30 +155,174 @@ class PrimaryRoot(unittest.TestCase):
     def tearDown(self):
         self.env.stop()
 
-    def test_main_checkout_is_its_own_primary(self):
-        with patch.object(kbconfig, "CHECKOUT_ROOT", self.main):
-            self.assertEqual(kbconfig.primary_root(), self.main)
-            self.assertEqual(kbconfig.bases_dir(), os.path.join(self.main, "kbs"))
+    def at(self, root):
+        return patch.object(kbconfig, "checkout_root", lambda: root)
 
-    def test_linked_worktree_resolves_to_the_main_checkouts_kbs(self):
-        with patch.object(kbconfig, "CHECKOUT_ROOT", self.work):
+    def test_main_checkout_is_its_own_primary(self):
+        with self.at(self.main):
             self.assertEqual(kbconfig.primary_root(), self.main)
-            self.assertEqual(kbconfig.bases_dir(), os.path.join(self.main, "kbs"))
+
+    def test_linked_worktree_finds_the_main_checkout(self):
+        with self.at(self.work):
+            self.assertEqual(kbconfig.primary_root(), self.main)
 
     def test_no_git_at_all_falls_back_to_the_checkout(self):
         plain = os.path.join(self.tmp, "export")
         os.makedirs(plain)
-        with patch.object(kbconfig, "CHECKOUT_ROOT", plain):
+        with self.at(plain):
             self.assertEqual(kbconfig.primary_root(), plain)
 
+    def test_an_installed_package_has_no_primary_root(self):
+        with self.at(None):
+            self.assertIsNone(kbconfig.primary_root())
+
     def test_hooks_path_is_relative_inside_kbs_and_absolute_elsewhere(self):
-        with patch.object(kbconfig, "CHECKOUT_ROOT", self.work):
+        with self.at(self.work):
             inside = os.path.join(self.main, "kbs", "thesis")
             os.makedirs(inside)
             self.assertEqual(kbconfig.hooks_path_for(inside), "../../scripts/kb-hooks")
             outside = os.path.join(self.tmp, "elsewhere", "notes")
             os.makedirs(outside)
             self.assertEqual(kbconfig.hooks_path_for(outside), os.path.join(self.main, "scripts", "kb-hooks"))
+
+    def test_hooks_path_of_an_installed_package_is_the_packaged_copy(self):
+        from kb_distillery.config import resources
+        with patch.object(resources, "repo_root", lambda: None):
+            self.assertTrue(kbconfig.hooks_path_for(os.path.join(self.tmp, "notes")).endswith(
+                os.path.join("_data", "scripts", "kb-hooks")))
+
+
+class BasesDir(unittest.TestCase):
+    """bases_dir() = $KB_DISTILLERY_HOME or ~/knowledge; the repo's kbs/ is a transitional, worktree-safe fallback."""
+
+    def setUp(self):
+        self.tmp = os.path.realpath(tempfile.mkdtemp())
+        self.home = os.path.join(self.tmp, "home")
+        self.main = os.path.join(self.tmp, "engine")
+        self.work = os.path.join(self.tmp, "wt")
+        os.makedirs(self.main)
+        _sh(self.main, "init", "-q", "-b", "main")
+        _sh(self.main, "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "--allow-empty", "-m", "init")
+        _sh(self.main, "worktree", "add", "-q", "-b", "x", self.work)
+        self.env = patch.dict(os.environ, {"HOME": self.tmp})
+        self.env.start()
+        for k in ("KB_BASES_DIR", "KB_DISTILLERY_HOME", "KB", "KB_ROOT"):
+            os.environ.pop(k, None)
+
+    def tearDown(self):
+        self.env.stop()
+
+    def at(self, root):
+        return patch.object(kbconfig, "checkout_root", lambda: root)
+
+    def test_default_is_knowledge_in_the_home_folder(self):
+        self.assertEqual(kbconfig.bases_dir(), os.path.join(self.tmp, "knowledge"))
+
+    def test_home_variable_replaces_it_and_expands_a_tilde(self):
+        with patch.dict(os.environ, {"KB_DISTILLERY_HOME": self.home}):
+            self.assertEqual(kbconfig.bases_dir(), self.home)
+        with patch.dict(os.environ, {"KB_DISTILLERY_HOME": "~/elsewhere"}):
+            self.assertEqual(kbconfig.bases_dir(), os.path.join(self.tmp, "elsewhere"))
+
+    def test_the_home_folder_wins_over_the_repo_kbs(self):
+        _write(os.path.join(self.home, "demo"), MINIMAL.replace("Demo", "In home"))
+        _write(os.path.join(self.main, "kbs", "demo"), MINIMAL)
+        with patch.dict(os.environ, {"KB_DISTILLERY_HOME": self.home}), self.at(self.main):
+            self.assertEqual(kbconfig.load("demo").name, "In home")
+
+    def test_an_id_missing_from_home_falls_back_to_the_repo_kbs(self):
+        _write(os.path.join(self.main, "kbs", "demo"), MINIMAL)
+        with patch.dict(os.environ, {"KB_DISTILLERY_HOME": self.home}), self.at(self.main):
+            self.assertEqual(kbconfig.load("demo").root, os.path.join(self.main, "kbs", "demo"))
+
+    def test_a_worktree_prefers_its_own_kbs_over_the_primarys(self):
+        """A bare id used from a worktree never resolves to (and so never writes into) the primary's copy when the
+        worktree has its own tracked copy."""
+        _write(os.path.join(self.main, "kbs", "demo"), MINIMAL.replace("Demo", "Primary copy"))
+        _write(os.path.join(self.work, "kbs", "demo"), MINIMAL.replace("Demo", "Worktree copy"))
+        with patch.dict(os.environ, {"KB_DISTILLERY_HOME": self.home}), self.at(self.work):
+            cfg = kbconfig.load("demo")
+        self.assertEqual(cfg.root, os.path.join(self.work, "kbs", "demo"))
+        self.assertEqual(cfg.name, "Worktree copy")
+
+    def test_a_worktree_using_a_primary_only_kb_says_so(self):
+        """The thesis kb is untracked and exists only in the primary: it still opens from a worktree (the ship gates
+        need it), loudly, never silently."""
+        import io
+        from contextlib import redirect_stderr
+        _write(os.path.join(self.main, "kbs", "thesis"), MINIMAL.replace('"demo"', '"thesis"'))
+        err = io.StringIO()
+        with patch.dict(os.environ, {"KB_DISTILLERY_HOME": self.home}), self.at(self.work), redirect_stderr(err):
+            cfg = kbconfig.load("thesis")
+        self.assertEqual(cfg.root, os.path.join(self.main, "kbs", "thesis"))
+        self.assertIn("PRIMARY checkout", err.getvalue())
+
+    def test_the_primary_checkout_itself_does_not_warn(self):
+        import io
+        from contextlib import redirect_stderr
+        _write(os.path.join(self.main, "kbs", "thesis"), MINIMAL.replace('"demo"', '"thesis"'))
+        err = io.StringIO()
+        with patch.dict(os.environ, {"KB_DISTILLERY_HOME": self.home}), self.at(self.main), redirect_stderr(err):
+            kbconfig.load("thesis")
+        self.assertEqual(err.getvalue(), "")
+
+    def test_bases_dir_override_is_exclusive(self):
+        """$KB_BASES_DIR (the tests' override) never falls back to a repo's kbs/: tests stay hermetic."""
+        _write(os.path.join(self.main, "kbs", "demo"), MINIMAL)
+        os.makedirs(self.home)
+        with patch.dict(os.environ, {"KB_BASES_DIR": self.home}), self.at(self.main):
+            self.assertEqual(kbconfig.discover(), {})
+
+    def test_an_installed_package_has_no_repo_fallback(self):
+        with patch.dict(os.environ, {"KB_DISTILLERY_HOME": self.home}), self.at(None):
+            self.assertEqual(kbconfig.search_dirs(), [self.home])
+
+    def test_think_is_searched_like_the_kbs(self):
+        os.makedirs(os.path.join(self.main, "kbs", "think"))
+        with patch.dict(os.environ, {"KB_DISTILLERY_HOME": self.home}), self.at(self.main):
+            self.assertEqual(kbconfig.think_root(), os.path.join(self.main, "kbs", "think"))
+            os.makedirs(os.path.join(self.home, "think"))
+            self.assertEqual(kbconfig.think_root(), os.path.join(self.home, "think"))
+
+
+class UpwardDiscovery(unittest.TestCase):
+    """Inside a kb folder (outside the engine checkout) no KB / --kb is needed."""
+
+    def setUp(self):
+        self.tmp = os.path.realpath(tempfile.mkdtemp())
+        self.kb = os.path.join(self.tmp, "notes")
+        _write(self.kb, MINIMAL.replace('"demo"', '"notes"'))
+        os.makedirs(os.path.join(self.kb, "wiki", "deep"))
+        self.env = patch.dict(os.environ, {"KB_BASES_DIR": os.path.join(self.tmp, "none")})
+        self.env.start()
+        for k in ("KB", "KB_ROOT"):
+            os.environ.pop(k, None)
+        self.old = os.getcwd()
+
+    def tearDown(self):
+        os.chdir(self.old)
+        self.env.stop()
+
+    def test_the_nearest_kb_toml_above_the_current_folder_is_selected(self):
+        os.chdir(os.path.join(self.kb, "wiki", "deep"))
+        self.assertEqual(kbconfig.kb_above(), self.kb)
+        with patch.object(kbconfig, "_ARGV_KB", None):
+            self.assertEqual(kbconfig.selected(), self.kb)
+
+    def test_env_and_flag_win_over_the_folder(self):
+        os.chdir(self.kb)
+        with patch.dict(os.environ, {"KB": "other"}):
+            self.assertEqual(kbconfig.selected(), "other")
+
+    def test_a_folder_without_a_kb_above_it_selects_nothing(self):
+        os.makedirs(os.path.join(self.tmp, "empty"))
+        os.chdir(os.path.join(self.tmp, "empty"))
+        self.assertIsNone(kbconfig.kb_above())
+
+    def test_inside_the_engine_checkout_nothing_is_discovered(self):
+        os.chdir(self.kb)
+        with patch.object(kbconfig, "checkout_root", lambda: self.tmp):
+            self.assertIsNone(kbconfig.kb_above())
 
 
 class TypesFromConfig(unittest.TestCase):

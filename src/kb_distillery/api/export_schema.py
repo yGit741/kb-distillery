@@ -10,7 +10,7 @@ import subprocess
 import sys
 import tempfile
 
-from kb_distillery.paths import CHECKOUT_ROOT
+from kb_distillery.config.resources import require_repo_root
 
 OUT = os.path.join("web", "src", "api", "schema.d.ts")
 
@@ -36,7 +36,7 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--check", action="store_true")
     args = parser.parse_args(argv)
-    root = CHECKOUT_ROOT          # the frontend is code: it lives with the explorer, not the vault
+    root = str(require_repo_root("api-schema"))          # the frontend is code: it lives with the explorer, not the vault
     target = os.path.join(root, OUT)
     text = generate(root)
     if args.check:

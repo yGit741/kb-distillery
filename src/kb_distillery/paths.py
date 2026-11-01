@@ -11,10 +11,12 @@ templates/, migration state) stays in `meta/`.
 import os
 
 from kb_distillery import kbconfig
+from kb_distillery.config.resources import resource, root_resource
 
-# src/kb_distillery/paths.py -> kb -> src -> backend -> <checkout root>
-CODE_DIR = kbconfig.CODE_DIR                                                 # .../src/kb_distillery
-CHECKOUT_ROOT = kbconfig.CHECKOUT_ROOT                                       # the explorer checkout this code runs from
+CODE_DIR = kbconfig.CODE_DIR                                                 # the installed kb_distillery package folder
+# There is no import-time checkout root: an installed wheel has none. Code that works on the repository (ship, flags
+# codegen, repo lint, the web/ sources) calls `kb_distillery.config.resources.require_repo_root()`; package data is
+# found with `resource()` below.
 
 
 def vault_root():
@@ -29,9 +31,10 @@ KB = kbconfig.current()                    # the knowledge base's kb.toml, or No
 # up into an enclosing repository: every git call this process or its children make stops at these parents.
 # Never add the bases dir's parent (the engine itself): git would stop before it and lose the engine's own repo.
 os.environ.setdefault("GIT_CEILING_DIRECTORIES", os.pathsep.join(sorted({
-    os.path.dirname(os.path.realpath(ROOT)), os.path.dirname(os.path.realpath(CHECKOUT_ROOT))})))
+    os.path.dirname(os.path.realpath(ROOT)),
+    *([os.path.dirname(os.path.realpath(kbconfig.checkout_root()))] if kbconfig.checkout_root() else [])})))
 META_DIR = os.path.join(ROOT, "meta")      # vault metadata only (no code lives here any more)
-META_DEFAULTS_PATH = os.path.join(CHECKOUT_ROOT, "meta-defaults")   # explorer-owned defaults a kb's meta/ overrides
+META_DEFAULTS_PATH = str(root_resource("meta-defaults"))   # explorer-owned defaults a kb's meta/ overrides
 
 
 def vpath(*parts, root=None):
@@ -96,9 +99,9 @@ MIGRATE_PATH = vpath("meta", ".migrate")
 CACHE_PATH = vpath(".cache")
 EXPORT_PATH = vpath(".exported")
 
-# --- code-side resources (relative to the checkout the code runs from) ------------------------------------
-SKILLS_PATH = os.path.join(CHECKOUT_ROOT, "skills")
-TOOLS_PATH = os.path.join(CHECKOUT_ROOT, "scripts")
-PROMPTS_PATH = os.path.join(CODE_DIR, "prompts")
-MIGRATIONS_CODE_PATH = os.path.join(CODE_DIR, "migrations")
-SHARE_WORKER_PATH = os.path.join(CHECKOUT_ROOT, "share")
+# --- code-side resources (package data, found through kb_distillery.config.resources) -------------------------
+SKILLS_PATH = str(root_resource("skills"))
+TOOLS_PATH = str(root_resource("scripts"))          # a checkout only: the wheel ships scripts/kb-hooks, not the rest
+PROMPTS_PATH = str(resource("prompts"))
+MIGRATIONS_CODE_PATH = str(resource("migrations"))
+SHARE_WORKER_PATH = str(root_resource("share"))

@@ -6,21 +6,35 @@ from pathlib import Path
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse
 
-from kb_distillery.paths import CHECKOUT_ROOT, vault_root
+from kb_distillery.config.resources import repo_root, resource
+from kb_distillery.paths import vault_root
 
-FRONTEND = os.path.join(CHECKOUT_ROOT, "web")     # code, not vault content
-DIST = os.path.join(CHECKOUT_ROOT, "src", "kb_distillery", "_webapp")   # vite builds here (web/vite.config.ts)
 STAMP = ".src-hash"
 
 
-def ensure_app_dist(frontend=FRONTEND, runner=None, dist=DIST):
+def frontend_dir() -> str | None:
+    """The `web/` sources (code, not vault content): only in a checkout, None for an installed package."""
+    root = repo_root()
+    return str(root / "web") if root else None
+
+
+def dist_dir() -> str:
+    """The built shell, `src/kb_distillery/_webapp` (vite builds there, web/vite.config.ts; a wheel ships it)."""
+    return str(resource("_webapp"))
+
+
+def ensure_app_dist(frontend=None, runner=None, dist=None):
     """Build `src/kb_distillery/_webapp` from the current sources when they changed since the last build.
 
-    Returns "fresh", "built" or a warning string; a failed or impossible build keeps the old dist."""
+    Returns "fresh", "built" or a warning string; a failed or impossible build keeps the old dist. An installed
+    package has no sources to build from: it serves the bundled shell as it is."""
     from kb_distillery.webbuild import frontend_source_hash
 
+    frontend = frontend or frontend_dir()
+    dist = Path(dist or dist_dir())
+    if frontend is None:
+        return "fresh" if (dist / "index.html").is_file() else "no bundled web app in this install (build it from a checkout)"
     frontend = Path(frontend)
-    dist = Path(dist)
     want = frontend_source_hash(frontend)
     stamp = dist / STAMP
     if (dist / "index.html").is_file() and stamp.is_file() and stamp.read_text().strip() == want:
@@ -55,7 +69,7 @@ def _cache_for(full, assets_dir):
 
 
 def spa_router(dist=None) -> APIRouter:
-    dist = os.path.realpath(dist or DIST)
+    dist = os.path.realpath(dist or dist_dir())
     router = APIRouter(include_in_schema=False)
 
     assets_dir = os.path.join(dist, "assets")

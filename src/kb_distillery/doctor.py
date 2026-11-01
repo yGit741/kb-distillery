@@ -20,6 +20,7 @@ import sys
 from dataclasses import asdict, dataclass
 
 from kb_distillery import kbconfig
+from kb_distillery.config.resources import repo_root, resource
 from kb_distillery.publish.null import DEFAULT_REASON
 
 PASS, WARN, FAIL, INFO = "PASS", "WARN", "FAIL", "INFO"
@@ -165,9 +166,13 @@ def check_llm(avail=None) -> list[Check]:
 
 
 def check_frontend(frontend_dir: str, node: bool, dist: str = "") -> Check:
-    dist = dist or os.path.join(kbconfig.CODE_DIR, "_webapp")
+    """`frontend_dir` is the checkout's web/ folder, "" for an installed package (nothing to build from)."""
+    dist = dist or str(resource("_webapp"))
     if os.path.isfile(os.path.join(dist, "index.html")):
         return Check("frontend", PASS, "src/kb_distillery/_webapp is built")
+    if not frontend_dir:
+        return Check("frontend", WARN, "the web app is not bundled in this install",
+                     "install a release wheel, or run from a checkout of the repository (it builds the app on first launch)")
     if not node:
         return Check("frontend", WARN, "src/kb_distillery/_webapp is not built and node is missing", "run `pixi install` (it provides node), then launch again")
     if os.path.isdir(os.path.join(frontend_dir, "node_modules")):
@@ -189,7 +194,8 @@ def run_checks(ref: str | None = None) -> list[Check]:
         if cfg:
             checks += [check_kb_layout(cfg), check_storage(cfg), check_publisher(cfg)]
     checks += check_llm()
-    checks.append(check_frontend(os.path.join(kbconfig.CHECKOUT_ROOT, "web"), node.status == PASS))
+    repo = repo_root()
+    checks.append(check_frontend(str(repo / "web") if repo else "", node.status == PASS))
     return checks
 
 

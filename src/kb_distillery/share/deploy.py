@@ -38,11 +38,12 @@ import urllib.request
 from pathlib import Path
 from typing import Callable, Optional
 
+from kb_distillery.config.resources import root_resource
 from kb_distillery.share import contracts
 from kb_distillery.share.contracts import (ACCOUNT_SUBDOMAIN, CACHE_DIR, DEPLOY_MESSAGE_PREFIX, LOG_PATH, REPO,
                                   STATUS_PATH, WORKER_MAIN, WRANGLER_VERSION, DeployResult, StatusFile)
 
-WORKER_DIR = REPO / "share"      # the Cloudflare Worker sources (auth.js, admin.js, wrangler template)
+WORKER_DIR = root_resource("share")      # the Cloudflare Worker sources (auth.js, admin.js, wrangler template)
 CONFIG_PATH = Path(__file__).resolve().parent / "share.toml"
 DEFAULT_ALLOWED = ["ygreenshpan@gmail.com"]
 CF_ACCOUNT_ID = os.environ.get("KB_CLOUDFLARE_ACCOUNT_ID") or "7803af2d776eeea4c226f8e594121a10"  # the panel's REST calls (not secret)

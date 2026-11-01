@@ -10,7 +10,7 @@ import unittest
 
 from kb_distillery import kbconfig
 
-ENGINE = kbconfig.CHECKOUT_ROOT
+ENGINE = kbconfig.checkout_root()
 ENV_SH = os.path.join(ENGINE, "scripts", "kb-hooks", "env.sh")
 INSTALL = os.path.join(ENGINE, "scripts", "install-kb-hooks.sh")
 GIT_ENV = {**os.environ, "GIT_CONFIG_GLOBAL": os.devnull, "GIT_CONFIG_NOSYSTEM": "1"}

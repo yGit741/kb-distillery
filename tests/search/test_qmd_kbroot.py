@@ -11,8 +11,9 @@ import tempfile
 import unittest
 
 from kb_distillery import paths
+from kb_distillery import kbconfig
 
-QMD = os.path.join(paths.CHECKOUT_ROOT, "scripts", "qmd")
+QMD = os.path.join(kbconfig.checkout_root(), "scripts", "qmd")
 NODE = shutil.which("node")
 MINIMAL = '[kb]\nid = "{id}"\nname = "Probe"\nschema_version = "1.4"\n'
 
@@ -47,11 +48,11 @@ class SourceGuards(unittest.TestCase):
                 self.assertIn('from "./kbroot.mjs"', src, f"{f}: reads .cache without kbroot.mjs")
 
     def test_pixi_tasks_and_launcher_hand_node_the_kb(self):
-        pixi = open(os.path.join(paths.CHECKOUT_ROOT, "pixi.toml"), encoding="utf-8").read()
+        pixi = open(os.path.join(kbconfig.checkout_root(), "pixi.toml"), encoding="utf-8").read()
         for line in pixi.splitlines():
             if re.search(r"scripts/qmd/\w+\.mjs", line):
                 self.assertIn("scripts/qmd/with-kb.sh", line, f"pixi task runs a qmd tool without the kb: {line}")
-        launch = open(os.path.join(paths.CHECKOUT_ROOT, "scripts", "launch.sh"), encoding="utf-8").read()
+        launch = open(os.path.join(kbconfig.checkout_root(), "scripts", "launch.sh"), encoding="utf-8").read()
         for line in launch.splitlines():
             if "scripts/qmd/" in line and "node " in line and not line.lstrip().startswith("#"):
                 self.assertIn('KB_ROOT="$KB_ROOT_DIR"', line, f"launch.sh starts a qmd tool without the kb: {line}")
@@ -78,13 +79,13 @@ class Chain(unittest.TestCase):
 
     def _env(self, **extra):
         env = {k: v for k, v in os.environ.items() if k not in ("KB", "KB_ROOT")}
-        env.update(KB_BASES_DIR=self.bases, PYTHONPATH=os.path.join(paths.CHECKOUT_ROOT, "src"),
+        env.update(KB_BASES_DIR=self.bases, PYTHONPATH=os.path.join(kbconfig.checkout_root(), "src"),
                    PATH=os.path.dirname(sys.executable) + os.pathsep + env.get("PATH", ""))
         env.update(extra)
         return env
 
     def _with_kb(self, *args, **env):
-        return subprocess.run(["bash", os.path.join(QMD, "with-kb.sh"), self.probe, *args], cwd=paths.CHECKOUT_ROOT,
+        return subprocess.run(["bash", os.path.join(QMD, "with-kb.sh"), self.probe, *args], cwd=kbconfig.checkout_root(),
                               capture_output=True, text=True, env=self._env(**env))
 
     def test_kb_flag_resolves_to_the_kb_folder(self):
@@ -105,7 +106,7 @@ class Chain(unittest.TestCase):
     def test_unknown_kb_fails_instead_of_falling_back(self):
         out = self._with_kb("--kb", "no-such-kb")
         self.assertNotEqual(out.returncode, 0)
-        self.assertNotIn(os.path.realpath(paths.CHECKOUT_ROOT), out.stdout)
+        self.assertNotIn(os.path.realpath(kbconfig.checkout_root()), out.stdout)
 
     def test_kbroot_refuses_without_kb_root(self):
         out = subprocess.run([NODE, self.probe], capture_output=True, text=True, env=self._env())
@@ -122,7 +123,7 @@ class Chain(unittest.TestCase):
 class KbconfigRoot(unittest.TestCase):
     def test_root_prints_the_vault(self):
         out = subprocess.run([sys.executable, "-m", "kb_distillery.kbconfig", "root"], capture_output=True, text=True,
-                             env=dict(os.environ, PYTHONPATH=os.path.join(paths.CHECKOUT_ROOT, "src")))
+                             env=dict(os.environ, PYTHONPATH=os.path.join(kbconfig.checkout_root(), "src")))
         self.assertEqual(out.returncode, 0, out.stderr)
         self.assertEqual(os.path.realpath(out.stdout.strip()), os.path.realpath(paths.ROOT))
 
