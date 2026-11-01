@@ -1,4 +1,4 @@
-// Rendered by backend/src/kb/share/deploy.py into a temporary Worker directory — never edit the rendered copy.
+// Rendered by src/kb_distillery/share/deploy.py into a temporary Worker directory — never edit the rendered copy.
 // Placeholders (double braces): name, compatibility_date, assets, script — see deploy.render_wrangler.
 {
   "name": "{{name}}",

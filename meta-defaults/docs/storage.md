@@ -1,8 +1,8 @@
 # Storage connectors
 
-A knowledge base reaches its raw sources through a connector, so inputs can live in a local folder (the default), a Drive mount or a package's own store. Code: `backend/src/kb/storage/`. Contract suite: `backend/tests/storage/test_connector_contract.py`.
+A knowledge base reaches its raw sources through a connector, so inputs can live in a local folder (the default), a Drive mount or a package's own store. Code: `src/kb_distillery/storage/`. Contract suite: `tests/storage/test_connector_contract.py`.
 
-## The interface (`kb.storage.Connector`)
+## The interface (`kb_distillery.storage.Connector`)
 
 | Method | Does |
 |---|---|
@@ -27,7 +27,7 @@ connector = "local-folder"
 In code, engine modules use the facade, which is bound to the current kb's connector:
 
 ```python
-from kb.storage import raw
+from kb_distillery.storage import raw
 raw.exists("raw/web-clips/x.md")   raw.read_text(key)   raw.read_bytes(key)   raw.list("raw/printed-docs/")
 raw.info(key).short                # the 12 hex characters meta/corpus.tsv stores
 raw.path(key)                      # a local file valid for the process (the file itself for a local store)
@@ -35,9 +35,9 @@ raw.is_raw_key(value)              # the check serving code runs before it looks
 raw.put(key, data)                 # refused when the key exists: raw is immutable
 ```
 
-`kb.storage.for_kb()` returns the connector itself, for code that needs `local_copy` or `auth`. `raw.path` is for a web handler or a tool that needs a file after the call returns; `local_copy` is the scoped version that cleans up.
+`kb_distillery.storage.for_kb()` returns the connector itself, for code that needs `local_copy` or `auth`. `raw.path` is for a web handler or a tool that needs a file after the call returns; `local_copy` is the scoped version that cleans up.
 
-`python -m kb.lint.raw_access` lists the modules that still touch `raw/` directly; `backend/tests/storage/raw_access_baseline.txt` is their allowance, and a module you migrate must leave it.
+`python -m kb_distillery.lint.raw_access` lists the modules that still touch `raw/` directly; `tests/storage/raw_access_baseline.txt` is their allowance, and a module you migrate must leave it.
 
 ## Google Drive (`gdrive`)
 
@@ -56,11 +56,11 @@ Keys keep their shape: `raw/printed-docs/a.pdf` is `My Drive/<folder>/raw/printe
 
 ## Writing a connector in a package
 
-Subclass `kb.storage.Connector` (constructor `Cls(root, **options)`), then register it:
+Subclass `kb_distillery.storage.Connector` (constructor `Cls(root, **options)`), then register it:
 
 ```toml
 # your package's pyproject.toml
-[project.entry-points."kb.storage.connectors"]
+[project.entry-points."kb_distillery.storage.connectors"]
 my-store = "my_pkg.store:MyStore"
 ```
 

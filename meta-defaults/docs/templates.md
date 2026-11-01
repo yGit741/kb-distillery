@@ -1,6 +1,6 @@
 # Ontology templates
 
-A template is the schema a knowledge base follows: its page types, areas, source fields and typed edges. It is versioned in the engine (`templates/<name>/template.toml`); a kb names one and may extend it, never edit it. Code: `backend/src/kb/core/template.py`. Tests: `backend/tests/core/test_template.py`.
+A template is the schema a knowledge base follows: its page types, areas, source fields and typed edges. It is versioned in the engine (`templates/<name>/template.toml`); a kb names one and may extend it, never edit it. Code: `src/kb_distillery/core/template.py`. Tests: `tests/core/test_template.py`.
 
 ## A kb names its template
 
@@ -23,7 +23,7 @@ template = "academic-research"      # optional; without it the kb.toml carries i
 
 So a kb can add a type, an area or an edge type, and can restate what the template says, but cannot rename, recolour or remove anything the template defines. To change the template, change the template (a PR on `templates/<name>/`).
 
-The merge is in `KbConfig.section`, so every reader (`kb.core.kbtypes`, `kb.services.cypher.edge_config`) sees the same result, whatever imports first.
+The merge is in `KbConfig.section`, so every reader (`kb_distillery.core.kbtypes`, `kb_distillery.services.cypher.edge_config`) sees the same result, whatever imports first.
 
 ## The file
 
@@ -33,8 +33,8 @@ name = "academic-research"    # must equal the folder name
 version = 1                   # bump when a kb must notice the change
 description = "..."
 
-[types]    # the kb.toml [types] format, see backend/src/kb/core/kbtypes.py
-[edges]    # types, symmetric, note_required, labels: see backend/src/kb/services/cypher.py (edge_config)
+[types]    # the kb.toml [types] format, see src/kb_distillery/core/kbtypes.py
+[edges]    # types, symmetric, note_required, labels: see src/kb_distillery/services/cypher.py (edge_config)
 ```
 
 **Areas are the kb's, not the template's.** `areas` and `deprecated_areas` (the `area:` whitelist) stay out of a template: every area needs its own `theme-<area>` topic page, so a template that listed some would make lint fail for every kb that follows it. A kb adds them under its own `[types]`.

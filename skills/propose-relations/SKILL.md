@@ -11,7 +11,7 @@ description: >-
 
 **LLM tier:** light · **Budget:** ~1–2k per subject (Sonnet batch, about $0.005–0.02 a subject); `apply` is zero LLM
 
-`python -m kb.graph.propose` asks the LLM, once per subject page, which typed relations its text supports toward a small candidate list (its linked pages + top-5 vector neighbours). Proposals land only in `<kb>/.cache/relations-proposals.jsonl` (run state in `.cache/relations-propose/<run>/`); `submit`, `collect` and `review` change nothing in `wiki/`, `raw/`, `think/` or `meta/`. `apply` is the one step that edits pages, and only inside a `wiki-edit` session after the user has chosen what to accept.
+`python -m kb_distillery.graph.propose` asks the LLM, once per subject page, which typed relations its text supports toward a small candidate list (its linked pages + top-5 vector neighbours). Proposals land only in `<kb>/.cache/relations-proposals.jsonl` (run state in `.cache/relations-propose/<run>/`); `submit`, `collect` and `review` change nothing in `wiki/`, `raw/`, `think/` or `meta/`. `apply` is the one step that edits pages, and only inside a `wiki-edit` session after the user has chosen what to accept.
 
 ## Triggers
 
@@ -27,14 +27,14 @@ description: >-
 ## CLI
 
 ```bash
-python3 -m kb.graph.propose --kb <id> submit --run <name> --dry-run          # count, estimate, worst case
-python3 -m kb.graph.propose --kb <id> submit --run <name> [--backend batch|api|subscription] [--model sonnet] [--include-easy] [--include-people] [--limit N] [--max-usd 6]
-python3 -m kb.graph.propose --kb <id> collect --run <name> [--wait 3600]
-python3 -m kb.graph.propose --kb <id> review --run <name> [--min-confidence 0.7]
-python3 -m kb.graph.propose --kb <id> status [--run <name>]
-python3 -m kb.graph.propose --kb <id> repack --run <name>        # rebuild the proposals file from saved run state (no LLM): older runs kept weak rows only as rejected
-python3 -m kb.graph.propose --kb <id> apply --min-confidence 0.9 [--run <name>] [--kinds uses,extends] [--subjects a,b] [--limit N]          # dry run: lists what it would write
-python3 -m kb.graph.propose --kb <id> apply --min-confidence 0.9 … --write                                                                    # inside an ops session
+python3 -m kb_distillery.graph.propose --kb <id> submit --run <name> --dry-run          # count, estimate, worst case
+python3 -m kb_distillery.graph.propose --kb <id> submit --run <name> [--backend batch|api|subscription] [--model sonnet] [--include-easy] [--include-people] [--limit N] [--max-usd 6]
+python3 -m kb_distillery.graph.propose --kb <id> collect --run <name> [--wait 3600]
+python3 -m kb_distillery.graph.propose --kb <id> review --run <name> [--min-confidence 0.7]
+python3 -m kb_distillery.graph.propose --kb <id> status [--run <name>]
+python3 -m kb_distillery.graph.propose --kb <id> repack --run <name>        # rebuild the proposals file from saved run state (no LLM): older runs kept weak rows only as rejected
+python3 -m kb_distillery.graph.propose --kb <id> apply --min-confidence 0.9 [--run <name>] [--kinds uses,extends] [--subjects a,b] [--limit N]          # dry run: lists what it would write
+python3 -m kb_distillery.graph.propose --kb <id> apply --min-confidence 0.9 … --write                                                                    # inside an ops session
 ```
 
 ## Agent steps

@@ -22,7 +22,7 @@ description: Parse a local .mbox/.eml Gmail export into raw/inbox/mail-.../ with
 ## CLI
 
 ```bash
-python3 -m kb.ingest scrap-mail <path-to.mbox-or-.eml> [--slug thread-slug] [--force]
+python3 -m kb_distillery.ingest scrap-mail <path-to.mbox-or-.eml> [--slug thread-slug] [--force]
 ```
 
 ## Behavior

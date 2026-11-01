@@ -28,5 +28,5 @@ description: Catalog a raw/inbox/mail-.../ thread bundle to raw/emails/ as a cor
 ## CLI
 
 ```bash
-python3 -m kb.ingest catalog raw/inbox/mail-<dir> [--collection <collection|person>]
+python3 -m kb_distillery.ingest catalog raw/inbox/mail-<dir> [--collection <collection|person>]
 ```
