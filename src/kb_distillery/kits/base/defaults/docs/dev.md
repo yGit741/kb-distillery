@@ -38,7 +38,7 @@ Run a module with `python -m kb_distillery.<package>.<module>` (pixi tasks do; `
 
 ## distill and knowledge bases
 
-`distill <command> [args…]` (pixi installs it; `pixi run distill --help`) runs the module or script behind it, with the
+`distill <command> [args…]` (inside the repo: `pixi run distill --help`, or `python -m kb_distillery`; for a kb elsewhere see "`distill` on PATH" below) runs the module or script behind it, with the
 rest of the command line passed through, so `--kb` goes after the command. The package `src/kb_distillery/cli/` imports
 no kb code, so `--help` works with no knowledge base selected. `kbd` is the old name: it prints one deprecation line and
 forwards (`cli/legacy.py` holds the mapping table; it goes after one release).
@@ -60,12 +60,21 @@ old `thesis-kb` folder under `~/.config/` exists, every command but `doctor`/`ho
 moved for you.
 
 **One discovery path.** A knowledge base is a folder with a `kb.toml`: `~/knowledge/<id>/` (the bases dir is
-`$KB_DISTILLERY_HOME`, default `~/knowledge`; the folder name is the id; until the transitional lookup in `kbconfig.py` goes, an id not found there falls back to this checkout's `kbs/`), or any folder given as `--kb <path>`. A `--kb` /
+`$KB_DISTILLERY_HOME`, default `~/knowledge`; the folder name is the id; a checkout's own `kbs/` is not searched), or any folder given as `--kb <path>`. A `--kb` /
 `$KB` value containing `/` or starting with `.` or `~` is a path, anything else an id. Selection: `--kb`, then `$KB`,
 then the only kb there is. `$KB_ROOT` is internal (tools set it to hand a resolved folder to the processes they
 start, e.g. the share build, qmd, the hooks); users never do. `$KB_BASES_DIR` replaces the bases dir for tests only.
 `examples/demo` is the one kb tracked by this repo (a made-up job search, public); every other kb is its own git
 repo and never enters this one. The hooks in a kb repo (`src/kb_distillery/kits/base/hooks/`, installed by `distill hooks install --kb <id|path>`) run `distill hook <name>` on `$PATH` with `$KB_ROOT` set to that repo; they never look for the engine and fail closed (exit 2) when `distill` is missing or cannot import. The git hooks follow the kit through `core.hooksPath`; the two Claude guards are copied into `.claude/hooks/`, so they update on `distill hooks install`. A kb whose `core.hooksPath` still names a retired hook folder of this repo has no hooks: run `distill hooks install --kb <id|path>`.
+
+**`distill` on PATH, for a kb outside the repo.** The kb hooks (`distill hooks install`) call `distill hook …` and fail closed when it is missing, so a kb outside this checkout needs `distill` on `$PATH`. The pixi env deliberately holds no install of this package (a path dependency in `pixi.toml` was re-pointed at whichever worktree ran `pixi run`, breaking the shared env; `tests/test_pixi_env.py` guards it), so there is no `distill` script in `.pixi/`. Put a launcher on `$PATH` instead, e.g. `~/.local/bin/distill` (`chmod +x`):
+
+```sh
+#!/bin/sh
+PYTHONPATH="<engine>/src" exec "<engine>/.pixi/envs/default/bin/python" -m kb_distillery "$@"
+```
+
+`<engine>` is the primary checkout (never a worktree: it is removed when the work merges). `distill init` and `distill hooks install` print this hint when `distill` is not on `$PATH`. A wheel (`pip install`) gets the same command from `pyproject.toml` (`distill = kb_distillery.cli:main`, `kbd = kb_distillery.cli:kbd_main`; keep both stable). Inside the repo, imports resolve per checkout through `[activation.env] PYTHONPATH` in `pixi.toml`, so a worktree always runs its own code; never run `pixi install`/`pixi add` from a worktree.
 
 **Tags.** `pixi run ship -- tag <name> [--at REV] [--kb ID|PATH | --repo DIR]` puts an annotated tag on main of the
 engine, a kb or any repo (local, never pushed; refuses `kb-*`, which are `ops snapshot`'s). `ship merge --local --pr N
