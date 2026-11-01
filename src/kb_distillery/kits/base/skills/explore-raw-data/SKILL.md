@@ -17,7 +17,7 @@ The one door from the wiki to `raw/`. The CLI prints text and metadata; you reas
 
 ## Do NOT
 
-- Answer thesis questions from the wiki (that is `query-knowledge`)
+- Answer questions from the wiki (that is `query-knowledge`)
 - Read `raw/inbox/` — catalog first (`ingest-to-catalog`); the CLI refuses with exit 2
 - Digest (that is the digest ladder) or write anything (strictly read-only)
 - Open PDFs with Read — use `read` so extraction and page limits apply

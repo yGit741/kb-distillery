@@ -91,7 +91,7 @@ def test_refuses_to_overwrite_and_leaves_it_untouched(world):
     assert os.listdir(bases / "notes") == ["mine.md"]
 
 
-@pytest.mark.parametrize("bad", ["think", "yonatan-thesis", "demo", "../x", "a/b", ".hidden", "Up", ""])
+@pytest.mark.parametrize("bad", ["think", "demo", "../x", "a/b", ".hidden", "Up", ""])
 def test_refuses_reserved_and_unsafe_ids(world, bad):
     bases, _ = world
     with pytest.raises(init_kb.InitError):

@@ -33,7 +33,7 @@ distill lint --health                 # optional: orphans, broken links
 
 1. **Read `index.md`** — skim the relevant section (topics, questions, sources, ideas).
 2. **Run `candidates`** — supplements index with full-text term hits.
-3. **Pick 3–8 slugs** — prefer topic pages (`theme-*`) + `q-*` for thesis questions; Source pages
+3. **Pick 3–8 slugs** — prefer topic pages (`theme-*`) + `q-*` for the research questions; Source pages
    (`paper-`, `part-`, `lecture-`, `article-`, `mail-`, `chat-`) for citations.
    Old slugs (pre-`theme-` topic slugs, unprefixed papers) live in `aliases:` — `distill ingest resolve <old-slug>`.
 
@@ -80,7 +80,7 @@ After filing: `distill lint` and optional `meta/log.md` entry:
 
 ## Entry points for this vault
 
-- **Thesis direction:** `[[theme-info-theory]]`, `[[theme-quantum]]`, `[[theme-tensor-factorization]]`, open `q-*` pages
+- **Main directions:** the `theme-*` pages the question touches, and open `q-*` pages
 - **Course provenance:** `course-*` / `series-*` collections — their `## Contents` table lists every member and its digest
 - **Books:** `book-*` / `notebook-*` collections — `## Partition` links each digested `part-*`
 - **Activity:** `meta/log.md`

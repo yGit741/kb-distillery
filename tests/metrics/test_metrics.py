@@ -68,6 +68,18 @@ class SessionsTest(unittest.TestCase):
         p = self.session([human("say ok"), assistant("m1", usage())], sid="s3")
         self.assertEqual(sessions.parse_session(p)["task"], "chat")
 
+    def test_editing_the_current_tooling_layout_is_a_feature_and_the_retired_paths_are_not(self):
+        root = "/v"
+        for sid, path in (("e1", "src/kb_distillery/lint/lint.py"), ("e2", "web/src/App.tsx"), ("e3", "share/auth.js"),
+                          ("e4", "scripts/launch.sh"), ("e5", "tests/lint/test_lint.py"), ("e6", ".claude/skills/infra-pr/SKILL.md")):
+            p = self.session([human("tweak"), assistant("m1", usage(), tools=[("Edit", {"file_path": f"{root}/{path}"})])], sid=sid)
+            self.assertEqual(sessions.parse_session(p)["task"], "feature", path)
+        # the folders this repo no longer has (spelled in pieces so test_no_old_paths does not mistake them for stale references)
+        retired = ["back" + "end/src/kb/x.py", "front" + "end/a.ts", "ski" + "lls/q/SKILL.md", "too" + "ls/x.sh"]
+        for i, path in enumerate(retired):
+            p = self.session([human("tweak"), assistant("m1", usage(), tools=[("Edit", {"file_path": f"{root}/{path}"})])], sid=f"r{i}")
+            self.assertEqual(sessions.parse_session(p)["task"], "chat", path)       # retired folders: no longer a feature signal
+
     def test_golden_tag_and_human_turns_skip_tool_results(self):
         p = self.session([human("[golden:query-x] what do I know"),
                           {"type": "user", "origin": {"kind": "human"},

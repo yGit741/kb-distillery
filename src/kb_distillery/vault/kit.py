@@ -41,6 +41,8 @@ OWNED = ("types", "edges")                 # the kb.toml tables a kit owns
 ALLOWED = {"kit", *OWNED}                  # every top-level table a kit.toml may hold today
 KITS_DIR_ENV = "KB_KITS_DIR"
 KIT_FILE = "kit.toml"
+KB_DOCS = ("page-model", "kits", "publish", "storage", "raw-and-corpus", "collections", "think", "workflows",
+           "semantic-lint")      # the docs a kb's AGENTS.md routes to; `distill init` copies them to its `.claude/docs/`
 LEGACY_NAMES = {"starter": "base", "academic-research": "research"}      # the names a kb.toml `template =` may still use
 
 

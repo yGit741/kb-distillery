@@ -30,7 +30,7 @@ python3 -m kb_distillery.publish.export --include-raw-pdfs   # full raw/ binarie
 
 ## Output
 
-`.exported/yonatan-thesis-kb-<YYYY-MM-DDTHHMMSSZ>.zip`
+`.exported/<kb-id>-kb-<YYYY-MM-DDTHHMMSSZ>.zip`
 
 Includes:
 
