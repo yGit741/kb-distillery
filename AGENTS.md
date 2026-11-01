@@ -13,7 +13,7 @@ This file is the core every turn needs. Details live in `meta-defaults/docs/` â€
 | **Raw** | `raw/` | User-owned inputs. **Immutable â€” never write here.** |
 | **Wiki** | `wiki/` | Agent-owned synthesis. Flat. Create, update, cross-link. |
 | **Think** | `kbs/think/` | ONE shared human-owned slow space for every knowledge base (its own repo). Schema-free. Agents never write here. Distilled pages cite `think:<note>.md`. |
-| **Meta** | `meta/` | Vault metadata: manifest, log, chats, aliases. Generic pieces (flags, templates, routed docs, digest defaults) live in the explorer's `meta-defaults/`; a kb's `meta/` overrides them. No code (code is `backend/`, see `meta-defaults/docs/dev.md`). |
+| **Meta** | `meta/` | Vault metadata: manifest, log, chats, aliases. Generic pieces (flags, templates, routed docs, digest defaults) live in the explorer's `meta-defaults/`; a kb's `meta/` overrides them. No code (code is `src/kb_distillery/`, see `meta-defaults/docs/dev.md`). |
 | **Config** | `kb.toml` | The knowledge base: id, name, schema version, its page types (`[types]`), its digest instructions (`digest/`). Read by `kb_distillery.kbconfig` / `kb_distillery.core.kbtypes`. |
 
 ## Hard rules

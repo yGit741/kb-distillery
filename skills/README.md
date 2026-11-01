@@ -79,7 +79,7 @@ Tooling is unversioned and ships as `infra/<feature>` PRs merged as `… (#N)`.
 | Skill | Purpose |
 |-------|---------|
 | [create-skill](create-skill/SKILL.md) | Author new skills; runs through `lint-skills` gate (0 LLM) |
-| [backend-api](backend-api/SKILL.md) | Add/change a FastAPI router, model, service and tests under `backend/`; regenerate `schema.d.ts` (0 LLM) |
+| [backend-api](backend-api/SKILL.md) | Add/change a FastAPI router, model, service and tests under `src/kb_distillery/`; regenerate `schema.d.ts` (0 LLM) |
 | [app-ui](app-ui/SKILL.md) | Conventions for building screens in `web/` (tokens, palette, data-model words, porting checklist; 0 LLM) |
 
 Template: [`SKILL_TEMPLATE.md`](SKILL_TEMPLATE.md) (not a skill; it has no `SKILL.md`).
