@@ -127,6 +127,7 @@ class ViolationTests(unittest.TestCase):
 
     def test_allowlist_requires_single_invocation(self):
         self.assertTrue(git_guard.is_allowlisted("pixi run ship -- start x"))
+        self.assertTrue(git_guard.is_allowlisted("pixi run ship -- mv backend/src/kb src/kb_distillery"))
         self.assertFalse(git_guard.is_allowlisted("pixi run ship -- x | tee log"))
         self.assertFalse(git_guard.is_allowlisted("pixi run ship > out.txt"))
         self.assertFalse(git_guard.is_allowlisted("pixi run lint"))

@@ -14,10 +14,10 @@ from kb.search.semfind import load_pages
 from kb.services.graph import _areas, _preview, _title, _year
 from kb.core.summary import unquote
 from kb.search import qmd_client
+from kb.core.links import WIKILINK
 from kb.storage import raw
 
 ROOT = vault_root()
-WIKILINK = re.compile(r"\[\[([^\]|#\\]+)(?:#[^\]|]+)?(?:\\?\|([^\]]+))?\]\]")
 IMAGE_EXT = (".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp")
 MAX_PATHS = 4
 MAX_SUGGESTIONS = 6

@@ -163,6 +163,31 @@ class PrFlowTests(unittest.TestCase):
         self.assertEqual(ship.cmd_start(feature, worktree=True, root=self.repo), 0)
         return os.path.join(self.repo, ".claude", "worktrees", feature)
 
+    def test_mv_moves_tracked_files_in_a_worktree_and_refuses_the_rest(self):
+        self._write(self.repo, "old/a.py")
+        self._write(self.repo, "old/sub/b.py")
+        self._write(self.repo, "dst/keep.py")
+        _g(self.repo, "add", "-A")
+        _g(self.repo, "commit", "-q", "-m", "chore: more (retro)")
+        _g(self.repo, "push", "-q", "origin", "main")
+        wt = self._start("mv-thing")
+        self.assertEqual(ship.cmd_mv("old", "dst2", root=self.repo), 1)          # primary is on main, not infra/*
+        self.assertEqual(ship.cmd_mv("old", "new", root=wt), 0)
+        self.assertTrue(os.path.exists(os.path.join(wt, "new", "sub", "b.py")))
+        self.assertFalse(os.path.exists(os.path.join(wt, "old")))
+        self.assertIn("R", _g(wt, "status", "--short").split()[0])               # staged as a rename
+        self.assertEqual(ship.cmd_mv("new", "dst", root=wt), 0)                  # merges into an existing directory
+        self.assertTrue(os.path.exists(os.path.join(wt, "dst", "keep.py")))
+        self.assertTrue(os.path.exists(os.path.join(wt, "dst", "a.py")))
+        self._write(wt, "untracked.py")
+        self.assertEqual(ship.cmd_mv("untracked.py", "x.py", root=wt), 1)         # untracked
+        self.assertEqual(ship.cmd_mv("dst/a.py", "dst/keep.py", root=wt), 1)      # never over a file
+        self.assertEqual(ship.cmd_mv("dst", "dst/inner", root=wt), 1)
+        self.assertEqual(ship.cmd_mv("dst/a.py", "../escape.py", root=wt), 1)
+        self.assertEqual(ship.cmd_mv("dst/a.py", "/tmp/escape.py", root=wt), 1)
+        self.assertEqual(ship.cmd_mv("dst/a.py", ".git/x", root=wt), 1)
+        self.assertEqual(ship.cmd_mv("meta/tool.py", "meta", root=wt), 1)         # file onto an existing directory
+
     def test_start_refused_in_primary(self):
         self.assertEqual(ship.cmd_start("x", root=self.repo), 1)
 

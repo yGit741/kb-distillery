@@ -23,6 +23,8 @@ httpx = ">=0.28.1,<0.29"
 # a worktree shares the primary's env (symlinked .pixi), whose editable install points at one fixed tree:
 # put this checkout's source first so `import kb` always resolves to the tree you run in
 PYTHONPATH = "$PIXI_PROJECT_ROOT/backend/src"
+# no deploy from any session or the nightly sync until the owner turns it on (ship merge and ops call share_autodeploy)
+KB_SHARE_AUTODEPLOY = "0"
 
 [tasks]
 harness = { cmd = "python -m tests.harness.run_pipeline", env = { PYTHONPATH = "backend" } }
