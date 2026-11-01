@@ -45,7 +45,7 @@ ROOT = CHECKOUT_ROOT     # the tooling lane is the explorer repo; knowledge comm
 
 from kb.maintenance.daily_sync import changed_paths, has_open_sessions, run_git
 from kb.git import app_token, claims, commit_policy, events, rounds
-from kb.core.schema import GIT_POLICY_MODE, SCHEMA_VERSION
+from kb.core.schema import GATE_PREFIXES as GP, GIT_POLICY_MODE, SCHEMA_VERSION
 
 GATES = [
     ("tests", [sys.executable, "-m", "pytest", "-q", "backend/tests"]),
@@ -295,9 +295,9 @@ def frontend_changed(root=ROOT):
     base = subprocess.run(["git", "merge-base", _base_ref(root), "HEAD"], cwd=root,
                           capture_output=True, text=True, check=False).stdout
     base = (base or "").strip()
-    diff = subprocess.run(["git", "diff", "--name-only", base or "HEAD", "--", "frontend/"], cwd=root,
+    diff = subprocess.run(["git", "diff", "--name-only", base or "HEAD", "--", *GP["frontend"]], cwd=root,
                           capture_output=True, text=True, check=False)
-    new = subprocess.run(["git", "ls-files", "--others", "--exclude-standard", "--", "frontend/src"],
+    new = subprocess.run(["git", "ls-files", "--others", "--exclude-standard", "--", *GP["frontend_src"]],
                          cwd=root, capture_output=True, text=True, check=False)
     return bool((diff.stdout or "").strip() or (new.stdout or "").strip())
 
@@ -376,16 +376,16 @@ def checks_for(paths):
     def hit(*prefixes):
         return any(p.startswith(prefixes) for p in paths)
     checks = []
-    if hit("meta/flags.toml", "meta-defaults/flags.toml", "backend/src/kb/flags/") and not hit("frontend/"):  # web-check runs it too
+    if hit(*GP["flags_registry"], *GP["flags_code"]) and not hit(*GP["frontend"]):  # web-check runs it too
         checks.append(("flags-check", ["pixi", "run", "flags-check"]))
-    if hit("frontend/"):
+    if hit(*GP["frontend"]):
         checks.append(("web-check", ["pixi", "run", "web-check"]))
         # the [auto] ui-principles (overlap, clipping, targets, contrast, colour literals, load errors), every screen
         checks.append(("test-ui-principles", ["pixi", "run", "test-ui-principles"]))
-    if hit("backend/src/kb/api/", "frontend/src/api"):
+    if hit(*GP["api"], *GP["frontend_api"]):
         checks.append(("api-schema-check", ["pixi", "run", "api-schema-check"]))
     # the graph's motion lives in the canvas: only the e2e still-canvas test sees it (frontend/e2e)
-    if hit("backend/src/kb/dashboard/", "frontend/src/features/graph/", "frontend/e2e/"):
+    if hit(*GP["dashboard"], *GP["graph_ui"], *GP["e2e"]):
         checks.append(("test-e2e", ["pixi", "run", "test-e2e"]))
     return checks
 
