@@ -49,7 +49,7 @@ META_DIR = os.path.join(vault_root(), "meta")
 ROOT = checkout_root()
 
 from kb_distillery.ops.daily_sync import changed_paths, has_open_sessions, run_git
-from kb_distillery.git import app_token, claims, commit_policy, events, gate_cache, rounds
+from kb_distillery.git import app_token, claims, commit_policy, events, gate_cache, gate_slot, rounds
 from kb_distillery.core.schema import GATE_PREFIXES as GP, GIT_POLICY_MODE, SCHEMA_VERSION
 
 GATES = [
@@ -323,7 +323,7 @@ def link_untracked_raw(root=ROOT):
 # The app's own gates, run only when the branch touches web/ (npm is slow to start).
 FRONTEND_GATES = [
     ("web-typecheck", ["npm", "run", "typecheck", "--prefix", "web"]),
-    ("web-tests", ["npm", "run", "test", "--prefix", "web"]),
+    ("web-tests", ["npm", "run", "test", "--prefix", "web", "--", "--maxWorkers=4"]),   # one web gate must not take every core
 ]
 
 
@@ -364,6 +364,12 @@ def lint_command(root=ROOT):
 
 
 def run_gates(root=ROOT, skip_tests=False, scope="full"):
+    """`_run_gates` as one gate-slot sequence: the slot is taken at the first real run and held to the last gate."""
+    with gate_slot.sequence(root):
+        return _run_gates(root, skip_tests, scope)
+
+
+def _run_gates(root, skip_tests, scope):
     """Lint-skills, lint and the tests (plus the frontend gates when web/ changed). `scope="subset"` (ship commit)
     runs the tests that mirror the touched code plus the top-level invariants; anything it cannot map runs full.
     A gate that already passed on the same content (see gate_cache) is reused, not rerun."""
@@ -409,9 +415,16 @@ def run_gate(name, cmd, root=ROOT):
     log_dir = os.path.join(root, ".cache", "ship-gates")
     os.makedirs(log_dir, exist_ok=True)
     log = os.path.join(log_dir, f"{time.strftime('%Y%m%d-%H%M%S')}-{name}.log")
-    started = time.monotonic()
-    with open(log, "w", encoding="utf-8") as f:
-        rc = subprocess.run(cmd, cwd=root, stdout=f, stderr=subprocess.STDOUT).returncode
+    try:
+        with gate_slot.sequence(root) as slot:
+            slot.ensure()            # a real run takes the machine-wide slot; reused gates never reach here
+            started = time.monotonic()
+            with open(log, "w", encoding="utf-8") as f:
+                rc = subprocess.run(cmd, cwd=root, stdout=f, stderr=subprocess.STDOUT,
+                                    env=gate_slot.child_env()).returncode
+    except gate_slot.GateSlotTimeout as e:
+        print(f"error: {e}")
+        return False
     secs = int(time.monotonic() - started)
     shown = os.path.relpath(log, root)
     if rc == 0:
@@ -465,6 +478,12 @@ def e2e_available(root=ROOT):
 
 
 def run_checks(root=ROOT, skip_reason=None, paths=None):
+    """`_run_checks` as one gate-slot sequence (shared with the gates when called inside one)."""
+    with gate_slot.sequence(root):
+        return _run_checks(root, skip_reason, paths)
+
+
+def _run_checks(root, skip_reason, paths):
     """Gate before `ship pr` / `ship merge`: run the checks of the touched lanes. False on a failure."""
     paths = branch_files(root) if paths is None else paths
     checks = checks_for(paths)
@@ -481,8 +500,15 @@ def run_checks(root=ROOT, skip_reason=None, paths=None):
         if key["tree"] and gate_cache.hit(root, key):
             print(f"check: {name} reused ({sha[:7]})")
             continue
-        print(f"check: {name}")
-        cp = subprocess.run(cmd, cwd=root, capture_output=True, text=True, check=False)
+        try:
+            with gate_slot.sequence(root) as slot:
+                slot.ensure()
+                print(f"check: {name}")
+                cp = subprocess.run(cmd, cwd=root, capture_output=True, text=True, check=False,
+                                    env=gate_slot.child_env())
+        except gate_slot.GateSlotTimeout as e:
+            print(f"error: {e}")
+            return False
         if cp.returncode != 0:
             tail = "\n".join(_out(cp).splitlines()[-40:])
             print(tail)
@@ -793,10 +819,11 @@ def cmd_pr(title=None, skip_tests=False, root=ROOT, gates=True, notes_file=None,
     if problems:
         print("error: " + "\n       ".join(problems))
         return 1
-    if gates and not run_gates(root, skip_tests):
-        return 1
-    if gates and not run_checks(root, skip_checks):
-        return 1
+    with gate_slot.sequence(root):      # gates and checks of this run are not interleaved with another run's
+        if gates and not run_gates(root, skip_tests):
+            return 1
+        if gates and not run_checks(root, skip_checks):
+            return 1
     push = app_token.run_git_push(["push", "-u", "origin", branch], cwd=root)
     print(_out(push))
     if push.returncode != 0:
@@ -1056,12 +1083,13 @@ def _merge_locked(branch, local, pr_number, title, skip_tests, no_push, root, ga
             run_git(["merge", "--abort"], cwd=root)
             print("error: main does not merge cleanly into the branch — resolve by hand")
             return 1
-    if gates and not run_gates(root, skip_tests):
-        events.post(ev_pr, "checks-failed", _head_sha(root), root=root, stage="gates")
-        return 1
-    if gates and not run_checks(root, skip_checks):
-        events.post(ev_pr, "checks-failed", _head_sha(root), root=root, stage="checks")
-        return 1
+    with gate_slot.sequence(root):      # after the merge slot, never before it (see gate_slot)
+        if gates and not run_gates(root, skip_tests):
+            events.post(ev_pr, "checks-failed", _head_sha(root), root=root, stage="gates")
+            return 1
+        if gates and not run_checks(root, skip_checks):
+            events.post(ev_pr, "checks-failed", _head_sha(root), root=root, stage="checks")
+            return 1
     events.post(ev_pr, "checks-passed", _head_sha(root), root=root,
                 gates="ran" if gates else "skipped", skip_checks=skip_checks)
 
