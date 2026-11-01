@@ -10,8 +10,9 @@ import unittest
 from unittest.mock import patch
 
 from kb_distillery import cli
+from kb_distillery import kbconfig
 
-SRC = os.path.join(cli.CHECKOUT_ROOT, "src")
+SRC = os.path.join(kbconfig.checkout_root(), "src")
 
 
 def _run(args, env_extra=None):
@@ -27,7 +28,7 @@ class CommandTableTests(unittest.TestCase):
             if kind == "module":
                 self.assertIsNotNone(importlib.util.find_spec(target), f"{name}: no module {target}")
             else:
-                self.assertTrue(os.path.isfile(os.path.join(cli.CHECKOUT_ROOT, target)), f"{name}: no script {target}")
+                self.assertTrue(os.path.isfile(os.path.join(kbconfig.checkout_root(), target)), f"{name}: no script {target}")
 
     def test_help_lists_every_command(self):
         for argv in ([], ["--help"], ["-h"], ["help"]):

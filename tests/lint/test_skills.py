@@ -7,7 +7,8 @@ import tempfile
 import unittest
 from typing import Optional
 
-from kb_distillery.paths import CHECKOUT_ROOT
+from kb_distillery.kbconfig import checkout_root
+CHECKOUT_ROOT = checkout_root()
 ROOT = CHECKOUT_ROOT          # skills are code
 
 from kb_distillery.lint.lint_skills import run_checks

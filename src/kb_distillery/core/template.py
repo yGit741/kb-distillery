@@ -26,6 +26,7 @@ import tomllib
 from functools import lru_cache
 
 from kb_distillery import kbconfig
+from kb_distillery.config.resources import root_resource
 
 OWNED = ("types", "edges")                 # the kb.toml tables a template owns
 ALLOWED = {"template", *OWNED}             # every top-level table a template.toml may hold today
@@ -37,8 +38,9 @@ class TemplateError(ValueError):
 
 
 def templates_dir() -> str:
-    """`$KB_TEMPLATES_DIR` (tests, a second templates folder) or `<engine checkout>/templates`."""
-    return os.environ.get("KB_TEMPLATES_DIR") or os.path.join(kbconfig.CHECKOUT_ROOT, TEMPLATES_DIR_NAME)
+    """`$KB_TEMPLATES_DIR` (tests, a second templates folder) or the packaged `templates` (the checkout's
+    `templates/`, `_data/templates` in a wheel; Lane C moves them to `kits/`)."""
+    return os.environ.get("KB_TEMPLATES_DIR") or str(root_resource(TEMPLATES_DIR_NAME))
 
 
 def path_of(name: str) -> str:

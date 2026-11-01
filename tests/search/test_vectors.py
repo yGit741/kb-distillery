@@ -9,6 +9,7 @@ import numpy as np
 import pytest
 
 from kb_distillery.search import vectors
+from kb_distillery import kbconfig
 
 
 def _db(path, rows):
@@ -72,7 +73,7 @@ def test_store_and_cards_live_in_the_selected_kb_cache():
     assert os.path.realpath(paths.CACHE_PATH) == os.path.realpath(os.path.join(paths.ROOT, ".cache"))
     if paths.KB is not None:            # split layout: the vault is a kb folder, not this checkout
         db = os.path.realpath(vectors.DB_PATH)
-        assert not db.startswith(os.path.join(os.path.realpath(paths.CHECKOUT_ROOT), ".cache") + os.sep)
+        assert not db.startswith(os.path.join(os.path.realpath(kbconfig.checkout_root()), ".cache") + os.sep)
         assert db.startswith(os.path.realpath(paths.ROOT) + os.sep)
 
 

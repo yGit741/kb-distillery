@@ -26,7 +26,9 @@ import tempfile
 import time
 import unittest
 
-from kb_distillery.paths import CHECKOUT_ROOT, CODE_DIR, vault_root
+from kb_distillery.kbconfig import checkout_root
+from kb_distillery.paths import CODE_DIR, vault_root
+CHECKOUT_ROOT = checkout_root()
 META = os.path.join(vault_root(), "meta")
 REPO = vault_root()
 DATA = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "testdata", "e2e")

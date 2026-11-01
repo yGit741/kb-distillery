@@ -199,7 +199,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zeromq-4.3.5-h10816f8_11.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zlib-ng-2.3.3-h31dac16_1.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zstd-1.5.7-hf451053_7.conda
-      - pypi: ./backend
+      - pypi: ./
       - pypi: https://files.pythonhosted.org/packages/04/37/b751de2b59b0197a1d92a5dd491de88e8a5e928c2e6562581974f1e85263/rpds_py-2026.9.1-cp314-cp314-macosx_11_0_arm64.whl
       - pypi: https://files.pythonhosted.org/packages/10/42/ba452bb593d53327d9d5dede688b17e38b532ee0126375754d722a91bf1a/grand_cypher-1.2.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/13/37/486d38a173b0b8dce973a3e13c74cf402ed1b8621586b5963bc9efd49a48/pyobjc_core-12.2.2-cp314-cp314-macosx_10_15_universal2.whl
@@ -3017,8 +3017,30 @@ packages:
     - zstd >=1.5.7,<1.6.0a0
   size: 433687
   timestamp: 1786599629846
-- pypi: ./backend
-  name: kb
+- pypi: ./
+  name: kb-distillery
+  requires_dist:
+  - fastapi>=0.162,<0.163
+  - uvicorn>=0.54,<0.55
+  - pydantic>=2
+  - httpx>=0.28.1,<0.29
+  - truststore>=0.9
+  - pyyaml>=6
+  - numpy>=2
+  - grand-cypher>=1.2
+  - networkx>=3.4
+  - claude-agent-sdk>=0.1.0
+  - pyjwt[crypto]>=2
+  - pymupdf ; extra == 'ingest-heavy'
+  - pillow ; extra == 'ingest-heavy'
+  - opencv-python-headless>=4.10 ; extra == 'ingest-heavy'
+  - imageio-ffmpeg>=0.5 ; extra == 'ingest-heavy'
+  - yt-dlp[default,curl-cffi]>=2025.1 ; extra == 'ingest-heavy'
+  - ocrmac>=1.0 ; sys_platform == 'darwin' and extra == 'ingest-heavy'
+  - pytest>=8 ; extra == 'dev'
+  - ruff ; extra == 'dev'
+  - build ; extra == 'dev'
+  - import-linter ; extra == 'dev'
   requires_python: '>=3.11'
 - pypi: https://files.pythonhosted.org/packages/04/37/b751de2b59b0197a1d92a5dd491de88e8a5e928c2e6562581974f1e85263/rpds_py-2026.9.1-cp314-cp314-macosx_11_0_arm64.whl
   name: rpds-py

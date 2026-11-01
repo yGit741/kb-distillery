@@ -21,9 +21,9 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Literal, Optional
 
-from kb_distillery.paths import CHECKOUT_ROOT
+from kb_distillery.kbconfig import checkout_root
 
-REPO = Path(CHECKOUT_ROOT)   # the checkout this tool runs from (never $KB_ROOT)
+REPO = Path(checkout_root() or Path.cwd())   # the checkout this tool runs from (never $KB_ROOT)
 
 Profile = Literal["private", "public"]
 PROFILES = ("private", "public")

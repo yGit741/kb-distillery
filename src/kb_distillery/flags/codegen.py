@@ -16,7 +16,7 @@ import sys
 from pathlib import Path
 
 from kb_distillery.flags.registry import FLAGS_TOML, FlagError, Registry, load
-from kb_distillery.paths import CHECKOUT_ROOT as ROOT   # generated files and tests are code: the explorer, not the vault
+from kb_distillery.config.resources import require_repo_root   # generated files and tests are code: the explorer, not the vault
 
 GEN_TS = Path("web/src/flags/registry.gen.ts")
 GEN_WORKER = Path("share/flags.gen.js")   # the private Worker accepts overrides for these names only
@@ -81,8 +81,8 @@ def _registry_for(root: Path) -> Path:
     return FLAGS_TOML
 
 
-def main(argv=None, root: Path | str = ROOT) -> int:
-    root = Path(root)
+def main(argv=None, root: Path | str | None = None) -> int:
+    root = Path(root) if root is not None else require_repo_root("flags codegen")
     ap = argparse.ArgumentParser(prog="kb_distillery.flags.codegen", description=__doc__.splitlines()[0])
     ap.add_argument("--check", action="store_true", help="fail when a generated file is stale; write nothing")
     ap.add_argument("--flags", default=None, help="registry path (default meta/flags.toml)")

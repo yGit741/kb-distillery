@@ -74,7 +74,7 @@ class DemoFollowsStarter(unittest.TestCase):
     """examples/demo is built from the starter template and adds the job-search types on top."""
 
     def setUp(self):
-        self.cfg = kbconfig.load_dir(os.path.join(kbconfig.CHECKOUT_ROOT, "examples", "demo"))
+        self.cfg = kbconfig.load_dir(os.path.join(kbconfig.checkout_root(), "examples", "demo"))
 
     def test_the_demo_names_the_starter(self):
         self.assertEqual(self.cfg.template, "starter")
