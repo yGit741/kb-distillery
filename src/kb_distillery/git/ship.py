@@ -40,6 +40,7 @@ import subprocess
 import time
 import sys
 
+from kb_distillery import kbconfig
 from kb_distillery.kbconfig import checkout_root
 from kb_distillery.paths import vault_root
 META_DIR = os.path.join(vault_root(), "meta")
@@ -48,7 +49,7 @@ META_DIR = os.path.join(vault_root(), "meta")
 ROOT = checkout_root()
 
 from kb_distillery.ops.daily_sync import changed_paths, has_open_sessions, run_git
-from kb_distillery.git import app_token, claims, commit_policy, events, rounds
+from kb_distillery.git import app_token, claims, commit_policy, events, gate_cache, rounds
 from kb_distillery.core.schema import GATE_PREFIXES as GP, GIT_POLICY_MODE, SCHEMA_VERSION
 
 GATES = [
@@ -61,6 +62,45 @@ GENERATED_FILES = {"index.md", "meta/corpus.tsv", "meta/coherence-warnings.tsv"}
 MIGRATED_GENERATED = {"meta/corpus.tsv"}   # a migration's output: committed by schema/paradigm commits
 FEATURE_RE = re.compile(r"^[a-z0-9][a-z0-9-]*$")
 FORBIDDEN_MERGE_FLAGS = {"--squash", "--rebase", "-s", "-r"}
+
+
+_REAL_RUN = subprocess.run     # a gate result is only recorded or reused while this is the runner (tests mock it)
+
+
+def is_generated(path):
+    """A file lint rewrites on every run: the kb's own and the demo kb's (examples/demo/)."""
+    return path in GENERATED_FILES or (path.startswith("examples/demo/") and path[len("examples/demo/"):] in GENERATED_FILES)
+
+
+def _fingerprint(root):
+    """Tree sha of `root` without generated files, or None when the real runner is not in use / git fails."""
+    if subprocess.run is not _REAL_RUN:
+        return None
+    generated = sorted(GENERATED_FILES | {f"examples/demo/{g}" for g in GENERATED_FILES})
+    return gate_cache.tree_sha(root, generated)
+
+
+def _kb_value():
+    """The resolved knowledge base (`--kb` / $KB / the kb folder the shell is in / the only kb) and $KB_ROOT."""
+    try:
+        return f"{kbconfig.selected() or ''}|{os.environ.get('KB_ROOT', '')}"
+    except Exception:                       # a broken kb config: never reuse on a guess
+        return f"unresolved|{time.time()}"
+
+
+def _reused(root, key):
+    if key["tree"] and gate_cache.hit(root, key):
+        print(f"gate: {key['gate']} reused ({key['tree'][:7]})")
+        return True
+    return False
+
+
+def _remember(root, key):
+    if key["tree"] and subprocess.run is _REAL_RUN:
+        try:
+            gate_cache.record(root, key)
+        except OSError:
+            pass
 
 
 PRUNABLE_PREFIXES = ("infra/", "worktree-", "history/")
@@ -323,19 +363,39 @@ def lint_command(root=ROOT):
     return [sys.executable, "-m", "kb_distillery.lint.lint", *(["--kb", demo] if os.path.isdir(demo) else [])]
 
 
-def run_gates(root=ROOT, skip_tests=False):
+def run_gates(root=ROOT, skip_tests=False, scope="full"):
+    """Lint-skills, lint and the tests (plus the frontend gates when web/ changed). `scope="subset"` (ship commit)
+    runs the tests that mirror the touched code plus the top-level invariants; anything it cannot map runs full.
+    A gate that already passed on the same content (see gate_cache) is reused, not rerun."""
     link_untracked_raw(root)
     gates = [(name, lint_command(root) if name == "lint" else cmd) for name, cmd in GATES]
+    scopes = {name: "full" for name, _ in gates}
+    extras = {}
+    if scope == "subset" and not skip_tests:
+        selection = gate_cache.test_subset(branch_files(root), root, ignore=is_generated)
+        if selection:
+            gates = [(n, [sys.executable, "-m", "pytest", "-q", *selection] if n == "tests" else c) for n, c in gates]
+            scopes["tests"] = "subset"
+            extras["tests"] = ",".join(selection)
+            print(f"gate: tests subset ({len(selection)} targets)")
     if not skip_tests and frontend_changed(root):
         extra = frontend_gates(root)
         if extra is None:
             return False
         gates += extra
+        for n, _ in extra:
+            scopes[n] = "full"
+            extras[n] = "+".join(x for x, _ in extra)
+    sha = _fingerprint(root)               # before any gate runs: lint rewrites generated files
     for name, cmd in gates:
         if name == "tests" and skip_tests:
             continue
+        key = gate_cache.make_key(name, scopes[name], sha, _kb_value(), extras.get(name, ""))
+        if _reused(root, key):
+            continue
         if not run_gate(name, cmd, root):
             return False
+        _remember(root, key)
     return True
 
 
@@ -412,9 +472,14 @@ def run_checks(root=ROOT, skip_reason=None, paths=None):
         if checks:
             print(f"checks skipped ({', '.join(n for n, _ in checks)}): {skip_reason}")
         return True
+    sha = _fingerprint(root) if checks else None
     for name, cmd in checks:
         if name in ("test-e2e", "test-ui-principles") and not e2e_available(root):
             print(f"check: {name} skipped (node/playwright not available)")
+            continue
+        key = gate_cache.make_key(name, "full", sha, _kb_value())
+        if key["tree"] and gate_cache.hit(root, key):
+            print(f"check: {name} reused ({sha[:7]})")
             continue
         print(f"check: {name}")
         cp = subprocess.run(cmd, cwd=root, capture_output=True, text=True, check=False)
@@ -423,6 +488,7 @@ def run_checks(root=ROOT, skip_reason=None, paths=None):
             print(tail)
             print(f"error: check {name} failed (bypass with --skip-checks \"<reason>\")")
             return False
+        _remember(root, key)
     return True
 
 
@@ -498,7 +564,7 @@ def legacy(argv):
         print("skipped: open ingest/distill sessions — finish or abort them first")
         return 0
 
-    if not run_gates(skip_tests=args.skip_tests):
+    if not run_gates(ROOT, skip_tests=args.skip_tests):
         print("nothing committed")
         return 1
 
@@ -616,16 +682,23 @@ def cmd_commit(message, skip_tests=False, root=ROOT, gates=True):
         for v in violations:
             print(f"  - {v}")
         return 1
-    if gates and not run_gates(root, skip_tests):
-        print("nothing committed")
-        return 1
-    lanes = changed_paths(root)
-    paths = list(lanes["tooling"]) + (lanes["knowledge"] if parsed.type in ("schema", "paradigm") else [])
     # generated files are rebuilt by lint on main — never part of a tooling commit. A schema/paradigm
     # commit keeps meta/corpus.tsv: its hand-owned columns (disposition, collection, scopes) are what a
     # migration rewrites, and lint keeps them as committed instead of re-deriving them.
     keep = MIGRATED_GENERATED if parsed.type in ("schema", "paradigm") else set()
-    paths = [p for p in paths if p not in GENERATED_FILES or p in keep]
+    paths = [p for p in paths if p not in GENERATED_FILES or p in keep]      # frozen: gates never change this set
+    # cheap refusals first, before any gate: what is already staged must be part of this commit
+    staged = set(filter(None, run_git(["diff", "--cached", "--name-only", "-z"], cwd=root).stdout.split("\0")))
+    extra = sorted(staged - set(paths))
+    if extra:
+        print(f"error: unrelated changes are staged — unstage them first: {extra[:5]}")
+        return 1
+    if not paths:
+        print("nothing to commit")
+        return 0
+    if gates and not run_gates(root, skip_tests, scope="subset"):
+        print("nothing committed")
+        return 1
     tracked = set(filter(None, run_git(["ls-files", "-z"], cwd=root).stdout.split("\0")))
     # a `git rm --cached` (untrack, keep on disk) is already staged; re-adding would re-track it
     staged_del = set(filter(None, run_git(["diff", "--cached", "--name-only", "--diff-filter=D", "-z"],
@@ -637,10 +710,6 @@ def cmd_commit(message, skip_tests=False, root=ROOT, gates=True):
             print(_out(add))
             return 1
     staged = set(filter(None, run_git(["diff", "--cached", "--name-only", "-z"], cwd=root).stdout.split("\0")))
-    extra = sorted(staged - set(paths))
-    if extra:
-        print(f"error: unrelated changes are staged — unstage them first: {extra[:5]}")
-        return 1
     if not staged:
         print("nothing to commit")
         return 0
