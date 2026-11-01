@@ -20,13 +20,13 @@ description: Thesis-critical deep digest with neighbor links (~25-40k+ tokens, H
 - Run without `--confirm-heavy` on CLI
 - Skip neighbor / topic / q- stub planning
 - Run the paper session on a video (`raw/videos/…/video.md`): a video's deep tier is
-  `python3 -m kb.ingest video-digest <raw> --tier deep` and then the neighbor/Connections work by hand
+  `python3 -m kb_distillery.ingest video-digest <raw> --tier deep` and then the neighbor/Connections work by hand
 
 ## CLI
 
 ```bash
-python3 -m kb.ingest deep-digest <raw> --confirm-heavy
-python3 -m kb.ingest deep-digest <collection-slug> --row N --confirm-heavy   # course/series row
+python3 -m kb_distillery.ingest deep-digest <raw> --confirm-heavy
+python3 -m kb_distillery.ingest deep-digest <collection-slug> --row N --confirm-heavy   # course/series row
 ```
 
 Same pipeline as `full-digest` plus extended `plan.json` (neighbor papers, q- stubs, topic-page `theme-*` threads).

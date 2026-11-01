@@ -21,14 +21,14 @@ description: Lightweight abstract/metadata skim of a Source page to depth easy (
 ## CLI
 
 ```bash
-python3 -m kb.ingest easy-digest <slug|raw>
-python3 -m kb.ingest easy-digest <raw> --into <series page>     # numbered parts share one page
-python3 -m kb.ingest easy-digest <raw> --no-tick --no-lint --no-commit   # batch: orchestrator ticks, lints, commits
-python3 -m kb.ingest easy-digest <slug|raw> --fill                     # kb.llm fills Problem + Main result (Haiku)
-python3 -m kb.ingest easy-digest <a> <b> <c> … --fill --backend batch  # backlog: one half-price Message Batch
+python3 -m kb_distillery.ingest easy-digest <slug|raw>
+python3 -m kb_distillery.ingest easy-digest <raw> --into <series page>     # numbered parts share one page
+python3 -m kb_distillery.ingest easy-digest <raw> --no-tick --no-lint --no-commit   # batch: orchestrator ticks, lints, commits
+python3 -m kb_distillery.ingest easy-digest <slug|raw> --fill                     # kb_distillery.llm fills Problem + Main result (Haiku)
+python3 -m kb_distillery.ingest easy-digest <a> <b> <c> … --fill --backend batch  # backlog: one half-price Message Batch
 ```
 
-**Fill (`--fill`).** `kb.llm` reads `abstract.text` and writes the page's empty **Problem** and **Main result**
+**Fill (`--fill`).** `kb_distillery.llm` reads `abstract.text` and writes the page's empty **Problem** and **Main result**
 lines (never a line that already has text; an invalid reply leaves the page as it was and is reported).
 `--backend subscription|api|batch` (default `$KB_LLM_BACKEND`, then subscription) and `--model` (default
 haiku). Several targets are prepared one by one (0 LLM), then filled in one run — with `batch` that is one
@@ -56,15 +56,15 @@ Easy digests run on **Haiku** by default — the cheapest model (e.g. a Task/age
 re-reads against the raw file; it logs a verdict per page to `meta/.ingest/easy/spotcheck.jsonl`:
 
 ```bash
-python3 -m kb.ingest easy-spotcheck pick <slug...>      # which of these slugs to re-read
-python3 -m kb.ingest easy-spotcheck log <slug> --model <m> --verdict ok|fix [--note "..."]
+python3 -m kb_distillery.ingest easy-spotcheck pick <slug...>      # which of these slugs to re-read
+python3 -m kb_distillery.ingest easy-spotcheck log <slug> --model <m> --verdict ok|fix [--note "..."]
 ```
 
 A `fix` verdict means the page is corrected (in an ops session, see `wiki-edit`) or re-digested.
 
 ## Agent steps
 
-1. Run CLI to extract abstract text (with `--fill`, steps 2–3 are done by `kb.llm`: check the filled lines)
+1. Run CLI to extract abstract text (with `--fill`, steps 2–3 are done by `kb_distillery.llm`: check the filled lines)
 2. Read `abstract.text` (~2–4k tokens max)
 3. Update wiki: **Problem**, **Main result** from abstract only
    (a `q-` page you touch: keep its H1 a short name ≤ 80 chars and fill `## Question` with the formal statement)

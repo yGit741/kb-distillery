@@ -1,4 +1,3 @@
 #!/bin/bash
-# KB Conventional Commits in a knowledge base repo: kb(op): … (kb-x.y.z) on main.
-. "$(dirname "$0")/env.sh"
-exec "$py" -m kb.git.commit_policy msg "$1"
+# Forwarding stub (removed in Phase 9): see tools/kb-hooks/pre-commit.
+exec "$(dirname "$0")/../../scripts/kb-hooks/commit-msg" "$@"

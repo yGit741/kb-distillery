@@ -24,24 +24,24 @@ Run `pixi run lint-skills` then `pixi run sync-skills` after editing skills.
 | `create-skill` | none | 0 | create skill, new skill (meta; not in digest ladder) |
 
 ```
-python3 -m kb.ingest resolve <url|arxiv|slug> # check vault first (0 LLM)
-python3 -m kb.ingest scrap <url>              # → raw/inbox/ (blocked if duplicate)
-python3 -m kb.ingest scrap-mail <mbox-or-eml> # → raw/inbox/mail-.../ (thread + attachments)
-python3 -m kb.ingest scrap-gdrive --dry-run   # preview a mounted Drive folder pull (0 bytes)
-python3 -m kb.ingest scrap-wordpress <site> --prefix <collection short>   # every post of a WordPress.com blog + figures → inbox
-python3 -m kb.ingest scrap-youtube <url>   # a lecture/video → inbox video-<name>/ bundle: transcript + anchors (0 LLM)
-python3 -m kb.ingest video-digest raw/videos/<name>/video.md --tier full|deep   # read the top anchors with Claude
-python3 -m kb.ingest catalog <inbox-path>     # → raw/<format>/ (+ paper- Source page at depth listed, papers only)
-python3 -m kb.ingest catalog <inbox-path> --collection <collection|person> [--format <folder>] [--title T]
-python3 -m kb.ingest easy-digest <slug|raw>   # depth easy: abstract skim (ticks a collection row if a member)
-python3 -m kb.ingest easy-digest <raw> --into <page> [--no-tick --no-lint]   # series page / batch mode
-python3 -m kb.ingest full-digest <raw>        # medium: begin→finalize
-python3 -m kb.ingest full-digest <collection-slug> --row N   # one course/series Contents row
-python3 -m kb.ingest easy-spotcheck pick <slug...>      # ~5% of easy digests for a Sonnet re-read
-python3 -m kb.ingest easy-spotcheck log <slug> --model <m> --verdict ok|fix [--note ...]
-python3 -m kb.ingest deep-digest <raw> --confirm-heavy
-python3 -m kb.ingest toc <raw>                # book partition (or a proposed one) (0 LLM)
-python3 -m kb.ingest refetch-raw [--apply]    # replace paper PDFs stamped with another arXiv id than their page cites (0 LLM)
+python3 -m kb_distillery.ingest resolve <url|arxiv|slug> # check vault first (0 LLM)
+python3 -m kb_distillery.ingest scrap <url>              # → raw/inbox/ (blocked if duplicate)
+python3 -m kb_distillery.ingest scrap-mail <mbox-or-eml> # → raw/inbox/mail-.../ (thread + attachments)
+python3 -m kb_distillery.ingest scrap-gdrive --dry-run   # preview a mounted Drive folder pull (0 bytes)
+python3 -m kb_distillery.ingest scrap-wordpress <site> --prefix <collection short>   # every post of a WordPress.com blog + figures → inbox
+python3 -m kb_distillery.ingest scrap-youtube <url>   # a lecture/video → inbox video-<name>/ bundle: transcript + anchors (0 LLM)
+python3 -m kb_distillery.ingest video-digest raw/videos/<name>/video.md --tier full|deep   # read the top anchors with Claude
+python3 -m kb_distillery.ingest catalog <inbox-path>     # → raw/<format>/ (+ paper- Source page at depth listed, papers only)
+python3 -m kb_distillery.ingest catalog <inbox-path> --collection <collection|person> [--format <folder>] [--title T]
+python3 -m kb_distillery.ingest easy-digest <slug|raw>   # depth easy: abstract skim (ticks a collection row if a member)
+python3 -m kb_distillery.ingest easy-digest <raw> --into <page> [--no-tick --no-lint]   # series page / batch mode
+python3 -m kb_distillery.ingest full-digest <raw>        # medium: begin→finalize
+python3 -m kb_distillery.ingest full-digest <collection-slug> --row N   # one course/series Contents row
+python3 -m kb_distillery.ingest easy-spotcheck pick <slug...>      # ~5% of easy digests for a Sonnet re-read
+python3 -m kb_distillery.ingest easy-spotcheck log <slug> --model <m> --verdict ok|fix [--note ...]
+python3 -m kb_distillery.ingest deep-digest <raw> --confirm-heavy
+python3 -m kb_distillery.ingest toc <raw>                # book partition (or a proposed one) (0 LLM)
+python3 -m kb_distillery.ingest refetch-raw [--apply]    # replace paper PDFs stamped with another arXiv id than their page cites (0 LLM)
 ```
 
 **scrap-wordpress** pulls a whole WordPress.com blog through its public API (0 LLM): one Markdown clip per
@@ -51,7 +51,7 @@ cannot be fetched stays a remote link). `--since`/`--limit` resume or trial a pu
 Then `drain-inbox --collection <series-slug>`: clips become `raw/web-clips/` members of the series, their
 figures `raw/images/` rows bound as `asset:<clip>` (lint derives this from the names), one lint at the end.
 
-**arXiv is never guessed.** The metadata client (`backend/src/kb/ingest/arxiv_meta.py`) spaces calls 3 s apart
+**arXiv is never guessed.** The metadata client (`src/kb_distillery/ingest/arxiv_meta.py`) spaces calls 3 s apart
 and retries 429/5xx; when it still cannot answer, `catalog` refuses the file (it stays in the inbox
 with the reason in `meta/.catalog/failures.jsonl`) instead of filing it as `2000-untitled.pdf`, and
 `backfill-authors --fix-urls` leaves the url untouched instead of clearing it. The researcher
@@ -69,28 +69,28 @@ Catalog creates the Source page at `depth: listed` for papers (`paper-`) and tag
 (`blog-`) — emails, chats, handwriting and slides stay corpus rows until something is digested from them. Every outcome,
 including a refusal and its reason, is logged in `meta/.catalog/` (the dashboard's Ingestion status).
 
-During `full-digest` / `deep-digest`, `backend/src/kb/git/guard.py` blocks direct writes to session-owned wiki paths — use `draft` + `finalize`.
+During `full-digest` / `deep-digest`, `src/kb_distillery/git/guard.py` blocks direct writes to session-owned wiki paths — use `draft` + `finalize`.
 
 **Triage:** anything in `raw/inbox/` gets cataloged or deleted. The inbox is a queue, not storage.
 
-**Query:** Karpathy Query operation — read wiki, cite `[[slugs]]`, file good answers back on request. See `skills/query-knowledge/SKILL.md`. Raw sources are reached only through `explore-raw-data` (`python3 -m kb.search.explore_raw find|read|check|recommend`, cataloged files only, 0 LLM): `skills/explore-raw-data/SKILL.md`.
+**Query:** Karpathy Query operation — read wiki, cite `[[slugs]]`, file good answers back on request. See `skills/query-knowledge/SKILL.md`. Raw sources are reached only through `explore-raw-data` (`python3 -m kb_distillery.search.explore_raw find|read|check|recommend`, cataloged files only, 0 LLM): `skills/explore-raw-data/SKILL.md`.
 
 ```
-python3 -m kb.search.query candidates "<keywords>"   # rank slugs (0 LLM)
-python3 -m kb.search.query mocs                      # topic pages (theme-*) as entry points
+python3 -m kb_distillery.search.query candidates "<keywords>"   # rank slugs (0 LLM)
+python3 -m kb_distillery.search.query mocs                      # topic pages (theme-*) as entry points
 ```
 
-Workflow: `index.md` → `candidates` → read 3–8 pages → synthesize. Not the same as `kb.ingest resolve` (ingest dedup).
+Workflow: `index.md` → `candidates` → read 3–8 pages → synthesize. Not the same as `kb_distillery.ingest resolve` (ingest dedup).
 
 ## Distill think
 
 Human writes in `think/*.md` (schema-free). Distill produces a transient `wiki/distilled-think-*.md` for review, then patches the public KB on apply.
 
 ```
-python3 -m kb.distill propose <think-file>              # → distilled-think page + plan.json
-python3 -m kb.distill revise <think-file>               # re-read think/, keep edited Summary
-python3 -m kb.distill apply <think-file> --cleanup       # propagate + delete distilled page
-python3 -m kb.distill abort <think-file>
+python3 -m kb_distillery.distill propose <think-file>              # → distilled-think page + plan.json
+python3 -m kb_distillery.distill revise <think-file>               # re-read think/, keep edited Summary
+python3 -m kb_distillery.distill apply <think-file> --cleanup       # propagate + delete distilled page
+python3 -m kb_distillery.distill abort <think-file>
 ```
 
 `think/` is never agent-edited. See `skills/distill-think/SKILL.md`.

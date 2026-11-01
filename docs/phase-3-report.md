@@ -2,11 +2,11 @@
 
 ## What is in
 
-- `kb.storage`: the connector interface (`list`, `get`, `put`, `info`, `exists`, `local_copy`, `cached_path`, `auth`), logical `raw/...` keys, a registry that finds built-ins and packages (entry point group `kb.storage.connectors`), and one contract suite every connector must pass.
+- `kb_distillery.storage`: the connector interface (`list`, `get`, `put`, `info`, `exists`, `local_copy`, `cached_path`, `auth`), logical `raw/...` keys, a registry that finds built-ins and packages (entry point group `kb_distillery.storage.connectors`), and one contract suite every connector must pass.
 - Connectors: `local-folder` (the default) and `gdrive` (the macOS Google Drive mount, no OAuth). A dummy in-memory connector in the tests stands in for a third-party package.
-- `kb.storage.raw`: the facade engine code uses (`raw.exists`, `raw.read_text`, `raw.path`, ...), bound to the current knowledge base's connector.
+- `kb_distillery.storage.raw`: the facade engine code uses (`raw.exists`, `raw.read_text`, `raw.path`, ...), bound to the current knowledge base's connector.
 - Migrated onto it: `services/pages.resolve_asset`, `ingest/chat_build`, `ingest/digest_many`, `maintenance/export`.
-- A ratchet: `python -m kb.lint.raw_access` lists the modules that still reach `raw/` themselves, `backend/tests/storage/raw_access_baseline.txt` is their allowance, and a test fails on a new one. The list only shrinks.
+- A ratchet: `python -m kb_distillery.lint.raw_access` lists the modules that still reach `raw/` themselves, `tests/storage/raw_access_baseline.txt` is their allowance, and a test fails on a new one. The list only shrinks.
 
 ## The plan's goal, and why it is met differently
 
@@ -25,7 +25,7 @@ The plan said "no module touches `raw/` directly". 17 modules still do. Moving t
 | `git/guard.py`, `git/ship.py` | Path rules and git plumbing, not content access. |
 | `dashboard/serve.py`, `ops/nightly_report.py` | Entry points that build raw paths for display; to be revisited with the legacy dashboard's removal. |
 
-Migrations (`backend/src/kb/migrations/`) are exempt on purpose: they rewrite old layouts.
+Migrations (`src/kb_distillery/migrations/`) are exempt on purpose: they rewrite old layouts.
 
 ## Known gaps
 

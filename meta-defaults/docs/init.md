@@ -16,7 +16,7 @@ kbd launch --kb <id>
   `kb.toml` (current `schema_version`, `[kb] template`), `wiki/`, `raw/inbox/`, `meta/`, a minimal `.gitignore`, and one
   first commit `kb(import): create <id> from template <t> (kb-x.y.0)` on `main`.
 - The folder is built in a hidden sibling and renamed into place, so a failure leaves nothing half made.
-- Git code path: `kb.ops.core._git` / `_commit_paths` (the helpers `ops` commits with: no hooks, no lint, no push).
+- Git code path: `kb_distillery.ops.core._git` / `_commit_paths` (the helpers `ops` commits with: no hooks, no lint, no push).
   `commit_policy` has no `init` op, so the commit uses `import`. Identity: your git config; if none, a local fallback
   author `kb-distillery <kb@localhost>` for that one commit.
 - **Never overwrites.** It refuses an existing folder, the reserved ids `think`, `yonatan-thesis` and `demo`, an id that is
@@ -45,7 +45,7 @@ Read-only: no network, no LLM call, no lint, nothing written.
 | llm subscription / api / batch | never | never (INFO: that backend stays off) |
 | frontend | | `dist` not built and node or `node_modules` missing |
 
-## `kb.llm.availability()`
+## `kb_distillery.llm.availability()`
 
 `{backend: {ok, why, fix}}` for `subscription`, `api`, `batch`, with no LLM call. Subscription = the `claude` CLI is on
 PATH and `claude auth status` says logged in with a subscription. api and batch = `api_key()` finds a key

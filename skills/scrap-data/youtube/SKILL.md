@@ -14,7 +14,7 @@ description: Turn a YouTube lecture or video into a raw/inbox/video-<name>/ bund
 
 ## Do NOT
 
-- Scrap without `resolve` first — `python3 -m kb.ingest resolve <url>` finds a bundle by its YouTube id
+- Scrap without `resolve` first — `python3 -m kb_distillery.ingest resolve <url>` finds a bundle by its YouTube id
 - Read frames here — that is `video-digest` (full / deep), which spends LLM tokens
 - Scrap animation-led videos such as 3Blue1Brown (Grant Sanderson): the content lives in continuous animation,
   which a frame budget cannot digest well — the owner's call (2026-10-26). Lectures (slides, blackboard), paper-
@@ -24,8 +24,8 @@ description: Turn a YouTube lecture or video into a raw/inbox/video-<name>/ bund
 ## CLI
 
 ```bash
-python3 -m kb.ingest scrap-youtube <url>            # one standard bundle, 0 LLM
-python3 -m kb.ingest scrap-youtube <url> --force    # refresh the bundle of a video already in the vault
+python3 -m kb_distillery.ingest scrap-youtube <url>            # one standard bundle, 0 LLM
+python3 -m kb_distillery.ingest scrap-youtube <url> --force    # refresh the bundle of a video already in the vault
 ```
 
 ## Bundle (one format, no tiers)
@@ -39,7 +39,7 @@ python3 -m kb.ingest scrap-youtube <url> --force    # refresh the bundle of a vi
 - `a-<seconds>.jpg` — one 640 px thumbnail per anchor (~25 KB), gitignored like every raw image, `asset:` rows of
   `video.md` in `meta/corpus.tsv`; a clone or the shared site has the text, not the images
 
-**Anchors** (`backend/src/kb/ingest/youtube/frames.py`) aim at recall: every timestamp where the screen likely shows
+**Anchors** (`src/kb_distillery/ingest/youtube/frames.py`) aim at recall: every timestamp where the screen likely shows
 something worth reading, scored, never dropped. Signals: the fullest board before each erase or camera cut
 (blackboard lectures), the last frame before each slide change scored by its OCR words (slides), transcript cues
 ("as you can see", "this equation"), chapter starts, and coverage (the most stable second of any 90 s stretch with
@@ -58,7 +58,7 @@ file stays in `.cache/youtube/<id>/` and never enters `raw/`. Local processing �
 | full | `video-digest raw/videos/<name>/video.md --tier full` | top anchors ~15/hour, ≥ 2 min apart, each read by Claude with the transcript around it | ~1.4k in + 0.5k out per frame (≈ $0.15 per lecture-hour on the API) |
 | deep | `video-digest … --tier deep` | ~30/hour, ≥ 1 min apart, + Connections into the wiki | ≈ twice full |
 
-Frame reads go through `kb.llm`: `--backend subscription|api|batch` (default `$KB_LLM_BACKEND`, then
+Frame reads go through `kb_distillery.llm`: `--backend subscription|api|batch` (default `$KB_LLM_BACKEND`, then
 subscription), `--model` (default sonnet). All of a video's frames are one run, so `--backend batch` is one
 half-price Message Batch per video (results within hours; the command waits).
 
@@ -69,7 +69,7 @@ reads), writes Problem, Main result, Key ideas, curates Key equations, Takeaways
 
 ## Next step
 
-`python3 -m kb.ingest catalog raw/inbox/video-<name> [--collection course-…]` (a course lecture joins the course's
+`python3 -m kb_distillery.ingest catalog raw/inbox/video-<name> [--collection course-…]` (a course lecture joins the course's
 Contents table), then a digest tier.
 
 ## Commit

@@ -17,7 +17,7 @@
 // → 403 (CSRF: the custom header forces a CORS preflight cross-site, the Origin check covers the
 // rest). CF_API_TOKEN unset → 503 {error: "panel not configured: set CF_API_TOKEN"}.
 //
-// Mirrors backend/src/kb/share/cf_api.py + snapshots.py (the CLI); semantics, not code, are shared:
+// Mirrors src/kb_distillery/share/cf_api.py + snapshots.py (the CLI); semantics, not code, are shared:
 //   - ours = Worker name `snapshot-<YYYYMMDD>-<name>` (the CLI additionally checks the `kb-share`
 //     deploy message; the panel does not, to save one API call per Worker — a foreign
 //     `snapshot-*` Worker would show up with online:false and be flagged by prune as an orphan).

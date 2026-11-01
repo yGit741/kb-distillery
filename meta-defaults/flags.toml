@@ -1,6 +1,6 @@
 # Feature-flag registry — the single source for backend and frontend (see meta/docs/dev.md § Feature flags).
-# One [[flag]] table per flag. `pixi run flags-gen` regenerates frontend/src/flags/registry.gen.ts and the
-# share route lists (frontend/src/routes/modules.share-*.ts); `pixi run flags-check` fails when they are stale.
+# One [[flag]] table per flag. `pixi run flags-gen` regenerates web/src/flags/registry.gen.ts and the
+# share route lists (web/src/routes/modules.share-*.ts); `pixi run flags-check` fails when they are stale.
 #
 #   kind = "build"   decided when the bundle is built (a screen that is not in a build is not in its JS at all)
 #   kind = "runtime" read at run time; server-side overrides arrive with the flags API (G2)
@@ -50,7 +50,7 @@ envs = { local = true, private = false, public = false }
 
 [[flag]]
 name = "semantic-search"
-description = "Search adds a 'related' group: meaning-based hits from the local qmd service over title+summary cards (tools/qmd)."
+description = "Search adds a 'related' group: meaning-based hits from the local qmd service over title+summary cards (scripts/qmd)."
 owner = "yonatanm"
 created = 2026-10-27
 expires = 2027-01-24

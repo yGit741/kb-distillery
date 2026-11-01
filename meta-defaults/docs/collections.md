@@ -5,7 +5,7 @@
 ## Course and series collections
 
 A `course-` / `series-` page is a collection over member raw files: Overview → Contents → Threads
-(`backend/src/kb/core/hubs.py`, `meta/templates/course.md`, `series.md`). Each Contents row is one source —
+(`src/kb_distillery/core/hubs.py`, `meta/templates/course.md`, `series.md`). Each Contents row is one source —
 usually one file, sometimes several (slides + the handwritten notes taken in that lecture):
 
 ```
@@ -47,11 +47,11 @@ chapters or half a long one; front/back matter rows are `skip`. Each digested pa
 Digesting a book is always scoped — the CLI prints the partition and exits 2 instead of guessing:
 
 ```
-python3 -m kb.ingest toc <raw>                     # partition [x]/[ ]/[-]; --depth 2 adds the outline
-python3 -m kb.ingest full-digest <raw> --part 3    # a row of the partition
-python3 -m kb.ingest full-digest <raw> --pages 43-55  # carves a new part out of undigested rows
-python3 -m kb.ingest full-digest <raw> --section 2 # an outline entry (chapter number, #index, text)
-python3 -m kb.ingest full-digest <raw> --whole-book  # override the gate (writes a paper)
+python3 -m kb_distillery.ingest toc <raw>                     # partition [x]/[ ]/[-]; --depth 2 adds the outline
+python3 -m kb_distillery.ingest full-digest <raw> --part 3    # a row of the partition
+python3 -m kb_distillery.ingest full-digest <raw> --pages 43-55  # carves a new part out of undigested rows
+python3 -m kb_distillery.ingest full-digest <raw> --section 2 # an outline entry (chapter number, #index, text)
+python3 -m kb_distillery.ingest full-digest <raw> --whole-book  # override the gate (writes a paper)
 ```
 
 The first scoped digest creates the book page from `meta/templates/book.md` with a partition
@@ -59,7 +59,7 @@ proposed from the PDF outline (split only at chapter/section boundaries, ≤60 p
 its Overview by hand. `finalize` writes the `type: part` page and ticks its row. A part's identity
 is its page range — the `#` column is display order and renumbers when a row is split.
 
-**The partition is the truth** (`backend/src/kb/core/books.py`, checked by lint): gaps or overlaps are errors,
+**The partition is the truth** (`src/kb_distillery/core/books.py`, checked by lint): gaps or overlaps are errors,
 a part over 60 pages is a warning, a digested row must link its part page and match its
 `depth`, and the part's `book:`/`raw:`/`section_pages:` must agree with its row.
 Coverage = digested pages ÷ non-skip pages; below 100% the raw file is `partial` in

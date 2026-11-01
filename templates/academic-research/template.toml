@@ -100,11 +100,11 @@ color = "#f6c177"
 [types.concept.person]
 label = "Person"
 prefix = ""
-status = []                   # no status: progress is `verified:` (backend/src/kb/core/persons.py)
+status = []                   # no status: progress is `verified:` (src/kb_distillery/core/persons.py)
 color = "#bb9af7"
 
 # --- Edges: the typed relations a page may state in its `relations:` block ---------------------------------
-# Read by kb.services.cypher.edge_config and checked by lint (check_relations). This table lives in the template.
+# Read by kb_distillery.services.cypher.edge_config and checked by lint (check_relations). This table lives in the template.
 [edges]
 types = ["extends", "uses", "contradicts", "example-of", "open-problem-in", "addresses", "discusses", "student-of"]
 symmetric = ["contradicts"]

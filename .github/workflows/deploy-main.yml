@@ -1,6 +1,6 @@
 # Daily fallback deploy of the private site (Worker `kb`) from GitHub.
 #
-# The deploy owner (backend/src/kb/share/owner.py, launchd com.thesis-kb.deploy-owner) is the one
+# The deploy owner (src/kb_distillery/share/owner.py, launchd com.thesis-kb.deploy-owner) is the one
 # process that deploys main: kb(...) ops, merges and the nightly sync only nudge it. This workflow is
 # the fallback for when the owner has been idle: `owner fresh --hours 24` (the owner's state, else the
 # newest kb-share deployment on Cloudflare) — a successful deploy in the last 24 h → the job is a no-op.
@@ -45,7 +45,7 @@ jobs:
       - name: Did the deploy owner deploy in the last 24 h?
         id: owner
         run: |
-          if pixi run python -m kb.share.owner fresh --hours 24; then echo "stale=0" >> "$GITHUB_OUTPUT"; else echo "stale=1" >> "$GITHUB_OUTPUT"; fi
+          if pixi run python -m kb_distillery.share.owner fresh --hours 24; then echo "stale=0" >> "$GITHUB_OUTPUT"; else echo "stale=1" >> "$GITHUB_OUTPUT"; fi
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

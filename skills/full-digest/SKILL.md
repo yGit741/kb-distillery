@@ -18,21 +18,21 @@ Replaces legacy `thesis-ingest`.
 - Trigger on bare `digest` — ask tier first
 - Trigger on `easy-digest` or `deep-digest`
 - Run the paper session on a video (`raw/videos/…/video.md`): a video's full tier is
-  `python3 -m kb.ingest video-digest <raw> --tier full` (`skills/scrap-data/youtube/SKILL.md`)
+  `python3 -m kb_distillery.ingest video-digest <raw> --tier full` (`skills/scrap-data/youtube/SKILL.md`)
 - Write `wiki/` directly during an open session
 - Mark as heavy tier
 
 ## Commands
 
 ```bash
-python3 -m kb.ingest full-digest <raw>   # opens session, prints next steps
-python3 -m kb.ingest begin <raw>         # same session API
-python3 -m kb.ingest extract <sha>       # fill claims.json — see backend/src/kb/ingest/extract_prompt.md
-python3 -m kb.ingest extract <sha> --fill [--backend subscription|api|batch] [--model sonnet]   # kb.llm fills it
-python3 -m kb.ingest map <sha>
-python3 -m kb.ingest draft <sha>
-python3 -m kb.ingest finalize <sha>      # lint --ingest-strict for depth full
-python3 -m kb.ingest abort <sha>
+python3 -m kb_distillery.ingest full-digest <raw>   # opens session, prints next steps
+python3 -m kb_distillery.ingest begin <raw>         # same session API
+python3 -m kb_distillery.ingest extract <sha>       # fill claims.json — see src/kb_distillery/ingest/extract_prompt.md
+python3 -m kb_distillery.ingest extract <sha> --fill [--backend subscription|api|batch] [--model sonnet]   # kb_distillery.llm fills it
+python3 -m kb_distillery.ingest map <sha>
+python3 -m kb_distillery.ingest draft <sha>
+python3 -m kb_distillery.ingest finalize <sha>      # lint --ingest-strict for depth full
+python3 -m kb_distillery.ingest abort <sha>
 ```
 
 ## Agent steps after `begin` / `full-digest`
@@ -40,7 +40,7 @@ python3 -m kb.ingest abort <sha>
 1. Run `extract` — read `meta/.ingest/<sha>/extracted.text` (the whole document; a book must be scoped with `--part`/`--pages`). If
    the raw entity has a `parsed.md` sidecar (e.g. `raw/emails/<YYYY-MM-DD-thread>/parsed.md`),
    `extracted.text` is that sidecar's content instead of raw PDF/thread text.
-2. Write `claims.json` with real LaTeX equations, results, ideas — or run `extract <sha> --fill`: `kb.llm`
+2. Write `claims.json` with real LaTeX equations, results, ideas — or run `extract <sha> --fill`: `kb_distillery.llm`
    fills the template from `extracted.text` with the same `extract_prompt.md` (Sonnet; `--backend`, default
    `$KB_LLM_BACKEND` then subscription). A reply that fails `validate_claims` goes to `claims.draft.json` and
    claims.json stays the template; a filled claims.json is never replaced. Review the filled claims before `map`.
@@ -50,16 +50,16 @@ python3 -m kb.ingest abort <sha>
 
 ## Many sources at once (backlog)
 
-`python3 -m kb.ingest digest-many` batches the claim-fill for a whole selection (Message Batches, half price), then
+`python3 -m kb_distillery.ingest digest-many` batches the claim-fill for a whole selection (Message Batches, half price), then
 runs the sessions one at a time from the cached claims — each source ends in its own `kb(digest)` commit. Resumable
 (`.cache/digest-many/<run>/state.json`); never forces a reply that fails `validate_claims` (it lands in `drafts/`).
 
 ```bash
-python3 -m kb.ingest digest-many submit --run kalai --hub series-gil-kalai-blog --topics comb,prob --dry-run   # count + $ estimate
-python3 -m kb.ingest digest-many submit --run kalai --hub series-gil-kalai-blog --topics comb,prob --max-usd 10
-python3 -m kb.ingest digest-many collect --run kalai [--wait 3600]   # batches take minutes to hours
-python3 -m kb.ingest digest-many drive --run kalai [--max 10]        # stops after 3 failed sessions in a row
-python3 -m kb.ingest digest-many status --run kalai
+python3 -m kb_distillery.ingest digest-many submit --run kalai --hub series-gil-kalai-blog --topics comb,prob --dry-run   # count + $ estimate
+python3 -m kb_distillery.ingest digest-many submit --run kalai --hub series-gil-kalai-blog --topics comb,prob --max-usd 10
+python3 -m kb_distillery.ingest digest-many collect --run kalai [--wait 3600]   # batches take minutes to hours
+python3 -m kb_distillery.ingest digest-many drive --run kalai [--max 10]        # stops after 3 failed sessions in a row
+python3 -m kb_distillery.ingest digest-many status --run kalai
 ```
 
 Deepening an existing page keeps its frontmatter (`blog`, `date`, `url`, `summary`, …) and its `## My notes`; `area`
@@ -71,8 +71,8 @@ A book is digested one **part** at a time — never whole. `toc` prints the book
 (or a proposed one if the book has no `type: book` page yet):
 
 ```bash
-python3 -m kb.ingest toc <raw>                     # [x] digested · [ ] backlog · [-] skip
-python3 -m kb.ingest full-digest <raw> --part N    # a row; --pages A-B carves a new one
+python3 -m kb_distillery.ingest toc <raw>                     # [x] digested · [ ] backlog · [-] skip
+python3 -m kb_distillery.ingest full-digest <raw> --part N    # a row; --pages A-B carves a new one
 ```
 
 The session id is `<sha>-p<A>-<B>`. `map` names the page `part-<book stem>-<topic>` with
@@ -87,7 +87,7 @@ A `course-`/`series-` collection's `## Contents` table lists its member raw file
 passing the collection slug (the row's raw files are read together, e.g. slides + handwritten notes):
 
 ```bash
-python3 -m kb.ingest full-digest course-runi-rl --row 3
+python3 -m kb_distillery.ingest full-digest course-runi-rl --row 3
 ```
 
 The page type follows the raw format: `presentations/`, `handwritten/` → `lecture-`;

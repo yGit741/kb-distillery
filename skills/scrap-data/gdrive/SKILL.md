@@ -30,8 +30,8 @@ either spelling resolves.
 ## CLI
 
 ```bash
-python3 -m kb.ingest scrap-gdrive --dry-run
-python3 -m kb.ingest scrap-gdrive
+python3 -m kb_distillery.ingest scrap-gdrive --dry-run
+python3 -m kb_distillery.ingest scrap-gdrive
 pixi run scrap-gdrive
 ```
 
@@ -46,7 +46,7 @@ Options: `--folder <name>` (default `Notes to Obsedian`), `--ext pdf,jpg,md` (de
 2. Show the user the plan: what would be pulled, what is skipped, the total size, and any
    `WARNING` lines verbatim.
 3. Get a yes, then re-run without `--dry-run`.
-4. Run `python3 -m kb.lint.lint` so new inbox files land in `meta/corpus.tsv` as `queued`.
+4. Run `python3 -m kb_distillery.lint.lint` so new inbox files land in `meta/corpus.tsv` as `queued`.
 
 ## Behavior
 

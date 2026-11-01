@@ -25,6 +25,6 @@ description: Catalog handwritten notes (ink-only PDFs) from inbox to raw/handwri
 ## CLI
 
 ```bash
-python3 -m kb.ingest catalog raw/inbox/<file>.pdf --collection course-runi-rl --title "Lecture 2 notes"
-python3 -m kb.ingest catalog raw/inbox/<file>.pdf --format handwritten   # force
+python3 -m kb_distillery.ingest catalog raw/inbox/<file>.pdf --collection course-runi-rl --title "Lecture 2 notes"
+python3 -m kb_distillery.ingest catalog raw/inbox/<file>.pdf --format handwritten   # force
 ```

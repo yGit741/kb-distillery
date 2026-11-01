@@ -4,7 +4,7 @@
 
 ## Page layers
 
-Every wiki page has a `layer:` and a `type:` within it (`backend/src/kb/core/schema.py` `LAYER_OF`). Verbs:
+Every wiki page has a `layer:` and a `type:` within it (`src/kb_distillery/core/schema.py` `LAYER_OF`). Verbs:
 **Add** (scrap into `raw/inbox/`) → **Catalog** (file the raw item, create its Source page at
 `depth: listed`) → **Digest** (deepen that same page in place: easy, full, deep).
 
@@ -47,14 +47,14 @@ status: to-read|reading|digested   # sources + collections; idea/topic: seed|gro
                              # question: open|partial|resolved; distilled-think: review|applied|archived;
                              # scope: active|parked; person: none — see below
 depth: listed|easy|full|deep # sources only — listed ⇒ to-read|reading, easy/full/deep ⇒ digested
-area: [info-theory]          # topic slugs only (whitelist TOPIC_SLUGS in backend/src/kb/core/schema.py)
+area: [info-theory]          # topic slugs only (whitelist TOPIC_SLUGS in src/kb_distillery/core/schema.py)
 summary: "…"                 # one English line, 80–320 chars: what the page is + its main point (schema 1.3)
 summary_from: 3f9a1c0b7e21   # hash of H1 + Problem/Main result + Key claims it was written from (stale check)
 summary_by: me               # optional: you wrote it — tools never overwrite it
 relations:                   # optional typed links to other pages (schema 1.4); see below
   - {to: other-slug, kind: extends, note: "why it holds"}
 related: [tensor-rank]       # bare slugs — wiki/ is flat, so no paths
-aliases: [old-slug]          # renamed pages keep their old slug; `kb.ingest resolve <old-slug>` finds them
+aliases: [old-slug]          # renamed pages keep their old slug; `kb_distillery.ingest resolve <old-slug>` finds them
 raw: raw/printed-docs/y.pdf  # sources + book/notebook (a list for multi-file lectures); `none` + a `url:` if read externally
 book_pages: 419              # book/notebook only — total PDF pages
 book: <book-slug>            # part only — its collection; plus section: and section_pages: A-B
@@ -75,15 +75,15 @@ institution: runi            # course only, plus course_code:, semester:, lectur
 | `chat-` | ai-chat (source; LLM chat) | *(bare)* | idea, person (concept) |
 | `distilled-think-` | distilled-think (concept, aux) | | |
 
-**`relations:`** (schema 1.4, `backend/src/kb/graph/relations.py`) — typed links a page states about other pages: `to`
+**`relations:`** (schema 1.4, `src/kb_distillery/graph/relations.py`) — typed links a page states about other pages: `to`
 (a slug), `kind` and a `note`. The kinds a knowledge base accepts are its `kb.toml` `[edges] types` (the thesis kb:
 extends, uses, contradicts, example-of, open-problem-in, addresses, student-of); `symmetric` kinds (contradicts) are
 stored once, and `note_required` kinds need a one-sentence note. Lint errors on an undeclared kind, a missing or
 self target, a missing note, a repeated (kind, target), a malformed block, and on a source page that is not depth
-`full` or `deep` (a concept page may always state relations). Relations are proposed by `python -m kb.graph.propose`
+`full` or `deep` (a concept page may always state relations). Relations are proposed by `python -m kb_distillery.graph.propose`
 and applied only after review; the graph reads them behind the `graph-relations` flag.
 
-**`summary:`** (schema 1.3, `backend/src/kb/core/summary.py`) — every page except courses and `listed`
+**`summary:`** (schema 1.3, `src/kb_distillery/core/summary.py`) — every page except courses and `listed`
 sources carries one English line saying what the page is and its main point, in the same template for
 every type, so a short idea and a long post are equally searchable. It feeds `index.md`, search cards and
 embeddings. Sonnet writes it (`pixi run summarize -- run --slugs <slug>`, then `apply` inside an ops
@@ -93,9 +93,9 @@ aggregated warning (until the backfill ends), stale → warning; `summary_by: me
 
 **`## My notes`** — every concept page (idea, topic, question, person) ends with a reserved
 `## My notes` section that is the user's: no tool overwrites it and it stays last
-(`backend/src/kb/core/wikiio.py`); lint warns when a page has two or it is not last. Agents never write in it.
+(`src/kb_distillery/core/wikiio.py`); lint warns when a page has two or it is not last. Agents never write in it.
 
-**Person pages are handle-driven** (`backend/src/kb/core/persons.py`, schema 0.12). Frontmatter holds only
+**Person pages are handle-driven** (`src/kb_distillery/core/persons.py`, schema 0.12). Frontmatter holds only
 handles, edges, contact and a date (besides `type: person`, `layer: concept`) — no `status`, `area`, `related` or `affiliation`:
 
 ```yaml
@@ -125,7 +125,7 @@ Sources:
 - **lecture** — `> Lecture of [[course]]` line → Setup & assumptions → Key equations → Takeaways for my thesis → Connections → Links out
 - **article / mail** — Key claims → Key equations → Takeaways for my thesis → Connections → Links out (mail = an email thread)
 - **ai-chat** — rendered from its `meta/chats/` tree by the chat pipeline (`conversation:` names the tree)
-- **blog-post** — rendered by `backend/src/kb/ingest/blog.py`: Blog Post Summary → Key concepts → Post
+- **blog-post** — rendered by `src/kb_distillery/ingest/blog.py`: Blog Post Summary → Key concepts → Post
 - **video** — Key ideas → Key equations → Takeaways for my thesis → Connections → Links out
 
 Collections (tables of sources, never sources themselves):

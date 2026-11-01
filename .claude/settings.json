@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"$CLAUDE_PROJECT_DIR/tools/hooks-python.sh\" kb.git.guard"
+            "command": "bash \"$CLAUDE_PROJECT_DIR/scripts/hooks-python.sh\" kb_distillery.git.guard"
           }
         ]
       },
@@ -15,7 +15,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"$CLAUDE_PROJECT_DIR/tools/hooks/block-git-write.sh\""
+            "command": "bash \"$CLAUDE_PROJECT_DIR/scripts/hooks/block-git-write.sh\""
           }
         ]
       }
@@ -25,13 +25,13 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"$CLAUDE_PROJECT_DIR/tools/hooks-python.sh\" kb.git.merge_nudge",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/scripts/hooks-python.sh\" kb_distillery.git.merge_nudge",
             "timeout": 20,
             "statusMessage": "Checking for a PR awaiting merge\u2026"
           },
           {
             "type": "command",
-            "command": "bash \"$CLAUDE_PROJECT_DIR/tools/hooks-python.sh\" kb.git.proof_nudge",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/scripts/hooks-python.sh\" kb_distillery.git.proof_nudge",
             "timeout": 10,
             "statusMessage": "Checking the reply shows proof\u2026"
           }
@@ -80,6 +80,8 @@
       "Bash(*wrangler versions deploy*)",
       "Bash(*wrangler versions upload*)",
       "Bash(*wrangler rollback*)",
+      "Bash(*kb_distillery.share.owner run*)",
+      "Bash(*kb_distillery.share.owner once*)",
       "Bash(*kb.share.owner run*)",
       "Bash(*kb.share.owner once*)"
     ]
