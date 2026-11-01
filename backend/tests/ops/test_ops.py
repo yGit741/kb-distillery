@@ -115,7 +115,7 @@ class CommitOpTests(OpsRepo):
         sha = self.op("digest", "a", ["wiki/a.md"])
         self.assertTrue(sha)
         self.assertEqual(self.subject(), f"kb(digest): a (kb-{V}.1)")
-        self.assertEqual(self.files(), {"wiki/a.md"})
+        self.assertEqual(self.files(), {"wiki/a.md", "meta/log.md"})
         c = cp.parse_message(self.body())
         self.assertEqual((c.trailers["KB-Op"], c.trailers["KB-Target"], c.trailers["KB-Version"]),
                          ("digest", "a", f"{V}.1"))
@@ -132,8 +132,8 @@ class CommitOpTests(OpsRepo):
     def test_think_edits_get_their_own_commit(self):
         self.write("think/t.md", "my thought")
         self.op("refine", "b", ["wiki/b.md", "think/t.md"])
-        self.assertEqual(self.files("HEAD"), {"wiki/b.md"})
-        self.assertEqual(self.files("HEAD~1"), {"think/t.md"})
+        self.assertEqual(self.files("HEAD"), {"wiki/b.md", "meta/log.md"})
+        self.assertEqual(self.files("HEAD~1"), {"think/t.md", "meta/log.md"})
         self.assertTrue(self.subject("HEAD~1").startswith("kb(think): human edits (1 file)"))
         self.assertIn("KB-Actor: human", self.body("HEAD~1"))
 
@@ -143,7 +143,7 @@ class CommitOpTests(OpsRepo):
         with open(os.path.join(sess, "session.json"), "w") as f:
             json.dump({"status": "open", "sha1": "abc", "new_files": ["wiki/locked.md"]}, f)
         self.op("digest", "mine", ["wiki/mine.md", "wiki/locked.md"])
-        self.assertEqual(self.files(), {"wiki/mine.md"})
+        self.assertEqual(self.files(), {"wiki/mine.md", "meta/log.md"})
 
     def test_refuses_off_main(self):
         g(self.root, "checkout", "-q", "-b", "infra/x")
@@ -154,6 +154,52 @@ class CommitOpTests(OpsRepo):
         self.assertIsNone(core.commit_op("refine", "x", paths=[], root=self.root))
 
 
+class LogLineTests(OpsRepo):
+    """Every kb(<op>) commit carries its own meta/log.md line, in the same commit."""
+
+    def line(self, op, text):
+        return f"] {op} | {text}"
+
+    def test_each_op_logs_inside_its_commit(self):
+        for op in ("import", "catalog", "digest", "refine", "distill"):
+            sha = self.op(op, f"t-{op}", [f"wiki/{op}.md"])
+            self.assertIn("meta/log.md", self.files(sha), op)
+            self.assertIn(self.line(op, f"t {op} ← `t-{op}`"), g(self.root, "show", f"{sha}:meta/log.md"))
+        self.assertEqual(g(self.root, "status", "--porcelain"), "")
+
+    def test_session_commit_logs_with_summary(self):
+        core.begin("refine", "b", root=self.root)
+        self.write("wiki/b.md", "edited")
+        core.commit("split the idea", root=self.root)
+        self.assertIn(self.line("refine", "split the idea ← `b`"), self.read("meta/log.md"))
+
+    def test_writer_that_already_logged_is_not_duplicated(self):
+        self.write("meta/log.md", "\n## [2026-10-22] ingest | a ← `raw/x`\n")
+        self.op("digest", "a", ["wiki/a.md"])
+        self.assertEqual(self.read("meta/log.md").count("\n## "), 1)
+
+    def test_nothing_to_commit_logs_nothing(self):
+        self.assertIsNone(core.commit_op("refine", "x", paths=[], root=self.root))
+        self.assertEqual(self.read("meta/log.md"), "# log\n")
+
+    def test_think_edits_log_in_their_own_commit(self):
+        self.write("think/t.md", "my thought")
+        core.sync_human(self.root)
+        self.assertEqual(self.files(), {"think/t.md", "meta/log.md"})
+        self.assertIn(self.line("think", "human edits (1 file) ← `think`"), self.read("meta/log.md"))
+
+    def test_undo_and_restore_log_once_in_their_commit(self):
+        bad = self.op("refine", "split", ["wiki/new.md"])
+        core.undo(bad, root=self.root)
+        self.assertIn("meta/log.md", self.files())
+        self.assertEqual(self.read("meta/log.md").count("] undo | "), 1)
+        core.snapshot(root=self.root)
+        self.op("refine", "later", ["wiki/later.md"])
+        core.restore(f"kb-{V}.2", root=self.root)
+        self.assertIn("meta/log.md", self.files())
+        self.assertEqual(self.read("meta/log.md").count("] restore | "), 1)
+
+
 class SessionTests(OpsRepo):
     def test_begin_commit_excludes_preexisting_dirt(self):
         self.write("wiki/pre.md", "before begin")
@@ -161,7 +207,7 @@ class SessionTests(OpsRepo):
         self.write("wiki/x1.md", "half one")
         self.write("wiki/b.md", "edited")
         core.commit(root=self.root)
-        self.assertEqual(self.files(), {"wiki/x1.md", "wiki/b.md"})
+        self.assertEqual(self.files(), {"wiki/x1.md", "wiki/b.md", "meta/log.md"})
         self.assertEqual(self.subject(), f"kb(refine): split concept x (kb-{V}.1)")
         self.assertIsNone(core.current_session(self.root))
 
@@ -379,7 +425,7 @@ class WrapTests(OpsRepo):
             rc = wrap.run(self._cli(["wiki/2024-x.md", "raw/papers/2024-x.md"]), ["catalog", "raw/inbox/x.pdf"])
         self.assertEqual(rc, 0)
         self.assertEqual(self.subject(), f"kb(catalog): 2024 x (kb-{V}.1)")  # subject in words, slug in KB-Target
-        self.assertEqual(self.files(), {"wiki/2024-x.md", "raw/papers/2024-x.md"})
+        self.assertEqual(self.files(), {"wiki/2024-x.md", "raw/papers/2024-x.md", "meta/log.md"})
 
     def test_no_commit_flag(self):
         with patch.object(core, "ROOT", self.root):

@@ -1,10 +1,10 @@
 """Vault health metrics — shared by lint --health and kb.dashboard."""
 import os
-import re
 import time
 from datetime import datetime, timezone
+from kb.core.links import WIKILINK_TARGET
 
-LINK = re.compile(r"\[\[([^\]|#\\]+)")
+LINK = WIKILINK_TARGET
 
 ORPHAN_EXCLUDE = frozenset({"AGENTS", "log", "thesis"})
 

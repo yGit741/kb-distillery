@@ -30,11 +30,12 @@ import subprocess
 import sys
 
 from kb.paths import vault_root
+from kb.core.links import WIKILINK_TARGET
 META_DIR = os.path.join(vault_root(), "meta")
 REPO = vault_root()
 
 FORMAT = "kb-invariants/1"
-_LINK = re.compile(r"\[\[([^\]|#\\]+)")
+_LINK = WIKILINK_TARGET
 _DAYS = re.compile(r"\b\d+ days\b")
 _LINE = re.compile(r"^(?P<key>[A-Za-z_][\w-]*):(?P<sp>\s*)(?P<val>[^\s#][^#]*?)?(?P<rest>\s*(#.*)?)$")
 
