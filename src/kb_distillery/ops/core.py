@@ -24,7 +24,7 @@ META_DIR = os.path.join(vault_root(), "meta")
 ROOT = vault_root()
 
 from kb_distillery.git import commit_policy as cp
-from kb_distillery.maintenance.daily_sync import changed_paths, has_open_sessions, run_git
+from kb_distillery.ops.daily_sync import changed_paths, has_open_sessions, run_git
 from kb_distillery.core import log as kblog
 from kb_distillery.core.schema import OPS_DIR, RESTORABLE_PATHS, lane_of, strip_prefix
 
@@ -753,7 +753,7 @@ def sync_hygiene(root=ROOT, failed=False, error=None, head_before=None, rc=None)
     run = None
     try:
         from . import hygiene, runlog
-        from kb_distillery.maintenance import notify
+        from kb_distillery.ops import notify
         run = runlog.Run(root)
         facts = _sync_facts(root, head_before, rc, failed, error)
         run.set(sync={k: v for k, v in facts.items() if k != "error"})

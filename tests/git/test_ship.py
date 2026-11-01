@@ -10,7 +10,7 @@ from unittest.mock import patch
 from kb_distillery.paths import vault_root
 ROOT = vault_root()
 
-from kb_distillery.maintenance import daily_sync
+from kb_distillery.ops import daily_sync
 from kb_distillery.git import ship
 from kb_distillery.core.schema import lane_of
 

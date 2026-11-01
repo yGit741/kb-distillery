@@ -45,7 +45,7 @@ meta/.ops/
 # Pixi environment
 .pixi
 
-# LLM share bundles (src/kb_distillery/maintenance/export.py)
+# LLM share bundles (src/kb_distillery/publish/export.py)
 .exported/
 
 # Share build cache + deploy status (src/kb_distillery/share); wrangler's local state

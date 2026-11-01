@@ -172,3 +172,16 @@ def test_main_json_on_empty_bases_dir(monkeypatch, tmp_path, capsys):
     rc = doctor.main(["--json"])
     rows = json.loads(capsys.readouterr().out)
     assert rc in (0, 1) and any(r["name"] == "knowledge base" and r["status"] == WARN for r in rows)
+
+
+# --- config folder (~/.config/kb-distillery) -------------------------------------------------------------
+def test_config_folder_only_the_old_one_is_a_fail_with_the_exact_mv(monkeypatch, tmp_path):
+    monkeypatch.setenv("HOME", str(tmp_path))
+    assert doctor.check_config_dir().status == INFO                      # nothing yet: fine
+    old = tmp_path / ".config" / "thesis-kb"
+    old.mkdir(parents=True)
+    c = doctor.check_config_dir()
+    assert c.status == FAIL and c.fix == f"mv {old} {tmp_path / '.config' / 'kb-distillery'}"
+    assert old.is_dir() and not (tmp_path / ".config" / "kb-distillery").exists()   # reported, never moved
+    (tmp_path / ".config" / "kb-distillery").mkdir()
+    assert doctor.check_config_dir().status == PASS

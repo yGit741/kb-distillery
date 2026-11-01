@@ -13,6 +13,7 @@ import unittest
 from unittest import mock
 
 
+from kb_distillery.config import userdir
 from kb_distillery.services import chat_agent
 from kb_distillery.services import chat as chat_data
 
@@ -176,7 +177,8 @@ class TestPolicy(unittest.TestCase):
         self.allow("Read", {"file_path": "think/ideas.md"})
         self.allow("Read", {"file_path": "raw/web-clips/some-post.md"})
         self.deny("Read", {"file_path": "raw/printed-docs/2023-paper.pdf"})
-        self.deny("Read", {"file_path": os.path.expanduser("~/.config/thesis-kb/anthropic_key")})
+        self.deny("Read", {"file_path": userdir.path("anthropic_key")})
+        self.deny("Read", {"file_path": os.path.join(userdir.legacy_dir(), "anthropic_key")})
         self.deny("Read", {"file_path": "wiki/../src/kb_distillery/core/schema.py"})
         self.deny("Read", {"file_path": "meta/corpus.tsv"})
         self.deny("Read", {"file_path": ".claude/settings.json"})

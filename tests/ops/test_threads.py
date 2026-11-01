@@ -14,7 +14,7 @@ ROOT = vault_root()
 
 from kb_distillery.git import ship
 from kb_distillery.ops import hygiene, nightly_report, runlog, threads
-from kb_distillery.report import render_html, render_text
+from kb_distillery.ops.report import render_html, render_text
 from tests.ops.test_hygiene import NOW, Repo, g
 
 PR = {"number": 7, "branch": "infra/feat", "title": "feat(x): one", "age": "2h", "hours": 2}

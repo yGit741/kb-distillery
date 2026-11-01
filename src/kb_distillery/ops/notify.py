@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """Email the nightly report — every night (mode "digest") or only when something needs fixing ("problems").
 
-    python3 -m kb_distillery.maintenance.notify --test          # one-line test email (says clearly when the keychain item is missing)
-    python3 -m kb_distillery.maintenance.notify --show-config
+    python3 -m kb_distillery.ops.notify --test          # one-line test email (says clearly when the keychain item is missing)
+    python3 -m kb_distillery.ops.notify --show-config
 
 Config: meta/ops/sync.toml `[notify]` (email, mode, on = severities, min_interval_hours).
 The body is the nightly report Doc (src/kb_distillery/ops/nightly_report.py) as HTML with a plain-text
 alternative; without a Doc (older callers) it falls back to the plain hygiene text.
-Password: macOS keychain, `security find-generic-password -a <email> -s thesis-kb-gmail -w`
+Password: macOS keychain, `security find-generic-password -a <email> -s kb-distillery-gmail -w` (an item under the old name is still read)
 — never printed, logged or committed. Sent over smtplib SSL to smtp.gmail.com:465 with the
 configured address as both SMTP user and recipient. Nothing here ever raises: a missing
 keychain item, an offline Mac or a refused login print one note and return False.
@@ -22,6 +22,7 @@ import sys
 import tomllib
 from email.message import EmailMessage
 
+from kb_distillery.config import userdir
 from kb_distillery.paths import vault_root
 META_DIR = os.path.join(vault_root(), "meta")
 ROOT = vault_root()
@@ -30,7 +31,7 @@ from kb_distillery.core.schema import OPS_DIR
 
 CONFIG_PATH = os.path.join("meta", "ops", "sync.toml")
 LAST_SENT = "notify-last.json"          # under meta/.ops/ (gitignored ops runtime dir)
-KEYCHAIN_SERVICE = "thesis-kb-gmail"
+KEYCHAIN_SERVICE = "kb-distillery-gmail"
 SMTP_HOST, SMTP_PORT = "smtp.gmail.com", 465
 SUBJECT_PREFIX = "[thesis-kb]"
 DEFAULTS = {"email": "", "mode": "problems", "on": ["error", "warn"], "min_interval_hours": 20}
@@ -52,13 +53,16 @@ def load_config(root=ROOT):
 
 def keychain_password(account, service=KEYCHAIN_SERVICE):
     """The app password from the login keychain, or None (never echoed)."""
-    try:
-        proc = subprocess.run(["security", "find-generic-password", "-a", account, "-s", service, "-w"],
-                              capture_output=True, text=True, check=False, timeout=15)
-    except (OSError, subprocess.TimeoutExpired):
-        return None
-    pw = proc.stdout.strip() if proc.returncode == 0 else ""
-    return pw or None
+    for name in userdir.keychain_services(service):         # the new name, then the one it replaces (read only)
+        try:
+            proc = subprocess.run(["security", "find-generic-password", "-a", account, "-s", name, "-w"],
+                                  capture_output=True, text=True, check=False, timeout=15)
+        except (OSError, subprocess.TimeoutExpired):
+            return None
+        pw = proc.stdout.strip() if proc.returncode == 0 else ""
+        if pw:
+            return pw
+    return None
 
 
 def send_email(subject, body, to, password=None, smtp_cls=None, html=None):
@@ -171,7 +175,7 @@ def notify_report(report, root=ROOT, sync_failed=False, error=None, tail=None, c
             pass
     if doc is not None:
         from kb_distillery.ops.nightly_report import subject
-        from kb_distillery.report import render_html, render_text
+        from kb_distillery.ops.report import render_html, render_text
         ok = (send or send_email)(subject(doc, report, SUBJECT_PREFIX), render_text.render(doc), cfg.get("email", ""),
                                   html=render_html.render(doc))
     else:

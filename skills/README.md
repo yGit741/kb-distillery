@@ -126,7 +126,7 @@ python3 -m kb_distillery.search.query mocs                    # topic pages (the
 python3 -m kb_distillery.core.coherence status
 python3 -m kb_distillery.search.semfind bundle --seeds wiki/foo.md --source manual
 python3 -m kb_distillery.search.semfind topic theme-info-theory   # `theme` / `moc` aliases kept
-python3 -m kb_distillery.maintenance.export
+python3 -m kb_distillery.publish.export
 pixi run lint-skills
 pixi run ops -- status
 pixi run ops -- log --kb

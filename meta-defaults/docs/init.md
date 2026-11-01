@@ -25,7 +25,7 @@ kbd launch --kb <id>
 - Then it runs `kbd doctor` on the new kb and prints the command to open it (`kbd launch --kb <id>`, or the path when
   `--dir` is not the bases dir).
 - **LLM is optional.** Init never asks for or stores a key. It prints one line: AI features stay off until a Claude
-  subscription login (`claude login`) or an API key (`ANTHROPIC_API_KEY`, or `~/.config/thesis-kb/anthropic_key`) exists.
+  subscription login (`claude login`) or an API key (`ANTHROPIC_API_KEY`, or `~/.config/kb-distillery/anthropic_key`) exists.
 
 ## `kbd doctor`
 
@@ -49,5 +49,5 @@ Read-only: no network, no LLM call, no lint, nothing written.
 
 `{backend: {ok, why, fix}}` for `subscription`, `api`, `batch`, with no LLM call. Subscription = the `claude` CLI is on
 PATH and `claude auth status` says logged in with a subscription. api and batch = `api_key()` finds a key
-(`ANTHROPIC_API_KEY`, then `~/.config/thesis-kb/anthropic_key`); the key itself is never reported. All three backends
+(`ANTHROPIC_API_KEY`, then `~/.config/kb-distillery/anthropic_key`); the key itself is never reported. All three backends
 stay selectable per run (`--backend`, `$KB_LLM_BACKEND`); the app uses this to grey out AI features when none is ok.

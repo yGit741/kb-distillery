@@ -56,12 +56,12 @@ def _config_key(branch):
 
 
 def set_branch_round(branch, number, root):
-    from kb_distillery.maintenance.daily_sync import run_git
+    from kb_distillery.ops.daily_sync import run_git
     return run_git(["config", _config_key(branch), str(number)], cwd=root).returncode == 0
 
 
 def branch_round(branch, root):
-    from kb_distillery.maintenance.daily_sync import run_git
+    from kb_distillery.ops.daily_sync import run_git
     v = run_git(["config", "--get", _config_key(branch)], cwd=root).stdout.strip()
     return int(v) if v.isdigit() else None
 

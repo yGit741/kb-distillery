@@ -1,9 +1,9 @@
 """The nightly report — one readable digest of the vault's git/ops state, mailed every night.
 
-Built from the generic blocks in src/kb_distillery/report/: a status banner, what needs you, every open work
+Built from the generic blocks in src/kb_distillery/ops/report/: a status banner, what needs you, every open work
 thread (src/kb_distillery/ops/threads.py) with its one next command, what changed in the last 24 h, the vault
 backlog, and — when the sync failed — the cleaned log tail. The same `Doc` feeds the email
-(src/kb_distillery/maintenance/notify.py), the Ops dashboard tab and this CLI.
+(src/kb_distillery/ops/notify.py), the Ops dashboard tab and this CLI.
 
     python3 -m kb_distillery.ops.nightly_report              # text preview (runs hygiene + threads, no sync)
     python3 -m kb_distillery.ops.nightly_report --html FILE  # the exact HTML mail
@@ -20,8 +20,8 @@ from kb_distillery.paths import vault_root
 META_DIR = os.path.join(vault_root(), "meta")
 ROOT = vault_root()
 
-from kb_distillery.report import model as m
-from kb_distillery.report import sanitize
+from kb_distillery.ops.report import model as m
+from kb_distillery.ops.report import sanitize
 
 from . import threads as threads_mod  # noqa: E402
 
@@ -256,7 +256,7 @@ def main(argv=None):
     p.add_argument("--send", action="store_true", help="send it now (ignores mode and throttle)")
     p.add_argument("--root", default=None, help="vault checkout (default: the primary checkout)")
     args = p.parse_args(argv)
-    from kb_distillery.report import render_html, render_text
+    from kb_distillery.ops.report import render_html, render_text
     from kb_distillery.git import ship
     root = args.root or ship.primary_checkout(ROOT)
     report, threads, doc = collect(root)
@@ -270,7 +270,7 @@ def main(argv=None):
         print(subject(doc, report))
         print(render_text.render(doc))
     if args.send:
-        from kb_distillery.maintenance import notify
+        from kb_distillery.ops import notify
         cfg = notify.load_config(root)
         ok = notify.send_email(subject(doc, report), render_text.render(doc), cfg.get("email", ""),
                                html=render_html.render(doc))

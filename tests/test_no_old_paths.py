@@ -1,4 +1,6 @@
-"""The retired layout (backend/, frontend/, tools/, kbs/demo, package `kb`) stays gone.
+"""The retired layout (backend/, frontend/, tools/, kbs/demo, package `kb`) stays gone, and so do the Lane D moves:
+`maintenance/{daily_sync,notify,export,fix_math,rename_raw}`, the top-level `report/` package, the per-user folder
+`~/.config/thesis-kb` (now `~/.config/kb-distillery`, `config/userdir.py`) and the keychain service `thesis-kb-gmail`.
 
 There are no import shims: a star-import shim breaks mock.patch, `python -m` and -W error filters. Instead this scan
 fails on any tracked file that still names the old module or path strings. Inputs come from `git ls-files` only (the
@@ -18,6 +20,13 @@ RETIRED = {
     "frontend/": re.compile(r"(?<![\w-])frontend/"),
     "tools/": re.compile(r"(?<![\w-])tools/"),
     "kbs/demo": re.compile(r"kbs/demo"),
+    "maintenance/ module that moved or was deleted": re.compile(
+        r"kb_distillery[./]maintenance[./](?:daily_sync|notify|export|fix_math|rename_raw)\b"
+        r"|from kb_distillery\.maintenance import (?:daily_sync|notify|export|fix_math|rename_raw)\b"
+        r"|maintenance/(?:daily_sync|notify|export|fix_math|rename_raw)\.py"),
+    "top-level report package": re.compile(r"kb_distillery\.report\b|src/kb_distillery/report/"),
+    "~/.config/thesis-kb": re.compile(r"\.config/thesis-kb"),
+    "keychain service thesis-kb-gmail": re.compile(r"thesis-kb-gmail"),
 }
 # (pattern name -> files that may name it): the hook forwarding stubs (until Phase 9), the share builder that still builds
 # refs from before the move, and this test.
@@ -27,6 +36,9 @@ ALLOWED = {
     "tools/": {"src/kb_distillery/core/schema.py"},               # TOOLING_PATHS keeps tools/ for the stubs until Phase 9
     "backend/src or backend/tests": {"src/kb_distillery/share/build.py", "tests/share/test_share_app.py", "tests/share/test_share_versions.py", "pixi.toml"},
 }
+ALLOWED["keychain service thesis-kb-gmail"] = {"src/kb_distillery/config/userdir.py",      # the read-only lookup of the old name
+                                               "tests/ops/test_notify.py", "tests/config/test_userdir.py"}
+ALLOWED["~/.config/thesis-kb"] = {"tests/config/test_userdir.py", "src/kb_distillery/config/userdir.py"}
 ALLOWED_PREFIXES = ("tools/", "docs/plans/", "scripts/qmd/package-lock.json")
 ALLOWED_PREFIXES_FOR = {"tools/": ("web/src/",)}               # web/src/features/graph/tools/ is a real folder of the app
 SKIP_SUFFIX = (".png", ".jpg", ".jpeg", ".gif", ".webp", ".ico", ".pdf", ".woff", ".woff2", ".ttf", ".zip", ".lock", ".svg")
@@ -37,7 +49,18 @@ def tracked():
     return [p for p in out.split("\0") if p and not p.endswith(SKIP_SUFFIX)]
 
 
+RETIRED_FILES = ("src/kb_distillery/maintenance/fix_math.py", "src/kb_distillery/maintenance/rename_raw.py",
+                 "src/kb_distillery/maintenance/daily_sync.py", "src/kb_distillery/maintenance/notify.py",
+                 "src/kb_distillery/maintenance/export.py", "src/kb_distillery/report/", "src/kb_distillery/cli.py",
+                 "tests/maintenance/", "tests/report/")
+
+
 class NoOldPathsTests(unittest.TestCase):
+    def test_retired_files_are_gone(self):
+        files = [p for p in tracked() if os.path.exists(os.path.join(ROOT, p))]   # a deletion is staged only at commit
+        for old in RETIRED_FILES:
+            self.assertEqual([p for p in files if p.startswith(old)], [], old)
+
     def test_old_directories_are_gone(self):
         files = tracked()
         for old in ("backend/src", "backend/tests", "frontend/", "kbs/"):

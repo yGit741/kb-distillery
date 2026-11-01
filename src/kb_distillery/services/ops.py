@@ -59,7 +59,7 @@ def run_history(root, n=30):
 
 def log_tail(n=LOG_LINES):
     from kb_distillery.ops.core import NIGHTLY_LOG
-    from kb_distillery.report import sanitize
+    from kb_distillery.ops.report import sanitize
     try:
         with open(NIGHTLY_LOG, encoding="utf-8", errors="replace") as f:
             lines = f.readlines()[-n:]
@@ -200,6 +200,6 @@ def build_ops_snapshot(refresh=False):
 
 def email_preview():
     """The exact HTML (and subject) the nightly mail would carry right now."""
-    from kb_distillery.report import model, render_html
+    from kb_distillery.ops.report import model, render_html
     data = build_ops_snapshot()
     return render_html.render(model.Doc.from_dict(data["doc"])), data["subject"]

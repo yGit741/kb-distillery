@@ -47,7 +47,7 @@ META_DIR = os.path.join(vault_root(), "meta")
 # installed package, which has no repository to ship: `_main` refuses with require_repo_root.
 ROOT = checkout_root()
 
-from kb_distillery.maintenance.daily_sync import changed_paths, has_open_sessions, run_git
+from kb_distillery.ops.daily_sync import changed_paths, has_open_sessions, run_git
 from kb_distillery.git import app_token, claims, commit_policy, events, rounds
 from kb_distillery.core.schema import GATE_PREFIXES as GP, GIT_POLICY_MODE, SCHEMA_VERSION
 

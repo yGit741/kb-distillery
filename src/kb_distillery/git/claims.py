@@ -15,7 +15,7 @@ CLAIMS_RE = re.compile(r"^Claims:\s*(.+)$", re.M)
 
 
 def _git(args, cwd):
-    from kb_distillery.maintenance.daily_sync import run_git
+    from kb_distillery.ops.daily_sync import run_git
     return run_git(args, cwd=cwd)
 
 

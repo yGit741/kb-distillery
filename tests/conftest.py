@@ -39,7 +39,7 @@ TYPE_BOUND = {
     "dashboard/test_source_layer_ui.py",
 }
 THESIS_DATA = {
-    "ingest/test_chat_merge.py", "maintenance/test_notify.py", "metrics/test_metrics.py",
+    "ingest/test_chat_merge.py", "ops/test_notify.py", "metrics/test_metrics.py",
     "migrations/test_migrations.py", "services/test_lifecycle_data.py",
     # read the thesis kb's frozen migration artifacts and its kb-x.y.z tags
     "core/test_source_model.py::SpecMapTotality", "core/test_source_model.py::MigrationTests",

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Tests for src/kb_distillery/maintenance/notify.py — the nightly email: when it is sent, what it says, how it fails."""
+"""Tests for src/kb_distillery/ops/notify.py — the nightly email: when it is sent, what it says, how it fails."""
 import datetime
 import json
 import os
@@ -12,7 +12,7 @@ from unittest.mock import patch
 from kb_distillery.paths import vault_root
 ROOT = vault_root()
 
-from kb_distillery.maintenance import notify
+from kb_distillery.ops import notify
 from kb_distillery.ops import hygiene
 
 NOW = datetime.datetime(2026, 10, 22, 22, 0, tzinfo=datetime.timezone.utc)
@@ -85,7 +85,7 @@ class SendEmail(unittest.TestCase):
             self.assertEqual(notify.keychain_password("me@example.com"), "secret")
         cmd = run.call_args.args[0]
         self.assertEqual(cmd[:2], ["security", "find-generic-password"])
-        self.assertIn("thesis-kb-gmail", cmd)
+        self.assertIn("kb-distillery-gmail", cmd)
         with patch.object(notify.subprocess, "run", return_value=P(44, "")):
             self.assertIsNone(notify.keychain_password("me@example.com"))
         with patch.object(notify.subprocess, "run", side_effect=OSError("no security binary")):
@@ -234,6 +234,19 @@ class Config(unittest.TestCase):
         self.assertEqual(len(tail.splitlines()), 30)
         self.assertEqual(notify.log_tail("/nonexistent/log"), "")
 
+    def test_keychain_falls_back_to_the_old_service_name_read_only(self):
+        class P:
+            def __init__(self, rc, out):
+                self.returncode, self.stdout = rc, out
+        seen = []
+
+        def fake(cmd, **kw):
+            seen.append(cmd[cmd.index("-s") + 1])
+            return P(0, "old-secret\n") if cmd[cmd.index("-s") + 1] == "thesis-kb-gmail" else P(44, "")
+        with patch.object(notify.subprocess, "run", side_effect=fake):
+            self.assertEqual(notify.keychain_password("me@example.com"), "old-secret")
+        self.assertEqual(seen, ["kb-distillery-gmail", "thesis-kb-gmail"])
+
     def test_cli_test_without_keychain_item_explains(self):
         import io
         from contextlib import redirect_stdout
@@ -241,7 +254,7 @@ class Config(unittest.TestCase):
         with patch.object(notify, "keychain_password", return_value=None), redirect_stdout(buf):
             rc = notify.main(["--test"])
         self.assertEqual(rc, 1)
-        self.assertIn("security add-generic-password -a ygreenshpan@gmail.com -s thesis-kb-gmail", buf.getvalue())
+        self.assertIn("security add-generic-password -a ygreenshpan@gmail.com -s kb-distillery-gmail", buf.getvalue())
 
 
 if __name__ == "__main__":

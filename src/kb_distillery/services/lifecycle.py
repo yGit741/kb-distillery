@@ -13,7 +13,7 @@ from kb_distillery.paths import vault_root
 META_DIR = os.path.join(vault_root(), "meta")
 
 from kb_distillery.git import commit_policy as cp
-from kb_distillery.maintenance.daily_sync import changed_paths, has_open_sessions
+from kb_distillery.ops.daily_sync import changed_paths, has_open_sessions
 from kb_distillery.ops import core as ops_core
 from kb_distillery.ops.history import timeline
 from kb_distillery.ops.migrate import _applied, pending_migrations

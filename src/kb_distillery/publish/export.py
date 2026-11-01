@@ -3,8 +3,8 @@
 
 Writes gitignored archives under .exported/:
 
-    python3 -m kb_distillery.maintenance.export
-    python3 -m kb_distillery.maintenance.export --list
+    python3 -m kb_distillery.publish.export
+    python3 -m kb_distillery.publish.export --list
 """
 from __future__ import annotations
 
@@ -217,7 +217,7 @@ def list_exports() -> list[str]:
 
 
 def main(argv: list[str] | None = None) -> int:
-    p = argparse.ArgumentParser(prog="kb_distillery.maintenance.export", description="Export KB zip for LLM sharing")
+    p = argparse.ArgumentParser(prog="kb_distillery.publish.export", description="Export KB zip for LLM sharing")
     p.add_argument(
         "--include-raw-pdfs",
         action="store_true",

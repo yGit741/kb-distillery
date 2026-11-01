@@ -5,7 +5,7 @@
 
 Every check is isolated: one that raises or hangs becomes a finding instead of aborting
 the run, and the whole run stops asking new checks once the time budget (~60 s) is spent.
-`run()` returns a Report; `src/kb_distillery/maintenance/notify.py` turns it into the email.
+`run()` returns a Report; `src/kb_distillery/ops/notify.py` turns it into the email.
 """
 import argparse
 import dataclasses
@@ -21,8 +21,8 @@ from kb_distillery.paths import vault_root
 META_DIR = os.path.join(vault_root(), "meta")
 ROOT = vault_root()
 
-from kb_distillery.maintenance.daily_sync import changed_paths, run_git
-from kb_distillery.report import sanitize
+from kb_distillery.ops.daily_sync import changed_paths, run_git
+from kb_distillery.ops.report import sanitize
 
 BUDGET_SECONDS = 60.0
 CHECK_CAP_SECONDS = 25.0          # no single check may eat the whole budget

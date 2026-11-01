@@ -1,7 +1,7 @@
 """Chat with the KB: retrieval over wiki/, a streaming Claude client, and save-to-inbox.
 
 Stdlib only. Retrieval reuses src/kb_distillery/search/query.py (index-first scoring, 0 LLM). The API key is read
-from ANTHROPIC_API_KEY or ~/.config/thesis-kb/anthropic_key and never leaves this process.
+from ANTHROPIC_API_KEY or ~/.config/kb-distillery/anthropic_key and never leaves this process.
 
 Prompt caching: the system prompt is stable, and each user turn carries only the pages first
 retrieved on that turn, so the message history is append-only and the whole prefix is cached
@@ -17,6 +17,7 @@ import threading
 import urllib.error
 import urllib.request
 
+from kb_distillery.config import userdir
 from kb_distillery.paths import vault_root
 META_DIR = os.path.join(vault_root(), "meta")
 ROOT = vault_root()
@@ -26,7 +27,7 @@ from kb_distillery.core.graph import tokenize
 
 PROMPTS_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "prompts")
 INBOX = os.path.join(ROOT, "raw", "inbox")
-KEY_FILE = os.path.expanduser("~/.config/thesis-kb/anthropic_key")
+KEY_FILE = userdir.path("anthropic_key")
 API_URL = "https://api.anthropic.com/v1/messages"
 API_VERSION = "2023-06-01"
 
@@ -47,13 +48,13 @@ PRICES = {
 CACHE_WRITE_5M = 1.25
 CACHE_WRITE_1H = 2.0
 
-CONFIG_DIR = os.path.expanduser("~/.config/thesis-kb")
+CONFIG_DIR = userdir.config_dir()
 SETTINGS_FILE = os.path.join(CONFIG_DIR, "chat.json")     # key name, monthly credit, reset day
 LEDGER_FILE = os.path.join(CONFIG_DIR, "usage.jsonl")     # one line per answered request
 BACKENDS = ("agent", "direct")   # agent: read-only research agent (chat_agent.py); direct: this module
 AUTH_MODES = ("api_key", "subscription")   # subscription = the `claude login` account; agent backend only
 KEYS_DIR = os.path.join(CONFIG_DIR, "keys")   # one file per named key, mode 0600
-LEGACY_KEY = "default"                        # the original ~/.config/thesis-kb/anthropic_key
+LEGACY_KEY = "default"                        # the original ~/.config/kb-distillery/anthropic_key
 ENV_KEY = "env"                               # ANTHROPIC_API_KEY of the dashboard process
 KEY_NAME_RE = re.compile(r"^[a-z0-9][a-z0-9-]{0,39}$")
 DEFAULT_SETTINGS = {"key_name": "", "monthly_credit": 100.0, "reset_day": 30, "backend": "agent",
@@ -100,7 +101,7 @@ def _read_file_key(path):
 
 def read_key(name, keys_dir=None):
     """The key stored under `name`: "env" (ANTHROPIC_API_KEY), "default" (the legacy key file) or a
-    file in ~/.config/thesis-kb/keys/. None when missing."""
+    file in ~/.config/kb-distillery/keys/. None when missing."""
     if name == ENV_KEY:
         return os.environ.get("ANTHROPIC_API_KEY", "").strip() or None
     if name == LEGACY_KEY:

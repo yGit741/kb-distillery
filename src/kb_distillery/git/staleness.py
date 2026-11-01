@@ -21,7 +21,7 @@ dirty worktree, the one it runs in, origin branches or PRs.
 import datetime
 import os
 
-from kb_distillery.maintenance.daily_sync import run_git
+from kb_distillery.ops.daily_sync import run_git
 
 BRANCH_IDLE_HOURS = 48
 PR_IDLE_DAYS = 3

@@ -21,7 +21,7 @@ from kb_distillery.paths import vault_root
 META_DIR = os.path.join(vault_root(), "meta")
 ROOT = vault_root()
 
-from kb_distillery.maintenance.daily_sync import changed_paths, has_open_sessions, run_git
+from kb_distillery.ops.daily_sync import changed_paths, has_open_sessions, run_git
 
 STALE_BRANCH_DAYS = 3        # an infra branch with no PR and no commit for this long is stale
 STALE_PR_DAYS = 7
