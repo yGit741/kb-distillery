@@ -98,6 +98,8 @@ def _no_real_claude_sessions(monkeypatch, tmp_path_factory):
     if "empty" not in _EMPTY_PROJECTS:
         _EMPTY_PROJECTS["empty"] = str(tmp_path_factory.mktemp("claude-projects"))
     monkeypatch.setattr(sessions, "PROJECTS_DIR", _EMPTY_PROJECTS["empty"])
+    from kb_distillery.metrics import golden
+    monkeypatch.setattr(golden, "PROJECTS_DIR", _EMPTY_PROJECTS["empty"])   # golden imported the value by name
 
 
 _EMPTY_PROJECTS = {}

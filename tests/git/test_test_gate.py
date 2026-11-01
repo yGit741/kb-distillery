@@ -23,7 +23,8 @@ class TestsGateParallel(unittest.TestCase):
             self.skipTest("not a source checkout")
         self.assertRegex(_read("pixi.toml"), r"(?m)^pytest-xdist\s*=")
         self.assertRegex(_read("pyproject.toml"), r'"pytest-xdist[^"]*"')
-        self.assertIn("pytest-xdist", _read("pixi.lock"))
+        import importlib.util
+        self.assertIsNotNone(importlib.util.find_spec("xdist"))
 
 
 if __name__ == "__main__":
