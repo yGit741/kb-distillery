@@ -28,7 +28,7 @@ This file is the core every turn needs. Details live in `src/kb_distillery/kits/
 8. Do not hand-edit `index.md` or `meta/corpus.tsv` — both are generated on every lint run.
 9. **`digest` alone → ask tier (easy / full / deep).** Bare "digest" never triggers `full-digest`.
 10. **Dedup:** always `resolve` before `scrap`. If FOUND → cite `[[slug]]`; don't re-download.
-11. Read the skill's `SKILL.md` (and `skills/README.md`, § Adding a skill, before any workflow) before running it.
+11. Read the skill's `SKILL.md` before running it (a kb's `.claude/skills/<skill>/`; in the engine repo the sources are `src/kb_distillery/kits/<kit>/skills/`, plus `.claude/skills/` for the dev skills).
 12. A feature that can't land in one PR ships dark behind a flag (`src/kb_distillery/kits/base/defaults/flags.toml`) and merges in small PRs; release = flipping the flag (System → Flags), not deploying (`src/kb_distillery/kits/base/defaults/docs/dev.md` § Feature flags).
 13. **Every LLM call goes through `kb_distillery.llm`** (`src/kb_distillery/llm`): one `--backend subscription|api|batch` choice (`$KB_LLM_BACKEND`, default subscription), never a new `claude -p`, SDK or HTTP call — `tests/llm/test_llm.py` fails on one. A plan for an LLM feature has a short **Billing** section: which backend by default, all three kept selectable. CLI: `pixi run llm -- ask|submit|status|collect`.
 
@@ -59,7 +59,7 @@ Map what the user says to a skill before acting; read that skill's `SKILL.md`, t
 | "share the KB / export for an LLM" (a zip of the text) | `export-kb` | zip |
 | "share / publish the site", "deploy main", "deploy status", "rollback the site", "snapshot the site", "list / remove snapshots", "audit", "time machine" | `share-kb` (Cloudflare; `pixi run share -- …`) | Worker version, `.cache/share/status.json` |
 | a multi-PR effort ("phase 2: E1–E3", several tooling PRs) | `infra-pr` with a round: `ship round open "<title>" --features a,b` → `ship start <f> --round R` per PR; read state with `ship round status R` | issue `#R` + PRs |
-| "integrate / verify the round / is it really done" | `integrator` (global skill `~/.claude/skills/integrator`, not in `skills/`; reads `.integrator.toml`: tests, build, every screen screenshotted, each tile vs its endpoint; deploy only by owner nudge) | report |
+| "integrate / verify the round / is it really done" | `integrator` (global skill `~/.claude/skills/integrator`, not in a skills folder; reads `.integrator.toml`: tests, build, every screen screenshotted, each tile vs its endpoint; deploy only by owner nudge) | report |
 | "create a skill / new workflow" | `create-skill` → `infra-pr` | PR |
 
 **Tooling or knowledge?** The target decides: files under `wiki/`, `raw/`, `think/` are knowledge (ops, straight to main); code, skills, dashboard, docs and config are tooling (PR). When one request touches both, ship the tooling PR first, then do the knowledge step on main. When the target is unclear, ask one short question.
@@ -80,4 +80,4 @@ Map what the user says to a skill before acting; read that skill's `SKILL.md`, t
 | send a think note into kbs, see where a note went, think provenance, `think:` citations | `src/kb_distillery/kits/base/defaults/docs/think.md` |
 | pick a skill tier or run the ingest / query / distill CLIs (scrap, catalog, digest, arXiv rules, scrap-wordpress) | `src/kb_distillery/kits/base/defaults/docs/workflows.md` |
 | handle coherence warnings or semantic lint | `src/kb_distillery/kits/base/defaults/docs/semantic-lint.md` |
-| write or change a skill | `skills/README.md`, skill `create-skill` |
+| write or change a skill | `docs/guides/write-a-skill.md`, skill `create-skill` |

@@ -49,12 +49,11 @@ packages = ["src/kb_distillery"]
 # The built web app is gitignored (vite writes it here); hatch drops ignored files unless they are artifacts.
 artifacts = ["src/kb_distillery/_webapp/**"]
 
-# The kits (src/kb_distillery/kits: kit.toml, defaults/, later skills and hooks) are package data: `packages` above
+# The kits (src/kb_distillery/kits: kit.toml, defaults/, skills, later hooks) are package data: `packages` above
 # carries every tracked file under the package, so they need no entry here.
-# TRANSITIONAL (Lane C steps 3 and 4 move these into kits/ and delete this table): the root-level folders the
+# TRANSITIONAL (Lane C step 4 move these into kits/ and delete this table): the root-level folders the
 # installed package still needs, packed under kb_distillery/_data/<same path> (config/resources.py root_resource()).
 [tool.hatch.build.targets.wheel.force-include]
-"skills" = "kb_distillery/_data/skills"
 "share" = "kb_distillery/_data/share"
 
 [tool.pytest.ini_options]

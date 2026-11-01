@@ -1,5 +1,5 @@
 /**
- * The graph-consistency guard (skills/app-ui, "Graph encoding"): one visual language on every graph.
+ * The graph-consistency guard (.claude/skills/app-ui, "Graph encoding"): one visual language on every graph.
  *
  * 1. A node is drawn by the shared encoding only: no `typeColor(` for a node, and no hand-drawn circle (`.arc(`,
  *    `<circle`) outside `encoding/`, except the listed files, each pinned to its count and reason.

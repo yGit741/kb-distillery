@@ -102,7 +102,7 @@ scripts/qmd/node_modules
 src/kb_distillery/_webapp/
 web/dist-share/
 
-# Other agents' skill folders (not ours; the one skill source is skills/)
+# Other agents' skill folders (not ours; skills are kits/*/skills for a kb, .claude/skills for the engine)
 .agents/
 .opencode/
 .copilot/

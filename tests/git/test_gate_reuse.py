@@ -198,7 +198,7 @@ class SelectionTests(RepoCase):
     def test_full_fallback_on_config_and_unmappable_changes(self):
         for p in ("pixi.toml", "pyproject.toml", "tests/conftest.py", "tests/git/conftest.py", "pixi.lock",
                   "src/kb_distillery/paths.py", "src/kb_distillery/nomirror/x.py", "tests/fixtures/data.json",
-                  "skills/x/SKILL.md", "web/src/a.ts"):
+                  "src/kb_distillery/kits/base/skills/x/SKILL.md", ".claude/skills/x/SKILL.md", "web/src/a.ts"):
             self.assertIsNone(self.sel("src/kb_distillery/git/ship.py", p), p)
 
 

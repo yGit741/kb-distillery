@@ -458,7 +458,7 @@ def _keychain_password(account, service=KEYCHAIN_SERVICE):
             return result.stdout.strip()
     raise ValueError(
         f"no Keychain entry for account={account!r} service={service!r} — "
-        f"store an app password first (see skills/scrap-data/mail/SKILL.md)")
+        f"store an app password first (see .claude/skills/scrap-data/mail/SKILL.md)")
 
 
 def _all_mail_folder(conn):

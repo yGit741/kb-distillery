@@ -24,4 +24,4 @@ python3 -m kb_distillery.search.semfind topic theme-info-theory   # `theme` / `m
 
 Manifest: `meta/coherence-warnings.tsv` (regenerated on lint; statuses persist).
 
-After full/deep digest or distill apply: `SEMFIND_READY` → `skills/semantic-lint-hop/SKILL.md`. On-demand topic audit: `skills/lint-moc/SKILL.md`.
+After full/deep digest or distill apply: `SEMFIND_READY` → `.claude/skills/semantic-lint-hop/SKILL.md`. On-demand topic audit: `.claude/skills/lint-moc/SKILL.md`.

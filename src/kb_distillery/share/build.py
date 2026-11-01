@@ -50,7 +50,7 @@ all). The data comes from the same `collect_data` / `collect_lifecycle` / `apply
 privacy cuts are the legacy ones, baked into `<script type="application/json" id="kb-data">` of the
 app's `index.html` (the id `share audit` already scans). The output directory is `index.html` +
 `assets/` + `manifest.json` (`layout: "app"`, `sha256` = tree digest); the Worker serves it with a
-single-page-application fallback. See skills/share-kb/SKILL.md.
+single-page-application fallback. See .claude/skills/share-kb/SKILL.md.
 """
 import argparse
 import datetime as _dt

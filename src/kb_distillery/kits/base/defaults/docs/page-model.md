@@ -114,7 +114,7 @@ Each generated heading carries `<!-- from: <handle|manual> -->` and is rewritten
 `index-researcher finalize` from `meta/.researcher/<slug>/manifest.json`; `## Why it matters
 here` (must link a topic or idea), `## Meeting log`, `## My notes` and custom sections are hand-owned and
 never touched. Lint enforces the handle ⇒ section rules on verified pages and warns on
-non-reciprocal `advisors`/`students`. See `skills/build-researcher-profile/SKILL.md`.
+non-reciprocal `advisors`/`students`. See `.claude/skills/build-researcher-profile/SKILL.md`.
 
 
 ## Note sections

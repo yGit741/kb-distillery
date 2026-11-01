@@ -66,7 +66,7 @@ class GuardMainTests(unittest.TestCase):
         wt = os.path.join(ROOT, ".claude", "worktrees", "feature-x")
         code, out, err = run_guard({
             "tool_name": "Edit",
-            "tool_input": {"file_path": os.path.join(wt, "skills", "x", "SKILL.md"),
+            "tool_input": {"file_path": os.path.join(wt, ".claude", "skills", "x", "SKILL.md"),
                            "old_string": "a", "new_string": "b"},
             "cwd": ROOT,
         })

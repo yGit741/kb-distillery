@@ -4,7 +4,7 @@
 
 ## Skill ladder
 
-Run `pixi run lint-skills` then `pixi run sync-skills` after editing skills.
+Skills live in `src/kb_distillery/kits/<kit>/skills/` (what a kb is given, as `.claude/skills/` in the kb) and `.claude/skills/` (the engine's own). Run `pixi run lint-skills` after editing skills; `docs/guides/write-a-skill.md` says how to write one.
 
 | Skill | LLM tier | Budget (in) | Trigger |
 |-------|----------|-------------|---------|
@@ -73,7 +73,7 @@ During `full-digest` / `deep-digest`, `src/kb_distillery/git/guard.py` blocks di
 
 **Triage:** anything in `raw/inbox/` gets cataloged or deleted. The inbox is a queue, not storage.
 
-**Query:** Karpathy Query operation — read wiki, cite `[[slugs]]`, file good answers back on request. See `skills/query-knowledge/SKILL.md`. Raw sources are reached only through `explore-raw-data` (`python3 -m kb_distillery.search.explore_raw find|read|check|recommend`, cataloged files only, 0 LLM): `skills/explore-raw-data/SKILL.md`.
+**Query:** Karpathy Query operation — read wiki, cite `[[slugs]]`, file good answers back on request. See `.claude/skills/query-knowledge/SKILL.md`. Raw sources are reached only through `explore-raw-data` (`python3 -m kb_distillery.search.explore_raw find|read|check|recommend`, cataloged files only, 0 LLM): `.claude/skills/explore-raw-data/SKILL.md`.
 
 ```
 python3 -m kb_distillery.search.query candidates "<keywords>"   # rank slugs (0 LLM)
@@ -93,4 +93,4 @@ python3 -m kb_distillery.distill apply <think-file> --cleanup       # propagate 
 python3 -m kb_distillery.distill abort <think-file>
 ```
 
-`think/` is never agent-edited. See `skills/distill-think/SKILL.md`.
+`think/` is never agent-edited. See `.claude/skills/distill-think/SKILL.md`.
