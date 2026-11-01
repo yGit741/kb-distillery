@@ -78,7 +78,7 @@ curate-history = "python -m kb_distillery.git.curate_history"
 ops = "python -m kb_distillery.ops"
 metrics = "python -m kb_distillery.metrics"
 install-hooks = "git config core.hooksPath scripts/githooks"
-install-kb-hooks = "bash scripts/install-kb-hooks.sh"
+install-kb-hooks = "python -m kb_distillery.cli hooks install"
 test = "pytest tests"
 test-wheel = { cmd = "pytest tests/cli/test_install_wheel.py -q", env = { KB_TEST_WHEEL = "1", PYTHONPATH = "" } }
 web-install = "npm ci --prefix web"

@@ -101,7 +101,7 @@ EXPORT_PATH = vpath(".exported")
 
 # --- code-side resources (package data, found through kb_distillery.config.resources) -------------------------
 SKILLS_PATH = str(root_resource("skills"))
-TOOLS_PATH = str(root_resource("scripts"))          # a checkout only: the wheel ships scripts/kb-hooks, not the rest
+TOOLS_PATH = str(root_resource("scripts"))          # a checkout only: the wheel ships none of scripts/
 PROMPTS_PATH = str(resource("prompts"))
 MIGRATIONS_CODE_PATH = str(resource("migrations"))
 SHARE_WORKER_PATH = str(root_resource("share"))

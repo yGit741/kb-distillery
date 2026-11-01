@@ -68,7 +68,7 @@ def _run(venv: Path, args, env, cwd):
 def test_the_wheel_carries_the_root_level_folders_under_data(wheel):
     names = zipfile.ZipFile(wheel).namelist()
     for want in ("kb_distillery/_data/skills/",
-                 "kb_distillery/_data/share/auth.js", "kb_distillery/_data/scripts/kb-hooks/env.sh"):
+                 "kb_distillery/_data/share/auth.js"):
         assert any(n.startswith(want) for n in names), want
     assert not any(n.startswith("kb/") or "backend" in n.split("/")[0] for n in names)
 
@@ -80,7 +80,18 @@ def test_the_wheel_carries_the_kits_as_package_data(wheel):
                  "kb_distillery/kits/base/defaults/templates/", "kb_distillery/kits/base/defaults/digest/"):
         assert any(n.startswith(want) for n in names), want
     packed = {n.split("/")[2] for n in names if n.startswith("kb_distillery/_data/") and n.count("/") > 2}
-    assert packed <= {"skills", "share", "scripts"}, packed          # only the folders C.3 to C.5 and Lane F still move
+    assert packed <= {"skills", "share"}, packed                      # only the folders C.3 and Lane F still move
+
+
+def test_the_wheel_carries_the_kit_hooks_executable(wheel):
+    zf = zipfile.ZipFile(wheel)
+    hooks = {n: zf.getinfo(n) for n in zf.namelist() if n.startswith("kb_distillery/kits/base/hooks/")}
+    names = {n.rsplit("/", 1)[1] for n in hooks}
+    assert {"pre-commit", "commit-msg", "pre-push", "kb-guard.sh", "kb-git-guard.sh", "claude-settings.json"} <= names, names
+    for n, info in hooks.items():
+        if not n.endswith(".json"):
+            assert (info.external_attr >> 16) & 0o111, f"{n} lost its executable bit in the wheel"
+    assert not any("kb-hooks" in n or n.endswith("/env.sh") for n in zf.namelist())
 
 
 def test_the_installed_package_is_the_one_in_the_venv_and_has_no_checkout(venv, clean_env, tmp_path):

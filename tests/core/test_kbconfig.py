@@ -176,20 +176,33 @@ class PrimaryRoot(unittest.TestCase):
         with self.at(None):
             self.assertIsNone(kbconfig.primary_root())
 
-    def test_hooks_path_is_relative_inside_kbs_and_absolute_elsewhere(self):
+    KIT = os.path.join("src", "kb_distillery", "kits", "base", "hooks")
+
+    def test_hooks_path_is_relative_inside_the_engine_and_absolute_elsewhere(self):
         with self.at(self.work):
             inside = os.path.join(self.main, "kbs", "thesis")
             os.makedirs(inside)
-            self.assertEqual(kbconfig.hooks_path_for(inside), "../../scripts/kb-hooks")
+            self.assertEqual(kbconfig.hooks_path_for(inside), os.path.join("..", "..", self.KIT))
+            deeper = os.path.join(self.main, "examples", "demo")
+            os.makedirs(deeper)
+            self.assertEqual(kbconfig.hooks_path_for(deeper), os.path.join("..", "..", self.KIT))
             outside = os.path.join(self.tmp, "elsewhere", "notes")
             os.makedirs(outside)
-            self.assertEqual(kbconfig.hooks_path_for(outside), os.path.join(self.main, "scripts", "kb-hooks"))
+            self.assertEqual(kbconfig.hooks_path_for(outside), os.path.join(self.main, self.KIT))
 
-    def test_hooks_path_of_an_installed_package_is_the_packaged_copy(self):
+    def test_hooks_path_from_the_primary_itself_is_its_own_kit(self):
+        with self.at(self.main):
+            inside = os.path.join(self.main, "kbs", "thesis")
+            os.makedirs(inside)
+            self.assertEqual(kbconfig.hooks_path_for(inside), os.path.join("..", "..", self.KIT))
+
+    def test_hooks_path_of_an_installed_package_is_the_packaged_kit(self):
         from kb_distillery.config import resources
         with patch.object(resources, "repo_root", lambda: None):
-            self.assertTrue(kbconfig.hooks_path_for(os.path.join(self.tmp, "notes")).endswith(
-                os.path.join("_data", "scripts", "kb-hooks")))
+            path = kbconfig.hooks_path_for(os.path.join(self.tmp, "notes"))
+        self.assertTrue(os.path.isabs(path))
+        self.assertTrue(path.endswith(os.path.join("kits", "base", "hooks")), path)
+        self.assertEqual(os.path.realpath(path), os.path.realpath(str(resources.resource("kits/base/hooks"))))
 
 
 class BasesDir(unittest.TestCase):
