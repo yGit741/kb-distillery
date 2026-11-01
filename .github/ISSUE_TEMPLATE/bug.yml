@@ -1,0 +1,56 @@
+name: Bug report
+description: Something does not work as documented.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not paste knowledge base content, tokens or personal paths. Redact them first.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What you did, what you expected, what you got.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Commands or clicks, starting from a fresh `distill init` or from `examples/demo` if you can.
+    validations:
+      required: true
+  - type: textarea
+    id: output
+    attributes:
+      label: Output
+      description: Error text or the output of `distill doctor`.
+      render: text
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Output of `distill --version`, or the commit hash.
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - CLI
+        - Ingest
+        - Digest
+        - Graph or search
+        - Web app
+        - Publishing
+        - Kits or skills
+        - Docs
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: platform
+    attributes:
+      label: Platform
+      description: Operating system, Python version, install method (wheel, pixi).
