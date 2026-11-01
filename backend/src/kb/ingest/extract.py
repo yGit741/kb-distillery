@@ -53,9 +53,22 @@ def text_clip(raw_path):
     return _FRONTMATTER.sub("", text, count=1).strip() + "\n"
 
 
-def extract_text(raw_path, max_pages=25, pages=None):
-    """Text of a PDF. `pages` is a 1-based inclusive (start, end) range; without it,
-    read the first `max_pages` pages — fine for a paper, useless for a book."""
+_CONTROL = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
+
+
+def clean_text(text):
+    """Drop NUL bytes and control codes (keeps \\t \\n \\r): they crash the subscription backend."""
+    return _CONTROL.sub("", text) if text else text
+
+
+def extract_text(raw_path, max_pages=None, pages=None):
+    """Text of a PDF, NULs/control codes stripped. `pages` is a 1-based inclusive (start, end) range;
+    otherwise the whole document is read, unless the caller passes `max_pages` (previews, easy-digest),
+    in which case the text says so when it was cut."""
+    return clean_text(_extract_raw(raw_path, max_pages, pages))
+
+
+def _extract_raw(raw_path, max_pages, pages):
     sidecar = _sidecar_path(raw_path)
     if sidecar:
         with open(sidecar, encoding="utf-8") as f:
@@ -79,8 +92,8 @@ def extract_text(raw_path, max_pages=25, pages=None):
             parts.append(doc.load_page(i).get_text())
     else:
         for i, page in enumerate(doc):
-            if i >= max_pages:
-                parts.append(f"\n[... truncated after {max_pages} pages ...]\n")
+            if max_pages is not None and i >= max_pages:
+                parts.append(f"\n[... truncated after {max_pages} of {doc.page_count} pages ...]\n")
                 break
             parts.append(page.get_text())
     doc.close()
