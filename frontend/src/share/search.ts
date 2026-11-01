@@ -5,10 +5,10 @@
  * requires identical output, so a change here must keep the legacy answers.
  */
 import type { PageDetail, PathResult, SearchHit, SearchResult } from "@/api/types";
+import { WIKILINK } from "@/lib/links";
 import type { ShareBlob } from "./blob";
 
 const MAX_PATHS = 4;
-const WIKILINK = /\[\[([^\]|#\\]+)(?:#[^\]|]+)?(?:\\?\|([^\]]+))?\]\]/g;
 
 type Pages = Record<string, PageDetail>;
 
