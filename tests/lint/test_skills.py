@@ -7,7 +7,8 @@ import tempfile
 import unittest
 from typing import Optional
 
-from kb_distillery.paths import CHECKOUT_ROOT
+from kb_distillery.kbconfig import checkout_root
+CHECKOUT_ROOT = checkout_root()
 ROOT = CHECKOUT_ROOT          # skills are code
 
 from kb_distillery.lint.lint_skills import run_checks
@@ -78,14 +79,14 @@ class LintSkillsFixtureTests(unittest.TestCase):
         pass
 
     def test_existing_skills_pass(self):
-        n_err, _ = run_checks(skills_root=os.path.join(ROOT, "skills"))
-        self.assertEqual(n_err, 0, "existing skills should pass lint-skills")
+        n_err, _ = run_checks()
+        self.assertEqual(n_err, 0, "existing skills (every kit and .claude/skills) should pass lint-skills")
 
     def test_missing_skill_md_fails(self):
         tmp = self._make_tree()
         skills = os.path.join(tmp, "skills")
         os.remove(os.path.join(skills, "test-skill", "SKILL.md"))
-        n_err, _ = run_checks(skills_root=skills)
+        n_err, _ = run_checks(skills_roots=[skills])
         self.assertGreater(n_err, 0)
         shutil.rmtree(tmp)
 
@@ -95,7 +96,7 @@ class LintSkillsFixtureTests(unittest.TestCase):
         path = os.path.join(skills, "test-skill", "SKILL.md")
         with open(path, "w", encoding="utf-8") as f:
             f.write(_minimal_skill("wrong-name"))
-        n_err, _ = run_checks(skills_root=skills)
+        n_err, _ = run_checks(skills_roots=[skills])
         self.assertGreater(n_err, 0)
         shutil.rmtree(tmp)
 
@@ -109,7 +110,7 @@ class LintSkillsFixtureTests(unittest.TestCase):
         )
         with open(path, "w", encoding="utf-8") as f:
             f.write(body)
-        n_err, _ = run_checks(skills_root=skills)
+        n_err, _ = run_checks(skills_roots=[skills])
         self.assertGreater(n_err, 0)
         shutil.rmtree(tmp)
 
@@ -119,7 +120,7 @@ class LintSkillsFixtureTests(unittest.TestCase):
         readme = os.path.join(skills, "README.md")
         with open(readme, "w", encoding="utf-8") as f:
             f.write(_minimal_readme("ghost-skill"))
-        n_err, _ = run_checks(skills_root=skills)
+        n_err, _ = run_checks(skills_roots=[skills])
         self.assertGreater(n_err, 0)
         shutil.rmtree(tmp)
 
@@ -131,10 +132,10 @@ class LintSkillsFixtureTests(unittest.TestCase):
         body = _minimal_skill("test-skill").replace("## Triggers\n\n- `test-skill`\n\n", "")
         with open(path, "w", encoding="utf-8") as f:
             f.write(body)
-        n_err_loose, n_warn = run_checks(skills_root=skills, strict=False)
+        n_err_loose, n_warn = run_checks(skills_roots=[skills], strict=False)
         self.assertEqual(n_err_loose, 0)
         self.assertGreater(n_warn, 0)
-        n_err_strict, _ = run_checks(skills_root=skills, strict=True)
+        n_err_strict, _ = run_checks(skills_roots=[skills], strict=True)
         self.assertGreater(n_err_strict, 0)
         shutil.rmtree(tmp)
 
@@ -145,7 +146,7 @@ class LintSkillsFixtureTests(unittest.TestCase):
         path = os.path.join(skills, "test-skill", "SKILL.md")
         with open(path, "w", encoding="utf-8") as f:
             f.write(_minimal_skill("test-skill", description))
-        n_err, _ = run_checks(skills_root=skills)
+        n_err, _ = run_checks(skills_roots=[skills])
         warns = list(lint_skills.warnings)
         shutil.rmtree(tmp)
         return n_err, warns
@@ -165,26 +166,63 @@ class LintSkillsFixtureTests(unittest.TestCase):
         self.assertFalse(any("trigger line" in w or "near-miss" in w for w in warns), warns)
 
 
-class SkillLinkTests(unittest.TestCase):
-    def test_repo_mirrors_are_symlinks_to_skills(self):
-        from kb_distillery.maintenance.sync_skills import LINKS, link_ok
-        for link in LINKS:
-            self.assertTrue(link_ok(link), f"{link} must be a symlink to ../skills (pixi run sync-skills)")
+class SkillRootsTests(unittest.TestCase):
+    def test_roots_are_each_kit_and_the_engine_skills(self):
+        from kb_distillery.lint import lint_skills
+        rel = {os.path.relpath(r, ROOT).replace(os.sep, "/") for r in lint_skills.SKILLS_ROOTS}
+        self.assertTrue({"src/kb_distillery/kits/base/skills", "src/kb_distillery/kits/research/skills", ".claude/skills"} <= rel, rel)
 
-    def test_ensure_link_replaces_copied_dir(self):
-        from kb_distillery.maintenance import sync_skills
+    def test_engine_skills_are_real_files_not_a_symlink(self):
+        path = os.path.join(ROOT, ".claude", "skills")
+        self.assertTrue(os.path.isdir(path) and not os.path.islink(path), f"{path} must be a real folder")
+        self.assertFalse(os.path.exists(os.path.join(ROOT, "skills")), "the top-level skills folder moved into the kits")
+
+    def _two_roots(self, second_skill: str):
+        a, b = self._make_root("one-skill"), self._make_root(second_skill)
+        return a, b
+
+    def _make_root(self, skill_name: str) -> str:
         tmp = tempfile.mkdtemp()
-        try:
-            os.makedirs(os.path.join(tmp, "skills"))
-            stale = os.path.join(tmp, ".claude", "skills")
-            os.makedirs(stale)
-            with open(os.path.join(stale, "x"), "w") as f:
-                f.write("copy")
-            self.assertEqual(sync_skills.ensure_link(stale), "replaced")
-            self.assertTrue(sync_skills.link_ok(stale))
-            self.assertEqual(sync_skills.ensure_link(stale), "ok")
-        finally:
-            shutil.rmtree(tmp)
+        self.addCleanup(shutil.rmtree, tmp)
+        skills = os.path.join(tmp, "skills")
+        os.makedirs(os.path.join(skills, skill_name))
+        with open(os.path.join(skills, skill_name, "SKILL.md"), "w", encoding="utf-8") as f:
+            f.write(_minimal_skill(skill_name))
+        with open(os.path.join(skills, "README.md"), "w", encoding="utf-8") as f:
+            f.write(_minimal_readme(skill_name))
+        return skills
+
+    def test_two_folders_each_lint_against_their_own_readme(self):
+        a, b = self._two_roots("two-skill")
+        n_err, _ = run_checks(skills_roots=[a, b])
+        self.assertEqual(n_err, 0)
+        with open(os.path.join(b, "README.md"), "w", encoding="utf-8") as f:
+            f.write(_minimal_readme("one-skill"))         # b's README lists a skill that is only in a
+        n_err, _ = run_checks(skills_roots=[a, b])
+        self.assertGreater(n_err, 0)
+
+    def test_a_skill_name_in_two_folders_fails(self):
+        a, b = self._two_roots("one-skill")
+        n_err, _ = run_checks(skills_roots=[a, b])
+        self.assertGreater(n_err, 0)
+
+    def test_distill_lines_are_checked(self):
+        from kb_distillery.lint import lint_skills
+        for line, ok in (("distill lint", True), ("distill ingest catalog raw/inbox/x.pdf", True), ("distill ops status", True),
+                         ("distill digest easy x", True), ("distill ingest not-a-command", False), ("distill nonsense", False),
+                         ("distill digest bogus", False)):
+            lint_skills.errors.clear()
+            lint_skills.validate_cli_line("x/SKILL.md", line)
+            self.assertEqual(not lint_skills.errors, ok, line)
+
+    def test_a_kit_skill_may_not_use_pixi(self):
+        from kb_distillery.lint import lint_skills
+        lint_skills.errors.clear()
+        lint_skills.validate_cli_line("x/SKILL.md", "pixi run lint", kit=True)
+        self.assertTrue(lint_skills.errors)
+        lint_skills.errors.clear()
+        lint_skills.validate_cli_line("x/SKILL.md", "pixi run lint", kit=False)
+        self.assertFalse(lint_skills.errors)
 
 
 if __name__ == "__main__":

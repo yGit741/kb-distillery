@@ -3,7 +3,7 @@
 Instead of pasting six guessed pages into one Messages call (chat_data.stream_claude), the agent
 runs the `query-knowledge` workflow itself inside the real Claude Code harness: `src/kb_distillery/search/query.py
 candidates`, Grep, Read `wiki/<slug>.md`, then an answer that cites `[[slug]]`. It bills the same
-Console API key (ANTHROPIC_API_KEY or ~/.config/thesis-kb/anthropic_key).
+Console API key (ANTHROPIC_API_KEY or ~/.config/kb-distillery/anthropic_key).
 
 The agent is READ-ONLY. `tool_policy` is the single source of truth and is enforced twice: as a
 PreToolUse hook (runs first, a deny wins in every permission mode) and as the `can_use_tool`

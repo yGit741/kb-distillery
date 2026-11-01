@@ -34,7 +34,7 @@ def _types():
 
 
 def _meta_overrides(root):
-    """Which of the explorer's meta-defaults this knowledge base overrides with its own meta/<x>."""
+    """Which of the explorer's src/kb_distillery/kits/base/defaults this knowledge base overrides with its own meta/<x>."""
     out = [name for name in ("flags.toml", "templates", "docs") if os.path.exists(os.path.join(root, "meta", name))]
     if os.path.isdir(os.path.join(root, "digest")):
         out.append("digest")

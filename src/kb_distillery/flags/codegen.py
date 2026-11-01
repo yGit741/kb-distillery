@@ -16,7 +16,7 @@ import sys
 from pathlib import Path
 
 from kb_distillery.flags.registry import FLAGS_TOML, FlagError, Registry, load
-from kb_distillery.paths import CHECKOUT_ROOT as ROOT   # generated files and tests are code: the explorer, not the vault
+from kb_distillery.config.resources import require_repo_root, resource   # generated files and tests are code: the explorer, not the vault
 
 GEN_TS = Path("web/src/flags/registry.gen.ts")
 GEN_WORKER = Path("share/flags.gen.js")   # the private Worker accepts overrides for these names only
@@ -72,17 +72,16 @@ def outputs(reg: Registry) -> dict[Path, str]:
 
 
 def _registry_for(root: Path) -> Path:
-    """`<root>/meta/flags.toml` (a vault's own), else `<root>/meta-defaults/flags.toml` (the explorer's), else the
+    """`<root>/meta/flags.toml` (a vault's own), else the base kit's `defaults/flags.toml` (the explorer's), else the
     registry this process resolved (kb_distillery.flags.registry.FLAGS_TOML)."""
-    for rel in (("meta", "flags.toml"), ("meta-defaults", "flags.toml")):
-        p = root.joinpath(*rel)
+    for p in (root / "meta" / "flags.toml", resource("kits/base/defaults") / "flags.toml"):
         if p.is_file():
             return p
     return FLAGS_TOML
 
 
-def main(argv=None, root: Path | str = ROOT) -> int:
-    root = Path(root)
+def main(argv=None, root: Path | str | None = None) -> int:
+    root = Path(root) if root is not None else require_repo_root("flags codegen")
     ap = argparse.ArgumentParser(prog="kb_distillery.flags.codegen", description=__doc__.splitlines()[0])
     ap.add_argument("--check", action="store_true", help="fail when a generated file is stale; write nothing")
     ap.add_argument("--flags", default=None, help="registry path (default meta/flags.toml)")

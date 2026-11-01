@@ -86,7 +86,7 @@ export function FlagsView({ env = FLAG_ENV }: { env?: FlagEnv }) {
         <CardTitle>Flags</CardTitle>
         <CardDescription>
           <span data-testid="flags-count">{rows.length}</span> flags from{" "}
-          <span data-testid="flags-registry">{q.data?.registry === "kb" ? "this knowledge base's meta/flags.toml" : "the explorer's meta-defaults/flags.toml"}</span> · this build: {env}
+          <span data-testid="flags-registry">{q.data?.registry === "kb" ? "this knowledge base's meta/flags.toml" : "the explorer's kits/base/defaults/flags.toml"}</span> · this build: {env}
           {env === "public" && " · read-only"}
         </CardDescription>
       </CardHeader>

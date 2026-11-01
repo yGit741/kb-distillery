@@ -10,7 +10,7 @@ from unittest.mock import patch
 from kb_distillery.paths import vault_root
 ROOT = vault_root()
 
-from kb_distillery.maintenance import daily_sync
+from kb_distillery.ops import daily_sync
 from kb_distillery.git import ship
 from kb_distillery.core.schema import lane_of
 
@@ -22,7 +22,7 @@ class LaneOfTests(unittest.TestCase):
             self.assertEqual(lane_of(p), "knowledge", p)
 
     def test_tooling(self):
-        for p in ("src/kb_distillery/dashboard/serve.py", "skills/x/SKILL.md", "scripts/launch.sh",
+        for p in ("src/kb_distillery/dashboard/serve.py", ".claude/skills/x/SKILL.md", "src/kb_distillery/kits/base/skills/x/SKILL.md", "scripts/launch.sh",
                   "pixi.toml", "AGENTS.md", "scripts/hooks/block-git-write.sh", ".claude/settings.json",
                   ".obsidian/app.json", "web/src/main.tsx", "src/kb_distillery/_webapp/index.html"):
             self.assertEqual(lane_of(p), "tooling", p)
@@ -56,6 +56,15 @@ class ChangedPathsTests(unittest.TestCase):
 
 class ShipTests(unittest.TestCase):
     LANES = {"knowledge": ["wiki/a.md"], "tooling": ["meta/tool.py"], "other": ["junk.txt"]}
+
+    def setUp(self):
+        # gates write their logs under the root: a tmp one, never the real worktree's .cache/ship-gates
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        _g(self.tmp.name, "init", "-q")
+        patcher = patch.object(ship, "ROOT", os.path.realpath(self.tmp.name))
+        patcher.start()
+        self.addCleanup(patcher.stop)
 
     def test_requires_message(self):
         with patch("kb_distillery.git.ship.changed_paths", return_value=self.LANES):

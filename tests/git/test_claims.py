@@ -76,10 +76,10 @@ class WarnTest(unittest.TestCase):
 
     def test_worktree_lane(self):
         buf = io.StringIO()
-        lanes = [{"branch": "infra/wt", "path": "/w", "paths": ["skills/infra-pr/SKILL.md"], "claims": []}]
+        lanes = [{"branch": "infra/wt", "path": "/w", "paths": [".claude/skills/infra-pr/SKILL.md"], "claims": []}]
         with mock.patch.object(claims, "_gh", return_value=_cp(rc=1)), \
                 mock.patch.object(claims, "worktree_lanes", return_value=lanes), redirect_stdout(buf):
-            hits = claims.warn(["skills"], "infra/me", "/tmp")
+            hits = claims.warn([".claude/skills"], "infra/me", "/tmp")
         self.assertEqual(len(hits), 1)
         self.assertIn("worktree /w", buf.getvalue())
 

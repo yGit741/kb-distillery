@@ -5,7 +5,7 @@ import zipfile
 import pytest
 
 from kb_distillery.ingest import chat_build, digest_many
-from kb_distillery.maintenance import export
+from kb_distillery.publish import export
 from kb_distillery.storage import StorageError, for_kb
 
 CLIP = """---

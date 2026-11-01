@@ -22,8 +22,8 @@ import shlex
 import sys
 
 ALLOW_PIXI_TASKS = {"daily-sync", "ship", "lanes", "ops", "curate-history", "install-hooks", "share"}
-ALLOW_SCRIPTS = {"src/kb_distillery/maintenance/daily_sync.py", "src/kb_distillery/git/ship.py", "src/kb_distillery/git/curate_history.py"}
-ALLOW_MODULES = {"kb_distillery.ops", "kb_distillery.maintenance.daily_sync", "kb_distillery.git.ship", "kb_distillery.git.curate_history"}
+ALLOW_SCRIPTS = {"src/kb_distillery/ops/daily_sync.py", "src/kb_distillery/git/ship.py", "src/kb_distillery/git/curate_history.py"}
+ALLOW_MODULES = {"kb_distillery.ops", "kb_distillery.ops.daily_sync", "kb_distillery.git.ship", "kb_distillery.git.curate_history"}
 
 BLOCKED_GIT = {
     "commit", "push", "merge", "rebase", "cherry-pick", "revert", "reset", "restore",

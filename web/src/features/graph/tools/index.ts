@@ -34,7 +34,7 @@ export interface GraphTool {
   overlay?: (ctx: GraphToolContext) => ReactNode;
   /** An experiment id (./experiments): the tool exists only while that experiment is switched on. */
   flag?: string;
-  /** A feature flag (meta-defaults/flags.toml, `@/flags`): the tool exists only while that flag is on. */
+  /** A feature flag (kits/base/defaults/flags.toml, `@/flags`): the tool exists only while that flag is on. */
   featureFlag?: FlagName;
 }
 

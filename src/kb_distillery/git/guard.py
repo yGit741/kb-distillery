@@ -30,6 +30,9 @@ WRITE_TOOLS = frozenset({
 _cursor_payload = None
 
 
+SKILLS_MD_PREFIX = ".claude/skills/"      # the engine's dev skills (and a kb's copy of its kit skills) are markdown
+
+
 def _open_ingest_sessions(root):
     ingest = os.path.join(root, INGEST_DIR)
     sessions = []
@@ -281,9 +284,9 @@ def check_path(rel, root):
         _think_guard(rel)
 
     if rel.endswith(".md"):
-        allowed = top in (WIKI_DIR, SCHEMA_META_DIR, DIGEST_DIR) or top in CODE_TOP_DIRS or rel in ROOT_MD
+        allowed = top in (WIKI_DIR, SCHEMA_META_DIR, DIGEST_DIR) or top in CODE_TOP_DIRS or rel in ROOT_MD or rel.startswith(SKILLS_MD_PREFIX)
         if not allowed:
-            deny(f"BLOCKED: {rel} — markdown lives in wiki/, meta/, digest/ or the code folders (backend/ skills/ scripts/ share/ web/ meta-defaults/). "
+            deny(f"BLOCKED: {rel} — markdown lives in wiki/, meta/, digest/ or the code folders (src/ scripts/ share/ web/ docs/ examples/). "
                  f"Allowed at root: {', '.join(sorted(ROOT_MD))}.")
         if top == WIKI_DIR and len(parts) > 2 and "excalidraw" not in parts:
             deny(f"BLOCKED: {rel} — wiki/ is flat. Use a filename prefix "

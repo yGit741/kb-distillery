@@ -97,8 +97,8 @@ def test_kb_config_errors_name_their_fix():
         return loader
     c, cfg = doctor.check_kb_config("x", boom("kb.toml: schema_version 1.3 but this explorer speaks 1.4"))
     assert c.status == FAIL and cfg is None and "migrate" in c.fix
-    c, _ = doctor.check_kb_config("x", boom("[kb] template = 'q' is not a known template"))
-    assert c.status == FAIL and "template" in c.fix
+    c, _ = doctor.check_kb_config("x", boom("[kb] kit = 'q' is not a known kit"))
+    assert c.status == FAIL and "kit" in c.fix
     c, _ = doctor.check_kb_config("x", boom("no knowledge base 'x'"))
     assert c.status == FAIL
 
@@ -106,9 +106,9 @@ def test_kb_config_errors_name_their_fix():
 def test_kb_config_ok_and_layout(tmp_path):
     root = tmp_path / "k"
     root.mkdir()
-    cfg = types.SimpleNamespace(id="k", schema_version=(1, 4), template="starter", root=str(root), git_root=None)
+    cfg = types.SimpleNamespace(id="k", schema_version=(1, 4), kit="base", root=str(root), git_root=None)
     c, got = doctor.check_kb_config("k", lambda ref: cfg)
-    assert c.status == PASS and got is cfg and "starter" in c.detail
+    assert c.status == PASS and got is cfg and "base" in c.detail
     assert doctor.check_kb_layout(cfg).status == WARN            # no wiki/ meta/
     for d in ("wiki", "meta"):
         (root / d).mkdir()
@@ -172,3 +172,16 @@ def test_main_json_on_empty_bases_dir(monkeypatch, tmp_path, capsys):
     rc = doctor.main(["--json"])
     rows = json.loads(capsys.readouterr().out)
     assert rc in (0, 1) and any(r["name"] == "knowledge base" and r["status"] == WARN for r in rows)
+
+
+# --- config folder (~/.config/kb-distillery) -------------------------------------------------------------
+def test_config_folder_only_the_old_one_is_a_fail_with_the_exact_mv(monkeypatch, tmp_path):
+    monkeypatch.setenv("HOME", str(tmp_path))
+    assert doctor.check_config_dir().status == INFO                      # nothing yet: fine
+    old = tmp_path / ".config" / "thesis-kb"
+    old.mkdir(parents=True)
+    c = doctor.check_config_dir()
+    assert c.status == FAIL and c.fix == f"mv {old} {tmp_path / '.config' / 'kb-distillery'}"
+    assert old.is_dir() and not (tmp_path / ".config" / "kb-distillery").exists()   # reported, never moved
+    (tmp_path / ".config" / "kb-distillery").mkdir()
+    assert doctor.check_config_dir().status == PASS

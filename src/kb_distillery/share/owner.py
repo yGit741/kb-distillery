@@ -36,6 +36,7 @@ import time
 from pathlib import Path
 from typing import Callable, Optional
 
+from kb_distillery.config.resources import root_resource
 from kb_distillery.share import deploy as dp
 from kb_distillery.share.contracts import CACHE_DIR, DEPLOY_MESSAGE_PREFIX, REPO, WORKER_MAIN
 
@@ -47,7 +48,7 @@ KEEP_BUILDS = 3
 TERMINAL = ("deployed", "rolled-back", "failed", "rollback-failed", "superseded")
 PENDING = ("building", "uploading", "deploying", "failed-network", "failed-module")
 CODE_DIR = Path(__file__).resolve().parent           # src/kb_distillery/share
-CODE_JS = CODE_DIR.parents[2] / "share"              # repo share/*.js (worker modules)
+CODE_JS = root_resource("share")                     # repo share/*.js (worker modules; `_data/share` in a wheel)
 _MODULE_RE = re.compile(r"Could not resolve|Cannot find module|No such module|ERR_MODULE_NOT_FOUND", re.I)
 SETTLE_SECONDS = 15
 

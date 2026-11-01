@@ -1,4 +1,4 @@
-"""`kbd distill <note> --to a,b`: send a think note into the chosen knowledge bases (docs: think.md).
+"""`distill send <note> --to a,b` (was `kbd distill`): send a think note into the chosen knowledge bases (docs: think.md).
 
 Each kb gets `wiki/distilled-think-<note>.md` citing `think:<note>.md`, committed there as `kb(distill)`; the
 note's provenance sidecar in the think space lists where it went (kb_distillery.distill.fanout). No LLM call unless
@@ -16,7 +16,7 @@ from kb_distillery.distill import fanout
 
 
 def build_parser() -> argparse.ArgumentParser:
-    p = argparse.ArgumentParser(prog="kbd distill", description="Send a think note into one or more knowledge bases.")
+    p = argparse.ArgumentParser(prog="distill send", description="Send a think note into one or more knowledge bases.")
     p.add_argument("note", help="think note: name, name.md, sub/name.md or think:name.md")
     p.add_argument("--to", required=True, help="comma-separated kb ids or paths, e.g. thesis,demo")
     p.add_argument("--summarize", action="store_true", help="write the page summary with an LLM (default: first paragraph)")

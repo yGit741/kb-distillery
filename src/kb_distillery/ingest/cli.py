@@ -129,7 +129,7 @@ def cmd_full_digest(args):
         return code
     sha = session.begin(args.raw_path, depth="full", scope=scope)
     print(f"\nfull-digest session {sha} — next: extract → claims.json → map → draft → finalize")
-    print("See skills/full-digest/SKILL.md")
+    print("See .claude/skills/full-digest/SKILL.md")
     return 0
 
 
@@ -142,7 +142,7 @@ def cmd_deep_digest(args):
         return code
     sha = session.begin(args.raw_path, depth="deep", scope=scope)
     print(f"\ndeep-digest session {sha} — extended neighbor linking in plan.json")
-    print("See skills/deep-digest/SKILL.md")
+    print("See .claude/skills/deep-digest/SKILL.md")
     return 0
 
 

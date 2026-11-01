@@ -8,12 +8,15 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from kb_distillery.paths import CHECKOUT_ROOT, CODE_DIR, vault_root
+from kb_distillery.kbconfig import checkout_root
+from kb_distillery.paths import CODE_DIR, vault_root
+CHECKOUT_ROOT = checkout_root()
 ROOT = vault_root()
 
 from kb_distillery.ops import migrate
 
-ENV = {"GIT_CONFIG_GLOBAL": os.devnull, "GIT_CONFIG_NOSYSTEM": "1", "KB": "", "KB_ROOT": ""}   # the temp repo is its own vault
+ENV = {"GIT_CONFIG_GLOBAL": os.devnull, "GIT_CONFIG_NOSYSTEM": "1", "KB": "", "KB_ROOT": "",
+       "PYTHONPATH": ""}   # the temp repo is its own vault, and its hooks must import ITS stub package, not the suite's
 
 
 def g(cwd, *args, env=None, check=True):
@@ -76,11 +79,12 @@ class GitHooksTests(unittest.TestCase):
         for k, v in (("user.name", "t"), ("user.email", "t@t")):
             g(self.root, "config", k, v)
         kb = os.path.join(self.root, "src", "kb_distillery")
-        for rel in ("__init__.py", "paths.py", "kbconfig.py", "core/__init__.py", "core/schema.py", "core/kbtypes.py",
+        for rel in ("__init__.py", "paths.py", "kbconfig.py", "config/__init__.py", "config/resources.py", "core/__init__.py", "core/schema.py", "core/kbtypes.py",
                     "git/__init__.py", "git/commit_policy.py"):
             os.makedirs(os.path.dirname(os.path.join(kb, rel)), exist_ok=True)
             shutil.copy(os.path.join(CODE_DIR, rel), os.path.join(kb, rel))
         shutil.copytree(os.path.join(CHECKOUT_ROOT, "scripts", "githooks"), os.path.join(self.root, "scripts", "githooks"))
+        shutil.copy(os.path.join(CHECKOUT_ROOT, "scripts", "hooks-python.sh"), os.path.join(self.root, "scripts", "hooks-python.sh"))
         os.makedirs(os.path.join(kb, "lint"))
         for rel, text in (("__init__.py", ""),
                           ("lint.py", "import os, sys\nsys.exit(1 if os.path.exists('LINT_FAIL') else 0)\n"),

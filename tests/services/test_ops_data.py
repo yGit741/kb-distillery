@@ -14,7 +14,7 @@ from kb_distillery.dashboard import ops_routes
 from kb_distillery.services import ops as ops_data
 from kb_distillery.dashboard.shell import TABS
 from kb_distillery.ops import runlog
-from kb_distillery.report import model as m
+from kb_distillery.ops.report import model as m
 
 DOC = m.Doc("t", "ok", "All clear", [m.Section("", [m.Banner("ok", "All clear")])]).as_dict()
 SNAP = {"subject": "[thesis-kb] ✓ all clear", "doc": DOC, "threads": [], "runs": [], "log": "", "hygiene": {}}

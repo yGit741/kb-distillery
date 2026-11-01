@@ -22,7 +22,7 @@ def client():
 
 @pytest.fixture(autouse=True)
 def temp_config(tmp_path, monkeypatch):
-    """Everything the chat service writes or reads from ~/.config/thesis-kb goes to a temp dir."""
+    """Everything the chat service writes or reads from ~/.config/kb-distillery goes to a temp dir."""
     cfg = tmp_path / "cfg"
     monkeypatch.setattr(chat_data, "CONFIG_DIR", str(cfg))
     monkeypatch.setattr(chat_data, "SETTINGS_FILE", str(cfg / "chat.json"))

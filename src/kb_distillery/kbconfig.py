@@ -3,14 +3,19 @@
 The engine is code only. A knowledge base is a folder holding a `kb.toml`; it may be its own git repository (then every
 `kb(...)` commit and `kb-x.y.z` tag lands there, see `git_root`). One discovery path:
 
-  1. `<bases dir>/<id>/kb.toml` — the bases dir is `<engine>/kbs` (the main checkout's, also from a linked worktree),
-     or `$KB_BASES_DIR` (a test override). The folder name is the id. Symlinks are followed.
+  1. `<bases dir>/<id>/kb.toml` — the bases dir is `$KB_DISTILLERY_HOME`, else `~/knowledge` (`$KB_BASES_DIR` replaces
+     both, a test override). The folder name is the id. Symlinks are followed. TRANSITIONAL: until the user's kbs move
+     to `~/knowledge` (Lane C.6), an id found nowhere there is looked up in the repository's own `kbs/` folder
+     (`_transitional_repo_kbs_dirs`, deleted in C.6).
   2. `--kb <path>` — any folder with a `kb.toml`, anywhere.
 
 `--kb` and `$KB` take an id or a path: a value containing `/` or starting with `.` or `~` is a path, anything else an id.
-Selection, first hit wins: `--kb`, `$KB`, the only knowledge base there is. `$KB_ROOT` is internal: tools set it to hand
-a resolved folder to the processes they start (the share build, qmd, hooks); users never do.
-Nothing here imports the rest of `kb`, so `kb_distillery.paths` and `kb_distillery.core.schema` can build on it at import time.
+Selection, first hit wins: `--kb`, `$KB`, the nearest `kb.toml` above the current folder (only outside a checkout), the
+only knowledge base there is. `$KB_ROOT` is internal: tools set it to hand a resolved folder to the processes they start
+(the share build, qmd, hooks); users never do.
+Nothing here imports the rest of `kb` (only `kb_distillery.config.resources`, which imports nothing), so
+`kb_distillery.paths` and `kb_distillery.core.schema` can build on it at import time. No repository root is computed at
+import: an installed wheel has none (see `config/resources.py`).
 
     python -m kb_distillery.kbconfig list     every knowledge base and where it is
     python -m kb_distillery.kbconfig show     the selected one, resolved
@@ -22,6 +27,8 @@ import os
 import sys
 from dataclasses import dataclass, field
 
+from kb_distillery.config import resources
+
 try:
     import tomllib
 except ModuleNotFoundError:          # python < 3.11 (the macOS system python running a hook): tomli if present
@@ -31,9 +38,10 @@ except ModuleNotFoundError:          # python < 3.11 (the macOS system python ru
         tomllib = None               # type: ignore[assignment]
 
 CODE_DIR = os.path.dirname(os.path.abspath(__file__))
-CHECKOUT_ROOT = os.path.dirname(os.path.dirname(CODE_DIR))
 CONFIG_NAME = "kb.toml"
-BASES_DIR_NAME = "kbs"
+BASES_DIR_NAME = "kbs"             # the repository's own kbs/ folder (transitional) and the default HOME subfolder name
+HOME_ENV = "KB_DISTILLERY_HOME"
+DEFAULT_HOME = os.path.join("~", "knowledge")
 THINK_DIR_NAME = "think"
 # `[kb] schema_version` a knowledge base must carry to be opened by this explorer (major.minor of kb-x.y.z).
 # Kept here, not in kb_distillery.core.schema, so this module stays import-free; the schema asserts both agree.
@@ -55,57 +63,117 @@ class KbConfig:
     data: dict = field(default_factory=dict, repr=False)
 
     def section(self, name: str) -> dict:
-        """A kb.toml table. `[types]` and `[edges]` of a kb that names a template come back as the template's tables
-        extended by the kb's own (kb_distillery.core.template); every other table is read as written."""
+        """A kb.toml table. `[types]` and `[edges]` of a kb that names a kit come back as the kit's tables
+        extended by the kb's own (kb_distillery.vault.kit); every other table is read as written."""
         d = self.data.get(name)
         d = d if isinstance(d, dict) else {}
-        if self.template and name in ("types", "edges"):
-            from kb_distillery.core import template        # lazy: this module stays import-free
-            return template.section(self.template, name, d, self.path)
+        if self.kit and name in ("types", "edges"):
+            from kb_distillery.vault import kit             # lazy: this module stays import-free
+            return kit.section(self.kit, name, d, self.path)
         return d
 
     @property
-    def template(self) -> str:
-        """`[kb] template`: the ontology template this kb follows ("" = none, the kb.toml carries its own schema)."""
+    def kit(self) -> str:
+        """The kit this kb follows ("" = none, the kb.toml carries its own schema): `[kb] kit`, else the older
+        `[kb] template`; the old names `starter` and `academic-research` come back as `base` and `research`."""
         kb = self.data.get("kb")
-        return str(kb.get("template") or "") if isinstance(kb, dict) else ""
+        raw = str((kb.get("kit") or kb.get("template") or "") if isinstance(kb, dict) else "")
+        if not raw:
+            return ""
+        from kb_distillery.vault import kit
+        return kit.canonical(raw)
 
     @property
     def tag_prefix(self) -> str:
         return str(self.section("git").get("tag_prefix") or "kb-")
 
 
-def primary_root() -> str:
-    """The engine's main working tree. From a linked worktree (its `.git` is a file naming `<git dir>/worktrees/x`,
-    whose `commondir` points at the shared git dir) that is not CHECKOUT_ROOT. Read without a subprocess because
-    this module is imported by nearly everything."""
-    dot_git = os.path.join(CHECKOUT_ROOT, ".git")
+def checkout_root() -> str | None:
+    """The checkout this code runs from (a repository, or a linked worktree of one), None for an installed package."""
+    root = resources.repo_root()
+    return str(root) if root else None
+
+
+def primary_root() -> str | None:
+    """The engine's main working tree, None for an installed package. From a linked worktree (its `.git` is a file
+    naming `<git dir>/worktrees/x`, whose `commondir` points at the shared git dir) that is not the checkout. Read
+    without a subprocess because this module is imported by nearly everything."""
+    checkout = checkout_root()
+    if checkout is None:
+        return None
+    dot_git = os.path.join(checkout, ".git")
     if os.path.isfile(dot_git):
         try:
             with open(dot_git, encoding="utf-8") as f:
                 first = f.readline().strip()
             if first.startswith("gitdir:"):
-                git_dir = os.path.realpath(os.path.join(CHECKOUT_ROOT, first[len("gitdir:"):].strip()))
+                git_dir = os.path.realpath(os.path.join(checkout, first[len("gitdir:"):].strip()))
                 with open(os.path.join(git_dir, "commondir"), encoding="utf-8") as f:
                     return os.path.dirname(os.path.realpath(os.path.join(git_dir, f.read().strip())))
         except OSError:
             pass
-    return CHECKOUT_ROOT
+    return checkout
 
 
 def bases_dir() -> str:
+    """Where knowledge bases live: `$KB_BASES_DIR` (tests), else `$KB_DISTILLERY_HOME`, else `~/knowledge`."""
     env = os.environ.get("KB_BASES_DIR")
-    return os.path.realpath(env) if env else os.path.join(primary_root(), BASES_DIR_NAME)
+    if env:
+        return os.path.realpath(env)
+    return os.path.realpath(os.path.expanduser(os.environ.get(HOME_ENV) or DEFAULT_HOME))
+
+
+def _transitional_repo_kbs_dirs() -> list[str]:
+    """TRANSITIONAL, deleted in Lane C.6 (when kbs/ moves to ~/knowledge): the repository's own `kbs/` folders, searched
+    when an id is not under `bases_dir()`. Order is the safety rule: THIS checkout's `kbs/` first (a linked worktree's
+    own tracked copy), the primary checkout's only after it, so a bare id used from a worktree never prefers (and so
+    never writes into) the primary's copy when the worktree has its own. A kb found only in the primary is used with a
+    warning (`_warn_primary`): the thesis kb is untracked and exists only there."""
+    out = []
+    for root in (checkout_root(), primary_root()):
+        d = os.path.join(root, BASES_DIR_NAME) if root else ""
+        if d and os.path.isdir(d) and os.path.realpath(d) not in [os.path.realpath(x) for x in out]:
+            out.append(d)
+    return out
+
+
+def search_dirs() -> list[str]:
+    """Every folder searched for `<id>/kb.toml`, first hit wins. `$KB_BASES_DIR` is exclusive (hermetic tests)."""
+    if os.environ.get("KB_BASES_DIR"):
+        return [bases_dir()]
+    return [bases_dir(), *_transitional_repo_kbs_dirs()]
+
+
+def _warn_primary(kb_id: str, folder: str) -> None:
+    primary, checkout = primary_root(), checkout_root()
+    # compare resolved paths: the primary's kbs/<id> may itself be a symlink (the thesis kb can be)
+    if primary and checkout and os.path.realpath(primary) != os.path.realpath(checkout) \
+            and os.path.realpath(os.path.join(primary, BASES_DIR_NAME, kb_id)) == os.path.realpath(folder):
+        print(f"warning: knowledge base {kb_id!r} resolves to the PRIMARY checkout's kbs/ ({folder}) from the linked "
+              f"worktree {checkout}; commands that write would change the primary's copy — pass --kb <path> for a "
+              f"worktree-local kb", file=sys.stderr)
+
+
+HOOKS_RESOURCE = "kits/base/hooks"      # the kit folder `hooks_path_for` points git at
 
 
 def hooks_path_for(kb_root: str) -> str:
-    """`core.hooksPath` for a knowledge base repo: relative (survives renaming the engine folder) for a kb at
-    `<engine>/kbs/<id>`, else the absolute path of the main checkout's `scripts/kb-hooks`. Git resolves a relative
-    value from the top of the work tree, where the hooks run."""
-    primary = os.path.realpath(primary_root())
-    if os.path.dirname(os.path.realpath(kb_root)) == os.path.join(primary, BASES_DIR_NAME):
-        return "../../scripts/kb-hooks"
-    return os.path.join(primary, "scripts", "kb-hooks")
+    """`core.hooksPath` for a knowledge base repo: the kit's `hooks/` folder (package data, `kits/base/hooks`).
+
+    Relative to the kb (survives renaming the engine folder) when the kb sits inside the engine checkout, i.e. both
+    live under the same home (`<engine>/kbs/<id>` -> `../../src/kb_distillery/kits/base/hooks`); absolute otherwise.
+    Git resolves a relative value from the top of the work tree, where the hooks run. From a linked worktree the
+    primary checkout's copy is used: it outlives the worktree, and a path into a deleted worktree makes git run no
+    hooks at all."""
+    primary = primary_root()
+    home = os.path.realpath(primary) if primary else None
+    # in a checkout the package sits at <checkout>/src/kb_distillery, so the primary's copy is the same resource there
+    hooks = os.path.join(home, "src", "kb_distillery", *HOOKS_RESOURCE.split("/")) if home \
+        else os.path.realpath(str(resources.resource(HOOKS_RESOURCE)))
+    root = os.path.realpath(kb_root)
+    if home and os.path.commonpath([root, home]) == home and os.path.commonpath([hooks, home]) == home:
+        return os.path.relpath(hooks, root)
+    return hooks
 
 
 def _toml_load(f):
@@ -124,23 +192,28 @@ def looks_like_path(ref: str) -> bool:
 
 
 def discover() -> dict[str, str]:
-    """id → knowledge base folder, for every `<bases dir>/<id>/kb.toml` (the folder name is the id)."""
+    """id → knowledge base folder, for every `<dir>/<id>/kb.toml` in `search_dirs()` (the folder name is the id)."""
     found: dict[str, str] = {}
-    base = bases_dir()
-    if os.path.isdir(base):
+    for base in search_dirs():
+        if not os.path.isdir(base):
+            continue
         for name in sorted(os.listdir(base)):
             folder = os.path.join(base, name)
-            if not name.startswith(".") and os.path.isdir(folder) and os.path.isfile(os.path.join(folder, CONFIG_NAME)):
+            if name not in found and not name.startswith(".") and os.path.isdir(folder) \
+                    and os.path.isfile(os.path.join(folder, CONFIG_NAME)):
                 found[name] = os.path.realpath(folder)
     return found
 
 
 def think_root(vault_root: str | None = None) -> str:
-    """The shared think space `<bases dir>/think`; a vault's own `think/` only when the shared one is absent."""
-    shared = os.path.join(bases_dir(), THINK_DIR_NAME)
-    if os.path.isdir(shared) or vault_root is None:
-        return shared
-    return os.path.join(vault_root, THINK_DIR_NAME)
+    """The shared think space `<bases dir>/think` (searched like kbs); a vault's own `think/` only when none exists."""
+    dirs = search_dirs()
+    for d in dirs:
+        shared = os.path.join(d, THINK_DIR_NAME)
+        if os.path.isdir(shared):
+            _warn_primary(THINK_DIR_NAME, shared)
+            return shared
+    return os.path.join(dirs[0], THINK_DIR_NAME) if vault_root is None else os.path.join(vault_root, THINK_DIR_NAME)
 
 
 def _consume_argv_kb() -> str | None:
@@ -172,11 +245,33 @@ def explicit_kb() -> str | None:
     return _ARGV_KB
 
 
+def kb_above(start: str | None = None) -> str | None:
+    """The nearest folder at or above `start` (default: the current folder) holding a `kb.toml`; None inside a checkout
+    of the engine (its repo-relative use is `KB=./examples/demo`) or when there is none."""
+    try:
+        here = os.path.realpath(start or os.getcwd())
+    except OSError:                     # the current folder was deleted under us
+        return None
+    repo = checkout_root()
+    if repo and (here == os.path.realpath(repo) or here.startswith(os.path.realpath(repo) + os.sep)):
+        return None
+    while True:
+        if os.path.isfile(os.path.join(here, CONFIG_NAME)):
+            return here
+        parent = os.path.dirname(here)
+        if parent == here:
+            return None
+        here = parent
+
+
 def selected() -> str | None:
-    """`--kb`, `$KB`, or the only knowledge base: an id or a path; None when nothing decides."""
+    """`--kb`, `$KB`, the kb folder the shell is in, or the only knowledge base: an id or a path; None when nothing decides."""
     pick = _ARGV_KB or os.environ.get("KB")
     if pick:
         return pick
+    above = kb_above()
+    if above:
+        return above
     known = discover()
     return next(iter(known)) if len(known) == 1 else None
 
@@ -214,11 +309,19 @@ def load_dir(root: str, id_hint: str | None = None, strict: bool = True) -> KbCo
         if strict:
             raise KbConfigError(msg)
         print(f"warning: {msg}", file=sys.stderr)
-    if kb.get("template") is not None:
-        from kb_distillery.core import template
-        if not isinstance(kb["template"], str) or not template.exists(kb["template"]):
-            raise KbConfigError(f"{path}: [kb] template = {kb['template']!r} is not a known template "
-                                f"(known: {', '.join(template.names()) or 'none'}; templates dir {template.templates_dir()})")
+    from kb_distillery.vault import kit
+    named = {key: kb[key] for key in ("kit", "template") if kb.get(key) not in (None, "")}
+    for key, value in named.items():
+        if not isinstance(value, str) or not kit.exists(value):
+            raise KbConfigError(f"{path}: [kb] {key} = {value!r} is not a known kit "
+                                f"(known: {', '.join(kit.names()) or 'none'}; kits dir {kit.kits_dir()})")
+        try:
+            kit.chain(value)
+        except kit.KitError as e:
+            raise KbConfigError(f"{path}: [kb] {key}: {e}") from None
+    if len({kit.canonical(v) for v in named.values()}) > 1:
+        raise KbConfigError(f"{path}: [kb] kit = {named['kit']!r} and template = {named['template']!r} name different kits "
+                            f"(template is the older spelling of kit; keep one)")
     git_root = root if os.path.exists(os.path.join(root, ".git")) else None
     return KbConfig(id=kb_id, name=str(kb["name"]), root=root, path=path, schema_version=version,
                     git_root=git_root, data=data)
@@ -233,6 +336,7 @@ def load(ref: str, strict: bool = True) -> KbConfig:
         have = ", ".join(sorted(known)) or "none"
         raise KbConfigError(f"no knowledge base {ref!r} (known: {have}; bases dir {bases_dir()}) — "
                             f"or pass a folder: --kb ./path")
+    _warn_primary(ref, known[ref])
     return load_dir(known[ref], ref, strict=strict)
 
 
@@ -270,12 +374,13 @@ def current() -> KbConfig | None:
 
 
 def vault_root() -> str:
-    """`$KB_ROOT`, else the selected knowledge base, else the checkout (none selected: engine-only commands)."""
+    """`$KB_ROOT`, else the selected knowledge base, else the checkout, else the current folder (none selected:
+    engine-only commands)."""
     env_root = os.environ.get("KB_ROOT")
     if env_root:
         return env_root
     kb = current()
-    return kb.root if kb else CHECKOUT_ROOT
+    return kb.root if kb else (checkout_root() or os.getcwd())
 
 
 def describe(cfg: KbConfig | None) -> dict:

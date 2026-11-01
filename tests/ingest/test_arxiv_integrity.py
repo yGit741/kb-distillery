@@ -19,7 +19,6 @@ from kb_distillery.paths import vault_root
 META = os.path.join(vault_root(), "meta")
 
 from kb_distillery.lint import lint
-from kb_distillery.maintenance import rename_raw
 from kb_distillery.ingest import arxiv_meta, backfill, catalog, researcher
 
 ATOM = """<?xml version="1.0" encoding="UTF-8"?>
@@ -238,19 +237,6 @@ class LintStampTests(unittest.TestCase):
                 mock.patch.object(lint.arxiv_meta, "stamp", return_value="2310.02541"):
             self.assertEqual(lint.check_arxiv_stamps(self._pages()), 0)
         self.assertEqual(lint.warnings, [])
-
-
-class RenameStaleRowsTests(unittest.TestCase):
-    def test_stale_rows_skip_not_block(self):
-        tmp = tempfile.mkdtemp()
-        os.makedirs(os.path.join(tmp, "raw", "printed-docs"))
-        open(os.path.join(tmp, "raw", "printed-docs", "2000-untitled.pdf"), "wb").close()
-        rows = [("raw/papers/old/2000-gone.pdf", "raw/papers/old/2000-gone-too.pdf", []),
-                ("raw/printed-docs/2000-untitled.pdf", "raw/printed-docs/2021-fit-without-fear.pdf", [])]
-        with mock.patch.object(rename_raw, "ROOT", tmp):
-            errors, stale = rename_raw.validate(rows)
-        self.assertEqual(errors, [])
-        self.assertEqual(stale, ["raw/papers/old/2000-gone.pdf"])
 
 
 if __name__ == "__main__":

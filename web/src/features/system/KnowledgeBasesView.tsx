@@ -80,7 +80,7 @@ function Active({ kb }: { kb: KbInfo }) {
           </dd>
           <dt className="text-muted-foreground">Meta</dt>
           <dd data-tour="kb-meta">
-            flags from <Badge variant="outline">{kb.flags_registry === "kb" ? "this kb" : "explorer meta-defaults"}</Badge>
+            flags from <Badge variant="outline">{kb.flags_registry === "kb" ? "this kb" : "explorer defaults"}</Badge>
             {kb.meta_overrides.length > 0 && <span className="ml-2 text-xs text-muted-foreground">overrides: {kb.meta_overrides.join(", ")}</span>}
           </dd>
           {kb.areas.length > 0 && (

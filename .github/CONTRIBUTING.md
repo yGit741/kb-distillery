@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for helping. This repo is the **engine** of kb-distillery: the code, the templates and the guides. Your knowledge is not part of it.
+Thanks for helping. This repo is the **engine** of kb-distillery: the code, the kits and the guides. Your knowledge is not part of it.
 
 ## Set up
 
@@ -29,7 +29,7 @@ Tooling changes go through a branch and a pull request, with the helper `ship`. 
 4. `pixi run ship -- pr --title "feat(<component>): imperative summary"` runs the gates (tests, lint) and opens the PR.
 5. A maintainer reviews. `pixi run ship -- merge` merges with a merge commit; PRs that change the schema are held for the owner's approval.
 
-Keep a PR to one concern and, where you can, under about 400 changed lines. A feature that cannot land in one PR ships dark behind a flag in `meta-defaults/flags.toml`. Every call to an LLM goes through `kb_distillery.llm` (`src/kb_distillery/llm`), never a new `claude -p`, SDK or HTTP call.
+Keep a PR to one concern and, where you can, under about 400 changed lines. A feature that cannot land in one PR ships dark behind a flag in `src/kb_distillery/kits/base/defaults/flags.toml`. Every call to an LLM goes through `kb_distillery.llm` (`src/kb_distillery/llm`), never a new `claude -p`, SDK or HTTP call.
 
 `ship` expects the maintainers' GitHub setup. If you only have a fork, make the same change on a feature branch and open an ordinary pull request; the checks are the same.
 
@@ -37,11 +37,11 @@ Keep a PR to one concern and, where you can, under about 400 changed lines. A fe
 
 | You want to add | Guide | Where the code goes |
 |---|---|---|
-| A **template** (the schema a kb follows: page types, edges, fields) | [`meta-defaults/docs/templates.md`](../meta-defaults/docs/templates.md) | `templates/<name>/template.toml` |
-| A **storage connector** (where raw sources live) | [`meta-defaults/docs/storage.md`](../meta-defaults/docs/storage.md) | `src/kb_distillery/storage/`, or a package with its own entry point |
-| A **publisher** (a way to share a kb as a site) | [`meta-defaults/docs/publish.md`](../meta-defaults/docs/publish.md) | a package in the `kb.publishers` entry-point group |
+| A **kit** (the schema a kb follows: page types, edges, fields) | [`src/kb_distillery/kits/base/defaults/docs/kits.md`](../src/kb_distillery/kits/base/defaults/docs/kits.md) | `src/kb_distillery/kits/<name>/kit.toml` |
+| A **storage connector** (where raw sources live) | [`src/kb_distillery/kits/base/defaults/docs/storage.md`](../src/kb_distillery/kits/base/defaults/docs/storage.md) | `src/kb_distillery/storage/`, or a package with its own entry point |
+| A **publisher** (a way to share a kb as a site) | [`src/kb_distillery/kits/base/defaults/docs/publish.md`](../src/kb_distillery/kits/base/defaults/docs/publish.md) | a package in the `kb.publishers` entry-point group |
 
-Each guide names the contract test your implementation must pass. Think notes and `kbd distill` are described in [`meta-defaults/docs/think.md`](../meta-defaults/docs/think.md); the code layout and pixi tasks are in [`meta-defaults/docs/dev.md`](../meta-defaults/docs/dev.md).
+Each guide names the contract test your implementation must pass. Think notes and `kbd distill` are described in [`src/kb_distillery/kits/base/defaults/docs/think.md`](../src/kb_distillery/kits/base/defaults/docs/think.md); the code layout and pixi tasks are in [`src/kb_distillery/kits/base/defaults/docs/dev.md`](../src/kb_distillery/kits/base/defaults/docs/dev.md).
 
 ## Conduct
 

@@ -1,4 +1,4 @@
-"""kbd init: a first kb from a template, its own git repo, no LLM. Temp dirs and a temp HOME only."""
+"""kbd init: a first kb from a kit, its own git repo, no LLM. Temp dirs and a temp HOME only."""
 import os
 import subprocess
 
@@ -31,10 +31,12 @@ def git(path, *args):
 
 def test_creates_a_loadable_kb_with_its_own_repo(world):
     bases, _ = world
-    target = init_kb.create("notes", "Notes", "starter", str(bases))
+    target = init_kb.create("notes", "Notes", "base", str(bases))
     assert target == str(bases / "notes")
-    cfg = kbconfig.load_dir(target)                            # strict: schema version and template resolve
-    assert (cfg.id, cfg.template, cfg.schema_version) == ("notes", "starter", kbconfig.SCHEMA_VERSION)
+    cfg = kbconfig.load_dir(target)                            # strict: schema version and kit resolve
+    assert (cfg.id, cfg.kit, cfg.schema_version) == ("notes", "base", kbconfig.SCHEMA_VERSION)
+    toml = open(os.path.join(target, "kb.toml"), encoding="utf-8").read()
+    assert 'kit = "base"' in toml and "template" not in toml          # init writes `kit`, never the older `template`
     assert cfg.git_root == target
     for rel in ("wiki", "raw/inbox", "meta", ".gitignore"):
         assert os.path.exists(os.path.join(target, rel))
@@ -45,9 +47,18 @@ def test_creates_a_loadable_kb_with_its_own_repo(world):
     assert not [d for d in os.listdir(bases) if d.startswith(".")]      # no temp folder left
 
 
-def test_first_commit_message_passes_commit_policy(world):
+def test_the_old_template_names_still_create_a_kb_with_the_current_kit_names(world):
     bases, _ = world
     target = init_kb.create("notes", "Notes", "academic-research", str(bases))
+    assert kbconfig.load_dir(target).kit == "research"
+    assert 'kit = "research"' in open(os.path.join(target, "kb.toml"), encoding="utf-8").read()
+    with pytest.raises(init_kb.InitError, match="unknown kit"):
+        init_kb.create("other", "Other", "nope", str(bases))
+
+
+def test_first_commit_message_passes_commit_policy(world):
+    bases, _ = world
+    target = init_kb.create("notes", "Notes", "research", str(bases))
     subject = git(target, "log", "-1", "--format=%s")
     assert commit_policy.SUBJECT_KB.match(subject), subject
     assert git(target, "log", "-1", "--format=%an") == "kb-distillery"      # the fallback identity
@@ -59,14 +70,14 @@ def test_uses_the_configured_git_identity(world, monkeypatch):
     monkeypatch.setenv("GIT_AUTHOR_EMAIL", "ann@example.com")
     monkeypatch.setenv("GIT_COMMITTER_NAME", "Ann")
     monkeypatch.setenv("GIT_COMMITTER_EMAIL", "ann@example.com")
-    target = init_kb.create("notes", "Notes", "starter", str(bases))
+    target = init_kb.create("notes", "Notes", "base", str(bases))
     assert git(target, "log", "-1", "--format=%an") == "Ann"
     assert os.environ["GIT_AUTHOR_NAME"] == "Ann"
 
 
 def test_fallback_identity_does_not_leak_into_the_environment(world):
     bases, _ = world
-    init_kb.create("notes", "Notes", "starter", str(bases))
+    init_kb.create("notes", "Notes", "base", str(bases))
     assert "GIT_AUTHOR_NAME" not in os.environ
 
 
@@ -75,24 +86,24 @@ def test_refuses_to_overwrite_and_leaves_it_untouched(world):
     (bases / "notes").mkdir(parents=True)
     (bases / "notes" / "mine.md").write_text("keep")
     with pytest.raises(init_kb.InitError, match="already exists"):
-        init_kb.create("notes", "Notes", "starter", str(bases))
+        init_kb.create("notes", "Notes", "base", str(bases))
     assert (bases / "notes" / "mine.md").read_text() == "keep"
     assert os.listdir(bases / "notes") == ["mine.md"]
 
 
-@pytest.mark.parametrize("bad", ["think", "yonatan-thesis", "demo", "../x", "a/b", ".hidden", "Up", ""])
+@pytest.mark.parametrize("bad", ["think", "demo", "../x", "a/b", ".hidden", "Up", ""])
 def test_refuses_reserved_and_unsafe_ids(world, bad):
     bases, _ = world
     with pytest.raises(init_kb.InitError):
-        init_kb.create(bad, "X", "starter", str(bases))
+        init_kb.create(bad, "X", "base", str(bases))
     assert not bases.exists() or os.listdir(bases) == []
 
 
-def test_refuses_home_and_unknown_template(world):
+def test_refuses_home_and_unknown_kit(world):
     bases, home = world
     with pytest.raises(init_kb.InitError, match="home"):
-        init_kb.create("notes", "N", "starter", str(home))
-    with pytest.raises(init_kb.InitError, match="unknown template"):
+        init_kb.create("notes", "N", "base", str(home))
+    with pytest.raises(init_kb.InitError, match="unknown kit"):
         init_kb.create("notes", "N", "nope", str(bases))
     assert list(home.iterdir()) == []
 
@@ -105,13 +116,13 @@ def test_failed_commit_leaves_nothing_behind(world, monkeypatch):
         raise core.OpsError("git commit failed: no")
     monkeypatch.setattr(core, "_commit_paths", boom)
     with pytest.raises(init_kb.InitError, match="first commit"):
-        init_kb.create("notes", "N", "starter", str(bases))
+        init_kb.create("notes", "N", "base", str(bases))
     assert os.listdir(bases) == []
 
 
 def test_name_with_quotes_stays_valid_toml(world):
     bases, _ = world
-    target = init_kb.create("notes", 'My "best" notes', "starter", str(bases))
+    target = init_kb.create("notes", 'My "best" notes', "base", str(bases))
     assert kbconfig.load_dir(target).name == 'My "best" notes'
 
 
@@ -141,7 +152,7 @@ def test_main_dir_prints_a_path_launch(world, tmp_path, capsys):
 
 def test_new_kb_lints_clean(world):
     bases, _ = world
-    target = init_kb.create("notes", "Notes", "starter", str(bases))
+    target = init_kb.create("notes", "Notes", "base", str(bases))
     env = {**os.environ, "KB_ROOT": target}
     cp = subprocess.run([os.sys.executable, "-m", "kb_distillery.lint.lint"], cwd=target, env=env, capture_output=True, text=True)
     assert cp.returncode == 0, cp.stdout[-800:] + cp.stderr[-800:]

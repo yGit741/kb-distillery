@@ -1,4 +1,0 @@
-#!/bin/bash
-# main only moves forward, by kb(...) steps (z+1); snapshot tags kb-x.y.z are annotated and match KB-Version.
-. "$(dirname "$0")/env.sh"
-exec "$py" -m kb_distillery.git.commit_policy push "$@"

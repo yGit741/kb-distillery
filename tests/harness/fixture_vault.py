@@ -18,9 +18,9 @@ from pathlib import Path
 
 CHECKOUT = Path(__file__).resolve().parents[2]           # this checkout (tests/harness/ -> repo root)
 CODE_SRC = CHECKOUT / "src" / "kb_distillery"           # the tool code (package kb)
-META_SRC = CHECKOUT / "meta-defaults"                    # the explorer's generic meta (templates, flags, docs)
+META_SRC = CODE_SRC / "kits" / "base" / "defaults"       # the explorer's generic meta (templates, flags, docs)
 
-# The scratch vault copies the templates the writers read from the explorer's meta-defaults/ (a knowledge
+# The scratch vault copies the templates the writers read from the base kit's defaults/ (a knowledge
 # base's own meta/ would override them; the fixture has none).
 META_COPY = ("templates",)
 CODE_IGNORE = shutil.ignore_patterns("__pycache__", "*.pyc", ".ingest", ".catalog", ".ops", ".researcher",

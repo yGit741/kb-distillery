@@ -1,0 +1,112 @@
+[kit]
+name = "research"
+version = 1
+extends = "base"
+description = "Academic research: papers, books and lectures digested into ideas, questions and people, with typed relations."
+
+[types]
+order = ["topic", "idea", "question", "person", "course", "series", "book", "notebook",
+         "paper", "part", "lecture", "article", "blog-post", "video", "ai-chat", "mail"]
+# No `areas` here on purpose: the `area:` whitelist is a kb's own choice of topics (each needs a theme-<area> page),
+# so a kb adds it under its own [types] (areas, deprecated_areas).
+# Extra frontmatter on source pages, beyond the explorer's common fields.
+source_fields = ["authors", "venue", "arxiv-id"]
+
+# --- Sources: the digest of one raw item ----------------------------------------------------------------
+[types.source.paper]
+label = "Paper"
+prefix = "paper-"
+yeared = true
+color = "#ff6b7a"
+
+[types.source.part]
+label = "Book part"
+prefix = "part-"
+yeared = true
+color = "#eab0ee"
+
+[types.source.lecture]
+label = "Lecture"
+prefix = "lecture-"
+color = "#ffc777"
+
+[types.source.article]
+label = "Article"
+prefix = "article-"
+color = "#4fd6be"
+
+[types.source.video]
+label = "Video"
+prefix = "video-"
+color = "#f7768e"
+
+[types.source.mail]
+label = "Mail"
+prefix = "mail-"
+color = "#73daca"
+
+[types.source."ai-chat"]
+label = "AI chat"
+prefix = "chat-"
+color = "#ff9e64"
+
+[types.source."blog-post"]
+label = "Blog post"
+prefix = "blog-"
+color = "#ff79c6"
+
+# --- Collections: a table grouping sources ---------------------------------------------------------------
+[types.collection.book]
+label = "Book"
+prefix = "book-"
+kind = "partition"            # its table is a page partition of its own raw PDF
+yeared = true
+color = "#d16bd8"
+
+[types.collection.notebook]
+label = "Notebook"
+prefix = "notebook-"
+kind = "partition"
+color = "#c099ff"
+
+[types.collection.course]
+label = "Course"
+prefix = "course-"
+kind = "contents"             # its table lists member raw files (corpus.tsv `collection` agrees)
+color = "#2ac3de"
+
+[types.collection.series]
+label = "Series"
+prefix = "series-"
+kind = "contents"
+color = "#7dcfff"
+
+# --- Concepts: knowledge across sources ------------------------------------------------------------------
+[types.concept.topic]
+label = "Topic"
+prefix = "theme-"
+color = "#9ece6a"
+
+[types.concept.idea]
+label = "Idea"
+prefix = ""                   # bare slug: the most-linked nodes read better in prose
+color = "#7aa2ff"
+
+[types.concept.question]
+label = "Question"
+prefix = "q-"
+status = ["open", "partial", "resolved"]
+color = "#f6c177"
+
+[types.concept.person]
+label = "Person"
+prefix = ""
+status = []                   # no status: progress is `verified:` (src/kb_distillery/core/persons.py)
+color = "#bb9af7"
+
+# --- Edges: the typed relations a page may state in its `relations:` block ---------------------------------
+# Read by kb_distillery.services.cypher.edge_config and checked by lint (check_relations). This table lives in the kit.
+[edges]
+types = ["extends", "uses", "contradicts", "example-of", "open-problem-in", "addresses", "discusses", "student-of"]
+symmetric = ["contradicts"]
+note_required = ["contradicts"]

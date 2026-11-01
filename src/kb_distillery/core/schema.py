@@ -101,9 +101,8 @@ ROOT_MD = {"index.md", "AGENTS.md", "CLAUDE.md", "README.md", "CHANGELOG.md", "C
 # Top-level vault shape — only these dirs/files may sit at the root (dot-* tooling exempt).
 FRONTEND_DIR = "web"                 # React app (tooling lane); node_modules is gitignored
 # Code and tooling folders beside the vault content (tooling lane; see TOOLING_PATHS).
-META_DEFAULTS_DIR = "meta-defaults"     # the explorer's generic meta (flags, templates, docs, digest defaults)
 # The old frontend and kbs-demo folders are gone (src/ tests/ web/ examples/); backend/ keeps only pyproject.toml until Lane A; the tools folder stays until Phase 9 for the hook stubs.
-CODE_TOP_DIRS = frozenset({"backend", "docs", "examples", "kbs", "scripts", "share", "skills", "src", "templates", "tests", "tools", "web", META_DEFAULTS_DIR})
+CODE_TOP_DIRS = frozenset({"backend", "docs", "examples", "kbs", "scripts", "share", "src", "tests", "tools", "web"})
 # A knowledge base folder also carries its kb.toml and digest/ instructions (kb_distillery.kbconfig, kb_distillery.core.kbtypes).
 KB_CONFIG = "kb.toml"
 DIGEST_DIR = "digest"
@@ -266,19 +265,16 @@ TOOLING_PATHS = [
     # (what another vault user needs); the rest is gitignored. Ships with any infra PR.
     ".obsidian/",
     "meta/",
-    "meta-defaults/",
     "backend/",
     "docs/",
     "examples/demo/",         # the public demo knowledge base is part of the engine repo; every other kbs/<id> is its own repo
     "share/",
-    "skills/",
-    "templates/",        # ontology templates (kb_distillery.core.template): part of the engine, versioned with it
     "src/",
     "tests/",
     "web/",
     "examples/",
     "scripts/",
-    "tools/",           # forwarding stubs for the old hook paths, until Phase 9
+    "tools/",           # tools/hooks-python.sh and tools/hooks/ stubs for old settings.json copies, until Phase 9
     "README.md",
     "CHANGELOG.md",
     "CONTRIBUTING.md",
@@ -303,7 +299,7 @@ GATE_PREFIXES = {
     "frontend_api": ("web/src/api",),
     "graph_ui": ("web/src/features/graph/",),
     "e2e": ("web/e2e/",),
-    "flags_registry": ("meta/flags.toml", "meta-defaults/flags.toml"),
+    "flags_registry": ("meta/flags.toml", "src/kb_distillery/kits/base/defaults/flags.toml"),
     "flags_code": ("src/kb_distillery/flags/",),
     "api": ("src/kb_distillery/api/",),
     "dashboard": ("src/kb_distillery/dashboard/",),

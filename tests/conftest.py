@@ -39,7 +39,7 @@ TYPE_BOUND = {
     "dashboard/test_source_layer_ui.py",
 }
 THESIS_DATA = {
-    "ingest/test_chat_merge.py", "maintenance/test_notify.py", "metrics/test_metrics.py",
+    "ingest/test_chat_merge.py", "ops/test_notify.py", "metrics/test_metrics.py",
     "migrations/test_migrations.py", "services/test_lifecycle_data.py",
     # read the thesis kb's frozen migration artifacts and its kb-x.y.z tags
     "core/test_source_model.py::SpecMapTotality", "core/test_source_model.py::MigrationTests",
@@ -87,3 +87,19 @@ def _flag_marker(request):
         for m in request.node.iter_markers("flag"):
             stack.enter_context(override(m.args[0], m.args[1]))
         yield
+
+
+@pytest.fixture(autouse=True)
+def _no_real_claude_sessions(monkeypatch, tmp_path_factory):
+    """`metrics.sessions.scan()` defaults to the owner's `~/.claude/projects` (hundreds of real session logs, ~5s to parse
+    and a different answer on every machine): a sync that runs the nightly metrics step must see an empty one.
+    Tests of the scanner pass their own `sources`."""
+    from kb_distillery.metrics import sessions
+    if "empty" not in _EMPTY_PROJECTS:
+        _EMPTY_PROJECTS["empty"] = str(tmp_path_factory.mktemp("claude-projects"))
+    monkeypatch.setattr(sessions, "PROJECTS_DIR", _EMPTY_PROJECTS["empty"])
+    from kb_distillery.metrics import golden
+    monkeypatch.setattr(golden, "PROJECTS_DIR", _EMPTY_PROJECTS["empty"])   # golden imported the value by name
+
+
+_EMPTY_PROJECTS = {}

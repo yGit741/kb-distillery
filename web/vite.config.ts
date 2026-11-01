@@ -47,6 +47,8 @@ export default defineConfig(({ mode }) => {
       css: false,
       // e2e/ runs under node --test with a real browser (pixi run test-e2e), not vitest
       include: ["src/**/*.test.{ts,tsx}"],
+      // inside a ship gate (KB_GATE_SLOT_HELD) cap the pool so one web run cannot take every core; a developer's own run is uncapped
+      ...(process.env.KB_GATE_SLOT_HELD ? { maxWorkers: 4 } : {}),
     },
   };
 });

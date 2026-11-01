@@ -1,3 +1,0 @@
-#!/bin/bash
-# Forwarding stub (removed in Phase 9): see tools/kb-hooks/pre-commit.
-exec "$(dirname "$0")/../../scripts/kb-hooks/pre-push" "$@"

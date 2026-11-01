@@ -1,6 +1,6 @@
-"""kbd doctor: check the environment and a knowledge base, and say how to fix each problem.
+"""distill doctor: check the environment and a knowledge base, and say how to fix each problem.
 
-    kbd doctor [--kb <id|path>] [--json]
+    distill doctor [--kb <id|path>] [--json]
 
 Prints PASS / WARN / FAIL / INFO with a one-line fix each. Exit code 0 unless something FAILs. Read-only: no network,
 no LLM call, no lint (lint writes index.md), nothing written. Every check is a small function that takes what it looks
@@ -20,6 +20,8 @@ import sys
 from dataclasses import asdict, dataclass
 
 from kb_distillery import kbconfig
+from kb_distillery.config import userdir
+from kb_distillery.config.resources import repo_root, resource
 from kb_distillery.publish.null import DEFAULT_REASON
 
 PASS, WARN, FAIL, INFO = "PASS", "WARN", "FAIL", "INFO"
@@ -81,6 +83,16 @@ def check_git(which=shutil.which, config=_git_config) -> list[Check]:
     return out
 
 
+def check_config_dir() -> Check:
+    """The per-user config folder. Only the old folder on disk (and not the new one) is a FAIL: the engine never moves a user's files."""
+    if userdir.migration_needed():
+        return Check("config folder", FAIL, f"only the old folder {userdir.legacy_dir()} exists (the API key, chat keys and usage ledger are in it)",
+                     userdir.migration_command())
+    if os.path.isdir(userdir.config_dir()):
+        return Check("config folder", PASS, userdir.display())
+    return Check("config folder", INFO, f"{userdir.display()} does not exist yet (it is created when you store a key)")
+
+
 # --- knowledge base ------------------------------------------------------------------------------------------
 def check_kb_found(known: dict, bases_dir: str, ref: str | None) -> Check:
     if ref:
@@ -94,18 +106,18 @@ def check_kb_found(known: dict, bases_dir: str, ref: str | None) -> Check:
 
 
 def check_kb_config(ref: str, loader=kbconfig.load):
-    """→ (Check, KbConfig | None). Schema mismatch and an unknown template are FAILs that name the fix."""
+    """→ (Check, KbConfig | None). Schema mismatch and an unknown kit are FAILs that name the fix."""
     try:
         cfg = loader(ref)
     except kbconfig.KbConfigError as e:
         msg = str(e)
         if "schema_version" in msg:
             return Check("kb.toml", FAIL, msg, "run `pixi run ops -- migrate` on that knowledge base"), None
-        if "not a known template" in msg:
-            return Check("kb template", FAIL, msg, "set `[kb] template` to a known template, or remove it"), None
+        if "not a known kit" in msg:
+            return Check("kb kit", FAIL, msg, "set `[kb] kit` to a known kit, or remove it"), None
         return Check("kb.toml", FAIL, msg, "fix kb.toml, or create a new kb with `kbd init`"), None
     out = Check("kb.toml", PASS, f"{cfg.id}: schema {'.'.join(map(str, cfg.schema_version))}"
-                + (f", template {cfg.template}" if cfg.template else ""))
+                + (f", kit {cfg.kit}" if cfg.kit else ""))
     return out, cfg
 
 
@@ -165,9 +177,13 @@ def check_llm(avail=None) -> list[Check]:
 
 
 def check_frontend(frontend_dir: str, node: bool, dist: str = "") -> Check:
-    dist = dist or os.path.join(kbconfig.CODE_DIR, "_webapp")
+    """`frontend_dir` is the checkout's web/ folder, "" for an installed package (nothing to build from)."""
+    dist = dist or str(resource("_webapp"))
     if os.path.isfile(os.path.join(dist, "index.html")):
         return Check("frontend", PASS, "src/kb_distillery/_webapp is built")
+    if not frontend_dir:
+        return Check("frontend", WARN, "the web app is not bundled in this install",
+                     "install a release wheel, or run from a checkout of the repository (it builds the app on first launch)")
     if not node:
         return Check("frontend", WARN, "src/kb_distillery/_webapp is not built and node is missing", "run `pixi install` (it provides node), then launch again")
     if os.path.isdir(os.path.join(frontend_dir, "node_modules")):
@@ -179,7 +195,7 @@ def check_frontend(frontend_dir: str, node: bool, dist: str = "") -> Check:
 # --- run -----------------------------------------------------------------------------------------------------
 def run_checks(ref: str | None = None) -> list[Check]:
     node = check_node()
-    checks = [*check_python(), node, *check_git()]
+    checks = [*check_python(), node, *check_git(), check_config_dir()]
     known = kbconfig.discover()
     checks.append(check_kb_found(known, kbconfig.bases_dir(), ref))
     pick = ref or (next(iter(known)) if len(known) == 1 else None)
@@ -189,7 +205,8 @@ def run_checks(ref: str | None = None) -> list[Check]:
         if cfg:
             checks += [check_kb_layout(cfg), check_storage(cfg), check_publisher(cfg)]
     checks += check_llm()
-    checks.append(check_frontend(os.path.join(kbconfig.CHECKOUT_ROOT, "web"), node.status == PASS))
+    repo = repo_root()
+    checks.append(check_frontend(str(repo / "web") if repo else "", node.status == PASS))
     return checks
 
 
@@ -209,7 +226,7 @@ def exit_code(checks: list[Check]) -> int:
 
 
 def main(argv=None) -> int:
-    ap = argparse.ArgumentParser(prog="kbd doctor", description=__doc__.split("\n\n")[0])
+    ap = argparse.ArgumentParser(prog="distill doctor", description=__doc__.split("\n\n")[0])
     ap.add_argument("--json", action="store_true", help="machine-readable output")
     args = ap.parse_args(argv)
     ref = kbconfig.explicit_kb() or os.environ.get("KB")     # kbconfig already stripped --kb from argv

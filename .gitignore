@@ -45,7 +45,7 @@ meta/.ops/
 # Pixi environment
 .pixi
 
-# LLM share bundles (src/kb_distillery/maintenance/export.py)
+# LLM share bundles (src/kb_distillery/publish/export.py)
 .exported/
 
 # Share build cache + deploy status (src/kb_distillery/share); wrangler's local state
@@ -102,11 +102,11 @@ scripts/qmd/node_modules
 src/kb_distillery/_webapp/
 web/dist-share/
 
-# Other agents' skill folders (not ours; the one skill source is skills/)
+# Other agents' skill folders (not ours; skills are kits/*/skills for a kb, .claude/skills for the engine)
 .agents/
 .opencode/
 .copilot/
 
-# Knowledge bases live in kbs/<id> (kb_distillery.kbconfig). Each is its own git repo and its knowledge never enters the
-# engine repo; the public demo lives in examples/demo.
+# Knowledge bases live in ~/knowledge/<id> (kb_distillery.kbconfig), outside this checkout. kbs/* stays ignored as a guard
+# so a stray kb folder here can never be committed to the engine repo; the public demo lives in examples/demo.
 kbs/*

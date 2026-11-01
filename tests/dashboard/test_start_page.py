@@ -5,7 +5,8 @@ import re
 import sys
 import unittest
 
-from kb_distillery.paths import CHECKOUT_ROOT as ROOT   # dashboard, skills: code, not vault content
+from kb_distillery.kbconfig import checkout_root
+ROOT = checkout_root()   # code, not vault content
 
 from kb_distillery.dashboard.shell import TABS, inject_nav
 
@@ -22,7 +23,10 @@ class StartPageTests(unittest.TestCase):
         self.assertIn('href="/start" class="active"', inject_nav(self.html, "start"))
 
     def test_named_skills_exist(self):
-        skills = set(os.listdir(os.path.join(ROOT, "skills")))
+        skills = set()
+        for where in (("src", "kb_distillery", "kits", "base", "skills"), ("src", "kb_distillery", "kits", "research", "skills"),
+                      (".claude", "skills")):
+            skills |= set(os.listdir(os.path.join(ROOT, *where)))
         named = set(re.findall(r"<code>([a-z][a-z0-9-]+)</code></td>", self.html))
         named |= set(re.findall(r"skill <code>([a-z][a-z0-9-]+)</code>", self.html))
         missing = sorted(n for n in named if n not in skills and "-" in n)
