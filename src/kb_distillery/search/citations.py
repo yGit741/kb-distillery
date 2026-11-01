@@ -17,6 +17,7 @@ import urllib.request
 from collections import Counter, deque
 from datetime import datetime, timezone
 
+from kb_distillery.config import userdir
 from kb_distillery.paths import vault_root
 HERE = os.path.join(vault_root(), "meta")
 ROOT = vault_root()
@@ -103,7 +104,7 @@ def _headers():
     key = os.environ.get("S2_API_KEY", "").strip()
     if not key:
         try:
-            with open(os.path.expanduser("~/.config/thesis-kb/keys/s2")) as f:
+            with open(userdir.path("keys", "s2")) as f:
                 key = f.read().strip()
         except OSError:
             pass

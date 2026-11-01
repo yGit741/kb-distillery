@@ -1,6 +1,6 @@
-"""kbd doctor: check the environment and a knowledge base, and say how to fix each problem.
+"""distill doctor: check the environment and a knowledge base, and say how to fix each problem.
 
-    kbd doctor [--kb <id|path>] [--json]
+    distill doctor [--kb <id|path>] [--json]
 
 Prints PASS / WARN / FAIL / INFO with a one-line fix each. Exit code 0 unless something FAILs. Read-only: no network,
 no LLM call, no lint (lint writes index.md), nothing written. Every check is a small function that takes what it looks
@@ -20,6 +20,7 @@ import sys
 from dataclasses import asdict, dataclass
 
 from kb_distillery import kbconfig
+from kb_distillery.config import userdir
 from kb_distillery.config.resources import repo_root, resource
 from kb_distillery.publish.null import DEFAULT_REASON
 
@@ -80,6 +81,16 @@ def check_git(which=shutil.which, config=_git_config) -> list[Check]:
         out.append(Check("git identity", WARN, "git user.name / user.email not set",
                          'run `git config --global user.name "You"` and `git config --global user.email you@example.com`'))
     return out
+
+
+def check_config_dir() -> Check:
+    """The per-user config folder. Only the old folder on disk (and not the new one) is a FAIL: the engine never moves a user's files."""
+    if userdir.migration_needed():
+        return Check("config folder", FAIL, f"only the old folder {userdir.legacy_dir()} exists (the API key, chat keys and usage ledger are in it)",
+                     userdir.migration_command())
+    if os.path.isdir(userdir.config_dir()):
+        return Check("config folder", PASS, userdir.display())
+    return Check("config folder", INFO, f"{userdir.display()} does not exist yet (it is created when you store a key)")
 
 
 # --- knowledge base ------------------------------------------------------------------------------------------
@@ -184,7 +195,7 @@ def check_frontend(frontend_dir: str, node: bool, dist: str = "") -> Check:
 # --- run -----------------------------------------------------------------------------------------------------
 def run_checks(ref: str | None = None) -> list[Check]:
     node = check_node()
-    checks = [*check_python(), node, *check_git()]
+    checks = [*check_python(), node, *check_git(), check_config_dir()]
     known = kbconfig.discover()
     checks.append(check_kb_found(known, kbconfig.bases_dir(), ref))
     pick = ref or (next(iter(known)) if len(known) == 1 else None)
@@ -215,7 +226,7 @@ def exit_code(checks: list[Check]) -> int:
 
 
 def main(argv=None) -> int:
-    ap = argparse.ArgumentParser(prog="kbd doctor", description=__doc__.split("\n\n")[0])
+    ap = argparse.ArgumentParser(prog="distill doctor", description=__doc__.split("\n\n")[0])
     ap.add_argument("--json", action="store_true", help="machine-readable output")
     args = ap.parse_args(argv)
     ref = kbconfig.explicit_kb() or os.environ.get("KB")     # kbconfig already stripped --kb from argv

@@ -68,7 +68,7 @@ engine, a kb or any repo (local, never pushed; refuses `kb-*`, which are `ops sn
 Every LLM call goes through `kb_distillery.llm` (`pixi run llm -- ask|submit|status|collect`); a test fails on a new `claude -p`,
 SDK or HTTP call elsewhere. One flag picks the backend per run: `--backend subscription|api|batch` or `$KB_LLM_BACKEND`.
 **Default: `subscription`** (`claude -p`, the API-key variables scrubbed, so it runs on the login, not on credits).
-`api` is the Messages API on `ANTHROPIC_API_KEY` (or `~/.config/thesis-kb/anthropic_key`); `batch` is the Message
+`api` is the Messages API on `ANTHROPIC_API_KEY` (or `~/.config/kb-distillery/anthropic_key`); `batch` is the Message
 Batches API (half price, asynchronous: `submit` then `collect`, a manifest under `.cache/llm/batches/`). All three stay
 selectable on every run; a feature that calls an LLM says in its plan which backend it defaults to.
 
@@ -79,7 +79,7 @@ selectable on every run; a feature that calls an LLM says in its plan which back
 ```
 pixi run lint                      check + reconcile + regenerate index.md
 pixi run health                    terminal health summary
-pixi run dashboard                 localhost health UI + graph explorer (http://127.0.0.1:8765, /graph, /digestion, /ops, /chat — a read-only research agent over the Claude Agent SDK, with the direct Messages call as fallback; pays with a stored API key (`~/.config/thesis-kb/keys/<name>`, switchable in the Session card) or, agent backend only, the `claude login` subscription)
+pixi run dashboard                 localhost health UI + graph explorer (http://127.0.0.1:8765, /graph, /digestion, /ops, /chat — a read-only research agent over the Claude Agent SDK, with the direct Messages call as fallback; pays with a stored API key (`~/.config/kb-distillery/keys/<name>`, switchable in the Session card) or, agent backend only, the `claude login` subscription)
 pixi run launch                    restart dashboard from current code (detached) + open browser; also (re)starts the qmd search service when installed
 pixi run qmd-install               (once) install the qmd search service in scripts/qmd (Node >= 22; models download on first start, ~1.9 GB under .cache/qmd/models)
 pixi run qmd-serve                 run the qmd search service in the foreground (127.0.0.1:8766; KB_QMD_PORT to change)

@@ -22,10 +22,11 @@ from datetime import datetime
 
 from .paths import ROOT
 from . import resolve as resolve_mod
+from kb_distillery.config import userdir
 
 INBOX = os.path.join(ROOT, "raw", "inbox")
 IMAP_HOST = "imap.gmail.com"
-KEYCHAIN_SERVICE = "thesis-kb-gmail-imap"
+KEYCHAIN_SERVICE = "kb-distillery-gmail-imap"      # an item stored under the old name is still found
 
 
 def _ascii_slug(text):
@@ -448,15 +449,16 @@ def scrap_mail(source, slug=None, force=False, fallback_id=None):
 
 
 def _keychain_password(account, service=KEYCHAIN_SERVICE):
-    result = subprocess.run(
-        ["security", "find-generic-password", "-a", account, "-s", service, "-w"],
-        capture_output=True, text=True,
-    )
-    if result.returncode != 0:
-        raise ValueError(
-            f"no Keychain entry for account={account!r} service={service!r} — "
-            f"store an app password first (see skills/scrap-data/mail/SKILL.md)")
-    return result.stdout.strip()
+    for name in userdir.keychain_services(service):         # the new name, then the one it replaces (read only)
+        result = subprocess.run(
+            ["security", "find-generic-password", "-a", account, "-s", name, "-w"],
+            capture_output=True, text=True,
+        )
+        if result.returncode == 0:
+            return result.stdout.strip()
+    raise ValueError(
+        f"no Keychain entry for account={account!r} service={service!r} — "
+        f"store an app password first (see skills/scrap-data/mail/SKILL.md)")
 
 
 def _all_mail_folder(conn):

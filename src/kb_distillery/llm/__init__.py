@@ -4,7 +4,7 @@ SDK or HTTP call, so billing is a flag instead of a rewrite.
 Three backends, same Request in, same Result out, results always in input order:
   * subscription — `claude -p` from an empty dir with no tools and the API-key variables removed, so it
     runs on the `claude login` account (usd is what the CLI reports; the subscription is not charged per call);
-  * api          — POST /v1/messages with the key from ANTHROPIC_API_KEY or ~/.config/thesis-kb/anthropic_key;
+  * api          — POST /v1/messages with the key from ANTHROPIC_API_KEY or ~/.config/kb-distillery/anthropic_key;
   * batch        — the Message Batches API: half price, results within hours. `run()` submits and waits;
     `submit()` + `collect()` split that across processes (the manifest under .cache/llm/batches/ keeps the order).
 
@@ -22,6 +22,8 @@ import tempfile
 import time
 import urllib.error
 import urllib.request
+
+from kb_distillery.config import userdir
 
 BACKENDS = ("subscription", "api", "batch")
 DEFAULT_BACKEND = "subscription"
@@ -43,7 +45,7 @@ BATCH_DISCOUNT = 0.5
 
 API_ROOT = "https://api.anthropic.com/v1"
 API_VERSION = "2023-06-01"
-KEY_FILE = os.path.expanduser("~/.config/thesis-kb/anthropic_key")
+KEY_FILE = userdir.path("anthropic_key")
 BATCH_MAX = 100_000                     # requests per batch (API limit)
 CUSTOM_ID_RE = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
 RETRYABLE = {408, 409, 429, 500, 502, 503, 504, 529}

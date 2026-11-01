@@ -110,7 +110,7 @@ export function SessionPanel({ status, scopes, model, onModel, scope, onScope }:
           </div>
           <Message error={addKey.error ?? removeKey.error} ok={addKey.isSuccess ? "Key stored and selected." : removeKey.isSuccess ? "Key removed." : undefined} />
           <p className="text-xs text-muted-foreground">
-            Stored as files under <code>{status.keysDir || "~/.config/thesis-kb/keys/"}</code> and never leave this machine. Only the last four characters are shown.
+            Stored as files under <code>{status.keysDir || "~/.config/kb-distillery/keys/"}</code> and never leave this machine. Only the last four characters are shown.
           </p>
         </form>
       </details>

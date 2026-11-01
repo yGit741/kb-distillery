@@ -22,6 +22,7 @@ import shutil
 import sys
 
 from kb_distillery import kbconfig
+from kb_distillery.config import userdir
 
 DEFAULT_TEMPLATE = "starter"
 DEFAULT_ID = "my-kb"
@@ -43,7 +44,7 @@ meta/.migrate/
 """
 KEEP = ("wiki/.gitkeep", "raw/inbox/.gitkeep", "meta/.gitkeep")
 LLM_LINE = ("AI features (digest, chat, proposals) stay off until you add a Claude subscription login (`claude login`) or an "
-            "API key (ANTHROPIC_API_KEY, or ~/.config/thesis-kb/anthropic_key); `kbd doctor` shows which backends work.")
+            "API key (ANTHROPIC_API_KEY, or " + userdir.display("anthropic_key") + "); `kbd doctor` shows which backends work.")
 
 
 class InitError(Exception):

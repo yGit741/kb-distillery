@@ -303,7 +303,7 @@ class Handler(BaseHTTPRequestHandler):
                 return
             self._json(200, chat_data.status())
         elif path in ("/api/chat/keys", "/api/chat/keys/remove"):
-            # the key never leaves this process: stored under ~/.config/thesis-kb/keys/<name>
+            # the key never leaves this process: stored under ~/.config/kb-distillery/keys/<name>
             try:
                 if path.endswith("/remove"):
                     chat_data.remove_key(payload.get("name"))

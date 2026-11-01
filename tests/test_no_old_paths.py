@@ -1,5 +1,6 @@
 """The retired layout (backend/, frontend/, tools/, kbs/demo, package `kb`) stays gone, and so do the Lane D moves:
-`maintenance/{daily_sync,notify,export,fix_math,rename_raw}`, the top-level `report/` package.
+`maintenance/{daily_sync,notify,export,fix_math,rename_raw}`, the top-level `report/` package, the per-user folder
+`~/.config/thesis-kb` (now `~/.config/kb-distillery`, `config/userdir.py`) and the keychain service `thesis-kb-gmail`.
 
 There are no import shims: a star-import shim breaks mock.patch, `python -m` and -W error filters. Instead this scan
 fails on any tracked file that still names the old module or path strings. Inputs come from `git ls-files` only (the
@@ -24,6 +25,8 @@ RETIRED = {
         r"|from kb_distillery\.maintenance import (?:daily_sync|notify|export|fix_math|rename_raw)\b"
         r"|maintenance/(?:daily_sync|notify|export|fix_math|rename_raw)\.py"),
     "top-level report package": re.compile(r"kb_distillery\.report\b|src/kb_distillery/report/"),
+    "~/.config/thesis-kb": re.compile(r"\.config/thesis-kb"),
+    "keychain service thesis-kb-gmail": re.compile(r"thesis-kb-gmail"),
 }
 # (pattern name -> files that may name it): the hook forwarding stubs (until Phase 9), the share builder that still builds
 # refs from before the move, and this test.
@@ -33,6 +36,9 @@ ALLOWED = {
     "tools/": {"src/kb_distillery/core/schema.py"},               # TOOLING_PATHS keeps tools/ for the stubs until Phase 9
     "backend/src or backend/tests": {"src/kb_distillery/share/build.py", "tests/share/test_share_app.py", "tests/share/test_share_versions.py", "pixi.toml"},
 }
+ALLOWED["keychain service thesis-kb-gmail"] = {"src/kb_distillery/config/userdir.py",      # the read-only lookup of the old name
+                                               "tests/ops/test_notify.py", "tests/config/test_userdir.py"}
+ALLOWED["~/.config/thesis-kb"] = {"tests/config/test_userdir.py"}
 ALLOWED_PREFIXES = ("tools/", "docs/plans/", "scripts/qmd/package-lock.json")
 ALLOWED_PREFIXES_FOR = {"tools/": ("web/src/",)}               # web/src/features/graph/tools/ is a real folder of the app
 SKIP_SUFFIX = (".png", ".jpg", ".jpeg", ".gif", ".webp", ".ico", ".pdf", ".woff", ".woff2", ".ttf", ".zip", ".lock", ".svg")
