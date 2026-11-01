@@ -166,6 +166,8 @@ class ArxivMetaTests(unittest.TestCase):
             def read(self): return self.data
 
         opener = lambda *_a, **_k: Resp(ATOM_FIXTURE)
+        slept = []
+        self.enterContext(mock.patch.object(arxiv_meta, "SLEEP", slept.append))   # arXiv's 3s politeness pause, not under test
         title = "From Local Pseudorandom Generators to Hardness of Learning"
         self.assertIsNotNone(arxiv_meta.search_title(title, ["Gal Vardi"], opener=opener))
         self.assertIsNone(arxiv_meta.search_title(title, ["Nadav Cohen"], opener=opener))
