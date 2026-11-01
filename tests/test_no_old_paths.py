@@ -43,7 +43,7 @@ ALLOWED = {
     "backend/src or backend/tests": {"src/kb_distillery/share/build.py", "tests/share/test_share_app.py", "tests/share/test_share_versions.py", "pixi.toml"},
 }
 # The roadmap is the record of what was planned and done under the old names; it is not rewritten.
-ALLOWED["meta-defaults/"] = {"docs/ROADMAP.md", "src/kb_distillery/core/schema.py"}   # schema.py: until the last commit of this PR
+ALLOWED["meta-defaults/"] = {"docs/ROADMAP.md"}
 ALLOWED["templates/ kit folder, template.toml, core.template or $KB_TEMPLATES_DIR"] = {"docs/ROADMAP.md"}
 ALLOWED["keychain service thesis-kb-gmail"] = {"src/kb_distillery/config/userdir.py",      # the read-only lookup of the old name
                                                "tests/ops/test_notify.py", "tests/config/test_userdir.py"}
@@ -75,6 +75,13 @@ class NoOldPathsTests(unittest.TestCase):
         files = tracked()
         for old in ("backend/src", "backend/tests", "frontend/", "kbs/", "templates/", "meta-defaults/"):
             self.assertEqual([p for p in files if p.startswith(old)], [], old)
+
+    def test_the_schema_no_longer_lists_the_retired_root_folders(self):
+        from kb_distillery.core import schema
+        for old in ("templates", "meta-defaults"):
+            self.assertNotIn(old, schema.ROOT_DIRS)
+            self.assertNotIn(old, schema.CODE_TOP_DIRS)
+            self.assertNotIn(old + "/", schema.TOOLING_PATHS)
 
     def test_the_kits_live_in_the_package(self):
         for rel in ("src/kb_distillery/kits/base/kit.toml", "src/kb_distillery/kits/research/kit.toml",
