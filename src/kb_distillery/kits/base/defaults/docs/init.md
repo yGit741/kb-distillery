@@ -12,7 +12,7 @@ kbd launch --kb <id>
 
 `kbd init [--kb-id ID] [--name NAME] [--kit base|research] [--dir PATH] [--yes]` (also `distill init`)
 
-- Creates `<dir>/<id>/` (`--dir` defaults to the bases dir, `kbs/`, or `$KB_BASES_DIR`) as its **own git repository**:
+- Creates `<dir>/<id>/` (`--dir` defaults to the bases dir, `~/knowledge`, or `$KB_BASES_DIR`) as its **own git repository**:
   `kb.toml` (current `schema_version`, `[kb] kit`), `wiki/`, `raw/inbox/`, `meta/`, a minimal `.gitignore`, and one
   first commit `kb(import): create <id> from kit <k> (kb-x.y.0)` on `main`. The commit also carries the kit's files:
   `.claude/skills/` (copies of the kit's skills, parents from `extends` first), `.claude/docs/` (the docs `AGENTS.md`

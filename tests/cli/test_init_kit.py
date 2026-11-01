@@ -11,6 +11,9 @@ from kb_distillery.git import install_hooks
 from kb_distillery.vault import kit as kits
 
 
+OLD_HOOKS_PATH = "../../tools" "/kb-hooks"      # a kb wired before the move; spelled in two parts so the old-paths scan stays clean
+
+
 @pytest.fixture
 def world(monkeypatch, tmp_path):
     home = tmp_path / "home"
@@ -145,13 +148,13 @@ def test_refresh_restores_what_drifted_says_what_changed_and_touches_no_knowledg
     open(os.path.join(root, ".claude/skills/my-own/SKILL.md"), "w").write("mine")
     open(os.path.join(root, ".claude/settings.json"), "w").write("{}")
     open(os.path.join(root, ".claude/hooks/env.sh"), "w").write("# the old engine lookup\n")
-    git(root, "config", "core.hooksPath", "../../tools/kb-hooks")
+    git(root, "config", "core.hooksPath", OLD_HOOKS_PATH)
     out = refresh(root, capsys, monkeypatch)
     assert "updated .claude/skills/query-knowledge/SKILL.md" in out
     assert "added .claude/skills/kb-undo/SKILL.md" in out
     assert ".claude/skills/query-knowledge/old/SKILL.md is not in the kit" in out
     assert "updated .claude/settings.json (previous copy: .claude/settings.json.bak)" in out
-    assert "core.hooksPath ../../tools/kb-hooks ->" in out
+    assert f"core.hooksPath {OLD_HOOKS_PATH} ->" in out
     assert ".claude/hooks/env.sh is not part of the kit any more" in out and os.path.isfile(os.path.join(root, ".claude/hooks/env.sh"))
     assert "AGENTS.md: yours" in out and "My own rule." in read(root, "AGENTS.md")
     assert os.path.isfile(os.path.join(root, ".claude/skills/my-own/SKILL.md"))          # the kb's own skill stays

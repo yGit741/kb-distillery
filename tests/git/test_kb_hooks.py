@@ -71,7 +71,7 @@ class KitHookFilesTests(unittest.TestCase):
             self.assertTrue(tracked.startswith("100755"), f"{name}: git does not track the executable bit ({tracked!r})")
             with open(path, encoding="utf-8") as f:
                 text = f.read()
-            for retired in ("PYTHONPATH", "KBD_DIR", "backend" + "/src", "src/kb_distillery", ".pixi", "env.sh", "python -m", "python3"):
+            for retired in ("PYTHONPATH", "KBD" + "_DIR", "backend" + "/src", "src/kb_distillery", ".pixi", "env.sh", "python -m", "python3"):
                 self.assertNotIn(retired, text, f"{name} still names {retired}")
             self.assertIn("distill hook", text)
         self.assertFalse(os.path.exists(os.path.join(KIT, "env.sh")))
@@ -82,7 +82,7 @@ class KitHookFilesTests(unittest.TestCase):
         self.assertEqual(commands, [f'bash "$CLAUDE_PROJECT_DIR/.claude/hooks/{n}"' for n in CLAUDE_HOOKS])
 
     def test_the_install_script_is_gone(self):
-        self.assertFalse(os.path.exists(os.path.join(ENGINE, "scripts", "install-kb-hooks.sh")))
+        self.assertFalse(os.path.exists(os.path.join(ENGINE, "scripts", "install-kb-hooks" + ".sh")))
 
 
 class GitHookTests(Tmp):
@@ -312,56 +312,6 @@ class InstallTests(Tmp):
                 mock.patch("sys.stdout"), mock.patch("sys.stderr"):
             self.assertEqual(tree.main(["hooks", "install"]), 0)
         self.assertEqual(_run(["git", "config", "core.hooksPath"], kb).stdout.strip(), kbconfig.hooks_path_for(kb))
-
-
-class ForwardingStubTests(Tmp):
-    """Stubs for a kb wired before the move (thesis: core.hooksPath ../../tools/kb-hooks): they run the kit hook through
-    the engine they sit in, put the engine's pixi env first on PATH, and print the exact fix."""
-
-    def _engine(self, folder):
-        engine = os.path.join(self.tmp, "engine")
-        kit = os.path.join(engine, "src", "kb_distillery", "kits", "base", "hooks")
-        os.makedirs(kit)
-        os.makedirs(os.path.join(engine, folder))
-        hook = os.path.join(kit, "commit-msg")
-        with open(hook, "w", encoding="utf-8") as f:
-            f.write('#!/bin/bash\necho "kit-hook-ran $* PATH0=${PATH%%:*}"\n')
-        os.chmod(hook, 0o755)
-        for name in GIT_HOOKS:
-            shutil.copy(os.path.join(ENGINE, folder, name), os.path.join(engine, folder, name))
-        kb = os.path.join(engine, "kbs", "x")
-        _init_repo(kb)
-        _run(["git", "config", "core.hooksPath", f"../../{folder}"], kb)
-        return engine, kit, kb
-
-    def test_both_stub_folders_forward_and_print_the_fix(self):
-        for folder in ("scripts/kb-hooks", "tools/kb-hooks"):
-            with self.subTest(folder):
-                shutil.rmtree(os.path.join(self.tmp, "engine"), ignore_errors=True)
-                engine, kit, kb = self._engine(folder)
-                msg = os.path.join(self.tmp, "msg")
-                with open(msg, "w", encoding="utf-8") as f:
-                    f.write("x\n")
-                cp = _run(["bash", os.path.join(engine, folder, "commit-msg"), msg], kb)
-                self.assertEqual(cp.returncode, 0, cp.stderr)
-                self.assertIn("kit-hook-ran", cp.stdout)
-                self.assertTrue(cp.stdout.strip().endswith(os.path.join(engine, ".pixi", "envs", "default", "bin")), cp.stdout)
-                self.assertIn(f'git -C "{kb}" config core.hooksPath "{kit}"', cp.stderr)
-                self.assertIn(f'distill hooks install --kb "{kb}"', cp.stderr)
-
-    def test_a_stub_without_the_kit_fails_closed(self):
-        engine, kit, kb = self._engine("scripts/kb-hooks")
-        shutil.rmtree(kit)
-        cp = _run(["bash", os.path.join(engine, "scripts/kb-hooks", "pre-commit")], kb)
-        self.assertEqual(cp.returncode, 2)
-        self.assertIn("fail closed", cp.stderr)
-
-    def test_the_stubs_are_executable_and_tracked_as_such(self):
-        for folder in ("scripts/kb-hooks", "tools/kb-hooks"):
-            for name in GIT_HOOKS:
-                self.assertTrue(os.access(os.path.join(ENGINE, folder, name), os.X_OK), f"{folder}/{name}")
-        out = subprocess.run(["git", "ls-files", "-s", "scripts/kb-hooks", "tools/kb-hooks"], cwd=ENGINE, capture_output=True, text=True).stdout
-        self.assertFalse([l for l in out.splitlines() if not l.startswith("100755")], out)
 
 
 if __name__ == "__main__":

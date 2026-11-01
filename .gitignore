@@ -107,6 +107,6 @@ web/dist-share/
 .opencode/
 .copilot/
 
-# Knowledge bases live in kbs/<id> (kb_distillery.kbconfig). Each is its own git repo and its knowledge never enters the
-# engine repo; the public demo lives in examples/demo.
+# Knowledge bases live in ~/knowledge/<id> (kb_distillery.kbconfig), outside this checkout. kbs/* stays ignored as a guard
+# so a stray kb folder here can never be committed to the engine repo; the public demo lives in examples/demo.
 kbs/*
