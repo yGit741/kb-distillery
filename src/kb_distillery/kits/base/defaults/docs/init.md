@@ -4,7 +4,7 @@ A fresh clone becomes a working knowledge base and dashboard with no LLM:
 
 ```bash
 pixi install
-kbd init            # asks for an id, name and template when run in a terminal; --yes takes defaults
+kbd init            # asks for an id, name and kit when run in a terminal; --yes takes defaults
 kbd launch --kb <id>
 ```
 

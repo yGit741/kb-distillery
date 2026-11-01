@@ -18,7 +18,7 @@ pixi run kbd init            # asks for an id, a name and a kit, then checks you
 pixi run kbd launch --kb <id>
 ```
 
-`kbd init` creates `kbs/<id>/` as its own git repository from the kit you pick, runs `kbd doctor`, and prints the launch command. The first launch installs the frontend dependencies and builds the app (a few minutes, needs the network); after that it starts in seconds. Non-interactive: `pixi run kbd init --kb-id my-kb --name "My KB" --template starter --yes`.
+`kbd init` creates `kbs/<id>/` as its own git repository from the kit you pick, runs `kbd doctor`, and prints the launch command. The first launch installs the frontend dependencies and builds the app (a few minutes, needs the network); after that it starts in seconds. Non-interactive: `pixi run kbd init --kb-id my-kb --name "My KB" --kit base --yes`.
 
 `pixi run kbd doctor` checks your environment at any time and prints a fix for each problem. Add AI later with `claude login` or an `ANTHROPIC_API_KEY`; doctor shows which of the three backends (subscription, API, batch) are ready.
 

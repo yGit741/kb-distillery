@@ -30,6 +30,7 @@ samples. A kit's page skeletons and docs live beside it in `kits/<name>/defaults
 """
 from __future__ import annotations
 
+import copy
 import os
 import tomllib
 from functools import lru_cache
@@ -151,4 +152,4 @@ def extend(base, extra, where: str):
 
 def section(name: str, table: str, own: dict, where: str) -> dict:
     """The kb's `table` (`types` / `edges`) as the engine reads it: the kit's, extended by `own`."""
-    return extend(load(name).get(table, {}), own, f"{where} [{table}]")
+    return copy.deepcopy(extend(load(name).get(table, {}), own, f"{where} [{table}]"))
