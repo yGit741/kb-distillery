@@ -295,6 +295,23 @@ class InstallTests(Tmp):
             self.assertEqual(install_hooks.install(kb), 0)
         self.assertTrue(os.path.isfile(os.path.join(kb, ".claude", "settings.json")))
 
+    def test_install_says_how_to_get_distill_on_path_when_it_is_missing(self):
+        kb = self._kb()
+        with mock.patch.object(install_hooks.shutil, "which", return_value=None), mock.patch("sys.stdout"), \
+                mock.patch("sys.stderr") as err:
+            self.assertEqual(install_hooks.install(kb), 0)
+        text = "".join(c.args[0] for c in err.write.call_args_list)
+        self.assertIn("`distill` is not on PATH", text)
+        self.assertIn("~/.local/bin/distill", text)
+        self.assertIn("-m kb_distillery", text)
+
+    def test_install_is_quiet_about_path_when_distill_is_there(self):
+        kb = self._kb()
+        with mock.patch.object(install_hooks.shutil, "which", return_value="/usr/bin/distill"), mock.patch("sys.stdout"), \
+                mock.patch("sys.stderr") as err:
+            self.assertEqual(install_hooks.install(kb), 0)
+        self.assertNotIn("not on PATH", "".join(c.args[0] for c in err.write.call_args_list))
+
     def test_distill_hooks_install_works_from_the_command_line_and_refuses_without_a_kb(self):
         from kb_distillery.cli import tree
         kb = self._kb()

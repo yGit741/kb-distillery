@@ -4,9 +4,7 @@ The engine is code only. A knowledge base is a folder holding a `kb.toml`; it ma
 `kb(...)` commit and `kb-x.y.z` tag lands there, see `git_root`). One discovery path:
 
   1. `<bases dir>/<id>/kb.toml` — the bases dir is `$KB_DISTILLERY_HOME`, else `~/knowledge` (`$KB_BASES_DIR` replaces
-     both, a test override). The folder name is the id. Symlinks are followed. TRANSITIONAL: until the user's kbs move
-     to `~/knowledge` (Lane C.6), an id found nowhere there is looked up in the repository's own `kbs/` folder
-     (`_transitional_repo_kbs_dirs`, deleted in C.6).
+     both, a test override). The folder name is the id. Symlinks are followed.
   2. `--kb <path>` — any folder with a `kb.toml`, anywhere.
 
 `--kb` and `$KB` take an id or a path: a value containing `/` or starting with `.` or `~` is a path, anything else an id.
@@ -39,7 +37,6 @@ except ModuleNotFoundError:          # python < 3.11 (the macOS system python ru
 
 CODE_DIR = os.path.dirname(os.path.abspath(__file__))
 CONFIG_NAME = "kb.toml"
-BASES_DIR_NAME = "kbs"             # the repository's own kbs/ folder (transitional) and the default HOME subfolder name
 HOME_ENV = "KB_DISTILLERY_HOME"
 DEFAULT_HOME = os.path.join("~", "knowledge")
 THINK_DIR_NAME = "think"
@@ -123,35 +120,10 @@ def bases_dir() -> str:
     return os.path.realpath(os.path.expanduser(os.environ.get(HOME_ENV) or DEFAULT_HOME))
 
 
-def _transitional_repo_kbs_dirs() -> list[str]:
-    """TRANSITIONAL, deleted in Lane C.6 (when kbs/ moves to ~/knowledge): the repository's own `kbs/` folders, searched
-    when an id is not under `bases_dir()`. Order is the safety rule: THIS checkout's `kbs/` first (a linked worktree's
-    own tracked copy), the primary checkout's only after it, so a bare id used from a worktree never prefers (and so
-    never writes into) the primary's copy when the worktree has its own. A kb found only in the primary is used with a
-    warning (`_warn_primary`): the thesis kb is untracked and exists only there."""
-    out = []
-    for root in (checkout_root(), primary_root()):
-        d = os.path.join(root, BASES_DIR_NAME) if root else ""
-        if d and os.path.isdir(d) and os.path.realpath(d) not in [os.path.realpath(x) for x in out]:
-            out.append(d)
-    return out
-
-
 def search_dirs() -> list[str]:
-    """Every folder searched for `<id>/kb.toml`, first hit wins. `$KB_BASES_DIR` is exclusive (hermetic tests)."""
-    if os.environ.get("KB_BASES_DIR"):
-        return [bases_dir()]
-    return [bases_dir(), *_transitional_repo_kbs_dirs()]
-
-
-def _warn_primary(kb_id: str, folder: str) -> None:
-    primary, checkout = primary_root(), checkout_root()
-    # compare resolved paths: the primary's kbs/<id> may itself be a symlink (the thesis kb can be)
-    if primary and checkout and os.path.realpath(primary) != os.path.realpath(checkout) \
-            and os.path.realpath(os.path.join(primary, BASES_DIR_NAME, kb_id)) == os.path.realpath(folder):
-        print(f"warning: knowledge base {kb_id!r} resolves to the PRIMARY checkout's kbs/ ({folder}) from the linked "
-              f"worktree {checkout}; commands that write would change the primary's copy — pass --kb <path> for a "
-              f"worktree-local kb", file=sys.stderr)
+    """Every folder searched for `<id>/kb.toml`, first hit wins: the bases dir only (a checkout's own `kbs/` is not
+    looked at)."""
+    return [bases_dir()]
 
 
 HOOKS_RESOURCE = "kits/base/hooks"      # the kit folder `hooks_path_for` points git at
@@ -211,7 +183,6 @@ def think_root(vault_root: str | None = None) -> str:
     for d in dirs:
         shared = os.path.join(d, THINK_DIR_NAME)
         if os.path.isdir(shared):
-            _warn_primary(THINK_DIR_NAME, shared)
             return shared
     return os.path.join(dirs[0], THINK_DIR_NAME) if vault_root is None else os.path.join(vault_root, THINK_DIR_NAME)
 
@@ -336,7 +307,6 @@ def load(ref: str, strict: bool = True) -> KbConfig:
         have = ", ".join(sorted(known)) or "none"
         raise KbConfigError(f"no knowledge base {ref!r} (known: {have}; bases dir {bases_dir()}) — "
                             f"or pass a folder: --kb ./path")
-    _warn_primary(ref, known[ref])
     return load_dir(known[ref], ref, strict=strict)
 
 
