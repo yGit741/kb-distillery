@@ -1,11 +1,11 @@
-[template]
-name = "starter"
+[kit]
+name = "base"
 version = 1
 description = "A small general knowledge base: documents, notes and articles digested into ideas, questions, topics and people."
 
 # The smallest ontology that stands on its own. Every layer is given here on purpose: a layer with no table falls
-# back to the explorer's thesis-style defaults (kb_distillery.core.kbtypes), which a starter must not inherit.
-# `color` is left out where a kb extending this template is likely to add types of its own: the loader then picks
+# back to the explorer's thesis-style defaults (kb_distillery.core.kbtypes), which a small kit must not inherit.
+# `color` is left out where a kb extending this kit is likely to add types of its own: the loader then picks
 # a palette colour no other type uses, so two types never share one.
 [types]
 

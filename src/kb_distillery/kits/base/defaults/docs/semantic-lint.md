@@ -1,6 +1,6 @@
 # Semantic lint
 
-> Structural vs semantic lint, warning kinds, coherence CLI. Part of the doc router in [`AGENTS.md`](../../AGENTS.md).
+> Structural vs semantic lint, warning kinds, coherence CLI. Part of the doc router in [`AGENTS.md`](../../../../../../AGENTS.md).
 
 ## Semantic lint
 

@@ -1,6 +1,6 @@
 # Lifecycle: commits, versions, hygiene
 
-> Lanes, commit formats, versions, hygiene, snapshots/undo, diverged main, nightly schedule, partial checkouts, commit gate. Part of the doc router in [`AGENTS.md`](../../AGENTS.md).
+> Lanes, commit formats, versions, hygiene, snapshots/undo, diverged main, nightly schedule, partial checkouts, commit gate. Part of the doc router in [`AGENTS.md`](../../../../../../AGENTS.md).
 
 **Git lifecycle — KB Conventional Commits.** Lane membership lives in `src/kb_distillery/core/schema.py` (`KNOWLEDGE_PATHS`, `TOOLING_PATHS`, `lane_of`). The dashboard **Lifecycle** tab explains and shows all of it.
 

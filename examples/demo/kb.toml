@@ -1,10 +1,10 @@
 # Demo knowledge base: a made-up job search, tracked by the engine repo and used as its public demo and test kb.
-# It follows the `starter` template (templates/starter) and adds the types a job search needs.
+# It follows the `base` kit (src/kb_distillery/kits/base) and adds the types a job search needs.
 [kb]
 id = "demo"
 name = "Job Search (demo)"
 schema_version = "1.4"
-template = "starter"
+kit = "base"
 
 [git]
 tag_prefix = "kb-"
@@ -14,7 +14,7 @@ focus = "digest/focus.md"
 types = "digest/types.md"
 
 [types]
-# Every type once: the template's, then this kb's own (the union keeps the template's entries first).
+# Every type once: the kit's, then this kb's own (the union keeps the kit's entries first).
 order = ["topic", "idea", "question", "person", "series", "article", "notes", "document",
          "company", "role", "interview", "skill",
          "process",
@@ -22,7 +22,7 @@ order = ["topic", "idea", "question", "person", "series", "article", "notes", "d
 # Extra frontmatter on source pages (the thesis has authors/venue/arxiv-id; a job search has these).
 source_fields = ["company", "date", "stage"]
 
-# --- Sources (the starter gives article, notes, document) ----------------------------------------------------
+# --- Sources (the base kit gives article, notes, document) ----------------------------------------------------
 [types.source.posting]
 label = "Job posting"
 prefix = "posting-"
@@ -38,14 +38,14 @@ label = "AI chat"
 prefix = "chat-"
 color = "#ff9e64"
 
-# --- Collections (the starter gives series) -------------------------------------------------------------------
+# --- Collections (the base kit gives series) -------------------------------------------------------------------
 [types.collection.process]
 label = "Hiring process"
 prefix = "process-"
 kind = "contents"             # one per company: the posting, mails, chats and notes of that application
 color = "#2ac3de"
 
-# --- Concepts (the starter gives topic, idea, question, person) ------------------------------------------------
+# --- Concepts (the base kit gives topic, idea, question, person) ------------------------------------------------
 [types.concept.company]
 label = "Company"
 prefix = "company-"

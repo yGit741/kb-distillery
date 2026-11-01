@@ -34,7 +34,7 @@ os.environ.setdefault("GIT_CEILING_DIRECTORIES", os.pathsep.join(sorted({
     os.path.dirname(os.path.realpath(ROOT)),
     *([os.path.dirname(os.path.realpath(kbconfig.checkout_root()))] if kbconfig.checkout_root() else [])})))
 META_DIR = os.path.join(ROOT, "meta")      # vault metadata only (no code lives here any more)
-META_DEFAULTS_PATH = str(root_resource("meta-defaults"))   # explorer-owned defaults a kb's meta/ overrides
+META_DEFAULTS_PATH = str(resource("kits/base/defaults"))   # the base kit's defaults (flags, docs, page skeletons, digest) a kb's meta/ overrides
 
 
 def vpath(*parts, root=None):
@@ -43,7 +43,7 @@ def vpath(*parts, root=None):
 
 
 def meta_file(*parts, root=None):
-    """`meta/<x>` from the knowledge base when it has one, else the explorer's `meta-defaults/<x>`
+    """`meta/<x>` from the knowledge base when it has one, else the base kit's `defaults/<x>`
     (flags.toml, docs/, templates/, digest/). Returns the kb path when neither exists, so writes land there."""
     own = os.path.join(root or ROOT, "meta", *parts)
     if os.path.exists(own):

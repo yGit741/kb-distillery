@@ -1,6 +1,6 @@
 # Workflows and the ingest CLI
 
-> Skill ladder, dedup, ingest/digest commands, scrap-wordpress, scrap-youtube, arXiv rules, catalog, query, distill. Part of the doc router in [`AGENTS.md`](../../AGENTS.md).
+> Skill ladder, dedup, ingest/digest commands, scrap-wordpress, scrap-youtube, arXiv rules, catalog, query, distill. Part of the doc router in [`AGENTS.md`](../../../../../../AGENTS.md).
 
 ## Skill ladder
 

@@ -1,9 +1,9 @@
-"""kbd init: create a first knowledge base from a template, run doctor, print how to open the dashboard.
+"""kbd init: create a first knowledge base from a kit, run doctor, print how to open the dashboard.
 
-    kbd init [--kb-id ID] [--name NAME] [--template starter|academic-research] [--dir PATH] [--yes]
+    kbd init [--kb-id ID] [--name NAME] [--kit base|research] [--dir PATH] [--yes]
 
 Creates `<dir>/<id>/` (dir defaults to the bases dir, `kbs/`) as its OWN git repository: kb.toml (current schema
-version, `[kb] template`), wiki/, raw/inbox/, meta/, a minimal .gitignore, and one first commit. It is built in a hidden
+version, `[kb] kit`), wiki/, raw/inbox/, meta/, a minimal .gitignore, and one first commit. It is built in a hidden
 sibling folder and renamed into place, so a failure leaves nothing half made. It refuses to touch anything that exists.
 
 No LLM is needed or asked for: init never reads or stores a key. AI features stay off until a Claude subscription login
@@ -24,7 +24,7 @@ import sys
 from kb_distillery import kbconfig
 from kb_distillery.config import userdir
 
-DEFAULT_TEMPLATE = "starter"
+DEFAULT_KIT = "base"
 DEFAULT_ID = "my-kb"
 RESERVED_IDS = {"think", "yonatan-thesis", "demo"}
 ID_RE = re.compile(r"^[a-z0-9][a-z0-9-]{0,40}$")
@@ -71,16 +71,16 @@ def plan_target(parent: str, kb_id: str, home: str | None = None) -> str:
     return target
 
 
-def kb_toml(kb_id: str, name: str, template: str) -> str:
+def kb_toml(kb_id: str, name: str, kit: str) -> str:
     major, minor = kbconfig.SCHEMA_VERSION
     esc = name.replace("\\", "\\\\").replace('"', '\\"')
-    return (f'[kb]\nid = "{kb_id}"\nname = "{esc}"\nschema_version = "{major}.{minor}"\ntemplate = "{template}"\n\n'
+    return (f'[kb]\nid = "{kb_id}"\nname = "{esc}"\nschema_version = "{major}.{minor}"\nkit = "{kit}"\n\n'
             f'[git]\ntag_prefix = "kb-"\n')
 
 
-def commit_message(kb_id: str, template: str) -> str:
+def commit_message(kb_id: str, kit: str) -> str:
     major, minor = kbconfig.SCHEMA_VERSION
-    return f"kb(import): create {kb_id} from template {template} (kb-{major}.{minor}.0)\n"
+    return f"kb(import): create {kb_id} from kit {kit} (kb-{major}.{minor}.0)\n"
 
 
 def _write(root: str, rel: str, text: str) -> None:
@@ -109,18 +109,19 @@ def _identity_if_missing():
                 os.environ[k] = v
 
 
-def create(kb_id: str, name: str, template: str, parent: str, home: str | None = None) -> str:
+def create(kb_id: str, name: str, kit: str, parent: str, home: str | None = None) -> str:
     """Make the kb folder with its own git repo and first commit → its path. Raises InitError, leaving nothing behind."""
-    from kb_distillery.core import template as templates
+    from kb_distillery.vault import kit as kits
     validate_id(kb_id)
-    if not templates.exists(template):
-        raise InitError(f"unknown template {template!r} (known: {', '.join(templates.names()) or 'none'})")
+    if not kits.exists(kit):
+        raise InitError(f"unknown kit {kit!r} (known: {', '.join(kits.names()) or 'none'})")
+    kit = kits.canonical(kit)                 # the old names starter / academic-research write the current ones
     target = plan_target(parent, kb_id, home)
     os.makedirs(os.path.dirname(target), exist_ok=True)
     work = os.path.join(os.path.dirname(target), f".init-{kb_id}-{os.getpid()}")      # hidden: discovery skips dots
     try:
         os.makedirs(work)
-        _write(work, "kb.toml", kb_toml(kb_id, name, template))
+        _write(work, "kb.toml", kb_toml(kb_id, name, kit))
         _write(work, ".gitignore", GITIGNORE)
         for rel in KEEP:
             _write(work, rel, "")
@@ -128,7 +129,7 @@ def create(kb_id: str, name: str, template: str, parent: str, home: str | None =
         try:
             _git(work, "init", "-q", "-b", "main", check=True)
             with _identity_if_missing():
-                sha = _commit_paths(work, ["kb.toml", ".gitignore", *KEEP], commit_message(kb_id, template))
+                sha = _commit_paths(work, ["kb.toml", ".gitignore", *KEEP], commit_message(kb_id, kit))
         except OpsError as e:
             raise InitError(f"could not make the first commit: {e}") from None
         if not sha:
@@ -152,11 +153,12 @@ def _ask(prompt: str, default: str) -> str:
 
 
 def main(argv=None) -> int:
-    from kb_distillery.core import template as templates
+    from kb_distillery.vault import kit as kits
     ap = argparse.ArgumentParser(prog="kbd init", description=__doc__.split("\n\n")[0])
     ap.add_argument("--kb-id", help=f"folder name and id (default {DEFAULT_ID})")
     ap.add_argument("--name", help="display name (default: the id, spaced and capitalised)")
-    ap.add_argument("--template", help=f"ontology template (default {DEFAULT_TEMPLATE}; known: {', '.join(templates.names())})")
+    ap.add_argument("--kit", "--template", dest="kit", help=f"ontology kit (default {DEFAULT_KIT}; known: {', '.join(kits.names())}; "
+                    f"--template is the older spelling)")
     ap.add_argument("--dir", help="parent folder the kb folder is created in (default: the bases dir, kbs/)")
     ap.add_argument("--yes", action="store_true", help="never prompt; take defaults for what is not given")
     args = ap.parse_args(argv)
@@ -164,14 +166,14 @@ def main(argv=None) -> int:
     kb_id = args.kb_id or (_ask("Knowledge base id", DEFAULT_ID) if interactive else DEFAULT_ID)
     default_name = kb_id.replace("-", " ").capitalize()
     name = args.name or (_ask("Display name", default_name) if interactive else default_name)
-    template = args.template or (_ask(f"Template ({'/'.join(templates.names())})", DEFAULT_TEMPLATE) if interactive else DEFAULT_TEMPLATE)
+    kit = args.kit or (_ask(f"Kit ({'/'.join(kits.names())})", DEFAULT_KIT) if interactive else DEFAULT_KIT)
     parent = args.dir or kbconfig.bases_dir()
     try:
-        target = create(kb_id, name, template, parent)
+        target = create(kb_id, name, kit, parent)
     except InitError as e:
         print(f"kbd init: {e}", file=sys.stderr)
         return 1
-    print(f"created {target} (own git repository, template {template}, schema {'.'.join(map(str, kbconfig.SCHEMA_VERSION))})\n")
+    print(f"created {target} (own git repository, kit {kits.canonical(kit)}, schema {'.'.join(map(str, kbconfig.SCHEMA_VERSION))})\n")
     from kb_distillery import doctor
     checks = doctor.run_checks(target)
     print(doctor.render(checks))

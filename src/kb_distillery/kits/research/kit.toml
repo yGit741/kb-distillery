@@ -1,6 +1,7 @@
-[template]
-name = "academic-research"
+[kit]
+name = "research"
 version = 1
+extends = "base"
 description = "Academic research: papers, books and lectures digested into ideas, questions and people, with typed relations."
 
 [types]
@@ -104,7 +105,7 @@ status = []                   # no status: progress is `verified:` (src/kb_disti
 color = "#bb9af7"
 
 # --- Edges: the typed relations a page may state in its `relations:` block ---------------------------------
-# Read by kb_distillery.services.cypher.edge_config and checked by lint (check_relations). This table lives in the template.
+# Read by kb_distillery.services.cypher.edge_config and checked by lint (check_relations). This table lives in the kit.
 [edges]
 types = ["extends", "uses", "contradicts", "example-of", "open-problem-in", "addresses", "discusses", "student-of"]
 symmetric = ["contradicts"]

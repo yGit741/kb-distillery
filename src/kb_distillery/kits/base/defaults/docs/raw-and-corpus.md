@@ -1,6 +1,6 @@
 # Raw layout, corpus manifest, naming
 
-> Where raw files live, how `meta/corpus.tsv` tracks them, how they are named. Part of the doc router in [`AGENTS.md`](../../AGENTS.md).
+> Where raw files live, how `meta/corpus.tsv` tracks them, how they are named. Part of the doc router in [`AGENTS.md`](../../../../../../AGENTS.md).
 
 ## Raw layout
 

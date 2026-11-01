@@ -16,7 +16,7 @@ import sys
 from pathlib import Path
 
 from kb_distillery.flags.registry import FLAGS_TOML, FlagError, Registry, load
-from kb_distillery.config.resources import require_repo_root   # generated files and tests are code: the explorer, not the vault
+from kb_distillery.config.resources import require_repo_root, resource   # generated files and tests are code: the explorer, not the vault
 
 GEN_TS = Path("web/src/flags/registry.gen.ts")
 GEN_WORKER = Path("share/flags.gen.js")   # the private Worker accepts overrides for these names only
@@ -72,10 +72,9 @@ def outputs(reg: Registry) -> dict[Path, str]:
 
 
 def _registry_for(root: Path) -> Path:
-    """`<root>/meta/flags.toml` (a vault's own), else `<root>/meta-defaults/flags.toml` (the explorer's), else the
+    """`<root>/meta/flags.toml` (a vault's own), else the base kit's `defaults/flags.toml` (the explorer's), else the
     registry this process resolved (kb_distillery.flags.registry.FLAGS_TOML)."""
-    for rel in (("meta", "flags.toml"), ("meta-defaults", "flags.toml")):
-        p = root.joinpath(*rel)
+    for p in (root / "meta" / "flags.toml", resource("kits/base/defaults") / "flags.toml"):
         if p.is_file():
             return p
     return FLAGS_TOML

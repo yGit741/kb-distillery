@@ -67,16 +67,26 @@ def _run(venv: Path, args, env, cwd):
 
 def test_the_wheel_carries_the_root_level_folders_under_data(wheel):
     names = zipfile.ZipFile(wheel).namelist()
-    for want in ("kb_distillery/_data/templates/", "kb_distillery/_data/meta-defaults/", "kb_distillery/_data/skills/",
+    for want in ("kb_distillery/_data/skills/",
                  "kb_distillery/_data/share/auth.js", "kb_distillery/_data/scripts/kb-hooks/env.sh"):
         assert any(n.startswith(want) for n in names), want
     assert not any(n.startswith("kb/") or "backend" in n.split("/")[0] for n in names)
 
 
+def test_the_wheel_carries_the_kits_as_package_data(wheel):
+    names = zipfile.ZipFile(wheel).namelist()
+    for want in ("kb_distillery/kits/base/kit.toml", "kb_distillery/kits/research/kit.toml",
+                 "kb_distillery/kits/base/defaults/flags.toml", "kb_distillery/kits/base/defaults/docs/",
+                 "kb_distillery/kits/base/defaults/templates/", "kb_distillery/kits/base/defaults/digest/"):
+        assert any(n.startswith(want) for n in names), want
+    packed = {n.split("/")[2] for n in names if n.startswith("kb_distillery/_data/") and n.count("/") > 2}
+    assert packed <= {"skills", "share", "scripts"}, packed          # only the folders C.3 to C.5 and Lane F still move
+
+
 def test_the_installed_package_is_the_one_in_the_venv_and_has_no_checkout(venv, clean_env, tmp_path):
     env, _ = clean_env
     code = ("import kb_distillery, sys; from kb_distillery.config import resources as r; "
-            "print(kb_distillery.__file__); print(r.repo_root()); print(r.root_resource('templates').is_dir())")
+            "print(kb_distillery.__file__); print(r.repo_root()); print(r.resource('kits/base/kit.toml').is_file())")
     cp = subprocess.run([str(venv / "bin" / "python"), "-c", code], capture_output=True, text=True, env=env, cwd=tmp_path)
     assert cp.returncode == 0, cp.stderr
     where, repo, templates = cp.stdout.split("\n")[:3]
@@ -96,7 +106,8 @@ def test_distill_init_creates_a_kb_under_the_home_folder_and_finds_it_from_insid
     cp = _run(venv, ["distill", "init", "--kb-id", "wheel-kb", "--yes"], env, tmp_path)
     assert cp.returncode == 0, cp.stdout + cp.stderr
     assert (home / "wheel-kb" / "kb.toml").is_file() and (home / "wheel-kb" / ".git").exists()
-    listed = _run(venv, ["distill", "kb-list"], env, tmp_path)
+    assert 'kit = "base"' in (home / "wheel-kb" / "kb.toml").read_text()          # the kit resolved from the wheel's package data
+    listed = _run(venv, ["distill", "kb", "list"], env, tmp_path)
     assert listed.returncode == 0 and "wheel-kb" in listed.stdout, listed.stdout + listed.stderr
-    inside = _run(venv, ["distill", "kb-show"], env, home / "wheel-kb")           # no KB, no --kb: found from the folder
+    inside = _run(venv, ["distill", "kb", "show"], env, home / "wheel-kb")           # no KB, no --kb: found from the folder
     assert inside.returncode == 0 and "wheel-kb" in inside.stdout, inside.stdout + inside.stderr

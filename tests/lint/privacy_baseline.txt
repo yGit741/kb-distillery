@@ -16,7 +16,7 @@ tests/share/test_share_snapshots.py
 docs/phase-1-report.md
 web/src/features/chat/ChatScreen.test.tsx
 web/src/flags/registry.gen.ts
-meta-defaults/flags.toml
+src/kb_distillery/kits/base/defaults/flags.toml
 share/admin.js
 share/admin.test.mjs
 skills/export-kb/SKILL.md
