@@ -106,7 +106,8 @@ def test_distill_init_creates_a_kb_under_the_home_folder_and_finds_it_from_insid
     cp = _run(venv, ["distill", "init", "--kb-id", "wheel-kb", "--yes"], env, tmp_path)
     assert cp.returncode == 0, cp.stdout + cp.stderr
     assert (home / "wheel-kb" / "kb.toml").is_file() and (home / "wheel-kb" / ".git").exists()
-    listed = _run(venv, ["distill", "kb-list"], env, tmp_path)
+    assert 'kit = "base"' in (home / "wheel-kb" / "kb.toml").read_text()          # the kit resolved from the wheel's package data
+    listed = _run(venv, ["distill", "kb", "list"], env, tmp_path)
     assert listed.returncode == 0 and "wheel-kb" in listed.stdout, listed.stdout + listed.stderr
-    inside = _run(venv, ["distill", "kb-show"], env, home / "wheel-kb")           # no KB, no --kb: found from the folder
+    inside = _run(venv, ["distill", "kb", "show"], env, home / "wheel-kb")           # no KB, no --kb: found from the folder
     assert inside.returncode == 0 and "wheel-kb" in inside.stdout, inside.stdout + inside.stderr
