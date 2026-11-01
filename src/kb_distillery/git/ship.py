@@ -53,7 +53,7 @@ from kb_distillery.git import app_token, claims, commit_policy, events, gate_cac
 from kb_distillery.core.schema import GATE_PREFIXES as GP, GIT_POLICY_MODE, SCHEMA_VERSION
 
 GATES = [
-    ("tests", [sys.executable, "-m", "pytest", "-q", "tests"]),
+    ("tests", [sys.executable, "-m", "pytest", "-q", "-n", "6", "tests"]),
     ("lint-skills", [sys.executable, "-m", "kb_distillery.lint.lint_skills"]),
     ("lint", [sys.executable, "-m", "kb_distillery.lint.lint"]),
 ]
