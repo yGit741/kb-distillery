@@ -45,10 +45,26 @@ def arxiv_filename(aid):
     return f"arxiv-{aid.replace('/', '_')}.pdf" if "/" in aid else f"arxiv-{aid.replace('.', '-')}.pdf"
 
 
-def _download(url, dest):
+def _fetch(url):
+    """(bytes, Content-Type) of a URL, nothing written."""
     req = urllib.request.Request(url, headers={"User-Agent": "thesis-wiki-ingest/1.0"})
     with net.urlopen(req, timeout=60) as resp:
         data = resp.read()
+        ctype = ""
+        try:
+            ctype = resp.headers.get("Content-Type", "") or ""
+        except AttributeError:
+            pass
+    return data, ctype
+
+
+def is_pdf(data, content_type=""):
+    """A PDF by its bytes (`%PDF-`) or its Content-Type, never by the URL's suffix."""
+    return bytes(data[:1024]).lstrip().startswith(PDF_MAGIC) or "application/pdf" in (content_type or "").lower()
+
+
+def _download(url, dest):
+    data, _ctype = _fetch(url)
     with open(dest, "wb") as f:
         f.write(data)
     return data
@@ -120,12 +136,14 @@ def scrap(source, kind=None, force=False):
 
     if os.path.isfile(source):
         ext = os.path.splitext(source)[1].lower()
-        if kind is None:
-            kind = "articles" if ext == ".pdf" else "notes"
-        name = _sanitize_name(os.path.basename(source))
-        dest = os.path.join(INBOX, name)
         with open(source, "rb") as f:
             data = f.read()
+        if kind is None:
+            kind = "articles" if ext == ".pdf" or is_pdf(data) else "notes"
+        name = _sanitize_name(os.path.basename(source))
+        if kind == "articles" and not name.endswith(".pdf") and data.startswith(PDF_MAGIC):
+            name += ".pdf"
+        dest = os.path.join(INBOX, name)
         rel = f"raw/inbox/{name}"
         _check_post_bytes(data, rel, force)
         with open(dest, "wb") as f:
@@ -162,9 +180,22 @@ def scrap(source, kind=None, force=False):
         print(f"scrap (articles) → {rel}")
         return rel
 
+    data, ctype = _fetch(source)
+    if is_pdf(data, ctype) and data.startswith(PDF_MAGIC):      # a PDF served from a suffix-less URL
+        name = _sanitize_name(os.path.basename(parsed.path) or "paper.pdf")
+        if not name.endswith(".pdf"):
+            name += ".pdf"
+        rel = f"raw/inbox/{name}"
+        _check_post_bytes(data, rel, force)
+        with open(os.path.join(INBOX, name), "wb") as f:
+            f.write(data)
+        record_source(name, data, source)
+        print(f"scrap (articles) → {rel}")
+        return rel
     name = web_clip_name(source)
     dest = os.path.join(INBOX, name)
-    data = _download(source, dest)
+    with open(dest, "wb") as f:
+        f.write(data)
     rel = f"raw/inbox/{name}"
     _check_post_bytes(data, rel, force)
     print(f"scrap ({kind or 'web'}) → {rel}")

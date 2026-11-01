@@ -18,11 +18,12 @@ import sys
 from kb.core.graph import tokenize
 
 from kb.paths import vault_root
+from kb.core.links import WIKILINK_TARGET
 ROOT = vault_root()
 WIKI = os.path.join(ROOT, "wiki")
 INDEX = os.path.join(ROOT, "index.md")
 
-LINK = re.compile(r"\[\[([^\]|#\\]+)")
+LINK = WIKILINK_TARGET
 INDEX_ROW = re.compile(r"^\| \[\[([^\]]+)\]\] \| ([^|]*) \| (.*) \|$")
 
 

@@ -10,15 +10,19 @@ export function ShareChip() {
   const { data } = useQuery({ queryKey: ["share-status"], queryFn: () => ds.getShareStatus(), retry: false });
   const chip = data?.chip;
   if (!chip) return null;
+  const badge = <Badge variant={VARIANT[chip.cls] ?? "default"}>{chip.label}</Badge>;
+  const label = `Share status: ${chip.label}`;
+  // No destination (no publisher configured) = a plain status, not a link: an empty href is a dead 20px click target.
+  if (!chip.href) {
+    return (
+      <span title={chip.title} className="hidden sm:inline-flex" role="status" aria-label={label} data-testid="share-chip">
+        {badge}
+      </span>
+    );
+  }
   return (
-    <a
-      href={chip.href}
-      title={chip.title}
-      className="hidden sm:inline-flex"
-      aria-label={`Share status: ${chip.label}`}
-      data-testid="share-chip"
-    >
-      <Badge variant={VARIANT[chip.cls] ?? "default"}>{chip.label}</Badge>
+    <a href={chip.href} title={chip.title} className="hidden sm:inline-flex" aria-label={label} data-testid="share-chip">
+      {badge}
     </a>
   );
 }

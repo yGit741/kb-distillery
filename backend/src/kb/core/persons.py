@@ -17,6 +17,7 @@ progress is the `verified` date, and `--health` counts pages without one.
 import re
 
 from kb.core.schema import CONCEPT_TYPES, make_slug
+from kb.core.links import WIKILINK_TARGET
 
 HANDLES = ("url", "scholar", "github", "youtube", "blog", "wikipedia")
 EDGES = ("orgs", "advisors", "students")
@@ -45,7 +46,7 @@ BIB_CAP = None                    # rows shown on the page (None = all: meta/.re
 MEGA_AUTHORS = 20                 # a paper with more authors is not cataloged unless pinned
 
 MARKER = re.compile(r"^<!--\s*from:\s*([\w-]+)\s*-->\s*$")
-LINK = re.compile(r"\[\[([^\]|#\\]+)")
+LINK = WIKILINK_TARGET
 URL = re.compile(r"^https?://\S+$")
 DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 

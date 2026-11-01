@@ -7,6 +7,7 @@ Section ranges are 1-based inclusive page numbers as printed by `toc`, matching 
 outline reports (physical PDF pages, which for a typeset book run ahead of the printed folios).
 """
 import glob
+import hashlib
 import os
 import re
 import sys
@@ -31,7 +32,16 @@ TOC_LINE_RE = re.compile(
 
 def verify_for_scope(raw_rel):
     """Normalise a repo-relative raw path for TOC/scope use (read-only, no corpus checks)."""
-    return str(raw_rel).replace(os.sep, "/").lstrip("./")
+    s = str(raw_rel).replace(os.sep, "/")
+    if os.path.isabs(s):
+        root = os.path.realpath(ROOT).replace(os.sep, "/").rstrip("/") + "/"
+        for cand in (s, os.path.realpath(s).replace(os.sep, "/")):
+            if cand.startswith(root):
+                return cand[len(root):]
+        return s                       # outside the KB: keep it absolute (os.path.join then keeps it too)
+    while s.startswith("./"):
+        s = s[2:]
+    return s
 
 
 def _fitz():
@@ -183,12 +193,17 @@ def find_section(entries, spec):
             return entries[int(spec[1:]) - 1]
         except (ValueError, IndexError):
             return None
-    for e in entries:
-        if e["number"] and e["number"].lower() == spec.lower():
-            return e
     low = spec.lower()
+    # a chapter number: the shallowest outline entry carrying it ("1" is Chapter 1 even when a deeper
+    # entry also numbers itself 1), earliest first
+    numbered = [e for e in entries if e["number"] and e["number"].lower() == low]
+    if numbered:
+        return min(numbered, key=lambda e: (e["level"], e["start"]))
+    if re.fullmatch(r"[0-9]+(?:\.[0-9]+)*", low):
+        # a bare number with no such chapter: never let "4" match "Chapter 14" or "2004" by substring
+        return None
     hits = [e for e in entries if low in e["title"].lower() or low in e["slug"]]
-    return hits[0] if len(hits) == 1 else (hits[0] if hits else None)
+    return min(hits, key=lambda e: (e["level"], e["start"])) if hits else None
 
 
 def parse_pages(spec, total=None):
@@ -417,11 +432,16 @@ def gate(raw_rel, raw_path, pages, section, whole_book, part=None):
 
 
 def part_slug(book, label):
-    """`part-<book stem>-ch1-boolean-functions-…` / `…-part-i-foundations` from a row title."""
-    s = _slug(label)
-    s = re.sub(r"^chapter-(\d+)-", r"ch\1-", s)
+    """`part-<book stem>-ch1-boolean-functions-…` / `…-part-i-foundations` from a row title.
+    A title too long to keep whole gets a short hash of the full title, so two long titles that
+    share a prefix never land on the same page."""
+    full = re.sub(r"-{2,}", "-", re.sub(r"[^a-z0-9]+", "-", str(label).lower()).strip("-"))
+    s = re.sub(r"^chapter-(\d+)-", r"ch\1-", full)
     s = re.sub(r"^part-([0-9ivx]+)-", r"part-\1-", s)
-    return f"{SLUG_PREFIX['part']}{strip_prefix(book)}-{s[:48].rstrip('-')}"
+    if len(s) > 48:
+        tag = hashlib.sha1(" ".join(str(label).split()).lower().encode("utf-8")).hexdigest()[:6]
+        s = f"{s[:41].rstrip('-')}-{tag}"
+    return f"{SLUG_PREFIX['part']}{strip_prefix(book)}-{s}"
 
 
 def pdf_title(raw_path):
