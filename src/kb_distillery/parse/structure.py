@@ -15,7 +15,7 @@ STATEMENT = re.compile(r"^[ \t>#*_]*(%s)\s+(\d+(?:\.\d+)*)\b" % WORDS, re.M)
 CAPTION = re.compile(r"^[ \t>#*_]*(Figure|Fig\.|Table)\s+(\d+(?:\.\d+)*)\s*[.:]", re.M)
 DISPLAY = [re.compile(p, re.S) for p in (r"\$\$(.+?)\$\$", r"\\\[(.+?)\\\]",
                                           r"\\begin\{(equation|align|gather|multline)\*?\}(.+?)\\end\{\1\*?\}")]
-TAG = re.compile(r"\\tag\*?\{\(?(\d+(?:\.\d+)*)\)?\}|(?:\\q?quad|\\eqno)\s*\(?(\d+(?:\.\d+)*)\)?\s*$")
+TAG = re.compile(r"\\tag\*?\s*\{\(?(\d+(?:\.\d+)*)\)?\}|(?:\\q?quad|\\eqno)\s*\(?(\d+(?:\.\d+)*)\)?\s*$")
 
 
 def _num(s: str) -> tuple:
@@ -94,6 +94,8 @@ def _layer_eq(text: str) -> list:
     out = []
     for ln in text.splitlines():
         m = re.search(r"\((\d+(?:\.\d+)*)\)\s*$", ln)
+        if m and "." not in m.group(1) and len(m.group(1)) > 3:            # "(2024)" is a year, not an equation number
+            continue
         if m and not re.search(r"[a-z]{4,}", ln[:m.start()]):
             out.append(m.group(1))
     return out
