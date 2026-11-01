@@ -32,6 +32,7 @@ Knowledge-lane paths are never staged here (except migrated files in a schema PR
 """
 import argparse
 import glob
+import importlib.util
 import json
 import os
 import re
@@ -393,6 +394,8 @@ def _run_gates(root, skip_tests, scope):
             scopes[n] = "full"
             extras[n] = "+".join(x for x, _ in extra)
     sha = _fingerprint(root)               # before any gate runs: lint rewrites generated files
+    if not skip_tests and not _xdist_ok(gates, scopes, extras, root, sha):
+        return False
     for name, cmd in gates:
         if name == "tests" and skip_tests:
             continue
@@ -403,6 +406,23 @@ def _run_gates(root, skip_tests, scope):
             return False
         _remember(root, key)
     return True
+
+
+def _xdist_ok(gates, scopes, extras, root, sha):
+    """Refuse before any gate when the tests gate would really run with `-n` (pytest-xdist) and xdist is missing. Every
+    worktree shares one `.pixi` through a symlink, and a `pixi run` from a branch with an older lock can remove it for
+    all lanes. Mocked runs (tests) and a reused tests gate skip this."""
+    if subprocess.run is not _REAL_RUN:
+        return True
+    cmd = dict(gates).get("tests")
+    if not cmd or "-n" not in cmd or importlib.util.find_spec("xdist") is not None:
+        return True
+    key = gate_cache.make_key("tests", scopes["tests"], sha, _kb_value(), extras.get("tests", ""))
+    if key["tree"] and gate_cache.hit(root, key):
+        return True
+    print("error: pytest-xdist is not installed in the shared .pixi env (the tests gate runs with -n); nothing was run. "
+          "Run `pixi install` in the PRIMARY checkout (all worktrees share its .pixi), then retry.")
+    return False
 
 
 GATE_TAIL_LINES = 25          # what a failing gate shows; the rest is in its log
