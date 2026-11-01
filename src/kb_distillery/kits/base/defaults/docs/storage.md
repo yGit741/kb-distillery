@@ -18,7 +18,7 @@ A knowledge base reaches its raw sources through a connector, so inputs can live
 ## A kb picks one
 
 ```toml
-# kbs/<id>/kb.toml (optional: no [storage] = the local folder at the kb root)
+# ~/knowledge/<id>/kb.toml (optional: no [storage] = the local folder at the kb root)
 [storage]
 connector = "local-folder"
 [storage.options]        # keyword arguments after the kb root

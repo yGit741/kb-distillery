@@ -9,7 +9,7 @@ Code, tools and the vault are separate top-level folders; `meta/` is vault metad
 ```
 src/kb_distillery/      Python app, package `kb_distillery` (src layout; `backend/pyproject.toml` stays until the root pyproject lands)
   src/kb_distillery/cli/           `distill` (and `kbd`, deprecated): one front door to the commands below (see § distill and knowledge bases)
-  src/kb_distillery/kbconfig.py    kb discovery and selection: `kbs/<id>` or `--kb <path>`, `kb.toml`
+  src/kb_distillery/kbconfig.py    kb discovery and selection: `~/knowledge/<id>` or `--kb <path>`, `kb.toml`
   src/kb_distillery/paths.py       the ONE vault-root resolver (the selected kb, else this checkout) + every data path constant
   src/kb_distillery/llm/           `kb_distillery.llm`: the one door to Claude (see § Billing)
   src/kb_distillery/core/          schema, graph, hubs, scopes, persons, books, mathnorm, coherence, health
@@ -25,9 +25,9 @@ web/                    the React app (builds into src/kb_distillery/_webapp)
 examples/               demo (the tracked sample kb), launchd
 share/                  Cloudflare Worker (auth.js, admin.js, wrangler template) + its node tests
 .claude/skills/         the engine's own dev skills (real files); the kb skills are src/kb_distillery/kits/<kit>/skills/
-scripts/                githooks/, hooks/, qmd/, launch.sh, kb-hooks/ (only forwarding stubs for kbs wired before the move; deleted in C.6, as are the older ones in the `tools` folder)
+scripts/                githooks/, hooks/, qmd/, launch.sh
 docs/                   ROADMAP.md: the migration to the open-source kb-distillery, phase by phase
-kbs/                    knowledge bases: kbs/<id> is one kb (its own git repo); only examples/demo is tracked here, the rest is gitignored
+~/knowledge/<id>/       one knowledge base each (its own git repo, outside this checkout); only examples/demo is tracked here; kbs/* stays gitignored as a guard
 meta/                   VAULT METADATA ONLY: corpus.tsv, log.md, aliases.tsv, coherence-warnings.tsv, raw-renames.tsv,
                         chats/, templates/, migration/, migrations/applied.tsv, ops/sync.toml, thesis.md,
                         docs/ (the routed agent docs)
@@ -59,13 +59,13 @@ Per-user files (API key, chat keys, usage ledger) live in `~/.config/kb-distille
 old `thesis-kb` folder under `~/.config/` exists, every command but `doctor`/`hook`/`ship` prints the exact `mv` and exits 1: nothing is
 moved for you.
 
-**One discovery path.** A knowledge base is a folder with a `kb.toml`: `kbs/<id>/` in the main checkout (the folder
-name is the id; a linked worktree uses the main checkout's `kbs/`), or any folder given as `--kb <path>`. A `--kb` /
+**One discovery path.** A knowledge base is a folder with a `kb.toml`: `~/knowledge/<id>/` (the bases dir is
+`$KB_DISTILLERY_HOME`, default `~/knowledge`; the folder name is the id; until the transitional lookup in `kbconfig.py` goes, an id not found there falls back to this checkout's `kbs/`), or any folder given as `--kb <path>`. A `--kb` /
 `$KB` value containing `/` or starting with `.` or `~` is a path, anything else an id. Selection: `--kb`, then `$KB`,
 then the only kb there is. `$KB_ROOT` is internal (tools set it to hand a resolved folder to the processes they
-start, e.g. the share build, qmd, the hooks); users never do. `$KB_BASES_DIR` replaces `kbs/` for tests only.
-`examples/demo` is the one kb tracked by this repo (a made-up job search, public); every other `kbs/<id>` is its own git
-repo and never enters this one. The hooks in a kb repo (`src/kb_distillery/kits/base/hooks/`, installed by `distill hooks install --kb <id|path>`) run `distill hook <name>` on `$PATH` with `$KB_ROOT` set to that repo; they never look for the engine and fail closed (exit 2) when `distill` is missing or cannot import. The git hooks follow the kit through `core.hooksPath`; the two Claude guards are copied into `.claude/hooks/`, so they update on `distill hooks install`. A kb wired before the move (`core.hooksPath` still at a retired hook folder of this repo) keeps working through forwarding stubs that print the exact `git config` fix.
+start, e.g. the share build, qmd, the hooks); users never do. `$KB_BASES_DIR` replaces the bases dir for tests only.
+`examples/demo` is the one kb tracked by this repo (a made-up job search, public); every other kb is its own git
+repo and never enters this one. The hooks in a kb repo (`src/kb_distillery/kits/base/hooks/`, installed by `distill hooks install --kb <id|path>`) run `distill hook <name>` on `$PATH` with `$KB_ROOT` set to that repo; they never look for the engine and fail closed (exit 2) when `distill` is missing or cannot import. The git hooks follow the kit through `core.hooksPath`; the two Claude guards are copied into `.claude/hooks/`, so they update on `distill hooks install`. A kb whose `core.hooksPath` still names a retired hook folder of this repo has no hooks: run `distill hooks install --kb <id|path>`.
 
 **Tags.** `pixi run ship -- tag <name> [--at REV] [--kb ID|PATH | --repo DIR]` puts an annotated tag on main of the
 engine, a kb or any repo (local, never pushed; refuses `kb-*`, which are `ops snapshot`'s). `ship merge --local --pr N

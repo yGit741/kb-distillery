@@ -39,7 +39,7 @@ Expose a `Publisher` subclass in the `kb.publishers` entry-point group
 
 ## Keeping today's Cloudflare behaviour
 
-Cloudflare is off until selected. To publish as before, add to `kbs/<id>/kb.toml`
+Cloudflare is off until selected. To publish as before, add to `~/knowledge/<id>/kb.toml`
 
 ```toml
 [publish]
