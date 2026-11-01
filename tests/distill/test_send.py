@@ -90,9 +90,10 @@ class Send(unittest.TestCase):
     def test_backend_without_summarize_is_refused(self):
         self.assertEqual(self.go("--backend", "api"), 2)
 
-    def test_kbd_front_door_routes_distill(self):
-        self.assertIn("distill", cli.COMMANDS)
-        self.assertEqual(cli.COMMANDS["distill"][1], "kb_distillery.distill.send")
+    def test_front_door_routes_send_and_kbd_distill_forwards_to_it(self):
+        self.assertIn("send", cli.COMMANDS)
+        self.assertEqual(cli.COMMANDS["send"].target, "kb_distillery.distill.send")
+        self.assertEqual(cli.KBD_MAP["distill"], ("send",))
 
 
 if __name__ == "__main__":

@@ -38,7 +38,7 @@ ALLOWED = {
 }
 ALLOWED["keychain service thesis-kb-gmail"] = {"src/kb_distillery/config/userdir.py",      # the read-only lookup of the old name
                                                "tests/ops/test_notify.py", "tests/config/test_userdir.py"}
-ALLOWED["~/.config/thesis-kb"] = {"tests/config/test_userdir.py"}
+ALLOWED["~/.config/thesis-kb"] = {"tests/config/test_userdir.py", "src/kb_distillery/config/userdir.py"}
 ALLOWED_PREFIXES = ("tools/", "docs/plans/", "scripts/qmd/package-lock.json")
 ALLOWED_PREFIXES_FOR = {"tools/": ("web/src/",)}               # web/src/features/graph/tools/ is a real folder of the app
 SKIP_SUFFIX = (".png", ".jpg", ".jpeg", ".gif", ".webp", ".ico", ".pdf", ".woff", ".woff2", ".ttf", ".zip", ".lock", ".svg")
@@ -51,7 +51,7 @@ def tracked():
 
 RETIRED_FILES = ("src/kb_distillery/maintenance/fix_math.py", "src/kb_distillery/maintenance/rename_raw.py",
                  "src/kb_distillery/maintenance/daily_sync.py", "src/kb_distillery/maintenance/notify.py",
-                 "src/kb_distillery/maintenance/export.py", "src/kb_distillery/report/",
+                 "src/kb_distillery/maintenance/export.py", "src/kb_distillery/report/", "src/kb_distillery/cli.py",
                  "tests/maintenance/", "tests/report/")
 
 

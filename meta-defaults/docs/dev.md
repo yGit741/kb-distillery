@@ -8,7 +8,7 @@ Code, tools and the vault are separate top-level folders; `meta/` is vault metad
 
 ```
 src/kb_distillery/      Python app, package `kb_distillery` (src layout; `backend/pyproject.toml` stays until the root pyproject lands)
-  src/kb_distillery/cli.py         `kbd`: one front door to the commands below (see § kbd and knowledge bases)
+  src/kb_distillery/cli/           `distill` (and `kbd`, deprecated): one front door to the commands below (see § distill and knowledge bases)
   src/kb_distillery/kbconfig.py    kb discovery and selection: `kbs/<id>` or `--kb <path>`, `kb.toml`
   src/kb_distillery/paths.py       the ONE vault-root resolver (the selected kb, else this checkout) + every data path constant
   src/kb_distillery/llm/           `kb_distillery.llm`: the one door to Claude (see § Billing)
@@ -36,20 +36,28 @@ meta/                   VAULT METADATA ONLY: corpus.tsv, log.md, aliases.tsv, co
 `pixi run api-schema` regenerates `web/src/api/schema.d.ts` from the API's OpenAPI (`api-schema-check` fails if stale).
 Run a module with `python -m kb_distillery.<package>.<module>` (pixi tasks do; `src/` is on `PYTHONPATH`). Never `sys.path.insert`; take paths from `kb_distillery.paths`.
 
-## kbd and knowledge bases
+## distill and knowledge bases
 
-`kbd <command> [args…]` (pixi installs it; `pixi run kbd --help`) runs the module or script the matching
-`pixi run <task>` runs, with the rest of the command line passed through, so `--kb` goes after the command.
-It imports nothing from `kb`, so `--help` works with no knowledge base selected.
+`distill <command> [args…]` (pixi installs it; `pixi run distill --help`) runs the module or script behind it, with the
+rest of the command line passed through, so `--kb` goes after the command. The package `src/kb_distillery/cli/` imports
+no kb code, so `--help` works with no knowledge base selected. `kbd` is the old name: it prints one deprecation line and
+forwards (`cli/legacy.py` holds the mapping table; it goes after one release).
 
-| Command | Same as | What |
+| Command | Was | What |
 |---|---|---|
-| `kbd kb-list` / `kb-show` | `pixi run kb-list` / `kb-show` | every kb and where it is / the selected one, resolved |
-| `kbd lint` / `health` | `pixi run lint` / `health` | the schema is the linter |
-| `kbd app` | `pixi run app` | API + React shell (default port 8765) |
-| `kbd launch` | `pixi run launch` | restart the app detached and open it |
-| `kbd ship …` / `kbd ops …` | `pixi run ship` / `ops` | tooling PRs / knowledge operations |
-| `kbd install-kb-hooks` | `pixi run install-kb-hooks` | git + Claude Code hooks into a kb |
+| `distill init` / `doctor` | `kbd init` / `doctor` | first kb from a template / check the environment and a kb |
+| `distill kb list` / `kb show` | `kbd kb-list` / `kb-show` | every kb and where it is / the selected one, resolved |
+| `distill lint [--health]` | `kbd lint` / `health` | the schema is the linter |
+| `distill launch` | `kbd launch` and `kbd app` | restart the app detached and open it (installed package: serve in the foreground) |
+| `distill hooks install` / `hook <name>` | `kbd install-kb-hooks` | git + Claude Code hooks into a kb / the stable entry the hooks call |
+| `distill ops …` / `ship …` | `kbd ops` / `ship` | knowledge operations / tooling PRs (`ship` only inside a checkout) |
+| `distill ingest …` / `digest easy\|full\|deep\|many` | `pixi run ingest` | scrap, catalog and digest sources |
+| `distill send <note> --to a,b` | `kbd distill` | send a think note into knowledge bases |
+| `distill llm …` / `share …` / `propose …` | `pixi run llm` / `share` / graph.propose | the LLM door / the site / relation proposals |
+
+Per-user files (API key, chat keys, usage ledger) live in `~/.config/kb-distillery/` (`config/userdir.py`). If only the
+old `thesis-kb` folder under `~/.config/` exists, every command but `doctor`/`hook`/`ship` prints the exact `mv` and exits 1: nothing is
+moved for you.
 
 **One discovery path.** A knowledge base is a folder with a `kb.toml`: `kbs/<id>/` in the main checkout (the folder
 name is the id; a linked worktree uses the main checkout's `kbs/`), or any folder given as `--kb <path>`. A `--kb` /
