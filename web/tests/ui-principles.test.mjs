@@ -87,7 +87,8 @@ function colourLiterals() {
     if (!/\.(tsx?|jsx?|css)$/.test(f)) continue;
     let added;
     try {
-      const d = git(["diff", "-U0", base || "HEAD", "--", f]);
+      // -M with the pre-move path in the pathspec: a renamed file counts only its changed lines
+      const d = git(["diff", "-M", "-U0", base || "HEAD", "--", f, f.replace(/^web\/src\//, "front" + "end/src/")]);
       added = d ? d.split("\n").filter((l) => l.startsWith("+") && !l.startsWith("+++")).map((l) => l.slice(1)) : null;
     } catch { added = null; }
     if (added === null) {
