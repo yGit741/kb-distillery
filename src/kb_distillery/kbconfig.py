@@ -154,16 +154,26 @@ def _warn_primary(kb_id: str, folder: str) -> None:
               f"worktree-local kb", file=sys.stderr)
 
 
+HOOKS_RESOURCE = "kits/base/hooks"      # the kit folder `hooks_path_for` points git at
+
+
 def hooks_path_for(kb_root: str) -> str:
-    """`core.hooksPath` for a knowledge base repo: relative (survives renaming the engine folder) for a kb at
-    `<engine>/kbs/<id>`, else the absolute path of `scripts/kb-hooks` (the primary checkout's, else the packaged copy). Git resolves a relative value
-    from the top of the work tree, where the hooks run."""
+    """`core.hooksPath` for a knowledge base repo: the kit's `hooks/` folder (package data, `kits/base/hooks`).
+
+    Relative to the kb (survives renaming the engine folder) when the kb sits inside the engine checkout, i.e. both
+    live under the same home (`<engine>/kbs/<id>` -> `../../src/kb_distillery/kits/base/hooks`); absolute otherwise.
+    Git resolves a relative value from the top of the work tree, where the hooks run. From a linked worktree the
+    primary checkout's copy is used: it outlives the worktree, and a path into a deleted worktree makes git run no
+    hooks at all."""
     primary = primary_root()
-    if primary and os.path.dirname(os.path.realpath(kb_root)) == os.path.join(os.path.realpath(primary), BASES_DIR_NAME):
-        return "../../scripts/kb-hooks"
-    packaged = resources.root_resource(os.path.join("scripts", "kb-hooks"))
-    # from a linked worktree prefer the primary's copy: it outlives the worktree a kb's core.hooksPath would point into
-    return os.path.join(primary, "scripts", "kb-hooks") if primary else str(packaged)
+    home = os.path.realpath(primary) if primary else None
+    # in a checkout the package sits at <checkout>/src/kb_distillery, so the primary's copy is the same resource there
+    hooks = os.path.join(home, "src", "kb_distillery", *HOOKS_RESOURCE.split("/")) if home \
+        else os.path.realpath(str(resources.resource(HOOKS_RESOURCE)))
+    root = os.path.realpath(kb_root)
+    if home and os.path.commonpath([root, home]) == home and os.path.commonpath([hooks, home]) == home:
+        return os.path.relpath(hooks, root)
+    return hooks
 
 
 def _toml_load(f):

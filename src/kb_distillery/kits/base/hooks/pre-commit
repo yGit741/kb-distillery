@@ -1,0 +1,15 @@
+#!/bin/bash
+# Knowledge-base repo pre-commit: the linter is the schema; a commit that fails it breaks the vault.
+# `distill ops` lints once per operation and hands over a one-time token, so its commits skip the second run.
+# Fails closed: a missing `distill` blocks the commit.
+command -v distill >/dev/null 2>&1 || {
+  echo "kb hook pre-commit: 'distill' is not on PATH - refusing (fail closed). Install kb-distillery (pip install kb-distillery) or put its bin folder on PATH." >&2
+  exit 2
+}
+KB_ROOT="$(git rev-parse --show-toplevel)" || exit 2
+export KB_ROOT
+token_file="$(git rev-parse --git-path kb-linted)"
+if [ -n "$KB_LINTED" ] && [ -f "$token_file" ] && [ "$(cat "$token_file")" = "$KB_LINTED" ]; then
+  exit 0
+fi
+distill hook pre-commit || { echo "pre-commit: lint failed - nothing committed" >&2; exit 1; }
