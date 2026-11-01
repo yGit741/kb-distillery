@@ -8,6 +8,8 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
+import tempfile
 import time
 
 
@@ -77,12 +79,17 @@ def run(engine, pdf: str, pages: list, out: str, window: int = 8, force: bool = 
     timing = json.load(open(tpath)) if os.path.exists(tpath) else []
     started = time.time()
     parsed: list = []
+    missing_all: list = []
     for win in windows(todo, window):
         t0 = time.time()
-        scratch = os.path.join(out, ".work", "w%d" % int(t0))
-        os.makedirs(scratch, exist_ok=True)
-        recs = engine.parse(pdf, win, scratch)
+        os.makedirs(os.path.join(out, ".work"), exist_ok=True)
+        scratch = tempfile.mkdtemp(dir=os.path.join(out, ".work"))
+        try:
+            recs = engine.parse(pdf, win, scratch)
+        finally:
+            shutil.rmtree(scratch, ignore_errors=True)
         missing = [p for p in win if p not in recs]
+        missing_all += missing
         for p, rec in sorted(recs.items()):
             if p in win:
                 _atomic(cache_path(out, engine.name, p), json.dumps(rec, ensure_ascii=False))
@@ -93,7 +100,8 @@ def run(engine, pdf: str, pages: list, out: str, window: int = 8, force: bool = 
         _atomic(tpath, json.dumps(timing, indent=1))
         log("window %s: %d page(s) in %.0fs%s" % (win, len(win) - len(missing), dt,
                                                    "  MISSING %s" % missing if missing else ""))
-    return {"parsed": parsed, "skipped": skipped, "seconds": round(time.time() - started, 1)}
+    return {"parsed": parsed, "skipped": skipped, "missing": missing_all,
+            "seconds": round(time.time() - started, 1)}
 
 
 def _write_md(engine, out: str, page: int) -> None:
@@ -106,6 +114,7 @@ def status(out: str, engine: str, pages: list | None = None) -> dict:
     want = pages if pages is not None else done
     tpath = os.path.join(out, "timing.json")
     timing = json.load(open(tpath)) if os.path.exists(tpath) else []
+    timing = [t for t in timing if t.get("engine") == engine]
     secs = sum(t["seconds"] for t in timing)
     n = sum(len(t["pages"]) for t in timing)
     return {"engine": engine, "done": done, "missing": [p for p in want if p not in set(done)],

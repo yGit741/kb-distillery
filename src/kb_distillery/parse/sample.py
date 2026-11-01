@@ -26,8 +26,9 @@ def stratify(types: dict, n: int = 100, seed: int = 7, build: int = 60) -> dict:
     Cells are (tenth of the document, page type). Each non-empty cell gets a pick before any gets a second; build and
     unseen are dealt cell by cell so both cover the cells."""
     pages = sorted(p for p, t in types.items() if t != "blank")
+    share_of = build / n if n > 0 else 0.0                 # the requested split, not the clipped count
     n = min(n, len(pages))
-    if not pages:
+    if not pages or n <= 0:
         return {"build": [], "unseen": [], "cells": {}}
     rng = random.Random(seed)
     cells: dict = defaultdict(list)
@@ -45,7 +46,7 @@ def stratify(types: dict, n: int = 100, seed: int = 7, build: int = 60) -> dict:
         for k in order:
             picked.append((k, cells[k].pop()))
     # deal: keep the running build share at build/n
-    share, got_build = build / n, 0
+    share, got_build = min(share_of, 0.9), 0              # a holdout always exists when there are 2+ picks
     out = {"build": [], "unseen": []}
     for i, (k, p) in enumerate(sorted(picked, key=lambda kp: (kp[0], rng.random()))):
         if got_build < round(share * (i + 1)):

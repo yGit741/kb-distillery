@@ -154,3 +154,27 @@ def test_tag_with_a_space_and_a_year_are_read_right():
     assert structure.equation_tags("$$\na = b \\tag {13.52}\n$$") == ["13.52"]
     assert structure._layer_eq("Xiao et al. (2024)") == []
     assert structure._layer_eq("a = b (5.2)") == ["5.2"]
+
+
+def test_unasked_pages_and_missing_pages_and_kb_toml_guard(tmp_path, monkeypatch):
+    from kb_distillery.parse.engines import EngineError
+    monkeypatch.setenv("KB_MINERU_HOME", str(tmp_path / "m"))
+    kit = tmp_path / "m" / "venv" / "bin" / "mineru-kit"
+    kit.parent.mkdir(parents=True)
+    kit.write_text("#!/bin/sh\ncat > $4/x.json <<'EOF'\n{\"pages\": [{\"page_idx\": 9, \"blocks\": []}]}\nEOF\n")
+    kit.chmod(0o755)
+    wd = tmp_path / "wd"
+    wd.mkdir()
+    assert list(mineru.MinerU().parse("a.pdf", [10], str(wd))) == [10]       # page_idx 9 is physical page 10
+    with pytest.raises(EngineError, match="not asked for"):
+        mineru.MinerU().parse("a.pdf", [3], str(wd))
+    kb = tmp_path / "somekb"
+    (kb / "wiki").mkdir(parents=True)
+    (kb / "kb.toml").write_text("")
+    with pytest.raises(SystemExit):
+        cli._guard_out(str(kb / "wiki" / "x"))
+
+
+def test_small_pdf_still_has_an_unseen_set():
+    s = sample.stratify({p: "prose" for p in range(1, 11)}, 100)
+    assert s["build"] and s["unseen"]

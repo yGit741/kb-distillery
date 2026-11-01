@@ -69,14 +69,19 @@ class MinerU:
                            timeout=TIMEOUT, cwd=workdir)
         if r.returncode != 0:
             raise EngineError("mineru-kit exited %d: %s" % (r.returncode, (r.stderr or r.stdout)[-1500:]))
-        files = glob.glob(os.path.join(workdir, "**", "*.json"), recursive=True)
+        files = sorted(glob.glob(os.path.join(workdir, "**", "*.json"), recursive=True))
         if not files:
             raise EngineError("mineru-kit wrote no JSON under %s: %s" % (workdir, (r.stderr or r.stdout)[-800:]))
         out: dict = {}
         for f in files:
             doc = json.load(open(f, encoding="utf-8"))
+            if not isinstance(doc, dict):
+                continue
             for pg in doc.get("pages", []):
-                out[int(pg["page_idx"]) + 1] = pg
+                out[int(pg["page_idx"]) + 1] = pg          # page_idx stays the PDF's own 0-based index for a subset
+        stray = sorted(set(out) - set(pages))
+        if stray:
+            raise EngineError("mineru-kit returned pages %s that were not asked for (%s)" % (stray, page_arg(pages)))
         return out
 
     def markdown(self, record: dict) -> str:

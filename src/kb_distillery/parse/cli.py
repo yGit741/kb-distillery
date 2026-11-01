@@ -14,6 +14,7 @@ import os
 import sys
 
 from . import run as runner
+from .engines import EngineError
 
 
 def _engine(name: str):
@@ -32,6 +33,11 @@ def _page_count(pdf: str) -> int:
 def _guard_out(out: str) -> str:
     """The output is a scratch / run directory: refuse a path inside a knowledge base's meta/ or wiki/ or raw/."""
     real = os.path.realpath(os.path.expanduser(out))
+    d = real
+    while d != os.path.dirname(d):                                    # inside any directory that holds a kb.toml
+        if os.path.exists(os.path.join(d, "kb.toml")):
+            raise SystemExit("refusing --out %s: it is inside the knowledge base %s" % (out, d))
+        d = os.path.dirname(d)
     parts = real.split(os.sep)
     for bad in ("raw", "wiki", "meta", "think"):
         if bad in parts and ("kbs" in parts or "knowledge" in parts):
@@ -41,11 +47,18 @@ def _guard_out(out: str) -> str:
 
 def cmd_run(a) -> int:
     out = _guard_out(a.out)
-    pages = runner.parse_pages(a.pages, _page_count(a.pdf))
-    res = runner.run(_engine(a.engine), os.path.abspath(a.pdf), pages, out, window=a.window, force=a.force,
-                     log=lambda m: print(m, file=sys.stderr, flush=True))
-    print(json.dumps({"parsed": len(res["parsed"]), "skipped": len(res["skipped"]), "seconds": res["seconds"]}))
-    return 0
+    try:
+        pages = runner.parse_pages(a.pages, _page_count(a.pdf))
+    except ValueError as e:
+        raise SystemExit("bad --pages: %s" % e)
+    try:
+        res = runner.run(_engine(a.engine), os.path.abspath(a.pdf), pages, out, window=a.window, force=a.force,
+                         log=lambda m: print(m, file=sys.stderr, flush=True))
+    except EngineError as e:
+        raise SystemExit("engine failed: %s" % e)
+    print(json.dumps({"parsed": len(res["parsed"]), "skipped": len(res["skipped"]), "missing": res["missing"],
+                      "seconds": res["seconds"]}))
+    return 1 if res["missing"] else 0
 
 
 def cmd_status(a) -> int:
@@ -59,6 +72,9 @@ def check_pages(pdf: str, out: str, pages: list, engine: str = "mineru") -> dict
     """{page: [Flag]} for the parsed `pages`: reconcile plus structure, each page on its own."""
     from . import layer, reconcile, structure
     layers = {l.page: l for l in layer.read_pdf(pdf, pages)}
+    absent = [p for p in pages if p not in layers or not os.path.exists(runner.md_path(out, p))]
+    if absent:
+        raise SystemExit("pages not in the PDF or not parsed yet: %s" % absent)
     eng = _engine(engine)
     for p, l in layers.items():                                  # text drawn inside a figure belongs to the figure
         rec = json.load(open(runner.cache_path(out, eng.name, p), encoding="utf-8"))
