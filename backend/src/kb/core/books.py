@@ -12,6 +12,7 @@ order only, renumbered whenever a row is split.
     | 3 | Chapter 2. Basic concepts and social choice | 43–68 | — | |
 """
 import re
+from kb.core.links import WIKILINK_TARGET
 
 PARTITION_HEADING = "## Partition"
 OVERVIEW_HEADING = "## Overview"
@@ -23,7 +24,7 @@ DIGESTED = ("easy", "full", "deep")
 ROW_STATUS = {SKIP, TODO, *DIGESTED}
 
 _PAGES = re.compile(r"^\s*(\d+)\s*(?:[–—-]\s*(\d+))?\s*$")
-_LINK = re.compile(r"\[\[([^\]|#\\]+)")
+_LINK = WIKILINK_TARGET
 _COMMENT = re.compile(r"<!--.*?-->", re.S)
 # Front/back matter: never a reading unit of its own.
 _MATTER = re.compile(

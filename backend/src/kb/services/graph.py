@@ -11,12 +11,12 @@ META_DIR = os.path.join(vault_root(), "meta")
 from kb.core.books import DIGESTED, coverage, parse_partition
 from kb.core.graph import inbound_index, outbound_links
 from kb.search.semfind import load_pages
+from kb.core.links import WIKILINK
 from kb.core.schema import LAYER_OF
 
 ROOT = vault_root()
 TITLE = re.compile(r"^#\s+(.+)$", re.MULTILINE)
 YEAR_PREFIX = re.compile(r"^(1[89]|20)\d{2}-")
-WIKILINK = re.compile(r"\[\[([^\]|#\\]+)(?:#[^\]|]+)?(?:\\?\|([^\]]+))?\]\]")
 FM_SKIP = frozenset({"type", "layer", "status", "area", "year", "role", "affiliation", "lab", "email",
                    "url", "raw", "related", "depth", "citekey", "authors",
                    "recommended_by", "discussed_with", "scholar", "tau_profile", "optional",
