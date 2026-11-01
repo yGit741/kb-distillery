@@ -141,8 +141,9 @@ def search_dirs() -> list[str]:
 
 def _warn_primary(kb_id: str, folder: str) -> None:
     primary, checkout = primary_root(), checkout_root()
+    # compare resolved paths: the primary's kbs/<id> may itself be a symlink (the thesis kb can be)
     if primary and checkout and os.path.realpath(primary) != os.path.realpath(checkout) \
-            and os.path.realpath(folder).startswith(os.path.join(os.path.realpath(primary), BASES_DIR_NAME) + os.sep):
+            and os.path.realpath(os.path.join(primary, BASES_DIR_NAME, kb_id)) == os.path.realpath(folder):
         print(f"warning: knowledge base {kb_id!r} resolves to the PRIMARY checkout's kbs/ ({folder}) from the linked "
               f"worktree {checkout}; commands that write would change the primary's copy — pass --kb <path> for a "
               f"worktree-local kb", file=sys.stderr)
@@ -195,6 +196,7 @@ def think_root(vault_root: str | None = None) -> str:
     for d in dirs:
         shared = os.path.join(d, THINK_DIR_NAME)
         if os.path.isdir(shared):
+            _warn_primary(THINK_DIR_NAME, shared)
             return shared
     return os.path.join(dirs[0], THINK_DIR_NAME) if vault_root is None else os.path.join(vault_root, THINK_DIR_NAME)
 
@@ -231,7 +233,10 @@ def explicit_kb() -> str | None:
 def kb_above(start: str | None = None) -> str | None:
     """The nearest folder at or above `start` (default: the current folder) holding a `kb.toml`; None inside a checkout
     of the engine (its repo-relative use is `KB=./examples/demo`) or when there is none."""
-    here = os.path.realpath(start or os.getcwd())
+    try:
+        here = os.path.realpath(start or os.getcwd())
+    except OSError:                     # the current folder was deleted under us
+        return None
     repo = checkout_root()
     if repo and (here == os.path.realpath(repo) or here.startswith(os.path.realpath(repo) + os.sep)):
         return None

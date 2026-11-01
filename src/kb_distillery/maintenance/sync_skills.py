@@ -42,6 +42,8 @@ def ensure_link(path: str) -> str:
 
 
 def main(argv=None) -> int:
+    from kb_distillery.config.resources import require_repo_root
+    require_repo_root("sync-skills")      # links skills into the checkout: never into whatever folder an install runs in
     args = argv if argv is not None else sys.argv[1:]
     check = "--check" in args
 

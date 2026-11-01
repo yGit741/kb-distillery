@@ -92,6 +92,6 @@ def test_the_modules_exit_code_comes_through(tmp_path):
     assert _run(root, "kb_distillery.run").returncode == 2
 
 
-def test_the_real_guard_imports_through_the_wrapper():
+def test_a_real_module_runs_through_the_wrapper():
     cp = _run(REPO, "kb_distillery.config.resources")
     assert cp.returncode == 0, cp.stderr
