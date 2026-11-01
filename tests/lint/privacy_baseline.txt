@@ -19,5 +19,4 @@ web/src/flags/registry.gen.ts
 src/kb_distillery/kits/base/defaults/flags.toml
 share/admin.js
 share/admin.test.mjs
-skills/export-kb/SKILL.md
-skills/share-kb/SKILL.md
+src/kb_distillery/kits/base/skills/export-kb/SKILL.md

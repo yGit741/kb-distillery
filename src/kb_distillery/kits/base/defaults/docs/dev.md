@@ -15,7 +15,7 @@ src/kb_distillery/      Python app, package `kb_distillery` (src layout; `backen
   src/kb_distillery/core/          schema, graph, hubs, scopes, persons, books, mathnorm, coherence, health
   src/kb_distillery/lint/          lint, lint_skills            src/kb_distillery/search/       query, semfind, explore_raw, citations
   src/kb_distillery/ingest|distill|ops (daily_sync, notify, report/)|share/            src/kb_distillery/git/          guard, git_guard, commit_policy, ship, merge_nudge, curate_history
-  src/kb_distillery/maintenance/   sync_skills (Lane C relinks, then it goes); export lives in publish/
+  src/kb_distillery/kits/          the kits: kit.toml, defaults/, skills (what a kb is given; `resource("kits")`)
   src/kb_distillery/migrations/    schema migrations (code); the applied ledger stays in meta/migrations/applied.tsv
   src/kb_distillery/services/      former dashboard *_data modules (graph, pages, corpus, scopes, chat, pipeline, lifecycle, ops)
   src/kb_distillery/api/           FastAPI app (`pixi run app`): routers/ auto-discovered, models/, sse.py, security.py; README.md = add-a-router recipe
@@ -24,7 +24,7 @@ tests/                  pytest, mirrored by package (tests/harness = the pipelin
 web/                    the React app (builds into src/kb_distillery/_webapp)
 examples/               demo (the tracked sample kb), launchd
 share/                  Cloudflare Worker (auth.js, admin.js, wrangler template) + its node tests
-skills/                 agent skill sources (.claude/skills is a symlink to it)
+.claude/skills/         the engine's own dev skills (real files); the kb skills are src/kb_distillery/kits/<kit>/skills/
 scripts/                githooks/, kb-hooks/, qmd/, launch.sh (a tools folder keeps hook forwarding stubs until Phase 9)
 docs/                   ROADMAP.md: the migration to the open-source kb-distillery, phase by phase
 kbs/                    knowledge bases: kbs/<id> is one kb (its own git repo); only examples/demo is tracked here, the rest is gitignored
@@ -101,8 +101,7 @@ pixi run distill-propose -- <slug> propose graph brief from think page
 pixi run distill-apply -- <slug>   apply distill plan to public KB
 pixi run test-e2e                  graph page mouse/keyboard scheme in headless Chromium (needs the playwright npm package)
 pixi run test-ui-principles        every app screen, light + dark, against the [auto] ui-principles (see § PR gates)
-pixi run lint-skills               validate skill definitions
-pixi run sync-skills               create/verify the .claude/skills symlink (after lint-skills)
+pixi run lint-skills               validate every skills folder (each kit skills folder and .claude/skills)
 pixi run export-kb                 zip wiki + think → .exported/ (LLM share)
 pixi run share -- deploy-main      build main → private Cloudflare site (also: status, rollback, --dry-run)
 pixi run install-deploy-owner      (user) install the launchd deploy owner — the only deployer; agents nudge it (`python -m kb_distillery.share.owner nudge|once|status`)

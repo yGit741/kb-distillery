@@ -90,7 +90,7 @@ def test_subset(paths, root, ignore=lambda p: False):
 
     Targets: `tests/<pkg>` for each touched `src/kb_distillery/<pkg>/`, each changed `tests/**/test_*.py`, and always
     the top-level `tests/test_*.py` (repo-wide invariants a mirror-only selection would miss). Anything else that
-    can change test outcomes (config, conftest, fixtures, a package without a mirror, skills/, the kit defaults,
+    can change test outcomes (config, conftest, fixtures, a package without a mirror, the kits (kit defaults and skills),
     web/, examples/ ...) returns None. Only top-level `*.md` files are free.
     """
     targets = set()

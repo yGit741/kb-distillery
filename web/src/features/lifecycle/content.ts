@@ -39,7 +39,7 @@ export const STORIES: { group: string; items: { what: string; how: string }[] }[
     group: "Knowledge infra development",
     items: [
       { what: "Explorer, dashboard, CLI", how: 'pixi run ship -- start <feature> --worktree → edit → ship -- commit "feat(scope): …" → ship -- pr → ship -- merge (skill infra-pr).' },
-      { what: "Add or change a skill", how: "create-skill → pixi run lint-skills → pixi run sync-skills → same PR flow." },
+      { what: "Add or change a skill", how: "create-skill → pixi run lint-skills → same PR flow." },
       { what: "Change the schema", how: "PR with SCHEMA_VERSION bump + meta/migrations/NNNN_*.py → pixi run ops -- migrate on the branch → ship -- merge snapshots and bumps y." },
       { what: "New kind of source", how: "Handler sub-skills (feat) + naming/tags (schema) in one PR, then ingest items as knowledge steps." },
       { what: "Change the paradigm", how: "Long-lived infra/ branch, compare with query-knowledge on both, merge as paradigm." },

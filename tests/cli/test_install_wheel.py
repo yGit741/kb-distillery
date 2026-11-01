@@ -67,8 +67,7 @@ def _run(venv: Path, args, env, cwd):
 
 def test_the_wheel_carries_the_root_level_folders_under_data(wheel):
     names = zipfile.ZipFile(wheel).namelist()
-    for want in ("kb_distillery/_data/skills/",
-                 "kb_distillery/_data/share/auth.js", "kb_distillery/_data/scripts/kb-hooks/env.sh"):
+    for want in ("kb_distillery/_data/share/auth.js", "kb_distillery/_data/scripts/kb-hooks/env.sh"):
         assert any(n.startswith(want) for n in names), want
     assert not any(n.startswith("kb/") or "backend" in n.split("/")[0] for n in names)
 
@@ -77,10 +76,12 @@ def test_the_wheel_carries_the_kits_as_package_data(wheel):
     names = zipfile.ZipFile(wheel).namelist()
     for want in ("kb_distillery/kits/base/kit.toml", "kb_distillery/kits/research/kit.toml",
                  "kb_distillery/kits/base/defaults/flags.toml", "kb_distillery/kits/base/defaults/docs/",
-                 "kb_distillery/kits/base/defaults/templates/", "kb_distillery/kits/base/defaults/digest/"):
+                 "kb_distillery/kits/base/defaults/templates/", "kb_distillery/kits/base/defaults/digest/",
+                 "kb_distillery/kits/base/skills/query-knowledge/SKILL.md", "kb_distillery/kits/base/skills/README.md",
+                 "kb_distillery/kits/research/skills/build-researcher-profile/SKILL.md"):
         assert any(n.startswith(want) for n in names), want
     packed = {n.split("/")[2] for n in names if n.startswith("kb_distillery/_data/") and n.count("/") > 2}
-    assert packed <= {"skills", "share", "scripts"}, packed          # only the folders C.3 to C.5 and Lane F still move
+    assert packed <= {"share", "scripts"}, packed          # only the folders C.4, C.5 and Lane F still move
 
 
 def test_the_installed_package_is_the_one_in_the_venv_and_has_no_checkout(venv, clean_env, tmp_path):

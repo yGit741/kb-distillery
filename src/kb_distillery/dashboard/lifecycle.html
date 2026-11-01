@@ -136,7 +136,7 @@
         <h3>Knowledge infra development</h3>
         <dl>
           <dt>Explorer, dashboard, CLI</dt><dd><code>pixi run ship -- start &lt;feature&gt; --worktree</code> → edit → <code>ship -- commit "feat(scope): …"</code> → <code>ship -- pr</code> → <code>ship -- merge</code> (skill <code>infra-pr</code>).</dd>
-          <dt>Add or change a skill</dt><dd><code>create-skill</code> → <code>pixi run lint-skills</code> → <code>pixi run sync-skills</code> → same PR flow.</dd>
+          <dt>Add or change a skill</dt><dd><code>create-skill</code> → <code>pixi run lint-skills</code> → same PR flow.</dd>
           <dt>Change the schema</dt><dd>PR with <code>SCHEMA_VERSION</code> bump + <code>src/kb_distillery/migrations/NNNN_*.py</code> → <code>pixi run ops -- migrate</code> on the branch → <code>ship -- merge</code> snapshots and bumps <em>y</em>.</dd>
           <dt>New kind of source</dt><dd>Handler sub-skills (feat) + naming/tags (schema) in one PR, then ingest items as knowledge steps.</dd>
           <dt>Change the paradigm</dt><dd>Long-lived <code>infra/</code> branch, compare with <code>query-knowledge</code> on both, merge as <code>paradigm</code>.</dd>

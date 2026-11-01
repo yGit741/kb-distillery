@@ -1,27 +1,50 @@
 #!/usr/bin/env python3
-"""Skill linter — validates skills/ structure, README ladder sync, and CLI references.
+"""Skill linter — validates every skills folder: structure, README tables per folder, and CLI references.
 
     python3 -m kb_distillery.lint.lint_skills          ERROR fail, WARN print
     python3 -m kb_distillery.lint.lint_skills --strict WARN promoted to ERROR
 
-Run before sync-skills and in pre-commit when skills change.
+The skills folders (`SKILLS_ROOTS`) are each kit's `kits/<kit>/skills/` (what a knowledge base is given) and the
+engine's own `.claude/skills/`. Each folder carries its own README (Token budgets and Skills tables).
+Run when skills change (`pixi run lint-skills`, and the commit gate).
 """
 import os
 import re
 import sys
 from typing import Optional
 
-from kb_distillery.maintenance.sync_skills import DEPRECATED
+from kb_distillery.cli.tree import COMMANDS as DISTILL_COMMANDS
+from kb_distillery.config.resources import resource
 from kb_distillery.kbconfig import checkout_root
-from kb_distillery.paths import CODE_DIR, vault_root
+from kb_distillery.paths import CODE_DIR
 
 ROOT = checkout_root() or os.getcwd()          # skills are code: they live with the explorer (dev tool: a checkout)
-SKILLS_ROOT = os.path.join(ROOT, "skills")
-README_PATH = os.path.join(SKILLS_ROOT, "README.md")
+KITS_DIR = str(resource("kits"))
+
+
+def _skills_roots() -> list:
+    """Every kit's skills folder, then the engine's own (.claude/skills)."""
+    roots = []
+    if os.path.isdir(KITS_DIR):
+        for kit in sorted(os.listdir(KITS_DIR)):
+            path = os.path.join(KITS_DIR, kit, "skills")
+            if os.path.isdir(path):
+                roots.append(path)
+    if checkout_root():
+        roots.append(os.path.join(ROOT, ".claude", "skills"))
+    return roots
+
+
+def _is_kit_root(skills_root: str) -> bool:
+    return os.path.realpath(skills_root).startswith(os.path.realpath(KITS_DIR) + os.sep)
+
+
+SKILLS_ROOTS = _skills_roots()
+DEPRECATED = frozenset({"thesis-ingest"})
 PIXI_TOML = os.path.join(ROOT, "pixi.toml")
 
 META_SKILLS = frozenset({"create-skill"})
-ROOT_EXCLUDE = frozenset({"README.md", "SKILL_TEMPLATE.md"})
+ROOT_EXCLUDE = frozenset({"README.md", "_TEMPLATE.md"})
 ALLOWED_TIERS = frozenset({
     "none", "light", "medium", "heavy", "light-medium", "light–medium",
 })
@@ -205,11 +228,15 @@ def _has_placeholder(line: str) -> bool:
     return "<" in line or ">" in line or "…" in line
 
 
-def validate_cli_line(rel_path: str, line: str) -> None:
+def validate_cli_line(rel_path: str, line: str, kit: bool = False) -> None:
     line = _strip_comment(line)
     if not line:
         return
     if _has_placeholder(line):
+        return
+
+    if kit and line.startswith("pixi run "):
+        err(rel_path, "a kit skill runs in a knowledge base, which has no pixi tasks: use `distill …` or `python3 -m kb_distillery.…`")
         return
 
     if line.startswith("pixi run "):
@@ -218,6 +245,18 @@ def validate_cli_line(rel_path: str, line: str) -> None:
             task = parts[2]
             if task not in PIXI_TASKS:
                 err(rel_path, f"unknown pixi task: {task}")
+        return
+
+    if line.startswith("distill "):
+        parts = line.split()
+        if len(parts) >= 2 and not parts[1].startswith("-"):
+            cmd = DISTILL_COMMANDS.get(parts[1])
+            if cmd is None:
+                err(rel_path, f"unknown distill command: {parts[1]}")
+            elif cmd.kind == "group" and len(parts) >= 3 and not parts[2].startswith("-") and parts[2] not in cmd.sub:
+                err(rel_path, f"unknown distill {parts[1]} subcommand: {parts[2]}")
+            elif parts[1] == "ingest" and len(parts) >= 3 and not parts[2].startswith("-") and parts[2] not in INGEST_SUBCMDS:
+                err(rel_path, f"unknown distill ingest subcommand: {parts[2]}")
         return
 
     if line.startswith("python3 -m kb_distillery.ingest "):
@@ -243,13 +282,13 @@ def validate_cli_line(rel_path: str, line: str) -> None:
         return
 
 
-def validate_cli_blocks(rel_path: str, body: str) -> None:
+def validate_cli_blocks(rel_path: str, body: str, kit: bool = False) -> None:
     for block in BASH_BLOCK_RE.findall(body):
         for raw_line in block.splitlines():
-            validate_cli_line(rel_path, raw_line)
+            validate_cli_line(rel_path, raw_line, kit)
 
 
-def check_skill_md(rel_path: str, is_top_level: bool, parent: Optional[str] = None) -> None:
+def check_skill_md(rel_path: str, is_top_level: bool, parent: Optional[str] = None, kit: bool = False) -> None:
     full = os.path.join(ROOT, rel_path.replace("/", os.sep))
     if not os.path.isfile(full):
         err(rel_path, "missing SKILL.md")
@@ -319,17 +358,18 @@ def check_skill_md(rel_path: str, is_top_level: bool, parent: Optional[str] = No
     if wiki_write and not guard_ref:
         warn(rel_path, "mentions writing wiki/ without guard/session/finalize reference")
 
-    validate_cli_blocks(rel_path, body)
+    validate_cli_blocks(rel_path, body, kit)
 
 
-def check_parent_subskill_table(parent: str, subdirs: list[str], body: str) -> None:
-    rel = f"skills/{parent}/SKILL.md"
+def check_parent_subskill_table(parent: str, subdirs: list[str], body: str, prefix: str = "skills") -> None:
+    rel = f"{prefix}/{parent}/SKILL.md"
     for sub in subdirs:
         if sub not in body:
             warn(rel, f"parent missing subskill table reference for '{sub}'")
 
 
 def check_readme(readme_text: str, skills_root: str) -> tuple[list[str], list[tuple[str, str]]]:
+    readme_rel = os.path.relpath(os.path.join(skills_root, "README.md"), ROOT).replace(os.sep, "/")
     ladder = parse_ladder_skills(readme_text)
     links = parse_skills_table_links(readme_text)
 
@@ -349,9 +389,8 @@ def check_readme(readme_text: str, skills_root: str) -> tuple[list[str], list[tu
                         tier_val = parts[2].strip()
                         normalized = tier_val.replace("–", "-")
                         if normalized not in {t.replace("–", "-") for t in ALLOWED_TIERS}:
-                            warn("skills/README.md", f"unusual tier value: {tier_val}")
+                            warn(readme_rel, f"unusual tier value: {tier_val}")
 
-    readme_rel = os.path.relpath(os.path.join(skills_root, "README.md"), ROOT).replace(os.sep, "/")
     for label, href in links:
         target = os.path.join(skills_root, href.replace("/", os.sep))
         if not os.path.isfile(target):
@@ -360,25 +399,18 @@ def check_readme(readme_text: str, skills_root: str) -> tuple[list[str], list[tu
     return ladder, links
 
 
-def run_checks(strict: bool = False, skills_root: Optional[str] = None) -> tuple:
-    global errors, warnings
-    errors = []
-    warnings = []
-
-    root_skills = skills_root or SKILLS_ROOT
+def _check_root(root_skills: str, seen: dict) -> None:
+    """Lint one skills folder against its own README."""
     readme_path = os.path.join(root_skills, "README.md")
     skills_prefix = os.path.relpath(root_skills, ROOT).replace(os.sep, "/")
+    kit = _is_kit_root(root_skills)
 
     if not os.path.isdir(root_skills):
         err(skills_prefix, "skills directory missing")
-        return len(errors), len(warnings)
+        return
 
-    if skills_root is None:
-        from kb_distillery.maintenance.sync_skills import LINKS, LINK_TARGET, link_ok
-        for link in LINKS:
-            if not link_ok(link):
-                warn(os.path.relpath(link, ROOT).replace(os.sep, "/"),
-                     f"not a symlink to {LINK_TARGET} (run pixi run sync-skills)")
+    if os.path.islink(root_skills):
+        err(skills_prefix, "must be a real folder, not a symlink")
 
     for dep in DEPRECATED:
         dep_path = os.path.join(root_skills, dep)
@@ -387,6 +419,8 @@ def run_checks(strict: bool = False, skills_root: Optional[str] = None) -> tuple
 
     tops = top_level_skill_dirs(root_skills)
     readme_text = _read(readme_path) if os.path.isfile(readme_path) else ""
+    if not readme_text:
+        err(f"{skills_prefix}/README.md", "missing (Token budgets and Skills tables)")
     ladder, _ = check_readme(readme_text, root_skills) if readme_text else ([], [])
 
     ladder_set = set(ladder)
@@ -402,17 +436,31 @@ def run_checks(strict: bool = False, skills_root: Optional[str] = None) -> tuple
         if not os.path.isfile(skill_md):
             err(f"{skills_prefix}/{name}", "directory without SKILL.md")
             continue
+        if name in seen:
+            err(rel, f"skill '{name}' is also in {seen[name]}: a skill name lives in one folder")
+        seen[name] = skills_prefix
         if name not in META_SKILLS and name not in ladder_set:
             err(rel, "top-level skill not in README Token budgets table")
-        check_skill_md(rel, is_top_level=True)
+        check_skill_md(rel, is_top_level=True, kit=kit)
 
         subskills = find_subskills(root_skills, name)
         if subskills:
             parent_body = _read(skill_md)
             sub_names = [s[0] for s in subskills]
-            check_parent_subskill_table(name, sub_names, parent_body)
+            check_parent_subskill_table(name, sub_names, parent_body, skills_prefix)
         for sub, sub_rel in subskills:
-            check_skill_md(sub_rel, is_top_level=False, parent=name)
+            check_skill_md(sub_rel, is_top_level=False, parent=name, kit=kit)
+
+
+def run_checks(strict: bool = False, skills_roots: Optional[list] = None) -> tuple:
+    """Lint every skills folder (default `SKILLS_ROOTS`); a skill name may live in one folder only."""
+    global errors, warnings
+    errors = []
+    warnings = []
+
+    seen: dict = {}
+    for root_skills in (SKILLS_ROOTS if skills_roots is None else skills_roots):
+        _check_root(root_skills, seen)
 
     if strict:
         for w in warnings:

@@ -2,7 +2,9 @@
 `maintenance/{daily_sync,notify,export,fix_math,rename_raw}`, the top-level `report/` package, the per-user folder
 `~/.config/thesis-kb` (now `~/.config/kb-distillery`, `config/userdir.py`) and the keychain service `thesis-kb-gmail`,
 and the Lane C moves: `templates/` (now `src/kb_distillery/kits/<kit>/kit.toml`, read by `vault/kit.py`) and
-`meta-defaults/` (now `src/kb_distillery/kits/base/defaults/`).
+`meta-defaults/` (now `src/kb_distillery/kits/base/defaults/`), the root `skills/` folder with its `.claude/skills`
+symlink, `pixi run sync-skills` and `SKILL_TEMPLATE.md` (now `src/kb_distillery/kits/<kit>/skills/`, real files in
+`.claude/skills/`, `docs/guides/write-a-skill.md` and `kits/base/skills/_TEMPLATE.md`).
 
 There are no import shims: a star-import shim breaks mock.patch, `python -m` and -W error filters. Instead this scan
 fails on any tracked file that still names the old module or path strings. Inputs come from `git ls-files` only (the
@@ -30,6 +32,8 @@ RETIRED = {
     "~/.config/thesis-kb": re.compile(r"\.config/thesis-kb"),
     "keychain service thesis-kb-gmail": re.compile(r"thesis-kb-gmail"),
     "meta-defaults/": re.compile(r"meta-defaults|META_DEFAULTS_DIR"),
+    "root skills/ folder, sync-skills or SKILL_TEMPLATE": re.compile(
+        r"(?<![\w./~-])skills/|sync[-_]skills|SKILL_TEMPLATE|(?<![\w])\.\./skills\b"),
     "templates/ kit folder, template.toml, core.template or $KB_TEMPLATES_DIR": re.compile(
         r"(?<![\w./-])templates/(?:starter|academic-research|<name>)|template\.toml|KB_TEMPLATES_DIR"
         r"|kb_distillery[./]core[./]template\b|core import template\b|core/template\.py"),
@@ -44,6 +48,7 @@ ALLOWED = {
 }
 # The roadmap is the record of what was planned and done under the old names; it is not rewritten.
 ALLOWED["meta-defaults/"] = {"docs/ROADMAP.md"}
+ALLOWED["root skills/ folder, sync-skills or SKILL_TEMPLATE"] = {"docs/ROADMAP.md"}
 ALLOWED["templates/ kit folder, template.toml, core.template or $KB_TEMPLATES_DIR"] = {"docs/ROADMAP.md"}
 ALLOWED["keychain service thesis-kb-gmail"] = {"src/kb_distillery/config/userdir.py",      # the read-only lookup of the old name
                                                "tests/ops/test_notify.py", "tests/config/test_userdir.py"}
@@ -62,7 +67,8 @@ RETIRED_FILES = ("src/kb_distillery/maintenance/fix_math.py", "src/kb_distillery
                  "src/kb_distillery/maintenance/daily_sync.py", "src/kb_distillery/maintenance/notify.py",
                  "src/kb_distillery/maintenance/export.py", "src/kb_distillery/report/", "src/kb_distillery/cli.py",
                  "tests/maintenance/", "tests/report/",
-                 "src/kb_distillery/core/template.py", "tests/core/test_template.py", "tests/templates/")
+                 "src/kb_distillery/core/template.py", "tests/core/test_template.py", "tests/templates/",
+                 "skills/", "src/kb_distillery/maintenance/")
 
 
 class NoOldPathsTests(unittest.TestCase):
@@ -73,15 +79,22 @@ class NoOldPathsTests(unittest.TestCase):
 
     def test_old_directories_are_gone(self):
         files = tracked()
-        for old in ("backend/src", "backend/tests", "frontend/", "kbs/", "templates/", "meta-defaults/"):
+        for old in ("backend/src", "backend/tests", "frontend/", "kbs/", "templates/", "meta-defaults/", "skills/"):
             self.assertEqual([p for p in files if p.startswith(old)], [], old)
 
     def test_the_schema_no_longer_lists_the_retired_root_folders(self):
         from kb_distillery.core import schema
-        for old in ("templates", "meta-defaults"):
+        for old in ("templates", "meta-defaults", "skills"):
             self.assertNotIn(old, schema.ROOT_DIRS)
             self.assertNotIn(old, schema.CODE_TOP_DIRS)
             self.assertNotIn(old + "/", schema.TOOLING_PATHS)
+
+    def test_the_skills_live_in_the_kits_and_the_dev_skills_are_real_files(self):
+        self.assertFalse(os.path.islink(os.path.join(ROOT, ".claude", "skills")))
+        for rel in ("src/kb_distillery/kits/base/skills/query-knowledge/SKILL.md", "src/kb_distillery/kits/base/skills/_TEMPLATE.md",
+                    "src/kb_distillery/kits/research/skills/build-researcher-profile/SKILL.md", ".claude/skills/infra-pr/SKILL.md",
+                    "docs/guides/write-a-skill.md"):
+            self.assertTrue(os.path.isfile(os.path.join(ROOT, rel)), rel)
 
     def test_the_kits_live_in_the_package(self):
         for rel in ("src/kb_distillery/kits/base/kit.toml", "src/kb_distillery/kits/research/kit.toml",

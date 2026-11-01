@@ -6,14 +6,14 @@ resolved at import, so `import kb_distillery` works in a clean venv):
 
     package_root()   the installed `kb_distillery` package folder
     resource(path)   a file or folder that ships inside the package (prompts, static, _webapp, ...)
-    root_resource(path)  transitional: the root-level folders still outside the package (skills, share, hooks)
+    root_resource(path)  transitional: the root-level folders still outside the package (share, hooks)
     repo_root()      the git checkout the package lives in, or None for an installed copy;
                      `require_repo_root(what)` is the dev-only form that raises with a clear message
 
 `resource()` is package data (the kits among it: `resource("kits/base/defaults")`). `root_resource()` is the
-transitional lookup for the folders that still sit at the repository root (`skills/`, `share/`, `scripts/kb-hooks`):
-`_data/<path>` in a wheel (pyproject.toml `force-include`), `<repo>/<path>` in a checkout. Lane C moves the skills and
-hooks into the package as `kits/` and deletes `root_resource()`.
+transitional lookup for the folders that still sit at the repository root (`share/`, `scripts/kb-hooks`):
+`_data/<path>` in a wheel (pyproject.toml `force-include`), `<repo>/<path>` in a checkout. Lane C moved the skills into the
+package as `kits/<kit>/skills`, moves the hooks next and then deletes `root_resource()`.
 """
 from __future__ import annotations
 
@@ -60,7 +60,7 @@ def resource(path: str) -> Path:
 
 
 def root_resource(path: str) -> Path:
-    """TRANSITIONAL (deleted by Lane C, when `skills/`, `share/` and `scripts/kb-hooks`
+    """TRANSITIONAL (deleted by Lane C, when `share/` and `scripts/kb-hooks`
     become package data under `kits/`): a folder that lives at the repository root in a checkout and under
     `_data/<path>` in a wheel (pyproject.toml `force-include`). Same path in both shapes. Never raises."""
     packed = package_root() / DATA_DIR / path

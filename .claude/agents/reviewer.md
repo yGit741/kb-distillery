@@ -17,7 +17,7 @@ You are a read-only reviewer for the thesis knowledge-base repo (Python `src/kb_
 
 - Correctness bugs: wrong conditions, unhandled failure paths, broken callers, tests that cannot fail.
 - Unrelated changes: anything in the diff the PR title does not explain.
-- Conventions from `AGENTS.md`: knowledge vs tooling lanes (a feature PR must not touch `wiki/ raw/ think/`), no hand edits to `index.md` or `meta/corpus.tsv`, bare wikilinks, `kb_distillery.paths` instead of `sys.path.insert`, skills synced to `.claude/skills`.
+- Conventions from `AGENTS.md`: knowledge vs tooling lanes (a feature PR must not touch `wiki/ raw/ think/`), no hand edits to `index.md` or `meta/corpus.tsv`, bare wikilinks, `kb_distillery.paths` instead of `sys.path.insert`, skills registered in their folder's README (`pixi run lint-skills`).
 
 ## Output
 

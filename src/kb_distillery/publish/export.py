@@ -62,7 +62,7 @@ TEXT_META_FILES = (
     "meta/corpus.tsv",
     "meta/coherence-warnings.tsv",
     "meta/log.md",
-    "skills/README.md",
+    ".claude/skills/README.md",
     # the docs AGENTS.md routes to
     "meta/docs/page-model.md",
     "meta/docs/raw-and-corpus.md",

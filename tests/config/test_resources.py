@@ -69,11 +69,11 @@ def test_resource_is_relative_to_the_package_and_never_raises():
 
 
 def test_root_resource_reads_the_checkout_here_and_the_packed_copy_in_a_wheel(tmp_path):
-    assert resources.root_resource("skills") == resources.repo_root() / "skills"
+    assert resources.root_resource("share") == resources.repo_root() / "share"
     site = tmp_path / "site-packages" / "kb_distillery"
-    (site / "_data" / "skills").mkdir(parents=True)
+    (site / "_data" / "scripts").mkdir(parents=True)
     with patch.object(resources, "package_root", lambda: site):
-        assert resources.root_resource("skills") == site / "_data" / "skills"
+        assert resources.root_resource("scripts") == site / "_data" / "scripts"
         assert resources.root_resource("share") == site / "_data" / "share"      # missing: still a path
 
 

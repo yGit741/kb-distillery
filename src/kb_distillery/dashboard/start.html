@@ -79,7 +79,7 @@
     </ol>
     <div class="st-cards">
       <div class="lc-group infra"><h3>A new skill</h3><dl>
-        <dd>Say <code>create skill &lt;name&gt;</code> (skill <code>create-skill</code>) → <code>pixi run lint-skills</code> → <code>pixi run sync-skills</code> → same PR flow, as <code>feat(skills): …</code>. A skill that writes knowledge must end in an op commit.</dd></dl></div>
+        <dd>Say <code>create skill &lt;name&gt;</code> (skill <code>create-skill</code>) → <code>pixi run lint-skills</code> → same PR flow, as <code>feat(skills): …</code>. A skill that writes knowledge must end in an op commit.</dd></dl></div>
       <div class="lc-group snap"><h3>A schema change</h3><dl>
         <dd>New note type, frontmatter field or rule that lint enforces: bump <code>SCHEMA_VERSION</code> in <code>src/kb_distillery/core/schema.py</code>, add <code>src/kb_distillery/migrations/NNNN_&lt;name&gt;.py</code>, run <code>pixi run ops -- migrate</code> on the branch, commit as <code>schema(&lt;component&gt;): …</code>. Merging snapshots first and bumps the middle digit.</dd></dl></div>
       <div class="lc-group kb"><h3>A new kind of source</h3><dl>
@@ -121,7 +121,7 @@
         <li><code>raw/</code> and <code>think/</code> are never edited by agents, never rewritten by undo or restore.</li>
         <li>Undo and restore add commits — history is never rewritten.</li>
         <li>Tooling changes need your PR approval; PRs are never squashed.</li>
-        <li>Full detail: <a href="/lifecycle">Lifecycle</a> tab · <code>AGENTS.md</code> · <code>src/kb_distillery/kits/base/defaults/docs/</code> · <code>skills/README.md</code>.</li>
+        <li>Full detail: <a href="/lifecycle">Lifecycle</a> tab · <code>AGENTS.md</code> · <code>src/kb_distillery/kits/base/defaults/docs/</code> · <code>docs/guides/write-a-skill.md</code>.</li>
       </ul>
     </section>
   </div>

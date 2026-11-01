@@ -3,7 +3,7 @@
 # Claude Code
 
 - Prefer targeted reads over scanning trees; use `python3 -m kb_distillery.dashboard` or `pixi run health` for status.
-- Read `skills/<skill>/SKILL.md` before running a workflow (see `skills/README.md`).
+- Read `.claude/skills/<skill>/SKILL.md` before running a workflow (app skills: `src/kb_distillery/kits/<kit>/skills/`; how to write one: `docs/guides/write-a-skill.md`).
 - One transactional workflow at a time; don't paste large file contents into chat.
 - Scripts enforce truth (guard blocks writes, lint on commit); if blocked, fix the approach — don't retry the same illegal path.
 - Route every request through the **Intent router** in `AGENTS.md` (casual phrasing → skill). A request to fix/change/add tooling *is* the ask: run the `infra-pr` flow, merge it yourself (`ship -- merge`) once the gates pass and keep going — unless it is **held** (schema/paradigm PRs, or `ship pr --hold` when the user said "don't merge" / "let me review"); only the user lifts a hold (`! pixi run ship -- approve N`).

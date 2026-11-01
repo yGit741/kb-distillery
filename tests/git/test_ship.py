@@ -22,7 +22,7 @@ class LaneOfTests(unittest.TestCase):
             self.assertEqual(lane_of(p), "knowledge", p)
 
     def test_tooling(self):
-        for p in ("src/kb_distillery/dashboard/serve.py", "skills/x/SKILL.md", "scripts/launch.sh",
+        for p in ("src/kb_distillery/dashboard/serve.py", ".claude/skills/x/SKILL.md", "src/kb_distillery/kits/base/skills/x/SKILL.md", "scripts/launch.sh",
                   "pixi.toml", "AGENTS.md", "scripts/hooks/block-git-write.sh", ".claude/settings.json",
                   ".obsidian/app.json", "web/src/main.tsx", "src/kb_distillery/_webapp/index.html"):
             self.assertEqual(lane_of(p), "tooling", p)

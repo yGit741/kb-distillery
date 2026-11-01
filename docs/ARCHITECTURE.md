@@ -61,7 +61,7 @@ Guides for the three extension points: [kits](../src/kb_distillery/kits/base/def
 | `src/kb_distillery/kits/` | the kits (`base`, `research`): `kit.toml` each; `base/defaults/` holds the flags, routed docs, page skeletons and digest defaults |
 | `kbs/` | kbs; gitignored except `examples/demo`, the public sample used by tests |
 | `src/kb_distillery/kits/base/defaults/` | defaults for every kb: docs, flags, templates; a kb's `meta/` overrides them |
-| `skills/` | agent skill sources (the workflows an agent follows) |
+| `src/kb_distillery/kits/<kit>/skills/` | the workflow skills a kb is given (`base`, `research`); `.claude/skills/` holds the engine's own dev skills |
 | `share/`, `scripts/` | the Worker for the Cloudflare publisher; launch script and git hooks |
 
 ## Invariants
