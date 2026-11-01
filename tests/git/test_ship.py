@@ -57,6 +57,15 @@ class ChangedPathsTests(unittest.TestCase):
 class ShipTests(unittest.TestCase):
     LANES = {"knowledge": ["wiki/a.md"], "tooling": ["meta/tool.py"], "other": ["junk.txt"]}
 
+    def setUp(self):
+        # gates write their logs under the root: a tmp one, never the real worktree's .cache/ship-gates
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        _g(self.tmp.name, "init", "-q")
+        patcher = patch.object(ship, "ROOT", os.path.realpath(self.tmp.name))
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
     def test_requires_message(self):
         with patch("kb_distillery.git.ship.changed_paths", return_value=self.LANES):
             with self.assertRaises(SystemExit):
