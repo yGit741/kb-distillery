@@ -7,6 +7,7 @@
     python3 -m kb.git.ship merge                          # sync main → gates → merge commit "<title> (#N)"
     python3 -m kb.git.ship approve N                      # USER ONLY: lift the hold on PR #N
     python3 -m kb.git.ship merge --local --pr N           # offline: git merge --no-ff into main
+    python3 -m kb.git.ship mv SRC DST                     # git mv of tracked paths inside the repo, on an infra/* branch
     python3 -m kb.git.ship status                         # pending changes grouped by lane
     python3 -m kb.git.ship prune [--apply]                # delete merged infra/* / worktree-* branches + their clean worktrees
     python3 -m kb.git.ship prune --drop <branch>          # delete one unmerged branch, patch saved to _quarantine/
@@ -52,7 +53,7 @@ GATES = [
     ("lint-skills", [sys.executable, "-m", "kb.lint.lint_skills"]),
     ("lint", [sys.executable, "-m", "kb.lint.lint"]),
 ]
-SUBCOMMANDS = {"whoami", "claims", "events", "round", "queue", "start", "commit", "pr", "merge", "sync", "status", "prune", "protect", "approve", "tag"}
+SUBCOMMANDS = {"whoami", "claims", "events", "round", "queue", "start", "commit", "pr", "merge", "sync", "status", "prune", "protect", "approve", "tag", "mv"}
 GENERATED_FILES = {"index.md", "meta/corpus.tsv", "meta/coherence-warnings.tsv"}
 MIGRATED_GENERATED = {"meta/corpus.tsv"}   # a migration's output: committed by schema/paradigm commits
 FEATURE_RE = re.compile(r"^[a-z0-9][a-z0-9-]*$")
@@ -1268,6 +1269,63 @@ def cmd_prune(apply=False, root=ROOT):
     return 0
 
 
+def _mv_pairs(src, dst, root):
+    """(old, new) repo-relative file pairs for `ship mv src dst`, or an error string."""
+    def clean(p):
+        n = os.path.normpath(p)
+        full = os.path.realpath(os.path.join(root, n))
+        inside = os.path.commonpath([os.path.realpath(root), full]) == os.path.realpath(root)
+        if os.path.isabs(p) or n.startswith("..") or n == "." or not inside or n.split(os.sep)[0] == ".git":
+            return None
+        return n.replace(os.sep, "/")
+    s, d = clean(src), clean(dst)
+    if not s or not d:
+        return "error: paths must be inside the repo (no absolute, .., . or .git)"
+    if s == d or d.startswith(s + "/"):
+        return "error: destination is the source or inside it"
+    tracked = [f for f in filter(None, run_git(["ls-files", "-z", "--", s], cwd=root).stdout.split("\0"))
+               if f == s or f.startswith(s + "/")]
+    if not tracked:
+        return f"error: {s} has no tracked files"
+    if os.path.isdir(os.path.join(root, d)):
+        if not os.path.isdir(os.path.join(root, s)):
+            return f"error: {d} exists"
+        pairs = [(f, d + f[len(s):]) for f in tracked]       # merge a tree into an existing directory
+    else:
+        if os.path.exists(os.path.join(root, d)):
+            return f"error: {d} exists"
+        pairs = [(f, d + f[len(s):]) for f in tracked]
+    clash = [n for _, n in pairs if os.path.lexists(os.path.join(root, n))]
+    if clash:
+        return f"error: destination exists: {clash[0]}" + (f" (+{len(clash) - 1} more)" if len(clash) > 1 else "")
+    return pairs
+
+
+def cmd_mv(src, dst, root=ROOT):
+    """git mv of tracked files under ship's guard. Only on an infra/<feature> branch, only inside the repo,
+    never over an existing file. Do the import rewrite and this move in ONE commit (`ship commit`)."""
+    branch = current_branch(root)
+    if not branch.startswith("infra/"):
+        print(f"error: ship mv runs on an infra/<feature> branch (current: {branch or 'detached'})")
+        return 1
+    pairs = _mv_pairs(src, dst, root)
+    if isinstance(pairs, str):
+        print(pairs)
+        return 1
+    for old, new in pairs:
+        os.makedirs(os.path.dirname(os.path.join(root, new)) or root, exist_ok=True)
+        cp = run_git(["mv", "--", old, new], cwd=root)
+        if cp.returncode != 0:
+            print(f"error: git mv {old} {new} failed: {_out(cp)}")
+            return 1
+        top, d = os.path.realpath(root), os.path.dirname(os.path.realpath(os.path.join(root, old)))
+        while d != top and d.startswith(top + os.sep) and os.path.isdir(d) and not os.listdir(d):
+            os.rmdir(d)                                       # per-file moves leave empty source directories
+            d = os.path.dirname(d)
+    print(f"moved {len(pairs)} file(s): {src} -> {dst}")
+    return 0
+
+
 RESULT_COMMANDS = ("commit", "pr", "merge", "sync")
 
 
@@ -1291,6 +1349,9 @@ def _main(argv):
     s.add_argument("--worktree", action="store_true", help="create .claude/worktrees/<feature> from origin/main")
     s.add_argument("--round", type=int, metavar="R", help="link the branch to round issue #R")
     s.add_argument("--paths", metavar="A,B", help="claim the paths this branch will touch; overlaps are warned about")
+    mv = sub.add_parser("mv", help="git mv tracked SRC to DST (infra/* branch, inside the repo, never over a file)")
+    mv.add_argument("src")
+    mv.add_argument("dst")
     sub.add_parser("claims", help="list every lane's claimed (or touched) paths")
     ro = sub.add_parser("round", help="round issues for multi-PR efforts (open / status)")
     rsub = ro.add_subparsers(dest="round_cmd", required=True)
@@ -1354,6 +1415,8 @@ def _main(argv):
         if args.round_cmd == "open":
             return rounds.cmd_open(args.title, args.features, ROOT)
         return rounds.cmd_status(args.number, ROOT)
+    if args.cmd == "mv":
+        return cmd_mv(args.src, args.dst)
     if args.cmd == "claims":
         return claims.cmd_claims(ROOT)
     if args.cmd == "events":
