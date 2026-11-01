@@ -382,7 +382,7 @@ def main(argv=None) -> int:
     ap.add_argument("--name", help="display name (default: the id, spaced and capitalised)")
     ap.add_argument("--kit", "--template", dest="kit", help=f"ontology kit (default {DEFAULT_KIT}; known: {', '.join(kits.names())}; "
                     f"--template is the older spelling)")
-    ap.add_argument("--dir", help="parent folder the kb folder is created in (default: the bases dir, kbs/)")
+    ap.add_argument("--dir", help="parent folder the kb folder is created in (default: the bases dir, ~/knowledge)")
     ap.add_argument("--yes", action="store_true", help="never prompt; take defaults for what is not given")
     ap.add_argument("--refresh", action="store_true", help="re-sync the skills, docs, hooks and settings of an existing kb "
                     "(--kb <id|path>, $KB, or run inside it) with its kit; prints what changed")
@@ -408,6 +408,9 @@ def main(argv=None) -> int:
     print(doctor.render(checks))
     print(f"\nOpen the dashboard:  {launch_command(target, kb_id, parent)}")
     print(LLM_LINE)
+    hint = install_hooks.path_hint()
+    if hint:
+        print("\n" + hint, file=sys.stderr)
     return doctor.exit_code(checks)
 
 

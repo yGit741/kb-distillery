@@ -93,15 +93,31 @@ def install_git(kb_root: str, report: list[str] | None = None) -> int:
     if dead:
         print(f"error: git would skip these hooks (missing or not executable) in {resolved}: {', '.join(dead)}", file=sys.stderr)
         return 1
-    if shutil.which("distill") is None:
-        print("warning: `distill` is not on PATH here; the hooks refuse every commit and guarded edit (fail closed) "
-              "until it is - install kb-distillery or add its bin folder to PATH", file=sys.stderr)
     return 0
+
+
+PATH_HINT = (
+    "warning: `distill` is not on PATH here. The hooks of a kb call `distill hook …` and refuse every commit and guarded "
+    "edit (fail closed) until it is.\n"
+    "  Put a launcher named `distill` in a folder on PATH, e.g. ~/.local/bin/distill (chmod +x):\n"
+    "      #!/bin/sh\n"
+    '      PYTHONPATH="<engine>/src" exec "<engine>/.pixi/envs/default/bin/python" -m kb_distillery "$@"\n'
+    "  where <engine> is your kb-distillery checkout (docs: dev.md § `distill` outside the repo); or `pip install` the wheel."
+)
+
+
+def path_hint() -> str | None:
+    """The hint to print when `distill` is not on PATH (None when it is). Shared by `hooks install` and `distill init`."""
+    return PATH_HINT if shutil.which("distill") is None else None
 
 
 def install(kb_root: str, report: list[str] | None = None) -> int:
     rc = install_claude(kb_root, report)
-    return rc or install_git(kb_root, report)
+    rc = rc or install_git(kb_root, report)
+    hint = path_hint()
+    if hint:
+        print(hint, file=sys.stderr)
+    return rc
 
 
 def main(argv: list[str] | None = None) -> int:
