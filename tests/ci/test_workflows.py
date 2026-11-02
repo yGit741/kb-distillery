@@ -64,11 +64,16 @@ class PushAndPullRequestChecks(unittest.TestCase):
     def test_ci_runs_on_push_and_pull_request_and_keeps_kb_ci(self):
         wf = load("ci.yml")
         self.assertTrue({"push", "pull_request"} <= set(triggers(wf)))
-        job = wf["jobs"]["checks"]
+        self.assertEqual(set(wf["jobs"]), {"python", "web", "wheel", "worker"})
+        for name, job in wf["jobs"].items():
+            self.assertIn("self-hosted", job["runs-on"], name)
+        job = wf["jobs"]["python"]
         self.assertEqual(str(job["env"]["KB_CI"]), "1")
         runs = [s["run"] for s in job["steps"] if "run" in s]
         self.assertIn("pixi run test", runs)
         self.assertTrue(any("test_privacy_ratchet" in r for r in runs))
+        for name, task in (("web", "pixi run web-check"), ("wheel", "pixi run test-wheel"), ("worker", "pixi run test-worker")):
+            self.assertIn(task, [s["run"] for s in wf["jobs"][name]["steps"] if "run" in s], name)
 
     def test_secret_scan_runs_gitleaks_on_push_and_pull_request(self):
         wf = load("secret-scan.yml")
