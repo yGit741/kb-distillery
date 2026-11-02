@@ -1,7 +1,7 @@
 import type { CitationGraph, LifecycleSnapshot, PageDetail, PageIndex, RawCard } from "@/api/types";
 import type { GraphSnapshot } from "@/api/types";
 
-/** What the share builder (backend kb_distillery.share.build --app) bakes into `<script id="kb-data">`. */
+/** What the share builder (backend kb_distillery.share.build) bakes into `<script id="kb-data">`. */
 export interface ShareMeta {
   kb_version: string;
   content_sha: string;

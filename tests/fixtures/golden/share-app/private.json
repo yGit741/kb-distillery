@@ -906,7 +906,7 @@
    }
   },
   "home": {
-   "cards": [],
+   "cards": "<cards>",
    "tour": "<tour>"
   },
   "index": {
@@ -1236,10 +1236,7 @@
    "github": null,
    "head": "0002c2637",
    "next_version": "1.5.1",
-   "policy": {
-    "mode": "enforce",
-    "strict": false
-   },
+   "policy": "<policy>",
    "schema": "<schema>",
    "snapshots": [],
    "stats": {

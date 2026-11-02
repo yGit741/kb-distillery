@@ -864,7 +864,7 @@
    }
   },
   "home": {
-   "cards": [],
+   "cards": "<cards>",
    "tour": "<tour>"
   },
   "index": {

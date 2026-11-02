@@ -44,6 +44,10 @@ class CloudflareBehaviour(unittest.TestCase):
         dm.assert_called_once_with(force=True, dry_run=True, **seams)
         self.assertEqual((res.state, res.url, res.version), ("deployed", "u", "v"))
 
+    def test_the_legacy_shell_option_is_refused(self):
+        with self.assertRaises(PublishError):
+            CloudflarePublisher().publish(Snapshot("main", options={"legacy": True}))
+
     def test_the_live_site_is_only_built_from_main(self):
         with self.assertRaises(PublishError):
             CloudflarePublisher().publish(Snapshot("kb-1.2.3"))

@@ -122,6 +122,46 @@ absolute paths or `think/` paths. **Public snapshots** (`share snapshot`) carry 
 Lifecycle, Share panel or their data — on top of the public profile's own cuts (no `distilled-think` pages, no
 `raw`/`path`/`email`/`original_name` fields).
 
+## Snapshots panel (private site)
+
+The private site has the **Share** panel (`screen.share`, private builds only — public snapshots never contain it
+or any `/admin/` path). It lists every `snapshot-*` Worker with kb version, behind-main,
+7-day views, built date and online state, with Open / Copy link / Update… / Delete (type the Worker
+name to confirm), shows an orphan / "not ours" banner from a **dry-run** prune, and a "New
+snapshot" box that builds `pixi run share -- snapshot <name> kb-x.y.z` for you to run on the Mac;
+"Update…" fills the box in replace mode (`--replace`, same link) and warns when a typed name is
+already taken (creating, updating and `prune --apply` stay CLI-only).
+
+API (`share/admin.js`, behind the sign-in session + `ALLOWED_EMAILS` (or `ADMIN_EMAILS`)
++ header `X-KB-Admin: 1` + same-origin `Origin` for writes): `GET /admin/api/snapshots`,
+`DELETE /admin/api/snapshots/<worker>` with body `{"confirm": "<worker>"}`, `POST /admin/api/prune`
+(dry run). Behind-main in the panel is an approximation (patch difference within one x.y); the CLI's
+`share list` is exact.
+
+**One-time setup (user-owned):** Cloudflare dashboard → My Profile → API Tokens → Create custom
+token with **Account → Workers Scripts → Edit** (list + delete) and **Account → Account Analytics →
+Read** (views), scoped to this account. Copy it, then:
+
+```bash
+pbpaste | npx wrangler@4.151.3 secret put CF_API_TOKEN --name kb && pbcopy < /dev/null
+```
+
+`CF_ACCOUNT_ID` is rendered as a plain var by `deploy-main`. Until the secret exists the API answers
+503 and the tab shows this hint. Never paste the token into chat or `share.toml`.
+
+## Output
+
+Nothing in the vault. `.cache/share/status.json` (gitignored), the share log, and a new Worker
+version at `https://kb.yonatan-magen-thesis.workers.dev` tagged `kb-share <sha> <version> <profile>`;
+snapshots are their own Workers (`.cache/share/status-snapshot-*.json`, never the main chip).
+
+## Limits
+
+The site is served from the Worker's static-assets directory: Cloudflare caps a
+file at **25 MiB** (the data page `index.html` and every asset). The build prints its size against that limit, warns from 80 % and refuses above
+it (`MAX_HTML_BYTES` in `src/kb_distillery/share/build.py`). Growth comes from embedded page bodies, the graph
+— shrink those, do not raise the constant.
+
 ## Quality bar
 
 The reported state matches `share status`; unauthenticated `curl -I` on the site gives 302 → `/auth/login`.

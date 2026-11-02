@@ -84,14 +84,16 @@ def make_stub_dist(base):
 
 def stable(payload):
     """The `kb-data` blob minus what depends on the checkout running the test, not on the fixture or the build:
-    the viewer sha (HEAD of this checkout), the schema version (bumps with every schema PR) and the tour name
-    (the owner's share.toml)."""
+    the viewer sha (HEAD of this checkout), the schema version and git policy constants, and the Home tour and
+    cards (the owner's share.toml)."""
     data = json.loads(json.dumps(payload))
     data["meta"]["viewer_sha"] = "<viewer>"
     if "home" in data:
         data["home"]["tour"] = "<tour>"
+        data["home"]["cards"] = "<cards>"
     if "lifecycle" in data:
         data["lifecycle"]["schema"] = "<schema>"
+        data["lifecycle"]["policy"] = "<policy>"
     return data
 
 

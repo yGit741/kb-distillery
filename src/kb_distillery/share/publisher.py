@@ -82,6 +82,8 @@ class CloudflarePublisher(Publisher):
         return contracts.StatusFile(Path(root) / ".cache" / "share" / "status.json").read()
 
     def publish(self, snapshot: Snapshot, *, dry_run: bool = False) -> PublishResult:
+        if snapshot.options.get("legacy"):
+            raise PublishError("the legacy iframe shell is gone: every share build is the React app")
         if snapshot.name is None:
             if snapshot.ref != "main":
                 raise PublishError("the live site is always built from main; give the snapshot a name to publish another ref")
