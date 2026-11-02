@@ -24,7 +24,7 @@ pixi is solved for macOS on Apple silicon (`osx-arm64`). Tests do not call a rea
 | `src/kb_distillery/` | the Python package |
 | `src/kb_distillery/kits/` | kits: `kit.toml`, defaults, hooks, skills |
 | `web/` | the React app |
-| `tests/` | tests, mirroring `src/`; browser-free end-to-end tests in `tests/e2e/` |
+| `tests/` | tests, mirroring `src/`; end-to-end tests in `tests/e2e/` |
 | `examples/demo/` | the public sample knowledge base |
 | `scripts/` | shell helpers and git hooks |
 | `docs/` | documentation |
@@ -37,7 +37,7 @@ Never commit to `main`. Use `ship`, which wraps branch, commit, gates and pull r
 
 1. `pixi run ship -- start <feature> --worktree` creates `infra/<feature>` in its own worktree.
 2. Make the change. Add a test next to the code it covers.
-3. `pixi run ship -- commit "chore(<component>): summary"` runs the gates on the files you changed and commits them. The type is `paradigm`, `schema`, `feat`, `fix` or `chore`; `chore` covers docs, tests and refactors. Keep the subject to 72 characters and do not use apostrophes.
+3. `pixi run ship -- commit "chore(<component>): summary"` runs the gates on the files you changed and commits them. The type is `paradigm`, `schema`, `feat`, `fix` or `chore`; `chore` covers docs, tests and refactors. Keep the subject to 72 characters and do not use apostrophes (pixi re-quotes the message and the commit silently fails).
 4. If `main` moved, `pixi run ship -- sync` merges it into your branch. Resolve any conflict, `git add` the files, then `pixi run ship -- sync --continue`.
 5. `pixi run ship -- pr --title "chore(<component>): summary"` runs the full gates and opens the pull request. `--hold` keeps it from merging until the owner approves.
 6. A maintainer reviews and merges with `pixi run ship -- merge` (always a merge commit). Pull requests that change the schema are held for the owner.

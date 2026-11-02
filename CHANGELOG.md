@@ -32,13 +32,13 @@ First release as an installable package. Most entries below are renames and move
   - `services/graph.py` to `graph/snapshot.py`
   - the source connectors under `ingest/` to `ingest/sources/{books,chat,gdrive,mail,researcher,web,youtube}`
 - Tests moved with the code: `tests/core` to `tests/vault`, `tests/api` to `tests/server`, `tests/share` to `tests/publish/cloudflare`, `tests/maintenance` to `tests/ops`.
-- Templates are now kits. `templates/starter` is `kits/base`; `templates/academic-research` is `kits/research`, which extends `kits/base`. `kb.toml` reads both `[kb] template` and `[kb] kit`; `distill init` writes `kit`.
-- `meta-defaults` is now `kits/base/defaults` (under `src/kb_distillery/`). Hooks are `kits/base/hooks`. Application skills move to `kits/base/skills` and `kits/research/skills`.
+- Templates are now kits. `templates/starter` is `src/kb_distillery/kits/base`; `templates/academic-research` is `src/kb_distillery/kits/research`, which extends the base kit. `kb.toml` reads both `[kb] template` and `[kb] kit`; `distill init` writes `kit`.
+- `meta-defaults` is now `src/kb_distillery/kits/base/defaults`. Hooks are `src/kb_distillery/kits/base/hooks`. Application skills move to `src/kb_distillery/kits/base/skills` and `src/kb_distillery/kits/research/skills`.
 - Knowledge bases live outside the repository, in `~/knowledge/<id>`, each in its own git repository. The base folder can be set with `KB_DISTILLERY_HOME`.
 - The user config folder `~/.config/thesis-kb/` is now `~/.config/kb-distillery/`. If only the old folder exists, the CLI prints the `mv` command and exits.
 - The built React app is written to `src/kb_distillery/_webapp` and included in the wheel.
 - Share settings (site name, subdomain, OAuth client id, allowed emails) are read from `~/.config/kb-distillery/share.toml`, or from `<kb>/.cache/share/share.toml` for one knowledge base. The repository ships only `src/kb_distillery/publish/cloudflare/share.example.toml`, with placeholders.
-- `CONTRIBUTING.md` is at the repository root. `AGENTS.md` describes the engine; subject-specific text moved to `kits/research/AGENTS.template.md`.
+- `CONTRIBUTING.md` is at the repository root. `AGENTS.md` describes the engine; subject-specific text moved to `src/kb_distillery/kits/research/AGENTS.template.md`.
 
 ### Added
 
