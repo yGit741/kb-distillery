@@ -1,3 +1,4 @@
+import { flag, type FlagName } from "@/flags";
 import type { Predicate } from "../publicPredicate";
 import type { ColorBy, SizeBy } from "../style";
 import { DEFAULT_LAB, type LabConfig } from "./config";
@@ -25,15 +26,24 @@ export interface Story {
   seed?: readonly string[];
   /** A tool panel the view opens (and the experiment flag it needs). */
   tool?: { id: string; flag?: string };
+  /** A feature flag (kits/base/defaults/flags.toml): the view is offered only while it is on. */
+  featureFlag?: FlagName;
 }
+
+/** Whether the view is offered now (its feature flag, if any, is on). Saved and linked views still apply. */
+export const storyOffered = (s: Story): boolean => !s.featureFlag || flag(s.featureFlag);
+
+/** The flag behind the views that exist for the research toolkit and the seed below. */
+const RESEARCH_TOOLS = "research-tools" as const;
 
 const CONCEPTS = ["topic", "question", "idea"] as const;
 /** Map's drawn types: every page type except the collection hubs, whose course/book names duplicate the themes' labels. */
 const MAP_TYPES = ["topic", "idea", "question", "person", "paper", "part", "lecture", "article", "video", "mail", "ai-chat", "blog-post"] as const;
 
 /**
- * The thesis spine: generalization of over-parameterized networks met through Boolean analysis. The themes,
- * the open questions that touch both, the papers the direction rests on, and the book; one hop out is drawn.
+ * The seed of the Thesis view: page slugs of one knowledge base's thesis spine (themes, the open questions
+ * that touch them, the papers and the book the direction rests on); one hop out is drawn. It only means
+ * something in a kb that has these pages, so the view is offered only with the `research-tools` flag.
  */
 export const THESIS_SEED: readonly string[] = [
   "theme-boolean-analysis",
@@ -86,6 +96,7 @@ export const STORIES: readonly Story[] = [
       hint: "The thesis spine and one hop around it",
     },
     seed: THESIS_SEED,
+    featureFlag: RESEARCH_TOOLS,
     lab: { wTier: 0.5, wEvidence: 0.4, wOpen: 1.2, wBetween: 1.6, coverage: 14, positions: 8, questionLabels: "short" },
     colorBy: "area",
     sizeBy: "evidence",
@@ -103,7 +114,8 @@ export const STORIES: readonly Story[] = [
       questions: ["What is on my mind?", "Where is my curiosity pulling me?", "Which themes do I touch but never connect?"],
       hint: "Research directions from the gaps between themes",
     },
-    tool: { id: "kalai-directions", flag: "directions" },
+    tool: { id: "research-directions", flag: "directions" },
+    featureFlag: RESEARCH_TOOLS,
     lab: { wTier: 0.3, wEvidence: 0, wDegree: 0.3, wGap: 1.5, sizeMode: "quantile" },
     colorBy: "evidence",
     sizeBy: "gap",

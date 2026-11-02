@@ -1,5 +1,6 @@
 import { useGraphUi } from "@/features/graph/store";
-import { registerTour, type TourStep } from "@/features/tour/tours";
+import { registerTour, unregisterTour, type TourStep } from "@/features/tour/tours";
+import { flag, subscribeFlags } from "@/flags";
 import { useKb } from "@/lib/store";
 
 /**
@@ -107,7 +108,7 @@ const exploreView = (): TourStep => ({
   wait: SLOW,
   place: "right",
   title: "Explore: where a thesis could sit",
-  // source: features/graph/kalai/directions.ts (gaps = two big themes that rarely share a page, holes = three themes meeting only in pairs; footholdOf: strong = reach ≥ 0.3 of my own questions/ideas to every side)
+  // source: features/graph/directions/directions.ts (gaps = two big themes that rarely share a page, holes = three themes meeting only in pairs; footholdOf: strong = reach ≥ 0.3 of my own questions/ideas to every side)
   body: "Each card is an intersection my vault leaves empty: two big themes that rarely share a page, or three that only meet in pairs. A strong foothold means my own questions and ideas already reach every side of it.",
 });
 
@@ -157,59 +158,75 @@ registerTour(
   "What is in this vault, in 90 seconds",
 );
 
-registerTour(
-  "thesis-story",
-  [
-    welcome(),
-    conceptCard(),
-    dive(VOLUME),
-    thesisView(),
-    touch(
-      VOLUME,
-      "The volume hypothesis",
-      // source: wiki/volume-hypothesis.md (one-liner; Intuition: credit to the architecture and the prior, not the optimizer)
-      "Among the weight settings that fit the training data, the ones that generalize well occupy far more prior mass than the ones that generalize badly. If so, any optimizer that fits the data — even guessing weights at random until one fits — generalizes about as well as gradient descent.",
-    ),
-    touch(
-      ALEXANDER_2025,
-      "Alexander 2025: the test case",
-      // source: wiki/paper-2025-do-neural-networks-need-gradient-descent-to-generalize.md (Main result: G&C deteriorates with width, Theorem 1; improves with depth, Theorem 2; builds on paper-2019-implicit-regularization-in-deep-matrix-factorization, linked twice)
-      "Sampling weights at random until one fits generalizes better as depth grows and worse as width grows, so width and depth pull the volume in opposite directions. It is the test case for the volume hypothesis, in the deep matrix factorizations of the 2019 implicit-regularization paper lit beside it.",
-    ),
-    exploreView(),
-    homeAgain(
-      // source: features/graph/views/ViewsBar.tsx (Σ, ⓘ); wiki/q-does-the-gradient-variance-bound-explain-the-sparse-parity-s.md (open question, spawned from paper-2017-failures-of-gradient-based-deep-learning)
-      "I left the Σ chords in Map, the other direction cards, the ⓘ behind each view, and my open question on whether the gradient-variance bound explains how SGD still learns sparse parities.",
-    ),
-  ],
-  "Why over-parameterized networks generalize — the question I am chasing",
-  { menu: false },
-);
+/**
+ * The thesis journeys walk one knowledge base's own pages and the research toolkit's views, so they exist
+ * only while the `research-tools` flag is on (kits/base/defaults/flags.toml). The flag arrives from the
+ * server after boot, so the tours are (un)registered whenever it changes.
+ */
+const THESIS_TOURS = ["thesis-story", "boolean-bridge"] as const;
 
-registerTour(
-  "boolean-bridge",
-  [
-    welcome(),
-    dive(PARITY),
-    sigma(),
-    thesisView(),
-    touch(
-      PARITY,
-      "Parity: the canonical hard function",
-      // source: wiki/parity-function.md (all Fourier mass on level |S|; low-degree learners see zero signal; Connections: paper-2017 gradient variance ≤ G(w)²/2^d); wiki/q-does-the-gradient-variance-bound-explain-the-sparse-parity-s.md
-      "The XOR of a subset of bits has all its Fourier mass on one level, so a learner that only sees low-degree correlations sees exactly zero signal, and gradient variance over random parities is exponentially small. My open question: does that bound explain the staircase results where SGD still learns k-sparse parities?",
-    ),
-    touch(
-      ODONNELL,
-      "O'Donnell's book, and Fourier degree",
-      // source: wiki/book-2014-analysis-of-boolean-functions.md (Key concepts: Fourier expansion, influence, noise stability and hypercontractivity, low-degree learning); wiki/fourier-degree.md (learnability via low-degree concentration; "the most promising bridge in this vault"; open question vs spectral bias)
-      "Analysis of Boolean Functions is where the vocabulary comes from: Fourier expansion, influence, noise stability and hypercontractivity, low-degree learning. Fourier degree is the bridge I am betting on — low-degree concentration is what makes a class learnable, and whether that is the same claim as spectral bias is an open question of mine.",
-    ),
-    homeAgain(
-      // source: wiki/noise-stability.md, wiki/gil-kalai.md (both in THESIS_SEED); features/graph/lab/views.ts (Explore)
-      "Still unseen: noise stability (the Kalai side of the bridge), Gil Kalai's blog as a hub of its own, and the Explore view where these themes meet or fail to.",
-    ),
-  ],
-  "Where Boolean analysis meets learning theory in my notes",
-  { menu: false },
-);
+function registerThesisTours(): void {
+  registerTour(
+    "thesis-story",
+    [
+      welcome(),
+      conceptCard(),
+      dive(VOLUME),
+      thesisView(),
+      touch(
+        VOLUME,
+        "The volume hypothesis",
+        // source: wiki/volume-hypothesis.md (one-liner; Intuition: credit to the architecture and the prior, not the optimizer)
+        "Among the weight settings that fit the training data, the ones that generalize well occupy far more prior mass than the ones that generalize badly. If so, any optimizer that fits the data — even guessing weights at random until one fits — generalizes about as well as gradient descent.",
+      ),
+      touch(
+        ALEXANDER_2025,
+        "Alexander 2025: the test case",
+        // source: wiki/paper-2025-do-neural-networks-need-gradient-descent-to-generalize.md (Main result: G&C deteriorates with width, Theorem 1; improves with depth, Theorem 2; builds on paper-2019-implicit-regularization-in-deep-matrix-factorization, linked twice)
+        "Sampling weights at random until one fits generalizes better as depth grows and worse as width grows, so width and depth pull the volume in opposite directions. It is the test case for the volume hypothesis, in the deep matrix factorizations of the 2019 implicit-regularization paper lit beside it.",
+      ),
+      exploreView(),
+      homeAgain(
+        // source: features/graph/views/ViewsBar.tsx (Σ, ⓘ); wiki/q-does-the-gradient-variance-bound-explain-the-sparse-parity-s.md (open question, spawned from paper-2017-failures-of-gradient-based-deep-learning)
+        "I left the Σ chords in Map, the other direction cards, the ⓘ behind each view, and my open question on whether the gradient-variance bound explains how SGD still learns sparse parities.",
+      ),
+    ],
+    "Why over-parameterized networks generalize — the question I am chasing",
+    { menu: false },
+  );
+
+  registerTour(
+    "boolean-bridge",
+    [
+      welcome(),
+      dive(PARITY),
+      sigma(),
+      thesisView(),
+      touch(
+        PARITY,
+        "Parity: the canonical hard function",
+        // source: wiki/parity-function.md (all Fourier mass on level |S|; low-degree learners see zero signal; Connections: paper-2017 gradient variance ≤ G(w)²/2^d); wiki/q-does-the-gradient-variance-bound-explain-the-sparse-parity-s.md
+        "The XOR of a subset of bits has all its Fourier mass on one level, so a learner that only sees low-degree correlations sees exactly zero signal, and gradient variance over random parities is exponentially small. My open question: does that bound explain the staircase results where SGD still learns k-sparse parities?",
+      ),
+      touch(
+        ODONNELL,
+        "O'Donnell's book, and Fourier degree",
+        // source: wiki/book-2014-analysis-of-boolean-functions.md (Key concepts: Fourier expansion, influence, noise stability and hypercontractivity, low-degree learning); wiki/fourier-degree.md (learnability via low-degree concentration; "the most promising bridge in this vault"; open question vs spectral bias)
+        "Analysis of Boolean Functions is where the vocabulary comes from: Fourier expansion, influence, noise stability and hypercontractivity, low-degree learning. Fourier degree is the bridge I am betting on — low-degree concentration is what makes a class learnable, and whether that is the same claim as spectral bias is an open question of mine.",
+      ),
+      homeAgain(
+        // source: wiki/noise-stability.md, wiki/gil-kalai.md (both in THESIS_SEED); features/graph/lab/views.ts (Explore)
+        "Still unseen: noise stability (the Kalai side of the bridge), Gil Kalai's blog as a hub of its own, and the Explore view where these themes meet or fail to.",
+      ),
+    ],
+    "Where Boolean analysis meets learning theory in my notes",
+    { menu: false },
+  );
+}
+
+function syncThesisTours(): void {
+  if (flag("research-tools")) registerThesisTours();
+  else for (const name of THESIS_TOURS) unregisterTour(name);
+}
+syncThesisTours();
+subscribeFlags(syncThesisTours);

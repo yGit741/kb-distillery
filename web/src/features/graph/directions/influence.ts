@@ -4,7 +4,7 @@ import { pageThemes } from "./fourier";
 import type { ThresholdResult } from "./threshold";
 
 /**
- * Influence of a page (Kahn–Kalai–Linial): in a random kept graph at a theme's critical point p50, a page
+ * Influence of a page (KKL): in a random kept graph at a theme's critical point p50, a page
  * is *pivotal* for that theme when the theme holds together with it and falls apart without it. Its
  * influence on the theme is the probability of being pivotal; its total influence is the sum over themes.
  * KKL says some coordinate always has influence at least ~ (log n)/n; a vault where one page carries a

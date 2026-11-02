@@ -4,9 +4,9 @@ import { CheckField, RangeField, SelectField } from "../controls";
 import type { GraphToolContext } from "../tools";
 import { useDecor } from "../tools/decor";
 import { noiseStability, stabilityCurve, type NoiseMode, type NoiseResult } from "./noise";
-import { MiniChart, num, pct, Section, Story, useCached, useDecorLifetime, useKalaiCache } from "./ui";
+import { MiniChart, num, pct, Section, Story, useCached, useDecorLifetime, useDirectionsCache } from "./ui";
 
-const OWNER = "kalai-noise";
+const OWNER = "directions-noise";
 /** below this cluster Jaccard a page gets a halo; at or above STABLE it is in the stable core */
 const FRAGILE = 0.6;
 const STABLE = 0.8;
@@ -32,13 +32,13 @@ export function NoisePanel({ ctx }: { ctx: GraphToolContext }) {
   const run = async () => {
     setProgress("0 / 10 runs");
     const value = await noiseStability(ctx.model, { eps, mode, runs: 10, onProgress: (d, t) => setProgress(`${d} / ${t} runs`) });
-    useKalaiCache.getState().put("noise", { model: ctx.model, key, value });
+    useDirectionsCache.getState().put("noise", { model: ctx.model, key, value });
     setProgress(null);
   };
   const runCurve = async () => {
     setProgress("decay curve…");
     const value = await stabilityCurve(ctx.model, { eps: CURVE_EPS, mode, runs: 4, onProgress: (d, t) => setProgress(`decay curve ${d} / ${t}`) });
-    useKalaiCache.getState().put("noise-curve", { model: ctx.model, key: mode, value });
+    useDirectionsCache.getState().put("noise-curve", { model: ctx.model, key: mode, value });
     setProgress(null);
   };
 

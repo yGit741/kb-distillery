@@ -2,7 +2,7 @@ import type { GraphModel } from "../types";
 import { breathe, louvain, pageGraph, pagerank, rng, type PageGraph } from "./core";
 
 /**
- * Noise stability (Benjamini–Kalai–Schramm): perturb the input a little and ask which conclusions survive.
+ * Noise stability (Benjamini et al.): perturb the input a little and ask which conclusions survive.
  * The input here is the vault: drop a random eps of the links (a link I never wrote) or of the sources (a
  * paper I never read), re-run the clustering and the ranking, and compare with the unperturbed run.
  *   - cluster stability of a page = mean Jaccard of its cluster, perturbed vs baseline (1 = always the same company)
