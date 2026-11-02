@@ -1,5 +1,0 @@
----
-type: meta
----
-
-# Wiki log

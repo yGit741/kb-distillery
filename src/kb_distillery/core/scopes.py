@@ -21,6 +21,7 @@ from kb_distillery.core import frontmatter
 from kb_distillery.core.graph import outbound_links
 from kb_distillery.core.schema import COLLECTION_TYPES, SOURCE_TYPES, SLUG_PREFIX
 from kb_distillery.core import links as page_links
+from kb_distillery.core.schema import is_page_file
 
 PREFIX = SLUG_PREFIX["scope"]
 MEMBERS_HEADING = "## Members"
@@ -242,7 +243,7 @@ def _stamp(root):
     """Cheap change detector: corpus mtime + wiki dir mtime + newest wiki file mtime."""
     wiki = os.path.join(root, "wiki")
     try:
-        names = os.listdir(wiki)
+        names = [n for n in os.listdir(wiki) if is_page_file(n) or not n.endswith(".md")]
         newest = max([os.path.getmtime(os.path.join(wiki, n)) for n in names] or [0])
         return (os.path.getmtime(os.path.join(root, "meta", "corpus.tsv")), os.path.getmtime(wiki),
                 newest, len(names))
@@ -267,7 +268,7 @@ def scope_context(slug, root=None):
     pages = dict()
     wiki = os.path.join(root, "wiki")
     for name in sorted(os.listdir(wiki)) if os.path.isdir(wiki) else []:
-        if not name.endswith(".md") or "excalidraw" in name:
+        if not is_page_file(name) or "excalidraw" in name:
             continue
         with open(os.path.join(wiki, name), encoding="utf-8") as f:
             text = f.read()

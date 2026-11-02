@@ -151,7 +151,7 @@
       <li><b>Agents never run git writes.</b> The shell hook allows only single <code>pixi run ops|ship|daily-sync</code> invocations; chained commands are refused.</li>
       <li><b>Wiki edits need an open operation</b> (<code>src/kb_distillery/git/guard.py</code>; warns now, blocks once strict).</li>
       <li><b>Commit messages are checked</b> by <code>scripts/githooks/commit-msg</code>; <b>pushes to main</b> must be kb steps (z+1) or PR merges (<code>pre-push</code>).</li>
-      <li><b>Undo and restore never touch</b> <code>raw/</code>, <code>think/</code>, <code>meta/log.md</code> or generated files, and never reset history.</li>
+      <li><b>Undo and restore never touch</b> <code>raw/</code>, <code>think/</code>, <code>wiki/log.md</code> or generated files, and never reset history.</li>
       <li><b>PRs are never squashed</b>; schema PRs snapshot before (<code>pre-</code>) and after (<code>post-</code>) the merge. The nightly sync takes the same lock as ops.</li>
       <li><b>Hygiene is automatic, never a gate:</b> every kb step pushes main right away (the nightly sync is the backstop); <code>ship merge</code> removes its own worktree; <code>ship prune --apply</code> removes merged, clean worktrees only; stale worktrees, session branches and the nightly state show up here and in <code>pixi run lanes</code>.</li>
     </ul>

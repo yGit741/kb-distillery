@@ -31,7 +31,7 @@ python3 -m kb_distillery.search.query mocs                    # topic pages (the
 distill lint --health                 # optional: orphans, broken links
 ```
 
-1. **Read `index.md`** — skim the relevant section (topics, questions, sources, ideas).
+1. **Read `wiki/index.md`** — skim the relevant section (topics, questions, sources, ideas).
 2. **Run `candidates`** — supplements index with full-text term hits.
 3. **Pick 3–8 slugs** — prefer topic pages (`theme-*`) + `q-*` for the research questions; Source pages
    (`paper-`, `part-`, `lecture-`, `article-`, `mail-`, `chat-`) for citations.
@@ -75,15 +75,14 @@ Karpathy: explorations should compound, not die in chat.
 | Personal deliberation | `think/*.md` (human-owned; never agent-edit directly) |
 | Comparison / analysis worth keeping | idea or question page; cross-link sources |
 
-After filing: `distill lint` and optional `meta/log.md` entry:
-`## [YYYY-MM-DD] query | <short title>`
+After filing: `distill lint`. The ops step logs itself in `wiki/log.md` (OKF shape: a `## YYYY-MM-DD` day, newest first, one `### query | <short title>` entry); add a body line under it only when it helps.
 
 ## Entry points for this vault
 
 - **Main directions:** the `theme-*` pages the question touches, and open `q-*` pages
 - **Course provenance:** `course-*` / `series-*` collections — their `## Contents` table lists every member and its digest
 - **Books:** `book-*` / `notebook-*` collections — `## Partition` links each digested `part-*`
-- **Activity:** `meta/log.md`
+- **Activity:** `wiki/log.md`
 - **Human scratch:** `think/my-true-research-start-here.md` (read if relevant; do not edit)
 
 ## Reaching raw

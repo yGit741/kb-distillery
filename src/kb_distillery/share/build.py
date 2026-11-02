@@ -1289,7 +1289,7 @@ def build(content_ref, viewer_ref="main", profile="private", *, root=REPO, viewe
         # PYTHONHASHSEED=0: set iteration order in the viewer's data builders (e.g. tie-breaks in
         # explore_data._suggest) must not vary between runs or machines. KB_CI=1: the content
         # checkout has no raw binaries (gitignored) — lint must trust meta/corpus.tsv and never
-        # regenerate index.md/corpus.tsv. KB_SHARE_GIT_ROOT: the real repo, for history reads.
+        # regenerate wiki/index.md/corpus.tsv. KB_SHARE_GIT_ROOT: the real repo, for history reads.
         env = dict(os.environ, KB_ROOT=content_dir, PYTHONDONTWRITEBYTECODE="1", PYTHONHASHSEED="0",
                    KB_CI="1")
         env.pop("PYTHONPATH", None)

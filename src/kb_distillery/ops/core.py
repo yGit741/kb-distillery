@@ -6,7 +6,7 @@ Every writer (ingest, catalog, distill, researcher, free-form wiki edits) ends i
 Human edits under think/ are committed first, on their own, as `kb(think)`.
 
 Undo and restore only ever rewrite the restorable set (schema.RESTORABLE_PATHS):
-never raw/ (immutable), think/ (human-owned), meta/log.md (append-only) or the
+never raw/ (immutable), think/ (human-owned), wiki/log.md (append-only) or the
 generated files (lint regenerates them).
 """
 import contextlib
@@ -26,10 +26,11 @@ ROOT = vault_root()
 from kb_distillery.git import commit_policy as cp
 from kb_distillery.ops.daily_sync import changed_paths, has_open_sessions, run_git
 from kb_distillery.core import log as kblog
-from kb_distillery.core.schema import OPS_DIR, RESTORABLE_PATHS, lane_of, strip_prefix
+from kb_distillery.core.schema import (INDEX_REL, LOG_REL, OPS_DIR, RESTORABLE_PATHS, RESTORE_EXCLUDED, is_page_file,
+                                       lane_of, strip_prefix)
 
-GENERATED_KNOWLEDGE = ("index.md", "meta/corpus.tsv", "meta/coherence-warnings.tsv")
-LOG_PATH = "meta/log.md"
+GENERATED_KNOWLEDGE = (INDEX_REL, "meta/corpus.tsv", "meta/coherence-warnings.tsv")
+LOG_PATH = LOG_REL
 MAX_SUMMARY = cp.MAX_SUMMARY
 # Human-owned paths committed on their own as kb(think) before any agent op (and nightly).
 HUMAN_PREFIXES = ("think/",)
@@ -122,18 +123,23 @@ def short_title(slug):
     return strip_prefix(slug).replace("-", " ") if "-" in slug else slug
 
 
+def _is_wiki_page(path):
+    """A changed path that is a wiki page (not wiki/index.md or wiki/log.md, the reserved files)."""
+    return path.startswith("wiki/") and "/" not in path[5:] and is_page_file(path[5:])
+
+
 def _target_of(target, paths):
     """A readable KB-Target: never a session id or sha (fall back to the first wiki page touched)."""
     if target and not HASH_LIKE.match(target):
         return target
     for p in paths:
-        if p.startswith("wiki/") and p.endswith(".md"):
+        if _is_wiki_page(p):
             return os.path.basename(p)[:-3]
     return target or "kb"
 
 
 def _pages(paths):
-    return sorted(os.path.basename(p)[:-3] for p in paths if p.startswith("wiki/") and p.endswith(".md"))
+    return sorted(os.path.basename(p)[:-3] for p in paths if _is_wiki_page(p))
 
 
 def _tier(root, op, target, pages=()):
@@ -489,7 +495,7 @@ def abort(root=ROOT):
 # ---------- undo / restore ----------
 
 def _restorable(path):
-    return any(path == p.rstrip("/") or (p.endswith("/") and path.startswith(p)) for p in RESTORABLE_PATHS)
+    return path not in RESTORE_EXCLUDED and any(path == p.rstrip("/") or (p.endswith("/") and path.startswith(p)) for p in RESTORABLE_PATHS)
 
 
 def _first_parent(root, ref="main"):
@@ -571,7 +577,8 @@ def restore(tag, root=ROOT):
         dirty = [p for p in changed_paths(root)["knowledge"] if _restorable(p)]
         if dirty:
             raise OpsError(f"commit or discard edits under wiki/ first: {dirty[:5]}")
-        diff = _git(root, "diff", "--name-only", "--no-renames", tag, "HEAD", "--", *RESTORABLE_PATHS).stdout.split("\n")
+        diff = _git(root, "diff", "--name-only", "--no-renames", tag, "HEAD", "--", *RESTORABLE_PATHS,
+                 *(f":(exclude){p}" for p in RESTORE_EXCLUDED)).stdout.split("\n")
         files = [f for f in diff if f]
         if not files:
             print(f"wiki already matches {tag}")

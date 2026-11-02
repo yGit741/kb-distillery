@@ -2,6 +2,7 @@
 import os
 
 from .paths import ROOT
+from kb_distillery.core.schema import is_page_file
 
 
 def is_shallow_paper(text: str) -> bool:
@@ -21,7 +22,7 @@ def shallow_paper_slugs(wiki_dir=None):
     if not os.path.isdir(base):          # a vault with no wiki/ yet (e.g. an early content commit)
         return shallow
     for fn in os.listdir(base):
-        if not fn.endswith(".md") or fn.startswith(("q-", "theme-")):
+        if not is_page_file(fn) or fn.startswith(("q-", "theme-")):
             continue
         text = open(os.path.join(base, fn), encoding="utf-8").read()
         if is_shallow_paper(text):

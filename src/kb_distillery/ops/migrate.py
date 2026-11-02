@@ -14,7 +14,7 @@ import sys
 
 from kb_distillery.paths import vault_root
 META_DIR = os.path.join(vault_root(), "meta")
-from kb_distillery.core.schema import SCHEMA_VERSION
+from kb_distillery.core.schema import LEGACY_INDEX_REL, LEGACY_LOG_REL, SCHEMA_VERSION
 from kb_distillery.paths import MIGRATIONS_CODE_PATH
 
 MIGRATIONS_DIR = os.path.join("meta", "migrations")      # vault side: applied.tsv
@@ -133,11 +133,12 @@ def _migrate_own_repo(root):
     from . import core
     core._require_main(root)
     ignore = set(core.GENERATED_KNOWLEDGE) | {core.LOG_PATH}
+    legacy = {LEGACY_INDEX_REL, LEGACY_LOG_REL}       # pre-1.7 places: a dirty one is lint/ops output, and migration 0015 deletes them
     applied = os.path.join(MIGRATIONS_DIR, "applied.tsv")
     with core.ops_lock(root):
         state = core.changed_paths(root)
         dirty = state["knowledge"]
-        stray = sorted(p for p in dirty if p not in ignore and p != "kb.toml")
+        stray = sorted(p for p in dirty if p not in ignore and p not in legacy and p != "kb.toml")
         if stray:
             raise RuntimeError("commit or discard these first, a migration must start from clean notes: "
                                + ", ".join(stray[:5]) + (" …" if len(stray) > 5 else ""))

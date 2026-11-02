@@ -34,7 +34,7 @@ def git(cwd, *args):
 def vault(tmp_path):
     from tests.core.test_scopes import manifest
     root = str(tmp_path)
-    files = {"meta/stub.py": "x = 1\n", "meta/log.md": "# log\n", ".gitignore": "meta/.ops/\n", "index.md": "v1\n",
+    files = {"meta/stub.py": "x = 1\n", "wiki/log.md": "# Log\n", ".gitignore": "meta/.ops/\n", "wiki/index.md": "v1\n",
              "meta/templates/scope.md": Path(meta_file("templates", "scope.md")).read_text()}
     for slug, text in TEXTS.items():
         files[f"wiki/{slug}.md"] = text

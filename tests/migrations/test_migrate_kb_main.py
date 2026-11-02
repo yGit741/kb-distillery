@@ -105,6 +105,32 @@ class MigrateOnKbMainTests(unittest.TestCase):
             run(self.root)
         self.assertEqual(g(self.root, "log", "--format=%s", "-1").stdout.strip(), "init")
 
+    def test_the_index_and_log_move_is_committed_and_a_dirty_legacy_index_does_not_block_it(self):
+        """Migration 0015 on a kb's main: the root index.md and meta/log.md are deleted, wiki/log.md is created, and all
+        of it is committed (a regenerated root index.md, dirty before the run, must not stop the migration)."""
+        import shutil
+        from kb_distillery.paths import MIGRATIONS_CODE_PATH
+        make_repo(self.root, toml=KB_TOML.replace("0.1", "1.6"))
+        os.remove(os.path.join(self.root, "meta", "migrations", "0001_bump.py"))
+        shutil.copy(os.path.join(MIGRATIONS_CODE_PATH, "0015_okf_index_log.py"),
+                    os.path.join(self.root, "meta", "migrations", "0015_okf_index_log.py"))
+        write(self.root, "index.md", "| [[a]] | x |\n")
+        write(self.root, "meta/log.md", "# Wiki log\n\n## [2026-08-07] setup | first\n\n## [2026-08-08] ingest | second\n")
+        g(self.root, "add", "-A")
+        g(self.root, "commit", "-q", "-m", "kb(catalog): old layout (kb-1.6.1)")
+        write(self.root, "index.md", "| [[a]] | regenerated and dirty |\n")
+        with patch("kb_distillery.ops.core.run_lint", return_value=None):
+            ids = run(self.root)
+        self.assertEqual(ids, ["0015_okf_index_log"])
+        self.assertEqual(g(self.root, "status", "--porcelain").stdout, "")                  # everything committed
+        tree = g(self.root, "ls-tree", "-r", "--name-only", "HEAD").stdout.split()
+        self.assertNotIn("index.md", tree)
+        self.assertNotIn("meta/log.md", tree)
+        self.assertIn("wiki/log.md", tree)
+        log = g(self.root, "show", "HEAD:wiki/log.md").stdout
+        self.assertLess(log.index("### ingest | second"), log.index("### setup | first"))   # newest first
+        self.assertTrue(g(self.root, "log", "--format=%s", "-1").stdout.startswith("kb(refine): migrate notes to schema"))
+
     def test_a_kb_inside_another_repo_still_needs_a_schema_pr(self):
         g(self.root, "init", "-q", "-b", "main")
         inner = os.path.join(self.root, "examples", "demo")

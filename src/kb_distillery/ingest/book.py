@@ -16,7 +16,7 @@ from .paths import ROOT
 from kb_distillery.paths import meta_file
 from kb_distillery.core import frontmatter, wikiio
 from kb_distillery.lint.lint import parse_frontmatter
-from kb_distillery.core.schema import PARTITION_COLLECTIONS, RAW_HANDWRITTEN, SLUG_PREFIX, make_slug, strip_prefix
+from kb_distillery.core.schema import PARTITION_COLLECTIONS, RAW_HANDWRITTEN, SLUG_PREFIX, is_page_file, make_slug, strip_prefix
 from kb_distillery.core.books import (DIGESTED, PART_MAX_PAGES, SKIP, book_status, carve, coverage_line, find_row,
                    parse_partition, propose, replace_partition)
 
@@ -228,7 +228,7 @@ def digested_ranges(raw_rel):
     from kb_distillery.paths import vault_root
     root = vault_root()
     out = []
-    for path in glob.glob(os.path.join(root, "wiki", "*.md")):
+    for path in _wiki_pages(os.path.join(root, "wiki")):
         try:
             with open(path, encoding="utf-8") as f:
                 head = f.read(1200)
@@ -299,9 +299,14 @@ def template_for(page_type):
     return meta_file("templates", f"{page_type}.md")
 
 
+def _wiki_pages(wiki_dir):
+    """Absolute paths of the wiki's pages (index.md and log.md are the bundle's reserved files, not pages)."""
+    return [p for p in glob.glob(os.path.join(wiki_dir, "*.md")) if is_page_file(os.path.basename(p))]
+
+
 def find_hub(raw_rel):
     """(wiki_rel, text) of the book/notebook page for this raw file, or None."""
-    for path in sorted(glob.glob(os.path.join(ROOT, "wiki", "*.md"))):
+    for path in sorted(_wiki_pages(os.path.join(ROOT, "wiki"))):
         try:
             with open(path, encoding="utf-8") as f:
                 text = f.read()

@@ -76,7 +76,7 @@ class LintCiTest(unittest.TestCase):
         snap, out = self._run({"KB_CI": "1"})
         self.assertEqual(snap["values"]["errors"], 0, lint.errors)
         self.assertIn("partial checkout:", out)
-        self.assertIn("wrote index.md", out)                     # a partial checkout still regenerates
+        self.assertIn("wrote wiki/index.md", out)                     # a partial checkout still regenerates
         with open(os.path.join(self.root, "meta", "corpus.tsv"), encoding="utf-8") as f:
             self.assertIn(RAW, f.read(), "the missing binary keeps its manifest row under KB_CI")
         self.assertEqual(snap["_rows"][RAW]["disposition"], "source")
@@ -88,7 +88,7 @@ class LintCiTest(unittest.TestCase):
             snap, out = self._run({})
         self.assertTrue(any(f"raw: {RAW} does not exist on disk" in e for e in lint.errors), lint.errors)
         self.assertNotIn("KB_CI:", out)
-        self.assertIn("wrote index.md", out)
+        self.assertIn("wrote wiki/index.md", out)
         self.assertNotIn(RAW, snap["_rows"], "reconcile drops a manifest row whose file is gone")
 
 

@@ -5,7 +5,7 @@ archived content ref), else the checkout this code runs from. Every module reads
 of recomputing them from `__file__`. Data paths are absolute constants built from the schema's
 repo-relative names (`kb_distillery.core.schema`), so renaming a vault folder is one edit in the schema.
 
-Layout (code vs vault): code lives in `src/kb_distillery`; vault metadata (corpus.tsv, log.md, chats/,
+Layout (code vs vault): code lives in `src/kb_distillery`; vault metadata (corpus.tsv, chats/,
 templates/, migration state) stays in `meta/`.
 """
 import os
@@ -74,12 +74,12 @@ RAW_PATH = vpath(_rel("RAW_DIR", "raw"))
 # Think is ONE shared human space for every knowledge base (`kbs/think/`, its own repo); a vault's own think/
 # only when that is absent. Repo-relative think paths are spelled `think/<file>` everywhere.
 THINK_PATH = kbconfig.think_root(ROOT)
-INDEX_PATH = vpath("index.md")
+INDEX_PATH = vpath(_rel("INDEX_REL", "wiki/index.md"))
 QUARANTINE_PATH = vpath(_rel("QUARANTINE_DIR", "_quarantine"))
 
 # --- vault metadata (meta/) ---------------------------------------------------------------------------
 MANIFEST_PATH = vpath(_rel("MANIFEST", "meta/corpus.tsv"))
-LOG_PATH = vpath("meta", "log.md")
+LOG_PATH = vpath(_rel("LOG_REL", "wiki/log.md"))
 ALIASES_PATH = vpath("meta", "aliases.tsv")
 COHERENCE_PATH = vpath("meta", "coherence-warnings.tsv")
 RAW_RENAMES_PATH = vpath("meta", "raw-renames.tsv")

@@ -309,9 +309,9 @@ class ApiTests(unittest.TestCase):
         self.addCleanup(_lint.stop)
         files = dict()
         files["meta/stub.py"] = "x = 1\n"
-        files["meta/log.md"] = "# log\n"
+        files["wiki/log.md"] = "# log\n"
         files[".gitignore"] = "meta/.ops/\n"
-        files["index.md"] = "v1\n"
+        files["wiki/index.md"] = "v1\n"
         files["meta/templates/scope.md"] = Path(meta_file("templates", "scope.md")).read_text()
         for slug, text in TEXTS.items():
             files[f"wiki/{slug}.md"] = text
@@ -349,7 +349,7 @@ class ApiTests(unittest.TestCase):
         self.assertRegex(res["version"], rf"^kb-{schema.SCHEMA_VERSION[0]}\.{schema.SCHEMA_VERSION[1]}\.\d+$")
         self.assertEqual(self.commits(), n + 1)
         self.assertTrue(git(self.root, "log", "-1", "--format=%s").startswith("kb(refine): "))
-        self.assertEqual(self.files_of_head(), ["meta/corpus.tsv", "meta/log.md", "wiki/scope-alpha.md"])
+        self.assertEqual(self.files_of_head(), ["meta/corpus.tsv", "wiki/log.md", "wiki/scope-alpha.md"])
         text = Path(self.root, "wiki", "scope-alpha.md").read_text()
         self.assertIn("# Alpha set", text)
         self.assertIn("Because [q-y](q-y.md) needs it.", text)       # a typed wikilink is stored as a page link
@@ -363,18 +363,18 @@ class ApiTests(unittest.TestCase):
 
         self.save(paths=[B], create=False, why="Now about [[theme-learning-theory]].", title="")
         self.assertEqual(self.commits(), n + 2)
-        self.assertEqual(self.files_of_head(), ["meta/corpus.tsv", "meta/log.md", "wiki/scope-alpha.md"])
+        self.assertEqual(self.files_of_head(), ["meta/corpus.tsv", "wiki/log.md", "wiki/scope-alpha.md"])
         self.assertEqual(sc.rows_of("scope-alpha", lint.read_manifest(self.root)), [B])
         self.assertIn("# Alpha set", Path(self.root, "wiki", "scope-alpha.md").read_text())
 
         self.sd.duplicate_scope(dict(slug="scope-alpha", new_slug="beta"), root=self.root, lint=False, push=False)
         self.assertEqual(self.commits(), n + 3)
-        self.assertEqual(self.files_of_head(), ["meta/corpus.tsv", "meta/log.md", "wiki/scope-beta.md"])
+        self.assertEqual(self.files_of_head(), ["meta/corpus.tsv", "wiki/log.md", "wiki/scope-beta.md"])
         self.assertEqual(sc.rows_of("scope-beta", lint.read_manifest(self.root)), [B])
 
         self.sd.delete_scope(dict(slug="scope-alpha"), root=self.root, lint=False, push=False)
         self.assertEqual(self.commits(), n + 4)
-        self.assertEqual(self.files_of_head(), ["meta/corpus.tsv", "meta/log.md", "wiki/scope-alpha.md"])
+        self.assertEqual(self.files_of_head(), ["meta/corpus.tsv", "wiki/log.md", "wiki/scope-alpha.md"])
         self.assertFalse(Path(self.root, "wiki", "scope-alpha.md").exists())
         self.assertEqual(sc.all_scopes(lint.read_manifest(self.root)), ["scope-beta"])
         self.assertEqual(git(self.root, "status", "--porcelain"), "")

@@ -152,7 +152,7 @@ class TestDrainCount(unittest.TestCase):
     def test_items_not_paths(self):
         from kb_distillery.ops.wrap import _items
         paths = ["raw/printed-docs/2020-a.pdf", "wiki/paper-2020-a.md", "wiki/paper-2021-b.md",
-                 "raw/printed-docs/2021-b.pdf", "meta/corpus.tsv", "index.md"]
+                 "raw/printed-docs/2021-b.pdf", "meta/corpus.tsv", "index.md", "wiki/index.md", "wiki/log.md"]
         self.assertEqual(_items(paths), 2)
         self.assertEqual(_items(["meta/corpus.tsv"]), 1)
 

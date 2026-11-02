@@ -108,7 +108,8 @@ class WorktreeChecks(Repo):
     def test_generated_files_do_not_make_a_worktree_dirty(self):
         path = self.worktree("live", "infra/live")
         self.commit("meta/x.py", "x = 1", "feat(x): one", cwd=path)
-        for rel in ("index.md", "meta/corpus.tsv"):
+        for rel in ("wiki/index.md", "meta/corpus.tsv"):
+            os.makedirs(os.path.dirname(os.path.join(path, rel)), exist_ok=True)
             with open(os.path.join(path, rel), "w") as f:
                 f.write("generated\n")
         self.assertEqual(hygiene.check_worktrees(self.root, NOW), [])

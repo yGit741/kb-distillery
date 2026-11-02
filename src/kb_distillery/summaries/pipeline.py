@@ -11,6 +11,7 @@ from kb_distillery.core import schema
 from kb_distillery.core.summary import (body_of, hand_written, needs_summary, now_stamp, problems, section, summary_hash,
                                        tool_actor, unquote, with_offset)
 from kb_distillery.lint.lint import parse_frontmatter
+from kb_distillery.core.schema import is_page_file
 
 MODEL = "sonnet"
 PER_CALL = 10                 # pages per model call
@@ -44,7 +45,7 @@ def load_pages(root=None):
     wiki = paths.vpath("wiki", root=root) if root else paths.WIKI_PATH
     out = []
     for name in sorted(os.listdir(wiki)):
-        if not name.endswith(".md"):
+        if not is_page_file(name):
             continue
         p = os.path.join(wiki, name)
         with open(p, encoding="utf-8") as f:

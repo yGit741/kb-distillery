@@ -4,6 +4,7 @@ import re
 
 from kb_distillery.core import links
 from .paths import ROOT, think_cite, wiki_slugs
+from kb_distillery.core.schema import is_page_file
 
 
 THEME_KEYWORDS = [
@@ -21,7 +22,7 @@ THEME_KEYWORDS = [
 def _walk_wiki():
     base = os.path.join(ROOT, "wiki")
     for fn in os.listdir(base):
-        if fn.endswith(".md"):
+        if is_page_file(fn):
             rel = f"wiki/{fn}"
             text = open(os.path.join(ROOT, rel), encoding="utf-8").read()
             yield fn[:-3], rel, text

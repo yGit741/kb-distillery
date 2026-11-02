@@ -338,14 +338,14 @@ def build(root, inputs):
     for name in META_COPY:
         if (META_SRC / name).is_dir():
             shutil.copytree(META_SRC / name, meta / name, ignore=CODE_IGNORE)
-    (root / "kb.toml").write_text('[kb]\nid = "harness"\nname = "Harness fixture vault"\nschema_version = "1.6"\n'
+    (root / "kb.toml").write_text('[kb]\nid = "harness"\nname = "Harness fixture vault"\nschema_version = "1.7"\n'
                                   '\n[types]\nareas = [' + ", ".join(f'"{t}"' for t in TOPICS) + ']\n', encoding="utf-8")
     (meta / "corpus.tsv").write_text(MANIFEST_HEADER, encoding="utf-8")
     (meta / "aliases.tsv").write_text("", encoding="utf-8")
-    (meta / "log.md").write_text("# Log\n", encoding="utf-8")
     (meta / "thesis.md").write_text("# Thesis\n\nFixture.\n", encoding="utf-8")
     (meta / "coherence-warnings.tsv").write_text("id\tscore\tkind\tslugs\tsummary\tstatus\n", encoding="utf-8")
     (root / "wiki").mkdir()
+    (root / "wiki" / "log.md").write_text("# Log\n", encoding="utf-8")
     for slug, text in pages.items():
         (root / "wiki" / f"{slug}.md").write_text(text, encoding="utf-8")
     for d in RAW_DIRS:

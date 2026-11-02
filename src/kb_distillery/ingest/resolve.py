@@ -10,6 +10,7 @@ from kb_distillery.lint.lint import parse_frontmatter, read_manifest, walk
 from kb_distillery.core.schema import DUPE_PREFIX, INK_PREFIX, WIKI_DIR
 
 from .paths import ROOT
+from kb_distillery.core.schema import is_page_file
 
 # New-style IDs (2007+): 1906.05890. Old-style (pre-2007): math/9811157, math.PR/0503503,
 # hep-th/9901001 — an archive name, optional subject class, a slash, then YYMMNNN.
@@ -123,7 +124,7 @@ def build_indexes():
             idx.by_sha1.setdefault(h, []).append(path)
 
     for rel in walk(WIKI_DIR, ".md"):
-        if "excalidraw" in rel:
+        if "excalidraw" in rel or not is_page_file(os.path.basename(rel)):
             continue
         slug = os.path.basename(rel)[:-3]
         with open(os.path.join(ROOT, rel), encoding="utf-8") as f:

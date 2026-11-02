@@ -51,7 +51,7 @@ ROOT = checkout_root()
 
 from kb_distillery.ops.daily_sync import changed_paths, has_open_sessions, run_git
 from kb_distillery.git import app_token, claims, commit_policy, events, gate_cache, gate_slot, rounds
-from kb_distillery.core.schema import GATE_PREFIXES as GP, GIT_POLICY_MODE, SCHEMA_VERSION
+from kb_distillery.core.schema import GATE_PREFIXES as GP, GIT_POLICY_MODE, INDEX_REL, SCHEMA_VERSION
 
 GATES = [
     ("tests", [sys.executable, "-m", "pytest", "-q", "-n", "6", "-m", "not serial", "tests"]),
@@ -61,7 +61,7 @@ GATES = [
     ("lint", [sys.executable, "-m", "kb_distillery.lint.lint"]),
 ]
 SUBCOMMANDS = {"whoami", "claims", "events", "round", "queue", "start", "commit", "pr", "merge", "sync", "status", "prune", "protect", "approve", "tag", "mv"}
-GENERATED_FILES = {"index.md", "meta/corpus.tsv", "meta/coherence-warnings.tsv"}
+GENERATED_FILES = {INDEX_REL, "meta/corpus.tsv", "meta/coherence-warnings.tsv"}
 MIGRATED_GENERATED = {"meta/corpus.tsv"}   # a migration's output: committed by schema/paradigm commits
 FEATURE_RE = re.compile(r"^[a-z0-9][a-z0-9-]*$")
 FORBIDDEN_MERGE_FLAGS = {"--squash", "--rebase", "-s", "-r"}

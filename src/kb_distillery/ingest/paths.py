@@ -5,7 +5,7 @@ import os
 import sys
 
 from kb_distillery.lint.lint import parse_frontmatter
-from kb_distillery.core.schema import INGEST_DIR, MANIFEST, MANIFEST_COLS, ROOT_MD, WIKI_DIR
+from kb_distillery.core.schema import INGEST_DIR, MANIFEST, MANIFEST_COLS, ROOT_MD, WIKI_DIR, is_page_file
 
 from kb_distillery.paths import vault_root
 ROOT = vault_root()  # KB_ROOT: share build
@@ -123,7 +123,7 @@ def wiki_slugs():
     slugs = set()
     base = os.path.join(ROOT, WIKI_DIR)
     for fn in os.listdir(base):
-        if fn.endswith(".md") and "excalidraw" not in fn:
+        if is_page_file(fn) and "excalidraw" not in fn:
             slugs.add(fn[:-3])
     think_base = os.path.join(base, "think")
     if os.path.isdir(think_base):

@@ -9,6 +9,7 @@ import os
 import sys
 
 from . import core
+from kb_distillery.core.schema import is_page_file
 
 # (subcommand, sub-subcommand or None) -> (op, already linted by the command)
 INGEST = {
@@ -62,7 +63,7 @@ def _target(paths, pos):
     if slug:
         return slug
     for p in paths:
-        if p.startswith("wiki/") and p.endswith(".md") and "/distilled-think-" not in p:
+        if p.startswith("wiki/") and is_page_file(os.path.basename(p)) and "/distilled-think-" not in p:
             return os.path.basename(p)[:-3]
     for p in paths:
         parts = p.split("/")
@@ -77,12 +78,12 @@ def _target(paths, pos):
 def _items(paths):
     """Cataloged items, not changed paths: a paper is a raw PDF plus its wiki stub (one item),
     and corpus.tsv, index.md and the log are bookkeeping. Falls back to the path count."""
-    from kb_distillery.core.schema import strip_prefix
+    from kb_distillery.core.schema import is_page_file, strip_prefix
     stems = set()
     for p in paths:
         if p.startswith("raw/"):
             stems.add(os.path.splitext(os.path.basename(p))[0])
-        elif p.startswith("wiki/") and p.endswith(".md"):
+        elif p.startswith("wiki/") and is_page_file(os.path.basename(p)):
             stems.add(strip_prefix(os.path.basename(p)[:-3]))
     return len(stems) or len(paths)
 

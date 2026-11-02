@@ -102,8 +102,9 @@ def read_title(wiki_dir: str, slug: str) -> str:
 def read_titles(wiki_dir: str) -> dict:
     """{slug: shown title} of every flat page below `wiki_dir` (excalidraw drawings left out)."""
     import os
+    from kb_distillery.core.schema import is_page_file
     return {fn[:-3]: read_title(wiki_dir, fn[:-3]) for fn in sorted(os.listdir(wiki_dir))
-            if fn.endswith(".md") and "excalidraw" not in fn}
+            if is_page_file(fn) and "excalidraw" not in fn}
 
 
 def plain(text: str) -> str:

@@ -17,6 +17,7 @@ from kb_distillery.core.coherence import load_warnings
 from kb_distillery.lint.lint import collect_snapshot, collections_of, parse_frontmatter, raw_paths
 from kb_distillery.core.schema import (DEPTH, COLLECTION_TYPES, PARTITION_COLLECTIONS, SOURCE_TYPES, RAW_DIR,  # noqa: E402
                     RAW_EMAILS, RAW_INBOX, RAW_VIDEOS, VIDEO_ITEM, RAW_PRINTED, CONTENTS_COLLECTIONS, WIKI_DIR)
+from kb_distillery.core.schema import is_page_file
 
 ROOT = vault_root()  # KB_ROOT: share build
 INGEST_ROOT = os.path.join(ROOT, "meta", ".ingest")
@@ -112,7 +113,7 @@ def _load_pages():
     if not os.path.isdir(base):
         return pages
     for fn in os.listdir(base):
-        if not fn.endswith(".md") or "excalidraw" in fn:
+        if not is_page_file(fn) or "excalidraw" in fn:
             continue
         rel = f"{WIKI_DIR}/{fn}"
         text = open(os.path.join(ROOT, rel), encoding="utf-8").read()

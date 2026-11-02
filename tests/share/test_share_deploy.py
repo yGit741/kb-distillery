@@ -424,8 +424,8 @@ class CommitOpHookTests(unittest.TestCase):
         _lint = mock.patch("kb_distillery.ops.core.run_lint", return_value=None)  # lint of a bare temp repo is not under test
         _lint.start()
         self.addCleanup(_lint.stop)
-        for rel, text in (("meta/stub.py", "x = 1\n"), ("meta/log.md", "# log\n"),
-                          (".gitignore", "meta/.ops/\n"), ("wiki/b.md", "v1\n"), ("index.md", "v1\n")):
+        for rel, text in (("meta/stub.py", "x = 1\n"), ("wiki/log.md", "# Log\n"),
+                          (".gitignore", "meta/.ops/\n"), ("wiki/b.md", "v1\n"), ("wiki/index.md", "v1\n")):
             Path(self.root, rel).parent.mkdir(parents=True, exist_ok=True)
             Path(self.root, rel).write_text(text)
         g(self.root, "add", "-A")

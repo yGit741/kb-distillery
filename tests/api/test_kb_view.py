@@ -31,7 +31,7 @@ label = "Topic notes"
 def _kb(root, kb_id, types, pages):
     os.makedirs(os.path.join(root, "wiki"))
     with open(os.path.join(root, "kb.toml"), "w", encoding="utf-8") as f:
-        f.write(f'[kb]\nid = "{kb_id}"\nname = "{kb_id.title()}"\nschema_version = "1.6"\n{types}')
+        f.write(f'[kb]\nid = "{kb_id}"\nname = "{kb_id.title()}"\nschema_version = "1.7"\n{types}')
     for slug, (ptype, body) in pages.items():
         with open(os.path.join(root, "wiki", f"{slug}.md"), "w", encoding="utf-8") as f:
             f.write(f"---\ntype: {ptype}\n---\n\n# {slug.title()}\n\n{body}\n")

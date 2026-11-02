@@ -12,6 +12,7 @@ from . import arxiv_meta
 from .paths import ROOT
 from kb_distillery.core import frontmatter, wikiio
 from .resolve import normalize_arxiv_id
+from kb_distillery.core.schema import is_page_file
 
 WIKI = os.path.join(ROOT, "wiki")
 FM_AUTHORS = re.compile(r"^authors:.*$", re.M)
@@ -46,7 +47,7 @@ def candidates():
     """[(path, arxiv_id, current_authors, title)] for paper pages that cite arXiv."""
     out = []
     for fn in sorted(os.listdir(WIKI)):
-        if not fn.endswith(".md"):
+        if not is_page_file(fn):
             continue
         path = os.path.join(WIKI, fn)
         with open(path, encoding="utf-8") as f:
@@ -167,7 +168,7 @@ def wrong_downloads(stamp=None, pages=None):
     stamp = stamp or arxiv_meta.stamp
     out = []
     for fn in sorted(pages if pages is not None else os.listdir(WIKI)):
-        if not fn.endswith(".md"):
+        if not is_page_file(fn):
             continue
         path = os.path.join(WIKI, fn)
         with open(path, encoding="utf-8") as f:

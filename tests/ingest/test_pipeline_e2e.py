@@ -71,7 +71,7 @@ def build_vault(root):
     # goldens were recorded with, so the test gives the same answer whichever kb the suite runs under
     areas = sorted(GOLDEN_AREAS)
     with open(os.path.join(root, "kb.toml"), "w", encoding="utf-8") as f:
-        f.write('[kb]\nid = "e2e"\nname = "E2E fixture vault"\nschema_version = "1.6"\n\n[types]\nareas = ['
+        f.write('[kb]\nid = "e2e"\nname = "E2E fixture vault"\nschema_version = "1.7"\n\n[types]\nareas = ['
                 + ", ".join(f'"{a}"' for a in areas) + "]\n")
     for name in os.listdir(os.path.join(DATA, "seed", "meta")):
         shutil.copy(os.path.join(DATA, "seed", "meta", name), os.path.join(root, "meta", name))
@@ -192,7 +192,7 @@ def run_pipeline(root):
 
 
 _TS = re.compile(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?")
-_DATE_HDR = re.compile(r"^## \[\d{4}-\d{2}-\d{2}\]", re.M)
+_DATE_HDR = re.compile(r"^## \d{4}-\d{2}-\d{2}$", re.M)
 
 
 def _norm(obj, root):
@@ -257,8 +257,7 @@ def collect_outputs(p, lint, coherence):
         for fn in sorted(os.listdir(os.path.join(root, d))):
             files[f"{d}/{fn}"] = p.read(f"{d}/{fn}")
     files["meta/corpus.tsv"] = p.read("meta/corpus.tsv")
-    files["index.md"] = p.read("index.md")
-    files["meta/log.md"] = _DATE_HDR.sub("## [<date>]", p.read("meta/log.md"))
+    files["wiki/log.md"] = _DATE_HDR.sub("## <date>", p.read("wiki/log.md"))
     return _norm(outputs, root), files
 
 

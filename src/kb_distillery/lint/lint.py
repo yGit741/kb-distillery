@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Vault linter. `src/kb_distillery/lint/lint.py` IS the schema — if it passes, the vault is legal.
 
-    python3 -m kb_distillery.lint.lint                 check + reconcile + regenerate index.md
+    python3 -m kb_distillery.lint.lint                 check + reconcile + regenerate wiki/index.md
     python3 -m kb_distillery.lint.lint --health        terminal health summary
     python3 -m kb_distillery.lint.lint --dashboard     localhost health UI
     python3 -m kb_distillery.lint.lint --coherence-only  semantic coherence checks only (debug)
@@ -29,7 +29,7 @@ from kb_distillery.core.schema import (ASSET_NAME, ASSET_PREFIX, BARE_TYPES, BLA
                     PLACEHOLDER_TITLE, RAW_NAME, RAW_NESTED, RAW_DIR, RAW_EMAILS, RAW_INBOX,
                     RAW_PRINTED, RAW_SUBDIRS, RAW_VIDEOS, VIDEO_ITEM, RESERVED_PREFIXES, ROOT_DIRS, ROOT_FILES,
                     ROOT_LINT_IGNORE, ROOT_MD, CONTENTS_COLLECTIONS, SIDECAR_ELIGIBLE_KINDS, SLUG_PREFIX,
-                    TOPIC_PREFIX, TOPIC_SLUGS, THINK_DIR, TYPE_STATUS, WIKI_DIR, YEARED, strip_prefix,
+                    TOPIC_PREFIX, TOPIC_SLUGS, THINK_DIR, TYPE_STATUS, WIKI_DIR, YEARED, strip_prefix, INDEX_REL, OKF_VERSION, RESERVED_PAGES, is_page_file,
                     LAYER_OF, RETIRED_DEPTH, RETIRED_DISPOSITIONS, RETIRED_KEYS, RETIRED_TYPES)
 from kb_distillery.core.books import (DIGESTED, OVERVIEW_HEADING, OVERVIEW_MIN_CHARS, PARTITION_HEADING, SKIP,
                    book_status, coverage, coverage_line, find_row, overview_ok,
@@ -359,10 +359,15 @@ def check_dupes(rows):
             warn(p, f"byte-identical to {canonical} — set disposition dupe:{canonical}")
 
 
+def wiki_page_files():
+    """Repo-relative paths of the wiki's markdown pages: the OKF reserved files (index.md, log.md) are not pages."""
+    return [rel for rel in walk(WIKI_DIR, ".md") if is_page_file(os.path.basename(rel))]
+
+
 def load_wiki_pages():
     """Load wiki pages without schema validation (for coherence-only debug)."""
     pages = {}
-    for rel in walk(WIKI_DIR, ".md"):
+    for rel in wiki_page_files():
         if "excalidraw" in rel:
             continue
         text = open(os.path.join(ROOT, rel), encoding="utf-8").read()
@@ -405,7 +410,7 @@ def _coherence_only_main():
 def check_wiki():
     pages = {}
     no_summary = []
-    for rel in walk(WIKI_DIR, ".md"):
+    for rel in wiki_page_files():
         parts = rel.split("/")
         text = open(os.path.join(ROOT, rel), encoding="utf-8").read()
         slug = os.path.basename(rel)[:-3]
@@ -631,22 +636,27 @@ def check_table_pipes(pages):
 
 def known_link_targets(pages):
     known = set(pages) | {os.path.basename(p)[:-3] for p in walk(META_DIR, ".md")}
-    known |= {p[:-3] for p in ROOT_MD}
+    known |= {p[:-3] for p in ROOT_MD} | {p[:-3] for p in RESERVED_PAGES}
     return known
 
 
 def check_index_links(pages):
-    """index.md is generated after check_links runs, so it is checked on its own: a row that points at
-    nothing is a generator bug (it was: write_index hardcoded [[thesis]], [[log]] and [[AGENTS]])."""
-    path = os.path.join(ROOT, "index.md")
+    """wiki/index.md is generated after check_links runs, so it is checked on its own: it links with `[Title](slug.md)`
+    like every page (a wikilink there is an error), and a row that points at no page is a generator bug (it was:
+    write_index hardcoded [[thesis]], [[log]] and [[AGENTS]])."""
+    path = os.path.join(ROOT, INDEX_REL)
     if not os.path.isfile(path):
         return 0
-    known, broken = known_link_targets(pages), 0
+    broken = 0
     with open(path, encoding="utf-8") as f:
-        text = f.read()
-    for target in page_links.wikilink_targets(CODE.sub("", text)):
-        if target not in known:
-            err("index.md", f"wikilink [[{target}]] resolves to nothing — write_index must only list pages that exist")
+        text = CODE.sub("", f.read())
+    for target in page_links.wikilink_targets(text):
+        err(INDEX_REL, f"wikilink [[{target}]] — the index links with [Title](slug.md), like every page")
+        broken += 1
+    for m in page_links.PAGE_LINK.finditer(text):
+        target = page_links.link_parts(m)[1]
+        if target not in pages:
+            err(INDEX_REL, f"link {m.group(0)} resolves to nothing — write_index must only list pages that exist")
             broken += 1
     return broken
 
@@ -1366,8 +1376,8 @@ def main():
 
     from kb_distillery.kbconfig import checkout_root
     if checkout_root() and os.path.realpath(ROOT) == os.path.realpath(checkout_root()) and not os.path.isdir(os.path.join(ROOT, "wiki")):
-        # No knowledge base selected: ROOT is an engine checkout with no vault in it, and lint would write index.md and meta/ there.
-        print("error: no knowledge base selected — lint would write index.md and meta/ into the engine checkout.\n"
+        # No knowledge base selected: ROOT is an engine checkout with no vault in it, and lint would write wiki/index.md and meta/ there.
+        print("error: no knowledge base selected — lint would write wiki/index.md and meta/ into the engine checkout.\n"
               "       pass --kb <id|path> or set KB (pixi run kb-list shows them).", file=sys.stderr)
         return 2
 
@@ -1449,42 +1459,34 @@ def sync_search_cards():
         qmd_client.refresh(timeout=0.5)      # the service re-indexes now instead of within 10 min
 
 
-def _page_file_exists(*parts):
-    return os.path.isfile(os.path.join(ROOT, *parts))
-
-
-# (slug, summary, exists?) — the Meta rows of index.md; a row is written only when its file is there.
-META_PAGES = [
-    ("thesis", "Thesis topic, instructor, institution",
-     lambda pages: "thesis" in pages or _page_file_exists("thesis.md") or _page_file_exists(META_DIR, "thesis.md")),
-    ("log", "Activity timeline", lambda pages: _page_file_exists(META_DIR, "log.md")),
-    ("AGENTS", "Schema and workflows", lambda pages: _page_file_exists("AGENTS.md")),
-]
-
-
 def write_index(pages, quiet=False):
-    out = ["---", "type: meta", "---", "", "# Wiki index", "",
+    """wiki/index.md, the OKF reserved catalog of the bundle: frontmatter holds only `okf_version`, the body is one
+    bulleted `[Title](slug.md)` list per page type. Generated on every lint run; never hand-edited."""
+    titles = {slug: page_links.title_of(text, slug) for slug, (_rel, _fm, text) in pages.items()}
+    out = ["---", f"okf_version: {OKF_VERSION}", "---", "", "# Wiki index", "",
            "> Generated by `src/kb_distillery/lint/lint.py`. Do not hand-edit.", "",
            "Read this first on any query.", ""]
-    meta_rows = [f"| [[{slug}]] | {what} |" for slug, what, exists in META_PAGES if exists(pages)]
-    if meta_rows:
-        out += ["## Meta", "", "| Page | Summary |", "|------|---------|"] + meta_rows + [""]
     for t, title in SECTIONS:
         rows = []
         for slug in sorted(pages):
             rel, fm, text = pages[slug]
             if fm.get("type") != t:
                 continue
-            s = page_links.plain(summary_lib.unquote(fm.get("description")) or first_line(text)).replace("|", "\\|")
+            s = " ".join(page_links.plain(summary_lib.unquote(fm.get("description")) or first_line(text)).split())
             if len(s) > 110:
                 s = s[:107] + "..."
-            rows.append(f"| [[{slug}]] | {fm.get('maturity','')} | {s} |")
+            row = "- " + page_links.page_link(slug, titles)
+            if fm.get("maturity"):
+                row += f" ({fm['maturity']})"
+            rows.append(row + (f" — {s}" if s else ""))
         if rows:
-            out += [f"## {title}", "", "| Page | Status | Summary |",
-                    "|------|--------|---------|"] + rows + [""]
-    open(os.path.join(ROOT, "index.md"), "w", encoding="utf-8").write("\n".join(out))
+            out += [f"## {title}", ""] + rows + [""]
+    path = os.path.join(ROOT, INDEX_REL)
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f:
+        f.write("\n".join(out))
     if not quiet:
-        print("wrote index.md")
+        print(f"wrote {INDEX_REL}")
 
 
 if __name__ == "__main__":

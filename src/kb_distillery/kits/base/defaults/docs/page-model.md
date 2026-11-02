@@ -91,7 +91,7 @@ and applied only after review; the graph reads them behind the `graph-relations`
 
 **`description:`** (schema 1.3 as `summary:`, renamed in 1.5, `src/kb_distillery/core/summary.py`) — every page except courses and `listed`
 sources carries one English line saying what the page is and its main point, in the same template for
-every type, so a short idea and a long post are equally searchable. It feeds `index.md`, search cards and
+every type, so a short idea and a long post are equally searchable. It feeds `wiki/index.md`, search cards and
 embeddings. Sonnet writes it (`pixi run summarize -- run --slugs <slug>`, then `apply` inside an ops
 session); `summary_from` lets lint warn when the page's point changed since. A page that gets deeper is
 re-summarized; edits to links, Connections or typos never are. Lint: malformed → error, missing → one
@@ -132,6 +132,15 @@ string by hand. Wikilinks (`[[slug]]`) survive only inside the user's `## My not
 (graph, backlinks, search) read both forms. Lint fails on a wikilink outside My notes (code, math and HTML comments are
 not read), on a link to no page, on a heading the target lacks, and on a path (`wiki/x.md`). `[[]]` stays a
 harmless empty placeholder. Schema 1.6 moved every page to this form (migration `0014_okf_links`).
+
+**Reserved files (schema 1.7).** `wiki/` is the OKF bundle root, and OKF reserves two files in it: `wiki/index.md` and
+`wiki/log.md`. They are not pages: no `type`, no frontmatter rules, never scanned, linted as pages, graphed, searched,
+counted, shared as nodes or restored by undo. `index.md` is generated on every lint run (frontmatter holds only
+`okf_version: 0.2`; the body is one bulleted `[Title](slug.md) (maturity) — summary` list per page type; no Meta
+section; wikilinks in it are a lint error). `log.md` is the append-only activity timeline: no frontmatter, `# Log`, one
+`## YYYY-MM-DD` heading per day (newest day first) and under it that day's entries, newest first, each
+`### <op> | <summary>` plus ` ← ` and the backticked targets when it has any; `kb_distillery.core.log` is its only writer.
+Migration `0015_okf_index_log` moved both from `index.md` and `meta/log.md`; a root `index.md` is never written again.
 
 ## Note sections
 

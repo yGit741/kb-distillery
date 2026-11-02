@@ -80,7 +80,7 @@ python3 -m kb_distillery.search.query candidates "<keywords>"   # rank slugs (0 
 python3 -m kb_distillery.search.query mocs                      # topic pages (theme-*) as entry points
 ```
 
-Workflow: `index.md` → `candidates` → read 3–8 pages → synthesize. Not the same as `kb_distillery.ingest resolve` (ingest dedup).
+Workflow: `wiki/index.md` → `candidates` → read 3–8 pages → synthesize. Not the same as `kb_distillery.ingest resolve` (ingest dedup).
 
 ## Distill think
 

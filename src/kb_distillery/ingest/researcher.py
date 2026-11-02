@@ -17,6 +17,7 @@ from .paths import ROOT, wiki_slugs, wiki_titles
 from kb_distillery.core import links, persons
 from kb_distillery.core import wikiio
 from kb_distillery.core.schema import make_slug
+from kb_distillery.core.schema import is_page_file
 
 
 def _wiki(p):
@@ -221,7 +222,7 @@ def _person_slug(query, name):
     """An existing person page wins; else the query's name; else the SS display name
     (which drifts: SS says "G. Kalai" for a page the vault calls gil-kalai)."""
     wdir = os.path.join(ROOT, "wiki")
-    known = {n[:-3] for n in os.listdir(wdir) if n.endswith(".md")} if os.path.isdir(wdir) else set()
+    known = {n[:-3] for n in os.listdir(wdir) if is_page_file(n)} if os.path.isdir(wdir) else set()
     for cand in (_slugify_person(query), _slugify_person(name)):
         if cand in known:
             return cand

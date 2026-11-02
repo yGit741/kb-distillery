@@ -22,6 +22,7 @@ HERE = os.path.join(vault_root(), "meta")
 
 from kb_distillery.lint import lint
 from kb_distillery.search import query
+from kb_distillery.core import links
 from kb_distillery.core.graph import extract_section, tokenize, claim_text
 
 ROOT = lint.ROOT
@@ -109,9 +110,9 @@ def _header(path, row):
     slug = row.get("slug", "")
     if slug:
         st = (_index().get(slug) or {}).get("status", "")
-        lines.append(f"page: [[{slug}]] {st}".rstrip())
+        lines.append(f"page: {links.link(slug)} {st}".rstrip())
     for hub, title in _hub_rows(path):
-        lines.append(f"hub row: [[{hub}]] · {title}")
+        lines.append(f"hub row: {links.link(hub)} · {title}")
     return "\n".join(lines)
 
 

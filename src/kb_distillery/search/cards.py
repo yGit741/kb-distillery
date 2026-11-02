@@ -12,6 +12,7 @@ import sys
 
 from kb_distillery import paths
 from kb_distillery.core.summary import body_of, needs_summary, unquote
+from kb_distillery.core.schema import is_page_file
 
 CARDS_DIR = os.path.join(paths.CACHE_PATH, "qmd-cards")
 
@@ -34,7 +35,7 @@ def build(wiki_dir=None, cards_dir=None):
     os.makedirs(cards_dir, exist_ok=True)
     want = {}
     for name in os.listdir(wiki_dir):
-        if not name.endswith(".md"):
+        if not is_page_file(name):
             continue
         with open(os.path.join(wiki_dir, name), encoding="utf-8") as f:
             text = f.read()

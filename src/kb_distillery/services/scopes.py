@@ -16,6 +16,7 @@ from kb_distillery.git import commit_policy as cp
 from kb_distillery.core import scopes as sc
 from kb_distillery.lint.lint import parse_frontmatter, read_manifest, write_manifest
 from kb_distillery.ops import core
+from kb_distillery.core.schema import is_page_file
 
 DEFAULT_ROOT = vault_root()
 TEMPLATE = os.path.join("meta", "templates", "scope.md")
@@ -32,7 +33,7 @@ def load_pages(root):
     pages = dict()
     wiki = os.path.join(root, "wiki")
     for name in sorted(os.listdir(wiki)) if os.path.isdir(wiki) else []:
-        if not name.endswith(".md") or "excalidraw" in name:
+        if not is_page_file(name) or "excalidraw" in name:
             continue
         with open(os.path.join(wiki, name), encoding="utf-8") as f:
             text = f.read()

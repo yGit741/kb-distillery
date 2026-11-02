@@ -31,6 +31,7 @@ import sys
 
 from kb_distillery.paths import vault_root
 from kb_distillery.core import links
+from kb_distillery.core.schema import is_page_file
 META_DIR = os.path.join(vault_root(), "meta")
 REPO = vault_root()
 
@@ -71,7 +72,7 @@ def read_pages(root):
     pages = {}
     wiki = os.path.join(root, "wiki")
     for fn in sorted(os.listdir(wiki)) if os.path.isdir(wiki) else []:
-        if not fn.endswith(".md") or fn.startswith("."):
+        if not is_page_file(fn) or fn.startswith("."):
             continue
         with open(os.path.join(wiki, fn), "rb") as f:
             data = f.read()
