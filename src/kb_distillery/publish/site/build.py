@@ -46,6 +46,7 @@ from pathlib import Path
 from kb_distillery.vault import links as page_links
 from kb_distillery.webbuild import frontend_source_hash as _frontend_source_hash
 
+from kb_distillery.publish.cloudflare import config as share_config
 from kb_distillery.publish.cloudflare.contracts import EXPORT_DIR, PROFILES, REPO, BuildResult, Manifest, raw_is_email
 from kb_distillery.publish.site.home import ShareConfigError, apply_home, load_home, strip_my_notes
 from kb_distillery.publish.site.predicate import add_predicate_args, predicate_fn
@@ -603,7 +604,7 @@ def inner_build_app(args):
     raw_of = raw_paths_of(data["graph"]["nodes"])             # before the public cut drops `raw`
     data = apply_profile(data, args.profile, _scope_arg(args))      # the one place the public cuts live
     data, dropped = apply_predicate(data, args.predicate)          # --predicate public: the Map view's pages only
-    data = apply_home(data, home, view=args.view)   # Home cards + tour from share.toml `[home]`, --view
+    data = apply_home(data, home, view=args.view)   # Home cards + tour from the share config `[home]`, --view
     data["rawCards"] = bake_raw_cards(data, raw_of, args.profile)
     page = app_page(Path(args.app_index).read_text(encoding="utf-8"), data, fields)
     out = Path(args.out)
@@ -743,6 +744,10 @@ def build(content_ref, viewer_ref="main", profile="private", *, root=REPO, viewe
     view = view or None
     if profile not in PROFILES:
         raise BuildError(f"unknown profile {profile!r}; choose one of {', '.join(PROFILES)}")
+    try:
+        share_config_file = share_config.require()      # before any work: a runner without a share config builds nothing
+    except ShareConfigError as e:
+        raise BuildError(str(e)) from None
     content_sha = resolve_ref(root, content_ref)
     built_at = commit_date(root, content_sha)
     kb_version = kb_version_of(root, content_sha, content_ref)
@@ -800,6 +805,7 @@ def build(content_ref, viewer_ref="main", profile="private", *, root=REPO, viewe
                    KB_CI="1")
         env["PYTHONPATH"] = os.path.join(viewer_dir, gen[2])     # the viewer's own kb package, not whatever is installed
         env.pop(GIT_ROOT_ENV, None)
+        env[share_config.ENV_FILE] = str(share_config_file)    # the inner build reads the Home from the same file (KB_ROOT is the archive)
         # the export has no history: the pages' added / changed dates, at the content commit, come in a file
         from kb_distillery.graph import snapshot as graph_data  # noqa: WPS433
 

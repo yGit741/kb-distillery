@@ -162,7 +162,7 @@ class GateTests(ShareCase):
         self.assertEqual(r.state, "deployed")
         self.assertTrue(cf.uploaded)
         self.assertEqual(r.version_id, "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee")
-        self.assertEqual(r.url, "https://kb.yonatan-magen-thesis.workers.dev")
+        self.assertEqual(r.url, "https://kb.acme-example.workers.dev")
 
     def test_bootstrap_first_auth_deploy_allowed_then_gate_verified(self):
         cf = FakeCloudflare(live_message=None, gate_ok=False, gate_after=True)  # hello page → auth Worker
@@ -479,7 +479,7 @@ class ChipTests(unittest.TestCase):
         import datetime as dt
         now = dt.datetime(2026, 10, 21, 12, 0, tzinfo=dt.timezone.utc)
         base = {"sha": "abcdef1234", "kb_version": "0.10.5", "at": "2026-10-21T11:30:00+00:00", "error": None,
-                "url": "https://kb.yonatan-magen-thesis.workers.dev"}
+                "url": "https://kb.acme-example.workers.dev"}
         chip = share_chip({**base, "state": "deployed"}, now)
         self.assertEqual((chip["label"], chip["cls"], chip["href"]), ("kb-0.10.5 · 30 min ago", "is-deployed", base["url"]))
         self.assertEqual(share_chip({**base, "state": "deploying"}, now)["cls"], "is-deploying")
@@ -507,9 +507,9 @@ class ConfigTests(unittest.TestCase):
     def test_env_overrides_file_and_save_round_trips(self):
         with tempfile.TemporaryDirectory() as d:
             p = Path(d, "share.toml")
-            shutil.copy(deploy.CONFIG_PATH, p)
+            shutil.copy(os.environ["KB_SHARE_CONFIG"], p)
             cfg = deploy.load_config(p)
-            self.assertEqual(cfg["allowed_emails"], ["ygreenshpan@gmail.com"])
+            self.assertEqual(cfg["allowed_emails"], ["owner@example.com"])
             self.assertTrue(cfg["google_client_id"].endswith(".apps.googleusercontent.com"))
             with mock.patch.dict(os.environ, {"KB_SHARE_GOOGLE_CLIENT_ID": "env-id"}):
                 self.assertEqual(deploy.load_config(p)["google_client_id"], "env-id")
@@ -517,7 +517,10 @@ class ConfigTests(unittest.TestCase):
             deploy.save_config(cfg, p)
             again = deploy.load_config(p)
             self.assertEqual(again["google_client_id"], "stored-id")
-            self.assertTrue(p.read_text().startswith("# Share deploy config"))
+            text = p.read_text()
+            self.assertTrue(text.startswith("# The share config every test runs with"))
+            self.assertIn('subdomain = "acme-example"', text)      # the other sections survive a save
+            self.assertIn('tour = "first-visit"', text)
 
 
 class WorkerAuthTests(unittest.TestCase):

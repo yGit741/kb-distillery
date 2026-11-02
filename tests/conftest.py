@@ -21,6 +21,8 @@ os.environ["KB_APP_CONFIG"] = os.path.join(os.sep, "nonexistent", "kb-app.toml")
 # selected (every fake-backed share test relies on it). Tests of "no publisher" clear it themselves.
 os.environ["KB_PUBLISHER"] = "cloudflare"
 os.environ["KB_ENGINE_CONFIG"] = os.path.join(os.sep, "nonexistent", "kb-engine.toml")
+# The share config is a fixture too: an invented account, so no test reads (or needs) the owner's ~/.config/kb-distillery/share.toml.
+os.environ["KB_SHARE_CONFIG"] = os.path.join(os.path.dirname(os.path.abspath(__file__)), "fixtures", "share", "share.toml")
 FIXTURE_KB = os.path.join(os.path.dirname(os.path.abspath(__file__)), "fixtures", "kb", "kb-fixture")
 if not os.environ.get("KB") and not os.environ.get("KB_ROOT"):
     _tmp = os.path.realpath(tempfile.mkdtemp(prefix="kb-fixture-"))   # realpath: /var -> /private/var on macOS

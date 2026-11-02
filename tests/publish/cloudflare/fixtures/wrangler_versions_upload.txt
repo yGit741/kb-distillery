@@ -9,5 +9,5 @@ Total Upload: 9.12 KiB / gzip: 2.88 KiB
 Worker Startup Time: 3 ms
 Uploaded kb (2.41 sec)
 Worker Version ID: 3f1c2a9e-7b4d-4e21-9c6a-0d8e5f4b2a17
-Version Preview URL: https://3f1c2a9e-kb.yonatan-magen-thesis.workers.dev
+Version Preview URL: https://3f1c2a9e-kb.acme-example.workers.dev
 To deploy this version to production traffic use the command wrangler versions deploy

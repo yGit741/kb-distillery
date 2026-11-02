@@ -241,7 +241,7 @@ class SnapshotTests(unittest.TestCase):
         self.assertFalse(kw["require_access"])
         self.assertEqual(kw["message"], f"kb-share {'a' * 40} 0.9.4 public")
         self.assertEqual(Path(kw["status_path"]).name, "status-snapshot-20261021-pub.json")
-        self.assertIn("https://snapshot-20261021-pub.yonatan-magen-thesis.workers.dev/", out)
+        self.assertIn("https://snapshot-20261021-pub.acme-example.workers.dev/", out)
 
     def test_existing_name_refused_without_replace(self):
         cf = FakeCloudflare(scripts=["kb", "snapshot-20261001-pub"],
@@ -259,7 +259,7 @@ class SnapshotTests(unittest.TestCase):
         self.assertIn("update: snapshot-20261001-pub serves kb 0.9.3 → will serve kb 0.9.4 at the same URL", out)
         self.assertIn("replaced snapshot-20261001-pub", out)
         self.assertIn("share history pub", out)
-        self.assertIn("https://snapshot-20261001-pub.yonatan-magen-thesis.workers.dev/", out)
+        self.assertIn("https://snapshot-20261001-pub.acme-example.workers.dev/", out)
 
     def test_replace_reports_same_and_refuses_older_without_force(self):
         cf = FakeCloudflare(scripts=["snapshot-20261001-pub"],
@@ -330,7 +330,7 @@ class ListTests(unittest.TestCase):
         self.assertEqual((a["version"], a["behind_main"], a["views"], a["online"]), ("0.9.4", 2, 12, True))
         self.assertEqual((b["version"], b["behind_main"], b["views"], b["online"]), ("0.9.6", 0, 0, "unknown"))
         self.assertEqual(a["deployed_at"], "2026-10-20T11:00:00Z")
-        self.assertEqual(a["url"], "https://snapshot-20261020-alpha.yonatan-magen-thesis.workers.dev/")
+        self.assertEqual(a["url"], "https://snapshot-20261020-alpha.acme-example.workers.dev/")
 
     def test_views_unavailable_is_zero_with_note(self):
         cf = FakeCloudflare(scripts=[W_A], messages={W_A: "kb-share " + "a" * 40 + " 0.9.4 public"},

@@ -83,7 +83,7 @@ the nightly sync only **nudge** it (touch `.cache/share/wake`; `KB_SHARE_AUTODEP
 `pixi run python -m kb_distillery.publish.cloudflare.owner status`. `deploy-main.yml` deploys daily only when the owner has not
 deployed for 24 h. `.claude/settings.json` denies agents `share -- deploy*`/`rollback*`, every wrangler
 deploy/upload/rollback and `owner run`; agents may run `share -- status`/`audit`/`build` and
-`owner status`/`nudge`. Log: `~/Library/Logs/thesis-kb-share.log`;
+`owner status`/`nudge`. Log: `[share] log_path` of the share config (default `~/Library/Logs/kb-distillery-share.log`);
 dashboard nav shows the chip (green deployed · deploying · skipped · red failed → `/share-log`).
 
 ## Agent steps
@@ -188,8 +188,11 @@ pixi run share -- deploy-main --dry-run
   profile (`VITE_SHARE_PROFILE`), built into `web/dist-share/<profile>/` (gitignored) and rebuilt when `web/src`
   changes; needs `pixi run web-install` once. Chat, ops, pipeline, scopes and every mutation are not imported by the
   share builds (`web/src/routes/modules.share-*.ts`), not hidden: `/chat` is "Not Found".
-- **A missing or unreadable `kb_distillery/publish/cloudflare/share.toml` (the Home tour and cards) stops the build** with
-  `share config missing: <path>`.
+- **No share config stops the build and the deploy** (`no share config found`, with the paths it looked at). The config is
+  untracked; the first file that exists wins: `$KB_SHARE_CONFIG`, `<kb>/.cache/share/share.toml`,
+  `~/.config/kb-distillery/share.toml`. `publish/cloudflare/share.example.toml` is the template (placeholders only). It holds
+  the Google client id, allowed emails, workers.dev subdomain, log path and the Home tour and cards. A broken file stops
+  the build with `share config unreadable: <path>`.
 - Frontend source comes from this checkout; a viewer ref older than the app layout is refused (use
   `--viewer-worktree` while it is unmerged). Same content + same frontend = same bytes. Old `kb-*` tags keep
   building through their own viewer (`--viewer`) as long as that viewer has the app layout.

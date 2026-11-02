@@ -85,7 +85,7 @@ def make_stub_dist(base):
 def stable(payload):
     """The `kb-data` blob minus what depends on the checkout running the test, not on the fixture or the build:
     the viewer sha (HEAD of this checkout), the schema version and git policy constants, and the Home tour and
-    cards (the owner's share.toml)."""
+    cards (the share config)."""
     data = json.loads(json.dumps(payload))
     data["meta"]["viewer_sha"] = "<viewer>"
     if "home" in data:
@@ -167,7 +167,7 @@ class SnapshotGolden(unittest.TestCase):
 
 
 class ShareConfigRequired(unittest.TestCase):
-    """The build reads the Home tour from share.toml; without that file it stops instead of publishing a site
+    """The build reads the Home tour from the share config; without that file it stops instead of publishing a site
     that silently lost its Home."""
 
     def args(self, tmp):
@@ -178,7 +178,7 @@ class ShareConfigRequired(unittest.TestCase):
     def test_a_missing_share_config_refuses_to_build(self):
         with tempfile.TemporaryDirectory() as tmp, pytest.MonkeyPatch.context() as mp:
             missing = Path(tmp) / "share.toml"
-            mp.setattr(home, "CONFIG_PATH", missing)
+            mp.setenv("KB_SHARE_CONFIG", str(missing))
             with self.assertRaises(sb.BuildError) as cm:
                 sb.inner_build_app(self.args(tmp))
             self.assertIn("share config", str(cm.exception))
@@ -189,7 +189,7 @@ class ShareConfigRequired(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp, pytest.MonkeyPatch.context() as mp:
             bad = Path(tmp) / "share.toml"
             bad.write_text("[home\ntour = ", encoding="utf-8")
-            mp.setattr(home, "CONFIG_PATH", bad)
+            mp.setenv("KB_SHARE_CONFIG", str(bad))
             with self.assertRaises(sb.BuildError) as cm:
                 sb.inner_build_app(self.args(tmp))
             self.assertIn("share config", str(cm.exception))

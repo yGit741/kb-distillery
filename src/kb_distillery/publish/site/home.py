@@ -1,10 +1,10 @@
 """What a share build adds for the app's Home screen, plus `strip_my_notes`, the cut `build.apply_profile`
 makes to every public page.
 
-Home cards and the guided tour are set per build in `share.toml`:
+Home cards and the guided tour are set per build in the share config (`share.toml`, read by `kb_distillery.publish.cloudflare.config`):
 
     [home]
-    tour = "thesis-story"     # a tour name from web/src/features/home/tours.ts, or omit for none
+    tour = "first-visit"      # a tour name from web/src/features/home/tours.ts, or omit for none
     [[home.cards]]
     title = "Boolean analysis"
     pages = ["theme-boolean-analysis", "fourier-analysis-of-boolean-functions"]
@@ -16,37 +16,27 @@ the graph view the app opens on when the URL carries no `?view=`; the Home "Open
 (after the public cuts), and is dropped when none are left, so Home never opens on an empty card.
 """
 import re
-import tomllib
 from pathlib import Path
 
-CONFIG_PATH = Path(__file__).resolve().parents[1] / "cloudflare" / "share.toml"   # personal config: stays beside the Cloudflare publisher (Lane G replaces it)
+from kb_distillery.publish.cloudflare import config as share_config
+from kb_distillery.publish.cloudflare.config import ShareConfigError   # noqa: F401  (re-exported: the build catches it from here)
 
 # `## My notes` (the user's own section, see vault/wikiio.py) up to the next h1/h2 heading or the end
 MY_NOTES = re.compile(r"^##[ \t]+My notes\b.*?(?=^#{1,2}[ \t]|\Z)", re.M | re.S)
 
 
-class ShareConfigError(Exception):
-    """share.toml is missing or unreadable; the message names the file and what to do."""
-
-
 def load_home(path: Path | None = None, strict: bool = False) -> dict:
-    """`[home]` of share.toml as {cards: [...], tour: str|None}. A missing or broken file means none, unless `strict`:
-    the share build asks for that, so a site is never published with a Home that silently lost its config."""
-    path = Path(path or CONFIG_PATH)
+    """`[home]` of the share config (`path`, else the file in use: see `kb_distillery.publish.cloudflare.config`) as
+    {cards: [...], tour: str|None}. A missing or broken file means none, unless `strict`: the share build asks for
+    that, so a site is never published with a Home that silently lost its config."""
     try:
-        home = tomllib.loads(path.read_text(encoding="utf-8")).get("home") or {}
-    except OSError as e:
+        if strict and path is None:
+            share_config.require()
+        return share_config.home(path)
+    except ShareConfigError:
         if strict:
-            raise ShareConfigError(f"share config missing: {path} ({e.strerror or e}) — the share build reads the Home tour "
-                                   "and cards from it; restore the file (see kb_distillery/publish/site/home.py)") from None
-        home = {}
-    except tomllib.TOMLDecodeError as e:
-        if strict:
-            raise ShareConfigError(f"share config unreadable: {path} ({e}) — fix the TOML, then build again") from None
-        home = {}
-    cards = [c for c in home.get("cards") or [] if isinstance(c, dict) and c.get("title") and c.get("pages")]
-    tour = home.get("tour") if isinstance(home.get("tour"), str) and home.get("tour") else None
-    return {"cards": cards, "tour": tour}
+            raise
+        return {"cards": [], "tour": None}
 
 
 def strip_my_notes(markdown: str) -> str:
