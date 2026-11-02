@@ -202,6 +202,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zlib-ng-2.3.3-h31dac16_1.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zstd-1.5.7-hf451053_7.conda
       - pypi: https://files.pythonhosted.org/packages/04/37/b751de2b59b0197a1d92a5dd491de88e8a5e928c2e6562581974f1e85263/rpds_py-2026.9.1-cp314-cp314-macosx_11_0_arm64.whl
+      - pypi: https://files.pythonhosted.org/packages/08/31/4571c20652a4002ed9e500046386f3731a77e23d95a608ae8a87f1fbb2da/import_linter-2.15-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/10/42/ba452bb593d53327d9d5dede688b17e38b532ee0126375754d722a91bf1a/grand_cypher-1.2.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/13/37/486d38a173b0b8dce973a3e13c74cf402ed1b8621586b5963bc9efd49a48/pyobjc_core-12.2.2-cp314-cp314-macosx_10_15_universal2.whl
       - pypi: https://files.pythonhosted.org/packages/16/c2/dabe988c2e878d0eeb5f2590e3a2624c92d91e88f9e961bc5f895b85bda9/claude_agent_sdk-0.2.170-py3-none-macosx_11_0_arm64.whl
@@ -232,6 +233,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/ce/48/32583066b155bb5d4507e7887dc88ee23118cc4de8e2a12870c49719e2a8/mcp_types-2.3.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/e3/bd/520769863744b669440a924271a6159ddd82ad5ae26b4ac4d4b69e9f8d44/yt_dlp_ejs-0.8.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/e5/56/d194340cc4a57535e82e1bee9e89667ac4b7c13b5d3f59686deae3094dd5/cryptography-50.0.2-cp311-abi3-macosx_11_0_arm64.whl
+      - pypi: https://files.pythonhosted.org/packages/f1/9a/f4aa9e284fb82874c4f588143557ae4f871ed52c6689a55c49968b6e3b44/grimp-3.18-cp314-cp314-macosx_11_0_arm64.whl
       - pypi: https://files.pythonhosted.org/packages/f3/49/fee7587c33ee35f7977f9051d7f2023d4e7246d62710c80f20c2361ea232/numpy-2.5.4-cp314-cp314-macosx_11_0_arm64.whl
 packages:
 - conda: https://conda.anaconda.org/conda-forge/noarch/_python_abi3_support-1.0-hd8ed1ab_3.conda
@@ -3051,6 +3053,19 @@ packages:
   version: 2026.9.1
   sha256: 3f0e9ac28fc067d4d34b88ae43c48e9489455c97fee9633d851f7eeed5a05d35
   requires_python: '>=3.11'
+- pypi: https://files.pythonhosted.org/packages/08/31/4571c20652a4002ed9e500046386f3731a77e23d95a608ae8a87f1fbb2da/import_linter-2.15-py3-none-any.whl
+  name: import-linter
+  version: '2.15'
+  sha256: 9aaf16a88ac1e99d5a464cd7f66b6a05f7060bfa761162e0ed441773a267ed3b
+  requires_dist:
+  - click>=6
+  - grimp>=3.17
+  - rich>=14.2.0
+  - tomli>=1.2.1 ; python_full_version < '3.11'
+  - typing-extensions>=3.10.0.0
+  - fastapi>=0.113 ; extra == 'ui'
+  - uvicorn>=0.17.1 ; extra == 'ui'
+  requires_python: '>=3.10'
 - pypi: https://files.pythonhosted.org/packages/10/42/ba452bb593d53327d9d5dede688b17e38b532ee0126375754d722a91bf1a/grand_cypher-1.2.0-py3-none-any.whl
   name: grand-cypher
   version: 1.2.0
@@ -3434,6 +3449,11 @@ packages:
   - typing-extensions>=4.13.2 ; python_full_version < '3.11'
   - bcrypt>=3.1.5 ; extra == 'ssh'
   requires_python: '!=3.9.0,>=3.9,!=3.9.1'
+- pypi: https://files.pythonhosted.org/packages/f1/9a/f4aa9e284fb82874c4f588143557ae4f871ed52c6689a55c49968b6e3b44/grimp-3.18-cp314-cp314-macosx_11_0_arm64.whl
+  name: grimp
+  version: '3.18'
+  sha256: 7bc0587c8622e1275e217e924c27e54420f7a06db88d133f4adad18a0298b040
+  requires_python: '>=3.10'
 - pypi: https://files.pythonhosted.org/packages/f3/49/fee7587c33ee35f7977f9051d7f2023d4e7246d62710c80f20c2361ea232/numpy-2.5.4-cp314-cp314-macosx_11_0_arm64.whl
   name: numpy
   version: 2.5.4

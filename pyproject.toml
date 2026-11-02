@@ -84,7 +84,7 @@ layers = [
     # entry points: the CLI, the HTTP server and the other `python -m` shells
     "cli : api : doctor : init_kb : __main__",
     # use cases that compose the pipeline stages below, and the things that ship the result
-    "services : publish : share : dashboard : webbuild",
+    "services : publish : webbuild",
     # pipeline stages, each one concern
     "ingest : summaries : distill : graph : search : lint : metrics : ops : git : migrations : parse",
     # the vault model, the LLM gateway and storage connectors (they know nothing of the stages above)
@@ -116,6 +116,4 @@ ignore_imports = [
     "kb_distillery.ops.nightly_report -> kb_distillery.publish",
     "kb_distillery.ops.core -> kb_distillery.publish",
     "kb_distillery.ops.hygiene -> kb_distillery.publish",
-    # cycle: dashboard <-> api (the legacy dashboard server reads the API's shared assets)
-    "kb_distillery.dashboard.serve -> kb_distillery.api.assets",
 ]
