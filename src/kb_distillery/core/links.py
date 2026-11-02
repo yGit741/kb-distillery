@@ -26,6 +26,8 @@ WIKILINK_ANY = re.compile(r"(!?)\[\[([^\[\]\n]+)\]\]")
 # label: any text, `[`, `]` and `\` escaped. slug: a flat page name (no folder, no scheme). Groups: label, slug, anchor.
 PAGE_LINK = re.compile(r"(?<!!)\[((?:[^\[\]\\\n]|\\.)*)\]\(([^()<>\s/:#]+?)\.md(?:#([^()\s]*))?\)")
 
+# A row of a generated index: PAGE_LINK, from the root index (`slug.md`) or a section index (`../slug.md`, `../../slug.md`).
+INDEX_LINK = re.compile(r"(?<!!)\[((?:[^\[\]\\\n]|\\.)*)\]\((?:\.\./)*([^()<>\s/:#]+?)\.md(?:#([^()\s]*))?\)")
 _LINK_TARGET = re.compile(r"\[\[([^\]|#\\]+)|(?<!!)\[(?:[^\[\]\\\n]|\\.)*\]\(([^()<>\s/:#]+?)\.md[)#]")
 
 
@@ -48,18 +50,19 @@ def escape_label(label: str) -> str:
     return re.sub(r"([\\\[\]])", r"\\\1", str(label))
 
 
-def link(slug: str, label=None, anchor: str | None = None) -> str:
+def link(slug: str, label=None, anchor: str | None = None, up: int = 0) -> str:
     """`[label](slug.md#anchor)`: how a writer links a page. `label` defaults to the slug, `anchor` is a heading text
-    (turned into its GitHub-style anchor) or an anchor already."""
+    (turned into its GitHub-style anchor) or an anchor already. `up` is for a generated section index that sits `up`
+    folders below the bundle root (`wiki/paper/index.md` links `../slug.md`); a page never sets it."""
     frag = "#" + slugify(anchor) if anchor else ""
-    return f"[{escape_label(' '.join(str(label if label is not None else slug).split()))}]({page_path(slug)}{frag})"
+    return f"[{escape_label(' '.join(str(label if label is not None else slug).split()))}]({page_path(slug, up)}{frag})"
 
 
-def page_link(slug: str, titles=None, label=None) -> str:
+def page_link(slug: str, titles=None, label=None, up: int = 0) -> str:
     """A link to `slug` whose text is `label`, else the page's title as the app shows it (`titles` = {slug: title}),
     else the slug."""
     shown = label or shown_title(titles.get(slug, "") if isinstance(titles, dict) else "") or slug
-    return link(slug, shown)
+    return link(slug, shown, up=up)
 
 
 def link_parts(m) -> tuple[str, str, str]:
@@ -273,9 +276,10 @@ def to_disk(text: str, titles=None, slugs=None) -> str:
 PAGE_SUFFIX = ".md"
 
 
-def page_path(slug: str) -> str:
-    """How frontmatter names the wiki page `slug`. Nothing else may build this string."""
-    return f"{slug}{PAGE_SUFFIX}"
+def page_path(slug: str, up: int = 0) -> str:
+    """How frontmatter names the wiki page `slug`. Nothing else may build this string. `up` prefixes `../` for a link
+    written from a section index below the bundle root."""
+    return f"{'../' * up}{slug}{PAGE_SUFFIX}"
 
 
 def page_slug(ref) -> str | None:

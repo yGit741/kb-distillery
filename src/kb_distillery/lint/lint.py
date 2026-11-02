@@ -29,7 +29,7 @@ from kb_distillery.core.schema import (ASSET_NAME, ASSET_PREFIX, BARE_TYPES, BLA
                     PLACEHOLDER_TITLE, RAW_NAME, RAW_NESTED, RAW_DIR, RAW_EMAILS, RAW_INBOX,
                     RAW_PRINTED, RAW_SUBDIRS, RAW_VIDEOS, VIDEO_ITEM, RESERVED_PREFIXES, ROOT_DIRS, ROOT_FILES,
                     ROOT_LINT_IGNORE, ROOT_MD, CONTENTS_COLLECTIONS, SIDECAR_ELIGIBLE_KINDS, SLUG_PREFIX,
-                    TOPIC_PREFIX, TOPIC_SLUGS, THINK_DIR, TYPE_STATUS, WIKI_DIR, YEARED, strip_prefix, INDEX_REL, OKF_VERSION, RESERVED_PAGES, is_page_file,
+                    TOPIC_PREFIX, TOPIC_SLUGS, THINK_DIR, TYPE_STATUS, WIKI_DIR, YEARED, strip_prefix, INDEX_REL, OKF_VERSION, RESERVED_PAGES, TYPE_LABEL, TYPE_ORDER, is_page_file, is_index_path,
                     LAYER_OF, RETIRED_DEPTH, RETIRED_DISPOSITIONS, RETIRED_KEYS, RETIRED_TYPES)
 from kb_distillery.core.books import (DIGESTED, OVERVIEW_HEADING, OVERVIEW_MIN_CHARS, PARTITION_HEADING, SKIP,
                    book_status, coverage, coverage_line, find_row, overview_ok,
@@ -38,7 +38,7 @@ from kb_distillery.core import frontmatter, hubs, links
 from kb_distillery.core import persons
 from kb_distillery.core import scopes as scope_lib
 from kb_distillery.core import summary as summary_lib
-from kb_distillery.core import wikiio
+from kb_distillery.core import wikiindex, wikiio
 try:
     from kb_distillery.ingest import arxiv_meta          # page-1 arXiv stamps (check_arxiv_stamps)
 except ImportError:                         # pragma: no cover
@@ -641,25 +641,30 @@ def known_link_targets(pages):
 
 
 def check_index_links(pages):
-    """wiki/index.md is generated after check_links runs, so it is checked on its own: it links with `[Title](slug.md)`
-    like every page (a wikilink there is an error), and a row that points at no page is a generator bug (it was:
-    write_index hardcoded [[thesis]], [[log]] and [[AGENTS]])."""
-    path = os.path.join(ROOT, INDEX_REL)
-    if not os.path.isfile(path):
-        return 0
+    """The index files are generated after check_links runs, so they are checked on their own: the root and every
+    section index link with `[Title](slug.md)` (`../slug.md` from a section) like every page (a wikilink there is an
+    error), a row that points at no page is a generator bug (it was: write_index hardcoded [[thesis]], [[log]] and
+    [[AGENTS]]), and a link to a section index must find the file."""
     broken = 0
-    with open(path, encoding="utf-8") as f:
-        text = CODE.sub("", f.read())
-    for target in page_links.wikilink_targets(text):
-        err(INDEX_REL, f"wikilink [[{target}]] — the index links with [Title](slug.md), like every page")
-        broken += 1
-    for m in page_links.PAGE_LINK.finditer(text):
-        target = page_links.link_parts(m)[1]
-        if target not in pages:
-            err(INDEX_REL, f"link {m.group(0)} resolves to nothing — write_index must only list pages that exist")
+    for rel in wikiindex.index_files(ROOT):
+        with open(os.path.join(ROOT, rel), encoding="utf-8") as f:
+            text = CODE.sub("", f.read())
+        for target in page_links.wikilink_targets(text):
+            err(rel, f"wikilink [[{target}]] — the index links with [Title](slug.md), like every page")
             broken += 1
+        for m in page_links.INDEX_LINK.finditer(text):
+            target = page_links.link_parts(m)[1]
+            if target != "index" and target not in pages:       # `index.md` links are checked below, as files
+                err(rel, f"link {m.group(0)} resolves to nothing — write_index must only list pages that exist")
+                broken += 1
+        for href in INDEX_FILE_LINK.findall(text):
+            if not os.path.isfile(os.path.normpath(os.path.join(ROOT, os.path.dirname(rel), href))):
+                err(rel, f"link ({href}) resolves to no index file — lint writes one per type")
+                broken += 1
     return broken
 
+
+INDEX_FILE_LINK = re.compile(r"(?<!!)\[[^\]\n]*\]\(((?:[^()\s#]*/)?index\.md)\)")
 
 PATH_PREFIXED = re.compile(r"\]\(((?:\./|\.\./wiki/|wiki/)[^()\s/]+\.md)(?:#[^()\s]*)?\)")
 
@@ -853,6 +858,12 @@ def check_relations(pages):
             seen.add((r["kind"], r["to"]))
 
 
+def _is_section_dir(rel):
+    """wiki/<type> or wiki/<type>/<year>: a folder that holds a generated section index (any other folder is a stray)."""
+    return (rel != WIKI_DIR and is_index_path(f"{rel}/index.md")
+            and wikiindex.is_generated_file(os.path.join(ROOT, rel, "index.md")))
+
+
 def check_wiki_strays():
     """Warn on anything in wiki/ that is not a flat `.md` page (subfolders, other files, excalidraw)."""
     base = os.path.join(ROOT, WIKI_DIR)
@@ -862,11 +873,17 @@ def check_wiki_strays():
         dirnames[:] = sorted(d for d in dirnames if not d.startswith("."))
         for d in dirnames:
             rel = os.path.relpath(os.path.join(dirpath, d), ROOT).replace(os.sep, "/")
-            warn(rel, "subfolder in wiki/ — wiki is flat; move or delete (plugin leftovers do not belong here)")
+            if not _is_section_dir(rel):
+                warn(rel, "subfolder in wiki/ — wiki is flat; move or delete (plugin leftovers do not belong here)")
         for fn in sorted(filenames):
             if fn.startswith("."):
                 continue
             rel = os.path.relpath(os.path.join(dirpath, fn), ROOT).replace(os.sep, "/")
+            if is_index_path(rel):          # a generated section index (wiki/<type>/index.md): see core/wikiindex.py
+                continue
+            if _is_section_dir(os.path.dirname(rel)):
+                warn(rel, "in a section folder of wiki/ — it holds only the generated index.md; pages live in wiki/ itself")
+                continue
             if fn.endswith(".excalidraw.md"):
                 warn(rel, "excalidraw drawing in wiki/ — not a wiki page; move it out or delete")
             elif not fn.endswith(".md"):
@@ -1418,15 +1435,6 @@ def main():
     return 1 if errors else 0
 
 
-SECTIONS = [("topic", "Topics"), ("idea", "Ideas"), ("question", "Open questions"),
-            ("course", "Courses"), ("series", "Series"), ("book", "Books"),
-            ("notebook", "Notebooks"), ("paper", "Papers"), ("part", "Book parts"),
-            ("lecture", "Lectures"), ("article", "Articles"), ("blog-post", "Blog posts"),
-            ("video", "Videos"), ("ai-chat", "AI chats"), ("mail", "Mail"),
-            ("person", "People"),
-            ("scope", "Scopes"),
-            ("distilled-think", "Distilled thinking (review)")]
-
 def first_line(text):
     body = text.split("\n---", 1)[-1]
     seen_h1 = False
@@ -1460,31 +1468,22 @@ def sync_search_cards():
 
 
 def write_index(pages, quiet=False):
-    """wiki/index.md, the OKF reserved catalog of the bundle: frontmatter holds only `okf_version`, the body is one
-    bulleted `[Title](slug.md)` list per page type. Generated on every lint run; never hand-edited."""
+    """The OKF reserved catalog of the bundle, generated on every lint run and never hand-edited: `wiki/index.md` is a
+    tiny root (one line per page type), `wiki/<type>/index.md` lists that type's pages and a big type splits one level
+    further by year (kb_distillery.core.wikiindex). Stale section indexes are removed."""
     titles = {slug: page_links.title_of(text, slug) for slug, (_rel, _fm, text) in pages.items()}
-    out = ["---", f"okf_version: {OKF_VERSION}", "---", "", "# Wiki index", "",
-           "> Generated by `src/kb_distillery/lint/lint.py`. Do not hand-edit.", "",
-           "Read this first on any query.", ""]
-    for t, title in SECTIONS:
-        rows = []
-        for slug in sorted(pages):
-            rel, fm, text = pages[slug]
-            if fm.get("type") != t:
-                continue
-            s = " ".join(page_links.plain(summary_lib.unquote(fm.get("description")) or first_line(text)).split())
-            if len(s) > 110:
-                s = s[:107] + "..."
-            row = "- " + page_links.page_link(slug, titles)
-            rows.append(row + (f" — {s}" if s else ""))
-        if rows:
-            out += [f"## {title}", ""] + rows + [""]
-    path = os.path.join(ROOT, INDEX_REL)
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    with open(path, "w", encoding="utf-8") as f:
-        f.write("\n".join(out))
+    entries = []
+    for slug in sorted(pages):
+        rel, fm, text = pages[slug]
+        s = " ".join(page_links.plain(summary_lib.unquote(fm.get("description")) or first_line(text)).split())
+        if len(s) > 110:
+            s = s[:107] + "..."
+        entries.append({"slug": slug, "type": fm.get("type"), "title": titles[slug], "summary": s,
+                        "year": wikiindex.page_year(fm)})
+    files = wikiindex.render([e for e in entries if e["type"]], labels=TYPE_LABEL, order=TYPE_ORDER)
+    written = wikiindex.write(ROOT, files)
     if not quiet:
-        print(f"wrote {INDEX_REL}")
+        print(f"wrote {INDEX_REL} and {len(written) - 1} section indexes")
 
 
 if __name__ == "__main__":
