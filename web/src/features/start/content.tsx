@@ -1,5 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { routeDefsNow } from "@/routes/defs";
+import { modules } from "@/routes/modules";
 import type { ReactNode } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Code } from "@/features/lifecycle/LifecycleScreen";
@@ -16,14 +17,23 @@ export const Chip = ({ kind, children }: { kind: ChipKind; children: ReactNode }
   </Badge>
 );
 
-/** The Lifecycle screen is flag-gated (screen.lifecycle): where it does not exist, the name is plain text. */
-export function LifecycleLink() {
-  return routeDefsNow().some((d) => d.id === "lifecycle") ? (
-    <Link to={"/lifecycle" as "/"} className="text-primary hover:underline">Lifecycle</Link>
+/**
+ * A link to another screen, or its name as plain text where that screen does not exist in this build: the route is
+ * flagged off (screen.* flags, e.g. lifecycle) or the build never imported it (share builds carry no Pipeline).
+ */
+// Read at render time, not import time: this file is itself imported by a screen module, so `modules` is still being built then.
+const hasScreen = (id: string) => Object.keys(modules).some((f) => f.endsWith(`/features/${id}/index.tsx`));
+
+export function ScreenLink({ id, children }: { id: string; children: ReactNode }) {
+  const def = routeDefsNow().find((d) => d.id === id);
+  return def && hasScreen(id) ? (
+    <Link to={def.path as "/"} className="text-primary hover:underline">{children}</Link>
   ) : (
-    <>Lifecycle</>
+    <>{children}</>
   );
 }
+
+export const LifecycleLink = () => <ScreenLink id="lifecycle">Lifecycle</ScreenLink>;
 
 const c = (s: string) => <Code>{s}</Code>;
 const kb = (s: string) => <Chip kind="kb">{s}</Chip>;
