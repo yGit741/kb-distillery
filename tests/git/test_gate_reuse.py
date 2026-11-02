@@ -176,6 +176,49 @@ class ScopeTests(RepoCase):
         self.assertIn("gate: tests reused", self.gates(scope="full"))   # and it was recorded as a full pass
 
 
+class SerialPassTests(RepoCase):
+    """The tests gate is two passes: parallel `not serial`, then `serial` alone; a failure in either fails the gate."""
+
+    def setUp(self):
+        super().setUp()
+        names = ("tests", "tests-serial", "lint-skills", "lint")
+        p = patch.object(ship, "GATES", [(n, self._gate(n)) for n in names])
+        p.start()
+        self.addCleanup(p.stop)
+
+    def test_full_runs_both_passes_in_order_and_reuses_each(self):
+        out = self.gates(scope="full")
+        self.assertEqual(self.runs()[:2], ["tests", "tests-serial"])
+        self.assertIn("gate: tests-serial ok", out)
+        out = self.gates(scope="full")
+        self.assertIn("gate: tests reused", out)
+        self.assertIn("gate: tests-serial reused", out)
+
+    def test_subset_runs_one_selection_and_no_serial_pass(self):
+        _write(self.root, "src/kb_distillery/git/a.py", "edit")      # the subset selection keeps serial tests in it
+        out = self.gates(scope="subset")
+        self.assertIn("tests subset", out)
+        self.assertNotIn("tests-serial", out)
+        self.assertNotIn("tests-serial", self.runs())
+
+    def test_unmappable_subset_falls_back_to_both_passes(self):
+        _write(self.root, "pixi.toml")
+        self.gates(scope="subset")
+        self.assertEqual(self.runs()[:2], ["tests", "tests-serial"])
+
+    def test_a_failing_serial_pass_fails_the_gate(self):
+        bad = [sys.executable, "-c", "raise SystemExit(1)"]
+        gates = [(n, bad if n == "tests-serial" else self._gate(n)) for n in ("tests", "tests-serial", "lint-skills", "lint")]
+        out = io.StringIO()
+        with patch.object(ship, "GATES", gates), contextlib.redirect_stdout(out):
+            self.assertFalse(ship.run_gates(self.root))
+        self.assertNotIn("lint", self.runs())
+
+    def test_skip_tests_skips_both(self):
+        self.gates(skip_tests=True)
+        self.assertEqual(sorted(self.runs()), ["lint", "lint-skills"])
+
+
 class SelectionTests(RepoCase):
     def sel(self, *paths):
         return gate_cache.test_subset(list(paths), self.root)

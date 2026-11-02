@@ -54,7 +54,9 @@ from kb_distillery.git import app_token, claims, commit_policy, events, gate_cac
 from kb_distillery.core.schema import GATE_PREFIXES as GP, GIT_POLICY_MODE, SCHEMA_VERSION
 
 GATES = [
-    ("tests", [sys.executable, "-m", "pytest", "-q", "-n", "6", "tests"]),
+    ("tests", [sys.executable, "-m", "pytest", "-q", "-n", "6", "-m", "not serial", "tests"]),
+    # tests that assert a wall-clock budget (`@pytest.mark.serial`): alone in one process, after the parallel pass
+    ("tests-serial", [sys.executable, "-m", "pytest", "-q", "-m", "serial", "tests"]),
     ("lint-skills", [sys.executable, "-m", "kb_distillery.lint.lint_skills"]),
     ("lint", [sys.executable, "-m", "kb_distillery.lint.lint"]),
 ]
@@ -381,7 +383,10 @@ def _run_gates(root, skip_tests, scope):
     if scope == "subset" and not skip_tests:
         selection = gate_cache.test_subset(branch_files(root), root, ignore=is_generated)
         if selection:
-            gates = [(n, [sys.executable, "-m", "pytest", "-q", *selection] if n == "tests" else c) for n, c in gates]
+            # one single-process run of the selection: it includes any serial test, so the serial pass is dropped
+            gates = [(n, [sys.executable, "-m", "pytest", "-q", *selection] if n == "tests" else c)
+                     for n, c in gates if n != "tests-serial"]
+            scopes.pop("tests-serial", None)
             scopes["tests"] = "subset"
             extras["tests"] = ",".join(selection)
             print(f"gate: tests subset ({len(selection)} targets)")
@@ -397,7 +402,7 @@ def _run_gates(root, skip_tests, scope):
     if not skip_tests and not _xdist_ok(gates, scopes, extras, root, sha):
         return False
     for name, cmd in gates:
-        if name == "tests" and skip_tests:
+        if name in ("tests", "tests-serial") and skip_tests:
             continue
         key = gate_cache.make_key(name, scopes[name], sha, _kb_value(), extras.get(name, ""))
         if _reused(root, key):
