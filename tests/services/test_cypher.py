@@ -1,9 +1,9 @@
-"""kb_distillery.services.cypher: snapshot → graph, the supported-subset check, query runs and the named queries."""
+"""kb_distillery.graph.query: snapshot → graph, the supported-subset check, query runs and the named queries."""
 import json
 
 import pytest
 
-from kb_distillery.services import cypher
+from kb_distillery.graph import query as cypher
 
 SNAP = {
     "etag": "t",

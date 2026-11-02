@@ -2,7 +2,7 @@
 from fastapi import APIRouter, HTTPException
 
 from kb_distillery.api.models.cypher import CypherRequest, NamedQuery, NamedQueryRequest, QueryTable
-from kb_distillery.services import cypher
+from kb_distillery.graph import query as cypher
 
 router = APIRouter(tags=["graph"])
 ERRORS = {400: {"description": "Query rejected: `detail` says why and what to use instead"}}

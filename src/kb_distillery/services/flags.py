@@ -18,10 +18,10 @@ import subprocess
 import sys
 from pathlib import Path
 
+from kb_distillery.flags import runtime
 from kb_distillery.flags.registry import FLAGS_SOURCE, FLAGS_TOML, load
-from kb_distillery.paths import OPS_PATH
 
-OVERRIDES_PATH = Path(OPS_PATH) / "flags.json"
+OVERRIDES_PATH = runtime.OVERRIDES_PATH   # meta/.ops/flags.json (tests patch it here)
 KEYCHAIN_SERVICE = "kb-flags-owner"
 ENV = "local"                     # this server is the local app
 
@@ -33,12 +33,7 @@ class FlagRefused(Exception):
 
 
 def read_overrides(path: Path | None = None) -> dict[str, dict]:
-    path = Path(path or OVERRIDES_PATH)
-    try:
-        data = json.loads(path.read_text(encoding="utf-8"))
-    except (FileNotFoundError, ValueError):
-        return {}
-    return {k: v for k, v in data.items() if isinstance(v, dict) and isinstance(v.get("value"), bool)}
+    return runtime.read_overrides(path or OVERRIDES_PATH)
 
 
 def list_flags(env: str = ENV, registry_path=FLAGS_TOML, overrides_path: Path | None = None) -> dict:

@@ -81,7 +81,7 @@ _TITLE = re.compile(r"^#\s+(.+)$", re.M)
 
 def title_of(text: str, slug: str) -> str:
     """The title the app shows for a page (what a bare link to it displays): its first `# ` line after the front
-    matter, else the slug with spaces. Page links to it use this as their text. Same rule as services.graph._title."""
+    matter, else the slug with spaces. Page links to it use this as their text. Same rule as graph.snapshot._title."""
     body = text.split("\n---", 1)[-1] if text.startswith("---") else text
     m = _TITLE.search(body)
     return m.group(1).strip() if m else slug.replace("-", " ")

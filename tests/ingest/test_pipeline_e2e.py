@@ -218,7 +218,8 @@ def _strip(obj):
 
 BUILDERS = r"""
 import json, sys
-from kb_distillery.services import graph as graph_data, pages as explore_data, pipeline as digestion_data, corpus as corpus_data
+from kb_distillery.graph import snapshot as graph_data
+from kb_distillery.services import pages as explore_data, pipeline as digestion_data, corpus as corpus_data
 out = {"graph": graph_data.build_graph_snapshot(), "explore": explore_data.build_index(),
        "digestion": digestion_data.build_digestion_snapshot()}
 out["corpus"] = {f: corpus_data.build_corpus(f) for f in corpus_data.FORMATS}

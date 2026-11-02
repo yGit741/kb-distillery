@@ -419,7 +419,7 @@ class RealRepoTests(unittest.TestCase):
         """node/link counts straight from graph_data on an archive of `sha` (independent process)."""
         content = os.path.join(self.tmp, "content-" + sha[:7])
         sb.archive(ROOT, sha, content)
-        code = ("import json,sys; from kb_distillery.services import graph as graph_data; "
+        code = ("import json,sys; from kb_distillery.graph import snapshot as graph_data; "
                 "s = graph_data.build_graph_snapshot(); print(json.dumps([s['node_count'], s['link_count']]))")
         env = dict(os.environ, KB_ROOT=content, PYTHONHASHSEED="0")
         p = subprocess.run([sys.executable, "-c", code, os.path.join(ROOT, "meta")],

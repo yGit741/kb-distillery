@@ -3,8 +3,8 @@ states. Runs on a throwaway knowledge base (viewed read-only through kb_distille
 import pytest
 
 from kb_distillery.core import schema
-from kb_distillery.services import cypher
-from kb_distillery.services.graph import build_graph_snapshot, merge_snapshots
+from kb_distillery.graph import query as cypher
+from kb_distillery.graph.snapshot import build_graph_snapshot, merge_snapshots
 from kb_distillery.services.kbview import KbView
 
 KB_TOML = """[kb]

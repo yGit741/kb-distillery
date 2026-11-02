@@ -89,7 +89,7 @@ def parse_relations(text):
     block = relations_block(text)
     if not block:
         return []
-    import yaml          # only pages with a block need it; kb_distillery.services.cypher imports this module
+    import yaml          # only pages with a block need it; kb_distillery.graph.query imports this module
 
     try:
         data = yaml.safe_load(block)

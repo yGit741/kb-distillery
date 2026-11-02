@@ -48,6 +48,9 @@ RETIRED = {
         r"(?<![\w./~-])share/(?:admin|auth|flags\.gen|package\.json|wrangler|\*\.test)|node --test share/"
         r"|(?<![\w])root_resource\(\"share\"\)|_data/share\b"),
     "Lane E cycle moves (vault.kit is config.kit)": re.compile(r"kb_distillery[./]vault[./]kit\b|vault import kit\b|tests/vault/test_kit"),
+    "Lane E cycle moves (the graph snapshot and queries live in graph/, the publisher port in hosting/)": re.compile(
+        r"kb_distillery[./]services[./](?:graph|raw_layer|schema)\b|services import (?:graph|raw_layer|schema)\b"
+        r"|kb_distillery[./]publish[./](?:base|null|registry)\b|publish import (?:base|null|registry)\b"),
 }
 # (pattern name -> files that may name it): the tools/ entry of TOOLING_PATHS (until Phase 9), the share builder that still builds
 # refs from before the move, and this test.
@@ -90,7 +93,10 @@ RETIRED_FILES = ("src/kb_distillery/share/", "src/kb_distillery/publish/site_sta
                  "scripts/kb-hooks/kb-git-guard.sh", "scripts/kb-hooks/claude-settings.json",
                  "scripts/kb-hooks/", "tools/kb-hooks/",          # the forwarding stubs, deleted with the knowledge move (C.6)
                  "skills/", "src/kb_distillery/maintenance/",
-                 "src/kb_distillery/vault/kit.py", "tests/vault/test_kit.py", "tests/vault/test_kit_contract.py")
+                 "src/kb_distillery/vault/kit.py", "tests/vault/test_kit.py", "tests/vault/test_kit_contract.py",
+                 "src/kb_distillery/services/graph.py", "src/kb_distillery/services/raw_layer.py",
+                 "src/kb_distillery/services/schema.py", "src/kb_distillery/publish/base.py",
+                 "src/kb_distillery/publish/null.py", "src/kb_distillery/publish/registry.py")
 
 
 class NoOldPathsTests(unittest.TestCase):

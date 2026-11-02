@@ -214,7 +214,7 @@ def collect_data(meta_dir, built_at, content_sha):
     """Graph snapshot, explorer index and every page, read from KB_ROOT through the viewer's builders."""
     meta_dir = str(meta_dir)
     from kb_distillery.services import pages as explore_data
-    from kb_distillery.services import graph as graph_data  # noqa: WPS433 (viewer code)
+    from kb_distillery.graph import snapshot as graph_data  # noqa: WPS433 (viewer code)
     from kb_distillery.search.semfind import load_pages
 
     pages = load_pages()
@@ -801,7 +801,7 @@ def build(content_ref, viewer_ref="main", profile="private", *, root=REPO, viewe
         env["PYTHONPATH"] = os.path.join(viewer_dir, gen[2])     # the viewer's own kb package, not whatever is installed
         env.pop(GIT_ROOT_ENV, None)
         # the export has no history: the pages' added / changed dates, at the content commit, come in a file
-        from kb_distillery.services import graph as graph_data  # noqa: WPS433
+        from kb_distillery.graph import snapshot as graph_data  # noqa: WPS433
 
         dfile = os.path.join(tmp, "graph-dates.json")
         with open(dfile, "w", encoding="utf-8") as f:

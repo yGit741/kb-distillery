@@ -94,8 +94,7 @@ layers = [
 ]
 # Every current violation, grouped by cycle. A cycle-fix PR deletes its group; nothing else belongs here.
 ignore_imports = [
-    # cycle: search <-> services (search.cypher wraps the services query model)
-    "kb_distillery.search.cypher -> kb_distillery.services.cypher",
-    # cycle: graph/propose.py <-> services: stays until the edges work lands (backlog card)
+    # cycle: graph/propose.py <-> services: stays until the typed-edges work lands (graph/propose.py is that work's file;
+    # no backlog card is filed for it yet, see the Lane E plan). services/cypher.py exists only for this leg.
     "kb_distillery.graph.propose -> kb_distillery.services.cypher",
 ]

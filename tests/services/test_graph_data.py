@@ -2,7 +2,7 @@ import os
 import sys
 import unittest
 
-from kb_distillery.services.graph import build_graph_snapshot
+from kb_distillery.graph.snapshot import build_graph_snapshot
 
 
 class GraphDataTest(unittest.TestCase):

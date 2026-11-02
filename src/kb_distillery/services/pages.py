@@ -11,7 +11,7 @@ META_DIR = os.path.join(vault_root(), "meta")
 
 from kb_distillery.core.graph import outbound_links
 from kb_distillery.search.semfind import load_pages
-from kb_distillery.services.graph import _areas, _preview, _title, _year
+from kb_distillery.graph.snapshot import _areas, _preview, _title, _year
 from kb_distillery.core.summary import unquote
 from kb_distillery.search import qmd_client
 from kb_distillery.core import frontmatter as page_frontmatter
@@ -291,15 +291,9 @@ def search(query, limit=40):
 
 def _flag_on(name):
     """Effective runtime value (registry + this server's override); a test's forced state wins."""
-    from kb_distillery.flags import registry
+    from kb_distillery.flags import runtime
     from kb_distillery.services import flags
-    forced = registry.forced(name)
-    if forced is not None:
-        return forced
-    try:
-        return next(f["value"] for f in flags.list_flags()["flags"] if f["name"] == name)
-    except Exception:                                    # unreadable registry: the safe side is off
-        return False
+    return runtime.effective(name, overrides_path=flags.OVERRIDES_PATH)
 
 
 def _collection(fm):

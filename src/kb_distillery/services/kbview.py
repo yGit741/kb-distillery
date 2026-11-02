@@ -8,7 +8,6 @@ while the runtime flag `kb-view` is on (server side too, so a dark feature serve
 """
 from __future__ import annotations
 
-import subprocess
 from dataclasses import dataclass
 
 from kb_distillery import kbconfig, paths
@@ -57,12 +56,3 @@ def view(kb_id: str | None = None) -> KbView:
     v = KbView(id=cfg.id, name=cfg.name, root=cfg.root, types=kbtypes.load(cfg), active=False)
     _views[kb_id] = v
     return v
-
-
-def head(root: str) -> str:
-    """The git HEAD sha of `root` ("" without git): the cache key for anything derived from history."""
-    try:
-        return subprocess.run(["git", "-C", root, "rev-parse", "HEAD"], capture_output=True, text=True,
-                              timeout=5).stdout.strip()
-    except (OSError, subprocess.SubprocessError):
-        return ""

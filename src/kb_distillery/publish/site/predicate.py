@@ -11,7 +11,7 @@ The rule, on a graph node as `/api/graph` reports it (`type`, `layer`, `depth`, 
   - everything else (ideas, questions, people, collections, …) when at least one link reaches or leaves
     it: inDegree + outDegree >= 1.
 
-Degrees are the full graph's: `kb_distillery.services.graph.build_graph_snapshot` counts them over every wiki page
+Degrees are the full graph's: `kb_distillery.graph.snapshot.build_graph_snapshot` counts them over every wiki page
 before any share cut, and `build.apply_profile` never recomputes them — so a page keeps the degree the
 API shows even when the public profile or this predicate drops some of its neighbours.
 """
