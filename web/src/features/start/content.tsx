@@ -1,4 +1,5 @@
 import { Link } from "@tanstack/react-router";
+import { routeDefsNow } from "@/routes/defs";
 import type { ReactNode } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Code } from "@/features/lifecycle/LifecycleScreen";
@@ -12,6 +13,15 @@ const CHIP_VARIANT = { kb: "primary", snap: "outline", schema: "warn", pr: "ok",
 export const Chip = ({ kind, children }: { kind: ChipKind; children: ReactNode }) => (
   <Badge variant={CHIP_VARIANT[kind]}>{children}</Badge>
 );
+
+/** The Lifecycle screen is flag-gated (screen.lifecycle): where it does not exist, the name is plain text. */
+export function LifecycleLink() {
+  return routeDefsNow().some((d) => d.id === "lifecycle") ? (
+    <Link to={"/lifecycle" as "/"} className="text-primary hover:underline">Lifecycle</Link>
+  ) : (
+    <>Lifecycle</>
+  );
+}
 
 const c = (s: string) => <Code>{s}</Code>;
 const kb = (s: string) => <Chip kind="kb">{s}</Chip>;
@@ -121,7 +131,7 @@ export const EDIT_ROWS: EditEntry[] = [
     skill: c("query-knowledge"),
     lands: <>nothing (filing back = {kb("kb(refine)")})</>,
   },
-  { want: "See what changed", say: <>{c("kb history")} · {c("kb status")}</>, skill: c("kb-history"), lands: <>read-only — or the <Link to={"/lifecycle" as "/"} className="text-primary hover:underline">Lifecycle</Link> tab</> },
+  { want: "See what changed", say: <>{c("kb history")} · {c("kb status")}</>, skill: c("kb-history"), lands: <>read-only — or the <LifecycleLink /> tab</> },
   { want: "Undo one bad step", say: c("undo <step>"), skill: c("kb-undo"), lands: <>{kb("kb(undo)")} — wiki only</> },
   { want: "Freeze the current state", say: c('snapshot "week 43"'), skill: c("kb-snapshot"), lands: <>tag <Chip kind="snap">kb-x.y.z</Chip></> },
   { want: "Go back to a snapshot", say: c("restore kb-x.y.z"), skill: c("kb-snapshot"), lands: kb("kb(restore)") },

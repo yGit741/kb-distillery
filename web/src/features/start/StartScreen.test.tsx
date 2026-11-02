@@ -4,6 +4,8 @@ import { App } from "@/app/providers";
 import { createAppRouter } from "@/app/router";
 import { ApiError, type DataSource, type LifecycleSnapshot } from "@/api";
 import { mockDataSource } from "@/test/datasource";
+import { withFlag } from "@/flags/testing";
+import { LifecycleLink } from "./content";
 import { nowCards } from "./StartScreen";
 
 const snap = {
@@ -84,5 +86,13 @@ describe("Start screen", () => {
     expect(await screen.findByRole("status", { name: /loading the current state/i })).toBeInTheDocument();
     expect(await screen.findByText(/could not load the current state/i, {}, { timeout: 4000 })).toBeInTheDocument();
     expect(screen.getByText("Edit knowledge")).toBeInTheDocument();
+  });
+
+  it("the Lifecycle name is plain text where the lifecycle screen is flagged off", () => {
+    withFlag("screen.lifecycle", false, () => {
+      const { container } = render(<LifecycleLink />);
+      expect(container).toHaveTextContent("Lifecycle");
+      expect(container.querySelector("a")).toBeNull();
+    });
   });
 });

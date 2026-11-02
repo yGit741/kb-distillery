@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Code, TableWrap } from "@/features/lifecycle/LifecycleScreen";
 import { useApiQuery } from "@/lib/useApiQuery";
 import { cn } from "@/lib/utils";
-import { COMMIT_ROWS, COMMIT_SCOPES, EDIT_ROWS, FEATURE_CARDS, PLACES, STEPS } from "./content";
+import { COMMIT_ROWS, LifecycleLink, COMMIT_SCOPES, EDIT_ROWS, FEATURE_CARDS, PLACES, STEPS } from "./content";
 
 /** The "Right now" cards, from the lifecycle snapshot (a shared, read-only site has no working-tree state). */
 export function nowCards(s: LifecycleSnapshot): [string, string | number][] {
@@ -170,7 +170,7 @@ export function StartScreen() {
             <li>Undo and restore add commits — history is never rewritten.</li>
             <li>Tooling changes need your PR approval; PRs are never squashed.</li>
             <li>
-              Full detail: <Link to={"/lifecycle" as "/"} className={LINK}>Lifecycle</Link> tab · <Code>AGENTS.md</Code> · <Code>src/kb_distillery/kits/base/defaults/docs/</Code> · <Code>docs/guides/write-a-skill.md</Code>.
+              Full detail: <LifecycleLink /> tab · <Code>AGENTS.md</Code> · <Code>src/kb_distillery/kits/base/defaults/docs/</Code> · <Code>docs/guides/write-a-skill.md</Code>.
             </li>
           </ul>
         </Section>

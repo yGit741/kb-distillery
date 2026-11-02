@@ -56,7 +56,7 @@ export function HealthView({ health, error, onRetry }: { health?: HealthLike & {
               <dl className="grid grid-cols-[1fr_auto] gap-x-4 gap-y-1 text-sm">
                 {g.keys.map(([k, label]) => (
                   <div key={k} className="contents">
-                    <dt className="text-muted-foreground" title={HELP[k]}>{label}</dt>
+                    <dt className="text-muted-foreground" title={HELP[k]} tabIndex={HELP[k] ? 0 : undefined}>{label}</dt>
                     <dd className={cn("text-right tabular-nums", TONE[st[k] ?? ""])}>{fmt(v[k])}</dd>
                   </div>
                 ))}
