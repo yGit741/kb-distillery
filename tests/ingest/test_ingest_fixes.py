@@ -11,7 +11,8 @@ import urllib.request
 from unittest.mock import patch, MagicMock
 
 
-from kb_distillery.ingest import net, resolve, scrap, catalog
+from kb_distillery.config import net
+from kb_distillery.ingest import resolve, scrap, catalog
 
 
 class TestNet(unittest.TestCase):

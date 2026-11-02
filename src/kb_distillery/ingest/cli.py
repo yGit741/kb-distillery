@@ -4,7 +4,8 @@ import json
 import os
 import sys
 
-from . import net, extract, map, draft, session, scrap, mail, catalog, easy_digest, resolve as resolve_mod, researcher
+from kb_distillery.config import net
+from . import extract, map, draft, session, scrap, mail, catalog, easy_digest, resolve as resolve_mod, researcher
 from . import gdrive
 from . import book as book_mod
 from . import backfill as backfill_mod

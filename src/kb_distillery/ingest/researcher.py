@@ -11,7 +11,8 @@ import urllib.parse
 import urllib.request
 from datetime import datetime, timezone
 
-from . import catalog, net, resolve as resolve_mod, scrap
+from kb_distillery.config import net
+from . import catalog, resolve as resolve_mod, scrap
 from .paths import ROOT, wiki_slugs, wiki_titles
 
 from kb_distillery.core import links, persons

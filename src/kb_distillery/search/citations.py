@@ -117,7 +117,7 @@ def _headers():
 def http_get(path, params=None):
     """Throttled GET returning parsed JSON, or None on 404. Raises RuntimeError otherwise."""
     global _last
-    from kb_distillery.ingest import net
+    from kb_distillery.config import net
     url = SS_BASE + path + ("?" + urllib.parse.urlencode(params) if params else "")
     last = None
     for attempt in range(1, RETRIES + 1):
