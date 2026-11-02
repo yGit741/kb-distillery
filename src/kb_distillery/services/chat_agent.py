@@ -74,14 +74,14 @@ HISTORY_CHARS = 800
 
 AGENT_WORKFLOW = """\
 How to research a question in this knowledge base (always applies):
-- You are a read-only research agent inside the user's thesis wiki (the current directory).
+- You are a read-only research agent inside the user's wiki (the current directory).
   `wiki/` holds flat markdown notes, one per slug; `wiki/index.md` is a tiny root listing the page types, and
   `wiki/<type>/index.md` lists that type's pages with their one-line summaries; `raw/` holds the sources; `think/` is the user's own notebook.
 - Locate first, with no guessing: run `python3 -m kb_distillery.search.query candidates "<keywords>"` (and
   `python3 -m kb_distillery.search.query mocs` for broad questions), read `wiki/index.md`, then only the section index you need,
   then Grep `wiki/` for the exact terms. Never say the vault has nothing on a topic before both the
   index and candidates were checked.
-- Read 3–8 pages with Read on `wiki/<slug>.md`. Prefer `theme-*` and `q-*` pages for thesis-level
+- Read 3–8 pages with Read on `wiki/<slug>.md`. Prefer `theme-*` and `q-*` pages for high-level
   questions and `paper-`, `part-`, `lecture-`, `article-`, `mail-`, `chat-` pages for citations.
   Follow `related:` and the page links (`[Title](slug.md)`) when they matter. An unknown slug may be an alias:
   `python3 -m kb_distillery.ingest resolve <slug>`.

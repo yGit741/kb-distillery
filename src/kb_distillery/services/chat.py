@@ -82,7 +82,7 @@ PHRASE_BONUS = 15         # every word of the slug appears in the question ("ten
 FIXED_SUFFIX = """\
 ---
 How this chat works (always applies):
-- Each user turn may start with <kb-pages>: wiki pages from the user's thesis knowledge base,
+- Each user turn may start with <kb-pages>: wiki pages from the user's knowledge base,
   retrieved for that turn. Pages from earlier turns stay in the conversation.
 - Cite a page as a markdown link `[Title](slug.md)` using its exact slug, whenever you draw on it.
 - If the pages do not cover something, say so plainly before adding anything from general knowledge,
@@ -350,19 +350,34 @@ def _split_fm(text):
     return fm, text[end + 4:].lstrip("\n")
 
 
-def list_prompts(prompts_dir=PROMPTS_DIR):
-    """Templates from src/kb_distillery/llm/prompts/*.md, `query` first."""
-    out = []
-    for name in sorted(os.listdir(prompts_dir)) if os.path.isdir(prompts_dir) else []:
-        if not name.endswith(".md"):
-            continue
-        with open(os.path.join(prompts_dir, name), encoding="utf-8") as f:
-            fm, body = _split_fm(f.read())
-        tid = name[:-3]
-        out.append({"id": tid, "title": fm.get("title", tid), "description": fm.get("description", ""),
-                    "order": int(fm.get("order", 99)), "text": body.strip()})
-    out.sort(key=lambda p: (p["order"], p["id"]))
-    return out
+def kit_prompt_dirs(kb=None):
+    """`kits/<kit>/prompts` for each kit in the active kb's chain, root first: a kit words the engine's generic
+    prompts for its own field (the research kit speaks to a student of theoretical machine learning)."""
+    from kb_distillery.config import kb as kbconfig, kit
+    cfg = kb if kb is not None else kbconfig.current()
+    if not cfg or not cfg.kit:
+        return []
+    try:
+        names = kit.chain(cfg.kit)
+    except kit.KitError:
+        return []
+    return [d for d in (os.path.join(kit.kits_dir(), n, "prompts") for n in names) if os.path.isdir(d)]
+
+
+def list_prompts(prompts_dir=PROMPTS_DIR, extra_dirs=None):
+    """Templates from src/kb_distillery/llm/prompts/*.md, then the kit's `prompts/` (same file name = the kit's
+    wording wins), `query` first."""
+    found = {}
+    for d in [prompts_dir, *(kit_prompt_dirs() if extra_dirs is None else extra_dirs)]:
+        for name in sorted(os.listdir(d)) if os.path.isdir(d) else []:
+            if not name.endswith(".md"):
+                continue
+            with open(os.path.join(d, name), encoding="utf-8") as f:
+                fm, body = _split_fm(f.read())
+            tid = name[:-3]
+            found[tid] = {"id": tid, "title": fm.get("title", tid), "description": fm.get("description", ""),
+                          "order": int(fm.get("order", 99)), "text": body.strip()}
+    return sorted(found.values(), key=lambda p: (p["order"], p["id"]))
 
 
 def scope_section(ctx, index=None, agent=False):

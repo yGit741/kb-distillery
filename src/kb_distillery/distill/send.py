@@ -18,7 +18,7 @@ from kb_distillery.distill import fanout
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog="distill send", description="Send a think note into one or more knowledge bases.")
     p.add_argument("note", help="think note: name, name.md, sub/name.md or think:name.md")
-    p.add_argument("--to", required=True, help="comma-separated kb ids or paths, e.g. thesis,demo")
+    p.add_argument("--to", required=True, help="comma-separated kb ids or paths, e.g. notes,demo")
     p.add_argument("--summarize", action="store_true", help="write the page summary with an LLM (default: first paragraph)")
     p.add_argument("--backend", choices=("subscription", "api", "batch"),
                    help="LLM backend for --summarize (default: $KB_LLM_BACKEND, then subscription)")

@@ -25,7 +25,7 @@ export function KbBadge() {
   const kbView = useFlag("kb-view") && ds.kind !== "embedded";
   const q = useApiQuery(["kb"], (d) => d.getKb(), { staleTime: Infinity, retry: false });
   // a share build bakes no kb info (getKb is absent there): keep the title its header always had
-  const name = q.data?.name ?? "Thesis Knowledge Base";
+  const name = q.data?.name ?? "Knowledge Base";
   const id = q.data?.id ?? null;
   const title = (
     <>

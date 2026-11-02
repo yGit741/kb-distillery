@@ -99,7 +99,7 @@ export const EDIT_ROWS: EditEntry[] = [
   },
   { want: "Full note with key equations (depth full)", say: c("full-digest <raw>"), skill: c("full-digest"), lands: kb("kb(digest)") },
   {
-    want: "Thesis-critical note with neighbours (depth deep)",
+    want: "High-stakes note with neighbours (depth deep)",
     say: <>{c("deep-digest <raw>")} + confirm heavy</>,
     skill: c("deep-digest"),
     lands: kb("kb(digest)"),

@@ -40,7 +40,7 @@ AUX_PREFIX = {"distilled-think": "distilled-think-", "scope": "scope-"}
 AUX_LABEL = {"distilled-think": "Distilled", "scope": "Scope"}
 AUX_COLOR = {"distilled-think": "#e0af68", "scope": "#e6c07b"}
 
-# Explorer defaults: the thesis knowledge base's types, which double as a sensible general set.
+# Explorer defaults: a research knowledge base's types, which double as a sensible general set.
 DEFAULT_TYPES = {
     "source": {
         "paper":     {"label": "Paper", "prefix": "paper-", "yeared": True, "color": "#ff6b7a"},   # academic work

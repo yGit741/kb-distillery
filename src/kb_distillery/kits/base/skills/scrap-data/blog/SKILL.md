@@ -21,9 +21,9 @@ description: Pull every post of a WordPress.com blog into raw/inbox/ as Markdown
 ## CLI
 
 ```bash
-distill ingest scrap-wordpress gilkalai.wordpress.com --prefix kalai-blog           # whole blog
-distill ingest scrap-wordpress gilkalai.wordpress.com --prefix kalai-blog --limit 5 # trial run
-distill ingest scrap-wordpress gilkalai.wordpress.com --prefix kalai-blog --since 2026-01-01
+distill ingest scrap-wordpress example.wordpress.com --prefix example-blog           # whole blog
+distill ingest scrap-wordpress example.wordpress.com --prefix example-blog --limit 5 # trial run
+distill ingest scrap-wordpress example.wordpress.com --prefix example-blog --since 2026-01-01
 distill ingest scrap-wordpress <site> --prefix <short> --no-images                   # figures stay remote
 ```
 

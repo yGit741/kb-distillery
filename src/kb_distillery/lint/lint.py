@@ -611,8 +611,8 @@ def known_link_targets(pages):
 def check_index_links(pages):
     """The index files are generated after check_links runs, so they are checked on their own: the root and every
     section index link with `[Title](slug.md)` (`../slug.md` from a section) like every page (a wikilink there is an
-    error), a row that points at no page is a generator bug (it was: write_index hardcoded [[thesis]], [[log]] and
-    [[AGENTS]]), and a link to a section index must find the file."""
+    error), a row that points at no page is a generator bug (it was: write_index hardcoded links to pages a kb
+    may not have: [[log]], [[AGENTS]]), and a link to a section index must find the file."""
     broken = 0
     for rel in wikiindex.index_files(ROOT):
         with open(os.path.join(ROOT, rel), encoding="utf-8") as f:

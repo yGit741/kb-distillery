@@ -24,7 +24,7 @@ MAX_PATHS = 4
 MAX_SUGGESTIONS = 6
 RELATED_FLAG = "semantic-search"
 RELATED_MAX = 8          # meaning-based hits shown under the keyword hits
-RELATED_PER_COLLECTION = 3   # so one big series (738 Kalai posts) can't fill the list
+RELATED_PER_COLLECTION = 3   # so one big series (a 700-post blog) can't fill the list
 
 
 def _now():

@@ -1,6 +1,6 @@
 ---
 name: deep-digest
-description: Thesis-critical deep digest with neighbor links (~25-40k+ tokens, HEAVY). Use ONLY when user explicitly says "deep-digest" or "deep digest" AND confirms heavy tier. Never auto-trigger.
+description: Deep digest with neighbor links (~25-40k+ tokens, HEAVY). Use ONLY when user explicitly says "deep-digest" or "deep digest" AND confirms heavy tier. Never auto-trigger.
 ---
 
 # deep-digest

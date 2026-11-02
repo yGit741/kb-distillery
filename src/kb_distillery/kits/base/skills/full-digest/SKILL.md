@@ -55,11 +55,11 @@ runs the sessions one at a time from the cached claims — each source ends in i
 (`.cache/digest-many/<run>/state.json`); never forces a reply that fails `validate_claims` (it lands in `drafts/`).
 
 ```bash
-distill ingest digest-many submit --run kalai --hub series-gil-kalai-blog --topics comb,prob --dry-run   # count + $ estimate
-distill ingest digest-many submit --run kalai --hub series-gil-kalai-blog --topics comb,prob --max-usd 10
-distill ingest digest-many collect --run kalai [--wait 3600]   # batches take minutes to hours
-distill ingest digest-many drive --run kalai [--max 10]        # stops after 3 failed sessions in a row
-distill ingest digest-many status --run kalai
+distill ingest digest-many submit --run blog --hub series-example-blog --topics comb,prob --dry-run   # count + $ estimate
+distill ingest digest-many submit --run blog --hub series-example-blog --topics comb,prob --max-usd 10
+distill ingest digest-many collect --run blog [--wait 3600]   # batches take minutes to hours
+distill ingest digest-many drive --run blog [--max 10]        # stops after 3 failed sessions in a row
+distill ingest digest-many status --run blog
 ```
 
 Deepening an existing page keeps its frontmatter (`blog`, `created`, `url`, `description`, …) and its `## My notes`; `area`

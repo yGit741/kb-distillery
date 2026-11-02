@@ -221,7 +221,7 @@ def _select_catalog_candidates(papers):
 
 def _person_slug(query, name):
     """An existing person page wins; else the query's name; else the SS display name
-    (which drifts: SS says "G. Kalai" for a page the vault calls gil-kalai)."""
+    (which drifts: SS says "J. Doe" for a page the vault calls jane-doe)."""
     wdir = os.path.join(ROOT, "wiki")
     known = {n[:-3] for n in os.listdir(wdir) if is_page_file(n)} if os.path.isdir(wdir) else set()
     for cand in (_slugify_person(query), _slugify_person(name)):
@@ -608,7 +608,7 @@ def finalize(slug):
 
 
 def _manifest_for_person(person_slug):
-    """Session dirs are not always named after the person (g-kalai → gil-kalai)."""
+    """Session dirs are not always named after the person (j-doe → jane-doe)."""
     if not os.path.isdir(RESEARCHER_ROOT):
         return None
     for name in sorted(os.listdir(RESEARCHER_ROOT)):

@@ -1,6 +1,6 @@
 """Send one think note into several knowledge bases, with provenance on both sides (docs: think.md).
 
-    distill_note("thesis-decision", [("thesis", "/…/kbs/thesis"), ("demo", "/…/examples/demo")])
+    distill_note("decision-note", [("notes", "/…/kbs/notes"), ("demo", "/…/examples/demo")])
 
 * kb side: `wiki/distilled-think-<note>.md` (type `distilled-think`) whose `sources:` cite `think:<note>.md`.
 * think side: `<think>/.provenance/<note>.json` lists where the note went. The note itself is never edited;

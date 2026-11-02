@@ -35,7 +35,7 @@ MENTIONS, SHARES_SOURCE, NAME_MATCH = "mentions", "shares-source", "name-match"
 ADVISOR_OF, STUDENT_OF, COLLABORATES_WITH, SIMILAR_TO = "advisor-of", "student-of", "collaborates-with", "similar-to"
 COMPUTED_KINDS = (MENTIONS, SHARES_SOURCE, ADVISOR_OF, STUDENT_OF, NAME_MATCH, COLLABORATES_WITH, SIMILAR_TO)
 SIMILAR_K = 3            # each page's closest pages …
-SIMILAR_MIN = 0.75       # … at or above this cosine (thesis cards: ~200 pairs)
+SIMILAR_MIN = 0.75       # … at or above this cosine (a typical kb: ~200 pairs)
 
 _LINK = re.compile(r"^\[\[([^\]|#]+)(?:[|#][^\]]*)?\]\]$")
 

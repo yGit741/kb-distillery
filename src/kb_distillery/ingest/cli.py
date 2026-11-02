@@ -169,7 +169,7 @@ def main(argv=None):
     sc.add_argument("--force", action="store_true", help="skip dedup checks")
 
     sw = sub.add_parser("scrap-wordpress", help="every post of a WordPress.com blog + its figures → raw/inbox/ (0 LLM)")
-    sw.add_argument("site", help="gilkalai.wordpress.com or any URL on the blog")
+    sw.add_argument("site", help="example.wordpress.com or any URL on the blog")
     sw.add_argument("--prefix", default=None, help="clip filename prefix, normally the hub's short: (default: site name)")
     sw.add_argument("--since", default=None, help="YYYY-MM-DD: only posts published on/after this date")
     sw.add_argument("--limit", type=int, default=None, help="stop after N posts (a trial run)")
@@ -243,7 +243,7 @@ def main(argv=None):
 
     dm = sub.add_parser("digest-many", help="batch-fill claims for many sources, then full-digest them one by one (LLM)")
     dm.add_argument("dm_args", nargs=argparse.REMAINDER, help="submit|collect|drive|status … (see digest-many -h)")
-    dd = sub.add_parser("deep-digest", help="thesis-critical digest (heavy LLM)")
+    dd = sub.add_parser("deep-digest", help="deep digest (heavy LLM)")
     dd.add_argument("raw_path")
     dd.add_argument("--confirm-heavy", action="store_true")
     _add_scope_flags(dd)
@@ -299,7 +299,7 @@ def main(argv=None):
     ir_a = ir_sub.add_parser("abort", help="delete researcher session staging")
     ir_a.add_argument("slug")
     ir_r = ir_sub.add_parser("relink", help="turn dangling bibliography links into titles (0 LLM)")
-    ir_r.add_argument("slug", help="person slug, e.g. gil-kalai")
+    ir_r.add_argument("slug", help="person slug, e.g. jane-doe")
     ir_r.add_argument("--dry-run", action="store_true")
 
     args = p.parse_args(argv)
