@@ -1,7 +1,6 @@
 ---
 type: person
 layer: concept
-title: "Noa Peretz"
 description: "Noa Peretz, talent acquisition at Acme Robotics, who contacted Dana on 2 October 2026, ran the recruiter screen and moved her to the technical round."
 generated: {by: human:dana-levi}
 ---

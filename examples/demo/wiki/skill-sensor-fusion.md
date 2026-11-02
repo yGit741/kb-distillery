@@ -1,7 +1,6 @@
 ---
 type: skill
 layer: concept
-title: "Sensor fusion"
 maturity: growing
 sources: [{resource: posting-acme-senior-ml-engineer.md}, {resource: notes-acme-technical-interview.md}, {resource: chat-gemini-acme-system-design-prep.md}]
 related: [role-senior-ml-engineer-acme.md, interview-acme-technical.md, skill-system-design.md, omer-shahar.md]

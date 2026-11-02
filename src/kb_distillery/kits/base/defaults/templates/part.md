@@ -1,7 +1,6 @@
 ---
 type: part
 layer: source
-title: {{title_yaml}}
 book: {{book}}
 authors: []
 year: {{year}}

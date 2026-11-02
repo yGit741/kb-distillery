@@ -7,11 +7,11 @@ summary; courses and `listed` stubs never do (kb_distillery.core.summary.needs_s
 summary or was deleted is removed. Unchanged cards keep their mtime, so qmd re-embeds only what changed.
 """
 import os
-import re
 import sys
 
 from kb_distillery import paths
-from kb_distillery.core.summary import body_of, needs_summary, unquote
+from kb_distillery.core import frontmatter
+from kb_distillery.core.summary import needs_summary, unquote
 from kb_distillery.core.schema import is_page_file
 
 CARDS_DIR = os.path.join(paths.CACHE_PATH, "qmd-cards")
@@ -22,8 +22,7 @@ def card_text(slug, fm, text):
     summary = unquote(fm.get("description"))
     if not summary or not needs_summary(fm):
         return None
-    m = re.search(r"^# (.+)$", body_of(text), re.M)
-    title = unquote(fm.get("title")) or (m.group(1).strip() if m else slug)
+    title = frontmatter.page_title(fm, text, slug)
     return f"# {title}\n\n{summary}\n"
 
 

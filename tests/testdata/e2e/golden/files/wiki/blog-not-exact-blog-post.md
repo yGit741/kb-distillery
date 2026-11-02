@@ -1,7 +1,6 @@
 ---
 type: blog-post
 layer: source
-title: "צורת ז'ורדן בפרקטיקה"
 maturity: to-read
 status: draft
 depth: listed

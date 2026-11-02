@@ -2,7 +2,7 @@
 
 `draft` renders a paper-shaped page; for a source that already has a page (an easy blog post, say) the new
 body replaces the old one but the frontmatter is merged: every field the page has stays, `depth`, `maturity` and `title`
-come from the new draft (OKF `status: draft` too, or its absence), an empty field takes the draft's value, `related` is the union, and fields only the draft has are
+come from the new draft (OKF `status: draft` and `title` too, or their absence: a title the draft omits is its H1), an empty field takes the draft's value, `related` is the union, and fields only the draft has are
 added when they are not empty."""
 import re
 
@@ -11,7 +11,8 @@ from kb_distillery.core import frontmatter
 _KEY = re.compile(r"^([A-Za-z_][\w-]*):[ \t]*(.*)$")
 EMPTY = {"", "[]", '""', "''", "null", "~"}
 OVERWRITE = ("depth", "maturity", "title")         # the draft is the new body: its H1, depth and maturity win
-FOLLOW = ("status",)                                # OKF `status: draft` follows the draft: dropped when it has none
+FOLLOW = ("status", "title")                        # follow the draft: OKF `status: draft` and a `title` (it is written only
+#                                                     when it differs from the H1) are dropped when the draft has none
 KEEP = ("type", "layer", "raw", "related")             # never replaced by the draft (related is merged)
 HUB_KEYS = ("series", "course")       # a page that names its blog/source does not also take a hub key
 

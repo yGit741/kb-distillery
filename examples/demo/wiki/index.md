@@ -10,7 +10,7 @@ Read this first on any query.
 
 ## Mail
 
-- [Acme recruiter intro thread](mail-2026-10-02-acme-recruiter-intro.md) (digested) — Recruiter thread with Noa Peretz at Acme Robotics, 2 to 8 October 2026: cold outreach, a recruiter-screen c...
+- [Acme recruiter intro thread](mail-2026-10-02-acme-recruiter-intro.md) — Recruiter thread with Noa Peretz at Acme Robotics, 2 to 8 October 2026: cold outreach, a recruiter-screen c...
 
 ## People
 

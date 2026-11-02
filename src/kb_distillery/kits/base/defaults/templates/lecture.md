@@ -1,7 +1,6 @@
 ---
 type: lecture
 layer: source
-title: {{title_yaml}}
 course: {{course}}
 area: []
 maturity: digested

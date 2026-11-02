@@ -45,6 +45,11 @@ def _index():
     return query.parse_index()
 
 
+def _maturity(slug):
+    from kb_distillery.core import frontmatter
+    return str((frontmatter.parse(_wiki_text(slug) or "")[0] or {}).get("maturity") or "")
+
+
 def _wiki_text(slug):
     path = os.path.join(ROOT, "wiki", f"{slug}.md")
     if not os.path.isfile(path):
@@ -109,7 +114,7 @@ def _header(path, row):
              f"disposition: {_disp(row)}", f"collection: {row.get('collection', '') or '-'}"]
     slug = row.get("slug", "")
     if slug:
-        st = (_index().get(slug) or {}).get("status", "")
+        st = (_index().get(slug) or {}).get("status") or _maturity(slug)    # index rows carry no maturity
         lines.append(f"page: {links.link(slug)} {st}".rstrip())
     for hub, title in _hub_rows(path):
         lines.append(f"hub row: {links.link(hub)} · {title}")

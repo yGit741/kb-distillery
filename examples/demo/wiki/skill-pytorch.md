@@ -1,7 +1,6 @@
 ---
 type: skill
 layer: concept
-title: "PyTorch"
 maturity: growing
 sources: [{resource: posting-acme-senior-ml-engineer.md}, {resource: posting-nimbus-health-applied-scientist.md}, {resource: notes-acme-technical-interview.md}, {resource: doc-dana-levi-cv.md}]
 related: [role-senior-ml-engineer-acme.md, role-applied-scientist-nimbus.md, interview-acme-technical.md, dana-levi.md]

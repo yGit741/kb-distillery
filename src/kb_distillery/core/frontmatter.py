@@ -129,16 +129,41 @@ def generated(fm):
     return g if isinstance(g, dict) else {}
 
 
+def url_resource(fm):
+    """The http(s) `url` of a Source-layer page: the resource it was digested from. It is not repeated in `sources`;
+    '' for any other page or a url that is not http(s)."""
+    url = unquote(str(fm.get("url") or ""))
+    return url if fm.get("layer") == "source" and _HTTP.match(url) else ""
+
+
 def resources(fm):
-    """The `sources[].resource` strings of a page, in order (a legacy bare string entry counts as its own resource)."""
+    """The `sources[].resource` strings of a page, in order (a legacy bare string entry counts as its own resource).
+    A Source page without `sources` has its own `url` (the one resource `sources` would only repeat)."""
     srcs = fm.get("sources")
     if srcs in (None, ""):
-        return []
+        return [url_resource(fm)] if url_resource(fm) else []
     out = []
     for e in [srcs] if isinstance(srcs, (str, dict)) else srcs:
         r = e.get("resource") if isinstance(e, dict) else e
         if isinstance(r, str) and r.strip():
             out.append(r.strip())
+    return out
+
+
+def page_title(fm, text, slug=""):
+    """The title of a page, the one rule everything shares: its `title:` when it has one (kept only when it differs
+    from the first heading), else its first `# ` heading, else `slug`."""
+    return unquote(fm.get("title")) or first_heading(text) or slug
+
+
+def effective(fm, text):
+    """`fm` with the fields the page leaves out because they are derived filled back in (`title` = first heading,
+    `sources` = the Source page's own url), for what the app shows."""
+    out = dict(fm)
+    if not unquote(out.get("title")) and first_heading(text):
+        out["title"] = quote(first_heading(text))      # as a written `title:` reads, so the panel looks as it did
+    if out.get("sources") in (None, "") and url_resource(out):
+        out["sources"] = [{"resource": url_resource(out)}]
     return out
 
 
@@ -197,19 +222,14 @@ def related_line(paths):
     return "related: [" + ", ".join(scalar(p) for p in paths) + "]"
 
 
-def url_sources(url):
-    """The `sources:` line of a Source-layer page: its own http(s) `url` is the resource it was digested from.
-    '' when the page has no such url (a `raw:` path is never a resource)."""
-    url = str(url or "").strip()
-    return sources_line([url]) if _HTTP.match(url) else ""
-
-
 def fill_title(text):
-    """Fill a template's `{{title_yaml}}` with its own first heading, quoted: the page's `title:` is its H1."""
-    if "{{title_yaml}}" not in text:
-        return text
-    return text.replace("{{title_yaml}}", quote(first_heading(text.replace("{{title_yaml}}", '""'))))
+    """Drop a template's `title: {{title_yaml}}` line: a page's title is its first heading, written only when it differs."""
+    return re.sub(r"^title: \{\{title_yaml\}\}\n", "", text, flags=re.M).replace("{{title_yaml}}", "")
 
 
-def title_line(title):
-    return "title: " + quote(" ".join(str(title).split()))
+def title_line(title, heading=None):
+    """`title: "…"` for a page whose H1 is `heading` (default: `title` itself); '' when it equals the first heading,
+    which is what a reader falls back to."""
+    title = " ".join(str(title).split())
+    h = first_heading("# " + (title if heading is None else str(heading)))
+    return "" if title == h else "title: " + quote(title)

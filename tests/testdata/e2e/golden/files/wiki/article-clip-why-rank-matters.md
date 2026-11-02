@@ -1,7 +1,6 @@
 ---
 type: article
 layer: source
-title: "Clip Why Rank Matters"
 source: 
 author:
 area: []

@@ -1,7 +1,6 @@
 ---
 type: posting
 layer: source
-title: "Senior ML Engineer, Perception (Acme Robotics)"
 maturity: digested
 depth: easy
 raw: raw/web-clips/acme-senior-ml-engineer.md

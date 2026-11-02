@@ -1,7 +1,6 @@
 ---
 type: video
 layer: source
-title: {{title_yaml}}
 author: {{author}}
 series: {{series}}
 area: []

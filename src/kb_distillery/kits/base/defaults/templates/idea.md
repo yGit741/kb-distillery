@@ -1,7 +1,6 @@
 ---
 type: idea
 layer: concept
-title: {{title_yaml}}
 area: []
 maturity: seed
 sources: []

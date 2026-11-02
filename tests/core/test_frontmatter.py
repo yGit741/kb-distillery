@@ -30,7 +30,27 @@ def test_quote_scalar_title_helpers():
     assert fm.scalar("a.md") == "a.md" and fm.scalar("https://x.org/?id=1").startswith('"')
     assert fm.first_heading("---\ntype: x\n---\n\n# See [[a|Label]] now\n") == "See Label now"
     assert fm.first_heading("```\n# no\n```\n# yes\n") == "yes"
-    assert fm.fill_title("---\ntitle: {{title_yaml}}\n---\n# T: x\n").startswith('---\ntitle: "T: x"')
+    assert fm.fill_title("---\ntitle: {{title_yaml}}\n---\n# T: x\n") == "---\n---\n# T: x\n"      # the title is the H1: no line
+
+
+def test_title_is_written_only_when_it_differs_from_the_heading():
+    assert fm.title_line("Same  Title") == "" and fm.title_line("Same Title", "Same Title") == ""
+    assert fm.title_line("Distilled · Label", "Distilled · [[a|Label]]") == ""
+    assert fm.title_line("Other", "Same Title") == 'title: "Other"'
+    page = "---\ntype: x\n---\n\n# Heading\n"
+    assert fm.page_title({}, page, "slug") == "Heading" and fm.page_title({"title": '"Own"'}, page, "slug") == "Own"
+    assert fm.page_title({}, "---\ntype: x\n---\nno heading\n", "slug") == "slug"
+
+
+def test_a_source_page_url_stands_in_for_the_sources_it_leaves_out():
+    src = {"layer": "source", "url": "https://x.org/a"}
+    assert fm.resources(src) == ["https://x.org/a"]
+    assert fm.resources({**src, "sources": [{"resource": "a.md"}]}) == ["a.md"]       # present sources win
+    assert fm.resources({"layer": "concept", "url": "https://x.org/a"}) == []
+    assert fm.resources({"layer": "source", "url": "raw/x.pdf"}) == []
+    shown = fm.effective({**src, "type": "paper"}, "---\ntype: paper\n---\n# H\n")
+    assert shown["title"] == '"H"' and shown["sources"] == [{"resource": "https://x.org/a"}]
+    assert fm.display("sources", shown["sources"]) == ["https://x.org/a"]
 
 
 def test_display_shows_slugs_and_dates():

@@ -1,7 +1,6 @@
 ---
 type: process
 layer: collection
-title: "Nimbus Health hiring process"
 maturity: digested
 related: [company-nimbus-health.md, role-applied-scientist-nimbus.md, interview-nimbus-hiring-manager.md, maya-cohen.md]
 description: "Hiring process for the Applied Scientist role at Nimbus Health: only the posting so far, with a hiring-manager conversation with Maya Cohen scheduled."

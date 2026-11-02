@@ -70,7 +70,8 @@ class RenderTests(BlogVault):
 
     def test_stub_without_metadata_falls_back_to_original_title(self):
         page = blog.render(self.raw, root=self.root)
-        self.assertIn('title: "פירוק SVD והפירוק הפולארי של מטריצות"', page)
+        self.assertIn("\n# פירוק SVD והפירוק הפולארי של מטריצות\n", page)
+        self.assertNotIn("title:", page)                       # the title is the H1: not written twice
         self.assertNotIn("aliases:", page)
 
     def test_catalog_detects_tagged_posts_only(self):

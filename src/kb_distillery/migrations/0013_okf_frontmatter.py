@@ -3,13 +3,15 @@
 Per page, front matter only (the body is kept byte for byte), line by line so key order and every untouched line stay:
   status      -> maturity (same values); OKF `status: draft` is set on pages at `depth: listed`, omitted otherwise
   summary     -> description
-  summary_by  -> generated: {by, at}. `summary_by: me` = the user wrote it -> `human:<owner>`, the owner read from
-                 kb.toml `[kb] owner`; a tool-written summary -> `summarize/<model>`. `at` only from a matching row of
-                 .cache/summaries/proposals.jsonl (its `ts`, with the machine's UTC offset), else left out
+  summary_by  -> generated: {by}. `summary_by: me` = the user wrote it -> `human:<owner>`, the owner read from
+                 kb.toml `[kb] owner`; a tool-written summary -> `summarize/<model>`, the model read from a matching
+                 row of .cache/summaries/proposals.jsonl. No `at`: it is not worth its bytes
   date        -> created (`YYYY-MM-DDT00:00:00Z`); an empty `date:` is dropped
-  title       -> from the first heading when the page has none
-  sources     -> objects with a `resource`: a wiki page (core.links.page_path), the page's own http(s) `url` on a Source
-                 page, a `think:<note>.md` or any other descriptor kept as plain text. `raw:` stays an extension field
+  title       -> dropped when it equals the page's first heading (readers fall back to the heading); kept when it differs
+  sources     -> objects with a `resource`: a wiki page (core.links.page_path), a `think:<note>.md` or any other
+                 descriptor kept as plain text. `raw:` stays an extension field. A Source page's own http(s) `url` is
+                 never written alone: `sources` that would only repeat it is omitted (readers fall back to `url`), and
+                 it stays in a list that has other entries
   related     -> page paths (core.links.page_path), resolved through slug, `aliases:` and meta/aliases.tsv
   type        -> `excalidraw` on a .md under wiki/ with frontmatter but no `type`
 Whatever cannot be resolved or added safely is kept as it was and listed in the report (printed, and returned).
@@ -18,7 +20,6 @@ Idempotent: a field already in the new shape is left alone.
     python src/kb_distillery/migrations/0013_okf_frontmatter.py [--root R] [--dry-run]
 """
 import argparse
-import datetime
 import json
 import os
 import re
@@ -32,7 +33,6 @@ PRODUCER = "summarize"                      # `generated.by` of a tool-written s
 UNKNOWN_MODEL = "unknown"
 DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 KEY = re.compile(r"^([A-Za-z0-9_-]+)\s*:(.*)$")
-HTTP = re.compile(r"^https?://\S+$")
 OKF_STATUS = {"draft", "stable", "deprecated"}
 
 
@@ -71,18 +71,6 @@ def _put_after(entries, after, key, line):
     entries.insert(len(entries) if i is None else i + 1, [key, [line]])
 
 
-def _with_offset(ts, tz=None):
-    """A proposals.jsonl `ts` (naive local time of the machine that ran `summarize run`, or already offset) with its
-    UTC offset, `YYYY-MM-DDTHH:MM:SS+HH:MM`."""
-    try:
-        d = datetime.datetime.fromisoformat(str(ts).replace("Z", "+00:00"))
-    except ValueError:
-        return None
-    if d.tzinfo is None:
-        d = d.replace(tzinfo=tz) if tz else d.astimezone()
-    return d.isoformat(timespec="seconds")
-
-
 def load_proposals(root):
     """{slug: [rows, oldest first]} from .cache/summaries/proposals.jsonl."""
     path = os.path.join(root, ".cache", "summaries", "proposals.jsonl")
@@ -101,23 +89,18 @@ def load_proposals(root):
     return out
 
 
-def _generated(fm, owner, proposals, tz, report, slug):
-    """The `generated: {...}` line for a page's summary, or None when it has no summary."""
-    by_me = fm.get("summary_by") == "me"
-    at = None
-    if by_me:
+def _generated(fm, owner, proposals, report, slug):
+    """The `generated: {by: …}` line for a page's summary."""
+    if fm.get("summary_by") == "me":
         by = f"human:{owner}"
     else:
         summary = fmlib.unquote(fm.get("summary") or fm.get("description"))
         row = next((r for r in reversed(proposals.get(slug, []))
                     if r.get("summary") == summary and r.get("summary_from") == fm.get("summary_from")), None)
         by = f"{PRODUCER}/{(row or {}).get('model') or UNKNOWN_MODEL}"
-        at = _with_offset(row.get("ts"), tz) if row and row.get("ts") else None
         if row is None:
             report["no_proposal"].append(slug)
-    if at is None:
-        report["no_at"].append(slug)
-    return "generated: {by: " + fmlib.scalar(by) + (", at: " + at if at else "") + "}"
+    return "generated: {by: " + fmlib.scalar(by) + "}"
 
 
 # -- one page ----------------------------------------------------------------------------------------------------
@@ -177,7 +160,7 @@ def _migrate_page(text, slug, ctx, report):
                                f"for the user's own summary (wiki/{slug}.md has `summary_by: me`)")
         if fm.get("summary_by") not in (None, "me", ""):
             report["odd_summary_by"].append(slug)
-        line = _generated(fm, ctx["owner"], ctx["proposals"], ctx["tz"], report, slug)
+        line = _generated(fm, ctx["owner"], ctx["proposals"], report, slug)
         j = _find(entries, "summary_by")
         if j is not None:
             entries[j] = ["generated", [line]]
@@ -199,15 +182,13 @@ def _migrate_page(text, slug, ctx, report):
         else:
             report["date_kept"].append((slug, str(fm["date"])))
 
-    # title from the first heading
+    # title: only when it differs from the first heading (it is what a reader falls back to)
     h1 = fmlib.first_heading(text)
-    if "title" not in fm:
-        if h1:
-            _put_after(entries, ("layer", "type"), "title", "title: " + fmlib.quote(h1))
-        else:
-            report["no_heading"].append(slug)
-    elif h1 and fmlib.unquote(fm["title"]) != h1:
-        report["title_differs"].append((slug, fmlib.unquote(fm["title"]), h1))
+    if "title" in fm:
+        if not fmlib.unquote(fm["title"]) or (h1 and fmlib.unquote(fm["title"]) == h1):
+            entries.pop(_find(entries, "title"))
+        elif h1:
+            report["title_differs"].append((slug, fmlib.unquote(fm["title"]), h1))
 
     # sources -> objects with a resource
     srcs = fm.get("sources", [])
@@ -238,14 +219,17 @@ def _migrate_page(text, slug, ctx, report):
         if hit is None:
             report["source_unresolved"].append((slug, item))
         new_srcs.append(links.page_path(hit or slug_ref))
-    url = fmlib.unquote(str(fm.get("url") or ""))
-    if fm.get("layer") == "source" and HTTP.match(url) and url not in new_srcs:
-        new_srcs.insert(0, url)
+    url = fmlib.url_resource(fm)
+    if url and new_srcs and url not in new_srcs:
+        new_srcs.insert(0, url)                     # other entries stay, so `url` must stay among them
         changed = True
     new_srcs = [r for r in dict.fromkeys(new_srcs) if r]
-    if changed:
+    i = _find(entries, "sources")
+    if url and new_srcs == [url]:
+        if i is not None:
+            entries.pop(i)                          # only the page's own url: `resources` falls back to it
+    elif changed:
         line = fmlib.sources_line(new_srcs)
-        i = _find(entries, "sources")
         if i is not None:
             entries[i] = ["sources", [line]]
         else:
@@ -298,10 +282,10 @@ def _excalidraw_lf(text, rel, report):
 
 
 # -- the vault ---------------------------------------------------------------------------------------------------
-def apply(root, dry_run=False, tz=None):
+def apply(root, dry_run=False):
     root = os.path.abspath(root)
     wiki = os.path.join(root, "wiki")
-    report = {k: [] for k in ("no_at", "no_proposal", "odd_summary_by", "date_kept", "no_heading", "title_differs",
+    report = {k: [] for k in ("no_proposal", "odd_summary_by", "date_kept", "title_differs",
                               "source_unresolved", "source_text", "source_dropped", "related_unresolved", "related_text", "no_type")}
     report["changed"] = []
     if not os.path.isdir(wiki):
@@ -325,7 +309,7 @@ def apply(root, dry_run=False, tz=None):
     fms = {s: (fmlib.parse(t.replace("\r\n", "\n"))[0] or {}) for s, (_p, t) in flat.items()}
     ctx = {"slugs": set(flat), "aliases": links.alias_map(fms),
            "mentions": links.mention_map(os.path.join(root, "meta", "aliases.tsv")),
-           "owner": owner_of(root), "proposals": load_proposals(root), "tz": tz}
+           "owner": owner_of(root), "proposals": load_proposals(root)}
     todo = {}
     for slug, (path, text) in flat.items():
         new = migrate_page(text, slug, ctx, report)
@@ -346,7 +330,7 @@ def apply(root, dry_run=False, tz=None):
 
 def _print(r, dry_run):
     print(f"okf frontmatter: {len(r['changed'])} pages {'would change' if dry_run else 'changed'}")
-    for key in ("no_at", "no_proposal", "odd_summary_by", "no_heading"):
+    for key in ("no_proposal", "odd_summary_by"):
         if r[key]:
             print(f"  {key}: {len(r[key])}" + (f" {r[key][:8]}" if len(r[key]) <= 8 else ""))
     for key in ("related_unresolved", "source_dropped", "source_unresolved", "source_text", "related_text", "date_kept", "title_differs",

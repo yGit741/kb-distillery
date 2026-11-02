@@ -1,7 +1,6 @@
 ---
 type: book
 layer: collection
-title: {{title_yaml}}
 authors: {{authors}}
 year: {{year}}
 area: {{area}}

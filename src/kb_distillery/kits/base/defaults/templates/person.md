@@ -1,7 +1,6 @@
 ---
 type: person
 layer: concept
-title: {{title_yaml}}
 url: unknown
 scholar: unknown
 github: unknown

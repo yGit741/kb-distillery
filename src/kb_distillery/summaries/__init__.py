@@ -8,6 +8,6 @@
 
 `run` never touches wiki/: proposals land in the cache, so a bad batch costs nothing to throw away.
 `apply` refuses until the schema knows the field (SCHEMA_VERSION >= 1.3), writes `description:`, `summary_from:` and
-`generated: {by: summarize/<model>, at: <when the proposal was made>}`, and never overwrites a description whose
+`generated: {by: summarize/<model>}`, and never overwrites a description whose
 `generated.by` is a `human:<id>` (you wrote it).
 """

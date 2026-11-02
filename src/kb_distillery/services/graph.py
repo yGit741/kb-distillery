@@ -238,7 +238,7 @@ def build_graph_snapshot(layer=None, view=None):
                 "changed": dates.get(rel, ("", ""))[1],
                 "preview": _preview(text),
                 "properties": _properties(
-                    fm, slug, len(inbound.get(slug, set())),
+                    frontmatter.effective(fm, text), slug, len(inbound.get(slug, set())),
                     len(outbound_links(text, fm) & set(pages)),
                 ),
             }

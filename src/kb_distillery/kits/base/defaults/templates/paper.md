@@ -1,7 +1,6 @@
 ---
 type: paper
 layer: source
-title: {{title_yaml}}
 authors: []
 year:
 area: []

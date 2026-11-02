@@ -222,7 +222,7 @@ def build_page(slug, view=None):
         for s in sorted(inn[slug], key=lambda s: (-len(inn[s]), s))
     ]
     fm_clean = {}
-    for k, v in fm.items():
+    for k, v in page_frontmatter.effective(fm, text).items():
         if v in (None, "", []):
             continue
         fm_clean[k] = page_frontmatter.display(k, v)

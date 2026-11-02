@@ -1,7 +1,6 @@
 ---
 type: paper
 layer: source
-title: "Tiny Rank Paper"
 authors: [A. Author]
 year: 2024
 area: [learning-theory]
@@ -12,7 +11,6 @@ citekey: tiny2024
 url: https://example.org/tiny-rank
 recommended_by: []
 discussed_with: []
-sources: [{resource: https://example.org/tiny-rank}]
 ---
 
 # Tiny Rank Paper

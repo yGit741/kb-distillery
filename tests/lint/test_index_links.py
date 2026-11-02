@@ -47,7 +47,7 @@ class IndexLinks(unittest.TestCase):
         text = self.index()
         self.assertTrue(text.startswith("---\nokf_version: 0.2\n---\n"))
         self.assertNotIn("type: meta", text)
-        self.assertIn("- [Alpha one](alpha.md) (seed) — About | alpha.", text)      # title the app shows, maturity, summary
+        self.assertIn("- [Alpha one](alpha.md) — About | alpha.", text)      # title the app shows, summary: no maturity
         self.assertIn("- [Beta](beta.md) — Alpha one in a summary", text)           # a link inside a summary is plain text
         self.assertNotIn("[[", text)
 

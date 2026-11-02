@@ -1,7 +1,6 @@
 ---
 type: book
 layer: collection
-title: "Tiny Book (2020)"
 authors: [B. Writer]
 year: 2020
 area: [learning-theory]

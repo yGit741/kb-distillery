@@ -124,6 +124,14 @@ class TestStub(unittest.TestCase):
         s = catalog._catalog_stub("paper-1997-threshold-intervals-under-group-symmetries", "raw/x.pdf")
         self.assertIn("# Threshold Intervals Under Group Symmetries\n", s)
 
+    def test_stub_writes_neither_a_title_nor_sources_the_heading_and_url_already_say(self):
+        s = catalog._catalog_stub("paper-1997-x", "raw/x.pdf", title="X Paper", url="https://example.org/x")
+        head = s.split("\n---\n", 1)[0]
+        self.assertIn("url: https://example.org/x", head)
+        self.assertNotIn("title:", head)
+        self.assertNotIn("sources:", head)
+        self.assertIn("\n# X Paper\n", s)
+
     def test_catalog_paper_url_and_title(self):
         with tempfile.TemporaryDirectory() as root:
             for d in ("wiki", "raw/inbox", "raw/printed-docs"):

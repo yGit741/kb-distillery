@@ -1,5 +1,5 @@
 """The `description:` field (was `summary:` before schema 1.5): one English "what it is + main point" line per page,
-and its staleness hash. `generated: {by, at}` says who wrote it: `human:<id>` (never rewritten by a tool) or
+and its staleness hash. `generated: {by}` says who wrote it: `human:<id>` (never rewritten by a tool) or
 `summarize/<model>`.
 
 `summary_from` stores `summary_hash(text)` of the page the summary was written from. The hash covers only

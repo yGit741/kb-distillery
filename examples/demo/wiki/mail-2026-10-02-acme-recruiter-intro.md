@@ -1,7 +1,6 @@
 ---
 type: mail
 layer: source
-title: "Acme recruiter intro thread"
 maturity: digested
 depth: easy
 raw: raw/emails/2026-10-02-acme-recruiter-intro/thread.md

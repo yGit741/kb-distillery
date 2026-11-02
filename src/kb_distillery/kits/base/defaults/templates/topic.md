@@ -1,7 +1,6 @@
 ---
 type: topic
 layer: concept
-title: {{title_yaml}}
 maturity: seed
 aliases: []
 related: []

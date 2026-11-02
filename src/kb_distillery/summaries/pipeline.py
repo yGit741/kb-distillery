@@ -7,9 +7,9 @@ import re
 import time
 
 from kb_distillery import llm, paths
-from kb_distillery.core import schema
+from kb_distillery.core import frontmatter, schema
 from kb_distillery.core.summary import (body_of, hand_written, needs_summary, now_stamp, problems, section, summary_hash,
-                                       tool_actor, unquote, with_offset)
+                                       tool_actor, unquote)
 from kb_distillery.lint.lint import parse_frontmatter
 from kb_distillery.core.schema import is_page_file
 
@@ -56,8 +56,7 @@ def load_pages(root=None):
 
 
 def title_of(page):
-    m = re.search(r"^# (.+)$", body_of(page["text"]), re.M)
-    return unquote(page["fm"].get("title")) or (m.group(1).strip() if m else page["slug"])
+    return frontmatter.page_title(page["fm"], page["text"], page["slug"])
 
 
 def status(page):
@@ -178,7 +177,7 @@ def propose(pages, model=MODEL, per_call=PER_CALL, workers=WORKERS, log=print, o
     batch = llm.resolve_backend(backend) == "batch"
 
     def done(rs):
-        stamp = now_stamp()                # with the UTC offset: it becomes `generated.at`
+        stamp = now_stamp()                # kept in proposals.jsonl; `generated` holds only `by`
         for r in rs:
             r["ts"] = stamp
         if on_rows:
@@ -284,9 +283,8 @@ def apply(slugs=None, root=None, path=PROPOSALS, out_dir=None):
             continue
         if r["summary_from"] != summary_hash(page["text"]):
             continue                                      # page changed since the proposal: re-run it
-        by = {"by": tool_actor(r.get("model") or MODEL), "at": with_offset(r.get("ts")) or now_stamp()}
         new = set_fields(page["text"], {"description": f'"{r["summary"]}"', "summary_from": r["summary_from"],
-                                        "generated": "{by: %s, at: %s}" % (by["by"], by["at"])})
+                                        "generated": "{by: %s}" % tool_actor(r.get("model") or MODEL)})
         if new != page["text"]:
             tmp = page["path"] + ".tmp"
             with open(tmp, "w", encoding="utf-8") as f:

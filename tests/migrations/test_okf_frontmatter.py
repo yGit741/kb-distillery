@@ -1,5 +1,5 @@
 """0013_okf_frontmatter: status -> maturity (+ OKF draft), summary -> description, summary_by -> generated, date -> created,
-title from the H1, sources as objects, related as page paths, excalidraw type; idempotent, body untouched."""
+title dropped when it is the H1, sources as objects (never only the url), generated.by only, related as page paths, excalidraw type; idempotent, body untouched."""
 import importlib.util
 import json
 import os
@@ -55,7 +55,7 @@ class OkfFrontmatter(unittest.TestCase):
         paper = frontmatter.parse(read(self.root, "wiki/paper-a.md"))[0]
         self.assertEqual(paper["maturity"], "to-read")
         self.assertEqual(paper["status"], "draft")
-        self.assertEqual(paper["title"], '"Paper A"')
+        self.assertNotIn("title", paper)                             # equals the H1: readers fall back to it
         self.assertEqual(frontmatter.resources(paper),
                          ["https://example.org/a", links.page_path("idea-x"), "think:note one.md"])
         self.assertEqual(paper["related"], ["idea-x.md", "sgd.md", "nowhere.md"])
@@ -67,9 +67,7 @@ class OkfFrontmatter(unittest.TestCase):
         self.assertEqual(idea["related"], ["sgd.md"])
         self.assertIn("description", idea)
         sgd = frontmatter.parse(read(self.root, "wiki/sgd.md"))[0]
-        self.assertEqual(sgd["generated"]["by"], "summarize/sonnet")
-        self.assertRegex(sgd["generated"]["at"], r"^2026-10-31T09:46:51[+-]\d\d:\d\d$")
-        self.assertEqual(rep["no_at"], ["idea-x"])
+        self.assertEqual(sgd["generated"], {"by": "summarize/sonnet"})      # no `at`
         self.assertTrue(read(self.root, "wiki/excalidraw/d.excalidraw.md").startswith("---\ntype: excalidraw\n"))
 
     def test_body_untouched_and_idempotent(self):
@@ -90,6 +88,23 @@ class OkfFrontmatter(unittest.TestCase):
         self.assertEqual(frontmatter.resources(d), ["think:n.md"])
         self.assertNotIn("source", d)
         self.assertEqual(rep["source_dropped"], [("paper-r", "raw/x.pdf")])
+
+    def test_sources_that_only_repeat_the_url_and_titles_equal_to_the_heading_are_omitted(self):
+        write(self.root, "wiki/paper-u.md", "---\ntype: paper\nlayer: source\nurl: https://example.org/u\n"
+              "title: \"Paper U\"\nsources: [https://example.org/u]\n---\n\n# Paper U\n")
+        write(self.root, "wiki/paper-o.md", "---\ntype: paper\nlayer: source\nurl: https://example.org/o\n"
+              "title: \"Other name\"\nsources: [{resource: https://example.org/o}]\n---\n\n# Paper O\n")
+        write(self.root, "wiki/paper-m.md", "---\ntype: paper\nlayer: source\nurl: https://example.org/m\n"
+              "sources: [idea-x]\n---\n\n# Paper M\n")
+        rep = mig.apply(self.root)
+        u, o, m = (frontmatter.parse(read(self.root, f"wiki/paper-{x}.md"))[0] for x in "uom")
+        self.assertNotIn("sources", u)
+        self.assertNotIn("title", u)
+        self.assertEqual(frontmatter.resources(u), ["https://example.org/u"])      # the url stands in
+        self.assertNotIn("sources", o)                                              # an object form is dropped too
+        self.assertEqual(o["title"], '"Other name"')                                # differs from the H1: kept
+        self.assertEqual([t[0] for t in rep["title_differs"]], ["paper-o"])
+        self.assertEqual(frontmatter.resources(m), ["https://example.org/m", "idea-x.md"])   # other entries: kept, url inside
 
     def test_dry_run_writes_nothing(self):
         text = read(self.root, "wiki/sgd.md")
@@ -119,7 +134,7 @@ class OkfFrontmatter(unittest.TestCase):
         rep = mig.apply(self.root)
         text = self._bytes("wiki/crlf.md")
         self.assertIn("maturity: seed\r\n", text)
-        self.assertIn("title: \"Crlf\"\r\n", text)
+        self.assertNotIn("title", text)
         self.assertTrue(text.endswith("---\r\n\r\n# Crlf\r\n\r\nBody.\r\n"))
         self.assertNotIn("\n", text.replace("\r\n", ""))                    # no bare LF anywhere
         self.assertIn("type: excalidraw\r\n", self._bytes("wiki/excalidraw/e.excalidraw.md"))

@@ -1,7 +1,6 @@
 ---
 type: interview
 layer: concept
-title: "Acme recruiter screen"
 maturity: done
 created: 2026-10-08T00:00:00Z
 sources: [{resource: mail-2026-10-02-acme-recruiter-intro.md}]

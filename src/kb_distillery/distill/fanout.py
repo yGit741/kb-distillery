@@ -180,7 +180,6 @@ def render_page(rel: str, summary: str, at: str) -> str:
     return f"""---
 type: distilled-think
 layer: concept
-{frontmatter.title_line("Distilled · " + _title(rel))}
 maturity: review
 {frontmatter.sources_line([cite(rel)])}
 distilled_at: {at}

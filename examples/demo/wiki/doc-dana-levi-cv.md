@@ -1,7 +1,6 @@
 ---
 type: document
 layer: source
-title: "Dana Levi CV"
 maturity: digested
 depth: easy
 raw: raw/printed-docs/dana-levi-cv.pdf

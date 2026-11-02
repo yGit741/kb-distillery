@@ -1,7 +1,6 @@
 ---
 type: interview
 layer: concept
-title: "Nimbus hiring-manager interview"
 maturity: scheduled
 created: 2026-10-29T00:00:00Z
 sources: [{resource: posting-nimbus-health-applied-scientist.md}]

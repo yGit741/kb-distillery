@@ -1,7 +1,6 @@
 ---
 type: company
 layer: concept
-title: "Nimbus Health"
 maturity: seed
 sources: [{resource: posting-nimbus-health-applied-scientist.md}]
 related: [role-applied-scientist-nimbus.md, maya-cohen.md, interview-nimbus-hiring-manager.md, skill-clinical-nlp.md, process-nimbus-health.md]

@@ -42,6 +42,12 @@ def _equations_block(equations):
     return "\n".join(lines) if lines else "—"
 
 
+def _title_yaml(title):
+    """`title: "…"` plus its newline, or '' when the title is the `# ` heading the page is written with."""
+    line = frontmatter.title_line(title)
+    return line + "\n" if line else ""
+
+
 def question_name(text, limit=QUESTION_TITLE_MAX):
     """The H1 of a q- stub: the question's short name. Lint caps it at QUESTION_TITLE_MAX chars, so a long
     `open_questions` sentence is clipped at a word boundary — the full statement goes in `## Question`."""
@@ -96,24 +102,22 @@ def run_draft(sha):
     raws = plan.get("raws") or [claims["raw"]]
     raw_field = raws[0] if len(raws) == 1 else "[" + ", ".join(raws) + "]"
 
-    title_fm = frontmatter.title_line(claims["title"])
+    title_fm = _title_yaml(claims["title"])
     draft_fm = "status: draft\n" if digestion == "listed" else ""             # OKF lifecycle: a listed stub is a draft
-    url_fm = frontmatter.url_sources(claims.get("url"))
-    url_fm = url_fm + "\n" if url_fm else ""
     scope = session.get("scope") or {}
     book = plan.get("book") if plan.get("type") == "part" else None
     if book:
         a, b = scope["pages"]
         section = (scope.get("label") or "").replace("#", "").replace(":", " –")
-        head = (f"type: part\nlayer: source\n{title_fm}\nbook: {book}\n", f"section: {section}\nsection_pages: {a}-{b}\n",
+        head = (f"type: part\nlayer: source\n{title_fm}book: {book}\n", f"section: {section}\nsection_pages: {a}-{b}\n",
                 f"\n> Part of {links.page_link(book, known)} · pp. {a}–{b} · {section}\n")
         plan["areas_resolved"] = areas
     elif plan.get("hub"):
         hub_key = "series" if plan["hub"].startswith("series-") else "course"
-        head = (f"type: {plan.get('type') or 'paper'}\nlayer: source\n{title_fm}\n{hub_key}: {plan['hub']}\n", "",
+        head = (f"type: {plan.get('type') or 'paper'}\nlayer: source\n{title_fm}{hub_key}: {plan['hub']}\n", "",
                 f"\n> Row {plan.get('hub_row')} of {links.page_link(plan['hub'], known)}\n")
     else:
-        head = (f"type: {plan.get('type') or 'paper'}\nlayer: source\n{title_fm}\n", "", "")
+        head = (f"type: {plan.get('type') or 'paper'}\nlayer: source\n{title_fm}", "", "")
 
     body = f"""---
 {head[0]}authors: {authors_yaml}
@@ -124,7 +128,7 @@ maturity: {paper_status}
 raw: {raw_field}
 {head[1]}citekey: {claims.get("citekey") or ""}
 url: {claims.get("url") or ""}
-{url_fm}recommended_by: {recommended_by}
+recommended_by: {recommended_by}
 discussed_with: []
 ---
 
@@ -180,8 +184,7 @@ discussed_with: []
         qbody = f"""---
 type: question
 layer: concept
-{frontmatter.title_line(question_name(q.get("text") or qslug))}
-area: [{", ".join(areas[:3])}]
+{_title_yaml(question_name(q.get("text") or qslug))}area: [{", ".join(areas[:3])}]
 maturity: open
 priority: med
 discussed_with: []

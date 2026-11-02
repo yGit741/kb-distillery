@@ -1,7 +1,6 @@
 ---
 type: posting
 layer: source
-title: "Applied Scientist, Clinical NLP (Nimbus Health)"
 maturity: digested
 depth: easy
 raw: raw/web-clips/nimbus-health-applied-scientist.md

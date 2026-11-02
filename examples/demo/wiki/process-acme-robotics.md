@@ -1,7 +1,6 @@
 ---
 type: process
 layer: collection
-title: "Acme Robotics hiring process"
 maturity: digested
 related: [company-acme-robotics.md, role-senior-ml-engineer-acme.md, interview-acme-recruiter-screen.md, interview-acme-technical.md, noa-peretz.md, omer-shahar.md]
 description: "Hiring process for the Senior ML Engineer role at Acme Robotics: posting, recruiter thread, prep chat, technical interview notes and CV, with stage reached and next step."

@@ -1,7 +1,6 @@
 ---
 type: article
 layer: source
-title: "Tblog Post One"
 source: 
 author:
 area: []

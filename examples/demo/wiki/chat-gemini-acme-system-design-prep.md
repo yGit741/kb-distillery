@@ -1,7 +1,6 @@
 ---
 type: chat
 layer: source
-title: "Gemini chat: Acme system-design and ML-ops prep"
 maturity: digested
 depth: easy
 raw: raw/llm-chats/gemini-acme-system-design-prep.md

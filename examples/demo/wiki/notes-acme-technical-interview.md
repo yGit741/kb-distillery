@@ -1,7 +1,6 @@
 ---
 type: notes
 layer: source
-title: "Acme technical interview notes"
 maturity: digested
 depth: easy
 raw: raw/printed-docs/acme-technical-interview-notes.md

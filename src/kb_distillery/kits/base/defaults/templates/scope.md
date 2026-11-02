@@ -1,7 +1,6 @@
 ---
 type: scope
 layer: collection
-title: {{title_yaml}}
 maturity: active
 related: []
 aliases: []

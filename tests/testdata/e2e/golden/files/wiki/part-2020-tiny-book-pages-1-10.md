@@ -1,7 +1,6 @@
 ---
 type: part
 layer: source
-title: "Tiny Book"
 book: book-2020-tiny-book
 authors: [B. Writer]
 year: 2020

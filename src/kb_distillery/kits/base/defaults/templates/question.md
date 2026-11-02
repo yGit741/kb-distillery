@@ -1,7 +1,6 @@
 ---
 type: question
 layer: concept
-title: {{title_yaml}}
 area: []
 maturity: open
 priority: med

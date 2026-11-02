@@ -71,7 +71,6 @@ def render_distilled_page(plan, think_rel, summary, applied=False):
     return f"""---
 type: distilled-think
 layer: concept
-{frontmatter.title_line("Distilled · " + title)}
 maturity: {status}
 {frontmatter.sources_line([think_cite(think_rel)])}
 distilled_at: {ts}

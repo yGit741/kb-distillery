@@ -1,7 +1,6 @@
 ---
 type: paper
 layer: source
-title: "Tiny Book"
 authors: []
 year: 2020
 area: []

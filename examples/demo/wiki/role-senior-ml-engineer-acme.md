@@ -1,7 +1,6 @@
 ---
 type: role
 layer: concept
-title: "Senior ML Engineer, Perception (Acme)"
 maturity: growing
 sources: [{resource: posting-acme-senior-ml-engineer.md}, {resource: doc-dana-levi-cv.md}]
 related: [company-acme-robotics.md, skill-pytorch.md, skill-system-design.md, skill-ml-ops.md, skill-sensor-fusion.md, interview-acme-technical.md, process-acme-robotics.md]

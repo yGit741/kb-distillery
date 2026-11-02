@@ -10,55 +10,55 @@ Read this first on any query.
 
 ## Topics
 
-- [Learning theory](theme-learning-theory.md) (seed) — Generalization bounds and why over-parameterized networks still generalize; a candidate thesis direction fo...
+- [Learning theory](theme-learning-theory.md) — Generalization bounds and why over-parameterized networks still generalize; a candidate thesis direction fo...
 
 ## Ideas
 
-- [Tensor rank](tensor-rank.md) (seed) — A measure of how complex a multi-way array is
+- [Tensor rank](tensor-rank.md) — A measure of how complex a multi-way array is
 
 ## Open questions
 
-- [Does rank explain generalization?](q-does-rank-explain-generalization.md) (open) — Does a low-rank bias explain why big networks generalize?
+- [Does rank explain generalization?](q-does-rank-explain-generalization.md) — Does a low-rank bias explain why big networks generalize?
 
 ## Courses
 
-- [Test machine learning](course-test-ml.md) (digested) — A tiny fixture course for the end-to-end pipeline test: one slide deck, one lecture, and nothing else. It e...
+- [Test machine learning](course-test-ml.md) — A tiny fixture course for the end-to-end pipeline test: one slide deck, one lecture, and nothing else. It e...
 
 ## Series
 
-- [Test blog](series-test-blog.md) (digested) — A tiny fixture blog series for the end-to-end pipeline test: one post clipped from the web, skimmed with ea...
+- [Test blog](series-test-blog.md) — A tiny fixture blog series for the end-to-end pipeline test: one post clipped from the web, skimmed with ea...
 
 ## Books
 
-- [Tiny Book (2020)](book-2020-tiny-book.md) (reading) — <!-- At least one paragraph: what the book is, how it is organised, its stance, and why it matters for the ...
+- [Tiny Book (2020)](book-2020-tiny-book.md) — <!-- At least one paragraph: what the book is, how it is organised, its stance, and why it matters for the ...
 
 ## Papers
 
-- [Tiny Book](paper-2020-tiny-book.md) (to-read)
-- [Easy Skim Paper](paper-2023-easy-skim-paper.md) (digested)
-- [Tiny Rank Paper](paper-2024-tiny-rank-paper.md) (digested) — Analyze gradient flow on a rank-one-initialized factorization
+- [Tiny Book](paper-2020-tiny-book.md)
+- [Easy Skim Paper](paper-2023-easy-skim-paper.md)
+- [Tiny Rank Paper](paper-2024-tiny-rank-paper.md) — Analyze gradient flow on a rank-one-initialized factorization
 
 ## Book parts
 
-- [Tiny Book](part-2020-tiny-book-pages-1-10.md) (digested) — Definitions and examples
+- [Tiny Book](part-2020-tiny-book-pages-1-10.md) — Definitions and examples
 
 ## Lectures
 
-- [Lecture 1 · Introduction](lecture-tml-slides-intro.md) (digested) — Lecture overview
+- [Lecture 1 · Introduction](lecture-tml-slides-intro.md) — Lecture overview
 
 ## Articles
 
-- [Clip Why Rank Matters](article-clip-why-rank-matters.md) (digested)
-- [Tblog Post One](article-tblog-post-one.md) (digested)
+- [Clip Why Rank Matters](article-clip-why-rank-matters.md)
+- [Tblog Post One](article-tblog-post-one.md)
 
 ## Blog posts
 
-- [צורת ז'ורדן בפרקטיקה](blog-not-exact-blog-post.md) (to-read) — <div dir="rtl">
+- [צורת ז'ורדן בפרקטיקה](blog-not-exact-blog-post.md) — <div dir="rtl">
 
 ## Videos
 
-- [Tiny talk](video-tiny-talk.md) (digested)
+- [Tiny talk](video-tiny-talk.md)
 
 ## Mail
 
-- [2026 01 02 Rank Thread](mail-2026-01-02-rank-thread.md) (digested)
+- [2026 01 02 Rank Thread](mail-2026-01-02-rank-thread.md)

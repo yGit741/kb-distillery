@@ -1,7 +1,6 @@
 ---
 type: article
 layer: source
-title: {{title_yaml}}
 source: {{source}}
 author:
 area: []

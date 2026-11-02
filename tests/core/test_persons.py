@@ -12,7 +12,6 @@ from kb_distillery.core import persons
 V2 = """---
 type: person
 layer: concept
-title: "Ada Lovelace"
 url: https://example.org/~ada
 scholar: none
 github: https://github.com/ada
@@ -294,7 +293,7 @@ class MigrationTest(unittest.TestCase):
     def test_hand_page(self):
         text, m, _rows = self.mod.plan(self.root)["amit-daniely"]
         fm, body = persons.parse_frontmatter(text)
-        self.assertEqual(fm, {"type": "person", "layer": "concept", "title": '"Amit Daniely"', "url": "https://www.cs.huji.ac.il/~amitd/",
+        self.assertEqual(fm, {"type": "person", "layer": "concept", "url": "https://www.cs.huji.ac.il/~amitd/",
                               "scholar": "https://scholar.google.com/citations?user=X", "email": "amit@example.org"})
         self.assertIn("HUJI — School of CS. Candidate thesis instructor. Why depth helps.", body)
         self.assertIn("| ? | — | HUJI — School of CS · Google Research (part-time) | — |", body)

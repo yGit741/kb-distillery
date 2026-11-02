@@ -24,12 +24,13 @@ ROOT = vault_root()
 WIKI = os.path.join(ROOT, "wiki")
 INDEX = os.path.join(ROOT, INDEX_REL)
 
-# One index row: `- [Title](slug.md)`, then ` (maturity)` when the page has one, then ` — summary` (lint.write_index).
+# One index row: `- [Title](slug.md) — summary` (lint.write_index; an older index also had ` (maturity)` after the link).
 INDEX_TAIL = re.compile(r"^(?: \(([^()]*)\))?(?: — (.*))?$")
 
 
 def parse_index():
-    """Return slug -> {section, title, status, summary} from wiki/index.md (`status` is the page's maturity)."""
+    """Return slug -> {section, title, status, summary} from wiki/index.md (`status` is empty: rows carry no maturity; an
+    older index that has one still parses)."""
     if not os.path.isfile(INDEX):
         return {}
     entries = {}

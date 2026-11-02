@@ -1,7 +1,6 @@
 ---
 type: interview
 layer: concept
-title: "Acme technical interview"
 maturity: done
 created: 2026-10-15T00:00:00Z
 sources: [{resource: notes-acme-technical-interview.md}, {resource: chat-gemini-acme-system-design-prep.md}, {resource: mail-2026-10-02-acme-recruiter-intro.md}]

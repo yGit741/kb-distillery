@@ -1,7 +1,6 @@
 ---
 type: role
 layer: concept
-title: "Applied Scientist, Clinical NLP (Nimbus)"
 maturity: seed
 sources: [{resource: posting-nimbus-health-applied-scientist.md}, {resource: doc-dana-levi-cv.md}]
 related: [company-nimbus-health.md, skill-clinical-nlp.md, skill-pytorch.md, skill-interviewing-stories.md, interview-nimbus-hiring-manager.md, maya-cohen.md, process-nimbus-health.md]

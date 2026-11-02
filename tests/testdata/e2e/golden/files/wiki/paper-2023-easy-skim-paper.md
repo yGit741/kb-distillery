@@ -1,7 +1,6 @@
 ---
 type: paper
 layer: source
-title: "Easy Skim Paper"
 authors: []
 year: 2023
 area: []

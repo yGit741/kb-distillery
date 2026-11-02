@@ -103,11 +103,13 @@ def _flat(v):
     return v
 
 
-def render_frontmatter(fm, title=None):
-    """`title` is the page's H1 (OKF `title:`); the summary fields the page already has are carried over."""
+def render_frontmatter(fm, heading=None):
+    """`heading` is the page's H1: an OKF `title:` the page already has is carried over only when it differs from it;
+    so are the summary fields."""
     lines = ["---", "type: person", "layer: concept"]
-    if title:
-        lines.append(frontmatter.title_line(title))
+    title = frontmatter.unquote(fm.get("title") or "")
+    if title and frontmatter.title_line(title, heading):
+        lines.append(frontmatter.title_line(title, heading))
     for k in SUMMARY_FIELDS:
         if fm.get(k):
             lines.append(f"{k}: {_flat(fm[k])}")

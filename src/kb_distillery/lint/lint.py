@@ -480,7 +480,7 @@ def check_wiki():
             err(rel, f"topic page must be one of {sorted(TOPIC_PREFIX + s for s in TOPIC_SLUGS)}")
         if t == "ai-chat":
             h1 = next((l[2:].strip() for l in text.splitlines() if l.startswith("# ")), "")
-            if re.match(PLACEHOLDER_TITLE, str(fm.get("title") or "")) or re.match(PLACEHOLDER_TITLE, h1):
+            if re.match(PLACEHOLDER_TITLE, frontmatter.page_title(fm, text)) or re.match(PLACEHOLDER_TITLE, h1):
                 err(rel, "ai-chat needs an informative title, not a clipper placeholder")
             conv = str(fm.get("conversation") or "")
             if not conv and str(fm.get("legacy")).lower() == "true":
@@ -1476,8 +1476,6 @@ def write_index(pages, quiet=False):
             if len(s) > 110:
                 s = s[:107] + "..."
             row = "- " + page_links.page_link(slug, titles)
-            if fm.get("maturity"):
-                row += f" ({fm['maturity']})"
             rows.append(row + (f" — {s}" if s else ""))
         if rows:
             out += [f"## {title}", ""] + rows + [""]

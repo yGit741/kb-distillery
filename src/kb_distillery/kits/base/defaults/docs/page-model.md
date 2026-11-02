@@ -43,7 +43,8 @@ unit" → source.
 ```yaml
 type: <type>                 # see Page layers
 layer: source|collection|concept   # right after type:, must match the type
-title: "Page title"          # the first heading (lint warns when they differ); OKF `title`
+title: "Page title"          # OKF `title`, written only when it differs from the first heading (lint warns on a title that does
+                             # differ); omitted otherwise: every reader falls back to the heading (`core.frontmatter.page_title`)
 maturity: to-read|reading|digested   # was `status` (schema 1.5); sources + collections; idea/topic: seed|growing|solid;
                              # question: open|partial|resolved; distilled-think: review|applied|archived;
                              # scope: active|parked; person: none — see below
@@ -53,10 +54,11 @@ depth: listed|easy|full|deep # sources only — listed ⇒ to-read|reading, easy
 area: [info-theory]          # topic slugs only (whitelist TOPIC_SLUGS in src/kb_distillery/core/schema.py)
 description: "…"             # was `summary`; one English line, 80–320 chars: what the page is + its main point
 summary_from: 3f9a1c0b7e21   # hash of H1 + Problem/Main result + Key claims it was written from (stale check)
-generated: {by: summarize/sonnet, at: 2026-10-31T09:46:51+02:00}   # who wrote the description (OKF §5.2); `at` only when known.
+generated: {by: summarize/sonnet}   # who wrote the description (OKF §5.2); `at` is allowed (an ISO datetime with a UTC offset) but tools do not write it
                              # `by: human:<id>` (the id is kb.toml `[kb] owner`) = you wrote it — tools never overwrite it
-sources: [{resource: paper-x.md}, {resource: https://…}]   # objects with a `resource`: a wiki page path, the Source page's
-                             # own http(s) `url`, or a plain descriptor such as `think:<note>.md`; never a path into raw/ or think/
+sources: [{resource: paper-x.md}, {resource: https://…}]   # objects with a `resource`: a wiki page path, a plain descriptor such as
+                             # `think:<note>.md`, or the Source page's own http(s) `url` next to other entries; never a path into
+                             # raw/ or think/. Omitted when it would only repeat `url:` (readers use `core.frontmatter.resources`)
 relations:                   # optional typed links to other pages (schema 1.4); see below
   - {to: other-slug, kind: extends, note: "why it holds"}
 related: [tensor-rank.md]    # page paths (core.links.page_path); wiki/ is the OKF bundle root and is flat
@@ -102,7 +104,7 @@ aggregated warning (until the backfill ends), stale → warning; pages whose `ge
 (`src/kb_distillery/core/wikiio.py`); lint warns when a page has two or it is not last. Agents never write in it.
 
 **Person pages are handle-driven** (`src/kb_distillery/core/persons.py`, schema 0.12). Frontmatter holds only
-handles, edges, contact and a date (besides `type: person`, `layer: concept`, `title`, `description`) — no `maturity`, `status`, `area`, `related` or `affiliation`:
+handles, edges, contact and a date (besides `type: person`, `layer: concept`, `description`; `title` only when it differs from the first heading) — no `maturity`, `status`, `area`, `related` or `affiliation`:
 
 ```yaml
 url: https://…        # homepage      ⇒ ## Courses
@@ -136,7 +138,7 @@ harmless empty placeholder. Schema 1.6 moved every page to this form (migration 
 **Reserved files (schema 1.7).** `wiki/` is the OKF bundle root, and OKF reserves two files in it: `wiki/index.md` and
 `wiki/log.md`. They are not pages: no `type`, no frontmatter rules, never scanned, linted as pages, graphed, searched,
 counted, shared as nodes or restored by undo. `index.md` is generated on every lint run (frontmatter holds only
-`okf_version: 0.2`; the body is one bulleted `[Title](slug.md) (maturity) — summary` list per page type; no Meta
+`okf_version: 0.2`; the body is one bulleted `[Title](slug.md) — summary` list per page type; no Meta
 section; wikilinks in it are a lint error). `log.md` is the append-only activity timeline: no frontmatter, `# Log`, one
 `## YYYY-MM-DD` heading per day (newest day first) and under it that day's entries, newest first, each
 `### <op> | <summary>` plus ` ← ` and the backticked targets when it has any; `kb_distillery.core.log` is its only writer.

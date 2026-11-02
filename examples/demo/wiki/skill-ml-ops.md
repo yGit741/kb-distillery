@@ -1,7 +1,6 @@
 ---
 type: skill
 layer: concept
-title: "ML-ops"
 maturity: growing
 sources: [{resource: chat-gemini-acme-system-design-prep.md}, {resource: posting-acme-senior-ml-engineer.md}, {resource: notes-acme-technical-interview.md}]
 related: [role-senior-ml-engineer-acme.md, skill-system-design.md, interview-acme-technical.md, company-acme-robotics.md]

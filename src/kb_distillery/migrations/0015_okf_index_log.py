@@ -1,7 +1,7 @@
 """OKF reserved files (schema 1.7): `index.md` and `log.md` live in the bundle root `wiki/`, in OKF shape.
 
   index.md       the generated catalog moves from the vault root to wiki/index.md. The root file is removed; lint
-                 writes wiki/index.md (frontmatter `okf_version: 0.2` only, bulleted `[Title](slug.md)` rows).
+                 writes wiki/index.md (frontmatter `okf_version: 0.2` only, bulleted `[Title](slug.md) — summary` rows, no status).
   meta/log.md    becomes wiki/log.md: no frontmatter, `# Log`, one `## YYYY-MM-DD` heading per day (newest day first)
                  and under it the day's entries, newest first, each `### <op> | <summary>` with its body lines kept.
                  Every entry of the old log is carried over; the text before the first entry (frontmatter, title,

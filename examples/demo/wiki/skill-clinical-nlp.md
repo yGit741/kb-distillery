@@ -1,7 +1,6 @@
 ---
 type: skill
 layer: concept
-title: "Clinical NLP"
 maturity: seed
 sources: [{resource: posting-nimbus-health-applied-scientist.md}, {resource: doc-dana-levi-cv.md}]
 related: [role-applied-scientist-nimbus.md, company-nimbus-health.md, interview-nimbus-hiring-manager.md, skill-pytorch.md]

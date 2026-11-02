@@ -1,7 +1,6 @@
 ---
 type: skill
 layer: concept
-title: "Interviewing stories (behavioural)"
 maturity: seed
 sources: [{resource: posting-nimbus-health-applied-scientist.md}, {resource: notes-acme-technical-interview.md}, {resource: doc-dana-levi-cv.md}]
 related: [interview-nimbus-hiring-manager.md, maya-cohen.md, role-applied-scientist-nimbus.md, interview-acme-technical.md]

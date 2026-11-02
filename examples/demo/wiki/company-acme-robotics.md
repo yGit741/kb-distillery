@@ -1,7 +1,6 @@
 ---
 type: company
 layer: concept
-title: "Acme Robotics"
 maturity: solid
 sources: [{resource: posting-acme-senior-ml-engineer.md}, {resource: mail-2026-10-02-acme-recruiter-intro.md}]
 related: [role-senior-ml-engineer-acme.md, noa-peretz.md, omer-shahar.md, interview-acme-recruiter-screen.md, interview-acme-technical.md, skill-sensor-fusion.md, process-acme-robotics.md]

@@ -1,7 +1,6 @@
 ---
 type: mail
 layer: source
-title: {{title_yaml}}
 area: []
 maturity: digested
 depth: easy

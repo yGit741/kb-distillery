@@ -1,7 +1,6 @@
 ---
 type: series
 layer: collection
-title: {{title_yaml}}
 short: {{short}}
 author: {{author}}
 url: {{url}}

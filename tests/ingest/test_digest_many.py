@@ -69,6 +69,11 @@ def test_merge_keeps_what_the_page_says_and_takes_depth_and_area():
     assert out.endswith("**Problem:** p\n") and "# A Problem" in out              # the body is the draft's
 
 
+def test_merge_drops_a_title_the_draft_omits_because_it_is_the_heading():
+    assert "title" not in fields(merge_frontmatter(OLD, NEW))          # the page's title is now its `# ` heading
+    assert fields(merge_frontmatter(OLD, NEW.replace("---\n\n#", 'title: "Longer name"\n---\n\n#', 1)))["title"] == '"Longer name"'
+
+
 def test_merge_never_overwrites_a_filled_area_and_adds_missing_filled_fields():
     old = OLD.replace("area: []", "area: [quantum]")
     new = NEW.replace("year:\n", "year: 2009\n")

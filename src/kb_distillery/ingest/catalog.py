@@ -209,13 +209,12 @@ def _catalog_stub(slug, raw_rel, title=None, year=None, url="", authors=None):
     person = person_from_raw(raw_rel)
     recommended = f"[{person}]" if person else "[]"
     person_line = f"- Person: {links.link(person, page_title(person))}\n" if person else ""
-    sources_yaml = frontmatter.url_sources(url)
-    sources_yaml = sources_yaml + "\n" if sources_yaml else ""
+    title_yaml = frontmatter.title_line(title)
+    title_yaml = title_yaml + "\n" if title_yaml else ""
     return f"""---
 type: paper
 layer: source
-{frontmatter.title_line(title)}
-authors: {authors_yaml}
+{title_yaml}authors: {authors_yaml}
 year: {year}
 area: []
 maturity: to-read
@@ -224,7 +223,7 @@ depth: listed
 raw: {raw_rel}
 citekey:
 url: {url}
-{sources_yaml}recommended_by: {recommended}
+recommended_by: {recommended}
 discussed_with: []
 ---
 

@@ -1,7 +1,6 @@
 ---
 type: mail
 layer: source
-title: "2026 01 02 Rank Thread"
 area: []
 maturity: digested
 depth: easy

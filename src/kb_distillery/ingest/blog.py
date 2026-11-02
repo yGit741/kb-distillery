@@ -165,15 +165,14 @@ def render(raw_rel, title_en=None, url=None, summary="", key_concepts=(), root=R
     q = lambda s: json.dumps(s, ensure_ascii=False)
     rtl = lang in RTL
     link = url or home
-    head = ["---", "type: blog-post", "layer: source", f"title: {q(title)}", "maturity: to-read", "status: draft",
-            "depth: listed"]
+    head = ["---", "type: blog-post", "layer: source", "maturity: to-read", "status: draft", "depth: listed"]
+    if frontmatter.title_line(title):              # only when it differs from the `# ` heading it is written with
+        head.insert(3, f"title: {q(title)}")
     if title_orig and title_orig != title:
         head.append(f"aliases: [{q(title_orig)}]")
     head += [f"blog: {q(name)}", f"lang: {lang}"]
     if url:
         head.append(f"url: {url}")
-        if frontmatter.url_sources(url):
-            head.append(frontmatter.url_sources(url))
     head.append(f"raw: {raw_rel}")
     related = [f"source-{x}" for x in re.findall(r"subject/([a-z0-9-]+)", fm)
                if os.path.isfile(os.path.join(root, "wiki", f"source-{x}.md"))]

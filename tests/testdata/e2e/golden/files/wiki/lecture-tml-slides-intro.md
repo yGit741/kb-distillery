@@ -1,7 +1,6 @@
 ---
 type: lecture
 layer: source
-title: "Lecture 1 · Introduction"
 course: course-test-ml
 authors: []
 year: 
