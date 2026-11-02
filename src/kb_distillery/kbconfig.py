@@ -61,11 +61,11 @@ class KbConfig:
 
     def section(self, name: str) -> dict:
         """A kb.toml table. `[types]` and `[edges]` of a kb that names a kit come back as the kit's tables
-        extended by the kb's own (kb_distillery.vault.kit); every other table is read as written."""
+        extended by the kb's own (kb_distillery.config.kit); every other table is read as written."""
         d = self.data.get(name)
         d = d if isinstance(d, dict) else {}
         if self.kit and name in ("types", "edges"):
-            from kb_distillery.vault import kit             # lazy: this module stays import-free
+            from kb_distillery.config import kit             # lazy: this module stays import-free
             return kit.section(self.kit, name, d, self.path)
         return d
 
@@ -77,7 +77,7 @@ class KbConfig:
         raw = str((kb.get("kit") or kb.get("template") or "") if isinstance(kb, dict) else "")
         if not raw:
             return ""
-        from kb_distillery.vault import kit
+        from kb_distillery.config import kit
         return kit.canonical(raw)
 
     @property
@@ -292,7 +292,7 @@ def load_dir(root: str, id_hint: str | None = None, strict: bool = True) -> KbCo
         if strict:
             raise KbConfigError(msg)
         print(f"warning: {msg}", file=sys.stderr)
-    from kb_distillery.vault import kit
+    from kb_distillery.config import kit
     named = {key: kb[key] for key in ("kit", "template") if kb.get(key) not in (None, "")}
     for key, value in named.items():
         if not isinstance(value, str) or not kit.exists(value):

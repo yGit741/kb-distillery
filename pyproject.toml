@@ -94,9 +94,6 @@ layers = [
 ]
 # Every current violation, grouped by cycle. A cycle-fix PR deletes its group; nothing else belongs here.
 ignore_imports = [
-    # cycle: config <-> vault/core (kbconfig and paths reach up for the kit loader and the schema constants)
-    "kb_distillery.kbconfig -> kb_distillery.vault.kit",
-    "kb_distillery.paths -> kb_distillery.core.schema",
     # cycle: search <-> services (search.cypher wraps the services query model)
     "kb_distillery.search.cypher -> kb_distillery.services.cypher",
     # cycle: graph/propose.py <-> services: stays until the edges work lands (backlog card)

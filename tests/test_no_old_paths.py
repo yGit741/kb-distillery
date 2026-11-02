@@ -1,7 +1,7 @@
 """The retired layout (backend/, frontend/, tools/, kbs/demo, package `kb`) stays gone, and so do the Lane D moves:
 `maintenance/{daily_sync,notify,export,fix_math,rename_raw}`, the top-level `report/` package, the per-user folder
 `~/.config/thesis-kb` (now `~/.config/kb-distillery`, `config/userdir.py`) and the keychain service `thesis-kb-gmail`,
-and the Lane C moves: `templates/` (now `src/kb_distillery/kits/<kit>/kit.toml`, read by `vault/kit.py`) and
+and the Lane C moves: `templates/` (now `src/kb_distillery/kits/<kit>/kit.toml`, read by `config/kit.py`) and
 `meta-defaults/` (now `src/kb_distillery/kits/base/defaults/`), the root `skills/` folder with its `.claude/skills`
 symlink, `pixi run sync-skills` and `SKILL_TEMPLATE.md` (now `src/kb_distillery/kits/<kit>/skills/`, real files in
 `.claude/skills/`, `docs/guides/write-a-skill.md` and `kits/base/skills/_TEMPLATE.md`), and the Lane F move of `kb_distillery.share`
@@ -47,6 +47,7 @@ RETIRED = {
     "root share/ Worker folder (now src/kb_distillery/publish/cloudflare/worker)": re.compile(
         r"(?<![\w./~-])share/(?:admin|auth|flags\.gen|package\.json|wrangler|\*\.test)|node --test share/"
         r"|(?<![\w])root_resource\(\"share\"\)|_data/share\b"),
+    "Lane E cycle moves (vault.kit is config.kit)": re.compile(r"kb_distillery[./]vault[./]kit\b|vault import kit\b|tests/vault/test_kit"),
 }
 # (pattern name -> files that may name it): the tools/ entry of TOOLING_PATHS (until Phase 9), the share builder that still builds
 # refs from before the move, and this test.
@@ -88,7 +89,8 @@ RETIRED_FILES = ("src/kb_distillery/share/", "src/kb_distillery/publish/site_sta
                  "scripts/install-kb-hooks.sh", "scripts/kb-hooks/env.sh", "scripts/kb-hooks/kb-guard.sh",
                  "scripts/kb-hooks/kb-git-guard.sh", "scripts/kb-hooks/claude-settings.json",
                  "scripts/kb-hooks/", "tools/kb-hooks/",          # the forwarding stubs, deleted with the knowledge move (C.6)
-                 "skills/", "src/kb_distillery/maintenance/")
+                 "skills/", "src/kb_distillery/maintenance/",
+                 "src/kb_distillery/vault/kit.py", "tests/vault/test_kit.py", "tests/vault/test_kit_contract.py")
 
 
 class NoOldPathsTests(unittest.TestCase):

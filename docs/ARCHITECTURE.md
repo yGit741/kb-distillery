@@ -49,7 +49,7 @@ Guides for the three extension points: [kits](../src/kb_distillery/kits/base/def
 | Path | Holds |
 |---|---|
 | `src/kb_distillery/` | the Python package `kb`; `cli.py` is `kbd`, `kbconfig.py` finds and selects a kb, `paths.py` is the one vault-root resolver |
-| `core/`, `lint/` | schema, kit merge (vault/kit.py), page types, graph helpers; the linter |
+| `core/`, `lint/` | schema, kit merge (config/kit.py), page types, graph helpers; the linter |
 | `ingest/`, `distill/`, `search/`, `graph/` | pipelines and queries over the wiki |
 | `ops/`, `git/` | versioned knowledge commits; write guards, commit policy, the `ship` PR tool |
 | `llm/` | `kb_distillery.llm`, the only door to a model |
