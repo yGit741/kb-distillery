@@ -22,6 +22,7 @@ from pathlib import Path
 from typing import Literal, Optional
 
 from kb_distillery.config.kb import checkout_root
+from kb_distillery.publish.cloudflare import config as share_config
 
 REPO = Path(checkout_root() or Path.cwd())   # the checkout this tool runs from (never $KB_ROOT)
 
@@ -42,17 +43,17 @@ def raw_is_email(raw) -> bool:
     return any(isinstance(r, str) and r.strip().strip("`'\"").startswith(EMAIL_RAW_PREFIX) for r in items)
 
 
-# Any Cloudflare account: the publisher (`[publish.options]`) or these variables set the values; unset = the defaults the
-# code always used, so existing sites and links are unchanged.
+# Any Cloudflare account: the publisher (`[publish.options]`) or these variables set the values. The workers.dev subdomain
+# and the log file come from the share config (`publish/cloudflare/config.py`); "" = unset, and a deploy then refuses.
 WORKER_MAIN = os.environ.get("KB_CLOUDFLARE_WORKER") or "kb"
-ACCOUNT_SUBDOMAIN = os.environ.get("KB_CLOUDFLARE_SUBDOMAIN") or "yonatan-magen-thesis"
+ACCOUNT_SUBDOMAIN = share_config.subdomain()
 SNAPSHOT_PREFIX = "snapshot-"
 DEPLOY_MESSAGE_PREFIX = "kb-share"
 WRANGLER_VERSION = "4.151.3"
 # Last known-good pin, kept for a quick rollback of the CLI itself (`versions upload/deploy` exist there too).
 WRANGLER_PREVIOUS = "4.149.0"
 
-LOG_PATH = Path.home() / "Library" / "Logs" / "thesis-kb-share.log"
+LOG_PATH = share_config.log_path()
 CACHE_DIR = REPO / ".cache" / "share"
 EXPORT_DIR = REPO / ".exported" / "share"
 STATUS_PATH = CACHE_DIR / "status.json"

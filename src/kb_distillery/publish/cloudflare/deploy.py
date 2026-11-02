@@ -3,7 +3,7 @@
     pixi run share -- deploy-main [--force] [--dry-run]   build main (private) → Worker `kb`
     pixi run share -- status                               last deploy outcome (status.json)
     pixi run share -- rollback [--to ID]                   wrangler rollback, then re-check the gate
-    pixi run share -- config --google-client-id ID         store the OAuth client id in share.toml
+    pixi run share -- config --google-client-id ID         store the OAuth client id in your share config
 
 `deploy(dir, worker, *, require_access, force=False, message=None)` → DeployResult:
 
@@ -33,23 +33,20 @@ import ssl
 import subprocess
 import sys
 import tempfile
-import tomllib
 import urllib.error
 import urllib.request
 from pathlib import Path
 from typing import Callable, Optional
 
 from kb_distillery.config.resources import resource
+from kb_distillery.publish.cloudflare import config as share_config
 from kb_distillery.publish.cloudflare import contracts
 from kb_distillery.publish.cloudflare.contracts import (ACCOUNT_SUBDOMAIN, CACHE_DIR, DEPLOY_MESSAGE_PREFIX, LOG_PATH, REPO,
                                   STATUS_PATH, WORKER_MAIN, WRANGLER_VERSION, DeployResult, StatusFile)
 
 WORKER_DIR = resource("publish/cloudflare/worker")      # the Cloudflare Worker sources (auth.js, admin.js, wrangler template)
-CONFIG_PATH = Path(__file__).resolve().parent / "share.toml"
-DEFAULT_ALLOWED = ["ygreenshpan@gmail.com"]
 CF_ACCOUNT_ID = os.environ.get("KB_CLOUDFLARE_ACCOUNT_ID") or "7803af2d776eeea4c226f8e594121a10"  # the panel's REST calls (not secret)
 WORKER_SCRIPTS = ("auth.js", "admin.js", "flags.gen.js")  # private site: sign-in + panel API + runtime flag names
-DEFAULT_COMPAT = "2026-09-01"
 LOCK_NAME = "deploy.lock"
 PENDING_NAME = "pending"
 DRY_RUN = "dry-run"  # extra result state for --dry-run; never written to the status file
@@ -101,28 +98,21 @@ def now_iso() -> str:
 # ---------- config ----------
 
 def load_config(path: Path = None) -> dict:
-    """share.toml + env overrides → {google_client_id, allowed_emails, compatibility_date}."""
-    data = {}
-    p = Path(path or CONFIG_PATH)
-    if p.is_file():
-        data = tomllib.loads(p.read_text(encoding="utf-8"))
-    auth = data.get("auth", {})
-    return {
-        "google_client_id": os.environ.get("KB_SHARE_GOOGLE_CLIENT_ID") or auth.get("google_client_id", ""),
-        "allowed_emails": list(auth.get("allowed_emails") or DEFAULT_ALLOWED),
-        "compatibility_date": data.get("worker", {}).get("compatibility_date", DEFAULT_COMPAT),
-        # KV namespace for runtime flag overrides ([worker] flags_kv_id); empty → not bound
-        "flags_kv_id": os.environ.get("KB_SHARE_FLAGS_KV_ID") or data.get("worker", {}).get("flags_kv_id", ""),
-    }
+    """The share config (`kb_distillery.publish.cloudflare.config`; `path` reads that one file) + env overrides
+    → {google_client_id, allowed_emails, compatibility_date, flags_kv_id}."""
+    return share_config.settings(path)
 
 
 def save_config(cfg: dict, path: Path = None) -> Path:
-    p = Path(path or CONFIG_PATH)
+    """Store the client id and allowlist in `path`, else in the config file in use, else in the user file.
+    Every other line of the file stays as it is."""
+    p = Path(path or share_config.find() or share_config.user_path())
+    text = p.read_text(encoding="utf-8") if p.is_file() else ""
     emails = ", ".join(json.dumps(e) for e in cfg["allowed_emails"])
-    head = p.read_text(encoding="utf-8").split("[auth]")[0] if p.is_file() else ""
-    p.write_text(f"{head}[auth]\ngoogle_client_id = {json.dumps(cfg['google_client_id'])}\n"
-                 f"allowed_emails = [{emails}]\n\n[worker]\ncompatibility_date = "
-                 f"{json.dumps(cfg['compatibility_date'])}\n", encoding="utf-8")
+    text = share_config.set_values(text, "auth", {"google_client_id": json.dumps(cfg["google_client_id"]),
+                                                  "allowed_emails": f"[{emails}]"})
+    p.parent.mkdir(parents=True, exist_ok=True)
+    p.write_text(text, encoding="utf-8")
     return p
 
 
@@ -330,6 +320,16 @@ def deploy(dir, worker: str, *, require_access: bool, force: bool = False, messa
     message = message or f"{DEPLOY_MESSAGE_PREFIX} {sha} {version} {profile}"
     url = worker_url(worker)
     status = StatusFile(Path(status_path)) if status_path else status_file()
+
+    if config is None:          # the config came from files: a clean runner has none, and must not deploy
+        try:
+            share_config.require()
+            share_config.check_deploy(cfg, require_access, ACCOUNT_SUBDOMAIN)
+        except share_config.ShareConfigError as e:
+            log(f"deploy {worker}: refused — {e}")
+            if not dry_run:
+                status.write("failed", sha, version, now_iso(), error=str(e), url=url)
+            return DeployResult(state="failed", url=url, error=str(e))
 
     if dry_run:
         dest = render_worker_dir(build_dir, worker, require_access, cfg, cache_dir() / "dry-run" / worker)

@@ -34,10 +34,11 @@ class SnapshotShape(unittest.TestCase):
         self.assertEqual(deploy.worker_url(W), f"https://{W}.{sub}.workers.dev")
 
     def test_the_account_defaults_are_unchanged(self):
-        """Hashes, so the owner's names are not repeated here; the values are what every link out there was made with."""
+        """Hashes, so the owner's names are not repeated here; the values are what every link out there was made with.
+        The workers.dev subdomain is not in the code any more: it comes from the share config."""
         if any(os.environ.get(v) for v in ("KB_CLOUDFLARE_SUBDOMAIN", "KB_CLOUDFLARE_ACCOUNT_ID", "KB_CLOUDFLARE_WORKER")):
             self.skipTest("an account is configured in the environment")
-        self.assertEqual(digest(contracts.ACCOUNT_SUBDOMAIN), "80f636d42dab8c6e")
+        self.assertEqual(contracts.ACCOUNT_SUBDOMAIN, "acme-example")     # from the fixture share config (tests/conftest.py)
         self.assertEqual(digest(cf_api.ACCOUNT_ID), "b6baacca92c64768")
         self.assertEqual(digest(deploy.CF_ACCOUNT_ID), "b6baacca92c64768")
         self.assertEqual(digest(contracts.WORKER_MAIN), "74fec0c33e96ab90")

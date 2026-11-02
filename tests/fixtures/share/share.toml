@@ -1,0 +1,13 @@
+# The share config every test runs with (tests/conftest.py points KB_SHARE_CONFIG here): an invented account, no real values.
+[auth]
+google_client_id = "test-client-id.apps.googleusercontent.com"
+allowed_emails = ["owner@example.com"]
+
+[worker]
+compatibility_date = "2026-09-01"
+
+[cloudflare]
+subdomain = "acme-example"
+
+[home]
+tour = "first-visit"

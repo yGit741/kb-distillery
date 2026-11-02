@@ -2,17 +2,11 @@
 src/kb_distillery/git/proof_nudge.py
 src/kb_distillery/ingest/sources/web/wordpress.py
 src/kb_distillery/publish/export.py
-src/kb_distillery/publish/cloudflare/contracts.py
-src/kb_distillery/publish/cloudflare/deploy.py
-src/kb_distillery/publish/cloudflare/share.toml
 tests/git/test_app_token.py
 tests/git/test_proof_nudge.py
 tests/git/test_ship.py
 tests/ingest/sources/chat/test_chat_kb.py
 tests/ops/test_notify.py
-tests/publish/cloudflare/fixtures/wrangler_versions_upload.txt
-tests/publish/cloudflare/test_share_deploy.py
-tests/publish/cloudflare/test_share_snapshots.py
 docs/phase-1-report.md
 web/src/features/chat/ChatScreen.test.tsx
 web/src/flags/registry.gen.ts
