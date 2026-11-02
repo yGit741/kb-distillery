@@ -121,13 +121,14 @@ class KbFlag(unittest.TestCase):
         self.assertEqual(out.stdout.strip(), "['status'] nope nope", out.stderr)
 
 
-if __name__ == "__main__":
-    unittest.main()
-
-
 class SuiteIsolation(unittest.TestCase):
     def test_an_unselected_run_never_sees_the_real_bases_dir(self):
-        if os.environ.get("KB"):
+        if os.environ.get("KB") or not os.environ.get("KB_ROOT", "").endswith("kb-fixture"):
             return          # the caller picked a kb on purpose; the fixture isolation does not apply
         self.assertNotEqual(os.path.realpath(kbconfig.bases_dir()), os.path.realpath(os.path.expanduser("~/knowledge")))
         self.assertEqual(kbconfig.discover(), {})
+
+
+
+if __name__ == "__main__":
+    unittest.main()

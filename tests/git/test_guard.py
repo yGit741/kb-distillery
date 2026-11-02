@@ -301,22 +301,30 @@ class GuardSubfolderCwdTests(unittest.TestCase):
         self.assertEqual(code, 0)
 
 
+class RelativeKbGuardTests(unittest.TestCase):
+    def test_guard_started_from_another_folder_still_finds_a_relative_kb(self):
+        # a process started with KB=./kbs/mine anchors it on import; the guard it then spawns from elsewhere inherits
+        # the absolute path (unanchored, "./kbs/mine" would resolve against the child's cwd and miss the kb)
+        import tempfile
+        with tempfile.TemporaryDirectory() as d:
+            d = os.path.realpath(d)
+            kb = os.path.join(d, "kbs", "mine")
+            elsewhere = os.path.join(d, "elsewhere")
+            os.makedirs(os.path.join(kb, "raw"))
+            os.makedirs(elsewhere)
+            with open(os.path.join(kb, "kb.toml"), "w") as f:
+                f.write(open(os.path.join(ROOT, "kb.toml")).read())
+            payload = json.dumps({"tool_name": "Write",
+                                  "tool_input": {"file_path": os.path.join(kb, "raw", "foo.md"), "content": "x"}})
+            parent = ("import json, subprocess, sys; from kb_distillery import kbconfig; "
+                      f"p = subprocess.run([sys.executable, '-m', 'kb_distillery.git.guard'], input={payload!r}, "
+                      f"capture_output=True, text=True, cwd={elsewhere!r}); print(p.returncode); print(p.stderr)")
+            env = {**os.environ, "KB": "./kbs/mine"}
+            for k in ("KB_ROOT", "CLAUDE_PROJECT_DIR"):
+                env.pop(k, None)
+            out = subprocess.run([sys.executable, "-c", parent], cwd=d, env=env, capture_output=True, text=True)
+            self.assertEqual(out.stdout.split()[0], "2", out.stdout + out.stderr)
+
 if __name__ == "__main__":
     unittest.main()
 
-
-class RelativeKbGuardTests(unittest.TestCase):
-    def test_guard_blocks_raw_when_kb_env_is_a_relative_path(self):
-        # run from the engine checkout with a relative $KB, as the ship gates do, then guard a path in that kb
-        import tempfile
-        with tempfile.TemporaryDirectory() as d:
-            kb = os.path.join(os.path.realpath(d), "kbs", "mine")
-            os.makedirs(os.path.join(kb, "raw"))
-            with open(os.path.join(kb, "kb.toml"), "w") as f:
-                f.write(open(os.path.join(ROOT, "kb.toml")).read())
-            env = {**os.environ, "KB": "./kbs/mine", "CLAUDE_PROJECT_DIR": kb}
-            env.pop("KB_ROOT", None)
-            proc = subprocess.run([sys.executable, *GUARD], input=json.dumps({
-                "tool_name": "Write", "tool_input": {"file_path": os.path.join(kb, "raw", "foo.md"), "content": "x"}}),
-                capture_output=True, text=True, cwd=os.path.realpath(d), env=env)
-            self.assertEqual(proc.returncode, 2, proc.stderr)

@@ -30,6 +30,7 @@ if not os.environ.get("KB") and not os.environ.get("KB_ROOT"):
     # no kb picked = the fixture: the bases dir is an empty temp folder too, so nothing in a run can discover, lint or
     # write a real knowledge base under ~/knowledge (tests that need a bases dir build their own)
     os.environ["KB_DISTILLERY_HOME"] = os.path.join(_tmp, "bases")
+    os.environ.pop("KB_BASES_DIR", None)
     os.makedirs(os.environ["KB_DISTILLERY_HOME"])
 
 import pytest

@@ -357,10 +357,6 @@ class TypesFromConfig(unittest.TestCase):
             types.build({"concept": {"a": {"label": "A", "prefix": "x-"}, "b": {"label": "B", "prefix": "x-"}}})
 
 
-if __name__ == "__main__":
-    unittest.main()
-
-
 class RelativeKbPath(unittest.TestCase):
     """`KB=./examples/demo` is resolved once, against the folder the process started in, and exported absolute."""
 
@@ -381,3 +377,8 @@ class RelativeKbPath(unittest.TestCase):
         out = subprocess.run([sys.executable, "-c", "import os; from kb_distillery import kbconfig; print(os.environ['KB'])"],
                              env=env, capture_output=True, text=True, check=True).stdout.strip()
         self.assertEqual(out, "demo")
+
+
+
+if __name__ == "__main__":
+    unittest.main()
