@@ -248,7 +248,11 @@ class Run:
     def share(self):
         out = self.work / "share" / "index.html"
         sha0 = "0" * 40
-        text = self.cmd("-m", "kb_distillery.share.build", "--inner", "--out", str(out), "--profile", "public",
+        template = self.work / "share" / "app-template.html"        # stands in for the built app's index.html
+        template.parent.mkdir(parents=True, exist_ok=True)
+        template.write_text("<!doctype html><html><head><title>app</title></head><body></body></html>\n", encoding="utf-8")
+        text = self.cmd("-m", "kb_distillery.share.build", "--inner", "--app-index", str(template),
+                        "--out", str(out), "--profile", "public",
                         "--content-ref", "main", "--content-sha", sha0, "--kb-version", "0.0.0",
                         "--viewer-sha", sha0, "--built-at", "2026-01-01T00:00:00Z",
                         env=self.env(KB_ROOT=str(self.root)))

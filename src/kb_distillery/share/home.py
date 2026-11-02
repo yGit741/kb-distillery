@@ -25,11 +25,24 @@ CONFIG_PATH = Path(__file__).resolve().parent / "share.toml"
 MY_NOTES = re.compile(r"^##[ \t]+My notes\b.*?(?=^#{1,2}[ \t]|\Z)", re.M | re.S)
 
 
-def load_home(path: Path = CONFIG_PATH) -> dict:
-    """`[home]` of share.toml as {cards: [...], tour: str|None}; a missing or broken file means none."""
+class ShareConfigError(Exception):
+    """share.toml is missing or unreadable; the message names the file and what to do."""
+
+
+def load_home(path: Path | None = None, strict: bool = False) -> dict:
+    """`[home]` of share.toml as {cards: [...], tour: str|None}. A missing or broken file means none, unless `strict`:
+    the share build asks for that, so a site is never published with a Home that silently lost its config."""
+    path = Path(path or CONFIG_PATH)
     try:
         home = tomllib.loads(path.read_text(encoding="utf-8")).get("home") or {}
-    except (OSError, tomllib.TOMLDecodeError):
+    except OSError as e:
+        if strict:
+            raise ShareConfigError(f"share config missing: {path} ({e.strerror or e}) — the share build reads the Home tour "
+                                   "and cards from it; restore the file (see kb_distillery/share/home.py)") from None
+        home = {}
+    except tomllib.TOMLDecodeError as e:
+        if strict:
+            raise ShareConfigError(f"share config unreadable: {path} ({e}) — fix the TOML, then build again") from None
         home = {}
     cards = [c for c in home.get("cards") or [] if isinstance(c, dict) and c.get("title") and c.get("pages")]
     tour = home.get("tour") if isinstance(home.get("tour"), str) and home.get("tour") else None

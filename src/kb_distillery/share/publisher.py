@@ -86,14 +86,13 @@ class CloudflarePublisher(Publisher):
             if snapshot.ref != "main":
                 raise PublishError("the live site is always built from main; give the snapshot a name to publish another ref")
             from kb_distillery.share import deploy
-            return _result(deploy.deploy_main(force=bool(snapshot.options.get("force")), dry_run=dry_run,
-                                              app=not snapshot.options.get("legacy"), **self.seams))
+            return _result(deploy.deploy_main(force=bool(snapshot.options.get("force")), dry_run=dry_run, **self.seams))
         from kb_distillery.share import snapshots
         o = snapshot.options
         args = argparse.Namespace(name=snapshot.name, ref=snapshot.ref, replace=bool(o.get("replace")),
                                   force=bool(o.get("force")), allow_flags=bool(o.get("allow_flags")), dry_run=dry_run,
                                   scope=o.get("scope"), hops=o.get("hops", 1), predicate=o.get("predicate"),
-                                  view=o.get("view"), app=bool(o.get("app")), viewer_worktree=False)
+                                  view=o.get("view"), viewer_worktree=False)
         rc = snapshots.cmd_snapshot(args)       # prints its report; the exit code is all it returns
         return PublishResult("deployed" if rc == 0 else "failed", error=None if rc == 0 else f"snapshot exited {rc}")
 

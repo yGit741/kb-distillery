@@ -29,6 +29,16 @@ default = false
 envs = { local = false, private = true, public = false }
 
 [[flag]]
+name = "screen.start"
+description = "Start screen (how to add knowledge, the right-now strip). Reads the Lifecycle snapshot, so the private site has it and public snapshots do not."
+owner = "yonatanm"
+created = 2026-11-02
+expires = 2027-11-02
+kind = "build"
+default = false
+envs = { local = true, private = true, public = false }
+
+[[flag]]
 name = "ui.system-flags-tab"
 description = "Flags tab on the System screen (G3): list flags and flip runtime overrides. Exercises the flags API."
 owner = "yonatanm"

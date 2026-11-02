@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
-"""Tests for the opt-in app layout of the share build (`kb_distillery.share.build --app`).
+"""Tests for the app layout of the share build (`kb_distillery.share.build`, the only layout).
 
-The data path is the legacy one (collect_data / collect_lifecycle / apply_profile), so these tests
-check that the baked blob equals the legacy build's, that the public privacy cuts hold, that
-`share audit` is clean on the output, the size guard, determinism, and the Worker config. The frontend
-is a stub dist (a template index.html + assets/) so nothing here needs node; one test runs the real
-`vite build --mode share` when web/node_modules exists. Offline; fixture vault only.
+The data path is collect_data / collect_lifecycle / apply_profile, so these tests check the shape of the baked
+blob, that the public privacy cuts hold, that `share audit` is clean on the output, the size guard, determinism, and
+the Worker config. The frontend is a stub dist (a template index.html + assets/) so nothing here needs node; one test
+runs the real `vite build --mode share` when web/node_modules exists. Offline; fixture vault only.
 """
 import json
 import os
@@ -23,37 +22,15 @@ ROOT = vault_root()
 from kb_distillery.share import build as sb
 from kb_distillery.share import deploy, snapshots
 from kb_distillery.share.contracts import Manifest
-from tests.share.test_share_build import (PAGES, SECRET_EMAIL, SECRET_RAW, THINK_SECRET, _git, _have_git,
-                                          build_from, kb_data, make_repo)
-
-STUB_INDEX = """<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <title>Thesis KB</title>
-    <script type="module" crossorigin src="/assets/index-abc123.js"></script>
-    <link rel="stylesheet" crossorigin href="/assets/index-abc123.css">
-  </head>
-  <body><div id="root"></div></body>
-</html>
-"""
+from tests.share.test_share_build import (PAGES, SECRET_EMAIL, SECRET_RAW, STUB_INDEX, THINK_SECRET, _git, _have_git,
+                                          build_from, kb_data, make_repo, make_stub_dist)
 
 # the fixture pages minus the prose that the audit rightly flags (raw/ path in a sentence)
 CLEAN_PAGES = {k: v.replace("Mentions `raw/notes/scratch.md` in prose.", "Plain prose.") for k, v in PAGES.items()}
 
 
-def make_stub_dist(base, name="dist"):
-    dist = Path(base) / name
-    (dist / "assets").mkdir(parents=True)
-    (dist / "index.html").write_text(STUB_INDEX, encoding="utf-8")
-    (dist / "assets" / "index-abc123.js").write_text("console.log('app');\n", encoding="utf-8")
-    (dist / "assets" / "index-abc123.css").write_text("body{margin:0}\n", encoding="utf-8")
-    (dist / ".src-hash").write_text("x\n", encoding="utf-8")        # a stamp must never ship
-    return dist
-
-
 def app_build(repo, out, dist, profile="private", **kw):
-    return build_from(repo, out, profile, app=True, frontend_dist=dist, **kw)
+    return build_from(repo, out, profile, frontend_dist=dist, **kw)
 
 
 class _AppFixture(unittest.TestCase):
@@ -69,7 +46,6 @@ class _AppFixture(unittest.TestCase):
         cls.dist = make_stub_dist(cls.tmp)
         cls.private = app_build(cls.repo, cls.out, cls.dist, "private", label="private")
         cls.public = app_build(cls.repo, cls.out, cls.dist, "public", label="public")
-        cls.legacy_public = build_from(cls.repo, cls.out, "public", label="legacy-public")
 
     @classmethod
     def tearDownClass(cls):
@@ -94,12 +70,11 @@ class AppLayoutTests(_AppFixture):
         self.assertEqual(self.private.manifest.profile, "private")
         self.assertEqual(self.public.manifest.profile, "public")
 
-    def test_legacy_manifest_is_unchanged(self):
-        text = (self.legacy_public.dir / "manifest.json").read_text()
-        self.assertNotIn("layout", json.loads(text))
-        self.assertEqual(self.legacy_public.manifest.layout, "legacy")
-        self.assertEqual(self.legacy_public.manifest.sha256,
-                         sb._sha256_bytes((self.legacy_public.dir / "index.html").read_bytes()))
+    def test_an_old_manifest_without_a_layout_still_reads_as_legacy(self):
+        """Snapshots published before the switch have no `layout`; listing and rollback must keep reading them."""
+        text = (self.public.dir / "manifest.json").read_text()
+        old = {k: v for k, v in json.loads(text).items() if k != "layout"}
+        self.assertEqual(Manifest.from_json(json.dumps(old)).layout, "legacy")
 
     def test_page_is_the_template_with_the_blob_baked_in(self):
         html = self.html(self.public)
@@ -112,13 +87,9 @@ class AppLayoutTests(_AppFixture):
         self.assertEqual(meta["profile"], "public")
         self.assertEqual(meta["content_sha"], self.public.manifest.content_sha)
 
-    def test_public_blob_equals_the_legacy_public_data(self):
-        """The privacy cuts are apply_profile's: same graph / index / pages as the legacy build, nothing more."""
+    def test_public_blob_has_exactly_these_keys(self):
         app = kb_data(self.html(self.public))
-        legacy = kb_data((self.legacy_public.dir / "index.html").read_text(encoding="utf-8"))
         self.assertEqual(set(app), {"graph", "index", "pages", "meta", "home", "rawCards"})   # rawCards: Home pipeline (raw_card.public_card)
-        for key in ("graph", "index", "pages"):
-            self.assertEqual(app[key], legacy[key], key)
 
     def test_public_privacy(self):
         html = self.html(self.public)
@@ -141,7 +112,7 @@ class AppLayoutTests(_AppFixture):
         self.assertEqual(life["generated_at"], "2026-01-02T03:04:05Z")
         self.assertTrue(life["timeline"])
         self.assertEqual(life["version"], "0.1.1")
-        for key in sb.LIFECYCLE_DROP_KEYS:               # local checkout state never ships
+        for key in ("working", "nightly", "stale_worktrees", "unpushed", "infra_branches"):   # local checkout state never ships
             self.assertNotIn(key, life)
         self.assertNotIn(THINK_SECRET, json.dumps(data))
         self.assertNotIn("digestion", data)
@@ -199,7 +170,7 @@ class AppAuditTests(unittest.TestCase):
         shutil.rmtree(cls.tmp, ignore_errors=True)
 
     def test_audit_of_the_app_build_is_clean(self):
-        report, build_dir, tmp = snapshots.audit_build("main", root=self.repo, app=True, viewer_root=ROOT,
+        report, build_dir, tmp = snapshots.audit_build("main", root=self.repo, viewer_root=ROOT,
                                                        viewer_worktree=True, frontend_dist=self.dist)
         with tmp:
             self.assertEqual(report["flags"], [])
@@ -208,15 +179,12 @@ class AppAuditTests(unittest.TestCase):
             self.assertEqual(report["manifest"]["layout"], "app")
             self.assertTrue((Path(build_dir) / "assets").is_dir())
 
-    def test_audit_flags_the_same_leaks_as_the_legacy_build(self):
+    def test_audit_of_the_leaky_fixture_is_clean_after_the_public_cuts(self):
         os.makedirs(os.path.join(self.tmp, "leaky"))
         repo = make_repo(os.path.join(self.tmp, "leaky"), pages=PAGES)
         out = os.path.join(self.tmp, "o")
-        legacy = snapshots.scan(snapshots.extract_data(
-            (build_from(repo, out, "public", label="l").dir / "index.html").read_text(encoding="utf-8")))
         app = snapshots.scan(snapshots.extract_data(
             (app_build(repo, out, self.dist, "public", label="a").dir / "index.html").read_text(encoding="utf-8")))
-        self.assertEqual(app["flags"], legacy["flags"])
         self.assertEqual(app["flags"], [])       # raw/notes/scratch.md in PAGES prose is no longer sensitive (only raw/emails/)
 
 
@@ -255,15 +223,15 @@ class AppGuardTests(_AppFixture):
 class WorkerConfigTests(_AppFixture):
     CFG = {"google_client_id": "id", "allowed_emails": ["a@example.com"], "compatibility_date": "2025-01-01"}
 
-    def test_app_builds_get_the_spa_fallback_and_legacy_does_not(self):
-        for result, expect in ((self.public, True), (self.legacy_public, False), (self.private, True)):
+    def test_builds_get_the_spa_fallback(self):
+        for result in (self.public, self.private):
             dest = Path(self.tmp) / f"worker-{result.dir.name}"
             deploy.render_worker_dir(result.dir, "snapshot-x", result.manifest.profile == "private", self.CFG, dest)
             conf = (dest / "wrangler.jsonc").read_text()
-            self.assertEqual("single-page-application" in conf, expect, conf)
+            self.assertIn("single-page-application", conf)
             self.assertTrue((dest / "public" / "index.html").is_file())
 
-    def test_legacy_wrangler_text_is_byte_identical(self):
+    def test_wrangler_text_without_the_spa_fallback_is_unchanged(self):     # a snapshot published before the switch
         self.assertNotIn("not_found_handling", deploy.render_wrangler("kb", True, self.CFG))
         self.assertNotIn("not_found_handling", deploy.render_wrangler("snapshot-x", False, self.CFG))
         self.assertIn("not_found_handling", deploy.render_wrangler("snapshot-x", False, self.CFG, spa=True))
@@ -339,8 +307,8 @@ class RealFrontendTests(unittest.TestCase):
                          if rel.endswith(".js"))
 
     def test_both_profiles_build_and_exclude_the_private_screens(self):
-        public = build_from(self.repo, self.out, "public", app=True, label="public")
-        private = build_from(self.repo, self.out, "private", app=True, label="private")
+        public = build_from(self.repo, self.out, "public", frontend_dist=None, label="public")
+        private = build_from(self.repo, self.out, "private", frontend_dist=None, label="private")
         self.assertTrue(re.search(r'src="/assets/index-[^"]+\.js"', self.html(public)))
         pub_js, priv_js = self.js(public), self.js(private)
         for banned in ("Could not load the pipeline", "Add or remove an API key", "Could not load scopes"):
@@ -348,6 +316,8 @@ class RealFrontendTests(unittest.TestCase):
             self.assertNotIn(banned, priv_js)
         self.assertNotIn("Working tree, sessions and the nightly job", pub_js)     # the lifecycle screen
         self.assertIn("Working tree, sessions and the nightly job", priv_js)
+        self.assertNotIn("Could not load the current state.", pub_js)              # the Start screen (screen.start): private only
+        self.assertIn("Could not load the current state.", priv_js)
         self.assertNotIn('id="kb-data"', (sb.FRONTEND_DIR / "dist-share" / "public" / "index.html").read_text())
 
     @staticmethod

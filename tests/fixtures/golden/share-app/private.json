@@ -1,0 +1,2036 @@
+{
+ "files": [
+  "assets/index-abc123.css",
+  "assets/index-abc123.js",
+  "index.html",
+  "manifest.json"
+ ],
+ "kb_data": {
+  "graph": {
+   "concept_links": [
+    {
+     "shared": 1,
+     "source": "generalization",
+     "target": "jane-doe"
+    },
+    {
+     "shared": 1,
+     "source": "generalization",
+     "target": "pac-learning"
+    },
+    {
+     "shared": 1,
+     "source": "generalization",
+     "target": "q-why-does-sgd-generalize"
+    },
+    {
+     "shared": 1,
+     "source": "jane-doe",
+     "target": "pac-learning"
+    },
+    {
+     "shared": 1,
+     "source": "jane-doe",
+     "target": "q-why-does-sgd-generalize"
+    },
+    {
+     "shared": 1,
+     "source": "pac-learning",
+     "target": "q-why-does-sgd-generalize"
+    },
+    {
+     "shared": 2,
+     "source": "shannon-entropy",
+     "target": "theme-info-theory"
+    }
+   ],
+   "etag": "0002c2637ce37bf8",
+   "facets": {
+    "areas": [
+     "info-theory",
+     "learning-theory",
+     "statistics"
+    ],
+    "maturities": [
+     "digested",
+     "open",
+     "seed"
+    ],
+    "types": [
+     "article",
+     "idea",
+     "paper",
+     "person",
+     "question",
+     "topic",
+     "video"
+    ]
+   },
+   "generated_at": "2026-01-02T03:04:05Z",
+   "link_count": 25,
+   "links": [
+    {
+     "kind": "wikilink",
+     "source": "article-fixture-entropy-primer",
+     "target": "shannon-entropy"
+    },
+    {
+     "kind": "wikilink",
+     "source": "article-fixture-entropy-primer",
+     "target": "theme-info-theory"
+    },
+    {
+     "kind": "wikilink",
+     "source": "bias-variance",
+     "target": "generalization"
+    },
+    {
+     "kind": "wikilink",
+     "source": "bias-variance",
+     "target": "theme-statistics"
+    },
+    {
+     "kind": "wikilink",
+     "source": "generalization",
+     "target": "pac-learning"
+    },
+    {
+     "kind": "wikilink",
+     "source": "generalization",
+     "target": "shannon-entropy"
+    },
+    {
+     "kind": "wikilink",
+     "source": "generalization",
+     "target": "theme-learning-theory"
+    },
+    {
+     "kind": "wikilink",
+     "source": "jane-doe",
+     "target": "generalization"
+    },
+    {
+     "kind": "wikilink",
+     "source": "jane-doe",
+     "target": "paper-2020-fixture-generalization-bounds"
+    },
+    {
+     "kind": "wikilink",
+     "source": "pac-learning",
+     "target": "generalization"
+    },
+    {
+     "kind": "wikilink",
+     "source": "pac-learning",
+     "target": "theme-learning-theory"
+    },
+    {
+     "kind": "wikilink",
+     "source": "paper-2020-fixture-generalization-bounds",
+     "target": "generalization"
+    },
+    {
+     "kind": "wikilink",
+     "source": "paper-2020-fixture-generalization-bounds",
+     "target": "jane-doe"
+    },
+    {
+     "kind": "wikilink",
+     "source": "paper-2020-fixture-generalization-bounds",
+     "target": "pac-learning"
+    },
+    {
+     "kind": "wikilink",
+     "source": "q-why-does-sgd-generalize",
+     "target": "generalization"
+    },
+    {
+     "kind": "wikilink",
+     "source": "q-why-does-sgd-generalize",
+     "target": "pac-learning"
+    },
+    {
+     "kind": "wikilink",
+     "source": "q-why-does-sgd-generalize",
+     "target": "paper-2020-fixture-generalization-bounds"
+    },
+    {
+     "kind": "wikilink",
+     "source": "shannon-entropy",
+     "target": "generalization"
+    },
+    {
+     "kind": "wikilink",
+     "source": "shannon-entropy",
+     "target": "theme-info-theory"
+    },
+    {
+     "kind": "wikilink",
+     "source": "theme-info-theory",
+     "target": "shannon-entropy"
+    },
+    {
+     "kind": "wikilink",
+     "source": "theme-learning-theory",
+     "target": "generalization"
+    },
+    {
+     "kind": "wikilink",
+     "source": "theme-learning-theory",
+     "target": "pac-learning"
+    },
+    {
+     "kind": "wikilink",
+     "source": "theme-statistics",
+     "target": "bias-variance"
+    },
+    {
+     "kind": "wikilink",
+     "source": "video-fixture-talk",
+     "target": "shannon-entropy"
+    },
+    {
+     "kind": "wikilink",
+     "source": "video-fixture-talk",
+     "target": "theme-info-theory"
+    }
+   ],
+   "node_count": 14,
+   "nodes": [
+    {
+     "added": "2026-01-02",
+     "areas": [
+      "info-theory"
+     ],
+     "changed": "2026-01-02",
+     "depth": "easy",
+     "id": "article-fixture-entropy-primer",
+     "inDegree": 0,
+     "kb": "fixture",
+     "label": "article-fixture-entropy-primer",
+     "layer": "source",
+     "maturity": "digested",
+     "outDegree": 2,
+     "path": "wiki/article-fixture-entropy-primer.md",
+     "preview": "Problem: What is entropy? Main result: Entropy measures surprise.",
+     "properties": {
+      "area": "info-theory",
+      "authors": "Fixture Author",
+      "links_in": "0",
+      "links_out": "2",
+      "maturity": "digested",
+      "raw": "none",
+      "slug": "article-fixture-entropy-primer",
+      "sources": "https://example.org/articles/entropy-primer",
+      "type": "article",
+      "url": "https://example.org/articles/entropy-primer",
+      "year": "2024"
+     },
+     "slug": "article-fixture-entropy-primer",
+     "title": "Fixture entropy primer",
+     "type": "article",
+     "year": 2024
+    },
+    {
+     "added": "2026-01-02",
+     "areas": [
+      "statistics"
+     ],
+     "changed": "2026-01-02",
+     "depth": "",
+     "id": "bias-variance",
+     "inDegree": 1,
+     "kb": "fixture",
+     "label": "bias-variance",
+     "layer": "concept",
+     "maturity": "seed",
+     "outDegree": 2,
+     "path": "wiki/bias-variance.md",
+     "preview": "One-liner: Error splits into bias, variance and noise.",
+     "properties": {
+      "area": "statistics",
+      "links_in": "1",
+      "links_out": "2",
+      "maturity": "seed",
+      "slug": "bias-variance",
+      "type": "idea"
+     },
+     "slug": "bias-variance",
+     "title": "Bias-variance tradeoff",
+     "type": "idea",
+     "year": null
+    },
+    {
+     "added": "2026-01-02",
+     "areas": [
+      "learning-theory"
+     ],
+     "changed": "2026-01-02",
+     "depth": "",
+     "id": "generalization",
+     "inDegree": 7,
+     "kb": "fixture",
+     "label": "generalization",
+     "layer": "concept",
+     "maturity": "seed",
+     "outDegree": 3,
+     "path": "wiki/generalization.md",
+     "preview": "One-liner: Gap between train and test risk.",
+     "properties": {
+      "area": "learning-theory",
+      "links_in": "7",
+      "links_out": "3",
+      "maturity": "seed",
+      "slug": "generalization",
+      "type": "idea"
+     },
+     "slug": "generalization",
+     "title": "Generalization",
+     "type": "idea",
+     "year": null
+    },
+    {
+     "added": "2026-01-02",
+     "areas": [],
+     "changed": "2026-01-02",
+     "depth": "",
+     "id": "jane-doe",
+     "inDegree": 1,
+     "kb": "fixture",
+     "label": "jane-doe",
+     "layer": "concept",
+     "maturity": "",
+     "outDegree": 2,
+     "path": "wiki/jane-doe.md",
+     "preview": "Fixture researcher at Example University. Works on Generalization.",
+     "properties": {
+      "description": "\"Fixture person page for a made-up learning-theory researcher at Example University, who works on generalization bounds and is the author of the fixture paper used by the backend test suite.\"",
+      "links_in": "1",
+      "links_out": "2",
+      "slug": "jane-doe",
+      "type": "person",
+      "url": "https://example.org/~jane"
+     },
+     "slug": "jane-doe",
+     "title": "Jane Doe",
+     "type": "person",
+     "year": null
+    },
+    {
+     "added": "2026-01-02",
+     "areas": [
+      "learning-theory"
+     ],
+     "changed": "2026-01-02",
+     "depth": "",
+     "id": "pac-learning",
+     "inDegree": 4,
+     "kb": "fixture",
+     "label": "pac-learning",
+     "layer": "concept",
+     "maturity": "seed",
+     "outDegree": 2,
+     "path": "wiki/pac-learning.md",
+     "preview": "One-liner: Learn a concept to accuracy epsilon with probability 1 - delta.",
+     "properties": {
+      "area": "learning-theory",
+      "links_in": "4",
+      "links_out": "2",
+      "maturity": "seed",
+      "slug": "pac-learning",
+      "type": "idea"
+     },
+     "slug": "pac-learning",
+     "title": "PAC learning",
+     "type": "idea",
+     "year": null
+    },
+    {
+     "added": "2026-01-02",
+     "areas": [
+      "learning-theory"
+     ],
+     "changed": "2026-01-02",
+     "depth": "easy",
+     "id": "paper-2020-fixture-generalization-bounds",
+     "inDegree": 2,
+     "kb": "fixture",
+     "label": "paper-2020-fixture-generalization-bounds",
+     "layer": "source",
+     "maturity": "digested",
+     "outDegree": 3,
+     "path": "wiki/paper-2020-fixture-generalization-bounds.md",
+     "preview": "Problem: How large is the gap between train and test risk? Main result: A uniform bound that scales with the square root of complexity over sample size.",
+     "properties": {
+      "aliases": "2020-fixture-generalization-bounds",
+      "area": "learning-theory",
+      "authors": "Jane Doe",
+      "links_in": "2",
+      "links_out": "3",
+      "maturity": "digested",
+      "raw": "none",
+      "slug": "paper-2020-fixture-generalization-bounds",
+      "sources": "https://example.org/papers/fixture-generalization-bounds",
+      "type": "paper",
+      "url": "https://example.org/papers/fixture-generalization-bounds",
+      "year": "2020"
+     },
+     "slug": "paper-2020-fixture-generalization-bounds",
+     "title": "Fixture generalization bounds",
+     "type": "paper",
+     "year": 2020
+    },
+    {
+     "added": "2026-01-02",
+     "areas": [
+      "learning-theory"
+     ],
+     "changed": "2026-01-02",
+     "depth": "",
+     "id": "q-why-does-sgd-generalize",
+     "inDegree": 0,
+     "kb": "fixture",
+     "label": "q-why-does-sgd-generalize",
+     "layer": "concept",
+     "maturity": "open",
+     "outDegree": 3,
+     "path": "wiki/q-why-does-sgd-generalize.md",
+     "preview": "Why do over-parameterized networks trained by SGD generalize? See Generalization and PAC learning.",
+     "properties": {
+      "area": "learning-theory",
+      "links_in": "0",
+      "links_out": "3",
+      "maturity": "open",
+      "priority": "med",
+      "slug": "q-why-does-sgd-generalize",
+      "type": "question"
+     },
+     "slug": "q-why-does-sgd-generalize",
+     "title": "Why does SGD generalize?",
+     "type": "question",
+     "year": null
+    },
+    {
+     "added": "2026-01-02",
+     "areas": [
+      "info-theory"
+     ],
+     "changed": "2026-01-02",
+     "depth": "",
+     "id": "shannon-entropy",
+     "inDegree": 4,
+     "kb": "fixture",
+     "label": "shannon-entropy",
+     "layer": "concept",
+     "maturity": "seed",
+     "outDegree": 2,
+     "path": "wiki/shannon-entropy.md",
+     "preview": "One-liner: Expected surprise of a random variable.",
+     "properties": {
+      "area": "info-theory",
+      "links_in": "4",
+      "links_out": "2",
+      "maturity": "seed",
+      "slug": "shannon-entropy",
+      "type": "idea"
+     },
+     "slug": "shannon-entropy",
+     "title": "Shannon entropy",
+     "type": "idea",
+     "year": null
+    },
+    {
+     "added": "2026-01-02",
+     "areas": [],
+     "changed": "2026-01-02",
+     "depth": "",
+     "id": "theme-boolean-analysis",
+     "inDegree": 0,
+     "kb": "fixture",
+     "label": "theme-boolean-analysis",
+     "layer": "concept",
+     "maturity": "seed",
+     "outDegree": 0,
+     "path": "wiki/theme-boolean-analysis.md",
+     "preview": "Fixture topic for the backend test suite.",
+     "properties": {
+      "links_in": "0",
+      "links_out": "0",
+      "maturity": "seed",
+      "slug": "theme-boolean-analysis",
+      "type": "topic"
+     },
+     "slug": "theme-boolean-analysis",
+     "title": "Topic: boolean analysis",
+     "type": "topic",
+     "year": null
+    },
+    {
+     "added": "2026-01-02",
+     "areas": [],
+     "changed": "2026-01-02",
+     "depth": "",
+     "id": "theme-fourier-analysis",
+     "inDegree": 0,
+     "kb": "fixture",
+     "label": "theme-fourier-analysis",
+     "layer": "concept",
+     "maturity": "seed",
+     "outDegree": 0,
+     "path": "wiki/theme-fourier-analysis.md",
+     "preview": "Fixture topic for the backend test suite.",
+     "properties": {
+      "links_in": "0",
+      "links_out": "0",
+      "maturity": "seed",
+      "slug": "theme-fourier-analysis",
+      "type": "topic"
+     },
+     "slug": "theme-fourier-analysis",
+     "title": "Topic: fourier analysis",
+     "type": "topic",
+     "year": null
+    },
+    {
+     "added": "2026-01-02",
+     "areas": [],
+     "changed": "2026-01-02",
+     "depth": "",
+     "id": "theme-info-theory",
+     "inDegree": 3,
+     "kb": "fixture",
+     "label": "theme-info-theory",
+     "layer": "concept",
+     "maturity": "seed",
+     "outDegree": 1,
+     "path": "wiki/theme-info-theory.md",
+     "preview": "Fixture topic for the backend test suite.",
+     "properties": {
+      "links_in": "3",
+      "links_out": "1",
+      "maturity": "seed",
+      "slug": "theme-info-theory",
+      "type": "topic"
+     },
+     "slug": "theme-info-theory",
+     "title": "Topic: info theory",
+     "type": "topic",
+     "year": null
+    },
+    {
+     "added": "2026-01-02",
+     "areas": [],
+     "changed": "2026-01-02",
+     "depth": "",
+     "id": "theme-learning-theory",
+     "inDegree": 2,
+     "kb": "fixture",
+     "label": "theme-learning-theory",
+     "layer": "concept",
+     "maturity": "seed",
+     "outDegree": 2,
+     "path": "wiki/theme-learning-theory.md",
+     "preview": "Fixture topic for the backend test suite.",
+     "properties": {
+      "links_in": "2",
+      "links_out": "2",
+      "maturity": "seed",
+      "slug": "theme-learning-theory",
+      "type": "topic"
+     },
+     "slug": "theme-learning-theory",
+     "title": "Topic: learning theory",
+     "type": "topic",
+     "year": null
+    },
+    {
+     "added": "2026-01-02",
+     "areas": [],
+     "changed": "2026-01-02",
+     "depth": "",
+     "id": "theme-statistics",
+     "inDegree": 1,
+     "kb": "fixture",
+     "label": "theme-statistics",
+     "layer": "concept",
+     "maturity": "seed",
+     "outDegree": 1,
+     "path": "wiki/theme-statistics.md",
+     "preview": "Fixture topic for the backend test suite.",
+     "properties": {
+      "links_in": "1",
+      "links_out": "1",
+      "maturity": "seed",
+      "slug": "theme-statistics",
+      "type": "topic"
+     },
+     "slug": "theme-statistics",
+     "title": "Topic: statistics",
+     "type": "topic",
+     "year": null
+    },
+    {
+     "added": "2026-01-02",
+     "areas": [
+      "info-theory"
+     ],
+     "changed": "2026-01-02",
+     "depth": "easy",
+     "id": "video-fixture-talk",
+     "inDegree": 0,
+     "kb": "fixture",
+     "label": "video-fixture-talk",
+     "layer": "source",
+     "maturity": "digested",
+     "outDegree": 2,
+     "path": "wiki/video-fixture-talk.md",
+     "preview": "Problem: What is entropy? Main result: Entropy measures surprise.",
+     "properties": {
+      "area": "info-theory",
+      "authors": "Fixture Speaker",
+      "links_in": "0",
+      "links_out": "2",
+      "maturity": "digested",
+      "raw": "none",
+      "slug": "video-fixture-talk",
+      "sources": "https://example.org/watch/fixture-talk",
+      "type": "video",
+      "url": "https://example.org/watch/fixture-talk",
+      "year": "2024"
+     },
+     "slug": "video-fixture-talk",
+     "title": "Fixture talk on entropy",
+     "type": "video",
+     "year": 2024
+    }
+   ],
+   "schema": {
+    "collection_types": [
+     "book",
+     "course",
+     "notebook",
+     "series"
+    ],
+    "concept_types": [
+     "idea",
+     "person",
+     "question",
+     "topic"
+    ],
+    "default_visible": [
+     "topic",
+     "idea",
+     "question"
+    ],
+    "depth": [
+     "listed",
+     "easy",
+     "full",
+     "deep"
+    ],
+    "dispositions": [
+     "partial",
+     "queued",
+     "sidecar",
+     "skip",
+     "source"
+    ],
+    "layers": [
+     {
+      "color": "#7aa2ff",
+      "id": "concept",
+      "label": "Concepts",
+      "types": [
+       "topic",
+       "idea",
+       "question",
+       "person",
+       "distilled-think"
+      ]
+     },
+     {
+      "color": "#2ac3de",
+      "id": "collection",
+      "label": "Collections",
+      "types": [
+       "course",
+       "series",
+       "book",
+       "notebook",
+       "scope"
+      ]
+     },
+     {
+      "color": "#ff6b7a",
+      "id": "source",
+      "label": "Sources",
+      "types": [
+       "paper",
+       "part",
+       "lecture",
+       "article",
+       "blog-post",
+       "video",
+       "ai-chat",
+       "mail"
+      ]
+     }
+    ],
+    "source_types": [
+     "ai-chat",
+     "article",
+     "blog-post",
+     "lecture",
+     "mail",
+     "paper",
+     "part",
+     "video"
+    ],
+    "types": [
+     {
+      "color": "#9ece6a",
+      "id": "topic",
+      "label": "Topic",
+      "layer": "concept",
+      "prefix": "theme-",
+      "statuses": [
+       "growing",
+       "seed",
+       "solid"
+      ]
+     },
+     {
+      "color": "#7aa2ff",
+      "id": "idea",
+      "label": "Idea",
+      "layer": "concept",
+      "prefix": "",
+      "statuses": [
+       "growing",
+       "seed",
+       "solid"
+      ]
+     },
+     {
+      "color": "#f6c177",
+      "id": "question",
+      "label": "Question",
+      "layer": "concept",
+      "prefix": "q-",
+      "statuses": [
+       "open",
+       "partial",
+       "resolved"
+      ]
+     },
+     {
+      "color": "#bb9af7",
+      "id": "person",
+      "label": "Person",
+      "layer": "concept",
+      "prefix": "",
+      "statuses": []
+     },
+     {
+      "color": "#2ac3de",
+      "id": "course",
+      "label": "Course",
+      "layer": "collection",
+      "prefix": "course-",
+      "statuses": [
+       "digested",
+       "reading",
+       "to-read"
+      ]
+     },
+     {
+      "color": "#7dcfff",
+      "id": "series",
+      "label": "Series",
+      "layer": "collection",
+      "prefix": "series-",
+      "statuses": [
+       "digested",
+       "reading",
+       "to-read"
+      ]
+     },
+     {
+      "color": "#d16bd8",
+      "id": "book",
+      "label": "Book",
+      "layer": "collection",
+      "prefix": "book-",
+      "statuses": [
+       "digested",
+       "reading",
+       "to-read"
+      ]
+     },
+     {
+      "color": "#c099ff",
+      "id": "notebook",
+      "label": "Notebook",
+      "layer": "collection",
+      "prefix": "notebook-",
+      "statuses": [
+       "digested",
+       "reading",
+       "to-read"
+      ]
+     },
+     {
+      "color": "#ff6b7a",
+      "id": "paper",
+      "label": "Paper",
+      "layer": "source",
+      "prefix": "paper-",
+      "statuses": [
+       "digested",
+       "reading",
+       "to-read"
+      ]
+     },
+     {
+      "color": "#eab0ee",
+      "id": "part",
+      "label": "Book part",
+      "layer": "source",
+      "prefix": "part-",
+      "statuses": [
+       "digested",
+       "reading",
+       "to-read"
+      ]
+     },
+     {
+      "color": "#ffc777",
+      "id": "lecture",
+      "label": "Lecture",
+      "layer": "source",
+      "prefix": "lecture-",
+      "statuses": [
+       "digested",
+       "reading",
+       "to-read"
+      ]
+     },
+     {
+      "color": "#4fd6be",
+      "id": "article",
+      "label": "Article",
+      "layer": "source",
+      "prefix": "article-",
+      "statuses": [
+       "digested",
+       "reading",
+       "to-read"
+      ]
+     },
+     {
+      "color": "#ff79c6",
+      "id": "blog-post",
+      "label": "Blog post",
+      "layer": "source",
+      "prefix": "blog-",
+      "statuses": [
+       "digested",
+       "reading",
+       "to-read"
+      ]
+     },
+     {
+      "color": "#f7768e",
+      "id": "video",
+      "label": "Video",
+      "layer": "source",
+      "prefix": "video-",
+      "statuses": [
+       "digested",
+       "reading",
+       "to-read"
+      ]
+     },
+     {
+      "color": "#ff9e64",
+      "id": "ai-chat",
+      "label": "AI chat",
+      "layer": "source",
+      "prefix": "chat-",
+      "statuses": [
+       "digested",
+       "reading",
+       "to-read"
+      ]
+     },
+     {
+      "color": "#73daca",
+      "id": "mail",
+      "label": "Mail",
+      "layer": "source",
+      "prefix": "mail-",
+      "statuses": [
+       "digested",
+       "reading",
+       "to-read"
+      ]
+     },
+     {
+      "color": "#e0af68",
+      "id": "distilled-think",
+      "label": "Distilled",
+      "layer": "concept",
+      "prefix": "distilled-think-",
+      "statuses": [
+       "applied",
+       "archived",
+       "review"
+      ]
+     },
+     {
+      "color": "#e6c07b",
+      "id": "scope",
+      "label": "Scope",
+      "layer": "collection",
+      "prefix": "scope-",
+      "statuses": [
+       "active",
+       "parked"
+      ]
+     }
+    ],
+    "version": [
+     1,
+     5
+    ]
+   }
+  },
+  "home": {
+   "cards": [],
+   "tour": "<tour>"
+  },
+  "index": {
+   "generated_at": "2026-01-02T03:04:05Z",
+   "links": [
+    [
+     "article-fixture-entropy-primer",
+     "shannon-entropy"
+    ],
+    [
+     "article-fixture-entropy-primer",
+     "theme-info-theory"
+    ],
+    [
+     "bias-variance",
+     "generalization"
+    ],
+    [
+     "bias-variance",
+     "theme-statistics"
+    ],
+    [
+     "generalization",
+     "pac-learning"
+    ],
+    [
+     "generalization",
+     "shannon-entropy"
+    ],
+    [
+     "generalization",
+     "theme-learning-theory"
+    ],
+    [
+     "jane-doe",
+     "generalization"
+    ],
+    [
+     "jane-doe",
+     "paper-2020-fixture-generalization-bounds"
+    ],
+    [
+     "pac-learning",
+     "generalization"
+    ],
+    [
+     "pac-learning",
+     "theme-learning-theory"
+    ],
+    [
+     "paper-2020-fixture-generalization-bounds",
+     "generalization"
+    ],
+    [
+     "paper-2020-fixture-generalization-bounds",
+     "jane-doe"
+    ],
+    [
+     "paper-2020-fixture-generalization-bounds",
+     "pac-learning"
+    ],
+    [
+     "q-why-does-sgd-generalize",
+     "generalization"
+    ],
+    [
+     "q-why-does-sgd-generalize",
+     "pac-learning"
+    ],
+    [
+     "q-why-does-sgd-generalize",
+     "paper-2020-fixture-generalization-bounds"
+    ],
+    [
+     "shannon-entropy",
+     "generalization"
+    ],
+    [
+     "shannon-entropy",
+     "theme-info-theory"
+    ],
+    [
+     "theme-info-theory",
+     "shannon-entropy"
+    ],
+    [
+     "theme-learning-theory",
+     "generalization"
+    ],
+    [
+     "theme-learning-theory",
+     "pac-learning"
+    ],
+    [
+     "theme-statistics",
+     "bias-variance"
+    ],
+    [
+     "video-fixture-talk",
+     "shannon-entropy"
+    ],
+    [
+     "video-fixture-talk",
+     "theme-info-theory"
+    ]
+   ],
+   "pages": [
+    {
+     "areas": [
+      "info-theory"
+     ],
+     "depth": "easy",
+     "id": "article-fixture-entropy-primer",
+     "in": 0,
+     "maturity": "digested",
+     "mtime": 1767323045,
+     "out": 2,
+     "preview": "Problem: What is entropy? Main result: Entropy measures surprise.",
+     "title": "Fixture entropy primer",
+     "type": "article",
+     "words": 56,
+     "year": 2024
+    },
+    {
+     "areas": [
+      "statistics"
+     ],
+     "depth": "",
+     "id": "bias-variance",
+     "in": 1,
+     "maturity": "seed",
+     "mtime": 1767323045,
+     "out": 2,
+     "preview": "One-liner: Error splits into bias, variance and noise.",
+     "title": "Bias-variance tradeoff",
+     "type": "idea",
+     "words": 50,
+     "year": null
+    },
+    {
+     "areas": [
+      "learning-theory"
+     ],
+     "depth": "",
+     "id": "generalization",
+     "in": 7,
+     "maturity": "seed",
+     "mtime": 1767323045,
+     "out": 3,
+     "preview": "One-liner: Gap between train and test risk.",
+     "title": "Generalization",
+     "type": "idea",
+     "words": 52,
+     "year": null
+    },
+    {
+     "areas": [],
+     "depth": "",
+     "id": "jane-doe",
+     "in": 1,
+     "maturity": "",
+     "mtime": 1767323045,
+     "out": 2,
+     "preview": "Fixture researcher at Example University. Works on Generalization.",
+     "title": "Jane Doe",
+     "type": "person",
+     "words": 68,
+     "year": null
+    },
+    {
+     "areas": [
+      "learning-theory"
+     ],
+     "depth": "",
+     "id": "pac-learning",
+     "in": 4,
+     "maturity": "seed",
+     "mtime": 1767323045,
+     "out": 2,
+     "preview": "One-liner: Learn a concept to accuracy epsilon with probability 1 - delta.",
+     "title": "PAC learning",
+     "type": "idea",
+     "words": 55,
+     "year": null
+    },
+    {
+     "areas": [
+      "learning-theory"
+     ],
+     "depth": "easy",
+     "id": "paper-2020-fixture-generalization-bounds",
+     "in": 2,
+     "maturity": "digested",
+     "mtime": 1767323045,
+     "out": 3,
+     "preview": "Problem: How large is the gap between train and test risk? Main result: A uniform bound that scales with the square root of complexity over sample size.",
+     "title": "Fixture generalization bounds",
+     "type": "paper",
+     "words": 79,
+     "year": 2020
+    },
+    {
+     "areas": [
+      "learning-theory"
+     ],
+     "depth": "",
+     "id": "q-why-does-sgd-generalize",
+     "in": 0,
+     "maturity": "open",
+     "mtime": 1767323045,
+     "out": 3,
+     "preview": "Why do over-parameterized networks trained by SGD generalize? See Generalization and PAC learning.",
+     "title": "Why does SGD generalize?",
+     "type": "question",
+     "words": 50,
+     "year": null
+    },
+    {
+     "areas": [
+      "info-theory"
+     ],
+     "depth": "",
+     "id": "shannon-entropy",
+     "in": 4,
+     "maturity": "seed",
+     "mtime": 1767323045,
+     "out": 2,
+     "preview": "One-liner: Expected surprise of a random variable.",
+     "title": "Shannon entropy",
+     "type": "idea",
+     "words": 50,
+     "year": null
+    },
+    {
+     "areas": [],
+     "depth": "",
+     "id": "theme-boolean-analysis",
+     "in": 0,
+     "maturity": "seed",
+     "mtime": 1767323045,
+     "out": 0,
+     "preview": "Fixture topic for the backend test suite.",
+     "title": "Topic: boolean analysis",
+     "type": "topic",
+     "words": 35,
+     "year": null
+    },
+    {
+     "areas": [],
+     "depth": "",
+     "id": "theme-fourier-analysis",
+     "in": 0,
+     "maturity": "seed",
+     "mtime": 1767323045,
+     "out": 0,
+     "preview": "Fixture topic for the backend test suite.",
+     "title": "Topic: fourier analysis",
+     "type": "topic",
+     "words": 35,
+     "year": null
+    },
+    {
+     "areas": [],
+     "depth": "",
+     "id": "theme-info-theory",
+     "in": 3,
+     "maturity": "seed",
+     "mtime": 1767323045,
+     "out": 1,
+     "preview": "Fixture topic for the backend test suite.",
+     "title": "Topic: info theory",
+     "type": "topic",
+     "words": 38,
+     "year": null
+    },
+    {
+     "areas": [],
+     "depth": "",
+     "id": "theme-learning-theory",
+     "in": 2,
+     "maturity": "seed",
+     "mtime": 1767323045,
+     "out": 2,
+     "preview": "Fixture topic for the backend test suite.",
+     "title": "Topic: learning theory",
+     "type": "topic",
+     "words": 40,
+     "year": null
+    },
+    {
+     "areas": [],
+     "depth": "",
+     "id": "theme-statistics",
+     "in": 1,
+     "maturity": "seed",
+     "mtime": 1767323045,
+     "out": 1,
+     "preview": "Fixture topic for the backend test suite.",
+     "title": "Topic: statistics",
+     "type": "topic",
+     "words": 37,
+     "year": null
+    },
+    {
+     "areas": [
+      "info-theory"
+     ],
+     "depth": "easy",
+     "id": "video-fixture-talk",
+     "in": 0,
+     "maturity": "digested",
+     "mtime": 1767323045,
+     "out": 2,
+     "preview": "Problem: What is entropy? Main result: Entropy measures surprise.",
+     "title": "Fixture talk on entropy",
+     "type": "video",
+     "words": 57,
+     "year": 2024
+    }
+   ],
+   "wanted": [],
+   "wanted_total": 0
+  },
+  "lifecycle": {
+   "branch": "main",
+   "generated_at": "2026-01-02T03:04:05Z",
+   "github": null,
+   "head": "0002c2637",
+   "next_version": "1.5.1",
+   "policy": {
+    "mode": "enforce",
+    "strict": false
+   },
+   "schema": "<schema>",
+   "snapshots": [],
+   "stats": {
+    "kb_steps": 1,
+    "ops_30d": {
+     "import": 1
+    },
+    "pr_merges": 0,
+    "undone": 0
+   },
+   "timeline": [
+    {
+     "date": "2026-01-02T03:04:05Z",
+     "kb_version": "0.1.1",
+     "kind": "kb",
+     "op": "import",
+     "parents": [],
+     "pr": null,
+     "retro": false,
+     "reverted_by": null,
+     "reverts": null,
+     "scope": "import",
+     "sha": "0002c2637ce37bf87a263cc1618fe9322fccf92e",
+     "short": "0002c2637",
+     "snapshot_tag": null,
+     "subject": "kb(import): fixture (kb-0.1.1)",
+     "summary": "fixture",
+     "target": null,
+     "type": "kb"
+    }
+   ],
+   "version": "0.1.1"
+  },
+  "meta": {
+   "built_at": "2026-01-02T03:04:05Z",
+   "content_sha": "0002c2637ce37bf87a263cc1618fe9322fccf92e",
+   "kb_version": "0.1.1",
+   "profile": "private",
+   "viewer_sha": "<viewer>"
+  },
+  "pages": {
+   "article-fixture-entropy-primer": {
+    "backlinks": [],
+    "broken": [],
+    "card": {
+     "areas": [
+      "info-theory"
+     ],
+     "depth": "easy",
+     "id": "article-fixture-entropy-primer",
+     "in": 0,
+     "maturity": "digested",
+     "mtime": 1767323045,
+     "out": 2,
+     "preview": "Problem: What is entropy? Main result: Entropy measures surprise.",
+     "title": "Fixture entropy primer",
+     "type": "article",
+     "words": 56,
+     "year": 2024
+    },
+    "frontmatter": {
+     "area": [
+      "info-theory"
+     ],
+     "authors": [
+      "Fixture Author"
+     ],
+     "depth": "easy",
+     "layer": "source",
+     "maturity": "digested",
+     "raw": "none",
+     "sources": [
+      "https://example.org/articles/entropy-primer"
+     ],
+     "title": "\"Fixture entropy primer\"",
+     "type": "article",
+     "url": "https://example.org/articles/entropy-primer",
+     "year": "2024"
+    },
+    "kb": "fixture",
+    "markdown": "# Fixture entropy primer\n\n**Problem:** What is entropy?\n\n**Main result:** Entropy measures surprise.\n\n## Key ideas\n\n- Fixture article source (no raw file; authored by hand).\n\n## Key equations\n\n$H(X) = -\\sum p \\log p$\n\n## Takeaways for my thesis\n\n- None.\n\n## Connections\n\n- [Topic: info theory](theme-info-theory.md), [Shannon entropy](shannon-entropy.md)\n\n## Links out\n\n- [Shannon entropy](shannon-entropy.md)\n",
+    "outbound": [
+     "shannon-entropy",
+     "theme-info-theory"
+    ],
+    "path": "wiki/article-fixture-entropy-primer.md",
+    "read_only": false,
+    "suggested": [
+     {
+      "id": "video-fixture-talk",
+      "score": 1.34,
+      "shared": 2,
+      "via": [
+       "theme-info-theory",
+       "shannon-entropy"
+      ]
+     }
+    ]
+   },
+   "bias-variance": {
+    "backlinks": [
+     {
+      "context": "listed under “Key concepts”",
+      "id": "theme-statistics"
+     }
+    ],
+    "broken": [],
+    "card": {
+     "areas": [
+      "statistics"
+     ],
+     "depth": "",
+     "id": "bias-variance",
+     "in": 1,
+     "maturity": "seed",
+     "mtime": 1767323045,
+     "out": 2,
+     "preview": "One-liner: Error splits into bias, variance and noise.",
+     "title": "Bias-variance tradeoff",
+     "type": "idea",
+     "words": 50,
+     "year": null
+    },
+    "frontmatter": {
+     "area": [
+      "statistics"
+     ],
+     "layer": "concept",
+     "maturity": "seed",
+     "title": "\"Bias-variance tradeoff\"",
+     "type": "idea"
+    },
+    "kb": "fixture",
+    "markdown": "# Bias-variance tradeoff\n\n**One-liner:** Error splits into bias, variance and noise.\n\n## Intuition\n\nFixture idea.\n\n## Formal\n\n## Why it matters (thesis angle)\n\nFixture.\n\n## Connections\n- [Topic: statistics](theme-statistics.md)\n- [Generalization](generalization.md)\n\n## Open questions\n-\n\n## My notes\n\n<!-- Yours: no tool rewrites this section, and it stays last. -->\n",
+    "outbound": [
+     "generalization",
+     "theme-statistics"
+    ],
+    "path": "wiki/bias-variance.md",
+    "read_only": false,
+    "suggested": []
+   },
+   "generalization": {
+    "backlinks": [
+     {
+      "context": "listed under “Connections”",
+      "id": "pac-learning"
+     },
+     {
+      "context": "listed under “Connections”",
+      "id": "shannon-entropy"
+     },
+     {
+      "context": "Baseline for Generalization.",
+      "id": "paper-2020-fixture-generalization-bounds"
+     },
+     {
+      "context": "listed under “Key concepts”",
+      "id": "theme-learning-theory"
+     },
+     {
+      "context": "listed under “Connections”",
+      "id": "bias-variance"
+     },
+     {
+      "context": "Fixture researcher at Example University. Works on Generalization.",
+      "id": "jane-doe"
+     },
+     {
+      "context": "Why do over-parameterized networks trained by SGD generalize? See Generalization and PAC learning.",
+      "id": "q-why-does-sgd-generalize"
+     }
+    ],
+    "broken": [],
+    "card": {
+     "areas": [
+      "learning-theory"
+     ],
+     "depth": "",
+     "id": "generalization",
+     "in": 7,
+     "maturity": "seed",
+     "mtime": 1767323045,
+     "out": 3,
+     "preview": "One-liner: Gap between train and test risk.",
+     "title": "Generalization",
+     "type": "idea",
+     "words": 52,
+     "year": null
+    },
+    "frontmatter": {
+     "area": [
+      "learning-theory"
+     ],
+     "layer": "concept",
+     "maturity": "seed",
+     "title": "\"Generalization\"",
+     "type": "idea"
+    },
+    "kb": "fixture",
+    "markdown": "# Generalization\n\n**One-liner:** Gap between train and test risk.\n\n## Intuition\n\nFixture idea.\n\n## Formal\n\n## Why it matters (thesis angle)\n\nFixture.\n\n## Connections\n- [Topic: learning theory](theme-learning-theory.md)\n- [PAC learning](pac-learning.md), [Shannon entropy](shannon-entropy.md)\n\n## Open questions\n-\n\n## My notes\n\n<!-- Yours: no tool rewrites this section, and it stays last. -->\n",
+    "outbound": [
+     "pac-learning",
+     "shannon-entropy",
+     "theme-learning-theory"
+    ],
+    "path": "wiki/generalization.md",
+    "read_only": false,
+    "suggested": []
+   },
+   "jane-doe": {
+    "backlinks": [
+     {
+      "context": "listed under “Links out”",
+      "id": "paper-2020-fixture-generalization-bounds"
+     }
+    ],
+    "broken": [],
+    "card": {
+     "areas": [],
+     "depth": "",
+     "id": "jane-doe",
+     "in": 1,
+     "maturity": "",
+     "mtime": 1767323045,
+     "out": 2,
+     "preview": "Fixture researcher at Example University. Works on Generalization.",
+     "title": "Jane Doe",
+     "type": "person",
+     "words": 68,
+     "year": null
+    },
+    "frontmatter": {
+     "description": "\"Fixture person page for a made-up learning-theory researcher at Example University, who works on generalization bounds and is the author of the fixture paper used by the backend test suite.\"",
+     "generated": "summarize/unknown",
+     "layer": "concept",
+     "title": "\"Jane Doe\"",
+     "type": "person",
+     "url": "https://example.org/~jane"
+    },
+    "kb": "fixture",
+    "markdown": "# Jane Doe\n\nFixture researcher at Example University. Works on [Generalization](generalization.md).\n\n## Why it matters here\n\nFixture author of the generalization-bounds paper.\n\n## Roles & companies\n<!-- from: manual -->\n\n| From | To | Org | Role |\n|---|---|---|---|\n| 2015 | — | Example University | Professor |\n\n## Bibliography\n<!-- from: scholar -->\n\n## Cataloged in vault\n<!-- from: scholar -->\n\n- [Fixture generalization bounds](paper-2020-fixture-generalization-bounds.md)\n",
+    "outbound": [
+     "generalization",
+     "paper-2020-fixture-generalization-bounds"
+    ],
+    "path": "wiki/jane-doe.md",
+    "read_only": false,
+    "suggested": [
+     {
+      "id": "pac-learning",
+      "score": 1.1,
+      "shared": 2,
+      "via": [
+       "paper-2020-fixture-generalization-bounds",
+       "generalization"
+      ]
+     },
+     {
+      "id": "q-why-does-sgd-generalize",
+      "score": 1.1,
+      "shared": 2,
+      "via": [
+       "paper-2020-fixture-generalization-bounds",
+       "generalization"
+      ]
+     }
+    ]
+   },
+   "pac-learning": {
+    "backlinks": [
+     {
+      "context": "PAC learning, Shannon entropy",
+      "id": "generalization"
+     },
+     {
+      "context": "Concepts: Generalization, PAC learning",
+      "id": "paper-2020-fixture-generalization-bounds"
+     },
+     {
+      "context": "listed under “Key concepts”",
+      "id": "theme-learning-theory"
+     },
+     {
+      "context": "Why do over-parameterized networks trained by SGD generalize? See Generalization and PAC learning.",
+      "id": "q-why-does-sgd-generalize"
+     }
+    ],
+    "broken": [],
+    "card": {
+     "areas": [
+      "learning-theory"
+     ],
+     "depth": "",
+     "id": "pac-learning",
+     "in": 4,
+     "maturity": "seed",
+     "mtime": 1767323045,
+     "out": 2,
+     "preview": "One-liner: Learn a concept to accuracy epsilon with probability 1 - delta.",
+     "title": "PAC learning",
+     "type": "idea",
+     "words": 55,
+     "year": null
+    },
+    "frontmatter": {
+     "area": [
+      "learning-theory"
+     ],
+     "layer": "concept",
+     "maturity": "seed",
+     "title": "\"PAC learning\"",
+     "type": "idea"
+    },
+    "kb": "fixture",
+    "markdown": "# PAC learning\n\n**One-liner:** Learn a concept to accuracy epsilon with probability 1 - delta.\n\n## Intuition\n\nFixture idea.\n\n## Formal\n\n## Why it matters (thesis angle)\n\nFixture.\n\n## Connections\n- [Topic: learning theory](theme-learning-theory.md)\n- [Generalization](generalization.md)\n\n## Open questions\n-\n\n## My notes\n\n<!-- Yours: no tool rewrites this section, and it stays last. -->\n",
+    "outbound": [
+     "generalization",
+     "theme-learning-theory"
+    ],
+    "path": "wiki/pac-learning.md",
+    "read_only": false,
+    "suggested": [
+     {
+      "id": "jane-doe",
+      "score": 1.1,
+      "shared": 2,
+      "via": [
+       "paper-2020-fixture-generalization-bounds",
+       "generalization"
+      ]
+     }
+    ]
+   },
+   "paper-2020-fixture-generalization-bounds": {
+    "backlinks": [
+     {
+      "context": "listed under “Cataloged in vault”",
+      "id": "jane-doe"
+     },
+     {
+      "context": "listed under “What I know so far”",
+      "id": "q-why-does-sgd-generalize"
+     }
+    ],
+    "broken": [],
+    "card": {
+     "areas": [
+      "learning-theory"
+     ],
+     "depth": "easy",
+     "id": "paper-2020-fixture-generalization-bounds",
+     "in": 2,
+     "maturity": "digested",
+     "mtime": 1767323045,
+     "out": 3,
+     "preview": "Problem: How large is the gap between train and test risk? Main result: A uniform bound that scales with the square root of complexity over sample size.",
+     "title": "Fixture generalization bounds",
+     "type": "paper",
+     "words": 79,
+     "year": 2020
+    },
+    "frontmatter": {
+     "aliases": [
+      "2020-fixture-generalization-bounds"
+     ],
+     "area": [
+      "learning-theory"
+     ],
+     "authors": [
+      "Jane Doe"
+     ],
+     "depth": "easy",
+     "layer": "source",
+     "maturity": "digested",
+     "raw": "none",
+     "recommended_by": [
+      "jane-doe"
+     ],
+     "sources": [
+      "https://example.org/papers/fixture-generalization-bounds"
+     ],
+     "title": "\"Fixture generalization bounds\"",
+     "type": "paper",
+     "url": "https://example.org/papers/fixture-generalization-bounds",
+     "year": "2020"
+    },
+    "kb": "fixture",
+    "markdown": "# Fixture generalization bounds\n\n**Problem:** How large is the gap between train and test risk?\n\n**Main result:** A uniform bound that scales with the square root of complexity over sample size.\n\n## Setup & assumptions\n\nIID samples, bounded loss.\n\n## Proof idea (sketch only)\n\nSymmetrization plus a union bound.\n\n## Key equations\n\n$R(h) \\le \\hat R(h) + \\sqrt{C/n}$\n\n## Takeaways for my thesis\n\n- Baseline for [Generalization](generalization.md).\n\n## Links out\n- Concepts: [Generalization](generalization.md), [PAC learning](pac-learning.md)\n- Person: [Jane Doe](jane-doe.md)\n",
+    "outbound": [
+     "generalization",
+     "jane-doe",
+     "pac-learning"
+    ],
+    "path": "wiki/paper-2020-fixture-generalization-bounds.md",
+    "read_only": false,
+    "suggested": [
+     {
+      "id": "theme-learning-theory",
+      "score": 1.1,
+      "shared": 2,
+      "via": [
+       "pac-learning",
+       "generalization"
+      ]
+     }
+    ]
+   },
+   "q-why-does-sgd-generalize": {
+    "backlinks": [],
+    "broken": [],
+    "card": {
+     "areas": [
+      "learning-theory"
+     ],
+     "depth": "",
+     "id": "q-why-does-sgd-generalize",
+     "in": 0,
+     "maturity": "open",
+     "mtime": 1767323045,
+     "out": 3,
+     "preview": "Why do over-parameterized networks trained by SGD generalize? See Generalization and PAC learning.",
+     "title": "Why does SGD generalize?",
+     "type": "question",
+     "words": 50,
+     "year": null
+    },
+    "frontmatter": {
+     "area": [
+      "learning-theory"
+     ],
+     "layer": "concept",
+     "maturity": "open",
+     "priority": "med",
+     "title": "\"Why does SGD generalize?\"",
+     "type": "question"
+    },
+    "kb": "fixture",
+    "markdown": "# Why does SGD generalize?\n\n## Question\n\nWhy do over-parameterized networks trained by SGD generalize? See [Generalization](generalization.md) and [PAC learning](pac-learning.md).\n\n## Why I care\n\nFixture question.\n\n## What I know so far\n\n- See [Fixture generalization bounds](paper-2020-fixture-generalization-bounds.md).\n\n## Hypotheses\n\n-\n\n## Papers / concepts to read\n\n- [Fixture generalization bounds](paper-2020-fixture-generalization-bounds.md)\n",
+    "outbound": [
+     "generalization",
+     "pac-learning",
+     "paper-2020-fixture-generalization-bounds"
+    ],
+    "path": "wiki/q-why-does-sgd-generalize.md",
+    "read_only": false,
+    "suggested": [
+     {
+      "id": "jane-doe",
+      "score": 1.1,
+      "shared": 2,
+      "via": [
+       "paper-2020-fixture-generalization-bounds",
+       "generalization"
+      ]
+     },
+     {
+      "id": "theme-learning-theory",
+      "score": 1.1,
+      "shared": 2,
+      "via": [
+       "pac-learning",
+       "generalization"
+      ]
+     }
+    ]
+   },
+   "shannon-entropy": {
+    "backlinks": [
+     {
+      "context": "PAC learning, Shannon entropy",
+      "id": "generalization"
+     },
+     {
+      "context": "listed under “Key concepts”",
+      "id": "theme-info-theory"
+     },
+     {
+      "context": "Topic: info theory, Shannon entropy",
+      "id": "article-fixture-entropy-primer"
+     },
+     {
+      "context": "Topic: info theory, Shannon entropy",
+      "id": "video-fixture-talk"
+     }
+    ],
+    "broken": [],
+    "card": {
+     "areas": [
+      "info-theory"
+     ],
+     "depth": "",
+     "id": "shannon-entropy",
+     "in": 4,
+     "maturity": "seed",
+     "mtime": 1767323045,
+     "out": 2,
+     "preview": "One-liner: Expected surprise of a random variable.",
+     "title": "Shannon entropy",
+     "type": "idea",
+     "words": 50,
+     "year": null
+    },
+    "frontmatter": {
+     "area": [
+      "info-theory"
+     ],
+     "layer": "concept",
+     "maturity": "seed",
+     "title": "\"Shannon entropy\"",
+     "type": "idea"
+    },
+    "kb": "fixture",
+    "markdown": "# Shannon entropy\n\n**One-liner:** Expected surprise of a random variable.\n\n## Intuition\n\nFixture idea.\n\n## Formal\n\n## Why it matters (thesis angle)\n\nFixture.\n\n## Connections\n- [Topic: info theory](theme-info-theory.md)\n- [Generalization](generalization.md)\n\n## Open questions\n-\n\n## My notes\n\n<!-- Yours: no tool rewrites this section, and it stays last. -->\n",
+    "outbound": [
+     "generalization",
+     "theme-info-theory"
+    ],
+    "path": "wiki/shannon-entropy.md",
+    "read_only": false,
+    "suggested": []
+   },
+   "theme-boolean-analysis": {
+    "backlinks": [],
+    "broken": [],
+    "card": {
+     "areas": [],
+     "depth": "",
+     "id": "theme-boolean-analysis",
+     "in": 0,
+     "maturity": "seed",
+     "mtime": 1767323045,
+     "out": 0,
+     "preview": "Fixture topic for the backend test suite.",
+     "title": "Topic: boolean analysis",
+     "type": "topic",
+     "words": 35,
+     "year": null
+    },
+    "frontmatter": {
+     "layer": "concept",
+     "maturity": "seed",
+     "title": "\"Topic: boolean analysis\"",
+     "type": "topic"
+    },
+    "kb": "fixture",
+    "markdown": "# Topic: boolean analysis\n\n## Scope\n\nFixture topic for the backend test suite.\n\n## Key concepts\n\n\n## Threads\n\n## Papers\n\n## My notes\n\n<!-- Yours: no tool rewrites this section, and it stays last. -->\n",
+    "outbound": [],
+    "path": "wiki/theme-boolean-analysis.md",
+    "read_only": false,
+    "suggested": []
+   },
+   "theme-fourier-analysis": {
+    "backlinks": [],
+    "broken": [],
+    "card": {
+     "areas": [],
+     "depth": "",
+     "id": "theme-fourier-analysis",
+     "in": 0,
+     "maturity": "seed",
+     "mtime": 1767323045,
+     "out": 0,
+     "preview": "Fixture topic for the backend test suite.",
+     "title": "Topic: fourier analysis",
+     "type": "topic",
+     "words": 35,
+     "year": null
+    },
+    "frontmatter": {
+     "layer": "concept",
+     "maturity": "seed",
+     "title": "\"Topic: fourier analysis\"",
+     "type": "topic"
+    },
+    "kb": "fixture",
+    "markdown": "# Topic: fourier analysis\n\n## Scope\n\nFixture topic for the backend test suite.\n\n## Key concepts\n\n\n## Threads\n\n## Papers\n\n## My notes\n\n<!-- Yours: no tool rewrites this section, and it stays last. -->\n",
+    "outbound": [],
+    "path": "wiki/theme-fourier-analysis.md",
+    "read_only": false,
+    "suggested": []
+   },
+   "theme-info-theory": {
+    "backlinks": [
+     {
+      "context": "listed under “Connections”",
+      "id": "shannon-entropy"
+     },
+     {
+      "context": "Topic: info theory, Shannon entropy",
+      "id": "article-fixture-entropy-primer"
+     },
+     {
+      "context": "Topic: info theory, Shannon entropy",
+      "id": "video-fixture-talk"
+     }
+    ],
+    "broken": [],
+    "card": {
+     "areas": [],
+     "depth": "",
+     "id": "theme-info-theory",
+     "in": 3,
+     "maturity": "seed",
+     "mtime": 1767323045,
+     "out": 1,
+     "preview": "Fixture topic for the backend test suite.",
+     "title": "Topic: info theory",
+     "type": "topic",
+     "words": 38,
+     "year": null
+    },
+    "frontmatter": {
+     "layer": "concept",
+     "maturity": "seed",
+     "title": "\"Topic: info theory\"",
+     "type": "topic"
+    },
+    "kb": "fixture",
+    "markdown": "# Topic: info theory\n\n## Scope\n\nFixture topic for the backend test suite.\n\n## Key concepts\n\n- [Shannon entropy](shannon-entropy.md)\n\n## Threads\n\n## Papers\n\n## My notes\n\n<!-- Yours: no tool rewrites this section, and it stays last. -->\n",
+    "outbound": [
+     "shannon-entropy"
+    ],
+    "path": "wiki/theme-info-theory.md",
+    "read_only": false,
+    "suggested": []
+   },
+   "theme-learning-theory": {
+    "backlinks": [
+     {
+      "context": "listed under “Connections”",
+      "id": "generalization"
+     },
+     {
+      "context": "listed under “Connections”",
+      "id": "pac-learning"
+     }
+    ],
+    "broken": [],
+    "card": {
+     "areas": [],
+     "depth": "",
+     "id": "theme-learning-theory",
+     "in": 2,
+     "maturity": "seed",
+     "mtime": 1767323045,
+     "out": 2,
+     "preview": "Fixture topic for the backend test suite.",
+     "title": "Topic: learning theory",
+     "type": "topic",
+     "words": 40,
+     "year": null
+    },
+    "frontmatter": {
+     "layer": "concept",
+     "maturity": "seed",
+     "title": "\"Topic: learning theory\"",
+     "type": "topic"
+    },
+    "kb": "fixture",
+    "markdown": "# Topic: learning theory\n\n## Scope\n\nFixture topic for the backend test suite.\n\n## Key concepts\n\n- [Generalization](generalization.md)\n- [PAC learning](pac-learning.md)\n\n## Threads\n\n## Papers\n\n## My notes\n\n<!-- Yours: no tool rewrites this section, and it stays last. -->\n",
+    "outbound": [
+     "generalization",
+     "pac-learning"
+    ],
+    "path": "wiki/theme-learning-theory.md",
+    "read_only": false,
+    "suggested": [
+     {
+      "id": "paper-2020-fixture-generalization-bounds",
+      "score": 1.1,
+      "shared": 2,
+      "via": [
+       "pac-learning",
+       "generalization"
+      ]
+     },
+     {
+      "id": "q-why-does-sgd-generalize",
+      "score": 1.1,
+      "shared": 2,
+      "via": [
+       "pac-learning",
+       "generalization"
+      ]
+     }
+    ]
+   },
+   "theme-statistics": {
+    "backlinks": [
+     {
+      "context": "listed under “Connections”",
+      "id": "bias-variance"
+     }
+    ],
+    "broken": [],
+    "card": {
+     "areas": [],
+     "depth": "",
+     "id": "theme-statistics",
+     "in": 1,
+     "maturity": "seed",
+     "mtime": 1767323045,
+     "out": 1,
+     "preview": "Fixture topic for the backend test suite.",
+     "title": "Topic: statistics",
+     "type": "topic",
+     "words": 37,
+     "year": null
+    },
+    "frontmatter": {
+     "layer": "concept",
+     "maturity": "seed",
+     "title": "\"Topic: statistics\"",
+     "type": "topic"
+    },
+    "kb": "fixture",
+    "markdown": "# Topic: statistics\n\n## Scope\n\nFixture topic for the backend test suite.\n\n## Key concepts\n\n- [Bias-variance tradeoff](bias-variance.md)\n\n## Threads\n\n## Papers\n\n## My notes\n\n<!-- Yours: no tool rewrites this section, and it stays last. -->\n",
+    "outbound": [
+     "bias-variance"
+    ],
+    "path": "wiki/theme-statistics.md",
+    "read_only": false,
+    "suggested": []
+   },
+   "video-fixture-talk": {
+    "backlinks": [],
+    "broken": [],
+    "card": {
+     "areas": [
+      "info-theory"
+     ],
+     "depth": "easy",
+     "id": "video-fixture-talk",
+     "in": 0,
+     "maturity": "digested",
+     "mtime": 1767323045,
+     "out": 2,
+     "preview": "Problem: What is entropy? Main result: Entropy measures surprise.",
+     "title": "Fixture talk on entropy",
+     "type": "video",
+     "words": 57,
+     "year": 2024
+    },
+    "frontmatter": {
+     "area": [
+      "info-theory"
+     ],
+     "authors": [
+      "Fixture Speaker"
+     ],
+     "depth": "easy",
+     "layer": "source",
+     "maturity": "digested",
+     "raw": "none",
+     "sources": [
+      "https://example.org/watch/fixture-talk"
+     ],
+     "title": "\"Fixture talk on entropy\"",
+     "type": "video",
+     "url": "https://example.org/watch/fixture-talk",
+     "year": "2024"
+    },
+    "kb": "fixture",
+    "markdown": "# Fixture talk on entropy\n\n**Problem:** What is entropy?\n\n**Main result:** Entropy measures surprise.\n\n## Key ideas\n\n- Fixture video source (no raw file; authored by hand).\n\n## Key equations\n\n$H(X) = -\\sum p \\log p$\n\n## Takeaways for my thesis\n\n- None.\n\n## Connections\n\n- [Topic: info theory](theme-info-theory.md), [Shannon entropy](shannon-entropy.md)\n\n## Links out\n\n- [Shannon entropy](shannon-entropy.md)\n",
+    "outbound": [
+     "shannon-entropy",
+     "theme-info-theory"
+    ],
+    "path": "wiki/video-fixture-talk.md",
+    "read_only": false,
+    "suggested": [
+     {
+      "id": "article-fixture-entropy-primer",
+      "score": 1.34,
+      "shared": 2,
+      "via": [
+       "theme-info-theory",
+       "shannon-entropy"
+      ]
+     }
+    ]
+   }
+  },
+  "rawCards": {}
+ },
+ "manifest": {
+  "built_at": "2026-01-02T03:04:05Z",
+  "content_ref": "main",
+  "kb_version": "0.1.1",
+  "layout": "app",
+  "profile": "private"
+ }
+}

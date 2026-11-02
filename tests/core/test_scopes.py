@@ -412,8 +412,6 @@ class ShareProfileTests(unittest.TestCase):
         self.assertIn("scope", sb.PUBLIC_EXCLUDE_TYPES)
         self.assertTrue(sb.PUBLIC_EXCLUDE_TYPES.isdisjoint({"mail", "ai-chat", "person"}))   # chats and profiles are public (only email-derived pages go)
         self.assertIn("scopes", sb.PUBLIC_DROP_KEYS)
-        self.assertIn("/api/scopes", sb.SHIMMED_API)
-        self.assertIn("/api/scope", sb.SHIMMED_API)
         nodes = [dict(id="paper-a", type="paper", properties=dict(scopes="scope-s", raw=A)),
                  dict(id="scope-s", type="scope", properties=dict())]
         links = [dict(source="scope-s", target="paper-a")]

@@ -357,11 +357,11 @@ class LockAndDebounceTests(ShareCase):
             self.assertEqual(spawned, [])
             self.assertTrue(deploy.pending_path().exists())
             runs = []
-            fake = lambda force=False, dry_run=False, build_dir=None, app=True: runs.append(app) or deploy.DeployResult(state="deployed")
+            fake = lambda force=False, dry_run=False, build_dir=None: runs.append(True) or deploy.DeployResult(state="deployed")
             with mock.patch.object(deploy, "deploy_main", fake):
                 rc = deploy.cmd_deploy_main(types.SimpleNamespace(force=False, dry_run=False))
             self.assertEqual(rc, 0)
-            self.assertEqual(runs, [True, True])  # the deploy + exactly one rerun, both the app layout
+            self.assertEqual(runs, [True, True])  # the deploy + exactly one rerun
             self.assertFalse(deploy.pending_path().exists())
             self.assertEqual(autodeploy.trigger("three"), "spawned")
             self.assertEqual(len(spawned), 1)

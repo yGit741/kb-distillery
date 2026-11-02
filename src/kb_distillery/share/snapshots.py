@@ -106,13 +106,13 @@ def scan(data: dict) -> dict:
     return {"counts": dict(sorted(counts.items())), "flags": flags, "pages": len(slugs)}
 
 
-def audit_build(ref: str, root: Path = REPO, app: bool = False, **build_kw):
+def audit_build(ref: str, root: Path = REPO, **build_kw):
     """Build `ref` with the public profile into a temp dir and scan it → (report, build_dir, tmpdir).
 
-    `app=True` (opt-in) audits the React-app layout instead: its baked `kb-data` is scanned the same way."""
+    The scan reads the `kb-data` blob baked into the app's index.html."""
     from kb_distillery.share.build import build  # lazy: the builder is heavy and its own module
     tmp = tempfile.TemporaryDirectory(prefix="kb-share-audit-")
-    result = build(ref, profile="public", root=root, out_root=Path(tmp.name), label="public", **({"app": True} if app else {}), **build_kw)
+    result = build(ref, profile="public", root=root, out_root=Path(tmp.name), label="public", **build_kw)
     html = (Path(result.dir) / "index.html").read_text(encoding="utf-8")
     report = scan(extract_data(html))
     report["manifest"] = json.loads((Path(result.dir) / "manifest.json").read_text(encoding="utf-8"))
@@ -120,9 +120,9 @@ def audit_build(ref: str, root: Path = REPO, app: bool = False, **build_kw):
 
 
 def _audit_kw(args) -> dict:
-    """Only what was asked for: no flag → no extra keyword, the legacy call is unchanged.
+    """Only what was asked for: no flag → no extra keyword.
     `--viewer-worktree` is dev only (hidden): render with this checkout's code, as `share build` can."""
-    kw = {"app": True} if getattr(args, "app", False) else {}
+    kw = {}
     if getattr(args, "scope", None):
         kw.update(scope=args.scope, hops=args.hops)
     if getattr(args, "predicate", None):
@@ -537,7 +537,7 @@ def register(subparsers) -> None:
                    help="publish only this scope / collection / person page, its members and (--hops 1) their neighbours")
     a.add_argument("--hops", type=int, choices=(0, 1), default=1)
     add_predicate_args(a)
-    a.add_argument("--app", action="store_true", help="opt in: audit the React-app layout build")
+    a.add_argument("--app", action="store_true", help=argparse.SUPPRESS)      # the only layout; accepted for old scripts
     a.add_argument("--viewer-worktree", action="store_true", help=argparse.SUPPRESS)
     a.set_defaults(func=cmd_audit)
 
@@ -554,7 +554,7 @@ def register(subparsers) -> None:
                    help="publish only this scope / collection / person page, its members and (--hops 1) their neighbours")
     s.add_argument("--hops", type=int, choices=(0, 1), default=1)
     add_predicate_args(s)
-    s.add_argument("--app", action="store_true", help="opt in: publish the React-app layout build instead of the iframe shell")
+    s.add_argument("--app", action="store_true", help=argparse.SUPPRESS)      # the only layout; accepted for old scripts
     s.add_argument("--viewer-worktree", action="store_true", help=argparse.SUPPRESS)
     s.set_defaults(func=cmd_snapshot)
 
