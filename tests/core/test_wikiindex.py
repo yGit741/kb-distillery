@@ -51,6 +51,10 @@ class Render(unittest.TestCase):
         root = files["wiki/index.md"]
         self.assertLess(root.index("[Company]"), root.index("[Skill]"))
 
+    def test_a_malformed_type_does_not_crash_the_index(self):
+        files = wikiindex.render([entry("a"), {**entry("b"), "type": ["x"]}])
+        self.assertEqual(sorted(files), ["wiki/index.md", "wiki/paper/index.md"])
+
     def test_page_year(self):
         self.assertEqual(wikiindex.page_year({"year": 1996}), "1996")
         self.assertEqual(wikiindex.page_year({"created": "2025-04-19T00:00:00Z"}), "2025")

@@ -10,12 +10,12 @@ Read this root first, then open only the one section you need; each section list
 
 - [Mail](mail/index.md) — 1 page. Email threads.
 - [People](person/index.md) — 4 pages. People: researchers and collaborators, with their papers.
-- [AI chat](chat/index.md) — 1 page. Pages of type `chat`.
-- [Company](company/index.md) — 2 pages. Pages of type `company`.
-- [Document](document/index.md) — 1 page. Pages of type `document`.
-- [Interview](interview/index.md) — 3 pages. Pages of type `interview`.
 - [Notes](notes/index.md) — 1 page. Pages of type `notes`.
-- [Job posting](posting/index.md) — 2 pages. Pages of type `posting`.
-- [Hiring process](process/index.md) — 2 pages. Pages of type `process`.
+- [Document](document/index.md) — 1 page. Pages of type `document`.
+- [Company](company/index.md) — 2 pages. Pages of type `company`.
 - [Role](role/index.md) — 2 pages. Pages of type `role`.
+- [Interview](interview/index.md) — 3 pages. Pages of type `interview`.
 - [Skill](skill/index.md) — 6 pages. Pages of type `skill`.
+- [Hiring process](process/index.md) — 2 pages. Pages of type `process`.
+- [Job posting](posting/index.md) — 2 pages. Pages of type `posting`.
+- [AI chat](chat/index.md) — 1 page. Pages of type `chat`.

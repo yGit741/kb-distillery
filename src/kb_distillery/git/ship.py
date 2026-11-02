@@ -79,6 +79,18 @@ def is_generated(path):
             or (demo is not None and (demo in GENERATED_FILES or is_index_path(demo))))
 
 
+def _drop_regenerated(root):
+    """Undo what lint rewrote in `root`: the generated files and every section index. A tracked one goes back to HEAD,
+    one lint created (untracked) is deleted."""
+    for p in changed_paths(root)["knowledge"]:
+        if p not in GENERATED_FILES and not is_index_path(p):
+            continue
+        if run_git(["cat-file", "-e", f"HEAD:{p}"], cwd=root).returncode == 0:
+            run_git(["checkout", "HEAD", "--", p], cwd=root)
+        elif os.path.isfile(os.path.join(root, p)):
+            os.remove(os.path.join(root, p))
+
+
 def _fingerprint(root):
     """Tree sha of `root` without generated files, or None when the real runner is not in use / git fails."""
     if subprocess.run is not _REAL_RUN:
@@ -1017,9 +1029,7 @@ def cmd_sync(cont=False, abort=False, root=ROOT, gates=True):
     if run_git(["merge-base", "--is-ancestor", base, "HEAD"], cwd=root).returncode == 0:
         print(f"{branch} already contains {base}")
         return 0
-    regenerated = [p for p in GENERATED_FILES if p in changed_paths(root)["knowledge"]]
-    if regenerated:                                  # lint rebuilds them; never block a sync on them
-        run_git(["checkout", "HEAD", "--", *regenerated], cwd=root)
+    _drop_regenerated(root)                          # lint rebuilds them; never block a sync on them
     dirty = [p for lane in changed_paths(root).values() for p in lane]
     if dirty:
         print(f"error: uncommitted changes — ship commit them first: {dirty[:5]}")
@@ -1110,9 +1120,7 @@ def _merge_locked(branch, local, pr_number, title, skip_tests, no_push, root, ga
         behind = False
     if behind:
         # lint gates regenerate these in the worktree; they are rebuilt anyway, so drop them before syncing
-        regenerated = [p for p in GENERATED_FILES if p in changed_paths(root)["knowledge"]]
-        if regenerated:
-            run_git(["checkout", "HEAD", "--", *regenerated], cwd=root)
+        _drop_regenerated(root)
         sync = run_git(["merge", "--no-edit", "-m", f"Merge branch 'main' into {branch}", base], cwd=root)
         print(_out(sync))
         if sync.returncode != 0:

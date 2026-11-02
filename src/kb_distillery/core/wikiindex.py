@@ -84,13 +84,17 @@ def render(entries, labels=None, order=()):
     labels = labels or {}
     by_type = {}
     for e in entries:
-        by_type.setdefault(e["type"], []).append(e)
+        if isinstance(e["type"], str):            # a malformed `type:` has no section
+            by_type.setdefault(e["type"], []).append(e)
     known = {t for t, _title, _d in SECTIONS}
-    order = [(t, title, desc) for t, title, desc in SECTIONS]
-    order += [(t, labels.get(t) or t.replace("-", " ").capitalize(), f"Pages of type `{t}`.") for t in sorted(by_type, key=lambda t: (t not in order, list(order).index(t) if t in order else 0, t)) if t not in known]
+    kb_order = list(order)
+    sections = [(t, title, desc) for t, title, desc in SECTIONS]
+    extra = sorted((t for t in by_type if t not in known),
+                   key=lambda t: (t not in kb_order, kb_order.index(t) if t in kb_order else 0, t))
+    sections += [(t, labels.get(t) or t.replace("-", " ").capitalize(), f"Pages of type `{t}`.") for t in extra]
     files = {}
     root_rows = []
-    for t, title, desc in order:
+    for t, title, desc in sections:
         group = sorted(by_type.get(t, ()), key=lambda e: e["slug"])
         if not group or not re.fullmatch(r"[a-z0-9][a-z0-9_-]*", t):
             continue
