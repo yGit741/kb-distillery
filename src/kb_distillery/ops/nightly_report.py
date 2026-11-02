@@ -85,8 +85,8 @@ def vault_counts(root):
 
 def site_status(root):
     try:
-        from kb_distillery import publish
-        return publish.current(root=root).status(root) or {}
+        from kb_distillery import hosting
+        return hosting.current(root=root).status(root) or {}
     except Exception:  # noqa: BLE001 — the report renders without a publisher
         return {}
 

@@ -130,7 +130,7 @@ def test_storage():
 
 
 def test_publisher():
-    from kb_distillery.publish.null import NullPublisher
+    from kb_distillery.hosting.null import NullPublisher
     assert doctor.check_publisher(None, lambda cfg: NullPublisher()).status == INFO
     assert doctor.check_publisher(None, lambda cfg: NullPublisher(reason="no publisher 'x'")).status == WARN
     assert doctor.check_publisher(None, lambda cfg: types.SimpleNamespace()).status == PASS

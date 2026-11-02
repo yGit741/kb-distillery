@@ -22,7 +22,7 @@ from dataclasses import asdict, dataclass
 from kb_distillery import kbconfig
 from kb_distillery.config import userdir
 from kb_distillery.config.resources import repo_root, resource
-from kb_distillery.publish.null import DEFAULT_REASON
+from kb_distillery.hosting.null import DEFAULT_REASON
 
 PASS, WARN, FAIL, INFO = "PASS", "WARN", "FAIL", "INFO"
 MIN_PYTHON = (3, 11)
@@ -147,7 +147,7 @@ def check_storage(cfg, connector_for=None) -> Check:
 
 def check_publisher(cfg, publisher_for=None) -> Check:
     if publisher_for is None:
-        from kb_distillery.publish import registry
+        from kb_distillery.hosting import registry
         publisher_for = registry.current
     pub = publisher_for(cfg)
     name = type(pub).__name__

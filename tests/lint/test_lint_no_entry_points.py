@@ -11,8 +11,8 @@ DEMO = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.absp
 CODE = (
     "import sys\n"
     "import kb_distillery.lint.lint_skills as ls\n"
-    "ls.validate_cli_line('skills/x/SKILL.md', 'distill kb list')\n"
-    "ls.validate_cli_line('skills/x/SKILL.md', 'distill nope')\n"
+    "ls.validate_cli_line('kits/base/skills/x/SKILL.md', 'distill kb list')\n"
+    "ls.validate_cli_line('kits/base/skills/x/SKILL.md', 'distill nope')\n"
     "assert len(ls.errors) == 1 and 'unknown distill command: nope' in ls.errors[0], ls.errors\n"
     "import kb_distillery.lint.lint as lint\n"
     "sys.argv = ['lint', '--dashboard']\n"

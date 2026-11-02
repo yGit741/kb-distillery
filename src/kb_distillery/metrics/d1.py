@@ -73,8 +73,8 @@ def database_id(root=None):
 def _account():
     """The publisher's cloud account API (D1 lives in the same Cloudflare account as the site); raises PublishError
     when no publisher is configured or it has none."""
-    from kb_distillery import publish
-    return publish.current().account_api()
+    from kb_distillery import hosting
+    return hosting.current().account_api()
 
 
 def _query(db, sql, params):
