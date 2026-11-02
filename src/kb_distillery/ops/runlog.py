@@ -1,6 +1,6 @@
 """Structured run log: one JSON line per nightly run in meta/.ops/runs.jsonl (gitignored).
 
-The launchd log (~/Library/Logs/thesis-kb-daily-sync.log) stays the human transcript; this file is
+The launchd log (~/Library/Logs/kb-distillery-daily-sync.log) stays the human transcript; this file is
 what the Ops tab and future reports read. A record is a plain dict — `started`, `duration`,
 `status` (ok | warn | error), `sync`, `deploy`, `hygiene`, `threads`, `notify`, `steps` — and
 never holds secrets. The file keeps the last MAX_RUNS records. Writing never raises.

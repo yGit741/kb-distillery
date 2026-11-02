@@ -33,7 +33,7 @@ CONFIG_PATH = os.path.join("meta", "ops", "sync.toml")
 LAST_SENT = "notify-last.json"          # under meta/.ops/ (gitignored ops runtime dir)
 KEYCHAIN_SERVICE = "kb-distillery-gmail"
 SMTP_HOST, SMTP_PORT = "smtp.gmail.com", 465
-SUBJECT_PREFIX = "[thesis-kb]"
+SUBJECT_PREFIX = "[kb-distillery]"
 DEFAULTS = {"email": "", "mode": "problems", "on": ["error", "warn"], "min_interval_hours": 20}
 MODES = ("digest", "problems")
 

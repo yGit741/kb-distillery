@@ -34,9 +34,9 @@ LOG_PATH = LOG_REL
 MAX_SUMMARY = cp.MAX_SUMMARY
 # Human-owned paths committed on their own as kb(think) before any agent op (and nightly).
 HUMAN_PREFIXES = ("think/",)
-NIGHTLY_LABEL = "com.thesis-kb.daily-sync"
+NIGHTLY_LABEL = "com.kb-distillery.daily-sync"
 NIGHTLY_PLIST = os.path.expanduser(f"~/Library/LaunchAgents/{NIGHTLY_LABEL}.plist")
-NIGHTLY_LOG = os.path.expanduser("~/Library/Logs/thesis-kb-daily-sync.log")
+NIGHTLY_LOG = os.path.expanduser("~/Library/Logs/kb-distillery-daily-sync.log")
 
 
 class OpsError(RuntimeError):

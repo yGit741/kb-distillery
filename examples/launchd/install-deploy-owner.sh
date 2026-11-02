@@ -33,12 +33,16 @@ capture_env() {
 [[ "${BASH_SOURCE[0]}" == "$0" ]] || return 0  # sourced (tests): only define capture_env
 
 cd "$(dirname "$0")/../.."
-LABEL=com.thesis-kb.deploy-owner
+LABEL=com.kb-distillery.deploy-owner
 DEST="$HOME/Library/LaunchAgents/$LABEL.plist"
-LOG="$HOME/Library/Logs/thesis-kb-deploy-owner.log"
+LOG="$HOME/Library/Logs/kb-distillery-deploy-owner.log"
 PIXI="$(command -v pixi || echo "$HOME/.pixi/bin/pixi")"
 
 launchctl bootout "gui/$(id -u)/$LABEL" 2>/dev/null || true
+# the pre-rename label (installed by older checkouts): stop it and remove its plist
+OLD="com.thesis-kb.deploy-owner"
+launchctl bootout "gui/$(id -u)/$OLD" 2>/dev/null || true
+rm -f "$HOME/Library/LaunchAgents/$OLD.plist"
 if [[ "${1:-}" == "--uninstall" ]]; then
   rm -f "$DEST"
   echo "uninstalled $LABEL"

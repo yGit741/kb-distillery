@@ -1,10 +1,4 @@
 # Files allowed to carry personal strings today (Phase 7; judged against the terms in KB_PRIVACY_TERMS or ~/.config/kb-distillery/privacy.toml). Clean one up, or move the name behind configuration, and delete its line.
-src/kb_distillery/publish/export.py
-tests/git/test_app_token.py
-tests/git/test_ship.py
 tests/ingest/sources/chat/test_chat_kb.py
-tests/ops/test_notify.py
 docs/phase-1-report.md
 web/src/features/chat/ChatScreen.test.tsx
-web/src/flags/registry.gen.ts
-src/kb_distillery/kits/base/defaults/flags.toml

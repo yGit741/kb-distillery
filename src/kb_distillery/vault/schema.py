@@ -44,7 +44,7 @@ YEARED = _T.yeared
 
 # Filename prefix per type. wiki/ is flat, so the prefix is the type at a glance: the type
 # requires the prefix and the prefix requires the type. A type with an empty prefix stays bare
-# (idea, person in the thesis kb): the most-linked nodes read better in prose.
+# (idea, person in a research kb): the most-linked nodes read better in prose.
 SLUG_PREFIX = _T.slug_prefix
 BARE_TYPES = _T.bare_types
 
@@ -54,7 +54,7 @@ TYPE_ORDER = _T.type_order
 TYPE_COLOR = _T.type_color
 LAYER_LABEL = {"source": "Sources", "collection": "Collections", "concept": "Concepts"}
 assert set(TYPE_ORDER) == set(LAYER_OF) == set(TYPE_LABEL) == set(TYPE_COLOR)
-# Extra frontmatter fields a knowledge base's source pages carry (thesis: authors, venue, arxiv-id).
+# Extra frontmatter fields a knowledge base's source pages carry (research kit: authors, venue, arxiv-id).
 SOURCE_FIELDS = _T.source_fields
 
 
