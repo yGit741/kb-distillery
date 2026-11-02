@@ -5,7 +5,7 @@ import os
 import numpy as np
 import pytest
 
-from kb_distillery.core.schema import unit_slug_for_raw, unit_type_for_raw
+from kb_distillery.vault.schema import unit_slug_for_raw, unit_type_for_raw
 from kb_distillery.ingest.youtube import bundle, frames as fx, transcript as tr
 from kb_distillery.ingest.youtube.fetch import pick_subs, video_id
 

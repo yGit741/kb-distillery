@@ -1,7 +1,7 @@
 """Read think sources and distilled page sections."""
 import os
 
-from kb_distillery.paths import vault_root
+from kb_distillery.config.paths import vault_root
 
 from .paths import think_abs
 ROOT = vault_root()

@@ -16,7 +16,7 @@ import os
 import re
 import sys
 
-from kb_distillery.core import log as kblog
+from kb_distillery.vault import log as kblog
 
 PRODUCES = (1, 5)
 LEGACY_ENTRY = re.compile(r"^## \[(\d{4}-\d{2}-\d{2})\] (.+?)\s*$")
@@ -112,7 +112,7 @@ def _print(r, dry_run):
 
 
 if __name__ == "__main__":
-    from kb_distillery.paths import vault_root
+    from kb_distillery.config.paths import vault_root
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--root", default=vault_root())
     ap.add_argument("--dry-run", action="store_true")

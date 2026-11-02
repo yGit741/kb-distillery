@@ -74,7 +74,7 @@ def post_chat(req: ChatRequest):
     scope = None
     scope_slug = (payload.get("scope") or "").strip()
     if scope_slug:
-        from kb_distillery.core import scopes as scope_lib
+        from kb_distillery.vault import scopes as scope_lib
         try:
             scope = scope_lib.scope_context(scope_slug, chat_data.ROOT)
         except scope_lib.ScopeUnknown as exc:

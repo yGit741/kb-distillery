@@ -2,7 +2,7 @@
 import os
 
 from .paths import ROOT
-from kb_distillery.core.schema import is_page_file
+from kb_distillery.vault.schema import is_page_file
 
 
 def is_shallow_paper(text: str) -> bool:

@@ -9,14 +9,14 @@ import os
 import re
 import sys
 
-from kb_distillery.paths import META_DEFAULTS_PATH, vault_root
+from kb_distillery.config.paths import META_DEFAULTS_PATH, vault_root
 META_DIR = os.path.join(vault_root(), "meta")
 
 from kb_distillery.git import commit_policy as cp
-from kb_distillery.core import scopes as sc
+from kb_distillery.vault import scopes as sc
 from kb_distillery.lint.lint import parse_frontmatter, read_manifest, write_manifest
 from kb_distillery.ops import core
-from kb_distillery.core.schema import is_page_file
+from kb_distillery.vault.schema import is_page_file
 
 DEFAULT_ROOT = vault_root()
 TEMPLATE = os.path.join("meta", "templates", "scope.md")
@@ -183,7 +183,7 @@ def _step(root, slug, summary, rel, before, lint, push):
 def _apply(root, slug, title, why, paths, create, manifest, pages, template):
     """Mutate corpus cells and write the page text; returns (rel, before-snapshot)."""
     rel = f"wiki/{slug}.md"
-    from kb_distillery.core import links
+    from kb_distillery.vault import links
     titles = {s: links.title_of(p[2], s) for s, p in pages.items()}
     why = links.to_disk(why, titles)               # a typed [[wikilink]] is stored as [Title](slug.md)
     before = dict((r, _read(root, r)) for r in ("meta/corpus.tsv", rel))

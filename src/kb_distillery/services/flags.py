@@ -18,8 +18,8 @@ import subprocess
 import sys
 from pathlib import Path
 
-from kb_distillery.flags import runtime
-from kb_distillery.flags.registry import FLAGS_SOURCE, FLAGS_TOML, load
+from kb_distillery.config.flags import runtime
+from kb_distillery.config.flags.registry import FLAGS_SOURCE, FLAGS_TOML, load
 
 OVERRIDES_PATH = runtime.OVERRIDES_PATH   # meta/.ops/flags.json (tests patch it here)
 KEYCHAIN_SERVICE = "kb-flags-owner"

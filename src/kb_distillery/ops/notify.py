@@ -23,11 +23,11 @@ import tomllib
 from email.message import EmailMessage
 
 from kb_distillery.config import userdir
-from kb_distillery.paths import vault_root
+from kb_distillery.config.paths import vault_root
 META_DIR = os.path.join(vault_root(), "meta")
 ROOT = vault_root()
 
-from kb_distillery.core.schema import OPS_DIR
+from kb_distillery.vault.schema import OPS_DIR
 
 CONFIG_PATH = os.path.join("meta", "ops", "sync.toml")
 LAST_SENT = "notify-last.json"          # under meta/.ops/ (gitignored ops runtime dir)

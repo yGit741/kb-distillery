@@ -6,7 +6,7 @@
 * think side: `<think>/.provenance/<note>.json` lists where the note went. The note itself is never edited;
   this function is the only writer of that sidecar, and the `kbd distill` command is its only caller.
 
-Nothing here imports `kb_distillery.paths` (which needs a selected kb): the think space and every kb root are arguments, so
+Nothing here imports `kb_distillery.config.paths` (which needs a selected kb): the think space and every kb root are arguments, so
 one process can write into two kbs. No LLM call is made unless the caller passes a `summarize` function
 (`llm_summarizer` builds one over `kb_distillery.llm`). Running it twice changes nothing.
 """
@@ -19,8 +19,8 @@ import re
 from dataclasses import dataclass
 from datetime import datetime, timezone
 
-from kb_distillery import kbconfig
-from kb_distillery.core import frontmatter
+from kb_distillery.config import kb as kbconfig
+from kb_distillery.vault import frontmatter
 
 THINK_CITE = "think:"
 LEGACY_PREFIX = "think/"

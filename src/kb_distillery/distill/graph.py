@@ -2,9 +2,9 @@
 import os
 import re
 
-from kb_distillery.core import links
+from kb_distillery.vault import links
 from .paths import ROOT, think_cite, wiki_slugs
-from kb_distillery.core.schema import is_page_file
+from kb_distillery.vault.schema import is_page_file
 
 
 THEME_KEYWORDS = [

@@ -19,7 +19,7 @@ import subprocess
 import sys
 from dataclasses import asdict, dataclass
 
-from kb_distillery import kbconfig
+from kb_distillery.config import kb as kbconfig
 from kb_distillery.config import userdir
 from kb_distillery.config.resources import repo_root, resource
 from kb_distillery.hosting.null import DEFAULT_REASON

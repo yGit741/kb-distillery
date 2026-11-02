@@ -8,8 +8,8 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from kb_distillery.kbconfig import checkout_root
-from kb_distillery.paths import CODE_DIR, vault_root
+from kb_distillery.config.kb import checkout_root
+from kb_distillery.config.paths import CODE_DIR, vault_root
 CHECKOUT_ROOT = checkout_root()
 ROOT = vault_root()
 
@@ -80,7 +80,7 @@ class GitHooksTests(unittest.TestCase):
         for k, v in (("user.name", "t"), ("user.email", "t@t")):
             g(self.root, "config", k, v)
         kb = os.path.join(self.root, "src", "kb_distillery")
-        for rel in ("__init__.py", "paths.py", "kbconfig.py", "config/__init__.py", "config/resources.py", "core/__init__.py", "core/schema.py", "core/kbtypes.py",
+        for rel in ("__init__.py", "config/paths.py", "config/kb.py", "config/__init__.py", "config/resources.py", "vault/__init__.py", "vault/schema.py", "vault/kbtypes.py",
                     "git/__init__.py", "git/commit_policy.py"):
             os.makedirs(os.path.dirname(os.path.join(kb, rel)), exist_ok=True)
             shutil.copy(os.path.join(CODE_DIR, rel), os.path.join(kb, rel))

@@ -22,7 +22,7 @@ Python package `kb_distillery` under `src/` (src layout). The typed HTTP API is 
 - Build or style a screen in `web/` (use `app-ui`); only regenerate its `schema.d.ts` here
 - Hand-edit vault content (that is `wiki-edit` and the writer CLIs)
 - Edit `kb_distillery/api/app.py` or any shared file to register a router: discovery is automatic
-- Use `sys.path.insert` or hard-code a vault path; take every path from `kb_distillery.paths`
+- Use `sys.path.insert` or hard-code a vault path; take every path from `kb_distillery.config.paths`
 - Run git writes directly (go through `infra-pr`)
 - Import `kb` with a bare `python`/`python3` inside the repo env: use `pixi run python …` (e.g. `pixi run python -c "from kb_distillery.api.app import create_app"`)
 
@@ -45,7 +45,7 @@ pixi run lint
 4. **Model** in `kb_distillery/api/models/<resource>.py`, extending `ApiModel` (`extra="allow"`, so a typed route returns what the legacy endpoint did). List the fields the frontend uses. JSON keys are strings; a field named like a `BaseModel` attribute (`schema`) gets `Field(alias=...)`. Use the data model's words: `layer`, `type`, `depth`.
 5. **Router** in `kb_distillery/api/routers/<resource>.py`: `router = APIRouter(tags=["<resource>"])`, each route with `response_model=` and a `summary=`. One model module and one router module per resource; a file starting with `_` is not a router. A typed route wins over the legacy catch-all for the same path.
 6. **Mutations** (POST/PUT/PATCH/DELETE) need a loopback `Origin` header; body cap is 4 MB. A route that changes vault content must go through a writer CLI or `ops begin`/`ops commit` so it lands as one op commit.
-7. **Test** in `tests/api/test_<resource>.py` (tests mirror the package: `tests/services`, `tests/core`, …). Use `TestClient(create_app())` and assert the response validates against the model. For writes, build a temp git vault in `tmp_path` and patch the service's root (copy the `vault` fixture pattern from `tests/api/test_scopes.py`, it is local to that file: `git init` in `tmp_path`, `mock.patch.object(<service>, "DEFAULT_ROOT", root)`, lint and autodeploy mocked); the real vault is never written. Send `{"Origin": "http://127.0.0.1:8765"}` on mutations and cover the 4xx shape.
+7. **Test** in `tests/api/test_<resource>.py` (tests mirror the package: `tests/services`, `tests/vault`, …). Use `TestClient(create_app())` and assert the response validates against the model. For writes, build a temp git vault in `tmp_path` and patch the service's root (copy the `vault` fixture pattern from `tests/api/test_scopes.py`, it is local to that file: `git init` in `tmp_path`, `mock.patch.object(<service>, "DEFAULT_ROOT", root)`, lint and autodeploy mocked); the real vault is never written. Send `{"Origin": "http://127.0.0.1:8765"}` on mutations and cover the 4xx shape.
 8. **Regenerate the client.** `pixi run api-schema` rewrites `web/src/api/schema.d.ts`; commit it with the change. `pixi run api-schema-check` fails when it is stale (run it before `ship pr`).
 9. **Verify.** `pixi run test` (or `pytest tests/api/test_<resource>.py` while iterating), `pixi run lint`, `pixi run api-schema-check`.
 10. **Ship.** `ship commit`, `ship pr`, give the link; merge only when the user says merge.
@@ -62,7 +62,7 @@ New or changed files under `src/kb_distillery/{api,services}/`, `tests/`, and `w
 
 - Router discovered without touching `app.py`; `/openapi.json` lists it
 - `api-schema-check` and `pixi run test` pass
-- No filesystem path literal outside `kb_distillery.paths`; no `sys.path.insert`
+- No filesystem path literal outside `kb_distillery.config.paths`; no `sys.path.insert`
 - Router has no business logic; service has no FastAPI import
 
 ## Next step

@@ -1,5 +1,5 @@
 """Layer contract: the config layer (`kbconfig`, `paths`, `config/`) sits below the vault model. Resolving a kb's
-kit-merged `[types]` and building the data paths must not pull in `kb_distillery.core` or `kb_distillery.vault`.
+kit-merged `[types]` and building the data paths must not pull in `kb_distillery.vault` or `kb_distillery.vault`.
 Run in a subprocess so modules other tests imported do not mask a regression."""
 import os
 import subprocess
@@ -9,12 +9,12 @@ DEMO = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.absp
 
 CODE = (
     "import sys\n"
-    "from kb_distillery import kbconfig, paths\n"
+    "from kb_distillery.config import kb as kbconfig; from kb_distillery.config import paths\n"
     "cfg = kbconfig.load_dir(sys.argv[1])\n"
     "assert cfg.kit == 'base', cfg.kit\n"
     "assert cfg.section('types'), 'kit types not merged'\n"
     "assert paths.WIKI_PATH and paths.MANIFEST_PATH and paths.OPS_PATH\n"
-    "bad = sorted(m for m in sys.modules if m.split('.')[:2] in (['kb_distillery', 'core'], ['kb_distillery', 'vault']))\n"
+    "bad = sorted(m for m in sys.modules if m.split('.')[:2] == ['kb_distillery', 'vault'])\n"
     "assert not bad, bad\n"
 )
 

@@ -23,7 +23,7 @@ class ChecksForTests(unittest.TestCase):
 
     def test_flag_registry(self):
         self.assertEqual(names(["meta/flags.toml"]), ["flags-check"])
-        self.assertEqual(names(["src/kb_distillery/flags/codegen.py"]), ["flags-check"])
+        self.assertEqual(names(["src/kb_distillery/config/flags/codegen.py"]), ["flags-check"])
 
     def test_api_router(self):
         self.assertEqual(names(["src/kb_distillery/api/routers/x.py"]), ["api-schema-check"])

@@ -2,7 +2,7 @@
 import os
 import sys
 
-from kb_distillery.core.schema import SOURCE_TYPES
+from kb_distillery.vault.schema import SOURCE_TYPES
 
 REQUIRED_CLAIMS = ("raw", "title", "problem", "method", "results", "equations", "concepts")
 REQUIRED_PLAN = ("wiki_slug", "type", "link_existing", "create_concepts", "moc_updates", "question_updates")

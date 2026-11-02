@@ -124,7 +124,7 @@
   0
  ],
  [
-  "src/kb_distillery/core/coherence.py status",
+  "src/kb_distillery/vault/coherence.py status",
   0
  ],
  [

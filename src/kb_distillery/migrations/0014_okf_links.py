@@ -5,8 +5,8 @@
 The shown text is what the app displays for the wikilink today (page `PageReader.prepareMarkdown`): the label, else the
 page title the graph holds (`_title`: the first `# ` line, else the slug with spaces) with `[`, `]` and `|` turned into
 spaces, else, when the name is an alias or mention and has no title of its own, the name as written.
-Every target resolves through core.links.resolve_slug (slug, `aliases:`, meta/aliases.tsv); the path is built with
-core.links.page_path. A link that does not resolve is not guessed: it stays a wikilink and is listed in the report.
+Every target resolves through vault.links.resolve_slug (slug, `aliases:`, meta/aliases.tsv); the path is built with
+vault.links.page_path. A link that does not resolve is not guessed: it stays a wikilink and is listed in the report.
 Not touched, byte for byte: front matter, every `## My notes` section (the user's), fenced and inline code, math,
 files below wiki/ (drawings), everything outside wiki/ (index.md and meta/log.md are regenerated / moved by the
 index-and-log migration). Nothing is written until every page has been processed; idempotent.
@@ -18,8 +18,8 @@ import os
 import re
 import sys
 
-from kb_distillery.core import frontmatter as fmlib
-from kb_distillery.core import links
+from kb_distillery.vault import frontmatter as fmlib
+from kb_distillery.vault import links
 
 PRODUCES = (1, 5)
 HEADING = re.compile(r"^#{1,6}\s+(.+?)\s*#*\s*$", re.M)
@@ -140,7 +140,7 @@ def _print(r, dry_run):
 
 
 if __name__ == "__main__":
-    from kb_distillery.paths import vault_root
+    from kb_distillery.config.paths import vault_root
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--root", default=vault_root())
     ap.add_argument("--dry-run", action="store_true")

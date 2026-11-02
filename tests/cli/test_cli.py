@@ -157,7 +157,7 @@ class HelpTests(unittest.TestCase):
         self.assertIn("lint", cp.stdout)
 
     def test_importing_cli_does_not_load_kbconfig(self):
-        cp = subprocess.run([sys.executable, "-c", "import sys, kb_distillery.cli; print('kb_distillery.kbconfig' in sys.modules)"],
+        cp = subprocess.run([sys.executable, "-c", "import sys, kb_distillery.cli; print('kb_distillery.config.kb' in sys.modules)"],
                             capture_output=True, text=True, env={**os.environ, "PYTHONPATH": SRC}, check=False)
         self.assertEqual(cp.stdout.strip(), "False", cp.stderr)
 
@@ -186,8 +186,8 @@ class DispatchTests(TempHome):
         cases = {
             ("init", "--yes"): ("kb_distillery.init_kb", ["--yes"]),
             ("doctor", "--json"): ("kb_distillery.doctor", ["--json"]),
-            ("kb", "list"): ("kb_distillery.kbconfig", ["list"]),
-            ("kb", "show", "--kb", "x"): ("kb_distillery.kbconfig", ["show", "--kb", "x"]),
+            ("kb", "list"): ("kb_distillery.config.kb", ["list"]),
+            ("kb", "show", "--kb", "x"): ("kb_distillery.config.kb", ["show", "--kb", "x"]),
             ("ops", "status"): ("kb_distillery.ops", ["status"]),
             ("ship", "status"): ("kb_distillery.git.ship", ["status"]),
             ("ingest", "status"): ("kb_distillery.ingest", ["status"]),
@@ -195,7 +195,7 @@ class DispatchTests(TempHome):
             ("digest", "full", "p1"): ("kb_distillery.ingest", ["full-digest", "p1"]),
             ("digest", "deep", "p1"): ("kb_distillery.ingest", ["deep-digest", "p1"]),
             ("digest", "many", "submit"): ("kb_distillery.ingest", ["digest-many", "submit"]),
-            ("digest", "instructions"): ("kb_distillery.core.digest", []),
+            ("digest", "instructions"): ("kb_distillery.vault.digest", []),
             ("send", "note.md", "--to", "a,b"): ("kb_distillery.distill.send", ["note.md", "--to", "a,b"]),
             ("lint",): ("kb_distillery.lint.lint", []),
             ("llm", "status"): ("kb_distillery.llm", ["status"]),

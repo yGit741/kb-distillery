@@ -37,7 +37,7 @@ python3 -m kb_distillery.search.semfind topic theme-tensor-factorization --max-p
 
 ## Paper disagreement
 
-Not a failure. For each `external` pair, draft Connections bullets for both pages; user/agent adds them manually; `python3 -m kb_distillery.core.coherence noted <id>`.
+Not a failure. For each `external` pair, draft Connections bullets for both pages; user/agent adds them manually; `python3 -m kb_distillery.vault.coherence noted <id>`.
 
 ## Commit
 

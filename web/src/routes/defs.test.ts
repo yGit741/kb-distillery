@@ -24,7 +24,7 @@ describe("the ported legacy pages", () => {
   });
 });
 
-/** Flag test matrix (kb_distillery.flags.coverage): each screen flag on and off. */
+/** Flag test matrix (kb_distillery.config.flags.coverage): each screen flag on and off. */
 describe("screen flags gate their route", () => {
   const ids = () => routeDefsNow().map((d) => d.id);
   it("screen.lifecycle on → /lifecycle exists", () =>

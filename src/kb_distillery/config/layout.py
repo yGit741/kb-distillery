@@ -1,6 +1,6 @@
 """The folder layout inside a knowledge base: repo-relative names, nothing else (no imports).
 
-`kb_distillery.paths` builds absolute paths from these and `kb_distillery.core.schema` re-exports them beside the
+`kb_distillery.config.paths` builds absolute paths from these and `kb_distillery.vault.schema` re-exports them beside the
 rest of the schema, so renaming a vault folder is still one edit, here.
 """
 WIKI_DIR = "wiki"

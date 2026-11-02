@@ -176,7 +176,7 @@ def cmd_apply(think_arg, only=None, cleanup=False):
 
 
 def _append_log(think_rel, n, cleanup=False):
-    from kb_distillery.core import log as kblog
+    from kb_distillery.vault import log as kblog
     tag = " (cleanup)" if cleanup else ""
     kblog.append(ROOT, "distill", f"{think_rel}{tag} — {n} proposal(s) applied", when=_now())
 

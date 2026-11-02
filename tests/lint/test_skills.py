@@ -7,7 +7,7 @@ import tempfile
 import unittest
 from typing import Optional
 
-from kb_distillery.kbconfig import checkout_root
+from kb_distillery.config.kb import checkout_root
 CHECKOUT_ROOT = checkout_root()
 ROOT = CHECKOUT_ROOT          # skills are code
 

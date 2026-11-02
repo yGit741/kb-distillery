@@ -28,8 +28,8 @@ import unittest
 
 import pytest
 
-from kb_distillery.kbconfig import checkout_root
-from kb_distillery.paths import CODE_DIR, vault_root
+from kb_distillery.config.kb import checkout_root
+from kb_distillery.config.paths import CODE_DIR, vault_root
 CHECKOUT_ROOT = checkout_root()
 META = os.path.join(vault_root(), "meta")
 REPO = vault_root()
@@ -187,7 +187,7 @@ def run_pipeline(root):
     p.full_digest("part", "full-digest", "raw/printed-docs/2020-tiny-book.pdf", "--pages", "1-10")
     # --- checks
     lint = p.run("src/kb_distillery/lint/lint.py", module=False, ok=False)
-    coherence = p.run("src/kb_distillery/core/coherence.py", "status", module=False, ok=False)
+    coherence = p.run("src/kb_distillery/vault/coherence.py", "status", module=False, ok=False)
     return p, lint, coherence
 
 

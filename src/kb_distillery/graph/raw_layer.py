@@ -9,16 +9,16 @@ import re
 import sys
 from collections import Counter, defaultdict
 
-from kb_distillery.paths import vault_root
+from kb_distillery.config.paths import vault_root
 META_DIR = os.path.join(vault_root(), "meta")
 
-from kb_distillery.core.hubs import parse_contents
+from kb_distillery.vault.hubs import parse_contents
 from kb_distillery.lint.lint import collections_of, raw_paths, read_manifest
 
 ROOT = vault_root()
 FORMATS = ("printed-docs", "handwritten", "presentations", "llm-chats", "emails", "web-clips", "images", "videos", "inbox")
 COMPANIONS = ("asset", "ink", "dupe")
-from kb_distillery.core.schema import COLLECTION_TYPES
+from kb_distillery.vault.schema import COLLECTION_TYPES
 _YEAR = re.compile(r"^((?:18|19|20)\d{2})-")
 _PAGE_STATUS = ("source", "partial", "queued", "skip")
 

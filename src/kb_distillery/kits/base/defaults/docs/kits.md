@@ -25,7 +25,7 @@ kit = "research"      # optional; without it the kb.toml carries its own [types]
 
 So a kb can add a type, an area or an edge type, and can restate what the kit says, but cannot rename, recolour or remove anything the kit defines. To change the kit, change the kit (a PR on `src/kb_distillery/kits/<name>/`).
 
-The merge is in `KbConfig.section`, so every reader (`kb_distillery.core.kbtypes`, `kb_distillery.graph.model.edge_config`) sees the same result, whatever imports first.
+The merge is in `KbConfig.section`, so every reader (`kb_distillery.vault.kbtypes`, `kb_distillery.graph.model.edge_config`) sees the same result, whatever imports first.
 
 ## The file
 
@@ -36,7 +36,7 @@ version = 1                   # bump when a kb must notice the change
 extends = "base"              # optional: the kit this one builds on (must exist, no cycle)
 description = "..."
 
-[types]    # the kb.toml [types] format, see src/kb_distillery/core/kbtypes.py
+[types]    # the kb.toml [types] format, see src/kb_distillery/vault/kbtypes.py
 [edges]    # types, symmetric, note_required, labels: see src/kb_distillery/graph/model.py (edge_config)
 ```
 
@@ -48,7 +48,7 @@ Any other top-level table is rejected until a phase gives it a meaning. Reserved
 
 ## Where the kits are
 
-`$KB_KITS_DIR` (tests, a second kits folder) or the package's own `kits/` (`resource("kits")` in `kb_distillery.config.resources`). The defaults the engine falls back to when a kb has no `meta/<x>` are `resource("kits/base/defaults")` (`kb_distillery.paths.META_DEFAULTS_PATH`).
+`$KB_KITS_DIR` (tests, a second kits folder) or the package's own `kits/` (`resource("kits")` in `kb_distillery.config.resources`). The defaults the engine falls back to when a kb has no `meta/<x>` are `resource("kits/base/defaults")` (`kb_distillery.config.paths.META_DEFAULTS_PATH`).
 
 ## Errors you will meet
 

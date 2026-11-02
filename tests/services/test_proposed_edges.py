@@ -5,7 +5,7 @@ import os
 import networkx as nx
 import pytest
 
-from kb_distillery import paths
+from kb_distillery.config import paths
 from kb_distillery.graph import propose, relations
 from kb_distillery.graph import query as cypher
 

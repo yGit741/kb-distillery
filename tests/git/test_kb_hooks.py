@@ -13,7 +13,7 @@ import tempfile
 import unittest
 from unittest import mock
 
-from kb_distillery import kbconfig
+from kb_distillery.config import kb as kbconfig
 from kb_distillery.config import resources
 from kb_distillery.git import install_hooks
 

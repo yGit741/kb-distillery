@@ -25,7 +25,7 @@ import re
 import sys
 from collections import Counter
 
-from kb_distillery.core import links as page_links
+from kb_distillery.vault import links as page_links
 
 STATUSES = {"draft", "stable", "deprecated"}
 RESERVED = {"index.md", "log.md"}                     # OKF reserved names: no frontmatter rules
@@ -158,7 +158,7 @@ def check(root, only=None):
 def main(argv=None):
     argv = list(sys.argv[1:] if argv is None else argv)
     as_json = "--json" in argv
-    from kb_distillery.paths import vault_root
+    from kb_distillery.config.paths import vault_root
     root = vault_root()
     only = [a[len("--only="):] for a in argv if a.startswith("--only=")] or None   # a commit checks the pages it changes
     try:

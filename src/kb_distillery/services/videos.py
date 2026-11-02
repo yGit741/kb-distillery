@@ -2,7 +2,7 @@
 import json
 import os
 
-from kb_distillery.core.schema import RAW_VIDEOS, VIDEO_ITEM
+from kb_distillery.vault.schema import RAW_VIDEOS, VIDEO_ITEM
 from kb_distillery.services import corpus
 
 

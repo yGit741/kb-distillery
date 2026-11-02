@@ -17,13 +17,13 @@ import os
 import re
 import sys
 
-from kb_distillery.paths import vault_root
+from kb_distillery.config.paths import vault_root
 HERE = os.path.join(vault_root(), "meta")
 
 from kb_distillery.lint import lint
 from kb_distillery.search import query
-from kb_distillery.core import links
-from kb_distillery.core.graph import extract_section, tokenize, claim_text
+from kb_distillery.vault import links
+from kb_distillery.vault.graph import extract_section, tokenize, claim_text
 
 ROOT = lint.ROOT
 SKIP_DISP = ("asset:", "ink:", "dupe:")
@@ -46,7 +46,7 @@ def _index():
 
 
 def _maturity(slug):
-    from kb_distillery.core import frontmatter
+    from kb_distillery.vault import frontmatter
     return str((frontmatter.parse(_wiki_text(slug) or "")[0] or {}).get("maturity") or "")
 
 
@@ -60,7 +60,7 @@ def _wiki_text(slug):
 
 def _hub_rows(raw_path):
     """[(hub slug, row title)] for course/series Contents rows listing raw_path."""
-    from kb_distillery.core import hubs
+    from kb_distillery.vault import hubs
     out = []
     wiki = os.path.join(ROOT, "wiki")
     if not os.path.isdir(wiki):
@@ -130,7 +130,7 @@ def cmd_find(question, limit=10, include_all=False, scope=None):
         return 2
     rows, index = _manifest(), _index()
     if scope:
-        from kb_distillery.core import scopes
+        from kb_distillery.vault import scopes
         members = scopes.rows_of(scope, rows)
         if not members and _wiki_text(scope) is None:
             raise Refused("unknown scope " + repr(scope))

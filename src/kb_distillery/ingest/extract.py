@@ -4,7 +4,7 @@ import os
 import re
 import sys
 
-from kb_distillery.core.schema import PARSED_FILENAME
+from kb_distillery.vault.schema import PARSED_FILENAME
 
 from .paths import session_dir, load_session, person_from_raw
 from .schemas import validate_claims
@@ -161,7 +161,7 @@ def run_extract(sha, fill=False, backend=None, model=FILL_MODEL):
     `fill`: a template (or no claims.json yet) is filled through kb_distillery.llm; a filled one is never replaced."""
     session = load_session(sha)
     raw_rel = session["raw"]
-    from kb_distillery.paths import vault_root
+    from kb_distillery.config.paths import vault_root
     root = vault_root()
     raw_path = os.path.join(root, raw_rel)
 

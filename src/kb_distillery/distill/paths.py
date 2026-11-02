@@ -5,10 +5,10 @@ import os
 import re
 import sys
 
-from kb_distillery.core.schema import DISTILL_DIR, DISTILLED_THINK_PREFIX, THINK_DIR, WIKI_DIR
+from kb_distillery.vault.schema import DISTILL_DIR, DISTILLED_THINK_PREFIX, THINK_DIR, WIKI_DIR
 
-from kb_distillery.paths import think_path, vault_root
-from kb_distillery.core.schema import is_page_file
+from kb_distillery.config.paths import think_path, vault_root
+from kb_distillery.vault.schema import is_page_file
 ROOT = vault_root()
 DISTILL_ROOT = os.path.join(ROOT, DISTILL_DIR)
 

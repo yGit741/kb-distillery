@@ -10,8 +10,8 @@ from .paths import ROOT, load_session, page_title, save_session, session_dir, sh
 from .schemas import validate_plan
 from . import book as book_mod
 from .verify import existing_digest_for_raw, verify_raw
-from kb_distillery.core import links as page_links
-from kb_distillery.core import wikiio
+from kb_distillery.vault import links as page_links
+from kb_distillery.vault import wikiio
 
 
 def _now():
@@ -346,5 +346,5 @@ def _apply_moc_updates(plan):
 
 
 def _append_log(session, plan):
-    from kb_distillery.core import log as kblog
+    from kb_distillery.vault import log as kblog
     kblog.append(ROOT, "ingest", plan.get("wiki_slug", "?"), (session["raw"],), when=_now())

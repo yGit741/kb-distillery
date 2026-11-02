@@ -152,7 +152,7 @@ def test_run_named_params(g):
 
 
 def _cfg(edges):
-    from kb_distillery import kbconfig
+    from kb_distillery.config import kb as kbconfig
     return kbconfig.KbConfig("t", "T", "/x", "/x/kb.toml", (1, 5), None, {"edges": edges})
 
 

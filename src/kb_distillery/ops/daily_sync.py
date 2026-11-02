@@ -16,12 +16,12 @@ import os
 import subprocess
 import sys
 
-from kb_distillery.paths import vault_root
+from kb_distillery.config.paths import vault_root
 META_DIR = os.path.join(vault_root(), "meta")
 ROOT = vault_root()
 
 from kb_distillery.git.guard import _open_distill_sessions, _open_ingest_sessions
-from kb_distillery.core.schema import KNOWLEDGE_PATHS, lane_of
+from kb_distillery.vault.schema import KNOWLEDGE_PATHS, lane_of
 
 STAGE_PATHS = KNOWLEDGE_PATHS
 
@@ -33,7 +33,7 @@ def has_open_sessions(root=ROOT):
 
 def commit_message_from_log(log_path=None):
     """The newest untargeted entry of wiki/log.md as `<op> | <title> (date)`, or a dated fallback."""
-    from kb_distillery.core import log as kblog
+    from kb_distillery.vault import log as kblog
     path = log_path or os.path.join(ROOT, kblog.LOG_REL)
     if not os.path.isfile(path):
         return f"chore: daily sync {datetime.date.today().isoformat()}"

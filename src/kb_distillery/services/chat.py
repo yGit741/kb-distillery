@@ -18,15 +18,15 @@ import urllib.error
 import urllib.request
 
 from kb_distillery.config import userdir
-from kb_distillery.paths import vault_root
+from kb_distillery.config.paths import vault_root
 META_DIR = os.path.join(vault_root(), "meta")
 ROOT = vault_root()
 
-from kb_distillery.core import links
+from kb_distillery.vault import links
 from kb_distillery.search import query
-from kb_distillery.core.graph import tokenize
+from kb_distillery.vault.graph import tokenize
 
-PROMPTS_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "prompts")
+PROMPTS_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "llm", "prompts")
 INBOX = os.path.join(ROOT, "raw", "inbox")
 KEY_FILE = userdir.path("anthropic_key")
 API_URL = "https://api.anthropic.com/v1/messages"
@@ -351,7 +351,7 @@ def _split_fm(text):
 
 
 def list_prompts(prompts_dir=PROMPTS_DIR):
-    """Templates from src/kb_distillery/prompts/*.md, `query` first."""
+    """Templates from src/kb_distillery/llm/prompts/*.md, `query` first."""
     out = []
     for name in sorted(os.listdir(prompts_dir)) if os.path.isdir(prompts_dir) else []:
         if not name.endswith(".md"):

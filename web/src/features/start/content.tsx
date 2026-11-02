@@ -173,7 +173,7 @@ export const FEATURE_CARDS: { title: string; tone: string; body: ReactNode }[] =
     tone: "border-warn",
     body: (
       <>
-        New note type, frontmatter field or rule that lint enforces: bump {c("SCHEMA_VERSION")} in {c("src/kb_distillery/core/schema.py")}, add {c("src/kb_distillery/migrations/NNNN_<name>.py")}, run {c("pixi run ops -- migrate")} on the branch, commit as {c("schema(<component>): …")}. Merging snapshots first and bumps the middle digit.
+        New note type, frontmatter field or rule that lint enforces: bump {c("SCHEMA_VERSION")} in {c("src/kb_distillery/vault/schema.py")}, add {c("src/kb_distillery/migrations/NNNN_<name>.py")}, run {c("pixi run ops -- migrate")} on the branch, commit as {c("schema(<component>): …")}. Merging snapshots first and bumps the middle digit.
       </>
     ),
   },

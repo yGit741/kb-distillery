@@ -20,7 +20,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from kb_distillery import kbconfig
+from kb_distillery.config import kb as kbconfig
 from kb_distillery.config import resources
 
 HOOKS_DIR = "kits/base/hooks"

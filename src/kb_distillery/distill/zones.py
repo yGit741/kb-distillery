@@ -2,7 +2,7 @@
 import os
 import sys
 
-from kb_distillery.core.schema import (  # noqa: E402
+from kb_distillery.vault.schema import (  # noqa: E402
     AGENT_ZONE_END,
     AGENT_ZONE_START,
     HUMAN_ZONE_END,

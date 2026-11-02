@@ -359,7 +359,7 @@ def _ask_api(r):
 
 # --- batch: /v1/messages/batches -----------------------------------------------------------------------
 def batch_dir():
-    from kb_distillery import paths
+    from kb_distillery.config import paths
     return os.path.join(paths.CACHE_PATH, "llm", "batches")
 
 

@@ -21,7 +21,7 @@ from pathlib import Path
 
 CONFIG_PATH = Path(__file__).resolve().parents[1] / "cloudflare" / "share.toml"   # personal config: stays beside the Cloudflare publisher (Lane G replaces it)
 
-# `## My notes` (the user's own section, see core/wikiio.py) up to the next h1/h2 heading or the end
+# `## My notes` (the user's own section, see vault/wikiio.py) up to the next h1/h2 heading or the end
 MY_NOTES = re.compile(r"^##[ \t]+My notes\b.*?(?=^#{1,2}[ \t]|\Z)", re.M | re.S)
 
 

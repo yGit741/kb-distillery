@@ -15,7 +15,7 @@ while [[ $# -gt 0 ]]; do
     *) echo "unknown argument: $1" >&2; exit 2 ;;
   esac
 done
-KB_SHOW="$(python -m kb_distillery.kbconfig show)" || { echo "$KB_SHOW" >&2; exit 1; }
+KB_SHOW="$(python -m kb_distillery.config.kb show)" || { echo "$KB_SHOW" >&2; exit 1; }
 KB_ID="$(printf '%s\n' "$KB_SHOW" | sed -n 's/^id  *//p')"
 [[ "$KB_ID" == "None" ]] && KB_ID=""
 KB_ROOT_DIR="$(printf '%s\n' "$KB_SHOW" | sed -n 's/^root  *//p')"

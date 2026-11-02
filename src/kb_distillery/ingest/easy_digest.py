@@ -2,7 +2,7 @@
 kb_distillery.llm do it (Haiku; `--backend subscription|api|batch`, several targets → one run / one batch)."""
 import os
 
-from kb_distillery.paths import meta_file
+from kb_distillery.config.paths import meta_file
 import re
 import subprocess
 import sys
@@ -10,8 +10,8 @@ import sys
 from .extract import extract_text
 from .paths import ROOT, sha1_file
 from .verify import existing_digest_for_raw
-from kb_distillery.core import frontmatter, links, wikiio
-from kb_distillery.core.schema import unit_slug_for_raw, unit_type_for_raw
+from kb_distillery.vault import frontmatter, links, wikiio
+from kb_distillery.vault.schema import unit_slug_for_raw, unit_type_for_raw
 
 EASY_DIR = os.path.join(ROOT, "meta", ".ingest", "easy")
 FILL_MODEL = "haiku"          # a skim of the abstract, not analysis

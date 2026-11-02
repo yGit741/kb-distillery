@@ -109,7 +109,7 @@ class MigrateOnKbMainTests(unittest.TestCase):
         """Migration 0015 on a kb's main: the root index.md and meta/log.md are deleted, wiki/log.md is created, and all
         of it is committed (a regenerated root index.md, dirty before the run, must not stop the migration)."""
         import shutil
-        from kb_distillery.paths import MIGRATIONS_CODE_PATH
+        from kb_distillery.config.paths import MIGRATIONS_CODE_PATH
         make_repo(self.root, toml=KB_TOML.replace("0.1", "1.4"))
         os.remove(os.path.join(self.root, "meta", "migrations", "0001_bump.py"))
         shutil.copy(os.path.join(MIGRATIONS_CODE_PATH, "0015_okf_index_log.py"),

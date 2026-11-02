@@ -9,7 +9,7 @@ import json
 import os
 import re
 
-from kb_distillery.core import frontmatter, links
+from kb_distillery.vault import frontmatter, links
 from .paths import ROOT
 
 BLOGS = {

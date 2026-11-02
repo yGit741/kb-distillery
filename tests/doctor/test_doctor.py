@@ -5,7 +5,8 @@ import types
 
 import pytest
 
-from kb_distillery import doctor, kbconfig, llm
+from kb_distillery import doctor, llm
+from kb_distillery.config import kb as kbconfig
 from kb_distillery.doctor import FAIL, INFO, PASS, WARN
 from kb_distillery.storage.base import AuthStatus
 

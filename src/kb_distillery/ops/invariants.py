@@ -29,9 +29,9 @@ import re
 import subprocess
 import sys
 
-from kb_distillery.paths import vault_root
-from kb_distillery.core import links
-from kb_distillery.core.schema import is_page_file
+from kb_distillery.config.paths import vault_root
+from kb_distillery.vault import links
+from kb_distillery.vault.schema import is_page_file
 META_DIR = os.path.join(vault_root(), "meta")
 REPO = vault_root()
 
@@ -156,7 +156,7 @@ def raw_state(root, corpus):
                 files[rel] = lint.sha1(rel)
     finally:
         lint.ROOT = old
-    from kb_distillery.core.schema import RAW_BINARY_EXTS
+    from kb_distillery.vault.schema import RAW_BINARY_EXTS
     mismatch = sorted(p for p, row in corpus.items() if p in files and row and row[0] != files[p])
     missing = sorted(p for p in corpus if p not in files and os.path.splitext(p)[1].lower() in RAW_BINARY_EXTS)
     return {"files": files, "sha_mismatch": mismatch, "missing_binaries": missing}
@@ -164,7 +164,7 @@ def raw_state(root, corpus):
 
 def hub_agreement(pages, corpus):
     """course/series hubs: Contents raw paths vs corpus rows whose `collection` names the hub."""
-    from kb_distillery.core import hubs
+    from kb_distillery.vault import hubs
     out = {}
     for slug, p in pages.items():
         if fm_value(p["fm"] or [], "type") not in ("course", "series"):

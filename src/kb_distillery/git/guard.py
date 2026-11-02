@@ -11,11 +11,11 @@ import os
 import sys
 import time
 
-from kb_distillery.paths import vault_root
+from kb_distillery.config.paths import vault_root
 META_DIR = os.path.join(vault_root(), "meta")
 VAULT_ROOT = vault_root()
 
-from kb_distillery.core.schema import (DIGEST_DIR, DISTILL_DIR, DISTILLED_THINK_PREFIX, INGEST_DIR, INGEST_STALE_HOURS,
+from kb_distillery.vault.schema import (DIGEST_DIR, DISTILL_DIR, DISTILLED_THINK_PREFIX, INGEST_DIR, INGEST_STALE_HOURS,
                     META_DIR as SCHEMA_META_DIR, OPS_DIR, OPS_STRICT, PARSED_FILENAME, QUARANTINE_DIR,
                     CODE_TOP_DIRS, RAW_DIR, ROOT_DIRS, ROOT_FILES, ROOT_MD, SIDECAR_ELIGIBLE_KINDS,
                     THINK_DIR, WIKI_DIR, is_generated)
@@ -101,9 +101,9 @@ def _think_guard(rel):
 
 
 def _shared_think_guard(abs_path):
-    """The shared think space (`kbs/think/`, kb_distillery.paths.THINK_PATH) sits beside every vault, so it is
+    """The shared think space (`kbs/think/`, kb_distillery.config.paths.THINK_PATH) sits beside every vault, so it is
     judged by absolute path before the vault-relative rules."""
-    from kb_distillery.paths import THINK_PATH
+    from kb_distillery.config.paths import THINK_PATH
     think = os.path.realpath(THINK_PATH)
     target = os.path.realpath(abs_path)
     if target == think or target.startswith(think + os.sep):

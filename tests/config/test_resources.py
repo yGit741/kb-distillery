@@ -63,7 +63,7 @@ def test_require_repo_root_names_the_problem_when_installed(tmp_path):
 
 
 def test_resource_is_relative_to_the_package_and_never_raises():
-    assert resources.resource("prompts").is_dir()
+    assert resources.resource("llm/prompts").is_dir()
     missing = resources.resource("no/such/thing")
     assert missing == resources.package_root() / "no" / "such" / "thing" and not missing.exists()
 
@@ -89,7 +89,7 @@ def test_importing_the_package_needs_no_repo():
     """Nothing resolves a repository at import: with no checkout at all, kbconfig and paths still import."""
     code = ("from kb_distillery.config import resources\n"
             "resources.repo_root = lambda: None\n"
-            "import kb_distillery.paths as p, kb_distillery.kbconfig as k\n"
+            "import kb_distillery.config.paths as p, kb_distillery.config.kb as k\n"
             "assert k.checkout_root() is None and k.primary_root() is None\n"
             "print(p.ROOT)\n")
     with tempfile.TemporaryDirectory() as tmp:

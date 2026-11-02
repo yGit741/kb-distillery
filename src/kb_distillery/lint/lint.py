@@ -19,7 +19,7 @@ import subprocess
 import sys
 import time
 
-from kb_distillery.core.schema import (ASSET_NAME, ASSET_PREFIX, BARE_TYPES, BLANK_PDF_BYTES, CHATS_DIR,
+from kb_distillery.vault.schema import (ASSET_NAME, ASSET_PREFIX, BARE_TYPES, BLANK_PDF_BYTES, CHATS_DIR,
                     PARTIAL_CHECKOUT_MIN, RAW_BINARY_EXTS,
                     DEPRECATED_AREA_SLUGS, DISPOSITIONS, RAW_IMAGES, RAW_WEB,
                     DEPTH, DISTILLED_THINK_PREFIX, DUPE_PREFIX, GENERATED,
@@ -31,22 +31,22 @@ from kb_distillery.core.schema import (ASSET_NAME, ASSET_PREFIX, BARE_TYPES, BLA
                     ROOT_LINT_IGNORE, ROOT_MD, CONTENTS_COLLECTIONS, SIDECAR_ELIGIBLE_KINDS, SLUG_PREFIX,
                     TOPIC_PREFIX, TOPIC_SLUGS, THINK_DIR, TYPE_STATUS, WIKI_DIR, YEARED, strip_prefix, INDEX_REL, OKF_VERSION, RESERVED_PAGES, TYPE_LABEL, TYPE_ORDER, is_page_file, is_index_path,
                     LAYER_OF, RETIRED_DEPTH, RETIRED_DISPOSITIONS, RETIRED_KEYS, RETIRED_TYPES)
-from kb_distillery.core.books import (DIGESTED, OVERVIEW_HEADING, OVERVIEW_MIN_CHARS, PARTITION_HEADING, SKIP,
+from kb_distillery.vault.books import (DIGESTED, OVERVIEW_HEADING, OVERVIEW_MIN_CHARS, PARTITION_HEADING, SKIP,
                    book_status, coverage, coverage_line, find_row, overview_ok,
                    parse_partition, validate)
-from kb_distillery.core import frontmatter, hubs, links
-from kb_distillery.core import pages as vault_pages
-from kb_distillery.core import persons
-from kb_distillery.core import scopes as scope_lib
-from kb_distillery.core import summary as summary_lib
-from kb_distillery.core import wikiindex, wikiio
+from kb_distillery.vault import frontmatter, hubs, links
+from kb_distillery.vault import pages as vault_pages
+from kb_distillery.vault import persons
+from kb_distillery.vault import scopes as scope_lib
+from kb_distillery.vault import summary as summary_lib
+from kb_distillery.vault import wikiindex, wikiio
 try:
     from kb_distillery.ingest import arxiv_meta          # page-1 arXiv stamps (check_arxiv_stamps)
 except ImportError:                         # pragma: no cover
     arxiv_meta = None
 
-from kb_distillery.paths import vault_root
-from kb_distillery.core import links as page_links
+from kb_distillery.config.paths import vault_root
+from kb_distillery.vault import links as page_links
 ROOT = vault_root()  # KB_ROOT: share build
 # Fenced blocks and inline code: `[[1, 2], [3, 4]]` in a code sample is not a wikilink.
 CODE = re.compile(r"^\s*(?:>\s*)*(```|~~~).*?^\s*(?:>\s*)*\1[^\n]*$|`[^`\n]+`", re.M | re.S)
@@ -84,8 +84,8 @@ def _names_guard(text):
 def hooks_health():
     """Return (status_text, all_ok) for the agent write-guard hook config (Claude Code's `.claude/settings.json`)."""
     claude_ok = False
-    from kb_distillery import paths
-    from kb_distillery.kbconfig import checkout_root
+    from kb_distillery.config import paths
+    from kb_distillery.config.kb import checkout_root
     claude_path = os.path.join(checkout_root() or "", ".claude", "settings.json")   # hook configs are code: the explorer's
     if checkout_root() and os.path.isfile(claude_path):
         try:
@@ -99,7 +99,7 @@ def err(f, m):  errors.append(f"{f}: {m}")
 def warn(f, m): warnings.append(f"{f}: {m}")
 
 def parse_frontmatter(text):
-    """Flat `key: value`, `key: [a, b]`, plus the OKF shapes (kb_distillery.core.frontmatter). None without a block."""
+    """Flat `key: value`, `key: [a, b]`, plus the OKF shapes (kb_distillery.vault.frontmatter). None without a block."""
     return frontmatter.parse(text)[0]
 
 def raw_paths(fm):
@@ -297,8 +297,8 @@ def check_flags(path=None, today=None):
     """meta/flags.toml: invalid registry -> error; a flag expiring within 14 days -> warning; expired -> error."""
     import datetime as dt
 
-    from kb_distillery.flags.registry import FlagError, load
-    from kb_distillery.flags.registry import FLAGS_TOML
+    from kb_distillery.config.flags.registry import FlagError, load
+    from kb_distillery.config.flags.registry import FLAGS_TOML
     path = path or str(FLAGS_TOML)
     if not os.path.exists(path):
         return
@@ -359,7 +359,7 @@ def _coherence_only_main():
         if raw and raw != "none":
             raw_to_slug[raw] = slug
     rows, _sha1_ms = reconcile(raw_files, cited, set(raw_files), raw_to_slug)
-    from kb_distillery.core.coherence import run_coherence_lint
+    from kb_distillery.vault.coherence import run_coherence_lint
     merged, internal, external = run_coherence_lint(
         pages, rows, err_fn=err, warn_fn=warn)
     cosmetic = sum(1 for r in merged.values()
@@ -520,7 +520,7 @@ def check_question_page(rel, text):
 
 
 def check_summary(rel, fm, text):
-    """`description:` — one English line, "what it is + main point" (kb_distillery.core.summary). Missing warns for now
+    """`description:` — one English line, "what it is + main point" (kb_distillery.vault.summary). Missing warns for now
     (the backfill is running; check_wiki reports them as one line); a malformed one is an error;
     `summary_from` ≠ the page's hash warns stale. Returns False only when a needed summary is missing."""
     s = summary_lib.unquote(fm.get("description"))
@@ -638,7 +638,7 @@ PATH_PREFIXED = re.compile(r"\]\(((?:\./|\.\./wiki/|wiki/)[^()\s/]+\.md)(?:#[^()
 
 
 def check_links(pages):
-    """Pages link with `[Title](slug.md)` (core.links). A wikilink outside `## My notes` is an error (it was written
+    """Pages link with `[Title](slug.md)` (vault.links). A wikilink outside `## My notes` is an error (it was written
     after the schema 1.5 switch); inside My notes it is the user's and only warns when it points at nothing. A page
     link to no page, or to a heading the page lacks, is an error. Code and math are not read."""
     known = known_link_targets(pages)
@@ -847,7 +847,7 @@ def check_wiki_strays():
             if fn.startswith("."):
                 continue
             rel = os.path.relpath(os.path.join(dirpath, fn), ROOT).replace(os.sep, "/")
-            if is_index_path(rel):          # a generated section index (wiki/<type>/index.md): see core/wikiindex.py
+            if is_index_path(rel):          # a generated section index (wiki/<type>/index.md): see vault/wikiindex.py
                 continue
             if _is_section_dir(os.path.dirname(rel)):
                 warn(rel, "in a section folder of wiki/ — it holds only the generated index.md; pages live in wiki/ itself")
@@ -1102,7 +1102,7 @@ def check_contents(pages):
 
 
 def check_persons(pages):
-    """Person pages: handles generate sections, no status (src/kb_distillery/core/persons.py). Returns the
+    """Person pages: handles generate sections, no status (src/kb_distillery/vault/persons.py). Returns the
     health counters: unverified pages, `unknown` handles, lineage slugs without a page."""
     fms = {slug: fm for slug, (_rel, fm, _text) in pages.items()}
     people = {slug: (fm, persons.parse_frontmatter(text)[1])
@@ -1241,7 +1241,8 @@ def collect_snapshot(quiet=False):
     check_root()
     check_wiki_strays()
     check_flags()
-    from kb_distillery import kbconfig, paths as _paths
+    from kb_distillery.config import kb as kbconfig
+    from kb_distillery.config import paths as _paths
     if (mismatch := kbconfig.schema_mismatch(_paths.KB)):
         err("kb.toml", mismatch)
 
@@ -1293,7 +1294,7 @@ def collect_snapshot(quiet=False):
     person_health = check_persons(pages)
     scope_health = check_scopes(pages, rows, manifest_rows, ci)
 
-    from kb_distillery.core.coherence import run_coherence_lint
+    from kb_distillery.vault.coherence import run_coherence_lint
     _coherence, _, _ = run_coherence_lint(
         pages, rows, err_fn=err, warn_fn=warn, fresh=_ingest_strict_slugs())
 
@@ -1319,7 +1320,7 @@ def collect_snapshot(quiet=False):
     h_status, h_ok = hooks_health()
     lint_ms = (time.perf_counter() - t0) * 1000
 
-    from kb_distillery.core.health import build_snapshot
+    from kb_distillery.vault.health import build_snapshot
     snapshot = build_snapshot(
         pages=pages,
         raw_files=raw_files,
@@ -1360,7 +1361,7 @@ def main():
               "(pixi run app, or distill launch).", file=sys.stderr)
         return 2
 
-    from kb_distillery.kbconfig import checkout_root
+    from kb_distillery.config.kb import checkout_root
     if checkout_root() and os.path.realpath(ROOT) == os.path.realpath(checkout_root()) and not os.path.isdir(os.path.join(ROOT, "wiki")):
         # No knowledge base selected: ROOT is an engine checkout with no vault in it, and lint would write wiki/index.md and meta/ there.
         print("error: no knowledge base selected — lint would write wiki/index.md and meta/ into the engine checkout.\n"
@@ -1389,7 +1390,7 @@ def main():
                 print(f"  queued  {p}")
 
     if "--health" in sys.argv:
-        from kb_distillery.core.health import print_health_terminal
+        from kb_distillery.vault.health import print_health_terminal
         print_health_terminal(snapshot)
         return 1 if snapshot["values"]["errors"] else 0
 
@@ -1420,7 +1421,7 @@ def sync_search_cards():
     """Keep .cache/qmd-cards/ (title + summary per page) in step with wiki/ for the qmd search service.
     Only for the live vault — the main checkout this code runs from — never a share build's content
     checkout, a worktree, CI or a test's temp root. A cache, never an error."""
-    from kb_distillery import paths
+    from kb_distillery.config import paths
     from kb_distillery.search import cards, qmd_client
     # The explorer and its knowledge bases are separate checkouts, so "live" is explicit: KB_LIVE=1 (launch.sh
     # sets it for the dashboard's own lint runs); a share build, CI, a worktree or a test root never sync.
@@ -1439,7 +1440,7 @@ def sync_search_cards():
 def write_index(pages, quiet=False):
     """The OKF reserved catalog of the bundle, generated on every lint run and never hand-edited: `wiki/index.md` is a
     tiny root (one line per page type), `wiki/<type>/index.md` lists that type's pages and a big type splits one level
-    further by year (kb_distillery.core.wikiindex). Stale section indexes are removed."""
+    further by year (kb_distillery.vault.wikiindex). Stale section indexes are removed."""
     titles = {slug: page_links.title_of(text, slug) for slug, (_rel, _fm, text) in pages.items()}
     entries = []
     for slug in sorted(pages):

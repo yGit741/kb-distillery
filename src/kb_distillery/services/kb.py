@@ -6,9 +6,10 @@ is a relaunch (`kbd launch --kb <id|path>`): ROOT is resolved when the process s
 import os
 import subprocess
 
-from kb_distillery import kbconfig, paths
-from kb_distillery.core import schema
-from kb_distillery.core.digest import instruction_files
+from kb_distillery.config import kb as kbconfig
+from kb_distillery.config import paths
+from kb_distillery.vault import schema
+from kb_distillery.vault.digest import instruction_files
 
 
 def _git(root, *args):
@@ -42,7 +43,7 @@ def _meta_overrides(root):
 
 
 def active():
-    from kb_distillery.flags.registry import FLAGS_SOURCE
+    from kb_distillery.config.flags.registry import FLAGS_SOURCE
     cfg = paths.KB
     root = paths.ROOT
     return {

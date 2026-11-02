@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 
 import os
 
-from kb_distillery.core import frontmatter, links
+from kb_distillery.vault import frontmatter, links
 from .paths import ROOT, think_cite
 
 

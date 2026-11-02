@@ -1,4 +1,4 @@
-"""The qmd node tools (scripts/qmd/*.mjs) get their knowledge base only from `python -m kb_distillery.kbconfig root`, via
+"""The qmd node tools (scripts/qmd/*.mjs) get their knowledge base only from `python -m kb_distillery.config.kb root`, via
 scripts/qmd/with-kb.sh or scripts/launch.sh — never from where their file lives. Before this, both tools fell back
 to the explorer checkout, so after the kb split the vector store and the search index were built (and read) in
 a folder that is not a vault. These tests run the real chain: --kb → kbconfig → $KB_ROOT → kbroot.mjs."""
@@ -10,8 +10,8 @@ import sys
 import tempfile
 import unittest
 
-from kb_distillery import paths
-from kb_distillery import kbconfig
+from kb_distillery.config import paths
+from kb_distillery.config import kb as kbconfig
 
 QMD = os.path.join(kbconfig.checkout_root(), "scripts", "qmd")
 NODE = shutil.which("node")
@@ -122,7 +122,7 @@ class Chain(unittest.TestCase):
 
 class KbconfigRoot(unittest.TestCase):
     def test_root_prints_the_vault(self):
-        out = subprocess.run([sys.executable, "-m", "kb_distillery.kbconfig", "root"], capture_output=True, text=True,
+        out = subprocess.run([sys.executable, "-m", "kb_distillery.config.kb", "root"], capture_output=True, text=True,
                              env=dict(os.environ, PYTHONPATH=os.path.join(kbconfig.checkout_root(), "src")))
         self.assertEqual(out.returncode, 0, out.stderr)
         self.assertEqual(os.path.realpath(out.stdout.strip()), os.path.realpath(paths.ROOT))

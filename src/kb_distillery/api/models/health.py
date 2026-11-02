@@ -1,4 +1,4 @@
-"""GET /api/health — mirrors kb_distillery.services.health.build_health_snapshot() (kb_distillery.core.health.build_snapshot)."""
+"""GET /api/health — mirrors kb_distillery.services.health.build_health_snapshot() (kb_distillery.vault.health.build_snapshot)."""
 from typing import Any
 
 from kb_distillery.api.models.base import ApiModel

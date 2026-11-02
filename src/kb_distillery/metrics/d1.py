@@ -12,7 +12,7 @@ import os
 import re
 
 from kb_distillery.metrics import store
-from kb_distillery.paths import vault_root
+from kb_distillery.config.paths import vault_root
 
 DB_NAME = "kb-metrics"
 SYNC_TOML = os.path.join("meta", "ops", "sync.toml")

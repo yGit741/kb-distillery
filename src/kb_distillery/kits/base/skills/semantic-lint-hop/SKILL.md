@@ -30,7 +30,7 @@ Runs after `full-digest` / `deep-digest` finalize or `distill apply` when `SEMFI
    - **`scope`** — different setting → note scope; dismiss
 3. Write `findings.md` in the same `.semfind/` session dir.
 4. High-severity internal: one entry in `wiki/log.md`.
-5. Mark manifest: `python3 -m kb_distillery.core.coherence fixed <id>` or `noted <id>`.
+5. Mark manifest: `python3 -m kb_distillery.vault.coherence fixed <id>` or `noted <id>`.
 
 ## Core rule
 

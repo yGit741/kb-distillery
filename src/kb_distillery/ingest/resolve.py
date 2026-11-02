@@ -7,10 +7,10 @@ from dataclasses import dataclass, field
 from typing import Literal
 
 from kb_distillery.lint.lint import parse_frontmatter, read_manifest, walk
-from kb_distillery.core.schema import DUPE_PREFIX, INK_PREFIX, WIKI_DIR
+from kb_distillery.vault.schema import DUPE_PREFIX, INK_PREFIX, WIKI_DIR
 
 from .paths import ROOT
-from kb_distillery.core.schema import is_page_file
+from kb_distillery.vault.schema import is_page_file
 
 # New-style IDs (2007+): 1906.05890. Old-style (pre-2007): math/9811157, math.PR/0503503,
 # hep-th/9901001 — an archive name, optional subject class, a slash, then YYMMNNN.

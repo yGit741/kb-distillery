@@ -16,7 +16,7 @@ import sys
 import webbrowser
 from pathlib import Path
 
-from kb_distillery.paths import ROOT
+from kb_distillery.config.paths import ROOT
 
 LOCAL = "http://127.0.0.1:8765/app"
 KINDS = {"focus", "new", "changed", "issue"}

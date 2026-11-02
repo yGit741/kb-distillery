@@ -17,7 +17,7 @@ import re
 import subprocess
 import sys
 
-from kb_distillery.paths import vault_root
+from kb_distillery.config.paths import vault_root
 META_DIR = os.path.join(vault_root(), "meta")
 ROOT = vault_root()
 
@@ -141,7 +141,7 @@ def _session_age(session, path, now):
 def open_sessions(root, now):
     """Every open ingest / distill / ops / researcher session as
     [{kind, id, label, detail?, age_hours, started, path, fix}] — shared with hygiene.check_sessions."""
-    from kb_distillery.core.schema import OPS_DIR
+    from kb_distillery.vault.schema import OPS_DIR
 
     from . import core
     out = []

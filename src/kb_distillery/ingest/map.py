@@ -9,7 +9,7 @@ from .paths import ROOT, load_session, save_session, session_dir, wiki_slugs, pe
 from .schemas import validate_claims
 from .verify import existing_digest_for_raw
 
-from kb_distillery.core.schema import TOPIC_PREFIX, TOPIC_SLUGS, unit_slug_for_raw, unit_type_for_raw
+from kb_distillery.vault.schema import TOPIC_PREFIX, TOPIC_SLUGS, unit_slug_for_raw, unit_type_for_raw
 
 
 def _kebab(s):

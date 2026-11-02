@@ -19,14 +19,14 @@ import secrets
 import subprocess
 import sys
 
-from kb_distillery.paths import THINK_PATH, vault_root
+from kb_distillery.config.paths import THINK_PATH, vault_root
 META_DIR = os.path.join(vault_root(), "meta")
 ROOT = vault_root()
 
 from kb_distillery.git import commit_policy as cp
 from kb_distillery.ops.daily_sync import changed_paths, has_open_sessions, run_git
-from kb_distillery.core import log as kblog
-from kb_distillery.core.schema import (INDEX_REL, LOG_REL, OPS_DIR, RESTORABLE_PATHS, RESTORE_EXCLUDED, RESTORE_EXCLUDED_GLOBS, is_index_path, is_page_file,
+from kb_distillery.vault import log as kblog
+from kb_distillery.vault.schema import (INDEX_REL, LOG_REL, OPS_DIR, RESTORABLE_PATHS, RESTORE_EXCLUDED, RESTORE_EXCLUDED_GLOBS, is_index_path, is_page_file,
                                        lane_of, strip_prefix)
 
 GENERATED_KNOWLEDGE = (INDEX_REL, "meta/corpus.tsv", "meta/coherence-warnings.tsv")
@@ -267,7 +267,7 @@ def chore(scope, summary, paths=None, root=ROOT, push=True):
     `chore(<scope>): <summary>` on its main. Unversioned, like any chore there. Only tooling paths are taken
     (`paths` narrows the choice, and must all be tooling); knowledge edits in the same tree are never touched.
     Returns the new sha, or None when no tooling file changed."""
-    from kb_distillery.core.schema import is_kb_tooling
+    from kb_distillery.vault.schema import is_kb_tooling
     from kb_distillery.git.commit_policy import _is_kb_repo
     if not _is_kb_repo(root):
         raise OpsError("ops chore is for a knowledge base that is its own git repo (kb.toml at its top)")
@@ -886,7 +886,7 @@ def status(root=ROOT):
     hooks = _git(root, "config", "core.hooksPath").stdout.strip()
     unpushed = _git(root, "rev-list", "--count", "origin/main..main").stdout.strip() or "?"
     snaps = snapshots(root)
-    from kb_distillery.core.schema import GIT_POLICY_MODE, OPS_STRICT, SCHEMA_VERSION
+    from kb_distillery.vault.schema import GIT_POLICY_MODE, OPS_STRICT, SCHEMA_VERSION
     print(f"branch: {current_branch(root) or 'detached'}   knowledge version: "
           f"{'kb-' + cp.fmt_version(last) if last else 'none yet'}   next: kb-{cp.fmt_version(cp.next_version(root, 'main'))}")
     print(f"schema: {SCHEMA_VERSION[0]}.{SCHEMA_VERSION[1]}   pending migrations: {len(pending_migrations(root))}")

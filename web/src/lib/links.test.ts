@@ -33,7 +33,7 @@ describe("links", () => {
     expect(got).toEqual([["A", "a", undefined], ["B", "b", "why"], ["esc \\[x\\]", "c", undefined]]);
   });
 
-  it("builds links like core.links.link", () => {
+  it("builds links like vault.links.link", () => {
     expect(link("a", "Tensor rank")).toBe("[Tensor rank](a.md)");
     expect(link("a")).toBe("[a](a.md)");
     expect(link("a", "Why [x]", "Why it works")).toBe("[Why \\[x\\]](a.md#why-it-works)");

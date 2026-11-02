@@ -6,7 +6,7 @@ import pytest
 
 fitz = pytest.importorskip("fitz")
 
-from kb_distillery.core import books as core_books, schema
+from kb_distillery.vault import books as core_books, schema
 from kb_distillery.ingest import book, catalog, easy_digest, extract, scrap
 
 

@@ -15,10 +15,10 @@ import subprocess
 import sys
 import tempfile
 
-from kb_distillery.paths import vault_root
+from kb_distillery.config.paths import vault_root
 META_DIR = os.path.join(vault_root(), "meta")
-from kb_distillery.core.schema import LEGACY_INDEX_REL, LEGACY_LOG_REL, SCHEMA_VERSION, is_index_path
-from kb_distillery.paths import MIGRATIONS_CODE_PATH
+from kb_distillery.vault.schema import LEGACY_INDEX_REL, LEGACY_LOG_REL, SCHEMA_VERSION, is_index_path
+from kb_distillery.config.paths import MIGRATIONS_CODE_PATH
 
 MIGRATIONS_DIR = os.path.join("meta", "migrations")      # vault side: applied.tsv
 

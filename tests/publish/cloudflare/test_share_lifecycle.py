@@ -10,7 +10,7 @@ import shutil
 import tempfile
 import unittest
 
-from kb_distillery.paths import vault_root
+from kb_distillery.config.paths import vault_root
 ROOT = vault_root()
 
 from kb_distillery.publish.site import build as sb
@@ -52,7 +52,7 @@ class LifecycleTests(_Fixture):
         self.assertEqual(lc["head"], sha[:9])
         self.assertEqual(lc["version"], "0.1.1")
         self.assertIsNone(lc["github"])                              # the fixture repo has no GitHub remote
-        from kb_distillery.core.schema import SCHEMA_VERSION
+        from kb_distillery.vault.schema import SCHEMA_VERSION
         self.assertEqual(lc["schema"]["version"], f"{SCHEMA_VERSION[0]}.{SCHEMA_VERSION[1]}")
         self.assertEqual([r["sha"] for r in lc["timeline"]], [sha])
         self.assertEqual(lc["timeline"][0]["op"], "import")

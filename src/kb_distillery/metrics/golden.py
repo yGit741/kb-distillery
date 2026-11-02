@@ -30,7 +30,7 @@ import uuid
 from kb_distillery.git.ship import primary_checkout
 from kb_distillery.metrics import judge, store
 from kb_distillery.metrics.sessions import parse_session, PROJECTS_DIR
-from kb_distillery.paths import vault_root
+from kb_distillery.config.paths import vault_root
 
 TASKS_FILE = os.path.join("meta", "ops", "golden.toml")
 RUNS_DIR = os.path.expanduser("~/local-workspace/agent-metrics/golden")

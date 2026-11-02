@@ -27,7 +27,7 @@ import os
 import re
 import unicodedata
 
-from kb_distillery.core.links import page_slug
+from kb_distillery.vault.links import page_slug
 
 STORED, COMPUTED, PROPOSED = "stored", "computed", "proposed"
 PROPOSALS_FILE = "relations-proposals.jsonl"      # `<kb>/.cache/`, written by kb_distillery.graph.propose (every valid proposal)
@@ -337,7 +337,7 @@ def build(pages, nodes, links, concept_links, config, root=None):
 def read_proposals(root=None):
     """Every LLM relation proposal of a knowledge base: [{from, to, kind, note, confidence, run}], one per
     (from, to, kind), best confidence first. [] when it has none. Read-only; nothing here is knowledge."""
-    from kb_distillery import paths
+    from kb_distillery.config import paths
     path = os.path.join(root or paths.ROOT, ".cache", PROPOSALS_FILE)
     if not os.path.isfile(path):
         return []

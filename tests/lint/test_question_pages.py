@@ -6,7 +6,7 @@ import tempfile
 import unittest
 
 from kb_distillery.lint import lint
-from kb_distillery.paths import MIGRATIONS_CODE_PATH
+from kb_distillery.config.paths import MIGRATIONS_CODE_PATH
 
 FM = "---\ntype: question\nlayer: concept\nmaturity: open\n---\n"
 SHORT = "Is the jump a sharp threshold?"
@@ -106,7 +106,7 @@ class QuestionTitleMigration(unittest.TestCase):
         self.assertEqual(self.snapshot(), after)
 
     def test_produces_the_current_schema(self):
-        from kb_distillery.core.schema import SCHEMA_VERSION
+        from kb_distillery.vault.schema import SCHEMA_VERSION
         self.assertLessEqual(tuple(self.mod.PRODUCES), tuple(SCHEMA_VERSION))   # later migrations may follow
 
 

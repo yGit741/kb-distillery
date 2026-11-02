@@ -9,15 +9,15 @@ import sys
 import time
 from datetime import datetime, timezone
 
-from kb_distillery.paths import vault_root
+from kb_distillery.config.paths import vault_root
 META_DIR = os.path.join(vault_root(), "meta")
 
-from kb_distillery.core import frontmatter
-from kb_distillery.core.coherence import load_warnings
+from kb_distillery.vault import frontmatter
+from kb_distillery.vault.coherence import load_warnings
 from kb_distillery.lint.lint import collect_snapshot, collections_of, parse_frontmatter, raw_paths
-from kb_distillery.core.schema import (DEPTH, COLLECTION_TYPES, PARTITION_COLLECTIONS, SOURCE_TYPES, RAW_DIR,  # noqa: E402
+from kb_distillery.vault.schema import (DEPTH, COLLECTION_TYPES, PARTITION_COLLECTIONS, SOURCE_TYPES, RAW_DIR,  # noqa: E402
                     RAW_EMAILS, RAW_INBOX, RAW_VIDEOS, VIDEO_ITEM, RAW_PRINTED, CONTENTS_COLLECTIONS, WIKI_DIR)
-from kb_distillery.core.schema import is_page_file
+from kb_distillery.vault.schema import is_page_file
 
 ROOT = vault_root()  # KB_ROOT: share build
 INGEST_ROOT = os.path.join(ROOT, "meta", ".ingest")
@@ -27,7 +27,7 @@ INGESTION_ORDER = ("inbox", "failed", "uncataloged", "cataloged")
 COMPANION_STATUS = ("ink", "dupe", "asset")     # dispositions that fold a file into another file
 DIGESTION_ORDER = ("not digested", "partial", "digested", "skipped")
 STARTED_AT = time.time()
-CODE_DIRS = ("src/kb_distillery", "src/kb_distillery/core",
+CODE_DIRS = ("src/kb_distillery", "src/kb_distillery/vault",
              "src/kb_distillery/ingest", "src/kb_distillery/ops", "src/kb_distillery/services")
 
 
@@ -134,8 +134,8 @@ def _title(text, slug):
 # collections: book/notebook partitions and course/series contents tables
 # --------------------------------------------------------------------------
 def _collections(pages):
-    from kb_distillery.core.books import coverage as page_coverage, parse_partition
-    from kb_distillery.core import hubs
+    from kb_distillery.vault.books import coverage as page_coverage, parse_partition
+    from kb_distillery.vault import hubs
     out = []
     for slug, (_rel, fm, text) in sorted(pages.items()):
         t = fm.get("type")

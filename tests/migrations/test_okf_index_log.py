@@ -4,9 +4,9 @@ import os
 import tempfile
 import unittest
 
-from kb_distillery.core import log as kblog
+from kb_distillery.vault import log as kblog
 from kb_distillery.ops import migrate
-from kb_distillery.paths import MIGRATIONS_CODE_PATH
+from kb_distillery.config.paths import MIGRATIONS_CODE_PATH
 
 spec = importlib.util.spec_from_file_location("m0015", os.path.join(MIGRATIONS_CODE_PATH, "0015_okf_index_log.py"))
 mig = importlib.util.module_from_spec(spec)

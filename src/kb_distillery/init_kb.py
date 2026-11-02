@@ -36,7 +36,7 @@ import shutil
 import stat
 import sys
 
-from kb_distillery import kbconfig
+from kb_distillery.config import kb as kbconfig
 from kb_distillery.config import userdir
 from kb_distillery.git import install_hooks
 

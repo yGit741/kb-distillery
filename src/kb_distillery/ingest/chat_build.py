@@ -17,7 +17,7 @@ import shutil
 from . import chat, chat_merge, chat_store
 from .paths import ROOT
 from kb_distillery.storage import for_kb
-from kb_distillery.core.schema import RAW_CHATS
+from kb_distillery.vault.schema import RAW_CHATS
 
 ASSETS = "assets"
 

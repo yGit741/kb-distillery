@@ -179,7 +179,7 @@ class TestPolicy(unittest.TestCase):
         self.deny("Read", {"file_path": "raw/printed-docs/2023-paper.pdf"})
         self.deny("Read", {"file_path": userdir.path("anthropic_key")})
         self.deny("Read", {"file_path": os.path.join(userdir.legacy_dir(), "anthropic_key")})
-        self.deny("Read", {"file_path": "wiki/../src/kb_distillery/core/schema.py"})
+        self.deny("Read", {"file_path": "wiki/../src/kb_distillery/vault/schema.py"})
         self.deny("Read", {"file_path": "meta/corpus.tsv"})
         self.deny("Read", {"file_path": ".claude/settings.json"})
         self.deny("Read", {})

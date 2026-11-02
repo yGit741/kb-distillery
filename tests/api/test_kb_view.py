@@ -4,7 +4,7 @@ import os
 import pytest
 from fastapi.testclient import TestClient
 
-from kb_distillery import kbconfig
+from kb_distillery.config import kb as kbconfig
 from kb_distillery.api.app import create_app
 from kb_distillery.services import kbview
 

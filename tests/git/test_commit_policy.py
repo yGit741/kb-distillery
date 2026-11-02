@@ -6,7 +6,7 @@ import sys
 import tempfile
 import unittest
 
-from kb_distillery.paths import vault_root
+from kb_distillery.config.paths import vault_root
 ROOT = vault_root()
 
 from kb_distillery.git import commit_policy as cp
@@ -96,7 +96,7 @@ class CheckMessageTests(unittest.TestCase):
         self.assertEqual(cp.check_message("feat(ops): undo", "infra/kb-ops", ["src/kb_distillery/ops/undo.py"]), [])
         self.assertTrue(cp.check_message("feat(ops): undo", "main", ["src/kb_distillery/ops/undo.py"]))
         self.assertTrue(cp.check_message("feat(ops): undo", "infra/kb-ops", ["wiki/a.md"]))
-        self.assertEqual(cp.check_message("schema(books): hub", "infra/books", ["src/kb_distillery/core/schema.py", "wiki/a.md"]), [])
+        self.assertEqual(cp.check_message("schema(books): hub", "infra/books", ["src/kb_distillery/vault/schema.py", "wiki/a.md"]), [])
         self.assertTrue(cp.check_message("nonsense message", "infra/x", ["meta/a.py"]))
         self.assertTrue(cp.check_message("feat(ops): " + "x" * 80, "infra/x", ["meta/a.py"]))
 
@@ -164,7 +164,7 @@ class VersionAndPushTests(unittest.TestCase):
     def test_schema_merge_bumps(self):
         old = self.repo.commit(kb_msg("digest", "a", "0.7.4"), "wiki/a.md")
         git(self.repo.path, "checkout", "-q", "-b", "infra/books")
-        self.repo.commit("schema(books): hub", "src/kb_distillery/core/schema.py")
+        self.repo.commit("schema(books): hub", "src/kb_distillery/vault/schema.py")
         git(self.repo.path, "checkout", "-q", "main")
         git(self.repo.path, "merge", "-q", "--no-ff", "-m", "schema(books): hub (#2)\n\nKB-Version: 0.8.0", "infra/books")
         self.repo.commit(kb_msg("digest", "b", "0.8.1"), "wiki/b.md")
