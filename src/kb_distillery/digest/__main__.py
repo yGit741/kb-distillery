@@ -1,10 +1,10 @@
-"""CLI: python -m kb_distillery.summaries plan|run|show|apply (see kb_distillery.summaries)."""
+"""CLI: python -m kb_distillery.digest plan|run|show|apply (see kb_distillery.digest)."""
 import argparse
 import collections
 import sys
 
 from kb_distillery import llm
-from kb_distillery.summaries import pipeline as P
+from kb_distillery.digest import pipeline as P
 
 
 def cmd_plan(a):
@@ -65,7 +65,7 @@ def cmd_apply(a):
 
 
 def cmd_judge(a):
-    from kb_distillery.summaries.judge import judge
+    from kb_distillery.digest.judge import judge
     rep = judge(set(a.slugs.split(",")) if a.slugs else None, model=a.model, backend=a.backend)
     print(f"judge {rep['judge']}: {rep['graded']}/{rep['n']} graded · mean {rep['mean']} · "
           f"{rep['per_criterion']} · faithful fails {len(rep['faithful_fails'])} · "

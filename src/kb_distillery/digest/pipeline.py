@@ -1,4 +1,4 @@
-"""Plan, propose (kb_distillery.llm), validate, show and apply page summaries. See kb_distillery.summaries."""
+"""Plan, propose (kb_distillery.llm), validate, show and apply page summaries. See kb_distillery.digest."""
 import concurrent.futures as cf
 import json
 import os

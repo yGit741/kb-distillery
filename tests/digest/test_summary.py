@@ -3,7 +3,7 @@ import os
 import pytest
 
 from kb_distillery.vault import summary as S
-from kb_distillery.summaries import pipeline as P
+from kb_distillery.digest import pipeline as P
 
 PAGE = """---
 type: paper

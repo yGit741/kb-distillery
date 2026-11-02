@@ -10,7 +10,7 @@ import os
 import time
 
 from kb_distillery import llm
-from kb_distillery.summaries import pipeline as P
+from kb_distillery.digest import pipeline as P
 
 JUDGE_MODEL = "claude-fable-5-1"
 PER_CALL = 5
