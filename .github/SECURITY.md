@@ -12,7 +12,7 @@ Expect an acknowledgement within 7 days. A fix and a disclosure date are agreed 
 
 ## Scope
 
-In scope: the `kb_distillery` package, the web app and the server in `server/`, the publishing code in `publish/` and the Cloudflare worker, and the hooks and scripts in this repository.
+In scope: the `kb_distillery` package, the web app in `web/`, the server in `src/kb_distillery/server/`, the publishing code in `src/kb_distillery/publish/` and the Cloudflare worker in `src/kb_distillery/publish/cloudflare/worker/`, and the hooks and scripts in this repository.
 
 Out of scope: the content of a knowledge base, and third-party services the engine calls.
 
