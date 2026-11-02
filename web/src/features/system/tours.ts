@@ -74,7 +74,7 @@ registerTour(
       wait: 4000,
       place: "bottom",
       title: "Pick the knowledge bases",
-      // source: app/KbBadge.tsx (KbMenu); GET /api/graph?kb=a,b (src/kb_distillery/api/routers/graph.py)
+      // source: app/KbBadge.tsx (KbMenu); GET /api/graph?kb=a,b (src/kb_distillery/server/routers/graph.py)
       body: "The name at the top left is a menu. Tick any knowledge base, or none. The choice goes into the link (**?kbs=**), so a presentation link opens the same view.",
     },
     {

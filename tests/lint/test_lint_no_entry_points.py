@@ -1,4 +1,4 @@
-"""Layer contract: `lint` is a pipeline stage and never imports an entry point (`kb_distillery.cli`, `kb_distillery.api`).
+"""Layer contract: `lint` is a pipeline stage and never imports an entry point (`kb_distillery.cli`, `kb_distillery.server`).
 The skills linter checks `distill …` lines against the command table in `kb_distillery.config.commands`, and
 `lint --dashboard` refuses instead of starting the app. Run in a subprocess so modules other tests imported do not
 mask a regression."""
@@ -17,7 +17,7 @@ CODE = (
     "import kb_distillery.lint.lint as lint\n"
     "sys.argv = ['lint', '--dashboard']\n"
     "assert lint.main() == 2\n"
-    "top = ('kb_distillery.cli', 'kb_distillery.api')\n"
+    "top = ('kb_distillery.cli', 'kb_distillery.server')\n"
     "bad = sorted(m for m in sys.modules if m in top or m.startswith(tuple(t + '.' for t in top)))\n"
     "assert not bad, bad\n"
 )

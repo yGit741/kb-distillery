@@ -23,13 +23,13 @@ class Block(MetaPathFinder):
             raise ImportError("kb_distillery.publish.cloudflare is blocked: " + name)
 
 sys.meta_path.insert(0, Block())
-MODULES = ["kb_distillery.api.app", "kb_distillery.api.routers.share", "kb_distillery.api.spa", "kb_distillery.git.ship", "kb_distillery.metrics.d1",
+MODULES = ["kb_distillery.server.app", "kb_distillery.server.routers.share", "kb_distillery.server.spa", "kb_distillery.git.ship", "kb_distillery.metrics.d1",
            "kb_distillery.ops.core", "kb_distillery.ops.hygiene", "kb_distillery.ops.nightly_report", "kb_distillery.services.ops"]
 for m in MODULES:
     importlib.import_module(m)
 
 from fastapi.testclient import TestClient
-from kb_distillery.api.app import create_app
+from kb_distillery.server.app import create_app
 out = {}
 with TestClient(create_app()) as c:
     r = c.get("/api/share/status")

@@ -330,7 +330,7 @@ GATE_PREFIXES = {
     "e2e": ("web/e2e/",),
     "flags_registry": ("meta/flags.toml", "src/kb_distillery/kits/base/defaults/flags.toml"),
     "flags_code": ("src/kb_distillery/config/flags/",),
-    "api": ("src/kb_distillery/api/",),
+    "api": ("src/kb_distillery/server/",),
 }
 
 

@@ -177,7 +177,7 @@ a rule below.**
 
 ## Porting checklist
 
-The app is served under `/app` (vite `base`, router `basepath`; `python -m kb_distillery.api` and `pixi run web-dev` both work). The groundwork is shared, so a screen port adds **only files inside its own folder** and never edits a shared file.
+The app is served under `/app` (vite `base`, router `basepath`; `python -m kb_distillery.server` and `pixi run web-dev` both work). The groundwork is shared, so a screen port adds **only files inside its own folder** and never edits a shared file.
 
 1. Read the legacy page, its `*_data.py` and its `/api/*` response. Types come from the generated `src/api/schema.d.ts` (`pixi run api-schema`; short names in `src/api/types.ts`). Never hand-write a response shape.
 2. Data: call `useApiQuery(key, (ds) => ds.<method>())` (or `useDataSource()` + `useQuery`). `DataSource` already has one method per endpoint group (pages, search, path, graph, corpus, raw, scopes, pipeline, chat incl. `chatStream`, ops, health). A missing endpoint is a backend PR first, then one line each in `datasource.ts`, `http.ts`, `embedded.ts`.
@@ -186,7 +186,7 @@ The app is served under `/app` (vite `base`, router `basepath`; `python -m kb_di
 5. Cross-screen state (selected slugs, open scope draft) is `useKb()` from `src/lib/store.ts`; do not add a second store for it.
 6. Reuse the shared pieces: `<Markdown>` (`src/components/Markdown.tsx`, GFM + KaTeX + `[Title](slug.md)` page links (and the `[[slug]]` wikilinks of My notes) to `/pages/<slug>`, `resolveSlug` prop), `Loading` / `Empty` / `ErrorState` / `ErrorBoundary` (`src/components/states.tsx`), `src/theme/palette.ts`, tokens. List the duplicates you removed.
 7. Tests next to the screen: render with `mockDataSource({...})` from `src/test/datasource.ts` (loading, error, empty, data) plus unit tests for pure logic.
-8. `pixi run web-check` (never commit `src/kb_distillery/_webapp` — it is gitignored build output; restarting `kb_distillery.api` rebuilds it), then check `/app/<path>` in a browser (hard reload, light and dark, 390px without horizontal scroll, no console errors) against `python -m kb_distillery.api --port <spare>`.
+8. `pixi run web-check` (never commit `src/kb_distillery/_webapp` — it is gitignored build output; restarting `kb_distillery.server` rebuilds it), then check `/app/<path>` in a browser (hard reload, light and dark, 390px without horizontal scroll, no console errors) against `python -m kb_distillery.server --port <spare>`.
 9. Delete the legacy page and its static files in the same PR.
 
 ## Output

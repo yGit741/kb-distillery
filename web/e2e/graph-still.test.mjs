@@ -2,7 +2,7 @@
 // The layout is settled off screen, so the canvas a moment after the first nodes appear must equal the canvas
 // two seconds later, with and without prefers-reduced-motion. A settled-only screenshot can't see this: the
 // motion is over by the time it is taken.
-// Starts `python -m kb_distillery.api` on a free port against this checkout (it rebuilds src/kb_distillery/_webapp when stale).
+// Starts `python -m kb_distillery.server` on a free port against this checkout (it rebuilds src/kb_distillery/_webapp when stale).
 // Needs the `playwright` npm package (resolved normally, from $PLAYWRIGHT_MODULE, or from the npx cache) —
 // skips without it.
 import { test, before, after } from "node:test";
@@ -52,7 +52,7 @@ before(async () => {
   if (!pw) { skipReason = "playwright not found (npm i -g playwright, or set PLAYWRIGHT_MODULE)"; return; }
   const port = await freePort();
   base = `http://127.0.0.1:${port}`;
-  server = spawn(process.env.PYTHON || "python3", ["-m", "kb_distillery.api", "--port", String(port), "--no-open"],
+  server = spawn(process.env.PYTHON || "python3", ["-m", "kb_distillery.server", "--port", String(port), "--no-open"],
     { cwd: ROOT, stdio: ["ignore", "pipe", "pipe"],
       env: { ...process.env, PYTHONPATH: join(ROOT, "src") } });
   let log = "";

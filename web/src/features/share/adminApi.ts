@@ -1,7 +1,7 @@
 /**
  * Typed client for the private Worker's admin API (src/kb_distillery/publish/cloudflare/worker/admin.js). Same contract as the legacy panel:
  * same-origin, session cookie `kb_session` (credentials: same-origin), CSRF header `X-KB-Admin: 1`.
- * There is no schema.d.ts entry: this API belongs to the Worker, not to `python -m kb_distillery.api`.
+ * There is no schema.d.ts entry: this API belongs to the Worker, not to `python -m kb_distillery.server`.
  *
  *   GET    /admin/api/snapshots            -> SnapshotList
  *   DELETE /admin/api/snapshots/<worker>   body {"confirm": "<worker>"} -> { deleted, url }

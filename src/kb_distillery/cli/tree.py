@@ -114,7 +114,7 @@ def run(path: tuple[str, ...], cmd: Cmd, rest: list[str]) -> int:
     kind, target = cmd.kind, cmd.target
     if kind == "launch":
         if repo_root() is None:                 # an installed package has no scripts/: serve the app in the foreground
-            kind, target = "module", "kb_distillery.api"
+            kind, target = "module", "kb_distillery.server"
             if "--port" not in rest:
                 rest = ["--port", "8765", *rest]
         else:

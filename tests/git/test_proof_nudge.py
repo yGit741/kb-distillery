@@ -65,7 +65,7 @@ class ProofNudgeTests(unittest.TestCase):
                                       reply=f"Proof: {LOCAL} {SITE}\nProof: {PR}"))
 
     def test_api_needs_local_endpoint(self):
-        api = ("Edit", {"file_path": "src/kb_distillery/api/routes.py"})
+        api = ("Edit", {"file_path": "src/kb_distillery/server/routes.py"})
         self.assertIsNotNone(self.decide(api, reply=f"Proof: {PR}"))
         self.assertIsNone(self.decide(api, reply="Proof: http://127.0.0.1:8000/api/notes"))
 

@@ -95,7 +95,7 @@ repomix-output.xml
 *.canvas-llm
 Untitled*.md
 
-# Frontend build output is never committed: kb_distillery.api rebuilds src/kb_distillery/_webapp from source on start when the
+# Frontend build output is never committed: kb_distillery.server rebuilds src/kb_distillery/_webapp from source on start when the
 # sources changed, share builds dist-share/ on demand (web-check fails if either is tracked)
 web/node_modules
 scripts/qmd/node_modules

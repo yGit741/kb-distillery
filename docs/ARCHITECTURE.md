@@ -54,7 +54,7 @@ Guides for the three extension points: [kits](../src/kb_distillery/kits/base/def
 | `ops/`, `git/` | versioned knowledge commits; write guards, commit policy, the `ship` PR tool |
 | `llm/` | `kb_distillery.llm`, the only door to a model |
 | `storage/`, `publish/` | connector and publisher interfaces, registries and built-ins; `publish/site/` builds the site, `publish/cloudflare/` is the Cloudflare publisher (core never imports it; off unless a kb or the engine config selects it) |
-| `services/`, `api/` | data services and the FastAPI routers (auto-discovered), typed client for the frontend |
+| `services/`, `server/` | data services and the FastAPI routers (auto-discovered), typed client for the frontend |
 | `tests/` | pytest, mirroring the package layout |
 | `web/` | the React app (Vite, TypeScript) |
 | `src/kb_distillery/kits/` | the kits (`base`, `research`): `kit.toml` each; `base/defaults/` holds the flags, routed docs, page skeletons and digest defaults |

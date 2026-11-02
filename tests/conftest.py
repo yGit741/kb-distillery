@@ -37,7 +37,7 @@ import pytest
 
 TYPE_BOUND = {
     "vault/test_model.py", "vault/test_books.py", "vault/test_persons.py", "vault/test_source_model.py",
-    "vault/test_coherence.py", "vault/test_scopes.py", "vault/test_wikiio.py", "api/test_scopes.py",
+    "vault/test_coherence.py", "vault/test_scopes.py", "vault/test_wikiio.py", "server/test_scopes.py",
     "search/test_scoped_query.py", "ingest/test_blog.py", "ingest/test_digest_robustness.py",
     "ingest/test_ingest_fixes.py", "ingest/test_youtube.py", "lint/test_links.py", "lint/test_lint_ci.py",
     "lint/test_question_pages.py", "lint/test_summary_lint.py", "ops/test_ops.py",

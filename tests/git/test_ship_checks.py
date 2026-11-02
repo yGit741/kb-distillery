@@ -26,7 +26,7 @@ class ChecksForTests(unittest.TestCase):
         self.assertEqual(names(["src/kb_distillery/config/flags/codegen.py"]), ["flags-check"])
 
     def test_api_router(self):
-        self.assertEqual(names(["src/kb_distillery/api/routers/x.py"]), ["api-schema-check"])
+        self.assertEqual(names(["src/kb_distillery/server/routers/x.py"]), ["api-schema-check"])
 
     def test_graph_runs_the_still_canvas_e2e(self):
         self.assertEqual(names(["web/src/features/graph/ForceGraph.tsx"]), ["web-check", "test-ui-principles", "test-e2e"])
@@ -43,7 +43,7 @@ class RunChecksTests(unittest.TestCase):
 
     def test_stale_schema_fails(self):
         with patch.object(ship.subprocess, "run", return_value=_cp(1, "schema.d.ts is stale")) as run:
-            self.assertFalse(ship.run_checks(paths=["src/kb_distillery/api/app.py"]))
+            self.assertFalse(ship.run_checks(paths=["src/kb_distillery/server/app.py"]))
             self.assertEqual(run.call_args.args[0], ["pixi", "run", "api-schema-check"])
 
     def test_passing_check(self):
