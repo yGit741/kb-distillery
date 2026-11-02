@@ -30,6 +30,7 @@ const CIRCLE_OK: Readonly<Record<string, { n: number; why: string }>> = {
   "features/graph/lab/draw.ts": { n: 2, why: "the label lens (Full Graph feature)" },
   "features/home/FullGraphIcon.tsx": { n: 4, why: "the Open in Full Graph icon" },
   "features/pages/MiniGraph.tsx": { n: 2, why: "the focus ring and the keyboard focus ring around a mark" },
+  "features/covector/CovectorScreen.tsx": { n: 1, why: "the dot at the tip of the test vector in the covector picture, not a page" },
 };
 
 /** Files that call `typeColor` for something that is not a node's colour: the exact count, and why. */

@@ -31,11 +31,11 @@ export function filterTimeline(rows: TimelineRow[], filter: Filter, query: strin
   });
 }
 
-const Code = ({ children }: { children: ReactNode }) => (
+export const Code = ({ children }: { children: ReactNode }) => (
   <code className="rounded bg-muted px-1 py-0.5 font-mono text-[0.85em] break-words">{children}</code>
 );
 
-function Section({ title, description, children }: { title: string; description?: string; children: ReactNode }) {
+export function Section({ title, description, children }: { title: string; description?: string; children: ReactNode }) {
   return (
     <Card className="min-w-0">
       <CardHeader>
@@ -48,7 +48,7 @@ function Section({ title, description, children }: { title: string; description?
 }
 
 /** Scroll container so wide tables never widen the page. */
-const TableWrap = ({ children }: { children: ReactNode }) => (
+export const TableWrap = ({ children }: { children: ReactNode }) => (
   <div className="overflow-x-auto">
     <table className="w-full min-w-max text-left text-sm [&_td]:py-1.5 [&_td]:pr-4 [&_th]:pb-1.5 [&_th]:pr-4 [&_th]:text-xs [&_th]:font-medium [&_th]:text-muted-foreground">
       {children}
