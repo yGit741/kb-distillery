@@ -96,7 +96,6 @@ selectable on every run; a feature that calls an LLM says in its plan which back
 ```
 pixi run lint                      check + reconcile + regenerate wiki/index.md
 pixi run health                    terminal health summary
-pixi run dashboard                 LEGACY stdlib health UI (deleted in a later PR; use `pixi run app` for the app, http://127.0.0.1:8765/app) — formerly /graph, /digestion, /ops, /chat — a read-only research agent over the Claude Agent SDK, with the direct Messages call as fallback; pays with a stored API key (`~/.config/kb-distillery/keys/<name>`, switchable in the Session card) or, agent backend only, the `claude login` subscription)
 pixi run launch                    restart dashboard from current code (detached) + open browser; also (re)starts the qmd search service when installed
 pixi run qmd-install               (once) install the qmd search service in scripts/qmd (Node >= 22; models download on first start, ~1.9 GB under .cache/qmd/models)
 pixi run qmd-serve                 run the qmd search service in the foreground (127.0.0.1:8766; KB_QMD_PORT to change)
