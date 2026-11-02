@@ -70,7 +70,7 @@ def _run(venv: Path, args, env, cwd):
 def test_the_wheel_carries_the_root_level_folders_under_data(wheel):
     names = zipfile.ZipFile(wheel).namelist()
     for want in ("kb_distillery/publish/cloudflare/worker/auth.js", "kb_distillery/publish/cloudflare/worker/wrangler.template.jsonc",
-                 "kb_distillery/publish/cloudflare/static/kb-static.js", "kb_distillery/publish/cloudflare/share.toml",):
+                 "kb_distillery/publish/cloudflare/share.toml",):
         assert any(n.startswith(want) for n in names), want
     assert not any(n.startswith("kb/") or "backend" in n.split("/")[0] for n in names)
 

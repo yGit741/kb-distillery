@@ -23,7 +23,7 @@ class Block(MetaPathFinder):
             raise ImportError("kb_distillery.publish.cloudflare is blocked: " + name)
 
 sys.meta_path.insert(0, Block())
-MODULES = ["kb_distillery.api.app", "kb_distillery.api.routers.share", "kb_distillery.api.spa", "kb_distillery.dashboard.serve", "kb_distillery.git.ship", "kb_distillery.metrics.d1",
+MODULES = ["kb_distillery.api.app", "kb_distillery.api.routers.share", "kb_distillery.api.spa", "kb_distillery.git.ship", "kb_distillery.metrics.d1",
            "kb_distillery.ops.core", "kb_distillery.ops.hygiene", "kb_distillery.ops.nightly_report", "kb_distillery.services.ops"]
 for m in MODULES:
     importlib.import_module(m)
@@ -36,7 +36,7 @@ with TestClient(create_app()) as c:
     out["status_code"], out["body"] = r.status_code, r.json()
 
 from kb_distillery.ops import core, hygiene, nightly_report
-from kb_distillery.dashboard import serve
+from kb_distillery.publish.site.state import share_log_tail
 from kb_distillery.metrics import d1
 from kb_distillery import publish
 tmp = tempfile.mkdtemp()
@@ -44,7 +44,7 @@ core.share_autodeploy("test", tmp)
 out["orphans"] = [f.kind for f in hygiene.check_snapshots(tmp, None)]
 out["site"] = hygiene.check_site(tmp, None)
 out["report_site"] = nightly_report.site_status(tmp)
-out["log"] = serve.share_log_tail()
+out["log"] = share_log_tail()
 try:
     d1._account()
     out["d1"] = "no error"

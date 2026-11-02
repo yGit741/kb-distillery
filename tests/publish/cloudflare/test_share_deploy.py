@@ -492,16 +492,13 @@ class ChipTests(unittest.TestCase):
         self.assertIsNone(share_chip(None))
         self.assertIsNone(share_chip({}))
 
-    def test_nav_has_chip_slot_and_server_routes(self):
-        from kb_distillery.dashboard.shell import render_nav
-        from kb_distillery.dashboard import serve
-        self.assertIn('id="share-chip"', render_nav("graph"))
-        self.assertIn("share_status", serve.Handler.do_GET.__code__.co_names)
+    def test_share_log_tail_keeps_the_last_200_lines(self):
+        from kb_distillery.publish.site.state import share_log_tail
         with tempfile.TemporaryDirectory() as d:
             log = Path(d, "share.log")
             log.write_text("".join(f"line {i}\n" for i in range(300)))
             with mock.patch("kb_distillery.publish.cloudflare.contracts.LOG_PATH", log):
-                tail = serve.share_log_tail()
+                tail = share_log_tail()
             self.assertEqual(tail.splitlines()[0], "line 100")
             self.assertEqual(len(tail.splitlines()), 200)
 
