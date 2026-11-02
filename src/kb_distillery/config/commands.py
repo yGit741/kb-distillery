@@ -59,7 +59,7 @@ COMMANDS: dict[str, Cmd] = {
     "digest": Cmd("digest a source page: easy, full or deep", "group", sub={
         "easy": Cmd("abstract skim (light LLM)", target="kb_distillery.ingest", fixed=("easy-digest",), forward_help=True),
         "full": Cmd("standard paper note (medium LLM)", target="kb_distillery.ingest", fixed=("full-digest",), forward_help=True),
-        "deep": Cmd("thesis-critical digest (heavy LLM)", target="kb_distillery.ingest", fixed=("deep-digest",), forward_help=True),
+        "deep": Cmd("deep digest (heavy LLM)", target="kb_distillery.ingest", fixed=("deep-digest",), forward_help=True),
         "many": Cmd("batch-fill claims for many sources, then full-digest them one by one (LLM)",
                     target="kb_distillery.ingest", fixed=("digest-many",), forward_help=True),
         "instructions": Cmd("the digest focus of the selected kb", target="kb_distillery.vault.digest", config_check=False),

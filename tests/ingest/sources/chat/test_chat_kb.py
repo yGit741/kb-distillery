@@ -39,6 +39,24 @@ class TestPrompts(unittest.TestCase):
         for p in chat_data.list_prompts():
             self.assertTrue(p["text"] and not p["text"].startswith("---"))
 
+    def test_engine_prompts_are_generic_and_a_kit_words_its_own(self):
+        engine = {p["id"]: p["text"] for p in chat_data.list_prompts(extra_dirs=[])}
+        self.assertEqual(set(engine), {"query", "brainstorm", "learn", "critique", "draft"})
+        for text in engine.values():
+            self.assertNotRegex(text.lower(), r"thesis|msc|machine learning")
+        research = os.path.join(os.path.dirname(chat_data.PROMPTS_DIR), "..", "kits", "research", "prompts")
+        kit = {p["id"]: p["text"] for p in chat_data.list_prompts(extra_dirs=[research])}
+        self.assertEqual(set(kit), set(engine))
+        self.assertIn("theoretical machine learning", kit["query"])
+        self.assertNotEqual(kit["query"], engine["query"])
+
+    def test_active_kit_chain_supplies_the_prompt_dirs(self):
+        from types import SimpleNamespace
+        dirs = chat_data.kit_prompt_dirs(SimpleNamespace(kit="research"))
+        self.assertEqual([os.path.basename(os.path.dirname(d)) for d in dirs], ["research"])
+        self.assertEqual(chat_data.kit_prompt_dirs(SimpleNamespace(kit="base")), [])
+        self.assertEqual(chat_data.kit_prompt_dirs(SimpleNamespace(kit="")), [])
+
     def test_system_keeps_fixed_suffix(self):
         system = chat_data.build_system("Custom instructions only.")
         self.assertTrue(system.startswith("Custom instructions only."))

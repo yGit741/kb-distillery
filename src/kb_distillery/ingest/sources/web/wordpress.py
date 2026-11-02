@@ -1,6 +1,6 @@
 """Scrap a WordPress.com blog into raw/inbox/ — every post as a Markdown clip plus its images.
 
-    python3 -m kb_distillery.ingest scrap-wordpress gilkalai.wordpress.com --prefix kalai-blog
+    python3 -m kb_distillery.ingest scrap-wordpress example.wordpress.com --prefix example-blog
 
 One post → `raw/inbox/<prefix>-<YYYY-MM-DD>-<slug>.md`; its figures → `raw/inbox/<same stem>-NN.<ext>`,
 linked from the clip as `../images/<file>` (the path they resolve to once catalog has moved the
@@ -49,7 +49,7 @@ WEB = "raw/web-clips"
 # API
 # --------------------------------------------------------------------------
 def site_of(text):
-    """`gilkalai.wordpress.com`, `https://gilkalai.wordpress.com/2020/…` → `gilkalai.wordpress.com`."""
+    """`example.wordpress.com`, `https://example.wordpress.com/2020/…` → `example.wordpress.com`."""
     text = text.strip()
     if "://" in text:
         text = urllib.parse.urlparse(text).netloc

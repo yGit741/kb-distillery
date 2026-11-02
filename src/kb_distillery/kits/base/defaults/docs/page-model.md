@@ -21,7 +21,7 @@ Every wiki page has a `layer:` and a `type:` within it (`src/kb_distillery/vault
 | `listed` | cataloged stub, not read yet |
 | `easy` | abstract skim: Problem / Main result only (`easy-digest`, Haiku) |
 | `full` | full note with Key equations (`full-digest`) |
-| `deep` | thesis-critical: full + neighbor papers, q- stubs, topic threads (`deep-digest`) |
+| `deep` | deep: full + neighbor papers, q- stubs, topic threads (`deep-digest`) |
 
 | source type | reaches | usually |
 |-------------|---------|---------|

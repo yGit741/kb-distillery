@@ -42,7 +42,7 @@ Every knowledge operation is one commit on main: `kb(<op>): <summary> (kb-x.y.z)
 | [ingest-to-catalog](ingest-to-catalog/SKILL.md) | Route inbox → `raw/<format>/` + corpus `collection` (+ `paper-` Source page at depth listed) (0 LLM) |
 | [easy-digest](easy-digest/SKILL.md) | Abstract/metadata skim → depth easy (light, Haiku) |
 | [full-digest](full-digest/SKILL.md) | Full note with Key equations → depth full — paper, book part, or course/series row (medium) |
-| [deep-digest](deep-digest/SKILL.md) | Thesis-critical + neighbors → depth deep (heavy, explicit only) |
+| [deep-digest](deep-digest/SKILL.md) | Deep read + neighbors → depth deep (heavy, explicit only) |
 | [distill-think](distill-think/SKILL.md) | Propose/apply from `think/` → transient `distilled-think-*` (medium) |
 | [query-knowledge](query-knowledge/SKILL.md) | Answer from wiki — index-first, citations, optional file-back |
 | [explore-raw-data](explore-raw-data/SKILL.md) | Look at cataloged raw sources (0 LLM CLI): find, read, check against pages, recommend a digest tier |

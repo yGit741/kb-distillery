@@ -39,7 +39,7 @@ export const DEPTH_TIP: Record<Depth, string> = {
   listed: "Cataloged with a stub page, not read yet.",
   easy: "A skim of the abstract (~2-4k tokens).",
   full: "A proper read: method, results, key equations (~8-12k tokens).",
-  deep: "A close, thesis-critical read with proofs and neighbours (~25-40k+ tokens).",
+  deep: "A close read with proofs and neighbours (~25-40k+ tokens).",
 };
 
 export const FORMAT_ORDER = ["inbox", "printed-docs", "handwritten", "presentations", "llm-chats", "emails", "web-clips", "images", "videos"];

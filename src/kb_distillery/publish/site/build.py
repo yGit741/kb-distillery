@@ -43,6 +43,7 @@ import tempfile
 import webbrowser
 from pathlib import Path
 
+from kb_distillery.config import kb as kbconfig
 from kb_distillery.vault import links as page_links
 from kb_distillery.webbuild import frontend_source_hash as _frontend_source_hash
 
@@ -550,17 +551,18 @@ def read_stats(path):
 # ---------- app layout ----------
 
 _DATA_TAG = '<script type="application/json" id="kb-data">%s</script>\n'
+DEFAULT_TITLE = "Knowledge Base"     # the page title when the kb has no name of its own (kb.toml `[kb] name`)
 _TITLE_RE = re.compile(r"<title>.*?</title>", re.S)
 
 
-def app_page(template, data, manifest_fields):
+def app_page(template, data, manifest_fields, title=DEFAULT_TITLE):
     """The built app's index.html with the data blob baked in (before </head>) and a versioned title.
 
     `data` = {graph, index, pages[, lifecycle]} after `apply_profile`; the blob also carries `meta`
     (what the footer line shows). The module script runs after parsing, so it finds `#kb-data`."""
     meta = {k: manifest_fields[k] for k in ("kb_version", "content_sha", "viewer_sha", "profile", "built_at")}
     blob = dict(data, meta=meta)
-    title = f"<title>{_html.escape('Thesis Wiki — kb ' + manifest_fields['kb_version'])}</title>"
+    title = f"<title>{_html.escape(f"{title} — kb {manifest_fields['kb_version']}")}</title>"
     if "</head>" not in template or not _TITLE_RE.search(template):
         raise BuildError("the app's index.html has no <title> / </head>; rebuild the frontend (pixi run web-install)")
     page = _TITLE_RE.sub(lambda _m: title, template, count=1)
@@ -606,7 +608,8 @@ def inner_build_app(args):
     data, dropped = apply_predicate(data, args.predicate)          # --predicate public: the Map view's pages only
     data = apply_home(data, home, view=args.view)   # Home cards + tour from the share config `[home]`, --view
     data["rawCards"] = bake_raw_cards(data, raw_of, args.profile)
-    page = app_page(Path(args.app_index).read_text(encoding="utf-8"), data, fields)
+    cfg = kbconfig.current()
+    page = app_page(Path(args.app_index).read_text(encoding="utf-8"), data, fields, title=(cfg.name if cfg else "") or DEFAULT_TITLE)
     out = Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(page, encoding="utf-8", newline="\n")

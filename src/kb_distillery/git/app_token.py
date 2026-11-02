@@ -1,4 +1,4 @@
-"""Agent identity: run gh (and git push) as the `thesis-knowledge-base` GitHub App.
+"""Agent identity: run gh (and git push) as the agent GitHub App named in the config below.
 
 Config `~/.config/kb-agents/app.toml` (override with env `KB_APP_CONFIG`) holds `app_id`,
 `installation_id`, `slug`, optional `key_path` (default: `key.pem` beside the toml). The private key

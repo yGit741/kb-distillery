@@ -18,7 +18,7 @@ import { useChatSession, type SendOptions } from "./useChatSession";
 
 const EXAMPLES: { q: string; template?: string; label: string }[] = [
   { q: "What do I know about implicit regularization in matrix factorization?", label: "Implicit regularization in matrix factorization" },
-  { q: "Which open questions in my notes could become a thesis topic?", template: "brainstorm", label: "Open questions that could be a thesis" },
+  { q: "Which open questions in my notes could become a research topic?", template: "brainstorm", label: "Open questions that could be a topic" },
   { q: "Teach me tensor rank from my notes.", template: "learn", label: "Teach me tensor rank" },
 ];
 

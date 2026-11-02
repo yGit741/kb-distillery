@@ -80,7 +80,7 @@ class AppLayoutTests(_AppFixture):
     def test_page_is_the_template_with_the_blob_baked_in(self):
         html = self.html(self.public)
         self.assertIn('<script type="module" crossorigin src="/assets/index-abc123.js"></script>', html)
-        self.assertIn("<title>Thesis Wiki — kb 0.1.1</title>", html)
+        self.assertIn("<title>Knowledge Base — kb 0.1.1</title>", html)
         self.assertEqual(html.count('id="kb-data"'), 1)
         self.assertLess(html.index('id="kb-data"'), html.index("</head>"))
         meta = kb_data(html)["meta"]
