@@ -159,14 +159,26 @@ def _tier(root, op, target, pages=()):
     return None
 
 
-def run_lint(root=ROOT):
+def run_lint(root=ROOT, okf_pages=None):
+    """Lint, then okf-check on `okf_pages` only (relative paths of the pages this commit changes). None = no OKF check:
+    undo and restore return to an earlier state and must work from a bad one."""
     proc = subprocess.run([sys.executable, "-m", "kb_distillery.lint.lint"], cwd=root, env=dict(os.environ, KB_ROOT=str(root)),
                           capture_output=True, text=True)
     if proc.returncode != 0:
         tail = "\n".join((proc.stdout or "").splitlines()[-8:])
         raise OpsError(f"lint failed — nothing committed\n{tail}")
-    # the OKF gate: no bypass. A finding names the file and the rule; the owner fixes the page, then commits again
-    okf = subprocess.run([sys.executable, "-m", "kb_distillery.lint.okf_check"], cwd=root,
+    if okf_pages is not None:
+        okf_gate(root, okf_pages)
+
+
+def okf_gate(root, okf_pages):
+    """okf-check the pages a commit changes (relative paths; non-pages ignored). Raises OpsError naming file and rule."""
+    pages = sorted(p for p in okf_pages if p.startswith("wiki/") and p.endswith(".md")
+                   and p not in (INDEX_REL, LOG_REL) and os.path.isfile(os.path.join(root, p)))
+    if not pages:
+        return
+    # the OKF gate: no bypass. A finding names the file and the rule; fix that page, then commit again
+    okf = subprocess.run([sys.executable, "-m", "kb_distillery.lint.okf_check", *(f"--only={p}" for p in pages)], cwd=root,
                          env=dict(os.environ, KB_ROOT=str(root)), capture_output=True, text=True)
     if okf.returncode != 0:
         lines = (okf.stdout or okf.stderr or "").splitlines()
@@ -388,12 +400,17 @@ def commit_op(op, target, summary=None, paths=None, lint=True, trailers=None, ro
     with ctx:
         _require_main(root)
         sync_human(root)
-        if lint:
-            run_lint(root)
         owned = _session_owned(root)
         dirty = set(changed_paths(root)["knowledge"])
         chosen = [p for p in (paths if paths is not None else dirty)
                   if lane_of(p) == "knowledge" and not is_human_path(p) and p not in owned]
+        if lint:
+            run_lint(root, okf_pages=chosen)
+            dirty = set(changed_paths(root)["knowledge"])      # lint regenerates files
+            chosen = [p for p in (paths if paths is not None else dirty)
+                      if lane_of(p) == "knowledge" and not is_human_path(p) and p not in owned]
+        elif op not in ("undo", "restore"):
+            okf_gate(root, chosen)          # the caller linted already; the OKF check is still ours
         if not chosen:
             return None
         version = cp.next_version(root)

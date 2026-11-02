@@ -121,8 +121,32 @@ def _generated(fm, owner, proposals, tz, report, slug):
 
 
 # -- one page ----------------------------------------------------------------------------------------------------
+def _split_head(text):
+    """(frontmatter block with its closing `---` line, rest) of a page; ('', text) when there is no block."""
+    if not text.startswith(("---\n", "---\r\n")):
+        return "", text
+    close = text.find("\n---", 3)
+    if close == -1:
+        return "", text
+    nl = text.find("\n", close + 1)
+    cut = len(text) if nl == -1 else nl + 1
+    return text[:cut], text[cut:]
+
+
 def migrate_page(text, slug, ctx, report):
-    """The page text in the new shape (same text when nothing changes)."""
+    """The page text in the new shape (same text when nothing changes). A CRLF frontmatter block is migrated as LF and
+    written back as CRLF; the body is never touched. A block mixing both is refused by `apply` before any write."""
+    head, body = _split_head(text)
+    lf_head, crlf = fmlib.to_lf(head)
+    probe = lf_head + body.replace("\r\n", "\n")        # the body is read (first heading), never rewritten
+    new = _migrate_page(probe, slug, ctx, report)
+    if new == probe:
+        return text
+    new_head = _split_head(new)[0]
+    return fmlib.from_lf(new_head, crlf) + body
+
+
+def _migrate_page(text, slug, ctx, report):
     fm, body = fmlib.parse(text)
     if fm is None:
         return text
@@ -254,6 +278,13 @@ def migrate_page(text, slug, ctx, report):
 
 def _excalidraw(text, rel, report):
     """Add `type: excalidraw` to a plugin file with frontmatter and no type; report one that cannot take it."""
+    if text.startswith("---\r\n"):
+        new = _excalidraw_lf("---\n" + text[5:], rel, report)
+        return text if new == "---\n" + text[5:] else "---\r\ntype: excalidraw\r\n" + text[5:]
+    return _excalidraw_lf(text, rel, report)
+
+
+def _excalidraw_lf(text, rel, report):
     fm, _body = fmlib.parse(text)
     if fm is None:
         report["no_type"].append((rel, "no frontmatter block"))
@@ -287,7 +318,11 @@ def apply(root, dry_run=False, tz=None):
                 flat[fn[:-3]] = (path, text)
             else:
                 others.append((path, text))
-    fms = {s: (fmlib.parse(t)[0] or {}) for s, (_p, t) in flat.items()}
+    mixed = fmlib.mixed_line_ends([(p, _split_head(t)[0]) for p, t in [*flat.values(), *others]])
+    if mixed:
+        raise RuntimeError("these pages mix CRLF and LF line ends in their frontmatter; make them one or the other first, nothing was written: "
+                           + ", ".join(os.path.relpath(p, root) for p in mixed[:10]) + (" …" if len(mixed) > 10 else ""))
+    fms = {s: (fmlib.parse(t.replace("\r\n", "\n"))[0] or {}) for s, (_p, t) in flat.items()}
     ctx = {"slugs": set(flat), "aliases": links.alias_map(fms),
            "mentions": links.mention_map(os.path.join(root, "meta", "aliases.tsv")),
            "owner": owner_of(root), "proposals": load_proposals(root), "tz": tz}

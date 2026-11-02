@@ -101,19 +101,49 @@ class OkfCheck(unittest.TestCase):
         os.makedirs(os.path.join(self.root, "examples", "demo"))
         self.assertEqual(ship.okf_command(self.root)[-3:], ["kb_distillery.lint.okf_check", "--kb", os.path.join(self.root, "examples", "demo")])
 
-    def test_ops_commit_gate_blocks_on_okf_findings(self):
+    def test_ops_commit_gate_blocks_on_okf_findings_of_the_changed_pages_only(self):
         from kb_distillery.ops import core
+        self.page("wiki/a.md", "---\ntype: idea\n---\n\nx\n")
+        self.page("wiki/bad.md", "no frontmatter\n")
         ok = mock.Mock(returncode=0, stdout="", stderr="")
         bad = mock.Mock(returncode=1, stdout="ERROR okf-check: wiki/a.md: type: no parseable non-empty `type`\n"
                         "okf-check: 1 pages, 1 findings (1 type)\n", stderr="")
         with mock.patch.object(core.subprocess, "run", side_effect=[ok, bad]) as run:
             with self.assertRaises(core.OpsError) as cm:
-                core.run_lint(self.root)
-        self.assertIn("kb_distillery.lint.okf_check", run.call_args_list[1].args[0])
+                core.run_lint(self.root, okf_pages=["wiki/a.md", "raw/x.md", "wiki/index.md"])
+        cmd = run.call_args_list[1].args[0]
+        self.assertIn("kb_distillery.lint.okf_check", cmd)
+        self.assertEqual([c for c in cmd if c.startswith("--only=")], ["--only=wiki/a.md"])   # only the changed page
         self.assertIn("wiki/a.md: type", str(cm.exception))
         with mock.patch.object(core.subprocess, "run", side_effect=[ok, ok]):
-            core.run_lint(self.root)
+            core.run_lint(self.root, okf_pages=["wiki/a.md"])
 
+    def test_undo_restore_and_pageless_commits_run_no_okf_check(self):
+        from kb_distillery.ops import core
+        ok = mock.Mock(returncode=0, stdout="", stderr="")
+        self.page("wiki/bad.md", "no frontmatter\n")
+        with mock.patch.object(core.subprocess, "run", side_effect=[ok]) as run:
+            core.run_lint(self.root)                                           # undo/restore call it without pages
+            self.assertEqual(run.call_count, 1)
+        with mock.patch.object(core.subprocess, "run", side_effect=[ok]) as run:
+            core.run_lint(self.root, okf_pages=["meta/aliases.tsv"])           # nothing OKF changed
+            self.assertEqual(run.call_count, 1)
+
+    def test_only_limits_the_pages_checked_not_the_link_targets(self):
+        self.page("wiki/bad.md", "no frontmatter\n")
+        self.page("wiki/b.md", "---\ntype: idea\n---\n\n# B\n")
+        self.page("wiki/a.md", "---\ntype: idea\n---\n\n[B](b.md#b)\n")
+        self.assertEqual(okf_check.check(self.root, only=["wiki/a.md"]), ({}, 1))
+        self.assertEqual(sorted(okf_check.check(self.root, only=["wiki/bad.md"])[0]), ["wiki/bad.md"])
+        self.assertEqual(sorted(okf_check.check(self.root)[0]), ["wiki/bad.md"])             # the gate on the whole bundle
+        out = io.StringIO()
+        with mock.patch("kb_distillery.paths.vault_root", return_value=self.root), contextlib.redirect_stdout(out):
+            self.assertEqual(okf_check.main(["--only=wiki/a.md"]), 0)
+            self.assertEqual(okf_check.main(["--only=wiki/bad.md"]), 1)
+
+    def test_a_commit_that_fixes_a_bad_page_passes(self):
+        self.page("wiki/bad.md", "---\ntype: idea\n---\n\nnow fine\n")
+        self.assertEqual(okf_check.check(self.root, only=["wiki/bad.md"])[0], {})
 
 if __name__ == "__main__":
     unittest.main()

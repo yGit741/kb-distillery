@@ -27,7 +27,8 @@ SAFE_SLUG = re.compile(r"^[A-Za-z0-9._-]+$")
 
 
 def _body_of(text):
-    return fmlib.split_block(text)[1] if text.startswith("---") else text
+    body = fmlib.split_block(text)[1] if text.startswith("---") else text
+    return body.replace("\r\n", "\n")            # read as LF; a CRLF body is converted as LF and written back as CRLF
 
 
 def _assets(root):
@@ -88,10 +89,13 @@ def apply(root, dry_run=False):
     rs = links.Resolver(slugs, {s: links.title_of(t, s) for s, (_p, t) in flat.items()}, links.alias_map(fms),
                         links.mention_map(os.path.join(root, "meta", "aliases.tsv")),
                         _assets(root) if needs_assets else {}, headings)
-    todo = {}
+    todo, mixed = {}, []
     for slug, (path, text) in flat.items():
-        body = _body_of(text)
-        head = text[:len(text) - len(body)]
+        raw_body = fmlib.split_block(text)[1] if text.startswith("---") else text
+        head = text[:len(text) - len(raw_body)]
+        eol = "\r\n" if raw_body.startswith("\r\n") else "\n" if text.startswith("---") and raw_body.startswith("\n") else ""
+        head, raw_body = head + eol, raw_body[len(eol):]       # the closing fence's own line end belongs to the head
+        body = raw_body.replace("\r\n", "\n")
         before_notes = [body[a:b] for a, b in links.notes_spans(body)]
         report["notes_wikilinks"] += sum(len(links.WIKILINK_ANY.findall(n)) for n in before_notes)
         report["before_unresolved"] += sum(1 for m in links.WIKILINK_ANY.finditer(links.prose(body)) if not m.group(1)
@@ -101,7 +105,13 @@ def apply(root, dry_run=False):
             report["notes_changed"].append(slug)
             raise RuntimeError(f"wiki/{slug}.md: a `## My notes` section would change; nothing was written")
         if new_body != body:
-            todo[slug] = head + new_body
+            try:
+                todo[slug] = head + fmlib.restore_eols(raw_body, new_body)
+            except ValueError:
+                mixed.append(os.path.relpath(path, root))
+    if mixed:
+        raise RuntimeError("these CRLF pages would change their line count, so their line ends cannot be kept; convert them to LF first, "
+                           "nothing was written: " + ", ".join(mixed[:10]) + (" …" if len(mixed) > 10 else ""))
     for _path, text in below:
         report["below_wiki_wikilinks"] += len(links.WIKILINK_ANY.findall(text))
     report["after_broken"], report["after_wikilinks"] = _checks(flat, todo, slugs)

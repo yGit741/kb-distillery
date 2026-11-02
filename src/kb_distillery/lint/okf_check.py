@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 """okf-check: the blocking Open Knowledge Format v0.2 gate. Exits 1 on any finding, 0 on none (--json always exits 0).
 
-    python -m kb_distillery.lint.okf_check [--kb ID] [--json]
+    python -m kb_distillery.lint.okf_check [--kb ID] [--json] [--only=wiki/a.md ...]
 
 `wiki/` is the bundle root. `index.md` and `log.md` are OKF reserved files, not pages: they are not counted, need no
 `type` and the other frontmatter rules skip them; their links are still checked, and `log.md` (a historical record
 whose old entries quote `[[...]]` text) is exempt from the wikilink rule only. A kb commit (`ops`) and the engine
-`ship` gates (on examples/demo) run it; there is no bypass.
+`ship` gates (on examples/demo) run it on the whole bundle; there is no bypass. A kb commit checks only the pages it
+changes (`--only`), so one bad page never blocks an unrelated step, and undo/restore (the way out) are exempt.
 
 Rules:
   type        every non-reserved page has a non-empty `type`
@@ -135,10 +136,14 @@ def check_page(rel, text, root):
     return out
 
 
-def check(root):
-    """{relative path: [(rule, message)]} for pages with findings, and the page count."""
+def check(root, only=None):
+    """{relative path: [(rule, message)]} for pages with findings, and the page count. `only` (relative paths) limits
+    the pages checked to those; links still resolve against the whole bundle."""
     findings, count = {}, 0
+    only = None if only is None else {os.path.normpath(p) for p in only}
     for rel, path in pages(root):
+        if only is not None and os.path.normpath(rel) not in only:
+            continue
         count += not is_reserved(rel)
         try:
             with open(path, encoding="utf-8") as f:
@@ -155,8 +160,9 @@ def main(argv=None):
     as_json = "--json" in argv
     from kb_distillery.paths import vault_root
     root = vault_root()
+    only = [a[len("--only="):] for a in argv if a.startswith("--only=")] or None   # a commit checks the pages it changes
     try:
-        findings, count = check(root)
+        findings, count = check(root, only)
     except Exception as e:                                  # a gate that cannot run must block, not pass
         print(f"okf-check: could not run: {type(e).__name__}: {e}")
         return 1

@@ -10,7 +10,10 @@ if [ -n "$KB_LINTED" ] && [ -f "$token_file" ] && [ "$(cat "$token_file")" = "$K
 fi
 if [ -d "$root/wiki" ]; then   # the engine checkout holds no vault (kbs/<id> are linted by the ship gate): lint would only write into it
   bash "$root/scripts/hooks-python.sh" kb_distillery.lint.lint || { echo "pre-commit: lint failed — nothing committed" >&2; exit 1; }
-  bash "$root/scripts/hooks-python.sh" kb_distillery.lint.okf_check || { echo "pre-commit: okf-check failed — nothing committed" >&2; exit 1; }
+  # only the pages this commit changes: one bad page must not block an unrelated commit (undo/restore go through ops)
+  only=()
+  while IFS= read -r f; do only+=("--only=$f"); done < <(git diff --cached --name-only --diff-filter=ACMR | grep -E '^wiki/.*\.md$' | grep -vE '^wiki/(index|log)\.md$')
+  [ ${#only[@]} -eq 0 ] || bash "$root/scripts/hooks-python.sh" kb_distillery.lint.okf_check "${only[@]}" || { echo "pre-commit: okf-check failed — nothing committed" >&2; exit 1; }
 fi
 # wiki/index.md and wiki/log.md ride on wiki/; the root index.md and meta/log.md are the pre-1.7 places (migration 0015 deletes them)
 if git diff --cached --name-only | grep -qvE '^(wiki|think|raw)/|^index\.md$|^meta/(corpus|coherence-warnings|aliases)\.tsv$|^meta/log\.md$|^meta/chats/'; then

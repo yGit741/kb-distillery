@@ -9,7 +9,7 @@ from kb_distillery.ops import migrate
 
 ENV = {"GIT_CONFIG_GLOBAL": os.devnull, "GIT_CONFIG_NOSYSTEM": "1", "KB": "", "KB_ROOT": ""}
 WANT = "%d.%d" % migrate.SCHEMA_VERSION
-KB_TOML = '[kb]\nid = "x"\nschema_version = "0.1"   # keep this comment\n\n[git]\ntag_prefix = "kb-"\n'
+KB_TOML = '[kb]\nid = "x"\nname = "X"\nschema_version = "0.1"   # keep this comment\n\n[git]\ntag_prefix = "kb-"\n'
 
 
 def g(cwd, *args):
@@ -28,7 +28,7 @@ def _kb_files(path, toml=KB_TOML):
     write(path, "meta/migrations/0001_bump.py", "PRODUCES = (%d, %d)\ndef apply(root):\n    pass\n" % migrate.SCHEMA_VERSION)
     write(path, "kb.toml", toml)
     write(path, ".gitignore", "meta/.ops/\n__pycache__/\n")
-    write(path, "wiki/a.md", "---\ntype: idea\n---\n\n# A\n")
+    write(path, "wiki/a.md", "---\ntype: idea\nlayer: concept\nmaturity: seed\n---\n\n# A\n")
 
 
 def make_repo(root, toml=KB_TOML):
@@ -93,14 +93,14 @@ class MigrateOnKbMainTests(unittest.TestCase):
         self.assertEqual(g(self.root, "log", "--format=%s", "-1").stdout.strip(), f"chore(schema): schema {WANT}")
 
     def test_single_quoted_version_and_another_table_first(self):
-        make_repo(self.root, toml='[other]\nschema_version = "9.9"\n\n[kb]\nid = "x"\nschema_version = \'0.1\'\n')
+        make_repo(self.root, toml='[other]\nschema_version = "9.9"\n\n[kb]\nid = "x"\nname = "X"\nschema_version = \'0.1\'\n')
         run(self.root)
         text = g(self.root, "show", "HEAD:kb.toml").stdout
         self.assertIn('[other]\nschema_version = "9.9"', text)                    # not the [kb] table: left alone
         self.assertEqual(migrate._kb_toml_version(self.root), WANT)
 
     def test_an_unreadable_version_raises_instead_of_committing(self):
-        make_repo(self.root, toml="[kb]\nid = \"x\"\nschema_version = 0.1\n")
+        make_repo(self.root, toml="[kb]\nid = \"x\"\nname = \"X\"\nschema_version = 0.1\n")
         with self.assertRaises(RuntimeError):
             run(self.root)
         self.assertEqual(g(self.root, "log", "--format=%s", "-1").stdout.strip(), "init")
@@ -144,6 +144,73 @@ class MigrateOnKbMainTests(unittest.TestCase):
         with self.assertRaises(RuntimeError) as cm:
             migrate.run(self.root, "topic")
         self.assertIn("on its main", str(cm.exception))
+
+
+class MigrateIsAllOrNothing(unittest.TestCase):
+    """A failed batch leaves the kb as it was; unresolved links are refused before any write (dry run lists them)."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.root = os.path.realpath(self.tmp.name)
+        self.addCleanup(self.tmp.cleanup)
+
+    def two_migrations(self):
+        write(self.root, "meta/migrations/0001_bump.py",
+              "PRODUCES = (1, 6)\ndef apply(root):\n    open(root + '/wiki/a.md', 'a').write('\\nchanged by 0001\\n')\n")
+        write(self.root, "meta/migrations/0002_boom.py",
+              "PRODUCES = (%d, %d)\ndef apply(root):\n    open(root + '/wiki/new.md', 'w').write('x')\n    raise RuntimeError('boom')\n"
+              % migrate.SCHEMA_VERSION)
+
+    def test_a_failed_batch_puts_the_kb_back_and_records_nothing(self):
+        make_repo(self.root)
+        self.two_migrations()
+        g(self.root, "add", "-A")
+        g(self.root, "commit", "-q", "-m", "two migrations")
+        before = open(os.path.join(self.root, "wiki", "a.md")).read()
+        with self.assertRaises(RuntimeError):
+            migrate._apply(self.root, ["0001_bump", "0002_boom"])
+        self.assertEqual(open(os.path.join(self.root, "wiki", "a.md")).read(), before)
+        self.assertFalse(os.path.exists(os.path.join(self.root, "wiki", "new.md")))
+        self.assertFalse(os.path.exists(os.path.join(self.root, "meta", "migrations", "applied.tsv")))
+        self.assertEqual(g(self.root, "status", "--porcelain").stdout, "")
+        self.assertEqual(migrate.pending_migrations(self.root), ["0001_bump", "0002_boom"])
+
+    def test_run_refuses_a_failing_batch_and_a_rerun_is_not_stray(self):
+        make_repo(self.root)
+        self.two_migrations()
+        g(self.root, "add", "-A")
+        g(self.root, "commit", "-q", "-m", "two migrations")
+        for _ in range(2):                                    # the second run must fail the same way, not as `stray`
+            with self.assertRaises(RuntimeError) as cm:
+                run(self.root)
+            self.assertNotIn("commit or discard", str(cm.exception))
+            self.assertEqual(g(self.root, "status", "--porcelain").stdout, "")
+
+    def test_unresolved_wikilinks_refuse_the_migration_and_the_dry_run_lists_every_one(self):
+        make_repo(self.root)
+        write(self.root, "wiki/b.md", "---\ntype: idea\nlayer: concept\nmaturity: seed\n---\n\n# B\n\nsee [[gone-one]] and [[gone-two]]\n")
+        g(self.root, "add", "-A")
+        g(self.root, "commit", "-q", "-m", "kb(import): b (kb-0.1.1)")
+        head = g(self.root, "rev-parse", "HEAD").stdout
+        for kw in ({"dry_run": True}, {}):
+            with patch.dict(os.environ, ENV), patch("sys.dont_write_bytecode", True):
+                with self.assertRaises(RuntimeError) as cm:
+                    migrate.run(self.root, "main", **kw)
+            msg = str(cm.exception)
+            self.assertIn("[[gone-one]]", msg)
+            self.assertIn("[[gone-two]]", msg)
+            self.assertIn("wiki/b.md", msg)
+            self.assertIn("nothing was written", msg)
+            self.assertEqual(g(self.root, "rev-parse", "HEAD").stdout, head)       # nothing committed
+            self.assertEqual(g(self.root, "status", "--porcelain").stdout, "")     # nothing half-applied
+            self.assertEqual(migrate._kb_toml_version(self.root), "0.1")
+
+    def test_dry_run_on_a_clean_kb_writes_nothing(self):
+        make_repo(self.root)
+        with patch.dict(os.environ, ENV), patch("sys.dont_write_bytecode", True):
+            self.assertEqual(migrate.run(self.root, "main", dry_run=True), ["0001_bump"])
+        self.assertEqual(g(self.root, "status", "--porcelain").stdout, "")
+        self.assertEqual(migrate.pending_migrations(self.root), ["0001_bump"])
 
 
 if __name__ == "__main__":

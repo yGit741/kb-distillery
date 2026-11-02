@@ -145,6 +145,13 @@ class OkfLinks(unittest.TestCase):
         mig.apply(self.root)
         self.assertEqual(read(self.root, "wiki/crlf.md"), FM + "# C\r\n\r\nsee [Alpha one two](alpha.md)\r\n")
 
+    def test_a_fully_crlf_page_with_a_crlf_frontmatter_is_converted(self):
+        with open(os.path.join(self.root, "wiki/crlf2.md"), "wb") as f:
+            f.write(b"---\r\ntype: idea\r\nlayer: concept\r\n---\r\n\r\n# C\r\n\r\nsee [[alpha]]\r\n")
+        mig.apply(self.root)
+        with open(os.path.join(self.root, "wiki/crlf2.md"), "rb") as f:
+            self.assertEqual(f.read(), b"---\r\ntype: idea\r\nlayer: concept\r\n---\r\n\r\n# C\r\n\r\nsee [Alpha one two](alpha.md)\r\n")
+
 
 if __name__ == "__main__":
     unittest.main()

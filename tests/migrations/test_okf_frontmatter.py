@@ -106,3 +106,34 @@ class OkfFrontmatter(unittest.TestCase):
         self.assertEqual(links.page_slug("a-b.md"), "a-b")
         self.assertIsNone(links.page_slug("think:x.md"))
         self.assertIsNone(links.page_slug("https://x.org/a.md"))
+
+    def _bytes(self, rel):
+        with open(os.path.join(self.root, rel), "rb") as f:
+            return f.read().decode()
+
+    def test_crlf_pages_are_migrated_and_stay_crlf(self):
+        with open(os.path.join(self.root, "wiki/crlf.md"), "wb") as f:
+            f.write(b"---\r\ntype: idea\r\nlayer: concept\r\nstatus: seed\r\n---\r\n\r\n# Crlf\r\n\r\nBody.\r\n")
+        with open(os.path.join(self.root, "wiki/excalidraw/e.excalidraw.md"), "wb") as f:
+            f.write(b"---\r\nexcalidraw-plugin: parsed\r\n---\r\n\r\nbody\r\n")
+        rep = mig.apply(self.root)
+        text = self._bytes("wiki/crlf.md")
+        self.assertIn("maturity: seed\r\n", text)
+        self.assertIn("title: \"Crlf\"\r\n", text)
+        self.assertTrue(text.endswith("---\r\n\r\n# Crlf\r\n\r\nBody.\r\n"))
+        self.assertNotIn("\n", text.replace("\r\n", ""))                    # no bare LF anywhere
+        self.assertIn("type: excalidraw\r\n", self._bytes("wiki/excalidraw/e.excalidraw.md"))
+        self.assertIn("wiki/crlf.md", rep["changed"])
+
+    def test_a_frontmatter_mixing_line_ends_stops_loudly_before_any_write(self):
+        with open(os.path.join(self.root, "wiki/mixed.md"), "wb") as f:
+            f.write(b"---\r\ntype: idea\nlayer: concept\r\nstatus: seed\r\n---\r\n\r\n# M\r\n")
+        before = self._bytes("wiki/paper-a.md")
+        with self.assertRaises(RuntimeError) as cm:
+            mig.apply(self.root)
+        self.assertIn("wiki/mixed.md", str(cm.exception))
+        self.assertEqual(self._bytes("wiki/paper-a.md"), before)
+
+
+if __name__ == "__main__":
+    unittest.main()

@@ -11,6 +11,42 @@ _COMMENT = re.compile(r"\s#.*$")
 _QUOTED = re.compile(r'^("(?:[^"\\]|\\.)*"|\'(?:[^\']|\'\')*\')')
 
 
+def to_lf(text):
+    """(text with LF line ends, whether it was CRLF). A page with both CRLF and bare LF ends is ambiguous: ValueError."""
+    if "\r\n" not in text:
+        return text, False
+    if "\n" in text.replace("\r\n", ""):
+        raise ValueError("mixed CRLF and LF line ends")
+    return text.replace("\r\n", "\n"), True
+
+
+def from_lf(text, crlf):
+    return text.replace("\n", "\r\n") if crlf else text
+
+
+def restore_eols(orig, new_lf):
+    """`new_lf` (LF text derived from `orig`) with every line end taken from the same line of `orig`, so CRLF, LF and
+    mixed pages all come back as they were. ValueError when the line count changed (the ends could not be kept)."""
+    ends = re.findall(r"\r?\n", orig)
+    if "\r\n" not in orig:
+        return new_lf
+    parts = new_lf.split("\n")
+    if len(parts) - 1 != len(ends):
+        raise ValueError("line count changed")
+    return "".join(p + (ends[i] if i < len(ends) else "") for i, p in enumerate(parts))
+
+
+def mixed_line_ends(paths_texts):
+    """The paths among (path, text) pairs whose text mixes CRLF and bare LF line ends."""
+    out = []
+    for path, text in paths_texts:
+        try:
+            to_lf(text)
+        except ValueError:
+            out.append(path)
+    return out
+
+
 def split_block(text):
     """(inner frontmatter text, body) or (None, text) when `text` has no fenced block."""
     if not text.startswith("---"):

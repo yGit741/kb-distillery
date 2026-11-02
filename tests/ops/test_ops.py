@@ -443,7 +443,10 @@ class WrapTests(OpsRepo):
     def _cli(self, writes):
         def cli_main(argv):
             for rel in writes:
-                self.write(rel, "written by cli")
+                if rel.startswith("wiki/") and rel.endswith(".md"):       # a page the OKF gate accepts
+                    self.write(rel, "---\ntype: paper\n---\n\n# Written by cli\n", mode="w")
+                else:
+                    self.write(rel, "written by cli")
             return 0
         return cli_main
 
