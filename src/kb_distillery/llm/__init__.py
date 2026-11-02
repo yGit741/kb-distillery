@@ -273,7 +273,7 @@ def api_key():
 
 
 def _ssl():
-    from kb_distillery.ingest.net import ssl_context   # OS trust store / keychain roots (TLS-inspecting proxies); no vault needed
+    from kb_distillery.config.net import ssl_context   # OS trust store / keychain roots (TLS-inspecting proxies); no vault needed
     return ssl_context()
 
 
