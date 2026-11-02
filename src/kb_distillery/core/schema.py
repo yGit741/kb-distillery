@@ -317,7 +317,6 @@ GATE_PREFIXES = {
     "flags_registry": ("meta/flags.toml", "src/kb_distillery/kits/base/defaults/flags.toml"),
     "flags_code": ("src/kb_distillery/flags/",),
     "api": ("src/kb_distillery/api/",),
-    "dashboard": ("src/kb_distillery/dashboard/",),
 }
 
 

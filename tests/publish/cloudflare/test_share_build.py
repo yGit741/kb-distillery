@@ -26,8 +26,6 @@ ROOT = vault_root()
 from kb_distillery.publish.site import build as sb
 
 REAL_TAGS = ("kb-0.8.0", "kb-0.8.6", "kb-0.9.6")
-# the legacy static shim is no longer part of any build; it stays as the reference web/src/share/search.ts is ported from
-SHIM_PATH = os.path.join(os.path.dirname(sb.__file__), os.pardir, "cloudflare", "static", "kb-static.js")
 THINK_SECRET = "THINK-SECRET-TOKEN-7f3a9c"
 SECRET_RAW = "raw/papers/secret-paper.pdf"
 SECRET_EMAIL = "someone@example.com"
@@ -103,10 +101,6 @@ def _have_tags():
     return _have_git() and all(
         subprocess.run(["git", "rev-parse", "--verify", "--quiet", f"refs/tags/{t}"], cwd=ROOT,
                        capture_output=True).returncode == 0 for t in REAL_TAGS)
-
-
-def _node():
-    return shutil.which("node")
 
 
 def make_repo(base, pages=PAGES, with_think=True, with_raw=True):
@@ -393,85 +387,6 @@ class EmbedJsonTests(unittest.TestCase):
         self.assertNotIn("</", s)
         self.assertNotIn("<!--", s)
         self.assertEqual(json.loads(s), {"x": "</script><!--"})
-
-
-NODE_HARNESS = r"""
-const fs = require("fs"), vm = require("vm");
-const [,, shimPath, dataPath, query, a, b] = process.argv;
-const data = JSON.parse(fs.readFileSync(dataPath, "utf8"));
-const noop = () => {};
-const el = () => ({ style: {}, classList: { add: noop }, setAttribute: noop, replaceWith: noop });
-const ctx = {
-  KB_DATA: data, console, URL, Response: class { constructor(b, i) { this.body = b; this.init = i; } },
-  MutationObserver: class { observe() {} }, setTimeout, clearTimeout,
-  document: { addEventListener: noop, readyState: "complete", getElementById: () => null, body: null,
-              head: { appendChild: noop }, createElement: el, querySelectorAll: () => [],
-              documentElement: { getAttribute: () => null } },
-  matchMedia: () => ({ matches: false }), parent: null,
-};
-ctx.window = ctx; ctx.addEventListener = noop;
-vm.createContext(ctx);
-vm.runInContext(fs.readFileSync(shimPath, "utf8"), ctx);
-process.stdout.write(JSON.stringify({ search: ctx.KB_STATIC.search(query), paths: ctx.KB_STATIC.findPaths(a, b) }));
-"""
-
-PY_REFERENCE = r"""
-import json, sys
-from kb_distillery.services import pages as explore_data
-q, a, b = sys.argv[2:5]
-print(json.dumps({"search": explore_data.search(q), "paths": explore_data.find_paths(a, b)}))
-"""
-
-
-class JsPortParityTests(unittest.TestCase):
-    """The shim's search and BFS must agree with explore_data.search / find_paths."""
-
-    def _compare(self, content_root, query, a, b):
-        with tempfile.TemporaryDirectory() as d:
-            res = sb.build("HEAD", root=content_root, viewer_root=ROOT, viewer_worktree=True,
-                           out_root=d, label="parity", frontend_dist=default_dist())
-            data = kb_data(read_html(res))
-            data_path = os.path.join(d, "data.json")
-            with open(data_path, "w", encoding="utf-8") as f:
-                json.dump(data, f)
-            harness = os.path.join(d, "h.js")
-            with open(harness, "w") as f:
-                f.write(NODE_HARNESS)
-            js = subprocess.run([_node(), harness, str(SHIM_PATH), data_path, query, a, b],
-                                capture_output=True, text=True)
-            self.assertEqual(js.returncode, 0, js.stderr)
-            got = json.loads(js.stdout)
-            committed = os.path.join(d, "committed")          # the reference reads what was built: HEAD,
-            sb.archive(content_root, sb.resolve_ref(content_root, "HEAD"), committed)   # not a dirty tree
-            env = dict(os.environ, KB_ROOT=committed, PYTHONHASHSEED="0")
-            py = subprocess.run([sys.executable, "-c", PY_REFERENCE, os.path.join(ROOT, "meta"), query, a, b],
-                                capture_output=True, text=True, env=env)
-            self.assertEqual(py.returncode, 0, py.stderr)
-            want = json.loads(py.stdout)
-        self.assertEqual(got["search"], want["search"])
-        self.assertEqual(got["paths"], want["paths"])
-        return got
-
-    def setUp(self):
-        if not _have_git():
-            self.skipTest("git not available")
-        if not _node():
-            self.skipTest("node not available")
-
-    def test_fixture(self):
-        with tempfile.TemporaryDirectory() as t:
-            repo = make_repo(t)
-            got = self._compare(repo, "alpha links", "delta", "gamma")
-            self.assertEqual(got["paths"]["distance"], 2)
-            self.assertTrue(got["search"]["hits"])
-
-    def test_real_repo(self):
-        if _git(ROOT, "rev-parse", "--verify", "--quiet", "HEAD", check=False).returncode != 0:
-            self.skipTest("no HEAD")
-        if not os.path.isfile(os.path.join(ROOT, "wiki", "theme-learning-theory.md")):
-            self.skipTest("needs a real kb (the queried pages theme-learning-theory and adamw), not the engine checkout")
-        got = self._compare(ROOT, "tensor rank", "adamw", "theme-learning-theory")
-        self.assertTrue(got["search"]["hits"])
 
 
 class SizeVerdictTests(unittest.TestCase):

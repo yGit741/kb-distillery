@@ -28,9 +28,6 @@ class ChecksForTests(unittest.TestCase):
     def test_api_router(self):
         self.assertEqual(names(["src/kb_distillery/api/routers/x.py"]), ["api-schema-check"])
 
-    def test_dashboard(self):
-        self.assertEqual(names(["src/kb_distillery/dashboard/graph.html"]), ["test-e2e"])
-
     def test_graph_runs_the_still_canvas_e2e(self):
         self.assertEqual(names(["web/src/features/graph/ForceGraph.tsx"]), ["web-check", "test-ui-principles", "test-e2e"])
 
@@ -60,9 +57,10 @@ class RunChecksTests(unittest.TestCase):
 
     def test_e2e_skipped_without_playwright(self):
         with patch.object(ship, "e2e_available", return_value=False), \
-                patch.object(ship.subprocess, "run") as run:
-            self.assertTrue(ship.run_checks(paths=["src/kb_distillery/dashboard/x.html"]))
-            run.assert_not_called()
+                patch.object(ship.subprocess, "run", return_value=_cp(0)) as run:
+            self.assertTrue(ship.run_checks(paths=["web/e2e/x.test.mjs"]))
+        ran = [c.args[0][-1] for c in run.call_args_list if c.args and c.args[0][:2] == ["pixi", "run"]]
+        self.assertEqual(ran, ["web-check"])
 
     def test_pr_body_records_skip(self):
         self.assertIn("flaky", ship.pr_body(["chore(x): y"], skipped_checks="flaky"))

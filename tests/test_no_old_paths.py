@@ -60,8 +60,7 @@ ALLOWED = {
     # the old patterns so the deny never weakens
     "kb_distillery.share package (now publish/site and publish/cloudflare)": {
         "src/kb_distillery/publish/site/build.py", ".claude/settings.json", "tests/publish/cloudflare/test_share_versions.py",
-        "tests/publish/cloudflare/test_share_build.py", "docs/ROADMAP.md", "docs/phase-7-audit.md",
-        "src/kb_distillery/kits/base/defaults/docs/lifecycle.md"},   # TEMPORARY: another PR owns that doc; it renames the module there and deletes this entry
+        "tests/publish/cloudflare/test_share_build.py", "docs/ROADMAP.md", "docs/phase-7-audit.md"},
 }
 # The roadmap is the record of what was planned and done under the old names; it is not rewritten.
 ALLOWED["meta-defaults/"] = {"docs/ROADMAP.md"}
