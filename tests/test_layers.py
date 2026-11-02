@@ -9,7 +9,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def test_layer_contract_kept():
-    r = subprocess.run([sys.executable, "-c", "from importlinter.cli import lint_imports_command as m; m()", "--no-cache"],
+    r = subprocess.run(dict(ship.GATES)["lint-imports"],
                        cwd=ROOT, capture_output=True, text=True, timeout=300)
     assert r.returncode == 0, r.stdout[-3000:] + r.stderr[-1000:]
 

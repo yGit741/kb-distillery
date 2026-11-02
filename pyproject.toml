@@ -38,7 +38,7 @@ ingest-heavy = [
     "yt-dlp[default,curl-cffi]>=2025.1",
     "ocrmac>=1.0; sys_platform == 'darwin'",
 ]
-dev = ["pytest>=8", "pytest-xdist>=3", "ruff", "build", "import-linter"]
+dev = ["pytest>=8", "pytest-xdist>=3", "ruff", "build", "import-linter>=2"]
 
 [project.scripts]
 distill = "kb_distillery.cli:main"
