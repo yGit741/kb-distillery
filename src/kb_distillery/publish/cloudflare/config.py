@@ -84,6 +84,14 @@ def load(path: Optional[Path] = None, root: Optional[str] = None) -> dict:
     return data
 
 
+def write_path(root: Optional[str] = None) -> Path:
+    """Where `share config` stores values: the file in use, `$KB_SHARE_CONFIG` when it is set (even if not there yet),
+    else the user file."""
+    if os.environ.get(ENV_FILE):
+        return Path(os.environ[ENV_FILE]).expanduser()
+    return find(root) or user_path()
+
+
 def require(root: Optional[str] = None) -> Path:
     """The config file in use; ShareConfigError, naming where to put one, when there is none."""
     found = find(root)
@@ -111,7 +119,7 @@ def settings(path: Optional[Path] = None, root: Optional[str] = None) -> dict:
 def _lenient(root: Optional[str] = None) -> dict:
     try:
         return load(root=root)
-    except ShareConfigError:
+    except Exception:  # noqa: BLE001  (read at import by contracts: a broken file or kb must not break importing the publisher)
         return {}
 
 

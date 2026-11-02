@@ -106,7 +106,7 @@ def load_config(path: Path = None) -> dict:
 def save_config(cfg: dict, path: Path = None) -> Path:
     """Store the client id and allowlist in `path`, else in the config file in use, else in the user file.
     Every other line of the file stays as it is."""
-    p = Path(path or share_config.find() or share_config.user_path())
+    p = Path(path or share_config.write_path())
     text = p.read_text(encoding="utf-8") if p.is_file() else ""
     emails = ", ".join(json.dumps(e) for e in cfg["allowed_emails"])
     text = share_config.set_values(text, "auth", {"google_client_id": json.dumps(cfg["google_client_id"]),
@@ -591,12 +591,15 @@ def cmd_rollback(args) -> int:
 
 def cmd_config(args) -> int:
     cfg = load_config()
-    if args.google_client_id is not None:
-        cfg["google_client_id"] = args.google_client_id.strip()
-    if args.allowed_emails:
-        cfg["allowed_emails"] = [e.strip() for e in args.allowed_emails.split(",") if e.strip()]
     if args.google_client_id is not None or args.allowed_emails:
-        print(f"wrote {save_config(cfg)}")
+        # store only what the file holds plus what was passed: env overrides in `cfg` never reach the file
+        auth = share_config.load().get("auth") or {}
+        stored = {"google_client_id": auth.get("google_client_id") or "", "allowed_emails": list(auth.get("allowed_emails") or [])}
+        if args.google_client_id is not None:
+            stored["google_client_id"] = cfg["google_client_id"] = args.google_client_id.strip()
+        if args.allowed_emails:
+            stored["allowed_emails"] = cfg["allowed_emails"] = [e.strip() for e in args.allowed_emails.split(",") if e.strip()]
+        print(f"wrote {save_config(stored)}")
     print(json.dumps(cfg, indent=2))
     return 0
 

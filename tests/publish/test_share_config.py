@@ -92,6 +92,25 @@ class ReadOrder(Tree):
         self.assertEqual(config.home(root=str(self.kb)), {"cards": [{"title": "T", "pages": ["a"]}], "tour": "first-visit"})
 
 
+class Saving(Tree):
+    def test_config_stores_only_what_was_passed_not_env_overrides(self):
+        import argparse
+        user = self.user_file('[auth]\ngoogle_client_id = "file-id"\nallowed_emails = ["a@b.c"]\n[home]\ntour = "t"\n')
+        with mock.patch.dict(os.environ, {"KB_SHARE_GOOGLE_CLIENT_ID": "env-id"}):
+            deploy.cmd_config(argparse.Namespace(google_client_id=None, allowed_emails="x@y.z,q@w.e"))
+        text = user.read_text()
+        self.assertIn('google_client_id = "file-id"', text)
+        self.assertIn('allowed_emails = ["x@y.z", "q@w.e"]', text)
+        self.assertIn('tour = "t"', text)
+
+    def test_a_set_but_missing_env_file_is_where_values_are_written(self):
+        target = self.tmp / "new.toml"
+        with mock.patch.dict(os.environ, {config.ENV_FILE: str(target)}):
+            deploy.save_config({"google_client_id": "id", "allowed_emails": []})
+        self.assertIn('google_client_id = "id"', target.read_text())
+        self.assertFalse(config.user_path().exists())
+
+
 class CleanRunner(Tree):
     def test_require_lists_where_a_config_can_go(self):
         with self.assertRaises(config.ShareConfigError) as cm:
