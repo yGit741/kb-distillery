@@ -1,4 +1,6 @@
 import { listTours, stepsOf } from "@/features/tour/tours";
+import { act } from "@testing-library/react";
+import { setFlagOverrides } from "@/flags";
 import { withFlag } from "@/flags/testing";
 import "./tours";
 
@@ -26,8 +28,17 @@ describe("Home → Graph tours", () => {
     });
   });
 
-  it("the Tours menu lists only the first-visit tour", () => {
+  it("the Tours menu lists only the first-visit tour", withResearch(() => {
     expect(listTours().filter((t) => NAMES.includes(t.name)).map((t) => t.name)).toEqual(["first-visit"]);
+  }));
+
+  it("registers the thesis journeys when the flag arrives after boot", () => {
+    setFlagOverrides({});
+    expect(listTours({ all: true }).map((t) => t.name)).not.toContain("thesis-story");
+    act(() => setFlagOverrides({ "research-tools": true }));
+    expect(listTours({ all: true }).map((t) => t.name)).toContain("thesis-story");
+    act(() => setFlagOverrides({}));
+    expect(listTours({ all: true }).map((t) => t.name)).not.toContain("thesis-story");
   });
 
   it("every step has a title, a body of at most two sentences, and a string target", withResearch(() => {

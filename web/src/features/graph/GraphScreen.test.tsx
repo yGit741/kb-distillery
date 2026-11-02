@@ -3,6 +3,7 @@ import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { DataSourceProvider, type DataSource } from "@/api";
+import { setFlagOverrides } from "@/flags";
 import { withFlag } from "@/flags/testing";
 import { useKb } from "@/lib/store";
 import { mockDataSource } from "@/test/datasource";
@@ -276,6 +277,16 @@ describe("views bar", () => {
     expect(useGraphUi.getState().story).toBe("thesis");
     expect(host.setParams).toHaveBeenCalledWith(expect.objectContaining({ view: "thesis" }));
   }));
+
+  it("shows the Thesis and Explore pills once the flag arrives after the first render", async () => {
+    render(wrap(withGraph(), <GraphScreen search={{}} host={host} />));
+    await screen.findByTestId("graph-stats");
+    expect(screen.queryByRole("button", { name: "Thesis" })).toBeNull();
+    act(() => setFlagOverrides({ "research-tools": true }));
+    expect(screen.getByRole("button", { name: "Thesis" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Explore" })).toBeInTheDocument();
+    act(() => setFlagOverrides({}));
+  });
 
   it("has no Thesis or Explore pill, and no research tool in the toolbar, while the research-tools flag is off", async () => {
     await withFlag("research-tools", false, async () => {
