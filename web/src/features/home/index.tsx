@@ -4,8 +4,6 @@ import { useMemo } from "react";
 import { withDefaultView } from "@/features/graph/defaultView";
 import { HomeScreen, type HomeHost } from "./HomeScreen";
 
-export const ported = true;
-
 const base = (import.meta.env.BASE_URL as string).replace(/\/$/, "");
 
 /** Home: the router supplies navigation to the full graph; everything else is in HomeScreen. */

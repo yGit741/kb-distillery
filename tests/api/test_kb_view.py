@@ -48,7 +48,7 @@ def two_kbs(tmp_path, monkeypatch):
         f.write("---\ntype: part\nbook: book-x\n---\n\n# Chapter 1\n")
     monkeypatch.setattr(kbconfig, "discover", lambda: {"alpha": a, "beta": b})
     kbview._views.clear()
-    with TestClient(create_app(legacy=False)) as c:
+    with TestClient(create_app()) as c:
         yield c
     kbview._views.clear()
 
@@ -121,7 +121,7 @@ def test_page_from_another_kb_is_read_only(two_kbs):
 
 
 def test_no_write_endpoint_takes_kb():
-    app = create_app(legacy=False)
+    app = create_app()
     for route in app.routes:
         methods = getattr(route, "methods", set()) or set()
         if methods & {"POST", "PUT", "PATCH", "DELETE"}:

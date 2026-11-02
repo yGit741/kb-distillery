@@ -3,8 +3,6 @@ import { useMemo } from "react";
 import type { SearchById } from "@/routes/search";
 import { GraphScreen, type GraphHost } from "./GraphScreen";
 
-export const ported = true;
-
 const base = (import.meta.env.BASE_URL as string).replace(/\/$/, "");
 
 /** The graph screen: the router supplies the typed search params and navigation; everything else is in GraphScreen. */

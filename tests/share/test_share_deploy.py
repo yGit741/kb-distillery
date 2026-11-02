@@ -470,7 +470,7 @@ class CommitOpHookTests(unittest.TestCase):
 
 class ChipTests(unittest.TestCase):
     def test_every_state_renders(self):
-        from kb_distillery.dashboard.shell import share_chip
+        from kb_distillery.publish.site_state import share_chip
         import datetime as dt
         now = dt.datetime(2026, 10, 21, 12, 0, tzinfo=dt.timezone.utc)
         base = {"sha": "abcdef1234", "kb_version": "0.10.5", "at": "2026-10-21T11:30:00+00:00", "error": None,

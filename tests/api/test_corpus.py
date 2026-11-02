@@ -73,11 +73,11 @@ def test_file_and_thumb(client, raw):
     assert client.get("/api/raw/raw/printed-docs/2000-data.bin/file").status_code == 415
     t = client.get("/api/raw/raw/printed-docs/2000-pic.png/thumb")      # images are served as they are
     assert t.status_code == 200 and t.headers["content-type"] == "image/png" and t.content.startswith(b"\x89PNG")
-    with mock.patch("kb_distillery.dashboard.serve.thumbnail_png", return_value=b"PNGDATA") as thumb:
+    with mock.patch("kb_distillery.api.assets.thumbnail_png", return_value=b"PNGDATA") as thumb:
         t = client.get("/api/raw/raw/printed-docs/2000-x.pdf/thumb?w=500")
     assert t.status_code == 200 and t.content == b"PNGDATA"
     assert thumb.call_args.args[1] == 500
-    with mock.patch("kb_distillery.dashboard.serve.thumbnail_png", return_value=None):
+    with mock.patch("kb_distillery.api.assets.thumbnail_png", return_value=None):
         assert client.get("/api/raw/raw/printed-docs/2000-x.pdf/thumb").status_code == 415
     assert client.get("/api/raw/raw/printed-docs/2000-note.md/thumb").status_code == 415
 

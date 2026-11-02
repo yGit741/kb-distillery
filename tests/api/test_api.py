@@ -107,7 +107,7 @@ def test_lifecycle_on_a_fixture_vault(client):
 
 # ── security ───────────────────────────────────────────────────────────────
 def guarded_app():
-    app = create_app(legacy=False)
+    app = create_app()
 
     @app.post("/api/_throwaway")
     def throwaway(payload: dict):
@@ -260,33 +260,42 @@ def test_a_dropped_in_module_is_picked_up(tmp_path, monkeypatch):
     monkeypatch.syspath_prepend(str(tmp_path))
     sys.modules.pop("tmp_kb_routers", None)
     assert [n for n, _ in discover_routers("tmp_kb_routers")] == ["ping"]
-    c = TestClient(create_app(routers_package="tmp_kb_routers", legacy=False))
+    c = TestClient(create_app(routers_package="tmp_kb_routers"))
     assert c.get("/api/ping").json() == {"pong": True}
     assert c.get("/api/health").status_code == 404           # only the given package is included
 
 
-# ── legacy fall-through and the React shell ──────────────────────────────────
-def test_legacy_pages_and_api_names_still_answer(client):
-    r = client.get("/explore")
-    assert r.status_code == 200 and "text/html" in r.headers["content-type"]
-    assert client.get("/legacy/explore").text == r.text                                # the shell's link form
-    assert client.get("/legacy/graph").status_code == 200                              # ported, old page kept
-    assert client.get("/api/chat/status").json()["backend"] in ("agent", "direct")
+# ── old page URLs and the React shell ────────────────────────────────────────
+OLD_PAGES = {"/": "/app/system", "/index.html": "/app/system", "/ops": "/app/system", "/start": "/app/start",
+             "/start.html": "/app/start", "/covector-visualization.html": "/app/covector", "/graph": "/app/graph",
+             "/explore": "/app/pages", "/scopes": "/app/scopes", "/pipeline": "/app/pipeline",
+             "/digestion": "/app/pipeline", "/digestion.html": "/app/pipeline", "/lifecycle": "/app/lifecycle",
+             "/chat": "/app/chat"}
+
+
+@pytest.mark.parametrize("old,new", sorted(OLD_PAGES.items()))
+def test_old_pages_redirect_to_their_react_route(client, old, new):
+    r = client.get(old, follow_redirects=False)
+    assert r.status_code == 307 and r.headers["location"] == new
+    via_prefix = client.get("/legacy" + ("" if old == "/" else old), follow_redirects=False)
+    assert via_prefix.status_code == 307 and via_prefix.headers["location"] == new
+
+
+def test_old_page_redirect_keeps_the_query(client):
+    assert client.get("/explore?q=x", follow_redirects=False).headers["location"] == "/app/pages?q=x"
+
+
+def test_unowned_paths_are_404_and_old_posts_are_gone(client):
     assert client.get("/nope-not-a-page").status_code == 404
-
-
-def test_legacy_post_keeps_its_own_rules(client):
-    legacy = {"Content-Type": "application/json"}
-    assert client.post("/api/raw-action", json={}).status_code == 400                         # reached the handler
-    foreign = client.post("/api/raw-action", json={}, headers={**legacy, "Origin": "https://evil.example"})
-    assert foreign.status_code == 403
+    assert client.get("/share-log").status_code == 200                                 # owned by the share router
+    assert client.post("/api/raw-action", json={}, headers={"Origin": "http://localhost"}).status_code in (404, 405)
 
 
 def test_spa_fallback(tmp_path):
     (tmp_path / "assets").mkdir()
     (tmp_path / "index.html").write_text("<html>shell</html>")
     (tmp_path / "assets" / "a.js").write_text("js")
-    c = TestClient(create_app(dist=str(tmp_path), legacy=False))
+    c = TestClient(create_app(dist=str(tmp_path)))
     assert c.get("/app").text == "<html>shell</html>"
     assert c.get("/app/graph/deep/link").text == "<html>shell</html>"
     assert c.get("/app/assets/a.js").text == "js"

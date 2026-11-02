@@ -15,7 +15,6 @@ from kb_distillery.services import corpus
 MAX_BODY_BYTES = 4 * 1024 * 1024
 MUTATING = frozenset({"POST", "PUT", "PATCH", "DELETE"})
 LOOPBACK_NAMES = frozenset({"localhost", "127.0.0.1", "::1", "[::1]"})
-LEGACY_ROUTE = "legacy"       # name of the catch-all that proxies the old stdlib server (see legacy.py)
 
 
 def is_loopback_host(host):
@@ -38,14 +37,10 @@ def assert_loopback_bind(host):
 
 def require_loopback_origin(request: Request):
     """App-wide dependency. A mutating request must carry a loopback Origin (browsers always send one on
-    POST); a foreign or missing Origin is refused. The legacy catch-all keeps the old, laxer rule (a
-    missing Origin passes, e.g. curl) so the old pages behave exactly as before."""
+    POST); a foreign or missing Origin is refused."""
     if request.method not in MUTATING:
         return
     origin = request.headers.get("origin")
-    legacy = getattr(request.scope.get("route"), "name", None) == LEGACY_ROUTE
-    if origin is None and legacy:
-        return
     if origin is None or not is_loopback_host(urlparse(origin).hostname):
         raise HTTPException(403, "cross-origin or origin-less mutation refused")
 

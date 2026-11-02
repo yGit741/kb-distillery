@@ -6,7 +6,6 @@ import {
   type RouterHistory,
 } from "@tanstack/react-router";
 import { IS_SHARE } from "@/share/env";
-import { LegacyCard } from "@/features/legacy/LegacyCard";
 import { ROUTES, type Route } from "@/routes/registry";
 import { SEARCH } from "@/routes/search";
 import { AppShell } from "./AppShell";
@@ -18,7 +17,7 @@ export const BASEPATH = import.meta.env.BASE_URL.replace(/\/$/, "");
 const rootRoute = createRootRoute({ component: AppShell });
 
 function screenRoutes(def: Route) {
-  const Screen = def.Screen ?? (() => <LegacyCard id={def.id} />);
+  const Screen = def.Screen;
   const validateSearch = SEARCH[def.id as keyof typeof SEARCH] as (raw: Record<string, unknown>) => Record<string, unknown>;
   const component = () => (
     <ErrorBoundary label={def.label}>

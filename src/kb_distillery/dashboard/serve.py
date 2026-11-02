@@ -16,7 +16,9 @@ from kb_distillery.dashboard.render import render_page
 from kb_distillery.services.graph import build_graph_snapshot
 from kb_distillery.services.pipeline import build_digestion_snapshot
 from kb_distillery.services.lifecycle import build_lifecycle_snapshot
-from kb_distillery.dashboard.shell import inject_nav, share_chip, share_state
+from kb_distillery.api.assets import STATIC_DIR, THUMB_WIDTH, VIZ_REPORTER, thumbnail_png
+from kb_distillery.dashboard.shell import inject_nav
+from kb_distillery.publish.site_state import share_log_tail, share_state
 from kb_distillery.services import pages as explore_data
 from kb_distillery.services import chat as chat_data
 from kb_distillery.services import corpus as corpus_data
@@ -24,7 +26,6 @@ from kb_distillery.services import scopes as scopes_data
 from kb_distillery.services import chat_agent
 from kb_distillery.dashboard import ops_routes
 
-STATIC_DIR = os.path.join(os.path.dirname(__file__), "static")
 GRAPH_HTML = os.path.join(os.path.dirname(__file__), "graph.html")
 DIGESTION_HTML = os.path.join(os.path.dirname(__file__), "digestion.html")
 EXPLORE_HTML = os.path.join(os.path.dirname(__file__), "explore.html")
@@ -32,9 +33,6 @@ LIFECYCLE_HTML = os.path.join(os.path.dirname(__file__), "lifecycle.html")
 START_HTML = os.path.join(os.path.dirname(__file__), "start.html")
 CHAT_HTML = os.path.join(os.path.dirname(__file__), "chat.html")
 MAX_POST_BYTES = 4 * 1024 * 1024
-VIZ_REPORTER = (b"<script>(function(){var p=function(){parent.postMessage({vizHeight:"
-                b"document.documentElement.scrollHeight},'*');};new ResizeObserver(p)"
-                b".observe(document.documentElement);addEventListener('load',p);p();})()</script>")
 IMAGE_TYPES = {".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
                ".gif": "image/gif", ".svg": "image/svg+xml", ".webp": "image/webp"}
 RAW_TYPES = {**IMAGE_TYPES, ".pdf": "application/pdf", ".md": "text/plain; charset=utf-8",
@@ -45,8 +43,6 @@ SCOPE_POST = {"/api/scope/resolve": lambda p: scopes_data.resolve_nodes(p.get("n
               "/api/scope/save": scopes_data.save_scope,
               "/api/scope/delete": scopes_data.delete_scope,
               "/api/scope/duplicate": scopes_data.duplicate_scope}
-THUMB_WIDTH = 360
-_thumbs = {}          # (path, mtime) → PNG bytes; a re-annotated PDF gets a new mtime
 
 
 def safe_raw_path(rel):
@@ -58,37 +54,8 @@ def safe_raw_path(rel):
     return full if os.path.isfile(full) else None
 
 
-def thumbnail_png(full, width=THUMB_WIDTH):
-    """First page of a PDF rendered `width` px wide (200–1400), or None if it can't be rendered."""
-    width = max(200, min(1400, int(width)))
-    key = (full, os.path.getmtime(full), width)
-    if key not in _thumbs:
-        try:
-            import fitz  # pymupdf
-            doc = fitz.open(full)
-            page = doc[0]
-            zoom = width / max(page.rect.width, 1)
-            _thumbs[key] = page.get_pixmap(matrix=fitz.Matrix(zoom, zoom)).tobytes("png")
-            doc.close()
-        except Exception:
-            _thumbs[key] = None
-    return _thumbs[key]
-
-
-SHARE_LOG_LINES = 200
-
-
 def share_status():
-    """{status, chip} of the configured publisher's last publish — the chip in the nav."""
     return share_state()
-
-
-def share_log_tail(n=SHARE_LOG_LINES):
-    try:
-        from kb_distillery import publish
-        return publish.current().log_tail(n)
-    except Exception:  # noqa: BLE001
-        return "no share log yet\n"
 
 
 class Handler(BaseHTTPRequestHandler):

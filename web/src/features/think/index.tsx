@@ -16,8 +16,6 @@ import { useUi } from "@/app/ui-store";
 import type { SearchById } from "@/routes/search";
 import { Editor } from "./Editor";
 
-export const ported = true;
-
 const ago = (mtime: number): string => {
   const s = Math.max(0, Date.now() / 1000 - mtime);
   if (s < 90) return "just now";

@@ -4,12 +4,9 @@ import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import { defineConfig } from "vite";
 
-// Dev server proxies the existing stdlib dashboard (pixi run dashboard, port 8765):
-//   /api    -> its JSON endpoints
-//   /legacy -> its HTML pages, with the prefix stripped (/legacy/graph -> /graph)
-// `python -m kb_distillery.api` also serves /api and /legacy on 8765, so the same proxy works against either server.
+// Dev server proxies the API server (pixi run app, port 8765): /api -> its JSON endpoints.
 // KB_API points a worktree's dev server at its own backend (e.g. KB_API=http://127.0.0.1:8790).
-const LEGACY = process.env.KB_API || "http://127.0.0.1:8765";
+const API_TARGET = process.env.KB_API || "http://127.0.0.1:8765";
 
 // The app is served under /app (python -m kb_distillery.api, FastAPI spa router) and in dev at http://localhost:5173/app/.
 //
@@ -34,9 +31,7 @@ export default defineConfig(({ mode }) => {
     define: share ? { "import.meta.env.VITE_SHARE_PROFILE": JSON.stringify(profile) } : {},
     server: {
       proxy: {
-        "/api": LEGACY,
-        "/static": LEGACY,
-        "/legacy": { target: LEGACY, rewrite: (p: string) => p.replace(/^\/legacy/, "") || "/" },
+        "/api": API_TARGET,
       },
     },
     build: { outDir: share ? path.resolve(__dirname, "dist-share", profile) : path.resolve(__dirname, "../src/kb_distillery/_webapp"), emptyOutDir: true, sourcemap: false },
