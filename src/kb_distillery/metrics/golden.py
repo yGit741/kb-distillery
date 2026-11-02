@@ -173,7 +173,7 @@ def run_checks(task, repo, env):
 
 def diff_of(repo, ref):
     """Everything the agent changed: commits since `ref` plus the working tree, raw/ binaries excluded."""
-    skip = [":!raw", ":!index.md", ":!meta/corpus.tsv", *(f":!{p}" for p in LINKED)]
+    skip = [":!raw", ":!index.md", ":(exclude,glob)wiki/**/index.md", ":!meta/corpus.tsv", *(f":!{p}" for p in LINKED)]
     _git(["add", "-A", "-N", "--", ".", *skip], cwd=repo, check=False)
     return _git(["diff", ref, "--", ".", *skip], cwd=repo, check=False).stdout
 

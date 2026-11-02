@@ -5,7 +5,7 @@ description: Answer questions from the wiki — index-first navigation, citation
 
 # query-knowledge
 
-**LLM tier:** light–medium · **Budget:** ~3–15k tokens (index + 3–8 pages)
+**LLM tier:** light–medium · **Budget:** ~3–15k tokens (root + one section index + 3–8 pages)
 
 Karpathy **Query** operation: search the wiki, read pages, synthesize with citations. Good answers can be filed back as new wiki pages.
 
@@ -31,13 +31,13 @@ python3 -m kb_distillery.search.query mocs                    # topic pages (the
 distill lint --health                 # optional: orphans, broken links
 ```
 
-1. **Read `wiki/index.md`** — skim the relevant section (topics, questions, sources, ideas).
-2. **Run `candidates`** — supplements index with full-text term hits.
+1. **Read `wiki/index.md`** (a tiny root: one line per page type), then **only the one section index you need** (`wiki/<type>/index.md`; a big type is split by year, `wiki/<type>/<year>/index.md`). Never read every section.
+2. **Run `candidates`** — supplements the indexes with full-text term hits.
 3. **Pick 3–8 slugs** — prefer topic pages (`theme-*`) + `q-*` for the research questions; Source pages
    (`paper-`, `part-`, `lecture-`, `article-`, `mail-`, `chat-`) for citations.
    Old slugs (pre-`theme-` topic slugs, unprefixed papers) live in `aliases:` — `distill ingest resolve <old-slug>`.
 
-Never claim “nothing in the vault” until both index and `candidates` were checked.
+Never claim “nothing in the vault” until both the section index and `candidates` were checked.
 
 ## Phase 2 — read & synthesize
 

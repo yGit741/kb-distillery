@@ -22,6 +22,6 @@ export function parseCards(raw: unknown): CardDef[] {
   return out;
 }
 
-/** A share build's cards come from its blob (share.toml `[home]`, kb_distillery.share.home); the local app has none. */
+/** A share build's cards come from its blob (share.toml `[home]`, kb_distillery.publish.site.home); the local app has none. */
 export const curatedCards = (): CardDef[] =>
   parseCards(globalThis.KB_EMBEDDED?.home?.cards ?? (globalThis as { KB_HOME_CARDS?: unknown }).KB_HOME_CARDS);

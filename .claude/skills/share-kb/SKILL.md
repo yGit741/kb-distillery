@@ -51,8 +51,8 @@ pixi run share -- config --google-client-id <id>   # store the OAuth client id (
 pixi run share -- audit <ref>              # public build of <ref> in a temp dir: pages by type + privacy flags (exit 1 on flags)
 pixi run share -- snapshot <name> <ref>    # audit, then publish as snapshot-<YYYYMMDD>-<name> (public); --allow-flags, --dry-run
 pixi run share -- snapshot <name> <ref> --replace   # UPDATE a sent snapshot: same Worker, same link; refuses an older ref (--force)
-pixi run share -- snapshot <name> <ref> --app --scope <slug> [--hops 0|1]   # SUBGRAPH: only a scope / collection / person page, its members and (hops 1, default) their neighbours; manifest records scope + hops
-pixi run share -- snapshot <name> <ref> --app --predicate public [--view map]   # MAP ONLY: after the public cuts keep just the pages the app's Map view draws (kb_distillery.share.predicate = publicPredicate.ts: topics; linked concepts/collections; full/deep sources; no scope/distilled-think) — links, cards, bodies and search entries of dropped pages go too; `--view <id>` opens the graph on that view (home.view). Manifest records predicate, dropped, view; `audit` takes both flags
+pixi run share -- snapshot <name> <ref> --scope <slug> [--hops 0|1]   # SUBGRAPH: only a scope / collection / person page, its members and (hops 1, default) their neighbours; manifest records scope + hops
+pixi run share -- snapshot <name> <ref> --predicate public [--view map]   # MAP ONLY: after the public cuts keep just the pages the app's Map view draws (kb_distillery.publish.site.predicate = publicPredicate.ts: topics; linked concepts/collections; full/deep sources; no scope/distilled-think) — links, cards, bodies and search entries of dropped pages go too; `--view <id>` opens the graph on that view (home.view). Manifest records predicate, dropped, view; `audit` takes both flags
 pixi run share -- list [--json]            # our snapshots: version, behind-main, deployed at, views 7d, updates (was kb-x), online
 pixi run share -- history <name> [--json]  # every version a snapshot served, newest first, * = live; version ids for rollback
 pixi run share -- rollback --worker <name> [--to <id>]   # a snapshot's previous version (no auth gate; kb is the default worker)
@@ -71,7 +71,7 @@ phone-number patterns, `distilled-think`. Cloudflare is the registry (`snapshot-
 prefix + `kb-share` deploy message); credentials come from `CLOUDFLARE_API_TOKEN` or wrangler's
 login. Views show `0*` with a note when analytics is unavailable.
 
-**One deploy owner — agents never deploy.** `kb_distillery.share.owner` (launchd `com.thesis-kb.deploy-owner`,
+**One deploy owner — agents never deploy.** `kb_distillery.publish.cloudflare.owner` (launchd `com.thesis-kb.deploy-owner`,
 KeepAlive) is the only process that deploys main: it fetches origin/main, builds each sha once into
 `.cache/share/build/<sha>`, `versions upload` → `versions deploy @100` → health (auth gate, `/app`, live
 version = uploaded) → rolls back to the previous version on failure; network errors retry 10 s/60 s/300 s.
@@ -80,7 +80,7 @@ the nightly sync only **nudge** it (touch `.cache/share/wake`; `KB_SHARE_AUTODEP
 `KB_SHARE_DIRECT=1` — the user only — runs the old `deploy-main` path). The user installs it once with
 `pixi run install-deploy-owner` from their normal shell — it copies the proxy CA/proxy env (`NODE_EXTRA_CA_CERTS`, `SSL_CERT_FILE`,
 `HTTPS_PROXY`…, never tokens) + PATH into the plist; a `TLS: proxy CA missing` error means rerun it (log `~/Library/Logs/thesis-kb-deploy-owner.log`); state:
-`pixi run python -m kb_distillery.share.owner status`. `deploy-main.yml` deploys daily only when the owner has not
+`pixi run python -m kb_distillery.publish.cloudflare.owner status`. `deploy-main.yml` deploys daily only when the owner has not
 deployed for 24 h. `.claude/settings.json` denies agents `share -- deploy*`/`rollback*`, every wrangler
 deploy/upload/rollback and `owner run`; agents may run `share -- status`/`audit`/`build` and
 `owner status`/`nudge`. Log: `~/Library/Logs/thesis-kb-share.log`;
@@ -89,7 +89,7 @@ dashboard nav shows the chip (green deployed · deploying · skipped · red fail
 ## Agent steps
 
 1. `pixi run share -- status` — read the chip state first; `deployed` + current version → nothing to do.
-2. On request ("deploy main"): nudge the owner (`pixi run python -m kb_distillery.share.owner nudge`) and report
+2. On request ("deploy main"): nudge the owner (`pixi run python -m kb_distillery.publish.cloudflare.owner nudge`) and report
    `owner status`; `owner once` and a direct `share -- deploy-main` are the user's commands. States: `deployed`, `skipped-same`
    (live already has this sha), `skipped-older` (live is newer — never downgrade), `refused-no-access`
    (the Google gate is down: fix the Worker vars/secrets, nothing was uploaded), `failed` (read the log).
@@ -111,29 +111,28 @@ dashboard nav shows the chip (green deployed · deploying · skipped · red fail
 
 ## What the private site contains
 
-The private site (`deploy-main`, Google sign-in) is the shell with six tabs: **Graph · Explore ·
-Health · Digestion · Lifecycle · Snapshots**. Health, Digestion and Lifecycle are the dashboard
-pages rendered read-only from the content commit at build time (lint snapshot under `KB_CI`
-semantics, the pipeline snapshot, the first-parent history with versions and `kb-*` snapshot tags);
-`generated_at` is the commit date, so the time machine (`share build <old ref>`) shows those tabs as
-of that commit and the bytes stay deterministic. Local state never ships: no working tree, open
-sessions, nightly job, worktrees, branches, catalog logs, server info, file ages, absolute paths or
-`think/` paths (the digestion snapshot keeps slug + proposal count for distill reviews). **Public
-snapshots** (`share snapshot`) carry only Graph and Explore — none of those three tabs, their data or
-the Snapshots panel — on top of the public profile's own cuts (no `distilled-think` pages, no
+The private site (`deploy-main`, Google sign-in) is the React app: **Home · Graph · Pages**, plus **Start**
+(`screen.start`), **Lifecycle** (`screen.lifecycle`) and the **Share** panel (`screen.share`), which are private-only
+build flags (`kb_distillery/kits/base/defaults/flags.toml`; `pixi run flags-gen` writes the route lists
+`web/src/routes/modules.share-*.ts`). Lifecycle (and Start's "right now" strip) read the snapshot computed at build time
+from the content commit: its first-parent history with versions and `kb-*` snapshot tags; `generated_at` is the commit
+date, so the time machine (`share build <old ref>`) shows it as of that commit and the bytes stay deterministic. Local
+state never ships: no working tree, open sessions, nightly job, worktrees, branches, catalog logs, server info, file ages,
+absolute paths or `think/` paths. **Public snapshots** (`share snapshot`) carry only Home, Graph and Pages — no Start,
+Lifecycle, Share panel or their data — on top of the public profile's own cuts (no `distilled-think` pages, no
 `raw`/`path`/`email`/`original_name` fields).
 
 ## Snapshots panel (private site)
 
-The private site has a **Snapshots** tab (private builds only — public snapshots never contain it,
-its script, or any `/admin/` path). It lists every `snapshot-*` Worker with kb version, behind-main,
+The private site has the **Share** panel (`screen.share`, private builds only — public snapshots never contain it
+or any `/admin/` path). It lists every `snapshot-*` Worker with kb version, behind-main,
 7-day views, built date and online state, with Open / Copy link / Update… / Delete (type the Worker
 name to confirm), shows an orphan / "not ours" banner from a **dry-run** prune, and a "New
 snapshot" box that builds `pixi run share -- snapshot <name> kb-x.y.z` for you to run on the Mac;
 "Update…" fills the box in replace mode (`--replace`, same link) and warns when a typed name is
 already taken (creating, updating and `prune --apply` stay CLI-only).
 
-API (`share/admin.js`, behind the sign-in session + `ALLOWED_EMAILS` (or `ADMIN_EMAILS`)
+API (`src/kb_distillery/publish/cloudflare/worker/admin.js`, behind the sign-in session + `ALLOWED_EMAILS` (or `ADMIN_EMAILS`)
 + header `X-KB-Admin: 1` + same-origin `Origin` for writes): `GET /admin/api/snapshots`,
 `DELETE /admin/api/snapshots/<worker>` with body `{"confirm": "<worker>"}`, `POST /admin/api/prune`
 (dry run). Behind-main in the panel is an approximation (patch difference within one x.y); the CLI's
@@ -158,46 +157,44 @@ snapshots are their own Workers (`.cache/share/status-snapshot-*.json`, never th
 
 ## Limits
 
-The site is one `index.html` served from the Worker's static-assets directory: Cloudflare caps a
-file at **25 MiB**. The build prints its size against that limit, warns from 80 % and refuses above
-it (`MAX_HTML_BYTES` in `src/kb_distillery/share/build.py`). Growth comes from embedded page bodies, the graph
-and the digestion rows — shrink those, do not raise the constant.
+The site is served from the Worker's static-assets directory: Cloudflare caps a
+file at **25 MiB** (the data page `index.html` and every asset). The build prints its size against that limit, warns from 80 % and refuses above
+it (`MAX_HTML_BYTES` in `src/kb_distillery/publish/site/build.py`). Growth comes from embedded page bodies, the graph
+— shrink those, do not raise the constant.
 
 ## Quality bar
 
 The reported state matches `share status`; unauthenticated `curl -I` on the site gives 302 → `/auth/login`.
 
-## App build (default for `deploy-main`)
+## The build (React app only)
 
-Same site, built from the React app under `web/` instead of the iframe shell. `deploy-main` (the
-daily private deploy) builds it by default — `--legacy` builds the old shell instead, and a layout switch at
-an already-deployed sha needs `--force`. `build`, `audit` and `snapshot` still need `--app` (public
-snapshots stay on the legacy shell).
+Every build (`build`, `audit`, `snapshot`, `deploy-main`) is the React app under `web/`; the old iframe shell is gone
+(`--app` is still accepted and does nothing, `deploy-main --legacy` is refused). A snapshot published as a legacy shell
+before the switch still lists, rolls back and prunes: its manifest has no `layout`.
 
 ```bash
-pixi run share -- build main --profile public  --app    # graph + pages
-pixi run share -- build main --profile private --app    # + the read-only lifecycle view
-pixi run share -- audit main --app                      # same audit, on the app build
-pixi run share -- snapshot <name> main --app --dry-run  # audit + render the Worker dir, no deploy
-pixi run share -- deploy-main --dry-run              # --legacy for the iframe shell
+pixi run share -- build main --profile public            # home + graph + pages
+pixi run share -- build main --profile private           # + start, lifecycle and the share panel
+pixi run share -- audit main                             # build public, scan the baked kb-data
+pixi run share -- snapshot <name> main --dry-run         # audit + render the Worker dir, no deploy
+pixi run share -- deploy-main --dry-run
 ```
 
 - Output `.exported/share/<ref>-app/`: `index.html` (carries the data blob in `<script id="kb-data">`,
   the id the audit scans) + `assets/` + `manifest.json` (`layout: "app"`, `sha256` = digest of the whole
   tree). The 25 MiB guard applies to every file; the Worker gets `not_found_handling =
-  single-page-application` for this layout only.
-- Data is the legacy `collect_data` / `collect_lifecycle` / `apply_profile`, so the public privacy cuts are
-  the same code. The frontend is `vite build --mode share` per profile (`VITE_SHARE_PROFILE`), built into
-  `web/dist-share/<profile>/` (gitignored) and rebuilt when `web/src` changes; needs
-  `pixi run web-install` once. Chat, ops, pipeline, scopes and every mutation are not imported by the
+  single-page-application`.
+- Data is `collect_data` / `collect_lifecycle` / `apply_profile`. The frontend is `vite build --mode share` per
+  profile (`VITE_SHARE_PROFILE`), built into `web/dist-share/<profile>/` (gitignored) and rebuilt when `web/src`
+  changes; needs `pixi run web-install` once. Chat, ops, pipeline, scopes and every mutation are not imported by the
   share builds (`web/src/routes/modules.share-*.ts`), not hidden: `/chat` is "Not Found".
-- Frontend source comes from this checkout; a viewer ref older than this feature is refused (use
-  `--viewer-worktree` while it is unmerged). Same content + same frontend = same bytes.
-- **Switching the default later** (own PR, after the checks in the migration plan): pass `app=True` in
-  `deploy.deploy_main` and `snapshots.audit_build`, make `--app` default on in `build.register`, `deploy-main`
-  and `snapshots.register`, then delete the legacy shell, `static/kb-static.js`, the regex inliner and
-  `web/src/share/search.test.ts` (it compares against the shim). Old `kb-*` tags keep building through
-  their own viewer (`--viewer`).
+- **A missing or unreadable `kb_distillery/publish/cloudflare/share.toml` (the Home tour and cards) stops the build** with
+  `share config missing: <path>`.
+- Frontend source comes from this checkout; a viewer ref older than the app layout is refused (use
+  `--viewer-worktree` while it is unmerged). Same content + same frontend = same bytes. Old `kb-*` tags keep
+  building through their own viewer (`--viewer`) as long as that viewer has the app layout.
+- `tests/publish/test_share_snapshot_golden.py` pins the file list and the `kb-data` payload of a snapshot of the
+  fixture kb (`tests/fixtures/golden/share-app/`); after an intended data change, `KB_UPDATE_GOLDEN=1` regenerates it.
 
 ## Next step
 

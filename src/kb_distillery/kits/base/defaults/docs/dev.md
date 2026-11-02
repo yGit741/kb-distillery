@@ -14,17 +14,16 @@ src/kb_distillery/      Python app, package `kb_distillery` (src layout; `backen
   src/kb_distillery/llm/           `kb_distillery.llm`: the one door to Claude (see § Billing)
   src/kb_distillery/core/          schema, graph, hubs, scopes, persons, books, mathnorm, coherence, health
   src/kb_distillery/lint/          lint, lint_skills            src/kb_distillery/search/       query, semfind, explore_raw, citations
-  src/kb_distillery/ingest|distill|ops (daily_sync, notify, report/)|share/            src/kb_distillery/git/          guard, git_guard, commit_policy, ship, merge_nudge, curate_history
+  src/kb_distillery/ingest|distill|ops (daily_sync, notify, report/)|publish/{site,cloudflare}/            src/kb_distillery/git/          guard, git_guard, commit_policy, ship, merge_nudge, curate_history
   src/kb_distillery/kits/          the kits: kit.toml, defaults/, skills (what a kb is given; `resource("kits")`)
   src/kb_distillery/migrations/    schema migrations (code); the applied ledger stays in meta/migrations/applied.tsv
   src/kb_distillery/services/      former dashboard *_data modules (graph, pages, corpus, scopes, chat, pipeline, lifecycle, ops)
   src/kb_distillery/api/           FastAPI app (`pixi run app`): routers/ auto-discovered, models/, sse.py, security.py; README.md = add-a-router recipe
-  src/kb_distillery/dashboard/     retired legacy HTML pages + stdlib server (no longer served by kb_distillery.api; old URLs redirect to /app routes; deleted in a later PR)
   src/kb_distillery/prompts/  chat prompts
+  src/kb_distillery/publish/       publisher interface; site/ (build, snapshots, predicate, home, show, state); cloudflare/ (publisher, deploy, owner, ..., worker/ = the Cloudflare Worker (auth.js, admin.js, wrangler template) + its node tests)
 tests/                  pytest, mirrored by package (tests/harness = the pipeline harness)
 web/                    the React app (builds into src/kb_distillery/_webapp)
 examples/               demo (the tracked sample kb), launchd
-share/                  Cloudflare Worker (auth.js, admin.js, wrangler template) + its node tests
 .claude/skills/         the engine's own dev skills (real files); the kb skills are src/kb_distillery/kits/<kit>/skills/
 scripts/                githooks/, hooks/, qmd/, launch.sh
 docs/                   ROADMAP.md: the migration to the open-source kb-distillery, phase by phase
@@ -95,9 +94,8 @@ selectable on every run; a feature that calls an LLM says in its plan which back
 **Environment:** one-time `curl -fsSL https://pixi.sh/install.sh | bash`, then restart the shell, then `pixi install` (again after any `pixi.toml` change — the Chat tab's agent backend needs the `claude-agent-sdk` PyPI package; behind a TLS-inspecting proxy run it with `SSL_CERT_FILE` pointing at a PEM of the keychain roots). All tasks below work via `pixi run <task>`.
 
 ```
-pixi run lint                      check + reconcile + regenerate wiki/index.md
+pixi run lint                      check + reconcile + regenerate wiki/index.md and the wiki/<type>/index.md sections
 pixi run health                    terminal health summary
-pixi run dashboard                 LEGACY stdlib health UI (deleted in a later PR; use `pixi run app` for the app, http://127.0.0.1:8765/app) — formerly /graph, /digestion, /ops, /chat — a read-only research agent over the Claude Agent SDK, with the direct Messages call as fallback; pays with a stored API key (`~/.config/kb-distillery/keys/<name>`, switchable in the Session card) or, agent backend only, the `claude login` subscription)
 pixi run launch                    restart dashboard from current code (detached) + open browser; also (re)starts the qmd search service when installed
 pixi run qmd-install               (once) install the qmd search service in scripts/qmd (Node >= 22; models download on first start, ~1.9 GB under .cache/qmd/models)
 pixi run qmd-serve                 run the qmd search service in the foreground (127.0.0.1:8766; KB_QMD_PORT to change)
@@ -114,7 +112,7 @@ pixi run test-ui-principles        every app screen, light + dark, against the [
 pixi run lint-skills               validate every skills folder (each kit skills folder and .claude/skills)
 pixi run export-kb                 zip wiki + think → .exported/ (LLM share)
 pixi run share -- deploy-main      build main → private Cloudflare site (also: status, rollback, --dry-run)
-pixi run install-deploy-owner      (user) install the launchd deploy owner — the only deployer; agents nudge it (`python -m kb_distillery.share.owner nudge|once|status`)
+pixi run install-deploy-owner      (user) install the launchd deploy owner — the only deployer; agents nudge it (`python -m kb_distillery.publish.cloudflare.owner nudge|once|status`)
                                    run it from your normal shell: it copies proxy CA/proxy env + PATH (no secrets) into the plist
 pixi run share -- snapshot <name> <ref>   audit + publish a PUBLIC snapshot Worker (also: audit, list, history, remove, prune;
                                    `--replace` updates a sent snapshot at the same link, `rollback --worker <name>` undoes it)
@@ -132,9 +130,9 @@ pixi run install-hooks             use scripts/githooks (commit-msg, pre-commit,
 pixi run install-sync              install nightly daily-sync launchd job
 ```
 
-**PR gates** (`ship pr` / `ship merge`, by the lanes the branch touches vs origin/main; `src/kb_distillery/git/ship.py` `checks_for`): `web/` → `web-check` + `test-ui-principles`; `src/kb_distillery/api/` or `web/src/api` → `api-schema-check`; `src/kb_distillery/dashboard/`, `web/src/features/graph/` or `web/e2e/` → `test-e2e`; `meta/flags.toml` / `src/kb_distillery/flags/` → `flags-check`. A failing gate blocks the PR (`--skip-checks "<reason>"` bypasses, reason in the PR body). `test-ui-principles` (`web/tests/ui-principles.test.mjs`) starts `kb_distillery.api` on a free port, loads each `.integrator.toml` screen plus `/think?note=…` at 1440×900 in light and dark, and fails on the `[auto]` rules of `~/.claude/skills/ui-principles/SKILL.md`: overlapping chrome (4), contrast (5), clipped text without ellipsis (9), colour literals added outside `web/src/theme/` (12), targets under 24×24 px (25), console errors and 4xx/5xx on load (30). Failures already present on main are listed in `web/tests/ui-principles.baseline.json` and only warn; that file must shrink, never grow — delete entries as screens are fixed (the test names the stale ones), and regenerate it with `UI_PRINCIPLES_WRITE_BASELINE=1` only on a branch that fixes screens. The `[eye]` rules stay with the `ui-review` skill. Both Playwright gates skip with a note when node or the playwright npm package is missing.
+**PR gates** (`ship pr` / `ship merge`, by the lanes the branch touches vs origin/main; `src/kb_distillery/git/ship.py` `checks_for`): `web/` → `web-check` + `test-ui-principles`; `src/kb_distillery/api/` or `web/src/api` → `api-schema-check`; `web/src/features/graph/` or `web/e2e/` → `test-e2e`; `meta/flags.toml` / `src/kb_distillery/flags/` → `flags-check`. A failing gate blocks the PR (`--skip-checks "<reason>"` bypasses, reason in the PR body). `test-ui-principles` (`web/tests/ui-principles.test.mjs`) starts `kb_distillery.api` on a free port, loads each `.integrator.toml` screen plus `/think?note=…` at 1440×900 in light and dark, and fails on the `[auto]` rules of `~/.claude/skills/ui-principles/SKILL.md`: overlapping chrome (4), contrast (5), clipped text without ellipsis (9), colour literals added outside `web/src/theme/` (12), targets under 24×24 px (25), console errors and 4xx/5xx on load (30). Failures already present on main are listed in `web/tests/ui-principles.baseline.json` and only warn; that file must shrink, never grow — delete entries as screens are fixed (the test names the stale ones), and regenerate it with `UI_PRINCIPLES_WRITE_BASELINE=1` only on a branch that fixes screens. The `[eye]` rules stay with the `ui-review` skill. Both Playwright gates skip with a note when node or the playwright npm package is missing.
 
-Without pixi, use `python3` equivalents (`python3 -m kb_distillery.lint.lint`, `python3 -m kb_distillery.dashboard`, …).
+Without pixi, use `python3` equivalents (`python3 -m kb_distillery.lint.lint`, …).
 
 **Write guardrails:** `src/kb_distillery/git/guard.py` blocks illegal agent writes via a PreToolUse hook in `.claude/settings.json` (Claude Code); the Bash git-write guard is `scripts/hooks/block-git-write.sh`. Claude Code also runs `src/kb_distillery/git/merge_nudge.py` on `Stop` (merge reminder; Cursor has no stop hook, so there the skill rule alone applies). `CLAUDE.md` imports this file for Claude instruction parity.
 
@@ -164,7 +162,7 @@ text queries); `kb_distillery.search.vectors` reads it for graph math — neares
 - **Policy:** a feature that can't land in one PR ships dark behind a flag and merges in small PRs; release = flipping the flag (System → Flags), not deploying. A new flag needs an `owner` and `expires` at most 90 days after `created`.
 - **Test matrix:** every flag needs a test for **both** states. pytest: `@pytest.mark.flag("name", True|False)` (`tests/conftest.py` forces it through `kb_distillery.flags.override`, all envs). vitest: `withFlag("name", true|false, fn)` from `@/flags/testing` (forces build flags too — a test-only seam; `routeDefsNow()` re-reads route flags). `python -m kb_distillery.flags.coverage` (in `flags-check` and `web-check`) scans `tests/**/test_*.py` and `web/src/**/*.test.ts(x)` and fails on a missing flag/state.
 - **Expiry:** `lint` (`check_flags`) warns when a flag expires within 14 days and errors once it has expired or the registry is invalid; retire it with `meta/templates/flag-cleanup-pr.md` (`chore(flags): remove <name>`).
-- **Not flags:** `apply_profile` in `kb_distillery/share/build.py` (what data a public build strips) is privacy, not a feature switch, and stays on the profile.
+- **Not flags:** `apply_profile` in `kb_distillery/publish/site/build.py` (what data a public build strips) is privacy, not a feature switch, and stays on the profile.
 
 ## Worktrees
 

@@ -1,8 +1,10 @@
-"""Vault health metrics — shared by lint --health and kb_distillery.dashboard."""
+"""Vault health metrics — shared by lint --health and the app (kb_distillery.api)."""
 import os
 import time
 from datetime import datetime, timezone
 from kb_distillery.core import links as page_links
+from kb_distillery.core import wikiindex
+from kb_distillery.core.wikiindex import QUERY_PAGES
 from kb_distillery.core.schema import INDEX_REL
 
 
@@ -108,7 +110,7 @@ METRICS = {
     "index_savings_pct": {
         "label": "Index savings",
         "cluster": "tokens",
-        "help": "Percent of wiki tokens you skip by reading wiki/index.md first instead of every page.",
+        "help": "Percent of wiki tokens a typical query skips: it reads the root index, one section index and about five pages instead of every page.",
         "format": "pct",
     },
     "queued_mb": {
@@ -223,20 +225,24 @@ def compute_wiki_tokens(pages):
 
 
 def compute_index_tokens(root):
-    path = os.path.join(root, INDEX_REL)
-    if not os.path.isfile(path):
-        return 0
-    try:
-        with open(path, encoding="utf-8") as f:
-            return estimate_tokens(f.read())
-    except OSError:
-        return 0
+    """Tokens of the index part of a typical query: the root index plus one average section index (a query reads the
+    root, then the one section it needs). 0 without an index."""
+    sizes = wikiindex.sizes(root)
+    root_b = sizes.get(INDEX_REL, 0)
+    sections = [b for rel, b in sizes.items() if rel != INDEX_REL]
+    return round((root_b + (sum(sections) / len(sections) if sections else 0)) / 4)
 
 
-def index_savings_pct(wiki_tokens, index_tokens):
+def compute_query_tokens(index_tokens, wiki_tokens, n_pages):
+    """Tokens a typical query reads: the index part, then QUERY_PAGES average pages."""
+    return index_tokens + (round(QUERY_PAGES * wiki_tokens / n_pages) if n_pages else 0)
+
+
+def index_savings_pct(wiki_tokens, query_tokens):
+    """Percent of the wiki a typical query skips (it reads the root, one section and a few pages, not every page)."""
     if wiki_tokens <= 0:
         return 0
-    return round(100 * (1 - index_tokens / wiki_tokens))
+    return round(100 * (1 - query_tokens / wiki_tokens))
 
 
 def compute_queued_mb(root, rows):
@@ -308,6 +314,9 @@ def summarize_coherence(merged):
     return {"by_kind": by_kind, "by_status": by_status}
 
 
+MIN_PAGES_FOR_SAVINGS = 100
+
+
 def metric_status(metric_id, value, snapshot):
     if metric_id == "errors":
         return "ok" if value == 0 else "bad"
@@ -322,7 +331,8 @@ def metric_status(metric_id, value, snapshot):
     if metric_id == "queued":
         return "ok" if value == 0 else "warn"
     if metric_id == "index_savings_pct":
-        return "ok" if value >= 80 else "warn"
+        # a typical query reads about five pages, so a wiki of under MIN_PAGES_FOR_SAVINGS has nothing to save
+        return "ok" if value >= 80 or snapshot.get("wiki_pages", 0) < MIN_PAGES_FOR_SAVINGS else "warn"
     if metric_id in ("lint_ms", "sha1_ms", "wiki_ms", "links_ms"):
         return "ok"
     if metric_id in ("raw_tokens", "wiki_tokens", "queued_mb"):
@@ -379,11 +389,11 @@ def build_snapshot(
         "links_ms": timings.get("links_ms", 0),
         "raw_tokens": raw_tokens,
         "wiki_tokens": wiki_tokens,
-        "index_savings_pct": index_savings_pct(wiki_tokens, index_tokens),
+        "index_savings_pct": index_savings_pct(wiki_tokens, compute_query_tokens(index_tokens, wiki_tokens, len(pages))),
         "queued_mb": compute_queued_mb(timings.get("root", "."), rows),
     }
 
-    statuses = {mid: metric_status(mid, values[mid], {"hooks_ok": hooks_ok})
+    statuses = {mid: metric_status(mid, values[mid], {"hooks_ok": hooks_ok, "wiki_pages": len(pages)})
                 for mid in METRICS}
 
     lint_total = max(values["lint_ms"], 1)
@@ -447,4 +457,4 @@ def print_health_terminal(snapshot):
           f"wiki~{format_tokens(v['wiki_tokens'])}  "
           f"index saves {v['index_savings_pct']}%  "
           f"queued={format_metric_value('queued_mb', v['queued_mb'])}")
-    print("dashboard   python3 -m kb_distillery.dashboard")
+    print("app         pixi run app")

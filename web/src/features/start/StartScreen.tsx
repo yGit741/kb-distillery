@@ -1,4 +1,3 @@
-import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import type { LifecycleSnapshot } from "@/api";
 import { ErrorState, Loading } from "@/components/states";
@@ -6,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Code, TableWrap } from "@/features/lifecycle/LifecycleScreen";
 import { useApiQuery } from "@/lib/useApiQuery";
 import { cn } from "@/lib/utils";
-import { COMMIT_ROWS, LifecycleLink, COMMIT_SCOPES, EDIT_ROWS, FEATURE_CARDS, PLACES, STEPS } from "./content";
+import { COMMIT_ROWS, LifecycleLink, ScreenLink, COMMIT_SCOPES, EDIT_ROWS, FEATURE_CARDS, PLACES, STEPS } from "./content";
 
 /** The "Right now" cards, from the lifecycle snapshot (a shared, read-only site has no working-tree state). */
 export function nowCards(s: LifecycleSnapshot): [string, string | number][] {
@@ -53,8 +52,6 @@ function Section({ title, help, children }: { title: string; help?: ReactNode; c
     </Card>
   );
 }
-
-const LINK = "text-primary hover:underline";
 
 export function StartScreen() {
   return (
@@ -157,7 +154,7 @@ export function StartScreen() {
       <div className="grid gap-4 lg:grid-cols-2">
         <Section title="Daily rhythm">
           <ul className="list-disc space-y-1.5 pl-5 text-sm text-muted-foreground [&_code]:text-foreground">
-            <li><b className="text-foreground">Morning:</b> <Code>pixi run launch</Code> opens this dashboard. <Link to={"/pipeline" as "/"} className={LINK}>Digestion</Link> shows the inbox and backlog.</li>
+            <li><b className="text-foreground">Morning:</b> <Code>pixi run launch</Code> opens this dashboard. <ScreenLink id="pipeline">Digestion</ScreenLink> shows the inbox and backlog.</li>
             <li><b className="text-foreground">During the day:</b> ask for skills; each finished operation is already committed.</li>
             <li><b className="text-foreground">22:00:</b> the nightly sync commits your <Code>think/</Code> edits, anything left over, and pushes main with its snapshot tags.</li>
             <li><b className="text-foreground">Weekly:</b> <Code>snapshot "week NN"</Code> to name a state you might share or return to.</li>

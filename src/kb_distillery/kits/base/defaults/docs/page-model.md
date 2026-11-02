@@ -93,7 +93,7 @@ and applied only after review; the graph reads them behind the `graph-relations`
 
 **`description:`** (schema 1.3 as `summary:`, renamed in 1.5, `src/kb_distillery/core/summary.py`) — every page except courses and `listed`
 sources carries one English line saying what the page is and its main point, in the same template for
-every type, so a short idea and a long post are equally searchable. It feeds `wiki/index.md`, search cards and
+every type, so a short idea and a long post are equally searchable. It feeds the section indexes (`wiki/<type>/index.md`), search cards and
 embeddings. Sonnet writes it (`pixi run summarize -- run --slugs <slug>`, then `apply` inside an ops
 session); `summary_from` lets lint warn when the page's point changed since. A page that gets deeper is
 re-summarized; edits to links, Connections or typos never are. Lint: malformed → error, missing → one
@@ -138,8 +138,14 @@ harmless empty placeholder. Schema 1.5 moved every page to this form (migration 
 **Reserved files (schema 1.5).** `wiki/` is the OKF bundle root, and OKF reserves two files in it: `wiki/index.md` and
 `wiki/log.md`. They are not pages: no `type`, no frontmatter rules, never scanned, linted as pages, graphed, searched,
 counted, shared as nodes or restored by undo. `index.md` is generated on every lint run (frontmatter holds only
-`okf_version: 0.2`; the body is one bulleted `[Title](slug.md) — summary` list per page type; no Meta
-section; wikilinks in it are a lint error). `log.md` is the append-only activity timeline: no frontmatter, `# Log`, one
+`okf_version: 0.2`; wikilinks in it are a lint error). It is a **tiny root**: one line per page type with the page count
+and a one-line description, linking `<type>/index.md`. OKF allows an `index.md` in any directory, so each type has a
+generated section index `wiki/<type>/index.md` (rows `- [Title](../slug.md) — summary`, summary cut at 110 characters),
+and a type whose section would exceed 40 KB (`core/wikiindex.py` `SECTION_MAX_BYTES`, e.g. 700 blog posts) splits one
+level further, `wiki/<type>/<year>/index.md` (`../../slug.md`; the year is the page's `year`, else `created`, else
+`undated`), the type index then listing the years. Every one of these files is a reserved file by its basename. A section
+folder holds only its generated `index.md` (lint warns on anything else and removes the ones that no longer apply; it
+never touches other files). To find a page: read `wiki/index.md`, then the one section you need, never all of them. `log.md` is the append-only activity timeline: no frontmatter, `# Log`, one
 `## YYYY-MM-DD` heading per day (newest day first) and under it that day's entries, newest first, each
 `### <op> | <summary>` plus ` ← ` and the backticked targets when it has any; `kb_distillery.core.log` is its only writer.
 `okf-check` (the blocking OKF gate, see `lifecycle.md`) does not count them as pages and needs no `type` from them. Migration `0015_okf_index_log` moved both from `index.md` and `meta/log.md`; a root `index.md` is never written again.

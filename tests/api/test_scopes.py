@@ -52,7 +52,7 @@ def vault(tmp_path):
         git(root, "add", "-A")
         git(root, "commit", "-q", "-m", "chore: init (retro)")
         with mock.patch.object(scopes_data, "DEFAULT_ROOT", root), \
-             mock.patch("kb_distillery.share.autodeploy.trigger", return_value="skipped"), \
+             mock.patch("kb_distillery.publish.cloudflare.autodeploy.trigger", return_value="skipped"), \
              mock.patch("kb_distillery.ops.core.run_lint", return_value=None):      # lint of a bare temp repo is not under test
             yield root
 

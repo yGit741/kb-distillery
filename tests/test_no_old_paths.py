@@ -4,7 +4,9 @@
 and the Lane C moves: `templates/` (now `src/kb_distillery/kits/<kit>/kit.toml`, read by `vault/kit.py`) and
 `meta-defaults/` (now `src/kb_distillery/kits/base/defaults/`), the root `skills/` folder with its `.claude/skills`
 symlink, `pixi run sync-skills` and `SKILL_TEMPLATE.md` (now `src/kb_distillery/kits/<kit>/skills/`, real files in
-`.claude/skills/`, `docs/guides/write-a-skill.md` and `kits/base/skills/_TEMPLATE.md`).
+`.claude/skills/`, `docs/guides/write-a-skill.md` and `kits/base/skills/_TEMPLATE.md`), and the Lane F move of `kb_distillery.share`
+into `kb_distillery.publish.site` / `.cloudflare` (the Worker sources left the root `share/` for `publish/cloudflare/worker/`,
+`publish/site_state.py` became `publish/site/state.py`, `tests/share/` became `tests/publish/cloudflare/`).
 
 There are no import shims: a star-import shim breaks mock.patch, `python -m` and -W error filters. Instead this scan
 fails on any tracked file that still names the old module or path strings. Inputs come from `git ls-files` only (the
@@ -39,14 +41,26 @@ RETIRED = {
     "templates/ kit folder, template.toml, core.template or $KB_TEMPLATES_DIR": re.compile(
         r"(?<![\w./-])templates/(?:starter|academic-research|<name>)|template\.toml|KB_TEMPLATES_DIR"
         r"|kb_distillery[./]core[./]template\b|core import template\b|core/template\.py"),
+    "kb_distillery.share package (now publish/site and publish/cloudflare)": re.compile(
+        r"kb_distillery[./]share\b|from kb_distillery import share\b|kb_distillery[./]publish[./]site_state\b|publish[./]site_state\b"
+        r"|tests/share\b|tests\.share\b"),
+    "root share/ Worker folder (now src/kb_distillery/publish/cloudflare/worker)": re.compile(
+        r"(?<![\w./~-])share/(?:admin|auth|flags\.gen|package\.json|wrangler|\*\.test)|node --test share/"
+        r"|(?<![\w])root_resource\(\"share\"\)|_data/share\b"),
 }
 # (pattern name -> files that may name it): the tools/ entry of TOOLING_PATHS (until Phase 9), the share builder that still builds
 # refs from before the move, and this test.
 ALLOWED = {
     "*": {"tests/test_no_old_paths.py"},
     "tools/": {"src/kb_distillery/core/schema.py"},               # TOOLING_PATHS keeps tools/ for the two remaining stubs until Phase 9
-    "python -m kb.": {"src/kb_distillery/share/build.py"},
-        "backend/src or backend/tests": {"src/kb_distillery/share/build.py", "tests/share/test_share_app.py", "tests/share/test_share_versions.py", "pixi.toml"},
+    "python -m kb.": {"src/kb_distillery/publish/site/build.py"},
+    "backend/src or backend/tests": {"src/kb_distillery/publish/site/build.py", "tests/publish/cloudflare/test_share_app.py",
+                                     "tests/publish/cloudflare/test_share_versions.py", "pixi.toml"},
+    # the build still runs an OLDER viewer ref with that ref's own module path (build.APP_GENERATIONS), and the deny rules keep
+    # the old patterns so the deny never weakens
+    "kb_distillery.share package (now publish/site and publish/cloudflare)": {
+        "src/kb_distillery/publish/site/build.py", ".claude/settings.json", "tests/publish/cloudflare/test_share_versions.py",
+        "tests/publish/cloudflare/test_share_build.py", "docs/ROADMAP.md", "docs/phase-7-audit.md"},
 }
 # The roadmap is the record of what was planned and done under the old names; it is not rewritten.
 ALLOWED["meta-defaults/"] = {"docs/ROADMAP.md"}
@@ -65,7 +79,8 @@ def tracked():
     return [p for p in out.split("\0") if p and not p.endswith(SKIP_SUFFIX)]
 
 
-RETIRED_FILES = ("src/kb_distillery/maintenance/fix_math.py", "src/kb_distillery/maintenance/rename_raw.py",
+RETIRED_FILES = ("src/kb_distillery/share/", "src/kb_distillery/publish/site_state.py", "share/", "tests/share/",
+                 "src/kb_distillery/maintenance/fix_math.py", "src/kb_distillery/maintenance/rename_raw.py",
                  "src/kb_distillery/maintenance/daily_sync.py", "src/kb_distillery/maintenance/notify.py",
                  "src/kb_distillery/maintenance/export.py", "src/kb_distillery/report/", "src/kb_distillery/cli.py",
                  "tests/maintenance/", "tests/report/",

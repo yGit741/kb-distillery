@@ -29,7 +29,7 @@ const ALL_ROUTE_DEFS: readonly RouteDef[] = [
   { id: "lifecycle", path: "/lifecycle", label: "Lifecycle", blurb: "Versions, history, snapshots and working state.", flag: "screen.lifecycle" },
   { id: "share", path: "/share", label: "Share", blurb: "Public snapshots of the private site.", flag: "screen.share", nav: true },
   { id: "think", path: "/think", label: "Think", blurb: "Your own slow notes: edit, and capture quick thoughts.", flag: "screen.think" },
-  { id: "start", path: "/start", label: "Start", blurb: "How to add and edit knowledge, and how to build a feature." },
+  { id: "start", path: "/start", label: "Start", blurb: "How to add and edit knowledge, and how to build a feature.", flag: "screen.start" },
   { id: "covector", path: "/covector", label: "Covector", blurb: "Interactive picture of a covector acting on a vector." },
   // A route whose flag is off in this env is dropped here (screen.share: private site only).
 ];

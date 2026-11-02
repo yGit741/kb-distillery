@@ -12,9 +12,9 @@ round_open = "pixi run ship -- round open"
 round_status = "pixi run ship -- round status"  # + round number
 events = "pixi run ship -- events"  # + PR number
 claims = "pixi run ship -- claims"
-# Agents never deploy: they nudge the deploy owner (kb_distillery.share.owner, PR #140) and wait for its status.
-deploy_request = "pixi run python -m kb_distillery.share.owner nudge"
-deploy_status = "pixi run python -m kb_distillery.share.owner status"
+# Agents never deploy: they nudge the deploy owner (kb_distillery.publish.cloudflare.owner, PR #140) and wait for its status.
+deploy_request = "pixi run python -m kb_distillery.publish.cloudflare.owner nudge"
+deploy_status = "pixi run python -m kb_distillery.publish.cloudflare.owner status"
 deployed_match = "deployed"
 
 settle_ms = 1500
@@ -90,7 +90,7 @@ selector = "[data-testid=tile-version-value]"
 tile = "deploy"
 screen = "/system"
 endpoint = "/api/ops"
-# deploy owner state (kb_distillery.share.owner) vs origin/main; bad = failed outcome, owner missing/dead, or live != main > 30 min
+# deploy owner state (kb_distillery.publish.cloudflare.owner) vs origin/main; bad = failed outcome, owner missing/dead, or live != main > 30 min
 path = "deploy.owner_installed|default:unknown|map:false=owner not installed,true="  # the tone carries the rest
 match = "contains"
 fail_tones = ["bad"]

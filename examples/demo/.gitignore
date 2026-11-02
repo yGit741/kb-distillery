@@ -46,7 +46,7 @@ meta/.ops/
 # LLM share bundles (src/kb_distillery/publish/export.py)
 .exported/
 
-# Share build cache + deploy status (src/kb_distillery/share); wrangler's local state
+# Share build cache + deploy status (src/kb_distillery/publish/cloudflare); wrangler's local state
 .cache/
 .wrangler/
 

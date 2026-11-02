@@ -69,7 +69,8 @@ def _run(venv: Path, args, env, cwd):
 
 def test_the_wheel_carries_the_root_level_folders_under_data(wheel):
     names = zipfile.ZipFile(wheel).namelist()
-    for want in ("kb_distillery/_data/share/auth.js",):
+    for want in ("kb_distillery/publish/cloudflare/worker/auth.js", "kb_distillery/publish/cloudflare/worker/wrangler.template.jsonc",
+                 "kb_distillery/publish/cloudflare/share.toml",):
         assert any(n.startswith(want) for n in names), want
     assert not any(n.startswith("kb/") or "backend" in n.split("/")[0] for n in names)
 
@@ -84,7 +85,7 @@ def test_the_wheel_carries_the_kits_as_package_data(wheel):
                  "kb_distillery/kits/research/skills/build-researcher-profile/SKILL.md"):
         assert any(n.startswith(want) for n in names), want
     packed = {n.split("/")[2] for n in names if n.startswith("kb_distillery/_data/") and n.count("/") > 2}
-    assert packed <= {"share"}, packed                      # only the folder Lane F still moves
+    assert not packed, packed                               # nothing is force-included into _data any more (the Worker is package data)
 
 
 def test_the_wheel_carries_the_kit_hooks_executable(wheel):

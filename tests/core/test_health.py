@@ -10,6 +10,9 @@ from kb_distillery.core.health import (  # noqa: E402
     compute_orphans,
     estimate_tokens,
     in_degree_buckets,
+    compute_index_tokens,
+    metric_status,
+    compute_query_tokens,
     index_savings_pct,
     summarize_coherence,
 )
@@ -23,6 +26,27 @@ class HealthTest(unittest.TestCase):
     def test_index_savings_pct(self):
         self.assertEqual(index_savings_pct(1000, 100), 90)
         self.assertEqual(index_savings_pct(0, 100), 0)
+
+    def test_index_tokens_are_a_typical_query_not_the_whole_index(self):
+        import tempfile
+        from kb_distillery.core import wikiindex
+        with tempfile.TemporaryDirectory() as root:
+            for rel, n in (("wiki/index.md", 400), ("wiki/paper/index.md", 40_000), ("wiki/idea/index.md", 8_000)):
+                os.makedirs(os.path.dirname(os.path.join(root, rel)), exist_ok=True)
+                with open(os.path.join(root, rel), "w") as f:
+                    f.write("x" * n)
+            self.assertEqual(wikiindex.sizes(root)["wiki/paper/index.md"], 40_000)
+            # root + the mean of the section files (not their sum), in tokens
+            self.assertEqual(compute_index_tokens(root), round((400 + 24_000) / 4))
+            self.assertEqual(compute_index_tokens(os.path.join(root, "nope")), 0)
+        # the query adds five average pages: 5 * 1000 / 100 tokens each
+        self.assertEqual(compute_query_tokens(100, 1000, 100), 150)
+        self.assertEqual(index_savings_pct(1000, compute_query_tokens(100, 1000, 100)), 85)
+
+    def test_index_savings_status_ignores_a_wiki_too_small_to_save(self):
+        self.assertEqual(metric_status("index_savings_pct", 74, {"wiki_pages": 25}), "ok")     # five pages are a fifth of it
+        self.assertEqual(metric_status("index_savings_pct", 74, {"wiki_pages": 1000}), "warn")
+        self.assertEqual(metric_status("index_savings_pct", 99, {"wiki_pages": 1000}), "ok")
 
     def test_in_degree_buckets(self):
         degree = {"a": 0, "b": 1, "c": 3, "theme-x": 0, "log": 0}

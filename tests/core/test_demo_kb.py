@@ -13,7 +13,7 @@ from kb_distillery import kbconfig
 
 CHECKOUT = kbconfig.checkout_root()
 DEMO = os.path.join(CHECKOUT, "examples", "demo")
-GENERATED = ("wiki/index.md", "meta/corpus.tsv", "meta/coherence-warnings.tsv")
+GENERATED = ("meta/corpus.tsv", "meta/coherence-warnings.tsv")
 
 
 def _lint(root):
@@ -42,7 +42,11 @@ class DemoKb(unittest.TestCase):
             cp = _lint(copy)
             self.assertEqual(cp.returncode, 0, cp.stdout + cp.stderr)
             self.assertIn("0 errors", cp.stdout)
-            for rel in GENERATED:
+            from kb_distillery.core import wikiindex
+            indexes = wikiindex.index_files(DEMO)
+            self.assertGreater(len(indexes), 1)                      # the root and its section indexes
+            self.assertEqual(sorted(wikiindex.index_files(copy)), sorted(indexes))
+            for rel in (*GENERATED, *indexes):
                 self.assertTrue(filecmp.cmp(os.path.join(DEMO, rel), os.path.join(copy, rel), shallow=False),
                                 f"lint rewrote {rel}: commit the regenerated file")
 

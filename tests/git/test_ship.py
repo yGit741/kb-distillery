@@ -22,7 +22,7 @@ class LaneOfTests(unittest.TestCase):
             self.assertEqual(lane_of(p), "knowledge", p)
 
     def test_tooling(self):
-        for p in ("src/kb_distillery/dashboard/serve.py", ".claude/skills/x/SKILL.md", "src/kb_distillery/kits/base/skills/x/SKILL.md", "scripts/launch.sh",
+        for p in ("src/kb_distillery/api/app.py", ".claude/skills/x/SKILL.md", "src/kb_distillery/kits/base/skills/x/SKILL.md", "scripts/launch.sh",
                   "pixi.toml", "AGENTS.md", "scripts/hooks/block-git-write.sh", ".claude/settings.json",
                   ".obsidian/app.json", "web/src/main.tsx", "src/kb_distillery/_webapp/index.html"):
             self.assertEqual(lane_of(p), "tooling", p)
@@ -244,6 +244,22 @@ class PrFlowTests(unittest.TestCase):
             self._write(wt, rel)
         self.assertEqual(ship.cmd_commit("feat(ops): add thing", root=wt, gates=False), 0)
         self.assertEqual(_g(wt, "show", "--name-only", "--format=", "HEAD").split(), ["meta/tool.py"])
+
+    def test_feature_commit_never_takes_section_indexes(self):
+        wt = self._start("sections")
+        for rel in ("meta/tool.py", "wiki/paper/index.md", "wiki/blog-post/2019/index.md", "examples/demo/wiki/role/index.md"):
+            self._write(wt, rel)
+        self.assertEqual(ship.cmd_commit("feat(ops): add thing", root=wt, gates=False), 0)
+        # the demo kb is tracked by the engine: its regenerated sections are part of the change, like its root index
+        self.assertEqual(sorted(_g(wt, "show", "--name-only", "--format=", "HEAD").split()),
+                         ["examples/demo/wiki/role/index.md", "meta/tool.py"])
+
+    def test_is_generated_covers_section_indexes_of_the_kb_and_the_demo(self):
+        for rel in ("wiki/index.md", "wiki/paper/index.md", "wiki/paper/2020/index.md", "examples/demo/wiki/role/index.md",
+                    "examples/demo/wiki/index.md"):
+            self.assertTrue(ship.is_generated(rel), rel)
+        for rel in ("wiki/paper/x.md", "src/kb_distillery/core/wikiindex.py", "examples/demo/wiki/a.md"):
+            self.assertFalse(ship.is_generated(rel), rel)
 
     def test_schema_merge_refuses_clashing_local_note(self):
         wt = self._start("books")

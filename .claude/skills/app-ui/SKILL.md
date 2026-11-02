@@ -3,7 +3,7 @@ name: app-ui
 description: >-
   Rules for building screens in the React app under web/ (tokens, components, one palette,
   data-model vocabulary, porting checklist). Use for port a screen, add a screen, frontend,
-  app shell, shadcn component, data palette. Do NOT use for the legacy src/kb_distillery/dashboard pages or wiki edits.
+  app shell, shadcn component, data palette. Do NOT use for wiki edits.
 ---
 
 # app-ui
@@ -18,7 +18,7 @@ Conventions for `web/` (Vite + React 19 + TypeScript strict + Tailwind v4 + shad
 
 ## Do NOT
 
-- Edit `wiki/`, `raw/`, `think/`, or the legacy pages in `src/kb_distillery/dashboard/` (a port deletes its legacy page in the same PR, nothing else)
+- Edit `wiki/`, `raw/`, `think/`
 - Hard-code a colour, a second theme toggle, a second nav, or a second Markdown renderer
 
 ## CLI
@@ -33,7 +33,7 @@ pixi run lint-skills
 
 ## Tokens
 
-- `web/src/index.css` holds the shadcn CSS variables converted from `src/kb_distillery/dashboard/static/shell.css` (light in `:root`, dark in `.dark`). ONE accent (`--primary`, blue). Chrome status colours are `--ok --warn --bad` only.
+- `web/src/index.css` holds the shadcn CSS variables converted from the retired dashboard `shell.css` (light in `:root`, dark in `.dark`). ONE accent (`--primary`, blue). Chrome status colours are `--ok --warn --bad` only.
 - Use Tailwind token classes (`bg-card`, `text-muted-foreground`, `border`, `text-primary`). Never a hex value in a component.
 - Data colours (type, layer, depth, status, area, raw pile) come from `src/theme/palette.ts` and nowhere else.
 - Theme: `src/theme/theme.ts` (zustand, saved in `localStorage` inside try/catch, `prefers-color-scheme` default). The toggle lives in AppShell only.

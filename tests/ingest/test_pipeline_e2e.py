@@ -222,7 +222,7 @@ from kb_distillery.services import graph as graph_data, pages as explore_data, p
 out = {"graph": graph_data.build_graph_snapshot(), "explore": explore_data.build_index(),
        "digestion": digestion_data.build_digestion_snapshot()}
 out["corpus"] = {f: corpus_data.build_corpus(f) for f in corpus_data.FORMATS}
-from kb_distillery.share import build as sb
+from kb_distillery.publish.site import build as sb
 from pathlib import Path
 out["share"] = sb.collect_data(Path("meta").resolve(), "%s", "0" * 40)
 print(json.dumps(out, ensure_ascii=False, default=str))
@@ -234,7 +234,11 @@ def collect_outputs(p, lint, coherence):
     cp = p.run("-c", BUILDERS, module=False)
     data = json.loads(cp.stdout.strip().splitlines()[-1])
     share_out = os.path.join(root, ".share", "index.html")
-    p.run("kb_distillery.share.build", "--inner", "--content-ref", "e2e", "--content-sha", "0" * 40,
+    app_index = os.path.join(root, ".share", "app-template.html")      # stands in for the built app's index.html
+    os.makedirs(os.path.dirname(app_index), exist_ok=True)
+    with open(app_index, "w", encoding="utf-8") as f:
+        f.write("<!doctype html><html><head><title>app</title></head><body></body></html>\n")
+    p.run("kb_distillery.publish.site.build", "--inner", "--app-index", app_index, "--content-ref", "e2e", "--content-sha", "0" * 40,
           "--kb-version", "0.0.0", "--viewer-sha", "0" * 40, "--profile", "public",
           "--built-at", BUILT_AT, "--out", share_out)
     graph = data["graph"]
@@ -254,8 +258,10 @@ def collect_outputs(p, lint, coherence):
     }
     files = {}
     for d in ("wiki",):
-        for fn in sorted(os.listdir(os.path.join(root, d))):
-            files[f"{d}/{fn}"] = p.read(f"{d}/{fn}")
+        for dirpath, _dirs, names in sorted(os.walk(os.path.join(root, d))):      # the pages and the section indexes below them
+            for fn in sorted(names):
+                rel = os.path.relpath(os.path.join(dirpath, fn), root).replace(os.sep, "/")
+                files[rel] = p.read(rel)
     files["meta/corpus.tsv"] = p.read("meta/corpus.tsv")
     files["wiki/log.md"] = _DATE_HDR.sub("## <date>", p.read("wiki/log.md"))
     return _norm(outputs, root), files

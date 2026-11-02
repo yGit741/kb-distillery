@@ -253,7 +253,7 @@ class PrChecks(unittest.TestCase):
 
 class SiteChecks(Repo):
     def _status(self, **kw):
-        from kb_distillery.share.contracts import StatusFile
+        from kb_distillery.publish.cloudflare.contracts import StatusFile
         path = os.path.join(self.root, ".cache", "share", "status.json")
         data = {"state": "deployed", "sha": g(self.root, "rev-parse", "main"), "kb_version": "1.0.1",
                 "at": NOW.isoformat(), "error": None, "url": "https://kb.example"}
@@ -301,7 +301,7 @@ class SiteChecks(Repo):
 
 class SnapshotChecks(unittest.TestCase):
     def test_orphans(self):
-        from kb_distillery.share import snapshots
+        from kb_distillery.publish.site import snapshots
         plan = {"orphans": ["snapshot-20261001-x"], "unknown": [], "foreign": [], "ok": ["snapshot-20261002-y"]}
         with patch.object(snapshots, "prune_plan", return_value=plan):
             found = hygiene.check_snapshots("/nowhere", NOW)
@@ -309,7 +309,8 @@ class SnapshotChecks(unittest.TestCase):
         self.assertEqual(found[0].fix, "pixi run share -- prune --apply")
 
     def test_offline_or_no_credentials_is_silent(self):
-        from kb_distillery.share import cf_api, snapshots
+        from kb_distillery.publish.cloudflare import cf_api
+        from kb_distillery.publish.site import snapshots
         with patch.object(snapshots, "prune_plan", side_effect=cf_api.CloudflareError("no credentials")):
             self.assertEqual(hygiene.check_snapshots("/nowhere", NOW), [])
 
@@ -405,7 +406,8 @@ class Runner(unittest.TestCase):
 
     def test_real_checks_on_a_clean_temp_repo(self):
         """The full CHECKS list runs end to end (network-y checks mocked away)."""
-        from kb_distillery.share import cf_api, snapshots
+        from kb_distillery.publish.cloudflare import cf_api
+        from kb_distillery.publish.site import snapshots
         r = Repo()
         r.setUp()
         try:

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Wiki query helpers — index-first candidate ranking (0 LLM).
 
-Karpathy pattern: read wiki/index.md first, then drill into pages. At ~200 pages
+Karpathy pattern: read the root wiki/index.md, then the one section index you need, then drill into pages. At ~200 pages
 the index is still enough; this supplements it with full-text term scoring.
 
     python3 -m kb_distillery.search.query candidates "tensor rank implicit bias"
@@ -18,39 +18,21 @@ import sys
 from kb_distillery.core import links as page_links
 from kb_distillery.core.graph import tokenize
 from kb_distillery.core.schema import INDEX_REL
+from kb_distillery.core import wikiindex
 
 from kb_distillery.paths import vault_root
 ROOT = vault_root()
 WIKI = os.path.join(ROOT, "wiki")
 INDEX = os.path.join(ROOT, INDEX_REL)
 
-# One index row: `- [Title](slug.md) — summary` (lint.write_index; an older index also had ` (maturity)` after the link).
-INDEX_TAIL = re.compile(r"^(?: \(([^()]*)\))?(?: — (.*))?$")
-
-
 def parse_index():
-    """Return slug -> {section, title, status, summary} from wiki/index.md (`status` is empty: rows carry no maturity; an
-    older index that has one still parses)."""
+    """Return slug -> {section, title, status, summary} from the section indexes under wiki/ (kb_distillery.core.wikiindex;
+    the root index only counts them). `status` is empty: rows carry no maturity."""
     if not os.path.isfile(INDEX):
         return {}
-    entries = {}
-    section = ""
-    with open(INDEX, encoding="utf-8") as f:
-        for line in f:
-            line = line.rstrip("\n")
-            if line.startswith("## "):
-                section = line[3:].strip()
-                continue
-            if not line.startswith("- "):
-                continue
-            m = page_links.PAGE_LINK.match(line, 2)
-            tail = INDEX_TAIL.match(line[m.end():]) if m else None
-            if not tail:
-                continue
-            title, slug, _anchor = page_links.link_parts(m)
-            entries[slug] = {"section": section, "title": title, "status": (tail.group(1) or "").strip(),
-                             "summary": (tail.group(2) or "").strip()}
-    return entries
+    rows = wikiindex.parse_rows(os.path.dirname(os.path.dirname(INDEX)))
+    return {slug: {"section": r["section"], "title": r["title"], "status": "", "summary": r["summary"]}
+            for slug, r in rows.items()}
 
 
 def _ref(slug, meta):
@@ -143,7 +125,7 @@ def cmd_candidates(query, limit=12, scope=None):
     if not ranked:
         print("NO_MATCHES  " + query + (("  [scope " + scope + "]") if scope else ""))
         print("the scope's pages do not cover this yet; see scope-status" if scope
-              else "read wiki/index.md; broaden terms or check MOCs")
+              else "read wiki/index.md, then the section you need; broaden terms or check MOCs")
         return 0
     print(f"CANDIDATES  {query}" + (("  [scope " + scope + "]") if scope else "") + f"  ({len(ranked)} hits, showing {min(limit, len(ranked))})")
     for score, slug, meta, hits in ranked[:limit]:

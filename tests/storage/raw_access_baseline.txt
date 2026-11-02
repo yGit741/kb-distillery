@@ -1,5 +1,4 @@
 # Modules allowed to reach raw/ directly today (Phase 3). Migrate one onto kb_distillery.storage and delete its line.
-dashboard/serve.py
 git/guard.py
 git/ship.py
 ingest/catalog.py

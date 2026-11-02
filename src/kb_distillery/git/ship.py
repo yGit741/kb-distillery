@@ -51,7 +51,7 @@ ROOT = checkout_root()
 
 from kb_distillery.ops.daily_sync import changed_paths, has_open_sessions, run_git
 from kb_distillery.git import app_token, claims, commit_policy, events, gate_cache, gate_slot, rounds
-from kb_distillery.core.schema import GATE_PREFIXES as GP, GIT_POLICY_MODE, INDEX_REL, SCHEMA_VERSION
+from kb_distillery.core.schema import GATE_PREFIXES as GP, GIT_POLICY_MODE, INDEX_REL, SCHEMA_VERSION, is_index_path
 
 GATES = [
     ("tests", [sys.executable, "-m", "pytest", "-q", "-n", "6", "-m", "not serial", "tests"]),
@@ -63,6 +63,7 @@ GATES = [
 ]
 SUBCOMMANDS = {"whoami", "claims", "events", "round", "queue", "start", "commit", "pr", "merge", "sync", "status", "prune", "protect", "approve", "tag", "mv"}
 GENERATED_FILES = {INDEX_REL, "meta/corpus.tsv", "meta/coherence-warnings.tsv"}
+SECTION_INDEX_PATHSPECS = {"wiki/*/index.md"}     # git pathspecs (`*` crosses `/`): every section index under wiki/
 MIGRATED_GENERATED = {"meta/corpus.tsv"}   # a migration's output: committed by schema/paradigm commits
 FEATURE_RE = re.compile(r"^[a-z0-9][a-z0-9-]*$")
 FORBIDDEN_MERGE_FLAGS = {"--squash", "--rebase", "-s", "-r"}
@@ -73,14 +74,29 @@ _REAL_RUN = subprocess.run     # a gate result is only recorded or reused while 
 
 def is_generated(path):
     """A file lint rewrites on every run: the kb's own and the demo kb's (examples/demo/)."""
-    return path in GENERATED_FILES or (path.startswith("examples/demo/") and path[len("examples/demo/"):] in GENERATED_FILES)
+    demo = path[len("examples/demo/"):] if path.startswith("examples/demo/") else None
+    return (path in GENERATED_FILES or is_index_path(path)
+            or (demo is not None and (demo in GENERATED_FILES or is_index_path(demo))))
+
+
+def _drop_regenerated(root):
+    """Undo what lint rewrote in `root`: the generated files and every section index. A tracked one goes back to HEAD,
+    one lint created (untracked) is deleted."""
+    for p in changed_paths(root)["knowledge"]:
+        if p not in GENERATED_FILES and not is_index_path(p):
+            continue
+        if run_git(["cat-file", "-e", f"HEAD:{p}"], cwd=root).returncode == 0:
+            run_git(["checkout", "HEAD", "--", p], cwd=root)
+        elif os.path.isfile(os.path.join(root, p)):
+            os.remove(os.path.join(root, p))
 
 
 def _fingerprint(root):
     """Tree sha of `root` without generated files, or None when the real runner is not in use / git fails."""
     if subprocess.run is not _REAL_RUN:
         return None
-    generated = sorted(GENERATED_FILES | {f"examples/demo/{g}" for g in GENERATED_FILES})
+    generated = sorted(GENERATED_FILES | {f"examples/demo/{g}" for g in GENERATED_FILES}
+                       | SECTION_INDEX_PATHSPECS | {f"examples/demo/{g}" for g in SECTION_INDEX_PATHSPECS})
     return gate_cache.tree_sha(root, generated)
 
 
@@ -204,7 +220,7 @@ def worktree_dirty(path):
             continue
         if rec[0] in "RC":
             i += 1
-        if rec[3:] not in GENERATED_FILES:
+        if rec[3:] not in GENERATED_FILES and not is_index_path(rec[3:]):
             dirty.append(rec[3:])
     return dirty
 
@@ -494,7 +510,7 @@ def checks_for(paths):
     if hit(*GP["api"], *GP["frontend_api"]):
         checks.append(("api-schema-check", ["pixi", "run", "api-schema-check"]))
     # the graph's motion lives in the canvas: only the e2e still-canvas test sees it (web/e2e)
-    if hit(*GP["dashboard"], *GP["graph_ui"], *GP["e2e"]):
+    if hit(*GP["graph_ui"], *GP["e2e"]):
         checks.append(("test-e2e", ["pixi", "run", "test-e2e"]))
     return checks
 
@@ -744,7 +760,7 @@ def cmd_commit(message, skip_tests=False, root=ROOT, gates=True):
     # commit keeps meta/corpus.tsv: its hand-owned columns (disposition, collection, scopes) are what a
     # migration rewrites, and lint keeps them as committed instead of re-deriving them.
     keep = MIGRATED_GENERATED if parsed.type in ("schema", "paradigm") else set()
-    paths = [p for p in paths if p not in GENERATED_FILES or p in keep]      # frozen: gates never change this set
+    paths = [p for p in paths if (p not in GENERATED_FILES and not is_index_path(p)) or p in keep]      # frozen: gates never change this set
     # cheap refusals first, before any gate: what is already staged must be part of this commit
     staged = set(filter(None, run_git(["diff", "--cached", "--name-only", "-z"], cwd=root).stdout.split("\0")))
     extra = sorted(staged - set(paths))
@@ -1013,9 +1029,7 @@ def cmd_sync(cont=False, abort=False, root=ROOT, gates=True):
     if run_git(["merge-base", "--is-ancestor", base, "HEAD"], cwd=root).returncode == 0:
         print(f"{branch} already contains {base}")
         return 0
-    regenerated = [p for p in GENERATED_FILES if p in changed_paths(root)["knowledge"]]
-    if regenerated:                                  # lint rebuilds them; never block a sync on them
-        run_git(["checkout", "HEAD", "--", *regenerated], cwd=root)
+    _drop_regenerated(root)                          # lint rebuilds them; never block a sync on them
     dirty = [p for lane in changed_paths(root).values() for p in lane]
     if dirty:
         print(f"error: uncommitted changes — ship commit them first: {dirty[:5]}")
@@ -1038,7 +1052,7 @@ def _knowledge_clashes(root, primary, base):
                          .stdout.split("\0")))
     clashes = []
     for p in changed_paths(primary)["knowledge"]:
-        if p not in changed or p in GENERATED_FILES:
+        if p not in changed or p in GENERATED_FILES or is_index_path(p):
             continue
         local = os.path.join(primary, p)
         mine = open(local, "rb").read() if os.path.exists(local) else None
@@ -1106,9 +1120,7 @@ def _merge_locked(branch, local, pr_number, title, skip_tests, no_push, root, ga
         behind = False
     if behind:
         # lint gates regenerate these in the worktree; they are rebuilt anyway, so drop them before syncing
-        regenerated = [p for p in GENERATED_FILES if p in changed_paths(root)["knowledge"]]
-        if regenerated:
-            run_git(["checkout", "HEAD", "--", *regenerated], cwd=root)
+        _drop_regenerated(root)
         sync = run_git(["merge", "--no-edit", "-m", f"Merge branch 'main' into {branch}", base], cwd=root)
         print(_out(sync))
         if sync.returncode != 0:
