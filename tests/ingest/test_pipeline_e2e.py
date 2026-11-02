@@ -26,6 +26,8 @@ import tempfile
 import time
 import unittest
 
+import pytest
+
 from kb_distillery.kbconfig import checkout_root
 from kb_distillery.paths import CODE_DIR, vault_root
 CHECKOUT_ROOT = checkout_root()
@@ -296,6 +298,7 @@ class PipelineE2E(unittest.TestCase):
         if os.environ.get("KB_UPDATE_GOLDEN") == "1":
             write_golden(cls.outputs, cls.files)
 
+    @pytest.mark.serial        # a wall-clock budget: measures contention under `-n`, so the gate runs it alone
     def test_fast_and_offline(self):
         self.assertLess(self.seconds, 60, f"e2e took {self.seconds:.0f}s")
 
