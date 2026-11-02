@@ -2,9 +2,7 @@
 import os
 import re
 from kb_distillery.core import links as page_links
-from kb_distillery.core.links import WIKILINK_TARGET
 
-LINK = WIKILINK_TARGET
 TOKEN = re.compile(r"[a-z0-9]+")
 
 NEGATION = frozenset({
@@ -75,7 +73,7 @@ def claim_text(slug, fm, text):
 
 
 def outbound_links(text, fm=None):
-    slugs = {m.strip() for m in LINK.findall(text or "")}
+    slugs = set(page_links.targets(text))
     if fm:
         slugs.update(page_links.refs(fm.get("related")))
     return slugs

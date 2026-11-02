@@ -208,7 +208,7 @@ def _catalog_stub(slug, raw_rel, title=None, year=None, url="", authors=None):
     year = year or (stem[:4] if stem[:4].isdigit() else "")
     person = person_from_raw(raw_rel)
     recommended = f"[{person}]" if person else "[]"
-    person_line = f"- Person: [[{person}]]\n" if person else ""
+    person_line = f"- Person: {links.link(person, page_title(person))}\n" if person else ""
     sources_yaml = frontmatter.url_sources(url)
     sources_yaml = sources_yaml + "\n" if sources_yaml else ""
     return f"""---
@@ -244,7 +244,7 @@ discussed_with: []
 -
 
 ## Links out
-- Concepts: [[]]
+- Concepts: <!-- [Title](slug.md) -->
 {person_line}"""
 
 

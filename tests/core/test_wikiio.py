@@ -102,7 +102,7 @@ class WritersKeepNotes(unittest.TestCase):
         self.w("wiki/theme-x.md", "---\ntype: theme\nstatus: seed\n---\n\n# X\n\n## Scope\n\ns\n\n" + NOTES)
         with patch.object(session, "ROOT", self.root):
             session._apply_moc_updates({"moc_updates": [{"moc": "theme-x", "link": "paper-y"}]})
-        self.assertIn("## Papers\n\n- [[paper-y]]", self.r("wiki/theme-x.md"))
+        self.assertIn("## Papers\n\n- [paper-y](paper-y.md)", self.r("wiki/theme-x.md"))
         self.assertNotesKept("wiki/theme-x.md")
 
     def test_finalize_overwriting_an_existing_concept(self):
@@ -143,7 +143,7 @@ class WritersKeepNotes(unittest.TestCase):
             course.add_member("course-t", "raw/printed-docs/t-a.pdf", "A")
             course.record_row("course-t", ["raw/printed-docs/t-a.pdf"], "lecture-t-a", "easy")
         text = self.r("wiki/course-t.md")
-        self.assertIn("[[lecture-t-a]]", text)
+        self.assertIn("[lecture-t-a](lecture-t-a.md)", text)
         self.assertNotesKept("wiki/course-t.md")
 
     def test_person_regenerated(self):

@@ -38,8 +38,8 @@ Variables: $x$: a fixture variable
 ## Takeaways for my thesis
 
 - Yes, by symmetrisation.
-- Concepts: [[noise-stability]], [[theme-boolean-analysis]]
+- Concepts: [Noise stability](noise-stability.md), [Boolean Analysis](theme-boolean-analysis.md)
 
 ## Links out
 
-- Concepts: [[noise-stability]], [[theme-boolean-analysis]]
+- Concepts: [Noise stability](noise-stability.md), [Boolean Analysis](theme-boolean-analysis.md)

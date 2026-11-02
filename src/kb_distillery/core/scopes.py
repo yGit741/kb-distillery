@@ -20,7 +20,7 @@ import sys
 from kb_distillery.core import frontmatter
 from kb_distillery.core.graph import outbound_links
 from kb_distillery.core.schema import COLLECTION_TYPES, SOURCE_TYPES, SLUG_PREFIX
-from kb_distillery.core.links import WIKILINK_TARGET
+from kb_distillery.core import links as page_links
 
 PREFIX = SLUG_PREFIX["scope"]
 MEMBERS_HEADING = "## Members"
@@ -31,7 +31,6 @@ HOP1_MIN = 2
 HOP1_TYPES = ("idea", "question")
 SLUG_RE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 _COMMENT = re.compile(r"<!--.*?-->", re.S)
-_WIKILINK = WIKILINK_TARGET
 
 
 # ---------------------------------------------------------------- rows
@@ -320,7 +319,7 @@ def why_text(text):
 
 
 def why_links(text):
-    return [l.strip() for l in _WIKILINK.findall(why_text(text))]
+    return page_links.targets(why_text(text))
 
 
 def title_of(text, slug=""):
@@ -331,6 +330,11 @@ def title_of(text, slug=""):
 def _fmt(path):
     parts = path.split("/")
     return parts[1] if len(parts) > 2 else ""
+
+
+def _page(pages, slug):
+    """A page link whose text is the page title (the text a reader showed for the old bare wikilink)."""
+    return page_links.link(slug, page_links.shown_title(page_links.title_of(pages[slug][2], slug)) if slug in pages else slug)
 
 
 def render_members(scope_slug, proj, pages):
@@ -347,22 +351,22 @@ def render_members(scope_slug, proj, pages):
         for s in proj["hop0"]:
             fm = pages[s][1]
             src = ", ".join(f"`{p}`" for p in proj["sources"].get(s, ()))
-            out.append(f"| [[{s}]] | {fm.get('type', '')} | {fm.get('depth', '') or '—'} | {src} |")
+            out.append(f"| {_page(pages, s)} | {fm.get('type', '')} | {fm.get('depth', '') or '—'} | {src} |")
     else:
         out.append("_No digested pages yet._")
     out += ["", "### Uncovered", ""]
     if proj["uncovered"]:
         out += ["| Raw | Format | Hub |", "|-----|--------|-----|"]
         for p in proj["uncovered"]:
-            hubs = ", ".join(f"[[{h}]]" for h in proj["hub_of"].get(p, ())) or "—"
+            hubs = ", ".join(_page(pages, h) for h in proj["hub_of"].get(p, ())) or "—"
             out.append(f"| `{p}` | {_fmt(p)} | {hubs} |")
     else:
         out.append("_Nothing queued._")
     ctx = []
     if proj["hubs"]:
-        ctx.append("Collections: " + ", ".join(f"[[{h}]]" for h in proj["hubs"]))
+        ctx.append("Collections: " + ", ".join(_page(pages, h) for h in proj["hubs"]))
     if proj["themes"]:
-        ctx.append("Topics: " + ", ".join(f"[[{t}]]" for t in proj["themes"]))
+        ctx.append("Topics: " + ", ".join(_page(pages, t) for t in proj["themes"]))
     out += ["", "### Context", "", " · ".join(ctx) if ctx else "_No hubs or themes._"]
     return "\n".join(out) + "\n"
 

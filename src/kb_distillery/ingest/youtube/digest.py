@@ -215,7 +215,7 @@ def video_digest(arg, tier="full", model=readers.READ_MODEL, workers=4, backend=
           f"({stats['backend']} ${stats['usd']})")
     print(f"updated {wiki_path} ({page_type}, depth: {depth}) — ## Frames written, ## Key equations drafted")
     print(f"Agent: read {os.path.join(work, 'abstract.text')} (transcript + reads), write Problem, Main result, "
-          f"Key ideas, curate Key equations, Takeaways{', Connections ([[links]] into the wiki)' if tier == 'deep' else ''}; "
+          f"Key ideas, curate Key equations, Takeaways{', Connections (`[Title](slug.md)` links into the wiki)' if tier == 'deep' else ''}; "
           "then pixi run lint and pixi run ops -- commit")
     return wiki_path
 

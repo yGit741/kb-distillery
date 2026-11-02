@@ -38,8 +38,8 @@ Variables: $x$: a fixture variable
 ## Takeaways for my thesis
 
 - The bound is tight up to constants.
-- Concepts: [[generalization]], [[theme-learning-theory]]
+- Concepts: [Generalization](generalization.md), [Learning Theory](theme-learning-theory.md)
 
 ## Links out
 
-- Concepts: [[generalization]], [[theme-learning-theory]]
+- Concepts: [Generalization](generalization.md), [Learning Theory](theme-learning-theory.md)

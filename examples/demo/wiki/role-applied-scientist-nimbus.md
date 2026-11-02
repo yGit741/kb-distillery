@@ -11,15 +11,15 @@ generated: {by: human:dana-levi}
 
 # Applied Scientist, Clinical NLP (Nimbus)
 
-**Company:** [[company-nimbus-health]] · **Stage:** hiring-manager conversation scheduled.
+**Company:** [Nimbus Health](company-nimbus-health.md) · **Stage:** hiring-manager conversation scheduled.
 
 ## What the job is
-Lead modelling on clinical named-entity recognition, negation and summarisation ([[skill-clinical-nlp]]), build evaluation sets that capture rare but dangerous cases, and present to medical staff.
+Lead modelling on clinical named-entity recognition, negation and summarisation ([Clinical NLP](skill-clinical-nlp.md)), build evaluation sets that capture rare but dangerous cases, and present to medical staff.
 
 ## What they want
-MSc or PhD or equivalent, fluent [[skill-pytorch]] and Hugging Face, and a clear story about past projects ([[skill-interviewing-stories]]).
+MSc or PhD or equivalent, fluent [PyTorch](skill-pytorch.md) and Hugging Face, and a clear story about past projects ([Interviewing stories (behavioural)](skill-interviewing-stories.md)).
 
 ## Fit
-Good on modelling; clinical domain depth is the gap to close before [[interview-nimbus-hiring-manager]] with [[maya-cohen]].
+Good on modelling; clinical domain depth is the gap to close before [Nimbus hiring-manager interview](interview-nimbus-hiring-manager.md) with [Maya Cohen](maya-cohen.md).
 
-See [[process-nimbus-health]].
+See [Nimbus Health hiring process](process-nimbus-health.md).

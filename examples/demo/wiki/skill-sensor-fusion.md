@@ -14,8 +14,8 @@ generated: {by: human:dana-levi}
 Combining lidar, camera and IMU into one state estimate: time sync, per-sensor detection, a fusion stage (Kalman filter or learned) and a tracker.
 
 ## Evidence
-- Central to [[role-senior-ml-engineer-acme]].
-- [[interview-acme-technical]]: 30 ms skew question; improvement noted in [[notes-acme-technical-interview]].
-- Failure modes in [[chat-gemini-acme-system-design-prep]].
+- Central to [Senior ML Engineer, Perception (Acme)](role-senior-ml-engineer-acme.md).
+- [Acme technical interview](interview-acme-technical.md): 30 ms skew question; improvement noted in [Acme technical interview notes](notes-acme-technical-interview.md).
+- Failure modes in [Gemini chat: Acme system-design and ML-ops prep](chat-gemini-acme-system-design-prep.md).
 
-Pairs with [[skill-system-design]].
+Pairs with [System design for ML](skill-system-design.md).

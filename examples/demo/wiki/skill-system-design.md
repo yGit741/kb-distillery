@@ -11,10 +11,10 @@ generated: {by: human:dana-levi}
 
 # System design for ML
 
-Acme's loop has a design round for [[role-senior-ml-engineer-acme]].
+Acme's loop has a design round for [Senior ML Engineer, Perception (Acme)](role-senior-ml-engineer-acme.md).
 
 ## Structure
-Requirements, data flow, models, evaluation, deployment, monitoring, trade-offs (from [[chat-gemini-acme-system-design-prep]]).
+Requirements, data flow, models, evaluation, deployment, monitoring, trade-offs (from [Gemini chat: Acme system-design and ML-ops prep](chat-gemini-acme-system-design-prep.md)).
 
 ## Related
-[[skill-ml-ops]] supplies the deployment and monitoring half; [[skill-sensor-fusion]] the perception half. Next step after [[interview-acme-technical]].
+[ML-ops](skill-ml-ops.md) supplies the deployment and monitoring half; [Sensor fusion](skill-sensor-fusion.md) the perception half. Next step after [Acme technical interview](interview-acme-technical.md).

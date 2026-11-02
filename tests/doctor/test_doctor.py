@@ -95,7 +95,7 @@ def test_kb_config_errors_name_their_fix():
         def loader(ref):
             raise kbconfig.KbConfigError(msg)
         return loader
-    c, cfg = doctor.check_kb_config("x", boom("kb.toml: schema_version 1.3 but this explorer speaks 1.5"))
+    c, cfg = doctor.check_kb_config("x", boom("kb.toml: schema_version 1.3 but this explorer speaks 1.6"))
     assert c.status == FAIL and cfg is None and "migrate" in c.fix
     c, _ = doctor.check_kb_config("x", boom("[kb] kit = 'q' is not a known kit"))
     assert c.status == FAIL and "kit" in c.fix
@@ -106,7 +106,7 @@ def test_kb_config_errors_name_their_fix():
 def test_kb_config_ok_and_layout(tmp_path):
     root = tmp_path / "k"
     root.mkdir()
-    cfg = types.SimpleNamespace(id="k", schema_version=(1, 5), kit="base", root=str(root), git_root=None)
+    cfg = types.SimpleNamespace(id="k", schema_version=(1, 6), kit="base", root=str(root), git_root=None)
     c, got = doctor.check_kb_config("k", lambda ref: cfg)
     assert c.status == PASS and got is cfg and "base" in c.detail
     assert doctor.check_kb_layout(cfg).status == WARN            # no wiki/ meta/

@@ -18,7 +18,7 @@ Fixture topic for the pipeline harness.
 ## Threads
 
 ## Papers
-- [[paper-2021-arxiv-style-fixture]]
+- [Fixture arXiv-style paper](paper-2021-arxiv-style-fixture.md)
 
 ## My notes
 

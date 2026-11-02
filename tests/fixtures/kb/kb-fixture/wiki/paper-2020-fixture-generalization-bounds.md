@@ -36,8 +36,8 @@ $R(h) \le \hat R(h) + \sqrt{C/n}$
 
 ## Takeaways for my thesis
 
-- Baseline for [[generalization]].
+- Baseline for [Generalization](generalization.md).
 
 ## Links out
-- Concepts: [[generalization]], [[pac-learning]]
-- Person: [[jane-doe]]
+- Concepts: [Generalization](generalization.md), [PAC learning](pac-learning.md)
+- Person: [Jane Doe](jane-doe.md)

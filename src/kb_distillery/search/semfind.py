@@ -8,7 +8,7 @@ import sys
 from datetime import datetime, timezone
 
 from kb_distillery.core.graph import claim_text, extract_section, one_hop, outbound_links, score_pair
-from kb_distillery.lint.lint import LINK, parse_frontmatter
+from kb_distillery.lint.lint import parse_frontmatter
 from kb_distillery.core.schema import SOURCE_TYPES
 
 from kb_distillery.paths import vault_root

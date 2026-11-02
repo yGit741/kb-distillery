@@ -11,16 +11,16 @@ generated: {by: human:dana-levi}
 
 # Senior ML Engineer, Perception (Acme)
 
-**Company:** [[company-acme-robotics]] · **Applied:** 2026-10-02 via recruiter · **Stage:** technical interview done.
+**Company:** [Acme Robotics](company-acme-robotics.md) · **Applied:** 2026-10-02 via recruiter · **Stage:** technical interview done.
 
 ## What the job is
-Own the pipeline for 3D detection and tracking, fuse lidar, camera and IMU ([[skill-sensor-fusion]]), ship quantized models to the edge, and work with ML-ops on retraining and shadow deployment ([[skill-ml-ops]]).
+Own the pipeline for 3D detection and tracking, fuse lidar, camera and IMU ([Sensor fusion](skill-sensor-fusion.md)), ship quantized models to the edge, and work with ML-ops on retraining and shadow deployment ([ML-ops](skill-ml-ops.md)).
 
 ## What they want
-Strong [[skill-pytorch]], end-to-end design ability ([[skill-system-design]]), 5+ years applied ML.
+Strong [PyTorch](skill-pytorch.md), end-to-end design ability ([System design for ML](skill-system-design.md)), 5+ years applied ML.
 
 ## Fit
-Strong on tracking and ML-ops; time-alignment of sensors needs polish after [[interview-acme-technical]].
+Strong on tracking and ML-ops; time-alignment of sensors needs polish after [Acme technical interview](interview-acme-technical.md).
 
 ## Process
-[[interview-acme-recruiter-screen]], [[interview-acme-technical]], then system design and hiring manager. Contacts: [[noa-peretz]], [[omer-shahar]]. See [[process-acme-robotics]].
+[Acme recruiter screen](interview-acme-recruiter-screen.md), [Acme technical interview](interview-acme-technical.md), then system design and hiring manager. Contacts: [Noa Peretz](noa-peretz.md), [Omer Shahar](omer-shahar.md). See [Acme Robotics hiring process](process-acme-robotics.md).

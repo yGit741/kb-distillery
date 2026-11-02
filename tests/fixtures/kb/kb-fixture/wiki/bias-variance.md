@@ -24,8 +24,8 @@ Fixture idea.
 Fixture.
 
 ## Connections
-- [[theme-statistics]]
-- [[generalization]]
+- [Topic: statistics](theme-statistics.md)
+- [Generalization](generalization.md)
 
 ## Open questions
 -

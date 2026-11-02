@@ -39,8 +39,8 @@ Variables: $T$: tensor
 ## Takeaways for my thesis
 
 - Gradient flow implicitly minimizes tensor rank.
-- Concepts: [[tensor-rank]], [[theme-learning-theory]]
+- Concepts: [Tensor rank](tensor-rank.md), [Learning theory](theme-learning-theory.md)
 
 ## Links out
 
-- Concepts: [[tensor-rank]], [[theme-learning-theory]]
+- Concepts: [Tensor rank](tensor-rank.md), [Learning theory](theme-learning-theory.md)

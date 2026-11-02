@@ -26,10 +26,10 @@ $T = \sum_{r=1}^{R} a_r \otimes b_r \otimes c_r$
 Implicit regularization may minimize it.
 
 ## Connections
-- [[theme-learning-theory]]
+- [Learning theory](theme-learning-theory.md)
 
 ## Open questions
-- [[q-does-rank-explain-generalization]]
+- [Does rank explain generalization?](q-does-rank-explain-generalization.md)
 
 ## My notes
 

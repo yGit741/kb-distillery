@@ -12,13 +12,13 @@ generated: {by: human:dana-levi}
 
 # Acme technical interview
 
-**When:** 2026-10-15, 11:00, video, 60 minutes · **With:** [[omer-shahar]] · **Role:** [[role-senior-ml-engineer-acme]]
+**When:** 2026-10-15, 11:00, video, 60 minutes · **With:** [Omer Shahar](omer-shahar.md) · **Role:** [Senior ML Engineer, Perception (Acme)](role-senior-ml-engineer-acme.md)
 
 ## What was asked
-A shipped-model post-mortem, a minimal tracker, lidar-camera fusion under skew ([[skill-sensor-fusion]]), DataLoader performance ([[skill-pytorch]]), a retraining trigger ([[skill-ml-ops]]).
+A shipped-model post-mortem, a minimal tracker, lidar-camera fusion under skew ([Sensor fusion](skill-sensor-fusion.md)), DataLoader performance ([PyTorch](skill-pytorch.md)), a retraining trigger ([ML-ops](skill-ml-ops.md)).
 
 ## Preparation that paid off
-[[chat-gemini-acme-system-design-prep]] for the ML-ops answer.
+[Gemini chat: Acme system-design and ML-ops prep](chat-gemini-acme-system-design-prep.md) for the ML-ops answer.
 
 ## Outcome
-Omer will recommend the system-design round ([[skill-system-design]]). Arranged by [[noa-peretz]]. Notes: [[notes-acme-technical-interview]]. File: [[process-acme-robotics]].
+Omer will recommend the system-design round ([System design for ML](skill-system-design.md)). Arranged by [Noa Peretz](noa-peretz.md). Notes: [Acme technical interview notes](notes-acme-technical-interview.md). File: [Acme Robotics hiring process](process-acme-robotics.md).

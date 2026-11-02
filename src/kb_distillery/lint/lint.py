@@ -45,9 +45,8 @@ except ImportError:                         # pragma: no cover
     arxiv_meta = None
 
 from kb_distillery.paths import vault_root
-from kb_distillery.core.links import WIKILINK_TARGET
+from kb_distillery.core import links as page_links
 ROOT = vault_root()  # KB_ROOT: share build
-LINK = WIKILINK_TARGET
 # Fenced blocks and inline code: `[[1, 2], [3, 4]]` in a code sample is not a wikilink.
 CODE = re.compile(r"^\s*(?:>\s*)*(```|~~~).*?^\s*(?:>\s*)*\1[^\n]*$|`[^`\n]+`", re.M | re.S)
 errors, warnings, notices = [], [], []
@@ -645,25 +644,55 @@ def check_index_links(pages):
     known, broken = known_link_targets(pages), 0
     with open(path, encoding="utf-8") as f:
         text = f.read()
-    for target in LINK.findall(CODE.sub("", text)):
-        if target.strip() not in known:
-            err("index.md", f"wikilink [[{target.strip()}]] resolves to nothing — write_index must only list pages that exist")
+    for target in page_links.wikilink_targets(CODE.sub("", text)):
+        if target not in known:
+            err("index.md", f"wikilink [[{target}]] resolves to nothing — write_index must only list pages that exist")
             broken += 1
     return broken
 
 
+PATH_PREFIXED = re.compile(r"\]\(((?:\./|\.\./wiki/|wiki/)[^()\s/]+\.md)(?:#[^()\s]*)?\)")
+
+
 def check_links(pages):
+    """Pages link with `[Title](slug.md)` (core.links). A wikilink outside `## My notes` is an error (it was written
+    after the schema 1.6 switch); inside My notes it is the user's and only warns when it points at nothing. A page
+    link to no page, or to a heading the page lacks, is an error. Code and math are not read."""
     known = known_link_targets(pages)
+    headings = {}
     broken = 0
     for slug, (rel, fm, text) in pages.items():
-        for target in LINK.findall(CODE.sub("", text)):
-            target = target.strip()
-            if "/" in target:
-                err(rel, f"path-prefixed wikilink [[{target}]] — wiki/ is flat, use the bare slug")
-            elif target not in known:
-                warn(rel, f"wikilink [[{target}]] resolves to nothing")
+        body = page_links.body_of(text)
+        spans = page_links.protected_spans(body)
+        notes = page_links.notes_spans(body)
+        prose = page_links.prose(body)
+        for m in page_links.WIKILINK_ANY.finditer(body):
+            at = m.start()
+            if any(a <= at < b for a, b in notes):
+                target = re.split(r"\\?\||#", m.group(2))[0].strip()
+                if m.group(1) == "" and target and target not in known:
+                    warn(rel, f"wikilink [[{target}]] resolves to nothing")
+                    broken += 1
+            elif not any(a <= at < b for a, b in spans):
+                err(rel, f"wikilink {m.group(0)} — pages link with [Title](slug.md), wikilinks live only in ## My notes")
+        for m in page_links.PAGE_LINK.finditer(body):
+            if any(a <= m.start() < b for a, b in spans):
+                continue                                      # code, math and My notes are not read
+            _label, target, anchor = page_links.link_parts(m)
+            if target not in pages:
+                err(rel, f"link {m.group(0)} resolves to no page")
                 broken += 1
+            elif anchor:
+                if target not in headings:
+                    headings[target] = {page_links.slugify(h) for h in HEADING_LINE.findall(page_links.prose(page_links.body_of(pages[target][2])))}
+                if anchor.lower() not in headings[target]:
+                    err(rel, f"link {m.group(0)} points at a heading {target}.md does not have")
+        for m in PATH_PREFIXED.finditer(prose):
+            err(rel, f"path-prefixed page link ({m.group(1)}) — wiki/ is flat, link the bare slug.md")
     return broken
+
+
+HEADING_LINE = re.compile(r"^#{1,6}\s+(.+?)\s*#*\s*$", re.M)
 
 def check_pdf_magic(raw_files):
     """A .pdf that is really an HTML landing page passes the name and size checks and then
@@ -919,8 +948,8 @@ def check_ingest_strict(pages, only_slugs=None):
         if not slug.startswith(TOPIC_PREFIX):
             continue
         if "## Papers" in text:
-            for target in LINK.findall(text.split("## Papers", 1)[1]):
-                theme_papers.add(target.strip())
+            for target in page_links.targets(text.split("## Papers", 1)[1]):
+                theme_papers.add(target)
 
     for slug, (rel, fm, text) in pages.items():
         if only_slugs and slug not in only_slugs:
@@ -1446,7 +1475,7 @@ def write_index(pages, quiet=False):
             rel, fm, text = pages[slug]
             if fm.get("type") != t:
                 continue
-            s = (summary_lib.unquote(fm.get("description")) or first_line(text)).replace("|", "\\|")
+            s = page_links.plain(summary_lib.unquote(fm.get("description")) or first_line(text)).replace("|", "\\|")
             if len(s) > 110:
                 s = s[:107] + "..."
             rows.append(f"| [[{slug}]] | {fm.get('maturity','')} | {s} |")

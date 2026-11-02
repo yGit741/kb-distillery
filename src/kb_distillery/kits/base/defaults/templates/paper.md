@@ -33,10 +33,10 @@ description:
 
 ## Connections
 
-- Related papers: [[]]
-- Disagrees with [[other-paper]]: (when papers clash — both digests stay; note tension here)
+- Related papers: <!-- [Title](slug.md) -->
+- Disagrees with `[Other paper](other-paper.md)`: (when papers clash — both digests stay; note tension here)
 
 ## Links out
-- Concepts: [[]]
-- Person: [[]]   # required when the raw's corpus.tsv collection names a researcher
-- Related papers: [[]]
+- Concepts: <!-- [Title](slug.md) -->
+- Person: <!-- [Name](person-slug.md) -->   # required when the raw's corpus.tsv collection names a researcher
+- Related papers: <!-- [Title](slug.md) -->

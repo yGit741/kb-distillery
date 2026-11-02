@@ -21,8 +21,8 @@ description:
 ## Why it matters (thesis angle)
 
 ## Connections
-- [[]]
-- [[]]
+- <!-- [Title](slug.md) -->
+- <!-- [Title](slug.md) -->
 
 ## Open questions
 -

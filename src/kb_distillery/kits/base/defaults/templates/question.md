@@ -23,7 +23,7 @@ description:
 -
 
 ## Papers / concepts to read
-- [[]]
+- <!-- [Title](slug.md) -->
 
 ## My notes
 

@@ -6,10 +6,11 @@ import subprocess
 import sys
 from datetime import datetime, timezone
 
-from .paths import ROOT, load_session, save_session, session_dir, sha1_file
+from .paths import ROOT, load_session, page_title, save_session, session_dir, sha1_file
 from .schemas import validate_plan
 from . import book as book_mod
 from .verify import existing_digest_for_raw, verify_raw
+from kb_distillery.core import links as page_links
 from kb_distillery.core import wikiio
 
 
@@ -305,11 +306,11 @@ def _record_hub_row(sha, session, plan):
     if hub_rel not in session.setdefault("modified_files", []):
         session["modified_files"].append(hub_rel)
     save_session(sha, session)
-    print(f"hub {hub_rel} row {scope.get('row')} → [[{plan['wiki_slug']}]] ({status})")
+    print(f"hub {hub_rel} row {scope.get('row')} → {plan['wiki_slug']} ({status})")
 
 
 def _insert_under_papers(text, wikilink):
-    """Append `- [[x]]` at the end of the `## Papers` section (before the next `## `); create the
+    """Append `- [Title](x.md)` at the end of the `## Papers` section (before the next `## `); create the
     section before `## Threads` (or at the end) if the theme has none."""
     lines = text.rstrip("\n").split("\n")
     bullet = f"- {wikilink}"
@@ -338,9 +339,9 @@ def _apply_moc_updates(plan):
             continue
         with open(path, encoding="utf-8") as f:
             text = f.read()
-        wikilink = f"[[{link}]]"
-        if wikilink in text:
+        if link in page_links.targets(text):
             continue
+        wikilink = page_links.link(link, page_title(link))
         wikiio.write_page(path, wikiio.edit_body(text, lambda t: _insert_under_papers(t, wikilink)))
 
 

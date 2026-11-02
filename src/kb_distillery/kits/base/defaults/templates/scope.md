@@ -11,7 +11,7 @@ aliases: []
 
 ## Why
 
-<!-- At least one paragraph: why this working set exists. Must link a [[theme-…]] or [[q-…]] page. -->
+<!-- At least one paragraph: why this working set exists. Must link a theme- or q- page. -->
 
 ## Members
 

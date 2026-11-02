@@ -25,8 +25,8 @@ Coverage: **1 / 1 items (100%)** · skip rows excluded
 
 | # | Item | Raw | Status | Note |
 |---|------|-----|--------|------|
-| 1 | Lecture 1 · Introduction | `raw/presentations/tml-slides-intro.pdf` | full | [[lecture-tml-slides-intro]] |
+| 1 | Lecture 1 · Introduction | `raw/presentations/tml-slides-intro.pdf` | full | [Lecture 1 · Introduction](lecture-tml-slides-intro.md) |
 
 ## Threads
 
-- [[theme-learning-theory]]
+- [Learning theory](theme-learning-theory.md)

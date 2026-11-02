@@ -8,11 +8,11 @@ order only, renumbered whenever a row is split.
     | # | Part | Pages | Status | Note |
     |---|------|-------|--------|------|
     | 1 | Front matter · Preface | 1–18 | skip | |
-    | 2 | Chapter 1. Boolean functions and the Fourier expansion | 19–42 | full | [[slug]] |
+    | 2 | Chapter 1. Boolean functions and the Fourier expansion | 19–42 | full | [Part title](slug.md) |
     | 3 | Chapter 2. Basic concepts and social choice | 43–68 | — | |
 """
 import re
-from kb_distillery.core.links import WIKILINK_TARGET
+from kb_distillery.core import links as page_links
 
 PARTITION_HEADING = "## Partition"
 OVERVIEW_HEADING = "## Overview"
@@ -24,7 +24,6 @@ DIGESTED = ("easy", "full", "deep")
 ROW_STATUS = {SKIP, TODO, *DIGESTED}
 
 _PAGES = re.compile(r"^\s*(\d+)\s*(?:[–—-]\s*(\d+))?\s*$")
-_LINK = WIKILINK_TARGET
 _COMMENT = re.compile(r"<!--.*?-->", re.S)
 # Front/back matter: never a reading unit of its own.
 _MATTER = re.compile(
@@ -54,6 +53,16 @@ def overview_ok(text):
     return len(prose) >= OVERVIEW_MIN_CHARS
 
 
+def _first_link(cell):
+    """(slug, link text) of the first page link in a table cell, else None."""
+    m = page_links.PAGE_LINK.search(cell)
+    if m:
+        label, slug, _anchor = page_links.link_parts(m)
+        return slug, label
+    w = page_links.WIKILINK.search(cell)
+    return (w.group(1).strip(), (w.group(2) or "").strip()) if w else None
+
+
 def _status(cell):
     s = cell.strip().strip("*`").lower()
     return TODO if s in ("", "-", "—", "–") else s
@@ -74,9 +83,9 @@ def parse_partition(text):
         m = _PAGES.match(cells[2])
         start = int(m.group(1)) if m else None
         end = int(m.group(2) or m.group(1)) if m else None
-        link = _LINK.search(cells[4]) or _LINK.search(cells[1])
+        link = _first_link(cells[4]) or _first_link(cells[1])
         rows.append({"title": cells[1].replace("\\|", "|"), "start": start, "end": end,
-                     "status": _status(cells[3]), "slug": link.group(1).strip() if link else ""})
+                     "status": _status(cells[3]), "slug": link[0] if link else "", **({"link_text": link[1]} if link and link[1] and link[1] != link[0] else {})})
     return rows
 
 
@@ -147,7 +156,7 @@ def render(rows, cap=PART_MAX_PAGES):
     out = [coverage_line(rows, cap), "",
            "| # | Part | Pages | Status | Note |", "|---|------|-------|--------|------|"]
     for i, r in enumerate(sorted(rows, key=lambda r: r["start"]), 1):
-        note = f"[[{r['slug']}]]" if r["slug"] else ""
+        note = page_links.link(r["slug"], r.get("link_text") or r["slug"]) if r["slug"] else ""
         title = r["title"].replace("|", "\\|")
         out.append(f"| {i} | {title} | {r['start']}–{r['end']} | {r['status']} | {note} |")
     return "\n".join(out)
@@ -175,7 +184,7 @@ def carve(rows, start, end, status, slug, title):
             continue
         if r["status"] in DIGESTED and (r["start"], r["end"]) != (start, end):
             raise ValueError(f"pages {start}–{end} cut into digested part "
-                             f"p.{r['start']}–{r['end']} [[{r['slug']}]]")
+                             f"p.{r['start']}–{r['end']} {r['slug']}")
         if r["start"] < start:
             out.append({**r, "end": start - 1})
         if r["end"] > end:

@@ -12,7 +12,7 @@ description:
 
 # {{title}}
 
-> Lecture of [[{{course}}]]
+> Lecture of <!-- [Course title](course-slug.md) -->
 
 **Topic:**
 
@@ -27,4 +27,4 @@ description:
 ## Connections
 
 ## Links out
-- Concepts: [[]]
+- Concepts: <!-- [Title](slug.md) -->

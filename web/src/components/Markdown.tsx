@@ -9,13 +9,15 @@ import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import { cn } from "@/lib/utils";
 
-/** `[[slug]]` or `[[slug|label]]`; the link is marked with this scheme so the renderer can route it. */
+/** `[[slug]]` or `[[slug|label]]` (the wikilinks left in a page's `## My notes`); the link is marked with this scheme so the renderer can route it. */
 const WIKILINK = /\[\[([^\[\]|\n]+?)(?:\|([^\[\]\n]+?))?\]\]/g;
 const SCHEME = "kbwiki:";
+/** A page link `slug.md` or `slug.md#heading` (flat, no folder or scheme): `[Title](slug.md)` is how pages link. */
+const PAGE_HREF = /^([^/:#?]+)\.md(#.*)?$/;
 
 type Node = Root["children"][number];
 
-/** Remark plugin: split text nodes around [[wikilinks]] and replace them by link nodes. */
+/** Remark plugin: page links `[Title](slug.md)` and [[wikilinks]] both become a page route. */
 export function remarkWikilinks() {
   return (tree: Root) => {
     const walk = (parent: { children: Node[] }) => {
@@ -24,6 +26,10 @@ export function remarkWikilinks() {
         if (child.type === "text") {
           out.push(...splitText(child));
         } else {
+          if (child.type === "link") {
+            const m = PAGE_HREF.exec(child.url);
+            if (m) child.url = SCHEME + encodeURIComponent(safeDecode(m[1]!));
+          }
           // never rewrite inside code, inline code or existing links
           if ("children" in child && child.type !== "link" && child.type !== "linkReference") {
             walk(child as { children: Node[] });
@@ -36,6 +42,14 @@ export function remarkWikilinks() {
     walk(tree);
   };
 }
+
+const safeDecode = (s: string): string => {
+  try {
+    return decodeURIComponent(s);
+  } catch {
+    return s;
+  }
+};
 
 function splitText(node: Text): Node[] {
   const parts: Node[] = [];
@@ -66,16 +80,16 @@ function urlTransform(url: string): string {
 export interface MarkdownProps {
   children: string;
   className?: string;
-  /** Maps a [[slug]] to the page that should be linked (aliases, renames); return null if there is none. */
+  /** Maps a page link's slug (`[Title](slug.md)`, or a [[wikilink]]) to the page that should be linked (aliases, renames); return null if there is none. */
   resolveSlug?: (slug: string) => string | null | undefined;
   /** Rewrites relative image/link targets (e.g. vault assets). */
   transformUrl?: (url: string) => string;
-  /** Search params every [[slug]] link carries (`{ kb }` keeps a read-only page's links in its knowledge base). */
+  /** Search params every page link carries (`{ kb }` keeps a read-only page's links in its knowledge base). */
   linkSearch?: Record<string, string>;
 }
 
 /**
- * The ONE Markdown renderer: GFM, KaTeX ($…$ and $$…$$), light code highlighting and [[slug]] links
+ * The ONE Markdown renderer: GFM, KaTeX ($…$ and $$…$$), light code highlighting and page links (`[Title](slug.md)`, plus the [[slug]] wikilinks of My notes)
  * to /pages/<slug>. Raw HTML in the source is not rendered (react-markdown escapes it), so there is
  * nothing to sanitise and no dangerouslySetInnerHTML.
  */

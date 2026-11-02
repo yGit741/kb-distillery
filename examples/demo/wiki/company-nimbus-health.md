@@ -14,13 +14,13 @@ generated: {by: human:dana-levi}
 Health-tech company processing about 2 million clinical notes a month into structured data for hospitals. Tel Aviv or remote within Israel.
 
 ## Why it matters here
-A research-flavoured alternative to Acme: [[role-applied-scientist-nimbus]] leans on NLP and evaluation design rather than robotics. Full file: [[process-nimbus-health]].
+A research-flavoured alternative to Acme: [Applied Scientist, Clinical NLP (Nimbus)](role-applied-scientist-nimbus.md) leans on NLP and evaluation design rather than robotics. Full file: [Nimbus Health hiring process](process-nimbus-health.md).
 
 ## People
-- [[maya-cohen]], hiring manager.
+- [Maya Cohen](maya-cohen.md), hiring manager.
 
 ## Interviews
-[[interview-nimbus-hiring-manager]] (scheduled).
+[Nimbus hiring-manager interview](interview-nimbus-hiring-manager.md) (scheduled).
 
 ## What they test
-[[skill-clinical-nlp]], [[skill-pytorch]], [[skill-interviewing-stories]].
+[Clinical NLP](skill-clinical-nlp.md), [PyTorch](skill-pytorch.md), [Interviewing stories (behavioural)](skill-interviewing-stories.md).

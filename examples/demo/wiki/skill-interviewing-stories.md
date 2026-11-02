@@ -14,6 +14,6 @@ generated: {by: human:dana-levi}
 A reusable bank of short stories about past projects: a failure and fix, a disagreement with a domain expert, a decision under uncertainty.
 
 ## Why it matters here
-Nimbus names the manager conversation as behavioural ([[interview-nimbus-hiring-manager]], [[maya-cohen]]). Acme's shipped-model post-mortem question in [[interview-acme-technical]] used the same material.
+Nimbus names the manager conversation as behavioural ([Nimbus hiring-manager interview](interview-nimbus-hiring-manager.md), [Maya Cohen](maya-cohen.md)). Acme's shipped-model post-mortem question in [Acme technical interview](interview-acme-technical.md) used the same material.
 
-Build stories from [[doc-dana-levi-cv]]. Role: [[role-applied-scientist-nimbus]].
+Build stories from [Dana Levi CV](doc-dana-levi-cv.md). Role: [Applied Scientist, Clinical NLP (Nimbus)](role-applied-scientist-nimbus.md).

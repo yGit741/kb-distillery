@@ -2,9 +2,8 @@
 import os
 import time
 from datetime import datetime, timezone
-from kb_distillery.core.links import WIKILINK_TARGET
+from kb_distillery.core import links as page_links
 
-LINK = WIKILINK_TARGET
 
 ORPHAN_EXCLUDE = frozenset({"AGENTS", "log", "thesis"})
 
@@ -172,7 +171,7 @@ def format_metric_value(metric_id, value):
 def compute_in_degree(pages):
     degree = {slug: 0 for slug in pages}
     for _slug, (_rel, _fm, text) in pages.items():
-        for target in LINK.findall(text):
+        for target in page_links.targets(text):
             target = target.strip()
             if target in degree:
                 degree[target] += 1

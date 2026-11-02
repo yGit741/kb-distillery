@@ -15,10 +15,10 @@ Generalization bounds and why over-parameterized networks still generalize; a ca
 
 ## Key concepts
 
-- [[tensor-rank]]
+- [Tensor rank](tensor-rank.md)
 
 ## Threads
 
-- [[q-does-rank-explain-generalization]]
+- [Does rank explain generalization?](q-does-rank-explain-generalization.md)
 
 ## Papers

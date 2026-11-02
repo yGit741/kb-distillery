@@ -14,14 +14,14 @@ generated: {by: human:dana-levi}
 Builds autonomous warehouse robots; fleets of 400+ robots move around people, so perception safety is the core engineering problem. Offices in Tel Aviv, hybrid work.
 
 ## Why it matters here
-The application to [[role-senior-ml-engineer-acme]] is the most advanced in the search. Full file: [[process-acme-robotics]].
+The application to [Senior ML Engineer, Perception (Acme)](role-senior-ml-engineer-acme.md) is the most advanced in the search. Full file: [Acme Robotics hiring process](process-acme-robotics.md).
 
 ## People
-- [[noa-peretz]], talent acquisition, ran the recruiter screen.
-- [[omer-shahar]], staff ML engineer, ran the technical interview.
+- [Noa Peretz](noa-peretz.md), talent acquisition, ran the recruiter screen.
+- [Omer Shahar](omer-shahar.md), staff ML engineer, ran the technical interview.
 
 ## Interviews
-[[interview-acme-recruiter-screen]] (done), [[interview-acme-technical]] (done); system design and hiring manager follow.
+[Acme recruiter screen](interview-acme-recruiter-screen.md) (done), [Acme technical interview](interview-acme-technical.md) (done); system design and hiring manager follow.
 
 ## What they test
-[[skill-pytorch]], [[skill-sensor-fusion]], [[skill-system-design]], [[skill-ml-ops]].
+[PyTorch](skill-pytorch.md), [Sensor fusion](skill-sensor-fusion.md), [System design for ML](skill-system-design.md), [ML-ops](skill-ml-ops.md).

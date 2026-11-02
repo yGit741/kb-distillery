@@ -15,18 +15,18 @@ generated: {by: human:dana-levi}
 
 # Acme technical interview notes
 
-**With:** [[omer-shahar]] · **Interview:** [[interview-acme-technical]] · **Company:** [[company-acme-robotics]]
+**With:** [Omer Shahar](omer-shahar.md) · **Interview:** [Acme technical interview](interview-acme-technical.md) · **Company:** [Acme Robotics](company-acme-robotics.md)
 
 **What it was about:** A 60 minute video interview with a staff perception engineer, mixing a coding exercise with design questions.
 
 ## Key claims
-- Questions: a shipped-model post-mortem, a minimal multi-object tracker (Hungarian vs greedy matching), fusing detections with a 30 ms skew ([[skill-sensor-fusion]]), DataLoader slowdowns ([[skill-pytorch]]), and a retraining trigger for a new site ([[skill-ml-ops]]).
-- Went well: tracker discussion, unprompted track birth and death thresholds, and the ML-ops answer built on [[chat-gemini-acme-system-design-prep]].
+- Questions: a shipped-model post-mortem, a minimal multi-object tracker (Hungarian vs greedy matching), fusing detections with a 30 ms skew ([Sensor fusion](skill-sensor-fusion.md)), DataLoader slowdowns ([PyTorch](skill-pytorch.md)), and a retraining trigger for a new site ([ML-ops](skill-ml-ops.md)).
+- Went well: tracker discussion, unprompted track birth and death thresholds, and the ML-ops answer built on [Gemini chat: Acme system-design and ML-ops prep](chat-gemini-acme-system-design-prep.md).
 - To improve: propose IMU interpolation first for time alignment; revise Hungarian complexity.
-- Omer will recommend the system-design round ([[skill-system-design]]); [[noa-peretz]] confirms the date.
+- Omer will recommend the system-design round ([System design for ML](skill-system-design.md)); [Noa Peretz](noa-peretz.md) confirms the date.
 
 ## Takeaways
 Positive outcome. Prepare the design round with the same chat material.
 
 ## Links out
-- Concepts: [[omer-shahar]], [[interview-acme-technical]], [[skill-sensor-fusion]], [[skill-pytorch]], [[skill-ml-ops]], [[skill-system-design]]
+- Concepts: [Omer Shahar](omer-shahar.md), [Acme technical interview](interview-acme-technical.md), [Sensor fusion](skill-sensor-fusion.md), [PyTorch](skill-pytorch.md), [ML-ops](skill-ml-ops.md), [System design for ML](skill-system-design.md)

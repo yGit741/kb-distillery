@@ -9,6 +9,8 @@ the `## Key claims` section — so link, typo and Connections edits never mark a
 import hashlib
 import re
 
+from kb_distillery.core.links import PAGE_LINK
+
 SUMMARY_MIN = 80
 SUMMARY_MAX = 320
 EXEMPT_TYPES = {"course"}
@@ -97,6 +99,8 @@ def problems(summary):
         out.append('contains # or " (breaks the flat frontmatter parser)')
     if "\\" in s or "[[" in s or "]]" in s:
         out.append("contains a backslash or a wikilink")
+    if PAGE_LINK.search(s):
+        out.append("contains a page link")
     if _HEBREW.search(s):
         out.append("not English (Hebrew letters)")
     return out

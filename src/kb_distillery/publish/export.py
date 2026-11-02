@@ -160,7 +160,7 @@ def _manifest(files: list[str], include_raw_pdfs: bool, stamp: str) -> str:
         f"raw_files: {raw_n}",
         f"include_raw_pdfs: {include_raw_pdfs}",
         "",
-        "Start with AGENTS.md and index.md, then follow [[wikilinks]].",
+        "Start with AGENTS.md and index.md, then follow the `[Title](slug.md)` page links.",
         "",
         "paths:",
     ]

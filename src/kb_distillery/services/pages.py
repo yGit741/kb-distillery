@@ -16,7 +16,6 @@ from kb_distillery.core.summary import unquote
 from kb_distillery.search import qmd_client
 from kb_distillery.core import frontmatter as page_frontmatter
 from kb_distillery.core import links as page_links
-from kb_distillery.core.links import WIKILINK
 from kb_distillery.storage import raw
 
 ROOT = vault_root()
@@ -45,7 +44,8 @@ _TITLES = {}
 
 def _plain(s, titles=None):
     titles = _TITLES if titles is None else titles
-    s = WIKILINK.sub(lambda m: (m.group(2) or titles.get(m.group(1).strip()) or m.group(1)).strip(), s)
+    s = page_links.PAGE_LINK.sub(lambda m: page_links.link_parts(m)[0], s)
+    s = page_links.WIKILINK.sub(lambda m: (m.group(2) or titles.get(m.group(1).strip()) or m.group(1)).strip(), s)
     s = re.sub(r"\[([^\]]+)\]\([^)]+\)", r"\1", s)
     s = re.sub(r"[*_`>#]+", "", s)
     return re.sub(r"\s+", " ", s).strip()
@@ -66,7 +66,7 @@ def _clip(s, centre, width=220):
 
 
 def _words(text):
-    return len(_body(text).split())
+    return len(page_links.plain(_body(text)).split())      # the words a reader sees: a link counts as its text
 
 
 def _mtime(rel, root=None):
@@ -84,17 +84,25 @@ def _as_list(v):
     return [str(x) for x in v if x]
 
 
+def _link_span(line, target):
+    """(start, end) of the first link in `line` to page `target` (a page link or a wikilink), else None."""
+    for m in re.finditer(r"\[\[([^\]|#\\]+)[^\]]*\]\]|(?<!!)\[(?:[^\[\]\\\n]|\\.)*\]\(([^()<>\s/:#]+?)\.md(?:#[^()\s]*)?\)", line):
+        if (m.group(1) or m.group(2)).strip() == target:
+            return m.span()
+    return None
+
+
 def _link_context(text, fm, target, titles=None):
     """Sentence-ish snippet of `text` showing why it links to `target`."""
     titles = _TITLES if titles is None else titles
-    needle = f"[[{target}"
     heading = ""
     for line in _body(text).splitlines():
         if line.startswith("#"):
             heading = line.lstrip("#").strip()
-        pos = line.find(needle)
-        if pos < 0:
+        span = _link_span(line, target)
+        if span is None:
             continue
+        pos = span[0]
         where = f" under “{heading}”" if heading else ""
         if line.lstrip().startswith("|"):
             return f"listed in a table{where}"
@@ -102,7 +110,7 @@ def _link_context(text, fm, target, titles=None):
         bare = re.sub(r"^[-*\d.\s]+", "", plain)
         if len(bare) <= len(titles.get(target, target)) + 12:
             return f"listed{where}" if where else "listed"
-        label = _plain(line[pos:line.find("]]", pos) + 2], titles)
+        label = _plain(line[span[0]:span[1]], titles)
         centre = plain.find(label) if label else 0
         return _clip(plain, max(centre, 0))
     if target in page_links.refs(fm.get("related")) or target in _as_list(fm.get("recommended_by")):

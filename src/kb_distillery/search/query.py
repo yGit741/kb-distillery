@@ -18,12 +18,10 @@ import sys
 from kb_distillery.core.graph import tokenize
 
 from kb_distillery.paths import vault_root
-from kb_distillery.core.links import WIKILINK_TARGET
 ROOT = vault_root()
 WIKI = os.path.join(ROOT, "wiki")
 INDEX = os.path.join(ROOT, "index.md")
 
-LINK = WIKILINK_TARGET
 INDEX_ROW = re.compile(r"^\| \[\[([^\]]+)\]\] \| ([^|]*) \| (.*) \|$")
 
 

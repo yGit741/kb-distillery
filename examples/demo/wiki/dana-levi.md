@@ -8,18 +8,18 @@ generated: {by: human:dana-levi}
 
 # Dana Levi
 
-The candidate: ML engineer in Tel Aviv with PyTorch, sensor fusion, ML-ops and clinical NLP experience. CV: [[doc-dana-levi-cv]].
+The candidate: ML engineer in Tel Aviv with PyTorch, sensor fusion, ML-ops and clinical NLP experience. CV: [Dana Levi CV](doc-dana-levi-cv.md).
 
 ## Applications
-- [[role-senior-ml-engineer-acme]] at [[company-acme-robotics]] ([[process-acme-robotics]]), technical done.
-- [[role-applied-scientist-nimbus]] at [[company-nimbus-health]] ([[process-nimbus-health]]), hiring manager scheduled.
+- [Senior ML Engineer, Perception (Acme)](role-senior-ml-engineer-acme.md) at [Acme Robotics](company-acme-robotics.md) ([Acme Robotics hiring process](process-acme-robotics.md)), technical done.
+- [Applied Scientist, Clinical NLP (Nimbus)](role-applied-scientist-nimbus.md) at [Nimbus Health](company-nimbus-health.md) ([Nimbus Health hiring process](process-nimbus-health.md)), hiring manager scheduled.
 
 ## Skills
-[[skill-pytorch]], [[skill-sensor-fusion]], [[skill-ml-ops]], [[skill-clinical-nlp]], [[skill-system-design]], [[skill-interviewing-stories]].
+[PyTorch](skill-pytorch.md), [Sensor fusion](skill-sensor-fusion.md), [ML-ops](skill-ml-ops.md), [Clinical NLP](skill-clinical-nlp.md), [System design for ML](skill-system-design.md), [Interviewing stories (behavioural)](skill-interviewing-stories.md).
 
 ## Why it matters here
 
-Related: [[role-senior-ml-engineer-acme]], [[role-applied-scientist-nimbus]], [[skill-pytorch]], [[skill-sensor-fusion]], [[process-acme-robotics]], [[process-nimbus-health]]. Sources: [[doc-dana-levi-cv]].
+Related: [Senior ML Engineer, Perception (Acme)](role-senior-ml-engineer-acme.md), [Applied Scientist, Clinical NLP (Nimbus)](role-applied-scientist-nimbus.md), [PyTorch](skill-pytorch.md), [Sensor fusion](skill-sensor-fusion.md), [Acme Robotics hiring process](process-acme-robotics.md), [Nimbus Health hiring process](process-nimbus-health.md). Sources: [Dana Levi CV](doc-dana-levi-cv.md).
 
 ## Roles & companies
 <!-- from: manual -->

@@ -14,7 +14,7 @@ generated: {by: human:dana-levi}
 Practical operation of models in production.
 
 ## Checklist
-Golden set per scenario, a CI gate on pedestrian recall, shadow deployment, drift monitors, rollback, retraining triggers (drift alert, new site, failure cluster). Source: [[chat-gemini-acme-system-design-prep]].
+Golden set per scenario, a CI gate on pedestrian recall, shadow deployment, drift monitors, rollback, retraining triggers (drift alert, new site, failure cluster). Source: [Gemini chat: Acme system-design and ML-ops prep](chat-gemini-acme-system-design-prep.md).
 
 ## Where it was tested
-A retraining-trigger question in [[interview-acme-technical]]. Required by [[role-senior-ml-engineer-acme]]; pairs with [[skill-system-design]].
+A retraining-trigger question in [Acme technical interview](interview-acme-technical.md). Required by [Senior ML Engineer, Perception (Acme)](role-senior-ml-engineer-acme.md); pairs with [System design for ML](skill-system-design.md).

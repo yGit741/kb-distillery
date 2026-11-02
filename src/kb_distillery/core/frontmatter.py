@@ -128,7 +128,6 @@ def quote(s):
 
 _H1 = re.compile(r"^# +(.+?)\s*#*\s*$", re.M)
 _FENCE = re.compile(r"^(```|~~~).*?^\1[^\n]*$", re.M | re.S)
-_WIKI = re.compile(r"\[\[([^\]|#]+)(?:#[^\]|]*)?(?:\\?\|([^\]]+))?\]\]")
 
 
 def first_heading(text):
@@ -138,7 +137,8 @@ def first_heading(text):
     m = _H1.search(_FENCE.sub("", body))
     if not m:
         return ""
-    return " ".join(_WIKI.sub(lambda g: g.group(2) or g.group(1), m.group(1)).split())
+    from kb_distillery.core import links
+    return " ".join(links.plain(m.group(1)).split())
 
 
 # -- writing the OKF shapes ----------------------------------------------------------------------------------------

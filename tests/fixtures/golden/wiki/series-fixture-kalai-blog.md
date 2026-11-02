@@ -21,8 +21,8 @@ Coverage: **1 / 1 items (100%)** · skip rows excluded
 
 | # | Item | Raw | Status | Note |
 |---|------|-----|--------|------|
-| 1 | Fixture post one | `raw/web-clips/kalai-fixture-post-one.md` | easy | [[article-kalai-fixture-post-one]] |
+| 1 | Fixture post one | `raw/web-clips/kalai-fixture-post-one.md` | easy | [Kalai Fixture Post One](article-kalai-fixture-post-one.md) |
 
 ## Threads
 
-Links to [[theme-boolean-analysis]].
+Links to [Boolean Analysis](theme-boolean-analysis.md).

@@ -18,7 +18,9 @@ import re
 
 from kb_distillery.core.schema import CONCEPT_TYPES, make_slug
 from kb_distillery.core import frontmatter
+from kb_distillery.core import links as page_links
 from kb_distillery.core.links import WIKILINK_TARGET
+LINK = WIKILINK_TARGET        # the wikilink form; kept for migration 0006, which reads pre-OKF pages
 
 HANDLES = ("url", "scholar", "github", "youtube", "blog", "wikipedia")
 EDGES = ("orgs", "advisors", "students")
@@ -47,7 +49,6 @@ BIB_CAP = None                    # rows shown on the page (None = all: meta/.re
 MEGA_AUTHORS = 20                 # a paper with more authors is not cataloged unless pinned
 
 MARKER = re.compile(r"^<!--\s*from:\s*([\w-]+)\s*-->\s*$")
-LINK = WIKILINK_TARGET
 URL = re.compile(r"^https?://\S+$")
 DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
@@ -159,7 +160,7 @@ def merge(existing_body, generated):
 def _link(item):
     title, url, wiki = item.get("title", ""), item.get("url", ""), item.get("wiki", "")
     if wiki:
-        return f"[[{wiki}|{title}]]" if title and title != wiki else f"[[{wiki}]]"
+        return page_links.link(wiki, title if title and title != wiki else wiki)
     return f"[{title}]({url})" if url else title
 
 
@@ -193,7 +194,7 @@ def bib_title_cell(p, known):
     title = " ".join((p.get("title") or p.get("slug") or "").replace("|", "/").split())  # one table-safe line
     wiki = p.get("wiki") or (make_slug("paper", p["slug"]) if p.get("slug") else "")
     if wiki and wiki in known:
-        return f"[[{wiki}\\|{title}]]"   # escaped: a bare | would split the table cell
+        return page_links.link(wiki, title)      # no | in the text, so the table cell stays one cell
     url = paper_url(p)
     return f"[{title}]({url})" if url else title
 
@@ -232,7 +233,7 @@ def sections_from_manifest(m, known, cataloged=(), cap=BIB_CAP):
     if lineage:
         rows = []
         for r in lineage:
-            who = f"[[{r['slug']}]]" if r.get("slug") and r["slug"] in known else r.get("name", "")
+            who = page_links.page_link(r["slug"], known, r.get("name")) if r.get("slug") and r["slug"] in known else r.get("name", "")
             rows.append((r.get("relation", ""), who, r.get("where", ""), r.get("years", ""), r.get("note", "")))
         add("Academic lineage", _source_of(lineage, "wikipedia"),
             _table(["Relation", "Person", "Where", "Years", "Note"], rows))
@@ -264,7 +265,7 @@ def sections_from_manifest(m, known, cataloged=(), cap=BIB_CAP):
         add("Bibliography", _source_of(papers, "scholar"),
             head + "\n\n" + _table(["", "Year", "Title", "Venue", "Citations"], rows))
     if cataloged:
-        add("Cataloged in vault", "scholar", "\n".join(f"- [[{s}]]" for s in cataloged))
+        add("Cataloged in vault", "scholar", "\n".join(f"- {page_links.page_link(s, known)}" for s in cataloged))
     return out
 
 
@@ -310,7 +311,7 @@ def check(slug, fm, body, pages):
         errors.append(f"missing ## {WHY} — the one hand-written reason this person is in the vault")
     else:
         why = next(s for s in sections if s["title"] == WHY)
-        links = [l.strip() for l in LINK.findall(why["body"])]
+        links = page_links.targets(why["body"])
         # the reason must tie the person to the knowledge: a link to a concept page of this kb (not another person)
         knowledge = frozenset(CONCEPT_TYPES) - {"person"}
         if not any(pages.get(l, {}).get("type") in knowledge for l in links):

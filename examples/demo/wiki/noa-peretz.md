@@ -8,7 +8,7 @@ generated: {by: human:dana-levi}
 
 # Noa Peretz
 
-Recruiter at [[company-acme-robotics]] and Dana's first contact for [[role-senior-ml-engineer-acme]]. Wrote the outreach mail, ran [[interview-acme-recruiter-screen]] on 8 October and arranged the technical round with [[omer-shahar]]. Thread: [[mail-2026-10-02-acme-recruiter-intro]].
+Recruiter at [Acme Robotics](company-acme-robotics.md) and Dana's first contact for [Senior ML Engineer, Perception (Acme)](role-senior-ml-engineer-acme.md). Wrote the outreach mail, ran [Acme recruiter screen](interview-acme-recruiter-screen.md) on 8 October and arranged the technical round with [Omer Shahar](omer-shahar.md). Thread: [Acme recruiter intro thread](mail-2026-10-02-acme-recruiter-intro.md).
 
 ## Meeting log
 
@@ -18,7 +18,7 @@ Recruiter at [[company-acme-robotics]] and Dana's first contact for [[role-senio
 
 ## Why it matters here
 
-Related: [[company-acme-robotics]], [[role-senior-ml-engineer-acme]], [[interview-acme-recruiter-screen]], [[omer-shahar]], [[process-acme-robotics]]. Sources: [[mail-2026-10-02-acme-recruiter-intro]], [[notes-acme-technical-interview]].
+Related: [Acme Robotics](company-acme-robotics.md), [Senior ML Engineer, Perception (Acme)](role-senior-ml-engineer-acme.md), [Acme recruiter screen](interview-acme-recruiter-screen.md), [Omer Shahar](omer-shahar.md), [Acme Robotics hiring process](process-acme-robotics.md). Sources: [Acme recruiter intro thread](mail-2026-10-02-acme-recruiter-intro.md), [Acme technical interview notes](notes-acme-technical-interview.md).
 
 ## Roles & companies
 <!-- from: manual -->

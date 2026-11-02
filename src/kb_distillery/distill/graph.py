@@ -2,9 +2,9 @@
 import os
 import re
 
+from kb_distillery.core import links
 from .paths import ROOT, think_cite, wiki_slugs
 
-LINK = re.compile(r"\[\[([^\]|#]+)")
 
 THEME_KEYWORDS = [
     (r"implicit|margin|grokking|forgetting|regularization", "implicit-regularization"),
@@ -30,8 +30,7 @@ def _walk_wiki():
 def build_plan(think_rel, human_text):
     known = wiki_slugs()
     touches = set()
-    for target in LINK.findall(human_text):
-        target = target.strip()
+    for target in links.targets(human_text):
         if target in known:
             touches.add(target)
 

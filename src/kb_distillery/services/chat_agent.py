@@ -36,6 +36,7 @@ import threading
 import time
 from dataclasses import dataclass, field
 
+from kb_distillery.core import links
 from kb_distillery.paths import vault_root
 META_DIR = os.path.join(vault_root(), "meta")
 ROOT = vault_root()
@@ -81,7 +82,7 @@ How to research a question in this knowledge base (always applies):
   index and candidates were checked.
 - Read 3–8 pages with Read on `wiki/<slug>.md`. Prefer `theme-*` and `q-*` pages for thesis-level
   questions and `paper-`, `part-`, `lecture-`, `article-`, `mail-`, `chat-` pages for citations.
-  Follow `related:` and `[[links]]` when they matter. An unknown slug may be an alias:
+  Follow `related:` and the page links (`[Title](slug.md)`) when they matter. An unknown slug may be an alias:
   `python3 -m kb_distillery.ingest resolve <slug>`.
 - Structural questions (what links to X, which ideas share sources, paths between pages) go to the
   graph: `python3 -m kb_distillery.search.cypher run 'MATCH (s:Source)-[:MENTIONS]->(i:Idea) WHERE i.slug = "x"
@@ -479,8 +480,7 @@ def tool_summary(name, tool_input):
 
 def harvest_citations(text, index):
     out = []
-    for slug in re.findall(r"\[\[([^\]|#]+)(?:\|[^\]]*)?\]\]", text or ""):
-        slug = slug.strip()
+    for slug in links.targets(text):
         if slug in index and slug not in out:
             out.append(slug)
     return out

@@ -26,4 +26,4 @@ A tiny fixture course for the end-to-end pipeline test: one slide deck, one lect
 
 ## Threads
 
-- [[theme-learning-theory]]
+- [Learning theory](theme-learning-theory.md)

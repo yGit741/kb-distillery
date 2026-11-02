@@ -12,9 +12,9 @@ import urllib.request
 from datetime import datetime, timezone
 
 from . import catalog, net, resolve as resolve_mod, scrap
-from .paths import ROOT, wiki_slugs
+from .paths import ROOT, wiki_slugs, wiki_titles
 
-from kb_distillery.core import persons
+from kb_distillery.core import links, persons
 from kb_distillery.core import wikiio
 from kb_distillery.core.schema import make_slug
 
@@ -455,7 +455,7 @@ def _write_person_wiki(manifest):
     """Write wiki/<slug>.md: generated sections come from the manifest; the head, Why it
     matters here, Meeting log and any custom section of an existing page are kept verbatim."""
     slug = manifest["slug"]
-    known = wiki_slugs()
+    known = wiki_titles()
     generated = persons.sections_from_manifest(manifest, known, cataloged_slugs(manifest, known))
     wiki_path = os.path.join(ROOT, "wiki", f"{slug}.md")
     if os.path.isfile(wiki_path):
@@ -468,7 +468,7 @@ def _write_person_wiki(manifest):
         head = f"# {manifest.get('name', slug)}\n\n{manifest.get('affiliation', '')}".rstrip()
         sections = generated + [
             {"title": persons.WHY, "source": None,
-             "body": "- [[theme-...]] — why this person is in the vault (link a theme or concept)"},
+             "body": "- `[Topic title](theme-slug.md)` — why this person is in the vault (link a theme or concept)"},
             {"title": persons.LOG, "source": None, "body": "### YYYY-MM-DD\n- Discussed:\n- Action:"},
         ]
         fm = person_frontmatter(manifest)
@@ -603,7 +603,6 @@ def finalize(slug):
     return 0
 
 
-WIKILINK_FULL = re.compile(r"\[\[([^\]|#\\]+)(?:\\?\|([^\]]*))?\]\]")
 
 
 def _manifest_for_person(person_slug):
@@ -625,9 +624,8 @@ def relink_text(text, papers_by_slug, known):
     Valid links and dangling links that are not bibliography papers are left alone."""
     changed = 0
 
-    def sub(m):
+    def dangle(m, target, label):
         nonlocal changed
-        target, label = m.group(1).strip(), (m.group(2) or "").strip()
         if target in known or target not in papers_by_slug:
             return m.group(0)
         changed += 1
@@ -636,11 +634,19 @@ def relink_text(text, papers_by_slug, known):
             p["title"] = label
         return bib_title_cell(p, known)
 
-    return WIKILINK_FULL.sub(sub, text), changed
+    def sub_wiki(m):
+        return dangle(m, m.group(1).strip(), (m.group(2) or "").strip())
+
+    def sub_page(m):
+        label, target, _anchor = links.link_parts(m)
+        return dangle(m, target, label.strip())
+
+    text = links.WIKILINK.sub(sub_wiki, text)          # a wikilink left in My notes reads as before
+    return links.PAGE_LINK.sub(sub_page, text), changed
 
 
 def relink(person_slug, dry_run=False):
-    """Repair a person page in place: uncataloged papers become titles (linked out), not [[dead links]]."""
+    """Repair a person page in place: uncataloged papers become titles (linked out), not dead links."""
     manifest = _manifest_for_person(person_slug)
     if not manifest:
         print(f"no researcher manifest for {person_slug}", file=sys.stderr)
@@ -649,7 +655,7 @@ def relink(person_slug, dry_run=False):
     with open(path, encoding="utf-8") as f:
         text = f.read()
     papers = {_wiki(p): p for p in manifest.get("papers", [])}
-    new, n = relink_text(text, papers, wiki_slugs())
+    new, n = relink_text(text, papers, wiki_titles())
     print(f"{person_slug}: {n} dangling bibliography links → titles"
           + (" (dry run)" if dry_run else ""))
     if n and not dry_run:

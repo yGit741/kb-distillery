@@ -41,6 +41,8 @@
     src = src.replace(/\[\[([^\]|#]+)(?:\|([^\]]+))?\]\]/g, (_, slug, label) =>
       `<a class="ch-cite" href="/explore#/p/${encodeURIComponent(slug.trim())}" target="_blank" rel="noopener">${esc(label || slug.trim())}</a>`);
     let html = window.marked.parse(src, { gfm: true, breaks: false });
+    html = html.replace(/<a href="([^"/:#?]+)\.md(?:#[^"]*)?">/g, (_, slug) =>
+      `<a class="ch-cite" href="/explore#/p/${encodeURIComponent(decodeURIComponent(slug))}" target="_blank" rel="noopener">`);
     html = html.replace(/@@MATH(\d+)@@/g, (_, i) => {
       const m = math[+i];
       if (!window.katex) return esc(m.display ? `$$${m.tex}$$` : `$${m.tex}$`);

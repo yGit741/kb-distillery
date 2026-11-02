@@ -19,6 +19,7 @@ from kb_distillery.core.graph import (  # noqa: E402
 
 from kb_distillery.paths import vault_root
 from kb_distillery.core.summary import unquote
+from kb_distillery.core import links as page_links
 ROOT = vault_root()  # KB_ROOT: share build
 WARNINGS_PATH = os.path.join(ROOT, "meta", "coherence-warnings.tsv")
 WARNINGS_COLS = ["id", "score", "kind", "slugs", "summary", "status"]
@@ -179,7 +180,7 @@ def check_coherence(pages, rows=None, err_fn=None, warn_fn=None, prior=None, fre
         for slug, (rel, fm, text) in pages.items():
             if f"[[{slug}]]" not in index_text:
                 continue
-            fl = unquote(fm.get("description")) or _first_line(text)     # index.md shows the summary when set
+            fl = page_links.plain(unquote(fm.get("description")) or _first_line(text))     # index.md shows the summary when set
             if fl and fl[:40].replace("|", "\\|") not in index_text:
                 add("cosmetic", [slug], "index summary may be stale vs page body", 15)
 

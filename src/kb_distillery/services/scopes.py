@@ -182,6 +182,9 @@ def _step(root, slug, summary, rel, before, lint, push):
 def _apply(root, slug, title, why, paths, create, manifest, pages, template):
     """Mutate corpus cells and write the page text; returns (rel, before-snapshot)."""
     rel = f"wiki/{slug}.md"
+    from kb_distillery.core import links
+    titles = {s: links.title_of(p[2], s) for s, p in pages.items()}
+    why = links.to_disk(why, titles)               # a typed [[wikilink]] is stored as [Title](slug.md)
     before = dict((r, _read(root, r)) for r in ("meta/corpus.tsv", rel))
     sc.write_scope_rows(manifest, slug, paths)
     write_manifest(manifest, root)

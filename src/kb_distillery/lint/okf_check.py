@@ -8,7 +8,7 @@ Rules (OKF PR10 turns them into a blocking commit gate; this PR only reports):
   status      `status`, when present, is draft, stable or deprecated
   sources     every `sources` entry is a mapping with a `resource`
   timestamp   `created`, `updated`, `generated.at` carry a UTC offset
-  wikilink    no `[[...]]` left in a page body (code excluded)
+  wikilink    no `[[...]]` left in a page body (code, math, comments and `## My notes` excluded)
   link        every markdown link to a page resolves, and its `#anchor` matches a heading
   boundary    no link into `raw/` or `think/`
 """
@@ -94,8 +94,8 @@ def check_page(rel, text, root):
                 if not has_offset(value):
                     out.append(("timestamp", f"{key} {value!r} has no UTC offset"))
     prose = CODE.sub("", body)
-    for target in sorted(set(page_links.targets(prose))):
-        out.append(("wikilink", f"[[{target}]]"))
+    for found in sorted(set(page_links.leftover_wikilinks(body))):
+        out.append(("wikilink", found))
     own = {slugify(h) for h in HEADING.findall(prose)}
     for href in MD_LINK.findall(prose):
         if re.match(r"[a-z][a-z0-9+.-]*:", href, re.I):          # http:, mailto:

@@ -17,7 +17,7 @@ discussed_with: []
 
 # Lecture 1 · Introduction
 
-> Row 1 of [[course-test-ml]]
+> Row 1 of [Test machine learning](course-test-ml.md)
 
 **Problem:** What is generalization?
 
@@ -40,8 +40,8 @@ $R(h) \le \hat R(h) + \epsilon$
 ## Takeaways for my thesis
 
 - Capacity alone does not explain generalization.
-- Concepts: [[tensor-rank]], [[theme-learning-theory]]
+- Concepts: [Tensor rank](tensor-rank.md), [Learning theory](theme-learning-theory.md)
 
 ## Links out
 
-- Concepts: [[tensor-rank]], [[theme-learning-theory]]
+- Concepts: [Tensor rank](tensor-rank.md), [Learning theory](theme-learning-theory.md)

@@ -13,7 +13,6 @@ from kb_distillery.core.graph import inbound_index, outbound_links
 from kb_distillery.search.semfind import load_pages
 from kb_distillery.core import frontmatter
 from kb_distillery.core import links as page_links
-from kb_distillery.core.links import WIKILINK
 from kb_distillery.core.schema import LAYER_OF
 
 ROOT = vault_root()
@@ -57,8 +56,8 @@ def _preview(text, max_len=480):
         if not s or s.startswith(("!", "|", "- ", ">", "<!--")):
             continue
         paras.append(s)
-    blob = " ".join(paras[:4])
-    blob = WIKILINK.sub(lambda m: m.group(2) or m.group(1), blob)
+    blob = re.sub(r"<!--.*?-->", "", " ".join(paras[:4]))
+    blob = page_links.plain(blob)
     blob = re.sub(r"`([^`]+)`", r"\1", blob)
     blob = re.sub(r"\$[^$]+\$", "", blob)
     blob = re.sub(r"\*\*([^*]+)\*\*", r"\1", blob)
@@ -431,9 +430,7 @@ def concept_links(nodes, links):
 
 
 def _wikilink_set(text):
-    from kb_distillery.lint.lint import LINK
-
-    return {m.strip() for m in LINK.findall(text or "")}
+    return set(page_links.targets(text))
 
 
 def _related_set(fm):

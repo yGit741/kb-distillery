@@ -12,7 +12,7 @@ description:
 
 # 2026 01 02 Rank Thread
 
-**With:** [[]]
+**With:** <!-- [Name](person-slug.md) -->
 
 **What it was about:**
 
@@ -26,4 +26,4 @@ description:
 ## Connections
 
 ## Links out
-- Concepts: [[]]
+- Concepts: <!-- [Title](slug.md) -->

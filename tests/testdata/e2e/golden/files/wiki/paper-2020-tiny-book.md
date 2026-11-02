@@ -31,4 +31,4 @@ discussed_with: []
 -
 
 ## Links out
-- Concepts: [[]]
+- Concepts: <!-- [Title](slug.md) -->

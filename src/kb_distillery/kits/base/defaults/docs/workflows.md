@@ -73,7 +73,7 @@ During `full-digest` / `deep-digest`, `src/kb_distillery/git/guard.py` blocks di
 
 **Triage:** anything in `raw/inbox/` gets cataloged or deleted. The inbox is a queue, not storage.
 
-**Query:** Karpathy Query operation — read wiki, cite `[[slugs]]`, file good answers back on request. See `.claude/skills/query-knowledge/SKILL.md`. Raw sources are reached only through `explore-raw-data` (`python3 -m kb_distillery.search.explore_raw find|read|check|recommend`, cataloged files only, 0 LLM): `.claude/skills/explore-raw-data/SKILL.md`.
+**Query:** Karpathy Query operation — read wiki, cite `[Title](slug.md)` links, file good answers back on request. See `.claude/skills/query-knowledge/SKILL.md`. Raw sources are reached only through `explore-raw-data` (`python3 -m kb_distillery.search.explore_raw find|read|check|recommend`, cataloged files only, 0 LLM): `.claude/skills/explore-raw-data/SKILL.md`.
 
 ```
 python3 -m kb_distillery.search.query candidates "<keywords>"   # rank slugs (0 LLM)

@@ -24,8 +24,8 @@ Fixture idea.
 Fixture.
 
 ## Connections
-- [[theme-info-theory]]
-- [[generalization]]
+- [Topic: info theory](theme-info-theory.md)
+- [Generalization](generalization.md)
 
 ## Open questions
 -

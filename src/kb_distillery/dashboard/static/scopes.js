@@ -84,7 +84,7 @@
       <div class="sc-editor-head"><h2 id="sc-h">${ed.isNew ? "New scope" : esc(ed.title || ed.slug)}</h2><span class="sc-dirty" id="sc-dirty" hidden>unsaved changes</span></div>
       ${ed.isNew ? `<label class="sc-field"><span>Slug <span class="sc-hint">(kebab-case, scope- is added)</span></span><input id="sc-slug" value="${esc(ed.slug)}" placeholder="scope-my-topic" autocomplete="off"></label>` : `<p class="sc-note">${esc(ed.slug)}${ed.maturity ? " · " + esc(ed.maturity) : ""}</p>`}
       <label class="sc-field"><span>Title</span><input id="sc-title" value="${esc(ed.title)}" autocomplete="off" ${STATIC ? "readonly" : ""}></label>
-      <label class="sc-field"><span>Why <span class="sc-hint">required; link a theme or question, e.g. [[theme-info-theory]]</span></span><textarea id="sc-why" ${STATIC ? "readonly" : ""}>${esc(ed.why)}</textarea></label>
+      <label class="sc-field"><span>Why <span class="sc-hint">required; link a theme or question, e.g. [Info theory](theme-info-theory.md)</span></span><textarea id="sc-why" ${STATIC ? "readonly" : ""}>${esc(ed.why)}</textarea></label>
       <div class="sc-projection" id="sc-proj"></div>
       <div class="sc-stats" id="sc-stats"></div>
       <div class="sc-toolbar" id="sc-tools"></div>

@@ -46,6 +46,7 @@
 
   // ---------- ports of src/kb_distillery/services/pages.py ----------
   const WIKILINK = /\[\[([^\]|#\\]+)(?:#[^\]|]+)?(?:\\?\|([^\]]+))?\]\]/g;
+  const PAGE_LINK = /(?<!!)\[((?:[^[\]\\\n]|\\.)*)\]\(([^()<>\s/:#]+?)\.md(?:#([^()\s]*))?\)/g;
 
   function titleOf(d, slug) {
     const p = d.pages[slug];
@@ -53,6 +54,7 @@
   }
 
   function plain(d, s) {
+    s = s.replace(PAGE_LINK, (_m, label) => label.replace(/\\(.)/g, "$1"));
     s = s.replace(WIKILINK, (_m, slug, label) => (label || titleOf(d, slug.trim()) || slug).trim());
     s = s.replace(/\[([^\]]+)\]\([^)]+\)/g, "$1");
     s = s.replace(/[*_`>#]+/g, "");

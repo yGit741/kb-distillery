@@ -26,12 +26,12 @@ Coverage: **10 / 61 pp (16%)** · skip rows excluded · parts ≤ 60 pp
 
 | # | Part | Pages | Status | Note |
 |---|------|-------|--------|------|
-| 1 | Pages 1–10 | 1–10 | full | [[part-2020-tiny-book-pages-1-10]] |
+| 1 | Pages 1–10 | 1–10 | full | [part-2020-tiny-book-pages-1-10](part-2020-tiny-book-pages-1-10.md) |
 | 2 | Whole book | 11–61 | — |  |
 
 ## Key concepts
 
-<!-- Book-wide concepts as [[concept]] links, filled in as parts are digested. -->
+<!-- Book-wide concepts as [Concept](concept.md) links, filled in as parts are digested. -->
 
 ## Threads
 

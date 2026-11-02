@@ -100,7 +100,7 @@
    "preview": "Problem: Is low rank a good bias? Main result: The article argues it is.",
    "title": "Clip Why Rank Matters",
    "type": "article",
-   "words": 39,
+   "words": 41,
    "year": null
   },
   {
@@ -113,7 +113,7 @@
    "preview": "Problem: Where does rank show up? Main result: Everywhere, says the post.",
    "title": "Tblog Post One",
    "type": "article",
-   "words": 36,
+   "words": 38,
    "year": null
   },
   {
@@ -156,7 +156,7 @@
    "preview": "A tiny fixture course for the end-to-end pipeline test: one slide deck, one lecture, and nothing else. It exists so that catalog, full-digest and the Contents table are exercised together.",
    "title": "Test machine learning",
    "type": "course",
-   "words": 78,
+   "words": 82,
    "year": null
   },
   {
@@ -171,7 +171,7 @@
    "preview": "Problem: What is generalization? Main result: Capacity alone does not explain generalization.",
    "title": "Lecture 1 · Introduction",
    "type": "lecture",
-   "words": 66,
+   "words": 72,
    "year": null
   },
   {
@@ -181,10 +181,10 @@
    "in": 0,
    "maturity": "digested",
    "out": 0,
-   "preview": "With: [[]] What it was about:",
+   "preview": "With: What it was about:",
    "title": "2026 01 02 Rank Thread",
    "type": "mail",
-   "words": 32,
+   "words": 36,
    "year": null
   },
   {
@@ -197,7 +197,7 @@
    "preview": "Problem: Main result:",
    "title": "Tiny Book",
    "type": "paper",
-   "words": 30,
+   "words": 32,
    "year": 2020
   },
   {
@@ -210,7 +210,7 @@
    "preview": "Problem: Is matrix completion biased to low rank? Main result: Yes, in a toy model.",
    "title": "Easy Skim Paper",
    "type": "paper",
-   "words": 43,
+   "words": 45,
    "year": 2023
   },
   {
@@ -225,7 +225,7 @@
    "preview": "Problem: Why does gradient descent on a tensor factorization generalize? Main result: Gradient flow implicitly minimizes tensor rank.",
    "title": "Tiny Rank Paper",
    "type": "paper",
-   "words": 76,
+   "words": 80,
    "year": 2024
   },
   {
@@ -240,7 +240,7 @@
    "preview": "Problem: What is the rank of a tensor? Main result: Tensor rank can exceed every flattening rank.",
    "title": "Tiny Book",
    "type": "part",
-   "words": 73,
+   "words": 77,
    "year": 2020
   },
   {
@@ -255,7 +255,7 @@
    "preview": "Does a low-rank bias explain why big networks generalize?",
    "title": "Does rank explain generalization?",
    "type": "question",
-   "words": 51,
+   "words": 54,
    "year": null
   },
   {
@@ -268,7 +268,7 @@
    "preview": "A tiny fixture blog series for the end-to-end pipeline test: one post clipped from the web, skimmed with easy-digest so that its Contents row is ticked.",
    "title": "Test blog",
    "type": "series",
-   "words": 72,
+   "words": 75,
    "year": null
   },
   {
@@ -283,7 +283,7 @@
    "preview": "One-liner: The smallest number of rank-one tensors that sum to a given tensor.",
    "title": "Tensor rank",
    "type": "idea",
-   "words": 74,
+   "words": 78,
    "year": null
   },
   {
@@ -296,7 +296,7 @@
    "preview": "Generalization bounds and why over-parameterized networks still generalize; a candidate thesis direction for the e2e fixture vault.",
    "title": "Learning theory",
    "type": "topic",
-   "words": 35,
+   "words": 41,
    "year": null
   },
   {
@@ -308,21 +308,13 @@
    "in": 0,
    "maturity": "digested",
    "out": 2,
-   "preview": "Problem: Why do big networks generalize? Main result: A talk-length argument that tensor-rank is the right lens.",
+   "preview": "Problem: Why do big networks generalize? Main result: A talk-length argument that Tensor rank is the right lens.",
    "title": "Tiny talk",
    "type": "video",
-   "words": 48,
+   "words": 51,
    "year": null
   }
  ],
- "wanted": [
-  {
-   "count": 1,
-   "from": [
-    "book-2020-tiny-book"
-   ],
-   "id": "concept"
-  }
- ],
- "wanted_total": 1
+ "wanted": [],
+ "wanted_total": 0
 }

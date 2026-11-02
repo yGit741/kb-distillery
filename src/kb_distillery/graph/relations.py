@@ -27,6 +27,8 @@ import os
 import re
 import unicodedata
 
+from kb_distillery.core.links import page_slug
+
 STORED, COMPUTED, PROPOSED = "stored", "computed", "proposed"
 PROPOSALS_FILE = "relations-proposals.jsonl"      # `<kb>/.cache/`, written by kb_distillery.graph.propose (every valid proposal)
 MENTIONS, SHARES_SOURCE, NAME_MATCH = "mentions", "shares-source", "name-match"
@@ -77,7 +79,9 @@ def relations_block(text):
 def _target(value):
     s = str(value or "").strip()
     m = _LINK.match(s)
-    return (m.group(1) if m else s).strip()
+    if m:
+        return m.group(1).strip()
+    return (page_slug(s) or s).strip()          # a bare slug, or a page path `slug.md`
 
 
 def parse_relations(text):

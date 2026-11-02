@@ -162,6 +162,15 @@
       frame.className = "ex-viz-frame";
       box.appendChild(frame);
     });
+    // page links: [Title](slug.md) and [label](slug.md#heading) route to the page like a wikilink did
+    root.querySelectorAll("a[href]").forEach((a) => {
+      const m = /^([^/:#?]+)\.md(?:#.*)?$/.exec(a.getAttribute("href"));
+      if (!m) return;
+      const slug = decodeURIComponent(m[1]);
+      const holder = document.createElement("template");
+      holder.innerHTML = pageLink(slug, a.textContent);
+      a.replaceWith(holder.content);
+    });
     root.querySelectorAll("a[href]").forEach((a) => {
       if (/^https?:/i.test(a.getAttribute("href"))) {
         a.target = "_blank";

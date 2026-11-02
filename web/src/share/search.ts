@@ -5,7 +5,7 @@
  * requires identical output, so a change here must keep the legacy answers.
  */
 import type { PageDetail, PathResult, SearchHit, SearchResult } from "@/api/types";
-import { WIKILINK } from "@/lib/links";
+import { PAGE_LINK, WIKILINK } from "@/lib/links";
 import type { ShareBlob } from "./blob";
 
 const MAX_PATHS = 4;
@@ -17,6 +17,7 @@ function titleOf(pages: Pages, slug: string): string {
 }
 
 function plain(pages: Pages, s: string): string {
+  s = s.replace(PAGE_LINK, (_m, label: string) => label.replace(/\\(.)/g, "$1"));
   s = s.replace(WIKILINK, (_m, slug: string, label?: string) => (label || titleOf(pages, slug.trim()) || slug).trim());
   s = s.replace(/\[([^\]]+)\]\([^)]+\)/g, "$1");
   s = s.replace(/[*_`>#]+/g, "");

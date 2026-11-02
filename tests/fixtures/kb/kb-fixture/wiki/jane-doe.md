@@ -9,7 +9,7 @@ generated: {by: summarize/unknown}
 
 # Jane Doe
 
-Fixture researcher at Example University. Works on [[generalization]].
+Fixture researcher at Example University. Works on [Generalization](generalization.md).
 
 ## Why it matters here
 
@@ -28,4 +28,4 @@ Fixture author of the generalization-bounds paper.
 ## Cataloged in vault
 <!-- from: scholar -->
 
-- [[paper-2020-fixture-generalization-bounds]]
+- [Fixture generalization bounds](paper-2020-fixture-generalization-bounds.md)

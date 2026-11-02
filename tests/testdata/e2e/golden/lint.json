@@ -9,7 +9,6 @@
  "warn  wiki: missing topic page [[theme-statistics]] — every area: needs one",
  "warn  wiki: missing topic page [[theme-tensor-factorization]] — every area: needs one",
  "warn  wiki: 13 page(s) have no description: — `pixi run summarize -- plan` lists them",
- "warn  wiki/book-2020-tiny-book.md: wikilink [[concept]] resolves to nothing",
  "warn  wiki/book-2020-tiny-book.md: book needs an ## Overview paragraph (≥120 chars): what it is, how it is organised, why it matters here",
  "warn  raw/printed-docs/2020-tiny-book.pdf: book partially digested — 10/61 pages (16%): p.1-10. Run `python3 -m kb_distillery.ingest toc <raw>` for what is left.",
  "rc=0"

@@ -11,9 +11,9 @@ usually one file, sometimes several (slides + the handwritten notes taken in tha
 ```
 | # | Item | Raw | Status | Note |
 |---|------|-----|--------|------|
-| 1 | Lecture 1 · Introduction | `raw/presentations/rl-lecture-01-introduction.pdf` | full | [[lecture-rl-01-introduction]] |
+| 1 | Lecture 1 · Introduction | `raw/presentations/rl-lecture-01-introduction.pdf` | full | [Lecture 1 · Introduction](lecture-rl-01-introduction.md) |
 | 2 | Lecture 2 · MDPs | `raw/presentations/rl-02.pdf` `raw/handwritten/rl-mdp.pdf` | — | |
-| 3 | Course book | `raw/printed-docs/rl-course-book.pdf` | partial | [[book-rl-course-book]] |
+| 3 | Course book | `raw/printed-docs/rl-course-book.pdf` | partial | [Course book](book-rl-course-book.md) |
 ```
 
 Row status: `skip` | `—` (backlog) | `partial` (the row is itself a book/notebook collection) | `easy` |
@@ -40,7 +40,7 @@ chapters or half a long one; front/back matter rows are `skip`. Each digested pa
 | # | Part | Pages | Status | Note |
 |---|------|-------|--------|------|
 | 1 | Front matter · Prefaces | 1–18 | skip | |
-| 2 | Chapter 1. Boolean functions and the Fourier expansion | 19–42 | full | [[part-2014-analysis-of-boolean-functions-ch1-fourier-expansion]] |
+| 2 | Chapter 1. Boolean functions and the Fourier expansion | 19–42 | full | [Chapter 1](part-2014-analysis-of-boolean-functions-ch1-fourier-expansion.md) |
 | 3 | Chapter 2. Basic concepts and social choice | 43–68 | — | |
 ```
 

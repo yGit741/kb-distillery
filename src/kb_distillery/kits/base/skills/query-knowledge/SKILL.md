@@ -42,7 +42,7 @@ Never claim “nothing in the vault” until both index and `candidates` were ch
 ## Phase 2 — read & synthesize
 
 1. Read selected `wiki/<slug>.md` files (targeted reads, not the whole tree).
-2. **Prefer wiki over training knowledge.** Cite with bare wikilinks: `[[tensor-rank]]`.
+2. **Prefer wiki over training knowledge.** Cite with page links: `[Tensor rank](tensor-rank.md)`.
 3. Answer in chat — format as prose, table, or list depending on the question.
 4. Note gaps: queued raw, `to-read` papers, open questions (`maturity: open`).
 
@@ -58,7 +58,7 @@ python3 -m kb_distillery.search.query candidates "<keywords>" --scope scope-x # 
 ```
 
 1. Run `scope-status` first; the page list is the whole universe for this answer.
-2. Locate with `candidates … --scope scope-x`, read 3–8 of those pages, cite only them as `[[slug]]`.
+2. Locate with `candidates … --scope scope-x`, read 3–8 of those pages, cite only them as `[Title](slug.md)`.
 3. If the scope's pages do not cover the question, say so — do not borrow from other pages or from general knowledge.
 4. **End every answer with** `Not yet digested in this scope: <uncovered files>` (from `scope-status`,
    `NOT_YET_DIGESTED`); offer `explore-raw-data` (`find … --scope scope-x`) to look at them.

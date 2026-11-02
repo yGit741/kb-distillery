@@ -532,7 +532,7 @@ _SLUG_LIST = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*(?:, [a-z0-9]+(?:-[a-z0-9]+)*
 
 
 def _unlink(value, drop, titles):
-    """A scoped build names no dropped page: `[[dropped|label]]` → label (else its title) as plain
+    """A scoped build names no dropped page: `[label](dropped.md)` / `[[dropped|label]]` → label (else its title) as plain
     text in strings, dropped slugs removed from lists — recursively through frontmatter/properties."""
     if isinstance(value, str):
         if value.strip() in drop or (value.strip().endswith(page_links.PAGE_SUFFIX)
@@ -540,6 +540,8 @@ def _unlink(value, drop, titles):
             return None
         if _SLUG_LIST.match(value):              # graph properties join list fields with ", "
             return ", ".join(s for s in value.split(", ") if s not in drop)
+        value = page_links.PAGE_LINK.sub(lambda m: page_links.link_parts(m)[0]
+                                         if page_links.link_parts(m)[1] in drop else m.group(0), value)
         return _SCOPE_WIKILINK.sub(lambda m: (m.group(3) or titles.get(m.group(1).strip()) or m.group(1)).strip()
                                    if m.group(1).strip() in drop else m.group(0), value)
     if isinstance(value, list):
@@ -595,7 +597,7 @@ def apply_profile(data, profile, scope_slugs=None):
 
 
 def unlink_dropped(data, drop):
-    """A subset build names no dropped page: `[[dropped|label]]` → label (else its title) as plain text,
+    """A subset build names no dropped page: `[label](dropped.md)` / `[[dropped|label]]` → label (else its title) as plain text,
     dropped slugs removed from list fields (related, sources, …) — in every kept node, card and body
     (`_unlink`, recursive through frontmatter / properties). Before `drop_pages`, while titles are known."""
     graph, index, pages = data["graph"], data["index"], data["pages"]

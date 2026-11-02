@@ -11,11 +11,11 @@ generated: {by: human:dana-levi}
 
 # PyTorch
 
-Deep-learning framework asked for by [[role-senior-ml-engineer-acme]] and [[role-applied-scientist-nimbus]].
+Deep-learning framework asked for by [Senior ML Engineer, Perception (Acme)](role-senior-ml-engineer-acme.md) and [Applied Scientist, Clinical NLP (Nimbus)](role-applied-scientist-nimbus.md).
 
 ## Evidence
-- Acme asked why many DataLoader workers can slow training ([[interview-acme-technical]], [[notes-acme-technical-interview]]).
-- Listed on [[doc-dana-levi-cv]].
+- Acme asked why many DataLoader workers can slow training ([Acme technical interview](interview-acme-technical.md), [Acme technical interview notes](notes-acme-technical-interview.md)).
+- Listed on [Dana Levi CV](doc-dana-levi-cv.md).
 
 ## Prep
 Revise pinned memory, worker start-up cost and collate functions.

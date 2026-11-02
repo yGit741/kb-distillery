@@ -589,6 +589,13 @@
         img.replaceWith(miss);
       }, { once: true });
     });
+    root.querySelectorAll("a[href]").forEach((a) => {                      // page links: [Title](slug.md)
+      const m = /^([^/:#?]+)\.md(?:#.*)?$/.exec(a.getAttribute("href"));
+      if (!m) return;
+      a.className = "wl";
+      a.title = "Open in Explore";
+      a.setAttribute("href", `/explore#/p/${encodeURIComponent(decodeURIComponent(m[1]))}`);
+    });
     root.querySelectorAll("a[href]").forEach((a) => {
       const href = a.getAttribute("href");
       if (/^javascript:/i.test(href)) { a.removeAttribute("href"); return; }

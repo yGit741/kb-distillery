@@ -177,7 +177,7 @@ export function Editor({ init, projection, onDirty, onSaved, onDeleted, onDuplic
       </label>
       <label className="flex flex-col gap-1 text-sm">
         <span>
-          Why <span className="text-muted-foreground">required; link a topic or question, e.g. [[topic-info-theory]]</span>
+          Why <span className="text-muted-foreground">required; link a topic or question, e.g. [Info theory](theme-info-theory.md)</span>
         </span>
         <textarea
           value={why}

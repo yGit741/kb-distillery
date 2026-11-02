@@ -17,7 +17,7 @@ discussed_with: []
 
 # Fixture RL lecture 1
 
-> Row 1 of [[course-fixture-rl]]
+> Row 1 of [Fixture RL course](course-fixture-rl.md)
 
 **Problem:** Define a fixture MDP.
 
@@ -41,8 +41,8 @@ Variables: $x$: a fixture variable
 ## Takeaways for my thesis
 
 - The value function satisfies the Bellman equation.
-- Concepts: [[theme-learning-theory]]
+- Concepts: [Learning Theory](theme-learning-theory.md)
 
 ## Links out
 
-- Concepts: [[theme-learning-theory]]
+- Concepts: [Learning Theory](theme-learning-theory.md)

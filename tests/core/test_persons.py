@@ -83,7 +83,7 @@ class ParseRenderTest(unittest.TestCase):
         secs = {s["title"]: s for s in persons.sections_from_manifest(m, {"paper-2019-y"}, ["paper-2019-y"])}
         self.assertEqual(set(secs), {"Roles & companies", "Courses", "Bibliography", "Cataloged in vault"})
         bib = secs["Bibliography"]["body"].split("\n")
-        self.assertTrue(bib[-3].startswith("| 📌 | 2019 | [[paper-2019-y\\|Y]]"))   # pinned first, linked
+        self.assertTrue(bib[-3].startswith("| 📌 | 2019 | [Y](paper-2019-y.md)"))   # pinned first, linked
         self.assertTrue(bib[-2].startswith("| 🚫 | 2020 | X"))                       # mega-author
         self.assertTrue(bib[-1].startswith("| 📖 | 2001 | [B](http://b)"))
         self.assertEqual(secs["Courses"]["source"], "manual")
@@ -306,7 +306,7 @@ class MigrationTest(unittest.TestCase):
         self.assertNotIn("See bibliography below", body)
         self.assertEqual([p["wiki"] for p in m["papers"]], ["paper-2017-depth-separation"])
         self.assertEqual(m["papers"][0]["source"], "manual")
-        self.assertIn("- [[paper-2017-depth-separation]]", body)                 # from corpus collection
+        self.assertIn("- [paper-2017-depth-separation](paper-2017-depth-separation.md)", body)                 # from corpus collection
         errs, _w, _s = persons.check("amit-daniely", fm, body, {"depth-vs-width": {"type": "idea"}})
         self.assertEqual(errs, [])
 
@@ -317,7 +317,7 @@ class MigrationTest(unittest.TestCase):
         self.assertNotIn("Indexed from Semantic Scholar", body.split("## ")[0])
         self.assertIn("171 papers indexed", body)
         self.assertIn("| 📖 | 2001 | [Discrete Mathematics](http://x/dmc.pdf) (2001) — with M. Parnas | — | — |", body)
-        self.assertIn("## Writing\n<!-- from: manual -->\n\n- [[series-gil-kalai-blog]] — *Combinatorics and More*", body)
+        self.assertIn("## Writing\n<!-- from: manual -->\n\n- [series-gil-kalai-blog](series-gil-kalai-blog.md) — *Combinatorics and More*", body)
         self.assertIn("## Courses\n<!-- from: manual -->\n\n- [Game Theory]", body)
         self.assertNotIn("none cataloged yet", body)
         self.assertIn("**Concepts:** [[theme-quantum]]", body)

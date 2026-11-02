@@ -19,7 +19,7 @@ discussed_with: []
 
 # Fixture book, chapter 2: concentration
 
-> Part of [[book-2019-fixture-book]] · pp. 16–30 · Chapter 2. Concentration
+> Part of [book-2019-fixture-book](book-2019-fixture-book.md) · pp. 16–30 · Chapter 2. Concentration
 
 **Problem:** Show that fixture sums concentrate.
 
@@ -43,8 +43,8 @@ Variables: $x$: a fixture variable
 ## Takeaways for my thesis
 
 - The tail decays exponentially.
-- Concepts: [[noise-stability]], [[theme-learning-theory]]
+- Concepts: [Noise stability](noise-stability.md), [Learning Theory](theme-learning-theory.md)
 
 ## Links out
 
-- Concepts: [[noise-stability]], [[theme-learning-theory]]
+- Concepts: [Noise stability](noise-stability.md), [Learning Theory](theme-learning-theory.md)

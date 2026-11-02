@@ -106,6 +106,19 @@ def save_session(sha, data):
         f.write("\n")
 
 
+def page_title(slug):
+    """The title the app shows for wiki/<slug>.md (what a link to it reads as); the slug when the page is missing."""
+    from kb_distillery.core import links
+    return links.read_title(os.path.join(ROOT, WIKI_DIR), slug)
+
+
+def wiki_titles():
+    """{slug: title the app shows} of every wiki page (what a link to it reads as); a mapping, so it also serves as the
+    set of known slugs."""
+    from kb_distillery.core import links
+    return links.read_titles(os.path.join(ROOT, WIKI_DIR))
+
+
 def wiki_slugs():
     slugs = set()
     base = os.path.join(ROOT, WIKI_DIR)

@@ -3,12 +3,12 @@ import json
 import os
 import sys
 
-from kb_distillery.core import frontmatter
+from kb_distillery.core import frontmatter, links
 from kb_distillery.core.schema import TOPIC_SLUGS
 from kb_distillery.lint.lint import QUESTION_TITLE_MAX
 
 from .fm_merge import merge_frontmatter
-from .paths import ROOT, session_dir, load_session, wiki_slugs, resolve_wikilink_slug
+from .paths import ROOT, session_dir, load_session, wiki_titles, resolve_wikilink_slug
 from .schemas import validate_claims, validate_plan
 
 
@@ -64,7 +64,8 @@ def run_draft(sha):
     validate_plan(plan)
 
     slug = plan["wiki_slug"]
-    known = wiki_slugs()
+    known = wiki_titles()
+    self_title = links.shown_title(claims.get("title") or slug)
     existing = None                       # deepening a page in place: its frontmatter survives (merge below)
     existing_path = os.path.join(ROOT, "wiki", f"{slug}.md")
     if os.path.isfile(existing_path):
@@ -76,7 +77,7 @@ def run_draft(sha):
     link_slugs = plan.get("link_slugs") or list((plan.get("link_existing") or {}).values())
     area_links = [s for a in areas if (s := resolve_wikilink_slug(a, known))]
     related = list(dict.fromkeys([*link_slugs, *(plan.get("link_existing") or {}).values(), *area_links]))[:8]
-    concepts_links = ", ".join(f"[[{s}]]" for s in related[:5])
+    concepts_links = ", ".join(links.page_link(s, known) for s in related[:5])
 
     results = claims.get("results") or []
     main_result = results[0] if results else ""
@@ -88,7 +89,7 @@ def run_draft(sha):
 
     person = plan.get("person") or claims.get("person")
     recommended_by = f"[{person}]" if person else "[]"
-    links_person = f"- Person: [[{person}]]\n" if person else ""
+    links_person = f"- Person: {links.page_link(person, known)}\n" if person else ""
 
     digestion = plan.get("depth") or session.get("depth") or "full"
     paper_status = "digested" if digestion in ("easy", "full", "deep") else "to-read"     # listed → to-read
@@ -105,12 +106,12 @@ def run_draft(sha):
         a, b = scope["pages"]
         section = (scope.get("label") or "").replace("#", "").replace(":", " –")
         head = (f"type: part\nlayer: source\n{title_fm}\nbook: {book}\n", f"section: {section}\nsection_pages: {a}-{b}\n",
-                f"\n> Part of [[{book}]] · pp. {a}–{b} · {section}\n")
+                f"\n> Part of {links.page_link(book, known)} · pp. {a}–{b} · {section}\n")
         plan["areas_resolved"] = areas
     elif plan.get("hub"):
         hub_key = "series" if plan["hub"].startswith("series-") else "course"
         head = (f"type: {plan.get('type') or 'paper'}\nlayer: source\n{title_fm}\n{hub_key}: {plan['hub']}\n", "",
-                f"\n> Row {plan.get('hub_row')} of [[{plan['hub']}]]\n")
+                f"\n> Row {plan.get('hub_row')} of {links.page_link(plan['hub'], known)}\n")
     else:
         head = (f"type: {plan.get('type') or 'paper'}\nlayer: source\n{title_fm}\n", "", "")
 
@@ -194,7 +195,7 @@ discussed_with: []
 
 ## Why I care
 
-Spawned during ingest of [[{slug}]].
+Spawned during ingest of {links.link(slug, self_title)}.
 
 ## What I know so far
 -
@@ -203,7 +204,7 @@ Spawned during ingest of [[{slug}]].
 -
 
 ## Papers / concepts to read
-- [[{slug}]]
+- {links.link(slug, self_title)}
 """
         with open(qpath, "w", encoding="utf-8") as f:
             f.write(qbody)

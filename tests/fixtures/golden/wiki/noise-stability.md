@@ -24,7 +24,7 @@ Fixture idea.
 Fixture.
 
 ## Connections
-- [[theme-boolean-analysis]]
+- [Boolean Analysis](theme-boolean-analysis.md)
 
 ## Open questions
 -

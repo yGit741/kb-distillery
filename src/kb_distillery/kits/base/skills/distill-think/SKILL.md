@@ -55,7 +55,7 @@ python3 -m kb_distillery.distill abort my-true-research-start-here
 
 - Backs up targets, applies proposals, runs lint, rolls back on failure.
 - Appends `meta/log.md`.
-- Cite think paths as `` `think/...` `` in thread text — **not** `[[wikilinks]]` (think is outside wiki).
+- Cite think paths as `` `think/...` `` in thread text — **not** page links (think is outside wiki).
 
 ## Plan actions
 

@@ -123,12 +123,22 @@ never touched. Lint enforces the handle ⇒ section rules on verified pages and 
 non-reciprocal `advisors`/`students`. See `.claude/skills/build-researcher-profile/SKILL.md`.
 
 
+## Links
+
+Pages link with standard relative markdown links (Open Knowledge Format v0.2; `wiki/` is the bundle root and is flat):
+`[Title](slug.md)`, `[label](slug.md#heading)`. The text is the page title (or a label you choose), the target is
+`core.links.page_path(slug)`: writers call `links.link(slug, label)` / `links.page_link(slug, titles)`, never build the
+string by hand. Wikilinks (`[[slug]]`) survive only inside the user's `## My notes`, which no tool rewrites; readers
+(graph, backlinks, search) read both forms. Lint fails on a wikilink outside My notes (code, math and HTML comments are
+not read), on a link to no page, on a heading the target lacks, and on a path (`wiki/x.md`). `[[]]` stays a
+harmless empty placeholder. Schema 1.6 moved every page to this form (migration `0014_okf_links`).
+
 ## Note sections
 
 Sources:
 - **paper** — Setup & assumptions → Proof idea (sketch only) → Key equations → Takeaways for my thesis → Connections → Links out (`meta/templates/paper.md`; at `depth: listed` it holds only **Problem:** / **Main result:** lines)
-- **part** — as paper, plus a `> Part of [[book]] · pp. A–B` line under the title
-- **lecture** — `> Lecture of [[course]]` line → Setup & assumptions → Key equations → Takeaways for my thesis → Connections → Links out
+- **part** — as paper, plus a `> Part of [Book title](book-slug.md) · pp. A–B` line under the title
+- **lecture** — `> Lecture of [Course title](course-slug.md)` line → Setup & assumptions → Key equations → Takeaways for my thesis → Connections → Links out
 - **article / mail** — Key claims → Key equations → Takeaways for my thesis → Connections → Links out (mail = an email thread)
 - **ai-chat** — rendered from its `meta/chats/` tree by the chat pipeline (`conversation:` names the tree)
 - **blog-post** — rendered by `src/kb_distillery/ingest/blog.py`: Blog Post Summary → Key concepts → Post

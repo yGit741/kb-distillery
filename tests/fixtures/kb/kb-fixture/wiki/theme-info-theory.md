@@ -15,7 +15,7 @@ Fixture topic for the backend test suite.
 
 ## Key concepts
 
-- [[shannon-entropy]]
+- [Shannon entropy](shannon-entropy.md)
 
 ## Threads
 

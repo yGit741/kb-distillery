@@ -18,7 +18,7 @@ Fixture topic for the pipeline harness.
 ## Threads
 
 ## Papers
-- [[mail-2024-02-01-fixture-thread-about-a-lemma]]
+- [Fixture thread about a lemma](mail-2024-02-01-fixture-thread-about-a-lemma.md)
 
 ## My notes
 

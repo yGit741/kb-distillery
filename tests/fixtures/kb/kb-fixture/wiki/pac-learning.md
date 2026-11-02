@@ -24,8 +24,8 @@ Fixture idea.
 Fixture.
 
 ## Connections
-- [[theme-learning-theory]]
-- [[generalization]]
+- [Topic: learning theory](theme-learning-theory.md)
+- [Generalization](generalization.md)
 
 ## Open questions
 -

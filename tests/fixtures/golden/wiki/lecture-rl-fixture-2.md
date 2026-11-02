@@ -11,7 +11,7 @@ raw: [raw/presentations/rl-fixture-lecture-2.pdf]
 
 # Rl Fixture 2
 
-> Lecture of [[]]
+> Lecture of <!-- [Course title](course-slug.md) -->
 
 **Topic:**
 
@@ -26,4 +26,4 @@ raw: [raw/presentations/rl-fixture-lecture-2.pdf]
 ## Connections
 
 ## Links out
-- Concepts: [[]]
+- Concepts: <!-- [Title](slug.md) -->

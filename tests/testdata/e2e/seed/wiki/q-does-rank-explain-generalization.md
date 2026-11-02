@@ -16,7 +16,7 @@ Does a low-rank bias explain why big networks generalize?
 
 ## Why I care
 
-It would connect [[tensor-rank]] to [[theme-learning-theory]].
+It would connect [Tensor rank](tensor-rank.md) to [Learning theory](theme-learning-theory.md).
 
 ## What I know so far
 - Nothing yet.
@@ -25,4 +25,4 @@ It would connect [[tensor-rank]] to [[theme-learning-theory]].
 - Gradient descent prefers low rank.
 
 ## Papers / concepts to read
-- [[tensor-rank]]
+- [Tensor rank](tensor-rank.md)

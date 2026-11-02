@@ -34,8 +34,8 @@ $H(X) = -\sum p \log p$
 
 ## Connections
 
-- [[theme-info-theory]], [[shannon-entropy]]
+- [Topic: info theory](theme-info-theory.md), [Shannon entropy](shannon-entropy.md)
 
 ## Links out
 
-- [[shannon-entropy]]
+- [Shannon entropy](shannon-entropy.md)

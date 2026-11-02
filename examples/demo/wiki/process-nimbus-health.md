@@ -12,7 +12,7 @@ generated: {by: human:dana-levi}
 
 ## Overview
 
-Everything about the application to [[company-nimbus-health]] for [[role-applied-scientist-nimbus]]. Stage so far: applied; the hiring-manager conversation with [[maya-cohen]] is scheduled ([[interview-nimbus-hiring-manager]]).
+Everything about the application to [Nimbus Health](company-nimbus-health.md) for [Applied Scientist, Clinical NLP (Nimbus)](role-applied-scientist-nimbus.md). Stage so far: applied; the hiring-manager conversation with [Maya Cohen](maya-cohen.md) is scheduled ([Nimbus hiring-manager interview](interview-nimbus-hiring-manager.md)).
 
 ## Contents
 
@@ -20,4 +20,4 @@ Coverage: **1 / 1 items (100%)** · skip rows excluded
 
 | # | Item | Raw | Status | Note |
 |---|------|-----|--------|------|
-| 1 | nimbus-health-applied-scientist | `raw/web-clips/nimbus-health-applied-scientist.md` | easy | [[posting-nimbus-health-applied-scientist]] |
+| 1 | nimbus-health-applied-scientist | `raw/web-clips/nimbus-health-applied-scientist.md` | easy | [Applied Scientist, Clinical NLP (Nimbus Health)](posting-nimbus-health-applied-scientist.md) |

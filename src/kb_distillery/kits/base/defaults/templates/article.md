@@ -28,4 +28,4 @@ description:
 ## Connections
 
 ## Links out
-- Concepts: [[]]
+- Concepts: <!-- [Title](slug.md) -->

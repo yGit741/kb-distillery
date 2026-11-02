@@ -49,7 +49,7 @@ def page(typ, status, body="", **fm):
 
 
 def unit(slug, raw, links, digestion="full", status="digested"):
-    body = f"# {slug}\n\nSee " + " ".join(f"[[{l}]]" for l in links)
+    body = f"# {slug}\n\nSee " + " ".join(f"[{l}]({l}.md)" for l in links)
     fm = dict(year=2023, area="[learning-theory]", raw=raw)
     fm["depth"] = digestion
     return page("paper", status, body, **fm)
@@ -167,7 +167,7 @@ def paper_page(slug, raw):
 
 
 SCOPE_PAGE = ("---\ntype: scope\nlayer: collection\nmaturity: active\nrelated: []\naliases: []\n---\n\n# S\n\n## Why\n\n"
-              "Because [[q-y]] matters.\n\n## Members\n\n<!-- generated: scopes -->\n")
+              "Because [q-y](q-y.md) matters.\n\n## Members\n\n<!-- generated: scopes -->\n")
 
 
 class LintVaultTests(unittest.TestCase):
@@ -221,8 +221,8 @@ class LintVaultTests(unittest.TestCase):
         self.assertEqual(snap["values"]["scope_uncovered"], 1)
         first = self.text()
         self.assertIn("**Coverage:** 1/2 files digested (50%) · 1 undigested", first)
-        self.assertIn("[[paper-a]]", first)
-        self.assertIn("Because [[q-y]] matters.", first)
+        self.assertIn("[paper-a](paper-a.md)", first)
+        self.assertIn("Because [q-y](q-y.md) matters.", first)
         self.run_lint()
         self.assertEqual(self.text(), first)
         with open(os.path.join(self.root, "meta", "corpus.tsv"), encoding="utf-8") as f:
@@ -235,7 +235,7 @@ class LintVaultTests(unittest.TestCase):
         self.assertTrue(any("scope-ghost" in e and "not a scope page" in e for e in lint.errors), lint.errors)
 
     def test_empty_why_is_an_error_and_no_rows_a_warning(self):
-        self.put("wiki/scope-s.md", SCOPE_PAGE.replace("Because [[q-y]] matters.", "<!-- todo -->"))
+        self.put("wiki/scope-s.md", SCOPE_PAGE.replace("Because [q-y](q-y.md) matters.", "<!-- todo -->"))
         self.cells.clear()
         self.write_corpus()
         self.run_lint()
@@ -352,7 +352,7 @@ class ApiTests(unittest.TestCase):
         self.assertEqual(self.files_of_head(), ["meta/corpus.tsv", "meta/log.md", "wiki/scope-alpha.md"])
         text = Path(self.root, "wiki", "scope-alpha.md").read_text()
         self.assertIn("# Alpha set", text)
-        self.assertIn("Because [[q-y]] needs it.", text)
+        self.assertIn("Because [q-y](q-y.md) needs it.", text)       # a typed wikilink is stored as a page link
         self.assertIn("**Coverage:** 1/2 files digested (50%) · 1 undigested", text)
         got = self.sd.get_scope("scope-alpha", root=self.root)
         self.assertEqual([r["path"] for r in got["rows"]], [A, C])
@@ -455,6 +455,19 @@ class ShareProfileTests(unittest.TestCase):
         self.assertEqual(out["pages"]["paper-a"]["markdown"], "cites B and Bee paper, uses [[idea-x]]")
         self.assertEqual(out["pages"]["paper-a"]["frontmatter"]["related"], ["idea-x"])
         self.assertNotIn("paper-b", json.dumps(out))
+
+    def test_scoped_public_build_unlinks_dropped_page_links_too(self):
+        from kb_distillery.share import build as sb
+        nodes = [dict(id="paper-a", type="paper", title="A", properties=dict()),
+                 dict(id="paper-b", type="paper", title="Bee paper", properties=dict())]
+        data = dict(graph=dict(nodes=nodes, links=[dict(source="paper-a", target="paper-b")], facets=dict()),
+                    index=dict(pages=[dict(id=n["id"], type=n["type"]) for n in nodes], links=[["paper-a", "paper-b"]], wanted=[]),
+                    pages={n["id"]: dict(card=dict(type=n["type"], title=n["title"]), frontmatter=dict(),
+                                         markdown="", backlinks=[], outbound=[], suggested=[]) for n in nodes})
+        data["pages"]["paper-a"].update(markdown="cites [Bee \\[2\\]](paper-b.md), [again](paper-b.md#x) and [A](paper-a.md)",
+                                        outbound=["paper-b"])
+        out = sb.apply_profile(data, "public", {"paper-a"})
+        self.assertEqual(out["pages"]["paper-a"]["markdown"], "cites Bee [2], again and [A](paper-a.md)")
 
 
 if __name__ == "__main__":

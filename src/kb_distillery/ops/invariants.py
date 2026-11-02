@@ -31,12 +31,10 @@ import sys
 
 from kb_distillery.paths import vault_root
 from kb_distillery.core import links
-from kb_distillery.core.links import WIKILINK_TARGET
 META_DIR = os.path.join(vault_root(), "meta")
 REPO = vault_root()
 
 FORMAT = "kb-invariants/1"
-_LINK = WIKILINK_TARGET
 _DAYS = re.compile(r"\b\d+ days\b")
 _LINE = re.compile(r"^(?P<key>[A-Za-z_][\w-]*):(?P<sp>\s*)(?P<val>[^\s#][^#]*?)?(?P<rest>\s*(#.*)?)$")
 
@@ -114,7 +112,7 @@ def link_counts(pages):
     inbound = collections.Counter()
     total = dangling = 0
     for slug, p in pages.items():
-        targets = {m.strip() for m in _LINK.findall(p["_text"])} | set(_related(p["fm"]))
+        targets = set(links.targets(p["_text"])) | set(_related(p["fm"]))
         total += len(targets)
         for t in targets:
             if t in known:

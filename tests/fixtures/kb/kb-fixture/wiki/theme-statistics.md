@@ -15,7 +15,7 @@ Fixture topic for the backend test suite.
 
 ## Key concepts
 
-- [[bias-variance]]
+- [Bias-variance tradeoff](bias-variance.md)
 
 ## Threads
 

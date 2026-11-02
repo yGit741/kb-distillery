@@ -89,7 +89,7 @@ Fixture idea.
 Fixture.
 
 ## Connections
-- [[theme-{area}]]
+- [{area_title}](theme-{area}.md)
 
 ## Open questions
 -
@@ -123,7 +123,7 @@ A fixture course whose members are two slide decks, catalogued with a collection
 
 ## Threads
 
-Links to [[theme-learning-theory]].
+Links to [Learning Theory](theme-learning-theory.md).
 """
 
 _SERIES = """---
@@ -146,7 +146,7 @@ A fixture blog series standing in for a WordPress blog of clips. It exists only 
 
 ## Threads
 
-Links to [[theme-boolean-analysis]].
+Links to [Boolean Analysis](theme-boolean-analysis.md).
 """
 
 _VIDEO = """---
@@ -183,11 +183,11 @@ $H(X) = -\\sum p \\log p$
 
 ## Connections
 
-- [[theme-info-theory]], [[shannon-entropy]]
+- [Info Theory](theme-info-theory.md), [Shannon entropy](shannon-entropy.md)
 
 ## Links out
 
-- [[shannon-entropy]]
+- [Shannon entropy](shannon-entropy.md)
 """
 
 
@@ -195,11 +195,15 @@ def _title(slug):
     return slug.replace("-", " ").title()
 
 
+def _idea(**kw):
+    return _IDEA.format(area_title=_title(kw["area"]), **kw)
+
+
 def seed_pages():
     pages = {f"theme-{t}": _TOPIC.format(title=_title(t)) for t in TOPICS}
-    pages["shannon-entropy"] = _IDEA.format(area="info-theory", title="Shannon entropy", one="Expected surprise of a random variable.")
-    pages["noise-stability"] = _IDEA.format(area="boolean-analysis", title="Noise stability", one="Correlation of a function with its noisy copy.")
-    pages["generalization"] = _IDEA.format(area="learning-theory", title="Generalization", one="Gap between train and test risk.")
+    pages["shannon-entropy"] = _idea(area="info-theory", title="Shannon entropy", one="Expected surprise of a random variable.")
+    pages["noise-stability"] = _idea(area="boolean-analysis", title="Noise stability", one="Correlation of a function with its noisy copy.")
+    pages["generalization"] = _idea(area="learning-theory", title="Generalization", one="Gap between train and test risk.")
     pages["course-fixture-rl"] = _COURSE
     pages["series-fixture-kalai-blog"] = _SERIES
     pages["video-fixture-talk"] = _VIDEO
@@ -334,7 +338,7 @@ def build(root, inputs):
     for name in META_COPY:
         if (META_SRC / name).is_dir():
             shutil.copytree(META_SRC / name, meta / name, ignore=CODE_IGNORE)
-    (root / "kb.toml").write_text('[kb]\nid = "harness"\nname = "Harness fixture vault"\nschema_version = "1.5"\n'
+    (root / "kb.toml").write_text('[kb]\nid = "harness"\nname = "Harness fixture vault"\nschema_version = "1.6"\n'
                                   '\n[types]\nareas = [' + ", ".join(f'"{t}"' for t in TOPICS) + ']\n', encoding="utf-8")
     (meta / "corpus.tsv").write_text(MANIFEST_HEADER, encoding="utf-8")
     (meta / "aliases.tsv").write_text("", encoding="utf-8")

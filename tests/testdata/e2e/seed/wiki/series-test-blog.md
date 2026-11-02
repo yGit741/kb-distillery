@@ -24,4 +24,4 @@ A tiny fixture blog series for the end-to-end pipeline test: one post clipped fr
 
 ## Threads
 
-- [[theme-learning-theory]]
+- [Learning theory](theme-learning-theory.md)

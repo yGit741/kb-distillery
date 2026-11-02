@@ -1,40 +1,40 @@
 import type { PageDetail } from "@/api/types";
 import type { ShareBlob } from "./blob";
 
-/** A small vault shaped like the baked blob: wikilinks, headings, tables, labels, a disconnected island. */
+/** A small vault shaped like the baked blob: page links, headings, tables, labels, a My notes wikilink, a disconnected island. */
 const BODIES: Record<string, { title: string; type: string; body: string; links: string[] }> = {
   "tensor-rank": {
     title: "Tensor rank",
     type: "idea",
-    body: "# Tensor rank\n\nThe rank of a [[cp-decomposition|CP decomposition]] counts terms.\n\n| a | b |\n|---|---|\n| rank | table row |\n\nSee **[[matrix-rank]]** and [web](https://example.com/rank).",
+    body: "# Tensor rank\n\nThe rank of a [CP decomposition](cp-decomposition.md) counts terms.\n\n| a | b |\n|---|---|\n| rank | table row |\n\nSee **[Matrix rank](matrix-rank.md)** and [web](https://example.com/rank).",
     links: ["cp-decomposition", "matrix-rank"],
   },
   "cp-decomposition": {
     title: "CP decomposition",
     type: "idea",
-    body: "Canonical polyadic form. Related to [[tensor-rank]] and [[2019-implicit-regularization]].\n\nRank minimisation is NP-hard.",
+    body: "Canonical polyadic form. Related to [Tensor rank](tensor-rank.md) and [Implicit regularization in matrix factorization](2019-implicit-regularization.md).\n\nRank minimisation is NP-hard.\n\n## My notes\n\nA note about [[tensor-rank]].",
     links: ["tensor-rank", "2019-implicit-regularization"],
   },
   "matrix-rank": {
     title: "Matrix rank",
     type: "idea",
-    body: "Linear algebra basics. `rank(A)` equals the dimension of the column space.\n> a quote about rank\n\nSee [[tensor-rank]].",
+    body: "Linear algebra basics. `rank(A)` equals the dimension of the column space.\n> a quote about rank\n\nSee [Tensor rank](tensor-rank.md).",
     links: ["tensor-rank"],
   },
   "2019-implicit-regularization": {
     title: "Implicit regularization in matrix factorization",
     type: "paper",
-    body: "Problem: why does gradient descent find low rank solutions?\n\nMain result: with small init, GD on [[matrix-rank|factorized]] objectives approaches the nuclear norm minimiser.",
+    body: "Problem: why does gradient descent find low rank solutions?\n\nMain result: with small init, GD on [factorized](matrix-rank.md) objectives approaches the nuclear norm minimiser.",
     links: ["matrix-rank", "cp-decomposition"],
   },
   "course-learning-theory": {
     title: "Learning theory",
     type: "course",
-    body: "# Learning theory\n\nLectures: [[lecture-01-pac]], [[lecture-02-vc]].",
+    body: "# Learning theory\n\nLectures: [PAC learning](lecture-01-pac.md), [VC dimension](lecture-02-vc.md).",
     links: ["lecture-01-pac", "lecture-02-vc"],
   },
   "lecture-01-pac": { title: "PAC learning", type: "lecture", body: "Probably approximately correct. Sample complexity ~ 1/eps.\n", links: ["lecture-02-vc"] },
-  "lecture-02-vc": { title: "VC dimension", type: "lecture", body: "Shattering and VC dimension; links back to [[lecture-01-pac]].", links: ["lecture-01-pac", "2019-implicit-regularization"] },
+  "lecture-02-vc": { title: "VC dimension", type: "lecture", body: "Shattering and VC dimension; links back to [PAC learning](lecture-01-pac.md).", links: ["lecture-01-pac", "2019-implicit-regularization"] },
   "island": { title: "Island", type: "idea", body: "Nothing links here, not even a rank mention? rank.", links: [] },
   "no-title-body": { title: "", type: "idea", body: "", links: [] },
 };
@@ -83,7 +83,7 @@ export function makeRandomBlob(n = 80, seed = 7): ShareBlob {
     for (let k = 0; k < 1 + Math.floor(rnd() * 3); k++) out.add(slugs[Math.floor(rnd() * n)]!);
     out.delete(slug);
     const text = Array.from({ length: 30 + Math.floor(rnd() * 40) }, () => words[Math.floor(rnd() * words.length)]!).join(" ");
-    bodies[slug] = `# ${slug}\n\n${text}\n\nSee ${[...out].map((t) => `[[${t}]]`).join(" and ")}.\n`;
+    bodies[slug] = `# ${slug}\n\n${text}\n\nSee ${[...out].map((t) => `[${t}](${t}.md)`).join(" and ")}.\n`;
     for (const t of out) links.push([slug, t]);
   }
   for (const slug of slugs) {

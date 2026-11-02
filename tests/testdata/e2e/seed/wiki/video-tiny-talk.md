@@ -16,7 +16,7 @@ sources: [{resource: https://example.org/talk}]
 
 **Problem:** Why do big networks generalize?
 
-**Main result:** A talk-length argument that [[tensor-rank]] is the right lens.
+**Main result:** A talk-length argument that [Tensor rank](tensor-rank.md) is the right lens.
 
 ## Key ideas
 - Low rank as an implicit bias.
@@ -26,7 +26,7 @@ sources: [{resource: https://example.org/talk}]
 ## Takeaways for my thesis
 
 ## Connections
-- [[theme-learning-theory]]
+- [Learning theory](theme-learning-theory.md)
 
 ## Links out
-- Concepts: [[tensor-rank]]
+- Concepts: [Tensor rank](tensor-rank.md)

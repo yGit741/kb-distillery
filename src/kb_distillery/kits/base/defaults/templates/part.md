@@ -17,7 +17,7 @@ description:
 
 # {{title}}
 
-> Part of [[{{book}}]] · pp. {{start}}–{{end}} · {{section}}
+> Part of <!-- [Book title](book-slug.md) --> · pp. {{start}}–{{end}} · {{section}}
 
 **Problem:**
 

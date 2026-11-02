@@ -14,7 +14,7 @@ discussed_with: []
 
 ## Why I care
 
-Spawned during ingest of [[part-2019-fixture-book-ch2-concentration]].
+Spawned during ingest of [Fixture book, chapter 2: concentration](part-2019-fixture-book-ch2-concentration.md).
 
 ## What I know so far
 -
@@ -23,4 +23,4 @@ Spawned during ingest of [[part-2019-fixture-book-ch2-concentration]].
 -
 
 ## Papers / concepts to read
-- [[part-2019-fixture-book-ch2-concentration]]
+- [Fixture book, chapter 2: concentration](part-2019-fixture-book-ch2-concentration.md)

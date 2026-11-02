@@ -39,8 +39,8 @@ Variables: $x$: a fixture variable
 ## Takeaways for my thesis
 
 - Equality holds for dyadic sources.
-- Concepts: [[shannon-entropy]], [[theme-info-theory]]
+- Concepts: [Shannon entropy](shannon-entropy.md), [Info Theory](theme-info-theory.md)
 
 ## Links out
 
-- Concepts: [[shannon-entropy]], [[theme-info-theory]]
+- Concepts: [Shannon entropy](shannon-entropy.md), [Info Theory](theme-info-theory.md)
