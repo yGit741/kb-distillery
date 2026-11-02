@@ -14,10 +14,10 @@ import sys
 
 from .paths import ROOT
 from kb_distillery.paths import meta_file
-from kb_distillery.core import frontmatter, wikiio
+from kb_distillery.vault import frontmatter, wikiio
 from kb_distillery.lint.lint import parse_frontmatter
-from kb_distillery.core.schema import PARTITION_COLLECTIONS, RAW_HANDWRITTEN, SLUG_PREFIX, is_page_file, make_slug, strip_prefix
-from kb_distillery.core.books import (DIGESTED, PART_MAX_PAGES, SKIP, book_status, carve, coverage_line, find_row,
+from kb_distillery.vault.schema import PARTITION_COLLECTIONS, RAW_HANDWRITTEN, SLUG_PREFIX, is_page_file, make_slug, strip_prefix
+from kb_distillery.vault.books import (DIGESTED, PART_MAX_PAGES, SKIP, book_status, carve, coverage_line, find_row,
                    parse_partition, propose, replace_partition)
 
 BOOK_MIN_PAGES = 60         # below this a PDF is a paper: digest it whole

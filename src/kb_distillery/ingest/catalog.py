@@ -11,11 +11,11 @@ import shutil
 import subprocess
 import sys
 
-from kb_distillery.core import frontmatter
+from kb_distillery.vault import frontmatter
 from . import blog
 from .paths import ROOT, person_from_raw, set_collection, _page_type
 from .verify import existing_digest_for_raw
-from kb_distillery.core.schema import (ASSET_NAME, RAW_CHATS, RAW_EMAILS, RAW_VIDEOS, VIDEO_ITEM, RAW_HANDWRITTEN, RAW_IMAGES,  # noqa: E402
+from kb_distillery.vault.schema import (ASSET_NAME, RAW_CHATS, RAW_EMAILS, RAW_VIDEOS, VIDEO_ITEM, RAW_HANDWRITTEN, RAW_IMAGES,  # noqa: E402
                     RAW_PRESENTATIONS, RAW_PRINTED, RAW_WEB, CONTENTS_COLLECTIONS, make_slug, strip_prefix)
 
 PAPER_NAME = re.compile(r"^(1[89]|20)\d{2}-[a-z0-9]+(-[a-z0-9]+)*\.pdf$")

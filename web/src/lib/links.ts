@@ -1,5 +1,5 @@
 /**
- * The one place the frontend knows how a page link is written. Mirrors src/kb_distillery/core/links.py.
+ * The one place the frontend knows how a page link is written. Mirrors src/kb_distillery/vault/links.py.
  *
  * On disk a page links to another with a relative markdown link, `[Title](slug.md)` (`[label](slug.md#heading)` for a
  * heading; Open Knowledge Format v0.2, `wiki/` is flat). Wikilinks (`[[slug]]`, `[[slug|label]]`, `[[slug#heading]]`)

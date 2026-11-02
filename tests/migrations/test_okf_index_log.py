@@ -4,7 +4,7 @@ import os
 import tempfile
 import unittest
 
-from kb_distillery.core import log as kblog
+from kb_distillery.vault import log as kblog
 from kb_distillery.ops import migrate
 from kb_distillery.paths import MIGRATIONS_CODE_PATH
 

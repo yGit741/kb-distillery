@@ -19,7 +19,7 @@ import subprocess
 import tempfile
 
 from .core import OpsError, _git, ops_lock, _require_main
-from kb_distillery.core.schema import OPS_DIR
+from kb_distillery.vault.schema import OPS_DIR
 
 
 def _blob_text(root, rev, path):

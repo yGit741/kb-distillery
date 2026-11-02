@@ -3,7 +3,7 @@ import os
 import re
 
 from .paths import ROOT
-from kb_distillery.core import links, wikiio
+from kb_distillery.vault import links, wikiio
 
 
 def _read(rel):

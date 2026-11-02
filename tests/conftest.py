@@ -6,7 +6,7 @@ session temp folder first, so tests that run lint or write pages never dirty the
 
 Two groups of tests are tied to the vault they run against, and skip instead of failing on any other:
   * TYPE_BOUND modules build pages of the explorer's default types (paper, book, person, ...) and read the
-    type tables `kb_distillery.core.schema` built at import time from the active kb.toml, so they run only when that
+    type tables `kb_distillery.vault.schema` built at import time from the active kb.toml, so they run only when that
     kb declares the default types (the fixture and the thesis kb do; examples/demo does not);
   * THESIS_DATA modules read content only the thesis kb has (its raw chats, migration state, ops config):
     they run only with KB=yonatan-thesis.
@@ -36,8 +36,8 @@ if not os.environ.get("KB") and not os.environ.get("KB_ROOT"):
 import pytest
 
 TYPE_BOUND = {
-    "core/test_model.py", "core/test_books.py", "core/test_persons.py", "core/test_source_model.py",
-    "core/test_coherence.py", "core/test_scopes.py", "core/test_wikiio.py", "api/test_scopes.py",
+    "vault/test_model.py", "vault/test_books.py", "vault/test_persons.py", "vault/test_source_model.py",
+    "vault/test_coherence.py", "vault/test_scopes.py", "vault/test_wikiio.py", "api/test_scopes.py",
     "search/test_scoped_query.py", "ingest/test_blog.py", "ingest/test_digest_robustness.py",
     "ingest/test_ingest_fixes.py", "ingest/test_youtube.py", "lint/test_links.py", "lint/test_lint_ci.py",
     "lint/test_question_pages.py", "lint/test_summary_lint.py", "ops/test_ops.py",
@@ -46,8 +46,8 @@ THESIS_DATA = {
     "ingest/test_chat_merge.py", "ops/test_notify.py", "metrics/test_metrics.py",
     "migrations/test_migrations.py", "services/test_lifecycle_data.py",
     # read the thesis kb's frozen migration artifacts and its kb-x.y.z tags
-    "core/test_source_model.py::SpecMapTotality", "core/test_source_model.py::MigrationTests",
-    "core/test_source_model.py::MajorVersionBump::test_share_build_reads_the_schema_major",
+    "vault/test_source_model.py::SpecMapTotality", "vault/test_source_model.py::MigrationTests",
+    "vault/test_source_model.py::MajorVersionBump::test_share_build_reads_the_schema_major",
 }
 
 
@@ -57,7 +57,7 @@ def real_kb() -> bool:
 
 
 def _has_default_types() -> bool:
-    from kb_distillery.core import kbtypes
+    from kb_distillery.vault import kbtypes
     return kbtypes.load().spec == kbtypes.build(None).spec
 
 

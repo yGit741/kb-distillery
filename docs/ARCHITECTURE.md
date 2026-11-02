@@ -40,7 +40,7 @@ Guides for the three extension points: [kits](../src/kb_distillery/kits/base/def
 1. **Scrap and catalog** put a file or URL into `raw/inbox/`, then move it into `raw/<format>/` and record it in `meta/corpus.tsv`. No LLM.
 2. **Digest** deepens a source page in `wiki/` in three tiers (easy, full, deep) through an agent skill and a transactional ingest session. The digest reads raw, writes only wiki.
 3. **Lint** (`kbd lint`) checks every page against the kb's schema and regenerates `wiki/index.md` (a tiny root), the `wiki/<type>/index.md` section indexes and `meta/corpus.tsv`.
-4. **Graph** is built from the wiki links and the typed `relations:` that pages state (`src/kb_distillery/core/graph.py`, `src/kb_distillery/graph/snapshot.py`, `src/kb_distillery/graph/relations.py`).
+4. **Graph** is built from the wiki links and the typed `relations:` that pages state (`src/kb_distillery/vault/graph.py`, `src/kb_distillery/graph/snapshot.py`, `src/kb_distillery/graph/relations.py`).
 5. **App**: `kbd app` serves a FastAPI backend plus the React shell in `web/`. Every screen is a React route; the old HTML dashboard is gone and its URLs redirect to the `/app` routes.
 6. Every knowledge operation lands as one commit `kb(<op>): ... (kb-x.y.z)` in the kb's own repository, which gives undo, snapshots and a time machine from its history and tags (`src/kb_distillery/ops/`).
 
@@ -49,7 +49,7 @@ Guides for the three extension points: [kits](../src/kb_distillery/kits/base/def
 | Path | Holds |
 |---|---|
 | `src/kb_distillery/` | the Python package `kb`; `cli.py` is `kbd`, `kbconfig.py` finds and selects a kb, `paths.py` is the one vault-root resolver |
-| `core/`, `lint/` | schema, kit merge (config/kit.py), page types, graph helpers; the linter |
+| `vault/`, `lint/` | schema, kit merge (config/kit.py), page types, graph helpers; the linter |
 | `ingest/`, `distill/`, `search/`, `graph/` | pipelines and queries over the wiki |
 | `ops/`, `git/` | versioned knowledge commits; write guards, commit policy, the `ship` PR tool |
 | `llm/` | `kb_distillery.llm`, the only door to a model |

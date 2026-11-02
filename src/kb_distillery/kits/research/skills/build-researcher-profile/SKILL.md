@@ -12,7 +12,7 @@ description: >-
 
 **LLM tier:** light · **Budget:** ~3–8k tokens (verify step only)
 
-A person page is **handle-driven** (`src/kb_distillery/core/persons.py`): each frontmatter handle generates one
+A person page is **handle-driven** (`src/kb_distillery/vault/persons.py`): each frontmatter handle generates one
 section, `none` means "checked, there is none" (no section), `unknown` means "checked, not
 found", and a *missing* key means not checked yet. `verified: YYYY-MM-DD` is the only progress
 marker; `distill lint --health` counts pages without one (`persons-unverified`).

@@ -7,8 +7,8 @@ import os
 import subprocess
 
 from kb_distillery import kbconfig, paths
-from kb_distillery.core import schema
-from kb_distillery.core.digest import instruction_files
+from kb_distillery.vault import schema
+from kb_distillery.vault.digest import instruction_files
 
 
 def _git(root, *args):

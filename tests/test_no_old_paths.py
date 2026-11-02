@@ -51,12 +51,14 @@ RETIRED = {
     "Lane E cycle moves (the graph snapshot and queries live in graph/, the publisher port in hosting/)": re.compile(
         r"kb_distillery[./]services[./](?:graph|raw_layer|schema)\b|services import (?:graph|raw_layer|schema)\b"
         r"|kb_distillery[./]publish[./](?:base|null|registry)\b|publish import (?:base|null|registry)\b"),
+    "Lane E renames (core is now vault)": re.compile(
+        r"kb_distillery[./]core\b|from kb_distillery import core\b|tests[/.]core\b|(?<![\w./-])core/(?:schema|links|wikiio|frontmatter)\.py"),
 }
 # (pattern name -> files that may name it): the tools/ entry of TOOLING_PATHS (until Phase 9), the share builder that still builds
 # refs from before the move, and this test.
 ALLOWED = {
     "*": {"tests/test_no_old_paths.py"},
-    "tools/": {"src/kb_distillery/core/schema.py"},               # TOOLING_PATHS keeps tools/ for the two remaining stubs until Phase 9
+    "tools/": {"src/kb_distillery/vault/schema.py"},               # TOOLING_PATHS keeps tools/ for the two remaining stubs until Phase 9
     "python -m kb.": {"src/kb_distillery/publish/site/build.py"},
     "backend/src or backend/tests": {"src/kb_distillery/publish/site/build.py", "tests/publish/cloudflare/test_share_app.py",
                                      "tests/publish/cloudflare/test_share_versions.py", "pixi.toml"},
@@ -69,6 +71,7 @@ ALLOWED = {
 # The roadmap is the record of what was planned and done under the old names; it is not rewritten.
 ALLOWED["meta-defaults/"] = {"docs/ROADMAP.md"}
 ALLOWED["root skills/ folder, sync-skills or SKILL_TEMPLATE"] = {"docs/ROADMAP.md"}
+ALLOWED["Lane E renames (core is now vault)"] = {"docs/ROADMAP.md"}
 ALLOWED["templates/ kit folder, template.toml, core.template or $KB_TEMPLATES_DIR"] = {"docs/ROADMAP.md"}
 ALLOWED["keychain service thesis-kb-gmail"] = {"src/kb_distillery/config/userdir.py",      # the read-only lookup of the old name
                                                "tests/ops/test_notify.py", "tests/config/test_userdir.py"}
@@ -96,7 +99,8 @@ RETIRED_FILES = ("src/kb_distillery/share/", "src/kb_distillery/publish/site_sta
                  "src/kb_distillery/vault/kit.py", "tests/vault/test_kit.py", "tests/vault/test_kit_contract.py",
                  "src/kb_distillery/services/graph.py", "src/kb_distillery/services/raw_layer.py",
                  "src/kb_distillery/services/schema.py", "src/kb_distillery/publish/base.py",
-                 "src/kb_distillery/publish/null.py", "src/kb_distillery/publish/registry.py")
+                 "src/kb_distillery/publish/null.py", "src/kb_distillery/publish/registry.py",
+                 "src/kb_distillery/core/", "tests/core/")
 
 
 class NoOldPathsTests(unittest.TestCase):
@@ -111,7 +115,7 @@ class NoOldPathsTests(unittest.TestCase):
             self.assertEqual([p for p in files if p.startswith(old)], [], old)
 
     def test_the_schema_no_longer_lists_the_retired_root_folders(self):
-        from kb_distillery.core import schema
+        from kb_distillery.vault import schema
         for old in ("templates", "meta-defaults", "skills"):
             self.assertNotIn(old, schema.ROOT_DIRS)
             self.assertNotIn(old, schema.CODE_TOP_DIRS)

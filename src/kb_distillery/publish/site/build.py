@@ -43,7 +43,7 @@ import tempfile
 import webbrowser
 from pathlib import Path
 
-from kb_distillery.core import links as page_links
+from kb_distillery.vault import links as page_links
 from kb_distillery.webbuild import frontend_source_hash as _frontend_source_hash
 
 from kb_distillery.publish.cloudflare.contracts import EXPORT_DIR, PROFILES, REPO, BuildResult, Manifest, raw_is_email
@@ -278,7 +278,7 @@ def collect_lifecycle(meta_dir, built_at, git_root, content_sha, content_dir, co
     from kb_distillery.git import commit_policy as cp  # noqa: WPS433 (viewer code)
     from kb_distillery.ops.history import timeline
     from kb_distillery.ops.migrate import _applied, pending_migrations
-    from kb_distillery.core.schema import GIT_POLICY_MODE, OPS_STRICT, SCHEMA_VERSION
+    from kb_distillery.vault.schema import GIT_POLICY_MODE, OPS_STRICT, SCHEMA_VERSION
 
     rows = timeline(git_root, content_sha, limit=LIFECYCLE_LIMIT)
     shas = {r["sha"] for r in rows}
@@ -333,9 +333,9 @@ def collect_lifecycle(meta_dir, built_at, git_root, content_sha, content_dir, co
 
 def scope_keep(slug, hops=1):
     """Slugs a scoped build keeps: the `slug` page (a scope, collection or person), its corpus members'
-    pages (`kb_distillery.core.scopes.projection`: hop0 + ideas/questions shared by >= 2 of them) and, with
+    pages (`kb_distillery.vault.scopes.projection`: hop0 + ideas/questions shared by >= 2 of them) and, with
     `hops=1`, every page linked to or from that set. Read from KB_ROOT (the content checkout)."""
-    from kb_distillery.core import scopes as core
+    from kb_distillery.vault import scopes as core
     from kb_distillery.lint.lint import read_manifest
     from kb_distillery.paths import vault_root
     from kb_distillery.services.scopes import load_pages
@@ -683,9 +683,9 @@ _SCHEMA_RE = re.compile(r"^SCHEMA_VERSION\s*=\s*\((\d+)\s*,\s*(\d+)\)", re.M)
 
 
 def schema_major(root, sha):
-    """x of SCHEMA_VERSION = (x, y) in the schema at `sha` (src/kb_distillery/core/schema.py, or meta/schema.py
+    """x of SCHEMA_VERSION = (x, y) in the schema at `sha` (src/kb_distillery/vault/schema.py, or meta/schema.py
     before the app layout), or None."""
-    for rel in ("src/kb_distillery/core/schema.py", "backend/src/kb/core/schema.py", "meta/schema.py"):
+    for rel in ("src/kb_distillery/vault/schema.py", "backend/src/kb/core/schema.py", "meta/schema.py"):
         cp = subprocess.run(["git", "show", f"{sha}:{rel}"], cwd=str(root), capture_output=True,
                             text=True, check=False)
         m = _SCHEMA_RE.search(cp.stdout or "") if cp.returncode == 0 else None

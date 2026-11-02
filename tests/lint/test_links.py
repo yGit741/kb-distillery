@@ -12,7 +12,7 @@ from unittest import mock
 from kb_distillery.paths import vault_root
 META = os.path.join(vault_root(), "meta")
 
-from kb_distillery.core import graph, links
+from kb_distillery.vault import graph, links
 from kb_distillery.lint import lint
 from kb_distillery.ingest import researcher
 

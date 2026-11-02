@@ -15,10 +15,10 @@ import os
 import re
 import sys
 
-from kb_distillery.core import links as page_links
-from kb_distillery.core.graph import tokenize
-from kb_distillery.core.schema import INDEX_REL
-from kb_distillery.core import wikiindex
+from kb_distillery.vault import links as page_links
+from kb_distillery.vault.graph import tokenize
+from kb_distillery.vault.schema import INDEX_REL
+from kb_distillery.vault import wikiindex
 
 from kb_distillery.paths import vault_root
 ROOT = vault_root()
@@ -26,7 +26,7 @@ WIKI = os.path.join(ROOT, "wiki")
 INDEX = os.path.join(ROOT, INDEX_REL)
 
 def parse_index():
-    """Return slug -> {section, title, status, summary} from the section indexes under wiki/ (kb_distillery.core.wikiindex;
+    """Return slug -> {section, title, status, summary} from the section indexes under wiki/ (kb_distillery.vault.wikiindex;
     the root index only counts them). `status` is empty: rows carry no maturity."""
     if not os.path.isfile(INDEX):
         return {}
@@ -42,7 +42,7 @@ def _ref(slug, meta):
 
 def _maturity(slug):
     """The page's `maturity:` (index rows carry none)."""
-    from kb_distillery.core import frontmatter
+    from kb_distillery.vault import frontmatter
     try:
         with open(wiki_path(slug), encoding="utf-8") as f:
             return str(frontmatter.parse(f.read())[0].get("maturity") or "")
@@ -92,7 +92,7 @@ def score_slug(slug, meta, qtokens):
 
 def load_scope(scope_slug):
     """scope_context for the checkout this script lives in (raises scopes.ScopeUnknown)."""
-    from kb_distillery.core import scopes
+    from kb_distillery.vault import scopes
     return scopes.scope_context(scope_slug, ROOT)
 
 
@@ -103,7 +103,7 @@ def cmd_candidates(query, limit=12, scope=None):
         return 1
     allowed = None
     if scope:
-        from kb_distillery.core import scopes
+        from kb_distillery.vault import scopes
         try:
             allowed = load_scope(scope)["pages"]
         except scopes.ScopeUnknown as e:
@@ -138,7 +138,7 @@ def cmd_candidates(query, limit=12, scope=None):
 
 
 def cmd_scope_status(scope, max_files=200):
-    from kb_distillery.core import scopes
+    from kb_distillery.vault import scopes
     try:
         ctx = load_scope(scope)
     except scopes.ScopeUnknown as exc:

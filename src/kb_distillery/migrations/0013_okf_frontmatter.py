@@ -8,11 +8,11 @@ Per page, front matter only (the body is kept byte for byte), line by line so ke
                  row of .cache/summaries/proposals.jsonl. No `at`: it is not worth its bytes
   date        -> created (`YYYY-MM-DDT00:00:00Z`); an empty `date:` is dropped
   title       -> dropped when it equals the page's first heading (readers fall back to the heading); kept when it differs
-  sources     -> objects with a `resource`: a wiki page (core.links.page_path), a `think:<note>.md` or any other
+  sources     -> objects with a `resource`: a wiki page (vault.links.page_path), a `think:<note>.md` or any other
                  descriptor kept as plain text. `raw:` stays an extension field. A Source page's own http(s) `url` is
                  never written alone: `sources` that would only repeat it is omitted (readers fall back to `url`), and
                  it stays in a list that has other entries
-  related     -> page paths (core.links.page_path), resolved through slug, `aliases:` and meta/aliases.tsv
+  related     -> page paths (vault.links.page_path), resolved through slug, `aliases:` and meta/aliases.tsv
   type        -> `excalidraw` on a .md under wiki/ with frontmatter but no `type`
 Whatever cannot be resolved or added safely is kept as it was and listed in the report (printed, and returned).
 Idempotent: a field already in the new shape is left alone.
@@ -25,8 +25,8 @@ import os
 import re
 import sys
 
-from kb_distillery.core import frontmatter as fmlib
-from kb_distillery.core import links
+from kb_distillery.vault import frontmatter as fmlib
+from kb_distillery.vault import links
 
 PRODUCES = (1, 5)
 PRODUCER = "summarize"                      # `generated.by` of a tool-written summary is `summarize/<model>`

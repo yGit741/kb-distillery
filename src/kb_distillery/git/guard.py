@@ -15,7 +15,7 @@ from kb_distillery.paths import vault_root
 META_DIR = os.path.join(vault_root(), "meta")
 VAULT_ROOT = vault_root()
 
-from kb_distillery.core.schema import (DIGEST_DIR, DISTILL_DIR, DISTILLED_THINK_PREFIX, INGEST_DIR, INGEST_STALE_HOURS,
+from kb_distillery.vault.schema import (DIGEST_DIR, DISTILL_DIR, DISTILLED_THINK_PREFIX, INGEST_DIR, INGEST_STALE_HOURS,
                     META_DIR as SCHEMA_META_DIR, OPS_DIR, OPS_STRICT, PARSED_FILENAME, QUARANTINE_DIR,
                     CODE_TOP_DIRS, RAW_DIR, ROOT_DIRS, ROOT_FILES, ROOT_MD, SIDECAR_ELIGIBLE_KINDS,
                     THINK_DIR, WIKI_DIR, is_generated)

@@ -12,7 +12,7 @@ src/kb_distillery/      Python app, package `kb_distillery` (src layout; `backen
   src/kb_distillery/kbconfig.py    kb discovery and selection: `~/knowledge/<id>` or `--kb <path>`, `kb.toml`
   src/kb_distillery/paths.py       the ONE vault-root resolver (the selected kb, else this checkout) + every data path constant
   src/kb_distillery/llm/           `kb_distillery.llm`: the one door to Claude (see § Billing)
-  src/kb_distillery/core/          schema, graph, hubs, scopes, persons, books, mathnorm, coherence, health
+  src/kb_distillery/vault/          schema, graph, hubs, scopes, persons, books, mathnorm, coherence, health
   src/kb_distillery/lint/          lint, lint_skills            src/kb_distillery/search/       query, semfind, explore_raw, citations
   src/kb_distillery/ingest|distill|ops (daily_sync, notify, report/)|publish/{site,cloudflare}/            src/kb_distillery/git/          guard, git_guard, commit_policy, ship, merge_nudge, curate_history
   src/kb_distillery/kits/          the kits: kit.toml, defaults/, skills (what a kb is given; `resource("kits")`)

@@ -15,7 +15,7 @@ import re
 
 from .chat import GEMINI_VISUAL_RE
 from .chat_build import main_leaf, path_to
-from kb_distillery.core import frontmatter as fmlib
+from kb_distillery.vault import frontmatter as fmlib
 from .paths import ROOT
 
 ROLE_HEADING = {"user": "#### 🧑 You", "model": "#### ✨ Gemini"}

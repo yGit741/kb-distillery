@@ -88,7 +88,7 @@ layers = [
     # pipeline stages, each one concern
     "ingest : summaries : distill : graph : search : lint : metrics : ops : git : migrations : parse",
     # the vault model, the LLM gateway, storage connectors and the publisher port (they know nothing of the stages above)
-    "core : vault : llm : storage : hosting",
+    "vault : llm : storage : hosting",
     # configuration and locations: depend on nothing in the engine
     "kbconfig : paths : flags : config",
 ]

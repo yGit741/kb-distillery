@@ -10,9 +10,9 @@ import re
 
 from . import arxiv_meta
 from .paths import ROOT
-from kb_distillery.core import frontmatter, wikiio
+from kb_distillery.vault import frontmatter, wikiio
 from .resolve import normalize_arxiv_id
-from kb_distillery.core.schema import is_page_file
+from kb_distillery.vault.schema import is_page_file
 
 WIKI = os.path.join(ROOT, "wiki")
 FM_AUTHORS = re.compile(r"^authors:.*$", re.M)

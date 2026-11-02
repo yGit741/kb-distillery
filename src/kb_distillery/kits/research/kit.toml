@@ -101,7 +101,7 @@ color = "#f6c177"
 [types.concept.person]
 label = "Person"
 prefix = ""
-status = []                   # no status: progress is `verified:` (src/kb_distillery/core/persons.py)
+status = []                   # no status: progress is `verified:` (src/kb_distillery/vault/persons.py)
 color = "#bb9af7"
 
 # --- Edges: the typed relations a page may state in its `relations:` block ---------------------------------

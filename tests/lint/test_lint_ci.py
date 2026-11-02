@@ -16,7 +16,7 @@ import tempfile
 import unittest
 from unittest import mock
 
-from kb_distillery.core import coherence
+from kb_distillery.vault import coherence
 from kb_distillery.lint import lint
 
 RAW = "raw/printed-docs/2023-toolformer.pdf"

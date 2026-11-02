@@ -25,7 +25,7 @@ import re
 import sys
 from collections import Counter
 
-from kb_distillery.core import links as page_links
+from kb_distillery.vault import links as page_links
 
 STATUSES = {"draft", "stable", "deprecated"}
 RESERVED = {"index.md", "log.md"}                     # OKF reserved names: no frontmatter rules

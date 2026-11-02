@@ -9,7 +9,7 @@ import os
 import sys
 
 from . import core
-from kb_distillery.core.schema import is_page_file
+from kb_distillery.vault.schema import is_page_file
 
 # (subcommand, sub-subcommand or None) -> (op, already linted by the command)
 INGEST = {
@@ -78,7 +78,7 @@ def _target(paths, pos):
 def _items(paths):
     """Cataloged items, not changed paths: a paper is a raw PDF plus its wiki stub (one item),
     and corpus.tsv, index.md and the log are bookkeeping. Falls back to the path count."""
-    from kb_distillery.core.schema import is_page_file, strip_prefix
+    from kb_distillery.vault.schema import is_page_file, strip_prefix
     stems = set()
     for p in paths:
         if p.startswith("raw/"):

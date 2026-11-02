@@ -85,7 +85,7 @@ def git(cwd, *args):
 
 
 def test_lifecycle_on_a_fixture_vault(client):
-    from kb_distillery.core.schema import SCHEMA_VERSION
+    from kb_distillery.vault.schema import SCHEMA_VERSION
     v = "%d.%d" % SCHEMA_VERSION
     with tempfile.TemporaryDirectory() as root, mock.patch.dict(os.environ, ENV):
         git(root, "init", "-q", "-b", "main")

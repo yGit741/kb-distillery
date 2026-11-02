@@ -4,7 +4,7 @@ import shutil
 import tempfile
 import unittest
 
-from kb_distillery.core.summary import summary_hash
+from kb_distillery.vault.summary import summary_hash
 from kb_distillery.lint import lint
 
 GOOD = "An idea page arguing that norm-based capacity bounds, not raw parameter counts, explain generalization."

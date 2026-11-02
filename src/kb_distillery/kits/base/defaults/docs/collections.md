@@ -5,7 +5,7 @@
 ## Course and series collections
 
 A `course-` / `series-` page is a collection over member raw files: Overview → Contents → Threads
-(`src/kb_distillery/core/hubs.py`, `meta/templates/course.md`, `series.md`). Each Contents row is one source —
+(`src/kb_distillery/vault/hubs.py`, `meta/templates/course.md`, `series.md`). Each Contents row is one source —
 usually one file, sometimes several (slides + the handwritten notes taken in that lecture):
 
 ```
@@ -59,7 +59,7 @@ proposed from the PDF outline (split only at chapter/section boundaries, ≤60 p
 its Overview by hand. `finalize` writes the `type: part` page and ticks its row. A part's identity
 is its page range — the `#` column is display order and renumbers when a row is split.
 
-**The partition is the truth** (`src/kb_distillery/core/books.py`, checked by lint): gaps or overlaps are errors,
+**The partition is the truth** (`src/kb_distillery/vault/books.py`, checked by lint): gaps or overlaps are errors,
 a part over 60 pages is a warning, a digested row must link its part page and match its
 `depth`, and the part's `book:`/`raw:`/`section_pages:` must agree with its row.
 Coverage = digested pages ÷ non-skip pages; below 100% the raw file is `partial` in

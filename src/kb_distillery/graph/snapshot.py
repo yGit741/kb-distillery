@@ -10,12 +10,12 @@ from datetime import datetime, timezone
 from kb_distillery.paths import vault_root
 META_DIR = os.path.join(vault_root(), "meta")
 
-from kb_distillery.core.books import DIGESTED, coverage, parse_partition
-from kb_distillery.core.graph import inbound_index, outbound_links
+from kb_distillery.vault.books import DIGESTED, coverage, parse_partition
+from kb_distillery.vault.graph import inbound_index, outbound_links
 from kb_distillery.search.semfind import load_pages
-from kb_distillery.core import frontmatter
-from kb_distillery.core import links as page_links
-from kb_distillery.core.schema import LAYER_OF
+from kb_distillery.vault import frontmatter
+from kb_distillery.vault import links as page_links
+from kb_distillery.vault.schema import LAYER_OF
 
 ROOT = vault_root()
 TITLE = re.compile(r"^#\s+(.+)$", re.MULTILINE)

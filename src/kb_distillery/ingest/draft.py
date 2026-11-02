@@ -3,8 +3,8 @@ import json
 import os
 import sys
 
-from kb_distillery.core import frontmatter, links
-from kb_distillery.core.schema import TOPIC_SLUGS
+from kb_distillery.vault import frontmatter, links
+from kb_distillery.vault.schema import TOPIC_SLUGS
 from kb_distillery.lint.lint import QUESTION_TITLE_MAX
 
 from .fm_merge import merge_frontmatter

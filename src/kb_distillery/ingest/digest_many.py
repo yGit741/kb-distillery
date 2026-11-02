@@ -24,7 +24,7 @@ from .fm_merge import parse, split
 from .paths import ROOT, session_dir
 from kb_distillery.storage import StorageError, for_kb
 from .verify import existing_digest_for_raw
-from kb_distillery.core.schema import is_page_file
+from kb_distillery.vault.schema import is_page_file
 
 MODEL = "sonnet"
 MAX_TEXT = 60_000          # chars of source text per request: a ceiling on cost, not a summary

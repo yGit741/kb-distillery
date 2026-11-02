@@ -3,7 +3,7 @@ import tomllib
 import unittest
 from pathlib import Path
 
-from kb_distillery.core import schema
+from kb_distillery.vault import schema
 
 REPO = Path(__file__).resolve().parents[2]
 NEW_DIRS = ("src", "tests", "web", "examples", "scripts")

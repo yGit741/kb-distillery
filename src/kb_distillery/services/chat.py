@@ -22,9 +22,9 @@ from kb_distillery.paths import vault_root
 META_DIR = os.path.join(vault_root(), "meta")
 ROOT = vault_root()
 
-from kb_distillery.core import links
+from kb_distillery.vault import links
 from kb_distillery.search import query
-from kb_distillery.core.graph import tokenize
+from kb_distillery.vault.graph import tokenize
 
 PROMPTS_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "prompts")
 INBOX = os.path.join(ROOT, "raw", "inbox")

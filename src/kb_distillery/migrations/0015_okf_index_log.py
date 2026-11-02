@@ -16,7 +16,7 @@ import os
 import re
 import sys
 
-from kb_distillery.core import log as kblog
+from kb_distillery.vault import log as kblog
 
 PRODUCES = (1, 5)
 LEGACY_ENTRY = re.compile(r"^## \[(\d{4}-\d{2}-\d{2})\] (.+?)\s*$")

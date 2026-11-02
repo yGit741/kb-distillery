@@ -9,7 +9,7 @@ import json
 import os
 import sys
 
-from kb_distillery.core.schema import CHATS_DIR, CHAT_TREE_SCHEMA
+from kb_distillery.vault.schema import CHATS_DIR, CHAT_TREE_SCHEMA
 
 from kb_distillery.paths import vault_root
 ROOT = vault_root()

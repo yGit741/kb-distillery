@@ -6,7 +6,7 @@ come from the new draft (OKF `status: draft` and `title` too, or their absence: 
 added when they are not empty."""
 import re
 
-from kb_distillery.core import frontmatter
+from kb_distillery.vault import frontmatter
 
 _KEY = re.compile(r"^([A-Za-z_][\w-]*):[ \t]*(.*)$")
 EMPTY = {"", "[]", '""', "''", "null", "~"}

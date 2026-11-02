@@ -132,7 +132,7 @@ def section_empty(text, heading):
 def video_digest(arg, tier="full", model=readers.READ_MODEL, workers=4, backend=None):
     """Read the chosen frames and write them onto the video page (depth full/deep). Returns the page path.
     `backend`: kb_distillery.llm's subscription / api / batch for the frame reads (all frames in one run)."""
-    from kb_distillery.core import wikiio
+    from kb_distillery.vault import wikiio
     from .. import easy_digest as ed
     if tier not in TIERS:
         raise ValueError(f"tier must be one of {sorted(TIERS)}")
@@ -192,7 +192,7 @@ def video_digest(arg, tier="full", model=readers.READ_MODEL, workers=4, backend=
     if len(ok) < had:
         raise ValueError(f"only {len(ok)} of {len(chosen)} frames were read, the page already holds {had} — "
                          "kept the page as it is; rerun later (reads are in meta/.ingest/video/)")
-    from kb_distillery.core.schema import DEPTH
+    from kb_distillery.vault.schema import DEPTH
     from kb_distillery.lint.lint import parse_frontmatter
     old = (parse_frontmatter(text) or {}).get("depth")
     depth = max([d_ for d_ in (old, tier) if d_ in DEPTH], key=DEPTH.index)   # never downgrade deep to full

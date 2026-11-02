@@ -51,7 +51,7 @@ ROOT = checkout_root()
 
 from kb_distillery.ops.daily_sync import changed_paths, has_open_sessions, run_git
 from kb_distillery.git import app_token, claims, commit_policy, events, gate_cache, gate_slot, rounds
-from kb_distillery.core.schema import GATE_PREFIXES as GP, GIT_POLICY_MODE, INDEX_REL, SCHEMA_VERSION, is_index_path
+from kb_distillery.vault.schema import GATE_PREFIXES as GP, GIT_POLICY_MODE, INDEX_REL, SCHEMA_VERSION, is_index_path
 
 GATES = [
     ("tests", [sys.executable, "-m", "pytest", "-q", "-n", "6", "-m", "not serial", "tests"]),

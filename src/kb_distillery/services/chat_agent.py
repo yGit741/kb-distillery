@@ -36,7 +36,7 @@ import threading
 import time
 from dataclasses import dataclass, field
 
-from kb_distillery.core import links
+from kb_distillery.vault import links
 from kb_distillery.paths import vault_root
 META_DIR = os.path.join(vault_root(), "meta")
 ROOT = vault_root()
@@ -47,7 +47,7 @@ from kb_distillery.services import chat as chat_data
 WIKI = os.path.join(ROOT, "wiki")
 RAW = os.path.join(ROOT, "raw")
 from kb_distillery.paths import THINK_PATH as THINK      # the shared think space, outside the vault
-from kb_distillery.core.schema import INDEX_REL, is_index_path, is_page_file
+from kb_distillery.vault.schema import INDEX_REL, is_index_path, is_page_file
 INDEX = os.path.join(ROOT, INDEX_REL)
 READ_ROOTS = (WIKI, RAW, THINK)
 RAW_TEXT_EXT = {".md", ".txt", ".html", ".eml", ".json", ".tsv", ".csv"}

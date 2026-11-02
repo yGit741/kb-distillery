@@ -16,7 +16,7 @@ import sys
 import zipfile
 from datetime import datetime, timezone
 
-from kb_distillery.core.schema import is_page_file
+from kb_distillery.vault.schema import is_page_file
 from kb_distillery.paths import THINK_PATH, think_path, vault_root
 from kb_distillery.storage import for_kb
 from kb_distillery.config.kit import KB_DOCS

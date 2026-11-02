@@ -7,11 +7,11 @@ import re
 import time
 
 from kb_distillery import llm, paths
-from kb_distillery.core import frontmatter, schema
-from kb_distillery.core.summary import (body_of, hand_written, needs_summary, now_stamp, problems, section, summary_hash,
+from kb_distillery.vault import frontmatter, schema
+from kb_distillery.vault.summary import (body_of, hand_written, needs_summary, now_stamp, problems, section, summary_hash,
                                        tool_actor, unquote)
 from kb_distillery.lint.lint import parse_frontmatter
-from kb_distillery.core.schema import is_page_file
+from kb_distillery.vault.schema import is_page_file
 
 MODEL = "sonnet"
 PER_CALL = 10                 # pages per model call

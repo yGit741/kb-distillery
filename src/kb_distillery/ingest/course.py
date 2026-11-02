@@ -1,15 +1,15 @@
 """Course/series hubs during ingest: find a row, tick it on finalize, add rows on catalog.
 
-The hub page's `## Contents` table is the truth (src/kb_distillery/core/hubs.py); corpus.tsv `collection` must
+The hub page's `## Contents` table is the truth (src/kb_distillery/vault/hubs.py); corpus.tsv `collection` must
 agree with it, so every write here goes through both.
 """
 import os
 
 from .paths import ROOT, collection_of, page_title, set_collection
 from kb_distillery.lint.lint import parse_frontmatter
-from kb_distillery.core.schema import CONTENTS_COLLECTIONS
-from kb_distillery.core import hubs
-from kb_distillery.core import wikiio
+from kb_distillery.vault.schema import CONTENTS_COLLECTIONS
+from kb_distillery.vault import hubs
+from kb_distillery.vault import wikiio
 
 
 def _hub_path(slug):

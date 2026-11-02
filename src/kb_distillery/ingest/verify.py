@@ -4,9 +4,9 @@ import re
 import sys
 
 from kb_distillery.lint.lint import read_manifest, parse_frontmatter, walk
-from kb_distillery.core.schema import PAPER_NAME, PAPER_YEAR_MAX, PAPER_YEAR_MIN, WIKI_DIR
+from kb_distillery.vault.schema import PAPER_NAME, PAPER_YEAR_MAX, PAPER_YEAR_MIN, WIKI_DIR
 from .paths import ROOT
-from kb_distillery.core.schema import is_page_file
+from kb_distillery.vault.schema import is_page_file
 
 
 def corpus_disposition(raw_rel):

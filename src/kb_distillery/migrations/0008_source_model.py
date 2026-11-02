@@ -27,7 +27,7 @@ OUT = os.path.join("meta", ".migrate", "source-model")
 
 def _meta(root):
     meta = os.path.join(root, "meta")
-    from kb_distillery.core import wikiio
+    from kb_distillery.vault import wikiio
     from kb_distillery.ops import invariants
     return wikiio, invariants
 

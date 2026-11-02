@@ -11,7 +11,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from kb_distillery import kbconfig, paths
-from kb_distillery.core import kbtypes, schema
+from kb_distillery.vault import kbtypes, schema
 
 
 @dataclass(frozen=True)

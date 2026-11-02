@@ -15,10 +15,10 @@ from kb_distillery.config import net
 from . import catalog, resolve as resolve_mod, scrap
 from .paths import ROOT, wiki_slugs, wiki_titles
 
-from kb_distillery.core import links, persons
-from kb_distillery.core import wikiio
-from kb_distillery.core.schema import make_slug
-from kb_distillery.core.schema import is_page_file
+from kb_distillery.vault import links, persons
+from kb_distillery.vault import wikiio
+from kb_distillery.vault.schema import make_slug
+from kb_distillery.vault.schema import is_page_file
 
 
 def _wiki(p):
@@ -430,7 +430,7 @@ def _paper_url(p):
 
 
 def bib_title_cell(p, known):
-    """A bibliography row links its wiki page only if one exists (src/kb_distillery/core/persons.py)."""
+    """A bibliography row links its wiki page only if one exists (src/kb_distillery/vault/persons.py)."""
     return persons.bib_title_cell(p, known)
 
 

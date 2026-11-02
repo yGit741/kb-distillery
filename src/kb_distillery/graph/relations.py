@@ -27,7 +27,7 @@ import os
 import re
 import unicodedata
 
-from kb_distillery.core.links import page_slug
+from kb_distillery.vault.links import page_slug
 
 STORED, COMPUTED, PROPOSED = "stored", "computed", "proposed"
 PROPOSALS_FILE = "relations-proposals.jsonl"      # `<kb>/.cache/`, written by kb_distillery.graph.propose (every valid proposal)

@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Tests for src/kb_distillery/search/semfind.py and src/kb_distillery/core/graph.py."""
+"""Tests for src/kb_distillery/search/semfind.py and src/kb_distillery/vault/graph.py."""
 import os
 import sys
 import unittest
 
-from kb_distillery.core.graph import one_hop, score_pair
+from kb_distillery.vault.graph import one_hop, score_pair
 
 
 def _page(slug, links):

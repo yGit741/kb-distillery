@@ -62,7 +62,7 @@ COMMANDS: dict[str, Cmd] = {
         "deep": Cmd("thesis-critical digest (heavy LLM)", target="kb_distillery.ingest", fixed=("deep-digest",), forward_help=True),
         "many": Cmd("batch-fill claims for many sources, then full-digest them one by one (LLM)",
                     target="kb_distillery.ingest", fixed=("digest-many",), forward_help=True),
-        "instructions": Cmd("the digest focus of the selected kb", target="kb_distillery.core.digest", config_check=False),
+        "instructions": Cmd("the digest focus of the selected kb", target="kb_distillery.vault.digest", config_check=False),
     }),
     "send": Cmd("send a think note into knowledge bases: distill send <note> --to a,b", target="kb_distillery.distill.send",
                 forward_help=True),

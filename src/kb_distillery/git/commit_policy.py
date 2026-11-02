@@ -31,7 +31,7 @@ from dataclasses import dataclass, field
 from kb_distillery.paths import THINK_PATH, vault_root
 META_DIR = os.path.join(vault_root(), "meta")
 ROOT = vault_root()
-from kb_distillery.core.schema import GIT_POLICY_MODE, SCHEMA_VERSION, is_kb_tooling, lane_of
+from kb_distillery.vault.schema import GIT_POLICY_MODE, SCHEMA_VERSION, is_kb_tooling, lane_of
 
 KB_OPS = ("import", "catalog", "digest", "refine", "distill", "think", "undo", "restore")
 INFRA_TYPES = ("feat", "fix", "chore", "schema", "paradigm")

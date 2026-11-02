@@ -9,7 +9,7 @@ carry for itself:
     extends = "base"                  # optional: the kit whose resources (defaults, skills, hooks) this one builds on
     description = "..."
 
-    [types] ...                       # exactly the kb.toml [types] format (kb_distillery.core.kbtypes)
+    [types] ...                       # exactly the kb.toml [types] format (kb_distillery.vault.kbtypes)
     [edges] ...                       # exactly the kb.toml [edges] format (kb_distillery.graph.model.edge_config)
 
 A kb names its kit in `[kb] kit = "<name>"` (`distill init` writes it). The older `[kb] template = "<name>"` is read

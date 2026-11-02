@@ -19,7 +19,7 @@ from datetime import datetime, timezone
 
 from kb_distillery.config import userdir
 from kb_distillery.paths import vault_root
-from kb_distillery.core.schema import is_page_file
+from kb_distillery.vault.schema import is_page_file
 HERE = os.path.join(vault_root(), "meta")
 ROOT = vault_root()
 
@@ -398,7 +398,7 @@ def cmd_rank(a):
 
 def scope_papers(scope):
     """Vault paper slugs inside a scope's projection (exit 2 on an unknown scope)."""
-    from kb_distillery.core import scopes
+    from kb_distillery.vault import scopes
     try:
         pages = scopes.scope_context(scope, ROOT)["pages"]
     except scopes.ScopeUnknown as exc:

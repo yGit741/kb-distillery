@@ -2,7 +2,7 @@
 kb(refine) step each, legacy error shapes and the Origin rule."""
 import pytest
 
-from kb_distillery.core import schema as _schema
+from kb_distillery.vault import schema as _schema
 
 if "paper" not in _schema.SOURCE_TYPES:   # this module builds `paper` pages: it needs the explorer's default types
     pytest.skip("needs the default source types (run with KB=yonatan-thesis or a kb that defines `paper`)", allow_module_level=True)
@@ -19,7 +19,7 @@ from kb_distillery.api.app import create_app
 from kb_distillery.api.models.scopes import ScopeDetail, ScopeList, ScopeResolved, ScopeStep
 from kb_distillery.paths import meta_file, vault_root
 from kb_distillery.services import scopes as scopes_data
-from tests.core.test_scopes import A, B, C, IMG, TEXTS
+from tests.vault.test_scopes import A, B, C, IMG, TEXTS
 
 LOOPBACK = {"Origin": "http://127.0.0.1:8765"}
 ENV = {"GIT_CONFIG_GLOBAL": os.devnull, "GIT_CONFIG_NOSYSTEM": "1", "KB_NO_PUSH": "1"}
@@ -32,7 +32,7 @@ def git(cwd, *args):
 
 @pytest.fixture
 def vault(tmp_path):
-    from tests.core.test_scopes import manifest
+    from tests.vault.test_scopes import manifest
     root = str(tmp_path)
     files = {"meta/stub.py": "x = 1\n", "wiki/log.md": "# Log\n", ".gitignore": "meta/.ops/\n", "wiki/index.md": "v1\n",
              "meta/templates/scope.md": Path(meta_file("templates", "scope.md")).read_text()}

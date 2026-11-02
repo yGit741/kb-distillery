@@ -2,7 +2,7 @@
 states. Runs on a throwaway knowledge base (viewed read-only through kb_distillery.services.kbview), never a real vault."""
 import pytest
 
-from kb_distillery.core import schema
+from kb_distillery.vault import schema
 from kb_distillery.graph import query as cypher
 from kb_distillery.graph.snapshot import build_graph_snapshot, merge_snapshots
 from kb_distillery.services.kbview import KbView

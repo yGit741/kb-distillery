@@ -6,7 +6,7 @@ import os
 import tempfile
 import unittest
 
-from kb_distillery.core import frontmatter, links
+from kb_distillery.vault import frontmatter, links
 from kb_distillery.paths import MIGRATIONS_CODE_PATH
 
 spec = importlib.util.spec_from_file_location("m0013", os.path.join(MIGRATIONS_CODE_PATH, "0013_okf_frontmatter.py"))

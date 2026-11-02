@@ -187,7 +187,7 @@ def run_pipeline(root):
     p.full_digest("part", "full-digest", "raw/printed-docs/2020-tiny-book.pdf", "--pages", "1-10")
     # --- checks
     lint = p.run("src/kb_distillery/lint/lint.py", module=False, ok=False)
-    coherence = p.run("src/kb_distillery/core/coherence.py", "status", module=False, ok=False)
+    coherence = p.run("src/kb_distillery/vault/coherence.py", "status", module=False, ok=False)
     return p, lint, coherence
 
 

@@ -4,7 +4,7 @@ import os
 import tempfile
 import unittest
 
-from kb_distillery.core import links
+from kb_distillery.vault import links
 from kb_distillery.paths import MIGRATIONS_CODE_PATH
 
 spec = importlib.util.spec_from_file_location("m0014", os.path.join(MIGRATIONS_CODE_PATH, "0014_okf_links.py"))

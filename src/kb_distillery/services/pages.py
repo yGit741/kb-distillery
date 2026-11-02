@@ -9,13 +9,13 @@ from datetime import datetime, timezone
 from kb_distillery.paths import vault_root
 META_DIR = os.path.join(vault_root(), "meta")
 
-from kb_distillery.core.graph import outbound_links
+from kb_distillery.vault.graph import outbound_links
 from kb_distillery.search.semfind import load_pages
 from kb_distillery.graph.snapshot import _areas, _preview, _title, _year
-from kb_distillery.core.summary import unquote
+from kb_distillery.vault.summary import unquote
 from kb_distillery.search import qmd_client
-from kb_distillery.core import frontmatter as page_frontmatter
-from kb_distillery.core import links as page_links
+from kb_distillery.vault import frontmatter as page_frontmatter
+from kb_distillery.vault import links as page_links
 from kb_distillery.storage import raw
 
 ROOT = vault_root()

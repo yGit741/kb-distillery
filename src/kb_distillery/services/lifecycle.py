@@ -17,7 +17,7 @@ from kb_distillery.ops.daily_sync import changed_paths, has_open_sessions
 from kb_distillery.ops import core as ops_core
 from kb_distillery.ops.history import timeline
 from kb_distillery.ops.migrate import _applied, pending_migrations
-from kb_distillery.core.schema import GIT_POLICY_MODE, OPS_STRICT, SCHEMA_VERSION
+from kb_distillery.vault.schema import GIT_POLICY_MODE, OPS_STRICT, SCHEMA_VERSION
 
 ROOT = vault_root()
 PLIST = os.path.expanduser("~/Library/LaunchAgents/com.thesis-kb.daily-sync.plist")

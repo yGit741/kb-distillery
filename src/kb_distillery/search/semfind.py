@@ -7,13 +7,13 @@ import os
 import sys
 from datetime import datetime, timezone
 
-from kb_distillery.core import links
-from kb_distillery.core.graph import claim_text, extract_section, one_hop, outbound_links, score_pair
+from kb_distillery.vault import links
+from kb_distillery.vault.graph import claim_text, extract_section, one_hop, outbound_links, score_pair
 from kb_distillery.lint.lint import parse_frontmatter
-from kb_distillery.core.schema import SOURCE_TYPES
+from kb_distillery.vault.schema import SOURCE_TYPES
 
 from kb_distillery.paths import vault_root
-from kb_distillery.core.schema import is_page_file
+from kb_distillery.vault.schema import is_page_file
 ROOT = vault_root()
 SEMFIND_DIR = os.path.join(ROOT, "meta", ".semfind")
 WIKI_DIR = "wiki"
@@ -129,7 +129,7 @@ def build_bundle(seeds, source, max_pairs=6, session_id=None):
     sdir = os.path.join(SEMFIND_DIR, sid)
     os.makedirs(sdir, exist_ok=True)
 
-    from kb_distillery.core.coherence import check_coherence, classify_pair_kind
+    from kb_distillery.vault.coherence import check_coherence, classify_pair_kind
 
     scoped_hits = []
     for h in check_coherence(pages, rows={}):

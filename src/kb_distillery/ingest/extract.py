@@ -4,7 +4,7 @@ import os
 import re
 import sys
 
-from kb_distillery.core.schema import PARSED_FILENAME
+from kb_distillery.vault.schema import PARSED_FILENAME
 
 from .paths import session_dir, load_session, person_from_raw
 from .schemas import validate_claims

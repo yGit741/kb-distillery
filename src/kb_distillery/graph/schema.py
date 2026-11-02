@@ -1,6 +1,6 @@
 """The vault schema as the dashboard JS sees it (`/api/schema`, and `schema` inside `/api/graph`).
 
-src/kb_distillery/core/schema.py is the single source of truth; the static pages keep no type, layer, depth or
+src/kb_distillery/vault/schema.py is the single source of truth; the static pages keep no type, layer, depth or
 disposition lists of their own. Colours are presentation, but they are keyed by type here too so a
 new type needs one edit.
 """
@@ -10,7 +10,7 @@ import sys
 from kb_distillery.paths import vault_root
 META_DIR = os.path.join(vault_root(), "meta")
 
-from kb_distillery.core import schema
+from kb_distillery.vault import schema
 
 TYPE_COLOR = schema.TYPE_COLOR            # per type, from the knowledge base's kb.toml (palette fallback)
 LAYER_COLOR = {"concept": "#7aa2ff", "collection": "#2ac3de", "source": "#ff6b7a"}

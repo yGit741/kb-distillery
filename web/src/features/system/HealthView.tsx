@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 import { HealthCharts } from "./HealthCharts";
 import type { HealthLike } from "./model";
 
-/** The groups and labels of the old Health page (core/health.py), in one place. */
+/** The groups and labels of the old Health page (vault/health.py), in one place. */
 const GROUPS: { title: string; keys: [string, string][] }[] = [
   { title: "Integrity", keys: [["errors", "Lint errors"], ["warnings", "Lint warnings"], ["hooks", "Guard hooks"]] },
   { title: "Knowledge", keys: [["broken", "Broken links"], ["orphans", "Orphans"], ["queued", "Queued raw"], ["partial_books", "Partial books"], ["to_read_stubs", "To-read stubs"], ["persons_unverified", "Unverified persons"]] },
@@ -13,7 +13,7 @@ const GROUPS: { title: string; keys: [string, string][] }[] = [
   { title: "Speed", keys: [["lint_ms", "Lint ms"], ["sha1_ms", "Hashing ms"], ["wiki_ms", "Wiki ms"], ["links_ms", "Links ms"]] },
 ];
 
-/** What each number means: the "?" help of the old Health page (core/health.py METRICS), shown as a tooltip on the label. */
+/** What each number means: the "?" help of the old Health page (vault/health.py METRICS), shown as a tooltip on the label. */
 const HELP: Record<string, string> = {
   errors: "Schema violations that must be zero before commit.",
   warnings: "Non-blocking issues (broken links, inbox files) worth fixing soon.",

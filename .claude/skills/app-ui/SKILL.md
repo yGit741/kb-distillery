@@ -48,7 +48,7 @@ pixi run lint-skills
 
 ## Data-model vocabulary
 
-The frontend speaks the shipped model (schema 1.0, `src/kb_distillery/core/schema.py` `LAYER_OF`; `src/api/model.ts` mirrors it): every page has a `layer` (`source`, `collection`, `concept`) and a `type` inside it.
+The frontend speaks the shipped model (schema 1.0, `src/kb_distillery/vault/schema.py` `LAYER_OF`; `src/api/model.ts` mirrors it): every page has a `layer` (`source`, `collection`, `concept`) and a `type` inside it.
 
 - source: paper, part, lecture, article, video, mail, ai-chat, blog-post. Sources alone carry `depth`: `listed`, `easy`, `full`, `deep`.
 - collection: book, notebook, course, series, plus aux `scope`.

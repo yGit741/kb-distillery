@@ -174,7 +174,7 @@ def excerpt(text, limit=EXCERPT):
 
 def load_pages(root=None):
     """{slug: {slug, type, depth, title, summary, text, links}} — `links` = outbound ∪ inbound slugs."""
-    from kb_distillery.core.graph import inbound_index, outbound_links
+    from kb_distillery.vault.graph import inbound_index, outbound_links
     from kb_distillery.search.semfind import load_pages as _pages
     raw = _pages(root or ROOT)
     inbound = inbound_index(raw)

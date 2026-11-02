@@ -3,16 +3,16 @@
     python -m kb_distillery.search.cards        (lint runs it after every check; cheap: only changed cards are written)
 
 Cards live in `.cache/qmd-cards/<slug>.md` (never committed). A page gets a card only when it has a
-summary; courses and `listed` stubs never do (kb_distillery.core.summary.needs_summary). A card whose page lost its
+summary; courses and `listed` stubs never do (kb_distillery.vault.summary.needs_summary). A card whose page lost its
 summary or was deleted is removed. Unchanged cards keep their mtime, so qmd re-embeds only what changed.
 """
 import os
 import sys
 
 from kb_distillery import paths
-from kb_distillery.core import frontmatter
-from kb_distillery.core.summary import needs_summary, unquote
-from kb_distillery.core.schema import is_page_file
+from kb_distillery.vault import frontmatter
+from kb_distillery.vault.summary import needs_summary, unquote
+from kb_distillery.vault.schema import is_page_file
 
 CARDS_DIR = os.path.join(paths.CACHE_PATH, "qmd-cards")
 

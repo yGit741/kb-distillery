@@ -20,7 +20,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 
 from kb_distillery import kbconfig
-from kb_distillery.core import frontmatter
+from kb_distillery.vault import frontmatter
 
 THINK_CITE = "think:"
 LEGACY_PREFIX = "think/"

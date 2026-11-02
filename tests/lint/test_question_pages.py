@@ -106,7 +106,7 @@ class QuestionTitleMigration(unittest.TestCase):
         self.assertEqual(self.snapshot(), after)
 
     def test_produces_the_current_schema(self):
-        from kb_distillery.core.schema import SCHEMA_VERSION
+        from kb_distillery.vault.schema import SCHEMA_VERSION
         self.assertLessEqual(tuple(self.mod.PRODUCES), tuple(SCHEMA_VERSION))   # later migrations may follow
 
 

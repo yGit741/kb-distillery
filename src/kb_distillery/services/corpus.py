@@ -23,7 +23,7 @@ CITATIONS_CACHE = os.path.join(CACHE_DIR, "citations.json")
 PREVIEW_CHARS = 4000
 ACTIONS = ("easy-digest",)
 ACTION_TIMEOUT = 300
-from kb_distillery.core.schema import COLLECTION_TYPES
+from kb_distillery.vault.schema import COLLECTION_TYPES
 
 COMMON = [("path", "File"), ("disposition", "Disposition"), ("digestion", "Digest"), ("slug", "Page"),
           ("collection", "Collection"), ("year", "Year"), ("sha1", "sha1")]

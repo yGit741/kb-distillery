@@ -195,7 +195,7 @@ class DispatchTests(TempHome):
             ("digest", "full", "p1"): ("kb_distillery.ingest", ["full-digest", "p1"]),
             ("digest", "deep", "p1"): ("kb_distillery.ingest", ["deep-digest", "p1"]),
             ("digest", "many", "submit"): ("kb_distillery.ingest", ["digest-many", "submit"]),
-            ("digest", "instructions"): ("kb_distillery.core.digest", []),
+            ("digest", "instructions"): ("kb_distillery.vault.digest", []),
             ("send", "note.md", "--to", "a,b"): ("kb_distillery.distill.send", ["note.md", "--to", "a,b"]),
             ("lint",): ("kb_distillery.lint.lint", []),
             ("llm", "status"): ("kb_distillery.llm", ["status"]),

@@ -12,7 +12,7 @@ ROOT = vault_root()
 
 from kb_distillery.ops import daily_sync
 from kb_distillery.git import ship
-from kb_distillery.core.schema import lane_of
+from kb_distillery.vault.schema import lane_of
 
 
 class LaneOfTests(unittest.TestCase):
@@ -232,11 +232,11 @@ class PrFlowTests(unittest.TestCase):
 
     def test_schema_commit_takes_notes_and_the_manifest_but_not_index(self):
         wt = self._start("books")
-        for rel in ("src/kb_distillery/core/schema.py", "wiki/a.md", "wiki/index.md", "meta/corpus.tsv"):
+        for rel in ("src/kb_distillery/vault/schema.py", "wiki/a.md", "wiki/index.md", "meta/corpus.tsv"):
             self._write(wt, rel)
         self.assertEqual(ship.cmd_commit("schema(books): add hub", root=wt, gates=False), 0)
         files = set(_g(wt, "show", "--name-only", "--format=", "HEAD").split())
-        self.assertEqual(files, {"src/kb_distillery/core/schema.py", "wiki/a.md", "meta/corpus.tsv"})   # migrated dispositions
+        self.assertEqual(files, {"src/kb_distillery/vault/schema.py", "wiki/a.md", "meta/corpus.tsv"})   # migrated dispositions
 
     def test_feature_commit_never_takes_generated_files(self):
         wt = self._start("plain")
@@ -258,12 +258,12 @@ class PrFlowTests(unittest.TestCase):
         for rel in ("wiki/index.md", "wiki/paper/index.md", "wiki/paper/2020/index.md", "examples/demo/wiki/role/index.md",
                     "examples/demo/wiki/index.md"):
             self.assertTrue(ship.is_generated(rel), rel)
-        for rel in ("wiki/paper/x.md", "src/kb_distillery/core/wikiindex.py", "examples/demo/wiki/a.md"):
+        for rel in ("wiki/paper/x.md", "src/kb_distillery/vault/wikiindex.py", "examples/demo/wiki/a.md"):
             self.assertFalse(ship.is_generated(rel), rel)
 
     def test_schema_merge_refuses_clashing_local_note(self):
         wt = self._start("books")
-        self._write(wt, "src/kb_distillery/core/schema.py")
+        self._write(wt, "src/kb_distillery/vault/schema.py")
         self._write(wt, "wiki/b.md", "migrated")
         ship.cmd_commit("schema(books): add hub", root=wt, gates=False)
         self._write(self.repo, "wiki/b.md", "my own edit")       # differs → clash
@@ -553,7 +553,7 @@ class PrFlowTests(unittest.TestCase):
            "kb(digest): a (kb-0.7.3)\n\nKB-Version: 0.7.3\nKB-Op: digest\nKB-Target: a")
         _g(self.repo, "push", "-q", "origin", "main")
         wt = self._start("books")
-        self._write(wt, "src/kb_distillery/core/schema.py")
+        self._write(wt, "src/kb_distillery/vault/schema.py")
         self.assertEqual(ship.cmd_commit("schema(books): hub", root=wt, gates=False), 0)
         with patch.object(ship, "SCHEMA_VERSION", (0, 9)):  # wrong bump: 0.7 → 0.9
             self.assertEqual(ship.cmd_merge(local=True, pr_number=4, title="schema(books): hub",
@@ -571,7 +571,7 @@ class PrFlowTests(unittest.TestCase):
 
     def test_first_schema_merge_uses_declared_schema(self):
         wt = self._start("books")
-        self._write(wt, "src/kb_distillery/core/schema.py")
+        self._write(wt, "src/kb_distillery/vault/schema.py")
         ship.cmd_commit("schema(books): hub", root=wt, gates=False)
         with patch.object(ship, "SCHEMA_VERSION", (0, 8)):  # no knowledge version on main yet
             self.assertEqual(ship.cmd_merge(local=True, pr_number=4, title="schema(books): hub",

@@ -3,7 +3,7 @@ import os
 import tempfile
 import unittest
 
-from kb_distillery.core import frontmatter
+from kb_distillery.vault import frontmatter
 from kb_distillery.ingest import backfill
 
 

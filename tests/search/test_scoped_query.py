@@ -3,7 +3,7 @@
 --scope`, the chat policy / system prompt / direct retrieval inside a scope. A temp vault, no network."""
 import pytest
 
-from kb_distillery.core import schema as _schema
+from kb_distillery.vault import schema as _schema
 
 if "paper" not in _schema.SOURCE_TYPES:   # this module builds `paper` pages: it needs the explorer's default types
     pytest.skip("needs the default source types (run with KB=yonatan-thesis or a kb that defines `paper`)", allow_module_level=True)
@@ -25,7 +25,7 @@ from kb_distillery.search import citations
 from kb_distillery.search import explore_raw
 from kb_distillery.lint import lint
 from kb_distillery.search import query
-from kb_distillery.core import scopes as sc
+from kb_distillery.vault import scopes as sc
 from kb_distillery.services import chat_agent
 from kb_distillery.services import chat as chat_data
 
@@ -36,7 +36,7 @@ Z = "raw/printed-docs/2023-zeta-tensor.pdf"
 
 
 def page(typ, status, body, fm=None):
-    from kb_distillery.core import schema
+    from kb_distillery.vault import schema
     typ = {"concept": "idea", "theme": "topic"}.get(typ, typ)
     lines = ["---", "type: " + typ, "layer: " + schema.LAYER_OF[typ], "status: " + status]
     lines += [k + ": " + str(v) for k, v in (fm or dict()).items()]
@@ -286,7 +286,7 @@ class ScopedPolicyTests(unittest.TestCase):
         self.assertFalse(self.d("Read", fp("raw/printed-docs/2023-a.pdf")).allow)
 
     def test_wiki_subpath_and_traversal(self):
-        self.assertFalse(self.d("Read", fp("wiki/../src/kb_distillery/core/schema.py")).allow)
+        self.assertFalse(self.d("Read", fp("wiki/../src/kb_distillery/vault/schema.py")).allow)
         self.assertFalse(self.d("Read", fp("wiki/sub/tensor-rank.md")).allow)
 
     def test_grep_glob_default_to_wiki(self):

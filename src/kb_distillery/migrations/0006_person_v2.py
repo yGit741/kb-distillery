@@ -1,4 +1,4 @@
-"""Person pages v2 (schema 0.12): frontmatter handles generate sections (src/kb_distillery/core/persons.py).
+"""Person pages v2 (schema 0.12): frontmatter handles generate sections (src/kb_distillery/vault/persons.py).
 
 Every pre-0.12 person page is rewritten without losing a line — reorganised, never deleted:
 
@@ -47,7 +47,7 @@ URL_IN_TEXT = re.compile(r"https?://[^\s)>\]]+")
 
 
 def _mods(root):
-    from kb_distillery.core import persons
+    from kb_distillery.vault import persons
     from kb_distillery.ingest import researcher
     return persons, researcher
 
@@ -288,7 +288,7 @@ def convert(root, slug, text, persons, researcher, pages, corpus):
             w = WIKI.search(c)
             links.append(w.group(1).strip() if w else c)
     extra = [s for s in persons.as_list(fm.get("area")) + persons.as_list(fm.get("related")) if s != slug]
-    from kb_distillery.core.schema import TOPIC_SLUGS as THEME_SLUGS
+    from kb_distillery.vault.schema import TOPIC_SLUGS as THEME_SLUGS
     extra = [("theme-" + s[4:]) if s.startswith("moc-") else ("theme-" + s) if s in THEME_SLUGS else s
              for s in extra]
     body_links = {l.strip() for l in persons.LINK.findall(body)}

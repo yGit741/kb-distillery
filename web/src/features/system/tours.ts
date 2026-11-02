@@ -36,7 +36,7 @@ registerTour(
     {
       target: '[data-tour="kb-types"]',
       title: "Types from kb.toml",
-      // source: src/kb_distillery/core/types.py ([types] tables); core/schema.py keeps the historical names
+      // source: src/kb_distillery/vault/types.py ([types] tables); vault/schema.py keeps the historical names
       body: "Source, Collection and Concept are the explorer's three kinds. Which **page types** live inside them is this knowledge base's choice, declared in its kb.toml and colouring the graph legend.",
     },
     {
@@ -48,7 +48,7 @@ registerTour(
     {
       target: '[data-tour="kb-digest"]',
       title: "Digest instructions per knowledge base",
-      // source: src/kb_distillery/core/digest.py (digest/focus.md, types.md; kits/base/defaults/digest fallback)
+      // source: src/kb_distillery/vault/digest.py (digest/focus.md, types.md; kits/base/defaults/digest fallback)
       body: "Ingest is identical everywhere; digest is one engine plus these instructions. A knowledge base's digest/ folder **overrides** the explorer's default focus and concept kinds.",
     },
     {
