@@ -1,8 +1,8 @@
-"""The share build (Cloudflare site) still assumes one repository holding code and content: it checks out a
-*viewer* ref that must contain src/kb_distillery/publish/cloudflare and reads `.github/workflows/deploy-main.yml`, `share/`
-and `scripts/` from the vault. The knowledge-base split leaves Cloudflare untouched for now, so these tests
-are skipped whenever the vault is not the explorer checkout. Run them from a monorepo-layout checkout
-(`KB_ROOT=<explorer>`), or remove this file once the share build takes its viewer from CHECKOUT_ROOT."""
+"""The share build still assumes one repository holding code and content: it checks out a *viewer* ref that must contain
+src/kb_distillery/publish/site and reads `.github/workflows/deploy-main.yml`, the Worker and `scripts/` from the vault.
+The knowledge-base split leaves Cloudflare untouched for now, so these tests are skipped whenever the vault is not the
+engine checkout (without this file ~50 of them fail in the split layout). Run them with `KB_ROOT=<engine checkout>`
+(all pass there), or remove this file once the share build takes its viewer from CHECKOUT_ROOT."""
 import os
 
 import pytest

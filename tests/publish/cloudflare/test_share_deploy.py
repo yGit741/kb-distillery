@@ -26,6 +26,11 @@ ENV = {"GIT_CONFIG_GLOBAL": os.devnull, "GIT_CONFIG_NOSYSTEM": "1"}
 GOOGLE = "https://accounts.google.com/o/oauth2/v2/auth?x=1"
 
 
+def page(body):
+    """A wiki page that passes okf-check (the commit gate of ops commits): `type` is required."""
+    return f'---\ntype: idea\nlayer: concept\ntitle: "B"\nsources: []\nrelated: []\n---\n\n# B\n\n{body}\n'
+
+
 def g(cwd, *args):
     return subprocess.run(["git", *args], cwd=cwd, check=True, capture_output=True, text=True,
                           env=dict(os.environ, **ENV)).stdout.strip()
@@ -425,7 +430,7 @@ class CommitOpHookTests(unittest.TestCase):
         _lint.start()
         self.addCleanup(_lint.stop)
         for rel, text in (("meta/stub.py", "x = 1\n"), ("wiki/log.md", "# Log\n"),
-                          (".gitignore", "meta/.ops/\n"), ("wiki/b.md", "v1\n"), ("wiki/index.md", "v1\n")):
+                          (".gitignore", "meta/.ops/\n"), ("wiki/b.md", page("v1")), ("wiki/index.md", "v1\n")):
             Path(self.root, rel).parent.mkdir(parents=True, exist_ok=True)
             Path(self.root, rel).write_text(text)
         g(self.root, "add", "-A")
@@ -435,7 +440,7 @@ class CommitOpHookTests(unittest.TestCase):
     def test_commit_op_returns_before_the_deploy_finishes_and_survives_trigger_errors(self):
         from kb_distillery.ops import core
         self.enterContext(mock.patch.dict(os.environ, {"KB_SHARE_DIRECT": "1"}))  # the old direct path
-        Path(self.root, "wiki/b.md").write_text("v2\n")
+        Path(self.root, "wiki/b.md").write_text(page("v2"))
         started = []
         procs = []
 
@@ -455,7 +460,7 @@ class CommitOpHookTests(unittest.TestCase):
         self.assertIn("refine", started[0][0])
         self.assertEqual(started[0][1], self.root)
 
-        Path(self.root, "wiki/b.md").write_text("v3\n")
+        Path(self.root, "wiki/b.md").write_text(page("v3"))
         with mock.patch("kb_distillery.publish.cloudflare.autodeploy.trigger", side_effect=RuntimeError("boom")):
             sha2 = core.commit_op("refine", "b", paths=["wiki/b.md"], lint=False, root=self.root)
         self.assertTrue(sha2)
@@ -463,7 +468,7 @@ class CommitOpHookTests(unittest.TestCase):
 
     def test_real_trigger_on_a_test_repo_is_a_no_op(self):
         from kb_distillery.ops import core
-        Path(self.root, "wiki/b.md").write_text("v2\n")
+        Path(self.root, "wiki/b.md").write_text(page("v2"))
         with mock.patch.object(autodeploy, "spawn", side_effect=AssertionError("spawned")):
             self.assertTrue(core.commit_op("refine", "b", paths=["wiki/b.md"], lint=False, root=self.root))
 

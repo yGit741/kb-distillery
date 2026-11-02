@@ -468,6 +468,8 @@ class JsPortParityTests(unittest.TestCase):
     def test_real_repo(self):
         if _git(ROOT, "rev-parse", "--verify", "--quiet", "HEAD", check=False).returncode != 0:
             self.skipTest("no HEAD")
+        if not os.path.isfile(os.path.join(ROOT, "wiki", "theme-learning-theory.md")):
+            self.skipTest("needs a real kb (the queried pages theme-learning-theory and adamw), not the engine checkout")
         got = self._compare(ROOT, "tensor rank", "adamw", "theme-learning-theory")
         self.assertTrue(got["search"]["hits"])
 
