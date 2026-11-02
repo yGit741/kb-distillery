@@ -357,5 +357,28 @@ class TypesFromConfig(unittest.TestCase):
             types.build({"concept": {"a": {"label": "A", "prefix": "x-"}, "b": {"label": "B", "prefix": "x-"}}})
 
 
+class RelativeKbPath(unittest.TestCase):
+    """`KB=./examples/demo` is resolved once, against the folder the process started in, and exported absolute."""
+
+    def test_relative_kb_is_anchored_at_import_and_survives_a_cwd_change(self):
+        with tempfile.TemporaryDirectory() as d:
+            folder = os.path.realpath(os.path.join(d, "kbs", "mine"))
+            os.makedirs(folder)
+            code = ("import os, sys; from kb_distillery import kbconfig; os.chdir('/'); "
+                    "print(os.environ['KB']); print(kbconfig.selected())")
+            env = {**os.environ, "KB": "./kbs/mine"}
+            env.pop("KB_ROOT", None)
+            out = subprocess.run([sys.executable, "-c", code], cwd=os.path.realpath(d), env=env, capture_output=True,
+                                 text=True, check=True).stdout.split()
+            self.assertEqual(out, [folder, folder])
+
+    def test_a_kb_id_is_left_alone(self):
+        env = {**os.environ, "KB": "demo"}
+        out = subprocess.run([sys.executable, "-c", "import os; from kb_distillery import kbconfig; print(os.environ['KB'])"],
+                             env=env, capture_output=True, text=True, check=True).stdout.strip()
+        self.assertEqual(out, "demo")
+
+
+
 if __name__ == "__main__":
     unittest.main()
