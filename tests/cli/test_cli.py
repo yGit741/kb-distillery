@@ -199,7 +199,7 @@ class DispatchTests(TempHome):
             ("send", "note.md", "--to", "a,b"): ("kb_distillery.distill.send", ["note.md", "--to", "a,b"]),
             ("lint",): ("kb_distillery.lint.lint", []),
             ("llm", "status"): ("kb_distillery.llm", ["status"]),
-            ("share", "status"): ("kb_distillery.share", ["status"]),
+            ("share", "status"): ("kb_distillery.publish.cloudflare", ["status"]),
             ("propose", "review"): ("kb_distillery.graph.propose", ["review"]),
             ("hooks", "install", "--kb", "demo"): ("kb_distillery.git.install_hooks", ["--kb", "demo"]),
             ("hook", "guard"): ("kb_distillery.git.guard", []),

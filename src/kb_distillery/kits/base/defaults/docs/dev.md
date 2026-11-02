@@ -14,17 +14,17 @@ src/kb_distillery/      Python app, package `kb_distillery` (src layout; `backen
   src/kb_distillery/llm/           `kb_distillery.llm`: the one door to Claude (see § Billing)
   src/kb_distillery/core/          schema, graph, hubs, scopes, persons, books, mathnorm, coherence, health
   src/kb_distillery/lint/          lint, lint_skills            src/kb_distillery/search/       query, semfind, explore_raw, citations
-  src/kb_distillery/ingest|distill|ops (daily_sync, notify, report/)|share/            src/kb_distillery/git/          guard, git_guard, commit_policy, ship, merge_nudge, curate_history
+  src/kb_distillery/ingest|distill|ops (daily_sync, notify, report/)|publish/{site,cloudflare}/            src/kb_distillery/git/          guard, git_guard, commit_policy, ship, merge_nudge, curate_history
   src/kb_distillery/kits/          the kits: kit.toml, defaults/, skills (what a kb is given; `resource("kits")`)
   src/kb_distillery/migrations/    schema migrations (code); the applied ledger stays in meta/migrations/applied.tsv
   src/kb_distillery/services/      former dashboard *_data modules (graph, pages, corpus, scopes, chat, pipeline, lifecycle, ops)
   src/kb_distillery/api/           FastAPI app (`pixi run app`): routers/ auto-discovered, models/, sse.py, security.py; README.md = add-a-router recipe
   src/kb_distillery/dashboard/     retired legacy HTML pages + stdlib server (no longer served by kb_distillery.api; old URLs redirect to /app routes; deleted in a later PR)
   src/kb_distillery/prompts/  chat prompts
+  src/kb_distillery/publish/       publisher interface; site/ (build, snapshots, predicate, home, show, state); cloudflare/ (publisher, deploy, owner, ..., worker/ = the Cloudflare Worker (auth.js, admin.js, wrangler template) + its node tests)
 tests/                  pytest, mirrored by package (tests/harness = the pipeline harness)
 web/                    the React app (builds into src/kb_distillery/_webapp)
 examples/               demo (the tracked sample kb), launchd
-share/                  Cloudflare Worker (auth.js, admin.js, wrangler template) + its node tests
 .claude/skills/         the engine's own dev skills (real files); the kb skills are src/kb_distillery/kits/<kit>/skills/
 scripts/                githooks/, hooks/, qmd/, launch.sh
 docs/                   ROADMAP.md: the migration to the open-source kb-distillery, phase by phase
@@ -114,7 +114,7 @@ pixi run test-ui-principles        every app screen, light + dark, against the [
 pixi run lint-skills               validate every skills folder (each kit skills folder and .claude/skills)
 pixi run export-kb                 zip wiki + think → .exported/ (LLM share)
 pixi run share -- deploy-main      build main → private Cloudflare site (also: status, rollback, --dry-run)
-pixi run install-deploy-owner      (user) install the launchd deploy owner — the only deployer; agents nudge it (`python -m kb_distillery.share.owner nudge|once|status`)
+pixi run install-deploy-owner      (user) install the launchd deploy owner — the only deployer; agents nudge it (`python -m kb_distillery.publish.cloudflare.owner nudge|once|status`)
                                    run it from your normal shell: it copies proxy CA/proxy env + PATH (no secrets) into the plist
 pixi run share -- snapshot <name> <ref>   audit + publish a PUBLIC snapshot Worker (also: audit, list, history, remove, prune;
                                    `--replace` updates a sent snapshot at the same link, `rollback --worker <name>` undoes it)
@@ -164,7 +164,7 @@ text queries); `kb_distillery.search.vectors` reads it for graph math — neares
 - **Policy:** a feature that can't land in one PR ships dark behind a flag and merges in small PRs; release = flipping the flag (System → Flags), not deploying. A new flag needs an `owner` and `expires` at most 90 days after `created`.
 - **Test matrix:** every flag needs a test for **both** states. pytest: `@pytest.mark.flag("name", True|False)` (`tests/conftest.py` forces it through `kb_distillery.flags.override`, all envs). vitest: `withFlag("name", true|false, fn)` from `@/flags/testing` (forces build flags too — a test-only seam; `routeDefsNow()` re-reads route flags). `python -m kb_distillery.flags.coverage` (in `flags-check` and `web-check`) scans `tests/**/test_*.py` and `web/src/**/*.test.ts(x)` and fails on a missing flag/state.
 - **Expiry:** `lint` (`check_flags`) warns when a flag expires within 14 days and errors once it has expired or the registry is invalid; retire it with `meta/templates/flag-cleanup-pr.md` (`chore(flags): remove <name>`).
-- **Not flags:** `apply_profile` in `kb_distillery/share/build.py` (what data a public build strips) is privacy, not a feature switch, and stays on the profile.
+- **Not flags:** `apply_profile` in `kb_distillery/publish/site/build.py` (what data a public build strips) is privacy, not a feature switch, and stays on the profile.
 
 ## Worktrees
 

@@ -27,7 +27,7 @@ GROUP = "kb.publishers"
 ENV = "KB_PUBLISHER"
 ENGINE_CONFIG_ENV = "KB_ENGINE_CONFIG"
 NONE_NAMES = ("", "none", "null")
-BUILTIN: dict[str, str] = {"cloudflare": "kb_distillery.share.publisher:CloudflarePublisher"}
+BUILTIN: dict[str, str] = {"cloudflare": "kb_distillery.publish.cloudflare.publisher:CloudflarePublisher"}
 
 
 def _entry_points() -> dict:

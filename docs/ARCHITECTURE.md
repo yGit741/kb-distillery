@@ -10,7 +10,7 @@ kb-distillery turns sources you collect (papers, slides, mail, web clips) into a
 | **Knowledge base (kb)** | A folder with `kb.toml`, `raw/`, `wiki/`, `meta/`. Holds only knowledge and its settings. Each kb is its own git repository. | `kbs/<id>`, or any folder given as `--kb <path>` |
 | **Kit** | The schema a kb follows: page types, typed edges, fields, filename prefixes. Versioned. A kb names one and may extend it, never edit it. | `src/kb_distillery/kits/<name>/kit.toml` |
 | **Storage connector** | How raw sources are reached: list, get, put, info, local copy, auth. Built in: local folder (default) and Google Drive. Third parties register more through the `kb_distillery.storage.connectors` entry-point group. | `src/kb_distillery/storage/` |
-| **Publisher** | Sharing a kb as a site, as a plugin outside core. With none configured core runs unchanged. The Cloudflare publisher is the first (code in `src/kb_distillery/share/` and `share/`). Third parties use the `kb.publishers` entry-point group. | `src/kb_distillery/publish/` |
+| **Publisher** | Sharing a kb as a site, as a plugin outside core. With none configured core runs unchanged. The Cloudflare publisher is the first (code in `src/kb_distillery/publish/cloudflare/`, its Worker in `publish/cloudflare/worker/`, the site builder in `publish/site/`). Third parties use the `kb.publishers` entry-point group. | `src/kb_distillery/publish/` |
 | **Think** | One human-owned, schema-free journal outside every kb. `kbd distill <note> --to a,b` sends a note into chosen kbs with provenance on both sides. Agents never edit it. | `<kbs dir>/think` (its own repo) |
 
 Guides for the three extension points: [kits](../src/kb_distillery/kits/base/defaults/docs/kits.md), [storage](../src/kb_distillery/kits/base/defaults/docs/storage.md), [publish](../src/kb_distillery/kits/base/defaults/docs/publish.md); think in [think](../src/kb_distillery/kits/base/defaults/docs/think.md).
@@ -53,16 +53,15 @@ Guides for the three extension points: [kits](../src/kb_distillery/kits/base/def
 | `ingest/`, `distill/`, `search/`, `graph/` | pipelines and queries over the wiki |
 | `ops/`, `git/` | versioned knowledge commits; write guards, commit policy, the `ship` PR tool |
 | `llm/` | `kb_distillery.llm`, the only door to a model |
-| `storage/`, `publish/` | connector and publisher interfaces, registries and built-ins |
+| `storage/`, `publish/` | connector and publisher interfaces, registries and built-ins; `publish/site/` builds the site, `publish/cloudflare/` is the Cloudflare publisher (core never imports it; off unless a kb or the engine config selects it) |
 | `services/`, `api/` | data services and the FastAPI routers (auto-discovered), typed client for the frontend |
-| `share/` | the Cloudflare publisher's code, reached only through `publish/` (core never imports it; off unless a kb or the engine config selects it) |
 | `tests/` | pytest, mirroring the package layout |
 | `web/` | the React app (Vite, TypeScript) |
 | `src/kb_distillery/kits/` | the kits (`base`, `research`): `kit.toml` each; `base/defaults/` holds the flags, routed docs, page skeletons and digest defaults |
 | `kbs/` | kbs; gitignored except `examples/demo`, the public sample used by tests |
 | `src/kb_distillery/kits/base/defaults/` | defaults for every kb: docs, flags, templates; a kb's `meta/` overrides them |
 | `src/kb_distillery/kits/<kit>/skills/` | the workflow skills a kb is given (`base`, `research`); `.claude/skills/` holds the engine's own dev skills |
-| `share/`, `scripts/` | the Worker for the Cloudflare publisher; launch script and git hooks |
+| `scripts/` | launch script and git hooks |
 
 ## Invariants
 

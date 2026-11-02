@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Install (or reinstall) the deploy owner (kb_distillery.share.owner run) as a user launchd agent: KeepAlive,
+# Install (or reinstall) the deploy owner (kb_distillery.publish.cloudflare.owner run) as a user launchd agent: KeepAlive,
 # the one process that builds + deploys main to the private site. Everything else only nudges it.
 # Usage: pixi run install-deploy-owner            uninstall: pixi run install-deploy-owner -- --uninstall
 set -euo pipefail
@@ -51,4 +51,4 @@ sed -e "s|__ROOT__|$PWD|g" -e "s|__PIXI__|$PIXI|g" -e "s|__LOG__|$LOG|g" \
 capture_env "$DEST"
 launchctl bootstrap "gui/$(id -u)" "$DEST"
 echo "installed $LABEL → always on, log: $LOG"
-echo "state: pixi run python -m kb_distillery.share.owner status"
+echo "state: pixi run python -m kb_distillery.publish.cloudflare.owner status"

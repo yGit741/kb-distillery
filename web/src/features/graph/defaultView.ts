@@ -1,6 +1,6 @@
 import { storyById } from "./lab/views";
 
-/** Home blob fields the graph reads (the share builder's `home`, see backend kb_distillery.share.home). */
+/** Home blob fields the graph reads (the share builder's `home`, see backend kb_distillery.publish.site.home). */
 type EmbeddedHome = { view?: string | null } | undefined;
 
 /** URL params that describe a dive of their own (a Home card, a focus, a search …): a snapshot's default

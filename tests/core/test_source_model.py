@@ -235,7 +235,7 @@ class MajorVersionBump(unittest.TestCase):
         self.assertTrue(any("1.0.0" in v for v in cp.check_push_range(self.repo.path, old, self.repo.head())))
 
     def test_share_build_reads_the_schema_major(self):
-        from kb_distillery.share import build as sb
+        from kb_distillery.publish.site import build as sb
         self.assertEqual(sb.schema_major(META.rsplit("/", 1)[0], "kb-0.9.6"), 0)
 
     def test_ship_pr_body_says_major(self):

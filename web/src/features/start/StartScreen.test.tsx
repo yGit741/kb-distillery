@@ -5,7 +5,7 @@ import { createAppRouter } from "@/app/router";
 import { ApiError, type DataSource, type LifecycleSnapshot } from "@/api";
 import { mockDataSource } from "@/test/datasource";
 import { withFlag } from "@/flags/testing";
-import { LifecycleLink } from "./content";
+import { LifecycleLink, ScreenLink } from "./content";
 import { nowCards } from "./StartScreen";
 
 const snap = {
@@ -94,5 +94,16 @@ describe("Start screen", () => {
       expect(container).toHaveTextContent("Lifecycle");
       expect(container.querySelector("a")).toBeNull();
     });
+  });
+
+  it("a link to a screen this build does not carry is plain text (share builds have no Pipeline)", () => {
+    const { container } = render(<ScreenLink id="no-such-screen">Nowhere</ScreenLink>);
+    expect(container).toHaveTextContent("Nowhere");
+    expect(container.querySelector("a")).toBeNull();
+  });
+
+  it("a link to a screen the build carries stays a link", async () => {
+    open();
+    expect(await screen.findByRole("link", { name: "Digestion" })).toHaveAttribute("href", expect.stringContaining("/pipeline"));
   });
 });

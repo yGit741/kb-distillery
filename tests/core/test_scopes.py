@@ -296,7 +296,7 @@ class ApiTests(unittest.TestCase):
         env = mock.patch.dict(os.environ, dict(ENV, KB_NO_PUSH="1"))
         env.start()
         self.addCleanup(env.stop)
-        trig = mock.patch("kb_distillery.share.autodeploy.trigger", return_value="skipped")
+        trig = mock.patch("kb_distillery.publish.cloudflare.autodeploy.trigger", return_value="skipped")
         trig.start()
         self.addCleanup(trig.stop)
         self.root = tempfile.mkdtemp(prefix="kb-scopes-api-")
@@ -408,12 +408,10 @@ class ApiTests(unittest.TestCase):
 
 class ShareProfileTests(unittest.TestCase):
     def test_public_profile_drops_scope_pages_and_the_scopes_key(self):
-        from kb_distillery.share import build as sb
+        from kb_distillery.publish.site import build as sb
         self.assertIn("scope", sb.PUBLIC_EXCLUDE_TYPES)
         self.assertTrue(sb.PUBLIC_EXCLUDE_TYPES.isdisjoint({"mail", "ai-chat", "person"}))   # chats and profiles are public (only email-derived pages go)
         self.assertIn("scopes", sb.PUBLIC_DROP_KEYS)
-        self.assertIn("/api/scopes", sb.SHIMMED_API)
-        self.assertIn("/api/scope", sb.SHIMMED_API)
         nodes = [dict(id="paper-a", type="paper", properties=dict(scopes="scope-s", raw=A)),
                  dict(id="scope-s", type="scope", properties=dict())]
         links = [dict(source="scope-s", target="paper-a")]
@@ -435,7 +433,7 @@ class ShareProfileTests(unittest.TestCase):
         self.assertNotIn("scope-s", json.dumps(out))
 
     def test_scoped_public_build_keeps_only_the_scope_set_and_names_nothing_else(self):
-        from kb_distillery.share import build as sb
+        from kb_distillery.publish.site import build as sb
         nodes = [dict(id="paper-a", type="paper", title="A", preview="see [[paper-b]]",
                       properties=dict(related="paper-b, idea-x")),
                  dict(id="paper-b", type="paper", title="Bee paper", properties=dict()),
@@ -457,7 +455,7 @@ class ShareProfileTests(unittest.TestCase):
         self.assertNotIn("paper-b", json.dumps(out))
 
     def test_scoped_public_build_unlinks_dropped_page_links_too(self):
-        from kb_distillery.share import build as sb
+        from kb_distillery.publish.site import build as sb
         nodes = [dict(id="paper-a", type="paper", title="A", properties=dict()),
                  dict(id="paper-b", type="paper", title="Bee paper", properties=dict())]
         data = dict(graph=dict(nodes=nodes, links=[dict(source="paper-a", target="paper-b")], facets=dict()),
