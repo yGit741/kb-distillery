@@ -8,6 +8,7 @@ compatibility_date = "2026-09-01"
 
 [cloudflare]
 subdomain = "acme-example"
+account_id = "00000000000000000000000000000000"
 
 [home]
 tour = "first-visit"

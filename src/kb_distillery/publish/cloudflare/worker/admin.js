@@ -28,14 +28,13 @@
 //     minor match, the patch difference (z counts knowledge steps within one schema version).
 //     Different major/minor, unparseable versions or a snapshot newer than main → null.
 //
-// Bindings: var CF_ACCOUNT_ID, secret CF_API_TOKEN (Workers Scripts Edit + Account Analytics Read).
+// Bindings: vars CF_ACCOUNT_ID and ACCOUNT_SUBDOMAIN, secret CF_API_TOKEN (Workers Scripts Edit + Account Analytics Read).
 // All Cloudflare calls go through deps.fetch with an AbortController timeout so tests can mock them.
 
 import { RUNTIME_FLAGS } from "./flags.gen.js";
 
 const API_BASE = "https://api.cloudflare.com/client/v4";
 const GRAPHQL_URL = `${API_BASE}/graphql`;
-const ACCOUNT_SUBDOMAIN = "yonatan-magen-thesis";
 const WORKER_MAIN = "kb";
 const SNAPSHOT_RE = /^snapshot-(\d{8})-([a-z0-9](?:[a-z0-9-]*[a-z0-9])?)$/;
 const MANIFEST_TIMEOUT_MS = 5000;
@@ -72,8 +71,9 @@ export function parseWorker(name) {
   return m ? { date: m[1], name: m[2] } : null;
 }
 
-export function workerUrl(worker) {
-  return `https://${worker}.${ACCOUNT_SUBDOMAIN}.workers.dev/`;
+// The workers.dev account subdomain is the ACCOUNT_SUBDOMAIN var, rendered from the share config at deploy time.
+export function workerUrl(worker, env) {
+  return `https://${worker}.${env.ACCOUNT_SUBDOMAIN}.workers.dev/`;
 }
 
 function parseVersion(v) {
@@ -130,9 +130,9 @@ async function listScripts(env, deps) {
 }
 
 // ['ok', manifest] | ['timeout', null] | ['down', null]
-async function fetchManifest(worker, deps) {
+async function fetchManifest(worker, env, deps) {
   try {
-    const res = await timed(deps, workerUrl(worker) + "manifest.json", { method: "GET" },
+    const res = await timed(deps, workerUrl(worker, env) + "manifest.json", { method: "GET" },
                             deps.manifestTimeoutMs || MANIFEST_TIMEOUT_MS);
     if (res.status !== 200) return ["down", null];
     const data = await res.json();
@@ -184,7 +184,7 @@ async function listSnapshots(request, env, deps) {
   const notes = [];
   const workers = (await listScripts(env, deps)).filter((n) => parseWorker(n));
   const [manifests, counts, mainV] = await Promise.all([
-    Promise.all(workers.map((w) => fetchManifest(w, deps))),
+    Promise.all(workers.map((w) => fetchManifest(w, env, deps))),
     views(env, deps, workers),
     mainVersion(request, env),
   ]);
@@ -196,7 +196,7 @@ async function listSnapshots(request, env, deps) {
     return {
       worker,
       name: parseWorker(worker).name,
-      url: workerUrl(worker),
+      url: workerUrl(worker, env),
       kb_version: kbVersion,
       content_sha: (m && m.content_sha) || null,
       built_at: (m && m.built_at) || null,
@@ -221,7 +221,7 @@ async function deleteSnapshot(request, env, deps, worker) {
   } catch (e) {
     return json(502, { error: `${e.message} — ${worker} may still be live` });
   }
-  return json(200, { deleted: worker, url: workerUrl(worker) });
+  return json(200, { deleted: worker, url: workerUrl(worker, env) });
 }
 
 async function prune(env, deps) {
@@ -229,7 +229,7 @@ async function prune(env, deps) {
   const names = (await listScripts(env, deps)).filter((n) => n !== WORKER_MAIN);
   const snaps = names.filter((n) => parseWorker(n));
   plan.foreign = names.filter((n) => !parseWorker(n));
-  const states = await Promise.all(snaps.map((w) => fetchManifest(w, deps)));
+  const states = await Promise.all(snaps.map((w) => fetchManifest(w, env, deps)));
   snaps.forEach((w, i) => {
     const s = states[i][0];
     plan[s === "ok" ? "ok" : s === "timeout" ? "unknown" : "orphans"].push(w);
@@ -286,6 +286,7 @@ export async function handleAdmin(request, env, deps, session) {
   if (refused) return refused;
   if (!env.CF_API_TOKEN) return json(503, { error: "panel not configured: set CF_API_TOKEN" });
   if (!env.CF_ACCOUNT_ID) return json(503, { error: "panel not configured: set CF_ACCOUNT_ID" });
+  if (!env.ACCOUNT_SUBDOMAIN) return json(503, { error: "panel not configured: set ACCOUNT_SUBDOMAIN" });
 
   const path = url.pathname.replace(/\/+$/, "");
   try {
