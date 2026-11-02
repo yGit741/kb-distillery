@@ -12,7 +12,8 @@ const ACCOUNT = "acct123";
 const API = "https://api.cloudflare.com/client/v4";
 const SNAP_A = "snapshot-20261001-cohen";
 const SNAP_B = "snapshot-20261015-draft";
-const host = (w) => `https://${w}.yonatan-magen-thesis.workers.dev/manifest.json`;
+const SUBDOMAIN = "acme-example";
+const host = (w) => `https://${w}.${SUBDOMAIN}.workers.dev/manifest.json`;
 
 const enc = new TextEncoder();
 const b64url = (bytes) => Buffer.from(bytes).toString("base64url");
@@ -33,7 +34,7 @@ function env(overrides = {}) {
       },
     },
     GOOGLE_CLIENT_ID: "cid", GOOGLE_CLIENT_SECRET: "shh", SESSION_SECRET: SECRET,
-    ALLOWED_EMAILS: "me@example.com", CF_ACCOUNT_ID: ACCOUNT, CF_API_TOKEN: "tok", ...overrides,
+    ALLOWED_EMAILS: "me@example.com", CF_ACCOUNT_ID: ACCOUNT, ACCOUNT_SUBDOMAIN: SUBDOMAIN, CF_API_TOKEN: "tok", ...overrides,
   };
 }
 
@@ -144,6 +145,13 @@ test("CF_API_TOKEN missing → 503 with the setup hint", async () => {
   assert.equal(cf.calls.length, 0);
 });
 
+test("ACCOUNT_SUBDOMAIN missing → 503 with the setup hint, no Cloudflare call", async () => {
+  const { res, json, cf } = await call("/admin/api/snapshots", { e: env({ ACCOUNT_SUBDOMAIN: "" }) });
+  assert.equal(res.status, 503);
+  assert.equal(json.error, "panel not configured: set ACCOUNT_SUBDOMAIN");
+  assert.equal(cf.calls.length, 0);
+});
+
 test("unknown admin route → 404 JSON, never an asset", async () => {
   const { res, text } = await call("/admin/api/nope");
   assert.equal(res.status, 404);
@@ -161,7 +169,7 @@ test("list: only snapshot-* Workers, manifest fields, views, online, behind-main
   assert.deepEqual(json.notes, []);
   assert.deepEqual(json.snapshots.map((s) => s.worker), [SNAP_A, SNAP_B]);
   const [a, b] = json.snapshots;
-  assert.deepEqual(a, { worker: SNAP_A, name: "cohen", url: `https://${SNAP_A}.yonatan-magen-thesis.workers.dev/`,
+  assert.deepEqual(a, { worker: SNAP_A, name: "cohen", url: `https://${SNAP_A}.${SUBDOMAIN}.workers.dev/`,
                         kb_version: "0.9.4", content_sha: "aaa", built_at: "2026-10-01T00:00:00Z",
                         views_7d: 7, online: true, behind_main: 2 });
   assert.equal(b.views_7d, 0);

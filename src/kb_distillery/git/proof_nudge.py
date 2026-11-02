@@ -23,7 +23,7 @@ import sys
 
 from kb_distillery.git.merge_nudge import last_reply
 
-DEPLOYED_SITE = "https://kb.yonatan-magen-thesis.workers.dev"
+DEPLOYED_SITE = "https://<worker>.<your-subdomain>.workers.dev"      # the shape only; the account is in the share config
 WRITE_TOOLS = {"Write", "Edit", "NotebookEdit"}
 PROOF_LINE = re.compile(r"^\W*proof\W*:(.*)$", re.I | re.M)
 

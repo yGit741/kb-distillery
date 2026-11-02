@@ -45,7 +45,7 @@ from kb_distillery.publish.cloudflare.contracts import (ACCOUNT_SUBDOMAIN, CACHE
                                   STATUS_PATH, WORKER_MAIN, WRANGLER_VERSION, DeployResult, StatusFile)
 
 WORKER_DIR = resource("publish/cloudflare/worker")      # the Cloudflare Worker sources (auth.js, admin.js, wrangler template)
-CF_ACCOUNT_ID = os.environ.get("KB_CLOUDFLARE_ACCOUNT_ID") or "7803af2d776eeea4c226f8e594121a10"  # the panel's REST calls (not secret)
+CF_ACCOUNT_ID = share_config.account_id()  # the panel's REST calls (not secret); from the share config
 WORKER_SCRIPTS = ("auth.js", "admin.js", "flags.gen.js")  # private site: sign-in + panel API + runtime flag names
 LOCK_NAME = "deploy.lock"
 PENDING_NAME = "pending"
@@ -124,7 +124,7 @@ def render_wrangler(worker: str, require_access: bool, cfg: dict, spa: bool = Fa
         assets = {"directory": "./public", "binding": "ASSETS", "run_worker_first": True}
         variables = {"GOOGLE_CLIENT_ID": cfg["google_client_id"],
                      "ALLOWED_EMAILS": ",".join(cfg["allowed_emails"]),
-                     "CF_ACCOUNT_ID": CF_ACCOUNT_ID}
+                     "CF_ACCOUNT_ID": CF_ACCOUNT_ID, "ACCOUNT_SUBDOMAIN": ACCOUNT_SUBDOMAIN}
         # global_fetch_strictly_public: the panel (admin.js) fetches snapshot-*.workers.dev manifests,
         # which a same-account Worker otherwise cannot reach (Cloudflare error 1042).
         script = (f'  "main": "auth.js",\n  "vars": {json.dumps(variables)},\n'

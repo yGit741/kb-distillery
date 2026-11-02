@@ -24,9 +24,10 @@ import urllib.request
 from pathlib import Path
 from typing import Callable, Optional
 
+from kb_distillery.publish.cloudflare import config as share_config
 from kb_distillery.publish.cloudflare.contracts import REPO, WRANGLER_VERSION
 
-ACCOUNT_ID = os.environ.get("KB_CLOUDFLARE_ACCOUNT_ID") or "7803af2d776eeea4c226f8e594121a10"
+ACCOUNT_ID = share_config.account_id()      # share config [cloudflare] account_id or $KB_CLOUDFLARE_ACCOUNT_ID; "" = unset
 API_BASE = "https://api.cloudflare.com/client/v4"
 GRAPHQL_URL = f"{API_BASE}/graphql"
 WRANGLER_CONFIG = Path.home() / "Library" / "Preferences" / ".wrangler" / "config" / "default.toml"

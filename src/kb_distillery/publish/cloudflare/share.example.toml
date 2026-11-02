@@ -20,6 +20,8 @@ compatibility_date = "2026-09-01"
 [cloudflare]
 # Your workers.dev account subdomain: sites live at https://<worker>.<subdomain>.workers.dev
 subdomain = ""
+# Your Cloudflare account id (not secret): the panel's REST calls. Env override: KB_CLOUDFLARE_ACCOUNT_ID.
+account_id = ""
 
 [share]
 # Where deploys and the auto-deploy append their log (default ~/Library/Logs/kb-distillery-share.log).

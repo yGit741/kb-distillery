@@ -148,12 +148,23 @@ class CleanRunner(Tree):
         with self.assertRaises(config.ShareConfigError):
             config.check_deploy({"google_client_id": "x", "allowed_emails": ["a@b.c"]}, True, "")
 
+    def test_a_private_deploy_needs_the_cloudflare_account_id(self):
+        ok = {"google_client_id": "x", "allowed_emails": ["a@b.c"]}
+        with mock.patch.dict(os.environ, {"KB_CLOUDFLARE_ACCOUNT_ID": "acct-1"}):
+            config.check_deploy(ok, True, "acme")
+        with mock.patch.dict(os.environ, {"KB_CLOUDFLARE_ACCOUNT_ID": ""}):
+            with self.assertRaises(config.ShareConfigError) as cm:
+                config.check_deploy(ok, True, "acme")
+            self.assertIn("account_id", str(cm.exception))
+            config.check_deploy(ok, False, "acme")                          # a public snapshot does not use the panel
+
 
 class Tracked(unittest.TestCase):
     def test_no_real_config_is_tracked_and_the_example_holds_no_values(self):
         self.assertFalse((CLOUDFLARE_DIR / "share.toml").exists())
         ex = config.load(config.EXAMPLE)
         self.assertEqual((ex["auth"]["google_client_id"], ex["auth"]["allowed_emails"], ex["cloudflare"]["subdomain"]), ("", [], ""))
+        self.assertEqual(ex["cloudflare"]["account_id"], "")
         self.assertTrue(config.EXAMPLE.is_file())
 
     def test_set_values_changes_only_its_keys(self):

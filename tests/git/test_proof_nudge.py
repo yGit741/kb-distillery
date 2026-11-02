@@ -8,8 +8,8 @@ import unittest
 from kb_distillery.git import proof_nudge
 
 LOCAL = "http://localhost:5173/graph"
-SITE = "https://kb.yonatan-magen-thesis.workers.dev/graph"
-PR = "https://github.com/yGit741/yonatan-thesis-kb/pull/9"
+SITE = "https://kb.acme-example.workers.dev/graph"
+PR = "https://github.com/acme/example-kb/pull/9"
 
 
 def transcript(*tool_calls, reply="done", human="please change the graph"):
