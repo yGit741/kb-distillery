@@ -53,7 +53,6 @@ function Section({ title, help, children }: { title: string; help?: ReactNode; c
   );
 }
 
-
 export function StartScreen() {
   return (
     <div className="flex min-w-0 flex-col gap-4">

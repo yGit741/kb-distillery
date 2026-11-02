@@ -17,13 +17,13 @@ export const Chip = ({ kind, children }: { kind: ChipKind; children: ReactNode }
   </Badge>
 );
 
+// Read at render time, not import time: this file is itself imported by a screen module, so `modules` is still being built then.
+const hasScreen = (id: string) => Object.keys(modules).some((f) => f.endsWith(`/features/${id}/index.tsx`));
+
 /**
  * A link to another screen, or its name as plain text where that screen does not exist in this build: the route is
  * flagged off (screen.* flags, e.g. lifecycle) or the build never imported it (share builds carry no Pipeline).
  */
-// Read at render time, not import time: this file is itself imported by a screen module, so `modules` is still being built then.
-const hasScreen = (id: string) => Object.keys(modules).some((f) => f.endsWith(`/features/${id}/index.tsx`));
-
 export function ScreenLink({ id, children }: { id: string; children: ReactNode }) {
   const def = routeDefsNow().find((d) => d.id === id);
   return def && hasScreen(id) ? (
