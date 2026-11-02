@@ -1,50 +1,72 @@
 # kb-distillery
 
-Turn what you read into a knowledge base you can search, question and grow. You put raw sources (papers, notes, web clips, chats) in a folder; kb-distillery helps you **distill** each one into a linked page, keeps the pages consistent with a linter, and shows them as a graph you can explore. It follows the [LLM Wiki](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f) idea: a flat, cross-linked set of notes that you and an agent both work on.
+kb-distillery builds a knowledge base from sources you collect. You put papers, notes, web clips, mail and chats in a folder. An agent digests each source into a linked wiki page. A linter checks every page against a schema. An app shows the pages as a graph you can search and read. The knowledge stays in your own git repository, outside this one.
 
-- **Your knowledge never enters this repo.** Each knowledge base is its own folder and its own git repository under `~/knowledge/` (outside this checkout). This repo is the engine.
-- **No AI needed to start.** Reading, linking, searching and the dashboard all work without a key. Digesting and chat stay off until you add a Claude subscription login or an API key, and you choose how they are billed.
-- **Pick your shape.** A *kit* defines the page types and relations of a knowledge base (a small `base`, and `research`); you can write your own.
+![The graph of the demo knowledge base in the app](docs/images/demo-graph.png)
 
 ## Quick start
 
-You need [pixi](https://pixi.sh) (`curl -fsSL https://pixi.sh/install.sh | bash`), git, and Node (pixi installs it).
+Needs macOS, [pixi](https://pixi.sh) and git. Clone this repository and run:
 
 ```bash
-git clone <this-repository-url> kb-distillery
-cd kb-distillery
 pixi install
-pixi run kbd init            # asks for an id, a name and a kit, then checks your setup
-pixi run kbd launch --kb <id>
+pixi run distill init
+pixi run distill launch --kb <id>
 ```
 
-`kbd init` creates `~/knowledge/<id>/` as its own git repository from the kit you pick, runs `kbd doctor`, and prints the launch command. The first launch installs the frontend dependencies and builds the app (a few minutes, needs the network); after that it starts in seconds. Non-interactive: `pixi run kbd init --kb-id my-kb --name "My KB" --kit base --yes`.
+`distill init` asks for an id, a name and a kit. It creates `~/knowledge/<id>/` as a git repository and runs `distill doctor`. The first launch builds the app, which takes a few minutes. The app opens at `http://127.0.0.1:8765`.
 
-`pixi run kbd doctor` checks your environment at any time and prints a fix for each problem. Add AI later with `claude login` or an `ANTHROPIC_API_KEY`; doctor shows which of the three backends (subscription, API, batch) are ready.
+Digests need a Claude login or an API key. Everything else works without one. See [Getting started](docs/getting-started.md).
 
-## How it fits together
+`examples/demo` is a sample knowledge base about a made-up job search. Open it with `pixi run distill launch --kb examples/demo`.
 
-| Part | What it is |
-|------|------------|
-| **Engine** | this repo: linter, ingest and digest tools, the API and the React app |
-| **Knowledge base** | a folder under `~/knowledge/` with `wiki/` (pages), `raw/` (your sources, never edited), `meta/` and a `kb.toml` |
-| **Kit** | the page types, areas and typed relations a knowledge base follows. See [`src/kb_distillery/kits/base/defaults/docs/kits.md`](src/kb_distillery/kits/base/defaults/docs/kits.md) |
-| **Storage connector** | how raw sources are reached: a local folder, a Google Drive mount, or a package you add. [`storage.md`](src/kb_distillery/kits/base/defaults/docs/storage.md) |
-| **Think** | one slow, human-only journal; `kbd distill <note> --to a,b` sends a note into knowledge bases with provenance on both sides. [`think.md`](src/kb_distillery/kits/base/defaults/docs/think.md) |
-| **Publisher** | optional: publish a static snapshot of a knowledge base. Cloudflare is the first. [`publish.md`](src/kb_distillery/kits/base/defaults/docs/publish.md) |
+## How it works
 
-The picture, the data flow and the invariants are in [`ARCHITECTURE.md`](docs/ARCHITECTURE.md). To change the code, read [`CONTRIBUTING.md`](.github/CONTRIBUTING.md). The roadmap is [`docs/ROADMAP.md`](docs/ROADMAP.md).
+```mermaid
+flowchart LR
+  A[raw/inbox] -->|catalog| B[raw/ by format]
+  B -->|digest: easy, full, deep| C[wiki/ pages]
+  C -->|lint| D[graph and search]
+  D --> E[app]
+  C -.->|optional| F[published site]
+```
 
-## Everyday commands
+- `raw/` holds your sources. Nothing edits them.
+- `wiki/` holds the pages. The linter is the schema.
+- Each knowledge operation is one git commit in the knowledge base, so every step has an undo.
+- Every model call goes through one gateway with three billing backends: subscription, API and Batch API.
+
+More: [Architecture](docs/architecture.md), [Concepts](docs/index.md).
+
+## Kits
+
+A kit sets the page types and relations of a knowledge base. A knowledge base names a kit and may add to it.
+
+| Kit | For |
+|---|---|
+| `base` | A small general knowledge base: articles, notes, documents, topics, ideas, questions, people. |
+| `research` | Academic reading: papers, books, lectures and typed relations such as `extends` and `contradicts`. |
+
+See [Kit](docs/concepts/kit.md) and [Write a kit](docs/guides/write-a-kit.md).
+
+## Publishing
+
+A knowledge base can be published as a static site. Publishing is a plugin. Cloudflare Workers is built in. The audit step lists what a public build would expose before anything is deployed.
 
 ```bash
-pixi run kbd kb-list                  # your knowledge bases
-pixi run kbd lint --kb <id>           # the schema check (the linter is the schema)
-pixi run kbd doctor --kb <id>         # environment and kb checks
-pixi run kbd distill <note> --to a,b  # think note -> knowledge bases
-pixi run test                         # the test suite
+pixi run distill share audit <ref> --kb <id>
 ```
+
+See [Publishing](docs/concepts/publishing.md) and [Add a publisher](docs/guides/add-a-publisher.md).
+
+## Documentation
+
+- [Getting started](docs/getting-started.md)
+- [CLI reference](docs/reference/cli.md)
+- [kb.toml reference](docs/reference/kb-toml.md)
+- [Roadmap](docs/public-roadmap.md)
+- [Contributing](CONTRIBUTING.md)
 
 ## License
 
-MIT, see [`LICENSE`](LICENSE).
+MIT. See [`LICENSE`](LICENSE).

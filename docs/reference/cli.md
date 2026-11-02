@@ -1,0 +1,229 @@
+# CLI reference
+
+`distill` is the command line. In a checkout, run it as `pixi run distill <command>`. An installed package puts `distill` on the path.
+
+`kbd` is an older name that still works and forwards to the same code. Use `distill` in new scripts.
+
+Run `distill --help`, or `distill <group> --help` for a group. Most commands pass `--help` on to the module behind them, so `distill <command> --help` shows that module's own options.
+
+Pass `--kb <id|path>` after the command to select a knowledge base. See [Knowledge base](../concepts/knowledge-base.md).
+
+The text below follows the output of `--help` for the code on `main`. Spacing is shortened.
+
+## Top level
+
+```
+usage: distill <command> [args…]
+
+commands:
+  init                  create a first knowledge base from a kit (own git repo), then run doctor
+  doctor                check the environment and a kb, with a fix for each problem (--json)
+  kb                    knowledge bases
+  launch                restart the app detached and open it (outside a checkout: serve it in the foreground)
+  hooks                 git and Claude Code hooks
+  hook                  stable entry for the kb-side hooks (git hooks and Claude Code guards call these)
+  ops                   knowledge operations: sessions, snapshots, undo, restore, status, migrate
+  ship                  ship tooling through infra/* branches (start, commit, pr, merge, …)
+  ingest                scrap, catalog and digest sources (scrap, catalog, resolve, status, …)
+  digest                digest a source page: easy, full or deep
+  send                  send a think note into knowledge bases: distill send <note> --to a,b
+  lint                  lint the selected knowledge base (the schema is the linter); --health adds the summary
+  llm                   the one door to Claude: ask, submit, status, collect
+  share                 publish the wiki graph + explorer as a site (build, snapshot, status, …)
+  propose               typed relation proposals between wiki pages: submit, collect, review, apply
+```
+
+`ship` is listed only inside a checkout. It is for people who change the engine. See [CONTRIBUTING](../../CONTRIBUTING.md).
+
+## init
+
+```
+usage: distill init [-h] [--kb-id KB_ID] [--name NAME] [--kit KIT] [--dir DIR] [--yes] [--refresh]
+
+  --kb-id KB_ID         folder name and id (default my-kb)
+  --name NAME           display name (default: the id, spaced and capitalised)
+  --kit, --template KIT ontology kit (default base; known: base, research)
+  --dir DIR             parent folder the kb folder is created in (default: the bases dir, ~/knowledge)
+  --yes                 never prompt; take defaults for what is not given
+  --refresh             re-sync the skills, docs, hooks and settings of an existing kb
+                        (--kb <id|path>, $KB, or run inside it) with its kit; prints what changed
+```
+
+## doctor
+
+```
+usage: distill doctor [-h] [--json]
+
+  --json      machine-readable output
+```
+
+Exit code 0 unless a check fails.
+
+## kb
+
+```
+distill kb list     every knowledge base and where it is
+distill kb show     the selected knowledge base, resolved
+```
+
+## launch
+
+```
+usage: distill launch [args…]
+```
+
+Starts the app on `127.0.0.1:8765`. Arguments go to `scripts/launch.sh`: `--kb <id|path>` and `--port N`. Outside a checkout, it serves the app in the foreground.
+
+## hooks and hook
+
+```
+distill hooks install      install the git + Claude Code hooks into a kb (--kb <id|path>)
+
+distill hook guard         Claude Code write guard: may this file be edited?
+distill hook git-guard     Claude Code Bash guard: block ad-hoc git writes
+distill hook pre-commit    git pre-commit: the linter is the schema
+distill hook commit-msg    git commit-msg: kb(op) conventional commits
+distill hook pre-push      git pre-push: main only moves forward by kb steps
+```
+
+The `hook` commands are called by hooks. They fail closed: an error blocks the action.
+
+## ops
+
+```
+usage: ops [-h] {status,log,snapshots,begin,commit,abort,undo,restore,snapshot,sync,migrate,next-version,chore,record,adopt-history} ...
+```
+
+| Subcommand | Does |
+|---|---|
+| `status` | Version, sessions, hooks, pending changes. |
+| `log [-n 20] [--kb\|--infra]` | First-parent history. |
+| `snapshots` | List snapshot tags. |
+| `begin <op> <target> ["why"]` | Open a free-form edit session. |
+| `commit ["summary"] [--no-push]` | Commit what changed since `begin`. |
+| `abort` | Close the session without committing. |
+| `undo <sha>` | Reverse one knowledge step as a new `kb(undo)` commit. |
+| `restore <kb-x.y.z>` | Bring `wiki/` back to a snapshot as a new `kb(restore)` commit. |
+| `snapshot ["label"]` | Tag the newest knowledge step as `kb-x.y.z`. |
+| `sync [--no-push] [--dry-run]` | The nightly sync: think edits, leftovers, push. |
+| `migrate [--check]` | Run pending schema migrations. |
+| `next-version` | Print the next `kb-x.y.z`. |
+| `chore <scope> "summary" [paths…]` | Commit a knowledge base's own tooling files. |
+| `record <op> <target> "summary" <paths…>` | Commit already-modified files as one knowledge operation. |
+| `adopt-history <bundle> [--checkout P]` | Fast-forward `main` to a curated history bundle. |
+
+## ingest
+
+```
+usage: kb_distillery.ingest [-h] {scrap,scrap-wordpress,scrap-youtube,video-digest,scrap-mail,scrap-gdrive,resolve,catalog,drain-inbox,easy-digest,easy-spotcheck,full-digest,digest-many,deep-digest,backfill-authors,refetch-raw,toc,begin,extract,map,draft,finalize,abort,status,backlog,index-researcher} ...
+```
+
+| Subcommand | Does | Model |
+|---|---|---|
+| `scrap` | Download or copy to `raw/inbox/`. `--type`, `--force`. | none |
+| `scrap-wordpress` | Every post of a WordPress.com blog and its figures to `raw/inbox/`. | none |
+| `scrap-youtube` | A video to `raw/inbox/video-<name>/`: transcript and anchors. | none |
+| `video-digest` | Full or deep digest of a video page. | yes |
+| `scrap-mail` | Parse an `.mbox` or `.eml` export, or fetch by IMAP. | none |
+| `scrap-gdrive` | Pull a mounted Google Drive folder to `raw/inbox/`. | none |
+| `resolve` | Look up an existing raw or wiki entry. `--json`. | none |
+| `catalog` | Inbox file to `raw/<format>/`, plus membership. `--collection`, `--format`, `--title`, `--year`. | none |
+| `drain-inbox` | Catalog all inbox files. | none |
+| `easy-digest` | Abstract skim. `--into`, `--no-tick`, `--no-lint`, `--fill`, `--backend`, `--model`. | light |
+| `easy-spotcheck` | About 5% of easy digests re-read by a stronger model. | none here |
+| `full-digest` | Standard note. `--part`, `--pages`, `--section`, `--whole-book`, `--row`. | medium |
+| `digest-many` | Fill claims for many sources, then full-digest each. | yes |
+| `deep-digest` | Heavy digest. `--confirm-heavy` and the `full-digest` options. | heavy |
+| `backfill-authors` | Fill author lists from arXiv. | none |
+| `refetch-raw` | Replace paper PDFs stamped with another arXiv id than their page cites. | none |
+| `toc` | A book's page partition and outline. | none |
+| `begin`, `extract`, `map`, `draft`, `finalize`, `abort` | The steps of an ingest session. | none |
+| `status` | List sessions. | none |
+| `backlog` | List shallow paper digests. | none |
+| `index-researcher` | Index a researcher's bibliography and catalog star papers. | none |
+
+## digest
+
+```
+distill digest easy           abstract skim (light LLM)
+distill digest full           standard paper note (medium LLM)
+distill digest deep           thesis-critical digest (heavy LLM)
+distill digest many           batch-fill claims for many sources, then full-digest them one by one (LLM)
+distill digest instructions   the digest focus of the selected kb
+```
+
+`easy`, `full`, `deep` and `many` run the `ingest` subcommands `easy-digest`, `full-digest`, `deep-digest` and `digest-many`. See [Digest tiers](../concepts/digest-tiers.md).
+
+## send
+
+```
+usage: distill send [-h] --to TO [--summarize] [--backend {subscription,api,batch}] [--think THINK] [--no-commit] [--no-push] note
+
+  note                  think note: name, name.md, sub/name.md or think:name.md
+  --to TO               comma-separated kb ids or paths, e.g. a,b
+  --summarize           write the page summary with an LLM (default: first paragraph)
+  --backend             LLM backend for --summarize (default: $KB_LLM_BACKEND, then subscription)
+  --think THINK         think folder (default: <kbs dir>/think)
+  --no-commit           write the pages but do not commit them in the kbs
+  --no-push             commit but do not push
+```
+
+## lint
+
+`distill lint [--kb ID] [--health]` checks every page, regenerates `index.md` and `meta/corpus.tsv`, and prints the page count and error count. `--health` adds a summary. Other options are in `src/kb_distillery/lint/lint.py`. The command does not forward `--help`.
+
+## llm
+
+```
+usage: kb_distillery.llm [-h] {ask,submit,status,collect} ...
+
+ask [--backend {subscription,api,batch}] [--model MODEL] [--system SYSTEM] [--max-tokens N] [--effort EFFORT] prompt
+submit file
+status id
+collect [--poll POLL] [--wait WAIT] id        --wait: seconds to wait for the batch to end (0: check once)
+```
+
+## share
+
+```
+usage: share [-h] {version,build,versions,deploy-main,status,rollback,config,audit,snapshot,list,history,remove,prune} ...
+```
+
+| Subcommand | Does |
+|---|---|
+| `version` | Describe the tool and list loaded modules. |
+| `build <ref>` | Build the React app with the wiki data of a git ref baked in. `--profile`, `--scope`, `--hops`, `--predicate`, `--view`, `--open`, `--app`. |
+| `versions` | List knowledge versions on `main` and their tags. |
+| `deploy-main` | Build `main` and deploy it to the private Worker. `--dry-run`, `--force`, `--dir`. |
+| `status` | Last deploy outcome. |
+| `rollback` | Previous version of the site, or of a snapshot. |
+| `config` | Show or store `share.toml` values (Google client id, allow-list). |
+| `audit <ref>` | Build the public profile and scan it. No deploy. |
+| `snapshot <name> <ref>` | Publish a ref as a public snapshot. `--replace`, `--force`, `--allow-flags`, `--dry-run`, `--scope`, `--hops`, `--predicate`, `--view`, `--app`. |
+| `list` | Snapshots: version, behind-main, deployed, views, online. |
+| `history` | Uploaded versions of one snapshot. |
+| `remove` | Delete one snapshot. |
+| `prune` | List orphan snapshots. `--apply` deletes them. |
+
+See [Publishing](../concepts/publishing.md).
+
+## propose
+
+```
+usage: kb_distillery.graph.propose [-h] {submit,collect,review,repack,status,apply} ...
+```
+
+| Subcommand | Does |
+|---|---|
+| `submit --run RUN` | One relation request per subject page. `--backend`, `--model`, `--include-easy`, `--include-people`, `--limit`, `--kinds`, `--types`, `--keep-above`, `--max-usd`, `--dry-run`, `--retry`. |
+| `collect --run RUN` | Wait for the batches, check, write the proposals file. `--wait`. |
+| `review --run RUN` | Per-subject markdown digest. `--min-confidence`. |
+| `repack` | Rewrite the proposals file from a run's saved state. No model. |
+| `status` | State of runs. |
+| `apply --min-confidence X` | Write chosen proposals into pages. Dry run unless `--write`. `--run`, `--kinds`, `--subjects`, `--limit`. |
+
+See [Relations and proposals](../concepts/relations-and-proposals.md).
+
+## Tasks that have no `distill` command yet
+
+These run with `pixi run <task>` in a checkout: `daily-sync`, `hygiene`, `nightly-report`, `install-sync`, `export-kb`, `health`, `okf-check`, `parse`, `api-schema`, `test`. `pixi task list` shows all of them.
