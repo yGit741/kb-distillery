@@ -31,15 +31,15 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true     # a newer push to the same branch or PR replaces the running check
 jobs:
-  checks:
+  python:     # pytest (includes the privacy ratchet), skills lint, layer contract, kb lint
     runs-on: [self-hosted, macOS, ARM64]
     env:
-      KB_CI: "1"     # for every step: tests that build dashboard snapshots run lint too (test_digestion_data)
-      KB_PRIVACY_TERMS: ${{ secrets.KB_PRIVACY_TERMS }}     # the personal terms the privacy ratchet looks for (comma list); empty = token shapes only
+      KB_CI: "1"     # tests that build dashboard snapshots run lint too (test_digestion_data)
+      KB_PRIVACY_TERMS: ${{ secrets.KB_PRIVACY_TERMS }}     # personal terms the privacy ratchet looks for (comma list); empty = token shapes only
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0     # lifecycle data reads kb(...) history and kb-x.y.z tags
+          fetch-depth: 0
       - run: git show-ref -q refs/heads/main || git branch main origin/main   # a PR checkout has no local main
       - uses: prefix-dev/setup-pixi@v0.8.1
         with:
@@ -51,3 +51,46 @@ jobs:
       - run: pixi run lint-skills
       - run: pixi run lint-imports
       - run: pixi run lint
+      # ruff is not a pixi dependency yet, so there is no ruff step; it joins here once pixi.toml carries it.
+
+  web:     # flags codegen check, tsc, vitest, build:check, check-untracked-dist (all inside the web-check task)
+    runs-on: [self-hosted, macOS, ARM64]
+    env:
+      KB_CI: "1"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - run: git show-ref -q refs/heads/main || git branch main origin/main   # a PR checkout has no local main
+      - uses: prefix-dev/setup-pixi@v0.8.1
+        with:
+          pixi-version: v0.76.1
+          cache: false
+      - run: pixi run web-install
+      - run: pixi run web-check
+
+  wheel:     # builds the wheel, installs it into a clean venv, runs the installed CLI (tests/cli/test_install_wheel.py)
+    runs-on: [self-hosted, macOS, ARM64]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - run: git show-ref -q refs/heads/main || git branch main origin/main   # a PR checkout has no local main
+      - uses: prefix-dev/setup-pixi@v0.8.1
+        with:
+          pixi-version: v0.76.1
+          cache: false
+      - run: pixi run test-wheel
+
+  worker:     # Cloudflare worker node tests
+    runs-on: [self-hosted, macOS, ARM64]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - run: git show-ref -q refs/heads/main || git branch main origin/main   # a PR checkout has no local main
+      - uses: prefix-dev/setup-pixi@v0.8.1
+        with:
+          pixi-version: v0.76.1
+          cache: false
+      - run: pixi run test-worker
