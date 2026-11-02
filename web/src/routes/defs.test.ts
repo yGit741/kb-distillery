@@ -12,6 +12,18 @@ describe("route defs consult flags", () => {
   });
 });
 
+describe("the ported legacy pages", () => {
+  it("Start and Covector are always-on routes (no flag), reached from the palette rather than the top bar", () => {
+    for (const [id, path] of [["start", "/start"], ["covector", "/covector"]] as const) {
+      const d = ROUTE_DEFS.find((r) => r.id === id);
+      expect(d, id).toBeDefined();
+      expect(d!.path).toBe(path);
+      expect(d!.flag).toBeUndefined();
+      expect(d!.nav).toBeUndefined();
+    }
+  });
+});
+
 /** Flag test matrix (kb_distillery.flags.coverage): each screen flag on and off. */
 describe("screen flags gate their route", () => {
   const ids = () => routeDefsNow().map((d) => d.id);

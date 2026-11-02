@@ -211,7 +211,13 @@ export interface OpsLike {
   nightly?: { summary?: string; hint?: string | null };
 }
 export interface HealthLike {
+  generated_at?: string;
   inbox_count?: number;
+  compression_pct?: number;
+  wiki_pages?: number;
+  raw_files?: number;
+  /** Chart series of the health page: in_degree, lint_phases_ms, coherence_by_kind, lint_by_category. */
+  graphs?: Record<string, Record<string, unknown>>;
   values?: Record<string, number | string>;
   statuses?: Record<string, string>;
 }

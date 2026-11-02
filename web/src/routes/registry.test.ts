@@ -15,4 +15,11 @@ describe("route registry parity", () => {
     expect(new Set(ROUTES.map((r) => r.id)).size).toBe(ROUTES.length);
     expect(new Set(ROUTES.map((r) => r.path)).size).toBe(ROUTES.length);
   });
+  it("Start and Covector are ported screens", () => {
+    for (const id of ["start", "covector"]) {
+      const r = ROUTES.find((x) => x.id === id);
+      expect(r?.ported, id).toBe(true);
+      expect(r?.Screen, id).toBeTypeOf("function");
+    }
+  });
 });
