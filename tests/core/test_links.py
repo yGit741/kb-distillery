@@ -69,5 +69,25 @@ def test_protected_regions_are_not_prose():
     assert links.leftover_wikilinks(body) == ["[[ok]]"]
 
 
-def test_readers_follow_both_forms():
-    assert graph.outbound_links("[[a]] and [b](b.md)") == {"a", "b"}
+def test_a_wikilink_inside_a_markdown_links_text_is_left_alone():
+    rs = links.Resolver({"a"}, {"a": "A"})
+    text = "see [about [[a]] here](https://example.org/x) and [[a]]"
+    assert links.convert(text, rs) == "see [about [[a]] here](https://example.org/x) and [A](a.md)"
+
+
+def test_every_reader_follows_both_forms():
+    """The one shared reading of links (links.targets): graph, health, lint, hubs, scopes and the relations block all see
+    a wikilink (My notes) and a page link alike, so no edge is lost across the switch."""
+    from kb_distillery.core import health, hubs, scopes
+    both = "see [[a]] and [B](b.md#h)"
+    assert graph.outbound_links(both) == {"a", "b"}
+    pages = {"a": ("wiki/a.md", {}, ""), "b": ("wiki/b.md", {}, ""), "c": ("wiki/c.md", {}, both)}
+    assert health.compute_in_degree(pages) == {"a": 1, "b": 1, "c": 0}
+    from kb_distillery.lint import lint
+    assert lint.page_links.targets("## Papers\n- [[a]]\n- [B](b.md)") == ["a", "b"]
+    row = "| 1 | T | `raw/x.pdf` | full | {} |"
+    assert hubs.parse_contents("## Contents\n\n| # | Item | Raw | Status | Note |\n|--|--|--|--|--|\n" + row.format("[[a]]"))[0]["slug"] == "a"
+    assert hubs.parse_contents("## Contents\n\n| # | Item | Raw | Status | Note |\n|--|--|--|--|--|\n" + row.format("[B](b.md)"))[0]["slug"] == "b"
+    assert scopes.why_links("## Why\n\nBecause [[a]] and [B](b.md).\n\n## Members\n") == ["a", "b"]
+    from kb_distillery.graph import relations
+    assert [r["to"] for r in relations.parse_relations("---\nrelations:\n  - to: \"[[a]]\"\n    kind: uses\n  - to: b.md\n    kind: uses\n---\n")] == ["a", "b"]

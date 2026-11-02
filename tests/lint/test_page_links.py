@@ -1,5 +1,8 @@
 """lint.check_links: pages link with [Title](slug.md); a wikilink is only legal in ## My notes; a link must resolve."""
+import os
+import tempfile
 import unittest
+from unittest import mock
 
 from kb_distillery.lint import lint
 
@@ -54,6 +57,21 @@ class PageLinks(unittest.TestCase):
         errs, _w, _b = run({"a": "# A\n\n[B](wiki/b.md) [B](./b.md)\n", "b": "# B\n"})
         self.assertEqual(len(errs), 2)
         self.assertTrue(all("path-prefixed" in e for e in errs))
+
+    def test_an_excalidraw_drawing_is_not_a_page(self):
+        """A drawing's `[[x]]` text element is the plugin's, not a page link: the page loaders never read it."""
+        with tempfile.TemporaryDirectory() as root:
+            os.makedirs(os.path.join(root, "wiki", "excalidraw"))
+            with open(os.path.join(root, "wiki", "a.md"), "w", encoding="utf-8") as f:
+                f.write(FM + "# A\n")
+            with open(os.path.join(root, "wiki", "excalidraw", "d.excalidraw.md"), "w", encoding="utf-8") as f:
+                f.write("---\ntype: excalidraw\n---\n## Text Elements\n[[a]] ^id1\n")
+            with mock.patch.object(lint, "ROOT", root):
+                pages = lint.load_wiki_pages()
+            self.assertEqual(list(pages), ["a"])
+            lint.errors, lint.warnings = [], []
+            lint.check_links(pages)
+            self.assertEqual(lint.errors, [])
 
     def test_urls_and_raw_images_are_left_alone(self):
         self.assertEqual(run({"a": "# A\n\n[x](https://example.org/a.md) ![i](../raw/img/p.png)\n"}), ([], [], 0))

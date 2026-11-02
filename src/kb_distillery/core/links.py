@@ -143,16 +143,23 @@ def protected_spans(body: str) -> list[tuple[int, int]]:
     """Sorted, merged (start, end) of the regions of `body` that are not prose: `## My notes`, fenced and inline
     code, math, HTML comments (the reader drops them). A `[[x]]` there is not a link (the reader never renders one)."""
     spans = notes_spans(body)
-    # code and math are looked for outside My notes only, so a stray backtick there cannot swallow prose
     spans += [m.span() for m in _PROTECTED.finditer(body)]
-    spans.sort()
+    return _merge(spans)
+
+
+def _merge(spans):
     merged: list[list[int]] = []
-    for a, b in spans:
+    for a, b in sorted(spans):
         if merged and a <= merged[-1][1]:
             merged[-1][1] = max(merged[-1][1], b)
         else:
             merged.append([a, b])
     return [(a, b) for a, b in merged]
+
+
+# `[see [[x]]](https://…)`: a wikilink inside the text of a markdown link. The reader never makes it a link (it does
+# not rewrite inside links) and a page link inside a link would nest, so convert() leaves the whole link alone.
+_NESTED = re.compile(r"(?<!!)\[(?:[^\[\]\n]|\[\[[^\]\n]*\]\])*\[\[[^\]\n]*\]\](?:[^\[\]\n]|\[\[[^\]\n]*\]\])*\]\([^)\s]*\)")
 
 
 def prose(body: str) -> str:
@@ -239,7 +246,8 @@ def convert(body: str, rs: Resolver, report=None) -> str:
     math are copied byte for byte."""
     report = report if report is not None else new_report()
     out, last = [], 0
-    for a, b in protected_spans(body) + [(len(body), len(body))]:
+    spans = _merge(protected_spans(body) + [m.span() for m in _NESTED.finditer(body)])
+    for a, b in spans + [(len(body), len(body))]:
         seg = body[last:a]
         out.append(WIKILINK_ANY.sub(lambda m: _convert_one(m, rs, report), seg))
         out.append(body[a:b])
