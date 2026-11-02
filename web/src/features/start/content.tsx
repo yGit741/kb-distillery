@@ -11,7 +11,9 @@ const CHIP_VARIANT = { kb: "primary", snap: "outline", schema: "warn", pr: "ok",
 
 /** A commit-type chip, coloured like the History timeline: knowledge blue, schema amber, PR merges green. */
 export const Chip = ({ kind, children }: { kind: ChipKind; children: ReactNode }) => (
-  <Badge variant={CHIP_VARIANT[kind]}>{children}</Badge>
+  <Badge variant={CHIP_VARIANT[kind]} className={kind === "kb" ? "bg-primary/6" : undefined}>
+    {children}
+  </Badge>
 );
 
 /** The Lifecycle screen is flag-gated (screen.lifecycle): where it does not exist, the name is plain text. */

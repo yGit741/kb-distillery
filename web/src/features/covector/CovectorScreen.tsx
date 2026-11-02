@@ -121,7 +121,7 @@ export function CovectorScreen() {
                         step={0.1}
                         value={inputs[key]}
                         onChange={(e) => setInputs((p) => ({ ...p, [key]: parseFloat(e.target.value) }))}
-                        className="w-full accent-primary"
+                        className="h-6 w-full accent-primary"
                       />
                     </div>
                   ))}
