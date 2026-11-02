@@ -49,8 +49,8 @@ A short post about posets.
 def vault(tmp_path):
     for fmt in ("printed-docs", "llm-chats", "web-clips", "emails/t1"):
         (tmp_path / "raw" / fmt).mkdir(parents=True)
-    import fitz
-    doc = fitz.open()
+    from tests import pdfkit
+    doc = pdfkit.Doc()
     for _ in range(3):
         doc.new_page().insert_text((72, 72), "Why are sensitive functions hard?")
     doc.save(tmp_path / "raw" / "printed-docs" / "2024-x.pdf")
@@ -128,9 +128,9 @@ def test_blockquote_original_line_is_stripped(vault):
 
 
 def test_public_handwritten_and_images_get_facts_only(vault):
-    import fitz
+    from tests import pdfkit
     (vault / "raw" / "handwritten").mkdir()
-    doc = fitz.open()
+    doc = pdfkit.Doc()
     doc.new_page().insert_text((72, 72), "my notes")
     doc.save(vault / "raw" / "handwritten" / "n.pdf")
     rel = "raw/handwritten/n.pdf"

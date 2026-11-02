@@ -65,13 +65,8 @@ def stratify(types: dict, n: int = 100, seed: int = 7, build: int = 60) -> dict:
 
 def sample(pdf: str, n: int = 100, seed: int = 7, build: int = 60) -> dict:
     """Classify every page of `pdf` from its text layer, then stratify."""
-    import fitz
     from . import layer as L
-    doc = fitz.open(pdf)
-    try:
-        types = {p.number + 1: page_type(L.read_page(p)) for p in doc}
-    finally:
-        doc.close()
+    types = {lay.page: page_type(lay) for lay in L.iter_pdf(pdf)}
     res = stratify(types, n, seed, build)
     res["types"] = {t: sum(1 for v in types.values() if v == t) for t in sorted(set(types.values()))}
     return res

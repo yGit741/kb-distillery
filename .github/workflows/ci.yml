@@ -49,6 +49,7 @@ jobs:
       - name: Privacy ratchet (no personal strings or token shapes in new files; also part of the suite above)
         run: pixi run pytest tests/lint/test_privacy_ratchet.py
       - run: pixi run lint-skills
+      - run: pixi run licenses     # fails on a GPL / LGPL / AGPL package (PyMuPDF was one); allowlist in lint/licenses.py
       - run: pixi run lint-imports
       - run: pixi run lint
       # ruff is not a pixi dependency yet, so there is no ruff step; it joins here once pixi.toml carries it.

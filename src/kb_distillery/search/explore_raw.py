@@ -228,8 +228,8 @@ def _page_count(path):
     if not path.lower().endswith(".pdf") or not os.path.isfile(full):
         return None
     try:
-        import fitz
-        with fitz.open(full) as d:
+        from kb_distillery.storage.pdf import PdfDoc
+        with PdfDoc(full) as d:
             return d.page_count
     except Exception:
         return None

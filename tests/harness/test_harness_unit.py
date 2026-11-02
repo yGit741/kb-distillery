@@ -100,9 +100,9 @@ class FixtureVaultTest(unittest.TestCase):
         d = Path(tempfile.mkdtemp(prefix="kb-unit-in-"))
         made = fixture_vault.build_inputs(d)
         self.assertEqual(set(made), set(fixture_vault.CASES))
-        import fitz
-        self.assertGreaterEqual(fitz.open(made["collection-book"]).page_count, 60)
-        self.assertGreater(len(fitz.open(made["source-paper-local"])[0].get_text()), 200)
+        from kb_distillery.storage.pdf import PdfDoc
+        self.assertGreaterEqual(PdfDoc(made["collection-book"]).page_count, 60)
+        self.assertGreater(len(PdfDoc(made["source-paper-local"]).page_text(0)), 200)
 
 
 if __name__ == "__main__":

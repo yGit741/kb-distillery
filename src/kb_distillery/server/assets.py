@@ -14,12 +14,9 @@ def thumbnail_png(full, width=THUMB_WIDTH):
     key = (full, os.path.getmtime(full), width)
     if key not in _thumbs:
         try:
-            import fitz  # pymupdf
-            doc = fitz.open(full)
-            page = doc[0]
-            zoom = width / max(page.rect.width, 1)
-            _thumbs[key] = page.get_pixmap(matrix=fitz.Matrix(zoom, zoom)).tobytes("png")
-            doc.close()
+            from kb_distillery.storage import pdf     # lazy: pypdfium2 is imported on first use
+            with pdf.PdfDoc(full) as doc:
+                _thumbs[key] = doc.render_png(0, width)
         except Exception:
             _thumbs[key] = None
     return _thumbs[key]

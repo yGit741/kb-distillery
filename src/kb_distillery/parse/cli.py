@@ -25,8 +25,8 @@ def _engine(name: str):
 
 
 def _page_count(pdf: str) -> int:
-    import fitz
-    with fitz.open(pdf) as d:
+    from kb_distillery.storage.pdf import PdfDoc
+    with PdfDoc(pdf) as d:
         return d.page_count
 
 

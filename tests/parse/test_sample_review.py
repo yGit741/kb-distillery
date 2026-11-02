@@ -1,6 +1,6 @@
 """Verifier checks that came out of reviewing 100 real MinerU pages (stray bars, accents the font draws on the base's
-own line, spaced letters inside math, tags that are really inequalities, ...). Each test builds a small PDF with fitz."""
-import fitz
+own line, spaced letters inside math, tags that are really inequalities, ...). Each test builds a small PDF with tests.pdfkit."""
+from tests import pdfkit
 import pytest
 
 from kb_distillery.parse import layer, reconcile
@@ -9,7 +9,7 @@ from . import pdfs
 
 
 def one_page(draw):
-    doc = fitz.open()
+    doc = pdfkit.Doc()
     pg = doc.new_page()
     pdfs.frame(pg, 1)
     draw(pg)

@@ -3,7 +3,7 @@
 A book is any PDF long enough that a 25-page skim from the front is meaningless. Digesting one
 is always scoped: the CLI prints the TOC and refuses to guess which part you meant.
 
-Section ranges are 1-based inclusive page numbers as printed by `toc`, matching what PyMuPDF's
+Section ranges are 1-based inclusive page numbers as printed by `toc`, matching what the PDF
 outline reports (physical PDF pages, which for a typeset book run ahead of the printed folios).
 """
 import glob
@@ -14,6 +14,7 @@ import sys
 
 from kb_distillery.ingest.paths import ROOT
 from kb_distillery.config.paths import meta_file
+from kb_distillery.storage import pdf as pdflib
 from kb_distillery.vault import frontmatter, wikiio
 from kb_distillery.lint.lint import parse_frontmatter
 from kb_distillery.vault.schema import PARTITION_COLLECTIONS, RAW_HANDWRITTEN, SLUG_PREFIX, is_page_file, make_slug, strip_prefix
@@ -44,20 +45,19 @@ def verify_for_scope(raw_rel):
     return s
 
 
-def _fitz():
-    try:
-        import fitz  # pymupdf
-        return fitz
-    except ImportError:
-        print("pymupdf not installed — run: pixi install", file=sys.stderr)
-        return None
+def _pdf():
+    """The PDF reader, or None (with a hint on stderr) when the library is not installed."""
+    if pdflib.available():
+        return pdflib
+    print(pdflib.MISSING_MSG, file=sys.stderr)
+    return None
 
 
 def page_count(raw_path):
-    fitz = _fitz()
-    if not fitz or not os.path.isfile(raw_path) or not raw_path.lower().endswith(".pdf"):
+    reader = _pdf()
+    if not reader or not os.path.isfile(raw_path) or not raw_path.lower().endswith(".pdf"):
         return 0
-    doc = fitz.open(raw_path)
+    doc = reader.PdfDoc(raw_path)
     n = doc.page_count
     doc.close()
     return n
@@ -93,7 +93,7 @@ def _finish(entries, total):
 
 
 def _from_outline(doc):
-    raw = doc.get_toc() or []
+    raw = doc.toc()
     entries = [{"level": lvl, "title": " ".join(str(t).split()), "start": max(1, int(p))}
                for lvl, t, p in raw if p and int(p) > 0]
     return _finish(entries, doc.page_count)
@@ -103,7 +103,7 @@ def _from_text(doc):
     """Fallback for PDFs with no embedded outline: parse a printed contents page."""
     entries = []
     for i in range(min(TOC_SCAN_PAGES, doc.page_count)):
-        for line in (doc.load_page(i).get_text() or "").splitlines():
+        for line in doc.page_text(i).splitlines():
             m = TOC_LINE_RE.match(line)
             if not m:
                 continue
@@ -125,10 +125,10 @@ def _from_text(doc):
 
 def read_toc(raw_path):
     """Return (entries, page_count, source) where source is 'outline', 'text' or 'none'."""
-    fitz = _fitz()
-    if not fitz or not os.path.isfile(raw_path) or not raw_path.lower().endswith(".pdf"):
+    reader = _pdf()
+    if not reader or not os.path.isfile(raw_path) or not raw_path.lower().endswith(".pdf"):
         return [], 0, "none"
-    doc = fitz.open(raw_path)
+    doc = reader.PdfDoc(raw_path)
     total = doc.page_count
     entries = _from_outline(doc)
     source = "outline"
@@ -145,16 +145,16 @@ _PAPER_NOTICED = set()
 def looks_like_paper(raw_path):
     """A long PDF that is really a paper with appendices: no chapter-like top-level outline
     entries and an abstract on the first page."""
-    fitz = _fitz()
-    if not fitz or not os.path.isfile(raw_path):
+    reader = _pdf()
+    if not reader or not os.path.isfile(raw_path):
         return False
     try:
-        doc = fitz.open(raw_path)
+        doc = reader.PdfDoc(raw_path)
         try:
-            for lvl, title, _p in (doc.get_toc() or []):
+            for lvl, title, _p in doc.toc():
                 if lvl == 1 and CHAPTER_RE.match(str(title)):
                     return False
-            first = (doc.load_page(0).get_text() or "") if doc.page_count else ""
+            first = doc.page_text(0) if doc.page_count else ""
         finally:
             doc.close()
     except Exception:
@@ -450,11 +450,11 @@ def part_slug(book, label):
 
 
 def pdf_title(raw_path):
-    fitz = _fitz()
-    if not fitz or not os.path.isfile(raw_path):
+    reader = _pdf()
+    if not reader or not os.path.isfile(raw_path):
         return ""
-    doc = fitz.open(raw_path)
-    title = (doc.metadata or {}).get("title") or ""
+    doc = reader.PdfDoc(raw_path)
+    title = doc.title
     doc.close()
     return " ".join(title.split())
 

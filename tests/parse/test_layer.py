@@ -1,4 +1,4 @@
-import fitz
+from tests import pdfkit
 
 from kb_distillery.parse import layer
 from kb_distillery.parse.layer import Glyph, font_class, glyph_latex
@@ -46,7 +46,7 @@ def test_page_layer_words_margin_figures_rules():
 
 
 def test_nul_in_pdf_text_never_reaches_the_layer():
-    doc = fitz.open()
+    doc = pdfkit.Doc()
     pg = doc.new_page()
     pg.insert_text((72, 100), "clean text", fontsize=10)
     layers = layer.read_pdf(doc.tobytes())

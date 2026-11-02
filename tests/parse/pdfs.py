@@ -1,7 +1,7 @@
-"""Small PDFs built with fitz for the verifier tests. Every page has a running head, a page number, prose, inline math
+"""Small PDFs built with tests.pdfkit for the verifier tests. Every page has a running head, a page number, prose, inline math
 (letters, subscripts, accents drawn as separate raised glyphs, an overline as a ruled line), a theorem, a numbered
 display equation, a table and a captioned figure; `PAGES` pairs each with the Markdown a good parser would write."""
-import fitz
+from tests import pdfkit
 
 H, M, S = "helv", "heit", 10          # prose font, math (italic) font, size
 
@@ -9,7 +9,7 @@ H, M, S = "helv", "heit", 10          # prose font, math (italic) font, size
 def put(page, x, y, text, size=S, font=H):
     """Write text at (x, y) on the baseline; return the x after it."""
     page.insert_text((x, y), text, fontsize=size, fontname=font)
-    return x + fitz.get_text_length(text, fontname=font, fontsize=size)
+    return x + pdfkit.text_length(text, font, size)
 
 
 def line(page, x, y, parts):
@@ -85,16 +85,10 @@ def page2(doc):
                        ("t", " is finite, since the series converges.")])
     line(pg, 72, 124, [("t", "Proof. Observe that "), ("a", "·", "u"), ("t", " grows slowly; hence the sum of the"),])
     line(pg, 72, 138, [("t", "decomposition coefficients stays below 40 in every case.")])
-    pg.insert_image(fitz.Rect(100, 170, 220, 250), pixmap=_pix())
+    pg.insert_image((100, 170, 220, 250), color=(200, 60, 60))
     put(pg, 72, 270, "Figure 1. A sample curve")
     line(pg, 150, 310, [("m", "u"), ("t", " = "), ("m", "w"), ("s", "k"), ("t", "    (2.2)")])
     return pg
-
-
-def _pix():
-    pix = fitz.Pixmap(fitz.csRGB, fitz.IRect(0, 0, 40, 27), False)
-    pix.set_rect(pix.irect, (200, 60, 60))
-    return pix
 
 
 MD2 = """\
@@ -143,7 +137,7 @@ PAGES_MD = [MD1, MD2, MD3]
 
 
 def build(path=None):
-    doc = fitz.open()
+    doc = pdfkit.Doc()
     page1(doc)
     page2(doc)
     page3(doc)
