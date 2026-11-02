@@ -267,7 +267,7 @@ _STATUS_MAP = {"dismiss": "dismissed", "fixed": "fixed", "noted": "noted"}
 def _regenerate():
     """Recompute the manifest from the current wiki (what a lint run would write)."""
     try:
-        pages = vault_pages.load_wiki_pages(vault_root())
+        pages = vault_pages.load_wiki_pages(ROOT)
         hits = check_coherence(pages, rows={})
         return merge_warnings(hits)
     except Exception:
