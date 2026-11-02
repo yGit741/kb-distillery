@@ -98,9 +98,6 @@ ignore_imports = [
     "kb_distillery.search.cypher -> kb_distillery.services.cypher",
     # cycle: graph/propose.py <-> services: stays until the edges work lands (backlog card)
     "kb_distillery.graph.propose -> kb_distillery.services.cypher",
-    # cycle: lint <-> cli/api (lint_skills reads the CLI tree; lint.lint starts the API for its UI check)
-    "kb_distillery.lint.lint_skills -> kb_distillery.cli.tree",
-    "kb_distillery.lint.lint -> kb_distillery.api.__main__",
     # cycle: stages <-> publish (metrics, ops and hygiene call the export/publish helpers)
     "kb_distillery.metrics.d1 -> kb_distillery.publish",
     "kb_distillery.ops.nightly_report -> kb_distillery.publish",
