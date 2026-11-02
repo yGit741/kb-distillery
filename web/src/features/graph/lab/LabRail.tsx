@@ -1,6 +1,7 @@
 import { X } from "lucide-react";
 import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
+import { useFlag } from "@/flags/useFlag";
 import { cn } from "@/lib/utils";
 import { NodeSwatch } from "../encoding/NodeMarkSvg";
 import { CheckField, RangeField, SelectField } from "../controls";
@@ -10,7 +11,7 @@ import type { GNode } from "../types";
 import type { LabConfig } from "./config";
 import { useLabHud } from "./hud";
 import { TERM_WEIGHTS, type Importance } from "./importance";
-import { STORIES, storyById } from "./views";
+import { STORIES, storyById, storyOffered } from "./views";
 
 type Opt<T extends string> = readonly { id: T; label: string }[];
 type Knob =
@@ -270,6 +271,7 @@ function Hud() {
  */
 export function LabRail({ imp, selected, className }: { imp: Importance; selected: readonly GNode[]; className?: string }) {
   const ui = useGraphUi();
+  useFlag("research-tools"); // re-render when the flag lands: it decides which views are offered
   const cfg = ui.lab;
   const story = storyById(ui.story);
   return (
@@ -285,7 +287,7 @@ export function LabRail({ imp, selected, className }: { imp: Importance; selecte
           <SelectField
             label="Start from"
             value={ui.story}
-            options={[...STORIES.map((s) => ({ id: s.id, label: s.name })), { id: "", label: "Custom" }]}
+            options={[...STORIES.filter((s) => storyOffered(s) || s.id === ui.story).map((s) => ({ id: s.id, label: s.name })), { id: "", label: "Custom" }]}
             onChange={(id) => (id ? ui.applyStory(id) : ui.set({ story: "" }))}
           />
           {story && (

@@ -3,6 +3,7 @@ import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { DataSourceProvider, type DataSource } from "@/api";
+import { withFlag } from "@/flags/testing";
 import { useKb } from "@/lib/store";
 import { mockDataSource } from "@/test/datasource";
 import { node, sampleLinks, sampleNodes, sampleSnapshot } from "./fixtures";
@@ -148,12 +149,12 @@ describe("search", () => {
     const search = vi.fn(async () => ({
       hits: [],
       total: 0,
-      related: [{ id: "q-why-big-nets-work", title: "x", type: "question", score: 80, snippet: "Asks why overparameterized nets generalize." }],
+      related: [{ id: "q-why-big-nets-work", title: "x", type: "question", score: 80, snippet: "Asks why big nets generalize." }],
     }));
     render(wrap(withGraph({ search }), <GraphScreen search={{}} host={host} />));
     await userEvent.type(await screen.findByRole("combobox", { name: /search a page/i }), "why do big nets work");
     expect(await screen.findByText("Related ideas")).toBeInTheDocument();
-    expect(screen.getByText("Asks why overparameterized nets generalize.")).toBeInTheDocument();
+    expect(screen.getByText("Asks why big nets generalize.")).toBeInTheDocument();
     await userEvent.keyboard("{Enter}");
     expect(useGraphUi.getState().focusRequest?.id).toBe("q-why-big-nets-work");
   });
@@ -251,7 +252,9 @@ describe("selection, details, reader, menu", () => {
 });
 
 describe("views bar", () => {
-  it("?view=thesis applies the Thesis story and its seed view without writing the URL back", async () => {
+  const withResearch = (fn: () => Promise<void>) => () => withFlag("research-tools", true, fn);
+
+  it("?view=thesis applies the Thesis story and its seed view without writing the URL back", withResearch(async () => {
     vi.mocked(host.setParams).mockClear();
     // the fixture needs one page of the thesis spine for the seed view to have a hit
     const nodes = [...sampleNodes, node("theme-boolean-analysis", { inDegree: 2, outDegree: 1, areas: ["boolean-analysis"] })];
@@ -262,9 +265,9 @@ describe("views bar", () => {
     expect(useGraphUi.getState().view?.label).toBe("Thesis");
     expect(screen.getByRole("button", { name: "Thesis" })).toHaveAttribute("aria-pressed", "true");
     expect(host.setParams).not.toHaveBeenCalled();
-  });
+  }));
 
-  it("clicking the Thesis pill applies the story and puts view=thesis in the URL", async () => {
+  it("clicking the Thesis pill applies the story and puts view=thesis in the URL", withResearch(async () => {
     vi.mocked(host.setParams).mockClear();
     render(wrap(withGraph(), <GraphScreen search={{}} host={host} />));
     await screen.findByTestId("graph-stats");
@@ -272,5 +275,14 @@ describe("views bar", () => {
     await userEvent.click(screen.getByRole("button", { name: "Thesis" }));
     expect(useGraphUi.getState().story).toBe("thesis");
     expect(host.setParams).toHaveBeenCalledWith(expect.objectContaining({ view: "thesis" }));
+  }));
+
+  it("has no Thesis or Explore pill, and no research tool in the toolbar, while the research-tools flag is off", async () => {
+    await withFlag("research-tools", false, async () => {
+      render(wrap(withGraph(), <GraphScreen search={{}} host={host} />));
+      await screen.findByTestId("graph-stats");
+      expect(screen.getByRole("button", { name: "Map" })).toBeInTheDocument();
+      for (const name of ["Thesis", "Explore", "Experiments", "Research directions"]) expect(screen.queryByRole("button", { name })).toBeNull();
+    });
   });
 });

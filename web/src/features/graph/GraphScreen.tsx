@@ -15,7 +15,7 @@ import { HostContext, type ToolHost } from "./hostContext";
 import { useLayer } from "./layerStore";
 import "./tools/register";
 import { askAbout, useChatDock } from "./tools/chatDockStore";
-import "./kalai/register";
+import "./directions/register";
 import { extendView, makeView, parsePages, scopeIds, type GraphView } from "./pageSearch";
 import { buildNeighborMap } from "./graphData";
 import { GraphCanvas, type CanvasHandle } from "./GraphCanvas";

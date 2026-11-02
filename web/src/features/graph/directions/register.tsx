@@ -7,8 +7,9 @@ import { NoisePanel } from "./NoisePanel";
 import { ThresholdPanel } from "./ThresholdPanel";
 
 /**
- * The Kalai toolkit: three analyses of the vault graph, each behind its own experiment flag. The
- * Experiments panel (always in the toolbar) is where they are switched on; see ./README.md.
+ * The directions toolkit: four analyses of the vault graph behind the feature flag `research-tools` (off by
+ * default), each also behind its own experiment switch. The Experiments panel is where they are switched
+ * on; see ./README.md.
  */
 registerExperiment({
   id: "fourier",
@@ -34,6 +35,8 @@ registerExperiment({
   story: "When I choose my thesis topic, I want the empty intersections of my vault as cards, each with what already sits there and my closest questions and ideas, so that I can shortlist directions with evidence rather than gut feeling.",
   read: "Strong foothold = my own questions already reach every side; greenfield = new ground, cold start. 'Show on graph' lights the card's pages.",
 });
+
+const RESEARCH_TOOLS = "research-tools" as const;
 
 function ExperimentsPanel() {
   const on = useExperiments((s) => s.on);
@@ -62,37 +65,42 @@ registerTool({
   id: "experiments",
   label: "Experiments",
   icon: <FlaskConical aria-hidden />,
+  featureFlag: RESEARCH_TOOLS,
   panel: () => <ExperimentsPanel />,
 });
 
 registerTool({
-  id: "kalai-fourier",
+  id: "directions-fourier",
   label: "Theme spectrum",
   icon: <Sigma aria-hidden />,
   flag: "fourier",
+  featureFlag: RESEARCH_TOOLS,
   panel: (ctx) => <FourierPanel ctx={ctx} />,
 });
 
 registerTool({
-  id: "kalai-noise",
+  id: "directions-noise",
   label: "Noise stability",
   icon: <Waves aria-hidden />,
   flag: "noise",
+  featureFlag: RESEARCH_TOOLS,
   panel: (ctx) => <NoisePanel ctx={ctx} />,
 });
 
 registerTool({
-  id: "kalai-threshold",
+  id: "directions-threshold",
   label: "Sharp thresholds",
   icon: <Activity aria-hidden />,
   flag: "threshold",
+  featureFlag: RESEARCH_TOOLS,
   panel: (ctx) => <ThresholdPanel ctx={ctx} />,
 });
 
 registerTool({
-  id: "kalai-directions",
+  id: "research-directions",
   label: "Research directions",
   icon: <Compass aria-hidden />,
   flag: "directions",
+  featureFlag: RESEARCH_TOOLS,
   panel: (ctx) => <DirectionsPanel ctx={ctx} />,
 });

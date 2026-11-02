@@ -3,7 +3,7 @@ import { pageGraph, rng, themesOf, UnionFind } from "./core";
 import { pageThemes } from "./fourier";
 
 /**
- * Sharp thresholds (Friedgut–Kalai): keep each link with probability p and watch a monotone property
+ * Sharp thresholds (Friedgut): keep each link with probability p and watch a monotone property
  * switch on. "Some page of A touches some page of B" is useless here (it holds at p ~ 0.03 for every
  * pair), so the property is *integration*: one connected piece holds at least `share` of theme A's pages
  * and `share` of theme B's (for A = B: the theme is *cohesive*).

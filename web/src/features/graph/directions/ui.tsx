@@ -18,13 +18,13 @@ interface CacheState {
   put: (slot: string, c: Cached<unknown>) => void;
 }
 
-export const useKalaiCache = create<CacheState>((set) => ({
+export const useDirectionsCache = create<CacheState>((set) => ({
   slots: {},
   put: (slot, c) => set((s) => ({ slots: { ...s.slots, [slot]: c } })),
 }));
 
 export function useCached<T>(slot: string, model: GraphModel, key: string): T | null {
-  const c = useKalaiCache((s) => s.slots[slot]);
+  const c = useDirectionsCache((s) => s.slots[slot]);
   return c && c.model === model && c.key === key ? (c.value as T) : null;
 }
 

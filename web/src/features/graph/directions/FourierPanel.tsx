@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { CheckField, SelectField } from "../controls";
 import type { GraphToolContext } from "../tools";
 import { notablePairs, spectrum, type AttentionTarget, type PairStat, type Spectrum } from "./fourier";
-import { num, pct, Section, shortTheme, Story, ThemeChip, useCached, useKalaiCache } from "./ui";
+import { num, pct, Section, shortTheme, Story, ThemeChip, useCached, useDirectionsCache } from "./ui";
 
 /** Diverging cell colour: primary for "together more than chance", destructive for "less", neutral at 0. */
 function cellColor(coef: number, max: number): string {
@@ -78,7 +78,7 @@ export function FourierPanel({ ctx }: { ctx: GraphToolContext }) {
   const s = useCached<Spectrum>("fourier", ctx.model, key);
   useEffect(() => {
     if (s) return;
-    const t = window.setTimeout(() => useKalaiCache.getState().put("fourier", { model: ctx.model, key, value: spectrum(ctx.model, { infer, target }) }), 0);
+    const t = window.setTimeout(() => useDirectionsCache.getState().put("fourier", { model: ctx.model, key, value: spectrum(ctx.model, { infer, target }) }), 0);
     return () => window.clearTimeout(t);
   }, [s, ctx.model, key, infer, target]);
 

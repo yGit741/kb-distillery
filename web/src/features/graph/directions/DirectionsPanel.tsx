@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import type { GraphToolContext } from "../tools";
 import { directions, type Direction, type DirectionPage } from "./directions";
 import { spectrum, type Spectrum } from "./fourier";
-import { num, Section, shortTheme, Story, ThemeChip, useCached, useKalaiCache } from "./ui";
+import { num, Section, shortTheme, Story, ThemeChip, useCached, useDirectionsCache } from "./ui";
 
 const FOOTHOLD: Record<Direction["foothold"], { label: string; hint: string }> = {
   strong: { label: "strong foothold", hint: "some of my questions or ideas already reach every side" },
@@ -77,7 +77,7 @@ export function DirectionsPanel({ ctx }: { ctx: GraphToolContext }) {
     if (list) return;
     const t = window.setTimeout(() => {
       const spec = s ?? spectrum(ctx.model);
-      useKalaiCache.getState().put("directions", { model: ctx.model, key: "default", value: directions(ctx.model, spec) });
+      useDirectionsCache.getState().put("directions", { model: ctx.model, key: "default", value: directions(ctx.model, spec) });
     }, 0);
     return () => window.clearTimeout(t);
   }, [list, s, ctx.model]);

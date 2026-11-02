@@ -3,9 +3,10 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
-import { spectrum, type Spectrum } from "../kalai/fourier";
-import { shortTheme, useCached, useKalaiCache } from "../kalai/ui";
-import { HEADLINE_STORIES, MORE_STORIES, storyById } from "../lab/views";
+import { spectrum, type Spectrum } from "../directions/fourier";
+import { shortTheme, useCached, useDirectionsCache } from "../directions/ui";
+import { useFlag } from "@/flags/useFlag";
+import { HEADLINE_STORIES, MORE_STORIES, storyById, storyOffered } from "../lab/views";
 import { useGraphUi } from "../store";
 import { useDecor, type Arc } from "../tools/decor";
 import type { GraphModel } from "../types";
@@ -54,6 +55,7 @@ const PILL = "rounded-full px-3 py-1 text-sm transition-colors";
  */
 export function ViewsBar({ model, visible, onPick }: Props) {
   const story = useGraphUi((s) => s.story);
+  useFlag("research-tools"); // re-render when the flag lands: it decides which views are offered
   const [more, setMore] = useState(false);
   const [info, setInfo] = useState(false);
   const [sigma, setSigma] = useState(false);
@@ -64,7 +66,7 @@ export function ViewsBar({ model, visible, onPick }: Props) {
   const cached = useCached<Spectrum>(SLOT, model, SPECTRUM_KEY);
   useEffect(() => {
     if (!isMap || !sigma || cached) return;
-    const t = window.setTimeout(() => useKalaiCache.getState().put(SLOT, { model, key: SPECTRUM_KEY, value: spectrum(model) }), 0);
+    const t = window.setTimeout(() => useDirectionsCache.getState().put(SLOT, { model, key: SPECTRUM_KEY, value: spectrum(model) }), 0);
     return () => window.clearTimeout(t);
   }, [isMap, sigma, cached, model]);
   const arcs = useMemo(() => (isMap && sigma && cached ? spectrumArcs(model, cached) : null), [isMap, sigma, cached, model]);
@@ -82,7 +84,7 @@ export function ViewsBar({ model, visible, onPick }: Props) {
 
   return (
     <div id={VIEWS_BAR_ID} data-tour="graph-views" className="pointer-events-auto absolute left-1/2 top-3 z-20 flex -translate-x-1/2 items-center gap-0.5 rounded-full border bg-card/95 p-0.5 shadow-[var(--shadow)]">
-      {HEADLINE_STORIES.map((s) => {
+      {HEADLINE_STORIES.filter(storyOffered).map((s) => {
         const on = story === s.id;
         return (
           <button
@@ -113,7 +115,7 @@ export function ViewsBar({ model, visible, onPick }: Props) {
         </button>
         {more && (
           <ul role="menu" aria-label="Other views" className="absolute left-0 top-full z-30 mt-1 w-56 rounded-lg border bg-popover p-1 text-sm shadow-[var(--shadow)]" onMouseDown={(e) => e.preventDefault()}>
-            {MORE_STORIES.map((s) => (
+            {MORE_STORIES.filter(storyOffered).map((s) => (
               <li key={s.id} role="none">
                 <button
                   type="button"

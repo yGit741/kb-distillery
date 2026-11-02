@@ -7,9 +7,9 @@ import type { GraphToolContext } from "../tools";
 import { useDecor } from "../tools/decor";
 import { influence, type Influence } from "./influence";
 import { heldAt, linkKey, thresholds, type PairThreshold, type ThresholdResult } from "./threshold";
-import { MiniChart, num, pct, Section, shortTheme, Story, ThemeChip, useCached, useDecorLifetime, useKalaiCache } from "./ui";
+import { MiniChart, num, pct, Section, shortTheme, Story, ThemeChip, useCached, useDecorLifetime, useDirectionsCache } from "./ui";
 
-const OWNER = "kalai-threshold";
+const OWNER = "directions-threshold";
 const GRID = Array.from({ length: 51 }, (_, i) => i / 50);
 
 /**
@@ -32,7 +32,7 @@ export function ThresholdPanel({ ctx }: { ctx: GraphToolContext }) {
     if (!r) return;
     setBusy(true);
     const value = await influence(ctx.model, r, { share: Number(share), weighted });
-    useKalaiCache.getState().put("influence", { model: ctx.model, key, value });
+    useDirectionsCache.getState().put("influence", { model: ctx.model, key, value });
     setBusy(false);
     setHaloBy("influence");
   };
@@ -40,7 +40,7 @@ export function ThresholdPanel({ ctx }: { ctx: GraphToolContext }) {
   useEffect(() => {
     if (r) return;
     const t = window.setTimeout(
-      () => useKalaiCache.getState().put("threshold", { model: ctx.model, key, value: thresholds(ctx.model, { share: Number(share), weighted }) }),
+      () => useDirectionsCache.getState().put("threshold", { model: ctx.model, key, value: thresholds(ctx.model, { share: Number(share), weighted }) }),
       0,
     );
     return () => window.clearTimeout(t);
