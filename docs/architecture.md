@@ -69,7 +69,7 @@ raw/inbox -> catalog -> raw/<format>/ + meta/corpus.tsv -> digest -> wiki/ -> li
 | `kits/` | The kits: `kit.toml`, defaults, skills, hooks. |
 | `migrations/` | Schema migrations, one file each. |
 | `web/` | The React app (Vite, TypeScript). |
-| `tests/` | pytest, mirroring the package; `tests/e2e/` holds the browser-free end-to-end tests. |
+| `tests/` | pytest, mirroring the package; `tests/e2e/` holds a browser test of the graph screen (`pixi run test-e2e`; it skips without Playwright). |
 | `examples/demo/` | The tracked sample knowledge base. |
 | `examples/launchd/` | Templates for the nightly job. |
 | `scripts/` | Launch script and git hooks. |

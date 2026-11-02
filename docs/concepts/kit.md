@@ -11,7 +11,7 @@ A kit is versioned and lives in the engine: `src/kb_distillery/kits/<name>/kit.t
 | `base` | none | A small general knowledge base. Source types `article`, `notes`, `document`. Concept types `topic`, `idea`, `question`, `person`. Collection type `series`. Relations `extends`, `uses`. |
 | `research` | `base` | Academic reading. Adds `paper`, `lecture`, `video`, `blog-post`, `mail`, `ai-chat`, `part`, and the collections `book`, `notebook`, `course`. Adds the relations `contradicts`, `example-of`, `open-problem-in`, `addresses`, `discusses`, `student-of`. |
 
-`examples/demo` uses `base` and adds its own types (`company`, `role`, `interview`, `skill`, `posting`). Read its `kb.toml` as a worked example of extension.
+`examples/demo` uses `base` and adds its own types, for example `company`, `role`, `interview` and `skill`. Read its `kb.toml` as a worked example of extension.
 
 ## What a kb may do
 

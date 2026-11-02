@@ -10,7 +10,7 @@
 [kb]
 id = "my-kb"
 name = "My KB"
-schema_version = "1.4"
+schema_version = "1.5"
 kit = "base"
 
 [git]

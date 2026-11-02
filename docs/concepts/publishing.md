@@ -42,7 +42,7 @@ Other `share` commands: `build`, `versions`, `deploy-main`, `status`, `rollback`
 
 ## Rules
 
-- With the Cloudflare publisher selected, a knowledge commit can start a deploy of the live site in the background. Set `KB_SHARE_AUTODEPLOY=0` to turn that off. A snapshot is always a command you run.
+- In an engine checkout, a knowledge commit can start a deploy of the live site in the background. Set `KB_SHARE_AUTODEPLOY=0` to turn that off; `distill launch` sets it to 0 for the app unless you set it. A snapshot is always a command you run.
 - The engine core never imports a publisher. It asks a registry.
 - `available()` and `status()` of a publisher read local state only.
 - An account id, API token and subdomain are yours. The token goes in `CLOUDFLARE_API_TOKEN`, never in a committed file.

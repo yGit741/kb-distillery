@@ -1,6 +1,6 @@
 # Run the nightly job
 
-The nightly job keeps the knowledge base's git history in order. It commits human edits to the think journal, commits labelled leftovers when no session is open, and pushes `main` with its tags. Each knowledge operation already commits itself, so the job is a backstop.
+The nightly job keeps the knowledge base's git history in order. It commits human edits under `think/` in the knowledge base, commits labelled leftovers when no session is open, and pushes `main` with its tags. Each knowledge operation already commits itself, so the job is a backstop.
 
 After the sync, it runs the hygiene checks and sends the nightly report when something is wrong.
 
