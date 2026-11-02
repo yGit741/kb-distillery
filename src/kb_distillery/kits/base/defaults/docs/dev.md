@@ -19,7 +19,7 @@ src/kb_distillery/      Python app, package `kb_distillery` (src layout; `backen
   src/kb_distillery/migrations/    schema migrations (code); the applied ledger stays in meta/migrations/applied.tsv
   src/kb_distillery/services/      former dashboard *_data modules (graph, pages, corpus, scopes, chat, pipeline, lifecycle, ops)
   src/kb_distillery/api/           FastAPI app (`pixi run app`): routers/ auto-discovered, models/, sse.py, security.py; README.md = add-a-router recipe
-  src/kb_distillery/prompts/  chat prompts
+  src/kb_distillery/llm/prompts/  chat prompts
   src/kb_distillery/publish/       publisher interface; site/ (build, snapshots, predicate, home, show, state); cloudflare/ (publisher, deploy, owner, ..., worker/ = the Cloudflare Worker (auth.js, admin.js, wrangler template) + its node tests)
 tests/                  pytest, mirrored by package (tests/harness = the pipeline harness)
 web/                    the React app (builds into src/kb_distillery/_webapp)

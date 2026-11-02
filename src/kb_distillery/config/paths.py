@@ -96,6 +96,6 @@ EXPORT_PATH = vpath(".exported")
 # --- code-side resources (package data, found through kb_distillery.config.resources) -------------------------
 SKILLS_PATH = str(resource("kits/base/skills"))     # the base kit's skills (every kit has its own kits/<kit>/skills)
 TOOLS_PATH = str(root_resource("scripts"))          # a checkout only: the wheel ships none of scripts/
-PROMPTS_PATH = str(resource("prompts"))
+PROMPTS_PATH = str(resource("llm/prompts"))
 MIGRATIONS_CODE_PATH = str(resource("migrations"))
 SHARE_WORKER_PATH = str(resource("publish/cloudflare/worker"))

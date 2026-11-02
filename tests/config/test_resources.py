@@ -63,7 +63,7 @@ def test_require_repo_root_names_the_problem_when_installed(tmp_path):
 
 
 def test_resource_is_relative_to_the_package_and_never_raises():
-    assert resources.resource("prompts").is_dir()
+    assert resources.resource("llm/prompts").is_dir()
     missing = resources.resource("no/such/thing")
     assert missing == resources.package_root() / "no" / "such" / "thing" and not missing.exists()
 
