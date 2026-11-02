@@ -16,7 +16,7 @@ from __future__ import annotations
 import importlib
 from importlib import metadata
 
-from kb_distillery import kbconfig
+from kb_distillery.config import kb as kbconfig
 
 from .base import Connector, StorageError
 

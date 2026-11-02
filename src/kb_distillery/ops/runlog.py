@@ -12,7 +12,7 @@ import re
 import sys
 import time
 
-from kb_distillery.paths import vault_root
+from kb_distillery.config.paths import vault_root
 META_DIR = os.path.join(vault_root(), "meta")
 
 from kb_distillery.vault.schema import OPS_DIR

@@ -17,7 +17,7 @@ from fastapi.testclient import TestClient
 
 from kb_distillery.api.app import create_app
 from kb_distillery.api.models.scopes import ScopeDetail, ScopeList, ScopeResolved, ScopeStep
-from kb_distillery.paths import meta_file, vault_root
+from kb_distillery.config.paths import meta_file, vault_root
 from kb_distillery.services import scopes as scopes_data
 from tests.vault.test_scopes import A, B, C, IMG, TEXTS
 

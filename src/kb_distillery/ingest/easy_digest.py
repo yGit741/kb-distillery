@@ -2,7 +2,7 @@
 kb_distillery.llm do it (Haiku; `--backend subscription|api|batch`, several targets → one run / one batch)."""
 import os
 
-from kb_distillery.paths import meta_file
+from kb_distillery.config.paths import meta_file
 import re
 import subprocess
 import sys

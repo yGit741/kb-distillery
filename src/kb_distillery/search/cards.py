@@ -9,7 +9,7 @@ summary or was deleted is removed. Unchanged cards keep their mtime, so qmd re-e
 import os
 import sys
 
-from kb_distillery import paths
+from kb_distillery.config import paths
 from kb_distillery.vault import frontmatter
 from kb_distillery.vault.summary import needs_summary, unquote
 from kb_distillery.vault.schema import is_page_file

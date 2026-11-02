@@ -444,7 +444,7 @@ def apply(root):
 
 
 if __name__ == "__main__":
-    from kb_distillery.paths import vault_root
+    from kb_distillery.config.paths import vault_root
     here = vault_root()
     res = plan(here)
     n_bad = write_report(here, res)

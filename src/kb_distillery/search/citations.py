@@ -18,7 +18,7 @@ from collections import Counter, deque
 from datetime import datetime, timezone
 
 from kb_distillery.config import userdir
-from kb_distillery.paths import vault_root
+from kb_distillery.config.paths import vault_root
 from kb_distillery.vault.schema import is_page_file
 HERE = os.path.join(vault_root(), "meta")
 ROOT = vault_root()

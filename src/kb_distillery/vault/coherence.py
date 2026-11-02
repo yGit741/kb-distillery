@@ -18,7 +18,7 @@ from kb_distillery.vault.graph import (  # noqa: E402
     tokenize,
 )
 
-from kb_distillery.paths import vault_root
+from kb_distillery.config.paths import vault_root
 from kb_distillery.vault.summary import unquote
 from kb_distillery.vault import links as page_links
 from kb_distillery.vault import pages as vault_pages

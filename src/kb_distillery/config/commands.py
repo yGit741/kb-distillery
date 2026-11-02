@@ -31,8 +31,8 @@ COMMANDS: dict[str, Cmd] = {
     "doctor": Cmd("check the environment and a kb, with a fix for each problem (--json)", target="kb_distillery.doctor",
                   forward_help=True, config_check=False),
     "kb": Cmd("knowledge bases", "group", sub={
-        "list": Cmd("every knowledge base and where it is", target="kb_distillery.kbconfig", fixed=("list",), config_check=False),
-        "show": Cmd("the selected knowledge base, resolved", target="kb_distillery.kbconfig", fixed=("show",), config_check=False),
+        "list": Cmd("every knowledge base and where it is", target="kb_distillery.config.kb", fixed=("list",), config_check=False),
+        "show": Cmd("the selected knowledge base, resolved", target="kb_distillery.config.kb", fixed=("show",), config_check=False),
     }),
     "launch": Cmd("restart the app detached and open it (outside a checkout: serve it in the foreground)", "launch",
                   "scripts/launch.sh"),

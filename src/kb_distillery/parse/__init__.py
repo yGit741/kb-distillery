@@ -9,7 +9,7 @@ FLAG = "parsed-pdf"
 
 def enabled() -> bool:
     """Effective value of the `parsed-pdf` flag (a test's forced state wins; otherwise the registry's local value)."""
-    from kb_distillery.flags import registry
+    from kb_distillery.config.flags import registry
     forced = registry.forced(FLAG)
     if forced is not None:
         return forced

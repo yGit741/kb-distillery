@@ -17,7 +17,7 @@ import zipfile
 from datetime import datetime, timezone
 
 from kb_distillery.vault.schema import is_page_file
-from kb_distillery.paths import THINK_PATH, think_path, vault_root
+from kb_distillery.config.paths import THINK_PATH, think_path, vault_root
 from kb_distillery.storage import for_kb
 from kb_distillery.config.kit import KB_DOCS
 ROOT = vault_root()
@@ -118,7 +118,7 @@ def _collect_files(include_raw_pdfs: bool) -> list[str]:
             files.append(rel)
 
     for top in TEXT_GLOBS:
-        # think is the shared space beside the vault (kb_distillery.paths.THINK_PATH); it is bundled as think/ all the same
+        # think is the shared space beside the vault (kb_distillery.config.paths.THINK_PATH); it is bundled as think/ all the same
         base = THINK_PATH if top == "think" else os.path.join(ROOT, top)
         if not os.path.isdir(base):
             continue

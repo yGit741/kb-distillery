@@ -15,7 +15,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, ValidationError, model_validator
 
-from kb_distillery.paths import META_DEFAULTS_PATH, ROOT, meta_file
+from kb_distillery.config.paths import META_DEFAULTS_PATH, ROOT, meta_file
 
 # The explorer's `src/kb_distillery/kits/base/defaults/flags.toml`, unless the knowledge base carries its own `meta/flags.toml`.
 FLAGS_TOML = Path(meta_file("flags.toml"))

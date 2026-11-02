@@ -21,7 +21,7 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Literal, Optional
 
-from kb_distillery.kbconfig import checkout_root
+from kb_distillery.config.kb import checkout_root
 
 REPO = Path(checkout_root() or Path.cwd())   # the checkout this tool runs from (never $KB_ROOT)
 

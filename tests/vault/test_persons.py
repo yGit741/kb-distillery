@@ -6,7 +6,7 @@ import sys
 import tempfile
 import unittest
 
-from kb_distillery.paths import CODE_DIR as HERE
+from kb_distillery.config.paths import CODE_DIR as HERE
 from kb_distillery.vault import persons
 
 V2 = """---

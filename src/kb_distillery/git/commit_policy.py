@@ -28,7 +28,7 @@ import subprocess
 import sys
 from dataclasses import dataclass, field
 
-from kb_distillery.paths import THINK_PATH, vault_root
+from kb_distillery.config.paths import THINK_PATH, vault_root
 META_DIR = os.path.join(vault_root(), "meta")
 ROOT = vault_root()
 from kb_distillery.vault.schema import GIT_POLICY_MODE, SCHEMA_VERSION, is_kb_tooling, lane_of

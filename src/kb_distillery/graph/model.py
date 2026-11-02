@@ -18,7 +18,7 @@ import re
 
 import networkx as nx
 
-from kb_distillery import kbconfig
+from kb_distillery.config import kb as kbconfig
 from kb_distillery.graph.relations import edge_label, kind_name
 
 MAX_ROWS = 500

@@ -1,6 +1,6 @@
 """A read-only view of any knowledge base the explorer can find, for showing several in one running app.
 
-The server still works on one knowledge base (`kb_distillery.paths.KB`): every write, ops session and lint run is on it.
+The server still works on one knowledge base (`kb_distillery.config.paths.KB`): every write, ops session and lint run is on it.
 Another knowledge base is only read — its pages, graph and types — so nothing can land in the wrong repo.
 `view(None)` and `view(<active id>)` are the active knowledge base; an unknown id is a `KeyError` (→ 404).
 Ids are looked up in `kbconfig.discover()`, never joined into a path. Another knowledge base is reachable only
@@ -10,7 +10,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from kb_distillery import kbconfig, paths
+from kb_distillery.config import kb as kbconfig
+from kb_distillery.config import paths
 from kb_distillery.vault import kbtypes, schema
 
 

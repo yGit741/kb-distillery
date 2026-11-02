@@ -6,7 +6,8 @@ import random
 import re
 import time
 
-from kb_distillery import llm, paths
+from kb_distillery import llm
+from kb_distillery.config import paths
 from kb_distillery.vault import frontmatter, schema
 from kb_distillery.vault.summary import (body_of, hand_written, needs_summary, now_stamp, problems, section, summary_hash,
                                        tool_actor, unquote)

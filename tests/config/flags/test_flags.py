@@ -5,9 +5,9 @@ import textwrap
 import unittest
 from pathlib import Path
 
-from kb_distillery.flags import codegen
-from kb_distillery.flags.registry import FLAGS_TOML, FlagError, load, parse
-from kb_distillery.paths import ROOT
+from kb_distillery.config.flags import codegen
+from kb_distillery.config.flags.registry import FLAGS_TOML, FlagError, load, parse
+from kb_distillery.config.paths import ROOT
 
 GOOD = dict(name="screen.x", description="d", owner="me", kind="build", default=False,
             envs={"local": True, "private": True, "public": False})

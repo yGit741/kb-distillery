@@ -11,7 +11,7 @@ import os
 import statistics
 
 from kb_distillery.vault.schema import OPS_DIR
-from kb_distillery.paths import vault_root
+from kb_distillery.config.paths import vault_root
 
 METRICS_DIR = "metrics"
 

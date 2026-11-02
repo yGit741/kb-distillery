@@ -62,7 +62,7 @@ def _has_default_types() -> bool:
 
 
 def pytest_collection_modifyitems(config, items):
-    from kb_distillery import kbconfig
+    from kb_distillery.config import kb as kbconfig
     cfg = kbconfig.current()
     thesis = bool(cfg) and cfg.id == "yonatan-thesis"
     default_types = _has_default_types()
@@ -79,14 +79,14 @@ def pytest_collection_modifyitems(config, items):
 def pytest_configure(config):
     config.addinivalue_line(
         "markers", 'flag(name, on): run this test with feature flag `name` forced on/off '
-        '(kb_distillery.flags.override); `python -m kb_distillery.flags.coverage` needs both states per flag')
+        '(kb_distillery.config.flags.override); `python -m kb_distillery.config.flags.coverage` needs both states per flag')
 
 
 @pytest.fixture(autouse=True)
 def _flag_marker(request):
     from contextlib import ExitStack
 
-    from kb_distillery.flags.registry import override
+    from kb_distillery.config.flags.registry import override
     with ExitStack() as stack:
         for m in request.node.iter_markers("flag"):
             stack.enter_context(override(m.args[0], m.args[1]))

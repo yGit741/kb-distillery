@@ -6,7 +6,7 @@ import subprocess
 import sys
 import unittest
 
-from kb_distillery.paths import vault_root
+from kb_distillery.config.paths import vault_root
 ROOT = vault_root()
 GUARD = ["-m", "kb_distillery.git.guard"]
 
@@ -327,7 +327,7 @@ class RelativeKbGuardTests(unittest.TestCase):
                 f.write(open(os.path.join(ROOT, "kb.toml")).read())
             payload = json.dumps({"tool_name": "Write",
                                   "tool_input": {"file_path": os.path.join(kb, "raw", "foo.md"), "content": "x"}})
-            parent = ("import json, subprocess, sys; from kb_distillery import kbconfig; "
+            parent = ("import json, subprocess, sys; from kb_distillery.config import kb as kbconfig; "
                       f"p = subprocess.run([sys.executable, '-m', 'kb_distillery.git.guard'], input={payload!r}, "
                       f"capture_output=True, text=True, cwd={elsewhere!r}); print(p.returncode); print(p.stderr)")
             env = {**os.environ, "KB": "./kbs/mine"}

@@ -6,7 +6,7 @@ import sys
 from collections import deque
 from datetime import datetime, timezone
 
-from kb_distillery.paths import vault_root
+from kb_distillery.config.paths import vault_root
 META_DIR = os.path.join(vault_root(), "meta")
 
 from kb_distillery.vault.graph import outbound_links
@@ -241,7 +241,7 @@ def build_page(slug, view=None):
 
 
 def _active_id():
-    from kb_distillery import paths
+    from kb_distillery.config import paths
     return paths.KB.id if paths.KB else ""
 
 
@@ -291,7 +291,7 @@ def search(query, limit=40):
 
 def _flag_on(name):
     """Effective runtime value (registry + this server's override); a test's forced state wins."""
-    from kb_distillery.flags import runtime
+    from kb_distillery.config.flags import runtime
     from kb_distillery.services import flags
     return runtime.effective(name, overrides_path=flags.OVERRIDES_PATH)
 

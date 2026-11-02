@@ -12,12 +12,12 @@ Selection, first hit wins: `--kb`, `$KB`, the nearest `kb.toml` above the curren
 only knowledge base there is. `$KB_ROOT` is internal: tools set it to hand a resolved folder to the processes they start
 (the share build, qmd, hooks); users never do.
 Nothing here imports the rest of `kb` (only `kb_distillery.config.resources`, which imports nothing), so
-`kb_distillery.paths` and `kb_distillery.vault.schema` can build on it at import time. No repository root is computed at
+`kb_distillery.config.paths` and `kb_distillery.vault.schema` can build on it at import time. No repository root is computed at
 import: an installed wheel has none (see `config/resources.py`).
 
-    python -m kb_distillery.kbconfig list     every knowledge base and where it is
-    python -m kb_distillery.kbconfig show     the selected one, resolved
-    python -m kb_distillery.kbconfig root     just its folder (what scripts/qmd/with-kb.sh hands node as $KB_ROOT)
+    python -m kb_distillery.config.kb list     every knowledge base and where it is
+    python -m kb_distillery.config.kb show     the selected one, resolved
+    python -m kb_distillery.config.kb root     just its folder (what scripts/qmd/with-kb.sh hands node as $KB_ROOT)
 """
 from __future__ import annotations
 
@@ -35,7 +35,7 @@ except ModuleNotFoundError:          # python < 3.11 (the macOS system python ru
     except ModuleNotFoundError:
         tomllib = None               # type: ignore[assignment]
 
-CODE_DIR = os.path.dirname(os.path.abspath(__file__))
+CODE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))   # the kb_distillery package folder (this file is config/kb.py)
 CONFIG_NAME = "kb.toml"
 HOME_ENV = "KB_DISTILLERY_HOME"
 DEFAULT_HOME = os.path.join("~", "knowledge")

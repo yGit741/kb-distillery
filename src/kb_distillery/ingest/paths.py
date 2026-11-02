@@ -7,7 +7,7 @@ import sys
 from kb_distillery.lint.lint import parse_frontmatter
 from kb_distillery.vault.schema import INGEST_DIR, MANIFEST, MANIFEST_COLS, ROOT_MD, WIKI_DIR, is_page_file
 
-from kb_distillery.paths import vault_root
+from kb_distillery.config.paths import vault_root
 ROOT = vault_root()  # KB_ROOT: share build
 INGEST_ROOT = os.path.join(ROOT, INGEST_DIR)
 

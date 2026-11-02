@@ -9,8 +9,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from kb_distillery.flags.registry import FLAGS_TOML, forced, load
-from kb_distillery.paths import OPS_PATH
+from kb_distillery.config.flags.registry import FLAGS_TOML, forced, load
+from kb_distillery.config.paths import OPS_PATH
 
 ENV = "local"                     # the local app and the CLI
 OVERRIDES_PATH = Path(OPS_PATH) / "flags.json"

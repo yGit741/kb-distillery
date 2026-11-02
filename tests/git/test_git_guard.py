@@ -6,7 +6,7 @@ import subprocess
 import sys
 import unittest
 
-from kb_distillery.kbconfig import checkout_root
+from kb_distillery.config.kb import checkout_root
 ROOT = checkout_root()   # code, not vault content
 
 from kb_distillery.git import git_guard

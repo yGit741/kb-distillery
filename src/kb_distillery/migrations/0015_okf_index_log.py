@@ -112,7 +112,7 @@ def _print(r, dry_run):
 
 
 if __name__ == "__main__":
-    from kb_distillery.paths import vault_root
+    from kb_distillery.config.paths import vault_root
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--root", default=vault_root())
     ap.add_argument("--dry-run", action="store_true")

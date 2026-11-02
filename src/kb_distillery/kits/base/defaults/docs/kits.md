@@ -48,7 +48,7 @@ Any other top-level table is rejected until a phase gives it a meaning. Reserved
 
 ## Where the kits are
 
-`$KB_KITS_DIR` (tests, a second kits folder) or the package's own `kits/` (`resource("kits")` in `kb_distillery.config.resources`). The defaults the engine falls back to when a kb has no `meta/<x>` are `resource("kits/base/defaults")` (`kb_distillery.paths.META_DEFAULTS_PATH`).
+`$KB_KITS_DIR` (tests, a second kits folder) or the package's own `kits/` (`resource("kits")` in `kb_distillery.config.resources`). The defaults the engine falls back to when a kb has no `meta/<x>` are `resource("kits/base/defaults")` (`kb_distillery.config.paths.META_DEFAULTS_PATH`).
 
 ## Errors you will meet
 

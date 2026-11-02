@@ -8,7 +8,7 @@ engine plus these per-kb instructions.
 import os
 import sys
 
-from kb_distillery.paths import DIGEST_INSTRUCTIONS_PATH, META_DEFAULTS_PATH, ROOT
+from kb_distillery.config.paths import DIGEST_INSTRUCTIONS_PATH, META_DEFAULTS_PATH, ROOT
 
 PARTS = ("focus.md", "types.md")
 

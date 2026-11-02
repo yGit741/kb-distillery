@@ -6,7 +6,7 @@ import unittest
 from kb_distillery.ingest import chat
 from kb_distillery.ingest import chat_signal
 
-from kb_distillery.paths import vault_root
+from kb_distillery.config.paths import vault_root
 ROOT = vault_root()
 CHATS = os.path.join(ROOT, "raw", "chats")
 INBOX = os.path.join(ROOT, "raw", "inbox")

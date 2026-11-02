@@ -28,8 +28,8 @@ import unittest
 
 import pytest
 
-from kb_distillery.kbconfig import checkout_root
-from kb_distillery.paths import CODE_DIR, vault_root
+from kb_distillery.config.kb import checkout_root
+from kb_distillery.config.paths import CODE_DIR, vault_root
 CHECKOUT_ROOT = checkout_root()
 META = os.path.join(vault_root(), "meta")
 REPO = vault_root()

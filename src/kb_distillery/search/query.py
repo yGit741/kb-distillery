@@ -20,7 +20,7 @@ from kb_distillery.vault.graph import tokenize
 from kb_distillery.vault.schema import INDEX_REL
 from kb_distillery.vault import wikiindex
 
-from kb_distillery.paths import vault_root
+from kb_distillery.config.paths import vault_root
 ROOT = vault_root()
 WIKI = os.path.join(ROOT, "wiki")
 INDEX = os.path.join(ROOT, INDEX_REL)

@@ -6,7 +6,7 @@ import tempfile
 import unittest
 
 from kb_distillery.lint import lint
-from kb_distillery.paths import MIGRATIONS_CODE_PATH
+from kb_distillery.config.paths import MIGRATIONS_CODE_PATH
 
 FM = "---\ntype: question\nlayer: concept\nmaturity: open\n---\n"
 SHORT = "Is the jump a sharp threshold?"

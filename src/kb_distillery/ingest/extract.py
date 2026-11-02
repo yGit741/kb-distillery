@@ -161,7 +161,7 @@ def run_extract(sha, fill=False, backend=None, model=FILL_MODEL):
     `fill`: a template (or no claims.json yet) is filled through kb_distillery.llm; a filled one is never replaced."""
     session = load_session(sha)
     raw_rel = session["raw"]
-    from kb_distillery.paths import vault_root
+    from kb_distillery.config.paths import vault_root
     root = vault_root()
     raw_path = os.path.join(root, raw_rel)
 

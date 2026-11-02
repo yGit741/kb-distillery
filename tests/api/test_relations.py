@@ -5,7 +5,7 @@ import os
 import pytest
 from fastapi.testclient import TestClient
 
-from kb_distillery import paths
+from kb_distillery.config import paths
 from kb_distillery.api.app import create_app
 from kb_distillery.api.models.relations import RelationProposals
 

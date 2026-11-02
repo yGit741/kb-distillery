@@ -337,7 +337,7 @@ def scope_keep(slug, hops=1):
     `hops=1`, every page linked to or from that set. Read from KB_ROOT (the content checkout)."""
     from kb_distillery.vault import scopes as core
     from kb_distillery.lint.lint import read_manifest
-    from kb_distillery.paths import vault_root
+    from kb_distillery.config.paths import vault_root
     from kb_distillery.services.scopes import load_pages
     root = vault_root()
     pages = load_pages(root)

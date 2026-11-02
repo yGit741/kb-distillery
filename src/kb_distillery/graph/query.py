@@ -24,7 +24,7 @@ from kb_distillery.graph.model import (  # noqa: F401 — re-exported: the API a
     add_proposed, check, edge_config, gaps, kinds, neighbourhood, normalize, relation_label, shortest_path, to_graph,
     unaddressed_questions,
 )
-from kb_distillery.paths import CACHE_PATH
+from kb_distillery.config.paths import CACHE_PATH
 
 REJECTED_LOG = os.path.join(CACHE_PATH, "cypher-rejected.jsonl")
 
@@ -33,7 +33,7 @@ _lock = threading.Lock()
 
 
 def _proposals_stamp(root=None):
-    from kb_distillery import paths
+    from kb_distillery.config import paths
     from kb_distillery.graph.relations import PROPOSALS_FILE
     try:
         st = os.stat(os.path.join(root or paths.ROOT, ".cache", PROPOSALS_FILE))

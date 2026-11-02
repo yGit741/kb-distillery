@@ -6,7 +6,7 @@ import sys
 import tempfile
 import unittest
 
-from kb_distillery.paths import vault_root
+from kb_distillery.config.paths import vault_root
 ROOT = vault_root()
 
 from kb_distillery.git import commit_policy as cp

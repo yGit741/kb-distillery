@@ -1,6 +1,6 @@
 /**
  * Flag test matrix (vitest): `withFlag(name, on, fn)` runs `fn` with flag `name` forced on/off — build flags
- * too (test-only seam) — and restores it afterwards, also for async `fn`. `python -m kb_distillery.flags.coverage` scans
+ * too (test-only seam) — and restores it afterwards, also for async `fn`. `python -m kb_distillery.config.flags.coverage` scans
  * *.test.ts(x) for `withFlag("<name>", true|false` and needs both states for every flag in meta/flags.toml.
  */
 import { setTestFlagOverrides, type FlagName } from "./index";

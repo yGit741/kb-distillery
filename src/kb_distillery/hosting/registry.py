@@ -18,7 +18,7 @@ import os
 from importlib import metadata
 from typing import Optional
 
-from kb_distillery import kbconfig
+from kb_distillery.config import kb as kbconfig
 
 from .base import Publisher, PublishError
 from .null import NullPublisher

@@ -64,7 +64,7 @@ def test_health_service_drops_private_rows():
 
 
 def _real_kb_with_history():
-    from kb_distillery import kbconfig
+    from kb_distillery.config import kb as kbconfig
     cfg = kbconfig.current()
     return bool(os.environ.get("KB")) and not os.environ.get("KB_ROOT") and bool(cfg and cfg.git_root)
 

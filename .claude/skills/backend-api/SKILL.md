@@ -22,7 +22,7 @@ Python package `kb_distillery` under `src/` (src layout). The typed HTTP API is 
 - Build or style a screen in `web/` (use `app-ui`); only regenerate its `schema.d.ts` here
 - Hand-edit vault content (that is `wiki-edit` and the writer CLIs)
 - Edit `kb_distillery/api/app.py` or any shared file to register a router: discovery is automatic
-- Use `sys.path.insert` or hard-code a vault path; take every path from `kb_distillery.paths`
+- Use `sys.path.insert` or hard-code a vault path; take every path from `kb_distillery.config.paths`
 - Run git writes directly (go through `infra-pr`)
 - Import `kb` with a bare `python`/`python3` inside the repo env: use `pixi run python …` (e.g. `pixi run python -c "from kb_distillery.api.app import create_app"`)
 
@@ -62,7 +62,7 @@ New or changed files under `src/kb_distillery/{api,services}/`, `tests/`, and `w
 
 - Router discovered without touching `app.py`; `/openapi.json` lists it
 - `api-schema-check` and `pixi run test` pass
-- No filesystem path literal outside `kb_distillery.paths`; no `sys.path.insert`
+- No filesystem path literal outside `kb_distillery.config.paths`; no `sys.path.insert`
 - Router has no business logic; service has no FastAPI import
 
 ## Next step

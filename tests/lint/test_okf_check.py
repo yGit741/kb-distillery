@@ -83,13 +83,13 @@ class OkfCheck(unittest.TestCase):
     def test_main_blocks_on_a_finding_and_names_file_and_rule(self):
         self.page("wiki/a.md", "---\ntype: idea\n---\n\n[[x]]\n")
         out = io.StringIO()
-        with mock.patch("kb_distillery.paths.vault_root", return_value=self.root), contextlib.redirect_stdout(out):
+        with mock.patch("kb_distillery.config.paths.vault_root", return_value=self.root), contextlib.redirect_stdout(out):
             self.assertEqual(okf_check.main([]), 1)
         self.assertIn("ERROR okf-check: wiki/a.md: wikilink: [[x]]", out.getvalue())
 
     def test_main_passes_a_clean_bundle_and_blocks_when_it_cannot_run(self):
         self.page("wiki/a.md", "---\ntype: idea\n---\n\nx\n")
-        with mock.patch("kb_distillery.paths.vault_root", return_value=self.root), contextlib.redirect_stdout(io.StringIO()):
+        with mock.patch("kb_distillery.config.paths.vault_root", return_value=self.root), contextlib.redirect_stdout(io.StringIO()):
             self.assertEqual(okf_check.main([]), 0)
             with mock.patch.object(okf_check, "check", side_effect=RuntimeError("boom")):
                 self.assertEqual(okf_check.main([]), 1)
@@ -137,7 +137,7 @@ class OkfCheck(unittest.TestCase):
         self.assertEqual(sorted(okf_check.check(self.root, only=["wiki/bad.md"])[0]), ["wiki/bad.md"])
         self.assertEqual(sorted(okf_check.check(self.root)[0]), ["wiki/bad.md"])             # the gate on the whole bundle
         out = io.StringIO()
-        with mock.patch("kb_distillery.paths.vault_root", return_value=self.root), contextlib.redirect_stdout(out):
+        with mock.patch("kb_distillery.config.paths.vault_root", return_value=self.root), contextlib.redirect_stdout(out):
             self.assertEqual(okf_check.main(["--only=wiki/a.md"]), 0)
             self.assertEqual(okf_check.main(["--only=wiki/bad.md"]), 1)
 

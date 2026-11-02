@@ -11,7 +11,7 @@ templates/, migration state) stays in `meta/`.
 """
 import os
 
-from kb_distillery import kbconfig
+from kb_distillery.config import kb as kbconfig
 from kb_distillery.config import layout
 from kb_distillery.config.resources import resource, root_resource
 
@@ -22,7 +22,7 @@ CODE_DIR = kbconfig.CODE_DIR                                                 # t
 
 
 def vault_root():
-    """The vault (one knowledge base): $KB_ROOT, else the selected knowledge base (`kb_distillery.kbconfig`: `--kb`, $KB,
+    """The vault (one knowledge base): $KB_ROOT, else the selected knowledge base (`kb_distillery.config.kb`: `--kb`, $KB,
     the only one), else the checkout this code runs from (none selected: engine-only commands)."""
     return kbconfig.vault_root()
 

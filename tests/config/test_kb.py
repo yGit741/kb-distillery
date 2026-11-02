@@ -1,4 +1,4 @@
-"""kb_distillery.kbconfig (discovery, kb.toml, selection) and kb_distillery.vault.kbtypes ([types] → the schema constants)."""
+"""kb_distillery.config.kb (discovery, kb.toml, selection) and kb_distillery.vault.kbtypes ([types] → the schema constants)."""
 import os
 import subprocess
 import sys
@@ -6,7 +6,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from kb_distillery import kbconfig
+from kb_distillery.config import kb as kbconfig
 from kb_distillery.vault import kbtypes as types
 
 
@@ -364,7 +364,7 @@ class RelativeKbPath(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             folder = os.path.realpath(os.path.join(d, "kbs", "mine"))
             os.makedirs(folder)
-            code = ("import os, sys; from kb_distillery import kbconfig; os.chdir('/'); "
+            code = ("import os, sys; from kb_distillery.config import kb as kbconfig; os.chdir('/'); "
                     "print(os.environ['KB']); print(kbconfig.selected())")
             env = {**os.environ, "KB": "./kbs/mine"}
             env.pop("KB_ROOT", None)
@@ -374,7 +374,7 @@ class RelativeKbPath(unittest.TestCase):
 
     def test_a_kb_id_is_left_alone(self):
         env = {**os.environ, "KB": "demo"}
-        out = subprocess.run([sys.executable, "-c", "import os; from kb_distillery import kbconfig; print(os.environ['KB'])"],
+        out = subprocess.run([sys.executable, "-c", "import os; from kb_distillery.config import kb as kbconfig; print(os.environ['KB'])"],
                              env=env, capture_output=True, text=True, check=True).stdout.strip()
         self.assertEqual(out, "demo")
 

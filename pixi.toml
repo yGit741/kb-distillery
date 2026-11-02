@@ -43,8 +43,8 @@ harness-bite = { cmd = "python -m tests.harness.harness_bite", env = { PYTHONPAT
 lint = "python -m kb_distillery.lint.lint"
 okf-check = "python -m kb_distillery.lint.okf_check"
 backlog = "python -m kb_distillery.services.backlog"
-kb-list = "python -m kb_distillery.kbconfig list"
-kb-show = "python -m kb_distillery.kbconfig show"
+kb-list = "python -m kb_distillery.config.kb list"
+kb-show = "python -m kb_distillery.config.kb show"
 digest-instructions = "python -m kb_distillery.vault.digest"
 health = "python -m kb_distillery.lint.lint --health"
 lint-strict = "python -m kb_distillery.lint.lint --ingest-strict"
@@ -93,9 +93,9 @@ test-wheel = { cmd = "pytest tests/cli/test_install_wheel.py -q", env = { KB_TES
 web-install = "npm ci --prefix web"
 web-dev = "npm run dev --prefix web"
 web-build = "npm run build --prefix web"
-flags-gen = "python -m kb_distillery.flags.codegen"
-flags-check = "python -m kb_distillery.flags.codegen --check && python -m kb_distillery.flags.coverage"
-web-check = { cmd = "python -m kb_distillery.flags.codegen --check && python -m kb_distillery.flags.coverage && npm run typecheck --prefix web && npm run test --prefix web && npm run build:check --prefix web && bash scripts/check-untracked-dist.sh" }
+flags-gen = "python -m kb_distillery.config.flags.codegen"
+flags-check = "python -m kb_distillery.config.flags.codegen --check && python -m kb_distillery.config.flags.coverage"
+web-check = { cmd = "python -m kb_distillery.config.flags.codegen --check && python -m kb_distillery.config.flags.coverage && npm run typecheck --prefix web && npm run test --prefix web && npm run build:check --prefix web && bash scripts/check-untracked-dist.sh" }
 test-worker = "node --test src/kb_distillery/publish/cloudflare/worker/*.test.mjs"
 test-e2e = "node --test web/e2e/*.test.mjs"
 test-ui-principles = "node --test web/tests/ui-principles.test.mjs"

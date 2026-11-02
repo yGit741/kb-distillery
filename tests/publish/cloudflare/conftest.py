@@ -7,8 +7,8 @@ import os
 
 import pytest
 
-from kb_distillery.kbconfig import checkout_root
-from kb_distillery.paths import ROOT
+from kb_distillery.config.kb import checkout_root
+from kb_distillery.config.paths import ROOT
 CHECKOUT_ROOT = checkout_root()
 
 SPLIT = os.path.realpath(ROOT) != os.path.realpath(CHECKOUT_ROOT)

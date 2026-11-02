@@ -28,7 +28,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from kb_distillery import kbconfig
+from kb_distillery.config import kb as kbconfig
 
 LAYERS = ("concept", "collection", "source")
 READ_STATUS = {"to-read", "reading", "digested"}

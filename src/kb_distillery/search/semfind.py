@@ -12,7 +12,7 @@ from kb_distillery.vault.graph import claim_text, extract_section, one_hop, outb
 from kb_distillery.lint.lint import parse_frontmatter
 from kb_distillery.vault.schema import SOURCE_TYPES
 
-from kb_distillery.paths import vault_root
+from kb_distillery.config.paths import vault_root
 from kb_distillery.vault.schema import is_page_file
 ROOT = vault_root()
 SEMFIND_DIR = os.path.join(ROOT, "meta", ".semfind")

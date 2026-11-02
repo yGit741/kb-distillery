@@ -9,7 +9,7 @@ DEMO = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.absp
 
 CODE = (
     "import sys\n"
-    "from kb_distillery import kbconfig, paths\n"
+    "from kb_distillery.config import kb as kbconfig; from kb_distillery.config import paths\n"
     "cfg = kbconfig.load_dir(sys.argv[1])\n"
     "assert cfg.kit == 'base', cfg.kit\n"
     "assert cfg.section('types'), 'kit types not merged'\n"

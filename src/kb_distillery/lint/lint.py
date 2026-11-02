@@ -45,7 +45,7 @@ try:
 except ImportError:                         # pragma: no cover
     arxiv_meta = None
 
-from kb_distillery.paths import vault_root
+from kb_distillery.config.paths import vault_root
 from kb_distillery.vault import links as page_links
 ROOT = vault_root()  # KB_ROOT: share build
 # Fenced blocks and inline code: `[[1, 2], [3, 4]]` in a code sample is not a wikilink.
@@ -84,8 +84,8 @@ def _names_guard(text):
 def hooks_health():
     """Return (status_text, all_ok) for the agent write-guard hook config (Claude Code's `.claude/settings.json`)."""
     claude_ok = False
-    from kb_distillery import paths
-    from kb_distillery.kbconfig import checkout_root
+    from kb_distillery.config import paths
+    from kb_distillery.config.kb import checkout_root
     claude_path = os.path.join(checkout_root() or "", ".claude", "settings.json")   # hook configs are code: the explorer's
     if checkout_root() and os.path.isfile(claude_path):
         try:
@@ -297,8 +297,8 @@ def check_flags(path=None, today=None):
     """meta/flags.toml: invalid registry -> error; a flag expiring within 14 days -> warning; expired -> error."""
     import datetime as dt
 
-    from kb_distillery.flags.registry import FlagError, load
-    from kb_distillery.flags.registry import FLAGS_TOML
+    from kb_distillery.config.flags.registry import FlagError, load
+    from kb_distillery.config.flags.registry import FLAGS_TOML
     path = path or str(FLAGS_TOML)
     if not os.path.exists(path):
         return
@@ -1241,7 +1241,8 @@ def collect_snapshot(quiet=False):
     check_root()
     check_wiki_strays()
     check_flags()
-    from kb_distillery import kbconfig, paths as _paths
+    from kb_distillery.config import kb as kbconfig
+    from kb_distillery.config import paths as _paths
     if (mismatch := kbconfig.schema_mismatch(_paths.KB)):
         err("kb.toml", mismatch)
 
@@ -1360,7 +1361,7 @@ def main():
               "(pixi run app, or distill launch).", file=sys.stderr)
         return 2
 
-    from kb_distillery.kbconfig import checkout_root
+    from kb_distillery.config.kb import checkout_root
     if checkout_root() and os.path.realpath(ROOT) == os.path.realpath(checkout_root()) and not os.path.isdir(os.path.join(ROOT, "wiki")):
         # No knowledge base selected: ROOT is an engine checkout with no vault in it, and lint would write wiki/index.md and meta/ there.
         print("error: no knowledge base selected — lint would write wiki/index.md and meta/ into the engine checkout.\n"
@@ -1420,7 +1421,7 @@ def sync_search_cards():
     """Keep .cache/qmd-cards/ (title + summary per page) in step with wiki/ for the qmd search service.
     Only for the live vault — the main checkout this code runs from — never a share build's content
     checkout, a worktree, CI or a test's temp root. A cache, never an error."""
-    from kb_distillery import paths
+    from kb_distillery.config import paths
     from kb_distillery.search import cards, qmd_client
     # The explorer and its knowledge bases are separate checkouts, so "live" is explicit: KB_LIVE=1 (launch.sh
     # sets it for the dashboard's own lint runs); a share build, CI, a worktree or a test root never sync.

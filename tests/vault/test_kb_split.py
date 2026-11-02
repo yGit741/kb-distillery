@@ -10,7 +10,8 @@ import unittest
 from contextlib import redirect_stderr
 from unittest import mock
 
-from kb_distillery import kbconfig, paths
+from kb_distillery.config import kb as kbconfig
+from kb_distillery.config import paths
 from kb_distillery.config import resources
 from kb_distillery.vault import digest, schema
 from kb_distillery.git import commit_policy as cp
@@ -115,7 +116,7 @@ class KbService(unittest.TestCase):
 class KbFlag(unittest.TestCase):
     def test_dash_dash_kb_is_consumed_from_argv(self):
         code = ("import sys; sys.argv += ['--kb', 'nope', 'status']; import os; os.environ.pop('KB', None); "
-                "import kb_distillery.kbconfig as k; print(sys.argv[1:], os.environ.get('KB'), k._ARGV_KB)")
+                "import kb_distillery.config.kb as k; print(sys.argv[1:], os.environ.get('KB'), k._ARGV_KB)")
         out = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True,
                              env=dict(os.environ, PYTHONPATH=os.path.join(kbconfig.checkout_root(), "src")))
         self.assertEqual(out.stdout.strip(), "['status'] nope nope", out.stderr)

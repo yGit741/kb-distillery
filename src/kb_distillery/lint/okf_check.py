@@ -158,7 +158,7 @@ def check(root, only=None):
 def main(argv=None):
     argv = list(sys.argv[1:] if argv is None else argv)
     as_json = "--json" in argv
-    from kb_distillery.paths import vault_root
+    from kb_distillery.config.paths import vault_root
     root = vault_root()
     only = [a[len("--only="):] for a in argv if a.startswith("--only=")] or None   # a commit checks the pages it changes
     try:

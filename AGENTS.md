@@ -14,7 +14,7 @@ This file is the core every turn needs. Details live in `src/kb_distillery/kits/
 | **Wiki** | `wiki/` | Agent-owned synthesis. Flat. Create, update, cross-link. |
 | **Think** | `~/knowledge/think/` | ONE shared human-owned slow space for every knowledge base (its own repo). Schema-free. Agents never write here. Distilled pages cite `think:<note>.md`. |
 | **Meta** | `meta/` | Vault metadata: manifest, log, chats, aliases. Generic pieces (flags, templates, routed docs, digest defaults) live in the explorer's `src/kb_distillery/kits/base/defaults/`; a kb's `meta/` overrides them. No code (code is `src/kb_distillery/`, see `src/kb_distillery/kits/base/defaults/docs/dev.md`). |
-| **Config** | `kb.toml` | The knowledge base: id, name, schema version, its page types (`[types]`), its digest instructions (`digest/`). Read by `kb_distillery.kbconfig` / `kb_distillery.vault.kbtypes`. |
+| **Config** | `kb.toml` | The knowledge base: id, name, schema version, its page types (`[types]`), its digest instructions (`digest/`). Read by `kb_distillery.config.kb` / `kb_distillery.vault.kbtypes`. |
 
 ## Hard rules
 

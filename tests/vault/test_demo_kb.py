@@ -9,7 +9,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from kb_distillery import kbconfig
+from kb_distillery.config import kb as kbconfig
 
 CHECKOUT = kbconfig.checkout_root()
 DEMO = os.path.join(CHECKOUT, "examples", "demo")

@@ -10,7 +10,7 @@ import sys
 import tempfile
 import unittest
 
-from kb_distillery.paths import CODE_DIR, vault_root
+from kb_distillery.config.paths import CODE_DIR, vault_root
 META = os.path.join(vault_root(), "meta")
 from kb_distillery.git import commit_policy as cp
 from kb_distillery.vault import schema

@@ -1,4 +1,4 @@
-"""Flag test matrix (kb_distillery.flags.coverage), the pytest `flag` marker and the expiry lint (lint.check_flags)."""
+"""Flag test matrix (kb_distillery.config.flags.coverage), the pytest `flag` marker and the expiry lint (lint.check_flags)."""
 import datetime as dt
 import textwrap
 from pathlib import Path
@@ -6,8 +6,8 @@ from unittest import mock
 
 import pytest
 
-from kb_distillery.flags import coverage, value
-from kb_distillery.flags.registry import load
+from kb_distillery.config.flags import coverage, value
+from kb_distillery.config.flags.registry import load
 from kb_distillery.lint import lint
 
 

@@ -7,7 +7,7 @@ from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse
 
 from kb_distillery.config.resources import repo_root, resource
-from kb_distillery.paths import vault_root
+from kb_distillery.config.paths import vault_root
 
 STAMP = ".src-hash"
 

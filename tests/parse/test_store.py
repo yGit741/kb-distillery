@@ -75,6 +75,6 @@ def test_flag_off():
 
 
 def test_flag_is_registered_and_dark_by_default():
-    from kb_distillery.flags import registry
+    from kb_distillery.config.flags import registry
     f = registry.load().get(FLAG)
     assert f.default is False and not any([f.envs.local, f.envs.private, f.envs.public])

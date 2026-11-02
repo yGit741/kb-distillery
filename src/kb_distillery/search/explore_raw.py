@@ -17,7 +17,7 @@ import os
 import re
 import sys
 
-from kb_distillery.paths import vault_root
+from kb_distillery.config.paths import vault_root
 HERE = os.path.join(vault_root(), "meta")
 
 from kb_distillery.lint import lint

@@ -9,7 +9,7 @@ import os
 import re
 import sys
 
-from kb_distillery.paths import META_DEFAULTS_PATH, vault_root
+from kb_distillery.config.paths import META_DEFAULTS_PATH, vault_root
 META_DIR = os.path.join(vault_root(), "meta")
 
 from kb_distillery.git import commit_policy as cp

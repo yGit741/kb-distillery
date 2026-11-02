@@ -2,7 +2,7 @@
 from fastapi import APIRouter, Query
 
 from kb_distillery.api.models.lifecycle import LifecycleSnapshot
-from kb_distillery.paths import vault_root
+from kb_distillery.config.paths import vault_root
 from kb_distillery.services.lifecycle import build_lifecycle_snapshot
 
 router = APIRouter(tags=["lifecycle"])

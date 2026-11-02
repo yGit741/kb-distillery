@@ -4,7 +4,8 @@ import subprocess
 
 import pytest
 
-from kb_distillery import init_kb, kbconfig, llm
+from kb_distillery import init_kb, llm
+from kb_distillery.config import kb as kbconfig
 from kb_distillery.git import commit_policy
 
 

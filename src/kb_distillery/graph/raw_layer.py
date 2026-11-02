@@ -9,7 +9,7 @@ import re
 import sys
 from collections import Counter, defaultdict
 
-from kb_distillery.paths import vault_root
+from kb_distillery.config.paths import vault_root
 META_DIR = os.path.join(vault_root(), "meta")
 
 from kb_distillery.vault.hubs import parse_contents

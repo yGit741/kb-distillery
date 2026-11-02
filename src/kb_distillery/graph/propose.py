@@ -27,8 +27,8 @@ import re
 import sys
 import time
 
-from kb_distillery import kbconfig
-from kb_distillery import paths
+from kb_distillery.config import kb as kbconfig
+from kb_distillery.config import paths
 
 ROOT = paths.ROOT
 MODEL = "sonnet"

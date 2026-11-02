@@ -17,7 +17,7 @@ import re
 import subprocess
 import sys
 
-from kb_distillery.paths import vault_root
+from kb_distillery.config.paths import vault_root
 META_DIR = os.path.join(vault_root(), "meta")
 ROOT = vault_root()
 

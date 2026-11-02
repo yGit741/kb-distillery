@@ -8,7 +8,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from kb_distillery import kbconfig
+from kb_distillery.config import kb as kbconfig
 from kb_distillery.publish import (NotConfigured, NotSupported, NullPublisher, PublishError, PublishResult, Publisher, Snapshot,
                         current, for_kb, load_class, publisher_names, selected_name)
 from kb_distillery.hosting import registry

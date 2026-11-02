@@ -92,7 +92,7 @@ def strip_prefix(slug):
             return slug[len(p):]
     return slug
 
-# The folder names live in the config layer (kb_distillery.paths builds on them without importing the schema).
+# The folder names live in the config layer (kb_distillery.config.paths builds on them without importing the schema).
 from kb_distillery.config.layout import META_DIR, QUARANTINE_DIR, RAW_DIR, THINK_DIR, WIKI_DIR  # noqa: E402,F401
 
 # Markdown allowed at the vault root.
@@ -103,7 +103,7 @@ FRONTEND_DIR = "web"                 # React app (tooling lane); node_modules is
 # Code and tooling folders beside the vault content (tooling lane; see TOOLING_PATHS).
 # The old frontend and kbs-demo folders are gone (src/ tests/ web/ examples/); backend/ keeps only pyproject.toml until Lane A; the tools folder stays until Phase 9 for the hook stubs.
 CODE_TOP_DIRS = frozenset({"backend", "docs", "examples", "kbs", "scripts", "src", "tests", "tools", "web"})
-# A knowledge base folder also carries its kb.toml and digest/ instructions (kb_distillery.kbconfig, kb_distillery.vault.kbtypes).
+# A knowledge base folder also carries its kb.toml and digest/ instructions (kb_distillery.config.kb, kb_distillery.vault.kbtypes).
 KB_CONFIG = "kb.toml"
 DIGEST_DIR = "digest"
 ROOT_DIRS = frozenset({WIKI_DIR, RAW_DIR, THINK_DIR, META_DIR, QUARANTINE_DIR, FRONTEND_DIR, DIGEST_DIR}) | CODE_TOP_DIRS
@@ -329,7 +329,7 @@ GATE_PREFIXES = {
     "graph_ui": ("web/src/features/graph/",),
     "e2e": ("web/e2e/",),
     "flags_registry": ("meta/flags.toml", "src/kb_distillery/kits/base/defaults/flags.toml"),
-    "flags_code": ("src/kb_distillery/flags/",),
+    "flags_code": ("src/kb_distillery/config/flags/",),
     "api": ("src/kb_distillery/api/",),
 }
 
@@ -364,8 +364,8 @@ def is_kb_tooling(path):
 # from git (last first-parent KB-Version + 1). Tooling is not versioned — infra work
 # is identified by its PR number (#N). See src/kb_distillery/git/commit_policy.py.
 SCHEMA_VERSION = (1, 5)     # 1.5: OKF v0.2 native bundle in one step (migrations 0013-0015): frontmatter (maturity, description, generated {by}, created, title only when it differs from the H1, sources objects only beyond the url, related paths); pages link with relative markdown links `[Title](slug.md)`, wikilinks only in My notes; index.md and log.md are the OKF reserved files of the bundle root wiki/ (1.4: `relations:` field; 1.3: `summary:` field; 1.2: conversation → mail/ai-chat; 1.1: question H1)
-from kb_distillery.kbconfig import SCHEMA_VERSION as _KB_SCHEMA_VERSION
-assert SCHEMA_VERSION == _KB_SCHEMA_VERSION, "kb_distillery.kbconfig.SCHEMA_VERSION must follow this value"
+from kb_distillery.config.kb import SCHEMA_VERSION as _KB_SCHEMA_VERSION
+assert SCHEMA_VERSION == _KB_SCHEMA_VERSION, "kb_distillery.config.kb.SCHEMA_VERSION must follow this value"
 
 # What undo/restore may rewrite. Never raw/ (immutable, PDFs untracked), think/
 # (human-owned), wiki/log.md (append-only) or generated files such as wiki/index.md (lint regenerates them).

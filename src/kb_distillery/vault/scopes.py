@@ -22,7 +22,7 @@ from kb_distillery.vault.graph import outbound_links
 from kb_distillery.vault.schema import COLLECTION_TYPES, SOURCE_TYPES, SLUG_PREFIX
 from kb_distillery.vault import links as page_links
 from kb_distillery.vault import pages as vault_pages
-from kb_distillery.paths import vault_root
+from kb_distillery.config.paths import vault_root
 from kb_distillery.vault.schema import is_page_file
 
 PREFIX = SLUG_PREFIX["scope"]

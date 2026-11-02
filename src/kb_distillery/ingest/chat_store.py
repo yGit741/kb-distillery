@@ -11,7 +11,7 @@ import sys
 
 from kb_distillery.vault.schema import CHATS_DIR, CHAT_TREE_SCHEMA
 
-from kb_distillery.paths import vault_root
+from kb_distillery.config.paths import vault_root
 ROOT = vault_root()
 CHATS_ABS = os.path.join(ROOT, CHATS_DIR)
 INDEX_PATH = os.path.join(CHATS_ABS, "index.json")

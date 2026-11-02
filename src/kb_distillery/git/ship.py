@@ -41,9 +41,9 @@ import subprocess
 import time
 import sys
 
-from kb_distillery import kbconfig
-from kb_distillery.kbconfig import checkout_root
-from kb_distillery.paths import vault_root
+from kb_distillery.config import kb as kbconfig
+from kb_distillery.config.kb import checkout_root
+from kb_distillery.config.paths import vault_root
 META_DIR = os.path.join(vault_root(), "meta")
 # The tooling lane is the explorer repo (knowledge commits go through kb_distillery.ops in the kb's repo). None for an
 # installed package, which has no repository to ship: `_main` refuses with require_repo_root.
@@ -1321,7 +1321,7 @@ def cmd_tag(name, at=None, kb=None, repo=None, message=None, root=ROOT):
     if repo:
         target = os.path.realpath(os.path.expanduser(repo))
     elif kb:
-        from kb_distillery import kbconfig
+        from kb_distillery.config import kb as kbconfig
         git_root = kbconfig.load(kb).git_root
         if not git_root:
             print(f"error: knowledge base {kb} is not a git repository")
@@ -1591,7 +1591,7 @@ def _main(argv):
     if args.cmd == "approve":
         return cmd_approve(args.number)
     if args.cmd == "tag":
-        from kb_distillery import kbconfig
+        from kb_distillery.config import kb as kbconfig
         return cmd_tag(args.name, args.at, kbconfig.explicit_kb(), args.repo, args.message)
     return cmd_merge(args.local, args.pr, args.title, args.skip_tests, args.no_push, skip_checks=args.skip_checks)
 

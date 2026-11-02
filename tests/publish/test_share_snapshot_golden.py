@@ -17,7 +17,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from kb_distillery.kbconfig import checkout_root
+from kb_distillery.config.kb import checkout_root
 from kb_distillery.publish.site import build as sb
 from kb_distillery.publish.site import home
 

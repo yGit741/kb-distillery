@@ -7,7 +7,7 @@ import subprocess
 import sys
 from datetime import datetime, timezone
 
-from kb_distillery.paths import vault_root
+from kb_distillery.config.paths import vault_root
 META_DIR = os.path.join(vault_root(), "meta")
 
 from kb_distillery.vault.books import DIGESTED, coverage, parse_partition
@@ -301,7 +301,7 @@ RELATIONS_FLAG = "graph-relations"
 
 def relations_on():
     """Whether typed relations (and proposals) are on: the flag's effective value (test, owner override, registry)."""
-    from kb_distillery.flags import runtime
+    from kb_distillery.config.flags import runtime
     return runtime.effective(RELATIONS_FLAG)
 
 
@@ -320,7 +320,7 @@ def _relations_etag(etag, root):
 
 def _relations(pages, nodes, links, concept, root, view=None):
     """kb_distillery.graph.relations for this knowledge base, with its own `[edges]` table (another kb's for a view)."""
-    from kb_distillery import kbconfig
+    from kb_distillery.config import kb as kbconfig
     from kb_distillery.graph import relations
     from kb_distillery.graph.model import edge_config
 
@@ -342,7 +342,7 @@ def _schema(types=None):
 
 
 def _active_id():
-    from kb_distillery import paths
+    from kb_distillery.config import paths
     return paths.KB.id if paths.KB else ""
 
 

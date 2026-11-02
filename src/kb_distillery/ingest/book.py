@@ -13,7 +13,7 @@ import re
 import sys
 
 from .paths import ROOT
-from kb_distillery.paths import meta_file
+from kb_distillery.config.paths import meta_file
 from kb_distillery.vault import frontmatter, wikiio
 from kb_distillery.lint.lint import parse_frontmatter
 from kb_distillery.vault.schema import PARTITION_COLLECTIONS, RAW_HANDWRITTEN, SLUG_PREFIX, is_page_file, make_slug, strip_prefix
@@ -225,7 +225,7 @@ def parse_pages(spec, total=None):
 def digested_ranges(raw_rel):
     """[(slug, start, end)] already digested from this raw file, read from wiki frontmatter."""
     import glob
-    from kb_distillery.paths import vault_root
+    from kb_distillery.config.paths import vault_root
     root = vault_root()
     out = []
     for path in _wiki_pages(os.path.join(root, "wiki")):

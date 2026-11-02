@@ -89,7 +89,7 @@ def test_importing_the_package_needs_no_repo():
     """Nothing resolves a repository at import: with no checkout at all, kbconfig and paths still import."""
     code = ("from kb_distillery.config import resources\n"
             "resources.repo_root = lambda: None\n"
-            "import kb_distillery.paths as p, kb_distillery.kbconfig as k\n"
+            "import kb_distillery.config.paths as p, kb_distillery.config.kb as k\n"
             "assert k.checkout_root() is None and k.primary_root() is None\n"
             "print(p.ROOT)\n")
     with tempfile.TemporaryDirectory() as tmp:

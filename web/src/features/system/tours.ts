@@ -15,7 +15,7 @@ registerTour(
       target: '[data-tour="kb-badge"]',
       place: "bottom",
       title: "One engine, many knowledge bases",
-      // source: src/kb_distillery/kbconfig.py (discovery, selection); app/KbBadge.tsx
+      // source: src/kb_distillery/config/kb.py (discovery, selection); app/KbBadge.tsx
       body: "The explorer is only the engine. The header names the **knowledge base** it was launched with, a plain folder with its own kb.toml, content and git history.",
     },
     {
@@ -42,7 +42,7 @@ registerTour(
     {
       target: '[data-tour="kb-think"]',
       title: "Think is shared",
-      // source: kb_distillery.paths.THINK_PATH = kbs/think; git/guard.py _shared_think_guard; distill cites think:<note>
+      // source: kb_distillery.config.paths.THINK_PATH = kbs/think; git/guard.py _shared_think_guard; distill cites think:<note>
       body: "One think space sits beside every knowledge base, in its own repo. Agents are blocked from writing there, and a distilled page cites its note as **think:**name.md.",
     },
     {
@@ -54,7 +54,7 @@ registerTour(
     {
       target: '[data-tour="kb-meta"]',
       title: "Generic meta lives in the explorer",
-      // source: kb_distillery.paths.meta_file; flags/registry.py FLAGS_SOURCE; kits/base/defaults/{flags.toml,templates,docs}
+      // source: kb_distillery.config.paths.meta_file; flags/registry.py FLAGS_SOURCE; kits/base/defaults/{flags.toml,templates,docs}
       body: "Flags, templates and the routed docs moved to the explorer's base kit (kits/base/defaults/). A knowledge base keeps only its own metadata and may **override** any of them in its meta/.",
     },
   ],

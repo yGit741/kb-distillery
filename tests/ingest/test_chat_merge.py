@@ -6,7 +6,7 @@ import unittest
 
 from kb_distillery.ingest import chat, chat_signal, chat_store, chat_merge
 
-from kb_distillery.paths import vault_root
+from kb_distillery.config.paths import vault_root
 ROOT = os.path.join(vault_root(), "meta")
 CHATS = os.path.join(ROOT, "..", "raw", "llm-chats")
 

@@ -1,9 +1,9 @@
 """Flag test matrix: every flag in meta/flags.toml needs a test for both states (on and off).
 
 A test declares the state it runs in with
-  pytest  `@pytest.mark.flag("name", True|False)` (tests, conftest applies kb_distillery.flags.override)
+  pytest  `@pytest.mark.flag("name", True|False)` (tests, conftest applies kb_distillery.config.flags.override)
   vitest  `withFlag("name", true|false, fn)` from `@/flags/testing` (web/src/**/*.test.ts(x))
-`python -m kb_distillery.flags.coverage` (part of `pixi run flags-check`) exits 1 listing each flag/state with no test.
+`python -m kb_distillery.config.flags.coverage` (part of `pixi run flags-check`) exits 1 listing each flag/state with no test.
 """
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ import re
 import sys
 from pathlib import Path
 
-from kb_distillery.flags.registry import FLAGS_TOML, FlagError, load
+from kb_distillery.config.flags.registry import FLAGS_TOML, FlagError, load
 from kb_distillery.config.resources import require_repo_root   # generated files and tests are code: the explorer, not the vault
 
 PY_RE = re.compile(r"""mark\.flag\(\s*["']([^"']+)["']\s*,\s*(True|False)\b""")
@@ -51,11 +51,11 @@ def missing(names, found) -> list[str]:
 
 def main(argv=None, root: Path | str | None = None) -> int:
     root = Path(root) if root is not None else require_repo_root("flags coverage")
-    ap = argparse.ArgumentParser(prog="kb_distillery.flags.coverage", description=__doc__.splitlines()[0])
+    ap = argparse.ArgumentParser(prog="kb_distillery.config.flags.coverage", description=__doc__.splitlines()[0])
     ap.add_argument("--flags", default=None, help="registry path (default meta/flags.toml)")
     args = ap.parse_args(argv)
     try:
-        from kb_distillery.flags.codegen import _registry_for
+        from kb_distillery.config.flags.codegen import _registry_for
         reg = load(args.flags or _registry_for(root))
     except FlagError as e:
         print(e, file=sys.stderr)
