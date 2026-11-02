@@ -43,7 +43,7 @@ def discover_routers(package=ROUTERS_PACKAGE):
 
 
 def create_app(routers_package=ROUTERS_PACKAGE, dist=None, allowed_hosts=None) -> FastAPI:
-    app = FastAPI(title="Thesis KB API", version="1",
+    app = FastAPI(title="kb-distillery API", version="1",
                   dependencies=[Depends(security.require_loopback_origin)])
     app.add_middleware(security.BodyLimitMiddleware)
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=allowed_hosts or ALLOWED_HOSTS)

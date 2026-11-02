@@ -23,3 +23,9 @@ def test_list_exports_matches_only_this_kbs_archives(tmp_path):
         (tmp_path / name).write_text("x")
     with mock.patch.object(paths, "KB", SimpleNamespace(id="demo")), mock.patch.object(export, "EXPORT_DIR", str(tmp_path)):
         assert export.list_exports() == ["demo-kb-a.zip"]
+
+
+def test_manifest_title_names_the_kb_not_a_person():
+    with mock.patch.object(paths, "KB", SimpleNamespace(id="jane-research", name="Jane Research")):
+        first = export._manifest(["wiki/a.md"], False, "2026-01-01T000000Z").splitlines()[0]
+    assert first == "Jane Research export"

@@ -155,7 +155,7 @@ def _manifest(files: list[str], include_raw_pdfs: bool, stamp: str) -> str:
     think_n = sum(1 for f in files if f.startswith("think/"))
     raw_n = sum(1 for f in files if f.startswith("raw/"))
     lines = [
-        "Yonatan Thesis KB export",
+        f"{(paths.KB.name if paths.KB else prefix())} export",
         f"created_utc: {stamp}",
         "",
         "Purpose: text bundle for external LLM context (wiki notes, think pages, index).",
