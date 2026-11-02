@@ -47,7 +47,7 @@ from kb_distillery.services import chat as chat_data
 WIKI = os.path.join(ROOT, "wiki")
 RAW = os.path.join(ROOT, "raw")
 from kb_distillery.paths import THINK_PATH as THINK      # the shared think space, outside the vault
-from kb_distillery.core.schema import INDEX_REL, is_page_file
+from kb_distillery.core.schema import INDEX_REL, is_index_path, is_page_file
 INDEX = os.path.join(ROOT, INDEX_REL)
 READ_ROOTS = (WIKI, RAW, THINK)
 RAW_TEXT_EXT = {".md", ".txt", ".html", ".eml", ".json", ".tsv", ".csv"}
@@ -75,10 +75,10 @@ HISTORY_CHARS = 800
 AGENT_WORKFLOW = """\
 How to research a question in this knowledge base (always applies):
 - You are a read-only research agent inside the user's thesis wiki (the current directory).
-  `wiki/` holds flat markdown notes, one per slug; `wiki/index.md` lists every page with its one-line
-  summary; `raw/` holds the sources; `think/` is the user's own notebook.
+  `wiki/` holds flat markdown notes, one per slug; `wiki/index.md` is a tiny root listing the page types, and
+  `wiki/<type>/index.md` lists that type's pages with their one-line summaries; `raw/` holds the sources; `think/` is the user's own notebook.
 - Locate first, with no guessing: run `python3 -m kb_distillery.search.query candidates "<keywords>"` (and
-  `python3 -m kb_distillery.search.query mocs` for broad questions), look at the matching section of `wiki/index.md`,
+  `python3 -m kb_distillery.search.query mocs` for broad questions), read `wiki/index.md`, then only the section index you need,
   then Grep `wiki/` for the exact terms. Never say the vault has nothing on a topic before both the
   index and candidates were checked.
 - Read 3–8 pages with Read on `wiki/<slug>.md`. Prefer `theme-*` and `q-*` pages for thesis-level
@@ -243,18 +243,23 @@ def _real(p):
     return os.path.realpath(p)
 
 
-READ_DENY = "read-only KB agent: only wiki/ (with wiki/index.md), think/ and text files under raw/ can be read"
+READ_DENY = "read-only KB agent: only wiki/ (with its index.md files), think/ and text files under raw/ can be read"
 BASH_DENY = ("read-only KB agent: only `python3 -m kb_distillery.search.query candidates|mocs …`, "
              "`python3 -m kb_distillery.search.semfind …`, `python3 -m kb_distillery.search.explore_raw …` / "
              "`python3 -m kb_distillery.search.explore_raw find|read|check|recommend …` and "
              "`python3 -m kb_distillery.ingest resolve …` may run")
 
 
+def _is_index_file(real):
+    """The root wiki/index.md or a generated section index (wiki/<type>/index.md)."""
+    return real == os.path.realpath(INDEX) or is_index_path(os.path.relpath(real, os.path.realpath(ROOT)).replace(os.sep, "/"))
+
+
 def _readable_in_scope(real, scope, allow_dirs=False):
-    """_readable, narrowed to a scope: wiki/index.md, the scope's pages, its own raw text files; no think/."""
+    """_readable, narrowed to a scope: the wiki indexes, the scope's pages, its own raw text files; no think/."""
     if real is None:
         return False
-    if real == os.path.realpath(INDEX):
+    if _is_index_file(real):
         return True
     if allow_dirs and os.path.isdir(real):
         return _under(real, WIKI) or _under(real, RAW)
@@ -298,7 +303,7 @@ BASH_DENY = BASH_DENY + ("; also `python3 -m kb_distillery.search.cypher run '<q
 
 
 SCOPE_READ_DENY = ("scoped chat: only the scope's pages (wiki/<slug>.md listed in the system prompt), "
-                   "wiki/index.md and the scope's own text files under raw/ can be read; think/ is closed")
+                   "the wiki indexes (wiki/index.md and wiki/<type>/index.md) and the scope's own text files under raw/ can be read; think/ is closed")
 SCOPE_BASH_DENY = ("scoped chat: `candidates` and `find` need --scope <this scope>, `explore_raw read|check|"
                    "recommend` only take this scope's files, and `mocs` / `semfind` are not available")
 

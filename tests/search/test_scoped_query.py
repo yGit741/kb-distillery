@@ -267,6 +267,9 @@ class ScopedPolicyTests(unittest.TestCase):
         self.assertTrue(self.d("Read", fp(wiki("tensor-rank"))).allow)
         self.assertTrue(self.d("Read", fp("wiki/paper-a.md")).allow)
         self.assertTrue(self.d("Read", fp("wiki/index.md")).allow)
+        self.assertTrue(self.d("Read", fp("wiki/paper/index.md")).allow)               # a section index
+        self.assertTrue(self.d("Read", fp("wiki/blog-post/2019/index.md")).allow)
+        self.assertFalse(self.d("Read", fp("wiki/paper/other.md")).allow)             # nothing else in a section folder
         self.assertFalse(self.d("Read", fp("index.md")).allow)          # the pre-1.7 place is not readable any more
         out = self.d("Read", fp(wiki("theme-info-theory")))
         self.assertFalse(out.allow)

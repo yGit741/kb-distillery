@@ -60,6 +60,17 @@ class GuardMainTests(unittest.TestCase):
         })
         self.assertEqual(code, 2)
 
+    def test_cursor_write_to_section_index_blocked(self):
+        for rel in ("wiki/paper/index.md", "wiki/blog-post/2019/index.md"):
+            code, out, err = run_guard({
+                "hook_event_name": "preToolUse",
+                "tool_name": "Write",
+                "tool_input": {"path": os.path.join(ROOT, rel), "content": "x"},
+                "cwd": ROOT,
+            })
+            self.assertEqual(code, 2, rel)
+            self.assertIn("generated", err.lower())
+
     def test_cursor_write_to_index_blocked(self):
         path = os.path.join(ROOT, "wiki", "index.md")
         code, out, err = run_guard({

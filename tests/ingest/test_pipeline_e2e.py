@@ -254,8 +254,10 @@ def collect_outputs(p, lint, coherence):
     }
     files = {}
     for d in ("wiki",):
-        for fn in sorted(os.listdir(os.path.join(root, d))):
-            files[f"{d}/{fn}"] = p.read(f"{d}/{fn}")
+        for dirpath, _dirs, names in sorted(os.walk(os.path.join(root, d))):      # the pages and the section indexes below them
+            for fn in sorted(names):
+                rel = os.path.relpath(os.path.join(dirpath, fn), root).replace(os.sep, "/")
+                files[rel] = p.read(rel)
     files["meta/corpus.tsv"] = p.read("meta/corpus.tsv")
     files["wiki/log.md"] = _DATE_HDR.sub("## <date>", p.read("wiki/log.md"))
     return _norm(outputs, root), files

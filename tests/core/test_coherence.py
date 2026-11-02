@@ -148,9 +148,11 @@ class IndexDriftTest(unittest.TestCase):
         path, fm, text = _paper("paper-s", "We prove tensor rank bounds for deep linear networks")
         fm = {**fm, "summary": f'"{summary}"'}
         with tempfile.TemporaryDirectory() as root:
-            os.makedirs(os.path.join(root, "wiki"))
+            os.makedirs(os.path.join(root, "wiki", "paper"))
             with open(os.path.join(root, "wiki", "index.md"), "w") as f:
-                f.write(f"- [Paper s](paper-s.md) (digested) — {summary}\n")
+                f.write("- [Papers](paper/index.md) — 1 page.\n")
+            with open(os.path.join(root, "wiki", "paper", "index.md"), "w") as f:       # the rows live in the section index
+                f.write(f"# Papers\n\n- [Paper s](../paper-s.md) — {summary}\n")
             with mock.patch.object(coherence, "ROOT", root):
                 hits = check_coherence({"paper-s": (path, fm, text)}, rows={})
                 self.assertFalse(any("index summary" in h["summary"] for h in hits))

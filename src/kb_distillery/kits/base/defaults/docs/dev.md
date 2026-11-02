@@ -95,7 +95,7 @@ selectable on every run; a feature that calls an LLM says in its plan which back
 **Environment:** one-time `curl -fsSL https://pixi.sh/install.sh | bash`, then restart the shell, then `pixi install` (again after any `pixi.toml` change — the Chat tab's agent backend needs the `claude-agent-sdk` PyPI package; behind a TLS-inspecting proxy run it with `SSL_CERT_FILE` pointing at a PEM of the keychain roots). All tasks below work via `pixi run <task>`.
 
 ```
-pixi run lint                      check + reconcile + regenerate wiki/index.md
+pixi run lint                      check + reconcile + regenerate wiki/index.md and the wiki/<type>/index.md sections
 pixi run health                    terminal health summary
 pixi run dashboard                 LEGACY stdlib health UI (deleted in a later PR; use `pixi run app` for the app, http://127.0.0.1:8765/app) — formerly /graph, /digestion, /ops, /chat — a read-only research agent over the Claude Agent SDK, with the direct Messages call as fallback; pays with a stored API key (`~/.config/kb-distillery/keys/<name>`, switchable in the Session card) or, agent backend only, the `claude login` subscription)
 pixi run launch                    restart dashboard from current code (detached) + open browser; also (re)starts the qmd search service when installed
