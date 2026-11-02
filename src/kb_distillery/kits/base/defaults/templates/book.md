@@ -17,7 +17,7 @@ description:
 
 ## Overview
 
-<!-- At least one paragraph: what the book is, how it is organised, its stance, and why it matters for the thesis. Lint warns until this is written. -->
+<!-- At least one paragraph: what the book is, how it is organised, its stance, and why it matters. Lint warns until this is written. -->
 
 ## Partition
 
@@ -29,4 +29,4 @@ description:
 
 ## Threads
 
-<!-- Thesis links, open questions, connected papers and people. -->
+<!-- Links, open questions, connected papers and people. -->

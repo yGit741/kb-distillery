@@ -16,7 +16,7 @@ One sentence: who this is and the one thing they are known for.
 
 ## Why it matters here
 
-- `[Topic title](theme-slug.md)` — the thesis thread this person's work feeds
+- `[Topic title](theme-slug.md)` — the topic this person's work feeds
 
 ## Meeting log
 

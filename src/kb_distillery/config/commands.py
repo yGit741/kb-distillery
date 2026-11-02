@@ -33,6 +33,8 @@ COMMANDS: dict[str, Cmd] = {
     "kb": Cmd("knowledge bases", "group", sub={
         "list": Cmd("every knowledge base and where it is", target="kb_distillery.config.kb", fixed=("list",), config_check=False),
         "show": Cmd("the selected knowledge base, resolved", target="kb_distillery.config.kb", fixed=("show",), config_check=False),
+        "takeaways": Cmd("rename older pages' takeaways heading to the kit's (dry run; --apply writes)",
+                         target="kb_distillery.migrations.takeaways_heading", forward_help=True),
     }),
     "launch": Cmd("restart the app detached and open it (outside a checkout: serve it in the foreground)", "launch",
                   "scripts/launch.sh"),

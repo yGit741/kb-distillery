@@ -12,6 +12,7 @@ import json
 import os
 import re
 
+from kb_distillery.config import pages as page_conventions
 from kb_distillery.ingest.paths import ROOT, sha1_file
 from . import bundle, fetch as fetch_mod, frames as fx, readers
 from .transcript import ts
@@ -101,10 +102,12 @@ def equations(chosen, limit=14):
     return out
 
 
-def put_section(text, heading, body, before=("## Takeaways for my thesis", "## Connections", "## Links out",
-                                              "## My notes")):
+def put_section(text, heading, body, before=None):
     """Replace `heading`'s section, or insert it before whichever of `before` comes first in the page (so
-    never inside or after `## My notes`), else at the end."""
+    never inside or after `## My notes`), else at the end. `before` defaults to the kb's takeaways heading,
+    Connections, Links out and My notes."""
+    if before is None:
+        before = (f"## {page_conventions.takeaways_heading()}", "## Connections", "## Links out", "## My notes")
     lines = body.rstrip() + "\n\n"
     m = re.search(rf"^{re.escape(heading)}\s*$.*?(?=^## |\Z)", text, re.M | re.S)
     if m:
