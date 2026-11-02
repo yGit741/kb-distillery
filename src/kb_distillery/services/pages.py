@@ -44,7 +44,10 @@ _TITLES = {}
 
 def _plain(s, titles=None):
     titles = _TITLES if titles is None else titles
-    s = page_links.PAGE_LINK.sub(lambda m: page_links.link_parts(m)[0], s)
+    def label(m):                                     # text equal to the slug = no text chosen: show the page title
+        text, slug, _a = page_links.link_parts(m)
+        return titles.get(slug) or text if text == slug else text
+    s = page_links.PAGE_LINK.sub(label, s)
     s = page_links.WIKILINK.sub(lambda m: (m.group(2) or titles.get(m.group(1).strip()) or m.group(1)).strip(), s)
     s = re.sub(r"\[([^\]]+)\]\([^)]+\)", r"\1", s)
     s = re.sub(r"[*_`>#]+", "", s)

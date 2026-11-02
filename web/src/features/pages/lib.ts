@@ -2,6 +2,7 @@
 import { LAYER_TYPES, type Layer } from "@/api/model";
 import type { PageCard, PageIndex } from "@/api/types";
 import type { GNode } from "@/features/graph/types";
+import { PAGE_LINK, link } from "@/lib/links";
 
 // ---------- data model ----------
 
@@ -128,6 +129,12 @@ export const withPinToggled = (pins: readonly string[], slug: string): string[] 
 /** Obsidian-isms the shared renderer does not know: comments, `![[img]]` embeds, chat visualization blocks, the H1. */
 export function prepareMarkdown(md: string, titleFor?: (slug: string) => string | undefined): string {
   let s = md.replace(/<!--[\s\S]*?-->/g, "");
+  // a page link whose text is its slug chose no text: the reader shows the page title (as for a bare wikilink)
+  if (titleFor)
+    s = s.replace(PAGE_LINK, (m, label: string, slug: string, anchor?: string) => {
+      const t = label === slug ? titleFor(slug)?.replace(/[[\]|]/g, " ") : undefined;
+      return t ? link(slug, t, anchor) : m;
+    });
   // a bare [[slug]] reads as the page title (a table-cell `\|` separator is already unescaped by the parser)
   if (titleFor)
     s = s.replace(/\[\[([^\[\]|#\n]+)(#[^\[\]|\n]*)?\]\]/g, (m, slug: string) => {

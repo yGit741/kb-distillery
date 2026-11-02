@@ -88,6 +88,13 @@ describe("wikilink titles", () => {
     const t = (s: string) => (s === "a" ? "Alpha [x]" : undefined);
     expect(prepareMarkdown("[[a]] [[a|mine]] [[zzz]] [[a#h]]", t)).toBe("[[a|Alpha  x ]] [[a|mine]] [[zzz]] [[a|Alpha  x ]]");
   });
+
+  it("shows the page title for a page link whose text is its slug, keeps chosen text", () => {
+    const t = (s: string) => (s === "a" ? "Alpha [x]" : undefined);
+    expect(prepareMarkdown("[a](a.md) [mine](a.md) [zzz](zzz.md) [a](a.md#why)", t)).toBe(
+      "[Alpha x](a.md) [mine](a.md) [zzz](zzz.md) [Alpha x](a.md#why)",
+    );
+  });
 });
 
 describe("search helpers", () => {
