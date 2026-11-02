@@ -16,7 +16,7 @@ class FakeStatus:
 
 def get(value):
     FakeStatus.value = value
-    with TestClient(create_app()) as c, mock.patch("kb_distillery.share.contracts.StatusFile", FakeStatus):
+    with TestClient(create_app()) as c, mock.patch("kb_distillery.publish.cloudflare.contracts.StatusFile", FakeStatus):
         return c.get("/api/share/status")
 
 

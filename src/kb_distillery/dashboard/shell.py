@@ -1,7 +1,7 @@
-"""Shared navigation shell for the legacy dashboard tabs (the share chip lives in publish.site_state)."""
+"""Shared navigation shell for the legacy dashboard tabs (the share chip lives in publish.site.state)."""
 import html
 
-from kb_distillery.publish.site_state import share_chip, share_state  # noqa: F401 (re-exported for the legacy pages)
+from kb_distillery.publish.site.state import share_chip, share_state  # noqa: F401 (re-exported for the legacy pages)
 
 TABS = [
     ("start", "/start", "Start"),

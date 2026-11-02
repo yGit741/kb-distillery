@@ -69,20 +69,20 @@ def test_resource_is_relative_to_the_package_and_never_raises():
 
 
 def test_root_resource_reads_the_checkout_here_and_the_packed_copy_in_a_wheel(tmp_path):
-    assert resources.root_resource("share") == resources.repo_root() / "share"
+    assert resources.root_resource("scripts") == resources.repo_root() / "scripts"
     site = tmp_path / "site-packages" / "kb_distillery"
     (site / "_data" / "scripts").mkdir(parents=True)
     with patch.object(resources, "package_root", lambda: site):
         assert resources.root_resource("scripts") == site / "_data" / "scripts"
-        assert resources.root_resource("share") == site / "_data" / "share"      # missing: still a path
+        assert resources.root_resource("elsewhere") == site / "_data" / "elsewhere"      # missing: still a path
 
 
 def test_a_packed_copy_wins_over_the_checkout(tmp_path):
     pkg = _fake_checkout(tmp_path)
-    (pkg / "_data" / "share").mkdir(parents=True)
-    (tmp_path / "repo" / "share").mkdir()
+    (pkg / "_data" / "scripts").mkdir(parents=True)
+    (tmp_path / "repo" / "scripts").mkdir()
     with patch.object(resources, "package_root", lambda: pkg):
-        assert resources.root_resource("share") == pkg / "_data" / "share"
+        assert resources.root_resource("scripts") == pkg / "_data" / "scripts"
 
 
 def test_importing_the_package_needs_no_repo():

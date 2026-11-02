@@ -1,7 +1,7 @@
 import type { CitationGraph, LifecycleSnapshot, PageDetail, PageIndex, RawCard } from "@/api/types";
 import type { GraphSnapshot } from "@/api/types";
 
-/** What the share builder (backend kb_distillery.share.build) bakes into `<script id="kb-data">`. */
+/** What the share builder (backend kb_distillery.publish.site.build) bakes into `<script id="kb-data">`. */
 export interface ShareMeta {
   kb_version: string;
   content_sha: string;
@@ -21,7 +21,7 @@ export interface ShareBlob {
   meta?: ShareMeta;
   /** Home pipeline cards per source slug (kb_distillery.services.raw_card.bake_cards); public: the privacy column applied. */
   rawCards?: Record<string, RawCard>;
-  /** Home cards and the tour id from share.toml `[home]` (kb_distillery.share.home); `view` = the graph view a
+  /** Home cards and the tour id from share.toml `[home]` (kb_distillery.publish.site.home); `view` = the graph view a
    *  snapshot built with `share snapshot … --view <id>` opens on when the URL has no `?view=`. */
   home?: { cards?: unknown[]; tour?: string | null; view?: string | null };
 }

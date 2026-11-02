@@ -2,7 +2,7 @@
 its `kb-data` payload byte for byte (tests/fixtures/golden/share-app/{private,public}.json), and a missing share config
 refuses to build.
 
-It lives here, not in tests/share, because that folder skips itself outside the monorepo layout. Offline: a stub frontend
+It lives here, not in tests/publish/cloudflare, because that folder skips itself outside the monorepo layout. Offline: a stub frontend
 dist stands in for `vite build`, so only the Python side of the build is pinned. After an intended change to the data,
 regenerate with `KB_UPDATE_GOLDEN=1 pixi run pytest tests/publish/test_share_snapshot_golden.py` and review the diff."""
 import json
@@ -18,8 +18,8 @@ from types import SimpleNamespace
 import pytest
 
 from kb_distillery.kbconfig import checkout_root
-from kb_distillery.share import build as sb
-from kb_distillery.share import home
+from kb_distillery.publish.site import build as sb
+from kb_distillery.publish.site import home
 
 HERE = Path(__file__).resolve().parent
 FIXTURE_KB = HERE.parent / "fixtures" / "kb" / "kb-fixture"
@@ -107,7 +107,7 @@ class SnapshotGolden(unittest.TestCase):
         if shutil.which("git") is None:
             raise unittest.SkipTest("git not available")
         root = checkout_root()
-        if root is None or not (Path(root) / "src" / "kb_distillery" / "share" / "build.py").is_file():
+        if root is None or not (Path(root) / "src" / "kb_distillery" / "publish" / "site" / "build.py").is_file():
             raise unittest.SkipTest("not a source checkout: the share build renders with this checkout's code")
         cls.viewer = root
         cls.tmp = tempfile.mkdtemp(prefix="share-golden-")

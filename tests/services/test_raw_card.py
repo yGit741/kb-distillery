@@ -9,7 +9,7 @@ from kb_distillery.api.app import create_app
 from kb_distillery.api.models.corpus import RawCard
 from kb_distillery.services import corpus
 from kb_distillery.services.raw_card import bake_cards, public_card, raw_card
-from kb_distillery.share.build import raw_paths_of
+from kb_distillery.publish.site.build import raw_paths_of
 
 CHAT = """---
 source: https://gemini.google.com/app/abc

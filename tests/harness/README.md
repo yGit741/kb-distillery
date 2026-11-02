@@ -18,7 +18,7 @@ pixi run test                           # includes the fast unit tests (test_har
    (`src/kb_distillery`, minus tests) plus a seed wiki in schema-1.0 form (10 topic pages, ideas ending with `## My notes`,
    one course, one series, one video source), and one input file per source type.
 2. `run_pipeline.py` runs the real path with cwd = the scratch vault: `scrap` -> `catalog` (with collection) ->
-   digest -> `lint` -> graph / explorer / chat-retrieval builders -> share build (`kb_distillery.share.build --inner`,
+   digest -> `lint` -> graph / explorer / chat-retrieval builders -> share build (`kb_distillery.publish.site.build --inner`,
    public profile) -> nightly report preview. LLM steps are replaced by recordings in
    `fixtures/recorded/digests.json` (the claims.json the agent would have written, plus the easy-digest summaries).
 3. Artifacts are normalised (paths, timestamps, session ids, PDF sha1) and compared with

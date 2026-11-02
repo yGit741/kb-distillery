@@ -10,7 +10,7 @@ const API_TARGET = process.env.KB_API || "http://127.0.0.1:8765";
 
 // The app is served under /app (python -m kb_distillery.api, FastAPI spa router) and in dev at http://localhost:5173/app/.
 //
-// `vite build --mode share` is the static, read-only build for the shared site (kb_distillery.share.build):
+// `vite build --mode share` is the static, read-only build for the shared site (kb_distillery.publish.site.build):
 // served from the site root, with the screens it includes decided HERE, at build time. The profile comes
 // from VITE_SHARE_PROFILE (anything but "private" is public, the safe side). The route registry then
 // imports a literal screen list (src/routes/modules.share-*.ts, generated from the screen.* build flags in

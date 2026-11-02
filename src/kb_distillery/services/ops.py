@@ -133,7 +133,7 @@ def _origin_main(root):
 
 
 def deploy_state(root=None, now=None, plist=OWNER_PLIST, main=None):
-    """The deploy owner's state (kb_distillery.share.owner: .cache/share/owner.json + status.json) vs origin/main.
+    """The deploy owner's state (kb_distillery.publish.cloudflare.owner: .cache/share/owner.json + status.json) vs origin/main.
 
     Read-only. A field is None when unknown so the tile says "unknown" rather than ok. `main` = (sha, unix
     time) overrides the git read (tests).

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <!-- Template: install-deploy-owner.sh fills in __ROOT__, __PIXI__ and __LOG__.
-     The single deploy owner of the private site (kb_distillery.share.owner run); always on, restarted on exit. -->
+     The single deploy owner of the private site (kb_distillery.publish.cloudflare.owner run); always on, restarted on exit. -->
 <plist version="1.0">
 <dict>
   <key>Label</key>
@@ -10,7 +10,7 @@
   <array>
     <string>/bin/zsh</string>
     <string>-lc</string>
-    <string>cd "__ROOT__" &amp;&amp; echo "=== $(date) deploy owner start" &amp;&amp; exec "__PIXI__" run python -m kb_distillery.share.owner run</string>
+    <string>cd "__ROOT__" &amp;&amp; echo "=== $(date) deploy owner start" &amp;&amp; exec "__PIXI__" run python -m kb_distillery.publish.cloudflare.owner run</string>
   </array>
   <key>RunAtLoad</key>
   <true/>

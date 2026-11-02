@@ -1,0 +1,10 @@
+// Rendered by src/kb_distillery/publish/cloudflare/deploy.py into a temporary Worker directory — never edit the rendered copy.
+// Placeholders (double braces): name, compatibility_date, assets, script — see deploy.render_wrangler.
+{
+  "name": "{{name}}",
+  "compatibility_date": "{{compatibility_date}}",
+  "workers_dev": true,
+  "preview_urls": false,
+  "assets": {{assets}},
+{{script}}  "observability": { "enabled": false }
+}

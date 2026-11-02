@@ -1,0 +1,19 @@
+# Share deploy config — committed, no secrets. Secrets live as Worker secrets
+# (`npx wrangler@4.151.3 secret put GOOGLE_CLIENT_SECRET|SESSION_SECRET --name kb`).
+#
+# google_client_id: the OAuth 2.0 Web client ID (not secret). Empty until the user pastes it:
+#   pixi run share -- config --google-client-id <id>     (stores it here)
+# or export KB_SHARE_GOOGLE_CLIENT_ID=<id> at deploy time (overrides this file, not stored).
+# allowed_emails: who may open the private site (ALLOWED_EMAILS var in the Worker).
+
+[auth]
+google_client_id = "674238874424-l5l5l4q50qrsmngf406rvikbenjl34nv.apps.googleusercontent.com"
+allowed_emails = ["ygreenshpan@gmail.com"]
+
+[worker]
+compatibility_date = "2026-09-01"
+
+# Home of a share build: the tour offered on the first visit (a name from web/src/features/home/tours.ts;
+# first-visit, thesis-story or boolean-bridge) and optional [[home.cards]] (see kb_distillery/publish/site/home.py).
+[home]
+tour = "thesis-story"
