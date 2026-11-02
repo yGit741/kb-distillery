@@ -62,7 +62,7 @@ distill ingest digest-many drive --run kalai [--max 10]        # stops after 3 f
 distill ingest digest-many status --run kalai
 ```
 
-Deepening an existing page keeps its frontmatter (`blog`, `date`, `url`, `summary`, …) and its `## My notes`; `area`
+Deepening an existing page keeps its frontmatter (`blog`, `created`, `url`, `description`, …) and its `## My notes`; `area`
 is never guessed for it, and `open_questions` spawn no `q-` stubs in a bulk run.
 
 ## Books (≥60 pages)
@@ -99,7 +99,7 @@ member auto-scopes to its row.
 
 ## Output
 
-A Source page (`layer: source`) at `depth: full`, `status: digested`, Key equations required at finalize.
+A Source page (`layer: source`) at `depth: full`, `maturity: digested`, Key equations required at finalize.
 An existing page (e.g. `depth: listed` or `easy`) is deepened in place. For a book: a `type: part`
 page plus an updated partition row. For a collection row: a Source page plus a ticked Contents row.
 
@@ -119,7 +119,7 @@ page plus an updated partition row. For a collection row: a Source page plus a t
 
 ## Summary
 
-After finalize, refresh the page's `summary:` (schema 1.3): `python3 -m kb_distillery.summaries run --slugs <slug>` then `python3 -m kb_distillery.summaries apply --slugs <slug>` inside the open ops session — a deeper page always gets a new one; skip pages marked `summary_by: me`.
+After finalize, refresh the page's `description:` (schema 1.3): `python3 -m kb_distillery.summaries run --slugs <slug>` then `python3 -m kb_distillery.summaries apply --slugs <slug>` inside the open ops session — a deeper page always gets a new one; skip pages whose `generated.by` is a `human:<id>`.
 
 ## Commit
 

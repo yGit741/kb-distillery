@@ -176,7 +176,7 @@
       .sort((a, b) => (b.inDegree + b.outDegree) - (a.inDegree + a.outDegree));
     const kicker = [`<i class="gs-dot" style="background:${G().colorFor(n)}"></i>${esc(G().layerOf(n) ? `${G().layerOf(n)} · ${n.type}` : n.type)}`];
     if (n.depth) kicker.push(`<span class="gs-badge gs-badge-${esc(n.depth)}">${esc(n.depth)}</span>`);
-    if (n.status) kicker.push(`<span class="gs-badge">${esc(n.status)}</span>`);
+    if (n.maturity) kicker.push(`<span class="gs-badge">${esc(n.maturity)}</span>`);
     if (n.year) kicker.push(`<span>${n.year}</span>`);
     if (n.part && n.part.pages) kicker.push(`<span>pp. ${esc(n.part.pages.replace("-", "–"))}</span>`);
     (n.areas || []).slice(0, 3).forEach((a) => kicker.push(`<span>#${esc(a)}</span>`));

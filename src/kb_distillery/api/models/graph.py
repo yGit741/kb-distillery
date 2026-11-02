@@ -12,7 +12,7 @@ class GraphNode(ApiModel):
     title: str = ""
     type: str = ""
     layer: str = ""                      # source | collection | concept
-    status: str = ""
+    maturity: str = ""                   # the reading lifecycle (was `status`)
     depth: str = ""                      # listed | easy | full | deep (sources)
     areas: list[str] = []
     year: int | None = None
@@ -48,7 +48,7 @@ class ConceptLink(ApiModel):
 
 class GraphFacets(ApiModel):
     types: list[str] = []
-    statuses: list[str] = []
+    maturities: list[str] = []
     areas: list[str] = []
 
 

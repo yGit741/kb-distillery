@@ -8,7 +8,7 @@ from kb_distillery.ingest import cli, easy_digest as ed
 
 PAPER = """---
 type: paper
-status: digested
+maturity: digested
 depth: easy
 summary:
 ---

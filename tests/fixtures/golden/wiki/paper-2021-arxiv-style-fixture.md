@@ -1,14 +1,16 @@
 ---
 type: paper
 layer: source
+title: "Fixture arXiv-style paper"
 authors: [Fixture Author]
 year: 2021
 area: [info-theory]
-status: digested
+maturity: digested
 depth: deep
 raw: raw/printed-docs/2021-arxiv-style-fixture.pdf
 citekey: 
 url: https://arxiv.org/abs/2105.10386
+sources: [{resource: https://arxiv.org/abs/2105.10386}]
 recommended_by: []
 discussed_with: []
 ---

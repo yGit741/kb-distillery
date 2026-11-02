@@ -1,15 +1,16 @@
 ---
 type: mail
 layer: source
-status: digested
+title: "Acme recruiter intro thread"
+maturity: digested
 depth: easy
 raw: raw/emails/2026-10-02-acme-recruiter-intro/thread.md
 company: Acme Robotics
-date: 2026-10-08
+created: 2026-10-08T00:00:00Z
 stage: recruiter screen
-related: [noa-peretz, omer-shahar, interview-acme-recruiter-screen, process-acme-robotics]
-summary: "Recruiter thread with Noa Peretz at Acme Robotics, 2 to 8 October 2026: cold outreach, a recruiter-screen call on 8 October, CV sent, and promotion to a technical round with Omer Shahar on 15 October."
-summary_by: me
+related: [noa-peretz.md, omer-shahar.md, interview-acme-recruiter-screen.md, process-acme-robotics.md]
+description: "Recruiter thread with Noa Peretz at Acme Robotics, 2 to 8 October 2026: cold outreach, a recruiter-screen call on 8 October, CV sent, and promotion to a technical round with Omer Shahar on 15 October."
+generated: {by: human:dana-levi}
 ---
 
 # Acme recruiter intro thread

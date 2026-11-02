@@ -1,6 +1,7 @@
 """Wiki graph helpers — links, sections, token overlap (0 LLM)."""
 import os
 import re
+from kb_distillery.core import links as page_links
 from kb_distillery.core.links import WIKILINK_TARGET
 
 LINK = WIKILINK_TARGET
@@ -76,13 +77,7 @@ def claim_text(slug, fm, text):
 def outbound_links(text, fm=None):
     slugs = {m.strip() for m in LINK.findall(text or "")}
     if fm:
-        related = fm.get("related")
-        if isinstance(related, str):
-            related = [related]
-        if related:
-            for r in related:
-                if r:
-                    slugs.add(r.strip())
+        slugs.update(page_links.refs(fm.get("related")))
     return slugs
 
 

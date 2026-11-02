@@ -1,12 +1,13 @@
 ---
 type: interview
 layer: concept
-status: done
-date: 2026-10-15
-sources: [notes-acme-technical-interview, chat-gemini-acme-system-design-prep, mail-2026-10-02-acme-recruiter-intro]
-related: [omer-shahar, role-senior-ml-engineer-acme, company-acme-robotics, interview-acme-recruiter-screen, skill-sensor-fusion, skill-pytorch, skill-ml-ops, skill-system-design, process-acme-robotics]
-summary: "Technical interview at Acme Robotics with Omer Shahar on 15 October 2026: multi-object tracker, sensor timestamp alignment, PyTorch data loading and retraining triggers; positive outcome."
-summary_by: me
+title: "Acme technical interview"
+maturity: done
+created: 2026-10-15T00:00:00Z
+sources: [{resource: notes-acme-technical-interview.md}, {resource: chat-gemini-acme-system-design-prep.md}, {resource: mail-2026-10-02-acme-recruiter-intro.md}]
+related: [omer-shahar.md, role-senior-ml-engineer-acme.md, company-acme-robotics.md, interview-acme-recruiter-screen.md, skill-sensor-fusion.md, skill-pytorch.md, skill-ml-ops.md, skill-system-design.md, process-acme-robotics.md]
+description: "Technical interview at Acme Robotics with Omer Shahar on 15 October 2026: multi-object tracker, sensor timestamp alignment, PyTorch data loading and retraining triggers; positive outcome."
+generated: {by: human:dana-levi}
 ---
 
 # Acme technical interview

@@ -4,6 +4,7 @@
  "collections": [
   {
    "covered": 10,
+   "maturity": "reading",
    "pct": 16,
    "raw": "raw/printed-docs/2020-tiny-book.pdf",
    "rows": [
@@ -29,7 +30,6 @@
     }
    ],
    "slug": "book-2020-tiny-book",
-   "status": "reading",
    "title": "Tiny Book (2020)",
    "total": 61,
    "type": "book",
@@ -37,6 +37,7 @@
   },
   {
    "covered": 1,
+   "maturity": "digested",
    "pct": 100,
    "raw": "",
    "rows": [
@@ -51,7 +52,6 @@
     }
    ],
    "slug": "course-test-ml",
-   "status": "digested",
    "title": "Test machine learning",
    "total": 1,
    "type": "course",
@@ -59,6 +59,7 @@
   },
   {
    "covered": 1,
+   "maturity": "digested",
    "pct": 100,
    "raw": "",
    "rows": [
@@ -73,7 +74,6 @@
     }
    ],
    "slug": "series-test-blog",
-   "status": "digested",
    "title": "Test blog",
    "total": 1,
    "type": "series",

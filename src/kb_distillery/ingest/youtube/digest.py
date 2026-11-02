@@ -196,8 +196,7 @@ def video_digest(arg, tier="full", model=readers.READ_MODEL, workers=4, backend=
     from kb_distillery.lint.lint import parse_frontmatter
     old = (parse_frontmatter(text) or {}).get("depth")
     depth = max([d_ for d_ in (old, tier) if d_ in DEPTH], key=DEPTH.index)   # never downgrade deep to full
-    text = wikiio.set_key(text, "depth", depth, after="status")
-    text = wikiio.set_key(text, "status", "digested")
+    text = wikiio.set_reading(text, depth, "digested")
     text = put_section(text, "## Frames", frames_section(chosen, d["url"]))
     eqs = equations(ok)
     if eqs and section_empty(text, "## Key equations"):

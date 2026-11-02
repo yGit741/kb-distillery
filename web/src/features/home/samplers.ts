@@ -150,7 +150,7 @@ export const SAMPLERS: Record<Exclude<SampleKind, "curated">, Sampler> = {
   question: (v, rand) => {
     const pool = connected(v).filter((id) => {
       const n = v.byId.get(id);
-      return n?.type === "question" && /open|partial/.test(n.status);
+      return n?.type === "question" && /open|partial/.test(n.maturity);
     });
     return make(v, "question", pick(pool, rand), "An open question and the pages that bear on it.");
   },

@@ -49,7 +49,7 @@ export function makeFixtureBlob(): ShareBlob {
   for (const [slug, p] of Object.entries(BODIES)) {
     const backlinks = links.filter((l) => l[1] === slug).map((l) => ({ id: l[0]!, context: `context of ${l[0]} -> ${slug}` }));
     pages[slug] = {
-      card: { id: slug, title: p.title, type: p.type, status: "seed", depth: "", areas: [], words: p.body.split(/\s+/).length, preview: `preview of ${slug}` },
+      card: { id: slug, title: p.title, type: p.type, maturity: "seed", depth: "", areas: [], words: p.body.split(/\s+/).length, preview: `preview of ${slug}` },
       path: `wiki/${slug}.md`,
       frontmatter: { type: p.type },
       markdown: p.body,
@@ -59,9 +59,9 @@ export function makeFixtureBlob(): ShareBlob {
       suggested: [],
     } as PageDetail;
   }
-  const nodes = Object.values(pages).map((p) => ({ id: p.card.id, label: p.card.title, title: p.card.title, type: p.card.type, layer: "concept", status: "seed", depth: "", areas: [], inDegree: 0, outDegree: 0, path: "", added: "", changed: "", preview: "", properties: {} }));
+  const nodes = Object.values(pages).map((p) => ({ id: p.card.id, label: p.card.title, title: p.card.title, type: p.card.type, layer: "concept", maturity: "seed", depth: "", areas: [], inDegree: 0, outDegree: 0, path: "", added: "", changed: "", preview: "", properties: {} }));
   return {
-    graph: { generated_at: "2026-01-01T00:00:00Z", etag: "e", node_count: nodes.length, link_count: links.length, nodes, links: links.map(([source, target]) => ({ source: source!, target: target!, kind: "wikilink" })), schema: {}, concept_links: [], facets: { types: [], statuses: [], areas: [] } },
+    graph: { generated_at: "2026-01-01T00:00:00Z", etag: "e", node_count: nodes.length, link_count: links.length, nodes, links: links.map(([source, target]) => ({ source: source!, target: target!, kind: "wikilink" })), schema: {}, concept_links: [], facets: { types: [], maturities: [], areas: [] } },
     index: { generated_at: "2026-01-01T00:00:00Z", pages: Object.values(pages).map((p) => p.card), links, wanted: [], wanted_total: 0 },
     pages,
     meta: { kb_version: "1.2.3", content_sha: "0123456789abcdef", viewer_sha: "fedcba9876543210", profile: "public", built_at: "2026-01-01T00:00:00Z" },
@@ -89,7 +89,7 @@ export function makeRandomBlob(n = 80, seed = 7): ShareBlob {
   for (const slug of slugs) {
     const t = `${words[Math.floor(rnd() * words.length)]} ${words[Math.floor(rnd() * words.length)]} page`;
     blob.pages[slug] = {
-      card: { id: slug, title: t, type: "idea", status: "seed", depth: "", areas: [], words: 40, preview: `p ${slug}` },
+      card: { id: slug, title: t, type: "idea", maturity: "seed", depth: "", areas: [], words: 40, preview: `p ${slug}` },
       path: "", frontmatter: {}, markdown: bodies[slug]!,
       backlinks: links.filter((l) => l[1] === slug).map((l) => ({ id: l[0]!, context: `ctx ${l[0]}->${slug}` })),
       outbound: links.filter((l) => l[0] === slug).map((l) => l[1]!), broken: [], suggested: [],

@@ -1,12 +1,12 @@
 ---
 type: lecture
 layer: source
+title: "Rl Fixture 2"
 course: 
 area: []
-status: digested
+maturity: digested
 depth: easy
 raw: [raw/presentations/rl-fixture-lecture-2.pdf]
-date:
 ---
 
 # Rl Fixture 2

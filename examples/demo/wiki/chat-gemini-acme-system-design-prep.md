@@ -1,15 +1,16 @@
 ---
 type: chat
 layer: source
-status: digested
+title: "Gemini chat: Acme system-design and ML-ops prep"
+maturity: digested
 depth: easy
 raw: raw/llm-chats/gemini-acme-system-design-prep.md
 company: Acme Robotics
-date: 2026-10-12
+created: 2026-10-12T00:00:00Z
 stage: system-design prep
-related: [skill-system-design, skill-ml-ops, skill-sensor-fusion, process-acme-robotics]
-summary: "Gemini prep chat on the Acme system-design round: structure of a perception design answer, an ML-ops checklist (golden sets, shadow deployment, drift monitors), how to present sensor fusion, and latency budgeting."
-summary_by: me
+related: [skill-system-design.md, skill-ml-ops.md, skill-sensor-fusion.md, process-acme-robotics.md]
+description: "Gemini prep chat on the Acme system-design round: structure of a perception design answer, an ML-ops checklist (golden sets, shadow deployment, drift monitors), how to present sensor fusion, and latency budgeting."
+generated: {by: human:dana-levi}
 ---
 
 # Gemini chat: Acme system-design and ML-ops prep

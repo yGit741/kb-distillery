@@ -1,14 +1,15 @@
 ---
 type: series
 layer: collection
+title: {{title_yaml}}
 short: {{short}}
 author: {{author}}
 url: {{url}}
 area: []
-status: to-read
+maturity: to-read
 aliases: []
 related: []
-summary:
+description:
 ---
 
 # {{title}}

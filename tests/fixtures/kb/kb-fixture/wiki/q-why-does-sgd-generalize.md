@@ -1,8 +1,9 @@
 ---
 type: question
 layer: concept
+title: "Why does SGD generalize?"
 area: [learning-theory]
-status: open
+maturity: open
 priority: med
 discussed_with: []
 ---

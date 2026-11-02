@@ -1,8 +1,9 @@
 ---
 type: idea
 layer: concept
+title: "Bias-variance tradeoff"
 area: [statistics]
-status: seed
+maturity: seed
 sources: []
 related: []
 discussed_with: []

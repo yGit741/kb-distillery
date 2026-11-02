@@ -1,12 +1,13 @@
 ---
 type: interview
 layer: concept
-status: scheduled
-date: 2026-10-29
-sources: [posting-nimbus-health-applied-scientist]
-related: [maya-cohen, role-applied-scientist-nimbus, company-nimbus-health, skill-interviewing-stories, skill-clinical-nlp, process-nimbus-health]
-summary: "Hiring-manager conversation with Maya Cohen at Nimbus Health, scheduled for the Applied Scientist role; behavioural, so story preparation is the main task."
-summary_by: me
+title: "Nimbus hiring-manager interview"
+maturity: scheduled
+created: 2026-10-29T00:00:00Z
+sources: [{resource: posting-nimbus-health-applied-scientist.md}]
+related: [maya-cohen.md, role-applied-scientist-nimbus.md, company-nimbus-health.md, skill-interviewing-stories.md, skill-clinical-nlp.md, process-nimbus-health.md]
+description: "Hiring-manager conversation with Maya Cohen at Nimbus Health, scheduled for the Applied Scientist role; behavioural, so story preparation is the main task."
+generated: {by: human:dana-levi}
 ---
 
 # Nimbus hiring-manager interview

@@ -1,14 +1,15 @@
 ---
 type: video
 layer: source
+title: {{title_yaml}}
 author: {{author}}
 series: {{series}}
 area: []
-status: digested
+maturity: digested
 depth: easy
 raw: {{raw}}
 url: {{url}}
-summary:
+description:
 ---
 
 # {{title}}

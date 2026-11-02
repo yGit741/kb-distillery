@@ -11,6 +11,7 @@ import shutil
 import subprocess
 import sys
 
+from kb_distillery.core import frontmatter
 from . import blog
 from .paths import ROOT, person_from_raw, set_collection, _page_type
 from .verify import existing_digest_for_raw
@@ -208,18 +209,22 @@ def _catalog_stub(slug, raw_rel, title=None, year=None, url="", authors=None):
     person = person_from_raw(raw_rel)
     recommended = f"[{person}]" if person else "[]"
     person_line = f"- Person: [[{person}]]\n" if person else ""
+    sources_yaml = frontmatter.url_sources(url)
+    sources_yaml = sources_yaml + "\n" if sources_yaml else ""
     return f"""---
 type: paper
 layer: source
+{frontmatter.title_line(title)}
 authors: {authors_yaml}
 year: {year}
 area: []
-status: to-read
+maturity: to-read
+status: draft
 depth: listed
 raw: {raw_rel}
 citekey:
 url: {url}
-recommended_by: {recommended}
+{sources_yaml}recommended_by: {recommended}
 discussed_with: []
 ---
 

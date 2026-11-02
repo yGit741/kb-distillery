@@ -16,7 +16,7 @@ from kb_distillery.share import contracts
 
 PAGE = """---
 type: concept
-status: seed
+maturity: seed
 related: []
 ---
 

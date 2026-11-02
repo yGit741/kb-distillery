@@ -1,15 +1,15 @@
 ---
 type: article
 layer: source
+title: "Clip Why Rank Matters"
 source: 
 author:
 area: []
-status: digested
+maturity: digested
 depth: easy
 raw: raw/web-clips/clip-why-rank-matters.md
 url:
-date:
-summary:
+description:
 ---
 
 # Clip Why Rank Matters

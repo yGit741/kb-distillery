@@ -159,7 +159,7 @@ export function colorOf(n: GNode, by: ColorBy, metric?: number, ramp?: "light" |
     case "depth":
       return n.layer === "source" ? depthColor(n.depth || "listed") : UNKNOWN_COLOR;
     case "status":
-      return statusColor(n.status);
+      return statusColor(n.maturity);
     case "area":
       return n.type === "person" && !n.areas[0] ? PERSON_INK : areaHue(n.areas[0], slots);
     case "degree":
@@ -181,7 +181,7 @@ export function colorKey(n: GNode, by: ColorBy, slots: AreaSlots = AREA_SLOT): s
     case "depth":
       return n.layer === "source" ? n.depth || "listed" : "(not a source)";
     case "status":
-      return n.status || "(none)";
+      return n.maturity || "(none)";
     case "area":
       if (n.type === "person" && !n.areas[0]) return PEOPLE;
       return !n.areas[0] ? NO_AREA : slots.has(n.areas[0]) ? areaDisplay(n.areas[0]) : OTHER_AREAS;

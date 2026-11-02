@@ -3,6 +3,7 @@ import json
 import os
 import sys
 
+from kb_distillery.core import frontmatter
 from kb_distillery.core.schema import TOPIC_SLUGS
 from kb_distillery.lint.lint import QUESTION_TITLE_MAX
 
@@ -94,31 +95,35 @@ def run_draft(sha):
     raws = plan.get("raws") or [claims["raw"]]
     raw_field = raws[0] if len(raws) == 1 else "[" + ", ".join(raws) + "]"
 
+    title_fm = frontmatter.title_line(claims["title"])
+    draft_fm = "status: draft\n" if digestion == "listed" else ""             # OKF lifecycle: a listed stub is a draft
+    url_fm = frontmatter.url_sources(claims.get("url"))
+    url_fm = url_fm + "\n" if url_fm else ""
     scope = session.get("scope") or {}
     book = plan.get("book") if plan.get("type") == "part" else None
     if book:
         a, b = scope["pages"]
         section = (scope.get("label") or "").replace("#", "").replace(":", " –")
-        head = (f"type: part\nlayer: source\nbook: {book}\n", f"section: {section}\nsection_pages: {a}-{b}\n",
+        head = (f"type: part\nlayer: source\n{title_fm}\nbook: {book}\n", f"section: {section}\nsection_pages: {a}-{b}\n",
                 f"\n> Part of [[{book}]] · pp. {a}–{b} · {section}\n")
         plan["areas_resolved"] = areas
     elif plan.get("hub"):
         hub_key = "series" if plan["hub"].startswith("series-") else "course"
-        head = (f"type: {plan.get('type') or 'paper'}\nlayer: source\n{hub_key}: {plan['hub']}\n", "",
+        head = (f"type: {plan.get('type') or 'paper'}\nlayer: source\n{title_fm}\n{hub_key}: {plan['hub']}\n", "",
                 f"\n> Row {plan.get('hub_row')} of [[{plan['hub']}]]\n")
     else:
-        head = (f"type: {plan.get('type') or 'paper'}\nlayer: source\n", "", "")
+        head = (f"type: {plan.get('type') or 'paper'}\nlayer: source\n{title_fm}\n", "", "")
 
     body = f"""---
 {head[0]}authors: {authors_yaml}
 year: {year}
 area: [{", ".join(areas)}]
-status: {paper_status}
-depth: {digestion}
+maturity: {paper_status}
+{draft_fm}depth: {digestion}
 raw: {raw_field}
 {head[1]}citekey: {claims.get("citekey") or ""}
 url: {claims.get("url") or ""}
-recommended_by: {recommended_by}
+{url_fm}recommended_by: {recommended_by}
 discussed_with: []
 ---
 
@@ -174,8 +179,9 @@ discussed_with: []
         qbody = f"""---
 type: question
 layer: concept
+{frontmatter.title_line(question_name(q.get("text") or qslug))}
 area: [{", ".join(areas[:3])}]
-status: open
+maturity: open
 priority: med
 discussed_with: []
 ---

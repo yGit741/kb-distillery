@@ -1,17 +1,19 @@
 ---
 type: paper
 layer: source
+title: {{title_yaml}}
 authors: []
 year:
 area: []
-status: to-read
+maturity: to-read
+status: draft
 depth: listed
 raw: raw/printed-docs/
 citekey:
 url:
 recommended_by: []
 discussed_with: []
-summary:
+description:
 ---
 
 # {{title}}

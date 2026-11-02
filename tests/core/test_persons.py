@@ -12,6 +12,7 @@ from kb_distillery.core import persons
 V2 = """---
 type: person
 layer: concept
+title: "Ada Lovelace"
 url: https://example.org/~ada
 scholar: none
 github: https://github.com/ada
@@ -110,8 +111,8 @@ class CheckTest(unittest.TestCase):
         self.assertTrue(any("`area:` is not a person field" in e for e in errs))
 
     def test_summary_fields_are_person_fields(self):
-        errs, _w, _s = self.check(V2.replace("type: person", 'type: person\nsummary: "x"\nsummary_from: abc\nsummary_by: me'))
-        self.assertFalse(any("summary" in e for e in errs))
+        errs, _w, _s = self.check(V2.replace("type: person", 'type: person\ndescription: "x"\nsummary_from: abc\ngenerated: {by: human:ada}'))
+        self.assertFalse(any("description" in e or "generated" in e for e in errs))
 
     def test_unverified_page_is_backlog_not_error(self):
         text = V2.replace("verified: 2026-10-21\n", "")
@@ -264,8 +265,8 @@ class MigrationTest(unittest.TestCase):
         os.makedirs(os.path.join(self.root, "wiki"))
         os.makedirs(os.path.join(self.root, "meta"))
         pages = {"amit-daniely": OLD_HAND, "gil-kalai": OLD_GENERATED,
-                 "depth-vs-width": "---\ntype: idea\nlayer: concept\nstatus: seed\n---\n\n# d\n",
-                 "theme-quantum": "---\ntype: topic\nlayer: concept\nstatus: seed\n---\n\n# q\n",
+                 "depth-vs-width": "---\ntype: idea\nlayer: concept\nmaturity: seed\n---\n\n# d\n",
+                 "theme-quantum": "---\ntype: topic\nlayer: concept\nmaturity: seed\n---\n\n# q\n",
                  "paper-2017-depth-separation": "---\ntype: paper\n---\n\n# p\n",
                  "series-gil-kalai-blog": "---\ntype: series\nurl: https://gilkalai.wordpress.com/\n---\n\n# s\n"}
         for slug, text in pages.items():
@@ -293,7 +294,7 @@ class MigrationTest(unittest.TestCase):
     def test_hand_page(self):
         text, m, _rows = self.mod.plan(self.root)["amit-daniely"]
         fm, body = persons.parse_frontmatter(text)
-        self.assertEqual(fm, {"type": "person", "layer": "concept", "url": "https://www.cs.huji.ac.il/~amitd/",
+        self.assertEqual(fm, {"type": "person", "layer": "concept", "title": '"Amit Daniely"', "url": "https://www.cs.huji.ac.il/~amitd/",
                               "scholar": "https://scholar.google.com/citations?user=X", "email": "amit@example.org"})
         self.assertIn("HUJI — School of CS. Candidate thesis instructor. Why depth helps.", body)
         self.assertIn("| ? | — | HUJI — School of CS · Google Research (part-time) | — |", body)

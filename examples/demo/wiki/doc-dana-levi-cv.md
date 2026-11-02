@@ -1,15 +1,16 @@
 ---
 type: document
 layer: source
-status: digested
+title: "Dana Levi CV"
+maturity: digested
 depth: easy
 raw: raw/printed-docs/dana-levi-cv.pdf
 company: Dana Levi
-date: 2026-10-03
+created: 2026-10-03T00:00:00Z
 stage: cv
-related: [dana-levi, role-senior-ml-engineer-acme, role-applied-scientist-nimbus]
-summary: "Dana Levi CV (demo PDF): ML engineer in Tel Aviv with PyTorch, sensor fusion, ML-ops and clinical NLP experience; sent to Acme recruiter Noa Peretz before the screen."
-summary_by: me
+related: [dana-levi.md, role-senior-ml-engineer-acme.md, role-applied-scientist-nimbus.md]
+description: "Dana Levi CV (demo PDF): ML engineer in Tel Aviv with PyTorch, sensor fusion, ML-ops and clinical NLP experience; sent to Acme recruiter Noa Peretz before the screen."
+generated: {by: human:dana-levi}
 ---
 
 # Dana Levi CV

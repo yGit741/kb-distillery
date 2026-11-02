@@ -1,7 +1,8 @@
 ---
 type: topic
 layer: concept
-status: seed
+title: "Tensor Factorization"
+maturity: seed
 aliases: []
 related: []
 ---

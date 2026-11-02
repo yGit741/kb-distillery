@@ -14,7 +14,7 @@ HUB = """---
 type: book
 raw: raw/printed-docs/2000-a-book.pdf
 book_pages: 100
-status: reading
+maturity: reading
 ---
 
 # A Book (2000)
@@ -39,7 +39,7 @@ PART = """---
 type: part
 book: book-2000-a-book
 year: 2000
-status: digested
+maturity: digested
 depth: {ds}
 raw: raw/printed-docs/2000-a-book.pdf
 section_pages: {pages}

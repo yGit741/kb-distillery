@@ -1,9 +1,10 @@
 ---
 type: series
 layer: collection
+title: "Fixture combinatorics blog"
 short: kalai
 area: [boolean-analysis]
-status: digested
+maturity: digested
 aliases: []
 related: []
 ---

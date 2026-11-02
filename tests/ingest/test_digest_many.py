@@ -14,14 +14,14 @@ blog: "Combinatorics and More"
 layer: source
 author: Gil Kalai
 area: []
-status: digested
+maturity: digested
 depth: easy
 raw: raw/web-clips/k-1.md
 url: https://example.org/a/
-date: 2009-04-25
-related: [gil-kalai, series-gil-kalai-blog]
+created: 2009-04-25T00:00:00Z
+related: [gil-kalai.md, series-gil-kalai-blog.md]
 title: "A Problem"
-summary: "Kozma's conjecture."
+description: "Kozma's conjecture."
 ---
 
 # A Problem
@@ -37,14 +37,14 @@ series: series-gil-kalai-blog
 authors: []
 year:
 area: [boolean-analysis]
-status: digested
+maturity: digested
 depth: full
 raw: raw/web-clips/k-1.md
 citekey:
 url:
 recommended_by: []
 discussed_with: []
-related: [series-gil-kalai-blog, total-influence]
+related: [series-gil-kalai-blog.md, total-influence.md]
 ---
 
 # A Problem
@@ -63,8 +63,8 @@ def test_merge_keeps_what_the_page_says_and_takes_depth_and_area():
     f = fields(out)
     assert f["depth"] == "full" and f["area"] == "[boolean-analysis]"      # an empty field takes the draft's
     assert f["blog"] == '"Combinatorics and More"' and f["author"] == "Gil Kalai"
-    assert f["date"] == "2009-04-25" and f["url"] == "https://example.org/a/" and f["summary"] == '"Kozma\'s conjecture."'
-    assert f["related"] == "[gil-kalai, series-gil-kalai-blog, total-influence]"     # union, order kept
+    assert f["created"] == "2009-04-25T00:00:00Z" and f["url"] == "https://example.org/a/" and f["description"] == '"Kozma\'s conjecture."'
+    assert f["related"] == "[gil-kalai.md, series-gil-kalai-blog.md, total-influence.md]"     # union, order kept
     assert "series" not in f and "authors" not in f and "citekey" not in f         # nothing empty or hub-keyed is added
     assert out.endswith("**Problem:** p\n") and "# A Problem" in out              # the body is the draft's
 

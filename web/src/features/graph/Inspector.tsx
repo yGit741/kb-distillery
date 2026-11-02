@@ -103,7 +103,7 @@ function One({ n, byId, neighbors, colorBy, revealed, pageHref, onFocus, onRead,
         <NodeSwatch type={n.type} color={colorOf(n, effectiveColorBy(colorBy))} />
         <span>{layerLabel ? `${layerLabel} · ${n.type}` : n.type}</span>
         {n.depth && <Badge variant="primary">{n.depth}</Badge>}
-        {n.status && <Badge>{n.status}</Badge>}
+        {n.maturity && <Badge>{n.maturity}</Badge>}
         {n.year ? <span>{n.year}</span> : null}
         {part?.pages && <span>pp. {part.pages.replace("-", "–")}</span>}
         {n.areas.slice(0, 3).map((a) => (

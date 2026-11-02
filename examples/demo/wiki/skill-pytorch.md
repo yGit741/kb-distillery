@@ -1,11 +1,12 @@
 ---
 type: skill
 layer: concept
-status: growing
-sources: [posting-acme-senior-ml-engineer, posting-nimbus-health-applied-scientist, notes-acme-technical-interview, doc-dana-levi-cv]
-related: [role-senior-ml-engineer-acme, role-applied-scientist-nimbus, interview-acme-technical, dana-levi]
-summary: "PyTorch as asked by both postings and tested in the Acme technical interview, including DataLoader performance; Dana is strong here."
-summary_by: me
+title: "PyTorch"
+maturity: growing
+sources: [{resource: posting-acme-senior-ml-engineer.md}, {resource: posting-nimbus-health-applied-scientist.md}, {resource: notes-acme-technical-interview.md}, {resource: doc-dana-levi-cv.md}]
+related: [role-senior-ml-engineer-acme.md, role-applied-scientist-nimbus.md, interview-acme-technical.md, dana-levi.md]
+description: "PyTorch as asked by both postings and tested in the Acme technical interview, including DataLoader performance; Dana is strong here."
+generated: {by: human:dana-levi}
 ---
 
 # PyTorch

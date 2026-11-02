@@ -56,10 +56,11 @@ assert set(TYPE_ORDER) == set(LAYER_OF) == set(TYPE_LABEL) == set(TYPE_COLOR)
 SOURCE_FIELDS = _T.source_fields
 
 
-# Retired names (schema 0.x). There is no read compatibility: lint names the replacement in its
+# Retired names (schema 0.x, 1.x). There is no read compatibility: lint names the replacement in its
 # error, the 0008 migration rewrote the vault, and nothing else may read these.
 RETIRED_TYPES = {"theme": "topic", "concept": "idea"}
-RETIRED_KEYS = {"digestion-status": "depth"}
+RETIRED_KEYS = {"digestion-status": "depth", "summary": "description", "summary_by": "generated: {by: human:<id>}",
+                "date": "created"}      # the last three: schema 1.5 (OKF frontmatter)
 RETIRED_DEPTH = {"catalog": "listed"}
 RETIRED_DISPOSITIONS = {"digested": "source"}
 
@@ -335,7 +336,7 @@ def is_kb_tooling(path):
 # (x, y) changes only inside a schema/paradigm PR (with its migration); z is derived
 # from git (last first-parent KB-Version + 1). Tooling is not versioned — infra work
 # is identified by its PR number (#N). See src/kb_distillery/git/commit_policy.py.
-SCHEMA_VERSION = (1, 4)     # 1.4: `relations:` field (1.3: `summary:` field; 1.2: conversation → mail/ai-chat; 1.1: question H1)
+SCHEMA_VERSION = (1, 5)     # 1.5: OKF frontmatter (maturity, description, generated, created, title, sources objects, related paths) (1.4: `relations:` field; 1.3: `summary:` field; 1.2: conversation → mail/ai-chat; 1.1: question H1)
 from kb_distillery.kbconfig import SCHEMA_VERSION as _KB_SCHEMA_VERSION
 assert SCHEMA_VERSION == _KB_SCHEMA_VERSION, "kb_distillery.kbconfig.SCHEMA_VERSION must follow this value"
 

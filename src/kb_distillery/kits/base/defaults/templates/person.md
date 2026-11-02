@@ -1,13 +1,14 @@
 ---
 type: person
 layer: concept
+title: {{title_yaml}}
 url: unknown
 scholar: unknown
 github: unknown
 youtube: unknown
 blog: unknown
 wikipedia: unknown
-summary:
+description:
 ---
 
 # {{title}}

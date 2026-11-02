@@ -1,13 +1,15 @@
 ---
 type: article
 layer: source
+title: "Fixture entropy primer"
 authors: [Fixture Author]
 year: 2024
 area: [info-theory]
-status: digested
+maturity: digested
 depth: easy
 raw: none
 url: https://example.org/articles/entropy-primer
+sources: [{resource: https://example.org/articles/entropy-primer}]
 recommended_by: []
 discussed_with: []
 ---

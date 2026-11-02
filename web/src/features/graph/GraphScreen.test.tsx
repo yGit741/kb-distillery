@@ -196,7 +196,7 @@ describe("deep links", () => {
   });
 
   it("?scope= shows the scope's pages", async () => {
-    const getScope = vi.fn(async () => ({ slug: "scope-x", title: "X", why: "", status: "active", rows: [], projection: { hop0: ["idea-margin"], hop1: [], covered: [], hubs: [], themes: [], uncovered: [] } }));
+    const getScope = vi.fn(async () => ({ slug: "scope-x", title: "X", why: "", maturity: "active", rows: [], projection: { hop0: ["idea-margin"], hop1: [], covered: [], hubs: [], themes: [], uncovered: [] } }));
     render(wrap(withGraph({ getScope }), <GraphScreen search={{ scope: "scope-x" }} host={host} />));
     expect(await screen.findByText(/pages in scope-x/i)).toBeInTheDocument();
   });

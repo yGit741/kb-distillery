@@ -1,10 +1,11 @@
 ---
 type: paper
 layer: source
+title: "Easy Skim Paper"
 authors: []
 year: 2023
 area: []
-status: digested
+maturity: digested
 depth: easy
 raw: raw/printed-docs/2023-easy-skim-paper.pdf
 citekey:

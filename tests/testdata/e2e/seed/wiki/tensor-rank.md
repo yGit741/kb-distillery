@@ -1,10 +1,11 @@
 ---
 type: idea
 layer: concept
+title: "Tensor rank"
 area: [learning-theory]
-status: seed
+maturity: seed
 sources: []
-related: [theme-learning-theory]
+related: [theme-learning-theory.md]
 discussed_with: []
 ---
 

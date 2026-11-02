@@ -1,15 +1,15 @@
 ---
 type: article
 layer: source
+title: {{title_yaml}}
 source: {{source}}
 author:
 area: []
-status: digested
+maturity: digested
 depth: easy
 raw: {{raw}}
 url:
-date:
-summary:
+description:
 ---
 
 # {{title}}

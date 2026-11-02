@@ -14,7 +14,7 @@ import sys
 
 from .paths import ROOT
 from kb_distillery.paths import meta_file
-from kb_distillery.core import wikiio
+from kb_distillery.core import frontmatter, wikiio
 from kb_distillery.lint.lint import parse_frontmatter
 from kb_distillery.core.schema import PARTITION_COLLECTIONS, RAW_HANDWRITTEN, SLUG_PREFIX, make_slug, strip_prefix
 from kb_distillery.core.books import (DIGESTED, PART_MAX_PAGES, SKIP, book_status, carve, coverage_line, find_row,
@@ -455,7 +455,7 @@ def pdf_title(raw_path):
 
 
 def _set_status(text, status):
-    return wikiio.set_key(text, "status", status)      # front matter only, never a body line
+    return wikiio.set_key(text, "maturity", status)      # front matter only, never a body line
 
 
 def new_hub_text(raw_rel, rows, total, meta=None):
@@ -473,13 +473,14 @@ def new_hub_text(raw_rel, rows, total, meta=None):
         "raw": raw_rel,
         "url": meta.get("url") or "",
         "book_pages": str(total),
-        "status": book_status(rows),
+        "maturity": book_status(rows),
         "partition": "",
     }
     with open(template_for(hub_type(raw_rel)), encoding="utf-8") as f:
         text = f.read()
     for k, v in fill.items():
         text = text.replace("{{" + k + "}}", v)
+    text = frontmatter.fill_title(text)
     return replace_partition(text, rows, PART_MAX_PAGES)
 
 

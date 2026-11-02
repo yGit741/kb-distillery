@@ -1,8 +1,9 @@
 ---
 type: question
 layer: concept
+title: "Does rank explain generalization?"
 area: [learning-theory]
-status: open
+maturity: open
 priority: med
 discussed_with: []
 ---

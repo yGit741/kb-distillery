@@ -244,7 +244,7 @@ export function homeSections(g: LinkGraph): HomeSections {
     counts,
     topics: all.filter((p) => p.type === "topic" && out(p) > 0).sort((a, b) => degree(g, b.id) - degree(g, a.id)),
     questions: all
-      .filter((p) => p.type === "question" && p.status !== "resolved")
+      .filter((p) => p.type === "question" && p.maturity !== "resolved")
       .sort((a, b) => degree(g, b.id) - degree(g, a.id)),
     people: all.filter((p) => p.type === "person").sort((a, b) => inn(b) - inn(a)),
     deep: all
@@ -316,7 +316,7 @@ export function cardNode(c: PageCard): GNode {
     title: c.title || c.id,
     type: c.type,
     layer: layerOf(c.type) ?? "source",
-    status: c.status,
+    maturity: c.maturity,
     depth: c.depth,
     areas: c.areas,
     year: null,

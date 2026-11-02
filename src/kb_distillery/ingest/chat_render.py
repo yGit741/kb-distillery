@@ -15,6 +15,7 @@ import re
 
 from .chat import GEMINI_VISUAL_RE
 from .chat_build import main_leaf, path_to
+from kb_distillery.core import frontmatter
 from .paths import ROOT
 
 ROLE_HEADING = {"user": "#### 🧑 You", "model": "#### ✨ Gemini"}
@@ -182,7 +183,8 @@ def stats(conv):
 
 def frontmatter(conv, title, aliases=(), extra=None):
     q = lambda s: json.dumps(s, ensure_ascii=False)
-    lines = ["---", "type: ai-chat", "layer: source", "status: to-read", "depth: listed", f"title: {q(title)}"]
+    lines = ["---", "type: ai-chat", "layer: source", f"title: {q(title)}", "maturity: to-read", "status: draft",
+             "depth: listed"]
     if aliases:
         lines.append(f"aliases: [{', '.join(q(a) for a in aliases)}]")
     lines += [f"provider: {conv['provider']}",
@@ -191,6 +193,8 @@ def frontmatter(conv, title, aliases=(), extra=None):
               f"clips: [{', '.join(sorted(conv['clips']))}]"]
     if conv["source_urls"]:
         lines.append(f"url: {conv['source_urls'][0]}")
+        if frontmatter.url_sources(conv["source_urls"][0]):
+            lines.append(frontmatter.url_sources(conv["source_urls"][0]))
     for k, v in (extra or {}).items():
         lines.append(f"{k}: {v}")
     lines.append("---")

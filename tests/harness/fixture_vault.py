@@ -42,7 +42,7 @@ MANIFEST_HEADER = (
 _TOPIC = """---
 type: topic
 layer: concept
-status: seed
+maturity: seed
 aliases: []
 related: []
 ---
@@ -68,7 +68,7 @@ _IDEA = """---
 type: idea
 layer: concept
 area: [{area}]
-status: seed
+maturity: seed
 sources: []
 related: []
 discussed_with: []
@@ -108,7 +108,7 @@ course_code: 00000
 semester: 2026a
 lecturer: Fixture Lecturer
 area: [learning-theory]
-status: to-read
+maturity: to-read
 aliases: []
 related: []
 ---
@@ -131,7 +131,7 @@ type: series
 layer: collection
 short: kalai
 area: [boolean-analysis]
-status: to-read
+maturity: to-read
 aliases: []
 related: []
 ---
@@ -155,7 +155,7 @@ layer: source
 authors: [Fixture Speaker]
 year: 2024
 area: [info-theory]
-status: digested
+maturity: digested
 depth: easy
 raw: none
 url: https://example.org/watch/fixture-talk
@@ -334,7 +334,7 @@ def build(root, inputs):
     for name in META_COPY:
         if (META_SRC / name).is_dir():
             shutil.copytree(META_SRC / name, meta / name, ignore=CODE_IGNORE)
-    (root / "kb.toml").write_text('[kb]\nid = "harness"\nname = "Harness fixture vault"\nschema_version = "1.4"\n'
+    (root / "kb.toml").write_text('[kb]\nid = "harness"\nname = "Harness fixture vault"\nschema_version = "1.5"\n'
                                   '\n[types]\nareas = [' + ", ".join(f'"{t}"' for t in TOPICS) + ']\n', encoding="utf-8")
     (meta / "corpus.tsv").write_text(MANIFEST_HEADER, encoding="utf-8")
     (meta / "aliases.tsv").write_text("", encoding="utf-8")

@@ -1,12 +1,13 @@
 ---
 type: idea
 layer: concept
+title: {{title_yaml}}
 area: []
-status: seed
+maturity: seed
 sources: []
 related: []
 discussed_with: []
-summary:
+description:
 ---
 
 # {{title}}

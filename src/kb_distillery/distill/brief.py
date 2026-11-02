@@ -1,6 +1,7 @@
 """Render distilled-think wiki pages."""
 from datetime import datetime, timezone
 
+from kb_distillery.core import frontmatter
 from .paths import think_cite
 
 
@@ -62,8 +63,9 @@ def render_distilled_page(plan, think_rel, summary, applied=False):
     return f"""---
 type: distilled-think
 layer: concept
-status: {status}
-source: {think_cite(think_rel)}
+{frontmatter.title_line("Distilled · " + title)}
+maturity: {status}
+{frontmatter.sources_line([think_cite(think_rel)])}
 distilled_at: {ts}
 ---
 

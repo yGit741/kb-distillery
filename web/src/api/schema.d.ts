@@ -1324,10 +1324,10 @@ export interface components {
              */
             areas: string[];
             /**
-             * Statuses
+             * Maturities
              * @default []
              */
-            statuses: string[];
+            maturities: string[];
             /**
              * Types
              * @default []
@@ -1409,6 +1409,11 @@ export interface components {
              */
             layer: string;
             /**
+             * Maturity
+             * @default
+             */
+            maturity: string;
+            /**
              * Outdegree
              * @default 0
              */
@@ -1432,11 +1437,6 @@ export interface components {
             };
             /** Slug */
             slug?: string | null;
-            /**
-             * Status
-             * @default
-             */
-            status: string;
             /**
              * Title
              * @default
@@ -1490,7 +1490,7 @@ export interface components {
             /**
              * @default {
              *       "areas": [],
-             *       "statuses": [],
+             *       "maturities": [],
              *       "types": []
              *     }
              */
@@ -1747,10 +1747,10 @@ export interface components {
              * @enum {string}
              */
             layer: "source" | "collection" | "concept";
+            /** Maturities */
+            maturities: string[];
             /** Prefix */
             prefix: string;
-            /** Statuses */
-            statuses: string[];
         } & {
             [key: string]: unknown;
         };
@@ -1959,6 +1959,11 @@ export interface components {
             depth: string;
             /** Id */
             id: string;
+            /**
+             * Maturity
+             * @default
+             */
+            maturity: string;
             /** Mtime */
             mtime?: number | string | null;
             /**
@@ -1966,11 +1971,6 @@ export interface components {
              * @default
              */
             preview: string;
-            /**
-             * Status
-             * @default
-             */
-            status: string;
             /**
              * Title
              * @default
@@ -2366,13 +2366,13 @@ export interface components {
         };
         /** ScopeDetail */
         ScopeDetail: {
+            /** Maturity */
+            maturity: string;
             projection: components["schemas"]["ScopeProjection"];
             /** Rows */
             rows: components["schemas"]["ScopeRow"][];
             /** Slug */
             slug: string;
-            /** Status */
-            status: string;
             /** Title */
             title: string;
             /**
@@ -2536,10 +2536,10 @@ export interface components {
             digested: number;
             /** Files */
             files: number;
+            /** Maturity */
+            maturity: string;
             /** Slug */
             slug: string;
-            /** Status */
-            status: string;
             /** Title */
             title: string;
             /** Uncovered */

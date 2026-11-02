@@ -1,4 +1,4 @@
-"""Search cards: one tiny markdown file per page — its title and `summary:` line — for the qmd service.
+"""Search cards: one tiny markdown file per page — its title and `description:` line — for the qmd service.
 
     python -m kb_distillery.search.cards        (lint runs it after every check; cheap: only changed cards are written)
 
@@ -18,7 +18,7 @@ CARDS_DIR = os.path.join(paths.CACHE_PATH, "qmd-cards")
 
 def card_text(slug, fm, text):
     """'# <title>\\n\\n<summary>\\n' or None when the page gets no card."""
-    summary = unquote(fm.get("summary"))
+    summary = unquote(fm.get("description"))
     if not summary or not needs_summary(fm):
         return None
     m = re.search(r"^# (.+)$", body_of(text), re.M)

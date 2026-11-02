@@ -134,7 +134,7 @@ class WritersKeepNotes(unittest.TestCase):
 
     def test_course_hub_table_and_status(self):
         from kb_distillery.ingest import course, paths
-        hub = ("---\ntype: course\nshort: t\nstatus: to-read\n---\n\n# C\n\n## Overview\n\nx\n\n"
+        hub = ("---\ntype: course\nshort: t\nmaturity: to-read\n---\n\n# C\n\n## Overview\n\nx\n\n"
                "## Contents\n\n| # | Item | Raw | Status | Note |\n|---|------|-----|--------|------|\n\n" + NOTES)
         self.w("wiki/course-t.md", hub)
         self.w("meta/corpus.tsv", "path\tsha1\tkind\tdisposition\tslug\tcollection\tscopes\n")
@@ -156,7 +156,7 @@ class WritersKeepNotes(unittest.TestCase):
 
     def test_distill_apply(self):
         from kb_distillery.distill import apply as dapply
-        self.w("wiki/q-x.md", "---\ntype: question\nstatus: open\n---\n\n# Q\n\n## Threads\n\n- a\n\n" + NOTES)
+        self.w("wiki/q-x.md", "---\ntype: question\nmaturity: open\n---\n\n# Q\n\n## Threads\n\n- a\n\n" + NOTES)
         with patch.object(dapply, "ROOT", self.root):
             dapply.apply_proposal({"target": "wiki/q-x.md", "action": "append_papers", "text": "- [[paper-z]]"})
             dapply.apply_proposal({"target": "wiki/q-x.md", "action": "append_threads", "text": "- b"})
@@ -175,11 +175,11 @@ class WritersKeepNotes(unittest.TestCase):
     def test_easy_digest_status_edit(self):
         from kb_distillery.ingest import easy_digest
         body = "\n# P\n\nstatus: a body line\n\n" + NOTES
-        self.w("wiki/paper-p.md", "---\ntype: paper\nstatus: to-read\ndepth: catalog\n---\n" + body)
+        self.w("wiki/paper-p.md", "---\ntype: paper\nmaturity: to-read\ndepth: catalog\n---\n" + body)
         with patch.object(easy_digest, "ROOT", self.root):
             easy_digest._update_wiki_digestion("paper-p", "raw/printed-docs/p.pdf")
         self.assertEqual(self.r("wiki/paper-p.md"),
-                         "---\ntype: paper\nstatus: digested\ndepth: easy\n---\n" + body)
+                         "---\ntype: paper\nmaturity: digested\ndepth: easy\n---\n" + body)
 
 
 if __name__ == "__main__":

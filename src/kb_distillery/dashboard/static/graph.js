@@ -627,6 +627,7 @@
     else if (field === "slug") actual = node.id;
     else if (field === "title") actual = node.title || "";
     else if (field === "year") actual = node.year;
+    else if (field === "status") actual = node.maturity;     // the filter keeps its "Status" label; the page field is `maturity`
     else actual = node[field];
 
     const val = value.toLowerCase();
@@ -817,7 +818,7 @@
     const by = el("color-by").value;
     if (by === "none") return "#7aa2ff";
     if (by === "type") return TYPE_COLORS[node.type] || TYPE_COLORS.unknown;
-    if (by === "status") return STATUS_COLORS[node.status] || "#6c7086";
+    if (by === "status") return STATUS_COLORS[node.maturity] || "#6c7086";
     if (by === "area") {
       const area = (node.areas && node.areas[0]) || "none";
       let h = 0;
@@ -1975,7 +1976,7 @@
 
   function legendKey(node, by) {
     if (by === "type") return TYPE_DISPLAY[node.type] || node.type || "Unknown";
-    if (by === "status") return node.status || "(none)";
+    if (by === "status") return node.maturity || "(none)";
     if (by === "area") return (node.areas && node.areas[0]) || "(none)";
     if (by === "degree") {
       const d = (node.inDegree || 0) + (node.outDegree || 0);

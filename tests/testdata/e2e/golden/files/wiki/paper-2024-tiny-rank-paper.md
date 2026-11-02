@@ -1,16 +1,18 @@
 ---
 type: paper
 layer: source
+title: "Tiny Rank Paper"
 authors: [A. Author]
 year: 2024
 area: [learning-theory]
-status: digested
+maturity: digested
 depth: full
 raw: raw/printed-docs/2024-tiny-rank-paper.pdf
 citekey: tiny2024
 url: https://example.org/tiny-rank
 recommended_by: []
 discussed_with: []
+sources: [{resource: https://example.org/tiny-rank}]
 ---
 
 # Tiny Rank Paper

@@ -29,7 +29,7 @@ export interface EditorInit {
   slug: string;
   title: string;
   why: string;
-  status: string;
+  maturity: string;
   rows: ScopeRow[];
   draftKey: string;
   message?: string;
@@ -168,7 +168,7 @@ export function Editor({ init, projection, onDirty, onSaved, onDeleted, onDuplic
       ) : (
         <p className="text-sm text-muted-foreground">
           {init.slug}
-          {init.status ? ` · ${init.status}` : ""}
+          {init.maturity ? ` · ${init.maturity}` : ""}
         </p>
       )}
       <label className="flex flex-col gap-1 text-sm">

@@ -1,11 +1,12 @@
 ---
 type: series
 layer: collection
+title: "Test blog"
 short: tblog
 author: Test Author
 url: https://example.org/blog
 area: []
-status: to-read
+maturity: to-read
 aliases: []
 related: []
 ---

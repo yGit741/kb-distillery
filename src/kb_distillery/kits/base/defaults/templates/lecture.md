@@ -1,13 +1,13 @@
 ---
 type: lecture
 layer: source
+title: {{title_yaml}}
 course: {{course}}
 area: []
-status: digested
+maturity: digested
 depth: full
 raw: [{{raw}}]
-date:
-summary:
+description:
 ---
 
 # {{title}}

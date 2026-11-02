@@ -1,16 +1,17 @@
 ---
 type: book
 layer: collection
+title: {{title_yaml}}
 authors: {{authors}}
 year: {{year}}
 area: {{area}}
 raw: {{raw}}
 url: {{url}}
 book_pages: {{book_pages}}
-status: {{status}}
+maturity: {{maturity}}
 recommended_by: []
 related: []
-summary:
+description:
 ---
 
 # {{title}} ({{year}})

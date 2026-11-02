@@ -68,6 +68,7 @@ import tempfile
 import webbrowser
 from pathlib import Path
 
+from kb_distillery.core import links as page_links
 from kb_distillery.webbuild import frontend_source_hash as _frontend_source_hash
 
 from .contracts import EXPORT_DIR, PROFILES, REPO, BuildResult, Manifest, raw_is_email
@@ -117,7 +118,7 @@ CDN_FILES = {
 }
 KATEX_FONTS_URL = "https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/fonts/"
 
-PUBLIC_DROP_KEYS = ("raw", "path", "email", "original_name", "scopes")
+PUBLIC_DROP_KEYS = ("raw", "path", "email", "original_name", "scopes", "generated")     # generated: names the owner
 # Not content: scopes are private working sets and distilled-think pages are transient review drafts.
 # LLM chats and person pages (profiles built from public sources) are the owner's and are public.
 PUBLIC_EXCLUDE_TYPES = frozenset({"distilled-think", "scope"})
@@ -534,7 +535,8 @@ def _unlink(value, drop, titles):
     """A scoped build names no dropped page: `[[dropped|label]]` → label (else its title) as plain
     text in strings, dropped slugs removed from lists — recursively through frontmatter/properties."""
     if isinstance(value, str):
-        if value.strip() in drop:
+        if value.strip() in drop or (value.strip().endswith(page_links.PAGE_SUFFIX)
+                                     and page_links.page_slug(value) in drop):       # a `related` page path
             return None
         if _SLUG_LIST.match(value):              # graph properties join list fields with ", "
             return ", ".join(s for s in value.split(", ") if s not in drop)
@@ -543,7 +545,8 @@ def _unlink(value, drop, titles):
     if isinstance(value, list):
         return [v for v in (_unlink(x, drop, titles) for x in value) if v is not None]
     if isinstance(value, dict):
-        return {k: v for k, v in ((k, _unlink(x, drop, titles)) for k, x in value.items()) if v is not None}
+        out = {k: v for k, v in ((k, _unlink(x, drop, titles)) for k, x in value.items()) if v is not None}
+        return None if "resource" in value and "resource" not in out else out      # a `sources` entry for a dropped page
     return value
 
 

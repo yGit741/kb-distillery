@@ -16,9 +16,9 @@ def _page(fm, title="A page"):
 def test_cards_sync_writes_changed_removes_gone(tmp_path):
     wiki, out = tmp_path / "wiki", tmp_path / "cards"
     wiki.mkdir()
-    (wiki / "a.md").write_text(_page({"type": "idea", "summary": f'"{GOOD}"'}, "Idea A"))
-    (wiki / "b.md").write_text(_page({"type": "paper", "depth": "listed", "summary": f'"{GOOD}"'}))
-    (wiki / "c.md").write_text(_page({"type": "course", "summary": f'"{GOOD}"'}))
+    (wiki / "a.md").write_text(_page({"type": "idea", "description": f'"{GOOD}"'}, "Idea A"))
+    (wiki / "b.md").write_text(_page({"type": "paper", "depth": "listed", "description": f'"{GOOD}"'}))
+    (wiki / "c.md").write_text(_page({"type": "course", "description": f'"{GOOD}"'}))
     (wiki / "d.md").write_text(_page({"type": "idea"}))
     r = cards.build(str(wiki), str(out))
     assert r == {"written": 1, "removed": 0, "cards": 1}
@@ -36,9 +36,9 @@ def test_client_returns_none_when_service_is_down(monkeypatch):
 
 
 def _pages():
-    blog = {"type": "blog-post", "blog": '"Combinatorics and More"', "depth": "easy", "summary": f'"{GOOD}"'}
+    blog = {"type": "blog-post", "blog": '"Combinatorics and More"', "depth": "easy", "description": f'"{GOOD}"'}
     p = {f"post-{i}": ("", blog, f"# Post {i}\n") for i in range(5)}
-    p["idea-x"] = ("", {"type": "idea", "summary": f'"{GOOD}"'}, "# Idea X\n")
+    p["idea-x"] = ("", {"type": "idea", "description": f'"{GOOD}"'}, "# Idea X\n")
     p["kw-hit"] = ("", {"type": "idea"}, "# Keyword hit\n")
     return p
 
@@ -70,7 +70,7 @@ def test_search_has_no_related_when_flag_off(monkeypatch):
 
 
 def test_related_maps_qmd_keys_back_to_dotted_slugs(monkeypatch):
-    pages = {"paper-x-et-al.-s-trick": ("", {"type": "paper", "summary": f'"{GOOD}"'}, "# X\n"),
+    pages = {"paper-x-et-al.-s-trick": ("", {"type": "paper", "description": f'"{GOOD}"'}, "# X\n"),
              "moc-a.canvas-llm": ("", {"type": "idea"}, "# M\n")}
     monkeypatch.setattr(qmd_client, "search", lambda *a, **k: [("paper-x-et-al-s-trick", 0.9), ("moc-a-canvas-llm", 0.8)])
     assert [h["id"] for h in svc.related("q", pages)] == ["paper-x-et-al.-s-trick", "moc-a.canvas-llm"]

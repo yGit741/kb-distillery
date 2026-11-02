@@ -33,7 +33,7 @@ class BlogVault(unittest.TestCase):
             os.makedirs(os.path.join(self.root, d))
         self.raw = "raw/notes/linear-algebra/blog-not-exact-svd.md"
         self.write(self.raw, POST)
-        self.write("wiki/source-linear-algebra.md", "---\ntype: source\nstatus: reading\nraw: none\n"
+        self.write("wiki/source-linear-algebra.md", "---\ntype: source\nmaturity: reading\nraw: none\n"
                    "url: x\n---\n# LA\n")
         self._root, lint.ROOT = lint.ROOT, self.root
         lint.errors, lint.warnings = [], []
@@ -60,7 +60,7 @@ class RenderTests(BlogVault):
         self.assertIn("type: blog-post", page)
         self.assertIn('aliases: ["פירוק SVD והפירוק הפולארי של מטריצות"]', page)
         self.assertIn("url: https://gadial.net/p/", page)
-        self.assertIn("related: [source-linear-algebra]", page)
+        self.assertIn("related: [source-linear-algebra.md]", page)
         self.assertIn("## Blog Post Summary\n\nA blog post about **SVD**.", page)
         self.assertIn("- **SVD**: x", page)
         self.assertIn('<div dir="rtl"><strong>פירוק SVD', page)   # Hebrew title under the English one
@@ -117,12 +117,12 @@ class LintTests(BlogVault):
         page = blog.render(self.raw, title_en="SVD", root=self.root)
         self.write("wiki/svd-post.md", page)
         self.assertTrue(any("requires a blog- filename prefix" in e for e in self.errors_for("svd-post")))
-        self.write("wiki/blog-misc.md", "---\ntype: idea\nlayer: concept\nstatus: seed\n---\n# x\n")
+        self.write("wiki/blog-misc.md", "---\ntype: idea\nlayer: concept\nmaturity: seed\n---\n# x\n")
         self.assertTrue(any("blog- prefix requires type: blog-post" in e for e in self.errors_for("blog-misc")))
 
     def test_ai_chat_needs_real_title_and_tree(self):
         self.write("raw/notes/linear-algebra/c.md", "x")
-        self.write("wiki/chat-x.md", "---\ntype: ai-chat\nstatus: to-read\ntitle: \"New chat\"\n"
+        self.write("wiki/chat-x.md", "---\ntype: ai-chat\nmaturity: to-read\ntitle: \"New chat\"\n"
                    "raw: raw/notes/linear-algebra/c.md\nconversation: conv-missing\n---\n# New chat 3\n")
         errs = self.errors_for("chat-x")
         self.assertTrue(any("informative title" in e for e in errs))

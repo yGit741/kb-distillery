@@ -1,12 +1,13 @@
 ---
 type: interview
 layer: concept
-status: done
-date: 2026-10-08
-sources: [mail-2026-10-02-acme-recruiter-intro]
-related: [noa-peretz, role-senior-ml-engineer-acme, company-acme-robotics, interview-acme-technical, process-acme-robotics]
-summary: "Recruiter screen with Noa Peretz of Acme Robotics on 8 October 2026: team, process and compensation overview; outcome was promotion to the technical round."
-summary_by: me
+title: "Acme recruiter screen"
+maturity: done
+created: 2026-10-08T00:00:00Z
+sources: [{resource: mail-2026-10-02-acme-recruiter-intro.md}]
+related: [noa-peretz.md, role-senior-ml-engineer-acme.md, company-acme-robotics.md, interview-acme-technical.md, process-acme-robotics.md]
+description: "Recruiter screen with Noa Peretz of Acme Robotics on 8 October 2026: team, process and compensation overview; outcome was promotion to the technical round."
+generated: {by: human:dana-levi}
 ---
 
 # Acme recruiter screen

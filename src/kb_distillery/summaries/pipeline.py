@@ -8,7 +8,8 @@ import time
 
 from kb_distillery import llm, paths
 from kb_distillery.core import schema
-from kb_distillery.core.summary import body_of, needs_summary, problems, section, summary_hash, unquote
+from kb_distillery.core.summary import (body_of, hand_written, needs_summary, now_stamp, problems, section, summary_hash,
+                                       tool_actor, unquote, with_offset)
 from kb_distillery.lint.lint import parse_frontmatter
 
 MODEL = "sonnet"
@@ -63,9 +64,9 @@ def status(page):
     fm = page["fm"]
     if not needs_summary(fm):
         return "exempt"
-    if fm.get("summary_by") == "me":
+    if hand_written(fm):
         return "mine"
-    if not unquote(fm.get("summary")):
+    if not unquote(fm.get("description")):
         return "missing"
     return "ok" if fm.get("summary_from") == summary_hash(page["text"]) else "stale"
 
@@ -176,7 +177,7 @@ def propose(pages, model=MODEL, per_call=PER_CALL, workers=WORKERS, log=print, o
     batch = llm.resolve_backend(backend) == "batch"
 
     def done(rs):
-        stamp = time.strftime("%Y-%m-%dT%H:%M:%S")
+        stamp = now_stamp()                # with the UTC offset: it becomes `generated.at`
         for r in rs:
             r["ts"] = stamp
         if on_rows:
@@ -265,10 +266,10 @@ def judge_fails(out_dir=None):
 def apply(slugs=None, root=None, path=PROPOSALS, out_dir=None):
     """Write the newest valid proposal into each page → list of written slugs.
 
-    Skips: invalid proposals, pages without frontmatter, `summary_by: me`, pages changed since the
+    Skips: invalid proposals, pages without frontmatter, pages whose `generated.by` is a `human:`, pages changed since the
     proposal, and summaries the judge flagged unfaithful (that exact text)."""
     if tuple(schema.SCHEMA_VERSION) < (1, 3):
-        raise SystemExit("apply: the schema does not know `summary:` yet (needs SCHEMA_VERSION >= 1.3)")
+        raise SystemExit("apply: the schema does not know `description:` yet (needs SCHEMA_VERSION >= 1.3)")
     props = latest(path)
     fails = {s for s, (text, bad) in judge_fails(out_dir).items() if bad and props.get(s, {}).get("summary") == text}
     written = []
@@ -278,11 +279,13 @@ def apply(slugs=None, root=None, path=PROPOSALS, out_dir=None):
             continue
         if not page["text"].startswith("---") or page["text"].find("\n---", 3) == -1:
             continue
-        if page["fm"].get("summary_by") == "me" or not needs_summary(page["fm"]):
+        if hand_written(page["fm"]) or not needs_summary(page["fm"]):
             continue
         if r["summary_from"] != summary_hash(page["text"]):
             continue                                      # page changed since the proposal: re-run it
-        new = set_fields(page["text"], {"summary": f'"{r["summary"]}"', "summary_from": r["summary_from"]})
+        by = {"by": tool_actor(r.get("model") or MODEL), "at": with_offset(r.get("ts")) or now_stamp()}
+        new = set_fields(page["text"], {"description": f'"{r["summary"]}"', "summary_from": r["summary_from"],
+                                        "generated": "{by: %s, at: %s}" % (by["by"], by["at"])})
         if new != page["text"]:
             tmp = page["path"] + ".tmp"
             with open(tmp, "w", encoding="utf-8") as f:

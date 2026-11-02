@@ -3,7 +3,7 @@ import os
 import re
 
 from .paths import ROOT
-from kb_distillery.core import wikiio
+from kb_distillery.core import links, wikiio
 
 
 def _read(rel):
@@ -63,12 +63,12 @@ def apply_proposal(proposal):
         # append slug to related: frontmatter if present
         slug = proposal.get("slug", "")
         if slug and "related:" in text:
-            text = re.sub(
-                r"(related:\s*\[)([^\]]*)(\])",
-                lambda m: f"{m.group(1)}{m.group(2)}, {slug}{m.group(3)}" if slug not in m.group(2) else m.group(0),
-                text,
-                count=1,
-            )
+            def add(m):
+                items = [x.strip() for x in m.group(2).split(",") if x.strip()]
+                if slug in [links.page_slug(x) for x in items]:
+                    return m.group(0)
+                return f"{m.group(1)}{', '.join(items + [links.page_path(slug)])}{m.group(3)}"
+            text = re.sub(r"(related:\s*\[)([^\]]*)(\])", add, text, count=1)
     else:
         raise ValueError(f"unknown action {action!r}")
 

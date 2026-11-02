@@ -1,11 +1,12 @@
 ---
 type: company
 layer: concept
-status: seed
-sources: [posting-nimbus-health-applied-scientist]
-related: [role-applied-scientist-nimbus, maya-cohen, interview-nimbus-hiring-manager, skill-clinical-nlp, process-nimbus-health]
-summary: "Nimbus Health, a health-tech company that structures clinical free text for hospitals in Hebrew and English; hiring an Applied Scientist, hiring-manager call scheduled."
-summary_by: me
+title: "Nimbus Health"
+maturity: seed
+sources: [{resource: posting-nimbus-health-applied-scientist.md}]
+related: [role-applied-scientist-nimbus.md, maya-cohen.md, interview-nimbus-hiring-manager.md, skill-clinical-nlp.md, process-nimbus-health.md]
+description: "Nimbus Health, a health-tech company that structures clinical free text for hospitals in Hebrew and English; hiring an Applied Scientist, hiring-manager call scheduled."
+generated: {by: human:dana-levi}
 ---
 
 # Nimbus Health

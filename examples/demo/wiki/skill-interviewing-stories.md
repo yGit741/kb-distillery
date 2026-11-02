@@ -1,11 +1,12 @@
 ---
 type: skill
 layer: concept
-status: seed
-sources: [posting-nimbus-health-applied-scientist, notes-acme-technical-interview, doc-dana-levi-cv]
-related: [interview-nimbus-hiring-manager, maya-cohen, role-applied-scientist-nimbus, interview-acme-technical]
-summary: "Behavioural interview stories: a small bank of past-project stories to prepare for the Nimbus hiring-manager conversation with Maya Cohen."
-summary_by: me
+title: "Interviewing stories (behavioural)"
+maturity: seed
+sources: [{resource: posting-nimbus-health-applied-scientist.md}, {resource: notes-acme-technical-interview.md}, {resource: doc-dana-levi-cv.md}]
+related: [interview-nimbus-hiring-manager.md, maya-cohen.md, role-applied-scientist-nimbus.md, interview-acme-technical.md]
+description: "Behavioural interview stories: a small bank of past-project stories to prepare for the Nimbus hiring-manager conversation with Maya Cohen."
+generated: {by: human:dana-levi}
 ---
 
 # Interviewing stories (behavioural)

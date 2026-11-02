@@ -14,6 +14,8 @@ from kb_distillery.search.semfind import load_pages
 from kb_distillery.services.graph import _areas, _preview, _title, _year
 from kb_distillery.core.summary import unquote
 from kb_distillery.search import qmd_client
+from kb_distillery.core import frontmatter as page_frontmatter
+from kb_distillery.core import links as page_links
 from kb_distillery.core.links import WIKILINK
 from kb_distillery.storage import raw
 
@@ -103,7 +105,7 @@ def _link_context(text, fm, target, titles=None):
         label = _plain(line[pos:line.find("]]", pos) + 2], titles)
         centre = plain.find(label) if label else 0
         return _clip(plain, max(centre, 0))
-    if target in _as_list(fm.get("related")) or target in _as_list(fm.get("recommended_by")):
+    if target in page_links.refs(fm.get("related")) or target in _as_list(fm.get("recommended_by")):
         return "listed in frontmatter"
     return ""
 
@@ -138,7 +140,7 @@ def _card(slug, pages, out, inn, root=None):
         "id": slug,
         "title": _title(text, slug),
         "type": fm.get("type", "unknown"),
-        "status": fm.get("status", ""),
+        "maturity": fm.get("maturity", ""),
         "depth": fm.get("depth", ""),
         "areas": _areas(fm),
         "year": _year(slug, fm),
@@ -212,7 +214,7 @@ def build_page(slug, view=None):
     for k, v in fm.items():
         if v in (None, "", []):
             continue
-        fm_clean[k] = v if isinstance(v, list) else str(v)
+        fm_clean[k] = page_frontmatter.display(k, v)
     return {
         "card": _card(slug, pages, out, inn, root),
         "kb": view.id if view else _active_id(),
@@ -315,7 +317,7 @@ def related(query, pages, exclude=()):
             continue
         per[coll] = per.get(coll, 0) + 1
         out.append({"id": slug, "title": _title(text, slug), "type": fm.get("type", "unknown"),
-                    "depth": fm.get("depth", ""), "snippet": unquote(fm.get("summary")) or _preview(text, 200),
+                    "depth": fm.get("depth", ""), "snippet": unquote(fm.get("description")) or _preview(text, 200),
                     "score": round(score * 100)})
         if len(out) >= RELATED_MAX:
             break

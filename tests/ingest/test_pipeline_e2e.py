@@ -26,6 +26,8 @@ import tempfile
 import time
 import unittest
 
+import pytest
+
 from kb_distillery.kbconfig import checkout_root
 from kb_distillery.paths import CODE_DIR, vault_root
 CHECKOUT_ROOT = checkout_root()
@@ -69,7 +71,7 @@ def build_vault(root):
     # goldens were recorded with, so the test gives the same answer whichever kb the suite runs under
     areas = sorted(GOLDEN_AREAS)
     with open(os.path.join(root, "kb.toml"), "w", encoding="utf-8") as f:
-        f.write('[kb]\nid = "e2e"\nname = "E2E fixture vault"\nschema_version = "1.4"\n\n[types]\nareas = ['
+        f.write('[kb]\nid = "e2e"\nname = "E2E fixture vault"\nschema_version = "1.5"\n\n[types]\nareas = ['
                 + ", ".join(f'"{a}"' for a in areas) + "]\n")
     for name in os.listdir(os.path.join(DATA, "seed", "meta")):
         shutil.copy(os.path.join(DATA, "seed", "meta", name), os.path.join(root, "meta", name))
@@ -240,7 +242,7 @@ def collect_outputs(p, lint, coherence):
         "transcript": p.log,
         "lint": [l for l in lint.stdout.splitlines() if l.startswith(("ERROR", "warn"))] + [f"rc={lint.returncode}"],
         "coherence": coherence.stdout.splitlines()[-5:] if coherence.stdout else [],
-        "graph_nodes": sorted(({k: n.get(k) for k in ("id", "type", "layer", "group", "status", "depth",
+        "graph_nodes": sorted(({k: n.get(k) for k in ("id", "type", "layer", "group", "maturity", "depth",
                                                         "digestion_status") if k in n}
                                for n in graph.get("nodes", [])), key=lambda n: n["id"]),
         "graph_links": sorted(f"{l.get('source')}->{l.get('target')}:{l.get('kind', '')}" for l in graph.get("links", [])),
@@ -296,6 +298,7 @@ class PipelineE2E(unittest.TestCase):
         if os.environ.get("KB_UPDATE_GOLDEN") == "1":
             write_golden(cls.outputs, cls.files)
 
+    @pytest.mark.serial        # a wall-clock budget: measures contention under `-n`, so the gate runs it alone
     def test_fast_and_offline(self):
         self.assertLess(self.seconds, 60, f"e2e took {self.seconds:.0f}s")
 

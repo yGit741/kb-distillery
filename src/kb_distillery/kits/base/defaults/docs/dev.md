@@ -140,7 +140,7 @@ Without pixi, use `python3` equivalents (`python3 -m kb_distillery.lint.lint`, `
 ## Search service (qmd)
 
 `scripts/qmd/server.mjs` is a long-running local Node service over [qmd](https://github.com/tobi/qmd): BM25 +
-vector search (Qwen3-Embedding, multilingual) over one card per page — its title and `summary:` line,
+vector search (Qwen3-Embedding, multilingual) over one card per page — its title and `description:` line,
 written to `.cache/qmd-cards/` by `kb_distillery.search.cards` (lint calls it in the main checkout; worktrees, CI and
 share builds never touch the cards). The API's `/api/search` keeps its keyword hits and, with the runtime
 flag `semantic-search` on, adds a `related` group from the service (`kb_distillery.search.qmd_client`, ≤ 1.5 s, at

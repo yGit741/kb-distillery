@@ -1,11 +1,12 @@
 ---
 type: skill
 layer: concept
-status: growing
-sources: [chat-gemini-acme-system-design-prep, posting-acme-senior-ml-engineer, notes-acme-technical-interview]
-related: [role-senior-ml-engineer-acme, skill-ml-ops, skill-sensor-fusion, company-acme-robotics]
-summary: "End-to-end ML system design as an interview skill: Acme includes a dedicated round; prep follows a seven-step structure from the Gemini chat."
-summary_by: me
+title: "System design for ML"
+maturity: growing
+sources: [{resource: chat-gemini-acme-system-design-prep.md}, {resource: posting-acme-senior-ml-engineer.md}, {resource: notes-acme-technical-interview.md}]
+related: [role-senior-ml-engineer-acme.md, skill-ml-ops.md, skill-sensor-fusion.md, company-acme-robotics.md]
+description: "End-to-end ML system design as an interview skill: Acme includes a dedicated round; prep follows a seven-step structure from the Gemini chat."
+generated: {by: human:dana-levi}
 ---
 
 # System design for ML

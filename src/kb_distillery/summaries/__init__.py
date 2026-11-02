@@ -1,4 +1,4 @@
-"""Propose and apply `summary:` lines for wiki pages (Sonnet through kb_distillery.llm; `--backend subscription|api|batch`).
+"""Propose and apply `description:` lines (called `summary:` before schema 1.5) for wiki pages (Sonnet through kb_distillery.llm; `--backend subscription|api|batch`).
 
     pixi run summarize -- plan                 # which pages need one (missing or stale)
     pixi run summarize -- run --batch 50 [--sample] [--backend batch]   # propose → .cache/summaries/proposals.jsonl
@@ -7,6 +7,7 @@
     pixi run summarize -- apply [--slugs a,b]  # write them into wiki/ (inside an ops session)
 
 `run` never touches wiki/: proposals land in the cache, so a bad batch costs nothing to throw away.
-`apply` refuses until the schema knows the field (SCHEMA_VERSION >= 1.3) and never overwrites a summary
-marked `summary_by: me`.
+`apply` refuses until the schema knows the field (SCHEMA_VERSION >= 1.3), writes `description:`, `summary_from:` and
+`generated: {by: summarize/<model>, at: <when the proposal was made>}`, and never overwrites a description whose
+`generated.by` is a `human:<id>` (you wrote it).
 """

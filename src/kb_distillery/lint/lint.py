@@ -34,7 +34,7 @@ from kb_distillery.core.schema import (ASSET_NAME, ASSET_PREFIX, BARE_TYPES, BLA
 from kb_distillery.core.books import (DIGESTED, OVERVIEW_HEADING, OVERVIEW_MIN_CHARS, PARTITION_HEADING, SKIP,
                    book_status, coverage, coverage_line, find_row, overview_ok,
                    parse_partition, validate)
-from kb_distillery.core import hubs
+from kb_distillery.core import frontmatter, hubs, links
 from kb_distillery.core import persons
 from kb_distillery.core import scopes as scope_lib
 from kb_distillery.core import summary as summary_lib
@@ -99,23 +99,8 @@ def err(f, m):  errors.append(f"{f}: {m}")
 def warn(f, m): warnings.append(f"{f}: {m}")
 
 def parse_frontmatter(text):
-    """Minimal YAML: flat `key: value` and `key: [a, b]`. Enough for this vault."""
-    if not text.startswith("---"):
-        return None
-    end = text.find("\n---", 3)
-    if end == -1:
-        return None
-    fm = {}
-    for line in text[3:end].splitlines():
-        line = line.split("#")[0].rstrip()
-        if not line.strip() or ":" not in line or line.startswith((" ", "\t", "-")):
-            continue
-        k, v = line.split(":", 1)
-        v = v.strip()
-        if v.startswith("[") and v.endswith("]"):
-            v = [x.strip() for x in v[1:-1].split(",") if x.strip()]
-        fm[k.strip()] = v
-    return fm
+    """Flat `key: value`, `key: [a, b]`, plus the OKF shapes (kb_distillery.core.frontmatter). None without a block."""
+    return frontmatter.parse(text)[0]
 
 def raw_paths(fm):
     """`raw:` as a list of paths — a lecture may cite its slides and its notes. `none` → []."""
@@ -450,7 +435,7 @@ def check_wiki():
             continue
         for key, new in RETIRED_KEYS.items():
             if key in fm:
-                err(rel, f"`{key}:` is retired (schema 1.0) — use `{new}:`")
+                err(rel, f"`{key}:` is retired — use `{new}:`")
         layer = fm.get("layer")
         if not layer:
             err(rel, f"missing `layer:` — type {t} lives in layer {LAYER_OF[t]}")
@@ -459,9 +444,10 @@ def check_wiki():
         elif t not in SOURCE_TYPES and "depth" in fm:
             err(rel, f"`depth:` is for sources only (this page is a {layer} of type {t})")
         allowed = TYPE_STATUS[t]
-        if allowed and fm.get("status") not in allowed:
-            err(rel, f"status: {fm.get('status')!r} invalid for type {t} — "
+        if allowed and fm.get("maturity") not in allowed:
+            err(rel, f"maturity: {fm.get('maturity')!r} invalid for type {t} — "
                      f"expected one of {sorted(allowed)}")
+        _check_okf_fields(rel, fm, t, text)
         if t in NEEDS_RAW:
             raws = raw_paths(fm)
             if not fm.get("raw"):
@@ -480,10 +466,10 @@ def check_wiki():
                 err(rel, f"depth: {ds} is retired (schema 1.0) — use depth: {RETIRED_DEPTH[ds]}")
             elif ds not in DEPTH:
                 err(rel, f"depth: {ds!r} invalid — expected one of {list(DEPTH)}")
-            elif ds == "listed" and fm.get("status") == "digested":
-                err(rel, "depth listed means unread — status must be to-read or reading")
-            elif ds != "listed" and fm.get("status") != "digested":
-                err(rel, f"depth {ds} means read — status must be digested")
+            elif ds == "listed" and fm.get("maturity") == "digested":
+                err(rel, "depth listed means unread — maturity must be to-read or reading")
+            elif ds != "listed" and fm.get("maturity") != "digested":
+                err(rel, f"depth {ds} means read — maturity must be digested")
         _check_slug(rel, slug, t)
         # a kb that declares `[types] areas` pins its topic pages to them; one that declares none accepts any topic
         if t == "topic" and TOPIC_SLUGS and slug[len(TOPIC_PREFIX):] not in TOPIC_SLUGS:
@@ -498,11 +484,11 @@ def check_wiki():
             elif not conv or not os.path.isfile(os.path.join(ROOT, CHATS_DIR, conv + ".json")):
                 err(rel, f"ai-chat conversation: {conv or '(missing)'} has no tree in {CHATS_DIR}/")
         if t == "distilled-think":
-            src = str(fm.get("source") or "")
-            if src.startswith(f"{THINK_DIR}/"):
-                warn(rel, f"source: {src} — think is the shared space; cite it as {THINK_DIR}:{src[len(THINK_DIR) + 1:]}")
-            elif not src.startswith(f"{THINK_DIR}:"):
-                err(rel, f"type distilled-think requires source: {THINK_DIR}:<note>.md (the shared think space)")
+            cites = [r for r in frontmatter.resources(fm) if r.startswith((f"{THINK_DIR}/", f"{THINK_DIR}:"))]
+            if cites and cites[0].startswith(f"{THINK_DIR}/"):
+                warn(rel, f"sources: {cites[0]} — think is the shared space; cite it as {THINK_DIR}:{cites[0][len(THINK_DIR) + 1:]}")
+            elif not cites:
+                err(rel, f"type distilled-think requires `sources: [{{resource: {THINK_DIR}:<note>.md}}]` (the shared think space)")
             for heading in ("Summary", "Proposed propagation"):
                 if f"## {heading}" not in text:
                     err(rel, f"distilled-think page missing ## {heading}")
@@ -530,7 +516,7 @@ def check_wiki():
         if TOPIC_PREFIX + theme not in pages:
             warn(WIKI_DIR, f"missing topic page [[{TOPIC_PREFIX}{theme}]] — every area: needs one")
     if no_summary:      # one line, not one per page, while the backfill runs
-        warn(WIKI_DIR, f"{len(no_summary)} page(s) have no summary: — `pixi run summarize -- plan` lists them")
+        warn(WIKI_DIR, f"{len(no_summary)} page(s) have no description: — `pixi run summarize -- plan` lists them")
     return pages
 
 
@@ -562,21 +548,48 @@ def check_question_page(rel, text):
 
 
 def check_summary(rel, fm, text):
-    """`summary:` — one English line, "what it is + main point" (kb_distillery.core.summary). Missing warns for now
+    """`description:` — one English line, "what it is + main point" (kb_distillery.core.summary). Missing warns for now
     (the backfill is running; check_wiki reports them as one line); a malformed one is an error;
     `summary_from` ≠ the page's hash warns stale. Returns False only when a needed summary is missing."""
-    s = summary_lib.unquote(fm.get("summary"))
+    s = summary_lib.unquote(fm.get("description"))
     if not s:
         return not summary_lib.needs_summary(fm)
     for p in summary_lib.problems(s):
-        err(rel, f"summary: {p}")
-    by = fm.get("summary_by")
-    if by and by != "me":
-        err(rel, f"summary_by: {by} — the only value is `me` (a summary you wrote; digests never overwrite it)")
-    if by != "me" and fm.get("summary_from") != summary_lib.summary_hash(text):
-        warn(rel, "summary may be stale (Key claims / main result changed since it was written) — "
-                  "re-run `pixi run summarize -- run --slugs <slug>`, or keep it with summary_by: me")
+        err(rel, f"description: {p}")
+    if not summary_lib.hand_written(fm) and fm.get("summary_from") != summary_lib.summary_hash(text):
+        warn(rel, "description may be stale (Key claims / main result changed since it was written) — "
+                  "re-run `pixi run summarize -- run --slugs <slug>`, or keep it with generated: {by: human:<you>}")
     return True
+
+
+ACTOR = re.compile(r"^(?:human:|process:)\S+$|^[^\s/:]+/\S+$")        # OKF §7: <producer>/<version>, human:<id>, process:<id>
+STAMP = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:?\d{2})$")
+
+
+def _check_okf_fields(rel, fm, t, text):
+    """The Open Knowledge Format fields (schema 1.5): lifecycle `status`, `generated`, `created`, `sources`, `related`."""
+    if "status" in fm and not (fm["status"] == "draft" and fm.get("depth") == "listed"):
+        err(rel, f"status: {fm['status']!r} — OKF `status` is only `draft`, set on pages at depth listed "
+                 f"(the reading lifecycle is `maturity:`)")
+    if "generated" in fm:
+        g = fm["generated"]
+        if not isinstance(g, dict) or not ACTOR.match(str(g.get("by") or "")):
+            err(rel, "generated: needs `{by: <producer>/<version> | human:<id> | process:<id>[, at: <datetime>]}`")
+        elif "at" in g and not STAMP.match(str(g["at"])):
+            err(rel, f"generated.at: {g['at']!r} is not an ISO 8601 datetime with a UTC offset")
+    if "created" in fm and not STAMP.match(str(fm["created"])):
+        err(rel, f"created: {fm['created']!r} is not an ISO 8601 datetime with a UTC offset (2026-10-08T00:00:00Z)")
+    srcs = fm.get("sources", [])
+    for entry in [] if srcs in ("", None) else ([srcs] if isinstance(srcs, (str, dict)) else srcs):
+        if not (isinstance(entry, dict) and str(entry.get("resource") or "").strip()):
+            err(rel, f"sources: entry {entry!r} is not an object with a `resource` (`sources: [{{resource: paper-x.md}}]`)")
+    rel_list = fm.get("related", [])
+    for ref in [] if rel_list in ("", None) else ([rel_list] if isinstance(rel_list, str) else rel_list):
+        if not (isinstance(ref, str) and ref.endswith(links.PAGE_SUFFIX) and links.page_slug(ref)):
+            err(rel, f"related: {ref!r} is not a page path (`related: [{links.page_path('other-page')}]`)")
+    title, h1 = frontmatter.unquote(fm.get("title")), frontmatter.first_heading(text)
+    if title and h1 and title != h1:
+        warn(rel, f"title: {title!r} differs from the first heading {h1!r}")
 
 
 def _check_slug(rel, slug, t):
@@ -889,7 +902,7 @@ def _effective_digestion(fm, text):
     ds = fm.get("depth")
     if ds in DEPTH:
         return ds
-    if fm.get("status") != "digested":
+    if fm.get("maturity") != "digested":
         return "listed"
     if "## Key equations" in text:
         block = text.split("## Key equations", 1)[1].split("\n##", 1)[0].strip()
@@ -917,8 +930,8 @@ def check_ingest_strict(pages, only_slugs=None):
         tier = _effective_digestion(fm, text)
         if tier not in ("full", "deep"):
             continue
-        if fm.get("status") != "digested":
-            err(rel, f"depth {tier} requires status: digested")
+        if fm.get("maturity") != "digested":
+            err(rel, f"depth {tier} requires maturity: digested")
             continue
         if "## Key equations" not in text:
             err(rel, "full/deep digest missing ## Key equations section")
@@ -982,8 +995,8 @@ def check_books(pages):
             if rows and line not in text:
                 warn(rel, f"stale coverage line — expected `{line}`")
             derived = book_status(rows)
-            if rows and fm.get("status") != derived:
-                warn(rel, f"status: {fm.get('status')} but the partition says {derived}")
+            if rows and fm.get("maturity") != derived:
+                warn(rel, f"maturity: {fm.get('maturity')} but the partition says {derived}")
         for r in rows:
             target = pages.get(r["slug"])
             if target and target[1].get("type") != "part":
@@ -1042,8 +1055,8 @@ def check_contents(pages):
         if rows and line not in text:
             warn(rel, f"stale coverage line — expected `{line}`")
         derived = hubs.hub_status(rows)
-        if rows and fm.get("status") != derived:
-            warn(rel, f"status: {fm.get('status')} but the contents table says {derived}")
+        if rows and fm.get("maturity") != derived:
+            warn(rel, f"maturity: {fm.get('maturity')} but the contents table says {derived}")
         for r in rows:
             if not r["slug"]:
                 continue
@@ -1433,10 +1446,10 @@ def write_index(pages, quiet=False):
             rel, fm, text = pages[slug]
             if fm.get("type") != t:
                 continue
-            s = (summary_lib.unquote(fm.get("summary")) or first_line(text)).replace("|", "\\|")
+            s = (summary_lib.unquote(fm.get("description")) or first_line(text)).replace("|", "\\|")
             if len(s) > 110:
                 s = s[:107] + "..."
-            rows.append(f"| [[{slug}]] | {fm.get('status','')} | {s} |")
+            rows.append(f"| [[{slug}]] | {fm.get('maturity','')} | {s} |")
         if rows:
             out += [f"## {title}", "", "| Page | Status | Summary |",
                     "|------|--------|---------|"] + rows + [""]

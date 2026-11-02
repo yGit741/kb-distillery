@@ -17,13 +17,14 @@ progress is the `verified` date, and `--health` counts pages without one.
 import re
 
 from kb_distillery.core.schema import CONCEPT_TYPES, make_slug
+from kb_distillery.core import frontmatter
 from kb_distillery.core.links import WIKILINK_TARGET
 
 HANDLES = ("url", "scholar", "github", "youtube", "blog", "wikipedia")
 EDGES = ("orgs", "advisors", "students")
 CONTACT = ("email",)
-SUMMARY_FIELDS = ("summary", "summary_from", "summary_by")   # schema 1.3, every page type (kb_distillery.core.summary)
-FIELDS = {"type", "layer", "verified", *HANDLES, *EDGES, *CONTACT, *SUMMARY_FIELDS}
+SUMMARY_FIELDS = ("description", "summary_from", "generated")   # every page type (kb_distillery.core.summary)
+FIELDS = {"type", "layer", "title", "verified", *HANDLES, *EDGES, *CONTACT, *SUMMARY_FIELDS}
 # Keys the pre-0.12 layouts used; migration 0006 moves their content into the body.
 LEGACY_FIELDS = ("status", "area", "related", "affiliation", "lab", "role", "optional", "tau_profile")
 NONE, UNKNOWN = "none", "unknown"
@@ -53,24 +54,9 @@ DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
 # -- parsing -----------------------------------------------------------------------------------
 def parse_frontmatter(text):
-    """Same minimal YAML as lint.parse_frontmatter: flat `key: value` and `key: [a, b]`."""
-    if not text.startswith("---"):
-        return None, text
-    end = text.find("\n---", 3)
-    if end == -1:
-        return None, text
-    fm = {}
-    for line in text[3:end].splitlines():
-        line = line.split("#")[0].rstrip()
-        if not line.strip() or ":" not in line or line.startswith((" ", "\t", "-")):
-            continue
-        k, v = line.split(":", 1)
-        v = v.strip()
-        if v.startswith("[") and v.endswith("]"):
-            v = [x.strip() for x in v[1:-1].split(",") if x.strip()]
-        fm[k.strip()] = v
-    body = text[end + 4:]
-    return fm, body.lstrip("\n")
+    """Same reader as lint.parse_frontmatter, plus the body (leading blank lines dropped)."""
+    fm, body = frontmatter.parse(text)
+    return (None, text) if fm is None else (fm, body.lstrip("\n"))
 
 
 def as_list(v):
@@ -109,8 +95,21 @@ def title_of(body):
 
 
 # -- rendering ---------------------------------------------------------------------------------
-def render_frontmatter(fm):
+def _flat(v):
+    """A frontmatter value back to its one-line form (`generated` is a mapping)."""
+    if isinstance(v, dict):
+        return "{" + ", ".join(f"{k}: {frontmatter.scalar(str(x))}" for k, x in v.items()) + "}"
+    return v
+
+
+def render_frontmatter(fm, title=None):
+    """`title` is the page's H1 (OKF `title:`); the summary fields the page already has are carried over."""
     lines = ["---", "type: person", "layer: concept"]
+    if title:
+        lines.append(frontmatter.title_line(title))
+    for k in SUMMARY_FIELDS:
+        if fm.get(k):
+            lines.append(f"{k}: {_flat(fm[k])}")
     for k in HANDLES + CONTACT:
         if k in fm:
             lines.append(f"{k}: {fm[k]}")
@@ -141,7 +140,7 @@ def order(sections):
 
 
 def render(fm, head, sections):
-    parts = [render_frontmatter(fm), "\n" + head.strip() + "\n"]
+    parts = [render_frontmatter(fm, frontmatter.first_heading(head)), "\n" + head.strip() + "\n"]
     for s in order(sections):
         parts.append("\n" + render_section(s["title"], s.get("source"), s["body"]))
     return "".join(parts)
@@ -280,7 +279,7 @@ def check(slug, fm, body, pages):
             errors.append(f"`{k}:` is not a person field since schema 0.12 — run the person-v2 migration")
     for k in fm:
         if k not in FIELDS and k not in LEGACY_FIELDS:
-            errors.append(f"unknown person field `{k}:` — handles {HANDLES}, edges {EDGES}, email, verified, summary")
+            errors.append(f"unknown person field `{k}:` — handles {HANDLES}, edges {EDGES}, email, verified, title, description, generated")
     for k in HANDLES:
         v = fm.get(k)
         if v is None:

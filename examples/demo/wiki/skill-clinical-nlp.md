@@ -1,11 +1,12 @@
 ---
 type: skill
 layer: concept
-status: seed
-sources: [posting-nimbus-health-applied-scientist, doc-dana-levi-cv]
-related: [role-applied-scientist-nimbus, company-nimbus-health, interview-nimbus-hiring-manager, skill-pytorch]
-summary: "Clinical NLP, the domain skill Nimbus Health requires: entity recognition, negation and summarisation on de-identified notes; Dana has adjacent but thinner experience."
-summary_by: me
+title: "Clinical NLP"
+maturity: seed
+sources: [{resource: posting-nimbus-health-applied-scientist.md}, {resource: doc-dana-levi-cv.md}]
+related: [role-applied-scientist-nimbus.md, company-nimbus-health.md, interview-nimbus-hiring-manager.md, skill-pytorch.md]
+description: "Clinical NLP, the domain skill Nimbus Health requires: entity recognition, negation and summarisation on de-identified notes; Dana has adjacent but thinner experience."
+generated: {by: human:dana-levi}
 ---
 
 # Clinical NLP

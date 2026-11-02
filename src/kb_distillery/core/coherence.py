@@ -55,7 +55,7 @@ def _is_digested_paper(pages, slug):
     if slug not in pages:
         return False
     fm = pages[slug][1]
-    return fm.get("type") in SOURCE_TYPES and fm.get("status") == "digested"
+    return fm.get("type") in SOURCE_TYPES and fm.get("maturity") == "digested"
 
 
 def classify_pair_kind(slug_a, slug_b, pages):
@@ -121,7 +121,7 @@ def check_coherence(pages, rows=None, err_fn=None, warn_fn=None, prior=None, fre
                 min(LEXICAL_CLASH_CAP, _score_hit(kind, base)))
 
         # q-* status tension vs digested paper
-        if fm.get("type") == "question" and fm.get("status") in ("open", "partial"):
+        if fm.get("type") == "question" and fm.get("maturity") in ("open", "partial"):
             cs = claim_text(slug, fm, text).lower()
             if any(w in cs for w in ("unknown", "open", "unclear", "not known")):
                 for other in outbound_links(text, fm):
@@ -165,7 +165,7 @@ def check_coherence(pages, rows=None, err_fn=None, warn_fn=None, prior=None, fre
         if not wiki_slug or wiki_slug not in pages:
             continue
         wfm = pages[wiki_slug][1]
-        if wfm.get("type") != "paper" or wfm.get("status") != "digested":
+        if wfm.get("type") != "paper" or wfm.get("maturity") != "digested":
             continue
         add("internal", [wiki_slug],
             f"raw re-queued but wiki still digested — re-digest `{raw_path}`",
@@ -179,7 +179,7 @@ def check_coherence(pages, rows=None, err_fn=None, warn_fn=None, prior=None, fre
         for slug, (rel, fm, text) in pages.items():
             if f"[[{slug}]]" not in index_text:
                 continue
-            fl = unquote(fm.get("summary")) or _first_line(text)     # index.md shows the summary when set
+            fl = unquote(fm.get("description")) or _first_line(text)     # index.md shows the summary when set
             if fl and fl[:40].replace("|", "\\|") not in index_text:
                 add("cosmetic", [slug], "index summary may be stale vs page body", 15)
 

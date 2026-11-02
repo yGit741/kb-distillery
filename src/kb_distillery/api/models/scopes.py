@@ -5,7 +5,7 @@ from kb_distillery.api.models.base import ApiModel
 class ScopeSummary(ApiModel):
     slug: str
     title: str
-    status: str
+    maturity: str
     files: int
     digested: int
     uncovered: int
@@ -42,7 +42,7 @@ class ScopeDetail(ApiModel):
     slug: str
     title: str
     why: str = ""
-    status: str
+    maturity: str
     rows: list[ScopeRow]
     projection: ScopeProjection
 

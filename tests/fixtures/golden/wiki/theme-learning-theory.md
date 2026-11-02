@@ -1,7 +1,8 @@
 ---
 type: topic
 layer: concept
-status: seed
+title: "Learning Theory"
+maturity: seed
 aliases: []
 related: []
 ---

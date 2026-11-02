@@ -1,14 +1,14 @@
 ---
 type: article
 layer: source
+title: "Kalai Fixture Post One"
 source: 
 author:
 area: []
-status: digested
+maturity: digested
 depth: easy
 raw: raw/web-clips/kalai-fixture-post-one.md
 url:
-date:
 ---
 
 # Kalai Fixture Post One

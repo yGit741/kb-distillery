@@ -70,10 +70,10 @@ def test_page_input_drops_private_sections():
 
 
 def test_set_fields_replaces_and_appends():
-    t = P.set_fields(PAGE, {"summary": '"one"', "summary_from": "abc"})
-    t = P.set_fields(t, {"summary": '"two"'})
+    t = P.set_fields(PAGE, {"description": '"one"', "summary_from": "abc"})
+    t = P.set_fields(t, {"description": '"two"'})
     fm = t.split("\n---", 1)[0]
-    assert fm.count("summary:") == 1 and 'summary: "two"' in fm and "summary_from: abc" in fm
+    assert fm.count("description:") == 1 and 'description: "two"' in fm and "summary_from: abc" in fm
     assert t.endswith(PAGE.split("\n---", 1)[1])
 
 
@@ -84,7 +84,7 @@ def test_status_and_sample(tmp_path):
         (wiki / f"p{i}.md").write_text(PAGE)
     (wiki / "idea.md").write_text("---\ntype: idea\nlayer: concept\n---\n\n# An idea\n")
     (wiki / "heb.md").write_text(PAGE.replace("# A paper", "# שלום").replace('title: "A paper"', 'title: "שלום"'))
-    (wiki / "mine.md").write_text(PAGE.replace("depth: easy", 'depth: easy\nsummary: "x"\nsummary_by: me'))
+    (wiki / "mine.md").write_text(PAGE.replace("depth: easy", 'depth: easy\ndescription: "x"\ngenerated: {by: human:ada}'))
     pages = P.load_pages(str(tmp_path))
     st = {p["slug"]: P.status(p) for p in pages}
     assert st["mine"] == "mine" and st["idea"] == "missing"
@@ -128,7 +128,7 @@ def test_apply_writes_and_skips_changed(tmp_path, monkeypatch):
             {"slug": "b", "summary": good, "problems": [], "summary_from": "stale0000000"}], str(props))
     assert P.apply(root=str(tmp_path), path=str(props)) == ["a"]
     text = (wiki / "a.md").read_text()
-    assert f'summary: "{good}"' in text and P.status(P.load_pages(str(tmp_path))[0]) == "ok"
+    assert f'description: "{good}"' in text and "generated: {by: summarize/sonnet, at: " in text and P.status(P.load_pages(str(tmp_path))[0]) == "ok"
     assert os.path.getsize(wiki / "b.md") == len(PAGE.encode())
 
 

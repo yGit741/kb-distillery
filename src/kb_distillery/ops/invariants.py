@@ -30,6 +30,7 @@ import subprocess
 import sys
 
 from kb_distillery.paths import vault_root
+from kb_distillery.core import links
 from kb_distillery.core.links import WIKILINK_TARGET
 META_DIR = os.path.join(vault_root(), "meta")
 REPO = vault_root()
@@ -94,13 +95,14 @@ def page_counts(pages):
         depth = fm_value(lines, "depth") or fm_value(lines, "digestion-status")
         if depth:
             c["depth"][f"{t}:{depth}"] += 1
-        c["status"][f"{t}:{fm_value(lines, 'status') or '-'}"] += 1
+        # a snapshot reads both sides of a migration: `maturity` (schema 1.5) or the `status` it replaced
+        c["status"][f"{t}:{fm_value(lines, 'maturity') or fm_value(lines, 'status') or '-'}"] += 1
     return {k: dict(sorted(v.items())) for k, v in c.items()}
 
 
 def _related(lines):
     v = fm_value(lines or [], "related") or ""
-    return [x.strip() for x in v.strip("[]").split(",") if x.strip()]
+    return [links.page_slug(x) or x.strip() for x in v.strip("[]").split(",") if x.strip()]
 
 
 def link_counts(pages):

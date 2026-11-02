@@ -1,8 +1,9 @@
 ---
 type: idea
 layer: concept
+title: "PAC learning"
 area: [learning-theory]
-status: seed
+maturity: seed
 sources: []
 related: []
 discussed_with: []

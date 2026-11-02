@@ -1,13 +1,13 @@
 ---
 type: mail
 layer: source
+title: {{title_yaml}}
 area: []
-status: digested
+maturity: digested
 depth: easy
 raw: {{raw}}
-date:
 aliases: []
-summary:
+description:
 ---
 
 # {{title}}

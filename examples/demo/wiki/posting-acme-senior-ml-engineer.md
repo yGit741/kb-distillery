@@ -1,15 +1,16 @@
 ---
 type: posting
 layer: source
-status: digested
+title: "Senior ML Engineer, Perception (Acme Robotics)"
+maturity: digested
 depth: easy
 raw: raw/web-clips/acme-senior-ml-engineer.md
 company: Acme Robotics
-date: 2026-09-24
+created: 2026-09-24T00:00:00Z
 stage: posting
-related: [company-acme-robotics, role-senior-ml-engineer-acme, process-acme-robotics]
-summary: "Acme Robotics posting for a Senior ML Engineer in the perception team: 3D detection and tracking, lidar-camera-IMU sensor fusion, edge deployment and ML-ops; requires strong PyTorch and a system-design interview."
-summary_by: me
+related: [company-acme-robotics.md, role-senior-ml-engineer-acme.md, process-acme-robotics.md]
+description: "Acme Robotics posting for a Senior ML Engineer in the perception team: 3D detection and tracking, lidar-camera-IMU sensor fusion, edge deployment and ML-ops; requires strong PyTorch and a system-design interview."
+generated: {by: human:dana-levi}
 ---
 
 # Senior ML Engineer, Perception (Acme Robotics)

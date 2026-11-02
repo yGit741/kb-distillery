@@ -43,17 +43,23 @@ unit" → source.
 ```yaml
 type: <type>                 # see Page layers
 layer: source|collection|concept   # right after type:, must match the type
-status: to-read|reading|digested   # sources + collections; idea/topic: seed|growing|solid;
+title: "Page title"          # the first heading (lint warns when they differ); OKF `title`
+maturity: to-read|reading|digested   # was `status` (schema 1.5); sources + collections; idea/topic: seed|growing|solid;
                              # question: open|partial|resolved; distilled-think: review|applied|archived;
                              # scope: active|parked; person: none — see below
+status: draft                # OKF lifecycle, only `draft`, only on a source at `depth: listed`; omitted otherwise
+created: 2026-10-08T00:00:00Z  # was `date`; an ISO 8601 datetime with a UTC offset
 depth: listed|easy|full|deep # sources only — listed ⇒ to-read|reading, easy/full/deep ⇒ digested
 area: [info-theory]          # topic slugs only (whitelist TOPIC_SLUGS in src/kb_distillery/core/schema.py)
-summary: "…"                 # one English line, 80–320 chars: what the page is + its main point (schema 1.3)
+description: "…"             # was `summary`; one English line, 80–320 chars: what the page is + its main point
 summary_from: 3f9a1c0b7e21   # hash of H1 + Problem/Main result + Key claims it was written from (stale check)
-summary_by: me               # optional: you wrote it — tools never overwrite it
+generated: {by: summarize/sonnet, at: 2026-10-31T09:46:51+02:00}   # who wrote the description (OKF §5.2); `at` only when known.
+                             # `by: human:<id>` (the id is kb.toml `[kb] owner`) = you wrote it — tools never overwrite it
+sources: [{resource: paper-x.md}, {resource: https://…}]   # objects with a `resource`: a wiki page path, the Source page's
+                             # own http(s) `url`, or a plain descriptor such as `think:<note>.md`; never a path into raw/ or think/
 relations:                   # optional typed links to other pages (schema 1.4); see below
   - {to: other-slug, kind: extends, note: "why it holds"}
-related: [tensor-rank]       # bare slugs — wiki/ is flat, so no paths
+related: [tensor-rank.md]    # page paths (core.links.page_path); wiki/ is the OKF bundle root and is flat
 aliases: [old-slug]          # renamed pages keep their old slug; `kb_distillery.ingest resolve <old-slug>` finds them
 raw: raw/printed-docs/y.pdf  # sources + book/notebook (a list for multi-file lectures); `none` + a `url:` if read externally
 book_pages: 419              # book/notebook only — total PDF pages
@@ -83,20 +89,20 @@ self target, a missing note, a repeated (kind, target), a malformed block, and o
 `full` or `deep` (a concept page may always state relations). Relations are proposed by `python -m kb_distillery.graph.propose`
 and applied only after review; the graph reads them behind the `graph-relations` flag.
 
-**`summary:`** (schema 1.3, `src/kb_distillery/core/summary.py`) — every page except courses and `listed`
+**`description:`** (schema 1.3 as `summary:`, renamed in 1.5, `src/kb_distillery/core/summary.py`) — every page except courses and `listed`
 sources carries one English line saying what the page is and its main point, in the same template for
 every type, so a short idea and a long post are equally searchable. It feeds `index.md`, search cards and
 embeddings. Sonnet writes it (`pixi run summarize -- run --slugs <slug>`, then `apply` inside an ops
 session); `summary_from` lets lint warn when the page's point changed since. A page that gets deeper is
 re-summarized; edits to links, Connections or typos never are. Lint: malformed → error, missing → one
-aggregated warning (until the backfill ends), stale → warning; `summary_by: me` pages are never rewritten.
+aggregated warning (until the backfill ends), stale → warning; pages whose `generated.by` is a `human:<id>` are never rewritten.
 
 **`## My notes`** — every concept page (idea, topic, question, person) ends with a reserved
 `## My notes` section that is the user's: no tool overwrites it and it stays last
 (`src/kb_distillery/core/wikiio.py`); lint warns when a page has two or it is not last. Agents never write in it.
 
 **Person pages are handle-driven** (`src/kb_distillery/core/persons.py`, schema 0.12). Frontmatter holds only
-handles, edges, contact and a date (besides `type: person`, `layer: concept`) — no `status`, `area`, `related` or `affiliation`:
+handles, edges, contact and a date (besides `type: person`, `layer: concept`, `title`, `description`) — no `maturity`, `status`, `area`, `related` or `affiliation`:
 
 ```yaml
 url: https://…        # homepage      ⇒ ## Courses

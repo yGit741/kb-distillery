@@ -71,6 +71,22 @@ def set_key(text, key, value, after=None):
     return edit_front_matter(text, fn)
 
 
+def drop_key(text, key):
+    """Remove one flat `key: value` line from the front matter (nothing happens when it is not there)."""
+    pat = re.compile(_KEY_RE.format(key=re.escape(key)) + r"\n?", re.M)
+    return edit_front_matter(text, lambda inner: pat.sub("", inner + "\n", count=1).rstrip("\n"))
+
+
+def set_reading(text, depth, maturity):
+    """Move a Source page to `depth` and `maturity`. OKF `status: draft` is how a `listed` stub says it is unread, so
+    it is set at depth listed and dropped at every other depth. Front matter only."""
+    text = set_key(text, "maturity", maturity)
+    text = set_key(text, "depth", depth, after="maturity")
+    if depth == "listed":
+        return set_key(text, "status", "draft", after="maturity")
+    return drop_key(text, "status")
+
+
 def _atomic_write(path, text):
     d = os.path.dirname(os.path.abspath(path))
     fd, tmp = tempfile.mkstemp(prefix=".wikiio-", suffix=".md", dir=d)

@@ -167,16 +167,16 @@ class LintRetiredNames(unittest.TestCase):
         return [e for e in self.lint.errors if f"{slug}.md" in e]
 
     def test_retired_type_names_its_replacement(self):
-        errs = self.errors("tensor-rank", "---\ntype: concept\nstatus: seed\n---\n# T\n")
+        errs = self.errors("tensor-rank", "---\ntype: concept\nmaturity: seed\n---\n# T\n")
         self.assertTrue(any("retired" in e and "type: idea" in e for e in errs), errs)
 
     def test_missing_or_wrong_layer(self):
-        self.assertTrue(any("missing `layer:`" in e for e in self.errors("x", "---\ntype: idea\nstatus: seed\n---\n# X\n")))
-        self.assertTrue(any("disagrees" in e for e in self.errors("y", "---\ntype: idea\nlayer: source\nstatus: seed\n---\n# Y\n")))
-        self.assertEqual(self.errors("z", "---\ntype: idea\nlayer: concept\nstatus: seed\n---\n# Z\n"), [])
+        self.assertTrue(any("missing `layer:`" in e for e in self.errors("x", "---\ntype: idea\nmaturity: seed\n---\n# X\n")))
+        self.assertTrue(any("disagrees" in e for e in self.errors("y", "---\ntype: idea\nlayer: source\nmaturity: seed\n---\n# Y\n")))
+        self.assertEqual(self.errors("z", "---\ntype: idea\nlayer: concept\nmaturity: seed\n---\n# Z\n"), [])
 
     def test_retired_depth_key_and_value(self):
-        base = "---\ntype: video\nlayer: source\nstatus: to-read\nraw: none\nurl: https://x.org\n"
+        base = "---\ntype: video\nlayer: source\nmaturity: to-read\nraw: none\nurl: https://x.org\n"
         errs = self.errors("video-a", base + "digestion-status: catalog\n---\n# A\n")
         self.assertTrue(any("`digestion-status:` is retired" in e for e in errs), errs)
         errs = self.errors("video-b", base + "depth: catalog\n---\n# B\n")

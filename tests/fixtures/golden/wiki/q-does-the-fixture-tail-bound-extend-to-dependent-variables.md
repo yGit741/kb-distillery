@@ -1,8 +1,9 @@
 ---
 type: question
 layer: concept
+title: "Does the fixture tail bound extend to dependent variables?"
 area: [learning-theory]
-status: open
+maturity: open
 priority: med
 discussed_with: []
 ---

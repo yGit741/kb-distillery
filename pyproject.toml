@@ -61,6 +61,7 @@ testpaths = ["tests"]
 python_files = ["test_*.py"]
 addopts = "-p no:cacheprovider"
 markers = [
+    "serial: asserts a wall-clock budget, so it runs alone in a single process (the tests gate's second pass); never in the -n pass",
     "wheel: builds the wheel and installs it into a temp venv (slow, needs network for the build backend); CI job `wheel`",
 ]
 

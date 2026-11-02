@@ -1,16 +1,17 @@
 ---
 type: book
 layer: collection
+title: "Tiny Book (2020)"
 authors: [B. Writer]
 year: 2020
 area: [learning-theory]
 raw: raw/printed-docs/2020-tiny-book.pdf
 url: 
 book_pages: 61
-status: reading
+maturity: reading
 recommended_by: []
 related: []
-summary:
+description:
 ---
 
 # Tiny Book (2020)

@@ -1,11 +1,12 @@
 ---
 type: question
 layer: concept
+title: {{title_yaml}}
 area: []
-status: open
+maturity: open
 priority: med
 discussed_with: []
-summary:
+description:
 ---
 
 # {{title}}

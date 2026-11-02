@@ -1,13 +1,14 @@
 ---
 type: course
 layer: collection
+title: {{title_yaml}}
 short: {{short}}
 institution: {{institution}}
 course_code: {{course_code}}
 semester: {{semester}}
 lecturer: {{lecturer}}
 area: []
-status: to-read
+maturity: to-read
 aliases: []
 related: []
 ---

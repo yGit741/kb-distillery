@@ -23,7 +23,7 @@ RAW = "raw/printed-docs/2023-toolformer.pdf"
 PAGE = """---
 type: paper
 layer: source
-status: digested
+maturity: digested
 depth: full
 year: 2023
 area: [learning-theory]

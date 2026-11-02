@@ -79,7 +79,7 @@ def list_scopes(root=None):
         rel, fm, text = pages[slug]
         paths = sc.rows_of(slug, manifest)
         proj = sc.projection(paths, pages, manifest, index)
-        out.append(dict(slug=slug, title=sc.title_of(text, slug), status=fm.get("status") or "active",
+        out.append(dict(slug=slug, title=sc.title_of(text, slug), maturity=fm.get("maturity") or "active",
                         files=len(paths), digested=len(proj["covered"]), uncovered=len(proj["uncovered"]),
                         coverage=proj["coverage"], updated=_mtime_iso(root, rel)))
     return dict(scopes=out)
@@ -95,7 +95,7 @@ def get_scope(slug, root=None):
     paths = sc.rows_of(slug, manifest)
     proj = sc.projection(paths, pages, manifest, index)
     return dict(slug=slug, title=sc.title_of(text, slug), why=sc.why_text(text),
-                status=fm.get("status") or "active",
+                maturity=fm.get("maturity") or "active",
                 rows=[_row_dict(p, manifest, pages, index) for p in paths], projection=_proj_public(proj))
 
 

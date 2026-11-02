@@ -6,7 +6,7 @@ from kb_distillery.core import hubs
 
 HUB = """---
 type: course
-status: reading
+maturity: reading
 institution: openu
 course_code: "20229"
 ---

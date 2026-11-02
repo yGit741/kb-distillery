@@ -1,10 +1,11 @@
 ---
 type: process
 layer: collection
-status: digested
-related: [company-acme-robotics, role-senior-ml-engineer-acme, interview-acme-recruiter-screen, interview-acme-technical, noa-peretz, omer-shahar]
-summary: "Hiring process for the Senior ML Engineer role at Acme Robotics: posting, recruiter thread, prep chat, technical interview notes and CV, with stage reached and next step."
-summary_by: me
+title: "Acme Robotics hiring process"
+maturity: digested
+related: [company-acme-robotics.md, role-senior-ml-engineer-acme.md, interview-acme-recruiter-screen.md, interview-acme-technical.md, noa-peretz.md, omer-shahar.md]
+description: "Hiring process for the Senior ML Engineer role at Acme Robotics: posting, recruiter thread, prep chat, technical interview notes and CV, with stage reached and next step."
+generated: {by: human:dana-levi}
 ---
 
 # Acme Robotics hiring process

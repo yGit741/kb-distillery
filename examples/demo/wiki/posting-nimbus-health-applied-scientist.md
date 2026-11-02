@@ -1,15 +1,16 @@
 ---
 type: posting
 layer: source
-status: digested
+title: "Applied Scientist, Clinical NLP (Nimbus Health)"
+maturity: digested
 depth: easy
 raw: raw/web-clips/nimbus-health-applied-scientist.md
 company: Nimbus Health
-date: 2026-10-05
+created: 2026-10-05T00:00:00Z
 stage: posting
-related: [company-nimbus-health, role-applied-scientist-nimbus, process-nimbus-health]
-summary: "Nimbus Health posting for an Applied Scientist in clinical NLP: fine-tune transformers on de-identified Hebrew and English notes, design annotation guidelines with physicians, and present results to hospital staff."
-summary_by: me
+related: [company-nimbus-health.md, role-applied-scientist-nimbus.md, process-nimbus-health.md]
+description: "Nimbus Health posting for an Applied Scientist in clinical NLP: fine-tune transformers on de-identified Hebrew and English notes, design annotation guidelines with physicians, and present results to hospital staff."
+generated: {by: human:dana-levi}
 ---
 
 # Applied Scientist, Clinical NLP (Nimbus Health)

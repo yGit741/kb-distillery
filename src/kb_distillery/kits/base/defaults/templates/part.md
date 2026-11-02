@@ -1,17 +1,18 @@
 ---
 type: part
 layer: source
+title: {{title_yaml}}
 book: {{book}}
 authors: []
 year: {{year}}
 area: []
-status: digested
+maturity: digested
 depth: full
 raw: {{raw}}
 section: {{section}}
 section_pages: {{start}}-{{end}}
 url:
-summary:
+description:
 ---
 
 # {{title}}

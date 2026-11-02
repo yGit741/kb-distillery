@@ -42,7 +42,7 @@ ALL = sorted([A, B, C, D, IMG])
 def page(typ, status, body="", **fm):
     from kb_distillery.core import schema
     typ = {"concept": "idea", "theme": "topic"}.get(typ, typ)
-    lines = ["---", f"type: {typ}", f"layer: {schema.LAYER_OF[typ]}", f"status: {status}"]
+    lines = ["---", f"type: {typ}", f"layer: {schema.LAYER_OF[typ]}", f"maturity: {status}"]
     for k, v in fm.items():
         lines.append(f"{k}: {v}")
     return "\n".join(lines + ["---", "", body]) + "\n"
@@ -166,7 +166,7 @@ def paper_page(slug, raw):
     return page("paper", "digested", body, **fm)
 
 
-SCOPE_PAGE = ("---\ntype: scope\nlayer: collection\nstatus: active\nrelated: []\naliases: []\n---\n\n# S\n\n## Why\n\n"
+SCOPE_PAGE = ("---\ntype: scope\nlayer: collection\nmaturity: active\nrelated: []\naliases: []\n---\n\n# S\n\n## Why\n\n"
               "Because [[q-y]] matters.\n\n## Members\n\n<!-- generated: scopes -->\n")
 
 

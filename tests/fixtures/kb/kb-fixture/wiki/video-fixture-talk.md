@@ -1,13 +1,15 @@
 ---
 type: video
 layer: source
+title: "Fixture talk on entropy"
 authors: [Fixture Speaker]
 year: 2024
 area: [info-theory]
-status: digested
+maturity: digested
 depth: easy
 raw: none
 url: https://example.org/watch/fixture-talk
+sources: [{resource: https://example.org/watch/fixture-talk}]
 recommended_by: []
 discussed_with: []
 ---

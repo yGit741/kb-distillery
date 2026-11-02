@@ -1,11 +1,12 @@
 ---
 type: skill
 layer: concept
-status: growing
-sources: [posting-acme-senior-ml-engineer, notes-acme-technical-interview, chat-gemini-acme-system-design-prep]
-related: [role-senior-ml-engineer-acme, interview-acme-technical, skill-system-design, omer-shahar]
-summary: "Sensor fusion of lidar, camera and IMU for tracking at Acme Robotics; the interview weak spot was timestamp alignment, fixed by interpolating IMU first."
-summary_by: me
+title: "Sensor fusion"
+maturity: growing
+sources: [{resource: posting-acme-senior-ml-engineer.md}, {resource: notes-acme-technical-interview.md}, {resource: chat-gemini-acme-system-design-prep.md}]
+related: [role-senior-ml-engineer-acme.md, interview-acme-technical.md, skill-system-design.md, omer-shahar.md]
+description: "Sensor fusion of lidar, camera and IMU for tracking at Acme Robotics; the interview weak spot was timestamp alignment, fixed by interpolating IMU first."
+generated: {by: human:dana-levi}
 ---
 
 # Sensor fusion

@@ -1,13 +1,14 @@
 ---
 type: course
 layer: collection
+title: "Fixture RL course"
 short: rl
 institution: runi
 course_code: 00000
 semester: 2026a
 lecturer: Fixture Lecturer
 area: [learning-theory]
-status: digested
+maturity: digested
 aliases: []
 related: []
 ---

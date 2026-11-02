@@ -1,8 +1,9 @@
 ---
 type: person
 layer: concept
-summary: "Maya Cohen, hiring manager for the Applied Scientist role at Nimbus Health, who will run the behavioural hiring-manager conversation."
-summary_by: me
+title: "Maya Cohen"
+description: "Maya Cohen, hiring manager for the Applied Scientist role at Nimbus Health, who will run the behavioural hiring-manager conversation."
+generated: {by: human:dana-levi}
 ---
 
 # Maya Cohen

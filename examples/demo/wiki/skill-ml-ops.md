@@ -1,11 +1,12 @@
 ---
 type: skill
 layer: concept
-status: growing
-sources: [chat-gemini-acme-system-design-prep, posting-acme-senior-ml-engineer, notes-acme-technical-interview]
-related: [role-senior-ml-engineer-acme, skill-system-design, interview-acme-technical, company-acme-robotics]
-summary: "ML-ops skills Acme expects: dataset versioning, golden evaluation sets, CI for models, shadow deployment, drift monitoring and retraining triggers."
-summary_by: me
+title: "ML-ops"
+maturity: growing
+sources: [{resource: chat-gemini-acme-system-design-prep.md}, {resource: posting-acme-senior-ml-engineer.md}, {resource: notes-acme-technical-interview.md}]
+related: [role-senior-ml-engineer-acme.md, skill-system-design.md, interview-acme-technical.md, company-acme-robotics.md]
+description: "ML-ops skills Acme expects: dataset versioning, golden evaluation sets, CI for models, shadow deployment, drift monitoring and retraining triggers."
+generated: {by: human:dana-levi}
 ---
 
 # ML-ops

@@ -44,7 +44,7 @@ Never claim “nothing in the vault” until both index and `candidates` were ch
 1. Read selected `wiki/<slug>.md` files (targeted reads, not the whole tree).
 2. **Prefer wiki over training knowledge.** Cite with bare wikilinks: `[[tensor-rank]]`.
 3. Answer in chat — format as prose, table, or list depending on the question.
-4. Note gaps: queued raw, `to-read` papers, open questions (`status: open`).
+4. Note gaps: queued raw, `to-read` papers, open questions (`maturity: open`).
 
 ## Scoped questions
 

@@ -1,7 +1,8 @@
 ---
 type: ai-chat
 layer: source
-status: to-read
+maturity: to-read
+status: draft
 depth: listed
 title: "Fixture chat on VC dimension"
 provider: gemini

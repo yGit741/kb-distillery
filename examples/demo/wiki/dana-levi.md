@@ -1,8 +1,9 @@
 ---
 type: person
 layer: concept
-summary: "Dana Levi, ML engineer in Tel Aviv looking for a senior ML or applied-research role in autumn 2026; owner of this job search, applying to Acme Robotics and Nimbus Health."
-summary_by: me
+title: "Dana Levi"
+description: "Dana Levi, ML engineer in Tel Aviv looking for a senior ML or applied-research role in autumn 2026; owner of this job search, applying to Acme Robotics and Nimbus Health."
+generated: {by: human:dana-levi}
 ---
 
 # Dana Levi

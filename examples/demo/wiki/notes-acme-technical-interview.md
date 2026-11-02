@@ -1,15 +1,16 @@
 ---
 type: notes
 layer: source
-status: digested
+title: "Acme technical interview notes"
+maturity: digested
 depth: easy
 raw: raw/printed-docs/acme-technical-interview-notes.md
 company: Acme Robotics
-date: 2026-10-15
+created: 2026-10-15T00:00:00Z
 stage: technical
-related: [omer-shahar, interview-acme-technical, process-acme-robotics]
-summary: "Dana notes from the Acme technical interview with Omer Shahar on 15 October: tracker implementation, lidar-camera timestamp alignment, DataLoader performance, retraining triggers; strong on tracking, slower on time alignment."
-summary_by: me
+related: [omer-shahar.md, interview-acme-technical.md, process-acme-robotics.md]
+description: "Dana notes from the Acme technical interview with Omer Shahar on 15 October: tracker implementation, lidar-camera timestamp alignment, DataLoader performance, retraining triggers; strong on tracking, slower on time alignment."
+generated: {by: human:dana-levi}
 ---
 
 # Acme technical interview notes

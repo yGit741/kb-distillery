@@ -1,15 +1,15 @@
 ---
 type: article
 layer: source
+title: "Tblog Post One"
 source: 
 author:
 area: []
-status: digested
+maturity: digested
 depth: easy
 raw: raw/web-clips/tblog-post-one.md
 url:
-date:
-summary:
+description:
 ---
 
 # Tblog Post One

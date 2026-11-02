@@ -34,7 +34,7 @@ def _save(slug, text, rows):
 
 
 def _set_status(text, status):
-    return wikiio.set_key(text, "status", status)      # front matter only, never a body line
+    return wikiio.set_key(text, "maturity", status)      # front matter only, never a body line
 
 
 def resolve_row(slug, n):

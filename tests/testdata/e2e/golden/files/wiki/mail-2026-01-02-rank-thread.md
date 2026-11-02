@@ -1,13 +1,13 @@
 ---
 type: mail
 layer: source
+title: "2026 01 02 Rank Thread"
 area: []
-status: digested
+maturity: digested
 depth: easy
 raw: raw/emails/2026-01-02-rank-thread/thread.md
-date:
 aliases: []
-summary:
+description:
 ---
 
 # 2026 01 02 Rank Thread

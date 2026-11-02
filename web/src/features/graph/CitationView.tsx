@@ -30,7 +30,7 @@ const asNode = (n: GenealogyNode): CiteNode => ({
   title: n.title,
   type: "paper",
   layer: "source",
-  status: "",
+  maturity: "",
   depth: "",
   areas: [],
   year: n.year,

@@ -1,13 +1,14 @@
 ---
 type: book
 layer: collection
+title: "Fixture Book (2019)"
 authors: [Fixture Author]
 year: 2019
 area: [learning-theory]
 raw: raw/printed-docs/2019-fixture-book.pdf
 url: 
 book_pages: 62
-status: reading
+maturity: reading
 recommended_by: []
 related: []
 ---

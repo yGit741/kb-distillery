@@ -1,8 +1,10 @@
 ---
 type: person
 layer: concept
+title: "Jane Doe"
 url: https://example.org/~jane
-summary: "Fixture person page for a made-up learning-theory researcher at Example University, who works on generalization bounds and is the author of the fixture paper used by the backend test suite."
+description: "Fixture person page for a made-up learning-theory researcher at Example University, who works on generalization bounds and is the author of the fixture paper used by the backend test suite."
+generated: {by: summarize/unknown}
 ---
 
 # Jane Doe

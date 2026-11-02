@@ -13,7 +13,7 @@ CLIP = "raw/web-clips/2024-hypercontractivity-note.md"
 OTHER = "raw/printed-docs/2020-unrelated-topic.pdf"
 PAGE = """---
 type: article
-status: digested
+maturity: digested
 depth: full
 ---
 # Page

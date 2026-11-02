@@ -1,8 +1,9 @@
 ---
 type: person
 layer: concept
-summary: "Omer Shahar, staff ML engineer in the Acme Robotics perception team, interviewer in the technical round on 15 October 2026; recommended Dana for the system-design round."
-summary_by: me
+title: "Omer Shahar"
+description: "Omer Shahar, staff ML engineer in the Acme Robotics perception team, interviewer in the technical round on 15 October 2026; recommended Dana for the system-design round."
+generated: {by: human:dana-levi}
 ---
 
 # Omer Shahar

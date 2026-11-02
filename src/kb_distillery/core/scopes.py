@@ -17,6 +17,7 @@ import os
 import re
 import sys
 
+from kb_distillery.core import frontmatter
 from kb_distillery.core.graph import outbound_links
 from kb_distillery.core.schema import COLLECTION_TYPES, SOURCE_TYPES, SLUG_PREFIX
 from kb_distillery.core.links import WIKILINK_TARGET
@@ -391,4 +392,4 @@ def set_why(text, why):
 
 def new_page(title, why, template_text):
     """Fresh scope page from meta/templates/scope.md with the given title and Why."""
-    return set_why(template_text.replace("{{title}}", title), why)
+    return set_why(frontmatter.fill_title(template_text.replace("{{title}}", title)), why)

@@ -10,7 +10,7 @@ import re
 
 from . import arxiv_meta
 from .paths import ROOT
-from kb_distillery.core import wikiio
+from kb_distillery.core import frontmatter, wikiio
 from .resolve import normalize_arxiv_id
 
 WIKI = os.path.join(ROOT, "wiki")
@@ -128,6 +128,30 @@ def _set_field(path, regex, line):
     wikiio.write_front_matter(path, fm2)
 
 
+def _set_url(path, url):
+    """Set `url:` and keep the Source page's `sources:` resource in step with it: the old url goes, the new http(s)
+    one comes in (an emptied url leaves no resource). Front matter only."""
+    with open(path, encoding="utf-8") as f:
+        text = f.read()
+    fm = frontmatter.parse(text)[0] or {}
+    old = str(fm.get("url") or "").strip()
+    keep = [(e.get("resource") if isinstance(e, dict) else e) for e in
+            ([fm["sources"]] if isinstance(fm.get("sources"), (str, dict)) else list(fm.get("sources") or []))]
+    keep = [r for r in keep if r and r != old]
+    if url and frontmatter.url_sources(url):
+        keep.insert(0, url)
+    def edit(inner):
+        inner = re.sub(r"^url:.*$", lambda _m: f"url: {url}" if url else "url:", inner, count=1, flags=re.M)
+        inner = re.sub(r"^sources:.*(?:\n[ \t]+.*|\n- .*)*\n?", "", inner + "\n", count=1, flags=re.M).rstrip("\n")
+        if keep:
+            inner = re.sub(r"^(url:.*)$", lambda m: m.group(1) + "\n" + frontmatter.sources_line(keep), inner,
+                           count=1, flags=re.M)
+        return inner
+    new = wikiio.edit_front_matter(text, edit)
+    if new != text:
+        wikiio.write_page(path, new)
+
+
 def _raw_of(fm_text):
     raw = _field(fm_text, "raw")
     if raw.startswith("["):
@@ -233,11 +257,11 @@ def fix_urls(dry_run=False, searcher=None, pause=arxiv_meta.PAUSE_S):
             time.sleep(pause)
     if not dry_run:
         for path, _bad, hit in fixed:
-            _set_field(path, FM_URL, f"url: {hit['url']}")
+            _set_url(path, hit["url"])
             _set_field(path, FM_AUTHORS, f"authors: {format_authors(hit['authors'])}")
         for path, _bad in unresolved:
             # a demonstrably wrong link is worse than none: dedup and the reader both trust it
-            _set_field(path, FM_URL, "url:")
+            _set_url(path, "")
     print(f"\n{len(fixed)} fixed · {len(unresolved)} cleared for manual lookup · "
           f"{len(unavailable)} unavailable" + (" · dry run, nothing written" if dry_run else ""))
     return 0 if not unavailable else 1

@@ -11,17 +11,19 @@ META_DIR = os.path.join(vault_root(), "meta")
 from kb_distillery.core.books import DIGESTED, coverage, parse_partition
 from kb_distillery.core.graph import inbound_index, outbound_links
 from kb_distillery.search.semfind import load_pages
+from kb_distillery.core import frontmatter
+from kb_distillery.core import links as page_links
 from kb_distillery.core.links import WIKILINK
 from kb_distillery.core.schema import LAYER_OF
 
 ROOT = vault_root()
 TITLE = re.compile(r"^#\s+(.+)$", re.MULTILINE)
 YEAR_PREFIX = re.compile(r"^(1[89]|20)\d{2}-")
-FM_SKIP = frozenset({"type", "layer", "status", "area", "year", "role", "affiliation", "lab", "email",
+FM_SKIP = frozenset({"type", "layer", "maturity", "status", "title", "generated", "area", "year", "role", "affiliation", "lab", "email",
                    "url", "raw", "related", "depth", "citekey", "authors",
                    "recommended_by", "discussed_with", "scholar", "tau_profile", "optional",
                    "book", "section", "section_pages", "book_pages"})
-FM_ORDER = ("type", "status", "area", "year", "role", "affiliation", "lab", "email",
+FM_ORDER = ("type", "maturity", "area", "year", "role", "affiliation", "lab", "email",
             "url", "raw", "related", "citekey", "authors")
 
 
@@ -69,13 +71,14 @@ def _properties(fm, slug, in_degree, out_degree):
     for k in FM_ORDER:
         if k not in fm or not fm[k]:
             continue
-        v = fm[k]
+        v = frontmatter.display(k, fm[k])
         if isinstance(v, list):
             v = ", ".join(str(x) for x in v)
         props[k] = str(v).strip()
     for k, v in sorted(fm.items()):
         if k in props or k in FM_SKIP or not v:
             continue
+        v = frontmatter.display(k, v)
         if isinstance(v, list):
             v = ", ".join(str(x) for x in v)
         props[k] = str(v).strip()
@@ -197,16 +200,16 @@ def build_graph_snapshot(layer=None, view=None):
     links = []
     link_keys = set()
     types = set()
-    statuses = set()
+    maturities = set()
     areas = set()
 
     for slug, (rel, fm, text) in pages.items():
         ntype = fm.get("type", "unknown")
-        status = fm.get("status", "")
+        maturity = fm.get("maturity", "")
         node_areas = _areas(fm)
         types.add(ntype)
-        if status:
-            statuses.add(status)
+        if maturity:
+            maturities.add(maturity)
         for a in node_areas:
             areas.add(a)
         extra = {}
@@ -224,7 +227,7 @@ def build_graph_snapshot(layer=None, view=None):
                 "title": _title(text, slug),
                 "type": ntype,
                 "layer": fm.get("layer") or layer_of.get(ntype, ""),
-                "status": status,
+                "maturity": maturity,
                 "depth": fm.get("depth", ""),
                 "areas": node_areas,
                 "year": _year(slug, fm),
@@ -269,7 +272,7 @@ def build_graph_snapshot(layer=None, view=None):
         "concept_links": concept_links(nodes, links),
         "facets": {
             "types": sorted(types),
-            "statuses": sorted(statuses),
+            "maturities": sorted(maturities),
             "areas": sorted(areas),
         },
     }
@@ -340,7 +343,7 @@ def merge_snapshots(snaps):
     nodes get the type `<kb>:<type>` so one colour never means two things."""
     nodes, links, concept, kbs, visible = [], [], [], [], set()
     relations = None
-    types, type_rows, facets = {}, [], {"types": set(), "statuses": set(), "areas": set()}
+    types, type_rows, facets = {}, [], {"types": set(), "maturities": set(), "areas": set()}
     layer_types = {}
     etags = []
     for view, snap in snaps:
@@ -383,7 +386,7 @@ def merge_snapshots(snaps):
         if snap.get("relations") is not None:
             relations = (relations or []) + [{**r, "source": ns(r["source"]), "target": ns(r["target"])}
                                              for r in snap["relations"]]
-        facets["statuses"].update(snap["facets"]["statuses"])
+        facets["maturities"].update(snap["facets"]["maturities"])
         facets["areas"].update(snap["facets"]["areas"])
     first = snaps[0][1]["schema"] if snaps else {}
     schema_ = {**first, "layers": list(layer_types.values()), "types": type_rows,
@@ -434,9 +437,4 @@ def _wikilink_set(text):
 
 
 def _related_set(fm):
-    related = fm.get("related")
-    if not related:
-        return set()
-    if isinstance(related, str):
-        related = [related]
-    return {r.strip() for r in related if r}
+    return set(page_links.refs(fm.get("related")))

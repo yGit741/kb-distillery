@@ -1,10 +1,12 @@
 ---
 type: paper
 layer: source
+title: "Fixture Book"
 authors: []
 year: 2019
 area: []
-status: to-read
+maturity: to-read
+status: draft
 depth: listed
 raw: raw/printed-docs/2019-fixture-book.pdf
 citekey:

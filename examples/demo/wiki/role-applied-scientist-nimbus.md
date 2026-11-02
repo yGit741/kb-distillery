@@ -1,11 +1,12 @@
 ---
 type: role
 layer: concept
-status: seed
-sources: [posting-nimbus-health-applied-scientist, doc-dana-levi-cv]
-related: [company-nimbus-health, skill-clinical-nlp, skill-pytorch, skill-interviewing-stories, interview-nimbus-hiring-manager, maya-cohen, process-nimbus-health]
-summary: "Applied Scientist (clinical NLP) at Nimbus Health: fine-tune transformers on de-identified Hebrew and English clinical notes, design annotation guidelines with physicians and present to hospital staff."
-summary_by: me
+title: "Applied Scientist, Clinical NLP (Nimbus)"
+maturity: seed
+sources: [{resource: posting-nimbus-health-applied-scientist.md}, {resource: doc-dana-levi-cv.md}]
+related: [company-nimbus-health.md, skill-clinical-nlp.md, skill-pytorch.md, skill-interviewing-stories.md, interview-nimbus-hiring-manager.md, maya-cohen.md, process-nimbus-health.md]
+description: "Applied Scientist (clinical NLP) at Nimbus Health: fine-tune transformers on de-identified Hebrew and English clinical notes, design annotation guidelines with physicians and present to hospital staff."
+generated: {by: human:dana-levi}
 ---
 
 # Applied Scientist, Clinical NLP (Nimbus)

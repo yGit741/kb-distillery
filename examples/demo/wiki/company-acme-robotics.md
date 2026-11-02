@@ -1,11 +1,12 @@
 ---
 type: company
 layer: concept
-status: solid
-sources: [posting-acme-senior-ml-engineer, mail-2026-10-02-acme-recruiter-intro]
-related: [role-senior-ml-engineer-acme, noa-peretz, omer-shahar, interview-acme-recruiter-screen, interview-acme-technical, skill-sensor-fusion, process-acme-robotics]
-summary: "Acme Robotics, a Tel Aviv maker of autonomous warehouse robots, hiring a Senior ML Engineer for perception; the most advanced of the two applications, at technical-interview stage."
-summary_by: me
+title: "Acme Robotics"
+maturity: solid
+sources: [{resource: posting-acme-senior-ml-engineer.md}, {resource: mail-2026-10-02-acme-recruiter-intro.md}]
+related: [role-senior-ml-engineer-acme.md, noa-peretz.md, omer-shahar.md, interview-acme-recruiter-screen.md, interview-acme-technical.md, skill-sensor-fusion.md, process-acme-robotics.md]
+description: "Acme Robotics, a Tel Aviv maker of autonomous warehouse robots, hiring a Senior ML Engineer for perception; the most advanced of the two applications, at technical-interview stage."
+generated: {by: human:dana-levi}
 ---
 
 # Acme Robotics

@@ -103,7 +103,7 @@ def to_graph(snapshot, config=None):
     for n in snapshot.get("nodes", []):
         labels = {lbl for lbl in (_label(n.get("type")), _label(n.get("layer"))) if lbl}
         g.add_node(n["id"], slug=n["id"], title=n.get("title") or n.get("label") or "", type=n.get("type", ""),
-                   layer=n.get("layer", ""), depth=n.get("depth", ""), status=n.get("status", ""),
+                   layer=n.get("layer", ""), depth=n.get("depth", ""), maturity=n.get("maturity", ""),
                    areas=list(n.get("areas") or []), year=n.get("year"), path=n.get("path", ""),
                    __labels__=labels or {"Page"})
     for l in snapshot.get("links", []):

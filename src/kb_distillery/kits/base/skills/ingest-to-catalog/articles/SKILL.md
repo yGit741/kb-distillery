@@ -20,7 +20,7 @@ description: Catalog a typed PDF from inbox to raw/printed-docs/ and create a pa
 1. **Paper** (no collection, or a `book-`/person collection):
    1. Validate or suggest `YYYY-kebab-title.pdf` (arXiv scrapes are looked up for title/year/authors)
    2. Move to `raw/printed-docs/<year>-<title>.pdf`
-   3. Create `wiki/paper-<year>-<title>.md` Source page: `layer: source`, `depth: listed`, `status: to-read`
+   3. Create `wiki/paper-<year>-<title>.md` Source page: `layer: source`, `depth: listed`, `maturity: to-read`, `status: draft`
    4. Person collection (researcher bibliography) → corpus `collection` = person slug
 2. **Course/series member** (`--collection course-…|series-…`, e.g. a course book or typed notes):
    move to `raw/printed-docs/<short>-<topic>.pdf`, append a `—` Contents row, no wiki stub

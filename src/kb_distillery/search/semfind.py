@@ -61,7 +61,7 @@ def _snippets(slug, pages):
         return ""
     _rel, fm, text = pages[slug]
     t = fm.get("type", "")
-    lines = [f"### [[{slug}]] ({t}, {fm.get('status', '')})"]
+    lines = [f"### [[{slug}]] ({t}, {fm.get('maturity', '')})"]
     if t in SOURCE_TYPES:
         for h in ("Problem", "Main result", "Takeaways for my thesis", "Connections", "Links out"):
             block = extract_section(text, h)

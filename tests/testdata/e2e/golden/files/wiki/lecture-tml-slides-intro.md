@@ -1,11 +1,12 @@
 ---
 type: lecture
 layer: source
+title: "Lecture 1 · Introduction"
 course: course-test-ml
 authors: []
 year: 
 area: [learning-theory]
-status: digested
+maturity: digested
 depth: full
 raw: raw/presentations/tml-slides-intro.pdf
 citekey: 

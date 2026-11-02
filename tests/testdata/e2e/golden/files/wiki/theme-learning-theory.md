@@ -1,9 +1,10 @@
 ---
 type: topic
 layer: concept
-status: seed
+title: "Learning theory"
+maturity: seed
 aliases: []
-related: [tensor-rank]
+related: [tensor-rank.md]
 ---
 
 # Learning theory

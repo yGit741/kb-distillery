@@ -1,13 +1,15 @@
 ---
 type: video
 layer: source
+title: "Tiny talk"
 author: Test Speaker
 series:
 area: [learning-theory]
-status: digested
+maturity: digested
 depth: easy
 raw: none
 url: https://example.org/talk
+sources: [{resource: https://example.org/talk}]
 ---
 
 # Tiny talk

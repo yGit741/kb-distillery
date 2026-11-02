@@ -1,10 +1,11 @@
 ---
 type: topic
 layer: concept
-status: seed
+title: {{title_yaml}}
+maturity: seed
 aliases: []
 related: []
-summary:
+description:
 ---
 
 # {{title}}
