@@ -45,6 +45,11 @@ def test_parse_reads_only_the_relations_block():
     assert R.relations_block(PAGE).splitlines()[-1] == "  - kind: uses"   # stops at the next key
 
 
+def test_a_relation_target_may_be_a_page_path():
+    text = _page(["type: idea", "relations:", "  - to: implicit-bias.md", "    kind: extends", "  - to: q-open", "    kind: uses"])
+    assert [r["to"] for r in R.parse_relations(text)] == ["implicit-bias", "q-open"]
+
+
 def test_flat_frontmatter_parser_is_unchanged_by_a_relations_block():
     fm = parse_frontmatter(PAGE)
     assert fm == {"type": "idea", "area": ["learning-theory"], "relations": "", "related": ["margin"]}

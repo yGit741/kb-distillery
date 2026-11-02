@@ -2,10 +2,10 @@
 type: question
 layer: concept
 area: []
-status: open
+maturity: open
 priority: med
 discussed_with: []
-summary:
+description:
 ---
 
 # {{title}}
@@ -22,7 +22,7 @@ summary:
 -
 
 ## Papers / concepts to read
-- [[]]
+- <!-- [Title](slug.md) -->
 
 ## My notes
 

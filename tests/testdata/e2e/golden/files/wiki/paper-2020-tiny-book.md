@@ -4,7 +4,8 @@ layer: source
 authors: []
 year: 2020
 area: []
-status: to-read
+maturity: to-read
+status: draft
 depth: listed
 raw: raw/printed-docs/2020-tiny-book.pdf
 citekey:
@@ -29,4 +30,4 @@ discussed_with: []
 -
 
 ## Links out
-- Concepts: [[]]
+- Concepts: <!-- [Title](slug.md) -->

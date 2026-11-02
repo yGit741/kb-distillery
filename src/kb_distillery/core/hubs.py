@@ -8,23 +8,32 @@ not pages. A row's identity is its raw paths — the `#` column is display order
 
     | # | Item | Raw | Status | Note |
     |---|------|-----|--------|------|
-    | 1 | Lecture 1 · Introduction | `raw/presentations/rl-lecture-01-introduction.pdf` | full | [[lecture-…]] |
+    | 1 | Lecture 1 · Introduction | `raw/presentations/rl-lecture-01-introduction.pdf` | full | [Lecture 1](lecture-….md) |
     | 2 | Lecture 2 · MDPs | `raw/presentations/rl-02.pdf` `raw/handwritten/rl-mdp.pdf` | — | |
-    | 3 | Course book | `raw/printed-docs/la-course-book.pdf` | partial | [[book-…]] |
+    | 3 | Course book | `raw/printed-docs/la-course-book.pdf` | partial | [Course book](book-….md) |
 
 Page-range hubs (book, notebook) live in books.py; this module is their sibling.
 """
 import re
 
 from kb_distillery.core.books import DIGESTED, SKIP, TODO, section
-from kb_distillery.core.links import WIKILINK_TARGET
+from kb_distillery.core import links as page_links
 
 CONTENTS_HEADING = "## Contents"
 PARTIAL = "partial"          # the row is itself a book/notebook hub, digested only in part
 ROW_STATUS = {SKIP, TODO, PARTIAL, *DIGESTED}
 
 _PATH = re.compile(r"`(raw/[^`]+)`")
-_LINK = WIKILINK_TARGET
+
+
+def _first_link(cell):
+    """(slug, link text) of the first page link in a table cell, else None."""
+    m = page_links.PAGE_LINK.search(cell)
+    if m:
+        label, slug, _anchor = page_links.link_parts(m)
+        return slug, label
+    w = page_links.WIKILINK.search(cell)
+    return (w.group(1).strip(), (w.group(2) or "").strip()) if w else None
 
 
 def _status(cell):
@@ -43,9 +52,9 @@ def parse_contents(text):
         if len(cells) < 4 or set(cells[0]) <= set("-: ") or cells[0] == "#":
             continue
         cells += [""] * (5 - len(cells))
-        link = _LINK.search(cells[4]) or _LINK.search(cells[1])
+        link = _first_link(cells[4]) or _first_link(cells[1])
         rows.append({"title": cells[1].replace("\\|", "|"), "raws": _PATH.findall(cells[2]),
-                     "status": _status(cells[3]), "slug": link.group(1).strip() if link else ""})
+                     "status": _status(cells[3]), "slug": link[0] if link else "", **({"link_text": link[1]} if link and link[1] and link[1] != link[0] else {})})
     return rows
 
 
@@ -104,7 +113,7 @@ def render(rows):
     out = [coverage_line(rows), "",
            "| # | Item | Raw | Status | Note |", "|---|------|-----|--------|------|"]
     for i, r in enumerate(rows, 1):
-        note = f"[[{r['slug']}]]" if r["slug"] else ""
+        note = page_links.link(r["slug"], r.get("link_text") or r["slug"]) if r["slug"] else ""
         title = r["title"].replace("|", "\\|")
         raws = " ".join(f"`{p}`" for p in r["raws"])
         out.append(f"| {i} | {title} | {raws} | {r['status']} | {note} |")
@@ -138,11 +147,13 @@ def add_row(rows, title, raws, status=TODO, slug=""):
     return rows + [{"title": title, "raws": new, "status": status, "slug": slug}]
 
 
-def tick(rows, index, status, slug):
-    """Mark row `index` (0-based) digested as [[slug]]. Refuses to re-digest a finished row."""
+def tick(rows, index, status, slug, label=None):
+    """Mark row `index` (0-based) digested as page `slug` (`label` = the link text, default the slug). Refuses to re-digest a finished row."""
     r = rows[index]
     if r["status"] in DIGESTED and r["slug"] and r["slug"] != slug:
-        raise ValueError(f"row {index + 1} ({r['title']}) is already digested as [[{r['slug']}]]")
+        raise ValueError(f"row {index + 1} ({r['title']}) is already digested as {r['slug']}")
     out = [dict(x) for x in rows]
-    out[index].update(status=status, slug=slug)
+    text = label or (out[index].get("link_text") if out[index].get("slug") == slug else "")
+    out[index].pop("link_text", None)
+    out[index].update(status=status, slug=slug, **({"link_text": text} if text else {}))
     return out

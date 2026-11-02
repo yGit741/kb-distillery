@@ -39,8 +39,8 @@ class TestPolarity(unittest.TestCase):
 
     def test_lexical_clash_capped_below_error(self):
         def page(slug, body, link=""):
-            text = f"---\ntype: paper\nstatus: digested\n---\n\n# {slug}\n\n**Main result:** {body}\n\n{link}\n"
-            return (f"wiki/{slug}.md", {"type": "paper", "status": "digested"}, text)
+            text = f"---\ntype: paper\nmaturity: digested\n---\n\n# {slug}\n\n**Main result:** {body}\n\n{link}\n"
+            return (f"wiki/{slug}.md", {"type": "paper", "maturity": "digested"}, text)
         pages = {
             "paper-a": page("paper-a", "tensor rank low rank factorization deep network generalization bound "
                             "implicit regularization gradient flow matrix completion always holds", "[[paper-b]]"),
@@ -53,7 +53,7 @@ class TestPolarity(unittest.TestCase):
         self.assertTrue(all(h["score"] < coherence.INTERNAL_ERROR_THRESHOLD for h in hits))
 
     def test_fresh_pages_do_not_clash_with_each_other(self):
-        a = "wiki/p.md", {"type": "paper", "status": "digested"}, \
+        a = "wiki/p.md", {"type": "paper", "maturity": "digested"}, \
             "---\ntype: paper\n---\n\n**Main result:** tensor rank explains generalization deep networks\n\n[[stub]]\n"
         b = "wiki/stub.md", {"type": "idea"}, \
             "---\ntype: idea\n---\n\n## One-liner\n\ntensor rank does not explain generalization deep networks\n"

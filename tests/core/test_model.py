@@ -15,7 +15,7 @@ def page(slug, text):
 
 COURSE = """---
 type: course
-status: to-read
+maturity: to-read
 ---
 
 # RL
@@ -86,13 +86,13 @@ class DigestionStatusTest(unittest.TestCase):
     def test_required_and_consistent(self):
         base = "type: paper\nraw: raw/printed-docs/2000-x.pdf\n"
         self.assertTrue(any("requires `depth:`" in e
-                            for e in self.wiki(base + "status: to-read")))
-        self.assertTrue(any("status must be to-read" in e
-                            for e in self.wiki(base + "status: digested\ndepth: listed")))
-        self.assertTrue(any("status must be digested" in e
-                            for e in self.wiki(base + "status: to-read\ndepth: easy")))
+                            for e in self.wiki(base + "maturity: to-read")))
+        self.assertTrue(any("maturity must be to-read" in e
+                            for e in self.wiki(base + "maturity: digested\ndepth: listed")))
+        self.assertTrue(any("maturity must be digested" in e
+                            for e in self.wiki(base + "maturity: to-read\ndepth: easy")))
         self.assertFalse(any("digestion" in e
-                             for e in self.wiki(base + "status: digested\ndepth: full")))
+                             for e in self.wiki(base + "maturity: digested\ndepth: full")))
 
 
 class CollectionTest(unittest.TestCase):

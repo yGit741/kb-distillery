@@ -2,6 +2,7 @@
 import { LAYER_TYPES, type Layer } from "@/api/model";
 import type { PageCard, PageIndex } from "@/api/types";
 import type { GNode } from "@/features/graph/types";
+import { PAGE_LINK, link } from "@/lib/links";
 
 // ---------- data model ----------
 
@@ -128,6 +129,12 @@ export const withPinToggled = (pins: readonly string[], slug: string): string[] 
 /** Obsidian-isms the shared renderer does not know: comments, `![[img]]` embeds, chat visualization blocks, the H1. */
 export function prepareMarkdown(md: string, titleFor?: (slug: string) => string | undefined): string {
   let s = md.replace(/<!--[\s\S]*?-->/g, "");
+  // a page link whose text is its slug chose no text: the reader shows the page title (as for a bare wikilink)
+  if (titleFor)
+    s = s.replace(PAGE_LINK, (m, label: string, slug: string, anchor?: string) => {
+      const t = label === slug ? titleFor(slug)?.replace(/[[\]|]/g, " ") : undefined;
+      return t ? link(slug, t, anchor) : m;
+    });
   // a bare [[slug]] reads as the page title (a table-cell `\|` separator is already unescaped by the parser)
   if (titleFor)
     s = s.replace(/\[\[([^\[\]|#\n]+)(#[^\[\]|\n]*)?\]\]/g, (m, slug: string) => {
@@ -244,7 +251,7 @@ export function homeSections(g: LinkGraph): HomeSections {
     counts,
     topics: all.filter((p) => p.type === "topic" && out(p) > 0).sort((a, b) => degree(g, b.id) - degree(g, a.id)),
     questions: all
-      .filter((p) => p.type === "question" && p.status !== "resolved")
+      .filter((p) => p.type === "question" && p.maturity !== "resolved")
       .sort((a, b) => degree(g, b.id) - degree(g, a.id)),
     people: all.filter((p) => p.type === "person").sort((a, b) => inn(b) - inn(a)),
     deep: all
@@ -316,7 +323,7 @@ export function cardNode(c: PageCard): GNode {
     title: c.title || c.id,
     type: c.type,
     layer: layerOf(c.type) ?? "source",
-    status: c.status,
+    maturity: c.maturity,
     depth: c.depth,
     areas: c.areas,
     year: null,

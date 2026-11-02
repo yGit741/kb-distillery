@@ -75,10 +75,10 @@ def build_vault(root):
     for slug, text in TEXTS.items():
         with open(os.path.join(root, "wiki", slug + ".md"), "w") as f:
             f.write(text)
-    with open(os.path.join(root, "index.md"), "w") as f:
-        f.write("## Papers\n\n| Page | Status | Summary |\n|---|---|---|\n")
+    with open(os.path.join(root, "wiki", "index.md"), "w") as f:
+        f.write("---\nokf_version: 0.2\n---\n\n## Papers\n\n")
         for slug, summ in SUMMARY.items():
-            f.write("| [[" + slug + "]] | seed | " + summ + " |\n")
+            f.write("- [" + slug + "](" + slug + ".md) (seed) — " + summ + "\n")
     lines = ["path\tsha1\tkind\tdisposition\tslug\tcollection\tscopes"]
     for path, disp, slug, scope in ROWS:
         lines.append("\t".join([path, "x", path.split("/")[1], disp, slug, "", scope]))
@@ -93,7 +93,7 @@ class VaultCase(unittest.TestCase):
         build_vault(self.root)
         sc._CTX_CACHE.clear()
         patches = [(query, "ROOT", self.root), (query, "WIKI", os.path.join(self.root, "wiki")),
-                   (query, "INDEX", os.path.join(self.root, "index.md")),
+                   (query, "INDEX", os.path.join(self.root, "wiki", "index.md")),
                    (lint, "ROOT", self.root), (explore_raw, "ROOT", self.root), (citations, "ROOT", self.root)]
         for target, name, value in patches:
             p = mock.patch.object(target, name, value)
@@ -144,17 +144,17 @@ class QueryCliTests(VaultCase):
     def test_candidates_unscoped_sees_everything(self):
         code, out, _ = self.run_cli(query.cmd_candidates, "tensor", 20)
         self.assertEqual(code, 0)
-        self.assertIn("[[paper-z]]", out)
-        self.assertIn("[[paper-a]]", out)
+        self.assertIn("[paper-z](paper-z.md)", out)
+        self.assertIn("[paper-a](paper-a.md)", out)
 
     def test_candidates_scoped_restricts(self):
         code, out, _ = self.run_cli(query.cmd_candidates, "tensor", 20, "scope-s")
         self.assertEqual(code, 0)
         self.assertIn("[scope scope-s]", out)
         for slug in ("paper-a", "paper-b", "concept-x"):
-            self.assertIn("[[" + slug + "]]", out)
+            self.assertIn("[" + slug + "](" + slug + ".md)", out)
         for slug in ("paper-z", "concept-z"):
-            self.assertNotIn("[[" + slug + "]]", out)
+            self.assertNotIn("[" + slug + "](" + slug + ".md)", out)
 
     def test_candidates_unknown_scope_exits_2(self):
         code, out, err = self.run_cli(query.cmd_candidates, "tensor", 20, "scope-nope")
@@ -171,8 +171,8 @@ class QueryCliTests(VaultCase):
         self.assertEqual(code, 0)
         self.assertIn("SCOPE  scope-s  Scope S", out)
         self.assertIn("Coverage: 2/3 files digested (67%) · 1 undigested", out)
-        self.assertIn("[[paper-a]]  alpha tensor result", out)
-        self.assertNotIn("[[paper-z]]", out)
+        self.assertIn("[paper-a](paper-a.md)  alpha tensor result", out)
+        self.assertNotIn("[paper-z](paper-z.md)", out)
         self.assertIn("NOT_YET_DIGESTED  (1)", out)
         self.assertIn("  " + C, out)
 
@@ -266,7 +266,8 @@ class ScopedPolicyTests(unittest.TestCase):
     def test_read_in_and_out_of_scope(self):
         self.assertTrue(self.d("Read", fp(wiki("tensor-rank"))).allow)
         self.assertTrue(self.d("Read", fp("wiki/paper-a.md")).allow)
-        self.assertTrue(self.d("Read", fp("index.md")).allow)
+        self.assertTrue(self.d("Read", fp("wiki/index.md")).allow)
+        self.assertFalse(self.d("Read", fp("index.md")).allow)          # the pre-1.7 place is not readable any more
         out = self.d("Read", fp(wiki("theme-info-theory")))
         self.assertFalse(out.allow)
         self.assertIn("scope", out.reason)
@@ -341,8 +342,9 @@ class ScopedPromptTests(unittest.TestCase):
     def test_agent_system_scoped(self):
         s = chat_agent.build_agent_system("Be brief.", scope=SCOPE)
         self.assertIn("Scope S (scope-s)", s)
-        self.assertIn("[[tensor-rank]]", s)
-        self.assertIn("[[paper-a]]", s)
+        self.assertIn("(tensor-rank.md)", s)
+        self.assertIn("(paper-a.md)", s)
+        self.assertNotIn("[[", s)
         self.assertIn("cite only those pages", s)
         self.assertIn("End every answer with: Not yet digested in this scope:", s)
         self.assertIn(CLIP, s)
@@ -360,7 +362,7 @@ class ScopedPromptTests(unittest.TestCase):
         big = dict(SCOPE, pages=set("p-" + str(i) for i in range(350)),
                    uncovered=[dict(path="raw/x/f" + str(i) + ".md", name="f", format="x") for i in range(130)])
         s = chat_data.scope_section(big, index=dict())
-        self.assertEqual(s.count("\n- [[p-"), 300)
+        self.assertEqual(s.count("\n- [p-"), 300)
         self.assertIn("first 300 shown", s)
         self.assertIn("(130): ", s)
         self.assertIn("and 30 more", s)

@@ -202,7 +202,7 @@ export function computeImportance({ visible, byId, neighbors, cfg }: ImportanceI
       degree,
       pagerank: norm.pr.get(id) ?? 0,
       between: norm.bt.get(id) ?? 0,
-      open: n.type === "question" && /open|partial/.test(n.status) ? 1 : 0,
+      open: n.type === "question" && /open|partial/.test(n.maturity) ? 1 : 0,
       gap: n.layer === "source" ? degree * (1 - (DEPTH_WEIGHT[n.depth] ?? 0) / 3) : degree * (1 - evidence),
       orphan: (adj.get(id) ?? []).length <= 1 ? 1 : 0,
     };

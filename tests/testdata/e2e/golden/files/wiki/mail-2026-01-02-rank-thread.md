@@ -2,17 +2,16 @@
 type: mail
 layer: source
 area: []
-status: digested
+maturity: digested
 depth: easy
 raw: raw/emails/2026-01-02-rank-thread/thread.md
-date:
 aliases: []
-summary:
+description:
 ---
 
 # 2026 01 02 Rank Thread
 
-**With:** [[]]
+**With:** <!-- [Name](person-slug.md) -->
 
 **What it was about:**
 
@@ -26,4 +25,4 @@ summary:
 ## Connections
 
 ## Links out
-- Concepts: [[]]
+- Concepts: <!-- [Title](slug.md) -->

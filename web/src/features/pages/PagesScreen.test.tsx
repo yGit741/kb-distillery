@@ -9,7 +9,7 @@ import { resetEmbed } from "@/app/embed";
 import { mockDataSource } from "@/test/datasource";
 
 const card = (id: string, o: Partial<PageCard> = {}): PageCard => ({
-  id, title: `Title ${id}`, type: "paper", status: "digested", depth: "full", areas: ["learning-theory"], preview: "p", words: 300, ...o,
+  id, title: `Title ${id}`, type: "paper", maturity: "digested", depth: "full", areas: ["learning-theory"], preview: "p", words: 300, ...o,
 });
 const index: PageIndex = {
   generated_at: "t",

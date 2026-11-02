@@ -1,21 +1,21 @@
 ---
 type: person
 layer: concept
-summary: "Maya Cohen, hiring manager for the Applied Scientist role at Nimbus Health, who will run the behavioural hiring-manager conversation."
-summary_by: me
+description: "Maya Cohen, hiring manager for the Applied Scientist role at Nimbus Health, who will run the behavioural hiring-manager conversation."
+generated: {by: human:dana-levi}
 ---
 
 # Maya Cohen
 
-Hiring manager at [[company-nimbus-health]] for [[role-applied-scientist-nimbus]]. The posting names her as the owner of the behavioural conversation ([[interview-nimbus-hiring-manager]]), so prepare stories ([[skill-interviewing-stories]]). Not yet met.
+Hiring manager at [Nimbus Health](company-nimbus-health.md) for [Applied Scientist, Clinical NLP (Nimbus)](role-applied-scientist-nimbus.md). The posting names her as the owner of the behavioural conversation ([Nimbus hiring-manager interview](interview-nimbus-hiring-manager.md)), so prepare stories ([Interviewing stories (behavioural)](skill-interviewing-stories.md)). Not yet met.
 
 ## Meeting log
 
-No meetings yet; the first one is [[interview-nimbus-hiring-manager]].
+No meetings yet; the first one is [Nimbus hiring-manager interview](interview-nimbus-hiring-manager.md).
 
 ## Why it matters here
 
-Related: [[company-nimbus-health]], [[role-applied-scientist-nimbus]], [[interview-nimbus-hiring-manager]], [[skill-interviewing-stories]], [[process-nimbus-health]]. Sources: [[posting-nimbus-health-applied-scientist]].
+Related: [Nimbus Health](company-nimbus-health.md), [Applied Scientist, Clinical NLP (Nimbus)](role-applied-scientist-nimbus.md), [Nimbus hiring-manager interview](interview-nimbus-hiring-manager.md), [Interviewing stories (behavioural)](skill-interviewing-stories.md), [Nimbus Health hiring process](process-nimbus-health.md). Sources: [Applied Scientist, Clinical NLP (Nimbus Health)](posting-nimbus-health-applied-scientist.md).
 
 ## Roles & companies
 <!-- from: manual -->

@@ -1,10 +1,10 @@
 ---
 type: topic
 layer: concept
-status: seed
+maturity: seed
 aliases: []
 related: []
-summary:
+description:
 ---
 
 # {{title}}

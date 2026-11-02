@@ -15,7 +15,7 @@ from kb_distillery.core.coherence import (  # noqa: E402
 def _paper(slug, main, status="digested"):
     text = f"""---
 type: paper
-status: {status}
+maturity: {status}
 raw: raw/papers/x/{slug}.pdf
 ---
 
@@ -27,13 +27,13 @@ raw: raw/papers/x/{slug}.pdf
 
 - [[other]]
 """
-    return (f"wiki/{slug}.md", {"type": "paper", "status": status, "raw": f"raw/papers/x/{slug}.pdf"}, text)
+    return (f"wiki/{slug}.md", {"type": "paper", "maturity": status, "raw": f"raw/papers/x/{slug}.pdf"}, text)
 
 
 def _question(slug, state):
     text = f"""---
 type: question
-status: open
+maturity: open
 related: [paper-a]
 ---
 
@@ -47,7 +47,7 @@ Does X hold?
 
 {state}
 """
-    return (f"wiki/{slug}.md", {"type": "question", "status": "open", "related": ["paper-a"]}, text)
+    return (f"wiki/{slug}.md", {"type": "question", "maturity": "open", "related": ["paper-a"]}, text)
 
 
 class CoherenceTest(unittest.TestCase):
@@ -56,7 +56,7 @@ class CoherenceTest(unittest.TestCase):
         main_b = "Tensor rank does not explain generalization in deep networks"
         text_a = f"""---
 type: paper
-status: digested
+maturity: digested
 ---
 
 # paper-a
@@ -69,7 +69,7 @@ status: digested
 """
         text_b = f"""---
 type: paper
-status: digested
+maturity: digested
 ---
 
 # paper-b
@@ -77,8 +77,8 @@ status: digested
 **Main result:** {main_b}
 """
         pages = {
-            "paper-a": ("wiki/paper-a.md", {"type": "paper", "status": "digested"}, text_a),
-            "paper-b": ("wiki/paper-b.md", {"type": "paper", "status": "digested"}, text_b),
+            "paper-a": ("wiki/paper-a.md", {"type": "paper", "maturity": "digested"}, text_a),
+            "paper-b": ("wiki/paper-b.md", {"type": "paper", "maturity": "digested"}, text_b),
         }
         errors, warns = [], []
         hits = check_coherence(pages, rows={}, err_fn=lambda f, m: errors.append(m),
@@ -148,8 +148,9 @@ class IndexDriftTest(unittest.TestCase):
         path, fm, text = _paper("paper-s", "We prove tensor rank bounds for deep linear networks")
         fm = {**fm, "summary": f'"{summary}"'}
         with tempfile.TemporaryDirectory() as root:
-            with open(os.path.join(root, "index.md"), "w") as f:
-                f.write(f"| [[paper-s]] | digested | {summary} |\n")
+            os.makedirs(os.path.join(root, "wiki"))
+            with open(os.path.join(root, "wiki", "index.md"), "w") as f:
+                f.write(f"- [Paper s](paper-s.md) (digested) — {summary}\n")
             with mock.patch.object(coherence, "ROOT", root):
                 hits = check_coherence({"paper-s": (path, fm, text)}, rows={})
                 self.assertFalse(any("index summary" in h["summary"] for h in hits))

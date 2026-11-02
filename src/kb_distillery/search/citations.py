@@ -19,6 +19,7 @@ from datetime import datetime, timezone
 
 from kb_distillery.config import userdir
 from kb_distillery.paths import vault_root
+from kb_distillery.core.schema import is_page_file
 HERE = os.path.join(vault_root(), "meta")
 ROOT = vault_root()
 
@@ -80,7 +81,7 @@ def vault_papers(wiki_dir=None):
     wiki_dir = wiki_dir or os.path.join(ROOT, "wiki")
     out = {}
     for name in sorted(os.listdir(wiki_dir)):
-        if not name.endswith(".md"):
+        if not is_page_file(name):
             continue
         with open(os.path.join(wiki_dir, name), encoding="utf-8") as f:
             fm = parse_frontmatter(f.read()) or {}

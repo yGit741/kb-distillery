@@ -15,6 +15,7 @@ import re
 
 from .chat import GEMINI_VISUAL_RE
 from .chat_build import main_leaf, path_to
+from kb_distillery.core import frontmatter as fmlib
 from .paths import ROOT
 
 ROLE_HEADING = {"user": "#### 🧑 You", "model": "#### ✨ Gemini"}
@@ -182,7 +183,9 @@ def stats(conv):
 
 def frontmatter(conv, title, aliases=(), extra=None):
     q = lambda s: json.dumps(s, ensure_ascii=False)
-    lines = ["---", "type: ai-chat", "layer: source", "status: to-read", "depth: listed", f"title: {q(title)}"]
+    lines = ["---", "type: ai-chat", "layer: source", "maturity: to-read", "status: draft", "depth: listed"]
+    if fmlib.title_line(title):                    # only when it differs from the `# ` heading it is written with
+        lines.insert(3, f"title: {q(title)}")
     if aliases:
         lines.append(f"aliases: [{', '.join(q(a) for a in aliases)}]")
     lines += [f"provider: {conv['provider']}",

@@ -11,14 +11,14 @@ usually one file, sometimes several (slides + the handwritten notes taken in tha
 ```
 | # | Item | Raw | Status | Note |
 |---|------|-----|--------|------|
-| 1 | Lecture 1 · Introduction | `raw/presentations/rl-lecture-01-introduction.pdf` | full | [[lecture-rl-01-introduction]] |
+| 1 | Lecture 1 · Introduction | `raw/presentations/rl-lecture-01-introduction.pdf` | full | [Lecture 1 · Introduction](lecture-rl-01-introduction.md) |
 | 2 | Lecture 2 · MDPs | `raw/presentations/rl-02.pdf` `raw/handwritten/rl-mdp.pdf` | — | |
-| 3 | Course book | `raw/printed-docs/rl-course-book.pdf` | partial | [[book-rl-course-book]] |
+| 3 | Course book | `raw/printed-docs/rl-course-book.pdf` | partial | [Course book](book-rl-course-book.md) |
 ```
 
 Row status: `skip` | `—` (backlog) | `partial` (the row is itself a book/notebook collection) | `easy` |
 `full` | `deep` (the source's depth). **The table is the truth for member dispositions** — a `—` row is backlog.
-A row's identity is its raw paths; `#` is display order. The collection's `status` follows its rows.
+A row's identity is its raw paths; `#` is display order. The collection's `maturity` follows its rows.
 
 ## Digesting a collection row
 
@@ -26,7 +26,7 @@ A row's identity is its raw paths; `#` is display order. The collection's `statu
 format: `presentations/`, `handwritten/` → `lecture-`; `emails/` → `mail-`; `web-clips/`
 or non-PDF `printed-docs/` → `article-`; `printed-docs/` PDF → `paper-`. LLM chats become `chat-`
 pages through the chat pipeline instead. `finalize` ticks the row; `easy-digest` ticks it too and
-sets `status: digested`. A raw path that is a collection member auto-scopes to its row.
+sets `maturity: digested`. A raw path that is a collection member auto-scopes to its row.
 
 ## Books and parts
 
@@ -40,7 +40,7 @@ chapters or half a long one; front/back matter rows are `skip`. Each digested pa
 | # | Part | Pages | Status | Note |
 |---|------|-------|--------|------|
 | 1 | Front matter · Prefaces | 1–18 | skip | |
-| 2 | Chapter 1. Boolean functions and the Fourier expansion | 19–42 | full | [[part-2014-analysis-of-boolean-functions-ch1-fourier-expansion]] |
+| 2 | Chapter 1. Boolean functions and the Fourier expansion | 19–42 | full | [Chapter 1](part-2014-analysis-of-boolean-functions-ch1-fourier-expansion.md) |
 | 3 | Chapter 2. Basic concepts and social choice | 43–68 | — | |
 ```
 
@@ -64,4 +64,4 @@ a part over 60 pages is a warning, a digested row must link its part page and ma
 `depth`, and the part's `book:`/`raw:`/`section_pages:` must agree with its row.
 Coverage = digested pages ÷ non-skip pages; below 100% the raw file is `partial` in
 `meta/corpus.tsv` — never `source` — warns on every run and counts in `--health` as
-`partial-books`. The book's `status` follows coverage. Re-digesting a finished part is refused.
+`partial-books`. The book's `maturity` follows coverage. Re-digesting a finished part is refused.

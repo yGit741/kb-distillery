@@ -32,7 +32,7 @@ const snapshot = {
   nodes: [node("hub", { title: "The hub", type: "idea" }), node("q-x", { type: "question", status: "open", title: "Why?" }), ...papers],
   links: [...papers.map((p) => ({ source: p.id, target: "hub", kind: "wikilink" })), { source: "q-x", target: "p0", kind: "wikilink" }, { source: "q-x", target: "p1", kind: "wikilink" }],
   concept_links: [],
-  facets: { types: [], statuses: [], areas: [] },
+  facets: { types: [], maturities: [], areas: [] },
 } as unknown as GraphSnapshot;
 
 const host: HomeHost = {

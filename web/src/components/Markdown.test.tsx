@@ -58,6 +58,25 @@ describe("Markdown", () => {
     expect(screen.getByText("ghost")).toHaveAttribute("data-missing", "true");
   });
 
+  it("routes [Title](slug.md) page links to /pages/<slug>, dropping the heading, and marks a missing page", async () => {
+    await renderMd("See [Tensor rank](tensor-rank.md), [why](tensor-rank.md#why-it-works), [gone](ghost.md), [web](https://example.org/a.md).", {
+      resolveSlug: (s) => (s === "ghost" ? null : s),
+    });
+    const links = screen.getAllByRole("link");
+    expect(links[0]).toHaveAttribute("href", "/pages/tensor-rank");
+    expect(links[0]).toHaveTextContent("Tensor rank");
+    expect(links[1]).toHaveAttribute("href", "/pages/tensor-rank");
+    expect(screen.getByText("gone")).toHaveAttribute("data-missing", "true");
+    expect(links[2]).toHaveAttribute("href", "https://example.org/a.md");
+  });
+
+  it("shows a page link in a table cell and an escaped bracket label as text", async () => {
+    const { container } = await renderMd("| a | b |\n|---|---|\n| [Alpha \\[1\\]](alpha.md) | x |");
+    const a = container.querySelector("td a")!;
+    expect(a).toHaveAttribute("href", "/pages/alpha");
+    expect(a.textContent).toBe("Alpha [1]");
+  });
+
   it("leaves [[x]] alone inside code", async () => {
     const { container } = await renderMd("`[[not-a-link]]`\n\n```\n[[also-not]]\n```");
     expect(container.querySelectorAll("a")).toHaveLength(0);

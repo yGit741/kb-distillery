@@ -1,4 +1,6 @@
-"""The `summary:` field: one English "what it is + main point" line per page, and its staleness hash.
+"""The `description:` field (was `summary:` before schema 1.5): one English "what it is + main point" line per page,
+and its staleness hash. `generated: {by}` says who wrote it: `human:<id>` (never rewritten by a tool) or
+`summarize/<model>`.
 
 `summary_from` stores `summary_hash(text)` of the page the summary was written from. The hash covers only
 the parts that carry the page's point — the H1, the `**Problem:**` / `**Main result:**` lead lines and
@@ -6,6 +8,8 @@ the `## Key claims` section — so link, typo and Connections edits never mark a
 """
 import hashlib
 import re
+
+from kb_distillery.core.links import PAGE_LINK
 
 SUMMARY_MIN = 80
 SUMMARY_MAX = 320
@@ -48,6 +52,36 @@ def summary_hash(text):
     return hashlib.sha256(norm.encode()).hexdigest()[:12]
 
 
+PRODUCER = "summarize"
+
+
+def with_offset(ts):
+    """An ISO 8601 datetime with a UTC offset: `ts` as given when it has one, a naive `ts` read as this machine's local
+    time (what `time.strftime` wrote), None when it is not a datetime."""
+    import datetime
+    try:
+        d = datetime.datetime.fromisoformat(str(ts).replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    return (d if d.tzinfo else d.astimezone()).isoformat(timespec="seconds")
+
+
+def now_stamp():
+    import datetime
+    return datetime.datetime.now().astimezone().isoformat(timespec="seconds")
+
+
+def tool_actor(model):
+    """`generated.by` of a summary a tool wrote."""
+    return f"{PRODUCER}/{model}"
+
+
+def hand_written(fm):
+    """Did the user write this page's description? (`generated.by` is a `human:<id>` actor: tools never overwrite it.)"""
+    g = fm.get("generated")
+    return isinstance(g, dict) and str(g.get("by") or "").startswith("human:")
+
+
 def unquote(v):
     v = (v or "").strip() if isinstance(v, str) else ""
     return v[1:-1] if len(v) >= 2 and v[0] == v[-1] == '"' else v
@@ -65,6 +99,8 @@ def problems(summary):
         out.append('contains # or " (breaks the flat frontmatter parser)')
     if "\\" in s or "[[" in s or "]]" in s:
         out.append("contains a backslash or a wikilink")
+    if PAGE_LINK.search(s):
+        out.append("contains a page link")
     if _HEBREW.search(s):
         out.append("not English (Hebrew letters)")
     return out

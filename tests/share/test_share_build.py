@@ -31,7 +31,7 @@ KB_DATA_RE = re.compile(r'<script type="application/json" id="kb-data">(.*?)</sc
 PAGES = {
     "alpha.md": f"""---
 type: concept
-status: seed
+maturity: seed
 raw: {SECRET_RAW}
 email: {SECRET_EMAIL}
 original_name: Old Name.md
@@ -52,7 +52,7 @@ Inline $e^{{i\\pi}}$ too. Mentions `raw/notes/scratch.md` in prose.
 """,
     "beta.md": """---
 type: moc
-status: growing
+maturity: growing
 ---
 
 # Beta theme
@@ -61,7 +61,7 @@ Old-schema MOC. Links [[alpha]], [[gamma]] and [[delta]].
 """,
     "gamma.md": """---
 type: distilled-think
-status: review
+maturity: review
 ---
 
 # Gamma review
@@ -70,7 +70,7 @@ Transient page linking [[alpha]]. GAMMA-ONLY-TOKEN.
 """,
     "delta.md": """---
 type: paper
-status: digested
+maturity: digested
 year: 2021
 area: [learning-theory]
 ---
@@ -573,7 +573,7 @@ if __name__ == "__main__":
 
 
 MAIL_PAGES = {
-    "hub.md": "---\ntype: concept\nstatus: seed\n---\n\n# Hub\n\nSee [[mail-thread]], [[mail-list]], [[llm-chat]] and [[jane]].\n",
+    "hub.md": "---\ntype: concept\nmaturity: seed\n---\n\n# Hub\n\nSee [[mail-thread]], [[mail-list]], [[llm-chat]] and [[jane]].\n",
     "mail-thread.md": "---\ntype: mail\nraw: raw/emails/2026-01-01-x/thread.md\n---\n\n# Mail thread\n\nMAIL-ONLY-TOKEN [[hub]]\n",
     "mail-list.md": "---\ntype: mail\nraw: [raw/printed-docs/a.pdf, raw/emails/2026-01-01-x/thread.md]\n---\n\n# Mail two\n\nMAIL-LIST-TOKEN\n",
     "llm-chat.md": "---\ntype: ai-chat\nraw: raw/llm-chats/c.md\n---\n\n# LLM chat\n\nCHAT-VISIBLE-TOKEN [[hub]]\n",

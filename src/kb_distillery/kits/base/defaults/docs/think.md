@@ -10,7 +10,7 @@ kbd distill <note> --to a --summarize --backend batch
 kbd distill <note> --to a,b --no-commit
 ```
 
-- **kb side:** `wiki/distilled-think-<slug>.md` in each kb, type `distilled-think`, `source: think:<note>.md`. One naming rule (`kb_distillery.distill.fanout.slug_for`) is shared with the `distill-think` skill, so the skill's `propose` continues the page this command wrote. Each kb gets its own `kb(distill)` commit.
+- **kb side:** `wiki/distilled-think-<slug>.md` in each kb, type `distilled-think`, `sources: [{resource: think:<note>.md}]`. One naming rule (`kb_distillery.distill.fanout.slug_for`) is shared with the `distill-think` skill, so the skill's `propose` continues the page this command wrote. Each kb gets its own `kb(distill)` commit.
 - **think side:** `<think>/.provenance/<note>.md.json` records `{kb, page, at, note_sha256}` per kb. The note itself is never edited (a sidecar, not frontmatter, keeps human text byte-identical).
 - **Idempotent:** an existing page and recorded entry are kept; a second run changes nothing and makes no commit. Everything is checked (note exists, kbs resolve, no page-name collision with another note) before the first write.
 - **Citations:** `think:<note>.md` is the citation form; the legacy `think/<note>.md` still resolves (`fanout.resolve_cite`).

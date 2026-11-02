@@ -44,7 +44,7 @@ class Fanout(unittest.TestCase):
         self.assertEqual([(o.kb, o.written) for o in out], [("a", True), ("b", True)])
         for root in (self.a, self.b):
             page = open(os.path.join(root, "wiki", "distilled-think-thesis-decision.md"), encoding="utf-8").read()
-            self.assertIn("source: think:Thesis Decision.md", page)
+            self.assertIn('sources: [{resource: "think:Thesis Decision.md"}]', page)
             self.assertIn("We pick tensors. Second line.", page)
             r = lint(root)
             self.assertEqual(r.returncode, 0, r.stdout + r.stderr)

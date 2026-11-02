@@ -1,11 +1,12 @@
 ---
 type: series
 layer: collection
+title: "Test blog"
 short: tblog
 author: Test Author
 url: https://example.org/blog
 area: []
-status: digested
+maturity: digested
 aliases: []
 related: []
 ---
@@ -22,8 +23,8 @@ Coverage: **1 / 1 items (100%)** · skip rows excluded
 
 | # | Item | Raw | Status | Note |
 |---|------|-----|--------|------|
-| 1 | Rank in practice | `raw/web-clips/tblog-post-one.md` | easy | [[article-tblog-post-one]] |
+| 1 | Rank in practice | `raw/web-clips/tblog-post-one.md` | easy | [Tblog Post One](article-tblog-post-one.md) |
 
 ## Threads
 
-- [[theme-learning-theory]]
+- [Learning theory](theme-learning-theory.md)

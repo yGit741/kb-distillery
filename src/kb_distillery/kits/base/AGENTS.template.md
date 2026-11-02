@@ -22,10 +22,10 @@ This file is the core every turn needs. The details live in `.claude/docs/`: rea
 2. Never write in `raw/` or the think space, and never inside a `## My notes` section: that is the user's.
 3. Never run raw `git commit` / `push` / `merge` / `tag` / `revert` / `reset` in this repo. Knowledge changes (one `kb(<op>)` commit each; see the `kb-history`, `kb-snapshot` and `kb-undo` skills) go through `distill ops` (a session per operation), which lints, commits one `kb(<op>): …` step and tags `kb-x.y.z`. The hooks in `.claude/` and `core.hooksPath` enforce this and fail closed when `distill` is not on PATH.
 4. One transactional workflow (ingest session, ops session, distill) at a time.
-5. Wikilinks are always bare: `[[tensor-rank]]`, never `[[wiki/tensor-rank]]`. Paths into `raw/` go in backticks, not wikilinks.
-6. Do not hand-edit `index.md` or `meta/corpus.tsv`: both are generated on every lint run.
+5. Pages link with standard relative markdown links, `[Tensor rank](tensor-rank.md)`: the bare `slug.md` (`wiki/` is flat and is the bundle root), `[label](slug.md#heading)` for a heading, never `[[wikilinks]]` (they live only in the user's `## My notes`) and never a path (`wiki/…`, `../wiki/…`). Paths into `raw/` go in backticks, not links.
+6. Do not hand-edit `wiki/index.md` or `meta/corpus.tsv`: both are generated on every lint run. `wiki/index.md` and `wiki/log.md` are OKF's reserved files of the bundle root, not pages.
 7. **`digest` alone → ask the tier (easy / full / deep).** Bare "digest" never triggers `full-digest`.
-8. **Dedup:** always `distill ingest resolve` before `scrap`. If FOUND → cite `[[slug]]`; do not re-download.
+8. **Dedup:** always `distill ingest resolve` before `scrap`. If FOUND → cite `[Title](slug.md)`; do not re-download.
 9. Read a skill's `SKILL.md` before running it.
 10. **Every LLM call goes through `kb_distillery.llm`**: one `--backend subscription|api|batch` choice (`$KB_LLM_BACKEND`, default subscription). Never add a `claude -p`, SDK or HTTP call of your own. CLI: `distill llm ask|submit|status|collect`.
 

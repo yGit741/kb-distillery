@@ -196,8 +196,7 @@ def video_digest(arg, tier="full", model=readers.READ_MODEL, workers=4, backend=
     from kb_distillery.lint.lint import parse_frontmatter
     old = (parse_frontmatter(text) or {}).get("depth")
     depth = max([d_ for d_ in (old, tier) if d_ in DEPTH], key=DEPTH.index)   # never downgrade deep to full
-    text = wikiio.set_key(text, "depth", depth, after="status")
-    text = wikiio.set_key(text, "status", "digested")
+    text = wikiio.set_reading(text, depth, "digested")
     text = put_section(text, "## Frames", frames_section(chosen, d["url"]))
     eqs = equations(ok)
     if eqs and section_empty(text, "## Key equations"):
@@ -216,7 +215,7 @@ def video_digest(arg, tier="full", model=readers.READ_MODEL, workers=4, backend=
           f"({stats['backend']} ${stats['usd']})")
     print(f"updated {wiki_path} ({page_type}, depth: {depth}) — ## Frames written, ## Key equations drafted")
     print(f"Agent: read {os.path.join(work, 'abstract.text')} (transcript + reads), write Problem, Main result, "
-          f"Key ideas, curate Key equations, Takeaways{', Connections ([[links]] into the wiki)' if tier == 'deep' else ''}; "
+          f"Key ideas, curate Key equations, Takeaways{', Connections (`[Title](slug.md)` links into the wiki)' if tier == 'deep' else ''}; "
           "then pixi run lint and pixi run ops -- commit")
     return wiki_path
 

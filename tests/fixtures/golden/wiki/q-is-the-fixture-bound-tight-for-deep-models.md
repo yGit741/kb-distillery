@@ -1,8 +1,9 @@
 ---
 type: question
 layer: concept
+title: "Is the fixture bound tight for deep models?"
 area: [learning-theory]
-status: open
+maturity: open
 priority: med
 discussed_with: []
 ---
@@ -13,7 +14,7 @@ discussed_with: []
 
 ## Why I care
 
-Spawned during ingest of [[paper-2020-local-fixture-paper]].
+Spawned during ingest of [Fixture local paper](paper-2020-local-fixture-paper.md).
 
 ## What I know so far
 -
@@ -22,4 +23,4 @@ Spawned during ingest of [[paper-2020-local-fixture-paper]].
 -
 
 ## Papers / concepts to read
-- [[paper-2020-local-fixture-paper]]
+- [Fixture local paper](paper-2020-local-fixture-paper.md)

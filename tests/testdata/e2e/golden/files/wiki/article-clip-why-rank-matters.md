@@ -4,12 +4,11 @@ layer: source
 source: 
 author:
 area: []
-status: digested
+maturity: digested
 depth: easy
 raw: raw/web-clips/clip-why-rank-matters.md
 url:
-date:
-summary:
+description:
 ---
 
 # Clip Why Rank Matters
@@ -28,4 +27,4 @@ summary:
 ## Connections
 
 ## Links out
-- Concepts: [[]]
+- Concepts: <!-- [Title](slug.md) -->

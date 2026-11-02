@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Vault linter. `src/kb_distillery/lint/lint.py` IS the schema — if it passes, the vault is legal.
 
-    python3 -m kb_distillery.lint.lint                 check + reconcile + regenerate index.md
+    python3 -m kb_distillery.lint.lint                 check + reconcile + regenerate wiki/index.md
     python3 -m kb_distillery.lint.lint --health        terminal health summary
     python3 -m kb_distillery.lint.lint --dashboard     localhost health UI
     python3 -m kb_distillery.lint.lint --coherence-only  semantic coherence checks only (debug)
@@ -29,12 +29,12 @@ from kb_distillery.core.schema import (ASSET_NAME, ASSET_PREFIX, BARE_TYPES, BLA
                     PLACEHOLDER_TITLE, RAW_NAME, RAW_NESTED, RAW_DIR, RAW_EMAILS, RAW_INBOX,
                     RAW_PRINTED, RAW_SUBDIRS, RAW_VIDEOS, VIDEO_ITEM, RESERVED_PREFIXES, ROOT_DIRS, ROOT_FILES,
                     ROOT_LINT_IGNORE, ROOT_MD, CONTENTS_COLLECTIONS, SIDECAR_ELIGIBLE_KINDS, SLUG_PREFIX,
-                    TOPIC_PREFIX, TOPIC_SLUGS, THINK_DIR, TYPE_STATUS, WIKI_DIR, YEARED, strip_prefix,
+                    TOPIC_PREFIX, TOPIC_SLUGS, THINK_DIR, TYPE_STATUS, WIKI_DIR, YEARED, strip_prefix, INDEX_REL, OKF_VERSION, RESERVED_PAGES, is_page_file,
                     LAYER_OF, RETIRED_DEPTH, RETIRED_DISPOSITIONS, RETIRED_KEYS, RETIRED_TYPES)
 from kb_distillery.core.books import (DIGESTED, OVERVIEW_HEADING, OVERVIEW_MIN_CHARS, PARTITION_HEADING, SKIP,
                    book_status, coverage, coverage_line, find_row, overview_ok,
                    parse_partition, validate)
-from kb_distillery.core import hubs
+from kb_distillery.core import frontmatter, hubs, links
 from kb_distillery.core import persons
 from kb_distillery.core import scopes as scope_lib
 from kb_distillery.core import summary as summary_lib
@@ -45,9 +45,8 @@ except ImportError:                         # pragma: no cover
     arxiv_meta = None
 
 from kb_distillery.paths import vault_root
-from kb_distillery.core.links import WIKILINK_TARGET
+from kb_distillery.core import links as page_links
 ROOT = vault_root()  # KB_ROOT: share build
-LINK = WIKILINK_TARGET
 # Fenced blocks and inline code: `[[1, 2], [3, 4]]` in a code sample is not a wikilink.
 CODE = re.compile(r"^\s*(?:>\s*)*(```|~~~).*?^\s*(?:>\s*)*\1[^\n]*$|`[^`\n]+`", re.M | re.S)
 errors, warnings, notices = [], [], []
@@ -99,23 +98,8 @@ def err(f, m):  errors.append(f"{f}: {m}")
 def warn(f, m): warnings.append(f"{f}: {m}")
 
 def parse_frontmatter(text):
-    """Minimal YAML: flat `key: value` and `key: [a, b]`. Enough for this vault."""
-    if not text.startswith("---"):
-        return None
-    end = text.find("\n---", 3)
-    if end == -1:
-        return None
-    fm = {}
-    for line in text[3:end].splitlines():
-        line = line.split("#")[0].rstrip()
-        if not line.strip() or ":" not in line or line.startswith((" ", "\t", "-")):
-            continue
-        k, v = line.split(":", 1)
-        v = v.strip()
-        if v.startswith("[") and v.endswith("]"):
-            v = [x.strip() for x in v[1:-1].split(",") if x.strip()]
-        fm[k.strip()] = v
-    return fm
+    """Flat `key: value`, `key: [a, b]`, plus the OKF shapes (kb_distillery.core.frontmatter). None without a block."""
+    return frontmatter.parse(text)[0]
 
 def raw_paths(fm):
     """`raw:` as a list of paths — a lecture may cite its slides and its notes. `none` → []."""
@@ -375,10 +359,15 @@ def check_dupes(rows):
             warn(p, f"byte-identical to {canonical} — set disposition dupe:{canonical}")
 
 
+def wiki_page_files():
+    """Repo-relative paths of the wiki's markdown pages: the OKF reserved files (index.md, log.md) are not pages."""
+    return [rel for rel in walk(WIKI_DIR, ".md") if is_page_file(os.path.basename(rel))]
+
+
 def load_wiki_pages():
     """Load wiki pages without schema validation (for coherence-only debug)."""
     pages = {}
-    for rel in walk(WIKI_DIR, ".md"):
+    for rel in wiki_page_files():
         if "excalidraw" in rel:
             continue
         text = open(os.path.join(ROOT, rel), encoding="utf-8").read()
@@ -421,7 +410,7 @@ def _coherence_only_main():
 def check_wiki():
     pages = {}
     no_summary = []
-    for rel in walk(WIKI_DIR, ".md"):
+    for rel in wiki_page_files():
         parts = rel.split("/")
         text = open(os.path.join(ROOT, rel), encoding="utf-8").read()
         slug = os.path.basename(rel)[:-3]
@@ -450,7 +439,7 @@ def check_wiki():
             continue
         for key, new in RETIRED_KEYS.items():
             if key in fm:
-                err(rel, f"`{key}:` is retired (schema 1.0) — use `{new}:`")
+                err(rel, f"`{key}:` is retired — use `{new}:`")
         layer = fm.get("layer")
         if not layer:
             err(rel, f"missing `layer:` — type {t} lives in layer {LAYER_OF[t]}")
@@ -459,9 +448,10 @@ def check_wiki():
         elif t not in SOURCE_TYPES and "depth" in fm:
             err(rel, f"`depth:` is for sources only (this page is a {layer} of type {t})")
         allowed = TYPE_STATUS[t]
-        if allowed and fm.get("status") not in allowed:
-            err(rel, f"status: {fm.get('status')!r} invalid for type {t} — "
+        if allowed and fm.get("maturity") not in allowed:
+            err(rel, f"maturity: {fm.get('maturity')!r} invalid for type {t} — "
                      f"expected one of {sorted(allowed)}")
+        _check_okf_fields(rel, fm, t, text)
         if t in NEEDS_RAW:
             raws = raw_paths(fm)
             if not fm.get("raw"):
@@ -480,17 +470,17 @@ def check_wiki():
                 err(rel, f"depth: {ds} is retired (schema 1.0) — use depth: {RETIRED_DEPTH[ds]}")
             elif ds not in DEPTH:
                 err(rel, f"depth: {ds!r} invalid — expected one of {list(DEPTH)}")
-            elif ds == "listed" and fm.get("status") == "digested":
-                err(rel, "depth listed means unread — status must be to-read or reading")
-            elif ds != "listed" and fm.get("status") != "digested":
-                err(rel, f"depth {ds} means read — status must be digested")
+            elif ds == "listed" and fm.get("maturity") == "digested":
+                err(rel, "depth listed means unread — maturity must be to-read or reading")
+            elif ds != "listed" and fm.get("maturity") != "digested":
+                err(rel, f"depth {ds} means read — maturity must be digested")
         _check_slug(rel, slug, t)
         # a kb that declares `[types] areas` pins its topic pages to them; one that declares none accepts any topic
         if t == "topic" and TOPIC_SLUGS and slug[len(TOPIC_PREFIX):] not in TOPIC_SLUGS:
             err(rel, f"topic page must be one of {sorted(TOPIC_PREFIX + s for s in TOPIC_SLUGS)}")
         if t == "ai-chat":
             h1 = next((l[2:].strip() for l in text.splitlines() if l.startswith("# ")), "")
-            if re.match(PLACEHOLDER_TITLE, str(fm.get("title") or "")) or re.match(PLACEHOLDER_TITLE, h1):
+            if re.match(PLACEHOLDER_TITLE, frontmatter.page_title(fm, text)) or re.match(PLACEHOLDER_TITLE, h1):
                 err(rel, "ai-chat needs an informative title, not a clipper placeholder")
             conv = str(fm.get("conversation") or "")
             if not conv and str(fm.get("legacy")).lower() == "true":
@@ -498,11 +488,11 @@ def check_wiki():
             elif not conv or not os.path.isfile(os.path.join(ROOT, CHATS_DIR, conv + ".json")):
                 err(rel, f"ai-chat conversation: {conv or '(missing)'} has no tree in {CHATS_DIR}/")
         if t == "distilled-think":
-            src = str(fm.get("source") or "")
-            if src.startswith(f"{THINK_DIR}/"):
-                warn(rel, f"source: {src} — think is the shared space; cite it as {THINK_DIR}:{src[len(THINK_DIR) + 1:]}")
-            elif not src.startswith(f"{THINK_DIR}:"):
-                err(rel, f"type distilled-think requires source: {THINK_DIR}:<note>.md (the shared think space)")
+            cites = [r for r in frontmatter.resources(fm) if r.startswith((f"{THINK_DIR}/", f"{THINK_DIR}:"))]
+            if cites and cites[0].startswith(f"{THINK_DIR}/"):
+                warn(rel, f"sources: {cites[0]} — think is the shared space; cite it as {THINK_DIR}:{cites[0][len(THINK_DIR) + 1:]}")
+            elif not cites:
+                err(rel, f"type distilled-think requires `sources: [{{resource: {THINK_DIR}:<note>.md}}]` (the shared think space)")
             for heading in ("Summary", "Proposed propagation"):
                 if f"## {heading}" not in text:
                     err(rel, f"distilled-think page missing ## {heading}")
@@ -530,7 +520,7 @@ def check_wiki():
         if TOPIC_PREFIX + theme not in pages:
             warn(WIKI_DIR, f"missing topic page [[{TOPIC_PREFIX}{theme}]] — every area: needs one")
     if no_summary:      # one line, not one per page, while the backfill runs
-        warn(WIKI_DIR, f"{len(no_summary)} page(s) have no summary: — `pixi run summarize -- plan` lists them")
+        warn(WIKI_DIR, f"{len(no_summary)} page(s) have no description: — `pixi run summarize -- plan` lists them")
     return pages
 
 
@@ -562,21 +552,48 @@ def check_question_page(rel, text):
 
 
 def check_summary(rel, fm, text):
-    """`summary:` — one English line, "what it is + main point" (kb_distillery.core.summary). Missing warns for now
+    """`description:` — one English line, "what it is + main point" (kb_distillery.core.summary). Missing warns for now
     (the backfill is running; check_wiki reports them as one line); a malformed one is an error;
     `summary_from` ≠ the page's hash warns stale. Returns False only when a needed summary is missing."""
-    s = summary_lib.unquote(fm.get("summary"))
+    s = summary_lib.unquote(fm.get("description"))
     if not s:
         return not summary_lib.needs_summary(fm)
     for p in summary_lib.problems(s):
-        err(rel, f"summary: {p}")
-    by = fm.get("summary_by")
-    if by and by != "me":
-        err(rel, f"summary_by: {by} — the only value is `me` (a summary you wrote; digests never overwrite it)")
-    if by != "me" and fm.get("summary_from") != summary_lib.summary_hash(text):
-        warn(rel, "summary may be stale (Key claims / main result changed since it was written) — "
-                  "re-run `pixi run summarize -- run --slugs <slug>`, or keep it with summary_by: me")
+        err(rel, f"description: {p}")
+    if not summary_lib.hand_written(fm) and fm.get("summary_from") != summary_lib.summary_hash(text):
+        warn(rel, "description may be stale (Key claims / main result changed since it was written) — "
+                  "re-run `pixi run summarize -- run --slugs <slug>`, or keep it with generated: {by: human:<you>}")
     return True
+
+
+ACTOR = re.compile(r"^(?:human:|process:)\S+$|^[^\s/:]+/\S+$")        # OKF §7: <producer>/<version>, human:<id>, process:<id>
+STAMP = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:?\d{2})$")
+
+
+def _check_okf_fields(rel, fm, t, text):
+    """The Open Knowledge Format fields (schema 1.5): lifecycle `status`, `generated`, `created`, `sources`, `related`."""
+    if "status" in fm and not (fm["status"] == "draft" and fm.get("depth") == "listed"):
+        err(rel, f"status: {fm['status']!r} — OKF `status` is only `draft`, set on pages at depth listed "
+                 f"(the reading lifecycle is `maturity:`)")
+    if "generated" in fm:
+        g = fm["generated"]
+        if not isinstance(g, dict) or not ACTOR.match(str(g.get("by") or "")):
+            err(rel, "generated: needs `{by: <producer>/<version> | human:<id> | process:<id>[, at: <datetime>]}`")
+        elif "at" in g and not STAMP.match(str(g["at"])):
+            err(rel, f"generated.at: {g['at']!r} is not an ISO 8601 datetime with a UTC offset")
+    if "created" in fm and not STAMP.match(str(fm["created"])):
+        err(rel, f"created: {fm['created']!r} is not an ISO 8601 datetime with a UTC offset (2026-10-08T00:00:00Z)")
+    srcs = fm.get("sources", [])
+    for entry in [] if srcs in ("", None) else ([srcs] if isinstance(srcs, (str, dict)) else srcs):
+        if not (isinstance(entry, dict) and str(entry.get("resource") or "").strip()):
+            err(rel, f"sources: entry {entry!r} is not an object with a `resource` (`sources: [{{resource: paper-x.md}}]`)")
+    rel_list = fm.get("related", [])
+    for ref in [] if rel_list in ("", None) else ([rel_list] if isinstance(rel_list, str) else rel_list):
+        if not (isinstance(ref, str) and ref.endswith(links.PAGE_SUFFIX) and links.page_slug(ref)):
+            err(rel, f"related: {ref!r} is not a page path (`related: [{links.page_path('other-page')}]`)")
+    title, h1 = frontmatter.unquote(fm.get("title")), frontmatter.first_heading(text)
+    if title and h1 and title != h1:
+        warn(rel, f"title: {title!r} differs from the first heading {h1!r}")
 
 
 def _check_slug(rel, slug, t):
@@ -619,38 +636,73 @@ def check_table_pipes(pages):
 
 def known_link_targets(pages):
     known = set(pages) | {os.path.basename(p)[:-3] for p in walk(META_DIR, ".md")}
-    known |= {p[:-3] for p in ROOT_MD}
+    known |= {p[:-3] for p in ROOT_MD} | {p[:-3] for p in RESERVED_PAGES}
     return known
 
 
 def check_index_links(pages):
-    """index.md is generated after check_links runs, so it is checked on its own: a row that points at
-    nothing is a generator bug (it was: write_index hardcoded [[thesis]], [[log]] and [[AGENTS]])."""
-    path = os.path.join(ROOT, "index.md")
+    """wiki/index.md is generated after check_links runs, so it is checked on its own: it links with `[Title](slug.md)`
+    like every page (a wikilink there is an error), and a row that points at no page is a generator bug (it was:
+    write_index hardcoded [[thesis]], [[log]] and [[AGENTS]])."""
+    path = os.path.join(ROOT, INDEX_REL)
     if not os.path.isfile(path):
         return 0
-    known, broken = known_link_targets(pages), 0
+    broken = 0
     with open(path, encoding="utf-8") as f:
-        text = f.read()
-    for target in LINK.findall(CODE.sub("", text)):
-        if target.strip() not in known:
-            err("index.md", f"wikilink [[{target.strip()}]] resolves to nothing — write_index must only list pages that exist")
+        text = CODE.sub("", f.read())
+    for target in page_links.wikilink_targets(text):
+        err(INDEX_REL, f"wikilink [[{target}]] — the index links with [Title](slug.md), like every page")
+        broken += 1
+    for m in page_links.PAGE_LINK.finditer(text):
+        target = page_links.link_parts(m)[1]
+        if target not in pages:
+            err(INDEX_REL, f"link {m.group(0)} resolves to nothing — write_index must only list pages that exist")
             broken += 1
     return broken
 
 
+PATH_PREFIXED = re.compile(r"\]\(((?:\./|\.\./wiki/|wiki/)[^()\s/]+\.md)(?:#[^()\s]*)?\)")
+
+
 def check_links(pages):
+    """Pages link with `[Title](slug.md)` (core.links). A wikilink outside `## My notes` is an error (it was written
+    after the schema 1.5 switch); inside My notes it is the user's and only warns when it points at nothing. A page
+    link to no page, or to a heading the page lacks, is an error. Code and math are not read."""
     known = known_link_targets(pages)
+    headings = {}
     broken = 0
     for slug, (rel, fm, text) in pages.items():
-        for target in LINK.findall(CODE.sub("", text)):
-            target = target.strip()
-            if "/" in target:
-                err(rel, f"path-prefixed wikilink [[{target}]] — wiki/ is flat, use the bare slug")
-            elif target not in known:
-                warn(rel, f"wikilink [[{target}]] resolves to nothing")
+        body = page_links.body_of(text)
+        spans = page_links.protected_spans(body)
+        notes = page_links.notes_spans(body)
+        prose = page_links.prose(body)
+        for m in page_links.WIKILINK_ANY.finditer(body):
+            at = m.start()
+            if any(a <= at < b for a, b in notes):
+                target = re.split(r"\\?\||#", m.group(2))[0].strip()
+                if m.group(1) == "" and target and target not in known:
+                    warn(rel, f"wikilink [[{target}]] resolves to nothing")
+                    broken += 1
+            elif not any(a <= at < b for a, b in spans):
+                err(rel, f"wikilink {m.group(0)} — pages link with [Title](slug.md), wikilinks live only in ## My notes")
+        for m in page_links.PAGE_LINK.finditer(body):
+            if any(a <= m.start() < b for a, b in spans):
+                continue                                      # code, math and My notes are not read
+            _label, target, anchor = page_links.link_parts(m)
+            if target not in pages:
+                err(rel, f"link {m.group(0)} resolves to no page")
                 broken += 1
+            elif anchor:
+                if target not in headings:
+                    headings[target] = {page_links.slugify(h) for h in HEADING_LINE.findall(page_links.prose(page_links.body_of(pages[target][2])))}
+                if anchor.lower() not in headings[target]:
+                    err(rel, f"link {m.group(0)} points at a heading {target}.md does not have")
+        for m in PATH_PREFIXED.finditer(prose):
+            err(rel, f"path-prefixed page link ({m.group(1)}) — wiki/ is flat, link the bare slug.md")
     return broken
+
+
+HEADING_LINE = re.compile(r"^#{1,6}\s+(.+?)\s*#*\s*$", re.M)
 
 def check_pdf_magic(raw_files):
     """A .pdf that is really an HTML landing page passes the name and size checks and then
@@ -889,7 +941,7 @@ def _effective_digestion(fm, text):
     ds = fm.get("depth")
     if ds in DEPTH:
         return ds
-    if fm.get("status") != "digested":
+    if fm.get("maturity") != "digested":
         return "listed"
     if "## Key equations" in text:
         block = text.split("## Key equations", 1)[1].split("\n##", 1)[0].strip()
@@ -906,8 +958,8 @@ def check_ingest_strict(pages, only_slugs=None):
         if not slug.startswith(TOPIC_PREFIX):
             continue
         if "## Papers" in text:
-            for target in LINK.findall(text.split("## Papers", 1)[1]):
-                theme_papers.add(target.strip())
+            for target in page_links.targets(text.split("## Papers", 1)[1]):
+                theme_papers.add(target)
 
     for slug, (rel, fm, text) in pages.items():
         if only_slugs and slug not in only_slugs:
@@ -917,8 +969,8 @@ def check_ingest_strict(pages, only_slugs=None):
         tier = _effective_digestion(fm, text)
         if tier not in ("full", "deep"):
             continue
-        if fm.get("status") != "digested":
-            err(rel, f"depth {tier} requires status: digested")
+        if fm.get("maturity") != "digested":
+            err(rel, f"depth {tier} requires maturity: digested")
             continue
         if "## Key equations" not in text:
             err(rel, "full/deep digest missing ## Key equations section")
@@ -982,8 +1034,8 @@ def check_books(pages):
             if rows and line not in text:
                 warn(rel, f"stale coverage line — expected `{line}`")
             derived = book_status(rows)
-            if rows and fm.get("status") != derived:
-                warn(rel, f"status: {fm.get('status')} but the partition says {derived}")
+            if rows and fm.get("maturity") != derived:
+                warn(rel, f"maturity: {fm.get('maturity')} but the partition says {derived}")
         for r in rows:
             target = pages.get(r["slug"])
             if target and target[1].get("type") != "part":
@@ -1042,8 +1094,8 @@ def check_contents(pages):
         if rows and line not in text:
             warn(rel, f"stale coverage line — expected `{line}`")
         derived = hubs.hub_status(rows)
-        if rows and fm.get("status") != derived:
-            warn(rel, f"status: {fm.get('status')} but the contents table says {derived}")
+        if rows and fm.get("maturity") != derived:
+            warn(rel, f"maturity: {fm.get('maturity')} but the contents table says {derived}")
         for r in rows:
             if not r["slug"]:
                 continue
@@ -1324,8 +1376,8 @@ def main():
 
     from kb_distillery.kbconfig import checkout_root
     if checkout_root() and os.path.realpath(ROOT) == os.path.realpath(checkout_root()) and not os.path.isdir(os.path.join(ROOT, "wiki")):
-        # No knowledge base selected: ROOT is an engine checkout with no vault in it, and lint would write index.md and meta/ there.
-        print("error: no knowledge base selected — lint would write index.md and meta/ into the engine checkout.\n"
+        # No knowledge base selected: ROOT is an engine checkout with no vault in it, and lint would write wiki/index.md and meta/ there.
+        print("error: no knowledge base selected — lint would write wiki/index.md and meta/ into the engine checkout.\n"
               "       pass --kb <id|path> or set KB (pixi run kb-list shows them).", file=sys.stderr)
         return 2
 
@@ -1407,42 +1459,32 @@ def sync_search_cards():
         qmd_client.refresh(timeout=0.5)      # the service re-indexes now instead of within 10 min
 
 
-def _page_file_exists(*parts):
-    return os.path.isfile(os.path.join(ROOT, *parts))
-
-
-# (slug, summary, exists?) — the Meta rows of index.md; a row is written only when its file is there.
-META_PAGES = [
-    ("thesis", "Thesis topic, instructor, institution",
-     lambda pages: "thesis" in pages or _page_file_exists("thesis.md") or _page_file_exists(META_DIR, "thesis.md")),
-    ("log", "Activity timeline", lambda pages: _page_file_exists(META_DIR, "log.md")),
-    ("AGENTS", "Schema and workflows", lambda pages: _page_file_exists("AGENTS.md")),
-]
-
-
 def write_index(pages, quiet=False):
-    out = ["---", "type: meta", "---", "", "# Wiki index", "",
+    """wiki/index.md, the OKF reserved catalog of the bundle: frontmatter holds only `okf_version`, the body is one
+    bulleted `[Title](slug.md)` list per page type. Generated on every lint run; never hand-edited."""
+    titles = {slug: page_links.title_of(text, slug) for slug, (_rel, _fm, text) in pages.items()}
+    out = ["---", f"okf_version: {OKF_VERSION}", "---", "", "# Wiki index", "",
            "> Generated by `src/kb_distillery/lint/lint.py`. Do not hand-edit.", "",
            "Read this first on any query.", ""]
-    meta_rows = [f"| [[{slug}]] | {what} |" for slug, what, exists in META_PAGES if exists(pages)]
-    if meta_rows:
-        out += ["## Meta", "", "| Page | Summary |", "|------|---------|"] + meta_rows + [""]
     for t, title in SECTIONS:
         rows = []
         for slug in sorted(pages):
             rel, fm, text = pages[slug]
             if fm.get("type") != t:
                 continue
-            s = (summary_lib.unquote(fm.get("summary")) or first_line(text)).replace("|", "\\|")
+            s = " ".join(page_links.plain(summary_lib.unquote(fm.get("description")) or first_line(text)).split())
             if len(s) > 110:
                 s = s[:107] + "..."
-            rows.append(f"| [[{slug}]] | {fm.get('status','')} | {s} |")
+            row = "- " + page_links.page_link(slug, titles)
+            rows.append(row + (f" — {s}" if s else ""))
         if rows:
-            out += [f"## {title}", "", "| Page | Status | Summary |",
-                    "|------|--------|---------|"] + rows + [""]
-    open(os.path.join(ROOT, "index.md"), "w", encoding="utf-8").write("\n".join(out))
+            out += [f"## {title}", ""] + rows + [""]
+    path = os.path.join(ROOT, INDEX_REL)
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f:
+        f.write("\n".join(out))
     if not quiet:
-        print("wrote index.md")
+        print(f"wrote {INDEX_REL}")
 
 
 if __name__ == "__main__":

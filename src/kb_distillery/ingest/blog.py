@@ -9,6 +9,7 @@ import json
 import os
 import re
 
+from kb_distillery.core import frontmatter, links
 from .paths import ROOT
 
 BLOGS = {
@@ -164,7 +165,9 @@ def render(raw_rel, title_en=None, url=None, summary="", key_concepts=(), root=R
     q = lambda s: json.dumps(s, ensure_ascii=False)
     rtl = lang in RTL
     link = url or home
-    head = ["---", "type: blog-post", "layer: source", "status: to-read", "depth: listed", f"title: {q(title)}"]
+    head = ["---", "type: blog-post", "layer: source", "maturity: to-read", "status: draft", "depth: listed"]
+    if frontmatter.title_line(title):              # only when it differs from the `# ` heading it is written with
+        head.insert(3, f"title: {q(title)}")
     if title_orig and title_orig != title:
         head.append(f"aliases: [{q(title_orig)}]")
     head += [f"blog: {q(name)}", f"lang: {lang}"]
@@ -174,7 +177,7 @@ def render(raw_rel, title_en=None, url=None, summary="", key_concepts=(), root=R
     related = [f"source-{x}" for x in re.findall(r"subject/([a-z0-9-]+)", fm)
                if os.path.isfile(os.path.join(root, "wiki", f"source-{x}.md"))]
     if related:
-        head.append(f"related: [{', '.join(related)}]")
+        head.append(frontmatter.related_line([links.page_path(x) for x in related]))
     head += ["---", "", f"# {title}", ""]
     if title_orig and title_orig != title:
         head += [f'<div dir="rtl"><strong>{title_orig}</strong></div>' if rtl

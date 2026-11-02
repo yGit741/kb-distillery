@@ -1,8 +1,9 @@
 ---
 type: idea
 layer: concept
+title: "PAC learning"
 area: [learning-theory]
-status: seed
+maturity: seed
 sources: []
 related: []
 discussed_with: []
@@ -23,8 +24,8 @@ Fixture idea.
 Fixture.
 
 ## Connections
-- [[theme-learning-theory]]
-- [[generalization]]
+- [Topic: learning theory](theme-learning-theory.md)
+- [Generalization](generalization.md)
 
 ## Open questions
 -

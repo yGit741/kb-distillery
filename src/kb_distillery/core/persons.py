@@ -17,13 +17,16 @@ progress is the `verified` date, and `--health` counts pages without one.
 import re
 
 from kb_distillery.core.schema import CONCEPT_TYPES, make_slug
+from kb_distillery.core import frontmatter
+from kb_distillery.core import links as page_links
 from kb_distillery.core.links import WIKILINK_TARGET
+LINK = WIKILINK_TARGET        # the wikilink form; kept for migration 0006, which reads pre-OKF pages
 
 HANDLES = ("url", "scholar", "github", "youtube", "blog", "wikipedia")
 EDGES = ("orgs", "advisors", "students")
 CONTACT = ("email",)
-SUMMARY_FIELDS = ("summary", "summary_from", "summary_by")   # schema 1.3, every page type (kb_distillery.core.summary)
-FIELDS = {"type", "layer", "verified", *HANDLES, *EDGES, *CONTACT, *SUMMARY_FIELDS}
+SUMMARY_FIELDS = ("description", "summary_from", "generated")   # every page type (kb_distillery.core.summary)
+FIELDS = {"type", "layer", "title", "verified", *HANDLES, *EDGES, *CONTACT, *SUMMARY_FIELDS}
 # Keys the pre-0.12 layouts used; migration 0006 moves their content into the body.
 LEGACY_FIELDS = ("status", "area", "related", "affiliation", "lab", "role", "optional", "tau_profile")
 NONE, UNKNOWN = "none", "unknown"
@@ -46,31 +49,15 @@ BIB_CAP = None                    # rows shown on the page (None = all: meta/.re
 MEGA_AUTHORS = 20                 # a paper with more authors is not cataloged unless pinned
 
 MARKER = re.compile(r"^<!--\s*from:\s*([\w-]+)\s*-->\s*$")
-LINK = WIKILINK_TARGET
 URL = re.compile(r"^https?://\S+$")
 DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
 
 # -- parsing -----------------------------------------------------------------------------------
 def parse_frontmatter(text):
-    """Same minimal YAML as lint.parse_frontmatter: flat `key: value` and `key: [a, b]`."""
-    if not text.startswith("---"):
-        return None, text
-    end = text.find("\n---", 3)
-    if end == -1:
-        return None, text
-    fm = {}
-    for line in text[3:end].splitlines():
-        line = line.split("#")[0].rstrip()
-        if not line.strip() or ":" not in line or line.startswith((" ", "\t", "-")):
-            continue
-        k, v = line.split(":", 1)
-        v = v.strip()
-        if v.startswith("[") and v.endswith("]"):
-            v = [x.strip() for x in v[1:-1].split(",") if x.strip()]
-        fm[k.strip()] = v
-    body = text[end + 4:]
-    return fm, body.lstrip("\n")
+    """Same reader as lint.parse_frontmatter, plus the body (leading blank lines dropped)."""
+    fm, body = frontmatter.parse(text)
+    return (None, text) if fm is None else (fm, body.lstrip("\n"))
 
 
 def as_list(v):
@@ -109,8 +96,23 @@ def title_of(body):
 
 
 # -- rendering ---------------------------------------------------------------------------------
-def render_frontmatter(fm):
+def _flat(v):
+    """A frontmatter value back to its one-line form (`generated` is a mapping)."""
+    if isinstance(v, dict):
+        return "{" + ", ".join(f"{k}: {frontmatter.scalar(str(x))}" for k, x in v.items()) + "}"
+    return v
+
+
+def render_frontmatter(fm, heading=None):
+    """`heading` is the page's H1: an OKF `title:` the page already has is carried over only when it differs from it;
+    so are the summary fields."""
     lines = ["---", "type: person", "layer: concept"]
+    title = frontmatter.unquote(fm.get("title") or "")
+    if title and frontmatter.title_line(title, heading):
+        lines.append(frontmatter.title_line(title, heading))
+    for k in SUMMARY_FIELDS:
+        if fm.get(k):
+            lines.append(f"{k}: {_flat(fm[k])}")
     for k in HANDLES + CONTACT:
         if k in fm:
             lines.append(f"{k}: {fm[k]}")
@@ -141,7 +143,7 @@ def order(sections):
 
 
 def render(fm, head, sections):
-    parts = [render_frontmatter(fm), "\n" + head.strip() + "\n"]
+    parts = [render_frontmatter(fm, frontmatter.first_heading(head)), "\n" + head.strip() + "\n"]
     for s in order(sections):
         parts.append("\n" + render_section(s["title"], s.get("source"), s["body"]))
     return "".join(parts)
@@ -160,7 +162,7 @@ def merge(existing_body, generated):
 def _link(item):
     title, url, wiki = item.get("title", ""), item.get("url", ""), item.get("wiki", "")
     if wiki:
-        return f"[[{wiki}|{title}]]" if title and title != wiki else f"[[{wiki}]]"
+        return page_links.link(wiki, title if title and title != wiki else wiki)
     return f"[{title}]({url})" if url else title
 
 
@@ -194,7 +196,7 @@ def bib_title_cell(p, known):
     title = " ".join((p.get("title") or p.get("slug") or "").replace("|", "/").split())  # one table-safe line
     wiki = p.get("wiki") or (make_slug("paper", p["slug"]) if p.get("slug") else "")
     if wiki and wiki in known:
-        return f"[[{wiki}\\|{title}]]"   # escaped: a bare | would split the table cell
+        return page_links.link(wiki, title)      # no | in the text, so the table cell stays one cell
     url = paper_url(p)
     return f"[{title}]({url})" if url else title
 
@@ -233,7 +235,7 @@ def sections_from_manifest(m, known, cataloged=(), cap=BIB_CAP):
     if lineage:
         rows = []
         for r in lineage:
-            who = f"[[{r['slug']}]]" if r.get("slug") and r["slug"] in known else r.get("name", "")
+            who = page_links.page_link(r["slug"], known, r.get("name")) if r.get("slug") and r["slug"] in known else r.get("name", "")
             rows.append((r.get("relation", ""), who, r.get("where", ""), r.get("years", ""), r.get("note", "")))
         add("Academic lineage", _source_of(lineage, "wikipedia"),
             _table(["Relation", "Person", "Where", "Years", "Note"], rows))
@@ -265,7 +267,7 @@ def sections_from_manifest(m, known, cataloged=(), cap=BIB_CAP):
         add("Bibliography", _source_of(papers, "scholar"),
             head + "\n\n" + _table(["", "Year", "Title", "Venue", "Citations"], rows))
     if cataloged:
-        add("Cataloged in vault", "scholar", "\n".join(f"- [[{s}]]" for s in cataloged))
+        add("Cataloged in vault", "scholar", "\n".join(f"- {page_links.page_link(s, known)}" for s in cataloged))
     return out
 
 
@@ -280,7 +282,7 @@ def check(slug, fm, body, pages):
             errors.append(f"`{k}:` is not a person field since schema 0.12 — run the person-v2 migration")
     for k in fm:
         if k not in FIELDS and k not in LEGACY_FIELDS:
-            errors.append(f"unknown person field `{k}:` — handles {HANDLES}, edges {EDGES}, email, verified, summary")
+            errors.append(f"unknown person field `{k}:` — handles {HANDLES}, edges {EDGES}, email, verified, title, description, generated")
     for k in HANDLES:
         v = fm.get(k)
         if v is None:
@@ -311,7 +313,7 @@ def check(slug, fm, body, pages):
         errors.append(f"missing ## {WHY} — the one hand-written reason this person is in the vault")
     else:
         why = next(s for s in sections if s["title"] == WHY)
-        links = [l.strip() for l in LINK.findall(why["body"])]
+        links = page_links.targets(why["body"])
         # the reason must tie the person to the knowledge: a link to a concept page of this kb (not another person)
         knowledge = frozenset(CONCEPT_TYPES) - {"person"}
         if not any(pages.get(l, {}).get("type") in knowledge for l in links):

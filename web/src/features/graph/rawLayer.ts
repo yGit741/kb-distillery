@@ -64,7 +64,7 @@ function pileNode(p: Record<string, unknown>): GNode {
     title: format,
     type: "pile",
     layer: "raw",
-    status: "",
+    maturity: "",
     depth: "",
     areas: [],
     year: null,

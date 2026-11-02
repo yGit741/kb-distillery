@@ -7,7 +7,7 @@ import json
 import os
 import sys
 
-from kb_distillery.core.schema import SOURCE_TYPES, strip_prefix
+from kb_distillery.core.schema import INDEX_REL, SOURCE_TYPES, strip_prefix
 from kb_distillery.core.graph import (  # noqa: E402
     claim_text,
     inbound_index,
@@ -19,6 +19,7 @@ from kb_distillery.core.graph import (  # noqa: E402
 
 from kb_distillery.paths import vault_root
 from kb_distillery.core.summary import unquote
+from kb_distillery.core import links as page_links
 ROOT = vault_root()  # KB_ROOT: share build
 WARNINGS_PATH = os.path.join(ROOT, "meta", "coherence-warnings.tsv")
 WARNINGS_COLS = ["id", "score", "kind", "slugs", "summary", "status"]
@@ -55,7 +56,7 @@ def _is_digested_paper(pages, slug):
     if slug not in pages:
         return False
     fm = pages[slug][1]
-    return fm.get("type") in SOURCE_TYPES and fm.get("status") == "digested"
+    return fm.get("type") in SOURCE_TYPES and fm.get("maturity") == "digested"
 
 
 def classify_pair_kind(slug_a, slug_b, pages):
@@ -121,7 +122,7 @@ def check_coherence(pages, rows=None, err_fn=None, warn_fn=None, prior=None, fre
                 min(LEXICAL_CLASH_CAP, _score_hit(kind, base)))
 
         # q-* status tension vs digested paper
-        if fm.get("type") == "question" and fm.get("status") in ("open", "partial"):
+        if fm.get("type") == "question" and fm.get("maturity") in ("open", "partial"):
             cs = claim_text(slug, fm, text).lower()
             if any(w in cs for w in ("unknown", "open", "unclear", "not known")):
                 for other in outbound_links(text, fm):
@@ -165,22 +166,22 @@ def check_coherence(pages, rows=None, err_fn=None, warn_fn=None, prior=None, fre
         if not wiki_slug or wiki_slug not in pages:
             continue
         wfm = pages[wiki_slug][1]
-        if wfm.get("type") != "paper" or wfm.get("status") != "digested":
+        if wfm.get("type") != "paper" or wfm.get("maturity") != "digested":
             continue
         add("internal", [wiki_slug],
             f"raw re-queued but wiki still digested — re-digest `{raw_path}`",
             _score_hit("internal", 80))
 
-    # Index drift
-    index_path = os.path.join(ROOT, "index.md")
+    # Index drift (wiki/index.md lists `[Title](slug.md)` rows)
+    index_path = os.path.join(ROOT, INDEX_REL)
     if os.path.isfile(index_path):
         with open(index_path, encoding="utf-8") as f:
             index_text = f.read()
         for slug, (rel, fm, text) in pages.items():
-            if f"[[{slug}]]" not in index_text:
+            if f"]({page_links.page_path(slug)})" not in index_text:
                 continue
-            fl = unquote(fm.get("summary")) or _first_line(text)     # index.md shows the summary when set
-            if fl and fl[:40].replace("|", "\\|") not in index_text:
+            fl = " ".join(page_links.plain(unquote(fm.get("description")) or _first_line(text)).split())     # wiki/index.md shows the summary when set
+            if fl and fl[:40] not in index_text:
                 add("cosmetic", [slug], "index summary may be stale vs page body", 15)
 
     # Route to lint err/warn

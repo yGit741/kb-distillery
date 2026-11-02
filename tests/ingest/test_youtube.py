@@ -325,7 +325,7 @@ def _digest_env(tmp_path, monkeypatch, reads):
     (folder / "video.md").write_text("# SVM\n")
     (tmp_path / "wiki").mkdir()
     page = tmp_path / "wiki" / "video-svm.md"
-    page.write_text("---\ntype: video\nlayer: source\nstatus: digested\ndepth: deep\nraw: raw/videos/svm/video.md\n---\n\n"
+    page.write_text("---\ntype: video\nlayer: source\nmaturity: digested\ndepth: deep\nraw: raw/videos/svm/video.md\n---\n\n"
                     "# SVM\n\n## Key equations\n\n## Takeaways for my thesis\n\n## My notes\n\nmine\n")
     monkeypatch.setattr(digest, "ROOT", str(tmp_path))
     monkeypatch.setattr(digest, "CACHE", str(tmp_path / "cache"))

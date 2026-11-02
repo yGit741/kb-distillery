@@ -1,11 +1,11 @@
 ---
 type: skill
 layer: concept
-status: seed
-sources: [posting-nimbus-health-applied-scientist, notes-acme-technical-interview, doc-dana-levi-cv]
-related: [interview-nimbus-hiring-manager, maya-cohen, role-applied-scientist-nimbus, interview-acme-technical]
-summary: "Behavioural interview stories: a small bank of past-project stories to prepare for the Nimbus hiring-manager conversation with Maya Cohen."
-summary_by: me
+maturity: seed
+sources: [{resource: posting-nimbus-health-applied-scientist.md}, {resource: notes-acme-technical-interview.md}, {resource: doc-dana-levi-cv.md}]
+related: [interview-nimbus-hiring-manager.md, maya-cohen.md, role-applied-scientist-nimbus.md, interview-acme-technical.md]
+description: "Behavioural interview stories: a small bank of past-project stories to prepare for the Nimbus hiring-manager conversation with Maya Cohen."
+generated: {by: human:dana-levi}
 ---
 
 # Interviewing stories (behavioural)
@@ -13,6 +13,6 @@ summary_by: me
 A reusable bank of short stories about past projects: a failure and fix, a disagreement with a domain expert, a decision under uncertainty.
 
 ## Why it matters here
-Nimbus names the manager conversation as behavioural ([[interview-nimbus-hiring-manager]], [[maya-cohen]]). Acme's shipped-model post-mortem question in [[interview-acme-technical]] used the same material.
+Nimbus names the manager conversation as behavioural ([Nimbus hiring-manager interview](interview-nimbus-hiring-manager.md), [Maya Cohen](maya-cohen.md)). Acme's shipped-model post-mortem question in [Acme technical interview](interview-acme-technical.md) used the same material.
 
-Build stories from [[doc-dana-levi-cv]]. Role: [[role-applied-scientist-nimbus]].
+Build stories from [Dana Levi CV](doc-dana-levi-cv.md). Role: [Applied Scientist, Clinical NLP (Nimbus)](role-applied-scientist-nimbus.md).

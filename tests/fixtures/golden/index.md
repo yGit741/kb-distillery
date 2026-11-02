@@ -1,5 +1,5 @@
 ---
-type: meta
+okf_version: 0.2
 ---
 
 # Wiki index
@@ -8,109 +8,73 @@ type: meta
 
 Read this first on any query.
 
-## Meta
-
-| Page | Summary |
-|------|---------|
-| [[thesis]] | Thesis topic, instructor, institution |
-| [[log]] | Activity timeline |
-| [[AGENTS]] | Schema and workflows |
-
 ## Topics
 
-| Page | Status | Summary |
-|------|--------|---------|
-| [[theme-boolean-analysis]] | seed | Fixture topic for the pipeline harness |
-| [[theme-complex-nn]] | seed | Fixture topic for the pipeline harness |
-| [[theme-fourier-analysis]] | seed | Fixture topic for the pipeline harness |
-| [[theme-implicit-regularization]] | seed | Fixture topic for the pipeline harness |
-| [[theme-info-theory]] | seed | Fixture topic for the pipeline harness |
-| [[theme-learning-theory]] | seed | Fixture topic for the pipeline harness |
-| [[theme-optimization-theory]] | seed | Fixture topic for the pipeline harness |
-| [[theme-quantum]] | seed | Fixture topic for the pipeline harness |
-| [[theme-statistics]] | seed | Fixture topic for the pipeline harness |
-| [[theme-tensor-factorization]] | seed | Fixture topic for the pipeline harness |
+- [Boolean Analysis](theme-boolean-analysis.md) (seed) — Fixture topic for the pipeline harness
+- [Complex Nn](theme-complex-nn.md) (seed) — Fixture topic for the pipeline harness
+- [Fourier Analysis](theme-fourier-analysis.md) (seed) — Fixture topic for the pipeline harness
+- [Implicit Regularization](theme-implicit-regularization.md) (seed) — Fixture topic for the pipeline harness
+- [Info Theory](theme-info-theory.md) (seed) — Fixture topic for the pipeline harness
+- [Learning Theory](theme-learning-theory.md) (seed) — Fixture topic for the pipeline harness
+- [Optimization Theory](theme-optimization-theory.md) (seed) — Fixture topic for the pipeline harness
+- [Quantum](theme-quantum.md) (seed) — Fixture topic for the pipeline harness
+- [Statistics](theme-statistics.md) (seed) — Fixture topic for the pipeline harness
+- [Tensor Factorization](theme-tensor-factorization.md) (seed) — Fixture topic for the pipeline harness
 
 ## Ideas
 
-| Page | Status | Summary |
-|------|--------|---------|
-| [[generalization]] | seed | Fixture idea |
-| [[noise-stability]] | seed | Fixture idea |
-| [[shannon-entropy]] | seed | Fixture idea |
+- [Generalization](generalization.md) (seed) — Fixture idea
+- [Noise stability](noise-stability.md) (seed) — Fixture idea
+- [Shannon entropy](shannon-entropy.md) (seed) — Fixture idea
 
 ## Open questions
 
-| Page | Status | Summary |
-|------|--------|---------|
-| [[q-does-the-fixture-tail-bound-extend-to-dependent-variables]] | open | Spawned during ingest of [[part-2019-fixture-book-ch2-concentration]] |
-| [[q-is-the-fixture-bound-tight-for-deep-models]] | open | Spawned during ingest of [[paper-2020-local-fixture-paper]] |
+- [Does the fixture tail bound extend to dependent variables?](q-does-the-fixture-tail-bound-extend-to-dependent-variables.md) (open) — Does the fixture tail bound extend to dependent variables?
+- [Is the fixture bound tight for deep models?](q-is-the-fixture-bound-tight-for-deep-models.md) (open) — Is the fixture bound tight for deep models?
 
 ## Courses
 
-| Page | Status | Summary |
-|------|--------|---------|
-| [[course-fixture-rl]] | digested | A fixture course whose members are two slide decks, catalogued with a collection and a title. It exists onl... |
+- [Fixture RL course](course-fixture-rl.md) (digested) — A fixture course whose members are two slide decks, catalogued with a collection and a title. It exists onl...
 
 ## Series
 
-| Page | Status | Summary |
-|------|--------|---------|
-| [[series-fixture-kalai-blog]] | digested | A fixture blog series standing in for a WordPress blog of clips. It exists only so the pipeline harness can... |
+- [Fixture combinatorics blog](series-fixture-kalai-blog.md) (digested) — A fixture blog series standing in for a WordPress blog of clips. It exists only so the pipeline harness can...
 
 ## Books
 
-| Page | Status | Summary |
-|------|--------|---------|
-| [[book-2019-fixture-book]] | reading | A fixture book of four chapters, used by the pipeline harness to exercise the page partition, part digests ... |
+- [Fixture Book (2019)](book-2019-fixture-book.md) (reading) — A fixture book of four chapters, used by the pipeline harness to exercise the page partition, part digests ...
 
 ## Papers
 
-| Page | Status | Summary |
-|------|--------|---------|
-| [[paper-2019-fixture-book]] | to-read |  |
-| [[paper-2020-local-fixture-paper]] | digested | Uniform convergence over a fixture class |
-| [[paper-2021-arxiv-style-fixture]] | digested | A fixture coding argument |
+- [Fixture Book](paper-2019-fixture-book.md) (to-read)
+- [Fixture local paper](paper-2020-local-fixture-paper.md) (digested) — Uniform convergence over a fixture class
+- [Fixture arXiv-style paper](paper-2021-arxiv-style-fixture.md) (digested) — A fixture coding argument
 
 ## Book parts
 
-| Page | Status | Summary |
-|------|--------|---------|
-| [[part-2019-fixture-book-ch2-concentration]] | digested | A fixture Chernoff bound |
+- [Fixture book, chapter 2: concentration](part-2019-fixture-book-ch2-concentration.md) (digested) — A fixture Chernoff bound
 
 ## Lectures
 
-| Page | Status | Summary |
-|------|--------|---------|
-| [[lecture-rl-fixture-1]] | digested | Bellman equations |
-| [[lecture-rl-fixture-2]] | digested |  |
+- [Fixture RL lecture 1](lecture-rl-fixture-1.md) (digested) — Bellman equations
+- [Rl Fixture 2](lecture-rl-fixture-2.md) (digested)
 
 ## Articles
 
-| Page | Status | Summary |
-|------|--------|---------|
-| [[article-kalai-fixture-post-one]] | digested |  |
+- [Kalai Fixture Post One](article-kalai-fixture-post-one.md) (digested)
 
 ## Blog posts
 
-| Page | Status | Summary |
-|------|--------|---------|
-| [[blog-not-exact-fixture-hebrew-post]] | digested | Rank of a fixture matrix. The rank is at most n |
+- [פוסט לדוגמה: מטריצות](blog-not-exact-fixture-hebrew-post.md) (digested) — Rank of a fixture matrix. The rank is at most n
 
 ## Videos
 
-| Page | Status | Summary |
-|------|--------|---------|
-| [[video-fixture-talk]] | digested | $H(X) = -\sum p \log p$ |
+- [Fixture talk on entropy](video-fixture-talk.md) (digested) — $H(X) = -\sum p \log p$
 
 ## AI chats
 
-| Page | Status | Summary |
-|------|--------|---------|
-| [[chat-fixture-ai-chat]] | to-read | _No visualizations in this chat._ |
+- [Fixture chat on VC dimension](chat-fixture-ai-chat.md) (to-read) — _No visualizations in this chat._
 
 ## Mail
 
-| Page | Status | Summary |
-|------|--------|---------|
-| [[mail-2024-02-01-fixture-thread-about-a-lemma]] | digested | Symmetrisation |
+- [Fixture thread about a lemma](mail-2024-02-01-fixture-thread-about-a-lemma.md) (digested) — Symmetrisation

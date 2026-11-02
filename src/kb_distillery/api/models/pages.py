@@ -6,7 +6,7 @@ class PageCard(ApiModel):
     id: str
     title: str = ""
     type: str = "unknown"
-    status: str = ""
+    maturity: str = ""
     depth: str = ""                      # listed | easy | full | deep
     areas: list[str] = []
     year: int | None = None

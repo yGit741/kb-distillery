@@ -4,12 +4,11 @@ layer: source
 source: {{source}}
 author:
 area: []
-status: digested
+maturity: digested
 depth: easy
 raw: {{raw}}
 url:
-date:
-summary:
+description:
 ---
 
 # {{title}}
@@ -28,4 +27,4 @@ summary:
 ## Connections
 
 ## Links out
-- Concepts: [[]]
+- Concepts: <!-- [Title](slug.md) -->

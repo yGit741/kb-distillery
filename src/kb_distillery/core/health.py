@@ -2,9 +2,9 @@
 import os
 import time
 from datetime import datetime, timezone
-from kb_distillery.core.links import WIKILINK_TARGET
+from kb_distillery.core import links as page_links
+from kb_distillery.core.schema import INDEX_REL
 
-LINK = WIKILINK_TARGET
 
 ORPHAN_EXCLUDE = frozenset({"AGENTS", "log", "thesis"})
 
@@ -108,7 +108,7 @@ METRICS = {
     "index_savings_pct": {
         "label": "Index savings",
         "cluster": "tokens",
-        "help": "Percent of wiki tokens you skip by reading index.md first instead of every page.",
+        "help": "Percent of wiki tokens you skip by reading wiki/index.md first instead of every page.",
         "format": "pct",
     },
     "queued_mb": {
@@ -172,7 +172,7 @@ def format_metric_value(metric_id, value):
 def compute_in_degree(pages):
     degree = {slug: 0 for slug in pages}
     for _slug, (_rel, _fm, text) in pages.items():
-        for target in LINK.findall(text):
+        for target in page_links.targets(text):
             target = target.strip()
             if target in degree:
                 degree[target] += 1
@@ -223,7 +223,7 @@ def compute_wiki_tokens(pages):
 
 
 def compute_index_tokens(root):
-    path = os.path.join(root, "index.md")
+    path = os.path.join(root, INDEX_REL)
     if not os.path.isfile(path):
         return 0
     try:

@@ -13,7 +13,7 @@ from kb_distillery import kbconfig
 
 CHECKOUT = kbconfig.checkout_root()
 DEMO = os.path.join(CHECKOUT, "examples", "demo")
-GENERATED = ("index.md", "meta/corpus.tsv", "meta/coherence-warnings.tsv")
+GENERATED = ("wiki/index.md", "meta/corpus.tsv", "meta/coherence-warnings.tsv")
 
 
 def _lint(root):
@@ -69,7 +69,7 @@ class DemoIsPublicSafe(unittest.TestCase):
                              r"[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+\.(com|org|net|io)", re.I)
         hits = []
         for rel in self.files:
-            if rel.endswith(".pdf"):
+            if rel.endswith(".pdf") or not os.path.isfile(os.path.join(CHECKOUT, rel)):      # a file deleted in the work tree holds nothing to leak
                 continue
             with open(os.path.join(CHECKOUT, rel), encoding="utf-8", errors="ignore") as f:
                 if pattern.search(f.read()):

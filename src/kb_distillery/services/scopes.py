@@ -16,6 +16,7 @@ from kb_distillery.git import commit_policy as cp
 from kb_distillery.core import scopes as sc
 from kb_distillery.lint.lint import parse_frontmatter, read_manifest, write_manifest
 from kb_distillery.ops import core
+from kb_distillery.core.schema import is_page_file
 
 DEFAULT_ROOT = vault_root()
 TEMPLATE = os.path.join("meta", "templates", "scope.md")
@@ -32,7 +33,7 @@ def load_pages(root):
     pages = dict()
     wiki = os.path.join(root, "wiki")
     for name in sorted(os.listdir(wiki)) if os.path.isdir(wiki) else []:
-        if not name.endswith(".md") or "excalidraw" in name:
+        if not is_page_file(name) or "excalidraw" in name:
             continue
         with open(os.path.join(wiki, name), encoding="utf-8") as f:
             text = f.read()
@@ -79,7 +80,7 @@ def list_scopes(root=None):
         rel, fm, text = pages[slug]
         paths = sc.rows_of(slug, manifest)
         proj = sc.projection(paths, pages, manifest, index)
-        out.append(dict(slug=slug, title=sc.title_of(text, slug), status=fm.get("status") or "active",
+        out.append(dict(slug=slug, title=sc.title_of(text, slug), maturity=fm.get("maturity") or "active",
                         files=len(paths), digested=len(proj["covered"]), uncovered=len(proj["uncovered"]),
                         coverage=proj["coverage"], updated=_mtime_iso(root, rel)))
     return dict(scopes=out)
@@ -95,7 +96,7 @@ def get_scope(slug, root=None):
     paths = sc.rows_of(slug, manifest)
     proj = sc.projection(paths, pages, manifest, index)
     return dict(slug=slug, title=sc.title_of(text, slug), why=sc.why_text(text),
-                status=fm.get("status") or "active",
+                maturity=fm.get("maturity") or "active",
                 rows=[_row_dict(p, manifest, pages, index) for p in paths], projection=_proj_public(proj))
 
 
@@ -182,6 +183,9 @@ def _step(root, slug, summary, rel, before, lint, push):
 def _apply(root, slug, title, why, paths, create, manifest, pages, template):
     """Mutate corpus cells and write the page text; returns (rel, before-snapshot)."""
     rel = f"wiki/{slug}.md"
+    from kb_distillery.core import links
+    titles = {s: links.title_of(p[2], s) for s, p in pages.items()}
+    why = links.to_disk(why, titles)               # a typed [[wikilink]] is stored as [Title](slug.md)
     before = dict((r, _read(root, r)) for r in ("meta/corpus.tsv", rel))
     sc.write_scope_rows(manifest, slug, paths)
     write_manifest(manifest, root)

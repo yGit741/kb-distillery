@@ -162,6 +162,15 @@
       frame.className = "ex-viz-frame";
       box.appendChild(frame);
     });
+    // page links: [Title](slug.md) and [label](slug.md#heading) route to the page like a wikilink did
+    root.querySelectorAll("a[href]").forEach((a) => {
+      const m = /^([^/:#?]+)\.md(?:#.*)?$/.exec(a.getAttribute("href"));
+      if (!m) return;
+      const slug = decodeURIComponent(m[1]);
+      const holder = document.createElement("template");
+      holder.innerHTML = pageLink(slug, a.textContent);
+      a.replaceWith(holder.content);
+    });
     root.querySelectorAll("a[href]").forEach((a) => {
       if (/^https?:/i.test(a.getAttribute("href"))) {
         a.target = "_blank";
@@ -239,7 +248,7 @@
     const meta = [];
     if (p.year) meta.push(p.year);
     if (p.depth) meta.push(p.depth);
-    else if (p.status) meta.push(p.status);
+    else if (p.maturity) meta.push(p.maturity);
     meta.push(`${p.in}↘ ${p.out}↗`);
     return `<a class="ex-card" data-slug="${esc(p.id)}" href="${pageHref(p.id)}">
       <span class="ex-card-head">${dot(p.type)}<span class="ex-card-title">${esc(p.title)}</span></span>
@@ -266,7 +275,7 @@
 
     const themes = by("topic").filter((p) => p.out > 0).sort((a, b) => b.out + b.in - (a.out + a.in));
     const people = by("person").sort((a, b) => b.in - a.in);
-    const questions = by("question").filter((p) => p.status !== "resolved").sort((a, b) => b.in + b.out - (a.in + a.out));
+    const questions = by("question").filter((p) => p.maturity !== "resolved").sort((a, b) => b.in + b.out - (a.in + a.out));
     const deep = all.filter((p) => (p.type === "paper" || p.type === "part") && DEPTH_RANK[p.depth] >= 2)
       .sort((a, b) => DEPTH_RANK[b.depth] - DEPTH_RANK[a.depth] || b.words - a.words);
     const recent = [...all].sort((a, b) => b.mtime - a.mtime).slice(0, 10);
@@ -395,7 +404,7 @@
     out.push(`<a class="ex-chip" href="#/browse/${esc(c.type)}">${dot(c.type)}${esc(TYPE_LABEL[c.type] || c.type)}</a>`);
     if (fm.book && c.type === "part") out.push(`<a class="ex-chip" href="${pageHref(fm.book)}" title="the book this part belongs to">${dot("book")}book · pp. ${esc(String(fm.section_pages || "").replace("-", "–"))}</a>`);
     if (c.depth) out.push(`<span class="ex-badge ex-depth-${esc(c.depth)}" title="digestion depth">${esc(c.depth)}</span>`);
-    if (c.status) out.push(`<span class="ex-badge">${esc(c.status)}</span>`);
+    if (c.maturity) out.push(`<span class="ex-badge">${esc(c.maturity)}</span>`);
     if (c.year) out.push(`<span class="ex-badge">${c.year}</span>`);
     (c.areas || []).forEach((a) => {
       const theme = `theme-${a}`;
@@ -594,7 +603,7 @@
     const box = $("ex-hover");
     box.innerHTML = `<div class="ex-hover-head">${dot(p.type)}<b>${esc(p.title)}</b></div>
       <p>${esc(p.preview || "(no summary yet)")}</p>
-      <small>${esc(TYPE_LABEL[p.type] || p.type)}${p.depth ? ` · ${esc(p.depth)}` : p.status ? ` · ${esc(p.status)}` : ""} · ${p.in}↘ ${p.out}↗ · ${p.words}w</small>`;
+      <small>${esc(TYPE_LABEL[p.type] || p.type)}${p.depth ? ` · ${esc(p.depth)}` : p.maturity ? ` · ${esc(p.maturity)}` : ""} · ${p.in}↘ ${p.out}↗ · ${p.words}w</small>`;
     box.classList.remove("hidden");
     const r = a.getBoundingClientRect();
     const w = 340;

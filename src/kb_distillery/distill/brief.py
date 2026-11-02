@@ -1,13 +1,21 @@
 """Render distilled-think wiki pages."""
 from datetime import datetime, timezone
 
-from .paths import think_cite
+import os
+
+from kb_distillery.core import frontmatter, links
+from .paths import ROOT, think_cite
+
+
+def _titles():
+    return links.read_titles(os.path.join(ROOT, "wiki"))
 
 
 def render_summary(plan, think_text, prior_summary=""):
     if prior_summary and prior_summary.strip():
         return prior_summary.strip()
 
+    titles = _titles()
     touches = plan.get("touches") or []
     themes = plan.get("themes_detected") or []
     not_promoted = plan.get("not_promoted") or []
@@ -20,7 +28,7 @@ def render_summary(plan, think_text, prior_summary=""):
             lines.append(para[:600] + ("…" if len(para) > 600 else ""))
 
     if themes:
-        theme_links = ", ".join(f"[[theme-{t}]]" for t in themes[:5])
+        theme_links = ", ".join(links.page_link(f"theme-{t}", titles) for t in themes[:5])
         lines.append(
             f"This deliberation connects to {theme_links}. "
             "Theme page threads may be updated on propagate."
@@ -28,7 +36,7 @@ def render_summary(plan, think_text, prior_summary=""):
 
     q = [t for t in touches if t.startswith("q-")][:4]
     if q:
-        lines.append("Questions in play: " + ", ".join(f"[[{x}]]" for x in q) + ".")
+        lines.append("Questions in play: " + ", ".join(links.page_link(x, titles) for x in q) + ".")
 
     if not_promoted:
         lines.append("Some notes should stay in think/ only — see Not promoting.")
@@ -42,6 +50,7 @@ def render_summary(plan, think_text, prior_summary=""):
 def render_proposals_table(proposals):
     if not proposals:
         return "_No proposals — nothing to propagate._"
+    titles = _titles()
     rows = [
         "| # | Target | Action | Rationale |",
         "|---|--------|--------|-----------|",
@@ -49,7 +58,7 @@ def render_proposals_table(proposals):
     for i, p in enumerate(proposals, 1):
         target = p.get("target", "").replace("wiki/", "").replace(".md", "")
         rows.append(
-            f"| {i} | [[{target}]] | {p.get('action', '')} | {(p.get('rationale') or '')[:80]} |"
+            f"| {i} | {links.page_link(target, titles)} | {p.get('action', '')} | {(p.get('rationale') or '')[:80]} |"
         )
     return "\n".join(rows)
 
@@ -62,8 +71,8 @@ def render_distilled_page(plan, think_rel, summary, applied=False):
     return f"""---
 type: distilled-think
 layer: concept
-status: {status}
-source: {think_cite(think_rel)}
+maturity: {status}
+{frontmatter.sources_line([think_cite(think_rel)])}
 distilled_at: {ts}
 ---
 

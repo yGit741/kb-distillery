@@ -35,7 +35,7 @@ Course/series rows use `--row N`; the page type follows the raw format — see f
 
 ## Output
 
-A Source page at `depth: deep` (deepened in place), `status: digested`, Key equations + extended
+A Source page at `depth: deep` (deepened in place), `maturity: digested`, Key equations + extended
 Connections required.
 
 ## Pitfalls
@@ -48,7 +48,7 @@ Connections required.
 
 ## Summary
 
-After finalize, refresh the page's `summary:` (schema 1.3): `python3 -m kb_distillery.summaries run --slugs <slug>` then `python3 -m kb_distillery.summaries apply --slugs <slug>` inside the open ops session — a deeper page always gets a new one; skip pages marked `summary_by: me`.
+After finalize, refresh the page's `description:` (schema 1.3): `python3 -m kb_distillery.summaries run --slugs <slug>` then `python3 -m kb_distillery.summaries apply --slugs <slug>` inside the open ops session — a deeper page always gets a new one; skip pages whose `generated.by` is a `human:<id>`.
 
 ## Commit
 

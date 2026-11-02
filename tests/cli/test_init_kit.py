@@ -132,7 +132,7 @@ def test_refresh_of_a_fresh_kb_is_already_up_to_date_and_idempotent(world, capsy
 
 def test_refresh_restores_what_drifted_says_what_changed_and_touches_no_knowledge(world, capsys, monkeypatch):
     root = init_kb.create("notes", "Notes", "research", str(world))
-    for rel, text in (("wiki/idea.md", "---\ntype: idea\n---\n# Idea\n"), ("raw/inbox/a.txt", "raw"), ("meta/log.md", "log\n")):
+    for rel, text in (("wiki/idea.md", "---\ntype: idea\n---\n# Idea\n"), ("raw/inbox/a.txt", "raw"), ("wiki/log.md", "# Log\n")):
         os.makedirs(os.path.dirname(os.path.join(root, rel)), exist_ok=True)
         open(os.path.join(root, rel), "w").write(text)
     os.makedirs(os.path.join(root, "think"), exist_ok=True)

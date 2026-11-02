@@ -1,13 +1,14 @@
 ---
 type: course
 layer: collection
+title: "Fixture RL course"
 short: rl
 institution: runi
 course_code: 00000
 semester: 2026a
 lecturer: Fixture Lecturer
 area: [learning-theory]
-status: digested
+maturity: digested
 aliases: []
 related: []
 ---
@@ -24,9 +25,9 @@ Coverage: **2 / 2 items (100%)** · skip rows excluded
 
 | # | Item | Raw | Status | Note |
 |---|------|-----|--------|------|
-| 1 | Lecture 1 | `raw/presentations/rl-fixture-lecture-1.pdf` | full | [[lecture-rl-fixture-1]] |
-| 2 | Lecture 2 | `raw/presentations/rl-fixture-lecture-2.pdf` | easy | [[lecture-rl-fixture-2]] |
+| 1 | Lecture 1 | `raw/presentations/rl-fixture-lecture-1.pdf` | full | [Fixture RL lecture 1](lecture-rl-fixture-1.md) |
+| 2 | Lecture 2 | `raw/presentations/rl-fixture-lecture-2.pdf` | easy | [Rl Fixture 2](lecture-rl-fixture-2.md) |
 
 ## Threads
 
-Links to [[theme-learning-theory]].
+Links to [Learning Theory](theme-learning-theory.md).

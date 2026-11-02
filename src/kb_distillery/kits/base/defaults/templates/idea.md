@@ -2,11 +2,11 @@
 type: idea
 layer: concept
 area: []
-status: seed
+maturity: seed
 sources: []
 related: []
 discussed_with: []
-summary:
+description:
 ---
 
 # {{title}}
@@ -20,8 +20,8 @@ summary:
 ## Why it matters (thesis angle)
 
 ## Connections
-- [[]]
-- [[]]
+- <!-- [Title](slug.md) -->
+- <!-- [Title](slug.md) -->
 
 ## Open questions
 -

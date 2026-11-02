@@ -1,13 +1,15 @@
 ---
 type: person
 layer: concept
+title: "Jane Doe"
 url: https://example.org/~jane
-summary: "Fixture person page for a made-up learning-theory researcher at Example University, who works on generalization bounds and is the author of the fixture paper used by the backend test suite."
+description: "Fixture person page for a made-up learning-theory researcher at Example University, who works on generalization bounds and is the author of the fixture paper used by the backend test suite."
+generated: {by: summarize/unknown}
 ---
 
 # Jane Doe
 
-Fixture researcher at Example University. Works on [[generalization]].
+Fixture researcher at Example University. Works on [Generalization](generalization.md).
 
 ## Why it matters here
 
@@ -26,4 +28,4 @@ Fixture author of the generalization-bounds paper.
 ## Cataloged in vault
 <!-- from: scholar -->
 
-- [[paper-2020-fixture-generalization-bounds]]
+- [Fixture generalization bounds](paper-2020-fixture-generalization-bounds.md)

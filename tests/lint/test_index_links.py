@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""index.md is generated: its Meta rows exist only for pages that exist, and lint checks its links."""
+"""wiki/index.md is generated (OKF reserved file): bulleted relative links, no Meta rows, not a page; lint checks its links."""
 import os
 import shutil
 import tempfile
@@ -24,37 +24,61 @@ class IndexLinks(unittest.TestCase):
             p.stop()
         shutil.rmtree(self.root, ignore_errors=True)
 
-    def touch(self, rel):
+    def touch(self, rel, text="x"):
         path = os.path.join(self.root, rel)
         os.makedirs(os.path.dirname(path), exist_ok=True)
-        open(path, "w").write("x")
+        open(path, "w").write(text)
 
-    def index(self):
-        lint.write_index({}, quiet=True)
-        return open(os.path.join(self.root, "index.md"), encoding="utf-8").read()
+    def pages(self):
+        return {"alpha": ("wiki/alpha.md", {"type": "idea", "maturity": "seed", "description": "About | alpha."},
+                          "# Alpha [one]\n\nBody.\n"),
+                "beta": ("wiki/beta.md", {"type": "idea", "description": "[Alpha one](alpha.md) in a summary"}, "# Beta\n")}
 
-    def test_no_meta_rows_when_no_meta_pages_exist(self):
+    def index(self, pages=None):
+        lint.write_index(pages if pages is not None else self.pages(), quiet=True)
+        return open(os.path.join(self.root, "wiki", "index.md"), encoding="utf-8").read()
+
+    def test_the_index_lives_in_the_bundle_root_and_the_root_stays_clean(self):
+        self.index()
+        self.assertTrue(os.path.isfile(os.path.join(self.root, "wiki", "index.md")))
+        self.assertFalse(os.path.exists(os.path.join(self.root, "index.md")))
+
+    def test_okf_shape_frontmatter_has_only_okf_version_and_rows_are_relative_links(self):
         text = self.index()
-        for slug in ("[[thesis]]", "[[log]]", "[[AGENTS]]", "## Meta"):
-            self.assertNotIn(slug, text)
-        self.assertEqual(lint.check_index_links({}), 0)
+        self.assertTrue(text.startswith("---\nokf_version: 0.2\n---\n"))
+        self.assertNotIn("type: meta", text)
+        self.assertIn("- [Alpha one](alpha.md) — About | alpha.", text)      # title the app shows, summary: no maturity
+        self.assertIn("- [Beta](beta.md) — Alpha one in a summary", text)           # a link inside a summary is plain text
+        self.assertNotIn("[[", text)
 
-    def test_meta_rows_only_for_pages_that_exist(self):
+    def test_there_is_no_meta_section_and_no_meta_rows(self):
         self.touch("meta/log.md")
-        text = self.index()
-        self.assertIn("[[log]]", text)
-        self.assertNotIn("[[AGENTS]]", text)
-        self.assertEqual(lint.check_index_links({}), 0)
-
-    def test_thesis_in_meta_dir_is_listed(self):
         self.touch("meta/thesis.md")
-        self.assertIn("[[thesis]]", self.index())
+        self.touch("AGENTS.md")
+        text = self.index()
+        for needle in ("## Meta", "thesis", "AGENTS", "(log.md)", "[[log]]"):
+            self.assertNotIn(needle, text)
+
+    def test_the_index_and_the_log_are_not_pages(self):
+        self.touch("wiki/alpha.md", "---\ntype: idea\n---\n# Alpha\n")
+        self.touch("wiki/index.md", "---\nokf_version: 0.2\n---\n")
+        self.touch("wiki/log.md", "# Log\n")
+        self.assertEqual(lint.wiki_page_files(), ["wiki/alpha.md"])
+
+    def test_a_generated_index_passes_its_own_link_check(self):
+        self.index()
+        self.assertEqual(lint.check_index_links(self.pages()), 0)
+        self.assertEqual(lint.errors, [])
 
     def test_a_dangling_link_in_index_is_an_error(self):
-        with open(os.path.join(self.root, "index.md"), "w") as f:
-            f.write("| [[ghost]] | x |\n")
+        self.touch("wiki/index.md", "- [Ghost](ghost.md) — x\n")
         self.assertEqual(lint.check_index_links({}), 1)
         self.assertTrue(any("ghost" in e for e in lint.errors))
+
+    def test_a_wikilink_in_index_is_an_error(self):
+        self.touch("wiki/index.md", "| [[alpha]] | x |\n")
+        self.assertEqual(lint.check_index_links(self.pages()), 1)
+        self.assertTrue(any("wikilink [[alpha]]" in e for e in lint.errors))
 
 
 if __name__ == "__main__":

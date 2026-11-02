@@ -1,13 +1,15 @@
 ---
 type: video
 layer: source
+title: "Fixture talk on entropy"
 authors: [Fixture Speaker]
 year: 2024
 area: [info-theory]
-status: digested
+maturity: digested
 depth: easy
 raw: none
 url: https://example.org/watch/fixture-talk
+sources: [{resource: https://example.org/watch/fixture-talk}]
 recommended_by: []
 discussed_with: []
 ---
@@ -32,8 +34,8 @@ $H(X) = -\sum p \log p$
 
 ## Connections
 
-- [[theme-info-theory]], [[shannon-entropy]]
+- [Topic: info theory](theme-info-theory.md), [Shannon entropy](shannon-entropy.md)
 
 ## Links out
 
-- [[shannon-entropy]]
+- [Shannon entropy](shannon-entropy.md)

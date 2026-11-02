@@ -2,9 +2,10 @@
 import os
 import re
 
+from kb_distillery.core import links
 from .paths import ROOT, think_cite, wiki_slugs
+from kb_distillery.core.schema import is_page_file
 
-LINK = re.compile(r"\[\[([^\]|#]+)")
 
 THEME_KEYWORDS = [
     (r"implicit|margin|grokking|forgetting|regularization", "implicit-regularization"),
@@ -21,7 +22,7 @@ THEME_KEYWORDS = [
 def _walk_wiki():
     base = os.path.join(ROOT, "wiki")
     for fn in os.listdir(base):
-        if fn.endswith(".md"):
+        if is_page_file(fn):
             rel = f"wiki/{fn}"
             text = open(os.path.join(ROOT, rel), encoding="utf-8").read()
             yield fn[:-3], rel, text
@@ -30,8 +31,7 @@ def _walk_wiki():
 def build_plan(think_rel, human_text):
     known = wiki_slugs()
     touches = set()
-    for target in LINK.findall(human_text):
-        target = target.strip()
+    for target in links.targets(human_text):
         if target in known:
             touches.add(target)
 

@@ -4,7 +4,7 @@ layer: source
 authors: []
 year: 2023
 area: []
-status: digested
+maturity: digested
 depth: easy
 raw: raw/printed-docs/2023-easy-skim-paper.pdf
 citekey:
@@ -29,4 +29,4 @@ discussed_with: []
 -
 
 ## Links out
-- Concepts: [[]]
+- Concepts: <!-- [Title](slug.md) -->

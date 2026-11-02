@@ -67,7 +67,7 @@ The backend emits these names directly, so there is no translation layer and no 
 
 1. One control per action, one place per setting. A PR lists the controls it removed or merged.
 2. One nav, one theme toggle, one ⌘K palette (all in AppShell). Screens add palette commands by extending the palette, not by opening their own.
-3. One `<Markdown>` renderer (Markdown + KaTeX + `[[slug]]` links) in `src/components/`; chat and pages must not each carry a copy.
+3. One `<Markdown>` renderer (Markdown + KaTeX + `[Title](slug.md)` page links) in `src/components/`; chat and pages must not each carry a copy.
 4. One data palette; no per-screen colour maps.
 5. No re-parenting or clicking hidden legacy buttons: a ported screen has one toolbar.
 
@@ -184,7 +184,7 @@ The app is served under `/app` (vite `base`, router `basepath`; `python -m kb_di
 3. Screen: replace `src/features/<id>/index.tsx` (`id` = chat, pages, graph, scopes, pipeline, ...). Default export = the screen component; add `export const ported = true;`. The registry picks the folder up by convention (`import.meta.glob`), so nav, palette and router need no edit. Put the screen's other files next to `index.tsx`.
 4. URL state: the typed search params for the id are in `src/routes/search.ts` (`SearchById`); read them with `useSearch({ strict: false }) as SearchById["<id>"]`. If you need another param, add it there in the same PR; nothing else shared changes.
 5. Cross-screen state (selected slugs, open scope draft) is `useKb()` from `src/lib/store.ts`; do not add a second store for it.
-6. Reuse the shared pieces: `<Markdown>` (`src/components/Markdown.tsx`, GFM + KaTeX + `[[slug]]` links to `/pages/<slug>`, `resolveSlug` prop), `Loading` / `Empty` / `ErrorState` / `ErrorBoundary` (`src/components/states.tsx`), `src/theme/palette.ts`, tokens. List the duplicates you removed.
+6. Reuse the shared pieces: `<Markdown>` (`src/components/Markdown.tsx`, GFM + KaTeX + `[Title](slug.md)` page links (and the `[[slug]]` wikilinks of My notes) to `/pages/<slug>`, `resolveSlug` prop), `Loading` / `Empty` / `ErrorState` / `ErrorBoundary` (`src/components/states.tsx`), `src/theme/palette.ts`, tokens. List the duplicates you removed.
 7. Tests next to the screen: render with `mockDataSource({...})` from `src/test/datasource.ts` (loading, error, empty, data) plus unit tests for pure logic.
 8. `pixi run web-check` (never commit `src/kb_distillery/_webapp` — it is gitignored build output; restarting `kb_distillery.api` rebuilds it), then check `/app/<path>` in a browser (hard reload, light and dark, 390px without horizontal scroll, no console errors) against `python -m kb_distillery.api --port <spare>`.
 9. Delete the legacy page and its static files in the same PR.

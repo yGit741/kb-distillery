@@ -1,7 +1,7 @@
 ---
 type: scope
 layer: collection
-status: active
+maturity: active
 related: []
 aliases: []
 ---
@@ -10,7 +10,7 @@ aliases: []
 
 ## Why
 
-<!-- At least one paragraph: why this working set exists. Must link a [[theme-…]] or [[q-…]] page. -->
+<!-- At least one paragraph: why this working set exists. Must link a theme- or q- page. -->
 
 ## Members
 

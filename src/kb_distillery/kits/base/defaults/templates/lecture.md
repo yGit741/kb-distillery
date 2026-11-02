@@ -3,16 +3,15 @@ type: lecture
 layer: source
 course: {{course}}
 area: []
-status: digested
+maturity: digested
 depth: full
 raw: [{{raw}}]
-date:
-summary:
+description:
 ---
 
 # {{title}}
 
-> Lecture of [[{{course}}]]
+> Lecture of <!-- [Course title](course-slug.md) -->
 
 **Topic:**
 
@@ -27,4 +26,4 @@ summary:
 ## Connections
 
 ## Links out
-- Concepts: [[]]
+- Concepts: <!-- [Title](slug.md) -->

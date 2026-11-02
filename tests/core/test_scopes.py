@@ -42,14 +42,14 @@ ALL = sorted([A, B, C, D, IMG])
 def page(typ, status, body="", **fm):
     from kb_distillery.core import schema
     typ = {"concept": "idea", "theme": "topic"}.get(typ, typ)
-    lines = ["---", f"type: {typ}", f"layer: {schema.LAYER_OF[typ]}", f"status: {status}"]
+    lines = ["---", f"type: {typ}", f"layer: {schema.LAYER_OF[typ]}", f"maturity: {status}"]
     for k, v in fm.items():
         lines.append(f"{k}: {v}")
     return "\n".join(lines + ["---", "", body]) + "\n"
 
 
 def unit(slug, raw, links, digestion="full", status="digested"):
-    body = f"# {slug}\n\nSee " + " ".join(f"[[{l}]]" for l in links)
+    body = f"# {slug}\n\nSee " + " ".join(f"[{l}]({l}.md)" for l in links)
     fm = dict(year=2023, area="[learning-theory]", raw=raw)
     fm["depth"] = digestion
     return page("paper", status, body, **fm)
@@ -166,8 +166,8 @@ def paper_page(slug, raw):
     return page("paper", "digested", body, **fm)
 
 
-SCOPE_PAGE = ("---\ntype: scope\nlayer: collection\nstatus: active\nrelated: []\naliases: []\n---\n\n# S\n\n## Why\n\n"
-              "Because [[q-y]] matters.\n\n## Members\n\n<!-- generated: scopes -->\n")
+SCOPE_PAGE = ("---\ntype: scope\nlayer: collection\nmaturity: active\nrelated: []\naliases: []\n---\n\n# S\n\n## Why\n\n"
+              "Because [q-y](q-y.md) matters.\n\n## Members\n\n<!-- generated: scopes -->\n")
 
 
 class LintVaultTests(unittest.TestCase):
@@ -221,8 +221,8 @@ class LintVaultTests(unittest.TestCase):
         self.assertEqual(snap["values"]["scope_uncovered"], 1)
         first = self.text()
         self.assertIn("**Coverage:** 1/2 files digested (50%) · 1 undigested", first)
-        self.assertIn("[[paper-a]]", first)
-        self.assertIn("Because [[q-y]] matters.", first)
+        self.assertIn("[paper-a](paper-a.md)", first)
+        self.assertIn("Because [q-y](q-y.md) matters.", first)
         self.run_lint()
         self.assertEqual(self.text(), first)
         with open(os.path.join(self.root, "meta", "corpus.tsv"), encoding="utf-8") as f:
@@ -235,7 +235,7 @@ class LintVaultTests(unittest.TestCase):
         self.assertTrue(any("scope-ghost" in e and "not a scope page" in e for e in lint.errors), lint.errors)
 
     def test_empty_why_is_an_error_and_no_rows_a_warning(self):
-        self.put("wiki/scope-s.md", SCOPE_PAGE.replace("Because [[q-y]] matters.", "<!-- todo -->"))
+        self.put("wiki/scope-s.md", SCOPE_PAGE.replace("Because [q-y](q-y.md) matters.", "<!-- todo -->"))
         self.cells.clear()
         self.write_corpus()
         self.run_lint()
@@ -309,9 +309,9 @@ class ApiTests(unittest.TestCase):
         self.addCleanup(_lint.stop)
         files = dict()
         files["meta/stub.py"] = "x = 1\n"
-        files["meta/log.md"] = "# log\n"
+        files["wiki/log.md"] = "# log\n"
         files[".gitignore"] = "meta/.ops/\n"
-        files["index.md"] = "v1\n"
+        files["wiki/index.md"] = "v1\n"
         files["meta/templates/scope.md"] = Path(meta_file("templates", "scope.md")).read_text()
         for slug, text in TEXTS.items():
             files[f"wiki/{slug}.md"] = text
@@ -349,10 +349,10 @@ class ApiTests(unittest.TestCase):
         self.assertRegex(res["version"], rf"^kb-{schema.SCHEMA_VERSION[0]}\.{schema.SCHEMA_VERSION[1]}\.\d+$")
         self.assertEqual(self.commits(), n + 1)
         self.assertTrue(git(self.root, "log", "-1", "--format=%s").startswith("kb(refine): "))
-        self.assertEqual(self.files_of_head(), ["meta/corpus.tsv", "meta/log.md", "wiki/scope-alpha.md"])
+        self.assertEqual(self.files_of_head(), ["meta/corpus.tsv", "wiki/log.md", "wiki/scope-alpha.md"])
         text = Path(self.root, "wiki", "scope-alpha.md").read_text()
         self.assertIn("# Alpha set", text)
-        self.assertIn("Because [[q-y]] needs it.", text)
+        self.assertIn("Because [q-y](q-y.md) needs it.", text)       # a typed wikilink is stored as a page link
         self.assertIn("**Coverage:** 1/2 files digested (50%) · 1 undigested", text)
         got = self.sd.get_scope("scope-alpha", root=self.root)
         self.assertEqual([r["path"] for r in got["rows"]], [A, C])
@@ -363,18 +363,18 @@ class ApiTests(unittest.TestCase):
 
         self.save(paths=[B], create=False, why="Now about [[theme-learning-theory]].", title="")
         self.assertEqual(self.commits(), n + 2)
-        self.assertEqual(self.files_of_head(), ["meta/corpus.tsv", "meta/log.md", "wiki/scope-alpha.md"])
+        self.assertEqual(self.files_of_head(), ["meta/corpus.tsv", "wiki/log.md", "wiki/scope-alpha.md"])
         self.assertEqual(sc.rows_of("scope-alpha", lint.read_manifest(self.root)), [B])
         self.assertIn("# Alpha set", Path(self.root, "wiki", "scope-alpha.md").read_text())
 
         self.sd.duplicate_scope(dict(slug="scope-alpha", new_slug="beta"), root=self.root, lint=False, push=False)
         self.assertEqual(self.commits(), n + 3)
-        self.assertEqual(self.files_of_head(), ["meta/corpus.tsv", "meta/log.md", "wiki/scope-beta.md"])
+        self.assertEqual(self.files_of_head(), ["meta/corpus.tsv", "wiki/log.md", "wiki/scope-beta.md"])
         self.assertEqual(sc.rows_of("scope-beta", lint.read_manifest(self.root)), [B])
 
         self.sd.delete_scope(dict(slug="scope-alpha"), root=self.root, lint=False, push=False)
         self.assertEqual(self.commits(), n + 4)
-        self.assertEqual(self.files_of_head(), ["meta/corpus.tsv", "meta/log.md", "wiki/scope-alpha.md"])
+        self.assertEqual(self.files_of_head(), ["meta/corpus.tsv", "wiki/log.md", "wiki/scope-alpha.md"])
         self.assertFalse(Path(self.root, "wiki", "scope-alpha.md").exists())
         self.assertEqual(sc.all_scopes(lint.read_manifest(self.root)), ["scope-beta"])
         self.assertEqual(git(self.root, "status", "--porcelain"), "")
@@ -455,6 +455,19 @@ class ShareProfileTests(unittest.TestCase):
         self.assertEqual(out["pages"]["paper-a"]["markdown"], "cites B and Bee paper, uses [[idea-x]]")
         self.assertEqual(out["pages"]["paper-a"]["frontmatter"]["related"], ["idea-x"])
         self.assertNotIn("paper-b", json.dumps(out))
+
+    def test_scoped_public_build_unlinks_dropped_page_links_too(self):
+        from kb_distillery.share import build as sb
+        nodes = [dict(id="paper-a", type="paper", title="A", properties=dict()),
+                 dict(id="paper-b", type="paper", title="Bee paper", properties=dict())]
+        data = dict(graph=dict(nodes=nodes, links=[dict(source="paper-a", target="paper-b")], facets=dict()),
+                    index=dict(pages=[dict(id=n["id"], type=n["type"]) for n in nodes], links=[["paper-a", "paper-b"]], wanted=[]),
+                    pages={n["id"]: dict(card=dict(type=n["type"], title=n["title"]), frontmatter=dict(),
+                                         markdown="", backlinks=[], outbound=[], suggested=[]) for n in nodes})
+        data["pages"]["paper-a"].update(markdown="cites [Bee \\[2\\]](paper-b.md), [again](paper-b.md#x) and [A](paper-a.md)",
+                                        outbound=["paper-b"])
+        out = sb.apply_profile(data, "public", {"paper-a"})
+        self.assertEqual(out["pages"]["paper-a"]["markdown"], "cites Bee [2], again and [A](paper-a.md)")
 
 
 if __name__ == "__main__":

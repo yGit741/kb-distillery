@@ -28,7 +28,7 @@ share/                  Cloudflare Worker (auth.js, admin.js, wrangler template)
 scripts/                githooks/, hooks/, qmd/, launch.sh
 docs/                   ROADMAP.md: the migration to the open-source kb-distillery, phase by phase
 ~/knowledge/<id>/       one knowledge base each (its own git repo, outside this checkout); only examples/demo is tracked here; kbs/* stays gitignored as a guard
-meta/                   VAULT METADATA ONLY: corpus.tsv, log.md, aliases.tsv, coherence-warnings.tsv, raw-renames.tsv,
+meta/                   VAULT METADATA ONLY: corpus.tsv, aliases.tsv, coherence-warnings.tsv, raw-renames.tsv,
                         chats/, templates/, migration/, migrations/applied.tsv, ops/sync.toml, thesis.md,
                         docs/ (the routed agent docs)
 ```
@@ -94,7 +94,7 @@ selectable on every run; a feature that calls an LLM says in its plan which back
 **Environment:** one-time `curl -fsSL https://pixi.sh/install.sh | bash`, then restart the shell, then `pixi install` (again after any `pixi.toml` change — the Chat tab's agent backend needs the `claude-agent-sdk` PyPI package; behind a TLS-inspecting proxy run it with `SSL_CERT_FILE` pointing at a PEM of the keychain roots). All tasks below work via `pixi run <task>`.
 
 ```
-pixi run lint                      check + reconcile + regenerate index.md
+pixi run lint                      check + reconcile + regenerate wiki/index.md
 pixi run health                    terminal health summary
 pixi run dashboard                 localhost health UI + graph explorer (http://127.0.0.1:8765, /graph, /digestion, /ops, /chat — a read-only research agent over the Claude Agent SDK, with the direct Messages call as fallback; pays with a stored API key (`~/.config/kb-distillery/keys/<name>`, switchable in the Session card) or, agent backend only, the `claude login` subscription)
 pixi run launch                    restart dashboard from current code (detached) + open browser; also (re)starts the qmd search service when installed
@@ -140,7 +140,7 @@ Without pixi, use `python3` equivalents (`python3 -m kb_distillery.lint.lint`, `
 ## Search service (qmd)
 
 `scripts/qmd/server.mjs` is a long-running local Node service over [qmd](https://github.com/tobi/qmd): BM25 +
-vector search (Qwen3-Embedding, multilingual) over one card per page — its title and `summary:` line,
+vector search (Qwen3-Embedding, multilingual) over one card per page — its title and `description:` line,
 written to `.cache/qmd-cards/` by `kb_distillery.search.cards` (lint calls it in the main checkout; worktrees, CI and
 share builds never touch the cards). The API's `/api/search` keeps its keyword hits and, with the runtime
 flag `semantic-search` on, adds a `related` group from the service (`kb_distillery.search.qmd_client`, ≤ 1.5 s, at

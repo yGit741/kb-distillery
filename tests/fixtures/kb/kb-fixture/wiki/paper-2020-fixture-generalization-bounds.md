@@ -1,14 +1,16 @@
 ---
 type: paper
 layer: source
+title: "Fixture generalization bounds"
 authors: [Jane Doe]
 year: 2020
 area: [learning-theory]
-status: digested
+maturity: digested
 depth: easy
 raw: none
 citekey:
 url: https://example.org/papers/fixture-generalization-bounds
+sources: [{resource: https://example.org/papers/fixture-generalization-bounds}]
 recommended_by: [jane-doe]
 discussed_with: []
 aliases: [2020-fixture-generalization-bounds]
@@ -34,8 +36,8 @@ $R(h) \le \hat R(h) + \sqrt{C/n}$
 
 ## Takeaways for my thesis
 
-- Baseline for [[generalization]].
+- Baseline for [Generalization](generalization.md).
 
 ## Links out
-- Concepts: [[generalization]], [[pac-learning]]
-- Person: [[jane-doe]]
+- Concepts: [Generalization](generalization.md), [PAC learning](pac-learning.md)
+- Person: [Jane Doe](jane-doe.md)

@@ -1,7 +1,8 @@
 ---
 type: topic
 layer: concept
-status: seed
+title: "Topic: fourier analysis"
+maturity: seed
 aliases: []
 related: []
 ---

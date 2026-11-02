@@ -1,14 +1,18 @@
 """Deepen a page in place without losing what it already says about itself.
 
 `draft` renders a paper-shaped page; for a source that already has a page (an easy blog post, say) the new
-body replaces the old one but the frontmatter is merged: every field the page has stays, `depth` and `status`
-come from the new draft, an empty field takes the draft's value, `related` is the union, and fields only the draft has are
+body replaces the old one but the frontmatter is merged: every field the page has stays, `depth`, `maturity` and `title`
+come from the new draft (OKF `status: draft` and `title` too, or their absence: a title the draft omits is its H1), an empty field takes the draft's value, `related` is the union, and fields only the draft has are
 added when they are not empty."""
 import re
 
+from kb_distillery.core import frontmatter
+
 _KEY = re.compile(r"^([A-Za-z_][\w-]*):[ \t]*(.*)$")
 EMPTY = {"", "[]", '""', "''", "null", "~"}
-OVERWRITE = ("depth", "status")
+OVERWRITE = ("depth", "maturity", "title")         # the draft is the new body: its H1, depth and maturity win
+FOLLOW = ("status", "title")                        # follow the draft: OKF `status: draft` and a `title` (it is written only
+#                                                     when it differs from the H1) are dropped when the draft has none
 KEEP = ("type", "layer", "raw", "related")             # never replaced by the draft (related is merged)
 HUB_KEYS = ("series", "course")       # a page that names its blog/source does not also take a hub key
 
@@ -61,6 +65,8 @@ def merge_frontmatter(existing_text, new_text):
     merged = []
     for key, lines in ex:
         new = nw.get(key)
+        if key in FOLLOW and new is None:
+            continue
         if new is not None and key in OVERWRITE:
             lines = new
         elif new is not None and key not in KEEP and _empty(lines) and not _empty(new):
@@ -69,7 +75,7 @@ def merge_frontmatter(existing_text, new_text):
             old_items, new_items = _items(_value(lines)), _items(_value(new))
             if old_items is not None and new_items:
                 union = list(dict.fromkeys([*old_items, *new_items]))
-                lines = [f"related: [{', '.join(union)}]"]
+                lines = [frontmatter.related_line(union)]
         merged.append((key, lines))
     for key, lines in parse(nw_fm):
         if key in have or _empty(lines):

@@ -30,7 +30,7 @@ def git_state(root):
 
 def _types():
     return [{"id": t, "label": schema.TYPE_LABEL[t], "layer": schema.LAYER_OF[t], "prefix": schema.SLUG_PREFIX.get(t, ""),
-             "color": schema.TYPE_COLOR[t], "statuses": sorted(schema.TYPE_STATUS[t])} for t in schema.TYPE_ORDER]
+             "color": schema.TYPE_COLOR[t], "maturities": sorted(schema.TYPE_STATUS[t])} for t in schema.TYPE_ORDER]
 
 
 def _meta_overrides(root):

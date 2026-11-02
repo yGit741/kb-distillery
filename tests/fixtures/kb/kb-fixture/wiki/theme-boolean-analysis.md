@@ -1,7 +1,8 @@
 ---
 type: topic
 layer: concept
-status: seed
+title: "Topic: boolean analysis"
+maturity: seed
 aliases: []
 related: []
 ---

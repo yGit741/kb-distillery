@@ -69,7 +69,7 @@ export function FactBadges({ card }: { card: PageCard }) {
           {card.depth}
         </Badge>
       )}
-      {card.status && <Badge variant="outline">{card.status}</Badge>}
+      {card.maturity && <Badge variant="outline">{card.maturity}</Badge>}
       {card.year ? <Badge variant="outline">{card.year}</Badge> : null}
     </div>
   );
@@ -86,7 +86,7 @@ export function Section({ title, hint, children }: { title: ReactNode; hint?: st
 }
 
 export function PageCardTile({ g, card }: { g: LinkGraph; card: PageCard }) {
-  const meta = [card.year, card.depth || card.status, `${g.inn.get(card.id)?.size ?? 0}↘ ${g.out.get(card.id)?.size ?? 0}↗`]
+  const meta = [card.year, card.depth || card.maturity, `${g.inn.get(card.id)?.size ?? 0}↘ ${g.out.get(card.id)?.size ?? 0}↗`]
     .filter(Boolean)
     .join(" · ");
   const search = usePageSearch();

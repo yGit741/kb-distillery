@@ -8,6 +8,7 @@ import sys
 from kb_distillery.core.schema import DISTILL_DIR, DISTILLED_THINK_PREFIX, THINK_DIR, WIKI_DIR
 
 from kb_distillery.paths import think_path, vault_root
+from kb_distillery.core.schema import is_page_file
 ROOT = vault_root()
 DISTILL_ROOT = os.path.join(ROOT, DISTILL_DIR)
 
@@ -88,6 +89,6 @@ def wiki_slugs():
     base = os.path.join(ROOT, WIKI_DIR)
     if os.path.isdir(base):
         for fn in os.listdir(base):
-            if fn.endswith(".md") and "excalidraw" not in fn:
+            if is_page_file(fn) and "excalidraw" not in fn:
                 slugs.add(fn[:-3])
     return slugs

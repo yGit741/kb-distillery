@@ -5,7 +5,7 @@ book: book-2020-tiny-book
 authors: [B. Writer]
 year: 2020
 area: [learning-theory]
-status: digested
+maturity: digested
 depth: full
 raw: raw/printed-docs/2020-tiny-book.pdf
 section: Pages 1–10
@@ -18,7 +18,7 @@ discussed_with: []
 
 # Tiny Book
 
-> Part of [[book-2020-tiny-book]] · pp. 1–10 · Pages 1–10
+> Part of [book-2020-tiny-book](book-2020-tiny-book.md) · pp. 1–10 · Pages 1–10
 
 **Problem:** What is the rank of a tensor?
 
@@ -41,8 +41,8 @@ $\operatorname{rank}(T) \ge \operatorname{rank}(T_{(1)})$
 ## Takeaways for my thesis
 
 - Tensor rank can exceed every flattening rank.
-- Concepts: [[tensor-rank]], [[theme-learning-theory]]
+- Concepts: [Tensor rank](tensor-rank.md), [Learning theory](theme-learning-theory.md)
 
 ## Links out
 
-- Concepts: [[tensor-rank]], [[theme-learning-theory]]
+- Concepts: [Tensor rank](tensor-rank.md), [Learning theory](theme-learning-theory.md)

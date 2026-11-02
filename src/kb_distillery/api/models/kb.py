@@ -16,7 +16,7 @@ class KbType(ApiModel):
     layer: Literal["source", "collection", "concept"]
     prefix: str
     color: str
-    statuses: list[str]
+    maturities: list[str]
 
 
 class KbDigestPart(ApiModel):

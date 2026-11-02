@@ -41,7 +41,8 @@ class TestPrompts(unittest.TestCase):
     def test_system_keeps_fixed_suffix(self):
         system = chat_data.build_system("Custom instructions only.")
         self.assertTrue(system.startswith("Custom instructions only."))
-        self.assertIn("[[slug]]", system)
+        self.assertIn("[Title](slug.md)", system)
+        self.assertNotIn("[[", system)
         self.assertIn(chat_data.FIXED_SUFFIX, chat_data.build_system(""))
 
 

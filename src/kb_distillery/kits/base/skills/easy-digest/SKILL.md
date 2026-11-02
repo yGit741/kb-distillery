@@ -43,7 +43,7 @@ run in a clone without the raw binaries: their manifest rows are kept as they ar
 Writes `meta/.ingest/easy/<sha>/abstract.text` for agent summary. A video bundle (`raw/videos/<name>/video.md`,
 from `scrap-youtube`) is skimmed from its metadata, description, chapters and the start and end of the transcript (no frames —
 reading frames is `video-digest --tier full|deep`, see `.claude/skills/scrap-data/youtube/SKILL.md`); the new `video-<name>` page gets its title, url and channel from the bundle. Deepens the Source page in place
-(a `depth: listed` catalog stub becomes `depth: easy`, `status: digested` — lint requires `digested`
+(a `depth: listed` catalog stub becomes `depth: easy`, `maturity: digested` — lint requires `digested`
 for any easy/full/deep depth). If the raw file is a course/series member, its `## Contents` row is
 ticked `easy`.
 
@@ -68,7 +68,7 @@ A `fix` verdict means the page is corrected (in an ops session, see `wiki-edit`)
 2. Read `abstract.text` (~2–4k tokens max)
 3. Update wiki: **Problem**, **Main result** from abstract only
    (a `q-` page you touch: keep its H1 a short name ≤ 80 chars and fill `## Question` with the formal statement)
-4. Then refresh the page's `summary:` (schema 1.3): `python3 -m kb_distillery.summaries run --slugs <slug>` then `python3 -m kb_distillery.summaries apply --slugs <slug>` inside the open ops session — a deeper page always gets a new one; skip pages marked `summary_by: me`
+4. Then refresh the page's `description:` (schema 1.3): `python3 -m kb_distillery.summaries run --slugs <slug>` then `python3 -m kb_distillery.summaries apply --slugs <slug>` inside the open ops session — a deeper page always gets a new one; skip pages whose `generated.by` is a `human:<id>`
 5. Run `distill lint`
 6. For a batch: `easy-spotcheck pick` over the new slugs; have Sonnet re-read the picked ones and
    `easy-spotcheck log` each verdict

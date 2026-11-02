@@ -22,6 +22,7 @@ HERE = os.path.join(vault_root(), "meta")
 
 from kb_distillery.lint import lint
 from kb_distillery.search import query
+from kb_distillery.core import links
 from kb_distillery.core.graph import extract_section, tokenize, claim_text
 
 ROOT = lint.ROOT
@@ -42,6 +43,11 @@ def _manifest():
 
 def _index():
     return query.parse_index()
+
+
+def _maturity(slug):
+    from kb_distillery.core import frontmatter
+    return str((frontmatter.parse(_wiki_text(slug) or "")[0] or {}).get("maturity") or "")
 
 
 def _wiki_text(slug):
@@ -108,10 +114,10 @@ def _header(path, row):
              f"disposition: {_disp(row)}", f"collection: {row.get('collection', '') or '-'}"]
     slug = row.get("slug", "")
     if slug:
-        st = (_index().get(slug) or {}).get("status", "")
-        lines.append(f"page: [[{slug}]] {st}".rstrip())
+        st = (_index().get(slug) or {}).get("status") or _maturity(slug)    # index rows carry no maturity
+        lines.append(f"page: {links.link(slug)} {st}".rstrip())
     for hub, title in _hub_rows(path):
-        lines.append(f"hub row: [[{hub}]] · {title}")
+        lines.append(f"hub row: {links.link(hub)} · {title}")
     return "\n".join(lines)
 
 

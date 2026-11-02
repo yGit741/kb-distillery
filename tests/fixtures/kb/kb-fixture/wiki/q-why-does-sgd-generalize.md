@@ -1,8 +1,9 @@
 ---
 type: question
 layer: concept
+title: "Why does SGD generalize?"
 area: [learning-theory]
-status: open
+maturity: open
 priority: med
 discussed_with: []
 ---
@@ -11,7 +12,7 @@ discussed_with: []
 
 ## Question
 
-Why do over-parameterized networks trained by SGD generalize? See [[generalization]] and [[pac-learning]].
+Why do over-parameterized networks trained by SGD generalize? See [Generalization](generalization.md) and [PAC learning](pac-learning.md).
 
 ## Why I care
 
@@ -19,7 +20,7 @@ Fixture question.
 
 ## What I know so far
 
-- See [[paper-2020-fixture-generalization-bounds]].
+- See [Fixture generalization bounds](paper-2020-fixture-generalization-bounds.md).
 
 ## Hypotheses
 
@@ -27,4 +28,4 @@ Fixture question.
 
 ## Papers / concepts to read
 
-- [[paper-2020-fixture-generalization-bounds]]
+- [Fixture generalization bounds](paper-2020-fixture-generalization-bounds.md)

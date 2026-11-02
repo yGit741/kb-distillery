@@ -30,12 +30,12 @@ import subprocess
 import sys
 
 from kb_distillery.paths import vault_root
-from kb_distillery.core.links import WIKILINK_TARGET
+from kb_distillery.core import links
+from kb_distillery.core.schema import is_page_file
 META_DIR = os.path.join(vault_root(), "meta")
 REPO = vault_root()
 
 FORMAT = "kb-invariants/1"
-_LINK = WIKILINK_TARGET
 _DAYS = re.compile(r"\b\d+ days\b")
 _LINE = re.compile(r"^(?P<key>[A-Za-z_][\w-]*):(?P<sp>\s*)(?P<val>[^\s#][^#]*?)?(?P<rest>\s*(#.*)?)$")
 
@@ -72,7 +72,7 @@ def read_pages(root):
     pages = {}
     wiki = os.path.join(root, "wiki")
     for fn in sorted(os.listdir(wiki)) if os.path.isdir(wiki) else []:
-        if not fn.endswith(".md") or fn.startswith("."):
+        if not is_page_file(fn) or fn.startswith("."):
             continue
         with open(os.path.join(wiki, fn), "rb") as f:
             data = f.read()
@@ -94,13 +94,14 @@ def page_counts(pages):
         depth = fm_value(lines, "depth") or fm_value(lines, "digestion-status")
         if depth:
             c["depth"][f"{t}:{depth}"] += 1
-        c["status"][f"{t}:{fm_value(lines, 'status') or '-'}"] += 1
+        # a snapshot reads both sides of a migration: `maturity` (schema 1.5) or the `status` it replaced
+        c["status"][f"{t}:{fm_value(lines, 'maturity') or fm_value(lines, 'status') or '-'}"] += 1
     return {k: dict(sorted(v.items())) for k, v in c.items()}
 
 
 def _related(lines):
     v = fm_value(lines or [], "related") or ""
-    return [x.strip() for x in v.strip("[]").split(",") if x.strip()]
+    return [links.page_slug(x) or x.strip() for x in v.strip("[]").split(",") if x.strip()]
 
 
 def link_counts(pages):
@@ -112,7 +113,7 @@ def link_counts(pages):
     inbound = collections.Counter()
     total = dangling = 0
     for slug, p in pages.items():
-        targets = {m.strip() for m in _LINK.findall(p["_text"])} | set(_related(p["fm"]))
+        targets = set(links.targets(p["_text"])) | set(_related(p["fm"]))
         total += len(targets)
         for t in targets:
             if t in known:

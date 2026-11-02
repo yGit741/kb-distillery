@@ -6,7 +6,7 @@ from kb_distillery.core import hubs
 
 HUB = """---
 type: course
-status: reading
+maturity: reading
 institution: openu
 course_code: "20229"
 ---
@@ -77,6 +77,28 @@ class ContentsTest(unittest.TestCase):
         text = hubs.replace_contents(HUB, self.rows)
         self.assertEqual(hubs.parse_contents(text), self.rows)
         self.assertIn("## Threads", text)
+
+    def test_note_is_a_page_link_and_keeps_its_text(self):
+        rows = [dict(self.rows[0]), dict(self.rows[1], status="full", slug="book-la", link_text="The course book")]
+        text = hubs.replace_contents(HUB, rows)
+        self.assertIn("[lecture-la-01-spaces](lecture-la-01-spaces.md) |", text)       # no text given: the slug
+        self.assertIn("[The course book](book-la.md) |", text)
+        back = hubs.parse_contents(text)
+        self.assertEqual([r["slug"] for r in back], ["lecture-la-01-spaces", "book-la"])
+        self.assertEqual(back[1]["link_text"], "The course book")
+        self.assertNotIn("link_text", back[0])
+        self.assertEqual(hubs.parse_contents(hubs.replace_contents(HUB, back)), back)   # stable
+
+    def test_old_wikilink_note_still_reads(self):
+        text = HUB.replace("## Contents\n", "## Contents\n\n| # | Item | Raw | Status | Note |\n|---|---|---|---|---|\n"
+                           "| 1 | A | `raw/x.pdf` | full | [[lecture-a\\|Lecture A]] |\n", 1)
+        row = hubs.parse_contents(text)[0]
+        self.assertEqual((row["slug"], row.get("link_text")), ("lecture-a", "Lecture A"))
+
+    def test_tick_records_the_link_text(self):
+        rows = hubs.tick(self.rows, 1, "easy", "book-la", "Course book")
+        self.assertEqual(rows[1]["link_text"], "Course book")
+        self.assertIn("[Course book](book-la.md)", hubs.render(rows))
 
     def test_add_row_and_tick(self):
         rows = hubs.add_row(self.rows, "Lecture 2", ["raw/presentations/la-02.pdf"])

@@ -7,11 +7,13 @@ import os
 import sys
 from datetime import datetime, timezone
 
+from kb_distillery.core import links
 from kb_distillery.core.graph import claim_text, extract_section, one_hop, outbound_links, score_pair
-from kb_distillery.lint.lint import LINK, parse_frontmatter
+from kb_distillery.lint.lint import parse_frontmatter
 from kb_distillery.core.schema import SOURCE_TYPES
 
 from kb_distillery.paths import vault_root
+from kb_distillery.core.schema import is_page_file
 ROOT = vault_root()
 SEMFIND_DIR = os.path.join(ROOT, "meta", ".semfind")
 WIKI_DIR = "wiki"
@@ -42,7 +44,7 @@ def load_pages(root=None):
     root = root or ROOT
     pages = {}
     for rel in walk(WIKI_DIR, ".md", root):
-        if "excalidraw" in rel:
+        if "excalidraw" in rel or not is_page_file(os.path.basename(rel)):
             continue
         text = open(os.path.join(root, rel), encoding="utf-8").read()
         slug = os.path.basename(rel)[:-3]
@@ -56,12 +58,18 @@ def _session_id(source):
     return hashlib.sha1(source.encode()).hexdigest()[:12]
 
 
+def _ref(slug, pages):
+    """`[Title](slug.md)`: how the bundle names a page (the form the page itself would link it with)."""
+    entry = pages.get(slug)
+    return links.page_link(slug, {slug: links.title_of(entry[2], slug)} if entry else None)
+
+
 def _snippets(slug, pages):
     if slug not in pages:
         return ""
     _rel, fm, text = pages[slug]
     t = fm.get("type", "")
-    lines = [f"### [[{slug}]] ({t}, {fm.get('status', '')})"]
+    lines = [f"### {_ref(slug, pages)} ({t}, {fm.get('maturity', '')})"]
     if t in SOURCE_TYPES:
         for h in ("Problem", "Main result", "Takeaways for my thesis", "Connections", "Links out"):
             block = extract_section(text, h)
@@ -147,14 +155,14 @@ def build_bundle(seeds, source, max_pairs=6, session_id=None):
     lines = [
         f"# Semfind bundle — {source}",
         "",
-        f"Seeds: {', '.join(f'[[{s}]]' for s in seed_slugs)}",
+        f"Seeds: {', '.join(_ref(s, pages) for s in seed_slugs)}",
         "",
         "## Pairs to review",
         "",
     ]
     for a, b, sc in pairs:
         ka = classify_pair_kind(a, b, pages)
-        lines.append(f"### [[{a}]] vs [[{b}]] (score={sc}, kind={ka})")
+        lines.append(f"### {_ref(a, pages)} vs {_ref(b, pages)} (score={sc}, kind={ka})")
         lines.append("")
         lines.append(_snippets(a, pages))
         lines.append("")
@@ -163,7 +171,7 @@ def build_bundle(seeds, source, max_pairs=6, session_id=None):
         if ka == "external":
             lines.append(
                 f"> **external:** note on each paper's ## Connections / ## Links out — "
-                f"`Disagrees with [[{b}]] on …`"
+                f"`Disagrees with {_ref(b, pages)} on …`"
             )
         else:
             lines.append("> **internal:** fix ingestion — re-digest or edit wiki.")
@@ -188,7 +196,7 @@ def bundle_from_ingest(sha):
         session = json.load(f)
     seeds = []
     for rel in session.get("new_files", []) + session.get("modified_files", []):
-        if rel.startswith("wiki/") and rel.endswith(".md"):
+        if rel.startswith("wiki/") and is_page_file(os.path.basename(rel)):
             seeds.append(rel)
     if os.path.isfile(plan_path):
         with open(plan_path, encoding="utf-8") as f:

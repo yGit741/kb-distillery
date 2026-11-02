@@ -1,7 +1,7 @@
 ---
 type: blog-post
 layer: source
-status: digested
+maturity: digested
 depth: easy
 title: "פוסט לדוגמה: מטריצות"
 blog: "לא מדויק"

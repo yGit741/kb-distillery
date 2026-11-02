@@ -1,13 +1,14 @@
 ---
 type: course
 layer: collection
+title: "Test machine learning"
 short: tml
 institution: test
 course_code: 000
 semester: 2026a
 lecturer: Test Lecturer
 area: [learning-theory]
-status: to-read
+maturity: to-read
 aliases: []
 related: []
 ---
@@ -25,4 +26,4 @@ A tiny fixture course for the end-to-end pipeline test: one slide deck, one lect
 
 ## Threads
 
-- [[theme-learning-theory]]
+- [Learning theory](theme-learning-theory.md)

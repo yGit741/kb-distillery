@@ -7,7 +7,7 @@ export const node = (id: string, o: Partial<GNode> = {}): GNode => ({
   title: id.replace(/-/g, " "),
   type: "topic",
   layer: "concept",
-  status: "growing",
+  maturity: "growing",
   depth: "",
   areas: [],
   year: null,
@@ -24,11 +24,11 @@ export const node = (id: string, o: Partial<GNode> = {}): GNode => ({
 export const sampleNodes: GNode[] = [
   node("topic-learning-theory", { inDegree: 5, outDegree: 3, areas: ["learning-theory"] }),
   node("idea-margin", { type: "idea", inDegree: 2, outDegree: 1, areas: ["learning-theory", "optimization-theory"] }),
-  node("q-why-big-nets-work", { type: "question", status: "open", inDegree: 1, outDegree: 1 }),
-  node("jane-doe", { type: "person", status: "", inDegree: 0, outDegree: 2 }),
-  node("course-runi-rl", { type: "course", layer: "collection", status: "reading", inDegree: 6, outDegree: 0 }),
-  node("2019-fine-grained", { type: "paper", layer: "source", depth: "full", status: "digested", year: 2019, inDegree: 1, outDegree: 3 }),
-  node("2020-listed-paper", { type: "paper", layer: "source", depth: "listed", status: "to-read", year: 2020, inDegree: 0, outDegree: 1 }),
+  node("q-why-big-nets-work", { type: "question", maturity: "open", inDegree: 1, outDegree: 1 }),
+  node("jane-doe", { type: "person", maturity: "", inDegree: 0, outDegree: 2 }),
+  node("course-runi-rl", { type: "course", layer: "collection", maturity: "reading", inDegree: 6, outDegree: 0 }),
+  node("2019-fine-grained", { type: "paper", layer: "source", depth: "full", maturity: "digested", year: 2019, inDegree: 1, outDegree: 3 }),
+  node("2020-listed-paper", { type: "paper", layer: "source", depth: "listed", maturity: "to-read", year: 2020, inDegree: 0, outDegree: 1 }),
 ];
 
 export const sampleLinks = [
@@ -44,7 +44,7 @@ export const sampleLinks = [
 export const sampleSnapshot = (over: Partial<GraphSnapshot> = {}): GraphSnapshot => ({
   concept_links: [{ source: "idea-margin", target: "topic-learning-theory", shared: 1 }],
   etag: "e1",
-  facets: { areas: [], statuses: [], types: [] },
+  facets: { areas: [], maturities: [], types: [] },
   generated_at: "2026-10-24T10:00:00Z",
   link_count: sampleLinks.length,
   links: sampleLinks,

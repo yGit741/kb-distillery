@@ -39,7 +39,7 @@ distill ops status
 
 ## Output
 
-New commit `kb(undo): revert <version> <summary> (kb-x.y.z)` with `KB-Reverts: <sha>`. Only `wiki/`, `meta/aliases.tsv`, `meta/chats/` are rewritten; lint regenerates `index.md` / `corpus.tsv` (an un-digested paper is simply re-queued); `meta/log.md` gets an `undo` entry. History is never rewritten.
+New commit `kb(undo): revert <version> <summary> (kb-x.y.z)` with `KB-Reverts: <sha>`. Only `wiki/`, `meta/aliases.tsv`, `meta/chats/` are rewritten; lint regenerates `wiki/index.md` / `corpus.tsv` (an un-digested paper is simply re-queued); `wiki/log.md` gets an `undo` entry. History is never rewritten.
 
 ## Next step
 

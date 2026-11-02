@@ -38,7 +38,7 @@ distill ops restore kb-0.7.4
 ## Output
 
 - Snapshot: annotated tag `kb-x.y.z` with the label as its message.
-- Restore: one new commit `kb(restore): back to kb-x.y.z (kb-…)` with `KB-Snapshot`; `wiki/`, `meta/aliases.tsv`, `meta/chats/` match the tag; `meta/log.md` gets a `restore` entry.
+- Restore: one new commit `kb(restore): back to kb-x.y.z (kb-…)` with `KB-Snapshot`; `wiki/`, `meta/aliases.tsv`, `meta/chats/` match the tag; `wiki/log.md` gets a `restore` entry.
 
 ## Next step
 

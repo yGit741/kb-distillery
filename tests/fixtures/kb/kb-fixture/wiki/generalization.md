@@ -1,8 +1,9 @@
 ---
 type: idea
 layer: concept
+title: "Generalization"
 area: [learning-theory]
-status: seed
+maturity: seed
 sources: []
 related: []
 discussed_with: []
@@ -23,8 +24,8 @@ Fixture idea.
 Fixture.
 
 ## Connections
-- [[theme-learning-theory]]
-- [[pac-learning]], [[shannon-entropy]]
+- [Topic: learning theory](theme-learning-theory.md)
+- [PAC learning](pac-learning.md), [Shannon entropy](shannon-entropy.md)
 
 ## Open questions
 -

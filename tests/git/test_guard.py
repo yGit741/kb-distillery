@@ -49,8 +49,19 @@ class GuardMainTests(unittest.TestCase):
         self.assertEqual(code, 0)
         self.assertIn("allow", out)
 
-    def test_cursor_write_to_index_blocked(self):
+    def test_cursor_write_to_root_index_blocked(self):
+        """The pre-1.7 place of the index: nothing may recreate it (it is not an allowed root file any more)."""
         path = os.path.join(ROOT, "index.md")
+        code, out, err = run_guard({
+            "hook_event_name": "preToolUse",
+            "tool_name": "Write",
+            "tool_input": {"path": path, "content": "x"},
+            "cwd": ROOT,
+        })
+        self.assertEqual(code, 2)
+
+    def test_cursor_write_to_index_blocked(self):
+        path = os.path.join(ROOT, "wiki", "index.md")
         code, out, err = run_guard({
             "hook_event_name": "preToolUse",
             "tool_name": "Write",

@@ -1,11 +1,12 @@
 ---
 type: series
 layer: collection
+title: "Test blog"
 short: tblog
 author: Test Author
 url: https://example.org/blog
 area: []
-status: to-read
+maturity: to-read
 aliases: []
 related: []
 ---
@@ -23,4 +24,4 @@ A tiny fixture blog series for the end-to-end pipeline test: one post clipped fr
 
 ## Threads
 
-- [[theme-learning-theory]]
+- [Learning theory](theme-learning-theory.md)

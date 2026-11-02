@@ -11,7 +11,7 @@
    "areas": [
     "learning-theory"
    ],
-   "statuses": [
+   "maturities": [
     "digested",
     "open",
     "reading",
@@ -159,19 +159,19 @@
     "kb": "e2e",
     "label": "article-clip-why-rank-matters",
     "layer": "source",
+    "maturity": "digested",
     "outDegree": 0,
     "path": "wiki/article-clip-why-rank-matters.md",
     "preview": "Problem: Is low rank a good bias? Main result: The article argues it is.",
     "properties": {
      "links_in": "0",
      "links_out": "0",
+     "maturity": "digested",
      "raw": "raw/web-clips/clip-why-rank-matters.md",
      "slug": "article-clip-why-rank-matters",
-     "status": "digested",
      "type": "article"
     },
     "slug": "article-clip-why-rank-matters",
-    "status": "digested",
     "title": "Clip Why Rank Matters",
     "type": "article",
     "year": null
@@ -186,19 +186,19 @@
     "kb": "e2e",
     "label": "article-tblog-post-one",
     "layer": "source",
+    "maturity": "digested",
     "outDegree": 0,
     "path": "wiki/article-tblog-post-one.md",
     "preview": "Problem: Where does rank show up? Main result: Everywhere, says the post.",
     "properties": {
      "links_in": "1",
      "links_out": "0",
+     "maturity": "digested",
      "raw": "raw/web-clips/tblog-post-one.md",
      "slug": "article-tblog-post-one",
-     "status": "digested",
      "type": "article"
     },
     "slug": "article-tblog-post-one",
-    "status": "digested",
     "title": "Tblog Post One",
     "type": "article",
     "year": null
@@ -213,6 +213,7 @@
     "kb": "e2e",
     "label": "blog-not-exact-blog-post",
     "layer": "source",
+    "maturity": "to-read",
     "outDegree": 0,
     "path": "wiki/blog-not-exact-blog-post.md",
     "preview": "<div dir=\"rtl\"> פוסט קצר על צורת ז'ורדן. </div>",
@@ -221,14 +222,12 @@
      "lang": "he",
      "links_in": "0",
      "links_out": "0",
+     "maturity": "to-read",
      "raw": "raw/printed-docs/blog-not-exact-blog-post.md",
      "slug": "blog-not-exact-blog-post",
-     "status": "to-read",
-     "title": "\"צורת ז'ורדן בפרקטיקה\"",
      "type": "blog-post"
     },
     "slug": "blog-not-exact-blog-post",
-    "status": "to-read",
     "title": "צורת ז'ורדן בפרקטיקה",
     "type": "blog-post",
     "year": null
@@ -266,6 +265,7 @@
     "kb": "e2e",
     "label": "book-2020-tiny-book",
     "layer": "collection",
+    "maturity": "reading",
     "outDegree": 1,
     "path": "wiki/book-2020-tiny-book.md",
     "preview": "Coverage: 10 / 61 pp (16%) · skip rows excluded · parts ≤ 60 pp",
@@ -274,14 +274,13 @@
      "authors": "B. Writer",
      "links_in": "1",
      "links_out": "1",
+     "maturity": "reading",
      "raw": "raw/printed-docs/2020-tiny-book.pdf",
      "slug": "book-2020-tiny-book",
-     "status": "reading",
      "type": "book",
      "year": "2020"
     },
     "slug": "book-2020-tiny-book",
-    "status": "reading",
     "title": "Tiny Book (2020)",
     "type": "book",
     "year": 2020
@@ -298,6 +297,7 @@
     "kb": "e2e",
     "label": "course-test-ml",
     "layer": "collection",
+    "maturity": "digested",
     "outDegree": 2,
     "path": "wiki/course-test-ml.md",
     "preview": "A tiny fixture course for the end-to-end pipeline test: one slide deck, one lecture, and nothing else. It exists so that catalog, full-digest and the Contents table are exercised together.",
@@ -308,14 +308,13 @@
      "lecturer": "Test Lecturer",
      "links_in": "1",
      "links_out": "2",
+     "maturity": "digested",
      "semester": "2026a",
      "short": "tml",
      "slug": "course-test-ml",
-     "status": "digested",
      "type": "course"
     },
     "slug": "course-test-ml",
-    "status": "digested",
     "title": "Test machine learning",
     "type": "course",
     "year": null
@@ -332,6 +331,7 @@
     "kb": "e2e",
     "label": "lecture-tml-slides-intro",
     "layer": "source",
+    "maturity": "digested",
     "outDegree": 3,
     "path": "wiki/lecture-tml-slides-intro.md",
     "preview": "Problem: What is generalization? Main result: Capacity alone does not explain generalization.",
@@ -340,13 +340,12 @@
      "course": "course-test-ml",
      "links_in": "1",
      "links_out": "3",
+     "maturity": "digested",
      "raw": "raw/presentations/tml-slides-intro.pdf",
      "slug": "lecture-tml-slides-intro",
-     "status": "digested",
      "type": "lecture"
     },
     "slug": "lecture-tml-slides-intro",
-    "status": "digested",
     "title": "Lecture 1 · Introduction",
     "type": "lecture",
     "year": null
@@ -361,19 +360,19 @@
     "kb": "e2e",
     "label": "mail-2026-01-02-rank-thread",
     "layer": "source",
+    "maturity": "digested",
     "outDegree": 0,
     "path": "wiki/mail-2026-01-02-rank-thread.md",
-    "preview": "With: [[]] What it was about:",
+    "preview": "With: What it was about:",
     "properties": {
      "links_in": "0",
      "links_out": "0",
+     "maturity": "digested",
      "raw": "raw/emails/2026-01-02-rank-thread/thread.md",
      "slug": "mail-2026-01-02-rank-thread",
-     "status": "digested",
      "type": "mail"
     },
     "slug": "mail-2026-01-02-rank-thread",
-    "status": "digested",
     "title": "2026 01 02 Rank Thread",
     "type": "mail",
     "year": null
@@ -388,20 +387,20 @@
     "kb": "e2e",
     "label": "paper-2020-tiny-book",
     "layer": "source",
+    "maturity": "to-read",
     "outDegree": 0,
     "path": "wiki/paper-2020-tiny-book.md",
     "preview": "Problem: Main result:",
     "properties": {
      "links_in": "0",
      "links_out": "0",
+     "maturity": "to-read",
      "raw": "raw/printed-docs/2020-tiny-book.pdf",
      "slug": "paper-2020-tiny-book",
-     "status": "to-read",
      "type": "paper",
      "year": "2020"
     },
     "slug": "paper-2020-tiny-book",
-    "status": "to-read",
     "title": "Tiny Book",
     "type": "paper",
     "year": 2020
@@ -416,20 +415,20 @@
     "kb": "e2e",
     "label": "paper-2023-easy-skim-paper",
     "layer": "source",
+    "maturity": "digested",
     "outDegree": 0,
     "path": "wiki/paper-2023-easy-skim-paper.md",
     "preview": "Problem: Is matrix completion biased to low rank? Main result: Yes, in a toy model.",
     "properties": {
      "links_in": "0",
      "links_out": "0",
+     "maturity": "digested",
      "raw": "raw/printed-docs/2023-easy-skim-paper.pdf",
      "slug": "paper-2023-easy-skim-paper",
-     "status": "digested",
      "type": "paper",
      "year": "2023"
     },
     "slug": "paper-2023-easy-skim-paper",
-    "status": "digested",
     "title": "Easy Skim Paper",
     "type": "paper",
     "year": 2023
@@ -446,6 +445,7 @@
     "kb": "e2e",
     "label": "paper-2024-tiny-rank-paper",
     "layer": "source",
+    "maturity": "digested",
     "outDegree": 2,
     "path": "wiki/paper-2024-tiny-rank-paper.md",
     "preview": "Problem: Why does gradient descent on a tensor factorization generalize? Main result: Gradient flow implicitly minimizes tensor rank.",
@@ -455,15 +455,15 @@
      "citekey": "tiny2024",
      "links_in": "1",
      "links_out": "2",
+     "maturity": "digested",
      "raw": "raw/printed-docs/2024-tiny-rank-paper.pdf",
      "slug": "paper-2024-tiny-rank-paper",
-     "status": "digested",
+     "sources": "https://example.org/tiny-rank",
      "type": "paper",
      "url": "https://example.org/tiny-rank",
      "year": "2024"
     },
     "slug": "paper-2024-tiny-rank-paper",
-    "status": "digested",
     "title": "Tiny Rank Paper",
     "type": "paper",
     "year": 2024
@@ -480,6 +480,7 @@
     "kb": "e2e",
     "label": "part-2020-tiny-book-pages-1-10",
     "layer": "source",
+    "maturity": "digested",
     "outDegree": 3,
     "part": {
      "book": "book-2020-tiny-book",
@@ -493,14 +494,13 @@
      "authors": "B. Writer",
      "links_in": "1",
      "links_out": "3",
+     "maturity": "digested",
      "raw": "raw/printed-docs/2020-tiny-book.pdf",
      "slug": "part-2020-tiny-book-pages-1-10",
-     "status": "digested",
      "type": "part",
      "year": "2020"
     },
     "slug": "part-2020-tiny-book-pages-1-10",
-    "status": "digested",
     "title": "Tiny Book",
     "type": "part",
     "year": 2020
@@ -517,6 +517,7 @@
     "kb": "e2e",
     "label": "q-does-rank-explain-generalization",
     "layer": "concept",
+    "maturity": "open",
     "outDegree": 2,
     "path": "wiki/q-does-rank-explain-generalization.md",
     "preview": "Does a low-rank bias explain why big networks generalize?",
@@ -524,13 +525,12 @@
      "area": "learning-theory",
      "links_in": "2",
      "links_out": "2",
+     "maturity": "open",
      "priority": "med",
      "slug": "q-does-rank-explain-generalization",
-     "status": "open",
      "type": "question"
     },
     "slug": "q-does-rank-explain-generalization",
-    "status": "open",
     "title": "Does rank explain generalization?",
     "type": "question",
     "year": null
@@ -545,6 +545,7 @@
     "kb": "e2e",
     "label": "series-test-blog",
     "layer": "collection",
+    "maturity": "digested",
     "outDegree": 2,
     "path": "wiki/series-test-blog.md",
     "preview": "A tiny fixture blog series for the end-to-end pipeline test: one post clipped from the web, skimmed with easy-digest so that its Contents row is ticked.",
@@ -552,14 +553,13 @@
      "author": "Test Author",
      "links_in": "0",
      "links_out": "2",
+     "maturity": "digested",
      "short": "tblog",
      "slug": "series-test-blog",
-     "status": "digested",
      "type": "series",
      "url": "https://example.org/blog"
     },
     "slug": "series-test-blog",
-    "status": "digested",
     "title": "Test blog",
     "type": "series",
     "year": null
@@ -576,6 +576,7 @@
     "kb": "e2e",
     "label": "tensor-rank",
     "layer": "concept",
+    "maturity": "seed",
     "outDegree": 2,
     "path": "wiki/tensor-rank.md",
     "preview": "One-liner: The smallest number of rank-one tensors that sum to a given tensor.",
@@ -583,13 +584,12 @@
      "area": "learning-theory",
      "links_in": "6",
      "links_out": "2",
+     "maturity": "seed",
      "related": "theme-learning-theory",
      "slug": "tensor-rank",
-     "status": "seed",
      "type": "idea"
     },
     "slug": "tensor-rank",
-    "status": "seed",
     "title": "Tensor rank",
     "type": "idea",
     "year": null
@@ -604,19 +604,19 @@
     "kb": "e2e",
     "label": "theme-learning-theory",
     "layer": "concept",
+    "maturity": "seed",
     "outDegree": 3,
     "path": "wiki/theme-learning-theory.md",
     "preview": "Generalization bounds and why over-parameterized networks still generalize; a candidate thesis direction for the e2e fixture vault.",
     "properties": {
      "links_in": "8",
      "links_out": "3",
+     "maturity": "seed",
      "related": "tensor-rank",
      "slug": "theme-learning-theory",
-     "status": "seed",
      "type": "topic"
     },
     "slug": "theme-learning-theory",
-    "status": "seed",
     "title": "Learning theory",
     "type": "topic",
     "year": null
@@ -633,22 +633,23 @@
     "kb": "e2e",
     "label": "video-tiny-talk",
     "layer": "source",
+    "maturity": "digested",
     "outDegree": 2,
     "path": "wiki/video-tiny-talk.md",
-    "preview": "Problem: Why do big networks generalize? Main result: A talk-length argument that tensor-rank is the right lens.",
+    "preview": "Problem: Why do big networks generalize? Main result: A talk-length argument that Tensor rank is the right lens.",
     "properties": {
      "area": "learning-theory",
      "author": "Test Speaker",
      "links_in": "0",
      "links_out": "2",
+     "maturity": "digested",
      "raw": "none",
      "slug": "video-tiny-talk",
-     "status": "digested",
+     "sources": "https://example.org/talk",
      "type": "video",
      "url": "https://example.org/talk"
     },
     "slug": "video-tiny-talk",
-    "status": "digested",
     "title": "Tiny talk",
     "type": "video",
     "year": null
@@ -951,7 +952,7 @@
    ],
    "version": [
     1,
-    4
+    5
    ]
   }
  },
@@ -1052,12 +1053,12 @@
     "depth": "easy",
     "id": "article-clip-why-rank-matters",
     "in": 0,
+    "maturity": "digested",
     "out": 0,
     "preview": "Problem: Is low rank a good bias? Main result: The article argues it is.",
-    "status": "digested",
     "title": "Clip Why Rank Matters",
     "type": "article",
-    "words": 39,
+    "words": 41,
     "year": null
    },
    {
@@ -1065,12 +1066,12 @@
     "depth": "easy",
     "id": "article-tblog-post-one",
     "in": 1,
+    "maturity": "digested",
     "out": 0,
     "preview": "Problem: Where does rank show up? Main result: Everywhere, says the post.",
-    "status": "digested",
     "title": "Tblog Post One",
     "type": "article",
-    "words": 36,
+    "words": 38,
     "year": null
    },
    {
@@ -1078,9 +1079,9 @@
     "depth": "listed",
     "id": "blog-not-exact-blog-post",
     "in": 0,
+    "maturity": "to-read",
     "out": 0,
     "preview": "<div dir=\"rtl\"> פוסט קצר על צורת ז'ורדן. </div>",
-    "status": "to-read",
     "title": "צורת ז'ורדן בפרקטיקה",
     "type": "blog-post",
     "words": 41,
@@ -1093,9 +1094,9 @@
     "depth": "",
     "id": "book-2020-tiny-book",
     "in": 1,
+    "maturity": "reading",
     "out": 1,
     "preview": "Coverage: 10 / 61 pp (16%) · skip rows excluded · parts ≤ 60 pp",
-    "status": "reading",
     "title": "Tiny Book (2020)",
     "type": "book",
     "words": 115,
@@ -1108,12 +1109,12 @@
     "depth": "",
     "id": "course-test-ml",
     "in": 1,
+    "maturity": "digested",
     "out": 2,
     "preview": "A tiny fixture course for the end-to-end pipeline test: one slide deck, one lecture, and nothing else. It exists so that catalog, full-digest and the Contents table are exercised together.",
-    "status": "digested",
     "title": "Test machine learning",
     "type": "course",
-    "words": 78,
+    "words": 82,
     "year": null
    },
    {
@@ -1123,12 +1124,12 @@
     "depth": "full",
     "id": "lecture-tml-slides-intro",
     "in": 1,
+    "maturity": "digested",
     "out": 3,
     "preview": "Problem: What is generalization? Main result: Capacity alone does not explain generalization.",
-    "status": "digested",
     "title": "Lecture 1 · Introduction",
     "type": "lecture",
-    "words": 66,
+    "words": 72,
     "year": null
    },
    {
@@ -1136,12 +1137,12 @@
     "depth": "easy",
     "id": "mail-2026-01-02-rank-thread",
     "in": 0,
+    "maturity": "digested",
     "out": 0,
-    "preview": "With: [[]] What it was about:",
-    "status": "digested",
+    "preview": "With: What it was about:",
     "title": "2026 01 02 Rank Thread",
     "type": "mail",
-    "words": 32,
+    "words": 36,
     "year": null
    },
    {
@@ -1149,12 +1150,12 @@
     "depth": "listed",
     "id": "paper-2020-tiny-book",
     "in": 0,
+    "maturity": "to-read",
     "out": 0,
     "preview": "Problem: Main result:",
-    "status": "to-read",
     "title": "Tiny Book",
     "type": "paper",
-    "words": 30,
+    "words": 32,
     "year": 2020
    },
    {
@@ -1162,12 +1163,12 @@
     "depth": "easy",
     "id": "paper-2023-easy-skim-paper",
     "in": 0,
+    "maturity": "digested",
     "out": 0,
     "preview": "Problem: Is matrix completion biased to low rank? Main result: Yes, in a toy model.",
-    "status": "digested",
     "title": "Easy Skim Paper",
     "type": "paper",
-    "words": 43,
+    "words": 45,
     "year": 2023
    },
    {
@@ -1177,12 +1178,12 @@
     "depth": "full",
     "id": "paper-2024-tiny-rank-paper",
     "in": 1,
+    "maturity": "digested",
     "out": 2,
     "preview": "Problem: Why does gradient descent on a tensor factorization generalize? Main result: Gradient flow implicitly minimizes tensor rank.",
-    "status": "digested",
     "title": "Tiny Rank Paper",
     "type": "paper",
-    "words": 76,
+    "words": 80,
     "year": 2024
    },
    {
@@ -1192,12 +1193,12 @@
     "depth": "full",
     "id": "part-2020-tiny-book-pages-1-10",
     "in": 1,
+    "maturity": "digested",
     "out": 3,
     "preview": "Problem: What is the rank of a tensor? Main result: Tensor rank can exceed every flattening rank.",
-    "status": "digested",
     "title": "Tiny Book",
     "type": "part",
-    "words": 73,
+    "words": 77,
     "year": 2020
    },
    {
@@ -1207,12 +1208,12 @@
     "depth": "",
     "id": "q-does-rank-explain-generalization",
     "in": 2,
+    "maturity": "open",
     "out": 2,
     "preview": "Does a low-rank bias explain why big networks generalize?",
-    "status": "open",
     "title": "Does rank explain generalization?",
     "type": "question",
-    "words": 51,
+    "words": 54,
     "year": null
    },
    {
@@ -1220,12 +1221,12 @@
     "depth": "",
     "id": "series-test-blog",
     "in": 0,
+    "maturity": "digested",
     "out": 2,
     "preview": "A tiny fixture blog series for the end-to-end pipeline test: one post clipped from the web, skimmed with easy-digest so that its Contents row is ticked.",
-    "status": "digested",
     "title": "Test blog",
     "type": "series",
-    "words": 72,
+    "words": 75,
     "year": null
    },
    {
@@ -1235,12 +1236,12 @@
     "depth": "",
     "id": "tensor-rank",
     "in": 6,
+    "maturity": "seed",
     "out": 2,
     "preview": "One-liner: The smallest number of rank-one tensors that sum to a given tensor.",
-    "status": "seed",
     "title": "Tensor rank",
     "type": "idea",
-    "words": 74,
+    "words": 78,
     "year": null
    },
    {
@@ -1248,12 +1249,12 @@
     "depth": "",
     "id": "theme-learning-theory",
     "in": 8,
+    "maturity": "seed",
     "out": 3,
     "preview": "Generalization bounds and why over-parameterized networks still generalize; a candidate thesis direction for the e2e fixture vault.",
-    "status": "seed",
     "title": "Learning theory",
     "type": "topic",
-    "words": 35,
+    "words": 41,
     "year": null
    },
    {
@@ -1263,25 +1264,17 @@
     "depth": "easy",
     "id": "video-tiny-talk",
     "in": 0,
+    "maturity": "digested",
     "out": 2,
-    "preview": "Problem: Why do big networks generalize? Main result: A talk-length argument that tensor-rank is the right lens.",
-    "status": "digested",
+    "preview": "Problem: Why do big networks generalize? Main result: A talk-length argument that Tensor rank is the right lens.",
     "title": "Tiny talk",
     "type": "video",
-    "words": 48,
+    "words": 51,
     "year": null
    }
   ],
-  "wanted": [
-   {
-    "count": 1,
-    "from": [
-     "book-2020-tiny-book"
-    ],
-    "id": "concept"
-   }
-  ],
-  "wanted_total": 1
+  "wanted": [],
+  "wanted_total": 0
  },
  "pages": {
   "article-clip-why-rank-matters": {
@@ -1292,23 +1285,24 @@
     "depth": "easy",
     "id": "article-clip-why-rank-matters",
     "in": 0,
+    "maturity": "digested",
     "out": 0,
     "preview": "Problem: Is low rank a good bias? Main result: The article argues it is.",
-    "status": "digested",
     "title": "Clip Why Rank Matters",
     "type": "article",
-    "words": 39,
+    "words": 41,
     "year": null
    },
    "frontmatter": {
     "depth": "easy",
     "layer": "source",
+    "maturity": "digested",
     "raw": "raw/web-clips/clip-why-rank-matters.md",
-    "status": "digested",
+    "title": "\"Clip Why Rank Matters\"",
     "type": "article"
    },
    "kb": "e2e",
-   "markdown": "# Clip Why Rank Matters\n\n**Problem:** Is low rank a good bias?\n\n**Main result:** The article argues it is.\n\n## Key claims\n-\n\n## Key equations\n\n## Takeaways for my thesis\n\n## Connections\n\n## Links out\n- Concepts: [[]]\n",
+   "markdown": "# Clip Why Rank Matters\n\n**Problem:** Is low rank a good bias?\n\n**Main result:** The article argues it is.\n\n## Key claims\n-\n\n## Key equations\n\n## Takeaways for my thesis\n\n## Connections\n\n## Links out\n- Concepts: <!-- [Title](slug.md) -->\n",
    "outbound": [],
    "path": "wiki/article-clip-why-rank-matters.md",
    "read_only": false,
@@ -1327,23 +1321,24 @@
     "depth": "easy",
     "id": "article-tblog-post-one",
     "in": 1,
+    "maturity": "digested",
     "out": 0,
     "preview": "Problem: Where does rank show up? Main result: Everywhere, says the post.",
-    "status": "digested",
     "title": "Tblog Post One",
     "type": "article",
-    "words": 36,
+    "words": 38,
     "year": null
    },
    "frontmatter": {
     "depth": "easy",
     "layer": "source",
+    "maturity": "digested",
     "raw": "raw/web-clips/tblog-post-one.md",
-    "status": "digested",
+    "title": "\"Tblog Post One\"",
     "type": "article"
    },
    "kb": "e2e",
-   "markdown": "# Tblog Post One\n\n**Problem:** Where does rank show up?\n\n**Main result:** Everywhere, says the post.\n\n## Key claims\n-\n\n## Key equations\n\n## Takeaways for my thesis\n\n## Connections\n\n## Links out\n- Concepts: [[]]\n",
+   "markdown": "# Tblog Post One\n\n**Problem:** Where does rank show up?\n\n**Main result:** Everywhere, says the post.\n\n## Key claims\n-\n\n## Key equations\n\n## Takeaways for my thesis\n\n## Connections\n\n## Links out\n- Concepts: <!-- [Title](slug.md) -->\n",
    "outbound": [],
    "path": "wiki/article-tblog-post-one.md",
    "read_only": false,
@@ -1357,9 +1352,9 @@
     "depth": "listed",
     "id": "blog-not-exact-blog-post",
     "in": 0,
+    "maturity": "to-read",
     "out": 0,
     "preview": "<div dir=\"rtl\"> פוסט קצר על צורת ז'ורדן. </div>",
-    "status": "to-read",
     "title": "צורת ז'ורדן בפרקטיקה",
     "type": "blog-post",
     "words": 41,
@@ -1370,8 +1365,9 @@
     "depth": "listed",
     "lang": "he",
     "layer": "source",
+    "maturity": "to-read",
     "raw": "raw/printed-docs/blog-not-exact-blog-post.md",
-    "status": "to-read",
+    "status": "draft",
     "title": "\"צורת ז'ורדן בפרקטיקה\"",
     "type": "blog-post"
    },
@@ -1389,9 +1385,7 @@
      "id": "part-2020-tiny-book-pages-1-10"
     }
    ],
-   "broken": [
-    "concept"
-   ],
+   "broken": [],
    "card": {
     "areas": [
      "learning-theory"
@@ -1399,9 +1393,9 @@
     "depth": "",
     "id": "book-2020-tiny-book",
     "in": 1,
+    "maturity": "reading",
     "out": 1,
     "preview": "Coverage: 10 / 61 pp (16%) · skip rows excluded · parts ≤ 60 pp",
-    "status": "reading",
     "title": "Tiny Book (2020)",
     "type": "book",
     "words": 115,
@@ -1416,13 +1410,14 @@
     ],
     "book_pages": "61",
     "layer": "collection",
+    "maturity": "reading",
     "raw": "raw/printed-docs/2020-tiny-book.pdf",
-    "status": "reading",
+    "title": "\"Tiny Book (2020)\"",
     "type": "book",
     "year": "2020"
    },
    "kb": "e2e",
-   "markdown": "# Tiny Book (2020)\n\n## Overview\n\n<!-- At least one paragraph: what the book is, how it is organised, its stance, and why it matters for the thesis. Lint warns until this is written. -->\n\n## Partition\n\nCoverage: **10 / 61 pp (16%)** · skip rows excluded · parts ≤ 60 pp\n\n| # | Part | Pages | Status | Note |\n|---|------|-------|--------|------|\n| 1 | Pages 1–10 | 1–10 | full | [[part-2020-tiny-book-pages-1-10]] |\n| 2 | Whole book | 11–61 | — |  |\n\n## Key concepts\n\n<!-- Book-wide concepts as [[concept]] links, filled in as parts are digested. -->\n\n## Threads\n\n<!-- Thesis links, open questions, connected papers and people. -->\n",
+   "markdown": "# Tiny Book (2020)\n\n## Overview\n\n<!-- At least one paragraph: what the book is, how it is organised, its stance, and why it matters for the thesis. Lint warns until this is written. -->\n\n## Partition\n\nCoverage: **10 / 61 pp (16%)** · skip rows excluded · parts ≤ 60 pp\n\n| # | Part | Pages | Status | Note |\n|---|------|-------|--------|------|\n| 1 | Pages 1–10 | 1–10 | full | [part-2020-tiny-book-pages-1-10](part-2020-tiny-book-pages-1-10.md) |\n| 2 | Whole book | 11–61 | — |  |\n\n## Key concepts\n\n<!-- Book-wide concepts as [Concept](concept.md) links, filled in as parts are digested. -->\n\n## Threads\n\n<!-- Thesis links, open questions, connected papers and people. -->\n",
    "outbound": [
     "part-2020-tiny-book-pages-1-10"
    ],
@@ -1445,12 +1440,12 @@
     "depth": "",
     "id": "course-test-ml",
     "in": 1,
+    "maturity": "digested",
     "out": 2,
     "preview": "A tiny fixture course for the end-to-end pipeline test: one slide deck, one lecture, and nothing else. It exists so that catalog, full-digest and the Contents table are exercised together.",
-    "status": "digested",
     "title": "Test machine learning",
     "type": "course",
-    "words": 78,
+    "words": 82,
     "year": null
    },
    "frontmatter": {
@@ -1461,13 +1456,14 @@
     "institution": "test",
     "layer": "collection",
     "lecturer": "Test Lecturer",
+    "maturity": "digested",
     "semester": "2026a",
     "short": "tml",
-    "status": "digested",
+    "title": "\"Test machine learning\"",
     "type": "course"
    },
    "kb": "e2e",
-   "markdown": "# Test machine learning\n\n## Overview\n\nA tiny fixture course for the end-to-end pipeline test: one slide deck, one lecture, and nothing else. It exists so that catalog, full-digest and the Contents table are exercised together.\n\n## Contents\n\nCoverage: **1 / 1 items (100%)** · skip rows excluded\n\n| # | Item | Raw | Status | Note |\n|---|------|-----|--------|------|\n| 1 | Lecture 1 · Introduction | `raw/presentations/tml-slides-intro.pdf` | full | [[lecture-tml-slides-intro]] |\n\n## Threads\n\n- [[theme-learning-theory]]\n",
+   "markdown": "# Test machine learning\n\n## Overview\n\nA tiny fixture course for the end-to-end pipeline test: one slide deck, one lecture, and nothing else. It exists so that catalog, full-digest and the Contents table are exercised together.\n\n## Contents\n\nCoverage: **1 / 1 items (100%)** · skip rows excluded\n\n| # | Item | Raw | Status | Note |\n|---|------|-----|--------|------|\n| 1 | Lecture 1 · Introduction | `raw/presentations/tml-slides-intro.pdf` | full | [Lecture 1 · Introduction](lecture-tml-slides-intro.md) |\n\n## Threads\n\n- [Learning theory](theme-learning-theory.md)\n",
    "outbound": [
     "lecture-tml-slides-intro",
     "theme-learning-theory"
@@ -1501,12 +1497,12 @@
     "depth": "full",
     "id": "lecture-tml-slides-intro",
     "in": 1,
+    "maturity": "digested",
     "out": 3,
     "preview": "Problem: What is generalization? Main result: Capacity alone does not explain generalization.",
-    "status": "digested",
     "title": "Lecture 1 · Introduction",
     "type": "lecture",
-    "words": 66,
+    "words": 72,
     "year": null
    },
    "frontmatter": {
@@ -1516,12 +1512,13 @@
     "course": "course-test-ml",
     "depth": "full",
     "layer": "source",
+    "maturity": "digested",
     "raw": "raw/presentations/tml-slides-intro.pdf",
-    "status": "digested",
+    "title": "\"Lecture 1 · Introduction\"",
     "type": "lecture"
    },
    "kb": "e2e",
-   "markdown": "# Lecture 1 · Introduction\n\n> Row 1 of [[course-test-ml]]\n\n**Problem:** What is generalization?\n\n**Main result:** Capacity alone does not explain generalization.\n\n## Setup & assumptions\n\nLecture overview.\n\n## Proof idea (sketch only)\n\n\n\n## Key equations\n\n**bound:**\n$R(h) \\le \\hat R(h) + \\epsilon$\n\n\n## Takeaways for my thesis\n\n- Capacity alone does not explain generalization.\n- Concepts: [[tensor-rank]], [[theme-learning-theory]]\n\n## Links out\n\n- Concepts: [[tensor-rank]], [[theme-learning-theory]]\n",
+   "markdown": "# Lecture 1 · Introduction\n\n> Row 1 of [Test machine learning](course-test-ml.md)\n\n**Problem:** What is generalization?\n\n**Main result:** Capacity alone does not explain generalization.\n\n## Setup & assumptions\n\nLecture overview.\n\n## Proof idea (sketch only)\n\n\n\n## Key equations\n\n**bound:**\n$R(h) \\le \\hat R(h) + \\epsilon$\n\n\n## Takeaways for my thesis\n\n- Capacity alone does not explain generalization.\n- Concepts: [Tensor rank](tensor-rank.md), [Learning theory](theme-learning-theory.md)\n\n## Links out\n\n- Concepts: [Tensor rank](tensor-rank.md), [Learning theory](theme-learning-theory.md)\n",
    "outbound": [
     "course-test-ml",
     "tensor-rank",
@@ -1576,23 +1573,24 @@
     "depth": "easy",
     "id": "mail-2026-01-02-rank-thread",
     "in": 0,
+    "maturity": "digested",
     "out": 0,
-    "preview": "With: [[]] What it was about:",
-    "status": "digested",
+    "preview": "With: What it was about:",
     "title": "2026 01 02 Rank Thread",
     "type": "mail",
-    "words": 32,
+    "words": 36,
     "year": null
    },
    "frontmatter": {
     "depth": "easy",
     "layer": "source",
+    "maturity": "digested",
     "raw": "raw/emails/2026-01-02-rank-thread/thread.md",
-    "status": "digested",
+    "title": "\"2026 01 02 Rank Thread\"",
     "type": "mail"
    },
    "kb": "e2e",
-   "markdown": "# 2026 01 02 Rank Thread\n\n**With:** [[]]\n\n**What it was about:**\n\n## Key claims\n-\n\n## Key equations\n\n## Takeaways for my thesis\n\n## Connections\n\n## Links out\n- Concepts: [[]]\n",
+   "markdown": "# 2026 01 02 Rank Thread\n\n**With:** <!-- [Name](person-slug.md) -->\n\n**What it was about:**\n\n## Key claims\n-\n\n## Key equations\n\n## Takeaways for my thesis\n\n## Connections\n\n## Links out\n- Concepts: <!-- [Title](slug.md) -->\n",
    "outbound": [],
    "path": "wiki/mail-2026-01-02-rank-thread.md",
    "read_only": false,
@@ -1606,24 +1604,26 @@
     "depth": "listed",
     "id": "paper-2020-tiny-book",
     "in": 0,
+    "maturity": "to-read",
     "out": 0,
     "preview": "Problem: Main result:",
-    "status": "to-read",
     "title": "Tiny Book",
     "type": "paper",
-    "words": 30,
+    "words": 32,
     "year": 2020
    },
    "frontmatter": {
     "depth": "listed",
     "layer": "source",
+    "maturity": "to-read",
     "raw": "raw/printed-docs/2020-tiny-book.pdf",
-    "status": "to-read",
+    "status": "draft",
+    "title": "\"Tiny Book\"",
     "type": "paper",
     "year": "2020"
    },
    "kb": "e2e",
-   "markdown": "# Tiny Book\n\n**Problem:**\n\n**Main result:**\n\n## Setup & assumptions\n\n## Proof idea (sketch only)\n\n## Key equations\n\n## Takeaways for my thesis\n-\n\n## Links out\n- Concepts: [[]]\n",
+   "markdown": "# Tiny Book\n\n**Problem:**\n\n**Main result:**\n\n## Setup & assumptions\n\n## Proof idea (sketch only)\n\n## Key equations\n\n## Takeaways for my thesis\n-\n\n## Links out\n- Concepts: <!-- [Title](slug.md) -->\n",
    "outbound": [],
    "path": "wiki/paper-2020-tiny-book.md",
    "read_only": false,
@@ -1637,24 +1637,25 @@
     "depth": "easy",
     "id": "paper-2023-easy-skim-paper",
     "in": 0,
+    "maturity": "digested",
     "out": 0,
     "preview": "Problem: Is matrix completion biased to low rank? Main result: Yes, in a toy model.",
-    "status": "digested",
     "title": "Easy Skim Paper",
     "type": "paper",
-    "words": 43,
+    "words": 45,
     "year": 2023
    },
    "frontmatter": {
     "depth": "easy",
     "layer": "source",
+    "maturity": "digested",
     "raw": "raw/printed-docs/2023-easy-skim-paper.pdf",
-    "status": "digested",
+    "title": "\"Easy Skim Paper\"",
     "type": "paper",
     "year": "2023"
    },
    "kb": "e2e",
-   "markdown": "# Easy Skim Paper\n\n**Problem:** Is matrix completion biased to low rank?\n\n**Main result:** Yes, in a toy model.\n\n## Setup & assumptions\n\n## Proof idea (sketch only)\n\n## Key equations\n\n## Takeaways for my thesis\n-\n\n## Links out\n- Concepts: [[]]\n",
+   "markdown": "# Easy Skim Paper\n\n**Problem:** Is matrix completion biased to low rank?\n\n**Main result:** Yes, in a toy model.\n\n## Setup & assumptions\n\n## Proof idea (sketch only)\n\n## Key equations\n\n## Takeaways for my thesis\n-\n\n## Links out\n- Concepts: <!-- [Title](slug.md) -->\n",
    "outbound": [],
    "path": "wiki/paper-2023-easy-skim-paper.md",
    "read_only": false,
@@ -1675,12 +1676,12 @@
     "depth": "full",
     "id": "paper-2024-tiny-rank-paper",
     "in": 1,
+    "maturity": "digested",
     "out": 2,
     "preview": "Problem: Why does gradient descent on a tensor factorization generalize? Main result: Gradient flow implicitly minimizes tensor rank.",
-    "status": "digested",
     "title": "Tiny Rank Paper",
     "type": "paper",
-    "words": 76,
+    "words": 80,
     "year": 2024
    },
    "frontmatter": {
@@ -1693,14 +1694,18 @@
     "citekey": "tiny2024",
     "depth": "full",
     "layer": "source",
+    "maturity": "digested",
     "raw": "raw/printed-docs/2024-tiny-rank-paper.pdf",
-    "status": "digested",
+    "sources": [
+     "https://example.org/tiny-rank"
+    ],
+    "title": "\"Tiny Rank Paper\"",
     "type": "paper",
     "url": "https://example.org/tiny-rank",
     "year": "2024"
    },
    "kb": "e2e",
-   "markdown": "# Tiny Rank Paper\n\n**Problem:** Why does gradient descent on a tensor factorization generalize?\n\n**Main result:** Gradient flow implicitly minimizes tensor rank.\n\n## Setup & assumptions\n\nAnalyze gradient flow on a rank-one-initialized factorization.\n\n## Proof idea (sketch only)\n\n\n\n## Key equations\n\n**cp:**\n$T = \\sum_r a_r \\otimes b_r \\otimes c_r$\nVariables: $T$: tensor\n\n\n## Takeaways for my thesis\n\n- Gradient flow implicitly minimizes tensor rank.\n- Concepts: [[tensor-rank]], [[theme-learning-theory]]\n\n## Links out\n\n- Concepts: [[tensor-rank]], [[theme-learning-theory]]\n",
+   "markdown": "# Tiny Rank Paper\n\n**Problem:** Why does gradient descent on a tensor factorization generalize?\n\n**Main result:** Gradient flow implicitly minimizes tensor rank.\n\n## Setup & assumptions\n\nAnalyze gradient flow on a rank-one-initialized factorization.\n\n## Proof idea (sketch only)\n\n\n\n## Key equations\n\n**cp:**\n$T = \\sum_r a_r \\otimes b_r \\otimes c_r$\nVariables: $T$: tensor\n\n\n## Takeaways for my thesis\n\n- Gradient flow implicitly minimizes tensor rank.\n- Concepts: [Tensor rank](tensor-rank.md), [Learning theory](theme-learning-theory.md)\n\n## Links out\n\n- Concepts: [Tensor rank](tensor-rank.md), [Learning theory](theme-learning-theory.md)\n",
    "outbound": [
     "tensor-rank",
     "theme-learning-theory"
@@ -1761,12 +1766,12 @@
     "depth": "full",
     "id": "part-2020-tiny-book-pages-1-10",
     "in": 1,
+    "maturity": "digested",
     "out": 3,
     "preview": "Problem: What is the rank of a tensor? Main result: Tensor rank can exceed every flattening rank.",
-    "status": "digested",
     "title": "Tiny Book",
     "type": "part",
-    "words": 73,
+    "words": 77,
     "year": 2020
    },
    "frontmatter": {
@@ -1779,15 +1784,16 @@
     "book": "book-2020-tiny-book",
     "depth": "full",
     "layer": "source",
+    "maturity": "digested",
     "raw": "raw/printed-docs/2020-tiny-book.pdf",
     "section": "Pages 1–10",
     "section_pages": "1-10",
-    "status": "digested",
+    "title": "\"Tiny Book\"",
     "type": "part",
     "year": "2020"
    },
    "kb": "e2e",
-   "markdown": "# Tiny Book\n\n> Part of [[book-2020-tiny-book]] · pp. 1–10 · Pages 1–10\n\n**Problem:** What is the rank of a tensor?\n\n**Main result:** Tensor rank can exceed every flattening rank.\n\n## Setup & assumptions\n\nDefinitions and examples.\n\n## Proof idea (sketch only)\n\n\n\n## Key equations\n\n**flat:**\n$\\operatorname{rank}(T) \\ge \\operatorname{rank}(T_{(1)})$\n\n\n## Takeaways for my thesis\n\n- Tensor rank can exceed every flattening rank.\n- Concepts: [[tensor-rank]], [[theme-learning-theory]]\n\n## Links out\n\n- Concepts: [[tensor-rank]], [[theme-learning-theory]]\n",
+   "markdown": "# Tiny Book\n\n> Part of [book-2020-tiny-book](book-2020-tiny-book.md) · pp. 1–10 · Pages 1–10\n\n**Problem:** What is the rank of a tensor?\n\n**Main result:** Tensor rank can exceed every flattening rank.\n\n## Setup & assumptions\n\nDefinitions and examples.\n\n## Proof idea (sketch only)\n\n\n\n## Key equations\n\n**flat:**\n$\\operatorname{rank}(T) \\ge \\operatorname{rank}(T_{(1)})$\n\n\n## Takeaways for my thesis\n\n- Tensor rank can exceed every flattening rank.\n- Concepts: [Tensor rank](tensor-rank.md), [Learning theory](theme-learning-theory.md)\n\n## Links out\n\n- Concepts: [Tensor rank](tensor-rank.md), [Learning theory](theme-learning-theory.md)\n",
    "outbound": [
     "book-2020-tiny-book",
     "tensor-rank",
@@ -1853,12 +1859,12 @@
     "depth": "",
     "id": "q-does-rank-explain-generalization",
     "in": 2,
+    "maturity": "open",
     "out": 2,
     "preview": "Does a low-rank bias explain why big networks generalize?",
-    "status": "open",
     "title": "Does rank explain generalization?",
     "type": "question",
-    "words": 51,
+    "words": 54,
     "year": null
    },
    "frontmatter": {
@@ -1866,12 +1872,13 @@
      "learning-theory"
     ],
     "layer": "concept",
+    "maturity": "open",
     "priority": "med",
-    "status": "open",
+    "title": "\"Does rank explain generalization?\"",
     "type": "question"
    },
    "kb": "e2e",
-   "markdown": "# Does rank explain generalization?\n\n## Question\n\nDoes a low-rank bias explain why big networks generalize?\n\n## Why I care\n\nIt would connect [[tensor-rank]] to [[theme-learning-theory]].\n\n## What I know so far\n- Nothing yet.\n\n## Hypotheses\n- Gradient descent prefers low rank.\n\n## Papers / concepts to read\n- [[tensor-rank]]\n",
+   "markdown": "# Does rank explain generalization?\n\n## Question\n\nDoes a low-rank bias explain why big networks generalize?\n\n## Why I care\n\nIt would connect [Tensor rank](tensor-rank.md) to [Learning theory](theme-learning-theory.md).\n\n## What I know so far\n- Nothing yet.\n\n## Hypotheses\n- Gradient descent prefers low rank.\n\n## Papers / concepts to read\n- [Tensor rank](tensor-rank.md)\n",
    "outbound": [
     "tensor-rank",
     "theme-learning-theory"
@@ -1925,24 +1932,25 @@
     "depth": "",
     "id": "series-test-blog",
     "in": 0,
+    "maturity": "digested",
     "out": 2,
     "preview": "A tiny fixture blog series for the end-to-end pipeline test: one post clipped from the web, skimmed with easy-digest so that its Contents row is ticked.",
-    "status": "digested",
     "title": "Test blog",
     "type": "series",
-    "words": 72,
+    "words": 75,
     "year": null
    },
    "frontmatter": {
     "author": "Test Author",
     "layer": "collection",
+    "maturity": "digested",
     "short": "tblog",
-    "status": "digested",
+    "title": "\"Test blog\"",
     "type": "series",
     "url": "https://example.org/blog"
    },
    "kb": "e2e",
-   "markdown": "# Test blog\n\n## Overview\n\nA tiny fixture blog series for the end-to-end pipeline test: one post clipped from the web, skimmed with easy-digest so that its Contents row is ticked.\n\n## Contents\n\nCoverage: **1 / 1 items (100%)** · skip rows excluded\n\n| # | Item | Raw | Status | Note |\n|---|------|-----|--------|------|\n| 1 | Rank in practice | `raw/web-clips/tblog-post-one.md` | easy | [[article-tblog-post-one]] |\n\n## Threads\n\n- [[theme-learning-theory]]\n",
+   "markdown": "# Test blog\n\n## Overview\n\nA tiny fixture blog series for the end-to-end pipeline test: one post clipped from the web, skimmed with easy-digest so that its Contents row is ticked.\n\n## Contents\n\nCoverage: **1 / 1 items (100%)** · skip rows excluded\n\n| # | Item | Raw | Status | Note |\n|---|------|-----|--------|------|\n| 1 | Rank in practice | `raw/web-clips/tblog-post-one.md` | easy | [Tblog Post One](article-tblog-post-one.md) |\n\n## Threads\n\n- [Learning theory](theme-learning-theory.md)\n",
    "outbound": [
     "article-tblog-post-one",
     "theme-learning-theory"
@@ -1986,12 +1994,12 @@
     "depth": "",
     "id": "tensor-rank",
     "in": 6,
+    "maturity": "seed",
     "out": 2,
     "preview": "One-liner: The smallest number of rank-one tensors that sum to a given tensor.",
-    "status": "seed",
     "title": "Tensor rank",
     "type": "idea",
-    "words": 74,
+    "words": 78,
     "year": null
    },
    "frontmatter": {
@@ -1999,14 +2007,15 @@
      "learning-theory"
     ],
     "layer": "concept",
+    "maturity": "seed",
     "related": [
      "theme-learning-theory"
     ],
-    "status": "seed",
+    "title": "\"Tensor rank\"",
     "type": "idea"
    },
    "kb": "e2e",
-   "markdown": "# Tensor rank\n\n**One-liner:** The smallest number of rank-one tensors that sum to a given tensor.\n\n## Intuition\n\nA measure of how complex a multi-way array is.\n\n## Formal\n\n$T = \\sum_{r=1}^{R} a_r \\otimes b_r \\otimes c_r$\n\n## Why it matters (thesis angle)\n\nImplicit regularization may minimize it.\n\n## Connections\n- [[theme-learning-theory]]\n\n## Open questions\n- [[q-does-rank-explain-generalization]]\n\n## My notes\n\nHand-written note that no tool may overwrite: compare with matrix rank before the meeting.\n",
+   "markdown": "# Tensor rank\n\n**One-liner:** The smallest number of rank-one tensors that sum to a given tensor.\n\n## Intuition\n\nA measure of how complex a multi-way array is.\n\n## Formal\n\n$T = \\sum_{r=1}^{R} a_r \\otimes b_r \\otimes c_r$\n\n## Why it matters (thesis angle)\n\nImplicit regularization may minimize it.\n\n## Connections\n- [Learning theory](theme-learning-theory.md)\n\n## Open questions\n- [Does rank explain generalization?](q-does-rank-explain-generalization.md)\n\n## My notes\n\nHand-written note that no tool may overwrite: compare with matrix rank before the meeting.\n",
    "outbound": [
     "q-does-rank-explain-generalization",
     "theme-learning-theory"
@@ -2066,24 +2075,25 @@
     "depth": "",
     "id": "theme-learning-theory",
     "in": 8,
+    "maturity": "seed",
     "out": 3,
     "preview": "Generalization bounds and why over-parameterized networks still generalize; a candidate thesis direction for the e2e fixture vault.",
-    "status": "seed",
     "title": "Learning theory",
     "type": "topic",
-    "words": 35,
+    "words": 41,
     "year": null
    },
    "frontmatter": {
     "layer": "concept",
+    "maturity": "seed",
     "related": [
      "tensor-rank"
     ],
-    "status": "seed",
+    "title": "\"Learning theory\"",
     "type": "topic"
    },
    "kb": "e2e",
-   "markdown": "# Learning theory\n\n## Scope\n\nGeneralization bounds and why over-parameterized networks still generalize; a candidate thesis direction for the e2e fixture vault.\n\n## Key concepts\n\n- [[tensor-rank]]\n\n## Threads\n\n- [[q-does-rank-explain-generalization]]\n\n## Papers\n- [[paper-2024-tiny-rank-paper]]\n",
+   "markdown": "# Learning theory\n\n## Scope\n\nGeneralization bounds and why over-parameterized networks still generalize; a candidate thesis direction for the e2e fixture vault.\n\n## Key concepts\n\n- [Tensor rank](tensor-rank.md)\n\n## Threads\n\n- [Does rank explain generalization?](q-does-rank-explain-generalization.md)\n\n## Papers\n- [Tiny Rank Paper](paper-2024-tiny-rank-paper.md)\n",
    "outbound": [
     "paper-2024-tiny-rank-paper",
     "q-does-rank-explain-generalization",
@@ -2103,12 +2113,12 @@
     "depth": "easy",
     "id": "video-tiny-talk",
     "in": 0,
+    "maturity": "digested",
     "out": 2,
-    "preview": "Problem: Why do big networks generalize? Main result: A talk-length argument that tensor-rank is the right lens.",
-    "status": "digested",
+    "preview": "Problem: Why do big networks generalize? Main result: A talk-length argument that Tensor rank is the right lens.",
     "title": "Tiny talk",
     "type": "video",
-    "words": 48,
+    "words": 51,
     "year": null
    },
    "frontmatter": {
@@ -2118,13 +2128,17 @@
     "author": "Test Speaker",
     "depth": "easy",
     "layer": "source",
+    "maturity": "digested",
     "raw": "none",
-    "status": "digested",
+    "sources": [
+     "https://example.org/talk"
+    ],
+    "title": "\"Tiny talk\"",
     "type": "video",
     "url": "https://example.org/talk"
    },
    "kb": "e2e",
-   "markdown": "# Tiny talk\n\n**Problem:** Why do big networks generalize?\n\n**Main result:** A talk-length argument that [[tensor-rank]] is the right lens.\n\n## Key ideas\n- Low rank as an implicit bias.\n\n## Key equations\n\n## Takeaways for my thesis\n\n## Connections\n- [[theme-learning-theory]]\n\n## Links out\n- Concepts: [[tensor-rank]]\n",
+   "markdown": "# Tiny talk\n\n**Problem:** Why do big networks generalize?\n\n**Main result:** A talk-length argument that [Tensor rank](tensor-rank.md) is the right lens.\n\n## Key ideas\n- Low rank as an implicit bias.\n\n## Key equations\n\n## Takeaways for my thesis\n\n## Connections\n- [Learning theory](theme-learning-theory.md)\n\n## Links out\n- Concepts: [Tensor rank](tensor-rank.md)\n",
    "outbound": [
     "tensor-rank",
     "theme-learning-theory"
