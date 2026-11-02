@@ -39,7 +39,7 @@ distill ingest scrap-youtube <url> --force    # refresh the bundle of a video al
 - `a-<seconds>.jpg` — one 640 px thumbnail per anchor (~25 KB), gitignored like every raw image, `asset:` rows of
   `video.md` in `meta/corpus.tsv`; a clone or the shared site has the text, not the images
 
-**Anchors** (`src/kb_distillery/ingest/youtube/frames.py`) aim at recall: every timestamp where the screen likely shows
+**Anchors** (`src/kb_distillery/ingest/sources/youtube/frames.py`) aim at recall: every timestamp where the screen likely shows
 something worth reading, scored, never dropped. Signals: the fullest board before each erase or camera cut
 (blackboard lectures), the last frame before each slide change scored by its OCR words (slides), transcript cues
 ("as you can see", "this equation"), chapter starts, and coverage (the most stable second of any 90 s stretch with

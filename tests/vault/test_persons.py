@@ -338,7 +338,7 @@ class WriteBackTest(unittest.TestCase):
     """finalize must not clobber hand-written sections (the pre-0.12 bug)."""
 
     def test_write_person_wiki_preserves_hand_sections(self):
-        from kb_distillery.ingest import researcher
+        from kb_distillery.ingest.sources.researcher import researcher
         root = tempfile.mkdtemp()
         os.makedirs(os.path.join(root, "wiki"))
         with open(os.path.join(root, "wiki", "ada-lovelace.md"), "w", encoding="utf-8") as f:

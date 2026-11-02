@@ -16,8 +16,8 @@ The plan said "no module touches `raw/` directly". 17 modules still do. Moving t
 |---|---|
 | `services/chat_agent.py`, `services/corpus.py` | Security checks: they decide what a user or the chat agent may read, using `realpath` containment on the real file system. A connector hides the real path, so moving them would change a security boundary. |
 | `services/chat.py` | Its `save_chat(inbox=...)` takes a directory that the API router and several tests pass in. |
-| `ingest/mail.py`, `scrap.py`, `wordpress.py`, `catalog.py`, `gdrive.py` | They write into `raw/inbox/` through module-level path constants that tests patch. The inbox is also the one place a user drops files by hand. |
-| `ingest/youtube/bundle.py` | A connector has no directories, but this module relies on an empty `raw/videos/<name>/` folder counting as taken. |
+| `ingest/sources/mail/mail.py`, `scrap.py`, `wordpress.py`, `catalog.py`, `gdrive.py` | They write into `raw/inbox/` through module-level path constants that tests patch. The inbox is also the one place a user drops files by hand. |
+| `ingest/sources/youtube/bundle.py` | A connector has no directories, but this module relies on an empty `raw/videos/<name>/` folder counting as taken. |
 | `services/pipeline.py` | It stats every raw file for size and time; the connector's `info()` hashes each file, which would be far slower. |
 | `ops/invariants.py` | Its walk follows symlinks; the connector's `list` does not. |
 | `services/raw_card.py` | It runs `git log` on the `raw` folder. |
@@ -29,7 +29,7 @@ Migrations (`src/kb_distillery/migrations/`) are exempt on purpose: they rewrite
 
 ## Known gaps
 
-- The `gdrive` connector has no timeout: a wedged Drive mount can make `auth()` or a read hang (`ingest/gdrive.py` has a guard for this that the connector does not copy yet).
+- The `gdrive` connector has no timeout: a wedged Drive mount can make `auth()` or a read hang (`ingest/sources/gdrive/gdrive.py` has a guard for this that the connector does not copy yet).
 - A remote connector would need two things the interface lacks: directory-like listing and a cheap stat. Add them when a real remote connector appears.
 - The connector contract is exercised only by local and in-memory stores. No remote store (an API-based Drive, S3) was built or tested.
 

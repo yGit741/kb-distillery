@@ -14,7 +14,7 @@ META = os.path.join(vault_root(), "meta")
 
 from kb_distillery.vault import graph, links
 from kb_distillery.lint import lint
-from kb_distillery.ingest import researcher
+from kb_distillery.ingest.sources.researcher import researcher
 
 
 class LinkRegexTests(unittest.TestCase):

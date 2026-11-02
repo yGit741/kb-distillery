@@ -158,7 +158,7 @@ Sources:
 - **lecture** — `> Lecture of [Course title](course-slug.md)` line → Setup & assumptions → Key equations → Takeaways for my thesis → Connections → Links out
 - **article / mail** — Key claims → Key equations → Takeaways for my thesis → Connections → Links out (mail = an email thread)
 - **ai-chat** — rendered from its `meta/chats/` tree by the chat pipeline (`conversation:` names the tree)
-- **blog-post** — rendered by `src/kb_distillery/ingest/blog.py`: Blog Post Summary → Key concepts → Post
+- **blog-post** — rendered by `src/kb_distillery/ingest/sources/web/blog.py`: Blog Post Summary → Key concepts → Post
 - **video** — Key ideas → Key equations → Takeaways for my thesis → Connections → Links out
 
 Collections (tables of sources, never sources themselves):

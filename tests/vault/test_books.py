@@ -111,7 +111,7 @@ class PartitionTest(unittest.TestCase):
 
 class ProposeTest(unittest.TestCase):
     def entries(self):
-        # outline in src/kb_distillery/ingest/book.py read_toc shape
+        # outline in src/kb_distillery/ingest/sources/books/book.py read_toc shape
         def e(level, title, a, b):
             return {"level": level, "title": title, "start": a, "end": b}
         return [e(1, "Preface", 5, 10), e(1, "Part I Basics", 11, 130),
@@ -174,7 +174,7 @@ class IngestBooksTest(unittest.TestCase):
         self.assertIn('"partial"', inspect.getsource(verify.verify_raw))
 
     def test_part_slug(self):
-        from kb_distillery.ingest.book import part_slug
+        from kb_distillery.ingest.sources.books.book import part_slug
         self.assertEqual(part_slug("book-2014-x", "Chapter 1. Boolean functions"),
                          "part-2014-x-ch1-boolean-functions")
         self.assertEqual(part_slug("book-2014-x", "Part I Foundations"), "part-2014-x-part-i-foundations")

@@ -147,7 +147,7 @@ class WritersKeepNotes(unittest.TestCase):
         self.assertNotesKept("wiki/course-t.md")
 
     def test_person_regenerated(self):
-        from kb_distillery.ingest import researcher
+        from kb_distillery.ingest.sources.researcher import researcher
         self.w("wiki/ada.md", "---\ntype: person\n---\n\n# Ada\n\n## Why it matters here\n\n- [[theme-x]]\n\n" + NOTES)
         with patch.object(researcher, "ROOT", self.root), patch.object(researcher, "wiki_slugs", lambda: set()):
             researcher._write_person_wiki({"slug": "ada", "name": "Ada"})
@@ -166,7 +166,7 @@ class WritersKeepNotes(unittest.TestCase):
         self.assertNotesKept("wiki/q-x.md")
 
     def test_backfill_field_edit(self):
-        from kb_distillery.ingest import backfill
+        from kb_distillery.ingest.sources.researcher import backfill
         body = "\n# P\n\nurl: this body line is not front matter\n\n" + NOTES
         self.w("wiki/paper-p.md", "---\ntype: paper\nurl:\n---\n" + body)
         backfill._set_field(os.path.join(self.root, "wiki/paper-p.md"), backfill.FM_URL, "url: https://x.org")

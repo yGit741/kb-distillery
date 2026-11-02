@@ -285,7 +285,7 @@ def _merge_skips(rows):
 
 
 def propose(entries, total, cap=PART_MAX_PAGES):
-    """A disjoint, exhaustive partition of 1..total from outline entries (src/kb_distillery/ingest/book.py
+    """A disjoint, exhaustive partition of 1..total from outline entries (src/kb_distillery/ingest/sources/books/book.py
     `read_toc` shape). Splits only at outline boundaries; front/back matter becomes skip rows."""
     if not total:
         return []

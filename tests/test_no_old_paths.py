@@ -57,6 +57,9 @@ RETIRED = {
         r"kb_distillery[./](?:kbconfig|paths|flags)\b|from kb_distillery import[^\n#]*\b(?:kbconfig|paths|flags)\b"
         r"|tests/flags\b|tests\.flags\b|tests/vault/test_kbconfig"),
     "kb_distillery/prompts (now llm/prompts)": re.compile(r"kb_distillery[./]prompts\b|resource\(\"prompts\"\)"),
+    "Lane E renames (ingest sources live in ingest/sources/<source>/)": re.compile(
+        r"kb_distillery[./]ingest[./](?:youtube|blog|htmlmd|wordpress|mail|book|chat|chat_build|chat_merge|chat_render|chat_signal|chat_store|gdrive|researcher|backfill)\b|from kb_distillery\.ingest import[^\n#]*\b(?:blog|htmlmd|wordpress|mail|book|chat|chat_build|chat_merge|chat_render|chat_signal|chat_store|gdrive|researcher|backfill)\b"
+        r"|(?<![\w.-])ingest/(?:youtube/|(?:blog|htmlmd|wordpress|mail|book|chat|chat_build|chat_merge|chat_render|chat_signal|chat_store|gdrive|researcher|backfill)\.py)|(?<![\w.-])ingest/test_(?:blog|wordpress|youtube|chat\w*|researcher|set_url)\.py"),
     "Lane E renames (api is now server)": re.compile(
         r"kb_distillery[./]api\b|from kb_distillery import[^\n#]*\bapi\b|(?<![\w/.-])tests/api\b|\{api,services\}"),
     "Lane E renames (summaries is now digest)": re.compile(r"kb_distillery[./]summaries\b|from kb_distillery import[^\n#]*\bsummaries\b|tests/vault/test_summary\b"),
@@ -82,6 +85,7 @@ ALLOWED["Lane E renames (core is now vault)"] = {"docs/ROADMAP.md"}
 ALLOWED["kb_distillery/prompts (now llm/prompts)"] = {"docs/ROADMAP.md"}
 ALLOWED["Lane E renames (summaries is now digest)"] = {"docs/ROADMAP.md"}
 ALLOWED["Lane E renames (api is now server)"] = {"docs/ROADMAP.md"}
+ALLOWED["Lane E renames (ingest sources live in ingest/sources/<source>/)"] = {"docs/ROADMAP.md"}
 ALLOWED["Lane E renames (kbconfig, paths and flags are now config/kb, config/paths and config/flags)"] = {"docs/ROADMAP.md"}
 ALLOWED["templates/ kit folder, template.toml, core.template or $KB_TEMPLATES_DIR"] = {"docs/ROADMAP.md"}
 ALLOWED["keychain service thesis-kb-gmail"] = {"src/kb_distillery/config/userdir.py",      # the read-only lookup of the old name
@@ -114,7 +118,12 @@ RETIRED_FILES = ("src/kb_distillery/share/", "src/kb_distillery/publish/site_sta
                  "src/kb_distillery/core/", "tests/core/",
                  "src/kb_distillery/kbconfig.py", "src/kb_distillery/paths.py", "src/kb_distillery/flags/", "tests/flags/",
                  "tests/vault/test_kbconfig.py", "src/kb_distillery/prompts/",
-                 "src/kb_distillery/summaries/", "tests/vault/test_summary.py", "src/kb_distillery/api/", "tests/api/")
+                 "src/kb_distillery/summaries/", "tests/vault/test_summary.py", "src/kb_distillery/api/", "tests/api/",
+                 "src/kb_distillery/ingest/youtube/", *(f"src/kb_distillery/ingest/{m}.py" for m in (
+                     "blog", "htmlmd", "wordpress", "mail", "book", "chat", "chat_build", "chat_merge", "chat_render", "chat_signal",
+                     "chat_store", "gdrive", "researcher", "backfill")),
+                 *(f"tests/ingest/test_{m}.py" for m in ("blog", "wordpress", "youtube", "chat", "chat_kb", "chat_merge", "chat_store",
+                                                         "researcher", "set_url")))
 
 
 class NoOldPathsTests(unittest.TestCase):
