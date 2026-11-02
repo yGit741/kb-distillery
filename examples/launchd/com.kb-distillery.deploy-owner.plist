@@ -5,7 +5,7 @@
 <plist version="1.0">
 <dict>
   <key>Label</key>
-  <string>com.thesis-kb.deploy-owner</string>
+  <string>com.kb-distillery.deploy-owner</string>
   <key>ProgramArguments</key>
   <array>
     <string>/bin/zsh</string>

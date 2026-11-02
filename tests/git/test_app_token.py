@@ -25,12 +25,12 @@ class OwnerLoginTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             p = os.path.join(d, "app.toml")
             with open(p, "w") as f:
-                f.write('app_id = 1\ninstallation_id = 2\nowner_login = "yGit741"\n')
+                f.write('app_id = 1\ninstallation_id = 2\nowner_login = "octocat"\n')
             with patch.dict(os.environ, {"KB_APP_CONFIG": p}):
                 os.environ.pop("KB_OWNER_LOGIN", None)
-                self.assertEqual(app_token.owner_login(), "yGit741")
+                self.assertEqual(app_token.owner_login(), "octocat")
                 with patch.dict(os.environ, {"KB_OWNER_LOGIN": "other"}):
-                    self.assertEqual(app_token.owner_login(), "yGit741")   # the toml wins
+                    self.assertEqual(app_token.owner_login(), "octocat")   # the toml wins
             with open(p, "w") as f:
                 f.write('app_id = 1\ninstallation_id = 2\n')
             with patch.dict(os.environ, {"KB_APP_CONFIG": p, "KB_OWNER_LOGIN": "other"}):

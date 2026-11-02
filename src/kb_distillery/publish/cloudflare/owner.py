@@ -1,6 +1,6 @@
 """The single deploy owner of the private site (Worker `kb`): one process builds and deploys main.
 
-    python -m kb_distillery.publish.cloudflare.owner run      long-lived loop (launchd: examples/launchd/com.thesis-kb.deploy-owner.plist)
+    python -m kb_distillery.publish.cloudflare.owner run      long-lived loop (launchd: examples/launchd/com.kb-distillery.deploy-owner.plist)
     python -m kb_distillery.publish.cloudflare.owner once     one cycle now, then exit (same lock; the user's manual kick)
     python -m kb_distillery.publish.cloudflare.owner status   per-sha state from .cache/share/owner.json
     python -m kb_distillery.publish.cloudflare.owner fresh    exit 0 when a deploy succeeded in the last --hours (CI fallback gate)

@@ -388,14 +388,14 @@ def build(src, plan, out, allow_unreviewed=False, dry_run=False, keep_old=True):
         "bundle": bundle,
         "keep_old": keep_old,
         "adopt": [
-            "launchctl bootout gui/$(id -u)/com.thesis-kb.daily-sync   # pause nightly sync",
+            "launchctl bootout gui/$(id -u)/com.kb-distillery.daily-sync   # pause nightly sync",
             f"git fetch {bundle} {BRANCH}:{BRANCH} --tags",
             f"git diff main {BRANCH} --stat   # must print nothing",
             f"git merge --ff-only {BRANCH}   # on main — old history stays as the adopt merge's 2nd parent",
             "git push origin main --follow-tags   # plain fast-forward; pre-push validates it",
             "pixi run install-sync   # resume nightly sync",
         ] if keep_old else [
-            "launchctl bootout gui/$(id -u)/com.thesis-kb.daily-sync   # pause nightly sync",
+            "launchctl bootout gui/$(id -u)/com.kb-distillery.daily-sync   # pause nightly sync",
             "git tag backup/pre-curation-<date> main && git push origin backup/pre-curation-<date>",
             f"git fetch {bundle} {BRANCH}:{BRANCH} --tags",
             f"git diff main {BRANCH} --stat   # must print nothing",

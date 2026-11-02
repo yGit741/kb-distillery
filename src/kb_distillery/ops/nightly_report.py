@@ -25,7 +25,7 @@ from kb_distillery.ops.report import sanitize
 
 from . import threads as threads_mod  # noqa: E402
 
-TITLE = "thesis-kb · nightly report"
+TITLE = "kb-distillery · nightly report"
 DASHBOARD_URL = "http://127.0.0.1:8765/ops"
 # hygiene finding kind → thread id, for findings that name no branch or path
 KIND_TO_THREAD = {"unpushed-steps": "main:unpushed", "behind-origin": "main:behind", "other-lane": "dirty:other"}
@@ -215,7 +215,7 @@ def build(root, report, threads, now=None, sync=None, log_tail=None, version=Non
 
     if failed and log_tail:
         sections.append(m.Section("Sync log", [m.Code(sanitize.clean_block(log_tail, root, max_lines=30),
-                                                      "last lines of ~/Library/Logs/thesis-kb-daily-sync.log")], id="log"))
+                                                      "last lines of ~/Library/Logs/kb-distillery-daily-sync.log")], id="log"))
 
     footer = [f"run {_local(now)} · {report.elapsed:.1f} s · {len(report.checks)} checks",
               "config meta/ops/sync.toml · run log meta/.ops/runs.jsonl"]
@@ -226,7 +226,7 @@ def build(root, report, threads, now=None, sync=None, log_tail=None, version=Non
     return m.Doc(TITLE, status, f"{title} — {' · '.join(sub)}", sections, footer, _local(now), links)
 
 
-def subject(doc, report, prefix="[thesis-kb]"):
+def subject(doc, report, prefix="[kb-distillery]"):
     kinds = report.kinds()
     tail = (" · " + ", ".join(kinds[:3]) + (", …" if len(kinds) > 3 else "")) if kinds else ""
     glyph = {"ok": "✓", "warn": "!", "error": "✗"}.get(doc.status, "·")

@@ -153,7 +153,7 @@ class Report(unittest.TestCase):
         report, doc = self.build(ts=[self.thread()])
         self.assertEqual(doc.status, "ok")
         self.assertEqual(doc.sections[0].blocks[0].title, "All clear")
-        self.assertEqual(nightly_report.subject(doc, report), "[thesis-kb] ✓ all clear · 1 open thread")
+        self.assertEqual(nightly_report.subject(doc, report), "[kb-distillery] ✓ all clear · 1 open thread")
         self.assertNotIn("needs", [s.id for s in doc.sections])
 
     def test_findings_attach_to_their_thread_and_raise_its_colour(self):
@@ -167,7 +167,7 @@ class Report(unittest.TestCase):
         self.assertEqual([i.label for i in needs], ["deploy-failed"])          # only the unattached one
         self.assertEqual(doc.status, "error")
         self.assertEqual(nightly_report.subject(doc, report),
-                         "[thesis-kb] ✗ 1 thing needs you · deploy-failed, dirty-worktree")
+                         "[kb-distillery] ✗ 1 thing needs you · deploy-failed, dirty-worktree")
 
     def test_failed_sync_leads_and_carries_the_log(self):
         report, doc = self.build(sync={"failed": True, "error": "Traceback …\nRuntimeError: push exploded"})

@@ -4,7 +4,7 @@
 <plist version="1.0">
 <dict>
   <key>Label</key>
-  <string>com.thesis-kb.daily-sync</string>
+  <string>com.kb-distillery.daily-sync</string>
   <key>ProgramArguments</key>
   <array>
     <string>/bin/zsh</string>

@@ -5,12 +5,16 @@
 set -euo pipefail
 
 cd "$(dirname "$0")/../.."
-LABEL=com.thesis-kb.daily-sync
+LABEL=com.kb-distillery.daily-sync
 DEST="$HOME/Library/LaunchAgents/$LABEL.plist"
-LOG="$HOME/Library/Logs/thesis-kb-daily-sync.log"
+LOG="$HOME/Library/Logs/kb-distillery-daily-sync.log"
 PIXI="$(command -v pixi || echo "$HOME/.pixi/bin/pixi")"
 
 launchctl bootout "gui/$(id -u)/$LABEL" 2>/dev/null || true
+# the pre-rename label (installed by older checkouts): stop it and remove its plist
+OLD="com.thesis-kb.daily-sync"
+launchctl bootout "gui/$(id -u)/$OLD" 2>/dev/null || true
+rm -f "$HOME/Library/LaunchAgents/$OLD.plist"
 if [[ "${1:-}" == "--uninstall" ]]; then
   rm -f "$DEST"
   echo "uninstalled $LABEL"
