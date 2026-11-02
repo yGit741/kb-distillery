@@ -1,4 +1,4 @@
-"""python -m kb_distillery.api [--port 8765] [--no-open] [--no-build] — the API, the legacy pages and the React shell on one port.
+"""python -m kb_distillery.api [--port 8765] [--no-open] [--no-build] — the API and the React shell on one port.
 
 Before serving it rebuilds `src/kb_distillery/_webapp` (gitignored build output) when the frontend sources changed."""
 import argparse
@@ -29,13 +29,13 @@ def main(argv=None):
         print(f"src/kb_distillery/_webapp: {state}", flush=True)
 
     base = f"http://{args.host}:{args.port}"
-    for name, path in (("app", "/app"), ("start", "/start"), ("graph", "/graph"), ("explore", "/explore"),
-                       ("pipeline", "/pipeline"), ("lifecycle", "/lifecycle"), ("ops", "/ops"),
-                       ("chat", "/chat"), ("api docs", "/docs")):
+    for name, path in (("app", "/app"), ("start", "/app/start"), ("graph", "/app/graph"), ("pages", "/app/pages"),
+                       ("pipeline", "/app/pipeline"), ("lifecycle", "/app/lifecycle"), ("system", "/app/system"),
+                       ("chat", "/app/chat"), ("api docs", "/docs")):
         print(f"{name:<11} {base}{path}")
     print("(Ctrl+C to stop)", flush=True)
     if not args.no_open:
-        webbrowser.open(f"{base}/start")
+        webbrowser.open(f"{base}/app/start")
     uvicorn.run(create_app(), host=args.host, port=args.port, log_level="warning")
     return 0
 

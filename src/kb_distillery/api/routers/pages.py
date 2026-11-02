@@ -66,7 +66,7 @@ def vault_asset(name: str = ""):
             responses={200: {"content": {"text/html": {}, "image/svg+xml": {}, "image/png": {}}},
                        404: {"description": "no such asset"}})
 def chat_asset(path: str = ""):
-    from kb_distillery.dashboard.serve import VIZ_REPORTER      # same height reporter the legacy route injects
+    from kb_distillery.api.assets import VIZ_REPORTER      # the height reporter the chat visualization posts to its parent
     full = svc.resolve_chat_asset(path)
     if not full:
         raise HTTPException(404)

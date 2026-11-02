@@ -140,7 +140,7 @@ export const EDIT_ROWS: EditEntry[] = [
 
 export const STEPS: ReactNode[] = [
   <><b>Branch.</b> {c("pixi run ship -- start <feature> --worktree")} — an isolated copy on {c("infra/<feature>")}, so your vault and the nightly sync stay on main.</>,
-  <><b>Build and try it.</b> Edit code in the worktree. Try the dashboard from there with {c("pixi run dashboard -- --port 8799")} (your usual one stays on 8765).</>,
+  <><b>Build and try it.</b> Edit code in the worktree. Try the app from there with {c("pixi run app -- --port 8799")} (your usual one stays on 8765).</>,
   <><b>Commit.</b> {c('pixi run ship -- commit "feat(dashboard): add …"')} — runs tests, lint-skills and lint first; commits tooling files only.</>,
   <><b>Open the PR.</b> {c('pixi run ship -- pr --title "feat(dashboard): add …"')} — pushes and gives you the GitHub link to review.</>,
   <><b>Merge.</b> Approve, then say {c("merge")} → {c("pixi run ship -- merge")} makes a real merge commit {c("… (#N)")} (never squash) and updates your checkout.</>,

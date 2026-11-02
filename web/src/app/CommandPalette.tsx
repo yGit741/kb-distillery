@@ -1,5 +1,5 @@
 import { useNavigate } from "@tanstack/react-router";
-import { ExternalLink, Feather, MessageSquare } from "lucide-react";
+import { Feather, MessageSquare } from "lucide-react";
 import { flag } from "@/flags";
 import { useChatDock } from "@/features/graph/tools/chatDockStore";
 import { useApiQuery } from "@/lib/useApiQuery";
@@ -13,7 +13,7 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import { legacyHref, ROUTES } from "@/routes/registry";
+import { ROUTES } from "@/routes/registry";
 import { IS_SHARE } from "@/share/env";
 import { useUi } from "./ui-store";
 
@@ -101,23 +101,6 @@ export function CommandPalette() {
               </CommandItem>
             ))}
           </CommandGroup>
-        )}
-        {!IS_SHARE && (
-        <CommandGroup heading="Legacy pages">
-          {ROUTES.filter((r) => !r.ported).map((r) => (
-            <CommandItem
-              key={r.id}
-              value={`legacy ${r.label}`}
-              onSelect={() => {
-                setPaletteOpen(false);
-                window.location.assign(legacyHref(r));
-              }}
-            >
-              <ExternalLink aria-hidden />
-              <span>Open legacy {r.label}</span>
-            </CommandItem>
-          ))}
-        </CommandGroup>
         )}
       </CommandList>
     </CommandDialog>

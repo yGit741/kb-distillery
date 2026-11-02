@@ -1,10 +1,10 @@
-"""GET /api/static/{name} — the dashboard's own css/js (what the legacy /static/ serves), nothing else."""
+"""GET /api/static/{name} — the dashboard's own css/js, nothing else."""
 import os
 
 from fastapi import APIRouter, HTTPException
 from starlette.responses import FileResponse
 
-from kb_distillery.dashboard.serve import STATIC_DIR
+from kb_distillery.api.assets import STATIC_DIR
 
 router = APIRouter(tags=["assets"])
 

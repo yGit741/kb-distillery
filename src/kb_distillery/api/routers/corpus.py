@@ -38,7 +38,7 @@ def get_raw_thumb(full: str = Depends(safe_raw_path), w: int = Query(THUMB_WIDTH
     ext = os.path.splitext(full)[1].lower()
     if ext in IMAGE_TYPES:
         return FileResponse(full, media_type=IMAGE_TYPES[ext])
-    from kb_distillery.dashboard.serve import thumbnail_png     # lazy: the legacy module's imports are heavy
+    from kb_distillery.api.assets import thumbnail_png     # lazy: pymupdf is imported on first use
     png = thumbnail_png(full, w) if ext == ".pdf" else None
     if not png:
         return JSONResponse({"error": "no thumbnail for this file"}, status_code=415)

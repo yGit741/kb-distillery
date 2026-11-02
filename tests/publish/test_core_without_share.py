@@ -10,7 +10,7 @@ import tempfile
 import unittest
 from unittest import mock
 
-from kb_distillery.dashboard.shell import share_state
+from kb_distillery.publish.site_state import share_state
 from kb_distillery.publish import NullPublisher
 
 SCRIPT = r'''

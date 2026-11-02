@@ -17,7 +17,7 @@ OUT = os.path.join("web", "src", "api", "schema.d.ts")
 
 def openapi_json():
     from kb_distillery.api.app import create_app
-    return json.dumps(create_app(legacy=False).openapi(), indent=2, sort_keys=True) + "\n"
+    return json.dumps(create_app().openapi(), indent=2, sort_keys=True) + "\n"
 
 
 def generate(root):

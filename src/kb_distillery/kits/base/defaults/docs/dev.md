@@ -19,7 +19,7 @@ src/kb_distillery/      Python app, package `kb_distillery` (src layout; `backen
   src/kb_distillery/migrations/    schema migrations (code); the applied ledger stays in meta/migrations/applied.tsv
   src/kb_distillery/services/      former dashboard *_data modules (graph, pages, corpus, scopes, chat, pipeline, lifecycle, ops)
   src/kb_distillery/api/           FastAPI app (`pixi run app`): routers/ auto-discovered, models/, sse.py, security.py; README.md = add-a-router recipe
-  src/kb_distillery/dashboard/     legacy HTML pages + server until their screens are ported (served behind kb_distillery.api's catch-all)       src/kb_distillery/prompts/  chat prompts
+  src/kb_distillery/dashboard/     retired legacy HTML pages + stdlib server (no longer served by kb_distillery.api; old URLs redirect to /app routes; deleted in a later PR)       src/kb_distillery/prompts/  chat prompts
 tests/                  pytest, mirrored by package (tests/harness = the pipeline harness)
 web/                    the React app (builds into src/kb_distillery/_webapp)
 examples/               demo (the tracked sample kb), launchd

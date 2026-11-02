@@ -31,6 +31,8 @@ screens = [
   { id = "scopes", path = "/scopes" },
   { id = "pipeline", path = "/pipeline" },
   { id = "lifecycle", path = "/lifecycle" },
+  { id = "start", path = "/start" },
+  { id = "covector", path = "/covector" },
 ]
 
 # tile text (data-testid=tile-<id>-value on /system) vs the endpoint it claims to show.
