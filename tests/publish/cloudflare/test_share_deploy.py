@@ -238,7 +238,8 @@ class GuardTests(ShareCase):
         self.assertTrue(cfg["workers_dev"])
         self.assertEqual(cfg["assets"], {"directory": "./public", "binding": "ASSETS", "run_worker_first": True})
         self.assertEqual(cfg["vars"], {"GOOGLE_CLIENT_ID": "cid", "ALLOWED_EMAILS": "me@x.com",
-                                       "CF_ACCOUNT_ID": deploy.CF_ACCOUNT_ID})
+                                       "CF_ACCOUNT_ID": deploy.CF_ACCOUNT_ID,
+                                       "ACCOUNT_SUBDOMAIN": deploy.ACCOUNT_SUBDOMAIN})
         self.assertNotIn("CF_API_TOKEN", json.dumps(cfg))  # a secret, never rendered
         self.assertEqual(cfg["compatibility_flags"], ["global_fetch_strictly_public"])
         self.assertIn("admin.js", cf.deployed_dir)

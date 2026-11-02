@@ -3,23 +3,31 @@
     python -m kb_distillery.lint.privacy            # table of files and how many lines match
     python -m kb_distillery.lint.privacy --names    # just the file paths, the format of the baseline file
 
-A line matches when it holds the owner's local path or handles, the private site's name, or a token-shaped string
-(an Anthropic, AWS, GitHub or Slack key, a Google API key, a private-key header). Knowledge never lives here (the
-kbs are their own repos and `kbs/` is skipped), so a match is code, a test, a doc or a config naming a person.
+A line matches when it holds one of YOUR terms (a name, a handle, an email, a private site's name, a local path) or a
+token-shaped string (an Anthropic, AWS, GitHub or Slack key, a Google API key, a private-key header). The terms are not
+in this repo, because naming them here would leak them: they are read, first match wins, from
 
-`tests/lint/privacy_baseline.txt` lists the files allowed to match today. The ratchet test fails on a file
-that is not listed (new personal text) and on a listed file that no longer matches (delete its line), so the list only
-shrinks until Phase 7 empties it or moves each remaining name behind configuration. Fake keys used as test fixtures
-match the token shapes on purpose: they are listed with the rest, and a reviewer decides per file.
+1. `$KB_PRIVACY_TERMS`, a comma- or pipe-separated list (CI sets it from a repository secret), else
+2. `~/.config/kb-distillery/privacy.toml`, `terms = ["...", "..."]`.
+
+With neither there are no terms: only token shapes are checked, so the ratchet passes on a fresh clone and still checks
+every term you configure. Terms match case-insensitively as plain text. Knowledge never lives here (the kbs are their
+own repos and `kbs/` is skipped), so a match is code, a test, a doc or a config naming a person.
+
+`tests/lint/privacy_baseline.txt` lists the files allowed to match today. The ratchet test fails on a file that is not
+listed (new personal text) and, when terms are configured, on a listed file that no longer matches (delete its line), so
+the list only shrinks. Fake keys used as test fixtures match the token shapes on purpose: they are listed with the rest,
+and a reviewer decides per file.
 """
 from __future__ import annotations
 
 import os
 import re
 import sys
+import tomllib
 
-# `workers.dev` alone is Cloudflare's own domain, not personal: the owner's site is caught by its name (yonatan-magen).
-PERSONAL = re.compile(r"/Users/yonatanm|yonatanm|ygreenshpan|yGit741|yonatan-magen|yonatan-thesis-kb")
+ENV_TERMS = "KB_PRIVACY_TERMS"
+TERMS_FILE = "privacy.toml"
 SECRET = re.compile(
     r"sk-ant-[A-Za-z0-9_-]{10,}|AKIA[0-9A-Z]{16}|ghp_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}"
     r"|xox[bpoa]-[A-Za-z0-9-]{10,}|-----BEGIN [A-Z ]*PRIVATE KEY-----|AIza[0-9A-Za-z_-]{30,}")
@@ -38,13 +46,40 @@ def repo_root() -> str:
     return os.path.dirname(os.path.dirname(os.path.dirname(here)))        # src/kb_distillery/lint -> repo
 
 
-def matches(line: str) -> bool:
-    return bool(PERSONAL.search(line) or SECRET.search(line))
+def terms_path() -> str:
+    return os.path.join(os.path.expanduser("~"), ".config", "kb-distillery", TERMS_FILE)
 
 
-def scan(root: str | None = None) -> dict[str, int]:
-    """{path relative to the repo root: number of matching lines} for every text file outside the skipped folders."""
+def load_terms() -> list[str]:
+    """The configured personal terms: `$KB_PRIVACY_TERMS` (comma or pipe list), else `terms` in privacy.toml, else []."""
+    raw = os.environ.get(ENV_TERMS, "")
+    if raw.strip():
+        found = re.split(r"[,|]", raw)
+    else:
+        try:
+            with open(terms_path(), "rb") as f:
+                value = tomllib.load(f).get("terms") or []
+        except (OSError, tomllib.TOMLDecodeError):
+            value = []
+        found = value if isinstance(value, list) else [value]
+    return sorted({t.strip() for t in found if isinstance(t, str) and t.strip()})
+
+
+def personal_pattern(terms: list[str] | None = None) -> re.Pattern | None:
+    """One case-insensitive pattern for the terms, None when there are none (then nothing personal can match)."""
+    terms = load_terms() if terms is None else terms
+    return re.compile("|".join(re.escape(t) for t in sorted(terms, key=len, reverse=True)), re.I) if terms else None
+
+
+def matches(line: str, personal: re.Pattern | None = None) -> bool:
+    return bool((personal and personal.search(line)) or SECRET.search(line))
+
+
+def scan(root: str | None = None, terms: list[str] | None = None) -> dict[str, int]:
+    """{path relative to the repo root: number of matching lines} for every text file outside the skipped folders.
+    `terms` default to the configured ones (`load_terms`)."""
     root = root or repo_root()
+    personal = personal_pattern(terms)
     out: dict[str, int] = {}
     for dirpath, dirnames, filenames in os.walk(root):
         dirnames[:] = sorted(d for d in dirnames if d not in SKIP_DIRS and not d.startswith("."))
@@ -56,7 +91,7 @@ def scan(root: str | None = None) -> dict[str, int]:
                 continue
             try:
                 with open(os.path.join(dirpath, fn), encoding="utf-8") as f:
-                    n = sum(1 for line in f if matches(line))
+                    n = sum(1 for line in f if matches(line, personal))
             except (OSError, UnicodeDecodeError):
                 continue
             if n:
@@ -65,6 +100,8 @@ def scan(root: str | None = None) -> dict[str, int]:
 
 
 def main(argv=None) -> int:
+    if not load_terms():
+        print(f"note: no personal terms configured (${ENV_TERMS} or {terms_path()}): checking token shapes only", file=sys.stderr)
     found = scan()
     if "--names" in (argv if argv is not None else sys.argv[1:]):
         print("\n".join(sorted(found)))
