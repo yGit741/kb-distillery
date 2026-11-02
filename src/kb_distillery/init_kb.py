@@ -91,7 +91,7 @@ def plan_target(parent: str, kb_id: str, home: str | None = None) -> str:
 # --- the kit's files -------------------------------------------------------------------------------------------
 
 def _kit_dir(kit_name: str) -> str:
-    from kb_distillery.vault import kit as kits
+    from kb_distillery.config import kit as kits
     return os.path.join(kits.kits_dir(), kits.canonical(kit_name))
 
 
@@ -135,7 +135,7 @@ def _sync_tree(src: str, dest: str, rel: str, report: list[str], extra: list[str
 
 def skill_sources(kit: str) -> dict[str, str]:
     """skill name -> source folder, for the kit and every kit it extends (a child's skill replaces its parent's)."""
-    from kb_distillery.vault import kit as kits
+    from kb_distillery.config import kit as kits
     out: dict[str, str] = {}
     for name in kits.chain(kit):
         root = os.path.join(_kit_dir(name), "skills")
@@ -149,7 +149,7 @@ def skill_sources(kit: str) -> dict[str, str]:
 
 def skills_readme(kit: str) -> str:
     """The kits' skills READMEs one after the other, parents first."""
-    from kb_distillery.vault import kit as kits
+    from kb_distillery.config import kit as kits
     parts = []
     for name in kits.chain(kit):
         path = os.path.join(_kit_dir(name), "skills", "README.md")
@@ -171,7 +171,7 @@ def _write_if_different(path: str, text: str) -> str | None:
 def sync_kit_files(root: str, kit: str, report: list[str], extra: list[str] | None = None) -> None:
     """The kit's copies in a kb: `.claude/skills/` (every skill of the kit chain, plus the README listing them) and
     `.claude/docs/`. A skill folder the kit does not have (the kb's own) is left alone."""
-    from kb_distillery.vault import kit as kits
+    from kb_distillery.config import kit as kits
     extra = [] if extra is None else extra
     skills = os.path.join(root, ".claude", "skills")
     for skill, src in skill_sources(kit).items():
@@ -192,7 +192,7 @@ def sync_kit_files(root: str, kit: str, report: list[str], extra: list[str] | No
 def render_template(kit: str, filename: str, context: dict[str, str]) -> str:
     """`kits/<kit>/<filename>` with `{{name}}`, `{{kb_id}}`, `{{kit}}` filled in. A kit's template may put `{{parent}}`
     where the template of the kit it extends goes; a kit with no such file uses its parent's."""
-    from kb_distillery.vault import kit as kits
+    from kb_distillery.config import kit as kits
     chain = kits.chain(kit)
     for i in range(len(chain) - 1, -1, -1):
         path = os.path.join(_kit_dir(chain[i]), filename)
@@ -258,7 +258,7 @@ def _identity_if_missing():
 
 def create(kb_id: str, name: str, kit: str, parent: str, home: str | None = None) -> str:
     """Make the kb folder with its own git repo and first commit → its path. Raises InitError, leaving nothing behind."""
-    from kb_distillery.vault import kit as kits
+    from kb_distillery.config import kit as kits
     validate_id(kb_id)
     if not kits.exists(kit):
         raise InitError(f"unknown kit {kit!r} (known: {', '.join(kits.names()) or 'none'})")
@@ -303,7 +303,7 @@ def create(kb_id: str, name: str, kit: str, parent: str, home: str | None = None
 def refresh(root: str) -> tuple[list[str], list[str], int]:
     """Re-sync an existing kb's kit files -> (changes, notes, rc). `changes` are the files written or removed,
     `notes` what was found and left alone (the user's AGENTS.md, files the kit no longer ships). Idempotent."""
-    from kb_distillery.vault import kit as kits
+    from kb_distillery.config import kit as kits
     cfg = kbconfig.load_dir(root, strict=False)       # tooling files only: a kb on an older schema is refreshed too
     if not cfg.kit:
         raise InitError(f"{cfg.path} names no kit ([kb] kit = \"base\" or \"research\"): --refresh has nothing to sync from")
@@ -376,7 +376,7 @@ def _ask(prompt: str, default: str) -> str:
 
 
 def main(argv=None) -> int:
-    from kb_distillery.vault import kit as kits
+    from kb_distillery.config import kit as kits
     ap = argparse.ArgumentParser(prog="distill init", description=__doc__.split("\n\n")[0])
     ap.add_argument("--kb-id", help=f"folder name and id (default {DEFAULT_ID})")
     ap.add_argument("--name", help="display name (default: the id, spaced and capitalised)")

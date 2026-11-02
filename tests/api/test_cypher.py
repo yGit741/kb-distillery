@@ -6,7 +6,7 @@ from fastapi.testclient import TestClient
 
 from kb_distillery.api.app import create_app
 from kb_distillery.api.models.cypher import NamedQuery, QueryTable
-from kb_distillery.services import cypher
+from kb_distillery.graph import query as cypher
 
 ORIGIN = {"Origin": "http://127.0.0.1:8765"}
 SNAP = {

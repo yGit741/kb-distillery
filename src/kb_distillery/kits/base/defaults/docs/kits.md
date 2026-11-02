@@ -1,6 +1,6 @@
 # Ontology kits
 
-A kit is the schema a knowledge base follows: its page types, areas, source fields and typed edges. It is versioned in the engine (`src/kb_distillery/kits/<name>/kit.toml`, package data, so it ships in the wheel too); a kb names one and may extend it, never edit it. Two kits ship: `base` (a small general kb) and `research` (academic research; `extends = "base"`). The base kit's `defaults/` folder beside its `kit.toml` holds what every kb falls back to: flags, routed docs, page skeletons, digest instructions. Code: `src/kb_distillery/vault/kit.py`. Tests: `tests/vault/test_kit.py`, `tests/vault/test_kit_contract.py`.
+A kit is the schema a knowledge base follows: its page types, areas, source fields and typed edges. It is versioned in the engine (`src/kb_distillery/kits/<name>/kit.toml`, package data, so it ships in the wheel too); a kb names one and may extend it, never edit it. Two kits ship: `base` (a small general kb) and `research` (academic research; `extends = "base"`). The base kit's `defaults/` folder beside its `kit.toml` holds what every kb falls back to: flags, routed docs, page skeletons, digest instructions. Code: `src/kb_distillery/config/kit.py`. Tests: `tests/config/test_kit.py`, `tests/config/test_kit_contract.py`.
 
 ## A kb names its kit
 

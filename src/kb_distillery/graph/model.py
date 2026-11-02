@@ -11,7 +11,7 @@ silently returns nothing for undirected patterns, so `check` rejects those with 
 that answers the same question. Rejections are logged (`.cache/cypher-rejected.jsonl`): when that log
 says the subset is too small, swap the engine behind `run` (e.g. Neo4j) and nothing upstream changes.
 
-This module is the model (no services): kb_distillery.services.cypher supplies the live vault graph, runs
+This module is the model (no services): kb_distillery.graph.query supplies the live vault graph, runs
 queries on it and logs rejections.
 """
 import re

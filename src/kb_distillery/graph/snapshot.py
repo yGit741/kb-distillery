@@ -1,7 +1,9 @@
-"""Build wiki link graph for the interactive explorer (0 LLM)."""
+"""Build wiki link graph for the interactive explorer (0 LLM): the `/api/graph` snapshot, also the graph the queries
+in kb_distillery.graph.query run on."""
 import hashlib
 import os
 import re
+import subprocess
 import sys
 from datetime import datetime, timezone
 
@@ -169,8 +171,16 @@ def _git_dates(root=ROOT, rev="HEAD"):
 _DATES_CACHE = {}    # root → (HEAD sha, dates): another kb's history is read once per commit
 
 
+def head(root: str) -> str:
+    """The git HEAD sha of `root` ("" without git): the cache key for anything derived from history."""
+    try:
+        return subprocess.run(["git", "-C", root, "rev-parse", "HEAD"], capture_output=True, text=True,
+                              timeout=5).stdout.strip()
+    except (OSError, subprocess.SubprocessError):
+        return ""
+
+
 def _dates_for(root):
-    from kb_distillery.services.kbview import head
     sha = head(root)
     hit = _DATES_CACHE.get(root)
     if sha and hit and hit[0] == sha:
@@ -279,7 +289,7 @@ def build_graph_snapshot(layer=None, view=None):
         snap["relations"] = _relations(pages, nodes, links, snap["concept_links"], root, view)
         snap["etag"] = _relations_etag(snap["etag"], root)
     if layer == "raw":      # private data layer; the share build never passes a layer
-        from kb_distillery.services import raw_layer
+        from kb_distillery.graph import raw_layer
         snap.update(raw_layer.build_raw_layer(pages))
         snap["etag"] = raw_layer.layer_etag(snap["etag"])
         snap["layer"] = "raw"
@@ -290,8 +300,9 @@ RELATIONS_FLAG = "graph-relations"
 
 
 def relations_on():
-    from kb_distillery.services.pages import _flag_on
-    return _flag_on(RELATIONS_FLAG)
+    """Whether typed relations (and proposals) are on: the flag's effective value (test, owner override, registry)."""
+    from kb_distillery.flags import runtime
+    return runtime.effective(RELATIONS_FLAG)
 
 
 def _relations_etag(etag, root):
@@ -311,7 +322,7 @@ def _relations(pages, nodes, links, concept, root, view=None):
     """kb_distillery.graph.relations for this knowledge base, with its own `[edges]` table (another kb's for a view)."""
     from kb_distillery import kbconfig
     from kb_distillery.graph import relations
-    from kb_distillery.services.cypher import edge_config
+    from kb_distillery.graph.model import edge_config
 
     cfg = None
     if view is not None and not view.active:
@@ -326,7 +337,7 @@ def _relations(pages, nodes, links, concept, root, view=None):
 
 
 def _schema(types=None):
-    from kb_distillery.services.schema import schema_payload
+    from kb_distillery.graph.schema import schema_payload
     return schema_payload(types)
 
 

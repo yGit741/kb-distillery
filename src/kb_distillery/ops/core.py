@@ -442,8 +442,8 @@ def share_autodeploy(reason, root=ROOT, foreground=False):
     With the Cloudflare publisher that nudges the deploy owner (touch `.cache/share/wake`); `KB_SHARE_DIRECT=1` (the user
     only) keeps the old path: `share deploy-main` from here, detached by default, in the foreground for the nightly sync."""
     try:
-        from kb_distillery import publish
-        publish.current(root=root).request_publish(reason, root, foreground)
+        from kb_distillery import hosting
+        hosting.current(root=root).request_publish(reason, root, foreground)
     except Exception as e:  # noqa: BLE001 — a deploy hiccup must never fail a knowledge op
         print(f"note: share autodeploy not triggered — {e}")
 

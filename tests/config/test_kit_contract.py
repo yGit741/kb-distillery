@@ -5,8 +5,8 @@ import unittest
 
 from kb_distillery import kbconfig
 from kb_distillery.core import kbtypes
-from kb_distillery.vault import kit
-from kb_distillery.services.cypher import edge_config
+from kb_distillery.config import kit
+from kb_distillery.graph.model import edge_config
 
 SCHEMA = "%d.%d" % kbconfig.SCHEMA_VERSION
 

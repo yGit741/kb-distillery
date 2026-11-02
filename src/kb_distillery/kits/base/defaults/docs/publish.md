@@ -17,7 +17,7 @@ Precedence: the kb's `[publish] publisher`, then the engine default: `$KB_PUBLIS
 `ship merge` select no kb, so they see only the engine default: to keep the deploy nudge on merges, set one.
 `kb_distillery.publish.current()` never raises (a bad setting gives a `NullPublisher` that says why); `for_kb()` raises `PublishError`.
 
-## The interface (`src/kb_distillery/publish/base.py`)
+## The interface (`src/kb_distillery/hosting/base.py`)
 
 Required: `available()`, `status(root)`, `publish(snapshot, dry_run=)`. Optional, with empty defaults:
 `log_tail`, `request_publish` (a nudge, never raises), `rollback`, `snapshots`, `orphan_snapshots`, `audit`,

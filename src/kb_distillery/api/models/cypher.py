@@ -1,4 +1,4 @@
-"""Models of POST /api/graph/cypher and /api/graph/queries — read-only graph queries (kb_distillery.services.cypher)."""
+"""Models of POST /api/graph/cypher and /api/graph/queries — read-only graph queries (kb_distillery.graph.query)."""
 from typing import Any
 
 from pydantic import Field

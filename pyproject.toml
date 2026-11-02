@@ -87,26 +87,14 @@ layers = [
     "services : publish : webbuild",
     # pipeline stages, each one concern
     "ingest : summaries : distill : graph : search : lint : metrics : ops : git : migrations : parse",
-    # the vault model, the LLM gateway and storage connectors (they know nothing of the stages above)
-    "core : vault : llm : storage",
+    # the vault model, the LLM gateway, storage connectors and the publisher port (they know nothing of the stages above)
+    "core : vault : llm : storage : hosting",
     # configuration and locations: depend on nothing in the engine
     "kbconfig : paths : flags : config",
 ]
 # Every current violation, grouped by cycle. A cycle-fix PR deletes its group; nothing else belongs here.
 ignore_imports = [
-    # cycle: config <-> vault/core (kbconfig and paths reach up for the kit loader and the schema constants)
-    "kb_distillery.kbconfig -> kb_distillery.vault.kit",
-    "kb_distillery.paths -> kb_distillery.core.schema",
-    # cycle: search <-> services (search.cypher wraps the services query model)
-    "kb_distillery.search.cypher -> kb_distillery.services.cypher",
-    # cycle: graph/propose.py <-> services: stays until the edges work lands (backlog card)
+    # cycle: graph/propose.py <-> services: stays until the typed-edges work lands (graph/propose.py is that work's file;
+    # no backlog card is filed for it yet, see the Lane E plan). services/cypher.py exists only for this leg.
     "kb_distillery.graph.propose -> kb_distillery.services.cypher",
-    # cycle: lint <-> cli/api (lint_skills reads the CLI tree; lint.lint starts the API for its UI check)
-    "kb_distillery.lint.lint_skills -> kb_distillery.cli.tree",
-    "kb_distillery.lint.lint -> kb_distillery.api.__main__",
-    # cycle: stages <-> publish (metrics, ops and hygiene call the export/publish helpers)
-    "kb_distillery.metrics.d1 -> kb_distillery.publish",
-    "kb_distillery.ops.nightly_report -> kb_distillery.publish",
-    "kb_distillery.ops.core -> kb_distillery.publish",
-    "kb_distillery.ops.hygiene -> kb_distillery.publish",
 ]

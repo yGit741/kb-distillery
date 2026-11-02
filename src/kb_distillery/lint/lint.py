@@ -3,7 +3,7 @@
 
     python3 -m kb_distillery.lint.lint                 check + reconcile + regenerate wiki/index.md
     python3 -m kb_distillery.lint.lint --health        terminal health summary
-    python3 -m kb_distillery.lint.lint --dashboard     opens the app (pixi run app)
+    python3 -m kb_distillery.lint.lint --dashboard     retired: says to run the app itself (pixi run app)
     python3 -m kb_distillery.lint.lint --coherence-only  semantic coherence checks only (debug)
     python3 -m kb_distillery.lint.lint --write-index   no-op (index always regenerated)
     KB_CI=1 python3 -m kb_distillery.lint.lint         cloud checkout: raw binaries are gitignored, so the
@@ -1355,9 +1355,10 @@ def collect_snapshot(quiet=False):
 
 def main():
     if "--dashboard" in sys.argv:
-        from kb_distillery.api.__main__ import main as app_main
-        argv = [a for a in sys.argv[1:] if a != "--dashboard"]
-        return app_main(argv or None)
+        # The linter is a pipeline stage and never starts an entry point (layer contract): the app is its own command.
+        print("error: `lint --dashboard` no longer starts the app; run `python -m kb_distillery.api` "
+              "(pixi run app, or distill launch).", file=sys.stderr)
+        return 2
 
     from kb_distillery.kbconfig import checkout_root
     if checkout_root() and os.path.realpath(ROOT) == os.path.realpath(checkout_root()) and not os.path.isdir(os.path.join(ROOT, "wiki")):

@@ -1,6 +1,6 @@
 """The publisher interface: how a knowledge base is published as a site, kept outside core.
 
-Core never imports a publisher's code. It asks `kb_distillery.publish.current()` for a `Publisher` and calls the methods below;
+Core never imports a publisher's code. It asks `kb_distillery.hosting.current()` for a `Publisher` and calls the methods below;
 what is behind them (Cloudflare, a static host, nothing) is the publisher's business.
 
     available()               pure local check: can this publisher publish right now (credentials, tools)? never raises

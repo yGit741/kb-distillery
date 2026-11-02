@@ -13,7 +13,7 @@ import re
 import sys
 from typing import Optional
 
-from kb_distillery.cli.tree import COMMANDS as DISTILL_COMMANDS
+from kb_distillery.config.commands import COMMANDS as DISTILL_COMMANDS
 from kb_distillery.config.resources import resource
 from kb_distillery.kbconfig import checkout_root
 from kb_distillery.paths import CODE_DIR

@@ -11,8 +11,8 @@ from unittest.mock import patch
 from kb_distillery import kbconfig
 from kb_distillery.publish import (NotConfigured, NotSupported, NullPublisher, PublishError, PublishResult, Publisher, Snapshot,
                         current, for_kb, load_class, publisher_names, selected_name)
-from kb_distillery.publish import registry
-from kb_distillery.publish.base import STATUS_KEYS
+from kb_distillery.hosting import registry
+from kb_distillery.hosting.base import STATUS_KEYS
 from tests.publish.fake_publisher import MemoryPublisher
 
 FAKE = {"memory": "tests.publish.fake_publisher:MemoryPublisher"}

@@ -7,7 +7,7 @@ import pytest
 
 from kb_distillery import paths
 from kb_distillery.graph import propose, relations
-from kb_distillery.services import cypher
+from kb_distillery.graph import query as cypher
 
 CONFIG = {"labels": {}, "symmetric": {"CONTRADICTS"}, "types": ["addresses", "contradicts", "extends", "open-problem-in", "uses"],
           "note_required": {"contradicts"}}
@@ -116,7 +116,7 @@ def test_a_bad_confidence_is_a_query_error(tmp_path):
 def served(tmp_path, monkeypatch):
     """current_graph() with a stubbed snapshot, the flag settable, and the kb root a temp folder."""
     snap = {"etag": "e1", "nodes": [{"id": s, "title": s, "type": "idea", "layer": "concept"} for s in "ab"], "links": []}
-    import kb_distillery.services.graph as sg
+    import kb_distillery.graph.snapshot as sg
     state = {"on": True}
     monkeypatch.setattr(sg, "build_graph_snapshot", lambda *a, **k: snap)
     monkeypatch.setattr(sg, "relations_on", lambda: state["on"])

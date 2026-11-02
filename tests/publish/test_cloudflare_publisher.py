@@ -7,7 +7,7 @@ from pathlib import Path
 from unittest import mock
 
 from kb_distillery.publish import PublishError, Snapshot
-from kb_distillery.publish import registry
+from kb_distillery.hosting import registry
 from kb_distillery.publish.cloudflare import cf_api, deploy, owner
 from kb_distillery.publish.site import snapshots
 from kb_distillery.publish.cloudflare.contracts import DeployResult

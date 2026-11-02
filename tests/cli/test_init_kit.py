@@ -8,7 +8,7 @@ import pytest
 
 from kb_distillery import init_kb, kbconfig, llm
 from kb_distillery.git import install_hooks
-from kb_distillery.vault import kit as kits
+from kb_distillery.config import kit as kits
 
 
 OLD_HOOKS_PATH = "../../tools" "/kb-hooks"      # a kb wired before the move; spelled in two parts so the old-paths scan stays clean

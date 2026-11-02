@@ -92,11 +92,8 @@ def strip_prefix(slug):
             return slug[len(p):]
     return slug
 
-WIKI_DIR = "wiki"
-META_DIR = "meta"
-RAW_DIR = "raw"
-THINK_DIR = "think"  # human sandbox at vault root — not linted
-QUARANTINE_DIR = "_quarantine"
+# The folder names live in the config layer (kb_distillery.paths builds on them without importing the schema).
+from kb_distillery.config.layout import META_DIR, QUARANTINE_DIR, RAW_DIR, THINK_DIR, WIKI_DIR  # noqa: E402,F401
 
 # Markdown allowed at the vault root.
 ROOT_MD = {"AGENTS.md", "CLAUDE.md", "README.md", "CHANGELOG.md", "CONTRIBUTING.md"}
@@ -116,8 +113,7 @@ ROOT_LINT_IGNORE = frozenset({"copilot"})
 
 # OKF v0.2 reserved files of the bundle root (wiki/): the generated catalog and the append-only timeline. They are not
 # pages: scans of wiki/ for pages (lint, graph, search, counts, share) skip them through `is_page_file`.
-INDEX_REL = f"{WIKI_DIR}/index.md"
-LOG_REL = f"{WIKI_DIR}/log.md"
+from kb_distillery.config.layout import INDEX_REL, LOG_REL  # noqa: E402,F401
 OKF_VERSION = "0.2"          # written as the only frontmatter key of wiki/index.md
 RESERVED_PAGES = frozenset({"index.md", "log.md"})
 LEGACY_INDEX_REL = "index.md"       # before schema 1.5 (migration 0015 removes it, nothing writes it again)
@@ -229,7 +225,7 @@ RAW_BINARY_EXTS = {".pdf", ".epub", ".png", ".jpg", ".jpeg", ".gif", ".webp", ".
 PARTIAL_CHECKOUT_MIN = 5          # fewer missing binaries = someone deleted files on purpose
 
 # --- corpus manifest ------------------------------------------------------
-MANIFEST = "meta/corpus.tsv"
+from kb_distillery.config.layout import MANIFEST  # noqa: E402,F401
 # `collection`: comma-separated hub/person slugs the file belongs to (hand-editable, like
 # `disposition`). A course/series hub's Contents table must list exactly its members.
 # `scopes` (schema 0.13): comma-separated `scope-*` slugs whose working set holds the file (hand-editable).
@@ -259,10 +255,10 @@ PAPER_YEAR_MIN, PAPER_YEAR_MAX = 1800, 2100
 INK_SUFFIX = " (annotations)"
 BLANK_PDF_BYTES = 700
 
-INGEST_DIR = "meta/.ingest"
+from kb_distillery.config.layout import INGEST_DIR  # noqa: E402,F401
 INGEST_STALE_HOURS = 24
 
-DISTILL_DIR = "meta/.distill"
+from kb_distillery.config.layout import DISTILL_DIR  # noqa: E402,F401
 
 # Research areas: the `area:` whitelist of this knowledge base (`[types] areas` in kb.toml); each has exactly
 # one `<topic prefix><slug>` topic page when the kb has a `topic` concept type.
@@ -382,4 +378,4 @@ GIT_POLICY_MODE = "enforce"
 
 # guard.py: wiki writes need an open ops/ingest/distill session (False = warn only).
 OPS_STRICT = False
-OPS_DIR = "meta/.ops"
+from kb_distillery.config.layout import OPS_DIR  # noqa: E402,F401

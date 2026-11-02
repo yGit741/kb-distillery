@@ -4,7 +4,7 @@ from fastapi import APIRouter, HTTPException, Query
 
 from kb_distillery.api.models.graph import GraphSnapshot
 from kb_distillery.services import kbview
-from kb_distillery.services.graph import build_graph_snapshot, merge_snapshots
+from kb_distillery.graph.snapshot import build_graph_snapshot, merge_snapshots
 
 router = APIRouter(tags=["graph"])
 
