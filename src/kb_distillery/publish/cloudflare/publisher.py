@@ -36,6 +36,8 @@ class _Account:
     @property
     def account_id(self) -> str:
         from kb_distillery.publish.cloudflare import cf_api
+        if not cf_api.ACCOUNT_ID:
+            raise PublishError("no Cloudflare account id: set [cloudflare] account_id in the share config or KB_CLOUDFLARE_ACCOUNT_ID")
         return cf_api.ACCOUNT_ID
 
     def rest(self, method: str, path: str, body: Optional[dict] = None) -> dict:

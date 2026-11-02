@@ -9,7 +9,7 @@ Nothing personal is tracked. The first file that exists is the config, in this o
    (like `compatibility_date`) but is never a config by itself: `require()` refuses without a real file.
 
 A few values also have an environment override, which wins over the file: `KB_SHARE_GOOGLE_CLIENT_ID`,
-`KB_SHARE_FLAGS_KV_ID`, `KB_CLOUDFLARE_SUBDOMAIN`.
+`KB_SHARE_FLAGS_KV_ID`, `KB_CLOUDFLARE_SUBDOMAIN`, `KB_CLOUDFLARE_ACCOUNT_ID`.
 
 Imports only `kb_distillery.config`, so `contracts` can read the subdomain and log path at import.
 """
@@ -128,6 +128,11 @@ def subdomain(root: Optional[str] = None) -> str:
     return os.environ.get("KB_CLOUDFLARE_SUBDOMAIN") or str((_lenient(root).get("cloudflare") or {}).get("subdomain") or "")
 
 
+def account_id(root: Optional[str] = None) -> str:
+    """The Cloudflare account id (not secret); "" when unset (a deploy and the panel then refuse)."""
+    return os.environ.get("KB_CLOUDFLARE_ACCOUNT_ID") or str((_lenient(root).get("cloudflare") or {}).get("account_id") or "")
+
+
 def log_path(root: Optional[str] = None) -> Path:
     return Path(str((_lenient(root).get("share") or {}).get("log_path") or DEFAULT_LOG)).expanduser()
 
@@ -146,6 +151,8 @@ def check_deploy(cfg: dict, require_access: bool = True, account_subdomain: Opti
     if not (subdomain() if account_subdomain is None else account_subdomain):
         missing.append("[cloudflare] subdomain (or KB_CLOUDFLARE_SUBDOMAIN)")
     if require_access:
+        if not account_id():
+            missing.append("[cloudflare] account_id (or KB_CLOUDFLARE_ACCOUNT_ID)")
         if not cfg.get("google_client_id"):
             missing.append("[auth] google_client_id (or KB_SHARE_GOOGLE_CLIENT_ID)")
         if not cfg.get("allowed_emails"):

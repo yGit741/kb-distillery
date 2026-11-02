@@ -62,7 +62,7 @@ pixi run test-worker                       # node --test of worker/auth.js + adm
 ```
 
 Snapshots: `<ref>` is `main`, a commit, `kb-x.y.z` or `x.y.z`; the URL is
-`https://snapshot-<YYYYMMDD>-<name>.yonatan-magen-thesis.workers.dev/` (date = deploy day, UTC).
+`https://snapshot-<YYYYMMDD>-<name>.<subdomain>.workers.dev/` (date = deploy day, UTC).
 Public builds exclude only `distilled-think`, `scope` and anything derived from e-mail (`raw:` under
 `raw/emails/`, i.e. email-thread `mail-` pages); person pages, LLM chats and ordinary `raw/`
 paths are public (owner decision 2026-10-24: mails involve someone else, chats and profiles do not).
@@ -152,7 +152,7 @@ pbpaste | npx wrangler@4.151.3 secret put CF_API_TOKEN --name kb && pbcopy < /de
 ## Output
 
 Nothing in the vault. `.cache/share/status.json` (gitignored), the share log, and a new Worker
-version at `https://kb.yonatan-magen-thesis.workers.dev` tagged `kb-share <sha> <version> <profile>`;
+version at `https://kb.<subdomain>.workers.dev` tagged `kb-share <sha> <version> <profile>`;
 snapshots are their own Workers (`.cache/share/status-snapshot-*.json`, never the main chip).
 
 ## Limits
