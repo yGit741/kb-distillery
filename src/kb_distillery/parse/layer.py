@@ -1,4 +1,4 @@
-"""The truth: every glyph of a PDF page with its font, size and box, plus the ruled lines, from PyMuPDF.
+"""The truth: every glyph of a PDF page with its font, size and box, plus the ruled lines, from PDFium (pypdfium2).
 
 `read_page` / `read_pdf` give `PageLayer`s; words are runs of glyphs between spaces, hyphen-broken words are joined
 across lines, and NUL / control codes never survive. Fonts map to the LaTeX class they stand for (MSBM -> mathbb,
@@ -197,51 +197,96 @@ def _classify_rules(rules: list, glyphs: list) -> None:
             else "underline" if above else "rule"
 
 
+def _page_glyphs(page) -> list:
+    """Per line, the glyphs of a pypdfium2 page: [[Glyph, ...], ...] in reading order, y down, spaces kept."""
+    from kb_distillery.storage.pdf import page_lines
+    out = []
+    for line in page_lines(page):
+        gl = []
+        for ch in line:
+            c = clean(ch.ch)
+            if c:
+                gl.append(Glyph(c, ch.font, ch.size, ch.box, font_class(ch.font)))
+        if gl:
+            out.append(gl)
+    return out
+
+
+def _paragraph_breaks(lines: list) -> list:
+    """Block number of each line: a new block when the gap to the previous line is more than 0.6 of its type size."""
+    blocks, block, prev = [], 0, None
+    for gl in lines:
+        box = [g for g in gl if not g.char.isspace()] or gl
+        top, bottom = min(g.bbox[1] for g in box), max(g.bbox[3] for g in box)
+        size = max(g.size for g in box)
+        if prev is not None and top - prev[1] > 0.6 * prev[2]:
+            block += 1
+        blocks.append(block)
+        prev = (top, bottom, size)
+    return blocks
+
+
+def _half_stroke(obj) -> float:
+    """Half the stroke width of a stroked path object, 0 for a path that is only filled."""
+    import ctypes
+
+    import pypdfium2.raw as raw
+    fill, stroke = ctypes.c_int(), ctypes.c_int()
+    raw.FPDFPath_GetDrawMode(obj.raw, ctypes.byref(fill), ctypes.byref(stroke))
+    if not stroke.value:
+        return 0.0
+    width = ctypes.c_float()
+    raw.FPDFPageObj_GetStrokeWidth(obj.raw, ctypes.byref(width))
+    return width.value / 2
+
+
 def read_page(page, number: int | None = None) -> PageLayer:
-    """Layer of one fitz page: glyphs (rawdict), words, thin horizontal rules (get_drawings) and image boxes."""
-    n = (page.number + 1) if number is None else number
-    layer = PageLayer(n, page.rect.width, page.rect.height)
-    line_no = 0
-    for block_no, block in enumerate(page.get_text("rawdict").get("blocks", [])):
-        if block.get("type", 0) != 0:
-            continue
-        for line in block.get("lines", []):
-            gl = []
-            for span in line.get("spans", []):
-                font, size = span.get("font", ""), float(span.get("size", 0))
-                cls = font_class(font)
-                for ch in span.get("chars", []):
-                    c = clean(ch.get("c", ""))
-                    if c == "" and ch.get("c", "") != "":
-                        continue                                   # a control code: no glyph
-                    gl.append(Glyph(c, font, size, tuple(ch["bbox"]), cls))
-            layer.glyphs.extend(g for g in gl if not g.char.isspace())
-            layer.words.extend(_words_of_line(gl, line_no, block_no))
-            line_no += 1
+    """Layer of one pypdfium2 page: glyphs, words, thin horizontal rules (path objects) and image boxes."""
+    import pypdfium2.raw as raw
+    layer = PageLayer(number or 1, page.get_width(), page.get_height())
+    height = layer.height
+    lines = _page_glyphs(page)
+    for line_no, (gl, block_no) in enumerate(zip(lines, _paragraph_breaks(lines))):
+        layer.glyphs.extend(g for g in gl if not g.char.isspace())
+        layer.words.extend(_words_of_line(gl, line_no, block_no))
     layer.words = _join_hyphens(layer.words)
-    for d in page.get_drawings():
-        r = d.get("rect")
-        if r is not None and r.height <= 1.6 and r.width >= 2.0:
-            layer.rules.append(Rule((r.x0, r.y0, r.x1, r.y1)))
+    paths = []
+    for obj in page.get_objects(filter=[raw.FPDF_PAGEOBJ_PATH, raw.FPDF_PAGEOBJ_IMAGE]):
+        x0, bottom, x1, top = obj.get_bounds()
+        if obj.type == raw.FPDF_PAGEOBJ_IMAGE:
+            layer.figures.append((x0, height - top, x1, height - bottom))
+            continue
+        half = _half_stroke(obj)             # PDFium's bounds include the stroke; a rule is the path itself
+        x0, x1, top, bottom = (x0 + half, x1 - half, top - half, bottom + half) if x1 - x0 > 2 * half \
+            else (x0 + half, x0 + half, top - half, bottom + half)
+        paths.append((x0, height - max(top, bottom), x1, height - min(top, bottom)))
+    for x0, y0, x1, y1 in paths:
+        if y1 - y0 <= 1.6 and x1 - x0 >= 2.0:
+            layer.rules.append(Rule((x0, y0, x1, y1)))
     _classify_rules(layer.rules, layer.glyphs)
-    for d in page.get_drawings():
-        r = d.get("rect")
-        if r is not None and r.width <= 1.6 and r.height >= 8.0:
-            layer.vrules.append((r.x0, r.y0, r.x1, r.y1))
-    try:
-        layer.figures = [tuple(i["bbox"]) for i in page.get_image_info()]
-    except Exception:
-        layer.figures = []
+    layer.vrules = [b for b in paths if b[2] - b[0] <= 1.6 and b[3] - b[1] >= 8.0]
     return layer
+
+
+def iter_pdf(path_or_bytes, pages=None):
+    """Layers of a PDF (a path or the bytes) one page at a time, the 1-based `pages` or all of them."""
+    from kb_distillery.storage.pdf import LOCK, PdfDoc
+    doc = PdfDoc(path_or_bytes)
+    try:
+        want = set(pages) if pages else None
+        for i in range(doc.page_count):
+            if want is None or i + 1 in want:
+                with LOCK:
+                    page = doc.page(i)
+                    try:
+                        lay = read_page(page, i + 1)
+                    finally:
+                        page.close()
+                yield lay
+    finally:
+        doc.close()
 
 
 def read_pdf(path_or_bytes, pages=None) -> list:
     """Layers of a PDF (a path or the bytes), all pages or the 1-based `pages`."""
-    import fitz
-    doc = fitz.open(stream=path_or_bytes, filetype="pdf") if isinstance(path_or_bytes, (bytes, bytearray)) \
-        else fitz.open(path_or_bytes)
-    try:
-        want = set(pages) if pages else None
-        return [read_page(p) for p in doc if want is None or p.number + 1 in want]
-    finally:
-        doc.close()
+    return list(iter_pdf(path_or_bytes, pages))

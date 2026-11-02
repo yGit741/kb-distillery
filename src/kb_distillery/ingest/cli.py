@@ -111,7 +111,7 @@ def cmd_toc(args):
     if not raw_abs.lower().endswith(".pdf"):
         print(f"toc: {args.raw_path} is not a PDF", file=sys.stderr)
         return 1
-    if book_mod._fitz() is None:
+    if book_mod._pdf() is None:
         return 1
     rows, total, hub_rel = book_mod.partition_for(raw_rel, raw_abs)
     if rows:

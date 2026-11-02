@@ -11,6 +11,8 @@ import urllib.parse
 import urllib.request
 import xml.etree.ElementTree as ET
 
+from kb_distillery.storage import pdf
+
 API = "https://export.arxiv.org/api/query"
 ATOM = {"a": "http://www.w3.org/2005/Atom"}
 BATCH = 50            # ids per request
@@ -124,15 +126,13 @@ def fetch(ids, pause=PAUSE_S, opener=None, strict=False):
 
 def stamp(path):
     """The arXiv id printed in the margin of page 1 (`arXiv:2310.02541v2 [cs.LG] 4 Oct 2023`),
-    or None: not a PDF, no text layer, a journal version without the stamp, pymupdf missing.
+    or None: not a PDF, no text layer, a journal version without the stamp, pypdfium2 missing.
     Only the dated margin form counts, so a citation in a footnote cannot pass as the stamp."""
-    try:
-        import fitz  # pymupdf
-    except ImportError:
+    if not pdf.available():
         return None
     try:
-        doc = fitz.open(path)
-        text = doc[0].get_text() if doc.page_count else ""
+        doc = pdf.PdfDoc(path)
+        text = doc.page_text(0) if doc.page_count else ""
         doc.close()
     except Exception:
         return None

@@ -4,6 +4,7 @@ import os
 import re
 import sys
 
+from kb_distillery.storage import pdf
 from kb_distillery.vault.schema import PARSED_FILENAME
 
 from .paths import session_dir, load_session, person_from_raw
@@ -76,26 +77,24 @@ def _extract_raw(raw_path, max_pages, pages):
     if os.path.splitext(raw_path)[1].lower() in TEXT_EXTS:
         return text_clip(raw_path)
 
-    try:
-        import fitz  # pymupdf
-    except ImportError:
-        print("pymupdf not installed — run: pixi install", file=sys.stderr)
+    if not pdf.available():
+        print(pdf.MISSING_MSG, file=sys.stderr)
         return None
 
-    doc = fitz.open(raw_path)
+    doc = pdf.PdfDoc(raw_path)
     parts = []
     if pages:
         start = max(1, min(pages[0], doc.page_count))
         end = max(start, min(pages[1], doc.page_count))
         parts.append(f"[pages {start}-{end} of {doc.page_count}]\n")
         for i in range(start - 1, end):
-            parts.append(doc.load_page(i).get_text())
+            parts.append(doc.page_text(i))
     else:
-        for i, page in enumerate(doc):
+        for i in range(doc.page_count):
             if max_pages is not None and i >= max_pages:
                 parts.append(f"\n[... truncated after {max_pages} of {doc.page_count} pages ...]\n")
                 break
-            parts.append(page.get_text())
+            parts.append(doc.page_text(i))
     doc.close()
     return "\n".join(parts)
 

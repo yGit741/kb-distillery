@@ -110,11 +110,24 @@ class StampTests(unittest.TestCase):
         self.assertIsNone(arxiv_meta.STAMP.search("see arXiv:2306.09994 for the proof"))
 
     def test_stamp_reads_page_one(self):
-        with mock.patch.dict(sys.modules, {"fitz": mock.MagicMock()}) as mods:
-            doc = mods["fitz"].open.return_value
+        with mock.patch.object(arxiv_meta.pdf, "PdfDoc") as opened:
+            doc = opened.return_value
             doc.page_count = 1
-            doc.__getitem__.return_value.get_text.return_value = "QUANTUM MYCIELSKI\narXiv:2306.09994v2 [math.OA] 8 Aug 2023"
+            doc.page_text.return_value = "QUANTUM MYCIELSKI\narXiv:2306.09994v2 [math.OA] 8 Aug 2023"
             self.assertEqual(arxiv_meta.stamp("/x.pdf"), "2306.09994")
+            doc.page_text.assert_called_once_with(0)
+
+    def test_stamp_on_a_rotated_margin_line(self):
+        """arXiv prints the stamp rotated along the left edge: it must survive a real PDF round trip."""
+        from tests import pdfkit
+        doc = pdfkit.Doc()
+        page = doc.new_page()
+        page.insert_text((72, 100), "QUANTUM MYCIELSKI", fontsize=14)
+        page.insert_rotated_text((30, 600), "arXiv:2306.09994v2 [math.OA] 8 Aug 2023", fontsize=8)
+        with tempfile.TemporaryDirectory() as d:
+            path = os.path.join(d, "p.pdf")
+            doc.save(path)
+            self.assertEqual(arxiv_meta.stamp(path), "2306.09994")
 
 
 class CatalogRefusesOnOutage(unittest.TestCase):

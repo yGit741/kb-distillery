@@ -214,9 +214,9 @@ def seed_pages():
 
 def _pdf(path, pages, title, toc=None, stamp=None):
     """A small PDF with a real text layer. Content is deterministic; the file bytes are not
-    (PyMuPDF embeds a random /ID), which is why goldens mask the sha1 of PDF rows."""
-    import fitz
-    doc = fitz.open()
+    (a PDF library may embed a random /ID), which is why goldens mask the sha1 of PDF rows."""
+    from tests import pdfkit
+    doc = pdfkit.Doc()
     for i in range(pages):
         page = doc.new_page()
         lines = [f"{title} - page {i + 1}"]
@@ -225,11 +225,10 @@ def _pdf(path, pages, title, toc=None, stamp=None):
         lines += ["This page is generated for the pipeline harness. It carries enough running text "
                   "for the typed-document detector to see a real text layer, and it says nothing "
                   "about any real research result whatsoever."] * 2
-        page.insert_textbox(fitz.Rect(50, 50, 545, 780), "\n\n".join(lines), fontsize=11)
+        page.insert_textbox((50, 50, 545, 780), "\n\n".join(lines), fontsize=11)
     if toc:
         doc.set_toc(toc)
-    doc.set_metadata({})
-    doc.save(str(path), deflate=True)
+    doc.save(str(path))
     doc.close()
 
 
