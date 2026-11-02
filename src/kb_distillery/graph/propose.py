@@ -182,7 +182,7 @@ def load_pages(root=None):
     for slug, (_rel, fm, text) in raw.items():
         outbound = sorted(s for s in outbound_links(text, fm) if s in raw and s != slug)
         out[slug] = {"slug": slug, "type": str(fm.get("type", "")), "depth": str(fm.get("depth", "")),
-                     "title": _title(text, slug), "summary": _unquote(fm.get("summary")), "text": text,
+                     "title": _title(text, slug), "summary": _unquote(fm.get("description")), "text": text,
                      "out": outbound, "in": sorted(s for s in inbound.get(slug, ()) if s != slug)}
     return out
 
