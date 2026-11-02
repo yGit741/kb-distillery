@@ -27,7 +27,7 @@ Tag `phase-1-done` (engine, `5bd9410`). This report closes roadmap 1.6.
   2026-10-31: HEAD `9b74d91` (kb-1.3.14), `main` equals `origin/main`, only the same three untracked Think files, 3789 raw
   files. Before the move its `raw/`, `wiki/`, tracked `meta/` and Think notes were also compared with
   `kbs/yonatan-thesis` and `kbs/think` and were identical. `backups/pre-distillery-20261030.tgz` and the raw manifest remain.
-- **Live jobs.** `com.thesis-kb.daily-sync` and `com.thesis-kb.deploy-owner` were failing (their `cd` target
+- **Live jobs.** `com.kb-distillery.daily-sync` and `com.kb-distillery.deploy-owner` were failing (their `cd` target
   `~/local-workspace/personal-knowledge-base` does not exist; deploy-owner was in a respawn loop). They were unloaded and
   disabled on 2026-10-31. The live site is frozen at its last deployed version until the switchover phase.
 - **Remotes.** The "no remotes before Phase 8" rule no longer holds: `origin` is the private
