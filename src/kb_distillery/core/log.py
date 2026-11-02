@@ -109,6 +109,8 @@ def append(root, op, summary, targets=(), when=None):
         days.sort(key=lambda d: d[0], reverse=True)          # stable: equal dates keep their order
     day[1].insert(0, [head])
     os.makedirs(os.path.dirname(path), exist_ok=True)
-    with open(path, "w", encoding="utf-8") as f:
+    tmp = path + ".tmp"                       # whole-file rewrite: a crash must never leave a truncated timeline
+    with open(tmp, "w", encoding="utf-8") as f:
         f.write(render(days))
+    os.replace(tmp, path)
     return True
