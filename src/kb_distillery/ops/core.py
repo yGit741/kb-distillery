@@ -165,6 +165,13 @@ def run_lint(root=ROOT):
     if proc.returncode != 0:
         tail = "\n".join((proc.stdout or "").splitlines()[-8:])
         raise OpsError(f"lint failed — nothing committed\n{tail}")
+    # the OKF gate: no bypass. A finding names the file and the rule; the owner fixes the page, then commits again
+    okf = subprocess.run([sys.executable, "-m", "kb_distillery.lint.okf_check"], cwd=root,
+                         env=dict(os.environ, KB_ROOT=str(root)), capture_output=True, text=True)
+    if okf.returncode != 0:
+        lines = (okf.stdout or okf.stderr or "").splitlines()
+        shown = "\n".join(lines[:25] + ([f"… and {len(lines) - 26} more"] if len(lines) > 26 else []) + lines[-1:])
+        raise OpsError(f"okf-check failed — nothing committed (fix the pages named below; there is no bypass)\n{shown}")
 
 
 # ---------- knowledge state snapshots ----------

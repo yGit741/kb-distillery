@@ -1,9 +1,14 @@
 #!/usr/bin/env python3
-"""okf-check: report how far a knowledge base is from Open Knowledge Format v0.2. Report-only: exits 0.
+"""okf-check: the blocking Open Knowledge Format v0.2 gate. Exits 1 on any finding, 0 on none (--json always exits 0).
 
     python -m kb_distillery.lint.okf_check [--kb ID] [--json]
 
-Rules (OKF PR10 turns them into a blocking commit gate; this PR only reports):
+`wiki/` is the bundle root. `index.md` and `log.md` are OKF reserved files, not pages: they are not counted, need no
+`type` and the other frontmatter rules skip them; their links are still checked, and `log.md` (a historical record
+whose old entries quote `[[...]]` text) is exempt from the wikilink rule only. A kb commit (`ops`) and the engine
+`ship` gates (on examples/demo) run it; there is no bypass.
+
+Rules:
   type        every non-reserved page has a non-empty `type`
   status      `status`, when present, is draft, stable or deprecated
   sources     every `sources` entry is a mapping with a `resource`
@@ -60,8 +65,9 @@ def has_offset(value):
 
 
 def pages(root):
-    """(relative path, absolute path) of every markdown page outside raw/think/meta/digest."""
-    for dirpath, dirs, files in os.walk(root):
+    """(relative path, absolute path) of every markdown file of the bundle, `wiki/` (reserved files included)."""
+    bundle = os.path.join(root, "wiki")
+    for dirpath, dirs, files in os.walk(bundle):
         dirs[:] = sorted(d for d in dirs if d not in SKIP_DIRS and not d.startswith("."))
         for name in sorted(files):
             if name.endswith(".md"):
@@ -69,11 +75,15 @@ def pages(root):
                 yield os.path.relpath(path, root), path
 
 
+def is_reserved(rel):
+    return os.path.basename(rel) in RESERVED
+
+
 def check_page(rel, text, root):
     """List of (rule, message) for one page."""
     out = []
     fm, body = front_matter(text)
-    if os.path.basename(rel) not in RESERVED:
+    if not is_reserved(rel):
         if fm is None or not str(fm.get("type") or "").strip():
             out.append(("type", "no parseable non-empty `type`"))
         if fm:
@@ -93,11 +103,11 @@ def check_page(rel, text, root):
             for key, value in stamps.items():
                 if not has_offset(value):
                     out.append(("timestamp", f"{key} {value!r} has no UTC offset"))
-    prose = CODE.sub("", body)
-    for found in sorted(set(page_links.leftover_wikilinks(body))):
-        out.append(("wikilink", found))
-    own = {slugify(h) for h in HEADING.findall(prose)}
-    for href in MD_LINK.findall(prose):
+    if os.path.basename(rel) != "log.md":
+        for found in sorted(set(page_links.leftover_wikilinks(body))):
+            out.append(("wikilink", found))
+    own = {slugify(h) for h in HEADING.findall(CODE.sub("", body))}
+    for href in MD_LINK.findall(page_links.prose(body)):      # not in code, math, comments or `## My notes`
         if re.match(r"[a-z][a-z0-9+.-]*:", href, re.I):          # http:, mailto:
             continue
         path, _, anchor = href.partition("#")
@@ -129,11 +139,11 @@ def check(root):
     """{relative path: [(rule, message)]} for pages with findings, and the page count."""
     findings, count = {}, 0
     for rel, path in pages(root):
-        count += 1
+        count += not is_reserved(rel)
         try:
             with open(path, encoding="utf-8") as f:
                 found = check_page(rel, f.read(), root)
-        except (OSError, ValueError, TypeError) as e:       # report-only: a bad page is a finding, never a crash
+        except (OSError, ValueError, TypeError) as e:       # a bad page is a finding, never a crash
             found = [("read", f"{type(e).__name__}: {e}")]
         if found:
             findings[rel] = found
@@ -147,9 +157,9 @@ def main(argv=None):
     root = vault_root()
     try:
         findings, count = check(root)
-    except Exception as e:                                  # report-only: always exit 0
-        print(f"okf-check (report-only): could not run: {type(e).__name__}: {e}")
-        return 0
+    except Exception as e:                                  # a gate that cannot run must block, not pass
+        print(f"okf-check: could not run: {type(e).__name__}: {e}")
+        return 1
     totals = Counter(rule for found in findings.values() for rule, _ in found)
     if as_json:
         print(json.dumps({"pages": count, "findings": {p: [list(f) for f in fs] for p, fs in findings.items()},
@@ -157,10 +167,10 @@ def main(argv=None):
         return 0
     for rel, found in sorted(findings.items()):
         for rule, message in found:
-            print(f"{rel}: {rule}: {message}")
+            print(f"ERROR okf-check: {rel}: {rule}: {message}")
     summary = ", ".join(f"{n} {rule}" for rule, n in sorted(totals.items())) or "none"
-    print(f"okf-check (report-only): {count} pages, {sum(totals.values())} findings ({summary})")
-    return 0
+    print(f"okf-check: {count} pages, {sum(totals.values())} findings ({summary})")
+    return 1 if findings else 0
 
 
 if __name__ == "__main__":

@@ -59,6 +59,7 @@ GATES = [
     ("tests-serial", [sys.executable, "-m", "pytest", "-q", "-m", "serial", "tests"]),
     ("lint-skills", [sys.executable, "-m", "kb_distillery.lint.lint_skills"]),
     ("lint", [sys.executable, "-m", "kb_distillery.lint.lint"]),
+    ("okf-check", [sys.executable, "-m", "kb_distillery.lint.okf_check"]),    # blocking, on the demo kb like lint
 ]
 SUBCOMMANDS = {"whoami", "claims", "events", "round", "queue", "start", "commit", "pr", "merge", "sync", "status", "prune", "protect", "approve", "tag", "mv"}
 GENERATED_FILES = {INDEX_REL, "meta/corpus.tsv", "meta/coherence-warnings.tsv"}
@@ -366,6 +367,11 @@ def lint_command(root=ROOT):
     return [sys.executable, "-m", "kb_distillery.lint.lint", *(["--kb", demo] if os.path.isdir(demo) else [])]
 
 
+def okf_command(root=ROOT):
+    """The okf-check gate: lint's command line (same kb), the okf_check module."""
+    return [c.replace("kb_distillery.lint.lint", "kb_distillery.lint.okf_check") for c in lint_command(root)]
+
+
 def run_gates(root=ROOT, skip_tests=False, scope="full"):
     """`_run_gates` as one gate-slot sequence: the slot is taken at the first real run and held to the last gate."""
     with gate_slot.sequence(root):
@@ -377,7 +383,8 @@ def _run_gates(root, skip_tests, scope):
     runs the tests that mirror the touched code plus the top-level invariants; anything it cannot map runs full.
     A gate that already passed on the same content (see gate_cache) is reused, not rerun."""
     link_untracked_raw(root)
-    gates = [(name, lint_command(root) if name == "lint" else cmd) for name, cmd in GATES]
+    own = {"lint": lint_command, "okf-check": okf_command}
+    gates = [(name, own[name](root) if name in own else cmd) for name, cmd in GATES]
     scopes = {name: "full" for name, _ in gates}
     extras = {}
     if scope == "subset" and not skip_tests:

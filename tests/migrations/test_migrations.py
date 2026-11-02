@@ -88,6 +88,7 @@ class GitHooksTests(unittest.TestCase):
         os.makedirs(os.path.join(kb, "lint"))
         for rel, text in (("__init__.py", ""),
                           ("lint.py", "import os, sys\nsys.exit(1 if os.path.exists('LINT_FAIL') else 0)\n"),
+                          ("okf_check.py", "import os, sys\nsys.exit(1 if os.path.exists('OKF_FAIL') else 0)\n"),
                           ("lint_skills.py", "import sys; sys.exit(0)\n")):
             with open(os.path.join(kb, "lint", rel), "w") as f:
                 f.write(text)
@@ -129,6 +130,16 @@ class GitHooksTests(unittest.TestCase):
             f.write("nonce123")
         proc = g(self.root, "commit", "-m", msg, env={"KB_POLICY": "enforce", "KB_LINTED": "nonce123"}, check=False)
         self.assertEqual(proc.returncode, 0, proc.stderr)  # lint skipped via the one-time token
+
+    def test_okf_check_blocks_a_direct_commit(self):
+        self._write("wiki/a.md")
+        msg = "kb(digest): a (kb-0.7.1)\n\nKB-Version: 0.7.1\nKB-Op: digest\nKB-Target: a"
+        open(os.path.join(self.root, "OKF_FAIL"), "w").close()
+        proc = g(self.root, "commit", "-m", msg, env={"KB_POLICY": "enforce"}, check=False)
+        self.assertNotEqual(proc.returncode, 0)
+        self.assertIn("okf-check failed", proc.stderr)
+        os.remove(os.path.join(self.root, "OKF_FAIL"))
+        self.assertEqual(g(self.root, "commit", "-m", msg, env={"KB_POLICY": "enforce"}, check=False).returncode, 0)
 
     def test_pre_push_rejects_direct_feat_on_main(self):
         self._write("meta/tool.py")

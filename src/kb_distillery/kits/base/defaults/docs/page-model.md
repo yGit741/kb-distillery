@@ -140,7 +140,7 @@ counted, shared as nodes or restored by undo. `index.md` is generated on every l
 section; wikilinks in it are a lint error). `log.md` is the append-only activity timeline: no frontmatter, `# Log`, one
 `## YYYY-MM-DD` heading per day (newest day first) and under it that day's entries, newest first, each
 `### <op> | <summary>` plus ` ← ` and the backticked targets when it has any; `kb_distillery.core.log` is its only writer.
-Migration `0015_okf_index_log` moved both from `index.md` and `meta/log.md`; a root `index.md` is never written again.
+`okf-check` (the blocking OKF gate, see `lifecycle.md`) does not count them as pages and needs no `type` from them. Migration `0015_okf_index_log` moved both from `index.md` and `meta/log.md`; a root `index.md` is never written again.
 
 ## Note sections
 
