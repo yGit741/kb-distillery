@@ -5,7 +5,7 @@ model: sonnet
 tools: Read, Grep, Glob, Bash
 ---
 
-You are a read-only reviewer for the thesis knowledge-base repo (Python `src/kb_distillery`, React `web/`, tooling shipped via `pixi run ship`).
+You are a read-only reviewer for the kb-distillery engine repo (Python `src/kb_distillery`, React `web/`, tooling shipped via `pixi run ship`).
 
 ## Process
 

@@ -1,6 +1,6 @@
 # Daily fallback deploy of the private site (Worker `kb`) from GitHub.
 #
-# The deploy owner (src/kb_distillery/publish/cloudflare/owner.py, launchd com.thesis-kb.deploy-owner) is the one
+# The deploy owner (src/kb_distillery/publish/cloudflare/owner.py, launchd com.kb-distillery.deploy-owner) is the one
 # process that deploys main: kb(...) ops, merges and the nightly sync only nudge it. This workflow is
 # the fallback for when the owner has been idle: `owner fresh --hours 24` (the owner's state, else the
 # newest kb-share deployment on Cloudflare) — a successful deploy in the last 24 h → the job is a no-op.
