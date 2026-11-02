@@ -64,7 +64,7 @@ export const FLAGS: Readonly<Record<FlagName, FlagMeta>> = {
     "default": false,
     "envs": {
       "local": false,
-      "private": false,
+      "private": true,
       "public": false
     }
   },
