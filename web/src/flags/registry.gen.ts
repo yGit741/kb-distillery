@@ -18,7 +18,7 @@ export const FLAG_NAMES: readonly FlagName[] = ["graph-relations", "kb-view", "p
 export const FLAGS: Readonly<Record<FlagName, FlagMeta>> = {
   "graph-relations": {
     "description": "Graph: typed relations (a page's `relations:` block plus computed kinds) in /api/graph, the Cypher edge types, the inspector's grouped connections and the query panel.",
-    "owner": "yonatanm",
+    "owner": "maintainer",
     "created": "2026-10-30",
     "expires": "2027-01-28",
     "kind": "runtime",
@@ -31,7 +31,7 @@ export const FLAGS: Readonly<Record<FlagName, FlagMeta>> = {
   },
   "kb-view": {
     "description": "Graph: pick other knowledge bases to view read-only, several on one canvas (one region each); System \u2192 Knowledge bases gets a View button.",
-    "owner": "yonatanm",
+    "owner": "maintainer",
     "created": "2026-10-28",
     "expires": "2027-01-26",
     "kind": "runtime",
@@ -44,7 +44,7 @@ export const FLAGS: Readonly<Record<FlagName, FlagMeta>> = {
   },
   "parsed-pdf": {
     "description": "Parsed PDF pages: a closed-world verifier checks parser Markdown against the PDF text layer and stores verified pages under meta/parsed/<raw-sha1>/ (kb.parse). Dark until the holdout passes.",
-    "owner": "yonatanm",
+    "owner": "maintainer",
     "created": "2026-11-01",
     "expires": "2027-01-29",
     "kind": "runtime",
@@ -57,7 +57,7 @@ export const FLAGS: Readonly<Record<FlagName, FlagMeta>> = {
   },
   "research-tools": {
     "description": "Graph research toolkit: the Experiments, Theme spectrum, Noise stability, Sharp thresholds and Research directions tools, the Thesis and Explore views, and the thesis-story and boolean-bridge tours. Thesis-kb content; off elsewhere.",
-    "owner": "yonatanm",
+    "owner": "maintainer",
     "created": "2026-11-02",
     "expires": "2027-01-30",
     "kind": "runtime",
@@ -70,7 +70,7 @@ export const FLAGS: Readonly<Record<FlagName, FlagMeta>> = {
   },
   "screen.lifecycle": {
     "description": "Lifecycle screen (versions, history, snapshots). Read-only on the private site; never in public snapshots.",
-    "owner": "yonatanm",
+    "owner": "maintainer",
     "created": "2026-10-25",
     "expires": "2027-10-25",
     "kind": "build",
@@ -83,7 +83,7 @@ export const FLAGS: Readonly<Record<FlagName, FlagMeta>> = {
   },
   "screen.share": {
     "description": "Share admin panel (public snapshots). Needs the Worker's /admin/api, so only the private site has it.",
-    "owner": "yonatanm",
+    "owner": "maintainer",
     "created": "2026-10-25",
     "expires": "2027-10-25",
     "kind": "build",
@@ -96,7 +96,7 @@ export const FLAGS: Readonly<Record<FlagName, FlagMeta>> = {
   },
   "screen.start": {
     "description": "Start screen (how to add knowledge, the right-now strip). Reads the Lifecycle snapshot, so the private site has it and public snapshots do not.",
-    "owner": "yonatanm",
+    "owner": "maintainer",
     "created": "2026-11-02",
     "expires": "2027-11-02",
     "kind": "build",
@@ -109,7 +109,7 @@ export const FLAGS: Readonly<Record<FlagName, FlagMeta>> = {
   },
   "screen.think": {
     "description": "Think screen (edit think/ notes, quick capture). Private notes: local app only, never in share builds.",
-    "owner": "yonatanm",
+    "owner": "maintainer",
     "created": "2026-10-26",
     "expires": "2027-01-24",
     "kind": "build",
@@ -122,7 +122,7 @@ export const FLAGS: Readonly<Record<FlagName, FlagMeta>> = {
   },
   "semantic-search": {
     "description": "Search adds a 'related' group: meaning-based hits from the local qmd service over title+summary cards (scripts/qmd).",
-    "owner": "yonatanm",
+    "owner": "maintainer",
     "created": "2026-10-27",
     "expires": "2027-01-24",
     "kind": "runtime",
@@ -135,7 +135,7 @@ export const FLAGS: Readonly<Record<FlagName, FlagMeta>> = {
   },
   "ui.system-flags-tab": {
     "description": "Flags tab on the System screen (G3): list flags and flip runtime overrides. Exercises the flags API.",
-    "owner": "yonatanm",
+    "owner": "maintainer",
     "created": "2026-10-25",
     "expires": "2027-01-23",
     "kind": "runtime",

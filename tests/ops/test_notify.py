@@ -53,13 +53,13 @@ class SendEmail(unittest.TestCase):
         FakeSMTP.instances.clear()
 
     def test_sends_over_gmail_ssl_as_the_recipient(self):
-        ok = notify.send_email("[thesis-kb] s", "body\n", "me@example.com", password="app-pw", smtp_cls=FakeSMTP)
+        ok = notify.send_email("[kb-distillery] s", "body\n", "me@example.com", password="app-pw", smtp_cls=FakeSMTP)
         self.assertTrue(ok)
         smtp = FakeSMTP.instances[0]
         self.assertEqual((smtp.host, smtp.port), ("smtp.gmail.com", 465))
         self.assertEqual(smtp.login_args, ("me@example.com", "app-pw"))
         msg = smtp.sent[0]
-        self.assertEqual((msg["From"], msg["To"], msg["Subject"]), ("me@example.com", "me@example.com", "[thesis-kb] s"))
+        self.assertEqual((msg["From"], msg["To"], msg["Subject"]), ("me@example.com", "me@example.com", "[kb-distillery] s"))
         self.assertEqual(msg.get_content(), "body\n")
 
     def test_missing_keychain_item_returns_false_without_raising(self):
@@ -114,7 +114,7 @@ class NotifyReport(unittest.TestCase):
         self.assertEqual(notify.notify_report(r, self.root, cfg=CFG, now=NOW, send=self.send), "sent")
         subject, body, to = self.sent[0]
         self.assertEqual(to, "me@example.com")
-        self.assertEqual(subject, "[thesis-kb] nightly: 2 problems (unpushed-steps, stale-worktree)")
+        self.assertEqual(subject, "[kb-distillery] nightly: 2 problems (unpushed-steps, stale-worktree)")
         self.assertIn("[ERROR] unpushed-steps", body)
         self.assertIn("fix: pixi run daily-sync", body)
         self.assertNotIn("daily-sync log", body)
@@ -144,7 +144,7 @@ class NotifyReport(unittest.TestCase):
                                       tail="=== Thu\npushed\nerror\n", cfg=CFG, now=NOW, send=self.send)
         self.assertEqual(status, "sent")
         subject, body, _ = self.sent[0]
-        self.assertEqual(subject, "[thesis-kb] nightly sync FAILED")
+        self.assertEqual(subject, "[kb-distillery] nightly sync FAILED")
         self.assertIn("RuntimeError: push exploded", body)
         self.assertIn("--- daily-sync log (last lines) ---\n=== Thu\npushed\nerror", body)
 
@@ -183,7 +183,7 @@ class DigestMail(unittest.TestCase):
         status = notify.notify_report(r, self.root, cfg=dict(CFG, mode="digest"), now=NOW, send=self.send, doc=self.doc(r))
         self.assertEqual(status, "sent")
         subject, body, _to, html = self.sent[0]
-        self.assertEqual(subject, "[thesis-kb] ✓ all clear · 0 open threads")
+        self.assertEqual(subject, "[kb-distillery] ✓ all clear · 0 open threads")
         self.assertIn("All clear", body)
         self.assertTrue(html.startswith("<!doctype html>"))
         later = NOW + datetime.timedelta(hours=3)            # same report → throttled within the interval
@@ -198,7 +198,7 @@ class DigestMail(unittest.TestCase):
     def test_findings_use_the_report_subject(self):
         r = report(ERR, WARN)
         notify.notify_report(r, self.root, cfg=dict(CFG, mode="digest"), now=NOW, send=self.send, doc=self.doc(r))
-        self.assertEqual(self.sent[0][0], "[thesis-kb] ✗ 1 thing needs you · unpushed-steps, stale-worktree")
+        self.assertEqual(self.sent[0][0], "[kb-distillery] ✗ 1 thing needs you · unpushed-steps, stale-worktree")
 
     def test_send_email_attaches_the_html_alternative(self):
         FakeSMTP.instances.clear()
@@ -211,8 +211,12 @@ class DigestMail(unittest.TestCase):
 
 class Config(unittest.TestCase):
     def test_committed_config(self):
-        cfg = notify.load_config(ROOT)
-        self.assertEqual(cfg["email"], "ygreenshpan@gmail.com")
+        with tempfile.TemporaryDirectory() as tmp:
+            os.makedirs(os.path.join(tmp, os.path.dirname(notify.CONFIG_PATH)))
+            with open(os.path.join(tmp, notify.CONFIG_PATH), "w") as f:
+                f.write('[notify]\nemail = "me@example.com"\nmode = "digest"\n')
+            cfg = notify.load_config(tmp)
+        self.assertEqual(cfg["email"], "me@example.com")
         self.assertEqual(cfg["mode"], "digest")
         self.assertEqual(cfg["on"], ["error", "warn"])
         self.assertEqual(cfg["min_interval_hours"], 20)
@@ -254,7 +258,7 @@ class Config(unittest.TestCase):
         with patch.object(notify, "keychain_password", return_value=None), redirect_stdout(buf):
             rc = notify.main(["--test"])
         self.assertEqual(rc, 1)
-        self.assertIn("security add-generic-password -a ygreenshpan@gmail.com -s kb-distillery-gmail", buf.getvalue())
+        self.assertIn("security add-generic-password -a me@example.com -s kb-distillery-gmail", buf.getvalue())
 
 
 if __name__ == "__main__":

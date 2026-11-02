@@ -17,12 +17,20 @@ import zipfile
 from datetime import datetime, timezone
 
 from kb_distillery.vault.schema import is_page_file
+from kb_distillery.config import paths
 from kb_distillery.config.paths import THINK_PATH, think_path, vault_root
 from kb_distillery.storage import for_kb
 from kb_distillery.config.kit import KB_DOCS
 ROOT = vault_root()
 EXPORT_DIR = os.path.join(ROOT, ".exported")
-PREFIX = "yonatan-thesis-kb"
+
+
+def prefix() -> str:
+    """Archive name prefix: the selected kb's id plus `-kb` (kb id `my-notes` gives `my-notes-kb-<stamp>.zip`),
+    else the vault folder's name when no kb.toml is selected."""
+    kb = paths.KB
+    return f"{kb.id if kb else os.path.basename(os.path.normpath(ROOT))}-kb"
+
 
 SKIP_DIR_NAMES = {
     ".git",
@@ -85,7 +93,7 @@ def _now_stamp() -> str:
 
 
 def _archive_name(stamp: str | None = None) -> str:
-    return f"{PREFIX}-{stamp or _now_stamp()}.zip"
+    return f"{prefix()}-{stamp or _now_stamp()}.zip"
 
 
 def _should_skip(rel: str) -> bool:
@@ -208,7 +216,7 @@ def create_export(
 def list_exports() -> list[str]:
     if not os.path.isdir(EXPORT_DIR):
         return []
-    pat = re.compile(rf"^{re.escape(PREFIX)}-.*\.zip$")
+    pat = re.compile(rf"^{re.escape(prefix())}-.*\.zip$")
     names = [n for n in os.listdir(EXPORT_DIR) if pat.match(n)]
     return sorted(
         names,

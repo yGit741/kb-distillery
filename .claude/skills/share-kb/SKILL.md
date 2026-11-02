@@ -71,7 +71,7 @@ phone-number patterns, `distilled-think`. Cloudflare is the registry (`snapshot-
 prefix + `kb-share` deploy message); credentials come from `CLOUDFLARE_API_TOKEN` or wrangler's
 login. Views show `0*` with a note when analytics is unavailable.
 
-**One deploy owner — agents never deploy.** `kb_distillery.publish.cloudflare.owner` (launchd `com.thesis-kb.deploy-owner`,
+**One deploy owner — agents never deploy.** `kb_distillery.publish.cloudflare.owner` (launchd `com.kb-distillery.deploy-owner`,
 KeepAlive) is the only process that deploys main: it fetches origin/main, builds each sha once into
 `.cache/share/build/<sha>`, `versions upload` → `versions deploy @100` → health (auth gate, `/app`, live
 version = uploaded) → rolls back to the previous version on failure; network errors retry 10 s/60 s/300 s.
@@ -79,7 +79,7 @@ It posts `deployed`/`rolled-back` on the merged PR and its round. Every `kb(op)`
 the nightly sync only **nudge** it (touch `.cache/share/wake`; `KB_SHARE_AUTODEPLOY=0` opts out,
 `KB_SHARE_DIRECT=1` — the user only — runs the old `deploy-main` path). The user installs it once with
 `pixi run install-deploy-owner` from their normal shell — it copies the proxy CA/proxy env (`NODE_EXTRA_CA_CERTS`, `SSL_CERT_FILE`,
-`HTTPS_PROXY`…, never tokens) + PATH into the plist; a `TLS: proxy CA missing` error means rerun it (log `~/Library/Logs/thesis-kb-deploy-owner.log`); state:
+`HTTPS_PROXY`…, never tokens) + PATH into the plist; a `TLS: proxy CA missing` error means rerun it (log `~/Library/Logs/kb-distillery-deploy-owner.log`); state:
 `pixi run python -m kb_distillery.publish.cloudflare.owner status`. `deploy-main.yml` deploys daily only when the owner has not
 deployed for 24 h. `.claude/settings.json` denies agents `share -- deploy*`/`rollback*`, every wrangler
 deploy/upload/rollback and `owner run`; agents may run `share -- status`/`audit`/`build` and

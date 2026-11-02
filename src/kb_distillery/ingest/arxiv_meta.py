@@ -49,7 +49,7 @@ def _retry_after(err):
 def _get(url, opener=None):
     """One throttled API call; retries on 429/5xx; raises ArxivUnavailable when it cannot."""
     opener = opener or urllib.request.urlopen
-    req = urllib.request.Request(url, headers={"User-Agent": "thesis-wiki-ingest/1.0"})
+    req = urllib.request.Request(url, headers={"User-Agent": "kb-distillery-ingest/1.0"})
     last = None
     for attempt in range(1, RETRIES + 1):
         _throttle()
