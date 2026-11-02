@@ -35,6 +35,7 @@ from kb_distillery.core.books import (DIGESTED, OVERVIEW_HEADING, OVERVIEW_MIN_C
                    book_status, coverage, coverage_line, find_row, overview_ok,
                    parse_partition, validate)
 from kb_distillery.core import frontmatter, hubs, links
+from kb_distillery.core import pages as vault_pages
 from kb_distillery.core import persons
 from kb_distillery.core import scopes as scope_lib
 from kb_distillery.core import summary as summary_lib
@@ -114,19 +115,7 @@ def collections_of(row):
 
 
 def walk(d, ext=None):
-    out = []
-    base = os.path.join(ROOT, d)
-    if not os.path.isdir(base):
-        return out
-    for dirpath, dirnames, filenames in os.walk(base):
-        dirnames[:] = [x for x in dirnames if not x.startswith(".")]
-        for fn in filenames:
-            if fn.startswith("."):
-                continue
-            if ext and not fn.endswith(ext):
-                continue
-            out.append(os.path.relpath(os.path.join(dirpath, fn), ROOT).replace(os.sep, "/"))
-    return sorted(out)
+    return vault_pages.walk(ROOT, d, ext)
 
 # dispositions that bind a file to another file: never backlog, never a hub member of their own
 COMPANION = (DUPE_PREFIX, INK_PREFIX, ASSET_PREFIX)
@@ -173,19 +162,7 @@ def sha1(rel):
 # manifest
 # --------------------------------------------------------------------------
 def read_manifest(root=None):
-    path = os.path.join(root or ROOT, MANIFEST)
-    rows = {}
-    if not os.path.exists(path):
-        return rows
-    with open(path, encoding="utf-8") as f:
-        for i, line in enumerate(f):
-            line = line.rstrip("\n")
-            if not line or line.startswith("#") or line.startswith("path\t"):
-                continue
-            parts = line.split("\t")
-            parts += [""] * (len(MANIFEST_COLS) - len(parts))
-            rows[parts[0]] = dict(zip(MANIFEST_COLS, parts[:len(MANIFEST_COLS)]))
-    return rows
+    return vault_pages.read_manifest(root or ROOT)
 
 def write_manifest(rows, root=None):
     path = os.path.join(root or ROOT, MANIFEST)
@@ -361,21 +338,12 @@ def check_dupes(rows):
 
 def wiki_page_files():
     """Repo-relative paths of the wiki's markdown pages: the OKF reserved files (index.md, log.md) are not pages."""
-    return [rel for rel in walk(WIKI_DIR, ".md") if is_page_file(os.path.basename(rel))]
+    return vault_pages.wiki_page_files(ROOT)
 
 
 def load_wiki_pages():
     """Load wiki pages without schema validation (for coherence-only debug)."""
-    pages = {}
-    for rel in wiki_page_files():
-        if "excalidraw" in rel:
-            continue
-        text = open(os.path.join(ROOT, rel), encoding="utf-8").read()
-        slug = os.path.basename(rel)[:-3]
-        fm = parse_frontmatter(text)
-        if fm:
-            pages[slug] = (rel, fm, text)
-    return pages
+    return vault_pages.load_wiki_pages(ROOT)
 
 
 def _coherence_only_main():

@@ -260,6 +260,23 @@ def direct(cache, pid):
     return out, inn
 
 
+def citation_neighbors(slugs, cache=None):
+    """Vault papers citing / cited by the given paper slugs (the citations cache). Silent -> []."""
+    try:
+        cache = cache if cache is not None else load_cache()
+        vids = vault_ids(cache)
+        found = set()
+        for s in slugs:
+            pid = cache.get("slugs", dict()).get(s)
+            if not pid or pid not in cache.get("papers", dict()):
+                continue
+            o, i = direct(cache, pid)
+            found.update(vids[x] for x in (set(o) | set(i)) if x in vids)
+        return sorted(found - set(slugs))
+    except Exception:  # noqa: BLE001 — optional enrichment, never an error
+        return []
+
+
 def resolve(cache, key):
     """slug | paperId | arXiv id -> paperId (or None)."""
     key = key.strip()
