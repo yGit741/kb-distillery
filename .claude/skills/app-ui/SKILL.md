@@ -162,7 +162,7 @@ a rule below.**
     page: the force data is rebuilt only when the drawn set really changes (compared by members, never by Set
     identity), and pages that stay are held (fx/fy) while newcomers are placed off screen. A drag moves the
     dragged page only (no alphaTarget warm-up). Only explicit layout commands (spread, a layout or force change)
-    animate; under `prefers-reduced-motion` they settle at once. `[auto]` `web/e2e/graph-still.test.mjs`
+    animate; under `prefers-reduced-motion` they settle at once. `[auto]` `tests/e2e/graph-still.test.mjs`
     (first frame, click, Cmd+click, select-then-drag; positions via `window.__kbGraph`).
 20. **Topics anchored on a ring**; hulls truly round (Minkowski sum) and shown only when colour doesn't already
     say the same thing.

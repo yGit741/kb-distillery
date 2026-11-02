@@ -80,7 +80,7 @@ registerTour(
     {
       target: '[data-testid="graph-screen"]',
       title: "One region per knowledge base",
-      // source: lab/kbRegions.ts (anchors, dashed outline, name above); services/graph.py merge_snapshots
+      // source: lab/kbRegions.ts (anchors, dashed outline, name above); graph/snapshot.py merge_snapshots
       body: "Each sits in its own dashed **region**, named above it. Drag the name to move the whole region; colour still means page type.",
     },
     {

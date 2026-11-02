@@ -31,6 +31,9 @@ class ChecksForTests(unittest.TestCase):
     def test_graph_runs_the_still_canvas_e2e(self):
         self.assertEqual(names(["web/src/features/graph/ForceGraph.tsx"]), ["web-check", "test-ui-principles", "test-e2e"])
 
+    def test_the_e2e_folder_runs_only_the_e2e(self):
+        self.assertEqual(names(["tests/e2e/graph-still.test.mjs"]), ["test-e2e"])
+
     def test_frontend_api_runs_both(self):
         self.assertEqual(names(["web/src/api/schema.d.ts"]), ["web-check", "test-ui-principles", "api-schema-check"])
 
@@ -58,7 +61,7 @@ class RunChecksTests(unittest.TestCase):
     def test_e2e_skipped_without_playwright(self):
         with patch.object(ship, "e2e_available", return_value=False), \
                 patch.object(ship.subprocess, "run", return_value=_cp(0)) as run:
-            self.assertTrue(ship.run_checks(paths=["web/e2e/x.test.mjs"]))
+            self.assertTrue(ship.run_checks(paths=["web/src/features/graph/x.tsx"]))
         ran = [c.args[0][-1] for c in run.call_args_list if c.args and c.args[0][:2] == ["pixi", "run"]]
         self.assertEqual(ran, ["web-check"])
 

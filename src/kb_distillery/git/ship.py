@@ -511,7 +511,7 @@ def checks_for(paths):
         checks.append(("test-ui-principles", ["pixi", "run", "test-ui-principles"]))
     if hit(*GP["api"], *GP["frontend_api"]):
         checks.append(("api-schema-check", ["pixi", "run", "api-schema-check"]))
-    # the graph's motion lives in the canvas: only the e2e still-canvas test sees it (web/e2e)
+    # the graph's motion lives in the canvas: only the e2e still-canvas test sees it (tests/e2e)
     if hit(*GP["graph_ui"], *GP["e2e"]):
         checks.append(("test-e2e", ["pixi", "run", "test-e2e"]))
     return checks

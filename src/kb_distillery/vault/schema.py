@@ -327,7 +327,7 @@ GATE_PREFIXES = {
     "frontend_src": ("web/src",),
     "frontend_api": ("web/src/api",),
     "graph_ui": ("web/src/features/graph/",),
-    "e2e": ("web/e2e/",),
+    "e2e": ("tests/e2e/",),
     "flags_registry": ("meta/flags.toml", "src/kb_distillery/kits/base/defaults/flags.toml"),
     "flags_code": ("src/kb_distillery/config/flags/",),
     "api": ("src/kb_distillery/server/",),
