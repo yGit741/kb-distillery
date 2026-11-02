@@ -70,7 +70,7 @@ semfind-bundle = "python -m kb_distillery.search.semfind bundle"
 semfind-moc = "python -m kb_distillery.search.semfind moc"
 lint-skills = "python -m kb_distillery.lint.lint_skills"
 # layer contract in pyproject.toml [tool.importlinter]; needs `import-linter` (dev extra) in the env
-lint-imports = "lint-imports"
+lint-imports = "python -c \"from importlinter.cli import lint_imports_command as m; m()\" --no-cache"
 test-skills = "pytest tests/lint/test_skills.py"
 index-researcher = "python -m kb_distillery.ingest index-researcher"
 export-kb = "python -m kb_distillery.publish.export"
