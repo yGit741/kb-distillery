@@ -1,7 +1,7 @@
-"""Core runs with no publisher installed: with `kb_distillery.share` blocked at the import system, every module that used to
+"""Core runs with no publisher installed: with `kb_distillery.publish.cloudflare` blocked at the import system, every module that used to
 import it loads, the API app builds, and the share screens say "no publisher configured" instead of crashing.
 
-It runs in a fresh interpreter: blocking in-process would miss a `kb_distillery.share.*` submodule that is already cached."""
+It runs in a fresh interpreter: blocking in-process would miss a `kb_distillery.publish.cloudflare.*` submodule that is already cached."""
 import json
 import os
 import subprocess
@@ -10,7 +10,7 @@ import tempfile
 import unittest
 from unittest import mock
 
-from kb_distillery.publish.site_state import share_state
+from kb_distillery.publish.site.state import share_state
 from kb_distillery.publish import NullPublisher
 
 SCRIPT = r'''
@@ -19,8 +19,8 @@ from importlib.abc import MetaPathFinder
 
 class Block(MetaPathFinder):
     def find_spec(self, name, path=None, target=None):
-        if name == "kb_distillery.share" or name.startswith("kb_distillery.share."):
-            raise ImportError("kb_distillery.share is blocked: " + name)
+        if name == "kb_distillery.publish.cloudflare" or name.startswith("kb_distillery.publish.cloudflare."):
+            raise ImportError("kb_distillery.publish.cloudflare is blocked: " + name)
 
 sys.meta_path.insert(0, Block())
 MODULES = ["kb_distillery.api.app", "kb_distillery.api.routers.share", "kb_distillery.api.spa", "kb_distillery.dashboard.serve", "kb_distillery.git.ship", "kb_distillery.metrics.d1",
@@ -52,7 +52,7 @@ except publish.PublishError:
     out["d1"] = "PublishError"
 except Exception as e:
     out["d1"] = type(e).__name__
-out["leaked"] = sorted(m for m in sys.modules if m == "kb_distillery.share" or m.startswith("kb_distillery.share."))
+out["leaked"] = sorted(m for m in sys.modules if m == "kb_distillery.publish.cloudflare" or m.startswith("kb_distillery.publish.cloudflare."))
 print("RESULT" + json.dumps(out))
 '''
 
@@ -72,7 +72,7 @@ class CoreWithoutShare(unittest.TestCase):
         self.assertEqual((out["orphans"], out["site"], out["report_site"]), ([], [], {}))
         self.assertIn("no publisher configured", out["log"])
         self.assertEqual(out["d1"], "PublishError")
-        self.assertEqual(out["leaked"], [], "core imported kb_distillery.share")
+        self.assertEqual(out["leaked"], [], "core imported kb_distillery.publish.cloudflare")
 
 
 class ShareScreenWithoutPublisher(unittest.TestCase):

@@ -33,7 +33,7 @@ Expose a `Publisher` subclass in the `kb.publishers` entry-point group
 
 ## Rules
 
-- Core never imports a publisher's code; it asks the registry. `kb_distillery.share` is the Cloudflare publisher's code.
+- Core never imports a publisher's code; it asks the registry. `kb_distillery.publish.cloudflare` is the Cloudflare publisher's code.
 - `available()` and `status()` are pure local reads.
 - Nothing publishes by itself: the Cloudflare publisher keeps `KB_SHARE_AUTODEPLOY=0` and its single deploy owner.
 
@@ -52,13 +52,13 @@ needs a publisher. The deploy owner (launchd) is its own process and is untouche
 
 ## Core without a publisher
 
-Nothing in core imports `kb_distillery.share` (`tests/publish/test_core_without_share.py` blocks it and loads core). With no
+Nothing in core imports `kb_distillery.publish.cloudflare` (`tests/publish/test_core_without_share.py` blocks it and loads core). With no
 publisher the API and dashboard report `chip.label = "no publisher"`, the hygiene checks find nothing, and a `kb(op)` commit
 nudges nobody. `GET /api/share/status` keeps its shape.
 
 ## The Cloudflare publisher on your own account
 
-The publisher works for any Cloudflare account; nothing about an account is fixed in its code. (The older `kb_distillery.share` code keeps
+The publisher works for any Cloudflare account; nothing about an account is fixed in its code. (The older `kb_distillery.publish.cloudflare` code keeps
 the original owner's values as the defaults used when nothing is configured, so existing sites and links do not change.)
 
 What the account needs:

@@ -70,7 +70,7 @@ class SessionsTest(unittest.TestCase):
 
     def test_editing_the_current_tooling_layout_is_a_feature_and_the_retired_paths_are_not(self):
         root = "/v"
-        for sid, path in (("e1", "src/kb_distillery/lint/lint.py"), ("e2", "web/src/App.tsx"), ("e3", "share/auth.js"),
+        for sid, path in (("e1", "src/kb_distillery/lint/lint.py"), ("e2", "web/src/App.tsx"), ("e3", "src/kb_distillery/publish/cloudflare/worker/auth.js"),
                           ("e4", "scripts/launch.sh"), ("e5", "tests/lint/test_lint.py"), ("e6", ".claude/skills/infra-pr/SKILL.md")):
             p = self.session([human("tweak"), assistant("m1", usage(), tools=[("Edit", {"file_path": f"{root}/{path}"})])], sid=sid)
             self.assertEqual(sessions.parse_session(p)["task"], "feature", path)

@@ -251,7 +251,7 @@ class Run:
         template = self.work / "share" / "app-template.html"        # stands in for the built app's index.html
         template.parent.mkdir(parents=True, exist_ok=True)
         template.write_text("<!doctype html><html><head><title>app</title></head><body></body></html>\n", encoding="utf-8")
-        text = self.cmd("-m", "kb_distillery.share.build", "--inner", "--app-index", str(template),
+        text = self.cmd("-m", "kb_distillery.publish.site.build", "--inner", "--app-index", str(template),
                         "--out", str(out), "--profile", "public",
                         "--content-ref", "main", "--content-sha", sha0, "--kb-version", "0.0.0",
                         "--viewer-sha", sha0, "--built-at", "2026-01-01T00:00:00Z",

@@ -3,7 +3,7 @@
     python -m kb_distillery.flags.codegen           # write the files
     python -m kb_distillery.flags.codegen --check   # exit 1 when any generated file is stale (web-check, ship lanes)
 
-Writes `share/flags.gen.js` (runtime flag names for the private Worker), `web/src/flags/registry.gen.ts` (the typed `FlagName` union, metadata and a value per env) and
+Writes `src/kb_distillery/publish/cloudflare/worker/flags.gen.js` (runtime flag names for the private Worker), `web/src/flags/registry.gen.ts` (the typed `FlagName` union, metadata and a value per env) and
 the share builds' route lists `web/src/routes/modules.share-{private,public}.ts`: the share core
 screens plus every `screen.<id>` build flag that is on in that env. vite.config.ts aliases
 `@/routes/modules` to one of them, so a screen whose flag is off is not in that bundle at all.
@@ -19,7 +19,7 @@ from kb_distillery.flags.registry import FLAGS_TOML, FlagError, Registry, load
 from kb_distillery.config.resources import require_repo_root, resource   # generated files and tests are code: the explorer, not the vault
 
 GEN_TS = Path("web/src/flags/registry.gen.ts")
-GEN_WORKER = Path("share/flags.gen.js")   # the private Worker accepts overrides for these names only
+GEN_WORKER = Path("src/kb_distillery/publish/cloudflare/worker/flags.gen.js")   # the private Worker accepts overrides for these names only
 SHARE_ENVS = ("private", "public")
 # Always in every share build: the read-only site itself. Everything else is opt-in by a screen.* flag.
 SHARE_CORE_SCREENS = ("home", "graph", "pages")

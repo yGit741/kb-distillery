@@ -1,7 +1,7 @@
 """Public snapshots already shared must keep resolving at the same URLs: this pins the URL and path shape, the name
 format, the listing rows and the account defaults, and that the Cloudflare publisher hands the same rows to core.
 
-It lives here, not in tests/share, because that folder skips itself outside the monorepo layout. Fakes only."""
+It lives here, not in tests/publish/cloudflare, because that folder skips itself outside the monorepo layout. Fakes only."""
 import datetime as dt
 import hashlib
 import json
@@ -12,8 +12,9 @@ import unittest
 from unittest import mock
 
 from kb_distillery.publish import PublishError
-from kb_distillery.share import cf_api, contracts, deploy, snapshots
-from kb_distillery.share.publisher import CloudflarePublisher
+from kb_distillery.publish.cloudflare import cf_api, contracts, deploy
+from kb_distillery.publish.site import snapshots
+from kb_distillery.publish.cloudflare.publisher import CloudflarePublisher
 
 W = "snapshot-20261020-alpha"
 MESSAGE = "kb-share " + "a" * 40 + " 0.9.4 public"
@@ -87,9 +88,9 @@ class Settings(unittest.TestCase):
         CloudflarePublisher(subdomain=contracts.ACCOUNT_SUBDOMAIN, account_id=cf_api.ACCOUNT_ID, worker=contracts.WORKER_MAIN)
 
     def test_any_account_is_configured_not_hard_coded(self):
-        code = ("import json; from kb_distillery.share.publisher import CloudflarePublisher as P; "
+        code = ("import json; from kb_distillery.publish.cloudflare.publisher import CloudflarePublisher as P; "
                 "p = P(account_id='acct-1', subdomain='acme', worker='site'); "
-                "from kb_distillery.share import cf_api, contracts, deploy, snapshots; "
+                "from kb_distillery.publish.cloudflare import cf_api, contracts, deploy; from kb_distillery.publish.site import snapshots; "
                 "print(json.dumps([cf_api.ACCOUNT_ID, deploy.CF_ACCOUNT_ID, contracts.WORKER_MAIN, snapshots.worker_url('snapshot-20260101-x'), "
                 "deploy.worker_url('site')]))")
         env = {k: v for k, v in os.environ.items() if not k.startswith("KB_CLOUDFLARE_")}

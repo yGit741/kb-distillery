@@ -18,7 +18,7 @@ from kb_distillery.services.pipeline import build_digestion_snapshot
 from kb_distillery.services.lifecycle import build_lifecycle_snapshot
 from kb_distillery.api.assets import STATIC_DIR, THUMB_WIDTH, VIZ_REPORTER, thumbnail_png
 from kb_distillery.dashboard.shell import inject_nav
-from kb_distillery.publish.site_state import share_log_tail, share_state
+from kb_distillery.publish.site.state import share_log_tail, share_state
 from kb_distillery.services import pages as explore_data
 from kb_distillery.services import chat as chat_data
 from kb_distillery.services import corpus as corpus_data

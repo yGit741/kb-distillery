@@ -35,7 +35,7 @@ def test_app_and_assets_load_without_the_legacy_dashboard():
     import subprocess
     import sys
     code = ("import sys; from kb_distillery.api.app import create_app; from kb_distillery.api import assets;"
-            "from kb_distillery.publish import site_state; create_app();"
+            "from kb_distillery.publish.site import state; create_app();"
             "bad=[m for m in sys.modules if m.startswith('kb_distillery.dashboard')]; assert not bad, bad;"
             "assert assets.VIZ_REPORTER.startswith(b'<script>') and callable(assets.thumbnail_png)")
     done = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True)

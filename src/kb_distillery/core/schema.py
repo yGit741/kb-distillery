@@ -103,7 +103,7 @@ ROOT_MD = {"AGENTS.md", "CLAUDE.md", "README.md", "CHANGELOG.md", "CONTRIBUTING.
 FRONTEND_DIR = "web"                 # React app (tooling lane); node_modules is gitignored
 # Code and tooling folders beside the vault content (tooling lane; see TOOLING_PATHS).
 # The old frontend and kbs-demo folders are gone (src/ tests/ web/ examples/); backend/ keeps only pyproject.toml until Lane A; the tools folder stays until Phase 9 for the hook stubs.
-CODE_TOP_DIRS = frozenset({"backend", "docs", "examples", "kbs", "scripts", "share", "src", "tests", "tools", "web"})
+CODE_TOP_DIRS = frozenset({"backend", "docs", "examples", "kbs", "scripts", "src", "tests", "tools", "web"})
 # A knowledge base folder also carries its kb.toml and digest/ instructions (kb_distillery.kbconfig, kb_distillery.core.kbtypes).
 KB_CONFIG = "kb.toml"
 DIGEST_DIR = "digest"
@@ -284,7 +284,6 @@ TOOLING_PATHS = [
     "backend/",
     "docs/",
     "examples/demo/",         # the public demo knowledge base is part of the engine repo; every other kbs/<id> is its own repo
-    "share/",
     "src/",
     "tests/",
     "web/",

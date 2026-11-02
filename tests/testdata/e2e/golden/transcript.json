@@ -128,11 +128,11 @@
   0
  ],
  [
-  "-c \nimport json, sys\nfrom kb_distillery.services import graph as graph_data, pages as explore_data, pipeline as digestion_data, corpus as corpus_data\nout = {\"graph\": graph_data.build_graph_snapshot(), \"explore\": explore_data.build_index(),\n       \"digestion\": digestion_data.build_digestion_snapshot()}\nout[\"corpus\"] = {f: corpus_data.build_corpus(f) for f in corpus_data.FORMATS}\nfrom kb_distillery.share import build as sb\nfrom pathlib import Path\nout[\"share\"] = sb.collect_data(Path(\"meta\").resolve(), \"<ts>\", \"0\" * 40)\nprint(json.dumps(out, ensure_ascii=False, default=str))\n",
+  "-c \nimport json, sys\nfrom kb_distillery.services import graph as graph_data, pages as explore_data, pipeline as digestion_data, corpus as corpus_data\nout = {\"graph\": graph_data.build_graph_snapshot(), \"explore\": explore_data.build_index(),\n       \"digestion\": digestion_data.build_digestion_snapshot()}\nout[\"corpus\"] = {f: corpus_data.build_corpus(f) for f in corpus_data.FORMATS}\nfrom kb_distillery.publish.site import build as sb\nfrom pathlib import Path\nout[\"share\"] = sb.collect_data(Path(\"meta\").resolve(), \"<ts>\", \"0\" * 40)\nprint(json.dumps(out, ensure_ascii=False, default=str))\n",
   0
  ],
  [
-  "kb_distillery.share.build --inner --app-index <vault>/.share/app-template.html --content-ref e2e --content-sha 0000000000000000000000000000000000000000 --kb-version 0.0.0 --viewer-sha 0000000000000000000000000000000000000000 --profile public --built-at <ts> --out <vault>/.share/index.html",
+  "kb_distillery.publish.site.build --inner --app-index <vault>/.share/app-template.html --content-ref e2e --content-sha 0000000000000000000000000000000000000000 --kb-version 0.0.0 --viewer-sha 0000000000000000000000000000000000000000 --profile public --built-at <ts> --out <vault>/.share/index.html",
   0
  ]
 ]

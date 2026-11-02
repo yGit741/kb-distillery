@@ -8,9 +8,10 @@ from unittest import mock
 
 from kb_distillery.publish import PublishError, Snapshot
 from kb_distillery.publish import registry
-from kb_distillery.share import cf_api, deploy, owner, snapshots
-from kb_distillery.share.contracts import DeployResult
-from kb_distillery.share.publisher import CloudflarePublisher
+from kb_distillery.publish.cloudflare import cf_api, deploy, owner
+from kb_distillery.publish.site import snapshots
+from kb_distillery.publish.cloudflare.contracts import DeployResult
+from kb_distillery.publish.cloudflare.publisher import CloudflarePublisher
 from tests.publish.test_publisher_contract import PublisherContract
 
 
@@ -80,7 +81,7 @@ class CloudflareBehaviour(unittest.TestCase):
         nudge.assert_called_once_with("why", "/r")
 
     def test_request_publish_direct_triggers_a_background_deploy_or_runs_it_in_the_foreground(self):
-        from kb_distillery.share import autodeploy
+        from kb_distillery.publish.cloudflare import autodeploy
         with mock.patch.dict(os.environ, {"KB_SHARE_DIRECT": "1"}), \
                 mock.patch.object(autodeploy, "trigger", return_value="spawned") as trig, \
                 mock.patch.object(autodeploy, "run_foreground", return_value=0) as fg:

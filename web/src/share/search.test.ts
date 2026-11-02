@@ -7,11 +7,11 @@ import { findPaths, searchPages } from "./search";
 
 /**
  * Differential test: the TypeScript port must answer exactly what the legacy static shim answered.
- * The shim (src/kb_distillery/share/static/kb-static.js) is evaluated as-is with the blob as its data.
+ * The shim (src/kb_distillery/publish/cloudflare/static/kb-static.js) is evaluated as-is with the blob as its data.
  * Delete this file together with the shim when the legacy share pages go.
  */
 // vitest runs with the package dir (web/) as cwd
-const SHIM = resolve(process.cwd(), "../src/kb_distillery/share/static/kb-static.js");
+const SHIM = resolve(process.cwd(), "../src/kb_distillery/publish/cloudflare/static/kb-static.js");
 
 interface Legacy {
   search(q: string, limit?: number): unknown;

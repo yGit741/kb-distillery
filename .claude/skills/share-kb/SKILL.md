@@ -52,7 +52,7 @@ pixi run share -- audit <ref>              # public build of <ref> in a temp dir
 pixi run share -- snapshot <name> <ref>    # audit, then publish as snapshot-<YYYYMMDD>-<name> (public); --allow-flags, --dry-run
 pixi run share -- snapshot <name> <ref> --replace   # UPDATE a sent snapshot: same Worker, same link; refuses an older ref (--force)
 pixi run share -- snapshot <name> <ref> --scope <slug> [--hops 0|1]   # SUBGRAPH: only a scope / collection / person page, its members and (hops 1, default) their neighbours; manifest records scope + hops
-pixi run share -- snapshot <name> <ref> --predicate public [--view map]   # MAP ONLY: after the public cuts keep just the pages the app's Map view draws (kb_distillery.share.predicate = publicPredicate.ts: topics; linked concepts/collections; full/deep sources; no scope/distilled-think) — links, cards, bodies and search entries of dropped pages go too; `--view <id>` opens the graph on that view (home.view). Manifest records predicate, dropped, view; `audit` takes both flags
+pixi run share -- snapshot <name> <ref> --predicate public [--view map]   # MAP ONLY: after the public cuts keep just the pages the app's Map view draws (kb_distillery.publish.site.predicate = publicPredicate.ts: topics; linked concepts/collections; full/deep sources; no scope/distilled-think) — links, cards, bodies and search entries of dropped pages go too; `--view <id>` opens the graph on that view (home.view). Manifest records predicate, dropped, view; `audit` takes both flags
 pixi run share -- list [--json]            # our snapshots: version, behind-main, deployed at, views 7d, updates (was kb-x), online
 pixi run share -- history <name> [--json]  # every version a snapshot served, newest first, * = live; version ids for rollback
 pixi run share -- rollback --worker <name> [--to <id>]   # a snapshot's previous version (no auth gate; kb is the default worker)
@@ -71,7 +71,7 @@ phone-number patterns, `distilled-think`. Cloudflare is the registry (`snapshot-
 prefix + `kb-share` deploy message); credentials come from `CLOUDFLARE_API_TOKEN` or wrangler's
 login. Views show `0*` with a note when analytics is unavailable.
 
-**One deploy owner — agents never deploy.** `kb_distillery.share.owner` (launchd `com.thesis-kb.deploy-owner`,
+**One deploy owner — agents never deploy.** `kb_distillery.publish.cloudflare.owner` (launchd `com.thesis-kb.deploy-owner`,
 KeepAlive) is the only process that deploys main: it fetches origin/main, builds each sha once into
 `.cache/share/build/<sha>`, `versions upload` → `versions deploy @100` → health (auth gate, `/app`, live
 version = uploaded) → rolls back to the previous version on failure; network errors retry 10 s/60 s/300 s.
@@ -80,7 +80,7 @@ the nightly sync only **nudge** it (touch `.cache/share/wake`; `KB_SHARE_AUTODEP
 `KB_SHARE_DIRECT=1` — the user only — runs the old `deploy-main` path). The user installs it once with
 `pixi run install-deploy-owner` from their normal shell — it copies the proxy CA/proxy env (`NODE_EXTRA_CA_CERTS`, `SSL_CERT_FILE`,
 `HTTPS_PROXY`…, never tokens) + PATH into the plist; a `TLS: proxy CA missing` error means rerun it (log `~/Library/Logs/thesis-kb-deploy-owner.log`); state:
-`pixi run python -m kb_distillery.share.owner status`. `deploy-main.yml` deploys daily only when the owner has not
+`pixi run python -m kb_distillery.publish.cloudflare.owner status`. `deploy-main.yml` deploys daily only when the owner has not
 deployed for 24 h. `.claude/settings.json` denies agents `share -- deploy*`/`rollback*`, every wrangler
 deploy/upload/rollback and `owner run`; agents may run `share -- status`/`audit`/`build` and
 `owner status`/`nudge`. Log: `~/Library/Logs/thesis-kb-share.log`;
@@ -89,7 +89,7 @@ dashboard nav shows the chip (green deployed · deploying · skipped · red fail
 ## Agent steps
 
 1. `pixi run share -- status` — read the chip state first; `deployed` + current version → nothing to do.
-2. On request ("deploy main"): nudge the owner (`pixi run python -m kb_distillery.share.owner nudge`) and report
+2. On request ("deploy main"): nudge the owner (`pixi run python -m kb_distillery.publish.cloudflare.owner nudge`) and report
    `owner status`; `owner once` and a direct `share -- deploy-main` are the user's commands. States: `deployed`, `skipped-same`
    (live already has this sha), `skipped-older` (live is newer — never downgrade), `refused-no-access`
    (the Google gate is down: fix the Worker vars/secrets, nothing was uploaded), `failed` (read the log).
@@ -132,7 +132,7 @@ snapshot" box that builds `pixi run share -- snapshot <name> kb-x.y.z` for you t
 "Update…" fills the box in replace mode (`--replace`, same link) and warns when a typed name is
 already taken (creating, updating and `prune --apply` stay CLI-only).
 
-API (`share/admin.js`, behind the sign-in session + `ALLOWED_EMAILS` (or `ADMIN_EMAILS`)
+API (`src/kb_distillery/publish/cloudflare/worker/admin.js`, behind the sign-in session + `ALLOWED_EMAILS` (or `ADMIN_EMAILS`)
 + header `X-KB-Admin: 1` + same-origin `Origin` for writes): `GET /admin/api/snapshots`,
 `DELETE /admin/api/snapshots/<worker>` with body `{"confirm": "<worker>"}`, `POST /admin/api/prune`
 (dry run). Behind-main in the panel is an approximation (patch difference within one x.y); the CLI's
@@ -159,7 +159,7 @@ snapshots are their own Workers (`.cache/share/status-snapshot-*.json`, never th
 
 The site is served from the Worker's static-assets directory: Cloudflare caps a
 file at **25 MiB** (the data page `index.html` and every asset). The build prints its size against that limit, warns from 80 % and refuses above
-it (`MAX_HTML_BYTES` in `src/kb_distillery/share/build.py`). Growth comes from embedded page bodies, the graph
+it (`MAX_HTML_BYTES` in `src/kb_distillery/publish/site/build.py`). Growth comes from embedded page bodies, the graph
 — shrink those, do not raise the constant.
 
 ## Quality bar
@@ -188,7 +188,7 @@ pixi run share -- deploy-main --dry-run
   profile (`VITE_SHARE_PROFILE`), built into `web/dist-share/<profile>/` (gitignored) and rebuilt when `web/src`
   changes; needs `pixi run web-install` once. Chat, ops, pipeline, scopes and every mutation are not imported by the
   share builds (`web/src/routes/modules.share-*.ts`), not hidden: `/chat` is "Not Found".
-- **A missing or unreadable `kb_distillery/share/share.toml` (the Home tour and cards) stops the build** with
+- **A missing or unreadable `kb_distillery/publish/cloudflare/share.toml` (the Home tour and cards) stops the build** with
   `share config missing: <path>`.
 - Frontend source comes from this checkout; a viewer ref older than the app layout is refused (use
   `--viewer-worktree` while it is unmerged). Same content + same frontend = same bytes. Old `kb-*` tags keep
