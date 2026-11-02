@@ -89,7 +89,7 @@ def _tier_emoji(cites):
 
 
 def _ss_headers():
-    headers = {"User-Agent": "thesis-wiki-ingest/1.0"}
+    headers = {"User-Agent": "kb-distillery-ingest/1.0"}
     key = os.environ.get("SEMANTIC_SCHOLAR_API_KEY", "").strip()
     if key:
         headers["x-api-key"] = key

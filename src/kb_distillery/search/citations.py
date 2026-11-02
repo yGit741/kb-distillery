@@ -101,7 +101,7 @@ def vault_papers(wiki_dir=None):
 # ---------------------------------------------------------------- network
 
 def _headers():
-    h = {"User-Agent": "thesis-wiki-ingest/1.0"}
+    h = {"User-Agent": "kb-distillery-ingest/1.0"}
     key = os.environ.get("S2_API_KEY", "").strip()
     if not key:
         try:

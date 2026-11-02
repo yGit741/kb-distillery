@@ -96,7 +96,7 @@ def merge_queue():
         return None
 
 
-OWNER_PLIST = os.path.expanduser("~/Library/LaunchAgents/com.thesis-kb.deploy-owner.plist")
+OWNER_PLIST = os.path.expanduser("~/Library/LaunchAgents/com.kb-distillery.deploy-owner.plist")
 OWNER_HEARTBEAT = 900   # the owner cycles every 300 s; three missed cycles = not running
 OUTCOMES = ("deployed", "rolled-back", "failed", "rollback-failed")
 IN_FLIGHT = ("building", "uploading", "deploying")

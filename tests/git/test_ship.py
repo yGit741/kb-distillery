@@ -404,8 +404,8 @@ class PrFlowTests(unittest.TestCase):
 
     def test_owner_approval_at_head_lifts_hold_and_merges(self):
         wt, head = self._held()
-        self._reviews(("yGit741", "APPROVED", head))
-        with patch.object(ship.app_token, "owner_login", return_value="yGit741"):
+        self._reviews(("octocat", "APPROVED", head))
+        with patch.object(ship.app_token, "owner_login", return_value="octocat"):
             self.assertEqual(ship.cmd_merge(root=wt, gates=False), 0)
         calls = self._calls()
         self.assertIn(f"--match-head-commit {head}", calls)
@@ -414,8 +414,8 @@ class PrFlowTests(unittest.TestCase):
 
     def test_owner_approval_on_old_sha_is_refused(self):
         wt, head = self._held()
-        self._reviews(("yGit741", "APPROVED", "0" * 40))
-        with patch.object(ship.app_token, "owner_login", return_value="yGit741"):
+        self._reviews(("octocat", "APPROVED", "0" * 40))
+        with patch.object(ship.app_token, "owner_login", return_value="octocat"):
             self.assertEqual(ship.review_approval(7, head, wt)[0], "stale")
             self.assertIn("re-approve: new commits since your review", ship.review_approval(7, head, wt)[1])
             self.assertEqual(ship.cmd_merge(root=wt, gates=False), 1)
@@ -424,21 +424,21 @@ class PrFlowTests(unittest.TestCase):
     def test_approval_by_another_login_or_the_bot_never_counts(self):
         wt, head = self._held()
         self._reviews(("someone", "APPROVED", head), ("thesis-knowledge-base[bot]", "APPROVED", head))
-        with patch.object(ship.app_token, "owner_login", return_value="yGit741"):
+        with patch.object(ship.app_token, "owner_login", return_value="octocat"):
             self.assertEqual(ship.review_approval(7, head, wt)[0], "none")
             self.assertEqual(ship.cmd_merge(root=wt, gates=False), 1)
         self.assertNotIn("pr merge", self._calls())
 
     def test_latest_owner_verdict_wins(self):
         wt, head = self._held()
-        self._reviews(("yGit741", "APPROVED", head), ("yGit741", "COMMENTED", head),
-                      ("yGit741", "CHANGES_REQUESTED", head))
-        with patch.object(ship.app_token, "owner_login", return_value="yGit741"):
+        self._reviews(("octocat", "APPROVED", head), ("octocat", "COMMENTED", head),
+                      ("octocat", "CHANGES_REQUESTED", head))
+        with patch.object(ship.app_token, "owner_login", return_value="octocat"):
             self.assertEqual(ship.review_approval(7, head, wt)[0], "none")
 
     def test_no_app_config_keeps_the_old_behaviour(self):
         wt, head = self._held()
-        self._reviews(("yGit741", "APPROVED", head))
+        self._reviews(("octocat", "APPROVED", head))
         with patch.object(ship.app_token, "owner_login", return_value=None):
             self.assertEqual(ship.review_approval(7, head, wt)[0], "off")
             self.assertEqual(ship.cmd_merge(root=wt, gates=False), 1)

@@ -20,7 +20,7 @@ from kb_distillery.ops.migrate import _applied, pending_migrations
 from kb_distillery.vault.schema import GIT_POLICY_MODE, OPS_STRICT, SCHEMA_VERSION
 
 ROOT = vault_root()
-PLIST = os.path.expanduser("~/Library/LaunchAgents/com.thesis-kb.daily-sync.plist")
+PLIST = os.path.expanduser("~/Library/LaunchAgents/com.kb-distillery.daily-sync.plist")
 
 
 def _now():
@@ -103,7 +103,7 @@ def build_lifecycle_snapshot(root=ROOT, limit=150):
             "undone": sum(1 for r in rows if r["reverted_by"]),
         },
         "nightly": {"plist_installed": os.path.isfile(PLIST),
-                    "log": "~/Library/Logs/thesis-kb-daily-sync.log",
+                    "log": "~/Library/Logs/kb-distillery-daily-sync.log",
                     **ops_core.nightly_status(root)},
         "stale_worktrees": [{"branch": r["branch"], "path": r["path"], "merged": r["merged"],
                              "ahead": r["ahead"], "dirty": len(r["dirty"])}

@@ -47,7 +47,7 @@ def arxiv_filename(aid):
 
 def _fetch(url):
     """(bytes, Content-Type) of a URL, nothing written."""
-    req = urllib.request.Request(url, headers={"User-Agent": "thesis-wiki-ingest/1.0"})
+    req = urllib.request.Request(url, headers={"User-Agent": "kb-distillery-ingest/1.0"})
     with net.urlopen(req, timeout=60) as resp:
         data = resp.read()
         ctype = ""
