@@ -20,12 +20,12 @@ ACCENTS = {                       # accent glyph -> kind (what a parser should r
     "¨": "ddot", "̈": "ddot",
     "ˇ": "check", "̌": "check", "˘": "breve", "̆": "breve",
     "´": "acute", "́": "acute", "`": "grave", "̀": "grave",
-    "⃗": "vec",
+    "⃗": "vec", "→": "vec", "⃖": "vecl", "←": "vecl",         # an arrow raised above a base is an accent (\vec)
 }
 # font-name stem (CM / AMS / Euler families) -> LaTeX class
 _FONT_CLASSES = (
     ("msbm", "mathbb"), ("msam", "symbol"), ("eufm", "mathfrak"), ("eusm", "mathscr"), ("eurm", "roman"),
-    ("cmex", "bigop"), ("cmsy", "symbol"), ("cmmi", "mathit"), ("cmbx", "mathbf"), ("cmbsy", "mathbf"),
+    ("cmex", "bigop"), ("lmmathextension", "bigop"), ("cmsy", "symbol"), ("cmmi", "mathit"), ("cmbx", "mathbf"), ("cmbsy", "mathbf"),
     ("cmr", "roman"), ("cmss", "sans"), ("cmtt", "mono"), ("cmti", "textit"), ("cmsl", "textit"), ("cmcsc", "roman"),
     ("lmmath", "mathit"), ("mathit", "mathit"), ("math", "mathit"),
 )
@@ -39,6 +39,8 @@ BIGOP_CHAR = {"\\sum": "∑", "\\prod": "∏", "\\int": "∫", "\\bigcup": "⋃"
               "\\bigsqcup": "⨆", "\\bigvee": "⋁", "\\bigwedge": "⋀", "\\bigoplus": "⨁",
               "\\bigotimes": "⨂"}
 UNI_BIGOP = {v: k for k, v in BIGOP_CHAR.items()}
+BAR_CHARS = {"|": "|", "\u2223": "|", "\u2225": "\u2016", "\u2016": "\u2016"}      # single / double vertical bar glyphs
+BARS = set(BAR_CHARS.values())
 
 
 def font_class(fontname: str) -> str:
@@ -84,9 +86,11 @@ class Glyph:
         """Normal form shared with `reconcile`: lower-case NFKC, \\mathbb / \\mathfrak kept as a class suffix."""
         if not self.char:
             return ""
-        if self.cls == "bigop" and ord(self.char[0]) in CMEX_BIGOP:
-            return BIGOP_CHAR[CMEX_BIGOP[ord(self.char[0])]]
-        c = unicodedata.normalize("NFKC", self.char).casefold()
+        if self.cls == "bigop":                      # extension-font codes: operators, or delimiter pieces (no key)
+            return BIGOP_CHAR[CMEX_BIGOP[ord(self.char[0])]] if ord(self.char[0]) in CMEX_BIGOP else ""
+        if self.char in BAR_CHARS:
+            return BAR_CHARS[self.char]
+        c = unicodedata.normalize("NFKC", self.char.replace("\u2206", "\u0394")).casefold()      # INCREMENT is Delta
         if self.cls in ("mathbb", "mathfrak") and c.isalpha():
             return c + ("|bb" if self.cls == "mathbb" else "|fr")
         return c
@@ -124,6 +128,7 @@ class PageLayer:
     glyphs: list = field(default_factory=list)
     words: list = field(default_factory=list)
     rules: list = field(default_factory=list)
+    vrules: list = field(default_factory=list)       # thin vertical strokes tall enough to be a drawn delimiter bar
     figures: list = field(default_factory=list)      # image boxes (labels inside them belong to the figure)
 
     def is_margin(self, bbox) -> bool:
@@ -219,6 +224,10 @@ def read_page(page, number: int | None = None) -> PageLayer:
         if r is not None and r.height <= 1.6 and r.width >= 2.0:
             layer.rules.append(Rule((r.x0, r.y0, r.x1, r.y1)))
     _classify_rules(layer.rules, layer.glyphs)
+    for d in page.get_drawings():
+        r = d.get("rect")
+        if r is not None and r.width <= 1.6 and r.height >= 8.0:
+            layer.vrules.append((r.x0, r.y0, r.x1, r.y1))
     try:
         layer.figures = [tuple(i["bbox"]) for i in page.get_image_info()]
     except Exception:

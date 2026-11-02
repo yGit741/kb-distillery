@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from .reconcile import _MATH_RES
 
 KINDS = ("drop_word", "iff_to_if", "add_tilde", "add_dot", "add_hat", "stray_bar", "invented_row",
-         "swap_numbers", "change_number")
+         "swap_numbers", "change_number", "add_bar", "drop_bar")
 CONFUSIONS = (("iff", "if"), ("then", "than"), ("than", "then"), ("affect", "effect"), ("effect", "affect"),
               ("principal", "principle"), ("principle", "principal"))
 _ACC_CTX = re.compile(r"\\(?:tilde|widetilde|hat|widehat|bar|overline|dot|ddot|vec|check|breve|text|textbf|mathrm|"
@@ -86,6 +86,14 @@ def _sites(md: str, kind: str) -> list:
         for pos, ch in _letters_in_math(md):
             out.append(lambda pos=pos, ch=ch: Mutation(kind, _cut(md, pos, pos + 1, "\\%s{%s}" % (cmd, ch)),
                                                        "\\%s on '%s'" % (cmd, ch)))
+    elif kind == "add_bar":
+        for pos, ch in _letters_in_math(md):
+            out.append(lambda pos=pos, ch=ch: Mutation(kind, _cut(md, pos, pos + 1, "\\left| %s" % ch), "\\left| before '%s'" % ch))
+    elif kind == "drop_bar":
+        math, _ = _spans(md)
+        for a, b in math:
+            for m in re.finditer(r"\\left\||\\right\||\\vert|(?<![\\|])\|(?!\|)", md[a:b]):
+                out.append(lambda a=a, m=m: Mutation(kind, _cut(md, a + m.start(), a + m.end(), ""), "dropped a bar"))
     elif kind == "invented_row":
         lines = md.split("\n")
         rows = [i for i, l in enumerate(lines) if re.match(r"^\s*\|.*\|\s*$", l) and not re.match(r"^\s*\|[\s:|-]+\|\s*$", l)]
