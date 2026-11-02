@@ -21,6 +21,8 @@ from kb_distillery.core import frontmatter
 from kb_distillery.core.graph import outbound_links
 from kb_distillery.core.schema import COLLECTION_TYPES, SOURCE_TYPES, SLUG_PREFIX
 from kb_distillery.core import links as page_links
+from kb_distillery.core import pages as vault_pages
+from kb_distillery.paths import vault_root
 from kb_distillery.core.schema import is_page_file
 
 PREFIX = SLUG_PREFIX["scope"]
@@ -212,24 +214,6 @@ def resolve(node_ids, pages, manifest, mode="sources", index=None):
     return sorted(p for p in out if p in manifest and not is_companion(manifest[p]) and is_member_path(p))
 
 
-def citation_neighbors(slugs, cache=None):
-    """Vault papers citing / cited by the given paper slugs (kb_distillery.search.citations cache). Silent -> []."""
-    try:
-        from kb_distillery.search import citations
-        cache = cache if cache is not None else citations.load_cache()
-        vids = citations.vault_ids(cache)
-        found = set()
-        for s in slugs:
-            pid = cache.get("slugs", dict()).get(s)
-            if not pid or pid not in cache.get("papers", dict()):
-                continue
-            o, i = citations.direct(cache, pid)
-            found.update(vids[x] for x in (set(o) | set(i)) if x in vids)
-        return sorted(found - set(slugs))
-    except Exception:  # noqa: BLE001 — optional enrichment, never an error
-        return []
-
-
 # ---------------------------------------------------------------- scope context (scoped query)
 
 class ScopeUnknown(Exception):
@@ -258,8 +242,7 @@ def scope_context(slug, root=None):
          uncovered: [{path, name, format}], coverage: float|None, rows: [every member path]}
 
     Raises ScopeUnknown for a slug that is not a scope. Cached per (root, slug) by corpus + wiki mtimes."""
-    from kb_distillery.lint import lint
-    root = os.path.abspath(root or lint.ROOT)
+    root = os.path.abspath(root or vault_root())
     stamp = _stamp(root)
     key = (root, slug)
     hit = _CTX_CACHE.get(key)
@@ -272,10 +255,10 @@ def scope_context(slug, root=None):
             continue
         with open(os.path.join(wiki, name), encoding="utf-8") as f:
             text = f.read()
-        fm = lint.parse_frontmatter(text)
+        fm = vault_pages.parse_frontmatter(text)
         if fm:
             pages[name[:-3]] = (f"wiki/{name}", fm, text)
-    manifest = lint.read_manifest(root)
+    manifest = vault_pages.read_manifest(root)
     is_scope = slug in pages and pages[slug][1].get("type") == "scope"
     paths = rows_of(slug, manifest)
     if not is_scope or not slug.startswith(PREFIX):

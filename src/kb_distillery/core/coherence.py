@@ -21,6 +21,7 @@ from kb_distillery.core.graph import (  # noqa: E402
 from kb_distillery.paths import vault_root
 from kb_distillery.core.summary import unquote
 from kb_distillery.core import links as page_links
+from kb_distillery.core import pages as vault_pages
 ROOT = vault_root()  # KB_ROOT: share build
 WARNINGS_PATH = os.path.join(ROOT, "meta", "coherence-warnings.tsv")
 WARNINGS_COLS = ["id", "score", "kind", "slugs", "summary", "status"]
@@ -266,8 +267,7 @@ _STATUS_MAP = {"dismiss": "dismissed", "fixed": "fixed", "noted": "noted"}
 def _regenerate():
     """Recompute the manifest from the current wiki (what a lint run would write)."""
     try:
-        from kb_distillery.lint import lint
-        pages = lint.load_wiki_pages()
+        pages = vault_pages.load_wiki_pages(vault_root())
         hits = check_coherence(pages, rows={})
         return merge_warnings(hits)
     except Exception:
