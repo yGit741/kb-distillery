@@ -1,8 +1,7 @@
 /**
  * Full-text search and shortest paths over the baked blob. A straight port of the two server-side
  * computations the retired static shim (kb-static.js) ran in the browser,
- * which in turn port src/kb_distillery/services/pages.py. share/search.test.ts runs both on fixtures and
- * requires identical output, so a change here must keep the legacy answers.
+ * which in turn port src/kb_distillery/services/pages.py; keep the answers identical to it.
  */
 import type { PageDetail, PathResult, SearchHit, SearchResult } from "@/api/types";
 import { PAGE_LINK, WIKILINK } from "@/lib/links";

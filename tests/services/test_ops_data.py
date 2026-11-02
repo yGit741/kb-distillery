@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Tests for the Ops dashboard tab: src/kb_distillery/services/ops.py."""
+"""Tests for the Ops screen data: src/kb_distillery/services/ops.py."""
 import os
 import sys
 import tempfile
