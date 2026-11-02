@@ -493,7 +493,7 @@ def deploy_main(force: bool = False, dry_run: bool = False, build_dir=None, **se
     status = status_file()
     if build_dir is None:
         try:
-            from kb_distillery.publish.site.build import build  # lazy: the builder lands in its own PR
+            from kb_distillery.publish.site.build import build
             build_dir = build("main", profile="private").dir
         except Exception as e:  # noqa: BLE001
             status.write("failed", "", "", now_iso(), error=f"build failed: {type(e).__name__}: {e}",

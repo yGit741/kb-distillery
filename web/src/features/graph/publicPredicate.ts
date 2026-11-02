@@ -8,7 +8,7 @@ import { degreeOf, type GNode } from "./types";
  *   - sources: only the ones read in depth (full or deep) — a listed or skimmed import is not knowledge yet;
  *   - aux types (scopes, distilled think notes) never.
  * One rule, two consumers: the Map story here and, next, the public snapshot build (`share snapshot
- * --predicate public`, to be added in src/kb_distillery/publish/cloudflare so the published data carries only these pages).
+ * --predicate public`, to be added in src/kb_distillery/publish/site so the published data carries only these pages).
  */
 export const PUBLIC_PREDICATE_ID = "public" as const;
 export type Predicate = typeof PUBLIC_PREDICATE_ID;
