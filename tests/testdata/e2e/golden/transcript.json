@@ -132,7 +132,7 @@
   0
  ],
  [
-  "kb_distillery.share.build --inner --content-ref e2e --content-sha 0000000000000000000000000000000000000000 --kb-version 0.0.0 --viewer-sha 0000000000000000000000000000000000000000 --profile public --built-at <ts> --out <vault>/.share/index.html",
+  "kb_distillery.share.build --inner --app-index <vault>/.share/app-template.html --content-ref e2e --content-sha 0000000000000000000000000000000000000000 --kb-version 0.0.0 --viewer-sha 0000000000000000000000000000000000000000 --profile public --built-at <ts> --out <vault>/.share/index.html",
   0
  ]
 ]

@@ -250,7 +250,7 @@ def pr_of(sha, root, git=_git) -> Optional[int]:
 
 def _default_builder(sha, out_root):
     from kb_distillery.share.build import build
-    return build(sha, sha, profile="private", app=True, out_root=out_root, label=sha).dir
+    return build(sha, sha, profile="private", out_root=out_root, label=sha).dir
 
 
 def _default_poster(pr, event, sha, root, **kv):

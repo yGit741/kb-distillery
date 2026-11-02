@@ -79,14 +79,14 @@ class CodegenTests(unittest.TestCase):
             (root / "meta").mkdir()
             shutil.copy(FLAGS_TOML, root / "meta" / "flags.toml")
             self.assertEqual(codegen.main(["--check"], root=root), 2)  # no feature folders yet
-            for s in ("home", "graph", "pages", "lifecycle", "share"):
+            for s in ("home", "graph", "pages", "lifecycle", "share", "start"):
                 (root / f"web/src/features/{s}").mkdir(parents=True)
                 (root / f"web/src/features/{s}/index.tsx").write_text("")
             self.assertEqual(codegen.main(["--check"], root=root), 1)  # nothing generated yet
             self.assertEqual(codegen.main([], root=root), 0)
             self.assertEqual(codegen.main(["--check"], root=root), 0)
             gen = (root / codegen.GEN_TS).read_text(encoding="utf-8")
-            self.assertIn('export type FlagName = "graph-relations" | "kb-view" | "parsed-pdf" | "screen.lifecycle" | "screen.share" | "screen.think" | "semantic-search" | "ui.system-flags-tab";', gen)
+            self.assertIn('export type FlagName = "graph-relations" | "kb-view" | "parsed-pdf" | "screen.lifecycle" | "screen.share" | "screen.start" | "screen.think" | "semantic-search" | "ui.system-flags-tab";', gen)
             pub = (root / codegen.modules_path("public")).read_text(encoding="utf-8")
             priv = (root / codegen.modules_path("private")).read_text(encoding="utf-8")
             self.assertNotIn("lifecycle", pub)

@@ -234,7 +234,11 @@ def collect_outputs(p, lint, coherence):
     cp = p.run("-c", BUILDERS, module=False)
     data = json.loads(cp.stdout.strip().splitlines()[-1])
     share_out = os.path.join(root, ".share", "index.html")
-    p.run("kb_distillery.share.build", "--inner", "--content-ref", "e2e", "--content-sha", "0" * 40,
+    app_index = os.path.join(root, ".share", "app-template.html")      # stands in for the built app's index.html
+    os.makedirs(os.path.dirname(app_index), exist_ok=True)
+    with open(app_index, "w", encoding="utf-8") as f:
+        f.write("<!doctype html><html><head><title>app</title></head><body></body></html>\n")
+    p.run("kb_distillery.share.build", "--inner", "--app-index", app_index, "--content-ref", "e2e", "--content-sha", "0" * 40,
           "--kb-version", "0.0.0", "--viewer-sha", "0" * 40, "--profile", "public",
           "--built-at", BUILT_AT, "--out", share_out)
     graph = data["graph"]

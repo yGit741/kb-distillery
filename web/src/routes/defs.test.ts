@@ -13,12 +13,12 @@ describe("route defs consult flags", () => {
 });
 
 describe("the ported legacy pages", () => {
-  it("Start and Covector are always-on routes (no flag), reached from the palette rather than the top bar", () => {
-    for (const [id, path] of [["start", "/start"], ["covector", "/covector"]] as const) {
+  it("Start (screen.start) and Covector (always on) are reached from the palette rather than the top bar", () => {
+    for (const [id, path, screenFlag] of [["start", "/start", "screen.start"], ["covector", "/covector", undefined]] as const) {
       const d = ROUTE_DEFS.find((r) => r.id === id);
       expect(d, id).toBeDefined();
       expect(d!.path).toBe(path);
-      expect(d!.flag).toBeUndefined();
+      expect(d!.flag).toBe(screenFlag);
       expect(d!.nav).toBeUndefined();
     }
   });
@@ -35,6 +35,10 @@ describe("screen flags gate their route", () => {
     withFlag("screen.share", true, () => expect(ids()).toContain("share")));
   it("screen.share off → no /share", () =>
     withFlag("screen.share", false, () => expect(ids()).not.toContain("share")));
+  it("screen.start on → /start exists", () =>
+    withFlag("screen.start", true, () => expect(ids()).toContain("start")));
+  it("screen.start off → no /start", () =>
+    withFlag("screen.start", false, () => expect(ids()).not.toContain("start")));
   it("screen.think on → /think exists", () =>
     withFlag("screen.think", true, () => expect(ids()).toContain("think")));
   it("screen.think off → no /think", () =>

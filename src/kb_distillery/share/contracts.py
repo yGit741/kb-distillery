@@ -70,9 +70,9 @@ class Manifest:
     profile: str
     sha256: str
     built_at: str  # ISO 8601, the content commit's date
-    # "legacy" = one index.html shell (the default); "app" = the React app build: index.html + assets/,
-    # `sha256` is then the digest of the whole tree (build.tree_digest). Left out of the JSON when
-    # legacy, so legacy manifests stay byte-identical.
+    # "app" = the React app build: index.html + assets/, `sha256` is the digest of the whole tree (build.tree_digest).
+    # Every build is "app" now; "legacy" (the default, left out of the JSON) is how a manifest of the old one-file shell
+    # reads, so snapshots published before the switch still list and roll back.
     layout: str = "legacy"
     # A scoped snapshot (`share snapshot … --scope <slug> --hops 0|1`): the seed page and hop count.
     # Left out of the JSON when unscoped, so existing manifests stay byte-identical.

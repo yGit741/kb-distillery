@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
-"""Tests for src/kb_distillery/share/build.py — the self-contained graph+explorer page builder.
+"""Tests for src/kb_distillery/share/build.py — the builder of the shared site (the React app + the wiki data of a ref).
 
-Synthetic cases use a temp git repo with a tiny vault; the real repo is used read-only for the
-tag builds (skipped when git or the kb-* tags are unavailable). The viewer is always this
-worktree's code (`viewer_worktree=True`), so the uncommitted builder is what gets exercised.
+Synthetic cases use a temp git repo with a tiny vault and a stub frontend dist (`vite build` is not run here, see
+test_share_app.RealFrontendTests); the real repo is used read-only for the tag builds (skipped when git or the kb-* tags
+are unavailable). The viewer is always this worktree's code (`viewer_worktree=True`), so the uncommitted builder is what
+gets exercised.
 """
+import atexit
 import contextlib
 import hashlib
 import io
@@ -16,6 +18,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from pathlib import Path
 
 from kb_distillery.paths import vault_root
 ROOT = vault_root()
@@ -23,6 +26,8 @@ ROOT = vault_root()
 from kb_distillery.share import build as sb
 
 REAL_TAGS = ("kb-0.8.0", "kb-0.8.6", "kb-0.9.6")
+# the legacy static shim is no longer part of any build; it stays as the reference web/src/share/search.ts is ported from
+SHIM_PATH = os.path.join(os.path.dirname(sb.__file__), "static", "kb-static.js")
 THINK_SECRET = "THINK-SECRET-TOKEN-7f3a9c"
 SECRET_RAW = "raw/papers/secret-paper.pdf"
 SECRET_EMAIL = "someone@example.com"
@@ -136,7 +141,44 @@ def make_repo(base, pages=PAGES, with_think=True, with_raw=True):
     return root
 
 
+STUB_INDEX = """<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Thesis KB</title>
+    <script type="module" crossorigin src="/assets/index-abc123.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-abc123.css">
+  </head>
+  <body><div id="root"></div></body>
+</html>
+"""
+
+
+def make_stub_dist(base, name="dist"):
+    """A built-app lookalike (a template index.html + assets/) so nothing here needs node."""
+    dist = Path(base) / name
+    (dist / "assets").mkdir(parents=True)
+    (dist / "index.html").write_text(STUB_INDEX, encoding="utf-8")
+    (dist / "assets" / "index-abc123.js").write_text("console.log('app');\n", encoding="utf-8")
+    (dist / "assets" / "index-abc123.css").write_text("body{margin:0}\n", encoding="utf-8")
+    (dist / ".src-hash").write_text("x\n", encoding="utf-8")        # a stamp must never ship
+    return dist
+
+
+_STUB = []
+
+
+def default_dist():
+    if not _STUB:
+        tmp = tempfile.mkdtemp(prefix="share-stub-dist-")
+        atexit.register(shutil.rmtree, tmp, True)
+        _STUB.append(make_stub_dist(tmp))
+    return _STUB[0]
+
+
 def build_from(repo, out, profile="private", ref="main", **kw):
+    """The worktree's builder on `repo`; `frontend_dist` defaults to a stub (pass None to run the real vite build)."""
+    kw.setdefault("frontend_dist", default_dist())
     return sb.build(ref, profile=profile, root=repo, viewer_root=ROOT, viewer_worktree=True,
                     out_root=out, **kw)
 
@@ -181,11 +223,13 @@ class FixtureBuildTests(_Fixture):
         self.assertEqual(m.profile, "private")
         self.assertEqual(m.built_at, "2026-01-02T03:04:05Z")
         self.assertEqual(m.content_sha, _git(self.repo, "rev-parse", "main").stdout.strip())
-        self.assertEqual(m.sha256, sha256(self.private.dir / "index.html"))
+        self.assertEqual(m.layout, "app")
+        self.assertEqual(m.sha256, sb.tree_digest(self.private.dir))
         on_disk = sb.Manifest.from_json((self.private.dir / "manifest.json").read_text())
         self.assertEqual(on_disk, m)
-        self.assertIn(f"kb 0.1.1 · {m.content_sha[:7]} · viewer {m.viewer_sha[:7]} · private · built {m.built_at}",
-                      self.html)
+        meta = self.data["meta"]               # what the app's footer line shows
+        self.assertEqual((meta["kb_version"], meta["content_sha"], meta["viewer_sha"], meta["profile"], meta["built_at"]),
+                         ("0.1.1", m.content_sha, m.viewer_sha, "private", m.built_at))
 
     def test_data_shape(self):
         nodes = {n["id"] for n in self.data["graph"]["nodes"]}
@@ -206,9 +250,6 @@ class FixtureBuildTests(_Fixture):
         self.assertNotIn(THINK_SECRET, self.pub_html)
         self.assertNotIn("data:image", self.html)
         self.assertIn("![[x.png]]", self.data["pages"]["alpha"]["markdown"])
-        self.assertIn("not included in shared view", self.html)
-        for route in ("/vault-asset", "/raw-file", "/raw-thumb", "/chat-asset"):
-            self.assertIn(route, self.html)  # the shim knows every asset route
 
     def test_private_keeps_fields(self):
         node = next(n for n in self.data["graph"]["nodes"] if n["id"] == "alpha")
@@ -250,55 +291,15 @@ class FixtureBuildTests(_Fixture):
             self.assertNotIn("gamma", l)
         self.assertIn("raw/notes/scratch.md", html)  # prose is not scrubbed; that is audit's job (W2b)
 
-    def test_static_scan(self):
+    def test_the_page_is_a_static_app_not_a_shell(self):
         for html in (self.html, self.pub_html):
             self.assertNotIn("127.0.0.1", html)
             self.assertNotIn("localhost", html)
-            for m in re.finditer(r"(?<!/admin)(/api/[a-z/]+)", html):  # /admin/api/ is the Worker's, not the shim's
-                self.assertIn(m.group(1).rstrip("/"), sb.SHIMMED_API, m.group(0))
-            for m in re.finditer(r"https://cdn\.jsdelivr\.net/[^\s\"')]+", html):
-                self.assertTrue(m.group(0).startswith(sb.KATEX_FONTS_URL), m.group(0))
-            self.assertNotIn('<script src=', html)
-            self.assertNotIn('<link rel="stylesheet" href=', html)
-            # location.href call sites were patched to go through the shim
-            self.assertNotIn("location.href = exploreUrl", html)
-            self.assertNotIn('location.href = "/explore"', html)
-            self.assertNotIn("location.href = `/graph", html)
-            self.assertGreaterEqual(html.count("window.KB_STATIC.navigate("), 4)
-            # the shim is the first script of each view document
-            for doc_id in ("kb-doc-graph", "kb-doc-explore"):
-                doc = json.loads(re.search(rf'id="{doc_id}">(.*?)</script>', html, re.S).group(1))
-                first = doc.index("<script>")
-                self.assertIn("kb-static.js", doc[first:first + 400])
-                self.assertNotIn("{{NAV}}", doc)
-
-    def test_public_has_no_snapshot_panel(self):
-        html = self.pub_html
-        self.assertNotIn("/admin/", html)
-        self.assertNotIn("kb-panel", html)
-        self.assertNotIn("kbp-", html)
-        self.assertNotIn("kb-versions", html)
-        self.assertNotIn('data-view="snapshots"', html)  # no tab button, hidden or not
-        self.assertIn('<section id="tab-snapshots" hidden></section>', html)  # empty slot only
-        for name in (sb.PANEL_JS, sb.PANEL_CSS):
-            first_line = (sb.SHARE_DIR / "static" / name).read_text(encoding="utf-8").splitlines()[0]
-            self.assertNotIn(first_line, html)
-
-    def test_private_has_snapshot_panel_and_versions(self):
-        html = self.html
-        self.assertIn('<button type="button" data-view="snapshots" role="tab">Snapshots</button>', html)
-        self.assertIn('<section id="tab-snapshots" hidden><div id="kb-panel" class="kb-panel"></div></section>', html)
-        self.assertIn('const API = "/admin/api/";', html)
-        self.assertIn("window.KB_EXTRA_TABS = Object.assign", html)
-        self.assertIn(".kbp-table", html)  # panel css inlined
-        m = re.search(r'<script type="application/json" id="kb-versions">(.*?)</script>', html, re.S)
-        self.assertIsNotNone(m)
-        versions = json.loads(m.group(1))
-        self.assertEqual(versions, [{"version": "0.1.1", "sha": self.private.manifest.content_sha[:12],
-                                     "date": "2026-01-02", "subject": "kb(import): fixture (kb-0.1.1)"}])
-        # panel script runs before the shell script so the initial #snapshots route finds KB_PANEL
-        self.assertLess(html.index("window.KB_EXTRA_TABS = Object.assign"), html.index('const THEME_KEY = "dashboard-theme"'))
-        self.assertNotIn("<script src=", html)
+            self.assertNotIn("<iframe", html)
+            self.assertNotIn("srcdoc", html)
+            self.assertNotIn("/admin/", html)
+            self.assertEqual(html.count('id="kb-data"'), 1)
+            self.assertIn('<script type="module" crossorigin src="/assets/index-abc123.js"></script>', html)
 
     def test_reproducible_dirty_tree_and_clone(self):
         again = build_from(self.repo, self.out, "private", label="again")
@@ -328,9 +329,6 @@ class FixtureBuildTests(_Fixture):
         self.assertEqual([r["version"] for r in rows], ["0.1.1"])
         self.assertEqual(rows[0]["sha"], self.private.manifest.content_sha)
         self.assertEqual(sb.versions(self.repo, rev=self.private.manifest.content_sha), rows)
-        picker = sb.panel_versions(self.repo, self.private.manifest.content_sha)
-        self.assertEqual([v["version"] for v in picker], ["0.1.1"])
-        self.assertNotIn("tags", picker[0])  # tags can be added later; they must not change the bytes
 
     def test_reproducible_after_new_tag(self):
         _git(self.repo, "tag", "kb-0.1.1-later")
@@ -354,9 +352,11 @@ class FixtureBuildTests(_Fixture):
         self.assertEqual(sb.resolve_ref(self.repo, "kb-0.1.1"), self.private.manifest.content_sha)
 
     def test_viewer_without_share_module_is_clear_error(self):
-        # the fixture repo has no meta/ at all → viewer archive fails loudly, no traceback
+        # the fixture repo has no share builder at all → a clear error, no traceback
         with self.assertRaises(sb.BuildError) as cm:
-            sb.build("main", root=self.repo, viewer_root=self.repo, out_root=self.out, label="noviewer")
+            sb.build("main", root=self.repo, viewer_root=self.repo, out_root=self.out, label="noviewer",
+                     frontend_dist=default_dist())
+        self.assertIn("no app-layout share builder", str(cm.exception))
         self.assertNotIn("Traceback", str(cm.exception))
 
     def test_cli(self):
@@ -379,39 +379,15 @@ class EmptyWikiTests(unittest.TestCase):
     def tearDown(self):
         shutil.rmtree(self.tmp, ignore_errors=True)
 
-    def test_empty_wiki_builds_a_page_saying_so(self):
+    def test_empty_wiki_builds_an_empty_blob(self):
         repo = make_repo(self.tmp, pages={}, with_raw=False)
         res = build_from(repo, os.path.join(self.tmp, "out"))
-        html = read_html(res)
-        self.assertIn("This version has no wiki pages.", html)
-        data = kb_data(html)
+        data = kb_data(read_html(res))
         self.assertEqual(data["graph"]["nodes"], [])
         self.assertEqual(data["pages"], {})
 
 
-class VendorTests(unittest.TestCase):
-    def test_lock_matches_files(self):
-        vendor = sb.load_vendor()
-        self.assertEqual(set(vendor), set(sb.CDN_FILES.values()))
-        for text in vendor.values():
-            self.assertNotIn("</script", text)
-
-    def test_tamper_is_refused(self):
-        with tempfile.TemporaryDirectory() as d:
-            shutil.copytree(sb.VENDOR_DIR, d, dirs_exist_ok=True)
-            victim = os.path.join(d, "marked-12.0.2.min.js")
-            with open(victim, "rb") as f:
-                data = bytearray(f.read())
-            data[100] ^= 0x01
-            with open(victim, "wb") as f:
-                f.write(data)
-            with self.assertRaises(sb.BuildError) as cm:
-                sb.load_vendor(d)
-            self.assertIn("vendor lock mismatch for marked-12.0.2.min.js", str(cm.exception))
-            os.remove(os.path.join(d, "vendor.lock"))
-            with self.assertRaises(sb.BuildError):
-                sb.load_vendor(d)
-
+class EmbedJsonTests(unittest.TestCase):
     def test_embed_json_escapes_script_terminators(self):
         s = sb.embed_json({"x": "</script><!--"})
         self.assertNotIn("</", s)
@@ -453,7 +429,7 @@ class JsPortParityTests(unittest.TestCase):
     def _compare(self, content_root, query, a, b):
         with tempfile.TemporaryDirectory() as d:
             res = sb.build("HEAD", root=content_root, viewer_root=ROOT, viewer_worktree=True,
-                           out_root=d, label="parity")
+                           out_root=d, label="parity", frontend_dist=default_dist())
             data = kb_data(read_html(res))
             data_path = os.path.join(d, "data.json")
             with open(data_path, "w", encoding="utf-8") as f:
@@ -461,7 +437,7 @@ class JsPortParityTests(unittest.TestCase):
             harness = os.path.join(d, "h.js")
             with open(harness, "w") as f:
                 f.write(NODE_HARNESS)
-            js = subprocess.run([_node(), harness, str(sb.SHIM_PATH), data_path, query, a, b],
+            js = subprocess.run([_node(), harness, str(SHIM_PATH), data_path, query, a, b],
                                 capture_output=True, text=True)
             self.assertEqual(js.returncode, 0, js.stderr)
             got = json.loads(js.stdout)
@@ -537,7 +513,8 @@ class RealRepoTests(unittest.TestCase):
     def test_tags_and_main(self):
         for ref in REAL_TAGS + ("main",):
             with self.subTest(ref=ref):
-                res = sb.build(ref, root=ROOT, viewer_root=ROOT, viewer_worktree=True, out_root=self.tmp)
+                res = sb.build(ref, root=ROOT, viewer_root=ROOT, viewer_worktree=True, out_root=self.tmp,
+                               frontend_dist=default_dist())
                 html = read_html(res)
                 self.assertLessEqual(len(html.encode("utf-8")), sb.MAX_HTML_BYTES)
                 data = kb_data(html)
@@ -556,15 +533,16 @@ class RealRepoTests(unittest.TestCase):
         self.assertEqual(sb.resolve_ref(ROOT, "kb-0.9.6"), sha)
         self.assertEqual(sb.resolve_ref(ROOT, "0.9.6"), sha)
         res = sb.build("kb-0.9.6", root=ROOT, viewer_root=ROOT, viewer_worktree=True, out_root=self.tmp,
-                       label="tag-check")
+                       label="tag-check", frontend_dist=default_dist())
         self.assertEqual(res.manifest.content_sha, sha)
         self.assertEqual(res.manifest.built_at, _git(ROOT, "show", "-s", "--format=%cI", sha).stdout.strip())
 
     def test_old_viewer_without_share_module(self):
         with self.assertRaises(sb.BuildError) as cm:
-            sb.build("main", viewer_ref="kb-0.8.0", root=ROOT, out_root=self.tmp, label="old-viewer")
+            sb.build("main", viewer_ref="kb-0.8.0", root=ROOT, out_root=self.tmp, label="old-viewer",
+                     frontend_dist=default_dist())
         msg = str(cm.exception)
-        self.assertIn("no share builder", msg)
+        self.assertIn("no app-layout share builder", msg)
         self.assertNotIn("Traceback", msg)
 
 
