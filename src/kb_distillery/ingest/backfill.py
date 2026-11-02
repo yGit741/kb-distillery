@@ -131,7 +131,7 @@ def _set_field(path, regex, line):
 
 def _set_url(path, url):
     """Set `url:` and keep the Source page's `sources:` resource in step with it: the old url goes, the new http(s)
-    one comes in (an emptied url leaves no resource). Front matter only."""
+    one comes in (an emptied url leaves no resource; a lone url is never written, `url:` says it). Front matter only."""
     with open(path, encoding="utf-8") as f:
         text = f.read()
     fm = frontmatter.parse(text)[0] or {}
@@ -139,8 +139,8 @@ def _set_url(path, url):
     keep = [(e.get("resource") if isinstance(e, dict) else e) for e in
             ([fm["sources"]] if isinstance(fm.get("sources"), (str, dict)) else list(fm.get("sources") or []))]
     keep = [r for r in keep if r and r != old]
-    if url and frontmatter.url_sources(url):
-        keep.insert(0, url)
+    if keep and frontmatter.url_resource({"layer": "source", "url": url}):
+        keep.insert(0, url)                # other entries stay, so the url must stay among them; alone it is `url:` itself
     def edit(inner):
         inner = re.sub(r"^url:.*$", lambda _m: f"url: {url}" if url else "url:", inner, count=1, flags=re.M)
         inner = re.sub(r"^sources:.*(?:\n[ \t]+.*|\n- .*)*\n?", "", inner + "\n", count=1, flags=re.M).rstrip("\n")

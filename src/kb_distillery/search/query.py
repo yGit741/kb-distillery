@@ -58,6 +58,16 @@ def _ref(slug, meta):
     return page_links.link(slug, (meta or {}).get("title") or slug)
 
 
+def _maturity(slug):
+    """The page's `maturity:` (index rows carry none)."""
+    from kb_distillery.core import frontmatter
+    try:
+        with open(wiki_path(slug), encoding="utf-8") as f:
+            return str(frontmatter.parse(f.read())[0].get("maturity") or "")
+    except (OSError, AttributeError):
+        return ""
+
+
 def wiki_path(slug):
     return os.path.join(WIKI, f"{slug}.md")
 
@@ -173,7 +183,7 @@ def cmd_mocs():
     print("THEME_ENTRY_POINTS")
     for slug, meta in sorted(index.items()):
         if slug.startswith("theme-"):
-            print(f"  {_ref(slug, meta)}  {meta.get('status', '')}  {(meta.get('summary') or '')[:100]}")
+            print(f"  {_ref(slug, meta)}  {meta.get('status') or _maturity(slug)}  {(meta.get('summary') or '')[:100]}")
     return 0
 
 
