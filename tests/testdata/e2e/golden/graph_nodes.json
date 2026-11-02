@@ -1,0 +1,114 @@
+[
+ {
+  "depth": "easy",
+  "id": "article-clip-why-rank-matters",
+  "layer": "source",
+  "maturity": "digested",
+  "type": "article"
+ },
+ {
+  "depth": "easy",
+  "id": "article-tblog-post-one",
+  "layer": "source",
+  "maturity": "digested",
+  "type": "article"
+ },
+ {
+  "depth": "listed",
+  "id": "blog-not-exact-blog-post",
+  "layer": "source",
+  "maturity": "to-read",
+  "type": "blog-post"
+ },
+ {
+  "depth": "",
+  "id": "book-2020-tiny-book",
+  "layer": "collection",
+  "maturity": "reading",
+  "type": "book"
+ },
+ {
+  "depth": "",
+  "id": "course-test-ml",
+  "layer": "collection",
+  "maturity": "digested",
+  "type": "course"
+ },
+ {
+  "depth": "full",
+  "id": "lecture-tml-slides-intro",
+  "layer": "source",
+  "maturity": "digested",
+  "type": "lecture"
+ },
+ {
+  "depth": "easy",
+  "id": "mail-2026-01-02-rank-thread",
+  "layer": "source",
+  "maturity": "digested",
+  "type": "mail"
+ },
+ {
+  "depth": "listed",
+  "id": "paper-2020-tiny-book",
+  "layer": "source",
+  "maturity": "to-read",
+  "type": "paper"
+ },
+ {
+  "depth": "easy",
+  "id": "paper-2023-easy-skim-paper",
+  "layer": "source",
+  "maturity": "digested",
+  "type": "paper"
+ },
+ {
+  "depth": "full",
+  "id": "paper-2024-tiny-rank-paper",
+  "layer": "source",
+  "maturity": "digested",
+  "type": "paper"
+ },
+ {
+  "depth": "full",
+  "id": "part-2020-tiny-book-pages-1-10",
+  "layer": "source",
+  "maturity": "digested",
+  "type": "part"
+ },
+ {
+  "depth": "",
+  "id": "q-does-rank-explain-generalization",
+  "layer": "concept",
+  "maturity": "open",
+  "type": "question"
+ },
+ {
+  "depth": "",
+  "id": "series-test-blog",
+  "layer": "collection",
+  "maturity": "digested",
+  "type": "series"
+ },
+ {
+  "depth": "",
+  "id": "tensor-rank",
+  "layer": "concept",
+  "maturity": "seed",
+  "type": "idea"
+ },
+ {
+  "depth": "",
+  "id": "theme-learning-theory",
+  "layer": "concept",
+  "maturity": "seed",
+  "type": "topic"
+ },
+ {
+  "depth": "easy",
+  "id": "video-tiny-talk",
+  "layer": "source",
+  "maturity": "digested",
+  "type": "video"
+ }
+]

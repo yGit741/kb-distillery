@@ -3,11 +3,11 @@
 Tag `phase-1-done` (engine, `5bd9410`). This report closes roadmap 1.6.
 
 ## What Phase 1 delivered
-- **Layout:** the engine is `kb-distillery`; each knowledge base is its own git repo under `kbs/` (`kbs/demo` tracked,
+- **Layout:** the engine is `kb-distillery`; each knowledge base is its own git repo under `kbs/` (`examples/demo` tracked,
   `kbs/yonatan-thesis` and `kbs/think` local). One discovery path: `kbs/<id>` or `--kb <path>` (`kbd kb-list`).
 - **Tooling:** `ship tag`, `kbd`, Billing docs, kb hooks resolving the engine from `../..` (the thesis kb carries the
   matching `chore(hooks)` commit).
-- **One door to Claude:** `kb.llm` with `subscription | api | batch` backends (#188).
+- **One door to Claude:** `kb_distillery.llm` with `subscription | api | batch` backends (#188).
 - **Graph:** edge kinds read from the kb and Cypher queries over the page graph (#194), API and chat-agent hook.
 - **Branches:** `main` only; one worktree; stale `infra/*` branches deleted.
 

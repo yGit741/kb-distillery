@@ -1,0 +1,371 @@
+{
+ "active_ingest": [],
+ "coherence": [],
+ "collections": [
+  {
+   "covered": 10,
+   "maturity": "reading",
+   "pct": 16,
+   "raw": "raw/printed-docs/2020-tiny-book.pdf",
+   "rows": [
+    {
+     "pages": [
+      1,
+      10
+     ],
+     "raws": [],
+     "slug": "part-2020-tiny-book-pages-1-10",
+     "status": "full",
+     "title": "Pages 1–10"
+    },
+    {
+     "pages": [
+      11,
+      61
+     ],
+     "raws": [],
+     "slug": "",
+     "status": "—",
+     "title": "Whole book"
+    }
+   ],
+   "slug": "book-2020-tiny-book",
+   "title": "Tiny Book (2020)",
+   "total": 61,
+   "type": "book",
+   "unit": "pp"
+  },
+  {
+   "covered": 1,
+   "maturity": "digested",
+   "pct": 100,
+   "raw": "",
+   "rows": [
+    {
+     "pages": null,
+     "raws": [
+      "raw/presentations/tml-slides-intro.pdf"
+     ],
+     "slug": "lecture-tml-slides-intro",
+     "status": "full",
+     "title": "Lecture 1 · Introduction"
+    }
+   ],
+   "slug": "course-test-ml",
+   "title": "Test machine learning",
+   "total": 1,
+   "type": "course",
+   "unit": "items"
+  },
+  {
+   "covered": 1,
+   "maturity": "digested",
+   "pct": 100,
+   "raw": "",
+   "rows": [
+    {
+     "pages": null,
+     "raws": [
+      "raw/web-clips/tblog-post-one.md"
+     ],
+     "slug": "article-tblog-post-one",
+     "status": "easy",
+     "title": "Rank in practice"
+    }
+   ],
+   "slug": "series-test-blog",
+   "title": "Test blog",
+   "total": 1,
+   "type": "series",
+   "unit": "items"
+  }
+ ],
+ "distill_review": [],
+ "failures": [],
+ "inbox": [],
+ "items": [
+  {
+   "collections": [],
+   "companion_of": "",
+   "depth": "easy",
+   "digestion": "digested",
+   "ext": ".md",
+   "failure": "",
+   "hub_row": null,
+   "ingestion": "cataloged",
+   "kind": "emails",
+   "last_op_at": "<ts>",
+   "name": "thread.md",
+   "next": "",
+   "path": "raw/emails/2026-01-02-rank-thread/thread.md",
+   "size_kb": 0.3,
+   "slug": "mail-2026-01-02-rank-thread",
+   "status": "source",
+   "target": "",
+   "unit": "raw/emails/2026-01-02-rank-thread",
+   "url": ""
+  },
+  {
+   "collections": [
+    "course-test-ml"
+   ],
+   "companion_of": "",
+   "depth": "full",
+   "digestion": "digested",
+   "ext": ".pdf",
+   "failure": "",
+   "hub_row": 1,
+   "ingestion": "cataloged",
+   "kind": "presentations",
+   "last_op_at": "<ts>",
+   "name": "tml-slides-intro.pdf",
+   "next": "",
+   "path": "raw/presentations/tml-slides-intro.pdf",
+   "size_kb": 1.0,
+   "slug": "lecture-tml-slides-intro",
+   "status": "source",
+   "target": "",
+   "unit": "raw/presentations/tml-slides-intro.pdf",
+   "url": ""
+  },
+  {
+   "collections": [],
+   "companion_of": "",
+   "depth": "",
+   "digestion": "partial",
+   "ext": ".pdf",
+   "failure": "",
+   "hub_row": null,
+   "ingestion": "cataloged",
+   "kind": "printed-docs",
+   "last_op_at": "<ts>",
+   "name": "2020-tiny-book.pdf",
+   "next": "python3 -m kb_distillery.ingest toc raw/printed-docs/2020-tiny-book.pdf",
+   "path": "raw/printed-docs/2020-tiny-book.pdf",
+   "size_kb": 24.0,
+   "slug": "book-2020-tiny-book",
+   "status": "partial",
+   "target": "",
+   "unit": "raw/printed-docs/2020-tiny-book.pdf",
+   "url": ""
+  },
+  {
+   "collections": [],
+   "companion_of": "",
+   "depth": "easy",
+   "digestion": "digested",
+   "ext": ".pdf",
+   "failure": "",
+   "hub_row": null,
+   "ingestion": "cataloged",
+   "kind": "printed-docs",
+   "last_op_at": "<ts>",
+   "name": "2023-easy-skim-paper.pdf",
+   "next": "",
+   "path": "raw/printed-docs/2023-easy-skim-paper.pdf",
+   "size_kb": 1.0,
+   "slug": "paper-2023-easy-skim-paper",
+   "status": "source",
+   "target": "",
+   "unit": "raw/printed-docs/2023-easy-skim-paper.pdf",
+   "url": ""
+  },
+  {
+   "collections": [],
+   "companion_of": "",
+   "depth": "full",
+   "digestion": "digested",
+   "ext": ".pdf",
+   "failure": "",
+   "hub_row": null,
+   "ingestion": "cataloged",
+   "kind": "printed-docs",
+   "last_op_at": "<ts>",
+   "name": "2024-tiny-rank-paper.pdf",
+   "next": "",
+   "path": "raw/printed-docs/2024-tiny-rank-paper.pdf",
+   "size_kb": 1.1,
+   "slug": "paper-2024-tiny-rank-paper",
+   "status": "source",
+   "target": "",
+   "unit": "raw/printed-docs/2024-tiny-rank-paper.pdf",
+   "url": ""
+  },
+  {
+   "collections": [],
+   "companion_of": "",
+   "depth": "",
+   "digestion": "not digested",
+   "ext": ".md",
+   "failure": "",
+   "hub_row": null,
+   "ingestion": "cataloged",
+   "kind": "printed-docs",
+   "last_op_at": "<ts>",
+   "name": "blog-not-exact-blog-post.md",
+   "next": "",
+   "path": "raw/printed-docs/blog-not-exact-blog-post.md",
+   "size_kb": 0.2,
+   "slug": "blog-not-exact-blog-post",
+   "status": "source",
+   "target": "",
+   "unit": "raw/printed-docs/blog-not-exact-blog-post.md",
+   "url": "https://gadial.net/2020/01/01/jordan"
+  },
+  {
+   "collections": [],
+   "companion_of": "",
+   "depth": "easy",
+   "digestion": "digested",
+   "ext": ".md",
+   "failure": "",
+   "hub_row": null,
+   "ingestion": "cataloged",
+   "kind": "web-clips",
+   "last_op_at": "<ts>",
+   "name": "clip-why-rank-matters.md",
+   "next": "",
+   "path": "raw/web-clips/clip-why-rank-matters.md",
+   "size_kb": 0.2,
+   "slug": "article-clip-why-rank-matters",
+   "status": "source",
+   "target": "",
+   "unit": "raw/web-clips/clip-why-rank-matters.md",
+   "url": ""
+  },
+  {
+   "collections": [
+    "series-test-blog"
+   ],
+   "companion_of": "",
+   "depth": "easy",
+   "digestion": "digested",
+   "ext": ".md",
+   "failure": "",
+   "hub_row": 1,
+   "ingestion": "cataloged",
+   "kind": "web-clips",
+   "last_op_at": "<ts>",
+   "name": "tblog-post-one.md",
+   "next": "",
+   "path": "raw/web-clips/tblog-post-one.md",
+   "size_kb": 0.2,
+   "slug": "article-tblog-post-one",
+   "status": "source",
+   "target": "",
+   "unit": "raw/web-clips/tblog-post-one.md",
+   "url": ""
+  }
+ ],
+ "recent": [
+  {
+   "collection": "",
+   "dest": "raw/emails/2026-01-02-rank-thread",
+   "format": "emails",
+   "path": "raw/inbox/mail-2026-01-02-rank-thread",
+   "slug": ""
+  },
+  {
+   "collection": "series-test-blog",
+   "dest": "raw/web-clips/tblog-post-one.md",
+   "format": "web-clips",
+   "path": "raw/inbox/post-one.md",
+   "slug": ""
+  },
+  {
+   "collection": "course-test-ml",
+   "dest": "raw/presentations/tml-slides-intro.pdf",
+   "format": "presentations",
+   "path": "raw/inbox/slides-intro.pdf",
+   "slug": ""
+  },
+  {
+   "collection": "",
+   "dest": "raw/printed-docs/blog-not-exact-blog-post.md",
+   "format": "printed-docs",
+   "path": "raw/inbox/blog-post.md",
+   "slug": "blog-not-exact-blog-post"
+  },
+  {
+   "collection": "",
+   "dest": "raw/web-clips/clip-why-rank-matters.md",
+   "format": "web-clips",
+   "path": "raw/inbox/clip-why-rank-matters.md",
+   "slug": ""
+  },
+  {
+   "collection": "",
+   "dest": "raw/printed-docs/2020-tiny-book.pdf",
+   "format": "printed-docs",
+   "path": "raw/inbox/2020-tiny-book.pdf",
+   "slug": "paper-2020-tiny-book"
+  },
+  {
+   "collection": "",
+   "dest": "raw/printed-docs/2023-easy-skim-paper.pdf",
+   "format": "printed-docs",
+   "path": "raw/inbox/2023-easy-skim-paper.pdf",
+   "slug": "paper-2023-easy-skim-paper"
+  },
+  {
+   "collection": "",
+   "dest": "raw/printed-docs/2024-tiny-rank-paper.pdf",
+   "format": "printed-docs",
+   "path": "raw/inbox/2024-tiny-rank-paper.pdf",
+   "slug": "paper-2024-tiny-rank-paper"
+  }
+ ],
+ "shallow_papers": [
+  {
+   "slug": "paper-2020-tiny-book"
+  },
+  {
+   "slug": "paper-2023-easy-skim-paper"
+  }
+ ],
+ "summary": {
+  "active_ingest": 0,
+  "coherence_cosmetic": 0,
+  "coherence_external": 0,
+  "coherence_internal": 0,
+  "coherence_open": 0,
+  "collections_open": 1,
+  "depth": {
+   "deep": 0,
+   "easy": 4,
+   "full": 2,
+   "listed": 0
+  },
+  "digestion": {
+   "digested": 6,
+   "not digested": 1,
+   "partial": 1,
+   "skipped": 0
+  },
+  "distill_review": 0,
+  "errors": 0,
+  "files": 8,
+  "inbox_count": 0,
+  "ingestion": {
+   "cataloged": 8,
+   "failed": 0,
+   "inbox": 0,
+   "uncataloged": 0
+  },
+  "items": 8,
+  "queued": 0,
+  "queued_mb": 0.0,
+  "queued_units": 0,
+  "read_depth": {
+   "deep": 0,
+   "easy": 4,
+   "full": 2
+  },
+  "shallow_papers": 2
+ },
+ "titles": {
+  "book-2020-tiny-book": "Tiny Book (2020)",
+  "course-test-ml": "Test machine learning",
+  "series-test-blog": "Test blog"
+ }
+}

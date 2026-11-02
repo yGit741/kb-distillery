@@ -1,0 +1,6 @@
+#!/bin/bash
+# main only moves forward, by kb(...) steps (z+1) or PR merge commits "(#N)";
+# snapshot tags kb-x.y.z are annotated and match their commit's KB-Version.
+root="$(git rev-parse --show-toplevel)"
+export KB_ROOT="$root"      # this repo is the vault these hooks judge, whatever knowledge base $KB selects
+exec bash "$root/scripts/hooks-python.sh" kb_distillery.git.commit_policy push "$@"

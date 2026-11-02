@@ -1,0 +1,138 @@
+[
+ [
+  "kb_distillery.ingest catalog raw/inbox/2024-tiny-rank-paper.pdf",
+  0
+ ],
+ [
+  "kb_distillery.ingest catalog raw/inbox/2023-easy-skim-paper.pdf",
+  0
+ ],
+ [
+  "kb_distillery.ingest catalog raw/inbox/2020-tiny-book.pdf",
+  0
+ ],
+ [
+  "kb_distillery.ingest catalog raw/inbox/clip-why-rank-matters.md",
+  0
+ ],
+ [
+  "kb_distillery.ingest catalog raw/inbox/blog-post.md",
+  0
+ ],
+ [
+  "kb_distillery.ingest catalog raw/inbox/slides-intro.pdf --collection course-test-ml --format presentations --title Lecture 1 · Introduction",
+  0
+ ],
+ [
+  "kb_distillery.ingest catalog raw/inbox/post-one.md --collection series-test-blog",
+  0
+ ],
+ [
+  "kb_distillery.ingest catalog raw/inbox/mail-2026-01-02-rank-thread",
+  0
+ ],
+ [
+  "kb_distillery.ingest easy-digest paper-2023-easy-skim-paper",
+  0
+ ],
+ [
+  "kb_distillery.ingest easy-digest raw/web-clips/clip-why-rank-matters.md",
+  0
+ ],
+ [
+  "kb_distillery.ingest easy-digest raw/web-clips/tblog-post-one.md",
+  0
+ ],
+ [
+  "kb_distillery.ingest easy-digest raw/emails/2026-01-02-rank-thread/thread.md",
+  0
+ ],
+ [
+  "kb_distillery.ingest full-digest raw/printed-docs/2024-tiny-rank-paper.pdf",
+  0
+ ],
+ [
+  "kb_distillery.ingest extract 63731fae52f0",
+  0
+ ],
+ [
+  "kb_distillery.ingest extract 63731fae52f0",
+  0
+ ],
+ [
+  "kb_distillery.ingest map 63731fae52f0",
+  0
+ ],
+ [
+  "kb_distillery.ingest draft 63731fae52f0",
+  0
+ ],
+ [
+  "kb_distillery.ingest finalize 63731fae52f0",
+  0
+ ],
+ [
+  "kb_distillery.ingest full-digest course-test-ml --row 1",
+  0
+ ],
+ [
+  "kb_distillery.ingest extract 314176d9a299",
+  0
+ ],
+ [
+  "kb_distillery.ingest extract 314176d9a299",
+  0
+ ],
+ [
+  "kb_distillery.ingest map 314176d9a299",
+  0
+ ],
+ [
+  "kb_distillery.ingest draft 314176d9a299",
+  0
+ ],
+ [
+  "kb_distillery.ingest finalize 314176d9a299",
+  0
+ ],
+ [
+  "kb_distillery.ingest full-digest raw/printed-docs/2020-tiny-book.pdf --pages 1-10",
+  0
+ ],
+ [
+  "kb_distillery.ingest extract f704a1e311ea-p1-10",
+  0
+ ],
+ [
+  "kb_distillery.ingest extract f704a1e311ea-p1-10",
+  0
+ ],
+ [
+  "kb_distillery.ingest map f704a1e311ea-p1-10",
+  0
+ ],
+ [
+  "kb_distillery.ingest draft f704a1e311ea-p1-10",
+  0
+ ],
+ [
+  "kb_distillery.ingest finalize f704a1e311ea-p1-10",
+  0
+ ],
+ [
+  "src/kb_distillery/lint/lint.py",
+  0
+ ],
+ [
+  "src/kb_distillery/vault/coherence.py status",
+  0
+ ],
+ [
+  "-c \nimport json, sys\nfrom kb_distillery.graph import snapshot as graph_data\nfrom kb_distillery.services import pages as explore_data, pipeline as digestion_data, corpus as corpus_data\nout = {\"graph\": graph_data.build_graph_snapshot(), \"explore\": explore_data.build_index(),\n       \"digestion\": digestion_data.build_digestion_snapshot()}\nout[\"corpus\"] = {f: corpus_data.build_corpus(f) for f in corpus_data.FORMATS}\nfrom kb_distillery.publish.site import build as sb\nfrom pathlib import Path\nout[\"share\"] = sb.collect_data(Path(\"meta\").resolve(), \"<ts>\", \"0\" * 40)\nprint(json.dumps(out, ensure_ascii=False, default=str))\n",
+  0
+ ],
+ [
+  "kb_distillery.publish.site.build --inner --app-index <vault>/.share/app-template.html --content-ref e2e --content-sha 0000000000000000000000000000000000000000 --kb-version 0.0.0 --viewer-sha 0000000000000000000000000000000000000000 --profile public --built-at <ts> --out <vault>/.share/index.html",
+  0
+ ]
+]

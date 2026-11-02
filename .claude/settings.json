@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"$CLAUDE_PROJECT_DIR/tools/hooks-python.sh\" kb.git.guard"
+            "command": "bash \"$CLAUDE_PROJECT_DIR/scripts/hooks-python.sh\" kb_distillery.git.guard"
           }
         ]
       },
@@ -15,7 +15,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"$CLAUDE_PROJECT_DIR/tools/hooks/block-git-write.sh\""
+            "command": "bash \"$CLAUDE_PROJECT_DIR/scripts/hooks/block-git-write.sh\""
           }
         ]
       }
@@ -25,15 +25,15 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"$CLAUDE_PROJECT_DIR/tools/hooks-python.sh\" kb.git.merge_nudge",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/scripts/hooks-python.sh\" kb_distillery.git.merge_nudge",
             "timeout": 20,
-            "statusMessage": "Checking for a PR awaiting merge…"
+            "statusMessage": "Checking for a PR awaiting merge\u2026"
           },
           {
             "type": "command",
-            "command": "bash \"$CLAUDE_PROJECT_DIR/tools/hooks-python.sh\" kb.git.proof_nudge",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/scripts/hooks-python.sh\" kb_distillery.git.proof_nudge",
             "timeout": 10,
-            "statusMessage": "Checking the reply shows proof…"
+            "statusMessage": "Checking the reply shows proof\u2026"
           }
         ]
       }
@@ -42,7 +42,33 @@
   "permissions": {
     "allow": [
       "Bash(pixi run ship -- merge)",
-      "Bash(pixi run ship -- merge:*)"
+      "Bash(pixi run ship -- merge:*)",
+      "Bash(pixi run ship -- start:*)",
+      "Bash(pixi run ship -- commit:*)",
+      "Bash(pixi run ship -- pr:*)",
+      "Bash(pixi run ship -- status)",
+      "Bash(pixi run ship -- prune:*)",
+      "Bash(pixi run ship -- claims)",
+      "Bash(pixi run lanes)",
+      "Bash(pixi run test:*)",
+      "Bash(pixi run lint:*)",
+      "Bash(pixi run ops -- migrate:*)",
+      "Bash(gh pr view:*)",
+      "Bash(gh pr list:*)",
+      "Bash(pixi run ship -- merge --local:*)",
+      "Bash(pixi run api-schema-check)",
+      "Bash(pixi run lint-skills)",
+      "Bash(pixi run web-check:*)",
+      "Bash(pixi run okf-check:*)",
+      "Bash(pixi run pytest:*)",
+      "Bash(pixi run ship -- mv:*)",
+      "Bash(pixi run ship -- round:*)",
+      "Bash(pixi run ship -- queue:*)",
+      "Bash(pixi run api-schema)",
+      "Bash(pixi run flags-gen)",
+      "Bash(pixi run web-build)",
+      "Bash(pixi run ruff:*)",
+      "Bash(pixi run lint-imports)"
     ],
     "deny": [
       "Bash(pixi run share -- deploy*)",
@@ -54,8 +80,17 @@
       "Bash(*wrangler versions deploy*)",
       "Bash(*wrangler versions upload*)",
       "Bash(*wrangler rollback*)",
+      "Bash(*kb_distillery.share.owner run*)",
+      "Bash(*kb_distillery.share.owner once*)",
       "Bash(*kb.share.owner run*)",
-      "Bash(*kb.share.owner once*)"
+      "Bash(*kb.share.owner once*)",
+      "Bash(*kb_distillery.publish.cloudflare.owner run*)",
+      "Bash(*kb_distillery.publish.cloudflare.owner once*)",
+      "Bash(*kb_distillery.publish.cloudflare deploy*)",
+      "Bash(*kb_distillery.publish.cloudflare rollback*)",
+      "Bash(*kb_distillery.publish.cloudflare.deploy*)",
+      "Bash(*kb_distillery.share deploy*)",
+      "Bash(*kb_distillery.share rollback*)"
     ]
   }
 }

@@ -1,0 +1,69 @@
+# Demo knowledge base: a made-up job search, tracked by the engine repo and used as its public demo and test kb.
+# It follows the `base` kit (src/kb_distillery/kits/base) and adds the types a job search needs.
+[kb]
+id = "demo"
+name = "Job Search (demo)"
+schema_version = "1.5"
+kit = "base"
+owner = "dana-levi"           # the id in `generated: {by: human:<owner>}` on pages whose summary you wrote
+
+[git]
+tag_prefix = "kb-"
+
+[digest]
+focus = "digest/focus.md"
+types = "digest/types.md"
+
+[types]
+# Every type once: the kit's, then this kb's own (the union keeps the kit's entries first).
+order = ["topic", "idea", "question", "person", "series", "article", "notes", "document",
+         "company", "role", "interview", "skill",
+         "process",
+         "posting", "mail", "chat"]
+# Extra frontmatter on source pages (the thesis has authors/venue/arxiv-id; a job search has these).
+source_fields = ["company", "created", "stage"]
+
+# --- Sources (the base kit gives article, notes, document) ----------------------------------------------------
+[types.source.posting]
+label = "Job posting"
+prefix = "posting-"
+color = "#4fd6be"
+
+[types.source.mail]
+label = "Mail"
+prefix = "mail-"
+color = "#73daca"
+
+[types.source.chat]
+label = "AI chat"
+prefix = "chat-"
+color = "#ff9e64"
+
+# --- Collections (the base kit gives series) -------------------------------------------------------------------
+[types.collection.process]
+label = "Hiring process"
+prefix = "process-"
+kind = "contents"             # one per company: the posting, mails, chats and notes of that application
+color = "#2ac3de"
+
+# --- Concepts (the base kit gives topic, idea, question, person) ------------------------------------------------
+[types.concept.company]
+label = "Company"
+prefix = "company-"
+color = "#9ece6a"
+
+[types.concept.role]
+label = "Role"
+prefix = "role-"
+color = "#7aa2ff"
+
+[types.concept.interview]
+label = "Interview"
+prefix = "interview-"
+status = ["scheduled", "done", "cancelled"]
+color = "#f6c177"
+
+[types.concept.skill]
+label = "Skill"
+prefix = "skill-"
+color = "#ff79c6"

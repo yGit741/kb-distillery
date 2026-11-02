@@ -1,1 +1,0 @@
-"""Localhost vault health dashboard."""

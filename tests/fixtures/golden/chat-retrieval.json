@@ -1,0 +1,73 @@
+{
+ "entropy": [
+  {
+   "score": 12,
+   "slug": "shannon-entropy",
+   "summary": "Fixture idea"
+  },
+  {
+   "score": 3,
+   "slug": "paper-2021-arxiv-style-fixture",
+   "summary": "A fixture coding argument"
+  },
+  {
+   "score": 3,
+   "slug": "video-fixture-talk",
+   "summary": "$H(X) = -\\sum p \\log p$"
+  }
+ ],
+ "generalization bound": [
+  {
+   "score": 27,
+   "slug": "generalization",
+   "summary": "Fixture idea"
+  },
+  {
+   "score": 12,
+   "slug": "q-does-the-fixture-tail-bound-extend-to-dependent-variables",
+   "summary": "Spawned during ingest of [part-2019-fixture-book-ch2-concentration](part-2019-fixture-book-ch2-concentration.md)"
+  },
+  {
+   "score": 12,
+   "slug": "q-is-the-fixture-bound-tight-for-deep-models",
+   "summary": "Spawned during ingest of [paper-2020-local-fixture-paper](paper-2020-local-fixture-paper.md)"
+  },
+  {
+   "score": 6,
+   "slug": "part-2019-fixture-book-ch2-concentration",
+   "summary": "A fixture Chernoff bound"
+  },
+  {
+   "score": 5,
+   "slug": "paper-2020-local-fixture-paper",
+   "summary": "Uniform convergence over a fixture class"
+  },
+  {
+   "score": 1,
+   "slug": "paper-2021-arxiv-style-fixture",
+   "summary": "A fixture coding argument"
+  }
+ ],
+ "noise stability": [
+  {
+   "score": 39,
+   "slug": "noise-stability",
+   "summary": "Fixture idea"
+  },
+  {
+   "score": 4,
+   "slug": "mail-2024-02-01-fixture-thread-about-a-lemma",
+   "summary": "Symmetrisation"
+  },
+  {
+   "score": 4,
+   "slug": "part-2019-fixture-book-ch2-concentration",
+   "summary": "A fixture Chernoff bound"
+  },
+  {
+   "score": 2,
+   "slug": "article-kalai-fixture-post-one",
+   "summary": ""
+  }
+ ]
+}

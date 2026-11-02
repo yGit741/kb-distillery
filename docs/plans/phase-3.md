@@ -6,7 +6,7 @@ Raw sources are reached through a connector interface, so a kb's inputs can live
 
 ## PRs
 
-1. `kb.storage` interface (`list/get/put/info/local_copy/auth`) + a contract test suite.
+1. `kb_distillery.storage` interface (`list/get/put/info/local_copy/auth`) + a contract test suite.
 2. Built-in local-folder connector (default).
 3. Move the ~43 raw-access modules onto it in 3-4 batches by area (ingest, lint/corpus, search, share).
 4. Google Drive connector.

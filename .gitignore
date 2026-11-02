@@ -1,7 +1,7 @@
 # Obsidian Copilot plugin state — tool output, not knowledge
 copilot/
 
-# Backlog items: local state, one file per idea or unstarted plan (kb.services.backlog)
+# Backlog items: local state, one file per idea or unstarted plan (kb_distillery.services.backlog)
 .backlog/
 
 # Obsidian: only app.json, core-plugins.json and community-plugins.json are tracked (what another
@@ -45,10 +45,10 @@ meta/.ops/
 # Pixi environment
 .pixi
 
-# LLM share bundles (backend/src/kb/maintenance/export.py)
+# LLM share bundles (src/kb_distillery/publish/export.py)
 .exported/
 
-# Share build cache + deploy status (backend/src/kb/share); wrangler's local state
+# Share build cache + deploy status (src/kb_distillery/publish/cloudflare); wrangler's local state
 .cache/
 .wrangler/
 
@@ -95,19 +95,18 @@ repomix-output.xml
 *.canvas-llm
 Untitled*.md
 
-# Frontend build output is never committed: kb.api rebuilds frontend/dist from source on start when the
+# Frontend build output is never committed: kb_distillery.server rebuilds src/kb_distillery/_webapp from source on start when the
 # sources changed, share builds dist-share/ on demand (web-check fails if either is tracked)
-frontend/node_modules
-tools/qmd/node_modules
-frontend/dist/
-frontend/dist-share/
+web/node_modules
+scripts/qmd/node_modules
+src/kb_distillery/_webapp/
+web/dist-share/
 
-# Other agents' skill folders (not ours; the one skill source is skills/)
+# Other agents' skill folders (not ours; skills are kits/*/skills for a kb, .claude/skills for the engine)
 .agents/
 .opencode/
 .copilot/
 
-# Knowledge bases live in kbs/<id> (kb.kbconfig). Each is its own git repo and its knowledge never enters the
-# engine repo; only the public demo is tracked here.
+# Knowledge bases live in ~/knowledge/<id> (kb_distillery.config.kb), outside this checkout. kbs/* stays ignored as a guard
+# so a stray kb folder here can never be committed to the engine repo; the public demo lives in examples/demo.
 kbs/*
-!kbs/demo/
