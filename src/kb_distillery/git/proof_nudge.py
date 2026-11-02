@@ -23,13 +23,12 @@ import sys
 
 from kb_distillery.git.merge_nudge import last_reply
 
-DEPLOYED_SITE = "https://<worker>.<your-subdomain>.workers.dev"      # the shape only; the account is in the share config
 WRITE_TOOLS = {"Write", "Edit", "NotebookEdit"}
 PROOF_LINE = re.compile(r"^\W*proof\W*:(.*)$", re.I | re.M)
 
 # evidence: name -> (description, regex)
 LOCAL = ("a local URL (http://localhost:5173/… of the changed screen)", r"https?://(localhost|127\.0\.0\.1)(:\d+)?\S*")
-DEPLOYED = (f"the deployed URL ({DEPLOYED_SITE}/…)", r"https://\S+\.(workers|pages)\.dev\S*")
+DEPLOYED = ("the deployed URL (https://<worker>.<subdomain>.workers.dev/… of the changed page)", r"https://\S+\.(workers|pages)\.dev\S*")
 PAGE = ("a link to the wiki page (deployed or local)", r"https?://(localhost|127\.0\.0\.1|\S+\.(workers|pages)\.dev)\S*")
 VERSION = ("the kb-x.y.z version or commit URL", r"\bkb-\d+\.\d+\.\d+\b|github\.com/\S+/commit/[0-9a-f]{7,}")
 PR = ("the PR URL (github.com/…/pull/N)", r"github\.com/\S+/pull/\d+")

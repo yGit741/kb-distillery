@@ -169,6 +169,8 @@ def _auth_headers() -> dict:
 
 
 def _rest(method: str, path: str, body: Optional[dict] = None) -> dict:
+    if "/accounts//" in path:
+        raise CloudflareError("no Cloudflare account id: set [cloudflare] account_id in the share config or KB_CLOUDFLARE_ACCOUNT_ID")
     status, payload = http_json(method, f"{API_BASE}{path}", body, _auth_headers())
     if status == 0 or not isinstance(payload, dict):
         raise CloudflareError(f"Cloudflare API {method} {path}: unreachable or non-JSON reply (status {status})")
