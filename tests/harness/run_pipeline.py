@@ -283,7 +283,7 @@ class Run:
         for line in (r / "meta" / "corpus.tsv").read_text(encoding="utf-8").splitlines():
             cols = line.split("\t")
             if len(cols) > 2 and cols[0].endswith(".pdf"):
-                cols[1] = "<pdf-sha1>"               # PyMuPDF embeds a random /ID: PDF bytes differ per run
+                cols[1] = "<pdf-sha1>"               # a PDF library may embed a random /ID: PDF bytes differ per run
             rows.append("\t".join(cols))
         self.artifacts["corpus.tsv"] = "\n".join(rows) + "\n"
         self.artifacts["coherence-warnings.tsv"] = (r / "meta" / "coherence-warnings.tsv").read_text(encoding="utf-8")

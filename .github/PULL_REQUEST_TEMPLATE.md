@@ -10,7 +10,7 @@
 
 - [ ] Branch made with `pixi run ship -- start`; no direct commit to `main`
 - [ ] Tests added or updated next to the code
-- [ ] `pixi run test`, `lint-skills`, `lint-imports`, `lint` and `okf-check` pass; `web-check` if `web/` changed
+- [ ] `pixi run test`, `lint-skills`, `licenses`, `lint-imports`, `lint` and `okf-check` pass; `web-check` if `web/` changed
 - [ ] No knowledge base content, local paths, names or keys in tracked files
 - [ ] LLM calls go through `kb_distillery.llm`
 - [ ] `CHANGELOG.md` updated under Unreleased

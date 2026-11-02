@@ -212,8 +212,8 @@ class TestCommitTarget(unittest.TestCase):
 
 class TestBookGate(unittest.TestCase):
     def _pdf(self, d, pages, first, toc=None):
-        import fitz
-        doc = fitz.open()
+        from tests import pdfkit
+        doc = pdfkit.Doc()
         for i in range(pages):
             doc.new_page().insert_text((72, 72), first if i == 0 else f"page {i}")
         if toc:

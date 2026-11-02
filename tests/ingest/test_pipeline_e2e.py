@@ -45,16 +45,14 @@ FIXED_NOW = 1767225600       # 2026-01-01, for mtimes the builders read
 
 
 def _pdf(path, text, pages=1):
-    import fitz  # pymupdf, a pixi dependency
-    doc = fitz.open()
+    from tests import pdfkit
+    doc = pdfkit.Doc()
     for i in range(pages):
         page = doc.new_page()
         base = text if i == 0 else f"Page {i + 1}. " + " ".join(text.split())
         body = (base + "\n") * (1 + 300 // max(1, len(base)))      # a typed text layer, not ink
-        page.insert_textbox(fitz.Rect(72, 72, 540, 760), body, fontsize=10)
-    doc.set_metadata({"creationDate": "D:20260101000000", "modDate": "D:20260101000000",
-                      "producer": "e2e", "creator": "e2e"})
-    doc.save(path, garbage=4, deflate=True, no_new_id=True)
+        page.insert_textbox((72, 72, 540, 760), body, fontsize=10)
+    doc.save(path)
     doc.close()
 
 

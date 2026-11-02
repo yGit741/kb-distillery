@@ -7,6 +7,7 @@ URI and, for the public profile, `public_card` applies the privacy column (chats
 no file name anywhere).
 """
 import base64
+import io
 import os
 import re
 import subprocess
@@ -90,8 +91,8 @@ def model_of(url, body):
 
 def pdf_pages(full):
     try:
-        import fitz  # pymupdf
-        with fitz.open(full) as doc:
+        from kb_distillery.storage.pdf import PdfDoc
+        with PdfDoc(full) as doc:
             return doc.page_count
     except Exception:  # noqa: BLE001
         return None
@@ -176,13 +177,20 @@ def raw_card(full, rel, root=None, with_added=True):
 def thumb_data_uri(full, kind, width=200, max_bytes=40_000):
     """A small JPEG data URI of page 1 (PDF) or the image itself, kept under `max_bytes`; None otherwise."""
     try:
-        import fitz  # pymupdf
-        with fitz.open(full) as doc:              # an image opens as a one-page document too
-            page = doc[0]
-            zoom = min(1.0, width / max(page.rect.width, 1)) if kind == "image" else width / max(page.rect.width, 1)
-            pix = page.get_pixmap(matrix=fitz.Matrix(zoom, zoom), alpha=False)
+        if kind == "image":                       # a photo or a scan: shrunk to `width`, never enlarged
+            from PIL import Image, ImageOps
+            with Image.open(full) as im:
+                img = ImageOps.exif_transpose(im).convert("RGB")
+            if img.width > width:
+                img = img.resize((width, max(1, round(img.height * width / img.width))), Image.LANCZOS)
+        else:
+            from kb_distillery.storage.pdf import PdfDoc
+            with PdfDoc(full) as doc:
+                img = doc.render(0, width)
         for q in (70, 55, 40):
-            data = pix.tobytes("jpeg", jpg_quality=q)
+            buf = io.BytesIO()
+            img.save(buf, "JPEG", quality=q)
+            data = buf.getvalue()
             if len(data) <= max_bytes:
                 return "data:image/jpeg;base64," + base64.b64encode(data).decode()
     except Exception:  # noqa: BLE001

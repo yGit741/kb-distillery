@@ -11,6 +11,7 @@ import shutil
 import subprocess
 import sys
 
+from kb_distillery.storage import pdf
 from kb_distillery.vault import frontmatter
 from kb_distillery.ingest.sources.web import blog
 from .paths import ROOT, person_from_raw, set_collection, _page_type
@@ -69,16 +70,14 @@ def _looks_like_blog(full_path):
 
 def has_text_layer(full_path, pages=5):
     """Typed PDFs carry text; reMarkable/scan exports are ink only. Unknown → typed."""
-    try:
-        import fitz  # pymupdf
-    except ImportError:
+    if not pdf.available():
         return True
     try:
-        doc = fitz.open(full_path)
+        doc = pdf.PdfDoc(full_path)
     except Exception:
         return True
     n = min(doc.page_count, pages) or 1
-    chars = sum(len(doc[i].get_text()) for i in range(min(doc.page_count, pages)))
+    chars = sum(len(doc.page_text(i)) for i in range(min(doc.page_count, pages)))
     doc.close()
     return chars / n >= TEXT_LAYER_CHARS
 

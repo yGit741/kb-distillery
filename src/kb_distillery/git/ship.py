@@ -58,6 +58,7 @@ GATES = [
     # tests that assert a wall-clock budget (`@pytest.mark.serial`): alone in one process, after the parallel pass
     ("tests-serial", [sys.executable, "-m", "pytest", "-q", "-m", "serial", "tests"]),
     ("lint-skills", [sys.executable, "-m", "kb_distillery.lint.lint_skills"]),
+    ("licenses", [sys.executable, "-m", "kb_distillery.lint.licenses"]),     # no GPL-family package in the env
     # the import layer contract (pyproject.toml [tool.importlinter]); importlinter ships no __main__, so call its CLI entry
     ("lint-imports", [sys.executable, "-c", "from importlinter.cli import lint_imports_command as m; m()", "--no-cache"]),
     ("lint", [sys.executable, "-m", "kb_distillery.lint.lint"]),

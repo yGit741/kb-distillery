@@ -4,7 +4,7 @@ import os
 
 import pytest
 
-fitz = pytest.importorskip("fitz")
+from tests import pdfkit
 
 from kb_distillery.vault import books as core_books, schema
 from kb_distillery.ingest.sources.books import book
@@ -12,7 +12,7 @@ from kb_distillery.ingest import catalog, easy_digest, extract, scrap
 
 
 def make_pdf(path, n, text="page {i} body", toc=None):
-    doc = fitz.open()
+    doc = pdfkit.Doc()
     for i in range(1, n + 1):
         doc.new_page().insert_text((72, 72), text.format(i=i))
     if toc:

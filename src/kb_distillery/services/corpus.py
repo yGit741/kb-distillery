@@ -87,10 +87,9 @@ def _page_count(rel, sha1, cache, dirty):
     n = None
     if rel.lower().endswith(".pdf") and os.path.isfile(full):
         try:
-            import fitz
-            doc = fitz.open(full)
-            n = doc.page_count
-            doc.close()
+            from kb_distillery.storage.pdf import PdfDoc
+            with PdfDoc(full) as doc:
+                n = doc.page_count
         except Exception:  # noqa: BLE001
             n = None
     if n is not None:

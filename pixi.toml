@@ -7,7 +7,7 @@ platforms = ["osx-arm64"]
 
 [dependencies]
 python = ">=3.11"
-pymupdf = "*"
+pypdfium2 = ">=4"
 pillow = "*"
 ipykernel = "*"
 wandb = ">=0.28.1,<0.29"
@@ -15,6 +15,7 @@ nodejs = ">=22,<23"
 truststore = ">=0.9"
 pytest = ">=8"
 pytest-xdist = ">=3"
+pip-licenses = ">=5"       # the licence gate (pixi run licenses)
 fastapi = ">=0.162.0,<0.163"
 uvicorn = ">=0.54.0,<0.55"
 pydantic = ">=2"
@@ -69,6 +70,8 @@ coherence-status = "python -m kb_distillery.vault.coherence status"
 semfind-bundle = "python -m kb_distillery.search.semfind bundle"
 semfind-moc = "python -m kb_distillery.search.semfind moc"
 lint-skills = "python -m kb_distillery.lint.lint_skills"
+# fails on a GPL / LGPL / AGPL package in the env (allowlist with reasons in lint/licenses.py); a ship gate and a CI step
+licenses = "python -m kb_distillery.lint.licenses"
 # layer contract in pyproject.toml [tool.importlinter]; needs `import-linter` (dev extra) in the env
 lint-imports = "python -c \"from importlinter.cli import lint_imports_command as m; m()\" --no-cache"
 test-skills = "pytest tests/lint/test_skills.py"
@@ -111,5 +114,6 @@ opencv-python-headless = ">=4.10"
 imageio-ffmpeg = ">=0.5"
 ocrmac = ">=1.0"
 grand-cypher = ">=1.2"
+reportlab = ">=4"            # builds the PDF fixtures in tests (from PyPI: the conda build drags in LGPL pycairo)
 networkx = ">=3.4"
 import-linter = ">=2"

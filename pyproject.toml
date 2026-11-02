@@ -29,9 +29,9 @@ dependencies = [
 [project.optional-dependencies]
 # The Google Drive connector reads the macOS Drive for desktop mount: no Python dependency, the extra names the feature.
 gdrive = []
-# PDF text, images, video frames and OCR. pymupdf is AGPL: decision 7 swaps it for pypdfium2 in Lane H, not here.
+# PDF text, images, video frames and OCR. pypdfium2 (BSD / Apache) reads and renders PDFs; PyMuPDF was dropped for its AGPL licence.
 ingest-heavy = [
-    "pymupdf",
+    "pypdfium2>=4",
     "pillow",
     "opencv-python-headless>=4.10",
     "imageio-ffmpeg>=0.5",
