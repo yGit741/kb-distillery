@@ -116,6 +116,7 @@ def page3(doc):
     line(pg, 72, 100, [("t", "Corollary 2.3. A map is bounded if and only if the well-known decompo-")])
     line(pg, 72, 114, [("t", "sition of its graph is finite; see [12] for details on the 3 cases.")])
     line(pg, 150, 150, [("m", "v"), ("t", " = "), ("m", "u"), ("t", " + "), ("m", "x"), ("s", "i"), ("t", "    (2.3)")])
+    line(pg, 150, 170, [("t", "|"), ("m", "u"), ("t", "| = |"), ("m", "v"), ("t", "|    (2.4)")])
     put(pg, 72, 190, "Table 2. Timing")
     for r, row in enumerate((("name", "secs"), ("fast", "0.5"), ("slow", "12.5"))):
         for c, cell in enumerate(row):
@@ -127,6 +128,8 @@ MD3 = """\
 **Corollary 2.3.** A map is bounded if and only if the well-known decomposition of its graph is finite; see [12] for details on the 3 cases.
 
 $$v = u + x_i \\tag{2.3}$$
+
+$$\\left| u \\right| = |v| \\tag{2.4}$$
 
 Table 2. Timing
 
