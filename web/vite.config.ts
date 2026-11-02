@@ -8,7 +8,7 @@ import { defineConfig } from "vite";
 // KB_API points a worktree's dev server at its own backend (e.g. KB_API=http://127.0.0.1:8790).
 const API_TARGET = process.env.KB_API || "http://127.0.0.1:8765";
 
-// The app is served under /app (python -m kb_distillery.api, FastAPI spa router) and in dev at http://localhost:5173/app/.
+// The app is served under /app (python -m kb_distillery.server, FastAPI spa router) and in dev at http://localhost:5173/app/.
 //
 // `vite build --mode share` is the static, read-only build for the shared site (kb_distillery.publish.site.build):
 // served from the site root, with the screens it includes decided HERE, at build time. The profile comes
@@ -40,7 +40,7 @@ export default defineConfig(({ mode }) => {
       globals: true,
       setupFiles: ["./src/test/setup.ts"],
       css: false,
-      // e2e/ runs under node --test with a real browser (pixi run test-e2e), not vitest
+      // tests/e2e/ runs under node --test with a real browser (pixi run test-e2e), not vitest
       include: ["src/**/*.test.{ts,tsx}"],
       // inside a ship gate (KB_GATE_SLOT_HELD) cap the pool so one web run cannot take every core; a developer's own run is uncapped
       ...(process.env.KB_GATE_SLOT_HELD ? { maxWorkers: 4 } : {}),

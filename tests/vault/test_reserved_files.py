@@ -48,7 +48,7 @@ class ReservedFiles(unittest.TestCase):
         self.assertEqual(sorted(semfind.load_pages(self.root)), ["alpha"])
         from kb_distillery.services import scopes as services_scopes
         self.assertEqual(sorted(services_scopes.load_pages(self.root)), ["alpha"])
-        from kb_distillery.summaries import pipeline
+        from kb_distillery.digest import pipeline
         self.assertEqual([p["slug"] if isinstance(p, dict) else p[0] for p in pipeline.load_pages(self.root)], ["alpha"])
 
     def test_the_agent_cannot_cite_them(self):

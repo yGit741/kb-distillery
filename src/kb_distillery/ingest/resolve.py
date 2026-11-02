@@ -185,7 +185,7 @@ def resolve(query):
 
     yt = re.search(r"(?:youtube\.com/.*[?&]v=|youtu\.be/|youtube\.com/(?:shorts|live|embed)/)([A-Za-z0-9_-]{11})", query)
     if yt:                                    # a scrap-youtube bundle, digested or not
-        from .youtube.bundle import ITEM, existing
+        from kb_distillery.ingest.sources.youtube.bundle import ITEM, existing
         for folder in existing(yt.group(1), ROOT):
             raw = f"{folder}/{ITEM}"
             slug = idx.by_raw.get(raw)

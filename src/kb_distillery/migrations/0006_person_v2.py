@@ -48,7 +48,7 @@ URL_IN_TEXT = re.compile(r"https?://[^\s)>\]]+")
 
 def _mods(root):
     from kb_distillery.vault import persons
-    from kb_distillery.ingest import researcher
+    from kb_distillery.ingest.sources.researcher import researcher
     return persons, researcher
 
 

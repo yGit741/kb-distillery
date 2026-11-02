@@ -70,8 +70,7 @@ target-version = "py311"
 select = ["E9", "F63", "F7", "F82"]      # syntax errors, undefined names: the cheap class of real bugs
 
 [tool.importlinter]
-# Layer contract (Lane E): a package imports only from its own layer or one below. Names are TODAY's; the renames
-# (summaries -> digest, api -> server) come later in Lane E.
+# Layer contract (Lane E): a package imports only from its own layer or one below.
 # `A : B` = siblings that may import each other. Not in the contract: `kits` (data, no Python),
 # `_webapp` (built assets).
 root_package = "kb_distillery"
@@ -82,11 +81,11 @@ type = "layers"
 containers = ["kb_distillery"]
 layers = [
     # entry points: the CLI, the HTTP server and the other `python -m` shells
-    "cli : api : doctor : init_kb : __main__",
+    "cli : server : doctor : init_kb : __main__",
     # use cases that compose the pipeline stages below, and the things that ship the result
     "services : publish : webbuild",
     # pipeline stages, each one concern
-    "ingest : summaries : distill : graph : search : lint : metrics : ops : git : migrations : parse",
+    "ingest : digest : distill : graph : search : lint : metrics : ops : git : migrations : parse",
     # the vault model, the LLM gateway, storage connectors and the publisher port (they know nothing of the stages above)
     "vault : llm : storage : hosting",
     # configuration and locations: depend on nothing in the engine

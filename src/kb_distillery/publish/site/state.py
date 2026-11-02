@@ -1,6 +1,6 @@
 """The share status chip and log tail the app shows: what the configured publisher last published.
 
-Plain data in, plain data out: no HTML, no dashboard import. `kb_distillery.api.routers.share` serves it."""
+Plain data in, plain data out: no HTML, no dashboard import. `kb_distillery.server.routers.share` serves it."""
 import datetime as _dt
 
 SHARE_LOG_LINES = 200

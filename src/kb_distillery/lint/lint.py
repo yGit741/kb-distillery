@@ -1357,7 +1357,7 @@ def collect_snapshot(quiet=False):
 def main():
     if "--dashboard" in sys.argv:
         # The linter is a pipeline stage and never starts an entry point (layer contract): the app is its own command.
-        print("error: `lint --dashboard` no longer starts the app; run `python -m kb_distillery.api` "
+        print("error: `lint --dashboard` no longer starts the app; run `python -m kb_distillery.server` "
               "(pixi run app, or distill launch).", file=sys.stderr)
         return 2
 

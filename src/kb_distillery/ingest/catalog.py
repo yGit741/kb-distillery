@@ -12,7 +12,7 @@ import subprocess
 import sys
 
 from kb_distillery.vault import frontmatter
-from . import blog
+from kb_distillery.ingest.sources.web import blog
 from .paths import ROOT, person_from_raw, set_collection, _page_type
 from .verify import existing_digest_for_raw
 from kb_distillery.vault.schema import (ASSET_NAME, RAW_CHATS, RAW_EMAILS, RAW_VIDEOS, VIDEO_ITEM, RAW_HANDWRITTEN, RAW_IMAGES,  # noqa: E402

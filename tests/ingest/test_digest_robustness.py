@@ -10,7 +10,8 @@ from unittest.mock import patch
 
 from kb_distillery.vault import coherence
 from kb_distillery.vault.graph import polarity_clash
-from kb_distillery.ingest import book, map as map_mod, paths, session
+from kb_distillery.ingest.sources.books import book
+from kb_distillery.ingest import map as map_mod, paths, session
 from kb_distillery.ops import wrap
 
 

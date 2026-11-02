@@ -16,7 +16,7 @@ import subprocess
 import sys
 import time
 
-from . import book as book_mod
+from kb_distillery.ingest.sources.books import book as book_mod
 from . import course, draft, extract
 from . import map as map_mod
 from . import session as session_mod

@@ -6,7 +6,7 @@ for its own evidence on the reply's `Proof:` line(s). Every requirement is an an
 groups of every kind the turn touched must be met:
 
     ui         web/                               local URL  +  deployed URL (always both)
-    api        kb_distillery/api/, kb_distillery/services/        local endpoint URL
+    api        kb_distillery/server/, kb_distillery/services/        local endpoint URL
     knowledge  wiki/, raw/, meta/, ops commit   page link  +  kb-x.y.z or commit URL
     pr         ship pr / merge              PR URL
     deploy     share -- …                   deployed URL
@@ -37,7 +37,7 @@ PR = ("the PR URL (github.com/…/pull/N)", r"github\.com/\S+/pull/\d+")
 # kind -> (path prefixes, command regex, [any-of evidence groups])
 KINDS = {
     "ui": (("web/",), None, [[LOCAL], [DEPLOYED]]),
-    "api": (("src/kb_distillery/api/", "src/kb_distillery/services/"), None, [[LOCAL]]),
+    "api": (("src/kb_distillery/server/", "src/kb_distillery/services/"), None, [[LOCAL]]),
     "knowledge": (("wiki/", "raw/", "meta/"), r"\bops\s+--\s+commit\b", [[PAGE], [VERSION]]),
     "pr": ((), r"\bship\s+--\s+(pr|merge)\b", [[PR]]),
     "deploy": ((), r"\bshare\s+--\s+\w", [[DEPLOYED]]),

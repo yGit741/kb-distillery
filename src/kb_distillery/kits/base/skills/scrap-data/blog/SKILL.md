@@ -36,7 +36,7 @@ distill ingest scrap-wordpress <site> --prefix <short> --no-images              
 3. Math: WordPress.com's `latex.php` images carry the TeX source in the URL → `$…$`, `\displaystyle` → `$$…$$`. Lossless.
 4. Figures: downloaded (8 in parallel) to `raw/inbox/<clip stem>-NN.<ext>`, linked as `../images/<file>` with the
    original URL as the link title; a figure that cannot be fetched keeps its remote URL. `<iframe>` → a link line.
-5. HTML → Markdown is `src/kb_distillery/ingest/htmlmd.py` (standard library only).
+5. HTML → Markdown is `src/kb_distillery/ingest/sources/web/htmlmd.py` (standard library only).
 
 ## Next step
 

@@ -2,11 +2,11 @@
 git/guard.py
 git/ship.py
 ingest/catalog.py
-ingest/gdrive.py
-ingest/mail.py
+ingest/sources/gdrive/gdrive.py
+ingest/sources/mail/mail.py
 ingest/scrap.py
-ingest/wordpress.py
-ingest/youtube/bundle.py
+ingest/sources/web/wordpress.py
+ingest/sources/youtube/bundle.py
 lint/lint.py
 ops/invariants.py
 ops/nightly_report.py

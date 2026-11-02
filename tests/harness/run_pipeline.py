@@ -68,7 +68,7 @@ json.dump({"graph": snap, "index": idx, "chat_retrieval": chat}, open(sys.argv[1
 
 CHAT_SNIPPET = r'''
 import sys
-from kb_distillery.ingest import chat_build, chat_render
+from kb_distillery.ingest.sources.chat import chat_build, chat_render
 convs, _rows = chat_build.run(apply=True)          # clips -> meta/chats/ conversation trees
 for conv in convs.values():
     page = chat_render.render(conv, sys.argv[1])

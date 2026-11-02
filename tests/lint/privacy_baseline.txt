@@ -1,6 +1,6 @@
 # Files allowed to carry personal strings today (Phase 7). Clean one up, or move the name behind configuration, and delete its line.
 src/kb_distillery/git/proof_nudge.py
-src/kb_distillery/ingest/wordpress.py
+src/kb_distillery/ingest/sources/web/wordpress.py
 src/kb_distillery/publish/export.py
 src/kb_distillery/publish/cloudflare/contracts.py
 src/kb_distillery/publish/cloudflare/deploy.py
@@ -8,7 +8,7 @@ src/kb_distillery/publish/cloudflare/share.toml
 tests/git/test_app_token.py
 tests/git/test_proof_nudge.py
 tests/git/test_ship.py
-tests/ingest/test_chat_kb.py
+tests/ingest/sources/chat/test_chat_kb.py
 tests/ops/test_notify.py
 tests/publish/cloudflare/fixtures/wrangler_versions_upload.txt
 tests/publish/cloudflare/test_share_deploy.py

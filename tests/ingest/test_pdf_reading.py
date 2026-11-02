@@ -7,7 +7,8 @@ import pytest
 fitz = pytest.importorskip("fitz")
 
 from kb_distillery.vault import books as core_books, schema
-from kb_distillery.ingest import book, catalog, easy_digest, extract, scrap
+from kb_distillery.ingest.sources.books import book
+from kb_distillery.ingest import catalog, easy_digest, extract, scrap
 
 
 def make_pdf(path, n, text="page {i} body", toc=None):

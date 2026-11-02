@@ -109,7 +109,7 @@ def test_init_writes_the_kits_skills_docs_hooks_settings_and_rendered_files_in_t
 def test_the_cli_hints_name_skills_that_exist_in_an_initialised_kb(world):
     root = init_kb.create("notes", "Notes", "base", str(world))
     sources = [open(os.path.join(os.path.dirname(__file__), "..", "..", "src", "kb_distillery", rel), encoding="utf-8").read()
-               for rel in ("ingest/cli.py", "ingest/mail.py")]
+               for rel in ("ingest/cli.py", "ingest/sources/mail/mail.py")]
     hinted = {m for text in sources for m in re.findall(r"\.claude/skills/[\w./-]+", text)}
     assert {".claude/skills/full-digest/SKILL.md", ".claude/skills/deep-digest/SKILL.md",
             ".claude/skills/scrap-data/mail/SKILL.md"} <= hinted

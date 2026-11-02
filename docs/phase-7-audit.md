@@ -14,7 +14,7 @@ _Update: the first run counted 27 files because it also matched Cloudflare's gen
 | Area | Result |
 |---|---|
 | Tracked files naming the owner, a local path or the private host | **23 files** (listed in `tests/lint/privacy_baseline.txt`). Mostly share/deploy code and tests (the private host name), flags metadata (owner), and a few docs. |
-| Token-shaped strings in tracked files | **2 files**, both test fixtures with fake, truncated keys (`tests/ingest/test_chat_kb.py`, `web/src/features/chat/ChatScreen.test.tsx`). No real secret found. |
+| Token-shaped strings in tracked files | **2 files**, both test fixtures with fake, truncated keys (`tests/ingest/sources/chat/test_chat_kb.py`, `web/src/features/chat/ChatScreen.test.tsx`). No real secret found. |
 | Token-shaped strings in history | **11 added lines in 2 commits' files, the same two test files.** None elsewhere. |
 | Commits adding a personal string | **25 commits** (`git log --all -G<personal patterns>`). |
 | Tracked paths that must not be public | `.vscode/settings.json` (tracked, carries a personal path). `_quarantine/`, `.backlog/` and `kbs/yonatan-*`, `kbs/think` are not tracked. |

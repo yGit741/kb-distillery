@@ -59,7 +59,7 @@ def test_keychain_names_try_the_new_service_first_then_the_old_one():
 
 
 def test_consumers_take_the_new_folder_from_home(tmp_path):
-    code = ("from kb_distillery import llm; from kb_distillery.services import chat; from kb_distillery.ingest import mail; "
+    code = ("from kb_distillery import llm; from kb_distillery.services import chat; from kb_distillery.ingest.sources.mail import mail; "
             "print(llm.KEY_FILE); print(chat.KEY_FILE); print(chat.KEYS_DIR); print(chat.SETTINGS_FILE); print(mail.KEYCHAIN_SERVICE)")
     env = {**os.environ, "HOME": str(tmp_path), "PYTHONPATH": SRC, "KB_APP_CONFIG": "/nonexistent/app.toml"}
     for k in ("KB", "KB_ROOT"):

@@ -19,7 +19,8 @@ from kb_distillery.config.paths import vault_root
 META = os.path.join(vault_root(), "meta")
 
 from kb_distillery.lint import lint
-from kb_distillery.ingest import arxiv_meta, backfill, catalog, researcher
+from kb_distillery.ingest import arxiv_meta, catalog
+from kb_distillery.ingest.sources.researcher import backfill, researcher
 
 ATOM = """<?xml version="1.0" encoding="UTF-8"?>
 <feed xmlns="http://www.w3.org/2005/Atom">{entries}</feed>"""

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Restart the app server (kb_distillery.api: API + legacy pages + React shell) from the current working tree, detached, then open it.
+# Restart the app server (kb_distillery.server: API + legacy pages + React shell) from the current working tree, detached, then open it.
 # Kills whatever already listens on the port so a stale server never answers.
 # Usage: pixi run launch [-- --kb <id>] [-- --port N]
 # The knowledge base: --kb <id|path> (else $KB, the only one; `kbd kb-list`).
@@ -60,10 +60,10 @@ if ! VEC_STATUS="$(python -m kb_distillery.search.vectors status 2>&1)"; then
   echo "card vectors: $VEC_STATUS"
 fi
 
-nohup python -m kb_distillery.api --port "$PORT" --no-open >"$LOG" 2>&1 &
+nohup python -m kb_distillery.server --port "$PORT" --no-open >"$LOG" 2>&1 &
 echo "started dashboard (pid $!), log: $LOG"
 
-for _ in $(seq 1 1200); do   # up to 5 min: kb_distillery.api installs the frontend dependencies on a fresh clone and rebuilds src/kb_distillery/_webapp when the sources changed
+for _ in $(seq 1 1200); do   # up to 5 min: kb_distillery.server installs the frontend dependencies on a fresh clone and rebuilds src/kb_distillery/_webapp when the sources changed
   if curl -fsS -o /dev/null "$URL"; then
     open "$URL"
     echo "ready: $URL"

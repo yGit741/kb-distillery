@@ -119,7 +119,7 @@ page plus an updated partition row. For a collection row: a Source page plus a t
 
 ## Summary
 
-After finalize, refresh the page's `description:` (schema 1.3): `python3 -m kb_distillery.summaries run --slugs <slug>` then `python3 -m kb_distillery.summaries apply --slugs <slug>` inside the open ops session — a deeper page always gets a new one; skip pages whose `generated.by` is a `human:<id>`.
+After finalize, refresh the page's `description:` (schema 1.3): `python3 -m kb_distillery.digest run --slugs <slug>` then `python3 -m kb_distillery.digest apply --slugs <slug>` inside the open ops session — a deeper page always gets a new one; skip pages whose `generated.by` is a `human:<id>`.
 
 ## Commit
 

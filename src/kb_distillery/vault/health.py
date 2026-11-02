@@ -1,4 +1,4 @@
-"""Vault health metrics — shared by lint --health and the app (kb_distillery.api)."""
+"""Vault health metrics — shared by lint --health and the app (kb_distillery.server)."""
 import os
 import time
 from datetime import datetime, timezone
