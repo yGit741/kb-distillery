@@ -31,7 +31,7 @@ const HELP: Record<string, string> = {
   links_ms: "Time spent scanning links across all pages.",
   raw_tokens: "Estimated tokens across all of raw/ if fully read (~bytes÷4 per file).",
   wiki_tokens: "Estimated tokens in all wiki page bodies (~chars÷4).",
-  index_savings_pct: "Percent of wiki tokens you skip by reading wiki/index.md first instead of every page.",
+  index_savings_pct: "Percent of wiki tokens a typical query skips: it reads the root index, one section index and about five pages instead of every page.",
   queued_mb: "Megabytes of queued raw PDFs — proxy for future ingest/extract cost.",
 };
 

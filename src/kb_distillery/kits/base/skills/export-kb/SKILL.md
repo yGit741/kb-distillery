@@ -34,7 +34,7 @@ python3 -m kb_distillery.publish.export --include-raw-pdfs   # full raw/ binarie
 
 Includes:
 
-- `AGENTS.md`, `CLAUDE.md`, `.claude/skills/README.md` (the bundle root `wiki/` carries `index.md` and `log.md`)
+- `AGENTS.md`, `CLAUDE.md`, `.claude/skills/README.md` (the bundle root `wiki/` carries `index.md`, the `wiki/<type>/index.md` sections and `log.md`)
 - `src/kb_distillery/kits/base/defaults/docs/*.md` (the docs the AGENTS.md doc router points to)
 - `wiki/*.md`, `think/*.md`
 - `meta/corpus.tsv`, `meta/coherence-warnings.tsv` (if present)
@@ -46,4 +46,4 @@ PDFs omitted by default; paths remain in `meta/corpus.tsv`.
 
 1. Run `python3 -m kb_distillery.publish.export` (lint runs first by default).
 2. Print the absolute path and size for upload to the other LLM.
-3. Tell the recipient: start with `AGENTS.md` (its doc router names the `src/kb_distillery/kits/base/defaults/docs/` file to read) and `wiki/index.md`.
+3. Tell the recipient: start with `AGENTS.md` (its doc router names the `src/kb_distillery/kits/base/defaults/docs/` file to read) and `wiki/index.md` (a tiny root; open only the `wiki/<type>/index.md` section you need).

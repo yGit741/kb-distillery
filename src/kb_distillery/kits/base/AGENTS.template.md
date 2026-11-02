@@ -23,7 +23,7 @@ This file is the core every turn needs. The details live in `.claude/docs/`: rea
 3. Never run raw `git commit` / `push` / `merge` / `tag` / `revert` / `reset` in this repo. Knowledge changes (one `kb(<op>)` commit each; see the `kb-history`, `kb-snapshot` and `kb-undo` skills) go through `distill ops` (a session per operation), which lints, commits one `kb(<op>): …` step and tags `kb-x.y.z`. The hooks in `.claude/` and `core.hooksPath` enforce this and fail closed when `distill` is not on PATH.
 4. One transactional workflow (ingest session, ops session, distill) at a time.
 5. Pages link with standard relative markdown links, `[Tensor rank](tensor-rank.md)`: the bare `slug.md` (`wiki/` is flat and is the bundle root), `[label](slug.md#heading)` for a heading, never `[[wikilinks]]` (they live only in the user's `## My notes`) and never a path (`wiki/…`, `../wiki/…`). Paths into `raw/` go in backticks, not links.
-6. Do not hand-edit `wiki/index.md` or `meta/corpus.tsv`: both are generated on every lint run. `wiki/index.md` and `wiki/log.md` are OKF's reserved files of the bundle root, not pages.
+6. Do not hand-edit `wiki/index.md`, the `wiki/<type>/index.md` section indexes or `meta/corpus.tsv`: all are generated on every lint run. To find a page read `wiki/index.md` (a tiny root), then only the one section index you need. Every `index.md` and `wiki/log.md` are OKF's reserved files, not pages.
 7. **`digest` alone → ask the tier (easy / full / deep).** Bare "digest" never triggers `full-digest`.
 8. **Dedup:** always `distill ingest resolve` before `scrap`. If FOUND → cite `[Title](slug.md)`; do not re-download.
 9. Read a skill's `SKILL.md` before running it.

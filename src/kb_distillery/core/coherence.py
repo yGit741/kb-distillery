@@ -7,7 +7,8 @@ import json
 import os
 import sys
 
-from kb_distillery.core.schema import INDEX_REL, SOURCE_TYPES, strip_prefix
+from kb_distillery.core.schema import SOURCE_TYPES, strip_prefix
+from kb_distillery.core import wikiindex
 from kb_distillery.core.graph import (  # noqa: E402
     claim_text,
     inbound_index,
@@ -172,17 +173,15 @@ def check_coherence(pages, rows=None, err_fn=None, warn_fn=None, prior=None, fre
             f"raw re-queued but wiki still digested — re-digest `{raw_path}`",
             _score_hit("internal", 80))
 
-    # Index drift (wiki/index.md lists `[Title](slug.md)` rows)
-    index_path = os.path.join(ROOT, INDEX_REL)
-    if os.path.isfile(index_path):
-        with open(index_path, encoding="utf-8") as f:
-            index_text = f.read()
-        for slug, (rel, fm, text) in pages.items():
-            if f"]({page_links.page_path(slug)})" not in index_text:
-                continue
-            fl = " ".join(page_links.plain(unquote(fm.get("description")) or _first_line(text)).split())     # wiki/index.md shows the summary when set
-            if fl and fl[:40] not in index_text:
-                add("cosmetic", [slug], "index summary may be stale vs page body", 15)
+    # Index drift (the section indexes list `[Title](slug.md)` rows; the root only counts them)
+    rows = wikiindex.parse_rows(ROOT)
+    for slug, (rel, fm, text) in pages.items():
+        row = rows.get(slug)
+        if row is None:
+            continue
+        fl = " ".join(page_links.plain(unquote(fm.get("description")) or _first_line(text)).split())     # the index shows the summary when set
+        if fl and fl[:40] not in row["summary"]:
+            add("cosmetic", [slug], "index summary may be stale vs page body", 15)
 
     # Route to lint err/warn
     for h in hits:

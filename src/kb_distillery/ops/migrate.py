@@ -17,7 +17,7 @@ import tempfile
 
 from kb_distillery.paths import vault_root
 META_DIR = os.path.join(vault_root(), "meta")
-from kb_distillery.core.schema import LEGACY_INDEX_REL, LEGACY_LOG_REL, SCHEMA_VERSION
+from kb_distillery.core.schema import LEGACY_INDEX_REL, LEGACY_LOG_REL, SCHEMA_VERSION, is_index_path
 from kb_distillery.paths import MIGRATIONS_CODE_PATH
 
 MIGRATIONS_DIR = os.path.join("meta", "migrations")      # vault side: applied.tsv
@@ -190,7 +190,8 @@ def _require_clean_notes(root):
     from . import core
     ignore = set(core.GENERATED_KNOWLEDGE) | {core.LOG_PATH}
     legacy = {LEGACY_INDEX_REL, LEGACY_LOG_REL}       # pre-1.7 places: a dirty one is lint/ops output, and migration 0015 deletes them
-    stray = sorted(p for p in core.changed_paths(root)["knowledge"] if p not in ignore and p not in legacy and p != "kb.toml")
+    stray = sorted(p for p in core.changed_paths(root)["knowledge"] if p not in ignore and p not in legacy and p != "kb.toml"
+                   and not is_index_path(p))
     if stray:
         raise RuntimeError("commit or discard these first, a migration must start from clean notes: "
                            + ", ".join(stray[:5]) + (" …" if len(stray) > 5 else ""))
@@ -221,7 +222,7 @@ def _migrate_own_repo(root):
         core._commit_paths(root, paths, subject + "\n" + body)
         print(f"committed {subject}")
         core.push_main(root, quiet=True)
-    if [p for p in core.changed_paths(root)["knowledge"] if p not in ignore]:
+    if [p for p in core.changed_paths(root)["knowledge"] if p not in ignore and not is_index_path(p)]:
         core.commit_op("refine", f"schema-{_want().replace('.', '-')}", f"migrate notes to schema {_want()}", root=root)
     return ids
 

@@ -26,7 +26,7 @@ ROOT = vault_root()
 from kb_distillery.git import commit_policy as cp
 from kb_distillery.ops.daily_sync import changed_paths, has_open_sessions, run_git
 from kb_distillery.core import log as kblog
-from kb_distillery.core.schema import (INDEX_REL, LOG_REL, OPS_DIR, RESTORABLE_PATHS, RESTORE_EXCLUDED, is_page_file,
+from kb_distillery.core.schema import (INDEX_REL, LOG_REL, OPS_DIR, RESTORABLE_PATHS, RESTORE_EXCLUDED, RESTORE_EXCLUDED_GLOBS, is_index_path, is_page_file,
                                        lane_of, strip_prefix)
 
 GENERATED_KNOWLEDGE = (INDEX_REL, "meta/corpus.tsv", "meta/coherence-warnings.tsv")
@@ -174,7 +174,7 @@ def run_lint(root=ROOT, okf_pages=None):
 def okf_gate(root, okf_pages):
     """okf-check the pages a commit changes (relative paths; non-pages ignored). Raises OpsError naming file and rule."""
     pages = sorted(p for p in okf_pages if p.startswith("wiki/") and p.endswith(".md")
-                   and p not in (INDEX_REL, LOG_REL) and os.path.isfile(os.path.join(root, p)))
+                   and not is_index_path(p) and p != LOG_REL and os.path.isfile(os.path.join(root, p)))
     if not pages:
         return
     # the OKF gate: no bypass. A finding names the file and the rule; fix that page, then commit again
@@ -417,7 +417,8 @@ def commit_op(op, target, summary=None, paths=None, lint=True, trailers=None, ro
         target = _target_of(target, chosen)
         _log_step(root, op, target, summary, dirty)
         dirty = set(changed_paths(root)["knowledge"])
-        chosen += [p for p in (*GENERATED_KNOWLEDGE, LOG_PATH) if p in dirty and p not in chosen]
+        chosen += [p for p in (*GENERATED_KNOWLEDGE, *sorted(d for d in dirty if is_index_path(d)), LOG_PATH)
+                   if p in dirty and p not in chosen]
         trailers = dict(trailers or {})
         pages = _pages(chosen)
         tier = _tier(root, op, target, pages)
@@ -519,7 +520,7 @@ def abort(root=ROOT):
 # ---------- undo / restore ----------
 
 def _restorable(path):
-    return path not in RESTORE_EXCLUDED and any(path == p.rstrip("/") or (p.endswith("/") and path.startswith(p)) for p in RESTORABLE_PATHS)
+    return path not in RESTORE_EXCLUDED and not is_index_path(path) and any(path == p.rstrip("/") or (p.endswith("/") and path.startswith(p)) for p in RESTORABLE_PATHS)
 
 
 def _first_parent(root, ref="main"):
@@ -602,7 +603,8 @@ def restore(tag, root=ROOT):
         if dirty:
             raise OpsError(f"commit or discard edits under wiki/ first: {dirty[:5]}")
         diff = _git(root, "diff", "--name-only", "--no-renames", tag, "HEAD", "--", *RESTORABLE_PATHS,
-                 *(f":(exclude){p}" for p in RESTORE_EXCLUDED)).stdout.split("\n")
+                 *(f":(exclude){p}" for p in RESTORE_EXCLUDED),
+                 *(f":(exclude,glob){p}" for p in RESTORE_EXCLUDED_GLOBS)).stdout.split("\n")
         files = [f for f in diff if f]
         if not files:
             print(f"wiki already matches {tag}")
