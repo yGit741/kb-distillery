@@ -47,7 +47,7 @@ function Section({ title, help, children }: { title: string; help?: ReactNode; c
     <Card className="min-w-0">
       <CardHeader>
         <CardTitle>{title}</CardTitle>
-        {help && <CardDescription>{help}</CardDescription>}
+        {help && <CardDescription className="[&_code]:text-foreground">{help}</CardDescription>}
       </CardHeader>
       <CardContent>{children}</CardContent>
     </Card>
@@ -61,7 +61,7 @@ export function StartScreen() {
     <div className="flex min-w-0 flex-col gap-4">
       <div>
         <h1 className="text-2xl font-semibold">Start here</h1>
-        <p className="text-sm text-muted-foreground break-words">
+        <p className="text-sm text-foreground/75 break-words">
           How to add and edit knowledge, and how to build a new feature for the knowledge base. You talk to the agent (Claude Code or Cursor); the trigger phrases below pick the right skill, and every change lands as one reviewable git commit.
         </p>
       </div>
@@ -149,14 +149,14 @@ export function StartScreen() {
             ))}
           </tbody>
         </TableWrap>
-        <p className="mt-3 text-sm text-muted-foreground">
+        <p className="mt-3 text-sm text-muted-foreground [&_code]:text-foreground">
           Scope is always a component: <Code>{COMMIT_SCOPES}</Code>. Infra summaries start with a verb. Versions are knowledge-only: <Code>kb-x.y.z</Code> = paradigm · schema · step.
         </p>
       </Section>
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Section title="Daily rhythm">
-          <ul className="list-disc space-y-1.5 pl-5 text-sm text-muted-foreground">
+          <ul className="list-disc space-y-1.5 pl-5 text-sm text-muted-foreground [&_code]:text-foreground">
             <li><b className="text-foreground">Morning:</b> <Code>pixi run launch</Code> opens this dashboard. <Link to={"/pipeline" as "/"} className={LINK}>Digestion</Link> shows the inbox and backlog.</li>
             <li><b className="text-foreground">During the day:</b> ask for skills; each finished operation is already committed.</li>
             <li><b className="text-foreground">22:00:</b> the nightly sync commits your <Code>think/</Code> edits, anything left over, and pushes main with its snapshot tags.</li>
@@ -164,7 +164,7 @@ export function StartScreen() {
           </ul>
         </Section>
         <Section title="Rules that protect you">
-          <ul className="list-disc space-y-1.5 pl-5 text-sm text-muted-foreground">
+          <ul className="list-disc space-y-1.5 pl-5 text-sm text-muted-foreground [&_code]:text-foreground">
             <li>Agents never run git writes; only the <Code>ops</Code>, <Code>ship</Code> and <Code>daily-sync</Code> tools commit.</li>
             <li><Code>raw/</Code> and <Code>think/</Code> are never edited by agents, never rewritten by undo or restore.</li>
             <li>Undo and restore add commits — history is never rewritten.</li>
