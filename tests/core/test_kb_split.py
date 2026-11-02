@@ -10,8 +10,7 @@ import unittest
 from contextlib import redirect_stderr
 from unittest import mock
 
-from kb_distillery import paths
-from kb_distillery import kbconfig
+from kb_distillery import kbconfig, paths
 from kb_distillery.config import resources
 from kb_distillery.core import digest, schema
 from kb_distillery.git import commit_policy as cp
@@ -92,8 +91,11 @@ class KbService(unittest.TestCase):
         self.assertEqual(info["think_root"], paths.THINK_PATH)
         self.assertIn(info["flags_registry"], ("explorer", "kb"))
         listing = svc.listing()
-        if not os.environ.get("KB_ROOT"):    # a $KB_ROOT folder (the test fixture) is not in the bases dir
-            self.assertTrue(any(r["active"] for r in listing["kbs"]) or info["id"] is None)
+        # only a kb that lives in the bases dir is listed (and so can be active); a kb given by path (KB=<folder>,
+        # the $KB_ROOT test fixture) is not, whatever the caller's env says
+        listed = {os.path.realpath(r["root"]) for r in listing["kbs"]}
+        if os.path.realpath(info["root"]) in listed:
+            self.assertTrue(any(r["active"] for r in listing["kbs"]))
         self.assertNotIn("registry", listing)
         self.assertNotIn("legacy", info)
 
@@ -121,3 +123,11 @@ class KbFlag(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class SuiteIsolation(unittest.TestCase):
+    def test_an_unselected_run_never_sees_the_real_bases_dir(self):
+        if os.environ.get("KB"):
+            return          # the caller picked a kb on purpose; the fixture isolation does not apply
+        self.assertNotEqual(os.path.realpath(kbconfig.bases_dir()), os.path.realpath(os.path.expanduser("~/knowledge")))
+        self.assertEqual(kbconfig.discover(), {})

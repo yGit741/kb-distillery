@@ -303,3 +303,20 @@ class GuardSubfolderCwdTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class RelativeKbGuardTests(unittest.TestCase):
+    def test_guard_blocks_raw_when_kb_env_is_a_relative_path(self):
+        # run from the engine checkout with a relative $KB, as the ship gates do, then guard a path in that kb
+        import tempfile
+        with tempfile.TemporaryDirectory() as d:
+            kb = os.path.join(os.path.realpath(d), "kbs", "mine")
+            os.makedirs(os.path.join(kb, "raw"))
+            with open(os.path.join(kb, "kb.toml"), "w") as f:
+                f.write(open(os.path.join(ROOT, "kb.toml")).read())
+            env = {**os.environ, "KB": "./kbs/mine", "CLAUDE_PROJECT_DIR": kb}
+            env.pop("KB_ROOT", None)
+            proc = subprocess.run([sys.executable, *GUARD], input=json.dumps({
+                "tool_name": "Write", "tool_input": {"file_path": os.path.join(kb, "raw", "foo.md"), "content": "x"}}),
+                capture_output=True, text=True, cwd=os.path.realpath(d), env=env)
+            self.assertEqual(proc.returncode, 2, proc.stderr)

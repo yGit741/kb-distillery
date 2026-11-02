@@ -211,6 +211,18 @@ def _consume_argv_kb() -> str | None:
 _ARGV_KB = _consume_argv_kb()
 
 
+def _anchor_env_kb() -> None:
+    """A relative `$KB` path (`KB=./examples/demo`) is resolved once, against the folder the process started in, and
+    exported absolute: the guard hook, the pytest subprocesses and every other child may start elsewhere, and a relative
+    path would silently point each of them at a different (or no) folder."""
+    pick = os.environ.get("KB")
+    if pick and looks_like_path(pick):
+        os.environ["KB"] = _expand(pick)
+
+
+_anchor_env_kb()
+
+
 def explicit_kb() -> str | None:
     """The `--kb` given on this command line (not `$KB`): for commands that act on a kb only when asked to."""
     return _ARGV_KB
