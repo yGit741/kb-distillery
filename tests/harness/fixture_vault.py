@@ -42,7 +42,7 @@ MANIFEST_HEADER = (
 _TOPIC = """---
 type: topic
 layer: concept
-status: seed
+maturity: seed
 aliases: []
 related: []
 ---
@@ -68,7 +68,7 @@ _IDEA = """---
 type: idea
 layer: concept
 area: [{area}]
-status: seed
+maturity: seed
 sources: []
 related: []
 discussed_with: []
@@ -89,7 +89,7 @@ Fixture idea.
 Fixture.
 
 ## Connections
-- [[theme-{area}]]
+- [{area_title}](theme-{area}.md)
 
 ## Open questions
 -
@@ -108,7 +108,7 @@ course_code: 00000
 semester: 2026a
 lecturer: Fixture Lecturer
 area: [learning-theory]
-status: to-read
+maturity: to-read
 aliases: []
 related: []
 ---
@@ -123,7 +123,7 @@ A fixture course whose members are two slide decks, catalogued with a collection
 
 ## Threads
 
-Links to [[theme-learning-theory]].
+Links to [Learning Theory](theme-learning-theory.md).
 """
 
 _SERIES = """---
@@ -131,7 +131,7 @@ type: series
 layer: collection
 short: kalai
 area: [boolean-analysis]
-status: to-read
+maturity: to-read
 aliases: []
 related: []
 ---
@@ -146,7 +146,7 @@ A fixture blog series standing in for a WordPress blog of clips. It exists only 
 
 ## Threads
 
-Links to [[theme-boolean-analysis]].
+Links to [Boolean Analysis](theme-boolean-analysis.md).
 """
 
 _VIDEO = """---
@@ -155,7 +155,7 @@ layer: source
 authors: [Fixture Speaker]
 year: 2024
 area: [info-theory]
-status: digested
+maturity: digested
 depth: easy
 raw: none
 url: https://example.org/watch/fixture-talk
@@ -183,11 +183,11 @@ $H(X) = -\\sum p \\log p$
 
 ## Connections
 
-- [[theme-info-theory]], [[shannon-entropy]]
+- [Info Theory](theme-info-theory.md), [Shannon entropy](shannon-entropy.md)
 
 ## Links out
 
-- [[shannon-entropy]]
+- [Shannon entropy](shannon-entropy.md)
 """
 
 
@@ -195,11 +195,15 @@ def _title(slug):
     return slug.replace("-", " ").title()
 
 
+def _idea(**kw):
+    return _IDEA.format(area_title=_title(kw["area"]), **kw)
+
+
 def seed_pages():
     pages = {f"theme-{t}": _TOPIC.format(title=_title(t)) for t in TOPICS}
-    pages["shannon-entropy"] = _IDEA.format(area="info-theory", title="Shannon entropy", one="Expected surprise of a random variable.")
-    pages["noise-stability"] = _IDEA.format(area="boolean-analysis", title="Noise stability", one="Correlation of a function with its noisy copy.")
-    pages["generalization"] = _IDEA.format(area="learning-theory", title="Generalization", one="Gap between train and test risk.")
+    pages["shannon-entropy"] = _idea(area="info-theory", title="Shannon entropy", one="Expected surprise of a random variable.")
+    pages["noise-stability"] = _idea(area="boolean-analysis", title="Noise stability", one="Correlation of a function with its noisy copy.")
+    pages["generalization"] = _idea(area="learning-theory", title="Generalization", one="Gap between train and test risk.")
     pages["course-fixture-rl"] = _COURSE
     pages["series-fixture-kalai-blog"] = _SERIES
     pages["video-fixture-talk"] = _VIDEO
@@ -334,14 +338,14 @@ def build(root, inputs):
     for name in META_COPY:
         if (META_SRC / name).is_dir():
             shutil.copytree(META_SRC / name, meta / name, ignore=CODE_IGNORE)
-    (root / "kb.toml").write_text('[kb]\nid = "harness"\nname = "Harness fixture vault"\nschema_version = "1.4"\n'
+    (root / "kb.toml").write_text('[kb]\nid = "harness"\nname = "Harness fixture vault"\nschema_version = "1.5"\n'
                                   '\n[types]\nareas = [' + ", ".join(f'"{t}"' for t in TOPICS) + ']\n', encoding="utf-8")
     (meta / "corpus.tsv").write_text(MANIFEST_HEADER, encoding="utf-8")
     (meta / "aliases.tsv").write_text("", encoding="utf-8")
-    (meta / "log.md").write_text("# Log\n", encoding="utf-8")
     (meta / "thesis.md").write_text("# Thesis\n\nFixture.\n", encoding="utf-8")
     (meta / "coherence-warnings.tsv").write_text("id\tscore\tkind\tslugs\tsummary\tstatus\n", encoding="utf-8")
     (root / "wiki").mkdir()
+    (root / "wiki" / "log.md").write_text("# Log\n", encoding="utf-8")
     for slug, text in pages.items():
         (root / "wiki" / f"{slug}.md").write_text(text, encoding="utf-8")
     for d in RAW_DIRS:

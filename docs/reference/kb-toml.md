@@ -44,8 +44,7 @@ publisher = "none"
 | `schema_version` | `major.minor` of the page schema. The engine refuses a knowledge base whose version differs from its own and tells you to run `distill ops migrate`. |
 | `kit` | The kit the knowledge base follows: `base` or `research`. Without it, the file carries its own `[types]` and `[edges]`. The older key `template` is read too, and the old names `starter` and `academic-research` map to `base` and `research`. |
 
-<!-- after OKF merge -->
-After the OKF merge, `schema_version` is `1.7`. The key `[kb] owner` is an id that the frontmatter migration writes into `generated: {by: human:<owner>}` for summaries you wrote by hand.
+The current `schema_version` is `1.5`. The key `[kb] owner` is an id that the frontmatter migration writes into `generated: {by: human:<owner>}` for summaries you wrote by hand.
 
 ## [git]
 

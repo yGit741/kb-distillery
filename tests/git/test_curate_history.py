@@ -8,7 +8,7 @@ import tempfile
 import unittest
 import unittest.mock
 
-from kb_distillery.paths import vault_root
+from kb_distillery.config.paths import vault_root
 ROOT = vault_root()
 
 from kb_distillery.git import curate_history

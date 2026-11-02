@@ -16,7 +16,7 @@ import subprocess
 import sys
 import time
 
-from . import book as book_mod
+from kb_distillery.ingest.sources.books import book as book_mod
 from . import course, draft, extract
 from . import map as map_mod
 from . import session as session_mod
@@ -24,6 +24,7 @@ from .fm_merge import parse, split
 from .paths import ROOT, session_dir
 from kb_distillery.storage import StorageError, for_kb
 from .verify import existing_digest_for_raw
+from kb_distillery.vault.schema import is_page_file
 
 MODEL = "sonnet"
 MAX_TEXT = 60_000          # chars of source text per request: a ceiling on cost, not a summary
@@ -66,7 +67,7 @@ def page_index():
     wiki = os.path.join(ROOT, "wiki")
     out = []
     for fn in sorted(os.listdir(wiki)):
-        if not fn.endswith(".md"):
+        if not is_page_file(fn):
             continue
         with open(os.path.join(wiki, fn), encoding="utf-8", errors="ignore") as f:
             fm = dict((k, lines[0].split(":", 1)[1].strip()) for k, lines in parse(split(f.read())[0]))

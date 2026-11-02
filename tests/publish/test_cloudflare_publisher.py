@@ -7,10 +7,11 @@ from pathlib import Path
 from unittest import mock
 
 from kb_distillery.publish import PublishError, Snapshot
-from kb_distillery.publish import registry
-from kb_distillery.share import cf_api, deploy, owner, snapshots
-from kb_distillery.share.contracts import DeployResult
-from kb_distillery.share.publisher import CloudflarePublisher
+from kb_distillery.hosting import registry
+from kb_distillery.publish.cloudflare import cf_api, deploy, owner
+from kb_distillery.publish.site import snapshots
+from kb_distillery.publish.cloudflare.contracts import DeployResult
+from kb_distillery.publish.cloudflare.publisher import CloudflarePublisher
 from tests.publish.test_publisher_contract import PublisherContract
 
 
@@ -41,8 +42,12 @@ class CloudflareBehaviour(unittest.TestCase):
         seams = {"runner": object()}
         with mock.patch.object(deploy, "deploy_main", return_value=DeployResult("deployed", url="u", version_id="v")) as dm:
             res = CloudflarePublisher(seams=seams).publish(Snapshot("main", options={"force": True}), dry_run=True)
-        dm.assert_called_once_with(force=True, dry_run=True, app=True, **seams)
+        dm.assert_called_once_with(force=True, dry_run=True, **seams)
         self.assertEqual((res.state, res.url, res.version), ("deployed", "u", "v"))
+
+    def test_the_legacy_shell_option_is_refused(self):
+        with self.assertRaises(PublishError):
+            CloudflarePublisher().publish(Snapshot("main", options={"legacy": True}))
 
     def test_the_live_site_is_only_built_from_main(self):
         with self.assertRaises(PublishError):
@@ -51,9 +56,9 @@ class CloudflareBehaviour(unittest.TestCase):
     def test_a_named_snapshot_goes_through_the_snapshot_command(self):
         with mock.patch.object(snapshots, "cmd_snapshot", return_value=0) as cmd:
             res = CloudflarePublisher().publish(Snapshot("kb-1.2.3", name="demo", public=True,
-                                                         options={"replace": True, "app": True}), dry_run=True)
+                                                         options={"replace": True}), dry_run=True)
         args = cmd.call_args.args[0]
-        self.assertEqual((args.name, args.ref, args.replace, args.app, args.dry_run), ("demo", "kb-1.2.3", True, True, True))
+        self.assertEqual((args.name, args.ref, args.replace, args.dry_run), ("demo", "kb-1.2.3", True, True))
         self.assertEqual(res.state, "deployed")
         with mock.patch.object(snapshots, "cmd_snapshot", return_value=1):
             self.assertEqual(CloudflarePublisher().publish(Snapshot("main", name="demo")).state, "failed")
@@ -76,7 +81,7 @@ class CloudflareBehaviour(unittest.TestCase):
         nudge.assert_called_once_with("why", "/r")
 
     def test_request_publish_direct_triggers_a_background_deploy_or_runs_it_in_the_foreground(self):
-        from kb_distillery.share import autodeploy
+        from kb_distillery.publish.cloudflare import autodeploy
         with mock.patch.dict(os.environ, {"KB_SHARE_DIRECT": "1"}), \
                 mock.patch.object(autodeploy, "trigger", return_value="spawned") as trig, \
                 mock.patch.object(autodeploy, "run_foreground", return_value=0) as fg:

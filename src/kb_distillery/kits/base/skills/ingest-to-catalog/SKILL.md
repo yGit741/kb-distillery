@@ -51,7 +51,7 @@ for a slide-deck PDF). `--title` names the row added to a course/series `## Cont
   it goes to `raw/images/` with no collection and lint binds it as `asset:<clip>` (never backlog, never a collection row).
   `drain-inbox` catalogs clips before figures and lints once at the end.
 - A paper gets a `wiki/paper-<year>-<title>.md` Source page and a tagged blog post a `blog-…` page, both
-  `layer: source`, `depth: listed`, `status: to-read` (Catalog creates the Source page; Digest deepens it). Emails, chats, handwriting and slides stay corpus
+  `layer: source`, `depth: listed`, `maturity: to-read`, `status: draft` (Catalog creates the Source page; Digest deepens it). Emails, chats, handwriting and slides stay corpus
   rows until digested. Every outcome (success or refusal + reason) is logged in `meta/.catalog/`.
 
 - An `arxiv-*.pdf` scrape whose arXiv metadata cannot be fetched (rate limit, outage) is **refused**

@@ -6,7 +6,7 @@ import subprocess
 import sys
 import unittest
 
-from kb_distillery.paths import vault_root
+from kb_distillery.config.paths import vault_root
 ROOT = vault_root()
 GUARD = ["-m", "kb_distillery.git.guard"]
 
@@ -49,8 +49,30 @@ class GuardMainTests(unittest.TestCase):
         self.assertEqual(code, 0)
         self.assertIn("allow", out)
 
-    def test_cursor_write_to_index_blocked(self):
+    def test_cursor_write_to_root_index_blocked(self):
+        """The pre-1.7 place of the index: nothing may recreate it (it is not an allowed root file any more)."""
         path = os.path.join(ROOT, "index.md")
+        code, out, err = run_guard({
+            "hook_event_name": "preToolUse",
+            "tool_name": "Write",
+            "tool_input": {"path": path, "content": "x"},
+            "cwd": ROOT,
+        })
+        self.assertEqual(code, 2)
+
+    def test_cursor_write_to_section_index_blocked(self):
+        for rel in ("wiki/paper/index.md", "wiki/blog-post/2019/index.md"):
+            code, out, err = run_guard({
+                "hook_event_name": "preToolUse",
+                "tool_name": "Write",
+                "tool_input": {"path": os.path.join(ROOT, rel), "content": "x"},
+                "cwd": ROOT,
+            })
+            self.assertEqual(code, 2, rel)
+            self.assertIn("generated", err.lower())
+
+    def test_cursor_write_to_index_blocked(self):
+        path = os.path.join(ROOT, "wiki", "index.md")
         code, out, err = run_guard({
             "hook_event_name": "preToolUse",
             "tool_name": "Write",
@@ -290,5 +312,30 @@ class GuardSubfolderCwdTests(unittest.TestCase):
         self.assertEqual(code, 0)
 
 
+class RelativeKbGuardTests(unittest.TestCase):
+    def test_guard_started_from_another_folder_still_finds_a_relative_kb(self):
+        # a process started with KB=./kbs/mine anchors it on import; the guard it then spawns from elsewhere inherits
+        # the absolute path (unanchored, "./kbs/mine" would resolve against the child's cwd and miss the kb)
+        import tempfile
+        with tempfile.TemporaryDirectory() as d:
+            d = os.path.realpath(d)
+            kb = os.path.join(d, "kbs", "mine")
+            elsewhere = os.path.join(d, "elsewhere")
+            os.makedirs(os.path.join(kb, "raw"))
+            os.makedirs(elsewhere)
+            with open(os.path.join(kb, "kb.toml"), "w") as f:
+                f.write(open(os.path.join(ROOT, "kb.toml")).read())
+            payload = json.dumps({"tool_name": "Write",
+                                  "tool_input": {"file_path": os.path.join(kb, "raw", "foo.md"), "content": "x"}})
+            parent = ("import json, subprocess, sys; from kb_distillery.config import kb as kbconfig; "
+                      f"p = subprocess.run([sys.executable, '-m', 'kb_distillery.git.guard'], input={payload!r}, "
+                      f"capture_output=True, text=True, cwd={elsewhere!r}); print(p.returncode); print(p.stderr)")
+            env = {**os.environ, "KB": "./kbs/mine"}
+            for k in ("KB_ROOT", "CLAUDE_PROJECT_DIR"):
+                env.pop(k, None)
+            out = subprocess.run([sys.executable, "-c", parent], cwd=d, env=env, capture_output=True, text=True)
+            self.assertEqual(out.stdout.split()[0], "2", out.stdout + out.stderr)
+
 if __name__ == "__main__":
     unittest.main()
+

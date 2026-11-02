@@ -11,7 +11,8 @@ import urllib.request
 from unittest.mock import patch, MagicMock
 
 
-from kb_distillery.ingest import net, resolve, scrap, catalog
+from kb_distillery.config import net
+from kb_distillery.ingest import resolve, scrap, catalog
 
 
 class TestNet(unittest.TestCase):
@@ -124,6 +125,14 @@ class TestStub(unittest.TestCase):
         s = catalog._catalog_stub("paper-1997-threshold-intervals-under-group-symmetries", "raw/x.pdf")
         self.assertIn("# Threshold Intervals Under Group Symmetries\n", s)
 
+    def test_stub_writes_neither_a_title_nor_sources_the_heading_and_url_already_say(self):
+        s = catalog._catalog_stub("paper-1997-x", "raw/x.pdf", title="X Paper", url="https://example.org/x")
+        head = s.split("\n---\n", 1)[0]
+        self.assertIn("url: https://example.org/x", head)
+        self.assertNotIn("title:", head)
+        self.assertNotIn("sources:", head)
+        self.assertIn("\n# X Paper\n", s)
+
     def test_catalog_paper_url_and_title(self):
         with tempfile.TemporaryDirectory() as root:
             for d in ("wiki", "raw/inbox", "raw/printed-docs"):
@@ -152,7 +161,7 @@ class TestDrainCount(unittest.TestCase):
     def test_items_not_paths(self):
         from kb_distillery.ops.wrap import _items
         paths = ["raw/printed-docs/2020-a.pdf", "wiki/paper-2020-a.md", "wiki/paper-2021-b.md",
-                 "raw/printed-docs/2021-b.pdf", "meta/corpus.tsv", "index.md"]
+                 "raw/printed-docs/2021-b.pdf", "meta/corpus.tsv", "index.md", "wiki/index.md", "wiki/log.md"]
         self.assertEqual(_items(paths), 2)
         self.assertEqual(_items(["meta/corpus.tsv"]), 1)
 

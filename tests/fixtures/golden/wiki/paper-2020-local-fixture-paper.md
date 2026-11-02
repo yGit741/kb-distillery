@@ -1,10 +1,11 @@
 ---
 type: paper
 layer: source
+title: "Fixture local paper"
 authors: [Fixture Author]
 year: 2020
 area: [learning-theory]
-status: digested
+maturity: digested
 depth: full
 raw: raw/printed-docs/2020-local-fixture-paper.pdf
 citekey: 
@@ -37,8 +38,8 @@ Variables: $x$: a fixture variable
 ## Takeaways for my thesis
 
 - The bound is tight up to constants.
-- Concepts: [[generalization]], [[theme-learning-theory]]
+- Concepts: [Generalization](generalization.md), [Learning Theory](theme-learning-theory.md)
 
 ## Links out
 
-- Concepts: [[generalization]], [[theme-learning-theory]]
+- Concepts: [Generalization](generalization.md), [Learning Theory](theme-learning-theory.md)

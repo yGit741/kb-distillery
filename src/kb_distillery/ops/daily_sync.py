@@ -13,18 +13,15 @@ Shared git helpers (run_git, changed_paths, has_open_sessions) live here.
 import argparse
 import datetime
 import os
-import re
 import subprocess
 import sys
 
-from kb_distillery.paths import vault_root
+from kb_distillery.config.paths import vault_root
 META_DIR = os.path.join(vault_root(), "meta")
 ROOT = vault_root()
 
 from kb_distillery.git.guard import _open_distill_sessions, _open_ingest_sessions
-from kb_distillery.core.schema import KNOWLEDGE_PATHS, lane_of
-
-LOG_HEADING = re.compile(r"^## \[(\d{4}-\d{2}-\d{2})\] (.+)$")
+from kb_distillery.vault.schema import KNOWLEDGE_PATHS, lane_of
 
 STAGE_PATHS = KNOWLEDGE_PATHS
 
@@ -35,17 +32,13 @@ def has_open_sessions(root=ROOT):
 
 
 def commit_message_from_log(log_path=None):
-    """Last ## [date] action | title line in meta/log.md, or dated fallback."""
-    path = log_path or os.path.join(ROOT, "meta", "log.md")
+    """The newest untargeted entry of wiki/log.md as `<op> | <title> (date)`, or a dated fallback."""
+    from kb_distillery.vault import log as kblog
+    path = log_path or os.path.join(ROOT, kblog.LOG_REL)
     if not os.path.isfile(path):
         return f"chore: daily sync {datetime.date.today().isoformat()}"
-    last = None
     with open(path, encoding="utf-8") as f:
-        for line in f:
-            stripped = line.strip()
-            m = LOG_HEADING.match(stripped)
-            if m and "←" not in stripped:
-                last = (m.group(1), m.group(2).strip())
+        last = kblog.latest(f.read(), skip_targeted=True)
     if last:
         date, title = last
         return f"{title} ({date})"

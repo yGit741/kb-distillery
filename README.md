@@ -2,7 +2,7 @@
 
 kb-distillery builds a knowledge base from sources you collect. You put papers, notes, web clips, mail and chats in a folder. An agent digests each source into a linked wiki page. A linter checks every page against a schema. An app shows the pages as a graph you can search and read. The knowledge stays in your own git repository, outside this one.
 
-<!-- demo-kb screenshot: add docs/images/demo-graph.png (graph of examples/demo) and an image link here before release -->
+![The graph of the demo knowledge base in the app](docs/images/demo-graph.png)
 
 ## Quick start
 
@@ -64,8 +64,8 @@ See [Publishing](docs/concepts/publishing.md) and [Add a publisher](docs/guides/
 - [Getting started](docs/getting-started.md)
 - [CLI reference](docs/reference/cli.md)
 - [kb.toml reference](docs/reference/kb-toml.md)
-- [Roadmap](docs/roadmap.md)
-- [Contributing](.github/CONTRIBUTING.md)
+- [Roadmap](docs/public-roadmap.md)
+- [Contributing](CONTRIBUTING.md)
 
 ## License
 

@@ -26,8 +26,6 @@ import { useFlag } from "@/flags/useFlag";
 import { SearchBox } from "./SearchBox";
 import { BrowseView, HomeView, PathView, SearchView } from "./Views";
 
-export const ported = true;
-
 const isTyping = (t: EventTarget | null) =>
   t instanceof HTMLElement && (t.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(t.tagName));
 

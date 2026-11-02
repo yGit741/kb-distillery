@@ -6,9 +6,10 @@ import subprocess
 
 import pytest
 
-from kb_distillery import init_kb, kbconfig, llm
+from kb_distillery import init_kb, llm
+from kb_distillery.config import kb as kbconfig
 from kb_distillery.git import install_hooks
-from kb_distillery.vault import kit as kits
+from kb_distillery.config import kit as kits
 
 
 OLD_HOOKS_PATH = "../../tools" "/kb-hooks"      # a kb wired before the move; spelled in two parts so the old-paths scan stays clean
@@ -108,7 +109,7 @@ def test_init_writes_the_kits_skills_docs_hooks_settings_and_rendered_files_in_t
 def test_the_cli_hints_name_skills_that_exist_in_an_initialised_kb(world):
     root = init_kb.create("notes", "Notes", "base", str(world))
     sources = [open(os.path.join(os.path.dirname(__file__), "..", "..", "src", "kb_distillery", rel), encoding="utf-8").read()
-               for rel in ("ingest/cli.py", "ingest/mail.py")]
+               for rel in ("ingest/cli.py", "ingest/sources/mail/mail.py")]
     hinted = {m for text in sources for m in re.findall(r"\.claude/skills/[\w./-]+", text)}
     assert {".claude/skills/full-digest/SKILL.md", ".claude/skills/deep-digest/SKILL.md",
             ".claude/skills/scrap-data/mail/SKILL.md"} <= hinted
@@ -132,7 +133,7 @@ def test_refresh_of_a_fresh_kb_is_already_up_to_date_and_idempotent(world, capsy
 
 def test_refresh_restores_what_drifted_says_what_changed_and_touches_no_knowledge(world, capsys, monkeypatch):
     root = init_kb.create("notes", "Notes", "research", str(world))
-    for rel, text in (("wiki/idea.md", "---\ntype: idea\n---\n# Idea\n"), ("raw/inbox/a.txt", "raw"), ("meta/log.md", "log\n")):
+    for rel, text in (("wiki/idea.md", "---\ntype: idea\n---\n# Idea\n"), ("raw/inbox/a.txt", "raw"), ("wiki/log.md", "# Log\n")):
         os.makedirs(os.path.dirname(os.path.join(root, rel)), exist_ok=True)
         open(os.path.join(root, rel), "w").write(text)
     os.makedirs(os.path.join(root, "think"), exist_ok=True)

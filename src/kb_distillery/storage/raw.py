@@ -16,7 +16,7 @@ from __future__ import annotations
 import builtins
 from functools import lru_cache
 
-from kb_distillery import paths
+from kb_distillery.config import paths
 
 from .base import Connector, NotFound, ObjectInfo, StorageError, check_key
 from .registry import for_kb

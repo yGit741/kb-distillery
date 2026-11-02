@@ -8,11 +8,11 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from kb_distillery import kbconfig
+from kb_distillery.config import kb as kbconfig
 from kb_distillery.publish import (NotConfigured, NotSupported, NullPublisher, PublishError, PublishResult, Publisher, Snapshot,
                         current, for_kb, load_class, publisher_names, selected_name)
-from kb_distillery.publish import registry
-from kb_distillery.publish.base import STATUS_KEYS
+from kb_distillery.hosting import registry
+from kb_distillery.hosting.base import STATUS_KEYS
 from tests.publish.fake_publisher import MemoryPublisher
 
 FAKE = {"memory": "tests.publish.fake_publisher:MemoryPublisher"}
@@ -174,7 +174,7 @@ class Registry(unittest.TestCase):
 
     def test_importing_the_interface_does_not_import_a_publisher(self):
         import subprocess
-        code = "import sys, kb_distillery.publish; sys.exit(1 if any(m == 'kb_distillery.share' or m.startswith('kb_distillery.share.') for m in sys.modules) else 0)"
+        code = "import sys, kb_distillery.publish; sys.exit(1 if any(m == 'kb_distillery.publish.cloudflare' or m.startswith('kb_distillery.publish.cloudflare.') for m in sys.modules) else 0)"
         proc = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True,
                               env={**os.environ, "PYTHONPATH": os.pathsep.join(sys.path)})
         self.assertEqual(proc.returncode, 0, proc.stderr)

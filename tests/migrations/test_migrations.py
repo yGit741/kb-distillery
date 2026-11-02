@@ -8,8 +8,8 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from kb_distillery.kbconfig import checkout_root
-from kb_distillery.paths import CODE_DIR, vault_root
+from kb_distillery.config.kb import checkout_root
+from kb_distillery.config.paths import CODE_DIR, vault_root
 CHECKOUT_ROOT = checkout_root()
 ROOT = vault_root()
 
@@ -58,8 +58,9 @@ class MigrateTests(unittest.TestCase):
         with open(os.path.join(self.root, "meta", "migrations", "0003_future.py"), "w") as f:
             f.write("PRODUCES = (9, 9)\ndef apply(root):\n    pass\n")
         with self.assertRaises(RuntimeError):
-            migrate.run(self.root, "infra/x")  # applies 0002, then refuses 0003
-        self.assertEqual(migrate.pending_migrations(self.root), ["0003_future"])
+            migrate.run(self.root, "infra/x")  # refuses 0003 before running anything: all or nothing
+        self.assertEqual(migrate.pending_migrations(self.root), ["0002_add_field", "0003_future"])
+        self.assertFalse(os.path.exists(os.path.join(self.root, "touched")))
 
     def test_repo_baseline_recorded(self):
         self.assertEqual(migrate.pending_migrations(ROOT), [])
@@ -79,7 +80,7 @@ class GitHooksTests(unittest.TestCase):
         for k, v in (("user.name", "t"), ("user.email", "t@t")):
             g(self.root, "config", k, v)
         kb = os.path.join(self.root, "src", "kb_distillery")
-        for rel in ("__init__.py", "paths.py", "kbconfig.py", "config/__init__.py", "config/resources.py", "core/__init__.py", "core/schema.py", "core/kbtypes.py",
+        for rel in ("__init__.py", "config/paths.py", "config/kb.py", "config/__init__.py", "config/resources.py", "vault/__init__.py", "vault/schema.py", "vault/kbtypes.py",
                     "git/__init__.py", "git/commit_policy.py"):
             os.makedirs(os.path.dirname(os.path.join(kb, rel)), exist_ok=True)
             shutil.copy(os.path.join(CODE_DIR, rel), os.path.join(kb, rel))
@@ -88,6 +89,7 @@ class GitHooksTests(unittest.TestCase):
         os.makedirs(os.path.join(kb, "lint"))
         for rel, text in (("__init__.py", ""),
                           ("lint.py", "import os, sys\nsys.exit(1 if os.path.exists('LINT_FAIL') else 0)\n"),
+                          ("okf_check.py", "import os, sys\nopen('.git/OKF_ARGS', 'a').write(' '.join(sys.argv[1:]) + '\\n')\nsys.exit(1 if os.path.exists('OKF_FAIL') else 0)\n"),
                           ("lint_skills.py", "import sys; sys.exit(0)\n")):
             with open(os.path.join(kb, "lint", rel), "w") as f:
                 f.write(text)
@@ -129,6 +131,30 @@ class GitHooksTests(unittest.TestCase):
             f.write("nonce123")
         proc = g(self.root, "commit", "-m", msg, env={"KB_POLICY": "enforce", "KB_LINTED": "nonce123"}, check=False)
         self.assertEqual(proc.returncode, 0, proc.stderr)  # lint skipped via the one-time token
+
+    def test_okf_check_blocks_a_direct_commit(self):
+        self._write("wiki/a.md")
+        msg = "kb(digest): a (kb-0.7.1)\n\nKB-Version: 0.7.1\nKB-Op: digest\nKB-Target: a"
+        open(os.path.join(self.root, "OKF_FAIL"), "w").close()
+        proc = g(self.root, "commit", "-m", msg, env={"KB_POLICY": "enforce"}, check=False)
+        self.assertNotEqual(proc.returncode, 0)
+        self.assertIn("okf-check failed", proc.stderr)
+        os.remove(os.path.join(self.root, "OKF_FAIL"))
+        self.assertEqual(g(self.root, "commit", "-m", msg, env={"KB_POLICY": "enforce"}, check=False).returncode, 0)
+
+    def test_okf_check_sees_only_the_staged_pages(self):
+        msg = "kb(digest): a (kb-0.7.1)\n\nKB-Version: 0.7.1\nKB-Op: digest\nKB-Target: a"
+        self._write("wiki/a.md")
+        g(self.root, "add", "-A")
+        g(self.root, "commit", "-q", "-m", msg, env={"KB_POLICY": "enforce"})
+        self._write("wiki/b.md")
+        self._write("wiki/c.txt")
+        args = os.path.join(self.root, ".git", "OKF_ARGS")
+        if os.path.exists(args):
+            os.remove(args)
+        g(self.root, "add", "wiki/b.md", "wiki/c.txt")
+        g(self.root, "commit", "-q", "-m", msg.replace("0.7.1", "0.7.2"), env={"KB_POLICY": "enforce"})
+        self.assertEqual(open(args).read().split(), ["--only=wiki/b.md"])          # not a.md, not c.txt
 
     def test_pre_push_rejects_direct_feat_on_main(self):
         self._write("meta/tool.py")

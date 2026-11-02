@@ -2,8 +2,6 @@
 
 kb-distillery turns sources you collect into a linked, linted wiki. You keep the sources. An agent writes the pages. A linter checks every page against a schema. An app shows the result as a graph.
 
-These pages are drafts for the first public release. A mark `<!-- after OKF merge -->` in the source of a page flags a statement that holds once the Open Knowledge Format work lands on `main`.
-
 ## Start here
 
 - [Getting started](getting-started.md): install, create a knowledge base, open the app, run a first digest.
@@ -36,5 +34,5 @@ These pages are drafts for the first public release. A mark `<!-- after OKF merg
 
 ## Project
 
-- [Roadmap](roadmap.md)
+- [Roadmap](public-roadmap.md)
 - [Decision records](adr/0001-single-llm-gateway.md): why the engine is shaped this way.

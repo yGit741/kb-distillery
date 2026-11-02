@@ -1,10 +1,12 @@
 """The retired layout (backend/, frontend/, tools/, kbs/demo, package `kb`) stays gone, and so do the Lane D moves:
 `maintenance/{daily_sync,notify,export,fix_math,rename_raw}`, the top-level `report/` package, the per-user folder
 `~/.config/thesis-kb` (now `~/.config/kb-distillery`, `config/userdir.py`) and the keychain service `thesis-kb-gmail`,
-and the Lane C moves: `templates/` (now `src/kb_distillery/kits/<kit>/kit.toml`, read by `vault/kit.py`) and
+and the Lane C moves: `templates/` (now `src/kb_distillery/kits/<kit>/kit.toml`, read by `config/kit.py`) and
 `meta-defaults/` (now `src/kb_distillery/kits/base/defaults/`), the root `skills/` folder with its `.claude/skills`
 symlink, `pixi run sync-skills` and `SKILL_TEMPLATE.md` (now `src/kb_distillery/kits/<kit>/skills/`, real files in
-`.claude/skills/`, `docs/guides/write-a-skill.md` and `kits/base/skills/_TEMPLATE.md`).
+`.claude/skills/`, `docs/guides/write-a-skill.md` and `kits/base/skills/_TEMPLATE.md`), and the Lane F move of `kb_distillery.share`
+into `kb_distillery.publish.site` / `.cloudflare` (the Worker sources left the root `share/` for `publish/cloudflare/worker/`,
+`publish/site_state.py` became `publish/site/state.py`, `tests/share/` became `tests/publish/cloudflare/`).
 
 There are no import shims: a star-import shim breaks mock.patch, `python -m` and -W error filters. Instead this scan
 fails on any tracked file that still names the old module or path strings. Inputs come from `git ls-files` only (the
@@ -39,18 +41,54 @@ RETIRED = {
     "templates/ kit folder, template.toml, core.template or $KB_TEMPLATES_DIR": re.compile(
         r"(?<![\w./-])templates/(?:starter|academic-research|<name>)|template\.toml|KB_TEMPLATES_DIR"
         r"|kb_distillery[./]core[./]template\b|core import template\b|core/template\.py"),
+    "kb_distillery.share package (now publish/site and publish/cloudflare)": re.compile(
+        r"kb_distillery[./]share\b|from kb_distillery import share\b|kb_distillery[./]publish[./]site_state\b|publish[./]site_state\b"
+        r"|tests/share\b|tests\.share\b"),
+    "root share/ Worker folder (now src/kb_distillery/publish/cloudflare/worker)": re.compile(
+        r"(?<![\w./~-])share/(?:admin|auth|flags\.gen|package\.json|wrangler|\*\.test)|node --test share/"
+        r"|(?<![\w])root_resource\(\"share\"\)|_data/share\b"),
+    "Lane E cycle moves (vault.kit is config.kit)": re.compile(r"kb_distillery[./]vault[./]kit\b|vault import kit\b|tests/vault/test_kit"),
+    "Lane E cycle moves (the graph snapshot and queries live in graph/, the publisher port in hosting/)": re.compile(
+        r"kb_distillery[./]services[./](?:graph|raw_layer|schema)\b|services import (?:graph|raw_layer|schema)\b"
+        r"|kb_distillery[./]publish[./](?:base|null|registry)\b|publish import (?:base|null|registry)\b"),
+    "Lane E renames (core is now vault)": re.compile(
+        r"kb_distillery[./]core\b|from kb_distillery import core\b|tests[/.]core\b|(?<![\w./-])core/(?:schema|links|wikiio|frontmatter)\.py"),
+    "Lane E renames (kbconfig, paths and flags are now config/kb, config/paths and config/flags)": re.compile(
+        r"kb_distillery[./](?:kbconfig|paths|flags)\b|from kb_distillery import[^\n#]*\b(?:kbconfig|paths|flags)\b"
+        r"|tests/flags\b|tests\.flags\b|tests/vault/test_kbconfig"),
+    "kb_distillery/prompts (now llm/prompts)": re.compile(r"kb_distillery[./]prompts\b|resource\(\"prompts\"\)"),
+    "Lane E renames (ingest sources live in ingest/sources/<source>/)": re.compile(
+        r"kb_distillery[./]ingest[./](?:youtube|blog|htmlmd|wordpress|mail|book|chat|chat_build|chat_merge|chat_render|chat_signal|chat_store|gdrive|researcher|backfill)\b|from kb_distillery\.ingest import[^\n#]*\b(?:blog|htmlmd|wordpress|mail|book|chat|chat_build|chat_merge|chat_render|chat_signal|chat_store|gdrive|researcher|backfill)\b"
+        r"|(?<![\w.-])ingest/(?:youtube/|(?:blog|htmlmd|wordpress|mail|book|chat|chat_build|chat_merge|chat_render|chat_signal|chat_store|gdrive|researcher|backfill)\.py)|(?<![\w.-])ingest/test_(?:blog|wordpress|youtube|chat\w*|researcher|set_url)\.py"),
+    "Lane E renames (web/e2e is now tests/e2e)": re.compile(r"web/e2e\b"),
+    "Lane E renames (api is now server)": re.compile(
+        r"kb_distillery[./]api\b|from kb_distillery import[^\n#]*\bapi\b|(?<![\w/.-])tests/api\b|\{api,services\}"),
+    "Lane E renames (summaries is now digest)": re.compile(r"kb_distillery[./]summaries\b|from kb_distillery import[^\n#]*\bsummaries\b|tests/vault/test_summary\b"),
 }
 # (pattern name -> files that may name it): the tools/ entry of TOOLING_PATHS (until Phase 9), the share builder that still builds
 # refs from before the move, and this test.
 ALLOWED = {
     "*": {"tests/test_no_old_paths.py"},
-    "tools/": {"src/kb_distillery/core/schema.py"},               # TOOLING_PATHS keeps tools/ for the two remaining stubs until Phase 9
-    "python -m kb.": {"src/kb_distillery/share/build.py"},
-        "backend/src or backend/tests": {"src/kb_distillery/share/build.py", "tests/share/test_share_app.py", "tests/share/test_share_versions.py", "pixi.toml"},
+    "tools/": {"src/kb_distillery/vault/schema.py"},               # TOOLING_PATHS keeps tools/ for the two remaining stubs until Phase 9
+    "python -m kb.": {"src/kb_distillery/publish/site/build.py"},
+    "backend/src or backend/tests": {"src/kb_distillery/publish/site/build.py", "tests/publish/cloudflare/test_share_app.py",
+                                     "tests/publish/cloudflare/test_share_versions.py", "pixi.toml"},
+    # the build still runs an OLDER viewer ref with that ref's own module path (build.APP_GENERATIONS), and the deny rules keep
+    # the old patterns so the deny never weakens
+    "kb_distillery.share package (now publish/site and publish/cloudflare)": {
+        "src/kb_distillery/publish/site/build.py", ".claude/settings.json", "tests/publish/cloudflare/test_share_versions.py",
+        "tests/publish/cloudflare/test_share_build.py", "docs/ROADMAP.md", "docs/phase-7-audit.md"},
 }
 # The roadmap is the record of what was planned and done under the old names; it is not rewritten.
 ALLOWED["meta-defaults/"] = {"docs/ROADMAP.md"}
 ALLOWED["root skills/ folder, sync-skills or SKILL_TEMPLATE"] = {"docs/ROADMAP.md"}
+ALLOWED["Lane E renames (core is now vault)"] = {"docs/ROADMAP.md"}
+ALLOWED["kb_distillery/prompts (now llm/prompts)"] = {"docs/ROADMAP.md"}
+ALLOWED["Lane E renames (summaries is now digest)"] = {"docs/ROADMAP.md"}
+ALLOWED["Lane E renames (api is now server)"] = {"docs/ROADMAP.md"}
+ALLOWED["Lane E renames (web/e2e is now tests/e2e)"] = {"docs/ROADMAP.md"}
+ALLOWED["Lane E renames (ingest sources live in ingest/sources/<source>/)"] = {"docs/ROADMAP.md"}
+ALLOWED["Lane E renames (kbconfig, paths and flags are now config/kb, config/paths and config/flags)"] = {"docs/ROADMAP.md"}
 ALLOWED["templates/ kit folder, template.toml, core.template or $KB_TEMPLATES_DIR"] = {"docs/ROADMAP.md"}
 ALLOWED["keychain service thesis-kb-gmail"] = {"src/kb_distillery/config/userdir.py",      # the read-only lookup of the old name
                                                "tests/ops/test_notify.py", "tests/config/test_userdir.py"}
@@ -65,7 +103,8 @@ def tracked():
     return [p for p in out.split("\0") if p and not p.endswith(SKIP_SUFFIX)]
 
 
-RETIRED_FILES = ("src/kb_distillery/maintenance/fix_math.py", "src/kb_distillery/maintenance/rename_raw.py",
+RETIRED_FILES = ("src/kb_distillery/share/", "src/kb_distillery/publish/site_state.py", "share/", "tests/share/",
+                 "src/kb_distillery/maintenance/fix_math.py", "src/kb_distillery/maintenance/rename_raw.py",
                  "src/kb_distillery/maintenance/daily_sync.py", "src/kb_distillery/maintenance/notify.py",
                  "src/kb_distillery/maintenance/export.py", "src/kb_distillery/report/", "src/kb_distillery/cli.py",
                  "tests/maintenance/", "tests/report/",
@@ -73,7 +112,20 @@ RETIRED_FILES = ("src/kb_distillery/maintenance/fix_math.py", "src/kb_distillery
                  "scripts/install-kb-hooks.sh", "scripts/kb-hooks/env.sh", "scripts/kb-hooks/kb-guard.sh",
                  "scripts/kb-hooks/kb-git-guard.sh", "scripts/kb-hooks/claude-settings.json",
                  "scripts/kb-hooks/", "tools/kb-hooks/",          # the forwarding stubs, deleted with the knowledge move (C.6)
-                 "skills/", "src/kb_distillery/maintenance/")
+                 "skills/", "src/kb_distillery/maintenance/",
+                 "src/kb_distillery/vault/kit.py", "tests/vault/test_kit.py", "tests/vault/test_kit_contract.py",
+                 "src/kb_distillery/services/graph.py", "src/kb_distillery/services/raw_layer.py",
+                 "src/kb_distillery/services/schema.py", "src/kb_distillery/publish/base.py",
+                 "src/kb_distillery/publish/null.py", "src/kb_distillery/publish/registry.py",
+                 "src/kb_distillery/core/", "tests/core/",
+                 "src/kb_distillery/kbconfig.py", "src/kb_distillery/paths.py", "src/kb_distillery/flags/", "tests/flags/",
+                 "tests/vault/test_kbconfig.py", "src/kb_distillery/prompts/",
+                 "src/kb_distillery/summaries/", "tests/vault/test_summary.py", "src/kb_distillery/api/", "tests/api/", "web/e2e/",
+                 "src/kb_distillery/ingest/youtube/", *(f"src/kb_distillery/ingest/{m}.py" for m in (
+                     "blog", "htmlmd", "wordpress", "mail", "book", "chat", "chat_build", "chat_merge", "chat_render", "chat_signal",
+                     "chat_store", "gdrive", "researcher", "backfill")),
+                 *(f"tests/ingest/test_{m}.py" for m in ("blog", "wordpress", "youtube", "chat", "chat_kb", "chat_merge", "chat_store",
+                                                         "researcher", "set_url")))
 
 
 class NoOldPathsTests(unittest.TestCase):
@@ -88,7 +140,7 @@ class NoOldPathsTests(unittest.TestCase):
             self.assertEqual([p for p in files if p.startswith(old)], [], old)
 
     def test_the_schema_no_longer_lists_the_retired_root_folders(self):
-        from kb_distillery.core import schema
+        from kb_distillery.vault import schema
         for old in ("templates", "meta-defaults", "skills"):
             self.assertNotIn(old, schema.ROOT_DIRS)
             self.assertNotIn(old, schema.CODE_TOP_DIRS)

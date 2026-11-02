@@ -7,7 +7,7 @@ course_code: {{course_code}}
 semester: {{semester}}
 lecturer: {{lecturer}}
 area: []
-status: to-read
+maturity: to-read
 aliases: []
 related: []
 ---

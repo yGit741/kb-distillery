@@ -2,9 +2,9 @@
 states. Runs on a throwaway knowledge base (viewed read-only through kb_distillery.services.kbview), never a real vault."""
 import pytest
 
-from kb_distillery.core import schema
-from kb_distillery.services import cypher
-from kb_distillery.services.graph import build_graph_snapshot, merge_snapshots
+from kb_distillery.vault import schema
+from kb_distillery.graph import query as cypher
+from kb_distillery.graph.snapshot import build_graph_snapshot, merge_snapshots
 from kb_distillery.services.kbview import KbView
 
 KB_TOML = """[kb]
@@ -63,7 +63,7 @@ def test_flag_on_adds_relations_and_leaves_links_alone(view):
 
 @pytest.mark.flag("graph-relations", True)
 def test_flag_on_cypher_sees_the_new_edge_types(view):
-    from kb_distillery import kbconfig
+    from kb_distillery.config import kb as kbconfig
     snap = build_graph_snapshot(view=view)
     config = cypher.edge_config(kbconfig.load_dir(view.root, "rel", strict=False))
     g = cypher.to_graph(snap, config)
@@ -94,7 +94,7 @@ def test_merged_snapshots_without_the_flag_have_no_relations(view):
 @pytest.mark.parametrize("on", [False, True])
 def test_cypher_cache_follows_a_flag_flip(on, monkeypatch):
     """current_graph rebuilds when the flag flips even though the pages (and so the etag) did not change."""
-    from kb_distillery.flags.registry import override
+    from kb_distillery.config.flags.registry import override
 
     monkeypatch.setattr(cypher, "_cache", {"etag": None, "graph": None})
     with override("graph-relations", not on):

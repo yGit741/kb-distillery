@@ -1,9 +1,9 @@
-"""kb_distillery.services.cypher: snapshot → graph, the supported-subset check, query runs and the named queries."""
+"""kb_distillery.graph.query: snapshot → graph, the supported-subset check, query runs and the named queries."""
 import json
 
 import pytest
 
-from kb_distillery.services import cypher
+from kb_distillery.graph import query as cypher
 
 SNAP = {
     "etag": "t",
@@ -152,8 +152,8 @@ def test_run_named_params(g):
 
 
 def _cfg(edges):
-    from kb_distillery import kbconfig
-    return kbconfig.KbConfig("t", "T", "/x", "/x/kb.toml", (1, 4), None, {"edges": edges})
+    from kb_distillery.config import kb as kbconfig
+    return kbconfig.KbConfig("t", "T", "/x", "/x/kb.toml", (1, 5), None, {"edges": edges})
 
 
 LINKED = {"nodes": [{"id": "a", "type": "idea", "layer": "concept"}, {"id": "b", "type": "idea", "layer": "concept"}],

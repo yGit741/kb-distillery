@@ -1,6 +1,6 @@
 # Ontology kits
 
-A kit is the schema a knowledge base follows: its page types, areas, source fields and typed edges. It is versioned in the engine (`src/kb_distillery/kits/<name>/kit.toml`, package data, so it ships in the wheel too); a kb names one and may extend it, never edit it. Two kits ship: `base` (a small general kb) and `research` (academic research; `extends = "base"`). The base kit's `defaults/` folder beside its `kit.toml` holds what every kb falls back to: flags, routed docs, page skeletons, digest instructions. Code: `src/kb_distillery/vault/kit.py`. Tests: `tests/vault/test_kit.py`, `tests/vault/test_kit_contract.py`.
+A kit is the schema a knowledge base follows: its page types, areas, source fields and typed edges. It is versioned in the engine (`src/kb_distillery/kits/<name>/kit.toml`, package data, so it ships in the wheel too); a kb names one and may extend it, never edit it. Two kits ship: `base` (a small general kb) and `research` (academic research; `extends = "base"`). The base kit's `defaults/` folder beside its `kit.toml` holds what every kb falls back to: flags, routed docs, page skeletons, digest instructions. Code: `src/kb_distillery/config/kit.py`. Tests: `tests/config/test_kit.py`, `tests/config/test_kit_contract.py`.
 
 ## A kb names its kit
 
@@ -25,7 +25,7 @@ kit = "research"      # optional; without it the kb.toml carries its own [types]
 
 So a kb can add a type, an area or an edge type, and can restate what the kit says, but cannot rename, recolour or remove anything the kit defines. To change the kit, change the kit (a PR on `src/kb_distillery/kits/<name>/`).
 
-The merge is in `KbConfig.section`, so every reader (`kb_distillery.core.kbtypes`, `kb_distillery.services.cypher.edge_config`) sees the same result, whatever imports first.
+The merge is in `KbConfig.section`, so every reader (`kb_distillery.vault.kbtypes`, `kb_distillery.graph.model.edge_config`) sees the same result, whatever imports first.
 
 ## The file
 
@@ -36,8 +36,8 @@ version = 1                   # bump when a kb must notice the change
 extends = "base"              # optional: the kit this one builds on (must exist, no cycle)
 description = "..."
 
-[types]    # the kb.toml [types] format, see src/kb_distillery/core/kbtypes.py
-[edges]    # types, symmetric, note_required, labels: see src/kb_distillery/services/cypher.py (edge_config)
+[types]    # the kb.toml [types] format, see src/kb_distillery/vault/kbtypes.py
+[edges]    # types, symmetric, note_required, labels: see src/kb_distillery/graph/model.py (edge_config)
 ```
 
 `extends` is checked when a kb loads, and later steps use it to layer a kit's resources (defaults, skills, hooks) over its parent's. It does not copy the parent's `[types]` / `[edges]` into the child: a kit's ontology is exactly the tables in its own `kit.toml` (so a kb naming `research` gets research's types and colours, not base's).
@@ -48,7 +48,7 @@ Any other top-level table is rejected until a phase gives it a meaning. Reserved
 
 ## Where the kits are
 
-`$KB_KITS_DIR` (tests, a second kits folder) or the package's own `kits/` (`resource("kits")` in `kb_distillery.config.resources`). The defaults the engine falls back to when a kb has no `meta/<x>` are `resource("kits/base/defaults")` (`kb_distillery.paths.META_DEFAULTS_PATH`).
+`$KB_KITS_DIR` (tests, a second kits folder) or the package's own `kits/` (`resource("kits")` in `kb_distillery.config.resources`). The defaults the engine falls back to when a kb has no `meta/<x>` are `resource("kits/base/defaults")` (`kb_distillery.config.paths.META_DEFAULTS_PATH`).
 
 ## Errors you will meet
 

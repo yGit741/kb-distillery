@@ -10,7 +10,7 @@
     restore <kb-x.y.z>                   bring wiki/ back to a snapshot (new kb(restore) commit)
     snapshot ["label"]                   tag the newest knowledge step as kb-x.y.z
     sync [--no-push] [--dry-run]         nightly: think/ edits, leftovers, push
-    migrate [--check]                    run pending schema migrations (infra/* branch, or a kb repo's own main)
+    migrate [--check|--dry-run]         run pending schema migrations (infra/* branch, or a kb repo's own main)
     next-version                         print the next kb-x.y.z
     chore <scope> "summary" [paths…]     commit a kb repo's own tooling files (kb.toml, .claude/, CLAUDE.md…) as chore(<scope>)
     record <op> <target> "summary" <paths…>   commit already-modified files as one knowledge op
@@ -55,6 +55,7 @@ def main(argv=None):
     sy.add_argument("--root", help="sync another checkout (e.g. the primary one, from a worktree)")
     m = sub.add_parser("migrate")
     m.add_argument("--check", action="store_true")
+    m.add_argument("--dry-run", action="store_true", help="full preflight (migrate a copy, run lint and okf-check), write nothing")
     sub.add_parser("next-version")
     ch = sub.add_parser("chore")
     ch.add_argument("scope")
@@ -100,8 +101,11 @@ def main(argv=None):
             return core.sync(push=not args.no_push, dry_run=args.dry_run, prefer=args.prefer,
                              root=os.path.abspath(args.root) if args.root else core.ROOT)
         elif args.cmd == "migrate":
-            ids = migrate_mod.run(core.ROOT, core.current_branch(), check=args.check)
-            print(("pending: " if args.check else "applied: ") + (", ".join(ids) or "none"))
+            try:
+                ids = migrate_mod.run(core.ROOT, core.current_branch(), check=args.check, dry_run=args.dry_run)
+            except RuntimeError as e:                      # a refusal with a message, not a crash
+                raise migrate_mod.MigrateError(str(e)) from None
+            print(("pending: " if args.check else "would apply: " if args.dry_run else "applied: ") + (", ".join(ids) or "none"))
         elif args.cmd == "chore":
             if not core.chore(args.scope, args.summary, args.paths or None, root=core.ROOT):
                 print("no kb tooling file changed")
@@ -121,6 +125,9 @@ def main(argv=None):
             from .adopt import adopt
             adopt(args.bundle, os.path.abspath(args.checkout or core.ROOT), push=not args.no_push, dry_run=args.dry_run)
     except core.OpsError as e:
+        print(f"ops: {e}", file=sys.stderr)
+        return 1
+    except migrate_mod.MigrateError as e:
         print(f"ops: {e}", file=sys.stderr)
         return 1
     return 0

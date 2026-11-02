@@ -9,7 +9,7 @@ import tempfile
 import unittest
 from unittest import mock
 
-from kb_distillery.paths import vault_root
+from kb_distillery.config.paths import vault_root
 META = os.path.join(vault_root(), "meta")
 
 from kb_distillery.lint import lint
@@ -144,7 +144,8 @@ class ArxivMetaTests(unittest.TestCase):
 
     def test_wrong_paper_is_never_adopted(self):
         """The bootstrap left fabricated arXiv ids; a stranger's record must not overwrite a page."""
-        from kb_distillery.ingest import arxiv_meta, backfill
+        from kb_distillery.ingest import arxiv_meta
+        from kb_distillery.ingest.sources.researcher import backfill
         fetched = arxiv_meta._parse(ATOM_FIXTURE)
         rows = [
             ("ok.md", "2101.08303", ["Amit Daniely"], "From Local Pseudorandom Generators to Hardness of Learning"),
@@ -175,7 +176,7 @@ class ArxivMetaTests(unittest.TestCase):
                                                   ["Gal Vardi"], opener=opener))
 
     def test_author_names_safe_for_flat_yaml(self):
-        from kb_distillery.ingest import backfill
+        from kb_distillery.ingest.sources.researcher import backfill
         self.assertEqual(backfill.format_authors(["Ryan O'Donnell", "Smith, Jr.", "A#B"]),
                          "[Ryan O'Donnell, Smith Jr., AB]")
 

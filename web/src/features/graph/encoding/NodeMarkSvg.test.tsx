@@ -43,8 +43,8 @@ describe("NodeMarkG / NodeSwatch (SVG nodes)", () => {
 
 describe("cardNode", () => {
   it("turns a page card into a graph node with its layer", () => {
-    const n = cardNode({ id: "p", title: "P", type: "paper", status: "", depth: "full", areas: ["a"], preview: "", words: 1 } as never);
+    const n = cardNode({ id: "p", title: "P", type: "paper", maturity: "", depth: "full", areas: ["a"], preview: "", words: 1 } as never);
     expect(n).toMatchObject({ id: "p", type: "paper", layer: "source", areas: ["a"], depth: "full" });
-    expect(cardNode({ id: "i", title: "", type: "idea", status: "", depth: "", areas: [], preview: "", words: 0 } as never).layer).toBe("concept");
+    expect(cardNode({ id: "i", title: "", type: "idea", maturity: "", depth: "", areas: [], preview: "", words: 0 } as never).layer).toBe("concept");
   });
 });

@@ -8,7 +8,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from kb_distillery.paths import vault_root
+from kb_distillery.config.paths import vault_root
 ROOT = vault_root()
 
 from kb_distillery.ops.daily_sync import (
@@ -24,8 +24,7 @@ class CommitMessageTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             log = os.path.join(tmp, "log.md")
             with open(log, "w", encoding="utf-8") as f:
-                f.write("## [2026-08-07] setup | Karpathy alignment\n")
-                f.write("## [2026-08-13] ingest | info-bottleneck cluster\n")
+                f.write("# Log\n\n## 2026-08-13\n\n### ingest | info-bottleneck cluster\n\n## 2026-08-07\n\n### setup | Karpathy alignment\n")
             self.assertEqual(
                 commit_message_from_log(log),
                 "ingest | info-bottleneck cluster (2026-08-13)",

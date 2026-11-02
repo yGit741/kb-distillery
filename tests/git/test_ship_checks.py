@@ -23,16 +23,16 @@ class ChecksForTests(unittest.TestCase):
 
     def test_flag_registry(self):
         self.assertEqual(names(["meta/flags.toml"]), ["flags-check"])
-        self.assertEqual(names(["src/kb_distillery/flags/codegen.py"]), ["flags-check"])
+        self.assertEqual(names(["src/kb_distillery/config/flags/codegen.py"]), ["flags-check"])
 
     def test_api_router(self):
-        self.assertEqual(names(["src/kb_distillery/api/routers/x.py"]), ["api-schema-check"])
-
-    def test_dashboard(self):
-        self.assertEqual(names(["src/kb_distillery/dashboard/graph.html"]), ["test-e2e"])
+        self.assertEqual(names(["src/kb_distillery/server/routers/x.py"]), ["api-schema-check"])
 
     def test_graph_runs_the_still_canvas_e2e(self):
         self.assertEqual(names(["web/src/features/graph/ForceGraph.tsx"]), ["web-check", "test-ui-principles", "test-e2e"])
+
+    def test_the_e2e_folder_runs_only_the_e2e(self):
+        self.assertEqual(names(["tests/e2e/graph-still.test.mjs"]), ["test-e2e"])
 
     def test_frontend_api_runs_both(self):
         self.assertEqual(names(["web/src/api/schema.d.ts"]), ["web-check", "test-ui-principles", "api-schema-check"])
@@ -46,7 +46,7 @@ class RunChecksTests(unittest.TestCase):
 
     def test_stale_schema_fails(self):
         with patch.object(ship.subprocess, "run", return_value=_cp(1, "schema.d.ts is stale")) as run:
-            self.assertFalse(ship.run_checks(paths=["src/kb_distillery/api/app.py"]))
+            self.assertFalse(ship.run_checks(paths=["src/kb_distillery/server/app.py"]))
             self.assertEqual(run.call_args.args[0], ["pixi", "run", "api-schema-check"])
 
     def test_passing_check(self):
@@ -60,9 +60,17 @@ class RunChecksTests(unittest.TestCase):
 
     def test_e2e_skipped_without_playwright(self):
         with patch.object(ship, "e2e_available", return_value=False), \
-                patch.object(ship.subprocess, "run") as run:
-            self.assertTrue(ship.run_checks(paths=["src/kb_distillery/dashboard/x.html"]))
-            run.assert_not_called()
+                patch.object(ship.subprocess, "run", return_value=_cp(0)) as run:
+            self.assertTrue(ship.run_checks(paths=["web/src/features/graph/x.tsx"]))
+        ran = [c.args[0][-1] for c in run.call_args_list if c.args and c.args[0][:2] == ["pixi", "run"]]
+        self.assertEqual(ran, ["web-check"])
+
+    def test_e2e_folder_runs_the_e2e_check_when_playwright_is_there(self):
+        with patch.object(ship, "e2e_available", return_value=True), \
+                patch.object(ship.subprocess, "run", return_value=_cp(0)) as run:
+            self.assertTrue(ship.run_checks(paths=["tests/e2e/x.test.mjs"]))
+        ran = [c.args[0][-1] for c in run.call_args_list if c.args and c.args[0][:2] == ["pixi", "run"]]
+        self.assertEqual(ran, ["test-e2e"])
 
     def test_pr_body_records_skip(self):
         self.assertIn("flaky", ship.pr_body(["chore(x): y"], skipped_checks="flaky"))

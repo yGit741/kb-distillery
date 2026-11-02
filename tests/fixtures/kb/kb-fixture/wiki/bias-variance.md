@@ -1,8 +1,9 @@
 ---
 type: idea
 layer: concept
+title: "Bias-variance tradeoff"
 area: [statistics]
-status: seed
+maturity: seed
 sources: []
 related: []
 discussed_with: []
@@ -23,8 +24,8 @@ Fixture idea.
 Fixture.
 
 ## Connections
-- [[theme-statistics]]
-- [[generalization]]
+- [Topic: statistics](theme-statistics.md)
+- [Generalization](generalization.md)
 
 ## Open questions
 -

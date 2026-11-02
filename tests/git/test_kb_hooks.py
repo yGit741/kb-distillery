@@ -13,7 +13,7 @@ import tempfile
 import unittest
 from unittest import mock
 
-from kb_distillery import kbconfig
+from kb_distillery.config import kb as kbconfig
 from kb_distillery.config import resources
 from kb_distillery.git import install_hooks
 
@@ -235,7 +235,7 @@ class InstallTests(Tmp):
         kb = os.path.join(self.tmp, name)
         _init_repo(kb)
         with open(os.path.join(kb, "kb.toml"), "w", encoding="utf-8") as f:
-            f.write(f'[kb]\nid = "{name}"\nname = "Notes"\nschema_version = "1.4"\n')
+            f.write(f'[kb]\nid = "{name}"\nname = "Notes"\nschema_version = "1.5"\n')
         return kb
 
     def _kit_copy(self):

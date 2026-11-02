@@ -29,7 +29,7 @@ function setup(over: Partial<DataSource> = {}, url = "/chat") {
   const ds = mockDataSource({
     getChatStatus: async () => chatStatus(),
     getChatPrompts: async () => ({ prompts: [{ id: "query", title: "Query", description: "d", text: "base prompt" }, { id: "learn", title: "Learn", description: "", text: "teach" }] }),
-    listScopes: async () => ({ scopes: [{ slug: "scope-rl", title: "RL basics", status: "open", files: 3, digested: 1, uncovered: 2, coverage: 0.33 }] }),
+    listScopes: async () => ({ scopes: [{ slug: "scope-rl", title: "RL basics", maturity: "open", files: 3, digested: 1, uncovered: 2, coverage: 0.33 }] }),
     chatStream: async (body, signal) => {
       const stream = fakeStream(signal);
       calls.push({ body, signal, stream });

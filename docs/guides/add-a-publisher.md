@@ -1,10 +1,10 @@
 # Add a publisher
 
-A publisher puts a snapshot of a knowledge base on a host. The engine core talks to the `Publisher` interface in `kb_distillery.publish`. A publisher package implements it.
+A publisher puts a snapshot of a knowledge base on a host. The engine core talks to the `Publisher` interface in `kb_distillery.hosting`, which `kb_distillery.publish` re-exports. A publisher package implements it.
 
 ## The interface
 
-Subclass `kb_distillery.publish.Publisher`. The constructor is `Cls(root=None, **options)`.
+Subclass `kb_distillery.hosting.Publisher` (`kb_distillery.publish.Publisher` is the same class). The constructor is `Cls(root=None, **options)`.
 
 Required:
 

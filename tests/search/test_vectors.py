@@ -9,7 +9,7 @@ import numpy as np
 import pytest
 
 from kb_distillery.search import vectors
-from kb_distillery import kbconfig
+from kb_distillery.config import kb as kbconfig
 
 
 def _db(path, rows):
@@ -66,7 +66,7 @@ def _db_hashed(path, cards):
 def test_store_and_cards_live_in_the_selected_kb_cache():
     """The kb-split regression: the reader must look in the selected kb's .cache, next to the cards it embeds
     — never in the engine's own `.cache` (the engine holds no vault; a kb under kbs/ sits inside its checkout)."""
-    from kb_distillery import paths
+    from kb_distillery.config import paths
     from kb_distillery.search import cards
     assert vectors.DB_PATH == os.path.join(paths.CACHE_PATH, "vectors.sqlite")
     assert vectors.CARDS_DIR == cards.CARDS_DIR

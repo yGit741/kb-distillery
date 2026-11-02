@@ -1,9 +1,9 @@
 ---
 type: blog-post
 layer: source
-status: to-read
+maturity: to-read
+status: draft
 depth: listed
-title: "צורת ז'ורדן בפרקטיקה"
 blog: "לא מדויק"
 lang: he
 raw: raw/printed-docs/blog-not-exact-blog-post.md

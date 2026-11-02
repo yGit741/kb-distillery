@@ -48,4 +48,5 @@ jobs:
       - name: Privacy ratchet (no personal strings or token shapes in new files; also part of the suite above)
         run: pixi run pytest tests/lint/test_privacy_ratchet.py
       - run: pixi run lint-skills
+      - run: pixi run lint-imports
       - run: pixi run lint

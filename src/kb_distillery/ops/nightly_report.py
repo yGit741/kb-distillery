@@ -16,7 +16,7 @@ import json
 import os
 import sys
 
-from kb_distillery.paths import vault_root
+from kb_distillery.config.paths import vault_root
 META_DIR = os.path.join(vault_root(), "meta")
 ROOT = vault_root()
 
@@ -85,8 +85,8 @@ def vault_counts(root):
 
 def site_status(root):
     try:
-        from kb_distillery import publish
-        return publish.current(root=root).status(root) or {}
+        from kb_distillery import hosting
+        return hosting.current(root=root).status(root) or {}
     except Exception:  # noqa: BLE001 — the report renders without a publisher
         return {}
 

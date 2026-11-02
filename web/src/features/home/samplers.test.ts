@@ -26,15 +26,15 @@ import {
 
 // a hub topic with 30 digested papers, an open question, a bridge idea between two areas, and listed stubs
 const papers = Array.from({ length: 30 }, (_, i) =>
-  node(`p${i}`, { type: "paper", layer: "source", depth: i % 3 ? "easy" : "full", status: "digested", year: 2000 + i, areas: [i % 2 ? "info-theory" : "learning-theory"] }),
+  node(`p${i}`, { type: "paper", layer: "source", depth: i % 3 ? "easy" : "full", maturity: "digested", year: 2000 + i, areas: [i % 2 ? "info-theory" : "learning-theory"] }),
 );
 const nodes: GNode[] = [
   node("theme-a", { areas: ["learning-theory"] }),
   node("theme-b", { areas: ["info-theory"] }),
   node("bridge-idea", { type: "idea", areas: ["learning-theory", "info-theory"] }),
-  node("q-open", { type: "question", status: "open" }),
+  node("q-open", { type: "question", maturity: "open" }),
   node("thin-idea", { type: "idea" }),
-  node("stub", { type: "paper", layer: "source", depth: "listed", status: "to-read" }),
+  node("stub", { type: "paper", layer: "source", depth: "listed", maturity: "to-read" }),
   ...papers,
 ];
 const links = [
@@ -154,7 +154,7 @@ describe("intro card: pick a concept, draw a source", () => {
     [
       node("idea-x", { type: "idea" }),
       node("idea-y", { type: "idea" }),
-      node("q-far", { type: "question", status: "open" }),
+      node("q-far", { type: "question", maturity: "open" }),
       node("topic-none", { type: "topic" }),
       node("s-deep-clip", { type: "article", layer: "source", depth: "deep", ...raw("raw/web-clips/a.md") }),
       node("s-full-pdf", { type: "paper", layer: "source", depth: "full", ...raw("raw/printed-docs/b.pdf") }),

@@ -68,7 +68,7 @@ json.dump({"graph": snap, "index": idx, "chat_retrieval": chat}, open(sys.argv[1
 
 CHAT_SNIPPET = r'''
 import sys
-from kb_distillery.ingest import chat_build, chat_render
+from kb_distillery.ingest.sources.chat import chat_build, chat_render
 convs, _rows = chat_build.run(apply=True)          # clips -> meta/chats/ conversation trees
 for conv in convs.values():
     page = chat_render.render(conv, sys.argv[1])
@@ -133,6 +133,10 @@ class Run:
         self.skips.append((name, reason))
         self.steps.append((name, f"SKIPPED({reason})", 0.0, ""))
 
+    def pages(self):
+        """The wiki's pages: index.md and log.md are the bundle's OKF reserved files, not pages."""
+        return [p for p in (self.root / "wiki").glob("*.md") if p.name not in ("index.md", "log.md")]
+
     def wiki(self, slug):
         return self.root / "wiki" / f"{slug}.md"
 
@@ -141,7 +145,7 @@ class Run:
         fixture_vault.build(self.root, self.inputs)
         if self.mutate:
             self.mutate(self.root)
-        return f"{len(list((self.root / 'wiki').glob('*.md')))} seed pages"
+        return f"{len(self.pages())} seed pages"
 
     def stage_and_catalog(self):
         for case, name, extra in CATALOG_PLAN:
@@ -165,7 +169,7 @@ class Run:
 
     def easy(self, case, rec):
         self.ingest("easy-digest", rec["raw"])
-        page = next(p for p in (self.root / "wiki").glob("*.md")
+        page = next(p for p in self.pages()
                     if f"raw: {rec['raw']}" in p.read_text(encoding="utf-8") or rec["raw"] in p.read_text(encoding="utf-8").split("---")[1])
         text = page.read_text(encoding="utf-8")
         text = re.sub(r"^\*\*Problem:\*\*.*$", f"**Problem:** {rec['problem']}", text, count=1, flags=re.M)
@@ -244,7 +248,11 @@ class Run:
     def share(self):
         out = self.work / "share" / "index.html"
         sha0 = "0" * 40
-        text = self.cmd("-m", "kb_distillery.share.build", "--inner", "--out", str(out), "--profile", "public",
+        template = self.work / "share" / "app-template.html"        # stands in for the built app's index.html
+        template.parent.mkdir(parents=True, exist_ok=True)
+        template.write_text("<!doctype html><html><head><title>app</title></head><body></body></html>\n", encoding="utf-8")
+        text = self.cmd("-m", "kb_distillery.publish.site.build", "--inner", "--app-index", str(template),
+                        "--out", str(out), "--profile", "public",
                         "--content-ref", "main", "--content-sha", sha0, "--kb-version", "0.0.0",
                         "--viewer-sha", sha0, "--built-at", "2026-01-01T00:00:00Z",
                         env=self.env(KB_ROOT=str(self.root)))
@@ -267,8 +275,10 @@ class Run:
     def collect(self):
         r = self.root
         for p in sorted((r / "wiki").glob("*.md")):
+            if p.name in ("index.md", "log.md"):        # OKF reserved files: their own artifacts below
+                continue
             self.artifacts[f"wiki/{p.name}"] = p.read_text(encoding="utf-8")
-        self.artifacts["index.md"] = (r / "index.md").read_text(encoding="utf-8")
+        self.artifacts["index.md"] = (r / "wiki" / "index.md").read_text(encoding="utf-8")
         rows = []
         for line in (r / "meta" / "corpus.tsv").read_text(encoding="utf-8").splitlines():
             cols = line.split("\t")
@@ -278,7 +288,7 @@ class Run:
         self.artifacts["corpus.tsv"] = "\n".join(rows) + "\n"
         self.artifacts["coherence-warnings.tsv"] = (r / "meta" / "coherence-warnings.tsv").read_text(encoding="utf-8")
         self.artifacts["meta-chats-index.json"] = (r / "meta" / "chats" / "index.json").read_text(encoding="utf-8")
-        self.artifacts["log.md"] = (r / "meta" / "log.md").read_text(encoding="utf-8")
+        self.artifacts["log.md"] = (r / "wiki" / "log.md").read_text(encoding="utf-8")
         steps = [f"{n}: {s}" for n, s, _t, _d in self.steps if n != "collect goldens"]
         self.artifacts["steps.txt"] = "\n".join(steps) + "\n"
 
@@ -290,7 +300,7 @@ class Run:
             text = re.sub(r"\b[0-9a-f]{12}\b", "<sha12>", text) if rel in ("lint.txt", "log.md") else text
         text = re.sub(r"\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ", "<ts>", text)
         if rel == "log.md":
-            text = re.sub(r"\[\d{4}-\d\d-\d\d\]", "[<date>]", text)
+            text = re.sub(r"^## \d{4}-\d\d-\d\d$", "## <date>", text, flags=re.M)
         return text
 
     def compare(self, update):

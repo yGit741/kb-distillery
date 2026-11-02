@@ -9,7 +9,7 @@ from .paths import ROOT, load_session, save_session, session_dir, wiki_slugs, pe
 from .schemas import validate_claims
 from .verify import existing_digest_for_raw
 
-from kb_distillery.core.schema import TOPIC_PREFIX, TOPIC_SLUGS, unit_slug_for_raw, unit_type_for_raw
+from kb_distillery.vault.schema import TOPIC_PREFIX, TOPIC_SLUGS, unit_slug_for_raw, unit_type_for_raw
 
 
 def _kebab(s):
@@ -108,7 +108,7 @@ def run_map(sha, no_questions=False):
     page_type = scope.get("unit_type") or unit_type_for_raw(claims["raw"])
     wiki_slug = unit_slug_for_raw(claims["raw"], page_type)
     if book:
-        from .book import part_slug
+        from kb_distillery.ingest.sources.books.book import part_slug
         page_type = "part"
         wiki_slug = part_slug(book, scope.get("label") or f"pages-{scope['pages'][0]}")
     else:

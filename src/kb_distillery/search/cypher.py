@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Read-only graph queries over the wiki graph (0 LLM). Logic: kb_distillery.services.cypher.
+"""Read-only graph queries over the wiki graph (0 LLM). Logic: kb_distillery.graph.query.
 
   python3 -m kb_distillery.search.cypher run 'MATCH (p:Source)-[:MENTIONS]->(i:Idea) RETURN p.slug, i.slug' [--limit N]
   python3 -m kb_distillery.search.cypher named gaps [--param min_shared=3] [--limit N]
@@ -15,7 +15,7 @@ import argparse
 import json
 import sys
 
-from kb_distillery.services import cypher
+from kb_distillery.graph import query as cypher
 
 
 def _cell(v):

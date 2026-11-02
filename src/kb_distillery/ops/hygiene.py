@@ -17,7 +17,7 @@ import sys
 import threading
 import time
 
-from kb_distillery.paths import vault_root
+from kb_distillery.config.paths import vault_root
 META_DIR = os.path.join(vault_root(), "meta")
 ROOT = vault_root()
 
@@ -196,8 +196,8 @@ def check_stale(root, now):
 
 def check_site(root, now, status_path=None, max_hours=SITE_MAX_HOURS):
     """(f) the private site: last deploy failed, or it serves a main older than a day."""
-    from kb_distillery import publish
-    status = publish.read_status_file(status_path) if status_path else publish.current(root=root).status(root)
+    from kb_distillery import hosting
+    status = hosting.read_status_file(status_path) if status_path else hosting.current(root=root).status(root)
     if not status:
         return []
     state = status.get("state")
@@ -222,10 +222,10 @@ def check_site(root, now, status_path=None, max_hours=SITE_MAX_HOURS):
 
 def check_snapshots(root, now):
     """(g) public snapshot Workers without a reachable manifest (skipped offline / without credentials)."""
-    from kb_distillery import publish
+    from kb_distillery import hosting
     try:
-        orphans = publish.current(root=root).orphan_snapshots()
-    except (publish.PublishError, OSError):
+        orphans = hosting.current(root=root).orphan_snapshots()
+    except (hosting.PublishError, OSError):
         return []
     return [Finding("warn", "orphan-snapshot", f"{name} has no reachable manifest", "pixi run share -- prune --apply")
             for name in orphans]

@@ -6,7 +6,7 @@ import sys
 import tempfile
 import unittest
 
-from kb_distillery.paths import vault_root
+from kb_distillery.config.paths import vault_root
 META = os.path.join(vault_root(), "meta")
 
 from kb_distillery.lint import lint
@@ -18,7 +18,7 @@ class AddRawTests(unittest.TestCase):
         d = tempfile.mkdtemp()
         try:
             p = os.path.join(d, "page.md")
-            open(p, "w").write("---\ntype: article\nstatus: to-read\nraw: raw/web-clips/a.md\n---\n# T\n")
+            open(p, "w").write("---\ntype: article\nmaturity: to-read\nraw: raw/web-clips/a.md\n---\n# T\n")
             easy_digest._add_raw(p, "raw/web-clips/b.md")
             self.assertIn("raw: [raw/web-clips/a.md, raw/web-clips/b.md]", open(p).read())
             easy_digest._add_raw(p, "raw/web-clips/b.md")             # idempotent

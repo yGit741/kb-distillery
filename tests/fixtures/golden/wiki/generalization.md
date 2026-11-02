@@ -1,8 +1,9 @@
 ---
 type: idea
 layer: concept
+title: "Generalization"
 area: [learning-theory]
-status: seed
+maturity: seed
 sources: []
 related: []
 discussed_with: []
@@ -23,7 +24,7 @@ Fixture idea.
 Fixture.
 
 ## Connections
-- [[theme-learning-theory]]
+- [Learning Theory](theme-learning-theory.md)
 
 ## Open questions
 -

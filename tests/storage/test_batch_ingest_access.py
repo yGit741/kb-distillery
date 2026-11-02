@@ -4,7 +4,8 @@ import zipfile
 
 import pytest
 
-from kb_distillery.ingest import chat_build, digest_many
+from kb_distillery.ingest.sources.chat import chat_build
+from kb_distillery.ingest import digest_many
 from kb_distillery.publish import export
 from kb_distillery.storage import StorageError, for_kb
 

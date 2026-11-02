@@ -26,11 +26,11 @@ Runs after `full-digest` / `deep-digest` finalize or `distill apply` when `SEMFI
 2. For each pair:
    - **`internal`** — digest wrong, q-* out of sync, stale vs raw → **fix** wiki or re-digest
    - **`external`** — two digested papers disagree → suggest `## Connections` / `## Links out` bullet for **each** paper:
-     `- Disagrees with [[other-paper]]: …`
+     `- Disagrees with [Other paper](other-paper.md): …`
    - **`scope`** — different setting → note scope; dismiss
 3. Write `findings.md` in the same `.semfind/` session dir.
-4. High-severity internal: one line in `meta/log.md`.
-5. Mark manifest: `python3 -m kb_distillery.core.coherence fixed <id>` or `noted <id>`.
+4. High-severity internal: one entry in `wiki/log.md`.
+5. Mark manifest: `python3 -m kb_distillery.vault.coherence fixed <id>` or `noted <id>`.
 
 ## Core rule
 

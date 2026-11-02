@@ -7,10 +7,10 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from kb_distillery.paths import vault_root
+from kb_distillery.config.paths import vault_root
 ROOT = vault_root()
 
-from kb_distillery.core.schema import SCHEMA_VERSION
+from kb_distillery.vault.schema import SCHEMA_VERSION
 
 V = "%d.%d" % SCHEMA_VERSION  # knowledge versions under the current schema
 
@@ -167,7 +167,7 @@ class RecordTests(unittest.TestCase):
             ops_main(["record", "catalog", "lior-wolf", "Lior Wolf profile and 1 paper",
                       "wiki/lior-wolf.md", "wiki/2016-a.md"])
         files = set(g(self.root, "show", "--name-only", "--format=", "HEAD").split())
-        self.assertEqual(files, {"wiki/lior-wolf.md", "wiki/2016-a.md", "meta/log.md"})
+        self.assertEqual(files, {"wiki/lior-wolf.md", "wiki/2016-a.md", "wiki/log.md"})
         self.assertEqual(g(self.root, "log", "-1", "--format=%s"),
                          f"kb(catalog): Lior Wolf profile and 1 paper (kb-{V}.1)")
         self.assertIn("wiki/yoav-goldberg.md", g(self.root, "status", "--porcelain"))

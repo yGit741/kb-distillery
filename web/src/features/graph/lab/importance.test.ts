@@ -8,7 +8,7 @@ const nodes: GNode[] = [
   node("theme-a", { type: "topic", areas: ["a"] }),
   node("idea-1", { type: "idea", areas: ["a"] }),
   node("idea-2", { type: "idea", areas: ["a"] }),
-  node("q-1", { type: "question", status: "open" }),
+  node("q-1", { type: "question", maturity: "open" }),
   node("paper-deep", { type: "paper", layer: "source", depth: "deep" }),
   node("paper-easy", { type: "paper", layer: "source", depth: "easy" }),
   node("hub", { type: "series", layer: "collection", inDegree: 1400 }),

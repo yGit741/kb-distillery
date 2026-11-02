@@ -26,7 +26,7 @@ A kb can add a type, an area or a relation. It cannot rename, recolor or remove 
 ## What else a kit carries
 
 - `defaults/`: flags, the routed agent docs, page skeletons and digest instructions. A knowledge base's own `meta/` overrides them.
-- `skills/`: workflow skills copied into `.claude/skills/` of each knowledge base.
+- `kits/<name>/skills/`: workflow skills copied into `.claude/skills/` of each knowledge base.
 - `hooks/`: the git hooks and Claude Code guards (`base` only).
 - `AGENTS.template.md`: the agent instructions written into a new knowledge base.
 

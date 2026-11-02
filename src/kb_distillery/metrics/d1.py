@@ -12,7 +12,7 @@ import os
 import re
 
 from kb_distillery.metrics import store
-from kb_distillery.paths import vault_root
+from kb_distillery.config.paths import vault_root
 
 DB_NAME = "kb-metrics"
 SYNC_TOML = os.path.join("meta", "ops", "sync.toml")
@@ -73,8 +73,8 @@ def database_id(root=None):
 def _account():
     """The publisher's cloud account API (D1 lives in the same Cloudflare account as the site); raises PublishError
     when no publisher is configured or it has none."""
-    from kb_distillery import publish
-    return publish.current().account_api()
+    from kb_distillery import hosting
+    return hosting.current().account_api()
 
 
 def _query(db, sql, params):

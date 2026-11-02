@@ -8,7 +8,7 @@ import { resetEmbed } from "@/app/embed";
 import { withFlag } from "@/flags/testing";
 import { mockDataSource } from "@/test/datasource";
 
-const card = (id: string): PageCard => ({ id, title: `Title ${id}`, type: "idea", status: "", depth: "", areas: [], preview: "p", words: 10 });
+const card = (id: string): PageCard => ({ id, title: `Title ${id}`, type: "idea", maturity: "", depth: "", areas: [], preview: "p", words: 10 });
 const index: PageIndex = { generated_at: "t", pages: [card("shared"), card("note")], links: [["shared", "note"]], wanted: [], wanted_total: 0 };
 const detail = (kb: string, readOnly: boolean): PageDetail => ({
   card: card("shared"), path: "wiki/shared.md", frontmatter: {}, markdown: "# Title shared\n\nSee [[note]].\n",

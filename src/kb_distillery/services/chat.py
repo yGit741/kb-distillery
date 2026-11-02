@@ -18,14 +18,15 @@ import urllib.error
 import urllib.request
 
 from kb_distillery.config import userdir
-from kb_distillery.paths import vault_root
+from kb_distillery.config.paths import vault_root
 META_DIR = os.path.join(vault_root(), "meta")
 ROOT = vault_root()
 
+from kb_distillery.vault import links
 from kb_distillery.search import query
-from kb_distillery.core.graph import tokenize
+from kb_distillery.vault.graph import tokenize
 
-PROMPTS_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "prompts")
+PROMPTS_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "llm", "prompts")
 INBOX = os.path.join(ROOT, "raw", "inbox")
 KEY_FILE = userdir.path("anthropic_key")
 API_URL = "https://api.anthropic.com/v1/messages"
@@ -83,7 +84,7 @@ FIXED_SUFFIX = """\
 How this chat works (always applies):
 - Each user turn may start with <kb-pages>: wiki pages from the user's thesis knowledge base,
   retrieved for that turn. Pages from earlier turns stay in the conversation.
-- Cite a page as [[slug]] using its exact slug, whenever you draw on it.
+- Cite a page as a markdown link `[Title](slug.md)` using its exact slug, whenever you draw on it.
 - If the pages do not cover something, say so plainly before adding anything from general knowledge,
   and mark that part as not from the KB.
 - Write math in LaTeX with $…$ and $$…$$."""
@@ -350,7 +351,7 @@ def _split_fm(text):
 
 
 def list_prompts(prompts_dir=PROMPTS_DIR):
-    """Templates from src/kb_distillery/prompts/*.md, `query` first."""
+    """Templates from src/kb_distillery/llm/prompts/*.md, `query` first."""
     out = []
     for name in sorted(os.listdir(prompts_dir)) if os.path.isdir(prompts_dir) else []:
         if not name.endswith(".md"):
@@ -371,7 +372,7 @@ def scope_section(ctx, index=None, agent=False):
     slugs = sorted(ctx["pages"])
     lines = ["## Scope: " + ctx["title"] + " (" + ctx["slug"] + ")", "",
              "This question is asked INSIDE this scope, a personal working set of raw sources. Answer only "
-             "from the scope's knowledge pages listed below and cite only those pages as [[slug]]. A page "
+             "from the scope's knowledge pages listed below and cite only those pages as `[Title](slug.md)`. A page "
              "outside the list does not exist for this answer; if the scope does not cover something, say "
              "so plainly rather than reaching for other pages or general knowledge.",
              scope_coverage(ctx), ""]
@@ -383,7 +384,7 @@ def scope_section(ctx, index=None, agent=False):
                  if len(slugs) > SCOPE_PAGE_CAP else "") + "):")
     for s in slugs[:SCOPE_PAGE_CAP]:
         summ = (index.get(s, {}).get("summary") or "")[:SCOPE_SUMMARY_CHARS]
-        lines.append("- [[" + s + "]]" + (" — " + summ if summ else ""))
+        lines.append("- " + links.page_link(s, {s: links.read_title(query.WIKI, s)}) + (" — " + summ if summ else ""))
     unc = [u["path"] for u in ctx["uncovered"]]
     shown = unc[:SCOPE_UNCOVERED_CAP]
     more = (" … and " + str(len(unc) - len(shown)) + " more") if len(unc) > len(shown) else ""
@@ -406,7 +407,7 @@ def build_system(system_text, scope=None):
     """User-editable instructions + the KB map + the fixed suffix nobody can remove
     (+ the Scope block when the question is asked inside a scope)."""
     index = query.parse_index()
-    themes = [f"- [[{s}]] — {m['summary']}" for s, m in sorted(index.items()) if s.startswith("theme-")]
+    themes = [f"- {links.link(s, m.get('title') or s)} — {m['summary']}" for s, m in sorted(index.items()) if s.startswith("theme-")]
     kb_map = "Research themes in this KB:\n" + "\n".join(themes) if themes else ""
     parts = [(system_text or "").strip(), kb_map, FIXED_SUFFIX]
     if scope:

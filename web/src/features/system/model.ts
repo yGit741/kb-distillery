@@ -148,7 +148,7 @@ export const DEPLOY_BEHIND_LIMIT = 30;
 const sha7 = (s?: string | null) => (s ? s.slice(0, 7) : "?");
 
 /**
- * The Deploy tile reads the deploy owner (kb_distillery.share.owner) vs origin/main. Bad wins over everything: a failed or
+ * The Deploy tile reads the deploy owner (kb_distillery.publish.cloudflare.owner) vs origin/main. Bad wins over everything: a failed or
  * rollback-failed last outcome, the owner not installed / not running, or live != main past the limit. Missing
  * data is "unknown" (warn), never ok — a green tile next to a failed reality is the bug this tile exists to avoid.
  */
@@ -167,7 +167,7 @@ function deployTile(ops: OpsLike | undefined): Pick<Tile, "value" | "hint" | "to
   if (outcome === "failed" || outcome === "rollback-failed")
     return { value: `${outcome} ${sha7(d.last_sha)}`, hint: hint(reason), tone: "bad" };
   if (!d.owner_installed) return { value: "owner not installed", hint: hint("pixi run install-deploy-owner"), tone: "bad" };
-  if (!d.owner_alive) return { value: "owner not running", hint: hint("no heartbeat from kb_distillery.share.owner"), tone: "bad" };
+  if (!d.owner_alive) return { value: "owner not running", hint: hint("no heartbeat from kb_distillery.publish.cloudflare.owner"), tone: "bad" };
   if (d.behind == null) return { value: "unknown", hint: hint(d.live_sha ? "origin/main unreadable" : "no live sha recorded"), tone: "warn" };
   const mins = num(d.behind_minutes);
   if (d.behind && mins > DEPLOY_BEHIND_LIMIT)
@@ -211,7 +211,13 @@ export interface OpsLike {
   nightly?: { summary?: string; hint?: string | null };
 }
 export interface HealthLike {
+  generated_at?: string;
   inbox_count?: number;
+  compression_pct?: number;
+  wiki_pages?: number;
+  raw_files?: number;
+  /** Chart series of the health page: in_degree, lint_phases_ms, coherence_by_kind, lint_by_category. */
+  graphs?: Record<string, Record<string, unknown>>;
   values?: Record<string, number | string>;
   statuses?: Record<string, string>;
 }

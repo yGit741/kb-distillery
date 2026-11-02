@@ -20,6 +20,3 @@ Agents that work in a knowledge base read short documents instead of this site. 
 | [semantic-lint.md](../../src/kb_distillery/kits/base/defaults/docs/semantic-lint.md) | Handling coherence warnings and the semantic checks. |
 
 To write a skill, read [Write a skill](../guides/write-a-skill.md).
-
-<!-- after OKF merge -->
-The page model document changes with the OKF work: links become `[Title](slug.md)`, frontmatter keys are renamed, and `index.md` and `log.md` move into `wiki/`. See [Knowledge base](../concepts/knowledge-base.md).

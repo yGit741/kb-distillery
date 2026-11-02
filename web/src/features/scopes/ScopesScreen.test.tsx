@@ -14,10 +14,10 @@ const rows: ScopeDetail["rows"] = [
   { path: "raw/handwritten/b.pdf", format: "handwritten", disposition: "queued", slug: null, digestion: "", collection: [], page_type: null, year: null },
 ];
 const detail: ScopeDetail = {
-  slug: "scope-one", title: "Scope one", why: "because", status: "active", rows,
+  slug: "scope-one", title: "Scope one", why: "because", maturity: "active", rows,
   projection: { hop0: ["x"], hop1: [], covered: [], uncovered: ["y"], hubs: [], themes: [], coverage: 0.5 },
 };
-const summary = { slug: "scope-one", title: "Scope one", status: "active", files: 2, digested: 1, uncovered: 1, coverage: 0.5, updated: "2026-10-23T10:00:00" };
+const summary = { slug: "scope-one", title: "Scope one", maturity: "active", files: 2, digested: 1, uncovered: 1, coverage: 0.5, updated: "2026-10-23T10:00:00" };
 
 function setup(over: Partial<DataSource> = {}, url = "/app/scopes") {
   const ds = mockDataSource({
@@ -102,7 +102,7 @@ describe("ScopesScreen", () => {
     const resolveScope = vi.fn(async (_b: { nodes: string[] }) => ({ paths: ["raw/printed-docs/2021-c.pdf"], rows: [{ ...(rows[1] as ScopeDetail["rows"][number]), path: "raw/printed-docs/2021-c.pdf", format: "printed-docs" }] }));
     setup({
       resolveScope,
-      listPages: async () => ({ generated_at: "", links: [], wanted: [], pages: [{ id: "idea-c", title: "Gamma idea", type: "idea", areas: [], depth: "", preview: "", status: "", words: 1 }] }) as never,
+      listPages: async () => ({ generated_at: "", links: [], wanted: [], pages: [{ id: "idea-c", title: "Gamma idea", type: "idea", areas: [], depth: "", preview: "", maturity: "", words: 1 }] }) as never,
       getCorpus: async (f) => ({ columns: [], count: 1, format: f ?? "", rows: f === "emails" ? [{ path: "raw/emails/2020-t/thread.md", collection: [], digestion: "", sha1: "", title: "", disposition: "queued" }] : [] }) as never,
     }, "/app/scopes?scope=scope-one");
     await userEvent.type(await screen.findByLabelText("Search pages and raw files"), "gamma");

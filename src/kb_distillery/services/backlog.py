@@ -20,7 +20,7 @@ import re
 import subprocess
 import sys
 
-from kb_distillery.kbconfig import checkout_root
+from kb_distillery.config.kb import checkout_root
 
 CHECKOUT_ROOT = checkout_root() or os.getcwd()     # the backlog is a dev tool: it lives in the checkout
 

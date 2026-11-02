@@ -1,8 +1,9 @@
 ---
 type: idea
 layer: concept
+title: "Shannon entropy"
 area: [info-theory]
-status: seed
+maturity: seed
 sources: []
 related: []
 discussed_with: []
@@ -23,7 +24,7 @@ Fixture idea.
 Fixture.
 
 ## Connections
-- [[theme-info-theory]]
+- [Info Theory](theme-info-theory.md)
 
 ## Open questions
 -

@@ -5,13 +5,13 @@ from a checkout (`pixi run ...`, editable). Nothing may assume the second. Three
 resolved at import, so `import kb_distillery` works in a clean venv):
 
     package_root()   the installed `kb_distillery` package folder
-    resource(path)   a file or folder that ships inside the package (prompts, static, _webapp, ...)
-    root_resource(path)  transitional: the root-level folders still outside the package (share)
+    resource(path)   a file or folder that ships inside the package (llm/prompts, static, _webapp, ...)
+    root_resource(path)  transitional: the root-level folders still outside the package (scripts)
     repo_root()      the git checkout the package lives in, or None for an installed copy;
                      `require_repo_root(what)` is the dev-only form that raises with a clear message
 
 `resource()` is package data (the kits among it: `resource("kits/base/defaults")`). `root_resource()` is the
-transitional lookup for the folders that still sit at the repository root (`share/`):
+transitional lookup for the folders that still sit at the repository root (`scripts/`):
 `_data/<path>` in a wheel (pyproject.toml `force-include`), `<repo>/<path>` in a checkout. Lane C moved the skills and the
 hooks into the package as `kits/` and deletes `root_resource()` with the last of them.
 """
@@ -54,13 +54,13 @@ def require_repo_root(what: str = "this command") -> Path:
 
 
 def resource(path: str) -> Path:
-    """A file or folder that ships inside the package, by its path relative to it (`prompts`, `share/static`).
+    """A file or folder that ships inside the package, by its path relative to it (`llm/prompts`, `publish/cloudflare/static`).
     Never raises: a missing resource returns the path it would have, so callers report the missing file by name."""
     return package_root() / path
 
 
 def root_resource(path: str) -> Path:
-    """TRANSITIONAL (deleted by Lane C, when `share/`
+    """TRANSITIONAL (deleted by Lane C, when `scripts/`
     become package data under `kits/`): a folder that lives at the repository root in a checkout and under
     `_data/<path>` in a wheel (pyproject.toml `force-include`). Same path in both shapes. Never raises."""
     packed = package_root() / DATA_DIR / path

@@ -2,7 +2,6 @@ import type { ComponentType } from "react";
 
 export interface FeatureModule {
   default: ComponentType;
-  ported?: boolean;
 }
 
 /**

@@ -3,8 +3,9 @@
 [kb]
 id = "demo"
 name = "Job Search (demo)"
-schema_version = "1.4"
+schema_version = "1.5"
 kit = "base"
+owner = "dana-levi"           # the id in `generated: {by: human:<owner>}` on pages whose summary you wrote
 
 [git]
 tag_prefix = "kb-"
@@ -20,7 +21,7 @@ order = ["topic", "idea", "question", "person", "series", "article", "notes", "d
          "process",
          "posting", "mail", "chat"]
 # Extra frontmatter on source pages (the thesis has authors/venue/arxiv-id; a job search has these).
-source_fields = ["company", "date", "stage"]
+source_fields = ["company", "created", "stage"]
 
 # --- Sources (the base kit gives article, notes, document) ----------------------------------------------------
 [types.source.posting]

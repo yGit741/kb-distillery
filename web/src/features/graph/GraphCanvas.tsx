@@ -602,7 +602,7 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
     }),
     [],
   );
-  // read-only probe for the e2e motion tests (web/e2e): every drawn page's id and screen position
+  // read-only probe for the e2e motion tests (tests/e2e): every drawn page's id and screen position
   useEffect(() => {
     const w = window as unknown as { __kbGraph?: unknown };
     w.__kbGraph = {

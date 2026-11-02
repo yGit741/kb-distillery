@@ -83,7 +83,14 @@
       "Bash(*kb_distillery.share.owner run*)",
       "Bash(*kb_distillery.share.owner once*)",
       "Bash(*kb.share.owner run*)",
-      "Bash(*kb.share.owner once*)"
+      "Bash(*kb.share.owner once*)",
+      "Bash(*kb_distillery.publish.cloudflare.owner run*)",
+      "Bash(*kb_distillery.publish.cloudflare.owner once*)",
+      "Bash(*kb_distillery.publish.cloudflare deploy*)",
+      "Bash(*kb_distillery.publish.cloudflare rollback*)",
+      "Bash(*kb_distillery.publish.cloudflare.deploy*)",
+      "Bash(*kb_distillery.share deploy*)",
+      "Bash(*kb_distillery.share rollback*)"
     ]
   }
 }

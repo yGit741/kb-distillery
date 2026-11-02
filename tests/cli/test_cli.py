@@ -157,7 +157,7 @@ class HelpTests(unittest.TestCase):
         self.assertIn("lint", cp.stdout)
 
     def test_importing_cli_does_not_load_kbconfig(self):
-        cp = subprocess.run([sys.executable, "-c", "import sys, kb_distillery.cli; print('kb_distillery.kbconfig' in sys.modules)"],
+        cp = subprocess.run([sys.executable, "-c", "import sys, kb_distillery.cli; print('kb_distillery.config.kb' in sys.modules)"],
                             capture_output=True, text=True, env={**os.environ, "PYTHONPATH": SRC}, check=False)
         self.assertEqual(cp.stdout.strip(), "False", cp.stderr)
 
@@ -186,8 +186,8 @@ class DispatchTests(TempHome):
         cases = {
             ("init", "--yes"): ("kb_distillery.init_kb", ["--yes"]),
             ("doctor", "--json"): ("kb_distillery.doctor", ["--json"]),
-            ("kb", "list"): ("kb_distillery.kbconfig", ["list"]),
-            ("kb", "show", "--kb", "x"): ("kb_distillery.kbconfig", ["show", "--kb", "x"]),
+            ("kb", "list"): ("kb_distillery.config.kb", ["list"]),
+            ("kb", "show", "--kb", "x"): ("kb_distillery.config.kb", ["show", "--kb", "x"]),
             ("ops", "status"): ("kb_distillery.ops", ["status"]),
             ("ship", "status"): ("kb_distillery.git.ship", ["status"]),
             ("ingest", "status"): ("kb_distillery.ingest", ["status"]),
@@ -195,11 +195,11 @@ class DispatchTests(TempHome):
             ("digest", "full", "p1"): ("kb_distillery.ingest", ["full-digest", "p1"]),
             ("digest", "deep", "p1"): ("kb_distillery.ingest", ["deep-digest", "p1"]),
             ("digest", "many", "submit"): ("kb_distillery.ingest", ["digest-many", "submit"]),
-            ("digest", "instructions"): ("kb_distillery.core.digest", []),
+            ("digest", "instructions"): ("kb_distillery.vault.digest", []),
             ("send", "note.md", "--to", "a,b"): ("kb_distillery.distill.send", ["note.md", "--to", "a,b"]),
             ("lint",): ("kb_distillery.lint.lint", []),
             ("llm", "status"): ("kb_distillery.llm", ["status"]),
-            ("share", "status"): ("kb_distillery.share", ["status"]),
+            ("share", "status"): ("kb_distillery.publish.cloudflare", ["status"]),
             ("propose", "review"): ("kb_distillery.graph.propose", ["review"]),
             ("hooks", "install", "--kb", "demo"): ("kb_distillery.git.install_hooks", ["--kb", "demo"]),
             ("hook", "guard"): ("kb_distillery.git.guard", []),
@@ -278,7 +278,7 @@ class DispatchTests(TempHome):
     def test_launch_outside_a_checkout_serves_the_app_in_the_foreground(self):
         with patch.object(tree, "repo_root", return_value=None):
             _, seen = self.run_with_fake(["launch"])
-            self.assertEqual((seen["module"], seen["argv"][1:]), ("kb_distillery.api", ["--port", "8765"]))
+            self.assertEqual((seen["module"], seen["argv"][1:]), ("kb_distillery.server", ["--port", "8765"]))
             _, seen = self.run_with_fake(["launch", "--port", "9000"])
             self.assertEqual(seen["argv"][1:], ["--port", "9000"])
 
@@ -287,7 +287,7 @@ class DispatchTests(TempHome):
             folder = os.path.join(bases, "kb-probe")
             os.makedirs(folder)
             with open(os.path.join(folder, "kb.toml"), "w") as f:
-                f.write('[kb]\nid = "probe"\nname = "Probe"\nschema_version = "1.4"\n')
+                f.write('[kb]\nid = "probe"\nname = "Probe"\nschema_version = "1.5"\n')
             cp = run_cli(["kb", "list"], self.home, {"KB_BASES_DIR": bases})
         self.assertEqual(cp.returncode, 0, cp.stderr)
         self.assertIn("probe", cp.stdout)

@@ -5,9 +5,9 @@ import os
 import sys
 
 from kb_distillery.lint.lint import parse_frontmatter
-from kb_distillery.core.schema import INGEST_DIR, MANIFEST, MANIFEST_COLS, ROOT_MD, WIKI_DIR
+from kb_distillery.vault.schema import INGEST_DIR, MANIFEST, MANIFEST_COLS, ROOT_MD, WIKI_DIR, is_page_file
 
-from kb_distillery.paths import vault_root
+from kb_distillery.config.paths import vault_root
 ROOT = vault_root()  # KB_ROOT: share build
 INGEST_ROOT = os.path.join(ROOT, INGEST_DIR)
 
@@ -106,11 +106,24 @@ def save_session(sha, data):
         f.write("\n")
 
 
+def page_title(slug):
+    """The title the app shows for wiki/<slug>.md (what a link to it reads as); the slug when the page is missing."""
+    from kb_distillery.vault import links
+    return links.read_title(os.path.join(ROOT, WIKI_DIR), slug)
+
+
+def wiki_titles():
+    """{slug: title the app shows} of every wiki page (what a link to it reads as); a mapping, so it also serves as the
+    set of known slugs."""
+    from kb_distillery.vault import links
+    return links.read_titles(os.path.join(ROOT, WIKI_DIR))
+
+
 def wiki_slugs():
     slugs = set()
     base = os.path.join(ROOT, WIKI_DIR)
     for fn in os.listdir(base):
-        if fn.endswith(".md") and "excalidraw" not in fn:
+        if is_page_file(fn) and "excalidraw" not in fn:
             slugs.add(fn[:-3])
     think_base = os.path.join(base, "think")
     if os.path.isdir(think_base):

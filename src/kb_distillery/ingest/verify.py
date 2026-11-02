@@ -4,8 +4,9 @@ import re
 import sys
 
 from kb_distillery.lint.lint import read_manifest, parse_frontmatter, walk
-from kb_distillery.core.schema import PAPER_NAME, PAPER_YEAR_MAX, PAPER_YEAR_MIN, WIKI_DIR
+from kb_distillery.vault.schema import PAPER_NAME, PAPER_YEAR_MAX, PAPER_YEAR_MIN, WIKI_DIR
 from .paths import ROOT
+from kb_distillery.vault.schema import is_page_file
 
 
 def corpus_disposition(raw_rel):
@@ -19,6 +20,8 @@ def existing_digest_for_raw(raw_rel, pages=None):
     """Return wiki rel if a page already cites this raw file. With `pages` (a book part),
     only a page whose `section_pages:` is exactly that range counts."""
     for rel in walk(WIKI_DIR, ".md"):
+        if not is_page_file(os.path.basename(rel)):
+            continue
         text = open(os.path.join(ROOT, rel), encoding="utf-8").read()
         fm = parse_frontmatter(text)
         if not fm or str(fm.get("raw") or "") != raw_rel:

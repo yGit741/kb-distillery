@@ -1,6 +1,6 @@
 // pixi run test-ui-principles — the [auto] half of ~/.claude/skills/ui-principles/SKILL.md as a failing test.
 // Loads every app screen (.integrator.toml `screens`, plus /think?note=<first think note>) at 1440×900 in
-// light and dark against a fresh `python -m kb_distillery.api` on a free port, and reports, per route and theme:
+// light and dark against a fresh `python -m kb_distillery.server` on a free port, and reports, per route and theme:
 //   rule 4   overlap: two visible controls / panels whose boxes intersect by more than 2px (ancestors excluded)
 //   rule 9   clipping: a text element wider than its box without text-overflow: ellipsis (ellipsis = report only)
 //   rule 25  targets: a visible button / link / input smaller than 24×24 px (inline links in prose excluded)
@@ -254,7 +254,7 @@ before(async () => {
   if (!pw) { skipReason = "playwright not found (npm i -g playwright, or set PLAYWRIGHT_MODULE)"; return; }
   const port = await freePort();
   base = `http://127.0.0.1:${port}`;
-  server = spawn(process.env.PYTHON || "python3", ["-m", "kb_distillery.api", "--port", String(port), "--no-open"],
+  server = spawn(process.env.PYTHON || "python3", ["-m", "kb_distillery.server", "--port", String(port), "--no-open"],
     { cwd: ROOT, stdio: ["ignore", "pipe", "pipe"],
       env: { ...process.env, PYTHONPATH: join(ROOT, "src") } });
   let log = "";

@@ -15,7 +15,7 @@ import sys
 
 import numpy as np          # installed with opencv-python-headless (pixi pypi deps)
 
-from kb_distillery import paths
+from kb_distillery.config import paths
 
 DB_PATH = os.path.join(paths.CACHE_PATH, "vectors.sqlite")
 CARDS_DIR = os.path.join(paths.CACHE_PATH, "qmd-cards")    # = kb_distillery.search.cards.CARDS_DIR, what vectors.mjs embeds

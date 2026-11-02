@@ -29,7 +29,7 @@ pixi run lint-skills
 
 **Commands in a skill.** An app skill (kit) calls the installed CLI: `distill ingest …`, `distill ops …`, `distill lint`,
 `distill propose …`, never `pixi run` or a repo path, because a kb has no checkout. A command that has no `distill` form yet
-(`python3 -m kb_distillery.search.query`, `…search.explore_raw`, `…search.semfind`, `…core.coherence`, `…summaries`,
+(`python3 -m kb_distillery.search.query`, `…search.explore_raw`, `…search.semfind`, `…vault.coherence`, `…digest`,
 `…publish.export`, `…distill propose|revise|apply|abort`) stays a `python3 -m` line until it gets one. `lint-skills` checks
 every `bash` block against the real CLI.
 

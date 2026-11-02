@@ -1,0 +1,31 @@
+# Share config, the tracked template. Copy it to one of these and fill it in (nothing here is read as real values):
+#   ~/.config/kb-distillery/share.toml        yours, used by every knowledge base
+#   <kb>/.cache/share/share.toml              one knowledge base only (wins over the user file)
+#   KB_SHARE_CONFIG=/path/to/share.toml       wins over both
+# The first file that exists is the config; this template only fills in what it leaves out.
+# Secrets never go here: they are Worker secrets (`npx wrangler secret put GOOGLE_CLIENT_SECRET|SESSION_SECRET --name kb`).
+#
+# Environment overrides, per value: KB_SHARE_GOOGLE_CLIENT_ID, KB_SHARE_FLAGS_KV_ID, KB_CLOUDFLARE_SUBDOMAIN.
+
+[auth]
+# The OAuth 2.0 Web client ID (not secret): `pixi run share -- config --google-client-id <id>` stores it in your user file.
+google_client_id = ""
+# Who may open the private site (the ALLOWED_EMAILS variable of the Worker).
+allowed_emails = []
+
+[worker]
+compatibility_date = "2026-09-01"
+# flags_kv_id = ""            # KV namespace for runtime flag overrides; unset = not bound
+
+[cloudflare]
+# Your workers.dev account subdomain: sites live at https://<worker>.<subdomain>.workers.dev
+subdomain = ""
+
+[share]
+# Where deploys and the auto-deploy append their log (default ~/Library/Logs/kb-distillery-share.log).
+# log_path = "~/Library/Logs/kb-distillery-share.log"
+
+# The Home of a share build: the tour offered on the first visit (a name from web/src/features/home/tours.ts)
+# and optional [[home.cards]] (see kb_distillery/publish/site/home.py).
+[home]
+# tour = "first-visit"

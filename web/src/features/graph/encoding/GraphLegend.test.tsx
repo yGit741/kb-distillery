@@ -50,7 +50,7 @@ describe("GraphLegend", () => {
   });
 
   it("folds colour values past the compact limit into +N", () => {
-    const many = Array.from({ length: 6 }, (_, i) => node(`n${i}`, { type: "idea", status: `s${i}` }));
+    const many = Array.from({ length: 6 }, (_, i) => node(`n${i}`, { type: "idea", maturity: `s${i}` }));
     render(<GraphLegend nodes={many} color={colorChannel("status")} density="compact" maxColors={4} />);
     expect(screen.getByText("+2")).toBeInTheDocument();
   });

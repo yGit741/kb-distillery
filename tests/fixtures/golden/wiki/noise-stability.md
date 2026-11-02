@@ -1,8 +1,9 @@
 ---
 type: idea
 layer: concept
+title: "Noise stability"
 area: [boolean-analysis]
-status: seed
+maturity: seed
 sources: []
 related: []
 discussed_with: []
@@ -23,7 +24,7 @@ Fixture idea.
 Fixture.
 
 ## Connections
-- [[theme-boolean-analysis]]
+- [Boolean Analysis](theme-boolean-analysis.md)
 
 ## Open questions
 -

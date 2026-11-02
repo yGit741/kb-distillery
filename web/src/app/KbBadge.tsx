@@ -7,6 +7,14 @@ import { formatKbs, parseKbs } from "@/lib/kbSelection";
 import { useApiQuery } from "@/lib/useApiQuery";
 
 /**
+ * The header title is 20px tall; WCAG 2.5.8 wants a 24px target. The padding adds the 2px above and below and
+ * the negative margin takes it back, so the row does not move; the hover pill is the ::before, which keeps the
+ * old 20px size.
+ */
+const HEADER_TITLE =
+  "relative isolate -my-0.5 flex shrink-0 items-center gap-1.5 px-1 py-0.5 text-sm font-semibold before:absolute before:inset-x-0 before:inset-y-0.5 before:-z-10 before:rounded-md hover:before:bg-accent";
+
+/**
  * The knowledge base this app serves, as the header title: its name from kb.toml, its id as a chip. The
  * engine is code only; the content is whichever `kbs/<id>/` (or `--kb <path>`) it was launched with. A share
  * build (embedded data) has no /api/kb and shows the plain title. With flag kb-view the title is also the
@@ -34,7 +42,7 @@ export function KbBadge() {
       aria-label="Knowledge base"
       data-tour="kb-badge"
       title={q.data ? `${q.data.root}${q.data.git.repo ? ` · git ${q.data.git.branch}` : ""} — System → Knowledge bases` : undefined}
-      className="flex shrink-0 items-center gap-1.5 rounded-md px-1 text-sm font-semibold hover:bg-accent"
+      className={HEADER_TITLE}
     >
       {title}
     </Link>
@@ -91,7 +99,7 @@ function KbMenu({ title, active }: { title: React.ReactNode; active: string | nu
         aria-haspopup="dialog"
         data-tour="kb-badge"
         onClick={() => setOpen(!open)}
-        className="flex items-center gap-1.5 rounded-md px-1 text-sm font-semibold hover:bg-accent"
+        className={HEADER_TITLE}
       >
         {title}
         {!shown.length ? (

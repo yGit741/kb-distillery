@@ -12,7 +12,7 @@ from __future__ import annotations
 import json
 import os
 
-from kb_distillery import paths
+from kb_distillery.config import paths
 from kb_distillery.graph import propose
 
 PROPOSED, LOW = "proposed", "low-confidence"

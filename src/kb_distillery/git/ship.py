@@ -41,9 +41,9 @@ import subprocess
 import time
 import sys
 
-from kb_distillery import kbconfig
-from kb_distillery.kbconfig import checkout_root
-from kb_distillery.paths import vault_root
+from kb_distillery.config import kb as kbconfig
+from kb_distillery.config.kb import checkout_root
+from kb_distillery.config.paths import vault_root
 META_DIR = os.path.join(vault_root(), "meta")
 # The tooling lane is the explorer repo (knowledge commits go through kb_distillery.ops in the kb's repo). None for an
 # installed package, which has no repository to ship: `_main` refuses with require_repo_root.
@@ -51,17 +51,21 @@ ROOT = checkout_root()
 
 from kb_distillery.ops.daily_sync import changed_paths, has_open_sessions, run_git
 from kb_distillery.git import app_token, claims, commit_policy, events, gate_cache, gate_slot, rounds
-from kb_distillery.core.schema import GATE_PREFIXES as GP, GIT_POLICY_MODE, SCHEMA_VERSION
+from kb_distillery.vault.schema import GATE_PREFIXES as GP, GIT_POLICY_MODE, INDEX_REL, SCHEMA_VERSION, is_index_path
 
 GATES = [
     ("tests", [sys.executable, "-m", "pytest", "-q", "-n", "6", "-m", "not serial", "tests"]),
     # tests that assert a wall-clock budget (`@pytest.mark.serial`): alone in one process, after the parallel pass
     ("tests-serial", [sys.executable, "-m", "pytest", "-q", "-m", "serial", "tests"]),
     ("lint-skills", [sys.executable, "-m", "kb_distillery.lint.lint_skills"]),
+    # the import layer contract (pyproject.toml [tool.importlinter]); importlinter ships no __main__, so call its CLI entry
+    ("lint-imports", [sys.executable, "-c", "from importlinter.cli import lint_imports_command as m; m()", "--no-cache"]),
     ("lint", [sys.executable, "-m", "kb_distillery.lint.lint"]),
+    ("okf-check", [sys.executable, "-m", "kb_distillery.lint.okf_check"]),    # blocking, on the demo kb like lint
 ]
 SUBCOMMANDS = {"whoami", "claims", "events", "round", "queue", "start", "commit", "pr", "merge", "sync", "status", "prune", "protect", "approve", "tag", "mv"}
-GENERATED_FILES = {"index.md", "meta/corpus.tsv", "meta/coherence-warnings.tsv"}
+GENERATED_FILES = {INDEX_REL, "meta/corpus.tsv", "meta/coherence-warnings.tsv"}
+SECTION_INDEX_PATHSPECS = {"wiki/*/index.md"}     # git pathspecs (`*` crosses `/`): every section index under wiki/
 MIGRATED_GENERATED = {"meta/corpus.tsv"}   # a migration's output: committed by schema/paradigm commits
 FEATURE_RE = re.compile(r"^[a-z0-9][a-z0-9-]*$")
 FORBIDDEN_MERGE_FLAGS = {"--squash", "--rebase", "-s", "-r"}
@@ -72,14 +76,29 @@ _REAL_RUN = subprocess.run     # a gate result is only recorded or reused while 
 
 def is_generated(path):
     """A file lint rewrites on every run: the kb's own and the demo kb's (examples/demo/)."""
-    return path in GENERATED_FILES or (path.startswith("examples/demo/") and path[len("examples/demo/"):] in GENERATED_FILES)
+    demo = path[len("examples/demo/"):] if path.startswith("examples/demo/") else None
+    return (path in GENERATED_FILES or is_index_path(path)
+            or (demo is not None and (demo in GENERATED_FILES or is_index_path(demo))))
+
+
+def _drop_regenerated(root):
+    """Undo what lint rewrote in `root`: the generated files and every section index. A tracked one goes back to HEAD,
+    one lint created (untracked) is deleted."""
+    for p in changed_paths(root)["knowledge"]:
+        if p not in GENERATED_FILES and not is_index_path(p):
+            continue
+        if run_git(["cat-file", "-e", f"HEAD:{p}"], cwd=root).returncode == 0:
+            run_git(["checkout", "HEAD", "--", p], cwd=root)
+        elif os.path.isfile(os.path.join(root, p)):
+            os.remove(os.path.join(root, p))
 
 
 def _fingerprint(root):
     """Tree sha of `root` without generated files, or None when the real runner is not in use / git fails."""
     if subprocess.run is not _REAL_RUN:
         return None
-    generated = sorted(GENERATED_FILES | {f"examples/demo/{g}" for g in GENERATED_FILES})
+    generated = sorted(GENERATED_FILES | {f"examples/demo/{g}" for g in GENERATED_FILES}
+                       | SECTION_INDEX_PATHSPECS | {f"examples/demo/{g}" for g in SECTION_INDEX_PATHSPECS})
     return gate_cache.tree_sha(root, generated)
 
 
@@ -203,7 +222,7 @@ def worktree_dirty(path):
             continue
         if rec[0] in "RC":
             i += 1
-        if rec[3:] not in GENERATED_FILES:
+        if rec[3:] not in GENERATED_FILES and not is_index_path(rec[3:]):
             dirty.append(rec[3:])
     return dirty
 
@@ -366,6 +385,11 @@ def lint_command(root=ROOT):
     return [sys.executable, "-m", "kb_distillery.lint.lint", *(["--kb", demo] if os.path.isdir(demo) else [])]
 
 
+def okf_command(root=ROOT):
+    """The okf-check gate: lint's command line (same kb), the okf_check module."""
+    return [c.replace("kb_distillery.lint.lint", "kb_distillery.lint.okf_check") for c in lint_command(root)]
+
+
 def run_gates(root=ROOT, skip_tests=False, scope="full"):
     """`_run_gates` as one gate-slot sequence: the slot is taken at the first real run and held to the last gate."""
     with gate_slot.sequence(root):
@@ -377,7 +401,8 @@ def _run_gates(root, skip_tests, scope):
     runs the tests that mirror the touched code plus the top-level invariants; anything it cannot map runs full.
     A gate that already passed on the same content (see gate_cache) is reused, not rerun."""
     link_untracked_raw(root)
-    gates = [(name, lint_command(root) if name == "lint" else cmd) for name, cmd in GATES]
+    own = {"lint": lint_command, "okf-check": okf_command}
+    gates = [(name, own[name](root) if name in own else cmd) for name, cmd in GATES]
     scopes = {name: "full" for name, _ in gates}
     extras = {}
     if scope == "subset" and not skip_tests:
@@ -486,8 +511,8 @@ def checks_for(paths):
         checks.append(("test-ui-principles", ["pixi", "run", "test-ui-principles"]))
     if hit(*GP["api"], *GP["frontend_api"]):
         checks.append(("api-schema-check", ["pixi", "run", "api-schema-check"]))
-    # the graph's motion lives in the canvas: only the e2e still-canvas test sees it (web/e2e)
-    if hit(*GP["dashboard"], *GP["graph_ui"], *GP["e2e"]):
+    # the graph's motion lives in the canvas: only the e2e still-canvas test sees it (tests/e2e)
+    if hit(*GP["graph_ui"], *GP["e2e"]):
         checks.append(("test-e2e", ["pixi", "run", "test-e2e"]))
     return checks
 
@@ -737,7 +762,7 @@ def cmd_commit(message, skip_tests=False, root=ROOT, gates=True):
     # commit keeps meta/corpus.tsv: its hand-owned columns (disposition, collection, scopes) are what a
     # migration rewrites, and lint keeps them as committed instead of re-deriving them.
     keep = MIGRATED_GENERATED if parsed.type in ("schema", "paradigm") else set()
-    paths = [p for p in paths if p not in GENERATED_FILES or p in keep]      # frozen: gates never change this set
+    paths = [p for p in paths if (p not in GENERATED_FILES and not is_index_path(p)) or p in keep]      # frozen: gates never change this set
     # cheap refusals first, before any gate: what is already staged must be part of this commit
     staged = set(filter(None, run_git(["diff", "--cached", "--name-only", "-z"], cwd=root).stdout.split("\0")))
     extra = sorted(staged - set(paths))
@@ -1006,9 +1031,7 @@ def cmd_sync(cont=False, abort=False, root=ROOT, gates=True):
     if run_git(["merge-base", "--is-ancestor", base, "HEAD"], cwd=root).returncode == 0:
         print(f"{branch} already contains {base}")
         return 0
-    regenerated = [p for p in GENERATED_FILES if p in changed_paths(root)["knowledge"]]
-    if regenerated:                                  # lint rebuilds them; never block a sync on them
-        run_git(["checkout", "HEAD", "--", *regenerated], cwd=root)
+    _drop_regenerated(root)                          # lint rebuilds them; never block a sync on them
     dirty = [p for lane in changed_paths(root).values() for p in lane]
     if dirty:
         print(f"error: uncommitted changes — ship commit them first: {dirty[:5]}")
@@ -1031,7 +1054,7 @@ def _knowledge_clashes(root, primary, base):
                          .stdout.split("\0")))
     clashes = []
     for p in changed_paths(primary)["knowledge"]:
-        if p not in changed or p in GENERATED_FILES:
+        if p not in changed or p in GENERATED_FILES or is_index_path(p):
             continue
         local = os.path.join(primary, p)
         mine = open(local, "rb").read() if os.path.exists(local) else None
@@ -1099,9 +1122,7 @@ def _merge_locked(branch, local, pr_number, title, skip_tests, no_push, root, ga
         behind = False
     if behind:
         # lint gates regenerate these in the worktree; they are rebuilt anyway, so drop them before syncing
-        regenerated = [p for p in GENERATED_FILES if p in changed_paths(root)["knowledge"]]
-        if regenerated:
-            run_git(["checkout", "HEAD", "--", *regenerated], cwd=root)
+        _drop_regenerated(root)
         sync = run_git(["merge", "--no-edit", "-m", f"Merge branch 'main' into {branch}", base], cwd=root)
         print(_out(sync))
         if sync.returncode != 0:
@@ -1300,7 +1321,7 @@ def cmd_tag(name, at=None, kb=None, repo=None, message=None, root=ROOT):
     if repo:
         target = os.path.realpath(os.path.expanduser(repo))
     elif kb:
-        from kb_distillery import kbconfig
+        from kb_distillery.config import kb as kbconfig
         git_root = kbconfig.load(kb).git_root
         if not git_root:
             print(f"error: knowledge base {kb} is not a git repository")
@@ -1570,7 +1591,7 @@ def _main(argv):
     if args.cmd == "approve":
         return cmd_approve(args.number)
     if args.cmd == "tag":
-        from kb_distillery import kbconfig
+        from kb_distillery.config import kb as kbconfig
         return cmd_tag(args.name, args.at, kbconfig.explicit_kb(), args.repo, args.message)
     return cmd_merge(args.local, args.pr, args.title, args.skip_tests, args.no_push, skip_checks=args.skip_checks)
 

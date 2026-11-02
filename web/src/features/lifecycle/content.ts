@@ -51,7 +51,7 @@ export const GUARDRAILS: string[] = [
   "Agents never run git writes. The shell hook allows only single pixi run ops|ship|daily-sync invocations; chained commands are refused.",
   "Wiki edits need an open operation (meta/guard.py; warns now, blocks once strict).",
   "Commit messages are checked by meta/githooks/commit-msg; pushes to main must be kb steps (z+1) or PR merges (pre-push).",
-  "Undo and restore never touch raw/, think/, meta/log.md or generated files, and never reset history.",
+  "Undo and restore never touch raw/, think/, wiki/log.md or generated files, and never reset history.",
   "PRs are never squashed; schema PRs snapshot before (pre-) and after (post-) the merge. The nightly sync takes the same lock as ops.",
   "Hygiene is automatic, never a gate: every kb step pushes main right away (the nightly sync is the backstop); ship merge removes its own worktree; ship prune --apply removes merged, clean worktrees only; stale worktrees, session branches and the nightly state show up here and in pixi run lanes.",
 ];

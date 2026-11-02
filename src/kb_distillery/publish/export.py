@@ -16,9 +16,10 @@ import sys
 import zipfile
 from datetime import datetime, timezone
 
-from kb_distillery.paths import THINK_PATH, think_path, vault_root
+from kb_distillery.vault.schema import is_page_file
+from kb_distillery.config.paths import THINK_PATH, think_path, vault_root
 from kb_distillery.storage import for_kb
-from kb_distillery.vault.kit import KB_DOCS
+from kb_distillery.config.kit import KB_DOCS
 ROOT = vault_root()
 EXPORT_DIR = os.path.join(ROOT, ".exported")
 PREFIX = "yonatan-thesis-kb"
@@ -56,13 +57,11 @@ BINARY_SUFFIXES = {
 TEXT_ROOT_FILES = (
     "AGENTS.md",
     "CLAUDE.md",
-    "index.md",
 )
 
 TEXT_META_FILES = (
     "meta/corpus.tsv",
     "meta/coherence-warnings.tsv",
-    "meta/log.md",
     ".claude/skills/README.md",             # a kb's copy of its kit's skills index (`distill init` writes it)
     # the docs AGENTS.md routes to: a kb's copies from its kit, and its own overrides
     *(f".claude/docs/{n}.md" for n in KB_DOCS),
@@ -119,7 +118,7 @@ def _collect_files(include_raw_pdfs: bool) -> list[str]:
             files.append(rel)
 
     for top in TEXT_GLOBS:
-        # think is the shared space beside the vault (kb_distillery.paths.THINK_PATH); it is bundled as think/ all the same
+        # think is the shared space beside the vault (kb_distillery.config.paths.THINK_PATH); it is bundled as think/ all the same
         base = THINK_PATH if top == "think" else os.path.join(ROOT, top)
         if not os.path.isdir(base):
             continue
@@ -144,7 +143,7 @@ def _collect_files(include_raw_pdfs: bool) -> list[str]:
 
 
 def _manifest(files: list[str], include_raw_pdfs: bool, stamp: str) -> str:
-    wiki_n = sum(1 for f in files if f.startswith("wiki/"))
+    wiki_n = sum(1 for f in files if f.startswith("wiki/") and is_page_file(os.path.basename(f)))
     think_n = sum(1 for f in files if f.startswith("think/"))
     raw_n = sum(1 for f in files if f.startswith("raw/"))
     lines = [
@@ -160,7 +159,7 @@ def _manifest(files: list[str], include_raw_pdfs: bool, stamp: str) -> str:
         f"raw_files: {raw_n}",
         f"include_raw_pdfs: {include_raw_pdfs}",
         "",
-        "Start with AGENTS.md and index.md, then follow [[wikilinks]].",
+        "Start with AGENTS.md and wiki/index.md (a tiny root), open only the wiki/<type>/index.md section you need, then follow the `[Title](slug.md)` page links.",
         "",
         "paths:",
     ]

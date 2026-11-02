@@ -11,10 +11,11 @@ import shutil
 import subprocess
 import sys
 
-from . import blog
+from kb_distillery.vault import frontmatter
+from kb_distillery.ingest.sources.web import blog
 from .paths import ROOT, person_from_raw, set_collection, _page_type
 from .verify import existing_digest_for_raw
-from kb_distillery.core.schema import (ASSET_NAME, RAW_CHATS, RAW_EMAILS, RAW_VIDEOS, VIDEO_ITEM, RAW_HANDWRITTEN, RAW_IMAGES,  # noqa: E402
+from kb_distillery.vault.schema import (ASSET_NAME, RAW_CHATS, RAW_EMAILS, RAW_VIDEOS, VIDEO_ITEM, RAW_HANDWRITTEN, RAW_IMAGES,  # noqa: E402
                     RAW_PRESENTATIONS, RAW_PRINTED, RAW_WEB, CONTENTS_COLLECTIONS, make_slug, strip_prefix)
 
 PAPER_NAME = re.compile(r"^(1[89]|20)\d{2}-[a-z0-9]+(-[a-z0-9]+)*\.pdf$")
@@ -207,14 +208,17 @@ def _catalog_stub(slug, raw_rel, title=None, year=None, url="", authors=None):
     year = year or (stem[:4] if stem[:4].isdigit() else "")
     person = person_from_raw(raw_rel)
     recommended = f"[{person}]" if person else "[]"
-    person_line = f"- Person: [[{person}]]\n" if person else ""
+    person_line = f"- Person: {links.link(person, page_title(person))}\n" if person else ""
+    title_yaml = frontmatter.title_line(title)
+    title_yaml = title_yaml + "\n" if title_yaml else ""
     return f"""---
 type: paper
 layer: source
-authors: {authors_yaml}
+{title_yaml}authors: {authors_yaml}
 year: {year}
 area: []
-status: to-read
+maturity: to-read
+status: draft
 depth: listed
 raw: {raw_rel}
 citekey:
@@ -239,7 +243,7 @@ discussed_with: []
 -
 
 ## Links out
-- Concepts: [[]]
+- Concepts: <!-- [Title](slug.md) -->
 {person_line}"""
 
 

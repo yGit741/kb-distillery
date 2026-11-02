@@ -9,7 +9,7 @@ of the frontmatter stays with the flat parser `kb_distillery.lint.lint.parse_fro
         note: the margin argument carries over to deep linear nets
 
 A stored kind is legal when the knowledge base declares it in `kb.toml` `[edges] types` (read by
-`kb_distillery.services.cypher.edge_config`, with `symmetric` and `note_required`); anything else is dropped and reported
+`kb_distillery.graph.model.edge_config`, with `symmetric` and `note_required`); anything else is dropped and reported
 by `problems`. Computed kinds come from existing data:
 
     mentions           a wikilink or `related:` entry (the snapshot's `links`)
@@ -26,6 +26,8 @@ import json
 import os
 import re
 import unicodedata
+
+from kb_distillery.vault.links import page_slug
 
 STORED, COMPUTED, PROPOSED = "stored", "computed", "proposed"
 PROPOSALS_FILE = "relations-proposals.jsonl"      # `<kb>/.cache/`, written by kb_distillery.graph.propose (every valid proposal)
@@ -77,7 +79,9 @@ def relations_block(text):
 def _target(value):
     s = str(value or "").strip()
     m = _LINK.match(s)
-    return (m.group(1) if m else s).strip()
+    if m:
+        return m.group(1).strip()
+    return (page_slug(s) or s).strip()          # a bare slug, or a page path `slug.md`
 
 
 def parse_relations(text):
@@ -85,7 +89,7 @@ def parse_relations(text):
     block = relations_block(text)
     if not block:
         return []
-    import yaml          # only pages with a block need it; kb_distillery.services.cypher imports this module
+    import yaml          # only pages with a block need it; kb_distillery.graph.query imports this module
 
     try:
         data = yaml.safe_load(block)
@@ -333,7 +337,7 @@ def build(pages, nodes, links, concept_links, config, root=None):
 def read_proposals(root=None):
     """Every LLM relation proposal of a knowledge base: [{from, to, kind, note, confidence, run}], one per
     (from, to, kind), best confidence first. [] when it has none. Read-only; nothing here is knowledge."""
-    from kb_distillery import paths
+    from kb_distillery.config import paths
     path = os.path.join(root or paths.ROOT, ".cache", PROPOSALS_FILE)
     if not os.path.isfile(path):
         return []

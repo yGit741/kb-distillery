@@ -18,7 +18,8 @@ from collections import Counter, deque
 from datetime import datetime, timezone
 
 from kb_distillery.config import userdir
-from kb_distillery.paths import vault_root
+from kb_distillery.config.paths import vault_root
+from kb_distillery.vault.schema import is_page_file
 HERE = os.path.join(vault_root(), "meta")
 ROOT = vault_root()
 
@@ -80,7 +81,7 @@ def vault_papers(wiki_dir=None):
     wiki_dir = wiki_dir or os.path.join(ROOT, "wiki")
     out = {}
     for name in sorted(os.listdir(wiki_dir)):
-        if not name.endswith(".md"):
+        if not is_page_file(name):
             continue
         with open(os.path.join(wiki_dir, name), encoding="utf-8") as f:
             fm = parse_frontmatter(f.read()) or {}
@@ -116,7 +117,7 @@ def _headers():
 def http_get(path, params=None):
     """Throttled GET returning parsed JSON, or None on 404. Raises RuntimeError otherwise."""
     global _last
-    from kb_distillery.ingest import net
+    from kb_distillery.config import net
     url = SS_BASE + path + ("?" + urllib.parse.urlencode(params) if params else "")
     last = None
     for attempt in range(1, RETRIES + 1):
@@ -259,6 +260,23 @@ def direct(cache, pid):
     return out, inn
 
 
+def citation_neighbors(slugs, cache=None):
+    """Vault papers citing / cited by the given paper slugs (the citations cache). Silent -> []."""
+    try:
+        cache = cache if cache is not None else load_cache()
+        vids = vault_ids(cache)
+        found = set()
+        for s in slugs:
+            pid = cache.get("slugs", dict()).get(s)
+            if not pid or pid not in cache.get("papers", dict()):
+                continue
+            o, i = direct(cache, pid)
+            found.update(vids[x] for x in (set(o) | set(i)) if x in vids)
+        return sorted(found - set(slugs))
+    except Exception:  # noqa: BLE001 — optional enrichment, never an error
+        return []
+
+
 def resolve(cache, key):
     """slug | paperId | arXiv id -> paperId (or None)."""
     key = key.strip()
@@ -380,7 +398,7 @@ def cmd_rank(a):
 
 def scope_papers(scope):
     """Vault paper slugs inside a scope's projection (exit 2 on an unknown scope)."""
-    from kb_distillery.core import scopes
+    from kb_distillery.vault import scopes
     try:
         pages = scopes.scope_context(scope, ROOT)["pages"]
     except scopes.ScopeUnknown as exc:

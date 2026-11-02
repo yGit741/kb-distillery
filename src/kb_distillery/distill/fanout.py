@@ -2,11 +2,11 @@
 
     distill_note("thesis-decision", [("thesis", "/…/kbs/thesis"), ("demo", "/…/examples/demo")])
 
-* kb side: `wiki/distilled-think-<note>.md` (type `distilled-think`) whose `source:` cites `think:<note>.md`.
+* kb side: `wiki/distilled-think-<note>.md` (type `distilled-think`) whose `sources:` cite `think:<note>.md`.
 * think side: `<think>/.provenance/<note>.json` lists where the note went. The note itself is never edited;
   this function is the only writer of that sidecar, and the `kbd distill` command is its only caller.
 
-Nothing here imports `kb_distillery.paths` (which needs a selected kb): the think space and every kb root are arguments, so
+Nothing here imports `kb_distillery.config.paths` (which needs a selected kb): the think space and every kb root are arguments, so
 one process can write into two kbs. No LLM call is made unless the caller passes a `summarize` function
 (`llm_summarizer` builds one over `kb_distillery.llm`). Running it twice changes nothing.
 """
@@ -19,7 +19,8 @@ import re
 from dataclasses import dataclass
 from datetime import datetime, timezone
 
-from kb_distillery import kbconfig
+from kb_distillery.config import kb as kbconfig
+from kb_distillery.vault import frontmatter
 
 THINK_CITE = "think:"
 LEGACY_PREFIX = "think/"
@@ -62,7 +63,7 @@ def cite(rel: str) -> str:
 
 
 def resolve_cite(source: str, think_root: str | None = None) -> str | None:
-    """The file a `source:` citation names (`think:<note>.md`, or the legacy `think/<note>.md`), or None if it is gone."""
+    """The file a `sources[].resource` citation names (`think:<note>.md`, or the legacy `think/<note>.md`), or None if it is gone."""
     think_root = think_root or kbconfig.think_root()
     for prefix in (THINK_CITE, LEGACY_PREFIX):
         if source.startswith(prefix):
@@ -179,8 +180,8 @@ def render_page(rel: str, summary: str, at: str) -> str:
     return f"""---
 type: distilled-think
 layer: concept
-status: review
-source: {cite(rel)}
+maturity: review
+{frontmatter.sources_line([cite(rel)])}
 distilled_at: {at}
 ---
 
@@ -202,13 +203,7 @@ _Sent with `kbd distill`; no edits proposed yet. Run the distill-think skill on 
 
 def _front(path: str) -> dict:
     with open(path, encoding="utf-8") as f:
-        text = f.read()
-    m = re.match(r"---\n(.*?)\n---", text, re.S)
-    fm = {}
-    for line in (m.group(1).splitlines() if m else []):
-        k, _, v = line.partition(":")
-        fm[k.strip()] = v.strip()
-    return fm
+        return frontmatter.parse(f.read())[0] or {}
 
 
 def _now() -> str:
@@ -227,7 +222,7 @@ def distill_note(note: str, kbs, think_root: str | None = None, summarize=None, 
     page_rel = f"wiki/{slug}.md"
     for kb_id, root in targets:
         existing = os.path.join(root, page_rel)
-        if os.path.isfile(existing) and _front(existing).get("source") != cite(rel):
+        if os.path.isfile(existing) and cite(rel) not in frontmatter.resources(_front(existing)):
             raise DistillError(f"{kb_id}: {page_rel} already exists and cites another note; rename one of them")
 
     path = os.path.join(think_root, *rel.split("/"))

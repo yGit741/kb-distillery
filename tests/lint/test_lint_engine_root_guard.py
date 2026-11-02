@@ -8,7 +8,8 @@ import tempfile
 import unittest
 from unittest import mock
 
-from kb_distillery import kbconfig, paths
+from kb_distillery.config import kb as kbconfig
+from kb_distillery.config import paths
 from kb_distillery.lint import lint
 
 

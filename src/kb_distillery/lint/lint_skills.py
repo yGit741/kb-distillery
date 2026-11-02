@@ -13,10 +13,10 @@ import re
 import sys
 from typing import Optional
 
-from kb_distillery.cli.tree import COMMANDS as DISTILL_COMMANDS
+from kb_distillery.config.commands import COMMANDS as DISTILL_COMMANDS
 from kb_distillery.config.resources import resource
-from kb_distillery.kbconfig import checkout_root
-from kb_distillery.paths import CODE_DIR
+from kb_distillery.config.kb import checkout_root
+from kb_distillery.config.paths import CODE_DIR
 
 ROOT = checkout_root() or os.getcwd()          # skills are code: they live with the explorer (dev tool: a checkout)
 KITS_DIR = str(resource("kits"))

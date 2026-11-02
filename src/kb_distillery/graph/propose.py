@@ -27,8 +27,8 @@ import re
 import sys
 import time
 
-from kb_distillery import kbconfig
-from kb_distillery import paths
+from kb_distillery.config import kb as kbconfig
+from kb_distillery.config import paths
 
 ROOT = paths.ROOT
 MODEL = "sonnet"
@@ -174,7 +174,7 @@ def excerpt(text, limit=EXCERPT):
 
 def load_pages(root=None):
     """{slug: {slug, type, depth, title, summary, text, links}} — `links` = outbound ∪ inbound slugs."""
-    from kb_distillery.core.graph import inbound_index, outbound_links
+    from kb_distillery.vault.graph import inbound_index, outbound_links
     from kb_distillery.search.semfind import load_pages as _pages
     raw = _pages(root or ROOT)
     inbound = inbound_index(raw)
@@ -182,7 +182,7 @@ def load_pages(root=None):
     for slug, (_rel, fm, text) in raw.items():
         outbound = sorted(s for s in outbound_links(text, fm) if s in raw and s != slug)
         out[slug] = {"slug": slug, "type": str(fm.get("type", "")), "depth": str(fm.get("depth", "")),
-                     "title": _title(text, slug), "summary": _unquote(fm.get("summary")), "text": text,
+                     "title": _title(text, slug), "summary": _unquote(fm.get("description")), "text": text,
                      "out": outbound, "in": sorted(s for s in inbound.get(slug, ()) if s != slug)}
     return out
 

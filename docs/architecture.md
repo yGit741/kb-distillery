@@ -1,6 +1,6 @@
 # Architecture
 
-This page names the parts, shows how data moves, says where code lives, and lists the rules that do not change. It describes the code on this branch. Statements about the Open Knowledge Format (OKF) work are marked.
+This page names the parts, shows how data moves, says where code lives, and lists the rules that do not change. It describes the code on `main`.
 
 ## The parts
 
@@ -45,32 +45,31 @@ raw/inbox -> catalog -> raw/<format>/ + meta/corpus.tsv -> digest -> wiki/ -> li
 
 1. `scrap` puts a file or URL into `raw/inbox/`. `catalog` moves it to `raw/<format>/` and records it in `meta/corpus.tsv`. Neither calls a model.
 2. A digest deepens a source page in `wiki/` in one of three tiers. It runs as a transactional session that reads `raw/` and writes `wiki/`.
-3. `distill lint` checks every page against the schema of the knowledge base and regenerates `index.md` and `meta/corpus.tsv`.
+3. `distill lint` checks every page against the schema of the knowledge base and regenerates `wiki/index.md`, the `wiki/<type>/index.md` section indexes and `meta/corpus.tsv`.
 4. The graph is built from the links between pages and from the typed `relations:` that pages state.
 5. The app is a FastAPI server plus a React app in `web/`. `distill launch` starts both.
 6. Every knowledge operation is one commit on the `main` branch of the knowledge base: `kb(<op>): <summary> (kb-x.y.z)`. Undo, snapshots and the time machine read that history and its tags.
 
-<!-- after OKF merge -->
-Under the OKF shape, `wiki/` is the bundle root. It holds `index.md` and `log.md`. Pages link with relative markdown links.
+`wiki/` is the root of the Open Knowledge Format bundle. It holds `index.md` and `log.md`, and pages link to each other with relative `slug.md` links.
 
 ## Where code lives
 
 | Path | Holds |
 |---|---|
 | `src/kb_distillery/cli/` | The `distill` command table, help and dispatch. `legacy.py` is the old `kbd` name. |
-| `src/kb_distillery/kbconfig.py`, `paths.py`, `config/` | Finding and selecting a knowledge base, the user config folder, resource lookup. |
-| `core/`, `vault/`, `lint/` | Schema, page model, kit merge, the linter. |
-| `ingest/`, `distill/`, `summaries/`, `parse/` | Pipelines over sources and think notes. |
-| `graph/`, `search/` | Relations, proposals, graph helpers, search. |
-| `llm/` | The LLM gateway. |
-| `ops/`, `git/` | Versioned knowledge operations, hooks, guards, commit policy, nightly sync. `git/ship.py` is the pull request tool for engine changes. |
-| `storage/`, `publish/`, `share/` | Connector and publisher interfaces and registries. `share/` is the Cloudflare publisher's code. |
-| `services/`, `api/` | Domain services and the FastAPI routers. |
+| `config/` | Finding and selecting a knowledge base (`kb.py`), vault paths (`paths.py`), the kit loader (`kit.py`), the user config folder (`userdir.py`), feature flags (`flags/`). Depends on nothing else in the engine. |
+| `vault/`, `lint/` | Schema, page model, graph helpers, the linter. |
+| `ingest/`, `distill/`, `digest/`, `parse/` | Pipelines over sources and think notes. Source connectors live in `ingest/sources/`. |
+| `graph/`, `search/` | Relations, proposals, the graph snapshot, search. |
+| `llm/` | The LLM gateway and the prompts (`llm/prompts/`). |
+| `ops/`, `git/` | Versioned knowledge operations, nightly sync, reports; hooks, guards, commit policy. `git/ship.py` is the pull request tool for engine changes. |
+| `storage/`, `hosting/` | The storage connector interface and registry; the publisher interface and registry. |
+| `publish/` | `publish/site/` builds the site, `publish/cloudflare/` is the Cloudflare publisher with its Worker, `publish/export.py` writes the export. |
+| `services/`, `server/` | Domain services and the FastAPI routers (`python -m kb_distillery.server`). |
 | `kits/` | The kits: `kit.toml`, defaults, skills, hooks. |
 | `migrations/` | Schema migrations, one file each. |
-| `flags/` | The feature flag registry and code generation. |
 | `web/` | The React app (Vite, TypeScript). |
-| `tests/` | pytest, mirroring the package. |
+| `tests/` | pytest, mirroring the package; `tests/e2e/` holds the browser-free end-to-end tests. |
 | `examples/demo/` | The tracked sample knowledge base. |
 | `examples/launchd/` | Templates for the nightly job. |
 | `scripts/` | Launch script and git hooks. |
@@ -86,12 +85,22 @@ Under the OKF shape, `wiki/` is the bundle root. It holds `index.md` and `log.md
 - A knowledge base extends its kit and never edits it. See [ADR 0002](adr/0002-kits-over-templates.md).
 - The core does not import a publisher. It asks a registry.
 - Engine changes go through pull requests. Knowledge commits itself per operation.
-- A feature that cannot land in one pull request ships behind a flag in `flags.toml`.
+- A feature that cannot land in one pull request ships behind a flag in `src/kb_distillery/kits/base/defaults/flags.toml`.
+
+## Layers
+
+`pyproject.toml` declares the allowed imports between packages, and `pixi run lint-imports` enforces them. From the top:
+
+1. `cli`, `server`, `doctor`, `init_kb`: entry points.
+2. `services`, `publish`, `webbuild`: use cases and what ships the result.
+3. `ingest`, `digest`, `distill`, `graph`, `search`, `lint`, `metrics`, `ops`, `git`, `migrations`, `parse`: pipeline stages.
+4. `vault`, `llm`, `storage`, `hosting`: the vault model, the gateway, connectors and the publisher port.
+5. `config`: locations and settings.
+
+A package imports only from the layers below it. One cycle (`graph/propose.py` and `services`) is listed as an ignored import until it is removed.
 
 ## Not done yet
 
 - Some modules still read `raw/` directly instead of through the connector. `tests/storage/raw_access_baseline.txt` lists them, and the list only shrinks.
-- Some screens of the app are still served by an older dashboard behind the API.
-- A layer contract between packages is planned. It is not enforced yet.
 
-See the [roadmap](roadmap.md).
+See the [roadmap](public-roadmap.md).

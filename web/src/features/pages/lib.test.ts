@@ -5,14 +5,14 @@ import {
 } from "./lib";
 
 const card = (id: string, o: Partial<PageCard> = {}): PageCard => ({
-  id, title: id.toUpperCase(), type: "paper", status: "", depth: "", areas: [], preview: "", words: 100, ...o,
+  id, title: id.toUpperCase(), type: "paper", maturity: "", depth: "", areas: [], preview: "", words: 100, ...o,
 });
 const index: PageIndex = {
   generated_at: "t",
   pages: [
     card("a", { depth: "deep", words: 900, year: 2020 }),
     card("b", { type: "topic", title: "Tensor rank" }),
-    card("c", { type: "question", status: "open" }),
+    card("c", { type: "question", maturity: "open" }),
     card("d", { type: "person" }),
     card("e", { depth: "listed", words: 50, year: 2024 }),
   ],
@@ -87,6 +87,13 @@ describe("wikilink titles", () => {
   it("labels bare wikilinks with the page title and leaves explicit labels and unknown slugs", () => {
     const t = (s: string) => (s === "a" ? "Alpha [x]" : undefined);
     expect(prepareMarkdown("[[a]] [[a|mine]] [[zzz]] [[a#h]]", t)).toBe("[[a|Alpha  x ]] [[a|mine]] [[zzz]] [[a|Alpha  x ]]");
+  });
+
+  it("shows the page title for a page link whose text is its slug, keeps chosen text", () => {
+    const t = (s: string) => (s === "a" ? "Alpha [x]" : undefined);
+    expect(prepareMarkdown("[a](a.md) [mine](a.md) [zzz](zzz.md) [a](a.md#why)", t)).toBe(
+      "[Alpha x](a.md) [mine](a.md) [zzz](zzz.md) [Alpha x](a.md#why)",
+    );
   });
 });
 

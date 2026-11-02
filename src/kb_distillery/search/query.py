@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Wiki query helpers — index-first candidate ranking (0 LLM).
 
-Karpathy pattern: read index.md first, then drill into pages. At ~200 pages
+Karpathy pattern: read the root wiki/index.md, then the one section index you need, then drill into pages. At ~200 pages
 the index is still enough; this supplements it with full-text term scoring.
 
     python3 -m kb_distillery.search.query candidates "tensor rank implicit bias"
@@ -15,34 +15,39 @@ import os
 import re
 import sys
 
-from kb_distillery.core.graph import tokenize
+from kb_distillery.vault import links as page_links
+from kb_distillery.vault.graph import tokenize
+from kb_distillery.vault.schema import INDEX_REL
+from kb_distillery.vault import wikiindex
 
-from kb_distillery.paths import vault_root
-from kb_distillery.core.links import WIKILINK_TARGET
+from kb_distillery.config.paths import vault_root
 ROOT = vault_root()
 WIKI = os.path.join(ROOT, "wiki")
-INDEX = os.path.join(ROOT, "index.md")
-
-LINK = WIKILINK_TARGET
-INDEX_ROW = re.compile(r"^\| \[\[([^\]]+)\]\] \| ([^|]*) \| (.*) \|$")
-
+INDEX = os.path.join(ROOT, INDEX_REL)
 
 def parse_index():
-    """Return slug -> {section, status, summary}."""
+    """Return slug -> {section, title, status, summary} from the section indexes under wiki/ (kb_distillery.vault.wikiindex;
+    the root index only counts them). `status` is empty: rows carry no maturity."""
     if not os.path.isfile(INDEX):
         return {}
-    entries = {}
-    section = ""
-    for line in open(INDEX, encoding="utf-8"):
-        if line.startswith("## "):
-            section = line[3:].strip()
-            continue
-        m = INDEX_ROW.match(line.strip())
-        if not m:
-            continue
-        slug, status, summary = m.group(1).strip(), m.group(2).strip(), m.group(3).strip()
-        entries[slug] = {"section": section, "status": status, "summary": summary}
-    return entries
+    rows = wikiindex.parse_rows(os.path.dirname(os.path.dirname(INDEX)))
+    return {slug: {"section": r["section"], "title": r["title"], "status": "", "summary": r["summary"]}
+            for slug, r in rows.items()}
+
+
+def _ref(slug, meta):
+    """How a CLI line names a page: the page link `[Title](slug.md)` (the form the answers cite)."""
+    return page_links.link(slug, (meta or {}).get("title") or slug)
+
+
+def _maturity(slug):
+    """The page's `maturity:` (index rows carry none)."""
+    from kb_distillery.vault import frontmatter
+    try:
+        with open(wiki_path(slug), encoding="utf-8") as f:
+            return str(frontmatter.parse(f.read())[0].get("maturity") or "")
+    except (OSError, AttributeError):
+        return ""
 
 
 def wiki_path(slug):
@@ -87,7 +92,7 @@ def score_slug(slug, meta, qtokens):
 
 def load_scope(scope_slug):
     """scope_context for the checkout this script lives in (raises scopes.ScopeUnknown)."""
-    from kb_distillery.core import scopes
+    from kb_distillery.vault import scopes
     return scopes.scope_context(scope_slug, ROOT)
 
 
@@ -98,7 +103,7 @@ def cmd_candidates(query, limit=12, scope=None):
         return 1
     allowed = None
     if scope:
-        from kb_distillery.core import scopes
+        from kb_distillery.vault import scopes
         try:
             allowed = load_scope(scope)["pages"]
         except scopes.ScopeUnknown as e:
@@ -120,20 +125,20 @@ def cmd_candidates(query, limit=12, scope=None):
     if not ranked:
         print("NO_MATCHES  " + query + (("  [scope " + scope + "]") if scope else ""))
         print("the scope's pages do not cover this yet; see scope-status" if scope
-              else "read index.md; broaden terms or check MOCs")
+              else "read wiki/index.md, then the section you need; broaden terms or check MOCs")
         return 0
     print(f"CANDIDATES  {query}" + (("  [scope " + scope + "]") if scope else "") + f"  ({len(ranked)} hits, showing {min(limit, len(ranked))})")
     for score, slug, meta, hits in ranked[:limit]:
         summary = (meta.get("summary") or "")[:90]
         why = ", ".join(dict.fromkeys(hits[:4]))
-        print(f"  {score:3d}  [[{slug}]]  {meta.get('section', '')}  {why}")
+        print(f"  {score:3d}  {_ref(slug, meta)}  {meta.get('section', '')}  {why}")
         if summary:
             print(f"       {summary}")
     return 0
 
 
 def cmd_scope_status(scope, max_files=200):
-    from kb_distillery.core import scopes
+    from kb_distillery.vault import scopes
     try:
         ctx = load_scope(scope)
     except scopes.ScopeUnknown as exc:
@@ -145,7 +150,7 @@ def cmd_scope_status(scope, max_files=200):
     pages = sorted(ctx["pages"] - {ctx["slug"]})
     print("PAGES  (" + str(len(pages)) + ")")
     for s in pages:
-        print("  [[" + s + "]]  " + (index.get(s, {}).get("summary") or "")[:90])
+        print("  " + _ref(s, index.get(s)) + "  " + (index.get(s, {}).get("summary") or "")[:90])
     unc = ctx["uncovered"]
     print("NOT_YET_DIGESTED  (" + str(len(unc)) + ")")
     for u in unc[:max_files]:
@@ -160,7 +165,7 @@ def cmd_mocs():
     print("THEME_ENTRY_POINTS")
     for slug, meta in sorted(index.items()):
         if slug.startswith("theme-"):
-            print(f"  [[{slug}]]  {meta.get('status', '')}  {(meta.get('summary') or '')[:100]}")
+            print(f"  {_ref(slug, meta)}  {meta.get('status') or _maturity(slug)}  {(meta.get('summary') or '')[:100]}")
     return 0
 
 

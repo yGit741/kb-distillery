@@ -2,7 +2,7 @@
 kb_distillery.llm do it (Haiku; `--backend subscription|api|batch`, several targets → one run / one batch)."""
 import os
 
-from kb_distillery.paths import meta_file
+from kb_distillery.config.paths import meta_file
 import re
 import subprocess
 import sys
@@ -10,8 +10,8 @@ import sys
 from .extract import extract_text
 from .paths import ROOT, sha1_file
 from .verify import existing_digest_for_raw
-from kb_distillery.core import wikiio
-from kb_distillery.core.schema import unit_slug_for_raw, unit_type_for_raw
+from kb_distillery.vault import frontmatter, links, wikiio
+from kb_distillery.vault.schema import unit_slug_for_raw, unit_type_for_raw
 
 EASY_DIR = os.path.join(ROOT, "meta", ".ingest", "easy")
 FILL_MODEL = "haiku"          # a skim of the abstract, not analysis
@@ -47,7 +47,7 @@ def _new_page(page_type, slug, raw_rel):
         except (OSError, ValueError):
             pass
     body = body.replace("{{raw}}", raw_rel).replace("{{title}}", title)
-    return re.sub(r"\{\{[a-z_]+\}\}", "", body)
+    return re.sub(r"\{\{[a-z_]+\}\}", "", frontmatter.fill_title(body))
 
 
 def _add_raw(wiki_path, raw_rel):
@@ -71,8 +71,7 @@ def _update_wiki_digestion(slug, raw_rel, page_type="paper"):
     wiki_path = os.path.join(ROOT, "wiki", f"{slug}.md")
     text = (open(wiki_path, encoding="utf-8").read() if os.path.isfile(wiki_path)
             else _new_page(page_type, slug, raw_rel))
-    text = wikiio.set_key(text, "depth", "easy", after="status")    # front matter only
-    text = wikiio.set_key(text, "status", "digested")
+    text = wikiio.set_reading(text, "easy", "digested")    # front matter only
     wikiio.write_page(wiki_path, text)
     return wiki_path
 
@@ -88,7 +87,7 @@ def _suggest_related(slug):
         from kb_distillery.lint.lint import parse_frontmatter
         with open(os.path.join(ROOT, "wiki", f"{slug}.md"), encoding="utf-8") as f:
             rel = (parse_frontmatter(f.read()) or {}).get("related") or []
-        rows = citations.rank_for(c, pid, exclude=set(rel) | {slug})[:5]
+        rows = citations.rank_for(c, pid, exclude=set(links.refs(rel)) | {slug})[:5]
         if rows:
             print("related suggestions (citations): " + ", ".join(f"{r[0]} ({r[1]})" for r in rows))
     except Exception:
@@ -241,7 +240,7 @@ def prepare(arg, into=None, tick=True):
     page_type = unit_type_for_raw(raw_rel)
     if page_type == "video" and not raw_rel.endswith("/video.md"):
         raise ValueError(f"{raw_rel}: a video bundle is digested through its video.md")
-    from . import book as book_mod
+    from kb_distillery.ingest.sources.books import book as book_mod
     if book_mod.is_book(os.path.join(ROOT, raw_rel)):
         raise ValueError(f"{raw_rel} is a book: skim it by part (full-digest --part N / --pages A-B; see `toc`)")
     slug = unit_slug_for_raw(raw_rel, page_type)
@@ -261,7 +260,7 @@ def prepare(arg, into=None, tick=True):
 
     raw_path = os.path.join(ROOT, raw_rel)
     if page_type == "video":
-        from .youtube import bundle
+        from kb_distillery.ingest.sources.youtube import bundle
         abstract = bundle.abstract(raw_path)          # metadata + chapters + frame text + transcript ends
     else:
         abstract = extract_text(raw_path, max_pages=3) or ""

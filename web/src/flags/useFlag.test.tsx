@@ -37,7 +37,7 @@ describe("loadFlagOverrides()", () => {
   });
 });
 
-/** Flag test matrix (kb_distillery.flags.coverage): the runtime flag on and off. */
+/** Flag test matrix (kb_distillery.config.flags.coverage): the runtime flag on and off. */
 describe("ui.system-flags-tab states", () => {
   it("on → useFlag is true", () =>
     withFlag("ui.system-flags-tab", true, () => {

@@ -1,11 +1,10 @@
 /**
  * Full-text search and shortest paths over the baked blob. A straight port of the two server-side
- * computations the legacy static shim (src/kb_distillery/share/static/kb-static.js) ran in the browser,
- * which in turn port src/kb_distillery/services/pages.py. share/search.test.ts runs both on fixtures and
- * requires identical output, so a change here must keep the legacy answers.
+ * computations the retired static shim (kb-static.js) ran in the browser,
+ * which in turn port src/kb_distillery/services/pages.py; keep the answers identical to it.
  */
 import type { PageDetail, PathResult, SearchHit, SearchResult } from "@/api/types";
-import { WIKILINK } from "@/lib/links";
+import { PAGE_LINK, WIKILINK } from "@/lib/links";
 import type { ShareBlob } from "./blob";
 
 const MAX_PATHS = 4;
@@ -17,6 +16,10 @@ function titleOf(pages: Pages, slug: string): string {
 }
 
 function plain(pages: Pages, s: string): string {
+  s = s.replace(PAGE_LINK, (_m, label: string, slug: string) => {
+    const text = label.replace(/\\(.)/g, "$1");
+    return text === slug ? titleOf(pages, slug) : text;       // text equal to the slug chose no text: the page title
+  });
   s = s.replace(WIKILINK, (_m, slug: string, label?: string) => (label || titleOf(pages, slug.trim()) || slug).trim());
   s = s.replace(/\[([^\]]+)\]\([^)]+\)/g, "$1");
   s = s.replace(/[*_`>#]+/g, "");

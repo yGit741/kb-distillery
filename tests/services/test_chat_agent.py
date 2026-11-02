@@ -173,13 +173,13 @@ class TestPolicy(unittest.TestCase):
     def test_read_scope(self):
         self.allow("Read", {"file_path": "wiki/tensor-rank.md"})
         self.allow("Read", {"file_path": os.path.join(ROOT, "wiki", "tensor-rank.md")})
-        self.allow("Read", {"file_path": "index.md"})
+        self.allow("Read", {"file_path": "wiki/index.md"})
         self.allow("Read", {"file_path": "think/ideas.md"})
         self.allow("Read", {"file_path": "raw/web-clips/some-post.md"})
         self.deny("Read", {"file_path": "raw/printed-docs/2023-paper.pdf"})
         self.deny("Read", {"file_path": userdir.path("anthropic_key")})
         self.deny("Read", {"file_path": os.path.join(userdir.legacy_dir(), "anthropic_key")})
-        self.deny("Read", {"file_path": "wiki/../src/kb_distillery/core/schema.py"})
+        self.deny("Read", {"file_path": "wiki/../src/kb_distillery/vault/schema.py"})
         self.deny("Read", {"file_path": "meta/corpus.tsv"})
         self.deny("Read", {"file_path": ".claude/settings.json"})
         self.deny("Read", {})
@@ -310,9 +310,10 @@ class TestOptions(SDKCase):
     def test_agent_system_prompt(self):
         s = chat_agent.build_agent_system("Be brief.")
         self.assertTrue(s.startswith("Be brief."))
-        self.assertIn("[[theme-tensor-factorization]]", s)
+        self.assertIn("[theme-tensor-factorization](theme-tensor-factorization.md)", s)
         self.assertIn("kb_distillery.search.query candidates", s)
-        self.assertIn("[[slug]]", s)
+        self.assertIn("[Title](slug.md)", s)
+        self.assertNotIn("[[", s)
         self.assertNotIn("<kb-pages>", s)
 
 
@@ -508,6 +509,7 @@ class TestHelpers(unittest.TestCase):
     def test_harvest_citations(self):
         idx = {"a": {}, "b": {}}
         self.assertEqual(chat_agent.harvest_citations("see [[a]] and [[b|label]] and [[a]] and [[zz]]", idx), ["a", "b"])
+        self.assertEqual(chat_agent.harvest_citations("see [A](a.md) and [B](b.md#why) and [A](a.md) and [Z](zz.md)", idx), ["a", "b"])
 
 
 if __name__ == "__main__":

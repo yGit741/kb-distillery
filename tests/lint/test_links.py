@@ -9,12 +9,12 @@ import sys
 import unittest
 from unittest import mock
 
-from kb_distillery.paths import vault_root
+from kb_distillery.config.paths import vault_root
 META = os.path.join(vault_root(), "meta")
 
-from kb_distillery.core import graph
+from kb_distillery.vault import graph, links
 from kb_distillery.lint import lint
-from kb_distillery.ingest import researcher
+from kb_distillery.ingest.sources.researcher import researcher
 
 
 class LinkRegexTests(unittest.TestCase):
@@ -22,8 +22,8 @@ class LinkRegexTests(unittest.TestCase):
         for text in ["[[tensor-rank]]", "[[tensor-rank|Tensor rank]]",
                      "[[tensor-rank\\|Tensor rank]]", "[[tensor-rank#Formal|x]]"]:
             with self.subTest(text=text):
-                self.assertEqual(lint.LINK.findall(text), ["tensor-rank"])
-                self.assertEqual(graph.LINK.findall(text), ["tensor-rank"])
+                self.assertEqual(links.targets(text), ["tensor-rank"])
+                self.assertEqual(sorted(graph.outbound_links(text)), ["tensor-rank"])
 
 
 class TablePipeLintTests(unittest.TestCase):
@@ -45,13 +45,13 @@ class TablePipeLintTests(unittest.TestCase):
 class BibliographyRenderTests(unittest.TestCase):
     def test_cataloged_paper_links_with_escaped_pipe(self):
         cell = researcher.bib_title_cell({"slug": "k", "title": "Known"}, {"paper-k"})
-        self.assertEqual(cell, "[[paper-k\\|Known]]")
-        self.assertEqual(lint.LINK.findall(cell), ["paper-k"])
+        self.assertEqual(cell, "[Known](paper-k.md)")
+        self.assertEqual(links.targets(cell), ["paper-k"])
 
     def test_uncataloged_paper_links_out_not_in(self):
         cell = researcher.bib_title_cell({"slug": "u", "title": "Elsewhere", "arxiv": "2101.08303"}, set())
         self.assertEqual(cell, "[Elsewhere](https://arxiv.org/abs/2101.08303)")
-        self.assertEqual(lint.LINK.findall(cell), [], "must not create a dangling wikilink")
+        self.assertEqual(links.targets(cell), [], "must not create a dangling link")
 
     def test_title_is_one_line_and_pipe_free(self):
         cell = researcher.bib_title_cell({"slug": "u", "title": "On Projection\n$$P | Q$$ Matrices"}, set())
@@ -76,6 +76,15 @@ class RelinkTests(unittest.TestCase):
         self.assertIn("| ⭐ | No url paper |", new)
         self.assertIn("[[tensor-rank]]", new)
         self.assertIn("[[q-not-a-paper]]", new, "non-bibliography dangling links are not ours to rewrite")
+
+    def test_dangling_page_links_are_rewritten_too(self):
+        text = ("| ⭐ | [The influence of variables](1992-influence.md) |\n"
+                "| ⭐ | [No url paper](1993-no-url.md) |\n- [Tensor rank](tensor-rank.md) stays")
+        new, n = researcher.relink_text(text, self.PAPERS, known={"tensor-rank"})
+        self.assertEqual(n, 2)
+        self.assertIn("[The influence of variables](https://example.org/p)", new)
+        self.assertIn("| ⭐ | No url paper |", new)
+        self.assertIn("[Tensor rank](tensor-rank.md)", new)
 
     def test_existing_page_keeps_its_link(self):
         text = "| [[1992-influence\\|The influence of variables]] |"

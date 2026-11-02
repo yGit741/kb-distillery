@@ -1,15 +1,15 @@
 """Course/series hubs during ingest: find a row, tick it on finalize, add rows on catalog.
 
-The hub page's `## Contents` table is the truth (src/kb_distillery/core/hubs.py); corpus.tsv `collection` must
+The hub page's `## Contents` table is the truth (src/kb_distillery/vault/hubs.py); corpus.tsv `collection` must
 agree with it, so every write here goes through both.
 """
 import os
 
-from .paths import ROOT, collection_of, set_collection
+from .paths import ROOT, collection_of, page_title, set_collection
 from kb_distillery.lint.lint import parse_frontmatter
-from kb_distillery.core.schema import CONTENTS_COLLECTIONS
-from kb_distillery.core import hubs
-from kb_distillery.core import wikiio
+from kb_distillery.vault.schema import CONTENTS_COLLECTIONS
+from kb_distillery.vault import hubs
+from kb_distillery.vault import wikiio
 
 
 def _hub_path(slug):
@@ -34,7 +34,7 @@ def _save(slug, text, rows):
 
 
 def _set_status(text, status):
-    return wikiio.set_key(text, "status", status)      # front matter only, never a body line
+    return wikiio.set_key(text, "maturity", status)      # front matter only, never a body line
 
 
 def resolve_row(slug, n):
@@ -43,7 +43,7 @@ def resolve_row(slug, n):
     try:
         row = rows[int(str(n).lstrip("#")) - 1]
     except (ValueError, IndexError):
-        raise ValueError(f"no row {n!r} in [[{slug}]] — rows run 1–{len(rows)}")
+        raise ValueError(f"no row {n!r} in {slug} — rows run 1–{len(rows)}")
     if row["status"] == hubs.SKIP:
         raise ValueError(f"row {n} ({row['title']}) is marked skip — set its Status to — first")
     return row
@@ -63,14 +63,14 @@ def hub_row_for_raw(raw_rel):
 
 
 def record_row(slug, raws, page_slug, status):
-    """Tick the row holding these files as digested by [[page_slug]]."""
+    """Tick the row holding these files as digested by page `page_slug`."""
     text, rows = load_hub(slug)
     i, _row = hubs.find_row(rows, raws[0])
     if i is None:
         rows = hubs.add_row(rows, page_slug, raws)
         set_collection(raws[0], [slug])
         i = len(rows) - 1
-    _save(slug, text, hubs.tick(rows, i, status, page_slug))
+    _save(slug, text, hubs.tick(rows, i, status, page_slug, page_title(page_slug)))
     return f"wiki/{slug}.md"
 
 

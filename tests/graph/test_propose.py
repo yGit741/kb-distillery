@@ -25,7 +25,7 @@ PAGES = {
 
 def write_page(root, slug, typ, depth, title, extra, body):
     fm = [f"type: {typ}", "layer: x"] + ([f"depth: {depth}"] if depth else []) + ([extra] if extra else [])
-    fm.append(f'summary: "Summary of {title}."')
+    fm.append(f'description: "Summary of {title}."')
     with open(os.path.join(root, "wiki", f"{slug}.md"), "w", encoding="utf-8") as f:
         f.write("---\n" + "\n".join(fm) + f"\n---\n\n# {title}\n\n{body}")
 
@@ -160,6 +160,7 @@ def test_prompt_lists_numbered_candidates_and_keeps_my_notes_out(vault):
     text = propose.build_prompt(pages["paper-a"], [pages["paper-b"], pages["idea-x"]], kinds, KC)
     assert "1. paper-b (paper) — Paper B: Summary of Paper B." in text and "2. idea-x (idea)" in text
     assert "SUBJECT: paper-a (paper) — Paper A" in text and "**Problem:** the A problem." in text
+    assert "Summary: Summary of Paper A." in text
     assert "SECRET-MINE" not in text and "never invent a slug" in text and "Return []" in text
     assert "- contradicts:" in text and "open-problem-in" not in text
     assert len(propose.excerpt("x" * 5000)) == propose.EXCERPT

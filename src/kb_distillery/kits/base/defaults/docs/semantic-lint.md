@@ -6,7 +6,7 @@
 
 **Structural lint** (`src/kb_distillery/lint/lint.py`): links, schema, inbox — unchanged.
 
-**Semantic lint** (`src/kb_distillery/core/coherence.py`): meaning-level checks, 0 LLM.
+**Semantic lint** (`src/kb_distillery/vault/coherence.py`): meaning-level checks, 0 LLM.
 
 | kind | meaning | action |
 |------|---------|--------|
@@ -15,10 +15,10 @@
 | `cosmetic` | graph hygiene | warn only |
 
 ```
-python3 -m kb_distillery.core.coherence status
-python3 -m kb_distillery.core.coherence fixed <id>    # internal resolved
-python3 -m kb_distillery.core.coherence noted <id>    # external recorded on paper
-python3 -m kb_distillery.core.coherence dismiss <id>
+python3 -m kb_distillery.vault.coherence status
+python3 -m kb_distillery.vault.coherence fixed <id>    # internal resolved
+python3 -m kb_distillery.vault.coherence noted <id>    # external recorded on paper
+python3 -m kb_distillery.vault.coherence dismiss <id>
 python3 -m kb_distillery.search.semfind topic theme-info-theory   # `theme` / `moc` kept as aliases
 ```
 

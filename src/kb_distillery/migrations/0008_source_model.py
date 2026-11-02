@@ -20,14 +20,14 @@ import os
 import sys
 
 PRODUCES = (1, 0)
-from kb_distillery.paths import vault_root
+from kb_distillery.config.paths import vault_root
 SPEC = os.path.join("meta", "migration", "source-model", "spec_map.json")
 OUT = os.path.join("meta", ".migrate", "source-model")
 
 
 def _meta(root):
     meta = os.path.join(root, "meta")
-    from kb_distillery.core import wikiio
+    from kb_distillery.vault import wikiio
     from kb_distillery.ops import invariants
     return wikiio, invariants
 

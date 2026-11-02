@@ -7,10 +7,10 @@ area: {{area}}
 raw: {{raw}}
 url: {{url}}
 book_pages: {{book_pages}}
-status: {{status}}
+maturity: {{maturity}}
 recommended_by: []
 related: []
-summary:
+description:
 ---
 
 # {{title}} ({{year}})
@@ -25,7 +25,7 @@ summary:
 
 ## Key concepts
 
-<!-- Book-wide concepts as [[concept]] links, filled in as parts are digested. -->
+<!-- Book-wide concepts as [Concept](concept.md) links, filled in as parts are digested. -->
 
 ## Threads
 

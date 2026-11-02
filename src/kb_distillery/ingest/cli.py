@@ -4,10 +4,13 @@ import json
 import os
 import sys
 
-from . import net, extract, map, draft, session, scrap, mail, catalog, easy_digest, resolve as resolve_mod, researcher
-from . import gdrive
-from . import book as book_mod
-from . import backfill as backfill_mod
+from kb_distillery.config import net
+from . import extract, map, draft, session, scrap, catalog, easy_digest, resolve as resolve_mod
+from kb_distillery.ingest.sources.mail import mail
+from kb_distillery.ingest.sources.researcher import researcher
+from kb_distillery.ingest.sources.gdrive import gdrive
+from kb_distillery.ingest.sources.books import book as book_mod
+from kb_distillery.ingest.sources.researcher import backfill as backfill_mod
 from .paths import INGEST_ROOT, ROOT, load_session, session_dir
 
 
@@ -338,7 +341,7 @@ def main(argv=None):
             return 1
         return 0
     if args.cmd == "video-digest":
-        from .youtube import digest
+        from kb_distillery.ingest.sources.youtube import digest
         try:
             digest.video_digest(args.target, tier=args.tier, model=args.model, backend=args.backend)
         except ValueError as e:
@@ -346,7 +349,7 @@ def main(argv=None):
             return 1
         return 0
     if args.cmd == "scrap-youtube":
-        from .youtube import bundle
+        from kb_distillery.ingest.sources.youtube import bundle
         try:
             bundle.scrap_youtube(args.url, force=args.force)
         except resolve_mod.DuplicateBlocked:
@@ -356,7 +359,7 @@ def main(argv=None):
             return 1
         return 0
     if args.cmd == "scrap-wordpress":
-        from . import wordpress
+        from kb_distillery.ingest.sources.web import wordpress
         try:
             wordpress.scrap_wordpress(args.site, prefix=args.prefix, since=args.since, limit=args.limit,
                                       images=not args.no_images, force=args.force)

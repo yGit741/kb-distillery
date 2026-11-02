@@ -28,7 +28,7 @@ The engine repository tracks one knowledge base, `examples/demo`, as a public sa
 | Area | Owner | Rule |
 |---|---|---|
 | `raw/` | you | Immutable. A write guard refuses writes, and a storage connector refuses to overwrite a key. |
-| `wiki/` | the agent, with you | Flat. Pages cross-link. The linter is the schema. |
+| `wiki/` | the agent, with you | Pages are flat; only generated section indexes sit in subfolders. Pages cross-link. The linter is the schema. |
 | `meta/` | the engine | Manifest (`corpus.tsv`), aliases, coherence warnings. |
 
 Inside a page, a section named `## My notes` is yours. No tool writes there.
@@ -39,20 +39,17 @@ A page is a markdown file with frontmatter. Its `type` comes from the kit. Its l
 
 The shape of the frontmatter and the section rules are in [page-model.md](../../src/kb_distillery/kits/base/defaults/docs/page-model.md).
 
-<!-- after OKF merge -->
 ## The Open Knowledge Format shape
 
-The target shape follows Open Knowledge Format v0.2:
+A knowledge base follows Open Knowledge Format v0.2 (schema 1.5):
 
 - `wiki/` is the bundle root.
-- `wiki/index.md` is generated. Its frontmatter holds only `okf_version`.
+- `wiki/index.md` is generated. Its frontmatter holds only `okf_version`. Each `wiki/<type>/index.md` is a generated section index.
 - `wiki/log.md` is the append-only activity log. It has one `## YYYY-MM-DD` heading per day, newest first.
-- Pages link with relative markdown links: `[Title](slug.md)`.
+- Pages link with relative markdown links: `[Title](slug.md)`. Wikilinks appear only in `## My notes`.
 - Frontmatter keys: `maturity`, `description`, `created`, `generated` (`by`, `at`) and `sources`. Each entry in `sources` is an object with a `resource`.
 
-`wiki/` stays flat, so a link is always a bare `slug.md`.
-
-On `main` today, pages use `status`, `summary` and `[[wikilinks]]`, and `index.md` and the log sit outside `wiki/`.
+Pages stay flat, so a link is always a bare `slug.md`. `pixi run okf-check` validates the shape and runs in the `ship` gates.
 
 ## History
 

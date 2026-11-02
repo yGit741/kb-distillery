@@ -15,7 +15,7 @@ import { HostContext, type ToolHost } from "./hostContext";
 import { useLayer } from "./layerStore";
 import "./tools/register";
 import { askAbout, useChatDock } from "./tools/chatDockStore";
-import "./kalai/register";
+import "./directions/register";
 import { extendView, makeView, parsePages, scopeIds, type GraphView } from "./pageSearch";
 import { buildNeighborMap } from "./graphData";
 import { GraphCanvas, type CanvasHandle } from "./GraphCanvas";
@@ -24,7 +24,7 @@ import { computeImportance } from "./lab/importance";
 import { HoverCard } from "./lab/HoverCard";
 import { LabRail } from "./lab/LabRail";
 import { initialView } from "./defaultView";
-import { storyById } from "./lab/views";
+import { storyById, storyOffered } from "./lab/views";
 import { Legend } from "./Legend";
 import { predicateFn } from "./publicPredicate";
 import { ViewsBar } from "./views/ViewsBar";
@@ -291,7 +291,7 @@ function Loaded({
         });
       }
       useKb.getState().clearSelection();
-      if (st.tool) {
+      if (st.tool && storyOffered(st)) {
         const ex = useExperiments.getState();
         if (st.tool.flag && !ex.on.has(st.tool.flag)) ex.toggle(st.tool.flag);
         useGraphUi.setState({ flyout: st.tool.id, railOpen: false });

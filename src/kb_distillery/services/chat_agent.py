@@ -2,7 +2,7 @@
 
 Instead of pasting six guessed pages into one Messages call (chat_data.stream_claude), the agent
 runs the `query-knowledge` workflow itself inside the real Claude Code harness: `src/kb_distillery/search/query.py
-candidates`, Grep, Read `wiki/<slug>.md`, then an answer that cites `[[slug]]`. It bills the same
+candidates`, Grep, Read `wiki/<slug>.md`, then an answer that cites `[Title](slug.md)`. It bills the same
 Console API key (ANTHROPIC_API_KEY or ~/.config/kb-distillery/anthropic_key).
 
 The agent is READ-ONLY. `tool_policy` is the single source of truth and is enforced twice: as a
@@ -36,7 +36,8 @@ import threading
 import time
 from dataclasses import dataclass, field
 
-from kb_distillery.paths import vault_root
+from kb_distillery.vault import links
+from kb_distillery.config.paths import vault_root
 META_DIR = os.path.join(vault_root(), "meta")
 ROOT = vault_root()
 
@@ -45,8 +46,9 @@ from kb_distillery.services import chat as chat_data
 
 WIKI = os.path.join(ROOT, "wiki")
 RAW = os.path.join(ROOT, "raw")
-from kb_distillery.paths import THINK_PATH as THINK      # the shared think space, outside the vault
-INDEX = os.path.join(ROOT, "index.md")
+from kb_distillery.config.paths import THINK_PATH as THINK      # the shared think space, outside the vault
+from kb_distillery.vault.schema import INDEX_REL, is_index_path, is_page_file
+INDEX = os.path.join(ROOT, INDEX_REL)
 READ_ROOTS = (WIKI, RAW, THINK)
 RAW_TEXT_EXT = {".md", ".txt", ".html", ".eml", ".json", ".tsv", ".csv"}
 
@@ -73,15 +75,15 @@ HISTORY_CHARS = 800
 AGENT_WORKFLOW = """\
 How to research a question in this knowledge base (always applies):
 - You are a read-only research agent inside the user's thesis wiki (the current directory).
-  `wiki/` holds flat markdown notes, one per slug; `index.md` lists every page with its one-line
-  summary; `raw/` holds the sources; `think/` is the user's own notebook.
+  `wiki/` holds flat markdown notes, one per slug; `wiki/index.md` is a tiny root listing the page types, and
+  `wiki/<type>/index.md` lists that type's pages with their one-line summaries; `raw/` holds the sources; `think/` is the user's own notebook.
 - Locate first, with no guessing: run `python3 -m kb_distillery.search.query candidates "<keywords>"` (and
-  `python3 -m kb_distillery.search.query mocs` for broad questions), look at the matching section of `index.md`,
+  `python3 -m kb_distillery.search.query mocs` for broad questions), read `wiki/index.md`, then only the section index you need,
   then Grep `wiki/` for the exact terms. Never say the vault has nothing on a topic before both the
   index and candidates were checked.
 - Read 3–8 pages with Read on `wiki/<slug>.md`. Prefer `theme-*` and `q-*` pages for thesis-level
   questions and `paper-`, `part-`, `lecture-`, `article-`, `mail-`, `chat-` pages for citations.
-  Follow `related:` and `[[links]]` when they matter. An unknown slug may be an alias:
+  Follow `related:` and the page links (`[Title](slug.md)`) when they matter. An unknown slug may be an alias:
   `python3 -m kb_distillery.ingest resolve <slug>`.
 - Structural questions (what links to X, which ideas share sources, paths between pages) go to the
   graph: `python3 -m kb_distillery.search.cypher run 'MATCH (s:Source)-[:MENTIONS]->(i:Idea) WHERE i.slug = "x"
@@ -89,7 +91,7 @@ How to research a question in this knowledge base (always applies):
   query: `python3 -m kb_distillery.search.cypher list` shows which this knowledge base has (always `gaps`,
   `shortest-path`, `neighbourhood`), then `… named <name> --param key=value`. A rejected query says what
   to use instead.
-- Prefer the wiki over your own knowledge. Cite a page as [[slug]] with its exact slug whenever you
+- Prefer the wiki over your own knowledge. Cite a page as [Title](slug.md) with its exact slug whenever you
   draw on it. Note gaps: `to-read` papers, queued raw files, open `q-*` questions.
 - If the wiki does not cover something, say so plainly before adding anything from general
   knowledge, and mark that part as not from the KB.
@@ -209,7 +211,7 @@ def build_agent_system(system_text, scope=None):
     """User-editable template + KB theme map + the research workflow nobody can remove
     (+ the Scope block when `scope` — a scopes.scope_context dict — is set)."""
     index = query.parse_index()
-    themes = [f"- [[{s}]] — {m['summary']}" for s, m in sorted(index.items()) if s.startswith("theme-")]
+    themes = [f"- {links.link(s, m.get('title') or s)} — {m['summary']}" for s, m in sorted(index.items()) if s.startswith("theme-")]
     kb_map = "Research themes in this KB:\n" + "\n".join(themes) if themes else ""
     parts = [(system_text or "").strip(), kb_map, AGENT_WORKFLOW]
     if scope:
@@ -236,23 +238,28 @@ def _real(p):
         return None
     if not os.path.isabs(p):
         q = p.replace("\\", "/")
-        # `think/<note>`: the shared think space beside the vault, not a folder of it (kb_distillery.paths.THINK_PATH)
+        # `think/<note>`: the shared think space beside the vault, not a folder of it (kb_distillery.config.paths.THINK_PATH)
         p = os.path.join(THINK, q[len("think/"):]) if q == "think" or q.startswith("think/") else os.path.join(ROOT, p)
     return os.path.realpath(p)
 
 
-READ_DENY = "read-only KB agent: only wiki/, index.md, think/ and text files under raw/ can be read"
+READ_DENY = "read-only KB agent: only wiki/ (with its index.md files), think/ and text files under raw/ can be read"
 BASH_DENY = ("read-only KB agent: only `python3 -m kb_distillery.search.query candidates|mocs …`, "
              "`python3 -m kb_distillery.search.semfind …`, `python3 -m kb_distillery.search.explore_raw …` / "
              "`python3 -m kb_distillery.search.explore_raw find|read|check|recommend …` and "
              "`python3 -m kb_distillery.ingest resolve …` may run")
 
 
+def _is_index_file(real):
+    """The root wiki/index.md or a generated section index (wiki/<type>/index.md)."""
+    return real == os.path.realpath(INDEX) or is_index_path(os.path.relpath(real, os.path.realpath(ROOT)).replace(os.sep, "/"))
+
+
 def _readable_in_scope(real, scope, allow_dirs=False):
-    """_readable, narrowed to a scope: index.md, the scope's pages, its own raw text files; no think/."""
+    """_readable, narrowed to a scope: the wiki indexes, the scope's pages, its own raw text files; no think/."""
     if real is None:
         return False
-    if real == os.path.realpath(INDEX):
+    if _is_index_file(real):
         return True
     if allow_dirs and os.path.isdir(real):
         return _under(real, WIKI) or _under(real, RAW)
@@ -296,7 +303,7 @@ BASH_DENY = BASH_DENY + ("; also `python3 -m kb_distillery.search.cypher run '<q
 
 
 SCOPE_READ_DENY = ("scoped chat: only the scope's pages (wiki/<slug>.md listed in the system prompt), "
-                   "index.md and the scope's own text files under raw/ can be read; think/ is closed")
+                   "the wiki indexes (wiki/index.md and wiki/<type>/index.md) and the scope's own text files under raw/ can be read; think/ is closed")
 SCOPE_BASH_DENY = ("scoped chat: `candidates` and `find` need --scope <this scope>, `explore_raw read|check|"
                    "recommend` only take this scope's files, and `mocs` / `semfind` are not available")
 
@@ -446,7 +453,7 @@ def build_options(model, system, key, session_id=None, cli_path=None, ca_path=No
 
 def slug_from_read(tool_input):
     real = _real((tool_input or {}).get("file_path"))
-    if real and _under(real, WIKI) and real.endswith(".md"):
+    if real and _under(real, WIKI) and is_page_file(os.path.basename(real)):
         return os.path.basename(real)[:-3]
     return None
 
@@ -479,8 +486,7 @@ def tool_summary(name, tool_input):
 
 def harvest_citations(text, index):
     out = []
-    for slug in re.findall(r"\[\[([^\]|#]+)(?:\|[^\]]*)?\]\]", text or ""):
-        slug = slug.strip()
+    for slug in links.targets(text):
         if slug in index and slug not in out:
             out.append(slug)
     return out

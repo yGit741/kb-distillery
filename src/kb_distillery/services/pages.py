@@ -6,15 +6,16 @@ import sys
 from collections import deque
 from datetime import datetime, timezone
 
-from kb_distillery.paths import vault_root
+from kb_distillery.config.paths import vault_root
 META_DIR = os.path.join(vault_root(), "meta")
 
-from kb_distillery.core.graph import outbound_links
+from kb_distillery.vault.graph import outbound_links
 from kb_distillery.search.semfind import load_pages
-from kb_distillery.services.graph import _areas, _preview, _title, _year
-from kb_distillery.core.summary import unquote
+from kb_distillery.graph.snapshot import _areas, _preview, _title, _year
+from kb_distillery.vault.summary import unquote
 from kb_distillery.search import qmd_client
-from kb_distillery.core.links import WIKILINK
+from kb_distillery.vault import frontmatter as page_frontmatter
+from kb_distillery.vault import links as page_links
 from kb_distillery.storage import raw
 
 ROOT = vault_root()
@@ -43,7 +44,11 @@ _TITLES = {}
 
 def _plain(s, titles=None):
     titles = _TITLES if titles is None else titles
-    s = WIKILINK.sub(lambda m: (m.group(2) or titles.get(m.group(1).strip()) or m.group(1)).strip(), s)
+    def label(m):                                     # text equal to the slug = no text chosen: show the page title
+        text, slug, _a = page_links.link_parts(m)
+        return titles.get(slug) or text if text == slug else text
+    s = page_links.PAGE_LINK.sub(label, s)
+    s = page_links.WIKILINK.sub(lambda m: (m.group(2) or titles.get(m.group(1).strip()) or m.group(1)).strip(), s)
     s = re.sub(r"\[([^\]]+)\]\([^)]+\)", r"\1", s)
     s = re.sub(r"[*_`>#]+", "", s)
     return re.sub(r"\s+", " ", s).strip()
@@ -64,7 +69,7 @@ def _clip(s, centre, width=220):
 
 
 def _words(text):
-    return len(_body(text).split())
+    return len(page_links.plain(_body(text)).split())      # the words a reader sees: a link counts as its text
 
 
 def _mtime(rel, root=None):
@@ -82,17 +87,25 @@ def _as_list(v):
     return [str(x) for x in v if x]
 
 
+def _link_span(line, target):
+    """(start, end) of the first link in `line` to page `target` (a page link or a wikilink), else None."""
+    for m in re.finditer(r"\[\[([^\]|#\\]+)[^\]]*\]\]|(?<!!)\[(?:[^\[\]\\\n]|\\.)*\]\(([^()<>\s/:#]+?)\.md(?:#[^()\s]*)?\)", line):
+        if (m.group(1) or m.group(2)).strip() == target:
+            return m.span()
+    return None
+
+
 def _link_context(text, fm, target, titles=None):
     """Sentence-ish snippet of `text` showing why it links to `target`."""
     titles = _TITLES if titles is None else titles
-    needle = f"[[{target}"
     heading = ""
     for line in _body(text).splitlines():
         if line.startswith("#"):
             heading = line.lstrip("#").strip()
-        pos = line.find(needle)
-        if pos < 0:
+        span = _link_span(line, target)
+        if span is None:
             continue
+        pos = span[0]
         where = f" under “{heading}”" if heading else ""
         if line.lstrip().startswith("|"):
             return f"listed in a table{where}"
@@ -100,10 +113,10 @@ def _link_context(text, fm, target, titles=None):
         bare = re.sub(r"^[-*\d.\s]+", "", plain)
         if len(bare) <= len(titles.get(target, target)) + 12:
             return f"listed{where}" if where else "listed"
-        label = _plain(line[pos:line.find("]]", pos) + 2], titles)
+        label = _plain(line[span[0]:span[1]], titles)
         centre = plain.find(label) if label else 0
         return _clip(plain, max(centre, 0))
-    if target in _as_list(fm.get("related")) or target in _as_list(fm.get("recommended_by")):
+    if target in page_links.refs(fm.get("related")) or target in _as_list(fm.get("recommended_by")):
         return "listed in frontmatter"
     return ""
 
@@ -138,7 +151,7 @@ def _card(slug, pages, out, inn, root=None):
         "id": slug,
         "title": _title(text, slug),
         "type": fm.get("type", "unknown"),
-        "status": fm.get("status", ""),
+        "maturity": fm.get("maturity", ""),
         "depth": fm.get("depth", ""),
         "areas": _areas(fm),
         "year": _year(slug, fm),
@@ -209,10 +222,10 @@ def build_page(slug, view=None):
         for s in sorted(inn[slug], key=lambda s: (-len(inn[s]), s))
     ]
     fm_clean = {}
-    for k, v in fm.items():
+    for k, v in page_frontmatter.effective(fm, text).items():
         if v in (None, "", []):
             continue
-        fm_clean[k] = v if isinstance(v, list) else str(v)
+        fm_clean[k] = page_frontmatter.display(k, v)
     return {
         "card": _card(slug, pages, out, inn, root),
         "kb": view.id if view else _active_id(),
@@ -228,7 +241,7 @@ def build_page(slug, view=None):
 
 
 def _active_id():
-    from kb_distillery import paths
+    from kb_distillery.config import paths
     return paths.KB.id if paths.KB else ""
 
 
@@ -278,15 +291,9 @@ def search(query, limit=40):
 
 def _flag_on(name):
     """Effective runtime value (registry + this server's override); a test's forced state wins."""
-    from kb_distillery.flags import registry
+    from kb_distillery.config.flags import runtime
     from kb_distillery.services import flags
-    forced = registry.forced(name)
-    if forced is not None:
-        return forced
-    try:
-        return next(f["value"] for f in flags.list_flags()["flags"] if f["name"] == name)
-    except Exception:                                    # unreadable registry: the safe side is off
-        return False
+    return runtime.effective(name, overrides_path=flags.OVERRIDES_PATH)
 
 
 def _collection(fm):
@@ -315,7 +322,7 @@ def related(query, pages, exclude=()):
             continue
         per[coll] = per.get(coll, 0) + 1
         out.append({"id": slug, "title": _title(text, slug), "type": fm.get("type", "unknown"),
-                    "depth": fm.get("depth", ""), "snippet": unquote(fm.get("summary")) or _preview(text, 200),
+                    "depth": fm.get("depth", ""), "snippet": unquote(fm.get("description")) or _preview(text, 200),
                     "score": round(score * 100)})
         if len(out) >= RELATED_MAX:
             break

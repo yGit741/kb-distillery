@@ -6,7 +6,7 @@ Every writer (ingest, catalog, distill, researcher, free-form wiki edits) ends i
 Human edits under think/ are committed first, on their own, as `kb(think)`.
 
 Undo and restore only ever rewrite the restorable set (schema.RESTORABLE_PATHS):
-never raw/ (immutable), think/ (human-owned), meta/log.md (append-only) or the
+never raw/ (immutable), think/ (human-owned), wiki/log.md (append-only) or the
 generated files (lint regenerates them).
 """
 import contextlib
@@ -19,17 +19,18 @@ import secrets
 import subprocess
 import sys
 
-from kb_distillery.paths import THINK_PATH, vault_root
+from kb_distillery.config.paths import THINK_PATH, vault_root
 META_DIR = os.path.join(vault_root(), "meta")
 ROOT = vault_root()
 
 from kb_distillery.git import commit_policy as cp
 from kb_distillery.ops.daily_sync import changed_paths, has_open_sessions, run_git
-from kb_distillery.core import log as kblog
-from kb_distillery.core.schema import OPS_DIR, RESTORABLE_PATHS, lane_of, strip_prefix
+from kb_distillery.vault import log as kblog
+from kb_distillery.vault.schema import (INDEX_REL, LOG_REL, OPS_DIR, RESTORABLE_PATHS, RESTORE_EXCLUDED, RESTORE_EXCLUDED_GLOBS, is_index_path, is_page_file,
+                                       lane_of, strip_prefix)
 
-GENERATED_KNOWLEDGE = ("index.md", "meta/corpus.tsv", "meta/coherence-warnings.tsv")
-LOG_PATH = "meta/log.md"
+GENERATED_KNOWLEDGE = (INDEX_REL, "meta/corpus.tsv", "meta/coherence-warnings.tsv")
+LOG_PATH = LOG_REL
 MAX_SUMMARY = cp.MAX_SUMMARY
 # Human-owned paths committed on their own as kb(think) before any agent op (and nightly).
 HUMAN_PREFIXES = ("think/",)
@@ -122,18 +123,23 @@ def short_title(slug):
     return strip_prefix(slug).replace("-", " ") if "-" in slug else slug
 
 
+def _is_wiki_page(path):
+    """A changed path that is a wiki page (not wiki/index.md or wiki/log.md, the reserved files)."""
+    return path.startswith("wiki/") and "/" not in path[5:] and is_page_file(path[5:])
+
+
 def _target_of(target, paths):
     """A readable KB-Target: never a session id or sha (fall back to the first wiki page touched)."""
     if target and not HASH_LIKE.match(target):
         return target
     for p in paths:
-        if p.startswith("wiki/") and p.endswith(".md"):
+        if _is_wiki_page(p):
             return os.path.basename(p)[:-3]
     return target or "kb"
 
 
 def _pages(paths):
-    return sorted(os.path.basename(p)[:-3] for p in paths if p.startswith("wiki/") and p.endswith(".md"))
+    return sorted(os.path.basename(p)[:-3] for p in paths if _is_wiki_page(p))
 
 
 def _tier(root, op, target, pages=()):
@@ -153,12 +159,31 @@ def _tier(root, op, target, pages=()):
     return None
 
 
-def run_lint(root=ROOT):
+def run_lint(root=ROOT, okf_pages=None):
+    """Lint, then okf-check on `okf_pages` only (relative paths of the pages this commit changes). None = no OKF check:
+    undo and restore return to an earlier state and must work from a bad one."""
     proc = subprocess.run([sys.executable, "-m", "kb_distillery.lint.lint"], cwd=root, env=dict(os.environ, KB_ROOT=str(root)),
                           capture_output=True, text=True)
     if proc.returncode != 0:
         tail = "\n".join((proc.stdout or "").splitlines()[-8:])
         raise OpsError(f"lint failed — nothing committed\n{tail}")
+    if okf_pages is not None:
+        okf_gate(root, okf_pages)
+
+
+def okf_gate(root, okf_pages):
+    """okf-check the pages a commit changes (relative paths; non-pages ignored). Raises OpsError naming file and rule."""
+    pages = sorted(p for p in okf_pages if p.startswith("wiki/") and p.endswith(".md")
+                   and not is_index_path(p) and p != LOG_REL and os.path.isfile(os.path.join(root, p)))
+    if not pages:
+        return
+    # the OKF gate: no bypass. A finding names the file and the rule; fix that page, then commit again
+    okf = subprocess.run([sys.executable, "-m", "kb_distillery.lint.okf_check", *(f"--only={p}" for p in pages)], cwd=root,
+                         env=dict(os.environ, KB_ROOT=str(root)), capture_output=True, text=True)
+    if okf.returncode != 0:
+        lines = (okf.stdout or okf.stderr or "").splitlines()
+        shown = "\n".join(lines[:25] + ([f"… and {len(lines) - 26} more"] if len(lines) > 26 else []) + lines[-1:])
+        raise OpsError(f"okf-check failed — nothing committed (fix the pages named below; there is no bypass)\n{shown}")
 
 
 # ---------- knowledge state snapshots ----------
@@ -242,7 +267,7 @@ def chore(scope, summary, paths=None, root=ROOT, push=True):
     `chore(<scope>): <summary>` on its main. Unversioned, like any chore there. Only tooling paths are taken
     (`paths` narrows the choice, and must all be tooling); knowledge edits in the same tree are never touched.
     Returns the new sha, or None when no tooling file changed."""
-    from kb_distillery.core.schema import is_kb_tooling
+    from kb_distillery.vault.schema import is_kb_tooling
     from kb_distillery.git.commit_policy import _is_kb_repo
     if not _is_kb_repo(root):
         raise OpsError("ops chore is for a knowledge base that is its own git repo (kb.toml at its top)")
@@ -375,19 +400,25 @@ def commit_op(op, target, summary=None, paths=None, lint=True, trailers=None, ro
     with ctx:
         _require_main(root)
         sync_human(root)
-        if lint:
-            run_lint(root)
         owned = _session_owned(root)
         dirty = set(changed_paths(root)["knowledge"])
         chosen = [p for p in (paths if paths is not None else dirty)
                   if lane_of(p) == "knowledge" and not is_human_path(p) and p not in owned]
+        if lint:
+            run_lint(root, okf_pages=chosen)
+            dirty = set(changed_paths(root)["knowledge"])      # lint regenerates files
+            chosen = [p for p in (paths if paths is not None else dirty)
+                      if lane_of(p) == "knowledge" and not is_human_path(p) and p not in owned]
+        elif op not in ("undo", "restore"):
+            okf_gate(root, chosen)          # the caller linted already; the OKF check is still ours
         if not chosen:
             return None
         version = cp.next_version(root)
         target = _target_of(target, chosen)
         _log_step(root, op, target, summary, dirty)
         dirty = set(changed_paths(root)["knowledge"])
-        chosen += [p for p in (*GENERATED_KNOWLEDGE, LOG_PATH) if p in dirty and p not in chosen]
+        chosen += [p for p in (*GENERATED_KNOWLEDGE, *sorted(d for d in dirty if is_index_path(d)), LOG_PATH)
+                   if p in dirty and p not in chosen]
         trailers = dict(trailers or {})
         pages = _pages(chosen)
         tier = _tier(root, op, target, pages)
@@ -411,8 +442,8 @@ def share_autodeploy(reason, root=ROOT, foreground=False):
     With the Cloudflare publisher that nudges the deploy owner (touch `.cache/share/wake`); `KB_SHARE_DIRECT=1` (the user
     only) keeps the old path: `share deploy-main` from here, detached by default, in the foreground for the nightly sync."""
     try:
-        from kb_distillery import publish
-        publish.current(root=root).request_publish(reason, root, foreground)
+        from kb_distillery import hosting
+        hosting.current(root=root).request_publish(reason, root, foreground)
     except Exception as e:  # noqa: BLE001 — a deploy hiccup must never fail a knowledge op
         print(f"note: share autodeploy not triggered — {e}")
 
@@ -489,7 +520,7 @@ def abort(root=ROOT):
 # ---------- undo / restore ----------
 
 def _restorable(path):
-    return any(path == p.rstrip("/") or (p.endswith("/") and path.startswith(p)) for p in RESTORABLE_PATHS)
+    return path not in RESTORE_EXCLUDED and not is_index_path(path) and any(path == p.rstrip("/") or (p.endswith("/") and path.startswith(p)) for p in RESTORABLE_PATHS)
 
 
 def _first_parent(root, ref="main"):
@@ -571,7 +602,9 @@ def restore(tag, root=ROOT):
         dirty = [p for p in changed_paths(root)["knowledge"] if _restorable(p)]
         if dirty:
             raise OpsError(f"commit or discard edits under wiki/ first: {dirty[:5]}")
-        diff = _git(root, "diff", "--name-only", "--no-renames", tag, "HEAD", "--", *RESTORABLE_PATHS).stdout.split("\n")
+        diff = _git(root, "diff", "--name-only", "--no-renames", tag, "HEAD", "--", *RESTORABLE_PATHS,
+                 *(f":(exclude){p}" for p in RESTORE_EXCLUDED),
+                 *(f":(exclude,glob){p}" for p in RESTORE_EXCLUDED_GLOBS)).stdout.split("\n")
         files = [f for f in diff if f]
         if not files:
             print(f"wiki already matches {tag}")
@@ -853,7 +886,7 @@ def status(root=ROOT):
     hooks = _git(root, "config", "core.hooksPath").stdout.strip()
     unpushed = _git(root, "rev-list", "--count", "origin/main..main").stdout.strip() or "?"
     snaps = snapshots(root)
-    from kb_distillery.core.schema import GIT_POLICY_MODE, OPS_STRICT, SCHEMA_VERSION
+    from kb_distillery.vault.schema import GIT_POLICY_MODE, OPS_STRICT, SCHEMA_VERSION
     print(f"branch: {current_branch(root) or 'detached'}   knowledge version: "
           f"{'kb-' + cp.fmt_version(last) if last else 'none yet'}   next: kb-{cp.fmt_version(cp.next_version(root, 'main'))}")
     print(f"schema: {SCHEMA_VERSION[0]}.{SCHEMA_VERSION[1]}   pending migrations: {len(pending_migrations(root))}")

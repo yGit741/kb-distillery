@@ -29,7 +29,8 @@ REPO = Path(__file__).resolve().parents[2]
 LINK = re.compile(r"\[\[([^\]|#\\]+)")
 CODE = re.compile(r"^\s*(?:>\s*)*(```|~~~).*?^\s*(?:>\s*)*\1[^\n]*$|`[^`\n]+`", re.M | re.S)
 RAW_BINARY_EXTS = {".pdf", ".png", ".jpg", ".jpeg", ".gif", ".webp", ".pptx", ".ppt", ".key"}
-ROOT_MD = {"index", "AGENTS", "CLAUDE", "README"}
+ROOT_MD = {"AGENTS", "CLAUDE", "README"}
+RESERVED = {"index.md", "log.md"}
 LINT_LINE = re.compile(r"(\d+) pages · (\d+) raw files · (\d+) queued · (\d+) errors · (\d+) warnings")
 
 # direction of "worse" per count: "down" = a decrease is a regression, "up" = an increase is
@@ -72,6 +73,8 @@ def parse_frontmatter(text):
 def load_pages(root):
     pages = {}
     for p in sorted((Path(root) / "wiki").glob("*.md")):
+        if p.name in RESERVED:          # OKF reserved files of the bundle root: not pages
+            continue
         text = p.read_text(encoding="utf-8")
         fm, body = parse_frontmatter(text)
         pages[p.stem] = (fm, body, text)

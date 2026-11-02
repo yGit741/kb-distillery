@@ -1,6 +1,6 @@
 # HTTP API
 
-The app talks to a typed HTTP API. It is served by `python -m kb_distillery.api --port 8765`, which `distill launch` starts.
+The app talks to a typed HTTP API. It is served by `python -m kb_distillery.server --port 8765`, which `distill launch` starts.
 
 | What | Where |
 |---|---|
@@ -16,14 +16,14 @@ The API follows the knowledge base the server was started with.
 ## Get the schema
 
 ```bash
-pixi run python -c "from kb_distillery.api.app import create_app; import json; print(json.dumps(create_app(legacy=False).openapi(), indent=2))" > openapi.json
+pixi run python -c "from kb_distillery.server.app import create_app; import json; print(json.dumps(create_app().openapi(), indent=2))" > openapi.json
 ```
 
 `pixi run api-schema` writes the TypeScript types for the app from the same schema. `pixi run api-schema-check` fails when the committed file is stale.
 
 ## Endpoints
 
-This table is generated from the schema of this branch.
+This table is generated from the schema on `main`.
 
 | Method and path | Does |
 |---|---|
@@ -70,12 +70,11 @@ This table is generated from the schema of this branch.
 | `GET /api/chat/status` | Backend, auth, keys (hints only) and spend. |
 | `GET /api/chat/settings`, `POST /api/chat/settings` | Read and update chat settings. |
 | `GET /api/chat/prompts` | Prompt presets. |
-| `GET /api/chat/keys`, `POST /api/chat/keys`, `DELETE /api/chat/keys/{name}` | List, store and remove keys. Only hints are returned. |
+| `GET /api/chat/keys`, `POST /api/chat/keys`, `DELETE /api/chat/keys/{name}` | List, store and remove keys. Only hints are returned. `POST /api/chat/keys/remove` is the older form of the delete. |
 | `POST /api/chat/saved` | Save a chat to `raw/inbox/`. |
-| `GET /api/static/{name}` | A static file of the older dashboard. |
 
 The model names in the schema use the data model's words: `layer` is `source`, `collection` or `concept`, and `depth` is `listed`, `easy`, `full` or `deep`.
 
 ## Add an endpoint
 
-Add a model in `src/kb_distillery/api/models/`, a router in `src/kb_distillery/api/routers/`, a test in `tests/api/`, and run `pixi run api-schema`. The app includes every router module automatically. See `src/kb_distillery/api/README.md`.
+Add a model in `src/kb_distillery/server/models/`, a router in `src/kb_distillery/server/routers/`, a test in `tests/server/`, and run `pixi run api-schema`. The app includes every router module automatically. See `src/kb_distillery/server/README.md`.

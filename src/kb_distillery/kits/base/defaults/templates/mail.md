@@ -2,17 +2,16 @@
 type: mail
 layer: source
 area: []
-status: digested
+maturity: digested
 depth: easy
 raw: {{raw}}
-date:
 aliases: []
-summary:
+description:
 ---
 
 # {{title}}
 
-**With:** [[]]
+**With:** <!-- [Name](person-slug.md) -->
 
 **What it was about:**
 
@@ -26,4 +25,4 @@ summary:
 ## Connections
 
 ## Links out
-- Concepts: [[]]
+- Concepts: <!-- [Title](slug.md) -->

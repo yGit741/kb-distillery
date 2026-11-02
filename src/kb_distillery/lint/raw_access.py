@@ -26,7 +26,7 @@ CONSTANT = re.compile(r"\bRAW_PATH\b|\bRAW_DIR\b")
 RAW_LITERAL = re.compile(r"""["']raw/|["']raw["']""")
 FS_CALL = re.compile(r"""\bopen\(|os\.(path\.(join|isfile|isdir|exists|getsize|getmtime|relpath|realpath)|listdir|walk|scandir|stat|makedirs|remove|rename|replace)|\bPath\(|shutil\.|glob\.|\.read_text|\.read_bytes|\.write_text|\.write_bytes|subprocess|\bsha1\(""")
 EXEMPT_DIRS = ("storage/", "migrations/")
-EXEMPT_FILES = frozenset({"paths.py", "core/schema.py", "lint/raw_access.py"})
+EXEMPT_FILES = frozenset({"config/paths.py", "config/layout.py", "vault/schema.py", "lint/raw_access.py"})
 
 
 def src_root() -> str:

@@ -7,10 +7,10 @@ import subprocess
 import sys
 from urllib.parse import urlparse
 
-from kb_distillery.paths import vault_root
+from kb_distillery.config.paths import vault_root
 META_DIR = os.path.join(vault_root(), "meta")
 
-from kb_distillery.services import raw_layer
+from kb_distillery.graph import raw_layer
 from kb_distillery.lint.lint import collections_of, read_manifest
 from kb_distillery.search.semfind import load_pages
 
@@ -23,7 +23,7 @@ CITATIONS_CACHE = os.path.join(CACHE_DIR, "citations.json")
 PREVIEW_CHARS = 4000
 ACTIONS = ("easy-digest",)
 ACTION_TIMEOUT = 300
-from kb_distillery.core.schema import COLLECTION_TYPES
+from kb_distillery.vault.schema import COLLECTION_TYPES
 
 COMMON = [("path", "File"), ("disposition", "Disposition"), ("digestion", "Digest"), ("slug", "Page"),
           ("collection", "Collection"), ("year", "Year"), ("sha1", "sha1")]

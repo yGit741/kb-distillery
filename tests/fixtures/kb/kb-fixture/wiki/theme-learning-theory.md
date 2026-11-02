@@ -1,7 +1,8 @@
 ---
 type: topic
 layer: concept
-status: seed
+title: "Topic: learning theory"
+maturity: seed
 aliases: []
 related: []
 ---
@@ -14,8 +15,8 @@ Fixture topic for the backend test suite.
 
 ## Key concepts
 
-- [[generalization]]
-- [[pac-learning]]
+- [Generalization](generalization.md)
+- [PAC learning](pac-learning.md)
 
 ## Threads
 

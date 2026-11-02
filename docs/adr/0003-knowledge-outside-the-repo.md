@@ -28,4 +28,4 @@ The engine repository holds code, kits, docs, tests and one sample. Each knowled
 
 ## Where
 
-`src/kb_distillery/kbconfig.py`, `src/kb_distillery/lint/privacy.py`, `examples/demo/`, [Knowledge base](../concepts/knowledge-base.md).
+`src/kb_distillery/config/kb.py`, `src/kb_distillery/lint/privacy.py`, `examples/demo/`, [Knowledge base](../concepts/knowledge-base.md).

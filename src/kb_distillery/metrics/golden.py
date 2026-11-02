@@ -30,7 +30,7 @@ import uuid
 from kb_distillery.git.ship import primary_checkout
 from kb_distillery.metrics import judge, store
 from kb_distillery.metrics.sessions import parse_session, PROJECTS_DIR
-from kb_distillery.paths import vault_root
+from kb_distillery.config.paths import vault_root
 
 TASKS_FILE = os.path.join("meta", "ops", "golden.toml")
 RUNS_DIR = os.path.expanduser("~/local-workspace/agent-metrics/golden")
@@ -173,7 +173,7 @@ def run_checks(task, repo, env):
 
 def diff_of(repo, ref):
     """Everything the agent changed: commits since `ref` plus the working tree, raw/ binaries excluded."""
-    skip = [":!raw", ":!index.md", ":!meta/corpus.tsv", *(f":!{p}" for p in LINKED)]
+    skip = [":!raw", ":!index.md", ":(exclude,glob)wiki/**/index.md", ":!meta/corpus.tsv", *(f":!{p}" for p in LINKED)]
     _git(["add", "-A", "-N", "--", ".", *skip], cwd=repo, check=False)
     return _git(["diff", ref, "--", ".", *skip], cwd=repo, check=False).stdout
 

@@ -17,7 +17,7 @@ description: Save URLs or files to raw/inbox/ with zero LLM tokens. Use for "scr
 ## Do NOT
 
 - Write to `raw/` via agent tools — run the CLI (guard blocks direct writes)
-- **Scrap without `resolve` first** — always run `distill ingest resolve <query>`; if FOUND, cite `[[slug]]` instead
+- **Scrap without `resolve` first** — always run `distill ingest resolve <query>`; if FOUND, cite `[Title](slug.md)` instead
 - Catalog or digest — use `ingest-to-catalog` or digest skills next
 - Trigger any digest tier from here
 

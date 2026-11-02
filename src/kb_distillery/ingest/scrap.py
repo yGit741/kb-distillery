@@ -9,7 +9,7 @@ from urllib.parse import urlparse
 
 from .paths import ROOT
 from . import resolve as resolve_mod
-from . import net
+from kb_distillery.config import net
 
 INBOX = os.path.join(ROOT, "raw", "inbox")
 

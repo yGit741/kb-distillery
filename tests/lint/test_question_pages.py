@@ -6,9 +6,9 @@ import tempfile
 import unittest
 
 from kb_distillery.lint import lint
-from kb_distillery.paths import MIGRATIONS_CODE_PATH
+from kb_distillery.config.paths import MIGRATIONS_CODE_PATH
 
-FM = "---\ntype: question\nlayer: concept\nstatus: open\n---\n"
+FM = "---\ntype: question\nlayer: concept\nmaturity: open\n---\n"
 SHORT = "Is the jump a sharp threshold?"
 MID = "Is every abrupt jump in task success a sharp threshold of a monotone event?"
 LONG = "Is every abrupt jump in task success, as a scale parameter grows, a sharp threshold of a monotone event?"
@@ -63,7 +63,7 @@ class QuestionPageLint(unittest.TestCase):
         self.assertIn("## Question", errs[0])
 
     def test_rules_apply_to_questions_only(self):
-        errs, warns = self.run_lint("x", f"---\ntype: idea\nlayer: concept\nstatus: seed\n---\n# {LONG}\n")
+        errs, warns = self.run_lint("x", f"---\ntype: idea\nlayer: concept\nmaturity: seed\n---\n# {LONG}\n")
         self.assertEqual(errs, [])
         self.assertEqual(warns, [])
 
@@ -89,7 +89,7 @@ class QuestionTitleMigration(unittest.TestCase):
     def test_inserts_question_section_reports_long_titles_idempotently(self):
         self.w("q-long.md", page(LONG, body="\n**Question:** x\n\n## My notes\n"))
         self.w("q-ok.md", page(SHORT))
-        self.w("idea.md", f"---\ntype: idea\nlayer: concept\nstatus: seed\n---\n# {LONG}\n")
+        self.w("idea.md", f"---\ntype: idea\nlayer: concept\nmaturity: seed\n---\n# {LONG}\n")
         before = self.snapshot()
         r = self.mod.apply(self.root)
         self.assertEqual(r["pages"], 2)
@@ -106,7 +106,7 @@ class QuestionTitleMigration(unittest.TestCase):
         self.assertEqual(self.snapshot(), after)
 
     def test_produces_the_current_schema(self):
-        from kb_distillery.core.schema import SCHEMA_VERSION
+        from kb_distillery.vault.schema import SCHEMA_VERSION
         self.assertLessEqual(tuple(self.mod.PRODUCES), tuple(SCHEMA_VERSION))   # later migrations may follow
 
 

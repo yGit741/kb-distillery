@@ -7,22 +7,22 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from kb_distillery.paths import vault_root
+from kb_distillery.config.paths import vault_root
 ROOT = vault_root()
 
 from kb_distillery.ops import daily_sync
 from kb_distillery.git import ship
-from kb_distillery.core.schema import lane_of
+from kb_distillery.vault.schema import lane_of
 
 
 class LaneOfTests(unittest.TestCase):
     def test_knowledge(self):
-        for p in ("wiki/x.md", "think/a.md", "raw/web/clip.md", "index.md",
-                  "meta/corpus.tsv", "meta/log.md", "meta/chats/conv-1.json"):
+        for p in ("wiki/x.md", "think/a.md", "raw/web/clip.md", "wiki/index.md", "wiki/log.md", "index.md",
+                  "meta/corpus.tsv", "meta/log.md", "meta/chats/conv-1.json"):     # index.md and meta/log.md: pre-1.7 places
             self.assertEqual(lane_of(p), "knowledge", p)
 
     def test_tooling(self):
-        for p in ("src/kb_distillery/dashboard/serve.py", ".claude/skills/x/SKILL.md", "src/kb_distillery/kits/base/skills/x/SKILL.md", "scripts/launch.sh",
+        for p in ("src/kb_distillery/server/app.py", ".claude/skills/x/SKILL.md", "src/kb_distillery/kits/base/skills/x/SKILL.md", "scripts/launch.sh",
                   "pixi.toml", "AGENTS.md", "scripts/hooks/block-git-write.sh", ".claude/settings.json",
                   ".obsidian/app.json", "web/src/main.tsx", "src/kb_distillery/_webapp/index.html"):
             self.assertEqual(lane_of(p), "tooling", p)
@@ -232,22 +232,38 @@ class PrFlowTests(unittest.TestCase):
 
     def test_schema_commit_takes_notes_and_the_manifest_but_not_index(self):
         wt = self._start("books")
-        for rel in ("src/kb_distillery/core/schema.py", "wiki/a.md", "index.md", "meta/corpus.tsv"):
+        for rel in ("src/kb_distillery/vault/schema.py", "wiki/a.md", "wiki/index.md", "meta/corpus.tsv"):
             self._write(wt, rel)
         self.assertEqual(ship.cmd_commit("schema(books): add hub", root=wt, gates=False), 0)
         files = set(_g(wt, "show", "--name-only", "--format=", "HEAD").split())
-        self.assertEqual(files, {"src/kb_distillery/core/schema.py", "wiki/a.md", "meta/corpus.tsv"})   # migrated dispositions
+        self.assertEqual(files, {"src/kb_distillery/vault/schema.py", "wiki/a.md", "meta/corpus.tsv"})   # migrated dispositions
 
     def test_feature_commit_never_takes_generated_files(self):
         wt = self._start("plain")
-        for rel in ("meta/tool.py", "index.md", "meta/corpus.tsv"):
+        for rel in ("meta/tool.py", "wiki/index.md", "meta/corpus.tsv"):
             self._write(wt, rel)
         self.assertEqual(ship.cmd_commit("feat(ops): add thing", root=wt, gates=False), 0)
         self.assertEqual(_g(wt, "show", "--name-only", "--format=", "HEAD").split(), ["meta/tool.py"])
 
+    def test_feature_commit_never_takes_section_indexes(self):
+        wt = self._start("sections")
+        for rel in ("meta/tool.py", "wiki/paper/index.md", "wiki/blog-post/2019/index.md", "examples/demo/wiki/role/index.md"):
+            self._write(wt, rel)
+        self.assertEqual(ship.cmd_commit("feat(ops): add thing", root=wt, gates=False), 0)
+        # the demo kb is tracked by the engine: its regenerated sections are part of the change, like its root index
+        self.assertEqual(sorted(_g(wt, "show", "--name-only", "--format=", "HEAD").split()),
+                         ["examples/demo/wiki/role/index.md", "meta/tool.py"])
+
+    def test_is_generated_covers_section_indexes_of_the_kb_and_the_demo(self):
+        for rel in ("wiki/index.md", "wiki/paper/index.md", "wiki/paper/2020/index.md", "examples/demo/wiki/role/index.md",
+                    "examples/demo/wiki/index.md"):
+            self.assertTrue(ship.is_generated(rel), rel)
+        for rel in ("wiki/paper/x.md", "src/kb_distillery/vault/wikiindex.py", "examples/demo/wiki/a.md"):
+            self.assertFalse(ship.is_generated(rel), rel)
+
     def test_schema_merge_refuses_clashing_local_note(self):
         wt = self._start("books")
-        self._write(wt, "src/kb_distillery/core/schema.py")
+        self._write(wt, "src/kb_distillery/vault/schema.py")
         self._write(wt, "wiki/b.md", "migrated")
         ship.cmd_commit("schema(books): add hub", root=wt, gates=False)
         self._write(self.repo, "wiki/b.md", "my own edit")       # differs → clash
@@ -259,21 +275,21 @@ class PrFlowTests(unittest.TestCase):
         self.assertEqual(ship._knowledge_clashes(wt, self.repo, "origin/main"), [])
 
     def test_merge_syncs_main_over_regenerated_files(self):
-        self._write(self.repo, "index.md", "v1")
+        self._write(self.repo, "wiki/index.md", "v1")
         _g(self.repo, "add", "-A")
         _g(self.repo, "commit", "-q", "-m", "kb(catalog): a (kb-0.7.1)\n\nKB-Version: 0.7.1\nKB-Op: catalog\nKB-Target: a")
         _g(self.repo, "push", "-q", "origin", "main")
         wt = self._start("sync")
         self._write(wt, "meta/tool.py")
         ship.cmd_commit("feat(ops): add thing", root=wt, gates=False)
-        self._write(self.repo, "index.md", "v2")   # main moves on and changes a generated file
+        self._write(self.repo, "wiki/index.md", "v2")   # main moves on and changes a generated file
         _g(self.repo, "add", "-A")
         _g(self.repo, "commit", "-q", "-m", "kb(catalog): b (kb-0.7.2)\n\nKB-Version: 0.7.2\nKB-Op: catalog\nKB-Target: b")
         self._write(self.repo, "meta/other.py")    # and a tooling merge lands, so a sync is due
         _g(self.repo, "add", "-A")
         _g(self.repo, "commit", "-q", "-m", "feat(ops): other (#6)")
         _g(self.repo, "push", "-q", "origin", "main")
-        self._write(wt, "index.md", "regenerated by lint in the worktree")
+        self._write(wt, "wiki/index.md", "regenerated by lint in the worktree")
         rc = ship.cmd_merge(local=True, pr_number=8, title="feat(ops): add thing", root=wt, gates=False)
         self.assertEqual(rc, 0)
 
@@ -461,7 +477,7 @@ class PrFlowTests(unittest.TestCase):
         wt = self._start()
         self._write(wt, "meta/tool.py")
         ship.cmd_commit("feat(ops): add thing", root=wt, gates=False)
-        self._write(wt, "index.md", "regenerated")  # lint output: never a reason to keep the worktree
+        self._write(wt, "wiki/index.md", "regenerated")  # lint output: never a reason to keep the worktree
         self.assertEqual(ship.cmd_merge(local=True, pr_number=3, title="feat(ops): add thing", root=wt, gates=False), 0)
         self.assertFalse(os.path.exists(wt))
         self.assertNotIn("infra/ops-thing", _g(self.repo, "branch", "--list"))
@@ -537,7 +553,7 @@ class PrFlowTests(unittest.TestCase):
            "kb(digest): a (kb-0.7.3)\n\nKB-Version: 0.7.3\nKB-Op: digest\nKB-Target: a")
         _g(self.repo, "push", "-q", "origin", "main")
         wt = self._start("books")
-        self._write(wt, "src/kb_distillery/core/schema.py")
+        self._write(wt, "src/kb_distillery/vault/schema.py")
         self.assertEqual(ship.cmd_commit("schema(books): hub", root=wt, gates=False), 0)
         with patch.object(ship, "SCHEMA_VERSION", (0, 9)):  # wrong bump: 0.7 → 0.9
             self.assertEqual(ship.cmd_merge(local=True, pr_number=4, title="schema(books): hub",
@@ -555,7 +571,7 @@ class PrFlowTests(unittest.TestCase):
 
     def test_first_schema_merge_uses_declared_schema(self):
         wt = self._start("books")
-        self._write(wt, "src/kb_distillery/core/schema.py")
+        self._write(wt, "src/kb_distillery/vault/schema.py")
         ship.cmd_commit("schema(books): hub", root=wt, gates=False)
         with patch.object(ship, "SCHEMA_VERSION", (0, 8)):  # no knowledge version on main yet
             self.assertEqual(ship.cmd_merge(local=True, pr_number=4, title="schema(books): hub",

@@ -8,10 +8,10 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from kb_distillery.paths import vault_root
+from kb_distillery.config.paths import vault_root
 ROOT = vault_root()
 
-from kb_distillery.core.schema import SCHEMA_VERSION
+from kb_distillery.vault.schema import SCHEMA_VERSION
 
 V = "%d.%d" % SCHEMA_VERSION  # knowledge versions under the current schema
 
@@ -42,9 +42,9 @@ class OpsRepo(unittest.TestCase):
         _lint.start()
         self.addCleanup(_lint.stop)
         self.write("meta/stub.py", "x = 1\n", mode="w")
-        self.write("meta/log.md", "# log\n", mode="w")
+        self.write("wiki/log.md", "# Log\n", mode="w")
         self.write(".gitignore", "meta/.ops/\nmeta/.ingest/\n*.pdf\n", mode="w")
-        for rel in ("wiki/b.md", "raw/papers/x.md", "think/t.md", "index.md"):
+        for rel in ("wiki/b.md", "raw/papers/x.md", "think/t.md", "wiki/index.md"):
             self.write(rel, "v1")
         g(self.root, "add", "-A")
         g(self.root, "commit", "-q", "-m", "chore: init (retro)")
@@ -115,7 +115,7 @@ class CommitOpTests(OpsRepo):
         sha = self.op("digest", "a", ["wiki/a.md"])
         self.assertTrue(sha)
         self.assertEqual(self.subject(), f"kb(digest): a (kb-{V}.1)")
-        self.assertEqual(self.files(), {"wiki/a.md", "meta/log.md"})
+        self.assertEqual(self.files(), {"wiki/a.md", "wiki/log.md"})
         c = cp.parse_message(self.body())
         self.assertEqual((c.trailers["KB-Op"], c.trailers["KB-Target"], c.trailers["KB-Version"]),
                          ("digest", "a", f"{V}.1"))
@@ -124,16 +124,16 @@ class CommitOpTests(OpsRepo):
         self.assertIn("wiki/other.md", g(self.root, "status", "--porcelain"))
 
     def test_generated_and_log_ride_along(self):
-        self.write("index.md", "regenerated")
-        self.write("meta/log.md", "## [2026-10-22] ingest | a")
+        self.write("wiki/index.md", "regenerated")
+        self.write("wiki/log.md", "\n## 2026-10-22\n\n### ingest | a\n")
         self.op("digest", "a", ["wiki/a.md"])
-        self.assertEqual(self.files(), {"wiki/a.md", "index.md", "meta/log.md"})
+        self.assertEqual(self.files(), {"wiki/a.md", "wiki/index.md", "wiki/log.md"})
 
     def test_think_edits_get_their_own_commit(self):
         self.write("think/t.md", "my thought")
         self.op("refine", "b", ["wiki/b.md", "think/t.md"])
-        self.assertEqual(self.files("HEAD"), {"wiki/b.md", "meta/log.md"})
-        self.assertEqual(self.files("HEAD~1"), {"think/t.md", "meta/log.md"})
+        self.assertEqual(self.files("HEAD"), {"wiki/b.md", "wiki/log.md"})
+        self.assertEqual(self.files("HEAD~1"), {"think/t.md", "wiki/log.md"})
         self.assertTrue(self.subject("HEAD~1").startswith("kb(think): human edits (1 file)"))
         self.assertIn("KB-Actor: human", self.body("HEAD~1"))
 
@@ -143,7 +143,7 @@ class CommitOpTests(OpsRepo):
         with open(os.path.join(sess, "session.json"), "w") as f:
             json.dump({"status": "open", "sha1": "abc", "new_files": ["wiki/locked.md"]}, f)
         self.op("digest", "mine", ["wiki/mine.md", "wiki/locked.md"])
-        self.assertEqual(self.files(), {"wiki/mine.md", "meta/log.md"})
+        self.assertEqual(self.files(), {"wiki/mine.md", "wiki/log.md"})
 
     def test_refuses_off_main(self):
         g(self.root, "checkout", "-q", "-b", "infra/x")
@@ -155,49 +155,49 @@ class CommitOpTests(OpsRepo):
 
 
 class LogLineTests(OpsRepo):
-    """Every kb(<op>) commit carries its own meta/log.md line, in the same commit."""
+    """Every kb(<op>) commit carries its own wiki/log.md entry, in the same commit."""
 
     def line(self, op, text):
-        return f"] {op} | {text}"
+        return f"### {op} | {text}"
 
     def test_each_op_logs_inside_its_commit(self):
         for op in ("import", "catalog", "digest", "refine", "distill"):
             sha = self.op(op, f"t-{op}", [f"wiki/{op}.md"])
-            self.assertIn("meta/log.md", self.files(sha), op)
-            self.assertIn(self.line(op, f"t {op} ← `t-{op}`"), g(self.root, "show", f"{sha}:meta/log.md"))
+            self.assertIn("wiki/log.md", self.files(sha), op)
+            self.assertIn(self.line(op, f"t {op} ← `t-{op}`"), g(self.root, "show", f"{sha}:wiki/log.md"))
         self.assertEqual(g(self.root, "status", "--porcelain"), "")
 
     def test_session_commit_logs_with_summary(self):
         core.begin("refine", "b", root=self.root)
         self.write("wiki/b.md", "edited")
         core.commit("split the idea", root=self.root)
-        self.assertIn(self.line("refine", "split the idea ← `b`"), self.read("meta/log.md"))
+        self.assertIn(self.line("refine", "split the idea ← `b`"), self.read("wiki/log.md"))
 
     def test_writer_that_already_logged_is_not_duplicated(self):
-        self.write("meta/log.md", "\n## [2026-10-22] ingest | a ← `raw/x`\n")
+        self.write("wiki/log.md", "\n## 2026-10-22\n\n### ingest | a ← `raw/x`\n")
         self.op("digest", "a", ["wiki/a.md"])
-        self.assertEqual(self.read("meta/log.md").count("\n## "), 1)
+        self.assertEqual(self.read("wiki/log.md").count("\n## "), 1)
 
     def test_nothing_to_commit_logs_nothing(self):
         self.assertIsNone(core.commit_op("refine", "x", paths=[], root=self.root))
-        self.assertEqual(self.read("meta/log.md"), "# log\n")
+        self.assertEqual(self.read("wiki/log.md"), "# Log\n")
 
     def test_think_edits_log_in_their_own_commit(self):
         self.write("think/t.md", "my thought")
         core.sync_human(self.root)
-        self.assertEqual(self.files(), {"think/t.md", "meta/log.md"})
-        self.assertIn(self.line("think", "human edits (1 file) ← `think`"), self.read("meta/log.md"))
+        self.assertEqual(self.files(), {"think/t.md", "wiki/log.md"})
+        self.assertIn(self.line("think", "human edits (1 file) ← `think`"), self.read("wiki/log.md"))
 
     def test_undo_and_restore_log_once_in_their_commit(self):
         bad = self.op("refine", "split", ["wiki/new.md"])
         core.undo(bad, root=self.root)
-        self.assertIn("meta/log.md", self.files())
-        self.assertEqual(self.read("meta/log.md").count("] undo | "), 1)
+        self.assertIn("wiki/log.md", self.files())
+        self.assertEqual(self.read("wiki/log.md").count("### undo | "), 1)
         core.snapshot(root=self.root)
         self.op("refine", "later", ["wiki/later.md"])
         core.restore(f"kb-{V}.2", root=self.root)
-        self.assertIn("meta/log.md", self.files())
-        self.assertEqual(self.read("meta/log.md").count("] restore | "), 1)
+        self.assertIn("wiki/log.md", self.files())
+        self.assertEqual(self.read("wiki/log.md").count("### restore | "), 1)
 
 
 class SessionTests(OpsRepo):
@@ -207,7 +207,7 @@ class SessionTests(OpsRepo):
         self.write("wiki/x1.md", "half one")
         self.write("wiki/b.md", "edited")
         core.commit(root=self.root)
-        self.assertEqual(self.files(), {"wiki/x1.md", "wiki/b.md", "meta/log.md"})
+        self.assertEqual(self.files(), {"wiki/x1.md", "wiki/b.md", "wiki/log.md"})
         self.assertEqual(self.subject(), f"kb(refine): split concept x (kb-{V}.1)")
         self.assertIsNone(core.current_session(self.root))
 
@@ -236,8 +236,40 @@ class UndoTests(OpsRepo):
         self.assertFalse(os.path.exists(os.path.join(self.root, "wiki/new.md")))
         self.assertEqual(self.read("wiki/b.md"), "v1\n")
         self.assertEqual(self.read("raw/papers/x.md"), raw_after)  # raw/ never rewritten
-        self.assertIn("undo | kb(refine): split", self.read("meta/log.md"))
+        self.assertIn("undo | kb(refine): split", self.read("wiki/log.md"))
         self.assertNotIn("raw/papers/x.md", self.files())
+
+    def test_undo_and_restore_never_rewrite_the_index_or_the_log(self):
+        """wiki/index.md (generated) and wiki/log.md (append-only) sit inside wiki/ but are not restorable."""
+        self.op("refine", "warmup", ["wiki/w.md"])
+        core.snapshot(root=self.root)
+        self.write("wiki/index.md", "regenerated by lint")
+        self.write("wiki/paper/2020/index.md", "regenerated section")
+        bad = self.op("refine", "split", ["wiki/new.md"])
+        index_after = self.read("wiki/index.md")
+        section_after = self.read("wiki/paper/2020/index.md")
+        self.assertIn("wiki/index.md", self.files(bad))                      # it rode along in the step
+        self.assertIn("wiki/paper/2020/index.md", self.files(bad))           # and so did every section index
+        core.undo(bad, root=self.root)
+        self.assertFalse(os.path.exists(os.path.join(self.root, "wiki/new.md")))
+        self.assertEqual(self.read("wiki/index.md"), index_after)           # not rolled back
+        self.assertEqual(self.read("wiki/paper/2020/index.md"), section_after)
+        self.op("refine", "later", ["wiki/later.md"])
+        log_before = self.read("wiki/log.md")
+        core.restore(f"kb-{V}.1", root=self.root)
+        self.assertFalse(os.path.exists(os.path.join(self.root, "wiki/later.md")))
+        self.assertEqual(self.read("wiki/index.md"), index_after)
+        for line in log_before.splitlines():                                  # restore only ever adds an entry
+            self.assertIn(line, self.read("wiki/log.md").splitlines())
+        self.assertIn("### restore | ", self.read("wiki/log.md"))
+
+    def test_the_commit_names_pages_never_the_reserved_files(self):
+        self.write("wiki/index.md", "regenerated")
+        self.write("wiki/log.md", "\n## 2026-10-22\n\n### ingest | a\n")
+        self.op("digest", "a", ["wiki/a.md", "wiki/index.md", "wiki/log.md"])
+        self.assertEqual(core._pages(["wiki/a.md", "wiki/index.md", "wiki/log.md"]), ["a"])
+        self.assertEqual(core._target_of(None, ["wiki/index.md", "wiki/log.md", "wiki/a.md"]), "a")
+        self.assertNotIn("index", self.subject())
 
     def test_refusals(self):
         self.write("think/t.md", "mine")
@@ -275,7 +307,7 @@ class SnapshotRestoreTests(OpsRepo):
         self.assertFalse(os.path.exists(os.path.join(self.root, "wiki/c.md")))
         self.assertEqual(self.read("wiki/b.md"), "v1\n")
         self.assertIn("later thought", self.read("think/t.md"))  # think/ untouched
-        self.assertTrue(all(f.startswith("wiki/") or f in ("meta/log.md",) for f in self.files()))
+        self.assertTrue(all(f.startswith("wiki/") or f in ("wiki/log.md",) for f in self.files()))
 
     def test_restore_needs_annotated_tag(self):
         self.op("digest", "a", ["wiki/a.md"])
@@ -415,7 +447,10 @@ class WrapTests(OpsRepo):
     def _cli(self, writes):
         def cli_main(argv):
             for rel in writes:
-                self.write(rel, "written by cli")
+                if rel.startswith("wiki/") and rel.endswith(".md"):       # a page the OKF gate accepts
+                    self.write(rel, "---\ntype: paper\n---\n\n# Written by cli\n", mode="w")
+                else:
+                    self.write(rel, "written by cli")
             return 0
         return cli_main
 
@@ -425,7 +460,7 @@ class WrapTests(OpsRepo):
             rc = wrap.run(self._cli(["wiki/2024-x.md", "raw/papers/2024-x.md"]), ["catalog", "raw/inbox/x.pdf"])
         self.assertEqual(rc, 0)
         self.assertEqual(self.subject(), f"kb(catalog): 2024 x (kb-{V}.1)")  # subject in words, slug in KB-Target
-        self.assertEqual(self.files(), {"wiki/2024-x.md", "raw/papers/2024-x.md", "meta/log.md"})
+        self.assertEqual(self.files(), {"wiki/2024-x.md", "raw/papers/2024-x.md", "wiki/log.md"})
 
     def test_no_commit_flag(self):
         with patch.object(core, "ROOT", self.root):

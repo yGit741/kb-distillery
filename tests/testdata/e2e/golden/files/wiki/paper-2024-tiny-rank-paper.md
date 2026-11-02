@@ -4,7 +4,7 @@ layer: source
 authors: [A. Author]
 year: 2024
 area: [learning-theory]
-status: digested
+maturity: digested
 depth: full
 raw: raw/printed-docs/2024-tiny-rank-paper.pdf
 citekey: tiny2024
@@ -37,8 +37,8 @@ Variables: $T$: tensor
 ## Takeaways for my thesis
 
 - Gradient flow implicitly minimizes tensor rank.
-- Concepts: [[tensor-rank]], [[theme-learning-theory]]
+- Concepts: [Tensor rank](tensor-rank.md), [Learning theory](theme-learning-theory.md)
 
 ## Links out
 
-- Concepts: [[tensor-rank]], [[theme-learning-theory]]
+- Concepts: [Tensor rank](tensor-rank.md), [Learning theory](theme-learning-theory.md)

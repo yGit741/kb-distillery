@@ -28,8 +28,8 @@ import unittest
 
 import pytest
 
-from kb_distillery.kbconfig import checkout_root
-from kb_distillery.paths import CODE_DIR, vault_root
+from kb_distillery.config.kb import checkout_root
+from kb_distillery.config.paths import CODE_DIR, vault_root
 CHECKOUT_ROOT = checkout_root()
 META = os.path.join(vault_root(), "meta")
 REPO = vault_root()
@@ -71,7 +71,7 @@ def build_vault(root):
     # goldens were recorded with, so the test gives the same answer whichever kb the suite runs under
     areas = sorted(GOLDEN_AREAS)
     with open(os.path.join(root, "kb.toml"), "w", encoding="utf-8") as f:
-        f.write('[kb]\nid = "e2e"\nname = "E2E fixture vault"\nschema_version = "1.4"\n\n[types]\nareas = ['
+        f.write('[kb]\nid = "e2e"\nname = "E2E fixture vault"\nschema_version = "1.5"\n\n[types]\nareas = ['
                 + ", ".join(f'"{a}"' for a in areas) + "]\n")
     for name in os.listdir(os.path.join(DATA, "seed", "meta")):
         shutil.copy(os.path.join(DATA, "seed", "meta", name), os.path.join(root, "meta", name))
@@ -187,12 +187,12 @@ def run_pipeline(root):
     p.full_digest("part", "full-digest", "raw/printed-docs/2020-tiny-book.pdf", "--pages", "1-10")
     # --- checks
     lint = p.run("src/kb_distillery/lint/lint.py", module=False, ok=False)
-    coherence = p.run("src/kb_distillery/core/coherence.py", "status", module=False, ok=False)
+    coherence = p.run("src/kb_distillery/vault/coherence.py", "status", module=False, ok=False)
     return p, lint, coherence
 
 
 _TS = re.compile(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?")
-_DATE_HDR = re.compile(r"^## \[\d{4}-\d{2}-\d{2}\]", re.M)
+_DATE_HDR = re.compile(r"^## \d{4}-\d{2}-\d{2}$", re.M)
 
 
 def _norm(obj, root):
@@ -218,11 +218,12 @@ def _strip(obj):
 
 BUILDERS = r"""
 import json, sys
-from kb_distillery.services import graph as graph_data, pages as explore_data, pipeline as digestion_data, corpus as corpus_data
+from kb_distillery.graph import snapshot as graph_data
+from kb_distillery.services import pages as explore_data, pipeline as digestion_data, corpus as corpus_data
 out = {"graph": graph_data.build_graph_snapshot(), "explore": explore_data.build_index(),
        "digestion": digestion_data.build_digestion_snapshot()}
 out["corpus"] = {f: corpus_data.build_corpus(f) for f in corpus_data.FORMATS}
-from kb_distillery.share import build as sb
+from kb_distillery.publish.site import build as sb
 from pathlib import Path
 out["share"] = sb.collect_data(Path("meta").resolve(), "%s", "0" * 40)
 print(json.dumps(out, ensure_ascii=False, default=str))
@@ -234,7 +235,11 @@ def collect_outputs(p, lint, coherence):
     cp = p.run("-c", BUILDERS, module=False)
     data = json.loads(cp.stdout.strip().splitlines()[-1])
     share_out = os.path.join(root, ".share", "index.html")
-    p.run("kb_distillery.share.build", "--inner", "--content-ref", "e2e", "--content-sha", "0" * 40,
+    app_index = os.path.join(root, ".share", "app-template.html")      # stands in for the built app's index.html
+    os.makedirs(os.path.dirname(app_index), exist_ok=True)
+    with open(app_index, "w", encoding="utf-8") as f:
+        f.write("<!doctype html><html><head><title>app</title></head><body></body></html>\n")
+    p.run("kb_distillery.publish.site.build", "--inner", "--app-index", app_index, "--content-ref", "e2e", "--content-sha", "0" * 40,
           "--kb-version", "0.0.0", "--viewer-sha", "0" * 40, "--profile", "public",
           "--built-at", BUILT_AT, "--out", share_out)
     graph = data["graph"]
@@ -242,7 +247,7 @@ def collect_outputs(p, lint, coherence):
         "transcript": p.log,
         "lint": [l for l in lint.stdout.splitlines() if l.startswith(("ERROR", "warn"))] + [f"rc={lint.returncode}"],
         "coherence": coherence.stdout.splitlines()[-5:] if coherence.stdout else [],
-        "graph_nodes": sorted(({k: n.get(k) for k in ("id", "type", "layer", "group", "status", "depth",
+        "graph_nodes": sorted(({k: n.get(k) for k in ("id", "type", "layer", "group", "maturity", "depth",
                                                         "digestion_status") if k in n}
                                for n in graph.get("nodes", [])), key=lambda n: n["id"]),
         "graph_links": sorted(f"{l.get('source')}->{l.get('target')}:{l.get('kind', '')}" for l in graph.get("links", [])),
@@ -254,11 +259,12 @@ def collect_outputs(p, lint, coherence):
     }
     files = {}
     for d in ("wiki",):
-        for fn in sorted(os.listdir(os.path.join(root, d))):
-            files[f"{d}/{fn}"] = p.read(f"{d}/{fn}")
+        for dirpath, _dirs, names in sorted(os.walk(os.path.join(root, d))):      # the pages and the section indexes below them
+            for fn in sorted(names):
+                rel = os.path.relpath(os.path.join(dirpath, fn), root).replace(os.sep, "/")
+                files[rel] = p.read(rel)
     files["meta/corpus.tsv"] = p.read("meta/corpus.tsv")
-    files["index.md"] = p.read("index.md")
-    files["meta/log.md"] = _DATE_HDR.sub("## [<date>]", p.read("meta/log.md"))
+    files["wiki/log.md"] = _DATE_HDR.sub("## <date>", p.read("wiki/log.md"))
     return _norm(outputs, root), files
 
 

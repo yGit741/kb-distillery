@@ -5,7 +5,8 @@ import types
 
 import pytest
 
-from kb_distillery import doctor, kbconfig, llm
+from kb_distillery import doctor, llm
+from kb_distillery.config import kb as kbconfig
 from kb_distillery.doctor import FAIL, INFO, PASS, WARN
 from kb_distillery.storage.base import AuthStatus
 
@@ -95,7 +96,7 @@ def test_kb_config_errors_name_their_fix():
         def loader(ref):
             raise kbconfig.KbConfigError(msg)
         return loader
-    c, cfg = doctor.check_kb_config("x", boom("kb.toml: schema_version 1.3 but this explorer speaks 1.4"))
+    c, cfg = doctor.check_kb_config("x", boom("kb.toml: schema_version 1.3 but this explorer speaks 1.7"))
     assert c.status == FAIL and cfg is None and "migrate" in c.fix
     c, _ = doctor.check_kb_config("x", boom("[kb] kit = 'q' is not a known kit"))
     assert c.status == FAIL and "kit" in c.fix
@@ -106,7 +107,7 @@ def test_kb_config_errors_name_their_fix():
 def test_kb_config_ok_and_layout(tmp_path):
     root = tmp_path / "k"
     root.mkdir()
-    cfg = types.SimpleNamespace(id="k", schema_version=(1, 4), kit="base", root=str(root), git_root=None)
+    cfg = types.SimpleNamespace(id="k", schema_version=(1, 5), kit="base", root=str(root), git_root=None)
     c, got = doctor.check_kb_config("k", lambda ref: cfg)
     assert c.status == PASS and got is cfg and "base" in c.detail
     assert doctor.check_kb_layout(cfg).status == WARN            # no wiki/ meta/
@@ -130,7 +131,7 @@ def test_storage():
 
 
 def test_publisher():
-    from kb_distillery.publish.null import NullPublisher
+    from kb_distillery.hosting.null import NullPublisher
     assert doctor.check_publisher(None, lambda cfg: NullPublisher()).status == INFO
     assert doctor.check_publisher(None, lambda cfg: NullPublisher(reason="no publisher 'x'")).status == WARN
     assert doctor.check_publisher(None, lambda cfg: types.SimpleNamespace()).status == PASS

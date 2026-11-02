@@ -23,6 +23,11 @@ export function registerTour(name: string, steps: TourStep[], summary = "", { me
   TOURS.set(name, { steps, summary, menu });
 }
 
+/** Remove a tour (a feature flag turned its feature off). A running tour keeps its own copy of the steps. */
+export function unregisterTour(name: string): void {
+  TOURS.delete(name);
+}
+
 const SEEN_KEY = (name: string) => `kb.tour.seen.${name}`;
 
 export function seenTour(name: string): boolean {

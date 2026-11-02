@@ -4,9 +4,9 @@ layer: collection
 area: {{area}}
 raw: {{raw}}
 book_pages: {{book_pages}}
-status: {{status}}
+maturity: {{maturity}}
 related: []
-summary:
+description:
 ---
 
 # {{title}}

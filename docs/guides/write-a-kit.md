@@ -58,12 +58,12 @@ If you need a type for one knowledge base only, add it to that knowledge base's 
    types = ["uses"]
    ```
 
-3. Add `skills/` for workflows that belong to the kit. Each skill is a folder with a `SKILL.md`. See [Write a skill](write-a-skill.md).
+3. Add `kits/<name>/skills/` for workflows that belong to the kit. Each skill is a folder with a `SKILL.md`. See [Write a skill](write-a-skill.md).
 4. Add `AGENTS.template.md` if the kit has agent rules of its own. Put `{{parent}}` where the parent kit's text goes.
 5. Run the checks:
 
    ```bash
-   pixi run pytest tests/vault/test_kit.py tests/vault/test_kit_contract.py
+   pixi run pytest tests/config/test_kit.py tests/config/test_kit_contract.py
    pixi run lint-skills
    ```
 

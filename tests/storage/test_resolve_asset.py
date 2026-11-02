@@ -3,7 +3,7 @@ import os
 import unittest
 import uuid
 
-from kb_distillery import paths
+from kb_distillery.config import paths
 from kb_distillery.services import pages
 from kb_distillery.storage import raw
 

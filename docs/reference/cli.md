@@ -8,7 +8,7 @@ Run `distill --help`, or `distill <group> --help` for a group. Most commands pas
 
 Pass `--kb <id|path>` after the command to select a knowledge base. See [Knowledge base](../concepts/knowledge-base.md).
 
-The text below follows the output of `--help` for the code on this branch. Spacing is shortened.
+The text below follows the output of `--help` for the code on `main`. Spacing is shortened.
 
 ## Top level
 
@@ -33,7 +33,7 @@ commands:
   propose               typed relation proposals between wiki pages: submit, collect, review, apply
 ```
 
-`ship` is listed only inside a checkout. It is for people who change the engine. See [CONTRIBUTING](../../.github/CONTRIBUTING.md).
+`ship` is listed only inside a checkout. It is for people who change the engine. See [CONTRIBUTING](../../CONTRIBUTING.md).
 
 ## init
 
@@ -192,7 +192,7 @@ usage: share [-h] {version,build,versions,deploy-main,status,rollback,config,aud
 | Subcommand | Does |
 |---|---|
 | `version` | Describe the tool and list loaded modules. |
-| `build <ref>` | Build a self-contained graph and explorer page from a git ref. `--profile`, `--scope`, `--hops`, `--predicate`, `--view`, `--open`, `--app`. |
+| `build <ref>` | Build the React app with the wiki data of a git ref baked in. `--profile`, `--scope`, `--hops`, `--predicate`, `--view`, `--open`, `--app`. |
 | `versions` | List knowledge versions on `main` and their tags. |
 | `deploy-main` | Build `main` and deploy it to the private Worker. `--dry-run`, `--force`, `--dir`. |
 | `status` | Last deploy outcome. |

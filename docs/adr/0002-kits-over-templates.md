@@ -33,4 +33,4 @@ The word "template" was the first name. The key `template` and the old names `st
 
 ## Where
 
-`src/kb_distillery/vault/kit.py`, `src/kb_distillery/kits/`, `tests/vault/test_kit.py`, `tests/vault/test_kit_contract.py`.
+`src/kb_distillery/config/kit.py`, `src/kb_distillery/kits/`, `tests/config/test_kit.py`, `tests/config/test_kit_contract.py`.

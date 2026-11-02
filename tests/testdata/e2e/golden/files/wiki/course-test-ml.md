@@ -1,13 +1,14 @@
 ---
 type: course
 layer: collection
+title: "Test machine learning"
 short: tml
 institution: test
 course_code: 000
 semester: 2026a
 lecturer: Test Lecturer
 area: [learning-theory]
-status: digested
+maturity: digested
 aliases: []
 related: []
 ---
@@ -24,8 +25,8 @@ Coverage: **1 / 1 items (100%)** · skip rows excluded
 
 | # | Item | Raw | Status | Note |
 |---|------|-----|--------|------|
-| 1 | Lecture 1 · Introduction | `raw/presentations/tml-slides-intro.pdf` | full | [[lecture-tml-slides-intro]] |
+| 1 | Lecture 1 · Introduction | `raw/presentations/tml-slides-intro.pdf` | full | [Lecture 1 · Introduction](lecture-tml-slides-intro.md) |
 
 ## Threads
 
-- [[theme-learning-theory]]
+- [Learning theory](theme-learning-theory.md)

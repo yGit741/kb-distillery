@@ -25,7 +25,7 @@ def _write(root, rel, text="# x"):
 
 
 class RepoCase(unittest.TestCase):
-    """A tmp repo on infra/gate-demo with three fake gates that count their runs and a lint that rewrites index.md."""
+    """A tmp repo on infra/gate-demo with three fake gates that count their runs and a lint that rewrites wiki/index.md."""
 
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
@@ -39,7 +39,7 @@ class RepoCase(unittest.TestCase):
             _g(self.root, "config", k, v)
         _write(self.root, ".gitignore", "__pycache__/\n.pytest_cache/")
         for rel in ("src/kb_distillery/git/a.py", "tests/git/test_a.py", "tests/test_top.py", "tests/conftest.py",
-                    "index.md", "examples/demo/index.md", "examples/demo/meta/corpus.tsv", "notes/n.txt"):
+                    "wiki/index.md", "examples/demo/wiki/index.md", "examples/demo/meta/corpus.tsv", "notes/n.txt"):
             _write(self.root, rel, "def test_ok():\n    pass" if os.path.basename(rel).startswith("test_") else "# x")
         _g(self.root, "add", "-A")
         _g(self.root, "commit", "-q", "-m", "chore: init (retro)")
@@ -59,7 +59,7 @@ class RepoCase(unittest.TestCase):
     def _gate(self, name, regen=False):
         code = f"open({self.counter!r}, 'a').write({name!r} + '\\n')"
         if regen:   # lint rewrites generated files, the demo kb's too
-            code += f"\nopen('index.md', 'a').write('regen\\n')\nopen('examples/demo/index.md', 'a').write('regen\\n')"
+            code += f"\nopen('wiki/index.md', 'a').write('regen\\n')\nopen('examples/demo/wiki/index.md', 'a').write('regen\\n')"
         return [sys.executable, "-c", code]
 
     def runs(self):
@@ -113,7 +113,7 @@ class ReuseTests(RepoCase):
         self.assertEqual(len(self.runs()), 3)
 
     def test_generated_files_changing_is_a_hit(self):
-        self.gates()                                   # the lint gate itself rewrote index.md and the demo's
+        self.gates()                                   # the lint gate itself rewrote wiki/index.md and the demo's
         _write(self.root, "meta/corpus.tsv", "regenerated")
         _write(self.root, "examples/demo/meta/corpus.tsv", "regenerated")
         _write(self.root, "examples/demo/meta/coherence-warnings.tsv", "regenerated")
@@ -231,7 +231,7 @@ class SelectionTests(RepoCase):
         self.assertEqual(self.sel("tests/lint/test_x.py"), ["tests/lint/test_x.py", "tests/test_top.py"])
 
     def test_generated_files_do_not_force_a_full_run(self):
-        got = gate_cache.test_subset(["src/kb_distillery/git/a.py", "examples/demo/index.md"], self.root,
+        got = gate_cache.test_subset(["src/kb_distillery/git/a.py", "examples/demo/wiki/index.md"], self.root,
                                      ignore=ship.is_generated)
         self.assertEqual(got, ["tests/git", "tests/test_top.py"])
 
@@ -240,7 +240,7 @@ class SelectionTests(RepoCase):
 
     def test_full_fallback_on_config_and_unmappable_changes(self):
         for p in ("pixi.toml", "pyproject.toml", "tests/conftest.py", "tests/git/conftest.py", "pixi.lock",
-                  "src/kb_distillery/paths.py", "src/kb_distillery/nomirror/x.py", "tests/fixtures/data.json",
+                  "src/kb_distillery/config/paths.py", "src/kb_distillery/nomirror/x.py", "tests/fixtures/data.json",
                   "src/kb_distillery/kits/base/skills/x/SKILL.md", ".claude/skills/x/SKILL.md", "web/src/a.ts"):
             self.assertIsNone(self.sel("src/kb_distillery/git/ship.py", p), p)
 
@@ -268,11 +268,11 @@ class RefusalTests(RepoCase):
         gates.assert_not_called()
 
     def test_a_hand_edit_of_a_demo_page_before_the_gates_is_committed(self):
-        _write(self.root, "examples/demo/index.md", "hand edit")
+        _write(self.root, "examples/demo/wiki/index.md", "hand edit")
         out = io.StringIO()
         with contextlib.redirect_stdout(out):
             self.assertEqual(ship.cmd_commit("feat(git): thing", root=self.root), 0)
-        self.assertEqual(_g(self.root, "show", "--name-only", "--format=", "HEAD").splitlines(), ["examples/demo/index.md"])
+        self.assertEqual(_g(self.root, "show", "--name-only", "--format=", "HEAD").splitlines(), ["examples/demo/wiki/index.md"])
 
     def test_policy_refusal_before_any_gate(self):
         _write(self.root, "src/kb_distillery/git/a.py", "mine")
@@ -312,7 +312,7 @@ class FingerprintTests(RepoCase):
         # a private temp dir: other lanes' runs create ship-index-* in the shared system temp and raced this check
         with tempfile.TemporaryDirectory() as private, patch.object(tempfile, "tempdir", private):
             self.assertEqual(self.temp_indexes(), set())
-            self.assertIsNotNone(gate_cache.tree_sha(self.root, ["index.md"]))
+            self.assertIsNotNone(gate_cache.tree_sha(self.root, ["wiki/index.md"]))
             self.assertEqual(self.temp_indexes(), set())      # tree_sha leaves no ship-index-* behind
         self.assertEqual(self.index_state(), before)
         self.assertEqual(_g(self.root, "status", "--porcelain"), status)

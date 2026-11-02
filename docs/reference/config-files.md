@@ -14,6 +14,7 @@
 | File | Holds |
 |---|---|
 | `anthropic_key` | Your Anthropic API key, if you do not use `ANTHROPIC_API_KEY`. Keep it out of any repository. |
+| `share.toml` | Publisher settings: who may sign in, the Cloudflare account subdomain, the Home tour. `KB_SHARE_CONFIG` or `<kb>/.cache/share/share.toml` take precedence. The tracked template is `src/kb_distillery/publish/cloudflare/share.example.toml`, with placeholders only. Secrets never go in it. |
 | `engine.toml` | Engine defaults. Today: `[publish] publisher`, for commands that select no knowledge base. `KB_ENGINE_CONFIG` moves it. |
 | `keys/` | Keys for optional services, such as `s2` for the Semantic Scholar API. |
 | chat settings, usage ledger | Written by the app. |

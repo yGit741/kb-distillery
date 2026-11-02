@@ -9,13 +9,15 @@ import sys
 import time
 from datetime import datetime, timezone
 
-from kb_distillery.paths import vault_root
+from kb_distillery.config.paths import vault_root
 META_DIR = os.path.join(vault_root(), "meta")
 
-from kb_distillery.core.coherence import load_warnings
+from kb_distillery.vault import frontmatter
+from kb_distillery.vault.coherence import load_warnings
 from kb_distillery.lint.lint import collect_snapshot, collections_of, parse_frontmatter, raw_paths
-from kb_distillery.core.schema import (DEPTH, COLLECTION_TYPES, PARTITION_COLLECTIONS, SOURCE_TYPES, RAW_DIR,  # noqa: E402
+from kb_distillery.vault.schema import (DEPTH, COLLECTION_TYPES, PARTITION_COLLECTIONS, SOURCE_TYPES, RAW_DIR,  # noqa: E402
                     RAW_EMAILS, RAW_INBOX, RAW_VIDEOS, VIDEO_ITEM, RAW_PRINTED, CONTENTS_COLLECTIONS, WIKI_DIR)
+from kb_distillery.vault.schema import is_page_file
 
 ROOT = vault_root()  # KB_ROOT: share build
 INGEST_ROOT = os.path.join(ROOT, "meta", ".ingest")
@@ -25,7 +27,7 @@ INGESTION_ORDER = ("inbox", "failed", "uncataloged", "cataloged")
 COMPANION_STATUS = ("ink", "dupe", "asset")     # dispositions that fold a file into another file
 DIGESTION_ORDER = ("not digested", "partial", "digested", "skipped")
 STARTED_AT = time.time()
-CODE_DIRS = ("src/kb_distillery", "src/kb_distillery/core", "src/kb_distillery/dashboard", "src/kb_distillery/dashboard/static",
+CODE_DIRS = ("src/kb_distillery", "src/kb_distillery/vault",
              "src/kb_distillery/ingest", "src/kb_distillery/ops", "src/kb_distillery/services")
 
 
@@ -89,9 +91,9 @@ def _load_active_ingest():
 def _load_distill_review(pages):
     review = []
     for slug, (rel, fm, _text) in pages.items():
-        if fm.get("type") != "distilled-think" or fm.get("status") != "review":
+        if fm.get("type") != "distilled-think" or fm.get("maturity") != "review":
             continue
-        source = str(fm.get("source", ""))
+        source = next((r for r in frontmatter.resources(fm) if r.startswith(("think:", "think/"))), "")
         proposals = 0
         think_rel = source.replace("\\", "/")
         if think_rel.startswith("think/"):
@@ -111,7 +113,7 @@ def _load_pages():
     if not os.path.isdir(base):
         return pages
     for fn in os.listdir(base):
-        if not fn.endswith(".md") or "excalidraw" in fn:
+        if not is_page_file(fn) or "excalidraw" in fn:
             continue
         rel = f"{WIKI_DIR}/{fn}"
         text = open(os.path.join(ROOT, rel), encoding="utf-8").read()
@@ -132,8 +134,8 @@ def _title(text, slug):
 # collections: book/notebook partitions and course/series contents tables
 # --------------------------------------------------------------------------
 def _collections(pages):
-    from kb_distillery.core.books import coverage as page_coverage, parse_partition
-    from kb_distillery.core import hubs
+    from kb_distillery.vault.books import coverage as page_coverage, parse_partition
+    from kb_distillery.vault import hubs
     out = []
     for slug, (_rel, fm, text) in sorted(pages.items()):
         t = fm.get("type")
@@ -153,7 +155,7 @@ def _collections(pages):
                      "raws": r["raws"]} for r in rows]
         out.append({
             "slug": slug, "type": t, "title": _title(text, slug),
-            "raw": ", ".join(raw_paths(fm)), "status": str(fm.get("status") or ""),
+            "raw": ", ".join(raw_paths(fm)), "maturity": str(fm.get("maturity") or ""),
             "covered": done, "total": total, "unit": unit,
             "pct": round(100 * done / total) if total else 0, "rows": rows,
         })

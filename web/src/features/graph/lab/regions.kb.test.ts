@@ -2,7 +2,7 @@ import { areaNames, regionKey, regionsOf } from "./regions";
 import type { GNode } from "../types";
 
 const node = (id: string, kb: string, area: string, x: number): GNode & { x: number; y: number } =>
-  ({ id: `${kb}:${id}`, kb, slug: id, label: id, title: id, type: "idea", layer: "concept", status: "", depth: "", areas: [area],
+  ({ id: `${kb}:${id}`, kb, slug: id, label: id, title: id, type: "idea", layer: "concept", maturity: "", depth: "", areas: [area],
      inDegree: 0, outDegree: 0, path: "", added: "", changed: "", preview: "", properties: {}, x, y: 0 }) as GNode & { x: number; y: number };
 
 describe("regions by knowledge base", () => {

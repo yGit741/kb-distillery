@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from kb_distillery import kbconfig
+from kb_distillery.config import kb as kbconfig
 from kb_distillery.storage import (AuthStatus, Connector, NotFound, ObjectInfo, StorageError, connector_names, for_kb, load_class)
 from kb_distillery.storage import registry
 from kb_distillery.storage.gdrive import GDrive

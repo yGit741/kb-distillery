@@ -6,8 +6,9 @@ import pytest
 
 fitz = pytest.importorskip("fitz")
 
-from kb_distillery.core import books as core_books
-from kb_distillery.ingest import book, catalog, easy_digest, extract, scrap
+from kb_distillery.vault import books as core_books, schema
+from kb_distillery.ingest.sources.books import book
+from kb_distillery.ingest import catalog, easy_digest, extract, scrap
 
 
 def make_pdf(path, n, text="page {i} body", toc=None):
@@ -68,7 +69,11 @@ def test_toc_absolute_path_and_missing_file_errors(tmp_path, monkeypatch, capsys
     assert "5 pages" in out and "Chapter 2. B" in out
 
 
-def test_part_slug_long_titles_do_not_collide():
+def test_part_slug_long_titles_do_not_collide(monkeypatch):
+    # the slug prefixes come from the active kb's types; pin the default book kit's so the test never depends on $KB
+    monkeypatch.setitem(book.SLUG_PREFIX, "part", "part-")
+    monkeypatch.setitem(book.SLUG_PREFIX, "book", "book-")
+    monkeypatch.setattr(schema, "RESERVED_PREFIXES", tuple(sorted(set(book.SLUG_PREFIX.values()), key=len, reverse=True)))
     a = book.part_slug("book-2014-x", "Chapter 7. " + "Very long shared prefix of a title " * 2 + "alpha")
     b = book.part_slug("book-2014-x", "Chapter 7. " + "Very long shared prefix of a title " * 2 + "beta")
     assert a != b
