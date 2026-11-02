@@ -1,83 +1,70 @@
-# Thesis Wiki — agent schema
+# kb-distillery — agent guide for the engine
 
-Personal knowledge base for an MSc in theoretical ML. **The thesis topic is not yet chosen** — the vault exists to explore candidate directions and decide. Follows the [Karpathy LLM Wiki](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f) pattern.
+kb-distillery is the engine behind knowledge bases: it ingests raw sources, distills them into a linked wiki, lints that wiki against a schema, and serves it as a graph explorer and an optional private site. **This repo is the tooling only.** A knowledge base is its own folder and its own git repo (`~/knowledge/<id>/`, the bases dir is `$KB_DISTILLERY_HOME`; or any folder given as `--kb <path>`); the only kb tracked here is `examples/demo`. Each kb carries its own `AGENTS.md`, rendered by `distill init` from `src/kb_distillery/kits/<kit>/AGENTS.template.md`; that file, not this one, tells an agent how to work inside a kb.
 
-This file is the core every turn needs. Details live in `src/kb_distillery/kits/base/defaults/docs/` — read the one the **Doc router** names before you act.
-
-**Explorer and knowledge bases are separate.** This repo is the engine; the content is a knowledge base folder `~/knowledge/<id>/` (its own git repo; the bases dir is `$KB_DISTILLERY_HOME`, default `~/knowledge`; only `examples/demo` is tracked here) or any folder given as `--kb <path>`, selected with `--kb <id|path>` / `$KB` (`kbd kb-list`, `kbd launch --kb <id>`). `raw/`, `wiki/`, `meta/` below are paths inside the selected knowledge base; `kb(...)` commits and `kb-x.y.z` tags land in that repo, never here.
+This file is the core every turn on the engine needs. Details live in `src/kb_distillery/kits/base/defaults/docs/`: read the doc the **Doc router** names before you act.
 
 ## Folders
 
-| Folder | Path | Rule |
-|-------|------|------|
-| **Raw** | `raw/` | User-owned inputs. **Immutable — never write here.** |
-| **Wiki** | `wiki/` | Agent-owned synthesis. Flat. Create, update, cross-link. |
-| **Think** | `~/knowledge/think/` | ONE shared human-owned slow space for every knowledge base (its own repo). Schema-free. Agents never write here. Distilled pages cite `think:<note>.md`. |
-| **Meta** | `meta/` | Vault metadata: manifest, log, chats, aliases. Generic pieces (flags, templates, routed docs, digest defaults) live in the explorer's `src/kb_distillery/kits/base/defaults/`; a kb's `meta/` overrides them. No code (code is `src/kb_distillery/`, see `src/kb_distillery/kits/base/defaults/docs/dev.md`). |
-| **Config** | `kb.toml` | The knowledge base: id, name, schema version, its page types (`[types]`), its digest instructions (`digest/`). Read by `kb_distillery.config.kb` / `kb_distillery.vault.kbtypes`. |
+| Folder | Rule |
+|---|---|
+| `src/kb_distillery/` | The Python package (`distill` / `kbd` CLIs). Packages import only from their own layer or below (cli/server, then services/publish, then the pipeline stages, then vault/llm/storage, then config): the contract is in `pyproject.toml` and `pixi run lint-imports` enforces it. |
+| `src/kb_distillery/kits/` | Ontology kits (`base`, `research`): `kit.toml`, skills, hooks, docs, page templates and the `AGENTS.template.md` every new kb gets. |
+| `web/` | The React app (built into `src/kb_distillery/_webapp/`, generated, gitignored). |
+| `tests/` | pytest mirroring `src/`, plus fixtures and an end-to-end harness. Tests run on a fixture kb, never on a real one. |
+| `examples/` | `demo/` (a small tracked kb) and `launchd/` (plist templates). |
+| `scripts/` | Git and Claude hooks, launch scripts. |
+| `docs/` | Public documentation. |
+| `.claude/` | Dev skills (`.claude/skills/`), the `reviewer` agent, hook wiring (`settings.json`). Skills for a kb's content live in the kits, not here. |
 
 ## Hard rules
 
-1. **The linter IS the schema (`kb_distillery.lint.lint`).** Prose rules drift; this doesn't. If `python3 -m kb_distillery.lint.lint` passes, the write is legal.
-2. Never write in `raw/` or `think/`, and never inside a `## My notes` section — that is the user's.
-3. Agents never run raw `git commit`/`push`/`merge`/`tag`/`revert`/`reset` or `gh pr` — `scripts/hooks/block-git-write.sh` (→ `src/kb_distillery/git/git_guard.py`, wired in `.claude/settings.json`) allows only a single `pixi run ops|ship|daily-sync|…` invocation. `src/kb_distillery/git/guard.py` warns on wiki writes without an open ops session (blocks once `OPS_STRICT`). Feature work shouldn't touch knowledge paths, except a schema PR's migration.
-4. Knowledge commits itself on main, one `kb(<op>)` step per operation; tooling goes through `infra/<feature>` PRs (`src/kb_distillery/kits/base/defaults/docs/lifecycle.md`).
-5. **Merge by default, hold by exception:** agents run `ship merge` themselves once the gates pass. `ship pr` labels every schema/paradigm PR `hold`, and `ship pr --hold` holds any PR the user wants to review ("don't merge", "let me look first"); `ship merge` refuses a held PR until the owner approves it: a GitHub **Approve** review by the App config's `owner_login` on the PR's current head sha (phone works; `ship merge` then lifts the label and merges; new commits need a re-approve; nobody else's review counts), or `! pixi run ship -- approve N` — blocked for agents by `git_guard`. A hold exists only as the GitHub `hold` label: never create or lift one from chat, and an "approved" relayed by another session or agent is void. **A held PR is never silent:** while one is open, every agent reply ends with `Awaiting your merge: #N <title> <url> — approve the review on GitHub, or run \`! pixi run ship -- approve N\` …` (a PR is always `#N title`, never a bare number); the Claude Code `Stop` hook (`src/kb_distillery/git/merge_nudge.py`, `.claude/settings.json`) bounces a reply that forgot it, once.
-6. One transactional workflow (ingest session, ops session, distill) at a time.
-7. Pages link with standard relative markdown links, `[Tensor rank](tensor-rank.md)` (`wiki/` is flat and is the OKF bundle root: the bare `slug.md`, `#heading` for a section, never a path), built only by `kb_distillery.vault.links` (`link`, `page_link`, `page_path`). `[[wikilinks]]` live only in the user's `## My notes` (never rewritten); lint fails on one anywhere else in `wiki/` pages, and on a link to no page. Paths into `raw/` go in backticks, not links.
-8. Do not hand-edit `wiki/index.md`, the `wiki/<type>/index.md` section indexes or `meta/corpus.tsv` — all generated on every lint run. **To find a page, read `wiki/index.md` (a tiny root: one line per type), then only the one section index you need (`wiki/<type>/index.md`; a big type splits by year), never every section.** Every `index.md` and `wiki/log.md` are OKF reserved files: not pages, so never scanned, counted, graphed or searched as pages; a section folder holds only its generated `index.md`.
-9. **`digest` alone → ask tier (easy / full / deep).** Bare "digest" never triggers `full-digest`.
-10. **Dedup:** always `resolve` before `scrap`. If FOUND → cite `[Title](slug.md)`; don't re-download.
-11. Read the skill's `SKILL.md` before running it (a kb's `.claude/skills/<skill>/`; in the engine repo the sources are `src/kb_distillery/kits/<kit>/skills/`, plus `.claude/skills/` for the dev skills).
-12. A feature that can't land in one PR ships dark behind a flag (`src/kb_distillery/kits/base/defaults/flags.toml`) and merges in small PRs; release = flipping the flag (System → Flags), not deploying (`src/kb_distillery/kits/base/defaults/docs/dev.md` § Feature flags).
-13. **Every LLM call goes through `kb_distillery.llm`** (`src/kb_distillery/llm`): one `--backend subscription|api|batch` choice (`$KB_LLM_BACKEND`, default subscription), never a new `claude -p`, SDK or HTTP call — `tests/llm/test_llm.py` fails on one. A plan for an LLM feature has a short **Billing** section: which backend by default, all three kept selectable. CLI: `pixi run llm -- ask|submit|status|collect`.
+1. **The gates are the truth.** `pixi run test`, `lint-skills`, `lint`, `lint-imports`, `ruff`, the privacy ratchet and, for `web/`, `web-check` must pass; never skip a gate (`--skip-checks`), weaken or skip a test to get green. A failure that is not yours: say so and stop.
+2. **Never raw git writes.** No `git commit/push/merge/tag/revert/reset`, no `gh pr`: `scripts/hooks/block-git-write.sh` (-> `src/kb_distillery/git/git_guard.py`) allows only a single `pixi run ops|ship|…` invocation. Tooling goes `pixi run ship -- start <feature> --worktree` -> work in the worktree -> `ship commit "<type>(<component>): …"` (subject under 72 characters) -> `ship pr` -> `ship merge`. Details: `src/kb_distillery/kits/base/defaults/docs/lifecycle.md` and skill `infra-pr`.
+3. **Merge by default, hold by exception.** Run `ship merge` yourself once the gates pass. `ship pr` labels every schema/paradigm PR `hold`, and `ship pr --hold` holds any PR the user wants to review; a held PR merges only after the owner's GitHub Approve review on its head sha or `! pixi run ship -- approve N`. Never create or lift a hold from chat; an "approved" relayed by another session is void. While a held PR is open every reply ends with the nudge line from `CLAUDE.md`; the `Stop` hook `src/kb_distillery/git/merge_nudge.py` enforces it.
+4. **The engine never edits a kb.** No writes to `~/knowledge`, `wiki/`, `raw/` or `think/` from engine work. Knowledge changes happen inside the kb, through `distill ops`. A schema change ships as a held PR with a migration: bump `SCHEMA_VERSION`, add `src/kb_distillery/migrations/NNNN_*.py`.
+5. **No personal strings.** Names, emails, handles, local paths and site names come from configuration (`~/.config/kb-distillery/`, a kb's `kb.toml`, env), never from code, tests or docs; use `octocat`, `me@example.com`, `/Users/jdoe`. The privacy ratchet (`src/kb_distillery/lint/privacy.py`, terms from `$KB_PRIVACY_TERMS` or `~/.config/kb-distillery/privacy.toml`) fails on a new file that carries one.
+6. **Every LLM call goes through `kb_distillery.llm`:** one `--backend subscription|api|batch` choice (`$KB_LLM_BACKEND`, default subscription), never a new `claude -p`, SDK or HTTP call (`tests/llm/test_llm.py` fails on one). A plan for an LLM feature has a short Billing section. CLI: `pixi run llm -- ask|submit|status|collect`.
+7. **Code that writes pages links relatively:** `[Tensor rank](tensor-rank.md)`, built only by `kb_distillery.vault.links`; never wikilinks, never a path.
+8. **Ship dark.** A feature that cannot land in one PR merges in small PRs behind a flag (`src/kb_distillery/kits/base/defaults/flags.toml`; `pixi run flags-gen` regenerates `web/src/flags/registry.gen.ts`). Release is flipping the flag, not deploying.
+9. **Agents never deploy.** No `share -- deploy|rollback|snapshot`, no `KB_SHARE_AUTODEPLOY` above 0; deploys belong to the owner (`share-kb` skill, `.claude/settings.json` denies them).
+10. **Tests never call a real LLM or the network,** and read config from fixtures: set `KB_APP_CONFIG=/nonexistent/app.toml` and `KB_SHARE_AUTODEPLOY=0` for ship and test runs.
+11. Read a skill's `SKILL.md` before running it. Dev skills are in `.claude/skills/`; the skills a kb gets are the sources in `src/kb_distillery/kits/<kit>/skills/` (how to write one: `docs/guides/write-a-skill.md`, skill `create-skill`).
+12. One transactional workflow at a time; prefer targeted reads over scanning trees.
 
-## Intent router — casual requests → skills
+## Intent router — casual requests -> skills
 
 Map what the user says to a skill before acting; read that skill's `SKILL.md`, then follow it. A casual request **is** the ask: "fix the graph legend" means start the PR flow, not "suggest a fix".
 
 | The user says… | Do | Lands as |
 |---|---|---|
-| "fix / change / add / improve … the dashboard, explorer, graph, ingest, CLI, a skill, lint" — anything in tooling | `infra-pr`: `ship start <feature> --worktree` → implement → `ship commit "fix\|feat\|chore(<component>): …"` → `ship pr` → `ship merge` (unless held: schema/paradigm or the user asked to review → `pr --hold`, wait for their `approve`) → give the link | PR `… (#N)` |
-| "add an endpoint / router / API / SSE stream / backend test", "expose X over HTTP" | `backend-api` (inside the `infra-pr` flow) | PR `… (#N)` |
-| "port / add a screen", "frontend", "component", "app shell" (React app under `web/`) | `app-ui` (inside the `infra-pr` flow) | PR `… (#N)` |
-| "new note type / new field / lint should require …" | `infra-pr` as a **schema** PR: bump `SCHEMA_VERSION`, add `src/kb_distillery/migrations/NNNN_*.py`, `ops migrate` on the branch | PR, bumps y |
-| "what do I know about … / where did I read … / compare …" | `query-knowledge` (read-only) | nothing |
-| "which sources do I have on … / what does this undigested paper say / is it worth digesting / check this source against my notes" | `explore-raw-data` (read-only) | nothing |
-| "add researcher <name>" / "index <name>'s papers" | `build-researcher-profile` | `kb(catalog)` |
+| "fix / change / add / improve …" the explorer, graph, ingest, CLI, a kit skill, lint, anything in tooling | `infra-pr`: `ship start` -> implement -> `ship commit` -> `ship pr` -> `ship merge` (unless held) -> give the link | PR `… (#N)` |
+| "add an endpoint / router / API / SSE stream / backend test", "expose X over HTTP" | `backend-api` (inside the `infra-pr` flow) | PR |
+| "port / add a screen", "frontend", "component", "app shell" (the React app under `web/`) | `app-ui` (inside the `infra-pr` flow) | PR |
+| "new note type / new field / lint should require …" | `infra-pr` as a **schema** PR (rule 4) | held PR, bumps y |
+| "add a tour / walkthrough", "show me / explain this on the screen" | `guided-tour` | PR, or a show-me link |
+| "create a skill / new workflow" | `create-skill` -> `infra-pr` | PR |
 | "send to backlog / backlog this / park this idea / save this plan for later" | `send-to-backlog` (local `.backlog/`, gitignored: no PR, no commit) | card |
-| "save / scrap <url or file>" | `scrap-data` | `kb(import)` |
-| "catalog / triage the inbox" | `ingest-to-catalog` | `kb(catalog)` |
-| "digest <paper>" (no tier) | **ask**: easy, full or deep | — |
-| "skim / easy-digest", "full-digest", "deep-digest" (+ confirm heavy) | that digest skill → `semantic-lint-hop` | `kb(digest)` |
-| "split / merge / rename / fix this note", "file that answer back" — anything in `wiki/` | `wiki-edit` (`ops begin` … `ops commit`) | `kb(refine)` |
-| "distill my think note …" | `distill-think` | `kb(distill)` |
-| "send / distill this think note into kb a, b" | `kbd distill <note> --to a,b` (`src/kb_distillery/kits/base/defaults/docs/think.md`) | `kb(distill)` per kb |
-| "undo that / revert the split" | `kb-undo` (confirm the step first) | `kb(undo)` |
-| "snapshot / freeze" · "go back to kb-x.y.z" | `kb-snapshot` | tag · `kb(restore)` |
-| "what changed / kb status / which version" | `kb-history` | nothing |
-| "share the KB / export for an LLM" (a zip of the text) | `export-kb` | zip |
-| "share / publish the site", "deploy main", "deploy status", "rollback the site", "snapshot the site", "list / remove snapshots", "audit", "time machine" | `share-kb` (Cloudflare; `pixi run share -- …`) | Worker version, `.cache/share/status.json` |
-| a multi-PR effort ("phase 2: E1–E3", several tooling PRs) | `infra-pr` with a round: `ship round open "<title>" --features a,b` → `ship start <f> --round R` per PR; read state with `ship round status R` | issue `#R` + PRs |
-| "integrate / verify the round / is it really done" | `integrator` (global skill `~/.claude/skills/integrator`, not in a skills folder; reads `.integrator.toml`: tests, build, every screen screenshotted, each tile vs its endpoint; deploy only by owner nudge) | report |
-| "create a skill / new workflow" | `create-skill` → `infra-pr` | PR |
+| a multi-PR effort ("phase 2: E1–E3", several tooling PRs) | `infra-pr` with a round: `ship round open "<title>" --features a,b` -> `ship start <f> --round R`; read state with `ship round status R` | issue `#R` + PRs |
+| "integrate / verify the round / is it really done" | `integrator` (global skill, reads `.integrator.toml`: tests, build, every screen screenshotted, each tile vs its endpoint) | report |
+| "share / publish the site", "deploy status", "rollback", "snapshot the site", "audit" | `share-kb` (owner only for deploys; rule 9) | Worker version, `.cache/share/status.json` |
 
-**Tooling or knowledge?** The target decides: files under `wiki/`, `raw/`, `think/` are knowledge (ops, straight to main); code, skills, dashboard, docs and config are tooling (PR). When one request touches both, ship the tooling PR first, then do the knowledge step on main. When the target is unclear, ask one short question.
+A request about a kb's content ("digest this paper", "what do I know about …") is not engine work: it belongs in that kb's folder, under that kb's `AGENTS.md`.
 
-## Doc router — when you are about to… → read
+## Doc router — when you are about to… -> read
 
 | When you are about to… | Read |
 |---|---|
-| write or check a wiki page: layers, `type:`/`depth:`, frontmatter, filename prefixes, note sections, `## My notes`, person pages, the `area:` topic whitelist | `src/kb_distillery/kits/base/defaults/docs/page-model.md` |
-| write or change an ontology kit, or `[kb] kit` / `[types]` / `[edges]` in a kb.toml: what a kb may extend, what it may not | `src/kb_distillery/kits/base/defaults/docs/kits.md` |
-| publish or share a kb as a site, add a publisher, or set `[publish]` in a kb.toml | `src/kb_distillery/kits/base/defaults/docs/publish.md` |
-| read or write raw sources from code, add a storage connector, or set `[storage]` in a kb.toml | `src/kb_distillery/kits/base/defaults/docs/storage.md` |
-| set up a first kb with `kbd init`, or diagnose the environment with `kbd doctor` | `src/kb_distillery/kits/base/defaults/docs/init.md` |
-| touch `raw/` or `meta/corpus.tsv`: format folders, inbox, dispositions, `collection` column, file naming | `src/kb_distillery/kits/base/defaults/docs/raw-and-corpus.md` |
-| work on a course / series Contents table, digest a collection row, or digest a book (partition, parts) | `src/kb_distillery/kits/base/defaults/docs/collections.md` |
-| commit, ship, snapshot, undo, restore, resolve a diverged main, or reason about lanes, versions, hygiene, the nightly job, partial checkouts, the commit gate | `src/kb_distillery/kits/base/defaults/docs/lifecycle.md` |
-| run or change code: code layout, environment, pixi tasks, write guardrails, worktrees | `src/kb_distillery/kits/base/defaults/docs/dev.md` |
-| send a think note into kbs, see where a note went, think provenance, `think:` citations | `src/kb_distillery/kits/base/defaults/docs/think.md` |
-| pick a skill tier or run the ingest / query / distill CLIs (scrap, catalog, digest, arXiv rules, scrap-wordpress) | `src/kb_distillery/kits/base/defaults/docs/workflows.md` |
-| handle coherence warnings or semantic lint | `src/kb_distillery/kits/base/defaults/docs/semantic-lint.md` |
+| run or change code: code layout, environment, pixi tasks, write guardrails, worktrees, feature flags | `src/kb_distillery/kits/base/defaults/docs/dev.md` |
+| commit, ship, snapshot, undo, resolve a diverged main, or reason about lanes, versions, hygiene, the nightly job, the commit gate | `src/kb_distillery/kits/base/defaults/docs/lifecycle.md` |
+| change the page model: layers, `type:`/`depth:`, frontmatter, filename prefixes, `## My notes`, person pages | `src/kb_distillery/kits/base/defaults/docs/page-model.md` |
+| write or change an ontology kit, or `[kb] kit` / `[types]` / `[edges]` in a kb.toml | `src/kb_distillery/kits/base/defaults/docs/kits.md` |
+| publish or share a kb as a site, add a publisher, or set `[publish]` | `src/kb_distillery/kits/base/defaults/docs/publish.md` |
+| read or write raw sources from code, add a storage connector, or set `[storage]` | `src/kb_distillery/kits/base/defaults/docs/storage.md` |
+| change `kbd init` / `kbd doctor` or the kb template files | `src/kb_distillery/kits/base/defaults/docs/init.md` |
+| touch `raw/` or `meta/corpus.tsv` handling: format folders, inbox, dispositions, naming | `src/kb_distillery/kits/base/defaults/docs/raw-and-corpus.md` |
+| change how courses, series or books are digested | `src/kb_distillery/kits/base/defaults/docs/collections.md` |
+| change the ingest/digest/distill CLIs or the skill ladder | `src/kb_distillery/kits/base/defaults/docs/workflows.md` |
+| change think-note distillation | `src/kb_distillery/kits/base/defaults/docs/think.md` |
+| change coherence warnings or semantic lint | `src/kb_distillery/kits/base/defaults/docs/semantic-lint.md` |
 | write or change a skill | `docs/guides/write-a-skill.md`, skill `create-skill` |
