@@ -1,8 +1,6 @@
-"""Server assets the typed routers share: the dashboard's static dir, the height reporter injected into chat
-visualizations, and PDF thumbnails. Nothing here imports the legacy dashboard; the dashboard imports from here."""
+"""Server assets the typed routers share: the height reporter injected into chat visualizations, and PDF thumbnails."""
 import os
 
-STATIC_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "dashboard", "static")
 THUMB_WIDTH = 360
 VIZ_REPORTER = (b"<script>(function(){var p=function(){parent.postMessage({vizHeight:"
                 b"document.documentElement.scrollHeight},'*');};new ResizeObserver(p)"

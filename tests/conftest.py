@@ -41,7 +41,6 @@ TYPE_BOUND = {
     "search/test_scoped_query.py", "ingest/test_blog.py", "ingest/test_digest_robustness.py",
     "ingest/test_ingest_fixes.py", "ingest/test_youtube.py", "lint/test_links.py", "lint/test_lint_ci.py",
     "lint/test_question_pages.py", "lint/test_summary_lint.py", "ops/test_ops.py",
-    "dashboard/test_source_layer_ui.py",
 }
 THESIS_DATA = {
     "ingest/test_chat_merge.py", "ops/test_notify.py", "metrics/test_metrics.py",

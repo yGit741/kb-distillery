@@ -4,7 +4,7 @@ description: >-
   Backend work in src/kb_distillery: add or change a FastAPI router, model or service under kb_distillery.api / kb_distillery.services,
   regenerate the typed frontend client, write pytest tests. Use whenever the user wants a new or changed endpoint,
   route, API, SSE stream or backend test, even if they only say "expose X over HTTP". Use for add an endpoint,
-  new router, api-schema. Do NOT use for React screens (app-ui), wiki/raw/think edits, or legacy dashboard pages.
+  new router, api-schema. Do NOT use for React screens (app-ui), or wiki/raw/think edits.
 ---
 
 # backend-api
@@ -41,7 +41,7 @@ pixi run lint
 
 1. **Start the lane.** Run `infra-pr` (`ship start`) before the first edit; the endpoint is a `feat(api): …` or `fix(api): …` commit.
 2. **Look at a neighbour.** Copy the shape of `routers/health.py` + `models/health.py` (thin route over a service, typed) rather than inventing one. Streams: `routers/chat.py`; raw files: `kb_distillery.api.security.safe_raw_path`.
-3. **Put logic in `kb_distillery.services.<x>`.** Services are HTTP-free and importable from CLI and tests; the router only adapts. Why: the legacy dashboard and the API share these functions, and a service is testable without a client.
+3. **Put logic in `kb_distillery.services.<x>`.** Services are HTTP-free and importable from CLI and tests; the router only adapts. Why: the CLI and the API share these functions, and a service is testable without a client.
 4. **Model** in `kb_distillery/api/models/<resource>.py`, extending `ApiModel` (`extra="allow"`, so a typed route returns what the legacy endpoint did). List the fields the frontend uses. JSON keys are strings; a field named like a `BaseModel` attribute (`schema`) gets `Field(alias=...)`. Use the data model's words: `layer`, `type`, `depth`.
 5. **Router** in `kb_distillery/api/routers/<resource>.py`: `router = APIRouter(tags=["<resource>"])`, each route with `response_model=` and a `summary=`. One model module and one router module per resource; a file starting with `_` is not a router. A typed route wins over the legacy catch-all for the same path.
 6. **Mutations** (POST/PUT/PATCH/DELETE) need a loopback `Origin` header; body cap is 4 MB. A route that changes vault content must go through a writer CLI or `ops begin`/`ops commit` so it lands as one op commit.

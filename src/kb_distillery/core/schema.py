@@ -46,7 +46,7 @@ YEARED = _T.yeared
 SLUG_PREFIX = _T.slug_prefix
 BARE_TYPES = _T.bare_types
 
-# Display metadata for the dashboard (served by /api/schema; the JS keeps no type lists).
+# Display metadata for the app (served by /api/schema; the JS keeps no type lists).
 TYPE_LABEL = _T.type_label
 TYPE_ORDER = _T.type_order
 TYPE_COLOR = _T.type_color
@@ -317,7 +317,6 @@ GATE_PREFIXES = {
     "flags_registry": ("meta/flags.toml", "src/kb_distillery/kits/base/defaults/flags.toml"),
     "flags_code": ("src/kb_distillery/flags/",),
     "api": ("src/kb_distillery/api/",),
-    "dashboard": ("src/kb_distillery/dashboard/",),
 }
 
 

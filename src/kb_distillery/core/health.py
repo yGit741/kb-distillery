@@ -1,4 +1,4 @@
-"""Vault health metrics — shared by lint --health and kb_distillery.dashboard."""
+"""Vault health metrics — shared by lint --health and the System screen."""
 import os
 import time
 from datetime import datetime, timezone
@@ -447,4 +447,4 @@ def print_health_terminal(snapshot):
           f"wiki~{format_tokens(v['wiki_tokens'])}  "
           f"index saves {v['index_savings_pct']}%  "
           f"queued={format_metric_value('queued_mb', v['queued_mb'])}")
-    print("dashboard   python3 -m kb_distillery.dashboard")
+    print("app         pixi run app  (the System screen)")

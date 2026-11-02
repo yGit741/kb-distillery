@@ -2,7 +2,7 @@
 
 # Claude Code
 
-- Prefer targeted reads over scanning trees; use `python3 -m kb_distillery.dashboard` or `pixi run health` for status.
+- Prefer targeted reads over scanning trees; use `pixi run health` (or the System screen of `pixi run app`) for status.
 - Read `.claude/skills/<skill>/SKILL.md` before running a workflow (app skills: `src/kb_distillery/kits/<kit>/skills/`; how to write one: `docs/guides/write-a-skill.md`).
 - One transactional workflow at a time; don't paste large file contents into chat.
 - Scripts enforce truth (guard blocks writes, lint on commit); if blocked, fix the approach — don't retry the same illegal path.

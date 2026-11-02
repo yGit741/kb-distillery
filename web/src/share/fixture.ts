@@ -67,34 +67,3 @@ export function makeFixtureBlob(): ShareBlob {
     meta: { kb_version: "1.2.3", content_sha: "0123456789abcdef", viewer_sha: "fedcba9876543210", profile: "public", built_at: "2026-01-01T00:00:00Z" },
   } as ShareBlob;
 }
-
-/** A larger deterministic vault (seeded PRNG) for the differential test: many words, many links. */
-export function makeRandomBlob(n = 80, seed = 7): ShareBlob {
-  let s = seed;
-  const rnd = () => ((s = (s * 1664525 + 1013904223) % 4294967296) / 4294967296);
-  const words = ["rank", "tensor", "gradient", "descent", "Fourier", "boolean", "entropy", "kernel", "margin", "bound", "init", "norm", "depth", "width", "loss"];
-  const slugs = Array.from({ length: n }, (_, i) => `page-${i}`);
-  const blob = makeFixtureBlob();
-  blob.pages = {};
-  const links: string[][] = [];
-  const bodies: Record<string, string> = {};
-  for (const slug of slugs) {
-    const out = new Set<string>();
-    for (let k = 0; k < 1 + Math.floor(rnd() * 3); k++) out.add(slugs[Math.floor(rnd() * n)]!);
-    out.delete(slug);
-    const text = Array.from({ length: 30 + Math.floor(rnd() * 40) }, () => words[Math.floor(rnd() * words.length)]!).join(" ");
-    bodies[slug] = `# ${slug}\n\n${text}\n\nSee ${[...out].map((t) => `[${t}](${t}.md)`).join(" and ")}.\n`;
-    for (const t of out) links.push([slug, t]);
-  }
-  for (const slug of slugs) {
-    const t = `${words[Math.floor(rnd() * words.length)]} ${words[Math.floor(rnd() * words.length)]} page`;
-    blob.pages[slug] = {
-      card: { id: slug, title: t, type: "idea", maturity: "seed", depth: "", areas: [], words: 40, preview: `p ${slug}` },
-      path: "", frontmatter: {}, markdown: bodies[slug]!,
-      backlinks: links.filter((l) => l[1] === slug).map((l) => ({ id: l[0]!, context: `ctx ${l[0]}->${slug}` })),
-      outbound: links.filter((l) => l[0] === slug).map((l) => l[1]!), broken: [], suggested: [],
-    } as PageDetail;
-  }
-  blob.index = { ...blob.index, links, pages: Object.values(blob.pages).map((p) => p.card) };
-  return blob;
-}

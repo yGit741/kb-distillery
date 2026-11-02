@@ -27,7 +27,7 @@ INGESTION_ORDER = ("inbox", "failed", "uncataloged", "cataloged")
 COMPANION_STATUS = ("ink", "dupe", "asset")     # dispositions that fold a file into another file
 DIGESTION_ORDER = ("not digested", "partial", "digested", "skipped")
 STARTED_AT = time.time()
-CODE_DIRS = ("src/kb_distillery", "src/kb_distillery/core", "src/kb_distillery/dashboard", "src/kb_distillery/dashboard/static",
+CODE_DIRS = ("src/kb_distillery", "src/kb_distillery/core",
              "src/kb_distillery/ingest", "src/kb_distillery/ops", "src/kb_distillery/services")
 
 

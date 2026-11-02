@@ -28,8 +28,8 @@ class ChecksForTests(unittest.TestCase):
     def test_api_router(self):
         self.assertEqual(names(["src/kb_distillery/api/routers/x.py"]), ["api-schema-check"])
 
-    def test_dashboard(self):
-        self.assertEqual(names(["src/kb_distillery/dashboard/graph.html"]), ["test-e2e"])
+    def test_e2e_folder_runs_the_e2e(self):
+        self.assertIn("test-e2e", names(["web/e2e/x.test.mjs"]))
 
     def test_graph_runs_the_still_canvas_e2e(self):
         self.assertEqual(names(["web/src/features/graph/ForceGraph.tsx"]), ["web-check", "test-ui-principles", "test-e2e"])
@@ -60,8 +60,9 @@ class RunChecksTests(unittest.TestCase):
 
     def test_e2e_skipped_without_playwright(self):
         with patch.object(ship, "e2e_available", return_value=False), \
+                patch.object(ship, "checks_for", return_value=[("test-e2e", ["pixi", "run", "test-e2e"])]), \
                 patch.object(ship.subprocess, "run") as run:
-            self.assertTrue(ship.run_checks(paths=["src/kb_distillery/dashboard/x.html"]))
+            self.assertTrue(ship.run_checks(paths=["web/e2e/x.test.mjs"]))
             run.assert_not_called()
 
     def test_pr_body_records_skip(self):

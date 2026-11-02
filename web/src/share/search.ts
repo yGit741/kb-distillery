@@ -1,8 +1,7 @@
 /**
  * Full-text search and shortest paths over the baked blob. A straight port of the two server-side
- * computations the legacy static shim (src/kb_distillery/publish/cloudflare/static/kb-static.js) ran in the browser,
- * which in turn port src/kb_distillery/services/pages.py. share/search.test.ts runs both on fixtures and
- * requires identical output, so a change here must keep the legacy answers.
+ * computations in src/kb_distillery/services/pages.py (search, find_paths), run in the browser on the share build's data.
+ * search.test.ts pins the behaviour on a fixture.
  */
 import type { PageDetail, PathResult, SearchHit, SearchResult } from "@/api/types";
 import { PAGE_LINK, WIKILINK } from "@/lib/links";

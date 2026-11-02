@@ -195,8 +195,6 @@ pixi run share -- deploy-main --dry-run
   building through their own viewer (`--viewer`) as long as that viewer has the app layout.
 - `tests/publish/test_share_snapshot_golden.py` pins the file list and the `kb-data` payload of a snapshot of the
   fixture kb (`tests/fixtures/golden/share-app/`); after an intended data change, `KB_UPDATE_GOLDEN=1` regenerates it.
-- Left for the dashboard removal: `static/kb-static.js` and `web/src/share/search.test.ts` (it compares the TypeScript
-  search with the shim).
 
 ## Next step
 

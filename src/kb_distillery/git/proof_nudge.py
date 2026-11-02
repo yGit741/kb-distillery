@@ -5,7 +5,7 @@ The turn (every tool call after the last human message) is classified into kinds
 for its own evidence on the reply's `Proof:` line(s). Every requirement is an any-of group, and all
 groups of every kind the turn touched must be met:
 
-    ui         web/, kb_distillery/dashboard/     local URL  +  deployed URL (always both)
+    ui         web/                              local URL  +  deployed URL (always both)
     api        kb_distillery/api/, kb_distillery/services/        local endpoint URL
     knowledge  wiki/, raw/, meta/, ops commit   page link  +  kb-x.y.z or commit URL
     pr         ship pr / merge              PR URL
@@ -36,7 +36,7 @@ PR = ("the PR URL (github.com/…/pull/N)", r"github\.com/\S+/pull/\d+")
 
 # kind -> (path prefixes, command regex, [any-of evidence groups])
 KINDS = {
-    "ui": (("web/", "src/kb_distillery/dashboard/"), None, [[LOCAL], [DEPLOYED]]),
+    "ui": (("web/",), None, [[LOCAL], [DEPLOYED]]),
     "api": (("src/kb_distillery/api/", "src/kb_distillery/services/"), None, [[LOCAL]]),
     "knowledge": (("wiki/", "raw/", "meta/"), r"\bops\s+--\s+commit\b", [[PAGE], [VERSION]]),
     "pr": ((), r"\bship\s+--\s+(pr|merge)\b", [[PR]]),

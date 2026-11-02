@@ -6,7 +6,8 @@ and the Lane C moves: `templates/` (now `src/kb_distillery/kits/<kit>/kit.toml`,
 symlink, `pixi run sync-skills` and `SKILL_TEMPLATE.md` (now `src/kb_distillery/kits/<kit>/skills/`, real files in
 `.claude/skills/`, `docs/guides/write-a-skill.md` and `kits/base/skills/_TEMPLATE.md`), and the Lane F move of `kb_distillery.share`
 into `kb_distillery.publish.site` / `.cloudflare` (the Worker sources left the root `share/` for `publish/cloudflare/worker/`,
-`publish/site_state.py` became `publish/site/state.py`, `tests/share/` became `tests/publish/cloudflare/`).
+`publish/site_state.py` became `publish/site/state.py`, `tests/share/` became `tests/publish/cloudflare/`), and the Lane F removal of the legacy stdlib dashboard
+(`src/kb_distillery/dashboard/`, `python -m kb_distillery.dashboard`, `pixi run dashboard`; the app is `pixi run app`).
 
 There are no import shims: a star-import shim breaks mock.patch, `python -m` and -W error filters. Instead this scan
 fails on any tracked file that still names the old module or path strings. Inputs come from `git ls-files` only (the
@@ -47,6 +48,8 @@ RETIRED = {
     "root share/ Worker folder (now src/kb_distillery/publish/cloudflare/worker)": re.compile(
         r"(?<![\w./~-])share/(?:admin|auth|flags\.gen|package\.json|wrangler|\*\.test)|node --test share/"
         r"|(?<![\w])root_resource\(\"share\"\)|_data/share\b"),
+    "legacy dashboard package (the app is kb_distillery.api and web/)": re.compile(
+        r"kb_distillery[./]dashboard\b|\bpixi run dashboard\b|(?<![\w./-])dashboard/(?:serve|shell|ops_routes|static)\b"),
 }
 # (pattern name -> files that may name it): the tools/ entry of TOOLING_PATHS (until Phase 9), the share builder that still builds
 # refs from before the move, and this test.
@@ -60,10 +63,10 @@ ALLOWED = {
     # the old patterns so the deny never weakens
     "kb_distillery.share package (now publish/site and publish/cloudflare)": {
         "src/kb_distillery/publish/site/build.py", ".claude/settings.json", "tests/publish/cloudflare/test_share_versions.py",
-        "tests/publish/cloudflare/test_share_build.py", "docs/ROADMAP.md", "docs/phase-7-audit.md",
-        "src/kb_distillery/kits/base/defaults/docs/lifecycle.md"},   # TEMPORARY: another PR owns that doc; it renames the module there and deletes this entry
+        "tests/publish/cloudflare/test_share_build.py", "docs/ROADMAP.md", "docs/phase-7-audit.md"},
 }
 # The roadmap is the record of what was planned and done under the old names; it is not rewritten.
+ALLOWED["legacy dashboard package (the app is kb_distillery.api and web/)"] = {"docs/ROADMAP.md", "docs/phase-3-report.md"}   # records of what was
 ALLOWED["meta-defaults/"] = {"docs/ROADMAP.md"}
 ALLOWED["root skills/ folder, sync-skills or SKILL_TEMPLATE"] = {"docs/ROADMAP.md"}
 ALLOWED["templates/ kit folder, template.toml, core.template or $KB_TEMPLATES_DIR"] = {"docs/ROADMAP.md"}
@@ -80,7 +83,7 @@ def tracked():
     return [p for p in out.split("\0") if p and not p.endswith(SKIP_SUFFIX)]
 
 
-RETIRED_FILES = ("src/kb_distillery/share/", "src/kb_distillery/publish/site_state.py", "share/", "tests/share/",
+RETIRED_FILES = ("src/kb_distillery/dashboard/", "tests/dashboard/", "src/kb_distillery/share/", "src/kb_distillery/publish/site_state.py", "share/", "tests/share/",
                  "src/kb_distillery/maintenance/fix_math.py", "src/kb_distillery/maintenance/rename_raw.py",
                  "src/kb_distillery/maintenance/daily_sync.py", "src/kb_distillery/maintenance/notify.py",
                  "src/kb_distillery/maintenance/export.py", "src/kb_distillery/report/", "src/kb_distillery/cli.py",
