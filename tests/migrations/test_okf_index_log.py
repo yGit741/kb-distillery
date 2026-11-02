@@ -37,7 +37,7 @@ class OkfIndexLog(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.root = self.tmp.name
-        write(self.root, "kb.toml", '[kb]\nid = "t"\nname = "T"\nschema_version = "1.6"\n')
+        write(self.root, "kb.toml", '[kb]\nid = "t"\nname = "T"\nschema_version = "1.4"\n')
         write(self.root, "wiki/a.md", "---\ntype: idea\n---\n# A\n")
         write(self.root, "index.md", "---\ntype: meta\n---\n\n# Wiki index\n\n| [[a]] | x |\n")
         write(self.root, "meta/log.md", LEGACY)
@@ -125,7 +125,7 @@ class OkfIndexLog(unittest.TestCase):
         ids = migrate._apply(self.root, ["0015_okf_index_log"])
         self.assertEqual(ids, ["0015_okf_index_log"])
         self.assertIn("0015_okf_index_log\t", read(self.root, "meta/migrations/applied.tsv"))
-        self.assertEqual(mig.PRODUCES, (1, 7))
+        self.assertEqual(mig.PRODUCES, (1, 5))
         self.assertNotIn("0015_okf_index_log", migrate.pending_migrations(self.root))
 
 

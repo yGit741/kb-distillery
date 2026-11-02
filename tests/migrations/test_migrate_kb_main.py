@@ -110,14 +110,14 @@ class MigrateOnKbMainTests(unittest.TestCase):
         of it is committed (a regenerated root index.md, dirty before the run, must not stop the migration)."""
         import shutil
         from kb_distillery.paths import MIGRATIONS_CODE_PATH
-        make_repo(self.root, toml=KB_TOML.replace("0.1", "1.6"))
+        make_repo(self.root, toml=KB_TOML.replace("0.1", "1.4"))
         os.remove(os.path.join(self.root, "meta", "migrations", "0001_bump.py"))
         shutil.copy(os.path.join(MIGRATIONS_CODE_PATH, "0015_okf_index_log.py"),
                     os.path.join(self.root, "meta", "migrations", "0015_okf_index_log.py"))
         write(self.root, "index.md", "| [[a]] | x |\n")
         write(self.root, "meta/log.md", "# Wiki log\n\n## [2026-08-07] setup | first\n\n## [2026-08-08] ingest | second\n")
         g(self.root, "add", "-A")
-        g(self.root, "commit", "-q", "-m", "kb(catalog): old layout (kb-1.6.1)")
+        g(self.root, "commit", "-q", "-m", "kb(catalog): old layout (kb-1.4.1)")
         write(self.root, "index.md", "| [[a]] | regenerated and dirty |\n")
         with patch("kb_distillery.ops.core.run_lint", return_value=None):
             ids = run(self.root)
@@ -146,6 +146,23 @@ class MigrateOnKbMainTests(unittest.TestCase):
         self.assertIn("on its main", str(cm.exception))
 
 
+class SeveralMigrationsOneBump(unittest.TestCase):
+    """A schema step may ship as several migrations that all produce the same version (a schema PR bumps one minor)."""
+
+    def test_three_pending_migrations_with_the_same_produces_apply_together(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = os.path.realpath(tmp)
+            make_repo(root, toml=KB_TOML.replace("0.1", WANT))
+            os.remove(os.path.join(root, "meta", "migrations", "0001_bump.py"))
+            for n in ("0002_a", "0003_b", "0004_c"):
+                write(root, f"meta/migrations/{n}.py", "PRODUCES = (%d, %d)\ndef apply(root):\n    pass\n" % migrate.SCHEMA_VERSION)
+            self.assertEqual(migrate.run(root, "infra/x", dry_run=True), ["0002_a", "0003_b", "0004_c"])
+            self.assertEqual(migrate.run(root, "infra/x"), ["0002_a", "0003_b", "0004_c"])
+            self.assertEqual(migrate.pending_migrations(root), [])
+            with open(os.path.join(root, "meta", "migrations", "applied.tsv")) as f:
+                self.assertEqual([l.split("\t")[2].strip() for l in f.read().splitlines()[1:]], [WANT] * 3)
+
+
 class MigrateIsAllOrNothing(unittest.TestCase):
     """A failed batch leaves the kb as it was; unresolved links are refused before any write (dry run lists them)."""
 
@@ -156,7 +173,7 @@ class MigrateIsAllOrNothing(unittest.TestCase):
 
     def two_migrations(self):
         write(self.root, "meta/migrations/0001_bump.py",
-              "PRODUCES = (1, 6)\ndef apply(root):\n    open(root + '/wiki/a.md', 'a').write('\\nchanged by 0001\\n')\n")
+              "PRODUCES = (1, 5)\ndef apply(root):\n    open(root + '/wiki/a.md', 'a').write('\\nchanged by 0001\\n')\n")
         write(self.root, "meta/migrations/0002_boom.py",
               "PRODUCES = (%d, %d)\ndef apply(root):\n    open(root + '/wiki/new.md', 'w').write('x')\n    raise RuntimeError('boom')\n"
               % migrate.SCHEMA_VERSION)

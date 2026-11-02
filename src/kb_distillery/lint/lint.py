@@ -666,7 +666,7 @@ PATH_PREFIXED = re.compile(r"\]\(((?:\./|\.\./wiki/|wiki/)[^()\s/]+\.md)(?:#[^()
 
 def check_links(pages):
     """Pages link with `[Title](slug.md)` (core.links). A wikilink outside `## My notes` is an error (it was written
-    after the schema 1.6 switch); inside My notes it is the user's and only warns when it points at nothing. A page
+    after the schema 1.5 switch); inside My notes it is the user's and only warns when it points at nothing. A page
     link to no page, or to a heading the page lacks, is an error. Code and math are not read."""
     known = known_link_targets(pages)
     headings = {}

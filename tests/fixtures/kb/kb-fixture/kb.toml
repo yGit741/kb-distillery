@@ -3,7 +3,7 @@
 [kb]
 id = "fixture"
 name = "Test Fixture"
-schema_version = "1.7"
+schema_version = "1.5"
 template = "academic-research"
 
 [types]

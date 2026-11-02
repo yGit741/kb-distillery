@@ -106,7 +106,7 @@ def test_kb_config_errors_name_their_fix():
 def test_kb_config_ok_and_layout(tmp_path):
     root = tmp_path / "k"
     root.mkdir()
-    cfg = types.SimpleNamespace(id="k", schema_version=(1, 7), kit="base", root=str(root), git_root=None)
+    cfg = types.SimpleNamespace(id="k", schema_version=(1, 5), kit="base", root=str(root), git_root=None)
     c, got = doctor.check_kb_config("k", lambda ref: cfg)
     assert c.status == PASS and got is cfg and "base" in c.detail
     assert doctor.check_kb_layout(cfg).status == WARN            # no wiki/ meta/

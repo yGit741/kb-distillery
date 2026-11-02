@@ -118,7 +118,7 @@ INDEX_REL = f"{WIKI_DIR}/index.md"
 LOG_REL = f"{WIKI_DIR}/log.md"
 OKF_VERSION = "0.2"          # written as the only frontmatter key of wiki/index.md
 RESERVED_PAGES = frozenset({"index.md", "log.md"})
-LEGACY_INDEX_REL = "index.md"       # before schema 1.7 (migration 0015 removes it, nothing writes it again)
+LEGACY_INDEX_REL = "index.md"       # before schema 1.5 (migration 0015 removes it, nothing writes it again)
 LEGACY_LOG_REL = "meta/log.md"
 
 
@@ -269,7 +269,7 @@ KNOWLEDGE_PATHS = [
     "raw/",
     "index.md",         # legacy location: kept so migration 0015's removal of it is a knowledge change
     "meta/corpus.tsv",
-    "meta/log.md",      # legacy location (log.md lives in wiki/ since schema 1.7)
+    "meta/log.md",      # legacy location (log.md lives in wiki/ since schema 1.5)
     "meta/coherence-warnings.tsv",
     "meta/aliases.tsv",
     "meta/chats/",
@@ -351,7 +351,7 @@ def is_kb_tooling(path):
 # (x, y) changes only inside a schema/paradigm PR (with its migration); z is derived
 # from git (last first-parent KB-Version + 1). Tooling is not versioned — infra work
 # is identified by its PR number (#N). See src/kb_distillery/git/commit_policy.py.
-SCHEMA_VERSION = (1, 7)     # 1.7: index.md and log.md are the OKF reserved files of the bundle root wiki/; 1.6: pages link with relative markdown links `[Title](slug.md)`, wikilinks only in My notes (1.5: OKF frontmatter (maturity, description, generated {by}, created, title only when it differs from the H1, sources objects only beyond the url, related paths); 1.4: `relations:` field; 1.3: `summary:` field; 1.2: conversation → mail/ai-chat; 1.1: question H1)
+SCHEMA_VERSION = (1, 5)     # 1.5: OKF v0.2 native bundle in one step (migrations 0013-0015): frontmatter (maturity, description, generated {by}, created, title only when it differs from the H1, sources objects only beyond the url, related paths); pages link with relative markdown links `[Title](slug.md)`, wikilinks only in My notes; index.md and log.md are the OKF reserved files of the bundle root wiki/ (1.4: `relations:` field; 1.3: `summary:` field; 1.2: conversation → mail/ai-chat; 1.1: question H1)
 from kb_distillery.kbconfig import SCHEMA_VERSION as _KB_SCHEMA_VERSION
 assert SCHEMA_VERSION == _KB_SCHEMA_VERSION, "kb_distillery.kbconfig.SCHEMA_VERSION must follow this value"
 

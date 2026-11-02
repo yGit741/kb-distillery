@@ -338,7 +338,7 @@ def build(root, inputs):
     for name in META_COPY:
         if (META_SRC / name).is_dir():
             shutil.copytree(META_SRC / name, meta / name, ignore=CODE_IGNORE)
-    (root / "kb.toml").write_text('[kb]\nid = "harness"\nname = "Harness fixture vault"\nschema_version = "1.7"\n'
+    (root / "kb.toml").write_text('[kb]\nid = "harness"\nname = "Harness fixture vault"\nschema_version = "1.5"\n'
                                   '\n[types]\nareas = [' + ", ".join(f'"{t}"' for t in TOPICS) + ']\n', encoding="utf-8")
     (meta / "corpus.tsv").write_text(MANIFEST_HEADER, encoding="utf-8")
     (meta / "aliases.tsv").write_text("", encoding="utf-8")

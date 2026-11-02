@@ -15,7 +15,7 @@ from kb_distillery import kbconfig
 
 QMD = os.path.join(kbconfig.checkout_root(), "scripts", "qmd")
 NODE = shutil.which("node")
-MINIMAL = '[kb]\nid = "{id}"\nname = "Probe"\nschema_version = "1.7"\n'
+MINIMAL = '[kb]\nid = "{id}"\nname = "Probe"\nschema_version = "1.5"\n'
 
 
 def _node_ok():

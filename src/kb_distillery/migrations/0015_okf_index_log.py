@@ -1,4 +1,4 @@
-"""OKF reserved files (schema 1.7): `index.md` and `log.md` live in the bundle root `wiki/`, in OKF shape.
+"""OKF reserved files (schema 1.5): `index.md` and `log.md` live in the bundle root `wiki/`, in OKF shape.
 
   index.md       the generated catalog moves from the vault root to wiki/index.md. The root file is removed; lint
                  writes wiki/index.md (frontmatter `okf_version: 0.2` only, bulleted `[Title](slug.md) — summary` rows, no status).
@@ -18,7 +18,7 @@ import sys
 
 from kb_distillery.core import log as kblog
 
-PRODUCES = (1, 7)
+PRODUCES = (1, 5)
 LEGACY_ENTRY = re.compile(r"^## \[(\d{4}-\d{2}-\d{2})\] (.+?)\s*$")
 LEGACY_INDEX = "index.md"
 LEGACY_LOG = os.path.join("meta", "log.md")

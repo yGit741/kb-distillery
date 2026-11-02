@@ -1,4 +1,4 @@
-"""OKF links (schema 1.6): pages link with standard relative markdown links, `wiki/` is the bundle root.
+"""OKF links (schema 1.5): pages link with standard relative markdown links, `wiki/` is the bundle root.
 
 `[[slug]]` -> `[Title](slug.md)`, `[[slug|label]]` / `[[slug\\|label]]` (table cell) -> `[label](slug.md)`,
 `[[slug#Heading]]` -> `[Title](slug.md#heading)`, `![[file.png]]` -> `![file.png](../raw/.../file.png)`.
@@ -21,7 +21,7 @@ import sys
 from kb_distillery.core import frontmatter as fmlib
 from kb_distillery.core import links
 
-PRODUCES = (1, 6)
+PRODUCES = (1, 5)
 HEADING = re.compile(r"^#{1,6}\s+(.+?)\s*#*\s*$", re.M)
 SAFE_SLUG = re.compile(r"^[A-Za-z0-9._-]+$")
 

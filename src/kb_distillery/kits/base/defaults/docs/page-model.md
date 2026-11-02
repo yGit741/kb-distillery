@@ -133,9 +133,9 @@ Pages link with standard relative markdown links (Open Knowledge Format v0.2; `w
 string by hand. Wikilinks (`[[slug]]`) survive only inside the user's `## My notes`, which no tool rewrites; readers
 (graph, backlinks, search) read both forms. Lint fails on a wikilink outside My notes (code, math and HTML comments are
 not read), on a link to no page, on a heading the target lacks, and on a path (`wiki/x.md`). `[[]]` stays a
-harmless empty placeholder. Schema 1.6 moved every page to this form (migration `0014_okf_links`).
+harmless empty placeholder. Schema 1.5 moved every page to this form (migration `0014_okf_links`).
 
-**Reserved files (schema 1.7).** `wiki/` is the OKF bundle root, and OKF reserves two files in it: `wiki/index.md` and
+**Reserved files (schema 1.5).** `wiki/` is the OKF bundle root, and OKF reserves two files in it: `wiki/index.md` and
 `wiki/log.md`. They are not pages: no `type`, no frontmatter rules, never scanned, linted as pages, graphed, searched,
 counted, shared as nodes or restored by undo. `index.md` is generated on every lint run (frontmatter holds only
 `okf_version: 0.2`; the body is one bulleted `[Title](slug.md) — summary` list per page type; no Meta

@@ -3,7 +3,7 @@
 [kb]
 id = "demo"
 name = "Job Search (demo)"
-schema_version = "1.7"
+schema_version = "1.5"
 kit = "base"
 owner = "dana-levi"           # the id in `generated: {by: human:<owner>}` on pages whose summary you wrote
 

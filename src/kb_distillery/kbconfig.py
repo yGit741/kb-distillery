@@ -42,7 +42,7 @@ DEFAULT_HOME = os.path.join("~", "knowledge")
 THINK_DIR_NAME = "think"
 # `[kb] schema_version` a knowledge base must carry to be opened by this explorer (major.minor of kb-x.y.z).
 # Kept here, not in kb_distillery.core.schema, so this module stays import-free; the schema asserts both agree.
-SCHEMA_VERSION = (1, 7)
+SCHEMA_VERSION = (1, 5)
 
 
 class KbConfigError(ValueError):
