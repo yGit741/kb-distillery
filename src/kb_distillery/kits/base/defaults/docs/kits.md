@@ -25,7 +25,7 @@ kit = "research"      # optional; without it the kb.toml carries its own [types]
 
 So a kb can add a type, an area or an edge type, and can restate what the kit says, but cannot rename, recolour or remove anything the kit defines. To change the kit, change the kit (a PR on `src/kb_distillery/kits/<name>/`).
 
-The merge is in `KbConfig.section`, so every reader (`kb_distillery.core.kbtypes`, `kb_distillery.services.cypher.edge_config`) sees the same result, whatever imports first.
+The merge is in `KbConfig.section`, so every reader (`kb_distillery.core.kbtypes`, `kb_distillery.graph.model.edge_config`) sees the same result, whatever imports first.
 
 ## The file
 
@@ -37,7 +37,7 @@ extends = "base"              # optional: the kit this one builds on (must exist
 description = "..."
 
 [types]    # the kb.toml [types] format, see src/kb_distillery/core/kbtypes.py
-[edges]    # types, symmetric, note_required, labels: see src/kb_distillery/services/cypher.py (edge_config)
+[edges]    # types, symmetric, note_required, labels: see src/kb_distillery/graph/model.py (edge_config)
 ```
 
 `extends` is checked when a kb loads, and later steps use it to layer a kit's resources (defaults, skills, hooks) over its parent's. It does not copy the parent's `[types]` / `[edges]` into the child: a kit's ontology is exactly the tables in its own `kit.toml` (so a kb naming `research` gets research's types and colours, not base's).

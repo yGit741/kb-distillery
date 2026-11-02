@@ -10,7 +10,7 @@ carry for itself:
     description = "..."
 
     [types] ...                       # exactly the kb.toml [types] format (kb_distillery.core.kbtypes)
-    [edges] ...                       # exactly the kb.toml [edges] format (kb_distillery.services.cypher.edge_config)
+    [edges] ...                       # exactly the kb.toml [edges] format (kb_distillery.graph.model.edge_config)
 
 A kb names its kit in `[kb] kit = "<name>"` (`distill init` writes it). The older `[kb] template = "<name>"` is read
 too, and the two old names `starter` and `academic-research` resolve to `base` and `research`, so a kb.toml written

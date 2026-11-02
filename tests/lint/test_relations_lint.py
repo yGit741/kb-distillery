@@ -13,7 +13,7 @@ def page(slug, fm_extra="", ptype="idea"):
 
 
 def run(*pairs, config=CONFIG):
-    import kb_distillery.services.cypher as cy
+    import kb_distillery.graph.model as cy
     old, cy.edge_config = cy.edge_config, lambda cfg=None: config
     old_types, lint.SOURCE_TYPES = lint.SOURCE_TYPES, frozenset({"paper"})   # independent of the active kb's types
     lint.errors.clear()

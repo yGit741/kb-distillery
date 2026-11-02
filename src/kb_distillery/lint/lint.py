@@ -799,7 +799,7 @@ def check_relations(pages):
         return
     import yaml
     from kb_distillery.graph import relations as R
-    from kb_distillery.services.cypher import edge_config
+    from kb_distillery.graph.model import edge_config
     config = edge_config()
     for slug, (rel, fm, text) in sorted(stated.items()):
         block = R.relations_block(text)

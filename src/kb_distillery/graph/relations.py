@@ -9,7 +9,7 @@ of the frontmatter stays with the flat parser `kb_distillery.lint.lint.parse_fro
         note: the margin argument carries over to deep linear nets
 
 A stored kind is legal when the knowledge base declares it in `kb.toml` `[edges] types` (read by
-`kb_distillery.services.cypher.edge_config`, with `symmetric` and `note_required`); anything else is dropped and reported
+`kb_distillery.graph.model.edge_config`, with `symmetric` and `note_required`); anything else is dropped and reported
 by `problems`. Computed kinds come from existing data:
 
     mentions           a wikilink or `related:` entry (the snapshot's `links`)
