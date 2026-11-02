@@ -72,7 +72,7 @@ BAR_CMDS = {"vert": "|", "lvert": "|", "rvert": "|", "mid": "|", "Vert": "\u2016
             "rVert": "\u2016", "parallel": "\u2016"}
 MARK_KINDS = {"\u0303": "tilde", "\u0302": "hat", "\u0304": "bar", "\u0305": "bar", "\u0307": "dot", "\u0308": "ddot",
               "\u030c": "check", "\u0306": "breve", "\u0301": "acute", "\u0300": "grave", "\u20d7": "vec"}
-LETTER_MACROS = {"ell": "l", "hbar": norm("\u210f"), "imath": "\u0131", "jmath": "\u0237", "aleph": "\u2135",
+LETTER_MACROS = {"ell": "l", "hbar": norm("\u210f"), "imath": "\u0131", "jmath": "\u0237", "aleph": norm("\u2135"),
                  "Re": "r", "Im": "i"}               # one-letter symbols a font draws as a single glyph
 WIDE_ACCENT = {**{c: "hat" for c in (0x62, 0x63, 0x64)}, **{c: "tilde" for c in (0x65, 0x66, 0x67)}}
 OVERLAID = set("\u00af\u02c9\u0304\u203e\u02c6\u02dc\u02d9\u00a8\u02c7\u02d8\u00b4")       # modifier glyphs, never prose
@@ -192,7 +192,7 @@ def scan_math(s: str, accents: list | None = None) -> list:
 
 
 def _join_bars(items: list) -> list:
-    """`| |` written for a norm is the one double-bar glyph the PDF has."""
+    """`||` written for a norm (two bars with nothing between) is the one double-bar glyph the PDF has."""
     out: list = []
     for k in items:
         if k == "|" and out and out[-1] == "|":
@@ -263,7 +263,7 @@ def parse_markdown(md: str) -> Output:
     md = re.sub(r"(\w)-[ \t]*\n[ \t]*(?=[a-z])", r"\1", md)             # a word the parser left hyphen-broken
     md = re.sub(r"!\[[^\]]*\]\([^)]*\)", " ", md)
     md = re.sub(r"\[([^\]]*)\]\((?:https?:|/|\.|#)[^)]*\)", r"\1", md)
-    md = re.sub(r"</?[A-Za-z][^<>\n$]*>", " ", md)                       # HTML tags, not an inequality `a < b ... c > d`
+    md = re.sub(r"</?(?:table|tr|td|th|thead|tbody|br|p|b|i|u|em|strong|sub|sup|span|div|img|a|eq|html|body|figure|figcaption|caption|center|font|code|pre|ul|ol|li|h[1-6])(?:\s[^<>\n$]*)?/?>", " ", md, flags=re.I)                       # HTML tags, not an inequality `a < b ... c > d`
     maths = []
     for rx in _MATH_RES:
         md = rx.sub(lambda m: maths.append(m.group(1)) or " ", md)
@@ -382,6 +382,11 @@ def _lim_rules(layer: PageLayer) -> int:
         a, b, c = gl[i:i + 3]
         if (a.char, b.char, c.char) != ("l", "i", "m") or c.bbox[0] - a.bbox[0] > 3 * a.size:
             continue
+        before, after = gl[i - 1] if i else None, gl[i + 3] if i + 3 < len(gl) else None
+        glued = [g for g, gap in ((before, a.bbox[0] - before.bbox[2] if before else 9), (after, after.bbox[0] - c.bbox[2] if after else 9))
+                 if g is not None and g.char.isalpha() and abs(g.bbox[1] - a.bbox[1]) < 0.5 * a.size and gap < 1.5]
+        if glued:
+            continue                                                # `limit`, `eliminate`: prose, not the operator
         x0, x1, y0, y1 = a.bbox[0], c.bbox[2], min(g.bbox[1] for g in (a, b, c)), max(g.bbox[3] for g in (a, b, c))
         for r in layer.rules:
             lap = min(x1, r.bbox[2]) - max(x0, r.bbox[0])
@@ -425,8 +430,8 @@ def layer_bags(layer: PageLayer) -> LayerBags:
         (g.size for g in layer.glyphs), default=10))
     primes = sum({"\u2032": 1, "\u2033": 2, "\u2034": 3, "'": 1}.get(g.char, 0) for g in layer.glyphs
                  if g.cls in MATH_CLASSES and not layer.in_figure(g.bbox) and not layer.is_margin(g.bbox))
-    bad = sum(1 for g in layer.glyphs if g.cls in MATH_CLASSES and (g.char in "\u201c\u201d\u2018\u2019" or
-                                                                    "\u0100" <= g.char[:1] <= "\u017f"))
+    bad = sum(1 for g in layer.glyphs if g.cls in MATH_CLASSES and bool(g.char) and (
+        g.char in ("\u201c", "\u201d", "\u2018", "\u2019") or ("\u0100" <= g.char[0] <= "\u017f" and g.char[0] not in "\u0131\u0127")))
     return LayerBags(need1, all1, need2, skip2, numbers, _layer_accents(layer), primes, _lim_rules(layer), bad, tall)
 
 
