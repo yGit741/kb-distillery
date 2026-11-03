@@ -3,7 +3,6 @@ type: blog-post
 layer: source
 maturity: digested
 depth: easy
-title: "פוסט לדוגמה: מטריצות"
 blog: "לא מדויק"
 lang: he
 raw: raw/printed-docs/blog-not-exact-fixture-hebrew-post.md

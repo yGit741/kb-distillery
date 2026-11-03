@@ -26,6 +26,9 @@ from . import fixture_vault
 
 FIXTURES = HERE.parent / "fixtures"
 GOLDEN = FIXTURES / "golden"
+# golden subtrees owned by other tests (tests/publish/test_share_snapshot_golden.py): the harness neither
+# regenerates, deletes nor compares them
+FOREIGN_GOLDEN = ("share-app",)
 RECORDED = FIXTURES / "recorded" / "digests.json"
 PY = sys.executable
 
@@ -311,13 +314,16 @@ class Run:
         got = {rel: self.normalise(rel, t) for rel, t in self.artifacts.items()}
         if update:
             if GOLDEN.exists():
-                shutil.rmtree(GOLDEN)
+                for child in GOLDEN.iterdir():
+                    if child.name not in FOREIGN_GOLDEN:
+                        shutil.rmtree(child) if child.is_dir() else child.unlink()
             for rel, t in got.items():
                 dest = GOLDEN / rel
                 dest.parent.mkdir(parents=True, exist_ok=True)
                 dest.write_text(t, encoding="utf-8")
             return [], len(got)
-        want = {str(p.relative_to(GOLDEN)): p.read_text(encoding="utf-8") for p in GOLDEN.rglob("*") if p.is_file()}
+        want = {str(p.relative_to(GOLDEN)): p.read_text(encoding="utf-8") for p in GOLDEN.rglob("*")
+                if p.is_file() and p.relative_to(GOLDEN).parts[0] not in FOREIGN_GOLDEN}
         diffs = []
         for rel in sorted(set(want) | set(got)):
             a, b = want.get(rel), got.get(rel)

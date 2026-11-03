@@ -1,7 +1,6 @@
 ---
 type: idea
 layer: concept
-title: "Shannon entropy"
 area: [info-theory]
 maturity: seed
 sources: []

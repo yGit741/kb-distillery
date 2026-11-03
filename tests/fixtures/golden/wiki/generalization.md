@@ -1,7 +1,6 @@
 ---
 type: idea
 layer: concept
-title: "Generalization"
 area: [learning-theory]
 maturity: seed
 sources: []

@@ -1,7 +1,6 @@
 ---
 type: series
 layer: collection
-title: "Fixture combinatorics blog"
 short: author
 area: [boolean-analysis]
 maturity: digested

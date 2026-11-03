@@ -1,7 +1,6 @@
 ---
 type: topic
 layer: concept
-title: "Fourier Analysis"
 maturity: seed
 aliases: []
 related: []

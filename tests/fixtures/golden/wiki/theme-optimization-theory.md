@@ -1,7 +1,6 @@
 ---
 type: topic
 layer: concept
-title: "Optimization Theory"
 maturity: seed
 aliases: []
 related: []

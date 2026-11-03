@@ -1,7 +1,6 @@
 ---
 type: topic
 layer: concept
-title: "Quantum"
 maturity: seed
 aliases: []
 related: []

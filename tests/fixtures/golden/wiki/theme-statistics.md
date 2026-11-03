@@ -1,7 +1,6 @@
 ---
 type: topic
 layer: concept
-title: "Statistics"
 maturity: seed
 aliases: []
 related: []

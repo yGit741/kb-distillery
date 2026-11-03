@@ -1,7 +1,6 @@
 ---
 type: lecture
 layer: source
-title: "Fixture RL lecture 1"
 course: course-fixture-rl
 authors: [Fixture Author]
 year: 
@@ -38,7 +37,7 @@ $x^2$
 Variables: $x$: a fixture variable
 
 
-## Takeaways for my thesis
+## Takeaways
 
 - The value function satisfies the Bellman equation.
 - Concepts: [Learning Theory](theme-learning-theory.md)
