@@ -147,7 +147,7 @@ usage: kb_distillery.ingest [-h] {scrap,scrap-wordpress,scrap-youtube,video-dige
 ```
 distill digest easy           abstract skim (light LLM)
 distill digest full           standard paper note (medium LLM)
-distill digest deep           thesis-critical digest (heavy LLM)
+distill digest deep           high-stakes digest (heavy LLM)
 distill digest many           batch-fill claims for many sources, then full-digest them one by one (LLM)
 distill digest instructions   the digest focus of the selected kb
 ```

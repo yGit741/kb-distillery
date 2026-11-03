@@ -1,13 +1,15 @@
 # Getting started
 
-This page takes you from a clone to a first digest. You need macOS, [pixi](https://pixi.sh), and git. Node is installed by pixi.
+This page takes you from a clone to a first digest. You need [pixi](https://pixi.sh) and git. Node is installed by pixi.
 
-AI features are optional. Reading, linking, linting and the app work without a key. A digest needs a Claude login or an API key.
+Supported platforms: macOS (Apple silicon and Intel) and Linux x86-64. Windows is not supported.
+
+AI features are optional. Reading, linking, linting and the app work without a key. A digest needs a Claude login or an Anthropic API key; only Anthropic models are supported.
 
 ## 1. Install
 
 ```bash
-git clone <this-repository-url> kb-distillery
+git clone https://github.com/yGit741/kb-distillery kb-distillery
 cd kb-distillery
 pixi install
 ```

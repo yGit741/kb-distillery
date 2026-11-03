@@ -73,7 +73,7 @@ raw/inbox -> catalog -> raw/<format>/ + meta/corpus.tsv -> digest -> wiki/ -> li
 | `examples/demo/` | The tracked sample knowledge base. |
 | `examples/launchd/` | Templates for the nightly job. |
 | `scripts/` | Launch script and git hooks. |
-| `.claude/` | Skills and agents for working on the engine. |
+| `.claude/` | The maintainer's local agent tooling. It is not shipped in releases and you do not need it. |
 
 ## Rules that do not change
 
