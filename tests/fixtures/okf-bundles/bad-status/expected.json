@@ -1,0 +1,28 @@
+{
+  "pages": 23,
+  "errors": [
+    "wiki/bigfloat.md: [status] status 1.5e+20 is not draft, stable or deprecated",
+    "wiki/bothquotes.md: [status] status 'it\\'s \"x\"' is not draft, stable or deprecated",
+    "wiki/date.md: [status] status datetime.date(2026, 10, 12) is not draft, stable or deprecated",
+    "wiki/dict.md: [status] status {'a': 1, 'b': ['x', \"it's\"]} is not draft, stable or deprecated",
+    "wiki/digested.md: [status] status 'digested' is not draft, stable or deprecated",
+    "wiki/escapes.md: [status] status 'tab\\there\\nnew\\\\slash é \\x01 \\u200b' is not draft, stable or deprecated",
+    "wiki/exp-no-dot.md: [status] status '1e3' is not draft, stable or deprecated",
+    "wiki/float.md: [status] status 1.0 is not draft, stable or deprecated",
+    "wiki/hex.md: [status] status 31 is not draft, stable or deprecated",
+    "wiki/inf.md: [status] status inf is not draft, stable or deprecated",
+    "wiki/list.md: [status] status ['draft', 2] is not draft, stable or deprecated",
+    "wiki/nan.md: [status] status nan is not draft, stable or deprecated",
+    "wiki/no.md: [status] status False is not draft, stable or deprecated",
+    "wiki/null.md: [status] status None is not draft, stable or deprecated",
+    "wiki/num.md: [status] status 3 is not draft, stable or deprecated",
+    "wiki/octal.md: [status] status 493 is not draft, stable or deprecated",
+    "wiki/quote.md: [status] status \"it's\" is not draft, stable or deprecated",
+    "wiki/sexa.md: [status] status 90 is not draft, stable or deprecated",
+    "wiki/smallfloat.md: [status] status 1.5e-05 is not draft, stable or deprecated",
+    "wiki/tilde.md: [status] status None is not draft, stable or deprecated",
+    "wiki/upper.md: [status] status 'Stable' is not draft, stable or deprecated",
+    "wiki/yes.md: [status] status True is not draft, stable or deprecated"
+  ],
+  "warnings": []
+}

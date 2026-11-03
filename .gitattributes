@@ -8,3 +8,6 @@ docs/archive/** export-ignore
 # Owner-only: deploys the owner's private site; one-time owner launchd migration.
 .github/workflows/deploy-main.yml export-ignore
 examples/launchd/switch.sh export-ignore
+
+# okf-check parity bundles: byte-exact (CRLF, BOM and invalid utf-8 are the point)
+tests/fixtures/okf-bundles/** -text

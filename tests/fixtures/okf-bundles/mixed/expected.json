@@ -1,0 +1,24 @@
+{
+  "pages": 7,
+  "errors": [
+    "wiki/B-upper.md: [timestamp] created datetime.date(2026, 1, 1) has no UTC offset",
+    "wiki/B-upper.md: [wikilink] [[e]]",
+    "wiki/a-first.md: [type] no parseable non-empty `type`",
+    "wiki/a-first.md: [status] status 'bad' is not draft, stable or deprecated",
+    "wiki/a-first.md: [sources] `sources` is not a list: 'nope'",
+    "wiki/a-first.md: [timestamp] created datetime.date(2026, 10, 12) has no UTC offset",
+    "wiki/a-first.md: [wikilink] [[b]]",
+    "wiki/a-first.md: [link] unresolved: nope.md",
+    "wiki/a-first.md: [boundary] link into raw/: /raw/a.pdf",
+    "wiki/b/c.md: [wikilink] [[c]]",
+    "wiki/b/c.md: [link] unresolved anchor: ../a-first.md#nope",
+    "wiki/index.md: [wikilink] [[x]]",
+    "wiki/index.md: [link] unresolved: missing.md",
+    "wiki/z-last.md: [type] no parseable non-empty `type`",
+    "wiki/z-last.md: [wikilink] [[z]]",
+    "wiki/é-accent.md: [timestamp] created datetime.date(2026, 1, 1) has no UTC offset",
+    "wiki/Ａ-wide.md: [timestamp] created datetime.date(2026, 1, 1) has no UTC offset",
+    "wiki/😀-emoji.md: [timestamp] created datetime.date(2026, 1, 1) has no UTC offset"
+  ],
+  "warnings": []
+}

@@ -1,0 +1,21 @@
+{
+  "pages": 3,
+  "errors": [
+    "wiki/linked.md: [link] unresolved anchor: raw/inside.md#nope",
+    "wiki/raw-links.md: [boundary] link into raw/: /raw/x.pdf",
+    "wiki/raw-links.md: [boundary] link into raw/: ../raw/x.pdf",
+    "wiki/raw-links.md: [link] unresolved: raw/x.pdf",
+    "wiki/raw-links.md: [boundary] link into raw/: /raw",
+    "wiki/raw-links.md: [link] unresolved: raw/x.pdf#p2",
+    "wiki/raw-links.md: [boundary] link into think/: /think/note.md",
+    "wiki/raw-links.md: [link] unresolved: think/note.md#h",
+    "wiki/raw-links.md: [link] unresolved: /rawish/x.md",
+    "wiki/raw-links.md: [link] unresolved: /wiki/raw/x.md",
+    "wiki/raw-links.md: [link] unresolved: ./raw/y.md",
+    "wiki/sub/deep.md: [link] unresolved: ../raw/x.pdf",
+    "wiki/sub/deep.md: [boundary] link into raw/: ../../raw/x.pdf",
+    "wiki/sub/deep.md: [link] unresolved: ../think/n.md",
+    "wiki/sub/deep.md: [link] unresolved: raw/x.md"
+  ],
+  "warnings": []
+}

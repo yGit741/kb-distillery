@@ -78,7 +78,7 @@ def test_fill_never_replaces_filled_claims(session, monkeypatch, capsys):
 
 
 @pytest.mark.parametrize("reply,error,why", [
-    (json.dumps({**GOOD, "equations": []}), "", "equations must be non-empty"),
+    (json.dumps({**GOOD, "equations": "x"}), "", "equations"),
     (json.dumps({**GOOD, "results": "one result"}), "", "results"),
     (json.dumps({k: v for k, v in GOOD.items() if k != "method"}), "", "method"),
     (json.dumps(GOOD), "cut at max_tokens (text kept)", "max_tokens"),

@@ -514,3 +514,29 @@ class TestHelpers(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestRunnerWiring(SDKCase):
+    def test_flag_off_path_has_no_new_options(self):
+        chat_agent.build_options("claude-opus-5-5", "SYS", "sk-x")
+        FakeClient.script = staticmethod(lambda o: [result()])
+        self.run_stream()
+        o = FakeClient.instances[0].options
+        for k in ("effort", "skills", "max_budget_usd"):
+            self.assertFalse(hasattr(o, k), k)
+
+    def test_effort_and_budget_reach_the_options(self):
+        FakeClient.script = staticmethod(lambda o: [result()])
+        self.run_stream(effort="high", budget=2.0)
+        o = FakeClient.instances[0].options
+        self.assertEqual((o.effort, o.max_budget_usd), ("high", 2.0))
+
+    def test_subscription_billing_blanks_the_key(self):
+        FakeClient.script = staticmethod(lambda o: [result()])
+        events = self.run_stream(key=None, billing="subscription")
+        self.assertEqual(FakeClient.instances[0].options.env["ANTHROPIC_API_KEY"], "")
+        self.assertEqual(dict(events)["usage"]["billing"], "subscription")
+
+    def test_policy_groups_deny_web_skills_and_unknown(self):
+        for tool in ("WebSearch", "WebFetch", "Skill", "Task", "Agent", "Write"):
+            self.assertFalse(chat_agent.tool_policy(tool, {}).allow, tool)

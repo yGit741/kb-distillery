@@ -53,6 +53,17 @@ def _git(root, *args, check=False, env=None):
     return proc
 
 
+def identity_env(root):
+    """Env that gives a kb commit an author where git has none (a fresh HOME). Per field: a configured user.name /
+    user.email (or GIT_* variable) always wins, the fallback fills only what is missing. `distill doctor` still warns."""
+    out = {}
+    for field, key, default in (("NAME", "user.name", "kb-distillery"), ("EMAIL", "user.email", "kb@localhost")):
+        have = os.environ.get(f"GIT_AUTHOR_{field}") or _git(root, "config", "--get", key).stdout.strip()
+        if not have:
+            out.update({f"GIT_AUTHOR_{field}": default, f"GIT_COMMITTER_{field}": default})
+    return out
+
+
 def _ops_dir(root):
     path = os.path.join(root, OPS_DIR)
     os.makedirs(path, exist_ok=True)
@@ -253,7 +264,7 @@ def _commit_paths(root, paths, message):
         # KB_LINTED + the nonce file let scripts/githooks/pre-commit skip re-linting
         proc = subprocess.run(["git", "commit", "-q", "-F", "-", "--", *pending], cwd=root,
                               input=message, capture_output=True, text=True,
-                              env=dict(os.environ, KB_LINTED=nonce))
+                              env=dict(os.environ, **identity_env(root), KB_LINTED=nonce))
     finally:
         with contextlib.suppress(FileNotFoundError):
             os.remove(token_file)
@@ -642,7 +653,7 @@ def snapshot(label=None, root=ROOT):
     head = _git(root, "rev-parse", "main").stdout.strip()
     if head != sha:
         print(f"note: main's tip is an infra merge — snapshot goes on the last knowledge step {sha[:9]}")
-    _git(root, "tag", "-a", name, sha, "-m", label or "snapshot", check=True)
+    _git(root, "tag", "-a", name, sha, "-m", label or "snapshot", check=True, env=identity_env(root))
     print(f"snapshot {name}{' — ' + label if label else ''}")
     return name
 

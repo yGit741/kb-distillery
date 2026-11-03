@@ -107,3 +107,13 @@ expires = 2027-01-30
 kind = "runtime"
 default = false
 envs = { local = false, private = true, public = false }
+
+[[flag]]
+name = "agent-mode"
+description = "Agent mode in the chat: effort, model and budget per turn, web tools, whitelisted skills and attachments. Dark until the last PR of the round; localhost only (never on the deployed site)."
+owner = "maintainer"
+created = 2026-11-03
+expires = 2027-01-31
+kind = "runtime"
+default = false
+envs = { local = false, private = false, public = false }

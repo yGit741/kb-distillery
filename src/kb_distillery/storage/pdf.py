@@ -10,12 +10,20 @@ from __future__ import annotations
 
 import ctypes
 import io
+import os
 import threading
 from typing import NamedTuple
 
 LOCK = threading.RLock()
 GAP_EM = 2.0          # a gap wider than this many em on one line starts a new line (table cells sit this far apart)
-MISSING_MSG = "pypdfium2 not installed — run: pixi install"
+
+
+def missing_msg() -> str:
+    """The hint for a missing PDF library, fitted to how kb-distillery was installed (pixi env or pip)."""
+    import sys
+    if ".pixi" in sys.prefix or os.environ.get("PIXI_PROJECT_ROOT"):
+        return "pypdfium2 not installed — run: pixi install"
+    return "pypdfium2 not installed — run: pip install pypdfium2"
 
 
 def available() -> bool:
