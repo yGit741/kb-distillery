@@ -72,8 +72,25 @@ This table is generated from the schema on `main`.
 | `GET /api/chat/prompts` | Prompt presets. |
 | `GET /api/chat/keys`, `POST /api/chat/keys`, `DELETE /api/chat/keys/{name}` | List, store and remove keys. Only hints are returned. `POST /api/chat/keys/remove` is the older form of the delete. |
 | `POST /api/chat/saved` | Save a chat to `raw/inbox/`. |
+| `GET /api/views` | Pinned graph views of the knowledge base. |
+| `POST /api/views` | Pin a view (one knowledge step). |
+| `PATCH /api/views/{id}` | Rename a pinned view (one knowledge step). |
+| `DELETE /api/views/{id}` | Unpin a view (one knowledge step). |
+| `GET /api/recent` | Recent shaping steps, local to this machine. |
+| `POST /api/recent` | Append a recent step; the last 20 are kept. |
+| `DELETE /api/recent` | Clear the recent steps. |
 
 The model names in the schema use the data model's words: `layer` is `source`, `collection` or `concept`, and `depth` is `listed`, `easy`, `full` or `deep`.
+
+## Pinned views and recent steps
+
+A pinned view is `{id, name, created, spec}`. `spec` is a JSON object the app owns (query, style, filters, layout, camera); the server stores it as given and never reads it. Views live in the knowledge base, in `meta/views.json`, and are committed.
+
+- `POST /api/views` takes `{name, spec, id?}`. The `id` defaults to a slug of the name, made unique. `PATCH /api/views/{id}` takes `{name}`. `DELETE /api/views/{id}` removes the view.
+- Each change is one knowledge step, `kb(refine): pin view <name> (kb-x.y.z)`, made by the same code as `distill ops view pin|unpin|rename`. It is refused with 409 while an ops session is open. A bad name or spec is 400, an unknown id is 404.
+- `GET /api/views?kb=<id>` reads another knowledge base's views in multi-kb mode (flag `kb-view`). Every write on another knowledge base is **405**, and so is every write on a server started with `KB_READ_ONLY=1`. The body is `{"error": "..."}`.
+
+Recent steps are `{at, text, spec}`, oldest first, kept in `<kb>/.local/recent.json`. That file is never committed: `distill init` ignores `.local/`, the server also adds it to the repository's local exclude file, and the ops commit path never stages it. `POST /api/recent` takes `{text, spec?}` and trims the list to the last 20.
 
 ## Add an endpoint
 
