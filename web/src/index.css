@@ -24,7 +24,7 @@
   --muted-foreground: #71717a; /* --muted */
   --accent: rgba(0, 0, 0, 0.08); /* --control-bg-hover: shadcn "accent" = hover surface */
   --accent-foreground: #18181b;
-  --accent-soft: rgba(37, 99, 235, 0.09); /* 0.09: --primary text on it stays ≥ 4.5:1 */
+  --accent-soft: color-mix(in srgb, var(--primary) 9%, transparent); /* 9%: --primary text on it stays at least 4.5:1 */
   --destructive: #dc2626; /* --danger / --bad */
   --border: #e4e4e7;
   --input: #e4e4e7;
