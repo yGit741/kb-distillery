@@ -1,0 +1,11 @@
+{
+  "pages": 7,
+  "errors": [
+    "wiki/bom-linked.md: [link] unresolved anchor: bom.md#bom-hides",
+    "wiki/bom.md: [type] no parseable non-empty `type`",
+    "wiki/nbsp.md: [link] unresolved anchor: #cafémenu",
+    "wiki/tabs.md: [type] no parseable non-empty `type`",
+    "wiki/unicode-headings.md: [link] unresolved anchor: #emoji-title"
+  ],
+  "warnings": []
+}

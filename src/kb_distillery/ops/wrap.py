@@ -90,7 +90,8 @@ def _items(paths):
 
 def run(cli_main, argv=None, table=INGEST, begin_table=None):
     argv = list(sys.argv[1:] if argv is None else argv)
-    skip = "--no-commit" in argv or "--dry-run" in argv or os.environ.get("KB_OPS_DISABLE") == "1"
+    skip = "--no-commit" in argv or "--dry-run" in argv or os.environ.get("KB_OPS_DISABLE") == "1" \
+        or "-h" in argv or "--help" in argv           # help only prints usage: it never opens an ops session
     argv = [a for a in argv if a != "--no-commit"]
     pos = _positional(argv)
     key = (pos[0] if pos else None, pos[1] if len(pos) > 1 else None)

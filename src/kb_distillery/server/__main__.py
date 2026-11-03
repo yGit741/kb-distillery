@@ -21,9 +21,9 @@ def main(argv=None):
 
     import uvicorn
     from kb_distillery.server.app import create_app
-    from kb_distillery.server.spa import ensure_app_dist
+    from kb_distillery.server.spa import ensure_app_dist, frontend_dir
 
-    if not args.no_build:
+    if not args.no_build and frontend_dir() is not None:      # an installed wheel has no sources to check
         print("src/kb_distillery/_webapp: checking sources…", flush=True)
         state = ensure_app_dist()
         print(f"src/kb_distillery/_webapp: {state}", flush=True)
