@@ -125,20 +125,70 @@ def test_renaming_to_the_same_name_makes_no_step(kb):
     assert out["sha"] is None and commits(kb) == n
 
 
-def test_open_session_blocks_and_failed_step_restores_the_file(kb):
+def test_failed_step_restores_file_and_index(kb):
     ops_view.pin("First", {"a": 1}, root=kb)
-    before = open(os.path.join(kb, "meta", "views.json")).read()
-    with mock.patch.object(core, "commit_op", side_effect=core.OpsError("lint said no")):
+    path = os.path.join(kb, "meta", "views.json")
+    before = open(path).read()
+    n = commits(kb)
+
+    def staged_then_refused(*a, **kw):                    # `git add` happened, the commit did not (e.g. a hook said no)
+        core._git(kb, "add", "--", "meta/views.json")
+        raise core.OpsError("lint said no")
+
+    with mock.patch.object(core, "commit_op", side_effect=staged_then_refused):
         with pytest.raises(ViewsError) as e:
             ops_view.pin("Second", {}, root=kb)
-    assert e.value.status == 500 and "lint said no" in str(e.value)
-    assert open(os.path.join(kb, "meta", "views.json")).read() == before
+    assert e.value.status == 409 and "lint said no" in str(e.value)
+    assert open(path).read() == before and commits(kb) == n
+    assert git(kb, "status", "--porcelain") == ""         # nothing left staged or modified
 
+    with mock.patch.object(core, "commit_op", side_effect=RuntimeError("boom")):
+        with pytest.raises(ViewsError) as e:
+            ops_view.rename("first", "Other", root=kb)
+    assert e.value.status == 500 and open(path).read() == before
+
+
+def test_a_step_that_took_nothing_is_not_reported_as_done(kb):
+    with mock.patch.object(core, "commit_op", return_value=None):
+        with pytest.raises(ViewsError) as e:
+            ops_view.pin("Ghost", {}, root=kb)
+    assert e.value.status == 409
+    assert not os.path.exists(os.path.join(kb, "meta", "views.json"))
+
+
+def test_a_step_that_landed_survives_a_late_failure(kb):
+    real = core.commit_op
+
+    def lands_then_raises(*a, **kw):
+        real(*a, **kw)
+        raise RuntimeError("deploy request failed")
+
+    with mock.patch.object(core, "commit_op", side_effect=lands_then_raises):
+        out = ops_view.pin("Landed", {}, root=kb)
+    assert out["ok"] and out["sha"] == git(kb, "rev-parse", "HEAD")
+    assert [v["id"] for v in stored(kb)] == ["landed"]
+
+
+def test_open_session_blocks(kb):
     core.begin("refine", "something", root=kb)
     n = commits(kb)
     with pytest.raises(ViewsError) as e:
         ops_view.pin("Third", {}, root=kb)
     assert e.value.status == 409 and "ops session" in str(e.value) and commits(kb) == n
+
+
+def test_a_real_lint_accepts_the_views_file_on_a_new_kb(tmp_path):
+    """No mocked lint: a kb made by `distill init` lints clean with meta/views.json in it, and ignores `.local/`."""
+    with mock.patch.dict(os.environ, ENV), \
+         mock.patch("kb_distillery.publish.cloudflare.autodeploy.trigger", return_value="skipped"):
+        root = init_kb.create("notes", "Notes", "base", str(tmp_path))
+        # the kb's hooks run whichever `distill` is on PATH (maybe an older engine); the policy itself is checked below
+        git(root, "config", "--unset", "core.hooksPath")
+        out = ops_view.pin("Real lint", {"cypher": "MATCH (n) RETURN n"}, root=root)
+        assert out["sha"] and git(root, "status", "--porcelain") == ""
+        vv.append_recent(root, "a step", {})
+        assert git(root, "status", "--porcelain") == ""
+        assert ".local/" in open(os.path.join(root, ".gitignore")).read().splitlines()
 
 
 def test_a_damaged_file_is_a_409_not_a_guess(kb):
@@ -195,3 +245,9 @@ def test_the_ops_commit_path_never_stages_local_state(kb):
 
 def test_init_writes_the_local_rule_into_a_new_kbs_gitignore():
     assert ".local/" in init_kb.GITIGNORE.splitlines()
+
+
+def test_commit_policy_accepts_a_view_step_in_a_kb_repo():
+    from kb_distillery.git import commit_policy as cp
+    msg = "kb(refine): pin view X (kb-1.5.7)\n\nKB-Version: 1.5.7\nKB-Op: refine\nKB-Target: x\n"
+    assert cp.check_message(msg, "main", ["meta/views.json", "wiki/log.md"], kb_repo=True) == []

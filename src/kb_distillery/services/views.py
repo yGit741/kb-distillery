@@ -6,7 +6,7 @@ direct VCS call from here. HTTP-free: failures are `ViewsError(status, message)`
 
 Read-only: the server writes only to the knowledge base it serves. Another knowledge base shown in multi-kb mode
 (`?kb=<other id>`, flag `kb-view`) is read, never written, and a server started with `KB_READ_ONLY=1` (a hosted or
-share-like deployment) refuses every write. Both are a 405 with a message.
+share-like deployment) refuses every write of these routes (views and recent steps; other routes do not read it). Both are a 405 with a message.
 """
 from __future__ import annotations
 

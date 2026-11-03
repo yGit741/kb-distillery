@@ -20,6 +20,7 @@ import json
 import os
 import re
 import tempfile
+import threading
 
 from kb_distillery.vault.schema import LOCAL_DIR
 
@@ -30,6 +31,7 @@ MAX_NAME = 120
 MAX_ID = 64
 MAX_SPEC_BYTES = 256 * 1024          # a spec is a few hundred bytes of settings; a megabyte is a bug, not a view
 MAX_TEXT = 500
+_RECENT_LOCK = threading.Lock()
 ID_RE = re.compile(r"^[a-z0-9][a-z0-9-]{0,%d}$" % (MAX_ID - 1))
 
 
@@ -139,6 +141,20 @@ def render(views):
                        for v in views], indent=2, ensure_ascii=False) + "\n"
 
 
+def _atomic_write(full, text):
+    """Write beside the target, then rename over it: a concurrent reader sees the old file or the new, never a half."""
+    os.makedirs(os.path.dirname(full), exist_ok=True)
+    fd, tmp = tempfile.mkstemp(dir=os.path.dirname(full), prefix=".tmp-", suffix=".part")
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            f.write(text)
+        os.replace(tmp, full)
+    except BaseException:
+        with contextlib.suppress(OSError):
+            os.remove(tmp)
+        raise
+
+
 def write_text(root, text):
     """Write `text` to meta/views.json (None removes the file). The caller commits."""
     full = os.path.join(root, VIEWS_REL)
@@ -146,9 +162,7 @@ def write_text(root, text):
         with contextlib.suppress(FileNotFoundError):
             os.remove(full)
         return
-    os.makedirs(os.path.dirname(full), exist_ok=True)
-    with open(full, "w", encoding="utf-8") as f:
-        f.write(text)
+    _atomic_write(full, text)
 
 
 def find(views, view_id):
@@ -182,16 +196,7 @@ def _write_recent(root, entries):
     full = os.path.join(root, RECENT_REL)
     os.makedirs(os.path.dirname(full), exist_ok=True)
     ensure_local_ignored(root)
-    fd, tmp = tempfile.mkstemp(dir=os.path.dirname(full), prefix=".recent-", suffix=".tmp")
-    try:
-        with os.fdopen(fd, "w", encoding="utf-8") as f:
-            json.dump(entries, f, ensure_ascii=False, indent=2)
-            f.write("\n")
-        os.replace(tmp, full)
-    except BaseException:
-        with contextlib.suppress(OSError):
-            os.remove(tmp)
-        raise
+    _atomic_write(full, json.dumps(entries, ensure_ascii=False, indent=2) + "\n")
 
 
 def append_recent(root, text, spec=None, at=None):
@@ -199,13 +204,14 @@ def append_recent(root, text, spec=None, at=None):
     if not isinstance(text, str) or not text.strip():
         raise ViewsError(400, "a recent step needs text")
     entry = {"at": at or now_iso(), "text": " ".join(text.split())[:MAX_TEXT], "spec": clean_spec(spec)}
-    entries = (load_recent(root) + [entry])[-MAX_RECENT:]
-    _write_recent(root, entries)
+    with _RECENT_LOCK:                      # the routes run in a thread pool: read-modify-write must not interleave
+        entries = (load_recent(root) + [entry])[-MAX_RECENT:]
+        _write_recent(root, entries)
     return entries
 
 
 def clear_recent(root):
-    with contextlib.suppress(FileNotFoundError):
+    with _RECENT_LOCK, contextlib.suppress(FileNotFoundError):
         os.remove(os.path.join(root, RECENT_REL))
 
 

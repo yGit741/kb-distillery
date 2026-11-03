@@ -87,8 +87,8 @@ The model names in the schema use the data model's words: `layer` is `source`, `
 A pinned view is `{id, name, created, spec}`. `spec` is a JSON object the app owns (query, style, filters, layout, camera); the server stores it as given and never reads it. Views live in the knowledge base, in `meta/views.json`, and are committed.
 
 - `POST /api/views` takes `{name, spec, id?}`. The `id` defaults to a slug of the name, made unique. `PATCH /api/views/{id}` takes `{name}`. `DELETE /api/views/{id}` removes the view.
-- Each change is one knowledge step, `kb(refine): pin view <name> (kb-x.y.z)`, made by the same code as `distill ops view pin|unpin|rename`. It is refused with 409 while an ops session is open. A bad name or spec is 400, an unknown id is 404.
-- `GET /api/views?kb=<id>` reads another knowledge base's views in multi-kb mode (flag `kb-view`). Every write on another knowledge base is **405**, and so is every write on a server started with `KB_READ_ONLY=1`. The body is `{"error": "..."}`.
+- Each change is one knowledge step, `kb(refine): pin view <name> (kb-x.y.z)`, made by the same code as `distill ops view pin|unpin|rename`. `distill ops undo` reverses one, and `distill ops restore` brings the pinned views back to the snapshot with the rest of the knowledge. It is refused with 409 while an ops session is open or when lint rejects the knowledge base. A bad name or spec is 400, an unknown id is 404.
+- `GET /api/views?kb=<id>` reads another knowledge base's views in multi-kb mode (flag `kb-view`). Every write on another knowledge base is **405**, and so is every write of these routes (views and recent steps) on a server started with `KB_READ_ONLY=1`; other routes do not read that variable. The body is `{"error": "..."}`.
 
 Recent steps are `{at, text, spec}`, oldest first, kept in `<kb>/.local/recent.json`. That file is never committed: `distill init` ignores `.local/`, the server also adds it to the repository's local exclude file, and the ops commit path never stages it. `POST /api/recent` takes `{text, spec?}` and trims the list to the last 20.
 

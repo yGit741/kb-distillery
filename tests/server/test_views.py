@@ -180,3 +180,10 @@ def test_exclude_rule_is_added_once_and_only_for_a_repo(tmp_path):
     plain.mkdir()
     vv.ensure_local_ignored(str(plain))                  # no repo: nothing created, nothing raised
     assert not (plain / ".git").exists()
+
+
+def test_concurrent_recent_appends_lose_nothing(kb):
+    from concurrent.futures import ThreadPoolExecutor
+    with ThreadPoolExecutor(8) as pool:
+        list(pool.map(lambda i: vv.append_recent(kb, f"s{i}", {}), range(20)))
+    assert sorted(e["text"] for e in vv.load_recent(kb)) == sorted(f"s{i}" for i in range(20))
