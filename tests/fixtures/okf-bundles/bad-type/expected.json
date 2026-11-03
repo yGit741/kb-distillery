@@ -1,0 +1,18 @@
+{
+  "pages": 15,
+  "errors": [
+    "wiki/broken.md: [type] no parseable non-empty `type`",
+    "wiki/empty.md: [type] no parseable non-empty `type`",
+    "wiki/emptydict.md: [type] no parseable non-empty `type`",
+    "wiki/emptyfm.md: [type] no parseable non-empty `type`",
+    "wiki/false.md: [type] no parseable non-empty `type`",
+    "wiki/list.md: [type] no parseable non-empty `type`",
+    "wiki/none.md: [type] no parseable non-empty `type`",
+    "wiki/null.md: [type] no parseable non-empty `type`",
+    "wiki/scalar.md: [type] no parseable non-empty `type`",
+    "wiki/space.md: [type] no parseable non-empty `type`",
+    "wiki/unterminated.md: [type] no parseable non-empty `type`",
+    "wiki/zero.md: [type] no parseable non-empty `type`"
+  ],
+  "warnings": []
+}
