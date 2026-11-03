@@ -50,12 +50,12 @@ class ShippedKitsTests(unittest.TestCase):
             self.assertEqual(pages.takeaways_heading(cfg), "Takeaways")
             self.assertEqual(pages.focus_slugs(cfg), frozenset())
 
-    def test_research_kit_keeps_the_thesis_values(self):
+    def test_research_kit_is_neutral(self):
         for k in ("research", "academic-research"):          # the legacy name the owner's kb.toml still uses
             cfg = kb_at(os.path.join(self.tmp.name, k), k)
-            self.assertEqual(pages.takeaways_heading(cfg), "Takeaways for my thesis")
-            self.assertEqual(pages.focus_slugs(cfg), frozenset({"thesis"}))
-            self.assertEqual(pages.skip_slugs(cfg), frozenset({"AGENTS", "log", "thesis"}))
+            self.assertEqual(pages.takeaways_heading(cfg), "Takeaways")
+            self.assertEqual(pages.focus_slugs(cfg), frozenset({"focus"}))
+            self.assertEqual(pages.skip_slugs(cfg), frozenset({"AGENTS", "log", "focus"}))
 
     def test_a_kb_toml_pages_table_wins_over_its_kit(self):
         cfg = kb_at(os.path.join(self.tmp.name, "own"), "research",
@@ -94,6 +94,12 @@ class ShippedKitsTests(unittest.TestCase):
         write(os.path.join(cfg.root, "meta", "templates", "paper.md"), "# own\n")
         self.assertEqual(paths.meta_file("templates", "paper.md", root=cfg.root),
                          os.path.join(cfg.root, "meta", "templates", "paper.md"))
+
+    def test_no_research_kit_text_assumes_a_thesis_writer(self):
+        base = str(resource("kits/research"))
+        for path in glob.glob(base + "/defaults/templates/*.md") + glob.glob(base + "/prompts/*.md"):
+            with open(path, encoding="utf-8") as f:
+                self.assertNotRegex(f.read(), r"(?i)thesis|\bMSc\b|theoretical machine learning", path)
 
     def test_no_engine_skeleton_mentions_the_thesis(self):
         for path in glob.glob(str(resource("kits/base/defaults/templates")) + "/*.md"):
@@ -151,6 +157,24 @@ class MigrationTests(unittest.TestCase):
 
     def test_a_research_kb_has_nothing_to_do(self):
         self.assertEqual(migration.plan(self.root, "Takeaways for my thesis"), [])
+
+    def test_a_kb_overriding_the_heading_keeps_its_pages_through_migrate_and_lint(self):
+        """The owner's thesis kb sets the old heading and focus page in its own kb.toml: the neutral research-kit
+        default must neither rewrite its pages nor make its focus page look like an orphan."""
+        from unittest.mock import patch
+        from kb_distillery.vault import health
+        root = os.path.join(self.root, "kbs", "mine")
+        cfg = kb_at(root, "research", '\n[pages]\ntakeaways_heading = "Takeaways for my thesis"\nfocus_slugs = ["thesis"]\n')
+        write(os.path.join(root, "wiki", "paper-x.md"), self.PAGE)
+        write(os.path.join(root, "wiki", "thesis.md"), "# Thesis\n")
+        self.assertEqual(pages.takeaways_heading(cfg), "Takeaways for my thesis")
+        self.assertEqual(migration.plan(root, pages.takeaways_heading(cfg)), [])
+        with patch.object(kbconfig, "current", return_value=cfg):
+            self.assertEqual(migration.main(["--apply"]), 0)
+            self.assertFalse(health.is_orphan_slug("thesis"))
+            self.assertTrue(health.is_orphan_slug("focus"))
+        with open(os.path.join(root, "wiki", "paper-x.md"), encoding="utf-8") as f:
+            self.assertEqual(f.read(), self.PAGE)
 
     def test_crlf_pages_keep_their_line_ends(self):
         write(os.path.join(self.root, "wiki", "paper-x.md"), self.PAGE.replace("\n", "\r\n"))

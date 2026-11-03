@@ -352,7 +352,7 @@ def _split_fm(text):
 
 def kit_prompt_dirs(kb=None):
     """`kits/<kit>/prompts` for each kit in the active kb's chain, root first: a kit words the engine's generic
-    prompts for its own field (the research kit speaks to a student of theoretical machine learning)."""
+    prompts for its own field (the research kit speaks to a researcher)."""
     from kb_distillery.config import kb as kbconfig, kit
     cfg = kb if kb is not None else kbconfig.current()
     if not cfg or not cfg.kit:

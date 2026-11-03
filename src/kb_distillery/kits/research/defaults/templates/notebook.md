@@ -21,4 +21,4 @@ description:
 
 ## Threads
 
-<!-- Thesis links, open questions, connected courses and concepts. -->
+<!-- Links to your research focus, open questions, connected courses and concepts. -->

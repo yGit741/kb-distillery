@@ -40,7 +40,7 @@ const welcome = (): TourStep => ({
   place: "bottom",
   title: "What you are looking at",
   // source: AGENTS.md (Karpathy LLM-wiki pattern, agent-owned wiki/ over user-owned raw/); features/home/glossary.tsx (Raw → Source → Concept)
-  body: "Every paper, lecture and blog post I read is distilled by an agent into linked notes, in the pattern of Karpathy's LLM wiki. The strip below shows how a raw file becomes a source and then concepts.",
+  body: "Every paper, lecture and blog post added to this vault is distilled by an agent into linked notes, in the pattern of Karpathy's LLM wiki. The strip below shows how a raw file becomes a source and then concepts.",
 });
 
 /** B2: the picker's ego graph is one slice of the graph */
@@ -56,7 +56,7 @@ const conceptCard = (): TourStep => ({
   place: "top",
   title: "One source behind it",
   // source: features/home/samplers.ts (pickSource: full/deep first, then easy, then listed; PipelineStrip: Raw → Source → Concepts it feeds)
-  body: "Next to the graph is one source the concept relies on, followed from the raw file to the page and on to every concept it feeds. Questions are mine to answer; ideas are what they rest on.",
+  body: "Next to the graph is one source the concept relies on, followed from the raw file to the page and on to every concept it feeds. Questions are open for the reader to answer; ideas are what they rest on.",
 });
 
 /** B3: into the full graph, landing in the Map view on a page */
@@ -76,7 +76,7 @@ const mapView = (): TourStep => ({
   place: "bottom",
   title: "Map: what is in the vault",
   // source: features/graph/lab/views.ts (Map story: themes on a ring, ideas and questions inside, only digested sources; hulls: true)
-  body: "Themes sit on a ring, their ideas and questions inside, and only the sources I actually digested are drawn. Hulls mark where a theme's pages cluster.",
+  body: "Themes sit on a ring, their ideas and questions inside, and only the sources actually digested are drawn. Hulls mark where a theme's pages cluster.",
 });
 const sigma = (): TourStep => ({
   target: SIGMA,
@@ -85,9 +85,9 @@ const sigma = (): TourStep => ({
     const b = document.querySelector<HTMLButtonElement>(SIGMA);
     if (b && b.getAttribute("aria-pressed") !== "true") b.click();
   },
-  title: "Σ: which themes my notes combine",
+  title: "Σ: which themes the notes combine",
   // source: features/graph/views/ViewsBar.tsx (spectrumArcs: solid = positive coefficient, dashed = big pairs below chance); book-2014-analysis-of-boolean-functions.md (Fourier expansion as the book's first key concept)
-  body: "Solid chords join themes that share pages more often than chance; dashed chords are big pairs that meet less than chance. Watch for the chord between Boolean analysis and Fourier analysis, the pair my notes treat together most.",
+  body: "Solid chords join themes that share pages more often than chance; dashed chords are big pairs that meet less than chance. Watch for the chord between Boolean analysis and Fourier analysis, the pair the notes treat together most.",
 });
 
 /** B5: the Thesis view */
@@ -98,7 +98,7 @@ const thesisView = (): TourStep => ({
   place: "bottom",
   title: "Thesis: the spine",
   // source: features/graph/lab/views.ts (THESIS_SEED: three themes, four questions, concepts, papers, the book; story "one hop around it")
-  body: "The direction I am weighing — generalization of over-parameterized networks, met through Boolean analysis — as a seed of themes, open questions, concepts and papers, with one hop around it. Everything else is hidden.",
+  body: "The direction under consideration — generalization of over-parameterized networks, met through Boolean analysis — as a seed of themes, open questions, concepts and papers, with one hop around it. Everything else is hidden.",
 });
 
 /** B6: the Explore view and its Research directions panel */
@@ -108,8 +108,8 @@ const exploreView = (): TourStep => ({
   wait: SLOW,
   place: "right",
   title: "Explore: where a thesis could sit",
-  // source: features/graph/directions/directions.ts (gaps = two big themes that rarely share a page, holes = three themes meeting only in pairs; footholdOf: strong = reach ≥ 0.3 of my own questions/ideas to every side)
-  body: "Each card is an intersection my vault leaves empty: two big themes that rarely share a page, or three that only meet in pairs. A strong foothold means my own questions and ideas already reach every side of it.",
+  // source: features/graph/directions/directions.ts (gaps = two big themes that rarely share a page, holes = three themes meeting only in pairs; footholdOf: strong = reach ≥ 0.3 of the vault's own questions/ideas to every side)
+  body: "Each card is an intersection the vault leaves empty: two big themes that rarely share a page, or three that only meet in pairs. A strong foothold means the vault's own questions and ideas already reach every side of it.",
 });
 
 /** B7: touch one page — focus and select it, then explain it */
@@ -126,7 +126,7 @@ const touch = (slug: string, title: string, body: string): TourStep => ({
 });
 
 /** B9: back on Home, with what the tour left unseen */
-const homeAgain = (body: string, title = "What I left for you"): TourStep => ({
+const homeAgain = (body: string, title = "What is left to see"): TourStep => ({
   target: INTRO,
   go: "/",
   place: "bottom",
@@ -151,7 +151,7 @@ registerTour(
     ),
     homeAgain(
       // source: features/graph/views/ViewsBar.tsx (Thesis and Explore pills, ⓘ "How this view is computed"); features/graph/SideReader.tsx (double-click opens the reader)
-      "Play around and let me know what you think — it's still a work in progress, and I'm open to feedback. Try the Thesis and Explore views, the ⓘ next to each view, and double-click any node to read it.",
+      "Play around: this is still a work in progress. Try the Thesis and Explore views, the ⓘ next to each view, and double-click any node to read it.",
       "Play around",
     ),
   ],
@@ -188,10 +188,10 @@ function registerThesisTours(): void {
       exploreView(),
       homeAgain(
         // source: features/graph/views/ViewsBar.tsx (Σ, ⓘ); wiki/q-does-the-gradient-variance-bound-explain-the-sparse-parity-s.md (open question, spawned from paper-2017-failures-of-gradient-based-deep-learning)
-        "I left the Σ chords in Map, the other direction cards, the ⓘ behind each view, and my open question on whether the gradient-variance bound explains how SGD still learns sparse parities.",
+        "Still unseen: the Σ chords in Map, the other direction cards, the ⓘ behind each view, and the open question on whether the gradient-variance bound explains how SGD still learns sparse parities.",
       ),
     ],
-    "Why over-parameterized networks generalize — the question I am chasing",
+    "Why over-parameterized networks generalize — the question being chased",
     { menu: false },
   );
 
@@ -206,20 +206,20 @@ function registerThesisTours(): void {
         PARITY,
         "Parity: the canonical hard function",
         // source: wiki/parity-function.md (all Fourier mass on level |S|; low-degree learners see zero signal; Connections: paper-2017 gradient variance ≤ G(w)²/2^d); wiki/q-does-the-gradient-variance-bound-explain-the-sparse-parity-s.md
-        "The XOR of a subset of bits has all its Fourier mass on one level, so a learner that only sees low-degree correlations sees exactly zero signal, and gradient variance over random parities is exponentially small. My open question: does that bound explain the staircase results where SGD still learns k-sparse parities?",
+        "The XOR of a subset of bits has all its Fourier mass on one level, so a learner that only sees low-degree correlations sees exactly zero signal, and gradient variance over random parities is exponentially small. The open question: does that bound explain the staircase results where SGD still learns k-sparse parities?",
       ),
       touch(
         ODONNELL,
         "O'Donnell's book, and Fourier degree",
         // source: wiki/book-2014-analysis-of-boolean-functions.md (Key concepts: Fourier expansion, influence, noise stability and hypercontractivity, low-degree learning); wiki/fourier-degree.md (learnability via low-degree concentration; "the most promising bridge in this vault"; open question vs spectral bias)
-        "Analysis of Boolean Functions is where the vocabulary comes from: Fourier expansion, influence, noise stability and hypercontractivity, low-degree learning. Fourier degree is the bridge I am betting on — low-degree concentration is what makes a class learnable, and whether that is the same claim as spectral bias is an open question of mine.",
+        "Analysis of Boolean Functions is where the vocabulary comes from: Fourier expansion, influence, noise stability and hypercontractivity, low-degree learning. Fourier degree is the bridge being bet on — low-degree concentration is what makes a class learnable, and whether that is the same claim as spectral bias is an open question of mine.",
       ),
       homeAgain(
         // source: wiki/noise-stability.md (in THESIS_SEED); features/graph/lab/views.ts (Explore)
         "Still unseen: noise stability (the combinatorial side of the bridge) and the Explore view where these themes meet or fail to.",
       ),
     ],
-    "Where Boolean analysis meets learning theory in my notes",
+    "Where Boolean analysis meets learning theory in the notes",
     { menu: false },
   );
 }
