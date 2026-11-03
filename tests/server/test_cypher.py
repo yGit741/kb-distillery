@@ -44,6 +44,7 @@ def test_cypher_needs_loopback_origin(client):
     assert r.status_code == 403
 
 
+@pytest.mark.flag("graph-relations", False)   # the off state; proposals as edges are tested with it on
 def test_named_queries(client):
     r = client.get("/api/graph/queries")
     assert r.status_code == 200

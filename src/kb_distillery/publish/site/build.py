@@ -43,6 +43,7 @@ import tempfile
 import webbrowser
 from pathlib import Path
 
+from kb_distillery.config import flags
 from kb_distillery.config import kb as kbconfig
 from kb_distillery.vault import links as page_links
 from kb_distillery.webbuild import frontend_source_hash as _frontend_source_hash
@@ -238,7 +239,8 @@ def collect_data(meta_dir, built_at, content_sha):
     graph_data._now = lambda: built_at
     explore_data._now = lambda: built_at
 
-    snapshot = graph_data.build_graph_snapshot()
+    # Relations follow the share envs, not this Mac's: built when the private site has them, cut for public below.
+    snapshot = graph_data.build_graph_snapshot(relations=flags.value(graph_data.RELATIONS_FLAG, "private"))
     index = explore_data.build_index()
     page_docs = {}
     for slug in sorted(pages):
@@ -397,6 +399,8 @@ def apply_profile(data, profile, scope_slugs=None):
         raise BuildError(f"unknown profile {profile!r}; choose one of {', '.join(PROFILES)}")
     for k in PRIVATE_DATA_KEYS:
         data.pop(k, None)
+    if not flags.value("graph-relations", "public"):
+        data["graph"].pop("relations", None)
     graph, index, pages = data["graph"], data["index"], data["pages"]
     drop = {n["id"] for n in graph["nodes"] if n.get("type") in PUBLIC_EXCLUDE_TYPES}
     drop |= {c["id"] for c in index["pages"] if c.get("type") in PUBLIC_EXCLUDE_TYPES}
