@@ -117,3 +117,13 @@ expires = 2027-01-31
 kind = "runtime"
 default = false
 envs = { local = false, private = false, public = false }
+
+[[flag]]
+name = "inbox-pickup"
+description = "The nightly daily-sync also pulls the site's upload inbox: each pending bundle is imported as a new kb on this Mac (never published) and reported back. Dark until the owner has set up the R2 bucket and the inbox token."
+owner = "maintainer"
+created = 2026-11-03
+expires = 2027-01-31
+kind = "runtime"
+default = false
+envs = { local = false, private = false, public = false }

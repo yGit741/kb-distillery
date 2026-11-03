@@ -85,4 +85,5 @@ jobs:
         with:
           pixi-version: v0.76.1
           cache: false
+      - run: pixi run web-install   # esbuild + js-yaml for the Worker inbox's checker bundle (worker-bundle)
       - run: pixi run test-worker

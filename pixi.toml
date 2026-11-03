@@ -99,7 +99,8 @@ web-build = { cmd = "npm run build --prefix web", depends-on = ["web-install"] }
 flags-gen = "python -m kb_distillery.config.flags.codegen"
 flags-check = "python -m kb_distillery.config.flags.codegen --check && python -m kb_distillery.config.flags.coverage"
 web-check = { cmd = "python -m kb_distillery.config.flags.codegen --check && python -m kb_distillery.config.flags.coverage && npm run typecheck --prefix web && npm run test --prefix web && npm run build:check --prefix web && bash scripts/check-untracked-dist.sh" }
-test-worker = "node --test src/kb_distillery/publish/cloudflare/worker/*.test.mjs"
+worker-bundle = "node src/kb_distillery/publish/cloudflare/worker/build-okf.mjs"   # the web checker as okf.gen.js for the Worker inbox (needs `pixi run web-install` once)
+test-worker = { cmd = "node --test src/kb_distillery/publish/cloudflare/worker/*.test.mjs", depends-on = ["worker-bundle"] }
 test-e2e = "node --test tests/e2e/*.test.mjs"
 test-ui-principles = "node --test web/tests/ui-principles.test.mjs"
 install-sync = "bash examples/launchd/install.sh"

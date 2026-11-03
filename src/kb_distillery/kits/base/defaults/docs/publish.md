@@ -95,3 +95,12 @@ pixi run share -- list                               # the snapshots on the acco
 
 Existing snapshots are never touched by the plugin: their Worker names and URL shape
 (`https://snapshot-<YYYYMMDD>-<name>.<subdomain>.workers.dev/`) are pinned by `tests/publish/test_snapshot_shape.py`.
+
+## The upload inbox
+
+The private site can take OKF bundles from a signed-in owner (`worker/inbox.js`, routes under `/api/inbox`): it validates a zip with the very checker the app uses, stores it in an R2 bucket bound as `KB_INBOX` as `pending`, and the owner's Mac imports it (`distill kb inbox pull`, `kb_distillery.import_kb.import_bundle`). User-facing steps, including the one-time `wrangler r2 bucket create` and the `INBOX_TOKEN` secret: `docs/guides/import-a-bundle.md`.
+
+- **Bundling.** The Worker has no build step of its own, so `worker/build-okf.mjs` runs esbuild (from `web/node_modules`, a dependency of vite) over `worker/okf.entry.js`, which re-exports `checkBundle` from `web/src/lib/okf/checkBundle.ts`, and writes one dependency-free `okf.gen.js`. `deploy.render_worker_dir` runs it into the temporary Worker folder on every private deploy (it needs `pixi run web-install` once; the CI `worker` job runs it first), so the deployed checker is always the one in the commit. `okf.gen.js` is never committed. `pixi run worker-bundle` writes it beside the sources, and `pixi run test-worker` (the CI `worker` job) runs that first, so the inbox tests run against the real checker. `worker/zip.js` is the small zip reader (stored and deflate, via `DecompressionStream`): the zip-slip rules of `import_kb._safe_extract`, entry-count and unpacked-size limits, the same bundle-root choice as `find_bundle_root`.
+- **Binding.** `[worker] inbox_bucket` in the share config (or `KB_SHARE_INBOX_BUCKET`) renders `"r2_buckets": [{"binding": "KB_INBOX", ...}]` into `wrangler.jsonc` of the private site only. Unbound: the routes answer 503.
+- **Who.** Writes need a session on `ADMIN_EMAILS` (default `ALLOWED_EMAILS`) plus the `X-KB-Admin: 1` header and a same-origin `Origin`, exactly like the flag and snapshot panels. The Mac uses `Authorization: Bearer <INBOX_TOKEN>` (Worker secret) and may only list, download and report `imported`/`failed`.
+- **Flag.** `inbox-pickup` (runtime, off): `daily-sync` pulls the inbox after the sync.
