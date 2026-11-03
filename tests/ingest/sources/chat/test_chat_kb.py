@@ -47,7 +47,7 @@ class TestPrompts(unittest.TestCase):
         research = os.path.join(os.path.dirname(chat_data.PROMPTS_DIR), "..", "kits", "research", "prompts")
         kit = {p["id"]: p["text"] for p in chat_data.list_prompts(extra_dirs=[research])}
         self.assertEqual(set(kit), set(engine))
-        self.assertIn("theoretical machine learning", kit["query"])
+        self.assertIn("research assistant for a researcher", kit["query"])
         self.assertNotEqual(kit["query"], engine["query"])
 
     def test_active_kit_chain_supplies_the_prompt_dirs(self):

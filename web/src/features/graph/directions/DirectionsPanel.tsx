@@ -6,9 +6,9 @@ import { spectrum, type Spectrum } from "./fourier";
 import { num, Section, shortTheme, Story, ThemeChip, useCached, useDirectionsCache } from "./ui";
 
 const FOOTHOLD: Record<Direction["foothold"], { label: string; hint: string }> = {
-  strong: { label: "strong foothold", hint: "some of my questions or ideas already reach every side" },
-  thin: { label: "thin foothold", hint: "my notes touch every side, but only lightly" },
-  none: { label: "greenfield", hint: "nothing I wrote reaches every side yet: new ground, and a cold start" },
+  strong: { label: "strong foothold", hint: "some of the vault's questions or ideas already reach every side" },
+  thin: { label: "thin foothold", hint: "the notes touch every side, but only lightly" },
+  none: { label: "greenfield", hint: "nothing in the vault reaches every side yet: new ground, and a cold start" },
 };
 
 function PageList({ title, pages, ctx }: { title: string; pages: readonly DirectionPage[]; ctx: GraphToolContext }) {
@@ -87,8 +87,8 @@ export function DirectionsPanel({ ctx }: { ctx: GraphToolContext }) {
   return (
     <div className="flex flex-col gap-4 text-xs">
       <Story>
-        Where could my thesis sit? Each card is an intersection my vault leaves empty: big themes that rarely share a page, or three themes that meet only in
-        pairs. A strong foothold means my own questions already reach every side; greenfield means new ground with a cold start.
+        Where could a research focus sit? Each card is an intersection the vault leaves empty: big themes that rarely share a page, or three themes that meet only in
+        pairs. A strong foothold means the vault's own questions already reach every side; greenfield means new ground with a cold start.
       </Story>
       <Section title={`${list.length} directions · ${strong} with a strong foothold`}>
         <div className="flex flex-col gap-2">

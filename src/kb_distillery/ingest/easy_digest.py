@@ -46,6 +46,7 @@ def _new_page(page_type, slug, raw_rel):
             body = body.replace("{{author}}", json.dumps(meta.get("channel") or "", ensure_ascii=False))  # quoted YAML
         except (OSError, ValueError):
             pass
+    body = frontmatter.fill_conventions(body)
     body = body.replace("{{raw}}", raw_rel).replace("{{title}}", title)
     return re.sub(r"\{\{[a-z_]+\}\}", "", frontmatter.fill_title(body))
 

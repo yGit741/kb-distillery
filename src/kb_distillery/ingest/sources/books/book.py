@@ -485,7 +485,7 @@ def new_hub_text(raw_rel, rows, total, meta=None):
         text = f.read()
     for k, v in fill.items():
         text = text.replace("{{" + k + "}}", v)
-    text = frontmatter.fill_title(text)
+    text = frontmatter.fill_conventions(frontmatter.fill_title(text))
     return replace_partition(text, rows, PART_MAX_PAGES)
 
 

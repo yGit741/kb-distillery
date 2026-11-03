@@ -17,7 +17,7 @@ description:
 
 ## Formal
 
-## Why it matters (thesis angle)
+## Why it matters (research angle)
 
 ## Connections
 - <!-- [Title](slug.md) -->

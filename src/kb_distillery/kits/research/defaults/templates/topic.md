@@ -11,7 +11,7 @@ description:
 
 ## Scope
 
-<!-- One paragraph: what this research topic covers and why it is a candidate thesis direction. -->
+<!-- One paragraph: what this research topic covers and why it is a candidate research direction. -->
 
 ## Key concepts
 

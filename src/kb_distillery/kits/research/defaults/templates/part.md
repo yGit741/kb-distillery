@@ -28,7 +28,7 @@ description:
 
 ## Key equations
 
-## Takeaways for my thesis
+## {{takeaways_heading}}
 
 ## Connections
 

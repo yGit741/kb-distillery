@@ -28,7 +28,7 @@ interface Props {
 }
 
 /**
- * Chords for the spectrum between the pinned theme pages: solid = themes my notes treat together more than
+ * Chords for the spectrum between the pinned theme pages: solid = themes the notes treat together more than
  * chance (positive correlation, width ∝ coefficient); dashed = big pairs that meet less than chance.
  */
 export function spectrumArcs(model: GraphModel, s: Spectrum, max = MAX_ARCS, maxApart = MAX_APART): Arc[] {
@@ -141,8 +141,8 @@ export function ViewsBar({ model, visible, onPick }: Props) {
           size="icon"
           className={cn("size-7 rounded-full", sigma && "bg-accent-soft text-primary")}
           aria-pressed={sigma}
-          aria-label="Theme spectrum: chords between themes my notes treat together"
-          title="Theme spectrum (Σ): solid chords = themes my notes treat together more than chance; dashed = big pairs that never meet"
+          aria-label="Theme spectrum: chords between themes the notes treat together"
+          title="Theme spectrum (Σ): solid chords = themes the notes treat together more than chance; dashed = big pairs that never meet"
           onClick={() => setSigma(!sigma)}
         >
           <Sigma aria-hidden />
