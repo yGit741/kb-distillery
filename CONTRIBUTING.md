@@ -15,7 +15,7 @@ pixi run lint-imports                          # the layer contract between pack
 pixi run web-check                             # only when web/ changes
 ```
 
-pixi is solved for macOS on Apple silicon (`osx-arm64`). Tests do not call a real LLM and need no account or network.
+pixi is solved for macOS (`osx-arm64`, `osx-64`) and Linux (`linux-64`). Tests do not call a real LLM and need no account or network.
 
 ## Layout
 
@@ -39,15 +39,15 @@ Never commit to `main`. Use `ship`, which wraps branch, commit, gates and pull r
 2. Make the change. Add a test next to the code it covers.
 3. `pixi run ship -- commit "chore(<component>): summary"` runs the gates on the files you changed and commits them. The type is `paradigm`, `schema`, `feat`, `fix` or `chore`; `chore` covers docs, tests and refactors. Keep the subject to 72 characters and do not use apostrophes (pixi re-quotes the message and the commit silently fails).
 4. If `main` moved, `pixi run ship -- sync` merges it into your branch. Resolve any conflict, `git add` the files, then `pixi run ship -- sync --continue`.
-5. `pixi run ship -- pr --title "chore(<component>): summary"` runs the full gates and opens the pull request. `--hold` keeps it from merging until the owner approves.
-6. A maintainer reviews and merges with `pixi run ship -- merge` (always a merge commit). Pull requests that change the schema are held for the owner.
+5. `pixi run ship -- pr --title "chore(<component>): summary"` runs the full gates and opens the pull request. `--hold` keeps it from merging until a maintainer approves.
+6. A maintainer reviews and merges with `pixi run ship -- merge` (always a merge commit). Pull requests that change the schema are held until a maintainer approves them.
 
 `ship` expects the maintainers' GitHub setup. From a fork, make the same change on a branch and open an ordinary pull request; the checks are the same.
 
 ## Pull request expectations
 
 - One concern per pull request, under about 400 changed lines where possible.
-- The gates pass. `ship pr` runs `tests` (this includes the privacy ratchet), `lint-skills`, `lint-imports`, `lint` and `okf-check`; run `pixi run web-check` as well when `web/` changes. Do not skip or weaken a check.
+- The gates pass. `ship pr` runs `tests` (this includes the privacy ratchet), `lint-skills`, `lint-imports`, `lint` and `okf-check`; run `pixi run web-check` as well when `web/` changes. Do not skip or weaken a check. `web-check` also enforces the UI principles baseline (`web/tests/ui-principles.baseline.json`) and the graph screenshot test (`tests/e2e/graph-still.test.mjs`). More on the test harness: `tests/harness/README.md`; on the engine skills: `.claude/skills/README.md` (maintainer tooling).
 - Every call to a language model goes through `kb_distillery.llm`. Do not add a new `claude -p`, SDK or HTTP call.
 - A feature that cannot land in one pull request ships behind a flag in `src/kb_distillery/kits/base/defaults/flags.toml`; run `pixi run flags-gen` after editing it.
 - Changes to the app keep its look unless the pull request is about the look.

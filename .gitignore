@@ -16,8 +16,8 @@ copilot/
 # OS
 .DS_Store
 
-# raw/ binaries: 146MB+ of PDFs, already backed up by OneDrive.
-# git-lfs is not installed; tracking these would bloat the repo permanently.
+# raw/ binaries (PDFs, e-books): too large for plain git history.
+# git-lfs is not assumed; tracking these would bloat the repo permanently.
 # Paths stay lint-checked on disk — only the bytes are untracked.
 raw/**/*.pdf
 raw/**/*.epub
@@ -70,11 +70,11 @@ _quarantine/
 .claude/settings.local.json
 .claude/scheduled_tasks.lock
 
-# Mail/chat screenshots (~36MB): binary noise for Gemini GitHub import
+# Mail/chat screenshots: binary noise
 raw/**/*.png
 meta/chats/**/*.png
 
-# Other raw/ binaries — OneDrive backs them up; keep git text-only
+# Other raw/ binaries; keep git text-only
 raw/**/*.pptx
 raw/**/*.ppt
 raw/**/*.docx

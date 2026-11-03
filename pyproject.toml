@@ -9,6 +9,7 @@ description = "Build and keep a knowledge base: ingest, distill, lint, and read 
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]
+authors = [{name = "The kb-distillery authors"}]
 requires-python = ">=3.11"
 # Runtime dependencies (what `distill init`, doctor, lint, the app and the API import without an optional feature).
 # pixi.toml owns the dev environment (node, pytest, notebooks); nothing here is dev-only.
@@ -25,6 +26,12 @@ dependencies = [
     "claude-agent-sdk>=0.1.0",
     "pyjwt[crypto]>=2",
 ]
+
+[project.urls]
+Homepage = "https://github.com/yGit741/kb-distillery"
+Repository = "https://github.com/yGit741/kb-distillery"
+Issues = "https://github.com/yGit741/kb-distillery/issues"
+Changelog = "https://github.com/yGit741/kb-distillery/blob/main/CHANGELOG.md"
 
 [project.optional-dependencies]
 # The Google Drive connector reads the macOS Drive for desktop mount: no Python dependency, the extra names the feature.

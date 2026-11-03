@@ -2,3 +2,5 @@
 tests/ingest/sources/chat/test_chat_kb.py
 docs/phase-1-report.md
 web/src/features/chat/ChatScreen.test.tsx
+docs/getting-started.md
+pyproject.toml
