@@ -51,19 +51,22 @@ def upload(client, path, data, name="my-notes.zip", **fields):
     return client.post(path, files={"file": (name, data, "application/zip")}, data=fields, headers=ORIGIN)
 
 
-def uploads_left():
-    return [n for n in os.listdir(tempfile.gettempdir()) if n.startswith(("kb-upload-", "kb-import-"))]
+@pytest.fixture
+def tmpdir_of_its_own(tmp_path, monkeypatch):
+    own = tmp_path / "tmp"
+    own.mkdir()
+    monkeypatch.setattr(tempfile, "tempdir", str(own))
+    return own
 
 
-def test_validate_zip_previews_without_writing(client, world):
-    before = set(uploads_left())
+def test_validate_zip_previews_without_writing(client, world, tmpdir_of_its_own):
     r = upload(client, "/api/kb/import/validate", make_zip())
     assert r.status_code == 200, r.text
     j = r.json()
     assert (j["id"], j["name"], j["pages"], j["ok"]) == ("my-notes", "My notes", 2, True)
     assert j["errors"] == [] and j["source"] == "my-notes.zip"
     assert not world.exists() or not os.listdir(world)
-    assert set(uploads_left()) <= before                                    # temp dirs are removed
+    assert os.listdir(tmpdir_of_its_own) == []                              # temp dirs are removed
 
 
 def test_validate_reports_errors_and_taken_id(client, world):
@@ -149,3 +152,31 @@ def test_upload_cap_is_larger_only_on_the_import_routes(client):
     assert upload(client, "/api/kb/import/validate", big).status_code == 422          # reached the handler: not a zip
     r = client.post("/api/kb/list", content=big, headers={**ORIGIN, "Content-Type": "application/json"})
     assert r.status_code == 413
+
+
+def test_odd_json_types_are_422_not_500(client):
+    for body in ({"git_url": 5}, {"git_url": ["x"]}, {"git_url": "https://example.com/x.git", "id": 3}):
+        assert client.post("/api/kb/import/validate", json=body, headers=ORIGIN).status_code == 422
+
+
+def test_zip_bomb_and_control_chars(client, world):
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as z:
+        for i in range(import_kb.MAX_ENTRIES + 1):
+            z.writestr(f"{i}.md", "")
+    assert upload(client, "/api/kb/import/validate", buf.getvalue()).status_code == 422
+    r = upload(client, "/api/kb/import", make_zip(), name="bad\x01name.zip", id="ctl")
+    assert r.status_code == 200
+    assert kbconfig.load_dir(r.json()["root"], "ctl").id == "ctl"                  # kb.toml still parses
+
+
+def test_credentials_in_a_git_url_are_not_recorded(client, world, monkeypatch):
+    def fake_clone(url, ref, dest):
+        os.makedirs(dest)
+        with open(os.path.join(dest, "a.md"), "w", encoding="utf-8") as f:
+            f.write(PAGE.replace("[beta](beta.md)", "nothing"))
+        return "c0ffee"
+
+    monkeypatch.setattr(import_kb, "_clone", fake_clone)
+    j = client.post("/api/kb/import/validate", json={"git_url": "https://token@example.com/me/n.git"}, headers=ORIGIN).json()
+    assert "token" not in j["source"]

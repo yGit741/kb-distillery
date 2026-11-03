@@ -1,7 +1,7 @@
 import { zipStore, type ZipEntry } from "./zip";
 
 /** More than this and the server refuses the upload anyway (64 MB); say so before reading it all. */
-export const MAX_BUNDLE_BYTES = 64 * 1024 * 1024;
+export const MAX_BUNDLE_BYTES = 63 * 1024 * 1024;
 
 const SKIP = new Set([".git", ".DS_Store", "__MACOSX", "node_modules"]);
 

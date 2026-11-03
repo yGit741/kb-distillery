@@ -29,6 +29,8 @@ from kb_distillery.config import kb as kbconfig
 from kb_distillery.config.layout import WIKI_DIR
 from kb_distillery.lint import okf_check
 
+MAX_ENTRIES = 20000
+MAX_UNZIPPED = 512 * 1024 * 1024
 IGNORED = {".DS_Store", "__MACOSX", ".git"}
 
 
@@ -45,6 +47,8 @@ def _safe_extract(archive: str, dest: str) -> None:
     except (zipfile.BadZipFile, OSError) as e:
         raise BundleError(f"{archive} is not a readable zip: {e}") from None
     with zf:
+        if len(zf.infolist()) > MAX_ENTRIES or sum(i.file_size for i in zf.infolist()) > MAX_UNZIPPED:
+            raise BundleError(f"the zip is too large to import (over {MAX_ENTRIES} entries or {MAX_UNZIPPED >> 20} MB unzipped)")
         for info in zf.infolist():
             name = info.filename
             parts = name.replace("\\", "/").split("/")
@@ -114,7 +118,11 @@ def is_git_source(src: str) -> bool:
 def _clone(url: str, ref: str, dest: str) -> str:
     """Shallow clone `url` (at `ref`, if any) into the empty `dest` with the user's own git credentials -> HEAD sha."""
     cmd = ["git", "clone", "--quiet", "--depth", "1", *(["--branch", ref] if ref else []), "--", url, dest]
-    proc = subprocess.run(cmd, capture_output=True, text=True, env=dict(os.environ, GIT_TERMINAL_PROMPT="0"))
+    env = dict(os.environ, GIT_TERMINAL_PROMPT="0", GIT_SSH_COMMAND="ssh -o BatchMode=yes", GIT_ALLOW_PROTOCOL="https:ssh")
+    try:
+        proc = subprocess.run(cmd, capture_output=True, text=True, env=env, timeout=300)
+    except subprocess.TimeoutExpired:
+        raise BundleError(f"could not clone {url}: timed out after 5 minutes") from None
     if proc.returncode != 0:
         raise BundleError(f"could not clone {url}: {(proc.stderr or proc.stdout).strip()}")
     return subprocess.run(["git", "rev-parse", "HEAD"], cwd=dest, capture_output=True, text=True).stdout.strip()
@@ -143,7 +151,7 @@ def _open(source: str, stage: str):
         url, _, ref = source.partition("#")
         folder = os.path.join(stage, "clone")
         commit = _clone(url, ref, folder)
-        label = url
+        label = re.sub(r"^([a-z]+://)[^/@]*@", r"\1", url)          # never record credentials embedded in the URL
     else:
         label = os.path.realpath(os.path.expanduser(source))
         if not os.path.exists(label):
@@ -222,7 +230,8 @@ def _build(bundle: str, rep: Report, kit: str | None, parent: str, name: str | N
 def _record_source(target: str, rep: Report) -> None:
     """Append `[import]` (where the pages came from) to the new kb.toml."""
     def q(v):
-        return '"' + v.replace("\\", "\\\\").replace('"', '\\"') + '"'
+        v = v.replace("\\", "\\\\").replace('"', '\\"')
+        return '"' + re.sub(r"[\x00-\x1f\x7f]", lambda m: "\\u%04x" % ord(m.group()), v) + '"'
     now = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     lines = ["", "[import]", f"source = {q(rep.source)}"]
     if rep.ref:

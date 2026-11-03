@@ -42,12 +42,16 @@ async def _with_source(request: Request, work):
             with open(source, "wb") as out:
                 shutil.copyfileobj(up.file, out)
             kb_id, kit, label = form.get("id") or None, form.get("kit") or None, name
+            if not all(v is None or isinstance(v, str) for v in (kb_id, kit)):
+                raise HTTPException(422, "`id` and `kit` are text fields")
         elif ctype.startswith("application/json"):
             try:
                 body = await request.json()
                 source, kb_id, kit = body["git_url"], body.get("id") or None, body.get("kit") or None
             except (ValueError, KeyError, TypeError):
                 raise HTTPException(422, "send JSON {git_url, id?, kit?}") from None
+            if not isinstance(source, str) or not all(v is None or isinstance(v, str) for v in (kb_id, kit)):
+                raise HTTPException(422, "git_url, id and kit must be text")
             source = svc.check_git_url(source)
             label = None
         else:
