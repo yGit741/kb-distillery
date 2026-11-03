@@ -41,7 +41,8 @@ WORSE = {"pages_total": "down", "links_total": "down", "graph_nodes": "down", "g
 
 GRAPH_SNIPPET = r'''
 import json, sys
-from kb_distillery.services import pages as explore_data, graph as graph_data
+from kb_distillery.services import pages as explore_data
+from kb_distillery.graph import snapshot as graph_data
 snap = graph_data.build_graph_snapshot()
 idx = explore_data.build_index()
 json.dump({"nodes": snap["node_count"], "edges": snap["link_count"],

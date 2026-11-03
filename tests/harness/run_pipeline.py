@@ -49,7 +49,8 @@ DIGEST_ORDER = ["source-paper-local", "source-paper-arxiv-style", "source-conver
 
 GRAPH_SNIPPET = r'''
 import json, sys
-from kb_distillery.services import chat as chat_data, pages as explore_data, graph as graph_data
+from kb_distillery.services import chat as chat_data, pages as explore_data
+from kb_distillery.graph import snapshot as graph_data
 snap = graph_data.build_graph_snapshot()
 idx = explore_data.build_index()
 for k in ("generated_at", "etag"):
@@ -103,10 +104,13 @@ class Run:
         e.update(extra)
         return e
 
-    def cmd(self, *args, expect=0, env=None, quiet=False):
-        """Run one command with cwd = the scratch vault; return stdout+stderr. rc must equal `expect`."""
+    def cmd(self, *args, expect=0, env=None, quiet=False, stdout_only=False):
+        """Run one command with cwd = the scratch vault; return stdout+stderr (stdout alone with
+        `stdout_only`, for machine-readable output). rc must equal `expect`."""
         p = subprocess.run([PY, *args], cwd=self.root, env=env or self.env(), capture_output=True, text=True, timeout=600)
         out = (p.stdout or "") + (p.stderr or "")
+        if p.returncode == expect and stdout_only:
+            return p.stdout or ""
         if p.returncode != expect:
             raise StepFailed(f"`{' '.join(args)}` exited {p.returncode} (expected {expect})\n{out[-1500:]}")
         return out
@@ -264,8 +268,8 @@ class Run:
         return f"{m.group(1)} nodes, {m.group(2)} pages, {out.stat().st_size // 1024} KB (size not compared)"
 
     def nightly(self):
-        out = self.cmd("-m", "kb_distillery.ops.nightly_report", "--root", str(self.root), "--json")
-        doc = json.loads(out[out.index("{"):])
+        out = self.cmd("-m", "kb_distillery.ops.nightly_report", "--root", str(self.root), "--json", stdout_only=True)
+        doc = json.loads(out)
         digest = {"title": doc["title"], "status": doc["status"], "headline": doc["headline"],
                   "sections": [s["id"] or s["title"] for s in doc["sections"]]}
         self.artifacts["nightly-report.json"] = json.dumps(digest, sort_keys=True, indent=1)
