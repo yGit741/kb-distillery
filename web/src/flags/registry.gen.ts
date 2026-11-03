@@ -24,7 +24,7 @@ export const FLAGS: Readonly<Record<FlagName, FlagMeta>> = {
     "kind": "runtime",
     "default": false,
     "envs": {
-      "local": false,
+      "local": true,
       "private": false,
       "public": false
     }
@@ -128,7 +128,7 @@ export const FLAGS: Readonly<Record<FlagName, FlagMeta>> = {
     "kind": "runtime",
     "default": false,
     "envs": {
-      "local": false,
+      "local": true,
       "private": false,
       "public": false
     }

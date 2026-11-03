@@ -66,7 +66,7 @@ created = 2026-10-27
 expires = 2027-01-24
 kind = "runtime"
 default = false
-envs = { local = false, private = false, public = false }
+envs = { local = true, private = false, public = false }
 
 [[flag]]
 name = "kb-view"
@@ -86,7 +86,7 @@ created = 2026-10-30
 expires = 2027-01-28
 kind = "runtime"
 default = false
-envs = { local = false, private = false, public = false }
+envs = { local = true, private = false, public = false }
 
 [[flag]]
 name = "parsed-pdf"
