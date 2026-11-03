@@ -229,7 +229,7 @@ def main(argv=None) -> int:
     ap = argparse.ArgumentParser(prog="distill doctor", description=__doc__.split("\n\n")[0])
     ap.add_argument("--json", action="store_true", help="machine-readable output")
     args = ap.parse_args(argv)
-    ref = kbconfig.explicit_kb() or os.environ.get("KB")     # kbconfig already stripped --kb from argv
+    ref = kbconfig.explicit_kb() or os.environ.get("KB") or kbconfig.kb_above()   # --kb (already stripped from argv), $KB, the kb folder you are in
     checks = run_checks(ref)
     if args.json:
         print(json.dumps([asdict(c) for c in checks], indent=1))

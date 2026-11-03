@@ -38,7 +38,9 @@ commands:
 ## init
 
 ```
-usage: distill init [-h] [--kb-id KB_ID] [--name NAME] [--kit KIT] [--dir DIR] [--yes] [--refresh]
+usage: distill init [-h] [--kb-id KB_ID] [--name NAME] [--kit KIT] [--dir DIR] [--yes] [--refresh] [DIR]
+
+  DIR                   same as --dir (an error if both are given and differ)
 
   --kb-id KB_ID         folder name and id (default my-kb)
   --name NAME           display name (default: the id, spaced and capitalised)
@@ -53,6 +55,8 @@ usage: distill init [-h] [--kb-id KB_ID] [--name NAME] [--kit KIT] [--dir DIR] [
 
 ```
 usage: distill doctor [-h] [--json]
+
+With no `--kb` and no `KB`, run inside a kb folder (or any folder below one with a `kb.toml` above it), it checks that kb.
 
   --json      machine-readable output
 ```

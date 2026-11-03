@@ -175,6 +175,22 @@ def test_main_json_on_empty_bases_dir(monkeypatch, tmp_path, capsys):
     assert rc in (0, 1) and any(r["name"] == "knowledge base" and r["status"] == WARN for r in rows)
 
 
+def test_main_finds_the_kb_folder_you_are_in(monkeypatch, tmp_path, capsys):
+    from kb_distillery import init_kb
+    monkeypatch.setenv("HOME", str(tmp_path / "home"))
+    monkeypatch.setenv("KB_BASES_DIR", str(tmp_path / "kbs"))
+    monkeypatch.setenv("GIT_CONFIG_GLOBAL", os.devnull)
+    for k in ("KB", "KB_ROOT"):
+        monkeypatch.delenv(k, raising=False)
+    monkeypatch.setattr(llm, "_which", lambda n: None)
+    target = init_kb.create("elsewhere", "Elsewhere", "base", str(tmp_path / "other"))
+    monkeypatch.chdir(os.path.join(target, "wiki"))                 # a subfolder: the walk goes up to kb.toml
+    doctor.main(["--json"])
+    rows = json.loads(capsys.readouterr().out)
+    row = next(r for r in rows if r["name"] == "knowledge base")
+    assert row["status"] == PASS and os.path.realpath(target) in row["detail"]
+
+
 # --- config folder (~/.config/kb-distillery) -------------------------------------------------------------
 def test_config_folder_only_the_old_one_is_a_fail_with_the_exact_mv(monkeypatch, tmp_path):
     monkeypatch.setenv("HOME", str(tmp_path))

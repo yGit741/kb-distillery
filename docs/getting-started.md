@@ -2,7 +2,7 @@
 
 This page takes you from a clone to a first digest. You need [pixi](https://pixi.sh) and git. Node is installed by pixi.
 
-Supported platforms: macOS (Apple silicon and Intel) and Linux x86-64. Windows is not supported.
+Supported platforms: macOS (Apple silicon and Intel) and Linux x86-64. Windows is not supported. Installing the wheel with pip needs Python 3.11 or newer; older Pythons fail with a confusing `grand-cypher` error.
 
 AI features are optional. Reading, linking, linting and the app work without a key. A digest needs a Claude login or an Anthropic API key; only Anthropic models are supported.
 

@@ -157,3 +157,18 @@ def test_new_kb_lints_clean(world):
     env = {**os.environ, "KB_ROOT": target}
     cp = subprocess.run([os.sys.executable, "-m", "kb_distillery.lint.lint"], cwd=target, env=env, capture_output=True, text=True)
     assert cp.returncode == 0, cp.stdout[-800:] + cp.stderr[-800:]
+
+
+def test_positional_dir_is_the_same_as_dir_flag(world, tmp_path, capsys):
+    out = tmp_path / "out"
+    assert init_kb.main(["--kit", "research", "--yes", str(out)]) in (0, 1)       # doctor may warn; the kb is made
+    assert os.path.isfile(out / "my-kb" / "kb.toml")
+    same = tmp_path / "same"
+    init_kb.main(["--yes", "--dir", str(same), str(same)])
+    assert os.path.isfile(same / "my-kb" / "kb.toml")
+
+
+def test_positional_dir_and_a_different_dir_flag_is_an_error(world, tmp_path):
+    with pytest.raises(SystemExit) as e:
+        init_kb.main(["--yes", "--dir", str(tmp_path / "a"), str(tmp_path / "b")])
+    assert e.value.code == 2
