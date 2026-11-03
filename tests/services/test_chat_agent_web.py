@@ -304,3 +304,17 @@ class TestStream(base.SDKCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+def test_empty_session_cannot_answer_a_session_bound_ask():
+    out = {}
+    spec, _, _ = ask_round_trip(lambda reg, i: (out.setdefault("empty", reg.answer("", i, {"q": "a"})),
+                                                out.setdefault("ok", reg.answer("s1", i, {"q": "a"}))))
+    assert out == {"empty": False, "ok": True} and spec["permissionDecision"] == "allow"
+
+
+def test_hook_timeout_outlasts_the_ask_timeout():
+    from kb_distillery.llm import agent as llm_agent
+    assert llm_agent.HOOK_TIMEOUT > ca.ASK_TIMEOUT_SECONDS
+    o = ca.build_options("claude-sonnet-5-5", "S", "k", run=run_ctx())
+    assert o.hooks["PreToolUse"][0].timeout == llm_agent.HOOK_TIMEOUT

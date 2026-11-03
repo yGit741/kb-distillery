@@ -457,7 +457,7 @@ class AskRegistry:
         """Hand `answers` to the waiting turn. False when nothing waits under that id (or it is another session's)."""
         with self._lock:
             entry = self._pending.get(ask_id)
-            if entry is None or (entry[0] and session and entry[0] != session):
+            if entry is None or (entry[0] and entry[0] != session):
                 return False
             del self._pending[ask_id]
         return self._resolve(entry, answers)
@@ -613,8 +613,12 @@ def make_hook(policy=tool_policy, scope=None, run=None):
             d = _decide(policy, name, inp, scope, run)
         if d.allow and run is not None:
             if name in WEB_TOOLS:
-                run.charge(name)
-                run.decided.append(_input_key(name, inp))
+                problem = run.cap_problem(name)         # re-check after the lookup: parallel calls share the cap
+                if problem:
+                    d = Decision(False, problem)
+                else:
+                    run.charge(name)
+                    run.decided.append(_input_key(name, inp))
             elif name == "AskUserQuestion":
                 answers, reason = await _ask_user(run, inp if isinstance(inp, dict) else {}, tool_use_id)
                 if answers is None:
