@@ -1,6 +1,8 @@
 ---
 name: distill-think
 description: Distill think/ human notes into transient distilled-think pages + KB patches. Use for distill-think, distill think, graph brief. Do NOT edit think/ directly.
+audience: app
+mode: write
 ---
 
 # Distill think

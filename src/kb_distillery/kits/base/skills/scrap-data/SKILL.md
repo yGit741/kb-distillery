@@ -1,6 +1,8 @@
 ---
 name: scrap-data
 description: Save URLs or files to raw/inbox/ with zero LLM tokens. Use for "scrap", "download", "save to inbox", or fetching a paper URL. Do NOT use for cataloging or digesting.
+audience: app
+mode: write
 ---
 
 # scrap-data

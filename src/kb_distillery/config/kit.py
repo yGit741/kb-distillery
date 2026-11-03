@@ -12,6 +12,7 @@ carry for itself:
     [types] ...                       # exactly the kb.toml [types] format (kb_distillery.vault.kbtypes)
     [edges] ...                       # exactly the kb.toml [edges] format (kb_distillery.graph.model.edge_config)
     [pages] ...                       # page conventions: takeaways_heading, focus_slugs (kb_distillery.config.pages)
+    [agent] skills = ["deep-research"]   # app skills the chat agent may use; a kb.toml [agent] skills replaces it
 
 A kb names its kit in `[kb] kit = "<name>"` (`distill init` writes it). The older `[kb] template = "<name>"` is read
 too, and the two old names `starter` and `academic-research` resolve to `base` and `research`, so a kb.toml written
@@ -41,7 +42,8 @@ from kb_distillery.config.resources import resource
 
 OWNED = ("types", "edges")                 # the kb.toml tables a kit owns
 PAGES = "pages"                            # page conventions (takeaways heading, focus pages): kb_distillery.config.pages
-ALLOWED = {"kit", PAGES, *OWNED}           # every top-level table a kit.toml may hold today
+AGENT = "agent"                            # chat-agent defaults: `skills` (the app skills it may use), see kb_distillery.services.agent_skills
+ALLOWED = {"kit", PAGES, AGENT, *OWNED}           # every top-level table a kit.toml may hold today
 KITS_DIR_ENV = "KB_KITS_DIR"
 KIT_FILE = "kit.toml"
 KB_DOCS = ("page-model", "kits", "publish", "storage", "raw-and-corpus", "collections", "think", "workflows",
@@ -112,6 +114,11 @@ def load(name: str) -> dict:
     for table in (*OWNED, PAGES):
         if table in data and not isinstance(data[table], dict):
             raise KitError(f"{path}: [{table}] must be a table")
+    agent = data.get(AGENT, {})
+    if not isinstance(agent, dict):
+        raise KitError(f"{path}: [agent] must be a table")
+    if "skills" in agent and not (isinstance(agent["skills"], list) and all(isinstance(x, str) for x in agent["skills"])):
+        raise KitError(f"{path}: [agent] skills must be a list of skill names")
     pages = data.get(PAGES, {})
     if "takeaways_heading" in pages and not (isinstance(pages["takeaways_heading"], str) and pages["takeaways_heading"].strip()):
         raise KitError(f"{path}: [pages] takeaways_heading must be a non-empty string")

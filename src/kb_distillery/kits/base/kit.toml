@@ -3,6 +3,11 @@ name = "base"
 version = 1
 description = "A small general knowledge base: documents, notes and articles digested into ideas, questions, topics and people."
 
+# Chat agent: the app skills it may use (each must be `audience: app` and `mode: read`). A kb.toml `[agent] skills`
+# replaces this list; an empty list turns skills off.
+[agent]
+skills = ["deep-research"]
+
 # The smallest ontology that stands on its own. Every layer is given here on purpose: a layer with no table falls
 # back to the explorer's research-style defaults (kb_distillery.vault.kbtypes), which a small kit must not inherit.
 # `color` is left out where a kb extending this kit is likely to add types of its own: the loader then picks

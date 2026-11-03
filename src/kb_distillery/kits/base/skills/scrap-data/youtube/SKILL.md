@@ -1,6 +1,8 @@
 ---
 name: scrap-data-youtube
 description: Turn a YouTube lecture or video into a raw/inbox/video-<name>/ bundle — transcript by chapter, description, filtered comments, and anchors (scored timestamps worth a frame, with thumbnails), 0 LLM. Use for scrap youtube, save this lecture, save this video, a youtube URL. Do NOT catalog or digest from here.
+audience: app
+mode: write
 ---
 
 # scrap-data / youtube

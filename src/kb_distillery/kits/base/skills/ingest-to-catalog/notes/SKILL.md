@@ -1,6 +1,8 @@
 ---
 name: ingest-to-catalog-notes
 description: Catalog handwritten notes (ink-only PDFs) from inbox to raw/handwritten/. Corpus row only. Do NOT digest from here.
+audience: app
+mode: write
 ---
 
 # ingest-to-catalog / notes

@@ -1,6 +1,8 @@
 ---
 name: ingest-to-catalog-detect
 description: Detect an inbox file's format folder and route to the ingest-to-catalog handler. Zero LLM. Do NOT digest from here.
+audience: app
+mode: write
 ---
 
 # ingest-to-catalog / detect

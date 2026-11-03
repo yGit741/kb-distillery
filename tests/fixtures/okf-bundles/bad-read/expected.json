@@ -1,0 +1,18 @@
+{
+  "pages": 13,
+  "errors": [
+    "wiki/binary.md: [read] UnicodeDecodeError: 'utf-8' codec can't decode byte 0xff in position 0: invalid start byte",
+    "wiki/four-byte.md: [read] UnicodeDecodeError: 'utf-8' codec can't decode bytes in position 17-19: invalid continuation byte",
+    "wiki/latin1.md: [read] UnicodeDecodeError: 'utf-8' codec can't decode byte 0xe9 in position 20: invalid continuation byte",
+    "wiki/lead-only.md: [read] UnicodeDecodeError: 'utf-8' codec can't decode byte 0xe2 in position 17: unexpected end of data",
+    "wiki/linked-twice.md: [read] UnicodeDecodeError: 'utf-8' codec can't decode byte 0xc3 in position 17: invalid continuation byte",
+    "wiki/linker.md: [read] UnicodeDecodeError: 'utf-8' codec can't decode byte 0xe9 in position 20: invalid continuation byte",
+    "wiki/overlong.md: [read] UnicodeDecodeError: 'utf-8' codec can't decode byte 0xc0 in position 17: invalid start byte",
+    "wiki/surrogate.md: [read] UnicodeDecodeError: 'utf-8' codec can't decode byte 0xed in position 17: invalid continuation byte",
+    "wiki/three-byte.md: [read] UnicodeDecodeError: 'utf-8' codec can't decode bytes in position 17-18: invalid continuation byte",
+    "wiki/too-high.md: [read] UnicodeDecodeError: 'utf-8' codec can't decode byte 0xf4 in position 17: invalid continuation byte",
+    "wiki/truncated.md: [read] UnicodeDecodeError: 'utf-8' codec can't decode bytes in position 21-22: unexpected end of data",
+    "wiki/two-byte.md: [read] UnicodeDecodeError: 'utf-8' codec can't decode byte 0xc3 in position 17: invalid continuation byte"
+  ],
+  "warnings": []
+}

@@ -6,6 +6,8 @@ description: >-
   open material, catalog star-tier papers only (≥200 cites, ≤10). Use for add researcher,
   build researcher profile, index researcher, person profile, add <name>'s papers. Do NOT
   digest or catalog all papers.
+audience: app
+mode: write
 ---
 
 # build-researcher-profile

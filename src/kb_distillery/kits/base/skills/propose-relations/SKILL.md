@@ -5,6 +5,8 @@ description: >-
   wiki pages with a batch LLM run, review them per subject, then write the ones the user accepts into the pages. Use
   for propose relations, typed edges, review or apply relation proposals. Do NOT use to answer questions from the
   wiki (query-knowledge), or to apply before the user has said which to accept.
+audience: app
+mode: write
 ---
 
 # propose-relations

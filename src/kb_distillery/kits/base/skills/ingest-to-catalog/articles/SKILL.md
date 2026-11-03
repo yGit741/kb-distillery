@@ -1,6 +1,8 @@
 ---
 name: ingest-to-catalog-articles
 description: Catalog a typed PDF from inbox to raw/printed-docs/ and create a paper- Source page at depth listed (or a course row). Zero LLM. Do NOT digest from here.
+audience: app
+mode: write
 ---
 
 # ingest-to-catalog / articles
