@@ -1,4 +1,4 @@
-/** Static explanatory content of the Lifecycle tab (from meta/dashboard/lifecycle.html). */
+/** Static explanatory content of the Lifecycle tab (ported from the removed legacy lifecycle page). */
 
 export const VERSION_PARTS: { key: string; title: string; body: string }[] = [
   { key: "x", title: "x · paradigm", body: "How knowledge is stored and queried (LLM wiki today). Bumped by a paradigm PR." },

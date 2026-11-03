@@ -5,7 +5,7 @@
 - the typed API (`/api/...`, OpenAPI at `/openapi.json`, docs at `/docs`),
 - the React shell from `src/kb_distillery/_webapp` under `/app` (SPA fallback); `src/kb_distillery/_webapp` is gitignored build
   output that the server rebuilds from source on start when the sources changed (`--no-build` skips it),
-- the old dashboard page URLs (`/start`, `/`, `/ops`, `/covector-visualization.html`, ...) as redirects to their React
+- the old (pre-React) page URLs (`/start`, `/`, `/ops`, `/covector-visualization.html`, ...) as redirects to their React
   routes (`PORTED` in `app.py`); other unowned paths are a 404.
 
 Vocabulary in models, routes and docs is the data model's: `layer: source|collection|concept`, `type`,
