@@ -7,6 +7,7 @@ from unittest.mock import patch
 
 from kb_distillery.git import events, git_guard, rounds, ship
 from tests.git import test_ship
+from tests.needs_git import needs_git
 
 # issue body lives in $FAKE_GH_DIR/issue.md, issue comments in comments.txt; pr flow as in test_ship
 FAKE_GH = r"""#!/bin/bash
@@ -55,6 +56,7 @@ class PureTests(unittest.TestCase):
         self.assertTrue(git_guard.violation("gh issue edit 4 --body x"))
 
 
+@needs_git
 class RoundFlowTests(unittest.TestCase):
     setUp = test_ship.PrFlowTests.setUp
     tearDown = test_ship.PrFlowTests.tearDown

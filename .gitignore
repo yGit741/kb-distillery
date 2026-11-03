@@ -101,6 +101,8 @@ web/node_modules
 scripts/qmd/node_modules
 src/kb_distillery/_webapp/
 web/dist-share/
+# `pixi run build-wheel` output
+/dist/
 
 # Other agents' skill folders (not ours; skills are kits/*/skills for a kb, .claude/skills for the engine)
 .agents/

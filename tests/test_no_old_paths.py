@@ -16,6 +16,8 @@ import re
 import subprocess
 import unittest
 
+from tests.needs_git import needs_git
+
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 RETIRED = {
@@ -129,6 +131,7 @@ RETIRED_FILES = ("src/kb_distillery/share/", "src/kb_distillery/publish/site_sta
                                                          "researcher", "set_url")))
 
 
+@needs_git
 class NoOldPathsTests(unittest.TestCase):
     def test_retired_files_are_gone(self):
         files = [p for p in tracked() if os.path.exists(os.path.join(ROOT, p))]   # a deletion is staged only at commit

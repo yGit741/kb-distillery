@@ -36,20 +36,31 @@ def package_root() -> Path:
 def repo_root() -> Path | None:
     """The checkout this code runs from, or None when it is an installed copy.
 
-    A checkout is `<root>/src/kb_distillery` with `<root>/pyproject.toml` and a `.git` (a file in a linked
-    worktree). A package inside some venv's site-packages never qualifies, even when that venv sits in a repo."""
+    A checkout is a source tree: `<root>/src/kb_distillery` with `<root>/pyproject.toml`. It need not be a git
+    repository (a `git archive` tarball has no `.git`); use `has_git()` for what needs history. A package inside some
+    venv's site-packages never qualifies, even when that venv sits in a repo."""
     pkg = package_root()
     root = pkg.parent.parent
-    if pkg.parent.name == "src" and (root / "pyproject.toml").is_file() and (root / ".git").exists():
+    if pkg.parent.name == "src" and (root / "pyproject.toml").is_file():
         return root
     return None
 
 
-def require_repo_root(what: str = "this command") -> Path:
+def has_git(root: Path | None = None) -> bool:
+    """True when the checkout is a git repository (`.git` is a folder, or a file in a linked worktree)."""
+    root = root or repo_root()
+    return root is not None and (root / ".git").exists()
+
+
+def require_repo_root(what: str = "this command", *, git: bool = False) -> Path:
+    """The source tree, or NotInCheckout. `git=True` also needs history (a `.git`): ship and other repository tooling."""
     root = repo_root()
     if root is None:
         raise NotInCheckout(f"{what} works on a kb-distillery checkout, and kb_distillery is installed at "
                             f"{package_root()} (no repository). Clone the repository and run it from there.")
+    if git and not has_git(root):
+        raise NotInCheckout(f"{what} needs a git clone of kb-distillery, and {root} has no .git (a source archive?). "
+                            f"Clone the repository and run it from there.")
     return root
 
 

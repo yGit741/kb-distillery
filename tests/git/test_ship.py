@@ -13,6 +13,7 @@ ROOT = vault_root()
 from kb_distillery.ops import daily_sync
 from kb_distillery.git import ship
 from kb_distillery.vault.schema import lane_of
+from tests.needs_git import needs_git
 
 
 class LaneOfTests(unittest.TestCase):
@@ -54,6 +55,7 @@ class ChangedPathsTests(unittest.TestCase):
             self.assertEqual(lanes["other"], ["junk.txt"])
 
 
+@needs_git
 class ShipTests(unittest.TestCase):
     LANES = {"knowledge": ["wiki/a.md"], "tooling": ["meta/tool.py"], "other": ["junk.txt"]}
 
@@ -131,6 +133,7 @@ def _g(cwd, *args):
     return subprocess.run(["git", *args], cwd=cwd, check=True, capture_output=True, text=True, env=env).stdout.strip()
 
 
+@needs_git
 class PrFlowTests(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()

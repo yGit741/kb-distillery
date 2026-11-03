@@ -19,6 +19,7 @@ from unittest.mock import patch
 from kb_distillery import cli
 from kb_distillery.cli import legacy, tree
 from kb_distillery.config import userdir
+from kb_distillery.config import resources
 from kb_distillery.config.resources import NotInCheckout
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -144,7 +145,7 @@ class HelpTests(unittest.TestCase):
     def test_forwarded_help_comes_from_the_module(self):
         with tempfile.TemporaryDirectory() as home:
             for path, cmd in leaves():
-                if not cmd.forward_help:
+                if not cmd.forward_help or (cmd.checkout_only and not resources.has_git()):     # ship refuses a tree with no .git
                     continue
                 cp = run_cli([*path, "--help"], home)
                 self.assertEqual(cp.returncode, 0, f"{path}: {cp.stderr[-400:]}")
