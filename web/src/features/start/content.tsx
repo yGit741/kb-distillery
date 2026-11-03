@@ -5,7 +5,7 @@ import type { ReactNode } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Code } from "@/features/lifecycle/LifecycleScreen";
 
-/** Static content of the Start screen (ported from the legacy dashboard/start.html). */
+/** Static content of the Start screen (ported from the removed legacy start page). */
 
 export type ChipKind = "kb" | "snap" | "schema" | "pr" | "other";
 const CHIP_VARIANT = { kb: "primary", snap: "outline", schema: "warn", pr: "ok", other: "default" } as const;
