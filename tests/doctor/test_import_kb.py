@@ -178,3 +178,15 @@ def test_imported_kb_works_in_graph_and_page_reader(world, tmp_path):
         assert "[beta](beta.md)" in page["markdown"] or "beta" in page["markdown"]
         assert [b["id"] for b in page["backlinks"]] == ["beta"]
     kbview._views.clear()
+
+
+def test_dry_run_runs_the_kit_lint_so_it_matches_import(world, tmp_path):
+    src = make_bundle(tmp_path / "kitbad", {"a.md": "---\ntype: not-a-kit-type\n---\n# A\n\nhi\n"})
+    rep = import_kb.validate_bundle(src)                 # passes okf_check, fails the kit lint
+    assert not rep.ok and any("not-a-kit-type" in e for e in rep.errors)
+    with pytest.raises(import_kb.BundleError, match="not-a-kit-type"):
+        import_kb.import_bundle(src)
+    assert not world.exists() or not os.listdir(world)   # neither wrote anything
+    good = make_bundle(tmp_path / "kitgood")
+    assert import_kb.validate_bundle(good).ok
+    assert os.path.isdir(import_kb.import_bundle(good))

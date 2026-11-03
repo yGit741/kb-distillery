@@ -171,20 +171,51 @@ def _id_taken(kb_id: str, parent: str | None) -> bool:
     return kb_id in kbconfig.discover() or os.path.lexists(os.path.join(os.path.expanduser(parent), kb_id))
 
 
-def validate_bundle(source: str, kb_id: str | None = None, parent: str | None = None) -> Report:
-    """Dry run: check the bundle at `source` (folder, .zip or git URL[#ref]) and write nothing -> `Report`
-    (suggested id, page count, errors that block an import, warnings). A bad source raises `BundleError`."""
+def _display_name(kb_id: str, name: str | None) -> str:
+    return name or kb_id.replace("-", " ").capitalize()
+
+
+def validate_bundle(source: str, kb_id: str | None = None, parent: str | None = None, kit: str | None = None) -> Report:
+    """Dry run: exactly what `import_bundle` would check -> `Report` (suggested id, page count, errors that block an
+    import, warnings). The OKF gate runs first; when it passes, the kb is built in a temp folder (create + copy + the
+    kit lint, no commit) and the lint errors join `errors`; the temp folder is removed. Nothing is written to `parent`.
+    A bad source raises `BundleError`."""
     kb_id = kb_id or _guess_id(source)
     with tempfile.TemporaryDirectory(prefix="kb-import-") as stage, _open(source, stage) as (bundle, label, ref, commit):
         count, errors, warnings = _findings(bundle, stage)
+        rep = Report(kb_id, label, count, errors, warnings, ref, commit)
+        try:
+            init_kb.validate_id(kb_id)
+        except init_kb.InitError as e:
+            errors.append(str(e))
+        else:
+            if _id_taken(kb_id, parent):
+                errors.append(f"a knowledge base {kb_id!r} already exists: pick another --id")
+            elif not errors:
+                try:
+                    _build(bundle, rep, kit, os.path.join(stage, "dry-run"), None)
+                except init_kb.InitError as e:
+                    errors.append(str(e))
+    return rep
+
+
+def _build(bundle: str, rep: Report, kit: str | None, parent: str, name: str | None) -> str:
+    """The steps shared by the dry run and the import: create the kb in `parent`, copy the bundle into `wiki/`, record
+    `[import]`, run the kit lint -> the kb path. A lint failure appends its ERROR lines to `rep.errors` (and raises);
+    whatever fails, the new folder is removed."""
+    target = init_kb.create(rep.id, _display_name(rep.id, name), kit or init_kb.DEFAULT_KIT, parent)
     try:
-        init_kb.validate_id(kb_id)
-    except init_kb.InitError as e:
-        errors.append(str(e))
-    else:
-        if _id_taken(kb_id, parent):
-            errors.append(f"a knowledge base {kb_id!r} already exists: pick another --id")
-    return Report(kb_id, label, count, errors, warnings, ref, commit)
+        shutil.copytree(bundle, os.path.join(target, WIKI_DIR), dirs_exist_ok=True, symlinks=False,
+                        ignore=shutil.ignore_patterns(*IGNORED))
+        _record_source(target, rep)
+        lint_errors = _lint(target)
+        if lint_errors:
+            rep.errors.extend(lint_errors)
+            raise BundleError("the pages fail the kit lint; nothing was written:\n" + "\n".join("  " + e for e in lint_errors))
+    except BaseException:
+        shutil.rmtree(target, ignore_errors=True)
+        raise
+    return target
 
 
 def _record_source(target: str, rep: Report) -> None:
@@ -202,18 +233,17 @@ def _record_source(target: str, rep: Report) -> None:
         f.write("\n".join(lines) + "\n")
 
 
-def _build_views(target: str) -> None:
-    """The graph and page reader read the wiki files directly; lint writes the index/corpus they list. Nothing else to build."""
-    _lint(target)
-
-
-def _lint(root: str) -> None:
+def _lint(root: str) -> list[str]:
+    """Run the engine lint in the new kb (it also writes wiki/index.md and meta/corpus.tsv, which the graph and page
+    reader list) -> its ERROR lines, empty when clean."""
     env = dict(os.environ, KB_ROOT=root)
     env.pop("KB", None)
     proc = subprocess.run([sys.executable, "-m", "kb_distillery.lint.lint"], cwd=root, env=env, capture_output=True, text=True)
-    if proc.returncode != 0:
-        tail = "\n".join((proc.stdout or proc.stderr or "").splitlines()[-8:])
-        raise BundleError(f"lint failed on the imported pages:\n{tail}")
+    if proc.returncode == 0:
+        return []
+    out = (proc.stdout or "") + (proc.stderr or "")
+    errs = [l.strip() for l in out.splitlines() if l.startswith("ERROR")]
+    return errs or ["lint failed: " + "\n".join(out.splitlines()[-8:])]
 
 
 def import_bundle(src: str, kit: str | None = None, kb_id: str | None = None, parent: str | None = None,
@@ -234,12 +264,8 @@ def import_bundle(src: str, kit: str | None = None, kb_id: str | None = None, pa
         if errors:
             raise BundleError(f"the bundle is not valid OKF ({len(errors)} finding(s)); nothing was written:\n"
                               + "\n".join("  " + e for e in errors))
-        target = init_kb.create(kb_id, name or kb_id.replace("-", " ").capitalize(), kit or init_kb.DEFAULT_KIT, parent)
+        target = _build(bundle, rep, kit, parent, name)
         try:
-            shutil.copytree(bundle, os.path.join(target, WIKI_DIR), dirs_exist_ok=True, symlinks=False,
-                            ignore=shutil.ignore_patterns(*IGNORED))
-            _record_source(target, rep)
-            _build_views(target)
             from kb_distillery.git import commit_policy as cp
             from kb_distillery.ops.core import OpsError, _commit_paths, _message
             with init_kb._identity_if_missing():
@@ -267,7 +293,7 @@ def main(argv=None) -> int:
     args = ap.parse_args(argv)
     if args.dry_run:
         try:
-            rep = validate_bundle(args.source, args.kb_id, args.dir)
+            rep = validate_bundle(args.source, args.kb_id, args.dir, args.kit)
         except init_kb.InitError as e:
             print(f"distill kb import: {e}", file=sys.stderr)
             return 1
