@@ -54,9 +54,11 @@ raw/inbox -> catalog -> raw/<format>/ + meta/corpus.tsv -> digest -> wiki/ -> li
 
 ## Where code lives
 
+Inside the Python package, `src/kb_distillery/`:
+
 | Path | Holds |
 |---|---|
-| `src/kb_distillery/cli/` | The `distill` command table, help and dispatch. `legacy.py` is the old `kbd` name. |
+| `cli/` | The `distill` command table, help and dispatch. `legacy.py` is the deprecated `kbd` alias of `distill`. |
 | `config/` | Finding and selecting a knowledge base (`kb.py`), vault paths (`paths.py`), the kit loader (`kit.py`), the user config folder (`userdir.py`), feature flags (`flags/`). Depends on nothing else in the engine. |
 | `vault/`, `lint/` | Schema, page model, graph helpers, the linter. |
 | `ingest/`, `distill/`, `digest/`, `parse/` | Pipelines over sources and think notes. Source connectors live in `ingest/sources/`. |
@@ -68,12 +70,17 @@ raw/inbox -> catalog -> raw/<format>/ + meta/corpus.tsv -> digest -> wiki/ -> li
 | `services/`, `server/` | Domain services and the FastAPI routers (`python -m kb_distillery.server`). |
 | `kits/` | The kits: `kit.toml`, defaults, skills, hooks. |
 | `migrations/` | Schema migrations, one file each. |
+
+At the repository root:
+
+| Path | Holds |
+|---|---|
 | `web/` | The React app (Vite, TypeScript). |
-| `tests/` | pytest, mirroring the package; `tests/e2e/` holds a browser test of the graph screen (`pixi run test-e2e`; it skips without Playwright). |
+| `tests/` | pytest, mirroring the package. `tests/e2e/` holds a browser test of the graph screen (`pixi run test-e2e`). It needs the `playwright` npm package, which pixi does not install: add it yourself (for example `npm install playwright` in a scratch folder and point `PLAYWRIGHT_MODULE` at it); without it the test skips. |
 | `examples/demo/` | The tracked sample knowledge base. |
 | `examples/launchd/` | Templates for the nightly job. |
 | `scripts/` | Launch script and git hooks. |
-| `.claude/` | The maintainer's local agent tooling. It is not shipped in releases and you do not need it. |
+| `.claude/` | Maintainer-only agent tooling. It is not shipped in the public export or in releases, and you do not need it. |
 
 ## Rules that do not change
 

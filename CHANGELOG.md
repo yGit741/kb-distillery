@@ -6,11 +6,11 @@ All notable changes to this project are listed here. The format follows [Keep a 
 
 ## [0.1.0]
 
-Initial public release.
+Initial public release: the first version made public. It is not tagged or published as a package until the repository goes public.
 
 ### Added
 
-- `distill` command: `init`, `doctor`, `kb list|show`, `launch`, `hooks install`, `hook <name>`, `ops`, `ship`, `ingest`, `digest`, `send`, `lint`, `llm`, `share`, `propose`. `kbd` is an older alias.
+- `distill` command: `init`, `doctor`, `kb list|show`, `launch`, `hooks install`, `hook <name>`, `ops`, `ship`, `ingest`, `digest`, `send`, `lint`, `llm`, `share`, `propose`. `kbd` is a deprecated alias of `distill`.
 - Kits (`base`, `research`) that define the page types and relations of a knowledge base, and the schema linter.
 - Knowledge bases live outside the repository, in `~/knowledge/<id>`, each in its own git repository. The base folder can be set with `KB_DISTILLERY_HOME`.
 - One LLM gateway with three billing backends: subscription, API and Batch API.
