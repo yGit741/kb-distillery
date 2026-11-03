@@ -44,7 +44,9 @@ description = "..."
 
 **Areas are the kb's, not the kit's.** `areas` and `deprecated_areas` (the `area:` whitelist) stay out of a kit: every area needs its own `theme-<area>` topic page, so a kit that listed some would make lint fail for every kb that follows it. A kb adds them under its own `[types]`.
 
-Any other top-level table is rejected until a phase gives it a meaning. Reserved: lint rules, views, migrations, samples. Page skeletons live in `src/kb_distillery/kits/base/defaults/templates/*.md`.
+**Page conventions** sit in `[pages]` (`kb_distillery.config.pages`): `takeaways_heading` (the `## <heading>` where a source page says what it means for the reader; engine default `Takeaways`) and `focus_slugs` (convention pages kept out of retrieval and orphan checks; default none). A kb.toml `[pages]` wins over its kit chain, the kit itself over the kits it extends. `research` sets `Takeaways for my thesis` and `["thesis"]`. A kb whose pages carry another heading renames them with `distill kb takeaways` (dry run; `--apply` writes).
+
+Any other top-level table is rejected until a phase gives it a meaning. Reserved: lint rules, views, migrations, samples. Page skeletons live in `src/kb_distillery/kits/base/defaults/templates/*.md`; a kit that extends another carries only the skeletons it changes in its own `defaults/templates/` (`research` does), found per file, the kit itself first.
 
 ## Where the kits are
 

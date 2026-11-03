@@ -15,6 +15,7 @@ import os
 import re
 import sys
 
+from kb_distillery.config import pages as page_conventions
 from kb_distillery.vault import links as page_links
 from kb_distillery.vault.graph import tokenize
 from kb_distillery.vault.schema import INDEX_REL
@@ -111,8 +112,9 @@ def cmd_candidates(query, limit=12, scope=None):
             return 2
     index = parse_index()
     ranked = []
+    skip = page_conventions.skip_slugs()
     for slug, meta in index.items():
-        if slug in ("AGENTS", "log", "thesis"):
+        if slug in skip:
             continue
         if allowed is not None and slug not in allowed:
             continue

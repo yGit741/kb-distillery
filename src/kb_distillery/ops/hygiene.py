@@ -247,6 +247,8 @@ def check_nightly(root, now):
     st = core.nightly_status(root)
     if st["installed"] and st["loaded"]:
         return []
+    if not core.nightly_in_use(root):      # this kb never opted in: a missing launchd job is not a finding
+        return []
     return [Finding("warn", "nightly-not-installed", f"nightly sync {st['summary']}", st["hint"] or "pixi run install-sync")]
 
 

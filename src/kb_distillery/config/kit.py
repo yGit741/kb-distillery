@@ -11,6 +11,7 @@ carry for itself:
 
     [types] ...                       # exactly the kb.toml [types] format (kb_distillery.vault.kbtypes)
     [edges] ...                       # exactly the kb.toml [edges] format (kb_distillery.graph.model.edge_config)
+    [pages] ...                       # page conventions: takeaways_heading, focus_slugs (kb_distillery.config.pages)
 
 A kb names its kit in `[kb] kit = "<name>"` (`distill init` writes it). The older `[kb] template = "<name>"` is read
 too, and the two old names `starter` and `academic-research` resolve to `base` and `research`, so a kb.toml written
@@ -26,7 +27,8 @@ tables in its own kit.toml, so `research` types exactly what `academic-research`
 The kits folder is `$KB_KITS_DIR` (tests, a second kits folder) or the package's own `kits/`.
 
 Reserved for later phases (rejected in a kit.toml until a phase gives them a meaning): lint rules, views, migrations,
-samples. A kit's page skeletons and docs live beside it in `kits/<name>/defaults/`.
+samples. A kit's page skeletons and docs live beside it in `kits/<name>/defaults/`; a kit that extends another carries
+only the files it changes (`kb_distillery.config.paths.meta_file` looks child kit first, then up the chain).
 """
 from __future__ import annotations
 
@@ -38,7 +40,8 @@ from functools import lru_cache
 from kb_distillery.config.resources import resource
 
 OWNED = ("types", "edges")                 # the kb.toml tables a kit owns
-ALLOWED = {"kit", *OWNED}                  # every top-level table a kit.toml may hold today
+PAGES = "pages"                            # page conventions (takeaways heading, focus pages): kb_distillery.config.pages
+ALLOWED = {"kit", PAGES, *OWNED}           # every top-level table a kit.toml may hold today
 KITS_DIR_ENV = "KB_KITS_DIR"
 KIT_FILE = "kit.toml"
 KB_DOCS = ("page-model", "kits", "publish", "storage", "raw-and-corpus", "collections", "think", "workflows",
@@ -106,9 +109,14 @@ def load(name: str) -> dict:
     unknown = sorted(set(data) - ALLOWED)
     if unknown:
         raise KitError(f"{path}: unknown table(s) {unknown} (a kit may hold {sorted(ALLOWED)} for now)")
-    for table in OWNED:
+    for table in (*OWNED, PAGES):
         if table in data and not isinstance(data[table], dict):
             raise KitError(f"{path}: [{table}] must be a table")
+    pages = data.get(PAGES, {})
+    if "takeaways_heading" in pages and not (isinstance(pages["takeaways_heading"], str) and pages["takeaways_heading"].strip()):
+        raise KitError(f"{path}: [pages] takeaways_heading must be a non-empty string")
+    if "focus_slugs" in pages and not (isinstance(pages["focus_slugs"], list) and all(isinstance(x, str) for x in pages["focus_slugs"])):
+        raise KitError(f"{path}: [pages] focus_slugs must be a list of slugs")
     return data
 
 

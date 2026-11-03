@@ -1058,7 +1058,7 @@
     "preview": "Problem: Is low rank a good bias? Main result: The article argues it is.",
     "title": "Clip Why Rank Matters",
     "type": "article",
-    "words": 41,
+    "words": 38,
     "year": null
    },
    {
@@ -1071,7 +1071,7 @@
     "preview": "Problem: Where does rank show up? Main result: Everywhere, says the post.",
     "title": "Tblog Post One",
     "type": "article",
-    "words": 38,
+    "words": 35,
     "year": null
    },
    {
@@ -1099,7 +1099,7 @@
     "preview": "Coverage: 10 / 61 pp (16%) · skip rows excluded · parts ≤ 60 pp",
     "title": "Tiny Book (2020)",
     "type": "book",
-    "words": 115,
+    "words": 111,
     "year": 2020
    },
    {
@@ -1129,7 +1129,7 @@
     "preview": "Problem: What is generalization? Main result: Capacity alone does not explain generalization.",
     "title": "Lecture 1 · Introduction",
     "type": "lecture",
-    "words": 72,
+    "words": 69,
     "year": null
    },
    {
@@ -1142,7 +1142,7 @@
     "preview": "With: What it was about:",
     "title": "2026 01 02 Rank Thread",
     "type": "mail",
-    "words": 36,
+    "words": 33,
     "year": null
    },
    {
@@ -1155,7 +1155,7 @@
     "preview": "Problem: Main result:",
     "title": "Tiny Book",
     "type": "paper",
-    "words": 32,
+    "words": 29,
     "year": 2020
    },
    {
@@ -1168,7 +1168,7 @@
     "preview": "Problem: Is matrix completion biased to low rank? Main result: Yes, in a toy model.",
     "title": "Easy Skim Paper",
     "type": "paper",
-    "words": 45,
+    "words": 42,
     "year": 2023
    },
    {
@@ -1183,7 +1183,7 @@
     "preview": "Problem: Why does gradient descent on a tensor factorization generalize? Main result: Gradient flow implicitly minimizes tensor rank.",
     "title": "Tiny Rank Paper",
     "type": "paper",
-    "words": 80,
+    "words": 77,
     "year": 2024
    },
    {
@@ -1198,7 +1198,7 @@
     "preview": "Problem: What is the rank of a tensor? Main result: Tensor rank can exceed every flattening rank.",
     "title": "Tiny Book",
     "type": "part",
-    "words": 77,
+    "words": 74,
     "year": 2020
    },
    {
@@ -1269,7 +1269,7 @@
     "preview": "Problem: Why do big networks generalize? Main result: A talk-length argument that Tensor rank is the right lens.",
     "title": "Tiny talk",
     "type": "video",
-    "words": 51,
+    "words": 48,
     "year": null
    }
   ],
@@ -1290,7 +1290,7 @@
     "preview": "Problem: Is low rank a good bias? Main result: The article argues it is.",
     "title": "Clip Why Rank Matters",
     "type": "article",
-    "words": 41,
+    "words": 38,
     "year": null
    },
    "frontmatter": {
@@ -1302,7 +1302,7 @@
     "type": "article"
    },
    "kb": "e2e",
-   "markdown": "# Clip Why Rank Matters\n\n**Problem:** Is low rank a good bias?\n\n**Main result:** The article argues it is.\n\n## Key claims\n-\n\n## Key equations\n\n## Takeaways for my thesis\n\n## Connections\n\n## Links out\n- Concepts: <!-- [Title](slug.md) -->\n",
+   "markdown": "# Clip Why Rank Matters\n\n**Problem:** Is low rank a good bias?\n\n**Main result:** The article argues it is.\n\n## Key claims\n-\n\n## Key equations\n\n## Takeaways\n\n## Connections\n\n## Links out\n- Concepts: <!-- [Title](slug.md) -->\n",
    "outbound": [],
    "path": "wiki/article-clip-why-rank-matters.md",
    "read_only": false,
@@ -1326,7 +1326,7 @@
     "preview": "Problem: Where does rank show up? Main result: Everywhere, says the post.",
     "title": "Tblog Post One",
     "type": "article",
-    "words": 38,
+    "words": 35,
     "year": null
    },
    "frontmatter": {
@@ -1338,7 +1338,7 @@
     "type": "article"
    },
    "kb": "e2e",
-   "markdown": "# Tblog Post One\n\n**Problem:** Where does rank show up?\n\n**Main result:** Everywhere, says the post.\n\n## Key claims\n-\n\n## Key equations\n\n## Takeaways for my thesis\n\n## Connections\n\n## Links out\n- Concepts: <!-- [Title](slug.md) -->\n",
+   "markdown": "# Tblog Post One\n\n**Problem:** Where does rank show up?\n\n**Main result:** Everywhere, says the post.\n\n## Key claims\n-\n\n## Key equations\n\n## Takeaways\n\n## Connections\n\n## Links out\n- Concepts: <!-- [Title](slug.md) -->\n",
    "outbound": [],
    "path": "wiki/article-tblog-post-one.md",
    "read_only": false,
@@ -1398,7 +1398,7 @@
     "preview": "Coverage: 10 / 61 pp (16%) · skip rows excluded · parts ≤ 60 pp",
     "title": "Tiny Book (2020)",
     "type": "book",
-    "words": 115,
+    "words": 111,
     "year": 2020
    },
    "frontmatter": {
@@ -1417,7 +1417,7 @@
     "year": "2020"
    },
    "kb": "e2e",
-   "markdown": "# Tiny Book (2020)\n\n## Overview\n\n<!-- At least one paragraph: what the book is, how it is organised, its stance, and why it matters for the thesis. Lint warns until this is written. -->\n\n## Partition\n\nCoverage: **10 / 61 pp (16%)** · skip rows excluded · parts ≤ 60 pp\n\n| # | Part | Pages | Status | Note |\n|---|------|-------|--------|------|\n| 1 | Pages 1–10 | 1–10 | full | [part-2020-tiny-book-pages-1-10](part-2020-tiny-book-pages-1-10.md) |\n| 2 | Whole book | 11–61 | — |  |\n\n## Key concepts\n\n<!-- Book-wide concepts as [Concept](concept.md) links, filled in as parts are digested. -->\n\n## Threads\n\n<!-- Thesis links, open questions, connected papers and people. -->\n",
+   "markdown": "# Tiny Book (2020)\n\n## Overview\n\n<!-- At least one paragraph: what the book is, how it is organised, its stance, and why it matters. Lint warns until this is written. -->\n\n## Partition\n\nCoverage: **10 / 61 pp (16%)** · skip rows excluded · parts ≤ 60 pp\n\n| # | Part | Pages | Status | Note |\n|---|------|-------|--------|------|\n| 1 | Pages 1–10 | 1–10 | full | [part-2020-tiny-book-pages-1-10](part-2020-tiny-book-pages-1-10.md) |\n| 2 | Whole book | 11–61 | — |  |\n\n## Key concepts\n\n<!-- Book-wide concepts as [Concept](concept.md) links, filled in as parts are digested. -->\n\n## Threads\n\n<!-- Links, open questions, connected papers and people. -->\n",
    "outbound": [
     "part-2020-tiny-book-pages-1-10"
    ],
@@ -1502,7 +1502,7 @@
     "preview": "Problem: What is generalization? Main result: Capacity alone does not explain generalization.",
     "title": "Lecture 1 · Introduction",
     "type": "lecture",
-    "words": 72,
+    "words": 69,
     "year": null
    },
    "frontmatter": {
@@ -1518,7 +1518,7 @@
     "type": "lecture"
    },
    "kb": "e2e",
-   "markdown": "# Lecture 1 · Introduction\n\n> Row 1 of [Test machine learning](course-test-ml.md)\n\n**Problem:** What is generalization?\n\n**Main result:** Capacity alone does not explain generalization.\n\n## Setup & assumptions\n\nLecture overview.\n\n## Proof idea (sketch only)\n\n\n\n## Key equations\n\n**bound:**\n$R(h) \\le \\hat R(h) + \\epsilon$\n\n\n## Takeaways for my thesis\n\n- Capacity alone does not explain generalization.\n- Concepts: [Tensor rank](tensor-rank.md), [Learning theory](theme-learning-theory.md)\n\n## Links out\n\n- Concepts: [Tensor rank](tensor-rank.md), [Learning theory](theme-learning-theory.md)\n",
+   "markdown": "# Lecture 1 · Introduction\n\n> Row 1 of [Test machine learning](course-test-ml.md)\n\n**Problem:** What is generalization?\n\n**Main result:** Capacity alone does not explain generalization.\n\n## Setup & assumptions\n\nLecture overview.\n\n## Proof idea (sketch only)\n\n\n\n## Key equations\n\n**bound:**\n$R(h) \\le \\hat R(h) + \\epsilon$\n\n\n## Takeaways\n\n- Capacity alone does not explain generalization.\n- Concepts: [Tensor rank](tensor-rank.md), [Learning theory](theme-learning-theory.md)\n\n## Links out\n\n- Concepts: [Tensor rank](tensor-rank.md), [Learning theory](theme-learning-theory.md)\n",
    "outbound": [
     "course-test-ml",
     "tensor-rank",
@@ -1578,7 +1578,7 @@
     "preview": "With: What it was about:",
     "title": "2026 01 02 Rank Thread",
     "type": "mail",
-    "words": 36,
+    "words": 33,
     "year": null
    },
    "frontmatter": {
@@ -1590,7 +1590,7 @@
     "type": "mail"
    },
    "kb": "e2e",
-   "markdown": "# 2026 01 02 Rank Thread\n\n**With:** <!-- [Name](person-slug.md) -->\n\n**What it was about:**\n\n## Key claims\n-\n\n## Key equations\n\n## Takeaways for my thesis\n\n## Connections\n\n## Links out\n- Concepts: <!-- [Title](slug.md) -->\n",
+   "markdown": "# 2026 01 02 Rank Thread\n\n**With:** <!-- [Name](person-slug.md) -->\n\n**What it was about:**\n\n## Key claims\n-\n\n## Key equations\n\n## Takeaways\n\n## Connections\n\n## Links out\n- Concepts: <!-- [Title](slug.md) -->\n",
    "outbound": [],
    "path": "wiki/mail-2026-01-02-rank-thread.md",
    "read_only": false,
@@ -1609,7 +1609,7 @@
     "preview": "Problem: Main result:",
     "title": "Tiny Book",
     "type": "paper",
-    "words": 32,
+    "words": 29,
     "year": 2020
    },
    "frontmatter": {
@@ -1623,7 +1623,7 @@
     "year": "2020"
    },
    "kb": "e2e",
-   "markdown": "# Tiny Book\n\n**Problem:**\n\n**Main result:**\n\n## Setup & assumptions\n\n## Proof idea (sketch only)\n\n## Key equations\n\n## Takeaways for my thesis\n-\n\n## Links out\n- Concepts: <!-- [Title](slug.md) -->\n",
+   "markdown": "# Tiny Book\n\n**Problem:**\n\n**Main result:**\n\n## Setup & assumptions\n\n## Proof idea (sketch only)\n\n## Key equations\n\n## Takeaways\n-\n\n## Links out\n- Concepts: <!-- [Title](slug.md) -->\n",
    "outbound": [],
    "path": "wiki/paper-2020-tiny-book.md",
    "read_only": false,
@@ -1642,7 +1642,7 @@
     "preview": "Problem: Is matrix completion biased to low rank? Main result: Yes, in a toy model.",
     "title": "Easy Skim Paper",
     "type": "paper",
-    "words": 45,
+    "words": 42,
     "year": 2023
    },
    "frontmatter": {
@@ -1655,7 +1655,7 @@
     "year": "2023"
    },
    "kb": "e2e",
-   "markdown": "# Easy Skim Paper\n\n**Problem:** Is matrix completion biased to low rank?\n\n**Main result:** Yes, in a toy model.\n\n## Setup & assumptions\n\n## Proof idea (sketch only)\n\n## Key equations\n\n## Takeaways for my thesis\n-\n\n## Links out\n- Concepts: <!-- [Title](slug.md) -->\n",
+   "markdown": "# Easy Skim Paper\n\n**Problem:** Is matrix completion biased to low rank?\n\n**Main result:** Yes, in a toy model.\n\n## Setup & assumptions\n\n## Proof idea (sketch only)\n\n## Key equations\n\n## Takeaways\n-\n\n## Links out\n- Concepts: <!-- [Title](slug.md) -->\n",
    "outbound": [],
    "path": "wiki/paper-2023-easy-skim-paper.md",
    "read_only": false,
@@ -1681,7 +1681,7 @@
     "preview": "Problem: Why does gradient descent on a tensor factorization generalize? Main result: Gradient flow implicitly minimizes tensor rank.",
     "title": "Tiny Rank Paper",
     "type": "paper",
-    "words": 80,
+    "words": 77,
     "year": 2024
    },
    "frontmatter": {
@@ -1705,7 +1705,7 @@
     "year": "2024"
    },
    "kb": "e2e",
-   "markdown": "# Tiny Rank Paper\n\n**Problem:** Why does gradient descent on a tensor factorization generalize?\n\n**Main result:** Gradient flow implicitly minimizes tensor rank.\n\n## Setup & assumptions\n\nAnalyze gradient flow on a rank-one-initialized factorization.\n\n## Proof idea (sketch only)\n\n\n\n## Key equations\n\n**cp:**\n$T = \\sum_r a_r \\otimes b_r \\otimes c_r$\nVariables: $T$: tensor\n\n\n## Takeaways for my thesis\n\n- Gradient flow implicitly minimizes tensor rank.\n- Concepts: [Tensor rank](tensor-rank.md), [Learning theory](theme-learning-theory.md)\n\n## Links out\n\n- Concepts: [Tensor rank](tensor-rank.md), [Learning theory](theme-learning-theory.md)\n",
+   "markdown": "# Tiny Rank Paper\n\n**Problem:** Why does gradient descent on a tensor factorization generalize?\n\n**Main result:** Gradient flow implicitly minimizes tensor rank.\n\n## Setup & assumptions\n\nAnalyze gradient flow on a rank-one-initialized factorization.\n\n## Proof idea (sketch only)\n\n\n\n## Key equations\n\n**cp:**\n$T = \\sum_r a_r \\otimes b_r \\otimes c_r$\nVariables: $T$: tensor\n\n\n## Takeaways\n\n- Gradient flow implicitly minimizes tensor rank.\n- Concepts: [Tensor rank](tensor-rank.md), [Learning theory](theme-learning-theory.md)\n\n## Links out\n\n- Concepts: [Tensor rank](tensor-rank.md), [Learning theory](theme-learning-theory.md)\n",
    "outbound": [
     "tensor-rank",
     "theme-learning-theory"
@@ -1771,7 +1771,7 @@
     "preview": "Problem: What is the rank of a tensor? Main result: Tensor rank can exceed every flattening rank.",
     "title": "Tiny Book",
     "type": "part",
-    "words": 77,
+    "words": 74,
     "year": 2020
    },
    "frontmatter": {
@@ -1793,7 +1793,7 @@
     "year": "2020"
    },
    "kb": "e2e",
-   "markdown": "# Tiny Book\n\n> Part of [book-2020-tiny-book](book-2020-tiny-book.md) · pp. 1–10 · Pages 1–10\n\n**Problem:** What is the rank of a tensor?\n\n**Main result:** Tensor rank can exceed every flattening rank.\n\n## Setup & assumptions\n\nDefinitions and examples.\n\n## Proof idea (sketch only)\n\n\n\n## Key equations\n\n**flat:**\n$\\operatorname{rank}(T) \\ge \\operatorname{rank}(T_{(1)})$\n\n\n## Takeaways for my thesis\n\n- Tensor rank can exceed every flattening rank.\n- Concepts: [Tensor rank](tensor-rank.md), [Learning theory](theme-learning-theory.md)\n\n## Links out\n\n- Concepts: [Tensor rank](tensor-rank.md), [Learning theory](theme-learning-theory.md)\n",
+   "markdown": "# Tiny Book\n\n> Part of [book-2020-tiny-book](book-2020-tiny-book.md) · pp. 1–10 · Pages 1–10\n\n**Problem:** What is the rank of a tensor?\n\n**Main result:** Tensor rank can exceed every flattening rank.\n\n## Setup & assumptions\n\nDefinitions and examples.\n\n## Proof idea (sketch only)\n\n\n\n## Key equations\n\n**flat:**\n$\\operatorname{rank}(T) \\ge \\operatorname{rank}(T_{(1)})$\n\n\n## Takeaways\n\n- Tensor rank can exceed every flattening rank.\n- Concepts: [Tensor rank](tensor-rank.md), [Learning theory](theme-learning-theory.md)\n\n## Links out\n\n- Concepts: [Tensor rank](tensor-rank.md), [Learning theory](theme-learning-theory.md)\n",
    "outbound": [
     "book-2020-tiny-book",
     "tensor-rank",
@@ -2118,7 +2118,7 @@
     "preview": "Problem: Why do big networks generalize? Main result: A talk-length argument that Tensor rank is the right lens.",
     "title": "Tiny talk",
     "type": "video",
-    "words": 51,
+    "words": 48,
     "year": null
    },
    "frontmatter": {
@@ -2138,7 +2138,7 @@
     "url": "https://example.org/talk"
    },
    "kb": "e2e",
-   "markdown": "# Tiny talk\n\n**Problem:** Why do big networks generalize?\n\n**Main result:** A talk-length argument that [Tensor rank](tensor-rank.md) is the right lens.\n\n## Key ideas\n- Low rank as an implicit bias.\n\n## Key equations\n\n## Takeaways for my thesis\n\n## Connections\n- [Learning theory](theme-learning-theory.md)\n\n## Links out\n- Concepts: [Tensor rank](tensor-rank.md)\n",
+   "markdown": "# Tiny talk\n\n**Problem:** Why do big networks generalize?\n\n**Main result:** A talk-length argument that [Tensor rank](tensor-rank.md) is the right lens.\n\n## Key ideas\n- Low rank as an implicit bias.\n\n## Key equations\n\n## Takeaways\n\n## Connections\n- [Learning theory](theme-learning-theory.md)\n\n## Links out\n- Concepts: [Tensor rank](tensor-rank.md)\n",
    "outbound": [
     "tensor-rank",
     "theme-learning-theory"

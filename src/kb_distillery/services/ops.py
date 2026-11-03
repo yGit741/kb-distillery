@@ -69,12 +69,26 @@ def log_tail(n=LOG_LINES):
     return "\n".join(sanitize.short_path(sanitize.strip_ansi(line.rstrip("\n")), root) for line in lines)
 
 
+def maintainer_ops(root):
+    """Does this kb use the owner's operations (nightly sync, deploy owner, a publisher)? False for a fresh kb, so the
+    System screen leaves the Nightly, Merges and Deploy tiles out instead of showing them red and "not installed"."""
+    from kb_distillery import publish
+    from kb_distillery.ops import core
+    try:
+        publishing = not isinstance(publish.current(), publish.NullPublisher)
+    except Exception:  # noqa: BLE001 — an unreadable [publish] is "not configured" here; doctor reports it
+        publishing = False
+    return bool(core.nightly_in_use(root) or os.path.isfile(OWNER_PLIST) or publishing)
+
+
 def _build():
     from kb_distillery.ops import core, nightly_report
     root = vault_root()
     now = datetime.datetime.now(datetime.timezone.utc)
     report, threads, doc = nightly_report.collect(root, now)
-    return {
+    from kb_distillery.config.resources import repo_root
+    from kb_distillery.ops.usercmd import localize
+    return localize({
         "generated_at": now.isoformat(timespec="seconds"),
         "root": os.path.basename(root),
         "subject": nightly_report.subject(doc, report),
@@ -84,7 +98,8 @@ def _build():
         "runs": [_run_summary(r) for r in run_history(root)],
         "nightly": core.nightly_status(root),
         "log": log_tail(),
-    }
+        "maintainer": maintainer_ops(root),
+    }, repo_root() is not None)
 
 
 def merge_queue():

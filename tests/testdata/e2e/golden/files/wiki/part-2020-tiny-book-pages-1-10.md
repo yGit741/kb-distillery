@@ -38,7 +38,7 @@ Definitions and examples.
 $\operatorname{rank}(T) \ge \operatorname{rank}(T_{(1)})$
 
 
-## Takeaways for my thesis
+## Takeaways
 
 - Tensor rank can exceed every flattening rank.
 - Concepts: [Tensor rank](tensor-rank.md), [Learning theory](theme-learning-theory.md)

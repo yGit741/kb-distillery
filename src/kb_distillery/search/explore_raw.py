@@ -17,6 +17,7 @@ import os
 import re
 import sys
 
+from kb_distillery.config import pages as page_conventions
 from kb_distillery.config.paths import vault_root
 HERE = os.path.join(vault_root(), "meta")
 
@@ -203,7 +204,7 @@ def _page_block(slug):
         return f"(no wiki page {slug})"
     fm = lint.parse_frontmatter(text) or {}
     out = [f"claims: {claim_text(slug, fm, text) or '(none)'}"]
-    for h in ("Takeaways for my thesis", "Connections"):
+    for h in (page_conventions.takeaways_heading(), "Connections"):
         s = extract_section(text, h).strip()
         if s:
             out.append(f"--- {h} ---\n{s}")

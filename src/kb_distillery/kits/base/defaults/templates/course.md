@@ -16,7 +16,7 @@ related: []
 
 ## Overview
 
-<!-- At least one paragraph: what the course covers, who taught it, how it is organised, why it matters for the thesis. Lint warns until this is written. -->
+<!-- At least one paragraph: what the course covers, who taught it, how it is organised, why it matters. Lint warns until this is written. -->
 
 ## Contents
 
@@ -24,4 +24,4 @@ related: []
 
 ## Threads
 
-<!-- Thesis links, open questions, connected themes and people. -->
+<!-- Links, open questions, connected themes and people. -->

@@ -3,6 +3,7 @@ import json
 import os
 import sys
 
+from kb_distillery.config import pages as page_conventions
 from kb_distillery.vault import frontmatter, links
 from kb_distillery.vault.schema import TOPIC_SLUGS
 from kb_distillery.lint.lint import QUESTION_TITLE_MAX
@@ -150,7 +151,7 @@ discussed_with: []
 
 {_equations_block(claims.get("equations", []))}
 
-## Takeaways for my thesis
+## {page_conventions.takeaways_heading()}
 
 - {results[-1] if len(results) > 1 else main_result}
 - Concepts: {concepts_links}

@@ -1,4 +1,4 @@
-"""`distill send <note> --to a,b` (was `kbd distill`): send a think note into the chosen knowledge bases (docs: think.md).
+"""`distill send <note> --to a,b` (was `kbd distill`, the old name): send a think note into the chosen knowledge bases (docs: think.md).
 
 Each kb gets `wiki/distilled-think-<note>.md` citing `think:<note>.md`, committed there as `kb(distill)`; the
 note's provenance sidecar in the think space lists where it went (kb_distillery.distill.fanout). No LLM call unless
@@ -32,7 +32,7 @@ def main(argv=None, summarize=None) -> int:
     """`summarize` lets tests inject a fake; the CLI builds one over kb_distillery.llm only for --summarize."""
     args = build_parser().parse_args(argv)
     if args.backend and not args.summarize:
-        print("kbd distill: --backend only matters with --summarize", file=sys.stderr)
+        print("distill send: --backend only matters with --summarize", file=sys.stderr)
         return 2
     if args.summarize and summarize is None:
         summarize = fanout.llm_summarizer(args.backend)
@@ -40,7 +40,7 @@ def main(argv=None, summarize=None) -> int:
     try:
         outcomes = fanout.distill_note(args.note, refs, think_root=args.think, summarize=summarize)
     except fanout.DistillError as e:
-        print(f"kbd distill: {e}", file=sys.stderr)
+        print(f"distill send: {e}", file=sys.stderr)
         return 1
     rc = 0
     for o in outcomes:

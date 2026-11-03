@@ -26,7 +26,7 @@ discussed_with: []
 
 ## Key equations
 
-## Takeaways for my thesis
+## Takeaways
 -
 
 ## Links out

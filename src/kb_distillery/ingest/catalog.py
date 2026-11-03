@@ -11,6 +11,7 @@ import shutil
 import subprocess
 import sys
 
+from kb_distillery.config import pages as page_conventions
 from kb_distillery.storage import pdf
 from kb_distillery.vault import frontmatter
 from kb_distillery.ingest.sources.web import blog
@@ -238,7 +239,7 @@ discussed_with: []
 
 ## Key equations
 
-## Takeaways for my thesis
+## {page_conventions.takeaways_heading()}
 -
 
 ## Links out

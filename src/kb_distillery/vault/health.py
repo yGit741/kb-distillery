@@ -2,13 +2,13 @@
 import os
 import time
 from datetime import datetime, timezone
+from kb_distillery.config import pages as page_conventions
 from kb_distillery.vault import links as page_links
 from kb_distillery.vault import wikiindex
 from kb_distillery.vault.wikiindex import QUERY_PAGES
 from kb_distillery.vault.schema import INDEX_REL
 
 
-ORPHAN_EXCLUDE = frozenset({"AGENTS", "log", "thesis"})
 
 METRICS = {
     "errors": {
@@ -181,21 +181,23 @@ def compute_in_degree(pages):
     return degree
 
 
-def is_orphan_slug(slug):
+def is_orphan_slug(slug, skip=None):
     if slug.startswith(("theme-", "distilled-think-", "scope-")):
         return False
-    return slug not in ORPHAN_EXCLUDE
+    return slug not in (page_conventions.skip_slugs() if skip is None else skip)
 
 
 def compute_orphans(pages):
     degree = compute_in_degree(pages)
-    return sorted(slug for slug, n in degree.items() if n == 0 and is_orphan_slug(slug))
+    skip = page_conventions.skip_slugs()
+    return sorted(slug for slug, n in degree.items() if n == 0 and is_orphan_slug(slug, skip))
 
 
 def in_degree_buckets(degree):
     buckets = {"0": 0, "1": 0, "2+": 0}
+    skip = page_conventions.skip_slugs()
     for slug, n in degree.items():
-        if slug.startswith(("theme-", "distilled-think-", "scope-")) or slug in ORPHAN_EXCLUDE:
+        if slug.startswith(("theme-", "distilled-think-", "scope-")) or slug in skip:
             continue
         if n == 0:
             buckets["0"] += 1

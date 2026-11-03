@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { flag } from "@/flags";
 import { withFlag } from "@/flags/testing";
-import { ROUTE_DEFS, routeDefsNow } from "./defs";
+import { ROUTE_DEFS, routeDefsNow, routeOffered } from "./defs";
 
 describe("route defs consult flags", () => {
   it("every route with a flag exists only when that flag is on", () => {
@@ -13,12 +13,13 @@ describe("route defs consult flags", () => {
 });
 
 describe("the ported legacy pages", () => {
-  it("Start (screen.start) and Covector (always on) are reached from the palette rather than the top bar", () => {
+  it("Start (screen.start) and Covector (runtime research-tools) are reached from the palette rather than the top bar", () => {
     for (const [id, path, screenFlag] of [["start", "/start", "screen.start"], ["covector", "/covector", undefined]] as const) {
       const d = ROUTE_DEFS.find((r) => r.id === id);
       expect(d, id).toBeDefined();
       expect(d!.path).toBe(path);
       expect(d!.flag).toBe(screenFlag);
+      if (id === "covector") expect(d!.runtimeFlag).toBe("research-tools");
       expect(d!.nav).toBeUndefined();
     }
   });
@@ -46,5 +47,14 @@ describe("screen flags gate their route", () => {
   it("withFlag restores the built value", () => {
     withFlag("screen.share", true, () => undefined);
     expect(ids()).not.toContain("share");
+  });
+});
+
+describe("Covector is the owner's own page", () => {
+  const covector = () => ROUTE_DEFS.find((r) => r.id === "covector")!;
+  it("is offered only while research-tools is on", () => {
+    withFlag("research-tools", false, () => expect(routeOffered(covector())).toBe(false));
+    withFlag("research-tools", true, () => expect(routeOffered(covector())).toBe(true));
+    expect(routeOffered({})).toBe(true); // routes without a runtime flag are always offered
   });
 });

@@ -1,6 +1,7 @@
 """Wiki graph helpers — links, sections, token overlap (0 LLM)."""
 import os
 import re
+from kb_distillery.config import pages as page_conventions
 from kb_distillery.vault import links as page_links
 
 TOKEN = re.compile(r"[a-z0-9]+")
@@ -14,10 +15,13 @@ SCOPE_WORDS = frozenset({
     "overparameterized", "underparameterized", "real", "complex",
 })
 
-SECTIONS_BY_TYPE = {
-    "paper": ["Problem", "Main result", "Setup & assumptions", "Takeaways for my thesis",
+def sections_by_type():
+    """The sections worth reading per page type; the takeaways heading is the kb's (kb_distillery.config.pages)."""
+    takeaways = page_conventions.takeaways_heading()
+    return {
+    "paper": ["Problem", "Main result", "Setup & assumptions", takeaways,
               "Connections", "Links out"],
-    "part": ["Problem", "Main result", "Setup & assumptions", "Takeaways for my thesis",
+    "part": ["Problem", "Main result", "Setup & assumptions", takeaways,
              "Connections", "Links out"],
     "book": ["Overview", "Partition", "Key concepts", "Threads"],
     "question": ["Question", "Why it matters", "Current state"],
@@ -26,7 +30,7 @@ SECTIONS_BY_TYPE = {
     "course": ["Overview", "Contents", "Threads"],
     "series": ["Overview", "Contents", "Threads"],
     "notebook": ["Overview", "Partition", "Threads"],
-}
+    }
 
 
 def tokenize(text):

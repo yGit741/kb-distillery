@@ -153,13 +153,13 @@ never touches other files). To find a page: read `wiki/index.md`, then the one s
 ## Note sections
 
 Sources:
-- **paper** — Setup & assumptions → Proof idea (sketch only) → Key equations → Takeaways for my thesis → Connections → Links out (`meta/templates/paper.md`; at `depth: listed` it holds only **Problem:** / **Main result:** lines)
+- **paper** — Setup & assumptions → Proof idea (sketch only) → Key equations → Takeaways → Connections → Links out (`meta/templates/paper.md`; at `depth: listed` it holds only **Problem:** / **Main result:** lines)
 - **part** — as paper, plus a `> Part of [Book title](book-slug.md) · pp. A–B` line under the title
-- **lecture** — `> Lecture of [Course title](course-slug.md)` line → Setup & assumptions → Key equations → Takeaways for my thesis → Connections → Links out
-- **article / mail** — Key claims → Key equations → Takeaways for my thesis → Connections → Links out (mail = an email thread)
+- **lecture** — `> Lecture of [Course title](course-slug.md)` line → Setup & assumptions → Key equations → Takeaways → Connections → Links out
+- **article / mail** — Key claims → Key equations → Takeaways → Connections → Links out (mail = an email thread)
 - **ai-chat** — rendered from its `meta/chats/` tree by the chat pipeline (`conversation:` names the tree)
 - **blog-post** — rendered by `src/kb_distillery/ingest/sources/web/blog.py`: Blog Post Summary → Key concepts → Post
-- **video** — Key ideas → Key equations → Takeaways for my thesis → Connections → Links out
+- **video** — Key ideas → Key equations → Takeaways → Connections → Links out
 
 Collections (tables of sources, never sources themselves):
 - **book / notebook** — Overview (≥1 paragraph, required) → Partition → Key concepts → Threads
