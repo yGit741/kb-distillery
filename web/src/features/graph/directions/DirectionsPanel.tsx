@@ -6,9 +6,9 @@ import { spectrum, type Spectrum } from "./fourier";
 import { num, Section, shortTheme, Story, ThemeChip, useCached, useDirectionsCache } from "./ui";
 
 const FOOTHOLD: Record<Direction["foothold"], { label: string; hint: string }> = {
-  strong: { label: "strong foothold", hint: "some of my questions or ideas already reach every side" },
+  strong: { label: "strong foothold", hint: "some of the vault's questions or ideas already reach every side" },
   thin: { label: "thin foothold", hint: "the notes touch every side, but only lightly" },
-  none: { label: "greenfield", hint: "nothing I wrote reaches every side yet: new ground, and a cold start" },
+  none: { label: "greenfield", hint: "nothing in the vault reaches every side yet: new ground, and a cold start" },
 };
 
 function PageList({ title, pages, ctx }: { title: string; pages: readonly DirectionPage[]; ctx: GraphToolContext }) {

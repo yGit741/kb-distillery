@@ -212,7 +212,7 @@ function registerThesisTours(): void {
         ODONNELL,
         "O'Donnell's book, and Fourier degree",
         // source: wiki/book-2014-analysis-of-boolean-functions.md (Key concepts: Fourier expansion, influence, noise stability and hypercontractivity, low-degree learning); wiki/fourier-degree.md (learnability via low-degree concentration; "the most promising bridge in this vault"; open question vs spectral bias)
-        "Analysis of Boolean Functions is where the vocabulary comes from: Fourier expansion, influence, noise stability and hypercontractivity, low-degree learning. Fourier degree is the bridge being bet on — low-degree concentration is what makes a class learnable, and whether that is the same claim as spectral bias is an open question of mine.",
+        "Analysis of Boolean Functions is where the vocabulary comes from: Fourier expansion, influence, noise stability and hypercontractivity, low-degree learning. Fourier degree is the bridge being bet on — low-degree concentration is what makes a class learnable, and whether that is the same claim as spectral bias is an open question of the vault.",
       ),
       homeAgain(
         // source: wiki/noise-stability.md (in THESIS_SEED); features/graph/lab/views.ts (Explore)

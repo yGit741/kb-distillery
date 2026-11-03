@@ -69,7 +69,7 @@ export const STORIES: readonly Story[] = [
   {
     id: "map",
     name: "Map: what is in the vault",
-    story: "As a reader who opens this vault for the first time, I want the territory at a glance: every theme on a ring, the ideas and questions inside each, and only the sources I actually read, so that breadth shows without the noise of imports and stubs.",
+    story: "As a reader who opens this vault for the first time, I want the territory at a glance: every theme on a ring, the ideas and questions inside each, and only the sources actually read, so that breadth shows without the noise of imports and stubs.",
     headline: {
       label: "Map",
       goal: "See what is in the vault: every theme, with the ideas and questions inside it.",
@@ -124,7 +124,7 @@ export const STORIES: readonly Story[] = [
   {
     id: "orient",
     name: "Orient: what is in the vault",
-    story: "As a student who has not picked a thesis, I open the graph to see the territory: which themes exist, which questions sit in each, and roughly how much I have read about each.",
+    story: "As a reader without a fixed direction yet, I open the graph to see the territory: which themes exist, which questions sit in each, and roughly how much I have read about each.",
     lab: { degBasis: "nohub", coverage: 8, regions: "auto", regionZoom: 0.8, hulls: true },
     colorBy: "area",
     sizeBy: "evidence",
