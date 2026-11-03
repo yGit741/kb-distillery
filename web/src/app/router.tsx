@@ -6,6 +6,7 @@ import {
   type RouterHistory,
 } from "@tanstack/react-router";
 import { IS_SHARE } from "@/share/env";
+import { useFlag } from "@/flags/useFlag";
 import { ROUTES, type Route } from "@/routes/registry";
 import { SEARCH } from "@/routes/search";
 import { AppShell } from "./AppShell";
@@ -16,12 +17,17 @@ export const BASEPATH = import.meta.env.BASE_URL.replace(/\/$/, "");
 
 const rootRoute = createRootRoute({ component: AppShell });
 
+/** A route behind a runtime flag shows the router's own "Not Found" while the flag is off (same as an unknown path). */
+function Gate({ def }: { def: Route }) {
+  const on = useFlag(def.runtimeFlag ?? "research-tools");
+  return !def.runtimeFlag || on ? <def.Screen /> : <p>Not Found</p>;
+}
+
 function screenRoutes(def: Route) {
-  const Screen = def.Screen;
   const validateSearch = SEARCH[def.id as keyof typeof SEARCH] as (raw: Record<string, unknown>) => Record<string, unknown>;
   const component = () => (
     <ErrorBoundary label={def.label}>
-      <Screen />
+      <Gate def={def} />
     </ErrorBoundary>
   );
   return [def.path, ...(def.extraPaths ?? [])].map((path) =>

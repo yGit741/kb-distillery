@@ -11,7 +11,7 @@ import { PipelineScreen } from "@/features/pipeline/PipelineScreen";
 import { useApiQuery } from "@/lib/useApiQuery";
 import { cn } from "@/lib/utils";
 import { SYSTEM_TABS, type SearchById, type SystemTab } from "@/routes/search";
-import { needsYou, tiles, timeline, type EventKind, type HealthLike, type LifecycleLike, type OpsLike, type Tile, type Tone } from "./model";
+import { needsYou, showOwnerOps, tiles, timeline, type EventKind, type HealthLike, type LifecycleLike, type OpsLike, type Tile, type Tone } from "./model";
 import { HealthView } from "./HealthView";
 import { FlagsView } from "./FlagsView";
 import { KnowledgeBasesView } from "./KnowledgeBasesView";
@@ -74,7 +74,7 @@ function Timeline({ lc, ops }: { lc?: LifecycleLike; ops?: OpsLike }) {
           <CardDescription>Knowledge steps, merges and nightly runs, newest first.</CardDescription>
         </div>
         <div className="flex flex-wrap gap-1" role="tablist" aria-label="Timeline filter">
-          {FILTERS.map((f) => (
+          {FILTERS.filter((f) => f.id !== "nightly" || showOwnerOps(ops)).map((f) => (
             <button
               key={f.id}
               role="tab"
