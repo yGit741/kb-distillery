@@ -63,6 +63,13 @@ class ShippedKitsTests(unittest.TestCase):
         self.assertEqual(pages.takeaways_heading(cfg), "So what")
         self.assertEqual(pages.focus_slugs(cfg), frozenset({"plan"}))
 
+    def test_a_bad_kb_toml_pages_table_is_refused_with_the_file_named(self):
+        for i, bad in enumerate(('focus_slugs = "thesis"', 'takeaways_heading = ""', "takeaways_heading = 3")):
+            cfg = kb_at(os.path.join(self.tmp.name, f"bad{i}"), "", f"\n[pages]\n{bad}\n")
+            with self.assertRaises(kbconfig.KbConfigError, msg=bad) as e:
+                pages.takeaways_heading(cfg)
+            self.assertIn(cfg.path, str(e.exception))
+
     def test_every_kits_skeletons_use_the_heading_the_kit_names(self):
         """A source skeleton the kit resolves (its own, else its parent's) writes exactly the kit's heading."""
         for name in kit.names():
