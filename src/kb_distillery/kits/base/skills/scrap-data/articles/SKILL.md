@@ -1,6 +1,8 @@
 ---
 name: scrap-data-articles
 description: Download arXiv or PDF URLs to raw/inbox/. Use with scrap-data for paper URLs. Do NOT catalog or digest from here.
+audience: app
+mode: write
 ---
 
 # scrap-data / articles

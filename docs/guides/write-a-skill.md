@@ -18,7 +18,7 @@ Read `<skill>/SKILL.md` before running a workflow.
 
 1. **Extend vs new**: prefer extending an existing skill in the folder you target over adding a near-duplicate (the maintainers' `create-skill` decision tree is private tooling and is not shipped).
 2. Copy [`_TEMPLATE.md`](../../src/kb_distillery/kits/base/skills/_TEMPLATE.md) to `<skills folder>/<name>/SKILL.md`.
-3. Required: YAML `name` + `description` (with Use for / Do NOT), `## Triggers`, `## Do NOT`, `**LLM tier:**`, real CLI in `bash` blocks.
+3. Required: YAML `name` + `description` (with Use for / Do NOT), `audience` (`app`: a kit skill that runs in a kb; `dev`: engine work, `.claude/skills/` only) and `mode` (`read`: never changes a file, so the read-only chat agent may use it; `write`), `## Triggers`, `## Do NOT`, `**LLM tier:**`, real CLI in `bash` blocks.
 4. Register it in that folder's `README.md` (Token budgets row for ladder skills; Skills table always).
 5. Update the Intent router in `AGENTS.md` if triggers change, and the Skill ladder in `src/kb_distillery/kits/base/defaults/docs/workflows.md` if the ladder changes.
 6. Gate:
@@ -32,6 +32,8 @@ pixi run lint-skills
 (`python3 -m kb_distillery.search.query`, `…search.explore_raw`, `…search.semfind`, `…vault.coherence`, `…digest`,
 `…publish.export`, `…distill propose|revise|apply|abort`) stays a `python3 -m` line until it gets one. `lint-skills` checks
 every `bash` block against the real CLI.
+
+**Audience and mode.** `lint-skills` fails a skill without them. An `app` skill may not mention `ship` or PRs (engine workflow), and a `mode: read` skill may not name the Write / Edit tools. The chat agent (agent mode) can use only the `app` + `read` skills a kb lists in `[agent] skills` (kit default: `deep-research`); it loads them as a generated local plugin and may start only the read-only `kb-researcher` subagent.
 
 **Vault guardrails** (any skill that touches data): `raw/` immutable (use CLI); `think/` human-only; open ingest session → no direct `wiki/` writes (`guard.py`); post-write → `distill lint`.
 

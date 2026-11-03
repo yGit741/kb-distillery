@@ -3,6 +3,8 @@ name: export-kb
 description: >-
   Pack wiki + think text into a timestamped zip under .exported/ for sharing
   with external LLMs. Use for export-kb, export kb, share kb, kb zip. Do NOT commit .exported/.
+audience: app
+mode: write
 ---
 
 # export-kb

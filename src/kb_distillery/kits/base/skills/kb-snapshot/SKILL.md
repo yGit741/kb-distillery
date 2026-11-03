@@ -4,6 +4,8 @@ description: >-
   Freeze the knowledge base as an annotated tag kb-x.y.z, list snapshots, or bring wiki/ back to one
   as a new kb(restore) commit. Use for snapshot, freeze, tag version, restore snapshot, go back to kb-x.y.z.
   Do NOT use to undo a single step (use kb-undo) or to share (sharing is built from a snapshot later).
+audience: app
+mode: write
 ---
 
 # kb-snapshot

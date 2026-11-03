@@ -1,6 +1,8 @@
 ---
 name: lint-moc
 description: On-demand semantic audit of one topic page (theme-*). Use for lint-moc, lint moc, lint topic. Do NOT auto-edit wiki for external disagreements.
+audience: app
+mode: write
 ---
 
 # lint-moc

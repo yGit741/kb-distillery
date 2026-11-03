@@ -1,6 +1,8 @@
 ---
 name: full-digest
 description: Deepen a Source page to depth full via transactional ingest (~8-12k tokens, medium tier). Use ONLY for "full-digest" or "full digest". Do NOT use for bare "digest", "easy-digest", or "deep-digest".
+audience: app
+mode: write
 ---
 
 # full-digest

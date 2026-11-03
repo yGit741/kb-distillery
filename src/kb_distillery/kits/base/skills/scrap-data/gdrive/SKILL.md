@@ -1,6 +1,8 @@
 ---
 name: scrap-data-gdrive
 description: Pull files from a mounted Google Drive folder into raw/inbox/ with zero LLM tokens. Use for pull from drive, google drive, notes to obsedian, sync drive folder. Do NOT fetch Drive bytes through Google Drive MCP tools and do NOT hand-write cp loops.
+audience: app
+mode: write
 ---
 
 # scrap-data / gdrive

@@ -1,6 +1,8 @@
 ---
 name: deep-digest
 description: Deep digest with neighbor links (~25-40k+ tokens, HEAVY). Use ONLY when user explicitly says "deep-digest" or "deep digest" AND confirms heavy tier. Never auto-trigger.
+audience: app
+mode: write
 ---
 
 # deep-digest

@@ -4,6 +4,8 @@ description: >-
   Dump an idea, bug or an unstarted plan into the local backlog as one tidy card (title, why, kind, area, size).
   Use for send to backlog, add to backlog, backlog this, park this idea, save this plan for later, what is in the backlog.
   Do NOT use to ship work (infra-pr), to start a queued item overnight (work-all-night), or for wiki and think notes.
+audience: dev
+mode: write
 ---
 
 # send-to-backlog

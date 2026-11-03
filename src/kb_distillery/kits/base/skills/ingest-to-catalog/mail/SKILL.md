@@ -1,6 +1,8 @@
 ---
 name: ingest-to-catalog-mail
 description: Catalog a raw/inbox/mail-.../ thread bundle to raw/emails/ as a corpus row (no wiki stub). Zero LLM. Do NOT digest from here.
+audience: app
+mode: write
 ---
 
 # ingest-to-catalog / mail
