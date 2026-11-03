@@ -194,15 +194,15 @@ Citations from [Google Scholar](https://scholar.google.com/citations?user=X) (Au
 
 OLD_GENERATED = """---
 type: person
-area: [moc-quantum, gil-kalai]
+area: [moc-quantum, ada-example]
 status: seed
 affiliation: HUJI (emeritus)
-url: https://ma.huji.ac.il/~kalai/
+url: https://ma.huji.ac.il/~aexample/
 scholar: https://scholar.google.com/citations?user=K
 related: [theme-quantum]
 ---
 
-# Gil Kalai
+# Ada Example
 
 HUJI (emeritus). Indexed from Semantic Scholar (171 papers).
 
@@ -228,11 +228,11 @@ Citations from Semantic Scholar (indexed 2026-09-14). Influence tiers: ⭐ ≥20
 
 ## Blog
 
-- [[series-gil-kalai-blog]] — *Combinatorics and More*
+- [[series-ada-example-blog]] — *Combinatorics and More*
 
 ## Teaching
 
-- [Game Theory](https://gilkalai.wordpress.com/) — listed on blog
+- [Game Theory](https://adaexample.wordpress.com/) — listed on blog
 
 ## Cataloged in vault
 
@@ -263,11 +263,11 @@ class MigrationTest(unittest.TestCase):
         self.root = tempfile.mkdtemp()
         os.makedirs(os.path.join(self.root, "wiki"))
         os.makedirs(os.path.join(self.root, "meta"))
-        pages = {"amit-daniely": OLD_HAND, "gil-kalai": OLD_GENERATED,
+        pages = {"amit-daniely": OLD_HAND, "ada-example": OLD_GENERATED,
                  "depth-vs-width": "---\ntype: idea\nlayer: concept\nmaturity: seed\n---\n\n# d\n",
                  "theme-quantum": "---\ntype: topic\nlayer: concept\nmaturity: seed\n---\n\n# q\n",
                  "paper-2017-depth-separation": "---\ntype: paper\n---\n\n# p\n",
-                 "series-gil-kalai-blog": "---\ntype: series\nurl: https://gilkalai.wordpress.com/\n---\n\n# s\n"}
+                 "series-ada-example-blog": "---\ntype: series\nurl: https://adaexample.wordpress.com/\n---\n\n# s\n"}
         for slug, text in pages.items():
             with open(os.path.join(self.root, "wiki", f"{slug}.md"), "w", encoding="utf-8") as f:
                 f.write(text)
@@ -286,7 +286,7 @@ class MigrationTest(unittest.TestCase):
 
     def test_every_old_line_is_accounted_for(self):
         results = self.mod.plan(self.root)
-        self.assertEqual(set(results), {"amit-daniely", "gil-kalai"})
+        self.assertEqual(set(results), {"amit-daniely", "ada-example"})
         for slug, (_text, _m, rows) in results.items():
             self.assertEqual([l for st, l in rows if st == "UNACCOUNTED"], [], slug)
 
@@ -310,13 +310,13 @@ class MigrationTest(unittest.TestCase):
         self.assertEqual(errs, [])
 
     def test_generated_page_with_blog_books_teaching(self):
-        text, m, _rows = self.mod.plan(self.root)["gil-kalai"]
+        text, m, _rows = self.mod.plan(self.root)["ada-example"]
         fm, body = persons.parse_frontmatter(text)
-        self.assertEqual(fm["blog"], "https://gilkalai.wordpress.com/")
+        self.assertEqual(fm["blog"], "https://adaexample.wordpress.com/")
         self.assertNotIn("Indexed from Semantic Scholar", body.split("## ")[0])
         self.assertIn("171 papers indexed", body)
         self.assertIn("| 📖 | 2001 | [Discrete Mathematics](http://x/dmc.pdf) (2001) — with M. Parnas | — | — |", body)
-        self.assertIn("## Writing\n<!-- from: manual -->\n\n- [series-gil-kalai-blog](series-gil-kalai-blog.md) — *Combinatorics and More*", body)
+        self.assertIn("## Writing\n<!-- from: manual -->\n\n- [series-ada-example-blog](series-ada-example-blog.md) — *Combinatorics and More*", body)
         self.assertIn("## Courses\n<!-- from: manual -->\n\n- [Game Theory]", body)
         self.assertNotIn("none cataloged yet", body)
         self.assertIn("**Concepts:** [[theme-quantum]]", body)

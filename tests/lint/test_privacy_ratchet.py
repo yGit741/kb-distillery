@@ -1,5 +1,6 @@
 """No new file may carry personal strings, and the list of old ones only shrinks (see kb_distillery.lint.privacy)."""
 import os
+import subprocess
 import tempfile
 import unittest
 from unittest import mock
@@ -45,8 +46,28 @@ class Scanner(unittest.TestCase):
             self.put(root, "clean.py", "x = 1\n")
             self.put(root, "kbs/thesis/wiki/n.md", "/Users/jdoe\n")                 # knowledge: never scanned
             self.put(root, "src/kb_distillery/_webapp/app.js", "jane-doe\n")                         # build output
-            self.put(root, "docs/plans/p.md", "jane-doe\n")                             # plans name the owner on purpose
+            self.put(root, ".gitattributes", "docs/archive/** export-ignore\n")
+            self.put(root, "docs/archive/p.md", "jane-doe\n")                          # export-ignored history may name the owner
+            self.put(root, ".claude/worktrees/w/a.py", "jane-doe\n")                   # another checkout, not this repo's files
             self.assertEqual(sorted(privacy.scan(root, terms=["/Users/jdoe", "jane-doe"])), ["a.py", "b.md", "c.toml"])
+
+    def test_what_ships_is_scanned_including_dot_folders(self):
+        with tempfile.TemporaryDirectory() as root:
+            self.put(root, ".claude/skills/s/SKILL.md", "jane-doe\n")
+            self.put(root, ".github/workflows/ci.yml", "owner: jane-doe\n")
+            self.put(root, "docs/guide.md", "jane-doe\n")
+            self.assertEqual(sorted(privacy.scan(root, terms=["jane-doe"])),
+                             [".claude/skills/s/SKILL.md", ".github/workflows/ci.yml", "docs/guide.md"])
+
+    def test_this_repos_maintainer_history_is_export_ignored_and_nothing_else_is_exempt(self):
+        root = privacy.repo_root()
+        self.assertIn("docs/archive", privacy.export_ignored(root))
+        if privacy.tracked(root) is None:
+            self.skipTest("not a git checkout")
+        out = subprocess.run(["git", "-C", root, "check-attr", "export-ignore", "docs/archive/plans/README.md", "docs/ROADMAP.md"],
+                             capture_output=True, text=True, check=True).stdout
+        self.assertIn("docs/archive/plans/README.md: export-ignore: set", out)
+        self.assertIn("docs/ROADMAP.md: export-ignore: unspecified", out)
 
     def test_configured_terms_are_found_case_insensitively_and_others_are_not(self):
         with tempfile.TemporaryDirectory() as root:

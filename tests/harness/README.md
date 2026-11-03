@@ -7,7 +7,7 @@ pixi run harness                        # end-to-end run on a scratch fixture va
 pixi run harness -- --update-goldens    # regenerate tests/fixtures/golden/ (review the diff!)
 pixi run harness -- --keep              # leave the scratch vault on disk (path printed)
 pixi run harness-invariants -- --out X.json        # numbers + SHA-256 of every page body of THIS checkout (read-only)
-pixi run harness-invariants -- --compare tests/fixtures/baseline-invariants.json   # exit 1 on a body change or count regression
+pixi run harness-invariants -- --compare X.json    # a baseline you wrote earlier with --out; exit 1 on a body change or count regression
 pixi run harness-bite                   # proves the harness fails when the pipeline is broken (~4 min)
 pixi run test                           # includes the fast unit tests (test_harness_unit.py), not the end-to-end run
 ```
@@ -32,7 +32,7 @@ pixi run test                           # includes the fast unit tests (test_har
 |---|---|
 | `source-paper-local` | scrap -> catalog (paper stub) -> full-digest (begin, extract, map, draft, finalize) |
 | `source-paper-arxiv-style` | same, deep-digest `--confirm-heavy`, page-1 arXiv stamp, arXiv `url:` |
-| `source-article-web-clip` | Kalai-style clip -> catalog into a series -> easy-digest, row ticked |
+| `source-article-web-clip` | Author-style clip -> catalog into a series -> easy-digest, row ticked |
 | `source-blog-post-hebrew` | Not-Exact tagged post -> catalog creates the blog page -> easy-digest |
 | `source-conversation-email` | `scrap-mail` of an mbox -> catalog -> full-digest |
 | `source-ai-chat` | catalog -> chat pipeline (`chat_build` tree + `chat_render` page); the transactional digest is refused by lint for chats |

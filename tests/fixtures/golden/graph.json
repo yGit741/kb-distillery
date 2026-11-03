@@ -170,12 +170,12 @@
   },
   {
    "kind": "wikilink",
-   "source": "series-fixture-kalai-blog",
-   "target": "article-kalai-fixture-post-one"
+   "source": "series-fixture-author-blog",
+   "target": "article-author-fixture-post-one"
   },
   {
    "kind": "wikilink",
-   "source": "series-fixture-kalai-blog",
+   "source": "series-fixture-author-blog",
    "target": "theme-boolean-analysis"
   },
   {
@@ -224,23 +224,23 @@
   {
    "areas": [],
    "depth": "easy",
-   "id": "article-kalai-fixture-post-one",
+   "id": "article-author-fixture-post-one",
    "inDegree": 1,
-   "label": "article-kalai-fixture-post-one",
+   "label": "article-author-fixture-post-one",
    "layer": "source",
    "outDegree": 0,
-   "path": "wiki/article-kalai-fixture-post-one.md",
+   "path": "wiki/article-author-fixture-post-one.md",
    "preview": "Problem: Is noise stability at most one? Main result: Trivially yes; the fixture post asks a toy question.",
    "properties": {
     "links_in": "1",
     "links_out": "0",
-    "raw": "raw/web-clips/kalai-fixture-post-one.md",
-    "slug": "article-kalai-fixture-post-one",
+    "raw": "raw/web-clips/author-fixture-post-one.md",
+    "slug": "article-author-fixture-post-one",
     "status": "digested",
     "type": "article"
    },
    "status": "digested",
-   "title": "Kalai Fixture Post One",
+   "title": "Author Fixture Post One",
    "type": "article",
    "year": null
   },
@@ -690,19 +690,19 @@
     "boolean-analysis"
    ],
    "depth": "",
-   "id": "series-fixture-kalai-blog",
+   "id": "series-fixture-author-blog",
    "inDegree": 0,
-   "label": "series-fixture-kalai-blog",
+   "label": "series-fixture-author-blog",
    "layer": "collection",
    "outDegree": 2,
-   "path": "wiki/series-fixture-kalai-blog.md",
+   "path": "wiki/series-fixture-author-blog.md",
    "preview": "A fixture blog series standing in for a WordPress blog of clips. It exists only so the pipeline harness can exercise the Contents table of a series.",
    "properties": {
     "area": "boolean-analysis",
     "links_in": "0",
     "links_out": "2",
-    "short": "kalai",
-    "slug": "series-fixture-kalai-blog",
+    "short": "example",
+    "slug": "series-fixture-author-blog",
     "status": "digested",
     "type": "series"
    },

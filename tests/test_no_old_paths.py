@@ -78,7 +78,7 @@ ALLOWED = {
     # the old patterns so the deny never weakens
     "kb_distillery.share package (now publish/site and publish/cloudflare)": {
         "src/kb_distillery/publish/site/build.py", ".claude/settings.json", "tests/publish/cloudflare/test_share_versions.py",
-        "tests/publish/cloudflare/test_share_build.py", "docs/ROADMAP.md", "docs/phase-7-audit.md"},
+        "tests/publish/cloudflare/test_share_build.py", "docs/ROADMAP.md", "docs/archive/phase-7-audit.md"},
 }
 # The roadmap is the record of what was planned and done under the old names; it is not rewritten.
 ALLOWED["meta-defaults/"] = {"docs/ROADMAP.md"}
@@ -94,7 +94,7 @@ ALLOWED["templates/ kit folder, template.toml, core.template or $KB_TEMPLATES_DI
 ALLOWED["keychain service thesis-kb-gmail"] = {"src/kb_distillery/config/userdir.py",      # the read-only lookup of the old name
                                                "tests/ops/test_notify.py", "tests/config/test_userdir.py"}
 ALLOWED["~/.config/thesis-kb"] = {"tests/config/test_userdir.py", "src/kb_distillery/config/userdir.py"}
-ALLOWED_PREFIXES = ("tools/", "docs/plans/", "scripts/qmd/package-lock.json")
+ALLOWED_PREFIXES = ("tools/", "docs/archive/", "scripts/qmd/package-lock.json")
 ALLOWED_PREFIXES_FOR = {"tools/": ("web/src/",)}               # web/src/features/graph/tools/ is a real folder of the app
 SKIP_SUFFIX = (".png", ".jpg", ".jpeg", ".gif", ".webp", ".ico", ".pdf", ".woff", ".woff2", ".ttf", ".zip", ".lock", ".svg")
 

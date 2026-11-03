@@ -36,7 +36,7 @@ CATALOG_PLAN = [   # (case, inbox name, extra catalog args)
     ("source-ai-chat", "fixture-ai-chat.md", []),
     ("source-blog-post-hebrew", "fixture-hebrew-post.md", []),
     ("source-article-web-clip", "fixture-post-one.md",
-     ["--collection", "series-fixture-kalai-blog", "--title", "Fixture post one"]),
+     ["--collection", "series-fixture-author-blog", "--title", "Fixture post one"]),
     ("collection-book", "2019-fixture-book.pdf", []),
     ("collection-course-member-1", "rl-fixture-lecture-1.pdf",
      ["--collection", "course-fixture-rl", "--format", "presentations", "--title", "Lecture 1"]),

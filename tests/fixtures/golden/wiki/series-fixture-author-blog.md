@@ -2,7 +2,7 @@
 type: series
 layer: collection
 title: "Fixture combinatorics blog"
-short: kalai
+short: author
 area: [boolean-analysis]
 maturity: digested
 aliases: []
@@ -21,7 +21,7 @@ Coverage: **1 / 1 items (100%)** · skip rows excluded
 
 | # | Item | Raw | Status | Note |
 |---|------|-----|--------|------|
-| 1 | Fixture post one | `raw/web-clips/kalai-fixture-post-one.md` | easy | [Kalai Fixture Post One](article-kalai-fixture-post-one.md) |
+| 1 | Fixture post one | `raw/web-clips/author-fixture-post-one.md` | easy | [Author Fixture Post One](article-author-fixture-post-one.md) |
 
 ## Threads
 

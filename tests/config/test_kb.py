@@ -98,7 +98,7 @@ class PathRefs(unittest.TestCase):
     def test_which_values_are_paths(self):
         for ref in ("./x", "../x", "/abs/x", "~/x", "dir/x"):
             self.assertTrue(kbconfig.looks_like_path(ref), ref)
-        for ref in ("demo", "yonatan-thesis", "kb-x"):
+        for ref in ("demo", "my-thesis", "kb-x"):
             self.assertFalse(kbconfig.looks_like_path(ref), ref)
 
     def test_absolute_relative_and_home_paths_load(self):

@@ -12,14 +12,14 @@ OLD = """---
 type: blog-post
 blog: "Combinatorics and More"
 layer: source
-author: Gil Kalai
+author: Ada Example
 area: []
 maturity: digested
 depth: easy
 raw: raw/web-clips/k-1.md
 url: https://example.org/a/
 created: 2009-04-25T00:00:00Z
-related: [gil-kalai.md, series-gil-kalai-blog.md]
+related: [ada-example.md, series-ada-example-blog.md]
 title: "A Problem"
 description: "Kozma's conjecture."
 ---
@@ -33,7 +33,7 @@ mine
 NEW = """---
 type: blog-post
 layer: source
-series: series-gil-kalai-blog
+series: series-ada-example-blog
 authors: []
 year:
 area: [boolean-analysis]
@@ -44,7 +44,7 @@ citekey:
 url:
 recommended_by: []
 discussed_with: []
-related: [series-gil-kalai-blog.md, total-influence.md]
+related: [series-ada-example-blog.md, total-influence.md]
 ---
 
 # A Problem
@@ -62,9 +62,9 @@ def test_merge_keeps_what_the_page_says_and_takes_depth_and_area():
     out = merge_frontmatter(OLD, NEW)
     f = fields(out)
     assert f["depth"] == "full" and f["area"] == "[boolean-analysis]"      # an empty field takes the draft's
-    assert f["blog"] == '"Combinatorics and More"' and f["author"] == "Gil Kalai"
+    assert f["blog"] == '"Combinatorics and More"' and f["author"] == "Ada Example"
     assert f["created"] == "2009-04-25T00:00:00Z" and f["url"] == "https://example.org/a/" and f["description"] == '"Kozma\'s conjecture."'
-    assert f["related"] == "[gil-kalai.md, series-gil-kalai-blog.md, total-influence.md]"     # union, order kept
+    assert f["related"] == "[ada-example.md, series-ada-example-blog.md, total-influence.md]"     # union, order kept
     assert "series" not in f and "authors" not in f and "citekey" not in f         # nothing empty or hub-keyed is added
     assert out.endswith("**Problem:** p\n") and "# A Problem" in out              # the body is the draft's
 

@@ -9,6 +9,7 @@ import pytest
 from kb_distillery import init_kb, llm
 from kb_distillery.config import kb as kbconfig
 from kb_distillery.git import install_hooks
+from kb_distillery.lint import privacy
 from kb_distillery.config import kit as kits
 
 
@@ -59,7 +60,7 @@ def refresh(root, capsys, monkeypatch):
 
 
 def test_thesis_is_not_a_reserved_id_any_more_but_the_shared_spaces_are():
-    assert init_kb.validate_id("yonatan-thesis") == "yonatan-thesis"
+    assert init_kb.validate_id("my-thesis") == "my-thesis"
     for reserved in ("think", "demo"):
         with pytest.raises(init_kb.InitError, match="reserved"):
             init_kb.validate_id(reserved)
@@ -90,10 +91,12 @@ def test_init_writes_the_kits_skills_docs_hooks_settings_and_rendered_files_in_t
     assert "My Notes" in readme
     for text in (agents, readme):
         assert not re.search(r"\{\{|\}\}", text)
-        assert not re.search(r"yonatan|\bthesis\b|MSc|pixi|scripts/|\bship\b|infra/", text, re.I), "no thesis, personal or engine-dev text"
+        assert not re.search(r"\bthesis\b|MSc|pixi|scripts/|\bship\b|infra/", text, re.I), "no thesis or engine-dev text"
+        assert not privacy.matches(text, privacy.personal_pattern()), "no personal text (the owner's configured terms, kb_distillery.lint.privacy)"
     for base, _d, files in os.walk(os.path.join(root, ".claude")):                         # the copies carry no personal text either
         for name in files:
-            assert not re.search(r"yonatan|com\.thesis-kb|thesis-knowledge-base", read(base, name), re.I), os.path.join(base, name)
+            assert not re.search(r"com\.thesis-kb|thesis-knowledge-base", read(base, name), re.I), os.path.join(base, name)
+            assert not privacy.matches(read(base, name), privacy.personal_pattern()), os.path.join(base, name)
     assert git(root, "status", "--porcelain") == ""                         # all of it is in the one commit
     tracked = git(root, "ls-files")
     for rel in ("AGENTS.md", "README.md", ".claude/settings.json", ".claude/hooks/kb-guard.sh",

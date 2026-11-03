@@ -1,4 +1,3 @@
-# Files allowed to carry personal strings today (Phase 7; judged against the terms in KB_PRIVACY_TERMS or ~/.config/kb-distillery/privacy.toml). Clean one up, or move the name behind configuration, and delete its line.
+# Files allowed to carry personal strings today (judged against the terms in KB_PRIVACY_TERMS or ~/.config/kb-distillery/privacy.toml, plus token shapes). What ships in the public export must be clean: these two hold fake API keys on purpose, as test input. Clean one up, or move the name behind configuration, and delete its line. A name that must stay goes in an export-ignored path (docs/archive/), never here.
 tests/ingest/sources/chat/test_chat_kb.py
-docs/phase-1-report.md
 web/src/features/chat/ChatScreen.test.tsx

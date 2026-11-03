@@ -40,16 +40,16 @@ class TestShareHome(unittest.TestCase):
 
     def test_cards_keep_only_present_pages_and_drop_empty_ones(self):
         home = {"cards": [{"title": "T", "pages": ["a", "gone"], "focus": "gone", "caption": "c"},
-                          {"title": "Empty", "pages": ["gone"]}], "tour": "kalai"}
+                          {"title": "Empty", "pages": ["gone"]}], "tour": "author"}
         data = apply_home(blob(), home)
-        self.assertEqual(data["home"], {"cards": [{"title": "T", "pages": ["a"], "caption": "c"}], "tour": "kalai"})
+        self.assertEqual(data["home"], {"cards": [{"title": "T", "pages": ["a"], "caption": "c"}], "tour": "author"})
 
     def test_load_home_reads_share_toml(self):
         with TemporaryDirectory() as d:
             p = Path(d) / "share.toml"
-            p.write_text('[home]\ntour = "kalai"\n[[home.cards]]\ntitle = "X"\npages = ["a"]\n[[home.cards]]\ntitle = "bad"\n',
+            p.write_text('[home]\ntour = "author"\n[[home.cards]]\ntitle = "X"\npages = ["a"]\n[[home.cards]]\ntitle = "bad"\n',
                          encoding="utf-8")
-            self.assertEqual(load_home(p), {"cards": [{"title": "X", "pages": ["a"]}], "tour": "kalai"})
+            self.assertEqual(load_home(p), {"cards": [{"title": "X", "pages": ["a"]}], "tour": "author"})
             self.assertEqual(load_home(Path(d) / "missing.toml"), {"cards": [], "tour": None})
 
 

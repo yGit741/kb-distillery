@@ -89,12 +89,12 @@ describe("encoding spec", () => {
 
   it("takes a person's initials, and a third letter when two people would share them", () => {
     const m = personInitials([
-      { id: "gil-kalai", type: "person", title: "Gil Kalai" },
+      { id: "gil-karp", type: "person", title: "Gil Karp" },
       { id: "gal-kaplan", type: "person", title: "Gal Kaplan" },
       { id: "nati-linial", type: "person", title: "Nati Linial" },
       { id: "x", type: "idea", title: "Not a person" },
     ]);
-    expect(m.get("gil-kalai")).toBe("GKa");
+    expect(m.get("gil-karp")).toBe("GKa");
     expect(m.get("gal-kaplan")).toBe("GKa");
     expect(m.get("nati-linial")).toBe("NL");
     expect(m.has("x")).toBe(false);
