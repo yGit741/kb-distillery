@@ -866,10 +866,16 @@ export interface components {
         ChatRequest: {
             /** Active Key */
             active_key?: string | null;
+            /** Attachments */
+            attachments?: string[] | null;
             /** Auth Mode */
             auth_mode?: string | null;
             /** Backend */
             backend?: string | null;
+            /** Budget */
+            budget?: number | null;
+            /** Effort */
+            effort?: ("low" | "medium" | "high" | "xhigh" | "max") | null;
             /**
              * History
              * @default []

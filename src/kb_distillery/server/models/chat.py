@@ -1,5 +1,5 @@
 """Chat: status, settings, keys (hints only, never key material), prompts, saved chats, the request body."""
-from typing import Any, Optional
+from typing import Any, Literal, Optional
 
 from kb_distillery.server.models.base import ApiModel
 
@@ -20,6 +20,10 @@ class ChatRequest(ApiModel):
     system: Optional[str] = None
     session: Optional[str] = None
     scope: Optional[str] = None
+    # agent_mode flag only (ignored while it is off)
+    effort: Optional[Literal["low", "medium", "high", "xhigh", "max"]] = None
+    budget: Optional[float] = None
+    attachments: Optional[list[str]] = None
 
 
 class KeyEntry(ApiModel):
