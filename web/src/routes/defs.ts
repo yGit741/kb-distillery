@@ -1,7 +1,7 @@
 import { flag, type FlagName } from "@/flags";
 
 /**
- * Static route metadata. Order = palette order; `nav` picks the three top-bar tabs (Home · Graph · System).
+ * Static route metadata. Order = palette order; `nav` picks the top-bar tabs (Home · Graph · System · Chat).
  * Which screen a route shows is NOT decided here: it follows the feature folders (see registry.ts).
  */
 export interface RouteDef {
