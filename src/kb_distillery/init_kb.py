@@ -382,14 +382,19 @@ def main(argv=None) -> int:
     ap.add_argument("--name", help="display name (default: the id, spaced and capitalised)")
     ap.add_argument("--kit", "--template", dest="kit", help=f"ontology kit (default {DEFAULT_KIT}; known: {', '.join(kits.names())}; "
                     f"--template is the older spelling)")
+    ap.add_argument("target_dir", nargs="?", metavar="DIR", help="same as --dir")
     ap.add_argument("--dir", help="parent folder the kb folder is created in (default: the bases dir, ~/knowledge)")
     ap.add_argument("--yes", action="store_true", help="never prompt; take defaults for what is not given")
     ap.add_argument("--refresh", action="store_true", help="re-sync the skills, docs, hooks and settings of an existing kb "
                     "(--kb <id|path>, $KB, or run inside it) with its kit; prints what changed")
     args = ap.parse_args(argv)
+    if args.target_dir:
+        if args.dir and os.path.realpath(os.path.expanduser(args.dir)) != os.path.realpath(os.path.expanduser(args.target_dir)):
+            ap.error(f"DIR {args.target_dir!r} and --dir {args.dir!r} differ; give one")
+        args.dir = args.target_dir
     if args.refresh:
         if args.kb_id or args.name or args.kit or args.dir:
-            ap.error("--refresh works on an existing kb (--kb <id|path>); it takes none of --kb-id, --name, --kit, --dir")
+            ap.error("--refresh works on an existing kb (--kb <id|path>); it takes none of --kb-id, --name, --kit, --dir, DIR")
         return run_refresh()
     interactive = sys.stdin.isatty() and not args.yes
     kb_id = args.kb_id or (_ask("Knowledge base id", DEFAULT_ID) if interactive else DEFAULT_ID)

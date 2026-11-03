@@ -8,7 +8,7 @@ kb-distillery builds a knowledge base from sources you collect. You put papers, 
 
 ## Quick start
 
-Supported platforms: macOS (Apple silicon and Intel) and Linux x86-64. Windows is not supported. You need [pixi](https://pixi.sh) and git. Clone this repository and run:
+Supported platforms: macOS (Apple silicon and Intel) and Linux x86-64. Windows is not supported. Installing the wheel with pip needs Python 3.11 or newer (older Pythons fail with a confusing `grand-cypher` error). You need [pixi](https://pixi.sh) and git. Clone this repository and run:
 
 ```bash
 pixi install
