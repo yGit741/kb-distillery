@@ -6,6 +6,7 @@ every response carries hints (`sk-ant-…abcd`) only.
 from fastapi import APIRouter
 from starlette.responses import JSONResponse
 
+from kb_distillery.config.flags import runtime
 from kb_distillery.server.models.chat import (ChatRequest, ChatSettings, ChatSettingsUpdate, ChatStatus, KeyAdd, KeyList,
                                 KeyRemove, PromptsResponse, SavedChat, SavedChatResult)
 from kb_distillery.server.sse import sse_response
@@ -84,9 +85,13 @@ def post_chat(req: ChatRequest):
         if not info["available"]:
             return _err(400, "agent backend unavailable", f"{info['error']}; or switch the backend to Direct")
         system = chat_agent.build_agent_system(payload.get("system") or "", scope=scope)
+        extra = {}
+        if runtime.effective("agent-mode"):       # ship dark: the new fields are ignored until the flag is on
+            extra = {"effort": payload.get("effort"), "budget": payload.get("budget")}
         gen = chat_agent.stream_agent(question, model=model, system=system, key=key,
                                       billing="subscription" if key is None else "api",
-                                      session_id=payload.get("session") or None, history=history, scope=scope)
+                                      session_id=payload.get("session") or None, history=history, scope=scope,
+                                      **extra)
     else:
         gen = direct_events(payload, key, model, question, history, scope)
     return sse_response(gen)

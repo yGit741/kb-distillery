@@ -213,3 +213,33 @@ def test_chat_subscription_not_logged_in(client):
         r = client.post("/api/chat", json={"question": "q", "auth_mode": "subscription", "backend": "agent"},
                         headers=LOOPBACK)
     assert r.status_code == 400 and r.json()["hint"] == "no login"
+
+
+# ── agent-mode flag: effort / budget / attachments ──
+def _post_agent(client, **extra):
+    fake = fake_agent([("done", {})])
+    with mock.patch("kb_distillery.server.routers.chat.chat_agent.sdk_info", return_value={"available": True}), \
+         mock.patch("kb_distillery.server.routers.chat.chat_agent.stream_agent", fake), \
+         mock.patch("kb_distillery.server.routers.chat.chat_agent.build_agent_system", return_value="SYS"):
+        chat_data.add_key("k", KEY)
+        r = client.post("/api/chat", json={"question": "hi", "backend": "agent", "active_key": "k", **extra},
+                        headers=LOOPBACK)
+    assert r.status_code == 200
+    return fake.kw
+
+
+@pytest.mark.flag("agent-mode", False)
+def test_agent_mode_off_ignores_new_fields(client):
+    kw = _post_agent(client, effort="max", budget=3.0, attachments=["a.pdf"])
+    assert "effort" not in kw and "budget" not in kw
+
+
+@pytest.mark.flag("agent-mode", True)
+def test_agent_mode_on_passes_effort_and_budget(client):
+    kw = _post_agent(client, effort="high", budget=3.0)
+    assert kw["effort"] == "high" and kw["budget"] == 3.0
+
+
+def test_effort_is_validated(client):
+    r = client.post("/api/chat", json={"question": "hi", "effort": "turbo"}, headers=LOOPBACK)
+    assert r.status_code == 422

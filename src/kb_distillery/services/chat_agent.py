@@ -22,7 +22,7 @@ SSE event contract shared with static/chat.js (names → JSON data):
     done     {}
     ping     None                             heartbeat; serve.py writes an SSE comment
 
-`claude_agent_sdk` is imported lazily so the dashboard and the tests load without it.
+The SDK itself is owned by `kb_distillery.llm.agent` (lazy import), so the dashboard and the tests load without it.
 """
 import asyncio
 import json
@@ -36,6 +36,7 @@ import threading
 import time
 from dataclasses import dataclass, field
 
+from kb_distillery.llm import agent as llm_agent
 from kb_distillery.vault import links
 from kb_distillery.config.paths import vault_root
 META_DIR = os.path.join(vault_root(), "meta")
@@ -53,7 +54,6 @@ READ_ROOTS = (WIKI, RAW, THINK)
 RAW_TEXT_EXT = {".md", ".txt", ".html", ".eml", ".json", ".tsv", ".csv"}
 
 CA_PEM = os.path.join(chat_data.CONFIG_DIR, "ca-roots.pem")
-CA_MAX_AGE = 24 * 3600
 
 MAX_TURNS = 30
 TOOLS = ["Read", "Grep", "Glob", "Bash"]
@@ -108,55 +108,18 @@ How to research a question in this knowledge base (always applies):
 
 def sdk_info():
     """{available, version, cli, error} — whether the agent backend can run at all."""
-    info = {"available": False, "version": None, "cli": shutil.which("claude"), "error": None}
-    try:
-        import claude_agent_sdk  # noqa: F401
-    except ImportError as e:
-        info["error"] = f"claude-agent-sdk not installed ({e}); run `pixi install`"
-        return info
-    info["available"] = True
-    info["version"] = getattr(claude_agent_sdk, "__version__", None)
-    return info
+    return llm_agent.sdk_info()
 
 
 def ca_bundle_path(path=CA_PEM, now=None):
     """PEM file with the macOS keychain roots for the Node CLI (NODE_EXTRA_CA_CERTS). The TLS
     proxy fix of chat_data.ssl_context(), replayed for the subprocess. None when not needed."""
-    preset = os.environ.get("NODE_EXTRA_CA_CERTS")
-    if preset:
-        return preset
-    if sys.platform != "darwin":
-        return None
-    now = now or time.time()
-    try:
-        if os.path.isfile(path) and now - os.path.getmtime(path) < CA_MAX_AGE:
-            return path
-    except OSError:
-        pass
-    pem = chat_data.keychain_pem()
-    if not pem:
-        return None
-    try:
-        os.makedirs(os.path.dirname(path), exist_ok=True)
-        with open(path, "w", encoding="utf-8") as f:
-            f.write(pem)
-    except OSError:
-        return None
-    return path
+    return llm_agent.ca_bundle_path(chat_data.CONFIG_DIR, chat_data.keychain_pem, path=path, now=now)
 
 
 def cli_path():
     """The Claude Code binary: the one bundled with the SDK, else `claude` on PATH, else None."""
-    try:
-        import claude_agent_sdk
-        pkg = getattr(claude_agent_sdk, "__file__", None)
-        if pkg:
-            p = os.path.join(os.path.dirname(pkg), "_bundled", "claude")
-            if os.access(p, os.X_OK):
-                return p
-    except ImportError:
-        pass
-    return shutil.which("claude")
+    return llm_agent.cli_path()
 
 
 _SUB_CACHE = {"at": 0.0, "value": None}
@@ -191,20 +154,9 @@ def subscription_status(now=None, cli=None, timeout=8):
 
 
 def agent_env(key, ca_path=None):
-    """Extra environment for the claude subprocess (merged over os.environ by the SDK).
-    `key=None` means subscription mode: the API key variable is blanked so the CLI falls back
-    to the `claude login` credentials (a blank value counts as unset)."""
-    env = {"ANTHROPIC_API_KEY": key or "", "CLAUDE_CODE_ENTRYPOINT": "sdk-py",
-           # a dashboard started from a Claude Code terminal inherits CLAUDECODE, which makes the
-           # CLI refuse to start a nested session
-           "CLAUDECODE": "",
-           # a shell that routes Claude through a corporate gateway exports these; the dashboard's
-           # key belongs to the public API, so pin it there (the token would win over the key)
-           "ANTHROPIC_BASE_URL": "https://api.anthropic.com", "ANTHROPIC_AUTH_TOKEN": ""}
+    """Extra environment for the claude subprocess; `key=None` means subscription mode (see llm.agent)."""
     ca = ca_path if ca_path is not None else ca_bundle_path()
-    if ca:
-        env["NODE_EXTRA_CA_CERTS"] = ca
-    return env
+    return llm_agent.agent_env(key, ca)
 
 
 def build_agent_system(system_text, scope=None):
@@ -377,15 +329,20 @@ def _bash_allowed_unscoped(command):
     return os.path.normpath(script) in BASH_SCRIPTS
 
 
-def tool_policy(tool_name, tool_input, scope=None):
-    """The whole read-only policy, pure and testable. Returns a Decision.
-    `scope` (a scopes.scope_context dict) narrows it to one scope's pages and files; None = unchanged."""
-    tool_input = tool_input if isinstance(tool_input, dict) else {}
+# One helper per tool group, so the web / skills / attachments PRs each edit their own function. Each takes
+# (tool_name, tool_input, scope) and returns a Decision, or None when the tool is not in its group.
+WEB_TOOLS = ("WebSearch", "WebFetch")
+SKILL_TOOLS = ("Skill", "Agent", "Task")
+ATTACHMENT_TOOLS = ()       # attachments are read with Read; the per-session read scope lands with them
+
+
+def _policy_files(tool_name, tool_input, scope):
+    """Read / Grep / Glob over the wiki, think/ and text files under raw/ (narrowed to the scope's pages)."""
     if scope is not None:
         readable = lambda real, allow_dirs=False: _readable_in_scope(real, scope, allow_dirs)  # noqa: E731
-        read_deny, bash_deny = SCOPE_READ_DENY, BASH_DENY + "; " + SCOPE_BASH_DENY
+        read_deny = SCOPE_READ_DENY
     else:
-        readable, read_deny, bash_deny = _readable, READ_DENY, BASH_DENY
+        readable, read_deny = _readable, READ_DENY
     if tool_name == "Read":
         return (Decision(True) if readable(_real(tool_input.get("file_path")))
                 else Decision(False, read_deny))
@@ -396,9 +353,48 @@ def tool_policy(tool_name, tool_input, scope=None):
         real = _real(path)
         return (Decision(True) if readable(real, allow_dirs=True)
                 else Decision(False, read_deny))
-    if tool_name == "Bash":
-        return (Decision(True) if _bash_allowed(tool_input.get("command"), scope)
-                else Decision(False, bash_deny))
+    return None
+
+
+def _policy_bash(tool_name, tool_input, scope):
+    """Bash: one allow-listed python entry point (narrowed further inside a scope)."""
+    if tool_name != "Bash":
+        return None
+    bash_deny = BASH_DENY if scope is None else BASH_DENY + "; " + SCOPE_BASH_DENY
+    return (Decision(True) if _bash_allowed(tool_input.get("command"), scope)
+            else Decision(False, bash_deny))
+
+
+def _policy_web(tool_name, tool_input, scope):
+    """WebSearch / WebFetch: denied for now (the web-tools PR adds the URL checks and per-turn caps)."""
+    if tool_name in WEB_TOOLS:
+        return Decision(False, f"read-only KB agent: tool {tool_name} is not available")
+    return None
+
+
+def _policy_skills(tool_name, tool_input, scope):
+    """Skill / subagents: denied for now (the skills PR adds the whitelist)."""
+    if tool_name in SKILL_TOOLS:
+        return Decision(False, f"read-only KB agent: tool {tool_name} is not available")
+    return None
+
+
+def _policy_attachments(tool_name, tool_input, scope):
+    """Chat attachments: nothing yet (the attachments PR adds the per-session read scope)."""
+    return None
+
+
+POLICY_GROUPS = (_policy_files, _policy_bash, _policy_web, _policy_skills, _policy_attachments)
+
+
+def tool_policy(tool_name, tool_input, scope=None):
+    """The whole read-only policy, pure and testable. Returns a Decision.
+    `scope` (a scopes.scope_context dict) narrows it to one scope's pages and files; None = unchanged."""
+    tool_input = tool_input if isinstance(tool_input, dict) else {}
+    for group in POLICY_GROUPS:
+        d = group(tool_name, tool_input, scope)
+        if d is not None:
+            return d
     return Decision(False, f"read-only KB agent: tool {tool_name} is not available")
 
 
@@ -422,7 +418,7 @@ def make_hook(policy=tool_policy, scope=None):
 def make_can_use_tool(policy=tool_policy, scope=None):
     """can_use_tool callback — second line behind the hook."""
     async def can_use_tool(tool_name, tool_input, context):
-        from claude_agent_sdk import PermissionResultAllow, PermissionResultDeny
+        PermissionResultAllow, PermissionResultDeny = llm_agent.permission_results()
         d = _decide(policy, tool_name, tool_input, scope)
         if d.allow:
             return PermissionResultAllow(updated_input=d.updated_input)
@@ -430,23 +426,19 @@ def make_can_use_tool(policy=tool_policy, scope=None):
     return can_use_tool
 
 
+def agent_request(question, model, system, session_id=None, scope=None, history=None, effort=None, budget=None):
+    return llm_agent.AgentRequest(
+        question=question, model=model, system=system, effort=effort, budget=budget, session=session_id or None,
+        tools=tuple(TOOLS), disallowed=tuple(DISALLOWED_TOOLS), scope=scope, cwd=ROOT, max_turns=MAX_TURNS,
+        fresh_prompt=_history_prefix(history) + question if history else None)
+
+
 def build_options(model, system, key, session_id=None, cli_path=None, ca_path=None, stderr=None, scope=None):
-    from claude_agent_sdk import ClaudeAgentOptions, HookMatcher
-    kw = dict(
-        cwd=ROOT, model=model, system_prompt=system,
-        # no allowed_tools: an allow-list auto-approves before can_use_tool runs; with the default
-        # permission mode every call goes through the PreToolUse hook and then the callback
-        tools=list(TOOLS), disallowed_tools=list(DISALLOWED_TOOLS),
-        permission_mode="default", can_use_tool=make_can_use_tool(scope=scope),
-        hooks={"PreToolUse": [HookMatcher(matcher=None, hooks=[make_hook(scope=scope)])]},
-        setting_sources=[], max_turns=MAX_TURNS, include_partial_messages=True,
-        env=agent_env(key, ca_path), resume=session_id or None,
-    )
-    if cli_path:
-        kw["cli_path"] = cli_path
-    if stderr:
-        kw["stderr"] = stderr
-    return ClaudeAgentOptions(**kw)
+    req = agent_request("", model, system, session_id=session_id, scope=scope)
+    return llm_agent.build_options(req, key, policy_hook=make_hook(scope=scope),
+                                   can_use_tool=make_can_use_tool(scope=scope), resume=session_id,
+                                   cli=cli_path, ca_path=ca_path if ca_path is not None else ca_bundle_path(),
+                                   stderr=stderr)
 
 
 # ── Event mapping ──────────────────────────────────────────────────────────
@@ -567,10 +559,6 @@ def map_message(msg, state):
 
 # ── Streaming bridge ───────────────────────────────────────────────────────
 
-class _Stopped(Exception):
-    pass
-
-
 def _history_prefix(history):
     turns = [m for m in (history or []) if m.get("role") in ("user", "assistant") and (m.get("content") or "").strip()]
     turns = turns[-HISTORY_TURNS:]
@@ -592,86 +580,47 @@ def _is_resume_failure(exc):
 
 
 async def _run(question, *, model, system, key, session_id, history, emit, stop_event, log, billing="api",
-               scope=None):
-    import claude_agent_sdk as sdk
-
+               scope=None, effort=None, budget=None):
     index = query.parse_index()
-    cli_path = None
-    tried_cli_fallback = False
-    prompt = question
-    resume = session_id or None
-    stderr_lines = []
-
-    def on_stderr(line):
-        stderr_lines.append(line)
-        if len(stderr_lines) > 50:
-            del stderr_lines[0]
-        log(f"  claude: {line.rstrip()}")
-
-    while True:
-        state = TurnState(index=index)
-        options = build_options(model, system, key, session_id=resume, cli_path=cli_path, stderr=on_stderr,
-                                scope=scope)
-        result = None
-        try:
-            async with sdk.ClaudeSDKClient(options) as client:
-                await client.query(prompt)
-                async for msg in client.receive_response():
-                    if stop_event.is_set():
-                        try:
-                            await client.interrupt()
-                        except Exception:
-                            pass
-                        raise _Stopped()
-                    for ev in map_message(msg, state):
-                        emit(ev)
-                    if _name(msg) == "ResultMessage":
-                        result = msg
-        except _Stopped:
-            return
-        except Exception as e:  # SDK errors: ProcessError, CLIConnectionError, CLINotFoundError, …
-            name = _name(e)
-            if name == "CLINotFoundError" and not tried_cli_fallback and shutil.which("claude"):
-                tried_cli_fallback = True
-                cli_path = shutil.which("claude")
-                log(f"chat agent: bundled CLI missing, falling back to {cli_path}")
-                continue
-            if resume and _is_resume_failure(e):
-                log("chat agent: previous session not found, starting fresh")
-                emit(("notice", {"text": "Previous agent session expired; started a fresh one."}))
-                resume = None
-                prompt = _history_prefix(history) + question
-                continue
-            detail = str(e).strip()
-            tail = " ".join(l.strip() for l in stderr_lines[-3:])
-            if tail and tail not in detail:
-                detail = f"{detail} — {tail}" if detail else tail
-            emit(("error", {"error": f"agent: {detail or name}"}))
-            return
-
-        if result is None:
-            emit(("error", {"error": "agent: the session ended without a result"}))
-            return
-        if getattr(result, "is_error", False):
-            emit(("error", {"error": f"agent: {getattr(result, 'result', None) or 'error'}"}))
-            return
-        usage = dict(getattr(result, "usage", None) or {})
-        est = getattr(result, "total_cost_usd", None)
-        cost = chat_data.record_usage(model, usage, cost=est, billing=billing)
-        emit(("usage", {**usage, "model": model, "cost_usd": cost, "billing": billing,
-                        "est_cost_usd": est,
-                        "num_turns": getattr(result, "num_turns", None),
-                        "duration_ms": getattr(result, "duration_ms", None),
-                        "spend": chat_data.spend_summary()}))
-        if state.session_id:
-            emit(("session", {"id": state.session_id}))
-        emit(("sources", state.sources(extra=harvest_citations(state.text, index))))
-        emit(("done", {}))
-        return
+    req = agent_request(question, model, system, session_id=session_id, scope=scope, history=history,
+                        effort=effort, budget=budget)
+    if req.fresh_prompt is None:
+        req.fresh_prompt = question
+    state = TurnState(index=index)
+    backend = "subscription" if billing == "subscription" else "api"
+    gen = llm_agent.stream(
+        req, backend, key=key, policy_hook=make_hook(scope=scope), can_use_tool=make_can_use_tool(scope=scope),
+        usage_sink=lambda m, usage, est, b: chat_data.record_usage(m, usage, cost=est, billing=b),
+        stop_event=stop_event, log=log, ca_path=ca_bundle_path())
+    async for kind, data in gen:
+        if kind == "reset":
+            state = TurnState(index=index)
+        elif kind == "message":
+            for ev in map_message(data, state):
+                emit(ev)
+        elif kind == "notice":
+            emit(("notice", data))
+        elif kind == "error":
+            emit(("error", data))
+        elif kind == "pending":
+            emit(("notice", {"text": f"Queued as batch {data['batch_id']}; the answer arrives when it completes."}))
+            emit(("done", {}))
+        elif kind == "result":
+            usage = data["usage"]
+            result = data["result"]
+            emit(("usage", {**usage, "model": data["model"], "cost_usd": data["cost_usd"], "billing": data["billing"],
+                            "est_cost_usd": data["est_cost_usd"],
+                            "num_turns": getattr(result, "num_turns", None),
+                            "duration_ms": getattr(result, "duration_ms", None),
+                            "spend": chat_data.spend_summary()}))
+            if state.session_id:
+                emit(("session", {"id": state.session_id}))
+            emit(("sources", state.sources(extra=harvest_citations(state.text, index))))
+            emit(("done", {}))
 
 
 def stream_agent(question, *, model, system, key, session_id=None, history=None, log=None, billing="api",
-                 scope=None):
+                 scope=None, effort=None, budget=None):
     """Sync generator of (event, data) for serve.py's SSE loop. Closing it stops the agent.
     `key=None` with `billing="subscription"` runs on the `claude login` account."""
     log = log or (lambda s: print(s, flush=True))
@@ -686,7 +635,7 @@ def stream_agent(question, *, model, system, key, session_id=None, history=None,
         try:
             asyncio.run(_run(question, model=model, system=system, key=key, session_id=session_id,
                              history=history, emit=emit, stop_event=stop_event, log=log, billing=billing,
-                             scope=scope))
+                             scope=scope, effort=effort, budget=budget))
         except Exception as e:
             q.put(("error", {"error": f"agent: {e}"}))
         finally:
