@@ -37,6 +37,7 @@ def _load(path: Path):
     return data
 
 
+@unittest.skipUnless(WORKFLOW.is_file(), "owner workflow: export-ignored from the public repo")
 class WorkflowTests(unittest.TestCase):
     def setUp(self):
         self.text = WORKFLOW.read_text(encoding="utf-8")

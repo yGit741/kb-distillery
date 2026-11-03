@@ -1,32 +1,18 @@
-# PR checks (informational — no branch protection). Runs the same gates as `pixi run ship`.
-#
-# KB_CI=1 is required: 445 of the ~590 files under raw/ are gitignored binaries (PDFs, PNGs,
-# PPTX), so a cloud checkout has meta/corpus.tsv but not the bytes it lists. Without the flag,
-# src/kb_distillery/lint/lint.py would treat them as gone — dropping manifest rows, regenerating index.md /
-# corpus.tsv and erroring on every `raw:` reference. KB_CI keeps the wiki checks (frontmatter,
-# links, slugs, book partitions, course tables, collections, coherence) and reads the committed
-# manifest as the truth instead of reconciling it against disk.
+# PR checks (informational, no branch protection). Runs the same gates as `pixi run ship`.
 #
 # Runs on every push and every pull request. The runner follows the repo's visibility: while the repo is
-# private the jobs run on the owner's self-hosted Mac (free); once it is public they run on GitHub-hosted
-# `macos-latest` (arm64), so this file's jobs never run a fork's code on the owner's machine. That is not the whole
+# private the jobs run on a self-hosted runner (macOS arm64); once it is public they run on GitHub-hosted
+# `macos-latest` (arm64), so a fork's code never runs on a self-hosted machine. That is not the whole
 # defence: a fork PR can bring its own workflow file naming `self-hosted`, so before going public remove the runner
 # from the repo (or set Settings > Actions > "Require approval for all outside collaborators").
 # `runs-on` takes `fromJSON(...)` (a label list) and `&&`/`||` picks it; `private` is the repository context,
 # not a secret. tests/ci/test_workflows.py fails on any pull_request job that could land on `self-hosted` when public.
 #
-# Self-hosted runner on the owner's Mac while private (osx-arm64, the only platform pixi.lock is solved for).
-# GitHub-hosted macOS minutes bill 10x and exhausted the Free plan's 2,000 min/month on a private
-# repo (every job refused from 2026-10-22); a self-hosted runner is free and unlimited. Jobs run
-# only while the Mac is awake and the runner service is up — otherwise they queue. Only the owner
-# pushes to this private repo, so running PR code on the Mac is no wider trust than `ship` itself.
-# Setup: repo Settings → Actions → Runners → New self-hosted runner (macOS, ARM64), then
-# `./svc.sh install && ./svc.sh start`. Behind the TLS-inspecting proxy, put SSL_CERT_FILE in the
-# runner's `.env` file so pixi can download packages.
+# KB_CI=1: a cloud checkout may lack gitignored raw binaries that meta/corpus.tsv lists; the flag makes lint
+# read the committed manifest as the truth instead of reconciling it against disk.
 #
-# setup-pixi cache: false — checkout's `git clean -ffdx` removes .pixi/ each run, but the
-# runner keeps pixi's package cache (~/Library/Caches/rattler), so a reinstall is local and fast;
-# the GitHub cache would only add an upload/download round-trip.
+# setup-pixi cache: false, because checkout's `git clean -ffdx` removes .pixi/ each run and a self-hosted runner
+# keeps pixi's package cache, so a reinstall is local and fast.
 name: ci
 on:
   push:
