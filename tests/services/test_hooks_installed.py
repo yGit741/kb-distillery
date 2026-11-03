@@ -24,7 +24,7 @@ class HooksInstalledTests(unittest.TestCase):
         return kit
 
     def test_absolute_and_relative_paths_count_when_executable(self):
-        from kb_distillery.services.lifecycle import hooks_installed
+        from kb_distillery.ops.core import hooks_installed
         with tempfile.TemporaryDirectory() as d:
             kit = self._kit(d)
             repo = os.path.join(d, "kbs", "a")
@@ -39,7 +39,7 @@ class HooksInstalledTests(unittest.TestCase):
             self.assertFalse(hooks_installed(repo))
 
     def test_non_executable_hooks_do_not_count(self):
-        from kb_distillery.services.lifecycle import hooks_installed
+        from kb_distillery.ops.core import hooks_installed
         with tempfile.TemporaryDirectory() as d:
             kit = self._kit(d, executable=False)
             repo = os.path.join(d, "r")
