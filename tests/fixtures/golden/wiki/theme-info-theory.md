@@ -1,7 +1,6 @@
 ---
 type: topic
 layer: concept
-title: "Info Theory"
 maturity: seed
 aliases: []
 related: []

@@ -1,7 +1,6 @@
 ---
 type: topic
 layer: concept
-title: "Implicit Regularization"
 maturity: seed
 aliases: []
 related: []

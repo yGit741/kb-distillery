@@ -1,7 +1,6 @@
 ---
 type: idea
 layer: concept
-title: "Noise stability"
 area: [boolean-analysis]
 maturity: seed
 sources: []

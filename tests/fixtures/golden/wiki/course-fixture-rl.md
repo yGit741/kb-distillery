@@ -1,7 +1,6 @@
 ---
 type: course
 layer: collection
-title: "Fixture RL course"
 short: rl
 institution: runi
 course_code: 00000

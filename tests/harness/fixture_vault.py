@@ -217,6 +217,9 @@ def _pdf(path, pages, title, toc=None, stamp=None):
     (a PDF library may embed a random /ID), which is why goldens mask the sha1 of PDF rows."""
     from tests import pdfkit
     doc = pdfkit.Doc()
+    # reportlab's default /Title is "untitled", which pdf_title() reads as a real title (the book page became
+    # "untitled (2019)"); a blank title keeps the metadata empty so the page falls back to the file name
+    doc.set_metadata({"title": " "})
     for i in range(pages):
         page = doc.new_page()
         lines = [f"{title} - page {i + 1}"]

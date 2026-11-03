@@ -1,7 +1,6 @@
 ---
 type: part
 layer: source
-title: "Fixture book, chapter 2: concentration"
 book: book-2019-fixture-book
 authors: [Fixture Author]
 year: 2019
@@ -40,7 +39,7 @@ $P(S>t)\le e^{-t^2/2}$
 Variables: $x$: a fixture variable
 
 
-## Takeaways for my thesis
+## Takeaways
 
 - The tail decays exponentially.
 - Concepts: [Noise stability](noise-stability.md), [Learning Theory](theme-learning-theory.md)

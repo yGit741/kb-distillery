@@ -4,7 +4,6 @@ layer: source
 maturity: to-read
 status: draft
 depth: listed
-title: "Fixture chat on VC dimension"
 provider: gemini
 raw: raw/llm-chats/fixture-ai-chat.md
 conversation: conv-940824dcb2a9

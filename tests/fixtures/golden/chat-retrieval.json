@@ -6,12 +6,12 @@
    "summary": "Fixture idea"
   },
   {
-   "score": 3,
+   "score": 4,
    "slug": "paper-2021-arxiv-style-fixture",
    "summary": "A fixture coding argument"
   },
   {
-   "score": 3,
+   "score": 4,
    "slug": "video-fixture-talk",
    "summary": "$H(X) = -\\sum p \\log p$"
   }
@@ -25,22 +25,22 @@
   {
    "score": 12,
    "slug": "q-does-the-fixture-tail-bound-extend-to-dependent-variables",
-   "summary": "Spawned during ingest of [part-2019-fixture-book-ch2-concentration](part-2019-fixture-book-ch2-concentration.md)"
+   "summary": "Does the fixture tail bound extend to dependent variables?"
   },
   {
    "score": 12,
    "slug": "q-is-the-fixture-bound-tight-for-deep-models",
-   "summary": "Spawned during ingest of [paper-2020-local-fixture-paper](paper-2020-local-fixture-paper.md)"
+   "summary": "Is the fixture bound tight for deep models?"
+  },
+  {
+   "score": 6,
+   "slug": "paper-2020-local-fixture-paper",
+   "summary": "Uniform convergence over a fixture class"
   },
   {
    "score": 6,
    "slug": "part-2019-fixture-book-ch2-concentration",
    "summary": "A fixture Chernoff bound"
-  },
-  {
-   "score": 5,
-   "slug": "paper-2020-local-fixture-paper",
-   "summary": "Uniform convergence over a fixture class"
   },
   {
    "score": 1,
@@ -55,12 +55,12 @@
    "summary": "Fixture idea"
   },
   {
-   "score": 4,
+   "score": 6,
    "slug": "mail-2024-02-01-fixture-thread-about-a-lemma",
    "summary": "Symmetrisation"
   },
   {
-   "score": 4,
+   "score": 6,
    "slug": "part-2019-fixture-book-ch2-concentration",
    "summary": "A fixture Chernoff bound"
   },

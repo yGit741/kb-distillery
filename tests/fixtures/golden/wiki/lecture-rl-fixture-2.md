@@ -1,12 +1,12 @@
 ---
 type: lecture
 layer: source
-title: "Rl Fixture 2"
 course: 
 area: []
 maturity: digested
 depth: easy
 raw: [raw/presentations/rl-fixture-lecture-2.pdf]
+description:
 ---
 
 # Rl Fixture 2
@@ -21,7 +21,7 @@ raw: [raw/presentations/rl-fixture-lecture-2.pdf]
 
 ## Key equations
 
-## Takeaways for my thesis
+## Takeaways
 
 ## Connections
 
