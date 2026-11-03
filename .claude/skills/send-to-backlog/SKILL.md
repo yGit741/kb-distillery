@@ -20,7 +20,7 @@ A queue for ideas that must not be lost and must not cost a PR. One markdown fil
 
 - Commit anything: `.backlog/` is local state, never tracked
 - Start the work the item describes (that is `infra-pr`); capturing is the whole job
-- Write into `docs/ROADMAP.md` or `docs/archive/plans/`: promoting an item there is a separate, explicit ask
+- Write into `docs/public-roadmap.md` or `docs/archive/plans/`: promoting an item there is a separate, explicit ask
 - Make an LLM call from the CLI (there is none)
 
 ## CLI

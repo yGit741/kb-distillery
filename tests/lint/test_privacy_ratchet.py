@@ -66,10 +66,10 @@ class Scanner(unittest.TestCase):
         self.assertIn("docs/archive", privacy.export_ignored(root))
         if privacy.tracked(root) is None:
             self.skipTest("not a git checkout")
-        out = subprocess.run(["git", "-C", root, "check-attr", "export-ignore", "docs/archive/plans/README.md", "docs/ROADMAP.md"],
+        out = subprocess.run(["git", "-C", root, "check-attr", "export-ignore", "docs/archive/plans/README.md", "docs/public-roadmap.md"],
                              capture_output=True, text=True, check=True).stdout
         self.assertIn("docs/archive/plans/README.md: export-ignore: set", out)
-        self.assertIn("docs/ROADMAP.md: export-ignore: unspecified", out)
+        self.assertIn("docs/public-roadmap.md: export-ignore: unspecified", out)
 
     def test_configured_terms_are_found_case_insensitively_and_others_are_not(self):
         with tempfile.TemporaryDirectory() as root:

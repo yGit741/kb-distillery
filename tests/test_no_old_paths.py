@@ -78,19 +78,19 @@ ALLOWED = {
     # the old patterns so the deny never weakens
     "kb_distillery.share package (now publish/site and publish/cloudflare)": {
         "src/kb_distillery/publish/site/build.py", ".claude/settings.json", "tests/publish/cloudflare/test_share_versions.py",
-        "tests/publish/cloudflare/test_share_build.py", "docs/ROADMAP.md", "docs/archive/phase-7-audit.md"},
+        "tests/publish/cloudflare/test_share_build.py", "docs/archive/ROADMAP.md", "docs/archive/phase-7-audit.md"},
 }
 # The roadmap is the record of what was planned and done under the old names; it is not rewritten.
-ALLOWED["meta-defaults/"] = {"docs/ROADMAP.md"}
-ALLOWED["root skills/ folder, sync-skills or SKILL_TEMPLATE"] = {"docs/ROADMAP.md"}
-ALLOWED["Lane E renames (core is now vault)"] = {"docs/ROADMAP.md"}
-ALLOWED["kb_distillery/prompts (now llm/prompts)"] = {"docs/ROADMAP.md"}
-ALLOWED["Lane E renames (summaries is now digest)"] = {"docs/ROADMAP.md"}
-ALLOWED["Lane E renames (api is now server)"] = {"docs/ROADMAP.md"}
-ALLOWED["Lane E renames (web/e2e is now tests/e2e)"] = {"docs/ROADMAP.md"}
-ALLOWED["Lane E renames (ingest sources live in ingest/sources/<source>/)"] = {"docs/ROADMAP.md"}
-ALLOWED["Lane E renames (kbconfig, paths and flags are now config/kb, config/paths and config/flags)"] = {"docs/ROADMAP.md"}
-ALLOWED["templates/ kit folder, template.toml, core.template or $KB_TEMPLATES_DIR"] = {"docs/ROADMAP.md"}
+ALLOWED["meta-defaults/"] = {"docs/archive/ROADMAP.md"}
+ALLOWED["root skills/ folder, sync-skills or SKILL_TEMPLATE"] = {"docs/archive/ROADMAP.md"}
+ALLOWED["Lane E renames (core is now vault)"] = {"docs/archive/ROADMAP.md"}
+ALLOWED["kb_distillery/prompts (now llm/prompts)"] = {"docs/archive/ROADMAP.md"}
+ALLOWED["Lane E renames (summaries is now digest)"] = {"docs/archive/ROADMAP.md"}
+ALLOWED["Lane E renames (api is now server)"] = {"docs/archive/ROADMAP.md"}
+ALLOWED["Lane E renames (web/e2e is now tests/e2e)"] = {"docs/archive/ROADMAP.md"}
+ALLOWED["Lane E renames (ingest sources live in ingest/sources/<source>/)"] = {"docs/archive/ROADMAP.md"}
+ALLOWED["Lane E renames (kbconfig, paths and flags are now config/kb, config/paths and config/flags)"] = {"docs/archive/ROADMAP.md"}
+ALLOWED["templates/ kit folder, template.toml, core.template or $KB_TEMPLATES_DIR"] = {"docs/archive/ROADMAP.md"}
 ALLOWED["keychain service thesis-kb-gmail"] = {"src/kb_distillery/config/userdir.py",      # the read-only lookup of the old name
                                                "tests/ops/test_notify.py", "tests/config/test_userdir.py"}
 ALLOWED["~/.config/thesis-kb"] = {"tests/config/test_userdir.py", "src/kb_distillery/config/userdir.py"}
