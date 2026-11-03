@@ -3,6 +3,7 @@ import { cn } from "@/lib/utils";
 import { useTheme } from "@/theme/theme";
 import { LAYER_LABEL, layerGroups, type LayerGroup } from "./legendModel";
 import { QUICK_OFF, QUICK_STEPS, type QuickFilters } from "./quickFilters";
+import { predicateFn } from "./publicPredicate";
 import type { GraphSchema } from "./schema";
 import { useGraphUi } from "./store";
 import { COLOR_TITLE, colorChannel, sizeChannel } from "./encoding/channels";
@@ -141,10 +142,11 @@ export function Legend({ nodes, visible, schema, shownTypes, stats, quickHidden 
   // every page the type filter lets through, so a value hidden by the key stays listed (and can be shown again)
   const keyPool = useMemo(() => {
     if (!ui.hiddenKeys.size) return visible;
+    const keep = predicateFn(ui.predicate);
     const pool = new Set(visible);
-    for (const n of nodes) if (!shownTypes || shownTypes.has(n.type)) pool.add(n.id);
+    for (const n of nodes) if ((!shownTypes || shownTypes.has(n.type)) && (!keep || keep(n))) pool.add(n.id);
     return pool;
-  }, [nodes, visible, shownTypes, ui.hiddenKeys]);
+  }, [nodes, visible, shownTypes, ui.hiddenKeys, ui.predicate]);
   const key = useMemo(() => (by === "type" ? [] : colorChannel(by, { ramp }).rows(nodes.filter((n) => keyPool.has(n.id)))), [nodes, keyPool, by, ramp]);
   const allTypes = useMemo(() => groups.flatMap((g) => g.rows.map((r) => r.id)), [groups]);
   const defaults = schema.defaultVisible;
@@ -189,6 +191,18 @@ export function Legend({ nodes, visible, schema, shownTypes, stats, quickHidden 
           <button type="button" className={cn(CHIP, "text-muted-foreground")} onClick={() => useGraphUi.setState({ shownTypes: null, predicate: null, story: "", quick: QUICK_OFF })}>
             Show all
           </button>
+          {/* the Map view draws public pages only: that filter shows here, so no count depends on a hidden rule */}
+          {ui.predicate && (
+            <button
+              type="button"
+              className={cn(CHIP, "bg-accent-soft text-primary")}
+              aria-label="Public pages only: clear"
+              title="Only connected concepts and digested sources (the Map view). Click to draw every page of the chosen types"
+              onClick={() => useGraphUi.setState({ predicate: null })}
+            >
+              Public pages ×
+            </button>
+          )}
           <span className="mx-0.5 h-4 border-l" aria-hidden />
           <QuickChip
             label="Recent"
