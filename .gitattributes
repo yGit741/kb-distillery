@@ -1,0 +1,5 @@
+# `git archive` builds the public repo from this tree; these paths are the owner's private workflow and stay out of it.
+CLAUDE.md export-ignore
+.claude export-ignore
+.claude/** export-ignore
+.integrator.toml export-ignore

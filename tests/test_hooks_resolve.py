@@ -16,7 +16,10 @@ REPO = require_repo_root("tests/test_hooks_resolve.py")
 HOOKS_PY = REPO / "scripts" / "hooks-python.sh"
 # kit settings name `$CLAUDE_PROJECT_DIR/.claude/hooks/<x>.sh`, installed from this folder
 KIT_HOOKS = REPO / "src" / "kb_distillery" / "kits" / "base" / "hooks"
-SETTINGS = [(REPO / ".claude" / "settings.json", REPO), (KIT_HOOKS / "claude-settings.json", KIT_HOOKS)]
+OWNER_SETTINGS = REPO / ".claude" / "settings.json"
+SETTINGS = [pytest.param(OWNER_SETTINGS, REPO, id="repo", marks=pytest.mark.skipif(
+                not OWNER_SETTINGS.is_file(), reason="owner tooling: .claude/ is export-ignored, so the public checkout has none")),
+            pytest.param(KIT_HOOKS / "claude-settings.json", KIT_HOOKS, id="kit")]
 
 
 def _commands(path: Path):
@@ -36,7 +39,7 @@ def _script_of(command: str, base: Path) -> Path:
     return base / rel
 
 
-@pytest.mark.parametrize("settings,base", SETTINGS, ids=["repo", "kit"])
+@pytest.mark.parametrize("settings,base", SETTINGS)
 def test_every_hook_command_resolves(settings, base):
     commands = list(_commands(settings))
     assert commands, f"{settings} has no hook commands"
