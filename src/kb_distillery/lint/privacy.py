@@ -14,6 +14,11 @@ With neither there are no terms: only token shapes are checked, so the ratchet p
 every term you configure. Terms match case-insensitively as plain text. Knowledge never lives here (the kbs are their
 own repos and `kbs/` is skipped), so a match is code, a test, a doc or a config naming a person.
 
+What is checked is what the public export ships: the tracked files and new ones not yet added (every file under the root outside a git checkout)
+minus the paths `.gitattributes` marks `export-ignore` (`docs/archive/`, the maintainer-only history). `.claude/` and
+`.github/` ship, so they are checked too. A name that must stay in the repo belongs in an export-ignored path, not in
+the baseline.
+
 `tests/lint/privacy_baseline.txt` lists the files allowed to match today. The ratchet test fails on a file that is not
 listed (new personal text) and, when terms are configured, on a listed file that no longer matches (delete its line), so
 the list only shrinks. Fake keys used as test fixtures match the token shapes on purpose: they are listed with the rest,
@@ -23,6 +28,7 @@ from __future__ import annotations
 
 import os
 import re
+import subprocess
 import sys
 import tomllib
 
@@ -31,14 +37,13 @@ TERMS_FILE = "privacy.toml"
 SECRET = re.compile(
     r"sk-ant-[A-Za-z0-9_-]{10,}|AKIA[0-9A-Z]{16}|ghp_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}"
     r"|xox[bpoa]-[A-Za-z0-9-]{10,}|-----BEGIN [A-Z ]*PRIVATE KEY-----|AIza[0-9A-Za-z_-]{30,}")
-SKIP_DIRS = {".git", ".pixi", "node_modules", "dist", "_quarantine", ".cache", ".backlog", "__pycache__", ".claude",
+SKIP_DIRS = {".git", ".pixi", "node_modules", "dist", "_quarantine", ".cache", ".backlog", "__pycache__",
              ".vitest-cache", ".vite", "kbs"}
 SKIP_FILES = {"src/kb_distillery/lint/privacy.py", "tests/lint/privacy_baseline.txt",
-              "tests/lint/test_privacy_ratchet.py",          # the scanner and its fixtures name what they look for
-              "docs/phase-7-audit.md"}                               # the audit names the owner on purpose; not for the public repo
-SKIP_PREFIXES = ("docs/plans/", "src/kb_distillery/_webapp/")
+              "tests/lint/test_privacy_ratchet.py"}          # the scanner and its fixtures name what they look for
+SKIP_PREFIXES = (".claude/worktrees/", "src/kb_distillery/_webapp/")       # other checkouts; build output
 TEXT_EXT = {".py", ".ts", ".tsx", ".js", ".mjs", ".cjs", ".json", ".toml", ".md", ".yml", ".yaml", ".sh", ".txt",
-            ".css", ".html", ".plist", ".cfg", ".ini", ".mdc"}
+            ".css", ".html", ".plist", ".cfg", ".ini", ".mdc", ".tsv", ".csv", ".svg", ".lock", ".xml", ".env", ".example"}
 
 
 def repo_root() -> str:
@@ -75,27 +80,62 @@ def matches(line: str, personal: re.Pattern | None = None) -> bool:
     return bool((personal and personal.search(line)) or SECRET.search(line))
 
 
+def export_ignored(root: str) -> list[str]:
+    """Paths (files or folders, relative; a trailing `/**` is dropped) that `.gitattributes` marks `export-ignore`: not in the public export."""
+    try:
+        with open(os.path.join(root, ".gitattributes"), encoding="utf-8") as f:
+            lines = [l.split() for l in f if l.strip() and not l.lstrip().startswith("#")]
+    except OSError:
+        return []
+    return [l[0].removesuffix("**").strip("/") for l in lines if len(l) > 1 and "export-ignore" in l[1:]]
+
+
+def tracked(root: str) -> list[str] | None:
+    """The tracked and new (not ignored) files of a git checkout, None outside one (then every file under the root counts)."""
+    if not os.path.exists(os.path.join(root, ".git")):
+        return None
+    try:
+        out = subprocess.run(["git", "-C", root, "ls-files", "-z", "--cached", "--others", "--exclude-standard"], capture_output=True, check=True).stdout
+    except (OSError, subprocess.CalledProcessError):
+        return None
+    return sorted(p for p in out.decode("utf-8", "surrogateescape").split("\0") if p)
+
+
+def files(root: str) -> list[str]:
+    """Relative paths of the text files the export ships and the ratchet therefore reads."""
+    ignored = export_ignored(root)
+    names = tracked(root)
+    if names is None:
+        names = []
+        for dirpath, dirnames, filenames in os.walk(root):
+            dirnames[:] = sorted(d for d in dirnames if d not in SKIP_DIRS)
+            names += [os.path.relpath(os.path.join(dirpath, fn), root).replace(os.sep, "/") for fn in sorted(filenames)]
+    out = []
+    for rel in names:
+        fn = rel.rsplit("/", 1)[-1]
+        if (rel in SKIP_FILES or rel.startswith(SKIP_PREFIXES) or SKIP_DIRS & set(rel.split("/")[:-1])
+                or any(rel == i or rel.startswith(i + "/") for i in ignored)):
+            continue
+        if os.path.splitext(fn)[1].lower() not in TEXT_EXT and fn not in {".gitignore", ".gitattributes", "LICENSE"}:
+            continue
+        out.append(rel)
+    return out
+
+
 def scan(root: str | None = None, terms: list[str] | None = None) -> dict[str, int]:
     """{path relative to the repo root: number of matching lines} for every text file outside the skipped folders.
     `terms` default to the configured ones (`load_terms`)."""
     root = root or repo_root()
     personal = personal_pattern(terms)
     out: dict[str, int] = {}
-    for dirpath, dirnames, filenames in os.walk(root):
-        dirnames[:] = sorted(d for d in dirnames if d not in SKIP_DIRS and not d.startswith("."))
-        for fn in sorted(filenames):
-            rel = os.path.relpath(os.path.join(dirpath, fn), root).replace(os.sep, "/")
-            if rel in SKIP_FILES or rel.startswith(SKIP_PREFIXES):
-                continue
-            if os.path.splitext(fn)[1].lower() not in TEXT_EXT and fn not in {".gitignore", "LICENSE"}:
-                continue
-            try:
-                with open(os.path.join(dirpath, fn), encoding="utf-8") as f:
-                    n = sum(1 for line in f if matches(line, personal))
-            except (OSError, UnicodeDecodeError):
-                continue
-            if n:
-                out[rel] = n
+    for rel in files(root):
+        try:
+            with open(os.path.join(root, rel), encoding="utf-8") as f:
+                n = sum(1 for line in f if matches(line, personal))
+        except (OSError, UnicodeDecodeError):
+            continue
+        if n:
+            out[rel] = n
     return out
 
 

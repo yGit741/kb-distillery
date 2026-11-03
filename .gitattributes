@@ -3,3 +3,5 @@ CLAUDE.md export-ignore
 .claude export-ignore
 .claude/** export-ignore
 .integrator.toml export-ignore
+# Maintainer-only history: kept in the repository, left out of `git archive` (the public export).
+docs/archive/** export-ignore

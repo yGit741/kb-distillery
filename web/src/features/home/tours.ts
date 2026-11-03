@@ -97,7 +97,7 @@ const thesisView = (): TourStep => ({
   wait: 4000,
   place: "bottom",
   title: "Thesis: the spine",
-  // source: features/graph/lab/views.ts (THESIS_SEED: three themes, four questions, concepts, papers, the book, gil-kalai; story "one hop around it")
+  // source: features/graph/lab/views.ts (THESIS_SEED: three themes, four questions, concepts, papers, the book; story "one hop around it")
   body: "The direction I am weighing — generalization of over-parameterized networks, met through Boolean analysis — as a seed of themes, open questions, concepts and papers, with one hop around it. Everything else is hidden.",
 });
 
@@ -145,9 +145,9 @@ registerTour(
     sigma(),
     touch(
       TOTAL_INFLUENCE,
-      "Where Kalai meets transformers",
-      // source: wiki/total-influence.md (one-liner; shared by three threads: Benjamini–Kalai–Schramm noise sensitivity, Hahn & Rofin's average sensitivity for transformers, sharp thresholds via Margulis–Russo)
-      "Total influence: how many coordinates, on average, can flip a Boolean function's output. The same quantity runs through Kalai's work on noise sensitivity and sharp thresholds and through Hahn & Rofin's explanation of why transformers struggle with sensitive functions like parity — which is why this node sits between those threads.",
+      "Where noise sensitivity meets transformers",
+      // source: wiki/total-influence.md (one-liner; shared by three threads: Benjamini–Schramm noise sensitivity, Hahn & Rofin's average sensitivity for transformers, sharp thresholds via Margulis–Russo)
+      "Total influence: how many coordinates, on average, can flip a Boolean function's output. The same quantity runs through the classical work on noise sensitivity and sharp thresholds and through Hahn & Rofin's explanation of why transformers struggle with sensitive functions like parity — which is why this node sits between those threads.",
     ),
     homeAgain(
       // source: features/graph/views/ViewsBar.tsx (Thesis and Explore pills, ⓘ "How this view is computed"); features/graph/SideReader.tsx (double-click opens the reader)
@@ -215,8 +215,8 @@ function registerThesisTours(): void {
         "Analysis of Boolean Functions is where the vocabulary comes from: Fourier expansion, influence, noise stability and hypercontractivity, low-degree learning. Fourier degree is the bridge I am betting on — low-degree concentration is what makes a class learnable, and whether that is the same claim as spectral bias is an open question of mine.",
       ),
       homeAgain(
-        // source: wiki/noise-stability.md, wiki/gil-kalai.md (both in THESIS_SEED); features/graph/lab/views.ts (Explore)
-        "Still unseen: noise stability (the Kalai side of the bridge), Gil Kalai's blog as a hub of its own, and the Explore view where these themes meet or fail to.",
+        // source: wiki/noise-stability.md (in THESIS_SEED); features/graph/lab/views.ts (Explore)
+        "Still unseen: noise stability (the combinatorial side of the bridge) and the Explore view where these themes meet or fail to.",
       ),
     ],
     "Where Boolean analysis meets learning theory in my notes",

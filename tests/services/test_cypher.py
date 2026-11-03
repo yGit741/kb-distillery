@@ -11,19 +11,19 @@ SNAP = {
         {"id": "noise-stability", "title": "Noise stability", "type": "idea", "layer": "concept"},
         {"id": "fourier-analysis", "title": "Fourier analysis", "type": "idea", "layer": "concept"},
         {"id": "influence", "title": "Influence", "type": "idea", "layer": "concept"},
-        {"id": "kalai-2002", "title": "Kalai 2002", "type": "paper", "layer": "source", "depth": "full", "year": 2002},
+        {"id": "example-2002", "title": "Example 2002", "type": "paper", "layer": "source", "depth": "full", "year": 2002},
         {"id": "blog-kkl", "title": "KKL post", "type": "blog-post", "layer": "source", "depth": "easy"},
         {"id": "q-sharp", "title": "Is KKL sharp?", "type": "question", "layer": "concept"},
         {"id": "q-open", "title": "Open one", "type": "question", "layer": "concept"},
     ],
     "links": [
-        {"source": "kalai-2002", "target": "noise-stability", "kind": "wikilink"},
-        {"source": "kalai-2002", "target": "fourier-analysis", "kind": "related"},
+        {"source": "example-2002", "target": "noise-stability", "kind": "wikilink"},
+        {"source": "example-2002", "target": "fourier-analysis", "kind": "related"},
         {"source": "blog-kkl", "target": "influence", "kind": "wikilink"},
         {"source": "blog-kkl", "target": "fourier-analysis", "kind": "wikilink"},
         {"source": "noise-stability", "target": "fourier-analysis", "kind": "wikilink"},
         {"source": "influence", "target": "fourier-analysis", "kind": "wikilink"},
-        {"source": "kalai-2002", "target": "missing-page", "kind": "wikilink"},
+        {"source": "example-2002", "target": "missing-page", "kind": "wikilink"},
     ],
     "concept_links": [{"source": "fourier-analysis", "target": "influence", "shared": 1}],
 }
@@ -35,7 +35,7 @@ def g():
     # typed relations arrive with the schema PR; add two by hand to exercise the named queries
     cypher.add_edge(graph, "q-sharp", "influence", "OPEN_PROBLEM_IN")
     cypher.add_edge(graph, "q-open", "noise-stability", "OPEN_PROBLEM_IN")
-    cypher.add_edge(graph, "kalai-2002", "q-sharp", "ADDRESSES")
+    cypher.add_edge(graph, "example-2002", "q-sharp", "ADDRESSES")
     return graph
 
 
@@ -49,19 +49,19 @@ def rejected_log(tmp_path, monkeypatch):
 def test_to_graph_labels_and_kinds(g):
     assert g.nodes["blog-kkl"]["__labels__"] == {"BlogPost", "Source"}
     assert g.nodes["noise-stability"]["__labels__"] == {"Idea", "Concept"}
-    assert cypher.kinds(g, "kalai-2002", "fourier-analysis") == {"MENTIONS"}       # related → MENTIONS
-    assert [d["via"] for d in g["kalai-2002"]["fourier-analysis"].values()] == ["related"]
+    assert cypher.kinds(g, "example-2002", "fourier-analysis") == {"MENTIONS"}       # related → MENTIONS
+    assert [d["via"] for d in g["example-2002"]["fourier-analysis"].values()] == ["related"]
     assert "missing-page" not in g                                                # dangling links dropped
     assert "SHARES_SOURCE" in cypher.kinds(g, "fourier-analysis", "influence")    # symmetric: both ways
     assert "SHARES_SOURCE" in cypher.kinds(g, "influence", "fourier-analysis")
-    cypher.add_edge(g, "kalai-2002", "fourier-analysis", "MENTIONS")              # one edge per (pair, kind)
-    assert len(g["kalai-2002"]["fourier-analysis"]) == 1
+    cypher.add_edge(g, "example-2002", "fourier-analysis", "MENTIONS")              # one edge per (pair, kind)
+    assert len(g["example-2002"]["fourier-analysis"]) == 1
 
 
 def test_run_typed_match_and_labels(g):
     t = cypher.run('MATCH (s:Source)-[:MENTIONS]->(i:Idea) WHERE i.slug = "fourier-analysis" RETURN s.slug', graph=g)
     assert t["columns"] == ["s.slug"]
-    assert sorted(r[0] for r in t["rows"]) == ["blog-kkl", "kalai-2002"]
+    assert sorted(r[0] for r in t["rows"]) == ["blog-kkl", "example-2002"]
     t = cypher.run("MATCH (b:BlogPost) RETURN b.slug", graph=g)
     assert t["rows"] == [["blog-kkl"]]
 
@@ -135,7 +135,7 @@ def test_shortest_path_and_neighbourhood(g):
     path, length = t["rows"][0]
     assert path[0]["slug"] == "blog-kkl" and path[-1]["slug"] == "noise-stability" and length == 2
     hood = cypher.neighbourhood(g, "fourier-analysis", hops=1)
-    assert {r[0]["slug"] for r in hood["rows"]} == {"kalai-2002", "blog-kkl", "noise-stability", "influence"}
+    assert {r[0]["slug"] for r in hood["rows"]} == {"example-2002", "blog-kkl", "noise-stability", "influence"}
     with pytest.raises(cypher.QueryError, match="no page"):
         cypher.neighbourhood(g, "nope")
 

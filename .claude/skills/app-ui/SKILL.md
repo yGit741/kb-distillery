@@ -120,7 +120,7 @@ a rule below.**
 3. **Budget**: about 12% of the canvas, roughly 20–40 labels at fit (Bobák 2024).
 4. **Chosen over the whole graph, not what is on screen**, so panning never changes the set (pan churn fell from
    71–174 to 5–18 label changes/s in the Label Lab; Been 2006).
-5. **Ranked by degree of interest normalised per type, never raw degree** (imports skew degree: the Kalai blog
+5. **Ranked by degree of interest normalised per type, never raw degree** (imports skew degree: a large blog
    series has 1,401 links; Furnas; van Ham & Perer).
 6. **Size follows importance rank** (top 5% / next 20% / rest), so being shown and being big mean the same thing;
    label size grows with √zoom and never drops below 11 px (Töpfer).

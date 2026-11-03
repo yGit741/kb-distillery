@@ -129,7 +129,7 @@ Links to [Learning Theory](theme-learning-theory.md).
 _SERIES = """---
 type: series
 layer: collection
-short: kalai
+short: author
 area: [boolean-analysis]
 maturity: to-read
 aliases: []
@@ -205,7 +205,7 @@ def seed_pages():
     pages["noise-stability"] = _idea(area="boolean-analysis", title="Noise stability", one="Correlation of a function with its noisy copy.")
     pages["generalization"] = _idea(area="learning-theory", title="Generalization", one="Gap between train and test risk.")
     pages["course-fixture-rl"] = _COURSE
-    pages["series-fixture-kalai-blog"] = _SERIES
+    pages["series-fixture-author-blog"] = _SERIES
     pages["video-fixture-talk"] = _VIDEO
     return pages
 
@@ -253,7 +253,7 @@ published: 2026-01-01
 
 # Fixture post one: a combinatorial question
 
-A Kalai-style clip. Let $f:\\{{-1,1\\}}^n \\to \\{{-1,1\\}}$ be a Boolean function with noise stability $s$.
+An author-style clip. Let $f:\\{{-1,1\\}}^n \\to \\{{-1,1\\}}$ be a Boolean function with noise stability $s$.
 Is it true that $s \\le 1$? (Fixture text; no real claim.)
 """
 

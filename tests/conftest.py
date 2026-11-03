@@ -7,9 +7,9 @@ session temp folder first, so tests that run lint or write pages never dirty the
 Two groups of tests are tied to the vault they run against, and skip instead of failing on any other:
   * TYPE_BOUND modules build pages of the explorer's default types (paper, book, person, ...) and read the
     type tables `kb_distillery.vault.schema` built at import time from the active kb.toml, so they run only when that
-    kb declares the default types (the fixture and the thesis kb do; examples/demo does not);
-  * THESIS_DATA modules read content only the thesis kb has (its raw chats, migration state, ops config):
-    they run only with KB=yonatan-thesis.
+    kb declares the default types (the fixture and a research kb do; examples/demo does not);
+  * THESIS_DATA modules read content only the maintainer's research kb has (its raw chats, migration state, ops config):
+    they run only against the kb named by $KB_TEST_DATA_KB (the maintainer's research kb).
 `real_kb()` is for tests that read a real knowledge base (KB=<id>) rather than the fixture."""
 import atexit
 import os
@@ -66,16 +66,16 @@ def _has_default_types() -> bool:
 def pytest_collection_modifyitems(config, items):
     from kb_distillery.config import kb as kbconfig
     cfg = kbconfig.current()
-    thesis = bool(cfg) and cfg.id == "yonatan-thesis"
+    thesis = bool(cfg) and bool(os.environ.get("KB_TEST_DATA_KB")) and cfg.id == os.environ["KB_TEST_DATA_KB"]
     default_types = _has_default_types()
     here = os.path.dirname(os.path.abspath(__file__))
     for item in items:
         rel = os.path.relpath(str(item.fspath), here).replace(os.sep, "/")
         node = rel + item.nodeid[item.nodeid.index("::"):] if "::" in item.nodeid else rel
         if rel in TYPE_BOUND and not default_types:
-            item.add_marker(pytest.mark.skip(reason="needs the explorer's default page types (run with KB=yonatan-thesis or no KB)"))
+            item.add_marker(pytest.mark.skip(reason="needs the explorer's default page types (run with a research kb or no KB)"))
         elif not thesis and any(node == t or node.startswith(t + "::") for t in THESIS_DATA):
-            item.add_marker(pytest.mark.skip(reason="reads the thesis knowledge base's own content (run with KB=yonatan-thesis)"))
+            item.add_marker(pytest.mark.skip(reason="reads the thesis knowledge base's own content (run with KB=<id> and KB_TEST_DATA_KB=<id>)"))
 
 
 def pytest_configure(config):

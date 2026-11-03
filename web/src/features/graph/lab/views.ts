@@ -63,7 +63,6 @@ export const THESIS_SEED: readonly string[] = [
   "paper-2023-loss-landscapes-are-all-you-need",
   "paper-2025-do-neural-networks-need-gradient-descent-to-generalize",
   "book-2014-analysis-of-boolean-functions",
-  "gil-kalai",
 ];
 
 export const STORIES: readonly Story[] = [

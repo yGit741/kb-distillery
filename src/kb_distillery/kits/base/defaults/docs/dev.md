@@ -26,7 +26,7 @@ web/                    the React app (builds into src/kb_distillery/_webapp)
 examples/               demo (the tracked sample kb), launchd
 .claude/skills/         the engine's own dev skills (real files); the kb skills are src/kb_distillery/kits/<kit>/skills/
 scripts/                githooks/, hooks/, qmd/, launch.sh
-docs/                   ROADMAP.md: the migration to the open-source kb-distillery, phase by phase
+docs/                   public-roadmap.md: what shipped and what is next
 ~/knowledge/<id>/       one knowledge base each (its own git repo, outside this checkout); only examples/demo is tracked here; kbs/* stays gitignored as a guard
 meta/                   VAULT METADATA ONLY: corpus.tsv, aliases.tsv, coherence-warnings.tsv, raw-renames.tsv,
                         chats/, templates/, migration/, migrations/applied.tsv, ops/sync.toml, thesis.md,

@@ -1,17 +1,17 @@
 ---
 type: article
 layer: source
-title: "Kalai Fixture Post One"
+title: "Author Fixture Post One"
 source: 
 author:
 area: []
 maturity: digested
 depth: easy
-raw: raw/web-clips/kalai-fixture-post-one.md
+raw: raw/web-clips/author-fixture-post-one.md
 url:
 ---
 
-# Kalai Fixture Post One
+# Author Fixture Post One
 
 **Problem:** Is noise stability at most one?
 
