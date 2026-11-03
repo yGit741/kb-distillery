@@ -31,6 +31,7 @@ process.env.XDG_CACHE_HOME ||= CACHE;
 
 const { createStore } = await import("@tobilu/qmd");
 fs.mkdirSync(CARDS, { recursive: true });
+fs.mkdirSync(path.join(CACHE, "qmd"), { recursive: true });   // the index.sqlite folder: sqlite will not create it
 if (!fs.readdirSync(CARDS).some((f) => f.endsWith(".md"))) {
   console.warn(`[kb-qmd] no cards in ${CARDS} — search stays empty until \`pixi run qmd-cards\` (or lint) runs for this kb`);
 }

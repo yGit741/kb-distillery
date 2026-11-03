@@ -67,8 +67,8 @@ def run_draft(sha):
         claims = json.load(f)
     with open(os.path.join(sdir, "plan.json"), encoding="utf-8") as f:
         plan = json.load(f)
-    validate_claims(claims)
     validate_plan(plan)
+    validate_claims(claims, page_type=plan["type"])
 
     slug = plan["wiki_slug"]
     known = wiki_titles()

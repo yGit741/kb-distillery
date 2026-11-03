@@ -225,7 +225,7 @@ class DispatchTests(TempHome):
 
     def test_scripts_run_from_the_checkout_and_are_refused_outside_one(self):
         calls = []
-        with patch.object(tree.subprocess, "call", side_effect=lambda cmd: calls.append(cmd) or 0), \
+        with patch.object(tree.subprocess, "call", side_effect=lambda cmd, env=None: calls.append(cmd) or 0), \
                 patch.object(tree, "repo_root", return_value=ROOT):
             self.assertEqual(tree.main(["launch", "--port", "9000"]), 0)
         self.assertEqual(calls[0], ["bash", os.path.join(ROOT, "scripts/launch.sh"), "--port", "9000"])

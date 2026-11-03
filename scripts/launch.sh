@@ -1,21 +1,30 @@
 #!/usr/bin/env bash
 # Restart the app server (kb_distillery.server: API + legacy pages + React shell) from the current working tree, detached, then open it.
 # Kills whatever already listens on the port so a stale server never answers.
-# Usage: pixi run launch [-- --kb <id>] [-- --port N]
+# Usage: pixi run launch [-- --kb <id>] [-- --port N] [-- --no-open]
 # The knowledge base: --kb <id|path> (else $KB, the only one; `distill kb list`).
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
 PORT=8765
+OPEN=1
+# The interpreter: the one `distill launch` runs under ($KB_PYTHON), else python from the active environment (pixi
+# run), else the pixi env of this checkout. Never a bare `python`, which does not exist outside an environment.
+if [[ -n "${KB_PYTHON:-}" ]]; then PY=("$KB_PYTHON")
+elif command -v python >/dev/null 2>&1 && python -c 'import kb_distillery' >/dev/null 2>&1; then PY=(python)
+elif command -v pixi >/dev/null 2>&1; then PY=(pixi run python)
+else echo "no Python with kb_distillery: install it (pip install kb-distillery) or run through pixi" >&2; exit 1; fi
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --port) PORT="$2"; shift 2 ;;
+    --port=*) PORT="${1#--port=}"; shift ;;
+    --no-open) OPEN=0; shift ;;
     --kb) export KB="$2"; shift 2 ;;
     --kb=*) export KB="${1#--kb=}"; shift ;;
     *) echo "unknown argument: $1" >&2; exit 2 ;;
   esac
 done
-KB_SHOW="$(python -m kb_distillery.config.kb show)" || { echo "$KB_SHOW" >&2; exit 1; }
+KB_SHOW="$("${PY[@]}" -m kb_distillery.config.kb show)" || { echo "$KB_SHOW" >&2; exit 1; }
 KB_ID="$(printf '%s\n' "$KB_SHOW" | sed -n 's/^id  *//p')"
 [[ "$KB_ID" == "None" ]] && KB_ID=""
 KB_ROOT_DIR="$(printf '%s\n' "$KB_SHOW" | sed -n 's/^root  *//p')"
@@ -56,16 +65,16 @@ else
   echo "started qmd search service (pid $!), log: $QMD_LOG"
 fi
 # The card vectors are per kb too (graph math): say so when this kb has none or they lag its cards.
-if ! VEC_STATUS="$(python -m kb_distillery.search.vectors status 2>&1)"; then
+if ! VEC_STATUS="$("${PY[@]}" -m kb_distillery.search.vectors status 2>&1)"; then
   echo "card vectors: $VEC_STATUS"
 fi
 
-nohup python -m kb_distillery.server --port "$PORT" --no-open >"$LOG" 2>&1 &
+nohup "${PY[@]}" -m kb_distillery.server --port "$PORT" --no-open >"$LOG" 2>&1 &
 echo "started app (pid $!), log: $LOG"
 
 for _ in $(seq 1 1200); do   # up to 5 min: kb_distillery.server installs the frontend dependencies on a fresh clone and rebuilds src/kb_distillery/_webapp when the sources changed
   if curl -fsS -o /dev/null "$URL"; then
-    open "$URL"
+    [[ "$OPEN" == 1 ]] && open "$URL"
     echo "ready: $URL"
     exit 0
   fi

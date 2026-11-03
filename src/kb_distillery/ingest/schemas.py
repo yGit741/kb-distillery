@@ -2,9 +2,9 @@
 import os
 import sys
 
-from kb_distillery.vault.schema import SOURCE_TYPES
+from kb_distillery.vault.schema import EQUATION_TYPES, SOURCE_TYPES
 
-REQUIRED_CLAIMS = ("raw", "title", "problem", "method", "results", "equations", "concepts")
+REQUIRED_CLAIMS = ("raw", "title", "problem", "method", "results", "concepts")
 REQUIRED_PLAN = ("wiki_slug", "type", "link_existing", "create_concepts", "moc_updates", "question_updates")
 
 
@@ -15,18 +15,24 @@ def _check_type(name, data, key, typ):
         raise ValueError(f"{name}: {key!r} must be {typ.__name__}, got {type(data[key]).__name__}")
 
 
-def validate_claims(data):
+def validate_claims(data, page_type=None):
+    """`equations` is optional (an article, a mail or a video has none). It must hold a real equation only when the
+    page is of a type that has a Key equations section to fill (`EQUATION_TYPES`): the caller passes `page_type`
+    once the plan has fixed it (draft); before that (extract, map) the type is not known and nothing is enforced."""
     if not isinstance(data, dict):
         raise ValueError("claims must be a JSON object")
     for k in REQUIRED_CLAIMS:
         _check_type("claims", data, k, str if k in ("raw", "title", "problem", "method") else list)
     if not data["results"]:
         raise ValueError("claims.results must be non-empty")
-    if not data["equations"]:
-        raise ValueError("claims.equations must be non-empty (extract defining equations)")
-    for eq in data["equations"]:
+    equations = data.get("equations", [])
+    if not isinstance(equations, list):
+        raise ValueError(f"claims: 'equations' must be list, got {type(equations).__name__}")
+    for eq in equations:
         if not isinstance(eq, dict) or "latex" not in eq:
             raise ValueError("each equation needs a latex field")
+    if page_type in EQUATION_TYPES and not any(isinstance(eq["latex"], str) and eq["latex"].strip() not in ("", "—") for eq in equations):
+        raise ValueError(f"claims.equations must be non-empty for a {page_type} page (extract defining equations)")
     return True
 
 

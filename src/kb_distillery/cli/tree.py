@@ -115,7 +115,7 @@ def run(path: tuple[str, ...], cmd: Cmd, rest: list[str]) -> int:
     if kind == "launch":
         if repo_root() is None:                 # an installed package has no scripts/: serve the app in the foreground
             kind, target = "module", "kb_distillery.server"
-            if "--port" not in rest:
+            if not any(a == "--port" or a.startswith("--port=") for a in rest):
                 rest = ["--port", "8765", *rest]
         else:
             kind = "script"
@@ -125,7 +125,10 @@ def run(path: tuple[str, ...], cmd: Cmd, rest: list[str]) -> int:
         except NotInCheckout as e:
             sys.stderr.write(f"{PROG}: {e}\n")
             return 2
-        return subprocess.call(["bash", os.path.join(root, target), *cmd.fixed, *rest])
+        argv = ["bash", os.path.join(root, target), *cmd.fixed, *rest]
+        if target.endswith("launch.sh"):        # the script runs python as this interpreter, not a bare `python`
+            return subprocess.call(argv, env=dict(os.environ, KB_PYTHON=os.environ.get("KB_PYTHON") or sys.executable))
+        return subprocess.call(argv)
     saved = sys.argv
     sys.argv = [prog, *cmd.fixed, *rest]
     try:
