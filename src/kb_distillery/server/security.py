@@ -13,6 +13,8 @@ from starlette.responses import JSONResponse
 from kb_distillery.services import corpus
 
 MAX_BODY_BYTES = 4 * 1024 * 1024
+UPLOAD_PREFIX = "/api/chat/attachments"           # multipart uploads: 20 MB file + form overhead
+MAX_UPLOAD_BYTES = 21 * 1024 * 1024
 MUTATING = frozenset({"POST", "PUT", "PATCH", "DELETE"})
 LOOPBACK_NAMES = frozenset({"localhost", "127.0.0.1", "::1", "[::1]"})
 
@@ -68,6 +70,7 @@ class BodyLimitMiddleware:
             length = headers.get(b"content-length")
             if length is None and b"transfer-encoding" in headers:
                 return await JSONResponse({"detail": "Content-Length required"}, 411)(scope, receive, send)
-            if length is not None and (not length.isdigit() or int(length) > self.max_bytes):
+            cap = MAX_UPLOAD_BYTES if scope["path"].startswith(UPLOAD_PREFIX) else self.max_bytes
+            if length is not None and (not length.isdigit() or int(length) > cap):
                 return await JSONResponse({"detail": "request body too large"}, 413)(scope, receive, send)
         await self.app(scope, receive, send)
