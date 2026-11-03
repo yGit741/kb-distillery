@@ -191,9 +191,11 @@ def _dates_for(root):
     return dates
 
 
-def build_graph_snapshot(layer=None, view=None):
+def build_graph_snapshot(layer=None, view=None, relations=None):
     """The link graph of the active knowledge base, or of `view` (a `kbview.KbView`, read-only).
-    Every node carries its `kb` and `slug`; `id` is the slug here (`merge_snapshots` namespaces it)."""
+    Every node carries its `kb` and `slug`; `id` is the slug here (`merge_snapshots` namespaces it).
+    `relations`: include typed relations; None follows the graph-relations flag in this env (the share build passes
+    its own env's value, so turning the flag on locally never changes a site)."""
     root = view.root if view else ROOT
     layer_of = view.types.layer_of if view else LAYER_OF
     kb_id = view.id if view else _active_id()
@@ -285,7 +287,7 @@ def build_graph_snapshot(layer=None, view=None):
             "areas": sorted(areas),
         },
     }
-    if relations_on():      # typed relations, a separate list: `links` (what the canvas draws) stays as it was
+    if relations_on() if relations is None else relations:      # typed relations, a separate list: `links` (what the canvas draws) stays as it was
         snap["relations"] = _relations(pages, nodes, links, snap["concept_links"], root, view)
         snap["etag"] = _relations_etag(snap["etag"], root)
     if layer == "raw":      # private data layer; the share build never passes a layer
