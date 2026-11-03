@@ -164,7 +164,7 @@ def test_positional_dir_is_the_same_as_dir_flag(world, tmp_path, capsys):
     assert init_kb.main(["--kit", "research", "--yes", str(out)]) in (0, 1)       # doctor may warn; the kb is made
     assert os.path.isfile(out / "my-kb" / "kb.toml")
     same = tmp_path / "same"
-    init_kb.main(["--yes", "--dir", str(same), str(same)])
+    assert init_kb.main(["--yes", "--dir", str(same), str(same)]) in (0, 1)
     assert os.path.isfile(same / "my-kb" / "kb.toml")
 
 

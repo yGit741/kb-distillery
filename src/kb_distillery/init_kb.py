@@ -394,7 +394,7 @@ def main(argv=None) -> int:
         args.dir = args.target_dir
     if args.refresh:
         if args.kb_id or args.name or args.kit or args.dir:
-            ap.error("--refresh works on an existing kb (--kb <id|path>); it takes none of --kb-id, --name, --kit, --dir")
+            ap.error("--refresh works on an existing kb (--kb <id|path>); it takes none of --kb-id, --name, --kit, --dir, DIR")
         return run_refresh()
     interactive = sys.stdin.isatty() and not args.yes
     kb_id = args.kb_id or (_ask("Knowledge base id", DEFAULT_ID) if interactive else DEFAULT_ID)
