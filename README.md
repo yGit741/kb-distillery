@@ -20,7 +20,18 @@ pixi run distill launch --kb <id>
 
 Digests use Anthropic models only, through a Claude login or an Anthropic API key. Everything else works without one. See [Getting started](docs/getting-started.md).
 
-To see the app first, open the sample knowledge base `examples/demo` (a made-up job search): `pixi run distill launch --kb examples/demo`. `distill` is the command; `kbd` is an older alias.
+To skip the questions, for scripts and CI: `pixi run distill init --kit base ~/knowledge --yes` (the directory is the parent folder; add `--kb-id <id>` to name it, default `my-kb`). `launch --kb` takes that id, or a path.
+
+Search is keyword-only until you add the optional search service: `pixi run qmd-install` (needs Node 22 or newer). Everything else works without it.
+
+Terms used below:
+
+- **Agent**: a Claude Code session (or similar) that follows the skills and rules in the knowledge base's `AGENTS.md`.
+- **Kit**: the set of page types and relations a knowledge base follows ([Kit](docs/concepts/kit.md)).
+- **Digest**: turning one source into a wiki page, in three tiers: easy, full or deep ([Digest tiers](docs/concepts/digest-tiers.md)).
+- **Knowledge operation**: any change to the knowledge base (ingest, digest, edit, undo), recorded as one git commit ([Concepts](docs/index.md)).
+
+To see the app first, open the sample knowledge base `examples/demo` (a made-up job search): `pixi run distill launch --kb examples/demo`. `distill` is the command; `kbd` is a deprecated alias of `distill`.
 
 ## How it works
 

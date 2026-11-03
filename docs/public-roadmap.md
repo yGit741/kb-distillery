@@ -1,6 +1,6 @@
 # Roadmap
 
-This page lists what is shipped, what is next, and ideas that are not scheduled. It describes intent, not promises.
+This page lists what is shipped, what is next, and ideas that are not scheduled. It describes intent, not promises. Version `0.1.0` is the first public release; it counts as unreleased until the repository is public and a package is published.
 
 ## Shipped
 
@@ -17,22 +17,23 @@ This page lists what is shipped, what is next, and ideas that are not scheduled.
 - A typed HTTP API with a generated schema, and a React app that serves every screen.
 - Open Knowledge Format as the shape of a knowledge base: `wiki/` is the bundle root with `index.md` and `log.md`, links are relative `slug.md` links, and `pixi run okf-check` validates it.
 - A layer contract between packages, checked by `pixi run lint-imports` and by the `ship` gates.
-- A nightly sync and hygiene report for macOS.
+- A nightly sync and hygiene report, with launchd templates for macOS.
+- Linux x86-64 and macOS (Apple silicon and Intel) support. Two features are macOS-only: OCR through `ocrmac` and the keychain.
+- A `distill` command for the tasks that run as `pixi run <task>`; `kbd` stays as a deprecated alias.
+- A wheel that installs into a clean environment and passes `distill doctor`.
+- Continuous integration for pull requests (`ci.yml`): Python tests, lint, web checks, wheel build.
 - Hooks that keep agents from writing to `raw/` or running ad-hoc git writes in a knowledge base.
 - PDF reading with pypdfium2 (BSD / Apache) instead of the AGPL PyMuPDF, with a license check.
 
 ## Next
 
-- A `distill` command that covers the tasks that still run as `pixi run <task>`.
-- A wheel that installs into a clean environment and passes `distill doctor`.
-- Continuous integration for pull requests: Python tests, lint, web checks, wheel build.
 - Public release: the repository, a tagged `0.1.0` and a package.
 
 ## Ideas
 
 These have no date.
 
-- Linux support. The environment lock covers macOS on Apple silicon only, and two features use macOS APIs: OCR and the keychain.
+- OCR and secret storage on Linux, where the macOS-only `ocrmac` and keychain features do not apply.
 - A Google Drive connector that uses the API instead of a mounted folder.
 - A second publisher, for example a static host other than Cloudflare.
 - An agent in the app: chat and actions on a selected node.

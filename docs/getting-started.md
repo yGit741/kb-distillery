@@ -30,7 +30,7 @@ pixi run distill init --kb-id my-kb --name "My KB" --kit base --yes
 
 `--kit` takes `base` or `research`. See [Kit](concepts/kit.md).
 
-To create it somewhere other than `~/knowledge`, pass `--dir`. The folder you pass is the parent: `distill init --kb-id my-kb --kit research --dir ~/projects --yes` creates `~/projects/my-kb/`. `distill init` takes no positional path. Point later commands at it with `--kb ~/projects/my-kb` or `KB=~/projects/my-kb`.
+To create it somewhere other than `~/knowledge`, pass `--dir`. The folder you pass is the parent: `distill init --kb-id my-kb --kit research --dir ~/projects --yes` creates `~/projects/my-kb/`. The directory may also be given as a positional argument: `distill init --kit research ~/projects --yes`. Point later commands at it with `--kb ~/projects/my-kb` or `KB=~/projects/my-kb`.
 
 The command refuses an existing folder, the ids `think` and `demo`, and ids that are not lowercase letters, digits and dashes.
 

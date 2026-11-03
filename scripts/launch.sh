@@ -2,7 +2,7 @@
 # Restart the app server (kb_distillery.server: API + legacy pages + React shell) from the current working tree, detached, then open it.
 # Kills whatever already listens on the port so a stale server never answers.
 # Usage: pixi run launch [-- --kb <id>] [-- --port N]
-# The knowledge base: --kb <id|path> (else $KB, the only one; `kbd kb-list`).
+# The knowledge base: --kb <id|path> (else $KB, the only one; `distill kb list`).
 set -euo pipefail
 
 cd "$(dirname "$0")/.."

@@ -2,7 +2,7 @@
 
 `distill` is the command line. In a checkout, run it as `pixi run distill <command>`. An installed package puts `distill` on the path.
 
-`kbd` is an older name that still works and forwards to the same code. Use `distill` in new scripts.
+`kbd` is a deprecated alias of `distill`. It still works and forwards to the same code. Use `distill` in new scripts.
 
 Run `distill --help`, or `distill <group> --help` for a group. Most commands pass `--help` on to the module behind them, so `distill <command> --help` shows that module's own options.
 
