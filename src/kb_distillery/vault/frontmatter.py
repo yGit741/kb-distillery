@@ -227,6 +227,13 @@ def fill_title(text):
     return re.sub(r"^title: \{\{title_yaml\}\}\n", "", text, flags=re.M).replace("{{title_yaml}}", "")
 
 
+def fill_conventions(text):
+    """Fill a template's `{{takeaways_heading}}` with the kb's takeaways heading (kb_distillery.config.pages), so a
+    kit template never hardcodes it."""
+    from kb_distillery.config import pages
+    return text.replace("{{takeaways_heading}}", pages.takeaways_heading())
+
+
 def title_line(title, heading=None):
     """`title: "…"` for a page whose H1 is `heading` (default: `title` itself); '' when it equals the first heading,
     which is what a reader falls back to."""

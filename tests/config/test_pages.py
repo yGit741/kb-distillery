@@ -10,10 +10,12 @@ from unittest.mock import patch
 from kb_distillery.config import kb as kbconfig
 from kb_distillery.config import kit, pages, paths
 from kb_distillery.config.resources import resource
+from kb_distillery.ingest import easy_digest
 from kb_distillery.migrations import takeaways_heading as migration
+from kb_distillery.vault import frontmatter
 
 SCHEMA = "%d.%d" % kbconfig.SCHEMA_VERSION
-HEADING = re.compile(r"^## (Takeaways.*)$", re.M)
+HEADING = re.compile(r"^## (\{\{takeaways_heading\}\})$", re.M)
 
 
 def write(path, text):
@@ -71,7 +73,7 @@ class ShippedKitsTests(unittest.TestCase):
             self.assertIn(cfg.path, str(e.exception))
 
     def test_every_kits_skeletons_use_the_heading_the_kit_names(self):
-        """A source skeleton the kit resolves (its own, else its parent's) writes exactly the kit's heading."""
+        """A source skeleton the kit resolves (its own, else its parent's) carries the placeholder, which fills to the kit's heading."""
         for name in kit.names():
             cfg = kb_at(os.path.join(self.tmp.name, f"kit-{name}"), name)
             want = pages.takeaways_heading(cfg)
@@ -82,7 +84,8 @@ class ShippedKitsTests(unittest.TestCase):
                     found = HEADING.findall(f.read())
                 for heading in found:
                     seen += 1
-                    self.assertEqual(heading, want, f"kit {name}: {resolved}")
+                    with patch.object(kbconfig, "current", return_value=cfg):
+                        self.assertEqual(frontmatter.fill_conventions(heading), want, f"kit {name}: {resolved}")
             self.assertGreater(seen, 0, f"kit {name}: no skeleton writes a takeaways section")
 
     def test_research_skeletons_come_from_the_research_kit_per_file(self):
@@ -94,6 +97,22 @@ class ShippedKitsTests(unittest.TestCase):
         write(os.path.join(cfg.root, "meta", "templates", "paper.md"), "# own\n")
         self.assertEqual(paths.meta_file("templates", "paper.md", root=cfg.root),
                          os.path.join(cfg.root, "meta", "templates", "paper.md"))
+
+    def _new_paper(self, name, extra=""):
+        cfg = kb_at(os.path.join(self.tmp.name, name), "research", extra)
+        meta = lambda *a, **k: paths.meta_file(*a, root=cfg.root)
+        with patch.object(kbconfig, "current", return_value=cfg), patch.object(easy_digest, "meta_file", meta):
+            return easy_digest._new_page("paper", "paper-2020-x", "raw/papers/x.pdf")
+
+    def test_a_new_page_gets_the_default_heading(self):
+        text = self._new_paper("plain")
+        self.assertIn("\n## Takeaways\n", text)
+        self.assertNotIn("{{", text)
+
+    def test_a_new_page_gets_the_kbs_overridden_heading(self):
+        text = self._new_paper("thesis", '\n[pages]\ntakeaways_heading = "Takeaways for my thesis"\n')
+        self.assertIn("\n## Takeaways for my thesis\n", text)
+        self.assertNotIn("{{", text)
 
     def test_no_research_kit_text_assumes_a_thesis_writer(self):
         base = str(resource("kits/research"))

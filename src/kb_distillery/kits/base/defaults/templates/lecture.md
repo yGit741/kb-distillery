@@ -21,7 +21,7 @@ description:
 
 ## Key equations
 
-## Takeaways
+## {{takeaways_heading}}
 
 ## Connections
 
