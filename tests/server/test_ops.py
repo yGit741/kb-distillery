@@ -132,3 +132,22 @@ def test_maintainer_ops_is_false_for_a_fresh_kb_and_true_once_it_opted_in(tmp_pa
     (tmp_path / "meta" / "ops" / "sync.toml").unlink()
     monkeypatch.setattr(publish, "current", lambda *a, **k: object())
     assert ops.maintainer_ops(str(tmp_path)) is True
+
+
+def test_deploy_state_default_root_is_the_engine_not_the_kb(tmp_path, monkeypatch):
+    """The owner runs from the engine with no KB: the tile must read the engine's .cache/share even when the app
+    serves a kb elsewhere (vault_root() points at the kb), or it reports 'owner not running'."""
+    import datetime
+    from kb_distillery.publish.cloudflare import contracts, owner
+    from kb_distillery.services import ops
+    engine, kb = tmp_path / "engine", tmp_path / "kb"
+    engine.mkdir()
+    kb.mkdir()
+    monkeypatch.delenv("KB_SHARE_OWNER_STATUS", raising=False)
+    monkeypatch.setattr(contracts, "REPO", engine)
+    monkeypatch.setattr(owner, "primary_root", lambda r: r)
+    monkeypatch.setattr(ops, "vault_root", lambda: str(kb))
+    now = datetime.datetime(2026, 11, 3, 17, 0, tzinfo=datetime.timezone.utc)
+    _owner_fixture(engine, {}, {}, (now - datetime.timedelta(minutes=2)).isoformat())
+    d = ops.deploy_state(now=now.timestamp(), plist=str(tmp_path / "none"), main=(None, None))
+    assert d["owner_alive"] is True and d["heartbeat_age"] == 120

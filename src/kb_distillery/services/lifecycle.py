@@ -31,6 +31,19 @@ def _git(root, *args):
     return subprocess.run(["git", *args], cwd=root, capture_output=True, text=True, check=False).stdout.strip()
 
 
+def hooks_installed(root):
+    """Do the kb's git hooks really run? `core.hooksPath` (absolute, or relative to the work tree top, as git reads it)
+    must point at a folder whose pre-commit, commit-msg and pre-push are executable: git skips any other silently.
+    No comparison with one fixed path: a kb outside the engine gets an absolute one, a kb inside a relative one."""
+    from kb_distillery.git.install_hooks import GIT_HOOKS, _executable
+    configured = _git(root, "config", "core.hooksPath")
+    if not configured:
+        return False
+    top = _git(root, "rev-parse", "--show-toplevel") or root
+    folder = os.path.normpath(os.path.join(top, os.path.expanduser(configured)))
+    return all(_executable(os.path.join(folder, name)) for name in GIT_HOOKS)
+
+
 def _github_url(root):
     url = _git(root, "remote", "get-url", "origin")
     m = re.search(r"github\.com[:/](.+?)(\.git)?$", url)
@@ -76,7 +89,7 @@ def build_lifecycle_snapshot(root=ROOT, limit=150):
             "pending": pending_migrations(root),
         },
         "policy": {
-            "hooks_installed": _git(root, "config", "core.hooksPath") == "scripts/githooks",
+            "hooks_installed": hooks_installed(root),
             "mode": os.environ.get("KB_POLICY", GIT_POLICY_MODE),
             "strict": OPS_STRICT,
         },
