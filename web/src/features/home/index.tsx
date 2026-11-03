@@ -17,10 +17,12 @@ export default function Home() {
       openPage: (slug) => void navigate({ to: `/pages/${encodeURIComponent(slug)}` as "/" }),
       pageHref: (slug) => `${base}/pages/${encodeURIComponent(slug)}`,
       // replace + resetScroll:false: picking a concept must keep the page where it is
+      // the Start card was dismissed: the same page without `?start`, so it does not return from the address bar
+      closeStart: () => void navigate({ to: "/", search: ((prev: Record<string, unknown>) => ({ ...prev, start: undefined })) as never, replace: true, resetScroll: false }),
       setConcept: (slug) => void navigate({ to: "/", search: { concept: slug } as never, replace: true, resetScroll: false }),
     }),
     [navigate],
   );
-  const { concept } = useSearch({ strict: false }) as SearchById["home"];
-  return <HomeScreen host={host} concept={concept} />;
+  const { concept, start } = useSearch({ strict: false }) as SearchById["home"];
+  return <HomeScreen host={host} concept={concept} startForced={start === true} />;
 }

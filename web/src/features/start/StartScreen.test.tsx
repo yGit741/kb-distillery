@@ -23,6 +23,7 @@ function open(over: Partial<DataSource> = {}) {
         getLifecycle: async () => snap,
         getShareStatus: async () => ({ status: null, chip: null }),
         getGraphNodes: async () => [],
+        getGraph: async () => ({ nodes: [], links: [], concept_links: [], facets: { types: [], maturities: [], areas: [] } }) as never,
         ...over,
       })}
       router={router}
@@ -30,7 +31,8 @@ function open(over: Partial<DataSource> = {}) {
   );
 }
 
-describe("Start screen", () => {
+// /start redirects to Home (?start), where the guide is the "Start here" card: these tests go through that redirect.
+describe("Start guide (Home card behind /start)", () => {
   it("lists the same sections as the legacy Start page", async () => {
     open();
     expect(await screen.findByRole("heading", { name: "Start here" })).toBeInTheDocument();

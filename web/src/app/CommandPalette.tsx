@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/command";
 import { useFlag } from "@/flags/useFlag";
 import { routeOffered } from "@/routes/defs";
-import { ROUTES } from "@/routes/registry";
+import { ROUTES, movedTarget } from "@/routes/registry";
 import { IS_SHARE } from "@/share/env";
 import { useUi } from "./ui-store";
 
@@ -54,7 +54,7 @@ export function CommandPalette() {
       <CommandList>
         <CommandEmpty>No matching command.</CommandEmpty>
         <CommandGroup heading="Go to">
-          {ROUTES.filter(routeOffered).map((r) => (
+          {ROUTES.filter((r) => routeOffered(r) && !movedTarget(r)).map((r) => (
             <CommandItem key={r.id} value={`${r.label} ${r.blurb}`} onSelect={() => go(r.path)}>
               <span className="font-medium">{r.label}</span>
               <span className="truncate text-xs text-muted-foreground">{r.blurb}</span>

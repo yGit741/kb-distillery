@@ -53,14 +53,22 @@ function Section({ title, help, children }: { title: string; help?: ReactNode; c
   );
 }
 
-export function StartScreen() {
+/**
+ * The Start guide: heading, intro and every section. Home shows it as its dismissable "Start here" card
+ * (`heading="h2"`, with a Dismiss control in `actions`); `StartScreen` is the same guide as a page.
+ */
+export function StartGuide({ heading = "h1", actions }: { heading?: "h1" | "h2"; actions?: ReactNode }) {
+  const Heading = heading;
   return (
     <div className="flex min-w-0 flex-col gap-4">
-      <div>
-        <h1 className="text-2xl font-semibold">Start here</h1>
-        <p className="text-sm text-foreground/75 break-words">
-          How to add and edit knowledge, and how to build a new feature for the knowledge base. You talk to the agent (Claude Code or Cursor); the trigger phrases below pick the right skill, and every change lands as one reviewable git commit.
-        </p>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <Heading className={heading === "h1" ? "text-2xl font-semibold" : "text-lg font-semibold"}>Start here</Heading>
+          <p className="text-sm text-foreground/75 break-words">
+            How to add and edit knowledge, and how to build a new feature for the knowledge base. You talk to the agent (Claude Code or Cursor); the trigger phrases below pick the right skill, and every change lands as one reviewable git commit.
+          </p>
+        </div>
+        {actions}
       </div>
 
       <Now />
@@ -175,3 +183,5 @@ export function StartScreen() {
     </div>
   );
 }
+
+export const StartScreen = () => <StartGuide />;

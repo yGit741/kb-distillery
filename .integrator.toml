@@ -31,7 +31,6 @@ screens = [
   { id = "scopes", path = "/scopes" },
   { id = "pipeline", path = "/pipeline" },
   { id = "lifecycle", path = "/lifecycle" },
-  { id = "start", path = "/start" },
   { id = "covector", path = "/covector" },
 ]
 
