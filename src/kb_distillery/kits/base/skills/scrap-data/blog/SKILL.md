@@ -1,6 +1,8 @@
 ---
 name: scrap-data-blog
 description: Pull every post of a WordPress.com blog into raw/inbox/ as Markdown clips with lossless math and downloaded figures (0 LLM). Use for scrap blog, pull the blog, archive a wordpress blog. Do NOT catalog or digest from here.
+audience: app
+mode: write
 ---
 
 # scrap-data / blog

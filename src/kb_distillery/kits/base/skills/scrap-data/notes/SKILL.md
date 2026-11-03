@@ -1,6 +1,8 @@
 ---
 name: scrap-data-notes
 description: Stage handwritten notes or reMarkable exports to raw/inbox/. Stub. Do NOT catalog or digest from here.
+audience: app
+mode: write
 ---
 
 # scrap-data / notes

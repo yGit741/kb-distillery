@@ -4,6 +4,8 @@ description: >-
   Rules for building screens in the React app under web/ (tokens, components, one palette,
   data-model vocabulary, porting checklist). Use for port a screen, add a screen, frontend,
   app shell, shadcn component, data palette. Do NOT use for wiki edits.
+audience: dev
+mode: write
 ---
 
 # app-ui

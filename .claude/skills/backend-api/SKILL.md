@@ -5,6 +5,8 @@ description: >-
   regenerate the typed frontend client, write pytest tests. Use whenever the user wants a new or changed endpoint,
   route, API, SSE stream or backend test, even if they only say "expose X over HTTP". Use for add an endpoint,
   new router, api-schema. Do NOT use for React screens (app-ui), wiki/raw/think edits, or the removed legacy dashboard pages.
+audience: dev
+mode: write
 ---
 
 # backend-api

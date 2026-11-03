@@ -36,7 +36,9 @@ import threading
 import time
 from dataclasses import dataclass, field
 
+from kb_distillery.config.flags import runtime
 from kb_distillery.llm import agent as llm_agent
+from kb_distillery.services import agent_skills
 from kb_distillery.vault import links
 from kb_distillery.config.paths import vault_root
 META_DIR = os.path.join(vault_root(), "meta")
@@ -373,10 +375,14 @@ def _policy_web(tool_name, tool_input, scope):
 
 
 def _policy_skills(tool_name, tool_input, scope):
-    """Skill / subagents: denied for now (the skills PR adds the whitelist)."""
-    if tool_name in SKILL_TOOLS:
-        return Decision(False, f"read-only KB agent: tool {tool_name} is not available")
-    return None
+    """Skill / subagents: denied, except under agent mode: `Skill` only for the kb's whitelisted app skills
+    (`[agent] skills`) and `Agent` / `Task` only for the subagents agent_skills defines (read-only tools, this same policy)."""
+    if tool_name not in SKILL_TOOLS:
+        return None
+    if runtime.effective("agent-mode"):
+        allow, reason = agent_skills.decide(tool_name, tool_input)
+        return Decision(allow, reason)
+    return Decision(False, f"read-only KB agent: tool {tool_name} is not available")
 
 
 def _policy_attachments(tool_name, tool_input, scope):
@@ -427,10 +433,17 @@ def make_can_use_tool(policy=tool_policy, scope=None):
 
 
 def agent_request(question, model, system, session_id=None, scope=None, history=None, effort=None, budget=None):
+    tools, disallowed, extra = tuple(TOOLS), tuple(DISALLOWED_TOOLS), {}
+    skills = agent_skills.enabled() if runtime.effective("agent-mode") else []
+    if skills:           # whitelisted skills ride in a generated local plugin; the policy hook still checks every call
+        tools += ("Skill", "Agent")
+        disallowed = tuple(t for t in disallowed if t not in ("Skill", "Agent", "Task"))
+        extra = dict(skills=tuple(agent_skills.qualified(s) for s in skills),
+                     plugins=(agent_skills.plugin_dir(skills),), agents=agent_skills.subagents())
     return llm_agent.AgentRequest(
         question=question, model=model, system=system, effort=effort, budget=budget, session=session_id or None,
-        tools=tuple(TOOLS), disallowed=tuple(DISALLOWED_TOOLS), scope=scope, cwd=ROOT, max_turns=MAX_TURNS,
-        fresh_prompt=_history_prefix(history) + question if history else None)
+        tools=tools, disallowed=disallowed, scope=scope, cwd=ROOT, max_turns=MAX_TURNS,
+        fresh_prompt=_history_prefix(history) + question if history else None, **extra)
 
 
 def build_options(model, system, key, session_id=None, cli_path=None, ca_path=None, stderr=None, scope=None):

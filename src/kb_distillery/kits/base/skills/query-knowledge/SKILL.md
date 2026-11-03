@@ -1,6 +1,8 @@
 ---
 name: query-knowledge
 description: Answer questions from the wiki — index-first navigation, citations, optional file-back. Use for query-knowledge, query-kb, query kb, what do I know about, where did I read, compare, explain from my notes. Do NOT answer from memory without searching; raw sources go through explore-raw-data.
+audience: app
+mode: read
 ---
 
 # query-knowledge

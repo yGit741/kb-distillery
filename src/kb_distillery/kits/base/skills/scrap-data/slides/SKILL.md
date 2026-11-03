@@ -1,6 +1,8 @@
 ---
 name: scrap-data-slides
 description: Stage lecture decks to raw/inbox/. Stub. Do NOT catalog or digest from here.
+audience: app
+mode: write
 ---
 
 # scrap-data / slides
