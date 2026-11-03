@@ -48,6 +48,26 @@ describe("toEvent", () => {
   });
 });
 
+describe("ask and web sources", () => {
+  it("parses an ask event and drops questions without options", () => {
+    const ev = toEvent({ event: "ask", data: JSON.stringify({ id: "a1", questions: [
+      { question: "Pick", multiSelect: true, options: [{ label: "A", description: "x" }, { label: "" }] },
+      { question: "No options", options: [] },
+    ] }) });
+    expect(ev).toEqual({ type: "ask", id: "a1", questions: [{ question: "Pick", header: undefined, multiSelect: true, options: [{ label: "A", description: "x" }] }] });
+    expect(toEvent({ event: "ask", data: JSON.stringify({ questions: [] }) })).toBeNull();
+  });
+  it("keeps the kind of a hit; refuses a web hit that is not http(s)", () => {
+    const ev = toEvent({ event: "sources", data: JSON.stringify({ hits: [
+      { slug: "a", score: 1 },
+      { kind: "web", url: "https://x.org/p", title: "P" },
+      { kind: "web", url: "javascript:alert(1)", title: "bad" },
+    ], new: ["a"] }) });
+    expect(ev).toMatchObject({ type: "sources", hits: [{ slug: "a" }, { kind: "web", url: "https://x.org/p", title: "P" }] });
+    expect((ev as { hits: unknown[] }).hits).toHaveLength(2);
+  });
+});
+
 describe("readEvents", () => {
   it("reassembles frames split across chunks, drops pings, batches per chunk", async () => {
     const batches: ChatEvent[][] = [];

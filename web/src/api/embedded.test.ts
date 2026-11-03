@@ -55,7 +55,7 @@ describe("embedded DataSource", () => {
       () => ds.saveScope({} as never), () => ds.deleteScope("s"), () => ds.duplicateScope("s", {} as never),
       () => ds.getChatStatus(), () => ds.getChatSettings(), () => ds.updateChatSettings({} as never), () => ds.getChatPrompts(),
       () => ds.getChatKeys(), () => ds.addChatKey({} as never), () => ds.removeChatKey("k"), () => ds.saveChat({} as never),
-      () => ds.chatStream({} as never),
+      () => ds.chatStream({} as never), () => ds.answerChat({} as never),
     ];
     for (const c of calls) await expect(c()).rejects.toMatchObject({ status: 404 });
   });

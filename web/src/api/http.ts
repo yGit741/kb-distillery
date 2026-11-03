@@ -130,6 +130,7 @@ export function createHttpDataSource(fetchImpl: Fetch = (...a) => fetch(...a), b
     removeChatKey: (name) =>
       run(() => client.DELETE("/api/chat/keys/{name}", { params: { path: { name } } }), `/api/chat/keys/${name}`),
     saveChat: (body) => run(() => client.POST("/api/chat/saved", { body }), "/api/chat/saved"),
+    answerChat: (body) => run(() => client.POST("/api/chat/answer", { body }), "/api/chat/answer"),
     chatStream: async (body, signal) => {
       let res: Response;
       try {

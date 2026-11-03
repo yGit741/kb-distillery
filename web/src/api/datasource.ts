@@ -65,6 +65,8 @@ export interface DataSource {
   removeChatKey(name: string): Promise<T.ChatStatus>;
   saveChat(body: T.SavedChat): Promise<T.SavedChatResult>;
   /** POST /api/chat; the caller reads `response.body` as server-sent events. */
+  /** POST /api/chat/answer: the reply to an `ask` event. */
+  answerChat(body: T.ChatAnswer): Promise<T.ChatAnswerResult>;
   chatStream(body: T.ChatRequest, signal?: AbortSignal): Promise<Response>;
 
   // think (local app only; never in share builds)

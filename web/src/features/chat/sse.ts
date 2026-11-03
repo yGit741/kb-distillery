@@ -1,10 +1,24 @@
 /** Typed server-sent-events reader for POST /api/chat. Pure parsing here; no fetch, no React. */
 
 export interface SourceHit {
+  /** "wiki" (default) or "web": a web hit carries url and title and has no slug. */
+  kind?: "wiki" | "web";
   slug: string;
+  url?: string;
+  title?: string;
   score: number;
   summary: string;
   in_context: boolean;
+}
+export interface AskOption {
+  label: string;
+  description?: string;
+}
+export interface AskQuestion {
+  question: string;
+  header?: string;
+  multiSelect?: boolean;
+  options: AskOption[];
 }
 export interface ToolStep {
   name: string;
@@ -29,6 +43,7 @@ export type ChatEvent =
   | { type: "sources"; hits: SourceHit[]; fresh: string[] }
   | { type: "session"; id: string }
   | { type: "tool"; step: ToolStep }
+  | { type: "ask"; id: string; questions: AskQuestion[] }
   | { type: "notice"; text: string }
   | { type: "delta"; text: string }
   | { type: "usage"; usage: Usage }
@@ -89,14 +104,16 @@ export function toEvent(frame: RawFrame): ChatEvent | null {
       return typeof payload === "string" ? { type: "delta", text: payload } : null;
     case "sources": {
       if (!isObj(payload)) return null;
-      const hits = (Array.isArray(payload.hits) ? payload.hits : []).filter(isObj).map((h) => ({
-        slug: String(h.slug ?? ""),
-        score: num(h.score),
-        summary: typeof h.summary === "string" ? h.summary : "",
-        in_context: h.in_context === true,
-      }));
+      const hits = (Array.isArray(payload.hits) ? payload.hits : []).filter(isObj).map((h): SourceHit => {
+        const base = { score: num(h.score), summary: typeof h.summary === "string" ? h.summary : "", in_context: h.in_context === true };
+        if (h.kind === "web") {
+          const url = typeof h.url === "string" && /^https?:\/\//.test(h.url) ? h.url : "";
+          return { ...base, kind: "web", slug: "", url, title: typeof h.title === "string" && h.title ? h.title : url };
+        }
+        return { ...base, ...(h.kind === "wiki" ? { kind: "wiki" as const } : {}), slug: String(h.slug ?? "") };
+      });
       const fresh = (Array.isArray(payload.new) ? payload.new : []).filter((s): s is string => typeof s === "string");
-      return { type: "sources", hits: hits.filter((h) => h.slug), fresh };
+      return { type: "sources", hits: hits.filter((h) => (h.kind === "web" ? h.url : h.slug)), fresh };
     }
     case "session":
       return isObj(payload) && typeof payload.id === "string" ? { type: "session", id: payload.id } : null;
@@ -111,6 +128,19 @@ export function toEvent(frame: RawFrame): ChatEvent | null {
           error: payload.error === true ? true : undefined,
         },
       };
+    case "ask": {
+      if (!isObj(payload) || typeof payload.id !== "string") return null;
+      const questions = (Array.isArray(payload.questions) ? payload.questions : []).filter(isObj).map((q): AskQuestion => ({
+        question: String(q.question ?? ""),
+        header: typeof q.header === "string" ? q.header : undefined,
+        multiSelect: q.multiSelect === true,
+        options: (Array.isArray(q.options) ? q.options : []).filter(isObj).map((o) => ({
+          label: String(o.label ?? ""),
+          description: typeof o.description === "string" ? o.description : undefined,
+        })).filter((o) => o.label),
+      })).filter((q) => q.question && q.options.length);
+      return questions.length ? { type: "ask", id: payload.id, questions } : null;
+    }
     case "notice":
       return isObj(payload) && typeof payload.text === "string" ? { type: "notice", text: payload.text } : null;
     case "usage":

@@ -105,6 +105,38 @@ describe("ChatScreen", () => {
     expect(calls[1]!.body.history).toHaveLength(2);
   });
 
+  it("an ask event shows option buttons; a click POSTs the answer and the turn goes on", async () => {
+    const answers: unknown[] = [];
+    const { calls } = setup({ answerChat: async (b) => { answers.push(b); return { ok: true }; } });
+    const user = userEvent.setup();
+    await user.type(await box(), "compare them{Enter}");
+    await waitFor(() => expect(calls).toHaveLength(1));
+    const s = calls[0]!.stream;
+    s.push("session", { id: "sess-9" });
+    s.push("ask", { id: "toolu_1", questions: [{ question: "Which scope?", header: "Scope", multiSelect: false, options: [{ label: "Wiki only", description: "" }, { label: "Wiki and web" }] }] });
+    expect(await screen.findByText("Which scope?")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Wiki and web" }));
+    await waitFor(() => expect(answers).toEqual([{ session: "sess-9", id: "toolu_1", answers: { "Which scope?": "Wiki and web" } }]));
+    await waitFor(() => expect(screen.queryByText("Which scope?")).toBeNull());
+    s.push("delta", "Using both.");
+    expect(await screen.findByText("Using both.")).toBeInTheDocument();
+  });
+
+  it("web sources render as external links with a globe icon", async () => {
+    const { calls } = setup();
+    const user = userEvent.setup();
+    await user.type(await box(), "news{Enter}");
+    await waitFor(() => expect(calls).toHaveLength(1));
+    calls[0]!.stream.push("sources", { hits: [
+      { kind: "wiki", slug: "tensor-rank", score: 1, summary: "", in_context: false },
+      { kind: "web", url: "https://example.com/a", title: "Example A", score: 1, summary: "", in_context: false },
+    ], new: ["tensor-rank"] });
+    const link = await screen.findByRole("link", { name: "Example A" });
+    expect(link).toHaveAttribute("href", "https://example.com/a");
+    expect(link).toHaveAttribute("target", "_blank");
+    expect(link.querySelector("svg")).not.toBeNull();
+  });
+
   it("Stop aborts the stream and marks the answer stopped", async () => {
     const { calls } = setup();
     const user = userEvent.setup();
