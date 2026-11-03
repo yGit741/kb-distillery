@@ -20,7 +20,7 @@ with its kit, prints what changed (nothing to do prints "already up to date") an
 commit: review the changes and commit them with `distill ops chore hooks "refresh kit files"`.
 
 No LLM is needed or asked for: init never reads or stores a key. AI features stay off until a Claude subscription login
-or an API key exists (`kbd doctor` shows which). Prompts appear only when stdin is a terminal and `--yes` is absent.
+or an API key exists (`distill doctor` shows which). Prompts appear only when stdin is a terminal and `--yes` is absent.
 
 The first commit goes through the engine's own kb-repo code (`kb_distillery.ops.core._git` / `_commit_paths`: no hooks, no push, no
 lint), as `kb(import): …` because commit_policy has no init op. Identity: the user's git config, else a local fallback.
@@ -61,7 +61,7 @@ meta/.migrate/
 KEEP = ("wiki/.gitkeep", "raw/inbox/.gitkeep", "meta/.gitkeep")
 AGENTS_FILE, README_FILE = "AGENTS.template.md", "README.template.md"
 LLM_LINE = ("AI features (digest, chat, proposals) stay off until you add a Claude subscription login (`claude login`) or an "
-            "API key (ANTHROPIC_API_KEY, or " + userdir.display("anthropic_key") + "); `kbd doctor` shows which backends work.")
+            "API key (ANTHROPIC_API_KEY, or " + userdir.display("anthropic_key") + "); `distill doctor` shows which backends work.")
 
 
 class InitError(Exception):
@@ -84,7 +84,7 @@ def plan_target(parent: str, kb_id: str, home: str | None = None) -> str:
     if parent == home or target == home:
         raise InitError(f"refusing to create a knowledge base directly in your home directory ({home}): pass --dir <folder>")
     if os.path.lexists(target):
-        raise InitError(f"{target} already exists: init never overwrites. Pick another --kb-id, or open it with `kbd launch --kb {kb_id}`")
+        raise InitError(f"{target} already exists: init never overwrites. Pick another --kb-id, or open it with `distill launch --kb {kb_id}`")
     return target
 
 
@@ -367,7 +367,7 @@ def run_refresh() -> int:
 
 def launch_command(target: str, kb_id: str, parent: str) -> str:
     in_bases = os.path.realpath(parent) == os.path.realpath(kbconfig.bases_dir())
-    return f"kbd launch --kb {kb_id if in_bases else target}"
+    return f"distill launch --kb {kb_id if in_bases else target}"
 
 
 def _ask(prompt: str, default: str) -> str:

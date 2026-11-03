@@ -345,6 +345,15 @@ def nightly_status(root=ROOT):
     return {"installed": installed, "loaded": loaded, "last_run": last_run, "summary": summary, "hint": hint}
 
 
+def nightly_in_use(root=ROOT):
+    """Has this kb opted into the nightly sync: a sync config, a recorded run, or the launchd job on this machine?
+
+    A kb that never did (a fresh `distill init`) has no nightly to report on, so the System screen shows nothing about it."""
+    from . import runlog
+    return (os.path.isfile(os.path.join(root, "meta", "ops", "sync.toml")) or os.path.isfile(NIGHTLY_PLIST)
+            or bool(runlog.read(root, 1)))
+
+
 def think_repo(root=ROOT):
     """Where kb(think) commits go: the shared think repo (`kbs/think/`, its own git history) when
     it is one, else the vault itself (legacy layout, think/ inside the vault)."""

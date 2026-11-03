@@ -7,7 +7,7 @@ from kb_distillery.server.app import create_app
 from kb_distillery.server.models.ops import OpsSnapshot
 
 CANNED = {"subject": "nightly", "doc": {"blocks": []}, "runs": [{"at": "t"}], "legacy_extra": 1,
-          "queue": {"holder": None, "waiters": [], "stale_after": 1200}, "deploy": None}
+          "queue": {"holder": None, "waiters": [], "stale_after": 1200}, "deploy": None, "maintainer": True}
 
 
 def test_ops_model_and_refresh_flag():
@@ -115,3 +115,20 @@ def test_deploy_state_stale_failed_network_is_not_queued(tmp_path):
     }, {}, iso(1))
     d = ops.deploy_state(str(tmp_path), now=now, plist=str(tmp_path / "none"), main=("e" * 40, now))
     assert d["queued"] == ["e" * 40]
+
+
+def test_maintainer_ops_is_false_for_a_fresh_kb_and_true_once_it_opted_in(tmp_path, monkeypatch):
+    """A new kb has no nightly, deploy owner or publisher: the System screen leaves those tiles out."""
+    from kb_distillery import publish
+    from kb_distillery.ops import core
+    from kb_distillery.services import ops
+    monkeypatch.setattr(core, "NIGHTLY_PLIST", str(tmp_path / "none.plist"))
+    monkeypatch.setattr(ops, "OWNER_PLIST", str(tmp_path / "none-owner.plist"))
+    monkeypatch.setattr(publish, "current", lambda *a, **k: publish.NullPublisher(str(tmp_path), reason="none"))
+    assert ops.maintainer_ops(str(tmp_path)) is False
+    (tmp_path / "meta" / "ops").mkdir(parents=True)
+    (tmp_path / "meta" / "ops" / "sync.toml").write_text("")
+    assert ops.maintainer_ops(str(tmp_path)) is True
+    (tmp_path / "meta" / "ops" / "sync.toml").unlink()
+    monkeypatch.setattr(publish, "current", lambda *a, **k: object())
+    assert ops.maintainer_ops(str(tmp_path)) is True

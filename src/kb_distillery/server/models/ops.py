@@ -39,6 +39,7 @@ class DeployState(ApiModel):
 
 
 class OpsSnapshot(ApiModel):
+    maintainer: bool = True             # the kb uses nightly / deploy-owner / a publisher; False hides those tiles
     subject: str | None = None
     doc: dict[str, Any] = {}
     queue: MergeQueue | None = None

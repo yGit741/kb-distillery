@@ -1,7 +1,7 @@
 """The knowledge base behind this app (`/api/kb`) and every one the explorer can see (`/api/kb/list`).
 
 Facts only, read from kb.toml, the folder and its git repo: no writes. Switching the active knowledge base
-is a relaunch (`kbd launch --kb <id|path>`): ROOT is resolved when the process starts.
+is a relaunch (`distill launch --kb <id|path>`): ROOT is resolved when the process starts.
 """
 import os
 import subprocess
@@ -56,7 +56,7 @@ def active():
         "digest": [{"part": part, "origin": origin, "path": path} for part, (path, origin) in instruction_files().items()],
         "flags_registry": FLAGS_SOURCE, "meta_overrides": _meta_overrides(root),
         "bases_dir": kbconfig.bases_dir(),
-        "relaunch": "kbd launch --kb <id|path>",
+        "relaunch": "distill launch --kb <id|path>",
     }
 
 

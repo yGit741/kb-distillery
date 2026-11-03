@@ -56,7 +56,7 @@ export const FLAGS: Readonly<Record<FlagName, FlagMeta>> = {
     }
   },
   "research-tools": {
-    "description": "Graph research toolkit: the Experiments, Theme spectrum, Noise stability, Sharp thresholds and Research directions tools, the Thesis and Explore views, and the thesis-story and boolean-bridge tours. Thesis-kb content; off elsewhere.",
+    "description": "Graph research toolkit: the Experiments, Theme spectrum, Noise stability, Sharp thresholds and Research directions tools, the Thesis and Explore views, the thesis-story and boolean-bridge tours, and the /covector physics demo page. The owner's own content; off elsewhere.",
     "owner": "maintainer",
     "created": "2026-11-02",
     "expires": "2027-01-30",

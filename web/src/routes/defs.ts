@@ -15,6 +15,8 @@ export interface RouteDef {
   nav?: boolean;
   /** A build flag (meta/flags.toml) that must be on in this env for the route to exist. Absent: always on. */
   flag?: FlagName;
+  /** A runtime flag: the route is in the build, but only offered (palette) and shown (screen) while it is on. */
+  runtimeFlag?: FlagName;
 }
 
 const ALL_ROUTE_DEFS: readonly RouteDef[] = [
@@ -30,9 +32,12 @@ const ALL_ROUTE_DEFS: readonly RouteDef[] = [
   { id: "share", path: "/share", label: "Share", blurb: "Public snapshots of the private site.", flag: "screen.share", nav: true },
   { id: "think", path: "/think", label: "Think", blurb: "Your own slow notes: edit, and capture quick thoughts.", flag: "screen.think" },
   { id: "start", path: "/start", label: "Start", blurb: "How to add and edit knowledge, and how to build a feature.", flag: "screen.start" },
-  { id: "covector", path: "/covector", label: "Covector", blurb: "Interactive picture of a covector acting on a vector." },
+  { id: "covector", path: "/covector", label: "Covector", blurb: "Interactive picture of a covector acting on a vector.", runtimeFlag: "research-tools" },
   // A route whose flag is off in this env is dropped here (screen.share: private site only).
 ];
 
 export const routeDefsNow = (): RouteDef[] => ALL_ROUTE_DEFS.filter((d) => !d.flag || flag(d.flag));
 export const ROUTE_DEFS: readonly RouteDef[] = routeDefsNow();
+
+/** Whether a route is offered now: its runtime flag, if any, is on (it can arrive after start, see flags/load.ts). */
+export const routeOffered = (d: Pick<RouteDef, "runtimeFlag">): boolean => !d.runtimeFlag || flag(d.runtimeFlag);

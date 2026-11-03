@@ -13,6 +13,8 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
+import { useFlag } from "@/flags/useFlag";
+import { routeOffered } from "@/routes/defs";
 import { ROUTES } from "@/routes/registry";
 import { IS_SHARE } from "@/share/env";
 import { useUi } from "./ui-store";
@@ -20,6 +22,7 @@ import { useUi } from "./ui-store";
 /** The ONE ⌘K palette, mounted once in AppShell. Screens add commands by extending this list later. */
 export function CommandPalette() {
   const { paletteOpen, setPaletteOpen } = useUi();
+  useFlag("research-tools"); // re-render when the flag lands: it decides whether Covector is listed
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -51,7 +54,7 @@ export function CommandPalette() {
       <CommandList>
         <CommandEmpty>No matching command.</CommandEmpty>
         <CommandGroup heading="Go to">
-          {ROUTES.map((r) => (
+          {ROUTES.filter(routeOffered).map((r) => (
             <CommandItem key={r.id} value={`${r.label} ${r.blurb}`} onSelect={() => go(r.path)}>
               <span className="font-medium">{r.label}</span>
               <span className="truncate text-xs text-muted-foreground">{r.blurb}</span>

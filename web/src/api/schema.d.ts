@@ -1922,6 +1922,11 @@ export interface components {
             doc: {
                 [key: string]: unknown;
             };
+            /**
+             * Maintainer
+             * @default true
+             */
+            maintainer: boolean;
             queue?: components["schemas"]["MergeQueue"] | null;
             /** Subject */
             subject?: string | null;
