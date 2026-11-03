@@ -12,6 +12,7 @@ from unittest.mock import patch
 import jwt
 
 from kb_distillery.git import app_token, events, ship
+from tests.needs_git import needs_git
 
 TOKEN = "ghs_FAKEtoken1234567890"
 FAKE_GH = """#!/bin/bash
@@ -107,6 +108,7 @@ class AppTokenTest(unittest.TestCase):
         self.assertEqual(len(log), 2)
         self.assertTrue(all(l.startswith(f"GH_TOKEN={TOKEN} ") for l in log))
 
+    @needs_git
     def test_whoami_bot_without_token_in_output(self):
         out = io.StringIO()
         with patch.object(ship, "ROOT", self.root), contextlib.redirect_stdout(out):
