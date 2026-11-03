@@ -1,0 +1,19 @@
+{
+  "pages": 9,
+  "errors": [
+    "wiki/dict.md: [sources] `sources` is not a list: {'resource': 'a.md'}",
+    "wiki/dupkey.md: [sources] source entry without `resource`: {'title': 'first'}",
+    "wiki/dupkey.md: [sources] source entry without `resource`: {'title': 'second'}",
+    "wiki/entries.md: [sources] source entry without `resource`: 'bare string'",
+    "wiki/entries.md: [sources] source entry without `resource`: {'title': 'no resource', 'n': 1}",
+    "wiki/entries.md: [sources] source entry without `resource`: {'resource': '', 'title': 'empty'}",
+    "wiki/entries.md: [sources] source entry without `resource`: ['nested', 'list']",
+    "wiki/entries.md: [sources] source entry without `resource`: 7",
+    "wiki/entries.md: [sources] source entry without `resource`: None",
+    "wiki/entries.md: [sources] source entry without `resource`: {'resource': 0}",
+    "wiki/merge.md: [sources] source entry without `resource`: {'title': 'x'}",
+    "wiki/number.md: [sources] `sources` is not a list: 5",
+    "wiki/string.md: [sources] `sources` is not a list: 'beta'"
+  ],
+  "warnings": []
+}

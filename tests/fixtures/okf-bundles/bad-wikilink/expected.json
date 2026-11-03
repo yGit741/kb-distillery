@@ -1,0 +1,19 @@
+{
+  "pages": 5,
+  "errors": [
+    "wiki/dupes.md: [wikilink] [[a]]",
+    "wiki/dupes.md: [wikilink] [[z]]",
+    "wiki/dupes.md: [wikilink] [[é]]",
+    "wiki/dupes.md: [wikilink] [[Ａ]]",
+    "wiki/dupes.md: [wikilink] [[😀]]",
+    "wiki/index.md: [wikilink] [[in-index]]",
+    "wiki/multiline.md: [wikilink] [[ ]]",
+    "wiki/ok.md: [wikilink] [[after notes]]",
+    "wiki/plain.md: [wikilink] ![[embed.png]]",
+    "wiki/plain.md: [wikilink] [[a|label]]",
+    "wiki/plain.md: [wikilink] [[b]]",
+    "wiki/plain.md: [wikilink] [[c#h]]",
+    "wiki/sub/index.md: [wikilink] [[also-flagged]]"
+  ],
+  "warnings": []
+}

@@ -1,0 +1,3 @@
+# Index
+
+[[in-index]]

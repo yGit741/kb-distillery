@@ -1,0 +1,25 @@
+{
+  "pages": 8,
+  "errors": [
+    "wiki/anchors.md: [link] unresolved anchor: target.md#nope",
+    "wiki/anchors.md: [link] unresolved anchor: target.md#not-a-heading",
+    "wiki/anchors.md: [link] unresolved anchor: #nope",
+    "wiki/anchors.md: [link] unresolved: gone.json#frag",
+    "wiki/anchors.md: [link] unresolved anchor: target.md#type",
+    "wiki/schemes.md: [link] unresolved: ftp.md",
+    "wiki/schemes.md: [link] unresolved: 1a:b.md",
+    "wiki/titles.md: [link] unresolved anchor: target.md#section-one\"x\"",
+    "wiki/titles.md: [link] unresolved: gone.png",
+    "wiki/titles.md: [link] unresolved: gone.md#a#b",
+    "wiki/titles.md: [link] unresolved: gone%20x.md",
+    "wiki/unresolved.md: [link] unresolved: nope.md",
+    "wiki/unresolved.md: [link] unresolved: /wiki/nope.md",
+    "wiki/unresolved.md: [link] unresolved: sub/nope.md",
+    "wiki/unresolved.md: [link] unresolved: sub",
+    "wiki/unresolved.md: [link] unresolved: sub/",
+    "wiki/unresolved.md: [link] unresolved: ../outside.md",
+    "wiki/unresolved.md: [link] unresolved: /target.md",
+    "wiki/unresolved.md: [link] unresolved: /"
+  ],
+  "warnings": []
+}
