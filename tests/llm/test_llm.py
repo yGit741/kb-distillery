@@ -481,7 +481,6 @@ LEGACY = {
     "metrics/judge.py",
     "metrics/golden.py",
     "services/chat.py",           # dashboard chat (interactive, streaming)
-    "services/chat_agent.py",     # dashboard research agent (Agent SDK; has its own subscription/api_key switch)
 }
 DIRECT = re.compile(r'"claude",\s*"-p"|api\.anthropic\.com|import anthropic|from anthropic|claude_agent_sdk')
 
