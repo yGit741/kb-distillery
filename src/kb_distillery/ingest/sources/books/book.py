@@ -49,13 +49,15 @@ def _pdf():
     """The PDF reader, or None (with a hint on stderr) when the library is not installed."""
     if pdflib.available():
         return pdflib
-    print(pdflib.MISSING_MSG, file=sys.stderr)
+    print(pdflib.missing_msg(), file=sys.stderr)
     return None
 
 
 def page_count(raw_path):
+    if not os.path.isfile(raw_path) or not raw_path.lower().endswith(".pdf"):
+        return 0                       # not a PDF: no library needed (and no install hint)
     reader = _pdf()
-    if not reader or not os.path.isfile(raw_path) or not raw_path.lower().endswith(".pdf"):
+    if not reader:
         return 0
     doc = reader.PdfDoc(raw_path)
     n = doc.page_count

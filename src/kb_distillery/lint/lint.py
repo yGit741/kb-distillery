@@ -25,7 +25,7 @@ from kb_distillery.vault.schema import (ASSET_NAME, ASSET_PREFIX, BARE_TYPES, BL
                     DEPTH, DISTILLED_THINK_PREFIX, DUPE_PREFIX, GENERATED,
                     COLLECTION_TYPES, INK_PREFIX, PARTITION_COLLECTIONS, PAPER_NAME, PAPER_YEAR_MAX, PAPER_YEAR_MIN,
                     INBOX_ERROR, INBOX_STALE_DAYS, INK_SUFFIX,
-                    MANIFEST, MANIFEST_COLS, META_DIR, NEEDS_RAW, SOURCE_TYPES, PARSED_FILENAME,
+                    EQUATION_TYPES, MANIFEST, MANIFEST_COLS, META_DIR, NEEDS_RAW, SOURCE_TYPES, PARSED_FILENAME,
                     PLACEHOLDER_TITLE, RAW_NAME, RAW_NESTED, RAW_DIR, RAW_EMAILS, RAW_INBOX,
                     RAW_PRINTED, RAW_SUBDIRS, RAW_VIDEOS, VIDEO_ITEM, RESERVED_PREFIXES, ROOT_DIRS, ROOT_FILES,
                     ROOT_LINT_IGNORE, ROOT_MD, CONTENTS_COLLECTIONS, SIDECAR_ELIGIBLE_KINDS, SLUG_PREFIX,
@@ -959,12 +959,13 @@ def check_ingest_strict(pages, only_slugs=None):
         if fm.get("maturity") != "digested":
             err(rel, f"depth {tier} requires maturity: digested")
             continue
-        if "## Key equations" not in text:
-            err(rel, "full/deep digest missing ## Key equations section")
-            continue
-        block = text.split("## Key equations", 1)[1].split("\n##", 1)[0].strip()
-        if not block or block == "—" or len(block) < 8:
-            err(rel, "full/deep digest has empty Key equations (use LaTeX, not —)")
+        if fm.get("type") in EQUATION_TYPES:          # an article, mail or video has no equations to extract
+            if "## Key equations" not in text:
+                err(rel, "full/deep digest missing ## Key equations section")
+                continue
+            block = text.split("## Key equations", 1)[1].split("\n##", 1)[0].strip()
+            if not block or block == "—" or len(block) < 8:
+                err(rel, "full/deep digest has empty Key equations (use LaTeX, not —)")
         if slug not in theme_papers and str(fm.get("book") or "") not in theme_papers:
             warn(rel, f"[[{slug}]] not listed in any {TOPIC_PREFIX}*.md ## Papers section")
 

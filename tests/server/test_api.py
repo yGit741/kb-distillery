@@ -382,3 +382,15 @@ def test_ensure_app_dist_says_what_to_do_when_the_install_fails(tmp_path):
     msg = ensure_app_dist(fe, runner, fe / "dist")
     assert msg.startswith("frontend dependencies could not be installed") and "pixi run web-install" in msg
     assert "network" in msg and calls == ["ci"]                       # no build is attempted after a failed install
+
+
+def test_launch_from_a_wheel_skips_the_source_check_message(monkeypatch, capsys):
+    """An installed package has no web/ sources: `launch` must not print the source-checkout "checking sources" line."""
+    import uvicorn
+    from kb_distillery.server import __main__ as launch, spa
+    monkeypatch.setattr(spa, "frontend_dir", lambda: None)
+    monkeypatch.setattr(spa, "ensure_app_dist", lambda *a, **k: pytest.fail("no sources to check in a wheel"))
+    monkeypatch.setattr(uvicorn, "run", lambda *a, **k: None)
+    monkeypatch.setattr("kb_distillery.server.app.create_app", lambda: None)
+    assert launch.main(["--no-open"]) == 0
+    assert "checking sources" not in capsys.readouterr().out
