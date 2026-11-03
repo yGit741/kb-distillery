@@ -152,8 +152,9 @@ class NoOldPathsTests(unittest.TestCase):
 
     def test_the_skills_live_in_the_kits_and_the_dev_skills_are_real_files(self):
         self.assertFalse(os.path.islink(os.path.join(ROOT, ".claude", "skills")))
+        owner = (".claude/skills/infra-pr/SKILL.md",) if os.path.isdir(os.path.join(ROOT, ".claude", "skills")) else ()   # export-ignored from the public repo
         for rel in ("src/kb_distillery/kits/base/skills/query-knowledge/SKILL.md", "src/kb_distillery/kits/base/skills/_TEMPLATE.md",
-                    "src/kb_distillery/kits/research/skills/build-researcher-profile/SKILL.md", ".claude/skills/infra-pr/SKILL.md",
+                    "src/kb_distillery/kits/research/skills/build-researcher-profile/SKILL.md", *owner,
                     "docs/guides/write-a-skill.md"):
             self.assertTrue(os.path.isfile(os.path.join(ROOT, rel)), rel)
 

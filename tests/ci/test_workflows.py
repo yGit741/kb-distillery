@@ -60,13 +60,51 @@ class WorkflowShape(unittest.TestCase):
                 self.assertNotIn("secrets.", script, f"{name}/{job}: pass secrets through `env:`, not into the script text")
 
 
+PR_TRIGGERS = {"pull_request", "pull_request_target"}
+GITHUB_HOSTED = re.compile(r"^(ubuntu|macos|windows)-(latest|\d+(\.\d+)?(-arm64|-xlarge|-large)?)$")
+# the only self-hosted runner a job may name: picked while the repo is private, GitHub-hosted once it is public
+BY_VISIBILITY = ("${{ github.event.repository.private && fromJSON('[\"self-hosted\",\"macOS\",\"ARM64\"]') || 'macos-latest' }}")
+
+
+def runs_on_is_safe_for_forks(runs_on) -> bool:
+    """True when a job can only land on a self-hosted runner while the repo is private."""
+    return runs_on == BY_VISIBILITY or (isinstance(runs_on, str) and bool(GITHUB_HOSTED.match(runs_on)))
+
+
+class RunnerSafety(unittest.TestCase):
+    def test_no_pull_request_job_can_use_self_hosted_when_the_repo_is_public(self):
+        checked = 0
+        for name in workflows():
+            wf = load(name)
+            if not PR_TRIGGERS & set(triggers(wf) or ()):
+                continue
+            for job_name, job in wf["jobs"].items():
+                checked += 1
+                self.assertTrue(runs_on_is_safe_for_forks(job["runs-on"]),
+                                f"{name}/{job_name}: runs-on {job['runs-on']!r} may reach a self-hosted runner from a fork pull request; "
+                                "use the visibility expression or a GitHub-hosted label")
+        self.assertGreaterEqual(checked, 5)       # ci.yml (4 jobs) + secret-scan.yml
+
+    def test_the_guard_itself_rejects_self_hosted_labels(self):
+        for bad in (["self-hosted", "macOS", "ARM64"], "self-hosted", ["macos-latest"],
+                    "${{ fromJSON('[\"self-hosted\"]') }}", "${{ github.event.repository.private || 'macos-latest' }}"):
+            self.assertFalse(runs_on_is_safe_for_forks(bad), bad)
+        for good in ("ubuntu-latest", "macos-latest", "macos-14", BY_VISIBILITY):
+            self.assertTrue(runs_on_is_safe_for_forks(good), good)
+
+    def test_deploy_main_never_runs_on_pull_requests(self):
+        wf = load("deploy-main.yml")
+        self.assertFalse(PR_TRIGGERS & set(triggers(wf)), "deploy-main (self-hosted, holds deploy credentials) must not run on pull requests")
+        self.assertTrue(set(triggers(wf)) <= {"push", "schedule", "workflow_dispatch"}, set(triggers(wf)))
+
+
 class PushAndPullRequestChecks(unittest.TestCase):
     def test_ci_runs_on_push_and_pull_request_and_keeps_kb_ci(self):
         wf = load("ci.yml")
         self.assertTrue({"push", "pull_request"} <= set(triggers(wf)))
         self.assertEqual(set(wf["jobs"]), {"python", "web", "wheel", "worker"})
         for name, job in wf["jobs"].items():
-            self.assertIn("self-hosted", job["runs-on"], name)
+            self.assertEqual(job["runs-on"], BY_VISIBILITY, name)       # self-hosted while private (free minutes), GitHub-hosted once public
         job = wf["jobs"]["python"]
         self.assertEqual(str(job["env"]["KB_CI"]), "1")
         runs = [s["run"] for s in job["steps"] if "run" in s]

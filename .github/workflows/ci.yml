@@ -7,10 +7,15 @@
 # links, slugs, book partitions, course tables, collections, coherence) and reads the committed
 # manifest as the truth instead of reconciling it against disk.
 #
-# Runs on every push and every pull request. When the repo goes public, a self-hosted runner must NOT
-# run pull requests from forks: switch this job to a GitHub-hosted arm64 macOS runner first (Phase 8).
+# Runs on every push and every pull request. The runner follows the repo's visibility: while the repo is
+# private the jobs run on the owner's self-hosted Mac (free); once it is public they run on GitHub-hosted
+# `macos-latest` (arm64), so this file's jobs never run a fork's code on the owner's machine. That is not the whole
+# defence: a fork PR can bring its own workflow file naming `self-hosted`, so before going public remove the runner
+# from the repo (or set Settings > Actions > "Require approval for all outside collaborators").
+# `runs-on` takes `fromJSON(...)` (a label list) and `&&`/`||` picks it; `private` is the repository context,
+# not a secret. tests/ci/test_workflows.py fails on any pull_request job that could land on `self-hosted` when public.
 #
-# Self-hosted runner on the owner's Mac (osx-arm64, the only platform pixi.lock is solved for).
+# Self-hosted runner on the owner's Mac while private (osx-arm64, the only platform pixi.lock is solved for).
 # GitHub-hosted macOS minutes bill 10x and exhausted the Free plan's 2,000 min/month on a private
 # repo (every job refused from 2026-10-22); a self-hosted runner is free and unlimited. Jobs run
 # only while the Mac is awake and the runner service is up — otherwise they queue. Only the owner
@@ -32,7 +37,7 @@ concurrency:
   cancel-in-progress: true     # a newer push to the same branch or PR replaces the running check
 jobs:
   python:     # pytest (includes the privacy ratchet), skills lint, layer contract, kb lint
-    runs-on: [self-hosted, macOS, ARM64]
+    runs-on: ${{ github.event.repository.private && fromJSON('["self-hosted","macOS","ARM64"]') || 'macos-latest' }}
     env:
       KB_CI: "1"     # tests that build dashboard snapshots run lint too (test_digestion_data)
       KB_PRIVACY_TERMS: ${{ secrets.KB_PRIVACY_TERMS }}     # personal terms the privacy ratchet looks for (comma list); empty = token shapes only
@@ -55,7 +60,7 @@ jobs:
       # ruff is not a pixi dependency yet, so there is no ruff step; it joins here once pixi.toml carries it.
 
   web:     # flags codegen check, tsc, vitest, build:check, check-untracked-dist (all inside the web-check task)
-    runs-on: [self-hosted, macOS, ARM64]
+    runs-on: ${{ github.event.repository.private && fromJSON('["self-hosted","macOS","ARM64"]') || 'macos-latest' }}
     env:
       KB_CI: "1"
     steps:
@@ -71,7 +76,7 @@ jobs:
       - run: pixi run web-check
 
   wheel:     # builds the wheel, installs it into a clean venv, runs the installed CLI (tests/cli/test_install_wheel.py)
-    runs-on: [self-hosted, macOS, ARM64]
+    runs-on: ${{ github.event.repository.private && fromJSON('["self-hosted","macOS","ARM64"]') || 'macos-latest' }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -84,7 +89,7 @@ jobs:
       - run: pixi run test-wheel
 
   worker:     # Cloudflare worker node tests
-    runs-on: [self-hosted, macOS, ARM64]
+    runs-on: ${{ github.event.repository.private && fromJSON('["self-hosted","macOS","ARM64"]') || 'macos-latest' }}
     steps:
       - uses: actions/checkout@v4
         with:

@@ -170,8 +170,13 @@ class SkillRootsTests(unittest.TestCase):
     def test_roots_are_each_kit_and_the_engine_skills(self):
         from kb_distillery.lint import lint_skills
         rel = {os.path.relpath(r, ROOT).replace(os.sep, "/") for r in lint_skills.SKILLS_ROOTS}
-        self.assertTrue({"src/kb_distillery/kits/base/skills", "src/kb_distillery/kits/research/skills", ".claude/skills"} <= rel, rel)
+        want = {"src/kb_distillery/kits/base/skills", "src/kb_distillery/kits/research/skills"}
+        if os.path.isdir(os.path.join(ROOT, ".claude", "skills")):      # owner-only: export-ignored from the public repo
+            want.add(".claude/skills")
+        self.assertTrue(want <= rel, rel)
+        self.assertEqual(".claude/skills" in rel, os.path.isdir(os.path.join(ROOT, ".claude", "skills")))
 
+    @unittest.skipUnless(os.path.isdir(os.path.join(ROOT, ".claude", "skills")), "owner tooling: .claude/ is export-ignored, so the public checkout has none")
     def test_engine_skills_are_real_files_not_a_symlink(self):
         path = os.path.join(ROOT, ".claude", "skills")
         self.assertTrue(os.path.isdir(path) and not os.path.islink(path), f"{path} must be a real folder")

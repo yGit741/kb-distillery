@@ -30,7 +30,7 @@ def _skills_roots() -> list:
             path = os.path.join(KITS_DIR, kit, "skills")
             if os.path.isdir(path):
                 roots.append(path)
-    if checkout_root():
+    if checkout_root() and os.path.isdir(os.path.join(ROOT, ".claude", "skills")):     # owner-only: absent from the public export
         roots.append(os.path.join(ROOT, ".claude", "skills"))
     return roots
 

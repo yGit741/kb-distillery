@@ -3,12 +3,17 @@
 
 Runs against the real `.claude/settings.json`, so a move of the guard
 (as in the meta/ → backend/ restructure) that the health check does not follow fails here."""
+import os
 import unittest
 
 from kb_distillery.lint import lint
 
+ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 
 class HooksHealthTests(unittest.TestCase):
+    @unittest.skipUnless(os.path.isfile(os.path.join(ROOT, ".claude", "settings.json")),
+                         "owner tooling: .claude/ is export-ignored, so the public checkout has no hook config")
     def test_repo_hook_configs_name_the_guard(self):
         status, ok = lint.hooks_health()
         self.assertTrue(ok, status)
