@@ -12,7 +12,9 @@ export const FORMATS = [
   "videos",
 ] as const;
 
-export const DRAFTS_KEY = "thesis-wiki-scope-drafts";
+export const DRAFTS_KEY = "kb-scope-drafts";
+/** The key drafts were saved under before it was made generic; read once, moved to DRAFTS_KEY, then removed. */
+export const LEGACY_DRAFTS_KEY = "thesis-wiki-scope-drafts";
 export const MAX_SHOWN = 600;
 export const MAX_HITS = 30;
 
@@ -30,9 +32,27 @@ export interface DraftStore {
 
 const EMPTY: DraftStore = { active: "", drafts: {} };
 
-export function readDrafts(storage: Pick<Storage, "getItem"> | null = safeStorage()): DraftStore {
+type DraftReader = Pick<Storage, "getItem"> & Partial<Pick<Storage, "setItem" | "removeItem">>;
+
+/** The stored drafts JSON: DRAFTS_KEY, else (once) the legacy key's value, moved to DRAFTS_KEY so no draft is lost. */
+function storedDrafts(storage: DraftReader | null): string | null {
+  const current = storage?.getItem(DRAFTS_KEY) ?? null;
+  if (current !== null || !storage) return current;
+  const legacy = storage.getItem(LEGACY_DRAFTS_KEY);
+  if (legacy !== null && storage.setItem && storage.removeItem) {
+    try {
+      storage.setItem(DRAFTS_KEY, legacy);
+      storage.removeItem(LEGACY_DRAFTS_KEY);
+    } catch {
+      /* storage full or read-only: keep reading the legacy key */
+    }
+  }
+  return legacy;
+}
+
+export function readDrafts(storage: DraftReader | null = safeStorage()): DraftStore {
   try {
-    const d = JSON.parse(storage?.getItem(DRAFTS_KEY) ?? "null") as Partial<DraftStore> | null;
+    const d = JSON.parse(storedDrafts(storage) ?? "null") as Partial<DraftStore> | null;
     return d && typeof d.drafts === "object" && d.drafts ? { active: d.active ?? "", drafts: d.drafts } : { ...EMPTY };
   } catch {
     return { ...EMPTY };

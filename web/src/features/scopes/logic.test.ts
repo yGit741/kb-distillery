@@ -1,4 +1,4 @@
-import { DRAFTS_KEY, NO_FILTER, checkSave, corpusToRow, filterRows, matchPages, matchRaw, newRows, normSlug, readDrafts, dropDraft, snapshot, stats } from "./logic";
+import { DRAFTS_KEY, LEGACY_DRAFTS_KEY, NO_FILTER, checkSave, corpusToRow, filterRows, matchPages, matchRaw, newRows, normSlug, readDrafts, dropDraft, snapshot, stats } from "./logic";
 import type { ScopeRow } from "@/api/types";
 
 const row = (path: string, o: Partial<ScopeRow> = {}): ScopeRow => ({
@@ -11,6 +11,31 @@ function memStore(init?: string) {
 }
 
 describe("scope logic", () => {
+  it("moves drafts saved under the legacy key to the new key once, losing none", () => {
+    const store = new Map<string, string>();
+    const storage = {
+      getItem: (k: string) => store.get(k) ?? null,
+      setItem: (k: string, v: string) => void store.set(k, v),
+      removeItem: (k: string) => void store.delete(k),
+    };
+    const saved = { active: "scope-a", drafts: { "scope-a": { slug: "scope-a", title: "Old", isNew: true, rows: [] } } };
+    store.set(LEGACY_DRAFTS_KEY, JSON.stringify(saved));
+    expect(DRAFTS_KEY).not.toBe(LEGACY_DRAFTS_KEY);
+    expect(readDrafts(storage)).toEqual(saved);
+    expect(store.get(DRAFTS_KEY)).toBe(JSON.stringify(saved));
+    expect(store.has(LEGACY_DRAFTS_KEY)).toBe(false);
+    expect(readDrafts(storage)).toEqual(saved);
+  });
+
+  it("prefers the new key over a stale legacy one", () => {
+    const store = new Map<string, string>([
+      [DRAFTS_KEY, JSON.stringify({ active: "", drafts: {} })],
+      [LEGACY_DRAFTS_KEY, JSON.stringify({ active: "x", drafts: { x: { slug: "x", title: "X", isNew: true, rows: [] } } })],
+    ]);
+    const storage = { getItem: (k: string) => store.get(k) ?? null };
+    expect(readDrafts(storage)).toEqual({ active: "", drafts: {} });
+  });
+
   it("normalises slugs", () => {
     expect(normSlug(" My Topic! ")).toBe("scope-my-topic");
     expect(normSlug("scope-x")).toBe("scope-x");
