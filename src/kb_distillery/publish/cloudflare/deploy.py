@@ -168,7 +168,10 @@ def render_worker_dir(build_dir: Path, worker: str, require_access: bool, cfg: d
     if require_access:
         for script in WORKER_SCRIPTS:
             shutil.copy2(WORKER_DIR / script, dest / script)
-        (bundler or build_okf_bundle)(dest / OKF_BUNDLE)
+        if cfg.get("inbox_bucket"):
+            (bundler or build_okf_bundle)(dest / OKF_BUNDLE)
+        else:    # no inbox: no node needed; the inbox routes answer 503 anyway (auth.js still imports the file)
+            (dest / OKF_BUNDLE).write_text("export const checkBundle = null;\n", encoding="utf-8")
     return dest
 
 

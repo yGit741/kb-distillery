@@ -25,13 +25,13 @@ class InboxWranglerTests(unittest.TestCase):
 
 
 class InboxWorkerDirTests(unittest.TestCase):
-    def render(self, private: bool):
+    def render(self, private: bool, cfg=None):
         tmp = Path(tempfile.mkdtemp())
         build = tmp / "build"
         build.mkdir()
         (build / "index.html").write_text("<p>x</p>")
         calls = []
-        dest = deploy.render_worker_dir(build, "kb", private, CFG, tmp / "out", bundler=lambda out: (calls.append(out), out.write_text("// bundle")))
+        dest = deploy.render_worker_dir(build, "kb", private, cfg or {**CFG, "inbox_bucket": "kb-inbox"}, tmp / "out", bundler=lambda out: (calls.append(out), out.write_text("// bundle")))
         return dest, calls
 
     def test_a_private_site_gets_the_inbox_scripts_and_a_fresh_checker_bundle(self):
@@ -39,6 +39,11 @@ class InboxWorkerDirTests(unittest.TestCase):
         for name in ("auth.js", "inbox.js", "zip.js", "okf.gen.js"):
             self.assertTrue((dest / name).is_file(), name)
         self.assertEqual(calls, [dest / "okf.gen.js"])
+
+    def test_without_a_bucket_nothing_is_bundled_and_node_is_not_needed(self):
+        dest, calls = self.render(True, CFG)
+        self.assertEqual(calls, [])
+        self.assertIn("checkBundle = null", (dest / "okf.gen.js").read_text())
 
     def test_a_public_snapshot_gets_none_of_it(self):
         dest, calls = self.render(False)
