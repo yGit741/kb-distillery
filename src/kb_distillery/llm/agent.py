@@ -253,7 +253,8 @@ async def stream(req, backend=None, *, key=None, policy_hook=None, can_use_tool=
                 log("chat agent: previous session not found, starting fresh")
                 yield ("notice", {"text": "Previous agent session expired; started a fresh one."})
                 resume = None
-                prompt = req.fresh_prompt if req.fresh_prompt is not None else req.question
+                prompt = _prompt_input(req.fresh_prompt if req.fresh_prompt is not None else req.question,
+                                       req.attachments)
                 continue
             detail = str(e).strip()
             tail = " ".join(l.strip() for l in stderr_lines[-3:])

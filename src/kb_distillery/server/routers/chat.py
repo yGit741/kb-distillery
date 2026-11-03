@@ -89,6 +89,12 @@ def post_chat(req: ChatRequest):
         extra = {}
         if runtime.effective("agent-mode"):       # ship dark: the new fields are ignored until the flag is on
             extra = {"effort": payload.get("effort"), "budget": payload.get("budget")}
+            if payload.get("attachment_session"):
+                try:
+                    chat_attachments.session_dir(payload["attachment_session"])
+                    extra["attachment_session"] = payload["attachment_session"]
+                except chat_attachments.AttachmentError as exc:
+                    return _err(400, exc.message)
             if payload.get("attachments"):
                 try:
                     extra["attachments"] = chat_attachments.resolve(payload.get("attachment_session"),

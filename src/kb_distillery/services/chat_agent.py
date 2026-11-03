@@ -400,6 +400,10 @@ def _policy_attachments(tool_name, tool_input, scope):
     if not real or not _under(real, chat_root):
         return None
     mine = ATTACH_DIR.get() if runtime.effective("agent-mode") else None
+    for key in ("pattern", "glob"):          # a pattern must not climb out of `path` into another session's dir
+        pat = tool_input.get(key)
+        if isinstance(pat, str) and (".." in pat or os.path.isabs(pat)):
+            return Decision(False, "attachments: patterns may not leave the attachments dir")
     deny = Decision(False, "attachments: only this chat's own uploaded files can be read")
     if not mine or not _under(real, _real(mine)) or (tool_name == "Read" and os.path.isdir(real)):
         return deny
@@ -621,10 +625,11 @@ def _is_resume_failure(exc):
 
 
 async def _run(question, *, model, system, key, session_id, history, emit, stop_event, log, billing="api",
-               scope=None, effort=None, budget=None, attachments=()):
+               scope=None, effort=None, budget=None, attachments=(), attachment_session=None):
     index = query.parse_index()
-    if attachments:           # resolved entries (chat_attachments.resolve): the Read scope is their session's dir
-        ATTACH_DIR.set(os.path.dirname(attachments[0]["path"]))
+    if attachment_session:    # every turn: files from earlier turns stay readable in a resumed session
+        ATTACH_DIR.set(chat_attachments.session_dir(attachment_session))
+    if attachments:           # resolved entries (chat_attachments.resolve) ride with this turn
         question += chat_attachments.prompt_note(attachments)
     req = agent_request(question, model, system, session_id=session_id, scope=scope, history=history,
                         effort=effort, budget=budget, images=chat_attachments.image_paths(attachments))
@@ -664,7 +669,7 @@ async def _run(question, *, model, system, key, session_id, history, emit, stop_
 
 
 def stream_agent(question, *, model, system, key, session_id=None, history=None, log=None, billing="api",
-                 scope=None, effort=None, budget=None, attachments=()):
+                 scope=None, effort=None, budget=None, attachments=(), attachment_session=None):
     """Sync generator of (event, data) for serve.py's SSE loop. Closing it stops the agent.
     `key=None` with `billing="subscription"` runs on the `claude login` account."""
     log = log or (lambda s: print(s, flush=True))
@@ -679,7 +684,8 @@ def stream_agent(question, *, model, system, key, session_id=None, history=None,
         try:
             asyncio.run(_run(question, model=model, system=system, key=key, session_id=session_id,
                              history=history, emit=emit, stop_event=stop_event, log=log, billing=billing,
-                             scope=scope, effort=effort, budget=budget, attachments=attachments))
+                             scope=scope, effort=effort, budget=budget, attachments=attachments,
+                             attachment_session=attachment_session))
         except Exception as e:
             q.put(("error", {"error": f"agent: {e}"}))
         finally:

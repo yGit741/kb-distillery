@@ -162,6 +162,8 @@ def test_read_scope_is_the_current_session(two_sessions):
     assert pol("Grep", {"path": mine_dir, "pattern": "secret"}).allow
     assert not pol("Grep", {"path": svc.session_dir("other"), "pattern": "secret"}).allow
     assert not pol("Glob", {"path": svc.chat_root(), "pattern": "**/*"}).allow
+    assert not pol("Glob", {"path": mine_dir, "pattern": "../../*/attachments/*"}).allow
+    assert not pol("Grep", {"path": mine_dir, "pattern": "x", "glob": "/etc/*"}).allow
     assert not pol("Read", {"file_path": mine_dir + "/../../other/attachments/" + os.path.basename(two_sessions["other"])}).allow
 
 
@@ -222,6 +224,9 @@ def test_chat_resolves_attachment_ids_per_session(client):
     a = up(client, "a.md", b"x", session="mine").json()["id"]
     r, kw = _post_chat(client, attachments=[a, "ffffffffffff"], attachment_session="mine")
     assert r.status_code == 200 and [e["name"] for e in kw["attachments"]] == ["a.md"]
+    assert kw["attachment_session"] == "mine"
+    _, kw = _post_chat(client, attachment_session="mine")                       # turn 2: no new files, scope stays
+    assert kw["attachment_session"] == "mine" and "attachments" not in kw
     _, kw = _post_chat(client, attachments=[a], attachment_session="other")      # another session's id resolves to nothing
     assert kw["attachments"] == []
     r, _ = _post_chat(client, attachments=[a], attachment_session="../x")
