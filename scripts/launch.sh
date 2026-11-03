@@ -20,14 +20,14 @@ KB_ID="$(printf '%s\n' "$KB_SHOW" | sed -n 's/^id  *//p')"
 [[ "$KB_ID" == "None" ]] && KB_ID=""
 KB_ROOT_DIR="$(printf '%s\n' "$KB_SHOW" | sed -n 's/^root  *//p')"
 echo "knowledge base: ${KB_ID:-none} ($KB_ROOT_DIR)"
-export KB_LIVE=1                    # this dashboard's lint runs keep the qmd search cards in step
+export KB_LIVE=1                    # this app's lint runs keep the qmd search cards in step
 export KB_SHARE_AUTODEPLOY="${KB_SHARE_AUTODEPLOY:-0}"   # POC: nothing deploys from the split layout
 URL="http://127.0.0.1:${PORT}/start"
-LOG="${TMPDIR:-/tmp}/kb-distillery-${KB_ID:-none}-dashboard.log"
+LOG="${TMPDIR:-/tmp}/kb-distillery-${KB_ID:-none}-app.log"
 
 pids=$(lsof -ti "tcp:${PORT}" -sTCP:LISTEN 2>/dev/null || true)
 if [[ -n "$pids" ]]; then
-  echo "stopping old dashboard (pid $pids)"
+  echo "stopping old app (pid $pids)"
   kill $pids 2>/dev/null || true
   for _ in $(seq 1 20); do
     lsof -ti "tcp:${PORT}" -sTCP:LISTEN >/dev/null 2>&1 || break
@@ -40,7 +40,7 @@ find src -name __pycache__ -type d -prune -exec rm -rf {} + 2>/dev/null || true
 
 # The qmd search service (scripts/qmd, `pixi run qmd-install` once): long-running so its model stays warm.
 # Main checkout only — a worktree would start a second index and download the models again. Restarted
-# like the dashboard so a changed server.mjs takes effect.
+# like the app so a changed server.mjs takes effect.
 QMD_PORT="${KB_QMD_PORT:-8766}"
 QMD_LOG="${TMPDIR:-/tmp}/kb-distillery-qmd.log"
 if [[ "$PWD" == */.claude/worktrees/* ]]; then
@@ -61,7 +61,7 @@ if ! VEC_STATUS="$(python -m kb_distillery.search.vectors status 2>&1)"; then
 fi
 
 nohup python -m kb_distillery.server --port "$PORT" --no-open >"$LOG" 2>&1 &
-echo "started dashboard (pid $!), log: $LOG"
+echo "started app (pid $!), log: $LOG"
 
 for _ in $(seq 1 1200); do   # up to 5 min: kb_distillery.server installs the frontend dependencies on a fresh clone and rebuilds src/kb_distillery/_webapp when the sources changed
   if curl -fsS -o /dev/null "$URL"; then
@@ -72,6 +72,6 @@ for _ in $(seq 1 1200); do   # up to 5 min: kb_distillery.server installs the fr
   sleep 0.25
 done
 
-echo "dashboard did not come up in 5 min (a first run installs and builds the frontend and needs the network); last log lines:" >&2
+echo "app did not come up in 5 min (a first run installs and builds the frontend and needs the network); last log lines:" >&2
 tail -20 "$LOG" >&2
 exit 1
