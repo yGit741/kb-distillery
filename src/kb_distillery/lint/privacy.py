@@ -14,7 +14,7 @@ With neither there are no terms: only token shapes are checked, so the ratchet p
 every term you configure. Terms match case-insensitively as plain text. Knowledge never lives here (the kbs are their
 own repos and `kbs/` is skipped), so a match is code, a test, a doc or a config naming a person.
 
-What is checked is what the public export ships: the tracked files (every file under the root outside a git checkout)
+What is checked is what the public export ships: the tracked files and new ones not yet added (every file under the root outside a git checkout)
 minus the paths `.gitattributes` marks `export-ignore` (`docs/archive/`, the maintainer-only history). `.claude/` and
 `.github/` ship, so they are checked too. A name that must stay in the repo belongs in an export-ignored path, not in
 the baseline.
@@ -43,7 +43,7 @@ SKIP_FILES = {"src/kb_distillery/lint/privacy.py", "tests/lint/privacy_baseline.
               "tests/lint/test_privacy_ratchet.py"}          # the scanner and its fixtures name what they look for
 SKIP_PREFIXES = (".claude/worktrees/", "src/kb_distillery/_webapp/")       # other checkouts; build output
 TEXT_EXT = {".py", ".ts", ".tsx", ".js", ".mjs", ".cjs", ".json", ".toml", ".md", ".yml", ".yaml", ".sh", ".txt",
-            ".css", ".html", ".plist", ".cfg", ".ini", ".mdc"}
+            ".css", ".html", ".plist", ".cfg", ".ini", ".mdc", ".tsv", ".csv", ".svg", ".lock", ".xml", ".env", ".example"}
 
 
 def repo_root() -> str:
@@ -91,11 +91,11 @@ def export_ignored(root: str) -> list[str]:
 
 
 def tracked(root: str) -> list[str] | None:
-    """The tracked files of a git checkout, None outside one (then every file under the root counts)."""
+    """The tracked and new (not ignored) files of a git checkout, None outside one (then every file under the root counts)."""
     if not os.path.exists(os.path.join(root, ".git")):
         return None
     try:
-        out = subprocess.run(["git", "-C", root, "ls-files", "-z"], capture_output=True, check=True).stdout
+        out = subprocess.run(["git", "-C", root, "ls-files", "-z", "--cached", "--others", "--exclude-standard"], capture_output=True, check=True).stdout
     except (OSError, subprocess.CalledProcessError):
         return None
     return sorted(p for p in out.decode("utf-8", "surrogateescape").split("\0") if p)

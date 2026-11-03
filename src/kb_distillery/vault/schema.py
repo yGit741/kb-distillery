@@ -314,6 +314,7 @@ TOOLING_PATHS = [
     "pixi.toml",
     "pixi.lock",
     ".gitignore",
+    ".gitattributes",    # export-ignore: what the public archive leaves out
     ".claude/",
     ".github/",
     "LICENSE",           # open-source files at the repo root

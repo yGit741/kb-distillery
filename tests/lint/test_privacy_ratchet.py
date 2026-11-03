@@ -56,8 +56,10 @@ class Scanner(unittest.TestCase):
             self.put(root, ".claude/skills/s/SKILL.md", "jane-doe\n")
             self.put(root, ".github/workflows/ci.yml", "owner: jane-doe\n")
             self.put(root, "docs/guide.md", "jane-doe\n")
+            self.put(root, "tests/fixtures/golden/corpus.tsv", "raw/jane-doe.md\tx\n")            # a data file ships too
             self.assertEqual(sorted(privacy.scan(root, terms=["jane-doe"])),
-                             [".claude/skills/s/SKILL.md", ".github/workflows/ci.yml", "docs/guide.md"])
+                             [".claude/skills/s/SKILL.md", ".github/workflows/ci.yml", "docs/guide.md",
+                              "tests/fixtures/golden/corpus.tsv"])
 
     def test_this_repos_maintainer_history_is_export_ignored_and_nothing_else_is_exempt(self):
         root = privacy.repo_root()
