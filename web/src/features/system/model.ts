@@ -209,7 +209,13 @@ export interface OpsLike {
   hygiene?: { errors?: number; warnings?: number; findings?: Finding[] };
   runs?: Run[];
   nightly?: { summary?: string; hint?: string | null };
+  /** False when the kb uses none of nightly / deploy owner / a publisher: those tiles are left out. Absent = show. */
+  maintainer?: boolean;
 }
+
+/** The tiles and filters that only mean something to a kb running the owner's operations. */
+export const OWNER_TILES: readonly string[] = ["nightly", "merges", "deploy"];
+export const showOwnerOps = (ops?: OpsLike): boolean => ops?.maintainer !== false;
 export interface HealthLike {
   generated_at?: string;
   inbox_count?: number;
@@ -226,7 +232,7 @@ const num = (v: unknown) => (typeof v === "number" ? v : Number(v) || 0);
 const tone = (s?: string): Tone => (s === "ok" || s === "warn" || s === "bad" ? s : s === "error" ? "bad" : "");
 const plural = (n: number, w: string) => `${n} ${w}${n === 1 ? "" : "s"}`;
 
-/** Nine tiles; a tile whose snapshot has not arrived yet shows "…". */
+/** Nine tiles (six when the kb runs no owner operations); a tile whose snapshot has not arrived yet shows "…". */
 export function tiles(lc?: LifecycleLike, ops?: OpsLike, health?: HealthLike): Tile[] {
   const threads = ops?.threads ?? [];
   const stale = threads.filter((t) => t.status === "warn" || t.status === "bad").length;
@@ -235,7 +241,7 @@ export function tiles(lc?: LifecycleLike, ops?: OpsLike, health?: HealthLike): T
   const st = health?.statuses ?? {};
   const dirty = Object.values(lc?.working?.lanes ?? {}).reduce((a, b) => a + num(b), 0);
   const nightly = ops?.nightly?.summary ?? "";
-  return [
+  const all: Tile[] = [
     {
       id: "version",
       label: "Knowledge version",
@@ -301,6 +307,7 @@ export function tiles(lc?: LifecycleLike, ops?: OpsLike, health?: HealthLike): T
       tab: "overview",
     },
   ];
+  return showOwnerOps(ops) ? all : all.filter((t) => !OWNER_TILES.includes(t.id));
 }
 
 export type EventKind = "knowledge" | "tooling" | "nightly";

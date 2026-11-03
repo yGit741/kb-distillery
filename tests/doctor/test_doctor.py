@@ -85,7 +85,7 @@ def test_git():
 # --- kb checks -------------------------------------------------------------------------------------------
 def test_kb_found():
     assert doctor.check_kb_found({}, "/b", None).status == WARN
-    assert "kbd init" in doctor.check_kb_found({}, "/b", None).fix
+    assert "distill init" in doctor.check_kb_found({}, "/b", None).fix
     assert doctor.check_kb_found({"a": "/a"}, "/b", None).status == PASS
     assert doctor.check_kb_found({"a": "/a", "b": "/b"}, "/b", None).status == WARN
     assert doctor.check_kb_found({"a": "/a", "b": "/b"}, "/b", "a").status == PASS

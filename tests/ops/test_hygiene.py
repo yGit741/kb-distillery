@@ -329,12 +329,26 @@ class OtherLaneAndNightly(Repo):
 
     def test_nightly_not_installed(self):
         with patch.object(core, "nightly_status", return_value={"installed": False, "loaded": False, "last_run": None,
-                                                                "summary": "NOT INSTALLED", "hint": "pixi run install-sync"}):
+                                                                "summary": "NOT INSTALLED", "hint": "pixi run install-sync"}), \
+                patch.object(core, "nightly_in_use", return_value=True):
             found = hygiene.check_nightly(self.root, NOW)
         self.assertEqual([(f.kind, f.fix) for f in found], [("nightly-not-installed", "pixi run install-sync")])
         with patch.object(core, "nightly_status", return_value={"installed": True, "loaded": True, "last_run": "x",
                                                                 "summary": "ok", "hint": None}):
             self.assertEqual(hygiene.check_nightly(self.root, NOW), [])
+
+    def test_nightly_not_installed_is_no_finding_for_a_kb_that_never_opted_in(self):
+        with patch.object(core, "nightly_status", return_value={"installed": False, "loaded": False, "last_run": None,
+                                                                "summary": "NOT INSTALLED", "hint": "pixi run install-sync"}), \
+                patch.object(core, "NIGHTLY_PLIST", os.path.join(self.root, "no-such.plist")):
+            self.assertEqual(hygiene.check_nightly(self.root, NOW), [])
+
+    def test_nightly_in_use_follows_the_sync_config(self):
+        with patch.object(core, "NIGHTLY_PLIST", os.path.join(self.root, "no-such.plist")):
+            self.assertFalse(core.nightly_in_use(self.root))
+            os.makedirs(os.path.join(self.root, "meta", "ops"))
+            open(os.path.join(self.root, "meta", "ops", "sync.toml"), "w").close()
+            self.assertTrue(core.nightly_in_use(self.root))
 
 
 class Quarantine(Repo):

@@ -132,3 +132,18 @@ describe("system model", () => {
     expect(n.findings).toHaveLength(1);
   });
 });
+
+describe("tiles for a kb that runs no owner operations", () => {
+  it("leaves Nightly, Merges and Deploy out when the snapshot says maintainer: false, and keeps them otherwise", () => {
+    const owner = ["nightly", "merges", "deploy"];
+    const ids = (o?: OpsLike) => tiles(lc, o, health).map((t) => t.id);
+    for (const id of owner) {
+      expect(ids({ ...ops, maintainer: false })).not.toContain(id);
+      expect(ids({ ...ops, maintainer: true })).toContain(id);
+      expect(ids(ops)).toContain(id);
+      expect(ids(undefined)).toContain(id); // not loaded yet: placeholders, as before
+    }
+    expect(ids({ ...ops, maintainer: false })).toEqual(["version", "work", "hygiene", "lint", "backlog", "stale"]);
+  });
+});
+

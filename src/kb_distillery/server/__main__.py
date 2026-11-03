@@ -15,7 +15,7 @@ def main(argv=None):
     parser.add_argument("--host", default="127.0.0.1", help="loopback only")
     parser.add_argument("--no-open", action="store_true", help="do not open a browser tab")
     parser.add_argument("--no-build", action="store_true", help="serve src/kb_distillery/_webapp as is (skip the rebuild check)")
-    parser.add_argument("--kb", default=None, help="knowledge base id or folder path (else $KB; see `kbd kb-list`)")
+    parser.add_argument("--kb", default=None, help="knowledge base id or folder path (else $KB; see `distill kb list`)")
     args = parser.parse_args(argv)
     assert_loopback_bind(args.host)
 

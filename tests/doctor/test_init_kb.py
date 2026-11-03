@@ -1,4 +1,4 @@
-"""kbd init: a first kb from a kit, its own git repo, no LLM. Temp dirs and a temp HOME only."""
+"""distill init: a first kb from a kit, its own git repo, no LLM. Temp dirs and a temp HOME only."""
 import os
 import subprocess
 
@@ -132,7 +132,7 @@ def test_main_non_interactive_runs_doctor_and_prints_launch(world, capsys):
     rc = init_kb.main(["--kb-id", "notes", "--yes"])
     out = capsys.readouterr().out
     assert rc == 0 and (bases / "notes" / "kb.toml").is_file()
-    assert "kbd launch --kb notes" in out
+    assert "distill launch --kb notes" in out
     assert "PASS  kb.toml" in out
     assert "claude login" in out and "stay off" in out         # the one LLM line; nothing was asked or stored
     assert not os.path.exists(llm.KEY_FILE)
@@ -148,7 +148,7 @@ def test_main_second_run_refuses(world, capsys):
 def test_main_dir_prints_a_path_launch(world, tmp_path, capsys):
     other = tmp_path / "elsewhere"
     assert init_kb.main(["--kb-id", "notes", "--dir", str(other), "--yes"]) == 0
-    assert f"kbd launch --kb {os.path.realpath(other)}/notes" in capsys.readouterr().out.replace(str(other), os.path.realpath(other))
+    assert f"distill launch --kb {os.path.realpath(other)}/notes" in capsys.readouterr().out.replace(str(other), os.path.realpath(other))
 
 
 def test_new_kb_lints_clean(world):

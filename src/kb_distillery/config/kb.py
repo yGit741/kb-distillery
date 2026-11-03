@@ -402,7 +402,7 @@ def main(argv=None):
         # Non-Python tools (scripts/qmd/*.mjs) get their vault from here, never from where their file lives:
         # the engine checkout is not a vault, so refuse instead of guessing it.
         if cfg is None and not os.environ.get("KB_ROOT"):
-            print("error: no knowledge base selected — pass --kb <id|path> or set KB (`kbd kb-list`)", file=sys.stderr)
+            print("error: no knowledge base selected — pass --kb <id|path> or set KB (`distill kb list`)", file=sys.stderr)
             return 1
         print(vault_root())
         return 0

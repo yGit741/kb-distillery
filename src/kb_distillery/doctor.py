@@ -52,14 +52,14 @@ def check_python(version=None, prefix=None, env=None) -> list[Check]:
     out = []
     if tuple(version[:2]) < MIN_PYTHON:
         out.append(Check("python", FAIL, f"python {'.'.join(map(str, version))} is too old (need {MIN_PYTHON[0]}.{MIN_PYTHON[1]}+)",
-                         "run through pixi: `pixi install`, then `pixi run kbd doctor`"))
+                         "run through pixi: `pixi install`, then `pixi run distill doctor`"))
     else:
         out.append(Check("python", PASS, f"python {'.'.join(map(str, version))}"))
     if ".pixi" in prefix or env.get("PIXI_PROJECT_ROOT") or env.get("CONDA_PREFIX"):
         out.append(Check("pixi env", PASS, "running inside the pixi environment"))
     else:
         out.append(Check("pixi env", WARN, "not running inside the pixi environment",
-                         "install pixi, then `pixi install` and use `pixi run kbd …`"))
+                         "install pixi, then `pixi install` and use `pixi run distill …`"))
     return out
 
 
@@ -98,7 +98,7 @@ def check_kb_found(known: dict, bases_dir: str, ref: str | None) -> Check:
     if ref:
         return Check("knowledge base", PASS, f"checking {ref}")
     if not known:
-        return Check("knowledge base", WARN, f"no knowledge base in {bases_dir}", "run `kbd init` to create one")
+        return Check("knowledge base", WARN, f"no knowledge base in {bases_dir}", "run `distill init` to create one")
     if len(known) == 1:
         return Check("knowledge base", PASS, f"found {next(iter(known))}")
     return Check("knowledge base", WARN, f"{len(known)} knowledge bases ({', '.join(sorted(known))}) and none selected",
@@ -115,7 +115,7 @@ def check_kb_config(ref: str, loader=kbconfig.load):
             return Check("kb.toml", FAIL, msg, "run `pixi run ops -- migrate` on that knowledge base"), None
         if "not a known kit" in msg:
             return Check("kb kit", FAIL, msg, "set `[kb] kit` to a known kit, or remove it"), None
-        return Check("kb.toml", FAIL, msg, "fix kb.toml, or create a new kb with `kbd init`"), None
+        return Check("kb.toml", FAIL, msg, "fix kb.toml, or create a new kb with `distill init`"), None
     out = Check("kb.toml", PASS, f"{cfg.id}: schema {'.'.join(map(str, cfg.schema_version))}"
                 + (f", kit {cfg.kit}" if cfg.kit else ""))
     return out, cfg
@@ -125,7 +125,7 @@ def check_kb_layout(cfg) -> Check:
     missing = [d for d in ("wiki", "meta") if not os.path.isdir(os.path.join(cfg.root, d))]
     if missing:
         return Check("kb folders", WARN, f"missing {', '.join(m + '/' for m in missing)} in {cfg.root}",
-                     "create them (empty folders are fine) or recreate with `kbd init`")
+                     "create them (empty folders are fine) or recreate with `distill init`")
     if cfg.git_root is None:
         return Check("kb folders", INFO, "the kb folder is not its own git repository (fine for the tracked demo kb)",
                      f"to version a kb of your own, run `git init` in {cfg.root}")

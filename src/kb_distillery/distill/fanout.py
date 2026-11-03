@@ -4,7 +4,7 @@
 
 * kb side: `wiki/distilled-think-<note>.md` (type `distilled-think`) whose `sources:` cite `think:<note>.md`.
 * think side: `<think>/.provenance/<note>.json` lists where the note went. The note itself is never edited;
-  this function is the only writer of that sidecar, and the `kbd distill` command is its only caller.
+  this function is the only writer of that sidecar, and the `distill send` command is its only caller.
 
 Nothing here imports `kb_distillery.config.paths` (which needs a selected kb): the think space and every kb root are arguments, so
 one process can write into two kbs. No LLM call is made unless the caller passes a `summarize` function
@@ -193,7 +193,7 @@ distilled_at: {at}
 
 ## Proposed propagation
 
-_Sent with `kbd distill`; no edits proposed yet. Run the distill-think skill on this note to propose them._
+_Sent with `distill send`; no edits proposed yet. Run the distill-think skill on this note to propose them._
 
 ## Not promoting
 
