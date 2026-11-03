@@ -44,14 +44,33 @@ def vpath(*parts, root=None):
     return os.path.join(root or ROOT, *parts)
 
 
+def _kit_defaults(root=None):
+    """The `defaults/` folders of the kb's kit chain, the kit itself first, the root kit last (base's is
+    META_DEFAULTS_PATH and is always the final fallback). Empty for a kb without a kit."""
+    cfg = KB
+    if root is not None and os.path.realpath(root) != os.path.realpath(ROOT):
+        try:
+            cfg = kbconfig.load_dir(root, strict=False) if os.path.isfile(os.path.join(root, kbconfig.CONFIG_NAME)) else None
+        except kbconfig.KbConfigError:
+            cfg = None
+    if cfg is None or not cfg.kit:
+        return []
+    from kb_distillery.config import kit                  # lazy, like KbConfig.section
+    return [os.path.join(kit.kits_dir(), name, "defaults") for name in reversed(kit.chain(cfg.kit))]
+
+
 def meta_file(*parts, root=None):
-    """`meta/<x>` from the knowledge base when it has one, else the base kit's `defaults/<x>`
-    (flags.toml, docs/, templates/, digest/). Returns the kb path when neither exists, so writes land there."""
+    """`meta/<x>` from the knowledge base when it has one, else the first of its kit chain's `defaults/<x>` (the kit
+    itself, then the kits it extends), else the base kit's (flags.toml, docs/, templates/, digest/). Resolved per
+    file, so a kit carries only the files it changes. Returns the kb path when none exists, so writes land there."""
     own = os.path.join(root or ROOT, "meta", *parts)
     if os.path.exists(own):
         return own
-    default = os.path.join(META_DEFAULTS_PATH, *parts)
-    return default if os.path.exists(default) else own
+    for base in [*_kit_defaults(root), META_DEFAULTS_PATH]:
+        default = os.path.join(base, *parts)
+        if os.path.exists(default):
+            return default
+    return own
 
 
 def think_path(rel):
@@ -78,7 +97,6 @@ ALIASES_PATH = vpath("meta", "aliases.tsv")
 COHERENCE_PATH = vpath("meta", "coherence-warnings.tsv")
 RAW_RENAMES_PATH = vpath("meta", "raw-renames.tsv")
 CHATS_PATH = vpath("meta", "chats")
-TEMPLATES_PATH = meta_file("templates")
 DIGEST_INSTRUCTIONS_PATH = vpath("digest") if os.path.isdir(vpath("digest")) else os.path.join(META_DEFAULTS_PATH, "digest")
 MIGRATIONS_APPLIED_PATH = vpath("meta", "migrations", "applied.tsv")
 

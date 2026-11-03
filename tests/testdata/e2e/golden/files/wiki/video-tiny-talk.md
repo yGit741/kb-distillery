@@ -23,7 +23,7 @@ sources: [{resource: https://example.org/talk}]
 
 ## Key equations
 
-## Takeaways for my thesis
+## Takeaways
 
 ## Connections
 - [Learning theory](theme-learning-theory.md)
