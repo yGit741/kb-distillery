@@ -9,8 +9,6 @@ platforms = ["osx-arm64", "osx-64", "linux-64"]
 python = ">=3.11"
 pypdfium2 = ">=4"
 pillow = "*"
-ipykernel = "*"
-wandb = ">=0.28.1,<0.29"
 nodejs = ">=22,<23"
 truststore = ">=0.9"
 pytest = ">=8"
@@ -114,8 +112,14 @@ claude-agent-sdk = ">=0.1.0"
 yt-dlp = { version = ">=2025.1", extras = ["default", "curl-cffi"] }
 opencv-python-headless = ">=4.10"
 imageio-ffmpeg = ">=0.5"
-ocrmac = ">=1.0"
 grand-cypher = ">=1.2"
 reportlab = ">=4"            # builds the PDF fixtures in tests (from PyPI: the conda build drags in LGPL pycairo)
 networkx = ">=3.4"
 import-linter = ">=2"
+
+# macOS-only: Apple Vision OCR (pyobjc). Linux has no OCR backend yet (docs/public-roadmap.md, Ideas).
+[target.osx-arm64.pypi-dependencies]
+ocrmac = ">=1.0"
+
+[target.osx-64.pypi-dependencies]
+ocrmac = ">=1.0"
