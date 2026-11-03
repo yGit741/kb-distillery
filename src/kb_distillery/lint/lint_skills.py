@@ -55,6 +55,10 @@ LADDER_SKILL_RE = re.compile(r"^\|\s*`([^`]+)`\s*\|")
 SKILLS_LINK_RE = re.compile(r"\[([^\]]+)\]\(([^)]+/SKILL\.md)\)")
 BASH_BLOCK_RE = re.compile(r"```bash\s*\n(.*?)```", re.S)
 ADD_PARSER_RE = re.compile(r"add_parser\(\s*[\"']([^\"']+)[\"']")
+AUDIENCES = frozenset({"app", "dev"})            # app: runs in a knowledge base (and the chat agent); dev: works on the engine
+MODES = frozenset({"read", "write"})             # read: never changes a file (safe for the read-only chat agent)
+DEV_WORDS_RE = re.compile(r"\bship\b|\bPRs?\b|\bpull requests?\b")
+WRITE_TOOLS_RE = re.compile(r"\b(?:Write|Edit|MultiEdit|NotebookEdit)\b")
 errors: list[str] = []
 warnings: list[str] = []
 
@@ -328,6 +332,21 @@ def check_skill_md(rel_path: str, is_top_level: bool, parent: Optional[str] = No
         expected = f"{parent}-{dir_name}"
         if name and name != expected:
             err(rel_path, f"name '{name}' != expected '{expected}'")
+
+    audience = fm.get("audience", "").strip()
+    mode = fm.get("mode", "").strip()
+    if audience not in AUDIENCES:
+        err(rel_path, f"frontmatter audience must be one of {sorted(AUDIENCES)} (got {audience or 'nothing'})")
+    elif kit and audience != "app":
+        err(rel_path, "a kit skill reaches knowledge bases: audience must be app")
+    elif not kit and audience != "dev":
+        err(rel_path, "an engine skill (.claude/skills) must have audience: dev")
+    if mode not in MODES:
+        err(rel_path, f"frontmatter mode must be one of {sorted(MODES)} (got {mode or 'nothing'})")
+    if audience == "app" and DEV_WORDS_RE.search(body):
+        err(rel_path, "an app skill must not mention ship or PRs (that is engine work, audience: dev)")
+    if mode == "read" and WRITE_TOOLS_RE.search(body):
+        err(rel_path, "a mode: read skill must not name the Write / Edit tools")
 
     if not re.search(r"## Triggers", body):
         warn(rel_path, "missing ## Triggers section")

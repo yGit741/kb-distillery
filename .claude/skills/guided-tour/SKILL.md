@@ -6,6 +6,8 @@ description: >-
   of in chat. Use for guided tour, walkthrough, onboarding tour, tour of a screen or panel, show me, show-me,
   explain this on the UI, any reply about something visible in the app. Do NOT use to redesign or implement
   the screen itself (app-ui) or for wiki edits.
+audience: dev
+mode: write
 ---
 
 # guided-tour

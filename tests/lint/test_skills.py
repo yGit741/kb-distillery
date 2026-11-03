@@ -14,13 +14,16 @@ ROOT = CHECKOUT_ROOT          # skills are code
 from kb_distillery.lint.lint_skills import run_checks
 
 
-def _minimal_skill(name: str, description: Optional[str] = None) -> str:
+def _minimal_skill(name: str, description: Optional[str] = None, audience: str = "dev", mode: str = "write",
+                   extra: str = "") -> str:
     desc = description or (
         f"Test skill {name}. Use for testing only. Do NOT use in production."
     )
     return f"""---
 name: {name}
 description: {desc}
+audience: {audience}
+mode: {mode}
 ---
 
 # {name}
@@ -40,7 +43,7 @@ description: {desc}
 ```bash
 python3 -m kb_distillery.lint.lint
 ```
-"""
+{extra}"""
 
 
 def _minimal_readme(skill_name: str, meta: bool = False) -> str:
@@ -150,6 +153,57 @@ class LintSkillsFixtureTests(unittest.TestCase):
         warns = list(lint_skills.warnings)
         shutil.rmtree(tmp)
         return n_err, warns
+
+    def _errors_for(self, **kw):
+        from kb_distillery.lint import lint_skills
+        tmp = self._make_tree()
+        self.addCleanup(shutil.rmtree, tmp)
+        path = os.path.join(tmp, "skills", "test-skill", "SKILL.md")
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(_minimal_skill("test-skill", **kw))
+        run_checks(skills_roots=[os.path.join(tmp, "skills")])
+        return list(lint_skills.errors)
+
+    def test_audience_and_mode_are_required(self):
+        for field in ("audience", "mode"):
+            tmp = self._make_tree()
+            self.addCleanup(shutil.rmtree, tmp)
+            path = os.path.join(tmp, "skills", "test-skill", "SKILL.md")
+            with open(path, encoding="utf-8") as f:
+                body = "".join(l for l in f if not l.startswith(field + ":"))
+            with open(path, "w", encoding="utf-8") as f:
+                f.write(body)
+            n_err, _ = run_checks(skills_roots=[os.path.join(tmp, "skills")])
+            self.assertEqual(n_err, 1, field)
+
+    def test_audience_and_mode_values_are_checked(self):
+        self.assertTrue(any("audience must be" in e for e in self._errors_for(audience="everyone")))
+        self.assertTrue(any("mode must be" in e for e in self._errors_for(mode="rw")))
+
+    def test_app_skill_must_not_mention_ship_or_prs(self):
+        from kb_distillery.lint import lint_skills
+        app = lint_skills.check_skill_md  # an app skill only lives in a kit root; check the body rule directly
+        tmp = self._make_tree()
+        self.addCleanup(shutil.rmtree, tmp)
+        path = os.path.join(tmp, "skills", "test-skill", "SKILL.md")
+        for words, bad in (("Open a PR when done.", True), ("Then run ship merge.", True), ("A relationship map.", False)):
+            with open(path, "w", encoding="utf-8") as f:
+                f.write(_minimal_skill("test-skill", audience="app", extra=words + "\n"))
+            lint_skills.errors.clear()
+            app(os.path.relpath(path, lint_skills.ROOT).replace(os.sep, "/"), is_top_level=True, kit=True)
+            hit = any("must not mention ship" in e for e in lint_skills.errors)
+            self.assertEqual(hit, bad, words)
+
+    def test_read_skill_must_not_name_write_tools(self):
+        self.assertTrue(any("Write / Edit" in e for e in self._errors_for(mode="read", extra="Use the Edit tool on the page.\n")))
+        self.assertFalse(any("Write / Edit" in e for e in self._errors_for(mode="write", extra="Use the Edit tool on the page.\n")))
+        self.assertFalse(any("Write / Edit" in e for e in self._errors_for(mode="read", extra="Read the page.\n")))
+
+    def test_kit_skills_must_be_app_and_engine_skills_dev(self):
+        from kb_distillery.lint import lint_skills
+        self.assertTrue(any("must have audience: dev" in e for e in self._errors_for(audience="app")))
+        self.assertEqual(self._errors_for(audience="dev"), [])
+        self.assertTrue(lint_skills.AUDIENCES == {"app", "dev"})
 
     def test_description_without_use_trigger_warns(self):
         n_err, warns = self._warnings_for("Does a thing for the vault. Do NOT use for anything else.")

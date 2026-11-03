@@ -1,6 +1,8 @@
 ---
 name: explore-raw-data
 description: Look at cataloged raw sources (zero-LLM CLI) — find files, read excerpts, check a source against wiki pages, recommend a digest tier. Use for explore-raw-data, explore raw, which sources do I have on …, what does this undigested paper say, is this paper worth digesting, check this source against my notes. Do NOT answer thesis questions from the wiki, read raw/inbox/, digest, or write anything.
+audience: app
+mode: read
 ---
 
 # explore-raw-data
