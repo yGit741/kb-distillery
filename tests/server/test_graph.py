@@ -23,7 +23,7 @@ def test_graph_valid_model_and_legacy_keys(client, legacy):
     assert r.status_code == 200
     body = r.json()
     GraphSnapshot.model_validate(body)
-    assert set(body) - {"layer", "kbs", "relations"} == set(legacy)   # `schema` keeps its legacy key via the alias
+    assert set(body) - {"layer", "kbs", "relations"} == set(legacy) - {"relations"}   # `schema` keeps its legacy key via the alias
     assert body["node_count"] == len(body["nodes"]) == legacy["node_count"]
     assert body["link_count"] == len(body["links"])
     assert {k for n in body["nodes"] for k in n} >= {"id", "layer", "depth", "inDegree", "path"}

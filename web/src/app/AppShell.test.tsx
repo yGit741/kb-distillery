@@ -17,11 +17,11 @@ const ds: DataSource = mockDataSource({
 });
 
 describe("AppShell", () => {
-  it("has one nav of three tabs, one theme toggle, and a palette that reaches every screen", async () => {
+  it("has one nav of four tabs, one theme toggle, and a palette that reaches every screen", async () => {
     const router = createAppRouter(createMemoryHistory({ initialEntries: ["/app/system"] }));
     render(<App source={ds} router={router} />);
     const nav = await screen.findByRole("navigation", { name: "Main" });
-    expect([...nav.querySelectorAll("a")].map((a) => a.textContent)).toEqual(["Home", "Graph", "System"]);
+    expect([...nav.querySelectorAll("a")].map((a) => a.textContent)).toEqual(["Home", "Graph", "System", "Chat"]);
     expect(ROUTES.length).toBeGreaterThan(3); // the rest stay routable
     expect(nav).toHaveClass("overflow-x-auto", "min-w-0"); // scrolls inside itself on phones
     expect(screen.getAllByRole("button", { name: /switch to/i })).toHaveLength(1);
