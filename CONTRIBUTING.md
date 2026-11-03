@@ -47,7 +47,7 @@ Never commit to `main`. Use `ship`, which wraps branch, commit, gates and pull r
 ## Pull request expectations
 
 - One concern per pull request, under about 400 changed lines where possible.
-- The gates pass. `ship pr` runs `tests` (this includes the privacy ratchet), `lint-skills`, `lint-imports`, `lint` and `okf-check`; run `pixi run web-check` as well when `web/` changes. Do not skip or weaken a check. `web-check` also enforces the UI principles baseline (`web/tests/ui-principles.baseline.json`) and the graph screenshot test (`tests/e2e/graph-still.test.mjs`). More on the test harness: `tests/harness/README.md`; on the engine skills: `.claude/skills/README.md` (maintainer tooling).
+- The gates pass. `ship pr` runs `tests` (this includes the privacy ratchet), `lint-skills`, `lint-imports`, `lint` and `okf-check`; run `pixi run web-check` as well when `web/` changes. Do not skip or weaken a check. `web-check` also enforces the UI principles baseline (`web/tests/ui-principles.baseline.json`) and the graph screenshot test (`tests/e2e/graph-still.test.mjs`). More on the test harness: `tests/harness/README.md`; the maintainer-only `.claude/` agent tooling (engine skills, hooks) is not shipped in the public export.
 - Every call to a language model goes through `kb_distillery.llm`. Do not add a new `claude -p`, SDK or HTTP call.
 - A feature that cannot land in one pull request ships behind a flag in `src/kb_distillery/kits/base/defaults/flags.toml`; run `pixi run flags-gen` after editing it.
 - Changes to the app keep its look unless the pull request is about the look.

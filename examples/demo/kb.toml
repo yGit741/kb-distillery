@@ -20,7 +20,7 @@ order = ["topic", "idea", "question", "person", "series", "article", "notes", "d
          "company", "role", "interview", "skill",
          "process",
          "posting", "mail", "chat"]
-# Extra frontmatter on source pages (the thesis has authors/venue/arxiv-id; a job search has these).
+# Extra frontmatter on source pages (a research kb might add authors/venue/arxiv-id; a job search has these).
 source_fields = ["company", "created", "stage"]
 
 # --- Sources (the base kit gives article, notes, document) ----------------------------------------------------

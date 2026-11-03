@@ -1,16 +1,16 @@
-# First run: `kbd init` and `kbd doctor`
+# First run: `distill init` and `distill doctor`
 
 A fresh clone becomes a working knowledge base and dashboard with no LLM:
 
 ```bash
 pixi install
-kbd init            # asks for an id, name and kit when run in a terminal; --yes takes defaults
-kbd launch --kb <id>
+distill init            # asks for an id, name and kit when run in a terminal; --yes takes defaults
+distill launch --kb <id>
 ```
 
-## `kbd init`
+## `distill init`
 
-`kbd init [--kb-id ID] [--name NAME] [--kit base|research] [--dir PATH] [--yes]` (also `distill init`)
+`distill init [--kb-id ID] [--name NAME] [--kit base|research] [--dir PATH] [--yes] [DIR]`
 
 - Creates `<dir>/<id>/` (`--dir` defaults to the bases dir, `~/knowledge`, or `$KB_BASES_DIR`) as its **own git repository**:
   `kb.toml` (current `schema_version`, `[kb] kit`), `wiki/`, `raw/inbox/`, `meta/`, a minimal `.gitignore`, and one
@@ -26,7 +26,7 @@ kbd launch --kb <id>
 - **Never overwrites.** It refuses an existing folder, the reserved ids `think` and `demo`, an id that is
   not lowercase letters, digits and dashes, and your home directory.
 - Prompts only when stdin is a terminal and `--yes` is absent. Tests and scripts are non-interactive.
-- Then it runs `kbd doctor` on the new kb and prints the command to open it (`kbd launch --kb <id>`, or the path when
+- Then it runs `distill doctor` on the new kb and prints the command to open it (`distill launch --kb <id>`, or the path when
   `--dir` is not the bases dir).
 - **LLM is optional.** Init never asks for or stores a key. It prints one line: AI features stay off until a Claude
   subscription login (`claude login`) or an API key (`ANTHROPIC_API_KEY`, or `~/.config/kb-distillery/anthropic_key`) exists.
@@ -41,9 +41,9 @@ updated or removed, or `already up to date`, and is idempotent. It never touches
 missing (never created). A file the kit no longer ships (a hook, or a file in a skill folder) is reported and left in place, never deleted. Nothing is committed: review, then
 `distill ops chore hooks "refresh kit files"`.
 
-## `kbd doctor`
+## `distill doctor`
 
-`kbd doctor [--kb ID|PATH] [--json]`: PASS / WARN / FAIL / INFO with a one-line `fix:` each. Exit code 0 unless a FAIL.
+`distill doctor [--kb ID|PATH] [--json]`: PASS / WARN / FAIL / INFO with a one-line `fix:` each. Exit code 0 unless a FAIL.
 Read-only: no network, no LLM call, no lint, nothing written.
 
 | Check | FAIL when | WARN when |
@@ -51,7 +51,7 @@ Read-only: no network, no LLM call, no lint, nothing written.
 | python, pixi env | python < 3.11 | not inside the pixi env |
 | node | | missing (only the frontend build needs it) |
 | git, identity | git missing | `user.name` / `user.email` unset |
-| knowledge base | | none found (run `kbd init`), or several and none selected |
+| knowledge base | | none found (run `distill init`), or several and none selected |
 | kb.toml | unreadable, schema version differs (`ops migrate`), template unknown | |
 | kb folders | | `wiki/` or `meta/` missing |
 | storage | connector cannot load | connector auth not ready |

@@ -13,7 +13,7 @@ schema_version = "1.4"
 kit = "research"      # optional; without it the kb.toml carries its own [types] / [edges]
 ```
 
-`distill init` / `kbd init` write `kit`. The older key `template` is still read, and the old kit names `starter` and `academic-research` resolve to `base` and `research`, so a kb.toml written before the rename keeps working. Naming two different kits (`kit` and `template`) is refused.
+`distill init` writes `kit`. The older key `template` is still read, and the old kit names `starter` and `academic-research` resolve to `base` and `research`, so a kb.toml written before the rename keeps working. Naming two different kits (`kit` and `template`) is refused.
 
 `[types]` and `[edges]` in that kb.toml then **extend** the kit's:
 

@@ -7,7 +7,7 @@
 Code, tools and the vault are separate top-level folders; `meta/` is vault metadata only.
 
 ```
-src/kb_distillery/      Python app, package `kb_distillery` (src layout; `backend/pyproject.toml` stays until the root pyproject lands)
+src/kb_distillery/      Python app, package `kb_distillery` (src layout; `pyproject.toml` at the repo root)
   src/kb_distillery/cli/           `distill` (and `kbd`, deprecated): one front door to the commands below (see § distill and knowledge bases)
   src/kb_distillery/config/kb.py    kb discovery and selection: `~/knowledge/<id>` or `--kb <path>`, `kb.toml`
   src/kb_distillery/config/paths.py       the ONE vault-root resolver (the selected kb, else this checkout) + every data path constant
@@ -55,8 +55,8 @@ forwards (`cli/legacy.py` holds the mapping table; it goes after one release).
 | `distill send <note> --to a,b` | `kbd distill` | send a think note into knowledge bases |
 | `distill llm …` / `share …` / `propose …` | `pixi run llm` / `share` / graph.propose | the LLM door / the site / relation proposals |
 
-Per-user files (API key, chat keys, usage ledger) live in `~/.config/kb-distillery/` (`config/userdir.py`). If only the
-old `thesis-kb` folder under `~/.config/` exists, every command but `doctor`/`hook`/`ship` prints the exact `mv` and exits 1: nothing is
+Per-user files (API key, chat keys, usage ledger) live in `~/.config/kb-distillery/` (`config/userdir.py`). If only an
+older per-user folder under `~/.config/` exists, every command but `doctor`/`hook`/`ship` prints the exact `mv` and exits 1: nothing is
 moved for you.
 
 **One discovery path.** A knowledge base is a folder with a `kb.toml`: `~/knowledge/<id>/` (the bases dir is

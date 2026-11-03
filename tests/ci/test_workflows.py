@@ -92,6 +92,7 @@ class RunnerSafety(unittest.TestCase):
         for good in ("ubuntu-latest", "macos-latest", "macos-14", BY_VISIBILITY):
             self.assertTrue(runs_on_is_safe_for_forks(good), good)
 
+    @unittest.skipUnless(os.path.isfile(os.path.join(DIR, "deploy-main.yml")), "owner workflow: export-ignored from the public repo")
     def test_deploy_main_never_runs_on_pull_requests(self):
         wf = load("deploy-main.yml")
         self.assertFalse(PR_TRIGGERS & set(triggers(wf)), "deploy-main (self-hosted, holds deploy credentials) must not run on pull requests")

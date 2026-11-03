@@ -6,7 +6,7 @@ A skill is a folder `<name>/SKILL.md` that tells an agent how to run one workflo
 |--------|-----|--------------------------|
 | `src/kb_distillery/kits/base/skills/` | the workflows every kb needs (ingest, digest, query, wiki edits, history) | yes, copied into the kb's `.claude/skills/` |
 | `src/kb_distillery/kits/<kit>/skills/` | a kit's own workflows (`research`: `build-researcher-profile`) | yes, when the kb uses the kit |
-| `.claude/skills/` | working on the engine itself (tooling PRs, the React app, the API, the site) | no |
+| `.claude/skills/` | working on the engine itself; maintainer-only tooling, not shipped in the public export | no |
 
 Each of these folders has a `README.md` with a **Token budgets** table (one row per ladder skill) and a **Skills** table (every
 skill, linked); `pixi run lint-skills` keeps both in sync with the folders. Skills ship in the wheel with the kits
@@ -16,7 +16,7 @@ Read `<skill>/SKILL.md` before running a workflow.
 
 ## Adding a skill
 
-1. **Extend vs new**: see the `create-skill` decision tree (`.claude/skills/create-skill/SKILL.md`).
+1. **Extend vs new**: prefer extending an existing skill in the folder you target over adding a near-duplicate (the maintainers' `create-skill` decision tree is private tooling and is not shipped).
 2. Copy [`_TEMPLATE.md`](../../src/kb_distillery/kits/base/skills/_TEMPLATE.md) to `<skills folder>/<name>/SKILL.md`.
 3. Required: YAML `name` + `description` (with Use for / Do NOT), `## Triggers`, `## Do NOT`, `**LLM tier:**`, real CLI in `bash` blocks.
 4. Register it in that folder's `README.md` (Token budgets row for ladder skills; Skills table always).

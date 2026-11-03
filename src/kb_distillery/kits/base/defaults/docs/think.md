@@ -1,13 +1,13 @@
-# Think and `kbd distill`
+# Think and `distill send`
 
-Think is one standalone journal: `<kbs dir>/think` (its own git repo, human-owned, schema-free), outside every kb. Agents never write there, except the single provenance sidecar below, written by `kbd distill`.
+Think is one standalone journal: `<kbs dir>/think` (its own git repo, human-owned, schema-free), outside every kb. Agents never write there, except the single provenance sidecar below, written by `distill send`.
 
 ## Sending a note into kbs
 
 ```bash
-kbd distill <note> --to a,b            # ids or paths; note = name, name.md, sub/name.md, think:name.md
-kbd distill <note> --to a --summarize --backend batch
-kbd distill <note> --to a,b --no-commit
+distill send <note> --to a,b            # ids or paths; note = name, name.md, sub/name.md, think:name.md
+distill send <note> --to a --summarize --backend batch
+distill send <note> --to a,b --no-commit
 ```
 
 - **kb side:** `wiki/distilled-think-<slug>.md` in each kb, type `distilled-think`, `sources: [{resource: think:<note>.md}]`. One naming rule (`kb_distillery.distill.fanout.slug_for`) is shared with the `distill-think` skill, so the skill's `propose` continues the page this command wrote. Each kb gets its own `kb(distill)` commit.
