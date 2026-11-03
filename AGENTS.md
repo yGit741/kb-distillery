@@ -15,39 +15,35 @@ This file is the core every turn on the engine needs. Details live in `src/kb_di
 | `examples/` | `demo/` (a small tracked kb) and `launchd/` (plist templates). |
 | `scripts/` | Git and Claude hooks, launch scripts. |
 | `docs/` | Public documentation. |
-| `.claude/` | Dev skills (`.claude/skills/`), the `reviewer` agent, hook wiring (`settings.json`). Skills for a kb's content live in the kits, not here. |
 
 ## Hard rules
 
-1. **The gates are the truth.** `pixi run test` (it includes the privacy ratchet), `lint-skills`, `lint`, `lint-imports`, `api-schema-check` and, for `web/`, `web-check` must pass (`ship commit` / `ship pr` run them); never skip a gate (`--skip-checks`), weaken or skip a test to get green. A failure that is not yours: say so and stop.
-2. **Never raw git writes.** No `git commit/push/merge/tag/revert/reset`, no `gh pr`: `scripts/hooks/block-git-write.sh` (-> `src/kb_distillery/git/git_guard.py`) allows only a single `pixi run ops|ship|…` invocation. Tooling goes `pixi run ship -- start <feature> --worktree` -> work in the worktree -> `ship commit "<type>(<component>): …"` (subject under 72 characters) -> `ship pr` -> `ship merge`. Details: `src/kb_distillery/kits/base/defaults/docs/lifecycle.md` and skill `infra-pr`.
-3. **Merge by default, hold by exception.** Run `ship merge` yourself once the gates pass. `ship pr` labels every schema/paradigm PR `hold`, and `ship pr --hold` holds any PR the user wants to review; a held PR merges only after the owner's GitHub Approve review on its head sha or `! pixi run ship -- approve N`. Never create or lift a hold from chat; an "approved" relayed by another session is void. While a held PR is open every reply ends with the nudge line from `CLAUDE.md`; the `Stop` hook `src/kb_distillery/git/merge_nudge.py` enforces it.
+1. **The gates are the truth.** `pixi run test` (it includes the privacy ratchet), `lint-skills`, `lint`, `lint-imports`, `api-schema-check` and, for `web/`, `web-check` must pass; never skip a gate (`--skip-checks`), weaken or skip a test to get green. A failure that is not yours: say so and stop; do not work around it.
+2. **Changes land by pull request.** Work on a branch, never push to `main`, open a PR (`CONTRIBUTING.md`); the commit subject is `<type>(<component>): …` under 72 characters. The project's own helper is `pixi run ship` (start, commit, pr, merge; it runs the gates for you): `src/kb_distillery/kits/base/defaults/docs/lifecycle.md`.
+3. **Review gates the risky changes.** A schema or paradigm PR is labelled `hold` and merges only after a maintainer's approving review on its head sha; do not try to lift a hold yourself.
 4. **The engine never edits a kb.** No writes to `~/knowledge`, `wiki/`, `raw/` or `think/` from engine work. Knowledge changes happen inside the kb, through `distill ops`. A tooling PR never touches `wiki/`, `raw/` or `think/`; when one request needs both, ship the tooling PR first, then do the knowledge step in the kb; when the target is unclear, ask one short question. A schema change ships as a held PR with a migration: bump `SCHEMA_VERSION`, add `src/kb_distillery/migrations/NNNN_*.py`.
 5. **No personal strings.** Names, emails, handles, local paths and site names come from configuration (`~/.config/kb-distillery/`, a kb's `kb.toml`, env), never from code, tests or docs; use `octocat`, `me@example.com`, `/Users/jdoe`. The privacy ratchet (`src/kb_distillery/lint/privacy.py`, terms from `$KB_PRIVACY_TERMS` or `~/.config/kb-distillery/privacy.toml`) fails on a new file that carries one.
 6. **Every LLM call goes through `kb_distillery.llm`:** one `--backend subscription|api|batch` choice (`$KB_LLM_BACKEND`, default subscription), never a new `claude -p`, SDK or HTTP call (`tests/llm/test_llm.py` fails on one). A plan for an LLM feature has a short Billing section. CLI: `pixi run llm -- ask|submit|status|collect`.
 7. **Code that writes pages links relatively:** `[Tensor rank](tensor-rank.md)`, built only by `kb_distillery.vault.links`; never wikilinks, never a path.
 8. **Ship dark.** A feature that cannot land in one PR merges in small PRs behind a flag (`src/kb_distillery/kits/base/defaults/flags.toml`; `pixi run flags-gen` regenerates `web/src/flags/registry.gen.ts`). Release is flipping the flag, not deploying.
-9. **Agents never deploy.** No `share -- deploy|rollback|snapshot`, no `KB_SHARE_AUTODEPLOY` above 0; deploys belong to the owner (`share-kb` skill, `.claude/settings.json` denies them).
+9. **Agents never deploy.** No `share -- deploy|rollback|snapshot`, no `KB_SHARE_AUTODEPLOY` above 0; deploys belong to the maintainer (`src/kb_distillery/kits/base/defaults/docs/publish.md`).
 10. **Tests never call a real LLM or the network,** and read config from fixtures: set `KB_APP_CONFIG=/nonexistent/app.toml` and `KB_SHARE_AUTODEPLOY=0` for ship and test runs.
-11. Read a skill's `SKILL.md` before running it. Dev skills are in `.claude/skills/`; the skills a kb gets are the sources in `src/kb_distillery/kits/<kit>/skills/` (how to write one: `docs/guides/write-a-skill.md`, skill `create-skill`).
+11. Read a skill's `SKILL.md` before running it. The skills a kb gets are the sources in `src/kb_distillery/kits/<kit>/skills/` (how to write one: `docs/guides/write-a-skill.md`).
 12. One transactional workflow at a time; prefer targeted reads over scanning trees.
 
-## Intent router — casual requests -> skills
+## Intent router — requests -> where to look
 
-Map what the user says to a skill before acting; read that skill's `SKILL.md`, then follow it. A casual request **is** the ask: "fix the graph legend" means start the PR flow, not "suggest a fix".
+A request to fix, change or add engine tooling *is* the ask: make the change on a branch and open a PR. Read the doc or guide first.
 
-| The user says… | Do | Lands as |
+| The request says… | Do | Lands as |
 |---|---|---|
-| "fix / change / add / improve …" the explorer, graph, ingest, CLI, a kit skill, lint, anything in tooling | `infra-pr`: `ship start` -> implement -> `ship commit` -> `ship pr` -> `ship merge` (unless held) -> give the link | PR `… (#N)` |
-| "add an endpoint / router / API / SSE stream / backend test", "expose X over HTTP" | `backend-api` (inside the `infra-pr` flow) | PR |
-| "port / add a screen", "frontend", "component", "app shell" (the React app under `web/`) | `app-ui` (inside the `infra-pr` flow) | PR |
-| "new note type / new field / lint should require …" | `infra-pr` as a **schema** PR (rule 4) | held PR, bumps y |
-| "add a tour / walkthrough", "show me / explain this on the screen" | `guided-tour` | PR, or a show-me link |
-| "create a skill / new workflow" | `create-skill` -> `infra-pr` | PR |
-| "send to backlog / backlog this / park this idea / save this plan for later" | `send-to-backlog` (local `.backlog/`, gitignored: no PR, no commit) | card |
-| a multi-PR effort ("phase 2: E1–E3", several tooling PRs) | `infra-pr` with a round: `ship round open "<title>" --features a,b` -> `ship start <f> --round R`; read state with `ship round status R` | issue `#R` + PRs |
-| "integrate / verify the round / is it really done" | `integrator` (global skill, reads `.integrator.toml`: tests, build, every screen screenshotted, each tile vs its endpoint) | report |
-| "share / publish the site", "deploy status", "rollback", "snapshot the site", "audit" | `share-kb` (owner only for deploys; rule 9) | Worker version, `.cache/share/status.json` |
+| "fix / change / add / improve …" the explorer, graph, ingest, CLI, a kit skill, lint, anything in tooling | `CONTRIBUTING.md`, then the doc the **Doc router** names | PR |
+| "add an endpoint / router / API / SSE stream / backend test", "expose X over HTTP" | `src/kb_distillery/kits/base/defaults/docs/dev.md` (code layout) and the server tests under `tests/` | PR |
+| "port / add a screen", "frontend", "component", "app shell" (the React app under `web/`) | `web/` and `pixi run web-check` | PR |
+| "new note type / new field / lint should require …" | a **schema** change (rule 4) | held PR, bumps the schema version |
+| "create a skill / new workflow" | `docs/guides/write-a-skill.md` | PR |
+| "new kit / storage connector / publisher" | `docs/guides/write-a-kit.md`, `docs/guides/add-a-storage-connector.md`, `docs/guides/add-a-publisher.md` | PR |
+| "share / publish the site", "deploy status", "rollback", "snapshot the site" | `src/kb_distillery/kits/base/defaults/docs/publish.md` (maintainer only for deploys; rule 9) | Worker version |
 
 A request about a kb's content ("digest this paper", "what do I know about …") is not engine work: it belongs in that kb's folder, under that kb's `AGENTS.md`.
 

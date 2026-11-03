@@ -86,6 +86,8 @@ def hooks_health():
     claude_ok = False
     from kb_distillery.config import paths
     from kb_distillery.config.kb import checkout_root
+    if checkout_root() and not os.path.isdir(os.path.join(checkout_root(), ".claude")):
+        return "claude n/a", True      # the public export leaves the owner's `.claude/` out: nothing to wire
     claude_path = os.path.join(checkout_root() or "", ".claude", "settings.json")   # hook configs are code: the explorer's
     if checkout_root() and os.path.isfile(claude_path):
         try:

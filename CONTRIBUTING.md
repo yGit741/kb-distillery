@@ -66,8 +66,7 @@ Each guide names the contract test the implementation must pass.
 
 ## Other files at the root
 
-- `AGENTS.md` and `CLAUDE.md` give instructions to coding agents working on the engine.
-- `.integrator.toml` is the configuration for the integrator skill, which runs the test, build and screenshot checks for a round of merged pull requests. Do not move it.
+- `AGENTS.md` gives instructions to coding agents working on the engine.
 
 ## Conduct and license
 
