@@ -77,11 +77,11 @@
    "paper-2020-local-fixture-paper"
   ],
   [
-   "series-fixture-kalai-blog",
-   "article-kalai-fixture-post-one"
+   "series-fixture-author-blog",
+   "article-author-fixture-post-one"
   ],
   [
-   "series-fixture-kalai-blog",
+   "series-fixture-author-blog",
    "theme-boolean-analysis"
   ],
   [
@@ -121,12 +121,12 @@
   {
    "areas": [],
    "depth": "easy",
-   "id": "article-kalai-fixture-post-one",
+   "id": "article-author-fixture-post-one",
    "in": 1,
    "out": 0,
    "preview": "Problem: Is noise stability at most one? Main result: Trivially yes; the fixture post asks a toy question.",
    "status": "digested",
-   "title": "Kalai Fixture Post One",
+   "title": "Author Fixture Post One",
    "type": "article",
    "words": 43,
    "year": null
@@ -353,7 +353,7 @@
     "boolean-analysis"
    ],
    "depth": "",
-   "id": "series-fixture-kalai-blog",
+   "id": "series-fixture-author-blog",
    "in": 0,
    "out": 2,
    "preview": "A fixture blog series standing in for a WordPress blog of clips. It exists only so the pipeline harness can exercise the Contents table of a series.",

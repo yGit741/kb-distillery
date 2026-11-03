@@ -1,6 +1,6 @@
 """PDF integrity: old-style arXiv IDs resolve, and saved web pages never pass as PDFs.
 
-Regression for the gil-kalai bibliography, where three arXiv/AMS landing pages were
+Regression for the ada-example bibliography, where three arXiv/AMS landing pages were
 saved as .pdf and sat in the corpus as `digested`.
 """
 import os

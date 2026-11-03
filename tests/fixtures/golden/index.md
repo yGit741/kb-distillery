@@ -38,7 +38,7 @@ Read this first on any query.
 
 ## Series
 
-- [Fixture combinatorics blog](series-fixture-kalai-blog.md) (digested) — A fixture blog series standing in for a WordPress blog of clips. It exists only so the pipeline harness can...
+- [Fixture combinatorics blog](series-fixture-author-blog.md) (digested) — A fixture blog series standing in for a WordPress blog of clips. It exists only so the pipeline harness can...
 
 ## Books
 
@@ -61,7 +61,7 @@ Read this first on any query.
 
 ## Articles
 
-- [Kalai Fixture Post One](article-kalai-fixture-post-one.md) (digested)
+- [Author Fixture Post One](article-author-fixture-post-one.md) (digested)
 
 ## Blog posts
 

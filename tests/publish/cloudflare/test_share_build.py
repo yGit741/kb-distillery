@@ -391,7 +391,7 @@ class EmbedJsonTests(unittest.TestCase):
 
 class SizeVerdictTests(unittest.TestCase):
     """The deployable size is the builder's knowledge, not a number a test guessed (10 MB was
-    one; the vault outgrew it with the Kalai blog and every PR gate went red)."""
+    one; the vault outgrew it with a large blog and every PR gate went red)."""
 
     def test_fine_below_warning(self):
         self.assertIsNone(sb.size_verdict(sb.WARN_HTML_BYTES))

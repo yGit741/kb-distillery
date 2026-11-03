@@ -6,7 +6,7 @@ import pytest
 from kb_distillery.vault import schema as _schema
 
 if "paper" not in _schema.SOURCE_TYPES:   # this module builds `paper` pages: it needs the explorer's default types
-    pytest.skip("needs the default source types (run with KB=yonatan-thesis or a kb that defines `paper`)", allow_module_level=True)
+    pytest.skip("needs the default source types (run with a research kb or any kb that defines `paper`)", allow_module_level=True)
 
 import contextlib
 import importlib.util

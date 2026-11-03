@@ -169,8 +169,8 @@ class TestDrainCount(unittest.TestCase):
 class WebClipNameTests(unittest.TestCase):
     def test_url_derived(self):
         from kb_distillery.ingest.scrap import web_clip_name
-        self.assertEqual(web_clip_name("https://gilkalai.wordpress.com/ai-for-mathematics-spring-2027/"),
-                         "gilkalai-wordpress-com-ai-for-mathematics-spring-2027.html")
+        self.assertEqual(web_clip_name("https://adaexample.wordpress.com/ai-for-mathematics-spring-2027/"),
+                         "adaexample-wordpress-com-ai-for-mathematics-spring-2027.html")
         self.assertEqual(web_clip_name("https://www.windowsontheory.org/2023/12/22/emergent-abilities/"),
                          "windowsontheory-org-2023-12-22-emergent-abilities.html")
         self.assertEqual(web_clip_name("https://example.org/"), "example-org.html")

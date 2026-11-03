@@ -65,7 +65,7 @@ Depends on: nothing. Result: final repo shape, thesis kb running from inside it.
 any conflict with this roadmap before starting.
 
 **1.1 Freeze and back up.** Clean `git status` in the explorer, thesis kb and
-think. Save the green baseline (`KB=yonatan-thesis pixi run test`). Tag
+think. Save the green baseline (`KB=<research-kb> pixi run test`). Tag
 `pre-distillery` in all three repos with `ship tag` (agents cannot run
 `git tag`; `ship tag <name> [--at REV] [--kb ID|PATH | --repo DIR]`, local,
 annotated, main only, refuses `kb-*`). Tarball `knowledge-bases/` minus `raw/`,
@@ -78,7 +78,7 @@ docs and skills. No compatibility alias.
 *DoD:* `grep -ri knowledge-base-explorer` is empty outside history notes;
 `kbd --help` works; tests green.
 
-**1.3 Layout move.** `kb-yonatan-thesis` → `kbs/yonatan-thesis` (`.git` and
+**1.3 Layout move.** `kb-<research-kb>` → `kbs/<research-kb>` (`.git` and
 `raw/` move with it; same disk, instant). `kb-job-search` → `examples/demo`
 (tracked; check it is public-safe first). `think` → `kbs/think` (own repo).
 `.gitignore`: `kbs/*`, `!examples/demo/`. Delete the empty `knowledge-bases/`.
@@ -95,7 +95,7 @@ on a kb repo's main, `chore(<scope>)` is allowed when every path is a kb
 tooling path (`.claude/`, `.obsidian/`, `CLAUDE.md`, `AGENTS.md`,
 `.gitignore`, `kb.toml`); no `--no-verify`. There is no `refactor:` type.
 Tests: discovery (list, unknown id, path override) and hook resolution.
-*DoD:* `kbd kb-list` shows `demo`, `yonatan-thesis` and not `think`; old code
+*DoD:* `kbd kb-list` shows `demo`, `<research-kb>` and not `think`; old code
 paths deleted, not just unused.
 
 **1.5 Integrate branches.** Order of work: `infra/llm-client` merges first,
@@ -115,7 +115,7 @@ queries work against the thesis kb and demo.
 
 **1.6 Verify.** Thesis tests match the 1.1 baseline; demo tests green except
 the known thesis-type tests (fixed in Phase 2). Dashboard runs with
-`--kb yonatan-thesis` and `--kb demo`, screenshot tour of both.
+`--kb <research-kb>` and `--kb demo`, screenshot tour of both.
 `knowledge-base-thesis` untouched (status + mtime check).
 
 **Phase 1 DoD:** 1.1–1.6 green, `phase-1-done` tag, short report with

@@ -30,7 +30,7 @@ export const EXPLAIN: Record<string, Explain> = {
     ],
   },
   thesis: {
-    filters: "A fixed seed of pages (the two themes, the open questions touching both, the papers the direction rests on, O'Donnell's book, Gil Kalai) and every page one link away from the seed; everything else is hidden. Types: themes, ideas, questions, papers, book parts, people.",
+    filters: "A fixed seed of pages (the two themes, the open questions touching both, the papers the direction rests on, O'Donnell's book) and every page one link away from the seed; everything else is hidden. Types: themes, ideas, questions, papers, book parts, people.",
     layout: ANCHORED,
     ranking: `${LABELS} Open questions and pages between the two themes weigh more here (wOpen 1.2, wBetween 1.6).`,
     algorithms: [

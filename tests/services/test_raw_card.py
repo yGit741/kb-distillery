@@ -33,13 +33,13 @@ thanks
 """
 CLIP = """---
 title: "Brush Up"
-blog: "gilkalai.wordpress.com"
-url: https://gilkalai.wordpress.com/2008/06/02/x/
+blog: "adaexample.wordpress.com"
+url: https://adaexample.wordpress.com/2008/06/02/x/
 source: wordpress.com REST API v1.1
 ---
 # Brush Up
 
-Original: https://gilkalai.wordpress.com/2008/06/02/x/
+Original: https://adaexample.wordpress.com/2008/06/02/x/
 
 A short post about posets.
 """
@@ -76,7 +76,7 @@ def test_chat_web_youtube_email_cards(vault):
     assert chat["kind"] == "chat" and chat["model"] == "Gemini" and chat["turn_count"] == 3
     assert [t["role"] for t in chat["turns"]] == ["user", "model", "user"] and chat["turns"][0]["text"] == "what is XOR"
     web = card(vault, "raw/web-clips/w.md")
-    assert web["kind"] == "web" and web["url"].startswith("https://gilkalai") and web["site"] == "gilkalai.wordpress.com"
+    assert web["kind"] == "web" and web["url"].startswith("https://adaexample") and web["site"] == "adaexample.wordpress.com"
     assert "Original:" not in web["excerpt"] and "posets" in web["excerpt"]
     yt = card(vault, "raw/web-clips/yt.md")
     assert yt["kind"] == "youtube" and yt["video_id"] == "dQw4w9WgXcQ"
@@ -122,9 +122,9 @@ def test_card_route(vault):
 
 
 def test_blockquote_original_line_is_stripped(vault):
-    (vault / "raw" / "web-clips" / "q.md").write_text("---\ntitle: Q\n---\n# Q\n\n> Original: https://gilkalai.wordpress.com/2008/04/29/hello-world/ · 2008-04-29\n\nHello world post.\n")
+    (vault / "raw" / "web-clips" / "q.md").write_text("---\ntitle: Q\n---\n# Q\n\n> Original: https://adaexample.wordpress.com/2008/04/29/hello-world/ · 2008-04-29\n\nHello world post.\n")
     web = card(vault, "raw/web-clips/q.md")
-    assert "Original" not in web["excerpt"] and "gilkalai" not in web["excerpt"] and "Hello world" in web["excerpt"]
+    assert "Original" not in web["excerpt"] and "adaexample" not in web["excerpt"] and "Hello world" in web["excerpt"]
 
 
 def test_public_handwritten_and_images_get_facts_only(vault):

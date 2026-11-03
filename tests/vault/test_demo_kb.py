@@ -10,6 +10,7 @@ import unittest
 from unittest.mock import patch
 
 from kb_distillery.config import kb as kbconfig, resources
+from kb_distillery.lint import privacy
 
 CHECKOUT = kbconfig.checkout_root()
 DEMO = os.path.join(CHECKOUT, "examples", "demo")
@@ -70,14 +71,15 @@ class DemoIsPublicSafe(unittest.TestCase):
         self.assertEqual(bad, [])
 
     def test_no_personal_strings_or_secrets_in_the_text_files(self):
-        pattern = re.compile(r"/Users/|yonatan|mobileye|gh[ps]_[A-Za-z0-9]{20}|api[_-]?key|BEGIN [A-Z ]*PRIVATE|"
+        pattern = re.compile(r"/Users/|mobileye|gh[ps]_[A-Za-z0-9]{20}|api[_-]?key|BEGIN [A-Z ]*PRIVATE|"
                              r"[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+\.(com|org|net|io)", re.I)
         hits = []
         for rel in self.files:
             if rel.endswith(".pdf") or not os.path.isfile(os.path.join(CHECKOUT, rel)):      # a file deleted in the work tree holds nothing to leak
                 continue
             with open(os.path.join(CHECKOUT, rel), encoding="utf-8", errors="ignore") as f:
-                if pattern.search(f.read()):
+                text = f.read()
+                if pattern.search(text) or privacy.matches(text, privacy.personal_pattern()):     # + the owner's configured terms
                     hits.append(rel)
         self.assertEqual(hits, [])
 

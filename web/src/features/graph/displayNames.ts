@@ -32,7 +32,6 @@ export const AREA_DISPLAY: Readonly<Record<string, string>> = {
 export const PAGE_DISPLAY: Readonly<Record<string, string>> = {
   "book-2014-analysis-of-boolean-functions": "O'Donnell: Boolean functions",
   "book-2014-understanding-machine-learning": "Understanding ML",
-  "series-gil-kalai-blog": "Kalai's blog",
   "series-karpathy-zero-to-hero": "Zero to Hero",
 };
 

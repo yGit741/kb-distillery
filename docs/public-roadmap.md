@@ -19,11 +19,11 @@ This page lists what is shipped, what is next, and ideas that are not scheduled.
 - A layer contract between packages, checked by `pixi run lint-imports` and by the `ship` gates.
 - A nightly sync and hygiene report for macOS.
 - Hooks that keep agents from writing to `raw/` or running ad-hoc git writes in a knowledge base.
+- PDF reading with pypdfium2 (BSD / Apache) instead of the AGPL PyMuPDF, with a license check.
 
 ## Next
 
 - A `distill` command that covers the tasks that still run as `pixi run <task>`.
-- Replace PyMuPDF (AGPL) with a permissively licensed PDF library, and check licenses in CI.
 - A wheel that installs into a clean environment and passes `distill doctor`.
 - Continuous integration for pull requests: Python tests, lint, web checks, wheel build.
 - Public release: the repository, a tagged `0.1.0` and a package.
