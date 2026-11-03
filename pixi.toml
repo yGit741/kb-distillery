@@ -3,7 +3,7 @@ name = "kb-distillery"
 version = "0.1.0"
 description = "kb-distillery: the engine behind every knowledge base in ~/knowledge"
 channels = ["conda-forge"]
-platforms = ["osx-arm64"]
+platforms = ["osx-arm64", "osx-64", "linux-64"]
 
 [dependencies]
 python = ">=3.11"
