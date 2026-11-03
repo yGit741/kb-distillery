@@ -7,6 +7,7 @@ import os
 import sys
 from datetime import datetime, timezone
 
+from kb_distillery.config import pages as page_conventions
 from kb_distillery.vault import links
 from kb_distillery.vault.graph import claim_text, extract_section, one_hop, outbound_links, score_pair
 from kb_distillery.lint.lint import parse_frontmatter
@@ -71,7 +72,7 @@ def _snippets(slug, pages):
     t = fm.get("type", "")
     lines = [f"### {_ref(slug, pages)} ({t}, {fm.get('maturity', '')})"]
     if t in SOURCE_TYPES:
-        for h in ("Problem", "Main result", "Takeaways for my thesis", "Connections", "Links out"):
+        for h in ("Problem", "Main result", page_conventions.takeaways_heading(), "Connections", "Links out"):
             block = extract_section(text, h)
             if block:
                 lines.append(f"**{h}:** {block[:800]}")

@@ -100,7 +100,7 @@
    "preview": "Problem: Is low rank a good bias? Main result: The article argues it is.",
    "title": "Clip Why Rank Matters",
    "type": "article",
-   "words": 41,
+   "words": 38,
    "year": null
   },
   {
@@ -113,7 +113,7 @@
    "preview": "Problem: Where does rank show up? Main result: Everywhere, says the post.",
    "title": "Tblog Post One",
    "type": "article",
-   "words": 38,
+   "words": 35,
    "year": null
   },
   {
@@ -141,7 +141,7 @@
    "preview": "Coverage: 10 / 61 pp (16%) · skip rows excluded · parts ≤ 60 pp",
    "title": "Tiny Book (2020)",
    "type": "book",
-   "words": 115,
+   "words": 111,
    "year": 2020
   },
   {
@@ -171,7 +171,7 @@
    "preview": "Problem: What is generalization? Main result: Capacity alone does not explain generalization.",
    "title": "Lecture 1 · Introduction",
    "type": "lecture",
-   "words": 72,
+   "words": 69,
    "year": null
   },
   {
@@ -184,7 +184,7 @@
    "preview": "With: What it was about:",
    "title": "2026 01 02 Rank Thread",
    "type": "mail",
-   "words": 36,
+   "words": 33,
    "year": null
   },
   {
@@ -197,7 +197,7 @@
    "preview": "Problem: Main result:",
    "title": "Tiny Book",
    "type": "paper",
-   "words": 32,
+   "words": 29,
    "year": 2020
   },
   {
@@ -210,7 +210,7 @@
    "preview": "Problem: Is matrix completion biased to low rank? Main result: Yes, in a toy model.",
    "title": "Easy Skim Paper",
    "type": "paper",
-   "words": 45,
+   "words": 42,
    "year": 2023
   },
   {
@@ -225,7 +225,7 @@
    "preview": "Problem: Why does gradient descent on a tensor factorization generalize? Main result: Gradient flow implicitly minimizes tensor rank.",
    "title": "Tiny Rank Paper",
    "type": "paper",
-   "words": 80,
+   "words": 77,
    "year": 2024
   },
   {
@@ -240,7 +240,7 @@
    "preview": "Problem: What is the rank of a tensor? Main result: Tensor rank can exceed every flattening rank.",
    "title": "Tiny Book",
    "type": "part",
-   "words": 77,
+   "words": 74,
    "year": 2020
   },
   {
@@ -311,7 +311,7 @@
    "preview": "Problem: Why do big networks generalize? Main result: A talk-length argument that Tensor rank is the right lens.",
    "title": "Tiny talk",
    "type": "video",
-   "words": 51,
+   "words": 48,
    "year": null
   }
  ],

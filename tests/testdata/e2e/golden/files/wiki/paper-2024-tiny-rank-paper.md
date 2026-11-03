@@ -34,7 +34,7 @@ $T = \sum_r a_r \otimes b_r \otimes c_r$
 Variables: $T$: tensor
 
 
-## Takeaways for my thesis
+## Takeaways
 
 - Gradient flow implicitly minimizes tensor rank.
 - Concepts: [Tensor rank](tensor-rank.md), [Learning theory](theme-learning-theory.md)

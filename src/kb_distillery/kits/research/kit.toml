@@ -4,6 +4,12 @@ version = 1
 extends = "base"
 description = "Academic research: papers, books and lectures digested into ideas, questions and people, with typed relations."
 
+# Page conventions (kb_distillery.config.pages): a research kb writes its takeaways for the thesis, and its
+# research statement page `thesis` is a convention page, not content.
+[pages]
+takeaways_heading = "Takeaways for my thesis"
+focus_slugs = ["thesis"]
+
 [types]
 order = ["topic", "idea", "question", "person", "course", "series", "book", "notebook",
          "paper", "part", "lecture", "article", "blog-post", "video", "ai-chat", "mail"]

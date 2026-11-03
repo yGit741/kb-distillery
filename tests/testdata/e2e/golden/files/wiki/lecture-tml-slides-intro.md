@@ -36,7 +36,7 @@ Lecture overview.
 $R(h) \le \hat R(h) + \epsilon$
 
 
-## Takeaways for my thesis
+## Takeaways
 
 - Capacity alone does not explain generalization.
 - Concepts: [Tensor rank](tensor-rank.md), [Learning theory](theme-learning-theory.md)

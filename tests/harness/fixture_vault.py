@@ -177,7 +177,7 @@ discussed_with: []
 
 $H(X) = -\\sum p \\log p$
 
-## Takeaways for my thesis
+## Takeaways
 
 - None.
 

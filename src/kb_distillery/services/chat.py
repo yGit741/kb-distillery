@@ -17,6 +17,7 @@ import threading
 import urllib.error
 import urllib.request
 
+from kb_distillery.config import pages as page_conventions
 from kb_distillery.config import userdir
 from kb_distillery.config.paths import vault_root
 META_DIR = os.path.join(vault_root(), "meta")
@@ -66,7 +67,6 @@ MAX_TOKENS = 4096
 TOP_K = 6                 # pages retrieved per turn
 PAGE_CHARS = 14000        # cap per page body
 TURN_CHARS = 60000        # cap on new page text added per turn
-SKIP_SLUGS = {"AGENTS", "log", "thesis"}
 STOPWORDS = set("""
 a an and are as at be but by can could did do does doing for from had has have how i if in into
 is it its me my no not of on or our please should so tell than that the their them then there
@@ -446,7 +446,7 @@ def retrieve(question, k=TOP_K, index=None, allowed=None):
     qset = set(qtokens)
     ranked = []
     for slug, meta in index.items():
-        if slug in SKIP_SLUGS or not os.path.isfile(query.wiki_path(slug)):
+        if slug in page_conventions.skip_slugs() or not os.path.isfile(query.wiki_path(slug)):
             continue
         if allowed is not None and slug not in allowed:
             continue
