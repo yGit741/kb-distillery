@@ -1,7 +1,7 @@
 """`create_app()` — the FastAPI application.
 
 Routers are auto-discovered: every module in `kb_distillery.server.routers` that exposes `router` is included, so a new
-resource is a new file and nothing shared is edited. The old dashboard page URLs redirect to their React routes
+resource is a new file and nothing shared is edited. The old pre-React page URLs redirect to their React routes
 (`PORTED`); anything else no router owns is a 404.
 """
 import importlib
@@ -16,7 +16,7 @@ from kb_distillery.server.spa import spa_router
 
 ROUTERS_PACKAGE = "kb_distillery.server.routers"
 ALLOWED_HOSTS = ["127.0.0.1", "localhost", "[::1]", "testserver"]
-# Old dashboard page URLs, each redirecting to the React route that replaced it (also reached as /legacy/<page>).
+# Old pre-React page URLs, each redirecting to the React route that replaced it (also reached as /legacy/<page>).
 PORTED = {
     "/": "/app/system", "/index.html": "/app/system", "/ops": "/app/system",
     "/start": "/app/start", "/start.html": "/app/start",

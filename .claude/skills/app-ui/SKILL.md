@@ -33,7 +33,7 @@ pixi run lint-skills
 
 ## Tokens
 
-- `web/src/index.css` holds the shadcn CSS variables converted from the retired dashboard `shell.css` (light in `:root`, dark in `.dark`). ONE accent (`--primary`, blue). Chrome status colours are `--ok --warn --bad` only.
+- `web/src/index.css` holds the shadcn CSS variables converted from the retired `shell.css` of the old dashboard (light in `:root`, dark in `.dark`). ONE accent (`--primary`, blue). Chrome status colours are `--ok --warn --bad` only.
 - Use Tailwind token classes (`bg-card`, `text-muted-foreground`, `border`, `text-primary`). Never a hex value in a component.
 - Data colours (type, layer, depth, status, area, raw pile) come from `src/theme/palette.ts` and nowhere else.
 - Theme: `src/theme/theme.ts` (zustand, saved in `localStorage` inside try/catch, `prefers-color-scheme` default). The toggle lives in AppShell only.

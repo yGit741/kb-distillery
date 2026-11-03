@@ -3,7 +3,7 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 /*
- * Design tokens, converted from meta/dashboard/static/shell.css (light + dark).
+ * Design tokens, converted from the removed legacy shell.css (light + dark).
  * shadcn names on the left; the legacy token it came from in the comment.
  * ONE accent (blue). Status colours --ok/--warn/--bad are the only other hues in the chrome;
  * node-type / status / area colours live in src/theme/palette.ts, never here.

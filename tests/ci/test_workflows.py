@@ -120,7 +120,7 @@ class PushAndPullRequestChecks(unittest.TestCase):
         self.assertTrue(any(u.startswith("gitleaks/gitleaks-action@v") for u in uses))
         checkout = next(s for _, s in steps(wf) if s.get("uses", "").startswith("actions/checkout"))
         self.assertEqual(checkout["with"]["fetch-depth"], 0)               # the whole history, not just the tip
-        self.assertEqual(wf["permissions"], {"contents": "read"})
+        self.assertEqual(wf["permissions"], {"contents": "read", "pull-requests": "read"})   # read-only; the action lists PR commits
 
     def test_the_check_workflows_never_deploy_or_publish(self):
         for name in ("ci.yml", "secret-scan.yml"):
