@@ -15,6 +15,7 @@ from unittest import mock
 
 from kb_distillery.config import kb as kbconfig
 from kb_distillery.config import resources
+from kb_distillery.config import resources
 from kb_distillery.git import install_hooks
 
 ENGINE = kbconfig.checkout_root()
@@ -67,8 +68,9 @@ class KitHookFilesTests(unittest.TestCase):
         for name in (*GIT_HOOKS, *CLAUDE_HOOKS):
             path = os.path.join(KIT, name)
             self.assertTrue(os.stat(path).st_mode & stat.S_IXUSR, f"{name} is not executable (git would skip it)")
-            tracked = subprocess.run(["git", "ls-files", "-s", name], cwd=KIT, capture_output=True, text=True).stdout
-            self.assertTrue(tracked.startswith("100755"), f"{name}: git does not track the executable bit ({tracked!r})")
+            if resources.has_git():       # a `git archive` tree has no index to ask; the on-disk bit above is all we can check
+                tracked = subprocess.run(["git", "ls-files", "-s", name], cwd=KIT, capture_output=True, text=True).stdout
+                self.assertTrue(tracked.startswith("100755"), f"{name}: git does not track the executable bit ({tracked!r})")
             with open(path, encoding="utf-8") as f:
                 text = f.read()
             for retired in ("PYTHONPATH", "KBD" + "_DIR", "backend" + "/src", "src/kb_distillery", ".pixi", "env.sh", "python -m", "python3"):

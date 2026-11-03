@@ -1489,7 +1489,7 @@ def main(argv=None):
 def _main(argv):
     from kb_distillery.config.resources import NotInCheckout, require_repo_root
     try:
-        require_repo_root("ship")
+        require_repo_root("ship", git=True)
     except NotInCheckout as e:
         print(f"error: {e}", file=sys.stderr)
         return 2

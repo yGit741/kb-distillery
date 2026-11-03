@@ -9,7 +9,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from kb_distillery.config import kb as kbconfig
+from kb_distillery.config import kb as kbconfig, resources
 from kb_distillery.lint import privacy
 
 CHECKOUT = kbconfig.checkout_root()
@@ -52,6 +52,7 @@ class DemoKb(unittest.TestCase):
                                 f"lint rewrote {rel}: commit the regenerated file")
 
 
+@unittest.skipUnless(resources.has_git(), "needs git to list what is tracked (this source tree has no .git, e.g. a git archive)")
 class DemoIsPublicSafe(unittest.TestCase):
     """What git would hold of examples/demo: no caches, tokens, personal paths or addresses."""
 

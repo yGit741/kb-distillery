@@ -41,11 +41,15 @@ def test_a_package_in_site_packages_has_no_repo_even_inside_a_repo(tmp_path):
         assert resources.repo_root() is None
 
 
-def test_a_src_layout_without_git_is_not_a_checkout(tmp_path):
-    """An exported tree (no .git) is not a repository to ship from."""
+def test_a_src_layout_without_git_is_a_checkout_but_has_no_history(tmp_path):
+    """A `git archive` tree (no .git) is a source tree the tests and tools run from; only history-needing tools refuse it."""
     pkg = _fake_checkout(tmp_path, git=False)
     with patch.object(resources, "package_root", lambda: pkg):
-        assert resources.repo_root() is None
+        assert resources.repo_root() == tmp_path / "repo"
+        assert not resources.has_git()
+        assert resources.require_repo_root("tool") == tmp_path / "repo"
+        with pytest.raises(resources.NotInCheckout, match="needs a git clone"):
+            resources.require_repo_root("ship", git=True)
 
 
 def test_a_worktree_or_clone_is_a_checkout(tmp_path):
