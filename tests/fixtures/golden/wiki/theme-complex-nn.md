@@ -1,7 +1,6 @@
 ---
 type: topic
 layer: concept
-title: "Complex Nn"
 maturity: seed
 aliases: []
 related: []

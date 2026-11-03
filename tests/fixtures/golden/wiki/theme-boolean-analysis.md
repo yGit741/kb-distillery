@@ -1,7 +1,6 @@
 ---
 type: topic
 layer: concept
-title: "Boolean Analysis"
 maturity: seed
 aliases: []
 related: []

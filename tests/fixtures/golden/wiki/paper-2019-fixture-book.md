@@ -1,7 +1,6 @@
 ---
 type: paper
 layer: source
-title: "Fixture Book"
 authors: []
 year: 2019
 area: []
@@ -27,7 +26,7 @@ discussed_with: []
 
 ## Key equations
 
-## Takeaways for my thesis
+## Takeaways
 -
 
 ## Links out

@@ -5,14 +5,6 @@
    "part-2019-fixture-book-ch2-concentration"
   ],
   [
-   "mail-2024-02-01-fixture-thread-about-a-lemma",
-   "noise-stability"
-  ],
-  [
-   "mail-2024-02-01-fixture-thread-about-a-lemma",
-   "theme-boolean-analysis"
-  ],
-  [
    "course-fixture-rl",
    "lecture-rl-fixture-1"
   ],
@@ -35,6 +27,14 @@
   [
    "lecture-rl-fixture-1",
    "theme-learning-theory"
+  ],
+  [
+   "mail-2024-02-01-fixture-thread-about-a-lemma",
+   "noise-stability"
+  ],
+  [
+   "mail-2024-02-01-fixture-thread-about-a-lemma",
+   "theme-boolean-analysis"
   ],
   [
    "noise-stability",
@@ -123,12 +123,12 @@
    "depth": "easy",
    "id": "article-author-fixture-post-one",
    "in": 1,
+   "maturity": "digested",
    "out": 0,
    "preview": "Problem: Is noise stability at most one? Main result: Trivially yes; the fixture post asks a toy question.",
-   "status": "digested",
    "title": "Author Fixture Post One",
    "type": "article",
-   "words": 43,
+   "words": 42,
    "year": null
   },
   {
@@ -136,9 +136,9 @@
    "depth": "easy",
    "id": "blog-not-exact-fixture-hebrew-post",
    "in": 0,
+   "maturity": "digested",
    "out": 0,
    "preview": "Rank of a fixture matrix. The rank is at most n.",
-   "status": "digested",
    "title": "פוסט לדוגמה: מטריצות",
    "type": "blog-post",
    "words": 61,
@@ -151,12 +151,12 @@
    "depth": "",
    "id": "book-2019-fixture-book",
    "in": 2,
+   "maturity": "reading",
    "out": 1,
    "preview": "A fixture book of four chapters, used by the pipeline harness to exercise the page partition, part digests and the coverage line. It has no real content.",
-   "status": "reading",
    "title": "Fixture Book (2019)",
    "type": "book",
-   "words": 139,
+   "words": 138,
    "year": 2019
   },
   {
@@ -164,28 +164,13 @@
    "depth": "listed",
    "id": "chat-fixture-ai-chat",
    "in": 0,
+   "maturity": "to-read",
    "out": 0,
    "preview": "_No visualizations in this chat._",
-   "status": "to-read",
    "title": "Fixture chat on VC dimension",
    "type": "ai-chat",
    "words": 113,
    "year": null
-  },
-  {
-   "areas": [
-    "boolean-analysis"
-   ],
-   "depth": "full",
-   "id": "mail-2024-02-01-fixture-thread-about-a-lemma",
-   "in": 1,
-   "out": 2,
-   "preview": "Problem: Does the lemma hold for non-monotone functions? Main result: Yes, by symmetrisation.",
-   "status": "digested",
-   "title": "Fixture thread about a lemma",
-   "type": "mail",
-   "words": 60,
-   "year": 2024
   },
   {
    "areas": [
@@ -194,12 +179,12 @@
    "depth": "",
    "id": "course-fixture-rl",
    "in": 1,
+   "maturity": "digested",
    "out": 3,
    "preview": "A fixture course whose members are two slide decks, catalogued with a collection and a title. It exists only so the pipeline harness can exercise the Contents table of a course.",
-   "status": "digested",
    "title": "Fixture RL course",
    "type": "course",
-   "words": 90,
+   "words": 96,
    "year": null
   },
   {
@@ -209,12 +194,12 @@
    "depth": "",
    "id": "generalization",
    "in": 1,
+   "maturity": "seed",
    "out": 1,
    "preview": "One-liner: Gap between train and test risk.",
-   "status": "seed",
    "title": "Generalization",
    "type": "idea",
-   "words": 45,
+   "words": 46,
    "year": null
   },
   {
@@ -224,12 +209,12 @@
    "depth": "full",
    "id": "lecture-rl-fixture-1",
    "in": 2,
+   "maturity": "digested",
    "out": 2,
    "preview": "Problem: Define a fixture MDP. Main result: The value function satisfies the Bellman equation.",
-   "status": "digested",
    "title": "Fixture RL lecture 1",
    "type": "lecture",
-   "words": 68,
+   "words": 69,
    "year": null
   },
   {
@@ -237,13 +222,28 @@
    "depth": "easy",
    "id": "lecture-rl-fixture-2",
    "in": 1,
+   "maturity": "digested",
    "out": 0,
    "preview": "Topic: Main result: Policy iteration converges in finitely many steps.",
-   "status": "digested",
    "title": "Rl Fixture 2",
    "type": "lecture",
-   "words": 38,
+   "words": 40,
    "year": null
+  },
+  {
+   "areas": [
+    "boolean-analysis"
+   ],
+   "depth": "full",
+   "id": "mail-2024-02-01-fixture-thread-about-a-lemma",
+   "in": 1,
+   "maturity": "digested",
+   "out": 2,
+   "preview": "Problem: Does the lemma hold for non-monotone functions? Main result: Yes, by symmetrisation.",
+   "title": "Fixture thread about a lemma",
+   "type": "mail",
+   "words": 61,
+   "year": 2024
   },
   {
    "areas": [
@@ -252,12 +252,12 @@
    "depth": "",
    "id": "noise-stability",
    "in": 2,
+   "maturity": "seed",
    "out": 1,
    "preview": "One-liner: Correlation of a function with its noisy copy.",
-   "status": "seed",
    "title": "Noise stability",
    "type": "idea",
-   "words": 48,
+   "words": 49,
    "year": null
   },
   {
@@ -265,12 +265,12 @@
    "depth": "listed",
    "id": "paper-2019-fixture-book",
    "in": 0,
+   "maturity": "to-read",
    "out": 0,
    "preview": "Problem: Main result:",
-   "status": "to-read",
    "title": "Fixture Book",
    "type": "paper",
-   "words": 30,
+   "words": 29,
    "year": 2019
   },
   {
@@ -280,12 +280,12 @@
    "depth": "full",
    "id": "paper-2020-local-fixture-paper",
    "in": 2,
+   "maturity": "digested",
    "out": 2,
    "preview": "Problem: Bound the fixture risk of a linear model. Main result: The fixture risk is bounded by the complexity term.",
-   "status": "digested",
    "title": "Fixture local paper",
    "type": "paper",
-   "words": 82,
+   "words": 81,
    "year": 2020
   },
   {
@@ -295,12 +295,12 @@
    "depth": "deep",
    "id": "paper-2021-arxiv-style-fixture",
    "in": 1,
+   "maturity": "digested",
    "out": 2,
    "preview": "Problem: Characterise fixture entropy. Main result: Entropy lower-bounds code length.",
-   "status": "digested",
    "title": "Fixture arXiv-style paper",
    "type": "paper",
-   "words": 68,
+   "words": 69,
    "year": 2021
   },
   {
@@ -310,12 +310,12 @@
    "depth": "full",
    "id": "part-2019-fixture-book-ch2-concentration",
    "in": 2,
+   "maturity": "digested",
    "out": 3,
    "preview": "Problem: Show that fixture sums concentrate. Main result: Sums of independent fixture variables concentrate.",
-   "status": "digested",
    "title": "Fixture book, chapter 2: concentration",
    "type": "part",
-   "words": 82,
+   "words": 83,
    "year": 2019
   },
   {
@@ -325,12 +325,12 @@
    "depth": "",
    "id": "q-does-the-fixture-tail-bound-extend-to-dependent-variables",
    "in": 0,
+   "maturity": "open",
    "out": 1,
-   "preview": "Question: Does the fixture tail bound extend to dependent variables?",
-   "status": "open",
+   "preview": "Does the fixture tail bound extend to dependent variables?",
    "title": "Does the fixture tail bound extend to dependent variables?",
    "type": "question",
-   "words": 47,
+   "words": 56,
    "year": null
   },
   {
@@ -340,12 +340,12 @@
    "depth": "",
    "id": "q-is-the-fixture-bound-tight-for-deep-models",
    "in": 0,
+   "maturity": "open",
    "out": 1,
-   "preview": "Question: Is the fixture bound tight for deep models?",
-   "status": "open",
+   "preview": "Is the fixture bound tight for deep models?",
    "title": "Is the fixture bound tight for deep models?",
    "type": "question",
-   "words": 45,
+   "words": 50,
    "year": null
   },
   {
@@ -355,12 +355,12 @@
    "depth": "",
    "id": "series-fixture-author-blog",
    "in": 0,
+   "maturity": "digested",
    "out": 2,
    "preview": "A fixture blog series standing in for a WordPress blog of clips. It exists only so the pipeline harness can exercise the Contents table of a series.",
-   "status": "digested",
    "title": "Fixture combinatorics blog",
    "type": "series",
-   "words": 75,
+   "words": 79,
    "year": null
   },
   {
@@ -370,12 +370,12 @@
    "depth": "",
    "id": "shannon-entropy",
    "in": 2,
+   "maturity": "seed",
    "out": 1,
    "preview": "One-liner: Expected surprise of a random variable.",
-   "status": "seed",
    "title": "Shannon entropy",
    "type": "idea",
-   "words": 46,
+   "words": 47,
    "year": null
   },
   {
@@ -383,12 +383,12 @@
    "depth": "",
    "id": "theme-boolean-analysis",
    "in": 3,
+   "maturity": "seed",
    "out": 1,
    "preview": "Fixture topic for the pipeline harness.",
-   "status": "seed",
    "title": "Boolean Analysis",
    "type": "topic",
-   "words": 35,
+   "words": 39,
    "year": null
   },
   {
@@ -396,9 +396,9 @@
    "depth": "",
    "id": "theme-complex-nn",
    "in": 0,
+   "maturity": "seed",
    "out": 0,
    "preview": "Fixture topic for the pipeline harness.",
-   "status": "seed",
    "title": "Complex Nn",
    "type": "topic",
    "words": 33,
@@ -409,9 +409,9 @@
    "depth": "",
    "id": "theme-fourier-analysis",
    "in": 0,
+   "maturity": "seed",
    "out": 0,
    "preview": "Fixture topic for the pipeline harness.",
-   "status": "seed",
    "title": "Fourier Analysis",
    "type": "topic",
    "words": 33,
@@ -422,9 +422,9 @@
    "depth": "",
    "id": "theme-implicit-regularization",
    "in": 0,
+   "maturity": "seed",
    "out": 0,
    "preview": "Fixture topic for the pipeline harness.",
-   "status": "seed",
    "title": "Implicit Regularization",
    "type": "topic",
    "words": 33,
@@ -435,12 +435,12 @@
    "depth": "",
    "id": "theme-info-theory",
    "in": 3,
+   "maturity": "seed",
    "out": 1,
    "preview": "Fixture topic for the pipeline harness.",
-   "status": "seed",
    "title": "Info Theory",
    "type": "topic",
-   "words": 35,
+   "words": 37,
    "year": null
   },
   {
@@ -448,12 +448,12 @@
    "depth": "",
    "id": "theme-learning-theory",
    "in": 5,
+   "maturity": "seed",
    "out": 3,
    "preview": "Fixture topic for the pipeline harness.",
-   "status": "seed",
    "title": "Learning Theory",
    "type": "topic",
-   "words": 39,
+   "words": 44,
    "year": null
   },
   {
@@ -461,9 +461,9 @@
    "depth": "",
    "id": "theme-optimization-theory",
    "in": 0,
+   "maturity": "seed",
    "out": 0,
    "preview": "Fixture topic for the pipeline harness.",
-   "status": "seed",
    "title": "Optimization Theory",
    "type": "topic",
    "words": 33,
@@ -474,9 +474,9 @@
    "depth": "",
    "id": "theme-quantum",
    "in": 0,
+   "maturity": "seed",
    "out": 0,
    "preview": "Fixture topic for the pipeline harness.",
-   "status": "seed",
    "title": "Quantum",
    "type": "topic",
    "words": 32,
@@ -487,9 +487,9 @@
    "depth": "",
    "id": "theme-statistics",
    "in": 0,
+   "maturity": "seed",
    "out": 0,
    "preview": "Fixture topic for the pipeline harness.",
-   "status": "seed",
    "title": "Statistics",
    "type": "topic",
    "words": 32,
@@ -500,9 +500,9 @@
    "depth": "",
    "id": "theme-tensor-factorization",
    "in": 0,
+   "maturity": "seed",
    "out": 0,
    "preview": "Fixture topic for the pipeline harness.",
-   "status": "seed",
    "title": "Tensor Factorization",
    "type": "topic",
    "words": 33,
@@ -515,23 +515,15 @@
    "depth": "easy",
    "id": "video-fixture-talk",
    "in": 0,
+   "maturity": "digested",
    "out": 2,
    "preview": "Problem: What is entropy? Main result: Entropy measures surprise.",
-   "status": "digested",
    "title": "Fixture talk on entropy",
    "type": "video",
    "words": 53,
    "year": 2024
   }
  ],
- "wanted": [
-  {
-   "count": 1,
-   "from": [
-    "book-2019-fixture-book"
-   ],
-   "id": "concept"
-  }
- ],
- "wanted_total": 1
+ "wanted": [],
+ "wanted_total": 0
 }

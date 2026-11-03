@@ -1,7 +1,6 @@
 ---
 type: mail
 layer: source
-title: "Fixture thread about a lemma"
 authors: [Fixture Author]
 year: 2024
 area: [boolean-analysis]
@@ -35,7 +34,7 @@ $x^2$
 Variables: $x$: a fixture variable
 
 
-## Takeaways for my thesis
+## Takeaways
 
 - Yes, by symmetrisation.
 - Concepts: [Noise stability](noise-stability.md), [Boolean Analysis](theme-boolean-analysis.md)

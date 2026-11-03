@@ -5,3 +5,6 @@ CLAUDE.md export-ignore
 .integrator.toml export-ignore
 # Maintainer-only history: kept in the repository, left out of `git archive` (the public export).
 docs/archive/** export-ignore
+# Owner-only: deploys the owner's private site; one-time owner launchd migration.
+.github/workflows/deploy-main.yml export-ignore
+examples/launchd/switch.sh export-ignore

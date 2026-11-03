@@ -1,7 +1,6 @@
 ---
 type: book
 layer: collection
-title: "Fixture Book (2019)"
 authors: [Fixture Author]
 year: 2019
 area: [learning-theory]
@@ -11,6 +10,7 @@ book_pages: 62
 maturity: reading
 recommended_by: []
 related: []
+description:
 ---
 
 # Fixture Book (2019)
@@ -36,4 +36,4 @@ Coverage: **15 / 62 pp (24%)** · skip rows excluded · parts ≤ 60 pp
 
 ## Threads
 
-<!-- Thesis links, open questions, connected papers and people. -->
+<!-- Links, open questions, connected papers and people. -->

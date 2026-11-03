@@ -1,7 +1,6 @@
 ---
 type: article
 layer: source
-title: "Author Fixture Post One"
 source: 
 author:
 area: []
@@ -9,6 +8,7 @@ maturity: digested
 depth: easy
 raw: raw/web-clips/author-fixture-post-one.md
 url:
+description:
 ---
 
 # Author Fixture Post One
@@ -22,7 +22,7 @@ url:
 
 ## Key equations
 
-## Takeaways for my thesis
+## Takeaways
 
 ## Connections
 

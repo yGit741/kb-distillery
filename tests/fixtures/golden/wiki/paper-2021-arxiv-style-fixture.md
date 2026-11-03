@@ -1,16 +1,14 @@
 ---
 type: paper
 layer: source
-title: "Fixture arXiv-style paper"
 authors: [Fixture Author]
 year: 2021
 area: [info-theory]
 maturity: digested
 depth: deep
 raw: raw/printed-docs/2021-arxiv-style-fixture.pdf
-citekey: 
+citekey:
 url: https://arxiv.org/abs/2105.10386
-sources: [{resource: https://arxiv.org/abs/2105.10386}]
 recommended_by: []
 discussed_with: []
 ---
@@ -36,7 +34,7 @@ $H(X)=-\sum p\log p$
 Variables: $x$: a fixture variable
 
 
-## Takeaways for my thesis
+## Takeaways
 
 - Equality holds for dyadic sources.
 - Concepts: [Shannon entropy](shannon-entropy.md), [Info Theory](theme-info-theory.md)

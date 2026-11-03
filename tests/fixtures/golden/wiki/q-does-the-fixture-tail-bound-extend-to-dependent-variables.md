@@ -1,7 +1,6 @@
 ---
 type: question
 layer: concept
-title: "Does the fixture tail bound extend to dependent variables?"
 area: [learning-theory]
 maturity: open
 priority: med
@@ -10,7 +9,9 @@ discussed_with: []
 
 # Does the fixture tail bound extend to dependent variables?
 
-**Question:** Does the fixture tail bound extend to dependent variables?
+## Question
+
+Does the fixture tail bound extend to dependent variables?
 
 ## Why I care
 
