@@ -50,6 +50,7 @@ def test_hide_disambiguation():
     ("layout", "layout is one of"),
     ("hide", "name a node label"),
     ("hide label", "nothing to hide"),
+    ("hide the papers that mention attention", "is not one label or edge kind"),
     ("label title year", "label takes one node property"),
     ("label colour", "unknown property `colour`"),
 ])
@@ -62,8 +63,9 @@ def test_rejections_carry_a_hint(text, hint):
 
 
 def test_format_round_trips():
-    for text in ("group by label; colour by type; size by degree; layout timeline; hide label Paper; hide edge MENTIONS; label slug",
-                 "group by edge-kind", "layout grid", ""):
+    full = ("group by label; colour by type; size by degree; layout timeline; hide label Paper; "
+            "hide edge MENTIONS; label slug")
+    for text in (full, "group by edge-kind", "layout grid", ""):
         s = parse_style(text)
         assert parse_style(format_style(s)) == s
     assert format_style(parse_style("color by degree;hide Paper")) == "colour by degree; hide label Paper"

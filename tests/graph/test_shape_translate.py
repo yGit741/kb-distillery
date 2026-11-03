@@ -125,8 +125,7 @@ def test_llm_bad_cypher_is_retried_with_the_error_then_422(monkeypatch):
 
 
 def test_llm_retry_can_succeed(monkeypatch):
-    fake = FakeLLM(monkeypatch, reply("MATCH (p:Paper)-[:OOPS]-(q) RETURN p.slug"), reply(),
-                   )
+    fake = FakeLLM(monkeypatch, reply("MATCH (p:Paper)-[:OOPS]-(q) RETURN p.slug"), reply())
     out = st.shape("papers about tensor rank")
     assert out["source"] == "llm" and out["row_count"] == 1 and len(fake.calls) == 2
     assert out["usd"] == 0.02                                # both calls are billed
@@ -140,6 +139,12 @@ def test_llm_bad_style_and_bad_json_are_retried(monkeypatch):
     assert "unknown style clause `paint it blue`" in fake.calls[1]["request"].prompt
     FakeLLM(monkeypatch, reply(RANK, "paint it blue"), reply())
     assert st.shape("papers about tensor rank, blue please")["source"] == "llm"
+
+
+def test_free_text_starting_with_hide_still_reaches_the_llm(monkeypatch):
+    fake = FakeLLM(monkeypatch, reply(RANK, "hide Idea"))
+    out = st.shape("hide the papers that mention attention")
+    assert out["source"] == "llm" and len(fake.calls) == 1 and out["style"]["hide_labels"] == ["Idea"]
 
 
 def test_backend_override_and_env(monkeypatch):

@@ -108,6 +108,9 @@ def _hide(clause, rest, spec):
     if not names:
         raise ShapeError(_hint(f"`{clause}`: nothing to hide"))
     for n in names:
+        if explicit is None and len(n.split()) > 1:
+            raise ShapeError(_hint(f"`{clause}`: `{n}` is not one label or edge kind; name it (`hide Paper`), "
+                                   f"or write `hide label Open Problem` for a multi-word name"))
         is_edge = explicit == "edge" or (explicit is None and n.upper() == n and any(c.isalpha() for c in n))
         bucket = spec["hide_edge_kinds"] if is_edge else spec["hide_labels"]
         value = _edge_kind(n) if is_edge else _camel(n)
