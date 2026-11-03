@@ -54,7 +54,7 @@ const withGraph = (o: Partial<DataSource> = {}) => mockDataSource({ getGraph: as
 beforeEach(() => {
   localStorage.clear();
   useKb.setState({ selection: new Set() });
-  useGraphUi.setState({ ...DEFAULT_PREFS, shownTypes: undefined, shownDepths: null, search: "", rules: [], typeLabels: new Set(), view: null, revealed: new Set(), flyout: null, detailsOpen: false, readerSlug: null, focusRequest: null, fitTick: 0 });
+  useGraphUi.setState({ ...DEFAULT_PREFS, shownTypes: undefined, predicate: null, shownDepths: null, search: "", rules: [], typeLabels: new Set(), view: null, revealed: new Set(), flyout: null, detailsOpen: false, readerSlug: null, focusRequest: null, fitTick: 0 });
 });
 
 describe("GraphScreen states", () => {

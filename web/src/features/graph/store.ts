@@ -88,7 +88,7 @@ export interface GraphUiState extends GraphPrefs {
   fitTick: number;
 
   set: (patch: Partial<GraphUiState>) => void;
-  /** Hand filters (types, layers, depths) also drop the view's predicate: a chip must mean what it says. */
+  /** Chips only add to or take from the set they show; the view's predicate stays until its own chip (or Show all) drops it, so two clicks undo each other. */
   toggleType: (type: string, allTypes: readonly string[], defaults: readonly string[]) => void;
   setLayerTypes: (types: readonly string[], on: boolean, allTypes: readonly string[], defaults: readonly string[]) => void;
   toggleDepth: (depth: string, all: readonly string[]) => void;
@@ -175,7 +175,7 @@ export const useGraphUi = create<GraphUiState>((set, get) => ({
     const cur = get().shownTypes;
     const base = cur === undefined ? new Set(defaults) : new Set(cur ?? all);
     if (!base.delete(type)) base.add(type);
-    set({ shownTypes: normalize(base, all), predicate: null, story: "" });
+    set({ shownTypes: normalize(base, all), story: "" });
   },
   setLayerTypes: (types, on, all, defaults) => {
     const cur = get().shownTypes;
@@ -184,17 +184,17 @@ export const useGraphUi = create<GraphUiState>((set, get) => ({
       if (on) base.add(t);
       else base.delete(t);
     }
-    set({ shownTypes: normalize(base, all), predicate: null, story: "" });
+    set({ shownTypes: normalize(base, all), story: "" });
   },
   toggleDepth: (depth, all) => {
     const base = new Set(get().shownDepths ?? all);
     if (!base.delete(depth)) base.add(depth);
-    set({ shownDepths: all.every((d) => base.has(d)) ? null : base, predicate: null, story: "" });
+    set({ shownDepths: all.every((d) => base.has(d)) ? null : base, story: "" });
   },
   toggleKey: (label) => {
     const next = new Set(get().hiddenKeys);
     if (!next.delete(label)) next.add(label);
-    set({ hiddenKeys: next, predicate: null, story: "" });
+    set({ hiddenKeys: next, story: "" });
   },
   toggleTypeLabels: (type) => {
     const next = new Set(get().typeLabels);
@@ -218,7 +218,7 @@ export const useGraphUi = create<GraphUiState>((set, get) => ({
   fit: () => set((s) => ({ fitTick: s.fitTick + 1 })),
   openFlyout: (f) => set((s) => ({ flyout: s.flyout === f ? null : f })),
   resetFilters: () => set({ shownTypes: undefined, shownDepths: null, search: "", rules: [], view: null, revealed: new Set(), predicate: null, story: "" }),
-  setLab: (patch) => set((s) => ({ lab: { ...s.lab, ...patch }, story: "", predicate: null })),
+  setLab: (patch) => set((s) => ({ lab: { ...s.lab, ...patch }, story: "" })),
   applyStory: (id) => {
     const st = storyById(id);
     if (!st) return set({ story: "" });
