@@ -15,6 +15,7 @@ def snapshot(root: Path) -> dict:
             for p in sorted(root.rglob("*"))}
 
 
+@unittest.skipUnless(SCRIPT.is_file(), "owner migration script: export-ignored from the public repo")
 class SwitchSh(unittest.TestCase):
     def setUp(self):
         tmp = tempfile.TemporaryDirectory()
