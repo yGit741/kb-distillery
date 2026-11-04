@@ -995,7 +995,7 @@ async def _run(question, *, model, system, key, session_id, history, emit, stop_
     if req.fresh_prompt is None:
         req.fresh_prompt = question
     state = TurnState(index=index)
-    backend = "subscription" if billing == "subscription" else "api"
+    backend = billing if billing in ("subscription", "batch") else "api"
     gen = llm_agent.stream(
         req, backend, key=key, policy_hook=make_hook(scope=scope, run=run),
         can_use_tool=make_can_use_tool(scope=scope, run=run),
