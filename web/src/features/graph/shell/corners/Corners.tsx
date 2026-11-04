@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Brain, Sparkles } from "lucide-react";
+import { Sparkles } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useDataSource } from "@/api";
 import { useUi } from "@/app/ui-store";
@@ -21,7 +21,10 @@ import { useCorners, type Layer } from "./cornersStore";
 import { Fan, type FanCard } from "./Fan";
 import { BUTTON, EDGE, fanCapacity } from "./geometry";
 import { PinList } from "./PinList";
+import { useShellStore } from "../shellStore";
 import { browserSessions, newChat, resumeSession } from "./sessions";
+import { useShellTour } from "./shellTour";
+import { ThinkIcon } from "./ThinkIcon";
 import { TypesCard } from "./TypesCard";
 import { applySpec, captureSpec, suggestName } from "./viewSpec";
 
@@ -130,6 +133,14 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
       fail(e);
     }
   };
+  // a pinned view picked in the search panel opens the same way as one picked in the list
+  const pendingView = useShellStore((s) => s.pendingView);
+  useEffect(() => {
+    if (!pendingView) return;
+    useShellStore.getState().clearPendingView();
+    setActive(pendingView.id);
+    if (!applySpec(pendingView.spec, deps)) setNotice("Nothing in this view can be restored here");
+  }, [pendingView, deps, setActive]);
   const recognised = useCallback((spec: Record<string, unknown>) => ["story", "types", "depths", "colorBy", "sizeBy", "hiddenKeys", "quick", "pages"].some((k) => k in spec), []);
 
   // ---- fans
@@ -210,6 +221,7 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
     const read = LAYER_ORDER.filter((l) => l !== "concept").flatMap((l) => groups.find((g) => g.layer === l)?.rows ?? []);
     return [c, read];
   }, [groups]);
+  useShellTour(`${server}|${allTypes.length > 0}`);
   const spot = useCallback((types: readonly string[] | null) => useGraphUi.setState({ spotlight: types ? new Set(types) : null }), []);
   useEffect(() => () => useGraphUi.setState({ spotlight: null }), []);
 
@@ -272,9 +284,8 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
             </>
           )}
 
-          <CornerButton id={BTN_ID.think} label="Think notes" on={thinkOpen} style={{ position: "absolute", right: EDGE, top: EDGE }} onClick={() => toggle("think")}>
-            {/* a placeholder mark: a later change replaces it */}
-            <Brain className="size-[22px]" strokeWidth={1.75} aria-hidden />
+          <CornerButton id={BTN_ID.think} label="Think notes" data-tour="graph-think" on={thinkOpen} style={{ position: "absolute", right: EDGE, top: EDGE }} onClick={() => toggle("think")}>
+            <ThinkIcon />
           </CornerButton>
           <Fan kind="think" open={thinkOpen} label="Think notes" cards={thinkCards} empty={think.isLoading ? "Loading notes" : "No think notes yet"} onPick={pickThink} />
           {thinkOpen && (
@@ -305,7 +316,7 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
             </>
           )}
 
-          <CornerButton id={BTN_ID.agent} label="Agent chats" on={agentOpen} style={{ position: "absolute", left: EDGE, bottom: EDGE }} onClick={() => toggle("agent")}>
+          <CornerButton id={BTN_ID.agent} label="Agent chats" data-tour="graph-agent" on={agentOpen} style={{ position: "absolute", left: EDGE, bottom: EDGE }} onClick={() => toggle("agent")}>
             <Sparkles className="size-[22px]" strokeWidth={1.75} aria-hidden />
           </CornerButton>
           <Fan kind="agent" open={agentOpen} label="Agent chats" cards={agentCards} empty={sessions.isLoading ? "Loading chats" : "No chats yet"} onPick={pickAgent} />

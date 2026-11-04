@@ -12,6 +12,9 @@ import { matchConcepts } from "./ConceptExplorer";
 import "./tours";
 import { indexVault } from "./samplers";
 
+// The Start card needs the router (it links to screens) and has its own tests (StartCard.test.tsx).
+vi.mock("./StartCard", () => ({ StartCard: () => null }));
+
 // jsdom has no canvas: stand in for force-graph with a chainable no-op instance.
 vi.mock("force-graph", () => {
   const make = () => {

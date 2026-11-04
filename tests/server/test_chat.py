@@ -240,6 +240,70 @@ def test_agent_mode_on_passes_effort_and_budget(client):
     assert kw["effort"] == "high" and kw["budget"] == 3.0
 
 
+@pytest.mark.flag("agent-mode", True)
+@pytest.mark.parametrize("pick", ["api", "batch"])
+def test_agent_mode_on_passes_billing_pick(client, pick):
+    kw = _post_agent(client, billing=pick, auth_mode="subscription")
+    assert kw["billing"] == pick and kw["key"] == KEY       # the pick replaces the stored account choice
+
+
+@pytest.mark.flag("agent-mode", True)
+def test_agent_mode_on_subscription_pick_needs_a_login(client):
+    with mock.patch("kb_distillery.server.routers.chat.chat_agent.subscription_status",
+                    return_value={"logged_in": False, "error": "no login"}):
+        r = client.post("/api/chat", json={"question": "q", "backend": "agent", "billing": "subscription",
+                                           "auth_mode": "api_key"}, headers=LOOPBACK)
+    assert r.status_code == 400 and r.json()["hint"] == "no login"
+
+
+@pytest.mark.flag("agent-mode", True)
+def test_agent_mode_on_subscription_pick_runs_keyless(client):
+    fake = fake_agent([("done", {})])
+    with mock.patch("kb_distillery.server.routers.chat.chat_agent.sdk_info", return_value={"available": True}), \
+         mock.patch("kb_distillery.server.routers.chat.chat_agent.subscription_status",
+                    return_value={"logged_in": True, "error": ""}), \
+         mock.patch("kb_distillery.server.routers.chat.chat_agent.stream_agent", fake), \
+         mock.patch("kb_distillery.server.routers.chat.chat_agent.build_agent_system", return_value="SYS"):
+        r = client.post("/api/chat", json={"question": "q", "backend": "agent", "billing": "subscription"},
+                        headers=LOOPBACK)
+    assert r.status_code == 200 and fake.kw["billing"] == "subscription" and fake.kw["key"] is None
+
+
+@pytest.mark.flag("agent-mode", False)
+def test_agent_mode_off_ignores_billing_pick(client):
+    kw = _post_agent(client, billing="batch")
+    assert kw["billing"] == "api"
+
+
+def test_billing_is_validated(client):
+    r = client.post("/api/chat", json={"question": "hi", "billing": "free"}, headers=LOOPBACK)
+    assert r.status_code == 422
+
+
+def test_status_models_carry_a_context_window(client):
+    assert all(m["context"] > 0 for m in client.get("/api/chat/status").json()["models"])
+
+
 def test_effort_is_validated(client):
     r = client.post("/api/chat", json={"question": "hi", "effort": "turbo"}, headers=LOOPBACK)
     assert r.status_code == 422
+
+
+# ── POST /api/chat/answer (the reply to an `ask` event) ──
+def test_answer_unknown_question_is_404(client):
+    r = client.post("/api/chat/answer", json={"session": "s", "id": "nope", "answers": {"q": "a"}}, headers=LOOPBACK)
+    assert r.status_code == 404 and r.json()["error"]
+
+
+def test_answer_reaches_the_waiting_turn(client):
+    from kb_distillery.services import chat_agent
+    seen = []
+    with mock.patch.object(chat_agent.ASKS, "answer", lambda s, i, a: seen.append((s, i, a)) or True):
+        r = client.post("/api/chat/answer", json={"session": "s1", "id": "toolu_1", "answers": {"Q?": "A"}}, headers=LOOPBACK)
+    assert r.status_code == 200 and r.json() == {"ok": True}
+    assert seen == [("s1", "toolu_1", {"Q?": "A"})]
+
+
+def test_answer_needs_a_loopback_origin_and_a_valid_body(client):
+    assert client.post("/api/chat/answer", json={"id": "x", "answers": {}}).status_code in (400, 403)
+    assert client.post("/api/chat/answer", json={"answers": {}}, headers=LOOPBACK).status_code == 422

@@ -72,6 +72,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/chat/answer": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Answer the agent's question (an `ask` event) */
+        post: operations["post_answer_api_chat_answer_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/chat/attachments": {
         parameters: {
             query?: never;
@@ -238,6 +255,40 @@ export interface paths {
         put?: never;
         /** Update chat settings */
         post: operations["post_settings_api_chat_settings_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/chat/skills": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Whitelisted skills and which are on for a session */
+        get: operations["get_skills_api_chat_skills_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/chat/skills/{session_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Choose the skills on for a session */
+        put: operations["put_skills_api_chat_skills__session_id__put"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -843,6 +894,43 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Saved chat sessions, newest first */
+        get: operations["list_sessions_api_sessions_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/sessions/{session_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One saved chat session */
+        get: operations["get_session_api_sessions__session_id__get"];
+        /** Create or replace a chat session */
+        put: operations["put_session_api_sessions__session_id__put"];
+        post?: never;
+        /** Delete a chat session */
+        delete: operations["delete_session_api_sessions__session_id__delete"];
+        options?: never;
+        head?: never;
+        /** Rename a chat session */
+        patch: operations["rename_session_api_sessions__session_id__patch"];
+        trace?: never;
+    };
     "/api/share/status": {
         parameters: {
             query?: never;
@@ -1068,6 +1156,35 @@ export interface components {
             /** Session */
             session: string;
         };
+        /**
+         * ChatAnswer
+         * @description Body of POST /api/chat/answer: the user's reply to an `ask` event (question text → chosen label(s)).
+         */
+        ChatAnswer: {
+            /** Answers */
+            answers: {
+                [key: string]: string;
+            };
+            /** Id */
+            id: string;
+            /**
+             * Session
+             * @default
+             */
+            session: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** ChatAnswerResult */
+        ChatAnswerResult: {
+            /**
+             * Ok
+             * @default true
+             */
+            ok: boolean;
+        } & {
+            [key: string]: unknown;
+        };
         /** ChatAuth */
         ChatAuth: {
             /**
@@ -1137,6 +1254,8 @@ export interface components {
             auth_mode?: string | null;
             /** Backend */
             backend?: string | null;
+            /** Billing */
+            billing?: ("subscription" | "api" | "batch") | null;
             /** Budget */
             budget?: number | null;
             /** Effort */
@@ -1159,6 +1278,10 @@ export interface components {
             scope?: string | null;
             /** Session */
             session?: string | null;
+            /** Skills */
+            skills?: string[] | null;
+            /** Skills Session */
+            skills_session?: string | null;
             /** System */
             system?: string | null;
         } & {
@@ -1216,6 +1339,42 @@ export interface components {
             monthly_credit?: number | null;
             /** Reset Day */
             reset_day?: number | null;
+        } & {
+            [key: string]: unknown;
+        };
+        /** ChatSkill */
+        ChatSkill: {
+            /**
+             * Description
+             * @default
+             */
+            description: string;
+            /**
+             * Enabled
+             * @default true
+             */
+            enabled: boolean;
+            /** Name */
+            name: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** ChatSkillList */
+        ChatSkillList: {
+            /** Session */
+            session?: string | null;
+            /** Skills */
+            skills: components["schemas"]["ChatSkill"][];
+        } & {
+            [key: string]: unknown;
+        };
+        /** ChatSkillsPut */
+        ChatSkillsPut: {
+            /**
+             * Enabled
+             * @description skill names to turn on; names outside the whitelist are dropped
+             */
+            enabled: string[];
         } & {
             [key: string]: unknown;
         };
@@ -3025,6 +3184,130 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
+        /** SessionDeleted */
+        SessionDeleted: {
+            /** Id */
+            id: string;
+            /** Ok */
+            ok: boolean;
+        } & {
+            [key: string]: unknown;
+        };
+        /** SessionDoc */
+        SessionDoc: {
+            /** Backend */
+            backend?: string | null;
+            /** Created */
+            created: string;
+            /** Effort */
+            effort?: string | null;
+            /** Id */
+            id: string;
+            /** Messages */
+            messages: {
+                [key: string]: unknown;
+            }[];
+            /** Model */
+            model?: string | null;
+            /** Title */
+            title: string;
+            /** Updated */
+            updated: string;
+            usage: components["schemas"]["SessionUsage"];
+        } & {
+            [key: string]: unknown;
+        };
+        /** SessionList */
+        SessionList: {
+            /** Sessions */
+            sessions: components["schemas"]["SessionSummary"][];
+        } & {
+            [key: string]: unknown;
+        };
+        /** SessionPutRequest */
+        SessionPutRequest: {
+            /** Backend */
+            backend?: string | null;
+            /**
+             * Created
+             * @description ISO-8601 time of a new session (a migrated chat keeps its own); ignored when the session exists
+             */
+            created?: string | null;
+            /** Effort */
+            effort?: string | null;
+            /**
+             * Messages
+             * @description the whole conversation
+             */
+            messages: {
+                [key: string]: unknown;
+            }[];
+            /** Model */
+            model?: string | null;
+            /**
+             * Title
+             * @description omit to keep the stored title (a new session takes its first question)
+             */
+            title?: string | null;
+        } & {
+            [key: string]: unknown;
+        };
+        /** SessionRenameRequest */
+        SessionRenameRequest: {
+            /** Title */
+            title: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** SessionSummary */
+        SessionSummary: {
+            /** Backend */
+            backend?: string | null;
+            /**
+             * Cost Usd
+             * @default 0
+             */
+            cost_usd: number;
+            /** Created */
+            created: string;
+            /** Effort */
+            effort?: string | null;
+            /** Id */
+            id: string;
+            /** Model */
+            model?: string | null;
+            /**
+             * Preview
+             * @default
+             */
+            preview: string;
+            /** Title */
+            title: string;
+            /**
+             * Turns
+             * @default 0
+             */
+            turns: number;
+            /** Updated */
+            updated: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** SessionUsage */
+        SessionUsage: {
+            /**
+             * Cost Usd
+             * @default 0
+             */
+            cost_usd: number;
+            /**
+             * Turns
+             * @default 0
+             */
+            turns: number;
+        } & {
+            [key: string]: unknown;
+        };
         /** Sessions */
         Sessions: {
             /** Distill */
@@ -3725,6 +4008,46 @@ export interface operations {
             };
         };
     };
+    post_answer_api_chat_answer_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChatAnswer"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChatAnswerResult"];
+                };
+            };
+            /** @description no question is waiting under that id */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     post_attachment_api_chat_attachments_post: {
         parameters: {
             query?: never;
@@ -4166,6 +4489,107 @@ export interface operations {
             };
             /** @description invalid setting */
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_skills_api_chat_skills_get: {
+        parameters: {
+            query?: {
+                session?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChatSkillList"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_skills_api_chat_skills__session_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChatSkillsPut"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChatSkillList"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Method Not Allowed */
+            405: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -5354,6 +5778,158 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SearchResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_sessions_api_sessions_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SessionList"];
+                };
+            };
+        };
+    };
+    get_session_api_sessions__session_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SessionDoc"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_session_api_sessions__session_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SessionPutRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SessionDoc"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_session_api_sessions__session_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SessionDeleted"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    rename_session_api_sessions__session_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SessionRenameRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SessionDoc"];
                 };
             };
             /** @description Validation Error */

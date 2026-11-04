@@ -3,7 +3,6 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { withFlag } from "@/flags/testing";
 import { MessageList } from "./MessageList";
-import { TodoList } from "./Transcript";
 import type { ChatMessage } from "./thread";
 
 const noop = () => {};
@@ -80,27 +79,4 @@ describe("MessageList transcript (agent-mode off)", () => {
       expect(screen.queryAllByTestId("tool-line")).toHaveLength(0);
       expect(screen.getByText(/3 steps · 1 page read/)).toBeInTheDocument();
     }));
-});
-
-describe("TodoList", () => {
-  const items = [
-    { content: "Read the pages", status: "completed" as const },
-    { content: "Compare them", status: "in_progress" as const },
-    { content: "Write the answer", status: "pending" as const },
-  ];
-
-  it("lists items with their state and a count", () => {
-    render(<TodoList items={items} busy />);
-    expect(screen.getByText("Todo · 1/3")).toBeInTheDocument();
-    const rows = within(screen.getByTestId("todo-list")).getAllByRole("listitem");
-    expect(rows.map((r) => r.getAttribute("data-status"))).toEqual(["completed", "in_progress", "pending"]);
-    expect(rows[0]).toHaveClass("line-through");
-  });
-
-  it("hides when empty, or when everything is done and the turn is over", () => {
-    const { container, rerender } = render(<TodoList items={[]} busy />);
-    expect(container).toBeEmptyDOMElement();
-    rerender(<TodoList items={items.map((t) => ({ ...t, status: "completed" as const }))} busy={false} />);
-    expect(container).toBeEmptyDOMElement();
-  });
 });

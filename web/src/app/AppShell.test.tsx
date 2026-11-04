@@ -49,7 +49,7 @@ describe("AppShell", () => {
     for (const [from, to, search] of [
       ["/app/relations?min=90", "/graph", { tool: "relations", min: "90" }],
       ["/app/scopes", "/graph", { tool: "scopes" }],
-      ["/app/start", "/", { start: "1" }],
+      ["/app/start", "/", { start: true }],
     ] as const) {
       const router = createAppRouter(createMemoryHistory({ initialEntries: [from] }));
       const { unmount } = render(<App source={ds} router={router} />);

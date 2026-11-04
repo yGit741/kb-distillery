@@ -1,4 +1,4 @@
-import type { ChatEvent, SourceHit, TodoItem, ToolStep, Usage } from "./sse";
+import type { AskQuestion, ChatEvent, SourceHit, TodoItem, ToolStep, Usage } from "./sse";
 
 export interface ChatMessage {
   role: "user" | "assistant";
@@ -14,6 +14,8 @@ export interface ChatMessage {
   thinkSecs?: number;
   usage?: Usage;
   notice?: string;
+  /** assistant: a question from the agent that waits for the user's choice. */
+  ask?: { id: string; questions: AskQuestion[] };
   meta?: string;
   error?: string;
   /** a question whose turn failed with no answer: shown, but not sent as history. */
@@ -45,7 +47,10 @@ export function applyEvent(
   if (ev.type === "todo") return { ...chat, todo: ev.items };
   if (ev.type === "user") {
     // a message queued into the running turn: it opens the next question/answer pair
-    return { ...chat, messages: [...msgs, { role: "user", content: ev.text, sources: [] }, { role: "assistant", content: "" }] };
+    // a pending question moves with it, so the card stays on the last message where it can be answered
+    const { ask, ...prev } = msgs[last]!;
+    const next = { role: "assistant" as const, content: "", ...(ask ? { ask } : {}) };
+    return { ...chat, messages: [...msgs.slice(0, last), prev, { role: "user", content: ev.text, sources: [] }, next] };
   }
   const bot = { ...msgs[last]! };
   if (ev.type === "thinking") {
@@ -77,6 +82,9 @@ export function applyEvent(
       bot.trace = trace;
       break;
     }
+    case "ask":
+      bot.ask = { id: ev.id, questions: ev.questions };
+      break;
     case "notice":
       bot.notice = ev.text;
       break;
@@ -85,11 +93,24 @@ export function applyEvent(
       break;
     case "error":
       bot.error = ev.message;
+      delete bot.ask;
+      break;
+    case "done":
+      if (!bot.ask) return chat;
+      delete bot.ask;
       break;
     default:
       return chat;
   }
   return { ...chat, session, messages: [...msgs.slice(0, last - 1), user, bot] };
+}
+
+/** The question was answered (or is moot): drop it from the last assistant message. */
+export function clearAsk(chat: Chat): Chat {
+  const last = chat.messages.length - 1;
+  if (last < 0 || !chat.messages[last]!.ask) return chat;
+  const { ask: _ask, ...rest } = chat.messages[last]!;
+  return { ...chat, messages: chat.messages.map((m, i) => (i === last ? rest : m)) };
 }
 
 /** What the server needs of earlier turns: no failed questions, no empty answers. */

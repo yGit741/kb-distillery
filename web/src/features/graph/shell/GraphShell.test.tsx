@@ -9,10 +9,11 @@ import { useChatDock } from "../tools/chatDockStore";
 import { GraphShell } from "./GraphShell";
 import { looksLikeShape, useShellStore } from "./shellStore";
 
+const SHOWN = new Set(sampleNodes.map((n) => n.type));
 const byId = new Map(sampleNodes.map((n) => [n.id, n] as const));
 
 function setup(over: Partial<DataSource> = {}) {
-  const fns = { onFocus: vi.fn(), onRead: vi.fn(), onShowMentions: vi.fn(), onFit: vi.fn(), onZoom: vi.fn(), onReheat: vi.fn(), onRefresh: vi.fn() };
+  const fns = { onFocus: vi.fn(), onRead: vi.fn(), onShowExact: vi.fn(), onShowMentions: vi.fn(), onFit: vi.fn(), onZoom: vi.fn(), onReheat: vi.fn(), onRefresh: vi.fn() };
   const ds = mockDataSource({
     search: async () => ({ hits: [], total: 0 }),
     listRecent: async () => ({ recent: [] }),
@@ -23,7 +24,7 @@ function setup(over: Partial<DataSource> = {}) {
   const { unmount } = render(
     <DataSourceProvider source={ds}>
       <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
-        <GraphShell nodes={sampleNodes} byId={byId} colorBy="type" {...fns} />
+        <GraphShell nodes={sampleNodes} byId={byId} colorBy="type" shownTypes={SHOWN} {...fns} />
       </QueryClientProvider>
     </DataSourceProvider>,
   );
@@ -34,7 +35,7 @@ const box = () => screen.getByRole("combobox", { name: /search the graph/i });
 
 beforeEach(() => {
   useChatDock.setState({ open: false, question: "" });
-  useShellStore.setState({ pendingShape: null, pendingView: null, notice: null });
+  useShellStore.setState({ pendingShape: null, pendingView: null, notice: null, shaping: false, shape: null, undo: null, shapeError: null });
   useGraphUi.setState({ flyout: null, railOpen: false });
 });
 
@@ -113,12 +114,12 @@ describe("at rest", () => {
     expect(screen.getByText("Pinned views")).toBeInTheDocument();
   });
 
-  it("a pinned view records the request and says it is coming", async () => {
+  it("a pinned view records the request for the corner controls to open, with no notice", async () => {
     setup({ listViews: async () => ({ views: [{ id: "v1", name: "Learning theory", created: "2026-11-01", spec: {} }] }) });
     await userEvent.click(box());
     await userEvent.click(await screen.findByRole("option", { name: /learning theory/i }));
     expect(useShellStore.getState().pendingView?.id).toBe("v1");
-    expect(await screen.findByRole("status")).toHaveTextContent(/coming soon/i);
+    expect(useShellStore.getState().notice).toBeNull();
   });
 
   it("a recent command runs again", async () => {
@@ -200,7 +201,7 @@ describe("commands", () => {
       render(
         <DataSourceProvider source={ds}>
           <QueryClientProvider client={new QueryClient()}>
-            <GraphShell nodes={sampleNodes} byId={byId} colorBy="type" onFocus={vi.fn()} onRead={vi.fn()} onShowMentions={vi.fn()} onFit={vi.fn()} onZoom={vi.fn()} onReheat={vi.fn()} onRefresh={vi.fn()} setParams={setParams} />
+            <GraphShell nodes={sampleNodes} byId={byId} colorBy="type" shownTypes={SHOWN} onShowExact={vi.fn()} onFocus={vi.fn()} onRead={vi.fn()} onShowMentions={vi.fn()} onFit={vi.fn()} onZoom={vi.fn()} onReheat={vi.fn()} onRefresh={vi.fn()} setParams={setParams} />
           </QueryClientProvider>
         </DataSourceProvider>,
       );
@@ -229,13 +230,12 @@ describe("free text", () => {
     expect(screen.queryByRole("option", { name: /ask the agent/i })).not.toBeInTheDocument();
   });
 
-  it("'Shape the graph' records the step, requests the shape and says it is coming", async () => {
-    const { ds } = setup();
+  it("'Shape the graph' sends the text to the backend (the full flow is in GraphShell.shape.test)", async () => {
+    const shapeGraph = vi.fn(async () => ({ columns: [], rows: [], row_count: 0, truncated: false, cypher: null, style: { hide_edge_kinds: [], hide_labels: [] }, style_text: "colour by areas", source: "cypher" as const, explanation: "", warnings: [] }));
+    setup({ shapeGraph });
     await userEvent.type(box(), "colour by area");
     await userEvent.click(await screen.findByRole("option", { name: /shape the graph: colour by area/i }));
-    await waitFor(() => expect(ds.addRecent).toHaveBeenCalledWith("colour by area", { text: "colour by area" }));
-    expect(useShellStore.getState().pendingShape).toBe("colour by area");
-    expect(await screen.findByRole("status")).toHaveTextContent(/coming soon/i);
+    await waitFor(() => expect(shapeGraph).toHaveBeenCalledWith("colour by area"));
   });
 
   it("text starting with MATCH is shaped first", async () => {

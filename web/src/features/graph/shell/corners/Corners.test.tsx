@@ -104,6 +104,23 @@ describe("corner buttons", () => {
     expect(screen.getByRole("button", { name: /show page types/i })).toHaveAttribute("title");
   });
 
+  it("the Think corner wears the drawn brain mark, the same size and line weight as its neighbours", () => {
+    mount();
+    const mark = think().querySelector("svg")!;
+    expect(mark).toHaveAttribute("data-icon", "think");
+    expect(mark).toHaveAttribute("aria-hidden", "true");
+    expect(mark).toHaveAttribute("viewBox", "0 0 24 24");
+    expect(mark).toHaveAttribute("fill", "none");
+    expect(mark).toHaveAttribute("stroke", "currentColor");
+    expect(mark).toHaveAttribute("stroke-width", "1.75");
+    expect(mark).toHaveAttribute("width", "22");
+    expect(mark.querySelectorAll("path")).toHaveLength(4);
+    const sparkles = agent().querySelector("svg")!;
+    expect(sparkles.getAttribute("stroke-width")).toBe(mark.getAttribute("stroke-width"));
+    expect(sparkles.getAttribute("class")).toContain("size-[22px]");
+    expect(think().querySelector(".lucide-brain")).toBeNull();
+  });
+
   it("without a local server (a snapshot) only the legends remain", () => {
     mount(fakeServer(), {}, { kind: "embedded" });
     expect(screen.queryByRole("button", { name: "Pinned views" })).toBeNull();

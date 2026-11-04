@@ -13,6 +13,7 @@ import {
   RefreshCw,
   Search,
   SlidersHorizontal,
+  Undo2,
   Wand2,
   Wind,
   ZoomIn,
@@ -26,13 +27,16 @@ import { IS_SHARE } from "@/share/env";
 import { NodeSwatch } from "../encoding/NodeMarkSvg";
 import { useToolHost } from "../hostContext";
 import { colorOf, effectiveColorBy, type ColorBy } from "../style";
+import { useGraphUi } from "../store";
 import { useChatDock } from "../tools/chatDockStore";
 import { useVisibleTools } from "../tools";
 import type { GNode } from "../types";
 import { buildCommands, filterCommands, GROUP_ORDER, type Command, type CommandIcon } from "./commands";
 import { SearchBar } from "./SearchBar";
-import { optionId, SearchPanel, type PanelRow } from "./SearchPanel";
+import { optionId, SearchPanel, type PanelRow, type PanelStatus } from "./SearchPanel";
+import { marker, pillText, sameMarker } from "./shape";
 import { looksLikeShape, requestShape, useShellStore } from "./shellStore";
+import { useShape } from "./useShape";
 import { usePageResults } from "./usePageResults";
 
 const ICONS: Record<CommandIcon, ReactNode> = {
@@ -64,6 +68,10 @@ interface Props {
   onFocus: (id: string) => void;
   /** Shift+Enter on a page: read it in the side reader. */
   onRead: (id: string) => void;
+  /** Draw exactly these pages, replacing the pages on screen (free-text shaping). */
+  onShowExact: (ids: string[]) => void;
+  /** The types drawn now (free-text shaping hides some). */
+  shownTypes: ReadonlySet<string> | null;
   /** "Show pages mentioning ...". */
   onShowMentions: (q: string) => void;
   onFit: () => void;
@@ -79,7 +87,7 @@ interface Props {
  * centre unfolds, on focus or Cmd/Ctrl+K, into recent steps and pinned views at rest, live page results while
  * typing, commands after a slash, and two free-text rows (ask the agent, shape the graph).
  */
-export function GraphShell({ nodes, byId, colorBy, onFocus, onRead, onShowMentions, onFit, onZoom, onReheat, onRefresh, setParams }: Props) {
+export function GraphShell({ nodes, byId, colorBy, onFocus, onRead, onShowExact, shownTypes, onShowMentions, onFit, onZoom, onReheat, onRefresh, setParams }: Props) {
   const ds = useDataSource();
   const qc = useQueryClient();
   const host = useToolHost();
@@ -91,6 +99,16 @@ export function GraphShell({ nodes, byId, colorBy, onFocus, onRead, onShowMentio
   const input = useRef<HTMLInputElement>(null);
   const box = useRef<HTMLDivElement>(null);
   const notice = useShellStore((s) => s.notice);
+  const shaping = useShellStore((s) => s.shaping);
+  const shape = useShellStore((s) => s.shape);
+  const shapeError = useShellStore((s) => s.shapeError);
+  const canUndo = useShellStore((s) => s.undo !== null);
+  // the pill speaks only while the shape is what is drawn: a change by hand (a legend click, a cleared view) retires it
+  const shapeCurrent = useGraphUi((s) => (shape ? sameMarker(shape.after, marker(s)) : false));
+  const rawNow = useRef("");
+  rawNow.current = raw;
+  const openRef = useRef(false);
+  openRef.current = open;
 
   const text = raw.trim();
   const slash = raw.startsWith("/");
@@ -144,6 +162,21 @@ export function GraphShell({ nodes, byId, colorBy, onFocus, onRead, onShowMentio
     input.current?.focus();
   }, []);
 
+  const { undo } = useShape({
+    byId,
+    shownTypes,
+    showExact: onShowExact,
+    record,
+    onApplied: (text, say) => {
+      // the panel closes unless the person has moved on to other text meanwhile
+      if (rawNow.current.trim() === text) close();
+      useShellStore.getState().say(say);
+    },
+  });
+  const undoShape = useCallback(() => {
+    if (undo()) useShellStore.getState().say("Undid the last shape.");
+  }, [undo]);
+
   useEffect(() => {
     // Capture phase on the window: while this shell is mounted Cmd/Ctrl+K belongs to the search panel
     // (the global palette's listener comes later and never sees the event). Its "Go to" list is under "/".
@@ -152,6 +185,16 @@ export function GraphShell({ nodes, byId, colorBy, onFocus, onRead, onShowMentio
         e.preventDefault();
         e.stopPropagation();
         focusBar();
+        return;
+      }
+      if ((e.metaKey || e.ctrlKey) && !e.altKey && !e.shiftKey && e.key.toLowerCase() === "z") {
+        // Undo the last shape while the panel is closed and nothing is being typed (typing keeps the text's own undo)
+        const t = e.target;
+        const typing = t instanceof HTMLElement && t.closest("input, textarea, select, [contenteditable]");
+        if (!typing && !openRef.current && useShellStore.getState().undo) {
+          e.preventDefault();
+          undoShape();
+        }
         return;
       }
       if (e.metaKey || e.ctrlKey || e.altKey || e.isComposing) return;
@@ -168,7 +211,7 @@ export function GraphShell({ nodes, byId, colorBy, onFocus, onRead, onShowMentio
     };
     window.addEventListener("keydown", onKey, true);
     return () => window.removeEventListener("keydown", onKey, true);
-  }, [focusBar]);
+  }, [focusBar, undoShape]);
 
   useEffect(() => {
     if (!open) return;
@@ -210,6 +253,15 @@ export function GraphShell({ nodes, byId, colorBy, onFocus, onRead, onShowMentio
     }
 
     if (!text) {
+      if (canUndo)
+        out.push({
+          key: "undo-shape",
+          section: "Last shape",
+          label: "Undo",
+          hint: "Cmd-Z",
+          lead: <Undo2 aria-hidden className="size-4" strokeWidth={1.6} />,
+          run: done(undoShape),
+        });
       const seen = new Set<string>();
       const recent = [...(recentQ.data?.recent ?? [])].reverse().filter((s) => (seen.has(s.text) ? false : (seen.add(s.text), true))).slice(0, RECENT_SHOWN);
       for (const s of recent) {
@@ -233,7 +285,8 @@ export function GraphShell({ nodes, byId, colorBy, onFocus, onRead, onShowMentio
       return out;
     }
 
-    const shape = looksLikeShape(text);
+    const asksShape = looksLikeShape(text);
+    const canShape = live && !IS_SHARE;
     const shapeRow: PanelRow = {
       key: "shape",
       section: "Actions",
@@ -242,15 +295,13 @@ export function GraphShell({ nodes, byId, colorBy, onFocus, onRead, onShowMentio
           Shape the graph: <span className="text-muted-foreground">{text}</span>
         </>
       ),
-      hint: "coming soon",
+      hint: shaping ? "working" : "this view only",
       lead: <Wand2 aria-hidden className="size-4" strokeWidth={1.6} />,
-      run: done(() => {
-        record(text, { text });
-        requestShape(text);
-        useShellStore.getState().say("Shaping the graph from text is coming soon.");
-      }),
+      // the panel stays open until the shape is drawn, so a refusal is read where the text was typed
+      // (a new request replaces one still on its way: the older answer is dropped when it lands)
+      run: () => requestShape(text),
     };
-    if (shape && /^match\b/i.test(text)) out.push(shapeRow);
+    if (canShape && asksShape && /^match\b/i.test(text)) out.push(shapeRow);
     const colour = effectiveColorBy(colorBy);
     // a short list keeps the actions under it in view
     const shown = [...results.filter((r) => !r.related).slice(0, PAGES_SHOWN), ...results.filter((r) => r.related).slice(0, RELATED_SHOWN)];
@@ -286,7 +337,7 @@ export function GraphShell({ nodes, byId, colorBy, onFocus, onRead, onShowMentio
         }),
       });
     }
-    if (shape && !/^match\b/i.test(text)) out.push(shapeRow);
+    if (canShape && asksShape && !/^match\b/i.test(text)) out.push(shapeRow);
     if (!IS_SHARE) {
       out.push({
         key: "ask",
@@ -303,7 +354,7 @@ export function GraphShell({ nodes, byId, colorBy, onFocus, onRead, onShowMentio
     }
     return out;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [slash, raw, text, commands, recentQ.data, viewsQ.data, results, colorBy, onFocus, onRead, onShowMentions, record, close]);
+  }, [slash, raw, text, commands, recentQ.data, viewsQ.data, results, colorBy, onFocus, onRead, onShowMentions, record, close, shaping, canUndo, undoShape, live]);
 
   /** A recent step: a command runs again; anything else goes back into the box to be edited or run. */
   function runRecent(s: RecentStep) {
@@ -317,10 +368,13 @@ export function GraphShell({ nodes, byId, colorBy, onFocus, onRead, onShowMentio
   }
   function runView(v: PinnedView) {
     useShellStore.getState().requestView(v);
-    useShellStore.getState().say("Opening a pinned view is coming soon.");
   }
 
   useEffect(() => setIdx(0), [raw]);
+  // an error belongs to the text it answered: editing the text retires it
+  useEffect(() => {
+    useShellStore.getState().setShapeError(null);
+  }, [raw]);
   useEffect(() => setIdx((i) => Math.min(i, Math.max(rows.length - 1, 0))), [rows.length]);
 
   const onKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
@@ -339,6 +393,14 @@ export function GraphShell({ nodes, byId, colorBy, onFocus, onRead, onShowMentio
       close();
     }
   };
+
+  const status: PanelStatus | null = shaping
+    ? { kind: "busy", text: "Shaping the graph" }
+    : shapeError
+      ? { kind: "error", text: shapeError }
+      : shape && shapeCurrent
+        ? { kind: "shape", text: pillText(shape.styleText, shape.pages) || "Shaped", skipped: shape.skipped }
+        : null;
 
   const empty = slash ? "No command matches." : text ? "Nothing matches." : live && !IS_SHARE ? "Type to search pages, / for commands, or ask a question." : "Type to search pages.";
 
@@ -367,7 +429,7 @@ export function GraphShell({ nodes, byId, colorBy, onFocus, onRead, onShowMentio
         notice={open ? undefined : notice?.text}
         onKbClick={() => focusBar("/knowledge")}
       />
-      {open && <SearchPanel rows={rows} idx={idx} onHover={setIdx} empty={empty} />}
+      {open && <SearchPanel rows={rows} idx={idx} onHover={setIdx} empty={empty} status={status} />}
     </div>
   );
 }
