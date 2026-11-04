@@ -1,7 +1,8 @@
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
-import { ChevronDown, Database } from "lucide-react";
+import { ChevronDown, Database, Plus } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useDataSource } from "@/api";
+import { AddKnowledgeBase, useImportAdapter } from "@/components/kb-import";
 import { useFlag } from "@/flags/useFlag";
 import { formatKbs, parseKbs } from "@/lib/kbSelection";
 import { useApiQuery } from "@/lib/useApiQuery";
@@ -52,6 +53,8 @@ export function KbBadge() {
 /** The header menu: tick the knowledge bases the graph shows (none is allowed). */
 function KbMenu({ title, active }: { title: React.ReactNode; active: string | null }) {
   const [open, setOpen] = useState(false);
+  const [adding, setAdding] = useState(false);
+  const adapter = useImportAdapter();
   const box = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   const loc = useRouterState({ select: (s) => s.location });
@@ -129,6 +132,16 @@ function KbMenu({ title, active }: { title: React.ReactNode; active: string | nu
               <span className="shrink-0 text-xs text-muted-foreground">{r.error ? "can't open" : r.active ? "this app" : "view only"}</span>
             </label>
           ))}
+          {adapter && (
+            <button
+              type="button"
+              className="mt-1 flex w-full items-center gap-1.5 rounded px-1.5 py-1 text-left text-primary hover:bg-accent"
+              onClick={() => { setOpen(false); setAdding(true); }}
+            >
+              <Plus aria-hidden className="size-3.5" />
+              Add knowledge base
+            </button>
+          )}
           <div className="mt-1 border-t px-1.5 pt-1.5 text-xs">
             <Link to={"/system" as never} search={{ tab: "kbs" } as never} className="text-primary hover:underline" onClick={() => setOpen(false)}>
               Manage in System → Knowledge bases
@@ -136,6 +149,7 @@ function KbMenu({ title, active }: { title: React.ReactNode; active: string | nu
           </div>
         </div>
       )}
+      {adapter && <AddKnowledgeBase adapter={adapter} open={adding} onOpenChange={setAdding} />}
     </div>
   );
 }
