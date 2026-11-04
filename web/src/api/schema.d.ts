@@ -363,6 +363,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/kb/import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Import an OKF bundle as a new knowledge base */
+        post: operations["import_new_kb_api_kb_import_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/kb/import/validate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Dry run of a knowledge base import */
+        post: operations["validate_import_api_kb_import_validate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/kb/list": {
         parameters: {
             query?: never;
@@ -567,6 +601,25 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/recent": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Recent shaping steps (local, oldest first) */
+        get: operations["list_recent_api_recent_get"];
+        put?: never;
+        /** Append a recent step (keeps the last 20) */
+        post: operations["add_recent_api_recent_post"];
+        /** Clear the recent steps */
+        delete: operations["clear_recent_api_recent_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/relations/proposals": {
         parameters: {
             query?: never;
@@ -755,6 +808,42 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/api/views": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Pinned graph views */
+        get: operations["list_views_api_views_get"];
+        put?: never;
+        /** Pin a view (one knowledge step) */
+        post: operations["pin_view_api_views_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/views/{view_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Unpin a view (one knowledge step) */
+        delete: operations["unpin_view_api_views__view_id__delete"];
+        options?: never;
+        head?: never;
+        /** Rename a pinned view (one knowledge step) */
+        patch: operations["rename_view_api_views__view_id__patch"];
         trace?: never;
     };
 }
@@ -1652,6 +1741,45 @@ export interface components {
             [key: string]: unknown;
         };
         /**
+         * KbImportPreview
+         * @description The dry run: what an import would do. Errors block it, warnings do not.
+         */
+        KbImportPreview: {
+            /** Commit */
+            commit: string;
+            /** Errors */
+            errors: string[];
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /** Ok */
+            ok: boolean;
+            /** Pages */
+            pages: number;
+            /** Ref */
+            ref: string;
+            /** Source */
+            source: string;
+            /** Warnings */
+            warnings: string[];
+        } & {
+            [key: string]: unknown;
+        };
+        /** KbImportResult */
+        KbImportResult: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /** Pages */
+            pages: number;
+            /** Root */
+            root: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /**
          * KbInfo
          * @description The knowledge base this app serves: kb.toml facts, where it is, its types, what it overrides.
          */
@@ -2273,6 +2401,43 @@ export interface components {
              * Text
              * @default
              */
+            text: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** RecentAppendRequest */
+        RecentAppendRequest: {
+            /**
+             * Spec
+             * @default {}
+             */
+            spec: {
+                [key: string]: unknown;
+            };
+            /** Text */
+            text: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** RecentList */
+        RecentList: {
+            /** Recent */
+            recent: components["schemas"]["RecentStep"][];
+        } & {
+            [key: string]: unknown;
+        };
+        /** RecentStep */
+        RecentStep: {
+            /** At */
+            at: string;
+            /**
+             * Spec
+             * @default {}
+             */
+            spec: {
+                [key: string]: unknown;
+            };
+            /** Text */
             text: string;
         } & {
             [key: string]: unknown;
@@ -2932,6 +3097,66 @@ export interface components {
             start: number;
             /** Text */
             text: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** View */
+        View: {
+            /** Created */
+            created: string;
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /**
+             * Spec
+             * @default {}
+             */
+            spec: {
+                [key: string]: unknown;
+            };
+        } & {
+            [key: string]: unknown;
+        };
+        /** ViewList */
+        ViewList: {
+            /** Views */
+            views: components["schemas"]["View"][];
+        } & {
+            [key: string]: unknown;
+        };
+        /** ViewPinRequest */
+        ViewPinRequest: {
+            /** Id */
+            id?: string | null;
+            /** Name */
+            name: string;
+            /**
+             * Spec
+             * @default {}
+             */
+            spec: {
+                [key: string]: unknown;
+            };
+        } & {
+            [key: string]: unknown;
+        };
+        /** ViewRenameRequest */
+        ViewRenameRequest: {
+            /** Name */
+            name: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** ViewStep */
+        ViewStep: {
+            /** Ok */
+            ok: boolean;
+            /** Sha */
+            sha?: string | null;
+            /** Version */
+            version?: string | null;
+            view?: components["schemas"]["View"] | null;
         } & {
             [key: string]: unknown;
         };
@@ -3697,6 +3922,74 @@ export interface operations {
             };
         };
     };
+    import_new_kb_api_kb_import_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    git_url: string;
+                    id?: string | null;
+                    kit?: string | null;
+                };
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file: string;
+                    id?: string;
+                    kit?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KbImportResult"];
+                };
+            };
+        };
+    };
+    validate_import_api_kb_import_validate_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    git_url: string;
+                    id?: string | null;
+                    kit?: string | null;
+                };
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file: string;
+                    id?: string;
+                    kit?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KbImportPreview"];
+                };
+            };
+        };
+    };
     list_kbs_api_kb_list_get: {
         parameters: {
             query?: never;
@@ -4074,6 +4367,79 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_recent_api_recent_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecentList"];
+                };
+            };
+        };
+    };
+    add_recent_api_recent_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RecentAppendRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecentList"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    clear_recent_api_recent_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecentList"];
                 };
             };
         };
@@ -4494,6 +4860,146 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_views_api_views_get: {
+        parameters: {
+            query?: {
+                /** @description another knowledge base id (read-only, multi-kb mode); empty = the server's own */
+                kb?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ViewList"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    pin_view_api_views_post: {
+        parameters: {
+            query?: {
+                /** @description another knowledge base id (read-only, multi-kb mode); empty = the server's own */
+                kb?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ViewPinRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ViewStep"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    unpin_view_api_views__view_id__delete: {
+        parameters: {
+            query?: {
+                /** @description another knowledge base id (read-only, multi-kb mode); empty = the server's own */
+                kb?: string;
+            };
+            header?: never;
+            path: {
+                view_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ViewStep"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    rename_view_api_views__view_id__patch: {
+        parameters: {
+            query?: {
+                /** @description another knowledge base id (read-only, multi-kb mode); empty = the server's own */
+                kb?: string;
+            };
+            header?: never;
+            path: {
+                view_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ViewRenameRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ViewStep"];
+                };
             };
             /** @description Validation Error */
             422: {

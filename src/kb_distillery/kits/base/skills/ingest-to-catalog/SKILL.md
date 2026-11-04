@@ -1,6 +1,8 @@
 ---
 name: ingest-to-catalog
 description: Move inbox files to raw/ format folders, record collection membership, and create Source pages at depth listed (catalog stubs). Zero LLM. Use for "catalog", "triage inbox", "ingest to catalog". Do NOT read PDFs or digest.
+audience: app
+mode: write
 ---
 
 # ingest-to-catalog

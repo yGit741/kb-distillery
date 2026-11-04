@@ -7,7 +7,7 @@ import {
 } from "@tanstack/react-router";
 import { IS_SHARE } from "@/share/env";
 import { useFlag } from "@/flags/useFlag";
-import { ROUTES, type Route } from "@/routes/registry";
+import { ROUTES, movedTarget, type Route } from "@/routes/registry";
 import { SEARCH } from "@/routes/search";
 import { AppShell } from "./AppShell";
 import { ErrorBoundary } from "@/components/states";
@@ -25,13 +25,20 @@ function Gate({ def }: { def: Route }) {
 
 function screenRoutes(def: Route) {
   const validateSearch = SEARCH[def.id as keyof typeof SEARCH] as (raw: Record<string, unknown>) => Record<string, unknown>;
+  const target = movedTarget(def);
+  // A screen folded into another one: the old path keeps working, same search params, on the tab that replaced it.
+  const beforeLoad = target
+    ? (({ search }: { search: Record<string, unknown> }) => {
+        throw redirect({ to: target.path, search: { ...search, tab: def.movedTo!.tab } } as never);
+      }) as never
+    : undefined;
   const component = () => (
     <ErrorBoundary label={def.label}>
       <Gate def={def} />
     </ErrorBoundary>
   );
   return [def.path, ...(def.extraPaths ?? [])].map((path) =>
-    createRoute({ getParentRoute: () => rootRoute, path, component, validateSearch }),
+    createRoute({ getParentRoute: () => rootRoute, path, component, validateSearch, beforeLoad }),
   );
 }
 

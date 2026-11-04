@@ -1,6 +1,8 @@
 ---
 name: ingest-to-catalog-blog
 description: Catalog blog posts from inbox to raw/web-clips/ (or raw/printed-docs/ with --format). Corpus row only. Do NOT digest from here.
+audience: app
+mode: write
 ---
 
 # ingest-to-catalog / blog

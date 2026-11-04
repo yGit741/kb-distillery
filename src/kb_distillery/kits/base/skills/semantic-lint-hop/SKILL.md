@@ -1,6 +1,8 @@
 ---
 name: semantic-lint-hop
 description: 1-hop semantic review after ingest/distill. Fix internal ingestion issues; for external paper disagreements suggest Connections bullets only.
+audience: app
+mode: write
 ---
 
 # semantic-lint-hop

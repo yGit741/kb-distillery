@@ -15,13 +15,33 @@
     chore <scope> "summary" [paths…]     commit a kb repo's own tooling files (kb.toml, .claude/, CLAUDE.md…) as chore(<scope>)
     record <op> <target> "summary" <paths…>   commit already-modified files as one knowledge op
     adopt-history <bundle> [--checkout P]     fast-forward main to a curated history bundle
+    view pin <name> [--spec JSON|--spec-file F] [--id ID]   pin a graph view in meta/views.json (one knowledge step)
+    view unpin <id>                      remove a pinned view
+    view rename <id> <name>              rename a pinned view
 """
 import argparse
+import json
 import os
 import sys
 
 from . import core
 from . import migrate as migrate_mod
+from kb_distillery.vault.views import ViewsError
+
+
+def _read_spec(inline, path):
+    """The `--spec` / `--spec-file` JSON object ({} when neither is given)."""
+    if inline and path:
+        raise ViewsError(400, "give --spec or --spec-file, not both")
+    try:
+        if path:
+            with open(path, encoding="utf-8") as f:
+                text = f.read()
+        else:
+            text = inline
+        return json.loads(text) if text else {}
+    except (OSError, ValueError) as e:
+        raise ViewsError(400, f"the spec is not readable JSON: {e}") from None
 
 
 def main(argv=None):
@@ -73,6 +93,20 @@ def main(argv=None):
     ad.add_argument("--checkout", help="checkout to update (default: this one)")
     ad.add_argument("--dry-run", action="store_true")
     ad.add_argument("--no-push", action="store_true")
+    vw = sub.add_parser("view", help="pinned graph views in meta/views.json, one knowledge step each")
+    vsub = vw.add_subparsers(dest="view_cmd", required=True)
+    vp = vsub.add_parser("pin")
+    vp.add_argument("name")
+    vp.add_argument("--spec", help="the view's spec as a JSON object (default: {})")
+    vp.add_argument("--spec-file", help="read the spec from this JSON file")
+    vp.add_argument("--id", help="view id (default: a slug of the name)")
+    vu = vsub.add_parser("unpin")
+    vu.add_argument("id")
+    vr = vsub.add_parser("rename")
+    vr.add_argument("id")
+    vr.add_argument("name")
+    for v_ in (vp, vu, vr):
+        v_.add_argument("--no-push", action="store_true", help="commit only (offline); the nightly sync pushes later")
     args = p.parse_args(argv)
     if getattr(args, "no_push", False):
         os.environ["KB_NO_PUSH"] = "1"
@@ -124,10 +158,25 @@ def main(argv=None):
         elif args.cmd == "adopt-history":
             from .adopt import adopt
             adopt(args.bundle, os.path.abspath(args.checkout or core.ROOT), push=not args.no_push, dry_run=args.dry_run)
+        elif args.cmd == "view":
+            from . import view as view_mod
+            if args.view_cmd == "pin":
+                spec = _read_spec(args.spec, args.spec_file)
+                out = view_mod.pin(args.name, spec, view_id=args.id, root=core.ROOT)
+                print(f"pinned view {out['view']['id']} ({out['version'] or 'no step'})")
+            elif args.view_cmd == "unpin":
+                out = view_mod.unpin(args.id, root=core.ROOT)
+                print(f"unpinned view {args.id} ({out['version'] or 'no step'})")
+            else:
+                out = view_mod.rename(args.id, args.name, root=core.ROOT)
+                print(f"renamed view {args.id} ({out['version'] or 'unchanged'})")
     except core.OpsError as e:
         print(f"ops: {e}", file=sys.stderr)
         return 1
     except migrate_mod.MigrateError as e:
+        print(f"ops: {e}", file=sys.stderr)
+        return 1
+    except ViewsError as e:
         print(f"ops: {e}", file=sys.stderr)
         return 1
     return 0

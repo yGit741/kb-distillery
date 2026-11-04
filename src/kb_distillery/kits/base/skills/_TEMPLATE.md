@@ -2,6 +2,8 @@
 name: your-skill-slug
 description: >-
   One-line purpose. Use for <explicit triggers>. Do NOT use for <anti-triggers>.
+audience: app          # app (runs in a knowledge base, and in the chat agent) | dev (engine work, .claude/skills only)
+mode: write            # read (never changes a file; may run in the read-only chat agent) | write
 ---
 
 # your-skill-slug

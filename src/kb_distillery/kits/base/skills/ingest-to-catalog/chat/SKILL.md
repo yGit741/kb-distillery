@@ -1,6 +1,8 @@
 ---
 name: ingest-to-catalog-chat
 description: Catalog a Gemini-style chat export .md from inbox to raw/llm-chats/, rewriting an existing digest's raw field if one already cites it. Zero LLM. Do NOT digest from here.
+audience: app
+mode: write
 ---
 
 # ingest-to-catalog / chat

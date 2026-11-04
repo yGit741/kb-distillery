@@ -5,6 +5,8 @@ description: >-
   infra/<feature> branch and a GitHub PR merged as "(#N)". Use for fix the …, change the …, add a feature,
   bug in the dashboard or pipeline, ship, open PR, merge PR, schema change. Do NOT use for knowledge
   edits in wiki/ (use wiki-edit). Merges its own PRs unless held (schema/paradigm or the user asked to review).
+audience: dev
+mode: write
 ---
 
 # infra-pr
