@@ -89,6 +89,8 @@ def post_chat(req: ChatRequest):
         extra = {}
         if runtime.effective("agent-mode"):       # ship dark: the new fields are ignored until the flag is on
             extra = {"effort": payload.get("effort"), "budget": payload.get("budget")}
+            if payload.get("skills") is not None:
+                extra["skills"] = payload["skills"]      # narrowed to the whitelist inside agent_skills
             if payload.get("attachment_session"):
                 try:
                     chat_attachments.session_dir(payload["attachment_session"])

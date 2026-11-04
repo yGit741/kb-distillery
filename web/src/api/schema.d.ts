@@ -261,6 +261,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/chat/skills": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Whitelisted skills and which are on for a session */
+        get: operations["get_skills_api_chat_skills_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/chat/skills/{session_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Choose the skills on for a session */
+        put: operations["put_skills_api_chat_skills__session_id__put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/chat/status": {
         parameters: {
             query?: never;
@@ -1242,6 +1276,8 @@ export interface components {
             scope?: string | null;
             /** Session */
             session?: string | null;
+            /** Skills */
+            skills?: string[] | null;
             /** System */
             system?: string | null;
         } & {
@@ -1299,6 +1335,42 @@ export interface components {
             monthly_credit?: number | null;
             /** Reset Day */
             reset_day?: number | null;
+        } & {
+            [key: string]: unknown;
+        };
+        /** ChatSkill */
+        ChatSkill: {
+            /**
+             * Description
+             * @default
+             */
+            description: string;
+            /**
+             * Enabled
+             * @default true
+             */
+            enabled: boolean;
+            /** Name */
+            name: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** ChatSkillList */
+        ChatSkillList: {
+            /** Session */
+            session?: string | null;
+            /** Skills */
+            skills: components["schemas"]["ChatSkill"][];
+        } & {
+            [key: string]: unknown;
+        };
+        /** ChatSkillsPut */
+        ChatSkillsPut: {
+            /**
+             * Enabled
+             * @description skill names to turn on; names outside the whitelist are dropped
+             */
+            enabled: string[];
         } & {
             [key: string]: unknown;
         };
@@ -4413,6 +4485,107 @@ export interface operations {
             };
             /** @description invalid setting */
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_skills_api_chat_skills_get: {
+        parameters: {
+            query?: {
+                session?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChatSkillList"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_skills_api_chat_skills__session_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChatSkillsPut"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChatSkillList"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Method Not Allowed */
+            405: {
                 headers: {
                     [name: string]: unknown;
                 };

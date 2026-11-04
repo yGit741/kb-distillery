@@ -4,6 +4,7 @@ import { useFlag } from "@/flags/useFlag";
 import { readEvents } from "./sse";
 import { applyEvent, clearAsk, dropLastTurn, emptyChat, historyOf, type Chat } from "./thread";
 import { loadSessions, saveSessions, upsertSession, type SessionEntry } from "./sessions";
+import { skillSelection } from "./skillsSelection";
 import { readJson, writeJson } from "./storage";
 import { useServerSessions } from "./useServerSessions";
 
@@ -85,6 +86,7 @@ export function useChatSession() {
             backend: opts.backend,
             scope: opts.scope || undefined,
             session: base.session,
+            skills: skillSelection(base.id),
             system: opts.system,
             ...opts.auth,
           },

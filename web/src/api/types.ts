@@ -101,6 +101,11 @@ export type SessionDoc = S["SessionDoc"];
 export type SessionPutRequest = S["SessionPutRequest"];
 export type SessionDeleted = S["SessionDeleted"];
 
+// chat skills (the kb's whitelist, switched per session)
+export type ChatSkillList = S["ChatSkillList"];
+export type ChatSkill = S["ChatSkill"];
+export type ChatSkillsPut = S["ChatSkillsPut"];
+
 // backlog
 export type BacklogList = S["BacklogList"];
 export type BacklogItem = S["BacklogItem"];
