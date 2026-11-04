@@ -144,7 +144,12 @@ function PreviewStep({ adapter, source, preview, onBack, onDone }: {
 
 function ResultStep({ outcome, onClose }: { outcome: ImportOutcome; onClose: () => void }) {
   if (outcome.state === "received") {
-    return <ResultCard tone="pending" title="Received">{outcome.message}</ResultCard>;
+    return (
+      <ResultCard tone="pending" title="Received">
+        <p>{outcome.message}</p>
+        {outcome.ref && <p className="mt-1 break-all">Inbox item <code className="text-xs text-foreground">{outcome.ref}</code></p>}
+      </ResultCard>
+    );
   }
   return (
     <ResultCard

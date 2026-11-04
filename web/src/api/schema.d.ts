@@ -72,6 +72,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/chat/attachments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Upload a chat attachment */
+        post: operations["post_attachment_api_chat_attachments_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/chat/attachments/{session}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List a chat's attachments */
+        get: operations["get_attachments_api_chat_attachments__session__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/chat/attachments/{session}/{attachment_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Remove a chat attachment */
+        delete: operations["delete_attachment_api_chat_attachments__session___attachment_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/chat/keys": {
         parameters: {
             query?: never;
@@ -119,6 +170,23 @@ export interface paths {
         post?: never;
         /** Remove a stored key */
         delete: operations["delete_key_api_chat_keys__name__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/chat/message": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Queue a message into the running agent turn */
+        post: operations["post_message_api_chat_message_post"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -323,6 +391,23 @@ export interface paths {
         put?: never;
         /** Run a named graph query */
         post: operations["post_named_query_api_graph_queries__name__post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/graph/shape": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Turn free text into a graph view: Cypher selection plus style clause */
+        post: operations["post_shape_api_graph_shape_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -850,6 +935,32 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** AttachmentInfo */
+        AttachmentInfo: {
+            /** Bytes */
+            bytes: number;
+            /** Id */
+            id: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "text" | "pdf" | "image";
+            /** Name */
+            name: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** AttachmentList */
+        AttachmentList: {
+            /**
+             * Attachments
+             * @default []
+             */
+            attachments: components["schemas"]["AttachmentInfo"][];
+        } & {
+            [key: string]: unknown;
+        };
         /** Backlink */
         Backlink: {
             /**
@@ -916,6 +1027,13 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
+        /** Body_post_attachment_api_chat_attachments_post */
+        Body_post_attachment_api_chat_attachments_post: {
+            /** File */
+            file: string;
+            /** Session */
+            session: string;
+        };
         /** ChatAuth */
         ChatAuth: {
             /**
@@ -949,12 +1067,36 @@ export interface components {
             [key: string]: unknown;
         };
         /**
+         * ChatMessageIn
+         * @description Body of POST /api/chat/message: `text` becomes the next user message of the live turn for `session`.
+         */
+        ChatMessageIn: {
+            /** Session */
+            session: string;
+            /** Text */
+            text: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** ChatMessageResult */
+        ChatMessageResult: {
+            /**
+             * Ok
+             * @default true
+             */
+            ok: boolean;
+        } & {
+            [key: string]: unknown;
+        };
+        /**
          * ChatRequest
          * @description Body of POST /api/chat. Everything but `question` falls back to the stored settings.
          */
         ChatRequest: {
             /** Active Key */
             active_key?: string | null;
+            /** Attachment Session */
+            attachment_session?: string | null;
             /** Attachments */
             attachments?: string[] | null;
             /** Auth Mode */
@@ -2766,6 +2908,80 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
+        /** ShapeRequest */
+        ShapeRequest: {
+            /**
+             * Backend
+             * @description LLM backend for this request; default $KB_LLM_BACKEND, then subscription
+             */
+            backend?: ("subscription" | "api" | "batch") | null;
+            /**
+             * Limit
+             * @default 500
+             */
+            limit: number;
+            /**
+             * Text
+             * @description Free text, raw Cypher (starts with MATCH, style after a `--` or `style:` line), or a style clause list on its own
+             */
+            text: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** ShapeResponse */
+        ShapeResponse: {
+            /**
+             * Backend
+             * @description the LLM backend that answered; null without an LLM call
+             */
+            backend?: string | null;
+            /** Columns */
+            columns: string[];
+            /**
+             * Cypher
+             * @description null when the text was a style clause only: keep the current nodes
+             */
+            cypher?: string | null;
+            /**
+             * Explanation
+             * @default
+             */
+            explanation: string;
+            /** Row Count */
+            row_count: number;
+            /** Rows */
+            rows: unknown[][];
+            /**
+             * Source
+             * @description `llm` when the model wrote the Cypher
+             * @enum {string}
+             */
+            source: "cypher" | "llm";
+            style: components["schemas"]["StyleSpec"];
+            /**
+             * Style Text
+             * @description the style in its canonical clause form
+             * @default
+             */
+            style_text: string;
+            /**
+             * Truncated
+             * @default false
+             */
+            truncated: boolean;
+            /**
+             * Usd
+             * @description cost reported by the backend; null without an LLM call
+             */
+            usd?: number | null;
+            /**
+             * Warnings
+             * @default []
+             */
+            warnings: string[];
+        } & {
+            [key: string]: unknown;
+        };
         /** ShareChip */
         ShareChip: {
             /** Cls */
@@ -2835,6 +3051,29 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
+        /** StyleSpec */
+        StyleSpec: {
+            colour_by?: components["schemas"]["Target"] | null;
+            group_by?: components["schemas"]["Target"] | null;
+            /**
+             * Hide Edge Kinds
+             * @default []
+             */
+            hide_edge_kinds: string[];
+            /**
+             * Hide Labels
+             * @default []
+             */
+            hide_labels: string[];
+            /**
+             * Label
+             * @description node property shown as the node's text
+             */
+            label?: string | null;
+            /** Layout */
+            layout?: ("force" | "radial" | "grid" | "timeline") | null;
+            size_by?: components["schemas"]["Target"] | null;
+        };
         /** SuggestedPage */
         SuggestedPage: {
             /** Id */
@@ -2853,6 +3092,22 @@ export interface components {
             via: string[];
         } & {
             [key: string]: unknown;
+        };
+        /**
+         * Target
+         * @description What a style reads: a node property, the node labels, the degree, or the edge kind.
+         */
+        Target: {
+            /**
+             * By
+             * @enum {string}
+             */
+            by: "prop" | "label" | "degree" | "edge-kind";
+            /**
+             * Name
+             * @description the property name when `by` is `prop`
+             */
+            name?: string | null;
         };
         /** ThinkCaptureRequest */
         ThinkCaptureRequest: {
@@ -3337,6 +3592,165 @@ export interface operations {
             };
         };
     };
+    post_attachment_api_chat_attachments_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_post_attachment_api_chat_attachments_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AttachmentInfo"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Content Too Large */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unsupported Media Type */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_attachments_api_chat_attachments__session__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AttachmentList"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_attachment_api_chat_attachments__session___attachment_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session: string;
+                attachment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AttachmentList"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_keys_api_chat_keys_get: {
         parameters: {
             query?: never;
@@ -3459,6 +3873,46 @@ export interface operations {
             };
             /** @description unknown key */
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_message_api_chat_message_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChatMessageIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChatMessageResult"];
+                };
+            };
+            /** @description no turn is running for that session */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -3879,6 +4333,51 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
                 };
+            };
+        };
+    };
+    post_shape_api_graph_shape_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ShapeRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShapeResponse"];
+                };
+            };
+            /** @description Unknown or unusable LLM backend */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The text could not become a valid view: `detail` says why and what to write instead */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The LLM backend failed */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
