@@ -3,10 +3,12 @@ import { RefreshCw } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { Markdown } from "@/components/Markdown";
 import { Button } from "@/components/ui/button";
+import { useFlag } from "@/flags/useFlag";
 import { cn } from "@/lib/utils";
 import { tokenLine } from "./format";
 import type { ToolStep } from "./sse";
 import type { ChatMessage } from "./thread";
+import { Transcript } from "./Transcript";
 
 function Trace({ steps, live }: { steps: ToolStep[]; live: boolean }) {
   if (!steps.length) return null;
@@ -42,6 +44,7 @@ interface Props {
 }
 
 export function MessageList({ messages, busy, onRegenerate }: Props) {
+  const agentMode = useFlag("agent-mode");
   const end = useRef<HTMLDivElement>(null);
   const size = messages.length ? messages[messages.length - 1]!.content.length : 0;
   useEffect(() => {
@@ -61,7 +64,7 @@ export function MessageList({ messages, busy, onRegenerate }: Props) {
             className={cn("rounded-lg border p-3", user ? "bg-secondary/50" : "bg-card", m.failed && "opacity-70")}
           >
             <p className="mb-1 text-xs font-medium text-muted-foreground">{user ? "You" : "Claude"}</p>
-            {!user && m.trace && <Trace steps={m.trace} live={streaming} />}
+            {!user && (agentMode ? <Transcript message={m} live={streaming} /> : m.trace && <Trace steps={m.trace} live={streaming} />)}
             {user ? (
               <p className="whitespace-pre-wrap break-words text-sm">{m.content}</p>
             ) : m.content ? (
