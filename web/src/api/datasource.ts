@@ -84,6 +84,14 @@ export interface DataSource {
   answerChat(body: T.ChatAnswer): Promise<T.ChatAnswerResult>;
   chatStream(body: T.ChatRequest, signal?: AbortSignal): Promise<Response>;
 
+  // chat sessions (local app only; never in share builds)
+  listSessions(): Promise<T.SessionList>;
+  getSession(id: string): Promise<T.SessionDoc>;
+  /** Create or replace the whole document. */
+  putSession(id: string, body: T.SessionPutRequest): Promise<T.SessionDoc>;
+  renameSession(id: string, title: string): Promise<T.SessionDoc>;
+  deleteSession(id: string): Promise<T.SessionDeleted>;
+
   // think (local app only; never in share builds)
   listThink(): Promise<T.ThinkList>;
   getThinkNote(name: string): Promise<T.ThinkNote>;

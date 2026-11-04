@@ -1,8 +1,12 @@
 import "@testing-library/jest-dom/vitest";
-import { cleanup } from "@testing-library/react";
+import { cleanup, configure } from "@testing-library/react";
 import { afterEach } from "vitest";
 
 afterEach(() => cleanup());
+
+// inside a ship gate (KB_GATE_SLOT_HELD) a `findBy*` / `waitFor` gets 10 s instead of the 1 s default: on a host at
+// load 30-60 the render it waits for arrives late and the wait, not the test, is what fails; a developer's own run keeps the default
+if (process.env.KB_GATE_SLOT_HELD) configure({ asyncUtilTimeout: 10_000 });
 
 // jsdom lacks these; cmdk and the layout code touch them.
 if (!window.matchMedia) {
