@@ -25,6 +25,14 @@ export interface ToolStep {
   summary: string;
   id?: string;
   error?: boolean;
+  /** agent mode: running until its result arrives. */
+  status?: "running" | "done" | "error";
+  /** agent mode: the first ~300 characters of the tool's output. */
+  result?: string;
+}
+export interface TodoItem {
+  content: string;
+  status: "pending" | "in_progress" | "completed";
 }
 export interface Usage {
   input_tokens?: number;
@@ -44,6 +52,9 @@ export type ChatEvent =
   | { type: "session"; id: string }
   | { type: "tool"; step: ToolStep }
   | { type: "ask"; id: string; questions: AskQuestion[] }
+  | { type: "thinking"; text: string }
+  | { type: "todo"; items: TodoItem[] }
+  | { type: "user"; text: string }
   | { type: "notice"; text: string }
   | { type: "delta"; text: string }
   | { type: "usage"; usage: Usage }
@@ -126,6 +137,8 @@ export function toEvent(frame: RawFrame): ChatEvent | null {
           summary: typeof payload.summary === "string" ? payload.summary : "",
           id: typeof payload.id === "string" ? payload.id : undefined,
           error: payload.error === true ? true : undefined,
+          status: payload.status === "running" || payload.status === "done" || payload.status === "error" ? payload.status : undefined,
+          result: typeof payload.result === "string" ? payload.result : undefined,
         },
       };
     case "ask": {
@@ -141,6 +154,18 @@ export function toEvent(frame: RawFrame): ChatEvent | null {
       })).filter((q) => q.question && q.options.length);
       return questions.length ? { type: "ask", id: payload.id, questions } : null;
     }
+    case "thinking":
+      return typeof payload === "string" ? { type: "thinking", text: payload } : null;
+    case "todo": {
+      if (!isObj(payload) || !Array.isArray(payload.items)) return null;
+      const items = payload.items.filter(isObj).map((t): TodoItem => ({
+        content: String(t.content ?? ""),
+        status: t.status === "completed" || t.status === "in_progress" ? t.status : "pending",
+      }));
+      return { type: "todo", items: items.filter((t) => t.content) };
+    }
+    case "user":
+      return isObj(payload) && typeof payload.text === "string" ? { type: "user", text: payload.text } : null;
     case "notice":
       return isObj(payload) && typeof payload.text === "string" ? { type: "notice", text: payload.text } : null;
     case "usage":

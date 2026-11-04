@@ -223,6 +223,9 @@ def test_sources_carry_kind_and_web_hits_come_from_fetch_and_search():
     fetch = base.AssistantMessage(content=[base.ToolUseBlock(id="w1", name="WebFetch", input={"url": "https://example.com/a", "prompt": "p"})])
     ev = dict(ca.map_message(fetch, state))
     assert ev["tool"]["summary"] == "fetch https://example.com/a"
+    assert "sources" not in ev                                                       # cited only after the fetch succeeds
+    done = base.UserMessage(content=[base.ToolResultBlock(tool_use_id="w1", content="page")])
+    ev = dict(ca.map_message(done, state))
     web = [h for h in ev["sources"]["hits"] if h["kind"] == "web"]
     assert web == [{"kind": "web", "url": "https://example.com/a", "title": "example.com", "score": 1, "summary": "", "in_context": False}]
     assert ev["sources"]["new"] == ["tensor-rank"]                                   # web hits never enter `new`

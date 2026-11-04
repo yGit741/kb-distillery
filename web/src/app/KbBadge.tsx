@@ -1,7 +1,8 @@
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
-import { ChevronDown, Database } from "lucide-react";
+import { ChevronDown, Database, Plus } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useDataSource } from "@/api";
+import { AddKnowledgeBase, useImportAdapter, type ImportAdapter } from "@/components/kb-import";
 import { useFlag } from "@/flags/useFlag";
 import { formatKbs, parseKbs } from "@/lib/kbSelection";
 import { useApiQuery } from "@/lib/useApiQuery";
@@ -22,6 +23,7 @@ const HEADER_TITLE =
  */
 export function KbBadge() {
   const ds = useDataSource();
+  const adapter = useImportAdapter();
   const kbView = useFlag("kb-view") && ds.kind !== "embedded";
   const q = useApiQuery(["kb"], (d) => d.getKb(), { staleTime: Infinity, retry: false });
   // a share build bakes no kb info (getKb is absent there): keep the title its header always had
@@ -35,7 +37,7 @@ export function KbBadge() {
     </>
   );
   if (kbView && q.data) return <KbMenu title={title} active={id} />;
-  return (
+  const link = (
     <Link
       to={"/system" as never}
       search={{ tab: "kbs" } as never}
@@ -47,11 +49,35 @@ export function KbBadge() {
       {title}
     </Link>
   );
+  // the private share build: no menu (its data is baked in), but a bundle can still be sent to the site's inbox
+  return ds.kind === "embedded" && adapter ? <WithAdd adapter={adapter}>{link}</WithAdd> : link;
+}
+
+/** The plain title plus one button that opens the "Add knowledge base" dialog (the site's inbox adapter). */
+function WithAdd({ adapter, children }: { adapter: ImportAdapter; children: React.ReactNode }) {
+  const [adding, setAdding] = useState(false);
+  return (
+    <div className="flex shrink-0 items-center gap-0.5">
+      {children}
+      <button
+        type="button"
+        aria-label="Add knowledge base"
+        title="Add knowledge base"
+        onClick={() => setAdding(true)}
+        className="rounded-md p-1 text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+      >
+        <Plus aria-hidden className="size-4" />
+      </button>
+      <AddKnowledgeBase adapter={adapter} open={adding} onOpenChange={setAdding} />
+    </div>
+  );
 }
 
 /** The header menu: tick the knowledge bases the graph shows (none is allowed). */
 function KbMenu({ title, active }: { title: React.ReactNode; active: string | null }) {
   const [open, setOpen] = useState(false);
+  const [adding, setAdding] = useState(false);
+  const adapter = useImportAdapter();
   const box = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   const loc = useRouterState({ select: (s) => s.location });
@@ -129,6 +155,16 @@ function KbMenu({ title, active }: { title: React.ReactNode; active: string | nu
               <span className="shrink-0 text-xs text-muted-foreground">{r.error ? "can't open" : r.active ? "this app" : "view only"}</span>
             </label>
           ))}
+          {adapter && (
+            <button
+              type="button"
+              className="mt-1 flex w-full items-center gap-1.5 rounded px-1.5 py-1 text-left text-primary hover:bg-accent"
+              onClick={() => { setOpen(false); setAdding(true); }}
+            >
+              <Plus aria-hidden className="size-3.5" />
+              Add knowledge base
+            </button>
+          )}
           <div className="mt-1 border-t px-1.5 pt-1.5 text-xs">
             <Link to={"/system" as never} search={{ tab: "kbs" } as never} className="text-primary hover:underline" onClick={() => setOpen(false)}>
               Manage in System → Knowledge bases
@@ -136,6 +172,7 @@ function KbMenu({ title, active }: { title: React.ReactNode; active: string | nu
           </div>
         </div>
       )}
+      {adapter && <AddKnowledgeBase adapter={adapter} open={adding} onOpenChange={setAdding} />}
     </div>
   );
 }

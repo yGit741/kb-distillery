@@ -1,4 +1,4 @@
-import type { AskQuestion, ChatEvent, SourceHit, ToolStep, Usage } from "./sse";
+import type { AskQuestion, ChatEvent, SourceHit, TodoItem, ToolStep, Usage } from "./sse";
 
 export interface ChatMessage {
   role: "user" | "assistant";
@@ -8,6 +8,10 @@ export interface ChatMessage {
   /** assistant: pages used this turn and the agent's tool steps. */
   hits?: SourceHit[];
   trace?: ToolStep[];
+  /** assistant, agent mode: the model's thinking text, when it started and how long it took (seconds). */
+  thinking?: string;
+  thinkStart?: number;
+  thinkSecs?: number;
   usage?: Usage;
   notice?: string;
   /** assistant: a question from the agent that waits for the user's choice. */
@@ -22,6 +26,8 @@ export interface Chat {
   id: string;
   session: string | null;
   messages: ChatMessage[];
+  /** agent mode: the agent's checklist (TodoWrite), pinned above the composer. */
+  todo?: TodoItem[];
 }
 
 export const newChatId = (now = new Date(), rand = Math.random()) =>
@@ -33,11 +39,28 @@ export const emptyChat = (): Chat => ({ id: newChatId(), session: null, messages
 export function applyEvent(
   chat: Chat,
   ev: ChatEvent,
+  now = Date.now(),
 ): Chat {
   const msgs = chat.messages;
   const last = msgs.length - 1;
   if (last < 1 || msgs[last]!.role !== "assistant") return chat;
+  if (ev.type === "todo") return { ...chat, todo: ev.items };
+  if (ev.type === "user") {
+    // a message queued into the running turn: it opens the next question/answer pair
+    // a pending question moves with it, so the card stays on the last message where it can be answered
+    const { ask, ...prev } = msgs[last]!;
+    const next = { role: "assistant" as const, content: "", ...(ask ? { ask } : {}) };
+    return { ...chat, messages: [...msgs.slice(0, last), prev, { role: "user", content: ev.text, sources: [] }, next] };
+  }
   const bot = { ...msgs[last]! };
+  if (ev.type === "thinking") {
+    bot.thinking = (bot.thinking ?? "") + ev.text;
+    bot.thinkStart ??= now;
+    return { ...chat, messages: [...msgs.slice(0, last), bot] };
+  }
+  if (bot.thinkStart != null && bot.thinkSecs == null && (ev.type === "delta" || ev.type === "tool" || ev.type === "usage")) {
+    bot.thinkSecs = Math.max(1, Math.round((now - bot.thinkStart) / 1000));
+  }
   let user = msgs[last - 1]!;
   let session = chat.session;
   switch (ev.type) {

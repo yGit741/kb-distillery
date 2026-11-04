@@ -23,7 +23,19 @@ class ChatRequest(ApiModel):
     # agent_mode flag only (ignored while it is off)
     effort: Optional[Literal["low", "medium", "high", "xhigh", "max"]] = None
     budget: Optional[float] = None
-    attachments: Optional[list[str]] = None
+    attachments: Optional[list[str]] = None          # attachment ids (POST /api/chat/attachments)
+    attachment_session: Optional[str] = None         # the session the attachments were uploaded under
+
+
+class AttachmentInfo(ApiModel):
+    id: str
+    name: str
+    kind: Literal["text", "pdf", "image"]
+    bytes: int
+
+
+class AttachmentList(ApiModel):
+    attachments: list[AttachmentInfo] = []
 
 
 class ChatAnswer(ApiModel):

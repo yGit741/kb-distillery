@@ -1,6 +1,7 @@
 import createClient from "openapi-fetch";
 import { ApiError, type DataSource } from "./datasource";
 import type { paths } from "./schema";
+import type * as T_ from "./types";
 
 export type Fetch = typeof fetch;
 
@@ -37,6 +38,29 @@ export function createHttpDataSource(fetchImpl: Fetch = (...a) => fetch(...a), b
     return r.data;
   }
 
+  /** The import routes take a multipart .zip or JSON {git_url}, which the typed client cannot express: plain fetch. */
+  async function postImport<T>(path: string, req: T_.KbImportRequest): Promise<T> {
+    let init: RequestInit;
+    if ("file" in req) {
+      const form = new FormData();
+      form.append("file", req.file, req.file.name);
+      if (req.id) form.append("id", req.id);
+      if (req.kit) form.append("kit", req.kit);
+      init = { body: form };
+    } else {
+      init = { headers: { "Content-Type": "application/json" }, body: JSON.stringify({ git_url: req.gitUrl, id: req.id || null, kit: req.kit || null }) };
+    }
+    let res: Response;
+    try {
+      res = await fetchImpl(path, { method: "POST", cache: "no-store", ...init });
+    } catch (e) {
+      throw new ApiError(`Could not reach ${path}: ${e instanceof Error ? e.message : String(e)}`);
+    }
+    const body: unknown = await res.json().catch(() => undefined);
+    if (!res.ok) throw new ApiError(message(body, `${path} answered ${res.status}`), res.status);
+    return body as T;
+  }
+
   return {
     kind: "http",
 
@@ -45,6 +69,8 @@ export function createHttpDataSource(fetchImpl: Fetch = (...a) => fetch(...a), b
     getHealth: () => run(() => client.GET("/api/health"), "/api/health"),
     getKb: () => run(() => client.GET("/api/kb"), "/api/kb"),
     listKbs: () => run(() => client.GET("/api/kb/list"), "/api/kb/list"),
+    previewKbImport: (req) => postImport<T_.KbImportPreview>("/api/kb/import/validate", req),
+    importKb: (req) => postImport<T_.KbImportResult>("/api/kb/import", req),
     getOps: (refresh) =>
       run(() => client.GET("/api/ops", { params: { query: refresh ? { refresh: "1" } : {} } }), "/api/ops"),
 
@@ -131,6 +157,7 @@ export function createHttpDataSource(fetchImpl: Fetch = (...a) => fetch(...a), b
       run(() => client.DELETE("/api/chat/keys/{name}", { params: { path: { name } } }), `/api/chat/keys/${name}`),
     saveChat: (body) => run(() => client.POST("/api/chat/saved", { body }), "/api/chat/saved"),
     answerChat: (body) => run(() => client.POST("/api/chat/answer", { body }), "/api/chat/answer"),
+    sendChatMessage: (body) => run(() => client.POST("/api/chat/message", { body }), "/api/chat/message"),
     chatStream: async (body, signal) => {
       let res: Response;
       try {

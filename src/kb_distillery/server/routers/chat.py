@@ -12,6 +12,7 @@ from kb_distillery.server.models.chat import (ChatAnswer, ChatAnswerResult, Chat
 from kb_distillery.server.sse import sse_response
 from kb_distillery.services import chat as chat_data
 from kb_distillery.services import chat_agent
+from kb_distillery.services import chat_attachments
 
 router = APIRouter(tags=["chat"])
 
@@ -88,6 +89,18 @@ def post_chat(req: ChatRequest):
         extra = {}
         if runtime.effective("agent-mode"):       # ship dark: the new fields are ignored until the flag is on
             extra = {"effort": payload.get("effort"), "budget": payload.get("budget")}
+            if payload.get("attachment_session"):
+                try:
+                    chat_attachments.session_dir(payload["attachment_session"])
+                    extra["attachment_session"] = payload["attachment_session"]
+                except chat_attachments.AttachmentError as exc:
+                    return _err(400, exc.message)
+            if payload.get("attachments"):
+                try:
+                    extra["attachments"] = chat_attachments.resolve(payload.get("attachment_session"),
+                                                                    payload["attachments"])
+                except chat_attachments.AttachmentError as exc:
+                    return _err(400, exc.message)
         gen = chat_agent.stream_agent(question, model=model, system=system, key=key,
                                       billing="subscription" if key is None else "api",
                                       session_id=payload.get("session") or None, history=history, scope=scope,

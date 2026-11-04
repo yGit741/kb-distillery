@@ -122,6 +122,36 @@ describe("ChatScreen", () => {
     expect(await screen.findByText("Using both.")).toBeInTheDocument();
   });
 
+  it("a failed answer POST puts the question back so it can be answered again", async () => {
+    let n = 0;
+    const { calls } = setup({ answerChat: async () => { if (n++ === 0) throw new Error("HTTP 503"); return { ok: true }; } });
+    const user = userEvent.setup();
+    await user.type(await box(), "compare them{Enter}");
+    await waitFor(() => expect(calls).toHaveLength(1));
+    const s = calls[0]!.stream;
+    s.push("session", { id: "sess-9" });
+    s.push("ask", { id: "toolu_2", questions: [{ question: "Which scope?", multiSelect: false, options: [{ label: "Wiki only" }, { label: "Wiki and web" }] }] });
+    await user.click(await screen.findByRole("button", { name: "Wiki and web" }));
+    await waitFor(() => expect(n).toBe(1));
+    await user.click(await screen.findByRole("button", { name: "Wiki and web" }));
+    await waitFor(() => expect(n).toBe(2));
+    await waitFor(() => expect(screen.queryByText("Which scope?")).toBeNull());
+  });
+
+  it("a pending question stays answerable when a queued message opens the next pair", async () => {
+    const { calls } = setup();
+    const user = userEvent.setup();
+    await user.type(await box(), "compare them{Enter}");
+    await waitFor(() => expect(calls).toHaveLength(1));
+    const s = calls[0]!.stream;
+    s.push("session", { id: "sess-9" });
+    s.push("ask", { id: "toolu_3", questions: [{ question: "Which scope?", multiSelect: false, options: [{ label: "Wiki only" }, { label: "Wiki and web" }] }] });
+    expect(await screen.findByText("Which scope?")).toBeInTheDocument();
+    s.push("user", { text: "also include 2024" });
+    expect(await screen.findByText("also include 2024")).toBeInTheDocument();
+    expect(screen.getByText("Which scope?")).toBeInTheDocument();
+  });
+
   it("web sources render as external links with a globe icon", async () => {
     const { calls } = setup();
     const user = userEvent.setup();
