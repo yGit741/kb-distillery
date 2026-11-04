@@ -29,8 +29,6 @@ screens = [
   { id = "pages", path = "/pages" },
   { id = "chat", path = "/chat" },
   { id = "scopes", path = "/scopes" },
-  { id = "pipeline", path = "/pipeline" },
-  { id = "lifecycle", path = "/lifecycle" },
   { id = "covector", path = "/covector" },
 ]
 

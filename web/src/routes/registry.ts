@@ -29,5 +29,5 @@ export const ROUTES: readonly Route[] = ROUTE_DEFS.filter((d) => byId.has(d.id))
 
 export const routeById = (id: string): Route | undefined => ROUTES.find((r) => r.id === id);
 
-/** The screen a moved route now lives in, when this build has it. */
+/** The screen a moved route now lives in, when this build has it (the private site has Lifecycle but no System). */
 export const movedTarget = (d: Pick<RouteDef, "movedTo">): Route | undefined => (d.movedTo ? routeById(d.movedTo.id) : undefined);

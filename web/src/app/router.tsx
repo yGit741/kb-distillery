@@ -26,11 +26,10 @@ function Gate({ def }: { def: Route }) {
 function screenRoutes(def: Route) {
   const validateSearch = SEARCH[def.id as keyof typeof SEARCH] as (raw: Record<string, unknown>) => Record<string, unknown>;
   const target = movedTarget(def);
-  // A screen folded into another one: the old path keeps working, same search params, on the screen that replaced it.
+  // A screen folded into another one: the old path keeps working, same search params, on the tab that replaced it.
   const beforeLoad = target
     ? (({ search }: { search: Record<string, unknown> }) => {
-        const { tab, search: extra } = def.movedTo!;
-        throw redirect({ to: target.path, search: { ...search, ...(tab ? { tab } : {}), ...extra } } as never);
+        throw redirect({ to: target.path, search: { ...search, ...def.movedTo!.search, ...(def.movedTo!.tab ? { tab: def.movedTo!.tab } : {}) } } as never);
       }) as never
     : undefined;
   const component = () => (
