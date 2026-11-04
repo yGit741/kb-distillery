@@ -80,6 +80,22 @@ def run_git(args, cwd=ROOT):
     )
 
 
+def inbox_pickup(run=subprocess.run):
+    """Flag `inbox-pickup` (off by default): import what the site's upload inbox holds, as new kbs on this Mac
+    (`distill kb inbox pull`, a separate process: the entry-point layer is not ours to import). Never fails the sync."""
+    from kb_distillery.config.flags import runtime
+    if not runtime.effective("inbox-pickup"):
+        return None
+    try:
+        proc = run([sys.executable, "-m", "kb_distillery.inbox", "pull"], cwd=ROOT, check=False, timeout=1800)
+    except (OSError, subprocess.SubprocessError) as e:
+        print(f"note: inbox pickup skipped — {e}")
+        return None
+    if proc.returncode:
+        print(f"note: inbox pickup finished with exit {proc.returncode} (see the lines above)")
+    return proc.returncode
+
+
 def main(argv=None):
     p = argparse.ArgumentParser(description="Daily vault git sync")
     p.add_argument("--dry-run", action="store_true", help="print actions, no git write")
@@ -89,7 +105,10 @@ def main(argv=None):
     # Knowledge is committed one operation at a time by meta/ops; the nightly run
     # only commits human think/ edits and labelled leftovers, then pushes main + tags.
     from kb_distillery.ops import core as ops_core
-    return ops_core.sync(push=not args.no_push, dry_run=args.dry_run)
+    rc = ops_core.sync(push=not args.no_push, dry_run=args.dry_run)
+    if not args.dry_run:
+        inbox_pickup()
+    return rc
 
 
 if __name__ == "__main__":

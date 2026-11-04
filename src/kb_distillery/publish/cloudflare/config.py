@@ -9,7 +9,7 @@ Nothing personal is tracked. The first file that exists is the config, in this o
    (like `compatibility_date`) but is never a config by itself: `require()` refuses without a real file.
 
 A few values also have an environment override, which wins over the file: `KB_SHARE_GOOGLE_CLIENT_ID`,
-`KB_SHARE_FLAGS_KV_ID`, `KB_CLOUDFLARE_SUBDOMAIN`, `KB_CLOUDFLARE_ACCOUNT_ID`.
+`KB_SHARE_FLAGS_KV_ID`, `KB_SHARE_INBOX_BUCKET`, `KB_CLOUDFLARE_SUBDOMAIN`, `KB_CLOUDFLARE_ACCOUNT_ID`.
 
 Imports only `kb_distillery.config`, so `contracts` can read the subdomain and log path at import.
 """
@@ -104,7 +104,7 @@ def require(root: Optional[str] = None) -> Path:
 
 
 def settings(path: Optional[Path] = None, root: Optional[str] = None) -> dict:
-    """{google_client_id, allowed_emails, compatibility_date, flags_kv_id} for the Worker, env overrides applied."""
+    """{google_client_id, allowed_emails, compatibility_date, flags_kv_id, inbox_bucket} for the Worker, env overrides applied."""
     data = load(path, root)
     auth, worker = data.get("auth") or {}, data.get("worker") or {}
     return {
@@ -113,6 +113,8 @@ def settings(path: Optional[Path] = None, root: Optional[str] = None) -> dict:
         "compatibility_date": worker.get("compatibility_date") or DEFAULT_COMPAT,
         # KV namespace for runtime flag overrides; empty means not bound
         "flags_kv_id": os.environ.get("KB_SHARE_FLAGS_KV_ID") or worker.get("flags_kv_id") or "",
+        # R2 bucket bound as KB_INBOX for the upload inbox; empty means not bound
+        "inbox_bucket": os.environ.get("KB_SHARE_INBOX_BUCKET") or worker.get("inbox_bucket") or "",
     }
 
 

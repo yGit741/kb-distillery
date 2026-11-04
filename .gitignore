@@ -112,3 +112,6 @@ web/dist-share/
 # Knowledge bases live in ~/knowledge/<id> (kb_distillery.config.kb), outside this checkout. kbs/* stays ignored as a guard
 # so a stray kb folder here can never be committed to the engine repo; the public demo lives in examples/demo.
 kbs/*
+
+# The Worker inbox bundles the web checker at deploy/test time (build-okf.mjs); never committed
+src/kb_distillery/publish/cloudflare/worker/okf.gen.js
