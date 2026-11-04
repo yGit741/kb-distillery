@@ -363,6 +363,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/kb/import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Import an OKF bundle as a new knowledge base */
+        post: operations["import_new_kb_api_kb_import_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/kb/import/validate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Dry run of a knowledge base import */
+        post: operations["validate_import_api_kb_import_validate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/kb/list": {
         parameters: {
             query?: never;
@@ -1703,6 +1737,45 @@ export interface components {
             last_tag: string;
             /** Repo */
             repo: boolean;
+        } & {
+            [key: string]: unknown;
+        };
+        /**
+         * KbImportPreview
+         * @description The dry run: what an import would do. Errors block it, warnings do not.
+         */
+        KbImportPreview: {
+            /** Commit */
+            commit: string;
+            /** Errors */
+            errors: string[];
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /** Ok */
+            ok: boolean;
+            /** Pages */
+            pages: number;
+            /** Ref */
+            ref: string;
+            /** Source */
+            source: string;
+            /** Warnings */
+            warnings: string[];
+        } & {
+            [key: string]: unknown;
+        };
+        /** KbImportResult */
+        KbImportResult: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /** Pages */
+            pages: number;
+            /** Root */
+            root: string;
         } & {
             [key: string]: unknown;
         };
@@ -3845,6 +3918,74 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["KbInfo"];
+                };
+            };
+        };
+    };
+    import_new_kb_api_kb_import_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    git_url: string;
+                    id?: string | null;
+                    kit?: string | null;
+                };
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file: string;
+                    id?: string;
+                    kit?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KbImportResult"];
+                };
+            };
+        };
+    };
+    validate_import_api_kb_import_validate_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    git_url: string;
+                    id?: string | null;
+                    kit?: string | null;
+                };
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file: string;
+                    id?: string;
+                    kit?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KbImportPreview"];
                 };
             };
         };
