@@ -73,7 +73,7 @@ describe("header knowledge base menu (kb-view)", () => {
 });
 
 describe("header title without an import adapter", () => {
-  it("a share build with no inbox (this profile) shows no add button", async () => {
+  it("a build that is not the private share profile shows no add button", async () => {
     const ds = { ...mockDataSource({ getShareStatus: async () => ({ status: null, chip: null }) }), kind: "embedded" } as DataSource;
     render(<App source={ds} router={createAppRouter(createMemoryHistory({ initialEntries: ["/"] }), "")} />);
     await screen.findByRole("banner");

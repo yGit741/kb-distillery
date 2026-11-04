@@ -75,8 +75,13 @@ describe("site import adapter (the Worker inbox)", () => {
   });
 
   it("a 403 says only the owner can add", async () => {
-    const f = vi.fn(() => reply(403, { error: "not allowed" }));
-    await expect(adapterFor(f).submit(zip())).rejects.toThrow("Only the site owner can add knowledge bases here.");
+    const f = vi.fn(() => reply(403, { error: "not an admin" }));
+    await expect(adapterFor(f).submit(zip())).rejects.toThrow(/^Only the site owner can add knowledge bases here\.$/);
+  });
+
+  it("a 403 for another reason (origin, header) keeps the Worker's reason", async () => {
+    const f = vi.fn(() => reply(403, { error: "cross-origin request refused" }));
+    await expect(adapterFor(f).submit(zip())).rejects.toThrow("Only the site owner can add knowledge bases here. (cross-origin request refused)");
   });
 
   it("a 503 (no bucket yet) shows the Worker's message", async () => {

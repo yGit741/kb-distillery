@@ -64,7 +64,11 @@ async function post(fetchImpl: typeof fetch, path: string, source: ImportSource)
     return body;
   }
   if (res.status === 401) throw new Error(SIGNED_OUT);
-  if (res.status === 403) throw new Error(NOT_OWNER);
+  if (res.status === 403) {
+    // "not an admin" is the plain case; the other 403s (header, origin) say what the Worker refused
+    const why = typeof body?.error === "string" && body.error !== "not an admin" && body.error !== "not allowed" ? ` (${body.error})` : "";
+    throw new Error(NOT_OWNER + why);
+  }
   throw new Error(typeof body?.error === "string" ? body.error : `The site's inbox answered ${res.status}.`);
 }
 
