@@ -1,94 +1,111 @@
-import type { ImportAdapter, ImportPreview, ImportSource } from "./adapter";
+import type { ImportAdapter, ImportOutcome, ImportPreview, ImportSource } from "./adapter";
 
 /**
- * The deployed site: the dialog sends the bundle to the Worker's upload inbox (worker/inbox.js), which checks it with the
- * same checkBundle as the local import and parks it for the owner's Mac. Same-origin, session cookie, CSRF header
- * `X-KB-Admin: 1` (the Worker's ownerGate). Errors from the Worker are `{error}`.
+ * The deployed private site: the Worker's upload inbox (`POST /api/inbox/validate`, `POST /api/inbox`). It checks the
+ * bundle with the same checker as the app and parks it for the owner's Mac; nothing is imported here, so a successful
+ * submit is `received`, not `imported`. Writes need the owner's session cookie, the `X-KB-Admin` header and a
+ * same-origin request (the Worker's `ownerGate`); anyone else gets a 401 or 403, which is shown as a plain sentence.
  */
-export const RECEIVED = "Received, it appears after your Mac's next sync";
 
-type FetchLike = (input: string, init?: RequestInit) => Promise<Response>;
+const VALIDATE = "/api/inbox/validate";
+const CREATE = "/api/inbox";
+const RESERVED = new Set(["think", "demo"]);
+const RECEIVED = "Your bundle is in the inbox. It appears after your Mac's next sync.";
+const SIGNED_OUT = "Your sign-in has expired. Reload the page, sign in again, then retry.";
+const NOT_OWNER = "Only the site owner can add knowledge bases here.";
 
+/** The Worker's answer: the checker report (validate, create) plus the inbox item id (create). */
 interface Report {
   ok?: boolean;
+  kind?: string;
   id?: string;
   pages?: number;
   errors?: string[];
   warnings?: string[];
-  error?: string;
+  item?: string;
 }
 
-const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40).replace(/^-+|-+$/g, "");
-/** import_kb's display name for an id: "my-notes" -> "My notes". */
-const display = (id: string) => (id ? id.replace(/-/g, " ").replace(/^./, (c) => c.toUpperCase()) : "");
-const stem = (name: string) => name.replace(/\.zip$/i, "");
-const repoName = (url: string) => url.split("#")[0]!.replace(/\/+$/, "").split(/[/:]/).pop()!.replace(/\.git$/, "");
-
-function why(status: number, body: Report | null): string {
-  if (status === 401) return "Signed out. Reload the page to sign in again.";
-  if (status === 403) return "This account cannot add knowledge bases.";
-  if (status === 413) return body?.error ?? "That upload is too large.";
-  if (status === 503) return "The upload inbox is not set up on this site.";
-  return body?.error ?? `The site answered ${status}.`;
+/** The kb name a source suggests: a zip's stem, or the last part of a repository URL. */
+function nameOf(source: ImportSource): string {
+  if (source.kind === "zip") return source.file.name.replace(/\.zip$/i, "");
+  return source.url.split("#")[0]!.replace(/\/+$/, "").split(/[/:]/).pop()!.replace(/\.git$/i, "");
 }
 
-export function createSiteImportAdapter(fetchImpl: FetchLike = (u, i) => fetch(u, i)): ImportAdapter {
-  async function send(path: string, source: ImportSource): Promise<{ status: number; body: Report | null }> {
-    const q = new URLSearchParams();
-    if (source.kind === "zip" && source.id) q.set("id", source.id);
-    const headers: Record<string, string> = { "X-KB-Admin": "1", Accept: "application/json" };
-    const init: RequestInit = { method: "POST", credentials: "same-origin", cache: "no-store", headers };
-    let url = path;
-    if (source.kind === "zip") {
-      q.set("name", stem(source.file.name));
-      headers["Content-Type"] = "application/zip";
-      init.body = source.file;
-    } else {
-      headers["Content-Type"] = "application/json";
-      init.body = JSON.stringify({ git_url: source.url, id: source.id || undefined });
-    }
-    if (q.toString()) url += `?${q}`;
-    let res: Response;
-    try {
-      res = await fetchImpl(url, init);
-    } catch (e) {
-      throw new Error(`Could not reach the site: ${e instanceof Error ? e.message : String(e)}`);
-    }
-    return { status: res.status, body: (await res.json().catch(() => null)) as Report | null };
+/** import_kb's default id: lowercase letters, digits and dashes, at most 40 characters ("" when nothing is left). */
+function slug(name: string): string {
+  const s = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40).replace(/^-+|-+$/g, "");
+  return /^[a-z0-9]/.test(s) ? s : "";
+}
+
+function request(path: string, source: ImportSource): [string, RequestInit] {
+  const headers: Record<string, string> = { Accept: "application/json", "X-KB-Admin": "1" };
+  const init: RequestInit = { method: "POST", cache: "no-store", credentials: "same-origin", headers };
+  if (source.kind === "zip") {
+    const q = new URLSearchParams({ name: nameOf(source) });
+    if (source.id) q.set("id", source.id);
+    headers["Content-Type"] = "application/zip";
+    return [`${path}?${q}`, { ...init, body: source.file }];
   }
+  headers["Content-Type"] = "application/json";
+  return [path, { ...init, body: JSON.stringify({ git_url: source.url, ...(source.id ? { id: source.id } : {}) }) }];
+}
 
+async function post(fetchImpl: typeof fetch, path: string, source: ImportSource): Promise<Report> {
+  const [url, init] = request(path, source);
+  let res: Response;
+  try {
+    res = await fetchImpl(url, init);
+  } catch (e) {
+    throw new Error(`Could not reach the site's inbox: ${e instanceof Error ? e.message : String(e)}`);
+  }
+  const body = (await res.json().catch(() => null)) as (Report & { error?: unknown }) | null;
+  if (res.ok) {
+    if (!body) throw new Error("The site's inbox did not answer with JSON.");
+    return body;
+  }
+  if (res.status === 401) throw new Error(SIGNED_OUT);
+  if (res.status === 403) {
+    // "not an admin" is the plain case; the other 403s (header, origin) say what the Worker refused
+    const why = typeof body?.error === "string" && body.error !== "not an admin" && body.error !== "not allowed" ? ` (${body.error})` : "";
+    throw new Error(NOT_OWNER + why);
+  }
+  throw new Error(typeof body?.error === "string" ? body.error : `The site's inbox answered ${res.status}.`);
+}
+
+/** Turns the Worker's report into what the dialog's preview step shows. */
+function preview(source: ImportSource, r: Report): ImportPreview {
+  const name = nameOf(source);
+  const id = source.id || r.id || slug(name);
+  const errors = [...(r.errors ?? [])];
+  if (id && RESERVED.has(id)) errors.push(`The id "${id}" is reserved. Pick another one.`);
+  if (r.ok === false && !errors.length) errors.push("The bundle has no pages.");
   return {
-    validate: async (source) => {
-      const { status, body } = await send("/api/inbox/validate", source);
-      if (status !== 200 || !body) throw new Error(why(status, body));
-      const id = source.id || body.id || (source.kind === "git" ? slug(repoName(source.url)) : "");
-      const errors = [...(body.errors ?? [])];
-      if (!errors.length && body.ok === false) errors.push("The bundle has no pages.");
-      const preview: ImportPreview = {
-        id,
-        name: display(id),
-        pages: body.pages ?? 0,
-        source: source.kind === "zip" ? source.file.name : source.url,
-        errors,
-        warnings: body.warnings ?? [],
-      };
-      return preview;
-    },
-    submit: async (source) => {
-      const { status, body } = await send("/api/inbox", source);
-      if (status === 422 && body?.errors?.length) throw new Error(body.errors[0]);
-      if (status !== 201) throw new Error(why(status, body));
-      return { state: "received", message: RECEIVED };
+    id,
+    name,
+    pages: r.pages ?? 0,
+    source: source.kind === "zip" ? source.file.name : source.url,
+    errors,
+    warnings: r.warnings ?? [],
+  };
+}
+
+export function createSiteImportAdapter(fetchImpl: typeof fetch = (...a) => fetch(...a)): ImportAdapter {
+  return {
+    validate: async (source) => preview(source, await post(fetchImpl, VALIDATE, source)),
+    submit: async (source): Promise<ImportOutcome> => {
+      const r = await post(fetchImpl, CREATE, source);
+      return { state: "received", message: RECEIVED, ref: r.item };
     },
   };
 }
 
 /**
  * Is the signed-in viewer an owner of a site whose inbox is set up? `GET /api/inbox/access` answers 200 `{owner, inbox}`
- * to any signed-in viewer (owner = the Worker's ownerGate allowlist, inbox = the R2 bucket is bound). The entry is
- * offered only when both are true; anything else (another status, a network failure, a host that is not the Worker) is a no.
+ * to any signed-in viewer (owner = the Worker's ownerGate allowlist, inbox = the R2 bucket is bound), so the entry is
+ * offered only to an owner, only where the inbox works, and nobody's page load logs an error. Anything else (another
+ * status, a network failure, a host that is not the Worker) is a no.
  */
-export async function inboxAccess(fetchImpl: FetchLike = (u, i) => fetch(u, i)): Promise<boolean> {
+export async function inboxAccess(fetchImpl: typeof fetch = (...a) => fetch(...a)): Promise<boolean> {
   try {
     const res = await fetchImpl("/api/inbox/access", { credentials: "same-origin", cache: "no-store", headers: { Accept: "application/json" } });
     if (res.status !== 200) return false;

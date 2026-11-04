@@ -2,7 +2,7 @@ import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { ChevronDown, Database, Plus } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useDataSource } from "@/api";
-import { AddKnowledgeBase, useImportAdapter } from "@/components/kb-import";
+import { AddKnowledgeBase, useImportAdapter, type ImportAdapter } from "@/components/kb-import";
 import { useFlag } from "@/flags/useFlag";
 import { formatKbs, parseKbs } from "@/lib/kbSelection";
 import { useApiQuery } from "@/lib/useApiQuery";
@@ -23,9 +23,8 @@ const HEADER_TITLE =
  */
 export function KbBadge() {
   const ds = useDataSource();
+  const adapter = useImportAdapter();
   const kbView = useFlag("kb-view") && ds.kind !== "embedded";
-  const siteAdapter = useImportAdapter();
-  const [adding, setAdding] = useState(false);
   const q = useApiQuery(["kb"], (d) => d.getKb(), { staleTime: Infinity, retry: false });
   // a share build bakes no kb info (getKb is absent there): keep the title its header always had
   const name = q.data?.name ?? "Knowledge Base";
@@ -50,26 +49,28 @@ export function KbBadge() {
       {title}
     </Link>
   );
-  // The deployed site has no kb menu (no list of bases to pick from). For its owner the one thing the menu offers there,
-  // adding a knowledge base, sits beside the title; everyone else (and a public snapshot) sees the title alone.
-  if (ds.kind === "embedded" && siteAdapter) {
-    return (
-      <>
-        {link}
-        <button
-          type="button"
-          aria-label="Add knowledge base"
-          onClick={() => setAdding(true)}
-          className="flex shrink-0 items-center gap-1 rounded-md px-1.5 py-0.5 text-xs text-primary hover:bg-accent"
-        >
-          <Plus aria-hidden className="size-3.5" />
-          <span className="hidden sm:inline">Add knowledge base</span>
-        </button>
-        <AddKnowledgeBase adapter={siteAdapter} open={adding} onOpenChange={setAdding} />
-      </>
-    );
-  }
-  return link;
+  // the private share build: no menu (its data is baked in), but a bundle can still be sent to the site's inbox
+  return ds.kind === "embedded" && adapter ? <WithAdd adapter={adapter}>{link}</WithAdd> : link;
+}
+
+/** The plain title plus one button that opens the "Add knowledge base" dialog (the site's inbox adapter). */
+function WithAdd({ adapter, children }: { adapter: ImportAdapter; children: React.ReactNode }) {
+  const [adding, setAdding] = useState(false);
+  return (
+    <div className="flex shrink-0 items-center gap-0.5">
+      {children}
+      <button
+        type="button"
+        aria-label="Add knowledge base"
+        title="Add knowledge base"
+        onClick={() => setAdding(true)}
+        className="rounded-md p-1 text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+      >
+        <Plus aria-hidden className="size-4" />
+      </button>
+      <AddKnowledgeBase adapter={adapter} open={adding} onOpenChange={setAdding} />
+    </div>
+  );
 }
 
 /** The header menu: tick the knowledge bases the graph shows (none is allowed). */

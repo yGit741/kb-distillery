@@ -29,6 +29,7 @@ SSE event contract shared with static/chat.js (names → JSON data):
 The SDK itself is owned by `kb_distillery.llm.agent` (lazy import), so the dashboard and the tests load without it.
 """
 import asyncio
+import contextvars
 import json
 import os
 import queue
@@ -43,6 +44,7 @@ from dataclasses import dataclass, field
 from kb_distillery.config.flags import runtime
 from kb_distillery.llm import agent as llm_agent
 from kb_distillery.services import agent_skills
+from kb_distillery.services import chat_attachments
 from kb_distillery.services import chat_live
 from kb_distillery.vault import links
 from kb_distillery.config.paths import vault_root
@@ -340,7 +342,8 @@ def _bash_allowed_unscoped(command):
 # (tool_name, tool_input, scope) and returns a Decision, or None when the tool is not in its group.
 WEB_TOOLS = ("WebSearch", "WebFetch")
 SKILL_TOOLS = ("Skill", "Agent", "Task")
-ATTACHMENT_TOOLS = ()       # attachments are read with Read; the per-session read scope lands with them
+ATTACHMENT_TOOLS = ("Read", "Grep", "Glob")     # attachments are read with these, inside the session's own dir
+ATTACH_DIR = contextvars.ContextVar("chat_attach_dir", default=None)    # the running turn's attachments dir
 
 
 def _policy_files(tool_name, tool_input, scope):
@@ -391,8 +394,36 @@ def _policy_skills(tool_name, tool_input, scope):
 
 
 def _policy_attachments(tool_name, tool_input, scope):
-    """Chat attachments: nothing yet (the attachments PR adds the per-session read scope)."""
-    return None
+    """Chat attachments: Read / Grep / Glob inside the current session's attachments dir only (realpath check,
+    symlinks rejected); any other session's dir, or the dir with the flag off, is denied. Runs before the file
+    policy; returns None for paths outside `.cache/chat`."""
+    if tool_name not in ATTACHMENT_TOOLS:
+        return None
+    chat_root = _real(chat_attachments.chat_root())
+    raw = tool_input.get("file_path") if tool_name == "Read" else tool_input.get("path")
+    real = _real(raw)
+    if not real or not _under(real, chat_root):
+        return None
+    mine = ATTACH_DIR.get() if runtime.effective("agent-mode") else None
+    for key in ("pattern", "glob"):          # a pattern must not climb out of `path` into another session's dir
+        pat = tool_input.get(key)
+        if isinstance(pat, str) and (".." in pat or os.path.isabs(pat)):
+            return Decision(False, "attachments: patterns may not leave the attachments dir")
+    deny = Decision(False, "attachments: only this chat's own uploaded files can be read")
+    if not mine or not _under(real, _real(mine)) or (tool_name == "Read" and os.path.isdir(real)):
+        return deny
+    mine = _real(mine)                       # chat_attachments paths are already real, so a symlink shows as a mismatch
+    given = os.path.abspath(raw)
+    if not _under(given, mine):
+        return deny
+    cur = mine
+    for part in os.path.relpath(given, mine).split(os.sep):
+        if part in ("", "."):
+            continue
+        cur = os.path.join(cur, part)
+        if os.path.islink(cur):
+            return deny
+    return Decision(True)
 
 
 def _policy_todo(tool_name, tool_input, scope):
@@ -404,7 +435,7 @@ def _policy_todo(tool_name, tool_input, scope):
     return Decision(False, f"read-only KB agent: tool {tool_name} is not available")
 
 
-POLICY_GROUPS = (_policy_files, _policy_bash, _policy_web, _policy_skills, _policy_attachments, _policy_todo)
+POLICY_GROUPS = (_policy_attachments, _policy_files, _policy_bash, _policy_web, _policy_skills, _policy_todo)
 
 
 def tool_policy(tool_name, tool_input, scope=None):
@@ -446,7 +477,8 @@ def make_can_use_tool(policy=tool_policy, scope=None):
     return can_use_tool
 
 
-def agent_request(question, model, system, session_id=None, scope=None, history=None, effort=None, budget=None):
+def agent_request(question, model, system, session_id=None, scope=None, history=None, effort=None, budget=None,
+                  images=()):
     tools, disallowed, extra = tuple(TOOLS), tuple(DISALLOWED_TOOLS), {}
     skills = agent_skills.enabled() if runtime.effective("agent-mode") else []
     if skills:           # whitelisted skills ride in a generated local plugin; the policy hook still checks every call
@@ -460,7 +492,8 @@ def agent_request(question, model, system, session_id=None, scope=None, history=
         disallowed = tuple(t for t in disallowed if t != "TodoWrite")
     return llm_agent.AgentRequest(
         question=question, model=model, system=system, effort=effort, budget=budget, session=session_id or None,
-        tools=tools, disallowed=disallowed, scope=scope, cwd=ROOT, max_turns=MAX_TURNS, thinking=thinking,
+        tools=tools, disallowed=disallowed, scope=scope, cwd=ROOT, attachments=tuple(images), max_turns=MAX_TURNS,
+        thinking=thinking,
         fresh_prompt=_history_prefix(history) + question if history else None, **extra)
 
 
@@ -646,10 +679,14 @@ def _is_resume_failure(exc):
 
 
 async def _run(question, *, model, system, key, session_id, history, emit, stop_event, log, billing="api",
-               scope=None, effort=None, budget=None, live=None):
+               scope=None, effort=None, budget=None, live=None, attachments=(), attachment_session=None):
     index = query.parse_index()
+    if attachment_session:    # every turn: files from earlier turns stay readable in a resumed session
+        ATTACH_DIR.set(chat_attachments.session_dir(attachment_session))
+    if attachments:           # resolved entries (chat_attachments.resolve) ride with this turn
+        question += chat_attachments.prompt_note(attachments)
     req = agent_request(question, model, system, session_id=session_id, scope=scope, history=history,
-                        effort=effort, budget=budget)
+                        effort=effort, budget=budget, images=chat_attachments.image_paths(attachments))
     if req.fresh_prompt is None:
         req.fresh_prompt = question
     state = TurnState(index=index)
@@ -692,7 +729,7 @@ def _live_for(emit):
 
 
 def stream_agent(question, *, model, system, key, session_id=None, history=None, log=None, billing="api",
-                 scope=None, effort=None, budget=None):
+                 scope=None, effort=None, budget=None, attachments=(), attachment_session=None):
     """Sync generator of (event, data) for serve.py's SSE loop. Closing it stops the agent.
     `key=None` with `billing="subscription"` runs on the `claude login` account."""
     log = log or (lambda s: print(s, flush=True))
@@ -709,7 +746,8 @@ def stream_agent(question, *, model, system, key, session_id=None, history=None,
         try:
             asyncio.run(_run(question, model=model, system=system, key=key, session_id=session_id,
                              history=history, emit=emit, stop_event=stop_event, log=log, billing=billing,
-                             scope=scope, effort=effort, budget=budget, live=live))
+                             scope=scope, effort=effort, budget=budget, live=live, attachments=attachments,
+                             attachment_session=attachment_session))
         except Exception as e:
             q.put(("error", {"error": f"agent: {e}"}))
         finally:
