@@ -49,6 +49,10 @@ export type KbInfo = S["KbInfo"];
 export type KbList = S["KbList"];
 export type KbRow = S["KbRow"];
 export type KbType = S["KbType"];
+export type KbImportPreview = S["KbImportPreview"];
+export type KbImportResult = S["KbImportResult"];
+/** The body of the import routes (local app only): a zipped bundle, or a git URL; `id` and `kit` are optional. */
+export type KbImportRequest = ({ file: File } | { gitUrl: string }) & { id?: string; kit?: string };
 export type VideoBundle = S["VideoBundle"];
 export type VideoAnchor = S["VideoAnchor"];
 export type VideoSection = S["VideoSection"];
@@ -67,6 +71,8 @@ export type ScopeDuplicateRequest = S["ScopeDuplicateRequest"];
 
 // chat
 export type ChatRequest = S["ChatRequest"];
+export type ChatMessageIn = S["ChatMessageIn"];
+export type ChatMessageResult = S["ChatMessageResult"];
 export type ChatStatus = S["ChatStatus"];
 export type ChatSettings = S["ChatSettings"];
 export type ChatSettingsUpdate = S["ChatSettingsUpdate"];

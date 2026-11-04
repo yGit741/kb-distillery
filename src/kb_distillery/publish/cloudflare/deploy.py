@@ -46,7 +46,8 @@ from kb_distillery.publish.cloudflare.contracts import (ACCOUNT_SUBDOMAIN, CACHE
 
 WORKER_DIR = resource("publish/cloudflare/worker")      # the Cloudflare Worker sources (auth.js, admin.js, wrangler template)
 CF_ACCOUNT_ID = share_config.account_id()  # the panel's REST calls (not secret); from the share config
-WORKER_SCRIPTS = ("auth.js", "admin.js", "flags.gen.js")  # private site: sign-in + panel API + runtime flag names
+WORKER_SCRIPTS = ("auth.js", "admin.js", "flags.gen.js", "inbox.js", "zip.js")  # private site: sign-in + panel API + runtime flag names + upload inbox
+OKF_BUNDLE = "okf.gen.js"        # the web checker, bundled into the Worker folder by worker/build-okf.mjs at deploy time
 LOCK_NAME = "deploy.lock"
 PENDING_NAME = "pending"
 DRY_RUN = "dry-run"  # extra result state for --dry-run; never written to the status file
@@ -99,7 +100,7 @@ def now_iso() -> str:
 
 def load_config(path: Path = None) -> dict:
     """The share config (`kb_distillery.publish.cloudflare.config`; `path` reads that one file) + env overrides
-    → {google_client_id, allowed_emails, compatibility_date, flags_kv_id}."""
+    → {google_client_id, allowed_emails, compatibility_date, flags_kv_id, inbox_bucket}."""
     return share_config.settings(path)
 
 
@@ -131,6 +132,8 @@ def render_wrangler(worker: str, require_access: bool, cfg: dict, spa: bool = Fa
                   '  "compatibility_flags": ["global_fetch_strictly_public"],\n')
         if cfg.get("flags_kv_id"):   # runtime flag overrides (admin.js handleFlags); unset → GET {}, PUT 503
             script += f'  "kv_namespaces": [{{"binding": "FLAGS_KV", "id": {json.dumps(cfg["flags_kv_id"])}}}],\n'
+        if cfg.get("inbox_bucket"):  # upload inbox (inbox.js); unset → the inbox routes answer 503 "not configured"
+            script += f'  "r2_buckets": [{{"binding": "KB_INBOX", "bucket_name": {json.dumps(cfg["inbox_bucket"])}}}],\n'
     else:
         assets = {"directory": "./public"}
         script = ""
@@ -142,8 +145,19 @@ def render_wrangler(worker: str, require_access: bool, cfg: dict, spa: bool = Fa
             .replace("{{script}}", script))
 
 
-def render_worker_dir(build_dir: Path, worker: str, require_access: bool, cfg: dict, dest: Path) -> Path:
-    """`dest/` ← public/ (copy of the build), wrangler.jsonc, auth.js + admin.js when the site is private."""
+def build_okf_bundle(out: Path) -> None:
+    """Bundle web/src/lib/okf/checkBundle.ts into `out` (worker/build-okf.mjs, esbuild from web/node_modules).
+    Raises RuntimeError with the fix when node or web/node_modules is missing."""
+    proc = subprocess.run(["node", str(WORKER_DIR / "build-okf.mjs"), str(out)], capture_output=True, text=True)
+    if proc.returncode != 0 or not Path(out).is_file():
+        tail = ((proc.stderr or proc.stdout) or "").strip()[-300:]
+        raise RuntimeError(f"could not bundle the OKF checker for the Worker inbox ({tail or 'node failed'}); run `pixi run web-install`")
+
+
+def render_worker_dir(build_dir: Path, worker: str, require_access: bool, cfg: dict, dest: Path,
+                      bundler: Callable = None) -> Path:
+    """`dest/` ← public/ (copy of the build), wrangler.jsonc, auth.js + admin.js + the inbox (with a fresh
+    okf.gen.js from `bundler`) when the site is private."""
     dest = Path(dest)
     if dest.exists():
         shutil.rmtree(dest)
@@ -154,6 +168,10 @@ def render_worker_dir(build_dir: Path, worker: str, require_access: bool, cfg: d
     if require_access:
         for script in WORKER_SCRIPTS:
             shutil.copy2(WORKER_DIR / script, dest / script)
+        if cfg.get("inbox_bucket"):
+            (bundler or build_okf_bundle)(dest / OKF_BUNDLE)
+        else:    # no inbox: no node needed; the inbox routes answer 503 anyway (auth.js still imports the file)
+            (dest / OKF_BUNDLE).write_text("export const checkBundle = null;\n", encoding="utf-8")
     return dest
 
 
