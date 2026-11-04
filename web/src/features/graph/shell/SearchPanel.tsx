@@ -69,7 +69,11 @@ export function SearchPanel({ rows, idx, onHover, empty }: Props) {
           ))}
         </div>
       ))}
-      {!rows.length && <div className="px-2.5 py-2 text-muted-foreground">{empty}</div>}
+      {!rows.length && (
+        <div role="status" className="px-2.5 py-2 text-muted-foreground">
+          {empty}
+        </div>
+      )}
     </div>
   );
 }

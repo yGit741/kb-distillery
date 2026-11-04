@@ -107,9 +107,12 @@ export function GraphShell({ nodes, byId, colorBy, onFocus, onRead, onShowMentio
   const record = useCallback(
     (label: string, spec: Record<string, unknown>) => {
       if (!live) return;
+      // re-running the same step must not fill the server's short history with copies
+      const newest = recentQ.data?.recent.at(-1);
+      if (newest && newest.text === label) return;
       ds.addRecent(label, spec).then((r) => qc.setQueryData(["recent"], r), () => {});
     },
-    [ds, qc, live],
+    [ds, qc, live, recentQ.data],
   );
 
   const commands = useMemo(
@@ -151,9 +154,10 @@ export function GraphShell({ nodes, byId, colorBy, onFocus, onRead, onShowMentio
         focusBar();
         return;
       }
-      if (e.metaKey || e.ctrlKey || e.altKey || e.defaultPrevented) return;
+      if (e.metaKey || e.ctrlKey || e.altKey || e.isComposing) return;
       const t = e.target;
-      if (t instanceof HTMLElement && t.matches("input, textarea, select, [contenteditable=true]")) return;
+      // typing, or a control that owns the key (a menu item, tab, checkbox, anything inside a dialog or menu)
+      if (t instanceof HTMLElement && t.closest("input, textarea, select, [contenteditable], [role=menu], [role=dialog], [role=menuitem], [role=tab], [role=checkbox], [role=switch], [role=option]")) return;
       if (e.key === "/") {
         e.preventDefault();
         focusBar("/");
@@ -276,7 +280,10 @@ export function GraphShell({ nodes, byId, colorBy, onFocus, onRead, onShowMentio
         ),
         hint: "+ neighbours",
         lead: <Search aria-hidden className="size-4" strokeWidth={1.6} />,
-        run: done(() => onShowMentions(text)),
+        run: done(() => {
+          onShowMentions(text);
+          record(`Pages mentioning ${text}`, { mention: text });
+        }),
       });
     }
     if (shape && !/^match\b/i.test(text)) out.push(shapeRow);
@@ -323,6 +330,7 @@ export function GraphShell({ nodes, byId, colorBy, onFocus, onRead, onShowMentio
       const n = rows.length;
       if (n) setIdx((i) => (e.key === "ArrowDown" ? (i + 1) % n : (i - 1 + n) % n));
     } else if (e.key === "Enter") {
+      if (e.nativeEvent.isComposing) return;
       e.preventDefault();
       rows[idx]?.run(e.shiftKey);
     } else if (e.key === "Escape") {
@@ -332,7 +340,7 @@ export function GraphShell({ nodes, byId, colorBy, onFocus, onRead, onShowMentio
     }
   };
 
-  const empty = slash ? "No command matches." : text ? "Nothing matches." : live ? "Type to search pages, / for commands, or ask a question." : "Type to search pages.";
+  const empty = slash ? "No command matches." : text ? "Nothing matches." : live && !IS_SHARE ? "Type to search pages, / for commands, or ask a question." : "Type to search pages.";
 
   return (
     <div

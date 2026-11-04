@@ -20,14 +20,14 @@ function setup(over: Partial<DataSource> = {}) {
     addRecent: vi.fn(async () => ({ recent: [] })),
     ...over,
   });
-  render(
+  const { unmount } = render(
     <DataSourceProvider source={ds}>
       <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
         <GraphShell nodes={sampleNodes} byId={byId} colorBy="type" {...fns} />
       </QueryClientProvider>
     </DataSourceProvider>,
   );
-  return { ds, ...fns };
+  return { ds, ...fns, unmount };
 }
 
 const box = () => screen.getByRole("combobox", { name: /search the graph/i });
@@ -63,6 +63,29 @@ describe("opening", () => {
     await userEvent.keyboard("{Escape}");
     await userEvent.keyboard("{Control>}k{/Control}");
     expect(box()).toHaveAttribute("aria-expanded", "true");
+  });
+
+  it("gives Cmd-K back to the page once the shell is gone", async () => {
+    const { unmount } = setup();
+    unmount();
+    const pageSaw = vi.fn();
+    const listener = (e: KeyboardEvent) => e.key === "k" && pageSaw();
+    window.addEventListener("keydown", listener);
+    await userEvent.keyboard("{Meta>}k{/Meta}");
+    window.removeEventListener("keydown", listener);
+    expect(pageSaw).toHaveBeenCalledOnce();
+  });
+
+  it("leaves Space to a menu item", async () => {
+    setup();
+    const item = document.createElement("div");
+    item.setAttribute("role", "menuitem");
+    item.tabIndex = 0;
+    document.body.append(item);
+    item.focus();
+    await userEvent.keyboard(" ");
+    expect(box()).toHaveAttribute("aria-expanded", "false");
+    item.remove();
   });
 
   it("shows the knowledge base name as the icon's tooltip", async () => {
@@ -126,10 +149,11 @@ describe("page results", () => {
   });
 
   it("offers pages mentioning the text", async () => {
-    const { onShowMentions } = setup();
+    const { ds, onShowMentions } = setup();
     await userEvent.type(box(), "margin");
     await userEvent.click(await screen.findByRole("option", { name: /show pages mentioning/i }));
     expect(onShowMentions).toHaveBeenCalledWith("margin");
+    await waitFor(() => expect(ds.addRecent).toHaveBeenCalledWith("Pages mentioning margin", { mention: "margin" }));
   });
 });
 

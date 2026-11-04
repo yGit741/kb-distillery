@@ -474,7 +474,7 @@ function Loaded({
       )}
       {shellOn ? (
         // until the corner controls replace it, the views bar steps down below the search bar
-        <div className="pointer-events-none absolute inset-0 translate-y-14">
+        <div className="pointer-events-none absolute inset-0 z-20 translate-y-14">
           <ViewsBar model={model} visible={visible} onPick={applyView} />
         </div>
       ) : (

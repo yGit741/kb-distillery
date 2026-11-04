@@ -51,7 +51,7 @@ export function SearchBar({ value, onChange, open, onOpen, onKeyDown, activeId, 
         data-tour="graph-search"
         role="combobox"
         aria-expanded={open}
-        aria-controls={SHELL_LIST_ID}
+        aria-controls={open ? SHELL_LIST_ID : undefined}
         aria-autocomplete="list"
         aria-activedescendant={open ? activeId : undefined}
         aria-label="Search the graph, run a command (/), or ask"
