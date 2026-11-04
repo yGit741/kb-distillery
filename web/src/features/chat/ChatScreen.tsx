@@ -8,15 +8,16 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ErrorState, Loading } from "@/components/states";
 import type { SearchById } from "@/routes/search";
+import { useRegisterAskHost } from "./askHost";
 import { ComposerLine } from "./ComposerLine";
 import { MessageList, Sources } from "./MessageList";
+import { PlanPanel } from "./PlanPanel";
 import { PromptPanel } from "./PromptPanel";
 import { STATUS_KEY, SessionPanel } from "./SessionPanel";
 import { isCustom, parsePrompts, pick, setEdit, systemFor, type Edits } from "./prompts";
 import { authPayload, authValue, backendLabel, effectiveBackend, parseStatus } from "./status";
 import { readJson, writeJson } from "./storage";
 import { canSave, chatTitle, savableMessages } from "./thread";
-import { TodoList } from "./Transcript";
 import { useChatSession, type SendOptions } from "./useChatSession";
 
 const EXAMPLES: { q: string; template?: string; label: string }[] = [
@@ -71,6 +72,8 @@ function ChatBody({ status: rawStatus, prompts: rawPrompts, scopes, initialScope
   const prompts = useMemo(() => parsePrompts(rawPrompts), [rawPrompts]);
   const { chat, busy, send, regenerate, answer, stop, reset, forgetSession, sessions, resume } = useChatSession();
   const agentMode = useFlag("agent-mode");
+  // the Cmd-J quick ask sends through this session while the screen is on show
+  useRegisterAskHost(agentMode ? { ask: (q) => send(q, options()), chat, busy } : null);
 
   const [templateId, setTemplateId] = useState(() => readJson("local", "kbchat.template", "query"));
   const [edits, setEdits] = useState<Edits>(() => readJson("local", "kbchat.edits", {}));
@@ -151,8 +154,10 @@ function ChatBody({ status: rawStatus, prompts: rawPrompts, scopes, initialScope
     }
   };
 
-  const rail = (
+  // the plan sits at the top of the wide rail only; the narrow drawer has it in the composer slot
+  const railWith = (plan: boolean) => (
     <div className="flex flex-col gap-4">
+      {plan && agentMode && chat.todo && <PlanPanel items={chat.todo} busy={busy} placement="rail" />}
       <Card>
         <CardContent className="flex flex-col gap-3 p-3">
           <h2 className="text-sm font-semibold">Session</h2>
@@ -183,6 +188,7 @@ function ChatBody({ status: rawStatus, prompts: rawPrompts, scopes, initialScope
       </Card>
     </div>
   );
+  const rail = railWith(false);
 
   return (
     <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_20rem]">
@@ -242,7 +248,7 @@ function ChatBody({ status: rawStatus, prompts: rawPrompts, scopes, initialScope
         )}
 
         <div className="sticky bottom-0 -mx-4 flex flex-col gap-2 border-t bg-background/95 px-4 py-3 backdrop-blur">
-          {agentMode && chat.todo && <TodoList items={chat.todo} busy={busy} />}
+          {agentMode && chat.todo && <PlanPanel items={chat.todo} busy={busy} placement="inline" />}
           <PromptPanel prompts={prompts} current={current} edits={edits} onTemplate={selectTemplate} onEdit={edit} onReset={reseat} />
           <form className="flex items-end gap-2" onSubmit={onSubmit}>
             <textarea
@@ -282,8 +288,11 @@ function ChatBody({ status: rawStatus, prompts: rawPrompts, scopes, initialScope
           )}
         </div>
       </section>
-      <aside className="hidden lg:block" aria-label="Session and sources">
-        {rail}
+      <aside
+        className={agentMode ? "hidden lg:sticky lg:top-16 lg:block lg:max-h-[calc(100vh-5rem)] lg:self-start lg:overflow-y-auto" : "hidden lg:block"}
+        aria-label="Session and sources"
+      >
+        {railWith(true)}
       </aside>
     </div>
   );
