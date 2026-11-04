@@ -1,16 +1,38 @@
 /** Typed server-sent-events reader for POST /api/chat. Pure parsing here; no fetch, no React. */
 
 export interface SourceHit {
+  /** "wiki" (default) or "web": a web hit carries url and title and has no slug. */
+  kind?: "wiki" | "web";
   slug: string;
+  url?: string;
+  title?: string;
   score: number;
   summary: string;
   in_context: boolean;
+}
+export interface AskOption {
+  label: string;
+  description?: string;
+}
+export interface AskQuestion {
+  question: string;
+  header?: string;
+  multiSelect?: boolean;
+  options: AskOption[];
 }
 export interface ToolStep {
   name: string;
   summary: string;
   id?: string;
   error?: boolean;
+  /** agent mode: running until its result arrives. */
+  status?: "running" | "done" | "error";
+  /** agent mode: the first ~300 characters of the tool's output. */
+  result?: string;
+}
+export interface TodoItem {
+  content: string;
+  status: "pending" | "in_progress" | "completed";
 }
 export interface Usage {
   input_tokens?: number;
@@ -29,6 +51,10 @@ export type ChatEvent =
   | { type: "sources"; hits: SourceHit[]; fresh: string[] }
   | { type: "session"; id: string }
   | { type: "tool"; step: ToolStep }
+  | { type: "ask"; id: string; questions: AskQuestion[] }
+  | { type: "thinking"; text: string }
+  | { type: "todo"; items: TodoItem[] }
+  | { type: "user"; text: string }
   | { type: "notice"; text: string }
   | { type: "delta"; text: string }
   | { type: "usage"; usage: Usage }
@@ -89,14 +115,16 @@ export function toEvent(frame: RawFrame): ChatEvent | null {
       return typeof payload === "string" ? { type: "delta", text: payload } : null;
     case "sources": {
       if (!isObj(payload)) return null;
-      const hits = (Array.isArray(payload.hits) ? payload.hits : []).filter(isObj).map((h) => ({
-        slug: String(h.slug ?? ""),
-        score: num(h.score),
-        summary: typeof h.summary === "string" ? h.summary : "",
-        in_context: h.in_context === true,
-      }));
+      const hits = (Array.isArray(payload.hits) ? payload.hits : []).filter(isObj).map((h): SourceHit => {
+        const base = { score: num(h.score), summary: typeof h.summary === "string" ? h.summary : "", in_context: h.in_context === true };
+        if (h.kind === "web") {
+          const url = typeof h.url === "string" && /^https?:\/\//.test(h.url) ? h.url : "";
+          return { ...base, kind: "web", slug: "", url, title: typeof h.title === "string" && h.title ? h.title : url };
+        }
+        return { ...base, ...(h.kind === "wiki" ? { kind: "wiki" as const } : {}), slug: String(h.slug ?? "") };
+      });
       const fresh = (Array.isArray(payload.new) ? payload.new : []).filter((s): s is string => typeof s === "string");
-      return { type: "sources", hits: hits.filter((h) => h.slug), fresh };
+      return { type: "sources", hits: hits.filter((h) => (h.kind === "web" ? h.url : h.slug)), fresh };
     }
     case "session":
       return isObj(payload) && typeof payload.id === "string" ? { type: "session", id: payload.id } : null;
@@ -109,8 +137,35 @@ export function toEvent(frame: RawFrame): ChatEvent | null {
           summary: typeof payload.summary === "string" ? payload.summary : "",
           id: typeof payload.id === "string" ? payload.id : undefined,
           error: payload.error === true ? true : undefined,
+          status: payload.status === "running" || payload.status === "done" || payload.status === "error" ? payload.status : undefined,
+          result: typeof payload.result === "string" ? payload.result : undefined,
         },
       };
+    case "ask": {
+      if (!isObj(payload) || typeof payload.id !== "string") return null;
+      const questions = (Array.isArray(payload.questions) ? payload.questions : []).filter(isObj).map((q): AskQuestion => ({
+        question: String(q.question ?? ""),
+        header: typeof q.header === "string" ? q.header : undefined,
+        multiSelect: q.multiSelect === true,
+        options: (Array.isArray(q.options) ? q.options : []).filter(isObj).map((o) => ({
+          label: String(o.label ?? ""),
+          description: typeof o.description === "string" ? o.description : undefined,
+        })).filter((o) => o.label),
+      })).filter((q) => q.question && q.options.length);
+      return questions.length ? { type: "ask", id: payload.id, questions } : null;
+    }
+    case "thinking":
+      return typeof payload === "string" ? { type: "thinking", text: payload } : null;
+    case "todo": {
+      if (!isObj(payload) || !Array.isArray(payload.items)) return null;
+      const items = payload.items.filter(isObj).map((t): TodoItem => ({
+        content: String(t.content ?? ""),
+        status: t.status === "completed" || t.status === "in_progress" ? t.status : "pending",
+      }));
+      return { type: "todo", items: items.filter((t) => t.content) };
+    }
+    case "user":
+      return isObj(payload) && typeof payload.text === "string" ? { type: "user", text: payload.text } : null;
     case "notice":
       return isObj(payload) && typeof payload.text === "string" ? { type: "notice", text: payload.text } : null;
     case "usage":
@@ -130,7 +185,7 @@ export function toEvent(frame: RawFrame): ChatEvent | null {
  */
 export async function readEvents(
   body: ReadableStream<Uint8Array>,
-  onEvents: (events: ChatEvent[]) => void,
+  onEvents: (events: ChatEvent[]) => unknown,
   signal?: AbortSignal,
 ): Promise<void> {
   const reader = body.getReader();
@@ -147,10 +202,10 @@ export async function readEvents(
       const { frames, rest } = splitFrames(buffer);
       buffer = rest;
       const events = frames.map(toEvent).filter((e): e is ChatEvent => e !== null && e.type !== "ping");
-      if (events.length) onEvents(events);
+      if (events.length) await onEvents(events);
     }
     const tail = splitFrames(buffer + "\n\n").frames.map(toEvent).filter((e): e is ChatEvent => e !== null && e.type !== "ping");
-    if (tail.length) onEvents(tail);
+    if (tail.length) await onEvents(tail);
   } finally {
     signal?.removeEventListener("abort", onAbort);
   }

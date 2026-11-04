@@ -1,8 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useDataSource } from "@/api";
+import { useFlag } from "@/flags/useFlag";
+import { CAP_STEP, askCap, contextUsed, turnCost, useComposer } from "./composer";
 import { readEvents } from "./sse";
-import { applyEvent, dropLastTurn, emptyChat, historyOf, type Chat } from "./thread";
+import { applyEvent, clearAsk, dropLastTurn, emptyChat, historyOf, type Chat } from "./thread";
+import { loadSessions, saveSessions, upsertSession, type SessionEntry } from "./sessions";
+import { skillsRequest } from "./skillsSelection";
 import { readJson, writeJson } from "./storage";
+import { useServerSessions } from "./useServerSessions";
 
 export interface SendOptions {
   model: string;
@@ -26,8 +31,11 @@ export function useChatSession() {
   const ds = useDataSource();
   const [chat, setChat] = useState<Chat>(load);
   const [busy, setBusy] = useState(false);
+  const agentMode = useFlag("agent-mode");
   const chatRef = useRef(chat);
+  const resumeRef = useRef<{ text: string; opts: SendOptions } | null>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const metaRef = useRef<{ model: string; backend: string } | null>(null);
 
   const commit = useCallback((next: Chat) => {
     chatRef.current = next;
@@ -38,13 +46,39 @@ export function useChatSession() {
     if (!busy) writeJson("session", KEY, chat);
   }, [chat, busy]);
 
+  // agent mode: finished chats with a session id stay resumable from the Session panel
+  const [sessions, setSessions] = useState<SessionEntry[]>(() => (agentMode ? loadSessions() : []));
+  useEffect(() => {
+    if (!agentMode || busy) return;
+    setSessions((cur) => {
+      const next = upsertSession(cur, chat);
+      if (next !== cur) saveSessions(next);
+      return next;
+    });
+  }, [agentMode, chat, busy]);
+
   useEffect(() => () => abortRef.current?.abort(), []);
+
+  // agent mode: the context ring follows the latest answer's usage
+  useEffect(() => {
+    if (!agentMode) return;
+    const last = [...chat.messages].reverse().find((m) => m.usage);
+    const used = contextUsed(last?.usage);
+    if (useComposer.getState().used !== used) useComposer.setState({ used });
+  }, [agentMode, chat.messages]);
+
+  const open = useCallback((c: Chat) => {
+    if (!abortRef.current) commit(c); // never swap the chat under a stream
+  }, [commit]);
+  useServerSessions(chat, busy, metaRef.current, open); // flag `agent-mode`: no-op while it is off
 
   const run = useCallback(
     async (base: Chat, question: string, opts: SendOptions) => {
       const history = historyOf(base.messages);
+      metaRef.current = { model: opts.model, backend: opts.backend };
       commit({
         ...base,
+        todo: undefined,
         messages: [...base.messages, { role: "user", content: question, sources: [] }, { role: "assistant", content: "" }],
       });
       const ctl = new AbortController();
@@ -52,6 +86,10 @@ export function useChatSession() {
       setBusy(true);
       let usageSeen = false;
       let stopped = false;
+      // agent mode: the picks under the composer ride along; a turn that crosses its cap waits for Continue or Stop
+      const picks = agentMode ? useComposer.getState().prefs : null;
+      let limit = picks?.cap ?? 0;
+      let spent = 0;
       try {
         const res = await ds.chatStream(
           {
@@ -61,21 +99,34 @@ export function useChatSession() {
             backend: opts.backend,
             scope: opts.scope || undefined,
             session: base.session,
+            ...skillsRequest(base.id),
             system: opts.system,
             ...opts.auth,
+            ...(picks ? { effort: picks.effort, ...(opts.backend === "agent" && picks.billing ? { billing: picks.billing } : {}) } : {}),
           },
           ctl.signal,
         );
         if (!res.body) throw new Error("The server sent no stream.");
         await readEvents(
           res.body,
-          (events) => {
+          async (events) => {
             let next = chatRef.current;
+            let stopNow = false;
             for (const ev of events) {
-              if (ev.type === "usage") usageSeen = true;
+              if (ev.type === "usage") {
+                usageSeen = true;
+                spent += turnCost(ev.usage);
+              }
               next = applyEvent(next, ev);
+              if (ev.type === "usage" && limit > 0 && spent > limit && !stopNow) {
+                commit(next);
+                if ((await askCap({ spent, limit }, ctl.signal)) === "stop") stopNow = true; // the rest of this batch still lands
+                else limit = limit + CAP_STEP < spent ? spent + CAP_STEP : limit + CAP_STEP; // Continue: one more step (never a prompt per step)
+                next = chatRef.current;
+              }
             }
             commit(next);
+            if (stopNow) ctl.abort();
           },
           ctl.signal,
         );
@@ -89,7 +140,7 @@ export function useChatSession() {
         if (abortRef.current === ctl) abortRef.current = null;
         setBusy(false);
       }
-      const cur = chatRef.current;
+      const cur = clearAsk(chatRef.current);
       const last = cur.messages.length - 1;
       const bot = cur.messages[last];
       if (!bot || bot.role !== "assistant") return;
@@ -106,17 +157,44 @@ export function useChatSession() {
         next = { ...next, messages: next.messages.map((m, i) => (i === last - 1 ? { ...m, failed: true } : m)) };
       }
       commit(next);
+      // a mid-turn message that could not be queued: the turn was stopped, now resume the session with it
+      const again = resumeRef.current;
+      resumeRef.current = null;
+      if (again) void run(chatRef.current, again.text, again.opts);
     },
-    [ds, commit],
+    [ds, commit, agentMode],
+  );
+
+  /** Agent mode, a message while the turn runs: queued into the live client; if that fails, stop + resume with it. */
+  const queueMidTurn = useCallback(
+    async (text: string, opts: SendOptions) => {
+      const session = chatRef.current.session;
+      if (session) {
+        try {
+          await ds.sendChatMessage({ session, text });
+          return;
+        } catch {
+          /* no live turn to take it: fall through */
+        }
+      }
+      if (!abortRef.current) return;
+      resumeRef.current = { text, opts };
+      abortRef.current.abort();
+    },
+    [ds],
   );
 
   const send = useCallback(
     (question: string, opts: SendOptions) => {
       const q = question.trim();
-      if (!q || abortRef.current) return;
+      if (!q) return;
+      if (abortRef.current) {
+        if (agentMode && opts.backend === "agent") void queueMidTurn(q, opts);
+        return;
+      }
       void run(chatRef.current, q, opts);
     },
-    [run],
+    [run, agentMode, queueMidTurn],
   );
 
   const regenerate = useCallback(
@@ -128,19 +206,47 @@ export function useChatSession() {
     [run],
   );
 
+  /** Send the user's choice for an `ask` event; the turn on the server continues with it. */
+  const answer = useCallback(
+    async (id: string, answers: Record<string, string>) => {
+      const session = chatRef.current.session ?? "";
+      const pending = chatRef.current.messages[chatRef.current.messages.length - 1]?.ask;
+      commit(clearAsk(chatRef.current));
+      try {
+        await ds.answerChat({ session, id, answers });
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        const moot = /\b404\b/.test(msg);        // no question is waiting any more: nothing to retry
+        commit(patchLast(chatRef.current, (m) => ({ ...m, error: `Could not send the answer: ${msg}`, ...(pending && !moot ? { ask: pending } : {}) })));
+      }
+    },
+    [ds, commit],
+  );
+
   const stop = useCallback(() => abortRef.current?.abort(), []);
 
   const reset = useCallback(() => {
+    resumeRef.current = null;
     abortRef.current?.abort();
     commit(emptyChat());
   }, [commit]);
+
+  /** Pick up a stored session: its words come back and the next message resumes it on the server. */
+  const resume = useCallback(
+    (entry: SessionEntry) => {
+      resumeRef.current = null;
+      abortRef.current?.abort();
+      commit({ id: entry.id, session: entry.session, messages: entry.messages });
+    },
+    [commit],
+  );
 
   /** A resumed agent session would carry the old scope's pages. */
   const forgetSession = useCallback(() => {
     if (chatRef.current.session) commit({ ...chatRef.current, session: null });
   }, [commit]);
 
-  return { chat, busy, send, regenerate, stop, reset, forgetSession };
+  return { chat, busy, send, regenerate, answer, stop, reset, forgetSession, sessions, resume };
 }
 
 function patchLast(chat: Chat, f: (m: Chat["messages"][number]) => Chat["messages"][number]): Chat {

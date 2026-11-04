@@ -1,11 +1,15 @@
 import { Link } from "@tanstack/react-router";
+import { Plus } from "lucide-react";
+import { useState } from "react";
 import { CopyButton } from "@/components/CopyButton";
+import { AddKnowledgeBase, useImportAdapter } from "@/components/kb-import";
 import { ErrorState, Loading } from "@/components/states";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useFlag } from "@/flags/useFlag";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useApiQuery } from "@/lib/useApiQuery";
+import { KbInbox } from "./KbInbox";
 import type { KbInfo, KbRow, KbType } from "@/api/types";
 
 const LAYER_LABEL = { concept: "Concepts", collection: "Collections", source: "Sources" } as const;
@@ -113,6 +117,8 @@ export function KnowledgeBasesView() {
   const kb = useApiQuery(["kb"], (d) => d.getKb(), { staleTime: 60_000 });
   const list = useApiQuery(["kb-list"], (d) => d.listKbs(), { staleTime: 60_000 });
   const kbView = useFlag("kb-view");
+  const adapter = useImportAdapter();
+  const [adding, setAdding] = useState(false);
   if (kb.error) return <ErrorState title="Could not read the knowledge base" error={kb.error} onRetry={() => void kb.refetch()} />;
   if (!kb.data) return <Loading label="Reading kb.toml…" />;
   return (
@@ -120,7 +126,15 @@ export function KnowledgeBasesView() {
       <Active kb={kb.data} />
       <Card data-tour="kb-list">
         <CardHeader>
-          <CardTitle>Available knowledge bases</CardTitle>
+          <div className="flex items-center justify-between gap-2">
+            <CardTitle>Available knowledge bases</CardTitle>
+            {adapter && (
+              <Button variant="outline" size="sm" onClick={() => setAdding(true)}>
+                <Plus aria-hidden />
+                Add knowledge base
+              </Button>
+            )}
+          </div>
           <CardDescription>
             Every folder with a <code className="text-xs">kb.toml</code> in <code className="text-xs">{list.data?.bases_dir ?? kb.data.bases_dir}</code>
             {" "}(the folder name is the id), or any folder passed as <code className="text-xs">--kb &lt;path&gt;</code>. To switch: <code className="text-xs">{kb.data.relaunch}</code>
@@ -171,6 +185,8 @@ export function KnowledgeBasesView() {
           )}
         </CardContent>
       </Card>
+      <KbInbox />
+      {adapter && <AddKnowledgeBase adapter={adapter} open={adding} onOpenChange={setAdding} />}
     </div>
   );
 }

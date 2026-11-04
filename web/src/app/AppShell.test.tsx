@@ -17,11 +17,11 @@ const ds: DataSource = mockDataSource({
 });
 
 describe("AppShell", () => {
-  it("has one nav of four tabs, one theme toggle, and a palette that reaches every screen", async () => {
+  it("has one nav of five tabs, one theme toggle, and a palette that reaches every screen", async () => {
     const router = createAppRouter(createMemoryHistory({ initialEntries: ["/app/system"] }));
     render(<App source={ds} router={router} />);
     const nav = await screen.findByRole("navigation", { name: "Main" });
-    expect([...nav.querySelectorAll("a")].map((a) => a.textContent)).toEqual(["Home", "Graph", "System", "Chat"]);
+    expect([...nav.querySelectorAll("a")].map((a) => a.textContent)).toEqual(["Home", "Graph", "System", "Chat", "Think"]);
     expect(ROUTES.length).toBeGreaterThan(3); // the rest stay routable
     expect(nav).toHaveClass("overflow-x-auto", "min-w-0"); // scrolls inside itself on phones
     expect(screen.getAllByRole("button", { name: /switch to/i })).toHaveLength(1);
@@ -30,9 +30,33 @@ describe("AppShell", () => {
 
     await userEvent.keyboard("{Control>}k{/Control}");
     const box = await screen.findByPlaceholderText(/^Go to…/);
-    await userEvent.type(box, "lifecycle");
+    await userEvent.type(box, "pages");
     await userEvent.keyboard("{Enter}");
-    await waitFor(() => expect(router.state.location.pathname).toBe("/lifecycle"));
+    await waitFor(() => expect(router.state.location.pathname).toBe("/pages"));
+  });
+
+  it("sends the folded Pipeline and Lifecycle screens to their System tabs, search kept", async () => {
+    for (const [from, tab] of [["/app/pipeline?q=raw%2Fa.pdf", "pipeline"], ["/app/lifecycle", "history"]] as const) {
+      const router = createAppRouter(createMemoryHistory({ initialEntries: [from] }));
+      const { unmount } = render(<App source={ds} router={router} />);
+      await waitFor(() => expect(router.state.location.pathname).toBe("/system"));
+      expect(router.state.location.search).toMatchObject(from.includes("q=") ? { tab, q: "raw/a.pdf" } : { tab });
+      unmount();
+    }
+  });
+
+  it("sends the folded Relations, Scopes and Start screens to the graph tool or the Home card", async () => {
+    for (const [from, to, search] of [
+      ["/app/relations?min=90", "/graph", { tool: "relations", min: "90" }],
+      ["/app/scopes", "/graph", { tool: "scopes" }],
+      ["/app/start", "/", { start: true }],
+    ] as const) {
+      const router = createAppRouter(createMemoryHistory({ initialEntries: [from] }));
+      const { unmount } = render(<App source={ds} router={router} />);
+      await waitFor(() => expect(router.state.location.pathname).toBe(to));
+      expect(router.state.location.search).toMatchObject(search);
+      unmount();
+    }
   });
 
   it("hides the header and nav with ?embed=1", async () => {

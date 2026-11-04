@@ -13,15 +13,19 @@ import { useEmbed } from "./embed";
 import { HEADER_SLOT_ID } from "./headerSlot";
 import { useUi } from "./ui-store";
 import { flag } from "@/flags";
+import { useFlag } from "@/flags/useFlag";
 
 // Quick capture ships with the think feature; the lazy import keeps it out of builds where the flag is off.
 const QuickCapture = lazy(() => import("@/features/think/QuickCapture"));
+// The Cmd-J quick ask (flag `agent-mode`) is lazy for the same reason.
+const QuickAsk = lazy(() => import("@/features/chat/QuickAsk"));
 
 /** One top nav, ONE theme toggle, ONE command palette, one share chip. Screens render in <Outlet/>. */
 export function AppShell() {
   const { theme, toggle } = useTheme();
   const setPaletteOpen = useUi((s) => s.setPaletteOpen);
   const embed = useEmbed();
+  const agentMode = useFlag("agent-mode");
   return (
     <div className="flex min-h-screen flex-col">
       {!embed && (
@@ -61,6 +65,11 @@ export function AppShell() {
       </main>
       <ShareFooter />
       <CommandPalette />
+      {agentMode && (
+        <Suspense fallback={null}>
+          <QuickAsk />
+        </Suspense>
+      )}
       {flag("screen.think") && (
         <Suspense fallback={null}>
           <QuickCapture />

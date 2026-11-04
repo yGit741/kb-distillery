@@ -15,13 +15,13 @@ export function ShareChip() {
   // No destination (no publisher configured) = a plain status, not a link: an empty href is a dead 20px click target.
   if (!chip.href) {
     return (
-      <span title={chip.title} className="hidden sm:inline-flex" role="status" aria-label={label} data-testid="share-chip">
+      <span title={chip.title} className="hidden min-h-6 items-center sm:inline-flex" role="status" aria-label={label} data-testid="share-chip">
         {badge}
       </span>
     );
   }
   return (
-    <a href={chip.href} title={chip.title} className="hidden sm:inline-flex" aria-label={label} data-testid="share-chip">
+    <a href={chip.href} title={chip.title} className="hidden min-h-6 items-center sm:inline-flex" aria-label={label} data-testid="share-chip">
       {badge}
     </a>
   );

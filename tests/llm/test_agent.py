@@ -15,8 +15,9 @@ class Opts:
 
 
 class Matcher:
-    def __init__(self, matcher=None, hooks=None):
+    def __init__(self, matcher=None, hooks=None, timeout=None):
         self.hooks = hooks or []
+        self.timeout = timeout
 
 
 ResultMessage = type("ResultMessage", (), {"__init__": lambda self, **kw: self.__dict__.update(

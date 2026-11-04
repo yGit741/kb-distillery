@@ -52,6 +52,11 @@ export interface TourStep {
   do?: TourAction[];
   /** how dark the rest of the screen gets, 0 (none) … 0.85 (default 0.55) */
   dim?: number;
+  /**
+   * leave focus where the step's `do` put it instead of moving it to Next. For a step that types into a field
+   * whose panel closes when the field loses focus (the graph's search line); clicking Next still moves on.
+   */
+  keepFocus?: boolean;
 }
 
 /** why a tour ended: the user finished it, skipped it, or another tour replaced it */
@@ -319,7 +324,7 @@ export function startTour(steps: TourStep[], opts: TourOptions = {}): void {
     backB.disabled = i === 0;
     nextB.textContent = i === steps.length - 1 ? "Done" : "Next ›";
     requestAnimationFrame(place);
-    nextB.focus({ preventScroll: true });
+    if (!s.keepFocus) nextB.focus({ preventScroll: true });
     // autoplay starts only after a person has pressed Next once: a link alone never acts without a gesture
     if (opts.autoplay && i > 0 && i < steps.length - 1) timer = setTimeout(next, opts.autoplay);
   }
@@ -327,7 +332,9 @@ export function startTour(steps: TourStep[], opts: TourOptions = {}): void {
   const back = () => i > 0 && (i--, void show());
   const key = (e: KeyboardEvent) => {
     if (scripted) return;
-    if (inField(e.target)) return;
+    // a step that keeps focus in a field (keepFocus) owns Enter, Escape and the side arrows, so Enter cannot run what was typed
+    const owns = steps[i]?.keepFocus && ["Enter", "Escape", "ArrowLeft", "ArrowRight"].includes(e.key);
+    if (inField(e.target) && !owns) return;
     if (e.key === "ArrowRight" || e.key === "Enter") { e.preventDefault(); e.stopPropagation(); next(); }
     else if (e.key === "ArrowLeft") { e.stopPropagation(); back(); }
     else if (e.key === "Escape") { e.stopPropagation(); end("skip"); }

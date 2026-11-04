@@ -17,7 +17,12 @@ Backends (`kb_distillery.llm.resolve_backend`):
   result   {"result","usage","est_cost_usd","cost_usd","billing","model"}   the turn finished
   pending  {"batch_id","backend","model"}   batch backend: queued, answered later via `llm.collect`
   error    {"error"}
+
+`live` (optional) is the streaming-input handle for mid-turn messages: after the client connects the runner calls
+`live.attach(client, loop)`; `live.take_pending()` says whether another message was queued while the turn ran
+(then the loop keeps reading, one more result per queued message) and closes the handle when there is none.
 """
+import asyncio
 import dataclasses
 import os
 import shutil
@@ -29,7 +34,10 @@ from kb_distillery import llm
 CA_NAME = "ca-roots.pem"
 CA_MAX_AGE = 24 * 3600
 MAX_TURNS = 30
+HOOK_TIMEOUT = 700      # seconds: the policy hook may wait for the user's answer to an AskUserQuestion (10 min)
 EFFORTS = ("low", "medium", "high", "xhigh", "max")
+THINKING_BUDGET = {"low": 1024, "medium": 4000, "high": 8000, "xhigh": 16000, "max": 32000}   # tokens, scaled by effort
+THINKING_DEFAULT = 4000
 
 
 @dataclasses.dataclass
@@ -45,11 +53,23 @@ class AgentRequest:
     agents: dict = None                 # name -> {description, prompt, tools, ...}: SDK `agents` (subagents)
     budget: float = None                # hard ceiling in USD (SDK max_budget_usd); None = none
     session: str = None                 # resume key
-    attachments: tuple = ()             # chat-only files (unused until the attachments PR)
+    attachments: tuple = ()             # image paths: sent to the model as image blocks with the question
     scope: object = None                # opaque to this layer; the caller's policy closes over it
     cwd: str = None
     max_turns: int = MAX_TURNS
     fresh_prompt: str = None            # prompt to use when `session` cannot be resumed (history replay)
+    thinking: bool = False              # extended thinking with summarized text, budget scaled by `effort`
+
+
+def _prompt_input(text, images):
+    """`text`, or (with images) a one-message stream carrying the image blocks (`llm._image_block`) and the text."""
+    if not images:
+        return text
+    content = [*map(llm._image_block, images), {"type": "text", "text": text}]
+
+    async def one():
+        yield {"type": "user", "message": {"role": "user", "content": content}, "parent_tool_use_id": None}
+    return one()
 
 
 def sdk_available():
@@ -144,7 +164,7 @@ def build_options(req, key, *, policy_hook, can_use_tool, resume=None, cli=None,
         # permission mode every call goes through the PreToolUse hook and then the callback
         tools=list(req.tools), disallowed_tools=list(req.disallowed),
         permission_mode="default", can_use_tool=can_use_tool,
-        hooks={"PreToolUse": [HookMatcher(matcher=None, hooks=[policy_hook])]},
+        hooks={"PreToolUse": [HookMatcher(matcher=None, hooks=[policy_hook], timeout=HOOK_TIMEOUT)]},
         setting_sources=[], max_turns=req.max_turns, include_partial_messages=True,
         env=agent_env(key, ca_path), resume=resume or None,
     )
@@ -152,6 +172,9 @@ def build_options(req, key, *, policy_hook, can_use_tool, resume=None, cli=None,
         if req.effort not in EFFORTS:
             raise llm.LLMError(f"unknown effort {req.effort!r}; pick one of {', '.join(EFFORTS)}")
         kw["effort"] = req.effort
+    if req.thinking:
+        kw["thinking"] = {"type": "enabled", "budget_tokens": THINKING_BUDGET.get(req.effort, THINKING_DEFAULT),
+                          "display": "summarized"}
     if req.skills:
         kw["skills"] = list(req.skills)
     if req.plugins:
@@ -178,7 +201,7 @@ def is_resume_failure(exc):
 
 
 async def stream(req, backend=None, *, key=None, policy_hook=None, can_use_tool=None, usage_sink=None,
-                 stop_event=None, log=None, ca_path=None, config_dir=None, pem_source=None):
+                 stop_event=None, log=None, ca_path=None, config_dir=None, pem_source=None, live=None):
     """Run one agent turn on the chosen backend. See the module docstring for the yielded events."""
     log = log or (lambda s: None)
     backend = llm.resolve_backend(backend)
@@ -204,7 +227,7 @@ async def stream(req, backend=None, *, key=None, policy_hook=None, can_use_tool=
     cli = None
     tried_cli_fallback = False
     resume = req.session or None
-    prompt = req.question
+    prompt = _prompt_input(req.question, req.attachments)
     stderr_lines = []
 
     def on_stderr(line):
@@ -221,16 +244,26 @@ async def stream(req, backend=None, *, key=None, policy_hook=None, can_use_tool=
         try:
             async with sdk.ClaudeSDKClient(options) as client:
                 await client.query(prompt)
-                async for msg in client.receive_response():
-                    if stop_event is not None and stop_event.is_set():
-                        try:
-                            await client.interrupt()
-                        except Exception:
-                            pass
-                        return
-                    yield ("message", msg)
-                    if _name(msg) == "ResultMessage":
-                        result = msg
+                if live is not None:
+                    live.attach(client, asyncio.get_running_loop())
+                while True:
+                    async for msg in client.receive_response():
+                        if stop_event is not None and stop_event.is_set():
+                            try:
+                                await client.interrupt()
+                            except Exception:
+                                pass
+                            return
+                        yield ("message", msg)
+                        if _name(msg) == "ResultMessage":
+                            result = msg
+                    if live is None or not live.take_pending():
+                        break
+                    # a message queued mid-turn gets its own turn: record this one's cost, keep reading
+                    if result is not None and usage_sink:
+                        usage_sink(model, dict(getattr(result, "usage", None) or {}),
+                                   getattr(result, "total_cost_usd", None), billing)
+                    result = None
         except Exception as e:  # SDK errors: ProcessError, CLIConnectionError, CLINotFoundError, …
             name = _name(e)
             if name == "CLINotFoundError" and not tried_cli_fallback and shutil.which("claude"):
@@ -242,7 +275,8 @@ async def stream(req, backend=None, *, key=None, policy_hook=None, can_use_tool=
                 log("chat agent: previous session not found, starting fresh")
                 yield ("notice", {"text": "Previous agent session expired; started a fresh one."})
                 resume = None
-                prompt = req.fresh_prompt if req.fresh_prompt is not None else req.question
+                prompt = _prompt_input(req.fresh_prompt if req.fresh_prompt is not None else req.question,
+                                       req.attachments)
                 continue
             detail = str(e).strip()
             tail = " ".join(l.strip() for l in stderr_lines[-3:])

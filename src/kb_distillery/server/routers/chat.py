@@ -7,11 +7,13 @@ from fastapi import APIRouter
 from starlette.responses import JSONResponse
 
 from kb_distillery.config.flags import runtime
-from kb_distillery.server.models.chat import (ChatRequest, ChatSettings, ChatSettingsUpdate, ChatStatus, KeyAdd, KeyList,
+from kb_distillery.server.models.chat import (ChatAnswer, ChatAnswerResult, ChatRequest, ChatSettings, ChatSettingsUpdate, ChatStatus, KeyAdd, KeyList,
                                 KeyRemove, PromptsResponse, SavedChat, SavedChatResult)
 from kb_distillery.server.sse import sse_response
+from kb_distillery.services import agent_skills, sessions_store
 from kb_distillery.services import chat as chat_data
 from kb_distillery.services import chat_agent
+from kb_distillery.services import chat_attachments
 
 router = APIRouter(tags=["chat"])
 
@@ -52,6 +54,9 @@ def post_chat(req: ChatRequest):
     backend = payload.get("backend") or settings["backend"]
     if backend not in chat_data.BACKENDS:
         return _err(400, f"unknown backend {backend!r}")
+    billing = payload.get("billing") if runtime.effective("agent-mode") and backend == "agent" else None
+    if billing:       # the composer line's pick decides who pays; it replaces the stored account choice for this turn
+        auth_mode = "subscription" if billing == "subscription" else "api_key"
     if auth_mode == "subscription":
         if backend != "agent":
             return _err(400, "the subscription works with the Agent backend only",
@@ -88,13 +93,40 @@ def post_chat(req: ChatRequest):
         extra = {}
         if runtime.effective("agent-mode"):       # ship dark: the new fields are ignored until the flag is on
             extra = {"effort": payload.get("effort"), "budget": payload.get("budget")}
+            if payload.get("skills") is not None:
+                extra["skills"] = payload["skills"]      # narrowed to the whitelist inside agent_skills
+            elif payload.get("skills_session"):          # the subset saved with the session (the panel may not have loaded)
+                try:
+                    extra["skills"] = agent_skills.session_selection(payload["skills_session"])
+                except sessions_store.SessionsError:     # an id of another shape (an old local chat): the whole whitelist
+                    pass
+            if payload.get("attachment_session"):
+                try:
+                    chat_attachments.session_dir(payload["attachment_session"])
+                    extra["attachment_session"] = payload["attachment_session"]
+                except chat_attachments.AttachmentError as exc:
+                    return _err(400, exc.message)
+            if payload.get("attachments"):
+                try:
+                    extra["attachments"] = chat_attachments.resolve(payload.get("attachment_session"),
+                                                                    payload["attachments"])
+                except chat_attachments.AttachmentError as exc:
+                    return _err(400, exc.message)
         gen = chat_agent.stream_agent(question, model=model, system=system, key=key,
-                                      billing="subscription" if key is None else "api",
+                                      billing=billing or ("subscription" if key is None else "api"),
                                       session_id=payload.get("session") or None, history=history, scope=scope,
                                       **extra)
     else:
         gen = direct_events(payload, key, model, question, history, scope)
     return sse_response(gen)
+
+
+@router.post("/api/chat/answer", response_model=ChatAnswerResult, summary="Answer the agent's question (an `ask` event)",
+             responses={404: {"description": "no question is waiting under that id"}})
+def post_answer(body: ChatAnswer):
+    if not chat_agent.ASKS.answer(body.session, body.id, body.answers):
+        return _err(404, "no question is waiting", "it timed out, was answered already, or the chat was closed")
+    return {"ok": True}
 
 
 @router.get("/api/chat/status", response_model=ChatStatus, summary="Backend, auth, keys (hints) and spend")

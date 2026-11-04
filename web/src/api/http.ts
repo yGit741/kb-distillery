@@ -1,6 +1,7 @@
 import createClient from "openapi-fetch";
 import { ApiError, type DataSource } from "./datasource";
 import type { paths } from "./schema";
+import type * as T_ from "./types";
 
 export type Fetch = typeof fetch;
 
@@ -37,6 +38,29 @@ export function createHttpDataSource(fetchImpl: Fetch = (...a) => fetch(...a), b
     return r.data;
   }
 
+  /** The import routes take a multipart .zip or JSON {git_url}, which the typed client cannot express: plain fetch. */
+  async function postImport<T>(path: string, req: T_.KbImportRequest): Promise<T> {
+    let init: RequestInit;
+    if ("file" in req) {
+      const form = new FormData();
+      form.append("file", req.file, req.file.name);
+      if (req.id) form.append("id", req.id);
+      if (req.kit) form.append("kit", req.kit);
+      init = { body: form };
+    } else {
+      init = { headers: { "Content-Type": "application/json" }, body: JSON.stringify({ git_url: req.gitUrl, id: req.id || null, kit: req.kit || null }) };
+    }
+    let res: Response;
+    try {
+      res = await fetchImpl(path, { method: "POST", cache: "no-store", ...init });
+    } catch (e) {
+      throw new ApiError(`Could not reach ${path}: ${e instanceof Error ? e.message : String(e)}`);
+    }
+    const body: unknown = await res.json().catch(() => undefined);
+    if (!res.ok) throw new ApiError(message(body, `${path} answered ${res.status}`), res.status);
+    return body as T;
+  }
+
   return {
     kind: "http",
 
@@ -45,6 +69,10 @@ export function createHttpDataSource(fetchImpl: Fetch = (...a) => fetch(...a), b
     getHealth: () => run(() => client.GET("/api/health"), "/api/health"),
     getKb: () => run(() => client.GET("/api/kb"), "/api/kb"),
     listKbs: () => run(() => client.GET("/api/kb/list"), "/api/kb/list"),
+    previewKbImport: (req) => postImport<T_.KbImportPreview>("/api/kb/import/validate", req),
+    importKb: (req) => postImport<T_.KbImportResult>("/api/kb/import", req),
+    getKbInbox: () => run(() => client.GET("/api/kb/inbox"), "/api/kb/inbox"),
+    pullKbInbox: () => run(() => client.POST("/api/kb/inbox/pull"), "/api/kb/inbox/pull"),
     getOps: (refresh) =>
       run(() => client.GET("/api/ops", { params: { query: refresh ? { refresh: "1" } : {} } }), "/api/ops"),
 
@@ -66,11 +94,17 @@ export function createHttpDataSource(fetchImpl: Fetch = (...a) => fetch(...a), b
         `/api/graph/queries/${name}`,
       ),
 
+    shapeGraph: (text) => run(() => client.POST("/api/graph/shape", { body: { text, limit: 500 } }), "/api/graph/shape"),
+
     getRelationProposals: ({ min, max, kind }) =>
       run(
         () => client.GET("/api/relations/proposals", { params: { query: { min, max, ...(kind ? { kind } : {}) } } }),
         "/api/relations/proposals",
       ),
+
+    listViews: () => run(() => client.GET("/api/views"), "/api/views"),
+    listRecent: () => run(() => client.GET("/api/recent"), "/api/recent"),
+    addRecent: (text, spec) => run(() => client.POST("/api/recent", { body: { text, spec: spec ?? {} } }), "/api/recent"),
 
     listPages: (opts) =>
       run(() => client.GET("/api/pages", { params: { query: opts?.kb ? { kb: opts.kb } : {} } }), "/api/pages"),
@@ -129,7 +163,21 @@ export function createHttpDataSource(fetchImpl: Fetch = (...a) => fetch(...a), b
     addChatKey: (body) => run(() => client.POST("/api/chat/keys", { body }), "/api/chat/keys"),
     removeChatKey: (name) =>
       run(() => client.DELETE("/api/chat/keys/{name}", { params: { path: { name } } }), `/api/chat/keys/${name}`),
+    listSessions: () => run(() => client.GET("/api/sessions"), "/api/sessions"),
+    getSession: (id) => run(() => client.GET("/api/sessions/{session_id}", { params: { path: { session_id: id } } }), `/api/sessions/${id}`),
+    putSession: (id, body) =>
+      run(() => client.PUT("/api/sessions/{session_id}", { params: { path: { session_id: id } }, body }), `/api/sessions/${id}`),
+    renameSession: (id, title) =>
+      run(() => client.PATCH("/api/sessions/{session_id}", { params: { path: { session_id: id } }, body: { title } }), `/api/sessions/${id}`),
+    deleteSession: (id) =>
+      run(() => client.DELETE("/api/sessions/{session_id}", { params: { path: { session_id: id } } }), `/api/sessions/${id}`),
+    listChatSkills: (session) =>
+      run(() => client.GET("/api/chat/skills", { params: { query: session ? { session } : {} } }), "/api/chat/skills"),
+    putChatSkills: (id, body) =>
+      run(() => client.PUT("/api/chat/skills/{session_id}", { params: { path: { session_id: id } }, body }), `/api/chat/skills/${id}`),
     saveChat: (body) => run(() => client.POST("/api/chat/saved", { body }), "/api/chat/saved"),
+    answerChat: (body) => run(() => client.POST("/api/chat/answer", { body }), "/api/chat/answer"),
+    sendChatMessage: (body) => run(() => client.POST("/api/chat/message", { body }), "/api/chat/message"),
     chatStream: async (body, signal) => {
       let res: Response;
       try {

@@ -29,6 +29,8 @@ from kb_distillery.config import kb as kbconfig
 from kb_distillery.config.layout import WIKI_DIR
 from kb_distillery.lint import okf_check
 
+MAX_ENTRIES = 20000
+MAX_UNZIPPED = 512 * 1024 * 1024
 IGNORED = {".DS_Store", "__MACOSX", ".git"}
 
 
@@ -45,6 +47,8 @@ def _safe_extract(archive: str, dest: str) -> None:
     except (zipfile.BadZipFile, OSError) as e:
         raise BundleError(f"{archive} is not a readable zip: {e}") from None
     with zf:
+        if len(zf.infolist()) > MAX_ENTRIES or sum(i.file_size for i in zf.infolist()) > MAX_UNZIPPED:
+            raise BundleError(f"the zip is too large to import (over {MAX_ENTRIES} entries or {MAX_UNZIPPED >> 20} MB unzipped)")
         for info in zf.infolist():
             name = info.filename
             parts = name.replace("\\", "/").split("/")
@@ -101,6 +105,7 @@ class Report:
     warnings: list[str] = field(default_factory=list)
     ref: str = ""
     commit: str = ""
+    inbox_item: str = ""
 
     @property
     def ok(self) -> bool:
@@ -114,7 +119,11 @@ def is_git_source(src: str) -> bool:
 def _clone(url: str, ref: str, dest: str) -> str:
     """Shallow clone `url` (at `ref`, if any) into the empty `dest` with the user's own git credentials -> HEAD sha."""
     cmd = ["git", "clone", "--quiet", "--depth", "1", *(["--branch", ref] if ref else []), "--", url, dest]
-    proc = subprocess.run(cmd, capture_output=True, text=True, env=dict(os.environ, GIT_TERMINAL_PROMPT="0"))
+    env = dict(os.environ, GIT_TERMINAL_PROMPT="0", GIT_SSH_COMMAND="ssh -o BatchMode=yes", GIT_ALLOW_PROTOCOL="https:ssh")
+    try:
+        proc = subprocess.run(cmd, capture_output=True, text=True, env=env, timeout=300)
+    except subprocess.TimeoutExpired:
+        raise BundleError(f"could not clone {url}: timed out after 5 minutes") from None
     if proc.returncode != 0:
         raise BundleError(f"could not clone {url}: {(proc.stderr or proc.stdout).strip()}")
     return subprocess.run(["git", "rev-parse", "HEAD"], cwd=dest, capture_output=True, text=True).stdout.strip()
@@ -143,7 +152,7 @@ def _open(source: str, stage: str):
         url, _, ref = source.partition("#")
         folder = os.path.join(stage, "clone")
         commit = _clone(url, ref, folder)
-        label = url
+        label = re.sub(r"^([a-z]+://)[^/@]*@", r"\1", url)          # never record credentials embedded in the URL
     else:
         label = os.path.realpath(os.path.expanduser(source))
         if not os.path.exists(label):
@@ -175,15 +184,16 @@ def _display_name(kb_id: str, name: str | None) -> str:
     return name or kb_id.replace("-", " ").capitalize()
 
 
-def validate_bundle(source: str, kb_id: str | None = None, parent: str | None = None, kit: str | None = None) -> Report:
+def validate_bundle(source: str, kb_id: str | None = None, parent: str | None = None, kit: str | None = None,
+                    label: str | None = None) -> Report:
     """Dry run: exactly what `import_bundle` would check -> `Report` (suggested id, page count, errors that block an
     import, warnings). The OKF gate runs first; when it passes, the kb is built in a temp folder (create + copy + the
     kit lint, no commit) and the lint errors join `errors`; the temp folder is removed. Nothing is written to `parent`.
-    A bad source raises `BundleError`."""
+    A bad source raises `BundleError`. `label` names the source in the report (an upload's file name, not its temp path)."""
     kb_id = kb_id or _guess_id(source)
-    with tempfile.TemporaryDirectory(prefix="kb-import-") as stage, _open(source, stage) as (bundle, label, ref, commit):
+    with tempfile.TemporaryDirectory(prefix="kb-import-") as stage, _open(source, stage) as (bundle, found, ref, commit):
         count, errors, warnings = _findings(bundle, stage)
-        rep = Report(kb_id, label, count, errors, warnings, ref, commit)
+        rep = Report(kb_id, label or found, count, errors, warnings, ref, commit)
         try:
             init_kb.validate_id(kb_id)
         except init_kb.InitError as e:
@@ -221,13 +231,16 @@ def _build(bundle: str, rep: Report, kit: str | None, parent: str, name: str | N
 def _record_source(target: str, rep: Report) -> None:
     """Append `[import]` (where the pages came from) to the new kb.toml."""
     def q(v):
-        return '"' + v.replace("\\", "\\\\").replace('"', '\\"') + '"'
+        v = v.replace("\\", "\\\\").replace('"', '\\"')
+        return '"' + re.sub(r"[\x00-\x1f\x7f]", lambda m: "\\u%04x" % ord(m.group()), v) + '"'
     now = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     lines = ["", "[import]", f"source = {q(rep.source)}"]
     if rep.ref:
         lines.append(f"ref = {q(rep.ref)}")
     if rep.commit:
         lines.append(f"commit = {q(rep.commit)}")
+    if rep.inbox_item:
+        lines.append(f"inbox_item = {q(rep.inbox_item)}")
     lines.append(f"imported_at = {q(now)}")
     with open(os.path.join(target, kbconfig.CONFIG_NAME), "a", encoding="utf-8") as f:
         f.write("\n".join(lines) + "\n")
@@ -247,18 +260,21 @@ def _lint(root: str) -> list[str]:
 
 
 def import_bundle(src: str, kit: str | None = None, kb_id: str | None = None, parent: str | None = None,
-                  name: str | None = None) -> str:
+                  name: str | None = None, label: str | None = None, inbox_item: str | None = None) -> str:
     """Import the OKF bundle at `src` (folder, .zip or git URL[#ref]) as a NEW kb -> the new kb's path.
 
     A git source is a one-time shallow copy: the clone's .git is dropped and the kb gets its own history; `[import]` in
     kb.toml records source, ref, commit and time. okf_check errors raise `BundleError` (an `init_kb.InitError`) with nothing
-    written; so does an id that is taken or a kit that is unknown. `parent` defaults to the bases dir (`~/knowledge`)."""
+    written; so does an id that is taken or a kit that is unknown. `parent` defaults to the bases dir (`~/knowledge`).
+    `label` is recorded as `[import] source` instead of the path of `src` (for an upload held in a temp folder);
+    `inbox_item` (the site inbox item id) is recorded as `[import] inbox_item`."""
     kb_id = kb_id or _guess_id(src)
     init_kb.validate_id(kb_id)
     parent = parent or kbconfig.bases_dir()
-    with tempfile.TemporaryDirectory(prefix="kb-import-") as stage, _open(src, stage) as (bundle, label, ref, commit):
+    with tempfile.TemporaryDirectory(prefix="kb-import-") as stage, _open(src, stage) as (bundle, found, ref, commit):
+        label = label or found
         count, errors, warnings = _findings(bundle, stage)
-        rep = Report(kb_id, label, count, errors, warnings, ref, commit)
+        rep = Report(kb_id, label, count, errors, warnings, ref, commit, inbox_item or "")
         if _id_taken(kb_id, parent):
             raise BundleError(f"a knowledge base {kb_id!r} already exists: pick another --id")
         if errors:
@@ -283,6 +299,32 @@ def import_bundle(src: str, kit: str | None = None, kb_id: str | None = None, pa
     return target
 
 
+# --- the local app's import routes (server/routers/kb_import.py) call these: plain dicts, no HTTP ---
+
+def check_git_url(url: str) -> str:
+    """The URL when it is a remote git source (https://, ssh://, git@), else `BundleError`: a path or `file://` is never cloned."""
+    url = (url or "").strip()
+    if not url or not is_git_source(url) or url.startswith("-"):
+        raise BundleError("not a git URL: use https://, ssh:// or git@host:path (optionally #ref)")
+    return url
+
+
+def preview(source: str, kb_id: str | None = None, kit: str | None = None, label: str | None = None) -> dict:
+    """The dry run as a dict: suggested (or given) id, name, page count, errors that block an import, warnings."""
+    rep = validate_bundle(source, kb_id or None, None, kit or None, label)
+    return {"id": rep.id, "name": _display_name(rep.id, None), "source": rep.source, "pages": rep.pages,
+            "errors": rep.errors, "warnings": rep.warnings, "ref": rep.ref, "commit": rep.commit, "ok": rep.ok}
+
+
+def import_new(source: str, kb_id: str | None = None, kit: str | None = None, label: str | None = None) -> dict:
+    """Import `source` as a new kb in the bases dir -> {id, name, root, pages}. Raises `BundleError` with the findings."""
+    root = os.path.realpath(import_bundle(source, kit or None, kb_id or None, None, None, label))
+    new_id = os.path.basename(root)
+    wiki = os.path.join(root, WIKI_DIR)
+    pages = sum(1 for _, _, files in os.walk(wiki) for f in files if f.endswith(".md") and not okf_check.is_reserved(f))
+    return {"id": new_id, "name": kbconfig.load_dir(root, new_id).name, "root": root, "pages": pages}
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(prog="distill kb import", description=__doc__.split("\n\n")[0])
     ap.add_argument("source", help="an OKF bundle: a folder, a .zip or a git URL (https:// or git@, optional #ref)")
@@ -297,11 +339,14 @@ def main(argv=None) -> int:
         except init_kb.InitError as e:
             print(f"distill kb import: {e}", file=sys.stderr)
             return 1
+        if rep.errors:                                  # nothing would be imported: only the errors, then one line
+            for e in rep.errors:
+                print(f"error: {e}", file=sys.stderr)
+            print(f"nothing would be imported: {len(rep.errors)} error(s) above")
+            return 1
         print(f"would import {rep.pages} page(s) from {rep.source} as {rep.id!r}")
         for w in rep.warnings:
             print(f"warning: {w}")
-        for e in rep.errors:
-            print(f"error: {e}", file=sys.stderr)
         return 0 if rep.ok else 1
     try:
         target = import_bundle(args.source, args.kit, args.kb_id, args.dir)

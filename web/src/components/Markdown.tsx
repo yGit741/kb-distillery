@@ -120,6 +120,13 @@ export function Markdown({ children, className, resolveSlug, transformUrl, linkS
           </a>
         );
       },
+      table({ node: _node, children: kids }) {
+        return (
+          <div className="overflow-x-auto">
+            <table>{kids}</table>
+          </div>
+        );
+      },
       img({ src, alt, node: _node }) {
         const url = typeof src === "string" ? (transformUrl ? transformUrl(src) : src) : undefined;
         return <img src={url} alt={alt ?? ""} loading="lazy" />;

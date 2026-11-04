@@ -31,6 +31,9 @@ export type PathResult = S["PathResult"];
 export type GraphRelation = S["GraphRelation"];
 export type NamedQuery = S["NamedQuery"];
 export type QueryTable = S["QueryTable"];
+export type ShapeResult = S["ShapeResponse"];
+export type StyleSpec = S["StyleSpec"];
+export type StyleTarget = S["Target"];
 export type RelationProposals = S["RelationProposals"];
 export type RelationProposal = S["RelationProposal"];
 
@@ -49,6 +52,17 @@ export type KbInfo = S["KbInfo"];
 export type KbList = S["KbList"];
 export type KbRow = S["KbRow"];
 export type KbType = S["KbType"];
+export type KbImportPreview = S["KbImportPreview"];
+export type KbImportResult = S["KbImportResult"];
+export type KbInbox = S["KbInbox"];
+export type KbInboxItem = S["KbInboxItem"];
+export type KbInboxPull = S["KbInboxPull"];
+/** The body of the import routes (local app only): a zipped bundle, or a git URL; `id` and `kit` are optional. */
+export type KbImportRequest = ({ file: File } | { gitUrl: string }) & { id?: string; kit?: string };
+export type ViewList = S["ViewList"];
+export type PinnedView = S["View"];
+export type RecentList = S["RecentList"];
+export type RecentStep = S["RecentStep"];
 export type VideoBundle = S["VideoBundle"];
 export type VideoAnchor = S["VideoAnchor"];
 export type VideoSection = S["VideoSection"];
@@ -67,6 +81,10 @@ export type ScopeDuplicateRequest = S["ScopeDuplicateRequest"];
 
 // chat
 export type ChatRequest = S["ChatRequest"];
+export type ChatAnswer = S["ChatAnswer"];
+export type ChatAnswerResult = S["ChatAnswerResult"];
+export type ChatMessageIn = S["ChatMessageIn"];
+export type ChatMessageResult = S["ChatMessageResult"];
 export type ChatStatus = S["ChatStatus"];
 export type ChatSettings = S["ChatSettings"];
 export type ChatSettingsUpdate = S["ChatSettingsUpdate"];
@@ -75,6 +93,18 @@ export type KeyAdd = S["KeyAdd"];
 export type PromptsResponse = S["PromptsResponse"];
 export type SavedChat = S["SavedChat"];
 export type SavedChatResult = S["SavedChatResult"];
+
+// chat sessions (kept on this machine under <kb>/.local/sessions)
+export type SessionList = S["SessionList"];
+export type SessionSummary = S["SessionSummary"];
+export type SessionDoc = S["SessionDoc"];
+export type SessionPutRequest = S["SessionPutRequest"];
+export type SessionDeleted = S["SessionDeleted"];
+
+// chat skills (the kb's whitelist, switched per session)
+export type ChatSkillList = S["ChatSkillList"];
+export type ChatSkill = S["ChatSkill"];
+export type ChatSkillsPut = S["ChatSkillsPut"];
 
 // backlog
 export type BacklogList = S["BacklogList"];
