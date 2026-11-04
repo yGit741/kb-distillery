@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ErrorState, Loading } from "@/components/states";
 import type { SearchById } from "@/routes/search";
+import { ComposerLine } from "./ComposerLine";
 import { MessageList, Sources } from "./MessageList";
 import { PromptPanel } from "./PromptPanel";
 import { STATUS_KEY, SessionPanel } from "./SessionPanel";
@@ -268,6 +269,17 @@ function ChatBody({ status: rawStatus, prompts: rawPrompts, scopes, initialScope
               </Button>
             )}
           </form>
+          {agentMode && effectiveBackend(view) === "agent" && (
+            <ComposerLine
+              account={view.authMode === "api_key" && view.keyLoaded ? "api" : "subscription"}
+              models={view.models}
+              model={model}
+              onModel={(id) => {
+                setModelPick(id);
+                writeJson("local", "kbchat.model", id);
+              }}
+            />
+          )}
         </div>
       </section>
       <aside className="hidden lg:block" aria-label="Session and sources">
