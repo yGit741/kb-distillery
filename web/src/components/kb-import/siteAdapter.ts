@@ -1,3 +1,4 @@
+import { displayName, sourceStem, suggestId } from "@/lib/okf/names";
 import type { ImportAdapter, ImportOutcome, ImportPreview, ImportSource } from "./adapter";
 
 /**
@@ -25,16 +26,10 @@ interface Report {
   item?: string;
 }
 
-/** The kb name a source suggests: a zip's stem, or the last part of a repository URL. */
+/** The name the Worker derives the id from: a zip's own file name (it drops the extension), or the last part of a repository URL. */
 function nameOf(source: ImportSource): string {
-  if (source.kind === "zip") return source.file.name.replace(/\.zip$/i, "");
+  if (source.kind === "zip") return source.file.name;
   return source.url.split("#")[0]!.replace(/\/+$/, "").split(/[/:]/).pop()!.replace(/\.git$/i, "");
-}
-
-/** import_kb's default id: lowercase letters, digits and dashes, at most 40 characters ("" when nothing is left). */
-function slug(name: string): string {
-  const s = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40).replace(/^-+|-+$/g, "");
-  return /^[a-z0-9]/.test(s) ? s : "";
 }
 
 function request(path: string, source: ImportSource): [string, RequestInit] {
@@ -74,14 +69,13 @@ async function post(fetchImpl: typeof fetch, path: string, source: ImportSource)
 
 /** Turns the Worker's report into what the dialog's preview step shows. */
 function preview(source: ImportSource, r: Report): ImportPreview {
-  const name = nameOf(source);
-  const id = source.id || r.id || slug(name);
+  const id = source.id || r.id || suggestId(source.kind === "zip" ? sourceStem(nameOf(source)) : nameOf(source));
   const errors = [...(r.errors ?? [])];
   if (id && RESERVED.has(id)) errors.push(`The id "${id}" is reserved. Pick another one.`);
   if (r.ok === false && !errors.length) errors.push("The bundle has no pages.");
   return {
     id,
-    name,
+    name: displayName(id),                          // the local app's rule: the id with spaces, first letter capital
     pages: r.pages ?? 0,
     source: source.kind === "zip" ? source.file.name : source.url,
     errors,

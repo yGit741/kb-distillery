@@ -34,8 +34,9 @@ describe("checkBundle parity with okf_check", () => {
   });
 
   it.each(cases)("%s", (name) => {
-    const { id, ...report } = checkBundle(load(name));
+    const { id, name: shown, ...report } = checkBundle(load(name));
     expect(id).toBe("imported-kb");
+    expect(shown).toBe("Imported kb");
     expect(report).toEqual(expected(name));
   });
 
@@ -50,7 +51,7 @@ describe("checkBundle parity with okf_check", () => {
       ["a.md", "---\ntype: idea\n---\n\n[b](b.md)\n"],
       ["b.md", enc.encode("---\ntype: idea\r\n---\r\n\r\n# B\r\n")],
     ]);
-    expect(checkBundle(text)).toEqual({ id: "imported-kb", pages: 2, errors: [], warnings: [] });
+    expect(checkBundle(text)).toEqual({ id: "imported-kb", name: "Imported kb", pages: 2, errors: [], warnings: [] });
   });
 
   it("suggests a kb id from the source name like the import does", () => {
@@ -59,4 +60,14 @@ describe("checkBundle parity with okf_check", () => {
     expect(checkBundle(files, { name: "---" }).id).toBe("imported-kb");
     expect(checkBundle(files, { name: "x".repeat(60) }).id).toBe("x".repeat(40));
   });
+
+  // tests/fixtures/okf-bundles/names.json is also asserted by test_okf_check_parity.py against import_kb.default_id
+  it.each(JSON.parse(readFileSync(join(FIXTURES, "names.json"), "utf-8")) as Array<{ source: string; kind: string; id: string; name: string }>)(
+    "names $source ($kind) like the local import",
+    ({ source, kind, id, name }) => {
+      const files: BundleFiles = new Map([["a.md", "---\ntype: t\n---\n"]]);
+      const r = checkBundle(files, { name: source, archive: kind === "file" });
+      expect([r.id, r.name]).toEqual([id, name]);
+    },
+  );
 });

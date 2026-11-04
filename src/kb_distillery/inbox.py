@@ -179,11 +179,15 @@ def pull(client: Client | None = None, parent: str | None = None, dry_run: bool 
             with tempfile.TemporaryDirectory(prefix="kb-inbox-") as tmp:
                 if it.get("kind") == "git":
                     source = it["git_url"]
+                    shown = source
                 else:
                     source = os.path.join(tmp, f"{want or 'bundle'}.zip")
+                    shown = it.get("name") or "an upload"
                     with open(source, "wb") as f:
                         f.write(client.bundle(item))
-                target = importer(source, kit=it.get("kit") or None, kb_id=want, parent=parent)
+                # [import] source names the site upload (its file name or git URL), never the temp path of the download
+                target = importer(source, kit=it.get("kit") or None, kb_id=want, parent=parent,
+                                  label=f"site inbox: {shown}", inbox_item=item)
         except Exception as e:                                  # noqa: BLE001 — one bad item must not stop the rest
             error = (str(e) or type(e).__name__).strip()[:MAX_ERROR]
             out(f"failed {item}: {error.splitlines()[0]}")

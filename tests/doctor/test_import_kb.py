@@ -159,6 +159,26 @@ def test_dry_run_reports_and_writes_nothing(world, tmp_path, capsys):
     assert not world.exists() or not os.listdir(world)
 
 
+def test_dry_run_with_errors_prints_only_the_errors_and_exits_1(world, tmp_path, capsys):
+    bad = make_bundle(tmp_path / "bad-notes", {"a.md": PAGE.replace("beta.md", "missing.md"), "b.md": BETA})
+    assert import_kb.main([bad, "--dry-run"]) == 1
+    out, err = capsys.readouterr()
+    assert "missing.md" in err
+    assert "would import" not in out + err
+    lines = out.strip().splitlines()
+    assert len(lines) == 1 and lines[0].startswith("nothing would be imported:")
+    capsys.readouterr()
+    assert import_kb.main([make_bundle(tmp_path / "ok"), "--dry-run"]) == 0
+    assert capsys.readouterr().out.startswith("would import 2 page(s)")
+
+
+def test_the_import_records_the_inbox_item_beside_the_label(world, tmp_path):
+    src = make_bundle(tmp_path / "tmp-dl")
+    target = import_kb.import_bundle(src, kb_id="orbit", label="site inbox: orbit-notes.zip", inbox_item="20261103T100000Z-aaaaaaaa")
+    imp = kbconfig.load_dir(target).section("import")
+    assert imp["source"] == "site inbox: orbit-notes.zip" and imp["inbox_item"] == "20261103T100000Z-aaaaaaaa"
+
+
 @pytest.mark.flag("kb-view", True)
 def test_imported_kb_works_in_graph_and_page_reader(world, tmp_path):
     from fastapi.testclient import TestClient

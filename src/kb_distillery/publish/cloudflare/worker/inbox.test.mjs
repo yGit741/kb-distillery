@@ -188,7 +188,7 @@ test("validate returns the checker report and stores nothing", async () => {
   const e = env();
   const ok = await call(e, "POST", "/api/inbox/validate?name=My%20Notes", { body: good() });
   assert.equal(ok.status, 200);
-  assert.deepEqual(await ok.json(), { ok: true, kind: "zip", id: "my-notes", pages: 2, errors: [], warnings: [] });
+  assert.deepEqual(await ok.json(), { ok: true, kind: "zip", id: "my-notes", name: "My notes", pages: 2, errors: [], warnings: [] });
   const bad = await call(e, "POST", "/api/inbox/validate", { body: zip([{ name: "a.md", data: BAD_PAGE }]) });
   const report = await bad.json();
   assert.equal(report.ok, false);
@@ -222,7 +222,19 @@ test("upload stores the zip and a pending record with uploader, time and report"
   const list = await (await call(e, "GET", "/api/inbox")).json();
   assert.equal(list.items.length, 1);
   assert.deepEqual({ ...list.items[0], at: undefined }, { item: made.item, status: "pending", kind: "zip", at: undefined, uploader: "me@example.com",
-                                                          kb_id: "my-kb", kit: "research", size: good().length, pages: 2, warnings: 0 });
+                                                          kb_id: "my-kb", kit: "research", size: good().length, pages: 2, warnings: 0, name: "ignored" });
+});
+
+test("the id and name come from the file name without its extension, like the local import", async () => {
+  const e = env();
+  const res = await call(e, "POST", "/api/inbox/validate?name=bad-notes.zip", { body: good(), type: "application/zip" });
+  const report = await res.json();
+  assert.equal(report.id, "bad-notes");
+  assert.equal(report.name, "Bad notes");
+  const made = await (await call(e, "POST", "/api/inbox?name=bad-notes.zip", { body: good(), type: "application/zip" })).json();
+  assert.equal(made.kb_id, "bad-notes");
+  const list = await (await call(e, "GET", "/api/inbox")).json();
+  assert.equal(list.items[0].name, "bad-notes.zip");                 // the Mac records it as the import's source
 });
 
 test("an invalid or unsafe zip is refused with its report and nothing is stored", async () => {

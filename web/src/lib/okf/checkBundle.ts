@@ -16,12 +16,16 @@
 //   - A decode error of a file over 8 KiB reports its position within Python's read chunk, which is not mirrored.
 import { PyError, isDict, normpath, pyRepr, pyStr, pyTruthy, cmpCodePoints, readText, safeLoad } from "./pyCompat";
 import { PyDate, PyDateTime } from "./pyCompat";
+import { displayName, sourceStem, suggestId } from "./names";
+export { displayName, sourceStem, suggestId };
 import type { PyDict, PyValue } from "./pyCompat";
 
 export type BundleFiles = Map<string, string | Uint8Array>;
 export interface BundleReport {
-  /** Suggested kb id, from `opts.name` (the zip stem or folder name); "imported-kb" when it has none. */
+  /** Suggested kb id, from `opts.name` (a folder or repo name; with `opts.archive` a file name whose extension is dropped, like import_kb.default_id); "imported-kb" when it has none. */
   id: string;
+  /** The name the preview shows: `import_kb._display_name` of the id ("bad-notes" -> "Bad notes"). */
+  name: string;
   /** Pages counted by okf-check (every .md file but index.md / log.md). */
   pages: number;
   /** Findings that block an import: `"<page>: [<rule>] <message>"`, sorted by page. */
@@ -216,17 +220,11 @@ class Bundle {
   }
 }
 
-/** import_kb's default_id: a kb id from a source name. */
-function suggestId(name: string): string {
-  const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40).replace(/^-+|-+$/g, "");
-  return slug && /^[a-z0-9]/.test(slug) ? slug : "imported-kb";
-}
-
 /**
  * Check an OKF bundle. `files` maps a path inside the bundle root (what the local app calls `wiki/`, so `a.md` and
  * `sub/b.md`, no leading slash) to its text or bytes. Returns what `distill kb import` shows before it writes anything.
  */
-export function checkBundle(files: BundleFiles, opts: { name?: string } = {}): BundleReport {
+export function checkBundle(files: BundleFiles, opts: { name?: string; archive?: boolean } = {}): BundleReport {
   const bundle = new Bundle(files);
   const found = new Map<string, Finding[]>();
   let pages = 0;
@@ -247,5 +245,6 @@ export function checkBundle(files: BundleFiles, opts: { name?: string } = {}): B
   const errors = [...found.keys()].sort(cmpCodePoints)
     .flatMap((rel) => found.get(rel)!.map(([rule, msg]) => `${rel}: [${rule}] ${msg}`));
   if (!pages && !errors.length) errors.push("the bundle has no pages (no .md files besides index.md / log.md)");
-  return { id: suggestId(opts.name ?? ""), pages, errors, warnings: [] };
+  const id = suggestId(opts.archive ? sourceStem(opts.name ?? "") : opts.name ?? "");   // a zip's name keeps its extension, like the file
+  return { id, name: displayName(id), pages, errors, warnings: [] };
 }
