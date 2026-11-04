@@ -44,6 +44,7 @@ import { useExperiments } from "./tools/experiments";
 import { toModel, type GNode } from "./types";
 import { LAYER_TYPES, type Layer } from "@/api/model";
 import "./tours";
+import { GraphShell } from "./shell/GraphShell";
 
 /** How the screen reaches the rest of the app (the router lives in index.tsx; tests pass plain functions). */
 export interface GraphHost extends ToolHost {
@@ -194,6 +195,7 @@ function Loaded({
   dsKind: string;
 }) {
   const visibleTools = useVisibleTools();
+  const shellOn = useFlag("graph-shell");
   const ds = useDataSource();
   const ui = useGraphUi();
   const selection = useKb((s) => s.selection);
@@ -451,10 +453,35 @@ function Loaded({
         onOpenPile={(format) => useLayer.getState().openDrawer({ kind: "format", format })}
       />
       {/* the search box lives in the app header when there is one (the embed has none: it floats over the canvas) */}
-      {headerSlot ? createPortal(finder, headerSlot) : finder}
-      <ViewsBar model={model} visible={visible} onPick={applyView} />
+      {shellOn ? (
+        <GraphShell
+          nodes={model.nodes}
+          byId={byId}
+          colorBy={ui.colorBy}
+          onFocus={(id) => (visible.has(id) ? focus(id) : showPicked([id]))}
+          onRead={openReader}
+          onShowMentions={(query) => void showMentions(query)}
+          onFit={() => ui.fit()}
+          onZoom={(f) => canvas.current?.zoomBy(f)}
+          onReheat={() => canvas.current?.reheat()}
+          onRefresh={onRefresh}
+          setParams={host.setParams}
+        />
+      ) : headerSlot ? (
+        createPortal(finder, headerSlot)
+      ) : (
+        finder
+      )}
+      {shellOn ? (
+        // until the corner controls replace it, the views bar steps down below the search bar
+        <div className="pointer-events-none absolute inset-0 translate-y-14">
+          <ViewsBar model={model} visible={visible} onPick={applyView} />
+        </div>
+      ) : (
+        <ViewsBar model={model} visible={visible} onPick={applyView} />
+      )}
       {(ui.view || note) && (
-        <div className={cn("pointer-events-auto absolute left-1/2 z-10 flex max-w-[min(28rem,calc(100%-8rem))] -translate-x-1/2 items-center gap-2 rounded-lg border bg-card px-2.5 py-1 text-xs shadow-[var(--shadow)]", headerSlot ? "top-14" : "top-24")} role="status">
+        <div className={cn("pointer-events-auto absolute left-1/2 z-10 flex max-w-[min(28rem,calc(100%-8rem))] -translate-x-1/2 items-center gap-2 rounded-lg border bg-card px-2.5 py-1 text-xs shadow-[var(--shadow)]", shellOn ? "top-32" : headerSlot ? "top-14" : "top-24")} role="status">
           <span className="min-w-0 truncate">
             {ui.view ? (
               <>

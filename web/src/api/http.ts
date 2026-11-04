@@ -98,6 +98,10 @@ export function createHttpDataSource(fetchImpl: Fetch = (...a) => fetch(...a), b
         "/api/relations/proposals",
       ),
 
+    listViews: () => run(() => client.GET("/api/views"), "/api/views"),
+    listRecent: () => run(() => client.GET("/api/recent"), "/api/recent"),
+    addRecent: (text, spec) => run(() => client.POST("/api/recent", { body: { text, spec: spec ?? {} } }), "/api/recent"),
+
     listPages: (opts) =>
       run(() => client.GET("/api/pages", { params: { query: opts?.kb ? { kb: opts.kb } : {} } }), "/api/pages"),
     getPage: (slug, opts) =>

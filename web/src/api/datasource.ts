@@ -30,6 +30,11 @@ export interface DataSource {
   /** LLM relation proposals in a confidence range 0..1 (local app only), best first, with a 10-bucket histogram. */
   getRelationProposals(opts: { min: number; max: number; kind?: string }): Promise<T.RelationProposals>;
 
+  // pinned views (meta/views.json) and the recent steps of the graph search panel (local, never committed)
+  listViews(): Promise<T.ViewList>;
+  listRecent(): Promise<T.RecentList>;
+  addRecent(text: string, spec?: Record<string, unknown>): Promise<T.RecentList>;
+
   // pages
   listPages(opts?: { kb?: string }): Promise<T.PageIndex>;
   /** `kb`: read the page from another knowledge base (the result is `read_only`). */

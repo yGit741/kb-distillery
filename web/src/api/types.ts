@@ -53,6 +53,10 @@ export type KbImportPreview = S["KbImportPreview"];
 export type KbImportResult = S["KbImportResult"];
 /** The body of the import routes (local app only): a zipped bundle, or a git URL; `id` and `kit` are optional. */
 export type KbImportRequest = ({ file: File } | { gitUrl: string }) & { id?: string; kit?: string };
+export type ViewList = S["ViewList"];
+export type PinnedView = S["View"];
+export type RecentList = S["RecentList"];
+export type RecentStep = S["RecentStep"];
 export type VideoBundle = S["VideoBundle"];
 export type VideoAnchor = S["VideoAnchor"];
 export type VideoSection = S["VideoSection"];
