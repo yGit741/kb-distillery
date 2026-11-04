@@ -24,6 +24,8 @@ const HEADER_TITLE =
 export function KbBadge() {
   const ds = useDataSource();
   const kbView = useFlag("kb-view") && ds.kind !== "embedded";
+  const siteAdapter = useImportAdapter();
+  const [adding, setAdding] = useState(false);
   const q = useApiQuery(["kb"], (d) => d.getKb(), { staleTime: Infinity, retry: false });
   // a share build bakes no kb info (getKb is absent there): keep the title its header always had
   const name = q.data?.name ?? "Knowledge Base";
@@ -36,7 +38,7 @@ export function KbBadge() {
     </>
   );
   if (kbView && q.data) return <KbMenu title={title} active={id} />;
-  return (
+  const link = (
     <Link
       to={"/system" as never}
       search={{ tab: "kbs" } as never}
@@ -48,6 +50,26 @@ export function KbBadge() {
       {title}
     </Link>
   );
+  // The deployed site has no kb menu (no list of bases to pick from). For its owner the one thing the menu offers there,
+  // adding a knowledge base, sits beside the title; everyone else (and a public snapshot) sees the title alone.
+  if (ds.kind === "embedded" && siteAdapter) {
+    return (
+      <>
+        {link}
+        <button
+          type="button"
+          aria-label="Add knowledge base"
+          onClick={() => setAdding(true)}
+          className="flex shrink-0 items-center gap-1 rounded-md px-1.5 py-0.5 text-xs text-primary hover:bg-accent"
+        >
+          <Plus aria-hidden className="size-3.5" />
+          <span className="hidden sm:inline">Add knowledge base</span>
+        </button>
+        <AddKnowledgeBase adapter={siteAdapter} open={adding} onOpenChange={setAdding} />
+      </>
+    );
+  }
+  return link;
 }
 
 /** The header menu: tick the knowledge bases the graph shows (none is allowed). */

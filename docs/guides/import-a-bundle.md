@@ -19,6 +19,8 @@ distill kb import ./notes.zip --id my-notes             # a folder, a .zip, or h
 
 On the deployed private site a signed-in **owner** (the sign-in allow-list) can upload a bundle. The Worker checks it with the same checker as the app, refuses unsafe zips (absolute paths, `..`, symlinks) and anything over the size limit (25 MiB by default, `INBOX_MAX_BYTES`), and parks it in a private R2 bucket as `pending`. A git URL is only recorded; your Mac does the clone. Nothing is imported or published by the site: the Mac picks the item up.
 
+On the site the owner sees **Add knowledge base** beside the title (hidden for everyone else, and when the inbox is not set up): the same dialog as the app, ending in "Received, it appears after your Mac's next sync". In the app, **System → Knowledge bases → Inbox** lists the uploads (pending, imported, failed) and **Pull now** runs the pull below.
+
 | Route (all behind the sign-in) | What |
 |---|---|
 | `POST /api/inbox/validate` | the checker report for a zip or `{"git_url": …}`; stores nothing |

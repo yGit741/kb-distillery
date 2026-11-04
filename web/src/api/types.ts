@@ -51,6 +51,9 @@ export type KbRow = S["KbRow"];
 export type KbType = S["KbType"];
 export type KbImportPreview = S["KbImportPreview"];
 export type KbImportResult = S["KbImportResult"];
+export type KbInbox = S["KbInbox"];
+export type KbInboxItem = S["KbInboxItem"];
+export type KbInboxPull = S["KbInboxPull"];
 /** The body of the import routes (local app only): a zipped bundle, or a git URL; `id` and `kit` are optional. */
 export type KbImportRequest = ({ file: File } | { gitUrl: string }) & { id?: string; kit?: string };
 export type VideoBundle = S["VideoBundle"];
