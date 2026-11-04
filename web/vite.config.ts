@@ -42,8 +42,10 @@ export default defineConfig(({ mode }) => {
       css: false,
       // tests/e2e/ runs under node --test with a real browser (pixi run test-e2e), not vitest
       include: ["src/**/*.test.{ts,tsx}"],
-      // inside a ship gate (KB_GATE_SLOT_HELD) cap the pool so one web run cannot take every core; a developer's own run is uncapped
-      ...(process.env.KB_GATE_SLOT_HELD ? { maxWorkers: 4 } : {}),
+      // inside a ship gate (KB_GATE_SLOT_HELD) cap the pool so one web run cannot take every core, and give each test a
+      // budget that survives a loaded host (the 5 s default fails `findBy*` waits at load 30-60 while they pass alone);
+      // a developer's own run is uncapped and keeps vitest's defaults
+      ...(process.env.KB_GATE_SLOT_HELD ? { maxWorkers: 4, testTimeout: 30_000, hookTimeout: 30_000 } : {}),
     },
   };
 });

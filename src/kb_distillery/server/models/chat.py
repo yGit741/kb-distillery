@@ -38,6 +38,17 @@ class AttachmentList(ApiModel):
     attachments: list[AttachmentInfo] = []
 
 
+class ChatAnswer(ApiModel):
+    """Body of POST /api/chat/answer: the user's reply to an `ask` event (question text → chosen label(s))."""
+    session: str = ""
+    id: str
+    answers: dict[str, str]
+
+
+class ChatAnswerResult(ApiModel):
+    ok: bool = True
+
+
 class KeyEntry(ApiModel):
     name: str
     origin: str

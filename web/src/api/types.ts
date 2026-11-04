@@ -31,6 +31,9 @@ export type PathResult = S["PathResult"];
 export type GraphRelation = S["GraphRelation"];
 export type NamedQuery = S["NamedQuery"];
 export type QueryTable = S["QueryTable"];
+export type ShapeResult = S["ShapeResponse"];
+export type StyleSpec = S["StyleSpec"];
+export type StyleTarget = S["Target"];
 export type RelationProposals = S["RelationProposals"];
 export type RelationProposal = S["RelationProposal"];
 
@@ -78,6 +81,8 @@ export type ScopeDuplicateRequest = S["ScopeDuplicateRequest"];
 
 // chat
 export type ChatRequest = S["ChatRequest"];
+export type ChatAnswer = S["ChatAnswer"];
+export type ChatAnswerResult = S["ChatAnswerResult"];
 export type ChatMessageIn = S["ChatMessageIn"];
 export type ChatMessageResult = S["ChatMessageResult"];
 export type ChatStatus = S["ChatStatus"];
@@ -88,6 +93,13 @@ export type KeyAdd = S["KeyAdd"];
 export type PromptsResponse = S["PromptsResponse"];
 export type SavedChat = S["SavedChat"];
 export type SavedChatResult = S["SavedChatResult"];
+
+// chat sessions (kept on this machine under <kb>/.local/sessions)
+export type SessionList = S["SessionList"];
+export type SessionSummary = S["SessionSummary"];
+export type SessionDoc = S["SessionDoc"];
+export type SessionPutRequest = S["SessionPutRequest"];
+export type SessionDeleted = S["SessionDeleted"];
 
 // backlog
 export type BacklogList = S["BacklogList"];

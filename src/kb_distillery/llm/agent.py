@@ -34,6 +34,7 @@ from kb_distillery import llm
 CA_NAME = "ca-roots.pem"
 CA_MAX_AGE = 24 * 3600
 MAX_TURNS = 30
+HOOK_TIMEOUT = 700      # seconds: the policy hook may wait for the user's answer to an AskUserQuestion (10 min)
 EFFORTS = ("low", "medium", "high", "xhigh", "max")
 THINKING_BUDGET = {"low": 1024, "medium": 4000, "high": 8000, "xhigh": 16000, "max": 32000}   # tokens, scaled by effort
 THINKING_DEFAULT = 4000
@@ -163,7 +164,7 @@ def build_options(req, key, *, policy_hook, can_use_tool, resume=None, cli=None,
         # permission mode every call goes through the PreToolUse hook and then the callback
         tools=list(req.tools), disallowed_tools=list(req.disallowed),
         permission_mode="default", can_use_tool=can_use_tool,
-        hooks={"PreToolUse": [HookMatcher(matcher=None, hooks=[policy_hook])]},
+        hooks={"PreToolUse": [HookMatcher(matcher=None, hooks=[policy_hook], timeout=HOOK_TIMEOUT)]},
         setting_sources=[], max_turns=req.max_turns, include_partial_messages=True,
         env=agent_env(key, ca_path), resume=resume or None,
     )

@@ -1,12 +1,12 @@
 import { Link } from "@tanstack/react-router";
-import { RefreshCw } from "lucide-react";
-import { useEffect, useRef } from "react";
+import { Globe, RefreshCw } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { Markdown } from "@/components/Markdown";
 import { Button } from "@/components/ui/button";
 import { useFlag } from "@/flags/useFlag";
 import { cn } from "@/lib/utils";
 import { tokenLine } from "./format";
-import type { ToolStep } from "./sse";
+import type { AskQuestion, ToolStep } from "./sse";
 import type { ChatMessage } from "./thread";
 import { Transcript } from "./Transcript";
 
@@ -37,13 +37,62 @@ function Trace({ steps, live }: { steps: ToolStep[]; live: boolean }) {
   );
 }
 
+/** The agent's question: one button per option. A single plain question answers on click; otherwise pick, then send. */
+export function AskCard({ ask, onAnswer }: { ask: { id: string; questions: AskQuestion[] }; onAnswer: (id: string, answers: Record<string, string>) => void }) {
+  const [picked, setPicked] = useState<Record<string, string[]>>({});
+  const instant = ask.questions.length === 1 && !ask.questions[0]!.multiSelect;
+  const toggle = (q: AskQuestion, label: string) => {
+    if (instant) return onAnswer(ask.id, { [q.question]: label });
+    setPicked((p) => {
+      const cur = p[q.question] ?? [];
+      const next = q.multiSelect ? (cur.includes(label) ? cur.filter((l) => l !== label) : [...cur, label]) : [label];
+      return { ...p, [q.question]: next };
+    });
+  };
+  const ready = ask.questions.every((q) => (picked[q.question]?.length ?? 0) > 0);
+  return (
+    <div role="group" aria-label="The agent asks" className="mt-2 flex flex-col gap-3 rounded-md border bg-secondary/30 p-3">
+      {ask.questions.map((q) => (
+        <div key={q.question} className="flex flex-col gap-1.5">
+          <p className="text-sm font-medium">{q.question}</p>
+          <div className="flex flex-wrap gap-2">
+            {q.options.map((o) => (
+              <Button
+                key={o.label}
+                size="sm"
+                variant={picked[q.question]?.includes(o.label) ? "default" : "outline"}
+                title={o.description}
+                aria-pressed={instant ? undefined : picked[q.question]?.includes(o.label) ?? false}
+                onClick={() => toggle(q, o.label)}
+              >
+                {o.label}
+              </Button>
+            ))}
+          </div>
+        </div>
+      ))}
+      {!instant && (
+        <Button
+          size="sm"
+          className="self-start"
+          disabled={!ready}
+          onClick={() => onAnswer(ask.id, Object.fromEntries(ask.questions.map((q) => [q.question, (picked[q.question] ?? []).join(", ")])))}
+        >
+          Send answers
+        </Button>
+      )}
+    </div>
+  );
+}
+
 interface Props {
   messages: ChatMessage[];
   busy: boolean;
   onRegenerate: () => void;
+  onAnswer: (id: string, answers: Record<string, string>) => void;
 }
 
-export function MessageList({ messages, busy, onRegenerate }: Props) {
+export function MessageList({ messages, busy, onRegenerate, onAnswer }: Props) {
   const agentMode = useFlag("agent-mode");
   const end = useRef<HTMLDivElement>(null);
   const size = messages.length ? messages[messages.length - 1]!.content.length : 0;
@@ -72,6 +121,7 @@ export function MessageList({ messages, busy, onRegenerate }: Props) {
             ) : streaming ? (
               <p className="text-sm text-muted-foreground">Thinking…</p>
             ) : null}
+            {!user && m.ask && streaming && <AskCard ask={m.ask} onAnswer={onAnswer} />}
             {!user && m.meta && <p className="mt-2 text-xs text-muted-foreground">{m.meta}</p>}
             {!user && m.usage && <p className="text-xs text-muted-foreground">{tokenLine(m.usage)}</p>}
             {!user && m.error && (
@@ -100,7 +150,14 @@ export function Sources({ messages }: { messages: ChatMessage[] }) {
   }
   return (
     <ul className="flex flex-col gap-2 text-sm">
-      {hits.map((h) => (
+      {hits.map((h) => h.kind === "web" ? (
+        <li key={h.url} className="min-w-0">
+          <a href={h.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-start gap-1 break-words text-primary underline-offset-2 hover:underline">
+            <Globe aria-hidden className="mt-0.5 size-3.5 shrink-0" />
+            {h.title || h.url}
+          </a>
+        </li>
+      ) : (
         <li key={h.slug} className="min-w-0">
           <Link to={`/pages/${encodeURIComponent(h.slug)}` as "/"} className="break-words text-primary underline-offset-2 hover:underline">
             {h.slug}

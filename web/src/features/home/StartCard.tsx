@@ -1,53 +1,62 @@
-import { useState } from "react";
-import { BookOpen, ChevronDown, X } from "lucide-react";
+import { useState, type ComponentType, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { StartScreen } from "@/features/start/StartScreen";
+import { useFlag } from "@/flags/useFlag";
+import { modules } from "@/routes/modules";
 
-const KEY = "home.start-card.dismissed";
+type Guide = ComponentType<{ heading?: "h1" | "h2"; actions?: ReactNode }>;
 
+/**
+ * The guide comes from the Start feature module as the build lists it (routes/modules, swapped per share profile),
+ * never by a direct import: a public snapshot does not carry that screen at all, so it has no card either.
+ * Read at render time because this file is itself imported by a screen module.
+ */
+const startGuide = (): Guide | undefined =>
+  (Object.entries(modules).find(([file]) => file.endsWith("/features/start/index.tsx"))?.[1] as { StartGuide?: Guide } | undefined)?.StartGuide;
+
+export const START_DISMISSED_KEY = "kb.home.start-dismissed";
+
+/** Browser-side convenience only: a private window or blocked storage throws, and the card then just shows again next visit. */
 function readDismissed(): boolean {
   try {
-    return localStorage.getItem(KEY) === "1";
+    return window.localStorage.getItem(START_DISMISSED_KEY) === "1";
   } catch {
     return false;
   }
 }
+function saveDismissed(): void {
+  try {
+    window.localStorage.setItem(START_DISMISSED_KEY, "1");
+  } catch {
+    /* the card stays dismissed for this visit only */
+  }
+}
 
-/** The old Start screen, folded into Home: a one-line card that opens the guide in place, dismissable for good. */
-export function StartCard({ open: openInitially = false }: { open?: boolean }) {
-  const [dismissed, setDismissed] = useState(() => !openInitially && readDismissed());
-  const [open, setOpen] = useState(openInitially);
-  if (dismissed) return null;
+/**
+ * The "Start here" card at the top of Home (flag screen.start). Dismiss hides it and remembers that; `forced`
+ * (the `?start` link, which `/start` redirects to) shows it again even when dismissed. `onDismissed` lets the
+ * host drop the `start` param so the card does not come back while the link is still in the address bar.
+ */
+export function StartCard({ forced = false, onDismissed }: { forced?: boolean; onDismissed?: () => void }) {
+  const on = useFlag("screen.start");
+  const [dismissed, setDismissed] = useState(readDismissed);
+  const StartGuide = startGuide();
+  if (!on || !StartGuide || (dismissed && !forced)) return null;
   const dismiss = () => {
-    try {
-      localStorage.setItem(KEY, "1");
-    } catch {
-      // private window: the card just comes back next time
-    }
+    saveDismissed();
     setDismissed(true);
+    onDismissed?.();
   };
   return (
-    <Card className="mx-auto mb-3 w-full min-w-0 max-w-[1100px] px-4 py-3 sm:px-5" aria-label="Start here" data-testid="start-card">
-      <div className="flex items-center gap-3">
-        <BookOpen className="size-4 shrink-0 text-muted-foreground" aria-hidden />
-        <p className="min-w-0 flex-1 text-sm">
-          <b>Start here</b>
-          <span className="text-muted-foreground"> — how to add and edit knowledge, and how to build a feature.</span>
-        </p>
-        <Button variant="ghost" size="sm" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
-          {open ? "Hide guide" : "Open guide"}
-          <ChevronDown className={open ? "size-4 rotate-180" : "size-4"} aria-hidden />
-        </Button>
-        <Button variant="ghost" size="icon" aria-label="Dismiss the start card" onClick={dismiss}>
-          <X className="size-4" aria-hidden />
-        </Button>
-      </div>
-      {open && (
-        <div className="mt-3 border-t pt-3">
-          <StartScreen />
-        </div>
-      )}
+    <Card className="mx-auto mb-4 w-full min-w-0 max-w-[1100px] px-4 pb-5 pt-4 sm:px-5" data-testid="start-card">
+      <StartGuide
+        heading="h2"
+        actions={
+          <Button variant="ghost" size="sm" className="shrink-0" onClick={dismiss}>
+            Dismiss
+          </Button>
+        }
+      />
     </Card>
   );
 }

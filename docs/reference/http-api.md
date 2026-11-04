@@ -73,6 +73,11 @@ This table is generated from the schema on `main`.
 | `GET /api/chat/prompts` | Prompt presets. |
 | `GET /api/chat/keys`, `POST /api/chat/keys`, `DELETE /api/chat/keys/{name}` | List, store and remove keys. Only hints are returned. `POST /api/chat/keys/remove` is the older form of the delete. |
 | `POST /api/chat/saved` | Save a chat to `raw/inbox/`. |
+| `GET /api/sessions` | Saved chat sessions, newest first. |
+| `GET /api/sessions/{id}` | One saved chat session with its messages. |
+| `PUT /api/sessions/{id}` | Create or replace a chat session. |
+| `PATCH /api/sessions/{id}` | Rename a chat session. |
+| `DELETE /api/sessions/{id}` | Delete a chat session. |
 | `GET /api/views` | Pinned graph views of the knowledge base. |
 | `POST /api/views` | Pin a view (one knowledge step). |
 | `PATCH /api/views/{id}` | Rename a pinned view (one knowledge step). |
@@ -131,6 +136,20 @@ A pinned view is `{id, name, created, spec}`. `spec` is a JSON object the app ow
 - `GET /api/views?kb=<id>` reads another knowledge base's views in multi-kb mode (flag `kb-view`). Every write on another knowledge base is **405**, and so is every write of these routes (views and recent steps) on a server started with `KB_READ_ONLY=1`; other routes do not read that variable. The body is `{"error": "..."}`.
 
 Recent steps are `{at, text, spec}`, oldest first, kept in `<kb>/.local/recent.json`. That file is never committed: `distill init` ignores `.local/`, the server also adds it to the repository's local exclude file, and the ops commit path never stages it. `POST /api/recent` takes `{text, spec?}` and trims the list to the last 20.
+
+## Chat sessions
+
+Past chats have one home on the machine that runs the server: one file per chat, `<kb>/.local/sessions/<id>.json`. They are never committed: the first write puts a `.gitignore` of `*` inside `.local/` and, when the knowledge base is a repository, adds `.local/` to its local exclude file.
+
+A session is `{id, title, created, updated, model, effort, backend, messages, usage}`. `messages` is stored as the chat screen keeps it and is never interpreted. `usage` is computed on save: `turns` is the number of questions and `cost_usd` the sum of the answers' billed cost (subscription turns add nothing).
+
+- `id` is lowercase letters, digits, dashes and underscores, at most 64 characters (the chat screen uses its chat id without the `kb-chat:` prefix).
+- `GET /api/sessions` returns `{sessions: [{id, title, created, updated, turns, cost_usd, preview, model, effort, backend}]}`, newest `updated` first. `preview` is the first line of the first question. A damaged file is left out of the list.
+- `PUT /api/sessions/{id}` takes `{messages, title?, created?, model?, effort?, backend?}` and replaces the whole document. A new session takes `created` from the body or now, and its title from the first question; an existing one keeps its `created` and its title unless a `title` is sent, so a rename survives the next save. `updated` is set by the server. A document over 4 MB is refused.
+- `PATCH /api/sessions/{id}` takes `{title}`. `DELETE /api/sessions/{id}` removes the file.
+- Errors are `{"error": "..."}`: 400 for a bad id, title or body, 404 for an unknown session, 409 when the file of a session you read or rename is damaged (a `PUT` replaces it), 500 when the file cannot be written. On a server started with `KB_READ_ONLY=1` every write is **405**; the two reads still work.
+
+The chat screen uses these when the `agent-mode` flag is on: it saves the chat after each finished turn, copies the chat its browser tab holds once on first load, and lists past chats in the session panel. With the flag off the chat stays in the browser tab, as before.
 
 ## Add an endpoint
 
