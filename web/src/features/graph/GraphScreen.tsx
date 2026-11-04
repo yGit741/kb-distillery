@@ -36,6 +36,7 @@ import { parseSchema } from "./schema";
 import { SideReader } from "./SideReader";
 import { useGraphUi } from "./store";
 import { Toolbar } from "./Toolbar";
+import { Corners } from "./shell/corners/Corners";
 import { parseKbs } from "@/lib/kbSelection";
 import { useFlag } from "@/flags/useFlag";
 import { relationIndex } from "./relationGroups";
@@ -194,6 +195,7 @@ function Loaded({
   dsKind: string;
 }) {
   const visibleTools = useVisibleTools();
+  const shell = useFlag("graph-shell");
   const ds = useDataSource();
   const ui = useGraphUi();
   const selection = useKb((s) => s.selection);
@@ -452,7 +454,7 @@ function Loaded({
       />
       {/* the search box lives in the app header when there is one (the embed has none: it floats over the canvas) */}
       {headerSlot ? createPortal(finder, headerSlot) : finder}
-      <ViewsBar model={model} visible={visible} onPick={applyView} />
+      {!shell && <ViewsBar model={model} visible={visible} onPick={applyView} />}
       {(ui.view || note) && (
         <div className={cn("pointer-events-auto absolute left-1/2 z-10 flex max-w-[min(28rem,calc(100%-8rem))] -translate-x-1/2 items-center gap-2 rounded-lg border bg-card px-2.5 py-1 text-xs shadow-[var(--shadow)]", headerSlot ? "top-14" : "top-24")} role="status">
           <span className="min-w-0 truncate">
@@ -477,7 +479,7 @@ function Loaded({
           </button>
         </div>
       )}
-      <Toolbar
+      {!shell && <Toolbar
         onFit={() => ui.fit()}
         onZoom={(f) => canvas.current?.zoomBy(f)}
         onReheat={() => canvas.current?.reheat()}
@@ -486,8 +488,12 @@ function Loaded({
         stats={stats}
         toolContext={toolContext}
         onBack={search.from === "home" ? () => (window.history.length > 1 ? window.history.back() : host.go("/")) : undefined}
-      />
-      {legend}
+      />}
+      {shell ? (
+        <Corners nodes={model.nodes} visible={visible} schema={schema} shownTypes={shownTypes} stats={stats} host={host} applyView={applyView} showPicked={showPicked} />
+      ) : (
+        legend
+      )}
       {ui.railOpen && <LabRail imp={imp} selected={selected} className={cn("absolute bottom-16 left-14 top-3 z-20", wide ? "w-72" : "w-[min(20rem,calc(100%-4.5rem))]")} />}
       {/* the hover card is the quick peek; the inspector and the reader are where a page is read, so it yields to them */}
       {!ui.railOpen && !showDetails && !reader && <HoverCard byId={byId} className="absolute bottom-16 left-14 z-20" />}

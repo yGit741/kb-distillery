@@ -86,7 +86,7 @@ class CodegenTests(unittest.TestCase):
             self.assertEqual(codegen.main([], root=root), 0)
             self.assertEqual(codegen.main(["--check"], root=root), 0)
             gen = (root / codegen.GEN_TS).read_text(encoding="utf-8")
-            self.assertIn('export type FlagName = "agent-mode" | "graph-relations" | "inbox-pickup" | "kb-view" | "parsed-pdf" | "research-tools" | "screen.lifecycle" | "screen.share" | "screen.start" | "screen.think" | "semantic-search" | "ui.system-flags-tab";', gen)
+            self.assertIn('export type FlagName = "agent-mode" | "graph-relations" | "graph-shell" | "inbox-pickup" | "kb-view" | "parsed-pdf" | "research-tools" | "screen.lifecycle" | "screen.share" | "screen.start" | "screen.think" | "semantic-search" | "ui.system-flags-tab";', gen)
             pub = (root / codegen.modules_path("public")).read_text(encoding="utf-8")
             priv = (root / codegen.modules_path("private")).read_text(encoding="utf-8")
             self.assertNotIn("lifecycle", pub)
