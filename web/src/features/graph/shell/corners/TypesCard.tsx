@@ -101,7 +101,7 @@ export function TypesCard({ concepts, sources, onToggle, onSpot }: Props) {
       data-corners="types"
       data-tour="graph-types"
       data-open={open}
-      className="pointer-events-none absolute bottom-[3.5px] left-1/2 z-[24] grid h-6 w-max max-w-[calc(100%-160px)] -translate-x-1/2 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center"
+      className="pointer-events-none absolute bottom-[3.5px] [.gt-active_&]:bottom-[76px] left-1/2 z-[24] grid h-6 w-max max-w-[calc(100%-160px)] -translate-x-1/2 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center"
       onMouseLeave={() => spot(null)}
     >
       {/* the one card behind both groups, symmetric around the fixed centre */}
