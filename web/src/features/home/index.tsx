@@ -2,7 +2,9 @@ import { useNavigate, useSearch } from "@tanstack/react-router";
 import type { SearchById } from "@/routes/search";
 import { useMemo } from "react";
 import { withDefaultView } from "@/features/graph/defaultView";
+import { useFlag } from "@/flags/useFlag";
 import { HomeScreen, type HomeHost } from "./HomeScreen";
+import { StartCard } from "./StartCard";
 
 const base = (import.meta.env.BASE_URL as string).replace(/\/$/, "");
 
@@ -21,6 +23,12 @@ export default function Home() {
     }),
     [navigate],
   );
-  const { concept } = useSearch({ strict: false }) as SearchById["home"];
-  return <HomeScreen host={host} concept={concept} />;
+  const { concept, start } = useSearch({ strict: false }) as SearchById["home"];
+  const startOn = useFlag("screen.start");
+  return (
+    <>
+      {startOn && <StartCard open={start === "1"} />}
+      <HomeScreen host={host} concept={concept} />
+    </>
+  );
 }
