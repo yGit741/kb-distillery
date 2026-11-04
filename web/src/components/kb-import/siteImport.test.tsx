@@ -73,11 +73,14 @@ describe("Add knowledge base on the site (inbox adapter)", () => {
 });
 
 describe("header entry in the private share build", () => {
-  it("a + button next to the title opens the dialog", async () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("a + button next to the title opens the dialog, for an owner whose inbox is set up", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ owner: true, inbox: true }), { status: 200 })));
     const ds: DataSource = { ...mockDataSource({ getShareStatus: async () => ({ status: null, chip: null }) }), kind: "embedded" };
     render(<App source={ds} router={createAppRouter(createMemoryHistory({ initialEntries: ["/"] }), "")} />);
     const header = await screen.findByRole("banner");
-    await userEvent.click(within(header).getByRole("button", { name: "Add knowledge base" }));
+    await userEvent.click(await within(header).findByRole("button", { name: "Add knowledge base" }));
     expect(await screen.findByRole("dialog", { name: "Add knowledge base" })).toBeInTheDocument();
   });
 });

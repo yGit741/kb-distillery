@@ -7,6 +7,19 @@ import type { DataSource } from "@/api";
 import type { RelationProposals } from "@/api/types";
 import { mockDataSource } from "@/test/datasource";
 import { groupBySubject, rangeToSearch, readRange } from "./logic";
+import { sampleSnapshot } from "@/features/graph/fixtures";
+import { useGraphUi } from "@/features/graph/store";
+
+// The old path now redirects into the graph's sheet; jsdom has no canvas, so force-graph is a chainable no-op.
+vi.mock("force-graph", () => {
+  const make = () => {
+    const proxy: unknown = new Proxy({}, { get: (_t, name: string) => (name === "_destructor" ? () => {} : () => proxy) });
+    return proxy;
+  };
+  return { default: () => () => make() };
+});
+beforeEach(() => useGraphUi.setState({ flyout: null }));
+
 
 const row = (from: string, to: string, kind: string, confidence: number, extra = {}) => ({
   from, from_title: from.toUpperCase(), to, to_title: to.toUpperCase(), kind, confidence,
@@ -17,6 +30,7 @@ const ALL = [row("a", "b", "uses", 0.95, { note: "a relies on b" }), row("a", "c
 function setup(over: Partial<DataSource> = {}, url = "/app/relations") {
   const calls: { min: number; max: number; kind?: string }[] = [];
   const ds = mockDataSource({
+    getGraph: async () => sampleSnapshot(),
     getRelationProposals: async (o) => {
       calls.push(o);
       const rows = ALL.filter((r) => r.confidence >= o.min && r.confidence <= o.max && (!o.kind || r.kind === o.kind));

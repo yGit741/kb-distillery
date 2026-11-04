@@ -71,6 +71,8 @@ export function createHttpDataSource(fetchImpl: Fetch = (...a) => fetch(...a), b
     listKbs: () => run(() => client.GET("/api/kb/list"), "/api/kb/list"),
     previewKbImport: (req) => postImport<T_.KbImportPreview>("/api/kb/import/validate", req),
     importKb: (req) => postImport<T_.KbImportResult>("/api/kb/import", req),
+    getKbInbox: () => run(() => client.GET("/api/kb/inbox"), "/api/kb/inbox"),
+    pullKbInbox: () => run(() => client.POST("/api/kb/inbox/pull"), "/api/kb/inbox/pull"),
     getOps: (refresh) =>
       run(() => client.GET("/api/ops", { params: { query: refresh ? { refresh: "1" } : {} } }), "/api/ops"),
 
