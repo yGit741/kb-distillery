@@ -54,7 +54,7 @@ describe("embedded DataSource", () => {
       () => ds.digestRaw("raw/x.pdf"), () => ds.listScopes(), () => ds.getScope("s"), () => ds.resolveScope({ nodes: [] } as never),
       () => ds.saveScope({} as never), () => ds.deleteScope("s"), () => ds.duplicateScope("s", {} as never),
       () => ds.getChatStatus(), () => ds.getChatSettings(), () => ds.updateChatSettings({} as never), () => ds.getChatPrompts(),
-      () => ds.getChatKeys(), () => ds.addChatKey({} as never), () => ds.removeChatKey("k"), () => ds.saveChat({} as never),
+      () => ds.getChatKeys(), () => ds.addChatKey({} as never), () => ds.removeChatKey("k"), () => ds.saveChat({} as never), () => ds.sendChatMessage({} as never),
       () => ds.chatStream({} as never), () => ds.listSessions(), () => ds.getSession("s"), () => ds.putSession("s", {} as never),
       () => ds.renameSession("s", "t"), () => ds.deleteSession("s"),
     ];

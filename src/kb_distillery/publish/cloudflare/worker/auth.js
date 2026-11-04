@@ -7,16 +7,19 @@
 //                     the session cookie `kb_session` = base64url(payload).sig (HMAC-SHA256 with
 //                     SESSION_SECRET, 7-day expiry) and 302 → `/`. Not allowlisted → 403, no cookie.
 //   /auth/logout    → clear the session cookie.
+//   /api/inbox/…    → inbox.js (upload inbox: validate, store in R2 as pending; the Mac imports; JSON 401/403).
 //   /admin/…        → admin.js (snapshot control panel API; JSON 401/403 instead of a redirect).
 //   anything else   → valid session → env.ASSETS.fetch(request); otherwise 302 → /auth/login for
 //                     HTML navigations, 401 for everything else.
 //
 // Bindings: env.ASSETS (static assets, run_worker_first), vars GOOGLE_CLIENT_ID, ALLOWED_EMAILS
-// (comma-separated), CF_ACCOUNT_ID, secrets GOOGLE_CLIENT_SECRET, SESSION_SECRET, CF_API_TOKEN (panel).
+// (comma-separated), CF_ACCOUNT_ID, secrets GOOGLE_CLIENT_SECRET, SESSION_SECRET, CF_API_TOKEN (panel),
+// INBOX_TOKEN (the Mac's inbox pickup), R2 bucket KB_INBOX (inbox.js).
 //
 // `handle(request, env, deps)` is exported for tests: deps = {fetch, now} default to the globals.
 
 import { handleAdmin, handleFlags } from "./admin.js";
+import { handleInbox } from "./inbox.js";
 
 const GOOGLE_AUTH = "https://accounts.google.com/o/oauth2/v2/auth";
 const GOOGLE_TOKEN = "https://oauth2.googleapis.com/token";
@@ -216,6 +219,7 @@ export async function handle(request, env, deps = {}) {
   const session = await verify(readCookie(request, SESSION_COOKIE), env.SESSION_SECRET, Math.floor(deps.now() / 1000));
   if (url.pathname === "/admin" || url.pathname.startsWith("/admin/")) return handleAdmin(request, env, deps, session);
   if (url.pathname === "/api/flags" || url.pathname.startsWith("/api/flags/")) return handleFlags(request, env, session);
+  if (url.pathname === "/api/inbox" || url.pathname.startsWith("/api/inbox/")) return handleInbox(request, env, deps, session);
   if (session) return env.ASSETS.fetch(request);
   if (wantsHtml(request)) return redirect("/auth/login");
   return new Response("unauthorized", { status: 401, headers: { "Content-Type": "text/plain" } });

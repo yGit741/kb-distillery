@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useDataSource } from "@/api";
+import { useFlag } from "@/flags/useFlag";
 import { readEvents } from "./sse";
 import { applyEvent, dropLastTurn, emptyChat, historyOf, type Chat } from "./thread";
+import { loadSessions, saveSessions, upsertSession, type SessionEntry } from "./sessions";
 import { readJson, writeJson } from "./storage";
 import { useServerSessions } from "./useServerSessions";
 
@@ -27,7 +29,9 @@ export function useChatSession() {
   const ds = useDataSource();
   const [chat, setChat] = useState<Chat>(load);
   const [busy, setBusy] = useState(false);
+  const agentMode = useFlag("agent-mode");
   const chatRef = useRef(chat);
+  const resumeRef = useRef<{ text: string; opts: SendOptions } | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const metaRef = useRef<{ model: string; backend: string } | null>(null);
 
@@ -39,6 +43,17 @@ export function useChatSession() {
   useEffect(() => {
     if (!busy) writeJson("session", KEY, chat);
   }, [chat, busy]);
+
+  // agent mode: finished chats with a session id stay resumable from the Session panel
+  const [sessions, setSessions] = useState<SessionEntry[]>(() => (agentMode ? loadSessions() : []));
+  useEffect(() => {
+    if (!agentMode || busy) return;
+    setSessions((cur) => {
+      const next = upsertSession(cur, chat);
+      if (next !== cur) saveSessions(next);
+      return next;
+    });
+  }, [agentMode, chat, busy]);
 
   useEffect(() => () => abortRef.current?.abort(), []);
 
@@ -53,6 +68,7 @@ export function useChatSession() {
       metaRef.current = { model: opts.model, backend: opts.backend };
       commit({
         ...base,
+        todo: undefined,
         messages: [...base.messages, { role: "user", content: question, sources: [] }, { role: "assistant", content: "" }],
       });
       const ctl = new AbortController();
@@ -114,17 +130,44 @@ export function useChatSession() {
         next = { ...next, messages: next.messages.map((m, i) => (i === last - 1 ? { ...m, failed: true } : m)) };
       }
       commit(next);
+      // a mid-turn message that could not be queued: the turn was stopped, now resume the session with it
+      const again = resumeRef.current;
+      resumeRef.current = null;
+      if (again) void run(chatRef.current, again.text, again.opts);
     },
     [ds, commit],
+  );
+
+  /** Agent mode, a message while the turn runs: queued into the live client; if that fails, stop + resume with it. */
+  const queueMidTurn = useCallback(
+    async (text: string, opts: SendOptions) => {
+      const session = chatRef.current.session;
+      if (session) {
+        try {
+          await ds.sendChatMessage({ session, text });
+          return;
+        } catch {
+          /* no live turn to take it: fall through */
+        }
+      }
+      if (!abortRef.current) return;
+      resumeRef.current = { text, opts };
+      abortRef.current.abort();
+    },
+    [ds],
   );
 
   const send = useCallback(
     (question: string, opts: SendOptions) => {
       const q = question.trim();
-      if (!q || abortRef.current) return;
+      if (!q) return;
+      if (abortRef.current) {
+        if (agentMode && opts.backend === "agent") void queueMidTurn(q, opts);
+        return;
+      }
       void run(chatRef.current, q, opts);
     },
-    [run],
+    [run, agentMode, queueMidTurn],
   );
 
   const regenerate = useCallback(
@@ -139,16 +182,27 @@ export function useChatSession() {
   const stop = useCallback(() => abortRef.current?.abort(), []);
 
   const reset = useCallback(() => {
+    resumeRef.current = null;
     abortRef.current?.abort();
     commit(emptyChat());
   }, [commit]);
+
+  /** Pick up a stored session: its words come back and the next message resumes it on the server. */
+  const resume = useCallback(
+    (entry: SessionEntry) => {
+      resumeRef.current = null;
+      abortRef.current?.abort();
+      commit({ id: entry.id, session: entry.session, messages: entry.messages });
+    },
+    [commit],
+  );
 
   /** A resumed agent session would carry the old scope's pages. */
   const forgetSession = useCallback(() => {
     if (chatRef.current.session) commit({ ...chatRef.current, session: null });
   }, [commit]);
 
-  return { chat, busy, send, regenerate, stop, reset, forgetSession };
+  return { chat, busy, send, regenerate, stop, reset, forgetSession, sessions, resume };
 }
 
 function patchLast(chat: Chat, f: (m: Chat["messages"][number]) => Chat["messages"][number]): Chat {

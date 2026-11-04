@@ -25,10 +25,11 @@ import tempfile
 import threading
 
 from kb_distillery.config.paths import vault_root
+from kb_distillery.vault import views as vault_views
 
 DEFAULT_ROOT = vault_root()
 READ_ONLY_ENV = "KB_READ_ONLY"
-LOCAL_DIR = ".local"
+LOCAL_DIR = vault_views.LOCAL_DIR
 SESSIONS_REL = f"{LOCAL_DIR}/sessions"
 MAX_ID = 64
 MAX_TITLE = 120
@@ -135,53 +136,16 @@ def _atomic_write(full, text):
         raise
 
 
-def _exclude_file(root):
-    """The repository's local exclude file for a kb checkout (None when the kb is not a repo or it cannot be found)."""
-    dot = os.path.join(root, ".git")
-    if os.path.isfile(dot):                                  # a linked worktree: ".git" is a pointer file
-        try:
-            with open(dot, encoding="utf-8") as f:
-                line = f.read().strip()
-        except OSError:
-            return None
-        if not line.startswith("gitdir:"):
-            return None
-        dot = os.path.normpath(os.path.join(root, line[len("gitdir:"):].strip()))
-        common = os.path.join(dot, "commondir")              # the shared info/ lives in the common dir
-        if os.path.isfile(common):
-            with contextlib.suppress(OSError), open(common, encoding="utf-8") as f:
-                dot = os.path.normpath(os.path.join(dot, f.read().strip()))
-    if not os.path.isdir(dot):
-        return None
-    return os.path.join(dot, "info", "exclude")
-
-
 def ensure_local_ignored(root):
-    """Keep `.local/` out of git: a `.gitignore` of `*` inside it, and `.local/` in the repository's local exclude file
-    when it is missing (untracked, per clone). Best effort."""
+    """Keep `.local/` out of version control: an ignore-all file inside it (so a kb that is not a repository of its own
+    never stages a chat), and the repository's local exclude file via the helper the recent-steps file uses. Best effort."""
     inner = os.path.join(root, LOCAL_DIR, ".gitignore")
     if not os.path.exists(inner):
         with contextlib.suppress(OSError):
             os.makedirs(os.path.dirname(inner), exist_ok=True)
             with open(inner, "w", encoding="utf-8") as f:
                 f.write("*\n")
-    exclude = _exclude_file(root)
-    if not exclude:
-        return
-    rule = f"{LOCAL_DIR}/"
-    try:
-        try:
-            with open(exclude, encoding="utf-8") as f:
-                text = f.read()
-        except FileNotFoundError:
-            text = ""
-        if rule in (line.strip() for line in text.splitlines()):
-            return
-        os.makedirs(os.path.dirname(exclude), exist_ok=True)
-        with open(exclude, "a", encoding="utf-8") as f:
-            f.write(("" if not text or text.endswith("\n") else "\n") + rule + "\n")
-    except OSError:
-        pass
+    vault_views.ensure_local_ignored(root)
 
 
 def _read(root, session_id):

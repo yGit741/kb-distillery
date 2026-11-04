@@ -1,4 +1,6 @@
-import { Boxes, MessageSquare, MousePointerSquareDashed, ShoppingBasket, TextSearch } from "lucide-react";
+import { Boxes, Layers, MessageSquare, MousePointerSquareDashed, ShoppingBasket, TextSearch, Waypoints } from "lucide-react";
+import { RelationsScreen } from "@/features/relations/RelationsScreen";
+import { ScopesScreen } from "@/features/scopes/ScopesScreen";
 import { ChatDock, ChatToolPanel } from "./ChatDock";
 import { CorpusDrawer } from "../CorpusDrawer";
 import { useLayer } from "../layerStore";
@@ -51,6 +53,12 @@ registerTool({
   panel: (ctx) => <RawPanel ctx={ctx} />,
   overlay: (ctx) => <CorpusDrawer ctx={ctx} />,
 });
+
+// Relation proposals and scopes are screens of the local app folded into the graph (a share build has neither)
+if (import.meta.env.MODE !== "share") {
+  registerTool({ id: "relations", label: "Relation proposals", icon: <Waypoints aria-hidden />, sheet: () => <RelationsScreen /> });
+  registerTool({ id: "scopes", label: "Scopes", icon: <Layers aria-hidden />, sheet: () => <ScopesScreen /> });
+}
 
 // read-only graph queries over the local API; a share build has no query endpoint
 if (import.meta.env.MODE !== "share") {
