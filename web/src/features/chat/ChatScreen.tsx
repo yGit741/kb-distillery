@@ -9,6 +9,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { ErrorState, Loading } from "@/components/states";
 import type { SearchById } from "@/routes/search";
 import { useRegisterAskHost } from "./askHost";
+import { ComposerLine } from "./ComposerLine";
 import { MessageList, Sources } from "./MessageList";
 import { PlanPanel } from "./PlanPanel";
 import { PromptPanel } from "./PromptPanel";
@@ -274,6 +275,17 @@ function ChatBody({ status: rawStatus, prompts: rawPrompts, scopes, initialScope
               </Button>
             )}
           </form>
+          {agentMode && effectiveBackend(view) === "agent" && (
+            <ComposerLine
+              account={view.authMode === "api_key" && view.keyLoaded ? "api" : "subscription"}
+              models={view.models}
+              model={model}
+              onModel={(id) => {
+                setModelPick(id);
+                writeJson("local", "kbchat.model", id);
+              }}
+            />
+          )}
         </div>
       </section>
       <aside
