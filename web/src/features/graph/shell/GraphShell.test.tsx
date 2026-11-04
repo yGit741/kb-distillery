@@ -114,12 +114,12 @@ describe("at rest", () => {
     expect(screen.getByText("Pinned views")).toBeInTheDocument();
   });
 
-  it("a pinned view records the request and says it is coming", async () => {
+  it("a pinned view records the request for the corner controls to open, with no notice", async () => {
     setup({ listViews: async () => ({ views: [{ id: "v1", name: "Learning theory", created: "2026-11-01", spec: {} }] }) });
     await userEvent.click(box());
     await userEvent.click(await screen.findByRole("option", { name: /learning theory/i }));
     expect(useShellStore.getState().pendingView?.id).toBe("v1");
-    expect(await screen.findByRole("status")).toHaveTextContent(/coming soon/i);
+    expect(useShellStore.getState().notice).toBeNull();
   });
 
   it("a recent command runs again", async () => {

@@ -368,7 +368,6 @@ export function GraphShell({ nodes, byId, colorBy, onFocus, onRead, onShowExact,
   }
   function runView(v: PinnedView) {
     useShellStore.getState().requestView(v);
-    useShellStore.getState().say("Opening a pinned view is coming soon.");
   }
 
   useEffect(() => setIdx(0), [raw]);

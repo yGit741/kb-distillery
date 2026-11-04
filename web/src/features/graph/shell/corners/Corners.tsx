@@ -21,6 +21,7 @@ import { useCorners, type Layer } from "./cornersStore";
 import { Fan, type FanCard } from "./Fan";
 import { BUTTON, EDGE, fanCapacity } from "./geometry";
 import { PinList } from "./PinList";
+import { useShellStore } from "../shellStore";
 import { browserSessions, newChat, resumeSession } from "./sessions";
 import { useShellTour } from "./shellTour";
 import { ThinkIcon } from "./ThinkIcon";
@@ -132,6 +133,14 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
       fail(e);
     }
   };
+  // a pinned view picked in the search panel opens the same way as one picked in the list
+  const pendingView = useShellStore((s) => s.pendingView);
+  useEffect(() => {
+    if (!pendingView) return;
+    useShellStore.getState().clearPendingView();
+    setActive(pendingView.id);
+    if (!applySpec(pendingView.spec, deps)) setNotice("Nothing in this view can be restored here");
+  }, [pendingView, deps, setActive]);
   const recognised = useCallback((spec: Record<string, unknown>) => ["story", "types", "depths", "colorBy", "sizeBy", "hiddenKeys", "quick", "pages"].some((k) => k in spec), []);
 
   // ---- fans
