@@ -76,7 +76,7 @@ describe("chat transcript (agent-mode on)", () => {
       s.push("tool", { name: "Grep", summary: "grep rank", id: "t1", status: "running" });
       s.push("tool", { name: "Grep", summary: "grep rank", id: "t1", status: "done", result: "3 hits" });
       s.push("todo", { items: [{ content: "Read pages", status: "in_progress" }, { content: "Answer", status: "pending" }] });
-      expect(await screen.findByTestId("todo-list")).toHaveTextContent("Todo · 0/2");
+      expect(await screen.findByTestId("plan-panel")).toHaveTextContent("0 of 2 done");
       expect(await screen.findByText("pondering")).toBeInTheDocument();
       expect(screen.getByText("3 hits")).toBeInTheDocument();
       s.push("delta", "Done.");
@@ -87,7 +87,7 @@ describe("chat transcript (agent-mode on)", () => {
       // every item still open: the list stays after the turn; a new turn starts a fresh one
       await user.type(await box(), "next{Enter}");
       await waitFor(() => expect(calls).toHaveLength(2));
-      expect(screen.queryByTestId("todo-list")).toBeNull();
+      expect(screen.queryByTestId("plan-panel")).toBeNull();
     }));
 
   it("a message sent while the turn runs is queued, not restarted; the echo opens the next pair", () =>

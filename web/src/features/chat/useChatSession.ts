@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useDataSource } from "@/api";
 import { useFlag } from "@/flags/useFlag";
+import { CAP_STEP, askCap, contextUsed, turnCost, useComposer } from "./composer";
 import { readEvents } from "./sse";
 import { applyEvent, clearAsk, dropLastTurn, emptyChat, historyOf, type Chat } from "./thread";
 import { loadSessions, saveSessions, upsertSession, type SessionEntry } from "./sessions";
+import { skillsRequest } from "./skillsSelection";
 import { readJson, writeJson } from "./storage";
 import { useServerSessions } from "./useServerSessions";
 
@@ -57,6 +59,14 @@ export function useChatSession() {
 
   useEffect(() => () => abortRef.current?.abort(), []);
 
+  // agent mode: the context ring follows the latest answer's usage
+  useEffect(() => {
+    if (!agentMode) return;
+    const last = [...chat.messages].reverse().find((m) => m.usage);
+    const used = contextUsed(last?.usage);
+    if (useComposer.getState().used !== used) useComposer.setState({ used });
+  }, [agentMode, chat.messages]);
+
   const open = useCallback((c: Chat) => {
     if (!abortRef.current) commit(c); // never swap the chat under a stream
   }, [commit]);
@@ -76,6 +86,10 @@ export function useChatSession() {
       setBusy(true);
       let usageSeen = false;
       let stopped = false;
+      // agent mode: the picks under the composer ride along; a turn that crosses its cap waits for Continue or Stop
+      const picks = agentMode ? useComposer.getState().prefs : null;
+      let limit = picks?.cap ?? 0;
+      let spent = 0;
       try {
         const res = await ds.chatStream(
           {
@@ -85,21 +99,34 @@ export function useChatSession() {
             backend: opts.backend,
             scope: opts.scope || undefined,
             session: base.session,
+            ...skillsRequest(base.id),
             system: opts.system,
             ...opts.auth,
+            ...(picks ? { effort: picks.effort, ...(opts.backend === "agent" && picks.billing ? { billing: picks.billing } : {}) } : {}),
           },
           ctl.signal,
         );
         if (!res.body) throw new Error("The server sent no stream.");
         await readEvents(
           res.body,
-          (events) => {
+          async (events) => {
             let next = chatRef.current;
+            let stopNow = false;
             for (const ev of events) {
-              if (ev.type === "usage") usageSeen = true;
+              if (ev.type === "usage") {
+                usageSeen = true;
+                spent += turnCost(ev.usage);
+              }
               next = applyEvent(next, ev);
+              if (ev.type === "usage" && limit > 0 && spent > limit && !stopNow) {
+                commit(next);
+                if ((await askCap({ spent, limit }, ctl.signal)) === "stop") stopNow = true; // the rest of this batch still lands
+                else limit = limit + CAP_STEP < spent ? spent + CAP_STEP : limit + CAP_STEP; // Continue: one more step (never a prompt per step)
+                next = chatRef.current;
+              }
             }
             commit(next);
+            if (stopNow) ctl.abort();
           },
           ctl.signal,
         );
@@ -135,7 +162,7 @@ export function useChatSession() {
       resumeRef.current = null;
       if (again) void run(chatRef.current, again.text, again.opts);
     },
-    [ds, commit],
+    [ds, commit, agentMode],
   );
 
   /** Agent mode, a message while the turn runs: queued into the live client; if that fails, stop + resume with it. */

@@ -6,6 +6,9 @@ interface UiState {
   /** Quick-capture dialog (think inbox), reachable from any screen via ⌘K or ⌘⇧Space. */
   captureOpen: boolean;
   setCaptureOpen: (open: boolean) => void;
+  /** Cmd-J quick ask (flag `agent-mode`). */
+  askOpen: boolean;
+  setAskOpen: (open: boolean) => void;
 }
 
 export const useUi = create<UiState>((set) => ({
@@ -13,4 +16,6 @@ export const useUi = create<UiState>((set) => ({
   setPaletteOpen: (paletteOpen) => set({ paletteOpen }),
   captureOpen: false,
   setCaptureOpen: (captureOpen) => set({ captureOpen }),
+  askOpen: false,
+  setAskOpen: (askOpen) => set({ askOpen }),
 }));

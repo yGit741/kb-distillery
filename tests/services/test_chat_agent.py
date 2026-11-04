@@ -538,6 +538,15 @@ class TestRunnerWiring(SDKCase):
         self.assertEqual(FakeClient.instances[0].options.env["ANTHROPIC_API_KEY"], "")
         self.assertEqual(dict(events)["usage"]["billing"], "subscription")
 
+    def test_batch_billing_queues_one_request_and_never_starts_the_sdk(self):
+        FakeClient.script = staticmethod(lambda o: [result()])
+        with mock.patch("kb_distillery.llm.submit", return_value="bid9") as submit:
+            events = self.run_stream(key="sk-test", billing="batch")
+        self.assertEqual(submit.call_count, 1)
+        self.assertEqual(FakeClient.instances, [])
+        self.assertIn("bid9", dict(events)["notice"]["text"])
+        self.assertEqual(events[-1][0], "done")
+
     def test_policy_groups_deny_web_skills_and_unknown(self):
         for tool in ("WebSearch", "WebFetch", "Skill", "Task", "Agent", "Write"):
             self.assertFalse(chat_agent.tool_policy(tool, {}).allow, tool)

@@ -23,8 +23,12 @@ class ChatRequest(ApiModel):
     # agent_mode flag only (ignored while it is off)
     effort: Optional[Literal["low", "medium", "high", "xhigh", "max"]] = None
     budget: Optional[float] = None
+    # agent_mode flag, agent backend: which kb_distillery.llm backend pays for the turn (overrides auth_mode)
+    billing: Optional[Literal["subscription", "api", "batch"]] = None
     attachments: Optional[list[str]] = None          # attachment ids (POST /api/chat/attachments)
     attachment_session: Optional[str] = None         # the session the attachments were uploaded under
+    skills: Optional[list[str]] = None               # this chat's subset of the kb's skill whitelist
+    skills_session: Optional[str] = None             # the chat's stored id: with no `skills`, its saved subset applies (else all)
 
 
 class AttachmentInfo(ApiModel):

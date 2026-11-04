@@ -171,6 +171,10 @@ export function createHttpDataSource(fetchImpl: Fetch = (...a) => fetch(...a), b
       run(() => client.PATCH("/api/sessions/{session_id}", { params: { path: { session_id: id } }, body: { title } }), `/api/sessions/${id}`),
     deleteSession: (id) =>
       run(() => client.DELETE("/api/sessions/{session_id}", { params: { path: { session_id: id } } }), `/api/sessions/${id}`),
+    listChatSkills: (session) =>
+      run(() => client.GET("/api/chat/skills", { params: { query: session ? { session } : {} } }), "/api/chat/skills"),
+    putChatSkills: (id, body) =>
+      run(() => client.PUT("/api/chat/skills/{session_id}", { params: { path: { session_id: id } }, body }), `/api/chat/skills/${id}`),
     saveChat: (body) => run(() => client.POST("/api/chat/saved", { body }), "/api/chat/saved"),
     answerChat: (body) => run(() => client.POST("/api/chat/answer", { body }), "/api/chat/answer"),
     sendChatMessage: (body) => run(() => client.POST("/api/chat/message", { body }), "/api/chat/message"),
