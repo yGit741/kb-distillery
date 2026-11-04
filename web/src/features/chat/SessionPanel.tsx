@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Field, Select } from "./fields";
+import { PastChats } from "./PastChats";
 import { fmtUsd } from "./format";
 import { ago, type SessionEntry } from "./sessions";
 import { authPayload, authValue, backendLabel, type StatusView } from "./status";
@@ -171,6 +172,8 @@ export function SessionPanel({ status, scopes, model, onModel, scope, onScope, s
           ))}
         </Select>
       </Field>
+
+      <PastChats />
     </div>
   );
 }

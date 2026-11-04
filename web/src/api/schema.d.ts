@@ -843,6 +843,43 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Saved chat sessions, newest first */
+        get: operations["list_sessions_api_sessions_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/sessions/{session_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One saved chat session */
+        get: operations["get_session_api_sessions__session_id__get"];
+        /** Create or replace a chat session */
+        put: operations["put_session_api_sessions__session_id__put"];
+        post?: never;
+        /** Delete a chat session */
+        delete: operations["delete_session_api_sessions__session_id__delete"];
+        options?: never;
+        head?: never;
+        /** Rename a chat session */
+        patch: operations["rename_session_api_sessions__session_id__patch"];
+        trace?: never;
+    };
     "/api/share/status": {
         parameters: {
             query?: never;
@@ -3022,6 +3059,130 @@ export interface components {
             related?: components["schemas"]["SearchHit"][] | null;
             /** Total */
             total: number;
+        } & {
+            [key: string]: unknown;
+        };
+        /** SessionDeleted */
+        SessionDeleted: {
+            /** Id */
+            id: string;
+            /** Ok */
+            ok: boolean;
+        } & {
+            [key: string]: unknown;
+        };
+        /** SessionDoc */
+        SessionDoc: {
+            /** Backend */
+            backend?: string | null;
+            /** Created */
+            created: string;
+            /** Effort */
+            effort?: string | null;
+            /** Id */
+            id: string;
+            /** Messages */
+            messages: {
+                [key: string]: unknown;
+            }[];
+            /** Model */
+            model?: string | null;
+            /** Title */
+            title: string;
+            /** Updated */
+            updated: string;
+            usage: components["schemas"]["SessionUsage"];
+        } & {
+            [key: string]: unknown;
+        };
+        /** SessionList */
+        SessionList: {
+            /** Sessions */
+            sessions: components["schemas"]["SessionSummary"][];
+        } & {
+            [key: string]: unknown;
+        };
+        /** SessionPutRequest */
+        SessionPutRequest: {
+            /** Backend */
+            backend?: string | null;
+            /**
+             * Created
+             * @description ISO-8601 time of a new session (a migrated chat keeps its own); ignored when the session exists
+             */
+            created?: string | null;
+            /** Effort */
+            effort?: string | null;
+            /**
+             * Messages
+             * @description the whole conversation
+             */
+            messages: {
+                [key: string]: unknown;
+            }[];
+            /** Model */
+            model?: string | null;
+            /**
+             * Title
+             * @description omit to keep the stored title (a new session takes its first question)
+             */
+            title?: string | null;
+        } & {
+            [key: string]: unknown;
+        };
+        /** SessionRenameRequest */
+        SessionRenameRequest: {
+            /** Title */
+            title: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** SessionSummary */
+        SessionSummary: {
+            /** Backend */
+            backend?: string | null;
+            /**
+             * Cost Usd
+             * @default 0
+             */
+            cost_usd: number;
+            /** Created */
+            created: string;
+            /** Effort */
+            effort?: string | null;
+            /** Id */
+            id: string;
+            /** Model */
+            model?: string | null;
+            /**
+             * Preview
+             * @default
+             */
+            preview: string;
+            /** Title */
+            title: string;
+            /**
+             * Turns
+             * @default 0
+             */
+            turns: number;
+            /** Updated */
+            updated: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** SessionUsage */
+        SessionUsage: {
+            /**
+             * Cost Usd
+             * @default 0
+             */
+            cost_usd: number;
+            /**
+             * Turns
+             * @default 0
+             */
+            turns: number;
         } & {
             [key: string]: unknown;
         };
@@ -5354,6 +5515,158 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SearchResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_sessions_api_sessions_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SessionList"];
+                };
+            };
+        };
+    };
+    get_session_api_sessions__session_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SessionDoc"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_session_api_sessions__session_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SessionPutRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SessionDoc"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_session_api_sessions__session_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SessionDeleted"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    rename_session_api_sessions__session_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SessionRenameRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SessionDoc"];
                 };
             };
             /** @description Validation Error */
