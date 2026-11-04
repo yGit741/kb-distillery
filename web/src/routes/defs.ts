@@ -18,7 +18,7 @@ export interface RouteDef {
   /** A runtime flag: the route is in the build, but only offered (palette) and shown (screen) while it is on. */
   runtimeFlag?: FlagName;
   /** Folded into a tab of another screen: where that screen exists the path redirects there and the palette skips it. */
-  movedTo?: { id: string; tab: string };
+  movedTo?: { id: string; search: Record<string, string> };
 }
 
 const ALL_ROUTE_DEFS: readonly RouteDef[] = [
@@ -27,13 +27,13 @@ const ALL_ROUTE_DEFS: readonly RouteDef[] = [
   { id: "system", path: "/system", label: "System", blurb: "Status, open work, timeline, pipeline, history and health.", nav: true },
   { id: "pages", path: "/pages", label: "Pages", blurb: "Read, search and trace notes (the Explore tab).", extraPaths: ["/pages/$slug"] },
   { id: "chat", path: "/chat", label: "Chat", blurb: "Read-only research agent over the wiki.", nav: true },
-  { id: "relations", path: "/relations", label: "Relations", blurb: "Review the LLM relation proposals by confidence." },
-  { id: "scopes", path: "/scopes", label: "Scopes", blurb: "Named subsets of the vault for focused work." },
-  { id: "pipeline", path: "/pipeline", label: "Pipeline", blurb: "Ingest and digestion status of every raw file.", movedTo: { id: "system", tab: "pipeline" } },
-  { id: "lifecycle", path: "/lifecycle", label: "Lifecycle", blurb: "Versions, history, snapshots and working state.", flag: "screen.lifecycle", movedTo: { id: "system", tab: "history" } },
+  { id: "relations", path: "/relations", label: "Relations", blurb: "Review the LLM relation proposals by confidence.", movedTo: { id: "graph", search: { tool: "relations" } } },
+  { id: "scopes", path: "/scopes", label: "Scopes", blurb: "Named subsets of the vault for focused work.", movedTo: { id: "graph", search: { tool: "scopes" } } },
+  { id: "pipeline", path: "/pipeline", label: "Pipeline", blurb: "Ingest and digestion status of every raw file.", movedTo: { id: "system", search: { tab: "pipeline" } } },
+  { id: "lifecycle", path: "/lifecycle", label: "Lifecycle", blurb: "Versions, history, snapshots and working state.", flag: "screen.lifecycle", movedTo: { id: "system", search: { tab: "history" } } },
   { id: "share", path: "/share", label: "Share", blurb: "Public snapshots of the private site.", flag: "screen.share", nav: true },
   { id: "think", path: "/think", label: "Think", blurb: "Your own slow notes: edit, and capture quick thoughts.", flag: "screen.think", nav: true },
-  { id: "start", path: "/start", label: "Start", blurb: "How to add and edit knowledge, and how to build a feature.", flag: "screen.start" },
+  { id: "start", path: "/start", label: "Start", blurb: "How to add and edit knowledge, and how to build a feature.", flag: "screen.start", movedTo: { id: "home", search: { start: "1" } } },
   { id: "covector", path: "/covector", label: "Covector", blurb: "Interactive picture of a covector acting on a vector.", runtimeFlag: "research-tools" },
   // A route whose flag is off in this env is dropped here (screen.share: private site only).
 ];

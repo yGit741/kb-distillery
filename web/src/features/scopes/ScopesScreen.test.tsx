@@ -8,6 +8,19 @@ import type { ScopeDetail } from "@/api/types";
 import { useKb } from "@/lib/store";
 import { mockDataSource } from "@/test/datasource";
 import { DRAFTS_KEY } from "./logic";
+import { sampleSnapshot } from "@/features/graph/fixtures";
+import { useGraphUi } from "@/features/graph/store";
+
+// The old path now redirects into the graph's sheet; jsdom has no canvas, so force-graph is a chainable no-op.
+vi.mock("force-graph", () => {
+  const make = () => {
+    const proxy: unknown = new Proxy({}, { get: (_t, name: string) => (name === "_destructor" ? () => {} : () => proxy) });
+    return proxy;
+  };
+  return { default: () => () => make() };
+});
+beforeEach(() => useGraphUi.setState({ flyout: null }));
+
 
 const rows: ScopeDetail["rows"] = [
   { path: "raw/printed-docs/2020-a.pdf", format: "printed-docs", disposition: "digested", slug: "paper-a", digestion: "full", collection: ["course-rl"], page_type: "paper", year: 2020 },
@@ -21,6 +34,7 @@ const summary = { slug: "scope-one", title: "Scope one", maturity: "active", fil
 
 function setup(over: Partial<DataSource> = {}, url = "/app/scopes") {
   const ds = mockDataSource({
+    getGraph: async () => sampleSnapshot(),
     listScopes: async () => ({ scopes: [summary] }),
     getScope: async () => detail,
     getShareStatus: async () => ({ status: null, chip: null }),
