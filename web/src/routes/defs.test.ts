@@ -13,7 +13,7 @@ describe("route defs consult flags", () => {
 });
 
 describe("the ported legacy pages", () => {
-  it("Start (screen.start) and Covector (runtime research-tools) are reached from the palette rather than the top bar", () => {
+  it("Start (screen.start) and Covector (runtime research-tools) are not in the top bar", () => {
     for (const [id, path, screenFlag] of [["start", "/start", "screen.start"], ["covector", "/covector", undefined]] as const) {
       const d = ROUTE_DEFS.find((r) => r.id === id);
       expect(d, id).toBeDefined();
