@@ -284,6 +284,43 @@ describe("flag graph-shell on: free-text shaping", () => {
     });
   });
 
+  it("undo drops an answer still on its way", async () => {
+    await withFlag("graph-shell", true, async () => {
+      let release: (r: ShapeResult) => void = () => {};
+      let n = 0;
+      mount({ shapeGraph: () => (n++ === 0 ? Promise.resolve(answer({ rows: [["idea-margin"]], row_count: 1 })) : new Promise<ShapeResult>((r) => (release = r))) });
+      await shapeWith("MATCH (a) RETURN a.slug");
+      await waitFor(() => expect(hits()).toEqual(["idea-margin"]));
+      await waitFor(() => expect(screen.queryByRole("listbox")).not.toBeInTheDocument());
+      await shapeWith("MATCH (b) RETURN b.slug");
+      expect(await screen.findByTestId("shape-busy")).toBeInTheDocument();
+      await userEvent.keyboard("{Escape}");
+      await userEvent.keyboard("{Meta>}z{/Meta}");
+      expect(useGraphUi.getState().view).toBeNull();
+      release(answer({ rows: [["jane-doe"]], row_count: 1 }));
+      await new Promise((r) => setTimeout(r, 30));
+      expect(useGraphUi.getState().view).toBeNull();
+    });
+  });
+
+  it("a shape that cannot be drawn says so instead of failing silently", async () => {
+    await withFlag("graph-shell", true, async () => {
+      mount({ shapeGraph: async () => ({ ...answer(), style: null as never }) });
+      await shapeWith("MATCH (a) RETURN a.slug");
+      expect(await screen.findByTestId("shape-error")).toHaveTextContent(/could not draw/i);
+      expect(useGraphUi.getState().view).toBeNull();
+    });
+  });
+
+  it("a headline view and Reset filters bring hidden link kinds back", async () => {
+    useGraphUi.setState({ hiddenLinkKinds: new Set(["wikilink"]) });
+    useGraphUi.getState().resetFilters();
+    expect(useGraphUi.getState().hiddenLinkKinds.size).toBe(0);
+    useGraphUi.setState({ hiddenLinkKinds: new Set(["wikilink"]) });
+    useGraphUi.getState().applyStory("map");
+    expect(useGraphUi.getState().hiddenLinkKinds.size).toBe(0);
+  });
+
   it("the pill goes when the shape is no longer what is drawn", async () => {
     await withFlag("graph-shell", true, async () => {
       mount({ shapeGraph: async () => answer({ style_text: "colour by areas", style: { ...noStyle, colour_by: { by: "prop", name: "areas" } } }) });

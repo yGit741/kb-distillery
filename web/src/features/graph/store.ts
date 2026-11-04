@@ -220,7 +220,7 @@ export const useGraphUi = create<GraphUiState>((set, get) => ({
   requestFocus: (id, zoom = true) => set({ focusRequest: { id, zoom } }),
   fit: () => set((s) => ({ fitTick: s.fitTick + 1 })),
   openFlyout: (f) => set((s) => ({ flyout: s.flyout === f ? null : f })),
-  resetFilters: () => set({ shownTypes: undefined, shownDepths: null, search: "", rules: [], view: null, revealed: new Set(), predicate: null, story: "" }),
+  resetFilters: () => set({ shownTypes: undefined, shownDepths: null, search: "", rules: [], view: null, revealed: new Set(), predicate: null, story: "", hiddenLinkKinds: new Set() }),
   setLab: (patch) => set((s) => ({ lab: { ...s.lab, ...patch }, story: "" })),
   applyStory: (id) => {
     const st = storyById(id);
@@ -237,6 +237,7 @@ export const useGraphUi = create<GraphUiState>((set, get) => ({
       // a story is a whole view: a search, picked pages, a scope or a colour-key filter from before would fight it
       view: null,
       hiddenKeys: new Set(),
+      hiddenLinkKinds: new Set(),
       quick: QUICK_OFF,
       revealed: new Set(),
     });

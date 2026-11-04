@@ -863,9 +863,9 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
     if (live.current.ui.hiddenLinkKinds.has(l.kind)) return withAlpha(colors.link, 0);
     return withAlpha(colors.link, fade * fadedLinkOpacity(a, b, focus, prevFocus, fadeT, live.current.ui.linkOpacity, l.kind));
   }, []);
-  const linkWidth = useCallback((l: SimLink) => (live.current.ui.hiddenLinkKinds.has(l.kind) ? 0 : l.kind === "shared" ? 0.35 + Math.min(l.shared ?? 1, 6) * 0.1 : 0.8), []);
+  const linkWidth = useCallback((l: SimLink) => (l.kind === "shared" ? 0.35 + Math.min(l.shared ?? 1, 6) * 0.1 : 0.8), []);
   const linkLabel = useCallback(
-    (l: SimLink) => (l.kind === "shared" ? `${l.shared} shared source${l.shared === 1 ? "" : "s"}` : ""),
+    (l: SimLink) => (l.kind === "shared" && !live.current.ui.hiddenLinkKinds.has(l.kind) ? `${l.shared} shared source${l.shared === 1 ? "" : "s"}` : ""),
     [],
   );
 

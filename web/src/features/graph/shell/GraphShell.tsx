@@ -10,10 +10,10 @@ import {
   MessageSquare,
   Network,
   Pin,
-  Undo2,
   RefreshCw,
   Search,
   SlidersHorizontal,
+  Undo2,
   Wand2,
   Wind,
   ZoomIn,
@@ -373,7 +373,9 @@ export function GraphShell({ nodes, byId, colorBy, onFocus, onRead, onShowExact,
 
   useEffect(() => setIdx(0), [raw]);
   // an error belongs to the text it answered: editing the text retires it
-  useEffect(() => useShellStore.getState().setShapeError(null), [raw]);
+  useEffect(() => {
+    useShellStore.getState().setShapeError(null);
+  }, [raw]);
   useEffect(() => setIdx((i) => Math.min(i, Math.max(rows.length - 1, 0))), [rows.length]);
 
   const onKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {

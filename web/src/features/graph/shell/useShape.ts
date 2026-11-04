@@ -62,6 +62,7 @@ export function useShape(opts: Options): { undo: () => boolean } {
         const next = dropTypes(view, hidden, byId);
         useGraphUi.setState({ view: next });
         if (next) useKb.getState().setSelection(next.hits);
+        else useKb.getState().clearSelection();
       }
     }
     if (ids || plan.patch.layoutMode || hidden.size) useGraphUi.getState().fit();
@@ -85,7 +86,11 @@ export function useShape(opts: Options): { undo: () => boolean } {
       (res) => {
         if (run.current !== mine) return;
         useShellStore.getState().setShaping(false);
-        apply(text, res);
+        try {
+          apply(text, res);
+        } catch (e) {
+          useShellStore.getState().setShapeError(`Could not draw that shape: ${asText(e)}`);
+        }
       },
       (e: unknown) => {
         if (run.current !== mine) return;
@@ -99,7 +104,11 @@ export function useShape(opts: Options): { undo: () => boolean } {
   useEffect(
     () => () => {
       run.current++;
-      useShellStore.getState().setShaping(false);
+      // the undo and the pill belong to the graph on screen: another graph must not be restored into
+      const s = useShellStore.getState();
+      s.setShaping(false);
+      s.clearShape();
+      s.setShapeError(null);
     },
     [],
   );
@@ -107,6 +116,9 @@ export function useShape(opts: Options): { undo: () => boolean } {
   const undo = useCallback(() => {
     const store = useShellStore.getState();
     if (!store.undo) return false;
+    // an answer still on its way would draw over what the person just took back
+    run.current++;
+    store.setShaping(false);
     restore(store.undo);
     store.clearShape();
     store.setShapeError(null);

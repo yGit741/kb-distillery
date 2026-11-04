@@ -153,7 +153,7 @@ export function createHttpDataSource(fetchImpl: Fetch = (...a) => fetch(...a), b
     getThinkNote: (name) => run(() => client.GET("/api/think/{name}", { params: { path: { name } } }), `/api/think/${name}`),
     saveThinkNote: (name, body) =>
       run(() => client.PUT("/api/think/{name}", { params: { path: { name } }, body }), `/api/think/${name}`),
-    captureThink: (text) => run(() => client.POST("/api/think/capture", { body: { text, limit: 500 } }), "/api/think/capture"),
+    captureThink: (text) => run(() => client.POST("/api/think/capture", { body: { text } }), "/api/think/capture"),
 
     getChatStatus: () => run(() => client.GET("/api/chat/status"), "/api/chat/status"),
     getChatSettings: () => run(() => client.GET("/api/chat/settings"), "/api/chat/settings"),

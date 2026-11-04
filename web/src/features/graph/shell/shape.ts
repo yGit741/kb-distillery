@@ -107,6 +107,7 @@ export function planStyle(style: StyleSpec, nodes: Iterable<Pick<GNode, "type" |
   if (style.group_by) {
     const g = style.group_by;
     // the anchored layout gathers pages by their area: the one grouping the graph has
+    // (radial maps to the same layout: the anchored one puts topics on a ring)
     if (g.by === "prop" && g.name === "areas") patch.layoutMode = "anchored";
     else skipped.push(`group by ${propName(g)} (only areas gather pages)`);
   }
