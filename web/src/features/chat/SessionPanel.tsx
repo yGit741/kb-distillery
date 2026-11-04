@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Field, Select } from "./fields";
 import { fmtUsd } from "./format";
+import { ago, type SessionEntry } from "./sessions";
 import { authPayload, authValue, backendLabel, type StatusView } from "./status";
 
 export const STATUS_KEY = ["chat", "status"] as const;
@@ -17,6 +18,10 @@ interface Props {
   onModel: (id: string) => void;
   scope: string;
   onScope: (slug: string) => void;
+  /** agent mode: stored sessions that can be resumed (omitted = no list) */
+  sessions?: SessionEntry[];
+  activeId?: string;
+  onResume?: (entry: SessionEntry) => void;
 }
 
 function Message({ error, ok }: { error?: Error | null; ok?: string }) {
@@ -24,7 +29,7 @@ function Message({ error, ok }: { error?: Error | null; ok?: string }) {
   return ok ? <p role="status" className="text-xs text-ok">{ok}</p> : null;
 }
 
-export function SessionPanel({ status, scopes, model, onModel, scope, onScope }: Props) {
+export function SessionPanel({ status, scopes, model, onModel, scope, onScope, sessions, activeId, onResume }: Props) {
   const ds = useDataSource();
   const qc = useQueryClient();
   const accept = (st: ChatStatus) => qc.setQueryData(STATUS_KEY, st);
@@ -137,6 +142,8 @@ export function SessionPanel({ status, scopes, model, onModel, scope, onScope }:
         </Select>
       </Field>
 
+      {sessions && onResume && <RecentSessions sessions={sessions} activeId={activeId} onResume={onResume} />}
+
       <Field label="Model">
         <Select value={model} onChange={(e) => onModel(e.target.value)} aria-label="Model">
           {status.models.map((m) => (
@@ -164,6 +171,33 @@ export function SessionPanel({ status, scopes, model, onModel, scope, onScope }:
           ))}
         </Select>
       </Field>
+    </div>
+  );
+}
+
+function RecentSessions({ sessions, activeId, onResume }: { sessions: SessionEntry[]; activeId?: string; onResume: (e: SessionEntry) => void }) {
+  return (
+    <div className="flex flex-col gap-1" aria-label="Recent sessions" role="group">
+      <p className="text-xs font-medium">Recent sessions</p>
+      {sessions.length === 0 ? (
+        <p className="text-xs text-muted-foreground">Finished agent chats show up here and can be resumed.</p>
+      ) : (
+        <ul className="flex flex-col">
+          {sessions.map((s) => (
+            <li key={s.id}>
+              <button
+                type="button"
+                onClick={() => onResume(s)}
+                aria-current={s.id === activeId ? "true" : undefined}
+                className="flex w-full flex-col rounded-md px-2 py-1 text-left hover:bg-accent aria-[current=true]:bg-accent"
+              >
+                <span className="truncate text-sm">{s.title}</span>
+                <span className="text-xs text-muted-foreground">{ago(s.last)}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }

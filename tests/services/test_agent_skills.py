@@ -119,7 +119,7 @@ def test_flag_on_request_carries_skills_plugin_and_subagent(monkeypatch, tmp_pat
 def test_flag_on_with_empty_whitelist_adds_nothing(monkeypatch):
     with_kb(monkeypatch, {"skills": []})
     req = chat_agent.agent_request("q", "sonnet", "SYS")
-    assert req.tools == tuple(chat_agent.TOOLS) and not req.skills and not req.plugins and not req.agents
+    assert req.tools == tuple(chat_agent.TOOLS) + ("TodoWrite",) and not req.skills and not req.plugins and not req.agents
 
 
 def test_plugin_dir_is_content_addressed_and_idempotent(tmp_path):
