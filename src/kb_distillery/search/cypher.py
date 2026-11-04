@@ -4,7 +4,8 @@
   python3 -m kb_distillery.search.cypher run 'MATCH (p:Source)-[:MENTIONS]->(i:Idea) RETURN p.slug, i.slug' [--limit N]
   python3 -m kb_distillery.search.cypher named gaps [--param min_shared=3] [--limit N]
   python3 -m kb_distillery.search.cypher list                     # the named queries and their params
-  add --json for the raw table
+  python3 -m kb_distillery.search.cypher shape 'papers that mention attention; colour by type' [--backend api]
+  add --json for the raw table; `shape` always prints JSON (Cypher + style clause; the LLM only for free text)
 
 Strings in a query take double quotes. Supported: labels (:Paper, :Idea, :Source, :Concept …), typed edges
 (:MENTIONS, :BOOK, :SHARES_SOURCE), [:A|B], WHERE filters, [*1..3], COUNT/ORDER BY/LIMIT, DISTINCT,
@@ -46,6 +47,10 @@ def main(argv=None):
     n.add_argument("name")
     n.add_argument("--param", action="append", default=[], metavar="KEY=VALUE")
     sub.add_parser("list", help="list named queries")
+    sh = sub.add_parser("shape", help="free text -> {cypher, style, rows} (LLM through kb_distillery.llm)")
+    sh.add_argument("text")
+    sh.add_argument("--limit", type=int, default=cypher.MAX_ROWS)
+    sh.add_argument("--backend", choices=("subscription", "api", "batch"), help="default $KB_LLM_BACKEND")
     for p in (r, n):
         p.add_argument("--limit", type=int, default=cypher.MAX_ROWS)
         p.add_argument("--json", action="store_true")
@@ -53,6 +58,16 @@ def main(argv=None):
     if a.cmd == "list":
         for q in cypher.named_list():
             print(f"{q['name']}\t{' '.join(q['params']) or '-'}\t{q['description']}")
+        return 0
+    if a.cmd == "shape":
+        from kb_distillery.graph import shape_translate
+        from kb_distillery.graph.shape import ShapeError
+        try:
+            out = shape_translate.shape(a.text, limit=a.limit, backend=a.backend)
+        except ShapeError as e:
+            print(f"error: {e}", file=sys.stderr)
+            return 2
+        print(json.dumps(out, ensure_ascii=False, indent=1))
         return 0
     try:
         if a.cmd == "run":
