@@ -117,7 +117,7 @@ export function ScopesScreen() {
       dirty.current = false;
       setCreating(nowCreating);
       setNotice(msg);
-      void navigate({ to: "/scopes" as string, search: to as never });
+      void navigate({ to: "." as string, search: to as never });
     };
     if (dirty.current && !force) setPending(() => run);
     else run();
@@ -134,7 +134,7 @@ export function ScopesScreen() {
     body = (
       <Opened key={search.scope} slug={search.scope} draftKey="" notice={notice} onDirty={onDirty}
         onSaved={(s, wasNew, m) => { if (wasNew) go({ scope: s }, false, m, true); }}
-        onDeleted={(s) => { dirty.current = false; setNotice(`Deleted ${s}.`); void navigate({ to: "/scopes" as string, search: {} as never }); }}
+        onDeleted={(s) => { dirty.current = false; setNotice(`Deleted ${s}.`); void navigate({ to: "." as string, search: {} as never }); }}
         onDuplicated={(s) => go({ scope: s }, false, `Duplicated as ${s}.`, true)} />
     );
   } else if (draft && !draft.isNew) {

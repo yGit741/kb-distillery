@@ -237,8 +237,8 @@ async function prune(env, deps) {
   return json(200, plan);
 }
 
-// The owner gate shared by the panel and flag PUTs; returns a refusal Response or null.
-function ownerGate(request, env, session) {
+// The owner gate shared by the panel, flag PUTs and the inbox; returns a refusal Response or null.
+export function ownerGate(request, env, session) {
   const url = new URL(request.url);
   if (!session) return json(401, { error: "sign in first" });
   const admins = emails(env.ADMIN_EMAILS || env.ALLOWED_EMAILS);

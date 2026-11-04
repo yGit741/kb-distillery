@@ -334,6 +334,11 @@ function Loaded({
     if (search.focus && byId.has(search.focus) && !(search.from === "home" && search.pages)) useGraphUi.getState().requestFocus(search.focus);
   }, [search, ds, dsKind, byId, neighbors, showMentions, showPicked, setView, applyView]);
 
+  // ?tool=<id> opens that tool once (links into the folded Relations and Scopes screens land here)
+  useEffect(() => {
+    if (search.tool) useGraphUi.setState({ flyout: search.tool, railOpen: false });
+  }, [search.tool]);
+
   // ---- actions shared by the menu, the inspector, the finder and the keyboard
   const openReader = useCallback((id: string) => useGraphUi.setState({ readerSlug: id }), []);
   const focus = useCallback((id: string, zoom = true) => useGraphUi.getState().requestFocus(id, zoom), []);

@@ -14,6 +14,10 @@ SSE event contract shared with static/chat.js (names → JSON data):
 
     session  {"id": str}                      first thing, and again after the result (resume key)
     tool     {"name", "summary", "id", "error"?}   one per tool call ("read tensor-rank", "grep …")
+             agent mode adds "status" (running|done|error) and "result" (first ~300 chars)
+    thinking str                              agent mode: streamed thinking text
+    todo     {"items": [{content, status}]}   agent mode: the TodoWrite list (replaces the previous one)
+    user     {"text": str}                    agent mode: a message queued into the running turn was accepted
     sources  {"hits": [{slug, score, summary, in_context}], "new": [slug]}   pages read so far
     delta    str                              streamed answer text
     notice   {"text": str}                    e.g. the previous session expired, started fresh
@@ -41,6 +45,7 @@ from kb_distillery.config.flags import runtime
 from kb_distillery.llm import agent as llm_agent
 from kb_distillery.services import agent_skills
 from kb_distillery.services import chat_attachments
+from kb_distillery.services import chat_live
 from kb_distillery.vault import links
 from kb_distillery.config.paths import vault_root
 META_DIR = os.path.join(vault_root(), "meta")
@@ -421,7 +426,16 @@ def _policy_attachments(tool_name, tool_input, scope):
     return Decision(True)
 
 
-POLICY_GROUPS = (_policy_attachments, _policy_files, _policy_bash, _policy_web, _policy_skills)
+def _policy_todo(tool_name, tool_input, scope):
+    """TodoWrite only keeps the agent's own checklist (shown above the composer); allowed under agent mode."""
+    if tool_name != "TodoWrite":
+        return None
+    if runtime.effective("agent-mode"):
+        return Decision(True)
+    return Decision(False, f"read-only KB agent: tool {tool_name} is not available")
+
+
+POLICY_GROUPS = (_policy_attachments, _policy_files, _policy_bash, _policy_web, _policy_skills, _policy_todo)
 
 
 def tool_policy(tool_name, tool_input, scope=None):
@@ -472,9 +486,14 @@ def agent_request(question, model, system, session_id=None, scope=None, history=
         disallowed = tuple(t for t in disallowed if t not in ("Skill", "Agent", "Task"))
         extra = dict(skills=tuple(agent_skills.qualified(s) for s in skills),
                      plugins=(agent_skills.plugin_dir(skills),), agents=agent_skills.subagents())
+    thinking = bool(runtime.effective("agent-mode"))
+    if thinking:         # the transcript PR: thinking text and a todo list
+        tools += ("TodoWrite",)
+        disallowed = tuple(t for t in disallowed if t != "TodoWrite")
     return llm_agent.AgentRequest(
         question=question, model=model, system=system, effort=effort, budget=budget, session=session_id or None,
         tools=tools, disallowed=disallowed, scope=scope, cwd=ROOT, attachments=tuple(images), max_turns=MAX_TURNS,
+        thinking=thinking,
         fresh_prompt=_history_prefix(history) + question if history else None, **extra)
 
 
@@ -549,6 +568,23 @@ def _name(obj):
     return type(obj).__name__
 
 
+PREVIEW_CHARS = 300
+
+
+def result_preview(content):
+    """First ~300 chars of a tool result (a string, or a list of {type: text, text} blocks)."""
+    if isinstance(content, list):
+        content = "\n".join(str(b.get("text", "")) if isinstance(b, dict) else str(b) for b in content)
+    text = str(content or "").strip()
+    return text[:PREVIEW_CHARS] + ("…" if len(text) > PREVIEW_CHARS else "")
+
+
+def todo_items(tool_input):
+    items = (tool_input or {}).get("todos")
+    return [{"content": str(t.get("content") or t.get("activeForm") or ""), "status": str(t.get("status") or "pending")}
+            for t in items if isinstance(t, dict)] if isinstance(items, list) else []
+
+
 def map_message(msg, state):
     """SDK message → list of (event, data). Dispatches on class names so tests can use fakes."""
     kind = _name(msg)
@@ -569,15 +605,25 @@ def map_message(msg, state):
             if text:
                 state.text += text
                 out.append(("delta", text))
+        elif (ev.get("type") == "content_block_delta" and (ev.get("delta") or {}).get("type") == "thinking_delta"
+              and runtime.effective("agent-mode")):
+            think = ev["delta"].get("thinking", "")
+            if think:
+                out.append(("thinking", think))
         return out
     if kind == "AssistantMessage":
         for block in getattr(msg, "content", None) or []:
             b = _name(block)
             if b == "ToolUseBlock":
                 name, inp = getattr(block, "name", ""), getattr(block, "input", None) or {}
+                if name == "TodoWrite" and runtime.effective("agent-mode"):
+                    out.append(("todo", {"items": todo_items(inp)}))
+                    continue
                 entry = {"name": name, "summary": tool_summary(name, inp), "id": getattr(block, "id", None)}
+                if runtime.effective("agent-mode"):
+                    entry["status"] = "running"
                 state.tools.append(entry)
-                out.append(("tool", entry))
+                out.append(("tool", dict(entry)))
                 slug = slug_from_read(inp) if name == "Read" else None
                 if slug:
                     state.reads[slug] = state.reads.get(slug, 0) + 1
@@ -588,12 +634,20 @@ def map_message(msg, state):
         return out
     if kind == "UserMessage":
         for block in getattr(msg, "content", None) or []:
-            if _name(block) == "ToolResultBlock" and getattr(block, "is_error", False):
-                tid = getattr(block, "tool_use_id", None)
-                match = next((t for t in reversed(state.tools) if t.get("id") == tid), None)
-                if match:
+            if _name(block) != "ToolResultBlock":
+                continue
+            failed = bool(getattr(block, "is_error", False))
+            if not failed and not runtime.effective("agent-mode"):
+                continue
+            tid = getattr(block, "tool_use_id", None)
+            match = next((t for t in reversed(state.tools) if t.get("id") == tid), None)
+            if match:
+                if failed:
                     match["error"] = True
-                    out.append(("tool", match))
+                if runtime.effective("agent-mode"):
+                    match["status"] = "error" if failed else "done"
+                    match["result"] = result_preview(getattr(block, "content", None))
+                out.append(("tool", dict(match)))
         return out
     if kind == "ResultMessage":
         if getattr(msg, "session_id", None):
@@ -625,7 +679,7 @@ def _is_resume_failure(exc):
 
 
 async def _run(question, *, model, system, key, session_id, history, emit, stop_event, log, billing="api",
-               scope=None, effort=None, budget=None, attachments=(), attachment_session=None):
+               scope=None, effort=None, budget=None, live=None, attachments=(), attachment_session=None):
     index = query.parse_index()
     if attachment_session:    # every turn: files from earlier turns stay readable in a resumed session
         ATTACH_DIR.set(chat_attachments.session_dir(attachment_session))
@@ -640,12 +694,14 @@ async def _run(question, *, model, system, key, session_id, history, emit, stop_
     gen = llm_agent.stream(
         req, backend, key=key, policy_hook=make_hook(scope=scope), can_use_tool=make_can_use_tool(scope=scope),
         usage_sink=lambda m, usage, est, b: chat_data.record_usage(m, usage, cost=est, billing=b),
-        stop_event=stop_event, log=log, ca_path=ca_bundle_path())
+        stop_event=stop_event, log=log, ca_path=ca_bundle_path(), live=live)
     async for kind, data in gen:
         if kind == "reset":
             state = TurnState(index=index)
         elif kind == "message":
             for ev in map_message(data, state):
+                if ev[0] == "session" and live is not None:
+                    chat_live.register(ev[1]["id"], live)
                 emit(ev)
         elif kind == "notice":
             emit(("notice", data))
@@ -668,6 +724,10 @@ async def _run(question, *, model, system, key, session_id, history, emit, stop_
             emit(("done", {}))
 
 
+def _live_for(emit):
+    return chat_live.Live(emit) if runtime.effective("agent-mode") else None
+
+
 def stream_agent(question, *, model, system, key, session_id=None, history=None, log=None, billing="api",
                  scope=None, effort=None, budget=None, attachments=(), attachment_session=None):
     """Sync generator of (event, data) for serve.py's SSE loop. Closing it stops the agent.
@@ -680,15 +740,19 @@ def stream_agent(question, *, model, system, key, session_id=None, history=None,
     def emit(ev):
         q.put(ev)
 
+    live = _live_for(emit)
+
     def runner():
         try:
             asyncio.run(_run(question, model=model, system=system, key=key, session_id=session_id,
                              history=history, emit=emit, stop_event=stop_event, log=log, billing=billing,
-                             scope=scope, effort=effort, budget=budget, attachments=attachments,
+                             scope=scope, effort=effort, budget=budget, live=live, attachments=attachments,
                              attachment_session=attachment_session))
         except Exception as e:
             q.put(("error", {"error": f"agent: {e}"}))
         finally:
+            if live is not None:
+                chat_live.unregister(live)
             q.put(DONE)
 
     t = threading.Thread(target=runner, name="kb-chat-agent", daemon=True)
@@ -705,4 +769,6 @@ def stream_agent(question, *, model, system, key, session_id=None, history=None,
             yield ev
     finally:
         stop_event.set()
+        if live is not None:
+            live.interrupt()
         t.join(JOIN_SECONDS)

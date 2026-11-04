@@ -175,6 +175,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/chat/message": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Queue a message into the running agent turn */
+        post: operations["post_message_api_chat_message_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/chat/prompts": {
         parameters: {
             query?: never;
@@ -374,6 +391,23 @@ export interface paths {
         put?: never;
         /** Run a named graph query */
         post: operations["post_named_query_api_graph_queries__name__post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/graph/shape": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Turn free text into a graph view: Cypher selection plus style clause */
+        post: operations["post_shape_api_graph_shape_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1029,6 +1063,28 @@ export interface components {
             subscription: {
                 [key: string]: unknown;
             };
+        } & {
+            [key: string]: unknown;
+        };
+        /**
+         * ChatMessageIn
+         * @description Body of POST /api/chat/message: `text` becomes the next user message of the live turn for `session`.
+         */
+        ChatMessageIn: {
+            /** Session */
+            session: string;
+            /** Text */
+            text: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** ChatMessageResult */
+        ChatMessageResult: {
+            /**
+             * Ok
+             * @default true
+             */
+            ok: boolean;
         } & {
             [key: string]: unknown;
         };
@@ -2852,6 +2908,80 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
+        /** ShapeRequest */
+        ShapeRequest: {
+            /**
+             * Backend
+             * @description LLM backend for this request; default $KB_LLM_BACKEND, then subscription
+             */
+            backend?: ("subscription" | "api" | "batch") | null;
+            /**
+             * Limit
+             * @default 500
+             */
+            limit: number;
+            /**
+             * Text
+             * @description Free text, raw Cypher (starts with MATCH, style after a `--` or `style:` line), or a style clause list on its own
+             */
+            text: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** ShapeResponse */
+        ShapeResponse: {
+            /**
+             * Backend
+             * @description the LLM backend that answered; null without an LLM call
+             */
+            backend?: string | null;
+            /** Columns */
+            columns: string[];
+            /**
+             * Cypher
+             * @description null when the text was a style clause only: keep the current nodes
+             */
+            cypher?: string | null;
+            /**
+             * Explanation
+             * @default
+             */
+            explanation: string;
+            /** Row Count */
+            row_count: number;
+            /** Rows */
+            rows: unknown[][];
+            /**
+             * Source
+             * @description `llm` when the model wrote the Cypher
+             * @enum {string}
+             */
+            source: "cypher" | "llm";
+            style: components["schemas"]["StyleSpec"];
+            /**
+             * Style Text
+             * @description the style in its canonical clause form
+             * @default
+             */
+            style_text: string;
+            /**
+             * Truncated
+             * @default false
+             */
+            truncated: boolean;
+            /**
+             * Usd
+             * @description cost reported by the backend; null without an LLM call
+             */
+            usd?: number | null;
+            /**
+             * Warnings
+             * @default []
+             */
+            warnings: string[];
+        } & {
+            [key: string]: unknown;
+        };
         /** ShareChip */
         ShareChip: {
             /** Cls */
@@ -2921,6 +3051,29 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
+        /** StyleSpec */
+        StyleSpec: {
+            colour_by?: components["schemas"]["Target"] | null;
+            group_by?: components["schemas"]["Target"] | null;
+            /**
+             * Hide Edge Kinds
+             * @default []
+             */
+            hide_edge_kinds: string[];
+            /**
+             * Hide Labels
+             * @default []
+             */
+            hide_labels: string[];
+            /**
+             * Label
+             * @description node property shown as the node's text
+             */
+            label?: string | null;
+            /** Layout */
+            layout?: ("force" | "radial" | "grid" | "timeline") | null;
+            size_by?: components["schemas"]["Target"] | null;
+        };
         /** SuggestedPage */
         SuggestedPage: {
             /** Id */
@@ -2939,6 +3092,22 @@ export interface components {
             via: string[];
         } & {
             [key: string]: unknown;
+        };
+        /**
+         * Target
+         * @description What a style reads: a node property, the node labels, the degree, or the edge kind.
+         */
+        Target: {
+            /**
+             * By
+             * @enum {string}
+             */
+            by: "prop" | "label" | "degree" | "edge-kind";
+            /**
+             * Name
+             * @description the property name when `by` is `prop`
+             */
+            name?: string | null;
         };
         /** ThinkCaptureRequest */
         ThinkCaptureRequest: {
@@ -3720,6 +3889,46 @@ export interface operations {
             };
         };
     };
+    post_message_api_chat_message_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChatMessageIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChatMessageResult"];
+                };
+            };
+            /** @description no turn is running for that session */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_prompts_api_chat_prompts_get: {
         parameters: {
             query?: never;
@@ -4124,6 +4333,51 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
                 };
+            };
+        };
+    };
+    post_shape_api_graph_shape_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ShapeRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShapeResponse"];
+                };
+            };
+            /** @description Unknown or unusable LLM backend */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The text could not become a valid view: `detail` says why and what to write instead */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The LLM backend failed */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
