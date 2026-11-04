@@ -44,9 +44,10 @@ function SkillsList({ sessionId }: { sessionId: string }) {
   });
 
   const toggle = (name: string, next: boolean) => {
-    if (!data) return;
-    const current = namesOn(data);
-    save.mutate(data.skills.map((s) => s.name).filter((n) => (n === name ? next : current.includes(n))));
+    const now = qc.getQueryData<ChatSkillList>(key) ?? data;
+    if (!now) return;
+    const current = namesOn(now);
+    save.mutate(now.skills.map((s) => s.name).filter((n) => (n === name ? next : current.includes(n))));
   };
 
   return (
@@ -76,6 +77,7 @@ function SkillsList({ sessionId }: { sessionId: string }) {
               </div>
               <Switch
                 checked={s.enabled}
+                disabled={save.isPending}
                 onCheckedChange={(next) => toggle(s.name, next)}
                 aria-labelledby={`skill-${s.name}`}
                 aria-describedby={s.description ? `skill-${s.name}-desc` : undefined}

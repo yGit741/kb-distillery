@@ -15,4 +15,4 @@ class ChatSkillList(ApiModel):
 
 
 class ChatSkillsPut(ApiModel):
-    enabled: list[str] = Field(description="skill names to turn on; names outside the whitelist are dropped")
+    enabled: list[str] = Field(max_length=64, description="skill names to turn on; names outside the whitelist are dropped")

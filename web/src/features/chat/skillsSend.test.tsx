@@ -33,6 +33,7 @@ describe("the chat request carries the session's skills", () => {
       act(() => result.current.send("hi", opts));
       await waitFor(() => expect(chatStream).toHaveBeenCalled());
       expect(sent(chatStream).skills).toEqual(["query-knowledge"]);
+      expect(sent(chatStream).skills_session).toBe(result.current.chat.id.replace("kb-chat:", ""));
       unmount();
       setSkillSelection(result.current.chat.id, undefined);
     });
@@ -44,7 +45,8 @@ describe("the chat request carries the session's skills", () => {
       setSkillSelection(result.current.chat.id, ["query-knowledge"]);
       act(() => result.current.send("hi", opts));
       await waitFor(() => expect(chatStream).toHaveBeenCalled());
-      expect("skills" in sent(chatStream) && sent(chatStream).skills !== undefined).toBe(false);
+      expect(sent(chatStream).skills).toBeUndefined();
+      expect(sent(chatStream).skills_session).toBeUndefined();
       unmount();
       setSkillSelection(result.current.chat.id, undefined);
     });

@@ -1278,6 +1278,8 @@ export interface components {
             session?: string | null;
             /** Skills */
             skills?: string[] | null;
+            /** Skills Session */
+            skills_session?: string | null;
             /** System */
             system?: string | null;
         } & {

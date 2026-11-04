@@ -10,23 +10,23 @@ interface SwitchProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, "onC
 export function Switch({ checked, onCheckedChange, className, disabled, ...p }: SwitchProps) {
   return (
     <button
+      {...p}
       type="button"
       role="switch"
       aria-checked={checked}
       disabled={disabled}
       onClick={() => onCheckedChange(!checked)}
       className={cn(
-        "relative inline-flex h-5 w-9 shrink-0 items-center rounded-full border transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-60 motion-reduce:transition-none",
+        "relative inline-flex h-6 w-10 shrink-0 items-center rounded-full border transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-60 motion-reduce:transition-none",
         checked ? "border-primary bg-primary" : "border-muted-foreground/60 bg-muted",
         className,
       )}
-      {...p}
     >
       <span
         aria-hidden
         className={cn(
-          "size-3.5 rounded-full transition-transform motion-reduce:transition-none",
-          checked ? "translate-x-[1.125rem] bg-primary-foreground" : "translate-x-0.5 bg-muted-foreground",
+          "size-4 rounded-full transition-transform motion-reduce:transition-none",
+          checked ? "translate-x-[1.375rem] bg-primary-foreground" : "translate-x-0.5 bg-muted-foreground",
         )}
       />
     </button>

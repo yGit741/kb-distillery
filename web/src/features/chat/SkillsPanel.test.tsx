@@ -89,6 +89,25 @@ describe("SkillsPanel", () => {
     });
   });
 
+  it("two quick toggles both stick: the second is built from the first", async () => {
+    await inFlag(true, async () => {
+      let release: () => void = () => {};
+      const gate = new Promise<void>((r) => { release = r; });
+      const putChatSkills = vi.fn(async (_id: string, body: { enabled: string[] }) => {
+        await gate;
+        return list({ "deep-research": body.enabled.includes("deep-research"), "query-knowledge": body.enabled.includes("query-knowledge") });
+      });
+      setup({ listChatSkills: async () => list({}), putChatSkills });
+      const user = userEvent.setup();
+      await user.click(await screen.findByRole("switch", { name: "deep-research" }));
+      await waitFor(() => expect(screen.getByRole("switch", { name: "query-knowledge" })).toBeDisabled());
+      release();
+      await waitFor(() => expect(screen.getByRole("switch", { name: "query-knowledge" })).toBeEnabled());
+      await user.click(screen.getByRole("switch", { name: "query-knowledge" }));
+      await waitFor(() => expect(putChatSkills).toHaveBeenLastCalledWith(SID, { enabled: [] }));
+    });
+  });
+
   it("a failed save puts the switch back and says so", async () => {
     await inFlag(true, async () => {
       setup({ listChatSkills: async () => list({}), putChatSkills: async () => { throw new Error("read-only server"); } });

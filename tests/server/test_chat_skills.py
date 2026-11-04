@@ -178,9 +178,33 @@ def test_flag_on_chat_request_passes_the_subset(client, cfg):
     assert "skills" not in post(client)
 
 
+@pytest.mark.flag("agent-mode", True)
+def test_a_saved_subset_applies_when_the_client_sends_no_list(client, cfg):
+    put(client, ["query-knowledge"])
+    assert post(client, skills_session=SID)["skills"] == ["query-knowledge"]
+    assert post(client, skills_session=SID, skills=["deep-research"])["skills"] == ["deep-research"]   # an explicit list wins
+    assert post(client, skills_session="20261104101500-never1")["skills"] == THREE                   # nothing saved: the whole whitelist
+    assert "skills" not in post(client)
+    assert "skills" not in post(client, skills_session="Not A Slug!")        # a chat id of another shape still asks
+
+
+@pytest.mark.flag("agent-mode", True)
+def test_a_stored_allow_list_leaves_skills_added_later_off(client, monkeypatch):
+    put(client, ["deep-research"])
+    whitelist(monkeypatch, THREE)
+    assert agent_skills.session_selection(SID) == ["deep-research"]      # a skill whitelisted after the choice stays off until switched on
+
+
+@pytest.mark.flag("agent-mode", True)
+def test_deleting_an_unsaved_session_keeps_nothing_it_did_not_own(client, kb):
+    put(client, ["deep-research"])
+    assert client.delete(f"/api/sessions/{SID}", headers=LOOPBACK).status_code == 404
+    assert os.path.isfile(os.path.join(kb, ".local", "sessions", f"{SID}.skills.json"))
+
+
 @pytest.mark.flag("agent-mode", False)
 def test_flag_off_chat_request_ignores_skills(client, cfg):
-    assert "skills" not in post(client, skills=["query-knowledge"])
+    assert "skills" not in post(client, skills=["query-knowledge"], skills_session=SID)
 
 
 def request_for(skills):

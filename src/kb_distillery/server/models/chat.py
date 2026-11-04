@@ -25,7 +25,8 @@ class ChatRequest(ApiModel):
     budget: Optional[float] = None
     attachments: Optional[list[str]] = None          # attachment ids (POST /api/chat/attachments)
     attachment_session: Optional[str] = None         # the session the attachments were uploaded under
-    skills: Optional[list[str]] = None               # this chat's subset of the kb's skill whitelist (omit = all of it)
+    skills: Optional[list[str]] = None               # this chat's subset of the kb's skill whitelist
+    skills_session: Optional[str] = None             # the chat's stored id: with no `skills`, its saved subset applies (else all)
 
 
 class AttachmentInfo(ApiModel):

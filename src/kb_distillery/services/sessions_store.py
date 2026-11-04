@@ -298,12 +298,12 @@ def delete_session(session_id, root=None):
     root = root or DEFAULT_ROOT
     sid = clean_id(session_id)
     with _LOCK:
-        with contextlib.suppress(OSError):
-            os.remove(os.path.join(_dir(root), f"{sid}.skills.json"))
         try:
             os.remove(_path(root, sid))
         except FileNotFoundError:
             raise SessionsError(404, f"no session {sid!r}") from None
         except OSError as e:
             raise SessionsError(500, f"could not delete the session file: {e.strerror or e}") from None
+        with contextlib.suppress(OSError):
+            os.remove(os.path.join(_dir(root), f"{sid}.skills.json"))
     return {"ok": True, "id": sid}
