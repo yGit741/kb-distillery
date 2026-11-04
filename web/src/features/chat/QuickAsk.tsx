@@ -19,9 +19,9 @@ import { useChatSession, type SendOptions } from "./useChatSession";
  * Cmd-J quick ask (flag `agent-mode`): the only quick-ask surface. A floating one-line composer that opens on any screen,
  * sends to the current chat session and shows the first lines of the answer, with "Open in chat".
  *
- * On the chat screen the question goes through that screen's own session (`askHost`), so the answer streams into the chat on show.
- * (so it carries that screen's scope and custom-prompt label.) Elsewhere `LocalAsk` runs the same `useChatSession` for the length of the question (it reads the stored chat when it mounts,
- * writes it back when idle) and "Open in chat" waits until the answer is written.
+ * On the chat screen the question goes through that screen's own session (`askHost`), so the answer streams into the chat on show
+ * and carries that screen's scope and custom-prompt label. Elsewhere `LocalAsk` runs the same `useChatSession` for the length of the question
+ * (it reads the stored chat when it mounts, writes it back when idle) and "Open in chat" waits until the answer is written.
  */
 
 type Prompts = Awaited<ReturnType<DataSource["getChatPrompts"]>>["prompts"];
@@ -118,7 +118,7 @@ function QuickAskOn() {
   const input = useRef<HTMLInputElement>(null);
   const before = useRef<Element | null>(null);
   const [text, setText] = useState("");
-  const [sentHere, setSentHere] = useState(false);
+  const [sentAt, setSentAt] = useState<number | null>(null); // host chat length when the quick question went out
   const [local, setLocal] = useState<Ask | null>(null);
   const [localBusy, setLocalBusy] = useState(false);
   const sentN = useRef(0);
@@ -145,7 +145,7 @@ function QuickAskOn() {
   useEffect(() => {
     if (open) {
       before.current = document.activeElement;
-      if (!local) setSentHere(false);
+      if (!local) setSentAt(null);
       input.current?.focus();
     } else if (before.current instanceof HTMLElement) {
       before.current.focus();
@@ -162,7 +162,7 @@ function QuickAskOn() {
   }, [host, local]);
   // a closed panel with no running question lets go of its session
   useEffect(() => {
-    if (!open && !localBusy && local) setLocal(null);
+    if (!open && !localBusy && local && sentN.current >= local.n) setLocal(null); // not before the question was actually sent
   }, [open, localBusy, local]);
 
   const busy = host ? host.busy : localBusy;
@@ -171,8 +171,10 @@ function QuickAskOn() {
     const q = text.trim();
     if (!q || busy) return;
     setText("");
-    setSentHere(true);
-    if (host) host.ask(q);
+    if (host) {
+      setSentAt(host.chat.messages.length);
+      host.ask(q);
+    }
     else setLocal((cur) => ({ text: q, n: (cur?.n ?? 0) + 1 }));
   };
   const openInChat = () => {
@@ -206,7 +208,7 @@ function QuickAskOn() {
         </Button>
       </form>
       {host
-        ? sentHere && <Answer chat={host.chat} busy={host.busy} onOpen={openInChat} canOpen />
+        ? sentAt !== null && host.chat.messages.length > sentAt && <Answer chat={host.chat} busy={host.busy} onOpen={openInChat} canOpen />
         : local && <LocalAsk ask={local} sentN={sentN} onBusy={setLocalBusy} onOpen={openInChat} />}
       <p className="border-t px-3 py-1.5 text-xs text-muted-foreground">Enter to send, Esc to close.</p>
     </div>

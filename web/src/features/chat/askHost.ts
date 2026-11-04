@@ -21,9 +21,9 @@ export function useRegisterAskHost(host: AskHost | null) {
   const on = host !== null;
   const chat = host?.chat;
   const busy = host?.busy ?? false;
+  // one overwrite per change (no null frame between two chats' states); cleared only when the screen goes or the flag turns off
   useEffect(() => {
-    if (!on || !chat) return;
-    useAskHost.setState({ host: { ask: (q) => ref.current?.ask(q), chat, busy } });
-    return () => useAskHost.setState({ host: null });
+    if (on && chat) useAskHost.setState({ host: { ask: (q) => ref.current?.ask(q), chat, busy } });
   }, [on, chat, busy]);
+  useEffect(() => (on ? () => useAskHost.setState({ host: null }) : undefined), [on]);
 }
