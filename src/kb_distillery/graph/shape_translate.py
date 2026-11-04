@@ -112,6 +112,8 @@ def _ask(prompt, backend):
         res = llm.run([req], backend=backend, **kw)[0]
     except llm.LLMError as e:
         raise ShapeError(str(e), status=400) from None
+    except (llm.HTTPFail, OSError) as e:                # batch talks to the API outside Result.error
+        raise ShapeError(f"the {backend} backend failed: {e}", status=502) from None
     if res.error and not res.text:
         raise ShapeError(f"the {res.backend or backend} backend failed: {res.error}", status=502)
     return res
@@ -142,7 +144,19 @@ def _select(cy, limit, graph):
 EMPTY_TABLE = {"columns": [], "rows": [], "row_count": 0, "truncated": False}
 
 
-def _result(cy, style, explanation, source, table, warnings, backend=None, usd=None):
+def _style_warnings(style, graph):
+    """Hidden names the kb does not have: they would hide nothing, silently."""
+    if not (style.hide_labels or style.hide_edge_kinds):
+        return []
+    v = vocabulary(cypher.current_graph() if graph is None else graph)
+    out = [f"hide: no node label `{n}` (labels: {', '.join(v['labels'])})" for n in style.hide_labels
+           if n not in v["labels"]]
+    return out + [f"hide: no edge kind `{n}` (kinds: {', '.join(v['edge_kinds'])})" for n in style.hide_edge_kinds
+                  if n not in v["edge_kinds"]]
+
+
+def _result(cy, style, explanation, source, table, warnings, backend=None, usd=None, graph=None):
+    warnings = [*warnings, *_style_warnings(style, graph)]
     if cy is not None:
         if table["row_count"] == 0:
             warnings.append("row_count is 0: the query matched nothing")
@@ -163,19 +177,21 @@ def shape(text, limit=cypher.MAX_ROWS, backend=None, graph=None):
     if is_cypher(text):
         cy, st = split_cypher(text)
         style = parse_style(st)
-        return _result(cy, style, "Cypher as written; no LLM call.", "cypher", _select(cy, limit, graph), [])
+        return _result(cy, style, "Cypher as written; no LLM call.", "cypher", _select(cy, limit, graph), [],
+                       graph=graph)
     try:
         style = parse_style(text)
     except ShapeError:
         pass
     else:
-        return _result(None, style, "Style clauses only: the current node set stays.", "cypher", dict(EMPTY_TABLE), [])
+        return _result(None, style, "Style clauses only: the current node set stays.", "cypher", dict(EMPTY_TABLE), [],
+                       graph=graph)
 
     b = _resolve(backend)
     g = cypher.current_graph() if graph is None else graph
     prompt = build_prompt(text, vocabulary(g), limit)
     usd, last, attempt_text = 0.0, "", ""
-    for attempt in range(2):
+    for attempt in range(1 if b == "batch" else 2):      # a retried batch would wait for hours twice
         res = _ask(prompt if attempt == 0 else retry_prompt(prompt, attempt_text, last), b)
         usd += res.usd
         attempt_text = res.text
@@ -186,7 +202,7 @@ def shape(text, limit=cypher.MAX_ROWS, backend=None, graph=None):
         except ShapeError as e:
             last = str(e)
             continue
-        return _result(cy or None, style, ex, "llm", table, [], backend=res.backend, usd=round(usd, 6))
+        return _result(cy or None, style, ex, "llm", table, [], backend=res.backend, usd=round(usd, 6), graph=g)
     shown = re.sub(r"\s+", " ", attempt_text).strip()[:300]
     raise ShapeError(f"could not turn that into a valid view: {last} (last answer: {shown})")
 

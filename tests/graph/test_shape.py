@@ -89,5 +89,6 @@ def test_split_cypher_style_marker():
 
 
 def test_is_cypher():
-    assert shape.is_cypher("  match (n) return n.slug") and shape.is_cypher("MATCH(n)")
+    assert shape.is_cypher("  match (n) return n.slug") and shape.is_cypher("MATCH(n)") and shape.is_cypher("match (n)")
     assert not shape.is_cypher("matches of the year") and not shape.is_cypher("show papers")
+    assert not shape.is_cypher("Match papers that mention attention to ideas")

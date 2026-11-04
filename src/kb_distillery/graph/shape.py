@@ -172,7 +172,7 @@ def format_style(spec):
     return "; ".join(parts)
 
 
-_RAW = re.compile(r"\s*MATCH\b", re.I)
+_RAW = re.compile(r"\s*MATCH\s*\(", re.I)           # `MATCH (`: English "match papers to ideas" is free text
 _STYLE_LINE = re.compile(r"^\s*(--(?!>)|style\s*:)", re.I)
 
 

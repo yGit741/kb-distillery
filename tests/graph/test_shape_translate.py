@@ -147,6 +147,39 @@ def test_free_text_starting_with_hide_still_reaches_the_llm(monkeypatch):
     assert out["source"] == "llm" and len(fake.calls) == 1 and out["style"]["hide_labels"] == ["Idea"]
 
 
+def test_english_match_is_free_text(monkeypatch):
+    fake = FakeLLM(monkeypatch, reply())
+    assert st.shape("Match papers that mention tensor rank")["source"] == "llm" and len(fake.calls) == 1
+
+
+def test_hiding_names_the_kb_lacks_warns(monkeypatch):
+    out = st.shape("hide papers; hide FAKE_KIND; hide Paper; hide MENTIONS")
+    assert out["cypher"] is None and len(out["warnings"]) == 2
+    assert "`Papers`" in out["warnings"][0] and "(labels: Concept, Idea, Paper" in out["warnings"][0]
+    assert "`FAKE_KIND`" in out["warnings"][1]
+    FakeLLM(monkeypatch, reply(RANK, "hide Papers"))
+    assert any("`Papers`" in w for w in st.shape("papers about tensor rank")["warnings"])
+
+
+def test_batch_api_failure_is_a_502_and_is_not_retried(monkeypatch):
+    calls = []
+
+    def boom(*a, **k):
+        calls.append(1)
+        raise llm.HTTPFail(0, "no API key: set ANTHROPIC_API_KEY")
+    monkeypatch.setattr(llm, "run", boom)
+    with pytest.raises(ShapeError) as e:
+        st.shape("papers about tensor rank", backend="batch")
+    assert e.value.status == 502 and "no API key" in str(e.value) and len(calls) == 1
+
+
+def test_a_bad_batch_reply_is_not_retried(monkeypatch):
+    fake = FakeLLM(monkeypatch, reply("MATCH (a)-[r]-(b) RETURN b.slug"))
+    with pytest.raises(ShapeError):
+        st.shape("papers next to something", backend="batch")
+    assert len(fake.calls) == 1
+
+
 def test_backend_override_and_env(monkeypatch):
     fake = FakeLLM(monkeypatch, reply(), reply(), reply())
     st.shape("papers about tensor rank", backend="api")

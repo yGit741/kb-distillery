@@ -94,7 +94,7 @@ What the text can be:
 
 | Text | What happens |
 |---|---|
-| Starts with `MATCH` (any case) | Raw Cypher, run as written. A style clause may follow a line that starts with `--` or `style:`. No LLM. |
+| Starts with `MATCH (` (any case) | Raw Cypher, run as written. A style clause may follow a line that starts with `--` or `style:`. No LLM. |
 | A style clause list only | `cypher` is `null`, `rows` is empty: keep the current node set. No LLM. |
 | Anything else | One call through `kb_distillery.llm`. The prompt carries the Cypher subset, this knowledge base's node labels and edge kinds, the style grammar and a few examples. The reply is run once to check it. When the Cypher or the style is rejected, the error goes back to the model once. |
 
@@ -111,9 +111,9 @@ The style clauses are separated by `;` or a new line:
 
 A later clause of the same kind replaces an earlier one. The same grammar is in `kb_distillery.graph.shape`; `python3 -m kb_distillery.search.cypher shape "<text>"` prints the response as JSON.
 
-Statuses: `422` when the text cannot become a valid view (the unknown clause or the Cypher engine's hint is in `detail`; an LLM answer gets one retry before this), `400` for an unknown `backend`, `502` when the backend failed (no login, no key).
+Statuses: `422` when the text cannot become a valid view (the unknown clause or the Cypher engine's hint is in `detail`; an LLM answer gets one retry before this), `400` when `$KB_LLM_BACKEND` names an unknown backend (an unknown `backend` in the body is a schema `422`), `502` when the backend failed (no login, no key, API unreachable). A hidden label or edge kind the knowledge base does not have comes back as a warning, not an error.
 
-The model is `haiku`. The backend is `subscription` unless `backend` or `$KB_LLM_BACKEND` says otherwise. With `batch` the request waits up to five minutes for the batch to end and answers `502` if it has not, because a page waits on this call; for bulk work use the `api` or `subscription` backend.
+The model is `haiku`. The backend is `subscription` unless `backend` or `$KB_LLM_BACKEND` says otherwise. With `batch` the request waits up to five minutes for the batch to end, is never retried, and answers `502` if it has not finished, because a page waits on this call; for bulk work use the `api` or `subscription` backend.
 
 ## Add an endpoint
 
