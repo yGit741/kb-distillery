@@ -23,6 +23,7 @@ kb-distillery turns sources you collect into a linked, linted wiki. You keep the
 - [Add a storage connector](guides/add-a-storage-connector.md)
 - [Add a publisher](guides/add-a-publisher.md)
 - [Import a bundle](guides/import-a-bundle.md)
+- [The graph shell](guides/graph-shell.md)
 - [Run the nightly job](guides/run-the-nightly-job.md)
 
 ## Reference

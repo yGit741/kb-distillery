@@ -119,6 +119,19 @@ describe("tour engine", () => {
     skipB()!.click();
     expect(seenTour("fast")).toBe(true);
   });
+
+  it("moves focus to Next, except for a step that keeps it where its field has it", async () => {
+    document.body.innerHTML = '<input id="a" /><div id="b">b</div>';
+    const input = document.getElementById("a") as HTMLInputElement;
+    startTour([{ target: "#b", title: "P1", body: "" }, { target: "#b", title: "P2", body: "", keepFocus: true, before: () => input.focus() }]);
+    await until(() => title() === "P1");
+    await until(() => document.activeElement === nextB());
+    expect(document.activeElement).toBe(nextB());
+    nextB()!.click();
+    await until(() => title() === "P2");
+    await tick(100);
+    expect(document.activeElement).toBe(input);
+  });
 });
 
 describe("tour registry", () => {
