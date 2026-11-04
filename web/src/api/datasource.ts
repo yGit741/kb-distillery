@@ -82,6 +82,8 @@ export interface DataSource {
   /** POST /api/chat/message: queue a message into the running agent turn (rejects with a 404 when none is live). */
   sendChatMessage(body: T.ChatMessageIn): Promise<T.ChatMessageResult>;
   /** POST /api/chat; the caller reads `response.body` as server-sent events. */
+  /** POST /api/chat/answer: the reply to an `ask` event. */
+  answerChat(body: T.ChatAnswer): Promise<T.ChatAnswerResult>;
   chatStream(body: T.ChatRequest, signal?: AbortSignal): Promise<Response>;
 
   // chat sessions (local app only; never in share builds)

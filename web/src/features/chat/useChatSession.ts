@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useDataSource } from "@/api";
 import { useFlag } from "@/flags/useFlag";
 import { readEvents } from "./sse";
-import { applyEvent, dropLastTurn, emptyChat, historyOf, type Chat } from "./thread";
+import { applyEvent, clearAsk, dropLastTurn, emptyChat, historyOf, type Chat } from "./thread";
 import { loadSessions, saveSessions, upsertSession, type SessionEntry } from "./sessions";
 import { readJson, writeJson } from "./storage";
 import { useServerSessions } from "./useServerSessions";
@@ -113,7 +113,7 @@ export function useChatSession() {
         if (abortRef.current === ctl) abortRef.current = null;
         setBusy(false);
       }
-      const cur = chatRef.current;
+      const cur = clearAsk(chatRef.current);
       const last = cur.messages.length - 1;
       const bot = cur.messages[last];
       if (!bot || bot.role !== "assistant") return;
@@ -179,6 +179,23 @@ export function useChatSession() {
     [run],
   );
 
+  /** Send the user's choice for an `ask` event; the turn on the server continues with it. */
+  const answer = useCallback(
+    async (id: string, answers: Record<string, string>) => {
+      const session = chatRef.current.session ?? "";
+      const pending = chatRef.current.messages[chatRef.current.messages.length - 1]?.ask;
+      commit(clearAsk(chatRef.current));
+      try {
+        await ds.answerChat({ session, id, answers });
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        const moot = /\b404\b/.test(msg);        // no question is waiting any more: nothing to retry
+        commit(patchLast(chatRef.current, (m) => ({ ...m, error: `Could not send the answer: ${msg}`, ...(pending && !moot ? { ask: pending } : {}) })));
+      }
+    },
+    [ds, commit],
+  );
+
   const stop = useCallback(() => abortRef.current?.abort(), []);
 
   const reset = useCallback(() => {
@@ -202,7 +219,7 @@ export function useChatSession() {
     if (chatRef.current.session) commit({ ...chatRef.current, session: null });
   }, [commit]);
 
-  return { chat, busy, send, regenerate, stop, reset, forgetSession, sessions, resume };
+  return { chat, busy, send, regenerate, answer, stop, reset, forgetSession, sessions, resume };
 }
 
 function patchLast(chat: Chat, f: (m: Chat["messages"][number]) => Chat["messages"][number]): Chat {

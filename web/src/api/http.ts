@@ -172,6 +172,7 @@ export function createHttpDataSource(fetchImpl: Fetch = (...a) => fetch(...a), b
     deleteSession: (id) =>
       run(() => client.DELETE("/api/sessions/{session_id}", { params: { path: { session_id: id } } }), `/api/sessions/${id}`),
     saveChat: (body) => run(() => client.POST("/api/chat/saved", { body }), "/api/chat/saved"),
+    answerChat: (body) => run(() => client.POST("/api/chat/answer", { body }), "/api/chat/answer"),
     sendChatMessage: (body) => run(() => client.POST("/api/chat/message", { body }), "/api/chat/message"),
     chatStream: async (body, signal) => {
       let res: Response;

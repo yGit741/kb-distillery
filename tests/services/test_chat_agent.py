@@ -30,6 +30,7 @@ class _Opts:
 class _Matcher:
     def __init__(self, matcher=None, hooks=None, timeout=None):
         self.matcher, self.hooks = matcher, hooks or []
+        self.timeout = timeout
 
 
 class _Allow:

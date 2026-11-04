@@ -68,7 +68,7 @@ function ChatBody({ status: rawStatus, prompts: rawPrompts, scopes, initialScope
   const ds = useDataSource();
   const view = useMemo(() => parseStatus(rawStatus), [rawStatus]);
   const prompts = useMemo(() => parsePrompts(rawPrompts), [rawPrompts]);
-  const { chat, busy, send, regenerate, stop, reset, forgetSession, sessions, resume } = useChatSession();
+  const { chat, busy, send, regenerate, answer, stop, reset, forgetSession, sessions, resume } = useChatSession();
   const agentMode = useFlag("agent-mode");
 
   const [templateId, setTemplateId] = useState(() => readJson("local", "kbchat.template", "query"));
@@ -237,7 +237,7 @@ function ChatBody({ status: rawStatus, prompts: rawPrompts, scopes, initialScope
             </div>
           </div>
         ) : (
-          <MessageList messages={chat.messages} busy={busy} onRegenerate={() => regenerate(options())} />
+          <MessageList messages={chat.messages} busy={busy} onRegenerate={() => regenerate(options())} onAnswer={answer} />
         )}
 
         <div className="sticky bottom-0 -mx-4 flex flex-col gap-2 border-t bg-background/95 px-4 py-3 backdrop-blur">

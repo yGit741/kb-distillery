@@ -66,6 +66,7 @@ export function createEmbeddedDataSource(blob: ShareBlob | undefined = globalThi
     addChatKey: absent,
     removeChatKey: absent,
     saveChat: absent,
+    answerChat: absent,
     sendChatMessage: absent,
     chatStream: absent,
     listSessions: absent,

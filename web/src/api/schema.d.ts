@@ -72,6 +72,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/chat/answer": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Answer the agent's question (an `ask` event) */
+        post: operations["post_answer_api_chat_answer_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/chat/attachments": {
         parameters: {
             query?: never;
@@ -1104,6 +1121,35 @@ export interface components {
             file: string;
             /** Session */
             session: string;
+        };
+        /**
+         * ChatAnswer
+         * @description Body of POST /api/chat/answer: the user's reply to an `ask` event (question text → chosen label(s)).
+         */
+        ChatAnswer: {
+            /** Answers */
+            answers: {
+                [key: string]: string;
+            };
+            /** Id */
+            id: string;
+            /**
+             * Session
+             * @default
+             */
+            session: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** ChatAnswerResult */
+        ChatAnswerResult: {
+            /**
+             * Ok
+             * @default true
+             */
+            ok: boolean;
+        } & {
+            [key: string]: unknown;
         };
         /** ChatAuth */
         ChatAuth: {
@@ -3870,6 +3916,46 @@ export interface operations {
             };
             /** @description bad request */
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_answer_api_chat_answer_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChatAnswer"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChatAnswerResult"];
+                };
+            };
+            /** @description no question is waiting under that id */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

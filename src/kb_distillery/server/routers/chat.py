@@ -7,7 +7,7 @@ from fastapi import APIRouter
 from starlette.responses import JSONResponse
 
 from kb_distillery.config.flags import runtime
-from kb_distillery.server.models.chat import (ChatRequest, ChatSettings, ChatSettingsUpdate, ChatStatus, KeyAdd, KeyList,
+from kb_distillery.server.models.chat import (ChatAnswer, ChatAnswerResult, ChatRequest, ChatSettings, ChatSettingsUpdate, ChatStatus, KeyAdd, KeyList,
                                 KeyRemove, PromptsResponse, SavedChat, SavedChatResult)
 from kb_distillery.server.sse import sse_response
 from kb_distillery.services import chat as chat_data
@@ -108,6 +108,14 @@ def post_chat(req: ChatRequest):
     else:
         gen = direct_events(payload, key, model, question, history, scope)
     return sse_response(gen)
+
+
+@router.post("/api/chat/answer", response_model=ChatAnswerResult, summary="Answer the agent's question (an `ask` event)",
+             responses={404: {"description": "no question is waiting under that id"}})
+def post_answer(body: ChatAnswer):
+    if not chat_agent.ASKS.answer(body.session, body.id, body.answers):
+        return _err(404, "no question is waiting", "it timed out, was answered already, or the chat was closed")
+    return {"ok": True}
 
 
 @router.get("/api/chat/status", response_model=ChatStatus, summary="Backend, auth, keys (hints) and spend")
