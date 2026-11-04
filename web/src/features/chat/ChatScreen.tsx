@@ -3,6 +3,7 @@ import { useSearch } from "@tanstack/react-router";
 import { Download, PanelRightOpen, Plus, SendHorizontal, Square } from "lucide-react";
 import { useEffect, useMemo, useState, type FormEvent, type KeyboardEvent } from "react";
 import { useDataSource } from "@/api";
+import { useFlag } from "@/flags/useFlag";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ErrorState, Loading } from "@/components/states";
@@ -14,6 +15,7 @@ import { isCustom, parsePrompts, pick, setEdit, systemFor, type Edits } from "./
 import { authPayload, authValue, backendLabel, effectiveBackend, parseStatus } from "./status";
 import { readJson, writeJson } from "./storage";
 import { canSave, chatTitle, savableMessages } from "./thread";
+import { TodoList } from "./Transcript";
 import { useChatSession, type SendOptions } from "./useChatSession";
 
 const EXAMPLES: { q: string; template?: string; label: string }[] = [
@@ -66,7 +68,8 @@ function ChatBody({ status: rawStatus, prompts: rawPrompts, scopes, initialScope
   const ds = useDataSource();
   const view = useMemo(() => parseStatus(rawStatus), [rawStatus]);
   const prompts = useMemo(() => parsePrompts(rawPrompts), [rawPrompts]);
-  const { chat, busy, send, regenerate, stop, reset, forgetSession } = useChatSession();
+  const { chat, busy, send, regenerate, stop, reset, forgetSession, sessions, resume } = useChatSession();
+  const agentMode = useFlag("agent-mode");
 
   const [templateId, setTemplateId] = useState(() => readJson("local", "kbchat.template", "query"));
   const [edits, setEdits] = useState<Edits>(() => readJson("local", "kbchat.edits", {}));
@@ -165,6 +168,9 @@ function ChatBody({ status: rawStatus, prompts: rawPrompts, scopes, initialScope
               setScope(slug);
               forgetSession();
             }}
+            sessions={agentMode ? sessions : undefined}
+            activeId={chat.id}
+            onResume={resume}
           />
         </CardContent>
       </Card>
@@ -235,17 +241,23 @@ function ChatBody({ status: rawStatus, prompts: rawPrompts, scopes, initialScope
         )}
 
         <div className="sticky bottom-0 -mx-4 flex flex-col gap-2 border-t bg-background/95 px-4 py-3 backdrop-blur">
+          {agentMode && chat.todo && <TodoList items={chat.todo} busy={busy} />}
           <PromptPanel prompts={prompts} current={current} edits={edits} onTemplate={selectTemplate} onEdit={edit} onReset={reseat} />
           <form className="flex items-end gap-2" onSubmit={onSubmit}>
             <textarea
               className="min-h-[2.75rem] flex-1 resize-y rounded-md border bg-background p-2 text-sm"
               rows={2}
               aria-label="Your message"
-              placeholder="Ask your knowledge base…  (Enter to send, Shift+Enter for a new line)"
+              placeholder={busy && agentMode ? "Add a message — it is sent to Claude while it works…" : "Ask your knowledge base…  (Enter to send, Shift+Enter for a new line)"}
               value={question}
               onChange={(e) => setQuestion(e.target.value)}
               onKeyDown={onKey}
             />
+            {busy && agentMode && (
+              <Button type="submit" disabled={!question.trim()}>
+                <SendHorizontal aria-hidden /> Send
+              </Button>
+            )}
             {busy ? (
               <Button type="button" variant="secondary" onClick={stop}>
                 <Square aria-hidden /> Stop
