@@ -26,7 +26,7 @@ ROOT = vault_root()
 from kb_distillery.git import commit_policy as cp
 from kb_distillery.ops.daily_sync import changed_paths, has_open_sessions, run_git
 from kb_distillery.vault import log as kblog
-from kb_distillery.vault.schema import (INDEX_REL, LOG_REL, OPS_DIR, RESTORABLE_PATHS, RESTORE_EXCLUDED, RESTORE_EXCLUDED_GLOBS, is_index_path, is_page_file,
+from kb_distillery.vault.schema import (INDEX_REL, LOG_REL, OPS_DIR, is_local_path, RESTORABLE_PATHS, RESTORE_EXCLUDED, RESTORE_EXCLUDED_GLOBS, is_index_path, is_page_file,
                                        lane_of, strip_prefix)
 
 GENERATED_KNOWLEDGE = (INDEX_REL, "meta/corpus.tsv", "meta/coherence-warnings.tsv")
@@ -249,7 +249,11 @@ def _message(op, summary, version, target, extra=None, pages=None):
 
 
 def _commit_paths(root, paths, message):
-    """Stage and commit exactly `paths` (pathspec commit, other staged work untouched)."""
+    """Stage and commit exactly `paths` (pathspec commit, other staged work untouched). Machine-local state under
+    `.local/` is never staged, even by a caller that names it and in a kb whose .gitignore predates the rule."""
+    paths = [p for p in paths if not is_local_path(p)]
+    if not paths:
+        return None
     add = _git(root, "add", "-A", "--", *paths)
     if add.returncode != 0:
         raise OpsError(f"git add failed: {add.stderr.strip()}")
@@ -594,7 +598,7 @@ def undo(rev, root=ROOT):
                  if "\t" in l]
         files = [f for f in files if _restorable(f)]
         if not files:
-            raise OpsError("that step changed nothing undo may touch (wiki/, meta/aliases.tsv, meta/chats/)")
+            raise OpsError("that step changed nothing undo may touch (wiki/, meta/aliases.tsv, meta/chats/, meta/views.json)")
         dirty = set(changed_paths(root)["knowledge"])
         if dirty & set(files):
             raise OpsError(f"uncommitted edits on files this undo touches: {sorted(dirty & set(files))[:5]}")

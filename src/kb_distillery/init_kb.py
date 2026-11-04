@@ -57,6 +57,9 @@ meta/.catalog/
 meta/.migrate/
 .cache/
 .exported/
+
+# Machine-local state (recent graph steps, ...): never committed
+.local/
 """
 KEEP = ("wiki/.gitkeep", "raw/inbox/.gitkeep", "meta/.gitkeep")
 AGENTS_FILE, README_FILE = "AGENTS.template.md", "README.template.md"
