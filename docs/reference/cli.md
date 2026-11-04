@@ -99,7 +99,7 @@ The `hook` commands are called by hooks. They fail closed: an error blocks the a
 ## ops
 
 ```
-usage: ops [-h] {status,log,snapshots,begin,commit,abort,undo,restore,snapshot,sync,migrate,next-version,chore,record,adopt-history} ...
+usage: ops [-h] {status,log,snapshots,begin,commit,abort,undo,restore,snapshot,sync,migrate,next-version,chore,record,adopt-history,view} ...
 ```
 
 | Subcommand | Does |
@@ -119,6 +119,9 @@ usage: ops [-h] {status,log,snapshots,begin,commit,abort,undo,restore,snapshot,s
 | `chore <scope> "summary" [paths…]` | Commit a knowledge base's own tooling files. |
 | `record <op> <target> "summary" <paths…>` | Commit already-modified files as one knowledge operation. |
 | `adopt-history <bundle> [--checkout P]` | Fast-forward `main` to a curated history bundle. |
+| `view pin <name> [--spec JSON\|--spec-file F] [--id ID]` | Pin a graph view in `meta/views.json` as one knowledge step. |
+| `view unpin <id>` | Remove a pinned view (one knowledge step). |
+| `view rename <id> <name>` | Rename a pinned view (one knowledge step). |
 
 ## ingest
 

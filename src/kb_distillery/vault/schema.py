@@ -289,6 +289,7 @@ KNOWLEDGE_PATHS = [
     "meta/coherence-warnings.tsv",
     "meta/aliases.tsv",
     "meta/chats/",
+    "meta/views.json",  # pinned graph views (kb_distillery.vault.views); written only by `ops view`
 ]
 
 
@@ -341,6 +342,17 @@ def _matches(path, prefixes):
     return any(path == p.rstrip("/") or (p.endswith("/") and path.startswith(p)) for p in prefixes)
 
 
+# A kb's machine-local, never-committed state (recent shaping steps, ...): the VCS ignores it (`distill init` writes
+# the rule, `kb_distillery.vault.views` adds it to the repo's local exclude file) and the ops commit path refuses to
+# stage it.
+LOCAL_DIR = ".local"
+
+
+def is_local_path(path):
+    path = path.replace("\\", "/").removeprefix("./")
+    return path == LOCAL_DIR or path.startswith(LOCAL_DIR + "/")
+
+
 def lane_of(path):
     """Return "knowledge", "tooling" or "other" for a repo-relative path."""
     path = path.replace("\\", "/").removeprefix("./")
@@ -372,7 +384,7 @@ assert SCHEMA_VERSION == _KB_SCHEMA_VERSION, "kb_distillery.config.kb.SCHEMA_VER
 
 # What undo/restore may rewrite. Never raw/ (immutable, PDFs untracked), think/
 # (human-owned), wiki/log.md (append-only) or generated files such as wiki/index.md (lint regenerates them).
-RESTORABLE_PATHS = ["wiki/", "meta/aliases.tsv", "meta/chats/"]
+RESTORABLE_PATHS = ["wiki/", "meta/aliases.tsv", "meta/chats/", "meta/views.json"]
 RESTORE_EXCLUDED_GLOBS = (f"{WIKI_DIR}/**/index.md",)      # git pathspecs for every section index
 RESTORE_EXCLUDED = (INDEX_REL, LOG_REL)      # inside wiki/, but generated / append-only: undo and restore never rewrite them (nor any section index: `is_index_path`)
 

@@ -13,8 +13,11 @@ from starlette.responses import JSONResponse
 from kb_distillery.services import corpus
 
 MAX_BODY_BYTES = 4 * 1024 * 1024
-UPLOAD_PREFIX = "/api/chat/attachments"           # multipart uploads: 20 MB file + form overhead
-MAX_UPLOAD_BYTES = 21 * 1024 * 1024
+# A bundle upload is a zipped folder of notes: these routes take a larger body than the 4 MB every other one gets.
+UPLOAD_PATHS = frozenset({"/api/kb/import", "/api/kb/import/validate"})
+MAX_UPLOAD_BYTES = 64 * 1024 * 1024
+CHAT_UPLOAD_PREFIX = "/api/chat/attachments"      # a 20 MB attachment plus the multipart form overhead
+MAX_CHAT_UPLOAD_BYTES = 21 * 1024 * 1024
 MUTATING = frozenset({"POST", "PUT", "PATCH", "DELETE"})
 LOOPBACK_NAMES = frozenset({"localhost", "127.0.0.1", "::1", "[::1]"})
 
@@ -59,7 +62,7 @@ def safe_raw_path(path: str = Path(...)) -> str:
 
 
 class BodyLimitMiddleware:
-    """Pure ASGI: a request body over MAX_BODY_BYTES is 413; a body without Content-Length is 411."""
+    """Pure ASGI: a request body over MAX_BODY_BYTES (MAX_UPLOAD_BYTES on UPLOAD_PATHS) is 413; one without Content-Length is 411."""
 
     def __init__(self, app, max_bytes=MAX_BODY_BYTES):
         self.app, self.max_bytes = app, max_bytes
@@ -70,7 +73,11 @@ class BodyLimitMiddleware:
             length = headers.get(b"content-length")
             if length is None and b"transfer-encoding" in headers:
                 return await JSONResponse({"detail": "Content-Length required"}, 411)(scope, receive, send)
-            cap = MAX_UPLOAD_BYTES if scope["path"].startswith(UPLOAD_PREFIX) else self.max_bytes
-            if length is not None and (not length.isdigit() or int(length) > cap):
+            limit = self.max_bytes
+            if scope["path"] in UPLOAD_PATHS:
+                limit = max(limit, MAX_UPLOAD_BYTES)
+            elif scope["path"].startswith(CHAT_UPLOAD_PREFIX):
+                limit = max(limit, MAX_CHAT_UPLOAD_BYTES)
+            if length is not None and (not length.isdigit() or int(length) > limit):
                 return await JSONResponse({"detail": "request body too large"}, 413)(scope, receive, send)
         await self.app(scope, receive, send)
