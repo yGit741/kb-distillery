@@ -53,6 +53,9 @@ def post_chat(req: ChatRequest):
     backend = payload.get("backend") or settings["backend"]
     if backend not in chat_data.BACKENDS:
         return _err(400, f"unknown backend {backend!r}")
+    billing = payload.get("billing") if runtime.effective("agent-mode") and backend == "agent" else None
+    if billing:       # the composer line's pick decides who pays; it replaces the stored account choice for this turn
+        auth_mode = "subscription" if billing == "subscription" else "api_key"
     if auth_mode == "subscription":
         if backend != "agent":
             return _err(400, "the subscription works with the Agent backend only",
@@ -102,7 +105,7 @@ def post_chat(req: ChatRequest):
                 except chat_attachments.AttachmentError as exc:
                     return _err(400, exc.message)
         gen = chat_agent.stream_agent(question, model=model, system=system, key=key,
-                                      billing="subscription" if key is None else "api",
+                                      billing=billing or ("subscription" if key is None else "api"),
                                       session_id=payload.get("session") or None, history=history, scope=scope,
                                       **extra)
     else:

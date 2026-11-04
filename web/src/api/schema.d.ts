@@ -1220,6 +1220,8 @@ export interface components {
             auth_mode?: string | null;
             /** Backend */
             backend?: string | null;
+            /** Billing */
+            billing?: ("subscription" | "api" | "batch") | null;
             /** Budget */
             budget?: number | null;
             /** Effort */
