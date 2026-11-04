@@ -98,3 +98,20 @@ export function createSiteImportAdapter(fetchImpl: typeof fetch = (...a) => fetc
     },
   };
 }
+
+/**
+ * Is the signed-in viewer an owner of a site whose inbox is set up? `GET /api/inbox/access` answers 200 `{owner, inbox}`
+ * to any signed-in viewer (owner = the Worker's ownerGate allowlist, inbox = the R2 bucket is bound), so the entry is
+ * offered only to an owner, only where the inbox works, and nobody's page load logs an error. Anything else (another
+ * status, a network failure, a host that is not the Worker) is a no.
+ */
+export async function inboxAccess(fetchImpl: typeof fetch = (...a) => fetch(...a)): Promise<boolean> {
+  try {
+    const res = await fetchImpl("/api/inbox/access", { credentials: "same-origin", cache: "no-store", headers: { Accept: "application/json" } });
+    if (res.status !== 200) return false;
+    const body = (await res.json().catch(() => null)) as { owner?: unknown; inbox?: unknown } | null;
+    return body?.owner === true && body?.inbox === true;
+  } catch {
+    return false;
+  }
+}

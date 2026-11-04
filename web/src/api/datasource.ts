@@ -15,6 +15,10 @@ export interface DataSource {
   previewKbImport(req: T.KbImportRequest): Promise<T.KbImportPreview>;
   /** Local app only: import it. */
   importKb(req: T.KbImportRequest): Promise<T.KbImportResult>;
+  /** Local app only: the deployed site's upload inbox (pending, imported, failed) as the server reads it. */
+  getKbInbox(): Promise<T.KbInbox>;
+  /** Local app only: import every pending upload as a new knowledge base and report back to the site. */
+  pullKbInbox(): Promise<T.KbInboxPull>;
   getOps(refresh?: boolean): Promise<T.OpsSnapshot>;
 
   // graph
@@ -29,6 +33,11 @@ export interface DataSource {
   runGraphQuery(name: string, params: Record<string, string>): Promise<T.QueryTable>;
   /** LLM relation proposals in a confidence range 0..1 (local app only), best first, with a 10-bucket histogram. */
   getRelationProposals(opts: { min: number; max: number; kind?: string }): Promise<T.RelationProposals>;
+
+  // pinned views (meta/views.json) and the recent steps of the graph search panel (local, never committed)
+  listViews(): Promise<T.ViewList>;
+  listRecent(): Promise<T.RecentList>;
+  addRecent(text: string, spec?: Record<string, unknown>): Promise<T.RecentList>;
 
   // pages
   listPages(opts?: { kb?: string }): Promise<T.PageIndex>;

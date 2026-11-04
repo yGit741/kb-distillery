@@ -28,8 +28,6 @@ screens = [
   { id = "system-flags", path = "/system?tab=flags", selector = "[data-testid=flags-table]" },
   { id = "pages", path = "/pages" },
   { id = "chat", path = "/chat" },
-  { id = "scopes", path = "/scopes" },
-  { id = "start", path = "/start" },
   { id = "covector", path = "/covector" },
 ]
 
