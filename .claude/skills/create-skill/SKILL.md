@@ -3,6 +3,8 @@ name: create-skill
 description: >-
   Add or extend a skills workflow skill with lint gate. Use for create skill,
   new skill, add skill workflow. Do NOT use for vault ingest, digest, or query.
+audience: dev
+mode: write
 ---
 
 # create-skill
@@ -34,7 +36,7 @@ Meta-skill for authoring skills. Not part of the ingest/digest ladder.
 
 1. Pick the folder: a workflow every kb needs → `src/kb_distillery/kits/base/skills/`; one kit's own → `src/kb_distillery/kits/<kit>/skills/`; working on the engine itself → `.claude/skills/`. Guide: [`docs/guides/write-a-skill.md`](../../../docs/guides/write-a-skill.md).
    Copy [`_TEMPLATE.md`](../../../src/kb_distillery/kits/base/skills/_TEMPLATE.md) to `<folder>/<name>/SKILL.md` (or subdir). App skills call `distill …`, not `pixi run`.
-2. Fill frontmatter: `name` must match directory (`parent-child` for subskills).
+2. Fill frontmatter: `name` must match directory (`parent-child` for subskills); `audience: app` (kit skills) or `dev` (`.claude/skills`); `mode: read` (never changes a file) or `write`. An app skill never mentions ship/PRs; a read skill never names Write/Edit.
 3. Register in that folder's `README.md`:
    - Ladder skill → row in **Token budgets** + **Skills** tables
    - Meta skill (like this one) → **Skills** table only, add to `META_SKILLS` in `src/kb_distillery/lint/lint_skills.py` if needed

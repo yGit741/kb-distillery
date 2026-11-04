@@ -1,6 +1,8 @@
 ---
 name: ingest-to-catalog-slides
 description: Catalog slide decks from inbox to raw/presentations/. Corpus row only. Do NOT digest from here.
+audience: app
+mode: write
 ---
 
 # ingest-to-catalog / slides

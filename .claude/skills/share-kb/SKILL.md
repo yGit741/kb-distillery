@@ -6,6 +6,8 @@ description: >-
   prune). Use for share the site, publish, deploy main, deploy status, rollback the site, snapshot
   the site, list snapshots, remove snapshot, audit, time machine. Do NOT use for export-kb (a zip
   for an LLM) or kb-snapshot (a kb-x.y.z tag); never --force or --allow-flags unless the user asks.
+audience: dev
+mode: write
 ---
 
 # share-kb

@@ -1,6 +1,8 @@
 ---
 name: scrap-data-mail
 description: Parse a local .mbox/.eml Gmail export into raw/inbox/mail-.../ with attachments. Use for scrap mail, download email thread. Do NOT fetch attachment bytes via an agent's Gmail MCP tools — there is no attachment-download tool and RAW MIME is too large for context.
+audience: app
+mode: write
 ---
 
 # scrap-data / mail

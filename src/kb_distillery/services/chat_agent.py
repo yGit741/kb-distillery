@@ -44,6 +44,7 @@ from urllib.parse import urlsplit
 from kb_distillery.config import kb as kbconfig
 from kb_distillery.config.flags import runtime
 from kb_distillery.llm import agent as llm_agent
+from kb_distillery.services import agent_skills
 from kb_distillery.vault import links
 from kb_distillery.config.paths import vault_root
 META_DIR = os.path.join(vault_root(), "meta")
@@ -544,10 +545,14 @@ def _policy_agent_ui(tool_name, tool_input, scope, run=None):
 
 
 def _policy_skills(tool_name, tool_input, scope):
-    """Skill / subagents: denied for now (the skills PR adds the whitelist)."""
-    if tool_name in SKILL_TOOLS:
-        return Decision(False, f"read-only KB agent: tool {tool_name} is not available")
-    return None
+    """Skill / subagents: denied, except under agent mode: `Skill` only for the kb's whitelisted app skills
+    (`[agent] skills`) and `Agent` / `Task` only for the subagents agent_skills defines (read-only tools, this same policy)."""
+    if tool_name not in SKILL_TOOLS:
+        return None
+    if runtime.effective("agent-mode"):
+        allow, reason = agent_skills.decide(tool_name, tool_input)
+        return Decision(allow, reason)
+    return Decision(False, f"read-only KB agent: tool {tool_name} is not available")
 
 
 def _policy_attachments(tool_name, tool_input, scope):
@@ -662,15 +667,21 @@ def make_can_use_tool(policy=tool_policy, scope=None, run=None):
 
 def agent_request(question, model, system, session_id=None, scope=None, history=None, effort=None, budget=None,
                   agent_mode=False):
-    tools, disallowed = list(TOOLS), list(DISALLOWED_TOOLS)
+    tools, disallowed, extra = list(TOOLS), list(DISALLOWED_TOOLS), {}
     if agent_mode:                      # ship dark: today's tool set unless the flag is on; scoped chat gets no web
-        extra = [t for t in AGENT_MODE_TOOLS if scope is None or t not in WEB_TOOLS]
-        tools += extra
-        disallowed = [t for t in disallowed if t not in extra]
+        ui = [t for t in AGENT_MODE_TOOLS if scope is None or t not in WEB_TOOLS]
+        tools += ui
+        disallowed = [t for t in disallowed if t not in ui]
+    skills = agent_skills.enabled() if runtime.effective("agent-mode") else []
+    if skills:           # whitelisted skills ride in a generated local plugin; the policy hook still checks every call
+        tools += ["Skill", "Agent"]
+        disallowed = [t for t in disallowed if t not in ("Skill", "Agent", "Task")]
+        extra = dict(skills=tuple(agent_skills.qualified(s) for s in skills),
+                     plugins=(agent_skills.plugin_dir(skills),), agents=agent_skills.subagents())
     return llm_agent.AgentRequest(
         question=question, model=model, system=system, effort=effort, budget=budget, session=session_id or None,
         tools=tuple(tools), disallowed=tuple(disallowed), scope=scope, cwd=ROOT, max_turns=MAX_TURNS,
-        fresh_prompt=_history_prefix(history) + question if history else None)
+        fresh_prompt=_history_prefix(history) + question if history else None, **extra)
 
 
 def build_options(model, system, key, session_id=None, cli_path=None, ca_path=None, stderr=None, scope=None, run=None):

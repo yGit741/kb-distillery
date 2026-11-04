@@ -4,6 +4,8 @@ description: >-
   Wrap free-form wiki edits (split, merge, rename, refine, file-back answers) in an ops session so they
   become one undoable kb(refine) commit. Use for split idea, merge notes, rename note, edit wiki, file back.
   Do NOT use inside full/deep-digest sessions (use draft + finalize) or for think/.
+audience: app
+mode: write
 ---
 
 # wiki-edit

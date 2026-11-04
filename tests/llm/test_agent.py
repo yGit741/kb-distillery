@@ -56,6 +56,7 @@ def fake_sdk(monkeypatch):
     Client.script = staticmethod(lambda o: [ResultMessage()])
     mod = types.ModuleType("claude_agent_sdk")
     mod.ClaudeAgentOptions, mod.HookMatcher, mod.ClaudeSDKClient = Opts, Matcher, Client
+    mod.AgentDefinition = lambda **kw: ("agent", kw)
     monkeypatch.setitem(sys.modules, "claude_agent_sdk", mod)
     monkeypatch.delenv("KB_LLM_BACKEND", raising=False)
     monkeypatch.delenv("NODE_EXTRA_CA_CERTS", raising=False)
@@ -176,3 +177,17 @@ def test_ca_bundle_uses_injected_pem(tmp_path, monkeypatch):
 def test_layer_rule_no_service_imports():
     src = open(agent.__file__, encoding="utf-8").read()
     assert not any(f"kb_distillery.{m}" in src for m in ("services", "server", "search", "config"))
+
+
+def test_options_carry_plugins_and_subagents():
+    run(agent.AgentRequest("q", plugins=("/cache/plug",), agents={"helper": {"description": "d", "prompt": "p", "tools": ["Read"]}}))
+    o = Client.instances[0].options
+    assert o.plugins == [{"type": "local", "path": "/cache/plug"}]
+    assert o.agents == {"helper": ("agent", {"description": "d", "prompt": "p", "tools": ["Read"]})}
+    assert o.setting_sources == []
+
+
+def test_options_without_plugins_or_subagents_do_not_pass_them():
+    run(agent.AgentRequest("q"))
+    o = Client.instances[0].options
+    assert not hasattr(o, "plugins") and not hasattr(o, "agents")

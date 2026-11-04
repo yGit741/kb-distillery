@@ -1,6 +1,8 @@
 ---
 name: easy-digest
 description: Lightweight abstract/metadata skim of a Source page to depth easy (~2-4k tokens, Haiku by default). Use ONLY for "easy-digest", "easy digest", or "skim". Do NOT use for bare "digest" (ask tier first) or "full-digest".
+audience: app
+mode: write
 ---
 
 # easy-digest

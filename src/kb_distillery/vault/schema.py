@@ -23,6 +23,8 @@ _GROW = _types.GROW_STATUS
 
 _T = _types.load()                                  # the active knowledge base's types (or the defaults)
 SOURCE_TYPES = _T.source_types
+# Source types whose page carries defining equations; the others (article, mail, video, ...) may have none.
+EQUATION_TYPES = SOURCE_TYPES & {"paper", "part", "lecture"}
 # Collections whose table is a page partition of their own raw PDF.
 PARTITION_COLLECTIONS = _T.partition_collections
 # Collections whose table lists member raw files (corpus.tsv `collection` must agree).

@@ -78,7 +78,7 @@ def _extract_raw(raw_path, max_pages, pages):
         return text_clip(raw_path)
 
     if not pdf.available():
-        print(pdf.MISSING_MSG, file=sys.stderr)
+        print(pdf.missing_msg(), file=sys.stderr)
         return None
 
     doc = pdf.PdfDoc(raw_path)
@@ -151,7 +151,7 @@ def fill_claims(template, text, sdir, backend=None, model=FILL_MODEL):
         json.dump(claims, f, indent=2, ensure_ascii=False)
         f.write("\n")
     print(f"claims.json filled ({where}): {claims['title']} — {len(claims['results'])} result(s), "
-          f"{len(claims['equations'])} equation(s); review it, then map")
+          f"{len(claims.get('equations') or [])} equation(s); review it, then map")
     return 0
 
 

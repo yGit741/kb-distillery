@@ -1,6 +1,8 @@
 ---
 name: ingest-to-catalog-web
 description: Catalog web clips from inbox to raw/web-clips/. Corpus row only. Do NOT digest from here.
+audience: app
+mode: write
 ---
 
 # ingest-to-catalog / web

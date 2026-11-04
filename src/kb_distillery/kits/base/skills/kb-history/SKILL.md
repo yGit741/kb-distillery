@@ -4,6 +4,8 @@ description: >-
   Show the knowledge version, recent steps (kb-x.y.z) and infra PRs (#N), open sessions and pending
   commits. Use for kb history, what changed, kb status, current version, audit, debug a note's history.
   Do NOT use to change anything (read-only).
+audience: app
+mode: read
 ---
 
 # kb-history

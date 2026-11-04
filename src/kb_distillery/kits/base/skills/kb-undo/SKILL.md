@@ -4,6 +4,8 @@ description: >-
   Reverse one knowledge step (e.g. an idea split that should not have happened) as a new kb(undo)
   commit that rewrites only wiki/. Use for undo, revert step, roll back <slug>. Do NOT use for infra
   changes, think/ edits, raw/ imports, or to go back to a whole earlier state (use kb-snapshot restore).
+audience: app
+mode: write
 ---
 
 # kb-undo
@@ -19,7 +21,7 @@ description: >-
 
 - Use `git revert` / `git reset` — blocked; `ops undo` is the only path
 - Undo `kb(think)` (the user's own notes) or `kb(import)` (raw inbox files) — refused by design
-- Undo an infra commit — that is a new PR
+- Undo an engine (tooling) change — that is not a knowledge step
 - Chain undos without confirming each with the user
 
 ## CLI

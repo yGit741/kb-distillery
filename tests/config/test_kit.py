@@ -218,3 +218,19 @@ class ShippedKits(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+def test_base_kit_lists_the_chat_agent_skills():
+    from kb_distillery.config import kit
+    assert kit.load("base")["agent"]["skills"] == ["deep-research"]
+
+
+def test_kit_agent_table_is_validated(tmp_path, monkeypatch):
+    import pytest
+    from kb_distillery.config import kit
+    (tmp_path / "bad").mkdir()
+    (tmp_path / "bad" / "kit.toml").write_text('[kit]\nname = "bad"\nversion = 1\n[agent]\nskills = "deep-research"\n')
+    monkeypatch.setenv("KB_KITS_DIR", str(tmp_path))
+    kit.load.cache_clear() if hasattr(kit.load, "cache_clear") else None
+    with pytest.raises(kit.KitError, match="skills must be a list"):
+        kit.load("bad")

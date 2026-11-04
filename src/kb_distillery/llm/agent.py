@@ -42,6 +42,8 @@ class AgentRequest:
     tools: tuple = ()                   # tools the session may see
     disallowed: tuple = ()
     skills: tuple = ()                  # SDK `skills` names (empty = not passed)
+    plugins: tuple = ()                 # local plugin directories (SDK `plugins`); carry the whitelisted skills
+    agents: dict = None                 # name -> {description, prompt, tools, ...}: SDK `agents` (subagents)
     budget: float = None                # hard ceiling in USD (SDK max_budget_usd); None = none
     session: str = None                 # resume key
     attachments: tuple = ()             # chat-only files (unused until the attachments PR)
@@ -153,6 +155,11 @@ def build_options(req, key, *, policy_hook, can_use_tool, resume=None, cli=None,
         kw["effort"] = req.effort
     if req.skills:
         kw["skills"] = list(req.skills)
+    if req.plugins:
+        kw["plugins"] = [{"type": "local", "path": str(p)} for p in req.plugins]
+    if req.agents:
+        from claude_agent_sdk import AgentDefinition
+        kw["agents"] = {name: AgentDefinition(**spec) for name, spec in req.agents.items()}
     if req.budget:
         kw["max_budget_usd"] = float(req.budget)
     if cli:

@@ -1,0 +1,7 @@
+{
+  "pages": 0,
+  "errors": [
+    "the bundle has no pages (no .md files besides index.md / log.md)"
+  ],
+  "warnings": []
+}
