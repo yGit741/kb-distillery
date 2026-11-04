@@ -31,7 +31,7 @@ export type RelationsSearch = { min?: string; max?: string; kind?: string };
 /** Think: the open note (`?note=<name>.md`), so a reload or link restores it. */
 export type ThinkSearch = { note?: string };
 /** Home: the concept picked in the intro card (`?concept=<slug>`), so Back and shared links restore it. */
-export type HomeSearch = { concept?: string };
+export type HomeSearch = { concept?: string; start?: "1" };
 
 export interface SearchById {
   home: HomeSearch;
@@ -53,7 +53,7 @@ const pipelineSearch = (r: Raw): PipelineSearch =>
   clean({ format: str(r.format), q: str(r.q), depth: str(r.depth), collection: str(r.collection), status: str(r.status), view: str(r.view), group: str(r.group), backlog: oneOf(r.backlog, ["queued"] as const), item: str(r.item) });
 
 export const SEARCH: { [K in keyof SearchById]: (raw: Raw) => SearchById[K] } = {
-  home: (r) => clean({ concept: str(r.concept) }),
+  home: (r) => clean({ concept: str(r.concept), start: oneOf(r.start, ["1"] as const) }),
   lifecycle: () => ({}),
   think: (r) => clean({ note: str(r.note) }),
   chat: (r) => clean({ session: str(r.session), scope: str(r.scope), q: str(r.q) }),

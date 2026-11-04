@@ -22,8 +22,6 @@
   "pages|light|5|a.w-#.text-xs": 3,
   "pages|light|5|p.text-sm.text-muted-foreground": 1,
   "pages|light|5|p.text-xs.text-muted-foreground": 2,
-  "scopes|light|5|p.py-#.text-center": 1,
-  "scopes|light|5|p.rounded-lg.border": 1,
   "system-flags|*|25|button.relative.inline-flex": 2,
   "system-flags|light|5|button.-mb-px.border-b-#": 4,
   "system-flags|light|5|span[tile-backlog-value].text-lg.font-semibold": 1,
