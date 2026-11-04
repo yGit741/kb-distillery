@@ -35,7 +35,7 @@ import { assignAreaColors, colorKey, effectiveColorBy } from "./style";
 import { parseSchema } from "./schema";
 import { SideReader } from "./SideReader";
 import { useGraphUi } from "./store";
-import { Toolbar } from "./Toolbar";
+import { Panels } from "./Panels";
 import { Corners } from "./shell/corners/Corners";
 import { parseKbs } from "@/lib/kbSelection";
 import { useFlag } from "@/flags/useFlag";
@@ -460,21 +460,28 @@ function Loaded({
       />
       {/* the search box lives in the app header when there is one (the embed has none: it floats over the canvas) */}
       {shell ? (
-        <GraphShell
-          nodes={model.nodes}
-          byId={byId}
-          colorBy={ui.colorBy}
-          onFocus={(id) => (visible.has(id) ? focus(id) : showPicked([id]))}
-          onRead={openReader}
-          onShowExact={(ids) => showPicked(ids, true)}
-          shownTypes={shownTypes}
-          onShowMentions={(query) => void showMentions(query)}
-          onFit={() => ui.fit()}
-          onZoom={(f) => canvas.current?.zoomBy(f)}
-          onReheat={() => canvas.current?.reheat()}
-          onRefresh={onRefresh}
-          setParams={host.setParams}
-        />
+        // the search line and the corner controls share one frame: it narrows while the side reader is open, so the reader never covers them
+        <div
+          className="pointer-events-none absolute inset-y-0 left-0 transition-[right] duration-200 motion-reduce:transition-none"
+          style={{ right: reader ? "min(34rem, 100%)" : 0 }}
+        >
+          <GraphShell
+            nodes={model.nodes}
+            byId={byId}
+            colorBy={ui.colorBy}
+            onFocus={(id) => (visible.has(id) ? focus(id) : showPicked([id]))}
+            onRead={openReader}
+            onShowExact={(ids) => showPicked(ids, true)}
+            shownTypes={shownTypes}
+            onShowMentions={(query) => void showMentions(query)}
+            onFit={() => ui.fit()}
+            onZoom={(f) => canvas.current?.zoomBy(f)}
+            onReheat={() => canvas.current?.reheat()}
+            onRefresh={onRefresh}
+            setParams={host.setParams}
+          />
+          <Corners nodes={model.nodes} visible={visible} schema={schema} shownTypes={shownTypes} stats={stats} host={host} applyView={applyView} showPicked={showPicked} />
+        </div>
       ) : headerSlot ? (
         createPortal(finder, headerSlot)
       ) : (
@@ -505,24 +512,17 @@ function Loaded({
           </button>
         </div>
       )}
-      {!shell && <Toolbar
-        onFit={() => ui.fit()}
-        onZoom={(f) => canvas.current?.zoomBy(f)}
+      <Panels
         onReheat={() => canvas.current?.reheat()}
         onRefresh={onRefresh}
         refreshing={refreshing}
         stats={stats}
         toolContext={toolContext}
-        onBack={search.from === "home" ? () => (window.history.length > 1 ? window.history.back() : host.go("/")) : undefined}
-      />}
-      {shell ? (
-        <Corners nodes={model.nodes} visible={visible} schema={schema} shownTypes={shownTypes} stats={stats} host={host} applyView={applyView} showPicked={showPicked} />
-      ) : (
-        legend
-      )}
-      {ui.railOpen && <LabRail imp={imp} selected={selected} className={cn("absolute bottom-16 left-14 top-3 z-20", wide ? "w-72" : "w-[min(20rem,calc(100%-4.5rem))]")} />}
+      />
+      {!shell && legend}
+      {ui.railOpen && <LabRail imp={imp} selected={selected} className={cn("absolute bottom-[66px] left-3.5 top-[66px] z-20", wide ? "w-72" : "w-[min(20rem,calc(100%-2rem))]")} />}
       {/* the hover card is the quick peek; the inspector and the reader are where a page is read, so it yields to them */}
-      {!ui.railOpen && !showDetails && !reader && <HoverCard byId={byId} className="absolute bottom-16 left-14 z-20" />}
+      {!ui.railOpen && !showDetails && !reader && <HoverCard byId={byId} className="absolute bottom-[66px] left-3.5 z-20" />}
       {bgMenu && (
         <div
           role="menu"
@@ -586,6 +586,7 @@ function Loaded({
           onRead={openReader}
           onToggleSources={(ids) => ui.toggleReveal(ids)}
           relations={relations}
+          clearOfEdge={shell}
         />
       )}
       {reader && <SideReader slug={reader.slug ?? reader.id} kb={host.foreignKb?.(reader.id)} title={reader.title || reader.id} pageHref={host.pageHref(reader.id)} onClose={() => ui.set({ readerSlug: null })} />}

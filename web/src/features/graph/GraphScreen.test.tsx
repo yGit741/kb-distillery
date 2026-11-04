@@ -51,6 +51,9 @@ function wrap(ds: DataSource, ui: ReactNode) {
 
 const withGraph = (o: Partial<DataSource> = {}) => mockDataSource({ getGraph: async () => sampleSnapshot(), ...o });
 
+/** The Legend, the Finder and the views bar are the screen's chrome while graph-shell is off (private and public builds). */
+const off = (fn: () => Promise<void>) => () => withFlag("graph-shell", false, fn);
+
 beforeEach(() => {
   localStorage.clear();
   useKb.setState({ selection: new Set() });
@@ -79,7 +82,7 @@ describe("GraphScreen states", () => {
 });
 
 describe("legend and filters", () => {
-  it("opens on the concept layer with people off; a chip brings them in", async () => {
+  it("opens on the concept layer with people off; a chip brings them in", off(async () => {
     render(wrap(withGraph(), <GraphScreen search={{}} host={host} />));
     const legend = await screen.findByRole("region", { name: "Legend" });
     const person = within(legend).getByRole("button", { name: /^person/i });
@@ -87,9 +90,9 @@ describe("legend and filters", () => {
     expect(within(legend).getByRole("button", { name: /^topic/i })).toHaveAttribute("aria-pressed", "true");
     await userEvent.click(person);
     expect(await screen.findByTestId("graph-stats")).toHaveTextContent("4 of 7 pages");
-  });
+  }));
 
-  it("'Sources:' shows or hides every source and collection; '+' opens the filters", async () => {
+  it("'Sources:' shows or hides every source and collection; '+' opens the filters", off(async () => {
     render(wrap(withGraph(), <GraphScreen search={{}} host={host} />));
     const legend = await screen.findByRole("region", { name: "Legend" });
     await userEvent.click(within(legend).getByRole("button", { name: "Sources:" }));
@@ -98,22 +101,22 @@ describe("legend and filters", () => {
     expect(screen.getByTestId("graph-stats")).toHaveTextContent("3 of 7 pages");
     await userEvent.click(within(legend).getByRole("button", { name: "Add a filter" }));
     expect(useGraphUi.getState().flyout).toBe("filter");
-  });
+  }));
 
-  it("'Show all' and 'Concepts only' switch between the whole graph and the default", async () => {
+  it("'Show all' and 'Concepts only' switch between the whole graph and the default", off(async () => {
     render(wrap(withGraph(), <GraphScreen search={{}} host={host} />));
     const legend = await screen.findByRole("region", { name: "Legend" });
     await userEvent.click(within(legend).getByRole("button", { name: "Show all" }));
     expect(screen.getByTestId("graph-stats")).toHaveTextContent("7 of 7 pages");
     await userEvent.click(within(legend).getByRole("button", { name: "Concepts only" }));
     expect(screen.getByTestId("graph-stats")).toHaveTextContent("3 of 7 pages");
-  });
+  }));
 
   it("the filter panel narrows by text, and Escape closes it", async () => {
     render(wrap(withGraph(), <GraphScreen search={{}} host={host} />));
     await screen.findByTestId("graph-stats");
-    await userEvent.click(screen.getByRole("button", { name: /^filters/i }));
-    await userEvent.type(screen.getByPlaceholderText("Slug or title…"), "margin");
+    act(() => useGraphUi.setState({ flyout: "filter" }));
+    await userEvent.type(await screen.findByPlaceholderText("Slug or title…"), "margin");
     expect(screen.getByTestId("graph-stats")).toHaveTextContent("1 of 7 pages");
     await userEvent.keyboard("{Escape}");
     await userEvent.click(document.body);
@@ -123,30 +126,30 @@ describe("legend and filters", () => {
 });
 
 describe("search", () => {
-  it("finds a page by title and asks the canvas to centre on it", async () => {
+  it("finds a page by title and asks the canvas to centre on it", off(async () => {
     render(wrap(withGraph({ search: async () => ({ hits: [], total: 0 }) }), <GraphScreen search={{}} host={host} />));
     const input = await screen.findByRole("combobox", { name: /search a page/i });
     await userEvent.type(input, "margin");
     expect(await screen.findByRole("option", { name: /idea margin/i })).toBeInTheDocument();
     await userEvent.keyboard("{Enter}");
     expect(useGraphUi.getState().focusRequest?.id).toBe("idea-margin");
-  });
+  }));
 
-  it("'/' sends the question to the chat dock", async () => {
+  it("'/' sends the question to the chat dock", off(async () => {
     render(wrap(withGraph(), <GraphScreen search={{}} host={host} />));
     const input = await screen.findByRole("combobox", { name: /search a page/i });
     await userEvent.type(input, "/what is margin");
     expect(await screen.findByText(/opens the chat/i)).toBeInTheDocument();
-  });
+  }));
 
-  it("lists full-text hits that are not title matches", async () => {
+  it("lists full-text hits that are not title matches", off(async () => {
     const search = vi.fn(async () => ({ hits: [{ id: "q-why-big-nets-work", title: "x", type: "question", score: 1, snippet: "mentions margin" }], total: 1 }));
     render(wrap(withGraph({ search }), <GraphScreen search={{}} host={host} />));
     await userEvent.type(await screen.findByRole("combobox", { name: /search a page/i }), "margin");
     expect(await screen.findByText("mentions margin")).toBeInTheDocument();
-  });
+  }));
 
-  it("shows meaning-based related hits under their own heading, and Enter centres on one", async () => {
+  it("shows meaning-based related hits under their own heading, and Enter centres on one", off(async () => {
     const search = vi.fn(async () => ({
       hits: [],
       total: 0,
@@ -158,15 +161,15 @@ describe("search", () => {
     expect(screen.getByText("Asks why big nets generalize.")).toBeInTheDocument();
     await userEvent.keyboard("{Enter}");
     expect(useGraphUi.getState().focusRequest?.id).toBe("q-why-big-nets-work");
-  });
+  }));
 
-  it("shows no related heading when the server sends none (flag off)", async () => {
+  it("shows no related heading when the server sends none (flag off)", off(async () => {
     const search = vi.fn(async () => ({ hits: [], total: 0, related: [] }));
     render(wrap(withGraph({ search }), <GraphScreen search={{}} host={host} />));
     await userEvent.type(await screen.findByRole("combobox", { name: /search a page/i }), "why do big nets work");
     expect(await screen.findByText(/mentioning/i)).toBeInTheDocument();
     expect(screen.queryByText("Related ideas")).not.toBeInTheDocument();
-  });
+  }));
 });
 
 describe("deep links", () => {
@@ -241,7 +244,7 @@ describe("selection, details, reader, menu", () => {
     expect(screen.queryByRole("complementary", { name: "Page reader" })).not.toBeInTheDocument();
   });
 
-  it("keyboard: E opens the page, Space focuses the search", async () => {
+  it("keyboard: E opens the page, Space focuses the search", off(async () => {
     render(wrap(withGraph(), <GraphScreen search={{}} host={host} />));
     await screen.findByTestId("graph-stats");
     act(() => useKb.getState().setSelection(["idea-margin"]));
@@ -249,11 +252,11 @@ describe("selection, details, reader, menu", () => {
     expect(host.openPage).toHaveBeenCalledWith("idea-margin");
     await userEvent.keyboard(" ");
     expect(screen.getByRole("combobox", { name: /search a page/i })).toHaveFocus();
-  });
+  }));
 });
 
 describe("views bar", () => {
-  const withResearch = (fn: () => Promise<void>) => () => withFlag("research-tools", true, fn);
+  const withResearch = (fn: () => Promise<void>) => off(() => withFlag("research-tools", true, fn));
 
   it("?view=thesis applies the Thesis story and its seed view without writing the URL back", withResearch(async () => {
     vi.mocked(host.setParams).mockClear();
@@ -278,7 +281,7 @@ describe("views bar", () => {
     expect(host.setParams).toHaveBeenCalledWith(expect.objectContaining({ view: "thesis" }));
   }));
 
-  it("shows the Thesis and Explore pills once the flag arrives after the first render", async () => {
+  it("shows the Thesis and Explore pills once the flag arrives after the first render", off(async () => {
     render(wrap(withGraph(), <GraphScreen search={{}} host={host} />));
     await screen.findByTestId("graph-stats");
     expect(screen.queryByRole("button", { name: "Thesis" })).toBeNull();
@@ -286,14 +289,17 @@ describe("views bar", () => {
     expect(screen.getByRole("button", { name: "Thesis" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Explore" })).toBeInTheDocument();
     act(() => setFlagOverrides({}));
-  });
+  }));
 
-  it("has no Thesis or Explore pill, and no research tool in the toolbar, while the research-tools flag is off", async () => {
+  it("has no Thesis or Explore pill, and no research tool, while the research-tools flag is off", off(async () => {
     await withFlag("research-tools", false, async () => {
       render(wrap(withGraph(), <GraphScreen search={{}} host={host} />));
       await screen.findByTestId("graph-stats");
       expect(screen.getByRole("button", { name: "Map" })).toBeInTheDocument();
-      for (const name of ["Thesis", "Explore", "Experiments", "Research directions"]) expect(screen.queryByRole("button", { name })).toBeNull();
+      for (const name of ["Thesis", "Explore"]) expect(screen.queryByRole("button", { name })).toBeNull();
+      // the Experiments tool is off too: its id opens no panel
+      act(() => useGraphUi.setState({ flyout: "experiments" }));
+      expect(screen.queryByRole("region", { name: "Experiments" })).toBeNull();
     });
-  });
+  }));
 });

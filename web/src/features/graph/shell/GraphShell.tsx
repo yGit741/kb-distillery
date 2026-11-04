@@ -26,7 +26,8 @@ import { useApiQuery } from "@/lib/useApiQuery";
 import { IS_SHARE } from "@/share/env";
 import { NodeSwatch } from "../encoding/NodeMarkSvg";
 import { useToolHost } from "../hostContext";
-import { colorOf, effectiveColorBy, type ColorBy } from "../style";
+import type { ColorBy } from "../style";
+import { swatchColor } from "../nodeColor";
 import { useGraphUi } from "../store";
 import { useChatDock } from "../tools/chatDockStore";
 import { useVisibleTools } from "../tools";
@@ -302,7 +303,6 @@ export function GraphShell({ nodes, byId, colorBy, onFocus, onRead, onShowExact,
       run: () => requestShape(text),
     };
     if (canShape && asksShape && /^match\b/i.test(text)) out.push(shapeRow);
-    const colour = effectiveColorBy(colorBy);
     // a short list keeps the actions under it in view
     const shown = [...results.filter((r) => !r.related).slice(0, PAGES_SHOWN), ...results.filter((r) => r.related).slice(0, RELATED_SHOWN)];
     shown.forEach((r) => {
@@ -312,7 +312,7 @@ export function GraphShell({ nodes, byId, colorBy, onFocus, onRead, onShowExact,
         label: r.node.title || r.node.id,
         detail: r.snippet,
         hint: r.node.type.replace(/-/g, " "),
-        lead: <NodeSwatch type={r.node.type} color={colorOf(r.node, colour)} className="size-3.5" />,
+        lead: <NodeSwatch type={r.node.type} color={swatchColor(r.node, colorBy)} className="size-3.5" />,
         run: (shift) => {
           if (shift) onRead(r.node.id);
           else onFocus(r.node.id);
