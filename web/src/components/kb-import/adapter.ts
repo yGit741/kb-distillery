@@ -18,10 +18,10 @@ export interface ImportPreview {
   warnings: string[];
 }
 
-/** What happened: imported at once (link to its graph), or handed over and will appear later (`message` says when). */
+/** What happened: imported at once (link to its graph), or handed over and will appear later (`message` says when; `ref` is the receiver's id for it). */
 export type ImportOutcome =
   | { state: "imported"; id: string; name: string; pages: number }
-  | { state: "received"; message: string };
+  | { state: "received"; message: string; ref?: string };
 
 export interface ImportAdapter {
   validate(source: ImportSource): Promise<ImportPreview>;
