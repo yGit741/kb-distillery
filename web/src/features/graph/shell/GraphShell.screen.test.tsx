@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { DataSourceProvider, type DataSource } from "@/api";
 import { withFlag } from "@/flags/testing";
@@ -73,17 +73,17 @@ describe("flag graph-shell", () => {
       expect(await screen.findByTestId("graph-shell")).toBeInTheDocument();
       expect(screen.getByRole("combobox", { name: /search the graph/i })).toBeInTheDocument();
       expect(screen.queryByRole("combobox", { name: /search a page/i })).not.toBeInTheDocument();
-      // the toolbar and the views bar are still there
-      expect(screen.getByRole("navigation", { name: /graph tools/i })).toBeInTheDocument();
+      // the corner controls replace the toolbar
+      expect(screen.queryByRole("navigation", { name: /graph tools/i })).not.toBeInTheDocument();
     });
   });
 
-  it("on: a command from the panel drives the graph (Filters opens the toolbar panel)", async () => {
+  it("on: a command from the panel drives the graph (Labels and views opens the rail)", async () => {
     await withFlag("graph-shell", true, async () => {
       screenWith();
-      await userEvent.type(await screen.findByRole("combobox", { name: /search the graph/i }), "/filters");
+      await userEvent.type(await screen.findByRole("combobox", { name: /search the graph/i }), "/labels");
       await userEvent.keyboard("{Enter}");
-      expect(await screen.findByRole("region", { name: "Filters" })).toBeInTheDocument();
+      await waitFor(() => expect(useGraphUi.getState().railOpen).toBe(true));
     });
   });
 
