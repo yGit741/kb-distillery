@@ -105,7 +105,21 @@ export function Toolbar({ onFit, onZoom, onReheat, onRefresh, refreshing, stats,
           <CircleHelp aria-hidden />
         </IconButton>
       </nav>
-      {flyout && (
+      {flyout && activeTool?.sheet && (
+        <section
+          aria-label={activeTool.label}
+          className="pointer-events-auto absolute bottom-3 right-3 top-3 z-20 flex w-[min(48rem,calc(100%-5rem))] flex-col rounded-lg border bg-card shadow-[var(--shadow)]"
+        >
+          <header className="flex items-center justify-between border-b px-3 py-1.5">
+            <h2 className="text-sm font-semibold">{activeTool.label}</h2>
+            <Button variant="ghost" size="icon" className="size-7" aria-label="Close panel" onClick={close}>
+              <X aria-hidden />
+            </Button>
+          </header>
+          <div className="min-h-0 flex-1 overflow-y-auto">{activeTool.sheet()}</div>
+        </section>
+      )}
+      {flyout && !activeTool?.sheet && (
         <section
           aria-label={activeTool?.label ?? TITLES[flyout] ?? flyout}
           className="pointer-events-auto absolute left-14 top-3 z-20 flex max-h-[calc(100%-5rem)] w-[min(20rem,calc(100%-4.5rem))] flex-col rounded-lg border bg-card shadow-[var(--shadow)] max-sm:top-14 max-sm:max-h-[calc(100%-4.5rem)]"

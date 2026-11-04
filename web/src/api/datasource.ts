@@ -72,6 +72,8 @@ export interface DataSource {
   addChatKey(body: T.KeyAdd): Promise<T.ChatStatus>;
   removeChatKey(name: string): Promise<T.ChatStatus>;
   saveChat(body: T.SavedChat): Promise<T.SavedChatResult>;
+  /** POST /api/chat/message: queue a message into the running agent turn (rejects with a 404 when none is live). */
+  sendChatMessage(body: T.ChatMessageIn): Promise<T.ChatMessageResult>;
   /** POST /api/chat; the caller reads `response.body` as server-sent events. */
   chatStream(body: T.ChatRequest, signal?: AbortSignal): Promise<Response>;
 

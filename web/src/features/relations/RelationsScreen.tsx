@@ -53,7 +53,7 @@ export function RelationsScreen() {
     const r = next.range ?? range;
     const k = "kind" in next ? next.kind : kind;
     setShowAll(false);
-    void navigate({ to: "/relations" as string, search: { ...rangeToSearch(r), ...(k ? { kind: k } : {}) } as never, replace: true });
+    void navigate({ to: "." as string, search: { ...rangeToSearch(r), ...(k ? { kind: k } : {}) } as never, replace: true });
   };
 
   const q = useApiQuery(

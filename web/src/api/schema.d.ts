@@ -124,6 +124,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/chat/message": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Queue a message into the running agent turn */
+        post: operations["post_message_api_chat_message_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/chat/prompts": {
         parameters: {
             query?: never;
@@ -979,6 +996,28 @@ export interface components {
             subscription: {
                 [key: string]: unknown;
             };
+        } & {
+            [key: string]: unknown;
+        };
+        /**
+         * ChatMessageIn
+         * @description Body of POST /api/chat/message: `text` becomes the next user message of the live turn for `session`.
+         */
+        ChatMessageIn: {
+            /** Session */
+            session: string;
+            /** Text */
+            text: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** ChatMessageResult */
+        ChatMessageResult: {
+            /**
+             * Ok
+             * @default true
+             */
+            ok: boolean;
         } & {
             [key: string]: unknown;
         };
@@ -3592,6 +3631,46 @@ export interface operations {
             };
             /** @description unknown key */
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_message_api_chat_message_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChatMessageIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChatMessageResult"];
+                };
+            };
+            /** @description no turn is running for that session */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

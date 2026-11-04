@@ -74,6 +74,8 @@ export type ScopeDuplicateRequest = S["ScopeDuplicateRequest"];
 
 // chat
 export type ChatRequest = S["ChatRequest"];
+export type ChatMessageIn = S["ChatMessageIn"];
+export type ChatMessageResult = S["ChatMessageResult"];
 export type ChatStatus = S["ChatStatus"];
 export type ChatSettings = S["ChatSettings"];
 export type ChatSettingsUpdate = S["ChatSettingsUpdate"];
