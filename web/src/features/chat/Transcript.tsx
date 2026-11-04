@@ -1,9 +1,9 @@
-import { AlertCircle, Brain, Check, ChevronRight, Circle, CircleDot, FileText, FolderSearch, Globe, ListChecks, Loader2, Search, Terminal, Wrench, type LucideIcon } from "lucide-react";
+import { AlertCircle, Brain, Check, ChevronRight, FileText, FolderSearch, Globe, Loader2, Search, Terminal, Wrench, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { TodoItem, ToolStep } from "./sse";
+import type { ToolStep } from "./sse";
 import type { ChatMessage } from "./thread";
 
-/** The Claude-Code-style pieces of an assistant message (agent mode): thinking, tool lines, the todo list. */
+/** The Claude-Code-style pieces of an assistant message (agent mode): thinking and tool lines (the todo list is `PlanPanel`). */
 
 const TOOL_ICONS: Record<string, LucideIcon> = {
   Read: FileText,
@@ -86,32 +86,5 @@ export function Transcript({ message, live }: { message: ChatMessage; live: bool
       {message.thinking && <ThinkingBlock text={message.thinking} secs={message.thinkSecs} live={live} />}
       {message.trace && <ToolLines steps={message.trace} />}
     </>
-  );
-}
-
-const TODO_ICON = { pending: Circle, in_progress: CircleDot, completed: Check } as const;
-
-/** The agent's checklist, pinned above the composer; hidden once every item is done and the turn is over. */
-export function TodoList({ items, busy }: { items: TodoItem[]; busy: boolean }) {
-  if (!items.length || (!busy && items.every((t) => t.status === "completed"))) return null;
-  const done = items.filter((t) => t.status === "completed").length;
-  return (
-    <section aria-label="Todo" className="rounded-md border bg-card p-2 text-xs" data-testid="todo-list">
-      <p className="mb-1 flex items-center gap-1.5 font-medium text-muted-foreground">
-        <ListChecks aria-hidden className="size-3.5" />
-        Todo · {done}/{items.length}
-      </p>
-      <ul className="flex flex-col gap-0.5">
-        {items.map((t, i) => {
-          const Icon = TODO_ICON[t.status];
-          return (
-            <li key={i} data-status={t.status} className={cn("flex items-start gap-1.5", t.status === "completed" && "text-muted-foreground line-through", t.status === "in_progress" && "font-medium")}>
-              <Icon aria-hidden className="mt-0.5 size-3.5 shrink-0" />
-              <span className="min-w-0 break-words">{t.content}</span>
-            </li>
-          );
-        })}
-      </ul>
-    </section>
   );
 }
