@@ -71,3 +71,12 @@ describe("header knowledge base menu (kb-view)", () => {
       expect(screen.queryByRole("button", { name: "Knowledge bases" })).toBeNull();
     }));
 });
+
+describe("header title without an import adapter", () => {
+  it("a share build with no inbox (this profile) shows no add button", async () => {
+    const ds = { ...mockDataSource({ getShareStatus: async () => ({ status: null, chip: null }) }), kind: "embedded" } as DataSource;
+    render(<App source={ds} router={createAppRouter(createMemoryHistory({ initialEntries: ["/"] }), "")} />);
+    await screen.findByRole("banner");
+    expect(screen.queryByRole("button", { name: "Add knowledge base" })).toBeNull();
+  });
+});
