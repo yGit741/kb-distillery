@@ -188,7 +188,7 @@ test("validate returns the checker report and stores nothing", async () => {
   const e = env();
   const ok = await call(e, "POST", "/api/inbox/validate?name=My%20Notes", { body: good() });
   assert.equal(ok.status, 200);
-  assert.deepEqual(await ok.json(), { ok: true, kind: "zip", id: "my-notes", pages: 2, errors: [], warnings: [] });
+  assert.deepEqual(await ok.json(), { ok: true, kind: "zip", id: "my-notes", name: "My notes", pages: 2, errors: [], warnings: [] });
   const bad = await call(e, "POST", "/api/inbox/validate", { body: zip([{ name: "a.md", data: BAD_PAGE }]) });
   const report = await bad.json();
   assert.equal(report.ok, false);
