@@ -2,8 +2,9 @@
 
 The browser keeps the open chat while it streams and mirrors the finished document here after every turn
 (`PUT /api/sessions/{id}`), so "where are my old chats" has one answer. The files are machine-local: `.local/` is never
-committed (`distill init` ignores it; the first write also adds it to the repository's local exclude file, so a kb created
-before that rule never shows it as untracked).
+committed: the first write puts a `.gitignore` of `*` inside `.local/` (so a kb that is not a repository of its own, such as a
+folder inside another repo, never stages a chat either) and adds `.local/` to the repository's local exclude file when it
+has one.
 
 Document: `{id, title, created, updated, model?, effort?, backend?, messages: [...], usage: {cost_usd, turns}}`.
 `messages` is stored as the frontend keeps it (opaque dicts, never interpreted beyond the first user line and the usage
@@ -33,7 +34,7 @@ MAX_ID = 64
 MAX_TITLE = 120
 MAX_PREVIEW = 140
 MAX_BYTES = 4 * 1024 * 1024            # the same cap as a request body
-ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{0,%d}$" % (MAX_ID - 1))
+ID_RE = re.compile(r"[a-z0-9][a-z0-9_-]{0,%d}" % (MAX_ID - 1))   # lowercase: one file per id on a case-insensitive disk
 _LOCK = threading.Lock()               # routes run in a thread pool: read-modify-write must not interleave
 
 
@@ -61,8 +62,8 @@ def _check_writable():
 
 
 def clean_id(session_id):
-    if not isinstance(session_id, str) or not ID_RE.match(session_id):
-        raise SessionsError(400, f"a session id is letters, digits, dashes and underscores (at most {MAX_ID})")
+    if not isinstance(session_id, str) or not ID_RE.fullmatch(session_id):
+        raise SessionsError(400, f"a session id is lowercase letters, digits, dashes and underscores (at most {MAX_ID})")
     return session_id
 
 
@@ -156,7 +157,14 @@ def _exclude_file(root):
 
 
 def ensure_local_ignored(root):
-    """Add `.local/` to the repository's local exclude file when it is missing (untracked, per clone). Best effort."""
+    """Keep `.local/` out of git: a `.gitignore` of `*` inside it, and `.local/` in the repository's local exclude file
+    when it is missing (untracked, per clone). Best effort."""
+    inner = os.path.join(root, LOCAL_DIR, ".gitignore")
+    if not os.path.exists(inner):
+        with contextlib.suppress(OSError):
+            os.makedirs(os.path.dirname(inner), exist_ok=True)
+            with open(inner, "w", encoding="utf-8") as f:
+                f.write("*\n")
     exclude = _exclude_file(root)
     if not exclude:
         return
@@ -213,8 +221,11 @@ def _write(root, doc):
     text = json.dumps(doc, ensure_ascii=False, indent=2) + "\n"
     if len(text.encode("utf-8")) > MAX_BYTES:
         raise SessionsError(400, f"a session is at most {MAX_BYTES // (1024 * 1024)} MB")
-    ensure_local_ignored(root)
-    _atomic_write(_path(root, doc["id"]), text)
+    try:
+        ensure_local_ignored(root)
+        _atomic_write(_path(root, doc["id"]), text)
+    except OSError as e:
+        raise SessionsError(500, f"could not write the session file: {e.strerror or e}") from None
 
 
 # ---------- operations ----------
@@ -236,7 +247,7 @@ def list_sessions(root=None):
     out = []
     for name in names:
         sid = name[:-5] if name.endswith(".json") else ""
-        if not sid or not ID_RE.match(sid):
+        if not sid or not ID_RE.fullmatch(sid):
             continue
         try:
             out.append(summary(_read(root, sid)))
@@ -303,4 +314,6 @@ def delete_session(session_id, root=None):
             os.remove(_path(root, sid))
         except FileNotFoundError:
             raise SessionsError(404, f"no session {sid!r}") from None
+        except OSError as e:
+            raise SessionsError(500, f"could not delete the session file: {e.strerror or e}") from None
     return {"ok": True, "id": sid}

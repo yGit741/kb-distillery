@@ -68,7 +68,7 @@ export interface Mirror {
 /** Debounced, ordered mirror: requests go one after another, so a slow older save never lands after a newer one. */
 export function createMirror(
   ds: Pick<DataSource, "putSession">,
-  opts: { delayMs?: number; onSynced?: (id: string) => void } = {},
+  opts: { delayMs?: number; onSynced?: (id: string) => void; onError?: (id: string, message: string) => void } = {},
 ): Mirror {
   const delay = opts.delayMs ?? MIRROR_DELAY_MS;
   const pending = new Map<string, { chat: Chat; meta?: SessionMeta }>();
@@ -84,8 +84,9 @@ export function createMirror(
         try {
           await ds.putSession(id, toDoc(chat, meta));
           opts.onSynced?.(id);
-        } catch {
-          /* offline or read-only server: the next turn sends the whole chat again */
+        } catch (e) {
+          // offline or read-only server: the next turn sends the whole chat again; the list says so meanwhile
+          opts.onError?.(id, e instanceof Error ? e.message : String(e));
         }
       });
     }
@@ -134,6 +135,8 @@ export async function migrateBrowserChat(ds: Pick<DataSource, "putSession">, met
 export const sessionBus = new EventTarget();
 export const OPEN_EVENT = "open";
 export const SYNCED_EVENT = "synced";
+export const FAILED_EVENT = "failed";
+export const DELETED_EVENT = "deleted";
 
 let busy = false;
 const busyListeners = new Set<() => void>();

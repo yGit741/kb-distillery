@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef } from "react";
 import { useDataSource } from "@/api";
 import { useFlag } from "@/flags/useFlag";
-import { OPEN_EVENT, SYNCED_EVENT, createMirror, fromDoc, migrateBrowserChat, serverSessionsOn, sessionBus, setChatBusy, type SessionMeta } from "./serverStorage";
+import { DELETED_EVENT, FAILED_EVENT, OPEN_EVENT, SYNCED_EVENT, chatIdOf, createMirror, fromDoc, migrateBrowserChat, serverSessionsOn, sessionBus, setChatBusy, type SessionMeta } from "./serverStorage";
 import type { Chat } from "./thread";
 
 /**
@@ -11,7 +11,10 @@ import type { Chat } from "./thread";
 export function useServerSessions(chat: Chat, busy: boolean, meta: SessionMeta | null, open: (c: Chat) => void) {
   const ds = useDataSource();
   const on = useFlag("agent-mode") && serverSessionsOn(ds);
-  const mirror = useMemo(() => createMirror(ds, { onSynced: (id) => sessionBus.dispatchEvent(new CustomEvent(SYNCED_EVENT, { detail: id })) }), [ds]);
+  const mirror = useMemo(() => createMirror(ds, {
+    onSynced: (id) => sessionBus.dispatchEvent(new CustomEvent(SYNCED_EVENT, { detail: id })),
+    onError: (id, message) => sessionBus.dispatchEvent(new CustomEvent(FAILED_EVENT, { detail: { id, message } })),
+  }), [ds]);
   const first = useRef(chat);
   const metaRef = useRef(meta);
   metaRef.current = meta;
@@ -27,6 +30,22 @@ export function useServerSessions(chat: Chat, busy: boolean, meta: SessionMeta |
   }, [on, busy, chat, mirror]);
 
   useEffect(() => () => void mirror.flush(), [mirror]);
+
+  // a tab closed or reloaded inside the quiet period still sends the last turn
+  useEffect(() => {
+    if (!on) return;
+    const h = () => void mirror.flush();
+    window.addEventListener("pagehide", h);
+    return () => window.removeEventListener("pagehide", h);
+  }, [on, mirror]);
+
+  // a deleted chat must not be recreated by a save that was still waiting
+  useEffect(() => {
+    if (!on) return;
+    const h = (e: Event) => mirror.cancel(chatIdOf((e as CustomEvent<string>).detail));
+    sessionBus.addEventListener(DELETED_EVENT, h);
+    return () => sessionBus.removeEventListener(DELETED_EVENT, h);
+  }, [on, mirror]);
 
   useEffect(() => {
     if (!on) return;

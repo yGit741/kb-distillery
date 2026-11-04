@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useFlag } from "@/flags/useFlag";
 import { fmtUsd } from "./format";
-import { OPEN_EVENT, SYNCED_EVENT, chatBusy, serverSessionsOn, sessionBus, subscribeChatBusy } from "./serverStorage";
+import { DELETED_EVENT, FAILED_EVENT, OPEN_EVENT, SYNCED_EVENT, chatBusy, serverSessionsOn, sessionBus, subscribeChatBusy } from "./serverStorage";
 
 export const SESSIONS_KEY = ["chat", "sessions"] as const;
 
@@ -31,12 +31,21 @@ function PastChatsList() {
   const [editing, setEditing] = useState<string | null>(null);
   const [title, setTitle] = useState("");
   const [asking, setAsking] = useState<string | null>(null);
+  const [unsaved, setUnsaved] = useState<string | null>(null);
   const refresh = () => void qc.invalidateQueries({ queryKey: SESSIONS_KEY });
 
   useEffect(() => {
-    const h = () => void qc.invalidateQueries({ queryKey: SESSIONS_KEY });
-    sessionBus.addEventListener(SYNCED_EVENT, h);
-    return () => sessionBus.removeEventListener(SYNCED_EVENT, h);
+    const synced = () => {
+      setUnsaved(null);
+      void qc.invalidateQueries({ queryKey: SESSIONS_KEY });
+    };
+    const failed = (e: Event) => setUnsaved((e as CustomEvent<{ message: string }>).detail.message);
+    sessionBus.addEventListener(SYNCED_EVENT, synced);
+    sessionBus.addEventListener(FAILED_EVENT, failed);
+    return () => {
+      sessionBus.removeEventListener(SYNCED_EVENT, synced);
+      sessionBus.removeEventListener(FAILED_EVENT, failed);
+    };
   }, [qc]);
 
   const open = useMutation({
@@ -52,7 +61,8 @@ function PastChatsList() {
   });
   const remove = useMutation({
     mutationFn: (id: string) => ds.deleteSession(id),
-    onSuccess: () => {
+    onSuccess: (_out, id) => {
+      sessionBus.dispatchEvent(new CustomEvent(DELETED_EVENT, { detail: id }));
       setAsking(null);
       refresh();
     },
@@ -63,6 +73,7 @@ function PastChatsList() {
     <section className="flex flex-col gap-1" aria-label="Past chats">
       <h3 className="text-xs font-medium">Past chats</h3>
       {error && <p role="alert" className="break-words text-xs text-bad">{error instanceof Error ? error.message : String(error)}</p>}
+      {unsaved && <p role="status" className="break-words text-xs text-bad">The last answer was not saved to the server: {unsaved}</p>}
       {list.data && list.data.sessions.length === 0 && <p className="text-xs text-muted-foreground">Finished chats are kept here, on this machine.</p>}
       <ul className="flex max-h-72 flex-col gap-1 overflow-y-auto">
         {(list.data?.sessions ?? []).map((s: SessionSummary) => (

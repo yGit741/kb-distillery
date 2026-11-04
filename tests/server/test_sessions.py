@@ -101,6 +101,8 @@ def test_delete_and_error_shapes(client):
     r = client.patch("/api/sessions/a2", json={"title": "  "}, headers=LOOPBACK)
     assert r.status_code == 400 and "title" in r.json()["error"]
     assert put(client, "bad.id").status_code == 400
+    assert put(client, "Upper").status_code == 400
+    assert client.put("/api/sessions/abc%0A", json={"messages": []}, headers=LOOPBACK).status_code == 400
     assert put(client, "x" * 65).status_code == 400
     assert client.put("/api/sessions/a3", json={"messages": ["not an object"]}, headers=LOOPBACK).status_code == 422
     assert client.put("/api/sessions/a3", json={"title": "x"}, headers=LOOPBACK).status_code == 422
@@ -136,6 +138,7 @@ def test_local_dir_is_excluded_once_and_never_staged(client, kb):
     put(client, "a1", messages=msgs("again"))
     lines = open(exclude).read().splitlines()
     assert lines == ["# local ignores", ".local/"]
+    assert open(os.path.join(kb, ".local", ".gitignore")).read() == "*\n"
     assert git(kb, "status", "--porcelain", "--untracked-files=all") == ""
     git(kb, "add", "-A")
     assert git(kb, "diff", "--cached", "--name-only") == ""
@@ -198,7 +201,7 @@ def test_a_session_over_the_size_cap_is_refused(client, kb):
     assert not os.path.exists(os.path.join(kb, ".local", "sessions", "big.json"))
 
 
-def test_concurrent_puts_leave_a_valid_file(client, kb):
+def test_concurrent_puts_leave_one_valid_file(client, kb):
     from concurrent.futures import ThreadPoolExecutor
     with ThreadPoolExecutor(8) as ex:
         codes = list(ex.map(lambda i: put(client, "race", messages=msgs(f"q{i}")).status_code, range(24)))
@@ -206,3 +209,17 @@ def test_concurrent_puts_leave_a_valid_file(client, kb):
     doc = client.get("/api/sessions/race").json()
     assert doc["usage"]["turns"] == 1 and doc["title"].startswith("q")
     assert [n for n in os.listdir(os.path.join(kb, ".local", "sessions"))] == ["race.json"]
+
+
+def test_a_folder_that_is_not_a_repo_still_ignores_its_local_dir(tmp_path):
+    outer = str(tmp_path / "outer")
+    os.makedirs(os.path.join(outer, "inner"))
+    git(outer, "init", "-q")
+    store.put_session("p1", msgs(), root=os.path.join(outer, "inner"))
+    assert git(outer, "status", "--porcelain", "--untracked-files=all") == ""
+
+
+def test_an_unwritable_local_dir_is_a_500_with_a_message(client, kb):
+    open(os.path.join(kb, ".local"), "w").write("a file where the directory should be")
+    r = put(client, "a1")
+    assert r.status_code == 500 and "error" in r.json()

@@ -147,3 +147,13 @@ describe("migrateBrowserChat", () => {
     spy.mockRestore();
   });
 });
+
+describe("createMirror failures", () => {
+  it("reports a failed save to onError", async () => {
+    const onError = vi.fn();
+    const m = createMirror({ putSession: async () => Promise.reject(new Error("read-only")) }, { onError });
+    m.schedule(chat());
+    await m.flush();
+    expect(onError).toHaveBeenCalledWith("20261103101500-abc123", "read-only");
+  });
+});
