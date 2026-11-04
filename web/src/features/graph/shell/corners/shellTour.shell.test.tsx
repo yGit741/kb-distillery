@@ -24,7 +24,7 @@ describe("shell tour on the real search line", () => {
     render(
       <DataSourceProvider source={source}>
         <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
-          <GraphShell nodes={sampleNodes} byId={byId} colorBy="type" onFocus={vi.fn()} onRead={vi.fn()} onShowMentions={vi.fn()} onFit={onFit} onZoom={vi.fn()} onReheat={vi.fn()} onRefresh={vi.fn()} />
+          <GraphShell nodes={sampleNodes} byId={byId} colorBy="type" onFocus={vi.fn()} onRead={vi.fn()} onShowExact={vi.fn()} shownTypes={null} onShowMentions={vi.fn()} onFit={onFit} onZoom={vi.fn()} onReheat={vi.fn()} onRefresh={vi.fn()} />
         </QueryClientProvider>
       </DataSourceProvider>,
     );
