@@ -29,6 +29,7 @@ const GIT_RE = /^(https?:\/\/|ssh:\/\/|git@)[\x21-\x7e]+$/;       // import_kb.i
 const MAX_JSON = 4096;
 const MAX_GIT_URL = 500;                                       // R2 customMetadata holds 2 KiB per object
 const MAX_ERROR = 300;
+const MAX_NAME = 120;                     // the uploaded file name kept on the record
 const LIST_CAP = 1000;
 const STATUSES = new Set(["pending", "imported", "failed"]);
 
@@ -107,6 +108,7 @@ function summary(rec) {
     warnings: String(rec.report ? rec.report.warnings.length : 0),
   };
   if (rec.git_url) s.git_url = rec.git_url;
+  if (rec.name) s.name = encodeURIComponent(rec.name);       // metadata travels in headers: ASCII only
   if (rec.error) s.error = rec.error.slice(0, MAX_ERROR);
   if (rec.updated_at) s.updated_at = rec.updated_at;
   return s;
@@ -119,6 +121,7 @@ function fromSummary(item, meta) {
     size: Number(m.size || 0), pages: Number(m.pages || 0), warnings: Number(m.warnings || 0),
   };
   if (m.git_url) out.git_url = m.git_url;
+  if (m.name) { try { out.name = decodeURIComponent(m.name); } catch { out.name = m.name; } }
   if (m.error) out.error = m.error;
   if (m.updated_at) out.updated_at = m.updated_at;
   return out;
@@ -183,7 +186,7 @@ async function inspect(request, env, deps, query) {
   const name = query.get("name") || "";
   let report;
   try {
-    report = check(await readBundle(bytes), { name });
+    report = check(await readBundle(bytes), { name, archive: true });   // name is the uploaded file name: the checker drops its extension
   } catch (e) {
     if (!(e instanceof ZipError)) throw e;
     report = { id: "", pages: 0, errors: [e.message], warnings: [] };
@@ -223,6 +226,7 @@ async function create(request, env, deps, query, session) {
     item, status: "pending", kind: found.kind, at: new Date(deps.now()).toISOString(), uploader: String(session.email).toLowerCase(),
     kb_id: kbId, kit: f.kit, size: found.size, report,
   };
+  if (found.kind === "zip" && found.name) rec.name = found.name.slice(0, MAX_NAME);   // the uploaded file name, shown in the Mac's [import] source
   if (found.kind === "git") rec.git_url = found.git_url;
   else await env.KB_INBOX.put(`bundle/${item}.zip`, found.bytes, { httpMetadata: { contentType: "application/zip" } });
   try {

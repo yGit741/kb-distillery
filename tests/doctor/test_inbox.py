@@ -93,6 +93,18 @@ def test_pull_imports_a_zip_as_a_new_kb_and_reports_it(bases, site):
     assert again.imported == [] and "nothing pending" in out[-1]
 
 
+def test_the_import_source_names_the_upload_never_the_temp_path(bases, site):
+    site.add("20261103T100000Z-aaaaaaaa", data=make_zip({"alpha.md": PAGE, "beta.md": BETA}), kb_id="orbit", name="orbit-notes.zip")
+    site.add("20261103T100100Z-bbbbbbbb", data=make_zip({"alpha.md": SOLO}), kb_id="nameless")      # an item from before names were kept
+    inbox.pull(client(site), out=lambda *_: None)
+    imp = kbconfig.load_dir(str(bases / "orbit")).section("import")
+    assert imp["source"] == "site inbox: orbit-notes.zip" and imp["inbox_item"] == "20261103T100000Z-aaaaaaaa"
+    other = kbconfig.load_dir(str(bases / "nameless")).section("import")
+    assert other["source"] == "site inbox: an upload" and other["inbox_item"] == "20261103T100100Z-bbbbbbbb"
+    for kb in ("orbit", "nameless"):
+        assert "/var/" not in (bases / kb / "kb.toml").read_text() and "kb-inbox-" not in (bases / kb / "kb.toml").read_text()
+
+
 def test_a_bad_item_is_reported_failed_and_the_next_still_imports(bases, site):
     site.add("20261103T100000Z-aaaaaaaa", data=make_zip({"../evil.md": PAGE}), kb_id="evil")          # zip-slip, defence in depth
     site.add("20261103T100100Z-bbbbbbbb", data=make_zip({"alpha.md": PAGE, "beta.md": BETA}), kb_id="good")
@@ -116,8 +128,9 @@ def test_a_git_item_is_cloned_here_not_on_the_site(bases, site):
     site.add("20261103T100000Z-aaaaaaaa", kind="git", git_url="https://github.com/octocat/notes.git#main", kb_id="octo")
     seen = []
 
-    def fake_import(src, kit=None, kb_id=None, parent=None):
+    def fake_import(src, kit=None, kb_id=None, parent=None, **kw):
         seen.append((src, kit, kb_id))
+        assert kw == {"label": "site inbox: https://github.com/octocat/notes.git#main", "inbox_item": "20261103T100000Z-aaaaaaaa"}
         return str(bases / kb_id)
 
     result = inbox.pull(client(site), importer=fake_import, out=lambda *_: None)

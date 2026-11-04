@@ -46,8 +46,8 @@ describe("Add knowledge base on the site (inbox adapter)", () => {
     expect(screen.getByText(ITEM)).toBeInTheDocument();
     expect(screen.queryByRole("link")).toBeNull();
     const urls = f.mock.calls.map((c) => c[0]);
-    expect(urls[0]).toBe("/api/inbox/validate?name=my-notes");
-    expect(urls[urls.length - 1]).toBe("/api/inbox?name=my-notes&id=my-notes");
+    expect(urls[0]).toBe("/api/inbox/validate?name=my-notes.zip");
+    expect(urls[urls.length - 1]).toBe("/api/inbox?name=my-notes.zip&id=my-notes");
   });
 
   it("validation errors from the Worker block Create", async () => {
