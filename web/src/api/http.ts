@@ -71,6 +71,8 @@ export function createHttpDataSource(fetchImpl: Fetch = (...a) => fetch(...a), b
     listKbs: () => run(() => client.GET("/api/kb/list"), "/api/kb/list"),
     previewKbImport: (req) => postImport<T_.KbImportPreview>("/api/kb/import/validate", req),
     importKb: (req) => postImport<T_.KbImportResult>("/api/kb/import", req),
+    getKbInbox: () => run(() => client.GET("/api/kb/inbox"), "/api/kb/inbox"),
+    pullKbInbox: () => run(() => client.POST("/api/kb/inbox/pull"), "/api/kb/inbox/pull"),
     getOps: (refresh) =>
       run(() => client.GET("/api/ops", { params: { query: refresh ? { refresh: "1" } : {} } }), "/api/ops"),
 
@@ -97,6 +99,10 @@ export function createHttpDataSource(fetchImpl: Fetch = (...a) => fetch(...a), b
         () => client.GET("/api/relations/proposals", { params: { query: { min, max, ...(kind ? { kind } : {}) } } }),
         "/api/relations/proposals",
       ),
+
+    listViews: () => run(() => client.GET("/api/views"), "/api/views"),
+    listRecent: () => run(() => client.GET("/api/recent"), "/api/recent"),
+    addRecent: (text, spec) => run(() => client.POST("/api/recent", { body: { text, spec: spec ?? {} } }), "/api/recent"),
 
     listPages: (opts) =>
       run(() => client.GET("/api/pages", { params: { query: opts?.kb ? { kb: opts.kb } : {} } }), "/api/pages"),
