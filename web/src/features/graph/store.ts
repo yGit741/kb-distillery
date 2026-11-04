@@ -76,6 +76,8 @@ export interface GraphUiState extends GraphPrefs {
   /** The legend's one-click filters (./quickFilters): Recent, Connected, Backbone, Neighbours, Path. */
   quick: QuickFilters;
   view: GraphView | null;
+  /** Link kinds drawn off (free-text shaping: `hide MENTIONS`). Empty = every kind drawn; the layout is unchanged. */
+  hiddenLinkKinds: ReadonlySet<string>;
   /** The story's own page rule (Map draws only public pages); null = none. */
   predicate: Predicate | null;
   /** Sources revealed by "See sources (N)". */
@@ -158,6 +160,7 @@ export const useGraphUi = create<GraphUiState>((set, get) => ({
   ...initialView(INITIAL),
   shownDepths: null,
   hiddenKeys: new Set(),
+  hiddenLinkKinds: new Set(),
   spotlight: null,
   quick: QUICK_OFF,
   search: "",
@@ -217,7 +220,7 @@ export const useGraphUi = create<GraphUiState>((set, get) => ({
   requestFocus: (id, zoom = true) => set({ focusRequest: { id, zoom } }),
   fit: () => set((s) => ({ fitTick: s.fitTick + 1 })),
   openFlyout: (f) => set((s) => ({ flyout: s.flyout === f ? null : f })),
-  resetFilters: () => set({ shownTypes: undefined, shownDepths: null, search: "", rules: [], view: null, revealed: new Set(), predicate: null, story: "" }),
+  resetFilters: () => set({ shownTypes: undefined, shownDepths: null, search: "", rules: [], view: null, revealed: new Set(), predicate: null, story: "", hiddenLinkKinds: new Set() }),
   setLab: (patch) => set((s) => ({ lab: { ...s.lab, ...patch }, story: "" })),
   applyStory: (id) => {
     const st = storyById(id);
@@ -234,6 +237,7 @@ export const useGraphUi = create<GraphUiState>((set, get) => ({
       // a story is a whole view: a search, picked pages, a scope or a colour-key filter from before would fight it
       view: null,
       hiddenKeys: new Set(),
+      hiddenLinkKinds: new Set(),
       quick: QUICK_OFF,
       revealed: new Set(),
     });

@@ -6,6 +6,7 @@ import { SHARE_PROFILE } from "@/share/env";
 import { isPublic } from "@/features/graph/publicPredicate";
 import type { GNode } from "@/features/graph/types";
 import { ConceptExplorer } from "./ConceptExplorer";
+import { StartCard } from "./StartCard";
 import { Glossary } from "./glossary";
 import { drawPickable, indexVault, isPickable, rng, type Vault } from "./samplers";
 
@@ -19,6 +20,8 @@ export interface HomeHost {
   pageHref: (slug: string) => string;
   /** Put the picked concept in the URL (`?concept=`), so Back and links restore it. */
   setConcept?: (slug: string) => void;
+  /** Drop `?start` from the address after the Start card is dismissed. */
+  closeStart?: () => void;
 }
 
 const newSeed = () => Math.floor(Math.random() * 2 ** 31);
@@ -35,7 +38,16 @@ export function resolveConcept(v: Vault, wanted: string | undefined, seed: numbe
  * Home is one intro card (approved mock v16): title and byline, the "How a page gets here" glossary, and the
  * inner card that picks a concept and shows its ego graph and the pipeline of one source it relies on.
  */
-export function HomeScreen({ host, concept: wanted }: { host: HomeHost; concept?: string }) {
+export function HomeScreen({ host, concept, startForced }: { host: HomeHost; concept?: string; startForced?: boolean }) {
+  return (
+    <>
+      <StartCard forced={startForced} onDismissed={host.closeStart} />
+      <HomeBody host={host} concept={concept} />
+    </>
+  );
+}
+
+function HomeBody({ host, concept: wanted }: { host: HomeHost; concept?: string }) {
   const q = useApiQuery(["graph", false], (d) => d.getGraph());
   const publicOnly = SHARE_PROFILE === "public";
   const [seed, setSeed] = useState(newSeed);

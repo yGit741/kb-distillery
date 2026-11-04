@@ -29,7 +29,7 @@ function screenRoutes(def: Route) {
   // A screen folded into another one: the old path keeps working, same search params, on the tab, tool or card that replaced it.
   const beforeLoad = target
     ? (({ search }: { search: Record<string, unknown> }) => {
-        throw redirect({ to: target.path, search: { ...search, ...def.movedTo!.search } } as never);
+        throw redirect({ to: target.path, search: { ...search, ...def.movedTo!.search, ...(def.movedTo!.tab ? { tab: def.movedTo!.tab } : {}) } } as never);
       }) as never
     : undefined;
   const component = () => (
