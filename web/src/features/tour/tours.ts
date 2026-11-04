@@ -9,7 +9,7 @@ export type { TourStep } from "./engine";
  * its tours at import time; anyone starts one with `?tour=<name>`, `kbTour.start("<name>")` or `runTour`.
  * A finished or skipped tour is remembered in this browser (`kb.tour.seen.<name>`).
  */
-const TOURS = new Map<string, { steps: TourStep[]; summary: string; menu: boolean }>();
+const TOURS = new Map<string, { steps: TourStep[]; summary: string; menu: boolean; onEnd?: () => void }>();
 
 export interface TourInfo {
   name: string;
@@ -18,9 +18,12 @@ export interface TourInfo {
   seen: boolean;
 }
 
-/** `menu: false` keeps a tour startable (`?tour=`, `kbTour.start`) but out of the Tours menu. */
-export function registerTour(name: string, steps: TourStep[], summary = "", { menu = true }: { menu?: boolean } = {}): void {
-  TOURS.set(name, { steps, summary, menu });
+/**
+ * `menu: false` keeps a tour startable (`?tour=`, `kbTour.start`) but out of the Tours menu. `onEnd` runs when
+ * the tour ends for any reason (done, skipped, replaced): a place to undo what its steps typed or opened.
+ */
+export function registerTour(name: string, steps: TourStep[], summary = "", { menu = true, onEnd }: { menu?: boolean; onEnd?: () => void } = {}): void {
+  TOURS.set(name, { steps, summary, menu, onEnd });
 }
 
 /** Remove a tour (a feature flag turned its feature off). A running tour keeps its own copy of the steps. */
@@ -50,7 +53,12 @@ export function runTour(name: string): boolean {
   const t = TOURS.get(name);
   if (!t) return false;
   // finished or skipped counts as seen; a tour another one replaced does not
-  startTour(t.steps, { onEnd: (reason) => reason !== "replaced" && markSeen(name) });
+  startTour(t.steps, {
+    onEnd: (reason) => {
+      if (reason !== "replaced") markSeen(name);
+      t.onEnd?.();
+    },
+  });
   return true;
 }
 
