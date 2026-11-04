@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { useFlag } from "@/flags/useFlag";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useApiQuery } from "@/lib/useApiQuery";
+import { KbInbox } from "./KbInbox";
 import type { KbInfo, KbRow, KbType } from "@/api/types";
 
 const LAYER_LABEL = { concept: "Concepts", collection: "Collections", source: "Sources" } as const;
@@ -184,6 +185,7 @@ export function KnowledgeBasesView() {
           )}
         </CardContent>
       </Card>
+      <KbInbox />
       {adapter && <AddKnowledgeBase adapter={adapter} open={adding} onOpenChange={setAdding} />}
     </div>
   );

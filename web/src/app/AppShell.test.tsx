@@ -30,9 +30,9 @@ describe("AppShell", () => {
 
     await userEvent.keyboard("{Control>}k{/Control}");
     const box = await screen.findByPlaceholderText(/^Go to…/);
-    await userEvent.type(box, "scopes");
+    await userEvent.type(box, "pages");
     await userEvent.keyboard("{Enter}");
-    await waitFor(() => expect(router.state.location.pathname).toBe("/scopes"));
+    await waitFor(() => expect(router.state.location.pathname).toBe("/pages"));
   });
 
   it("sends the folded Pipeline and Lifecycle screens to their System tabs, search kept", async () => {
@@ -41,6 +41,20 @@ describe("AppShell", () => {
       const { unmount } = render(<App source={ds} router={router} />);
       await waitFor(() => expect(router.state.location.pathname).toBe("/system"));
       expect(router.state.location.search).toMatchObject(from.includes("q=") ? { tab, q: "raw/a.pdf" } : { tab });
+      unmount();
+    }
+  });
+
+  it("sends the folded Relations, Scopes and Start screens to the graph tool or the Home card", async () => {
+    for (const [from, to, search] of [
+      ["/app/relations?min=90", "/graph", { tool: "relations", min: "90" }],
+      ["/app/scopes", "/graph", { tool: "scopes" }],
+      ["/app/start", "/", { start: true }],
+    ] as const) {
+      const router = createAppRouter(createMemoryHistory({ initialEntries: [from] }));
+      const { unmount } = render(<App source={ds} router={router} />);
+      await waitFor(() => expect(router.state.location.pathname).toBe(to));
+      expect(router.state.location.search).toMatchObject(search);
       unmount();
     }
   });

@@ -482,6 +482,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/kb/inbox": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Uploads waiting on the site's inbox */
+        get: operations["get_inbox_api_kb_inbox_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/kb/inbox/pull": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Import every pending upload as a new knowledge base */
+        post: operations["pull_inbox_api_kb_inbox_pull_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/kb/list": {
         parameters: {
             query?: never;
@@ -1918,6 +1952,105 @@ export interface components {
             pages: number;
             /** Root */
             root: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /**
+         * KbInbox
+         * @description The site's upload inbox. `configured` is false when this Mac has no site, token or bucket yet (not an error).
+         */
+        KbInbox: {
+            /** Configured */
+            configured: boolean;
+            /**
+             * Error
+             * @default
+             */
+            error: string;
+            /**
+             * Guide
+             * @default
+             */
+            guide: string;
+            /**
+             * Items
+             * @default []
+             */
+            items: components["schemas"]["KbInboxItem"][];
+        } & {
+            [key: string]: unknown;
+        };
+        /**
+         * KbInboxItem
+         * @description One upload on the site's inbox (the Worker's summary of it).
+         */
+        KbInboxItem: {
+            /** At */
+            at: string;
+            /** Error */
+            error?: string | null;
+            /** Git Url */
+            git_url?: string | null;
+            /** Item */
+            item: string;
+            /** Kb Id */
+            kb_id?: string | null;
+            /** Kind */
+            kind: string;
+            /** Kit */
+            kit?: string | null;
+            /**
+             * Pages
+             * @default 0
+             */
+            pages: number;
+            /**
+             * Size
+             * @default 0
+             */
+            size: number;
+            /** Status */
+            status: string;
+            /** Updated At */
+            updated_at?: string | null;
+            /** Uploader */
+            uploader: string;
+            /**
+             * Warnings
+             * @default 0
+             */
+            warnings: number;
+        } & {
+            [key: string]: unknown;
+        };
+        /** KbInboxOutcome */
+        KbInboxOutcome: {
+            /**
+             * Error
+             * @default
+             */
+            error: string;
+            /** Item */
+            item: string;
+            /**
+             * Kb Id
+             * @default
+             */
+            kb_id: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /**
+         * KbInboxPull
+         * @description What `pull` did: every pending item becomes a new kb, or fails with its reason.
+         */
+        KbInboxPull: {
+            /** Failed */
+            failed: components["schemas"]["KbInboxOutcome"][];
+            /** Imported */
+            imported: components["schemas"]["KbInboxOutcome"][];
+            /** Unreported */
+            unreported: string[];
         } & {
             [key: string]: unknown;
         };
@@ -4485,6 +4618,46 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["KbImportPreview"];
+                };
+            };
+        };
+    };
+    get_inbox_api_kb_inbox_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KbInbox"];
+                };
+            };
+        };
+    };
+    pull_inbox_api_kb_inbox_pull_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KbInboxPull"];
                 };
             };
         };

@@ -41,6 +41,10 @@ class InboxError(Exception):
     """The site could not be reached or refused; the message says what to fix (it never holds the token)."""
 
 
+class NotConfigured(InboxError):
+    """No site, no token, or a site without an inbox bucket: set-up is missing, which is not a failure (the app shows a hint)."""
+
+
 # ---------- site and token ----------
 
 def site_url() -> str:
@@ -52,7 +56,7 @@ def site_url() -> str:
         except Exception:                                   # noqa: BLE001 — no publisher / no status yet: say how to set it
             url = ""
     if not url:
-        raise InboxError(f"no site to ask: set ${ENV_URL} (https://<your-site>) or publish the site once so the publisher's status has its url")
+        raise NotConfigured(f"no site to ask: set ${ENV_URL} (https://<your-site>) or publish the site once so the publisher's status has its url")
     parsed = urlparse(url)
     local = parsed.hostname in ("localhost", "127.0.0.1", "::1")
     if parsed.scheme != "https" and not (parsed.scheme == "http" and local):
@@ -73,7 +77,7 @@ def keychain_token() -> str | None:
 def token(read: Callable[[], str | None] | None = None) -> str:
     tok = (os.environ.get(ENV_TOKEN) or "").strip() or (read or keychain_token)()
     if not tok:
-        raise InboxError(f"no inbox token: set ${ENV_TOKEN} or add the macOS keychain item {KEYCHAIN_SERVICE!r} "
+        raise NotConfigured(f"no inbox token: set ${ENV_TOKEN} or add the macOS keychain item {KEYCHAIN_SERVICE!r} "
                          "(docs/guides/import-a-bundle.md, owner set-up)")
     return tok
 
@@ -114,7 +118,7 @@ class Client:
             raise InboxError(f"the site refused the inbox token ({status}): check ${ENV_TOKEN} / keychain {KEYCHAIN_SERVICE!r} "
                              "against the Worker secret INBOX_TOKEN")
         if status == 503:
-            raise InboxError("the site's inbox is not set up: create the R2 bucket and bind it as KB_INBOX (docs/guides/import-a-bundle.md)")
+            raise NotConfigured("the site's inbox is not set up: create the R2 bucket and bind it as KB_INBOX (docs/guides/import-a-bundle.md)")
         if not 200 <= status < 300:
             raise InboxError(f"the site answered {status} for {method} {path}")
         return raw
