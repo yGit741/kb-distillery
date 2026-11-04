@@ -9,7 +9,7 @@ import { createEmbeddedDataSource } from "@/api";
 vi.mock("@/share/env", () => ({ SHARE_PROFILE: "private", IS_SHARE: true }));
 
 const json = (status: number, body: unknown) => new Response(JSON.stringify(body), { status });
-const PROBE = /^\/api\/inbox\/\d{8}T\d{6}Z-[0-9a-f]{8}$/;
+const PROBE = /^\/api\/inbox\/access$/;
 
 /** The Worker as the site sees it: `probe` is its answer to the owner probe, the rest is the inbox. */
 function worker(probe: Response | (() => Promise<Response>)) {
@@ -33,7 +33,7 @@ describe("Add knowledge base on the deployed site", () => {
   afterEach(() => vi.unstubAllGlobals());
 
   it("an owner sees the entry beside the title and the dialog ends in Received", async () => {
-    const f = worker(json(404, { error: "no such inbox item" }));
+    const f = worker(json(200, { owner: true, inbox: true }));
     site();
     await userEvent.click(await screen.findByRole("button", { name: "Add knowledge base" }));
     expect(await screen.findByText("Import an OKF bundle as a new knowledge base. Your current one is not changed.")).toBeInTheDocument();
@@ -44,9 +44,9 @@ describe("Add knowledge base on the deployed site", () => {
   });
 
   it("an owner can create: Received, it appears after the next sync", async () => {
-    const f = worker(json(404, { error: "no such inbox item" }));
+    const f = worker(json(200, { owner: true, inbox: true }));
     f.mockImplementation(async (url: string, init?: RequestInit) => {
-      if (PROBE.test(url)) return json(404, { error: "no such inbox item" });
+      if (PROBE.test(url)) return json(200, { owner: true, inbox: true });
       if (url.startsWith("/api/inbox/validate")) return json(200, { ok: true, kind: "zip", id: "my-notes", pages: 2, errors: [], warnings: [] });
       return init?.method === "POST" ? json(201, { item: "x", status: "pending" }) : json(404, {});
     });
@@ -59,9 +59,9 @@ describe("Add knowledge base on the deployed site", () => {
   });
 
   it.each([
-    ["a non-owner (403)", json(403, { error: "not an admin" })],
+    ["a non-owner", json(200, { owner: false, inbox: true })],
+    ["a site with no inbox bucket", json(200, { owner: true, inbox: false })],
     ["a signed-out viewer (401)", json(401, { error: "sign in first" })],
-    ["a site with no inbox bucket (503)", json(503, { error: "inbox not configured" })],
   ])("%s does not see it, and the header is the plain title link", async (_n, probe) => {
     const f = worker(probe);
     site();

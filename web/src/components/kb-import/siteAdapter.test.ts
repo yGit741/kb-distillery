@@ -1,4 +1,4 @@
-import { createSiteImportAdapter, probeInboxOwner, RECEIVED } from "./siteAdapter";
+import { createSiteImportAdapter, inboxAccess, RECEIVED } from "./siteAdapter";
 
 const reply = (status: number, body: unknown) => Promise.resolve(new Response(typeof body === "string" ? body : JSON.stringify(body), { status }));
 const zip = (name = "my-notes.zip") => new File(["zip-bytes"], name, { type: "application/zip" });
@@ -73,25 +73,24 @@ describe("site import adapter (the Worker's inbox)", () => {
   });
 });
 
-describe("probeInboxOwner (owner and inbox ready)", () => {
-  const probe = (status: number, body: unknown) => probeInboxOwner(((..._a: unknown[]) => reply(status, body)) as never);
+describe("inboxAccess (owner and inbox ready)", () => {
+  const ask = (status: number, body: unknown) => inboxAccess(((..._a: unknown[]) => reply(status, body)) as never);
 
-  it("404 no such inbox item: an owner, and the bucket is bound", async () => {
-    expect(await probe(404, { error: "no such inbox item" })).toBe(true);
+  it("owner and inbox: yes", async () => {
+    expect(await ask(200, { owner: true, inbox: true })).toBe(true);
   });
-  it.each([[401, "sign in first"], [403, "not an admin"], [503, "inbox not configured"]])("%i hides it", async (status, error) => {
-    expect(await probe(status, { error })).toBe(false);
+  it.each([[{ owner: false, inbox: true }], [{ owner: true, inbox: false }], [{ owner: false, inbox: false }], [{}]])("%j: no", async (body) => {
+    expect(await ask(200, body)).toBe(false);
   });
-  it("a 404 that is not the Worker's (a static host) is a no", async () => {
-    expect(await probe(404, "<html>not found</html>")).toBe(false);
+  it.each([401, 403, 404, 503])("status %i is a no", async (status) => {
+    expect(await ask(status, { owner: true, inbox: true })).toBe(false);
   });
-  it("a network failure is a no, and the probe reads without writing", async () => {
-    const f = vi.fn(() => Promise.reject(new Error("offline")));
-    expect(await probeInboxOwner(f as never)).toBe(false);
-    const g = vi.fn((..._a: unknown[]) => reply(404, { error: "no such inbox item" }));
-    await probeInboxOwner(g as never);
-    expect(call(g)[0]).toMatch(/^\/api\/inbox\/\d{8}T\d{6}Z-[0-9a-f]{8}$/);
+  it("a page that is not JSON, or a network failure, is a no; the call is a plain read of /api/inbox/access", async () => {
+    expect(await ask(200, "<html></html>")).toBe(false);
+    expect(await inboxAccess((() => Promise.reject(new Error("offline"))) as never)).toBe(false);
+    const g = vi.fn((..._a: unknown[]) => reply(200, { owner: true, inbox: true }));
+    await inboxAccess(g as never);
+    expect(call(g)[0]).toBe("/api/inbox/access");
     expect(call(g)[1].method).toBeUndefined();
-    expect(call(g)[1].headers["X-KB-Admin"]).toBe("1");
   });
 });

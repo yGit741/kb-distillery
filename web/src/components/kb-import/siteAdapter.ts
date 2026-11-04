@@ -83,21 +83,17 @@ export function createSiteImportAdapter(fetchImpl: FetchLike = (u, i) => fetch(u
   };
 }
 
-/** A well-formed inbox item id that never exists: the probe below asks about it. */
-const PROBE = "/api/inbox/00000000T000000Z-00000000";
-
 /**
- * Is the signed-in viewer an owner of a site whose inbox is set up? The Worker has no whoami; its owner-gated routes answer
- * 401/403 to anyone who is not on ADMIN_EMAILS (or has no `X-KB-Admin`), then 503 when no R2 bucket is bound, and 404
- * ("no such inbox item") for an item that does not exist. So a 404 from this read-only probe means: owner, inbox ready.
- * Anything else (including a network failure or a host that is not the Worker) is a no.
+ * Is the signed-in viewer an owner of a site whose inbox is set up? `GET /api/inbox/access` answers 200 `{owner, inbox}`
+ * to any signed-in viewer (owner = the Worker's ownerGate allowlist, inbox = the R2 bucket is bound). The entry is
+ * offered only when both are true; anything else (another status, a network failure, a host that is not the Worker) is a no.
  */
-export async function probeInboxOwner(fetchImpl: FetchLike = (u, i) => fetch(u, i)): Promise<boolean> {
+export async function inboxAccess(fetchImpl: FetchLike = (u, i) => fetch(u, i)): Promise<boolean> {
   try {
-    const res = await fetchImpl(PROBE, { credentials: "same-origin", cache: "no-store", headers: { "X-KB-Admin": "1", Accept: "application/json" } });
-    if (res.status !== 404) return false;
-    const body = (await res.json().catch(() => null)) as Report | null;
-    return /no such inbox item/.test(body?.error ?? "");
+    const res = await fetchImpl("/api/inbox/access", { credentials: "same-origin", cache: "no-store", headers: { Accept: "application/json" } });
+    if (res.status !== 200) return false;
+    const body = (await res.json().catch(() => null)) as { owner?: unknown; inbox?: unknown } | null;
+    return body?.owner === true && body?.inbox === true;
   } catch {
     return false;
   }

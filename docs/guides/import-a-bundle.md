@@ -25,6 +25,7 @@ On the site the owner sees **Add knowledge base** beside the title (hidden for e
 |---|---|
 | `POST /api/inbox/validate` | the checker report for a zip or `{"git_url": …}`; stores nothing |
 | `POST /api/inbox` | store as pending (`?id=` `&kit=` `&name=`, or those fields in the JSON); an invalid bundle is a 422 with its report |
+| `GET /api/inbox/access` | `{owner, inbox}`: is the viewer an owner, is the bucket bound (the site's entry reads it) |
 | `GET /api/inbox` | list the items (`?status=pending\|imported\|failed`) |
 | `GET /api/inbox/<item>` , `/bundle` , `POST /api/inbox/<item>/status` | the record, the zip, and the Mac's report of `imported` or `failed` |
 
