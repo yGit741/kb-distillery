@@ -129,6 +129,14 @@ export function createHttpDataSource(fetchImpl: Fetch = (...a) => fetch(...a), b
     addChatKey: (body) => run(() => client.POST("/api/chat/keys", { body }), "/api/chat/keys"),
     removeChatKey: (name) =>
       run(() => client.DELETE("/api/chat/keys/{name}", { params: { path: { name } } }), `/api/chat/keys/${name}`),
+    listSessions: () => run(() => client.GET("/api/sessions"), "/api/sessions"),
+    getSession: (id) => run(() => client.GET("/api/sessions/{session_id}", { params: { path: { session_id: id } } }), `/api/sessions/${id}`),
+    putSession: (id, body) =>
+      run(() => client.PUT("/api/sessions/{session_id}", { params: { path: { session_id: id } }, body }), `/api/sessions/${id}`),
+    renameSession: (id, title) =>
+      run(() => client.PATCH("/api/sessions/{session_id}", { params: { path: { session_id: id } }, body: { title } }), `/api/sessions/${id}`),
+    deleteSession: (id) =>
+      run(() => client.DELETE("/api/sessions/{session_id}", { params: { path: { session_id: id } } }), `/api/sessions/${id}`),
     saveChat: (body) => run(() => client.POST("/api/chat/saved", { body }), "/api/chat/saved"),
     chatStream: async (body, signal) => {
       let res: Response;

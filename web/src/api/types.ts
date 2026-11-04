@@ -76,6 +76,13 @@ export type PromptsResponse = S["PromptsResponse"];
 export type SavedChat = S["SavedChat"];
 export type SavedChatResult = S["SavedChatResult"];
 
+// chat sessions (kept on this machine under <kb>/.local/sessions)
+export type SessionList = S["SessionList"];
+export type SessionSummary = S["SessionSummary"];
+export type SessionDoc = S["SessionDoc"];
+export type SessionPutRequest = S["SessionPutRequest"];
+export type SessionDeleted = S["SessionDeleted"];
+
 // backlog
 export type BacklogList = S["BacklogList"];
 export type BacklogItem = S["BacklogItem"];

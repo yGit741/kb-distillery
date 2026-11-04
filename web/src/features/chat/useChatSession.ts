@@ -3,6 +3,7 @@ import { useDataSource } from "@/api";
 import { readEvents } from "./sse";
 import { applyEvent, dropLastTurn, emptyChat, historyOf, type Chat } from "./thread";
 import { readJson, writeJson } from "./storage";
+import { useServerSessions } from "./useServerSessions";
 
 export interface SendOptions {
   model: string;
@@ -28,6 +29,7 @@ export function useChatSession() {
   const [busy, setBusy] = useState(false);
   const chatRef = useRef(chat);
   const abortRef = useRef<AbortController | null>(null);
+  const metaRef = useRef<{ model: string; backend: string } | null>(null);
 
   const commit = useCallback((next: Chat) => {
     chatRef.current = next;
@@ -40,9 +42,15 @@ export function useChatSession() {
 
   useEffect(() => () => abortRef.current?.abort(), []);
 
+  const open = useCallback((c: Chat) => {
+    if (!abortRef.current) commit(c); // never swap the chat under a stream
+  }, [commit]);
+  useServerSessions(chat, busy, metaRef.current, open); // flag `agent-mode`: no-op while it is off
+
   const run = useCallback(
     async (base: Chat, question: string, opts: SendOptions) => {
       const history = historyOf(base.messages);
+      metaRef.current = { model: opts.model, backend: opts.backend };
       commit({
         ...base,
         messages: [...base.messages, { role: "user", content: question, sources: [] }, { role: "assistant", content: "" }],
