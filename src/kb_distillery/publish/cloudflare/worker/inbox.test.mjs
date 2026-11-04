@@ -367,3 +367,25 @@ test("folder entries count when the bundle root is chosen, as on the Mac", async
   const files = await readBundle(zip([{ name: "a/x.md", data: PAGE }, { name: "b/", data: "" }]));
   assert.deepEqual([...files.keys()], ["a/x.md"]);                                  // two top-level names: no descent
 });
+
+// ---------- access: who may add, and is the inbox ready (the site's entry reads this) ----------
+
+test("access says owner and inbox for an owner, with no admin header", async () => {
+  const e = env();
+  const res = await handle(new Request(ORIGIN + "/api/inbox/access", { headers: { Cookie: await session("me@example.com") } }), e, { now: () => NOW });
+  assert.equal(res.status, 200);
+  assert.deepEqual(await res.json(), { owner: true, inbox: true });
+});
+
+test("access says owner false for a signed-in viewer who is not an owner", async () => {
+  const res = await call(env(), "GET", "/api/inbox/access", { as: "viewer@example.com" });
+  assert.equal(res.status, 200);
+  assert.deepEqual(await res.json(), { owner: false, inbox: true });
+});
+
+test("access says inbox false when no bucket is bound, and needs a session", async () => {
+  const res = await call(env({ KB_INBOX: undefined }), "GET", "/api/inbox/access");
+  assert.deepEqual(await res.json(), { owner: true, inbox: false });
+  assert.equal((await call(env(), "GET", "/api/inbox/access", { as: null })).status, 401);
+  assert.equal((await mac(env(), "GET", "/api/inbox/access")).status, 403);
+});

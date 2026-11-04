@@ -1,4 +1,4 @@
-import { createSiteImportAdapter } from "./siteAdapter";
+import { createSiteImportAdapter, inboxAccess } from "./siteAdapter";
 
 const reply = (status: number, body: unknown) => Promise.resolve(new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } }));
 const zip = (name = "my-notes.zip") => ({ kind: "zip" as const, file: new File(["z"], name, { type: "application/zip" }) });
@@ -97,5 +97,26 @@ describe("site import adapter (the Worker inbox)", () => {
   it("a non-JSON failure falls back to its status", async () => {
     const f = vi.fn(() => Promise.resolve(new Response("<html>bad gateway</html>", { status: 502 })));
     await expect(adapterFor(f).validate(zip())).rejects.toThrow("The site's inbox answered 502.");
+  });
+});
+
+describe("inboxAccess (owner and inbox ready)", () => {
+  const ask = (status: number, body: unknown) => inboxAccess(((..._a: unknown[]) => reply(status, body)) as unknown as typeof fetch);
+
+  it("owner and inbox: yes", async () => {
+    expect(await ask(200, { owner: true, inbox: true })).toBe(true);
+  });
+  it.each([[{ owner: false, inbox: true }], [{ owner: true, inbox: false }], [{}]])("%j: no", async (body) => {
+    expect(await ask(200, body)).toBe(false);
+  });
+  it.each([401, 403, 404, 503])("status %i is a no", async (status) => {
+    expect(await ask(status, { owner: true, inbox: true })).toBe(false);
+  });
+  it("a network failure is a no; the call is a plain read of /api/inbox/access", async () => {
+    expect(await inboxAccess((() => Promise.reject(new Error("offline"))) as unknown as typeof fetch)).toBe(false);
+    const g = vi.fn(() => reply(200, { owner: true, inbox: true }));
+    await inboxAccess(g as unknown as typeof fetch);
+    expect(call(g)[0]).toBe("/api/inbox/access");
+    expect(call(g)[1].method).toBeUndefined();
   });
 });

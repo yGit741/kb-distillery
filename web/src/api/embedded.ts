@@ -26,6 +26,8 @@ export function createEmbeddedDataSource(blob: ShareBlob | undefined = globalThi
     listKbs: absent,
     previewKbImport: absent,
     importKb: absent,
+    getKbInbox: absent,
+    pullKbInbox: absent,
     getOps: absent,
     getGraph: absent,
     getGraphNodes: absent,

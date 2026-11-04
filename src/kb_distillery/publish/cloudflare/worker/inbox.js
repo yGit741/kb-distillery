@@ -5,6 +5,7 @@
 //   POST /api/inbox              same body, optional ?id=<kb id>&kit=<kit>&name=<zip name>; JSON may carry id, kit
 //                                -> 201 {item, status: "pending", ...}; an invalid zip is 422 with the report, nothing stored
 //   GET  /api/inbox[?status=…]   -> {items: [...]} newest first (any signed-in viewer; summaries only)
+//   GET  /api/inbox/access       -> {owner, inbox}: is the viewer an owner (ownerGate allowlist), is the R2 bucket bound (any signed-in viewer; reads only)
 //   GET  /api/inbox/<item>       -> the full record, with the report (owner)
 //   GET  /api/inbox/<item>/bundle-> the stored zip (owner, or the Mac with the inbox token)
 //   POST /api/inbox/<item>/status  body {status: "imported", kb_id} | {status: "failed", error} | {status: "pending"} (retry)
@@ -270,6 +271,7 @@ export async function handleInbox(request, env, deps, session) {
     if (path === "/api/inbox/validate" && method === "POST") return { name: "validate" };
     if (path === "/api/inbox" && method === "POST") return { name: "create" };
     if (path === "/api/inbox" && method === "GET") return { name: "list" };
+    if (path === "/api/inbox/access" && method === "GET") return { name: "access" };
     const m = /^\/api\/inbox\/(\d{8}T\d{6}Z-[0-9a-f]{8})(\/bundle|\/status)?$/.exec(path);
     if (!m) return null;
     if (!m[2] && method === "GET") return { name: "get", item: m[1] };
@@ -278,6 +280,13 @@ export async function handleInbox(request, env, deps, session) {
     return null;
   })();
   if (!route) return json(404, { error: "no such inbox route" });
+
+  if (route.name === "access") {
+    if (machine) return json(403, { error: "the inbox token may only list, download and report" });
+    // the same allowlist check as every write (ownerGate), asked without the CSRF header because this only reads
+    const asOwner = new Request(request.url, { headers: { "X-KB-Admin": "1" } });
+    return json(200, { owner: ownerGate(asOwner, env, session) === null, inbox: Boolean(env.KB_INBOX) });
+  }
 
   const machineMay = ["list", "bundle", "status"];
   if (machine) {
