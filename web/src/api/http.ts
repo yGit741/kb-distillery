@@ -94,6 +94,8 @@ export function createHttpDataSource(fetchImpl: Fetch = (...a) => fetch(...a), b
         `/api/graph/queries/${name}`,
       ),
 
+    shapeGraph: (text) => run(() => client.POST("/api/graph/shape", { body: { text, limit: 500 } }), "/api/graph/shape"),
+
     getRelationProposals: ({ min, max, kind }) =>
       run(
         () => client.GET("/api/relations/proposals", { params: { query: { min, max, ...(kind ? { kind } : {}) } } }),

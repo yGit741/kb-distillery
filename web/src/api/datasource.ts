@@ -31,6 +31,8 @@ export interface DataSource {
   listGraphQueries(): Promise<T.NamedQuery[]>;
   runCypher(query: string): Promise<T.QueryTable>;
   runGraphQuery(name: string, params: Record<string, string>): Promise<T.QueryTable>;
+  /** Free text (or Cypher, or a style clause list) to a graph view: the pages as rows plus the style (local app only). */
+  shapeGraph(text: string): Promise<T.ShapeResult>;
   /** LLM relation proposals in a confidence range 0..1 (local app only), best first, with a 10-bucket histogram. */
   getRelationProposals(opts: { min: number; max: number; kind?: string }): Promise<T.RelationProposals>;
 

@@ -466,6 +466,8 @@ function Loaded({
           colorBy={ui.colorBy}
           onFocus={(id) => (visible.has(id) ? focus(id) : showPicked([id]))}
           onRead={openReader}
+          onShowExact={(ids) => showPicked(ids, true)}
+          shownTypes={shownTypes}
           onShowMentions={(query) => void showMentions(query)}
           onFit={() => ui.fit()}
           onZoom={(f) => canvas.current?.zoomBy(f)}

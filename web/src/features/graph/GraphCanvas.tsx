@@ -345,6 +345,10 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
     layoutWas.current = now;
   }, [ui.layoutMode, ui.areaPull]);
 
+  useEffect(() => {
+    fg.current?.refresh();
+  }, [ui.hiddenLinkKinds]);
+
   // ---- tool decor (experiment halos, faded links) is read at draw time; a change only needs a redraw
   useEffect(() => useDecor.subscribe(() => fg.current?.refresh()), []);
 
@@ -837,7 +841,7 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
   );
 
   const drawLinkAfter = useCallback((l: SimLink, ctx: CanvasRenderingContext2D, scale: number) => {
-    if (l.kind !== "shared" || scale < 1.6) return;
+    if (l.kind !== "shared" || scale < 1.6 || live.current.ui.hiddenLinkKinds.has(l.kind)) return;
     const a = l.source as SimNode;
     const b = l.target as SimNode;
     if (typeof a === "string" || typeof b === "string" || a.x == null || b.x == null || a.y == null || b.y == null) return;
@@ -855,11 +859,13 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
     const a = endId(l.source);
     const b = endId(l.target);
     const fade = useDecor.getState().linkFade?.(a, b) ?? 1;
+    // a hidden kind keeps its place in the layout and is simply not drawn
+    if (live.current.ui.hiddenLinkKinds.has(l.kind)) return withAlpha(colors.link, 0);
     return withAlpha(colors.link, fade * fadedLinkOpacity(a, b, focus, prevFocus, fadeT, live.current.ui.linkOpacity, l.kind));
   }, []);
   const linkWidth = useCallback((l: SimLink) => (l.kind === "shared" ? 0.35 + Math.min(l.shared ?? 1, 6) * 0.1 : 0.8), []);
   const linkLabel = useCallback(
-    (l: SimLink) => (l.kind === "shared" ? `${l.shared} shared source${l.shared === 1 ? "" : "s"}` : ""),
+    (l: SimLink) => (l.kind === "shared" && !live.current.ui.hiddenLinkKinds.has(l.kind) ? `${l.shared} shared source${l.shared === 1 ? "" : "s"}` : ""),
     [],
   );
 
