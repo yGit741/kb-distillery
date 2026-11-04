@@ -81,7 +81,7 @@ export const MoreButton = forwardRef<HTMLButtonElement, Omit<Props, "children">>
 export function ActionPill({ label, align, children, className }: { label: string; align: "left" | "right"; children: ReactNode; className?: string }) {
   return (
     <div
-      role="menu"
+      role="group"
       aria-label={label}
       data-align={align}
       className={cn("pointer-events-auto flex h-7 items-center rounded-full border bg-card px-1 text-xs shadow-[var(--shadow)]", className)}
@@ -95,7 +95,6 @@ export function PillAction({ children, ...rest }: ButtonHTMLAttributes<HTMLButto
   return (
     <button
       type="button"
-      role="menuitem"
       className={cn("rounded-full px-2.5 py-1 leading-none whitespace-nowrap hover:bg-accent disabled:opacity-40 disabled:hover:bg-transparent", RING)}
       {...rest}
     >

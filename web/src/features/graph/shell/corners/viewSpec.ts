@@ -24,7 +24,7 @@ export interface ViewSpecV1 {
 type Ui = ReturnType<typeof useGraphUi.getState>;
 
 export function captureSpec(ui: Pick<Ui, "story" | "colorBy" | "sizeBy" | "shownTypes" | "shownDepths" | "hiddenKeys" | "quick" | "view">): ViewSpecV1 {
-  const pages = ui.view ? [...ui.view.hits].slice(0, 500) : [];
+  const pages = ui.view ? [...ui.view.hits].slice(0, 2000) : [];
   return {
     v: 1,
     story: ui.story,
@@ -73,7 +73,9 @@ export function applySpec(spec: Record<string, unknown>, deps: ApplyDeps): boole
     useGraphUi.setState({ ...patch, story: typeof spec.story === "string" ? story || "" : useGraphUi.getState().story });
     did = true;
   }
-  if (isArr(spec.pages) && spec.pages.length) {
+  // a restore replaces the pages on screen (never unions with them); a named view brings its own pages
+  if (!story && (did || (isArr(spec.pages) && spec.pages.length))) useGraphUi.setState({ view: null });
+  if (!story && isArr(spec.pages) && spec.pages.length) {
     deps.showPicked(spec.pages);
     did = true;
   }

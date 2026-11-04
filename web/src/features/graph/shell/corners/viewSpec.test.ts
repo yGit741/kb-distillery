@@ -35,6 +35,17 @@ describe("a pinned view's spec", () => {
     expect(deps.showPicked).toHaveBeenCalledWith(["a", "b"]);
   });
 
+  it("a restore replaces the pages on screen instead of adding to them", () => {
+    useGraphUi.setState({ view: { kind: "picked", label: "old", hits: new Set(["x"]), shown: new Set(["x"]) } });
+    const deps = { applyView: vi.fn(), showPicked: vi.fn() };
+    applySpec({ v: 1, types: "all" }, deps);
+    expect(useGraphUi.getState().view).toBeNull();
+    useGraphUi.setState({ view: { kind: "picked", label: "old", hits: new Set(["x"]), shown: new Set(["x"]) } });
+    applySpec({ v: 1, pages: ["a"] }, deps);
+    expect(useGraphUi.getState().view).toBeNull(); // showPicked then builds the new one from nothing
+    expect(deps.showPicked).toHaveBeenCalledWith(["a"]);
+  });
+
   it("a spec of another shape is left alone and reported as not applied", () => {
     const deps = { applyView: vi.fn(), showPicked: vi.fn() };
     expect(applySpec({ cypher: "MATCH (n) RETURN n" }, deps)).toBe(false);

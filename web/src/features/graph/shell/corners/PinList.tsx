@@ -1,5 +1,5 @@
 import { Plus } from "lucide-react";
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ElementType, type KeyboardEvent, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import { ago, type PinnedView, type RecentStep } from "./api";
 import { useCorners } from "./cornersStore";
@@ -103,10 +103,11 @@ export function PinList({ open, views, viewsError, recent, recentError, suggest,
     return out;
   }, [views, viewsError, recent, recentError, recentOpen]);
 
-  const { focusRow, kick } = useLens(lens, entries, els);
+  const { focusRow, release, kick } = useLens(lens, entries, els);
   useEffect(() => {
     if (open) kick();
-  }, [open, kick]);
+    else release();
+  }, [open, kick, release]);
 
   const tops = useMemo(() => lensTops(entries), [entries]);
   const total = entries.reduce((s, e) => s + e.hb, 0);
@@ -120,6 +121,7 @@ export function PinList({ open, views, viewsError, recent, recentError, suggest,
     "data-lens-row": e.type,
     style: { top: tops[i], height: e.hb },
     onFocus: () => focusRow(e.key),
+    onBlur: () => release(),
     className: cn("group absolute left-0 flex w-fit items-center gap-2 pl-[22px] text-left [transform-origin:22px_50%] will-change-transform", RING, "rounded-xl"),
   });
 
@@ -160,14 +162,13 @@ export function PinList({ open, views, viewsError, recent, recentError, suggest,
               const editing = edit?.kind === "pin";
               const empty = !views?.length;
               const name = <span className="truncate">Pin this view</span>;
+              // while the name is typed the row is a plain box: a text field may not sit inside a button
+              const Row: ElementType = editing ? "div" : "button";
               return (
-                <button
+                <Row
                   key={e.key}
-                  type="button"
+                  {...(editing ? { role: "group", "aria-label": "Pin this view" } : { type: "button", "aria-label": "Pin this view", title: "Pin this view", onClick: () => startEdit({ kind: "pin" }) })}
                   {...b}
-                  aria-label="Pin this view"
-                  title="Pin this view"
-                  onClick={() => (editing ? undefined : startEdit({ kind: "pin" }))}
                   className={cn(b.className, "pointer-events-auto")}
                 >
                   <span className="grid h-5 w-[30px] flex-none place-items-center rounded-[5px] bg-card text-muted-foreground shadow-[var(--shadow)] group-hover:text-primary">
@@ -176,7 +177,7 @@ export function PinList({ open, views, viewsError, recent, recentError, suggest,
                   <Pill className={cn("transition-opacity", editing || empty ? "opacity-100" : "opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 group-data-[focus=true]:opacity-100")}>
                     {editing ? <NameInput initial={suggest} label="Name for the pinned view" onSubmit={onPin} /> : <span className="text-[11.5px] font-medium">{name}</span>}
                   </Pill>
-                </button>
+                </Row>
               );
             }
             if (e.type === "stack")
@@ -219,13 +220,13 @@ export function PinList({ open, views, viewsError, recent, recentError, suggest,
             const ok = canApply(spec);
             const renaming = isPin && edit?.kind === "rename" && edit.id === e.view.id;
             const on = isPin && active === e.view.id;
+            const Item: ElementType = renaming ? "div" : "button";
             return (
-              <button
+              <Item
                 key={e.key}
-                type="button"
+                {...(renaming ? { role: "group" } : { type: "button", "aria-pressed": isPin ? on : undefined })}
                 {...b}
                 aria-label={`${name}${meta ? `, ${meta}` : ""}`}
-                aria-pressed={isPin ? on : undefined}
                 aria-disabled={!ok || undefined}
                 title={ok ? name : `${name} (this step cannot be restored here)`}
                 onClick={() => ok && !renaming && onApply(spec, isPin ? e.view.id : "")}
@@ -249,7 +250,7 @@ export function PinList({ open, views, viewsError, recent, recentError, suggest,
                     </>
                   )}
                 </Pill>
-              </button>
+              </Item>
             );
           })}
         </div>

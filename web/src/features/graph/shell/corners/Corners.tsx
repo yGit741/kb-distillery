@@ -169,6 +169,8 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
       if (e.key !== "Escape" || e.metaKey || e.ctrlKey || e.altKey) return;
       if (!useCorners.getState().order.length) return;
       if (isTyping(e.target) && !root.current?.contains(e.target as Node)) return;
+      // a dialog (the palette, a confirm) owns Escape while it is open
+      if (e.defaultPrevented || document.querySelector("[role=dialog]")) return;
       const closed = closeTop();
       if (!closed) return;
       // the screen's own Esc (clear the selection) must not also fire
@@ -186,6 +188,7 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
       window.removeEventListener("keydown", onKey, { capture: true });
       document.removeEventListener("pointerdown", onDown, { capture: true });
       useCorners.getState().closeAll();
+      useCorners.getState().setActive(null);
     };
   }, [closeTop, closeAll]);
 
@@ -266,11 +269,6 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
                   </PillAction>
                 </ActionPill>
               )}
-              {notice && (
-                <div role="status" className="absolute rounded-full border bg-card px-3 py-1 text-xs shadow-[var(--shadow)]" style={{ left: EDGE + BUTTON + MORE + 28 + 6 + (menuOpen("pins") ? 170 : 0), top: EDGE + (BUTTON - 28) / 2 }}>
-                  {notice}
-                </div>
-              )}
             </>
           )}
 
@@ -339,6 +337,12 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
             </>
           )}
         </>
+      )}
+
+      {notice && (
+        <div role="status" className="absolute left-1/2 -translate-x-1/2 rounded-full border bg-card px-3 py-1 text-xs shadow-[var(--shadow)]" style={{ top: EDGE + 56 }}>
+          {notice}
+        </div>
       )}
 
       <ColourDots

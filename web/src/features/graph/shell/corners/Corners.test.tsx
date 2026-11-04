@@ -178,13 +178,13 @@ describe("pinned views", () => {
     await userEvent.click(pins());
     await userEvent.click(await screen.findByRole("button", { name: /^Alpha view/ }));
     await userEvent.click(screen.getByRole("button", { name: "Pinned view options" }));
-    await userEvent.click(screen.getByRole("menuitem", { name: "Rename" }));
+    await userEvent.click(screen.getByRole("button", { name: "Rename" }));
     const input = screen.getByRole("textbox", { name: /new name/i });
     await userEvent.clear(input);
     await userEvent.type(input, "Renamed{Enter}");
     await waitFor(() => expect(server.calls.find((c) => c.method === "PATCH")?.body).toEqual({ name: "Renamed" }));
     await userEvent.click(screen.getByRole("button", { name: "Pinned view options" }));
-    await userEvent.click(screen.getByRole("menuitem", { name: "Unpin" }));
+    await userEvent.click(screen.getByRole("button", { name: "Unpin" }));
     await waitFor(() => expect(server.calls.some((c) => c.method === "DELETE" && c.url === "/api/views/alpha")).toBe(true));
   });
 
@@ -236,9 +236,9 @@ describe("open and close rules", () => {
     mount();
     await userEvent.click(agent());
     await userEvent.click(screen.getByRole("button", { name: "Agent options" }));
-    expect(screen.getByRole("menu", { name: "Agent options" })).toBeInTheDocument();
+    expect(screen.getByRole("group", { name: "Agent options" })).toBeInTheDocument();
     await userEvent.keyboard("{Escape}");
-    expect(screen.queryByRole("menu", { name: "Agent options" })).toBeNull();
+    expect(screen.queryByRole("group", { name: "Agent options" })).toBeNull();
     expect(expanded(agent())).toBe(true);
     await userEvent.keyboard("{Escape}");
     expect(expanded(agent())).toBe(false);
@@ -301,11 +301,11 @@ describe("Think and Agent fans", () => {
     mount();
     await userEvent.click(think());
     await userEvent.click(screen.getByRole("button", { name: "Think options" }));
-    await userEvent.click(screen.getByRole("menuitem", { name: "Open full screen" }));
+    await userEvent.click(screen.getByRole("button", { name: "Open full screen" }));
     expect(host.go).toHaveBeenCalledWith("/think");
     await userEvent.click(agent());
     await userEvent.click(screen.getByRole("button", { name: "Agent options" }));
-    await userEvent.click(screen.getByRole("menuitem", { name: "New" }));
+    await userEvent.click(screen.getByRole("button", { name: "New" }));
     expect(useChatDock.getState().open).toBe(true);
   });
 });

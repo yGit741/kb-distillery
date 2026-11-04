@@ -69,7 +69,7 @@ export function ColourDots({ rows, title, hidden, toggleable, onToggle, areaHeig
         className="overflow-hidden whitespace-nowrap text-[10px] font-medium uppercase tracking-wide text-muted-foreground transition-[height,opacity]"
         style={{ height: open ? 22 : 0, opacity: open ? 1 : 0, transitionDuration: `${MS}ms` }}
       >
-        <button type="button" tabIndex={open ? 0 : -1} aria-label="Hide colour names" title="Hide the names" className={cn("pointer-events-auto rounded px-1", RING)} onClick={() => toggle("legend")}>
+        <button type="button" tabIndex={open ? 0 : -1} aria-label={`Colour = ${title}: hide names`} aria-expanded={open} title="Hide the names" className={cn("pointer-events-auto rounded px-1", RING)} onClick={() => toggle("legend")}>
           Colour = {title}
         </button>
       </div>
