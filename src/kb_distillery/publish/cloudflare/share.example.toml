@@ -16,6 +16,7 @@ allowed_emails = []
 [worker]
 compatibility_date = "2026-09-01"
 # flags_kv_id = ""            # KV namespace for runtime flag overrides; unset = not bound
+# inbox_bucket = ""           # R2 bucket bound as KB_INBOX for the upload inbox (publish.md); unset = not bound
 
 [cloudflare]
 # Your workers.dev account subdomain: sites live at https://<worker>.<subdomain>.workers.dev
