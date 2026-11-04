@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Field, Select } from "./fields";
 import { PastChats } from "./PastChats";
+import { SkillsPanel } from "./SkillsPanel";
+import { sessionIdOf } from "./serverStorage";
 import { fmtUsd } from "./format";
 import { ago, type SessionEntry } from "./sessions";
 import { authPayload, authValue, backendLabel, type StatusView } from "./status";
@@ -144,6 +146,8 @@ export function SessionPanel({ status, scopes, model, onModel, scope, onScope, s
       </Field>
 
       {sessions && onResume && <RecentSessions sessions={sessions} activeId={activeId} onResume={onResume} />}
+
+      {activeId && <SkillsPanel sessionId={sessionIdOf(activeId)} />}
 
       <Field label="Model">
         <Select value={model} onChange={(e) => onModel(e.target.value)} aria-label="Model">

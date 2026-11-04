@@ -269,6 +269,30 @@ def rename_session(session_id, title, root=None):
     return doc
 
 
+def read_extra(session_id, kind, root=None):
+    """A small JSON sidecar kept beside a session (`<id>.<kind>.json`), or None when absent or unreadable. The list skips
+    it (a dotted name is not a session id) and a session delete removes it."""
+    full = os.path.join(_dir(root or DEFAULT_ROOT), f"{clean_id(session_id)}.{kind}.json")
+    try:
+        with open(full, encoding="utf-8") as f:
+            return json.load(f)
+    except (OSError, ValueError):
+        return None
+
+
+def write_extra(session_id, kind, data, root=None):
+    """Write the sidecar of `read_extra`; works before the session itself was ever saved."""
+    _check_writable()
+    root = root or DEFAULT_ROOT
+    full = os.path.join(_dir(root), f"{clean_id(session_id)}.{kind}.json")
+    with _LOCK:
+        try:
+            ensure_local_ignored(root)
+            _atomic_write(full, json.dumps(data, ensure_ascii=False, indent=2) + "\n")
+        except OSError as e:
+            raise SessionsError(500, f"could not write the session file: {e.strerror or e}") from None
+
+
 def delete_session(session_id, root=None):
     _check_writable()
     root = root or DEFAULT_ROOT
@@ -280,4 +304,6 @@ def delete_session(session_id, root=None):
             raise SessionsError(404, f"no session {sid!r}") from None
         except OSError as e:
             raise SessionsError(500, f"could not delete the session file: {e.strerror or e}") from None
+        with contextlib.suppress(OSError):
+            os.remove(os.path.join(_dir(root), f"{sid}.skills.json"))
     return {"ok": True, "id": sid}

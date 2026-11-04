@@ -94,6 +94,11 @@ export interface DataSource {
   renameSession(id: string, title: string): Promise<T.SessionDoc>;
   deleteSession(id: string): Promise<T.SessionDeleted>;
 
+  /** GET /api/chat/skills: the kb's whitelisted skills and which are on for `session` (agent mode only). */
+  listChatSkills(session?: string): Promise<T.ChatSkillList>;
+  /** PUT /api/chat/skills/{id}: the skills that are on for one session. */
+  putChatSkills(id: string, body: T.ChatSkillsPut): Promise<T.ChatSkillList>;
+
   // think (local app only; never in share builds)
   listThink(): Promise<T.ThinkList>;
   getThinkNote(name: string): Promise<T.ThinkNote>;

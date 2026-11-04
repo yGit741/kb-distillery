@@ -5,6 +5,7 @@ import { CAP_STEP, askCap, contextUsed, turnCost, useComposer } from "./composer
 import { readEvents } from "./sse";
 import { applyEvent, clearAsk, dropLastTurn, emptyChat, historyOf, type Chat } from "./thread";
 import { loadSessions, saveSessions, upsertSession, type SessionEntry } from "./sessions";
+import { skillsRequest } from "./skillsSelection";
 import { readJson, writeJson } from "./storage";
 import { useServerSessions } from "./useServerSessions";
 
@@ -98,6 +99,7 @@ export function useChatSession() {
             backend: opts.backend,
             scope: opts.scope || undefined,
             session: base.session,
+            ...skillsRequest(base.id),
             system: opts.system,
             ...opts.auth,
             ...(picks ? { effort: picks.effort, ...(opts.backend === "agent" && picks.billing ? { billing: picks.billing } : {}) } : {}),

@@ -718,7 +718,7 @@ def agent_request(question, model, system, session_id=None, scope=None, history=
         ui = [t for t in AGENT_MODE_TOOLS if scope is None or t not in WEB_TOOLS]
         tools += ui
         disallowed = [t for t in disallowed if t not in ui]
-    skills = agent_skills.enabled() if runtime.effective("agent-mode") else []
+    skills = agent_skills.active() if runtime.effective("agent-mode") else []
     if skills:           # whitelisted skills ride in a generated local plugin; the policy hook still checks every call
         tools += ["Skill", "Agent"]
         disallowed = [t for t in disallowed if t not in ("Skill", "Agent", "Task")]
@@ -976,8 +976,9 @@ ask the user with AskUserQuestion instead of guessing; track a multi-step plan w
 
 async def _run(question, *, model, system, key, session_id, history, emit, stop_event, log, billing="api",
                scope=None, effort=None, budget=None, agent_mode=False, run=None, live=None, attachments=(),
-               attachment_session=None):
+               attachment_session=None, skills=None):
     index = query.parse_index()
+    agent_skills.set_active(skills)      # this turn's subset of the whitelist (None = all of it)
     if agent_mode:
         run = run or RunContext(agent_mode=True, emit=emit, session=session_id,
                                 web_fetch_cap=_agent_cap("web_fetch_cap", DEFAULT_WEB_FETCH_CAP),
@@ -1036,7 +1037,8 @@ def _live_for(emit):
 
 
 def stream_agent(question, *, model, system, key, session_id=None, history=None, log=None, billing="api",
-                 scope=None, effort=None, budget=None, agent_mode=None, attachments=(), attachment_session=None):
+                 scope=None, effort=None, budget=None, agent_mode=None, attachments=(), attachment_session=None,
+                 skills=None):
     """Sync generator of (event, data) for serve.py's SSE loop. Closing it stops the agent.
     `key=None` with `billing="subscription"` runs on the `claude login` account.
     `agent_mode=None` reads the runtime flag: off keeps today's read-only tool set."""
@@ -1062,7 +1064,8 @@ def stream_agent(question, *, model, system, key, session_id=None, history=None,
             asyncio.run(_run(question, model=model, system=system, key=key, session_id=session_id,
                              history=history, emit=emit, stop_event=stop_event, log=log, billing=billing,
                              scope=scope, effort=effort, budget=budget, agent_mode=agent_mode, run=run,
-                             live=live, attachments=attachments, attachment_session=attachment_session))
+                             live=live, attachments=attachments, attachment_session=attachment_session,
+                             skills=skills))
         except Exception as e:
             q.put(("error", {"error": f"agent: {e}"}))
         finally:

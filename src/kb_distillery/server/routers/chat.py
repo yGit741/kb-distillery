@@ -10,6 +10,7 @@ from kb_distillery.config.flags import runtime
 from kb_distillery.server.models.chat import (ChatAnswer, ChatAnswerResult, ChatRequest, ChatSettings, ChatSettingsUpdate, ChatStatus, KeyAdd, KeyList,
                                 KeyRemove, PromptsResponse, SavedChat, SavedChatResult)
 from kb_distillery.server.sse import sse_response
+from kb_distillery.services import agent_skills, sessions_store
 from kb_distillery.services import chat as chat_data
 from kb_distillery.services import chat_agent
 from kb_distillery.services import chat_attachments
@@ -92,6 +93,13 @@ def post_chat(req: ChatRequest):
         extra = {}
         if runtime.effective("agent-mode"):       # ship dark: the new fields are ignored until the flag is on
             extra = {"effort": payload.get("effort"), "budget": payload.get("budget")}
+            if payload.get("skills") is not None:
+                extra["skills"] = payload["skills"]      # narrowed to the whitelist inside agent_skills
+            elif payload.get("skills_session"):          # the subset saved with the session (the panel may not have loaded)
+                try:
+                    extra["skills"] = agent_skills.session_selection(payload["skills_session"])
+                except sessions_store.SessionsError:     # an id of another shape (an old local chat): the whole whitelist
+                    pass
             if payload.get("attachment_session"):
                 try:
                     chat_attachments.session_dir(payload["attachment_session"])
