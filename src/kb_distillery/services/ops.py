@@ -153,11 +153,13 @@ def deploy_state(root=None, now=None, plist=OWNER_PLIST, main=None):
     Read-only. A field is None when unknown so the tile says "unknown" rather than ok. `main` = (sha, unix
     time) overrides the git read (tests).
     """
-    root = root or vault_root()
+    from kb_distillery.publish.cloudflare import contracts, owner as deploy_owner
+    # The owner is a per-engine service (launchd starts it from the engine checkout, no KB env): its state lives under
+    # the engine's .cache/share, never in a knowledge base. Resolve it with the owner's own helpers, not vault_root().
+    root = root or str(deploy_owner.primary_root(contracts.REPO))
     now = time.time() if now is None else now
-    cache = os.path.join(root, ".cache", "share")
-    owner = _read_json(os.path.join(cache, "owner.json"))
-    status = _read_json(os.path.join(cache, "status.json"))
+    owner = _read_json(deploy_owner.state_path(root))
+    status = _read_json(deploy_owner.cache(root) / "status.json")
     shas = owner.get("shas") or {}
     rows = sorted(((s, e) for s, e in shas.items() if isinstance(e, dict)),
                   key=lambda r: r[1].get("at", ""), reverse=True)

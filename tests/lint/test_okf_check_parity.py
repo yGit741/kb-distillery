@@ -45,6 +45,26 @@ def expected(case):
         return json.load(f)
 
 
+class NameParity(unittest.TestCase):
+    """The id and the shown name a source gets: names.json is asserted here against import_kb and in checkBundle.test.ts
+    against the port (the site's preview), so the site and the local app cannot name the same bundle differently."""
+
+    def test_import_kb_names_every_source_as_names_json_says(self):
+        from kb_distillery import import_kb
+        with open(os.path.join(FIXTURES, "names.json"), encoding="utf-8") as f:
+            names = json.load(f)
+        self.assertTrue(names)
+        for case in names:
+            with self.subTest(source=case["source"]), tempfile.TemporaryDirectory(prefix="kb-name-parity-") as tmp:
+                path = os.path.join(tmp, case["source"])
+                if case["kind"] == "file":
+                    open(path, "w").close()
+                else:
+                    os.mkdir(path)
+                kb_id = import_kb.default_id(path)
+                self.assertEqual((kb_id, import_kb._display_name(kb_id, None)), (case["id"], case["name"]))
+
+
 class OkfParity(unittest.TestCase):
     def test_every_case_has_an_expected_report(self):
         self.assertTrue(cases())

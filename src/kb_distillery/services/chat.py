@@ -34,9 +34,9 @@ API_URL = "https://api.anthropic.com/v1/messages"
 API_VERSION = "2023-06-01"
 
 MODELS = [
-    {"id": "claude-sonnet-5-5", "label": "Sonnet 5.5", "default": True},
-    {"id": "claude-opus-5-5", "label": "Opus 5.5"},
-    {"id": "claude-haiku-5-5", "label": "Haiku 5.5"},
+    {"id": "claude-sonnet-5-5", "label": "Sonnet 5.5", "default": True, "context": 200000},
+    {"id": "claude-opus-5-5", "label": "Opus 5.5", "context": 200000},
+    {"id": "claude-haiku-5-5", "label": "Haiku 5.5", "context": 200000},
 ]
 MODEL_IDS = {m["id"] for m in MODELS}
 

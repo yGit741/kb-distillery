@@ -902,12 +902,25 @@ def log(n=20, kind=None, root=ROOT):
             break
 
 
+def hooks_installed(root):
+    """Do the kb's git hooks really run? `core.hooksPath` (absolute, or relative to the work tree top, as git reads it)
+    must point at a folder whose pre-commit, commit-msg and pre-push are executable: git skips any other silently.
+    No comparison with one fixed path: a kb outside the engine gets an absolute one, a kb inside a relative one."""
+    configured = _git(root, "config", "core.hooksPath").stdout.strip()
+    if not configured:
+        return False
+    top = _git(root, "rev-parse", "--show-toplevel").stdout.strip() or root
+    folder = os.path.normpath(os.path.join(top, os.path.expanduser(configured)))
+    return all(os.path.isfile(os.path.join(folder, n)) and os.access(os.path.join(folder, n), os.X_OK)
+               for n in ("pre-commit", "commit-msg", "pre-push"))
+
+
 def status(root=ROOT):
     from .migrate import pending_migrations
     lanes = changed_paths(root)
     ingest, distill = has_open_sessions(root)
     last = cp.last_version(root, "main")
-    hooks = _git(root, "config", "core.hooksPath").stdout.strip()
+    hooks = hooks_installed(root)
     unpushed = _git(root, "rev-list", "--count", "origin/main..main").stdout.strip() or "?"
     snaps = snapshots(root)
     from kb_distillery.vault.schema import GIT_POLICY_MODE, OPS_STRICT, SCHEMA_VERSION
@@ -922,7 +935,7 @@ def status(root=ROOT):
         sessions.append(f"ops {s['op']} {s['target']}")
     sessions += [f"researcher {slug}" for slug in open_researcher_sessions(root)]
     print(f"open sessions: {', '.join(sessions) or 'none'}")
-    print(f"git hooks: {'scripts/githooks (' + GIT_POLICY_MODE + ')' if hooks == 'scripts/githooks' else 'not installed — pixi run install-hooks'}"
+    print(f"git hooks: {'installed (' + GIT_POLICY_MODE + ')' if hooks else 'not installed — distill hooks install'}"
           f"   guard strict: {OPS_STRICT}")
     nightly = nightly_status(root)
     print(f"nightly sync: {nightly['summary']}" + (f" — {nightly['hint']}" if nightly["hint"] else ""))

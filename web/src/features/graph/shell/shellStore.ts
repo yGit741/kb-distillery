@@ -5,7 +5,7 @@ import type { Marker, Snapshot } from "./shape";
 /**
  * State of the graph shell (flag graph-shell) that other parts of the screen reach for. The search panel
  * records what the user asked for; free-text shaping acts on it (./useShape) and keeps the shape on screen
- * with its one level of undo here. Opening a pinned view lands in a later PR and reads `pendingView`.
+ * with its one level of undo here. A pinned view picked in the search panel waits in `pendingView` until the corner controls open it.
  */
 /** The shape on screen: what the status pill says, and the graph state that proves it is still what is drawn. */
 export interface AppliedShape {
@@ -38,6 +38,8 @@ interface ShellState {
   requestView: (view: PinnedView) => void;
   /** Mark a request handled. */
   clearPending: () => void;
+  /** Mark only the pinned-view request handled (a shape request may still be waiting). */
+  clearPendingView: () => void;
   say: (text: string) => void;
   setShaping: (shaping: boolean) => void;
   setShapeError: (error: string | null) => void;
@@ -61,6 +63,7 @@ export const useShellStore = create<ShellState>((set) => ({
   requestShape: (text) => set({ pendingShape: text }),
   requestView: (view) => set({ pendingView: view }),
   clearPending: () => set({ pendingShape: null, pendingView: null }),
+  clearPendingView: () => set({ pendingView: null }),
   say: (text) => set({ notice: { id: ++noticeId, text } }),
   setShaping: (shaping) => set({ shaping }),
   setShapeError: (shapeError) => set({ shapeError }),

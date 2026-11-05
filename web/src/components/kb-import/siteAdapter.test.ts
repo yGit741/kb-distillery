@@ -10,18 +10,18 @@ describe("site import adapter (the Worker inbox)", () => {
     const f = vi.fn(() => reply(200, { ok: true, kind: "zip", id: "my-notes", pages: 3, errors: [], warnings: ["b.md: no title"] }));
     const p = await adapterFor(f).validate(zip());
     const [url, init] = call(f);
-    expect(url).toBe("/api/inbox/validate?name=my-notes");
+    expect(url).toBe("/api/inbox/validate?name=my-notes.zip");
     expect(init.method).toBe("POST");
     expect(init.credentials).toBe("same-origin");
     expect(init.headers).toMatchObject({ "X-KB-Admin": "1", "Content-Type": "application/zip" });
     expect(init.body).toBeInstanceOf(File);
-    expect(p).toEqual({ id: "my-notes", name: "my-notes", pages: 3, source: "my-notes.zip", errors: [], warnings: ["b.md: no title"] });
+    expect(p).toEqual({ id: "my-notes", name: "My notes", pages: 3, source: "my-notes.zip", errors: [], warnings: ["b.md: no title"] });
   });
 
   it("validate sends an edited id as a query parameter and keeps it", async () => {
     const f = vi.fn(() => reply(200, { ok: true, kind: "zip", id: "my-notes", pages: 1, errors: [], warnings: [] }));
     const p = await adapterFor(f).validate({ ...zip(), id: "fresh" });
-    expect(call(f)[0]).toBe("/api/inbox/validate?name=my-notes&id=fresh");
+    expect(call(f)[0]).toBe("/api/inbox/validate?name=my-notes.zip&id=fresh");
     expect(p.id).toBe("fresh");
   });
 
@@ -41,6 +41,12 @@ describe("site import adapter (the Worker inbox)", () => {
     expect((await adapterFor(f).validate(zip("demo.zip"))).errors[0]).toMatch(/reserved/);
   });
 
+  it("shows the same id and name as the local app for bad-notes.zip", async () => {
+    const f = vi.fn(() => reply(200, { ok: true, kind: "zip", pages: 2, errors: [], warnings: [] }));   // no id: the fallback must agree
+    const p = await adapterFor(f).validate(zip("bad-notes.zip"));
+    expect([p.id, p.name]).toEqual(["bad-notes", "Bad notes"]);
+  });
+
   it("a git URL is posted as JSON; its name and id come from the URL", async () => {
     const f = vi.fn(() => reply(200, { ok: true, kind: "git", id: "", pages: 0, errors: [], warnings: ["a git URL is checked on the Mac when it is imported"] }));
     const p = await adapterFor(f).validate({ kind: "git", url: "https://example.com/me/My_Notes.git#main" });
@@ -48,13 +54,13 @@ describe("site import adapter (the Worker inbox)", () => {
     expect(url).toBe("/api/inbox/validate");
     expect(init.headers).toMatchObject({ "Content-Type": "application/json", "X-KB-Admin": "1" });
     expect(JSON.parse(init.body as string)).toEqual({ git_url: "https://example.com/me/My_Notes.git#main" });
-    expect(p).toMatchObject({ id: "my-notes", name: "My_Notes", source: "https://example.com/me/My_Notes.git#main", errors: [] });
+    expect(p).toMatchObject({ id: "my-notes", name: "My notes", source: "https://example.com/me/My_Notes.git#main", errors: [] });
   });
 
   it("submit posts to /api/inbox and answers received with the inbox item id", async () => {
     const f = vi.fn(() => reply(201, { item: "20261104T101500Z-0a1b2c3d", status: "pending", kind: "zip", pages: 3, errors: [], warnings: [] }));
     const out = await adapterFor(f).submit({ ...zip(), id: "my-notes" });
-    expect(call(f)[0]).toBe("/api/inbox?name=my-notes&id=my-notes");
+    expect(call(f)[0]).toBe("/api/inbox?name=my-notes.zip&id=my-notes");
     expect(out).toEqual({ state: "received", message: expect.stringMatching(/inbox.*next sync/), ref: "20261104T101500Z-0a1b2c3d" });
   });
 

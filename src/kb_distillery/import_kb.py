@@ -105,6 +105,7 @@ class Report:
     warnings: list[str] = field(default_factory=list)
     ref: str = ""
     commit: str = ""
+    inbox_item: str = ""
 
     @property
     def ok(self) -> bool:
@@ -238,6 +239,8 @@ def _record_source(target: str, rep: Report) -> None:
         lines.append(f"ref = {q(rep.ref)}")
     if rep.commit:
         lines.append(f"commit = {q(rep.commit)}")
+    if rep.inbox_item:
+        lines.append(f"inbox_item = {q(rep.inbox_item)}")
     lines.append(f"imported_at = {q(now)}")
     with open(os.path.join(target, kbconfig.CONFIG_NAME), "a", encoding="utf-8") as f:
         f.write("\n".join(lines) + "\n")
@@ -257,20 +260,21 @@ def _lint(root: str) -> list[str]:
 
 
 def import_bundle(src: str, kit: str | None = None, kb_id: str | None = None, parent: str | None = None,
-                  name: str | None = None, label: str | None = None) -> str:
+                  name: str | None = None, label: str | None = None, inbox_item: str | None = None) -> str:
     """Import the OKF bundle at `src` (folder, .zip or git URL[#ref]) as a NEW kb -> the new kb's path.
 
     A git source is a one-time shallow copy: the clone's .git is dropped and the kb gets its own history; `[import]` in
     kb.toml records source, ref, commit and time. okf_check errors raise `BundleError` (an `init_kb.InitError`) with nothing
     written; so does an id that is taken or a kit that is unknown. `parent` defaults to the bases dir (`~/knowledge`).
-    `label` is recorded as `[import] source` instead of the path of `src` (for an upload held in a temp folder)."""
+    `label` is recorded as `[import] source` instead of the path of `src` (for an upload held in a temp folder);
+    `inbox_item` (the site inbox item id) is recorded as `[import] inbox_item`."""
     kb_id = kb_id or _guess_id(src)
     init_kb.validate_id(kb_id)
     parent = parent or kbconfig.bases_dir()
     with tempfile.TemporaryDirectory(prefix="kb-import-") as stage, _open(src, stage) as (bundle, found, ref, commit):
         label = label or found
         count, errors, warnings = _findings(bundle, stage)
-        rep = Report(kb_id, label, count, errors, warnings, ref, commit)
+        rep = Report(kb_id, label, count, errors, warnings, ref, commit, inbox_item or "")
         if _id_taken(kb_id, parent):
             raise BundleError(f"a knowledge base {kb_id!r} already exists: pick another --id")
         if errors:
@@ -335,11 +339,14 @@ def main(argv=None) -> int:
         except init_kb.InitError as e:
             print(f"distill kb import: {e}", file=sys.stderr)
             return 1
+        if rep.errors:                                  # nothing would be imported: only the errors, then one line
+            for e in rep.errors:
+                print(f"error: {e}", file=sys.stderr)
+            print(f"nothing would be imported: {len(rep.errors)} error(s) above")
+            return 1
         print(f"would import {rep.pages} page(s) from {rep.source} as {rep.id!r}")
         for w in rep.warnings:
             print(f"warning: {w}")
-        for e in rep.errors:
-            print(f"error: {e}", file=sys.stderr)
         return 0 if rep.ok else 1
     try:
         target = import_bundle(args.source, args.kit, args.kb_id, args.dir)

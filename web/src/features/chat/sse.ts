@@ -185,7 +185,7 @@ export function toEvent(frame: RawFrame): ChatEvent | null {
  */
 export async function readEvents(
   body: ReadableStream<Uint8Array>,
-  onEvents: (events: ChatEvent[]) => void,
+  onEvents: (events: ChatEvent[]) => unknown,
   signal?: AbortSignal,
 ): Promise<void> {
   const reader = body.getReader();
@@ -202,10 +202,10 @@ export async function readEvents(
       const { frames, rest } = splitFrames(buffer);
       buffer = rest;
       const events = frames.map(toEvent).filter((e): e is ChatEvent => e !== null && e.type !== "ping");
-      if (events.length) onEvents(events);
+      if (events.length) await onEvents(events);
     }
     const tail = splitFrames(buffer + "\n\n").frames.map(toEvent).filter((e): e is ChatEvent => e !== null && e.type !== "ping");
-    if (tail.length) onEvents(tail);
+    if (tail.length) await onEvents(tail);
   } finally {
     signal?.removeEventListener("abort", onAbort);
   }

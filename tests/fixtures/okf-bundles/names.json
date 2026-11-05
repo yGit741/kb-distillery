@@ -1,0 +1,9 @@
+[
+  {"source": "bad-notes.zip", "kind": "file", "id": "bad-notes", "name": "Bad notes"},
+  {"source": "My Notes (2026).zip", "kind": "file", "id": "my-notes-2026", "name": "My notes 2026"},
+  {"source": "v1.2.notes.zip", "kind": "file", "id": "v1-2-notes", "name": "V1 2 notes"},
+  {"source": "UPPER.ZIP", "kind": "file", "id": "upper", "name": "Upper"},
+  {"source": "---.zip", "kind": "file", "id": "imported-kb", "name": "Imported kb"},
+  {"source": "bad-notes", "kind": "folder", "id": "bad-notes", "name": "Bad notes"},
+  {"source": "notes.d", "kind": "folder", "id": "notes-d", "name": "Notes d"}
+]

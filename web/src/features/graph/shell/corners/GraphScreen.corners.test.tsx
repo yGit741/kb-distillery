@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { DataSourceProvider, type DataSource } from "@/api";
 import { withFlag } from "@/flags/testing";
@@ -9,6 +10,8 @@ import { sampleSnapshot } from "../../fixtures";
 import { GraphScreen, type GraphHost } from "../../GraphScreen";
 import { DEFAULT_PREFS, useGraphUi } from "../../store";
 import { resetCorners } from "./cornersStore";
+import type { PinnedView } from "@/api";
+import { useShellStore } from "../shellStore";
 
 // jsdom has no canvas: stand in for force-graph with a chainable no-op instance.
 vi.mock("force-graph", () => {
@@ -77,5 +80,40 @@ describe("graph-shell: the corner controls on the Graph screen", () => {
       expect(screen.getByRole("button", { name: "Think notes" })).toBeInTheDocument();
       expect(screen.getByRole("button", { name: "Agent chats" })).toBeInTheDocument();
       expect(screen.getByRole("button", { name: /show page types/i })).toBeInTheDocument();
+    }));
+});
+
+describe("graph-shell: opening a pinned view", () => {
+  const pinned: PinnedView = { id: "all-types", name: "All types", created: new Date().toISOString(), spec: { v: 1, types: "all" } };
+  afterEach(() => {
+    useShellStore.setState({ pendingView: null });
+    vi.unstubAllGlobals();
+  });
+
+  it("flag on: a view picked in the list is applied to the graph", () =>
+    withFlag("graph-shell", true, async () => {
+      vi.stubGlobal("fetch", vi.fn(async (url: RequestInfo | URL) => new Response(JSON.stringify(String(url) === "/api/views" ? { views: [pinned] } : { recent: [] }), { status: 200 })));
+      render(wrap(graph(), <GraphScreen search={{}} host={host} />));
+      await userEvent.click(await screen.findByRole("button", { name: "Pinned views" }));
+      expect(useGraphUi.getState().shownTypes).toBeUndefined();
+      await userEvent.click(await screen.findByRole("button", { name: /^All types/ }));
+      expect(useGraphUi.getState().shownTypes).toBeNull();
+    }));
+
+  it("flag on: a view picked in the search panel is applied and handled", () =>
+    withFlag("graph-shell", true, async () => {
+      render(wrap(graph(), <GraphScreen search={{}} host={host} />));
+      await screen.findByTestId("graph-corners");
+      act(() => useShellStore.getState().requestView(pinned));
+      await waitFor(() => expect(useGraphUi.getState().shownTypes).toBeNull());
+      expect(useShellStore.getState().pendingView).toBeNull();
+    }));
+
+  it("flag off: nothing opens it, the graph stays as it was", () =>
+    withFlag("graph-shell", false, async () => {
+      render(wrap(graph(), <GraphScreen search={{}} host={host} />));
+      await screen.findByRole("region", { name: "Legend" });
+      act(() => useShellStore.getState().requestView(pinned));
+      expect(useGraphUi.getState().shownTypes).toBeUndefined();
     }));
 });

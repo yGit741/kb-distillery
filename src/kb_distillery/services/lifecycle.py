@@ -76,7 +76,7 @@ def build_lifecycle_snapshot(root=ROOT, limit=150):
             "pending": pending_migrations(root),
         },
         "policy": {
-            "hooks_installed": _git(root, "config", "core.hooksPath") == "scripts/githooks",
+            "hooks_installed": ops_core.hooks_installed(root),
             "mode": os.environ.get("KB_POLICY", GIT_POLICY_MODE),
             "strict": OPS_STRICT,
         },

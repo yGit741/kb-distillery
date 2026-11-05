@@ -17,6 +17,8 @@ export interface Spend {
 export interface Model {
   id: string;
   label: string;
+  /** context window in tokens, when the server says */
+  context?: number;
 }
 export interface StatusView {
   backend: "agent" | "direct";
@@ -69,7 +71,7 @@ export function parseStatus(st: ChatStatus): StatusView {
     keyName: st.key_name,
     keyHint: st.key_hint,
     keyFile: st.key_file,
-    models: st.models.filter(isObj).map((m) => ({ id: str(m.id), label: str(m.label, str(m.id)) })).filter((m) => m.id),
+    models: st.models.filter(isObj).map((m) => ({ id: str(m.id), label: str(m.label, str(m.id)), ...(num(m.context) > 0 ? { context: num(m.context) } : {}) })).filter((m) => m.id),
     defaultModel: st.default_model,
     resetDay: st.reset_day,
     spend: parseSpend(st.spend),
