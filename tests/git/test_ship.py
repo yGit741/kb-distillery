@@ -386,6 +386,21 @@ class PrFlowTests(unittest.TestCase):
         self.assertEqual(ship.cmd_approve(7, root=wt), 0)
         self.assertEqual(ship.cmd_merge(root=wt, gates=False), 0)
 
+    def test_night_window_waives_holds_and_merges_held_pr(self):
+        from kb_distillery.git import night
+        wt = self._start()
+        self._write(wt, "meta/tool.py")
+        ship.cmd_commit("feat(ops): add thing", root=wt, gates=False)
+        self.assertEqual(ship.cmd_pr(root=wt, gates=False, hold=True), 0)
+        self.assertEqual(ship.cmd_merge(root=wt, gates=False), 1)          # held: refused while the window is closed
+        night.start(wt, hours=1)
+        try:
+            self.assertIsNone(ship._hold_reason(["schema(books): add hub"], root=wt))
+            self.assertEqual(ship.cmd_merge(root=wt, gates=False), 0)      # window open: the hold is waived
+        finally:
+            night.stop(wt)
+        self.assertIn("pr merge", open(os.path.join(self.ghdir, "calls.log")).read())
+
     # ---- C2: the owner's GitHub Approve review lifts the hold ----
     def _held(self):
         wt = self._start()
