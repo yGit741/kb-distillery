@@ -4,7 +4,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useDataSource } from "@/api";
 import { useFlag } from "@/flags/useFlag";
 import { useUi } from "@/app/ui-store";
+import { cn } from "@/lib/utils";
 import { useApiQuery } from "@/lib/useApiQuery";
+import { useKb } from "@/lib/store";
 import { IS_SHARE } from "@/share/env";
 import { useTheme } from "@/theme/theme";
 import { colorChannel, COLOR_TITLE } from "../../encoding/channels";
@@ -21,7 +23,9 @@ import { ColourDots } from "./ColourDots";
 import { useCorners, type Layer } from "./cornersStore";
 import { Fan, type FanCard } from "./Fan";
 import { BUTTON, EDGE, fanCapacity } from "./geometry";
-import { PinList } from "./PinList";
+import { LIST_WIDTH, PinList } from "./PinList";
+import { recentSources, viewCards } from "./panelModel";
+import { ViewsPanel } from "./ViewsPanel";
 import { SEARCH_LINE_H, useShellTop } from "../layout";
 import { useShellStore } from "../shellStore";
 import { browserSessions, newChat, resumeSession } from "./sessions";
@@ -66,6 +70,7 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
   const theme = useTheme((s) => s.theme);
   const server = ds.kind === "http" && !IS_SHARE;
   const sparkChat = useFlag("spark-chat");
+  const viewsPanel = useFlag("views-panel");
   const root = useRef<HTMLDivElement>(null);
   const order = useCorners((s) => s.order);
   const menu = useCorners((s) => s.menu);
@@ -92,7 +97,7 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
   const [recentOn, setRecentOn] = useState(false);
   const recent = useQuery({ queryKey: ["corners", "recent"], queryFn: () => listRecent(f), enabled: server && pinsOpen && recentOn, staleTime: 0 });
   const think = useApiQuery(["think"], (d) => d.listThink(), { enabled: server && thinkOpen });
-  const sessions = useQuery({ queryKey: ["corners", "sessions"], queryFn: () => listSessions(f), enabled: server && agentOpen, staleTime: 0, retry: false });
+  const sessions = useQuery({ queryKey: ["corners", "sessions"], queryFn: () => listSessions(f), enabled: server && (agentOpen || (viewsPanel && pinsOpen)), staleTime: 0, retry: false });
 
   const [notice, setNotice] = useState("");
   useEffect(() => {
@@ -154,6 +159,12 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
     const cards = notes.map((n) => ({ key: n.name, title: label(n.name), meta: ago(new Date(n.mtime * 1000).toISOString()) }));
     return notes.length > cap ? [...cards.slice(0, cap - 1), { key: "__all", title: "All think notes", meta: String(notes.length) }] : cards;
   }, [think.data, cap]);
+  // flag views-panel: the few newest chats and sources, and the views that fit this kb, for the pinned panel
+  const panelChats = useMemo<SessionRow[]>(() => (viewsPanel && pinsOpen ? (sessions.data ?? browserSessions()).slice(0, 3) : []), [viewsPanel, pinsOpen, sessions.data]);
+  const panelViews = useMemo(() => (viewsPanel ? viewCards(nodes, schema) : []), [viewsPanel, nodes, schema]);
+  const panelSources = useMemo(() => (viewsPanel ? recentSources(nodes) : []), [viewsPanel, nodes]);
+  const selection = useKb((s) => s.selection);
+  const paper = useMemo(() => (viewsPanel ? ([...selection].find((id) => nodes.find((n) => n.id === id)?.type === "paper") ?? null) : null), [viewsPanel, selection, nodes]);
   const [serverChats, setServerChats] = useState(false);
   const chatRows = useMemo<SessionRow[]>(() => {
     if (sessions.data) return sessions.data;
@@ -258,22 +269,72 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
 
       {server && (
         <>
-          <PinList
-            open={pinsOpen}
-            views={views.data}
-            viewsError={views.isError ? "error" : undefined}
-            recent={recent.data}
-            recentError={recent.isError ? "error" : undefined}
-            suggest={suggestName(ui)}
-            onApply={(spec, id) => {
-              if (id) setActive(id);
-              if (!applySpec(spec, deps)) setNotice("Nothing in this step can be restored here");
-            }}
-            onPin={(n) => void pin(n)}
-            onRename={(id, n) => void rename(id, n)}
-            onRecentOpen={setRecentOn}
-            canApply={recognised}
-          />
+          {viewsPanel ? (
+            <div
+              role="group"
+              aria-label="Views panel"
+              aria-hidden={!pinsOpen}
+              inert={!pinsOpen}
+              data-corners="views-panel"
+              className={cn("pointer-events-none absolute z-[16] flex flex-col gap-2 transition-opacity duration-300 motion-reduce:transition-none", pinsOpen ? "opacity-100" : "opacity-0")}
+              style={{ left: EDGE, top: EDGE + BUTTON + 4, bottom: 78, width: LIST_WIDTH }}
+            >
+              <ViewsPanel
+                views={panelViews}
+                story={ui.story}
+                sources={panelSources}
+                chats={panelChats}
+                paper={paper}
+                host={host}
+                onView={(v) => {
+                  setActive(null);
+                  if (!applySpec(v.spec, deps)) setNotice("Nothing in this view can be restored here");
+                }}
+                onChat={(row) => {
+                  closeAll();
+                  void resumeSession(f, row, !!sessions.data).catch(fail);
+                }}
+                done={closeAll}
+              />
+              <p className="pointer-events-none flex-none px-3 text-[10.5px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">Pinned</p>
+              <div className="relative min-h-[150px] flex-1">
+                <PinList
+                  embedded
+                  open={pinsOpen}
+                  views={views.data}
+                  viewsError={views.isError ? "error" : undefined}
+                  recent={recent.data}
+                  recentError={recent.isError ? "error" : undefined}
+                  suggest={suggestName(ui)}
+                  onApply={(spec, id) => {
+                    if (id) setActive(id);
+                    if (!applySpec(spec, deps)) setNotice("Nothing in this step can be restored here");
+                  }}
+                  onPin={(n) => void pin(n)}
+                  onRename={(id, n) => void rename(id, n)}
+                  onRecentOpen={setRecentOn}
+                  canApply={recognised}
+                />
+              </div>
+            </div>
+          ) : (
+            <PinList
+              open={pinsOpen}
+              views={views.data}
+              viewsError={views.isError ? "error" : undefined}
+              recent={recent.data}
+              recentError={recent.isError ? "error" : undefined}
+              suggest={suggestName(ui)}
+              onApply={(spec, id) => {
+                if (id) setActive(id);
+                if (!applySpec(spec, deps)) setNotice("Nothing in this step can be restored here");
+              }}
+              onPin={(n) => void pin(n)}
+              onRename={(id, n) => void rename(id, n)}
+              onRecentOpen={setRecentOn}
+              canApply={recognised}
+            />
+          )}
           <CornerButton id={BTN_ID.pins} label="Pinned views" data-tour="graph-views" on={pinsOpen} style={{ position: "absolute", left: EDGE, top: EDGE }} onClick={() => toggle("pins")}>
             <PushPin />
           </CornerButton>
@@ -364,7 +425,12 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
       )}
 
       {notice && (
-        <div role="status" className="absolute left-1/2 -translate-x-1/2 rounded-full border bg-card px-3 py-1 text-xs shadow-[var(--shadow)]" style={{ top: shellTop + SEARCH_LINE_H + 13 }}>
+        <div
+          role="status"
+          className={cn("absolute rounded-full border bg-card px-3 py-1 text-xs shadow-[var(--shadow)]", pinsOpen ? "truncate" : "left-1/2 -translate-x-1/2")}
+          // while the pinned panel is open the notice sits to its right, so the two never overlap
+          style={{ top: shellTop + SEARCH_LINE_H + 13, ...(pinsOpen ? { left: EDGE + LIST_WIDTH + 12, maxWidth: `calc(100% - ${EDGE * 2 + LIST_WIDTH + 72}px)` } : {}) }}
+        >
           {notice}
         </div>
       )}

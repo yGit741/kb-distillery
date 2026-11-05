@@ -28,6 +28,8 @@ export function AppShell() {
   const setPaletteOpen = useUi((s) => s.setPaletteOpen);
   const embed = useEmbed();
   const agentMode = useFlag("agent-mode");
+  // flag views-panel: the dark mode switch lives in the graph's pinned panel (Settings), not in the bar
+  const themeInPanel = useFlag("views-panel");
   // flag header-fold: on the graph the bar folds away above the screen (the graph's chevron brings it back)
   const folded = useHeaderFolded();
   return (
@@ -59,14 +61,16 @@ export function AppShell() {
           <CommandIcon aria-hidden />
           <span className="hidden sm:inline">K</span>
         </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={toggle}
-          aria-label={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
-        >
-          {theme === "dark" ? <Sun aria-hidden /> : <Moon aria-hidden />}
-        </Button>
+        {!themeInPanel && (
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={toggle}
+            aria-label={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
+          >
+            {theme === "dark" ? <Sun aria-hidden /> : <Moon aria-hidden />}
+          </Button>
+        )}
       </header>
       )}
       <main className={embed ? "min-w-0 flex-1" : "mx-auto w-full min-w-0 max-w-6xl flex-1 px-4 py-4"}>
