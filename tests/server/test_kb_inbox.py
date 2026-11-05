@@ -1,8 +1,8 @@
-"""GET /api/kb/inbox and POST /api/kb/inbox/pull with the site mocked: no network, no keychain, no ~/knowledge."""
+"""GET /api/kb/inbox and POST /api/kb/inbox/pull with the site mocked: no network, no keychain, no publisher status, no ~/knowledge."""
 import pytest
 from fastapi.testclient import TestClient
 
-from kb_distillery import import_kb, inbox
+from kb_distillery import hosting, import_kb, inbox
 from kb_distillery.server.app import create_app
 
 ORIGIN = {"Origin": "http://127.0.0.1:8765"}
@@ -37,6 +37,8 @@ def client(monkeypatch):
     for k in (inbox.ENV_URL, inbox.ENV_TOKEN):
         monkeypatch.delenv(k, raising=False)
     monkeypatch.setattr(inbox, "keychain_token", lambda: pytest.fail("no keychain in tests"))
+    # no publisher status either: on a machine that has deployed, .cache/share/status.json would name the live site
+    monkeypatch.setattr(hosting, "current", lambda *a, **k: (_ for _ in ()).throw(RuntimeError("no publisher in tests")))
     FakeClient.reported = []
     with TestClient(create_app()) as c:
         yield c
