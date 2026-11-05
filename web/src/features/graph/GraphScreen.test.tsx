@@ -303,3 +303,32 @@ describe("views bar", () => {
     });
   }));
 });
+
+describe("the Map view in a kb whose kit names its own types", () => {
+  it("draws an OKF bundle's Source and Concept pages, not only the research type names it starts from", async () => {
+    const okf = [
+      node("speed", { type: "Concept", layer: "concept", inDegree: 1, outDegree: 1 }),
+      node("calibration", { type: "Concept", layer: "concept", inDegree: 1, outDegree: 1 }),
+      node("source-spec", { type: "Source", layer: "source", depth: "full", inDegree: 1 }),
+      node("series-specs", { type: "Series", layer: "collection" }),
+    ];
+    const links = [
+      { source: "speed", target: "calibration", kind: "wikilink" as const },
+      { source: "calibration", target: "speed", kind: "wikilink" as const },
+      { source: "speed", target: "source-spec", kind: "wikilink" as const },
+    ];
+    useGraphUi.getState().applyStory("map");
+    render(wrap(withGraph({ getGraph: async () => sampleSnapshot({ nodes: okf, links, node_count: okf.length }) }), <GraphScreen search={{}} host={host} />));
+    // every type but the collection hub: 3 of 4
+    await waitFor(() => expect(screen.getByTestId("graph-stats")).toHaveTextContent("3 of 4 pages"));
+    expect(useGraphUi.getState().shownTypes).toEqual(new Set(["Concept", "Source"]));
+  });
+
+  it("leaves a type filter set by hand alone", async () => {
+    useGraphUi.getState().applyStory("map");
+    useGraphUi.setState({ shownTypes: new Set(["topic"]) });
+    render(wrap(withGraph(), <GraphScreen search={{}} host={host} />));
+    await screen.findByTestId("graph-stats");
+    expect(useGraphUi.getState().shownTypes).toEqual(new Set(["topic"]));
+  });
+});

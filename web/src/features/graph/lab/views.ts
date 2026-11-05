@@ -16,6 +16,9 @@ export interface Story {
   layoutMode: LayoutMode;
   /** page types drawn */
   types: readonly string[];
+  /** Draw every page type the kb has except this layer's, instead of `types` (which then only seeds the first frame):
+   *  a kb whose kit names its own types (an OKF bundle's `Source`, `Concept`) is drawn too. */
+  everyTypeExcept?: "collection";
   /** types whose every page is labelled (the legend's "Aa") */
   typeLabels?: readonly string[];
   /** A headline view: a pill in the views bar; `goal` is the one sentence its hover shows, then the questions and hint. */
@@ -82,6 +85,7 @@ export const STORIES: readonly Story[] = [
     sizeBy: "evidence",
     layoutMode: "anchored",
     types: MAP_TYPES,
+    everyTypeExcept: "collection",
     typeLabels: ["topic"],
   },
   {
@@ -253,3 +257,12 @@ export const storyById = (id: string): Story | undefined => STORIES.find((s) => 
 
 /** The whole lab config of a story: the defaults plus its overrides (a story starts from the principles). */
 export const storyLab = (s: Story): LabConfig => ({ ...DEFAULT_LAB, ...s.lab });
+
+/** The types a story draws in a kb: its `everyTypeExcept` resolved against the pages (every type present whose pages
+ *  are not in that layer), else its fixed `types`. */
+export function storyTypes(st: Story, nodes: readonly { type: string; layer?: string }[]): Set<string> {
+  if (!st.everyTypeExcept) return new Set(st.types);
+  const out = new Set<string>();
+  for (const n of nodes) if (n.layer !== st.everyTypeExcept) out.add(n.type || "unknown");
+  return out;
+}

@@ -24,7 +24,7 @@ import { computeImportance } from "./lab/importance";
 import { HoverCard } from "./lab/HoverCard";
 import { LabRail } from "./lab/LabRail";
 import { initialView } from "./defaultView";
-import { storyById, storyOffered } from "./lab/views";
+import { storyById, storyOffered, storyTypes } from "./lab/views";
 import { Legend } from "./Legend";
 import { predicateFn } from "./publicPredicate";
 import { ViewsBar } from "./views/ViewsBar";
@@ -211,6 +211,16 @@ function Loaded({
   const byId = useMemo(() => new Map(model.nodes.map((n) => [n.id, n] as const)), [model]);
   const neighbors = useMemo(() => buildNeighborMap(model.links), [model]);
   const relations = useMemo(() => (model.relations ? relationIndex(model.relations) : undefined), [model]);
+  // a story that draws "every type but collections" (Map) is resolved against this kb's pages, so a kit with its own
+  // type names (an OKF bundle's Source, Concept) is not filtered away by the research names the story starts from
+  useEffect(() => {
+    const st = storyById(ui.story);
+    if (!st?.everyTypeExcept) return;
+    // only the story's own starting list is replaced; a filter set any other way (or none) is left alone
+    const cur = useGraphUi.getState().shownTypes;
+    if (!cur || cur.size !== st.types.length || st.types.some((t) => !cur.has(t))) return;
+    useGraphUi.setState({ shownTypes: storyTypes(st, model.nodes) });
+  }, [ui.story, model]);
   const shownTypes = useMemo(
     () => (ui.shownTypes === undefined ? new Set(schema.defaultVisible) : ui.shownTypes),
     [ui.shownTypes, schema],
