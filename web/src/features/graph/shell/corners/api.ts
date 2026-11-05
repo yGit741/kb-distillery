@@ -79,7 +79,7 @@ export async function listSessions(f: Fetcher = defaultFetch): Promise<SessionRo
       id: String(s.id),
       title: String(s.title || "Untitled chat"),
       updated: typeof s.updated === "string" ? s.updated : typeof s.created === "string" ? s.created : undefined,
-      ...(STATUS_WORDS.includes(s.status as string) ? { status: s.status as ChatStatusWord, live: s.status === "running" } : {}),
+      ...(STATUS_WORDS.includes(s.status as string) ? { status: s.status as ChatStatusWord } : {}),
     }));
   } catch (e) {
     if (e instanceof ApiFailure && (e.status === 404 || e.status === 405)) return null;

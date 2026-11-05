@@ -415,12 +415,12 @@ describe("flag spark-chat on the agent fan", () => {
       mount(fakeServer({ sessions: rows }));
       await userEvent.click(agent());
       const group = screen.getByRole("group", { name: "Agent chats" });
-      const cards = await within(group).findAllByRole("button");
       await waitFor(() => expect(within(group).getAllByRole("button")).toHaveLength(4));
       expect(within(group).getAllByRole("button")[0]).toHaveAccessibleName("New chat");
       expect(within(group).getByRole("button", { name: "Parity chat, running" })).toBeInTheDocument();
       expect(within(group).getByRole("button", { name: "Spectral bias, yesterday" })).toBeInTheDocument();
-      expect(cards.length).toBeGreaterThan(0);
+      // the running chat carries the green dot
+      expect(group.querySelectorAll(".bg-ok")).toHaveLength(1);
       await userEvent.click(within(group).getByRole("button", { name: "New chat" }));
       expect(useChatDock.getState().open).toBe(true);
     }));
@@ -434,5 +434,6 @@ describe("flag spark-chat on the agent fan", () => {
       expect(within(group).queryByRole("button", { name: "New chat" })).not.toBeInTheDocument();
       expect(within(group).getByRole("button", { name: "Spectral bias, yesterday" })).toBeInTheDocument();
       expect(within(group).queryByRole("button", { name: /running/ })).not.toBeInTheDocument();
+      expect(group.querySelectorAll(".bg-ok")).toHaveLength(0);
     }));
 });

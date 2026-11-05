@@ -236,6 +236,10 @@ NOW = store.datetime.datetime(2026, 11, 5, 12, 0, tzinfo=store.datetime.timezone
     ([], "2026-11-05T11:59:00Z", "idle"),
     (msgs(), "2026-11-05T11:59:00Z", "idle"),
     ([{"role": "user", "content": "q"}], "2026-11-05T11:58:00Z", "running"),
+    # the shape the chat really saves mid-turn: the question and an empty answer being streamed
+    ([{"role": "user", "content": "q"}, {"role": "assistant", "content": ""}], "2026-11-05T11:58:00Z", "running"),
+    ([{"role": "user", "content": "q"}, {"role": "assistant", "content": ""}], "2026-11-05T10:00:00Z", "idle"),
+    ([{"role": "assistant", "content": "", "error": "down"}], "2026-10-01T00:00:00Z", "error"),   # a failure stays shown
     ([{"role": "user", "content": "q"}], "2026-11-05T11:00:00Z", "idle"),        # a question left for an hour is not running
     ([{"role": "user", "content": "q"}], "not a date", "idle"),
     ([{"role": "user", "content": "q", "failed": True}], "2026-11-05T11:59:00Z", "error"),
@@ -248,6 +252,6 @@ def test_status_of(messages, updated, want):
 
 def test_list_carries_the_status(client):
     assert put(client, "s1").status_code == 200
-    assert put(client, "s2", messages=[{"role": "user", "content": "still thinking"}]).status_code == 200
+    assert put(client, "s2", messages=[{"role": "user", "content": "still thinking"}, {"role": "assistant", "content": ""}]).status_code == 200
     rows = {s.id: s.status for s in SessionList.model_validate(client.get("/api/sessions").json()).sessions}
     assert rows == {"s1": "idle", "s2": "running"}

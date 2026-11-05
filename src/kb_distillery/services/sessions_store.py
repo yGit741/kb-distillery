@@ -208,8 +208,8 @@ def _age(iso, now):
 
 
 def status_of(doc, now=None):
-    """What the chat is doing, from its last message: `running` (a question saved in the last ten minutes with no
-    answer yet), `waiting` (the agent asked a question and waits for a choice), `error` (the last turn failed) or `idle`."""
+    """What the chat is doing, from its last message: `running` (a question, or an empty answer being streamed, saved
+    in the last ten minutes), `waiting` (the agent asked a question and waits for a choice), `error` (the last turn failed) or `idle`."""
     messages = doc["messages"]
     if not messages:
         return "idle"
@@ -218,7 +218,9 @@ def status_of(doc, now=None):
         return "error"
     if last.get("role") == "assistant" and last.get("ask"):
         return "waiting"
-    if last.get("role") == "user":
+    # a turn in flight is saved as the question plus an empty answer the stream is still filling
+    in_flight = last.get("role") == "user" or (last.get("role") == "assistant" and not str(last.get("content") or "").strip())
+    if in_flight:
         age = _age(doc["updated"], now or datetime.datetime.now(datetime.timezone.utc))
         if age is not None and age < RUNNING_FOR:
             return "running"

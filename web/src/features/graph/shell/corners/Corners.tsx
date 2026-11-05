@@ -166,8 +166,8 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
     }
     // flag spark-chat: "New chat" first, then each chat with its status or day; the plus card takes one slot
     const fresh: FanCard = { key: "__new", title: "New chat", isNew: true };
-    const room = Math.max(1, cap - 1);
-    const cards = chatRows.map((r) => ({ key: r.id, title: r.title, meta: chatWhen(r), live: r.live }));
+    const room = cap - 1; // fanCapacity is at least 2, so one chat or "All chats" always fits beside it
+    const cards = chatRows.map((r) => ({ key: r.id, title: r.title, meta: chatWhen(r), live: r.live || r.status === "running" }));
     const rows = chatRows.length > room ? [...cards.slice(0, room - 1), { key: "__all", title: "All chats", meta: String(chatRows.length) }] : cards;
     return [fresh, ...rows];
   }, [chatRows, cap, sparkChat]);
