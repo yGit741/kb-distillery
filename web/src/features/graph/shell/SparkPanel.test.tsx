@@ -114,6 +114,46 @@ describe("flag spark-chat: the left chat panel", () => {
     );
   });
 
+  it("on: Ask and the palette open the panel, never the dock beside it; the question prefills the box", async () => {
+    await withFlag("graph-shell", true, () =>
+      withFlag("spark-chat", true, async () => {
+        screenWith();
+        await screen.findByTestId("graph-shell");
+        act(() => useChatDock.getState().ask("About tensor rank: "));
+        await screen.findByTestId("spark-panel");
+        expect(useChatDock.getState().open).toBe(false);
+        await waitFor(() => expect(screen.getByPlaceholderText("Type / for commands")).toHaveValue("About tensor rank: "));
+        act(() => useChatDock.getState().set({ open: true }));
+        expect(useChatDock.getState().open).toBe(false);
+        expect(screen.getAllByRole("complementary", { name: "Chat" })).toHaveLength(1);
+      }),
+    );
+  });
+
+  it("on: Escape from any control in the panel closes it", async () => {
+    await withFlag("graph-shell", true, () =>
+      withFlag("spark-chat", true, async () => {
+        screenWith();
+        await screen.findByTestId("graph-shell");
+        act(() => newChat());
+        await screen.findByTestId("spark-panel");
+        screen.getByRole("button", { name: "Close chat" }).focus();
+        await userEvent.keyboard("{Escape}");
+        expect(screen.queryByTestId("spark-panel")).not.toBeInTheDocument();
+      }),
+    );
+  });
+
+  it("on without the calm shell: the dock opens as before, since the panel lives in the shell", async () => {
+    await withFlag("graph-shell", false, () =>
+      withFlag("spark-chat", true, async () => {
+        act(() => useChatDock.getState().ask("q"));
+        expect(useChatDock.getState().open).toBe(true);
+        expect(useSparkPanel.getState().open).toBe(false);
+      }),
+    );
+  });
+
   it("off: New chat opens the right dock as today", async () => {
     await withFlag("spark-chat", false, async () => {
       // (the dock itself needs the app router; its open state is what the fan sets)
