@@ -8,6 +8,7 @@ import { withFlag } from "@/flags/testing";
 import { useKb } from "@/lib/store";
 import { mockDataSource } from "@/test/datasource";
 import { node, sampleLinks, sampleNodes, sampleSnapshot } from "./fixtures";
+import { registerTypeMarks } from "./encoding/spec";
 import { GraphScreen, type GraphHost } from "./GraphScreen";
 import { DEFAULT_PREFS, useGraphUi } from "./store";
 
@@ -53,6 +54,8 @@ const withGraph = (o: Partial<DataSource> = {}) => mockDataSource({ getGraph: as
 
 /** The Legend, the Finder and the views bar are the screen's chrome while graph-shell is off (private and public builds). */
 const off = (fn: () => Promise<void>) => () => withFlag("graph-shell", false, fn);
+
+afterEach(() => registerTypeMarks([]));
 
 beforeEach(() => {
   localStorage.clear();

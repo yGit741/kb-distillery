@@ -9,6 +9,8 @@ export type NodeMark = "source" | "person" | "question" | "idea" | "topic" | "co
 /** Ring symbols handed to concept types the table does not name (a kit's own types), in this order. */
 export type ConceptSymbol = "equals" | "plus" | "triangle" | "diamond";
 const CONCEPT_POOL: readonly NodeMark[] = ["idea", "equals", "plus", "triangle", "diamond", "topic", "question"];
+/** The engine's own page types (a scope, a distilled think-note proposal): they keep their mark, never a pool symbol. */
+const TOOL_TYPES: ReadonlySet<string> = new Set(["scope", "distilled-think"]);
 /** Marks given by `registerTypeMarks` to the types the table does not name. */
 let AUTO: Readonly<Record<string, NodeMark>> = {};
 
@@ -27,18 +29,17 @@ const MARK: Readonly<Record<string, NodeMark>> = {
 export const markOf = (type: string): NodeMark => MARK[type] ?? AUTO[type] ?? "source";
 
 /**
- * Give every type a kit defines (or a bundle carries) that the table does not name a mark of its own, so two types
- * never look alike: a collection-layer type is a collection, a source-layer type a source (its glyph tells it apart),
- * and each concept-layer type takes the next symbol of the pool that no present type already uses. Stable for a
+ * Give every concept-layer type the table does not name (a kit's or a bundle's own) a mark of its own, so two types
+ * never look alike: each takes the next symbol of the pool that no present type already uses. Every other type keeps
+ * the mark it had (a source its glyph, the engine's own types theirs), so existing kbs look as before. Stable for a
  * given type list (it follows the list's order); called when a graph's schema loads.
  */
 export function registerTypeMarks(types: readonly { id: string; layer: string }[]): void {
   const used = new Set<NodeMark>(types.map((t) => MARK[t.id]).filter((m): m is NodeMark => !!m));
   const next: Record<string, NodeMark> = {};
   for (const t of types) {
-    if (MARK[t.id]) continue;
-    if (t.layer === "collection") next[t.id] = "collection";
-    else if (t.layer === "concept") {
+    if (MARK[t.id] || TOOL_TYPES.has(t.id)) continue;
+    if (t.layer === "concept") {
       const m = CONCEPT_POOL.find((c) => !used.has(c)) ?? "idea";
       used.add(m);
       next[t.id] = m;
@@ -102,7 +103,8 @@ export function symbolPath(mark: ConceptSymbol, x: number, y: number, r: number)
   const g = r * GEOMETRY.symbolGap;
   if (mark === "equals") return { d: `M${x - h} ${y - g}h${2 * h}M${x - h} ${y + g}h${2 * h}`, fill: false };
   if (mark === "plus") return { d: `M${x - h} ${y}h${2 * h}M${x} ${y - h}v${2 * h}`, fill: false };
-  if (mark === "triangle") return { d: `M${x} ${y - h}L${x + h} ${y + h * 0.75}L${x - h} ${y + h * 0.75}Z`, fill: true };
+  // equilateral, centred on its centroid so it does not sit high in the ring
+  if (mark === "triangle") return { d: `M${x} ${y - h}L${x + h * 0.87} ${y + h / 2}L${x - h * 0.87} ${y + h / 2}Z`, fill: true };
   return { d: `M${x} ${y - h}L${x + h} ${y}L${x} ${y + h}L${x - h} ${y}Z`, fill: true };
 }
 export const isConceptSymbol = (m: NodeMark): m is ConceptSymbol => m === "equals" || m === "plus" || m === "triangle" || m === "diamond";

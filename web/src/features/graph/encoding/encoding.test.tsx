@@ -1,6 +1,7 @@
 import { render } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { drawNode, drawNodeState } from "./canvas";
+import { typeRows } from "./GraphLegend";
 import { NodeMarkSvg } from "./NodeMarkSvg";
 import { GEOMETRY, glyphOf, GLYPH_LABEL, markOf, MARK_KEY, personInitials, registerTypeMarks, STATE, type NodeMark } from "./spec";
 import { GLYPH_SVG } from "./spec";
@@ -176,7 +177,7 @@ describe("automatic marks for a kit's own types", () => {
     expect(markOf("idea")).toBe("idea");
     expect(markOf("Concept")).toBe("equals");
     expect(markOf("Comparison")).toBe("plus");
-    expect(markOf("Series")).toBe("collection");
+    expect(markOf("Series")).toBe("source");             // only concept types get a symbol; others keep their mark
     expect(markOf("Source")).toBe("source");
     expect(markOf("not-registered")).toBe("source");
   });
@@ -189,5 +190,20 @@ describe("automatic marks for a kit's own types", () => {
     expect(cmp.getAttribute("data-mark")).toBe("equals");
     expect(cmp.querySelectorAll("circle").length).toBe(1);
     expect(cmp.querySelector("path")).not.toBeNull();
+  });
+});
+
+describe("the compact legend with pool symbols", () => {
+  afterEach(() => registerTypeMarks([]));
+  it("gives each symbol a row named after its type", () => {
+    registerTypeMarks([{ id: "idea", layer: "concept" }, { id: "Comparison", layer: "concept" }]);
+    const rows = typeRows([{ type: "idea" }, { type: "Comparison" }, { type: "Comparison" }]);
+    expect(rows.map((r) => [r.label, r.count])).toEqual([["Idea", 1], ["Comparison", 2]]);
+  });
+
+  it("leaves the engine's own types and research collections as they were", () => {
+    registerTypeMarks([{ id: "notebook", layer: "collection" }, { id: "distilled-think", layer: "concept" }]);
+    expect(markOf("notebook")).toBe("source");
+    expect(markOf("distilled-think")).toBe("source");
   });
 });

@@ -42,7 +42,7 @@ export function parseSchema(raw: unknown): GraphSchema {
  * drawn as an idea-like ring and the Map shows it.
  */
 export function inferLayer(type: string): Layer {
-  return /source|document|paper|article|^doc$/i.test(type) ? "source" : "concept";
+  return !type || /source|document|paper|article|^doc$/i.test(type) ? "source" : "concept";
 }
 
 /** The schema plus every type the data carries that the kit does not define, each in its inferred layer. */
