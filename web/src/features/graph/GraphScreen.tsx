@@ -33,7 +33,8 @@ import { NodeMenu } from "./NodeMenu";
 import { applyQuick } from "./quickFilters";
 import { computeVisible } from "./rules";
 import { assignAreaColors, colorKey, effectiveColorBy } from "./style";
-import { parseSchema } from "./schema";
+import { registerTypeMarks } from "./encoding/spec";
+import { parseSchema, withDataTypes } from "./schema";
 import { SideReader } from "./SideReader";
 import { useGraphUi } from "./store";
 import { Panels } from "./Panels";
@@ -85,7 +86,16 @@ export function GraphScreen({ search, host }: { search: GraphSearch; host: Graph
   // The model is rebuilt only when the wiki changed (etag), not on every poll.
   const etag = snap?.etag;
   const model = useMemo(() => (snap ? toModel(snap) : null), [etag, snap?.layer]); // eslint-disable-line react-hooks/exhaustive-deps
-  const schema = useMemo(() => parseSchema(snap?.schema), [etag]); // eslint-disable-line react-hooks/exhaustive-deps
+  // the kit's types, plus any type the pages carry that the kit does not define (an imported OKF bundle's), so the
+  // Map, the legend and the marks treat them as real types
+  const schema = useMemo(() => {
+    const inData = (snap?.nodes ?? []).map((n) => n.type);
+    const s = withDataTypes(parseSchema(snap?.schema), inData);
+    // marks go to the types this kb has, so its first own concept type takes the first free symbol
+    const present = new Set(inData);
+    registerTypeMarks(s.types.filter((t) => present.has(t.id)));
+    return s;
+  }, [etag]); // eslint-disable-line react-hooks/exhaustive-deps
   // a node of another knowledge base opens its page read-only (`?kb=`); ids may be `<kb>:<slug>`
   const kbHost = useMemo<GraphHost>(() => {
     if (!model) return host;

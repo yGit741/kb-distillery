@@ -8,6 +8,7 @@ import { withFlag } from "@/flags/testing";
 import { useKb } from "@/lib/store";
 import { mockDataSource } from "@/test/datasource";
 import { node, sampleLinks, sampleNodes, sampleSnapshot } from "./fixtures";
+import { registerTypeMarks } from "./encoding/spec";
 import { GraphScreen, type GraphHost } from "./GraphScreen";
 import { DEFAULT_PREFS, useGraphUi } from "./store";
 
@@ -53,6 +54,8 @@ const withGraph = (o: Partial<DataSource> = {}) => mockDataSource({ getGraph: as
 
 /** The Legend, the Finder and the views bar are the screen's chrome while graph-shell is off (private and public builds). */
 const off = (fn: () => Promise<void>) => () => withFlag("graph-shell", false, fn);
+
+afterEach(() => registerTypeMarks([]));
 
 beforeEach(() => {
   localStorage.clear();
@@ -302,5 +305,32 @@ describe("views bar", () => {
       act(() => useGraphUi.setState({ flyout: "experiments" }));
       expect(screen.queryByRole("region", { name: "Experiments" })).toBeNull();
     });
+  }));
+});
+
+describe("types the kit does not define (an imported OKF bundle)", () => {
+  const okf = [
+    node("speed", { type: "Concept", layer: "", inDegree: 1, outDegree: 1 }),
+    node("calibration", { type: "Concept", layer: "", inDegree: 1, outDegree: 1 }),
+    node("speed-vs-factor", { type: "Comparison", layer: "", inDegree: 1, outDegree: 1 }),
+    node("source-spec", { type: "Source", layer: "", inDegree: 1 }),
+  ];
+  const links = [
+    { source: "speed", target: "calibration", kind: "wikilink" as const },
+    { source: "calibration", target: "speed-vs-factor", kind: "wikilink" as const },
+    { source: "speed-vs-factor", target: "speed", kind: "wikilink" as const },
+    { source: "speed", target: "source-spec", kind: "wikilink" as const },
+  ];
+
+  it("the Map draws their concept pages and the legend names each type with its own mark", off(async () => {
+    useGraphUi.getState().applyStory("map");
+    render(wrap(withGraph({ getGraph: async () => sampleSnapshot({ nodes: okf, links, node_count: okf.length }) }), <GraphScreen search={{}} host={host} />));
+    // every page is drawn: Concept and Comparison as inferred concepts, the Source page too (the bundle states no
+    // depth, so the Map's "sources read in depth" rule does not apply to it)
+    expect(await screen.findByTestId("graph-stats")).toHaveTextContent("4 of 4 pages");
+    const legend = await screen.findByRole("region", { name: "Legend" });
+    const concept = within(legend).getAllByRole("button", { name: /^concept\b/i })[0]!.querySelector("svg")!;
+    const comparison = within(legend).getAllByRole("button", { name: /^comparison\b/i })[0]!.querySelector("svg")!;
+    expect(concept.getAttribute("data-mark")).not.toBe(comparison.getAttribute("data-mark"));
   }));
 });
