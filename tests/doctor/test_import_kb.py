@@ -210,3 +210,23 @@ def test_dry_run_runs_the_kit_lint_so_it_matches_import(world, tmp_path):
     good = make_bundle(tmp_path / "kitgood")
     assert import_kb.validate_bundle(good).ok
     assert os.path.isdir(import_kb.import_bundle(good))
+
+
+def test_bundle_root_links_are_rewritten_relative(world, tmp_path):
+    """A bundle written with `/slug.md` links (its `/` meaning the bundle root) imports with plain `slug.md` links; the
+    source folder is left as it was, the dry run reports the rewrite as a warning, and a missing target still blocks."""
+    alpha = PAGE.replace("[beta](beta.md)", "[beta](/beta.md#beta) and ![img](/pic.png)")
+    src = make_bundle(tmp_path / "rooted", {"alpha.md": alpha, "beta.md": BETA})
+    rep = import_kb.validate_bundle(src)
+    assert rep.errors == []
+    assert any("rewritten" in w for w in rep.warnings)
+    target = import_kb.import_bundle(src)
+    with open(os.path.join(target, "wiki", "alpha.md"), encoding="utf-8") as f:
+        text = f.read()
+    assert "[beta](beta.md#beta)" in text and "](/beta.md" not in text
+    assert "![img](/pic.png)" in text                       # images and missing targets are not touched
+    with open(os.path.join(src, "alpha.md"), encoding="utf-8") as f:
+        assert "[beta](/beta.md#beta)" in f.read()          # the source is not changed
+
+    broken = make_bundle(tmp_path / "broken", {"alpha.md": PAGE.replace("[beta](beta.md)", "[gone](/gone.md)"), "beta.md": BETA})
+    assert any("unresolved: /gone.md" in e for e in import_kb.validate_bundle(broken).errors)
