@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import { GEOMETRY as G, glyphOf, GLYPH_SVG, ICON_R, markOf, type NodeMark } from "./spec";
+import { GEOMETRY as G, glyphOf, GLYPH_SVG, ICON_R, isConceptSymbol, markOf, symbolPath, type NodeMark } from "./spec";
 
 
 /**
@@ -28,6 +28,15 @@ export function ShapeIcon({ shape, initials = "GK", className = "size-3.5" }: { 
         <>
           {ring}
           {text("?", r * G.questionText, "fill-current")}
+        </>
+      )}
+      {isConceptSymbol(shape) && (
+        <>
+          {ring}
+          {(() => {
+            const sym = symbolPath(shape, 8, 8, r);
+            return sym.fill ? <path d={sym.d} fill="currentColor" /> : <path d={sym.d} fill="none" stroke="currentColor" strokeWidth={r * G.symbolStroke} strokeLinecap="round" />;
+          })()}
         </>
       )}
       {shape === "idea" && (
@@ -123,6 +132,15 @@ export function NodeMarkG({
       <g data-mark={mark}>
         {ring}
         <path d={[-1, 0, 1].map(line).join("")} stroke={color} strokeWidth={r * G.topicLineStroke} strokeLinecap="round" />
+      </g>
+    );
+  }
+  if (isConceptSymbol(mark)) {
+    const sym = symbolPath(mark, x, y, r);
+    return (
+      <g data-mark={mark}>
+        {ring}
+        {sym.fill ? <path d={sym.d} fill={color} /> : <path d={sym.d} fill="none" stroke={color} strokeWidth={r * G.symbolStroke} strokeLinecap="round" />}
       </g>
     );
   }

@@ -1,8 +1,8 @@
 import { render } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { drawNode, drawNodeState } from "./canvas";
 import { NodeMarkSvg } from "./NodeMarkSvg";
-import { GEOMETRY, glyphOf, GLYPH_LABEL, markOf, MARK_KEY, personInitials, STATE, type NodeMark } from "./spec";
+import { GEOMETRY, glyphOf, GLYPH_LABEL, markOf, MARK_KEY, personInitials, registerTypeMarks, STATE, type NodeMark } from "./spec";
 import { GLYPH_SVG } from "./spec";
 
 /** A 2D context that records what is drawn: arcs (radius, filled/stroked), lines, text. */
@@ -147,16 +147,47 @@ describe("NodeMarkSvg", () => {
   const circles = (type: string) => svg(type).querySelectorAll("circle").length;
 
   it("draws the same mark as the canvas for every type", () => {
-    const expected: Record<NodeMark, number> = { source: 1, person: 1, question: 1, idea: 2, topic: 1, collection: 2 };
-    const sample: Record<NodeMark, string> = { source: "", person: "person", question: "question", idea: "idea", topic: "topic", collection: "course" };
+    const expected: Partial<Record<NodeMark, number>> = { source: 1, person: 1, question: 1, idea: 2, topic: 1, collection: 2 };
+    const sample: Partial<Record<NodeMark, string>> = { source: "", person: "person", question: "question", idea: "idea", topic: "topic", collection: "course" };
     for (const { mark } of MARK_KEY) {
       if (mark === "source") continue;
-      expect(circles(sample[mark]), mark).toBe(expected[mark]);
+      expect(circles(sample[mark]!), mark).toBe(expected[mark]);
     }
     expect(svg("question").textContent).toBe("?");
     expect(svg("topic").querySelector("path")).not.toBeNull();
     // a source is its glyph
     expect(svg("paper").querySelector("path")?.getAttribute("d")).toBe(GLYPH_SVG.paper.d);
     expect(svg("lecture").querySelector("path")?.getAttribute("d")).toBe(GLYPH_SVG.play.d);
+  });
+});
+
+describe("automatic marks for a kit's own types", () => {
+  afterEach(() => registerTypeMarks([]));
+
+  it("gives each unnamed concept type the next free ring symbol, collections a double ring, sources stay sources", () => {
+    registerTypeMarks([
+      { id: "Source", layer: "source" },
+      { id: "Concept", layer: "concept" },
+      { id: "Comparison", layer: "concept" },
+      { id: "idea", layer: "concept" },
+      { id: "Series", layer: "collection" },
+    ]);
+    // idea keeps its own mark, so Concept takes the next symbol of the pool and Comparison the one after
+    expect(markOf("idea")).toBe("idea");
+    expect(markOf("Concept")).toBe("equals");
+    expect(markOf("Comparison")).toBe("plus");
+    expect(markOf("Series")).toBe("collection");
+    expect(markOf("Source")).toBe("source");
+    expect(markOf("not-registered")).toBe("source");
+  });
+
+  it("draws a pool symbol as a ring with its symbol in SVG", () => {
+    registerTypeMarks([{ id: "Concept", layer: "concept" }, { id: "Comparison", layer: "concept" }]);
+    const c = render(<NodeMarkSvg type="Concept" />).container.querySelector("svg")!;
+    expect(c.getAttribute("data-mark")).toBe("idea");
+    const cmp = render(<NodeMarkSvg type="Comparison" />).container.querySelector("svg")!;
+    expect(cmp.getAttribute("data-mark")).toBe("equals");
+    expect(cmp.querySelectorAll("circle").length).toBe(1);
+    expect(cmp.querySelector("path")).not.toBeNull();
   });
 });

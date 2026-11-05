@@ -36,12 +36,29 @@ export function parseSchema(raw: unknown): GraphSchema {
   return { types, defaultVisible: dv.length ? dv : FALLBACK_DEFAULT_VISIBLE, depths: DEPTHS };
 }
 
+/**
+ * The layer of a type the kit does not define (an OKF bundle's `Source`, `Concept`, `Comparison` imported into the
+ * base kit): a name that says source, document, paper or article is a source; anything else is a concept, so it is
+ * drawn as an idea-like ring and the Map shows it.
+ */
+export function inferLayer(type: string): Layer {
+  return /source|document|paper|article|^doc$/i.test(type) ? "source" : "concept";
+}
+
+/** The schema plus every type the data carries that the kit does not define, each in its inferred layer. */
+export function withDataTypes(schema: GraphSchema, inData: readonly string[]): GraphSchema {
+  const known = new Set(schema.types.map((t) => t.id));
+  const extra = [...new Set(inData)].filter((id) => id && !known.has(id)).sort();
+  if (!extra.length) return schema;
+  return { ...schema, types: [...schema.types, ...extra.map((id) => ({ id, label: title(id), layer: inferLayer(id) }))] };
+}
+
 /** Types present in the data first (in schema order), then any unknown type the data carries. */
 export function presentTypes(schema: GraphSchema, inData: readonly string[]): TypeInfo[] {
   const have = new Set(inData);
   const known = schema.types.filter((t) => have.has(t.id));
   const extra = [...have].filter((id) => !schema.types.some((t) => t.id === id)).sort();
-  return [...known, ...extra.map((id) => ({ id, label: title(id || "unknown"), layer: "source" as Layer }))];
+  return [...known, ...extra.map((id) => ({ id, label: title(id || "unknown"), layer: inferLayer(id) }))];
 }
 
 export const typeLabel = (schema: GraphSchema, id: string): string =>
