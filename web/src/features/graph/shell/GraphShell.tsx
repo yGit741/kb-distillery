@@ -34,7 +34,8 @@ import { useVisibleTools } from "../tools";
 import type { GNode } from "../types";
 import { buildCommands, filterCommands, GROUP_ORDER, type Command, type CommandIcon } from "./commands";
 import { SearchBar } from "./SearchBar";
-import { optionId, SearchPanel, type PanelRow, type PanelStatus } from "./SearchPanel";
+import { optionId, SearchPanel, type PanelRow, type PanelStatus, type ViewChoice } from "./SearchPanel";
+import { activeCard, type ViewCard } from "./corners/panelModel";
 import { marker, pillText, sameMarker } from "./shape";
 import { looksLikeShape, requestShape, useShellStore } from "./shellStore";
 import { useShape } from "./useShape";
@@ -84,6 +85,9 @@ interface Props {
   setParams?: (patch: Record<string, string | undefined>) => void;
   /** Top of the line inside the graph area (./layout). */
   top?: number;
+  /** Flag calm-graph: the views that fit this kb (the cards of the pinned panel) and what picking one does. */
+  views?: readonly ViewCard[];
+  onPickView?: (card: ViewCard) => void;
 }
 
 /**
@@ -91,11 +95,12 @@ interface Props {
  * centre unfolds, on focus or Cmd/Ctrl+K, into recent steps and pinned views at rest, live page results while
  * typing, commands after a slash, and two free-text rows (ask the agent, shape the graph).
  */
-export function GraphShell({ nodes, byId, colorBy, onFocus, onRead, onShowExact, shownTypes, onShowMentions, onFit, onZoom, onReheat, onRefresh, setParams, top = SHELL_TOP }: Props) {
+export function GraphShell({ nodes, byId, colorBy, onFocus, onRead, onShowExact, shownTypes, onShowMentions, onFit, onZoom, onReheat, onRefresh, setParams, top = SHELL_TOP, views, onPickView }: Props) {
   const ds = useDataSource();
   const qc = useQueryClient();
   const host = useToolHost();
   const tools = useVisibleTools();
+  const calm = useFlag("calm-graph");
   const kbViewOn = useFlag("kb-view") && ds.kind !== "embedded";
   const [raw, setRaw] = useState("");
   const [open, setOpen] = useState(false);
@@ -109,6 +114,8 @@ export function GraphShell({ nodes, byId, colorBy, onFocus, onRead, onShowExact,
   const canUndo = useShellStore((s) => s.undo !== null);
   // the pill speaks only while the shape is what is drawn: a change by hand (a legend click, a cleared view) retires it
   const shapeCurrent = useGraphUi((s) => (shape ? sameMarker(shape.after, marker(s)) : false));
+  const story = useGraphUi((s) => s.story);
+  const recent = useGraphUi((s) => s.quick.recent);
   const rawNow = useRef("");
   rawNow.current = raw;
   const openRef = useRef(false);
@@ -137,6 +144,14 @@ export function GraphShell({ nodes, byId, colorBy, onFocus, onRead, onShowExact,
     [ds, qc, live, recentQ.data],
   );
 
+  // ---- flag calm-graph: one switcher of views (open at rest) and a `/view` command for each
+  const viewChoices = useMemo<ViewChoice[]>(() => {
+    if (!calm || !views?.length || !onPickView) return [];
+    const on = activeCard(views, { story, quick: { recent } });
+    return views.map((v) => ({ id: v.id, name: v.name, count: v.count, active: v.id === on, run: () => (onPickView(v), close()) }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [calm, views, onPickView, story, recent]);
+
   const commands = useMemo(
     () =>
       buildCommands({
@@ -149,8 +164,9 @@ export function GraphShell({ nodes, byId, colorBy, onFocus, onRead, onShowExact,
         setParams,
         kbs: kbViewOn ? (kbListQ.data?.kbs ?? []).map((k) => ({ id: k.id, name: k.name, active: k.active, error: k.error })) : [],
         share: IS_SHARE,
+        views: viewChoices,
       }),
-    [onFit, onZoom, onReheat, onRefresh, tools, host, setParams, kbViewOn, kbListQ.data],
+    [onFit, onZoom, onReheat, onRefresh, tools, host, setParams, kbViewOn, kbListQ.data, viewChoices],
   );
 
   // ---- open and close
@@ -432,7 +448,7 @@ export function GraphShell({ nodes, byId, colorBy, onFocus, onRead, onShowExact,
         notice={open ? undefined : notice?.text}
         onKbClick={() => focusBar("/knowledge")}
       />
-      {open && <SearchPanel rows={rows} idx={idx} onHover={setIdx} empty={empty} status={status} />}
+      {open && <SearchPanel rows={rows} idx={idx} onHover={setIdx} empty={empty} status={status} views={!text && !slash && viewChoices.length ? viewChoices : undefined} />}
     </div>
   );
 }

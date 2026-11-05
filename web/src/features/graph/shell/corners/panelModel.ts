@@ -1,4 +1,5 @@
-import { storyById, storyOffered, THESIS_SEED } from "../../lab/views";
+import { CALM_GRAPH, CALM_STORY, storyById, storyOffered, THESIS_SEED } from "../../lab/views";
+import { flag } from "@/flags";
 import { QUICK_OFF } from "../../quickFilters";
 import type { GraphSchema } from "../../schema";
 import type { GNode } from "../../types";
@@ -41,13 +42,15 @@ export function viewCards(
     quick: QUICK_OFF,
   });
 
+  // flag calm-graph: Concepts and Sources are named views (layers resolved per kb), so the switcher can mark them
+  const calm = flag(CALM_GRAPH);
   const concepts = inLayer("concept");
   if (concepts)
     out.push({
       id: "concepts",
       name: "Concepts",
       count: n(concepts, "page"),
-      spec: stand(typesOf("concept")),
+      spec: calm ? { v: 1, story: CALM_STORY } : stand(typesOf("concept")),
     });
 
   const ids = new Set(nodes.map((x) => x.id));
@@ -91,9 +94,18 @@ export function viewCards(
       id: "sources",
       name: "Sources",
       count: sources.toLocaleString("en-US"),
-      spec: stand(typesOf("source")),
+      spec: calm ? { v: 1, story: "sources" } : stand(typesOf("source")),
     });
   return out;
+}
+
+/** The card the graph is showing now: Recent while its filter is on, else the named view with the card's id. */
+export function activeCard(
+  cards: readonly ViewCard[],
+  ui: { story: string; quick: { recent?: unknown } },
+): string | null {
+  if (ui.quick.recent) return cards.some((c) => c.id === "recent") ? "recent" : null;
+  return ui.story && cards.some((c) => c.id === ui.story) ? ui.story : null;
 }
 
 /** The newest source pages (by the day they were added), for the SOURCES AND CHATS section. */

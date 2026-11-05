@@ -1,6 +1,7 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef } from "react";
 import { useKb } from "@/lib/store";
 import { cn } from "@/lib/utils";
+import { flag } from "@/flags";
 import { useTheme } from "@/theme/theme";
 import { readCanvasColors, withAlpha, type CanvasColors } from "./canvasTheme";
 import { computeFocus, fadedLinkOpacity, fadedNodeOpacity, focusKey, nodeOpacity, type Focus } from "./focus";
@@ -108,6 +109,8 @@ function themeAnchors(nodes: readonly SimNode[], ring: ReadonlyMap<string, reado
 
 const endId = (e: string | SimNode) => (typeof e === "string" ? e : e.id);
 
+/** Flag calm-graph: edges rest at this share of the usual opacity (a hovered page still lights its own). */
+const CALM_EDGE = 0.4;
 const DOUBLE_MS = 380;
 
 /**
@@ -861,7 +864,7 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
     const fade = useDecor.getState().linkFade?.(a, b) ?? 1;
     // a hidden kind keeps its place in the layout and is simply not drawn
     if (live.current.ui.hiddenLinkKinds.has(l.kind)) return withAlpha(colors.link, 0);
-    return withAlpha(colors.link, fade * fadedLinkOpacity(a, b, focus, prevFocus, fadeT, live.current.ui.linkOpacity, l.kind));
+    return withAlpha(colors.link, fade * fadedLinkOpacity(a, b, focus, prevFocus, fadeT, live.current.ui.linkOpacity * (flag("calm-graph") ? CALM_EDGE : 1), l.kind));
   }, []);
   const linkWidth = useCallback((l: SimLink) => (l.kind === "shared" ? 0.35 + Math.min(l.shared ?? 1, 6) * 0.1 : 0.8), []);
   const linkLabel = useCallback(

@@ -22,7 +22,7 @@ const ds = mockDataSource({ getGraph: async () => sampleSnapshot(), listScopes: 
 beforeEach(() => useGraphUi.setState({ flyout: null }));
 
 describe("Relations and Scopes folded into the graph", () => {
-  it("?tool=scopes opens the Scopes sheet beside the canvas, and its own controls stay on /graph", async () => {
+  it("?tool=scopes opens the Scopes sheet beside the canvas, and its own controls stay on /graph", () => withFlag("calm-graph", false, async () => {
     const router = createAppRouter(createMemoryHistory({ initialEntries: ["/app/graph?tool=scopes"] }));
     render(<App source={ds} router={router} />);
     const sheet = await screen.findByRole("region", { name: "Scopes" });
@@ -31,21 +31,21 @@ describe("Relations and Scopes folded into the graph", () => {
     await userEvent.click(screen.getByRole("button", { name: "Close panel" }));
     expect(screen.queryByRole("region", { name: "Scopes" })).toBeNull();
     expect(router.state.location.pathname).toBe("/graph");
-  });
+  }));
 
   it("?tool=scopes opens the same sheet with the graph shell off", () =>
-    withFlag("graph-shell", false, async () => {
+    withFlag("calm-graph", false, () => withFlag("graph-shell", false, async () => {
       const router = createAppRouter(createMemoryHistory({ initialEntries: ["/app/graph?tool=scopes"] }));
       render(<App source={ds} router={router} />);
       expect(await screen.findByRole("region", { name: "Scopes" })).toBeInTheDocument();
-    }));
+    })));
 
   it("the search line has a Relation proposals command that opens it as a sheet", () =>
-    withFlag("graph-shell", true, async () => {
+    withFlag("calm-graph", false, () => withFlag("graph-shell", true, async () => {
       const router = createAppRouter(createMemoryHistory({ initialEntries: ["/app/graph"] }));
       render(<App source={ds} router={router} />);
       await userEvent.click(await screen.findByRole("combobox", { name: /search the graph/i }));
       await userEvent.keyboard("/relation proposals{Enter}");
       expect(await screen.findByRole("region", { name: "Relation proposals" })).toBeInTheDocument();
-    }));
+    })));
 });

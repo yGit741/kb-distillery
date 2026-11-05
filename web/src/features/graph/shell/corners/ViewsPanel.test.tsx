@@ -68,7 +68,7 @@ describe("view cards", () => {
 
 describe("flag views-panel on", () => {
   it("opens the four sections above the pinned list and applies a view", () =>
-    withFlag("views-panel", true, async () => {
+    withFlag("calm-graph", false, () => withFlag("views-panel", true, async () => {
       mount();
       await userEvent.click(screen.getByRole("button", { name: "Pinned views" }));
       const panel = screen.getByTestId("views-panel");
@@ -77,7 +77,7 @@ describe("flag views-panel on", () => {
       expect(within(panel).getByRole("button", { name: /Citation genealogy/ })).toBeDisabled();
       await userEvent.click(within(panel).getByRole("button", { name: /^Sources/ }));
       expect(useGraphUi.getState().shownTypes).toEqual(new Set(["paper", "course"].filter((t) => schema.types.find((x) => x.id === t && x.layer === "source"))));
-    }));
+    })));
 
   it("lists the recent chats and the dark mode switch flips the theme", () =>
     withFlag("views-panel", true, async () => {

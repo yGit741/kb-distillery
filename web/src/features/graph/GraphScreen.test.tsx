@@ -53,7 +53,7 @@ function wrap(ds: DataSource, ui: ReactNode) {
 const withGraph = (o: Partial<DataSource> = {}) => mockDataSource({ getGraph: async () => sampleSnapshot(), ...o });
 
 /** The Legend, the Finder and the views bar are the screen's chrome while graph-shell is off (private and public builds). */
-const off = (fn: () => Promise<void>) => () => withFlag("graph-shell", false, fn);
+const off = (fn: () => Promise<void>) => () => withFlag("graph-shell", false, () => withFlag("calm-graph", false, fn));
 
 afterEach(() => registerTypeMarks([]));
 

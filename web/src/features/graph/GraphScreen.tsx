@@ -24,8 +24,10 @@ import { Inspector } from "./Inspector";
 import { computeImportance } from "./lab/importance";
 import { HoverCard } from "./lab/HoverCard";
 import { LabRail } from "./lab/LabRail";
-import { initialView } from "./defaultView";
-import { storyById, storyOffered, storyTypes } from "./lab/views";
+import { DIVE_PARAMS, initialView } from "./defaultView";
+import { CALM_STORY, DEFAULT_STORY, storyById, storyOffered, storyTypes } from "./lab/views";
+import { viewCards, type ViewCard } from "./shell/corners/panelModel";
+import { applySpec } from "./shell/corners/viewSpec";
 import { Legend } from "./Legend";
 import { predicateFn } from "./publicPredicate";
 import { ViewsBar } from "./views/ViewsBar";
@@ -216,6 +218,7 @@ function Loaded({
   const visibleTools = useVisibleTools();
   const shell = useFlag("graph-shell");
   const headerFold = useFlag("header-fold");
+  const calm = useFlag("calm-graph");
   const shellTop = useShellTop();
   const ds = useDataSource();
   const ui = useGraphUi();
@@ -329,6 +332,10 @@ function Loaded({
     [byId, neighbors, host],
   );
 
+  // flag calm-graph: the switcher's views are the pinned panel's cards; a pick applies like a card click
+  const calmViews = useMemo<ViewCard[] | undefined>(() => (calm ? viewCards(model.nodes, schema) : undefined), [calm, model.nodes, schema]);
+  const pickView = useCallback((card: ViewCard) => void applySpec(card.spec, { applyView, showPicked }), [applyView, showPicked]);
+
   // ---- deep links: ?focus ?select ?search ?pages ?scope ?layer, applied once per distinct value
   const applied = useRef("");
   /** a snapshot's default view (`KB_EMBEDDED.home.view`) stands in for a missing `?view=` on the first pass only */
@@ -338,7 +345,15 @@ function Loaded({
     if (applied.current === key) return;
     applied.current = key;
     const view = homeViewTried.current ? (search.view && storyById(search.view) ? search.view : undefined) : initialView(search);
+    // flag calm-graph: a bare link on the untouched default opens on Concepts (sources hidden until the Sources view);
+    // set straight on the store, so a tool panel or selection a link opened is left alone
+    const bare = !search.layer && !DIVE_PARAMS.some((k) => search[k] !== undefined && search[k] !== "");
+    const calmDefault = calm && !homeViewTried.current && !view && bare && useGraphUi.getState().story === DEFAULT_STORY;
     homeViewTried.current = true;
+    if (calmDefault) {
+      useGraphUi.getState().applyStory(CALM_STORY);
+      useGraphUi.getState().fit();
+    }
     if (view && view !== lastView.current) applyView(view, true);
     if (search.raw === "1" && dsKind !== "embedded") useLayer.getState().setRaw(true);
     if (search.layer && search.layer in LAYER_TYPES) {
@@ -356,7 +371,7 @@ function Loaded({
     if (search.select) useKb.getState().setSelection(parsePages(search.select).filter((id) => byId.has(id)));
     // a Home subgraph is fitted whole by the canvas (refit on a new view); zooming onto the focus would crop it
     if (search.focus && byId.has(search.focus) && !(search.from === "home" && search.pages)) useGraphUi.getState().requestFocus(search.focus);
-  }, [search, ds, dsKind, byId, neighbors, showMentions, showPicked, setView, applyView]);
+  }, [search, ds, dsKind, byId, neighbors, showMentions, showPicked, setView, applyView, calm]);
 
   // ?tool=<id> opens that tool once (links into the folded Relations and Scopes screens land here)
   useEffect(() => {
@@ -502,6 +517,8 @@ function Loaded({
             onRefresh={onRefresh}
             setParams={host.setParams}
             top={shellTop}
+            views={calmViews}
+            onPickView={pickView}
           />
           <Corners nodes={model.nodes} visible={visible} schema={schema} shownTypes={shownTypes} stats={stats} host={host} applyView={applyView} showPicked={showPicked} />
         </div>
