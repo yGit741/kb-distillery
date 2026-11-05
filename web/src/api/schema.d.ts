@@ -3281,6 +3281,12 @@ export interface components {
              * @default
              */
             preview: string;
+            /**
+             * Status
+             * @default idle
+             * @enum {string}
+             */
+            status: "running" | "waiting" | "error" | "idle";
             /** Title */
             title: string;
             /**

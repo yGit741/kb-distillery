@@ -24,7 +24,12 @@ export interface SessionRow {
   /** ISO time of the last turn, when the server says */
   updated?: string;
   live?: boolean;
+  /** what the chat is doing, when the server says (flag spark-chat shows it on the pill) */
+  status?: ChatStatusWord;
 }
+
+export type ChatStatusWord = "running" | "waiting" | "error" | "idle";
+const STATUS_WORDS: readonly string[] = ["running", "waiting", "error", "idle"];
 
 export class ApiFailure extends Error {
   constructor(
@@ -74,6 +79,7 @@ export async function listSessions(f: Fetcher = defaultFetch): Promise<SessionRo
       id: String(s.id),
       title: String(s.title || "Untitled chat"),
       updated: typeof s.updated === "string" ? s.updated : typeof s.created === "string" ? s.created : undefined,
+      ...(STATUS_WORDS.includes(s.status as string) ? { status: s.status as ChatStatusWord } : {}),
     }));
   } catch (e) {
     if (e instanceof ApiFailure && (e.status === 404 || e.status === 405)) return null;
@@ -96,4 +102,24 @@ export function ago(iso: string | undefined, now = Date.now()): string {
   if (s < 86400 * 2) return "yesterday";
   if (s < 86400 * 30) return `${Math.round(s / 86400)} d ago`;
   return new Date(t).toISOString().slice(0, 10);
+}
+
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+/**
+ * Flag spark-chat: the word at a chat pill's right end, as in the mockup: its status while it is doing something
+ * ("running", "waiting", "failed"), else the day of its last turn ("today", "yesterday", "Oct 30", "Oct 30, 2025").
+ */
+export function chatWhen(row: Pick<SessionRow, "status" | "updated">, now = new Date()): string {
+  if (row.status === "running") return "running";
+  if (row.status === "waiting") return "waiting";
+  if (row.status === "error") return "failed";
+  const t = row.updated ? new Date(row.updated) : null;
+  if (!t || Number.isNaN(t.getTime())) return "";
+  const day = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  const days = Math.round((day(now) - day(t)) / 86400000);
+  if (days <= 0) return "today";
+  if (days === 1) return "yesterday";
+  const md = `${MONTHS[t.getMonth()]} ${t.getDate()}`;
+  return t.getFullYear() === now.getFullYear() ? md : `${md}, ${t.getFullYear()}`;
 }
