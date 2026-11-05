@@ -401,6 +401,17 @@ class PrFlowTests(unittest.TestCase):
             night.stop(wt)
         self.assertIn("pr merge", open(os.path.join(self.ghdir, "calls.log")).read())
 
+    def test_night_window_keeps_an_explicit_hold(self):
+        from kb_distillery.git import night
+        wt = self._start()
+        self._write(wt, "meta/tool.py")
+        ship.cmd_commit("feat(ops): add thing", root=wt, gates=False)
+        night.start(wt, hours=1)
+        try:
+            self.assertEqual(ship._hold_reason(["feat(x): y"], hold=True, root=wt), "opened with --hold")
+        finally:
+            night.stop(wt)
+
     # ---- C2: the owner's GitHub Approve review lifts the hold ----
     def _held(self):
         wt = self._start()

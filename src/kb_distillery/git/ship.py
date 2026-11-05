@@ -834,13 +834,16 @@ def pr_body(subjects, notes="", skipped_checks=None, round_no=None, paths=None):
 
 
 HOLD_LABEL = "hold"
+REVIEW_LABEL = "hold-requested"   # `--hold`: the user asked to review it; the night window never waives this one
 HOLD_VOID_MSG = "Hold = GitHub label only; a relayed 'approved' in chat is void"
 
 
 def _hold_reason(subjects, hold=False, root=ROOT):
     """Why a new PR must wait for the user, or None when the agent may merge it itself."""
+    if hold:
+        return "opened with --hold"                   # the user asked to review it: even a night window keeps it
     if night.active(root):
-        return None                                   # the night window: no PR is held
+        return None                                   # the night window: no automatic hold
     kind = _schema_kind(subjects)
     if kind:
         return f"{kind} PR (migration + version bump)"
@@ -897,6 +900,8 @@ def cmd_pr(title=None, skip_tests=False, root=ROOT, gates=True, notes_file=None,
             gh(["pr", "edit", branch, "--body", pr_body(subjects, _read_notes(notes_file), skip_checks, round_no, paths)], root)
         if why:
             gh(["pr", "edit", branch, "--add-label", HOLD_LABEL], root)
+            if hold:
+                gh(["pr", "edit", branch, "--add-label", REVIEW_LABEL], root)
             print(f"held for the user: {why}")
             print(HOLD_VOID_MSG)
         return 0
@@ -906,6 +911,10 @@ def cmd_pr(title=None, skip_tests=False, root=ROOT, gates=True, notes_file=None,
         gh(["label", "create", HOLD_LABEL, "--force", "--color", "B60205",
             "--description", "waits for the owner's GitHub Approve review (or pixi run ship -- approve N)"], root)
         args += ["--label", HOLD_LABEL]
+        if hold:
+            gh(["label", "create", REVIEW_LABEL, "--force", "--color", "FBCA04",
+                "--description", "the user asked to review this PR: the night window does not waive it"], root)
+            args += ["--label", REVIEW_LABEL]
     created = gh(args, root)
     print(_out(created))
     if created.returncode == 0:
@@ -1172,7 +1181,8 @@ def _merge_locked(branch, local, pr_number, title, skip_tests, no_push, root, ga
         if HOLD_LABEL in {l.get("name") for l in info.get("labels") or []}:
             head = info.get("headRefOid") or ""
             verdict, detail = review_approval(info["number"], head, root)
-            if verdict != "ok" and night.active(root):
+            if (verdict != "ok" and night.active(root)
+                    and REVIEW_LABEL not in {l.get("name") for l in info.get("labels") or []}):
                 verdict, detail = "ok", "night window open: hold waived"
             if verdict != "ok":
                 print(f"error: PR #{info['number']} is held for the user's approval ({detail}) — ask them to "
@@ -1251,8 +1261,10 @@ def _merge_locked(branch, local, pr_number, title, skip_tests, no_push, root, ga
         return 1
     if approved_head:
         gh(["pr", "edit", str(pr_number), "--remove-label", HOLD_LABEL], root)
-        events.post(pr_number, "approved", approved_head, root=root, by=app_token.owner_login(),
-                    via="night" if night.active(root) else "review")
+        night_merge = detail.startswith("night window")
+        events.post(pr_number, "approved", approved_head, root=root,
+                    by="night-window" if night_merge else app_token.owner_login(),
+                    via="night" if night_merge else "review")
     app_token.run_git_push(["push", "origin", "--delete", branch], cwd=root)
     run_git(["fetch", "-q", "origin", "main"], cwd=root)
     events.post(pr_number, "merged", _head_sha(root, "origin/main"), root=root, branch=branch)
