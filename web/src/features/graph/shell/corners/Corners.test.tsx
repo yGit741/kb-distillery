@@ -9,6 +9,7 @@ import { parseSchema } from "../../schema";
 import { assignAreaColors } from "../../style";
 import { DEFAULT_PREFS, useGraphUi } from "../../store";
 import { useChatDock } from "../../tools/chatDockStore";
+import { useSparkPanel } from "../sparkPanelStore";
 import { Corners, type CornersProps } from "./Corners";
 import { fanReach } from "./geometry";
 import { resetCorners, useCorners } from "./cornersStore";
@@ -87,6 +88,7 @@ beforeEach(() => {
   host.go.mockClear();
   resetCorners();
   useChatDock.setState({ open: false, wide: false, question: "" });
+  useSparkPanel.setState({ open: false, key: 0 });
   useGraphUi.setState({ ...DEFAULT_PREFS, story: "", shownTypes: undefined, predicate: null, shownDepths: null, hiddenKeys: new Set(), spotlight: null, view: null });
 });
 
@@ -288,16 +290,30 @@ describe("Think and Agent fans", () => {
     expect(expanded(think())).toBe(false);
   });
 
-  it("Agent falls back to the browser's chat when the server has no sessions (404), and resumes it in the dock", async () => {
+  it("Agent falls back to the browser's chat when the server has no sessions (404), and resumes it in the dock (flag spark-chat off)", async () => {
+    await withFlag("spark-chat", false, async () => {
     sessionStorage.setItem("kbchat.chat", JSON.stringify({ id: "kb-chat:1", session: null, messages: [{ role: "user", content: "Is parity hard?", sources: [] }, { role: "assistant", content: "Yes." }] }));
     mount();
     await userEvent.click(agent());
     const card = await screen.findByRole("button", { name: /Is parity hard/ });
     await userEvent.click(card);
     expect(useChatDock.getState().open).toBe(true);
+    });
+  });
+
+  it("flag spark-chat on: a chat opens the left panel, not the right dock", async () => {
+    await withFlag("spark-chat", true, async () => {
+    sessionStorage.setItem("kbchat.chat", JSON.stringify({ id: "kb-chat:1", session: null, messages: [{ role: "user", content: "Is parity hard?", sources: [] }, { role: "assistant", content: "Yes." }] }));
+    mount();
+    await userEvent.click(agent());
+    await userEvent.click(await screen.findByRole("button", { name: /Is parity hard/ }));
+    expect(useSparkPanel.getState().open).toBe(true);
+    expect(useChatDock.getState().open).toBe(false);
+    });
   });
 
   it("Agent lists the server's sessions when /api/sessions exists, and resumes one by loading its document", async () => {
+    await withFlag("spark-chat", false, async () => {
     const server = fakeServer({ sessions: [{ id: "s1", title: "Parity chat", updated: new Date().toISOString() }] });
     const orig = server.f;
     const f = vi.fn(async (u: RequestInfo | URL, i?: RequestInit) => (String(u) === "/api/sessions/s1" ? new Response(JSON.stringify({ id: "s1", messages: [{ role: "user", content: "hi", sources: [] }] })) : orig(u, i)));
@@ -306,6 +322,7 @@ describe("Think and Agent fans", () => {
     await userEvent.click(await screen.findByRole("button", { name: /Parity chat/ }));
     await waitFor(() => expect(useChatDock.getState().open).toBe(true));
     expect(JSON.parse(sessionStorage.getItem("kbchat.chat")!)).toMatchObject({ id: "kb-chat:s1" });
+    });
   });
 
   it("with no notes or chats a quiet placeholder card says so (spark-chat off; on, the New chat card stands there)", () =>
@@ -318,6 +335,7 @@ describe("Think and Agent fans", () => {
     }));
 
   it("'...' beside each fan offers New and Open full screen", async () => {
+    await withFlag("spark-chat", false, async () => {
     mount();
     await userEvent.click(think());
     await userEvent.click(screen.getByRole("button", { name: "Think options" }));
@@ -327,6 +345,7 @@ describe("Think and Agent fans", () => {
     await userEvent.click(screen.getByRole("button", { name: "Agent options" }));
     await userEvent.click(screen.getByRole("button", { name: "New" }));
     expect(useChatDock.getState().open).toBe(true);
+    });
   });
 });
 
@@ -441,7 +460,7 @@ describe("flag spark-chat on the agent fan", () => {
     { id: "s3", title: "Tensor rank", updated: day(9), status: "idle" },
   ];
 
-  it("on: New chat comes first, each chat says its status or day, and New chat opens an empty dock", () =>
+  it("on: New chat comes first, each chat says its status or day, and New chat opens an empty chat in the left panel", () =>
     withFlag("spark-chat", true, async () => {
       mount(fakeServer({ sessions: rows }));
       await userEvent.click(agent());
@@ -453,7 +472,9 @@ describe("flag spark-chat on the agent fan", () => {
       // the running chat carries the green dot
       expect(group.querySelectorAll(".bg-ok")).toHaveLength(1);
       await userEvent.click(within(group).getByRole("button", { name: "New chat" }));
-      expect(useChatDock.getState().open).toBe(true);
+      // flag spark-chat sends it to the left panel (SparkPanel.test.tsx), never the right dock
+      expect(useSparkPanel.getState().open).toBe(true);
+      expect(useChatDock.getState().open).toBe(false);
     }));
 
   it("off: no New chat card, the pills keep the relative age", () =>
