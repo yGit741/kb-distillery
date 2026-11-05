@@ -149,7 +149,7 @@ const normalize = (next: Set<string>, all: readonly string[]) => (all.every((t) 
 function initialView(p: GraphPrefs): Pick<GraphUiState, "shownTypes" | "typeLabels" | "predicate"> {
   const st = storyById(p.story);
   return st
-    ? { shownTypes: new Set(st.types), typeLabels: new Set(st.typeLabels ?? []), predicate: st.predicate ?? null }
+    ? { shownTypes: st.types ? new Set(st.types) : undefined, typeLabels: new Set(st.typeLabels ?? []), predicate: st.predicate ?? null }
     : { shownTypes: undefined, typeLabels: new Set(), predicate: null };
 }
 
@@ -231,7 +231,7 @@ export const useGraphUi = create<GraphUiState>((set, get) => ({
       colorBy: st.colorBy,
       sizeBy: st.sizeBy,
       layoutMode: st.layoutMode,
-      shownTypes: new Set(st.types),
+      shownTypes: st.types ? new Set(st.types) : undefined,
       typeLabels: new Set(st.typeLabels ?? []),
       predicate: st.predicate ?? null,
       // a story is a whole view: a search, picked pages, a scope or a colour-key filter from before would fight it

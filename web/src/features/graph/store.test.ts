@@ -5,7 +5,7 @@ const DEFAULTS = ["topic", "idea"];
 
 beforeEach(() => {
   localStorage.clear();
-  useGraphUi.setState({ ...DEFAULT_PREFS, shownTypes: undefined, shownDepths: null, search: "", rules: [], typeLabels: new Set(), view: null, revealed: new Set(), flyout: null, fitTick: 0 });
+  useGraphUi.setState({ ...DEFAULT_PREFS, story: "", shownTypes: undefined, shownDepths: null, search: "", rules: [], typeLabels: new Set(), view: null, revealed: new Set(), flyout: null, fitTick: 0 });
 });
 
 describe("type visibility", () => {

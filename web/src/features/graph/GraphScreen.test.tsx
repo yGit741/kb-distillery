@@ -57,7 +57,7 @@ const off = (fn: () => Promise<void>) => () => withFlag("graph-shell", false, fn
 beforeEach(() => {
   localStorage.clear();
   useKb.setState({ selection: new Set() });
-  useGraphUi.setState({ ...DEFAULT_PREFS, shownTypes: undefined, predicate: null, shownDepths: null, search: "", rules: [], typeLabels: new Set(), view: null, revealed: new Set(), flyout: null, detailsOpen: false, readerSlug: null, focusRequest: null, fitTick: 0 });
+  useGraphUi.setState({ ...DEFAULT_PREFS, story: "", shownTypes: undefined, predicate: null, shownDepths: null, search: "", rules: [], typeLabels: new Set(), view: null, revealed: new Set(), flyout: null, detailsOpen: false, readerSlug: null, focusRequest: null, fitTick: 0 });
 });
 
 describe("GraphScreen states", () => {
@@ -273,6 +273,7 @@ describe("views bar", () => {
 
   it("clicking the Thesis pill applies the story and puts view=thesis in the URL", withResearch(async () => {
     vi.mocked(host.setParams).mockClear();
+    useGraphUi.getState().applyStory("map"); // the first visit opens on Map
     render(wrap(withGraph(), <GraphScreen search={{}} host={host} />));
     await screen.findByTestId("graph-stats");
     expect(screen.getByRole("button", { name: "Map" })).toHaveAttribute("aria-pressed", "true");

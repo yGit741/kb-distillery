@@ -24,7 +24,7 @@ import { computeImportance } from "./lab/importance";
 import { HoverCard } from "./lab/HoverCard";
 import { LabRail } from "./lab/LabRail";
 import { initialView } from "./defaultView";
-import { storyById, storyOffered } from "./lab/views";
+import { storyById, storyOffered, storyTypes } from "./lab/views";
 import { Legend } from "./Legend";
 import { predicateFn } from "./publicPredicate";
 import { ViewsBar } from "./views/ViewsBar";
@@ -211,10 +211,11 @@ function Loaded({
   const byId = useMemo(() => new Map(model.nodes.map((n) => [n.id, n] as const)), [model]);
   const neighbors = useMemo(() => buildNeighborMap(model.links), [model]);
   const relations = useMemo(() => (model.relations ? relationIndex(model.relations) : undefined), [model]);
-  const shownTypes = useMemo(
-    () => (ui.shownTypes === undefined ? new Set(schema.defaultVisible) : ui.shownTypes),
-    [ui.shownTypes, schema],
-  );
+  const shownTypes = useMemo(() => {
+    if (ui.shownTypes !== undefined) return ui.shownTypes;
+    // a view that names layers (Map) draws those layers of this kb's own schema, whatever its kit
+    return storyTypes(storyById(ui.story), schema) ?? new Set(schema.defaultVisible);
+  }, [ui.shownTypes, ui.story, schema]);
   const filtered = useMemo(
     () =>
       computeVisible(model.nodes, {
@@ -288,7 +289,7 @@ function Loaded({
         // the story's own types (otherwise a person's 900 blog posts would flood the thesis spine)
         const seed = st.seed.filter((s) => byId.has(s));
         const view = makeView("picked", st.headline?.label ?? st.name, seed, byId, neighbors);
-        const types = new Set<string>(st.types);
+        const types = new Set<string>(st.types ?? []);
         useGraphUi.setState({
           view: view ? { ...view, shown: new Set([...view.shown].filter((id) => view.hits.has(id) || types.has(byId.get(id)?.type ?? ""))) } : null,
         });
