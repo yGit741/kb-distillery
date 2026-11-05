@@ -48,7 +48,8 @@ import { LAYER_TYPES, type Layer } from "@/api/model";
 import "./tours";
 import { GraphShell } from "./shell/GraphShell";
 import { HeaderFold } from "./shell/HeaderFold";
-import { useShellTop } from "./shell/layout";
+import { SPARK_PANEL_W, useShellTop } from "./shell/layout";
+import { SparkPanelHost, useSparkOpen } from "./shell/SparkPanelHost";
 
 /** How the screen reaches the rest of the app (the router lives in index.tsx; tests pass plain functions). */
 export interface GraphHost extends ToolHost {
@@ -207,6 +208,7 @@ function Loaded({
   const shell = useFlag("graph-shell");
   const headerFold = useFlag("header-fold");
   const shellTop = useShellTop();
+  const sparkOpen = useSparkOpen();
   const ds = useDataSource();
   const ui = useGraphUi();
   const selection = useKb((s) => s.selection);
@@ -473,8 +475,8 @@ function Loaded({
       {shell ? (
         // the search line and the corner controls share one frame: it narrows while the side reader is open, so the reader never covers them
         <div
-          className="pointer-events-none absolute inset-y-0 left-0 transition-[right] duration-200 motion-reduce:transition-none"
-          style={{ right: reader ? "min(34rem, 100%)" : 0 }}
+          className="pointer-events-none absolute inset-y-0 transition-[left,right] duration-200 motion-reduce:transition-none"
+          style={{ left: sparkOpen ? SPARK_PANEL_W : 0, right: reader ? "min(34rem, 100%)" : 0 }}
         >
           {headerFold && <HeaderFold />}
           <GraphShell
@@ -620,6 +622,7 @@ function Loaded({
           }}
         />
       )}
+      {shell && <SparkPanelHost scope={search.scope} />}
       {visibleTools.map((t) => (
         <div key={t.id}>{t.overlay?.(toolContext)}</div>
       ))}

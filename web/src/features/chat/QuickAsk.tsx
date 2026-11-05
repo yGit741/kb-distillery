@@ -7,6 +7,7 @@ import { useUi } from "@/app/ui-store";
 import { Markdown } from "@/components/Markdown";
 import { Button } from "@/components/ui/button";
 import { useFlag } from "@/flags/useFlag";
+import { cn } from "@/lib/utils";
 import { useAskHost } from "./askHost";
 import { parsePrompts, pick, systemFor } from "./prompts";
 import { STATUS_KEY } from "./SessionPanel";
@@ -188,7 +189,11 @@ function QuickAskOn() {
       role={open ? "dialog" : undefined}
       aria-label="Quick ask"
       hidden={!open}
-      className="fixed left-1/2 top-16 z-50 w-[min(36rem,calc(100vw-2rem))] -translate-x-1/2 overflow-hidden rounded-xl border bg-popover text-popover-foreground shadow-[var(--shadow)]"
+      className={cn(
+        "fixed left-1/2 top-16 z-50 w-[min(36rem,calc(100vw-2rem))] -translate-x-1/2 overflow-hidden rounded-xl border bg-popover text-popover-foreground shadow-[var(--shadow)]",
+        // on the chat screen the plan card sits in a 20rem rail at the right (from lg): the card centres over the column beside it
+        host && "lg:left-[calc(50%-10rem)] lg:w-[min(36rem,calc(100vw-26rem))]",
+      )}
     >
       <form className="flex items-center gap-2 p-2" onSubmit={submit}>
         <MessageSquare aria-hidden className="ml-1 size-4 shrink-0 text-muted-foreground" />

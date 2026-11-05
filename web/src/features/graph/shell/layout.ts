@@ -11,3 +11,6 @@ export const SEARCH_LINE_H = 44;
 export function useShellTop(): number {
   return useFlag("header-fold") ? SHELL_TOP_FOLDED : SHELL_TOP;
 }
+
+/** Width of the left chat panel (flag `spark-chat`); the shell frame starts to its right so nothing overlaps. */
+export const SPARK_PANEL_W = 400;
