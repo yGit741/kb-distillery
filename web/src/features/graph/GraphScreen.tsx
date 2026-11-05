@@ -2,6 +2,7 @@ import { keepPreviousData, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useDataSource } from "@/api";
+import { useHeaderFolded } from "@/app/headerFold";
 import { HEADER_SLOT_ID } from "@/app/headerSlot";
 import { Empty, ErrorState, Loading } from "@/components/states";
 import { Button } from "@/components/ui/button";
@@ -24,7 +25,7 @@ import { computeImportance } from "./lab/importance";
 import { HoverCard } from "./lab/HoverCard";
 import { LabRail } from "./lab/LabRail";
 import { initialView } from "./defaultView";
-import { storyById, storyOffered } from "./lab/views";
+import { storyById, storyOffered, storyTypes } from "./lab/views";
 import { Legend } from "./Legend";
 import { predicateFn } from "./publicPredicate";
 import { ViewsBar } from "./views/ViewsBar";
@@ -46,6 +47,8 @@ import { toModel, type GNode } from "./types";
 import { LAYER_TYPES, type Layer } from "@/api/model";
 import "./tours";
 import { GraphShell } from "./shell/GraphShell";
+import { HeaderFold } from "./shell/HeaderFold";
+import { useShellTop } from "./shell/layout";
 
 /** How the screen reaches the rest of the app (the router lives in index.tsx; tests pass plain functions). */
 export interface GraphHost extends ToolHost {
@@ -154,10 +157,15 @@ export function GraphScreen({ search, host }: { search: GraphSearch; host: Graph
   );
 }
 
-/** The screen sits under the 48px header and fills the rest of the viewport (the graph needs the room). */
+/** The screen sits under the 48px header and fills the rest of the viewport (the graph needs the room); while the bar is folded away (flag header-fold) it takes the whole viewport. */
 function FullBleed({ children }: { children: React.ReactNode }) {
+  const folded = useHeaderFolded();
   return (
-    <div className={"fixed inset-x-0 bottom-0 top-12 z-30 overflow-hidden bg-background"} data-testid="graph-screen">
+    <div
+      className={cn("fixed inset-x-0 bottom-0 z-30 overflow-hidden bg-background transition-[top] duration-200 motion-reduce:transition-none", folded ? "top-0" : "top-12")}
+      data-testid="graph-screen"
+      data-header-folded={folded || undefined}
+    >
       {children}
     </div>
   );
@@ -197,6 +205,8 @@ function Loaded({
 }) {
   const visibleTools = useVisibleTools();
   const shell = useFlag("graph-shell");
+  const headerFold = useFlag("header-fold");
+  const shellTop = useShellTop();
   const ds = useDataSource();
   const ui = useGraphUi();
   const selection = useKb((s) => s.selection);
@@ -211,10 +221,11 @@ function Loaded({
   const byId = useMemo(() => new Map(model.nodes.map((n) => [n.id, n] as const)), [model]);
   const neighbors = useMemo(() => buildNeighborMap(model.links), [model]);
   const relations = useMemo(() => (model.relations ? relationIndex(model.relations) : undefined), [model]);
-  const shownTypes = useMemo(
-    () => (ui.shownTypes === undefined ? new Set(schema.defaultVisible) : ui.shownTypes),
-    [ui.shownTypes, schema],
-  );
+  const shownTypes = useMemo(() => {
+    if (ui.shownTypes !== undefined) return ui.shownTypes;
+    // a view that names layers (Map) draws those layers of this kb's own schema, whatever its kit
+    return storyTypes(storyById(ui.story), schema) ?? new Set(schema.defaultVisible);
+  }, [ui.shownTypes, ui.story, schema]);
   const filtered = useMemo(
     () =>
       computeVisible(model.nodes, {
@@ -288,7 +299,7 @@ function Loaded({
         // the story's own types (otherwise a person's 900 blog posts would flood the thesis spine)
         const seed = st.seed.filter((s) => byId.has(s));
         const view = makeView("picked", st.headline?.label ?? st.name, seed, byId, neighbors);
-        const types = new Set<string>(st.types);
+        const types = new Set<string>(st.types ?? []);
         useGraphUi.setState({
           view: view ? { ...view, shown: new Set([...view.shown].filter((id) => view.hits.has(id) || types.has(byId.get(id)?.type ?? ""))) } : null,
         });
@@ -465,6 +476,7 @@ function Loaded({
           className="pointer-events-none absolute inset-y-0 left-0 transition-[right] duration-200 motion-reduce:transition-none"
           style={{ right: reader ? "min(34rem, 100%)" : 0 }}
         >
+          {headerFold && <HeaderFold />}
           <GraphShell
             nodes={model.nodes}
             byId={byId}
@@ -479,6 +491,7 @@ function Loaded({
             onReheat={() => canvas.current?.reheat()}
             onRefresh={onRefresh}
             setParams={host.setParams}
+            top={shellTop}
           />
           <Corners nodes={model.nodes} visible={visible} schema={schema} shownTypes={shownTypes} stats={stats} host={host} applyView={applyView} showPicked={showPicked} />
         </div>

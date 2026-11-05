@@ -129,19 +129,63 @@ def _clone(url: str, ref: str, dest: str) -> str:
     return subprocess.run(["git", "rev-parse", "HEAD"], cwd=dest, capture_output=True, text=True).stdout.strip()
 
 
-def _findings(bundle: str, stage: str) -> tuple[int, list[str], list[str]]:
-    """okf-check `bundle` as the `wiki/` of a throwaway root -> (page count, errors, warnings). Errors block an import."""
+# A markdown link whose path starts with `/` (not an URL, not an image): `[label](/path#anchor)`.
+_ROOT_LINK = re.compile(r"(?<!!)(\[(?:[^\[\]\\\n]|\\.)*\]\()/([^()<>\s#]+)((?:#[^()\s]*)?\))")
+
+# A `/` link into these folders is kb-root-relative already (okf_check judges it); only bundle-root links are rewritten.
+_KB_ROOT_DIRS = frozenset({"wiki", "raw", "think"})
+
+
+def _relink_root_links(wiki: str) -> int:
+    """Rewrite bundle-root links (`/slug.md`, the bundle author's `/` meaning the bundle root) to the relative form the
+    engine reads (`slug.md`, `../slug.md` from a subfolder) -> how many were rewritten. Only a link whose target is a
+    file of the bundle changes; `/wiki/...`, `/raw/...`, `/think/...` and anything missing are left for okf_check."""
+    count = 0
+    for base, _dirs, files in os.walk(wiki):
+        for name in files:
+            if not name.endswith(".md"):
+                continue
+            path = os.path.join(base, name)
+            with open(path, encoding="utf-8", errors="replace") as f:
+                text = f.read()
+
+            def fix(m):
+                nonlocal count
+                target = m.group(2)
+                kb_rooted = target.split("/", 1)[0] in _KB_ROOT_DIRS
+                if kb_rooted or not os.path.isfile(os.path.join(wiki, target)):
+                    return m.group(0)
+                count += 1
+                rel = os.path.relpath(os.path.join(wiki, target), base).replace(os.sep, "/")
+                return f"{m.group(1)}{rel}{m.group(3)}"
+
+            new = _ROOT_LINK.sub(fix, text)
+            if new != text:
+                with open(path, "w", encoding="utf-8") as f:
+                    f.write(new)
+    return count
+
+
+def _findings(bundle: str, stage: str) -> tuple[int, list[str], list[str], str]:
+    """okf-check `bundle` as the `wiki/` of a throwaway root -> (page count, errors, warnings, staged wiki). Errors block
+    an import. Bundle-root links (`/slug.md`) are rewritten to `slug.md` in the staged copy first, and the import copies
+    that staged wiki, never the source (which is not changed)."""
     root = os.path.join(stage, "check")
-    shutil.copytree(bundle, os.path.join(root, WIKI_DIR), symlinks=True, ignore=shutil.ignore_patterns(*IGNORED))
-    for base, dirs, files in os.walk(os.path.join(root, WIKI_DIR)):
+    wiki = os.path.join(root, WIKI_DIR)
+    shutil.copytree(bundle, wiki, symlinks=True, ignore=shutil.ignore_patterns(*IGNORED))
+    for base, dirs, files in os.walk(wiki):
         for n in dirs + files:
             if os.path.islink(os.path.join(base, n)):
-                return 0, [f"the bundle contains a symlink: {os.path.relpath(os.path.join(base, n), root)}"], []
+                return 0, [f"the bundle contains a symlink: {os.path.relpath(os.path.join(base, n), root)}"], [], wiki
+    warnings = []
+    relinked = _relink_root_links(wiki)
+    if relinked:
+        warnings.append(f"{relinked} link(s) written from the bundle root (/slug.md) were rewritten as relative links (slug.md)")
     findings, count = okf_check.check(root)
     errors = [f"{rel}: [{rule}] {msg}" for rel, items in sorted(findings.items()) for rule, msg in items]
     if not count and not errors:
         errors.append("the bundle has no pages (no .md files besides index.md / log.md)")
-    return count, errors, []
+    return count, errors, warnings, wiki
 
 
 @contextlib.contextmanager
@@ -192,7 +236,7 @@ def validate_bundle(source: str, kb_id: str | None = None, parent: str | None = 
     A bad source raises `BundleError`. `label` names the source in the report (an upload's file name, not its temp path)."""
     kb_id = kb_id or _guess_id(source)
     with tempfile.TemporaryDirectory(prefix="kb-import-") as stage, _open(source, stage) as (bundle, found, ref, commit):
-        count, errors, warnings = _findings(bundle, stage)
+        count, errors, warnings, staged = _findings(bundle, stage)
         rep = Report(kb_id, label or found, count, errors, warnings, ref, commit)
         try:
             init_kb.validate_id(kb_id)
@@ -203,7 +247,7 @@ def validate_bundle(source: str, kb_id: str | None = None, parent: str | None = 
                 errors.append(f"a knowledge base {kb_id!r} already exists: pick another --id")
             elif not errors:
                 try:
-                    _build(bundle, rep, kit, os.path.join(stage, "dry-run"), None)
+                    _build(staged, rep, kit, os.path.join(stage, "dry-run"), None)
                 except init_kb.InitError as e:
                     errors.append(str(e))
     return rep
@@ -273,14 +317,14 @@ def import_bundle(src: str, kit: str | None = None, kb_id: str | None = None, pa
     parent = parent or kbconfig.bases_dir()
     with tempfile.TemporaryDirectory(prefix="kb-import-") as stage, _open(src, stage) as (bundle, found, ref, commit):
         label = label or found
-        count, errors, warnings = _findings(bundle, stage)
+        count, errors, warnings, staged = _findings(bundle, stage)
         rep = Report(kb_id, label, count, errors, warnings, ref, commit, inbox_item or "")
         if _id_taken(kb_id, parent):
             raise BundleError(f"a knowledge base {kb_id!r} already exists: pick another --id")
         if errors:
             raise BundleError(f"the bundle is not valid OKF ({len(errors)} finding(s)); nothing was written:\n"
                               + "\n".join("  " + e for e in errors))
-        target = _build(bundle, rep, kit, parent, name)
+        target = _build(staged, rep, kit, parent, name)
         try:
             from kb_distillery.git import commit_policy as cp
             from kb_distillery.ops.core import OpsError, _commit_paths, _message

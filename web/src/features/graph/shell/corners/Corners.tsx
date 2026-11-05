@@ -22,6 +22,7 @@ import { useCorners, type Layer } from "./cornersStore";
 import { Fan, type FanCard } from "./Fan";
 import { BUTTON, EDGE, fanCapacity } from "./geometry";
 import { PinList } from "./PinList";
+import { SEARCH_LINE_H, useShellTop } from "../layout";
 import { useShellStore } from "../shellStore";
 import { browserSessions, newChat, resumeSession } from "./sessions";
 import { useShellTour } from "./shellTour";
@@ -70,6 +71,7 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
   const menu = useCorners((s) => s.menu);
   const activeView = useCorners((s) => s.activeView);
   const { toggle, openMenu, closeMenu, closeTop, closeAll, setActive } = useCorners.getState();
+  const shellTop = useShellTop();
   const pinsOpen = order.includes("pins");
   const thinkOpen = order.includes("think");
   const agentOpen = order.includes("agent");
@@ -362,7 +364,7 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
       )}
 
       {notice && (
-        <div role="status" className="absolute left-1/2 -translate-x-1/2 rounded-full border bg-card px-3 py-1 text-xs shadow-[var(--shadow)]" style={{ top: EDGE + 56 }}>
+        <div role="status" className="absolute left-1/2 -translate-x-1/2 rounded-full border bg-card px-3 py-1 text-xs shadow-[var(--shadow)]" style={{ top: shellTop + SEARCH_LINE_H + 13 }}>
           {notice}
         </div>
       )}

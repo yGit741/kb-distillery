@@ -87,7 +87,7 @@ beforeEach(() => {
   useBasket.getState().reload();
   useLayer.setState({ rawOn: false, drawer: null, expansions: [] });
   useKb.setState({ selection: new Set() });
-  useGraphUi.setState({ ...DEFAULT_PREFS, shownTypes: undefined, shownDepths: null, search: "", rules: [], typeLabels: new Set(), view: null, revealed: new Set(), flyout: null, detailsOpen: false, readerSlug: null, focusRequest: null, fitTick: 0 });
+  useGraphUi.setState({ ...DEFAULT_PREFS, story: "", shownTypes: undefined, shownDepths: null, search: "", rules: [], typeLabels: new Set(), view: null, revealed: new Set(), flyout: null, detailsOpen: false, readerSlug: null, focusRequest: null, fitTick: 0 });
 });
 
 /** Open a tool's panel the way a command or its key does: through the store's flyout (the panels host draws it). */

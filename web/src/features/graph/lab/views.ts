@@ -1,3 +1,4 @@
+import type { Layer } from "@/api/model";
 import { flag, type FlagName } from "@/flags";
 import type { Predicate } from "../publicPredicate";
 import type { ColorBy, SizeBy } from "../style";
@@ -14,8 +15,10 @@ export interface Story {
   colorBy: ColorBy;
   sizeBy: SizeBy;
   layoutMode: LayoutMode;
-  /** page types drawn */
-  types: readonly string[];
+  /** page types drawn (a kit-specific list; a view meant for every kit names `layers` instead) */
+  types?: readonly string[];
+  /** page layers drawn, resolved against the kb's own schema, so the view works in any kit */
+  layers?: readonly Layer[];
   /** types whose every page is labelled (the legend's "Aa") */
   typeLabels?: readonly string[];
   /** A headline view: a pill in the views bar; `goal` is the one sentence its hover shows, then the questions and hint. */
@@ -37,8 +40,9 @@ export const storyOffered = (s: Story): boolean => !s.featureFlag || flag(s.feat
 const RESEARCH_TOOLS = "research-tools" as const;
 
 const CONCEPTS = ["topic", "question", "idea"] as const;
-/** Map's drawn types: every page type except the collection hubs, whose course/book names duplicate the themes' labels. */
-const MAP_TYPES = ["topic", "idea", "question", "person", "paper", "part", "lecture", "article", "video", "mail", "ai-chat", "blog-post"] as const;
+/** Map's drawn layers: ideas and sources of whatever kit the kb uses; the collection hubs stay out, since their
+ * course or book names duplicate the themes' labels. The public predicate then keeps only linked ideas and read sources. */
+const MAP_LAYERS: readonly Layer[] = ["concept", "source"];
 
 /**
  * The seed of the Thesis view: page slugs of one knowledge base's thesis spine (themes, the open questions
@@ -81,7 +85,7 @@ export const STORIES: readonly Story[] = [
     colorBy: "area",
     sizeBy: "evidence",
     layoutMode: "anchored",
-    types: MAP_TYPES,
+    layers: MAP_LAYERS,
     typeLabels: ["topic"],
   },
   {
@@ -253,3 +257,11 @@ export const storyById = (id: string): Story | undefined => STORIES.find((s) => 
 
 /** The whole lab config of a story: the defaults plus its overrides (a story starts from the principles). */
 export const storyLab = (s: Story): LabConfig => ({ ...DEFAULT_LAB, ...s.lab });
+
+/** The page types a view draws in this kb: its own list, or the kb's types in the layers it names (null: neither, the schema default applies). */
+export function storyTypes(st: Pick<Story, "types" | "layers"> | undefined, schema: { types: readonly { id: string; layer: Layer }[] }): Set<string> | null {
+  if (!st) return null;
+  if (st.types) return new Set(st.types);
+  if (st.layers) return new Set(schema.types.filter((t) => st.layers!.includes(t.layer)).map((t) => t.id));
+  return null;
+}
