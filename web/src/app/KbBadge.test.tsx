@@ -1,6 +1,7 @@
 import { createMemoryHistory } from "@tanstack/react-router";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { useHeaderFold } from "@/app/headerFold";
 import { App } from "@/app/providers";
 import { createAppRouter } from "@/app/router";
 import type { DataSource } from "@/api";
@@ -39,7 +40,11 @@ function open(path: string, over: Partial<DataSource> = {}) {
 }
 
 describe("header knowledge base menu (kb-view)", () => {
-  beforeEach(() => localStorage.clear());
+  // these tests read the app bar itself, so keep it open on the graph (flag header-fold folds it by default)
+  beforeEach(() => {
+    localStorage.clear();
+    useHeaderFold.setState({ folded: false });
+  });
 
   it("flag on: ticks show more knowledge bases, and unticking all shows none", () =>
     withFlag("kb-view", true, async () => {
@@ -79,4 +84,33 @@ describe("header title without an import adapter", () => {
     await screen.findByRole("banner");
     expect(screen.queryByRole("button", { name: "Add knowledge base" })).toBeNull();
   });
+});
+
+describe("flag header-fold in the app shell", () => {
+  beforeEach(() => {
+    localStorage.clear();
+    useHeaderFold.setState({ folded: true, mounted: false });
+  });
+
+  it("on: the bar folds on the graph once its chevron is there", () =>
+    withFlag("graph-shell", true, () =>
+      withFlag("header-fold", true, async () => {
+        open("/graph");
+        await screen.findByRole("button", { name: "Show the app bar" });
+        const bar = document.querySelector("header");
+        expect(bar).toHaveAttribute("data-folded");
+        expect(bar).toHaveAttribute("aria-hidden", "true");
+      }),
+    ));
+
+  it("on: another route keeps an active bar though the stored choice is folded", () =>
+    withFlag("graph-shell", true, () =>
+      withFlag("header-fold", true, async () => {
+        open("/system");
+        await waitFor(() => expect(document.querySelector("header")).not.toBeNull());
+        const bar = document.querySelector("header");
+        expect(bar).not.toHaveAttribute("data-folded");
+        expect(bar).not.toHaveAttribute("inert");
+      }),
+    ));
 });
