@@ -114,7 +114,7 @@ export function Row({ card, right }: { card: PageCard; right?: ReactNode }) {
   return (
     <li className="flex min-w-0 items-center gap-2 px-3 py-1.5">
       <TypeDot type={card.type} />
-      <Link to={pageTo(card.id)} search={search} className="min-w-0 flex-1 truncate text-primary hover:underline">
+      <Link to={pageTo(card.id)} search={search} className="min-w-0 flex-1 truncate py-0.5 leading-5 text-primary hover:underline">
         {card.title}
       </Link>
       {right != null && <span className="shrink-0 text-xs text-muted-foreground">{right}</span>}

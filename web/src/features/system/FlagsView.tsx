@@ -40,11 +40,11 @@ function Toggle({ row, env, busy, onToggle }: { row: FlagRow; env: FlagEnv; busy
       disabled={busy}
       onClick={onToggle}
       className={cn(
-        "relative inline-flex h-5 w-9 shrink-0 items-center rounded-full border transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none disabled:opacity-50",
+        "relative inline-flex h-6 w-10 shrink-0 items-center rounded-full border transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none disabled:opacity-50",
         row.value ? "bg-primary" : "bg-muted",
       )}
     >
-      <span className={cn("inline-block size-4 rounded-full bg-background shadow transition-transform", row.value ? "translate-x-4" : "translate-x-0.5")} />
+      <span className={cn("inline-block size-5 rounded-full bg-background shadow transition-transform", row.value ? "translate-x-4" : "translate-x-0.5")} />
     </button>
   );
 }
