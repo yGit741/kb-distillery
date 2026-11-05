@@ -36,15 +36,20 @@ describe("AppShell", () => {
     await waitFor(() => expect(router.state.location.pathname).toBe("/pages"));
   }));
 
-  it("flag views-panel: the header's theme toggle moves to the graph panel (hidden here); off, it stays", async () => {
+  it("flag views-panel: on the graph the theme toggle moves to the pinned panel; other screens keep it", async () => {
     for (const on of [true, false]) {
-      await withFlag("views-panel", on, async () => {
-        const router = createAppRouter(createMemoryHistory({ initialEntries: ["/app/system"] }));
-        const { unmount } = render(<App source={ds} router={router} />);
-        await screen.findByRole("navigation", { name: "Main" });
-        expect(screen.queryAllByRole("button", { name: /switch to/i })).toHaveLength(on ? 0 : 1);
-        unmount();
-      });
+      await withFlag("views-panel", on, () =>
+        withFlag("graph-shell", true, async () => {
+          for (const [path, hidden] of [["/app/system", false], ["/app/graph", on]] as const) {
+            const router = createAppRouter(createMemoryHistory({ initialEntries: [path] }));
+            const { unmount } = render(<App source={ds} router={router} />);
+            await screen.findByRole("navigation", { name: "Main", hidden: true });
+            // the graph may fold its bar away (flag header-fold), so look past aria-hidden
+            expect(screen.queryAllByRole("button", { name: /switch to/i, hidden: true })).toHaveLength(hidden ? 0 : 1);
+            unmount();
+          }
+        }),
+      );
     }
   });
 

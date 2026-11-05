@@ -1,5 +1,5 @@
 import { lazy, Suspense } from "react";
-import { Link, Outlet } from "@tanstack/react-router";
+import { Link, Outlet, useRouterState } from "@tanstack/react-router";
 import { Command as CommandIcon, Moon, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -28,8 +28,9 @@ export function AppShell() {
   const setPaletteOpen = useUi((s) => s.setPaletteOpen);
   const embed = useEmbed();
   const agentMode = useFlag("agent-mode");
-  // flag views-panel: the dark mode switch lives in the graph's pinned panel (Settings), not in the bar
-  const themeInPanel = useFlag("views-panel");
+  // flag views-panel: on the graph the dark mode switch lives in the pinned panel (Settings); other screens keep it here
+  const onGraph = useRouterState({ select: (s) => s.location.pathname }) === "/graph";
+  const themeInPanel = useFlag("views-panel") && useFlag("graph-shell") && onGraph;
   // flag header-fold: on the graph the bar folds away above the screen (the graph's chevron brings it back)
   const folded = useHeaderFolded();
   return (
