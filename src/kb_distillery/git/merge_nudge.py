@@ -85,6 +85,9 @@ def decide(payload):
     branch = _git(cwd, "symbolic-ref", "--short", "-q", "HEAD")
     if not branch.startswith("infra/"):
         return None
+    from kb_distillery.git import night
+    if night.active(cwd):
+        return None                                       # the night window: holds do not wait for the user
     pr = open_pr(cwd, branch)
     if not pr or not pr.get("held"):
         return None                                       # not held: the agent merges it itself
