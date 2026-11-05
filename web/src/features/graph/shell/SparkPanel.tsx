@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Mic, Plus, SendHorizontal, Square, X } from "lucide-react";
+import { useChatDock } from "../tools/chatDockStore";
 import { useEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 import { useDataSource } from "@/api";
 import { ErrorState, Loading } from "@/components/states";
@@ -31,6 +32,13 @@ export function SparkPanel({ scope }: { scope?: string }) {
       data-testid="spark-panel"
       className="spark-panel-in pointer-events-auto absolute inset-y-0 left-0 z-40 flex max-w-full flex-col border-r bg-card text-card-foreground shadow-[var(--shadow)]"
       style={{ width: SPARK_PANEL_W }}
+      onKeyDown={(e) => {
+        // Escape anywhere in the panel closes it, and stops here: the graph's own Escape (selection, reader) waits
+        if (e.key === "Escape" && !e.defaultPrevented) {
+          e.stopPropagation();
+          close();
+        }
+      }}
     >
       {status.isPending || promptsQ.isPending ? (
         <>
@@ -76,7 +84,12 @@ function Body({ status, prompts, scope, onClose }: { status: Status; prompts: Pr
   const { chat, busy, send, regenerate, answer, stop } = useChatSession();
   const view = useMemo(() => parseStatus(status), [status]);
   const [modelPick, setModelPick] = useState(() => readJson("local", "kbchat.model", ""));
-  const [text, setText] = useState("");
+  // a question handed in from Ask or the search ("/") prefills the box once
+  const [text, setText] = useState(() => {
+    const q = useChatDock.getState().question;
+    if (q) useChatDock.setState({ question: "" });
+    return q;
+  });
   const box = useRef<HTMLTextAreaElement>(null);
   const model = view.models.some((m) => m.id === modelPick) ? modelPick : view.defaultModel;
   const options = () => ({ ...quickSendOptions(status, prompts), model, scope });
@@ -96,9 +109,6 @@ function Body({ status, prompts, scope, onClose }: { status: Status; prompts: Pr
     if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
       e.preventDefault();
       submit();
-    } else if (e.key === "Escape") {
-      e.stopPropagation();
-      onClose();
     }
   };
 

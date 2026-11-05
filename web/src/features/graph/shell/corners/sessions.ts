@@ -1,8 +1,7 @@
 import { readJson, writeJson } from "@/features/chat/storage";
 import { emptyChat, type Chat } from "@/features/chat/thread";
-import { flag } from "@/flags";
 import { useChatDock } from "../../tools/chatDockStore";
-import { useSparkPanel } from "../sparkPanelStore";
+import { useSparkPanel, chatInPanel } from "../sparkPanelStore";
 import { getSession, type Fetcher, type SessionRow } from "./api";
 
 /** The chat the browser holds (the chat screen keeps exactly one, in sessionStorage). */
@@ -25,7 +24,7 @@ export function browserSessions(): SessionRow[] {
  */
 export function showDock(): void {
   // flag `spark-chat`: the chat opens in the left panel, and the right dock stays shut
-  if (flag("spark-chat")) {
+  if (chatInPanel()) {
     useChatDock.getState().set({ open: false });
     useSparkPanel.getState().show();
     return;

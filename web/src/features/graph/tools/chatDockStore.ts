@@ -1,6 +1,7 @@
 import { create } from "zustand";
 
 import { link } from "@/lib/links";
+import { chatInPanel, useSparkPanel } from "../shell/sparkPanelStore";
 
 /**
  * State of the chat dock (the research chat next to the graph). Kept apart from ChatDock.tsx so the finder,
@@ -19,8 +20,19 @@ export const useChatDock = create<ChatDockState>((set) => ({
   open: false,
   wide: false,
   question: "",
-  ask: (question) => set({ open: true, question }),
-  set: (s) => set(s),
+  // flag spark-chat: the dock stays shut and the left panel opens instead (one chat on screen, never two)
+  ask: (question) => {
+    if (chatInPanel()) {
+      set({ open: false, question });
+      useSparkPanel.getState().show();
+    } else set({ open: true, question });
+  },
+  set: (s) => {
+    if (s.open && chatInPanel()) {
+      set({ ...s, open: false });
+      useSparkPanel.getState().show();
+    } else set(s);
+  },
 }));
 
 /** A question draft about the selected pages: their page links, so the agent reads exactly those first. */
