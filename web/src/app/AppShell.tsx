@@ -1,5 +1,5 @@
 import { lazy, Suspense } from "react";
-import { Link, Outlet } from "@tanstack/react-router";
+import { Link, Outlet, useRouterState } from "@tanstack/react-router";
 import { Command as CommandIcon, Moon, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -28,6 +28,9 @@ export function AppShell() {
   const setPaletteOpen = useUi((s) => s.setPaletteOpen);
   const embed = useEmbed();
   const agentMode = useFlag("agent-mode");
+  // flag views-panel: on the graph the dark mode switch lives in the pinned panel (Settings); other screens keep it here
+  const onGraph = useRouterState({ select: (s) => s.location.pathname }) === "/graph";
+  const themeInPanel = useFlag("views-panel") && useFlag("graph-shell") && onGraph;
   // flag header-fold: on the graph the bar folds away above the screen (the graph's chevron brings it back)
   const folded = useHeaderFolded();
   return (
@@ -59,14 +62,16 @@ export function AppShell() {
           <CommandIcon aria-hidden />
           <span className="hidden sm:inline">K</span>
         </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={toggle}
-          aria-label={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
-        >
-          {theme === "dark" ? <Sun aria-hidden /> : <Moon aria-hidden />}
-        </Button>
+        {!themeInPanel && (
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={toggle}
+            aria-label={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
+          >
+            {theme === "dark" ? <Sun aria-hidden /> : <Moon aria-hidden />}
+          </Button>
+        )}
       </header>
       )}
       <main className={embed ? "min-w-0 flex-1" : "mx-auto w-full min-w-0 max-w-6xl flex-1 px-4 py-4"}>

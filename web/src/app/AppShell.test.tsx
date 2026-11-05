@@ -5,6 +5,7 @@ import { App } from "./providers";
 import { resetEmbed } from "./embed";
 import { createAppRouter } from "./router";
 import type { DataSource } from "@/api";
+import { withFlag } from "@/flags/testing";
 import { mockDataSource } from "@/test/datasource";
 import { ROUTES } from "@/routes/registry";
 
@@ -17,7 +18,7 @@ const ds: DataSource = mockDataSource({
 });
 
 describe("AppShell", () => {
-  it("has one nav of five tabs, one theme toggle, and a palette that reaches every screen", async () => {
+  it("has one nav of five tabs, one theme toggle, and a palette that reaches every screen", () => withFlag("views-panel", false, async () => {
     const router = createAppRouter(createMemoryHistory({ initialEntries: ["/app/system"] }));
     render(<App source={ds} router={router} />);
     const nav = await screen.findByRole("navigation", { name: "Main" });
@@ -33,6 +34,23 @@ describe("AppShell", () => {
     await userEvent.type(box, "pages");
     await userEvent.keyboard("{Enter}");
     await waitFor(() => expect(router.state.location.pathname).toBe("/pages"));
+  }));
+
+  it("flag views-panel: on the graph the theme toggle moves to the pinned panel; other screens keep it", async () => {
+    for (const on of [true, false]) {
+      await withFlag("views-panel", on, () =>
+        withFlag("graph-shell", true, async () => {
+          for (const [path, hidden] of [["/app/system", false], ["/app/graph", on]] as const) {
+            const router = createAppRouter(createMemoryHistory({ initialEntries: [path] }));
+            const { unmount } = render(<App source={ds} router={router} />);
+            await screen.findByRole("navigation", { name: "Main", hidden: true });
+            // the graph may fold its bar away (flag header-fold), so look past aria-hidden
+            expect(screen.queryAllByRole("button", { name: /switch to/i, hidden: true })).toHaveLength(hidden ? 0 : 1);
+            unmount();
+          }
+        }),
+      );
+    }
   });
 
   it("sends the folded Pipeline and Lifecycle screens to their System tabs, search kept", async () => {
