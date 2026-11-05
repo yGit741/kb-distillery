@@ -203,6 +203,26 @@ describe("quick ask, agent-mode on", () => {
       calls[0]!.stream.push("done", {});
       calls[0]!.stream.end();
     }));
+
+  it("on the chat screen the card is centred over the column beside the plan rail, not over the rail", () =>
+    withFlag("agent-mode", true, async () => {
+      setup("/chat");
+      await screen.findByRole("textbox", { name: "Your message" });
+      cmdJ();
+      const card = await screen.findByRole("dialog", { name: "Quick ask" });
+      // the plan card sits in a 20rem rail at the right (from lg): the card shifts left by half of it and narrows by the rail
+      expect(card.className).toContain("lg:left-[calc(50%-10rem)]");
+      expect(card.className).toContain("lg:w-[min(36rem,calc(100vw-26rem))]");
+    }));
+
+  it("off the chat screen the card stays centred in the window", () =>
+    withFlag("agent-mode", true, async () => {
+      setup("/");
+      await screen.findByText("home screen");
+      cmdJ();
+      const card = await screen.findByRole("dialog", { name: "Quick ask" });
+      expect(card.className).not.toContain("lg:left-[calc(50%-10rem)]");
+    }));
 });
 
 describe("quick ask in the app shell", () => {

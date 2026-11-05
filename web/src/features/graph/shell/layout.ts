@@ -11,3 +11,19 @@ export const SEARCH_LINE_H = 44;
 export function useShellTop(): number {
   return useFlag("header-fold") ? SHELL_TOP_FOLDED : SHELL_TOP;
 }
+
+/** Width of the left chat panel (flag `spark-chat`); the shell frame starts to its right so nothing overlaps. */
+export const SPARK_PANEL_W = 400;
+
+/** Chat sizes (flag `chat-full`): the folded right pane is a rail of this width. */
+export const FULL_RAIL_W = 44;
+/** Chat list column in the full chat. */
+export const FULL_LIST_W = 232;
+/** The right pane of the full chat (graph on top, mini explorer below): up to this wide, at most this share of the width. */
+export const FULL_PANE_W = "min(48%, 720px)";
+
+/** Width of the chat panel's box: the panel size, or the full chat up to the right pane (a rail when folded). */
+export function chatPanelWidth(full: boolean, folded: boolean): string {
+  if (!full) return `${SPARK_PANEL_W}px`;
+  return `calc(100% - ${folded ? `${FULL_RAIL_W}px` : FULL_PANE_W})`;
+}

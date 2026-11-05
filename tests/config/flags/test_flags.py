@@ -86,7 +86,7 @@ class CodegenTests(unittest.TestCase):
             self.assertEqual(codegen.main([], root=root), 0)
             self.assertEqual(codegen.main(["--check"], root=root), 0)
             gen = (root / codegen.GEN_TS).read_text(encoding="utf-8")
-            self.assertIn('export type FlagName = "agent-mode" | "calm-graph" | "graph-relations" | "graph-shell" | "header-fold" | "inbox-pickup" | "kb-view" | "legend-counts" | "parsed-pdf" | "research-tools" | "screen.lifecycle" | "screen.share" | "screen.start" | "screen.think" | "semantic-search" | "spark-chat" | "ui.system-flags-tab" | "views-panel";', gen)
+            self.assertIn('export type FlagName = "agent-mode" | "calm-graph" | "chat-full" | "graph-relations" | "graph-shell" | "header-fold" | "inbox-pickup" | "kb-view" | "legend-counts" | "parsed-pdf" | "research-tools" | "screen.lifecycle" | "screen.share" | "screen.start" | "screen.think" | "semantic-search" | "spark-chat" | "ui.system-flags-tab" | "views-panel";', gen)
             pub = (root / codegen.modules_path("public")).read_text(encoding="utf-8")
             priv = (root / codegen.modules_path("private")).read_text(encoding="utf-8")
             self.assertNotIn("lifecycle", pub)
