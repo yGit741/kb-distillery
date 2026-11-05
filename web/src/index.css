@@ -21,7 +21,7 @@
   --secondary: rgba(0, 0, 0, 0.04); /* --control-bg */
   --secondary-foreground: #18181b;
   --muted: rgba(0, 0, 0, 0.04);
-  --muted-foreground: #71717a; /* --muted */
+  --muted-foreground: color-mix(in srgb, var(--color-zinc-500) 80%, var(--color-zinc-600)); /* --muted: about 4.7:1 on the muted surface */
   --accent: rgba(0, 0, 0, 0.08); /* --control-bg-hover: shadcn "accent" = hover surface */
   --accent-foreground: #18181b;
   --accent-soft: color-mix(in srgb, var(--primary) 9%, transparent); /* 9%: --primary text on it stays at least 4.5:1 */
