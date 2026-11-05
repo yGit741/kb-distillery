@@ -137,3 +137,13 @@ expires = 2027-01-31
 kind = "runtime"
 default = false
 envs = { local = true, private = false, public = false }
+
+[[flag]]
+name = "spark-chat"
+description = "Graph: the spark corner as the chat surface: a New chat pill, status and dates on the fan, the left chat panel and cited pages on the graph"
+owner = "maintainer"
+created = 2026-11-05
+expires = 2027-02-01
+kind = "runtime"
+default = false
+envs = { local = true, private = false, public = false }

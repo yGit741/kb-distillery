@@ -223,3 +223,31 @@ def test_an_unwritable_local_dir_is_a_500_with_a_message(client, kb):
     open(os.path.join(kb, ".local"), "w").write("a file where the directory should be")
     r = put(client, "a1")
     assert r.status_code == 500 and "error" in r.json()
+
+
+def doc_of(messages, updated):
+    return {"messages": messages, "updated": updated}
+
+
+NOW = store.datetime.datetime(2026, 11, 5, 12, 0, tzinfo=store.datetime.timezone.utc)
+
+
+@pytest.mark.parametrize("messages, updated, want", [
+    ([], "2026-11-05T11:59:00Z", "idle"),
+    (msgs(), "2026-11-05T11:59:00Z", "idle"),
+    ([{"role": "user", "content": "q"}], "2026-11-05T11:58:00Z", "running"),
+    ([{"role": "user", "content": "q"}], "2026-11-05T11:00:00Z", "idle"),        # a question left for an hour is not running
+    ([{"role": "user", "content": "q"}], "not a date", "idle"),
+    ([{"role": "user", "content": "q", "failed": True}], "2026-11-05T11:59:00Z", "error"),
+    ([{"role": "assistant", "content": "", "error": "down"}], "2026-11-05T11:59:00Z", "error"),
+    ([{"role": "assistant", "content": "", "ask": {"id": "a", "questions": []}}], "2026-11-05T11:00:00Z", "waiting"),
+])
+def test_status_of(messages, updated, want):
+    assert store.status_of(doc_of(messages, updated), now=NOW) == want
+
+
+def test_list_carries_the_status(client):
+    assert put(client, "s1").status_code == 200
+    assert put(client, "s2", messages=[{"role": "user", "content": "still thinking"}]).status_code == 200
+    rows = {s.id: s.status for s in SessionList.model_validate(client.get("/api/sessions").json()).sessions}
+    assert rows == {"s1": "idle", "s2": "running"}

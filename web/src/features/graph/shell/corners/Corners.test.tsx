@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { DataSourceProvider, type DataSource } from "@/api";
+import { withFlag } from "@/flags/testing";
 import { mockDataSource } from "@/test/datasource";
 import { sampleNodes, sampleSnapshot } from "../../fixtures";
 import { parseSchema } from "../../schema";
@@ -306,13 +307,14 @@ describe("Think and Agent fans", () => {
     expect(JSON.parse(sessionStorage.getItem("kbchat.chat")!)).toMatchObject({ id: "kb-chat:s1" });
   });
 
-  it("with no notes or chats a quiet placeholder card says so", async () => {
-    mount(fakeServer(), {}, { listThink: async () => ({ capture_note: "x", notes: [] }) });
-    await userEvent.click(think());
-    expect(await screen.findByText("No think notes yet")).toBeInTheDocument();
-    await userEvent.click(agent());
-    expect(await screen.findByText("No chats yet")).toBeInTheDocument();
-  });
+  it("with no notes or chats a quiet placeholder card says so (spark-chat off; on, the New chat card stands there)", () =>
+    withFlag("spark-chat", false, async () => {
+      mount(fakeServer(), {}, { listThink: async () => ({ capture_note: "x", notes: [] }) });
+      await userEvent.click(think());
+      expect(await screen.findByText("No think notes yet")).toBeInTheDocument();
+      await userEvent.click(agent());
+      expect(await screen.findByText("No chats yet")).toBeInTheDocument();
+    }));
 
   it("'...' beside each fan offers New and Open full screen", async () => {
     mount();
@@ -399,3 +401,38 @@ describe("legends", () => {
   });
 });
 
+
+describe("flag spark-chat on the agent fan", () => {
+  const day = (d: number) => new Date(Date.now() - d * 86400000).toISOString();
+  const rows = [
+    { id: "s1", title: "Parity chat", updated: day(0), status: "running" },
+    { id: "s2", title: "Spectral bias", updated: day(1), status: "idle" },
+    { id: "s3", title: "Tensor rank", updated: day(9), status: "idle" },
+  ];
+
+  it("on: New chat comes first, each chat says its status or day, and New chat opens an empty dock", () =>
+    withFlag("spark-chat", true, async () => {
+      mount(fakeServer({ sessions: rows }));
+      await userEvent.click(agent());
+      const group = screen.getByRole("group", { name: "Agent chats" });
+      const cards = await within(group).findAllByRole("button");
+      await waitFor(() => expect(within(group).getAllByRole("button")).toHaveLength(4));
+      expect(within(group).getAllByRole("button")[0]).toHaveAccessibleName("New chat");
+      expect(within(group).getByRole("button", { name: "Parity chat, running" })).toBeInTheDocument();
+      expect(within(group).getByRole("button", { name: "Spectral bias, yesterday" })).toBeInTheDocument();
+      expect(cards.length).toBeGreaterThan(0);
+      await userEvent.click(within(group).getByRole("button", { name: "New chat" }));
+      expect(useChatDock.getState().open).toBe(true);
+    }));
+
+  it("off: no New chat card, the pills keep the relative age", () =>
+    withFlag("spark-chat", false, async () => {
+      mount(fakeServer({ sessions: rows }));
+      await userEvent.click(agent());
+      const group = screen.getByRole("group", { name: "Agent chats" });
+      await within(group).findByRole("button", { name: /Parity chat/ });
+      expect(within(group).queryByRole("button", { name: "New chat" })).not.toBeInTheDocument();
+      expect(within(group).getByRole("button", { name: "Spectral bias, yesterday" })).toBeInTheDocument();
+      expect(within(group).queryByRole("button", { name: /running/ })).not.toBeInTheDocument();
+    }));
+});

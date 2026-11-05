@@ -194,11 +194,42 @@ def _write(root, doc):
 
 # ---------- operations ----------
 
+RUNNING_FOR = 600   # seconds: a question with no answer counts as running this long after the last save
+
+
+def _age(iso, now):
+    try:
+        t = datetime.datetime.fromisoformat(str(iso).replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if t.tzinfo is None:
+        t = t.replace(tzinfo=datetime.timezone.utc)
+    return (now - t).total_seconds()
+
+
+def status_of(doc, now=None):
+    """What the chat is doing, from its last message: `running` (a question saved in the last ten minutes with no
+    answer yet), `waiting` (the agent asked a question and waits for a choice), `error` (the last turn failed) or `idle`."""
+    messages = doc["messages"]
+    if not messages:
+        return "idle"
+    last = messages[-1]
+    if last.get("error") or last.get("failed"):
+        return "error"
+    if last.get("role") == "assistant" and last.get("ask"):
+        return "waiting"
+    if last.get("role") == "user":
+        age = _age(doc["updated"], now or datetime.datetime.now(datetime.timezone.utc))
+        if age is not None and age < RUNNING_FOR:
+            return "running"
+    return "idle"
+
+
 def summary(doc):
     return {"id": doc["id"], "title": doc["title"], "created": doc["created"], "updated": doc["updated"],
             "turns": doc["usage"]["turns"], "cost_usd": doc["usage"]["cost_usd"],
             "preview": _first_user_line(doc["messages"])[:MAX_PREVIEW],
-            "model": doc["model"], "effort": doc["effort"], "backend": doc["backend"]}
+            "model": doc["model"], "effort": doc["effort"], "backend": doc["backend"], "status": status_of(doc)}
 
 
 def list_sessions(root=None):
