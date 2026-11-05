@@ -849,6 +849,7 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
         pointer: cfg.lens ? pointer : null,
         hovered: hover,
         dt,
+        strip: typesStripRect(el),
         nodeColor: (n) => {
           const u = live.current.ui;
           const by = effectiveColorBy(u.colorBy);
@@ -989,3 +990,13 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
   );
 });
 
+
+/** The page-type strip's box in the canvas's CSS px, with air around it; null when the strip is not rendered. */
+function typesStripRect(canvas: HTMLElement): [number, number, number, number] | null {
+  const strip = canvas.ownerDocument.querySelector('[data-corners="types"]');
+  if (!strip) return null;
+  const s = strip.getBoundingClientRect();
+  const c = canvas.getBoundingClientRect();
+  if (s.width === 0 || s.height === 0) return null;
+  return [s.left - c.left - 14, s.top - c.top - 8, s.right - c.left + 14, s.bottom - c.top + 8];
+}
