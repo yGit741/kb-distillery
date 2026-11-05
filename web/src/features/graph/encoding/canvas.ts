@@ -1,5 +1,5 @@
 import { withAlpha } from "./theme";
-import { GEOMETRY as G, GLYPH_SVG, glyphOf, markOf, STATE, type NodeMark, type NodeState, type SourceGlyph } from "./spec";
+import { GEOMETRY as G, GLYPH_SVG, glyphOf, isConceptSymbol, markOf, STATE, symbolPath, type NodeMark, type NodeState, type SourceGlyph } from "./spec";
 
 /** A source glyph (`glyphOf(type)`) of a dot of radius r at (x, y), in `color` (white inside a coloured dot). */
 export function drawSourceGlyph(ctx: CanvasRenderingContext2D, type: string, x: number, y: number, r: number, color = "#fff"): void {
@@ -117,6 +117,20 @@ export function drawMark(ctx: CanvasRenderingContext2D, mark: NodeMark, x: numbe
     ctx.lineCap = "round";
     ctx.stroke();
     ctx.lineCap = "butt";
+  } else if (isConceptSymbol(mark)) {
+    ring(r);
+    const sym = symbolPath(mark, x, y, r);
+    const path = new Path2D(sym.d);
+    if (sym.fill) {
+      ctx.fillStyle = col;
+      ctx.fill(path);
+    } else {
+      ctx.strokeStyle = col;
+      ctx.lineWidth = r * G.symbolStroke;
+      ctx.lineCap = "round";
+      ctx.stroke(path);
+      ctx.lineCap = "butt";
+    }
   } else if (mark === "collection") {
     ctx.beginPath();
     ctx.arc(x, y, r * G.collectionOuter, 0, 2 * Math.PI);

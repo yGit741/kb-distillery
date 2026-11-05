@@ -92,7 +92,7 @@ describe("useChatSession with the agent-mode flag", () => {
 });
 
 describe("PastChats", () => {
-  const summary = (id: string, title: string) => ({ id, title, created: "2026-11-03T10:00:00Z", updated: "2026-11-03T10:00:00Z", turns: 2, cost_usd: 0.05, preview: "first question" });
+  const summary = (id: string, title: string) => ({ id, title, created: "2026-11-03T10:00:00Z", updated: "2026-11-03T10:00:00Z", turns: 2, cost_usd: 0.05, preview: "first question", status: "idle" as const });
 
   it("off: renders nothing and never lists", async () => {
     await withFlag("agent-mode", false, async () => {

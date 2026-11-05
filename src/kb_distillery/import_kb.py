@@ -5,7 +5,8 @@
 The bundle root is `wiki/` (see `config.layout`). The source may be that folder, a folder holding `wiki/`, or a folder whose
 single top-level entry is one of those (what zipping a folder produces). The bundle is checked with `lint.okf_check` BEFORE
 anything is written; errors are printed and nothing is created. The kb is made by `init_kb.create` (same kit default as
-`distill init`), the bundle is copied into its `wiki/`, the engine's own lint regenerates `wiki/index.md` and
+`distill init`), the bundle is copied into its `wiki/`, the engine's own lint (its findings are warnings: only OKF errors
+block; ops commits in the new kb stay refused until the pages pass it) regenerates `wiki/index.md` and
 `meta/corpus.tsv`, and one `kb(import)` commit records it. If anything after the kb exists fails, the new folder is removed.
 A git URL is shallow-cloned once into a temp dir (the clone's .git is dropped; `[import]` in kb.toml records source, ref, commit). A zip is extracted into a temp dir with the zip-slip checks of `_safe_extract` (no absolute or `..` entries, no symlinks).
 """
@@ -232,7 +233,7 @@ def validate_bundle(source: str, kb_id: str | None = None, parent: str | None = 
                     label: str | None = None) -> Report:
     """Dry run: exactly what `import_bundle` would check -> `Report` (suggested id, page count, errors that block an
     import, warnings). The OKF gate runs first; when it passes, the kb is built in a temp folder (create + copy + the
-    kit lint, no commit) and the lint errors join `errors`; the temp folder is removed. Nothing is written to `parent`.
+    kit lint, no commit) and the lint findings join `warnings`; the temp folder is removed. Nothing is written to `parent`.
     A bad source raises `BundleError`. `label` names the source in the report (an upload's file name, not its temp path)."""
     kb_id = kb_id or _guess_id(source)
     with tempfile.TemporaryDirectory(prefix="kb-import-") as stage, _open(source, stage) as (bundle, found, ref, commit):
@@ -255,17 +256,20 @@ def validate_bundle(source: str, kb_id: str | None = None, parent: str | None = 
 
 def _build(bundle: str, rep: Report, kit: str | None, parent: str, name: str | None) -> str:
     """The steps shared by the dry run and the import: create the kb in `parent`, copy the bundle into `wiki/`, record
-    `[import]`, run the kit lint -> the kb path. A lint failure appends its ERROR lines to `rep.errors` (and raises);
-    whatever fails, the new folder is removed."""
+    `[import]`, run the kit lint -> the kb path. The lint's ERROR lines join `rep.warnings` (the OKF check is the only
+    gate); whatever fails, the new folder is removed."""
     target = init_kb.create(rep.id, _display_name(rep.id, name), kit or init_kb.DEFAULT_KIT, parent)
     try:
         shutil.copytree(bundle, os.path.join(target, WIKI_DIR), dirs_exist_ok=True, symlinks=False,
                         ignore=shutil.ignore_patterns(*IGNORED))
         _record_source(target, rep)
-        lint_errors = _lint(target)
-        if lint_errors:
-            rep.errors.extend(lint_errors)
-            raise BundleError("the pages fail the kit lint; nothing was written:\n" + "\n".join("  " + e for e in lint_errors))
+        # The OKF check is the gate; the kit lint is stricter (layer, maturity, raw, description length ...) and a valid
+        # OKF bundle from elsewhere rarely meets it, so its findings are warnings: the pages import as written.
+        lint_findings = _lint(target)
+        if lint_findings:
+            rep.warnings.append(f"{len(lint_findings)} page finding(s) from the engine lint: the pages import as written and show "
+                                "on the graph, but `distill ops` commits in this kb are refused until they are fixed")
+            rep.warnings.extend(lint_findings)
     except BaseException:
         shutil.rmtree(target, ignore_errors=True)
         raise

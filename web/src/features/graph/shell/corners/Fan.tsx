@@ -1,3 +1,4 @@
+import { Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { FAN_FOLDED, FAN_STACK_EDGE, FAN_STACK_SIDE, fanTransform, PILL_W, type FanKind } from "./geometry";
 import { useReducedMotion } from "./motion";
@@ -10,6 +11,8 @@ export interface FanCard {
   meta?: string;
   /** a chat that is running now */
   live?: boolean;
+  /** the "New chat" card (flag spark-chat): a plus in place of the picture */
+  isNew?: boolean;
 }
 
 interface Props {
@@ -70,7 +73,13 @@ export function Fan({ kind, open, label, cards, empty, onPick }: Props) {
               transition: still ? "none" : `transform ${MS}ms cubic-bezier(.32,.72,0,1) ${open ? i * 20 : (shown.length - i) * 10}ms, opacity ${MS / 2}ms ease ${open ? i * 20 : 0}ms`,
             }}
           >
-            <CardThumb accent={kind === "think" ? "warn" : "primary"} />
+            {c.isNew ? (
+              <span aria-hidden className="grid h-[50px] w-[72px] flex-none place-items-center rounded-[7px] border bg-card text-muted-foreground shadow-[var(--shadow)]">
+                <Plus className="size-5" strokeWidth={1.6} />
+              </span>
+            ) : (
+              <CardThumb accent={kind === "think" ? "warn" : "primary"} />
+            )}
             {c.live && <span className="absolute top-1/2 size-[7px] -translate-y-1/2 rounded-full bg-ok" style={agent ? { left: 76 } : { right: 76 }} aria-hidden />}
             <span
               className={cn(

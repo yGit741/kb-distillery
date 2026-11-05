@@ -4,13 +4,17 @@ import { NO_AREA, OTHER_AREAS } from "../style";
 import type { GNode } from "../types";
 import type { ColorChannel, KeyRow, SizeChannel } from "./channels";
 import { ShapeIcon, SourceIcon } from "./NodeMarkSvg";
-import { GLYPH_LABEL, glyphOf, markOf, type NodeMark, type SourceGlyph } from "./spec";
+import { GLYPH_LABEL, glyphOf, isConceptSymbol, markOf, type NodeMark, type SourceGlyph } from "./spec";
 
 /** The Type row's order: concepts first (what I think with), then people, collections, sources (what I read). */
 const TYPE_ORDER: readonly { mark: NodeMark; label: string }[] = [
   { mark: "topic", label: "Topic" },
   { mark: "idea", label: "Idea" },
   { mark: "question", label: "Question" },
+  { mark: "equals", label: "Concept" },
+  { mark: "plus", label: "Concept" },
+  { mark: "triangle", label: "Concept" },
+  { mark: "diamond", label: "Concept" },
   { mark: "person", label: "Person" },
   { mark: "collection", label: "Collection" },
   { mark: "source", label: "Source" },
@@ -34,8 +38,15 @@ export function LegendTitle({ children, className }: { children: ReactNode; clas
 /** Marks present in these pages, in the Type row's order, with counts. */
 export function typeRows(nodes: readonly Pick<GNode, "type">[]): { mark: NodeMark; label: string; count: number }[] {
   const count = new Map<NodeMark, number>();
-  for (const n of nodes) count.set(markOf(n.type), (count.get(markOf(n.type)) ?? 0) + 1);
-  return TYPE_ORDER.filter((t) => count.get(t.mark)).map((t) => ({ ...t, count: count.get(t.mark)! }));
+  const sample = new Map<NodeMark, string>();
+  for (const n of nodes) {
+    const m = markOf(n.type);
+    count.set(m, (count.get(m) ?? 0) + 1);
+    if (!sample.has(m)) sample.set(m, n.type);
+  }
+  // a pool symbol belongs to one type (registerTypeMarks), so its row says that type's name
+  const name = (t: { mark: NodeMark; label: string }) => (isConceptSymbol(t.mark) ? (sample.get(t.mark) ?? t.label).replace(/-/g, " ").replace(/^./, (c) => c.toUpperCase()) : t.label);
+  return TYPE_ORDER.filter((t) => count.get(t.mark)).map((t) => ({ ...t, label: name(t), count: count.get(t.mark)! }));
 }
 
 /** Source glyphs present in these pages, with counts (a sample type per glyph, for its icon). */

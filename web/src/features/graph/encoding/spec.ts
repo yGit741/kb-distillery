@@ -5,7 +5,14 @@
  */
 
 /** One mark per type: sources and people solid (a person with initials), concepts a ring with one symbol inside, collections a ring inside a ring. */
-export type NodeMark = "source" | "person" | "question" | "idea" | "topic" | "collection";
+export type NodeMark = "source" | "person" | "question" | "idea" | "topic" | "collection" | ConceptSymbol;
+/** Ring symbols handed to concept types the table does not name (a kit's own types), in this order. */
+export type ConceptSymbol = "equals" | "plus" | "triangle" | "diamond";
+const CONCEPT_POOL: readonly NodeMark[] = ["idea", "equals", "plus", "triangle", "diamond", "topic", "question"];
+/** The engine's own page types (a scope, a distilled think-note proposal): they keep their mark, never a pool symbol. */
+const TOOL_TYPES: ReadonlySet<string> = new Set(["scope", "distilled-think"]);
+/** Marks given by `registerTypeMarks` to the types the table does not name. */
+let AUTO: Readonly<Record<string, NodeMark>> = {};
 
 const MARK: Readonly<Record<string, NodeMark>> = {
   person: "person",
@@ -18,8 +25,28 @@ const MARK: Readonly<Record<string, NodeMark>> = {
   part: "collection",
 };
 
-/** A type's mark; every type the table does not name is a source. */
-export const markOf = (type: string): NodeMark => MARK[type] ?? "source";
+/** A type's mark: the table's, else the one `registerTypeMarks` gave it, else a source. */
+export const markOf = (type: string): NodeMark => MARK[type] ?? AUTO[type] ?? "source";
+
+/**
+ * Give every concept-layer type the table does not name (a kit's or a bundle's own) a mark of its own, so two types
+ * never look alike: each takes the next symbol of the pool that no present type already uses. Every other type keeps
+ * the mark it had (a source its glyph, the engine's own types theirs), so existing kbs look as before. Stable for a
+ * given type list (it follows the list's order); called when a graph's schema loads.
+ */
+export function registerTypeMarks(types: readonly { id: string; layer: string }[]): void {
+  const used = new Set<NodeMark>(types.map((t) => MARK[t.id]).filter((m): m is NodeMark => !!m));
+  const next: Record<string, NodeMark> = {};
+  for (const t of types) {
+    if (MARK[t.id] || TOOL_TYPES.has(t.id)) continue;
+    if (t.layer === "concept") {
+      const m = CONCEPT_POOL.find((c) => !used.has(c)) ?? "idea";
+      used.add(m);
+      next[t.id] = m;
+    }
+  }
+  AUTO = next;
+}
 
 /** The legend's mark key, in reading order. */
 export const MARK_KEY: readonly { mark: NodeMark; label: string }[] = [
@@ -64,7 +91,23 @@ export const GEOMETRY = {
   collectionOuterStroke: 0.14,
   initials2: 0.95,
   initials3: 0.78,
+  /** the pool symbols (equals, plus, triangle, diamond): half-width of a bar or shape, and the bar stroke */
+  symbolHalf: 0.42,
+  symbolGap: 0.22,
+  symbolStroke: 0.16,
 } as const;
+
+/** A pool symbol inside its ring, as one SVG path in a box centred at (x, y) for radius r; `fill` says how to paint it. */
+export function symbolPath(mark: ConceptSymbol, x: number, y: number, r: number): { d: string; fill: boolean } {
+  const h = r * GEOMETRY.symbolHalf;
+  const g = r * GEOMETRY.symbolGap;
+  if (mark === "equals") return { d: `M${x - h} ${y - g}h${2 * h}M${x - h} ${y + g}h${2 * h}`, fill: false };
+  if (mark === "plus") return { d: `M${x - h} ${y}h${2 * h}M${x} ${y - h}v${2 * h}`, fill: false };
+  // equilateral, centred on its centroid so it does not sit high in the ring
+  if (mark === "triangle") return { d: `M${x} ${y - h}L${x + h * 0.87} ${y + h / 2}L${x - h * 0.87} ${y + h / 2}Z`, fill: true };
+  return { d: `M${x} ${y - h}L${x + h} ${y}L${x} ${y + h}L${x - h} ${y}Z`, fill: true };
+}
+export const isConceptSymbol = (m: NodeMark): m is ConceptSymbol => m === "equals" || m === "plus" || m === "triangle" || m === "diamond";
 
 /** Mail threads: still typed `conversation` in the vault until the schema renames it to `mail`. */
 export const MAIL_TYPES: ReadonlySet<string> = new Set(["mail", "email", "conversation"]);
@@ -131,7 +174,7 @@ export const GLYPH_SVG: Readonly<Record<SourceGlyph, { d: string; fill?: boolean
 };
 
 /** A mark's radius in a 16 px icon box, so every mark (stroke included) fills about the same square. */
-export const ICON_R: Readonly<Record<NodeMark, number>> = { source: 6.6, person: 6.8, question: 5.8, idea: 5.8, topic: 5.8, collection: 5.2 };
+export const ICON_R: Readonly<Record<NodeMark, number>> = { source: 6.6, person: 6.8, question: 5.8, idea: 5.8, topic: 5.8, collection: 5.2, equals: 5.8, plus: 5.8, triangle: 5.8, diamond: 5.8 };
 
 /** On-screen radius from which a source shows its type glyph (below it, a plain dot); a hovered source always does. */
 export const SOURCE_GLYPH_PX = 8;
