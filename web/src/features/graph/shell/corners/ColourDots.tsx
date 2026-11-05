@@ -1,4 +1,5 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useFlag } from "@/flags/useFlag";
 import { cn } from "@/lib/utils";
 import type { KeyRow } from "../../legendModel";
 import { useReducedMotion } from "./motion";
@@ -18,6 +19,8 @@ interface Props {
 }
 
 const RING = "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
+/** legend-counts: the slide-out lists this many themes, the rest sit behind "+N more" */
+export const LEGEND_TOP = 5;
 const FULL_MS = 315; // the mockup's --k (.35) x .9s
 
 /**
@@ -36,8 +39,16 @@ export function ColourDots({ rows, title, hidden, toggleable, onToggle, areaHeig
   useEffect(() => {
     if (!open && box.current?.contains(document.activeElement) && document.activeElement !== opener.current) opener.current?.focus();
   }, [open]);
+  const counts = useFlag("legend-counts");
+  const [all, setAll] = useState(false);
+  useEffect(() => {
+    if (!open) setAll(false);
+  }, [open]);
   if (!rows.length) return null;
-  const h = legendHeight(rows.length, open);
+  // an ordered scale reads in order, so only a categorical one is cut to its top themes
+  const cut = counts && toggleable && rows.length > LEGEND_TOP + 1;
+  const listed = cut && !all ? LEGEND_TOP : rows.length;
+  const h = legendHeight(open ? listed + (cut ? 1 : 0) : rows.length, open);
   const top = legendTop({ areaHeight, height: h, thinkOpen, thinkCards });
   return (
     <div
@@ -75,19 +86,20 @@ export function ColourDots({ rows, title, hidden, toggleable, onToggle, areaHeig
       </div>
       {rows.map((r, i) => {
         const off = hidden.has(r.label);
+        const away = open && i >= listed;
         return (
           <button
             key={r.label}
             type="button"
-            tabIndex={open ? 0 : -1}
-            aria-hidden={!open}
+            tabIndex={open && !away ? 0 : -1}
+            aria-hidden={!open || away}
             aria-pressed={toggleable ? !off : undefined}
             aria-disabled={!toggleable || undefined}
             title={toggleable ? `${off ? "Show" : "Hide"} ${r.label} (${r.count})` : `${r.label} (${r.count})`}
             data-row={r.label}
             onClick={() => toggleable && onToggle(r.label)}
-            className={cn("flex items-center justify-end rounded-md transition-[height] motion-reduce:transition-none", open ? "pointer-events-auto hover:bg-accent" : "pointer-events-none", RING)}
-            style={{ height: open ? LEGEND_OPEN_ROW : LEGEND_REST_ROW, transitionDuration: `${MS}ms` }}
+            className={cn("flex items-center justify-end rounded-md transition-[height] motion-reduce:transition-none", open && !away ? "pointer-events-auto hover:bg-accent" : "pointer-events-none", away && "overflow-hidden", RING)}
+            style={{ height: away ? 0 : open ? LEGEND_OPEN_ROW : LEGEND_REST_ROW, transitionDuration: `${MS}ms` }}
           >
             <span
               className={cn("max-w-0 overflow-hidden whitespace-nowrap text-[12.5px] opacity-0 transition-[max-width,opacity,margin]", open && "mr-2.5 max-w-[170px] opacity-100", off && "text-muted-foreground line-through")}
@@ -99,7 +111,7 @@ export function ColourDots({ rows, title, hidden, toggleable, onToggle, areaHeig
               className={cn("max-w-0 overflow-hidden whitespace-nowrap text-[11.5px] text-muted-foreground opacity-0 transition-[max-width,opacity,margin]", open && "mr-2.5 max-w-[30px] opacity-100")}
               style={{ transitionDuration: `${MS}ms`, transitionDelay: `${i * 14}ms` }}
             >
-              {r.count}
+              <span className={counts ? "tabular-nums" : undefined}>{r.count}</span>
             </small>
             <i
               aria-hidden
@@ -109,6 +121,20 @@ export function ColourDots({ rows, title, hidden, toggleable, onToggle, areaHeig
           </button>
         );
       })}
+      {cut && (
+        <button
+          type="button"
+          tabIndex={open ? 0 : -1}
+          aria-hidden={!open}
+          aria-expanded={all}
+          data-more
+          onClick={() => setAll((v) => !v)}
+          className={cn("flex items-center justify-end overflow-hidden whitespace-nowrap rounded-md text-[12px] text-muted-foreground hover:bg-accent hover:text-foreground motion-reduce:transition-none", open ? "pointer-events-auto mr-[22px] min-w-[24px] px-2" : "pointer-events-none", RING)}
+          style={{ height: open ? LEGEND_OPEN_ROW : 0, transition: `height ${MS}ms` }}
+        >
+          {all ? "Show fewer" : `+${rows.length - LEGEND_TOP} more`}
+        </button>
+      )}
     </div>
   );
 }

@@ -74,6 +74,9 @@ export function fitZoom(nodes: readonly { x?: number; y?: number }[], width: num
   return Math.min(Math.max(1, width - 2 * pad) / w, Math.max(1, height - 2 * pad) / h);
 }
 
+/** Height of the band at the canvas bottom that the page-type strip covers (24px + 3.5px edge gap + 8px air). */
+const TYPES_STRIP_H = 36;
+
 const toScreen = (m: DOMMatrix, pr: number, x: number, y: number) => [(m.a * x + m.c * y + m.e) / pr, (m.b * x + m.d * y + m.f) / pr] as const;
 
 /** Faint hulls of each theme's core, under the nodes (graph coordinates: called with force-graph's transform). */
@@ -149,6 +152,10 @@ export function drawLabelLayer(i: LabelLayerInput): LabelLayerResult {
   const regionsOn = cfg.regions === "with" || (cfg.regions === "auto" && zr < cfg.regionZoom);
   const suppress = regionsOn && cfg.regions === "auto" && cfg.regionsSuppress;
   const obstacles: Box[] = [];
+  // the page-type strip sits at the bottom centre (24px tall, 3.5px from the edge, up to 560px wide when it is
+  // folded), so no label is ever planned under it
+  const stripW = Math.min(560, Math.max(0, i.width - 160));
+  if (stripW > 0) obstacles.push([(i.width - stripW) / 2, i.height - TYPES_STRIP_H, (i.width + stripW) / 2, i.height]);
   const regionDraw: { text: string; x: number; y: number; px: number }[] = [];
   if (regionsOn) {
     const px = 22;
