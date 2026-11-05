@@ -211,23 +211,11 @@ function Loaded({
   const byId = useMemo(() => new Map(model.nodes.map((n) => [n.id, n] as const)), [model]);
   const neighbors = useMemo(() => buildNeighborMap(model.links), [model]);
   const relations = useMemo(() => (model.relations ? relationIndex(model.relations) : undefined), [model]);
-  // a story that draws "every type but collections" (Map) is resolved against this kb's pages, so a kit with its own
-  // type names (an OKF bundle's Source, Concept) is not filtered away by the research names the story starts from.
-  // Resolved while rendering (no empty first frame, and re-applying the story cannot drop it back to the seed list);
-  // the layout effect then writes it to the store so a chip toggled next starts from what is on screen.
-  const storyResolved = useMemo(() => {
-    const st = storyById(ui.story);
-    const cur = ui.shownTypes;
-    if (!st?.everyTypeExcept || !cur || cur.size !== st.types.length || st.types.some((t) => !cur.has(t))) return null;
-    return storyTypes(st, model.nodes);
-  }, [ui.story, ui.shownTypes, model]);
-  useLayoutEffect(() => {
-    if (storyResolved) useGraphUi.setState({ shownTypes: storyResolved });
-  }, [storyResolved]);
-  const shownTypes = useMemo(
-    () => storyResolved ?? (ui.shownTypes === undefined ? new Set(schema.defaultVisible) : ui.shownTypes),
-    [storyResolved, ui.shownTypes, schema],
-  );
+  const shownTypes = useMemo(() => {
+    if (ui.shownTypes !== undefined) return ui.shownTypes;
+    // a view that names layers (Map) draws those layers of this kb's own schema, whatever its kit
+    return storyTypes(storyById(ui.story), schema) ?? new Set(schema.defaultVisible);
+  }, [ui.shownTypes, ui.story, schema]);
   const filtered = useMemo(
     () =>
       computeVisible(model.nodes, {
@@ -301,7 +289,7 @@ function Loaded({
         // the story's own types (otherwise a person's 900 blog posts would flood the thesis spine)
         const seed = st.seed.filter((s) => byId.has(s));
         const view = makeView("picked", st.headline?.label ?? st.name, seed, byId, neighbors);
-        const types = new Set<string>(st.types);
+        const types = new Set<string>(st.types ?? []);
         useGraphUi.setState({
           view: view ? { ...view, shown: new Set([...view.shown].filter((id) => view.hits.has(id) || types.has(byId.get(id)?.type ?? ""))) } : null,
         });

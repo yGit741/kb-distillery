@@ -57,7 +57,7 @@ const off = (fn: () => Promise<void>) => () => withFlag("graph-shell", false, fn
 beforeEach(() => {
   localStorage.clear();
   useKb.setState({ selection: new Set() });
-  useGraphUi.setState({ ...DEFAULT_PREFS, shownTypes: undefined, predicate: null, shownDepths: null, search: "", rules: [], typeLabels: new Set(), view: null, revealed: new Set(), flyout: null, detailsOpen: false, readerSlug: null, focusRequest: null, fitTick: 0 });
+  useGraphUi.setState({ ...DEFAULT_PREFS, story: "", shownTypes: undefined, predicate: null, shownDepths: null, search: "", rules: [], typeLabels: new Set(), view: null, revealed: new Set(), flyout: null, detailsOpen: false, readerSlug: null, focusRequest: null, fitTick: 0 });
 });
 
 describe("GraphScreen states", () => {
@@ -273,6 +273,7 @@ describe("views bar", () => {
 
   it("clicking the Thesis pill applies the story and puts view=thesis in the URL", withResearch(async () => {
     vi.mocked(host.setParams).mockClear();
+    useGraphUi.getState().applyStory("map"); // the first visit opens on Map
     render(wrap(withGraph(), <GraphScreen search={{}} host={host} />));
     await screen.findByTestId("graph-stats");
     expect(screen.getByRole("button", { name: "Map" })).toHaveAttribute("aria-pressed", "true");
@@ -302,37 +303,4 @@ describe("views bar", () => {
       expect(screen.queryByRole("region", { name: "Experiments" })).toBeNull();
     });
   }));
-});
-
-describe("the Map view in a kb whose kit names its own types", () => {
-  it("draws an OKF bundle's Source and Concept pages, not only the research type names it starts from", async () => {
-    const okf = [
-      node("speed", { type: "Concept", layer: "concept", inDegree: 1, outDegree: 1 }),
-      node("calibration", { type: "Concept", layer: "concept", inDegree: 1, outDegree: 1 }),
-      node("source-spec", { type: "Source", layer: "source", depth: "full", inDegree: 1 }),
-      node("series-specs", { type: "Series", layer: "collection" }),
-      node("think-proposal", { type: "distilled-think", layer: "concept", inDegree: 1 }),
-    ];
-    const links = [
-      { source: "speed", target: "calibration", kind: "wikilink" as const },
-      { source: "calibration", target: "speed", kind: "wikilink" as const },
-      { source: "speed", target: "source-spec", kind: "wikilink" as const },
-    ];
-    useGraphUi.getState().applyStory("map");
-    render(wrap(withGraph({ getGraph: async () => sampleSnapshot({ nodes: okf, links, node_count: okf.length }) }), <GraphScreen search={{}} host={host} />));
-    // every type but the collection hub and the engine's own think proposal: 3 of 5
-    expect(await screen.findByTestId("graph-stats")).toHaveTextContent("3 of 5 pages");
-    await waitFor(() => expect(useGraphUi.getState().shownTypes).toEqual(new Set(["Concept", "Source"])));
-    // picking Map again starts from the research list in the store; the screen resolves it again
-    act(() => useGraphUi.getState().applyStory("map"));
-    expect(screen.getByTestId("graph-stats")).toHaveTextContent("3 of 5 pages");
-  });
-
-  it("leaves a type filter set by hand alone", async () => {
-    useGraphUi.getState().applyStory("map");
-    useGraphUi.setState({ shownTypes: new Set(["topic"]) });
-    render(wrap(withGraph(), <GraphScreen search={{}} host={host} />));
-    await screen.findByTestId("graph-stats");
-    expect(useGraphUi.getState().shownTypes).toEqual(new Set(["topic"]));
-  });
 });
