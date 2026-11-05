@@ -26,6 +26,8 @@ export interface SessionRow {
   live?: boolean;
   /** what the chat is doing, when the server says (flag spark-chat shows it on the pill) */
   status?: ChatStatusWord;
+  /** pinned chats lead the full chat's list, when the server says */
+  pinned?: boolean;
 }
 
 export type ChatStatusWord = "running" | "waiting" | "error" | "idle";
@@ -80,6 +82,7 @@ export async function listSessions(f: Fetcher = defaultFetch): Promise<SessionRo
       title: String(s.title || "Untitled chat"),
       updated: typeof s.updated === "string" ? s.updated : typeof s.created === "string" ? s.created : undefined,
       ...(STATUS_WORDS.includes(s.status as string) ? { status: s.status as ChatStatusWord } : {}),
+      ...(s.pinned === true ? { pinned: true } : {}),
     }));
   } catch (e) {
     if (e instanceof ApiFailure && (e.status === 404 || e.status === 405)) return null;

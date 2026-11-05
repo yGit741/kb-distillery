@@ -73,7 +73,9 @@ beforeEach(() => {
 
 describe("flag spark-chat: the left chat panel", () => {
   it("on: New chat opens the panel on the left, the right dock stays shut", async () => {
-    await withFlag("graph-shell", true, () =>
+    // the plain panel on purpose: chat-full (on locally) adds the size control, attach and @page
+    await withFlag("chat-full", false, () =>
+    withFlag("graph-shell", true, () =>
       withFlag("spark-chat", true, async () => {
         screenWith();
         await screen.findByTestId("graph-shell");
@@ -97,11 +99,14 @@ describe("flag spark-chat: the left chat panel", () => {
         expect(screen.queryByTestId("spark-panel")).not.toBeInTheDocument();
         expect(screen.getByTestId("graph-shell").parentElement).toHaveStyle({ left: "0px" });
       }),
+    ),
     );
   });
 
   it("on: picking a stored chat opens the panel with its title", async () => {
-    await withFlag("graph-shell", true, () =>
+    // the plain panel on purpose: chat-full (on locally) adds the size control, attach and @page
+    await withFlag("chat-full", false, () =>
+    withFlag("graph-shell", true, () =>
       withFlag("spark-chat", true, async () => {
         sessionStorage.setItem("kbchat.chat", JSON.stringify({ id: "kb-chat:1", session: null, messages: [{ role: "user", content: "Is parity hard?", sources: [] }, { role: "assistant", content: "Yes." }] }));
         screenWith();
@@ -111,11 +116,14 @@ describe("flag spark-chat: the left chat panel", () => {
         await waitFor(() => expect(screen.getByTestId("spark-title")).toHaveTextContent("Is parity hard?"));
         expect(screen.getByRole("button", { name: "Attach" })).toHaveAttribute("title", "Attach, coming soon");
       }),
+    ),
     );
   });
 
   it("on: Ask and the palette open the panel, never the dock beside it; the question prefills the box", async () => {
-    await withFlag("graph-shell", true, () =>
+    // the plain panel on purpose: chat-full (on locally) adds the size control, attach and @page
+    await withFlag("chat-full", false, () =>
+    withFlag("graph-shell", true, () =>
       withFlag("spark-chat", true, async () => {
         screenWith();
         await screen.findByTestId("graph-shell");
@@ -127,6 +135,7 @@ describe("flag spark-chat: the left chat panel", () => {
         expect(useChatDock.getState().open).toBe(false);
         expect(screen.getAllByRole("complementary", { name: "Chat" })).toHaveLength(1);
       }),
+    ),
     );
   });
 

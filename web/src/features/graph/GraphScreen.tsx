@@ -1,5 +1,6 @@
 import { keepPreviousData, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { ChevronRight } from "lucide-react";
 import { createPortal } from "react-dom";
 import { useDataSource } from "@/api";
 import { useHeaderFolded } from "@/app/headerFold";
@@ -11,6 +12,7 @@ import { IS_SHARE } from "@/share/env";
 import { useKb } from "@/lib/store";
 import { useApiQuery } from "@/lib/useApiQuery";
 import type { GraphSearch } from "@/routes/search";
+import { swatchColor } from "./nodeColor";
 import { Finder, FINDER_ID } from "./Finder";
 import { HostContext, type ToolHost } from "./hostContext";
 import { useLayer } from "./layerStore";
@@ -49,7 +51,14 @@ import { LAYER_TYPES, type Layer } from "@/api/model";
 import "./tours";
 import { GraphShell } from "./shell/GraphShell";
 import { HeaderFold } from "./shell/HeaderFold";
-import { SPARK_PANEL_W, useShellTop } from "./shell/layout";
+import { ChatExplorer } from "./shell/ChatExplorer";
+import { ChatRail } from "./shell/ChatRail";
+import { useChatFull } from "./shell/chatFullStore";
+import { defaultFetch } from "./shell/corners/api";
+import { loadSession, newChat } from "./shell/corners/sessions";
+import { FULL_PANE_W, SPARK_PANEL_W, chatPanelWidth, useShellTop } from "./shell/layout";
+import { useFullChat } from "./shell/useFullChat";
+import { chatInPanel, useSparkPanel } from "./shell/sparkPanelStore";
 import { SparkPanelHost, useSparkOpen } from "./shell/SparkPanelHost";
 
 /** How the screen reaches the rest of the app (the router lives in index.tsx; tests pass plain functions). */
@@ -74,6 +83,28 @@ export function GraphScreen({ search, host }: { search: GraphSearch; host: Graph
   const picked = kbViewOn ? parseKbs(search.kbs) : null;
   const noneShown = picked !== null && !picked.length;
   const kbs = useMemo(() => picked ?? [], [picked?.join(",")]); // eslint-disable-line react-hooks/exhaustive-deps
+  // `?chat=` (flag chat-full): /chat and /chat/<id> land here; the full chat opens on that chat, then the param goes
+  const chatFull = useFlag("chat-full");
+  const sparkChat = useFlag("spark-chat");
+  const chatFlag = chatFull && sparkChat;
+  const chatParam = search.chat;
+  const askParam = search.ask;
+  useEffect(() => {
+    if (!chatParam || !chatFlag || !chatInPanel()) return;
+    let live = true;
+    void (async () => {
+      if (chatParam === "new") newChat();
+      else if (chatParam !== "open") await loadSession(defaultFetch, chatParam).catch(() => {});
+      if (!live) return;
+      useChatFull.getState().setFull(true);
+      if (askParam) useChatDock.getState().ask(askParam);
+      else if (chatParam !== "new") useSparkPanel.getState().show();
+      host.clearParams(["chat", "ask"]);
+    })();
+    return () => {
+      live = false;
+    };
+  }, [chatParam, askParam, chatFlag]); // eslint-disable-line react-hooks/exhaustive-deps
   // the data layer is the server's own knowledge base's: it is off while other knowledge bases are shown
   const rawOn = useLayer((s) => s.rawOn) && ds.kind !== "embedded" && !kbs.length;
   const q = useApiQuery(["graph", rawOn, kbs.join(",")], (d) => d.getGraph({ ...(rawOn ? { raw: true } : {}), ...(kbs.length ? { kbs } : {}) }), {
@@ -219,6 +250,7 @@ function Loaded({
   const headerFold = useFlag("header-fold");
   const shellTop = useShellTop();
   const sparkOpen = useSparkOpen();
+  const { full: fullChat, folded: foldedChat } = useFullChat();
   const ds = useDataSource();
   const ui = useGraphUi();
   const selection = useKb((s) => s.selection);
@@ -436,6 +468,28 @@ function Loaded({
     [model, byId, visible, selection, focus, openReader],
   );
 
+  // flag chat-full: the composer completes @pages from this graph, and a node clicked while the chat is full lands in it
+  const chatOn = useFlag("chat-full");
+  useEffect(() => {
+    if (!chatOn) return;
+    useChatFull.getState().setPages(model.nodes.map((n) => ({ id: n.id, title: n.title || n.id })));
+    return () => useChatFull.getState().setPages([]);
+  }, [chatOn, model]);
+  const lastPicked = useRef<string | null>(null);
+  useEffect(() => {
+    const id = selection.size === 1 ? [...selection][0]! : null;
+    if (id && id !== lastPicked.current && fullChat) useChatFull.getState().mentionPage(id, byId.get(id)?.title || id);
+    lastPicked.current = id;
+  }, [selection, fullChat, byId]);
+  const railColors = useMemo(() => {
+    const seen = new Set<string>();
+    for (const n of model.nodes) {
+      seen.add(swatchColor(n, ui.colorBy));
+      if (seen.size >= 5) break;
+    }
+    return [...seen];
+  }, [model, ui.colorBy]);
+
   const menuNode = menu ? byId.get(menu.id) : undefined;
   const reader = ui.readerSlug ? byId.get(ui.readerSlug) : undefined;
   const showDetails = ui.detailsOpen && selected.length > 0;
@@ -463,6 +517,8 @@ function Loaded({
   return (
     <HostContext.Provider value={host}>
       <div className="absolute inset-0" data-testid="graph-area">
+      {/* the full chat leaves the canvas the top of the right pane */}
+      <div className="absolute" style={fullChat ? { left: chatPanelWidth(true, false), right: 0, top: 0, bottom: "50%" } : { inset: 0 }}>
       <GraphCanvas
         ref={canvas}
         model={model}
@@ -481,12 +537,19 @@ function Loaded({
         onOpenReader={openReader}
         onOpenPile={(format) => useLayer.getState().openDrawer({ kind: "format", format })}
       />
+      </div>
       {/* the search box lives in the app header when there is one (the embed has none: it floats over the canvas) */}
       {shell ? (
         // the search line and the corner controls share one frame: it narrows while the side reader is open, so the reader never covers them
+        // (the full chat folds the whole frame away with its right pane: the graph is not on show)
         <div
-          className="pointer-events-none absolute inset-y-0 transition-[left,right] duration-200 motion-reduce:transition-none"
-          style={{ left: sparkOpen ? SPARK_PANEL_W : 0, right: reader ? "min(34rem, 100%)" : 0 }}
+          className="pointer-events-none absolute top-0 transition-[left,right] duration-200 motion-reduce:transition-none"
+          hidden={foldedChat}
+          style={{
+            left: fullChat ? chatPanelWidth(true, false) : sparkOpen ? SPARK_PANEL_W : 0,
+            right: reader && !fullChat ? "min(34rem, 100%)" : 0,
+            bottom: fullChat ? "50%" : 0,
+          }}
         >
           {headerFold && <HeaderFold />}
           <GraphShell
@@ -614,7 +677,7 @@ function Loaded({
           clearOfEdge={shell}
         />
       )}
-      {reader && <SideReader slug={reader.slug ?? reader.id} kb={host.foreignKb?.(reader.id)} title={reader.title || reader.id} pageHref={host.pageHref(reader.id)} onClose={() => ui.set({ readerSlug: null })} />}
+      {reader && !fullChat && <SideReader slug={reader.slug ?? reader.id} kb={host.foreignKb?.(reader.id)} title={reader.title || reader.id} pageHref={host.pageHref(reader.id)} onClose={() => ui.set({ readerSlug: null })} />}
       {menu && menuNode && (
         <NodeMenu
           node={menuNode}
@@ -633,6 +696,31 @@ function Loaded({
         />
       )}
       {shell && <SparkPanelHost scope={search.scope} />}
+      {fullChat && !foldedChat && (
+        <>
+          <div className="absolute bottom-0 right-0 z-30 h-1/2" style={{ width: FULL_PANE_W }}>
+            <ChatExplorer
+              byId={byId}
+              colorBy={ui.colorBy}
+              slug={ui.readerSlug}
+              onPick={openReader}
+              pageHref={(slug) => host.pageHref(slug)}
+              onClose={() => ui.set({ readerSlug: null })}
+            />
+          </div>
+          <button
+            type="button"
+            aria-label="Fold the graph pane"
+            title="Fold the graph pane"
+            onClick={() => useChatFull.getState().setFolded(true)}
+            className="pointer-events-auto absolute top-1/4 z-[41] grid h-12 w-4 -translate-y-1/2 place-items-center rounded-r-md border border-l-0 bg-card text-muted-foreground shadow-[var(--shadow)] hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            style={{ left: chatPanelWidth(true, false) }}
+          >
+            <ChevronRight aria-hidden className="size-3.5" strokeWidth={1.8} />
+          </button>
+        </>
+      )}
+      {foldedChat && <ChatRail colors={railColors} />}
       {visibleTools.map((t) => (
         <div key={t.id}>{t.overlay?.(toolContext)}</div>
       ))}

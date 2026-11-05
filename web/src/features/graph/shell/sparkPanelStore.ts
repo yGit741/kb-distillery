@@ -21,7 +21,8 @@ export const useSparkPanel = create<SparkPanelState>((set) => ({
 }));
 
 /**
- * Whether a chat opens in the left panel rather than the right dock: flag `spark-chat` with the calm shell (the
+ * Whether a chat opens in the left panel rather than the right dock: flag `spark-chat` (`chat-full` grows this panel
+ * to the full chat, so it needs it) with the calm shell (the
  * panel lives in the shell frame) and never in a share build (no chat code there). Every opener asks this one rule.
  */
 export function chatInPanel(): boolean {
