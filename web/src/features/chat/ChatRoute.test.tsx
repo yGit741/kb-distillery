@@ -54,6 +54,13 @@ describe("flag chat-full: the chat route is the graph with the full chat", () =>
       ),
     ));
 
+  it("off: /chat/<id> is as unknown as any other address", () =>
+    withFlag("chat-full", false, async () => {
+      const router = await open("/chat/kb-chat%3Aabc");
+      expect(router.state.location.pathname).toContain("/chat/kb-chat");
+      expect(document.body.textContent).toContain("Not Found");
+    }));
+
   it("off: /chat stays the chat screen", () =>
     withFlag("chat-full", false, async () => {
       const router = await open("/chat");

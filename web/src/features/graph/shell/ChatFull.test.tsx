@@ -11,10 +11,10 @@ import { GraphScreen, type GraphHost } from "../GraphScreen";
 import { DEFAULT_PREFS, useGraphUi } from "../store";
 import { useChatDock } from "../tools/chatDockStore";
 import { newChat } from "./corners/sessions";
-import { useChatFull } from "./chatFullStore";
+import { BUSY_NOTICE, useChatFull } from "./chatFullStore";
 import { useSparkPanel } from "./sparkPanelStore";
 import { groupChats } from "./ChatList";
-import { linkMentions, matchPages, openMention, withAttachments } from "./mentions";
+import { fenceFor, linkMentions, matchPages, openMention, withAttachments } from "./mentions";
 
 // jsdom has no canvas: stand in for force-graph with a chainable no-op instance.
 vi.mock("force-graph", () => {
@@ -59,7 +59,8 @@ const ds = (): DataSource =>
 const sessionsFetch = (rows: unknown[]) =>
   vi.spyOn(globalThis, "fetch").mockImplementation(async (url) => {
     const u = String(url);
-    if (u.startsWith("/api/sessions")) return new Response(JSON.stringify({ sessions: rows }), { status: 200 });
+    if (u === "/api/sessions") return new Response(JSON.stringify({ sessions: rows }), { status: 200 });
+    if (u.startsWith("/api/sessions/")) return new Response(JSON.stringify({ error: "no such session" }), { status: 404 });
     return new Response("{}", { status: 404 });
   });
 
@@ -77,7 +78,7 @@ beforeEach(() => {
   sessionStorage.clear();
   useChatDock.setState({ open: false, wide: false, question: "" });
   useSparkPanel.setState({ open: false, key: 0 });
-  useChatFull.setState({ full: false, listOpen: true, folded: false, cited: [], pages: [], mention: null });
+  useChatFull.setState({ full: false, listOpen: true, folded: false, cited: [], pages: [], mention: null, busy: false, notice: "", insert: null });
   useKb.setState({ selection: new Set() });
   useGraphUi.setState({ ...DEFAULT_PREFS, story: "", shownTypes: undefined, predicate: null, shownDepths: null, search: "", rules: [], typeLabels: new Set(), view: null, revealed: new Set(), flyout: null, detailsOpen: false, readerSlug: null, focusRequest: null, fitTick: 0 });
   (host.clearParams as ReturnType<typeof vi.fn>).mockClear();
@@ -219,6 +220,67 @@ describe("flag chat-full: one chat surface in three sizes", () => {
         }),
       ),
     );
+  });
+});
+
+describe("flag chat-full: the open panel is never remounted for nothing", () => {
+  it("on: ?chat=open with the panel already open only grows it (same key, so a streaming answer and the draft survive)", async () => {
+    await on(async () => {
+      sessionsFetch([]);
+      useSparkPanel.setState({ open: true, key: 7 });
+      screenWith({ chat: "open" });
+      const panel = await screen.findByTestId("spark-panel");
+      await waitFor(() => expect(panel).toHaveAttribute("data-size", "full"));
+      await waitFor(() => expect(host.clearParams).toHaveBeenCalled());
+      expect(useSparkPanel.getState().key).toBe(7);
+    });
+  });
+
+  it("on: ?chat=<unknown id> starts a new chat with a quiet notice instead of showing the last chat", async () => {
+    await on(async () => {
+      sessionsFetch([]);
+      sessionStorage.setItem("kbchat.chat", JSON.stringify({ id: "kb-chat:old", session: null, messages: [{ role: "user", content: "Old question", sources: [] }, { role: "assistant", content: "Old." }] }));
+      screenWith({ chat: "zzz-unknown" });
+      expect(await screen.findByTestId("chat-notice")).toHaveTextContent("That chat was not found");
+      expect(screen.getByTestId("spark-title")).toHaveTextContent("New chat");
+      expect(screen.queryByText("Old question")).not.toBeInTheDocument();
+    });
+  });
+
+  it("on: the list leaves the open chat alone, and while an answer streams it refuses to switch, saying why", async () => {
+    await on(async () => {
+      sessionsFetch([{ id: "kb-chat:cur", title: "Current one", updated: new Date().toISOString() }, { id: "other", title: "Other one", updated: new Date().toISOString() }]);
+      sessionStorage.setItem("kbchat.chat", JSON.stringify({ id: "kb-chat:cur", session: null, messages: [{ role: "user", content: "Q", sources: [] }, { role: "assistant", content: "A" }] }));
+      await opened();
+      await userEvent.click(screen.getByRole("button", { name: "Full screen" }));
+      const list = await screen.findByTestId("chat-list");
+      const key = useSparkPanel.getState().key;
+      await userEvent.click(await within(list).findByRole("button", { name: /Current one/ }));
+      expect(useSparkPanel.getState().key).toBe(key);
+      act(() => useChatFull.setState({ busy: true }));
+      await userEvent.click(within(list).getByRole("button", { name: /Other one/ }));
+      expect(useSparkPanel.getState().key).toBe(key);
+      expect(screen.getByTestId("chat-notice")).toHaveTextContent(BUSY_NOTICE);
+      await userEvent.click(within(list).getByRole("button", { name: /New chat/ }));
+      expect(useSparkPanel.getState().key).toBe(key);
+    });
+  });
+
+  it("on: attachments together are capped, and a file with backticks gets a longer fence", async () => {
+    await on(async () => {
+      sessionsFetch([]);
+      await opened();
+      const input = (await screen.findByTestId("attach-input")) as HTMLInputElement;
+      const big = (name: string) => new File(["x".repeat(150_000)], name, { type: "text/plain" });
+      await userEvent.upload(input, [big("a.txt"), big("b.txt"), big("c.txt"), big("d.txt")], { applyAccept: false });
+      expect(await screen.findByText("a.txt", {}, { timeout: 5000 })).toBeInTheDocument();
+      expect(screen.getByText("c.txt")).toBeInTheDocument();
+      expect(screen.queryByText("d.txt")).not.toBeInTheDocument();
+      expect(screen.getByRole("alert")).toHaveTextContent("d.txt would take the attachments over 500 KB");
+    });
+    expect(fenceFor("no ticks")).toBe("```");
+    expect(fenceFor("a ```js\ncode\n``` b")).toBe("````");
+    expect(withAttachments("q", [{ name: "a.md", text: "```x```" }])).toContain("````\n```x```\n````");
   });
 });
 

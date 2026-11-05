@@ -261,6 +261,31 @@ function Body({ status, prompts, scope, full, rich, listOpen, onClose, server }:
     return () => useChatFull.getState().setCited([]);
   }, [rich, cited]);
 
+  // an answer on the way: the list and the deep link refuse to remount the panel under it
+  useEffect(() => {
+    useChatFull.getState().setBusy(busy);
+    return () => useChatFull.getState().setBusy(false);
+  }, [busy]);
+  // text handed in without a remount (a question from /chat?q= while the panel is open)
+  const seenInsert = useRef(useChatFull.getState().insert?.n ?? 0);
+  useEffect(
+    () =>
+      useChatFull.subscribe((s) => {
+        if (!s.insert || s.insert.n === seenInsert.current) return;
+        seenInsert.current = s.insert.n;
+        const q = s.insert.text;
+        setText((t) => (t.trim() ? `${t.trimEnd()} ${q}` : q));
+        box.current?.focus();
+      }),
+    [],
+  );
+  const notice = useChatFull((s) => s.notice);
+  useEffect(() => {
+    if (!notice) return;
+    const t = window.setTimeout(() => useChatFull.getState().setNotice(""), 8000);
+    return () => window.clearTimeout(t);
+  }, [notice]);
+
   const planning = !!chat.todo?.some((t) => t.status !== "completed") && busy;
   const tools = full && rich ? { open: toolsOpen, toggle: () => setToolsOpen((o) => !o), planning } : undefined;
 
@@ -273,6 +298,11 @@ function Body({ status, prompts, scope, full, rich, listOpen, onClose, server }:
       )}
       <Column>
         <Header title={title} full={full} rich={rich} listOpen={listOpen} onClose={onClose} tools={tools} />
+        {notice && (
+          <p role="status" data-testid="chat-notice" className="border-b px-5 py-2 text-xs text-muted-foreground">
+            {notice}
+          </p>
+        )}
         {tools?.open && <ChatTools prompts={parsePrompts(prompts)} todo={chat.todo} busy={busy} sessionId={sessionIdOf(chat.id)} />}
         <div ref={scroller} className="flex min-h-0 flex-1 flex-col overflow-y-auto px-5 py-4 [&_[data-cited-now]]:rounded-sm [&_[data-cited-now]]:bg-primary/10 [&_[data-cited-now]]:transition-colors [&_li[data-testid=tool-line]]:w-fit [&_li[data-testid=tool-line]]:max-w-full [&_li[data-testid=tool-line]]:rounded-md [&_li[data-testid=tool-line]]:bg-secondary/60 [&_li[data-testid=tool-line]]:px-2 [&_li[data-testid=tool-line]]:py-0.5">
           {chat.messages.length === 0 ? (

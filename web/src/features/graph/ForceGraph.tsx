@@ -56,7 +56,7 @@ export interface ForceGraphHandle {
   centerOn(x: number, y: number, k?: number, ms?: number): void;
   fit(include?: (n: SimNode) => boolean, ms?: number): void;
   /** Frame the given pages inside the canvas minus `left` px on its left side (a panel lies over that strip). False when they have no place yet. */
-  fitIn(include: (n: SimNode) => boolean, left: number, ms?: number): boolean;
+  fitIn(include: (n: SimNode) => boolean, left: number, ms?: number, pad?: number): boolean;
   screenOf(n: { x?: number; y?: number }): { x: number; y: number } | null;
   reheat(): void;
   refresh(): void;
@@ -374,7 +374,7 @@ export const ForceGraph = forwardRef<ForceGraphHandle, ForceGraphProps & { class
           const pad = Math.round(Math.min(90, Math.max(24, (host.current?.clientWidth ?? 800) * 0.08)));
           g()?.zoomToFit(ms, pad, include ? (n) => include(n as SimNode) : undefined);
         },
-        fitIn: (include, left, ms = 600) => {
+        fitIn: (include, left, ms = 600, pad = 72) => {
           const inst = g();
           const el = host.current;
           if (!inst || !el?.clientWidth || !el.clientHeight) return false;
@@ -383,7 +383,6 @@ export const ForceGraph = forwardRef<ForceGraphHandle, ForceGraphProps & { class
           const xs = ns.map((n) => n.x as number);
           const ys = ns.map((n) => n.y as number);
           const [x0, x1, y0, y1] = [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)];
-          const pad = 72;
           const w = Math.max(40, el.clientWidth - left - 2 * pad);
           const h = Math.max(40, el.clientHeight - 2 * pad);
           // a lone page is centred at the usual focus zoom, never blown up

@@ -7,6 +7,7 @@ import { readJson, writeJson } from "@/features/chat/storage";
  * columns (chat list, chat, graph with a mini explorer). Whether the list shows and whether the right pane is
  * folded to a rail are remembered per browser; the size itself is not (a reload opens the panel).
  */
+export const BUSY_NOTICE = "An answer is still on its way. Stop it first, then switch chats.";
 const LIST_KEY = "kbchat.full.list";
 const FOLD_KEY = "kbchat.full.folded";
 
@@ -23,6 +24,15 @@ interface ChatFullState {
   /** Slugs the last answer cited, newest answer only (the mini explorer lists them). */
   cited: readonly string[];
   setCited: (cited: readonly string[]) => void;
+  /** An answer is streaming in the chat panel: nothing may remount it (a remount aborts the stream). */
+  busy: boolean;
+  setBusy: (busy: boolean) => void;
+  /** A quiet line under the chat header ("that chat was not found"); the panel clears it after a while. */
+  notice: string;
+  setNotice: (notice: string) => void;
+  /** Text handed to the composer without remounting it (a question from /chat?q=): `n` makes the same text insert twice. */
+  insert: { text: string; n: number } | null;
+  insertText: (text: string) => void;
   /** A page the graph handed to the composer (a click on a node): `n` makes the same page insert twice. */
   mention: { id: string; title: string; n: number } | null;
   mentionPage: (id: string, title: string) => void;
@@ -46,6 +56,12 @@ export const useChatFull = create<ChatFullState>((set, get) => ({
   setPages: (pages) => set({ pages }),
   cited: [],
   setCited: (cited) => set((s) => (s.cited.length === cited.length && s.cited.every((c, i) => c === cited[i]) ? s : { cited })),
+  busy: false,
+  setBusy: (busy) => set({ busy }),
+  notice: "",
+  setNotice: (notice) => set({ notice }),
+  insert: null,
+  insertText: (text) => set((s) => ({ insert: { text, n: (s.insert?.n ?? 0) + 1 } })),
   mention: null,
   mentionPage: (id, title) => set((s) => ({ mention: { id, title, n: (s.mention?.n ?? 0) + 1 } })),
 }));

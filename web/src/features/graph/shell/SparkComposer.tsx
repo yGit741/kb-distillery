@@ -6,6 +6,8 @@ import { useChatFull } from "./chatFullStore";
 import { linkMentions, matchPages, openMention, withAttachments } from "./mentions";
 
 const MAX_FILE = 200_000;
+/** All files on one message together: more than this would swamp the model's context. */
+export const MAX_ATTACHED = 500_000;
 
 const readText = (f: File): Promise<string> =>
   typeof f.text === "function"
@@ -88,6 +90,7 @@ export function SparkComposer({ text, setText, busy, box, onSend, onStop, rich }
   const attach = async (list: FileList | null) => {
     if (!list) return;
     const added: { name: string; text: string }[] = [];
+    let total = files.reduce((n, f) => n + f.text.length, 0);
     for (const f of Array.from(list)) {
       if (f.size > MAX_FILE) {
         setProblem(`${f.name} is larger than 200 KB; attach a text file under that.`);
@@ -96,6 +99,11 @@ export function SparkComposer({ text, setText, busy, box, onSend, onStop, rich }
       try {
         const t = await readText(f);
         if (t.includes("\u0000")) throw new Error("binary");
+        if (total + t.length > MAX_ATTACHED) {
+          setProblem(`${f.name} would take the attachments over 500 KB together; remove a file first.`);
+          continue;
+        }
+        total += t.length;
         added.push({ name: f.name, text: t });
         setProblem("");
       } catch {

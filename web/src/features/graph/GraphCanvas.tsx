@@ -19,6 +19,7 @@ import { useFlag } from "@/flags/useFlag";
 import { useCites } from "./shell/citeStore";
 import { useSparkOpen } from "./shell/SparkPanelHost";
 import { SPARK_PANEL_W } from "./shell/layout";
+import { useFullChat } from "./shell/useFullChat";
 import { drawPile, formatOfPile, isPile, isPileId, pileRadius } from "./rawLayer";
 import { DRAG_PX } from "./selection";
 import { useGraphUi } from "./store";
@@ -155,6 +156,8 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
   const citeSlugs = useCites((s) => s.slugs);
   const citeFitTick = useCites((s) => s.fitTick);
   const sparkOpen = useSparkOpen();
+  // the full chat gives the canvas its own box (the right pane): frame inside it, with room for the labels
+  const { full: fullChat } = useFullChat();
   const sparkChat = useFlag("spark-chat");
   const cited = useMemo<ReadonlySet<string>>(() => new Set(sparkChat ? citeSlugs.filter((id) => visible.has(id)) : []), [sparkChat, citeSlugs, visible]);
   const fitSeen = useRef(citeFitTick); // the tick a remounted canvas starts at is not a request
@@ -442,7 +445,7 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
       const ids = live.current.cited;
       if (!ids.size) return;
       pendingFit.current = false;
-      if (fg.current?.fitIn((n) => ids.has(n.id), sparkOpen ? SPARK_PANEL_W : 0)) {
+      if (fg.current?.fitIn((n) => ids.has(n.id), sparkOpen && !fullChat ? SPARK_PANEL_W : 0, 600, fullChat ? 110 : 72)) {
         window.setTimeout(() => {
           k.current = fg.current?.zoom() ?? 1;
           recompute();

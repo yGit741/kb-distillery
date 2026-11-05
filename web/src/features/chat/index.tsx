@@ -24,7 +24,10 @@ export default function Screen() {
   // the full chat is the spark panel grown, so it needs spark-chat and the calm shell too
   const [chatFull, sparkChat, shell] = [useFlag("chat-full"), useFlag("spark-chat"), useFlag("graph-shell")];
   const full = chatFull && sparkChat && shell;
+  const { id } = useParams({ strict: false }) as { id?: string };
   if (full) return <ToFullChat />;
+  // /chat/<id> exists only for the full chat; without it the address is as unknown as any other
+  if (id) return <p>Not Found</p>;
   return (
     <ErrorBoundary label="Chat">
       <ChatScreen />

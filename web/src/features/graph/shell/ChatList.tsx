@@ -4,7 +4,15 @@ import { useMemo } from "react";
 import { cn } from "@/lib/utils";
 import { chatWhen, defaultFetch, listSessions, type SessionRow } from "./corners/api";
 import { browserSessions, loadSession, newChat } from "./corners/sessions";
+import { BUSY_NOTICE, useChatFull } from "./chatFullStore";
 import { useSparkPanel } from "./sparkPanelStore";
+
+/** Whether a chat may be swapped now: an answer streaming in the panel would be aborted by the remount. */
+function mayLeave(): boolean {
+  if (!useChatFull.getState().busy) return true;
+  useChatFull.getState().setNotice(BUSY_NOTICE);
+  return false;
+}
 
 const plain = (id: string) => id.replace(/^kb-chat:/, "");
 const REFRESH_MS = 8000;
@@ -38,7 +46,7 @@ export function ChatList({ activeId, server }: { activeId: string; server: boole
   const rows = useMemo<SessionRow[]>(() => q.data ?? browserSessions(), [q.data]);
   const groups = useMemo(() => groupChats(rows), [rows]);
   const open = (row: SessionRow) => {
-    if (plain(row.id) === plain(activeId)) return;
+    if (plain(row.id) === plain(activeId) || !mayLeave()) return;
     void (async () => {
       try {
         if (q.data) await loadSession(defaultFetch, row.id);
@@ -52,7 +60,7 @@ export function ChatList({ activeId, server }: { activeId: string; server: boole
     <nav aria-label="Chats" data-testid="chat-list" className="flex h-full w-full min-w-0 flex-col gap-4 overflow-y-auto bg-background px-2 py-3">
       <button
         type="button"
-        onClick={newChat}
+        onClick={() => mayLeave() && newChat()}
         className="flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-sm hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
         <Plus aria-hidden className="size-4 shrink-0" strokeWidth={1.6} />

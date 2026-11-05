@@ -53,9 +53,10 @@ import { GraphShell } from "./shell/GraphShell";
 import { HeaderFold } from "./shell/HeaderFold";
 import { ChatExplorer } from "./shell/ChatExplorer";
 import { ChatRail } from "./shell/ChatRail";
-import { useChatFull } from "./shell/chatFullStore";
+import { BUSY_NOTICE, useChatFull } from "./shell/chatFullStore";
 import { defaultFetch } from "./shell/corners/api";
 import { loadSession, newChat } from "./shell/corners/sessions";
+import { readJson } from "@/features/chat/storage";
 import { FULL_PANE_W, SPARK_PANEL_W, chatPanelWidth, useShellTop } from "./shell/layout";
 import { useFullChat } from "./shell/useFullChat";
 import { chatInPanel, useSparkPanel } from "./shell/sparkPanelStore";
@@ -93,12 +94,39 @@ export function GraphScreen({ search, host }: { search: GraphSearch; host: Graph
     if (!chatParam || !chatFlag || !chatInPanel()) return;
     let live = true;
     void (async () => {
-      if (chatParam === "new") newChat();
-      else if (chatParam !== "open") await loadSession(defaultFetch, chatParam).catch(() => {});
+      // an open panel is never remounted for nothing: a remount aborts a streaming answer and drops the draft
+      const panel = useSparkPanel.getState();
+      const store = useChatFull.getState();
+      const plain = (id: string) => id.replace(/^kb-chat:/, "");
+      const here = readJson<{ id?: string } | null>("session", "kbchat.chat", null)?.id;
+      const stay = (note: string) => store.setNotice(note);
+      let remount = !panel.open;
+      if (chatParam === "new") {
+        if (panel.open && store.busy) stay(BUSY_NOTICE);
+        else {
+          newChat();
+          remount = false;
+        }
+      } else if (chatParam !== "open" && !(panel.open && here && plain(here) === plain(chatParam))) {
+        if (panel.open && store.busy) stay(BUSY_NOTICE);
+        else {
+          try {
+            await loadSession(defaultFetch, chatParam);
+            remount = true;
+          } catch {
+            // an id the server does not know must not show whatever chat the browser held last
+            newChat();
+            remount = false;
+            store.setNotice("That chat was not found, so this is a new one.");
+          }
+        }
+      }
       if (!live) return;
-      useChatFull.getState().setFull(true);
-      if (askParam) useChatDock.getState().ask(askParam);
-      else if (chatParam !== "new") useSparkPanel.getState().show();
+      store.setFull(true);
+      if (askParam) {
+        if (panel.open) store.insertText(askParam);
+        else useChatDock.getState().ask(askParam);
+      } else if (remount) panel.show();
       host.clearParams(["chat", "ask"]);
     })();
     return () => {
@@ -255,7 +283,6 @@ function Loaded({
   const ui = useGraphUi();
   const selection = useKb((s) => s.selection);
   const canvas = useRef<CanvasHandle>(null);
-  const canvasBox = useRef<HTMLDivElement>(null);
   const [menu, setMenu] = useState<{ id: string; x: number; y: number } | null>(null);
   /** the right-click menu on empty space: spread the nodes around the point, or fit the view */
   const [bgMenu, setBgMenu] = useState<{ x: number; y: number } | null>(null);
@@ -463,12 +490,7 @@ function Loaded({
       },
       clearSelection: () => useKb.getState().clearSelection(),
       focus,
-      // the canvas box is offset inside the graph area in the full chat: overlays are placed from the area's corner
-      screenOf: (id) => {
-        const p = canvas.current?.screenOf(id);
-        const box = canvasBox.current;
-        return p ? { x: p.x + (box?.offsetLeft ?? 0), y: p.y + (box?.offsetTop ?? 0) } : null;
-      },
+      screenOf: (id) => canvas.current?.screenOf(id) ?? null,
       openReader,
     }),
     [model, byId, visible, selection, focus, openReader],
@@ -524,7 +546,7 @@ function Loaded({
     <HostContext.Provider value={host}>
       <div className="absolute inset-0" data-testid="graph-area">
       {/* the full chat leaves the canvas the top of the right pane */}
-      <div ref={canvasBox} className="absolute" style={fullChat ? { left: chatPanelWidth(true, false), right: 0, top: 0, bottom: "50%" } : { inset: 0 }}>
+      <div className="absolute" style={fullChat ? { left: chatPanelWidth(true, false), right: 0, top: 0, bottom: "50%" } : { inset: 0 }}>
       <GraphCanvas
         ref={canvas}
         model={model}
