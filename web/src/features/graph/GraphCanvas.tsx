@@ -15,6 +15,7 @@ import { FORCED } from "./lab/labelPlan";
 import { areaNames } from "./lab/regions";
 import { drawKbOutlines, kbAnchors, kbGroups, kbLabelSpot } from "./lab/kbRegions";
 import { bubbleAim, drawBubble, magnetCursor, pickMagnetic, rgbOf, stepBubble, type Bubble, type ScreenNode } from "./magnet";
+import { useFlag } from "@/flags/useFlag";
 import { useCites } from "./shell/citeStore";
 import { useSparkOpen } from "./shell/SparkPanelHost";
 import { SPARK_PANEL_W } from "./shell/layout";
@@ -154,7 +155,9 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
   const citeSlugs = useCites((s) => s.slugs);
   const citeFitTick = useCites((s) => s.fitTick);
   const sparkOpen = useSparkOpen();
-  const cited = useMemo<ReadonlySet<string>>(() => new Set(citeSlugs.filter((id) => visible.has(id))), [citeSlugs, visible]);
+  const sparkChat = useFlag("spark-chat");
+  const cited = useMemo<ReadonlySet<string>>(() => new Set(sparkChat ? citeSlugs.filter((id) => visible.has(id)) : []), [sparkChat, citeSlugs, visible]);
+  const fitSeen = useRef(citeFitTick); // the tick a remounted canvas starts at is not a request
   const live = useRef({ ui, theme, selection, byId, neighbors, visible, cited, onOpenReader, onOpenMenu, onBackgroundContext, onOpenPile });
   live.current = { ui, theme, selection, byId, neighbors, visible, cited, onOpenReader, onOpenMenu, onBackgroundContext, onOpenPile };
 
@@ -238,9 +241,17 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
     // a legend spotlight (a type chip under the pointer) is a focus on every drawn page of the type: same fade
     const spot = u.spotlight;
     const spotIds = spot ? new Set([...vis].filter((id) => spot.has(ids.get(id)?.type ?? ""))) : null;
-    // cited pages stand out only while nothing else asks for the focus (a selection or hover of the user's wins)
-    const citeFocus = cite.size && !sel.size && !hover && !spotIds ? { core: cite, lit: cite, dim: 0.3 } : null;
-    const next = spotIds ? { core: spotIds, lit: spotIds, dim: 0.15 } : citeFocus ? citeFocus : hops ? { core: new Set(sel), lit: new Set(hops.keys()) } : computeFocus(sel, hover, nb, u.highlight);
+    const base = hops ? { core: new Set(sel), lit: new Set(hops.keys()) } : computeFocus(sel, hover, nb, u.highlight);
+    const next: Focus | null = spotIds
+      ? { core: spotIds, lit: spotIds, dim: 0.15 }
+      : cite.size
+        ? {
+            // the cited pages stay lit and the rest stays dim across a click or hover: the user's own focus joins them
+            core: new Set([...cite, ...(base?.core ?? []), ...(hover ? [hover] : [])]),
+            lit: new Set([...cite, ...(base?.lit ?? []), ...(hover ? [hover] : [])]),
+            dim: base?.dim ?? 0.3,
+          }
+        : base;
     startFade(rs.current.focus, next, u.calmHover);
     rs.current.focus = next;
     // forced labels: hovered page, the selection, their best neighbours (capped), every page of an "Aa" type
@@ -423,7 +434,8 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
 
   // a new answer (or a chat opened) frames the cited pages in the area right of the chat panel; nothing else re-frames
   useEffect(() => {
-    if (citeFitTick === 0) return;
+    if (citeFitTick === fitSeen.current) return;
+    fitSeen.current = citeFitTick;
     let tries = 0;
     let timer = 0;
     const attempt = () => {

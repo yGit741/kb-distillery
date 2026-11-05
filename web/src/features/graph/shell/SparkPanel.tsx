@@ -100,13 +100,17 @@ function useCitedPages(scroller: RefObject<HTMLDivElement | null>, messages: Cha
   }, [slugs]);
   useEffect(() => () => useCites.getState().clear(), []);
 
-  // frame the cited pages when an answer finishes and when the chat opens with one
-  const framed = useRef("");
+  // frame the cited pages when an answer finishes (busy to idle) and once when a chat opens with one: never on send or scroll
+  const wasBusy = useRef(busy);
+  const opened = useRef(false);
   useEffect(() => {
-    const key = slugs.length ? `${messages.length}:${idx}` : "";
-    if (key && key !== framed.current) useCites.getState().refit();
-    framed.current = key;
-  }, [slugs, messages.length, idx]);
+    const finished = wasBusy.current && !busy;
+    wasBusy.current = busy;
+    const first = !opened.current;
+    opened.current = true;
+    if (!slugs.length || busy) return;
+    if ((finished && idx === lastAssistant) || (first && !finished)) useCites.getState().refit();
+  }, [busy, slugs, idx, lastAssistant]);
 
   // the answer in the middle of the panel is the one on screen
   useEffect(() => {
@@ -135,10 +139,13 @@ function useCitedPages(scroller: RefObject<HTMLDivElement | null>, messages: Cha
 
   // a click on a lit page: scroll to the sentence that cites it, and mark it for a moment
   const req = useCites((s) => s.scrollReq);
+  const idxRef = useRef(idx);
+  idxRef.current = idx;
   useEffect(() => {
     const el = scroller.current;
     if (!req || !el) return;
-    const li = el.querySelectorAll<HTMLElement>("li[data-role]")[idx];
+    useCites.setState({ scrollReq: null }); // consumed: a later answer, scroll or reopening never replays it
+    const li = el.querySelectorAll<HTMLElement>("li[data-role]")[idxRef.current];
     const link = [...(li?.querySelectorAll<HTMLAnchorElement>("a") ?? [])].find((a) => slugOfHref(a.getAttribute("href")) === req.slug);
     const line = link?.closest<HTMLElement>("p, li") ?? link;
     if (!line) return;
@@ -147,7 +154,7 @@ function useCitedPages(scroller: RefObject<HTMLDivElement | null>, messages: Cha
     line.setAttribute("data-cited-now", "");
     const t = window.setTimeout(() => line.removeAttribute("data-cited-now"), 1800);
     return () => window.clearTimeout(t);
-  }, [req, idx, scroller]);
+  }, [req, scroller]);
 
   return slugs;
 }

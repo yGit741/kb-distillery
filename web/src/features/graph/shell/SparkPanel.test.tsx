@@ -55,9 +55,9 @@ const ds = (): DataSource =>
     getChatPrompts: async () => ({ prompts: [{ id: "query", title: "Query", description: "", system: "Answer from the wiki." }] }) as never,
   });
 
-const screenWith = () =>
+const screenWith = (source: DataSource = ds()) =>
   render(
-    <DataSourceProvider source={ds()}>
+    <DataSourceProvider source={source}>
       <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
         <GraphScreen search={{}} host={host} />
       </QueryClientProvider>
@@ -210,6 +210,80 @@ describe("cites: the pages an answer links light up on the graph beside the pane
         expect(screen.queryByTestId("spark-cites")).not.toBeInTheDocument();
         expect(useCites.getState().slugs).toEqual([]);
         expect(useCites.getState().fitTick).toBe(0);
+      }),
+    );
+  });
+
+  it("flag on: sending shows no re-zoom until the new answer is finished; scrolling between answers never re-zooms", async () => {
+    await withFlag("graph-shell", true, () =>
+      withFlag("spark-chat", true, async () => {
+        storeAnswer();
+        let push: (t: string) => void = () => {};
+        let end: () => void = () => {};
+        const body = new ReadableStream<Uint8Array>({
+          start(c) {
+            const enc = new TextEncoder();
+            push = (t) => c.enqueue(enc.encode(`event: delta\ndata: ${JSON.stringify(t)}\n\n`));
+            end = () => c.close();
+          },
+        });
+        screenWith({ ...ds(), chatStream: async () => new Response(body) } as DataSource);
+        await screen.findByTestId("graph-shell");
+        act(() => showDock());
+        await screen.findByTestId("spark-panel");
+        await waitFor(() => expect(useCites.getState().fitTick).toBe(1));
+        // send: the old answer's pages stay lit, nothing re-zooms while the new answer streams
+        const box = await screen.findByPlaceholderText("Type / for commands");
+        await userEvent.type(box, "And the gap?{Enter}");
+        await act(async () => push("It is [Idea six](idea-006.md)."));
+        await new Promise((r) => setTimeout(r, 250));
+        expect(useCites.getState().fitTick).toBe(1);
+        // the answer finishes: one fit, on the new answer's pages
+        await act(async () => end());
+        await waitFor(() => expect(useCites.getState().fitTick).toBe(2));
+        expect(useCites.getState().slugs).toEqual(["idea-006"]);
+        // scrolling the first answer into the middle changes what is lit, not the zoom
+        const items = [...screen.getByTestId("spark-panel").querySelectorAll<HTMLElement>("li[data-role]")];
+        const scroller = items[0]!.parentElement!.parentElement!;
+        scroller.getBoundingClientRect = () => ({ top: 0, height: 200, bottom: 200 }) as DOMRect;
+        items.forEach((li, i) => (li.getBoundingClientRect = () => ({ top: i === 1 ? 50 : 400, bottom: i === 1 ? 150 : 500 }) as DOMRect));
+        act(() => void scroller.dispatchEvent(new Event("scroll")));
+        await waitFor(() => expect(useCites.getState().slugs).toEqual(["idea-005", "idea-006"]));
+        expect(useCites.getState().fitTick).toBe(2);
+      }),
+    );
+  });
+
+  it("flag on: a scroll request is consumed, so reopening the panel does not replay it", async () => {
+    await withFlag("graph-shell", true, () =>
+      withFlag("spark-chat", true, async () => {
+        storeAnswer();
+        screenWith();
+        await screen.findByTestId("graph-shell");
+        act(() => showDock());
+        await screen.findByTestId("spark-panel");
+        await waitFor(() => expect(useCites.getState().slugs.length).toBe(2));
+        act(() => useCites.getState().scrollTo("idea-005"));
+        await waitFor(() => expect(useCites.getState().scrollReq).toBeNull());
+        act(() => useCites.getState().scrollTo("idea-005"));
+        await userEvent.click(screen.getByRole("button", { name: "Close chat" }));
+        expect(useCites.getState().scrollReq).toBeNull();
+        act(() => showDock());
+        await screen.findByTestId("spark-panel");
+        expect(useCites.getState().scrollReq).toBeNull();
+      }),
+    );
+  });
+
+  it("flag off: slugs in the store light nothing on the graph", async () => {
+    await withFlag("graph-shell", true, () =>
+      withFlag("spark-chat", false, async () => {
+        screenWith();
+        await screen.findByTestId("graph-shell");
+        act(() => useCites.setState({ slugs: ["idea-005"], fitTick: 1 }));
+        // the canvas ignores the store: no cited focus (it would dim the rest) and no fit
+        await new Promise((r) => setTimeout(r, 100));
+        expect(useGraphUi.getState().fitTick).toBe(0);
       }),
     );
   });

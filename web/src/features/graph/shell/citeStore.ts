@@ -28,7 +28,8 @@ export const useCites = create<CiteState>((set, get) => ({
   },
   refit: () => set((s) => ({ fitTick: s.fitTick + 1 })),
   scrollTo: (slug) => set((s) => ({ scrollReq: { slug, tick: (s.scrollReq?.tick ?? 0) + 1 } })),
+  // the fit counter only ever counts up: a canvas compares it with the value it saw when it mounted
   clear: () => {
-    if (get().slugs.length) set({ slugs: [] });
+    if (get().slugs.length || get().scrollReq) set({ slugs: [], scrollReq: null });
   },
 }));
