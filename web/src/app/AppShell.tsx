@@ -14,8 +14,10 @@ import { useEmbed } from "./embed";
 import { useHeaderFolded } from "./headerFold";
 import { HEADER_SLOT_ID } from "./headerSlot";
 import { useUi } from "./ui-store";
+import { useDataSource } from "@/api";
 import { flag } from "@/flags";
 import { useFlag } from "@/flags/useFlag";
+import { IS_SHARE } from "@/share/env";
 
 // Quick capture ships with the think feature; the lazy import keeps it out of builds where the flag is off.
 const QuickCapture = lazy(() => import("@/features/think/QuickCapture"));
@@ -30,7 +32,9 @@ export function AppShell() {
   const agentMode = useFlag("agent-mode");
   // flag views-panel: on the graph the dark mode switch lives in the pinned panel (Settings); other screens keep it here
   const onGraph = useRouterState({ select: (s) => s.location.pathname }) === "/graph";
-  const themeInPanel = useFlag("views-panel") && useFlag("graph-shell") && onGraph;
+  // the panel only renders its switch with a server behind it (as Corners does): share and static builds keep the header one
+  const panelHasSwitch = useDataSource().kind === "http" && !IS_SHARE;
+  const themeInPanel = useFlag("views-panel") && useFlag("graph-shell") && onGraph && panelHasSwitch;
   // flag header-fold: on the graph the bar folds away above the screen (the graph's chevron brings it back)
   const folded = useHeaderFolded();
   return (

@@ -40,6 +40,8 @@ export interface LabelLayerInput {
   pointer: { x: number; y: number } | null;
   hovered: string | null;
   dt: number;
+  /** where the page-type strip really is on the canvas (CSS px), or null when it is not shown: ordinary labels keep clear of it */
+  strip?: Box | null;
   /** a node's colour on the canvas: a leader line takes it, so it reads as part of its node */
   nodeColor?: (n: SimNode) => string;
 }
@@ -73,9 +75,6 @@ export function fitZoom(nodes: readonly { x?: number; y?: number }[], width: num
   const pad = Math.round(Math.min(90, Math.max(24, width * 0.08)));
   return Math.min(Math.max(1, width - 2 * pad) / w, Math.max(1, height - 2 * pad) / h);
 }
-
-/** Height of the band at the canvas bottom that the page-type strip covers (24px + 3.5px edge gap + 8px air). */
-const TYPES_STRIP_H = 36;
 
 const toScreen = (m: DOMMatrix, pr: number, x: number, y: number) => [(m.a * x + m.c * y + m.e) / pr, (m.b * x + m.d * y + m.f) / pr] as const;
 
@@ -152,10 +151,6 @@ export function drawLabelLayer(i: LabelLayerInput): LabelLayerResult {
   const regionsOn = cfg.regions === "with" || (cfg.regions === "auto" && zr < cfg.regionZoom);
   const suppress = regionsOn && cfg.regions === "auto" && cfg.regionsSuppress;
   const obstacles: Box[] = [];
-  // the page-type strip sits at the bottom centre (24px tall, 3.5px from the edge, up to 560px wide when it is
-  // folded), so no label is ever planned under it
-  const stripW = Math.min(560, Math.max(0, i.width - 160));
-  if (stripW > 0) obstacles.push([(i.width - stripW) / 2, i.height - TYPES_STRIP_H, (i.width + stripW) / 2, i.height]);
   const regionDraw: { text: string; x: number; y: number; px: number }[] = [];
   if (regionsOn) {
     const px = 22;
@@ -190,6 +185,7 @@ export function drawLabelLayer(i: LabelLayerInput): LabelLayerResult {
     hops: i.hops,
     prev,
     obstacles,
+    softObstacles: i.strip ? [i.strip] : [],
     suppress,
     measure: (text, px, weight) => {
       ctx.font = `${weight} ${px}px ${font}`;
