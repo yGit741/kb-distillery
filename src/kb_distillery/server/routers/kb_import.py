@@ -1,8 +1,8 @@
 """POST /api/kb/import/validate (dry run) and POST /api/kb/import: a new knowledge base from an OKF bundle.
 
 The body is a multipart upload (`file` = a .zip, optional `id`, `kit` fields) or JSON `{git_url, id?, kit?}`. An
-upload is held in a temp folder that is always removed. A source that cannot be read is 422; content problems are
-`errors` in the preview (validate) or 422 (import).
+upload is held in a temp folder that is always removed. A source that cannot be read is 422; OKF problems are
+`errors` in the preview (validate) or 422 (import); the engine lint's findings are `warnings` and do not block.
 """
 import os
 import re
