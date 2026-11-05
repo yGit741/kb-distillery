@@ -149,6 +149,16 @@ default = false
 envs = { local = true, private = false, public = false }
 
 [[flag]]
+name = "chat-full"
+description = "Chat: one chat surface in three sizes (no separate chat screen): the graph's left panel grows to a full chat with a chat list, the graph and a mini explorer on the right (foldable to a rail); /app/chat opens it"
+owner = "maintainer"
+created = 2026-11-06
+expires = 2027-02-01
+kind = "runtime"
+default = false
+envs = { local = true, private = false, public = false }
+
+[[flag]]
 name = "header-fold"
 description = "Graph: the app bar is folded away above the graph by default; a chevron above the search line opens it and a double click on the hairline under the open bar folds it. Remembered per browser."
 owner = "maintainer"

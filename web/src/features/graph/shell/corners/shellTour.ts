@@ -1,9 +1,12 @@
 import { useEffect } from "react";
+import { flag } from "@/flags";
 import { useFlag } from "@/flags/useFlag";
 import { registerTour, runTour, seenTour, unregisterTour } from "@/features/tour/tours";
 import type { TourStep } from "@/features/tour/tours";
 import { IS_SHARE } from "@/share/env";
 import { SHELL_LIST_ID } from "../SearchBar";
+import { useChatFull } from "../chatFullStore";
+import { useSparkPanel } from "../sparkPanelStore";
 
 /** The tour's name: `?tour=graph-shell`, `kbTour.start("graph-shell")` and the Tours menu use it; `kb.tour.seen.graph-shell` remembers it. */
 export const SHELL_TOUR = "graph-shell";
@@ -107,7 +110,8 @@ export function registerShellTour(): void {
 const embedded = () => new URLSearchParams(window.location.search).get("embed") === "1" || window.top !== window;
 const named = () => {
   const p = new URLSearchParams(window.location.search);
-  return p.has("tour") || p.has("show");
+  // `chat` (flag chat-full): the address is on its way to the full chat, which the tour would cover
+  return p.has("tour") || p.has("show") || p.has("chat");
 };
 
 /**
@@ -125,6 +129,8 @@ export function useShellTour(controls: string): void {
     if (shellTourAuto.enabled && !seenTour(SHELL_TOUR) && !embedded() && !named()) {
       timer = setTimeout(() => {
         if (document.querySelector(".gt-dock")) return;
+        // flag chat-full: its steps point at the graph's controls, which the full chat covers: offer it later, never over the chat
+        if (flag("chat-full") && useSparkPanel.getState().open && useChatFull.getState().full) return;
         registerShellTour();
         runTour(SHELL_TOUR);
       }, shellTourAuto.delayMs);

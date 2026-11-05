@@ -8,9 +8,10 @@ import { NodeMarkSvg } from "./encoding";
 
 /**
  * The page next to the graph, read without leaving it. Uses the shared <Markdown> over /api/pages/{slug}
- * (no second renderer, no iframe), so it works whether or not the Pages screen has an embed mode.
+ * (no second renderer, no iframe), so it works whether or not the Pages screen has an embed mode. `inline` (flag
+ * `chat-full`) fills its parent instead of floating: the mini explorer under the graph.
  */
-export function SideReader({ slug, kb, title, pageHref, onClose }: { slug: string; kb?: string; title: string; pageHref: string; onClose: () => void }) {
+export function SideReader({ slug, kb, title, pageHref, onClose, inline }: { slug: string; kb?: string; title: string; pageHref: string; onClose: () => void; inline?: boolean }) {
   // `kb` is the node's knowledge base; the server's own answers as usual, another one read-only
   const q = useApiQuery(["page", slug, kb ?? ""], (ds) => (kb ? ds.getPage(slug, { kb }) : ds.getPage(slug)));
   const linkSearch = useMemo(() => (kb ? { kb } : undefined), [kb]);
@@ -18,7 +19,11 @@ export function SideReader({ slug, kb, title, pageHref, onClose }: { slug: strin
     <aside
       aria-label="Page reader"
       data-tour="page-reader"
-      className="pointer-events-auto absolute inset-y-0 right-0 z-30 flex w-[min(34rem,100%)] flex-col border-l bg-card text-card-foreground shadow-[var(--shadow)]"
+      className={
+        inline
+          ? "pointer-events-auto flex size-full min-w-0 flex-col bg-card text-card-foreground"
+          : "pointer-events-auto absolute inset-y-0 right-0 z-30 flex w-[min(34rem,100%)] flex-col border-l bg-card text-card-foreground shadow-[var(--shadow)]"
+      }
     >
       <header className="flex items-center gap-2 border-b px-3 py-2">
         {/* the page's mark; its slot is reserved, so the title never shifts when the page loads */}

@@ -26,7 +26,7 @@ const ALL_ROUTE_DEFS: readonly RouteDef[] = [
   { id: "graph", path: "/graph", label: "Graph", blurb: "Explore, read and ask about the whole vault.", nav: true },
   { id: "system", path: "/system", label: "System", blurb: "Status, open work, timeline, pipeline, history and health.", nav: true },
   { id: "pages", path: "/pages", label: "Pages", blurb: "Read, search and trace notes (the Explore tab).", extraPaths: ["/pages/$slug"] },
-  { id: "chat", path: "/chat", label: "Chat", blurb: "Read-only research agent over the wiki.", nav: true },
+  { id: "chat", path: "/chat", label: "Chat", blurb: "Read-only research agent over the wiki.", extraPaths: ["/chat/$id"], nav: true },
   { id: "relations", path: "/relations", label: "Relations", blurb: "Review the LLM relation proposals by confidence.", movedTo: { id: "graph", search: { tool: "relations" } } },
   { id: "scopes", path: "/scopes", label: "Scopes", blurb: "Named subsets of the vault for focused work.", movedTo: { id: "graph", search: { tool: "scopes" } } },
   { id: "pipeline", path: "/pipeline", label: "Pipeline", blurb: "Ingest and digestion status of every raw file.", movedTo: { id: "system", search: { tab: "pipeline" } } },

@@ -26,9 +26,10 @@ const STATUS = {
   completed: { Icon: Check, label: "done" },
 } as const;
 
-export function PlanPanel({ items, busy, placement }: { items: TodoItem[]; busy: boolean; placement: "rail" | "inline" }) {
+export function PlanPanel({ items, busy, placement }: { items: TodoItem[]; busy: boolean; placement: "rail" | "inline" | "header" }) {
   const wide = useWide();
-  if (wide !== (placement === "rail")) return null;
+  // "header" (the full chat's column header, flag `chat-full`) shows at any width
+  if (placement !== "header" && wide !== (placement === "rail")) return null;
   // nothing to show: no plan yet, or every step is done and the turn is over
   if (!items.length || (!busy && items.every((t) => t.status === "completed"))) return null;
   const done = items.filter((t) => t.status === "completed").length;
