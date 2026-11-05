@@ -139,6 +139,16 @@ default = false
 envs = { local = true, private = false, public = false }
 
 [[flag]]
+name = "spark-chat"
+description = "Graph: the spark corner as the chat surface: a New chat pill, status and dates on the fan, the left chat panel and cited pages on the graph"
+owner = "maintainer"
+created = 2026-11-05
+expires = 2027-02-01
+kind = "runtime"
+default = false
+envs = { local = true, private = false, public = false }
+
+[[flag]]
 name = "header-fold"
 description = "Graph: the app bar is folded away above the graph by default; a chevron above the search line opens it and a double click on the hairline under the open bar folds it. Remembered per browser."
 owner = "maintainer"
