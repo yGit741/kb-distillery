@@ -24,6 +24,8 @@ interface Props {
   onRecentOpen: (open: boolean) => void;
   /** a step whose spec this screen cannot restore */
   canApply: (spec: Record<string, unknown>) => boolean;
+  /** flag views-panel: the list sits inside the panel (it fills its parent) instead of floating at the corner */
+  embedded?: boolean;
 }
 
 type Entry =
@@ -78,7 +80,7 @@ function NameInput({ initial, label, onSubmit }: { initial: string; label: strin
  * pill at half size; under the pointer the Dock lens grows the row and spreads its neighbours. Order: the pinned
  * views, a "+" card to pin the current view, a faint divider, then "Recent" (a stack that unfolds the last steps).
  */
-export function PinList({ open, views, viewsError, recent, recentError, suggest, onApply, onPin, onRename, onRecentOpen, canApply }: Props) {
+export function PinList({ open, views, viewsError, recent, recentError, suggest, onApply, onPin, onRename, onRecentOpen, canApply, embedded }: Props) {
   const edit = useCorners((s) => s.edit);
   const active = useCorners((s) => s.activeView);
   const startEdit = useCorners((s) => s.startEdit);
@@ -132,8 +134,8 @@ export function PinList({ open, views, viewsError, recent, recentError, suggest,
       aria-hidden={!open}
       inert={!open}
       data-corners="pins"
-      className={cn("pointer-events-none absolute z-[16] transition-[opacity,transform] duration-300 motion-reduce:transition-none", open ? "translate-y-0 opacity-100" : "-translate-x-1.5 -translate-y-2.5 opacity-0")}
-      style={{ left: EDGE, top: EDGE + BUTTON + 4, bottom: 78, width: LIST_WIDTH }}
+      className={cn("pointer-events-none absolute transition-[opacity,transform] duration-300 motion-reduce:transition-none", embedded ? "inset-0" : "z-[16]", !embedded && !open && "-translate-x-1.5 -translate-y-2.5", open ? "translate-y-0 opacity-100" : "opacity-0")}
+      style={embedded ? undefined : { left: EDGE, top: EDGE + BUTTON + 4, bottom: 78, width: LIST_WIDTH }}
     >
       <div
         ref={lens}

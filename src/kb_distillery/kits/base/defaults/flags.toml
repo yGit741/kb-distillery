@@ -159,6 +159,16 @@ default = false
 envs = { local = true, private = false, public = false }
 
 [[flag]]
+name = "views-panel"
+description = "Graph: the pinned corner opens a panel with saved views, recent sources and chats, commands and settings (with the dark mode toggle) above the pinned list"
+owner = "maintainer"
+created = 2026-11-05
+expires = 2027-02-01
+kind = "runtime"
+default = false
+envs = { local = true, private = false, public = false }
+
+[[flag]]
 name = "legend-counts"
 description = "Graph: the colour legend slide-out lists the top five themes with a tabular page count each; the rest sit behind a +N more row"
 owner = "maintainer"
