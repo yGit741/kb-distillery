@@ -212,18 +212,21 @@ function Loaded({
   const neighbors = useMemo(() => buildNeighborMap(model.links), [model]);
   const relations = useMemo(() => (model.relations ? relationIndex(model.relations) : undefined), [model]);
   // a story that draws "every type but collections" (Map) is resolved against this kb's pages, so a kit with its own
-  // type names (an OKF bundle's Source, Concept) is not filtered away by the research names the story starts from
-  useEffect(() => {
+  // type names (an OKF bundle's Source, Concept) is not filtered away by the research names the story starts from.
+  // Resolved while rendering (no empty first frame, and re-applying the story cannot drop it back to the seed list);
+  // the layout effect then writes it to the store so a chip toggled next starts from what is on screen.
+  const storyResolved = useMemo(() => {
     const st = storyById(ui.story);
-    if (!st?.everyTypeExcept) return;
-    // only the story's own starting list is replaced; a filter set any other way (or none) is left alone
-    const cur = useGraphUi.getState().shownTypes;
-    if (!cur || cur.size !== st.types.length || st.types.some((t) => !cur.has(t))) return;
-    useGraphUi.setState({ shownTypes: storyTypes(st, model.nodes) });
-  }, [ui.story, model]);
+    const cur = ui.shownTypes;
+    if (!st?.everyTypeExcept || !cur || cur.size !== st.types.length || st.types.some((t) => !cur.has(t))) return null;
+    return storyTypes(st, model.nodes);
+  }, [ui.story, ui.shownTypes, model]);
+  useLayoutEffect(() => {
+    if (storyResolved) useGraphUi.setState({ shownTypes: storyResolved });
+  }, [storyResolved]);
   const shownTypes = useMemo(
-    () => (ui.shownTypes === undefined ? new Set(schema.defaultVisible) : ui.shownTypes),
-    [ui.shownTypes, schema],
+    () => storyResolved ?? (ui.shownTypes === undefined ? new Set(schema.defaultVisible) : ui.shownTypes),
+    [storyResolved, ui.shownTypes, schema],
   );
   const filtered = useMemo(
     () =>

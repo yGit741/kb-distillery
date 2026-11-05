@@ -4,7 +4,7 @@ An OKF bundle (the contents of a kb's `wiki/`: a folder, a `.zip`, or a git repo
 
 ## Locally
 
-In the app, use the Import dialog. The bundle is checked first; errors block the import and nothing is written.
+In the app, use the Import dialog. The bundle is checked against OKF first; an OKF error blocks the import and nothing is written. The engine's own lint (layer, maturity, raw, description length, kit types) runs too, but its findings are warnings: a valid OKF bundle from elsewhere imports as written and shows on the graph. Until those pages meet the lint, `distill ops` commits in the new kb are refused (every ops commit lints the whole kb), so fix the pages before editing there.
 
 ## From the command line
 

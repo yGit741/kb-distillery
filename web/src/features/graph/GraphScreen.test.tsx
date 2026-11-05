@@ -311,6 +311,7 @@ describe("the Map view in a kb whose kit names its own types", () => {
       node("calibration", { type: "Concept", layer: "concept", inDegree: 1, outDegree: 1 }),
       node("source-spec", { type: "Source", layer: "source", depth: "full", inDegree: 1 }),
       node("series-specs", { type: "Series", layer: "collection" }),
+      node("think-proposal", { type: "distilled-think", layer: "concept", inDegree: 1 }),
     ];
     const links = [
       { source: "speed", target: "calibration", kind: "wikilink" as const },
@@ -319,9 +320,12 @@ describe("the Map view in a kb whose kit names its own types", () => {
     ];
     useGraphUi.getState().applyStory("map");
     render(wrap(withGraph({ getGraph: async () => sampleSnapshot({ nodes: okf, links, node_count: okf.length }) }), <GraphScreen search={{}} host={host} />));
-    // every type but the collection hub: 3 of 4
-    await waitFor(() => expect(screen.getByTestId("graph-stats")).toHaveTextContent("3 of 4 pages"));
-    expect(useGraphUi.getState().shownTypes).toEqual(new Set(["Concept", "Source"]));
+    // every type but the collection hub and the engine's own think proposal: 3 of 5
+    expect(await screen.findByTestId("graph-stats")).toHaveTextContent("3 of 5 pages");
+    await waitFor(() => expect(useGraphUi.getState().shownTypes).toEqual(new Set(["Concept", "Source"])));
+    // picking Map again starts from the research list in the store; the screen resolves it again
+    act(() => useGraphUi.getState().applyStory("map"));
+    expect(screen.getByTestId("graph-stats")).toHaveTextContent("3 of 5 pages");
   });
 
   it("leaves a type filter set by hand alone", async () => {

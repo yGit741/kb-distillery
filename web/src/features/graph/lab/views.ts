@@ -258,11 +258,14 @@ export const storyById = (id: string): Story | undefined => STORIES.find((s) => 
 /** The whole lab config of a story: the defaults plus its overrides (a story starts from the principles). */
 export const storyLab = (s: Story): LabConfig => ({ ...DEFAULT_LAB, ...s.lab });
 
+/** The engine's own page types (a scope, a distilled think-note proposal): never part of a "every type" story. */
+const TOOL_TYPES = new Set(["scope", "distilled-think"]);
+
 /** The types a story draws in a kb: its `everyTypeExcept` resolved against the pages (every type present whose pages
  *  are not in that layer), else its fixed `types`. */
 export function storyTypes(st: Story, nodes: readonly { type: string; layer?: string }[]): Set<string> {
   if (!st.everyTypeExcept) return new Set(st.types);
   const out = new Set<string>();
-  for (const n of nodes) if (n.layer !== st.everyTypeExcept) out.add(n.type || "unknown");
+  for (const n of nodes) if (n.layer !== st.everyTypeExcept && !TOOL_TYPES.has(n.type)) out.add(n.type || "unknown");
   return out;
 }

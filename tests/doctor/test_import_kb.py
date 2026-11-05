@@ -205,8 +205,9 @@ def test_kit_lint_findings_warn_but_only_okf_blocks(world, tmp_path):
     warnings, so a valid OKF bundle with types the kit does not know imports as written."""
     src = make_bundle(tmp_path / "kitbad", {"a.md": "---\ntype: not-a-kit-type\n---\n# A\n\nhi\n"})
     rep = import_kb.validate_bundle(src)                 # passes okf_check, the kit lint finds the type
-    assert rep.ok and rep.errors == []
+    assert rep.ok
     assert any("not-a-kit-type" in w for w in rep.warnings)
+    assert any("ops` commits in this kb are refused" in w for w in rep.warnings)   # the consequence is said up front
     target = import_kb.import_bundle(src)
     with open(os.path.join(target, "wiki", "a.md"), encoding="utf-8") as f:
         assert "type: not-a-kit-type" in f.read()        # imported as written
