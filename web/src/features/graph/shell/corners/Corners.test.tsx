@@ -7,7 +7,6 @@ import { mockDataSource } from "@/test/datasource";
 import { sampleNodes, sampleSnapshot } from "../../fixtures";
 import { parseSchema } from "../../schema";
 import { DEFAULT_PREFS, useGraphUi } from "../../store";
-import { withFlag } from "@/flags/testing";
 import { useChatDock } from "../../tools/chatDockStore";
 import { useSparkPanel } from "../sparkPanelStore";
 import { Corners, type CornersProps } from "./Corners";
@@ -430,7 +429,7 @@ describe("flag spark-chat on the agent fan", () => {
     { id: "s3", title: "Tensor rank", updated: day(9), status: "idle" },
   ];
 
-  it("on: New chat comes first, each chat says its status or day, and New chat opens an empty dock", () =>
+  it("on: New chat comes first, each chat says its status or day, and New chat opens an empty chat in the left panel", () =>
     withFlag("spark-chat", true, async () => {
       mount(fakeServer({ sessions: rows }));
       await userEvent.click(agent());
@@ -442,7 +441,9 @@ describe("flag spark-chat on the agent fan", () => {
       // the running chat carries the green dot
       expect(group.querySelectorAll(".bg-ok")).toHaveLength(1);
       await userEvent.click(within(group).getByRole("button", { name: "New chat" }));
-      expect(useChatDock.getState().open).toBe(true);
+      // flag spark-chat sends it to the left panel (SparkPanel.test.tsx), never the right dock
+      expect(useSparkPanel.getState().open).toBe(true);
+      expect(useChatDock.getState().open).toBe(false);
     }));
 
   it("off: no New chat card, the pills keep the relative age", () =>
