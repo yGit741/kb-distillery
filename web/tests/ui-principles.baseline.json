@@ -1,5 +1,4 @@
 {
-  "chat|*|4|button.inline-flex.items-center × button.inline-flex.items-center": 2,
   "pages|*|25|a.w-#.text-xs": 6,
   "system-flags|light|5|span[tile-deploy-value].text-lg.font-semibold": 1,
   "system-flags|light|5|span[tile-hygiene-value].text-lg.font-semibold": 1,

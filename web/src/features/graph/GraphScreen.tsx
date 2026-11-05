@@ -741,10 +741,13 @@ function Loaded({
             aria-label="Fold the graph pane"
             title="Fold the graph pane"
             onClick={() => useChatFull.getState().setFolded(true)}
-            className="pointer-events-auto absolute top-1/4 z-[41] grid h-12 w-4 -translate-y-1/2 place-items-center rounded-r-md border border-l-0 bg-card text-muted-foreground shadow-[var(--shadow)] hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="group pointer-events-auto absolute top-1/4 z-[41] grid h-12 w-6 -translate-y-1/2 place-items-center focus-visible:outline-none"
             style={{ left: chatPanelWidth(true, false) }}
           >
-            <ChevronRight aria-hidden className="size-3.5" strokeWidth={1.8} />
+            {/* the hit target is 24px wide; the tab you see stays slim */}
+            <span className="grid h-12 w-4 place-items-center rounded-r-md border border-l-0 bg-card text-muted-foreground shadow-[var(--shadow)] group-hover:text-foreground group-focus-visible:ring-2 group-focus-visible:ring-ring">
+              <ChevronRight aria-hidden className="size-3.5" strokeWidth={1.8} />
+            </span>
           </button>
         </>
       )}
