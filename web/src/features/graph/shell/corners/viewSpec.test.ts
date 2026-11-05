@@ -4,7 +4,7 @@ import { ago } from "./api";
 import { applySpec, captureSpec, suggestName } from "./viewSpec";
 
 beforeEach(() => {
-  useGraphUi.setState({ ...DEFAULT_PREFS, shownTypes: undefined, shownDepths: null, hiddenKeys: new Set(), view: null });
+  useGraphUi.setState({ ...DEFAULT_PREFS, story: "", shownTypes: undefined, shownDepths: null, hiddenKeys: new Set(), view: null });
 });
 
 describe("a pinned view's spec", () => {

@@ -94,7 +94,7 @@ beforeEach(() => {
   localStorage.clear();
   useKb.setState({ selection: new Set() });
   useShellStore.setState({ pendingShape: null, pendingView: null, notice: null, shaping: false, shape: null, undo: null, shapeError: null });
-  useGraphUi.setState({ ...DEFAULT_PREFS, shownTypes: undefined, predicate: null, shownDepths: null, search: "", rules: [], typeLabels: new Set(), view: null, revealed: new Set(), flyout: null, detailsOpen: false, readerSlug: null, focusRequest: null, fitTick: 0, hiddenKeys: new Set(), hiddenLinkKinds: new Set(), quick: useGraphUi.getState().quick });
+  useGraphUi.setState({ ...DEFAULT_PREFS, story: "", shownTypes: undefined, predicate: null, shownDepths: null, search: "", rules: [], typeLabels: new Set(), view: null, revealed: new Set(), flyout: null, detailsOpen: false, readerSlug: null, focusRequest: null, fitTick: 0, hiddenKeys: new Set(), hiddenLinkKinds: new Set(), quick: useGraphUi.getState().quick });
 });
 
 describe("flag graph-shell off", () => {

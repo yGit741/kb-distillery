@@ -85,7 +85,7 @@ beforeEach(() => {
   host.go.mockClear();
   resetCorners();
   useChatDock.setState({ open: false, wide: false, question: "" });
-  useGraphUi.setState({ ...DEFAULT_PREFS, shownTypes: undefined, predicate: null, shownDepths: null, hiddenKeys: new Set(), spotlight: null, view: null });
+  useGraphUi.setState({ ...DEFAULT_PREFS, story: "", shownTypes: undefined, predicate: null, shownDepths: null, hiddenKeys: new Set(), spotlight: null, view: null });
 });
 
 const pins = () => screen.getByRole("button", { name: "Pinned views" });
