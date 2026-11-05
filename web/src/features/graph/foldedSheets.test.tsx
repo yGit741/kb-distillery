@@ -1,6 +1,7 @@
 import { createMemoryHistory } from "@tanstack/react-router";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { withFlag } from "@/flags/testing";
 import { App } from "@/app/providers";
 import { createAppRouter } from "@/app/router";
 import { mockDataSource } from "@/test/datasource";
@@ -32,10 +33,19 @@ describe("Relations and Scopes folded into the graph", () => {
     expect(router.state.location.pathname).toBe("/graph");
   });
 
-  it("the toolbar has a Relation proposals tool that opens as a sheet", async () => {
-    const router = createAppRouter(createMemoryHistory({ initialEntries: ["/app/graph"] }));
-    render(<App source={ds} router={router} />);
-    await userEvent.click(await screen.findByRole("button", { name: "Relation proposals" }));
-    expect(await screen.findByRole("region", { name: "Relation proposals" })).toBeInTheDocument();
-  });
+  it("?tool=scopes opens the same sheet with the graph shell off", () =>
+    withFlag("graph-shell", false, async () => {
+      const router = createAppRouter(createMemoryHistory({ initialEntries: ["/app/graph?tool=scopes"] }));
+      render(<App source={ds} router={router} />);
+      expect(await screen.findByRole("region", { name: "Scopes" })).toBeInTheDocument();
+    }));
+
+  it("the search line has a Relation proposals command that opens it as a sheet", () =>
+    withFlag("graph-shell", true, async () => {
+      const router = createAppRouter(createMemoryHistory({ initialEntries: ["/app/graph"] }));
+      render(<App source={ds} router={router} />);
+      await userEvent.click(await screen.findByRole("combobox", { name: /search the graph/i }));
+      await userEvent.keyboard("/relation proposals{Enter}");
+      expect(await screen.findByRole("region", { name: "Relation proposals" })).toBeInTheDocument();
+    }));
 });

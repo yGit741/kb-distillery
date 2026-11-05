@@ -224,16 +224,30 @@ e2e("a filter change moves none of the pages that stay", async () => {
   const page = await settledPage();
   try {
     const before = await places(page);
-    // "Connected" hides the orphans; the pages that stay must stay put
-    await page.locator('[title^="Only pages with at least"]').first().click();
+    // The shell (flag `graph-shell`, the default) filters from the page-types card: hide one type, then show it
+    // again. The legend chip "Connected" is the same step with the shell off.
+    const chip = page.locator('[title^="Only pages with at least"]');
+    let hide, show;
+    if (await chip.count()) {
+      hide = chip.first();
+      show = page.getByRole("button", { name: "Show all" });
+    } else {
+      await page.getByRole("button", { name: "Show page types" }).click();
+      await page.waitForTimeout(600);
+      hide = page.locator('[data-corners="types"] button[aria-pressed="true"]').first();
+      show = hide;
+    }
+    // hiding pages: the pages that stay must stay put (hiding a type re-frames the view for the new set of types,
+    // which is the camera, so that path compares graph coordinates; the chip keeps the camera, so it compares px)
+    await hide.click();
     await page.waitForTimeout(2000);
     const fewer = await places(page);
-    assert.ok(fewer.length < before.length, "the Connected filter hid nothing");
-    let w = drift(before, fewer);
-    assert.ok(w.d < 1, `filtering moved ${w.id} by ${w.d.toFixed(1)} px`);
+    assert.ok(fewer.length < before.length, "the filter hid nothing");
+    let w = show === hide ? drift(before, fewer, undefined, ["gx", "gy"]) : drift(before, fewer);
+    assert.ok(w.d < (show === hide ? 0.5 : 1), `filtering moved ${w.id} by ${w.d.toFixed(1)} ${show === hide ? "graph units" : "px"}`);
     // and back: the hidden pages are placed off screen, the others keep their place in the layout (the view may
     // re-frame for a new set of types: that is the camera, so this compares graph coordinates)
-    await page.getByRole("button", { name: "Show all" }).click();
+    await show.click();
     await page.waitForTimeout(2000);
     w = drift(fewer, await places(page), undefined, ["gx", "gy"]);
     assert.ok(w.d < 0.5, `showing the hidden pages again moved ${w.id} by ${w.d.toFixed(1)} graph units`);

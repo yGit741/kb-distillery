@@ -1,8 +1,10 @@
 # The graph shell
 
-The graph screen has a calm layout behind the runtime flag `graph-shell`. The app bar and the toolbar are gone. One search line sits at the top, four small controls sit in the corners, and the graph fills the rest. Everything the old bars offered is still there, reached through the line. This guide says where each option went and what you can write in the line.
+The graph screen has a calm layout, controlled by the runtime flag `graph-shell`. The app bar and the toolbar are gone. One search line sits at the top, four small controls sit in the corners, and the graph fills the rest. Everything the old bars offered is still there, reached through the line. This guide says where each option went and what you can write in the line.
 
-Turn it on as the owner with `PUT /api/flags/graph-shell` (see the [HTTP API](../reference/http-api.md)), or from the Flags tab of the System screen when that tab is on. With the flag off the graph screen is unchanged.
+The layout is on by default in the local app. A private or public build keeps the flag off for now; turn it on as the owner with `PUT /api/flags/graph-shell` (see the [HTTP API](../reference/http-api.md)), or from the Flags tab of the System screen when that tab is on.
+
+With the flag off the toolbar is not drawn any more. The graph, the search box in the app header, the views bar, the colour and type legend, the inspector and the reader stay. The panels (filters, layout and sync, shortcuts, each tool) open from the keys the tools define and from `?tool=<id>` links; the labels and views rail and the zoom, fit and reheat buttons are only in the shell, though the mouse wheel and the keys `+`, `-` and `F` still work.
 
 ## What is on the screen
 

@@ -40,6 +40,11 @@ beforeEach(() => {
 });
 
 describe("opening", () => {
+  it("the search line is a 24px target (ui-principles rule 25)", () => {
+    setup();
+    expect(box()).toHaveClass("min-h-6");
+  });
+
   it("opens on focus and closes on Escape", async () => {
     setup();
     expect(box()).toHaveAttribute("aria-expanded", "false");

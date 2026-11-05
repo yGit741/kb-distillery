@@ -60,16 +60,16 @@ beforeEach(() => {
 });
 
 describe("graph-shell: the corner controls on the Graph screen", () => {
-  it("flag off: no corners; the Toolbar and the Legend stay", () =>
+  it("flag off: no corners; the Legend stays and there is no tool column", () =>
     withFlag("graph-shell", false, async () => {
       render(wrap(graph(), <GraphScreen search={{}} host={host} />));
       expect(await screen.findByRole("region", { name: "Legend" })).toBeInTheDocument();
-      expect(screen.getByRole("navigation", { name: "Graph tools" })).toBeInTheDocument();
+      expect(screen.queryByRole("navigation", { name: "Graph tools" })).toBeNull();
       expect(screen.queryByTestId("graph-corners")).toBeNull();
       expect(screen.queryByRole("button", { name: "Pinned views" })).toBeNull();
     }));
 
-  it("flag on: the corners show, the Toolbar and the Legend are gone, the stats line stays for assistive tech", () =>
+  it("flag on: the corners show, the Legend is gone, the stats line stays for assistive tech", () =>
     withFlag("graph-shell", true, async () => {
       render(wrap(graph(), <GraphScreen search={{}} host={host} />));
       expect(await screen.findByTestId("graph-corners")).toBeInTheDocument();

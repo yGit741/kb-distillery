@@ -2,16 +2,18 @@ import { X } from "lucide-react";
 import { useMemo } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { sourcesOf, type NeighborMap } from "./graphData";
 import { LAYER_LABEL } from "./legendModel";
 import { NodeSwatch } from "./encoding/NodeMarkSvg";
-import { colorOf, effectiveColorBy, type ColorBy } from "./style";
+import type { ColorBy } from "./style";
 import { bookOf, degreeOf, partOf, type GNode } from "./types";
 import { useToolHost } from "./hostContext";
 import { relationGroups } from "./relationGroups";
 import type { Layer } from "@/api/model";
 import { useFlag } from "@/flags/useFlag";
 import type { GRelation } from "./types";
+import { swatchColor } from "./nodeColor";
 
 const NB_MAX = 40;
 export const obsidianUri = (path: string) => `obsidian://open?file=${encodeURIComponent(path)}`;
@@ -30,13 +32,15 @@ interface Props {
   onToggleSources: (ids: string[]) => void;
   /** Typed relations by page id (flag `graph-relations`); absent while the snapshot carries none. */
   relations?: ReadonlyMap<string, readonly GRelation[]>;
+  /** In the calm shell the colour dots sit on the right edge: the card keeps clear of them. */
+  clearOfEdge?: boolean;
 }
 
 function Row({ n, colorBy, onGo, children }: { n: GNode; colorBy: ColorBy; onGo: () => void; children?: React.ReactNode }) {
   return (
     <li>
       <button type="button" className="flex w-full items-center gap-2 rounded px-1.5 py-1 text-left text-sm hover:bg-accent" onClick={onGo}>
-        <NodeSwatch type={n.type} color={colorOf(n, effectiveColorBy(colorBy))} />
+        <NodeSwatch type={n.type} color={swatchColor(n, colorBy)} />
         <span className="min-w-0 flex-1 truncate">{n.title || n.id}</span>
         {children}
       </button>
@@ -51,7 +55,7 @@ export function Inspector(p: Props) {
   return (
     <aside
       aria-label="Selected page"
-      className="pointer-events-auto absolute bottom-3 right-3 z-20 flex max-h-[62%] w-[min(24rem,calc(100%-1.5rem))] flex-col rounded-lg border bg-card text-card-foreground shadow-[var(--shadow)] max-sm:left-3 max-sm:w-auto"
+      className={cn("pointer-events-auto absolute bottom-3 z-20 flex max-h-[62%] w-[min(24rem,calc(100%-1.5rem))] flex-col rounded-lg border bg-card text-card-foreground shadow-[var(--shadow)] max-sm:left-3 max-sm:w-auto", p.clearOfEdge ? "right-11" : "right-3")}
     >
       <Button variant="ghost" size="icon" className="absolute right-1 top-1 size-7" aria-label="Close details" onClick={p.onClose}>
         <X aria-hidden />
@@ -100,7 +104,7 @@ function One({ n, byId, neighbors, colorBy, revealed, pageHref, onFocus, onRead,
   return (
     <div className="flex flex-col gap-2.5 overflow-y-auto p-3 pr-9">
       <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
-        <NodeSwatch type={n.type} color={colorOf(n, effectiveColorBy(colorBy))} />
+        <NodeSwatch type={n.type} color={swatchColor(n, colorBy)} />
         <span>{layerLabel ? `${layerLabel} · ${n.type}` : n.type}</span>
         {n.depth && <Badge variant="primary">{n.depth}</Badge>}
         {n.maturity && <Badge>{n.maturity}</Badge>}
@@ -195,7 +199,7 @@ function One({ n, byId, neighbors, colorBy, revealed, pageHref, onFocus, onRead,
                         onClick={() => onFocus(page.id, false)}
                       >
                         <span className="flex w-full items-center gap-2">
-                          <NodeSwatch type={page.type} color={colorOf(page, effectiveColorBy(colorBy))} />
+                          <NodeSwatch type={page.type} color={swatchColor(page, colorBy)} />
                           <span className="min-w-0 flex-1 truncate">{page.title || page.id}</span>
                         </span>
                         {note && <span className="line-clamp-2 pl-5 text-xs text-muted-foreground">{note}</span>}

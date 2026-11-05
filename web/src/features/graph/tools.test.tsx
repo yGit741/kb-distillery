@@ -14,7 +14,7 @@ import { useLayer } from "./layerStore";
 import { MENU_ITEMS } from "./menu";
 import { DEFAULT_PREFS, useGraphUi } from "./store";
 import { RegionOverlay } from "./tools/RegionOverlay";
-import type { GraphToolContext } from "./tools";
+import { TOOLS, type GraphToolContext } from "./tools";
 import { node } from "./fixtures";
 
 // jsdom has no canvas: stand in for force-graph with a chainable no-op instance.
@@ -90,9 +90,13 @@ beforeEach(() => {
   useGraphUi.setState({ ...DEFAULT_PREFS, shownTypes: undefined, shownDepths: null, search: "", rules: [], typeLabels: new Set(), view: null, revealed: new Set(), flyout: null, detailsOpen: false, readerSlug: null, focusRequest: null, fitTick: 0 });
 });
 
+/** Open a tool's panel the way a command or its key does: through the store's flyout (the panels host draws it). */
 const open = async (name: RegExp) => {
   await screen.findByTestId("graph-stats");
-  await userEvent.click(screen.getByRole("button", { name }));
+  const tool = TOOLS.find((t) => name.test(t.label));
+  if (!tool) throw new Error(`no tool named ${name}`);
+  act(() => useGraphUi.setState({ railOpen: false, flyout: tool.id }));
+  await screen.findByRole("region", { name: tool.label });
 };
 
 describe("selection tool: expand, collapse, path", () => {
@@ -409,7 +413,9 @@ describe("typed relations (flag graph-relations)", () => {
       const listGraphQueries = vi.fn(async () => []);
       render(wrap(withRelations({ listGraphQueries }), <GraphScreen search={{}} host={host()} />));
       const panel = await details();
-      expect(screen.queryByRole("button", { name: "Graph query" })).not.toBeInTheDocument();
+      // the tool is off: nothing answers to its id, so no panel opens
+      act(() => useGraphUi.setState({ flyout: "query" }));
+      expect(screen.queryByRole("region", { name: "Graph query" })).not.toBeInTheDocument();
       expect(panel.querySelectorAll("details")).toHaveLength(2);
       expect(within(panel).queryByText(/extends/)).not.toBeInTheDocument();
       expect(listGraphQueries).not.toHaveBeenCalled();

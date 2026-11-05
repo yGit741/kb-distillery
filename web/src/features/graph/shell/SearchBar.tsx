@@ -59,7 +59,7 @@ export function SearchBar({ value, onChange, open, onOpen, onKeyDown, activeId, 
         autoComplete="off"
         spellCheck={false}
         placeholder={notice ?? `Search ${kbName}`}
-        className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+        className="min-h-6 min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
         value={value}
         onChange={(e) => onChange(e.target.value)}
         onFocus={onOpen}
