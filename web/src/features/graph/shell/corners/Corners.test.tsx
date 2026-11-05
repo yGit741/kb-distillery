@@ -6,6 +6,7 @@ import { withFlag } from "@/flags/testing";
 import { mockDataSource } from "@/test/datasource";
 import { sampleNodes, sampleSnapshot } from "../../fixtures";
 import { parseSchema } from "../../schema";
+import { assignAreaColors } from "../../style";
 import { DEFAULT_PREFS, useGraphUi } from "../../store";
 import { useChatDock } from "../../tools/chatDockStore";
 import { Corners, type CornersProps } from "./Corners";
@@ -352,6 +353,36 @@ describe("legends", () => {
     expect(left!.nextElementSibling).toHaveAttribute("aria-hidden", "true");
     expect(left!.nextElementSibling!.nextElementSibling).toBe(right);
   });
+
+  // eight themes with 8, 7 ... 1 pages each, so the counts differ and the list is longer than five
+  const themed = Array.from({ length: 8 }, (_, t) => Array.from({ length: 8 - t }, (_, i) => ({ ...sampleNodes[0]!, id: `t${t}-p${i}`, areas: [`theme-${t}`] }))).flat();
+  const openLegend = async () => {
+    assignAreaColors(themed);
+    mount(fakeServer(), { nodes: themed, visible: new Set(themed.map((n) => n.id)) });
+    await userEvent.click(screen.getByRole("button", { name: /show colour names/i }));
+    return screen.getByRole("group", { name: /colour legend/i });
+  };
+
+  it("legend-counts on: the slide-out lists five themes with their counts and a +N more row that lists the rest", () =>
+    withFlag("legend-counts", true, async () => {
+      const legend = await openLegend();
+      const listed = () => within(legend).getAllByRole("button", { pressed: true });
+      expect(listed()).toHaveLength(5);
+      expect(listed()[0]).toHaveTextContent(/8$/);
+      const more = within(legend).getByRole("button", { name: "+3 more" });
+      await userEvent.click(more);
+      expect(listed()).toHaveLength(8);
+      expect(within(legend).getByRole("button", { name: "Show fewer" })).toBeInTheDocument();
+      await userEvent.click(screen.getByRole("button", { name: "Show fewer" }));
+      expect(listed()).toHaveLength(5);
+    }));
+
+  it("legend-counts off: every theme is listed and there is no +N more row", () =>
+    withFlag("legend-counts", false, async () => {
+      const legend = await openLegend();
+      expect(within(legend).getAllByRole("button", { pressed: true })).toHaveLength(8);
+      expect(within(legend).queryByRole("button", { name: /more/ })).toBeNull();
+    }));
 
   it("pressing the colour dots spreads them into names; pressing a name hides that colour", async () => {
     mount();
