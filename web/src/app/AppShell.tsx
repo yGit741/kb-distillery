@@ -1,7 +1,8 @@
 import { lazy, Suspense } from "react";
-import { Link, Outlet } from "@tanstack/react-router";
+import { Link, Outlet, useRouterState } from "@tanstack/react-router";
 import { Command as CommandIcon, Moon, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { ROUTES } from "@/routes/registry";
 import { ShareFooter } from "@/share/ShareFooter";
 import { useTheme } from "@/theme/theme";
@@ -10,6 +11,7 @@ import { ShareChip } from "./ShareChip";
 import { ToursMenu } from "./ToursMenu";
 import { KbBadge } from "./KbBadge";
 import { useEmbed } from "./embed";
+import { useHeaderFolded } from "./headerFold";
 import { HEADER_SLOT_ID } from "./headerSlot";
 import { useUi } from "./ui-store";
 import { flag } from "@/flags";
@@ -26,10 +28,18 @@ export function AppShell() {
   const setPaletteOpen = useUi((s) => s.setPaletteOpen);
   const embed = useEmbed();
   const agentMode = useFlag("agent-mode");
+  // flag header-fold: on the graph the bar folds away above the screen (the graph's chevron brings it back)
+  const onGraph = useRouterState({ select: (s) => s.location.pathname }) === "/graph";
+  const folded = useHeaderFolded(onGraph);
   return (
     <div className="flex min-h-screen flex-col">
       {!embed && (
-      <header className="sticky top-0 z-40 flex h-12 items-center gap-2 border-b bg-card px-4">
+      <header
+        aria-hidden={folded || undefined}
+        inert={folded}
+        data-folded={folded || undefined}
+        className={cn("sticky top-0 z-40 flex h-12 items-center gap-2 border-b bg-card px-4 transition-transform duration-200 motion-reduce:transition-none", folded && "-translate-y-full")}
+      >
         <KbBadge />
         <nav aria-label="Main" className="flex min-w-0 shrink items-center gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {ROUTES.filter((r) => r.nav).map((r) => (

@@ -1,6 +1,7 @@
 import { createMemoryHistory } from "@tanstack/react-router";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { useHeaderFold } from "@/app/headerFold";
 import { App } from "@/app/providers";
 import { createAppRouter } from "@/app/router";
 import type { DataSource } from "@/api";
@@ -39,7 +40,11 @@ function open(path: string, over: Partial<DataSource> = {}) {
 }
 
 describe("header knowledge base menu (kb-view)", () => {
-  beforeEach(() => localStorage.clear());
+  // these tests read the app bar itself, so keep it open on the graph (flag header-fold folds it by default)
+  beforeEach(() => {
+    localStorage.clear();
+    useHeaderFold.setState({ folded: false });
+  });
 
   it("flag on: ticks show more knowledge bases, and unticking all shows none", () =>
     withFlag("kb-view", true, async () => {

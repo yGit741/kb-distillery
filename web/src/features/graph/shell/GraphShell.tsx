@@ -39,6 +39,7 @@ import { marker, pillText, sameMarker } from "./shape";
 import { looksLikeShape, requestShape, useShellStore } from "./shellStore";
 import { useShape } from "./useShape";
 import { usePageResults } from "./usePageResults";
+import { SHELL_TOP } from "./layout";
 
 const ICONS: Record<CommandIcon, ReactNode> = {
   fit: <Maximize aria-hidden className="size-4" strokeWidth={1.6} />,
@@ -81,6 +82,8 @@ interface Props {
   onRefresh: () => void;
   /** Merge params into the URL (the `kbs` param). */
   setParams?: (patch: Record<string, string | undefined>) => void;
+  /** Top of the line inside the graph area (./layout). */
+  top?: number;
 }
 
 /**
@@ -88,7 +91,7 @@ interface Props {
  * centre unfolds, on focus or Cmd/Ctrl+K, into recent steps and pinned views at rest, live page results while
  * typing, commands after a slash, and two free-text rows (ask the agent, shape the graph).
  */
-export function GraphShell({ nodes, byId, colorBy, onFocus, onRead, onShowExact, shownTypes, onShowMentions, onFit, onZoom, onReheat, onRefresh, setParams }: Props) {
+export function GraphShell({ nodes, byId, colorBy, onFocus, onRead, onShowExact, shownTypes, onShowMentions, onFit, onZoom, onReheat, onRefresh, setParams, top = SHELL_TOP }: Props) {
   const ds = useDataSource();
   const qc = useQueryClient();
   const host = useToolHost();
@@ -407,8 +410,8 @@ export function GraphShell({ nodes, byId, colorBy, onFocus, onRead, onShowExact,
   return (
     <div
       ref={box}
-      className="pointer-events-auto absolute left-1/2 top-[13px] z-30 -translate-x-1/2 transition-[width] duration-200 motion-reduce:transition-none"
-      style={{ width: open ? "min(640px, calc(100% - 9rem))" : "min(520px, calc(100% - 9rem))" }}
+      className="pointer-events-auto absolute left-1/2 z-30 -translate-x-1/2 transition-[width] duration-200 motion-reduce:transition-none"
+      style={{ top, width: open ? "min(640px, calc(100% - 9rem))" : "min(520px, calc(100% - 9rem))" }}
       data-testid="graph-shell"
       onBlur={(e) => {
         if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setOpen(false);
