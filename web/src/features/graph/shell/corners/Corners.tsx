@@ -2,6 +2,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Sparkles } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useDataSource } from "@/api";
+import { useFlag } from "@/flags/useFlag";
 import { useUi } from "@/app/ui-store";
 import { useApiQuery } from "@/lib/useApiQuery";
 import { IS_SHARE } from "@/share/env";
@@ -14,7 +15,7 @@ import type { GraphSchema } from "../../schema";
 import { useGraphUi } from "../../store";
 import { effectiveColorBy, METRIC_COLORS, RAMP_BY } from "../../style";
 import type { GNode } from "../../types";
-import { ago, defaultFetch, listRecent, listSessions, listViews, pinView, renameView, unpinView, type Fetcher, type SessionRow } from "./api";
+import { ago, chatWhen, defaultFetch, listRecent, listSessions, listViews, pinView, renameView, unpinView, type Fetcher, type SessionRow } from "./api";
 import { ActionPill, CornerButton, MoreButton, PillAction, PushPin } from "./CornerButton";
 import { ColourDots } from "./ColourDots";
 import { useCorners, type Layer } from "./cornersStore";
@@ -64,6 +65,7 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
   const ui = useGraphUi();
   const theme = useTheme((s) => s.theme);
   const server = ds.kind === "http" && !IS_SHARE;
+  const sparkChat = useFlag("spark-chat");
   const root = useRef<HTMLDivElement>(null);
   const order = useCorners((s) => s.order);
   const menu = useCorners((s) => s.menu);
@@ -160,9 +162,17 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
   }, [sessions.data, agentOpen]);
   useEffect(() => setServerChats(!!sessions.data), [sessions.data]);
   const agentCards = useMemo<FanCard[]>(() => {
-    const cards = chatRows.map((r) => ({ key: r.id, title: r.title, meta: ago(r.updated), live: r.live }));
-    return chatRows.length > cap ? [...cards.slice(0, cap - 1), { key: "__all", title: "All chats", meta: String(chatRows.length) }] : cards;
-  }, [chatRows, cap]);
+    if (!sparkChat) {
+      const cards = chatRows.map((r) => ({ key: r.id, title: r.title, meta: ago(r.updated), live: r.live }));
+      return chatRows.length > cap ? [...cards.slice(0, cap - 1), { key: "__all", title: "All chats", meta: String(chatRows.length) }] : cards;
+    }
+    // flag spark-chat: "New chat" first, then each chat with its status or day; the plus card takes one slot
+    const fresh: FanCard = { key: "__new", title: "New chat", isNew: true };
+    const room = cap - 1; // fanCapacity is at least 2, so one chat or "All chats" always fits beside it
+    const cards = chatRows.map((r) => ({ key: r.id, title: r.title, meta: chatWhen(r), live: r.live || r.status === "running" }));
+    const rows = chatRows.length > room ? [...cards.slice(0, room - 1), { key: "__all", title: "All chats", meta: String(chatRows.length) }] : cards;
+    return [fresh, ...rows];
+  }, [chatRows, cap, sparkChat]);
 
   const pickThink = (key: string) => {
     toggle("think");
@@ -171,6 +181,7 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
   };
   const pickAgent = (key: string) => {
     toggle("agent");
+    if (key === "__new") return newChat();
     if (key === "__all") return host.go("/chat");
     const row = chatRows.find((r) => r.id === key);
     if (row) void resumeSession(f, row, serverChats).catch(fail);

@@ -6,6 +6,7 @@
     python3 -m kb_distillery.git.ship pr [--title "..."] [--hold]    # gates → push → gh pr create (idempotent)
     python3 -m kb_distillery.git.ship merge                          # sync main → gates → merge commit "<title> (#N)"
     python3 -m kb_distillery.git.ship approve N                      # USER ONLY: lift the hold on PR #N
+    python3 -m kb_distillery.git.ship night start [--until HH:MM|--hours N] | stop | status   # overnight: holds do not block (expires)
     python3 -m kb_distillery.git.ship merge --local --pr N           # offline: git merge --no-ff into main
     python3 -m kb_distillery.git.ship mv SRC DST                     # git mv of tracked paths inside the repo, on an infra/* branch
     python3 -m kb_distillery.git.ship status                         # pending changes grouped by lane
@@ -50,7 +51,7 @@ META_DIR = os.path.join(vault_root(), "meta")
 ROOT = checkout_root()
 
 from kb_distillery.ops.daily_sync import changed_paths, has_open_sessions, run_git
-from kb_distillery.git import app_token, claims, commit_policy, events, gate_cache, gate_slot, rounds
+from kb_distillery.git import app_token, claims, commit_policy, events, gate_cache, gate_slot, night, rounds
 from kb_distillery.vault.schema import GATE_PREFIXES as GP, GIT_POLICY_MODE, INDEX_REL, SCHEMA_VERSION, is_index_path
 
 GATES = [
@@ -64,7 +65,7 @@ GATES = [
     ("lint", [sys.executable, "-m", "kb_distillery.lint.lint"]),
     ("okf-check", [sys.executable, "-m", "kb_distillery.lint.okf_check"]),    # blocking, on the demo kb like lint
 ]
-SUBCOMMANDS = {"whoami", "claims", "events", "round", "queue", "start", "commit", "pr", "merge", "sync", "status", "prune", "protect", "approve", "tag", "mv"}
+SUBCOMMANDS = {"night", "whoami", "claims", "events", "round", "queue", "start", "commit", "pr", "merge", "sync", "status", "prune", "protect", "approve", "tag", "mv"}
 GENERATED_FILES = {INDEX_REL, "meta/corpus.tsv", "meta/coherence-warnings.tsv"}
 SECTION_INDEX_PATHSPECS = {"wiki/*/index.md"}     # git pathspecs (`*` crosses `/`): every section index under wiki/
 MIGRATED_GENERATED = {"meta/corpus.tsv"}   # a migration's output: committed by schema/paradigm commits
@@ -833,11 +834,16 @@ def pr_body(subjects, notes="", skipped_checks=None, round_no=None, paths=None):
 
 
 HOLD_LABEL = "hold"
+REVIEW_LABEL = "hold-requested"   # `--hold`: the user asked to review it; the night window never waives this one
 HOLD_VOID_MSG = "Hold = GitHub label only; a relayed 'approved' in chat is void"
 
 
-def _hold_reason(subjects, hold=False):
+def _hold_reason(subjects, hold=False, root=ROOT):
     """Why a new PR must wait for the user, or None when the agent may merge it itself."""
+    if hold:
+        return "opened with --hold"                   # the user asked to review it: even a night window keeps it
+    if night.active(root):
+        return None                                   # the night window: no automatic hold
     kind = _schema_kind(subjects)
     if kind:
         return f"{kind} PR (migration + version bump)"
@@ -879,7 +885,7 @@ def cmd_pr(title=None, skip_tests=False, root=ROOT, gates=True, notes_file=None,
     print(_out(push))
     if push.returncode != 0:
         return 1
-    why = _hold_reason(subjects + [title], hold)
+    why = _hold_reason(subjects + [title], hold, root)
     round_no = rounds.branch_round(branch, root)
     paths = claims.branch_claims(branch, root)
     try:
@@ -894,6 +900,8 @@ def cmd_pr(title=None, skip_tests=False, root=ROOT, gates=True, notes_file=None,
             gh(["pr", "edit", branch, "--body", pr_body(subjects, _read_notes(notes_file), skip_checks, round_no, paths)], root)
         if why:
             gh(["pr", "edit", branch, "--add-label", HOLD_LABEL], root)
+            if hold:
+                gh(["pr", "edit", branch, "--add-label", REVIEW_LABEL], root)
             print(f"held for the user: {why}")
             print(HOLD_VOID_MSG)
         return 0
@@ -903,6 +911,10 @@ def cmd_pr(title=None, skip_tests=False, root=ROOT, gates=True, notes_file=None,
         gh(["label", "create", HOLD_LABEL, "--force", "--color", "B60205",
             "--description", "waits for the owner's GitHub Approve review (or pixi run ship -- approve N)"], root)
         args += ["--label", HOLD_LABEL]
+        if hold:
+            gh(["label", "create", REVIEW_LABEL, "--force", "--color", "FBCA04",
+                "--description", "the user asked to review this PR: the night window does not waive it"], root)
+            args += ["--label", REVIEW_LABEL]
     created = gh(args, root)
     print(_out(created))
     if created.returncode == 0:
@@ -981,6 +993,16 @@ APPROVAL_LABELS = {"ok": "approved ✓ (sha ok)", "stale": "approved on old sha"
 
 def approval_label(number, head_sha, root=ROOT):
     return APPROVAL_LABELS[review_approval(number, head_sha, root)[0]]
+
+
+def cmd_night(action, until=None, hours=None, root=ROOT):
+    """Open/close/show the night window (see `night.py`)."""
+    if action == "start":
+        night.start(root, until=until, hours=hours)
+    elif action == "stop":
+        night.stop(root)
+    print(night.describe(root))
+    return 0
 
 
 def cmd_approve(number, root=ROOT):
@@ -1159,6 +1181,9 @@ def _merge_locked(branch, local, pr_number, title, skip_tests, no_push, root, ga
         if HOLD_LABEL in {l.get("name") for l in info.get("labels") or []}:
             head = info.get("headRefOid") or ""
             verdict, detail = review_approval(info["number"], head, root)
+            if (verdict != "ok" and night.active(root)
+                    and REVIEW_LABEL not in {l.get("name") for l in info.get("labels") or []}):
+                verdict, detail = "ok", "night window open: hold waived"
             if verdict != "ok":
                 print(f"error: PR #{info['number']} is held for the user's approval ({detail}) — ask them to "
                       f"approve the review on GitHub, or run: pixi run ship -- approve {info['number']}")
@@ -1236,7 +1261,10 @@ def _merge_locked(branch, local, pr_number, title, skip_tests, no_push, root, ga
         return 1
     if approved_head:
         gh(["pr", "edit", str(pr_number), "--remove-label", HOLD_LABEL], root)
-        events.post(pr_number, "approved", approved_head, root=root, by=app_token.owner_login(), via="review")
+        night_merge = detail.startswith("night window")
+        events.post(pr_number, "approved", approved_head, root=root,
+                    by="night-window" if night_merge else app_token.owner_login(),
+                    via="night" if night_merge else "review")
     app_token.run_git_push(["push", "origin", "--delete", branch], cwd=root)
     run_git(["fetch", "-q", "origin", "main"], cwd=root)
     events.post(pr_number, "merged", _head_sha(root, "origin/main"), root=root, branch=branch)
@@ -1522,6 +1550,10 @@ def _main(argv):
     r.add_argument("--notes", metavar="FILE", help="markdown appended to the PR body as ## Notes")
     r.add_argument("--skip-checks", metavar="REASON", help="bypass the lane checks (web-check, test-ui-principles, api-schema-check, test-e2e); the reason goes in the PR body")
     r.add_argument("--hold", action="store_true", help="the user wants to review it: merge waits for `approve`")
+    ni = sub.add_parser("night", help="the night window: while open no PR is held and held PRs merge (auto-expires)")
+    ni.add_argument("action", choices=["start", "stop", "status"])
+    ni.add_argument("--until", metavar="HH:MM", help="close at the next HH:MM (local time)")
+    ni.add_argument("--hours", type=float, help=f"or close after N hours (default {night.DEFAULT_HOURS:g}, max {night.MAX_HOURS:g})")
     ap = sub.add_parser("approve", help="USER ONLY: lift the hold on PR N (agents are blocked by git_guard)")
     ap.add_argument("number", type=int)
     m = sub.add_parser("merge")
@@ -1591,6 +1623,8 @@ def _main(argv):
         return cmd_pr(args.title, args.skip_tests, notes_file=args.notes, hold=args.hold, skip_checks=args.skip_checks)
     if args.cmd == "approve":
         return cmd_approve(args.number)
+    if args.cmd == "night":
+        return cmd_night(args.action, args.until, args.hours)
     if args.cmd == "tag":
         from kb_distillery.config import kb as kbconfig
         return cmd_tag(args.name, args.at, kbconfig.explicit_kb(), args.repo, args.message)

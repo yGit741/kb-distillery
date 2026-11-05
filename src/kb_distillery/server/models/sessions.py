@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import Field
 
@@ -21,6 +21,7 @@ class SessionSummary(ApiModel):
     model: str | None = None
     effort: str | None = None
     backend: str | None = None
+    status: Literal["running", "waiting", "error", "idle"] = "idle"   # from the last message (sessions_store.status_of)
 
 
 class SessionList(ApiModel):

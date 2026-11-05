@@ -100,6 +100,12 @@ class MergeNudgeTests(unittest.TestCase):
                              ("user", "thanks, one more thing"), ("assistant", "Changed it."))
         self.assertEqual(merge_nudge.decide(self._payload(t))["decision"], "block")
 
+    def test_silent_while_the_night_window_is_open(self):
+        from kb_distillery.git import night
+        with patch.object(night, "active", return_value=True), patch.object(merge_nudge, "open_pr") as op:
+            self.assertIsNone(merge_nudge.decide({"cwd": self.repo}))
+            op.assert_not_called()
+
     def test_silent_when_the_pr_is_not_held(self):
         g(self.repo, "checkout", "-q", "-b", "infra/thing")
         t = self._transcript(("user", "fix it"), ("assistant", "Opened PR #16, merging it."))
