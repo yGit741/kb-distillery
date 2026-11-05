@@ -197,3 +197,20 @@ describe("label text and size", () => {
     expect(labelPx(paper, { ...DEFAULT_LAB, t3: 6 }, imp, 1)).toBe(DEFAULT_LAB.minPx);
   });
 });
+
+describe("soft obstacles (the page-type strip)", () => {
+  const strip: [number, number, number, number] = [0, 0, 1200, 800];
+  const forced = new Map([["idea-000", FORCED.selected]]);
+  it("none: the plan is the one without the option", () => {
+    const base = planLabels(input({ cfg: { strategy: "all" } }));
+    const none = planLabels(input({ cfg: { strategy: "all" }, softObstacles: [] }));
+    expect(none.placed.map((p) => [p.id, p.box])).toEqual(base.placed.map((p) => [p.id, p.box]));
+  });
+  it("an ordinary label under the strip is dropped or moved, a selected one still shows", () => {
+    const base = planLabels(input({ forced, cfg: { strategy: "all" } }));
+    const under = planLabels(input({ forced, softObstacles: [strip], cfg: { strategy: "all" } }));
+    expect(under.placed.find((p) => p.id === "idea-000")).toBeDefined();
+    expect(under.placed.filter((p) => !p.forced && p.tier !== 1)).toHaveLength(0);
+    expect(base.placed.filter((p) => !p.forced).length).toBeGreaterThan(0);
+  });
+});

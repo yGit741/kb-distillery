@@ -40,6 +40,7 @@ const overlaps = (a: Box, b: Box) => a[0] < b[2] && a[2] > b[0] && a[1] < b[3] &
 
 class Grid {
   private cells = new Map<string, { b: Box; id: string | null; node: boolean }[]>();
+  // node: a node disc or a soft obstacle; both yield to forced and tier-1 labels
   constructor(private cell: number) {}
   private keys(b: Box): string[] {
     const out: string[] = [];
@@ -83,6 +84,8 @@ export interface PlanInput {
   prev: ReadonlyMap<string, { shown: boolean; pos: number }>;
   /** boxes that block labels (region names) */
   obstacles: readonly Box[];
+  /** screen furniture (the page-type strip): blocks ordinary labels only, never a forced or tier-1 one */
+  softObstacles?: readonly Box[];
   suppress: boolean;
   measure: (text: string, px: number, weight: number) => number;
 }
@@ -158,6 +161,7 @@ export function planLabels(i: PlanInput): Plan {
   const grid = new Grid(48);
   if (cfg.avoidNodes) for (const q of cand) grid.add([q.sx - q.r - 1, q.sy - q.r - 1, q.sx + q.r + 1, q.sy + q.r + 1], q.n.id, true);
   for (const b of i.obstacles) grid.add(b, null);
+  for (const b of i.softObstacles ?? []) grid.add(b, null, true);
 
   const worldF = cfg.scope === "world" ? zr * zr : 1;
   const grow = Math.pow(zr, cfg.zoomGrowth);
