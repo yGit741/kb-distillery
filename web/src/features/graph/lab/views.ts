@@ -281,6 +281,12 @@ export const HEADLINE_STORIES: readonly Story[] = STORIES.filter((s) => s.headli
 /** Views reachable from "More": the rest, minus the lab leftovers that only compare label rules. */
 export const MORE_STORIES: readonly Story[] = STORIES.filter((s) => !s.headline && !["baseline", "compare", "orient", "concepts", "sources"].includes(s.id));
 
+/** The views that exist only while flag calm-graph is on. */
+const CALM_ONLY: ReadonlySet<string> = new Set(["concepts", "sources"]);
+/** A view id that may be applied now: it exists, and a calm-only one needs the flag (a saved or linked id never leaks past it). */
+export const storyKnown = (id: string): boolean => !!storyById(id) && (!CALM_ONLY.has(id) || flag(CALM_GRAPH));
+export const isCalmStory = (id: string): boolean => CALM_ONLY.has(id);
+
 export const storyById = (id: string): Story | undefined => STORIES.find((s) => s.id === id);
 
 /** The whole lab config of a story: the defaults plus its overrides (a story starts from the principles). */

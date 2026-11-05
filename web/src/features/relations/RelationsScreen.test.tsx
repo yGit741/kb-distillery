@@ -66,8 +66,10 @@ describe("range helpers", () => {
 
 describe("RelationsScreen", () => {
   // these screens are not about the calm default; the folded graph behind them opens on the old Map
-  beforeEach(() => setTestFlagOverrides({ "calm-graph": false }));
-  afterEach(() => setTestFlagOverrides({}));
+  beforeEach(() => {
+    setTestFlagOverrides({ "calm-graph": false });
+    useGraphUi.setState({ story: "map" });
+  });
 
   it("shows everything by default, grouped, with the count", async () => {
     setup();

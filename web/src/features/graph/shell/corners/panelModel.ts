@@ -1,5 +1,6 @@
 import { CALM_GRAPH, CALM_STORY, storyById, storyOffered, THESIS_SEED } from "../../lab/views";
 import { flag } from "@/flags";
+import { isPublic } from "../../publicPredicate";
 import { QUICK_OFF } from "../../quickFilters";
 import type { GraphSchema } from "../../schema";
 import type { GNode } from "../../types";
@@ -88,12 +89,13 @@ export function viewCards(
       spec: { v: 1, story: "gaps" },
     });
 
-  const sources = inLayer("source");
-  if (sources)
+  // flag calm-graph: the Sources view draws the sources read in depth (the public rule), so the card counts those
+  const sources = calm ? nodes.filter((x) => x.layer === "source" && isPublic(x)).length : inLayer("source");
+  if (sources || (calm && inLayer("source")))
     out.push({
       id: "sources",
       name: "Sources",
-      count: sources.toLocaleString("en-US"),
+      count: calm ? `${sources.toLocaleString("en-US")} read` : sources.toLocaleString("en-US"),
       spec: calm ? { v: 1, story: "sources" } : stand(typesOf("source")),
     });
   return out;

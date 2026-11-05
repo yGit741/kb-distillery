@@ -1,7 +1,7 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef } from "react";
 import { useKb } from "@/lib/store";
 import { cn } from "@/lib/utils";
-import { flag } from "@/flags";
+import { useFlag } from "@/flags/useFlag";
 import { useTheme } from "@/theme/theme";
 import { readCanvasColors, withAlpha, type CanvasColors } from "./canvasTheme";
 import { computeFocus, fadedLinkOpacity, fadedNodeOpacity, focusKey, nodeOpacity, type Focus } from "./focus";
@@ -150,6 +150,10 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
   const pendingFit = useRef(true);
   const lastClick = useRef<{ id: string | null; at: number }>({ id: null, at: 0 });
   const pressed = useRef(false);
+  // flag calm-graph: reacts to the flag arriving late; hover always settles first and edges rest fainter
+  const calmOn = useFlag("calm-graph");
+  const calmRef = useRef(calmOn);
+  calmRef.current = calmOn;
   const live = useRef({ ui, theme, selection, byId, neighbors, visible, onOpenReader, onOpenMenu, onBackgroundContext, onOpenPile });
   live.current = { ui, theme, selection, byId, neighbors, visible, onOpenReader, onOpenMenu, onBackgroundContext, onOpenPile };
 
@@ -234,7 +238,7 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
     const spot = u.spotlight;
     const spotIds = spot ? new Set([...vis].filter((id) => spot.has(ids.get(id)?.type ?? ""))) : null;
     const next = spotIds ? { core: spotIds, lit: spotIds, dim: 0.15 } : hops ? { core: new Set(sel), lit: new Set(hops.keys()) } : computeFocus(sel, hover, nb, u.highlight);
-    startFade(rs.current.focus, next, u.calmHover);
+    startFade(rs.current.focus, next, u.calmHover || calmRef.current);
     rs.current.focus = next;
     // forced labels: hovered page, the selection, their best neighbours (capped), every page of an "Aa" type
     const forced = new Map<string, number>();
@@ -272,7 +276,7 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
     },
     committed: () => rs.current.hover,
     speed: () => speed.current.speed(performance.now()),
-    enabled: () => live.current.ui.calmHover,
+    enabled: () => live.current.ui.calmHover || calmRef.current,
   });
   const pointed = useCallback(() => intent.current?.pointed() ?? null, []);
   const setHover = useCallback((id: string | null) => {
@@ -282,8 +286,8 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
     fg.current?.refresh(); // the ring follows the pointer at once
   }, []);
   useEffect(() => {
-    if (!ui.calmHover) intent.current?.flush();
-  }, [ui.calmHover]);
+    if (!ui.calmHover && !calmOn) intent.current?.flush();
+  }, [ui.calmHover, calmOn]);
   useEffect(
     () => () => {
       intent.current?.cancel();
@@ -359,7 +363,7 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
   useEffect(() => {
     rs.current.colors = readCanvasColors();
     recompute();
-  }, [recompute, theme, visible, selection, byId, neighbors, ui.highlight, ui.lab, ui.typeLabels, ui.spotlight, ui.colorBy, ui.linkOpacity, radiusOpts, layered, imp]);
+  }, [recompute, theme, visible, selection, byId, neighbors, ui.highlight, ui.lab, ui.typeLabels, ui.spotlight, ui.colorBy, ui.linkOpacity, radiusOpts, layered, imp, calmOn]);
 
   // a changed set of pages is framed after a moment and framed again once the layout settles: at the moment the
   // pages may still be drifting from their old places, and a single early fit left a view (Thesis) in a corner.
@@ -864,8 +868,8 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
     const fade = useDecor.getState().linkFade?.(a, b) ?? 1;
     // a hidden kind keeps its place in the layout and is simply not drawn
     if (live.current.ui.hiddenLinkKinds.has(l.kind)) return withAlpha(colors.link, 0);
-    return withAlpha(colors.link, fade * fadedLinkOpacity(a, b, focus, prevFocus, fadeT, live.current.ui.linkOpacity * (flag("calm-graph") ? CALM_EDGE : 1), l.kind));
-  }, []);
+    return withAlpha(colors.link, fade * fadedLinkOpacity(a, b, focus, prevFocus, fadeT, live.current.ui.linkOpacity * (calmOn ? CALM_EDGE : 1), l.kind));
+  }, [calmOn]);
   const linkWidth = useCallback((l: SimLink) => (l.kind === "shared" ? 0.35 + Math.min(l.shared ?? 1, 6) * 0.1 : 0.8), []);
   const linkLabel = useCallback(
     (l: SimLink) => (l.kind === "shared" && !live.current.ui.hiddenLinkKinds.has(l.kind) ? `${l.shared} shared source${l.shared === 1 ? "" : "s"}` : ""),

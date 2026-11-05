@@ -25,7 +25,7 @@ import { computeImportance } from "./lab/importance";
 import { HoverCard } from "./lab/HoverCard";
 import { LabRail } from "./lab/LabRail";
 import { DIVE_PARAMS, initialView } from "./defaultView";
-import { CALM_STORY, DEFAULT_STORY, storyById, storyOffered, storyTypes } from "./lab/views";
+import { CALM_STORY, DEFAULT_STORY, isCalmStory, storyById, storyKnown, storyOffered, storyTypes } from "./lab/views";
 import { viewCards, type ViewCard } from "./shell/corners/panelModel";
 import { applySpec } from "./shell/corners/viewSpec";
 import { Legend } from "./Legend";
@@ -336,6 +336,36 @@ function Loaded({
   const calmViews = useMemo<ViewCard[] | undefined>(() => (calm ? viewCards(model.nodes, schema) : undefined), [calm, model.nodes, schema]);
   const pickView = useCallback((card: ViewCard) => void applySpec(card.spec, { applyView, showPicked }), [applyView, showPicked]);
 
+  // flag calm-graph: a bare first visit on the untouched default opens on Concepts (sources hidden until the Sources view).
+  // It follows the flag, which may arrive after the first render; a calm view left over from a time the flag was on
+  // never applies while it is off (back to today's default). Set straight on the store: a tool panel or selection
+  // a link opened is left alone.
+  const firstBare = useRef(!search.view && !search.layer && !DIVE_PARAMS.some((k) => search[k] !== undefined && search[k] !== "") && initialView(search) === undefined);
+  const calmDone = useRef(false);
+  /** the calm view set aside while the flag was (not yet) on: it comes back if the flag arrives late */
+  const heldCalm = useRef("");
+  useEffect(() => {
+    const g = useGraphUi.getState();
+    if (!calm) {
+      if (isCalmStory(g.story)) {
+        heldCalm.current = g.story;
+        g.applyStory(DEFAULT_STORY);
+      }
+      return;
+    }
+    if (calmDone.current) return;
+    calmDone.current = true;
+    if (heldCalm.current) {
+      g.applyStory(heldCalm.current);
+      g.fit();
+      return;
+    }
+    if (firstBare.current && g.story === DEFAULT_STORY) {
+      g.applyStory(CALM_STORY);
+      g.fit();
+    }
+  }, [calm]);
+
   // ---- deep links: ?focus ?select ?search ?pages ?scope ?layer, applied once per distinct value
   const applied = useRef("");
   /** a snapshot's default view (`KB_EMBEDDED.home.view`) stands in for a missing `?view=` on the first pass only */
@@ -344,16 +374,8 @@ function Loaded({
     const key = JSON.stringify([search.focus, search.select, search.search, search.pages, search.scope, search.layer, search.raw, search.view]);
     if (applied.current === key) return;
     applied.current = key;
-    const view = homeViewTried.current ? (search.view && storyById(search.view) ? search.view : undefined) : initialView(search);
-    // flag calm-graph: a bare link on the untouched default opens on Concepts (sources hidden until the Sources view);
-    // set straight on the store, so a tool panel or selection a link opened is left alone
-    const bare = !search.layer && !DIVE_PARAMS.some((k) => search[k] !== undefined && search[k] !== "");
-    const calmDefault = calm && !homeViewTried.current && !view && bare && useGraphUi.getState().story === DEFAULT_STORY;
+    const view = homeViewTried.current ? (search.view && storyKnown(search.view) ? search.view : undefined) : initialView(search);
     homeViewTried.current = true;
-    if (calmDefault) {
-      useGraphUi.getState().applyStory(CALM_STORY);
-      useGraphUi.getState().fit();
-    }
     if (view && view !== lastView.current) applyView(view, true);
     if (search.raw === "1" && dsKind !== "embedded") useLayer.getState().setRaw(true);
     if (search.layer && search.layer in LAYER_TYPES) {
@@ -371,7 +393,7 @@ function Loaded({
     if (search.select) useKb.getState().setSelection(parsePages(search.select).filter((id) => byId.has(id)));
     // a Home subgraph is fitted whole by the canvas (refit on a new view); zooming onto the focus would crop it
     if (search.focus && byId.has(search.focus) && !(search.from === "home" && search.pages)) useGraphUi.getState().requestFocus(search.focus);
-  }, [search, ds, dsKind, byId, neighbors, showMentions, showPicked, setView, applyView, calm]);
+  }, [search, ds, dsKind, byId, neighbors, showMentions, showPicked, setView, applyView]);
 
   // ?tool=<id> opens that tool once (links into the folded Relations and Scopes screens land here)
   useEffect(() => {

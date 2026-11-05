@@ -19,7 +19,7 @@ vi.mock("force-graph", () => {
 
 const ds = mockDataSource({ getGraph: async () => sampleSnapshot(), listScopes: async () => ({ scopes: [] }) as never });
 
-beforeEach(() => useGraphUi.setState({ flyout: null }));
+beforeEach(() => useGraphUi.setState({ flyout: null, story: "map" }));
 
 describe("Relations and Scopes folded into the graph", () => {
   it("?tool=scopes opens the Scopes sheet beside the canvas, and its own controls stay on /graph", () => withFlag("calm-graph", false, async () => {

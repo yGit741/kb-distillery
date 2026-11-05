@@ -48,8 +48,10 @@ function setup(over: Partial<DataSource> = {}, url = "/app/scopes") {
 
 describe("ScopesScreen", () => {
   // not about the calm default; the folded graph behind this screen opens on the old Map
-  beforeEach(() => setTestFlagOverrides({ "calm-graph": false }));
-  afterEach(() => setTestFlagOverrides({}));
+  beforeEach(() => {
+    setTestFlagOverrides({ "calm-graph": false });
+    useGraphUi.setState({ story: "map" });
+  });
 
   beforeEach(() => {
     localStorage.clear();

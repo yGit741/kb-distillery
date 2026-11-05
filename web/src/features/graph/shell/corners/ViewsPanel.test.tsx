@@ -50,7 +50,7 @@ beforeEach(() => {
 });
 
 describe("view cards", () => {
-  it("count the kb's own pages and leave out a view that does not fit", () => {
+  it("count the kb's own pages and leave out a view that does not fit", () => withFlag("calm-graph", false, () => {
     const cards = viewCards(nodes, schema);
     const by = Object.fromEntries(cards.map((c) => [c.id, c.count]));
     expect(by.concepts).toMatch(/pages?$/);
@@ -59,7 +59,13 @@ describe("view cards", () => {
     expect(by.gaps).toBe("1 question");
     expect(by.thesis).toBeUndefined(); // no thesis spine pages in this kb
     expect(viewCards([], schema)).toEqual([]);
-  });
+  }));
+
+  it("flag calm-graph: the Sources card counts the sources the view draws (read in depth)", () =>
+    withFlag("calm-graph", true, () => {
+      const by = Object.fromEntries(viewCards(nodes, schema).map((c) => [c.id, c.count]));
+      expect(by.sources).toBe(`${nodes.filter((x) => x.layer === "source" && ["full", "deep"].includes(x.depth ?? "")).length} read`);
+    }));
 
   it("lists the newest source pages first", () => {
     expect(recentSources(nodes)[0]?.id).toBe("2019-fine-grained");
