@@ -1,4 +1,5 @@
 import { ChevronDown } from "lucide-react";
+import { useEffect } from "react";
 import { useHeaderFold } from "@/app/headerFold";
 import { cn } from "@/lib/utils";
 
@@ -10,6 +11,12 @@ const RING = "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring
  * hairline, and the invisible 24px strip along that hairline folds the bar again on a double click.
  */
 export function HeaderFold() {
+  const setMounted = useHeaderFold((s) => s.setMounted);
+  // the bar folds only while this chevron is on screen, so every other state and route keeps its bar
+  useEffect(() => {
+    setMounted(true);
+    return () => setMounted(false);
+  }, [setMounted]);
   const folded = useHeaderFold((s) => s.folded);
   const toggle = useHeaderFold((s) => s.toggle);
   const label = folded ? "Show the app bar" : "Hide the app bar";

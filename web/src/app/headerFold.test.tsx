@@ -4,7 +4,7 @@ import { HEADER_FOLD_KEY, readFolded, useHeaderFold, useHeaderFolded } from "./h
 
 beforeEach(() => {
   localStorage.clear();
-  useHeaderFold.setState({ folded: true });
+  useHeaderFold.setState({ folded: true, mounted: true });
 });
 
 describe("header fold store", () => {
@@ -43,22 +43,24 @@ describe("flag header-fold", () => {
   it("on: folded on the graph with the shell, never off the graph", () =>
     withFlag("header-fold", true, () =>
       withFlag("graph-shell", true, () => {
-        expect(renderHook(() => useHeaderFolded(true)).result.current).toBe(true);
-        expect(renderHook(() => useHeaderFolded(false)).result.current).toBe(false);
+        expect(renderHook(() => useHeaderFolded()).result.current).toBe(true);
+        // no chevron on screen (another route, a loading or error state): the bar stays
+        useHeaderFold.setState({ mounted: false });
+        expect(renderHook(() => useHeaderFolded()).result.current).toBe(false);
       }),
     ));
 
   it("on without the shell: the bar stays", () =>
     withFlag("header-fold", true, () =>
       withFlag("graph-shell", false, () => {
-        expect(renderHook(() => useHeaderFolded(true)).result.current).toBe(false);
+        expect(renderHook(() => useHeaderFolded()).result.current).toBe(false);
       }),
     ));
 
   it("off: the bar never folds", () =>
     withFlag("header-fold", false, () =>
       withFlag("graph-shell", true, () => {
-        expect(renderHook(() => useHeaderFolded(true)).result.current).toBe(false);
+        expect(renderHook(() => useHeaderFolded()).result.current).toBe(false);
       }),
     ));
 });

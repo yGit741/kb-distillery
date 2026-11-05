@@ -38,12 +38,12 @@ const host: GraphHost = {
   href: (to) => `/app${to}`,
 };
 
-const ds = (): DataSource =>
-  mockDataSource({ getGraph: async () => sampleSnapshot(), search: async () => ({ hits: [], total: 0 }), listRecent: async () => ({ recent: [] }), listViews: async () => ({ views: [] }) });
+const ds = (over: Partial<DataSource> = {}): DataSource =>
+  mockDataSource({ getGraph: async () => sampleSnapshot(), ...over, search: async () => ({ hits: [], total: 0 }), listRecent: async () => ({ recent: [] }), listViews: async () => ({ views: [] }) });
 
-const screenWith = () =>
+const screenWith = (over: Partial<DataSource> = {}) =>
   render(
-    <DataSourceProvider source={ds()}>
+    <DataSourceProvider source={ds(over)}>
       <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
         <GraphScreen search={{}} host={host} />
       </QueryClientProvider>
@@ -52,7 +52,7 @@ const screenWith = () =>
 
 beforeEach(() => {
   localStorage.clear();
-  useHeaderFold.setState({ folded: true });
+  useHeaderFold.setState({ folded: true, mounted: false });
 });
 
 describe("flag header-fold on the graph screen", () => {
@@ -60,13 +60,25 @@ describe("flag header-fold on the graph screen", () => {
     withFlag("graph-shell", true, () =>
       withFlag("header-fold", true, async () => {
         screenWith();
-        const frame = await screen.findByTestId("graph-screen");
+        const show = await screen.findByRole("button", { name: "Show the app bar" });
+        const frame = screen.getByTestId("graph-screen");
         expect(frame.className).toContain("top-0");
-        await userEvent.click(await screen.findByRole("button", { name: "Show the app bar" }));
+        await userEvent.click(show);
         expect(frame.className).toContain("top-12");
         expect(screen.getByRole("button", { name: "Hide the app bar" })).toHaveAttribute("aria-expanded", "true");
         fireEvent.doubleClick(screen.getByTestId("header-fold"));
         expect(frame.className).toContain("top-0");
+      }),
+    ));
+
+  it("on: a graph that fails to load keeps the bar, since there is no chevron to bring it back", () =>
+    withFlag("graph-shell", true, () =>
+      withFlag("header-fold", true, async () => {
+        screenWith({ getGraph: async () => { throw new Error("down"); } });
+        expect(await screen.findByText(/could not load the graph/i)).toBeInTheDocument();
+        expect(screen.getByTestId("graph-screen").className).toContain("top-12");
+        expect(screen.queryByTestId("header-fold")).not.toBeInTheDocument();
+        expect(useHeaderFold.getState().mounted).toBe(false);
       }),
     ));
 

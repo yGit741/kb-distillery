@@ -1,5 +1,5 @@
 import { lazy, Suspense } from "react";
-import { Link, Outlet, useRouterState } from "@tanstack/react-router";
+import { Link, Outlet } from "@tanstack/react-router";
 import { Command as CommandIcon, Moon, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -29,8 +29,7 @@ export function AppShell() {
   const embed = useEmbed();
   const agentMode = useFlag("agent-mode");
   // flag header-fold: on the graph the bar folds away above the screen (the graph's chevron brings it back)
-  const onGraph = useRouterState({ select: (s) => s.location.pathname }) === "/graph";
-  const folded = useHeaderFolded(onGraph);
+  const folded = useHeaderFolded();
   return (
     <div className="flex min-h-screen flex-col">
       {!embed && (

@@ -159,7 +159,7 @@ export function GraphScreen({ search, host }: { search: GraphSearch; host: Graph
 
 /** The screen sits under the 48px header and fills the rest of the viewport (the graph needs the room); while the bar is folded away (flag header-fold) it takes the whole viewport. */
 function FullBleed({ children }: { children: React.ReactNode }) {
-  const folded = useHeaderFolded(true);
+  const folded = useHeaderFolded();
   return (
     <div
       className={cn("fixed inset-x-0 bottom-0 z-30 overflow-hidden bg-background transition-[top] duration-200 motion-reduce:transition-none", folded ? "top-0" : "top-12")}
