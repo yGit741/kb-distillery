@@ -255,6 +255,7 @@ function Loaded({
   const ui = useGraphUi();
   const selection = useKb((s) => s.selection);
   const canvas = useRef<CanvasHandle>(null);
+  const canvasBox = useRef<HTMLDivElement>(null);
   const [menu, setMenu] = useState<{ id: string; x: number; y: number } | null>(null);
   /** the right-click menu on empty space: spread the nodes around the point, or fit the view */
   const [bgMenu, setBgMenu] = useState<{ x: number; y: number } | null>(null);
@@ -462,7 +463,12 @@ function Loaded({
       },
       clearSelection: () => useKb.getState().clearSelection(),
       focus,
-      screenOf: (id) => canvas.current?.screenOf(id) ?? null,
+      // the canvas box is offset inside the graph area in the full chat: overlays are placed from the area's corner
+      screenOf: (id) => {
+        const p = canvas.current?.screenOf(id);
+        const box = canvasBox.current;
+        return p ? { x: p.x + (box?.offsetLeft ?? 0), y: p.y + (box?.offsetTop ?? 0) } : null;
+      },
       openReader,
     }),
     [model, byId, visible, selection, focus, openReader],
@@ -518,7 +524,7 @@ function Loaded({
     <HostContext.Provider value={host}>
       <div className="absolute inset-0" data-testid="graph-area">
       {/* the full chat leaves the canvas the top of the right pane */}
-      <div className="absolute" style={fullChat ? { left: chatPanelWidth(true, false), right: 0, top: 0, bottom: "50%" } : { inset: 0 }}>
+      <div ref={canvasBox} className="absolute" style={fullChat ? { left: chatPanelWidth(true, false), right: 0, top: 0, bottom: "50%" } : { inset: 0 }}>
       <GraphCanvas
         ref={canvas}
         model={model}
