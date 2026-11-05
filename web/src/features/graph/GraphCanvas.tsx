@@ -15,6 +15,9 @@ import { FORCED } from "./lab/labelPlan";
 import { areaNames } from "./lab/regions";
 import { drawKbOutlines, kbAnchors, kbGroups, kbLabelSpot } from "./lab/kbRegions";
 import { bubbleAim, drawBubble, magnetCursor, pickMagnetic, rgbOf, stepBubble, type Bubble, type ScreenNode } from "./magnet";
+import { useCites } from "./shell/citeStore";
+import { useSparkOpen } from "./shell/SparkPanelHost";
+import { SPARK_PANEL_W } from "./shell/layout";
 import { drawPile, formatOfPile, isPile, isPileId, pileRadius } from "./rawLayer";
 import { DRAG_PX } from "./selection";
 import { useGraphUi } from "./store";
@@ -147,8 +150,13 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
   const pendingFit = useRef(true);
   const lastClick = useRef<{ id: string | null; at: number }>({ id: null, at: 0 });
   const pressed = useRef(false);
-  const live = useRef({ ui, theme, selection, byId, neighbors, visible, onOpenReader, onOpenMenu, onBackgroundContext, onOpenPile });
-  live.current = { ui, theme, selection, byId, neighbors, visible, onOpenReader, onOpenMenu, onBackgroundContext, onOpenPile };
+  // pages the answer in the left chat panel cites (./shell/citeStore): lit while it is on screen, never selected
+  const citeSlugs = useCites((s) => s.slugs);
+  const citeFitTick = useCites((s) => s.fitTick);
+  const sparkOpen = useSparkOpen();
+  const cited = useMemo<ReadonlySet<string>>(() => new Set(citeSlugs.filter((id) => visible.has(id))), [citeSlugs, visible]);
+  const live = useRef({ ui, theme, selection, byId, neighbors, visible, cited, onOpenReader, onOpenMenu, onBackgroundContext, onOpenPile });
+  live.current = { ui, theme, selection, byId, neighbors, visible, cited, onOpenReader, onOpenMenu, onBackgroundContext, onOpenPile };
 
   rs.current.imp = imp;
   const names = useMemo(() => areaNames(model.nodes, model.kbs), [model]);
@@ -212,7 +220,7 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
   }, []);
 
   const recompute = useCallback(() => {
-    const { ui: u, selection: sel, byId: ids, neighbors: nb, visible: vis } = live.current;
+    const { ui: u, selection: sel, byId: ids, neighbors: nb, visible: vis, cited: cite } = live.current;
     const gone = intent.current?.pointed();
     if (gone && !vis.has(gone)) {   // filtered out or reloaded: nothing may act on it any more
       intent.current?.reset();
@@ -230,7 +238,9 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
     // a legend spotlight (a type chip under the pointer) is a focus on every drawn page of the type: same fade
     const spot = u.spotlight;
     const spotIds = spot ? new Set([...vis].filter((id) => spot.has(ids.get(id)?.type ?? ""))) : null;
-    const next = spotIds ? { core: spotIds, lit: spotIds, dim: 0.15 } : hops ? { core: new Set(sel), lit: new Set(hops.keys()) } : computeFocus(sel, hover, nb, u.highlight);
+    // cited pages stand out only while nothing else asks for the focus (a selection or hover of the user's wins)
+    const citeFocus = cite.size && !sel.size && !hover && !spotIds ? { core: cite, lit: cite, dim: 0.3 } : null;
+    const next = spotIds ? { core: spotIds, lit: spotIds, dim: 0.15 } : citeFocus ? citeFocus : hops ? { core: new Set(sel), lit: new Set(hops.keys()) } : computeFocus(sel, hover, nb, u.highlight);
     startFade(rs.current.focus, next, u.calmHover);
     rs.current.focus = next;
     // forced labels: hovered page, the selection, their best neighbours (capped), every page of an "Aa" type
@@ -251,6 +261,7 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
       put(id, FORCED.selected);
       topNeighbours(id, cfg.neighborBy === "weight" ? byWeight(id) : byScore).forEach((j) => put(j, FORCED.near));
     }
+    for (const id of cite) put(id, FORCED.type);
     if (u.typeLabels.size) for (const id of vis) if (u.typeLabels.has(ids.get(id)?.type ?? "")) put(id, FORCED.type);
     // a spotlit type small enough to label whole (people, topics) gets every label; a big one keeps the budget
     if (spotIds && spotIds.size <= 40) for (const id of spotIds) put(id, FORCED.type);
@@ -356,7 +367,7 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
   useEffect(() => {
     rs.current.colors = readCanvasColors();
     recompute();
-  }, [recompute, theme, visible, selection, byId, neighbors, ui.highlight, ui.lab, ui.typeLabels, ui.spotlight, ui.colorBy, ui.linkOpacity, radiusOpts, layered, imp]);
+  }, [recompute, theme, visible, selection, byId, neighbors, ui.highlight, ui.lab, ui.typeLabels, ui.spotlight, ui.colorBy, ui.linkOpacity, radiusOpts, layered, imp, cited]);
 
   // a changed set of pages is framed after a moment and framed again once the layout settles: at the moment the
   // pages may still be drifting from their old places, and a single early fit left a view (Thesis) in a corner.
@@ -409,6 +420,27 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
   useEffect(() => {
     if (ui.fitTick > 0) fit();
   }, [ui.fitTick, fit]);
+
+  // a new answer (or a chat opened) frames the cited pages in the area right of the chat panel; nothing else re-frames
+  useEffect(() => {
+    if (citeFitTick === 0) return;
+    let tries = 0;
+    let timer = 0;
+    const attempt = () => {
+      const ids = live.current.cited;
+      if (!ids.size) return;
+      pendingFit.current = false;
+      if (fg.current?.fitIn((n) => ids.has(n.id), sparkOpen ? SPARK_PANEL_W : 0)) {
+        window.setTimeout(() => {
+          k.current = fg.current?.zoom() ?? 1;
+          recompute();
+        }, 650);
+      } else if (tries++ < 40) timer = window.setTimeout(attempt, 100);
+    };
+    attempt();
+    return () => window.clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [citeFitTick]);
 
   // ---- pending focus: wait for the page to be drawn and laid out, then centre on it
   useEffect(() => {
@@ -632,6 +664,7 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
         return;
       }
       lastClick.current = { id, at: now };
+      if (live.current.cited.has(id)) useCites.getState().scrollTo(id);
       const kb = useKb.getState();
       if (ev.shiftKey || ev.metaKey || ev.ctrlKey) kb.toggle(id);
       else kb.setSelection([id]);
@@ -690,7 +723,7 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
         font: colors.font,
         ring: colors.ring,
         initials: initials.get(n.id),
-        state: isSel ? "selected" : hover === n.id ? "hover" : null,
+        state: isSel ? "selected" : hover === n.id ? "hover" : live.current.cited.has(n.id) ? "focus" : null,
         alpha,
         glyph: r * scale >= SOURCE_GLYPH_PX || hover === n.id,
         scale,

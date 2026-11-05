@@ -11,6 +11,8 @@ import { GraphScreen, type GraphHost } from "../GraphScreen";
 import { DEFAULT_PREFS, useGraphUi } from "../store";
 import { useChatDock } from "../tools/chatDockStore";
 import { newChat, showDock } from "./corners/sessions";
+import { useCites } from "./citeStore";
+import { citedSlugs, slugOfHref } from "./cites";
 import { useSparkPanel } from "./sparkPanelStore";
 
 // jsdom has no canvas: stand in for force-graph with a chainable no-op instance.
@@ -67,6 +69,7 @@ beforeEach(() => {
   sessionStorage.clear();
   useChatDock.setState({ open: false, wide: false, question: "" });
   useSparkPanel.setState({ open: false, key: 0 });
+  useCites.setState({ slugs: [], fitTick: 0, scrollReq: null });
   useKb.setState({ selection: new Set() });
   useGraphUi.setState({ ...DEFAULT_PREFS, story: "", shownTypes: undefined, predicate: null, shownDepths: null, search: "", rules: [], typeLabels: new Set(), view: null, revealed: new Set(), flyout: null, detailsOpen: false, readerSlug: null, focusRequest: null, fitTick: 0 });
 });
@@ -161,5 +164,53 @@ describe("flag spark-chat: the left chat panel", () => {
       expect(useChatDock.getState().open).toBe(true);
       expect(useSparkPanel.getState().open).toBe(false);
     });
+  });
+});
+
+const ANSWER = "See [Idea five](idea-005.md) and [[idea-006|six]]; again [Idea five](idea-005.md#top).";
+const storeAnswer = () =>
+  sessionStorage.setItem("kbchat.chat", JSON.stringify({ id: "kb-chat:2", session: null, messages: [{ role: "user", content: "Which ideas?", sources: [] }, { role: "assistant", content: ANSWER }] }));
+
+describe("cites: the pages an answer links light up on the graph beside the panel", () => {
+  it("reads page links and wikilinks once each, in order", () => {
+    expect(citedSlugs(ANSWER)).toEqual(["idea-005", "idea-006"]);
+    expect(citedSlugs("no links, [site](https://example.com/a.md)")).toEqual([]);
+    expect(slugOfHref("/app/pages/idea-005")).toBe("idea-005");
+    expect(slugOfHref("https://example.com")).toBeNull();
+  });
+
+  it("flag on: the answer on screen sets the cited pages and one fit; closing the panel ends it; the selection is untouched", async () => {
+    await withFlag("graph-shell", true, () =>
+      withFlag("spark-chat", true, async () => {
+        storeAnswer();
+        useKb.setState({ selection: new Set(["idea-001"]) });
+        screenWith();
+        await screen.findByTestId("graph-shell");
+        act(() => showDock());
+        await screen.findByTestId("spark-panel");
+        await waitFor(() => expect(useCites.getState().slugs).toEqual(["idea-005", "idea-006"]));
+        expect(useCites.getState().fitTick).toBe(1);
+        expect(await screen.findByTestId("spark-cites")).toHaveTextContent("2 cited pages lit on the graph");
+        expect([...useKb.getState().selection]).toEqual(["idea-001"]);
+        await userEvent.click(screen.getByRole("button", { name: "Close chat" }));
+        expect(useCites.getState().slugs).toEqual([]);
+        expect([...useKb.getState().selection]).toEqual(["idea-001"]);
+      }),
+    );
+  });
+
+  it("flag off: no panel, nothing is highlighted or fitted", async () => {
+    await withFlag("graph-shell", true, () =>
+      withFlag("spark-chat", false, async () => {
+        storeAnswer();
+        screenWith();
+        await screen.findByTestId("graph-shell");
+        act(() => useSparkPanel.getState().show()); // even asked to open, the flag keeps it shut
+        expect(screen.queryByTestId("spark-panel")).not.toBeInTheDocument();
+        expect(screen.queryByTestId("spark-cites")).not.toBeInTheDocument();
+        expect(useCites.getState().slugs).toEqual([]);
+        expect(useCites.getState().fitTick).toBe(0);
+      }),
+    );
   });
 });
