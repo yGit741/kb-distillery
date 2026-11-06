@@ -34,6 +34,8 @@ import { useVisibleTools } from "../tools";
 import type { GLink, GNode } from "../types";
 import { Chips } from "../layers/Chips";
 import { useLayers } from "../layers/store";
+import { planSentence, type Plan } from "../layers/sentenceRun";
+import { useKb } from "@/lib/store";
 import { buildCommands, closestCommands, filterCommands, GROUP_ORDER, type Command, type CommandIcon } from "./commands";
 import { LINE_COPY, type LineMode } from "./copy";
 import { SearchBar } from "./SearchBar";
@@ -152,6 +154,8 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
   const parsed = parseMode(raw);
   const viewMode = intent && parsed.mode === "view";
   const [hintMode, setHintMode] = useState<LineMode | null>(null);
+  // q3: a name that needs the user's pick before the sentence applies
+  const [didYou, setDidYou] = useState<{ text: string; op: "replace" | "stack"; pick: Extract<Plan, { kind: "ask" }>["pick"]; chosen: Record<string, string> } | null>(null);
 
   // ---- data: recent steps and pinned views (rest), the knowledge bases (kb-view), page results (typing)
   const live = ds.kind !== "embedded";
@@ -321,6 +325,18 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
 
     if (viewMode) {
       if (!parsed.text || !live || IS_SHARE) return out;
+      if (didYou && didYou.text === parsed.text) {
+        for (const o of didYou.pick.options)
+          out.push({
+            key: `pick:${o.slug}`,
+            section: LINE_COPY.didYouMean(didYou.pick.name),
+            label: o.title,
+            hint: o.slug,
+            lead: <Wand2 aria-hidden className="size-4" strokeWidth={1.6} />,
+            run: () => runSentence(didYou.text, didYou.op, { ...didYou.chosen, [didYou.pick.name]: o.slug }),
+          });
+        return out;
+      }
       out.push({
         key: "view-shape",
         section: "Actions",
@@ -332,16 +348,15 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
         hint: parsed.op ? LINE_COPY.explainers[parsed.op] : undefined,
         lead: <Wand2 aria-hidden className="size-4" strokeWidth={1.6} />,
         run: () => {
-          // q3: the grammar parses `parsed.text` into layers here; until then a sentence goes down the shape path and
-          // useShape records it as one `show` layer (so the chip row shows it and undo works)
+          // the grammar reads the sentence into layers; text it cannot read goes down the shape path, where useShape
+          // records it as one `show` layer (so the chip row shows it and undo works)
           if (parsed.op === "remove") {
             const gone = useLayers.getState().apply("remove", parsed.text);
             useShellStore.getState().say(gone ? "Removed it from the view." : "No layer of the view matches that.");
             close();
             return;
           }
-          useShellStore.getState().setPendingOp(parsed.op ?? "replace");
-          requestShape(parsed.text);
+          runSentence(parsed.text, parsed.op ?? "replace", {});
         },
       });
       return out;
@@ -467,7 +482,7 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
     }
     return out;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [slash, viewMode, intent, raw, text, commands, recentQ.data, viewsQ.data, results, colorBy, onFocus, onRead, onShowMentions, record, close, shaping, canUndo, layersUndo, undoShape, live]);
+  }, [slash, viewMode, intent, raw, text, commands, recentQ.data, viewsQ.data, results, colorBy, onFocus, onRead, onShowMentions, record, close, shaping, canUndo, layersUndo, undoShape, live, didYou, nodes]);
 
   /** A recent step: a command runs again; anything else goes back into the box to be edited or run. */
   function runRecent(s: RecentStep) {
@@ -481,6 +496,24 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
   }
   function runView(v: PinnedView) {
     useShellStore.getState().requestView(v);
+  }
+
+  /** Read a `>` sentence into layers and apply them; a name left open asks, text the rules cannot read goes to the shape path. */
+  function runSentence(typed: string, op: "replace" | "stack", chosen: Record<string, string>) {
+    const focus = [...useKb.getState().selection][0];
+    const plan = planSentence(typed, nodes, { focus, chosen });
+    const say = useShellStore.getState().say;
+    if (plan.kind === "ready") {
+      setDidYou(null);
+      useLayers.getState().apply(op, plan.layers);
+      close();
+    } else if (plan.kind === "ask") setDidYou({ text: typed, op, pick: plan.pick, chosen: plan.chosen });
+    else if (plan.kind === "missing") say(LINE_COPY.noSuchPage(plan.name));
+    else {
+      say(LINE_COPY.sentenceFallback);
+      useShellStore.getState().setPendingOp(op);
+      requestShape(typed);
+    }
   }
 
   useEffect(() => setIdx(0), [raw]);

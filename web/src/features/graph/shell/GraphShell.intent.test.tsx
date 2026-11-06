@@ -70,15 +70,15 @@ describe("the line, graph-intent on", () => {
     });
   });
 
-  it("routes a > sentence to the shape path and records the op", async () => {
+  it("routes a > sentence the rules cannot read to the shape path and records the op", async () => {
     await withFlag("graph-intent", true, async () => {
       setup();
       const seen: (string | null)[] = [];
       const off = useShellStore.subscribe((st) => seen.push(st.pendingShape));
-      await userEvent.type(box(), ">+ colour by area");
+      await userEvent.type(box(), ">+ make it feel calmer");
       await userEvent.keyboard("{Enter}");
       off();
-      expect(seen).toContain("colour by area");
+      expect(seen).toContain("make it feel calmer");
       expect(useShellStore.getState().pendingOp).toBe("stack");
     });
   });
