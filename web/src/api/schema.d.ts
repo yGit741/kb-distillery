@@ -1087,6 +1087,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/views/ready": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Ready views from the kb's kit */
+        get: operations["ready_views_api_views_ready_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/views/{view_id}": {
         parameters: {
             query?: never;
@@ -2920,6 +2937,31 @@ export interface components {
              * @default
              */
             text: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /**
+         * ReadyView
+         * @description A view the kit ships: `layers` are lines of the graph's query language (the frontend parses them).
+         */
+        ReadyView: {
+            /** Description */
+            description: string;
+            /** Id */
+            id: string;
+            /** Kit */
+            kit: string;
+            /** Layers */
+            layers: string[];
+            /** Name */
+            name: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** ReadyViewList */
+        ReadyViewList: {
+            /** Views */
+            views: components["schemas"]["ReadyView"][];
         } & {
             [key: string]: unknown;
         };
@@ -6416,6 +6458,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    ready_views_api_views_ready_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReadyViewList"];
                 };
             };
         };

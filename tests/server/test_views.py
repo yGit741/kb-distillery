@@ -9,7 +9,7 @@ from fastapi.testclient import TestClient
 
 from kb_distillery.config import kb as kbconfig
 from kb_distillery.server.app import create_app
-from kb_distillery.server.models.views import RecentList, ViewList, ViewStep
+from kb_distillery.server.models.views import ReadyViewList, RecentList, ViewList, ViewStep
 from kb_distillery.services import kbview
 from kb_distillery.services import views as views_svc
 from kb_distillery.vault import views as vv
@@ -187,3 +187,21 @@ def test_concurrent_recent_appends_lose_nothing(kb):
     with ThreadPoolExecutor(8) as pool:
         list(pool.map(lambda i: vv.append_recent(kb, f"s{i}", {}), range(20)))
     assert sorted(e["text"] for e in vv.load_recent(kb)) == sorted(f"s{i}" for i in range(20))
+
+
+def test_ready_views_come_from_the_kb_kit(client):
+    r = client.get("/api/views/ready")
+    assert r.status_code == 200
+    got = ReadyViewList.model_validate(r.json()).views
+    ids = [v.id for v in got]
+    assert {"contradictions", "orphans", "hubs", "by-type", "recent-additions", "gaps", "open-contradictions",
+            "frontier", "quiet-hubs"} <= set(ids)
+    assert all(v.layers and v.description and v.name for v in got)
+    with mock.patch("kb_distillery.services.views.kbconfig.current", return_value=mock.Mock(kit="research")):
+        research = [v.id for v in ReadyViewList.model_validate(client.get("/api/views/ready").json()).views]
+    assert "open-questions" in research and set(ids) <= set(research)
+
+
+def test_ready_views_survive_an_unreadable_kit(client):
+    with mock.patch("kb_distillery.services.views.kbconfig.current", return_value=mock.Mock(kit="nope")):
+        assert client.get("/api/views/ready").json() == {"views": []}

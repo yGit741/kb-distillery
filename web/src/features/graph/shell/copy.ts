@@ -58,6 +58,20 @@ export const LINE_COPY = {
   reader: { of: (i: number, n: number) => `${i} of ${n}`, prev: "Previous page", next: "Next page", nav: "Pages in this set" },
   /** A layer made by Expand. */
   neighborsOf: (title: string) => `neighbors of ${title}`,
+  /** `/views`: recent and pinned views, the kit's ready views, then the gallery. */
+  views: {
+    command: { label: "Views", hint: "recent, pinned and ready" },
+    recent: "Recent",
+    pinned: "Pinned",
+    ready: "Ready views",
+    gallery: "Open gallery\u2026",
+    galleryHint: "all views",
+    cannotRun: "Cannot run on this kb",
+    cannotRunSay: (name: string) => `${name} cannot run on this kb.`,
+    applied: (name: string) => `Applied ${name}.`,
+    added: (name: string) => `Added ${name} to the view.`,
+  },
+  favoritesCommand: { label: "Favorites", hint: "the pages you marked" },
   exportNone: "Could not read those pages to export.",
   exportFailed: "Could not copy to the clipboard.",
   exported: (n: number) => `Copied ${n} ${n === 1 ? "page" : "pages"} as an OKF bundle.`,
