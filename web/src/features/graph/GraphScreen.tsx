@@ -29,7 +29,7 @@ import { LabRail } from "./lab/LabRail";
 import { DIVE_PARAMS, initialView } from "./defaultView";
 import { CALM_STORY, DEFAULT_STORY, isCalmStory, storyById, storyKnown, storyOffered, storyTypes } from "./lab/views";
 import { viewCards, type ViewCard } from "./shell/corners/panelModel";
-import { applySpec } from "./shell/corners/viewSpec";
+import { applySpecV1 } from "./shell/corners/viewSpec";
 import { Legend } from "./Legend";
 import { predicateFn } from "./publicPredicate";
 import { ViewsBar } from "./views/ViewsBar";
@@ -404,7 +404,7 @@ function Loaded({
 
   // flag calm-graph: the switcher's views are the pinned panel's cards; a pick applies like a card click
   const calmViews = useMemo<ViewCard[] | undefined>(() => (calm ? viewCards(model.nodes, schema) : undefined), [calm, model.nodes, schema]);
-  const pickView = useCallback((card: ViewCard) => void applySpec(card.spec, { applyView, showPicked }), [applyView, showPicked]);
+  const pickView = useCallback((card: ViewCard) => void applySpecV1(card.spec, { applyView, showPicked }), [applyView, showPicked]);
 
   // flag calm-graph: a bare first visit on the untouched default opens on Concepts (sources hidden until the Sources view).
   // It follows the flag, which may arrive after the first render; a calm view left over from a time the flag was on

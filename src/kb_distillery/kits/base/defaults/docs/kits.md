@@ -48,7 +48,11 @@ description = "..."
 
 **Page conventions** sit in `[pages]` (`kb_distillery.config.pages`): `takeaways_heading` (the `## <heading>` where a source page says what it means for the reader; engine default `Takeaways`) and `focus_slugs` (convention pages kept out of retrieval and orphan checks; default none). A kb.toml `[pages]` wins over its kit chain, the kit itself over the kits it extends. `research` keeps the generic `Takeaways` and sets `["focus"]` as its focus page. A kb centred on one project overrides both in its own kb.toml, e.g. `[pages] takeaways_heading = "Takeaways for my thesis"` and `focus_slugs = ["thesis"]`. A kb whose pages carry another heading renames them with `distill kb takeaways` (dry run; `--apply` writes). Source templates write the heading as `## {{takeaways_heading}}`; the engine fills it from this setting when it creates a page (`vault.frontmatter.fill_conventions`), so write the kb heading when copying a template by hand.
 
-Any other top-level table is rejected until a phase gives it a meaning. Reserved: lint rules, views, migrations, samples. Page skeletons live in `src/kb_distillery/kits/base/defaults/templates/*.md`; a kit that extends another carries only the skeletons it changes in its own `defaults/templates/` (`research` does), found per file, the kit itself first.
+Any other top-level table is rejected until a phase gives it a meaning. Reserved: lint rules, migrations, samples. Page skeletons live in `src/kb_distillery/kits/base/defaults/templates/*.md`; a kit that extends another carries only the skeletons it changes in its own `defaults/templates/` (`research` does), found per file, the kit itself first.
+
+## Ready views
+
+A kit ships ready views in `kits/<name>/views/*.toml`: stacks of layers a person applies from `/views` in the graph. Each file holds `[[view]]` tables with `id`, `name`, `description` (one plain line) and `layers`, a one-line array where each entry is one line of the graph's query language (`web/src/features/graph/layers/grammar.ts`, e.g. `"show nodes degree >= 8"`, `"style nodes color by type"`; `favorites` stands for the pages marked as favorites). A kit that extends another adds its own views; the same `id` replaces the parent's. `kb_distillery.config.kit.views(name)` loads them, `GET /api/views/ready` serves them as text, and the frontend parses the lines; a line it cannot read shows the view as "cannot run on this kb". `web/src/features/graph/layers/readyViews.test.ts` parses every line of every kit.
 
 ## Where the kits are
 
