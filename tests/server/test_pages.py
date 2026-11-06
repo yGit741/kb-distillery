@@ -39,6 +39,14 @@ def test_page_detail_and_legacy_keys(client, index):
     assert body["card"]["id"] == slug
 
 
+def test_page_source_is_the_stored_text(client, index):
+    slug = index["pages"][0]["id"]
+    r = client.get(f"/api/pages/{slug}/source")
+    assert r.status_code == 200
+    assert r.text == svc.page_source(slug)
+    assert client.get("/api/pages/no-such-page-xyz/source").status_code == 404
+
+
 def test_page_unknown_is_404_with_legacy_shape(client):
     r = client.get("/api/pages/no-such-page-xyz")
     assert r.status_code == 404
