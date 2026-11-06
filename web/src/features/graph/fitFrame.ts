@@ -23,7 +23,8 @@ export interface FitBox {
 const MAX_K = 2.2;
 
 export function fitFrame(box: FitBox, width: number, height: number, ins: FitInsets): { x: number; y: number; k: number } {
-  const top = Math.max(ins.pad, ins.top);
+  // never more clearance than leaves a 40px band to frame in
+  const top = Math.min(Math.max(ins.pad, ins.top), Math.max(ins.pad, height - ins.pad - 40));
   const w = Math.max(40, width - ins.left - 2 * ins.pad);
   const h = Math.max(40, height - top - ins.pad);
   const k = Math.min(MAX_K, w / Math.max(1, box.x1 - box.x0), h / Math.max(1, box.y1 - box.y0));

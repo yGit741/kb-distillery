@@ -488,7 +488,7 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
       const ids = live.current.cited;
       if (!ids.size) return;
       pendingFit.current = false;
-      if (fg.current?.fitIn((n) => ids.has(n.id), sparkOpen && !fullChat ? SPARK_PANEL_W : 0, 600, 72, shellTopRef.current + SEARCH_LINE_H + CITE_FIT_AIR)) {
+      if (fg.current?.fitIn((n) => ids.has(n.id), sparkOpen && !fullChat ? SPARK_PANEL_W : 0, 600, fullChat ? 110 : 72, shellTopRef.current + SEARCH_LINE_H + CITE_FIT_AIR)) {
         window.setTimeout(() => {
           k.current = fg.current?.zoom() ?? 1;
           recompute();
