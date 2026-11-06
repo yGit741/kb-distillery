@@ -109,16 +109,20 @@ describe("lab size and colour modes", () => {
 
 describe("a kb without areas (an imported OKF bundle)", () => {
   it("colours by page type under the area colouring, and keys the legend by type", async () => {
-    const { assignAreaColors, colorKey, colorOf } = await import("./style");
+    const { areaSlots, assignAreaColors, colorKey, colorOf } = await import("./style");
     const node = (id: string, type: string, areas: string[] = []): GNode => ({ id, type, areas, layer: "", depth: "", maturity: "" }) as unknown as GNode;
     const concept = node("a", "Concept");
     const source = node("b", "Source");
     assignAreaColors([concept, source, node("c", "Source")]);
     expect(colorKey(source, "area")).toBe("Source");
     expect(colorOf(source, "area")).not.toBe(colorOf(concept, "area"));
-    // a kb with areas keeps its pages without one grey
+    // slots a surface builds itself (Home, the mini graph) decide on their own pages, never on the last graph shown
     const loose = node("y", "concept");
+    const withAreas = areaSlots([node("x", "concept", ["math"]), loose]);
+    expect(colorKey(loose, "area", withAreas)).toBe("No area");
+    expect(colorKey(source, "area", areaSlots([concept, source]))).toBe("Source");
+    // and the Full Graph of a kb with areas keeps its pages without one grey
     assignAreaColors([node("x", "concept", ["math"]), loose]);
-    expect(colorKey(loose, "area")).not.toBe("concept");
+    expect(colorKey(loose, "area")).toBe("No area");
   });
 });
