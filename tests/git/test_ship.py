@@ -488,6 +488,8 @@ class PrFlowTests(unittest.TestCase):
         approve.assert_called_once_with(101)
 
     def test_schema_pr_is_always_held(self):
+        # outside a night window: the checkout's real window (an owner's `ship night`) must not decide this test
+        self.enterContext(patch.object(ship.night, "active", return_value=False))
         self.assertIsNone(ship._hold_reason(["feat(ops): add thing"]))
         self.assertIn("schema", ship._hold_reason(["schema(books): add hub"]))
         self.assertIn("paradigm", ship._hold_reason(["feat(x): y", "paradigm(schema): z"]))

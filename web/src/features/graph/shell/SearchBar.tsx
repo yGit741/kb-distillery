@@ -13,15 +13,15 @@ interface Props {
   /** The id of the highlighted option (aria-activedescendant). */
   activeId?: string;
   inputRef: RefObject<HTMLInputElement | null>;
-  /** The knowledge base the graph shows: the tooltip of the icon at the left. */
+  /** The knowledge base the graph shows, named in the placeholder. */
   kbName: string;
   /** A quiet one-line notice shown in place of the placeholder for a moment. */
   notice?: string;
 }
 
 /**
- * The search bar at top centre: the knowledge base icon (kept visible), a hairline, the input and the
- * shortcut hint. It is the combobox; the panel under it (SearchPanel) is its listbox.
+ * The search bar at top centre: just the input, no icons or shortcut hint (the knowledge base switcher is the
+ * app bar's badge, or "/knowledge" here). It is the combobox; the panel under it (SearchPanel) is its listbox.
  */
 export function SearchBar({ value, onChange, open, onOpen, onKeyDown, activeId, inputRef, kbName, notice }: Props) {
   return (

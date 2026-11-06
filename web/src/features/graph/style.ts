@@ -70,17 +70,27 @@ export const PEOPLE = "People";
 export const OTHER_AREAS = "Other areas";
 export const NO_AREA = "No area";
 let AREA_SLOT = new Map<string, string>();
+/** True when no page of the Full Graph has an area (an imported OKF bundle): the page type stands in for the area. */
+let TYPE_AS_AREA = false;
+
+/** The key a page is coloured by under the area colouring: its first area, else its type in a kb without areas. */
+export const areaOf = (n: Pick<GNode, "areas" | "type">, typeAsArea = TYPE_AS_AREA): string | undefined =>
+  n.areas[0] || (typeAsArea ? n.type || undefined : undefined);
 
 /** The areas' colours by size (pages whose first area it is), largest first; ties by name. Pure: no global set. */
-export function areaSlots(nodes: readonly Pick<GNode, "areas">[]): ReadonlyMap<string, string> {
+export function areaSlots(nodes: readonly Pick<GNode, "areas" | "type">[], typeAsArea = TYPE_AS_AREA): ReadonlyMap<string, string> {
   const count = new Map<string, number>();
-  for (const n of nodes) if (n.areas[0]) count.set(n.areas[0], (count.get(n.areas[0]) ?? 0) + 1);
+  for (const n of nodes) {
+    const a = areaOf(n, typeAsArea);
+    if (a) count.set(a, (count.get(a) ?? 0) + 1);
+  }
   const ranked = [...count].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).slice(0, AREA_PALETTE.length);
   return new Map(ranked.map(([a], i) => [a, AREA_PALETTE[i]!]));
 }
 
 /** The Full Graph's area colours (`areaSlots` over its model), the default for every colouring by area. */
 export function assignAreaColors(nodes: readonly GNode[]): ReadonlyMap<string, string> {
+  TYPE_AS_AREA = nodes.length > 0 && !nodes.some((n) => n.areas.length > 0);
   AREA_SLOT = new Map(areaSlots(nodes));
   return AREA_SLOT;
 }
@@ -161,7 +171,7 @@ export function colorOf(n: GNode, by: ColorBy, metric?: number, ramp?: "light" |
     case "status":
       return statusColor(n.maturity);
     case "area":
-      return n.type === "person" && !n.areas[0] ? PERSON_INK : areaHue(n.areas[0], slots);
+      return n.type === "person" && !n.areas[0] ? PERSON_INK : areaHue(areaOf(n), slots);
     case "degree":
       return degreeBand(n).color;
     default:
@@ -184,7 +194,10 @@ export function colorKey(n: GNode, by: ColorBy, slots: AreaSlots = AREA_SLOT): s
       return n.maturity || "(none)";
     case "area":
       if (n.type === "person" && !n.areas[0]) return PEOPLE;
-      return !n.areas[0] ? NO_AREA : slots.has(n.areas[0]) ? areaDisplay(n.areas[0]) : OTHER_AREAS;
+      {
+        const a = areaOf(n);
+        return !a ? NO_AREA : slots.has(a) ? areaDisplay(a) : OTHER_AREAS;
+      }
     case "degree":
       return degreeBand(n).label;
     case "none":
