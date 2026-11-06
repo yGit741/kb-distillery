@@ -40,6 +40,7 @@ import { makeLayer, type Layer } from "../layers/model";
 import { useLayers } from "../layers/store";
 import { ACTION_ITEMS, setActionItems, type MenuContext } from "../menu";
 import { NodeMenu } from "../NodeMenu";
+import { exportPages } from "../export/runExport";
 import { planSentence, type Plan } from "../layers/sentenceRun";
 import { buildCommands, closestCommands, filterCommands, GROUP_ORDER, type Command, type CommandIcon } from "./commands";
 import { LINE_COPY, type LineMode } from "./copy";
@@ -564,8 +565,9 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
       colorSet: then((ids: string[], label: string) => useLayers.getState().apply("stack", [makeLayer("style", "nodes", { nodes: [{ t: "name", slugs: ids }] }, label, { style: { color: "type" } })])),
       chat: then((ids: string[]) => useChatDock.getState().ask(askAbout(ids.map((id) => ({ id }))))),
       think: then(() => useUi.getState().setCaptureOpen(true)),
+      exportPages: then((ids: string[]) => void exportPages(ds, ids, { kbName, isShare: IS_SHARE, say: useShellStore.getState().say })),
     };
-  }, [onRead, onFocus, byId, close]);
+  }, [onRead, onFocus, byId, close, ds, kbName]);
   const openMenu = useCallback((target: RowTarget, at: HTMLElement) => {
     const r = at.getBoundingClientRect();
     setMenu({ target, x: r.right - 24, y: r.bottom + 4 });

@@ -1,3 +1,4 @@
+import { flag } from "@/flags";
 import { IS_SHARE } from "@/share/env";
 import { LINE_COPY } from "./shell/copy";
 import type { GNode } from "./types";
@@ -16,6 +17,7 @@ export interface MenuContext {
   chat?: (ids: string[]) => void;
   think?: (id: string) => void;
   highlight?: (ids: string[]) => void;
+  exportPages?: (ids: string[]) => void;
 }
 
 /**
@@ -63,7 +65,7 @@ export const ACTION_ITEMS: MenuItem[] = [
   { id: "favorite", label: A.favorite.label, enabled: () => false, why: A.favorite.why, run: () => {} },
   { id: "chat", label: A.chat.label, hint: A.chat.hint, when: () => !IS_SHARE, run: (n, c) => c.chat?.([n.id]) },
   { id: "think", label: A.think.label, hint: A.think.hint, when: () => !IS_SHARE, run: (n, c) => c.think?.(n.id) },
-  { id: "export", label: A.export.label, enabled: () => false, why: A.export.why, run: () => {} },
+  { id: "export", label: A.export.label, hint: A.export.hint, enabled: () => flag("graph-intent"), why: A.export.why, run: (n, c) => c.exportPages?.([n.id]) },
 ];
 
 /** The same menu for a set of pages: the actions act on all of them. */
@@ -73,4 +75,5 @@ export const setActionItems = (ids: string[], label: string): MenuItem[] => [
   { id: "add", label: A.addToView.label, hint: A.addToView.hint, run: (_n, c) => c.addToView?.(ids, label) },
   { id: "color", label: A.color.label, hint: A.color.hint, run: (_n, c) => c.colorSet?.(ids, label) },
   { id: "chat", label: A.chatSet.label, hint: A.chatSet.hint, run: (_n, c) => c.chat?.(ids) },
+  { id: "export", label: A.export.label, hint: A.export.hint, enabled: () => flag("graph-intent"), why: A.export.why, run: (_n, c) => c.exportPages?.(ids) },
 ];

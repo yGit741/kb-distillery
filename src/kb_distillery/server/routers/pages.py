@@ -2,7 +2,7 @@
 import os
 
 from fastapi import APIRouter, HTTPException
-from fastapi.responses import FileResponse, JSONResponse, Response
+from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse, Response
 
 from kb_distillery.server.models.pages import PageDetail, PageIndex, PathResult, SearchResult
 from kb_distillery.services import kbview
@@ -36,6 +36,20 @@ def get_page(slug: str, kb: str = ""):
     if data is None:
         return JSONResponse(NOT_FOUND, status_code=404)
     return data
+
+
+@router.get("/api/pages/{slug}/source", response_class=PlainTextResponse,
+            summary="One page as stored: frontmatter and body, for the OKF export",
+            responses={404: {"description": "unknown slug"}})
+def get_page_source(slug: str, kb: str = ""):
+    try:
+        v = kbview.view(kb or None)
+    except KeyError:
+        return JSONResponse(NOT_FOUND, status_code=404)
+    text = svc.page_source(slug, None if v.active else v)
+    if text is None:
+        return JSONResponse(NOT_FOUND, status_code=404)
+    return PlainTextResponse(text)
 
 
 @router.get("/api/search", response_model=SearchResult, summary="Full-text search over the pages")
