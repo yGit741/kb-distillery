@@ -51,7 +51,7 @@ META_DIR = os.path.join(vault_root(), "meta")
 ROOT = checkout_root()
 
 from kb_distillery.ops.daily_sync import changed_paths, has_open_sessions, run_git
-from kb_distillery.git import app_token, claims, commit_policy, events, flag_merge, gate_cache, gate_slot, night, rounds
+from kb_distillery.git import app_token, claims, commit_policy, events, flag_merge, gate_cache, gate_slot, night, review_gate, rounds
 from kb_distillery.vault.schema import GATE_PREFIXES as GP, GIT_POLICY_MODE, INDEX_REL, SCHEMA_VERSION, is_index_path
 
 GATES = [
@@ -65,7 +65,7 @@ GATES = [
     ("lint", [sys.executable, "-m", "kb_distillery.lint.lint"]),
     ("okf-check", [sys.executable, "-m", "kb_distillery.lint.okf_check"]),    # blocking, on the demo kb like lint
 ]
-SUBCOMMANDS = {"night", "whoami", "claims", "events", "round", "queue", "start", "commit", "pr", "merge", "sync", "status", "prune", "protect", "approve", "tag", "mv"}
+SUBCOMMANDS = {"review", "night", "whoami", "claims", "events", "round", "queue", "start", "commit", "pr", "merge", "sync", "status", "prune", "protect", "approve", "tag", "mv"}
 GENERATED_FILES = {INDEX_REL, "meta/corpus.tsv", "meta/coherence-warnings.tsv"}
 SECTION_INDEX_PATHSPECS = {"wiki/*/index.md"}     # git pathspecs (`*` crosses `/`): every section index under wiki/
 MIGRATED_GENERATED = {"meta/corpus.tsv"}   # a migration's output: committed by schema/paradigm commits
@@ -817,7 +817,7 @@ def _schema_kind(subjects):
     return "paradigm" if "paradigm" in types else ("schema" if "schema" in types else None)
 
 
-def pr_body(subjects, notes="", skipped_checks=None, round_no=None, paths=None):
+def pr_body(subjects, notes="", skipped_checks=None, round_no=None, paths=None, review=None, no_review=None):
     head = ([f"Round: #{round_no}"] if round_no else []) + ([claims.claims_line(paths)] if paths else [])
     lines = (head + [""] if head else []) + ["## Summary", ""] + [f"- {s}" for s in subjects] + [
         "", "## Gates", "", "- unit tests · lint-skills · lint (run by `pixi run ship -- pr`)"]
@@ -826,6 +826,10 @@ def pr_body(subjects, notes="", skipped_checks=None, round_no=None, paths=None):
         lines += ["", "## Schema", "",
                   f"This is a **{kind}** PR: merging snapshots the current knowledge version "
                   f"and bumps it ({'y+1' if kind == 'schema' else 'x+1'}). The migration run is included."]
+    if review:
+        lines += ["", "## Review", "", f"reviewer pass: {review}"]
+    elif no_review:
+        lines += ["", "## Review", "", f"`--no-review`: {no_review}"]
     if skipped_checks:
         lines += ["", "## Checks skipped", "", f"`--skip-checks`: {skipped_checks}"]
     if notes.strip():
@@ -858,7 +862,23 @@ def _read_notes(path):
         return f.read()
 
 
-def cmd_pr(title=None, skip_tests=False, root=ROOT, gates=True, notes_file=None, hold=False, skip_checks=None):
+def cmd_review(summary, findings=None, root=ROOT):
+    """`ship review --pass "<summary>"`: record that the reviewer subagent passed the branch's HEAD."""
+    branch = current_branch(root)
+    if not branch.startswith("infra/"):
+        print(f"error: ship review runs on an infra/<feature> branch (current: {branch or 'detached'})")
+        return 1
+    if not (summary or "").strip():
+        print('error: give a one-line summary: pixi run ship -- review --pass "<summary>"')
+        return 1
+    sha = _head_sha(root)
+    review_gate.record(root, branch, sha, summary, findings)
+    print(f"review recorded for {branch} at {sha[:7]}: {summary.strip()}")
+    return 0
+
+
+def cmd_pr(title=None, skip_tests=False, root=ROOT, gates=True, notes_file=None, hold=False, skip_checks=None,
+           no_review=None, check_review=None):
     branch = current_branch(root)
     if not branch.startswith("infra/"):
         print(f"error: ship pr runs on an infra/<feature> branch (current: {branch or 'detached'})")
@@ -876,6 +896,16 @@ def cmd_pr(title=None, skip_tests=False, root=ROOT, gates=True, notes_file=None,
     if problems:
         print("error: " + "\n       ".join(problems))
         return 1
+    review_rec = None
+    if (gates if check_review is None else check_review) and not no_review:
+        review_rec = review_gate.passed(root, branch, _head_sha(root))
+        if not review_rec:
+            print(f"error: no reviewer pass recorded for {branch} at {_head_sha(root)[:7]}. Run the reviewer subagent "
+                  "(.claude/agents/reviewer.md), fix its blocking findings, then record the pass:\n"
+                  '       pixi run ship -- review --pass "<one-line summary>"\n'
+                  '       (or bypass with --no-review "<reason>"; the reason goes in the PR body)')
+            return 1
+    review_line = review_gate.summary_line(review_rec) if review_rec else None
     with gate_slot.sequence(root):      # gates and checks of this run are not interleaved with another run's
         if gates and not run_gates(root, skip_tests):
             return 1
@@ -896,8 +926,8 @@ def cmd_pr(title=None, skip_tests=False, root=ROOT, gates=True, notes_file=None,
     if existing.returncode == 0 and existing.stdout.strip():
         info = json.loads(existing.stdout)
         print(f"PR #{info['number']} already open: {info['url']} (pushed new commits)")
-        if skip_checks:
-            gh(["pr", "edit", branch, "--body", pr_body(subjects, _read_notes(notes_file), skip_checks, round_no, paths)], root)
+        if skip_checks or review_line or no_review:
+            gh(["pr", "edit", branch, "--body", pr_body(subjects, _read_notes(notes_file), skip_checks, round_no, paths, review_line, no_review)], root)
         if why:
             gh(["pr", "edit", branch, "--add-label", HOLD_LABEL], root)
             if hold:
@@ -906,7 +936,7 @@ def cmd_pr(title=None, skip_tests=False, root=ROOT, gates=True, notes_file=None,
             print(HOLD_VOID_MSG)
         return 0
     args = ["pr", "create", "--base", "main", "--head", branch,
-            "--title", title, "--body", pr_body(subjects, _read_notes(notes_file), skip_checks, round_no, paths)]
+            "--title", title, "--body", pr_body(subjects, _read_notes(notes_file), skip_checks, round_no, paths, review_line, no_review)]
     if why:
         gh(["label", "create", HOLD_LABEL, "--force", "--color", "B60205",
             "--description", "waits for the owner's GitHub Approve review (or pixi run ship -- approve N)"], root)
@@ -1556,7 +1586,11 @@ def _main(argv):
     r.add_argument("--skip-tests", action="store_true")
     r.add_argument("--notes", metavar="FILE", help="markdown appended to the PR body as ## Notes")
     r.add_argument("--skip-checks", metavar="REASON", help="bypass the lane checks (web-check, test-ui-principles, api-schema-check, test-e2e); the reason goes in the PR body")
+    r.add_argument("--no-review", metavar="REASON", help="open the PR without a recorded reviewer pass; the reason goes in the PR body")
     r.add_argument("--hold", action="store_true", help="the user wants to review it: merge waits for `approve`")
+    rv = sub.add_parser("review", help="record that the reviewer subagent passed this branch's HEAD (ship pr needs it)")
+    rv.add_argument("--pass", dest="summary", metavar="SUMMARY", required=True, help="one-line review summary")
+    rv.add_argument("--findings", type=int, metavar="N", help="number of findings the reviewer raised (all fixed)")
     ni = sub.add_parser("night", help="the night window: while open no PR is held and held PRs merge (auto-expires)")
     ni.add_argument("action", choices=["start", "stop", "status"])
     ni.add_argument("--until", metavar="HH:MM", help="close at the next HH:MM (local time)")
@@ -1627,7 +1661,10 @@ def _main(argv):
     if args.cmd == "commit":
         return cmd_commit(args.message, args.skip_tests)
     if args.cmd == "pr":
-        return cmd_pr(args.title, args.skip_tests, notes_file=args.notes, hold=args.hold, skip_checks=args.skip_checks)
+        return cmd_pr(args.title, args.skip_tests, notes_file=args.notes, hold=args.hold, skip_checks=args.skip_checks,
+                      no_review=args.no_review)
+    if args.cmd == "review":
+        return cmd_review(args.summary, args.findings)
     if args.cmd == "approve":
         return cmd_approve(args.number)
     if args.cmd == "night":

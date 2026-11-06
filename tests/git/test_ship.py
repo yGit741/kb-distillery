@@ -332,6 +332,45 @@ class PrFlowTests(unittest.TestCase):
         self.assertEqual(ship.cmd_commit("chore(git): remove old tool", root=wt, gates=False), 0)
         self.assertEqual(_g(wt, "show", "--name-status", "--format=", "HEAD"), "D\tmeta/tool.py")
 
+    def _committed(self, feature="rv-thing"):
+        wt = self._start(feature)
+        self._write(wt, "meta/tool.py")
+        ship.cmd_commit("feat(ops): add thing", root=wt, gates=False)
+        return wt
+
+    def _gh_calls(self):
+        p = os.path.join(self.ghdir, "calls.log")
+        return open(p).read() if os.path.exists(p) else ""
+
+    def test_pr_refused_without_a_review_record(self):
+        wt = self._committed()
+        self.assertEqual(ship.cmd_pr(root=wt, gates=False, check_review=True), 1)
+        self.assertNotIn("pr create", self._gh_calls())
+
+    def test_pr_allowed_with_a_review_record_and_body_has_review(self):
+        wt = self._committed()
+        self.assertEqual(ship.cmd_review("clean, no blockers", findings=2, root=wt), 0)
+        self.assertEqual(ship.cmd_pr(root=wt, gates=False, check_review=True), 0)
+        calls = self._gh_calls()
+        self.assertIn("pr create", calls)
+        self.assertIn("## Review", calls)
+        self.assertIn("clean, no blockers (2 findings)", calls)
+
+    def test_stale_review_record_is_refused(self):
+        wt = self._committed()
+        ship.cmd_review("ok", root=wt)
+        self._write(wt, "meta/tool.py")
+        self.assertEqual(ship.cmd_commit("fix(ops): more", root=wt, gates=False), 0)
+        self.assertEqual(ship.cmd_pr(title="feat(ops): add thing", root=wt, gates=False, check_review=True), 1)
+        self.assertNotIn("pr create", self._gh_calls())
+
+    def test_no_review_escape_hatch_lands_in_body(self):
+        wt = self._committed()
+        self.assertEqual(ship.cmd_pr(root=wt, gates=False, check_review=True, no_review="docs only"), 0)
+        calls = self._gh_calls()
+        self.assertIn("## Review", calls)
+        self.assertIn("`--no-review`: docs only", calls)
+
     def test_pr_then_merge_via_gh_never_squashes(self):
         wt = self._start()
         self._write(wt, "meta/tool.py")
