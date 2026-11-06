@@ -51,7 +51,7 @@ META_DIR = os.path.join(vault_root(), "meta")
 ROOT = checkout_root()
 
 from kb_distillery.ops.daily_sync import changed_paths, has_open_sessions, run_git
-from kb_distillery.git import app_token, claims, commit_policy, events, flag_merge, gate_cache, gate_slot, night, rounds
+from kb_distillery.git import app_token, claims, commit_policy, events, flag_merge, gate_cache, gate_slot, night, rounds, worktree_lock
 from kb_distillery.vault.schema import GATE_PREFIXES as GP, GIT_POLICY_MODE, INDEX_REL, SCHEMA_VERSION, is_index_path
 
 GATES = [
@@ -1521,6 +1521,16 @@ def main(argv=None):
     return code
 
 
+def _locked(name, fn, *a, **kw):
+    """Run commit/pr/merge under the per-worktree lock; a second run in the same worktree is refused at once."""
+    try:
+        with worktree_lock.hold(ROOT, name):
+            return fn(*a, **kw)
+    except worktree_lock.ShipLockBusy as e:
+        print(f"error: ship {name}: {e}")
+        return 1
+
+
 def _main(argv):
     from kb_distillery.config.resources import NotInCheckout, require_repo_root
     try:
@@ -1625,9 +1635,10 @@ def _main(argv):
     if args.cmd == "start":
         return cmd_start(args.feature, args.worktree, round_no=args.round, paths=args.paths)
     if args.cmd == "commit":
-        return cmd_commit(args.message, args.skip_tests)
+        return _locked("commit", cmd_commit, args.message, args.skip_tests)
     if args.cmd == "pr":
-        return cmd_pr(args.title, args.skip_tests, notes_file=args.notes, hold=args.hold, skip_checks=args.skip_checks)
+        return _locked("pr", cmd_pr, args.title, args.skip_tests, notes_file=args.notes, hold=args.hold,
+                       skip_checks=args.skip_checks)
     if args.cmd == "approve":
         return cmd_approve(args.number)
     if args.cmd == "night":
@@ -1635,7 +1646,8 @@ def _main(argv):
     if args.cmd == "tag":
         from kb_distillery.config import kb as kbconfig
         return cmd_tag(args.name, args.at, kbconfig.explicit_kb(), args.repo, args.message)
-    return cmd_merge(args.local, args.pr, args.title, args.skip_tests, args.no_push, skip_checks=args.skip_checks)
+    return _locked("merge", cmd_merge, args.local, args.pr, args.title, args.skip_tests, args.no_push,
+                   skip_checks=args.skip_checks)
 
 
 if __name__ == "__main__":
