@@ -316,6 +316,40 @@ class PrFlowTests(unittest.TestCase):
         self.assertTrue(os.path.isfile(os.path.join(wt, "meta/other.py")))
         self.assertEqual(_g(wt, "log", "-1", "--format=%s"), "Merge branch 'main' into infra/sync-conflict")
 
+    def _conflict(self, name, rel="meta/tool.py"):
+        wt = self._start(name)
+        self._write(wt, rel, "mine")
+        _g(wt, "add", "-A")
+        _g(wt, "commit", "-q", "-m", "feat(ops): mine")    # plain git in the fixture: ship refuses a wiki/ path
+        self._write(self.repo, rel, "theirs")
+        self._write(self.repo, "meta/other.py", "theirs too")
+        _g(self.repo, "add", "-A")
+        _g(self.repo, "commit", "-q", "-m", "feat(ops): theirs (#9)")
+        _g(self.repo, "push", "-q", "origin", "main")
+        return wt
+
+    def test_sync_continue_stages_resolved_files_itself(self):
+        wt = self._conflict("sync-auto")
+        self.assertEqual(ship.cmd_sync(root=wt, gates=False), 1)
+        with open(os.path.join(wt, "meta/tool.py"), "w") as f:
+            f.write("mine\ntheirs\n")                     # resolved, but never `git add`ed
+        self.assertEqual(ship.cmd_sync(cont=True, root=wt, gates=False), 0)
+        self.assertEqual(len(_g(wt, "rev-list", "--parents", "-n1", "HEAD").split()), 3)
+
+    def test_sync_continue_refuses_file_still_holding_markers(self):
+        wt = self._conflict("sync-markers")
+        self.assertEqual(ship.cmd_sync(root=wt, gates=False), 1)
+        self.assertEqual(ship.cmd_sync(cont=True, root=wt, gates=False), 1)
+        self.assertIn("meta/tool.py", _g(wt, "diff", "--name-only", "--diff-filter=U"))
+
+    def test_sync_continue_never_stages_knowledge_paths(self):
+        wt = self._conflict("sync-know", rel="wiki/page.md")
+        self.assertEqual(ship.cmd_sync(root=wt, gates=False), 1)
+        with open(os.path.join(wt, "wiki/page.md"), "w") as f:
+            f.write("resolved\n")
+        self.assertEqual(ship.cmd_sync(cont=True, root=wt, gates=False), 1)
+        self.assertIn("wiki/page.md", _g(wt, "diff", "--name-only", "--diff-filter=U"))
+
     def test_sync_abort_and_dirty_tree(self):
         wt = self._start("sync-abort")
         self._write(self.repo, "meta/other.py", "theirs")
