@@ -1,6 +1,6 @@
 import { lazy, Suspense } from "react";
 import { Link, Outlet, useRouterState } from "@tanstack/react-router";
-import { Command as CommandIcon, Moon, Sun } from "lucide-react";
+import { Moon, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { ROUTES } from "@/routes/registry";
@@ -13,7 +13,6 @@ import { KbBadge } from "./KbBadge";
 import { useEmbed } from "./embed";
 import { useHeaderFolded } from "./headerFold";
 import { HEADER_SLOT_ID } from "./headerSlot";
-import { useUi } from "./ui-store";
 import { useDataSource } from "@/api";
 import { flag } from "@/flags";
 import { useFlag } from "@/flags/useFlag";
@@ -27,7 +26,6 @@ const QuickAsk = lazy(() => import("@/features/chat/QuickAsk"));
 /** One top nav, ONE theme toggle, ONE command palette, one share chip. Screens render in <Outlet/>. */
 export function AppShell() {
   const { theme, toggle } = useTheme();
-  const setPaletteOpen = useUi((s) => s.setPaletteOpen);
   const embed = useEmbed();
   const agentMode = useFlag("agent-mode");
   // flag views-panel: on the graph the dark mode switch lives in the pinned panel (Settings); other screens keep it here
@@ -62,10 +60,6 @@ export function AppShell() {
         <div id={HEADER_SLOT_ID} className="min-w-0 flex-1 px-2" />
         <ShareChip />
         <ToursMenu />
-        <Button variant="secondary" size="sm" onClick={() => setPaletteOpen(true)} aria-label="Open command palette">
-          <CommandIcon aria-hidden />
-          <span className="hidden sm:inline">K</span>
-        </Button>
         {!themeInPanel && (
           <Button
             variant="ghost"

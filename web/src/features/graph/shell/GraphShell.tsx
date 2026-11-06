@@ -446,7 +446,6 @@ export function GraphShell({ nodes, byId, colorBy, onFocus, onRead, onShowExact,
         inputRef={input}
         kbName={kbName}
         notice={open ? undefined : notice?.text}
-        onKbClick={() => focusBar("/knowledge")}
       />
       {open && <SearchPanel rows={rows} idx={idx} onHover={setIdx} empty={empty} status={status} views={!text && !slash && viewChoices.length ? viewChoices : undefined} />}
     </div>

@@ -94,10 +94,12 @@ describe("opening", () => {
     item.remove();
   });
 
-  it("shows the knowledge base name as the icon's tooltip", async () => {
+  it("names the knowledge base in the placeholder, with no icons or shortcut hint in the bar", async () => {
     setup({ getKb: async () => ({ name: "Thesis Knowledge Base", id: "thesis" }) as never });
-    const icon = await screen.findByRole("button", { name: /knowledge base: thesis knowledge base/i });
-    expect(icon).toHaveAttribute("title", "Thesis Knowledge Base");
+    const input = await screen.findByPlaceholderText("Search Thesis Knowledge Base");
+    expect(input).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /knowledge base:/i })).not.toBeInTheDocument();
+    expect(screen.queryByText("⌘K")).not.toBeInTheDocument();
   });
 });
 

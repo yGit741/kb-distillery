@@ -1,4 +1,3 @@
-import { Database, Search } from "lucide-react";
 import type { KeyboardEvent, RefObject } from "react";
 import { cn } from "@/lib/utils";
 
@@ -18,14 +17,13 @@ interface Props {
   kbName: string;
   /** A quiet one-line notice shown in place of the placeholder for a moment. */
   notice?: string;
-  onKbClick: () => void;
 }
 
 /**
  * The search bar at top centre: the knowledge base icon (kept visible), a hairline, the input and the
  * shortcut hint. It is the combobox; the panel under it (SearchPanel) is its listbox.
  */
-export function SearchBar({ value, onChange, open, onOpen, onKeyDown, activeId, inputRef, kbName, notice, onKbClick }: Props) {
+export function SearchBar({ value, onChange, open, onOpen, onKeyDown, activeId, inputRef, kbName, notice }: Props) {
   return (
     <div
       className={cn(
@@ -34,17 +32,6 @@ export function SearchBar({ value, onChange, open, onOpen, onKeyDown, activeId, 
         "focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/25",
       )}
     >
-      <button
-        type="button"
-        aria-label={`Knowledge base: ${kbName}`}
-        title={kbName}
-        onClick={onKbClick}
-        className="-ml-1.5 grid size-7 shrink-0 place-items-center rounded-lg text-foreground outline-offset-0 transition-colors hover:bg-accent focus-visible:outline-2 focus-visible:outline-ring motion-reduce:transition-none"
-      >
-        <Database aria-hidden className="size-[18px]" strokeWidth={1.6} />
-      </button>
-      <span aria-hidden className="h-5 w-px shrink-0 bg-border" />
-      <Search aria-hidden className="size-4 shrink-0 text-muted-foreground" strokeWidth={1.6} />
       <input
         ref={inputRef}
         id={SHELL_SEARCH_ID}
@@ -66,11 +53,6 @@ export function SearchBar({ value, onChange, open, onOpen, onKeyDown, activeId, 
         onClick={onOpen}
         onKeyDown={onKeyDown}
       />
-      {!open && !value && !notice && (
-        <kbd aria-hidden className="shrink-0 rounded-[5px] border px-1.5 text-[11px] leading-5 text-muted-foreground">
-          ⌘K
-        </kbd>
-      )}
       <span role="status" className="sr-only">
         {notice}
       </span>

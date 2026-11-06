@@ -102,8 +102,24 @@ function Header({ title, full, rich, listOpen, onClose, tools }: BarProps & { ti
   const btn = "size-8";
   return (
     <header className="flex items-start gap-2 border-b px-5 py-3">
+      {/* close and size sit at the left and never move: the list toggle and the title come after them */}
+      <Button variant="ghost" size="icon" className={`${btn} -ml-3`} aria-label="Close chat" onClick={onClose}>
+        <X aria-hidden strokeWidth={1.6} />
+      </Button>
+      {rich && (
+        <Button
+          variant="ghost"
+          size="icon"
+          className={btn}
+          aria-label={full ? "Back to the panel" : "Full screen"}
+          title={full ? "Back to the panel" : "Full screen"}
+          onClick={() => useChatFull.getState().setFull(!full)}
+        >
+          {full ? <Minimize2 aria-hidden strokeWidth={1.6} /> : <Maximize2 aria-hidden strokeWidth={1.6} />}
+        </Button>
+      )}
       {full && (
-        <Button variant="ghost" size="icon" className={`${btn} -ml-3`} aria-label="Chat list" aria-pressed={listOpen} title={listOpen ? "Hide the chat list" : "Show the chat list"} onClick={() => useChatFull.getState().toggleList()}>
+        <Button variant="ghost" size="icon" className={btn} aria-label="Chat list" aria-pressed={listOpen} title={listOpen ? "Hide the chat list" : "Show the chat list"} onClick={() => useChatFull.getState().toggleList()}>
           <PanelLeft aria-hidden strokeWidth={1.6} />
         </Button>
       )}
@@ -119,21 +135,6 @@ function Header({ title, full, rich, listOpen, onClose, tools }: BarProps & { ti
           {tools.planning && <span aria-hidden className="absolute right-1.5 top-1.5 size-1.5 rounded-full bg-primary" />}
         </Button>
       )}
-      {rich && (
-        <Button
-          variant="ghost"
-          size="icon"
-          className={btn}
-          aria-label={full ? "Back to the panel" : "Full screen"}
-          title={full ? "Back to the panel" : "Full screen"}
-          onClick={() => useChatFull.getState().setFull(!full)}
-        >
-          {full ? <Minimize2 aria-hidden strokeWidth={1.6} /> : <Maximize2 aria-hidden strokeWidth={1.6} />}
-        </Button>
-      )}
-      <Button variant="ghost" size="icon" className={`${btn} -mr-2`} aria-label="Close chat" onClick={onClose}>
-        <X aria-hidden strokeWidth={1.6} />
-      </Button>
     </header>
   );
 }
