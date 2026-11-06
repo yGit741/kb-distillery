@@ -15,6 +15,10 @@ export function trackTypesStrip(canvas: HTMLElement): { rect: () => StripRect | 
   let strip: Element | null = null;
   const ro = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(() => measure());
   const mo = typeof MutationObserver === "undefined" ? null : new MutationObserver(() => measure());
+  // the graph's own frame, not the whole page: HUDs and labels elsewhere churn every frame
+  const root = canvas.closest('[data-testid="graph-area"]') ?? doc.body;
+  // a child-list change only matters when the strip itself came, went or was replaced (a plain lookup, no layout)
+  const mo2 = typeof MutationObserver === "undefined" ? null : new MutationObserver(() => doc.querySelector(SELECTOR) !== strip && measure());
   let watched: Element[] = [];
 
   function measure() {
@@ -28,7 +32,6 @@ export function trackTypesStrip(canvas: HTMLElement): { rect: () => StripRect | 
       watched = [];
       for (let n: Element | null = strip; n; n = n.parentElement) watched.push(n);
       for (const n of watched) mo?.observe(n, { attributes: true, attributeFilter: ["class", "style", "data-open"] });
-      mo?.observe(doc.body, { childList: true, subtree: true });
     }
     if (!strip) {
       rect = null;
@@ -42,14 +45,15 @@ export function trackTypesStrip(canvas: HTMLElement): { rect: () => StripRect | 
   measure();
   if (!strip) {
     ro?.observe(canvas);
-    mo?.observe(doc.body, { childList: true, subtree: true });
   }
+  mo2?.observe(root, { childList: true, subtree: true });
   win?.addEventListener("resize", measure);
   return {
     rect: () => rect,
     dispose: () => {
       ro?.disconnect();
       mo?.disconnect();
+      mo2?.disconnect();
       win?.removeEventListener("resize", measure);
     },
   };

@@ -60,6 +60,19 @@ describe("trackTypesStrip", () => {
     t.dispose();
   });
 
+  it("ignores unrelated DOM insertions, but notices the strip being replaced", async () => {
+    const { canvas, el, spy } = setup({ left: 110, top: 520, width: 300, height: 24 });
+    const t = trackTypesStrip(canvas);
+    expect(spy).toHaveBeenCalledTimes(1);
+    for (let i = 0; i < 5; i++) document.body.append(document.createElement("span"));
+    await new Promise((r) => setTimeout(r, 0));
+    expect(spy).toHaveBeenCalledTimes(1);
+    el.remove();
+    await new Promise((r) => setTimeout(r, 0));
+    expect(t.rect()).toBeNull();
+    t.dispose();
+  });
+
   it("re-measures on window resize and is null when the strip is absent or empty", () => {
     const { canvas, el, move } = setup({ left: 110, top: 520, width: 300, height: 24 });
     const t = trackTypesStrip(canvas);
