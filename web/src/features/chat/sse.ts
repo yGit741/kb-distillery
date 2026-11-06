@@ -29,6 +29,10 @@ export interface ToolStep {
   status?: "running" | "done" | "error";
   /** agent mode: the first ~300 characters of the tool's output. */
   result?: string;
+  /** page slugs a search or listing returned (at most 50); absent when unknown. */
+  seen?: string[];
+  /** page slugs whose content the step opened (at most 50); absent when unknown. */
+  read?: string[];
 }
 export interface TodoItem {
   content: string;
@@ -68,6 +72,11 @@ export interface RawFrame {
 }
 
 const isObj = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
+/** A short list of page slugs from the wire, or undefined when there is none. */
+const slugList = (v: unknown): string[] | undefined => {
+  const list = (Array.isArray(v) ? v : []).filter((s): s is string => typeof s === "string" && s !== "").slice(0, 50);
+  return list.length ? list : undefined;
+};
 const num = (v: unknown, d = 0) => (typeof v === "number" && Number.isFinite(v) ? v : d);
 
 /**
@@ -139,6 +148,8 @@ export function toEvent(frame: RawFrame): ChatEvent | null {
           error: payload.error === true ? true : undefined,
           status: payload.status === "running" || payload.status === "done" || payload.status === "error" ? payload.status : undefined,
           result: typeof payload.result === "string" ? payload.result : undefined,
+          seen: slugList(payload.seen),
+          read: slugList(payload.read),
         },
       };
     case "ask": {
