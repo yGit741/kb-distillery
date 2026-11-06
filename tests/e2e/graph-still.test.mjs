@@ -52,7 +52,7 @@ before(async () => {
   if (!pw) { skipReason = "playwright not found (npm i -g playwright, or set PLAYWRIGHT_MODULE)"; return; }
   const port = await freePort();
   base = `http://127.0.0.1:${port}`;
-  server = spawn(process.env.PYTHON || "python3", ["-m", "kb_distillery.server", "--port", String(port), "--no-open"],
+  server = spawn(process.env.PYTHON || "python3", ["-m", "kb_distillery.server", "--port", String(port), "--no-open", "--kb", join(ROOT, "examples", "demo")],
     { cwd: ROOT, stdio: ["ignore", "pipe", "pipe"],
       env: { ...process.env, PYTHONPATH: join(ROOT, "src") } });
   let log = "";
