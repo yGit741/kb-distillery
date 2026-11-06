@@ -110,7 +110,7 @@ describe("grouped search, graph-intent on", () => {
       await userEvent.type(box(), "margin");
       const row = await screen.findByRole("option", { name: /pages mention margin/ });
       await userEvent.click(within(row).getByRole("button", { name: "Actions" }));
-      expect(screen.getAllByRole("menuitem").map((b) => b.textContent?.replace(/(Enter|these pages|on top|by type|ask about them|OKF bundle)$/, ""))).toEqual(["Highlight", "Show only", "Add to view", "Color", "Chat about these", "Export"]);
+      expect(screen.getAllByRole("menuitem").map((b) => b.textContent?.replace(/(Enter|these pages|on top|by type|ask about them|OKF bundle|one after another|add its neighbours|quick note)$/, ""))).toEqual(["Highlight", "Show only", "Read", "Expand", "Think", "Add to view", "Color", "Chat about these", "Export"]);
       await userEvent.click(screen.getByRole("menuitem", { name: /Show only/ }));
       const layers = useLayers.getState().stack.layers;
       expect(layers).toHaveLength(1);

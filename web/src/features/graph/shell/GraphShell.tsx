@@ -22,7 +22,6 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useDataSource, type PinnedView, type RecentStep } from "@/api";
-import { useUi } from "@/app/ui-store";
 import { useFlag } from "@/flags/useFlag";
 import { useKb } from "@/lib/store";
 import { useApiQuery } from "@/lib/useApiQuery";
@@ -39,6 +38,7 @@ import { Chips } from "../layers/Chips";
 import { makeLayer, newLayerId, type Layer, type ViewStack } from "../layers/model";
 import { ResolvedLine } from "../layers/ResolvedLine";
 import { useLayers } from "../layers/store";
+import { openCaptureAbout } from "../captureAbout";
 import { ACTION_ITEMS, setActionItems, type MenuContext } from "../menu";
 import { NodeMenu } from "../NodeMenu";
 import { exportPages } from "../export/runExport";
@@ -604,10 +604,16 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
       highlight: then((ids: string[]) => useKb.getState().setSelection(ids)),
       showOnly: then((ids: string[], label: string) => useLayers.getState().apply("replace", [showLayer(ids, ids.length === 1 ? `Only ${label}` : label)])),
       addToView: then((ids: string[], label: string) => useLayers.getState().apply("stack", [showLayer(ids, label)])),
-      expand: then((id: string) => useLayers.getState().apply("stack", [makeLayer("show", "nodes", { nodes: [{ t: "hops", of: id, n: 1 }] }, `Neighbours of ${byId.get(id)?.title || id}`)])),
+      readSet: then((ids: string[]) => {
+        if (ids[0]) useGraphUi.setState({ readerSlug: ids[0], readerSet: ids });
+      }),
+      // one layer per page, each printing as `show nodes within 1 hop of "<slug>"`
+      expand: then((ids: string[]) =>
+        useLayers.getState().apply("stack", ids.map((id) => makeLayer("show", "nodes", { nodes: [{ t: "hops", of: id, n: 1 }] }, LINE_COPY.neighborsOf(byId.get(id)?.title || id)))),
+      ),
       colorSet: then((ids: string[], label: string) => useLayers.getState().apply("stack", [makeLayer("style", "nodes", { nodes: [{ t: "name", slugs: ids }] }, label, { style: { color: "type" } })])),
       chat: then((ids: string[]) => useChatDock.getState().ask(askAbout(ids.map((id) => ({ id }))))),
-      think: then(() => useUi.getState().setCaptureOpen(true)),
+      think: then((ids: string[]) => openCaptureAbout(ids)),
       exportPages: then((ids: string[]) => void exportPages(ds, ids, { kbName, isShare: IS_SHARE, say: useShellStore.getState().say })),
     };
   }, [onRead, onFocus, byId, close, ds, kbName]);

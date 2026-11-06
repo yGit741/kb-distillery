@@ -41,6 +41,7 @@ export const LINE_COPY = {
     think: { label: "Think", hint: "quick note" },
     export: { label: "Export", hint: "OKF bundle", why: "Needs the graph intent line" },
     highlight: { label: "Highlight", hint: "Enter" },
+    readSet: { label: "Read", hint: "one after another" },
     showSet: { label: "Show only", hint: "these pages" },
     addToView: { label: "Add to view", hint: "on top" },
     color: { label: "Color", hint: "by type" },
@@ -53,6 +54,10 @@ export const LINE_COPY = {
     mark: "Favorite",
     toggle: (on: boolean) => (on ? "Remove from favorites" : "Add to favorites"),
   },
+  /** The reader's stepper over a set of pages. */
+  reader: { of: (i: number, n: number) => `${i} of ${n}`, prev: "Previous page", next: "Next page", nav: "Pages in this set" },
+  /** A layer made by Expand. */
+  neighborsOf: (title: string) => `neighbors of ${title}`,
   exportNone: "Could not read those pages to export.",
   exportFailed: "Could not copy to the clipboard.",
   exported: (n: number) => `Copied ${n} ${n === 1 ? "page" : "pages"} as an OKF bundle.`,
