@@ -39,13 +39,16 @@ export const LINE_COPY = {
     favorite: { label: "Favorite", why: "Soon" },
     chat: { label: "Chat", hint: "ask about it" },
     think: { label: "Think", hint: "quick note" },
-    export: { label: "Export", why: "Soon" },
+    export: { label: "Export", hint: "OKF bundle", why: "Needs the graph intent line" },
     highlight: { label: "Highlight", hint: "Enter" },
     showSet: { label: "Show only", hint: "these pages" },
     addToView: { label: "Add to view", hint: "on top" },
     color: { label: "Color", hint: "by type" },
     chatSet: { label: "Chat about these", hint: "ask about them" },
   },
+  exportNone: "Could not read those pages to export.",
+  exportFailed: "Could not copy to the clipboard.",
+  exported: (n: number) => `Copied ${n} ${n === 1 ? "page" : "pages"} as an OKF bundle.`,
   /** A `>` sentence the rules could not read goes to the older shape path; this says so. */
   sentenceFallback: "Not a sentence I can read here yet, so I asked the graph to shape it.",
   /** The quiet row under the input while a sentence is previewed (flag graph-intent). */
