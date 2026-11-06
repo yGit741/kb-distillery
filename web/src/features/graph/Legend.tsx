@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef } from "react";
+import { useFlag } from "@/flags/useFlag";
 import { cn } from "@/lib/utils";
 import { useTheme } from "@/theme/theme";
+import { StackKey } from "./layers/StackKey";
 import { LAYER_LABEL, layerGroups, type LayerGroup } from "./legendModel";
 import { QUICK_OFF, QUICK_STEPS, type QuickFilters } from "./quickFilters";
 import { predicateFn } from "./publicPredicate";
@@ -135,6 +137,7 @@ const LAYER_ORDER = ["concept", "collection", "source"] as const;
  */
 export function Legend({ nodes, visible, schema, shownTypes, stats, quickHidden = 0 }: Props) {
   const ui = useGraphUi();
+  const intent = useFlag("graph-intent");
   const theme = useTheme((s) => s.theme);
   const groups = useMemo(() => layerGroups(nodes, visible, schema, shownTypes), [nodes, visible, schema, shownTypes]);
   const by = effectiveColorBy(ui.colorBy);
@@ -280,6 +283,7 @@ export function Legend({ nodes, visible, schema, shownTypes, stats, quickHidden 
             </div>
           ))}
         </div>
+        {intent && <StackKey />}
         <span className="sr-only" data-testid="graph-stats">
           {stats}
         </span>

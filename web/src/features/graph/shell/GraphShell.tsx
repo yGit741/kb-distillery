@@ -31,7 +31,9 @@ import { swatchColor } from "../nodeColor";
 import { useGraphUi } from "../store";
 import { useChatDock } from "../tools/chatDockStore";
 import { useVisibleTools } from "../tools";
-import type { GNode } from "../types";
+import type { GLink, GNode } from "../types";
+import { Chips } from "../layers/Chips";
+import { useLayers } from "../layers/store";
 import { buildCommands, closestCommands, filterCommands, GROUP_ORDER, type Command, type CommandIcon } from "./commands";
 import { LINE_COPY, type LineMode } from "./copy";
 import { SearchBar } from "./SearchBar";
@@ -67,6 +69,8 @@ const RELATED_SHOWN = 3;
 
 interface Props {
   nodes: readonly GNode[];
+  /** The links of the loaded graph (the layer model reads degree and hops from them; flag graph-intent). */
+  links?: readonly GLink[];
   byId: ReadonlyMap<string, GNode>;
   colorBy: ColorBy;
   /** Enter on a page: centre on it (bringing it in when it is filtered out). */
@@ -97,7 +101,7 @@ interface Props {
  * centre unfolds, on focus or Cmd/Ctrl+K, into recent steps and pinned views at rest, live page results while
  * typing, commands after a slash, and two free-text rows (ask the agent, shape the graph).
  */
-export function GraphShell({ nodes, byId, colorBy, onFocus, onRead, onShowExact, shownTypes, onShowMentions, onFit, onZoom, onReheat, onRefresh, setParams, top = SHELL_TOP, views, onPickView }: Props) {
+export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onShowExact, shownTypes, onShowMentions, onFit, onZoom, onReheat, onRefresh, setParams, top = SHELL_TOP, views, onPickView }: Props) {
   const ds = useDataSource();
   const qc = useQueryClient();
   const host = useToolHost();
@@ -115,6 +119,7 @@ export function GraphShell({ nodes, byId, colorBy, onFocus, onRead, onShowExact,
   const shape = useShellStore((s) => s.shape);
   const shapeError = useShellStore((s) => s.shapeError);
   const canUndo = useShellStore((s) => s.undo !== null);
+  const layersUndo = useLayers((s) => s.history.length > 0);
   // the pill speaks only while the shape is what is drawn: a change by hand (a legend click, a cleared view) retires it
   const shapeCurrent = useGraphUi((s) => (shape ? sameMarker(shape.after, marker(s)) : false));
   const story = useGraphUi((s) => s.story);
@@ -123,6 +128,24 @@ export function GraphShell({ nodes, byId, colorBy, onFocus, onRead, onShowExact,
   rawNow.current = raw;
   const openRef = useRef(false);
   openRef.current = open;
+  const intentRef = useRef(intent);
+  intentRef.current = intent;
+
+  // flag graph-intent: the layer store folds a stack onto this graph, so it needs the pages, the links and how to draw pages
+  const pickRef = useRef(onPickView);
+  pickRef.current = onPickView;
+  const showRef = useRef(onShowExact);
+  showRef.current = onShowExact;
+  useEffect(() => {
+    if (!intent) return;
+    useLayers.getState().setGraph({
+      nodes,
+      links: links ?? [],
+      show: (ids) => showRef.current(ids),
+      applyLegacy: (spec) => pickRef.current?.({ id: "legacy", name: "", count: "", spec }),
+    });
+    return () => useLayers.getState().setGraph(null);
+  }, [intent, nodes, links]);
 
   const text = raw.trim();
   const slash = raw.startsWith("/");
@@ -207,20 +230,24 @@ export function GraphShell({ nodes, byId, colorBy, onFocus, onRead, onShowExact,
     input.current?.focus();
   }, []);
 
-  const { undo } = useShape({
+  const { undo, cancel } = useShape({
     byId,
     shownTypes,
     showExact: onShowExact,
     record,
     onApplied: (text, say) => {
       // the panel closes unless the person has moved on to other text meanwhile
-      if (rawNow.current.trim() === text) close();
+      if (rawNow.current.trim() === text || (intentRef.current && parseMode(rawNow.current).text === text)) close();
       useShellStore.getState().say(say);
     },
   });
   const undoShape = useCallback(() => {
-    if (undo()) useShellStore.getState().say("Undid the last shape.");
-  }, [undo]);
+    // flag graph-intent: the layer stack keeps its own history (a shape is one step of it)
+    if (intent && useLayers.getState().undo()) {
+      cancel();
+      useShellStore.getState().say("Undid the last change.");
+    } else if (undo()) useShellStore.getState().say("Undid the last shape.");
+  }, [undo, cancel, intent]);
 
   useEffect(() => {
     // Capture phase on the window: while this shell is mounted Cmd/Ctrl+K belongs to the search panel
@@ -236,7 +263,7 @@ export function GraphShell({ nodes, byId, colorBy, onFocus, onRead, onShowExact,
         // Undo the last shape while the panel is closed and nothing is being typed (typing keeps the text's own undo)
         const t = e.target;
         const typing = t instanceof HTMLElement && t.closest("input, textarea, select, [contenteditable]");
-        if (!typing && !openRef.current && useShellStore.getState().undo) {
+        if (!typing && !openRef.current && (useShellStore.getState().undo || (intentRef.current && useLayers.getState().history.length))) {
           e.preventDefault();
           undoShape();
         }
@@ -305,7 +332,14 @@ export function GraphShell({ nodes, byId, colorBy, onFocus, onRead, onShowExact,
         hint: parsed.op ? LINE_COPY.explainers[parsed.op] : undefined,
         lead: <Wand2 aria-hidden className="size-4" strokeWidth={1.6} />,
         run: () => {
-          // the layer engine reads pendingOp later; for now every op goes down the shape path
+          // q3: the grammar parses `parsed.text` into layers here; until then a sentence goes down the shape path and
+          // useShape records it as one `show` layer (so the chip row shows it and undo works)
+          if (parsed.op === "remove") {
+            const gone = useLayers.getState().apply("remove", parsed.text);
+            useShellStore.getState().say(gone ? "Removed it from the view." : "No layer of the view matches that.");
+            close();
+            return;
+          }
           useShellStore.getState().setPendingOp(parsed.op ?? "replace");
           requestShape(parsed.text);
         },
@@ -330,7 +364,7 @@ export function GraphShell({ nodes, byId, colorBy, onFocus, onRead, onShowExact,
     }
 
     if (!text) {
-      if (canUndo)
+      if (canUndo || (intent && layersUndo))
         out.push({
           key: "undo-shape",
           section: "Last shape",
@@ -376,7 +410,10 @@ export function GraphShell({ nodes, byId, colorBy, onFocus, onRead, onShowExact,
       lead: <Wand2 aria-hidden className="size-4" strokeWidth={1.6} />,
       // the panel stays open until the shape is drawn, so a refusal is read where the text was typed
       // (a new request replaces one still on its way: the older answer is dropped when it lands)
-      run: () => requestShape(text),
+      run: () => {
+        useShellStore.getState().setPendingOp(null);
+        requestShape(text);
+      },
     };
     if (canShape && asksShape && /^match\b/i.test(text)) out.push(shapeRow);
     // a short list keeps the actions under it in view
@@ -430,7 +467,7 @@ export function GraphShell({ nodes, byId, colorBy, onFocus, onRead, onShowExact,
     }
     return out;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [slash, viewMode, intent, raw, text, commands, recentQ.data, viewsQ.data, results, colorBy, onFocus, onRead, onShowMentions, record, close, shaping, canUndo, undoShape, live]);
+  }, [slash, viewMode, intent, raw, text, commands, recentQ.data, viewsQ.data, results, colorBy, onFocus, onRead, onShowMentions, record, close, shaping, canUndo, layersUndo, undoShape, live]);
 
   /** A recent step: a command runs again; anything else goes back into the box to be edited or run. */
   function runRecent(s: RecentStep) {
@@ -507,6 +544,7 @@ export function GraphShell({ nodes, byId, colorBy, onFocus, onRead, onShowExact,
         notice={open ? undefined : notice?.text}
         kb={intent ? undefined : { name: kbName, onClick: () => focusBar("/knowledge") }}
       />
+      {intent && <Chips byId={byId} />}
       {open && <SearchPanel rows={rows} idx={idx} onHover={setIdx} empty={empty} status={status} hint={hintMode ? LINE_COPY.hints[hintMode] : undefined} views={!text && !slash && viewChoices.length ? viewChoices : undefined} />}
     </div>
   );
