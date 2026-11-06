@@ -279,6 +279,14 @@ function Loaded({
   const shell = useFlag("graph-shell");
   const headerFold = useFlag("header-fold");
   const calm = useFlag("calm-graph");
+  // flag calm-graph, first visit: the default is set before the first render builds the canvas, so nothing moves
+  // after the first frame (an effect would apply it a frame late and relayout). A late flag is handled below.
+  const firstBare = useRef(!search.view && !search.layer && !DIVE_PARAMS.some((k) => search[k] !== undefined && search[k] !== "") && initialView(search) === undefined);
+  const calmDone = useRef(false);
+  if (calm && !calmDone.current) {
+    calmDone.current = true;
+    if (firstBare.current && useGraphUi.getState().story === DEFAULT_STORY) useGraphUi.getState().applyStory(CALM_STORY);
+  }
   const shellTop = useShellTop();
   const sparkOpen = useSparkOpen();
   const { full: fullChat, folded: foldedChat } = useFullChat();
@@ -402,8 +410,6 @@ function Loaded({
   // It follows the flag, which may arrive after the first render; a calm view left over from a time the flag was on
   // never applies while it is off (back to today's default). Set straight on the store: a tool panel or selection
   // a link opened is left alone.
-  const firstBare = useRef(!search.view && !search.layer && !DIVE_PARAMS.some((k) => search[k] !== undefined && search[k] !== "") && initialView(search) === undefined);
-  const calmDone = useRef(false);
   /** the calm view set aside while the flag was (not yet) on: it comes back if the flag arrives late */
   const heldCalm = useRef("");
   useEffect(() => {
