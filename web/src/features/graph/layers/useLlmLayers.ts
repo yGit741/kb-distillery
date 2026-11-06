@@ -39,7 +39,10 @@ export function useLlmLayers(opts: Options): { request: (typed: string, op: Op, 
   const settle = useCallback((res: LayersResult, typed: string, op: Op, ctx: Context) => {
     // the ids the server wrote are its own: a layer in the store gets one from the same counter as every other layer
     const layers: Layer[] = res.layers.map((l) => ({ ...(l as unknown as Layer), id: newLayerId() }));
-    o.current.onPlan(planLayers(layers, res.lines, typed, o.current.nodes, ctx), typed, op);
+    const plan = planLayers(layers, res.lines, typed, o.current.nodes, ctx);
+    // only a name left open needs the answer again (the pick); a fresh ask of the same sentence asks the model again
+    if (plan.kind !== "ask") last.current = null;
+    o.current.onPlan(plan, typed, op);
   }, []);
 
   const request = useCallback(

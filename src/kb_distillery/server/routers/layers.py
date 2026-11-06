@@ -11,7 +11,7 @@ ERRORS = {400: {"description": "Unknown or unusable LLM backend"},
           502: {"description": "The LLM backend failed"}}
 
 
-@router.post("/api/graph/layers", response_model=LayersResponse, responses=ERRORS,
+@router.post("/api/graph/layers", response_model=LayersResponse, response_model_exclude_none=True, responses=ERRORS,
              summary="Turn free text into layer objects (show, hide, style) through the shared LLM tool")
 def post_layers(body: LayersRequest):
     try:

@@ -237,6 +237,11 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
 
   // flag graph-intent: a `>` sentence the rules cannot read is read by the model (POST /api/graph/layers)
   const llm = useLlmLayers({ nodes, onPlan: (plan, typed, op) => settleSentence(plan, typed, op, {}) });
+  // an answer on its way is dropped when the panel closes
+  const cancelLlm = llm.cancel;
+  useEffect(() => {
+    if (!open) cancelLlm();
+  }, [open, cancelLlm]);
   const { undo, cancel } = useShape({
     byId,
     shownTypes,
