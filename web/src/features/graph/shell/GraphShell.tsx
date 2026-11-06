@@ -34,6 +34,7 @@ import { useVisibleTools } from "../tools";
 import type { GLink, GNode } from "../types";
 import { Chips } from "../layers/Chips";
 import { useLayers } from "../layers/store";
+import { useLlmLayers } from "../layers/useLlmLayers";
 import { planSentence, type Plan } from "../layers/sentenceRun";
 import { useKb } from "@/lib/store";
 import { buildCommands, closestCommands, filterCommands, GROUP_ORDER, type Command, type CommandIcon } from "./commands";
@@ -234,6 +235,8 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
     input.current?.focus();
   }, []);
 
+  // flag graph-intent: a `>` sentence the rules cannot read is read by the model (POST /api/graph/layers)
+  const llm = useLlmLayers({ nodes, onPlan: (plan, typed, op) => settleSentence(plan, typed, op, {}) });
   const { undo, cancel } = useShape({
     byId,
     shownTypes,
@@ -348,8 +351,8 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
         hint: parsed.op ? LINE_COPY.explainers[parsed.op] : undefined,
         lead: <Wand2 aria-hidden className="size-4" strokeWidth={1.6} />,
         run: () => {
-          // the grammar reads the sentence into layers; text it cannot read goes down the shape path, where useShape
-          // records it as one `show` layer (so the chip row shows it and undo works)
+          // the grammar reads the sentence into layers; text it cannot read is read by the model (useLlmLayers),
+          // whose layers take the same route
           if (parsed.op === "remove") {
             const gone = useLayers.getState().apply("remove", parsed.text);
             useShellStore.getState().say(gone ? "Removed it from the view." : "No layer of the view matches that.");
@@ -498,10 +501,13 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
     useShellStore.getState().requestView(v);
   }
 
-  /** Read a `>` sentence into layers and apply them; a name left open asks, text the rules cannot read goes to the shape path. */
+  /** Read a `>` sentence into layers and apply them; a name left open asks, text the rules cannot read goes to the model. */
   function runSentence(typed: string, op: "replace" | "stack", chosen: Record<string, string>) {
     const focus = [...useKb.getState().selection][0];
-    const plan = planSentence(typed, nodes, { focus, chosen });
+    settleSentence(planSentence(typed, nodes, { focus, chosen }), typed, op, { focus, chosen });
+  }
+
+  function settleSentence(plan: Plan, typed: string, op: "replace" | "stack", ctx: { focus?: string; chosen?: Record<string, string> }) {
     const say = useShellStore.getState().say;
     if (plan.kind === "ready") {
       setDidYou(null);
@@ -509,11 +515,7 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
       close();
     } else if (plan.kind === "ask") setDidYou({ text: typed, op, pick: plan.pick, chosen: plan.chosen });
     else if (plan.kind === "missing") say(LINE_COPY.noSuchPage(plan.name));
-    else {
-      say(LINE_COPY.sentenceFallback);
-      useShellStore.getState().setPendingOp(op);
-      requestShape(typed);
-    }
+    else llm.request(typed, op, ctx);
   }
 
   useEffect(() => setIdx(0), [raw]);

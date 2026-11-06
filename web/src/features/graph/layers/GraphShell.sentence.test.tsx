@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { DataSourceProvider, type ShapeResult } from "@/api";
+import { DataSourceProvider, type DataSource, type LayersResult, type ShapeResult } from "@/api";
 import { withFlag } from "@/flags/testing";
 import { useKb } from "@/lib/store";
 import { mockDataSource } from "@/test/datasource";
@@ -18,13 +18,14 @@ const SHOWN = new Set(nodes.map((n) => n.type));
 const byId = new Map(nodes.map((n) => [n.id, n] as const));
 const shapeGraph = vi.fn(async (): Promise<ShapeResult> => ({ columns: [], rows: [], row_count: 0, truncated: false, cypher: null, style: { hide_edge_kinds: [], hide_labels: [] }, style_text: "", source: "cypher", explanation: "", warnings: [] }));
 
-function setup() {
+function setup(over: Partial<DataSource> = {}) {
   const ds = mockDataSource({
     search: async () => ({ hits: [], total: 0 }),
     listRecent: async () => ({ recent: [] }),
     listViews: async () => ({ views: [] }),
     addRecent: vi.fn(async () => ({ recent: [] })),
     shapeGraph,
+    ...over,
   });
   return render(
     <DataSourceProvider source={ds}>
@@ -88,21 +89,27 @@ describe("a > sentence read by the grammar (graph-intent)", () => {
     });
   });
 
-  it("on: text the rules cannot read falls through to the shape path and says so", async () => {
+  it("on: text the rules cannot read goes to the layers endpoint, not the shape path, and says so", async () => {
     await withFlag("graph-intent", true, async () => {
-      setup();
+      const layersFromText = vi.fn(async () => ({ layers: [], lines: [], explanation: "", backend: "subscription", usd: 0, warnings: [] }) as LayersResult);
+      setup({ layersFromText });
       const said: (string | undefined)[] = [];
       const off = useShellStore.subscribe((st) => said.push(st.notice?.text));
       await userEvent.type(box(), "> make it feel calmer{Enter}");
-      await waitFor(() => expect(shapeGraph).toHaveBeenCalled());
+      await waitFor(() => expect(layersFromText).toHaveBeenCalledWith("make it feel calmer", "replace"));
       off();
-      expect(said).toContain(LINE_COPY.sentenceFallback);
+      expect(said).toContain(LINE_COPY.asking);
+      expect(shapeGraph).not.toHaveBeenCalled();
     });
   });
 
-  it("off: no layers, the line is plain search", async () => {
+  it("off: no layers, the line is plain search, and the layers endpoint is never asked", async () => {
     await withFlag("graph-intent", false, async () => {
-      setup();
+      const layersFromText = vi.fn(async () => ({}) as LayersResult);
+      setup({ layersFromText });
+      await userEvent.type(box(), "> make it feel calmer{Enter}");
+      expect(layersFromText).not.toHaveBeenCalled();
+      await userEvent.clear(box());
       await userEvent.type(box(), "only orphans{Enter}");
       expect(useLayers.getState().stack.layers).toHaveLength(0);
       expect(screen.queryByRole("group", { name: "View" })).not.toBeInTheDocument();

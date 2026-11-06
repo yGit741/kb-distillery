@@ -38,6 +38,7 @@ This table is generated from the schema on `main`.
 | `GET /api/graph` | The wiki link graph. |
 | `POST /api/graph/cypher` | Run a read-only Cypher query (supported subset). |
 | `POST /api/graph/shape` | Turn free text into a graph view: Cypher selection plus a style clause. |
+| `POST /api/graph/layers` | Turn a `>` sentence the rules parser could not read into layer objects (show, hide, style) through the shared LLM tool. |
 | `GET /api/graph/queries` | Named graph queries. |
 | `POST /api/graph/queries/{name}` | Run a named graph query. |
 | `GET /api/citations` | Citation graph among cataloged papers. |
@@ -129,6 +130,16 @@ A later clause of the same kind replaces an earlier one. The same grammar is in 
 Statuses: `422` when the text cannot become a valid view (the unknown clause or the Cypher engine's hint is in `detail`; an LLM answer gets one retry before this), `400` when `$KB_LLM_BACKEND` names an unknown backend (an unknown `backend` in the body is a schema `422`), `502` when the backend failed (no login, no key, API unreachable). A hidden label or edge kind the knowledge base does not have comes back as a warning, not an error.
 
 The model is `haiku`. The backend is `subscription` unless `backend` or `$KB_LLM_BACKEND` says otherwise. With `batch` the request waits up to five minutes for the batch to end, is never retried, and answers `502` if it has not finished, because a page waits on this call; for bulk work use the `api` or `subscription` backend.
+
+### Layers from a sentence
+
+`POST /api/graph/layers` is what the graph line's `>` falls back to (flag `graph-intent`) when its rules cannot read a sentence. It answers layer objects (never Cypher): the same objects the app holds as its view stack, plus each one printed as a line of the query language.
+
+Request: `text` (up to 4000 characters), `op` (`replace`, `stack` or `remove`; default `replace`), `backend` (`subscription`, `api` or `batch`; optional), `fallback` (`subscription`, `api`, `batch` or `none`; optional).
+
+Response: `layers`, `lines` (one per layer), `explanation`, `backend` (the one that answered), `fallback_from` (the backend tried first, when another took over), `usd`, `warnings` (a page type, area or link type this knowledge base does not have). Status codes: 400 unknown backend, 422 the model's answer was not a valid list of layers (`detail` carries the reason and the answer, nothing is guessed), 502 no backend could answer.
+
+**Billing.** The call goes through `kb_distillery.llm`, so it is billed on the backend you pick: the subscription by default (`$KB_LLM_BACKEND`), which is not charged per call. When the subscription is unavailable, fails or is rate-limited, the request is retried once on the API if a key exists (`fallback` defaults to `api` in that case; send `none` to turn it off). `batch` can be chosen per request, but it waits minutes to hours and does not suit a line you are typing. The response echoes `usd`, and the graph line says which backend answered and the cost when the API did.
 
 ## Favorites
 
