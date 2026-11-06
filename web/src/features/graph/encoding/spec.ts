@@ -190,10 +190,11 @@ export const STATE = {
   focus: { width: 2.5, alpha: 0.95 },
   drawn: { width: 2, alpha: 0.95 },
   hoverRing: { width: 1.5, alpha: 0.55 },
+  favorite: { width: 1, alpha: 0.4 },
   glow: 14,
   glowAlpha: 0.45,
 } as const;
-export type NodeState = "selected" | "focus" | "drawn" | "hover" | null;
+export type NodeState = "selected" | "focus" | "drawn" | "hover" | "favorite" | null;
 
 /** One label style: text halo width in px (the page's background colour behind the text), and the smallest label. */
 export const LABEL = {

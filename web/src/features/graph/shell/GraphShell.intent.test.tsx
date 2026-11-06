@@ -110,3 +110,14 @@ describe("the line, graph-intent off", () => {
     });
   });
 });
+
+describe("a line handed over from the overlay (pendingLine)", () => {
+  it("is taken on mount: the line carries the text and the store is cleared", async () => {
+    await withFlag("graph-intent", true, async () => {
+      useShellStore.setState({ pendingLine: ">colour by area" });
+      setup();
+      expect(await screen.findByRole("combobox", { name: /search the graph/i })).toHaveValue(">colour by area");
+      expect(useShellStore.getState().pendingLine).toBeNull();
+    });
+  });
+});

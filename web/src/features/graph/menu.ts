@@ -1,6 +1,7 @@
 import { flag } from "@/flags";
 import { IS_SHARE } from "@/share/env";
 import { LINE_COPY } from "./shell/copy";
+import { useFavorites } from "./favorites/store";
 import type { GNode } from "./types";
 
 /** What a node-menu action may do. */
@@ -28,6 +29,8 @@ export interface MenuContext {
 export interface MenuItem {
   id: string;
   label: string;
+  /** A label that depends on the page (Favorite / Unfavorite); wins over `label`. */
+  labelOf?: (n: GNode) => string;
   hint?: string;
   when?: (n: GNode) => boolean;
   enabled?: (n: GNode) => boolean;
@@ -55,14 +58,22 @@ const A = LINE_COPY.actions;
 
 /**
  * The action menu: the same one for a search result, a set, the focus and the view (flag graph-intent). The plain
- * node menu above keeps MENU_ITEMS. Favorite and export are slots, greyed out until their features land.
+ * node menu above keeps MENU_ITEMS. Export is a slot, greyed out until its feature lands.
  */
 export const ACTION_ITEMS: MenuItem[] = [
   { id: "focus", label: A.focus.label, hint: A.focus.hint, run: (n, c) => c.focus?.(n.id) },
   { id: "show", label: A.show.label, hint: A.show.hint, run: (n, c) => c.showOnly?.([n.id], n.title || n.id) },
   { id: "read", label: A.read.label, hint: A.read.hint, run: (n, c) => c.openReader(n.id) },
   { id: "expand", label: A.expand.label, hint: A.expand.hint, run: (n, c) => c.expand?.(n.id) },
-  { id: "favorite", label: A.favorite.label, enabled: () => false, why: A.favorite.why, run: () => {} },
+  {
+    id: "favorite",
+    label: A.favorite.label,
+    labelOf: (n) => (useFavorites.getState().isFavorite(n.id) ? A.favorite.unlabel : A.favorite.label),
+    hint: A.favorite.hint,
+    // the share build is read-only: no toggle there
+    when: () => !IS_SHARE,
+    run: (n) => void useFavorites.getState().toggle(n.id),
+  },
   { id: "chat", label: A.chat.label, hint: A.chat.hint, when: () => !IS_SHARE, run: (n, c) => c.chat?.([n.id]) },
   { id: "think", label: A.think.label, hint: A.think.hint, when: () => !IS_SHARE, run: (n, c) => c.think?.(n.id) },
   { id: "export", label: A.export.label, hint: A.export.hint, enabled: () => flag("graph-intent"), why: A.export.why, run: (n, c) => c.exportPages?.([n.id]) },

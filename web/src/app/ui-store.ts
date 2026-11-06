@@ -6,6 +6,9 @@ interface UiState {
   /** Quick-capture dialog (think inbox), reachable from any screen via ⌘K or ⌘⇧Space. */
   captureOpen: boolean;
   setCaptureOpen: (open: boolean) => void;
+  /** The search line as an overlay on screens other than the graph (flag graph-intent), opened by Cmd/Ctrl+K. */
+  lineOpen: boolean;
+  setLineOpen: (open: boolean) => void;
   /** Cmd-J quick ask (flag `agent-mode`). */
   askOpen: boolean;
   setAskOpen: (open: boolean) => void;
@@ -16,6 +19,8 @@ export const useUi = create<UiState>((set) => ({
   setPaletteOpen: (paletteOpen) => set({ paletteOpen }),
   captureOpen: false,
   setCaptureOpen: (captureOpen) => set({ captureOpen }),
+  lineOpen: false,
+  setLineOpen: (lineOpen) => set({ lineOpen }),
   askOpen: false,
   setAskOpen: (askOpen) => set({ askOpen }),
 }));

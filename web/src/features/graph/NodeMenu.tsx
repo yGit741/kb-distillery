@@ -87,7 +87,7 @@ export function NodeMenu({ node, x, y, colorBy, ctx, items, title, onClose }: Pr
               it.run(node, ctx);
             }}
           >
-            <span>{it.label}</span>
+            <span>{it.labelOf?.(node) ?? it.label}</span>
             <small className="text-muted-foreground">{on ? it.hint : it.why}</small>
           </button>
         );

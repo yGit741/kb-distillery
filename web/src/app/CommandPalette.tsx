@@ -27,6 +27,8 @@ export function CommandPalette() {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      // flag graph-intent: the search line (SearchOverlay) owns Cmd/Ctrl+K on every screen
+      if (flag("graph-intent")) return;
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
         setPaletteOpen(!useUi.getState().paletteOpen);
