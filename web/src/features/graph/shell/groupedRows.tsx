@@ -1,4 +1,5 @@
 import { Layers, Pin } from "lucide-react";
+import type { GNode } from "../types";
 import type { PinnedView } from "@/api";
 import { NodeSwatch } from "../encoding/NodeMarkSvg";
 import { swatchColor } from "../nodeColor";
@@ -27,6 +28,31 @@ export interface GroupedArgs {
   /** Enter on a set row highlights the set. */
   highlightSet: (ids: string[]) => void;
   runView: (v: PinnedView) => void;
+  /** Page ids marked favorite: those rows carry a small mark. */
+  favorites?: ReadonlySet<string>;
+}
+
+/** The rows of `/favorites`: the favorite pages (narrowed by the words after the command), the same row as a search hit. */
+export function favoriteRows(a: Pick<GroupedArgs, "colorBy" | "focusNode" | "favorites">, byId: ReadonlyMap<string, GNode>, filter: string): PanelRow[] {
+  const words = filter.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  const out: PanelRow[] = [];
+  for (const id of a.favorites ?? []) {
+    const node = byId.get(id);
+    if (!node) continue;
+    const hay = `${node.title} ${node.id}`.toLowerCase();
+    if (!words.every((w) => hay.includes(w))) continue;
+    out.push({
+      key: `favorite:${id}`,
+      section: LINE_COPY.favorites.heading,
+      label: node.title || id,
+      hint: node.type.replace(/-/g, " "),
+      fav: true,
+      lead: <NodeSwatch type={node.type} color={swatchColor(node, a.colorBy)} className="size-3.5" />,
+      actions: { kind: "node", node },
+      run: (shift) => a.focusNode(id, shift),
+    });
+  }
+  return out.sort((x, y) => String(x.label).localeCompare(String(y.label)));
 }
 
 /**
@@ -56,6 +82,7 @@ export function groupedRows(a: GroupedArgs): PanelRow[] {
     label: p.node.title || p.node.id,
     detail: p.snippet,
     hint: p.node.type.replace(/-/g, " "),
+    fav: a.favorites?.has(p.node.id) || undefined,
     mark: p.also.length ? { text: p.also.map((v) => LINE_COPY.alsoMark[v]).join(" · "), title: p.also.map((v) => LINE_COPY.alsoTitle[v]).join("; ") } : undefined,
     lead: <NodeSwatch type={p.node.type} color={swatchColor(p.node, a.colorBy)} className="size-3.5" />,
     actions: { kind: "node", node: p.node },

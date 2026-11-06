@@ -15,6 +15,7 @@ import { layerGroups, type LayerGroup, type TypeRow } from "../../legendModel";
 import { predicateFn } from "../../publicPredicate";
 import type { GraphSchema } from "../../schema";
 import { useGraphUi } from "../../store";
+import { useFavorites } from "../../favorites/store";
 import { effectiveColorBy, METRIC_COLORS, RAMP_BY } from "../../style";
 import type { GNode } from "../../types";
 import { ago, chatWhen, defaultFetch, listRecent, listSessions, listViews, pinView, renameView, unpinView, type Fetcher, type SessionRow } from "./api";
@@ -70,6 +71,8 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
   const theme = useTheme((s) => s.theme);
   const server = ds.kind === "http" && !IS_SHARE;
   const sparkChat = useFlag("spark-chat");
+  const intent = useFlag("graph-intent");
+  const favSlugs = useFavorites((s) => s.slugs);
   const viewsPanel = useFlag("views-panel");
   const root = useRef<HTMLDivElement>(null);
   const order = useCorners((s) => s.order);
@@ -98,6 +101,16 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
   const recent = useQuery({ queryKey: ["corners", "recent"], queryFn: () => listRecent(f), enabled: server && pinsOpen && recentOn, staleTime: 0 });
   const think = useApiQuery(["think"], (d) => d.listThink(), { enabled: server && thinkOpen });
   const sessions = useQuery({ queryKey: ["corners", "sessions"], queryFn: () => listSessions(f), enabled: server && (agentOpen || (viewsPanel && pinsOpen)), staleTime: 0, retry: false });
+
+  const favorites = useMemo(() => {
+    if (!intent) return undefined;
+    const byId = new Map(nodes.map((n) => [n.id, n]));
+    return [...favSlugs].flatMap((id) => (byId.has(id) ? [{ id, title: byId.get(id)!.title || id }] : [])).sort((a, b) => a.title.localeCompare(b.title));
+  }, [intent, favSlugs, nodes]);
+  const focusFavorite = (id: string) => {
+    if (visible.has(id)) useGraphUi.getState().requestFocus(id, true);
+    else showPicked([id]);
+  };
 
   const [notice, setNotice] = useState("");
   useEffect(() => {
@@ -314,6 +327,8 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
                   onRename={(id, n) => void rename(id, n)}
                   onRecentOpen={setRecentOn}
                   canApply={recognised}
+                  favorites={favorites}
+                  onFavorite={focusFavorite}
                 />
               </div>
             </div>
@@ -333,6 +348,8 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
               onRename={(id, n) => void rename(id, n)}
               onRecentOpen={setRecentOn}
               canApply={recognised}
+              favorites={favorites}
+              onFavorite={focusFavorite}
             />
           )}
           <CornerButton id={BTN_ID.pins} label="Pinned views" data-tour="graph-views" on={pinsOpen} style={{ position: "absolute", left: EDGE, top: EDGE }} onClick={() => toggle("pins")}>

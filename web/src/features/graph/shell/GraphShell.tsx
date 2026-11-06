@@ -52,7 +52,8 @@ import { marker, pillText, sameMarker } from "./shape";
 import { looksLikeShape, parseMode, requestShape, useShellStore } from "./shellStore";
 import { useShape } from "./useShape";
 import { usePageResults } from "./usePageResults";
-import { groupedRows } from "./groupedRows";
+import { favoriteRows, groupedRows } from "./groupedRows";
+import { useFavorites } from "../favorites/store";
 import { buildSearchIndex, withNames, type RowTarget } from "./searchGroups";
 import { SHELL_TOP } from "./layout";
 
@@ -146,6 +147,9 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
   const intentRef = useRef(intent);
   intentRef.current = intent;
 
+  // flag graph-intent: the favorite pages, read with the graph and again when the knowledge base changes
+  const favs = useFavorites((s) => s.slugs);
+  const favsLoaded = useFavorites((s) => s.loaded);
   // flag graph-intent: the layer store folds a stack onto this graph, so it needs the pages, the links and how to draw pages
   const pickRef = useRef(onPickView);
   pickRef.current = onPickView;
@@ -156,11 +160,12 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
     useLayers.getState().setGraph({
       nodes,
       links: links ?? [],
+      favorites: favsLoaded ? favs : undefined,
       show: (ids) => showRef.current(ids),
       applyLegacy: (spec) => pickRef.current?.({ id: "legacy", name: "", count: "", spec }),
     });
     return () => useLayers.getState().setGraph(null);
-  }, [intent, nodes, links]);
+  }, [intent, nodes, links, favs, favsLoaded]);
 
   const text = raw.trim();
   const slash = raw.startsWith("/");
@@ -178,6 +183,9 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
   const kbListQ = useApiQuery(["kb-list"], (d) => d.listKbs(), { enabled: kbViewOn, staleTime: 30_000 });
   const results = usePageResults(nodes, byId, raw, !slash && text.length > 0);
   const kbName = kbQ.data?.name ?? "Knowledge Base";
+  useEffect(() => {
+    if (intent && live) void useFavorites.getState().load();
+  }, [intent, live, nodes, kbQ.data?.id]);
   // flag graph-intent: the tier-1 index, built once per graph load (page entries) and joined with the small name lists
   const baseIndex = useMemo(() => (intent ? buildSearchIndex(nodes) : null), [intent, nodes]);
   const [menu, setMenu] = useState<{ target: RowTarget; x: number; y: number } | null>(null);
@@ -384,6 +392,26 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
       return out;
     }
 
+    if (slash && intent && /^fav/i.test(raw.slice(1).trim())) {
+      // /favorites [words]: the favorite pages as rows, Enter focuses one
+      const rest = raw.slice(1).trim().replace(/^\S+\s*/, "");
+      out.push(
+        ...favoriteRows(
+          {
+            colorBy,
+            favorites: favs,
+            focusNode: (id, shift) => {
+              if (shift && useKb.getState().selection.size) useKb.getState().select(id);
+              else onFocus(id);
+              close();
+            },
+          },
+          byId,
+          rest,
+        ),
+      );
+      return out;
+    }
     if (slash) {
       const matches = filterCommands(commands, raw.slice(1));
       for (const g of GROUP_ORDER) matches.filter((c) => c.group === g).forEach((c) => out.push(commandRow(c)));
@@ -492,6 +520,7 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
             runView(v);
             close();
           },
+          favorites: favs,
         }),
       );
       if (canShape && asksShape && !/^match\b/i.test(text)) out.push(shapeRow);
@@ -537,7 +566,7 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
     if (askRow) out.push(askRow);
     return out;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [slash, viewMode, intent, index, raw, text, commands, recentQ.data, viewsQ.data, results, colorBy, onFocus, onRead, onShowMentions, record, close, shaping, canUndo, layersUndo, undoShape, live, didYou, nodes]);
+  }, [slash, viewMode, intent, index, raw, text, commands, recentQ.data, viewsQ.data, results, colorBy, onFocus, onRead, onShowMentions, record, close, shaping, canUndo, layersUndo, undoShape, live, didYou, nodes, favs, byId]);
 
   /** A recent step: a command runs again; anything else goes back into the box to be edited or run. */
   function runRecent(s: RecentStep) {
@@ -697,7 +726,7 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
         ? { kind: "shape", text: pillText(shape.styleText, shape.pages) || "Shaped", skipped: shape.skipped }
         : null;
 
-  const empty = viewMode ? LINE_COPY.viewEmpty : slash ? (intent ? LINE_COPY.hints.command : "No command matches.") : text ? "Nothing matches." : live && !IS_SHARE ? "Type to search pages, / for commands, or ask a question." : "Type to search pages.";
+  const empty = viewMode ? LINE_COPY.viewEmpty : slash ? (intent ? (/^fav/i.test(raw.slice(1).trim()) ? (favs.size ? "No favorite matches." : LINE_COPY.favorites.empty) : LINE_COPY.hints.command) : "No command matches.") : text ? "Nothing matches." : live && !IS_SHARE ? "Type to search pages, / for commands, or ask a question." : "Type to search pages.";
 
   return (
     <div
