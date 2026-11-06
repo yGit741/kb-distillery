@@ -48,6 +48,8 @@ export interface DataSource {
   /** The page file as stored (frontmatter and body); the OKF export copies it. */
   getPageSource(slug: string): Promise<string>;
   search(q: string, limit?: number): Promise<T.SearchResult>;
+  /** Tier 2 of the search line: full text over pages, think notes, chats and raw text (the embedded share has none). */
+  searchText(q: string, opts?: { kinds?: readonly string[]; limit?: number; signal?: AbortSignal }): Promise<T.TextSearch>;
   findPath(a: string, b: string): Promise<T.PathResult>;
 
   // pipeline, corpus, raw

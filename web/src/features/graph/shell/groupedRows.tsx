@@ -1,6 +1,6 @@
-import { Layers, Pin } from "lucide-react";
+import { FileText, Layers, MessageSquare, NotebookPen, Pin } from "lucide-react";
 import type { GNode } from "../types";
-import type { PinnedView } from "@/api";
+import type { PinnedView, TextHit } from "@/api";
 import { NodeSwatch } from "../encoding/NodeMarkSvg";
 import { swatchColor } from "../nodeColor";
 import type { ColorBy } from "../style";
@@ -30,6 +30,62 @@ export interface GroupedArgs {
   runView: (v: PinnedView) => void;
   /** Page ids marked favorite: those rows carry a small mark. */
   favorites?: ReadonlySet<string>;
+  /** Tier 2: the server's full-text hits for exactly this text (./useTextHits); they fill the sections after the tier-1 groups. */
+  textHits?: readonly TextHit[];
+  byId?: ReadonlyMap<string, GNode>;
+  openChat?: (id: string) => void;
+  openThink?: (name: string) => void;
+  /** A raw file's repo path: opens the corpus drawer on it. */
+  openRaw?: (path: string) => void;
+}
+
+const TEXT_SHOWN = { page: 6, think: 4, chat: 4, raw: 4 } as const;
+
+/**
+ * The rows of tier 2, appended after every tier-1 row: pages and think notes first, then chats, then raw files, in the
+ * server's order. A hit already shown by tier 1 (same page id) is not repeated. Pure: the same hits give the same rows.
+ */
+export function textRows(a: GroupedArgs, shown: ReadonlySet<string>): PanelRow[] {
+  const out: PanelRow[] = [];
+  const seen = new Set(shown);
+  for (const kind of ["page", "think", "chat", "raw"] as const) {
+    let n = 0;
+    for (const h of a.textHits ?? []) {
+      if (h.kind !== kind || n >= TEXT_SHOWN[kind]) continue;
+      const section = LINE_COPY.textGroups[kind];
+      const node = kind === "page" || kind === "think" ? a.byId?.get(h.id) : undefined;
+      if (node ? seen.has(node.id) : seen.has(`${kind}:${h.id}`)) continue;
+      seen.add(node ? node.id : `${kind}:${h.id}`);
+      n++;
+      const detail = h.snippet || undefined;
+      if (node) {
+        out.push({
+          key: `text:${kind}:${h.id}`,
+          section,
+          label: node.title || h.title || h.id,
+          detail,
+          hint: node.type.replace(/-/g, " "),
+          fav: a.favorites?.has(node.id) || undefined,
+          lead: <NodeSwatch type={node.type} color={swatchColor(node, a.colorBy)} className="size-3.5" />,
+          actions: { kind: "node", node },
+          run: (shift) => a.focusNode(node.id, shift),
+        });
+        continue;
+      }
+      const lead = kind === "chat" ? <MessageSquare aria-hidden strokeWidth={1.6} /> : kind === "think" ? <NotebookPen aria-hidden strokeWidth={1.6} /> : <FileText aria-hidden strokeWidth={1.6} />;
+      const open = kind === "chat" ? a.openChat : kind === "think" ? a.openThink : kind === "raw" ? a.openRaw : undefined;
+      out.push({
+        key: `text:${kind}:${h.id}`,
+        section,
+        label: h.title || h.id,
+        detail,
+        hint: kind === "raw" ? (h.id.split("/")[1] ?? "raw") : kind === "page" ? "page" : kind,
+        lead,
+        run: () => open?.(kind === "raw" ? h.path || h.id : h.id),
+      });
+    }
+  }
+  return out;
 }
 
 /** The rows of `/favorites`: the favorite pages (narrowed by the words after the command), the same row as a search hit. */
@@ -117,5 +173,14 @@ export function groupedRows(a: GroupedArgs): PanelRow[] {
     if (cmd) out.push({ ...a.commandRow(cmd), key: `command:${c.id}`, section: label("commands") });
   }
   placed.related.slice(0, RELATED_SHOWN).forEach((p) => out.push(pageRow(p, "related")));
+  // tier 2 goes last, so it only ever adds rows below those already on show
+  if (a.textHits?.length) {
+    const shown = new Set<string>();
+    for (const r of out) {
+      const m = /^(?:pages|think|related):(.+)$/.exec(r.key);
+      if (m) shown.add(m[1]!);
+    }
+    out.push(...textRows(a, shown));
+  }
   return out;
 }

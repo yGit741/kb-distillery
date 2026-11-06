@@ -80,6 +80,8 @@ python3 -m kb_distillery.search.query candidates "<keywords>"   # rank slugs (0 
 python3 -m kb_distillery.search.query mocs                      # topic pages (theme-*) as entry points
 ```
 
+**Full text:** `distill search text "<query>"` (also `GET /api/search/text`, the second tier of the graph search line) searches pages, think notes, chats (`.local/sessions/`) and raw `.md`/`.txt` text through one SQLite FTS5 index at `<kb>/.cache/search/fts.sqlite`. It is local and never committed (`.cache/` is gitignored), is built on the first search, is refreshed from a cheap stat scan (document count and newest mtime) and is updated after every knowledge step, think-note save and chat save (`kb_distillery.search.fts`); `--rebuild` starts over.
+
 Workflow: `wiki/index.md` (root) → the one `wiki/<type>/index.md` section you need → `candidates` → read 3–8 pages → synthesize. Not the same as `kb_distillery.ingest resolve` (ingest dedup).
 
 ## Distill think

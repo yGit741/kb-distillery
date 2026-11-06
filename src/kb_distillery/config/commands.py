@@ -75,6 +75,10 @@ COMMANDS: dict[str, Cmd] = {
     "lint": Cmd("lint the selected knowledge base (the schema is the linter); --health adds the summary",
                 target="kb_distillery.lint.lint", config_check=False),
     "llm": Cmd("the one door to Claude: ask, submit, status, collect", target="kb_distillery.llm", forward_help=True),
+    "search": Cmd("search a knowledge base", "group", sub={
+        "text": Cmd("full text over pages, think notes, chats and raw text: distill search text \"<query>\" [--rebuild]",
+                    target="kb_distillery.search.fts", forward_help=True),
+    }),
     "share": Cmd("publish the wiki graph + explorer as a site (build, snapshot, status, …)", target="kb_distillery.publish.cloudflare",
                  forward_help=True),
     "propose": Cmd("typed relation proposals between wiki pages: submit, collect, review, apply", target="kb_distillery.graph.propose",
