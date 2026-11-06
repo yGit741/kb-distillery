@@ -6,8 +6,10 @@ verdict: `ship review --pass "<one-line summary>" [--findings N]` stores the bra
 HEAD, so the record goes stale and `ship pr` asks for a fresh review. `ship pr --no-review "<reason>"`
 bypasses the check; the reason lands in the PR body.
 """
+import fcntl
 import json
 import os
+import tempfile
 
 from kb_distillery.git.queue import common_dir
 
@@ -28,13 +30,20 @@ def _read(root):
 
 
 def record(root, branch, sha, summary, findings=None):
-    data = _read(root)
-    data[branch] = {"sha": sha, "summary": summary.strip(), "findings": findings}
     path = _path(root)
-    tmp = path + ".tmp"
-    with open(tmp, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=1)
-    os.replace(tmp, path)
+    with open(path + ".lock", "a") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)         # released when the file closes
+        data = _read(root)
+        data[branch] = {"sha": sha, "summary": summary.strip(), "findings": findings}
+        fd, tmp = tempfile.mkstemp(dir=os.path.dirname(path), prefix=FILE + ".")
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as f:
+                json.dump(data, f, indent=1)
+            os.replace(tmp, path)
+        except BaseException:
+            if os.path.exists(tmp):
+                os.unlink(tmp)
+            raise
 
 
 def passed(root, branch, sha):

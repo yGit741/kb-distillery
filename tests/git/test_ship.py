@@ -364,6 +364,13 @@ class PrFlowTests(unittest.TestCase):
         self.assertEqual(ship.cmd_pr(title="feat(ops): add thing", root=wt, gates=False, check_review=True), 1)
         self.assertNotIn("pr create", self._gh_calls())
 
+    def test_review_records_for_two_branches_both_survive(self):
+        from kb_distillery.git import review_gate
+        review_gate.record(self.repo, "infra/a", "sha-a", "one")
+        review_gate.record(self.repo, "infra/b", "sha-b", "two", 1)
+        self.assertEqual(review_gate.passed(self.repo, "infra/a", "sha-a")["summary"], "one")
+        self.assertEqual(review_gate.passed(self.repo, "infra/b", "sha-b")["summary"], "two")
+
     def test_no_review_escape_hatch_lands_in_body(self):
         wt = self._committed()
         self.assertEqual(ship.cmd_pr(root=wt, gates=False, check_review=True, no_review="docs only"), 0)
