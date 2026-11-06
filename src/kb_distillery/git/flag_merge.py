@@ -31,13 +31,25 @@ def unmerged_paths(root) -> list[str]:
 
 
 def _split(text: str) -> tuple[str, list[tuple[str, str]]]:
-    """(preamble, [(name, block text)]) of a flags.toml."""
-    parts = re.split(r"(?m)^(?=\[\[flag\]\]\s*$)", text)
+    """(preamble, [(name, block text)]) of a flags.toml. The comment lines right above a `[[flag]]` header belong to
+    that block, not to the one before it."""
+    lines = text.split("\n")
+    heads = [i for i, ln in enumerate(lines) if ln.strip() == _BLOCK]
+    starts = []
+    for h in heads:
+        k = h
+        while k > 0 and lines[k - 1].lstrip().startswith("#"):
+            k -= 1
+        starts.append(k)
+    if not heads:
+        return text, []
     blocks = []
-    for part in parts[1:]:
-        m = _NAME.search(part)
-        blocks.append((m.group(1) if m else part, part.rstrip("\n")))
-    return parts[0], blocks
+    for n, st in enumerate(starts):
+        end = starts[n + 1] if n + 1 < len(starts) else len(lines)
+        body = "\n".join(lines[st:end]).rstrip("\n")
+        m = _NAME.search("\n".join(lines[heads[n]:end]))
+        blocks.append((m.group(1) if m else body, body))
+    return "\n".join(lines[:starts[0]]).rstrip("\n"), blocks
 
 
 def _stage(root, n: int, path: str) -> str | None:
@@ -45,24 +57,41 @@ def _stage(root, n: int, path: str) -> str | None:
     return cp.stdout if cp.returncode == 0 else None
 
 
+_BAIL = object()
+
+
+def _merge3(base, ours, theirs):
+    """Three-way on one unit (None = absent). _BAIL when both sides changed it differently."""
+    if ours == theirs:
+        return ours
+    if ours == base:
+        return theirs
+    if theirs == base:
+        return ours
+    return _BAIL
+
+
 def merge_flags_toml(ours: str, theirs: str, base: str | None = None) -> str | None:
-    """Union of the `[[flag]]` blocks: ours in file order, then theirs' new ones; a name once. None when theirs changed
-    a block that ours also changed (a real edit conflict, not an append)."""
-    pre, mine = _split(ours)
-    _, other = _split(theirs)
-    base_blocks = dict(_split(base)[1]) if base else {}
-    have = {n: t for n, t in mine}
-    out = list(mine)
-    for name, text in other:
-        if name in have:
-            if name in base_blocks and text != base_blocks[name] and have[name] != text and have[name] != base_blocks[name]:
-                return None
-            continue
-        if name in base_blocks:        # ours removed it on purpose
-            continue
-        out.append((name, text))
-        have[name] = text
-    return pre.rstrip("\n") + "\n\n" + "\n\n".join(t for _, t in out) + "\n"
+    """Three-way merge of a flags.toml by `[[flag]]` block: ours in file order, then theirs' new blocks. A block changed
+    on one side takes that side's text; deleted on one side and untouched on the other is deleted; changed on both
+    sides differently (or changed on one and deleted on the other) is None, like the preamble."""
+    pre_o, mine = _split(ours)
+    pre_t, other = _split(theirs)
+    pre_b, bl = _split(base) if base is not None else (None, [])
+    pre = _merge3(pre_b, pre_o, pre_t)
+    if pre is _BAIL:
+        return None
+    o, t, b = dict(mine), dict(other), dict(bl)
+    names = [n for n, _ in mine] + [n for n, _ in other if n not in o]
+    out = []
+    for name in dict.fromkeys(names):
+        merged = _merge3(b.get(name), o.get(name), t.get(name))
+        if merged is _BAIL:
+            return None
+        if merged is not None:
+            out.append(merged)
+    head = pre.rstrip("\n") + "\n\n" if pre.strip() else ""
+    return head + "\n\n".join(out) + "\n"
 
 
 def _pin_text(text: str, union_line: str) -> str:

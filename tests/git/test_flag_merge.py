@@ -30,6 +30,33 @@ class MergeFlagsTomlTests(unittest.TestCase):
         names = re.findall(r'^name = "(.*)"', out, re.M)
         self.assertEqual(names, ["a", "b", "c", "d"])
 
+    def test_one_sided_edit_is_kept_from_either_side(self):
+        base = _toml("a", "b")
+        flipped = base.replace("local = true", "local = false", 1)      # a: changed on one side only
+        names = lambda t: re.findall(r'^name = "(.*)"', t, re.M)
+        out = flag_merge.merge_flags_toml(_toml("a", "b", "mine"), flipped, base)      # theirs edited a
+        self.assertEqual(names(out), ["a", "b", "mine"])
+        self.assertIn("local = false", out.split("[[flag]]")[1])
+        out = flag_merge.merge_flags_toml(flipped, _toml("a", "b", "new"), base)       # ours edited a
+        self.assertEqual(names(out), ["a", "b", "new"])
+        self.assertIn("local = false", out.split("[[flag]]")[1])
+
+    def test_delete_vs_change(self):
+        base = _toml("a", "b")
+        self.assertEqual(re.findall(r'^name = "(.*)"', flag_merge.merge_flags_toml(_toml("b"), base, base), re.M), ["b"])
+        self.assertIsNone(flag_merge.merge_flags_toml(_toml("b"), base.replace("d a", "x"), base))
+
+    def test_header_comments_travel_with_their_block(self):
+        base = _toml("a")
+        theirs = base + "\n# about new\n" + _flag("new")
+        out = flag_merge.merge_flags_toml(_toml("a", "mine"), theirs, base)
+        self.assertIn("# about new\n[[flag]]\nname = \"new\"", out)
+        self.assertNotIn("# about new\n[[flag]]\nname = \"mine\"", out)
+        ours = base + "\n# about mine\n" + _flag("mine")
+        out = flag_merge.merge_flags_toml(ours, _toml("a", "new"), base)
+        self.assertIn("# about mine\n[[flag]]\nname = \"mine\"", out)
+        self.assertIsNone(flag_merge.merge_flags_toml("# one\n\n" + _toml("a"), "# two\n\n" + _toml("a"), _toml("a")))
+
     def test_edit_on_both_sides_is_not_resolved(self):
         base = _toml("a")
         self.assertIsNone(flag_merge.merge_flags_toml(_toml("a").replace("d a", "mine"), _toml("a").replace("d a", "theirs"), base))
@@ -116,6 +143,20 @@ class FlagSyncTests(unittest.TestCase):
         self.assertIn('FlagName = "a" | "mine" | "theirs";', Path(wt, flag_merge.FLAGS_TEST).read_text())
         self.assertEqual(_g(wt, "status", "--short"), "")
         self.assertEqual(codegen.main(["--check", "--flags", os.path.join(wt, flag_merge.FLAGS_TOML)], root=wt), 0)
+
+    def test_main_edit_of_an_existing_flag_survives_the_sync(self):
+        wt = self._branch("edit")
+        self._land(wt, "mine")
+        self._write(self.repo, flag_merge.FLAGS_TOML,
+                    _toml("a").replace("local = true", "local = false"))
+        self._regen(self.repo)
+        _g(self.repo, "add", "-A")
+        _g(self.repo, "commit", "-q", "-m", "feat(flags): release a (#9)")
+        _g(self.repo, "push", "-q", "origin", "main")
+        self.assertEqual(ship.cmd_sync(root=wt, gates=False), 0)
+        text = Path(wt, flag_merge.FLAGS_TOML).read_text()
+        self.assertEqual(re.findall(r'^name = "(.*)"', text, re.M), ["a", "mine"])
+        self.assertIn("local = false", text.split("[[flag]]")[1])
 
     def test_same_flag_name_on_both_sides_is_kept_once(self):
         wt = self._branch("dup")
