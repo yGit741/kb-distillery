@@ -50,7 +50,7 @@ beforeEach(() => {
 });
 
 describe("view cards", () => {
-  it("count the kb's own pages and leave out a view that does not fit", () => {
+  it("count the kb's own pages and leave out a view that does not fit", () => withFlag("calm-graph", false, () => {
     const cards = viewCards(nodes, schema);
     const by = Object.fromEntries(cards.map((c) => [c.id, c.count]));
     expect(by.concepts).toMatch(/pages?$/);
@@ -59,7 +59,13 @@ describe("view cards", () => {
     expect(by.gaps).toBe("1 question");
     expect(by.thesis).toBeUndefined(); // no thesis spine pages in this kb
     expect(viewCards([], schema)).toEqual([]);
-  });
+  }));
+
+  it("flag calm-graph: the Sources card counts the sources the view draws (read in depth)", () =>
+    withFlag("calm-graph", true, () => {
+      const by = Object.fromEntries(viewCards(nodes, schema).map((c) => [c.id, c.count]));
+      expect(by.sources).toBe(`${nodes.filter((x) => x.layer === "source" && ["full", "deep"].includes(x.depth ?? "")).length} read`);
+    }));
 
   it("lists the newest source pages first", () => {
     expect(recentSources(nodes)[0]?.id).toBe("2019-fine-grained");
@@ -68,7 +74,7 @@ describe("view cards", () => {
 
 describe("flag views-panel on", () => {
   it("opens the four sections above the pinned list and applies a view", () =>
-    withFlag("views-panel", true, async () => {
+    withFlag("calm-graph", false, () => withFlag("views-panel", true, async () => {
       mount();
       await userEvent.click(screen.getByRole("button", { name: "Pinned views" }));
       const panel = screen.getByTestId("views-panel");
@@ -77,7 +83,7 @@ describe("flag views-panel on", () => {
       expect(within(panel).getByRole("button", { name: /Citation genealogy/ })).toBeDisabled();
       await userEvent.click(within(panel).getByRole("button", { name: /^Sources/ }));
       expect(useGraphUi.getState().shownTypes).toEqual(new Set(["paper", "course"].filter((t) => schema.types.find((x) => x.id === t && x.layer === "source"))));
-    }));
+    })));
 
   it("lists the recent chats and the dark mode switch flips the theme", () =>
     withFlag("views-panel", true, async () => {

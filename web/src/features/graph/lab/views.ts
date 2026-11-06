@@ -38,6 +38,8 @@ export const storyOffered = (s: Story): boolean => !s.featureFlag || flag(s.feat
 
 /** The flag behind the views that exist for the research toolkit and the seed below. */
 const RESEARCH_TOOLS = "research-tools" as const;
+/** The flag behind the calm default: its two views (Concepts, Sources) exist only while it is on. */
+export const CALM_GRAPH = "calm-graph" as const;
 
 const CONCEPTS = ["topic", "question", "idea"] as const;
 /** Map's drawn layers: ideas and sources of whatever kit the kb uses; the collection hubs stay out, since their
@@ -70,6 +72,30 @@ export const THESIS_SEED: readonly string[] = [
 ];
 
 export const STORIES: readonly Story[] = [
+  {
+    id: "concepts",
+    name: "Concepts: the calm default",
+    story: "As a reader who opens the graph, I want only the ideas of the vault, a dozen names on its biggest hubs and the rest on hover, so that nothing competes for my eye until I ask for it.",
+    // flag calm-graph: layers resolved per kb schema, no type names, so every kit gets the same calm opening
+    featureFlag: CALM_GRAPH,
+    lab: { degBasis: "nohub", strategy: "count", count: 12, scope: "screen", zoomGrowth: 1.5, regions: "off", hulls: false, questionLabels: "none", wrapT2: 100 },
+    colorBy: "area",
+    sizeBy: "evidence",
+    layoutMode: "anchored",
+    layers: ["concept"],
+  },
+  {
+    id: "sources",
+    name: "Sources: what the ideas rest on",
+    story: "As a reader who wants the evidence, I switch the sources on: the ideas, plus the sources actually read, still with names on hubs only.",
+    featureFlag: CALM_GRAPH,
+    predicate: "public",
+    lab: { degBasis: "nohub", strategy: "count", count: 12, scope: "screen", zoomGrowth: 1.5, regions: "off", hulls: false, questionLabels: "none", wrapT2: 100 },
+    colorBy: "area",
+    sizeBy: "evidence",
+    layoutMode: "anchored",
+    layers: ["concept", "source"],
+  },
   {
     id: "map",
     name: "Map: what is in the vault",
@@ -247,11 +273,19 @@ export const STORIES: readonly Story[] = [
 ];
 
 export const DEFAULT_STORY = "map";
+/** The view the graph opens on while flag calm-graph is on. */
+export const CALM_STORY = "concepts";
 
 /** The pills of the views bar, in order. */
 export const HEADLINE_STORIES: readonly Story[] = STORIES.filter((s) => s.headline);
 /** Views reachable from "More": the rest, minus the lab leftovers that only compare label rules. */
-export const MORE_STORIES: readonly Story[] = STORIES.filter((s) => !s.headline && !["baseline", "compare", "orient"].includes(s.id));
+export const MORE_STORIES: readonly Story[] = STORIES.filter((s) => !s.headline && !["baseline", "compare", "orient", "concepts", "sources"].includes(s.id));
+
+/** The views that exist only while flag calm-graph is on. */
+const CALM_ONLY: ReadonlySet<string> = new Set(["concepts", "sources"]);
+/** A view id that may be applied now: it exists, and a calm-only one needs the flag (a saved or linked id never leaks past it). */
+export const storyKnown = (id: string): boolean => !!storyById(id) && (!CALM_ONLY.has(id) || flag(CALM_GRAPH));
+export const isCalmStory = (id: string): boolean => CALM_ONLY.has(id);
 
 export const storyById = (id: string): Story | undefined => STORIES.find((s) => s.id === id);
 

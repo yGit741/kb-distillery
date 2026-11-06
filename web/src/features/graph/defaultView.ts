@@ -1,4 +1,4 @@
-import { storyById } from "./lab/views";
+import { storyKnown } from "./lab/views";
 
 /** Home blob fields the graph reads (the share builder's `home`, see backend kb_distillery.publish.site.home). */
 type EmbeddedHome = { view?: string | null } | undefined;
@@ -17,7 +17,7 @@ const hasDive = (search: Record<string, unknown>): boolean => DIVE_PARAMS.some((
 export function initialView(
   search: Record<string, unknown> & { view?: string },
   home: EmbeddedHome = globalThis.KB_EMBEDDED?.home,
-  isKnown: (id: string) => boolean = (id) => !!storyById(id),
+  isKnown: (id: string) => boolean = (id) => storyKnown(id),
 ): string | undefined {
   const id = search.view ?? (hasDive(search) ? undefined : home?.view) ?? undefined;
   return id && isKnown(id) ? id : undefined;

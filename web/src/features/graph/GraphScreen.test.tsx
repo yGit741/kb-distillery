@@ -53,7 +53,7 @@ function wrap(ds: DataSource, ui: ReactNode) {
 const withGraph = (o: Partial<DataSource> = {}) => mockDataSource({ getGraph: async () => sampleSnapshot(), ...o });
 
 /** The Legend, the Finder and the views bar are the screen's chrome while graph-shell is off (private and public builds). */
-const off = (fn: () => Promise<void>) => () => withFlag("graph-shell", false, fn);
+const off = (fn: () => Promise<void>) => () => withFlag("graph-shell", false, () => withFlag("calm-graph", false, fn));
 
 afterEach(() => registerTypeMarks([]));
 
@@ -333,4 +333,53 @@ describe("types the kit does not define (an imported OKF bundle)", () => {
     const comparison = within(legend).getAllByRole("button", { name: /^comparison\b/i })[0]!.querySelector("svg")!;
     expect(concept.getAttribute("data-mark")).not.toBe(comparison.getAttribute("data-mark"));
   }));
+});
+
+describe("flag calm-graph", () => {
+  const calmOn = (fn: () => Promise<void>) => () => withFlag("graph-shell", false, () => withFlag("calm-graph", true, fn));
+  const calmOff = (fn: () => Promise<void>) => () => withFlag("graph-shell", false, () => withFlag("calm-graph", false, fn));
+
+  it("on: a bare first visit on the default opens on Concepts, and a saved Sources stays", calmOn(async () => {
+    useGraphUi.getState().applyStory("map");
+    const first = render(wrap(withGraph(), <GraphScreen search={{}} host={host} />));
+    await screen.findByTestId("graph-stats");
+    await waitFor(() => expect(useGraphUi.getState().story).toBe("concepts"));
+    useGraphUi.getState().applyStory("sources");
+    first.unmount();
+    render(wrap(withGraph(), <GraphScreen search={{}} host={host} />));
+    await screen.findByTestId("graph-stats");
+    expect(useGraphUi.getState().story).toBe("sources");
+  }));
+
+  it("off: a calm view saved while the flag was on never applies; the Map shows", calmOn(async () => {
+    useGraphUi.getState().applyStory("sources");
+    const first = render(wrap(withGraph(), <GraphScreen search={{}} host={host} />));
+    await screen.findByTestId("graph-stats");
+    first.unmount();
+    await withFlag("calm-graph", false, async () => {
+      useGraphUi.getState().applyStory("sources"); // what the saved preference restores
+      render(wrap(withGraph(), <GraphScreen search={{ view: "sources" }} host={host} />));
+      await screen.findByTestId("graph-stats");
+      await waitFor(() => expect(useGraphUi.getState().story).toBe("map"));
+    });
+  }));
+
+  it("off: ?view=concepts is unknown", calmOff(async () => {
+    useGraphUi.getState().applyStory("map");
+    render(wrap(withGraph(), <GraphScreen search={{ view: "concepts" }} host={host} />));
+    await screen.findByTestId("graph-stats");
+    expect(useGraphUi.getState().story).toBe("map");
+  }));
+
+  it("the default and a saved view follow the flag when it arrives after the first render", () =>
+    withFlag("graph-shell", false, async () => {
+      act(() => setFlagOverrides({ "calm-graph": false }));
+      useGraphUi.getState().applyStory("map");
+      render(wrap(withGraph(), <GraphScreen search={{}} host={host} />));
+      await screen.findByTestId("graph-stats");
+      expect(useGraphUi.getState().story).toBe("map");
+      act(() => setFlagOverrides({ "calm-graph": true }));
+      await waitFor(() => expect(useGraphUi.getState().story).toBe("concepts"));
+      act(() => setFlagOverrides({}));
+    }));
 });

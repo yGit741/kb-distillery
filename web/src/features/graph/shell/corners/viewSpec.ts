@@ -1,4 +1,4 @@
-import { storyById } from "../../lab/views";
+import { storyById, storyKnown } from "../../lab/views";
 import type { QuickFilters } from "../../quickFilters";
 import { useGraphUi } from "../../store";
 import type { ColorBy, SizeBy } from "../../style";
@@ -53,7 +53,7 @@ const isArr = (v: unknown): v is string[] => Array.isArray(v) && v.every((x) => 
  */
 export function applySpec(spec: Record<string, unknown>, deps: ApplyDeps): boolean {
   let did = false;
-  const story = typeof spec.story === "string" && spec.story && storyById(spec.story) ? spec.story : "";
+  const story = typeof spec.story === "string" && spec.story && storyKnown(spec.story) ? spec.story : "";
   if (story) {
     deps.applyView(story);
     did = true;

@@ -1,3 +1,4 @@
+import { setTestFlagOverrides } from "@/flags";
 import { createMemoryHistory } from "@tanstack/react-router";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -64,6 +65,12 @@ describe("range helpers", () => {
 });
 
 describe("RelationsScreen", () => {
+  // these screens are not about the calm default; the folded graph behind them opens on the old Map
+  beforeEach(() => {
+    setTestFlagOverrides({ "calm-graph": false });
+    useGraphUi.setState({ story: "map" });
+  });
+
   it("shows everything by default, grouped, with the count", async () => {
     setup();
     expect(await screen.findByText(/Showing 3 of 3/)).toBeInTheDocument();

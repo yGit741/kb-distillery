@@ -1,6 +1,7 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef } from "react";
 import { useKb } from "@/lib/store";
 import { cn } from "@/lib/utils";
+import { useFlag } from "@/flags/useFlag";
 import { useTheme } from "@/theme/theme";
 import { readCanvasColors, withAlpha, type CanvasColors } from "./canvasTheme";
 import { computeFocus, fadedLinkOpacity, fadedNodeOpacity, focusKey, nodeOpacity, type Focus } from "./focus";
@@ -15,7 +16,6 @@ import { FORCED } from "./lab/labelPlan";
 import { areaNames } from "./lab/regions";
 import { drawKbOutlines, kbAnchors, kbGroups, kbLabelSpot } from "./lab/kbRegions";
 import { bubbleAim, drawBubble, magnetCursor, pickMagnetic, rgbOf, stepBubble, type Bubble, type ScreenNode } from "./magnet";
-import { useFlag } from "@/flags/useFlag";
 import { useCites } from "./shell/citeStore";
 import { useSparkOpen } from "./shell/SparkPanelHost";
 import { SPARK_PANEL_W } from "./shell/layout";
@@ -113,6 +113,8 @@ function themeAnchors(nodes: readonly SimNode[], ring: ReadonlyMap<string, reado
 
 const endId = (e: string | SimNode) => (typeof e === "string" ? e : e.id);
 
+/** Flag calm-graph: edges rest at this share of the usual opacity (a hovered page still lights its own). */
+const CALM_EDGE = 0.4;
 const DOUBLE_MS = 380;
 
 /**
@@ -152,6 +154,10 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
   const pendingFit = useRef(true);
   const lastClick = useRef<{ id: string | null; at: number }>({ id: null, at: 0 });
   const pressed = useRef(false);
+  // flag calm-graph: reacts to the flag arriving late; hover always settles first and edges rest fainter
+  const calmOn = useFlag("calm-graph");
+  const calmRef = useRef(calmOn);
+  calmRef.current = calmOn;
   // pages the answer in the left chat panel cites (./shell/citeStore): lit while it is on screen, never selected
   const citeSlugs = useCites((s) => s.slugs);
   const citeFitTick = useCites((s) => s.fitTick);
@@ -255,7 +261,7 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
             dim: base?.dim ?? 0.3,
           }
         : base;
-    startFade(rs.current.focus, next, u.calmHover);
+    startFade(rs.current.focus, next, u.calmHover || calmRef.current);
     rs.current.focus = next;
     // forced labels: hovered page, the selection, their best neighbours (capped), every page of an "Aa" type
     const forced = new Map<string, number>();
@@ -294,7 +300,7 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
     },
     committed: () => rs.current.hover,
     speed: () => speed.current.speed(performance.now()),
-    enabled: () => live.current.ui.calmHover,
+    enabled: () => live.current.ui.calmHover || calmRef.current,
   });
   const pointed = useCallback(() => intent.current?.pointed() ?? null, []);
   const setHover = useCallback((id: string | null) => {
@@ -304,8 +310,8 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
     fg.current?.refresh(); // the ring follows the pointer at once
   }, []);
   useEffect(() => {
-    if (!ui.calmHover) intent.current?.flush();
-  }, [ui.calmHover]);
+    if (!ui.calmHover && !calmOn) intent.current?.flush();
+  }, [ui.calmHover, calmOn]);
   useEffect(
     () => () => {
       intent.current?.cancel();
@@ -381,7 +387,7 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
   useEffect(() => {
     rs.current.colors = readCanvasColors();
     recompute();
-  }, [recompute, theme, visible, selection, byId, neighbors, ui.highlight, ui.lab, ui.typeLabels, ui.spotlight, ui.colorBy, ui.linkOpacity, radiusOpts, layered, imp, cited]);
+  }, [recompute, theme, visible, selection, byId, neighbors, ui.highlight, ui.lab, ui.typeLabels, ui.spotlight, ui.colorBy, ui.linkOpacity, radiusOpts, layered, imp, cited, calmOn]);
 
   // a changed set of pages is framed after a moment and framed again once the layout settles: at the moment the
   // pages may still be drifting from their old places, and a single early fit left a view (Thesis) in a corner.
@@ -910,8 +916,8 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
     const fade = useDecor.getState().linkFade?.(a, b) ?? 1;
     // a hidden kind keeps its place in the layout and is simply not drawn
     if (live.current.ui.hiddenLinkKinds.has(l.kind)) return withAlpha(colors.link, 0);
-    return withAlpha(colors.link, fade * fadedLinkOpacity(a, b, focus, prevFocus, fadeT, live.current.ui.linkOpacity, l.kind));
-  }, []);
+    return withAlpha(colors.link, fade * fadedLinkOpacity(a, b, focus, prevFocus, fadeT, live.current.ui.linkOpacity * (calmOn ? CALM_EDGE : 1), l.kind));
+  }, [calmOn]);
   const linkWidth = useCallback((l: SimLink) => (l.kind === "shared" ? 0.35 + Math.min(l.shared ?? 1, 6) * 0.1 : 0.8), []);
   const linkLabel = useCallback(
     (l: SimLink) => (l.kind === "shared" && !live.current.ui.hiddenLinkKinds.has(l.kind) ? `${l.shared} shared source${l.shared === 1 ? "" : "s"}` : ""),
