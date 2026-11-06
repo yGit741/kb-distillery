@@ -219,7 +219,8 @@ describe("flag graph-shell on: free-text shaping", () => {
   });
 
   it("Cmd-Z undoes while the panel is closed, one level, and leaves typing alone", async () => {
-    await withFlag("graph-shell", true, async () => {
+    // one level is the behaviour without graph-intent (with it the layer stack keeps twenty steps: layers/store.test.ts)
+    await withFlag("graph-intent", false, () => withFlag("graph-shell", true, async () => {
       let n = 0;
       mount({ shapeGraph: async () => (n++ === 0 ? answer({ rows: [["idea-margin"]], row_count: 1 }) : answer()) });
       await screen.findByTestId("graph-shell");
@@ -239,7 +240,7 @@ describe("flag graph-shell on: free-text shaping", () => {
       expect(hits()).toEqual(["idea-margin"]);
       await userEvent.keyboard("{Meta>}z{/Meta}");
       expect(hits()).toEqual(["idea-margin"]);
-    });
+    }));
   });
 
   it("a backend error is a quiet row in the panel and the graph stays as it was", async () => {
