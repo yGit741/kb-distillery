@@ -410,7 +410,7 @@ def _log_step(root, op, target, summary, dirty):
 
 
 def commit_op(op, target, summary=None, paths=None, lint=True, trailers=None, root=ROOT, _locked=False,
-              push=True):
+              push=True, confirm_favorite=False):
     """Commit one knowledge operation. Returns the new sha, or None if nothing changed.
 
     `paths` = files this operation changed (see knowledge_state / changed_since).
@@ -435,6 +435,9 @@ def commit_op(op, target, summary=None, paths=None, lint=True, trailers=None, ro
                       if lane_of(p) == "knowledge" and not is_human_path(p) and p not in owned]
         elif op not in ("undo", "restore"):
             okf_gate(root, chosen)          # the caller linted already; the OKF check is still ours
+        if chosen and op not in ("undo", "restore"):
+            from . import favorite          # lazy: favorite imports this module for the step itself
+            chosen += favorite.apply_to_step(root, chosen, confirm_favorite)
         if not chosen:
             return None
         version = cp.next_version(root)
@@ -514,13 +517,14 @@ def begin(op, target, summary=None, root=ROOT):
     return session
 
 
-def commit(summary=None, root=ROOT):
+def commit(summary=None, root=ROOT, confirm_favorite=False):
     s = current_session(root)
     if not s:
         raise OpsError("no ops session open — use `pixi run ops -- begin <op> <target> \"why\"`")
     baseline = {k: tuple(v) if v else None for k, v in s["baseline"].items()}
     paths = changed_since(baseline, root)
-    sha = commit_op(s["op"], s["target"], summary or s.get("summary"), paths=paths, root=root)
+    sha = commit_op(s["op"], s["target"], summary or s.get("summary"), paths=paths, root=root,
+                    confirm_favorite=confirm_favorite)
     _clear(root, "current.json")
     if not sha:
         print("nothing changed since begin — session closed")
@@ -598,7 +602,7 @@ def undo(rev, root=ROOT):
                  if "\t" in l]
         files = [f for f in files if _restorable(f)]
         if not files:
-            raise OpsError("that step changed nothing undo may touch (wiki/, meta/aliases.tsv, meta/chats/, meta/views.json)")
+            raise OpsError("that step changed nothing undo may touch (wiki/, meta/aliases.tsv, meta/chats/, meta/views.json, meta/favorites.json)")
         dirty = set(changed_paths(root)["knowledge"])
         if dirty & set(files):
             raise OpsError(f"uncommitted edits on files this undo touches: {sorted(dirty & set(files))[:5]}")

@@ -4,7 +4,7 @@
     log [-n 20] [--kb|--infra]           first-parent history (kb-x.y.z / #N)
     snapshots                            list snapshot tags
     begin <op> <target> ["why"]          open a free-form edit session (refine, digest, …)
-    commit ["summary"] [--no-push]       commit what changed since begin (pushed right away)
+    commit ["summary"] [--no-push] [--confirm-favorite]   commit what changed since begin (pushed right away)
     abort                                close the session without committing
     undo <sha>                           reverse one knowledge step (new kb(undo) commit)
     restore <kb-x.y.z>                   bring wiki/ back to a snapshot (new kb(restore) commit)
@@ -18,6 +18,8 @@
     view pin <name> [--spec JSON|--spec-file F] [--id ID]   pin a graph view in meta/views.json (one knowledge step)
     view unpin <id>                      remove a pinned view
     view rename <id> <name>              rename a pinned view
+    favorite add|remove <slug>           mark / unmark a wiki page as a favorite in meta/favorites.json (one knowledge step)
+    favorite list                        the favorite slugs
 """
 import argparse
 import json
@@ -26,6 +28,7 @@ import sys
 
 from . import core
 from . import migrate as migrate_mod
+from kb_distillery.vault.favorites import FavoritesError
 from kb_distillery.vault.views import ViewsError
 
 
@@ -60,6 +63,7 @@ def main(argv=None):
     c = sub.add_parser("commit")
     c.add_argument("summary", nargs="?")
     c.add_argument("--no-push", action="store_true", help="commit only (offline); the nightly sync pushes later")
+    c.add_argument("--confirm-favorite", action="store_true", help="allow deleting a page that is a favorite")
     sub.add_parser("abort")
     u = sub.add_parser("undo")
     u.add_argument("sha")
@@ -88,6 +92,7 @@ def main(argv=None):
     rc.add_argument("summary")
     rc.add_argument("paths", nargs="+")
     rc.add_argument("--no-push", action="store_true", help="commit only (offline); the nightly sync pushes later")
+    rc.add_argument("--confirm-favorite", action="store_true", help="allow deleting a page that is a favorite")
     ad = sub.add_parser("adopt-history")
     ad.add_argument("bundle")
     ad.add_argument("--checkout", help="checkout to update (default: this one)")
@@ -107,6 +112,13 @@ def main(argv=None):
     vr.add_argument("name")
     for v_ in (vp, vu, vr):
         v_.add_argument("--no-push", action="store_true", help="commit only (offline); the nightly sync pushes later")
+    fv = sub.add_parser("favorite", help="favorite pages in meta/favorites.json, one knowledge step each")
+    fsub = fv.add_subparsers(dest="favorite_cmd", required=True)
+    for name_ in ("add", "remove"):
+        f_ = fsub.add_parser(name_)
+        f_.add_argument("slug")
+        f_.add_argument("--no-push", action="store_true", help="commit only (offline); the nightly sync pushes later")
+    fsub.add_parser("list")
     args = p.parse_args(argv)
     if getattr(args, "no_push", False):
         os.environ["KB_NO_PUSH"] = "1"
@@ -122,7 +134,7 @@ def main(argv=None):
         elif args.cmd == "begin":
             core.begin(args.op, args.target, args.summary)
         elif args.cmd == "commit":
-            core.commit(args.summary)
+            core.commit(args.summary, confirm_favorite=args.confirm_favorite)
         elif args.cmd == "abort":
             core.abort()
         elif args.cmd == "undo":
@@ -153,11 +165,19 @@ def main(argv=None):
                     paths += [x for x in core.changed_paths(core.ROOT)["knowledge"] if x.startswith(p_.rstrip("/") + "/")]
                 else:
                     paths.append(p_)
-            if not core.commit_op(args.op, args.target, args.summary, paths=paths, root=core.ROOT):
+            if not core.commit_op(args.op, args.target, args.summary, paths=paths, root=core.ROOT,
+                                  confirm_favorite=args.confirm_favorite):
                 print("nothing to commit for those paths")
         elif args.cmd == "adopt-history":
             from .adopt import adopt
             adopt(args.bundle, os.path.abspath(args.checkout or core.ROOT), push=not args.no_push, dry_run=args.dry_run)
+        elif args.cmd == "favorite":
+            from . import favorite as fav_mod
+            if args.favorite_cmd == "list":
+                print("\n".join(fav_mod.list_slugs(core.ROOT)))
+            else:
+                out = (fav_mod.add if args.favorite_cmd == "add" else fav_mod.remove)(args.slug, root=core.ROOT)
+                print(f"favorite {args.favorite_cmd} {args.slug}: " + (out["version"] or f"no step ({out.get('reason')})"))
         elif args.cmd == "view":
             from . import view as view_mod
             if args.view_cmd == "pin":
@@ -176,7 +196,7 @@ def main(argv=None):
     except migrate_mod.MigrateError as e:
         print(f"ops: {e}", file=sys.stderr)
         return 1
-    except ViewsError as e:
+    except (ViewsError, FavoritesError) as e:
         print(f"ops: {e}", file=sys.stderr)
         return 1
     return 0

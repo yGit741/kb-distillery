@@ -82,6 +82,9 @@ This table is generated from the schema on `main`.
 | `POST /api/views` | Pin a view (one knowledge step). |
 | `PATCH /api/views/{id}` | Rename a pinned view (one knowledge step). |
 | `DELETE /api/views/{id}` | Unpin a view (one knowledge step). |
+| `GET /api/favorites` | Favorite pages: `{slugs}`, sorted. |
+| `POST /api/favorites` | Mark a page as a favorite, body `{slug}` (one knowledge step). |
+| `DELETE /api/favorites/{slug}` | Unmark a favorite (one knowledge step). |
 | `GET /api/recent` | Recent shaping steps, local to this machine. |
 | `POST /api/recent` | Append a recent step; the last 20 are kept. |
 | `DELETE /api/recent` | Clear the recent steps. |
@@ -126,6 +129,10 @@ A later clause of the same kind replaces an earlier one. The same grammar is in 
 Statuses: `422` when the text cannot become a valid view (the unknown clause or the Cypher engine's hint is in `detail`; an LLM answer gets one retry before this), `400` when `$KB_LLM_BACKEND` names an unknown backend (an unknown `backend` in the body is a schema `422`), `502` when the backend failed (no login, no key, API unreachable). A hidden label or edge kind the knowledge base does not have comes back as a warning, not an error.
 
 The model is `haiku`. The backend is `subscription` unless `backend` or `$KB_LLM_BACKEND` says otherwise. With `batch` the request waits up to five minutes for the batch to end, is never retried, and answers `502` if it has not finished, because a page waits on this call; for bulk work use the `api` or `subscription` backend.
+
+## Favorites
+
+A favorite is a binary mark on a wiki page, kept in the knowledge base in `meta/favorites.json` (`{"v": 1, "slugs": [...]}`, sorted). `GET /api/favorites` returns `{slugs}`; `POST` takes `{slug}`, `DELETE /api/favorites/{slug}` unmarks. Each change is one knowledge step (`kb(refine): favorite add <slug> (kb-x.y.z)`), made by the same code as `distill ops favorite add|remove|list`. Marking twice or unmarking a page that is not marked is a no-op (`ok: false`, `reason: already|absent`); a slug that is not a wiki page is 404. `?kb=<id>` reads another knowledge base; every write there, and on a server started with `KB_READ_ONLY=1`, is **405**.
 
 ## Pinned views and recent steps
 
