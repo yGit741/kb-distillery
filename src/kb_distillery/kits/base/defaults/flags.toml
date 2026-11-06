@@ -197,3 +197,13 @@ expires = 2027-02-01
 kind = "runtime"
 default = false
 envs = { local = true, private = false, public = false }
+
+[[flag]]
+name = "graph-intent"
+description = "Graph: the search line's three modes (search everything, > change the view, / commands), layer views, favorites and the view gallery. Dark until the owner flips it."
+owner = "maintainer"
+created = 2026-11-06
+expires = 2027-02-04
+kind = "runtime"
+default = false
+envs = { local = true, private = false, public = false }
