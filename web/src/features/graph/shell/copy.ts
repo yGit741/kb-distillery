@@ -60,6 +60,16 @@ export const LINE_COPY = {
     editHint: "One line per layer. Enter applies exactly what is written.",
     parseError: (line: number, reason: string) => `Line ${line}: ${reason}`,
   },
+  /** The search line as an overlay on the other screens. */
+  overlay: {
+    label: "Search",
+    openGraph: "Open the graph",
+    openGraphHint: "the graph screen",
+    handOff: "Change the view on the graph:",
+    handOffHint: "opens the graph",
+    empty: "Type to search pages, / for commands.",
+    emptyShare: "Type to search pages.",
+  },
   didYouMean: (name: string) => `Did you mean "${name}"?`,
   noSuchPage: (name: string) => `No page is called "${name}".`,
   explainers: {

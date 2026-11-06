@@ -7,6 +7,7 @@ import { ROUTES } from "@/routes/registry";
 import { ShareFooter } from "@/share/ShareFooter";
 import { useTheme } from "@/theme/theme";
 import { CommandPalette } from "./CommandPalette";
+import { SearchOverlay } from "@/features/graph/shell/SearchOverlay";
 import { ShareChip } from "./ShareChip";
 import { ToursMenu } from "./ToursMenu";
 import { KbBadge } from "./KbBadge";
@@ -77,6 +78,7 @@ export function AppShell() {
       </main>
       <ShareFooter />
       <CommandPalette />
+      <SearchOverlay />
       {agentMode && (
         <Suspense fallback={null}>
           <QuickAsk />
