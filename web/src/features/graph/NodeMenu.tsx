@@ -12,11 +12,13 @@ interface Props {
   colorBy: ColorBy;
   ctx: MenuContext;
   items?: readonly MenuItem[];
+  /** A set of pages instead of one page: the header says this and shows no swatch. */
+  title?: string;
   onClose: () => void;
 }
 
 /** The right-click menu on a page. Entries come from MENU_ITEMS (./menu). */
-export function NodeMenu({ node, x, y, colorBy, ctx, items, onClose }: Props) {
+export function NodeMenu({ node, x, y, colorBy, ctx, items, title, onClose }: Props) {
   const ref = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState({ left: x, top: y });
   const list = visibleItems(node, items);
@@ -63,13 +65,13 @@ export function NodeMenu({ node, x, y, colorBy, ctx, items, onClose }: Props) {
     <div
       ref={ref}
       role="menu"
-      aria-label={`Actions for ${node.title || node.id}`}
+      aria-label={`Actions for ${title ?? (node.title || node.id)}`}
       className="fixed z-50 min-w-56 rounded-lg border bg-popover p-1 text-popover-foreground shadow-[var(--shadow)]"
       style={pos}
     >
       <div className="flex items-center gap-2 border-b px-2 py-1.5 text-xs text-muted-foreground">
-        <NodeSwatch type={node.type} color={swatchColor(node, colorBy)} />
-        <span className="max-w-64 truncate">{node.title || node.id}</span>
+        {title === undefined && <NodeSwatch type={node.type} color={swatchColor(node, colorBy)} />}
+        <span className="max-w-64 truncate">{title ?? (node.title || node.id)}</span>
       </div>
       {list.map((it) => {
         const on = !it.enabled || it.enabled(node);

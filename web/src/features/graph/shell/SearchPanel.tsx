@@ -1,7 +1,9 @@
-import { CircleAlert } from "lucide-react";
+import { CircleAlert, Ellipsis } from "lucide-react";
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
+import { LINE_COPY } from "./copy";
 import { SHELL_LIST_ID } from "./SearchBar";
+import type { RowTarget } from "./searchGroups";
 
 export interface PanelRow {
   key: string;
@@ -12,6 +14,10 @@ export interface PanelRow {
   /** A quiet word at the right. */
   hint?: string;
   lead?: ReactNode;
+  /** A small mark: the row was also found another way (flag graph-intent). */
+  mark?: { text: string; title: string };
+  /** What the row's action menu acts on; absent: the row has no menu. */
+  actions?: RowTarget;
   run: (shift: boolean) => void;
 }
 
@@ -44,10 +50,12 @@ interface Props {
   views?: readonly ViewChoice[];
   /** Flag graph-intent: a quiet one-line hint at the top, shown the first time a mode is used. */
   hint?: string;
+  /** Flag graph-intent: opens the action menu of row `i` (the trailing control, or the right arrow key). */
+  onMenu?: (i: number, at: HTMLElement) => void;
 }
 
 /** The unfolded panel: rows in labelled sections, one highlighted, scrolling past a maximum height. */
-export function SearchPanel({ rows, idx, onHover, empty, status, views, hint }: Props) {
+export function SearchPanel({ rows, idx, onHover, empty, status, views, hint, onMenu }: Props) {
   const groups: { section: string; items: { row: PanelRow; i: number }[] }[] = [];
   rows.forEach((row, i) => {
     const last = groups[groups.length - 1];
@@ -86,7 +94,7 @@ export function SearchPanel({ rows, idx, onHover, empty, status, views, hint }: 
               ref={(el) => {
                 if (el && i === idx) el.scrollIntoView?.({ block: "nearest" });
               }}
-              className={cn("flex min-h-9 cursor-pointer items-center gap-2.5 rounded-lg px-2.5 py-1.5", i === idx && "bg-accent")}
+              className={cn("group flex min-h-9 cursor-pointer items-center gap-2.5 rounded-lg px-2.5 py-1.5", i === idx && "bg-accent")}
               onMouseMove={() => i !== idx && onHover(i)}
               onClick={(e) => row.run(e.shiftKey)}
             >
@@ -95,7 +103,31 @@ export function SearchPanel({ rows, idx, onHover, empty, status, views, hint }: 
                 <span className="block truncate">{row.label}</span>
                 {row.detail && <span className="block truncate text-xs text-muted-foreground">{row.detail}</span>}
               </span>
+              {row.mark && (
+                <span title={row.mark.title} className="shrink-0 rounded border px-1 text-[11px] leading-4 text-muted-foreground">
+                  {row.mark.text}
+                </span>
+              )}
               {row.hint && <span className="max-w-[45%] shrink-0 truncate text-xs text-muted-foreground">{row.hint}</span>}
+              {onMenu && !row.actions && <span aria-hidden className="size-6 shrink-0" />}
+              {onMenu && row.actions && (
+                <button
+                  type="button"
+                  tabIndex={-1}
+                  aria-label={LINE_COPY.rowActions}
+                  aria-haspopup="menu"
+                  className={cn(
+                    "grid size-6 shrink-0 place-items-center rounded-md text-muted-foreground hover:bg-background hover:text-foreground",
+                    i === idx ? "opacity-100" : "opacity-0 group-hover:opacity-100",
+                  )}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onMenu(i, e.currentTarget);
+                  }}
+                >
+                  <Ellipsis aria-hidden className="size-4" strokeWidth={1.6} />
+                </button>
+              )}
             </div>
           ))}
         </div>
