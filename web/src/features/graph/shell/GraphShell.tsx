@@ -20,8 +20,11 @@ import {
   ZoomOut,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { useDataSource, type PinnedView, type RecentStep } from "@/api";
+import { useUi } from "@/app/ui-store";
 import { useFlag } from "@/flags/useFlag";
+import { useKb } from "@/lib/store";
 import { useApiQuery } from "@/lib/useApiQuery";
 import { IS_SHARE } from "@/share/env";
 import { NodeSwatch } from "../encoding/NodeMarkSvg";
@@ -29,17 +32,28 @@ import { useToolHost } from "../hostContext";
 import type { ColorBy } from "../style";
 import { swatchColor } from "../nodeColor";
 import { useGraphUi } from "../store";
-import { useChatDock } from "../tools/chatDockStore";
+import { askAbout, useChatDock } from "../tools/chatDockStore";
 import { useVisibleTools } from "../tools";
-import type { GNode } from "../types";
-import { buildCommands, filterCommands, GROUP_ORDER, type Command, type CommandIcon } from "./commands";
+import type { GLink, GNode } from "../types";
+import { Chips } from "../layers/Chips";
+import { makeLayer, newLayerId, type Layer, type ViewStack } from "../layers/model";
+import { ResolvedLine } from "../layers/ResolvedLine";
+import { useLayers } from "../layers/store";
+import { ACTION_ITEMS, setActionItems, type MenuContext } from "../menu";
+import { NodeMenu } from "../NodeMenu";
+import { exportPages } from "../export/runExport";
+import { planSentence, type Plan } from "../layers/sentenceRun";
+import { buildCommands, closestCommands, filterCommands, GROUP_ORDER, type Command, type CommandIcon } from "./commands";
+import { LINE_COPY, type LineMode } from "./copy";
 import { SearchBar } from "./SearchBar";
 import { optionId, SearchPanel, type PanelRow, type PanelStatus, type ViewChoice } from "./SearchPanel";
 import { activeCard, type ViewCard } from "./corners/panelModel";
 import { marker, pillText, sameMarker } from "./shape";
-import { looksLikeShape, requestShape, useShellStore } from "./shellStore";
+import { looksLikeShape, parseMode, requestShape, useShellStore } from "./shellStore";
 import { useShape } from "./useShape";
 import { usePageResults } from "./usePageResults";
+import { groupedRows } from "./groupedRows";
+import { buildSearchIndex, withNames, type RowTarget } from "./searchGroups";
 import { SHELL_TOP } from "./layout";
 
 const ICONS: Record<CommandIcon, ReactNode> = {
@@ -59,12 +73,15 @@ const ICONS: Record<CommandIcon, ReactNode> = {
 };
 
 const NOTICE_MS = 3200;
+const HINTS_KEY = "kb-graph-line-hints-v1";
 const RECENT_SHOWN = 5;
 const PAGES_SHOWN = 6;
 const RELATED_SHOWN = 3;
 
 interface Props {
   nodes: readonly GNode[];
+  /** The links of the loaded graph (the layer model reads degree and hops from them; flag graph-intent). */
+  links?: readonly GLink[];
   byId: ReadonlyMap<string, GNode>;
   colorBy: ColorBy;
   /** Enter on a page: centre on it (bringing it in when it is filtered out). */
@@ -95,12 +112,13 @@ interface Props {
  * centre unfolds, on focus or Cmd/Ctrl+K, into recent steps and pinned views at rest, live page results while
  * typing, commands after a slash, and two free-text rows (ask the agent, shape the graph).
  */
-export function GraphShell({ nodes, byId, colorBy, onFocus, onRead, onShowExact, shownTypes, onShowMentions, onFit, onZoom, onReheat, onRefresh, setParams, top = SHELL_TOP, views, onPickView }: Props) {
+export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onShowExact, shownTypes, onShowMentions, onFit, onZoom, onReheat, onRefresh, setParams, top = SHELL_TOP, views, onPickView }: Props) {
   const ds = useDataSource();
   const qc = useQueryClient();
   const host = useToolHost();
   const tools = useVisibleTools();
   const calm = useFlag("calm-graph");
+  const intent = useFlag("graph-intent");
   const kbViewOn = useFlag("kb-view") && ds.kind !== "embedded";
   const [raw, setRaw] = useState("");
   const [open, setOpen] = useState(false);
@@ -112,6 +130,11 @@ export function GraphShell({ nodes, byId, colorBy, onFocus, onRead, onShowExact,
   const shape = useShellStore((s) => s.shape);
   const shapeError = useShellStore((s) => s.shapeError);
   const canUndo = useShellStore((s) => s.undo !== null);
+  const layersUndo = useLayers((s) => s.history.length > 0);
+  const preview = useLayers((s) => s.preview);
+  // the sentence (with its op) the preview answers; editing the text retires the preview
+  const previewKey = useRef("");
+  const [editingLine, setEditingLine] = useState(false);
   // the pill speaks only while the shape is what is drawn: a change by hand (a legend click, a cleared view) retires it
   const shapeCurrent = useGraphUi((s) => (shape ? sameMarker(shape.after, marker(s)) : false));
   const story = useGraphUi((s) => s.story);
@@ -120,9 +143,32 @@ export function GraphShell({ nodes, byId, colorBy, onFocus, onRead, onShowExact,
   rawNow.current = raw;
   const openRef = useRef(false);
   openRef.current = open;
+  const intentRef = useRef(intent);
+  intentRef.current = intent;
+
+  // flag graph-intent: the layer store folds a stack onto this graph, so it needs the pages, the links and how to draw pages
+  const pickRef = useRef(onPickView);
+  pickRef.current = onPickView;
+  const showRef = useRef(onShowExact);
+  showRef.current = onShowExact;
+  useEffect(() => {
+    if (!intent) return;
+    useLayers.getState().setGraph({
+      nodes,
+      links: links ?? [],
+      show: (ids) => showRef.current(ids),
+      applyLegacy: (spec) => pickRef.current?.({ id: "legacy", name: "", count: "", spec }),
+    });
+    return () => useLayers.getState().setGraph(null);
+  }, [intent, nodes, links]);
 
   const text = raw.trim();
   const slash = raw.startsWith("/");
+  const parsed = parseMode(raw);
+  const viewMode = intent && parsed.mode === "view";
+  const [hintMode, setHintMode] = useState<LineMode | null>(null);
+  // q3: a name that needs the user's pick before the sentence applies
+  const [didYou, setDidYou] = useState<{ text: string; op: "replace" | "stack"; pick: Extract<Plan, { kind: "ask" }>["pick"]; chosen: Record<string, string> } | null>(null);
 
   // ---- data: recent steps and pinned views (rest), the knowledge bases (kb-view), page results (typing)
   const live = ds.kind !== "embedded";
@@ -132,6 +178,28 @@ export function GraphShell({ nodes, byId, colorBy, onFocus, onRead, onShowExact,
   const kbListQ = useApiQuery(["kb-list"], (d) => d.listKbs(), { enabled: kbViewOn, staleTime: 30_000 });
   const results = usePageResults(nodes, byId, raw, !slash && text.length > 0);
   const kbName = kbQ.data?.name ?? "Knowledge Base";
+  // flag graph-intent: the tier-1 index, built once per graph load (page entries) and joined with the small name lists
+  const baseIndex = useMemo(() => (intent ? buildSearchIndex(nodes) : null), [intent, nodes]);
+  const [menu, setMenu] = useState<{ target: RowTarget; x: number; y: number } | null>(null);
+
+  // first use of a mode shows its one-line hint (once ever per mode); Escape or the first Enter dismisses it
+  const lineMode = parsed.mode;
+  useEffect(() => {
+    if (!intent || !open) return setHintMode(null);
+    let seen: Record<string, boolean> = {};
+    try {
+      seen = JSON.parse(window.localStorage.getItem(HINTS_KEY) ?? "{}") ?? {};
+    } catch {
+      // storage unavailable: the hint shows for this visit only
+    }
+    if (seen[lineMode]) return setHintMode((m) => (m === lineMode ? m : null));
+    setHintMode(lineMode);
+    try {
+      window.localStorage.setItem(HINTS_KEY, JSON.stringify({ ...seen, [lineMode]: true }));
+    } catch {
+      // ignore
+    }
+  }, [intent, open, lineMode]);
 
   const record = useCallback(
     (label: string, spec: Record<string, unknown>) => {
@@ -169,6 +237,11 @@ export function GraphShell({ nodes, byId, colorBy, onFocus, onRead, onShowExact,
     [onFit, onZoom, onReheat, onRefresh, tools, host, setParams, kbViewOn, kbListQ.data, viewChoices],
   );
 
+  const index = useMemo(
+    () => (baseIndex ? withNames(baseIndex, viewsQ.data?.views ?? [], commands.map((c) => ({ id: c.id, label: c.label }))) : null),
+    [baseIndex, viewsQ.data, commands],
+  );
+
   // ---- open and close
   const close = useCallback((clear = true) => {
     setOpen(false);
@@ -182,20 +255,24 @@ export function GraphShell({ nodes, byId, colorBy, onFocus, onRead, onShowExact,
     input.current?.focus();
   }, []);
 
-  const { undo } = useShape({
+  const { undo, cancel } = useShape({
     byId,
     shownTypes,
     showExact: onShowExact,
     record,
     onApplied: (text, say) => {
       // the panel closes unless the person has moved on to other text meanwhile
-      if (rawNow.current.trim() === text) close();
+      if (rawNow.current.trim() === text || (intentRef.current && parseMode(rawNow.current).text === text)) close();
       useShellStore.getState().say(say);
     },
   });
   const undoShape = useCallback(() => {
-    if (undo()) useShellStore.getState().say("Undid the last shape.");
-  }, [undo]);
+    // flag graph-intent: the layer stack keeps its own history (a shape is one step of it)
+    if (intent && useLayers.getState().undo()) {
+      cancel();
+      useShellStore.getState().say("Undid the last change.");
+    } else if (undo()) useShellStore.getState().say("Undid the last shape.");
+  }, [undo, cancel, intent]);
 
   useEffect(() => {
     // Capture phase on the window: while this shell is mounted Cmd/Ctrl+K belongs to the search panel
@@ -211,7 +288,7 @@ export function GraphShell({ nodes, byId, colorBy, onFocus, onRead, onShowExact,
         // Undo the last shape while the panel is closed and nothing is being typed (typing keeps the text's own undo)
         const t = e.target;
         const typing = t instanceof HTMLElement && t.closest("input, textarea, select, [contenteditable]");
-        if (!typing && !openRef.current && useShellStore.getState().undo) {
+        if (!typing && !openRef.current && (useShellStore.getState().undo || (intentRef.current && useLayers.getState().history.length))) {
           e.preventDefault();
           undoShape();
         }
@@ -236,7 +313,7 @@ export function GraphShell({ nodes, byId, colorBy, onFocus, onRead, onShowExact,
   useEffect(() => {
     if (!open) return;
     const away = (e: PointerEvent) => {
-      if (!box.current?.contains(e.target as Node)) close(false);
+      if (!box.current?.contains(e.target as Node) && !(e.target as HTMLElement | null)?.closest?.("[role=menu]")) close(false);
     };
     document.addEventListener("pointerdown", away);
     return () => document.removeEventListener("pointerdown", away);
@@ -267,13 +344,64 @@ export function GraphShell({ nodes, byId, colorBy, onFocus, onRead, onShowExact,
       }),
     });
 
+    if (viewMode) {
+      if (!parsed.text || !live || IS_SHARE) return out;
+      if (didYou && didYou.text === parsed.text) {
+        for (const o of didYou.pick.options)
+          out.push({
+            key: `pick:${o.slug}`,
+            section: LINE_COPY.didYouMean(didYou.pick.name),
+            label: o.title,
+            hint: o.slug,
+            lead: <Wand2 aria-hidden className="size-4" strokeWidth={1.6} />,
+            run: () => runSentence(didYou.text, didYou.op, { ...didYou.chosen, [didYou.pick.name]: o.slug }),
+          });
+        return out;
+      }
+      out.push({
+        key: "view-shape",
+        section: "Actions",
+        label: (
+          <>
+            {LINE_COPY.viewRow} <span className="text-muted-foreground">{parsed.text}</span>
+          </>
+        ),
+        hint: parsed.op ? LINE_COPY.explainers[parsed.op] : undefined,
+        lead: <Wand2 aria-hidden className="size-4" strokeWidth={1.6} />,
+        run: () => {
+          // the grammar reads the sentence into layers; text it cannot read goes down the shape path, where useShape
+          // records it as one `show` layer (so the chip row shows it and undo works)
+          if (parsed.op === "remove") {
+            const gone = useLayers.getState().apply("remove", parsed.text);
+            useShellStore.getState().say(gone ? "Removed it from the view." : "No layer of the view matches that.");
+            close();
+            return;
+          }
+          if (useLayers.getState().preview && previewKey.current === `${parsed.op ?? "replace"}:${parsed.text}`) return commitPreview(parsed.text);
+          runSentence(parsed.text, parsed.op ?? "replace", {});
+        },
+      });
+      return out;
+    }
+
     if (slash) {
-      for (const g of GROUP_ORDER) filterCommands(commands, raw.slice(1)).filter((c) => c.group === g).forEach((c) => out.push(commandRow(c)));
+      const matches = filterCommands(commands, raw.slice(1));
+      for (const g of GROUP_ORDER) matches.filter((c) => c.group === g).forEach((c) => out.push(commandRow(c)));
+      if (intent && !matches.length) {
+        for (const c of closestCommands(commands, raw.slice(1))) out.push({ ...commandRow(c), section: LINE_COPY.closestHeading });
+        out.push({
+          key: "search-instead",
+          section: LINE_COPY.closestHeading,
+          label: LINE_COPY.searchInstead(raw.slice(1).trim()),
+          lead: <Search aria-hidden className="size-4" strokeWidth={1.6} />,
+          run: () => focusBar(raw.slice(1).trim()),
+        });
+      }
       return out;
     }
 
     if (!text) {
-      if (canUndo)
+      if (canUndo || (intent && layersUndo))
         out.push({
           key: "undo-shape",
           section: "Last shape",
@@ -289,6 +417,7 @@ export function GraphShell({ nodes, byId, colorBy, onFocus, onRead, onShowExact,
           key: `recent:${s.at}:${s.text}`,
           section: "Recent",
           label: s.text,
+          hint: intent && Array.isArray(s.spec.lines) ? (s.spec.lines as string[]).join(" · ") : undefined,
           lead: <History aria-hidden className="size-4" strokeWidth={1.6} />,
           run: () => runRecent(s),
         });
@@ -319,8 +448,56 @@ export function GraphShell({ nodes, byId, colorBy, onFocus, onRead, onShowExact,
       lead: <Wand2 aria-hidden className="size-4" strokeWidth={1.6} />,
       // the panel stays open until the shape is drawn, so a refusal is read where the text was typed
       // (a new request replaces one still on its way: the older answer is dropped when it lands)
-      run: () => requestShape(text),
+      run: () => {
+        useShellStore.getState().setPendingOp(null);
+        requestShape(text);
+      },
     };
+    const askRow: PanelRow | null = IS_SHARE
+      ? null
+      : {
+          key: "ask",
+          section: "Actions",
+          label: (
+            <>
+              Ask the agent: <span className="text-muted-foreground">{text}</span>
+            </>
+          ),
+          hint: "opens the chat",
+          lead: <MessageSquare aria-hidden className="size-4" strokeWidth={1.6} />,
+          run: done(() => useChatDock.getState().ask(text)),
+        };
+    if (intent && index) {
+      // grouped, in a fixed order, each action row after them (./groupedRows)
+      if (canShape && asksShape && /^match\b/i.test(text)) out.push(shapeRow);
+      out.push(
+        ...groupedRows({
+          text,
+          index,
+          results,
+          colorBy,
+          views: viewsQ.data?.views ?? [],
+          commands,
+          commandRow,
+          focusNode: (id, shift) => {
+            if (shift && useKb.getState().selection.size) useKb.getState().select(id);
+            else onFocus(id);
+            close();
+          },
+          highlightSet: (ids) => {
+            useKb.getState().setSelection(ids);
+            close();
+          },
+          runView: (v) => {
+            runView(v);
+            close();
+          },
+        }),
+      );
+      if (canShape && asksShape && !/^match\b/i.test(text)) out.push(shapeRow);
+      if (askRow) out.push(askRow);
+      return out;
+    }
     if (canShape && asksShape && /^match\b/i.test(text)) out.push(shapeRow);
     // a short list keeps the actions under it in view
     const shown = [...results.filter((r) => !r.related).slice(0, PAGES_SHOWN), ...results.filter((r) => r.related).slice(0, RELATED_SHOWN)];
@@ -357,26 +534,20 @@ export function GraphShell({ nodes, byId, colorBy, onFocus, onRead, onShowExact,
       });
     }
     if (canShape && asksShape && !/^match\b/i.test(text)) out.push(shapeRow);
-    if (!IS_SHARE) {
-      out.push({
-        key: "ask",
-        section: "Actions",
-        label: (
-          <>
-            Ask the agent: <span className="text-muted-foreground">{text}</span>
-          </>
-        ),
-        hint: "opens the chat",
-        lead: <MessageSquare aria-hidden className="size-4" strokeWidth={1.6} />,
-        run: done(() => useChatDock.getState().ask(text)),
-      });
-    }
+    if (askRow) out.push(askRow);
     return out;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [slash, raw, text, commands, recentQ.data, viewsQ.data, results, colorBy, onFocus, onRead, onShowMentions, record, close, shaping, canUndo, undoShape, live]);
+  }, [slash, viewMode, intent, index, raw, text, commands, recentQ.data, viewsQ.data, results, colorBy, onFocus, onRead, onShowMentions, record, close, shaping, canUndo, layersUndo, undoShape, live, didYou, nodes]);
 
   /** A recent step: a command runs again; anything else goes back into the box to be edited or run. */
   function runRecent(s: RecentStep) {
+    const saved = s.spec.stack as ViewStack | undefined;
+    if (intent && saved && Array.isArray(saved.layers) && saved.layers.length) {
+      // a recorded view stack goes back on as one undo step; its layers get fresh ids
+      useLayers.getState().apply("replace", saved.layers.map((l) => ({ ...l, id: newLayerId() })));
+      close();
+      return;
+    }
     const id = typeof s.spec.command === "string" ? s.spec.command : "";
     const cmd = id ? commands.find((c) => c.id === id) : undefined;
     if (cmd) {
@@ -389,7 +560,87 @@ export function GraphShell({ nodes, byId, colorBy, onFocus, onRead, onShowExact,
     useShellStore.getState().requestView(v);
   }
 
+  // ---- flag graph-intent: the action menu on a row (the same NodeMenu as the node menu, with the action items)
+  const actionCtx = useMemo<MenuContext>(() => {
+    const showLayer = (ids: string[], text: string): Layer => makeLayer("show", "nodes", { nodes: [{ t: "name", slugs: ids }] }, text);
+    const then = <A extends unknown[]>(fn: (...a: A) => void) => (...a: A) => {
+      fn(...a);
+      close();
+    };
+    return {
+      openReader: then(onRead),
+      openDetails: () => {},
+      openPage: () => {},
+      focus: then(onFocus),
+      highlight: then((ids: string[]) => useKb.getState().setSelection(ids)),
+      showOnly: then((ids: string[], label: string) => useLayers.getState().apply("replace", [showLayer(ids, ids.length === 1 ? `Only ${label}` : label)])),
+      addToView: then((ids: string[], label: string) => useLayers.getState().apply("stack", [showLayer(ids, label)])),
+      expand: then((id: string) => useLayers.getState().apply("stack", [makeLayer("show", "nodes", { nodes: [{ t: "hops", of: id, n: 1 }] }, `Neighbours of ${byId.get(id)?.title || id}`)])),
+      colorSet: then((ids: string[], label: string) => useLayers.getState().apply("stack", [makeLayer("style", "nodes", { nodes: [{ t: "name", slugs: ids }] }, label, { style: { color: "type" } })])),
+      chat: then((ids: string[]) => useChatDock.getState().ask(askAbout(ids.map((id) => ({ id }))))),
+      think: then(() => useUi.getState().setCaptureOpen(true)),
+      exportPages: then((ids: string[]) => void exportPages(ds, ids, { kbName, isShare: IS_SHARE, say: useShellStore.getState().say })),
+    };
+  }, [onRead, onFocus, byId, close, ds, kbName]);
+  const openMenu = useCallback((target: RowTarget, at: HTMLElement) => {
+    const r = at.getBoundingClientRect();
+    setMenu({ target, x: r.right - 24, y: r.bottom + 4 });
+  }, []);
+  useEffect(() => {
+    if (!open) setMenu(null);
+  }, [open]);
+  /** Read a `>` sentence into layers and apply them; a name left open asks, text the rules cannot read goes to the shape path. */
+  /** Second Enter: apply what the canvas is showing, remember it in Recent and close like any apply. */
+  function commitPreview(typed: string) {
+    const lines = useLayers.getState().preview?.lines ?? [];
+    setEditingLine(false);
+    if (useLayers.getState().commitPreview()) record(typed, { stack: useLayers.getState().stack, lines });
+    close();
+  }
+  /** The edited sentence applies exactly as written. */
+  function applyWritten(layers: Layer[]) {
+    const p = useLayers.getState().preview;
+    useLayers.getState().cancelPreview();
+    setEditingLine(false);
+    useLayers.getState().apply(p?.op ?? "replace", layers);
+    record(layers.map((l) => l.text).join(" · "), { stack: useLayers.getState().stack, lines: layers.map((l) => l.text) });
+    close();
+  }
+  function runSentence(typed: string, op: "replace" | "stack", chosen: Record<string, string>) {
+    const focus = [...useKb.getState().selection][0];
+    const plan = planSentence(typed, nodes, { focus, chosen });
+    const say = useShellStore.getState().say;
+    if (plan.kind === "ready") {
+      setDidYou(null);
+      // first Enter: show it on the canvas without applying; the second Enter (the same row) commits
+      previewKey.current = `${op}:${typed}`;
+      useLayers.getState().setPreview(op, plan.layers);
+    } else if (plan.kind === "ask") setDidYou({ text: typed, op, pick: plan.pick, chosen: plan.chosen });
+    else if (plan.kind === "missing") say(LINE_COPY.noSuchPage(plan.name));
+    else {
+      say(LINE_COPY.sentenceFallback);
+      useShellStore.getState().setPendingOp(op);
+      requestShape(typed);
+    }
+  }
+
   useEffect(() => setIdx(0), [raw]);
+  useEffect(() => {
+    if (!preview || !intent) return;
+    if (previewKey.current !== `${parsed.op ?? "replace"}:${parsed.text}`) {
+      useLayers.getState().cancelPreview();
+      setEditingLine(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [raw]);
+  // closing the panel drops a preview nobody confirmed
+  useEffect(() => {
+    if (!open && useLayers.getState().preview) {
+      useLayers.getState().cancelPreview();
+      setEditingLine(false);
+    }
+  }, [open]);
+  useEffect(() => () => useLayers.getState().cancelPreview(), []);
   // an error belongs to the text it answered: editing the text retires it
   useEffect(() => {
     useShellStore.getState().setShapeError(null);
@@ -402,13 +653,31 @@ export function GraphShell({ nodes, byId, colorBy, onFocus, onRead, onShowExact,
       setOpen(true);
       const n = rows.length;
       if (n) setIdx((i) => (e.key === "ArrowDown" ? (i + 1) % n : (i - 1 + n) % n));
+    } else if (e.key === "ArrowRight" && intent && open) {
+      // the right arrow opens the highlighted row's menu once the caret is past the last letter
+      const at = document.getElementById(optionId(idx));
+      const t = e.currentTarget;
+      const target = rows[idx]?.actions;
+      if (target && at && t.selectionStart === t.value.length && t.selectionEnd === t.value.length) {
+        e.preventDefault();
+        openMenu(target, at);
+      }
     } else if (e.key === "Enter") {
       if (e.nativeEvent.isComposing) return;
       e.preventDefault();
+      setHintMode(null);
       rows[idx]?.run(e.shiftKey);
+    } else if (e.key === "Tab" && intent && useLayers.getState().preview && !e.shiftKey) {
+      e.preventDefault();
+      setEditingLine(true);
     } else if (e.key === "Escape") {
       e.preventDefault();
       e.stopPropagation();
+      setHintMode(null);
+      if (intent && useLayers.getState().preview) {
+        useLayers.getState().cancelPreview();
+        return;
+      }
       close();
     }
   };
@@ -421,7 +690,7 @@ export function GraphShell({ nodes, byId, colorBy, onFocus, onRead, onShowExact,
         ? { kind: "shape", text: pillText(shape.styleText, shape.pages) || "Shaped", skipped: shape.skipped }
         : null;
 
-  const empty = slash ? "No command matches." : text ? "Nothing matches." : live && !IS_SHARE ? "Type to search pages, / for commands, or ask a question." : "Type to search pages.";
+  const empty = viewMode ? LINE_COPY.viewEmpty : slash ? (intent ? LINE_COPY.hints.command : "No command matches.") : text ? "Nothing matches." : live && !IS_SHARE ? "Type to search pages, / for commands, or ask a question." : "Type to search pages.";
 
   return (
     <div
@@ -430,7 +699,8 @@ export function GraphShell({ nodes, byId, colorBy, onFocus, onRead, onShowExact,
       style={{ top, width: open ? "min(640px, calc(100% - 9rem))" : "min(520px, calc(100% - 9rem))" }}
       data-testid="graph-shell"
       onBlur={(e) => {
-        if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setOpen(false);
+        const to = e.relatedTarget as HTMLElement | null;
+        if (!e.currentTarget.contains(to) && !to?.closest?.("[role=menu]")) setOpen(false);
       }}
     >
       <SearchBar
@@ -444,10 +714,29 @@ export function GraphShell({ nodes, byId, colorBy, onFocus, onRead, onShowExact,
         onKeyDown={onKeyDown}
         activeId={rows.length ? optionId(idx) : undefined}
         inputRef={input}
-        kbName={kbName}
+        placeholder={intent ? LINE_COPY.placeholder : `Search ${kbName}`}
         notice={open ? undefined : notice?.text}
       />
-      {open && <SearchPanel rows={rows} idx={idx} onHover={setIdx} empty={empty} status={status} views={!text && !slash && viewChoices.length ? viewChoices : undefined} />}
+      {intent && <Chips byId={byId} />}
+      {intent && open && viewMode && <ResolvedLine lines={preview?.lines ?? null} count={preview?.count ?? 0} editing={editingLine} onEditing={setEditingLine} onApply={applyWritten} />}
+      {open && <SearchPanel rows={rows} idx={idx} onHover={setIdx} empty={empty} status={status} hint={hintMode ? LINE_COPY.hints[hintMode] : undefined} views={!text && !slash && viewChoices.length ? viewChoices : undefined} onMenu={intent ? (i, at) => rows[i]?.actions && openMenu(rows[i]!.actions!, at) : undefined} />}
+      {menu &&
+        createPortal(
+          <NodeMenu
+            node={menu.target.kind === "node" ? menu.target.node : ({ id: "set", title: menu.target.label, type: "set" } as GNode)}
+            title={menu.target.kind === "set" ? menu.target.label : undefined}
+            x={menu.x}
+            y={menu.y}
+            colorBy={colorBy}
+            ctx={actionCtx}
+            items={menu.target.kind === "node" ? ACTION_ITEMS : setActionItems(menu.target.ids, menu.target.label)}
+            onClose={() => {
+              setMenu(null);
+              input.current?.focus({ preventScroll: true });
+            }}
+          />,
+          document.body,
+        )}
     </div>
   );
 }

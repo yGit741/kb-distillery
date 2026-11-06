@@ -488,11 +488,16 @@ class PrFlowTests(unittest.TestCase):
         approve.assert_called_once_with(101)
 
     def test_schema_pr_is_always_held(self):
-        # outside a night window: the checkout's real window (an owner's `ship night`) must not decide this test
-        self.enterContext(patch.object(ship.night, "active", return_value=False))
-        self.assertIsNone(ship._hold_reason(["feat(ops): add thing"]))
-        self.assertIn("schema", ship._hold_reason(["schema(books): add hub"]))
-        self.assertIn("paradigm", ship._hold_reason(["feat(x): y", "paradigm(schema): z"]))
+        r = self.repo                                  # the temp repo: never the live checkout's night window
+        self.assertIsNone(ship._hold_reason(["feat(ops): add thing"], root=r))
+        self.assertIn("schema", ship._hold_reason(["schema(books): add hub"], root=r))
+        self.assertIn("paradigm", ship._hold_reason(["feat(x): y", "paradigm(schema): z"], root=r))
+        from kb_distillery.git import night
+        night.start(r, hours=1)                        # an open night window waives the schema hold
+        try:
+            self.assertIsNone(ship._hold_reason(["schema(x): y"], root=r))
+        finally:
+            night.stop(r)
 
     def test_merge_local_creates_merge_commit(self):
         wt = self._start()

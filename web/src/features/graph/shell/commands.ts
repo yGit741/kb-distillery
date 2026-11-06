@@ -130,3 +130,34 @@ export function filterCommands(all: readonly Command[], text: string): Command[]
     return words.every((w) => hay.includes(w));
   });
 }
+
+/** Edit distance between two short strings. */
+function levenshtein(a: string, b: string): number {
+  let prev = Array.from({ length: b.length + 1 }, (_, i) => i);
+  for (let i = 1; i <= a.length; i++) {
+    const cur = [i];
+    for (let j = 1; j <= b.length; j++) cur[j] = Math.min((prev[j] ?? 0) + 1, (cur[j - 1] ?? 0) + 1, (prev[j - 1] ?? 0) + (a[i - 1] === b[j - 1] ? 0 : 1));
+    prev = cur;
+  }
+  return prev[b.length] ?? 0;
+}
+
+function sharedPrefix(a: string, b: string): number {
+  let n = 0;
+  while (n < a.length && n < b.length && a[n] === b[n]) n++;
+  return n;
+}
+
+/** Up to `limit` commands nearest to the text: most shared word prefixes first, then the smallest edit distance on the label. */
+export function closestCommands(all: readonly Command[], text: string, limit = 3): Command[] {
+  const t = text.trim().toLowerCase();
+  const words = t.split(/\s+/).filter(Boolean);
+  const scored = all.map((c) => {
+    const label = c.label.toLowerCase();
+    const labelWords = label.split(/\s+/);
+    const prefixes = words.reduce((n, w) => n + Math.max(0, ...labelWords.map((lw) => (sharedPrefix(w, lw) >= Math.min(2, w.length) ? sharedPrefix(w, lw) : 0))), 0);
+    return { c, prefixes, dist: levenshtein(t, label) };
+  });
+  scored.sort((x, y) => y.prefixes - x.prefixes || x.dist - y.dist);
+  return scored.slice(0, limit).map((s) => s.c);
+}

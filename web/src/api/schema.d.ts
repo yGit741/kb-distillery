@@ -346,6 +346,41 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/favorites": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Favorite pages (sorted slugs) */
+        get: operations["list_favorites_api_favorites_get"];
+        put?: never;
+        /** Mark a page as a favorite (one knowledge step) */
+        post: operations["add_favorite_api_favorites_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/favorites/{slug}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Unmark a favorite page (one knowledge step) */
+        delete: operations["remove_favorite_api_favorites__slug__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/flags": {
         parameters: {
             query?: never;
@@ -644,6 +679,23 @@ export interface paths {
         };
         /** One page: markdown, backlinks, suggestions */
         get: operations["get_page_api_pages__slug__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/pages/{slug}/source": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One page as stored: frontmatter and body, for the OKF export */
+        get: operations["get_page_source_api_pages__slug__source_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1654,6 +1706,38 @@ export interface components {
             error: string;
             /** Formats */
             formats?: string[] | null;
+        } & {
+            [key: string]: unknown;
+        };
+        /** FavoriteAddRequest */
+        FavoriteAddRequest: {
+            /** Slug */
+            slug: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** FavoriteList */
+        FavoriteList: {
+            /** Slugs */
+            slugs: string[];
+        } & {
+            [key: string]: unknown;
+        };
+        /** FavoriteStep */
+        FavoriteStep: {
+            /** Ok */
+            ok: boolean;
+            /** Reason */
+            reason?: string | null;
+            /** Sha */
+            sha?: string | null;
+            /**
+             * Slugs
+             * @default []
+             */
+            slugs: string[];
+            /** Version */
+            version?: string | null;
         } & {
             [key: string]: unknown;
         };
@@ -4692,6 +4776,108 @@ export interface operations {
             };
         };
     };
+    list_favorites_api_favorites_get: {
+        parameters: {
+            query?: {
+                /** @description another knowledge base id (read-only, multi-kb mode); empty = the server's own */
+                kb?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FavoriteList"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_favorite_api_favorites_post: {
+        parameters: {
+            query?: {
+                /** @description another knowledge base id (read-only, multi-kb mode); empty = the server's own */
+                kb?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FavoriteAddRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FavoriteStep"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    remove_favorite_api_favorites__slug__delete: {
+        parameters: {
+            query?: {
+                /** @description another knowledge base id (read-only, multi-kb mode); empty = the server's own */
+                kb?: string;
+            };
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FavoriteStep"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_flags_api_flags_get: {
         parameters: {
             query?: never;
@@ -5232,6 +5418,46 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PageDetail"];
+                };
+            };
+            /** @description unknown slug */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_page_source_api_pages__slug__source_get: {
+        parameters: {
+            query?: {
+                kb?: string;
+            };
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": string;
                 };
             };
             /** @description unknown slug */

@@ -290,6 +290,7 @@ KNOWLEDGE_PATHS = [
     "meta/aliases.tsv",
     "meta/chats/",
     "meta/views.json",  # pinned graph views (kb_distillery.vault.views); written only by `ops view`
+    "meta/favorites.json",  # favorite pages (kb_distillery.vault.favorites); written only by `ops favorite`
 ]
 
 
@@ -384,7 +385,7 @@ assert SCHEMA_VERSION == _KB_SCHEMA_VERSION, "kb_distillery.config.kb.SCHEMA_VER
 
 # What undo/restore may rewrite. Never raw/ (immutable, PDFs untracked), think/
 # (human-owned), wiki/log.md (append-only) or generated files such as wiki/index.md (lint regenerates them).
-RESTORABLE_PATHS = ["wiki/", "meta/aliases.tsv", "meta/chats/", "meta/views.json"]
+RESTORABLE_PATHS = ["wiki/", "meta/aliases.tsv", "meta/chats/", "meta/views.json", "meta/favorites.json"]
 RESTORE_EXCLUDED_GLOBS = (f"{WIKI_DIR}/**/index.md",)      # git pathspecs for every section index
 RESTORE_EXCLUDED = (INDEX_REL, LOG_REL)      # inside wiki/, but generated / append-only: undo and restore never rewrite them (nor any section index: `is_index_path`)
 

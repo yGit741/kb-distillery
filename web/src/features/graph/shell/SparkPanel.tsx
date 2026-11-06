@@ -18,6 +18,7 @@ import { readJson, writeJson } from "@/features/chat/storage";
 import { chatTitle, type ChatMessage } from "@/features/chat/thread";
 import { useChatSession } from "@/features/chat/useChatSession";
 import { sessionIdOf } from "@/features/chat/serverStorage";
+import { ReplayControl, ReplaySteps } from "./AnswerReplay";
 import { ChatList } from "./ChatList";
 import { ChatTools } from "./ChatTools";
 import { useChatFull } from "./chatFullStore";
@@ -309,7 +310,14 @@ function Body({ status, prompts, scope, full, rich, listOpen, onClose, server }:
           {chat.messages.length === 0 ? (
             <p className="text-sm text-muted-foreground">Ask about the pages on the graph. The agent searches and reads your wiki, read-only, and cites what it opened.</p>
           ) : (
-            <MessageList messages={chat.messages} busy={busy} onRegenerate={() => regenerate(options())} onAnswer={answer} />
+            <MessageList
+              messages={chat.messages}
+              busy={busy}
+              onRegenerate={() => regenerate(options())}
+              onAnswer={answer}
+              actions={(m, i) => (m.role === "assistant" ? <ReplayControl message={m} index={i} /> : null)}
+              below={(m, i) => (m.role === "assistant" ? <ReplaySteps message={m} index={i} /> : null)}
+            />
           )}
         </div>
         {cited.length > 0 && (

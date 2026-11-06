@@ -625,6 +625,7 @@ function Loaded({
           {headerFold && <HeaderFold />}
           <GraphShell
             nodes={model.nodes}
+            links={model.links}
             byId={byId}
             colorBy={ui.colorBy}
             onFocus={(id) => (visible.has(id) ? focus(id) : showPicked([id]))}

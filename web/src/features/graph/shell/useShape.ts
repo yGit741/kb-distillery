@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef } from "react";
 import { useDataSource, type ShapeResult } from "@/api";
 import { useKb } from "@/lib/store";
+import { useFlag } from "@/flags/useFlag";
+import { sentenceLayer, useLayers } from "../layers/store";
 import { useGraphUi } from "../store";
 import type { GNode } from "../types";
 import { dropTypes, marker, pillText, planStyle, restore, shapeIds, snapshot } from "./shape";
@@ -26,8 +28,11 @@ const asText = (e: unknown) => (e instanceof Error ? e.message : String(e));
  * style drives the screen's colour, size, layout and hidden types. One level of undo is kept, and a failure is
  * said in the panel without touching the graph. The text shapes the view only, never the wiki.
  */
-export function useShape(opts: Options): { undo: () => boolean } {
+export function useShape(opts: Options): { undo: () => boolean; cancel: () => void } {
   const ds = useDataSource();
+  const intent = useFlag("graph-intent");
+  const intentRef = useRef(intent);
+  intentRef.current = intent;
   const pending = useShellStore((s) => s.pendingShape);
   // the latest options, so a reply that lands after a re-render still draws against the current graph
   const o = useRef(opts);
@@ -69,6 +74,12 @@ export function useShape(opts: Options): { undo: () => boolean } {
     const pages = ids ? ids.length : null;
     const styleText = res.style_text.trim();
     useShellStore.getState().setShape({ text, styleText, pages, skipped: plan.skipped, after: marker() }, before);
+    // q3: the grammar parses a sentence into real layers; until then the whole sentence is one `show` layer
+    if (intentRef.current) {
+      const op = useShellStore.getState().pendingOp;
+      useLayers.getState().recordDrawn(op === "stack" ? "stack" : "replace", [sentenceLayer(text)], before);
+      useShellStore.getState().setPendingOp(null);
+    }
     record(text, { text, style: styleText, ...(res.cypher ? { cypher: res.cypher } : {}) });
     onApplied(text, `Shaped: ${pillText(styleText, pages) || "no change"}. Cmd-Z undoes it.`);
   }, []);
@@ -124,5 +135,11 @@ export function useShape(opts: Options): { undo: () => boolean } {
     store.setShapeError(null);
     return true;
   }, []);
-  return { undo };
+  /** Drop an answer still on its way (the layer stack took a step back). */
+  const cancel = useCallback(() => {
+    run.current++;
+    useShellStore.getState().setShaping(false);
+    useShellStore.getState().clearShape();
+  }, []);
+  return { undo, cancel };
 }

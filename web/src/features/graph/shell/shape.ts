@@ -65,7 +65,7 @@ const COLOUR_PROP: Readonly<Record<string, ColorBy>> = { layer: "layer", depth: 
 const SKIP_COLOUR_TYPE = "the mark already shows the type";
 
 /** The graph's edge kinds (kb_distillery.graph.model) -> the link kinds the canvas draws (`GLink.kind`). */
-const LINK_KINDS: Readonly<Record<string, readonly string[]>> = { MENTIONS: ["wikilink", "related"], BOOK: ["book"], SHARES_SOURCE: ["shared"] };
+export const LINK_KINDS: Readonly<Record<string, readonly string[]>> = { MENTIONS: ["wikilink", "related"], BOOK: ["book"], SHARES_SOURCE: ["shared"] };
 
 export interface StylePlan {
   patch: Partial<Pick<GraphUiState, "colorBy" | "sizeBy" | "layoutMode">>;

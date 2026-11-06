@@ -207,6 +207,12 @@ def _suggest(slug, out, inn):
     ]
 
 
+def page_source(slug, view=None):
+    """The page file's text as stored (frontmatter and body), or None for an unknown slug."""
+    pages = load_pages(view.root if view else None)
+    return pages[slug][2] if slug in pages else None
+
+
 def build_page(slug, view=None):
     """One page of the active knowledge base, or of `view` (a `kbview.KbView`; read-only when not active)."""
     root = view.root if view else None

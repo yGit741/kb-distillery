@@ -1,3 +1,6 @@
+import { flag } from "@/flags";
+import { IS_SHARE } from "@/share/env";
+import { LINE_COPY } from "./shell/copy";
 import type { GNode } from "./types";
 
 /** What a node-menu action may do. */
@@ -5,6 +8,16 @@ export interface MenuContext {
   openReader: (id: string) => void;
   openDetails: (id: string) => void;
   openPage: (id: string) => void;
+  /** Result and set actions (flag graph-intent); the plain node menu leaves them out. */
+  focus?: (id: string) => void;
+  showOnly?: (ids: string[], label: string) => void;
+  addToView?: (ids: string[], label: string) => void;
+  expand?: (id: string) => void;
+  colorSet?: (ids: string[], label: string) => void;
+  chat?: (ids: string[]) => void;
+  think?: (id: string) => void;
+  highlight?: (ids: string[]) => void;
+  exportPages?: (ids: string[]) => void;
 }
 
 /**
@@ -37,3 +50,30 @@ export function registerMenuItem(item: MenuItem, before?: string): void {
 
 export const visibleItems = (n: GNode, items: readonly MenuItem[] = MENU_ITEMS): MenuItem[] =>
   items.filter((i) => !i.when || i.when(n));
+
+const A = LINE_COPY.actions;
+
+/**
+ * The action menu: the same one for a search result, a set, the focus and the view (flag graph-intent). The plain
+ * node menu above keeps MENU_ITEMS. Favorite and export are slots, greyed out until their features land.
+ */
+export const ACTION_ITEMS: MenuItem[] = [
+  { id: "focus", label: A.focus.label, hint: A.focus.hint, run: (n, c) => c.focus?.(n.id) },
+  { id: "show", label: A.show.label, hint: A.show.hint, run: (n, c) => c.showOnly?.([n.id], n.title || n.id) },
+  { id: "read", label: A.read.label, hint: A.read.hint, run: (n, c) => c.openReader(n.id) },
+  { id: "expand", label: A.expand.label, hint: A.expand.hint, run: (n, c) => c.expand?.(n.id) },
+  { id: "favorite", label: A.favorite.label, enabled: () => false, why: A.favorite.why, run: () => {} },
+  { id: "chat", label: A.chat.label, hint: A.chat.hint, when: () => !IS_SHARE, run: (n, c) => c.chat?.([n.id]) },
+  { id: "think", label: A.think.label, hint: A.think.hint, when: () => !IS_SHARE, run: (n, c) => c.think?.(n.id) },
+  { id: "export", label: A.export.label, hint: A.export.hint, enabled: () => flag("graph-intent"), why: A.export.why, run: (n, c) => c.exportPages?.([n.id]) },
+];
+
+/** The same menu for a set of pages: the actions act on all of them. */
+export const setActionItems = (ids: string[], label: string): MenuItem[] => [
+  { id: "highlight", label: A.highlight.label, hint: A.highlight.hint, run: (_n, c) => c.highlight?.(ids) },
+  { id: "show", label: A.showSet.label, hint: A.showSet.hint, run: (_n, c) => c.showOnly?.(ids, label) },
+  { id: "add", label: A.addToView.label, hint: A.addToView.hint, run: (_n, c) => c.addToView?.(ids, label) },
+  { id: "color", label: A.color.label, hint: A.color.hint, run: (_n, c) => c.colorSet?.(ids, label) },
+  { id: "chat", label: A.chatSet.label, hint: A.chatSet.hint, run: (_n, c) => c.chat?.(ids) },
+  { id: "export", label: A.export.label, hint: A.export.hint, enabled: () => flag("graph-intent"), why: A.export.why, run: (_n, c) => c.exportPages?.(ids) },
+];
