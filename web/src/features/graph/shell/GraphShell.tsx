@@ -622,6 +622,13 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
     }
   }
 
+  // a line typed in the overlay on another screen: take it over so the first Enter previews it here
+  useEffect(() => {
+    const line = useShellStore.getState().pendingLine;
+    if (line === null) return;
+    useShellStore.getState().clearLine();
+    if (intentRef.current) focusBar(line);
+  }, [focusBar]);
   useEffect(() => setIdx(0), [raw]);
   useEffect(() => {
     if (!preview || !intent) return;

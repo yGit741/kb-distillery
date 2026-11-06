@@ -27,11 +27,13 @@ describe("/covector is the owner's own page (research-tools)", () => {
     expect(await screen.findByText("Not Found")).toBeInTheDocument();
     expect(screen.queryByText("Covector Visualization")).not.toBeInTheDocument();
 
+    // the old palette (the search line overlay takes Cmd+K when graph-intent is on)
+    act(() => setFlagOverrides({ "graph-intent": false }));
     await userEvent.keyboard("{Control>}k{/Control}");
     await screen.findByPlaceholderText(/^Go to…/);
     expect(screen.queryByText("Interactive picture of a covector acting on a vector.")).not.toBeInTheDocument();
 
-    act(() => setFlagOverrides({ "research-tools": true }));
+    act(() => setFlagOverrides({ "research-tools": true, "graph-intent": false }));
     expect(await screen.findByText("Interactive picture of a covector acting on a vector.")).toBeInTheDocument();
     expect(screen.queryByText("Not Found")).not.toBeInTheDocument();
   });

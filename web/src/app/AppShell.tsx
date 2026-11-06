@@ -7,6 +7,7 @@ import { ROUTES } from "@/routes/registry";
 import { ShareFooter } from "@/share/ShareFooter";
 import { useTheme } from "@/theme/theme";
 import { CommandPalette } from "./CommandPalette";
+import { SearchOverlay } from "@/features/graph/shell/SearchOverlay";
 import { ShareChip } from "./ShareChip";
 import { ToursMenu } from "./ToursMenu";
 import { KbBadge } from "./KbBadge";
@@ -62,7 +63,7 @@ export function AppShell() {
         <div id={HEADER_SLOT_ID} className="min-w-0 flex-1 px-2" />
         <ShareChip />
         <ToursMenu />
-        <Button variant="secondary" size="sm" onClick={() => setPaletteOpen(true)} aria-label="Open command palette">
+        <Button variant="secondary" size="sm" onClick={() => (flag("graph-intent") ? useUi.getState().setLineOpen(true) : setPaletteOpen(true))} aria-label="Open command palette">
           <CommandIcon aria-hidden />
           <span className="hidden sm:inline">K</span>
         </Button>
@@ -83,6 +84,7 @@ export function AppShell() {
       </main>
       <ShareFooter />
       <CommandPalette />
+      <SearchOverlay />
       {agentMode && (
         <Suspense fallback={null}>
           <QuickAsk />

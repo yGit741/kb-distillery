@@ -18,7 +18,7 @@ const ds: DataSource = mockDataSource({
 });
 
 describe("AppShell", () => {
-  it("has one nav of five tabs, one theme toggle, and a palette that reaches every screen", () => withFlag("views-panel", false, async () => {
+  it("has one nav of five tabs, one theme toggle, and a palette that reaches every screen", () => withFlag("graph-intent", false, () => withFlag("views-panel", false, async () => {
     const router = createAppRouter(createMemoryHistory({ initialEntries: ["/app/system"] }));
     render(<App source={ds} router={router} />);
     const nav = await screen.findByRole("navigation", { name: "Main" });
@@ -34,7 +34,7 @@ describe("AppShell", () => {
     await userEvent.type(box, "pages");
     await userEvent.keyboard("{Enter}");
     await waitFor(() => expect(router.state.location.pathname).toBe("/pages"));
-  }));
+  })));
 
   it("flag views-panel: on the graph the theme toggle moves to the pinned panel; other screens keep it", async () => {
     for (const on of [true, false]) {
