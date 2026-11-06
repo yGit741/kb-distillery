@@ -17,6 +17,9 @@ import { areaNames } from "./lab/regions";
 import { drawKbOutlines, kbAnchors, kbGroups, kbLabelSpot } from "./lab/kbRegions";
 import { bubbleAim, drawBubble, magnetCursor, pickMagnetic, rgbOf, stepBubble, type Bubble, type ScreenNode } from "./magnet";
 import { useCites } from "./shell/citeStore";
+import { candidatesOf } from "./shell/replay";
+import { ReplayLegend } from "./shell/ReplayLegend";
+import { useReplay } from "./shell/replayStore";
 import { useSparkOpen } from "./shell/SparkPanelHost";
 import { SPARK_PANEL_W } from "./shell/layout";
 import { useFullChat } from "./shell/useFullChat";
@@ -25,6 +28,7 @@ import { DRAG_PX } from "./selection";
 import { useGraphUi } from "./store";
 import { useDecor } from "./tools/decor";
 import { drawNode as drawNodeMark } from "./encoding/canvas";
+import { drawReplayMark, drawReplayPath } from "./shell/replayDraw";
 import { personInitials, SOURCE_GLYPH_PX } from "./encoding/spec";
 import { colorOf, effectiveColorBy, layeredRadii, METRIC_COLORS, nodeRadius, semanticRadius, type ColorBy, type SizeBy } from "./style";
 import type { GNode, GraphModel, SimLink, SimNode } from "./types";
@@ -165,10 +169,30 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
   // the full chat gives the canvas its own box (the right pane): frame inside it, with room for the labels
   const { full: fullChat } = useFullChat();
   const sparkChat = useFlag("spark-chat");
-  const cited = useMemo<ReadonlySet<string>>(() => new Set(sparkChat ? citeSlugs.filter((id) => visible.has(id)) : []), [sparkChat, citeSlugs, visible]);
+  // a replay of how an answer was built (./shell/replayStore) lights its trail through the same focus: the camera stays
+  const replayView = useReplay((s) => (sparkChat ? s.view : null));
+  const replayCandidates = useReplay((s) => s.candidates);
+  const replayMissed = useReplay((s) => s.missed);
+  const replayBad = useReplay((s) => s.bad);
+  const candidates = useMemo(
+    () => (replayView?.atEnd ? candidatesOf([...replayView.roles].filter(([, r]) => r === "read").map(([id]) => id), neighbors, new Set(replayView.roles.keys()), visible) : []),
+    [replayView, neighbors, visible],
+  );
+  useEffect(() => {
+    useReplay.getState().setCandidates(candidates);
+  }, [candidates]);
+  const replay = useMemo(
+    () => (replayView ? { view: replayView, candidates: new Set(replayView.atEnd ? replayCandidates : []), missed: new Set(replayMissed), bad: new Set(replayBad) } : null),
+    [replayView, replayCandidates, replayMissed, replayBad],
+  );
+  const cited = useMemo<ReadonlySet<string>>(() => {
+    if (!sparkChat) return new Set();
+    if (replay) return new Set([...replay.view.roles.keys(), ...replay.candidates, ...replay.missed, ...replay.bad].filter((id) => visible.has(id)));
+    return new Set(citeSlugs.filter((id) => visible.has(id)));
+  }, [sparkChat, citeSlugs, visible, replay]);
   const fitSeen = useRef(citeFitTick); // the tick a remounted canvas starts at is not a request
-  const live = useRef({ ui, theme, selection, byId, neighbors, visible, cited, onOpenReader, onOpenMenu, onBackgroundContext, onOpenPile });
-  live.current = { ui, theme, selection, byId, neighbors, visible, cited, onOpenReader, onOpenMenu, onBackgroundContext, onOpenPile };
+  const live = useRef({ ui, theme, selection, byId, neighbors, visible, cited, replay, onOpenReader, onOpenMenu, onBackgroundContext, onOpenPile });
+  live.current = { ui, theme, selection, byId, neighbors, visible, cited, replay, onOpenReader, onOpenMenu, onBackgroundContext, onOpenPile };
 
   rs.current.imp = imp;
   const names = useMemo(() => areaNames(model.nodes, model.kbs), [model]);
@@ -685,7 +709,13 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
         return;
       }
       lastClick.current = { id, at: now };
-      if (live.current.cited.has(id)) useCites.getState().scrollTo(id);
+      const rp = live.current.replay;
+      if (rp?.view.atEnd && rp.candidates.has(id)) {
+        useReplay.getState().toggleMissed(id); // a page the agent could have read: marked, not selected
+        return;
+      }
+      if (rp) useReplay.getState().pick(rp.view.roles.get(id) === "cited" ? id : null);
+      if (!rp && live.current.cited.has(id)) useCites.getState().scrollTo(id);
       const kb = useKb.getState();
       if (ev.shiftKey || ev.metaKey || ev.ctrlKey) kb.toggle(id);
       else kb.setSelection([id]);
@@ -744,11 +774,12 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
         font: colors.font,
         ring: colors.ring,
         initials: initials.get(n.id),
-        state: isSel ? "selected" : hover === n.id ? "hover" : live.current.cited.has(n.id) ? "focus" : null,
+        state: isSel ? "selected" : hover === n.id ? "hover" : !live.current.replay && live.current.cited.has(n.id) ? "focus" : null,
         alpha,
         glyph: r * scale >= SOURCE_GLYPH_PX || hover === n.id,
         scale,
       });
+      if (live.current.replay) drawReplayMark(ctx, n.id, n.x, n.y, r, scale, alpha, live.current.replay, colors);
     },
     [radius, initials],
   );
@@ -812,6 +843,8 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
       const g = fg.current;
       if (!g) return;
       const arcs = useDecor.getState().arcs;
+      const rp = live.current.replay;
+      if (rp?.view.path.length) drawReplayPath(ctx, g.nodes(), rp.view.path, scale, rs.current.colors);
       if (arcs?.length) drawArcs(ctx, g.nodes(), arcs, scale, rs.current.colors);
       const u = live.current.ui;
       // hulls say where (area tints, or one per knowledge base when several share the canvas) and show only
@@ -975,6 +1008,7 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
         onEngineStop={onEngineStop}
       />
       <canvas ref={overlay} aria-hidden className="pointer-events-none absolute inset-0 size-full" />
+      {replay && <ReplayLegend atEnd={replay.view.atEnd} />}
       {kbIds.map((id) => (
         <button
           key={id}

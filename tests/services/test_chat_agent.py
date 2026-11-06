@@ -369,6 +369,54 @@ class TestStream(SDKCase):
         self.assertTrue(tools[1]["error"])
         self.assertEqual(tools[1]["id"], "b1")
 
+    def test_read_and_seen_slugs_land_on_trace_steps(self):
+        FakeClient.script = staticmethod(lambda o: [
+            SystemMessage(subtype="init", data={"session_id": "s1"}),
+            AssistantMessage(content=[ToolUseBlock(id="g1", name="Grep", input={"pattern": "rank"})]),
+            UserMessage(content=[ToolResultBlock(tool_use_id="g1", content="wiki/tensor-rank.md:3: rank\nnope.md\ntensor-rank.md")]),
+            read_tool("tensor-rank", tid="r1"),
+            UserMessage(content=[ToolResultBlock(tool_use_id="r1", content="tensor-rank text")]),
+            delta("ok"), result(),
+        ])
+        tools = [d for n, d in self.run_stream() if n == "tool"]
+        grep = [t for t in tools if t["id"] == "g1"][-1]
+        self.assertEqual(grep["seen"], ["tensor-rank"])
+        self.assertNotIn("read", grep)
+        read = [t for t in tools if t["id"] == "r1"]
+        self.assertEqual(read[0]["read"], ["tensor-rank"])
+        self.assertNotIn("seen", read[-1])
+
+    def test_steps_without_page_data_stay_bare(self):
+        FakeClient.script = staticmethod(lambda o: [
+            AssistantMessage(content=[ToolUseBlock(id="g1", name="Grep", input={"pattern": "zzz"})]),
+            UserMessage(content=[ToolResultBlock(tool_use_id="g1", content="nothing here")]),
+            delta("ok"), result(),
+        ])
+        tools = [d for n, d in self.run_stream() if n == "tool"]
+        self.assertEqual(len(tools), 1)
+        self.assertNotIn("seen", tools[0])
+        self.assertNotIn("read", tools[0])
+
+    def test_grep_text_is_not_a_seen_page_and_failed_read_is_not_read(self):
+        FakeClient.script = staticmethod(lambda o: [
+            AssistantMessage(content=[ToolUseBlock(id="g1", name="Grep", input={"pattern": "rank"})]),
+            UserMessage(content=[ToolResultBlock(tool_use_id="g1", content="the tensor-rank of a matrix")]),
+            read_tool("tensor-rank", tid="r1"),
+            UserMessage(content=[ToolResultBlock(tool_use_id="r1", is_error=True)]),
+            delta("ok"), result(),
+        ])
+        tools = [d for n, d in self.run_stream() if n == "tool"]
+        self.assertFalse([t for t in tools if t["id"] == "g1" and "seen" in t])
+        self.assertNotIn("read", [t for t in tools if t["id"] == "r1"][-1])
+
+    def test_result_slugs_cap_and_dedupe(self):
+        index = {f"p{i}": {} for i in range(80)}
+        text = " ".join(f"p{i}.md p{i}" for i in range(80))
+        out = chat_agent.result_slugs(text, index)
+        self.assertEqual(len(out), 50)
+        self.assertEqual(out[:2], ["p0", "p1"])
+        self.assertEqual(chat_agent.result_slugs("a.md b", None), ["a"])
+
     def test_subagent_deltas_are_ignored(self):
         ev = StreamEvent(event={"type": "content_block_delta", "delta": {"type": "text_delta", "text": "x"}},
                          parent_tool_use_id="inner")
