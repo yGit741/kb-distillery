@@ -131,10 +131,13 @@ export interface Candidate {
   via: Via;
   node: GNode;
   snippet?: string;
+  /** Meaning hits: how close, 0 to 100. */
+  score?: number;
 }
 export interface Placed {
   node: GNode;
   snippet?: string;
+  score?: number;
   via: Via;
   /** The other ways this page was also found (one small mark in the row). */
   also: Via[];
@@ -150,7 +153,7 @@ export function placeOnce(cands: readonly Candidate[]): Record<GroupId, Placed[]
       if (c.via !== seen.via && !seen.also.includes(c.via)) seen.also.push(c.via);
       continue;
     }
-    const p: Placed = { node: c.node, snippet: c.snippet, via: c.via, also: [] };
+    const p: Placed = { node: c.node, snippet: c.snippet, score: c.score, via: c.via, also: [] };
     first.set(c.node.id, p);
     out[c.group].push(p);
   }

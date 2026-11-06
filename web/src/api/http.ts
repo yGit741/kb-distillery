@@ -129,6 +129,11 @@ export function createHttpDataSource(fetchImpl: Fetch = (...a) => fetch(...a), b
         () => client.GET("/api/search", { params: { query: { q, ...(limit ? { limit: String(limit) } : {}) } } }),
         "/api/search",
       ),
+    searchSimilar: ({ q, slug, k }, signal) =>
+      run(
+        () => client.GET("/api/search/similar", { params: { query: { ...(slug ? { slug } : { q: q ?? "" }), ...(k ? { k } : {}) } }, signal }),
+        "/api/search/similar",
+      ),
     findPath: (a, b) => run(() => client.GET("/api/path", { params: { query: { a, b } } }), "/api/path"),
 
     getPipeline: () => run(() => client.GET("/api/pipeline"), "/api/pipeline"),

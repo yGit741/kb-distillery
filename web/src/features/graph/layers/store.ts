@@ -4,6 +4,7 @@ import { marker, restore, snapshot, type Marker, type Snapshot } from "../shell/
 import { useShellStore } from "../shell/shellStore";
 import { useGraphUi } from "../store";
 import { print } from "./grammar";
+import { resolveAbout, type Resolution, type Similar } from "./meaning";
 import {
   EMPTY_STACK,
   evaluate,
@@ -32,6 +33,8 @@ export interface GraphContext extends EvalGraph {
   show: (ids: string[]) => void;
   /** Apply a V1 pinned spec (`applySpec`). */
   applyLegacy?: (spec: Record<string, unknown>) => void;
+  /** Meaning search (flags graph-intent and semantic-search, not the share build); absent: `about` stays skipped. */
+  similar?: Similar;
 }
 
 export interface Entry {
@@ -72,6 +75,8 @@ interface LayersState {
   /** What the last fold could not evaluate or draw, with the reason. */
   skipped: string[];
   setGraph: (g: GraphContext | null) => void;
+  /** Before a preview or an apply: answers every `about` of these layers with the pages the meaning service names (`focus`: the one focused page). */
+  resolveMeaning: (layers: Layer[], focus?: string) => Promise<Resolution>;
   /** `replace` and `stack` take layers; `remove` takes the chip text or id. Returns false when `remove` found nothing. */
   apply: (op: StackOp, payload: Layer[] | string) => boolean;
   /** Change one layer where it stands. */
@@ -176,6 +181,7 @@ export const useLayers = create<LayersState>((set, get) => {
     applied: null,
     skipped: [],
     setGraph: (graph) => set({ graph }),
+    resolveMeaning: (layers, focus) => resolveAbout(layers, get().graph?.similar ?? null, focus),
     apply: (op, payload) => {
       const s = get();
       let next: ViewStack;

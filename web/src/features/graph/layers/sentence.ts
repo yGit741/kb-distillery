@@ -170,6 +170,9 @@ function clauseLayers(clause: string): Layer[] | null {
     const of = nameOf(m[1]!);
     return [makeLayer("show", "nodes", { nodes: [{ t: "about", phrase: of }] }), makeLayer("show", "nodes", { nodes: [{ t: "name", slugs: [of] }] })];
   }
+  // meaning: only a quoted phrase, so ordinary sentences with the word "about" keep their old reading
+  m = c.match(/^(?:show )?(?:(?:nodes|pages|notes) )?about\s+["“](.+?)["”]$/i);
+  if (m) return [makeLayer("show", "nodes", { nodes: [{ t: "about", phrase: m[1]!.trim() }] })];
   const f = filterClause(c);
   return f ? [f] : null;
 }

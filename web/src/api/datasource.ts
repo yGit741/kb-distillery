@@ -48,6 +48,8 @@ export interface DataSource {
   /** The page file as stored (frontmatter and body); the OKF export copies it. */
   getPageSource(slug: string): Promise<string>;
   search(q: string, limit?: number): Promise<T.SearchResult>;
+  /** Pages close in meaning to a phrase (`q`) or to a page (`slug`); rejects with 503 when semantic search is off (local app only). */
+  searchSimilar(opts: { q?: string; slug?: string; k?: number }, signal?: AbortSignal): Promise<T.SimilarResult>;
   findPath(a: string, b: string): Promise<T.PathResult>;
 
   // pipeline, corpus, raw

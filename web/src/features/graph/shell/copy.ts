@@ -70,6 +70,18 @@ export const LINE_COPY = {
     empty: "Type to search pages, / for commands.",
     emptyShare: "Type to search pages.",
   },
+  /** Meaning search (flags graph-intent and semantic-search). */
+  meaningOff: "meaning search is off",
+  focusOneFirst: "Focus one node first",
+  /** The last row of the panel: opens the chat with the focus and the shown pages as context. */
+  askRow: "Ask about",
+  askHint: "opens the chat",
+  /** Lines of the chat draft that carry the context. */
+  chatContext: {
+    focus: "Focus",
+    shown: (n: number) => `Shown in the graph (${n})`,
+    more: (n: number) => `and ${n} more`,
+  },
   didYouMean: (name: string) => `Did you mean "${name}"?`,
   noSuchPage: (name: string) => `No page is called "${name}".`,
   explainers: {

@@ -32,12 +32,14 @@ import { useToolHost } from "../hostContext";
 import type { ColorBy } from "../style";
 import { swatchColor } from "../nodeColor";
 import { useGraphUi } from "../store";
-import { askAbout, useChatDock } from "../tools/chatDockStore";
+import { useChatDock } from "../tools/chatDockStore";
+import { chatContextDraft } from "./chatContext";
 import { useVisibleTools } from "../tools";
 import type { GLink, GNode } from "../types";
 import { Chips } from "../layers/Chips";
 import { makeLayer, newLayerId, type Layer, type ViewStack } from "../layers/model";
 import { ResolvedLine } from "../layers/ResolvedLine";
+import { needsMeaning } from "../layers/meaning";
 import { useLayers } from "../layers/store";
 import { ACTION_ITEMS, setActionItems, type MenuContext } from "../menu";
 import { NodeMenu } from "../NodeMenu";
@@ -45,6 +47,7 @@ import { exportPages } from "../export/runExport";
 import { planSentence, type Plan } from "../layers/sentenceRun";
 import { buildCommands, closestCommands, filterCommands, GROUP_ORDER, type Command, type CommandIcon } from "./commands";
 import { LINE_COPY, type LineMode } from "./copy";
+import { useMeaningHits } from "./useMeaningHits";
 import { SearchBar } from "./SearchBar";
 import { optionId, SearchPanel, type PanelRow, type PanelStatus, type ViewChoice } from "./SearchPanel";
 import { activeCard, type ViewCard } from "./corners/panelModel";
@@ -119,6 +122,9 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
   const tools = useVisibleTools();
   const calm = useFlag("calm-graph");
   const intent = useFlag("graph-intent");
+  // meaning (flags graph-intent and semantic-search): never on the share build or the embedded data
+  const semantic = useFlag("semantic-search");
+  const meaningOn = intent && semantic && !IS_SHARE && ds.kind !== "embedded";
   const kbViewOn = useFlag("kb-view") && ds.kind !== "embedded";
   const [raw, setRaw] = useState("");
   const [open, setOpen] = useState(false);
@@ -158,9 +164,10 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
       links: links ?? [],
       show: (ids) => showRef.current(ids),
       applyLegacy: (spec) => pickRef.current?.({ id: "legacy", name: "", count: "", spec }),
+      similar: meaningOn ? async ({ q, slug, k }) => (await ds.searchSimilar({ q, slug, k })).hits.map((h) => h.slug) : undefined,
     });
     return () => useLayers.getState().setGraph(null);
-  }, [intent, nodes, links]);
+  }, [intent, nodes, links, meaningOn, ds]);
 
   const text = raw.trim();
   const slash = raw.startsWith("/");
@@ -177,6 +184,11 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
   const kbQ = useApiQuery(["kb"], (d) => d.getKb(), { staleTime: Infinity, retry: false });
   const kbListQ = useApiQuery(["kb-list"], (d) => d.listKbs(), { enabled: kbViewOn, staleTime: 30_000 });
   const results = usePageResults(nodes, byId, raw, !slash && text.length > 0);
+  const meaningHits = useMeaningHits(text, meaningOn && !slash && !viewMode);
+  const meaning = useMemo(
+    () => (meaningOn ? meaningHits.flatMap((h) => (byId.get(h.slug) ? [{ node: byId.get(h.slug)!, score: h.score }] : [])) : undefined),
+    [meaningOn, meaningHits, byId],
+  );
   const kbName = kbQ.data?.name ?? "Knowledge Base";
   // flag graph-intent: the tier-1 index, built once per graph load (page entries) and joined with the small name lists
   const baseIndex = useMemo(() => (intent ? buildSearchIndex(nodes) : null), [intent, nodes]);
@@ -458,14 +470,19 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
       : {
           key: "ask",
           section: "Actions",
-          label: (
+          label: intent ? (
+            <>
+              {LINE_COPY.askRow} <span className="text-muted-foreground">"{text}"</span>
+            </>
+          ) : (
             <>
               Ask the agent: <span className="text-muted-foreground">{text}</span>
             </>
           ),
-          hint: "opens the chat",
+          hint: intent ? LINE_COPY.askHint : "opens the chat",
           lead: <MessageSquare aria-hidden className="size-4" strokeWidth={1.6} />,
-          run: done(() => useChatDock.getState().ask(text)),
+          // flag graph-intent: the focus and the shown pages go with the question
+          run: done(() => useChatDock.getState().ask(intent ? chatContextDraft(text) : text)),
         };
     if (intent && index) {
       // grouped, in a fixed order, each action row after them (./groupedRows)
@@ -479,6 +496,7 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
           views: viewsQ.data?.views ?? [],
           commands,
           commandRow,
+          meaning,
           focusNode: (id, shift) => {
             if (shift && useKb.getState().selection.size) useKb.getState().select(id);
             else onFocus(id);
@@ -537,7 +555,7 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
     if (askRow) out.push(askRow);
     return out;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [slash, viewMode, intent, index, raw, text, commands, recentQ.data, viewsQ.data, results, colorBy, onFocus, onRead, onShowMentions, record, close, shaping, canUndo, layersUndo, undoShape, live, didYou, nodes]);
+  }, [slash, viewMode, intent, index, raw, text, commands, recentQ.data, viewsQ.data, results, colorBy, onFocus, onRead, onShowMentions, record, close, shaping, canUndo, layersUndo, undoShape, live, didYou, nodes, meaning]);
 
   /** A recent step: a command runs again; anything else goes back into the box to be edited or run. */
   function runRecent(s: RecentStep) {
@@ -577,7 +595,7 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
       addToView: then((ids: string[], label: string) => useLayers.getState().apply("stack", [showLayer(ids, label)])),
       expand: then((id: string) => useLayers.getState().apply("stack", [makeLayer("show", "nodes", { nodes: [{ t: "hops", of: id, n: 1 }] }, `Neighbours of ${byId.get(id)?.title || id}`)])),
       colorSet: then((ids: string[], label: string) => useLayers.getState().apply("stack", [makeLayer("style", "nodes", { nodes: [{ t: "name", slugs: ids }] }, label, { style: { color: "type" } })])),
-      chat: then((ids: string[]) => useChatDock.getState().ask(askAbout(ids.map((id) => ({ id }))))),
+      chat: then((ids: string[]) => useChatDock.getState().ask(chatContextDraft("", ids))),
       think: then(() => useUi.getState().setCaptureOpen(true)),
       exportPages: then((ids: string[]) => void exportPages(ds, ids, { kbName, isShare: IS_SHARE, say: useShellStore.getState().say })),
     };
@@ -598,23 +616,45 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
     close();
   }
   /** The edited sentence applies exactly as written. */
-  function applyWritten(layers: Layer[]) {
+  async function applyWritten(written: Layer[]) {
     const p = useLayers.getState().preview;
+    let layers = written;
+    if (needsMeaning(layers)) {
+      const r = await useLayers.getState().resolveMeaning(layers, focusOne());
+      if (!r.ok) return useShellStore.getState().setShapeError(LINE_COPY.focusOneFirst);
+      layers = r.layers;
+    }
     useLayers.getState().cancelPreview();
     setEditingLine(false);
     useLayers.getState().apply(p?.op ?? "replace", layers);
     record(layers.map((l) => l.text).join(" · "), { stack: useLayers.getState().stack, lines: layers.map((l) => l.text) });
     close();
   }
+  /** The one focused page; none when nothing or several are focused. */
+  function focusOne(): string | undefined {
+    const sel = useKb.getState().selection;
+    return sel.size === 1 ? [...sel][0] : undefined;
+  }
   function runSentence(typed: string, op: "replace" | "stack", chosen: Record<string, string>) {
-    const focus = [...useKb.getState().selection][0];
+    const focus = focusOne();
     const plan = planSentence(typed, nodes, { focus, chosen });
     const say = useShellStore.getState().say;
     if (plan.kind === "ready") {
       setDidYou(null);
       // first Enter: show it on the canvas without applying; the second Enter (the same row) commits
-      previewKey.current = `${op}:${typed}`;
-      useLayers.getState().setPreview(op, plan.layers);
+      const key = `${op}:${typed}`;
+      previewKey.current = key;
+      if (!needsMeaning(plan.layers)) useLayers.getState().setPreview(op, plan.layers);
+      else
+        // `about` asks the meaning service first; a sentence typed over meanwhile drops this answer
+        void useLayers
+          .getState()
+          .resolveMeaning(plan.layers, focus)
+          .then((r) => {
+            if (previewKey.current !== key || !intentRef.current || (openRef.current && parseMode(rawNow.current).text !== typed)) return;
+            if (!r.ok) useShellStore.getState().setShapeError(LINE_COPY.focusOneFirst);
+            else useLayers.getState().setPreview(op, r.layers);
+          });
     } else if (plan.kind === "ask") setDidYou({ text: typed, op, pick: plan.pick, chosen: plan.chosen });
     else if (plan.kind === "missing") say(LINE_COPY.noSuchPage(plan.name));
     else {

@@ -229,15 +229,18 @@ describe("commands", () => {
 describe("free text", () => {
   it("'Ask the agent' hands the text to the chat dock (spark-chat off; on, the left panel takes it: SparkPanel.test.tsx)", async () => {
     const { withFlag } = await import("@/flags/testing");
-    await withFlag("spark-chat", false, async () => {
-      const { ds } = setup();
-      await userEvent.type(box(), "why do big nets work");
-      const row = await screen.findByRole("option", { name: /ask the agent: why do big nets work/i });
-      await userEvent.click(row);
-      expect(useChatDock.getState().open).toBe(true);
-      expect(useChatDock.getState().question).toBe("why do big nets work");
-      expect(ds.addRecent).not.toHaveBeenCalled();
-    });
+    await withFlag("spark-chat", false, () =>
+      // graph-intent turns this row into "Ask about" with context: GraphShell.meaning.test.tsx
+      withFlag("graph-intent", false, async () => {
+        const { ds } = setup();
+        await userEvent.type(box(), "why do big nets work");
+        const row = await screen.findByRole("option", { name: /ask the agent: why do big nets work/i });
+        await userEvent.click(row);
+        expect(useChatDock.getState().open).toBe(true);
+        expect(useChatDock.getState().question).toBe("why do big nets work");
+        expect(ds.addRecent).not.toHaveBeenCalled();
+      }),
+    );
   });
 
   it("a command ('/') never offers the ask row", async () => {
