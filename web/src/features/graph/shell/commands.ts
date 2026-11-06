@@ -4,6 +4,7 @@ import { formatKbs } from "@/lib/kbSelection";
 import { flag } from "@/flags";
 import { useUi } from "@/app/ui-store";
 import { useGraphUi } from "../store";
+import { LINE_COPY } from "./copy";
 import type { ToolHost } from "../hostContext";
 import type { GraphTool } from "../tools";
 
@@ -13,7 +14,7 @@ export type CommandGroup = "View" | "Panels" | "Knowledge bases" | "Go to";
 export const GROUP_ORDER: readonly CommandGroup[] = ["View", "Panels", "Knowledge bases", "Go to"];
 
 /** The name of an icon in the panel's small icon set (SearchPanel maps it to a drawing). */
-export type CommandIcon = "fit" | "zoom-in" | "zoom-out" | "reheat" | "refresh" | "labels" | "filters" | "layout" | "help" | "tool" | "kb" | "go" | "think";
+export type CommandIcon = "fit" | "zoom-in" | "zoom-out" | "reheat" | "refresh" | "labels" | "filters" | "layout" | "help" | "tool" | "kb" | "go" | "think" | "favorite";
 
 export interface Command {
   id: string;
@@ -22,6 +23,8 @@ export interface Command {
   icon: CommandIcon;
   /** A short quiet hint at the right (a shortcut, or what it opens). */
   hint?: string;
+  /** A command that only fills the search line with this text (and keeps it open) instead of running at once. */
+  fill?: string;
   /** For tools: the registered tool's own icon. */
   toolIcon?: GraphTool["icon"];
   /** Extra words the filter matches. */
@@ -50,11 +53,39 @@ export interface CommandCtx {
   kbs: readonly KbChoice[];
   /** The share build has no chat, no think capture and no system screens. */
   share: boolean;
+  /** Flag graph-intent: lists `/views` and `/favorites`, the two commands that open a list in the line. */
+  intent?: boolean;
   /** Flag calm-graph: the switcher's views (the same cards as the pinned panel), each a `/view` command. */
   views?: readonly { id: string; name: string; run: () => void }[];
 }
 
 const openPanel = (id: string) => useGraphUi.setState({ railOpen: false, flyout: id });
+
+/** The "Go to" part of the list (screens, quick thought, system tabs), shared by the graph's line and the overlay on other screens. */
+export function goCommands(host: ToolHost, share: boolean): Command[] {
+  const out: Command[] = [];
+  // the palette's "Go to" list, minus the screen we are on and the ones folded into a System tab
+  for (const r of ROUTE_DEFS) {
+    if (r.id === "graph" || r.movedTo || !routeOffered(r)) continue;
+    out.push({ id: `go:${r.id}`, label: r.label, group: "Go to", icon: "go", hint: r.blurb, run: () => host.go(r.path) });
+  }
+  if (!share) {
+    if (flag("screen.think")) {
+      out.push({ id: "think-capture", label: "Quick thought", group: "Go to", icon: "think", hint: "to the think inbox", run: () => useUi.getState().setCaptureOpen(true) });
+    }
+    for (const t of SYSTEM_TABS) {
+      const name = t === "kbs" ? "Knowledge bases" : t[0]!.toUpperCase() + t.slice(1);
+      out.push({
+        id: `system:${t}`,
+        label: `System: ${name}`,
+        group: "Go to",
+        icon: "go",
+        run: () => host.go("/system", t === "overview" ? undefined : { tab: t }),
+      });
+    }
+  }
+  return out;
+}
 
 /** Everything the toolbar and the command palette offer for the graph, as one flat list (order = display order). */
 export function buildCommands(c: CommandCtx): Command[] {
@@ -73,6 +104,12 @@ export function buildCommands(c: CommandCtx): Command[] {
       keywords: "rail importance stories",
       run: () => useGraphUi.setState((s) => ({ railOpen: !s.railOpen, flyout: null })),
     },
+    ...(c.intent
+      ? [
+          { id: "views", label: LINE_COPY.views.command.label, group: "View", icon: "labels", hint: LINE_COPY.views.command.hint, keywords: "saved pinned recent ready gallery", fill: "/views ", run: () => {} } satisfies Command,
+          { id: "favorites", label: LINE_COPY.favoritesCommand.label, group: "View", icon: "favorite", hint: LINE_COPY.favoritesCommand.hint, keywords: "starred marked pages", fill: "/favorites ", run: () => {} } satisfies Command,
+        ]
+      : []),
     { id: "filters", label: "Filters", group: "Panels", icon: "filters", keywords: "types depth rules", run: () => openPanel("filter") },
     { id: "layout", label: "Layout and sync", group: "Panels", icon: "layout", keywords: "force live sync", run: () => openPanel("layout") },
     ...c.tools.map<Command>((t) => ({
@@ -98,26 +135,7 @@ export function buildCommands(c: CommandCtx): Command[] {
       run: () => c.setParams?.({ kbs: formatKbs([k.id], c.kbs.find((x) => x.active)?.id ?? null) }),
     });
   }
-  // the palette's "Go to" list, minus the screen we are on and the ones folded into a System tab
-  for (const r of ROUTE_DEFS) {
-    if (r.id === "graph" || r.movedTo || !routeOffered(r)) continue;
-    out.push({ id: `go:${r.id}`, label: r.label, group: "Go to", icon: "go", hint: r.blurb, run: () => c.host.go(r.path) });
-  }
-  if (!c.share) {
-    if (flag("screen.think")) {
-      out.push({ id: "think-capture", label: "Quick thought", group: "Go to", icon: "think", hint: "to the think inbox", run: () => useUi.getState().setCaptureOpen(true) });
-    }
-    for (const t of SYSTEM_TABS) {
-      const name = t === "kbs" ? "Knowledge bases" : t[0]!.toUpperCase() + t.slice(1);
-      out.push({
-        id: `system:${t}`,
-        label: `System: ${name}`,
-        group: "Go to",
-        icon: "go",
-        run: () => c.host.go("/system", t === "overview" ? undefined : { tab: t }),
-      });
-    }
-  }
+  out.push(...goCommands(c.host, c.share));
   return out;
 }
 

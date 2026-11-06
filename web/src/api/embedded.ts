@@ -40,6 +40,7 @@ export function createEmbeddedDataSource(blob: ShareBlob | undefined = globalThi
     layersFromText: absent,
     getRelationProposals: absent,
     listViews: absent,
+    listReadyViews: absent,
     listRecent: absent,
     addRecent: absent,
     listPages: absent,

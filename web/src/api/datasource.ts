@@ -43,6 +43,8 @@ export interface DataSource {
 
   // pinned views (meta/views.json) and the recent steps of the graph search panel (local, never committed)
   listViews(): Promise<T.ViewList>;
+  /** The ready views the kb's kit ships: each layer is a line of the graph's query language, parsed by the frontend. */
+  listReadyViews(): Promise<T.ReadyViewList>;
   listRecent(): Promise<T.RecentList>;
   addRecent(text: string, spec?: Record<string, unknown>): Promise<T.RecentList>;
 

@@ -12,6 +12,8 @@ from __future__ import annotations
 
 import os
 
+from kb_distillery.config import kb as kbconfig
+from kb_distillery.config import kit as kits
 from kb_distillery.config.paths import vault_root
 from kb_distillery.ops import view as ops_view
 from kb_distillery.services import kbview
@@ -65,6 +67,17 @@ def unpin_view(view_id, kb=""):
 
 def rename_view(view_id, name, kb=""):
     return ops_view.rename(view_id, name, root=_writable_root(kb))
+
+
+# ---------- ready views (shipped by the kit)
+
+def ready_views():
+    """The ready views of the served kb's kit (and the kits it extends); none when the kit cannot be read."""
+    cfg = kbconfig.current()
+    try:
+        return {"views": kits.views((cfg.kit if cfg else "") or "base")}
+    except kits.KitError:
+        return {"views": []}
 
 
 # ---------- recent steps (local, never committed) ----------
