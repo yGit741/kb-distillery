@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 import { useFlag } from "@/flags/useFlag";
 import { useTheme } from "@/theme/theme";
 import { readCanvasColors, withAlpha, type CanvasColors } from "./canvasTheme";
+import { useLayers } from "./layers/store";
 import { computeFocus, fadedLinkOpacity, fadedNodeOpacity, focusKey, nodeOpacity, type Focus } from "./focus";
 import { ForceGraph, type Anchor, type ForceGraphHandle } from "./ForceGraph";
 import { buildGraphData, edgeWeight, edgeWeights, largestComponent, sameSet, type NeighborMap } from "./graphData";
@@ -191,8 +192,10 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
     return new Set(citeSlugs.filter((id) => visible.has(id)));
   }, [sparkChat, citeSlugs, visible, replay]);
   const fitSeen = useRef(citeFitTick); // the tick a remounted canvas starts at is not a request
-  const live = useRef({ ui, theme, selection, byId, neighbors, visible, cited, replay, onOpenReader, onOpenMenu, onBackgroundContext, onOpenPile });
-  live.current = { ui, theme, selection, byId, neighbors, visible, cited, replay, onOpenReader, onOpenMenu, onBackgroundContext, onOpenPile };
+  // a `>` sentence waiting for its second Enter (flag graph-intent): the pages it would keep light up, the rest dims
+  const previewIds = useLayers((st) => st.preview?.ids ?? null);
+  const live = useRef({ ui, theme, selection, byId, neighbors, visible, cited, previewIds, replay, onOpenReader, onOpenMenu, onBackgroundContext, onOpenPile });
+  live.current = { ui, theme, selection, byId, neighbors, visible, cited, previewIds, replay, onOpenReader, onOpenMenu, onBackgroundContext, onOpenPile };
 
   rs.current.imp = imp;
   const names = useMemo(() => areaNames(model.nodes, model.kbs), [model]);
@@ -256,7 +259,7 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
   }, []);
 
   const recompute = useCallback(() => {
-    const { ui: u, selection: sel, byId: ids, neighbors: nb, visible: vis, cited: cite } = live.current;
+    const { ui: u, selection: sel, byId: ids, neighbors: nb, visible: vis, cited: cite, previewIds: pre } = live.current;
     const gone = intent.current?.pointed();
     if (gone && !vis.has(gone)) {   // filtered out or reloaded: nothing may act on it any more
       intent.current?.reset();
@@ -275,7 +278,10 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
     const spot = u.spotlight;
     const spotIds = spot ? new Set([...vis].filter((id) => spot.has(ids.get(id)?.type ?? ""))) : null;
     const base = hops ? { core: new Set(sel), lit: new Set(hops.keys()) } : computeFocus(sel, hover, nb, u.highlight);
-    const next: Focus | null = spotIds
+    const preIds = pre ? new Set([...pre].filter((id) => vis.has(id))) : null;
+    const next: Focus | null = preIds
+      ? { core: preIds, lit: preIds, dim: 0.15 }
+      : spotIds
       ? { core: spotIds, lit: spotIds, dim: 0.15 }
       : cite.size
         ? {
@@ -411,7 +417,7 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
   useEffect(() => {
     rs.current.colors = readCanvasColors();
     recompute();
-  }, [recompute, theme, visible, selection, byId, neighbors, ui.highlight, ui.lab, ui.typeLabels, ui.spotlight, ui.colorBy, ui.linkOpacity, radiusOpts, layered, imp, cited, calmOn]);
+  }, [recompute, theme, visible, selection, byId, neighbors, ui.highlight, ui.lab, ui.typeLabels, ui.spotlight, ui.colorBy, ui.linkOpacity, radiusOpts, layered, imp, cited, previewIds, calmOn]);
 
   // a changed set of pages is framed after a moment and framed again once the layout settles: at the moment the
   // pages may still be drifting from their old places, and a single early fit left a view (Thesis) in a corner.

@@ -8,6 +8,8 @@ export interface PageResult {
   node: GNode;
   snippet?: string;
   related?: boolean;
+  /** A title match the server also found in the text or by meaning (one small mark in the row). */
+  also?: ("text" | "related")[];
 }
 
 /**
@@ -36,7 +38,13 @@ export function usePageResults(nodes: readonly GNode[], byId: ReadonlyMap<string
     [text.data, byId, pages, texts, enabled, debounced, q],
   );
   return useMemo(() => {
-    const out: PageResult[] = pages.map((node) => ({ node }));
+    const sure = debounced === q;
+    const inText = new Set(sure ? (text.data?.hits ?? []).map((h) => h.id) : []);
+    const inRelated = new Set(sure ? (text.data?.related ?? []).map((h) => h.id) : []);
+    const out: PageResult[] = pages.map((node) => {
+      const also = [...(inText.has(node.id) ? (["text"] as const) : []), ...(inRelated.has(node.id) ? (["related"] as const) : [])];
+      return also.length ? { node, also } : { node };
+    });
     for (const h of texts) {
       const node = byId.get(h.id);
       if (node) out.push({ node, snippet: h.snippet });
@@ -46,5 +54,5 @@ export function usePageResults(nodes: readonly GNode[], byId: ReadonlyMap<string
       if (node) out.push({ node, snippet: h.snippet, related: true });
     }
     return out;
-  }, [pages, texts, related, byId]);
+  }, [pages, texts, related, byId, text.data, debounced, q]);
 }
