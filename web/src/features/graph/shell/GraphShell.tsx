@@ -427,9 +427,9 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
         close();
       };
       for (const s of [...(recentQ.data?.recent ?? [])].reverse()) {
-        const saved = s.spec.stack as ViewStack | undefined;
-        if (!saved || !Array.isArray(saved.layers) || !saved.layers.length || !fresh(s.text)) continue;
-        out.push({ key: `views-recent:${s.at}:${s.text}`, section: VC.recent, label: s.text, lead: <History aria-hidden className="size-4" strokeWidth={1.6} />, run: (shift) => apply(s.text, saved.layers, shift) });
+        const savedLayers = specLayers({ v: 2, layers: (s.spec.stack as ViewStack | undefined)?.layers });
+        if (!savedLayers || !fresh(s.text)) continue;
+        out.push({ key: `views-recent:${s.at}:${s.text}`, section: VC.recent, label: s.text, lead: <History aria-hidden className="size-4" strokeWidth={1.6} />, run: (shift) => apply(s.text, savedLayers, shift) });
       }
       for (const v of viewsQ.data?.views ?? []) {
         if (!fresh(v.name)) continue;
@@ -444,7 +444,7 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
         });
       }
       for (const r of ready) {
-        if (!fresh(r.name)) continue;
+        if (!hit(r.name)) continue; // ready views are their own section: a recent step of the same name does not hide them
         out.push({
           key: `views-ready:${r.id}`,
           section: VC.ready,
