@@ -132,12 +132,12 @@ describe("grouped search, graph-intent on", () => {
         "Show onlythis page",
         "Readbeside the graph",
         "Expandadd its neighbours",
-        "FavoriteSoon",
+        "Favoritekeep it close",
         "Chatask about it",
         "Thinkquick note",
         "ExportOKF bundle",
       ]);
-      expect(items.filter((b) => (b as HTMLButtonElement).disabled).map((b) => b.textContent)).toEqual(["FavoriteSoon"]);
+      expect(items.filter((b) => (b as HTMLButtonElement).disabled).map((b) => b.textContent)).toEqual([]);
       await userEvent.keyboard("{Escape}");
       expect(screen.queryByRole("menu")).not.toBeInTheDocument();
       await userEvent.keyboard("{ArrowRight}");
