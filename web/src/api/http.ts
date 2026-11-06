@@ -103,6 +103,7 @@ export function createHttpDataSource(fetchImpl: Fetch = (...a) => fetch(...a), b
       ),
 
     listViews: () => run(() => client.GET("/api/views"), "/api/views"),
+    listReadyViews: () => run(() => client.GET("/api/views/ready"), "/api/views/ready"),
     listRecent: () => run(() => client.GET("/api/recent"), "/api/recent"),
     addRecent: (text, spec) => run(() => client.POST("/api/recent", { body: { text, spec: spec ?? {} } }), "/api/recent"),
 

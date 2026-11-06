@@ -5,6 +5,8 @@ import {
   CornerDownRight,
   Feather,
   History,
+  Layers,
+  LayoutGrid,
   ListFilter,
   Maximize,
   MessageSquare,
@@ -13,6 +15,7 @@ import {
   RefreshCw,
   Search,
   SlidersHorizontal,
+  Star,
   Undo2,
   Wand2,
   Wind,
@@ -38,6 +41,7 @@ import type { GLink, GNode } from "../types";
 import { Chips } from "../layers/Chips";
 import { makeLayer, newLayerId, type Layer, type ViewStack } from "../layers/model";
 import { ResolvedLine } from "../layers/ResolvedLine";
+import { applyLayers, readyCard, specLayers, stackLines, type ReadyCard } from "../layers/readyViews";
 import { useLayers } from "../layers/store";
 import { ACTION_ITEMS, setActionItems, type MenuContext } from "../menu";
 import { NodeMenu } from "../NodeMenu";
@@ -48,6 +52,7 @@ import { LINE_COPY, type LineMode } from "./copy";
 import { SearchBar } from "./SearchBar";
 import { optionId, SearchPanel, type PanelRow, type PanelStatus, type ViewChoice } from "./SearchPanel";
 import { activeCard, type ViewCard } from "./corners/panelModel";
+import { useCorners } from "./corners/cornersStore";
 import { marker, pillText, sameMarker } from "./shape";
 import { looksLikeShape, parseMode, requestShape, useShellStore } from "./shellStore";
 import { useShape } from "./useShape";
@@ -71,6 +76,7 @@ const ICONS: Record<CommandIcon, ReactNode> = {
   kb: <ArrowRightLeft aria-hidden className="size-4" strokeWidth={1.6} />,
   go: <CornerDownRight aria-hidden className="size-4" strokeWidth={1.6} />,
   think: <Feather aria-hidden className="size-4" strokeWidth={1.6} />,
+  favorite: <Star aria-hidden className="size-4" strokeWidth={1.6} />,
 };
 
 const NOTICE_MS = 3200;
@@ -179,6 +185,9 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
   const live = ds.kind !== "embedded";
   const recentQ = useApiQuery(["recent"], (d) => d.listRecent(), { enabled: live, retry: false, staleTime: 5_000 });
   const viewsQ = useApiQuery(["views"], (d) => d.listViews(), { enabled: live, retry: false, staleTime: 5_000 });
+  // flag graph-intent: the kit's ready views (lines of the query language; each is read here, never by the server)
+  const readyQ = useApiQuery(["views", "ready"], (d) => d.listReadyViews(), { enabled: live && intent && !IS_SHARE, retry: false, staleTime: 60_000 });
+  const ready = useMemo<ReadyCard[]>(() => (readyQ.data?.views ?? []).map(readyCard), [readyQ.data]);
   const kbQ = useApiQuery(["kb"], (d) => d.getKb(), { staleTime: Infinity, retry: false });
   const kbListQ = useApiQuery(["kb-list"], (d) => d.listKbs(), { enabled: kbViewOn, staleTime: 30_000 });
   const results = usePageResults(nodes, byId, raw, !slash && text.length > 0);
@@ -240,9 +249,10 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
         setParams,
         kbs: kbViewOn ? (kbListQ.data?.kbs ?? []).map((k) => ({ id: k.id, name: k.name, active: k.active, error: k.error })) : [],
         share: IS_SHARE,
+        intent,
         views: viewChoices,
       }),
-    [onFit, onZoom, onReheat, onRefresh, tools, host, setParams, kbViewOn, kbListQ.data, viewChoices],
+    [onFit, onZoom, onReheat, onRefresh, tools, host, setParams, kbViewOn, kbListQ.data, viewChoices, intent],
   );
 
   const index = useMemo(
@@ -346,10 +356,13 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
       label: c.label,
       hint: c.hint,
       lead: c.toolIcon ?? ICONS[c.icon],
-      run: done(() => {
-        c.run();
-        record(`/${c.label}`, { command: c.id });
-      }),
+      // a command that opens a list in the line (`/views`, `/favorites`) fills the line and keeps it open
+      run: c.fill
+        ? () => focusBar(c.fill)
+        : done(() => {
+            c.run();
+            record(`/${c.label}`, { command: c.id });
+          }),
     });
 
     if (viewMode) {
@@ -387,6 +400,70 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
           }
           if (useLayers.getState().preview && previewKey.current === `${parsed.op ?? "replace"}:${parsed.text}`) return commitPreview(parsed.text);
           runSentence(parsed.text, parsed.op ?? "replace", {});
+        },
+      });
+      return out;
+    }
+
+    if (slash && intent && /^views(\s|$)/i.test(raw.slice(1))) {
+      // /views [words]: recent, then pinned, then the kit's ready views, each narrowed by the words; Enter replaces the
+      // view, Shift+Enter adds to it. The last row is always the gallery.
+      const words = raw.slice(1).trim().replace(/^\S+\s*/, "").toLowerCase().split(/\s+/).filter(Boolean);
+      const hit = (name: string) => words.every((w) => name.toLowerCase().includes(w));
+      const seen = new Set<string>();
+      const fresh = (name: string) => {
+        const k = name.trim().toLowerCase();
+        if (!k || seen.has(k) || !hit(name)) return false;
+        seen.add(k);
+        return true;
+      };
+      const VC = LINE_COPY.views;
+      const apply = (name: string, layers: readonly Layer[], shift: boolean) => {
+        const op = shift ? "stack" : "replace";
+        if (applyLayers(op, layers)) {
+          record(name, { stack: useLayers.getState().stack, lines: stackLines(layers) });
+          useShellStore.getState().say(shift ? VC.added(name) : VC.applied(name));
+        }
+        close();
+      };
+      for (const s of [...(recentQ.data?.recent ?? [])].reverse()) {
+        const savedLayers = specLayers({ v: 2, layers: (s.spec.stack as ViewStack | undefined)?.layers });
+        if (!savedLayers || !fresh(s.text)) continue;
+        out.push({ key: `views-recent:${s.at}:${s.text}`, section: VC.recent, label: s.text, lead: <History aria-hidden className="size-4" strokeWidth={1.6} />, run: (shift) => apply(s.text, savedLayers, shift) });
+      }
+      for (const v of viewsQ.data?.views ?? []) {
+        if (!fresh(v.name)) continue;
+        const layers = specLayers(v.spec);
+        out.push({
+          key: `views-pinned:${v.id}`,
+          section: VC.pinned,
+          label: v.name,
+          lead: <Pin aria-hidden className="size-4" strokeWidth={1.6} />,
+          // a pin from before layer stacks (V1) opens through the corner's own path, as one legacy layer
+          run: (shift) => (layers ? apply(v.name, layers, shift) : done(() => runView(v))()),
+        });
+      }
+      for (const r of ready) {
+        if (!hit(r.name)) continue; // ready views are their own section: a recent step of the same name does not hide them
+        out.push({
+          key: `views-ready:${r.id}`,
+          section: VC.ready,
+          label: r.name,
+          hint: r.layers ? r.description : VC.cannotRun,
+          lead: <Layers aria-hidden className="size-4" strokeWidth={1.6} />,
+          run: (shift) => (r.layers ? apply(r.name, r.layers, shift) : useShellStore.getState().say(VC.cannotRunSay(r.name))),
+        });
+      }
+      out.push({
+        key: "views-gallery",
+        section: LINE_COPY.groups.views,
+        label: VC.gallery,
+        hint: VC.galleryHint,
+        lead: <LayoutGrid aria-hidden className="size-4" strokeWidth={1.6} />,
+        // q13: replace with the gallery window; until then it opens the pin corner's list of views
+        run: () => {
+          if (!useCorners.getState().has("pins")) useCorners.getState().toggle("pins");
+          close();
         },
       });
       return out;
@@ -566,7 +643,7 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
     if (askRow) out.push(askRow);
     return out;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [slash, viewMode, intent, index, raw, text, commands, recentQ.data, viewsQ.data, results, colorBy, onFocus, onRead, onShowMentions, record, close, shaping, canUndo, layersUndo, undoShape, live, didYou, nodes, favs, byId]);
+  }, [slash, viewMode, intent, index, raw, text, commands, recentQ.data, viewsQ.data, results, colorBy, onFocus, onRead, onShowMentions, record, close, shaping, canUndo, layersUndo, undoShape, live, didYou, nodes, favs, byId, ready, focusBar]);
 
   /** A recent step: a command runs again; anything else goes back into the box to be edited or run. */
   function runRecent(s: RecentStep) {

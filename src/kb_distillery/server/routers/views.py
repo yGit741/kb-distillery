@@ -6,8 +6,8 @@ Writes go through `kb_distillery.ops.view`, the same functions as `distill ops v
 from fastapi import APIRouter, Query
 from fastapi.responses import JSONResponse
 
-from kb_distillery.server.models.views import (RecentAppendRequest, RecentList, ViewList, ViewPinRequest,
-                                               ViewRenameRequest, ViewStep)
+from kb_distillery.server.models.views import (ReadyViewList, RecentAppendRequest, RecentList, ViewList,
+                                               ViewPinRequest, ViewRenameRequest, ViewStep)
 from kb_distillery.services import views as svc
 from kb_distillery.vault.views import ViewsError
 
@@ -26,6 +26,11 @@ def list_views(kb: str = KB):
         return svc.list_views(kb)
     except ViewsError as e:
         return _error(e)
+
+
+@router.get("/api/views/ready", response_model=ReadyViewList, summary="Ready views from the kb's kit")
+def ready_views():
+    return svc.ready_views()
 
 
 @router.post("/api/views", response_model=ViewStep, summary="Pin a view (one knowledge step)")

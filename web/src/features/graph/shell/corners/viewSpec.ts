@@ -1,4 +1,8 @@
+import { flag } from "@/flags";
 import { storyById, storyKnown } from "../../lab/views";
+import { describe, fromViewSpecV1, type Layer, type ViewStack } from "../../layers/model";
+import { applyLayers, specLayers } from "../../layers/readyViews";
+import { useLayers } from "../../layers/store";
 import type { QuickFilters } from "../../quickFilters";
 import { useGraphUi } from "../../store";
 import type { ColorBy, SizeBy } from "../../style";
@@ -21,9 +25,24 @@ export interface ViewSpecV1 {
   pages?: string[];
 }
 
-type Ui = ReturnType<typeof useGraphUi.getState>;
+/** What a pinned view stores with flag graph-intent: the layer stack as it is, and its plain words. */
+export interface ViewSpecV2 {
+  v: 2;
+  layers: Layer[];
+  text: string;
+}
 
-export function captureSpec(ui: Pick<Ui, "story" | "colorBy" | "sizeBy" | "shownTypes" | "shownDepths" | "hiddenKeys" | "quick" | "view">): ViewSpecV1 {
+type Ui = ReturnType<typeof useGraphUi.getState>;
+type CaptureUi = Pick<Ui, "story" | "colorBy" | "sizeBy" | "shownTypes" | "shownDepths" | "hiddenKeys" | "quick" | "view">;
+
+/**
+ * The spec to pin. With a layer stack that has layers (flag graph-intent) it is the stack, `{ v: 2, layers, text }`;
+ * otherwise the knobs as before (V1), so a view set by hand still pins.
+ */
+export function captureSpec(ui: CaptureUi): ViewSpecV1;
+export function captureSpec(ui: CaptureUi, stack: ViewStack | undefined): ViewSpecV1 | ViewSpecV2;
+export function captureSpec(ui: CaptureUi, stack?: ViewStack): ViewSpecV1 | ViewSpecV2 {
+  if (stack?.layers.length) return { v: 2, layers: stack.layers, text: stack.layers.map(describe).join(" · ") };
   const pages = ui.view ? [...ui.view.hits].slice(0, 2000) : [];
   return {
     v: 1,
@@ -51,7 +70,23 @@ const isArr = (v: unknown): v is string[] => Array.isArray(v) && v.every((x) => 
  * left alone, so a spec written by another part of the app applies as far as it is understood.
  * Returns false when nothing in it was recognised (the row then says so instead of doing nothing silently).
  */
-export function applySpec(spec: Record<string, unknown>, deps: ApplyDeps): boolean {
+export function applySpec(spec: Record<string, unknown>, deps: ApplyDeps, pin?: { name: string }): boolean {
+  // flag graph-intent: a pinned view is a layer stack. A v2 spec applies as layers (replacing the view); a V1 spec as one
+  // "legacy" layer named like the pin, drawn by `applySpecV1` through the layer store.
+  if (flag("graph-intent")) {
+    const layers = specLayers(spec);
+    if (layers) return applyLayers("replace", layers);
+    if (pin && spec.v !== 2 && recognisedV1(spec) && useLayers.getState().graph) return applyLayers("replace", fromViewSpecV1(spec as unknown as ViewSpecV1, pin.name).layers);
+  }
+  return applySpecV1(spec, deps);
+}
+
+const V1_KEYS = ["story", "types", "depths", "colorBy", "sizeBy", "hiddenKeys", "quick", "pages"];
+/** Whether a spec holds anything the V1 restore understands. */
+export const recognisedV1 = (spec: Record<string, unknown>): boolean => V1_KEYS.some((k) => k in spec);
+
+/** Apply a V1 spec to the knobs and pages directly (no layer stack). */
+export function applySpecV1(spec: Record<string, unknown>, deps: ApplyDeps): boolean {
   let did = false;
   const story = typeof spec.story === "string" && spec.story && storyKnown(spec.story) ? spec.story : "";
   if (story) {
