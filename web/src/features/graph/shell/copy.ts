@@ -48,6 +48,15 @@ export const LINE_COPY = {
   },
   /** A `>` sentence the rules could not read goes to the older shape path; this says so. */
   sentenceFallback: "Not a sentence I can read here yet, so I asked the graph to shape it.",
+  /** The quiet row under the input while a sentence is previewed (flag graph-intent). */
+  preview: {
+    count: (n: number) => (n === 1 ? "1 node" : `${n} nodes`),
+    hint: "Enter applies · Esc cancels · Tab edits",
+    edit: "Edit the resolved sentence",
+    editLabel: "Resolved sentence",
+    editHint: "One line per layer. Enter applies exactly what is written.",
+    parseError: (line: number, reason: string) => `Line ${line}: ${reason}`,
+  },
   didYouMean: (name: string) => `Did you mean "${name}"?`,
   noSuchPage: (name: string) => `No page is called "${name}".`,
   explainers: {

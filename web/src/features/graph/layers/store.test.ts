@@ -13,7 +13,7 @@ const applyLegacy = vi.fn();
 beforeEach(() => {
   shown.mockClear();
   applyLegacy.mockClear();
-  useLayers.setState({ stack: EMPTY_STACK, history: [], future: [], applied: null, skipped: [], graph: { nodes: sampleNodes, links: sampleLinks, show: shown, applyLegacy } });
+  useLayers.setState({ stack: EMPTY_STACK, history: [], future: [], applied: null, skipped: [], preview: null, graph: { nodes: sampleNodes, links: sampleLinks, show: shown, applyLegacy } });
   useGraphUi.setState({ ...DEFAULT_PREFS, view: null, hiddenKeys: new Set(), hiddenLinkKinds: new Set(), shownTypes: undefined });
   useKb.getState().clearSelection();
   useShellStore.setState({ shape: null, undo: null });
@@ -136,5 +136,42 @@ describe("layer store", () => {
     useLayers.getState().apply("replace", [makeLayer("show", "nodes", {}, "Orphans", { legacy: spec as never })]);
     expect(applyLegacy).toHaveBeenCalledWith(spec);
     expect(shown).not.toHaveBeenCalled();
+  });
+});
+
+describe("preview", () => {
+  it("setPreview leaves the stack alone and cancel gives back a tint", () => {
+    const style = makeLayer("style", "nodes", {}, "colour by depth", { style: { color: "depth" } });
+    expect(useLayers.getState().setPreview("stack", [style])).toBe(true);
+    const p = useLayers.getState().preview!;
+    expect(p.lines).toEqual(["style nodes color by depth"]);
+    expect(p.ids).toBeNull();
+    expect(useGraphUi.getState().colorBy).toBe("depth");
+    expect(useLayers.getState().stack.layers).toHaveLength(0);
+    useLayers.getState().cancelPreview();
+    expect(useGraphUi.getState().colorBy).toBe(DEFAULT_PREFS.colorBy);
+    expect(useLayers.getState().preview).toBeNull();
+  });
+
+  it("commitPreview applies once, as one undo step", () => {
+    useLayers.getState().setPreview("replace", [papers()]);
+    expect(useLayers.getState().preview!.count).toBe(2);
+    expect(useLayers.getState().commitPreview()).toBe(true);
+    expect(useLayers.getState().preview).toBeNull();
+    expect(useLayers.getState().stack.layers).toHaveLength(1);
+    expect(useLayers.getState().history).toHaveLength(1);
+  });
+});
+
+describe("editing a layer in place", () => {
+  it("is one undo step and the knobs follow", () => {
+    const { apply, edit, undo } = useLayers.getState();
+    apply("stack", [makeLayer("style", "nodes", {}, "colour by depth", { style: { color: "depth" } })]);
+    const l = useLayers.getState().stack.layers[0]!;
+    edit(l.id, { ...l, style: { color: "type" } });
+    expect(useLayers.getState().history).toHaveLength(2);
+    expect(useGraphUi.getState().colorBy).toBe("type");
+    undo();
+    expect(useGraphUi.getState().colorBy).toBe("depth");
   });
 });
