@@ -187,3 +187,13 @@ expires = 2027-02-01
 kind = "runtime"
 default = false
 envs = { local = true, private = false, public = false }
+
+[[flag]]
+name = "calm-graph"
+description = "Graph: opens on a calm default (concepts only, sources hidden until the Sources view), one switcher of five views in the search panel, names only on hubs and on hover, fainter edges"
+owner = "maintainer"
+created = 2026-11-05
+expires = 2027-02-01
+kind = "runtime"
+default = false
+envs = { local = true, private = false, public = false }

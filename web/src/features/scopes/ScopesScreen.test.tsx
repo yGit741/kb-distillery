@@ -1,3 +1,4 @@
+import { setTestFlagOverrides } from "@/flags";
 import { createMemoryHistory } from "@tanstack/react-router";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -46,6 +47,12 @@ function setup(over: Partial<DataSource> = {}, url = "/app/scopes") {
 }
 
 describe("ScopesScreen", () => {
+  // not about the calm default; the folded graph behind this screen opens on the old Map
+  beforeEach(() => {
+    setTestFlagOverrides({ "calm-graph": false });
+    useGraphUi.setState({ story: "map" });
+  });
+
   beforeEach(() => {
     localStorage.clear();
     useKb.setState({ selection: new Set(), scopeDraftId: null });

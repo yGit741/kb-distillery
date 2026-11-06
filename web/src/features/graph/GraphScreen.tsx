@@ -26,8 +26,10 @@ import { Inspector } from "./Inspector";
 import { computeImportance } from "./lab/importance";
 import { HoverCard } from "./lab/HoverCard";
 import { LabRail } from "./lab/LabRail";
-import { initialView } from "./defaultView";
-import { storyById, storyOffered, storyTypes } from "./lab/views";
+import { DIVE_PARAMS, initialView } from "./defaultView";
+import { CALM_STORY, DEFAULT_STORY, isCalmStory, storyById, storyKnown, storyOffered, storyTypes } from "./lab/views";
+import { viewCards, type ViewCard } from "./shell/corners/panelModel";
+import { applySpec } from "./shell/corners/viewSpec";
 import { Legend } from "./Legend";
 import { predicateFn } from "./publicPredicate";
 import { ViewsBar } from "./views/ViewsBar";
@@ -276,6 +278,15 @@ function Loaded({
   const visibleTools = useVisibleTools();
   const shell = useFlag("graph-shell");
   const headerFold = useFlag("header-fold");
+  const calm = useFlag("calm-graph");
+  // flag calm-graph, first visit: the default is set before the first render builds the canvas, so nothing moves
+  // after the first frame (an effect would apply it a frame late and relayout). A late flag is handled below.
+  const firstBare = useRef(!search.view && !search.layer && !DIVE_PARAMS.some((k) => search[k] !== undefined && search[k] !== "") && initialView(search) === undefined);
+  const calmDone = useRef(false);
+  if (calm && !calmDone.current) {
+    calmDone.current = true;
+    if (firstBare.current && useGraphUi.getState().story === DEFAULT_STORY) useGraphUi.getState().applyStory(CALM_STORY);
+  }
   const shellTop = useShellTop();
   const sparkOpen = useSparkOpen();
   const { full: fullChat, folded: foldedChat } = useFullChat();
@@ -391,6 +402,38 @@ function Loaded({
     [byId, neighbors, host],
   );
 
+  // flag calm-graph: the switcher's views are the pinned panel's cards; a pick applies like a card click
+  const calmViews = useMemo<ViewCard[] | undefined>(() => (calm ? viewCards(model.nodes, schema) : undefined), [calm, model.nodes, schema]);
+  const pickView = useCallback((card: ViewCard) => void applySpec(card.spec, { applyView, showPicked }), [applyView, showPicked]);
+
+  // flag calm-graph: a bare first visit on the untouched default opens on Concepts (sources hidden until the Sources view).
+  // It follows the flag, which may arrive after the first render; a calm view left over from a time the flag was on
+  // never applies while it is off (back to today's default). Set straight on the store: a tool panel or selection
+  // a link opened is left alone.
+  /** the calm view set aside while the flag was (not yet) on: it comes back if the flag arrives late */
+  const heldCalm = useRef("");
+  useEffect(() => {
+    const g = useGraphUi.getState();
+    if (!calm) {
+      if (isCalmStory(g.story)) {
+        heldCalm.current = g.story;
+        g.applyStory(DEFAULT_STORY);
+      }
+      return;
+    }
+    if (calmDone.current) return;
+    calmDone.current = true;
+    if (heldCalm.current) {
+      g.applyStory(heldCalm.current);
+      g.fit();
+      return;
+    }
+    if (firstBare.current && g.story === DEFAULT_STORY) {
+      g.applyStory(CALM_STORY);
+      g.fit();
+    }
+  }, [calm]);
+
   // ---- deep links: ?focus ?select ?search ?pages ?scope ?layer, applied once per distinct value
   const applied = useRef("");
   /** a snapshot's default view (`KB_EMBEDDED.home.view`) stands in for a missing `?view=` on the first pass only */
@@ -399,7 +442,7 @@ function Loaded({
     const key = JSON.stringify([search.focus, search.select, search.search, search.pages, search.scope, search.layer, search.raw, search.view]);
     if (applied.current === key) return;
     applied.current = key;
-    const view = homeViewTried.current ? (search.view && storyById(search.view) ? search.view : undefined) : initialView(search);
+    const view = homeViewTried.current ? (search.view && storyKnown(search.view) ? search.view : undefined) : initialView(search);
     homeViewTried.current = true;
     if (view && view !== lastView.current) applyView(view, true);
     if (search.raw === "1" && dsKind !== "embedded") useLayer.getState().setRaw(true);
@@ -595,6 +638,8 @@ function Loaded({
             onRefresh={onRefresh}
             setParams={host.setParams}
             top={shellTop}
+            views={calmViews}
+            onPickView={pickView}
           />
           <Corners nodes={model.nodes} visible={visible} schema={schema} shownTypes={shownTypes} stats={stats} host={host} applyView={applyView} showPicked={showPicked} />
         </div>

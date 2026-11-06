@@ -50,6 +50,8 @@ export interface CommandCtx {
   kbs: readonly KbChoice[];
   /** The share build has no chat, no think capture and no system screens. */
   share: boolean;
+  /** Flag calm-graph: the switcher's views (the same cards as the pinned panel), each a `/view` command. */
+  views?: readonly { id: string; name: string; run: () => void }[];
 }
 
 const openPanel = (id: string) => useGraphUi.setState({ railOpen: false, flyout: id });
@@ -62,6 +64,7 @@ export function buildCommands(c: CommandCtx): Command[] {
     { id: "zoom-out", label: "Zoom out", group: "View", icon: "zoom-out", hint: "-", keywords: "farther smaller", run: () => c.onZoom(1 / 1.25) },
     { id: "reheat", label: "Reheat layout", group: "View", icon: "reheat", keywords: "settle force simulation spread", run: c.onReheat },
     { id: "refresh", label: "Refresh graph", group: "View", icon: "refresh", keywords: "reload update", run: c.onRefresh },
+    ...(c.views ?? []).map<Command>((v) => ({ id: `view:${v.id}`, label: `View: ${v.name}`, group: "View", icon: "labels", keywords: "switch show", run: v.run })),
     {
       id: "labels",
       label: "Labels and views",
