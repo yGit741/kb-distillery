@@ -41,7 +41,9 @@ import type { GLink, GNode } from "../types";
 import { Chips } from "../layers/Chips";
 import { makeLayer, newLayerId, type Layer, type ViewStack } from "../layers/model";
 import { ResolvedLine } from "../layers/ResolvedLine";
-import { applyLayers, readyCard, specLayers, stackLines, type ReadyCard } from "../layers/readyViews";
+import { anchorLayers, applyLayers, isAnchored, readyCard, specLayers, stackLines, type ReadyCard } from "../layers/readyViews";
+import { Gallery } from "../views/Gallery";
+import { useGallery } from "../views/galleryStore";
 import { useLayers } from "../layers/store";
 import { ACTION_ITEMS, setActionItems, type MenuContext } from "../menu";
 import { NodeMenu } from "../NodeMenu";
@@ -52,7 +54,6 @@ import { LINE_COPY, type LineMode } from "./copy";
 import { SearchBar } from "./SearchBar";
 import { optionId, SearchPanel, type PanelRow, type PanelStatus, type ViewChoice } from "./SearchPanel";
 import { activeCard, type ViewCard } from "./corners/panelModel";
-import { useCorners } from "./corners/cornersStore";
 import { marker, pillText, sameMarker } from "./shape";
 import { looksLikeShape, parseMode, requestShape, useShellStore } from "./shellStore";
 import { useShape } from "./useShape";
@@ -451,7 +452,15 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
           label: r.name,
           hint: r.layers ? r.description : VC.cannotRun,
           lead: <Layers aria-hidden className="size-4" strokeWidth={1.6} />,
-          run: (shift) => (r.layers ? apply(r.name, r.layers, shift) : useShellStore.getState().say(VC.cannotRunSay(r.name))),
+          run: (shift) => {
+            if (!r.layers) return useShellStore.getState().say(VC.cannotRunSay(r.name));
+            // a view that needs one page takes the page in focus; with none (or several) the gallery asks for a name
+            if (!isAnchored(r.layers)) return apply(r.name, r.layers, shift);
+            const sel = [...useKb.getState().selection];
+            if (sel.length === 1) return apply(`${r.name.replace(/\u2026$/, "").trim()} ${byId.get(sel[0]!)?.title || sel[0]}`, anchorLayers(r.layers, nodes, sel[0]!), shift);
+            close();
+            useGallery.getState().show();
+          },
         });
       }
       out.push({
@@ -460,10 +469,9 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
         label: VC.gallery,
         hint: VC.galleryHint,
         lead: <LayoutGrid aria-hidden className="size-4" strokeWidth={1.6} />,
-        // q13: replace with the gallery window; until then it opens the pin corner's list of views
         run: () => {
-          if (!useCorners.getState().has("pins")) useCorners.getState().toggle("pins");
           close();
+          useGallery.getState().show();
         },
       });
       return out;
@@ -851,6 +859,16 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
           />,
           document.body,
         )}
+      {intent && (
+        <Gallery
+          nodes={nodes}
+          ready={ready}
+          pinned={viewsQ.data?.views ?? []}
+          recent={recentQ.data?.recent ?? []}
+          onRecord={(label, layers) => record(label, { stack: useLayers.getState().stack, lines: stackLines(layers) })}
+          onLegacy={(v) => runView(v as Parameters<typeof runView>[0])}
+        />
+      )}
     </div>
   );
 }
