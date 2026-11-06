@@ -94,10 +94,13 @@ describe("opening", () => {
     item.remove();
   });
 
-  it("shows the knowledge base name as the icon's tooltip", async () => {
-    setup({ getKb: async () => ({ name: "Thesis Knowledge Base", id: "thesis" }) as never });
-    const icon = await screen.findByRole("button", { name: /knowledge base: thesis knowledge base/i });
-    expect(icon).toHaveAttribute("title", "Thesis Knowledge Base");
+  it("shows the knowledge base name as the icon's tooltip (graph-intent off)", async () => {
+    const { withFlag } = await import("@/flags/testing");
+    await withFlag("graph-intent", false, async () => {
+      setup({ getKb: async () => ({ name: "Thesis Knowledge Base", id: "thesis" }) as never });
+      const icon = await screen.findByRole("button", { name: /knowledge base: thesis knowledge base/i });
+      expect(icon).toHaveAttribute("title", "Thesis Knowledge Base");
+    });
   });
 });
 
