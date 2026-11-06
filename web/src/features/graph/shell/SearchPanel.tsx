@@ -1,4 +1,4 @@
-import { CircleAlert, Ellipsis } from "lucide-react";
+import { CircleAlert, Ellipsis, Star } from "lucide-react";
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import { LINE_COPY } from "./copy";
@@ -14,6 +14,8 @@ export interface PanelRow {
   /** A quiet word at the right. */
   hint?: string;
   lead?: ReactNode;
+  /** The page is a favorite (flag graph-intent): one small line mark after the title. */
+  fav?: boolean;
   /** A small mark: the row was also found another way (flag graph-intent). */
   mark?: { text: string; title: string };
   /** What the row's action menu acts on; absent: the row has no menu. */
@@ -103,6 +105,7 @@ export function SearchPanel({ rows, idx, onHover, empty, status, views, hint, on
                 <span className="block truncate">{row.label}</span>
                 {row.detail && <span className="block truncate text-xs text-muted-foreground">{row.detail}</span>}
               </span>
+              {row.fav && <Star aria-label={LINE_COPY.favorites.mark} role="img" className="size-3.5 shrink-0 text-muted-foreground" strokeWidth={1.6} />}
               {row.mark && (
                 <span title={row.mark.title} className="shrink-0 rounded border px-1 text-[11px] leading-4 text-muted-foreground">
                   {row.mark.text}

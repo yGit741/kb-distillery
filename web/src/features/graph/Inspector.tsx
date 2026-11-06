@@ -1,4 +1,4 @@
-import { X } from "lucide-react";
+import { Star, X } from "lucide-react";
 import { useMemo } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,9 @@ import type { Layer } from "@/api/model";
 import { useFlag } from "@/flags/useFlag";
 import type { GRelation } from "./types";
 import { swatchColor } from "./nodeColor";
+import { useFavorites } from "./favorites/store";
+import { LINE_COPY } from "./shell/copy";
+import { IS_SHARE } from "@/share/env";
 
 const NB_MAX = 40;
 export const obsidianUri = (path: string) => `obsidian://open?file=${encodeURIComponent(path)}`;
@@ -49,6 +52,26 @@ function Row({ n, colorBy, onGo, children }: { n: GNode; colorBy: ColorBy; onGo:
 }
 
 /** The selected page(s): what it is, its summary, and (collapsed) its partition, connections and properties. */
+/** A quiet star beside the title: a button to toggle, or (share build, read-only) only the mark when the page is a favorite. */
+function FavoriteControl({ id }: { id: string }) {
+  const on = useFavorites((s) => s.slugs.has(id));
+  const C = LINE_COPY.favorites;
+  const icon = <Star aria-hidden className={cn("size-4", on && "text-foreground")} strokeWidth={1.6} />;
+  if (IS_SHARE) return on ? <span role="img" aria-label={C.mark} className="mt-0.5 text-muted-foreground"><Star aria-hidden className="size-4" strokeWidth={1.6} /></span> : null;
+  return (
+    <button
+      type="button"
+      aria-label={C.toggle(on)}
+      aria-pressed={on}
+      title={C.toggle(on)}
+      className="mt-0.5 grid size-5 shrink-0 place-items-center rounded text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      onClick={() => void useFavorites.getState().toggle(id)}
+    >
+      {icon}
+    </button>
+  );
+}
+
 export function Inspector(p: Props) {
   const { nodes } = p;
   if (!nodes.length) return null;
@@ -86,6 +109,7 @@ function Many({ nodes, byId: _b, colorBy, onFocus, onClear }: Props) {
 function One({ n, byId, neighbors, colorBy, revealed, pageHref, onFocus, onRead, onToggleSources, relations }: Props & { n: GNode }) {
   const host = useToolHost();
   const typed = useFlag("graph-relations") && !!relations;
+  const intent = useFlag("graph-intent");
   const groups = useMemo(() => (typed && relations ? relationGroups(n.id, relations, byId, degreeOf) : []), [typed, relations, n.id, byId]);
   const nbs = useMemo(
     () =>
@@ -114,7 +138,10 @@ function One({ n, byId, neighbors, colorBy, revealed, pageHref, onFocus, onRead,
           <span key={a}>#{a}</span>
         ))}
       </div>
-      <h2 className="text-base font-semibold leading-snug">{n.title || n.id}</h2>
+      <div className="flex items-start gap-1.5">
+        <h2 className="min-w-0 flex-1 text-base font-semibold leading-snug">{n.title || n.id}</h2>
+        {intent && <FavoriteControl id={n.id} />}
+      </div>
       <div className="flex flex-wrap gap-1.5">
         <Button size="sm" onClick={() => onRead(n.id)}>
           Read
