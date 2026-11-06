@@ -29,6 +29,8 @@ interface ShellState {
   pendingOp: ViewOp | null;
   /** The last pinned view picked in the search panel; null once handled. */
   pendingView: PinnedView | null;
+  /** A line typed in the overlay on another screen (`> make it blue`), waiting for the graph's own line to take it over; null once taken. */
+  pendingLine: string | null;
   /** A shaping request is on its way to the backend. */
   shaping: boolean;
   /** The last shape, shown as a status pill in the panel until it is undone or replaced by hand. */
@@ -40,6 +42,8 @@ interface ShellState {
   /** A quiet one-line notice under the search bar. */
   notice: { id: number; text: string } | null;
   requestShape: (text: string) => void;
+  requestLine: (text: string) => void;
+  clearLine: () => void;
   setPendingOp: (op: ViewOp | null) => void;
   requestView: (view: PinnedView) => void;
   /** Mark a request handled. */
@@ -62,12 +66,15 @@ export const useShellStore = create<ShellState>((set) => ({
   pendingShape: null,
   pendingView: null,
   pendingOp: null,
+  pendingLine: null,
   notice: null,
   shaping: false,
   shape: null,
   undo: null,
   shapeError: null,
   requestShape: (text) => set({ pendingShape: text }),
+  requestLine: (pendingLine) => set({ pendingLine }),
+  clearLine: () => set({ pendingLine: null }),
   setPendingOp: (pendingOp) => set({ pendingOp }),
   requestView: (view) => set({ pendingView: view }),
   clearPending: () => set({ pendingShape: null, pendingView: null }),

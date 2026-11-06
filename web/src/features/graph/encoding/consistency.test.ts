@@ -53,6 +53,7 @@ const SHARED_OK: Readonly<Record<string, { who: string; why: string }>> = {
   "features/graph/lab/config": { who: "features/home/samplers.ts", why: "the default importance settings" },
   // grandfathered: a Home tour drives the Full Graph's own state, and the chat dock is app-wide
   "features/graph/store": { who: "features/home/tours.ts", why: "Home tours drive the Full Graph's state" },
+  "features/graph/shell/SearchOverlay": { who: "app/", why: "the search line as a sheet on every screen" },
   "features/graph/tools/chatDockStore": { who: "app/", why: "the app-wide chat dock" },
 };
 
