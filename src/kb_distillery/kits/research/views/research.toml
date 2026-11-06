@@ -1,0 +1,19 @@
+# Ready views of the research kit, on top of the base kit's (same format: one grammar line per layer).
+
+[[view]]
+id = "open-questions"
+name = "Open questions"
+description = "Every question page."
+layers = ["show nodes type question"]
+
+[[view]]
+id = "open-problems"
+name = "Open problems"
+description = "Pages that name an open problem in their area."
+layers = ["show nodes having edge open-problem-in"]
+
+[[view]]
+id = "people"
+name = "People"
+description = "The authors and thinkers the knowledge base mentions."
+layers = ["show nodes type person"]
