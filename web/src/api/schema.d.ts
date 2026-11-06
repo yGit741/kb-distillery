@@ -346,6 +346,41 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/favorites": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Favorite pages (sorted slugs) */
+        get: operations["list_favorites_api_favorites_get"];
+        put?: never;
+        /** Mark a page as a favorite (one knowledge step) */
+        post: operations["add_favorite_api_favorites_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/favorites/{slug}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Unmark a favorite page (one knowledge step) */
+        delete: operations["remove_favorite_api_favorites__slug__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/flags": {
         parameters: {
             query?: never;
@@ -1654,6 +1689,38 @@ export interface components {
             error: string;
             /** Formats */
             formats?: string[] | null;
+        } & {
+            [key: string]: unknown;
+        };
+        /** FavoriteAddRequest */
+        FavoriteAddRequest: {
+            /** Slug */
+            slug: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** FavoriteList */
+        FavoriteList: {
+            /** Slugs */
+            slugs: string[];
+        } & {
+            [key: string]: unknown;
+        };
+        /** FavoriteStep */
+        FavoriteStep: {
+            /** Ok */
+            ok: boolean;
+            /** Reason */
+            reason?: string | null;
+            /** Sha */
+            sha?: string | null;
+            /**
+             * Slugs
+             * @default []
+             */
+            slugs: string[];
+            /** Version */
+            version?: string | null;
         } & {
             [key: string]: unknown;
         };
@@ -4679,6 +4746,108 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_favorites_api_favorites_get: {
+        parameters: {
+            query?: {
+                /** @description another knowledge base id (read-only, multi-kb mode); empty = the server's own */
+                kb?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FavoriteList"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_favorite_api_favorites_post: {
+        parameters: {
+            query?: {
+                /** @description another knowledge base id (read-only, multi-kb mode); empty = the server's own */
+                kb?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FavoriteAddRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FavoriteStep"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    remove_favorite_api_favorites__slug__delete: {
+        parameters: {
+            query?: {
+                /** @description another knowledge base id (read-only, multi-kb mode); empty = the server's own */
+                kb?: string;
+            };
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FavoriteStep"];
                 };
             };
             /** @description Validation Error */

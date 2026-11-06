@@ -102,7 +102,7 @@ The `hook` commands are called by hooks. They fail closed: an error blocks the a
 ## ops
 
 ```
-usage: ops [-h] {status,log,snapshots,begin,commit,abort,undo,restore,snapshot,sync,migrate,next-version,chore,record,adopt-history,view} ...
+usage: ops [-h] {status,log,snapshots,begin,commit,abort,undo,restore,snapshot,sync,migrate,next-version,chore,record,adopt-history,view,favorite} ...
 ```
 
 | Subcommand | Does |
@@ -111,7 +111,7 @@ usage: ops [-h] {status,log,snapshots,begin,commit,abort,undo,restore,snapshot,s
 | `log [-n 20] [--kb\|--infra]` | First-parent history. |
 | `snapshots` | List snapshot tags. |
 | `begin <op> <target> ["why"]` | Open a free-form edit session. |
-| `commit ["summary"] [--no-push]` | Commit what changed since `begin`. |
+| `commit ["summary"] [--no-push] [--confirm-favorite]` | Commit what changed since `begin`. A step that deletes a favorite page is refused without `--confirm-favorite`. |
 | `abort` | Close the session without committing. |
 | `undo <sha>` | Reverse one knowledge step as a new `kb(undo)` commit. |
 | `restore <kb-x.y.z>` | Bring `wiki/` back to a snapshot as a new `kb(restore)` commit. |
@@ -125,6 +125,8 @@ usage: ops [-h] {status,log,snapshots,begin,commit,abort,undo,restore,snapshot,s
 | `view pin <name> [--spec JSON\|--spec-file F] [--id ID]` | Pin a graph view in `meta/views.json` as one knowledge step. |
 | `view unpin <id>` | Remove a pinned view (one knowledge step). |
 | `view rename <id> <name>` | Rename a pinned view (one knowledge step). |
+| `favorite add <slug>` / `favorite remove <slug>` | Mark or unmark a wiki page as a favorite in `meta/favorites.json`, one knowledge step each. |
+| `favorite list` | The favorite slugs. |
 
 ## ingest
 
