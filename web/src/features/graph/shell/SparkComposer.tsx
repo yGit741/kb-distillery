@@ -1,9 +1,12 @@
 import { Mic, Plus, SendHorizontal, Square, X } from "lucide-react";
 import { useRef, useState, type FormEvent, type KeyboardEvent, type RefObject } from "react";
 import { Button } from "@/components/ui/button";
+import { link } from "@/lib/links";
 import { cn } from "@/lib/utils";
 import { useChatFull } from "./chatFullStore";
 import { linkMentions, matchPages, openMention, withAttachments } from "./mentions";
+import { marksContext } from "./replay";
+import { useReplay } from "./replayStore";
 
 const MAX_FILE = 200_000;
 /** All files on one message together: more than this would swamp the model's context. */
@@ -41,6 +44,9 @@ export function SparkComposer({ text, setText, busy, box, onSend, onStop, rich }
   const [problem, setProblem] = useState("");
   const [idx, setIdx] = useState(0);
   const [dismissed, setDismissed] = useState("");
+  // marks placed in a replay (a page the agent missed, a citation to re-check): chips here, context on the next send
+  const missed = useReplay((s) => s.missed);
+  const bad = useReplay((s) => s.bad);
 
   const mention = rich ? openMention(text) : null;
   const options = mention && dismissed !== text ? matchPages(pages, mention.query) : [];
@@ -56,7 +62,11 @@ export function SparkComposer({ text, setText, busy, box, onSend, onStop, rich }
     e?.preventDefault();
     const q = text.trim();
     if (!q) return;
-    onSend(rich ? withAttachments(linkMentions(q, pages), files) : q);
+    const label = (id: string) => link(id, pages.find((p) => p.id === id)?.title || id);
+    const context = busy ? "" : marksContext(missed, bad, label); // a send ignored while busy keeps the marks
+    const body = rich ? withAttachments(linkMentions(q, pages), files) : q;
+    onSend(context ? `${body}\n\n${context}` : body);
+    if (!busy) useReplay.getState().clearMarks();
     setFiles([]);
     setProblem("");
   };
@@ -144,6 +154,22 @@ export function SparkComposer({ text, setText, busy, box, onSend, onStop, rich }
               </button>
             </li>
           ))}
+        </ul>
+      )}
+      {(missed.length > 0 || bad.length > 0) && (
+        <ul aria-label="Marks from the replay" data-testid="replay-chips" className="flex flex-wrap gap-1.5 px-1">
+          {[...missed.map((id) => ({ id, kind: "Missed" })), ...bad.map((id) => ({ id, kind: "Bad citation" }))].map((m) => {
+            const name = pages.find((p) => p.id === m.id)?.title || m.id;
+            return (
+              <li key={`${m.kind}:${m.id}`} className="flex items-center gap-1 rounded-full bg-secondary py-0.5 pl-2.5 pr-1 text-xs">
+                <span className="text-muted-foreground">{m.kind}</span>
+                <span className="max-w-40 truncate">{name}</span>
+                <button type="button" aria-label={`Remove the ${m.kind.toLowerCase()} mark on ${name}`} className="grid size-5 place-items-center rounded-full hover:bg-background" onClick={() => useReplay.getState().unmark(m.id)}>
+                  <X aria-hidden className="size-3" strokeWidth={1.8} />
+                </button>
+              </li>
+            );
+          })}
         </ul>
       )}
       {problem && (

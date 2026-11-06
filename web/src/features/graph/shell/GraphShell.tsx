@@ -32,12 +32,13 @@ import { useGraphUi } from "../store";
 import { useChatDock } from "../tools/chatDockStore";
 import { useVisibleTools } from "../tools";
 import type { GNode } from "../types";
-import { buildCommands, filterCommands, GROUP_ORDER, type Command, type CommandIcon } from "./commands";
+import { buildCommands, closestCommands, filterCommands, GROUP_ORDER, type Command, type CommandIcon } from "./commands";
+import { LINE_COPY, type LineMode } from "./copy";
 import { SearchBar } from "./SearchBar";
 import { optionId, SearchPanel, type PanelRow, type PanelStatus, type ViewChoice } from "./SearchPanel";
 import { activeCard, type ViewCard } from "./corners/panelModel";
 import { marker, pillText, sameMarker } from "./shape";
-import { looksLikeShape, requestShape, useShellStore } from "./shellStore";
+import { looksLikeShape, parseMode, requestShape, useShellStore } from "./shellStore";
 import { useShape } from "./useShape";
 import { usePageResults } from "./usePageResults";
 import { SHELL_TOP } from "./layout";
@@ -59,6 +60,7 @@ const ICONS: Record<CommandIcon, ReactNode> = {
 };
 
 const NOTICE_MS = 3200;
+const HINTS_KEY = "kb-graph-line-hints-v1";
 const RECENT_SHOWN = 5;
 const PAGES_SHOWN = 6;
 const RELATED_SHOWN = 3;
@@ -101,6 +103,7 @@ export function GraphShell({ nodes, byId, colorBy, onFocus, onRead, onShowExact,
   const host = useToolHost();
   const tools = useVisibleTools();
   const calm = useFlag("calm-graph");
+  const intent = useFlag("graph-intent");
   const kbViewOn = useFlag("kb-view") && ds.kind !== "embedded";
   const [raw, setRaw] = useState("");
   const [open, setOpen] = useState(false);
@@ -123,6 +126,9 @@ export function GraphShell({ nodes, byId, colorBy, onFocus, onRead, onShowExact,
 
   const text = raw.trim();
   const slash = raw.startsWith("/");
+  const parsed = parseMode(raw);
+  const viewMode = intent && parsed.mode === "view";
+  const [hintMode, setHintMode] = useState<LineMode | null>(null);
 
   // ---- data: recent steps and pinned views (rest), the knowledge bases (kb-view), page results (typing)
   const live = ds.kind !== "embedded";
@@ -132,6 +138,25 @@ export function GraphShell({ nodes, byId, colorBy, onFocus, onRead, onShowExact,
   const kbListQ = useApiQuery(["kb-list"], (d) => d.listKbs(), { enabled: kbViewOn, staleTime: 30_000 });
   const results = usePageResults(nodes, byId, raw, !slash && text.length > 0);
   const kbName = kbQ.data?.name ?? "Knowledge Base";
+
+  // first use of a mode shows its one-line hint (once ever per mode); Escape or the first Enter dismisses it
+  const lineMode = parsed.mode;
+  useEffect(() => {
+    if (!intent || !open) return setHintMode(null);
+    let seen: Record<string, boolean> = {};
+    try {
+      seen = JSON.parse(window.localStorage.getItem(HINTS_KEY) ?? "{}") ?? {};
+    } catch {
+      // storage unavailable: the hint shows for this visit only
+    }
+    if (seen[lineMode]) return setHintMode((m) => (m === lineMode ? m : null));
+    setHintMode(lineMode);
+    try {
+      window.localStorage.setItem(HINTS_KEY, JSON.stringify({ ...seen, [lineMode]: true }));
+    } catch {
+      // ignore
+    }
+  }, [intent, open, lineMode]);
 
   const record = useCallback(
     (label: string, spec: Record<string, unknown>) => {
@@ -267,8 +292,40 @@ export function GraphShell({ nodes, byId, colorBy, onFocus, onRead, onShowExact,
       }),
     });
 
+    if (viewMode) {
+      if (!parsed.text || !live || IS_SHARE) return out;
+      out.push({
+        key: "view-shape",
+        section: "Actions",
+        label: (
+          <>
+            {LINE_COPY.viewRow} <span className="text-muted-foreground">{parsed.text}</span>
+          </>
+        ),
+        hint: parsed.op ? LINE_COPY.explainers[parsed.op] : undefined,
+        lead: <Wand2 aria-hidden className="size-4" strokeWidth={1.6} />,
+        run: () => {
+          // the layer engine reads pendingOp later; for now every op goes down the shape path
+          useShellStore.getState().setPendingOp(parsed.op ?? "replace");
+          requestShape(parsed.text);
+        },
+      });
+      return out;
+    }
+
     if (slash) {
-      for (const g of GROUP_ORDER) filterCommands(commands, raw.slice(1)).filter((c) => c.group === g).forEach((c) => out.push(commandRow(c)));
+      const matches = filterCommands(commands, raw.slice(1));
+      for (const g of GROUP_ORDER) matches.filter((c) => c.group === g).forEach((c) => out.push(commandRow(c)));
+      if (intent && !matches.length) {
+        for (const c of closestCommands(commands, raw.slice(1))) out.push({ ...commandRow(c), section: LINE_COPY.closestHeading });
+        out.push({
+          key: "search-instead",
+          section: LINE_COPY.closestHeading,
+          label: LINE_COPY.searchInstead(raw.slice(1).trim()),
+          lead: <Search aria-hidden className="size-4" strokeWidth={1.6} />,
+          run: () => focusBar(raw.slice(1).trim()),
+        });
+      }
       return out;
     }
 
@@ -373,7 +430,7 @@ export function GraphShell({ nodes, byId, colorBy, onFocus, onRead, onShowExact,
     }
     return out;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [slash, raw, text, commands, recentQ.data, viewsQ.data, results, colorBy, onFocus, onRead, onShowMentions, record, close, shaping, canUndo, undoShape, live]);
+  }, [slash, viewMode, intent, raw, text, commands, recentQ.data, viewsQ.data, results, colorBy, onFocus, onRead, onShowMentions, record, close, shaping, canUndo, undoShape, live]);
 
   /** A recent step: a command runs again; anything else goes back into the box to be edited or run. */
   function runRecent(s: RecentStep) {
@@ -405,10 +462,12 @@ export function GraphShell({ nodes, byId, colorBy, onFocus, onRead, onShowExact,
     } else if (e.key === "Enter") {
       if (e.nativeEvent.isComposing) return;
       e.preventDefault();
+      setHintMode(null);
       rows[idx]?.run(e.shiftKey);
     } else if (e.key === "Escape") {
       e.preventDefault();
       e.stopPropagation();
+      setHintMode(null);
       close();
     }
   };
@@ -421,7 +480,7 @@ export function GraphShell({ nodes, byId, colorBy, onFocus, onRead, onShowExact,
         ? { kind: "shape", text: pillText(shape.styleText, shape.pages) || "Shaped", skipped: shape.skipped }
         : null;
 
-  const empty = slash ? "No command matches." : text ? "Nothing matches." : live && !IS_SHARE ? "Type to search pages, / for commands, or ask a question." : "Type to search pages.";
+  const empty = viewMode ? LINE_COPY.viewEmpty : slash ? (intent ? LINE_COPY.hints.command : "No command matches.") : text ? "Nothing matches." : live && !IS_SHARE ? "Type to search pages, / for commands, or ask a question." : "Type to search pages.";
 
   return (
     <div
@@ -444,11 +503,11 @@ export function GraphShell({ nodes, byId, colorBy, onFocus, onRead, onShowExact,
         onKeyDown={onKeyDown}
         activeId={rows.length ? optionId(idx) : undefined}
         inputRef={input}
-        kbName={kbName}
+        placeholder={intent ? LINE_COPY.placeholder : `Search ${kbName}`}
         notice={open ? undefined : notice?.text}
-        onKbClick={() => focusBar("/knowledge")}
+        kb={intent ? undefined : { name: kbName, onClick: () => focusBar("/knowledge") }}
       />
-      {open && <SearchPanel rows={rows} idx={idx} onHover={setIdx} empty={empty} status={status} views={!text && !slash && viewChoices.length ? viewChoices : undefined} />}
+      {open && <SearchPanel rows={rows} idx={idx} onHover={setIdx} empty={empty} status={status} hint={hintMode ? LINE_COPY.hints[hintMode] : undefined} views={!text && !slash && viewChoices.length ? viewChoices : undefined} />}
     </div>
   );
 }

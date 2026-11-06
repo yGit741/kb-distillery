@@ -42,10 +42,12 @@ interface Props {
   status?: PanelStatus | null;
   /** Flag calm-graph: the one switcher of views, shown above the rows. Absent: the panel is as before. */
   views?: readonly ViewChoice[];
+  /** Flag graph-intent: a quiet one-line hint at the top, shown the first time a mode is used. */
+  hint?: string;
 }
 
 /** The unfolded panel: rows in labelled sections, one highlighted, scrolling past a maximum height. */
-export function SearchPanel({ rows, idx, onHover, empty, status, views }: Props) {
+export function SearchPanel({ rows, idx, onHover, empty, status, views, hint }: Props) {
   const groups: { section: string; items: { row: PanelRow; i: number }[] }[] = [];
   rows.forEach((row, i) => {
     const last = groups[groups.length - 1];
@@ -64,6 +66,11 @@ export function SearchPanel({ rows, idx, onHover, empty, status, views }: Props)
       // keep focus in the input while the pointer works the list
       onMouseDown={(e) => e.preventDefault()}
     >
+      {hint && (
+        <div data-testid="line-hint" className="mb-1 px-2.5 py-1.5 text-xs text-muted-foreground">
+          {hint}
+        </div>
+      )}
       {status && <StatusRow status={status} />}
       {groups.map((g, gi) => (
         <div key={`${g.section}:${gi}`} role="group" aria-labelledby={`${SHELL_LIST_ID}-h${gi}`}>

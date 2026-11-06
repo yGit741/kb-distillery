@@ -1,6 +1,9 @@
 import { create } from "zustand";
 import type { PinnedView } from "@/api";
 import type { Marker, Snapshot } from "./shape";
+import type { LineMode } from "./copy";
+
+export type ViewOp = "replace" | "stack" | "remove";
 
 /**
  * State of the graph shell (flag graph-shell) that other parts of the screen reach for. The search panel
@@ -22,6 +25,8 @@ export interface AppliedShape {
 interface ShellState {
   /** The last free-text shaping request ("colour by area, size by links"); null once handled. */
   pendingShape: string | null;
+  /** How the last `>` sentence should combine with the current view (flag graph-intent); the layer engine reads it later. */
+  pendingOp: ViewOp | null;
   /** The last pinned view picked in the search panel; null once handled. */
   pendingView: PinnedView | null;
   /** A shaping request is on its way to the backend. */
@@ -35,6 +40,7 @@ interface ShellState {
   /** A quiet one-line notice under the search bar. */
   notice: { id: number; text: string } | null;
   requestShape: (text: string) => void;
+  setPendingOp: (op: ViewOp | null) => void;
   requestView: (view: PinnedView) => void;
   /** Mark a request handled. */
   clearPending: () => void;
@@ -55,12 +61,14 @@ let noticeId = 0;
 export const useShellStore = create<ShellState>((set) => ({
   pendingShape: null,
   pendingView: null,
+  pendingOp: null,
   notice: null,
   shaping: false,
   shape: null,
   undo: null,
   shapeError: null,
   requestShape: (text) => set({ pendingShape: text }),
+  setPendingOp: (pendingOp) => set({ pendingOp }),
   requestView: (view) => set({ pendingView: view }),
   clearPending: () => set({ pendingShape: null, pendingView: null }),
   clearPendingView: () => set({ pendingView: null }),
@@ -81,4 +89,13 @@ const SHAPE_WORDS = /\b(group by|colou?r by|size by|layout|hide)\b/i;
 export function looksLikeShape(text: string): boolean {
   const t = text.trim();
   return /^match\b/i.test(t) || SHAPE_WORDS.test(t);
+}
+
+/** The mode a line of text is in: `>` changes the view (`>+` stacks, `>-` removes), `/` runs a command, anything else searches. */
+export function parseMode(raw: string): { mode: LineMode; op?: ViewOp; text: string } {
+  if (raw.startsWith(">+")) return { mode: "view", op: "stack", text: raw.slice(2).trim() };
+  if (raw.startsWith(">-")) return { mode: "view", op: "remove", text: raw.slice(2).trim() };
+  if (raw.startsWith(">")) return { mode: "view", op: "replace", text: raw.slice(1).trim() };
+  if (raw.startsWith("/")) return { mode: "command", text: raw.slice(1).trim() };
+  return { mode: "search", text: raw.trim() };
 }

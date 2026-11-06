@@ -14,18 +14,19 @@ interface Props {
   /** The id of the highlighted option (aria-activedescendant). */
   activeId?: string;
   inputRef: RefObject<HTMLInputElement | null>;
-  /** The knowledge base the graph shows: the tooltip of the icon at the left. */
-  kbName: string;
+  /** The input's placeholder (copy.ts when graph-intent is on). */
+  placeholder: string;
   /** A quiet one-line notice shown in place of the placeholder for a moment. */
   notice?: string;
-  onKbClick: () => void;
+  /** The knowledge base icon at the left; absent under graph-intent (the top bar already has the kb chip). */
+  kb?: { name: string; onClick: () => void };
 }
 
 /**
  * The search bar at top centre: the knowledge base icon (kept visible), a hairline, the input and the
  * shortcut hint. It is the combobox; the panel under it (SearchPanel) is its listbox.
  */
-export function SearchBar({ value, onChange, open, onOpen, onKeyDown, activeId, inputRef, kbName, notice, onKbClick }: Props) {
+export function SearchBar({ value, onChange, open, onOpen, onKeyDown, activeId, inputRef, placeholder, notice, kb }: Props) {
   return (
     <div
       className={cn(
@@ -34,16 +35,18 @@ export function SearchBar({ value, onChange, open, onOpen, onKeyDown, activeId, 
         "focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/25",
       )}
     >
-      <button
+      {kb && (
+        <button
         type="button"
-        aria-label={`Knowledge base: ${kbName}`}
-        title={kbName}
-        onClick={onKbClick}
+        aria-label={`Knowledge base: ${kb.name}`}
+        title={kb.name}
+        onClick={kb.onClick}
         className="-ml-1.5 grid size-7 shrink-0 place-items-center rounded-lg text-foreground outline-offset-0 transition-colors hover:bg-accent focus-visible:outline-2 focus-visible:outline-ring motion-reduce:transition-none"
       >
         <Database aria-hidden className="size-[18px]" strokeWidth={1.6} />
       </button>
-      <span aria-hidden className="h-5 w-px shrink-0 bg-border" />
+      )}
+      {kb && <span aria-hidden className="h-5 w-px shrink-0 bg-border" />}
       <Search aria-hidden className="size-4 shrink-0 text-muted-foreground" strokeWidth={1.6} />
       <input
         ref={inputRef}
@@ -58,7 +61,7 @@ export function SearchBar({ value, onChange, open, onOpen, onKeyDown, activeId, 
         type="text"
         autoComplete="off"
         spellCheck={false}
-        placeholder={notice ?? `Search ${kbName}`}
+        placeholder={notice ?? placeholder}
         className="min-h-6 min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
         value={value}
         onChange={(e) => onChange(e.target.value)}
