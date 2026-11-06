@@ -140,15 +140,18 @@ describe("at rest", () => {
 
 describe("page results", () => {
   it("lists live results while typing; Enter focuses the page, Shift+Enter reads it", async () => {
-    const { onFocus, onRead } = setup();
-    await userEvent.type(box(), "margin");
-    expect(await screen.findByRole("option", { name: /idea margin/i })).toBeInTheDocument();
-    await userEvent.keyboard("{Enter}");
-    expect(onFocus).toHaveBeenCalledWith("idea-margin");
-    await userEvent.type(box(), "margin");
-    await screen.findByRole("option", { name: /idea margin/i });
-    await userEvent.keyboard("{Shift>}{Enter}{/Shift}");
-    expect(onRead).toHaveBeenCalledWith("idea-margin");
+    const { withFlag } = await import("@/flags/testing");
+    await withFlag("graph-intent", false, async () => {
+      const { onFocus, onRead } = setup();
+      await userEvent.type(box(), "margin");
+      expect(await screen.findByRole("option", { name: /idea margin/i })).toBeInTheDocument();
+      await userEvent.keyboard("{Enter}");
+      expect(onFocus).toHaveBeenCalledWith("idea-margin");
+      await userEvent.type(box(), "margin");
+      await screen.findByRole("option", { name: /idea margin/i });
+      await userEvent.keyboard("{Shift>}{Enter}{/Shift}");
+      expect(onRead).toHaveBeenCalledWith("idea-margin");
+    });
   });
 
   it("lists full-text hits with their snippet", async () => {
@@ -158,11 +161,14 @@ describe("page results", () => {
   });
 
   it("offers pages mentioning the text", async () => {
-    const { ds, onShowMentions } = setup();
-    await userEvent.type(box(), "margin");
-    await userEvent.click(await screen.findByRole("option", { name: /show pages mentioning/i }));
-    expect(onShowMentions).toHaveBeenCalledWith("margin");
-    await waitFor(() => expect(ds.addRecent).toHaveBeenCalledWith("Pages mentioning margin", { mention: "margin" }));
+    const { withFlag } = await import("@/flags/testing");
+    await withFlag("graph-intent", false, async () => {
+      const { ds, onShowMentions } = setup();
+      await userEvent.type(box(), "margin");
+      await userEvent.click(await screen.findByRole("option", { name: /show pages mentioning/i }));
+      expect(onShowMentions).toHaveBeenCalledWith("margin");
+      await waitFor(() => expect(ds.addRecent).toHaveBeenCalledWith("Pages mentioning margin", { mention: "margin" }));
+    });
   });
 });
 
