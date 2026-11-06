@@ -46,6 +46,10 @@ export const LINE_COPY = {
     color: { label: "Color", hint: "by type" },
     chatSet: { label: "Chat about these", hint: "ask about them" },
   },
+  /** A `>` sentence the rules could not read goes to the older shape path; this says so. */
+  sentenceFallback: "Not a sentence I can read here yet, so I asked the graph to shape it.",
+  didYouMean: (name: string) => `Did you mean "${name}"?`,
+  noSuchPage: (name: string) => `No page is called "${name}".`,
   explainers: {
     replace: "> replaces the current view",
     stack: ">+ adds to the current view",
