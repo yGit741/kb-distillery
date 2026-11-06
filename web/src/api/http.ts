@@ -116,6 +116,17 @@ export function createHttpDataSource(fetchImpl: Fetch = (...a) => fetch(...a), b
         () => client.GET("/api/pages/{slug}", { params: { path: { slug }, query: opts?.kb ? { kb: opts.kb } : {} } }),
         `/api/pages/${slug}`,
       ),
+    getPageSource: async (slug) => {
+      const path = `/api/pages/${encodeURIComponent(slug)}/source`;
+      let res: Response;
+      try {
+        res = await fetchImpl(path, { cache: "no-store" });
+      } catch (e) {
+        throw new ApiError(`Could not reach ${path}: ${e instanceof Error ? e.message : String(e)}`);
+      }
+      if (!res.ok) throw new ApiError(`${path} answered ${res.status}`, res.status);
+      return res.text();
+    },
     search: (q, limit) =>
       run(
         () => client.GET("/api/search", { params: { query: { q, ...(limit ? { limit: String(limit) } : {}) } } }),

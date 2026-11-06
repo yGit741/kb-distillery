@@ -51,7 +51,7 @@ META_DIR = os.path.join(vault_root(), "meta")
 ROOT = checkout_root()
 
 from kb_distillery.ops.daily_sync import changed_paths, has_open_sessions, run_git
-from kb_distillery.git import app_token, claims, commit_policy, events, gate_cache, gate_slot, night, rounds
+from kb_distillery.git import app_token, claims, commit_policy, events, flag_merge, gate_cache, gate_slot, night, rounds
 from kb_distillery.vault.schema import GATE_PREFIXES as GP, GIT_POLICY_MODE, INDEX_REL, SCHEMA_VERSION, is_index_path
 
 GATES = [
@@ -1063,6 +1063,10 @@ def cmd_sync(cont=False, abort=False, root=ROOT, gates=True):
     print(_out(cp))
     if cp.returncode != 0:
         unmerged = [p for p in run_git(["diff", "--name-only", "--diff-filter=U"], cwd=root).stdout.split("\n") if p]
+        if flag_merge.resolve(root, unmerged):       # only flag files conflicted: union the blocks, regenerate
+            done = run_git(["commit", "--no-edit"], cwd=root)
+            print(_out(done) or f"flag files merged automatically ({', '.join(unmerged)})")
+            return done.returncode
         print(f"conflicts in {len(unmerged)} file(s) — resolve, `git add`, then: pixi run ship -- sync --continue")
         for p in unmerged:
             print(f"  {p}")
@@ -1148,6 +1152,9 @@ def _merge_locked(branch, local, pr_number, title, skip_tests, no_push, root, ga
         _drop_regenerated(root)
         sync = run_git(["merge", "--no-edit", "-m", f"Merge branch 'main' into {branch}", base], cwd=root)
         print(_out(sync))
+        if sync.returncode != 0 and flag_merge.resolve(root):
+            sync = run_git(["commit", "--no-edit"], cwd=root)
+            print(_out(sync) or "flag files merged automatically")
         if sync.returncode != 0:
             run_git(["merge", "--abort"], cwd=root)
             print("error: main does not merge cleanly into the branch — resolve by hand")

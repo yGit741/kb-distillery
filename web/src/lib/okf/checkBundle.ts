@@ -53,7 +53,7 @@ const PROTECTED = new RegExp(
   + "|(?<![\\\\$])\\$(?!\\s)[^$\\n]+?(?<!\\s)\\$(?!\\d)", "gms");
 const NOTES_HEAD = /^## My notes[ \t]*$/gm;
 
-function notesSpans(body: string): Array<[number, number]> {
+export function notesSpans(body: string): Array<[number, number]> {
   const out: Array<[number, number]> = [];
   for (const m of body.matchAll(NOTES_HEAD)) {
     const next = /^## /gm;

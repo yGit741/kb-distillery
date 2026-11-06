@@ -20,8 +20,11 @@ import {
   ZoomOut,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { useDataSource, type PinnedView, type RecentStep } from "@/api";
+import { useUi } from "@/app/ui-store";
 import { useFlag } from "@/flags/useFlag";
+import { useKb } from "@/lib/store";
 import { useApiQuery } from "@/lib/useApiQuery";
 import { IS_SHARE } from "@/share/env";
 import { NodeSwatch } from "../encoding/NodeMarkSvg";
@@ -29,14 +32,18 @@ import { useToolHost } from "../hostContext";
 import type { ColorBy } from "../style";
 import { swatchColor } from "../nodeColor";
 import { useGraphUi } from "../store";
-import { useChatDock } from "../tools/chatDockStore";
+import { askAbout, useChatDock } from "../tools/chatDockStore";
 import { useVisibleTools } from "../tools";
 import type { GLink, GNode } from "../types";
 import { Chips } from "../layers/Chips";
+import { makeLayer, newLayerId, type Layer, type ViewStack } from "../layers/model";
+import { ResolvedLine } from "../layers/ResolvedLine";
 import { useLayers } from "../layers/store";
 import { useLlmLayers } from "../layers/useLlmLayers";
+import { ACTION_ITEMS, setActionItems, type MenuContext } from "../menu";
+import { NodeMenu } from "../NodeMenu";
+import { exportPages } from "../export/runExport";
 import { planSentence, type Plan } from "../layers/sentenceRun";
-import { useKb } from "@/lib/store";
 import { buildCommands, closestCommands, filterCommands, GROUP_ORDER, type Command, type CommandIcon } from "./commands";
 import { LINE_COPY, type LineMode } from "./copy";
 import { SearchBar } from "./SearchBar";
@@ -46,6 +53,8 @@ import { marker, pillText, sameMarker } from "./shape";
 import { looksLikeShape, parseMode, requestShape, useShellStore } from "./shellStore";
 import { useShape } from "./useShape";
 import { usePageResults } from "./usePageResults";
+import { groupedRows } from "./groupedRows";
+import { buildSearchIndex, withNames, type RowTarget } from "./searchGroups";
 import { SHELL_TOP } from "./layout";
 
 const ICONS: Record<CommandIcon, ReactNode> = {
@@ -123,6 +132,10 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
   const shapeError = useShellStore((s) => s.shapeError);
   const canUndo = useShellStore((s) => s.undo !== null);
   const layersUndo = useLayers((s) => s.history.length > 0);
+  const preview = useLayers((s) => s.preview);
+  // the sentence (with its op) the preview answers; editing the text retires the preview
+  const previewKey = useRef("");
+  const [editingLine, setEditingLine] = useState(false);
   // the pill speaks only while the shape is what is drawn: a change by hand (a legend click, a cleared view) retires it
   const shapeCurrent = useGraphUi((s) => (shape ? sameMarker(shape.after, marker(s)) : false));
   const story = useGraphUi((s) => s.story);
@@ -166,6 +179,9 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
   const kbListQ = useApiQuery(["kb-list"], (d) => d.listKbs(), { enabled: kbViewOn, staleTime: 30_000 });
   const results = usePageResults(nodes, byId, raw, !slash && text.length > 0);
   const kbName = kbQ.data?.name ?? "Knowledge Base";
+  // flag graph-intent: the tier-1 index, built once per graph load (page entries) and joined with the small name lists
+  const baseIndex = useMemo(() => (intent ? buildSearchIndex(nodes) : null), [intent, nodes]);
+  const [menu, setMenu] = useState<{ target: RowTarget; x: number; y: number } | null>(null);
 
   // first use of a mode shows its one-line hint (once ever per mode); Escape or the first Enter dismisses it
   const lineMode = parsed.mode;
@@ -220,6 +236,11 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
         views: viewChoices,
       }),
     [onFit, onZoom, onReheat, onRefresh, tools, host, setParams, kbViewOn, kbListQ.data, viewChoices],
+  );
+
+  const index = useMemo(
+    () => (baseIndex ? withNames(baseIndex, viewsQ.data?.views ?? [], commands.map((c) => ({ id: c.id, label: c.label }))) : null),
+    [baseIndex, viewsQ.data, commands],
   );
 
   // ---- open and close
@@ -300,7 +321,7 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
   useEffect(() => {
     if (!open) return;
     const away = (e: PointerEvent) => {
-      if (!box.current?.contains(e.target as Node)) close(false);
+      if (!box.current?.contains(e.target as Node) && !(e.target as HTMLElement | null)?.closest?.("[role=menu]")) close(false);
     };
     document.addEventListener("pointerdown", away);
     return () => document.removeEventListener("pointerdown", away);
@@ -364,6 +385,7 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
             close();
             return;
           }
+          if (useLayers.getState().preview && previewKey.current === `${parsed.op ?? "replace"}:${parsed.text}`) return commitPreview(parsed.text);
           runSentence(parsed.text, parsed.op ?? "replace", {});
         },
       });
@@ -403,6 +425,7 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
           key: `recent:${s.at}:${s.text}`,
           section: "Recent",
           label: s.text,
+          hint: intent && Array.isArray(s.spec.lines) ? (s.spec.lines as string[]).join(" · ") : undefined,
           lead: <History aria-hidden className="size-4" strokeWidth={1.6} />,
           run: () => runRecent(s),
         });
@@ -438,6 +461,51 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
         requestShape(text);
       },
     };
+    const askRow: PanelRow | null = IS_SHARE
+      ? null
+      : {
+          key: "ask",
+          section: "Actions",
+          label: (
+            <>
+              Ask the agent: <span className="text-muted-foreground">{text}</span>
+            </>
+          ),
+          hint: "opens the chat",
+          lead: <MessageSquare aria-hidden className="size-4" strokeWidth={1.6} />,
+          run: done(() => useChatDock.getState().ask(text)),
+        };
+    if (intent && index) {
+      // grouped, in a fixed order, each action row after them (./groupedRows)
+      if (canShape && asksShape && /^match\b/i.test(text)) out.push(shapeRow);
+      out.push(
+        ...groupedRows({
+          text,
+          index,
+          results,
+          colorBy,
+          views: viewsQ.data?.views ?? [],
+          commands,
+          commandRow,
+          focusNode: (id, shift) => {
+            if (shift && useKb.getState().selection.size) useKb.getState().select(id);
+            else onFocus(id);
+            close();
+          },
+          highlightSet: (ids) => {
+            useKb.getState().setSelection(ids);
+            close();
+          },
+          runView: (v) => {
+            runView(v);
+            close();
+          },
+        }),
+      );
+      if (canShape && asksShape && !/^match\b/i.test(text)) out.push(shapeRow);
+      if (askRow) out.push(askRow);
+      return out;
+    }
     if (canShape && asksShape && /^match\b/i.test(text)) out.push(shapeRow);
     // a short list keeps the actions under it in view
     const shown = [...results.filter((r) => !r.related).slice(0, PAGES_SHOWN), ...results.filter((r) => r.related).slice(0, RELATED_SHOWN)];
@@ -474,26 +542,20 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
       });
     }
     if (canShape && asksShape && !/^match\b/i.test(text)) out.push(shapeRow);
-    if (!IS_SHARE) {
-      out.push({
-        key: "ask",
-        section: "Actions",
-        label: (
-          <>
-            Ask the agent: <span className="text-muted-foreground">{text}</span>
-          </>
-        ),
-        hint: "opens the chat",
-        lead: <MessageSquare aria-hidden className="size-4" strokeWidth={1.6} />,
-        run: done(() => useChatDock.getState().ask(text)),
-      });
-    }
+    if (askRow) out.push(askRow);
     return out;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [slash, viewMode, intent, raw, text, commands, recentQ.data, viewsQ.data, results, colorBy, onFocus, onRead, onShowMentions, record, close, shaping, canUndo, layersUndo, undoShape, live, didYou, nodes]);
+  }, [slash, viewMode, intent, index, raw, text, commands, recentQ.data, viewsQ.data, results, colorBy, onFocus, onRead, onShowMentions, record, close, shaping, canUndo, layersUndo, undoShape, live, didYou, nodes]);
 
   /** A recent step: a command runs again; anything else goes back into the box to be edited or run. */
   function runRecent(s: RecentStep) {
+    const saved = s.spec.stack as ViewStack | undefined;
+    if (intent && saved && Array.isArray(saved.layers) && saved.layers.length) {
+      // a recorded view stack goes back on as one undo step; its layers get fresh ids
+      useLayers.getState().apply("replace", saved.layers.map((l) => ({ ...l, id: newLayerId() })));
+      close();
+      return;
+    }
     const id = typeof s.spec.command === "string" ? s.spec.command : "";
     const cmd = id ? commands.find((c) => c.id === id) : undefined;
     if (cmd) {
@@ -506,6 +568,51 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
     useShellStore.getState().requestView(v);
   }
 
+  // ---- flag graph-intent: the action menu on a row (the same NodeMenu as the node menu, with the action items)
+  const actionCtx = useMemo<MenuContext>(() => {
+    const showLayer = (ids: string[], text: string): Layer => makeLayer("show", "nodes", { nodes: [{ t: "name", slugs: ids }] }, text);
+    const then = <A extends unknown[]>(fn: (...a: A) => void) => (...a: A) => {
+      fn(...a);
+      close();
+    };
+    return {
+      openReader: then(onRead),
+      openDetails: () => {},
+      openPage: () => {},
+      focus: then(onFocus),
+      highlight: then((ids: string[]) => useKb.getState().setSelection(ids)),
+      showOnly: then((ids: string[], label: string) => useLayers.getState().apply("replace", [showLayer(ids, ids.length === 1 ? `Only ${label}` : label)])),
+      addToView: then((ids: string[], label: string) => useLayers.getState().apply("stack", [showLayer(ids, label)])),
+      expand: then((id: string) => useLayers.getState().apply("stack", [makeLayer("show", "nodes", { nodes: [{ t: "hops", of: id, n: 1 }] }, `Neighbours of ${byId.get(id)?.title || id}`)])),
+      colorSet: then((ids: string[], label: string) => useLayers.getState().apply("stack", [makeLayer("style", "nodes", { nodes: [{ t: "name", slugs: ids }] }, label, { style: { color: "type" } })])),
+      chat: then((ids: string[]) => useChatDock.getState().ask(askAbout(ids.map((id) => ({ id }))))),
+      think: then(() => useUi.getState().setCaptureOpen(true)),
+      exportPages: then((ids: string[]) => void exportPages(ds, ids, { kbName, isShare: IS_SHARE, say: useShellStore.getState().say })),
+    };
+  }, [onRead, onFocus, byId, close, ds, kbName]);
+  const openMenu = useCallback((target: RowTarget, at: HTMLElement) => {
+    const r = at.getBoundingClientRect();
+    setMenu({ target, x: r.right - 24, y: r.bottom + 4 });
+  }, []);
+  useEffect(() => {
+    if (!open) setMenu(null);
+  }, [open]);
+  /** Second Enter: apply what the canvas is showing, remember it in Recent and close like any apply. */
+  function commitPreview(typed: string) {
+    const lines = useLayers.getState().preview?.lines ?? [];
+    setEditingLine(false);
+    if (useLayers.getState().commitPreview()) record(typed, { stack: useLayers.getState().stack, lines });
+    close();
+  }
+  /** The edited sentence applies exactly as written. */
+  function applyWritten(layers: Layer[]) {
+    const p = useLayers.getState().preview;
+    useLayers.getState().cancelPreview();
+    setEditingLine(false);
+    useLayers.getState().apply(p?.op ?? "replace", layers);
+    record(layers.map((l) => l.text).join(" · "), { stack: useLayers.getState().stack, lines: layers.map((l) => l.text) });
+    close();
+  }
   /** Read a `>` sentence into layers and apply them; a name left open asks, text the rules cannot read goes to the model. */
   function runSentence(typed: string, op: "replace" | "stack", chosen: Record<string, string>) {
     const focus = [...useKb.getState().selection][0];
@@ -516,14 +623,31 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
     const say = useShellStore.getState().say;
     if (plan.kind === "ready") {
       setDidYou(null);
-      useLayers.getState().apply(op, plan.layers);
-      close();
+      // first Enter: show it on the canvas without applying; the second Enter (the same row) commits
+      previewKey.current = `${op}:${typed}`;
+      useLayers.getState().setPreview(op, plan.layers);
     } else if (plan.kind === "ask") setDidYou({ text: typed, op, pick: plan.pick, chosen: plan.chosen });
     else if (plan.kind === "missing") say(LINE_COPY.noSuchPage(plan.name));
     else llm.request(typed, op, ctx);
   }
 
   useEffect(() => setIdx(0), [raw]);
+  useEffect(() => {
+    if (!preview || !intent) return;
+    if (previewKey.current !== `${parsed.op ?? "replace"}:${parsed.text}`) {
+      useLayers.getState().cancelPreview();
+      setEditingLine(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [raw]);
+  // closing the panel drops a preview nobody confirmed
+  useEffect(() => {
+    if (!open && useLayers.getState().preview) {
+      useLayers.getState().cancelPreview();
+      setEditingLine(false);
+    }
+  }, [open]);
+  useEffect(() => () => useLayers.getState().cancelPreview(), []);
   // an error belongs to the text it answered: editing the text retires it
   useEffect(() => {
     useShellStore.getState().setShapeError(null);
@@ -536,15 +660,31 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
       setOpen(true);
       const n = rows.length;
       if (n) setIdx((i) => (e.key === "ArrowDown" ? (i + 1) % n : (i - 1 + n) % n));
+    } else if (e.key === "ArrowRight" && intent && open) {
+      // the right arrow opens the highlighted row's menu once the caret is past the last letter
+      const at = document.getElementById(optionId(idx));
+      const t = e.currentTarget;
+      const target = rows[idx]?.actions;
+      if (target && at && t.selectionStart === t.value.length && t.selectionEnd === t.value.length) {
+        e.preventDefault();
+        openMenu(target, at);
+      }
     } else if (e.key === "Enter") {
       if (e.nativeEvent.isComposing) return;
       e.preventDefault();
       setHintMode(null);
       rows[idx]?.run(e.shiftKey);
+    } else if (e.key === "Tab" && intent && useLayers.getState().preview && !e.shiftKey) {
+      e.preventDefault();
+      setEditingLine(true);
     } else if (e.key === "Escape") {
       e.preventDefault();
       e.stopPropagation();
       setHintMode(null);
+      if (intent && useLayers.getState().preview) {
+        useLayers.getState().cancelPreview();
+        return;
+      }
       close();
     }
   };
@@ -566,7 +706,8 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
       style={{ top, width: open ? "min(640px, calc(100% - 9rem))" : "min(520px, calc(100% - 9rem))" }}
       data-testid="graph-shell"
       onBlur={(e) => {
-        if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setOpen(false);
+        const to = e.relatedTarget as HTMLElement | null;
+        if (!e.currentTarget.contains(to) && !to?.closest?.("[role=menu]")) setOpen(false);
       }}
     >
       <SearchBar
@@ -585,7 +726,25 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
         kb={intent ? undefined : { name: kbName, onClick: () => focusBar("/knowledge") }}
       />
       {intent && <Chips byId={byId} />}
-      {open && <SearchPanel rows={rows} idx={idx} onHover={setIdx} empty={empty} status={status} hint={hintMode ? LINE_COPY.hints[hintMode] : undefined} views={!text && !slash && viewChoices.length ? viewChoices : undefined} />}
+      {intent && open && viewMode && <ResolvedLine lines={preview?.lines ?? null} count={preview?.count ?? 0} editing={editingLine} onEditing={setEditingLine} onApply={applyWritten} />}
+      {open && <SearchPanel rows={rows} idx={idx} onHover={setIdx} empty={empty} status={status} hint={hintMode ? LINE_COPY.hints[hintMode] : undefined} views={!text && !slash && viewChoices.length ? viewChoices : undefined} onMenu={intent ? (i, at) => rows[i]?.actions && openMenu(rows[i]!.actions!, at) : undefined} />}
+      {menu &&
+        createPortal(
+          <NodeMenu
+            node={menu.target.kind === "node" ? menu.target.node : ({ id: "set", title: menu.target.label, type: "set" } as GNode)}
+            title={menu.target.kind === "set" ? menu.target.label : undefined}
+            x={menu.x}
+            y={menu.y}
+            colorBy={colorBy}
+            ctx={actionCtx}
+            items={menu.target.kind === "node" ? ACTION_ITEMS : setActionItems(menu.target.ids, menu.target.label)}
+            onClose={() => {
+              setMenu(null);
+              input.current?.focus({ preventScroll: true });
+            }}
+          />,
+          document.body,
+        )}
     </div>
   );
 }

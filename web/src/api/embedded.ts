@@ -1,5 +1,6 @@
 import type { ShareBlob } from "@/share/blob";
 import { findPaths, searchPages } from "@/share/search";
+import { sourceOf } from "@/lib/okf/pageSource";
 import { ApiError, type DataSource } from "./datasource";
 
 const NOT_SHARED = "not available in the shared view";
@@ -43,6 +44,7 @@ export function createEmbeddedDataSource(blob: ShareBlob | undefined = globalThi
     addRecent: absent,
     listPages: absent,
     getPage: absent,
+    getPageSource: absent,
     search: absent,
     findPath: absent,
     getPipeline: absent,
@@ -94,6 +96,11 @@ export function createEmbeddedDataSource(blob: ShareBlob | undefined = globalThi
       const page = data.pages[slug];
       if (!page) throw new ApiError("not found", 404);
       return page;
+    },
+    getPageSource: async (slug) => {
+      const page = data.pages[slug];
+      if (!page) throw new ApiError("not found", 404);
+      return sourceOf(page.frontmatter, page.markdown);
     },
     search: async (q, limit) => searchPages(data, q, limit),
     findPath: async (a, b) => {
