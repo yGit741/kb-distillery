@@ -23,7 +23,17 @@ export type NodeCond =
   | { t: "inArea"; area: string }
   | { t: "createdWithin"; days: number }
   | { t: "linkedFromType"; type: string }
+  /** Pages on a path of at most `n` hops between two pages. */
+  | { t: "paths"; a: string; b: string; n: number }
+  /** Pages with (or, `exists: false`, without) a link of this type. */
+  | { t: "hasEdge"; type: string; exists?: false }
+  | { t: "mentionedIn"; chat: string }
+  | { t: "not"; cond: NodeCond }
   | { t: "all" };
+
+/** In `hops.of`: the favorites as a whole, and the page in focus (filled in before the layer is applied). */
+export const FAVORITES = "$favorites";
+export const FOCUS = "$focus";
 
 /** One condition on links. */
 export type EdgeCond =
@@ -110,7 +120,15 @@ export function describeNodeCond(c: NodeCond): string {
     case "degree":
       return OP_WORDS[c.op](c.n);
     case "hops":
-      return `within ${c.n} hop${c.n === 1 ? "" : "s"} of ${c.of}`;
+      return `within ${c.n} hop${c.n === 1 ? "" : "s"} of ${c.of === FAVORITES ? "favorites" : c.of === FOCUS ? "this page" : c.of}`;
+    case "paths":
+      return `paths between ${c.a} and ${c.b} up to ${c.n} hops`;
+    case "hasEdge":
+      return c.exists === false ? `without a ${c.type} link` : `with a ${c.type} link`;
+    case "mentionedIn":
+      return `mentioned in chat "${c.chat}"`;
+    case "not":
+      return `not ${describeNodeCond(c.cond)}`;
     case "name":
       return c.slugs.join(", ");
     case "text":
@@ -236,6 +254,23 @@ export function withinHops(adj: ReadonlyMap<string, ReadonlySet<string>>, from: 
   return seen;
 }
 
+/** Hops from `from` to every page within `max` hops, over links in either direction. */
+function distances(adj: ReadonlyMap<string, ReadonlySet<string>>, from: string, max: number): Map<string, number> {
+  const dist = new Map([[from, 0]]);
+  let edge = [from];
+  for (let d = 1; d <= max && edge.length; d++) {
+    const next: string[] = [];
+    for (const id of edge)
+      for (const o of adj.get(id) ?? [])
+        if (!dist.has(o)) {
+          dist.set(o, d);
+          next.push(o);
+        }
+    edge = next;
+  }
+  return dist;
+}
+
 /** The graph kinds (`MENTIONS`) and the canvas kinds (`wikilink`) a layer's link type may name. */
 function linkKindsOf(value: string, present: ReadonlySet<string>): string[] | null {
   const mapped = LINK_KINDS[value.toUpperCase()];
@@ -260,9 +295,12 @@ export function evaluate(vs: ViewStack, graph: EvalGraph): Evaluation {
   const now = graph.now ?? Date.now();
   const presentKinds = new Set<string>(links.map((l) => l.kind));
   const skipped: string[] = [];
+  let skips = 0;
   const skip = (s: string) => {
+    skips++;
     if (!skipped.includes(s)) skipped.push(s);
   };
+  const pageOf = (of: string) => (byId.has(of) ? of : [...byId.values()].find((n) => n.title.toLowerCase() === of.toLowerCase())?.id);
 
   let cur: Set<string> | null = null;
   let hiddenKinds: Set<string> | null = null;
@@ -286,13 +324,48 @@ export function evaluate(vs: ViewStack, graph: EvalGraph): Evaluation {
           keep = (n) => cmp(adj.get(n.id)?.size ?? 0, c.op, c.n);
           break;
         case "hops": {
-          const from = byId.has(c.of) ? c.of : [...byId.values()].find((n) => n.title.toLowerCase() === c.of.toLowerCase())?.id;
+          if (c.of === FAVORITES) {
+            if (!graph.favorites) {
+              skip(`${label}: favorites (not loaded here yet)`);
+              continue;
+            }
+            const near = new Set<string>();
+            for (const f of graph.favorites) if (byId.has(f)) withinHops(adj, f, c.n).forEach((id) => near.add(id));
+            keep = (n) => near.has(n.id);
+            break;
+          }
+          const from = c.of === FOCUS ? undefined : pageOf(c.of);
           if (!from) {
-            skip(`${label}: "${c.of}" is not a page here`);
+            skip(c.of === FOCUS ? `${label}: no page is in focus` : `${label}: "${c.of}" is not a page here`);
             continue;
           }
           const near = withinHops(adj, from, c.n);
           keep = (n) => near.has(n.id);
+          break;
+        }
+        case "paths": {
+          const a = pageOf(c.a);
+          const b = pageOf(c.b);
+          if (!a || !b) {
+            skip(`${label}: "${a ? c.b : c.a}" is not a page here`);
+            continue;
+          }
+          const da = distances(adj, a, c.n);
+          const db = distances(adj, b, c.n);
+          keep = (n) => (da.get(n.id) ?? Infinity) + (db.get(n.id) ?? Infinity) <= c.n;
+          break;
+        }
+        case "hasEdge":
+          skip(`${label}: links of type ${c.type} (the types of links are not known to the canvas yet)`);
+          continue;
+        case "mentionedIn":
+          skip(`${label}: mentioned in a chat (not available yet)`);
+          continue;
+        case "not": {
+          const before = skips;
+          const inner = matchNodes([c.cond], label);
+          if (skips > before) continue;
+          keep = (n) => !inner.has(n.id);
           break;
         }
         case "name": {
