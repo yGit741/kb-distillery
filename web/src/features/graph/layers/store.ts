@@ -3,6 +3,7 @@ import { useKb } from "@/lib/store";
 import { marker, restore, snapshot, type Marker, type Snapshot } from "../shell/shape";
 import { useShellStore } from "../shell/shellStore";
 import { useGraphUi } from "../store";
+import { print } from "./grammar";
 import {
   EMPTY_STACK,
   evaluate,
@@ -40,7 +41,26 @@ export interface Entry {
 
 export type StackOp = "replace" | "stack" | "remove";
 
+/** A `>` sentence read but not applied yet: what the canvas shows tentatively and the line under the input. */
+export interface Preview {
+  layers: Layer[];
+  op: Exclude<StackOp, "remove">;
+  /** The resolved sentence, one line of the language per layer. */
+  lines: string[];
+  /** Pages that would be drawn. */
+  count: number;
+  /** The pages that would stay, or null when the layers restrict nothing. */
+  ids: ReadonlySet<string> | null;
+}
+
 interface LayersState {
+  /** A live preview (null = none): the canvas lights `ids`, nothing is hidden and the stack is untouched. */
+  preview: Preview | null;
+  setPreview: (op: Preview["op"], layers: Layer[]) => boolean;
+  /** Apply the previewed layers (one undo step). */
+  commitPreview: () => boolean;
+  /** Drop the preview and give back the knobs it tinted. */
+  cancelPreview: () => void;
   stack: ViewStack;
   /** Undo: the stacks before, newest last, each with the knobs it was drawn with (at most HISTORY_MAX). */
   history: Entry[];
@@ -67,6 +87,15 @@ interface LayersState {
 /** Knobs the stack owns right now, with the value each had before the stack touched it. */
 let owned: { patch: Partial<Record<keyof KnobPatch, unknown>>; kinds: { was: ReadonlySet<string> } | null } = { patch: {}, kinds: null };
 let restricting = false;
+/** The knobs as they were before a preview tinted them. */
+let previewKnobs: ReturnType<typeof snapshot> | null = null;
+
+function untint() {
+  if (!previewKnobs) return;
+  const { selection: _selection, ...knobs } = previewKnobs;
+  useGraphUi.setState(knobs);
+  previewKnobs = null;
+}
 
 function draw(next: ViewStack, g: GraphContext | null): { skipped: string[] } {
   if (!g) return { skipped: [] };
@@ -112,6 +141,34 @@ export const useLayers = create<LayersState>((set, get) => {
     set({ stack: next, history, future: [], applied: marker(), skipped });
   };
   return {
+    preview: null,
+    setPreview: (op, layers) => {
+      const s = get();
+      if (!s.graph) return false;
+      untint();
+      const next = (op === "replace" ? replaceLayers : stackLayers)(s.stack, layers);
+      const ev = evaluate(next, s.graph);
+      // a style layer tints through the same knobs, tentatively
+      const tint: Record<string, unknown> = { ...ev.patch };
+      if (ev.hiddenLinkKinds.size) tint.hiddenLinkKinds = ev.hiddenLinkKinds;
+      if (Object.keys(tint).length) {
+        previewKnobs = snapshot();
+        useGraphUi.setState(tint);
+      }
+      set({ preview: { layers, op, lines: layers.map(print), count: ev.nodeIds ? ev.nodeIds.size : s.graph.nodes.length, ids: ev.nodeIds } });
+      return true;
+    },
+    cancelPreview: () => {
+      untint();
+      if (get().preview) set({ preview: null });
+    },
+    commitPreview: () => {
+      const p = get().preview;
+      if (!p) return false;
+      untint();
+      set({ preview: null });
+      return get().apply(p.op, p.layers);
+    },
     stack: EMPTY_STACK,
     history: [],
     future: [],

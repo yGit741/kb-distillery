@@ -50,7 +50,7 @@ describe("a > sentence read by the grammar (graph-intent)", () => {
   it("on: Enter applies the layers and shows a chip, without asking the shape endpoint", async () => {
     await withFlag("graph-intent", true, async () => {
       setup();
-      await userEvent.type(box(), "> only orphans{Enter}");
+      await userEvent.type(box(), "> only orphans{Enter}{Enter}");
       const view = await screen.findByRole("group", { name: "View" });
       expect(view).toHaveTextContent("only orphans");
       expect(useLayers.getState().stack.layers.map((l) => l.subgraph.nodes)).toEqual([[{ t: "degree", op: "=", n: 0 }]]);
@@ -61,7 +61,7 @@ describe("a > sentence read by the grammar (graph-intent)", () => {
   it("on: several layers get their own chips, written in the language", async () => {
     await withFlag("graph-intent", true, async () => {
       setup();
-      await userEvent.type(box(), ">+ only supports edges, color by type{Enter}");
+      await userEvent.type(box(), ">+ only supports edges, color by type{Enter}{Enter}");
       await waitFor(() => expect(useLayers.getState().stack.layers).toHaveLength(2));
       expect(useLayers.getState().stack.layers.map((l) => l.text)).toEqual(["show edges type supports", "style nodes color by type"]);
     });
@@ -74,6 +74,8 @@ describe("a > sentence read by the grammar (graph-intent)", () => {
       expect(await screen.findByText(LINE_COPY.didYouMean("Learning"))).toBeInTheDocument();
       expect(useLayers.getState().stack.layers).toHaveLength(0);
       await userEvent.click(await screen.findByRole("option", { name: /Learning curves/ }));
+      expect(useLayers.getState().stack.layers).toHaveLength(0);
+      await userEvent.type(box(), "{Enter}");
       await waitFor(() => expect(useLayers.getState().stack.layers).toHaveLength(1));
       expect(useLayers.getState().stack.layers[0]!.subgraph.nodes).toEqual([{ t: "hops", n: 2, of: "learning-curves" }]);
     });

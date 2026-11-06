@@ -36,7 +36,8 @@ import { askAbout, useChatDock } from "../tools/chatDockStore";
 import { useVisibleTools } from "../tools";
 import type { GLink, GNode } from "../types";
 import { Chips } from "../layers/Chips";
-import { makeLayer, type Layer } from "../layers/model";
+import { makeLayer, newLayerId, type Layer, type ViewStack } from "../layers/model";
+import { ResolvedLine } from "../layers/ResolvedLine";
 import { useLayers } from "../layers/store";
 import { ACTION_ITEMS, setActionItems, type MenuContext } from "../menu";
 import { NodeMenu } from "../NodeMenu";
@@ -130,6 +131,10 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
   const shapeError = useShellStore((s) => s.shapeError);
   const canUndo = useShellStore((s) => s.undo !== null);
   const layersUndo = useLayers((s) => s.history.length > 0);
+  const preview = useLayers((s) => s.preview);
+  // the sentence (with its op) the preview answers; editing the text retires the preview
+  const previewKey = useRef("");
+  const [editingLine, setEditingLine] = useState(false);
   // the pill speaks only while the shape is what is drawn: a change by hand (a legend click, a cleared view) retires it
   const shapeCurrent = useGraphUi((s) => (shape ? sameMarker(shape.after, marker(s)) : false));
   const story = useGraphUi((s) => s.story);
@@ -372,6 +377,7 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
             close();
             return;
           }
+          if (useLayers.getState().preview && previewKey.current === `${parsed.op ?? "replace"}:${parsed.text}`) return commitPreview(parsed.text);
           runSentence(parsed.text, parsed.op ?? "replace", {});
         },
       });
@@ -411,6 +417,7 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
           key: `recent:${s.at}:${s.text}`,
           section: "Recent",
           label: s.text,
+          hint: intent && Array.isArray(s.spec.lines) ? (s.spec.lines as string[]).join(" · ") : undefined,
           lead: <History aria-hidden className="size-4" strokeWidth={1.6} />,
           run: () => runRecent(s),
         });
@@ -534,6 +541,13 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
 
   /** A recent step: a command runs again; anything else goes back into the box to be edited or run. */
   function runRecent(s: RecentStep) {
+    const saved = s.spec.stack as ViewStack | undefined;
+    if (intent && saved && Array.isArray(saved.layers) && saved.layers.length) {
+      // a recorded view stack goes back on as one undo step; its layers get fresh ids
+      useLayers.getState().apply("replace", saved.layers.map((l) => ({ ...l, id: newLayerId() })));
+      close();
+      return;
+    }
     const id = typeof s.spec.command === "string" ? s.spec.command : "";
     const cmd = id ? commands.find((c) => c.id === id) : undefined;
     if (cmd) {
@@ -576,14 +590,31 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
     if (!open) setMenu(null);
   }, [open]);
   /** Read a `>` sentence into layers and apply them; a name left open asks, text the rules cannot read goes to the shape path. */
+  /** Second Enter: apply what the canvas is showing, remember it in Recent and close like any apply. */
+  function commitPreview(typed: string) {
+    const lines = useLayers.getState().preview?.lines ?? [];
+    setEditingLine(false);
+    if (useLayers.getState().commitPreview()) record(typed, { stack: useLayers.getState().stack, lines });
+    close();
+  }
+  /** The edited sentence applies exactly as written. */
+  function applyWritten(layers: Layer[]) {
+    const p = useLayers.getState().preview;
+    useLayers.getState().cancelPreview();
+    setEditingLine(false);
+    useLayers.getState().apply(p?.op ?? "replace", layers);
+    record(layers.map((l) => l.text).join(" · "), { stack: useLayers.getState().stack, lines: layers.map((l) => l.text) });
+    close();
+  }
   function runSentence(typed: string, op: "replace" | "stack", chosen: Record<string, string>) {
     const focus = [...useKb.getState().selection][0];
     const plan = planSentence(typed, nodes, { focus, chosen });
     const say = useShellStore.getState().say;
     if (plan.kind === "ready") {
       setDidYou(null);
-      useLayers.getState().apply(op, plan.layers);
-      close();
+      // first Enter: show it on the canvas without applying; the second Enter (the same row) commits
+      previewKey.current = `${op}:${typed}`;
+      useLayers.getState().setPreview(op, plan.layers);
     } else if (plan.kind === "ask") setDidYou({ text: typed, op, pick: plan.pick, chosen: plan.chosen });
     else if (plan.kind === "missing") say(LINE_COPY.noSuchPage(plan.name));
     else {
@@ -594,6 +625,22 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
   }
 
   useEffect(() => setIdx(0), [raw]);
+  useEffect(() => {
+    if (!preview || !intent) return;
+    if (previewKey.current !== `${parsed.op ?? "replace"}:${parsed.text}`) {
+      useLayers.getState().cancelPreview();
+      setEditingLine(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [raw]);
+  // closing the panel drops a preview nobody confirmed
+  useEffect(() => {
+    if (!open && useLayers.getState().preview) {
+      useLayers.getState().cancelPreview();
+      setEditingLine(false);
+    }
+  }, [open]);
+  useEffect(() => () => useLayers.getState().cancelPreview(), []);
   // an error belongs to the text it answered: editing the text retires it
   useEffect(() => {
     useShellStore.getState().setShapeError(null);
@@ -620,10 +667,17 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
       e.preventDefault();
       setHintMode(null);
       rows[idx]?.run(e.shiftKey);
+    } else if (e.key === "Tab" && intent && useLayers.getState().preview && !e.shiftKey) {
+      e.preventDefault();
+      setEditingLine(true);
     } else if (e.key === "Escape") {
       e.preventDefault();
       e.stopPropagation();
       setHintMode(null);
+      if (intent && useLayers.getState().preview) {
+        useLayers.getState().cancelPreview();
+        return;
+      }
       close();
     }
   };
@@ -665,6 +719,7 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
         kb={intent ? undefined : { name: kbName, onClick: () => focusBar("/knowledge") }}
       />
       {intent && <Chips byId={byId} />}
+      {intent && open && viewMode && <ResolvedLine lines={preview?.lines ?? null} count={preview?.count ?? 0} editing={editingLine} onEditing={setEditingLine} onApply={applyWritten} />}
       {open && <SearchPanel rows={rows} idx={idx} onHover={setIdx} empty={empty} status={status} hint={hintMode ? LINE_COPY.hints[hintMode] : undefined} views={!text && !slash && viewChoices.length ? viewChoices : undefined} onMenu={intent ? (i, at) => rows[i]?.actions && openMenu(rows[i]!.actions!, at) : undefined} />}
       {menu &&
         createPortal(
