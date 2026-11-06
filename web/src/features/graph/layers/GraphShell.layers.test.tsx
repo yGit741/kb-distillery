@@ -59,7 +59,7 @@ describe("the > route records a layer (graph-intent)", () => {
     await withFlag("graph-intent", true, async () => {
       setup();
       expect(screen.queryByTestId("chip-rows")).not.toBeInTheDocument();
-      await userEvent.type(box(), "> colour by depth{Enter}");
+      await userEvent.type(box(), "> colour by depth{Enter}{Enter}");
       const view = await screen.findByRole("group", { name: "View" });
       expect(view).toHaveTextContent("colour by depth");
       expect(useGraphUi.getState().colorBy).toBe("depth");
@@ -77,7 +77,7 @@ describe("the > route records a layer (graph-intent)", () => {
   it("on: >+ stacks and >- removes", async () => {
     await withFlag("graph-intent", true, async () => {
       setup();
-      await userEvent.type(box(), ">+ colour by depth{Enter}");
+      await userEvent.type(box(), ">+ colour by depth{Enter}{Enter}");
       await waitFor(() => expect(useLayers.getState().stack.layers).toHaveLength(1));
       await userEvent.type(box(), ">- colour by depth{Enter}");
       await waitFor(() => expect(useLayers.getState().stack.layers).toHaveLength(0));
