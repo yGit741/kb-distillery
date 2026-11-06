@@ -13,7 +13,8 @@ this module is the guard.
 SSE event contract shared with static/chat.js (names → JSON data):
 
     session  {"id": str}                      first thing, and again after the result (resume key)
-    tool     {"name", "summary", "id", "error"?}   one per tool call ("read tensor-rank", "grep …")
+    tool     {"name", "summary", "id", "error"?, "seen"?, "read"?}   one per tool call ("read tensor-rank", "grep …")
+             seen / read: page slugs (at most 50) a search returned / a Read opened; absent when unknown
              agent mode adds "status" (running|done|error) and "result" (first ~300 chars)
     thinking str                              agent mode: streamed thinking text
     todo     {"items": [{content, status}]}   agent mode: the TodoWrite list (replaces the previous one)
@@ -857,6 +858,30 @@ def result_preview(content):
     return text[:PREVIEW_CHARS] + ("…" if len(text) > PREVIEW_CHARS else "")
 
 
+TRACE_SLUG_CAP = 50
+_TOKEN = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]*")
+
+
+def result_slugs(content, index, cap=TRACE_SLUG_CAP, md_only=False):
+    """Page slugs a search / listing result mentions, in order, at most `cap`. A token counts when it is a known slug
+    (or `<slug>.md` for a known slug); without an index only `.md` file names do. Slugs only, never page text."""
+    if isinstance(content, list):
+        content = "\n".join(str(b.get("text", "")) if isinstance(b, dict) else str(b) for b in content)
+    out = []
+    for tok in _TOKEN.findall(str(content or "")[:200_000]):
+        is_md = tok.endswith(".md")
+        if md_only and not is_md:
+            continue                    # grep output carries page text: only file names count
+        slug = tok[:-3] if is_md else tok
+        if slug in out or not slug:
+            continue
+        if (slug in index) if index else is_md:
+            out.append(slug)
+            if len(out) >= cap:
+                break
+    return out
+
+
 def todo_items(tool_input):
     items = (tool_input or {}).get("todos")
     return [{"content": str(t.get("content") or t.get("activeForm") or ""), "status": str(t.get("status") or "pending")}
@@ -898,6 +923,9 @@ def map_message(msg, state):
                     out.append(("todo", {"items": todo_items(inp)}))
                     continue
                 entry = {"name": name, "summary": tool_summary(name, inp), "id": getattr(block, "id", None)}
+                opened = slug_from_read(inp) if name == "Read" else None
+                if opened:
+                    entry["read"] = [opened]
                 if runtime.effective("agent-mode"):
                     entry["status"] = "running"
                 state.tools.append(entry)
@@ -923,10 +951,15 @@ def map_message(msg, state):
             if match:
                 if failed:
                     match["error"] = True
+                    match.pop("read", None)         # a denied or failed Read opened nothing
                 if runtime.effective("agent-mode"):
                     match["status"] = "error" if failed else "done"
                     match["result"] = result_preview(getattr(block, "content", None))
-                if failed or runtime.effective("agent-mode"):
+                seen = [] if failed or match.get("name") not in ("Grep", "Glob", "Bash") else \
+                    result_slugs(getattr(block, "content", None), state.index, md_only=match.get("name") != "Bash")
+                if seen:
+                    match["seen"] = seen
+                if failed or seen or runtime.effective("agent-mode"):
                     out.append(("tool", dict(match)))
             if not failed and tid in state.fetching:
                 state.add_web(state.fetching.pop(tid), count=1)

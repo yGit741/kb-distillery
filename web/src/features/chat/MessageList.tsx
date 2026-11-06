@@ -90,9 +90,12 @@ interface Props {
   busy: boolean;
   onRegenerate: () => void;
   onAnswer: (id: string, answers: Record<string, string>) => void;
+  /** a surface's own small controls beside Regenerate, and content under the answer (the spark panel's replay) */
+  actions?: (m: ChatMessage, index: number) => React.ReactNode;
+  below?: (m: ChatMessage, index: number) => React.ReactNode;
 }
 
-export function MessageList({ messages, busy, onRegenerate, onAnswer }: Props) {
+export function MessageList({ messages, busy, onRegenerate, onAnswer, actions, below }: Props) {
   const agentMode = useFlag("agent-mode");
   const end = useRef<HTMLDivElement>(null);
   const size = messages.length ? messages[messages.length - 1]!.content.length : 0;
@@ -129,11 +132,17 @@ export function MessageList({ messages, busy, onRegenerate, onAnswer }: Props) {
                 {m.error}
               </p>
             )}
-            {!user && isLast && !busy && (
-              <Button variant="ghost" size="sm" className="mt-2 -ml-2" onClick={onRegenerate}>
-                <RefreshCw aria-hidden /> Regenerate
-              </Button>
+            {!user && !streaming && (isLast || actions) && (
+              <div className="-ml-2 mt-2 flex flex-wrap items-center gap-1 empty:hidden">
+                {isLast && !busy && (
+                  <Button variant="ghost" size="sm" onClick={onRegenerate}>
+                    <RefreshCw aria-hidden /> Regenerate
+                  </Button>
+                )}
+                {actions?.(m, i)}
+              </div>
             )}
+            {!user && !streaming && below?.(m, i)}
           </li>
         );
       })}
