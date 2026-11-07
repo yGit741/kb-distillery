@@ -19,7 +19,12 @@ const withText = (layers: Layer[], lines: string[], typed: string): Layer[] => l
 export function planSentence(typed: string, nodes: readonly GNode[], opts: { focus?: string; chosen?: Record<string, string> } = {}): Plan {
   const s = fromSentence(typed);
   if (s.unknown !== undefined) return { kind: "unknown" };
-  const r = resolveNames(withText(s.layers, s.lines, typed), nodes, opts);
+  return planLayers(s.layers, s.lines, typed, nodes, opts);
+}
+
+/** Layers already read (by the rules or by the model): look their names up and say what comes of it. */
+export function planLayers(layers: Layer[], lines: string[], typed: string, nodes: readonly GNode[], opts: { focus?: string; chosen?: Record<string, string> } = {}): Plan {
+  const r = resolveNames(withText(layers, lines, typed), nodes, opts);
   const gap = r.ambiguous.find((a) => a.options.length === 0);
   if (gap) return { kind: "missing", name: gap.name };
   const first = r.ambiguous[0];
