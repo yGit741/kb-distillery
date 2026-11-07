@@ -19,6 +19,11 @@ import { chatTitle, type ChatMessage } from "@/features/chat/thread";
 import { useChatSession } from "@/features/chat/useChatSession";
 import { sessionIdOf } from "@/features/chat/serverStorage";
 import { ReplayControl, ReplaySteps } from "./AnswerReplay";
+import { ShowThinking } from "./ShowThinking";
+import { rolesOf, thinkingOf } from "./thinking";
+import { useThinking } from "./thinkingStore";
+import { useLabHud } from "../lab/hud";
+import type { CiteHooks } from "@/components/Markdown";
 import { ChatList } from "./ChatList";
 import { ChatTools } from "./ChatTools";
 import { useChatFull } from "./chatFullStore";
@@ -145,7 +150,7 @@ function Header({ title, full, rich, listOpen, onClose, tools }: BarProps & { ti
  * reader scrolls another into the middle. The graph frames the cited pages once when an answer finishes or the chat
  * opens, never on a render; a click on a lit page scrolls here to the sentence that cites it.
  */
-function useCitedPages(scroller: RefObject<HTMLDivElement | null>, messages: ChatMessage[], busy: boolean) {
+function useCitedPages(scroller: RefObject<HTMLDivElement | null>, messages: ChatMessage[], busy: boolean, still = false) {
   const [pick, setPick] = useState<{ n: number; idx: number | null }>({ n: messages.length, idx: null });
   const lastAssistant = (() => {
     for (let i = messages.length - 1; i >= 0; i--) if (messages[i]!.role === "assistant") return i;
@@ -169,9 +174,10 @@ function useCitedPages(scroller: RefObject<HTMLDivElement | null>, messages: Cha
     wasBusy.current = busy;
     const first = !opened.current;
     opened.current = true;
-    if (!slugs.length || busy) return;
+    // flag show-thinking: nothing moves, the camera included
+    if (!slugs.length || busy || still) return;
     if ((finished && idx === lastAssistant) || (first && !finished)) useCites.getState().refit();
-  }, [busy, slugs, idx, lastAssistant]);
+  }, [busy, slugs, idx, lastAssistant, still]);
 
   // the answer in the middle of the panel is the one on screen
   useEffect(() => {
@@ -217,7 +223,7 @@ function useCitedPages(scroller: RefObject<HTMLDivElement | null>, messages: Cha
     return () => window.clearTimeout(t);
   }, [req, scroller]);
 
-  return slugs;
+  return { slugs, idx };
 }
 
 type Status = Parameters<typeof parseStatus>[0];
@@ -236,7 +242,12 @@ function Body({ status, prompts, scope, full, rich, listOpen, onClose, server }:
   const box = useRef<HTMLTextAreaElement>(null);
   const [toolsOpen, setToolsOpen] = useState(false);
   const scroller = useRef<HTMLDivElement>(null);
-  const cited = useCitedPages(scroller, chat.messages, busy);
+  const thinkingFlag = useFlag("show-thinking");
+  const sparkFlag = useFlag("spark-chat");
+  const thinkingOn = thinkingFlag && sparkFlag;
+  const { slugs: cited, idx: onScreen } = useCitedPages(scroller, chat.messages, busy, thinkingOn);
+  useThinkingGraph(thinkingOn, chat.messages, onScreen, busy);
+  const citeHooks = useCiteHooks(thinkingOn, onScreen);
   const model = view.models.some((m) => m.id === modelPick) ? modelPick : view.defaultModel;
   const options = () => ({ ...quickSendOptions(status, prompts), model, scope });
   const title = chat.messages.length ? chatTitle(chat.messages) : "New chat";
@@ -315,8 +326,10 @@ function Body({ status, prompts, scope, full, rich, listOpen, onClose, server }:
               busy={busy}
               onRegenerate={() => regenerate(options())}
               onAnswer={answer}
-              actions={(m, i) => (m.role === "assistant" ? <ReplayControl message={m} index={i} /> : null)}
-              below={(m, i) => (m.role === "assistant" ? <ReplaySteps message={m} index={i} /> : null)}
+              actions={thinkingOn ? undefined : (m, i) => (m.role === "assistant" ? <ReplayControl message={m} index={i} /> : null)}
+              below={thinkingOn ? undefined : (m, i) => (m.role === "assistant" ? <ReplaySteps message={m} index={i} /> : null)}
+              thinking={thinkingOn ? (m, _i, streaming) => <ShowThinking message={m} streaming={streaming} /> : undefined}
+              cite={citeHooks}
             />
           )}
         </div>
@@ -355,4 +368,46 @@ function Body({ status, prompts, scope, full, rich, listOpen, onClose, server }:
       </Column>
     </>
   );
+}
+
+/**
+ * Flag show-thinking: the answer on screen puts what it looked at on the graph (./thinkingStore), from the first tool
+ * call onward, until the reader dismisses it; the next message brings it back.
+ */
+function useThinkingGraph(on: boolean, messages: ChatMessage[], idx: number, busy: boolean) {
+  const m = idx >= 0 ? messages[idx] : undefined;
+  const streaming = busy && idx === messages.length - 1;
+  const dismissed = useThinking((s) => s.dismissed);
+  // keyed on the trace and the finished text, not the message object: a streamed token changes neither
+  const trace = m?.role === "assistant" ? m.trace : undefined;
+  const text = streaming ? "" : (m?.content ?? "");
+  const view = useMemo(() => {
+    if (!on || !trace?.length) return null;
+    const t = thinkingOf(trace, text);
+    return { msg: idx, roles: rolesOf(t, !streaming), citeNo: t.citeNo, web: t.webSources };
+  }, [on, trace, text, idx, streaming]);
+  useEffect(() => {
+    useThinking.getState().set(view && view.msg !== dismissed ? view : null);
+  }, [view, dismissed]);
+  const count = messages.length;
+  useEffect(() => {
+    useThinking.getState().undismiss();
+  }, [count]);
+  useEffect(() => () => useThinking.getState().clear(), []);
+}
+
+/** Numbered citations in every answer; the one on screen also links its words and its nodes both ways. */
+function useCiteHooks(on: boolean, idx: number): ((m: ChatMessage, i: number) => CiteHooks | undefined) | undefined {
+  // flag off: no subscription, so a graph hover never re-renders the chat
+  const hot = useThinking((s) => (on ? s.hot : null));
+  const graphHover = useLabHud((s) => (on ? s.hover : null));
+  return useMemo(() => {
+    if (!on) return undefined;
+    const onHot = (slug: string | null) => useThinking.getState().setHot(slug);
+    return (m: ChatMessage, i: number) => {
+      if (m.role !== "assistant") return undefined;
+      const map = new Map(citedSlugs(m.content).map((s, n) => [s, n + 1] as const));
+      return { numberOf: (s: string) => map.get(s), hot: i === idx ? (hot ?? graphHover) : null, onHot: i === idx ? onHot : undefined };
+    };
+  }, [on, idx, hot, graphHover]);
 }

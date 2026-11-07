@@ -149,6 +149,16 @@ default = false
 envs = { local = true, private = true, public = false }
 
 [[flag]]
+name = "show-thinking"
+description = "Chat: Show my thinking under each answer (rounds of calls, citations, marks) and the answer glow on a grey graph; replaces the How it was built replay"
+owner = "maintainer"
+created = 2026-11-07
+expires = 2027-02-01
+kind = "runtime"
+default = false
+envs = { local = true, private = false, public = false }
+
+[[flag]]
 name = "chat-full"
 description = "Chat: one chat surface in three sizes (no separate chat screen): the graph's left panel grows to a full chat with a chat list, the graph and a mini explorer on the right (foldable to a rail); /app/chat opens it"
 owner = "maintainer"

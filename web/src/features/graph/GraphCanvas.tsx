@@ -33,6 +33,10 @@ import { useGraphUi } from "./store";
 import { useDecor } from "./tools/decor";
 import { drawNode as drawNodeMark } from "./encoding/canvas";
 import { drawReplayMark, drawReplayPath, LIT_DIM } from "./shell/replayDraw";
+import { linkKey, popSources } from "./shell/thinking";
+import { drawCiteBadge, drawGlow, drawHotRing, drawWebSource, popScale, THINK_DIM, webSpot } from "./shell/thinkingDraw";
+import { ThinkingLegend } from "./shell/ThinkingLegend";
+import { useThinking } from "./shell/thinkingStore";
 import { personInitials, SOURCE_GLYPH_PX } from "./encoding/spec";
 import { colorOf, effectiveColorBy, layeredRadii, METRIC_COLORS, nodeRadius, semanticRadius, type ColorBy, type SizeBy } from "./style";
 import type { GNode, GraphModel, SimLink, SimNode } from "./types";
@@ -136,7 +140,7 @@ const NO_NAMES: ReadonlyMap<string, string> = new Map();
 const CITE_FIT_AIR = 56;
 
 export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
-  { model, byId, neighbors, visible, imp, className, onOpenMenu, onBackgroundContext, onOpenReader, onOpenPile },
+  { model, byId, neighbors, visible: baseVisible, imp, className, onOpenMenu, onBackgroundContext, onOpenReader, onOpenPile },
   ref,
 ) {
   const ui = useGraphUi();
@@ -192,8 +196,40 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
   // the full chat gives the canvas its own box (the right pane): frame inside it, with room for the labels
   const { full: fullChat } = useFullChat();
   const sparkChat = useFlag("spark-chat");
+  // flag show-thinking: the answer on screen's pages come back in colour on a grey graph (./shell/thinkingStore);
+  // a source it found or opened that the calm graph hides pops in, with only its links to the answer's pages
+  const thinkingOn = useFlag("show-thinking") && sparkChat;
+  const thinkView = useThinking((s) => (thinkingOn ? s.view : null));
+  const thinkHot = useThinking((s) => s.hot);
+  useEffect(() => {
+    if (!thinkingOn) return;
+    useThinking.setState({ byId });
+  }, [thinkingOn, byId]);
+  const popped = useMemo(
+    () => (thinkView ? popSources(thinkView.roles, (id) => byId.get(id)?.layer, baseVisible, neighbors) : { pop: [] as string[], links: new Set<string>() }),
+    [thinkView, byId, baseVisible, neighbors],
+  );
+  const popSet = useMemo(() => new Set(popped.pop), [popped]);
+  const visible = useMemo<ReadonlySet<string>>(() => (popped.pop.length ? new Set([...baseVisible, ...popped.pop]) : baseVisible), [baseVisible, popped]);
+  // when each popped source first appeared: it scales in once from there
+  const popAt = useRef(new Map<string, number>());
+  useEffect(() => {
+    const now = performance.now();
+    const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    for (const id of popped.pop) if (!popAt.current.has(id)) popAt.current.set(id, still ? -Infinity : now);
+    for (const id of [...popAt.current.keys()]) if (!popSet.has(id)) popAt.current.delete(id);
+    if (still || !popped.pop.length) return;
+    let raf = 0;
+    const tick = () => {
+      fg.current?.refresh();
+      if (performance.now() - now < 400) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [popped, popSet]);
+  const think = useMemo(() => (thinkView ? { view: thinkView, pop: popSet, links: popped.links } : null), [thinkView, popSet, popped]);
   // a replay of how an answer was built (./shell/replayStore) lights its trail through the same focus: the camera stays
-  const replayView = useReplay((s) => (sparkChat ? s.view : null));
+  const replayView = useReplay((s) => (sparkChat && !thinkingOn ? s.view : null));
   const replayCandidates = useReplay((s) => s.candidates);
   const replayMissed = useReplay((s) => s.missed);
   const replayBad = useReplay((s) => s.bad);
@@ -210,14 +246,15 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
   );
   const cited = useMemo<ReadonlySet<string>>(() => {
     if (!sparkChat) return new Set();
+    if (think) return new Set([...think.view.roles.keys()].filter((id) => visible.has(id)));
     if (replay) return new Set([...replay.view.roles.keys(), ...replay.candidates, ...replay.missed, ...replay.bad].filter((id) => visible.has(id)));
     return new Set(citeSlugs.filter((id) => visible.has(id)));
-  }, [sparkChat, citeSlugs, visible, replay]);
+  }, [sparkChat, citeSlugs, visible, replay, think]);
   const fitSeen = useRef(citeFitTick); // the tick a remounted canvas starts at is not a request
   // a `>` sentence waiting for its second Enter (flag graph-intent): the pages it would keep light up, the rest dims
   const previewIds = useLayers((st) => st.preview?.ids ?? null);
-  const live = useRef({ ui, theme, selection, byId, neighbors, visible, cited, previewIds, replay, onOpenReader, onOpenMenu, onBackgroundContext, onOpenPile });
-  live.current = { ui, theme, selection, byId, neighbors, visible, cited, previewIds, replay, onOpenReader, onOpenMenu, onBackgroundContext, onOpenPile };
+  const live = useRef({ ui, theme, selection, byId, neighbors, visible, cited, previewIds, replay, think, onOpenReader, onOpenMenu, onBackgroundContext, onOpenPile });
+  live.current = { ui, theme, selection, byId, neighbors, visible, cited, previewIds, replay, think, onOpenReader, onOpenMenu, onBackgroundContext, onOpenPile };
 
   rs.current.imp = imp;
   const names = useMemo(() => areaNames(model.nodes, model.kbs), [model]);
@@ -247,7 +284,8 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
   const radiusRef = useRef(radiusOpts);
   radiusRef.current = radiusOpts;
   // each layer sized on its own scale (./style layeredRadii), over the pages drawn
-  const layered = useMemo(() => layeredRadii(model.nodes.filter((n) => shown.has(n.id)), radiusOpts), [model, shown, radiusOpts]);
+  // a popped source (flag show-thinking) never resizes the pages already drawn: sizes are scaled over the calm set
+  const layered = useMemo(() => layeredRadii(model.nodes.filter((n) => shown.has(n.id) && !popSet.has(n.id)), radiusOpts), [model, shown, radiusOpts, popSet]);
   const layeredRef = useRef(layered);
   layeredRef.current = layered;
   const radius = useCallback(
@@ -310,7 +348,7 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
             // the cited pages stay lit and the rest stays dim across a click or hover: the user's own focus joins them
             core: new Set([...cite, ...(base?.core ?? []), ...(hover ? [hover] : [])]),
             lit: new Set([...cite, ...(base?.lit ?? []), ...(hover ? [hover] : [])]),
-            dim: base?.dim ?? LIT_DIM[live.current.theme],
+            dim: base?.dim ?? (live.current.think ? THINK_DIM : LIT_DIM)[live.current.theme],
           }
         : base;
     startFade(rs.current.focus, next, u.calmHover || calmRef.current);
@@ -434,6 +472,9 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
 
   // ---- tool decor (experiment halos, faded links) is read at draw time; a change only needs a redraw
   useEffect(() => useDecor.subscribe(() => fg.current?.refresh()), []);
+  useEffect(() => {
+    fg.current?.refresh();
+  }, [thinkHot]);
   // a favorite page wears a quiet ring (flag graph-intent)
   useEffect(() => useFavorites.subscribe(() => fg.current?.refresh()), []);
 
@@ -779,7 +820,8 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
         return;
       }
       // a spotlit type (legend hover) is drawn a third larger as well as lit; semantic zoom (./style)
-      const r0 = radius(n) * (live.current.ui.spotlight?.has(n.type) ? 1.3 : 1);
+      const tk = live.current.think;
+      const r0 = radius(n) * (live.current.ui.spotlight?.has(n.type) ? 1.3 : 1) * (tk?.pop.has(n.id) ? popScale(popAt.current.get(n.id), performance.now()) : 1);
       const r = semanticRadius(r0, scale, rs.current.zr);
       const alpha = fadedNodeOpacity(n.id, focus, rs.current.prevFocus, rs.current.fadeT);
       const isSel = selected.has(n.id);
@@ -792,7 +834,10 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
       }
       const by = effectiveColorBy(live.current.ui.colorBy);
       // an ordered colouring is a neutral ramp (lightness), so it never fights the area hulls
-      const col = colorOf(n, by, METRIC_COLORS.has(by) ? metricOf(rs.current.imp, n, by) : undefined, live.current.theme);
+      const role = tk?.view.roles.get(n.id);
+      // flag show-thinking: a page that is not part of the answer is grey as well as dim
+      const col = tk && !role ? colors.muted : colorOf(n, by, METRIC_COLORS.has(by) ? metricOf(rs.current.imp, n, by) : undefined, live.current.theme);
+      if (role) drawGlow(ctx, n.x, n.y, r, col, role, scale, live.current.theme === "dark");
       // the shared encoding (./encoding): selection ring or hover glow, then the type's mark; a source is a plain dot
       // until it is big enough on screen (zoom) or under the pointer, then its type glyph
       drawNodeMark(ctx, n.type, {
@@ -804,12 +849,17 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
         font: colors.font,
         ring: colors.ring,
         initials: initials.get(n.id),
-        state: isSel ? "selected" : hover === n.id ? "hover" : !live.current.replay && live.current.cited.has(n.id) ? "focus" : flag("graph-intent") && useFavorites.getState().slugs.has(n.id) ? "favorite" : null,
+        state: isSel ? "selected" : hover === n.id ? "hover" : !live.current.replay && !tk && live.current.cited.has(n.id) ? "focus" : flag("graph-intent") && useFavorites.getState().slugs.has(n.id) ? "favorite" : null,
         alpha,
         glyph: r * scale >= SOURCE_GLYPH_PX || hover === n.id,
         scale,
       });
       if (live.current.replay) drawReplayMark(ctx, n.id, n.x, n.y, r, scale, alpha, live.current.replay, colors);
+      if (role === "cited") {
+        const no = tk?.view.citeNo.get(n.id);
+        if (no) drawCiteBadge(ctx, n.x, n.y, r, no, scale, colors);
+        if (useThinking.getState().hot === n.id) drawHotRing(ctx, n.x, n.y, r, scale, colors);
+      }
     },
     [radius, initials],
   );
@@ -875,6 +925,16 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
       const arcs = useDecor.getState().arcs;
       const rp = live.current.replay;
       if (rp?.view.path.length) drawReplayPath(ctx, g.nodes(), rp.view.path, scale, rs.current.colors);
+      const tk = live.current.think;
+      if (tk?.view.web.length) {
+        const all = g.nodes().filter((n) => n.x != null && n.y != null && live.current.visible.has(n.id)) as { id: string; x: number; y: number }[];
+        const at = new Map(all.map((n) => [n.id, n] as const));
+        tk.view.web.forEach((w, i) => {
+          const about = w.about.map((id) => at.get(id)).filter((p): p is { id: string; x: number; y: number } => !!p);
+          const spot = webSpot(about, all, 110, i);
+          if (spot) drawWebSource(ctx, w, spot, about, scale, rs.current.colors);
+        });
+      }
       if (arcs?.length) drawArcs(ctx, g.nodes(), arcs, scale, rs.current.colors);
       const u = live.current.ui;
       // hulls say where (area tints, or one per knowledge base when several share the canvas) and show only
@@ -979,6 +1039,9 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
     const fade = useDecor.getState().linkFade?.(a, b) ?? 1;
     // a hidden kind keeps its place in the layout and is simply not drawn
     if (live.current.ui.hiddenLinkKinds.has(l.kind)) return withAlpha(colors.link, 0);
+    // a popped source brings only its links to the answer's pages (flag show-thinking)
+    const tk = live.current.think;
+    if (tk && (tk.pop.has(a) || tk.pop.has(b)) && !tk.links.has(linkKey(a, b))) return withAlpha(colors.link, 0);
     return withAlpha(colors.link, fade * fadedLinkOpacity(a, b, focus, prevFocus, fadeT, live.current.ui.linkOpacity * (calmOn ? CALM_EDGE : 1), l.kind));
   }, [calmOn]);
   const linkWidth = useCallback((l: SimLink) => (l.kind === "shared" ? 0.35 + Math.min(l.shared ?? 1, 6) * 0.1 : 0.8), []);
@@ -1039,6 +1102,7 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
       />
       <canvas ref={overlay} aria-hidden className="pointer-events-none absolute inset-0 size-full" />
       {replay && <ReplayLegend atEnd={replay.view.atEnd} />}
+      {think && <ThinkingLegend web={think.view.web.length > 0} />}
       {kbIds.map((id) => (
         <button
           key={id}

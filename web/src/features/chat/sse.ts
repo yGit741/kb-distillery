@@ -33,6 +33,16 @@ export interface ToolStep {
   seen?: string[];
   /** page slugs whose content the step opened (at most 50); absent when unknown. */
   read?: string[];
+  /** the model's turn this call was sent in (1-based, shared by calls sent together); absent on old messages */
+  round?: number;
+  /** what the call does: shortlist, meaning, graph, raw, alias, keyword, files, open, attachment, web-search, web-source, other */
+  kind?: string;
+  /** the call's own words: search terms, grep pattern, cypher, web query */
+  query?: string;
+  /** an opened web page */
+  url?: string;
+  /** the hosts a web search returned */
+  domains?: string[];
 }
 export interface TodoItem {
   content: string;
@@ -150,6 +160,11 @@ export function toEvent(frame: RawFrame): ChatEvent | null {
           result: typeof payload.result === "string" ? payload.result : undefined,
           seen: slugList(payload.seen),
           read: slugList(payload.read),
+          round: typeof payload.round === "number" && payload.round >= 1 ? Math.floor(payload.round) : undefined,
+          kind: typeof payload.kind === "string" && payload.kind ? payload.kind : undefined,
+          query: typeof payload.query === "string" && payload.query ? payload.query : undefined,
+          url: typeof payload.url === "string" && payload.url ? payload.url : undefined,
+          domains: slugList(payload.domains),
         },
       };
     case "ask": {
