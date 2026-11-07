@@ -29,6 +29,7 @@ CALLS = [
     ("DELETE", "/api/recent", None),
     ("POST", "/api/graph/layers", {"text": "show papers", "op": "replace"}),
     ("POST", "/api/graph/shape", {"text": "papers"}),
+    ("GET", "/api/search/similar?q=attention", None),
     ("POST", "/api/chat", {"question": "hi"}),
     ("POST", "/api/chat/answer", {"session": "s", "id": "i", "answers": {}}),
 ]
