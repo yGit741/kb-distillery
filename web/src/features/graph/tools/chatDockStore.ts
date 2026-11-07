@@ -41,3 +41,21 @@ export function askAbout(pages: readonly { id: string }[], max = 12): string {
   const more = pages.length > max ? ` (and ${pages.length - max} more)` : "";
   return `About ${links}${more}: `;
 }
+
+/** The most shown pages a chat draft names. */
+export const SHOWN_MAX = 60;
+
+/**
+ * A chat draft with its context (flag graph-intent): the question (or, with none, the `About <pages>:` opening), the
+ * focused pages and the pages the view shows, as page links the agent reads first. Handed to `useChatDock.ask`.
+ */
+export function chatDraft(question: string, focus: readonly string[], shown: readonly string[], words: { focus: string; shown: (n: number) => string; more: (n: number) => string }): string {
+  const q = question.trim();
+  const out: string[] = [q || askAbout(focus.map((id) => ({ id })))];
+  if (q && focus.length) out.push(`${words.focus}: ${focus.slice(0, SHOWN_MAX).map((id) => link(id)).join(", ")}`);
+  if (shown.length) {
+    const more = shown.length > SHOWN_MAX ? ` ${words.more(shown.length - SHOWN_MAX)}` : "";
+    out.push(`${words.shown(shown.length)}: ${shown.slice(0, SHOWN_MAX).map((id) => link(id)).join(", ")}${more}`);
+  }
+  return out.length > 1 ? out.join("\n\n") : out[0]!;
+}

@@ -47,6 +47,8 @@ export function createEmbeddedDataSource(blob: ShareBlob | undefined = globalThi
     getPage: absent,
     getPageSource: absent,
     search: absent,
+    searchText: absent,
+    searchSimilar: absent,
     findPath: absent,
     getPipeline: absent,
     getCorpus: absent,
@@ -104,6 +106,7 @@ export function createEmbeddedDataSource(blob: ShareBlob | undefined = globalThi
       return sourceOf(page.frontmatter, page.markdown);
     },
     search: async (q, limit) => searchPages(data, q, limit),
+    searchText: async (q) => ({ query: q, hits: [] }),
     findPath: async (a, b) => {
       const r = findPaths(data, a, b);
       if (!r) throw new ApiError("not found", 404);
