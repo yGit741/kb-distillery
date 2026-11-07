@@ -279,7 +279,7 @@ export function tiles(lc?: LifecycleLike, ops?: OpsLike, health?: HealthLike): T
       label: "Backlog",
       value: health ? String(num(v.queued)) : "…",
       hint: health ? `queued · ${num(health.inbox_count)} in inbox · ${num(v.partial_books)} partial books` : "",
-      tone: health ? (num(health.inbox_count) ? "warn" : "") : "",
+      tone: "",
       tab: "pipeline",
     },
     {
