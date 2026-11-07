@@ -39,7 +39,7 @@ import { computeVisible } from "./rules";
 import { assignAreaColors, colorKey, effectiveColorBy } from "./style";
 import { registerTypeMarks } from "./encoding/spec";
 import { parseSchema, withDataTypes } from "./schema";
-import { SideReader } from "./SideReader";
+import { SideReader, type ReaderStep } from "./SideReader";
 import { useGraphUi } from "./store";
 import { Panels } from "./Panels";
 import { Corners } from "./shell/corners/Corners";
@@ -469,7 +469,19 @@ function Loaded({
   }, [search.tool]);
 
   // ---- actions shared by the menu, the inspector, the finder and the keyboard
-  const openReader = useCallback((id: string) => useGraphUi.setState({ readerSlug: id }), []);
+  const openReader = useCallback((id: string) => useGraphUi.setState((s) => ({ readerSlug: id, readerSet: s.readerSet.includes(id) ? s.readerSet : [] })), []);
+  const readerStep = useMemo<ReaderStep | undefined>(() => {
+    const at = ui.readerSlug ? ui.readerSet.indexOf(ui.readerSlug) : -1;
+    if (at < 0 || ui.readerSet.length < 2) return undefined;
+    return {
+      index: at + 1,
+      total: ui.readerSet.length,
+      go: (d) => {
+        const next = ui.readerSet[at + d];
+        if (next) useGraphUi.setState({ readerSlug: next });
+      },
+    };
+  }, [ui.readerSlug, ui.readerSet]);
   const focus = useCallback((id: string, zoom = true) => useGraphUi.getState().requestFocus(id, zoom), []);
   const closePanels = useCallback(() => {
     useGraphUi.setState({ readerSlug: null, detailsOpen: false });
@@ -751,7 +763,7 @@ function Loaded({
           clearOfEdge={shell}
         />
       )}
-      {reader && !fullChat && <SideReader slug={reader.slug ?? reader.id} kb={host.foreignKb?.(reader.id)} title={reader.title || reader.id} pageHref={host.pageHref(reader.id)} onClose={() => ui.set({ readerSlug: null })} />}
+      {reader && !fullChat && <SideReader slug={reader.slug ?? reader.id} kb={host.foreignKb?.(reader.id)} title={reader.title || reader.id} pageHref={host.pageHref(reader.id)} onClose={() => ui.set({ readerSlug: null, readerSet: [] })} step={readerStep} />}
       {menu && menuNode && (
         <NodeMenu
           node={menuNode}

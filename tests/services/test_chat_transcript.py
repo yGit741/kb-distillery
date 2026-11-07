@@ -63,7 +63,11 @@ def test_tool_events_are_unchanged_with_the_flag_off():
     use = AssistantMessage(content=[ToolUseBlock(id="t1", name="Grep", input={"pattern": "rank"})])
     ok = UserMessage(content=[ToolResultBlock(tool_use_id="t1", content="hits")])
     ev = run([use, ok])
-    assert ev == [("tool", {"name": "Grep", "summary": "grep rank", "id": "t1"})]
+    assert [e for e, _ in ev] == ["tool", "tool"]
+    first, done = ev[0][1], ev[1][1]
+    assert (first["name"], first["summary"], first["id"]) == ("Grep", "grep rank", "t1")
+    assert (first["round"], first["kind"], first["query"], first["status"]) == (1, "keyword", "rank", "running")
+    assert done["status"] == "done" and "result" not in done      # the preview stays agent-mode only
 
 
 @pytest.mark.flag("agent-mode", True)
