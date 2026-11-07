@@ -1,6 +1,8 @@
 """Feature-flag registry (meta/flags.toml): validation, values, codegen --check."""
+import json
 import shutil
 import tempfile
+import tomllib
 import textwrap
 import unittest
 from pathlib import Path
@@ -86,7 +88,9 @@ class CodegenTests(unittest.TestCase):
             self.assertEqual(codegen.main([], root=root), 0)
             self.assertEqual(codegen.main(["--check"], root=root), 0)
             gen = (root / codegen.GEN_TS).read_text(encoding="utf-8")
-            self.assertIn('export type FlagName = "agent-mode" | "calm-graph" | "chat-full" | "graph-intent" | "graph-relations" | "graph-shell" | "header-fold" | "inbox-pickup" | "kb-view" | "legend-counts" | "parsed-pdf" | "research-tools" | "screen.lifecycle" | "screen.share" | "screen.start" | "screen.think" | "semantic-search" | "spark-chat" | "ui.system-flags-tab" | "views-panel";', gen)
+            toml_names = sorted(f["name"] for f in tomllib.loads((root / "meta" / "flags.toml").read_text())["flag"])   # read independently of load()
+            union = " | ".join(json.dumps(n) for n in toml_names)
+            self.assertIn(f"export type FlagName = {union};", gen)
             pub = (root / codegen.modules_path("public")).read_text(encoding="utf-8")
             priv = (root / codegen.modules_path("private")).read_text(encoding="utf-8")
             self.assertNotIn("lifecycle", pub)

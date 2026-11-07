@@ -94,13 +94,17 @@ describe("opening", () => {
     item.remove();
   });
 
-  it("shows the knowledge base name as the icon's tooltip (graph-intent off)", async () => {
+  it("shows no icons or shortcut hint in the search line, with graph-intent on or off", async () => {
     const { withFlag } = await import("@/flags/testing");
-    await withFlag("graph-intent", false, async () => {
-      setup({ getKb: async () => ({ name: "Thesis Knowledge Base", id: "thesis" }) as never });
-      const icon = await screen.findByRole("button", { name: /knowledge base: thesis knowledge base/i });
-      expect(icon).toHaveAttribute("title", "Thesis Knowledge Base");
-    });
+    for (const on of [true, false]) {
+      await withFlag("graph-intent", on, async () => {
+        const { unmount } = setup({ getKb: async () => ({ name: "Thesis Knowledge Base", id: "thesis" }) as never });
+        await screen.findByRole("combobox");
+        expect(screen.queryByRole("button", { name: /knowledge base:/i })).not.toBeInTheDocument();
+        expect(screen.queryByText("⌘K")).not.toBeInTheDocument();
+        unmount();
+      });
+    }
   });
 });
 

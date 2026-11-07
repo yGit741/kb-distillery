@@ -24,7 +24,7 @@ export function HeaderFold() {
     <div
       data-testid="header-fold"
       data-folded={folded || undefined}
-      className={cn("absolute inset-x-0 top-0 z-[31] flex h-6 justify-center", folded ? "pointer-events-none" : "pointer-events-auto")}
+      className={cn("absolute inset-x-0 top-0 z-[31] flex h-3.5 justify-center", folded ? "pointer-events-none" : "pointer-events-auto")}
       title={folded ? undefined : "Double-click here to hide the app bar"}
       onDoubleClick={(e) => {
         // the chevron handles its own clicks; the strip around it folds on a double click
@@ -40,11 +40,11 @@ export function HeaderFold() {
         onClick={toggle}
         onDoubleClick={(e) => e.stopPropagation()}
         className={cn(
-          "pointer-events-auto mt-0.5 grid h-6 w-9 place-items-center rounded-full bg-background text-muted-foreground shadow-[0_0_10px_6px_var(--background)] transition-colors hover:text-foreground motion-reduce:transition-none",
+          "pointer-events-auto -mt-2.5 flex h-6 w-9 items-end justify-center pb-px rounded-full bg-background text-muted-foreground shadow-[0_0_10px_6px_var(--background)] transition-colors hover:text-foreground motion-reduce:transition-none",
           RING,
         )}
       >
-        <ChevronDown aria-hidden className={cn("size-[18px] transition-transform duration-200 motion-reduce:transition-none", !folded && "rotate-180")} strokeWidth={1.6} />
+        <ChevronDown aria-hidden className={cn("size-[14px] transition-transform duration-200 motion-reduce:transition-none", !folded && "rotate-180")} strokeWidth={1.6} />
       </button>
     </div>
   );
