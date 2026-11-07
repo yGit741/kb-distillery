@@ -419,6 +419,21 @@ class PrFlowTests(unittest.TestCase):
         self.assertIn("## Review", calls)
         self.assertIn("clean, no blockers (2 findings)", calls)
 
+    def test_pr_ignores_a_merged_pr_of_a_reused_branch_name(self):
+        wt = self._committed()
+        ship.cmd_review("ok", root=wt)
+        calls = []
+
+        def fake_gh(args, root=None):
+            calls.append(args[:2])
+            out = '{"number": 141, "url": "u", "state": "MERGED"}' if args[:2] == ["pr", "view"] else "https://x/pull/9"
+            return subprocess.CompletedProcess(args, 0, out, "")
+
+        with patch.object(ship, "gh", fake_gh):
+            self.assertEqual(ship.cmd_pr(root=wt, gates=False, check_review=True), 0)
+        self.assertIn(["pr", "create"], calls)
+        self.assertNotIn(["pr", "edit"], calls)
+
     def test_stale_review_record_is_refused(self):
         wt = self._committed()
         ship.cmd_review("ok", root=wt)

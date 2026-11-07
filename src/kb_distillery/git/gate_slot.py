@@ -17,6 +17,7 @@ import contextlib
 import fcntl
 import json
 import os
+import signal
 import socket
 import subprocess
 import time
@@ -28,6 +29,10 @@ HOLDER_NAME = "kb-gate.holder"
 HELD_ENV = "KB_GATE_SLOT_HELD"
 DEFAULT_WAIT = 45 * 60
 POLL = 0.2
+IDLE_MIN = 10          # KB_GATE_IDLE_MIN: no log output for this long AND ~0% CPU = hung
+STEP_MAX_MIN = 45      # KB_GATE_STEP_MAX_MIN: hard cap for one gate step
+IDLE_CPU = 1.0         # percent of the whole process tree under which it counts as not working
+HEAVY = ("vitest", "web-tests", "web-check", "test-e2e", "test-ui-principles", "playwright")   # steps load-gated
 
 _open = {}   # common dir -> the sequence open in this process
 
@@ -132,3 +137,113 @@ def sequence(root, wait=None, log=print):
         if outer:
             _open.pop(key, None)
             seq.release()
+
+
+def _env_minutes(name, default):
+    try:
+        v = float(os.environ.get(name, ""))
+        return v if v > 0 else default
+    except ValueError:
+        return default
+
+
+def _group_cpu_seconds(pgid):
+    """Cumulative CPU seconds of every process in the process group (ps TIME is [[dd-]hh:]mm:ss.cc)."""
+    cp = subprocess.run(["ps", "-A", "-o", "pgid=,time="], capture_output=True, text=True, check=False)
+    total = 0.0
+    for line in cp.stdout.splitlines():
+        parts = line.split()
+        if len(parts) != 2 or parts[0] != str(pgid):
+            continue
+        with contextlib.suppress(ValueError):
+            days, _, rest = parts[1].rpartition("-")
+            secs = 0.0
+            for f in rest.split(":"):
+                secs = secs * 60 + float(f)
+            total += secs + (int(days) * 86400 if days else 0)
+    return total
+
+
+def tree_cpu(pgid, window=1.5, sleep=time.sleep):
+    """Instantaneous %CPU of the process group: the CPU-time delta over `window` seconds (ps %cpu is a lifetime
+    average and would stay high long after a tree hung)."""
+    before = _group_cpu_seconds(pgid)
+    sleep(window)
+    return max(0.0, _group_cpu_seconds(pgid) - before) / window * 100.0
+
+
+def load_limit():
+    try:
+        v = float(os.environ["KB_GATE_MAX_LOAD"])
+    except (KeyError, ValueError):
+        v = 0.0
+    return v if v > 0 else 2.0 * (os.cpu_count() or 1)
+
+
+def is_heavy(name, cmd):
+    text = f"{name} {' '.join(map(str, cmd))}"
+    return any(h in text for h in HEAVY)
+
+
+def wait_for_load(wait, log=print, load=lambda: os.getloadavg()[0], limit=None, sleep=time.sleep,
+                  clock=time.monotonic, poll=5.0):
+    """Hold a vitest/e2e step back (still inside the slot, so it is the queue) while the 1-minute load average is above
+    the limit; bounded by `wait`, then GateSlotTimeout."""
+    limit = load_limit() if limit is None else limit
+    started = clock()
+    announced = False
+    while load() > limit:
+        if not announced:
+            log(f"gate slot: waiting for load {load():.1f} below {limit:.1f}")
+            announced = True
+        if clock() - started > wait:
+            raise GateSlotTimeout(f"gate slot: gave up after {fmt_age(wait)} waiting for load {load():.1f} below "
+                                  f"{limit:.1f} — raise KB_GATE_MAX_LOAD or KB_GATE_WAIT")
+        sleep(poll)
+
+
+def _kill_tree(proc):
+    for sig in (signal.SIGTERM, signal.SIGKILL):
+        with contextlib.suppress(OSError):
+            os.killpg(proc.pid, sig)
+        with contextlib.suppress(subprocess.TimeoutExpired):
+            proc.wait(timeout=5)
+    with contextlib.suppress(OSError):
+        os.killpg(proc.pid, signal.SIGKILL)       # grandchildren that outlived the leader or ignored SIGTERM
+
+
+def supervise(cmd, cwd, log_path, env=None, idle_min=None, max_min=None, cpu=tree_cpu, clock=time.monotonic,
+              sleep=time.sleep, poll=2.0):
+    """Run `cmd` writing to `log_path`; kill its whole process tree when the log has been silent for idle_min AND the
+    tree uses ~0% CPU, or after max_min in all. Returns (returncode, reason) with reason None, "idle" or "cap"."""
+    idle = (_env_minutes("KB_GATE_IDLE_MIN", IDLE_MIN) if idle_min is None else idle_min) * 60
+    cap = (_env_minutes("KB_GATE_STEP_MAX_MIN", STEP_MAX_MIN) if max_min is None else max_min) * 60
+    with open(log_path, "w", encoding="utf-8") as f:
+        proc = subprocess.Popen(cmd, cwd=cwd, stdout=f, stderr=subprocess.STDOUT, env=env, start_new_session=True)
+        started = last_move = clock()
+        last_size = 0
+        try:
+            while proc.poll() is None:
+                sleep(poll)
+                now = clock()
+                size = os.path.getsize(log_path)
+                if size != last_size:
+                    last_size, last_move = size, now
+                if now - started > cap:
+                    _kill_tree(proc)
+                    return proc.returncode, "cap"
+                if now - last_move > idle and cpu(proc.pid) < IDLE_CPU:
+                    _kill_tree(proc)
+                    return proc.returncode, "idle"
+        except BaseException:
+            _kill_tree(proc)
+            raise
+    return proc.returncode, None
+
+
+def hung_message(name, reason, log_rel, idle_min=None, max_min=None):
+    if reason == "idle":
+        n = _env_minutes("KB_GATE_IDLE_MIN", IDLE_MIN) if idle_min is None else idle_min
+        return f"hung gate, stopped after {n:g} idle minutes: {name} (see {log_rel})"
+    n = _env_minutes("KB_GATE_STEP_MAX_MIN", STEP_MAX_MIN) if max_min is None else max_min
+    return f"gate step over its cap, stopped after {n:g} minutes: {name} (see {log_rel})"

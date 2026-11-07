@@ -829,7 +829,6 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
         inputRef={input}
         placeholder={intent ? LINE_COPY.placeholder : `Search ${kbName}`}
         notice={open ? undefined : notice?.text}
-        kb={intent ? undefined : { name: kbName, onClick: () => focusBar("/knowledge") }}
       />
       {intent && <Chips byId={byId} />}
       {intent && open && viewMode && <ResolvedLine lines={preview?.lines ?? null} count={preview?.count ?? 0} editing={editingLine} onEditing={setEditingLine} onApply={applyWritten} />}
