@@ -86,6 +86,15 @@ export interface MarkdownProps {
   transformUrl?: (url: string) => string;
   /** Search params every page link carries (`{ kb }` keeps a read-only page's links in its knowledge base). */
   linkSearch?: Record<string, string>;
+  /** Numbered citations (flag show-thinking): a page link whose slug has a number gets it as a small superscript, and
+   * hovering the link or the number reports the slug; `hot` is the slug to highlight (hovered here or on the graph). */
+  cite?: CiteHooks;
+}
+
+export interface CiteHooks {
+  numberOf: (slug: string) => number | undefined;
+  hot?: string | null;
+  onHot?: (slug: string | null) => void;
 }
 
 /**
@@ -93,7 +102,7 @@ export interface MarkdownProps {
  * to /pages/<slug>. Raw HTML in the source is not rendered (react-markdown escapes it), so there is
  * nothing to sanitise and no dangerouslySetInnerHTML.
  */
-export function Markdown({ children, className, resolveSlug, transformUrl, linkSearch }: MarkdownProps) {
+export function Markdown({ children, className, resolveSlug, transformUrl, linkSearch, cite }: MarkdownProps) {
   const components = useMemo<ComponentProps<typeof ReactMarkdown>["components"]>(
     () => ({
       a({ href, children: kids, node: _node, ...rest }) {
@@ -107,10 +116,22 @@ export function Markdown({ children, className, resolveSlug, transformUrl, linkS
               </span>
             );
           }
-          return (
+          const link = (
             <Link to={`/pages/${encodeURIComponent(resolved)}` as "/"} search={(linkSearch ?? {}) as never} className="wikilink">
               {kids}
             </Link>
+          );
+          const n = cite?.numberOf(raw);
+          if (n === undefined) return link;
+          const hot = cite?.hot === raw;
+          const hover = { onMouseEnter: () => cite?.onHot?.(raw), onMouseLeave: () => cite?.onHot?.(null) };
+          return (
+            <span data-cite={raw} data-hot={hot ? "" : undefined} className={cn("rounded-sm", hot && "bg-secondary outline outline-1 outline-border")} {...hover}>
+              {link}
+              <sup className="ml-px cursor-default px-0.5 text-[10px] font-semibold text-foreground" aria-label={`citation ${n}`}>
+                {n}
+              </sup>
+            </span>
           );
         }
         const external = !!href && /^https?:/i.test(href);
@@ -132,7 +153,7 @@ export function Markdown({ children, className, resolveSlug, transformUrl, linkS
         return <img src={url} alt={alt ?? ""} loading="lazy" />;
       },
     }),
-    [resolveSlug, transformUrl, linkSearch],
+    [resolveSlug, transformUrl, linkSearch, cite],
   );
   return (
     <div className={cn("kb-prose", className)}>

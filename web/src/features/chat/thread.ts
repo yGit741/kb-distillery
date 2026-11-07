@@ -77,7 +77,8 @@ export function applyEvent(
     case "tool": {
       const trace = [...(bot.trace ?? [])];
       const at = ev.step.id ? trace.findIndex((t) => t.id === ev.step.id) : -1;
-      if (at >= 0) trace[at] = { ...trace[at]!, ...ev.step };
+      // a re-sent step (its result arrived) keeps what the first one said and the new one leaves out
+      if (at >= 0) trace[at] = { ...trace[at]!, ...Object.fromEntries(Object.entries(ev.step).filter(([, v]) => v !== undefined)) } as ToolStep;
       else trace.push(ev.step);
       bot.trace = trace;
       break;

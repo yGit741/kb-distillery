@@ -1,7 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { Globe, RefreshCw } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { Markdown } from "@/components/Markdown";
+import { Markdown, type CiteHooks } from "@/components/Markdown";
 import { Button } from "@/components/ui/button";
 import { useFlag } from "@/flags/useFlag";
 import { cn } from "@/lib/utils";
@@ -93,9 +93,13 @@ interface Props {
   /** a surface's own small controls beside Regenerate, and content under the answer (the spark panel's replay) */
   actions?: (m: ChatMessage, index: number) => React.ReactNode;
   below?: (m: ChatMessage, index: number) => React.ReactNode;
+  /** content under the answer that also shows while it streams (the spark panel's "Show my thinking") */
+  thinking?: (m: ChatMessage, index: number, streaming: boolean) => React.ReactNode;
+  /** numbered citations in an answer's text */
+  cite?: (m: ChatMessage, index: number) => CiteHooks | undefined;
 }
 
-export function MessageList({ messages, busy, onRegenerate, onAnswer, actions, below }: Props) {
+export function MessageList({ messages, busy, onRegenerate, onAnswer, actions, below, thinking, cite }: Props) {
   const agentMode = useFlag("agent-mode");
   const end = useRef<HTMLDivElement>(null);
   const size = messages.length ? messages[messages.length - 1]!.content.length : 0;
@@ -116,15 +120,16 @@ export function MessageList({ messages, busy, onRegenerate, onAnswer, actions, b
             className={cn("rounded-lg border p-3", user ? "bg-secondary/50" : "bg-card", m.failed && "opacity-70")}
           >
             <p className="mb-1 text-xs font-medium text-muted-foreground">{user ? "You" : "Claude"}</p>
-            {!user && (agentMode ? <Transcript message={m} live={streaming} /> : m.trace && <Trace steps={m.trace} live={streaming} />)}
+            {!user && (agentMode ? <Transcript message={m} live={streaming} /> : !thinking && m.trace && <Trace steps={m.trace} live={streaming} />)}
             {user ? (
               <p className="whitespace-pre-wrap break-words text-sm">{m.content}</p>
             ) : m.content ? (
-              <Markdown>{m.content}</Markdown>
+              <Markdown cite={cite?.(m, i)}>{m.content}</Markdown>
             ) : streaming ? (
               <p className="text-sm text-muted-foreground">Thinking…</p>
             ) : null}
             {!user && m.ask && streaming && <AskCard ask={m.ask} onAnswer={onAnswer} />}
+            {!user && thinking?.(m, i, streaming)}
             {!user && m.meta && <p className="mt-2 text-xs text-muted-foreground">{m.meta}</p>}
             {!user && m.usage && <p className="text-xs text-muted-foreground">{tokenLine(m.usage)}</p>}
             {!user && m.error && (
