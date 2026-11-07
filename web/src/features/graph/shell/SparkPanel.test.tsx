@@ -189,7 +189,8 @@ describe("cites: the pages an answer links light up on the graph beside the pane
   });
 
   it("flag on: the answer on screen sets the cited pages and one fit; closing the panel ends it; the selection is untouched", async () => {
-    await withFlag("graph-shell", true, () =>
+    // the re-zoom is the show-thinking flag's off state (with it on, nothing moves)
+    await withFlag("show-thinking", false, () => withFlag("graph-shell", true, () =>
       withFlag("spark-chat", true, async () => {
         storeAnswer();
         useKb.setState({ selection: new Set(["idea-001"]) });
@@ -205,7 +206,7 @@ describe("cites: the pages an answer links light up on the graph beside the pane
         expect(useCites.getState().slugs).toEqual([]);
         expect([...useKb.getState().selection]).toEqual(["idea-001"]);
       }),
-    );
+    ));
   });
 
   it("flag off: no panel, nothing is highlighted or fitted", async () => {
@@ -224,7 +225,8 @@ describe("cites: the pages an answer links light up on the graph beside the pane
   });
 
   it("flag on: sending shows no re-zoom until the new answer is finished; scrolling between answers never re-zooms", async () => {
-    await withFlag("graph-shell", true, () =>
+    // the re-zoom is the show-thinking flag's off state (with it on, nothing moves)
+    await withFlag("show-thinking", false, () => withFlag("graph-shell", true, () =>
       withFlag("spark-chat", true, async () => {
         storeAnswer();
         let push: (t: string) => void = () => {};
@@ -260,7 +262,7 @@ describe("cites: the pages an answer links light up on the graph beside the pane
         await waitFor(() => expect(useCites.getState().slugs).toEqual(["idea-005", "idea-006"]));
         expect(useCites.getState().fitTick).toBe(2);
       }),
-    );
+    ));
   });
 
   it("flag on: a scroll request is consumed, so reopening the panel does not replay it", async () => {

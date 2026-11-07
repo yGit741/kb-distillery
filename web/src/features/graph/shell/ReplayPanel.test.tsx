@@ -90,7 +90,8 @@ beforeEach(() => {
   useGraphUi.setState({ ...DEFAULT_PREFS, story: "", shownTypes: undefined, predicate: null, shownDepths: null, search: "", rules: [], typeLabels: new Set(), view: null, revealed: new Set(), flyout: null, detailsOpen: false, readerSlug: null, focusRequest: null, fitTick: 0 });
 });
 
-const on = (fn: () => Promise<void>) => withFlag("graph-shell", true, () => withFlag("spark-chat", true, fn));
+// the replay is the show-thinking flag's off state
+const on = (fn: () => Promise<void>) => withFlag("graph-shell", true, () => withFlag("spark-chat", true, () => withFlag("show-thinking", false, fn)));
 const open = async (source?: DataSource) => {
   screenWith(source);
   await screen.findByTestId("graph-shell");
