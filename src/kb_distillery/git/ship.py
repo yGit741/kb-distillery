@@ -51,7 +51,7 @@ META_DIR = os.path.join(vault_root(), "meta")
 ROOT = checkout_root()
 
 from kb_distillery.ops.daily_sync import changed_paths, has_open_sessions, run_git
-from kb_distillery.git import app_token, claims, commit_policy, events, flag_merge, gate_cache, gate_slot, night, review_gate, rounds
+from kb_distillery.git import app_token, claims, commit_policy, events, flag_merge, gate_cache, gate_slot, night, review_gate, rounds, worktree_lock
 from kb_distillery.vault.schema import GATE_PREFIXES as GP, GIT_POLICY_MODE, INDEX_REL, SCHEMA_VERSION, is_index_path
 
 GATES = [
@@ -470,15 +470,24 @@ def run_gate(name, cmd, root=ROOT):
     try:
         with gate_slot.sequence(root) as slot:
             slot.ensure()            # a real run takes the machine-wide slot; reused gates never reach here
+            if subprocess.run is _REAL_RUN and gate_slot.is_heavy(name, cmd) and not os.environ.get(gate_slot.HELD_ENV):
+                gate_slot.wait_for_load(slot.wait)
             started = time.monotonic()
-            with open(log, "w", encoding="utf-8") as f:
-                rc = subprocess.run(cmd, cwd=root, stdout=f, stderr=subprocess.STDOUT,
-                                    env=gate_slot.child_env()).returncode
+            if subprocess.run is _REAL_RUN:
+                rc, why = gate_slot.supervise(cmd, root, log, env=gate_slot.child_env())
+            else:
+                why = None
+                with open(log, "w", encoding="utf-8") as f:
+                    rc = subprocess.run(cmd, cwd=root, stdout=f, stderr=subprocess.STDOUT,
+                                        env=gate_slot.child_env()).returncode
     except gate_slot.GateSlotTimeout as e:
         print(f"error: {e}")
         return False
     secs = int(time.monotonic() - started)
     shown = os.path.relpath(log, root)
+    if why:
+        print(f"error: {gate_slot.hung_message(name, why, shown)}")
+        return False
     if rc == 0:
         print(f"gate: {name} ok ({secs}s, log {shown})")
         return True
@@ -555,9 +564,16 @@ def _run_checks(root, skip_reason, paths):
         try:
             with gate_slot.sequence(root) as slot:
                 slot.ensure()
+                if subprocess.run is _REAL_RUN and gate_slot.is_heavy(name, cmd) and not os.environ.get(gate_slot.HELD_ENV):
+                    gate_slot.wait_for_load(slot.wait)
                 print(f"check: {name}")
-                cp = subprocess.run(cmd, cwd=root, capture_output=True, text=True, check=False,
-                                    env=gate_slot.child_env())
+                if subprocess.run is _REAL_RUN:
+                    cp = _supervised_check(name, cmd, root)
+                    if cp is None:
+                        return False
+                else:
+                    cp = subprocess.run(cmd, cwd=root, capture_output=True, text=True, check=False,
+                                        env=gate_slot.child_env())
         except gate_slot.GateSlotTimeout as e:
             print(f"error: {e}")
             return False
@@ -568,6 +584,19 @@ def _run_checks(root, skip_reason, paths):
             return False
         _remember(root, key)
     return True
+
+
+def _supervised_check(name, cmd, root):
+    """A check run under the watchdog (output in a log file, read back); None when it was stopped as hung."""
+    log_dir = os.path.join(root, ".cache", "ship-gates")
+    os.makedirs(log_dir, exist_ok=True)
+    log = os.path.join(log_dir, f"{time.strftime('%Y%m%d-%H%M%S')}-check-{name}.log")
+    rc, why = gate_slot.supervise(cmd, root, log, env=gate_slot.child_env())
+    if why:
+        print(f"error: {gate_slot.hung_message(name, why, os.path.relpath(log, root))}")
+        return None
+    with open(log, encoding="utf-8", errors="replace") as f:
+        return subprocess.CompletedProcess(cmd, rc, f.read(), "")
 
 
 def _out(cp):
@@ -922,9 +951,9 @@ def cmd_pr(title=None, skip_tests=False, root=ROOT, gates=True, notes_file=None,
         claims.warn(paths or claims.touched_dirs(branch_files(root)), branch, root)
     except Exception as e:  # the overlap check never fails ship pr
         print(f"note: overlap check skipped — {e}")
-    existing = gh(["pr", "view", branch, "--json", "number,url"], root)
-    if existing.returncode == 0 and existing.stdout.strip():
-        info = json.loads(existing.stdout)
+    existing = gh(["pr", "view", branch, "--json", "number,url,state"], root)
+    info = json.loads(existing.stdout) if existing.returncode == 0 and existing.stdout.strip() else None
+    if info and info.get("state", "OPEN") == "OPEN":     # a merged or closed PR of a reused branch name is not this one
         print(f"PR #{info['number']} already open: {info['url']} (pushed new commits)")
         if skip_checks or review_line or no_review:
             gh(["pr", "edit", branch, "--body", pr_body(subjects, _read_notes(notes_file), skip_checks, round_no, paths, review_line, no_review)], root)
@@ -1551,6 +1580,16 @@ def main(argv=None):
     return code
 
 
+def _locked(name, fn, *a, **kw):
+    """Run commit/pr/merge under the per-worktree lock; a second run in the same worktree is refused at once."""
+    try:
+        with worktree_lock.hold(ROOT, name):
+            return fn(*a, **kw)
+    except worktree_lock.ShipLockBusy as e:
+        print(f"error: ship {name}: {e}")
+        return 1
+
+
 def _main(argv):
     from kb_distillery.config.resources import NotInCheckout, require_repo_root
     try:
@@ -1659,10 +1698,10 @@ def _main(argv):
     if args.cmd == "start":
         return cmd_start(args.feature, args.worktree, round_no=args.round, paths=args.paths)
     if args.cmd == "commit":
-        return cmd_commit(args.message, args.skip_tests)
+        return _locked("commit", cmd_commit, args.message, args.skip_tests)
     if args.cmd == "pr":
-        return cmd_pr(args.title, args.skip_tests, notes_file=args.notes, hold=args.hold, skip_checks=args.skip_checks,
-                      no_review=args.no_review)
+        return _locked("pr", cmd_pr, args.title, args.skip_tests, notes_file=args.notes, hold=args.hold,
+                       skip_checks=args.skip_checks, no_review=args.no_review)
     if args.cmd == "review":
         return cmd_review(args.summary, args.findings)
     if args.cmd == "approve":
@@ -1672,7 +1711,8 @@ def _main(argv):
     if args.cmd == "tag":
         from kb_distillery.config import kb as kbconfig
         return cmd_tag(args.name, args.at, kbconfig.explicit_kb(), args.repo, args.message)
-    return cmd_merge(args.local, args.pr, args.title, args.skip_tests, args.no_push, skip_checks=args.skip_checks)
+    return _locked("merge", cmd_merge, args.local, args.pr, args.title, args.skip_tests, args.no_push,
+                   skip_checks=args.skip_checks)
 
 
 if __name__ == "__main__":
