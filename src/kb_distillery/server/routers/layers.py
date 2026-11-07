@@ -1,9 +1,10 @@
 """POST /api/graph/layers — a `>` sentence the rules parser could not read, as layer objects (never Cypher)."""
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
 from kb_distillery.graph import layers_translate
 from kb_distillery.graph.layers_translate import LayersError
 from kb_distillery.server.models.layers import LayersRequest, LayersResponse
+from kb_distillery.server.readonly import refuse_when_read_only
 
 router = APIRouter(tags=["graph"])
 ERRORS = {400: {"description": "Unknown or unusable LLM backend"},
@@ -11,7 +12,7 @@ ERRORS = {400: {"description": "Unknown or unusable LLM backend"},
           502: {"description": "The LLM backend failed"}}
 
 
-@router.post("/api/graph/layers", response_model=LayersResponse, response_model_exclude_none=True, responses=ERRORS,
+@router.post("/api/graph/layers", dependencies=[Depends(refuse_when_read_only)], response_model=LayersResponse, response_model_exclude_none=True, responses=ERRORS,
              summary="Turn free text into layer objects (show, hide, style) through the shared LLM tool")
 def post_layers(body: LayersRequest):
     try:
