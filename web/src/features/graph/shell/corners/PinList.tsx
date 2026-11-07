@@ -1,6 +1,7 @@
-import { Plus } from "lucide-react";
+import { Plus, Star } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type ElementType, type KeyboardEvent, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
+import { LINE_COPY } from "../copy";
 import { ago, type PinnedView, type RecentStep } from "./api";
 import { useCorners } from "./cornersStore";
 import { BUTTON, EDGE, lensTops, SLOT, type LensKind } from "./geometry";
@@ -26,11 +27,15 @@ interface Props {
   canApply: (spec: Record<string, unknown>) => boolean;
   /** flag views-panel: the list sits inside the panel (it fills its parent) instead of floating at the corner */
   embedded?: boolean;
+  /** Flag graph-intent: the favorite pages, listed under the pinned views; absent or empty: no section. */
+  favorites?: readonly { id: string; title: string }[];
+  onFavorite?: (id: string) => void;
 }
 
 type Entry =
   | (LensRow & { type: "pin"; view: PinnedView })
   | (LensRow & { type: "add" })
+  | (LensRow & { type: "fav"; id: string; title: string })
   | (LensRow & { type: "div" })
   | (LensRow & { type: "stack" })
   | (LensRow & { type: "step"; step: RecentStep; index: number })
@@ -80,7 +85,7 @@ function NameInput({ initial, label, onSubmit }: { initial: string; label: strin
  * pill at half size; under the pointer the Dock lens grows the row and spreads its neighbours. Order: the pinned
  * views, a "+" card to pin the current view, a faint divider, then "Recent" (a stack that unfolds the last steps).
  */
-export function PinList({ open, views, viewsError, recent, recentError, suggest, onApply, onPin, onRename, onRecentOpen, canApply, embedded }: Props) {
+export function PinList({ open, views, viewsError, recent, recentError, suggest, onApply, onPin, onRename, onRecentOpen, canApply, embedded, favorites, onFavorite }: Props) {
   const edit = useCorners((s) => s.edit);
   const active = useCorners((s) => s.activeView);
   const startEdit = useCorners((s) => s.startEdit);
@@ -95,6 +100,7 @@ export function PinList({ open, views, viewsError, recent, recentError, suggest,
     if (viewsError) out.push({ type: "note", kind: "row", hb: hb("row"), key: "note-views", text: "Pinned views are not available here" });
     for (const v of views ?? []) out.push({ type: "pin", kind: "row", hb: hb("row"), key: `pin-${v.id}`, view: v });
     out.push({ type: "add", kind: "add", hb: hb("add"), key: "add" });
+    for (const f of favorites ?? []) out.push({ type: "fav", kind: "row", hb: hb("row"), key: `fav-${f.id}`, id: f.id, title: f.title });
     out.push({ type: "div", kind: "div", hb: hb("div"), key: "div" });
     out.push({ type: "stack", kind: "stack", hb: hb("stack"), key: "stack" });
     if (recentOpen) {
@@ -103,7 +109,7 @@ export function PinList({ open, views, viewsError, recent, recentError, suggest,
       (recent ?? []).forEach((step, index) => out.push({ type: "step", kind: "row", hb: hb("row"), key: `step-${index}-${step.at}`, step, index }));
     }
     return out;
-  }, [views, viewsError, recent, recentError, recentOpen]);
+  }, [views, viewsError, recent, recentError, recentOpen, favorites]);
 
   const { focusRow, release, kick } = useLens(lens, entries, els);
   useEffect(() => {
@@ -212,6 +218,17 @@ export function PinList({ open, views, viewsError, recent, recentError, suggest,
                   <Pill>
                     <span className="text-[11.5px] font-medium">Recent</span>
                     <small className="ml-auto truncate text-[9.5px] text-muted-foreground">{recentOpen ? "hide" : "show"} your last steps</small>
+                  </Pill>
+                </button>
+              );
+            if (e.type === "fav")
+              return (
+                <button key={e.key} type="button" {...b} aria-label={`${LINE_COPY.favorites.heading}: ${e.title}`} title={e.title} onClick={() => onFavorite?.(e.id)} className={cn(b.className, "pointer-events-auto")}>
+                  <span className="grid h-5 w-[30px] flex-none place-items-center rounded-[5px] bg-card text-muted-foreground shadow-[var(--shadow)] group-hover:text-primary">
+                    <Star className="size-[11px]" strokeWidth={1.8} aria-hidden />
+                  </span>
+                  <Pill>
+                    <span className="truncate text-[11.5px] font-medium">{e.title}</span>
                   </Pill>
                 </button>
               );

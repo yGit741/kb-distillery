@@ -15,6 +15,7 @@ import { layerGroups, type LayerGroup, type TypeRow } from "../../legendModel";
 import { predicateFn } from "../../publicPredicate";
 import type { GraphSchema } from "../../schema";
 import { useGraphUi } from "../../store";
+import { useFavorites } from "../../favorites/store";
 import { effectiveColorBy, METRIC_COLORS, RAMP_BY } from "../../style";
 import type { GNode } from "../../types";
 import { ago, chatWhen, defaultFetch, listRecent, listSessions, listViews, pinView, renameView, unpinView, type Fetcher, type SessionRow } from "./api";
@@ -32,7 +33,8 @@ import { browserSessions, newChat, resumeSession } from "./sessions";
 import { useShellTour } from "./shellTour";
 import { ThinkIcon } from "./ThinkIcon";
 import { TypesCard } from "./TypesCard";
-import { applySpec, captureSpec, suggestName } from "./viewSpec";
+import { useLayers } from "../../layers/store";
+import { applySpec, captureSpec, recognisedV1, suggestName } from "./viewSpec";
 
 export interface CornersProps {
   nodes: readonly GNode[];
@@ -70,6 +72,8 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
   const theme = useTheme((s) => s.theme);
   const server = ds.kind === "http" && !IS_SHARE;
   const sparkChat = useFlag("spark-chat");
+  const intent = useFlag("graph-intent");
+  const favSlugs = useFavorites((s) => s.slugs);
   const viewsPanel = useFlag("views-panel");
   const root = useRef<HTMLDivElement>(null);
   const order = useCorners((s) => s.order);
@@ -99,6 +103,16 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
   const think = useApiQuery(["think"], (d) => d.listThink(), { enabled: server && thinkOpen });
   const sessions = useQuery({ queryKey: ["corners", "sessions"], queryFn: () => listSessions(f), enabled: server && (agentOpen || (viewsPanel && pinsOpen)), staleTime: 0, retry: false });
 
+  const favorites = useMemo(() => {
+    if (!intent) return undefined;
+    const byId = new Map(nodes.map((n) => [n.id, n]));
+    return [...favSlugs].flatMap((id) => (byId.has(id) ? [{ id, title: byId.get(id)!.title || id }] : [])).sort((a, b) => a.title.localeCompare(b.title));
+  }, [intent, favSlugs, nodes]);
+  const focusFavorite = (id: string) => {
+    if (visible.has(id)) useGraphUi.getState().requestFocus(id, true);
+    else showPicked([id]);
+  };
+
   const [notice, setNotice] = useState("");
   useEffect(() => {
     if (!notice) return;
@@ -114,7 +128,7 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
   const deps = useMemo(() => ({ applyView, showPicked }), [applyView, showPicked]);
   const pin = async (name: string) => {
     try {
-      const res = await pinView(f, name, captureSpec(useGraphUi.getState()) as unknown as Record<string, unknown>);
+      const res = await pinView(f, name, captureSpec(useGraphUi.getState(), intent ? useLayers.getState().stack : undefined) as unknown as Record<string, unknown>);
       if (res.view) setActive(res.view.id);
       setNotice(`Pinned "${name}"`);
       reload();
@@ -148,9 +162,9 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
     if (!pendingView) return;
     useShellStore.getState().clearPendingView();
     setActive(pendingView.id);
-    if (!applySpec(pendingView.spec, deps)) setNotice("Nothing in this view can be restored here");
+    if (!applySpec(pendingView.spec, deps, { name: pendingView.name })) setNotice("Nothing in this view can be restored here");
   }, [pendingView, deps, setActive]);
-  const recognised = useCallback((spec: Record<string, unknown>) => ["story", "types", "depths", "colorBy", "sizeBy", "hiddenKeys", "quick", "pages"].some((k) => k in spec), []);
+  const recognised = useCallback((spec: Record<string, unknown>) => recognisedV1(spec) || (intent && spec.v === 2), [intent]);
 
   // ---- fans
   const thinkCards = useMemo<FanCard[]>(() => {
@@ -308,12 +322,14 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
                   suggest={suggestName(ui)}
                   onApply={(spec, id) => {
                     if (id) setActive(id);
-                    if (!applySpec(spec, deps)) setNotice("Nothing in this step can be restored here");
+                    if (!applySpec(spec, deps, id ? { name: views.data?.find((v) => v.id === id)?.name ?? "Pinned view" } : undefined)) setNotice("Nothing in this step can be restored here");
                   }}
                   onPin={(n) => void pin(n)}
                   onRename={(id, n) => void rename(id, n)}
                   onRecentOpen={setRecentOn}
                   canApply={recognised}
+                  favorites={favorites}
+                  onFavorite={focusFavorite}
                 />
               </div>
             </div>
@@ -327,12 +343,14 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
               suggest={suggestName(ui)}
               onApply={(spec, id) => {
                 if (id) setActive(id);
-                if (!applySpec(spec, deps)) setNotice("Nothing in this step can be restored here");
+                if (!applySpec(spec, deps, id ? { name: views.data?.find((v) => v.id === id)?.name ?? "Pinned view" } : undefined)) setNotice("Nothing in this step can be restored here");
               }}
               onPin={(n) => void pin(n)}
               onRename={(id, n) => void rename(id, n)}
               onRecentOpen={setRecentOn}
               canApply={recognised}
+              favorites={favorites}
+              onFavorite={focusFavorite}
             />
           )}
           <CornerButton id={BTN_ID.pins} label="Pinned views" data-tour="graph-views" on={pinsOpen} style={{ position: "absolute", left: EDGE, top: EDGE }} onClick={() => toggle("pins")}>

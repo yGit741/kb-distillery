@@ -27,8 +27,9 @@ tables in its own kit.toml, so `research` types exactly what `academic-research`
 
 The kits folder is `$KB_KITS_DIR` (tests, a second kits folder) or the package's own `kits/`.
 
-Reserved for later phases (rejected in a kit.toml until a phase gives them a meaning): lint rules, views, migrations,
-samples. A kit's page skeletons and docs live beside it in `kits/<name>/defaults/`; a kit that extends another carries
+Ready views are files, not a kit.toml table: `kits/<name>/views/*.toml` (see `views()`).
+
+Reserved for later phases (rejected in a kit.toml until a phase gives them a meaning): lint rules, migrations, samples. A kit's page skeletons and docs live beside it in `kits/<name>/defaults/`; a kit that extends another carries
 only the files it changes (`kb_distillery.config.paths.meta_file` looks child kit first, then up the chain).
 """
 from __future__ import annotations
@@ -170,3 +171,44 @@ def extend(base, extra, where: str):
 def section(name: str, table: str, own: dict, where: str) -> dict:
     """The kb's `table` (`types` / `edges`) as the engine reads it: the kit's, extended by `own`."""
     return copy.deepcopy(extend(load(name).get(table, {}), own, f"{where} [{table}]"))
+
+
+VIEWS_DIR = "views"
+
+
+def views(name: str) -> list[dict]:
+    """The ready views of a kit and the kits it extends (`kits/<kit>/views/*.toml`, `[[view]]` tables), root kit first.
+
+    Each view is `id`, `name`, `description` (one plain line) and `layers`: a list of lines of the graph's query
+    language, parsed by the frontend only. A child kit's view with the same id replaces its parent's in place.
+    Returns dicts with those keys plus `kit` (the kit that ships it). Raises KitError for a malformed file.
+    """
+    out: dict[str, dict] = {}
+    for kit in chain(name):
+        folder = os.path.join(kits_dir(), kit, VIEWS_DIR)
+        if not os.path.isdir(folder):
+            continue
+        for fname in sorted(os.listdir(folder)):
+            if not fname.endswith(".toml"):
+                continue
+            path = os.path.join(folder, fname)
+            try:
+                with open(path, "rb") as fh:
+                    data = tomllib.load(fh)
+            except tomllib.TOMLDecodeError as e:
+                raise KitError(f"{path}: TOML syntax error: {e}") from None
+            items = data.get("view", [])
+            if not isinstance(items, list):
+                raise KitError(f"{path}: `view` must be an array of tables ([[view]])")
+            for item in items:
+                if not isinstance(item, dict):
+                    raise KitError(f"{path}: each [[view]] must be a table")
+                for key in ("id", "name", "description"):
+                    if not (isinstance(item.get(key), str) and item[key].strip()):
+                        raise KitError(f"{path}: [[view]] needs a non-empty string `{key}`")
+                lines = item.get("layers")
+                if not (isinstance(lines, list) and lines and all(isinstance(x, str) and x.strip() for x in lines)):
+                    raise KitError(f"{path}: view {item['id']!r} needs `layers`, a non-empty list of lines")
+                out[item["id"]] = {"id": item["id"], "name": item["name"].strip(), "description": item["description"].strip(),
+                                   "layers": [x.strip() for x in lines], "kit": kit}
+    return list(out.values())

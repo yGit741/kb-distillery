@@ -141,6 +141,12 @@ describe("drawNode (canvas)", () => {
     drawNodeState(ctx, "selected", 0, 0, 10, "#000", "#00f", 2);
     expect(ops[0]!.r).toBe(10 + STATE.gap / 2);
   });
+
+  it("a favorite page wears a ring thinner and fainter than the selection ring", () => {
+    expect(draw("idea", { state: "favorite" })[0]).toEqual({ op: "arc", r: 10 + STATE.gap, stroked: true });
+    expect(STATE.favorite.width).toBeLessThan(STATE.selected.width);
+    expect(STATE.favorite.alpha).toBeLessThan(STATE.selected.alpha);
+  });
 });
 
 describe("NodeMarkSvg", () => {
