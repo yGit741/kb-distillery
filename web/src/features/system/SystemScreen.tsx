@@ -21,7 +21,8 @@ import { useFlag } from "@/flags/useFlag";
 
 const TAB_LABEL: Record<SystemTab, string> = { overview: "Overview", backlog: "Backlog", pipeline: "Pipeline", history: "History", health: "Health", flags: "Flags", kbs: "Knowledge bases" };
 
-const TONE_TEXT: Record<Tone, string> = { ok: "text-ok", warn: "text-warn", bad: "text-bad", "": "text-foreground" };
+// warn text is amber (under 4.5:1 on white): the dot carries the warning, the value stays readable.
+const TONE_TEXT: Record<Tone, string> = { ok: "text-ok", warn: "text-foreground", bad: "text-bad", "": "text-foreground" };
 const TONE_DOT: Record<Tone, string> = { ok: "bg-ok", warn: "bg-warn", bad: "bg-bad", "": "bg-muted-foreground/40" };
 
 function StatusStrip({ items, onOpen }: { items: Tile[]; onOpen: (tab: SystemTab) => void }) {
