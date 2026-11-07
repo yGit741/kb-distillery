@@ -258,6 +258,12 @@ def get_session(session_id, root=None):
     return _read(root or DEFAULT_ROOT, clean_id(session_id))
 
 
+def _reindex(root, sid):
+    """Keep the full-text index current (best effort; only once an index exists)."""
+    from kb_distillery.search import fts
+    fts.update_quiet(root, [os.path.join(root, SESSIONS_REL, f"{sid}.json")])
+
+
 def put_session(session_id, messages, title=None, created=None, model=None, effort=None, backend=None, root=None):
     """Upsert the whole document. A new session takes `created` from the caller (when given) or now; an existing one keeps
     its `created`, and keeps its title unless one is passed (so a rename survives the next save). `updated` is now."""
@@ -287,6 +293,7 @@ def put_session(session_id, messages, title=None, created=None, model=None, effo
                "created": old["created"] if old and old["created"] else (_opt(created, "created") or now),
                "updated": now, **fields, "messages": messages, "usage": usage_of(messages)}
         _write(root, doc)
+    _reindex(root, sid)
     return doc
 
 

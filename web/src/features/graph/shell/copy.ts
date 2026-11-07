@@ -29,6 +29,8 @@ export const LINE_COPY = {
     related: "Related by meaning",
     ask: "Actions",
   },
+  /** Tier 2 (server full text): the sections under the title groups, in order. */
+  textGroups: { page: "Pages: full text", think: "Think notes: full text", chat: "Chats", raw: "Raw files" } as Record<"page" | "think" | "chat" | "raw", string>,
   /** "31 pages mention x": `n` pages whose title, alias or tags contain the words. */
   setRow: (n: number) => `${n} pages mention`,
   /** The small mark on a row that was also a hit in a lower group, by the group it was also found in. */

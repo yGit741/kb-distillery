@@ -199,6 +199,10 @@ status id
 collect [--poll POLL] [--wait WAIT] id        --wait: seconds to wait for the batch to end (0: check once)
 ```
 
+## search
+
+`distill search text "<query>" [--kinds page,think,chat,raw] [--limit N] [--json] [--rebuild]` is a full-text search (SQLite FTS5, no LLM) over pages, think notes, chats and extracted raw text. The words are matched as written (no operators); the last word also matches as a prefix. The index lives in the kb's `.cache/search/fts.sqlite` (never committed), is built on the first search and re-checked on every one; `--rebuild` drops it and builds it again.
+
 ## share
 
 ```

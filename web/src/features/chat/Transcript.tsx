@@ -80,11 +80,12 @@ export function ToolLines({ steps }: { steps: ToolStep[] }) {
 }
 
 /** Thinking and tool lines of one assistant message. */
-export function Transcript({ message, live }: { message: ChatMessage; live: boolean }) {
+/** `noTools`: the answer has its own tool list (Show my thinking), so the per-tool lines are left out. */
+export function Transcript({ message, live, noTools }: { message: ChatMessage; live: boolean; noTools?: boolean }) {
   return (
     <>
       {message.thinking && <ThinkingBlock text={message.thinking} secs={message.thinkSecs} live={live} />}
-      {message.trace && <ToolLines steps={message.trace} />}
+      {message.trace && !noTools && <ToolLines steps={message.trace} />}
     </>
   );
 }

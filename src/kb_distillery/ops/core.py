@@ -456,6 +456,8 @@ def commit_op(op, target, summary=None, paths=None, lint=True, trailers=None, ro
         sha = _commit_paths(root, sorted(set(chosen)), message)
         _clear(root, "pending.json")
         if sha:
+            from kb_distillery.search import fts
+            fts.update_quiet(root, chosen)          # the full-text index, best effort
             print(f"committed {message.splitlines()[0]}")
             if push:
                 push_main(root, quiet=True)
