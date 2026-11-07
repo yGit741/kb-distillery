@@ -440,10 +440,21 @@ class TestStream(SDKCase):
         self.assertEqual([t["kind"] for t in second], ["meaning", "graph", "alias", "shortlist", "other"])
         self.assertEqual(second[0]["query"], "'implicit bias'")
         self.assertNotIn("query", second[4])
-        third = self._map(state, read_tool("tensor-rank", tid="r"))
-        self.assertEqual((third[0]["round"], third[0]["kind"], third[0]["read"]), (3, "open", ["tensor-rank"]))
-        self.assertNotIn("query", third[0])
+        third = self._map(state, UserMessage(content=[ToolResultBlock(tool_use_id="d")]),
+                          read_tool("tensor-rank", tid="r"))
+        third = third[-1]
+        self.assertEqual((third["round"], third["kind"], third["read"]), (3, "open", ["tensor-rank"]))
+        self.assertNotIn("query", third)
         self.assertEqual(chat_agent.TurnState().round, 0)       # a new turn starts over
+
+    def test_calls_split_over_messages_still_share_a_round_until_results_return(self):
+        state = chat_agent.TurnState()
+        t = self._map(state,
+                      AssistantMessage(content=[ToolUseBlock(id="a", name="Grep", input={"pattern": "x"})]),
+                      AssistantMessage(content=[ToolUseBlock(id="b", name="Grep", input={"pattern": "y"})]),
+                      UserMessage(content=[ToolResultBlock(tool_use_id="a"), ToolResultBlock(tool_use_id="b")]),
+                      AssistantMessage(content=[ToolUseBlock(id="c", name="Grep", input={"pattern": "z"})]))
+        self.assertEqual([(x["id"], x["round"]) for x in t if x["status"] == "running"], [("a", 1), ("b", 1), ("c", 2)])
 
     def test_web_steps_carry_url_and_domains(self):
         state = chat_agent.TurnState()

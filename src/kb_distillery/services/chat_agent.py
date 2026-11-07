@@ -896,6 +896,7 @@ class TurnState:
     text: str = ""
     session_id: str = None
     tools: list = field(default_factory=list)
+    round_open: bool = False                       # a round has calls and no result back yet
     round: int = 0                                 # tool rounds so far this turn (see map_message)
     fetching: dict = field(default_factory=dict)   # WebFetch tool id → url, cited only once the fetch succeeded
     index: dict = None
@@ -988,7 +989,6 @@ def map_message(msg, state):
                 out.append(("thinking", think))
         return out
     if kind == "AssistantMessage":
-        counted = False                         # the calls of one assistant message share a round
         for block in getattr(msg, "content", None) or []:
             b = _name(block)
             if b == "ToolUseBlock":
@@ -996,9 +996,9 @@ def map_message(msg, state):
                 if name == "TodoWrite" and runtime.effective("agent-mode"):
                     out.append(("todo", {"items": todo_items(inp)}))
                     continue
-                if not counted:
+                if not state.round_open:        # calls sent together (even split over messages) share a round
                     state.round += 1
-                    counted = True
+                    state.round_open = True
                 entry = {"name": name, "summary": tool_summary(name, inp), "id": getattr(block, "id", None)}
                 tkind, tquery, raw_slug = tool_meta(name, inp)
                 entry["round"], entry["kind"] = state.round, tkind
@@ -1026,6 +1026,7 @@ def map_message(msg, state):
         for block in getattr(msg, "content", None) or []:
             if _name(block) != "ToolResultBlock":
                 continue
+            state.round_open = False                # results are back: the next tool call opens a new round
             failed = bool(getattr(block, "is_error", False))
             tid = getattr(block, "tool_use_id", None)
             match = next((t for t in reversed(state.tools) if t.get("id") == tid), None)
