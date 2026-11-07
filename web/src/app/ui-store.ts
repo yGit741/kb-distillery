@@ -6,10 +6,13 @@ export interface CaptureContext {
   view: string[];
 }
 
+/** Page ids named in the footer; a capture is capped at 10k characters. */
+const FOOTER_IDS = 20;
+
 /** The footer a captured thought carries: the page ids, then the view's lines. Plain text, no markup. */
 export function captureFooter(c: CaptureContext | null): string {
   if (!c) return "";
-  return [c.ids.length ? `nodes: ${c.ids.join(", ")}` : "", c.view.length ? `view: ${c.view.join(" · ")}` : ""].filter(Boolean).join("\n");
+  return [c.ids.length ? `nodes: ${c.ids.slice(0, FOOTER_IDS).join(", ")}${c.ids.length > FOOTER_IDS ? ` and ${c.ids.length - FOOTER_IDS} more` : ""}` : "", c.view.length ? `view: ${c.view.join(" · ")}` : ""].filter(Boolean).join("\n");
 }
 
 interface UiState {
@@ -33,7 +36,7 @@ export const useUi = create<UiState>((set) => ({
   paletteOpen: false,
   setPaletteOpen: (paletteOpen) => set({ paletteOpen }),
   captureOpen: false,
-  setCaptureOpen: (captureOpen) => set(captureOpen ? { captureOpen } : { captureOpen, captureContext: null }),
+  setCaptureOpen: (captureOpen) => set({ captureOpen, captureContext: null }),
   captureContext: null,
   openCapture: (captureContext) => set({ captureOpen: true, captureContext }),
   lineOpen: false,

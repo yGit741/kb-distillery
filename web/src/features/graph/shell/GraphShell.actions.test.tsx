@@ -122,5 +122,7 @@ describe("the capture footer", () => {
     expect(captureFooter(null)).toBe("");
     expect(captureFooter({ ids: [], view: [] })).toBe("");
     expect(captureFooter({ ids: ["a", "b"], view: [] })).toBe("nodes: a, b");
+    const many = Array.from({ length: 25 }, (_, i) => `p${i}`);
+    expect(captureFooter({ ids: many, view: [] })).toMatch(/p19 and 5 more$/);
   });
 });
