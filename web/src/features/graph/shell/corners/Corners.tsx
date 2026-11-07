@@ -24,6 +24,7 @@ import { ColourDots } from "./ColourDots";
 import { useCorners, type Layer } from "./cornersStore";
 import { Fan, type FanCard } from "./Fan";
 import { BUTTON, EDGE, fanCapacity } from "./geometry";
+import { useGallery } from "../../views/galleryStore";
 import { LIST_WIDTH, PinList } from "./PinList";
 import { recentSources, viewCards } from "./panelModel";
 import { ViewsPanel } from "./ViewsPanel";
@@ -108,6 +109,12 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
     const byId = new Map(nodes.map((n) => [n.id, n]));
     return [...favSlugs].flatMap((id) => (byId.has(id) ? [{ id, title: byId.get(id)!.title || id }] : [])).sort((a, b) => a.title.localeCompare(b.title));
   }, [intent, favSlugs, nodes]);
+  const openGallery = intent
+    ? () => {
+        closeAll();
+        useGallery.getState().show();
+      }
+    : undefined;
   const focusFavorite = (id: string) => {
     if (visible.has(id)) useGraphUi.getState().requestFocus(id, true);
     else showPicked([id]);
@@ -330,6 +337,7 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
                   canApply={recognised}
                   favorites={favorites}
                   onFavorite={focusFavorite}
+                  onAllViews={openGallery}
                 />
               </div>
             </div>
@@ -351,6 +359,7 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
               canApply={recognised}
               favorites={favorites}
               onFavorite={focusFavorite}
+                  onAllViews={openGallery}
             />
           )}
           <CornerButton id={BTN_ID.pins} label="Pinned views" data-tour="graph-views" on={pinsOpen} style={{ position: "absolute", left: EDGE, top: EDGE }} onClick={() => toggle("pins")}>

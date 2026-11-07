@@ -4,6 +4,7 @@ import { formatKbs } from "@/lib/kbSelection";
 import { flag } from "@/flags";
 import { useUi } from "@/app/ui-store";
 import { useGraphUi } from "../store";
+import { useGallery } from "../views/galleryStore";
 import { LINE_COPY } from "./copy";
 import type { ToolHost } from "../hostContext";
 import type { GraphTool } from "../tools";
@@ -107,6 +108,7 @@ export function buildCommands(c: CommandCtx): Command[] {
     ...(c.intent
       ? [
           { id: "views", label: LINE_COPY.views.command.label, group: "View", icon: "labels", hint: LINE_COPY.views.command.hint, keywords: "saved pinned recent ready gallery", fill: "/views ", run: () => {} } satisfies Command,
+          { id: "gallery", label: LINE_COPY.gallery.command.label, group: "View", icon: "labels", hint: LINE_COPY.gallery.command.hint, keywords: "views ready pinned recent browse", run: () => useGallery.getState().show() } satisfies Command,
           { id: "favorites", label: LINE_COPY.favoritesCommand.label, group: "View", icon: "favorite", hint: LINE_COPY.favoritesCommand.hint, keywords: "starred marked pages", fill: "/favorites ", run: () => {} } satisfies Command,
         ]
       : []),
