@@ -115,3 +115,28 @@ class LoadCase(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class CpuCase(unittest.TestCase):
+    def test_tree_cpu_is_a_time_delta(self):
+        reads = iter([10.0, 10.0, 10.0, 11.5])
+        with patch.object(gate_slot, "_group_cpu_seconds", lambda pgid: next(reads)):
+            self.assertAlmostEqual(gate_slot.tree_cpu(1, window=1.5, sleep=lambda s: None), 0.0)
+            self.assertAlmostEqual(gate_slot.tree_cpu(1, window=1.5, sleep=lambda s: None), 100.0)
+
+    def test_kill_reaches_a_grandchild_that_ignores_sigterm(self):
+        pidfile = _log() + ".pid"
+        child = ("import os,signal,time;signal.signal(signal.SIGTERM,signal.SIG_IGN);"
+                 f"open({pidfile!r},'w').write(str(os.getpid()));time.sleep(30)")
+        code = f"import subprocess,sys,time\nsubprocess.Popen([sys.executable,'-c',{child!r}])\ntime.sleep(30)"
+        rc, why = gate_slot.supervise([sys.executable, "-c", code], ".", _log(), idle_min=0.03,
+                                      cpu=lambda p: 0.0, poll=0.05)
+        self.assertEqual(why, "idle")
+        pid = int(open(pidfile).read())
+        for _ in range(40):
+            try:
+                os.kill(pid, 0)
+            except OSError:
+                return
+            time.sleep(0.05)
+        self.fail("grandchild survived the kill")

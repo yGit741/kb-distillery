@@ -141,21 +141,35 @@ def sequence(root, wait=None, log=print):
 
 def _env_minutes(name, default):
     try:
-        return float(os.environ.get(name, "")) or default
+        v = float(os.environ.get(name, ""))
+        return v if v > 0 else default
     except ValueError:
         return default
 
 
-def tree_cpu(pgid):
-    """Summed %CPU of every process in the process group `pgid` (the step runs in its own session)."""
-    cp = subprocess.run(["ps", "-A", "-o", "pgid=,%cpu="], capture_output=True, text=True, check=False)
+def _group_cpu_seconds(pgid):
+    """Cumulative CPU seconds of every process in the process group (ps TIME is [[dd-]hh:]mm:ss.cc)."""
+    cp = subprocess.run(["ps", "-A", "-o", "pgid=,time="], capture_output=True, text=True, check=False)
     total = 0.0
     for line in cp.stdout.splitlines():
         parts = line.split()
-        if len(parts) == 2 and parts[0] == str(pgid):
-            with contextlib.suppress(ValueError):
-                total += float(parts[1])
+        if len(parts) != 2 or parts[0] != str(pgid):
+            continue
+        with contextlib.suppress(ValueError):
+            days, _, rest = parts[1].rpartition("-")
+            secs = 0.0
+            for f in rest.split(":"):
+                secs = secs * 60 + float(f)
+            total += secs + (int(days) * 86400 if days else 0)
     return total
+
+
+def tree_cpu(pgid, window=1.5, sleep=time.sleep):
+    """Instantaneous %CPU of the process group: the CPU-time delta over `window` seconds (ps %cpu is a lifetime
+    average and would stay high long after a tree hung)."""
+    before = _group_cpu_seconds(pgid)
+    sleep(window)
+    return max(0.0, _group_cpu_seconds(pgid) - before) / window * 100.0
 
 
 def load_limit():
@@ -191,11 +205,10 @@ def _kill_tree(proc):
     for sig in (signal.SIGTERM, signal.SIGKILL):
         with contextlib.suppress(OSError):
             os.killpg(proc.pid, sig)
-        try:
+        with contextlib.suppress(subprocess.TimeoutExpired):
             proc.wait(timeout=5)
-            return
-        except subprocess.TimeoutExpired:
-            continue
+    with contextlib.suppress(OSError):
+        os.killpg(proc.pid, signal.SIGKILL)       # grandchildren that outlived the leader or ignored SIGTERM
 
 
 def supervise(cmd, cwd, log_path, env=None, idle_min=None, max_min=None, cpu=tree_cpu, clock=time.monotonic,
