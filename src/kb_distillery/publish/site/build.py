@@ -591,6 +591,19 @@ def bake_raw_cards(data, raw_of, profile):
     return bake_cards(data["graph"]["nodes"], raw_of, root, public=profile != "private")
 
 
+def bake_line_data(data, profile):
+    """What the read-only half of the graph line needs on a site with no server (flag graph-intent): the kit's ready
+    views (both profiles), the favorite marks of pages the site carries, and the pinned views (private only: a pin names
+    pages the public cut may have dropped). Nothing here is ever written back by the site."""
+    from kb_distillery.services import views as views_svc
+    from kb_distillery.vault import favorites as favorites_vault
+    from kb_distillery.vault import views as views_vault
+    root = os.environ.get("KB_ROOT", ".")
+    pinned = views_vault.load(root) if profile == "private" else []
+    marked = [s for s in favorites_vault.load(root) if s in data["pages"]]
+    return {"views": pinned, "readyViews": views_svc.ready_views()["views"], "favorites": marked}
+
+
 def inner_build_app(args):
     """Inside the viewer checkout, KB_ROOT = content: the wiki data baked into the built app's page."""
     try:
@@ -611,6 +624,7 @@ def inner_build_app(args):
     data, dropped = apply_predicate(data, args.predicate)          # --predicate public: the Map view's pages only
     data = apply_home(data, home, view=args.view)   # Home cards + tour from the share config `[home]`, --view
     data["rawCards"] = bake_raw_cards(data, raw_of, args.profile)
+    data.update(bake_line_data(data, args.profile))
     cfg = kbconfig.current()
     page = app_page(Path(args.app_index).read_text(encoding="utf-8"), data, fields, title=(cfg.name if cfg else "") or DEFAULT_TITLE)
     out = Path(args.out)

@@ -1,4 +1,4 @@
-import type { CitationGraph, LifecycleSnapshot, PageDetail, PageIndex, RawCard } from "@/api/types";
+import type { CitationGraph, LifecycleSnapshot, PageDetail, PageIndex, PinnedView, RawCard, ReadyView } from "@/api/types";
 import type { GraphSnapshot } from "@/api/types";
 
 /** What the share builder (backend kb_distillery.publish.site.build) bakes into `<script id="kb-data">`. */
@@ -23,6 +23,10 @@ export interface ShareBlob {
   rawCards?: Record<string, RawCard>;
   /** Home cards and the tour id from share.toml `[home]` (kb_distillery.publish.site.home); `view` = the graph view a
    *  snapshot built with `share snapshot … --view <id>` opens on when the URL has no `?view=`. */
+  /** Flag graph-intent, read-only: the pinned views (private profile only), the kit's ready views, the favorite pages. */
+  views?: PinnedView[];
+  readyViews?: ReadyView[];
+  favorites?: string[];
   home?: { cards?: unknown[]; tour?: string | null; view?: string | null };
 }
 
