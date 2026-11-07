@@ -3,6 +3,7 @@ import type { SearchHit } from "@/api";
 import { useApiQuery } from "@/lib/useApiQuery";
 import { findPages, textHits } from "../pageSearch";
 import type { GNode } from "../types";
+import { useCapabilities } from "./capabilities";
 
 export interface PageResult {
   node: GNode;
@@ -17,6 +18,8 @@ export interface PageResult {
  * hits, then meaning-based "related" hits when the server has them), over the same query cache.
  */
 export function usePageResults(nodes: readonly GNode[], byId: ReadonlyMap<string, GNode>, raw: string, enabled: boolean): PageResult[] {
+  // a shared site searches the pages it carries, in the browser; nothing by meaning (that is a model call)
+  const byMeaning = useCapabilities().serverSearch;
   const q = raw.trim().toLowerCase();
   const [debounced, setDebounced] = useState("");
   useEffect(() => {
@@ -34,13 +37,13 @@ export function usePageResults(nodes: readonly GNode[], byId: ReadonlyMap<string
     [text.data, byId, pages, enabled, debounced, q],
   );
   const related = useMemo(
-    () => (!enabled || debounced !== q ? [] : textHits(text.data?.related ?? [], byId, [...pages, ...texts.map((h) => byId.get(h.id)!)], 5)),
-    [text.data, byId, pages, texts, enabled, debounced, q],
+    () => (!enabled || debounced !== q ? [] : textHits(byMeaning ? (text.data?.related ?? []) : [], byId, [...pages, ...texts.map((h) => byId.get(h.id)!)], 5)),
+    [text.data, byId, pages, texts, enabled, debounced, q, byMeaning],
   );
   return useMemo(() => {
     const sure = debounced === q;
     const inText = new Set(sure ? (text.data?.hits ?? []).map((h) => h.id) : []);
-    const inRelated = new Set(sure ? (text.data?.related ?? []).map((h) => h.id) : []);
+    const inRelated = new Set(sure && byMeaning ? (text.data?.related ?? []).map((h) => h.id) : []);
     const out: PageResult[] = pages.map((node) => {
       const also = [...(inText.has(node.id) ? (["text"] as const) : []), ...(inRelated.has(node.id) ? (["related"] as const) : [])];
       return also.length ? { node, also } : { node };
@@ -54,5 +57,5 @@ export function usePageResults(nodes: readonly GNode[], byId: ReadonlyMap<string
       if (node) out.push({ node, snippet: h.snippet, related: true });
     }
     return out;
-  }, [pages, texts, related, byId, text.data, debounced, q]);
+  }, [pages, texts, related, byId, text.data, debounced, q, byMeaning]);
 }
