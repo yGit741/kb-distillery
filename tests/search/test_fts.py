@@ -38,10 +38,10 @@ def ids(hits):
 def test_build_and_search_every_kind(kb):
     assert fts.build(kb) == 4
     assert os.path.isfile(os.path.join(kb, ".cache", "search", "fts.sqlite"))
-    assert ids(fts.search(kb, "tensor")) == {("page", "tensor-rank"), ("think", "ideas/compression")}
+    assert ids(fts.search(kb, "tensor")) == {("page", "tensor-rank"), ("think", "ideas/compression.md")}
     assert ids(fts.search(kb, "hessian")) == {("chat", "s1")}
     assert ids(fts.search(kb, "overfitting")) == {("raw", "raw/papers/grokking.md")}
-    assert ids(fts.search(kb, "tensor", kinds=["think"])) == {("think", "ideas/compression")}
+    assert ids(fts.search(kb, "tensor", kinds=["think"])) == {("think", "ideas/compression.md")}
     assert fts.search(kb, "ignored") == []          # a sidecar is not a chat
     assert fts.search(kb, "image") == []            # raw/images is skipped
     hit = fts.search(kb, "rank-one")[0]
@@ -131,7 +131,7 @@ def test_writer_hooks_keep_the_index_fresh(kb):
     assert not fts.is_stale(kb)
     with mock.patch.object(think_svc, "_think_dir", return_value=os.path.join(os.path.dirname(kb), "think")):
         think_svc.save_note("newnote.md", "# Fresh\n\nplatypus\n", root=kb, create=True)
-    assert ids(fts.search(kb, "platypus")) == {("think", "newnote")}
+    assert ids(fts.search(kb, "platypus")) == {("think", "newnote.md")}
 
 
 def test_cli_prints_hits(kb, capsys):

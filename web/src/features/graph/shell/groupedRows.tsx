@@ -53,7 +53,8 @@ export function textRows(a: GroupedArgs, shown: ReadonlySet<string>): PanelRow[]
     for (const h of a.textHits ?? []) {
       if (h.kind !== kind || n >= TEXT_SHOWN[kind]) continue;
       const section = LINE_COPY.textGroups[kind];
-      const node = kind === "page" || kind === "think" ? a.byId?.get(h.id) : undefined;
+      const node = kind === "page" ? a.byId?.get(h.id) : undefined;
+      if (kind === "page" && !node) continue;          // a page the graph does not carry yet has nothing to open
       if (node ? seen.has(node.id) : seen.has(`${kind}:${h.id}`)) continue;
       seen.add(node ? node.id : `${kind}:${h.id}`);
       n++;
@@ -73,13 +74,13 @@ export function textRows(a: GroupedArgs, shown: ReadonlySet<string>): PanelRow[]
         continue;
       }
       const lead = kind === "chat" ? <MessageSquare aria-hidden strokeWidth={1.6} /> : kind === "think" ? <NotebookPen aria-hidden strokeWidth={1.6} /> : <FileText aria-hidden strokeWidth={1.6} />;
-      const open = kind === "chat" ? a.openChat : kind === "think" ? a.openThink : kind === "raw" ? a.openRaw : undefined;
+      const open = kind === "chat" ? a.openChat : kind === "think" ? a.openThink : a.openRaw;
       out.push({
         key: `text:${kind}:${h.id}`,
         section,
         label: h.title || h.id,
         detail,
-        hint: kind === "raw" ? (h.id.split("/")[1] ?? "raw") : kind === "page" ? "page" : kind,
+        hint: kind === "raw" ? (h.id.split("/")[1] ?? "raw") : kind,
         lead,
         run: () => open?.(kind === "raw" ? h.path || h.id : h.id),
       });

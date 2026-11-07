@@ -67,7 +67,7 @@ def _scan(root):
         for name in files:
             if name.endswith(".md") and not name.startswith("."):
                 full = os.path.join(dirpath, name)
-                add("think", os.path.relpath(full, think)[:-3].replace(os.sep, "/"), full)
+                add("think", os.path.relpath(full, think).replace(os.sep, "/"), full)       # the id is the note name, with .md
     sess = os.path.join(root, SESSIONS_REL)
     for name in _listdir(sess):
         if name.endswith(".json") and name.count(".") == 1:        # `<id>.<kind>.json` sidecars are not sessions
@@ -156,9 +156,11 @@ def _connect(root, create=False):
         " path TEXT NOT NULL UNIQUE, mtime REAL NOT NULL);"
         "CREATE VIRTUAL TABLE IF NOT EXISTS fts USING fts5(title, body, tokenize='unicode61 remove_diacritics 2');")
     row = db.execute("SELECT v FROM meta WHERE k='schema'").fetchone()
-    if row and row[0] != SCHEMA:
-        db.executescript("DELETE FROM docs; DELETE FROM fts; DELETE FROM meta;")
-    db.execute("INSERT OR REPLACE INTO meta VALUES('schema', ?)", (SCHEMA,))
+    if not row or row[0] != SCHEMA:         # write only when it differs: a search must not take the write lock
+        with db:
+            if row:
+                db.executescript("DELETE FROM docs; DELETE FROM fts; DELETE FROM meta;")
+            db.execute("INSERT OR REPLACE INTO meta VALUES('schema', ?)", (SCHEMA,))
     return db
 
 
