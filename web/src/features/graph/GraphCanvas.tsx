@@ -1,4 +1,5 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef } from "react";
+import { trackTypesStrip } from "./typesStrip";
 import { useKb } from "@/lib/store";
 import { cn } from "@/lib/utils";
 import { flag } from "@/flags";
@@ -162,6 +163,18 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
   const fades = useRef(new Map<string, FadeState>());
   const frame = useRef({ last: 0, churn: 0, hudAt: 0, raf: 0 });
   const pendingFit = useRef(true);
+  // the page-type strip's box, measured on change (./typesStrip), never per frame
+  const stripRef = useRef<ReturnType<typeof trackTypesStrip> | null>(null);
+  useEffect(() => {
+    const el = wrap.current;
+    if (!el) return;
+    const t = trackTypesStrip(el);
+    stripRef.current = t;
+    return () => {
+      t.dispose();
+      stripRef.current = null;
+    };
+  }, []);
   const lastClick = useRef<{ id: string | null; at: number }>({ id: null, at: 0 });
   const pressed = useRef(false);
   // flag calm-graph: reacts to the flag arriving late; hover always settles first and edges rest fainter
@@ -905,7 +918,7 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
         pointer: cfg.lens ? pointer : null,
         hovered: hover,
         dt,
-        strip: typesStripRect(el),
+        strip: stripRef.current?.rect() ?? null,
         nodeColor: (n) => {
           const u = live.current.ui;
           const by = effectiveColorBy(u.colorBy);
@@ -1046,14 +1059,3 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
     </div>
   );
 });
-
-
-/** The page-type strip's box in the canvas's CSS px, with air around it; null when the strip is not rendered. */
-function typesStripRect(canvas: HTMLElement): [number, number, number, number] | null {
-  const strip = canvas.ownerDocument.querySelector('[data-corners="types"]');
-  if (!strip) return null;
-  const s = strip.getBoundingClientRect();
-  const c = canvas.getBoundingClientRect();
-  if (s.width === 0 || s.height === 0) return null;
-  return [s.left - c.left - 14, s.top - c.top - 8, s.right - c.left + 14, s.bottom - c.top + 8];
-}
