@@ -980,6 +980,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/search/text": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Full-text search over pages, think notes, chats and raw text */
+        get: operations["search_text_api_search_text_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/sessions": {
         parameters: {
             query?: never;
@@ -4036,6 +4053,44 @@ export interface components {
              */
             t: "text";
         };
+        /** TextHit */
+        TextHit: {
+            /** Id */
+            id: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "page" | "think" | "chat" | "raw";
+            /**
+             * Path
+             * @default
+             */
+            path: string;
+            /**
+             * Score
+             * @default 0
+             */
+            score: number;
+            /**
+             * Snippet
+             * @default
+             */
+            snippet: string;
+            /** Title */
+            title: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** TextSearch */
+        TextSearch: {
+            /** Hits */
+            hits: components["schemas"]["TextHit"][];
+            /** Query */
+            query: string;
+        } & {
+            [key: string]: unknown;
+        };
         /** ThinkCaptureRequest */
         ThinkCaptureRequest: {
             /** Text */
@@ -6541,6 +6596,48 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    search_text_api_search_text_get: {
+        parameters: {
+            query?: {
+                q?: string;
+                /** @description comma list of page, think, chat, raw; empty = all */
+                kinds?: string;
+                limit?: number;
+                kb?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TextSearch"];
+                };
+            };
+            /** @description unknown knowledge base */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
             };
         };
     };

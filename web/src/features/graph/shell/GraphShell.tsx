@@ -1,4 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
+import { useRouter } from "@tanstack/react-router";
 import {
   ArrowRightLeft,
   CircleHelp,
@@ -62,6 +63,11 @@ import { marker, pillText, sameMarker } from "./shape";
 import { looksLikeShape, parseMode, requestShape, useShellStore } from "./shellStore";
 import { useShape } from "./useShape";
 import { usePageResults } from "./usePageResults";
+import { useTextHits } from "./useTextHits";
+import { defaultFetch } from "./corners/api";
+import { loadSession, showDock } from "./corners/sessions";
+import { formatOfPath } from "../corpusRows";
+import { useLayer } from "../layerStore";
 import { favoriteRows, groupedRows } from "./groupedRows";
 import { useFavorites } from "../favorites/store";
 import { buildSearchIndex, withNames, type RowTarget } from "./searchGroups";
@@ -200,6 +206,8 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
   const kbQ = useApiQuery(["kb"], (d) => d.getKb(), { staleTime: Infinity, retry: false });
   const kbListQ = useApiQuery(["kb-list"], (d) => d.listKbs(), { enabled: kbViewOn, staleTime: 30_000 });
   const results = usePageResults(nodes, byId, raw, !slash && text.length > 0);
+  const router = useRouter({ warn: false });
+  const textHits = useTextHits(raw, intent && !slash && text.length > 0);
   const meaningHits = useMeaningHits(text, meaningOn && !slash && !viewMode);
   const meaning = useMemo(
     () => (meaningOn ? meaningHits.flatMap((h) => (byId.get(h.slug) ? [{ node: byId.get(h.slug)!, score: h.score }] : [])) : undefined),
@@ -632,6 +640,20 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
             close();
           },
           favorites: favs,
+          textHits,
+          byId,
+          openChat: (id) => {
+            close();
+            void loadSession(defaultFetch, id).then(showDock);
+          },
+          openThink: (name) => {
+            close();
+            void router?.navigate({ to: "/think" as never, search: { note: name } as never });
+          },
+          openRaw: (path) => {
+            close();
+            useLayer.getState().openDrawer({ kind: "format", format: formatOfPath(path), path });
+          },
         }),
       );
       if (canShape && asksShape && !/^match\b/i.test(text)) out.push(shapeRow);
@@ -677,7 +699,7 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
     if (askRow) out.push(askRow);
     return out;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [slash, viewMode, intent, index, raw, text, commands, recentQ.data, viewsQ.data, results, colorBy, onFocus, onRead, onShowMentions, record, close, shaping, canUndo, layersUndo, undoShape, live, didYou, nodes, favs, byId, ready, focusBar, meaning]);
+  }, [slash, viewMode, intent, index, raw, text, commands, recentQ.data, viewsQ.data, results, colorBy, onFocus, onRead, onShowMentions, record, close, shaping, canUndo, layersUndo, undoShape, live, didYou, nodes, favs, byId, ready, focusBar, meaning, textHits, router]);
 
   /** A recent step: a command runs again; anything else goes back into the box to be edited or run. */
   function runRecent(s: RecentStep) {
