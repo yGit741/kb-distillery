@@ -49,6 +49,22 @@ class Discovery(unittest.TestCase):
         _write(os.path.join(self.bases, "kb-old-style"), MINIMAL.replace('"demo"', '"kb-old-style"'))
         self.assertIn("kb-old-style", kbconfig.discover())            # just a folder name now
 
+    def test_the_configured_default_picks_among_several(self):
+        _write(os.path.join(self.bases, "other"), MINIMAL.replace('"demo"', '"other"'))
+        self.assertIsNone(kbconfig.selected())
+        cfg = os.path.join(self.tmp, "engine.toml")
+        with open(cfg, "w", encoding="utf-8") as f:
+            f.write('[kb]\ndefault = "other"\n')
+        with patch.dict(os.environ, {"KB_ENGINE_CONFIG": cfg}):
+            self.assertEqual(kbconfig.selected(), "other")
+            os.environ["KB"] = "demo"                                              # an explicit pick still wins
+            self.assertEqual(kbconfig.selected(), "demo")
+        with open(cfg, "w", encoding="utf-8") as f:
+            f.write('[kb]\ndefault = "gone"\n')                                   # an unknown id decides nothing
+        with patch.dict(os.environ, {"KB_ENGINE_CONFIG": cfg}):
+            os.environ.pop("KB", None)
+            self.assertIsNone(kbconfig.selected())
+
     def test_selection_order_argv_env_then_the_only_kb(self):
         self.assertEqual(kbconfig.selected(), "demo")                              # the only one
         with patch.dict(os.environ, {"KB": "other"}):

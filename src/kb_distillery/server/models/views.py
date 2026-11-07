@@ -48,3 +48,16 @@ class RecentList(ApiModel):
 class RecentAppendRequest(ApiModel):
     text: str
     spec: dict[str, Any] = {}
+
+
+class ReadyView(ApiModel):
+    """A view the kit ships: `layers` are lines of the graph's query language (the frontend parses them)."""
+    id: str
+    name: str
+    description: str
+    layers: list[str]
+    kit: str
+
+
+class ReadyViewList(ApiModel):
+    views: list[ReadyView]
