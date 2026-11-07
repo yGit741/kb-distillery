@@ -13,9 +13,17 @@ this module is the guard.
 SSE event contract shared with static/chat.js (names → JSON data):
 
     session  {"id": str}                      first thing, and again after the result (resume key)
-    tool     {"name", "summary", "id", "error"?, "seen"?, "read"?}   one per tool call ("read tensor-rank", "grep …")
-             seen / read: page slugs (at most 50) a search returned / a Read opened; absent when unknown
-             agent mode adds "status" (running|done|error) and "result" (first ~300 chars)
+    tool     {"name", "summary", "id", "round", "kind", "status", "query"?, "url"?, "domains"?, "error"?, "seen"?, "read"?}
+             one per tool call ("read tensor-rank", "grep …"), sent again when its result arrives (status done|error)
+             round: 1-based, per turn; the calls of one assistant message (sent together) share a round
+             kind: shortlist | meaning | graph | raw | alias | keyword | files | open | attachment | web-search |
+                   web-source | other
+             query: short text (at most 200 chars) of what was asked: words, pattern, cypher, raw path
+             url: the WebFetch address · domains: up to 8 distinct hosts a WebSearch returned (after its result)
+             status: running | done | error, in every mode
+             seen / read: page slugs (at most 50) a search returned / a Read (or an explore_raw read / check of a
+             digested raw file) opened; absent when unknown
+             agent mode adds "result" (first ~300 chars)
     thinking str                              agent mode: streamed thinking text
     todo     {"items": [{content, status}]}   agent mode: the TodoWrite list (replaces the previous one)
     user     {"text": str}                    agent mode: a message queued into the running turn was accepted
@@ -785,6 +793,70 @@ def tool_summary(name, tool_input):
     return name.lower()
 
 
+QUERY_CAP = 200
+_PY = r"\S*python3?\s+(?:-m\s+kb_distillery\.{mod}|(?:\S*/)?src/kb_distillery/{path}\.py)\s+"
+
+
+def _cmd_args(cmd, mod, path):
+    m = re.match(_PY.format(mod=re.escape(mod), path=re.escape(path)) + r"(.*)", cmd, re.S)
+    return m.group(1).strip() if m else None
+
+
+def _raw_slug(raw):
+    """Wiki page slug of a digested raw file (its corpus manifest row), or None when it has none."""
+    try:
+        from kb_distillery.search import explore_raw
+        _p, row = explore_raw._resolve(raw, explore_raw._manifest())
+        return (row.get("slug") or "").strip() or None
+    except Exception:
+        return None
+
+
+def tool_meta(name, tool_input):
+    """(kind, query, raw_slug) of a tool call for the trace view. query is None when there is nothing to show."""
+    inp = tool_input or {}
+    kind, query, raw_slug = "other", None, None
+    if name == "Read":
+        if slug_from_read(inp):
+            kind = "open"
+        else:
+            real = _real(inp.get("file_path"))
+            root = _real(chat_attachments.chat_root())
+            kind = "attachment" if real and root and _under(real, root) else "other"
+    elif name == "Grep":
+        kind, query = "keyword", inp.get("pattern")
+    elif name == "Glob":
+        kind, query = "files", inp.get("pattern")
+    elif name == "WebSearch":
+        kind, query = "web-search", inp.get("query")
+    elif name == "WebFetch":
+        kind = "web-source"
+    elif name == "Bash":
+        cmd = (inp.get("command") or "").strip()
+        a = _cmd_args(cmd, "search.query", "search/query")
+        if a is not None:
+            verb, _, rest = a.partition(" ")
+            if verb in ("candidates", "mocs"):
+                kind, query = "shortlist", rest.strip() or verb
+        elif (a := _cmd_args(cmd, "search.semfind", "search/semfind")) is not None:
+            kind, query = "meaning", a
+        elif (a := _cmd_args(cmd, "search.cypher", "search/cypher")) is not None:
+            kind, query = "graph", a
+        elif (a := _cmd_args(cmd, "search.explore_raw", "search/explore_raw")) is not None:
+            kind = "raw"
+            verb, _, rest = a.partition(" ")
+            toks = rest.split()
+            target = toks[0].strip("\"'") if toks else ""
+            if verb in ("read", "check") and target:
+                query, raw_slug = target, _raw_slug(target)
+            else:
+                query = a
+        elif (a := _cmd_args(cmd, "ingest", "ingest")) is not None and a.startswith("resolve"):
+            kind, query = "alias", a[len("resolve"):].strip() or None
+    query = " ".join(str(query).split())[:QUERY_CAP] if query else None
+    return kind, query, raw_slug
+
+
 def harvest_citations(text, index):
     out = []
     for slug in links.targets(text):
@@ -824,6 +896,8 @@ class TurnState:
     text: str = ""
     session_id: str = None
     tools: list = field(default_factory=list)
+    round_open: bool = False                       # a round has calls and no result back yet
+    round: int = 0                                 # tool rounds so far this turn (see map_message)
     fetching: dict = field(default_factory=dict)   # WebFetch tool id → url, cited only once the fetch succeeded
     index: dict = None
 
@@ -922,21 +996,28 @@ def map_message(msg, state):
                 if name == "TodoWrite" and runtime.effective("agent-mode"):
                     out.append(("todo", {"items": todo_items(inp)}))
                     continue
+                if not state.round_open:        # calls sent together (even split over messages) share a round
+                    state.round += 1
+                    state.round_open = True
                 entry = {"name": name, "summary": tool_summary(name, inp), "id": getattr(block, "id", None)}
-                opened = slug_from_read(inp) if name == "Read" else None
-                if opened:
-                    entry["read"] = [opened]
-                if runtime.effective("agent-mode"):
-                    entry["status"] = "running"
+                tkind, tquery, raw_slug = tool_meta(name, inp)
+                entry["round"], entry["kind"] = state.round, tkind
+                if tquery:
+                    entry["query"] = tquery
+                slug = (slug_from_read(inp) if name == "Read" else None) or raw_slug
+                if slug:
+                    entry["read"] = [slug]
+                url = inp.get("url") if name == "WebFetch" else None
+                if isinstance(url, str) and url.startswith(("http://", "https://")):
+                    entry["url"] = url[:1000]
+                entry["status"] = "running"
                 state.tools.append(entry)
                 out.append(("tool", dict(entry)))
-                slug = slug_from_read(inp) if name == "Read" else None
                 if slug:
                     state.reads[slug] = state.reads.get(slug, 0) + 1
                     out.append(("sources", state.sources()))
-                url = inp.get("url") if name == "WebFetch" else None
-                if isinstance(url, str) and url.startswith(("http://", "https://")) and entry["id"]:
-                    state.fetching[entry["id"]] = url
+                if entry.get("url") and entry["id"]:
+                    state.fetching[entry["id"]] = entry["url"]
             elif b == "TextBlock" and state.text and not state.text.endswith("\n\n"):
                 # a new text segment after tool use: keep paragraphs apart in the stream
                 pass
@@ -945,6 +1026,7 @@ def map_message(msg, state):
         for block in getattr(msg, "content", None) or []:
             if _name(block) != "ToolResultBlock":
                 continue
+            state.round_open = False                # results are back: the next tool call opens a new round
             failed = bool(getattr(block, "is_error", False))
             tid = getattr(block, "tool_use_id", None)
             match = next((t for t in reversed(state.tools) if t.get("id") == tid), None)
@@ -952,15 +1034,22 @@ def map_message(msg, state):
                 if failed:
                     match["error"] = True
                     match.pop("read", None)         # a denied or failed Read opened nothing
+                match["status"] = "error" if failed else "done"
                 if runtime.effective("agent-mode"):
-                    match["status"] = "error" if failed else "done"
                     match["result"] = result_preview(getattr(block, "content", None))
                 seen = [] if failed or match.get("name") not in ("Grep", "Glob", "Bash") else \
                     result_slugs(getattr(block, "content", None), state.index, md_only=match.get("name") != "Bash")
                 if seen:
                     match["seen"] = seen
-                if failed or seen or runtime.effective("agent-mode"):
-                    out.append(("tool", dict(match)))
+                if match.get("name") == "WebSearch" and not failed:
+                    hosts = []
+                    for link in search_links(getattr(block, "content", None)):
+                        h = _host(link["url"])
+                        if h not in hosts:
+                            hosts.append(h)
+                    if hosts:
+                        match["domains"] = hosts[:8]
+                out.append(("tool", dict(match)))
             if not failed and tid in state.fetching:
                 state.add_web(state.fetching.pop(tid), count=1)
                 out.append(("sources", state.sources()))
