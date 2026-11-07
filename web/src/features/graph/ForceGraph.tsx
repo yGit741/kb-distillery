@@ -1,5 +1,6 @@
 import createForceGraph, { type ForceGraphInstance, type LinkObject, type NodeObject } from "force-graph";
 import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
+import { fitFrame } from "./fitFrame";
 import type { GraphData } from "./graphData";
 import type { SimLink, SimNode } from "./types";
 
@@ -55,8 +56,8 @@ export interface ForceGraphHandle {
   panBy(dx: number, dy: number): void;
   centerOn(x: number, y: number, k?: number, ms?: number): void;
   fit(include?: (n: SimNode) => boolean, ms?: number): void;
-  /** Frame the given pages inside the canvas minus `left` px on its left side (a panel lies over that strip). False when they have no place yet. */
-  fitIn(include: (n: SimNode) => boolean, left: number, ms?: number, pad?: number): boolean;
+  /** Frame the given pages inside the canvas minus `left` px on its left side (a panel lies over that strip) and `top` px on its top (the search line). False when they have no place yet. */
+  fitIn(include: (n: SimNode) => boolean, left: number, ms?: number, pad?: number, top?: number): boolean;
   screenOf(n: { x?: number; y?: number }): { x: number; y: number } | null;
   reheat(): void;
   refresh(): void;
@@ -374,7 +375,7 @@ export const ForceGraph = forwardRef<ForceGraphHandle, ForceGraphProps & { class
           const pad = Math.round(Math.min(90, Math.max(24, (host.current?.clientWidth ?? 800) * 0.08)));
           g()?.zoomToFit(ms, pad, include ? (n) => include(n as SimNode) : undefined);
         },
-        fitIn: (include, left, ms = 600, pad = 72) => {
+        fitIn: (include, left, ms = 600, pad = 72, top = pad) => {
           const inst = g();
           const el = host.current;
           if (!inst || !el?.clientWidth || !el.clientHeight) return false;
@@ -382,14 +383,9 @@ export const ForceGraph = forwardRef<ForceGraphHandle, ForceGraphProps & { class
           if (!ns.length || ns.some((n) => !Number.isFinite(n.x) || !Number.isFinite(n.y))) return false;
           const xs = ns.map((n) => n.x as number);
           const ys = ns.map((n) => n.y as number);
-          const [x0, x1, y0, y1] = [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)];
-          const w = Math.max(40, el.clientWidth - left - 2 * pad);
-          const h = Math.max(40, el.clientHeight - 2 * pad);
-          // a lone page is centred at the usual focus zoom, never blown up
-          const kk = Math.min(2.2, w / Math.max(1, x1 - x0), h / Math.max(1, y1 - y0));
-          // the free area's centre sits left/2 px right of the canvas centre: the view's centre is that much left of the pages'
-          inst.centerAt((x0 + x1) / 2 - left / 2 / kk, (y0 + y1) / 2, ms);
-          inst.zoom(kk, ms);
+          const v = fitFrame({ x0: Math.min(...xs), x1: Math.max(...xs), y0: Math.min(...ys), y1: Math.max(...ys) }, el.clientWidth, el.clientHeight, { left, top, pad });
+          inst.centerAt(v.x, v.y, ms);
+          inst.zoom(v.k, ms);
           return true;
         },
         screenOf: (n) => {
