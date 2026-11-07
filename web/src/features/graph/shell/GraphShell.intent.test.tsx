@@ -100,10 +100,12 @@ describe("the line, graph-intent on", () => {
 });
 
 describe("the line, graph-intent off", () => {
-  it("keeps the knowledge base icon, the old placeholder and the old empty text", async () => {
+  it("keeps the old placeholder and the old empty text, with no knowledge base icon in the line", async () => {
     await withFlag("graph-intent", false, async () => {
       setup();
-      expect(await screen.findByRole("button", { name: /knowledge base/i })).toBeInTheDocument();
+      await screen.findByRole("combobox");
+      // the owner removed the icon in both states: the kb switcher is the app bar badge or /knowledge
+      expect(screen.queryByRole("button", { name: /knowledge base/i })).not.toBeInTheDocument();
       expect(box().getAttribute("placeholder")).toMatch(/^Search /);
       expect(box().getAttribute("placeholder")).not.toMatch(/everything/);
       await userEvent.type(box(), "/zzzzqq");

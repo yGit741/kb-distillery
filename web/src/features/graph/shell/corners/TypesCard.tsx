@@ -108,7 +108,7 @@ export function TypesCard({ concepts, sources, onToggle, onSpot }: Props) {
       <span
         aria-hidden
         onClick={() => open && toggle("types")}
-        className={cn("absolute -inset-x-3.5 -inset-y-[2.5px] -z-10 rounded-[14px] bg-card shadow-[var(--shadow)] transition-opacity duration-300 motion-reduce:transition-none", open ? "pointer-events-auto opacity-100" : "opacity-0")}
+        className={cn("absolute -inset-x-3.5 -inset-y-[2.5px] -z-10 rounded-[14px] bg-card shadow-[var(--shadow)] transition-opacity duration-300 motion-reduce:transition-none", open ? "pointer-events-auto cursor-pointer opacity-100" : "opacity-0")}
       />
       {!open && (
         <button
@@ -117,7 +117,7 @@ export function TypesCard({ concepts, sources, onToggle, onSpot }: Props) {
           aria-label="Show page types"
           title="Page types: press to show the names"
           aria-expanded={false}
-          className={cn("pointer-events-auto absolute -inset-x-3.5 -inset-y-[2.5px] rounded-[14px]", RING)}
+          className={cn("pointer-events-auto absolute -inset-x-3.5 -inset-y-[2.5px] cursor-pointer rounded-[14px] transition-colors hover:bg-accent motion-reduce:transition-none", RING)}
           onClick={() => toggle("types")}
         />
       )}
