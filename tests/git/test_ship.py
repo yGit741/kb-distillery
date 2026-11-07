@@ -342,6 +342,35 @@ class PrFlowTests(unittest.TestCase):
         self.assertEqual(ship.cmd_sync(cont=True, root=wt, gates=False), 1)
         self.assertIn("meta/tool.py", _g(wt, "diff", "--name-only", "--diff-filter=U"))
 
+    def test_sync_continue_stages_resolved_but_not_marked_file(self):
+        wt = self._conflict("sync-mixed")
+        self._write(wt, "meta/two.py", "mine")
+        _g(wt, "add", "-A")
+        _g(wt, "commit", "-q", "-m", "feat(ops): two")
+        self._write(self.repo, "meta/two.py", "theirs")
+        _g(self.repo, "add", "-A")
+        _g(self.repo, "commit", "-q", "-m", "feat(ops): two theirs (#10)")
+        _g(self.repo, "push", "-q", "origin", "main")
+        self.assertEqual(ship.cmd_sync(root=wt, gates=False), 1)
+        with open(os.path.join(wt, "meta/two.py"), "w") as f:
+            f.write("merged\n")                            # tool.py keeps its markers
+        self.assertEqual(ship.cmd_sync(cont=True, root=wt, gates=False), 1)
+        self.assertEqual(_g(wt, "diff", "--name-only", "--diff-filter=U").split(), ["meta/tool.py"])
+
+    def test_sync_continue_never_stages_modify_delete_conflict(self):
+        wt = self._start("sync-del")
+        self._write(wt, "meta/tool.py", "mine")
+        _g(wt, "add", "-A")
+        _g(wt, "commit", "-q", "-m", "feat(ops): mine")
+        _g(self.repo, "rm", "-q", "meta/tool.py")
+        self._write(self.repo, "meta/other.py", "theirs too")
+        _g(self.repo, "add", "-A")
+        _g(self.repo, "commit", "-q", "-m", "feat(ops): drop tool (#9)")
+        _g(self.repo, "push", "-q", "origin", "main")
+        self.assertEqual(ship.cmd_sync(root=wt, gates=False), 1)
+        self.assertEqual(ship.cmd_sync(cont=True, root=wt, gates=False), 1)
+        self.assertIn("meta/tool.py", _g(wt, "diff", "--name-only", "--diff-filter=U"))
+
     def test_sync_continue_never_stages_knowledge_paths(self):
         wt = self._conflict("sync-know", rel="wiki/page.md")
         self.assertEqual(ship.cmd_sync(root=wt, gates=False), 1)

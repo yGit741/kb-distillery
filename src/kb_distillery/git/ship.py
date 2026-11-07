@@ -1044,16 +1044,24 @@ def cmd_approve(number, root=ROOT):
     return cp.returncode
 
 
-_CONFLICT_MARKER = re.compile(r"^(<<<<<<< |=======$|>>>>>>> )", re.M)
+_CONFLICT_MARKER = re.compile(r"^(<<<<<<< |>>>>>>> )", re.M)
+
+
+def _both_edited(root):
+    """Unmerged paths where both sides changed a text file in place (porcelain UU or AA): the only conflicts
+    `sync --continue` stages for you. Deleted/renamed sides (DU, UD, AU, ...) always need a deliberate `git rm`/`git add`."""
+    out = run_git(["status", "--porcelain", "-z"], cwd=root).stdout
+    return {e[3:] for e in out.split("\0") if e[:2] in ("UU", "AA")}
 
 
 def _resolved_file(root, rel):
-    """True when the unmerged path exists as a file and holds no conflict markers."""
+    """True when the path is a text file that holds no conflict markers (a binary one is never auto-resolved)."""
     full = os.path.join(root, rel)
     if not os.path.isfile(full):
         return False
-    with open(full, encoding="utf-8", errors="replace") as f:
-        return not _CONFLICT_MARKER.search(f.read())
+    with open(full, "rb") as f:
+        data = f.read()
+    return b"\0" not in data and not _CONFLICT_MARKER.search(data.decode("utf-8", "replace"))
 
 
 def cmd_sync(cont=False, abort=False, root=ROOT, gates=True):
@@ -1078,12 +1086,15 @@ def cmd_sync(cont=False, abort=False, root=ROOT, gates=True):
             print("error: no merge in progress — run ship sync first")
             return 1
         unmerged = [p for p in run_git(["diff", "--name-only", "--diff-filter=U"], cwd=root).stdout.split("\n") if p]
-        left = []
+        left, editable = [], _both_edited(root)
         for p in unmerged:
-            if lane_of(p) != "knowledge" and _resolved_file(root, p) and run_git(["add", "--", p], cwd=root).returncode == 0:
-                print(f"staged {p} (resolved)")
-            else:
-                left.append(p)
+            if p in editable and lane_of(p) != "knowledge" and _resolved_file(root, p):
+                cp = run_git(["add", "--", p], cwd=root)
+                if cp.returncode == 0:
+                    print(f"staged {p} (resolved)")
+                    continue
+                print(_out(cp))
+            left.append(p)
         if left:
             print("error: unresolved conflicts — edit out the conflict markers, then `pixi run ship -- sync --continue`:")
             for p in left:
