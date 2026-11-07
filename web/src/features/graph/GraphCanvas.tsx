@@ -1072,6 +1072,7 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
   return (
     <div
       ref={wrap}
+      data-testid="graph-canvas"
       className={cn(
         "relative size-full [&.graph-pointer_canvas]:cursor-pointer",
         ui.magnet && "[&:not(.graph-pointer)_canvas]:[cursor:var(--magnet-cursor,default)]",

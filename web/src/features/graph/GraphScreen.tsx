@@ -489,6 +489,24 @@ function Loaded({
   const selected = useMemo(() => [...selection].map((id) => byId.get(id)).filter((n): n is GNode => !!n), [selection, byId]);
   const closeMenu = useCallback(() => setMenu(null), []);
 
+  // the empty-space menu closes like any menu: Escape (even from the search line) or a press outside it
+  const bgMenuRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!bgMenu) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setBgMenu(null);
+    };
+    const onDown = (e: PointerEvent) => {
+      if (!(e.target instanceof Node && bgMenuRef.current?.contains(e.target))) setBgMenu(null);
+    };
+    window.addEventListener("keydown", onKey);
+    window.addEventListener("pointerdown", onDown, true);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("pointerdown", onDown, true);
+    };
+  }, [bgMenu]);
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.metaKey || e.ctrlKey || e.altKey) return;
@@ -699,6 +717,7 @@ function Loaded({
       {!ui.railOpen && !showDetails && !reader && <HoverCard byId={byId} className="absolute bottom-[66px] left-3.5 z-20" />}
       {bgMenu && (
         <div
+          ref={bgMenuRef}
           role="menu"
           aria-label="Graph"
           className="pointer-events-auto fixed z-50 min-w-40 rounded-lg border bg-popover p-1 text-sm shadow-[var(--shadow)]"
