@@ -88,6 +88,8 @@ def save_note(name, text, base_mtime=None, root=None, create=False):
         raise ThinkError(409, f"{name} changed on disk since it was loaded — reload it first")
     os.makedirs(_think_dir(root), exist_ok=True)
     _write_atomic(path, text)
+    from kb_distillery.search import fts
+    fts.update_quiet(root, [path])          # the full-text index, best effort
     return dict(name=name, mtime=os.stat(path).st_mtime, created=not exists)
 
 

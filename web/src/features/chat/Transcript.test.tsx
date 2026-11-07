@@ -80,3 +80,29 @@ describe("MessageList transcript (agent-mode off)", () => {
       expect(screen.getByText(/3 steps · 1 page read/)).toBeInTheDocument();
     }));
 });
+
+describe("MessageList transcript with Show my thinking", () => {
+  const withThinking = async (flag: boolean) => {
+    const root = createRootRoute({
+      component: () => (
+        <MessageList messages={messages} busy={false} onRegenerate={noop} onAnswer={noop} thinking={flag ? () => <p>thinking section</p> : undefined} />
+      ),
+    });
+    const router = createRouter({ routeTree: root, history: createMemoryHistory({ initialEntries: ["/"] }) });
+    render(<RouterProvider router={router} />);
+    await screen.findByLabelText("Conversation");
+  };
+
+  it("on: the per-tool lines are left out, the thinking block stays", () =>
+    withFlag("agent-mode", true, async () => {
+      await withThinking(true);
+      expect(screen.queryAllByTestId("tool-line")).toHaveLength(0);
+      expect(screen.getByTestId("thinking")).toBeInTheDocument();
+    }));
+
+  it("off: the per-tool lines stay", () =>
+    withFlag("agent-mode", true, async () => {
+      await withThinking(false);
+      expect(screen.getAllByTestId("tool-line")).toHaveLength(3);
+    }));
+});

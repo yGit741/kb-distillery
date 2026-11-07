@@ -1,9 +1,9 @@
-import { Layers, Pin } from "lucide-react";
-import type { GNode } from "../types";
-import type { PinnedView } from "@/api";
+import { FileText, Layers, MessageSquare, NotebookPen, Pin } from "lucide-react";
+import type { PinnedView, TextHit } from "@/api";
 import { NodeSwatch } from "../encoding/NodeMarkSvg";
 import { swatchColor } from "../nodeColor";
 import type { ColorBy } from "../style";
+import type { GNode } from "../types";
 import type { Command } from "./commands";
 import { LINE_COPY } from "./copy";
 import type { PageResult } from "./usePageResults";
@@ -13,6 +13,7 @@ import { isThink, matchTier1, placeOnce, type Candidate, type GroupId, type Plac
 const PAGES_SHOWN = 6;
 const THINK_SHOWN = 4;
 const RELATED_SHOWN = 3;
+const MEANING_SHOWN = 5;
 
 export interface GroupedArgs {
   text: string;
@@ -28,8 +29,70 @@ export interface GroupedArgs {
   /** Enter on a set row highlights the set. */
   highlightSet: (ids: string[]) => void;
   runView: (v: PinnedView) => void;
+  /**
+   * Flag semantic-search: the answer of the meaning service for this text, best first. Present (even empty), it is the
+   * "Related by meaning" group; absent, that group is the older related hits of the text search.
+   */
+  meaning?: readonly { node: GNode; score: number }[];
   /** Page ids marked favorite: those rows carry a small mark. */
   favorites?: ReadonlySet<string>;
+  /** Tier 2: the server's full-text hits for exactly this text (./useTextHits); they fill the sections after the tier-1 groups. */
+  textHits?: readonly TextHit[];
+  byId?: ReadonlyMap<string, GNode>;
+  openChat?: (id: string) => void;
+  openThink?: (name: string) => void;
+  /** A raw file's repo path: opens the corpus drawer on it. */
+  openRaw?: (path: string) => void;
+}
+
+const TEXT_SHOWN = { page: 6, think: 4, chat: 4, raw: 4 } as const;
+
+/**
+ * The rows of tier 2, appended after every tier-1 row: pages and think notes first, then chats, then raw files, in the
+ * server's order. A hit already shown by tier 1 (same page id) is not repeated. Pure: the same hits give the same rows.
+ */
+export function textRows(a: GroupedArgs, shown: ReadonlySet<string>): PanelRow[] {
+  const out: PanelRow[] = [];
+  const seen = new Set(shown);
+  for (const kind of ["page", "think", "chat", "raw"] as const) {
+    let n = 0;
+    for (const h of a.textHits ?? []) {
+      if (h.kind !== kind || n >= TEXT_SHOWN[kind]) continue;
+      const section = LINE_COPY.textGroups[kind];
+      const node = kind === "page" ? a.byId?.get(h.id) : undefined;
+      if (kind === "page" && !node) continue;          // a page the graph does not carry yet has nothing to open
+      if (node ? seen.has(node.id) : seen.has(`${kind}:${h.id}`)) continue;
+      seen.add(node ? node.id : `${kind}:${h.id}`);
+      n++;
+      const detail = h.snippet || undefined;
+      if (node) {
+        out.push({
+          key: `text:${kind}:${h.id}`,
+          section,
+          label: node.title || h.title || h.id,
+          detail,
+          hint: node.type.replace(/-/g, " "),
+          fav: a.favorites?.has(node.id) || undefined,
+          lead: <NodeSwatch type={node.type} color={swatchColor(node, a.colorBy)} className="size-3.5" />,
+          actions: { kind: "node", node },
+          run: (shift) => a.focusNode(node.id, shift),
+        });
+        continue;
+      }
+      const lead = kind === "chat" ? <MessageSquare aria-hidden strokeWidth={1.6} /> : kind === "think" ? <NotebookPen aria-hidden strokeWidth={1.6} /> : <FileText aria-hidden strokeWidth={1.6} />;
+      const open = kind === "chat" ? a.openChat : kind === "think" ? a.openThink : a.openRaw;
+      out.push({
+        key: `text:${kind}:${h.id}`,
+        section,
+        label: h.title || h.id,
+        detail,
+        hint: kind === "raw" ? (h.id.split("/")[1] ?? "raw") : kind,
+        lead,
+        run: () => open?.(kind === "raw" ? h.path || h.id : h.id),
+      });
+    }
+  }
+  return out;
 }
 
 /** The rows of `/favorites`: the favorite pages (narrowed by the words after the command), the same row as a search hit. */
@@ -71,7 +134,9 @@ export function groupedRows(a: GroupedArgs): PanelRow[] {
         const group = isThink(r.node) ? "think" : "pages";
         return [{ group, via: r.snippet ? "text" : "title", node: r.node, snippet: r.snippet }, ...(r.also ?? []).map<Candidate>((via) => ({ group, via, node: r.node }))];
       }),
-    ...a.results.filter((r) => r.related).map<Candidate>((r) => ({ group: "related", via: "related", node: r.node, snippet: r.snippet })),
+    ...(a.meaning
+      ? a.meaning.map<Candidate>((m) => ({ group: "related", via: "related", node: m.node, score: m.score }))
+      : a.results.filter((r) => r.related).map<Candidate>((r) => ({ group: "related", via: "related", node: r.node, snippet: r.snippet }))),
   ];
   const placed = placeOnce(cands);
   const label = (g: GroupId) => LINE_COPY.groups[g];
@@ -81,7 +146,7 @@ export function groupedRows(a: GroupedArgs): PanelRow[] {
     section: label(g),
     label: p.node.title || p.node.id,
     detail: p.snippet,
-    hint: p.node.type.replace(/-/g, " "),
+    hint: p.score !== undefined ? String(p.score) : p.node.type.replace(/-/g, " "),
     fav: a.favorites?.has(p.node.id) || undefined,
     mark: p.also.length ? { text: p.also.map((v) => LINE_COPY.alsoMark[v]).join(" · "), title: p.also.map((v) => LINE_COPY.alsoTitle[v]).join("; ") } : undefined,
     lead: <NodeSwatch type={p.node.type} color={swatchColor(p.node, a.colorBy)} className="size-3.5" />,
@@ -116,6 +181,15 @@ export function groupedRows(a: GroupedArgs): PanelRow[] {
     const cmd = a.commands.find((x) => x.id === c.id);
     if (cmd) out.push({ ...a.commandRow(cmd), key: `command:${c.id}`, section: label("commands") });
   }
-  placed.related.slice(0, RELATED_SHOWN).forEach((p) => out.push(pageRow(p, "related")));
+  placed.related.slice(0, a.meaning ? MEANING_SHOWN : RELATED_SHOWN).forEach((p) => out.push(pageRow(p, "related")));
+  // tier 2 goes last, so it only ever adds rows below those already on show
+  if (a.textHits?.length) {
+    const shown = new Set<string>();
+    for (const r of out) {
+      const m = /^(?:pages|think|related):(.+)$/.exec(r.key);
+      if (m) shown.add(m[1]!);
+    }
+    out.push(...textRows(a, shown));
+  }
   return out;
 }

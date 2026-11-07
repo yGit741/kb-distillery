@@ -65,7 +65,7 @@ export function resolveNames(layers: Layer[], nodes: readonly GNode[], opts: { f
       case "name":
         return { ...c, slugs: c.slugs.map(one) };
       case "about":
-        return c.phrase === FOCUS && opts.focus ? { ...c, phrase: nodes.find((n) => n.id === opts.focus)?.title || opts.focus } : c;
+        return c.phrase === FOCUS && opts.focus ? { ...c, phrase: nodes.find((n) => n.id === opts.focus)?.title || opts.focus, slug: opts.focus } : c;
       case "not":
         return { ...c, cond: node(c.cond) };
       default:

@@ -33,6 +33,8 @@ export const LINE_COPY = {
     related: "Related by meaning",
     ask: "Actions",
   },
+  /** Tier 2 (server full text): the sections under the title groups, in order. */
+  textGroups: { page: "Pages: full text", think: "Think notes: full text", chat: "Chats", raw: "Raw files" } as Record<"page" | "think" | "chat" | "raw", string>,
   /** "31 pages mention x": `n` pages whose title, alias or tags contain the words. */
   setRow: (n: number) => `${n} pages mention`,
   /** The small mark on a row that was also a hit in a lower group, by the group it was also found in. */
@@ -128,6 +130,18 @@ export const LINE_COPY = {
     handOffHint: "opens the graph",
     empty: "Type to search pages, / for commands.",
     emptyShare: "Type to search pages.",
+  },
+  /** Meaning search (flags graph-intent and semantic-search). */
+  meaningOff: "meaning search is off",
+  focusOneFirst: "Focus one node first",
+  /** The last row of the panel: opens the chat with the focus and the shown pages as context. */
+  askRow: "Ask about",
+  askHint: "opens the chat",
+  /** Lines of the chat draft that carry the context. */
+  chatContext: {
+    focus: "Focus",
+    shown: (n: number) => `Shown in the graph (${n})`,
+    more: (n: number) => `and ${n} more`,
   },
   didYouMean: (name: string) => `Did you mean "${name}"?`,
   noSuchPage: (name: string) => `No page is called "${name}".`,

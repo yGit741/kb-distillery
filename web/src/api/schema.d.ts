@@ -963,6 +963,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/search/similar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Pages close in meaning to a phrase or a page */
+        get: operations["search_similar_api_search_similar_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/search/text": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Full-text search over pages, think notes, chats and raw text */
+        get: operations["search_text_api_search_text_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/sessions": {
         parameters: {
             query?: never;
@@ -3894,6 +3928,30 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
+        /** SimilarHit */
+        SimilarHit: {
+            /**
+             * Score
+             * @default 0
+             */
+            score: number;
+            /** Slug */
+            slug: string;
+            /**
+             * Title
+             * @default
+             */
+            title: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** SimilarResult */
+        SimilarResult: {
+            /** Hits */
+            hits: components["schemas"]["SimilarHit"][];
+        } & {
+            [key: string]: unknown;
+        };
         /** SnapshotTag */
         SnapshotTag: {
             /** Date */
@@ -3994,6 +4052,44 @@ export interface components {
              * @enum {string}
              */
             t: "text";
+        };
+        /** TextHit */
+        TextHit: {
+            /** Id */
+            id: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "page" | "think" | "chat" | "raw";
+            /**
+             * Path
+             * @default
+             */
+            path: string;
+            /**
+             * Score
+             * @default 0
+             */
+            score: number;
+            /**
+             * Snippet
+             * @default
+             */
+            snippet: string;
+            /** Title */
+            title: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** TextSearch */
+        TextSearch: {
+            /** Hits */
+            hits: components["schemas"]["TextHit"][];
+            /** Query */
+            query: string;
+        } & {
+            [key: string]: unknown;
         };
         /** ThinkCaptureRequest */
         ThinkCaptureRequest: {
@@ -6446,6 +6542,93 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["SearchResult"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    search_similar_api_search_similar_get: {
+        parameters: {
+            query?: {
+                q?: string;
+                slug?: string;
+                k?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SimilarResult"];
+                };
+            };
+            /** @description unknown slug */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description neither q nor slug */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description semantic search is off or its service is down */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    search_text_api_search_text_get: {
+        parameters: {
+            query?: {
+                q?: string;
+                /** @description comma list of page, think, chat, raw; empty = all */
+                kinds?: string;
+                limit?: number;
+                kb?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TextSearch"];
+                };
+            };
+            /** @description unknown knowledge base */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {
