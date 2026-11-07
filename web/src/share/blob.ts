@@ -21,12 +21,12 @@ export interface ShareBlob {
   meta?: ShareMeta;
   /** Home pipeline cards per source slug (kb_distillery.services.raw_card.bake_cards); public: the privacy column applied. */
   rawCards?: Record<string, RawCard>;
-  /** Home cards and the tour id from share.toml `[home]` (kb_distillery.publish.site.home); `view` = the graph view a
-   *  snapshot built with `share snapshot … --view <id>` opens on when the URL has no `?view=`. */
-  /** Flag graph-intent, read-only: the pinned views (private profile only), the kit's ready views, the favorite pages. */
+  /** Flag graph-intent, read-only: the kit's ready views; the pinned views and favorite pages (private profile only). */
   views?: PinnedView[];
   readyViews?: ReadyView[];
   favorites?: string[];
+  /** Home cards and the tour id from share.toml `[home]` (kb_distillery.publish.site.home); `view` = the graph view a
+   *  snapshot built with `share snapshot … --view <id>` opens on when the URL has no `?view=`. */
   home?: { cards?: unknown[]; tour?: string | null; view?: string | null };
 }
 

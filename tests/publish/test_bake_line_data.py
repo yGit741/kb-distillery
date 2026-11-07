@@ -29,11 +29,16 @@ def test_private_bakes_pinned_views_ready_views_and_the_marks_of_carried_pages(k
     assert isinstance(out["readyViews"], list)
 
 
-def test_public_bakes_no_pinned_view_and_no_mark_of_a_page_the_cut_dropped(kb):
+def test_public_bakes_no_pinned_view_and_no_favorite_mark(kb):
     out = build.bake_line_data(DATA, "public")
-    assert out["views"] == []
-    assert out["favorites"] == ["kept"]
+    assert out["views"] == [] and out["favorites"] == []
     assert isinstance(out["readyViews"], list)
+
+
+def test_a_damaged_file_does_not_stop_the_build(kb):
+    (kb / "meta" / "views.json").write_text("{not json")
+    out = build.bake_line_data(DATA, "private")
+    assert out["views"] == [] and out["favorites"] == []
 
 
 def test_a_kb_without_views_or_favorites_bakes_empty_lists(tmp_path):

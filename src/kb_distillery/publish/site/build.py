@@ -593,14 +593,18 @@ def bake_raw_cards(data, raw_of, profile):
 
 def bake_line_data(data, profile):
     """What the read-only half of the graph line needs on a site with no server (flag graph-intent): the kit's ready
-    views (both profiles), the favorite marks of pages the site carries, and the pinned views (private only: a pin names
-    pages the public cut may have dropped). Nothing here is ever written back by the site."""
+    views (both profiles), the pinned views and the favorite marks of pages the site carries (private only: personal curation). Nothing here is ever written back by the site."""
     from kb_distillery.services import views as views_svc
     from kb_distillery.vault import favorites as favorites_vault
     from kb_distillery.vault import views as views_vault
     root = os.environ.get("KB_ROOT", ".")
-    pinned = views_vault.load(root) if profile == "private" else []
-    marked = [s for s in favorites_vault.load(root) if s in data["pages"]]
+    pinned, marked = [], []
+    if profile == "private":      # a pin and a favorite are personal curation: the public site shows neither
+        try:
+            pinned = views_vault.load(root)
+            marked = [s for s in favorites_vault.load(root) if s in data["pages"]]
+        except Exception:         # a damaged file must not stop a share build; the line just has none
+            pinned, marked = [], []
     return {"views": pinned, "readyViews": views_svc.ready_views()["views"], "favorites": marked}
 
 
