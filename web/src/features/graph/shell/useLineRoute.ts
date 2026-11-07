@@ -24,17 +24,21 @@ export function useLineRoute(opts: Options): { route: (text: string) => void; ca
   const o = useRef(opts);
   o.current = opts;
   const run = useRef(0);
+  const inFlight = useRef<AbortController | null>(null);
   const [busy, setBusy] = useState(false);
 
   const route = useCallback(
     (text: string) => {
       const mine = ++run.current;
+      inFlight.current?.abort();
+      inFlight.current = null;
       const { pages, commands, canAsk } = o.current;
       const ruled = routeByRules(text, { pages, commands, canAsk });
       if (ruled) return o.current.onRoute(ruled);
       if (ds.kind === "embedded") return o.current.onRoute({ intent: "search", text });
       setBusy(true);
       const abort = new AbortController();
+      inFlight.current = abort;
       const timer = setTimeout(() => abort.abort(), ROUTE_TIMEOUT_MS);
       const offered = commands.filter((c) => !c.fill).map((c) => ({ id: c.id, label: c.label }));
       ds.routeLine(text, offered, { signal: abort.signal })
@@ -48,6 +52,7 @@ export function useLineRoute(opts: Options): { route: (text: string) => void; ca
         )
         .then((r) => {
           clearTimeout(timer);
+          if (inFlight.current === abort) inFlight.current = null;
           if (run.current !== mine) return;
           setBusy(false);
           o.current.onRoute(r);
@@ -58,6 +63,9 @@ export function useLineRoute(opts: Options): { route: (text: string) => void; ca
 
   const cancel = useCallback(() => {
     run.current++;
+    // a line that moved on drops its request and its answer
+    inFlight.current?.abort();
+    inFlight.current = null;
     setBusy(false);
   }, []);
 

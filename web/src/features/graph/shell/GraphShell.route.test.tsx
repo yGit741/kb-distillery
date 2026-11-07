@@ -104,6 +104,32 @@ describe("flag line-routing: Enter on a plain line reads it by itself", () => {
     });
   });
 
+  it("on: typing again while the model reads drops its answer", async () => {
+    await on(async () => {
+      let answer!: (r: LineRoute) => void;
+      const routeLine = vi.fn((_t: string, _c: unknown, o?: { signal?: AbortSignal }) => { void o; return new Promise<LineRoute>((res) => (answer = res)); });
+      const { onZoom } = setup({ routeLine });
+      await userEvent.type(box(), `${SENTENCE}{Enter}`);
+      expect(await screen.findByText(LINE_COPY.route.reading)).toBeInTheDocument();
+      await userEvent.type(box(), "x");
+      await waitFor(() => expect(screen.queryByText(LINE_COPY.route.reading)).not.toBeInTheDocument());
+      const signal = (routeLine.mock.calls[0]![2] as { signal: AbortSignal }).signal;
+      expect(signal.aborted).toBe(true);
+      answer({ intent: "command", text: SENTENCE, command: "zoom-out", backend: "subscription", usd: 0, reason: "" });
+      await new Promise((r) => setTimeout(r, 20));
+      expect(onZoom).not.toHaveBeenCalled();
+    });
+  });
+
+  it("on: Shift+Enter is never routed", async () => {
+    await on(async () => {
+      const routeLine = vi.fn();
+      setup({ routeLine });
+      await userEvent.type(box(), `${SENTENCE}{Shift>}{Enter}{/Shift}`);
+      expect(routeLine).not.toHaveBeenCalled();
+    });
+  });
+
   it("on: a failing endpoint reads the line as a page search, never an error", async () => {
     await on(async () => {
       const routeLine = vi.fn(async () => {

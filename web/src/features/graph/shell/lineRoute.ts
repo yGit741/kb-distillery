@@ -15,8 +15,10 @@ export interface LineRoute {
   id?: string;
 }
 
-/** View words beyond the shape words of `looksLikeShape`: a line with one of them changes the view, like `>`. */
+/** View words beyond the shape words of `looksLikeShape`: a longer line with one of them changes the view, like `>`. */
 const VIEW_WORDS = /\b(filter|filter out|show only|only|remove|without|degree|colou?r|size|group|layout|hide)\b/i;
+/** A short line changes the view only when it starts with one of these ("group theory" stays a page search). */
+const VIEW_START = /^(filter|show only|only|remove|hide)\b/i;
 const QUESTION_START = /^(what|why|how|who|which|when|explain|summari[sz]e|compare)\b/i;
 /** A command name counts as a strong match from this score (share of words that fit, see commandScore). */
 export const STRONG_COMMAND = 0.66;
@@ -27,7 +29,9 @@ const norm = (s: string) => s.trim().toLowerCase().replace(/\s+/g, " ");
 
 /** Whether a line reads as a view change: the shape words, or the wider view words (flag line-routing). */
 export function readsAsView(text: string): boolean {
-  return looksLikeShape(text) || VIEW_WORDS.test(text);
+  const t = text.trim();
+  if (looksLikeShape(t) || VIEW_START.test(t)) return true;
+  return t.split(/\s+/).length > SHORT_WORDS && VIEW_WORDS.test(t);
 }
 
 /** Whether a line reads as a question for the chat. */

@@ -915,8 +915,10 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
       e.preventDefault();
       setOpen(true);
       const n = rows.length;
-      if (n) setIdx((i) => (e.key === "ArrowDown" ? (i + 1) % n : (i - 1 + n) % n));
-      picked.current = true;
+      if (n) {
+        setIdx((i) => (e.key === "ArrowDown" ? (i + 1) % n : (i - 1 + n) % n));
+        picked.current = true;
+      }
     } else if (e.key === "ArrowRight" && intent && open) {
       // the right arrow opens the highlighted row's menu once the caret is past the last letter
       const at = document.getElementById(optionId(idx));
@@ -930,7 +932,8 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
       if (e.nativeEvent.isComposing) return;
       e.preventDefault();
       setHintMode(null);
-      const line = routing && !e.shiftKey && !picked.current ? routableLine() : null;
+      // a row picked with the arrows or the pointer runs as picked
+      const line = routing && !e.shiftKey && !picked.current && idx === 0 ? routableLine() : null;
       if (line) lineRoute.route(line);
       else rows[idx]?.run(e.shiftKey);
     } else if (e.key === "Tab" && intent && useLayers.getState().preview && !e.shiftKey) {
