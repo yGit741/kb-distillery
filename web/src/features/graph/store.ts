@@ -85,6 +85,8 @@ export interface GraphUiState extends GraphPrefs {
   flyout: Flyout | null;
   detailsOpen: boolean;
   readerSlug: string | null;
+  /** Pages being read one after another (Read on a set); the reader steps through it. */
+  readerSet: string[];
   focusRequest: FocusRequest | null;
   /** Bump to ask the canvas to fit the view. */
   fitTick: number;
@@ -170,6 +172,7 @@ export const useGraphUi = create<GraphUiState>((set, get) => ({
   flyout: null,
   detailsOpen: false,
   readerSlug: null,
+  readerSet: [],
   focusRequest: null,
   fitTick: 0,
 
