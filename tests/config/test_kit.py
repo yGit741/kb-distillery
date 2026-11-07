@@ -240,7 +240,7 @@ class ReadyViewsTest(unittest.TestCase):
     def test_base_ships_its_views_and_research_adds_to_them(self):
         base = {v["id"]: v for v in kit.views("base")}
         for vid in ("contradictions", "orphans", "hubs", "by-type", "recent-additions", "gaps",
-                    "open-contradictions", "frontier", "quiet-hubs"):
+                    "open-contradictions", "frontier", "quiet-hubs", "neighborhood"):
             self.assertIn(vid, base)
         research = kit.views("research")
         ids = [v["id"] for v in research]

@@ -41,7 +41,7 @@ describe("the kits' ready views", () => {
 
   it("finds the base and research views", () => {
     const ids = (kit: string) => all.filter((v) => v.kit === kit).map((v) => v.id);
-    expect(ids("base")).toEqual(expect.arrayContaining(["contradictions", "orphans", "hubs", "by-type", "recent-additions", "gaps", "open-contradictions", "frontier", "quiet-hubs"]));
+    expect(ids("base")).toEqual(expect.arrayContaining(["contradictions", "orphans", "hubs", "by-type", "recent-additions", "gaps", "open-contradictions", "frontier", "quiet-hubs", "neighborhood"]));
     expect(ids("research").length).toBeGreaterThanOrEqual(2);
   });
 

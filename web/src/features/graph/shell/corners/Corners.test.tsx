@@ -10,6 +10,8 @@ import { assignAreaColors } from "../../style";
 import { DEFAULT_PREFS, useGraphUi } from "../../store";
 import { EMPTY_STACK, makeLayer } from "../../layers/model";
 import { useLayers } from "../../layers/store";
+import { useFavorites } from "../../favorites/store";
+import { resetGallery, useGallery } from "../../views/galleryStore";
 import { useChatDock } from "../../tools/chatDockStore";
 import { useSparkPanel } from "../sparkPanelStore";
 import { Corners, type CornersProps } from "./Corners";
@@ -189,6 +191,32 @@ describe("pinned views", () => {
       expect(applyLegacy).toHaveBeenCalled();
     });
     useLayers.setState({ stack: EMPTY_STACK, graph: null });
+  });
+
+  it("graph-intent on: the list holds the pinned views, favorites, Pin this view, Recent and All views; All views opens the gallery", async () => {
+    await withFlag("graph-intent", true, async () => {
+      useFavorites.setState({ slugs: new Set(["idea-margin"]) });
+      resetGallery();
+      mount(fakeServer({ views: [{ id: "alpha", name: "Alpha view" }] }));
+      await userEvent.click(pins());
+      await screen.findByRole("button", { name: /^Alpha view/ });
+      const rows = [...document.querySelectorAll("[data-lens-row]")].filter((r) => r.getAttribute("data-lens-row") !== "div").map((r) => r.getAttribute("aria-label"));
+      expect(rows).toEqual(["Alpha view, just now", "Pin this view", "Favorites: idea margin", "Show recent steps", "All views\u2026"]);
+      await userEvent.click(screen.getByRole("button", { name: "All views\u2026" }));
+      expect(useGallery.getState().open).toBe(true);
+      expect(useCorners.getState().has("pins")).toBe(false);
+    });
+    resetGallery();
+    useFavorites.setState({ slugs: new Set() });
+  });
+
+  it("graph-intent off: no All views entry", async () => {
+    await withFlag("graph-intent", false, async () => {
+      mount(fakeServer());
+      await userEvent.click(pins());
+      await screen.findByRole("button", { name: "Pin this view" });
+      expect(screen.queryByRole("button", { name: /All views/ })).toBeNull();
+    });
   });
 
   it("zero pins: only the plus card, the divider and Recent", async () => {

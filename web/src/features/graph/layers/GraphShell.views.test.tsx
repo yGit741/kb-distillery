@@ -6,9 +6,10 @@ import { withFlag } from "@/flags/testing";
 import { useKb } from "@/lib/store";
 import { mockDataSource } from "@/test/datasource";
 import { sampleLinks, sampleNodes } from "../fixtures";
-import { useCorners, resetCorners } from "../shell/corners/cornersStore";
+import { resetCorners } from "../shell/corners/cornersStore";
 import { GraphShell } from "../shell/GraphShell";
 import { useShellStore } from "../shell/shellStore";
+import { resetGallery } from "../views/galleryStore";
 import { DEFAULT_PREFS, useGraphUi } from "../store";
 import { EMPTY_STACK, makeLayer } from "./model";
 import { useLayers } from "./store";
@@ -57,6 +58,7 @@ beforeEach(() => {
   useGraphUi.setState({ ...DEFAULT_PREFS, view: null, flyout: null, railOpen: false });
   useKb.getState().clearSelection();
   resetCorners();
+  resetGallery();
 });
 
 describe("/views (graph-intent)", () => {
@@ -113,12 +115,12 @@ describe("/views (graph-intent)", () => {
     });
   });
 
-  it("the last row opens the pin corner's list", async () => {
+  it("the last row opens the gallery window", async () => {
     await withFlag("graph-intent", true, async () => {
       setup();
       await userEvent.type(box(), "/views ");
       await userEvent.click(await screen.findByRole("option", { name: /Open gallery/ }));
-      expect(useCorners.getState().has("pins")).toBe(true);
+      expect(await screen.findByRole("dialog", { name: "Views" })).toBeInTheDocument();
     });
   });
 

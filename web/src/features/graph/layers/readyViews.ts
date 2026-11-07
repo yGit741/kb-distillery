@@ -1,6 +1,8 @@
 import type { ReadyView } from "@/api";
 import { isParseError, parse, print } from "./grammar";
-import { newLayerId, type Layer } from "./model";
+import type { GNode } from "../types";
+import { FOCUS, newLayerId, type Layer } from "./model";
+import { resolveNames } from "./names";
 import { useLayers, type StackOp } from "./store";
 
 /**
@@ -50,3 +52,9 @@ export function applyLayers(op: Exclude<StackOp, "remove">, layers: readonly Lay
   if (!layers.length) return false;
   return useLayers.getState().apply(op, freshLayers(layers));
 }
+
+/** A view whose layers name "the page in focus": it needs one page before it can run. */
+export const isAnchored = (layers: readonly Layer[]): boolean => JSON.stringify(layers).includes(JSON.stringify(FOCUS));
+
+/** The layers with the focus placeholder replaced by one page's slug. */
+export const anchorLayers = (layers: readonly Layer[], nodes: readonly GNode[], slug: string): Layer[] => resolveNames([...layers], nodes, { focus: slug }).layers;
