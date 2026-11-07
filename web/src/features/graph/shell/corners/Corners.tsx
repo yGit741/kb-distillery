@@ -471,7 +471,7 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
         areaHeight={areaHeight}
         thinkCards={Math.max(1, thinkCards.length)}
       />
-      <TypesCard concepts={concepts} sources={sources} onToggle={(t) => ui.toggleType(t, allTypes, schema.defaultVisible)} onSpot={spot} />
+      <TypesCard concepts={concepts} sources={sources} onToggle={(types, on) => ui.setLayerTypes(types, on, allTypes, schema.defaultVisible)} onSpot={spot} />
     </div>
   );
 }
