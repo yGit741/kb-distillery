@@ -1,7 +1,7 @@
 import "katex/dist/katex.min.css";
 import { Link } from "@tanstack/react-router";
 import type { Link as MdLink, Root, Text } from "mdast";
-import { useMemo, type ComponentProps } from "react";
+import { useMemo, useRef, type ComponentProps } from "react";
 import ReactMarkdown from "react-markdown";
 import rehypeHighlight from "rehype-highlight";
 import rehypeKatex from "rehype-katex";
@@ -102,7 +102,10 @@ export interface CiteHooks {
  * to /pages/<slug>. Raw HTML in the source is not rendered (react-markdown escapes it), so there is
  * nothing to sanitise and no dangerouslySetInnerHTML.
  */
-export function Markdown({ children, className, resolveSlug, transformUrl, linkSearch, cite }: MarkdownProps) {
+export function Markdown({ children, className, resolveSlug, transformUrl, linkSearch, cite: citeProp }: MarkdownProps) {
+  // read at render through a ref, so a new hooks object (a hover) never rebuilds the components and remounts the links
+  const citeRef = useRef(citeProp);
+  citeRef.current = citeProp;
   const components = useMemo<ComponentProps<typeof ReactMarkdown>["components"]>(
     () => ({
       a({ href, children: kids, node: _node, ...rest }) {
@@ -121,10 +124,11 @@ export function Markdown({ children, className, resolveSlug, transformUrl, linkS
               {kids}
             </Link>
           );
+          const cite = citeRef.current;
           const n = cite?.numberOf(raw);
           if (n === undefined) return link;
           const hot = cite?.hot === raw;
-          const hover = { onMouseEnter: () => cite?.onHot?.(raw), onMouseLeave: () => cite?.onHot?.(null) };
+          const hover = { onMouseEnter: () => citeRef.current?.onHot?.(raw), onMouseLeave: () => citeRef.current?.onHot?.(null) };
           return (
             <span data-cite={raw} data-hot={hot ? "" : undefined} className={cn("rounded-sm", hot && "bg-secondary outline outline-1 outline-border")} {...hover}>
               {link}
@@ -153,7 +157,7 @@ export function Markdown({ children, className, resolveSlug, transformUrl, linkS
         return <img src={url} alt={alt ?? ""} loading="lazy" />;
       },
     }),
-    [resolveSlug, transformUrl, linkSearch, cite],
+    [resolveSlug, transformUrl, linkSearch],
   );
   return (
     <div className={cn("kb-prose", className)}>

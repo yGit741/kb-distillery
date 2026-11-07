@@ -242,7 +242,9 @@ function Body({ status, prompts, scope, full, rich, listOpen, onClose, server }:
   const box = useRef<HTMLTextAreaElement>(null);
   const [toolsOpen, setToolsOpen] = useState(false);
   const scroller = useRef<HTMLDivElement>(null);
-  const thinkingOn = useFlag("show-thinking");
+  const thinkingFlag = useFlag("show-thinking");
+  const sparkFlag = useFlag("spark-chat");
+  const thinkingOn = thinkingFlag && sparkFlag;
   const { slugs: cited, idx: onScreen } = useCitedPages(scroller, chat.messages, busy, thinkingOn);
   useThinkingGraph(thinkingOn, chat.messages, onScreen, busy);
   const citeHooks = useCiteHooks(thinkingOn, onScreen);
@@ -397,16 +399,10 @@ function useCiteHooks(on: boolean, idx: number): ((m: ChatMessage, i: number) =>
   const graphHover = useLabHud((s) => s.hover);
   return useMemo(() => {
     if (!on) return undefined;
-    const cache = new Map<string, Map<string, number>>();
     const onHot = (slug: string | null) => useThinking.getState().setHot(slug);
     return (m: ChatMessage, i: number) => {
       if (m.role !== "assistant") return undefined;
-      let nums = cache.get(m.content);
-      if (!nums) {
-        nums = new Map(citedSlugs(m.content).map((s, n) => [s, n + 1] as const));
-        cache.set(m.content, nums);
-      }
-      const map = nums;
+      const map = new Map(citedSlugs(m.content).map((s, n) => [s, n + 1] as const));
       return { numberOf: (s: string) => map.get(s), hot: i === idx ? (hot ?? graphHover) : null, onHot: i === idx ? onHot : undefined };
     };
   }, [on, idx, hot, graphHover]);
