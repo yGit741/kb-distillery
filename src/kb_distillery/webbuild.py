@@ -74,17 +74,22 @@ def _safe_extract(archive, into):
             target = os.path.realpath(os.path.join(root, m.name))
             if not (target == root or target.startswith(root + os.sep)) or not (m.isreg() or m.isdir()):
                 raise ValueError(f"unsafe member {m.name!r}")
-        tf.extractall(into)
+        try:
+            tf.extractall(into, filter="data")
+        except TypeError:          # python without extraction filters
+            tf.extractall(into)
 
 
-def fetch_prebuilt(version, dest, *, repo=None, url=None):
+def fetch_prebuilt(version, dest, *, repo=None, url=None, accept=None):
     """Download the release's web bundle for `version` and unpack it into `dest` (the `_webapp` dir). True on success.
 
     Fetches `webapp-<version>.tar.gz` and `webapp-<version>.sha256` from the GitHub release `v<version>` of `repo`
     (default: `default_repo()`), or from the directory-like base `url` (tests). The sha256 must match; the archive is
     unpacked into a temp dir next to `dest` and renamed into place, so `dest` is never half-written. Marks the result
     with `BUNDLE_VERSION`. Any problem (no release, no network, bad checksum, bad archive) returns False and leaves
-    `dest` untouched; it never raises."""
+    `dest` untouched; it never raises. `accept(dir)`, when given, sees the unpacked bundle before it replaces `dest` and
+    may veto it (False).
+    """
     dest = Path(dest)
     tmp = None
     try:
@@ -110,6 +115,8 @@ def fetch_prebuilt(version, dest, *, repo=None, url=None):
         _safe_extract(archive, out)
         if not (out / "index.html").is_file():
             return False
+        if accept is not None and not accept(out):
+            return False
         (out / BUNDLE_VERSION_FILE).write_text(version + "\n", encoding="utf-8")
         old = None
         if dest.exists():
@@ -130,9 +137,9 @@ def fetch_prebuilt(version, dest, *, repo=None, url=None):
 
 
 def bundle_matches_sources(dest, want_hash):
-    """Whether a fetched bundle may be used with the local sources: yes unless it records a `SOURCE_HASH` that differs from
+    """Whether a fetched bundle may be used with the local sources: only when its recorded `SOURCE_HASH` equals
     `want_hash` (a dev checkout whose `web/` changed since the release keeps building locally)."""
     f = Path(dest) / SOURCE_HASH_FILE
     if not f.is_file():
-        return True
+        return False        # an unlabelled bundle cannot be shown to match the sources
     return f.read_text(encoding="utf-8").strip() == want_hash

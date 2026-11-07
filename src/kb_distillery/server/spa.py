@@ -29,11 +29,9 @@ def _try_prebuilt(dist, want):
 
     if not bundle_enabled():
         return False
-    if not fetch_prebuilt(installed_version(), dist):
-        print("frontend: no prebuilt bundle for this version, building locally", flush=True)
-        return False
-    if want is not None and not bundle_matches_sources(dist, want):
-        print("frontend: web/ differs from the prebuilt bundle, building locally", flush=True)
+    accept = None if want is None else (lambda d: bundle_matches_sources(d, want))      # decided before dist is replaced
+    if not fetch_prebuilt(installed_version(), dist, accept=accept):
+        print("frontend: no usable prebuilt bundle for this version, building locally", flush=True)
         return False
     if want is not None:
         (Path(dist) / STAMP).write_text(want + "\n")

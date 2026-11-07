@@ -79,7 +79,7 @@ def test_bundle_without_index_is_refused(tmp_path):
 
 
 def test_source_hash_gate(tmp_path):
-    assert webbuild.bundle_matches_sources(tmp_path, "abc") is True          # no SOURCE_HASH recorded
+    assert webbuild.bundle_matches_sources(tmp_path, "abc") is False         # no SOURCE_HASH recorded
     (tmp_path / "SOURCE_HASH").write_text("abc\n")
     assert webbuild.bundle_matches_sources(tmp_path, "abc") is True
     assert webbuild.bundle_matches_sources(tmp_path, "def") is False
@@ -99,17 +99,19 @@ def test_kb_web_bundle_zero_skips_the_fetch(tmp_path, monkeypatch):
 def test_stale_bundle_falls_back_to_local_build(tmp_path, monkeypatch):
     from kb_distillery.server import spa
 
-    def fake_fetch(version, dest, **k):
-        Path(dest).mkdir(parents=True, exist_ok=True)
-        (Path(dest) / "index.html").write_text("b")
-        (Path(dest) / "SOURCE_HASH").write_text("other\n")
-        return True
-    monkeypatch.setattr(webbuild, "fetch_prebuilt", fake_fetch)
+    url = make_release(tmp_path, files={"index.html": "bundle", "SOURCE_HASH": "other\n"})
+    real = webbuild.fetch_prebuilt
+    monkeypatch.setattr(webbuild, "fetch_prebuilt", lambda v, d, **k: real(v, d, url=url, **k))
     monkeypatch.setattr(webbuild, "installed_version", lambda: "1.2.3")
     monkeypatch.delenv("KB_WEB_BUNDLE", raising=False)
-    assert spa._try_prebuilt(tmp_path / "_webapp", "mine") is False
-    assert spa._try_prebuilt(tmp_path / "_webapp", "other") is True
-    assert (tmp_path / "_webapp" / spa.STAMP).read_text().strip() == "other"
+    dest = tmp_path / "_webapp"
+    dest.mkdir()
+    (dest / "index.html").write_text("my own build")
+    assert spa._try_prebuilt(dest, "mine") is False
+    assert (dest / "index.html").read_text() == "my own build"            # a mismatching bundle never replaces it
+    assert spa._try_prebuilt(dest, "other") is True
+    assert (dest / "index.html").read_text() == "bundle"
+    assert (dest / spa.STAMP).read_text().strip() == "other"
 
 
 def test_fetch_failure_never_raises(tmp_path):
