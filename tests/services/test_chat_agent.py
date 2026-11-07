@@ -55,7 +55,7 @@ ResultMessage = _cls("ResultMessage", session_id=None, total_cost_usd=None, usag
                      duration_ms=None, is_error=False, result=None)
 TextBlock = _cls("TextBlock", text="")
 ToolUseBlock = _cls("ToolUseBlock", id=None, name="", input=None)
-ToolResultBlock = _cls("ToolResultBlock", tool_use_id=None, is_error=False)
+ToolResultBlock = _cls("ToolResultBlock", tool_use_id=None, is_error=False, content=None)
 
 
 class CLINotFoundError(Exception):
@@ -332,16 +332,18 @@ class TestStream(SDKCase):
         ])
         events = self.run_stream()
         names = [n for n, _ in events]
-        self.assertEqual(names, ["session", "delta", "delta", "tool", "sources", "delta",
+        self.assertEqual(names, ["session", "delta", "delta", "tool", "sources", "tool", "delta",
                                  "usage", "session", "sources", "done"])
         data = dict((n, d) for n, d in events)   # last of each kind
         tool = events[3][1]
         self.assertEqual((tool["name"], tool["summary"], tool["id"]), ("Read", "read tensor-rank", "t1"))
         self.assertEqual(events[4][1]["new"], ["tensor-rank"])
-        final = events[8][1]
+        final = events[9][1]
         self.assertEqual([h["slug"] for h in final["hits"]], ["tensor-rank", "theme-tensor-factorization"])
         self.assertEqual(final["hits"][0]["summary"], "Minimal number of rank-one terms")
         self.assertEqual(final["hits"][0]["score"], 1)
+        self.assertEqual((tool["round"], tool["kind"], tool["status"], tool["read"]), (1, "open", "running", ["tensor-rank"]))
+        self.assertEqual(events[5][1]["status"], "done")
         self.assertAlmostEqual(data["usage"]["cost_usd"], 0.0123)
         self.assertEqual(data["usage"]["num_turns"], 3)
         self.assertEqual(data["usage"]["input_tokens"], 1000)
@@ -393,9 +395,10 @@ class TestStream(SDKCase):
             delta("ok"), result(),
         ])
         tools = [d for n, d in self.run_stream() if n == "tool"]
-        self.assertEqual(len(tools), 1)
-        self.assertNotIn("seen", tools[0])
-        self.assertNotIn("read", tools[0])
+        self.assertEqual([t["status"] for t in tools], ["running", "done"])     # the result ticks the step off
+        for t in tools:
+            self.assertNotIn("seen", t)
+            self.assertNotIn("read", t)
 
     def test_grep_text_is_not_a_seen_page_and_failed_read_is_not_read(self):
         FakeClient.script = staticmethod(lambda o: [
@@ -408,6 +411,85 @@ class TestStream(SDKCase):
         tools = [d for n, d in self.run_stream() if n == "tool"]
         self.assertFalse([t for t in tools if t["id"] == "g1" and "seen" in t])
         self.assertNotIn("read", [t for t in tools if t["id"] == "r1"][-1])
+
+    def _map(self, state, *msgs):
+        out = []
+        for m in msgs:
+            out += [d for n, d in chat_agent.map_message(m, state) if n == "tool"]
+        return out
+
+    def test_rounds_share_parallel_calls_and_kinds_and_queries(self):
+        bash = lambda tid, cmd: ToolUseBlock(id=tid, name="Bash", input={"command": cmd})
+        state = chat_agent.TurnState()
+        first = self._map(state, AssistantMessage(content=[
+            bash("a", 'python3 -m kb_distillery.search.query candidates "tensor rank"'),
+            ToolUseBlock(id="b", name="Grep", input={"pattern": "rank"}),
+            ToolUseBlock(id="c", name="Glob", input={"pattern": "wiki/paper-*.md"})]))
+        self.assertEqual([t["round"] for t in first], [1, 1, 1])
+        self.assertEqual([(t["kind"], t["query"], t["status"]) for t in first],
+                         [("shortlist", '"tensor rank"', "running"), ("keyword", "rank", "running"),
+                          ("files", "wiki/paper-*.md", "running")])
+        self._map(state, UserMessage(content=[ToolResultBlock(tool_use_id="a")]), AssistantMessage(content=[TextBlock(text="hm")]))
+        second = self._map(state, AssistantMessage(content=[
+            bash("d", "python3 -m kb_distillery.search.semfind 'implicit bias'"),
+            bash("e", "python3 -m kb_distillery.search.cypher MATCH"),
+            bash("f", "python3 -m kb_distillery.ingest resolve Smith"),
+            bash("g", "python3 -m kb_distillery.search.query mocs"),
+            bash("h", "ls")]))
+        self.assertEqual([t["round"] for t in second], [2] * 5)
+        self.assertEqual([t["kind"] for t in second], ["meaning", "graph", "alias", "shortlist", "other"])
+        self.assertEqual(second[0]["query"], "'implicit bias'")
+        self.assertNotIn("query", second[4])
+        third = self._map(state, read_tool("tensor-rank", tid="r"))
+        self.assertEqual((third[0]["round"], third[0]["kind"], third[0]["read"]), (3, "open", ["tensor-rank"]))
+        self.assertNotIn("query", third[0])
+        self.assertEqual(chat_agent.TurnState().round, 0)       # a new turn starts over
+
+    def test_web_steps_carry_url_and_domains(self):
+        state = chat_agent.TurnState()
+        sub = self._map(state, AssistantMessage(content=[
+            ToolUseBlock(id="s", name="WebSearch", input={"query": "grokking"}),
+            ToolUseBlock(id="f", name="WebFetch", input={"url": "https://a.org/x"})]))
+        self.assertEqual((sub[0]["kind"], sub[0]["query"]), ("web-search", "grokking"))
+        self.assertEqual((sub[1]["kind"], sub[1]["url"]), ("web-source", "https://a.org/x"))
+        links = ('Links: [{"title": "A", "url": "https://a.org/1"}, {"title": "B", "url": "https://b.com/2"},'
+                 ' {"title": "C", "url": "https://a.org/3"}]\n')
+        done = self._map(state, UserMessage(content=[ToolResultBlock(tool_use_id="s", content=links),
+                                                     ToolResultBlock(tool_use_id="f", is_error=True)]))
+        self.assertEqual(done[0]["domains"], ["a.org", "b.com"])
+        self.assertEqual((done[0]["status"], done[1]["status"], done[1]["error"]), ("done", "error", True))
+        self.assertNotIn("result", done[0])                     # preview stays agent-mode only
+
+    def test_explore_raw_read_maps_digested_raw_file_to_its_page(self):
+        from kb_distillery.search import explore_raw
+        rows = {"raw/printed-docs/p.pdf": {"slug": "tensor-rank", "disposition": "source"},
+                "raw/printed-docs/u.pdf": {"slug": "", "disposition": "queued"}}
+        cmd = lambda v, path: ToolUseBlock(id=path, name="Bash", input={
+            "command": f"python3 -m kb_distillery.search.explore_raw {v} {path} --pages 1-2"})
+        with mock.patch.object(explore_raw, "_manifest", return_value=rows):
+            state = chat_agent.TurnState()
+            t = self._map(state, AssistantMessage(content=[cmd("read", "raw/printed-docs/p.pdf"),
+                                                           cmd("check", "raw/printed-docs/p.pdf"),
+                                                           cmd("read", "raw/printed-docs/u.pdf"),
+                                                           cmd("read", "raw/printed-docs/zz.pdf")]))
+        self.assertEqual([x["kind"] for x in t], ["raw"] * 4)
+        self.assertEqual(t[0]["read"], ["tensor-rank"])
+        self.assertEqual(t[1]["read"], ["tensor-rank"])
+        self.assertEqual(t[0]["query"], "raw/printed-docs/p.pdf")
+        self.assertNotIn("read", t[2])
+        self.assertEqual(t[2]["query"], "raw/printed-docs/u.pdf")
+        self.assertNotIn("read", t[3])
+        self.assertIn("tensor-rank", state.reads)
+
+    def test_attachment_read_and_status_outside_agent_mode(self):
+        att = os.path.join(chat_agent.chat_attachments.chat_root(), "sess", "n.txt")
+        state = chat_agent.TurnState()
+        t = self._map(state, AssistantMessage(content=[ToolUseBlock(id="x", name="Read", input={"file_path": att})]))
+        self.assertEqual((t[0]["kind"], t[0]["status"]), ("attachment", "running"))
+        self.assertNotIn("read", t[0])
+        done = self._map(state, UserMessage(content=[ToolResultBlock(tool_use_id="x", content="hi")]))
+        self.assertEqual(done[0]["status"], "done")
+        self.assertEqual((done[0]["name"], done[0]["summary"], done[0]["id"]), ("Read", t[0]["summary"], "x"))
 
     def test_result_slugs_cap_and_dedupe(self):
         index = {f"p{i}": {} for i in range(80)}
