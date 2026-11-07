@@ -3,7 +3,7 @@ import { flag } from "@/flags";
 import { useFlag } from "@/flags/useFlag";
 import { registerTour, runTour, seenTour, unregisterTour } from "@/features/tour/tours";
 import type { TourStep } from "@/features/tour/tours";
-import { IS_SHARE } from "@/share/env";
+import { capabilities } from "../capabilities";
 import { SHELL_LIST_ID } from "../SearchBar";
 import { useChatFull } from "../chatFullStore";
 import { useSparkPanel } from "../sparkPanelStore";
@@ -35,7 +35,7 @@ const typeInto = (text: string) => [{ click: SEARCH }, { type: SEARCH, text }];
  * The steps, for the controls that exist now: a snapshot has no chat and no local server, so its tour is the
  * search line and the page types only. One idea per step, spotlight on the real element.
  */
-export function shellTourSteps(has: (selector: string) => boolean = present, share: boolean = IS_SHARE): TourStep[] {
+export function shellTourSteps(has: (selector: string) => boolean = present, share: boolean = !capabilities().chat): TourStep[] {
   const steps: TourStep[] = [
     {
       go: "/graph",

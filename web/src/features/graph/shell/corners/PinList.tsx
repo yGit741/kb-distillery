@@ -32,6 +32,8 @@ interface Props {
   onFavorite?: (id: string) => void;
   /** Flag graph-intent: opens the view gallery, the last entry of the list; absent: no entry. */
   onAllViews?: () => void;
+  /** A shared site: the saved views can be opened, but not pinned, renamed or stepped back through. */
+  readOnly?: boolean;
 }
 
 type Entry =
@@ -88,7 +90,7 @@ function NameInput({ initial, label, onSubmit }: { initial: string; label: strin
  * pill at half size; under the pointer the Dock lens grows the row and spreads its neighbours. Order: the pinned
  * views, a "+" card to pin the current view, a faint divider, then "Recent" (a stack that unfolds the last steps).
  */
-export function PinList({ open, views, viewsError, recent, recentError, suggest, onApply, onPin, onRename, onRecentOpen, canApply, embedded, favorites, onFavorite, onAllViews }: Props) {
+export function PinList({ open, views, viewsError, recent, recentError, suggest, onApply, onPin, onRename, onRecentOpen, canApply, embedded, favorites, onFavorite, onAllViews, readOnly }: Props) {
   const edit = useCorners((s) => s.edit);
   const active = useCorners((s) => s.activeView);
   const startEdit = useCorners((s) => s.startEdit);
@@ -102,18 +104,18 @@ export function PinList({ open, views, viewsError, recent, recentError, suggest,
     const hb = (kind: LensKind) => SLOT[kind];
     if (viewsError) out.push({ type: "note", kind: "row", hb: hb("row"), key: "note-views", text: "Pinned views are not available here" });
     for (const v of views ?? []) out.push({ type: "pin", kind: "row", hb: hb("row"), key: `pin-${v.id}`, view: v });
-    out.push({ type: "add", kind: "add", hb: hb("add"), key: "add" });
+    if (!readOnly) out.push({ type: "add", kind: "add", hb: hb("add"), key: "add" });
     for (const f of favorites ?? []) out.push({ type: "fav", kind: "row", hb: hb("row"), key: `fav-${f.id}`, id: f.id, title: f.title });
     out.push({ type: "div", kind: "div", hb: hb("div"), key: "div" });
-    out.push({ type: "stack", kind: "stack", hb: hb("stack"), key: "stack" });
-    if (recentOpen) {
+    if (!readOnly) out.push({ type: "stack", kind: "stack", hb: hb("stack"), key: "stack" });
+    if (recentOpen && !readOnly) {
       if (recentError) out.push({ type: "note", kind: "row", hb: hb("row"), key: "note-recent", text: "Recent steps are not available here" });
       else if (recent && !recent.length) out.push({ type: "note", kind: "row", hb: hb("row"), key: "note-empty", text: "No steps yet" });
       (recent ?? []).forEach((step, index) => out.push({ type: "step", kind: "row", hb: hb("row"), key: `step-${index}-${step.at}`, step, index }));
     }
     if (onAllViews) out.push({ type: "all", kind: "row", hb: hb("row"), key: "all" });
     return out;
-  }, [views, viewsError, recent, recentError, recentOpen, favorites, onAllViews]);
+  }, [views, viewsError, recent, recentError, recentOpen, favorites, onAllViews, readOnly]);
 
   const { focusRow, release, kick } = useLens(lens, entries, els);
   useEffect(() => {

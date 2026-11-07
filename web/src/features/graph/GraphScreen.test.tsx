@@ -383,3 +383,22 @@ describe("flag calm-graph", () => {
       act(() => setFlagOverrides({}));
     }));
 });
+
+describe("the empty-space menu", () => {
+  it("closes on Escape, even from the search line, and on a press outside it", async () => {
+    render(wrap(withGraph(), <><input aria-label="outside" /><GraphScreen search={{}} host={host} /></>));
+    await screen.findByTestId("graph-stats");
+    const open = () => act(() => void screen.getByTestId("graph-canvas").dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, clientX: 40, clientY: 40 })));
+
+    open();
+    expect(screen.getByRole("menu", { name: "Graph" })).toBeInTheDocument();
+    screen.getByLabelText("outside").focus();
+    await userEvent.keyboard("{Escape}");
+    expect(screen.queryByRole("menu", { name: "Graph" })).not.toBeInTheDocument();
+
+    open();
+    expect(screen.getByRole("menu", { name: "Graph" })).toBeInTheDocument();
+    await userEvent.pointer({ keys: "[MouseLeft]", target: screen.getByLabelText("outside") });
+    expect(screen.queryByRole("menu", { name: "Graph" })).not.toBeInTheDocument();
+  });
+});

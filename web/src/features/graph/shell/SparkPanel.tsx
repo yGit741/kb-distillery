@@ -4,7 +4,7 @@ import { useChatDock } from "../tools/chatDockStore";
 import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import { useDataSource } from "@/api";
 import { useFlag } from "@/flags/useFlag";
-import { IS_SHARE } from "@/share/env";
+import { capabilities } from "./capabilities";
 import { ErrorState, Loading } from "@/components/states";
 import { Button } from "@/components/ui/button";
 import { ComposerLine } from "@/features/chat/ComposerLine";
@@ -85,7 +85,7 @@ export function SparkPanel({ scope }: { scope?: string }) {
           </div>
         </Column>
       ) : (
-        <Body status={status.data} prompts={promptsQ.data.prompts} scope={scope ?? ""} {...bar} server={ds.kind === "http" && !IS_SHARE} />
+        <Body status={status.data} prompts={promptsQ.data.prompts} scope={scope ?? ""} {...bar} server={ds.kind === "http" && capabilities().chat} />
       )}
     </aside>
   );
@@ -333,7 +333,7 @@ function Body({ status, prompts, scope, full, rich, listOpen, onClose, server }:
             />
           )}
         </div>
-        {cited.length > 0 && (
+        {!thinkingOn && cited.length > 0 && (
           <p className="px-5 pb-1 text-xs text-muted-foreground" data-testid="spark-cites">
             {cited.length} cited page{cited.length === 1 ? "" : "s"} lit on the graph
           </p>
@@ -389,10 +389,14 @@ function useThinkingGraph(on: boolean, messages: ChatMessage[], idx: number, bus
   useEffect(() => {
     useThinking.getState().set(view && view.msg !== dismissed ? view : null);
   }, [view, dismissed]);
+  // a new message, or a regenerated answer (same count, a new run), reopens the view
   const count = messages.length;
   useEffect(() => {
     useThinking.getState().undismiss();
   }, [count]);
+  useEffect(() => {
+    if (busy) useThinking.getState().undismiss();
+  }, [busy]);
   useEffect(() => () => useThinking.getState().clear(), []);
 }
 
