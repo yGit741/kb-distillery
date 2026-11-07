@@ -217,3 +217,13 @@ expires = 2027-02-04
 kind = "runtime"
 default = false
 envs = { local = true, private = false, public = false }
+
+[[flag]]
+name = "line-routing"
+description = "Graph: Enter on a plain line (or a / line no command fits) reads it by itself: rules first (page title, view words, question, command name), then a small model, so the line goes to search, the view, a command or the chat."
+owner = "maintainer"
+created = 2026-11-08
+expires = 2027-02-06
+kind = "runtime"
+default = false
+envs = { local = true, private = false, public = false }

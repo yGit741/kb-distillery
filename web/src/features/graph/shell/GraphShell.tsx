@@ -53,7 +53,9 @@ import { ACTION_ITEMS, setActionItems, type MenuContext } from "../menu";
 import { NodeMenu } from "../NodeMenu";
 import { exportPages } from "../export/runExport";
 import { planSentence, type Plan } from "../layers/sentenceRun";
-import { buildCommands, closestCommands, filterCommands, GROUP_ORDER, type Command, type CommandIcon } from "./commands";
+import { buildCommands, closestCommands, filterCommands, GROUP_ORDER, MIN_CLOSEST, type Command, type CommandIcon } from "./commands";
+import type { LineRoute } from "./lineRoute";
+import { useLineRoute } from "./useLineRoute";
 import { LINE_COPY, type LineMode } from "./copy";
 import { useMeaningHits } from "./useMeaningHits";
 import { SearchBar } from "./SearchBar";
@@ -137,6 +139,8 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
   const tools = useVisibleTools();
   const calm = useFlag("calm-graph");
   const intent = useFlag("graph-intent");
+  // flag line-routing: Enter on a plain line (or a / line no command fits) reads it by itself
+  const routing = useFlag("line-routing") && intent;
   // meaning (flags graph-intent and semantic-search): never on the share build or the embedded data
   const semantic = useFlag("semantic-search");
   const meaningOn = intent && semantic && !IS_SHARE && ds.kind !== "embedded";
@@ -193,6 +197,9 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
   const parsed = parseMode(raw);
   const viewMode = intent && parsed.mode === "view";
   const [hintMode, setHintMode] = useState<LineMode | null>(null);
+  // flag line-routing: which way the last line went, said in the panel while it stays open; an arrow key is a pick
+  const [routedHint, setRoutedHint] = useState<string | null>(null);
+  const picked = useRef(false);
   // q3: a name that needs the user's pick before the sentence applies
   const [didYou, setDidYou] = useState<{ text: string; op: "replace" | "stack"; pick: Extract<Plan, { kind: "ask" }>["pick"]; chosen: Record<string, string> } | null>(null);
 
@@ -529,7 +536,7 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
       const matches = filterCommands(commands, raw.slice(1));
       for (const g of GROUP_ORDER) matches.filter((c) => c.group === g).forEach((c) => out.push(commandRow(c)));
       if (intent && !matches.length) {
-        for (const c of closestCommands(commands, raw.slice(1))) out.push({ ...commandRow(c), section: LINE_COPY.closestHeading });
+        for (const c of closestCommands(commands, raw.slice(1), 3, routing ? MIN_CLOSEST : 0)) out.push({ ...commandRow(c), section: LINE_COPY.closestHeading });
         out.push({
           key: "search-instead",
           section: LINE_COPY.closestHeading,
@@ -699,7 +706,7 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
     if (askRow) out.push(askRow);
     return out;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [slash, viewMode, intent, index, raw, text, commands, recentQ.data, viewsQ.data, results, colorBy, onFocus, onRead, onShowMentions, record, close, shaping, canUndo, layersUndo, undoShape, live, didYou, nodes, favs, byId, ready, focusBar, meaning, textHits, router]);
+  }, [slash, viewMode, intent, routing, index, raw, text, commands, recentQ.data, viewsQ.data, results, colorBy, onFocus, onRead, onShowMentions, record, close, shaping, canUndo, layersUndo, undoShape, live, didYou, nodes, favs, byId, ready, focusBar, meaning, textHits, router]);
 
   /** A recent step: a command runs again; anything else goes back into the box to be edited or run. */
   function runRecent(s: RecentStep) {
@@ -820,7 +827,10 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
     useShellStore.getState().clearLine();
     if (intentRef.current) focusBar(line);
   }, [focusBar]);
-  useEffect(() => setIdx(0), [raw]);
+  useEffect(() => {
+    setIdx(0);
+    picked.current = false;
+  }, [raw]);
   useEffect(() => {
     if (!preview || !intent) return;
     if (previewKey.current !== `${parsed.op ?? "replace"}:${parsed.text}`) {
@@ -843,12 +853,70 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
   }, [raw]);
   useEffect(() => setIdx((i) => Math.min(i, Math.max(rows.length - 1, 0))), [rows.length]);
 
+  // ---- flag line-routing: where a plain line goes on Enter (rules first, then the model; see ./lineRoute)
+  const routePages = useMemo(() => nodes.map((n) => ({ id: n.id, title: n.title || n.id })), [nodes]);
+  const rowsNow = useRef(rows);
+  rowsNow.current = rows;
+  const lineRoute = useLineRoute({ pages: routePages, commands, canAsk: live && !IS_SHARE, onRoute: (r) => actOnRoute(r) });
+  const cancelRoute = lineRoute.cancel;
+  useEffect(() => cancelRoute(), [raw, open, cancelRoute]);
+  useEffect(() => {
+    if (!open) setRoutedHint(null);
+  }, [open]);
+  /** The line Enter should route: plain text (not a `match` query), or `/` text no command fits; null otherwise. */
+  function routableLine(): string | null {
+    if (parsed.mode === "search") return text && !/^match\b/i.test(text) ? text : null;
+    if (parsed.mode !== "command" || !parsed.text) return null;
+    const fits = filterCommands(commands, parsed.text).length || closestCommands(commands, parsed.text, 1, MIN_CLOSEST).length;
+    return fits ? null : parsed.text;
+  }
+  function actOnRoute(r: LineRoute) {
+    const say = useShellStore.getState().say;
+    if (r.intent === "view") {
+      // exactly as `>` does: the line becomes a `>` line, the first Enter previews, the next one applies
+      focusBar(`> ${r.text}`);
+      setRoutedHint(LINE_COPY.route.view(r.text));
+      runSentence(r.text, "replace", {});
+    } else if (r.intent === "ask") {
+      useChatDock.getState().ask(chatContextDraft(r.text));
+      close();
+      say(LINE_COPY.route.ask);
+    } else if (r.intent === "command") {
+      const c = commands.find((x) => x.id === r.id);
+      if (!c) return actOnRoute({ intent: "search", text: r.text });
+      if (c.fill) return focusBar(c.fill);
+      c.run();
+      record(`/${c.label}`, { command: c.id });
+      close();
+      say(LINE_COPY.route.command(c.label));
+    } else {
+      const exact = r.id ? byId.get(r.id) : undefined;
+      if (exact) {
+        onFocus(exact.id);
+        close();
+        return say(LINE_COPY.route.search(exact.title || exact.id));
+      }
+      if (parseMode(rawNow.current).mode !== "search") {
+        // a `/` line: it becomes a plain line, and its page results show
+        focusBar(r.text);
+        return setRoutedHint(LINE_COPY.route.search(r.text));
+      }
+      // the search's own first page, from the rows of the line as typed
+      const top = rowsNow.current.find((x) => x.key.startsWith("pages:") || x.key.startsWith("think:"));
+      if (top) {
+        top.run(false);
+        say(LINE_COPY.route.search(typeof top.label === "string" ? top.label : r.text));
+      } else setRoutedHint(LINE_COPY.route.nothing(r.text));
+    }
+  }
+
   const onKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "ArrowDown" || e.key === "ArrowUp") {
       e.preventDefault();
       setOpen(true);
       const n = rows.length;
       if (n) setIdx((i) => (e.key === "ArrowDown" ? (i + 1) % n : (i - 1 + n) % n));
+      picked.current = true;
     } else if (e.key === "ArrowRight" && intent && open) {
       // the right arrow opens the highlighted row's menu once the caret is past the last letter
       const at = document.getElementById(optionId(idx));
@@ -862,7 +930,9 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
       if (e.nativeEvent.isComposing) return;
       e.preventDefault();
       setHintMode(null);
-      rows[idx]?.run(e.shiftKey);
+      const line = routing && !e.shiftKey && !picked.current ? routableLine() : null;
+      if (line) lineRoute.route(line);
+      else rows[idx]?.run(e.shiftKey);
     } else if (e.key === "Tab" && intent && useLayers.getState().preview && !e.shiftKey) {
       e.preventDefault();
       setEditingLine(true);
@@ -878,7 +948,9 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
     }
   };
 
-  const status: PanelStatus | null = shaping
+  const status: PanelStatus | null = lineRoute.busy
+    ? { kind: "busy", text: LINE_COPY.route.reading }
+    : shaping
     ? { kind: "busy", text: "Shaping the graph" }
     : shapeError
       ? { kind: "error", text: shapeError }
@@ -903,6 +975,7 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
         value={raw}
         onChange={(v) => {
           setRaw(v);
+          setRoutedHint(null);
           setOpen(true);
         }}
         open={open}
@@ -915,7 +988,7 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
       />
       {intent && <Chips byId={byId} />}
       {intent && open && viewMode && <ResolvedLine lines={preview?.lines ?? null} count={preview?.count ?? 0} editing={editingLine} onEditing={setEditingLine} onApply={applyWritten} />}
-      {open && <SearchPanel rows={rows} idx={idx} onHover={setIdx} empty={empty} status={status} hint={hintMode ? LINE_COPY.hints[hintMode] : undefined} views={!text && !slash && viewChoices.length ? viewChoices : undefined} onMenu={intent ? (i, at) => rows[i]?.actions && openMenu(rows[i]!.actions!, at) : undefined} />}
+      {open && <SearchPanel rows={rows} idx={idx} onHover={setIdx} empty={empty} status={status} hint={routedHint ?? (hintMode ? LINE_COPY.hints[hintMode] : undefined)} views={!text && !slash && viewChoices.length ? viewChoices : undefined} onMenu={intent ? (i, at) => rows[i]?.actions && openMenu(rows[i]!.actions!, at) : undefined} />}
       {menu &&
         createPortal(
           <NodeMenu
