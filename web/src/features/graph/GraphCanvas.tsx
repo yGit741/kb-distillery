@@ -1,7 +1,9 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef } from "react";
 import { useKb } from "@/lib/store";
 import { cn } from "@/lib/utils";
+import { flag } from "@/flags";
 import { useFlag } from "@/flags/useFlag";
+import { useFavorites } from "./favorites/store";
 import { useTheme } from "@/theme/theme";
 import { readCanvasColors, withAlpha, type CanvasColors } from "./canvasTheme";
 import { useLayers } from "./layers/store";
@@ -419,6 +421,8 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
 
   // ---- tool decor (experiment halos, faded links) is read at draw time; a change only needs a redraw
   useEffect(() => useDecor.subscribe(() => fg.current?.refresh()), []);
+  // a favorite page wears a quiet ring (flag graph-intent)
+  useEffect(() => useFavorites.subscribe(() => fg.current?.refresh()), []);
 
   // ---- redraw when anything the draw reads changes
   useEffect(() => {
@@ -787,7 +791,7 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
         font: colors.font,
         ring: colors.ring,
         initials: initials.get(n.id),
-        state: isSel ? "selected" : hover === n.id ? "hover" : !live.current.replay && live.current.cited.has(n.id) ? "focus" : null,
+        state: isSel ? "selected" : hover === n.id ? "hover" : !live.current.replay && live.current.cited.has(n.id) ? "focus" : flag("graph-intent") && useFavorites.getState().slugs.has(n.id) ? "favorite" : null,
         alpha,
         glyph: r * scale >= SOURCE_GLYPH_PX || hover === n.id,
         scale,
