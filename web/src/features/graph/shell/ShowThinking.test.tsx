@@ -181,4 +181,34 @@ describe("flag show-thinking: Show my thinking", () => {
       expect(screen.queryByTestId("show-thinking")).toBeNull();
     });
   });
+  it("on: the old cited-pages line is gone", async () => {
+    await on(async () => {
+      storeChat(TRACE);
+      await open();
+      await header();
+      expect(screen.queryByTestId("spark-cites")).toBeNull();
+    });
+  });
+
+  it("off: the cited-pages line shows", async () => {
+    await off(async () => {
+      storeChat(TRACE);
+      await open();
+      expect(await screen.findByTestId("spark-cites")).toHaveTextContent("lit on the graph");
+    });
+  });
+
+  it("on: regenerating after the view was closed reopens it for the new answer", async () => {
+    await on(async () => {
+      storeChat(TRACE);
+      const body = new ReadableStream<Uint8Array>({ start: () => {} });
+      await open({ ...ds(), chatStream: async () => new Response(body) } as unknown as DataSource);
+      await header();
+      await waitFor(() => expect(useThinking.getState().view).not.toBeNull());
+      act(() => useThinking.getState().dismiss());
+      expect(useThinking.getState().dismissed).not.toBeNull();
+      await userEvent.click(await screen.findByRole("button", { name: /Regenerate/ }));
+      await waitFor(() => expect(useThinking.getState().dismissed).toBeNull());
+    });
+  });
 });

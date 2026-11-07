@@ -120,7 +120,7 @@ export function MessageList({ messages, busy, onRegenerate, onAnswer, actions, b
             className={cn("rounded-lg border p-3", user ? "bg-secondary/50" : "bg-card", m.failed && "opacity-70")}
           >
             <p className="mb-1 text-xs font-medium text-muted-foreground">{user ? "You" : "Claude"}</p>
-            {!user && (agentMode ? <Transcript message={m} live={streaming} /> : !thinking && m.trace && <Trace steps={m.trace} live={streaming} />)}
+            {!user && (agentMode ? <Transcript message={m} live={streaming} noTools={!!thinking && (!!m.trace?.length || streaming)} /> : !thinking && m.trace && <Trace steps={m.trace} live={streaming} />)}
             {user ? (
               <p className="whitespace-pre-wrap break-words text-sm">{m.content}</p>
             ) : m.content ? (
