@@ -1,3 +1,5 @@
+import { rgbaOf } from "@/theme/resolveColor";
+
 export interface CanvasColors {
   text: string;
   background: string;
@@ -35,7 +37,8 @@ export function withAlpha(color: string, alpha: number): string {
   }
   const rgb = /^rgba?\(\s*([\d.]+)[ ,]+([\d.]+)[ ,]+([\d.]+)/i.exec(c);
   if (rgb) return `rgba(${rgb[1]}, ${rgb[2]}, ${rgb[3]}, ${a})`;
-  return c;
+  // any other CSS colour (oklch, color-mix, a name): resolved by the browser, so the alpha is never lost
+  return rgbaOf(c, a) ?? c;
 }
 
 /** The chrome tokens the canvas draws with, read from the active theme (the canvas cannot use CSS vars). */

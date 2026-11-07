@@ -1,0 +1,56 @@
+# Ready views of the base kit: each is an ordered stack of layers, one line of the graph's query language per layer
+# (web/src/features/graph/layers/grammar.ts). `favorites` stands for the pages the owner marked.
+
+[[view]]
+id = "contradictions"
+name = "Contradictions"
+description = "Pages that share a contradicts link, and the links between them."
+layers = ["show nodes having edge contradicts", "show edges type contradicts"]
+
+[[view]]
+id = "orphans"
+name = "Orphans"
+description = "Pages with no links at all."
+layers = ["show nodes degree = 0"]
+
+[[view]]
+id = "hubs"
+name = "Hubs"
+description = "Pages with eight or more links."
+layers = ["show nodes degree >= 8"]
+
+[[view]]
+id = "by-type"
+name = "By type"
+description = "Colour every page by its type."
+layers = ["style nodes color by type"]
+
+[[view]]
+id = "recent-additions"
+name = "Recent additions"
+description = "Pages added in the last 30 days."
+layers = ["show nodes created > 30d"]
+
+[[view]]
+id = "gaps"
+name = "Gaps"
+description = "Barely linked pages near your favorites, where a link may be missing. Matching by meaning is not available yet, so this looks at links only."
+layers = ["show nodes within 3 hops of favorites and degree <= 1"]
+
+[[view]]
+id = "open-contradictions"
+name = "Open contradictions"
+description = "Contradictions near your favorites that no think note has taken up."
+layers = ["show nodes having edge contradicts and within 2 hops of favorites and not linked_from type think", "show edges type contradicts"]
+
+[[view]]
+id = "frontier"
+name = "Frontier"
+description = "Pages added in the last 30 days that have fewer than two links."
+layers = ["show nodes created > 30d and degree < 2"]
+
+[[view]]
+id = "quiet-hubs"
+name = "Quiet hubs"
+description = "Pages with eight or more links that no think note has taken up."
+layers = ["show nodes degree >= 8 and not linked_from type think"]

@@ -146,7 +146,7 @@ created = 2026-11-05
 expires = 2027-02-01
 kind = "runtime"
 default = false
-envs = { local = true, private = false, public = false }
+envs = { local = true, private = true, public = false }
 
 [[flag]]
 name = "chat-full"
@@ -156,7 +156,7 @@ created = 2026-11-06
 expires = 2027-02-01
 kind = "runtime"
 default = false
-envs = { local = true, private = false, public = false }
+envs = { local = true, private = true, public = false }
 
 [[flag]]
 name = "header-fold"
@@ -166,7 +166,7 @@ created = 2026-11-05
 expires = 2027-02-01
 kind = "runtime"
 default = false
-envs = { local = true, private = false, public = false }
+envs = { local = true, private = true, public = false }
 
 [[flag]]
 name = "views-panel"
@@ -176,7 +176,7 @@ created = 2026-11-05
 expires = 2027-02-01
 kind = "runtime"
 default = false
-envs = { local = true, private = false, public = false }
+envs = { local = true, private = true, public = false }
 
 [[flag]]
 name = "legend-counts"
@@ -186,7 +186,7 @@ created = 2026-11-05
 expires = 2027-02-01
 kind = "runtime"
 default = false
-envs = { local = true, private = false, public = false }
+envs = { local = true, private = true, public = false }
 
 [[flag]]
 name = "calm-graph"
@@ -196,7 +196,7 @@ created = 2026-11-05
 expires = 2027-02-01
 kind = "runtime"
 default = false
-envs = { local = true, private = false, public = false }
+envs = { local = true, private = true, public = false }
 
 [[flag]]
 name = "graph-intent"
