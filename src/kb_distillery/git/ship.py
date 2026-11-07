@@ -470,15 +470,24 @@ def run_gate(name, cmd, root=ROOT):
     try:
         with gate_slot.sequence(root) as slot:
             slot.ensure()            # a real run takes the machine-wide slot; reused gates never reach here
+            if subprocess.run is _REAL_RUN and gate_slot.is_heavy(name, cmd) and not os.environ.get(gate_slot.HELD_ENV):
+                gate_slot.wait_for_load(slot.wait)
             started = time.monotonic()
-            with open(log, "w", encoding="utf-8") as f:
-                rc = subprocess.run(cmd, cwd=root, stdout=f, stderr=subprocess.STDOUT,
-                                    env=gate_slot.child_env()).returncode
+            if subprocess.run is _REAL_RUN:
+                rc, why = gate_slot.supervise(cmd, root, log, env=gate_slot.child_env())
+            else:
+                why = None
+                with open(log, "w", encoding="utf-8") as f:
+                    rc = subprocess.run(cmd, cwd=root, stdout=f, stderr=subprocess.STDOUT,
+                                        env=gate_slot.child_env()).returncode
     except gate_slot.GateSlotTimeout as e:
         print(f"error: {e}")
         return False
     secs = int(time.monotonic() - started)
     shown = os.path.relpath(log, root)
+    if why:
+        print(f"error: {gate_slot.hung_message(name, why, shown)}")
+        return False
     if rc == 0:
         print(f"gate: {name} ok ({secs}s, log {shown})")
         return True
@@ -555,9 +564,16 @@ def _run_checks(root, skip_reason, paths):
         try:
             with gate_slot.sequence(root) as slot:
                 slot.ensure()
+                if subprocess.run is _REAL_RUN and gate_slot.is_heavy(name, cmd) and not os.environ.get(gate_slot.HELD_ENV):
+                    gate_slot.wait_for_load(slot.wait)
                 print(f"check: {name}")
-                cp = subprocess.run(cmd, cwd=root, capture_output=True, text=True, check=False,
-                                    env=gate_slot.child_env())
+                if subprocess.run is _REAL_RUN:
+                    cp = _supervised_check(name, cmd, root)
+                    if cp is None:
+                        return False
+                else:
+                    cp = subprocess.run(cmd, cwd=root, capture_output=True, text=True, check=False,
+                                        env=gate_slot.child_env())
         except gate_slot.GateSlotTimeout as e:
             print(f"error: {e}")
             return False
@@ -568,6 +584,19 @@ def _run_checks(root, skip_reason, paths):
             return False
         _remember(root, key)
     return True
+
+
+def _supervised_check(name, cmd, root):
+    """A check run under the watchdog (output in a log file, read back); None when it was stopped as hung."""
+    log_dir = os.path.join(root, ".cache", "ship-gates")
+    os.makedirs(log_dir, exist_ok=True)
+    log = os.path.join(log_dir, f"{time.strftime('%Y%m%d-%H%M%S')}-check-{name}.log")
+    rc, why = gate_slot.supervise(cmd, root, log, env=gate_slot.child_env())
+    if why:
+        print(f"error: {gate_slot.hung_message(name, why, os.path.relpath(log, root))}")
+        return None
+    with open(log, encoding="utf-8", errors="replace") as f:
+        return subprocess.CompletedProcess(cmd, rc, f.read(), "")
 
 
 def _out(cp):
