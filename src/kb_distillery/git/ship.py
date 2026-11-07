@@ -52,7 +52,7 @@ ROOT = checkout_root()
 
 from kb_distillery.ops.daily_sync import changed_paths, has_open_sessions, run_git
 from kb_distillery.git import app_token, claims, commit_policy, events, flag_merge, gate_cache, gate_slot, night, review_gate, rounds, worktree_lock
-from kb_distillery.vault.schema import GATE_PREFIXES as GP, GIT_POLICY_MODE, INDEX_REL, SCHEMA_VERSION, is_index_path
+from kb_distillery.vault.schema import GATE_PREFIXES as GP, GIT_POLICY_MODE, INDEX_REL, SCHEMA_VERSION, is_index_path, lane_of
 
 GATES = [
     ("tests", [sys.executable, "-m", "pytest", "-q", "-n", "6", "-m", "not serial", "tests"]),
@@ -1073,10 +1073,31 @@ def cmd_approve(number, root=ROOT):
     return cp.returncode
 
 
+_CONFLICT_MARKER = re.compile(r"^(<<<<<<< |>>>>>>> )", re.M)
+
+
+def _both_edited(root):
+    """Unmerged paths where both sides changed a text file in place (porcelain UU or AA): the only conflicts
+    `sync --continue` stages for you. Deleted/renamed sides (DU, UD, AU, ...) always need a deliberate `git rm`/`git add`."""
+    out = run_git(["status", "--porcelain", "-z"], cwd=root).stdout
+    return {e[3:] for e in out.split("\0") if e[:2] in ("UU", "AA")}
+
+
+def _resolved_file(root, rel):
+    """True when the path is a text file that holds no conflict markers (a binary one is never auto-resolved)."""
+    full = os.path.join(root, rel)
+    if not os.path.isfile(full):
+        return False
+    with open(full, "rb") as f:
+        data = f.read()
+    return b"\0" not in data and not _CONFLICT_MARKER.search(data.decode("utf-8", "replace"))
+
+
 def cmd_sync(cont=False, abort=False, root=ROOT, gates=True):
     """Bring origin/main into this infra branch as a merge commit (the first step of `merge`, on its
-    own, for a PR whose base moved). Conflicts are left in the tree to resolve by hand: edit, `git add`,
-    then `ship sync --continue` (gates, then the merge commit); `--abort` drops the merge."""
+    own, for a PR whose base moved). Conflicts are left in the tree to resolve by hand: edit the files,
+    then `ship sync --continue` stages every unmerged file that no longer holds conflict markers (never a
+    knowledge path), then runs the gates and makes the merge commit; `--abort` drops the merge."""
     branch = current_branch(root)
     if not branch.startswith("infra/"):
         print(f"error: ship sync runs on an infra/<feature> branch (current: {branch or 'detached'})")
@@ -1094,9 +1115,18 @@ def cmd_sync(cont=False, abort=False, root=ROOT, gates=True):
             print("error: no merge in progress — run ship sync first")
             return 1
         unmerged = [p for p in run_git(["diff", "--name-only", "--diff-filter=U"], cwd=root).stdout.split("\n") if p]
-        if unmerged:
-            print("error: unresolved conflicts — fix and `git add` them first:")
-            for p in unmerged:
+        left, editable = [], _both_edited(root)
+        for p in unmerged:
+            if p in editable and lane_of(p) != "knowledge" and _resolved_file(root, p):
+                cp = run_git(["add", "--", p], cwd=root)
+                if cp.returncode == 0:
+                    print(f"staged {p} (resolved)")
+                    continue
+                print(_out(cp))
+            left.append(p)
+        if left:
+            print("error: unresolved conflicts — edit out the conflict markers, then `pixi run ship -- sync --continue`:")
+            for p in left:
                 print(f"  {p}")
             return 1
         if gates and not run_gates(root):
@@ -1126,7 +1156,7 @@ def cmd_sync(cont=False, abort=False, root=ROOT, gates=True):
             done = run_git(["commit", "--no-edit"], cwd=root)
             print(_out(done) or f"flag files merged automatically ({', '.join(unmerged)})")
             return done.returncode
-        print(f"conflicts in {len(unmerged)} file(s) — resolve, `git add`, then: pixi run ship -- sync --continue")
+        print(f"conflicts in {len(unmerged)} file(s) — resolve, then: pixi run ship -- sync --continue")
         for p in unmerged:
             print(f"  {p}")
         return 1
