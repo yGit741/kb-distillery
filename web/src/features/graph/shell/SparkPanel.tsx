@@ -378,11 +378,14 @@ function useThinkingGraph(on: boolean, messages: ChatMessage[], idx: number, bus
   const m = idx >= 0 ? messages[idx] : undefined;
   const streaming = busy && idx === messages.length - 1;
   const dismissed = useThinking((s) => s.dismissed);
+  // keyed on the trace and the finished text, not the message object: a streamed token changes neither
+  const trace = m?.role === "assistant" ? m.trace : undefined;
+  const text = streaming ? "" : (m?.content ?? "");
   const view = useMemo(() => {
-    if (!on || !m || m.role !== "assistant" || !m.trace?.length) return null;
-    const t = thinkingOf(m.trace, streaming ? "" : m.content);
+    if (!on || !trace?.length) return null;
+    const t = thinkingOf(trace, text);
     return { msg: idx, roles: rolesOf(t, !streaming), citeNo: t.citeNo, web: t.webSources };
-  }, [on, m, idx, streaming]);
+  }, [on, trace, text, idx, streaming]);
   useEffect(() => {
     useThinking.getState().set(view && view.msg !== dismissed ? view : null);
   }, [view, dismissed]);
@@ -395,8 +398,9 @@ function useThinkingGraph(on: boolean, messages: ChatMessage[], idx: number, bus
 
 /** Numbered citations in every answer; the one on screen also links its words and its nodes both ways. */
 function useCiteHooks(on: boolean, idx: number): ((m: ChatMessage, i: number) => CiteHooks | undefined) | undefined {
-  const hot = useThinking((s) => s.hot);
-  const graphHover = useLabHud((s) => s.hover);
+  // flag off: no subscription, so a graph hover never re-renders the chat
+  const hot = useThinking((s) => (on ? s.hot : null));
+  const graphHover = useLabHud((s) => (on ? s.hover : null));
   return useMemo(() => {
     if (!on) return undefined;
     const onHot = (slug: string | null) => useThinking.getState().setHot(slug);
