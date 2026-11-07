@@ -31,7 +31,7 @@ import { DRAG_PX } from "./selection";
 import { useGraphUi } from "./store";
 import { useDecor } from "./tools/decor";
 import { drawNode as drawNodeMark } from "./encoding/canvas";
-import { drawReplayMark, drawReplayPath } from "./shell/replayDraw";
+import { drawReplayMark, drawReplayPath, LIT_DIM } from "./shell/replayDraw";
 import { personInitials, SOURCE_GLYPH_PX } from "./encoding/spec";
 import { colorOf, effectiveColorBy, layeredRadii, METRIC_COLORS, nodeRadius, semanticRadius, type ColorBy, type SizeBy } from "./style";
 import type { GNode, GraphModel, SimLink, SimNode } from "./types";
@@ -297,7 +297,7 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
             // the cited pages stay lit and the rest stays dim across a click or hover: the user's own focus joins them
             core: new Set([...cite, ...(base?.core ?? []), ...(hover ? [hover] : [])]),
             lit: new Set([...cite, ...(base?.lit ?? []), ...(hover ? [hover] : [])]),
-            dim: base?.dim ?? 0.3,
+            dim: base?.dim ?? LIT_DIM[live.current.theme],
           }
         : base;
     startFade(rs.current.focus, next, u.calmHover || calmRef.current);
