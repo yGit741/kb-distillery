@@ -2,8 +2,8 @@ import { useFlag } from "@/flags/useFlag";
 
 /** Top of the search line inside the graph area. */
 export const SHELL_TOP = 13;
-/** With the app bar folding (flag `header-fold`) the line sits lower, under the chevron's 24px row. */
-export const SHELL_TOP_FOLDED = 28;
+/** With the app bar folding (flag `header-fold`) the line sits a little lower, under the chevron's 14px row. */
+export const SHELL_TOP_FOLDED = 14;
 /** Height of the search line (SearchBar's h-11). */
 export const SEARCH_LINE_H = 44;
 

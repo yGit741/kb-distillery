@@ -1,4 +1,4 @@
-import { Plus, Star } from "lucide-react";
+import { LayoutGrid, Plus, Star } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type ElementType, type KeyboardEvent, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import { LINE_COPY } from "../copy";
@@ -30,6 +30,8 @@ interface Props {
   /** Flag graph-intent: the favorite pages, listed under the pinned views; absent or empty: no section. */
   favorites?: readonly { id: string; title: string }[];
   onFavorite?: (id: string) => void;
+  /** Flag graph-intent: opens the view gallery, the last entry of the list; absent: no entry. */
+  onAllViews?: () => void;
 }
 
 type Entry =
@@ -38,6 +40,7 @@ type Entry =
   | (LensRow & { type: "fav"; id: string; title: string })
   | (LensRow & { type: "div" })
   | (LensRow & { type: "stack" })
+  | (LensRow & { type: "all" })
   | (LensRow & { type: "step"; step: RecentStep; index: number })
   | (LensRow & { type: "note"; text: string });
 
@@ -85,7 +88,7 @@ function NameInput({ initial, label, onSubmit }: { initial: string; label: strin
  * pill at half size; under the pointer the Dock lens grows the row and spreads its neighbours. Order: the pinned
  * views, a "+" card to pin the current view, a faint divider, then "Recent" (a stack that unfolds the last steps).
  */
-export function PinList({ open, views, viewsError, recent, recentError, suggest, onApply, onPin, onRename, onRecentOpen, canApply, embedded, favorites, onFavorite }: Props) {
+export function PinList({ open, views, viewsError, recent, recentError, suggest, onApply, onPin, onRename, onRecentOpen, canApply, embedded, favorites, onFavorite, onAllViews }: Props) {
   const edit = useCorners((s) => s.edit);
   const active = useCorners((s) => s.activeView);
   const startEdit = useCorners((s) => s.startEdit);
@@ -108,8 +111,9 @@ export function PinList({ open, views, viewsError, recent, recentError, suggest,
       else if (recent && !recent.length) out.push({ type: "note", kind: "row", hb: hb("row"), key: "note-empty", text: "No steps yet" });
       (recent ?? []).forEach((step, index) => out.push({ type: "step", kind: "row", hb: hb("row"), key: `step-${index}-${step.at}`, step, index }));
     }
+    if (onAllViews) out.push({ type: "all", kind: "row", hb: hb("row"), key: "all" });
     return out;
-  }, [views, viewsError, recent, recentError, recentOpen, favorites]);
+  }, [views, viewsError, recent, recentError, recentOpen, favorites, onAllViews]);
 
   const { focusRow, release, kick } = useLens(lens, entries, els);
   useEffect(() => {
@@ -218,6 +222,17 @@ export function PinList({ open, views, viewsError, recent, recentError, suggest,
                   <Pill>
                     <span className="text-[11.5px] font-medium">Recent</span>
                     <small className="ml-auto truncate text-[9.5px] text-muted-foreground">{recentOpen ? "hide" : "show"} your last steps</small>
+                  </Pill>
+                </button>
+              );
+            if (e.type === "all")
+              return (
+                <button key={e.key} type="button" {...b} aria-label={LINE_COPY.views.allViews} title={LINE_COPY.views.allViews} onClick={onAllViews} className={cn(b.className, "pointer-events-auto")}>
+                  <span className="grid h-5 w-[30px] flex-none place-items-center rounded-[5px] bg-card text-muted-foreground shadow-[var(--shadow)] group-hover:text-primary">
+                    <LayoutGrid className="size-[11px]" strokeWidth={1.8} aria-hidden />
+                  </span>
+                  <Pill>
+                    <span className="truncate text-[11.5px] font-medium">{LINE_COPY.views.allViews}</span>
                   </Pill>
                 </button>
               );

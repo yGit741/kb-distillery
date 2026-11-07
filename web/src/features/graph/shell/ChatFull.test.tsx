@@ -309,3 +309,16 @@ describe("chat list and composer helpers", () => {
     expect(withAttachments("q", [])).toBe("q");
   });
 });
+
+describe("flag chat-full: the header controls", () => {
+  it("on: close and size are the first two header buttons in the panel and in full screen, so they never move", async () => {
+    await on(async () => {
+      sessionsFetch([]);
+      const panel = await opened();
+      const firstTwo = () => [...panel.querySelector("header")!.querySelectorAll("button")].slice(0, 2).map((b) => b.getAttribute("aria-label"));
+      expect(firstTwo()).toEqual(["Close chat", "Full screen"]);
+      await userEvent.click(screen.getByRole("button", { name: "Full screen" }));
+      await waitFor(() => expect(firstTwo()).toEqual(["Close chat", "Back to the panel"]));
+    });
+  });
+});

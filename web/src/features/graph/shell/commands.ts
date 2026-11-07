@@ -4,6 +4,8 @@ import { formatKbs } from "@/lib/kbSelection";
 import { flag } from "@/flags";
 import { useUi } from "@/app/ui-store";
 import { useGraphUi } from "../store";
+import { useGallery } from "../views/galleryStore";
+import { LINE_COPY } from "./copy";
 import type { ToolHost } from "../hostContext";
 import type { GraphTool } from "../tools";
 
@@ -13,7 +15,7 @@ export type CommandGroup = "View" | "Panels" | "Knowledge bases" | "Go to";
 export const GROUP_ORDER: readonly CommandGroup[] = ["View", "Panels", "Knowledge bases", "Go to"];
 
 /** The name of an icon in the panel's small icon set (SearchPanel maps it to a drawing). */
-export type CommandIcon = "fit" | "zoom-in" | "zoom-out" | "reheat" | "refresh" | "labels" | "filters" | "layout" | "help" | "tool" | "kb" | "go" | "think";
+export type CommandIcon = "fit" | "zoom-in" | "zoom-out" | "reheat" | "refresh" | "labels" | "filters" | "layout" | "help" | "tool" | "kb" | "go" | "think" | "favorite";
 
 export interface Command {
   id: string;
@@ -22,6 +24,8 @@ export interface Command {
   icon: CommandIcon;
   /** A short quiet hint at the right (a shortcut, or what it opens). */
   hint?: string;
+  /** A command that only fills the search line with this text (and keeps it open) instead of running at once. */
+  fill?: string;
   /** For tools: the registered tool's own icon. */
   toolIcon?: GraphTool["icon"];
   /** Extra words the filter matches. */
@@ -50,6 +54,8 @@ export interface CommandCtx {
   kbs: readonly KbChoice[];
   /** The share build has no chat, no think capture and no system screens. */
   share: boolean;
+  /** Flag graph-intent: lists `/views` and `/favorites`, the two commands that open a list in the line. */
+  intent?: boolean;
   /** Flag calm-graph: the switcher's views (the same cards as the pinned panel), each a `/view` command. */
   views?: readonly { id: string; name: string; run: () => void }[];
 }
@@ -99,6 +105,13 @@ export function buildCommands(c: CommandCtx): Command[] {
       keywords: "rail importance stories",
       run: () => useGraphUi.setState((s) => ({ railOpen: !s.railOpen, flyout: null })),
     },
+    ...(c.intent
+      ? [
+          { id: "views", label: LINE_COPY.views.command.label, group: "View", icon: "labels", hint: LINE_COPY.views.command.hint, keywords: "saved pinned recent ready gallery", fill: "/views ", run: () => {} } satisfies Command,
+          { id: "gallery", label: LINE_COPY.gallery.command.label, group: "View", icon: "labels", hint: LINE_COPY.gallery.command.hint, keywords: "views ready pinned recent browse", run: () => useGallery.getState().show() } satisfies Command,
+          { id: "favorites", label: LINE_COPY.favoritesCommand.label, group: "View", icon: "favorite", hint: LINE_COPY.favoritesCommand.hint, keywords: "starred marked pages", fill: "/favorites ", run: () => {} } satisfies Command,
+        ]
+      : []),
     { id: "filters", label: "Filters", group: "Panels", icon: "filters", keywords: "types depth rules", run: () => openPanel("filter") },
     { id: "layout", label: "Layout and sync", group: "Panels", icon: "layout", keywords: "force live sync", run: () => openPanel("layout") },
     ...c.tools.map<Command>((t) => ({

@@ -69,19 +69,37 @@ export const PERSON_INK = "#2F3542";
 export const PEOPLE = "People";
 export const OTHER_AREAS = "Other areas";
 export const NO_AREA = "No area";
-let AREA_SLOT = new Map<string, string>();
+let AREA_SLOT: ReadonlyMap<string, string> = new Map<string, string>();
+/** Slot maps built over a kb where no page has an area (an imported OKF bundle): their keys are page types. */
+const TYPE_KEYED = new WeakSet<ReadonlyMap<string, string>>();
 
-/** The areas' colours by size (pages whose first area it is), largest first; ties by name. Pure: no global set. */
-export function areaSlots(nodes: readonly Pick<GNode, "areas">[]): ReadonlyMap<string, string> {
+/** The key a page is coloured by under the area colouring: its first area, else its type when the slots are type-keyed. */
+export const areaOf = (n: Pick<GNode, "areas" | "type">, typeAsArea = false): string | undefined =>
+  n.areas[0] || (typeAsArea ? n.type || undefined : undefined);
+
+/**
+ * The areas' colours by size (pages whose first area it is), largest first; ties by name. Pure: no global set.
+ * Over pages none of which has an area, the page types take the slots instead, so such a kb is not all grey.
+ */
+export function areaSlots(nodes: readonly Pick<GNode, "areas" | "type">[]): ReadonlyMap<string, string> {
+  const typeAsArea = nodes.length > 0 && !nodes.some((n) => n.areas.length > 0);
   const count = new Map<string, number>();
-  for (const n of nodes) if (n.areas[0]) count.set(n.areas[0], (count.get(n.areas[0]) ?? 0) + 1);
+  for (const n of nodes) {
+    const a = areaOf(n, typeAsArea);
+    if (a) count.set(a, (count.get(a) ?? 0) + 1);
+  }
   const ranked = [...count].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).slice(0, AREA_PALETTE.length);
-  return new Map(ranked.map(([a], i) => [a, AREA_PALETTE[i]!]));
+  const slots = new Map(ranked.map(([a], i) => [a, AREA_PALETTE[i]!]));
+  if (typeAsArea) TYPE_KEYED.add(slots);
+  return slots;
 }
+
+/** Whether these slots key pages by type (a kb without areas). */
+export const typeKeyed = (slots: ReadonlyMap<string, string>): boolean => TYPE_KEYED.has(slots);
 
 /** The Full Graph's area colours (`areaSlots` over its model), the default for every colouring by area. */
 export function assignAreaColors(nodes: readonly GNode[]): ReadonlyMap<string, string> {
-  AREA_SLOT = new Map(areaSlots(nodes));
+  AREA_SLOT = areaSlots(nodes);
   return AREA_SLOT;
 }
 
@@ -161,7 +179,7 @@ export function colorOf(n: GNode, by: ColorBy, metric?: number, ramp?: "light" |
     case "status":
       return statusColor(n.maturity);
     case "area":
-      return n.type === "person" && !n.areas[0] ? PERSON_INK : areaHue(n.areas[0], slots);
+      return n.type === "person" && !n.areas[0] ? PERSON_INK : areaHue(areaOf(n, typeKeyed(slots ?? AREA_SLOT)), slots);
     case "degree":
       return degreeBand(n).color;
     default:
@@ -184,7 +202,10 @@ export function colorKey(n: GNode, by: ColorBy, slots: AreaSlots = AREA_SLOT): s
       return n.maturity || "(none)";
     case "area":
       if (n.type === "person" && !n.areas[0]) return PEOPLE;
-      return !n.areas[0] ? NO_AREA : slots.has(n.areas[0]) ? areaDisplay(n.areas[0]) : OTHER_AREAS;
+      {
+        const a = areaOf(n, typeKeyed(slots));
+        return !a ? NO_AREA : slots.has(a) ? areaDisplay(a) : OTHER_AREAS;
+      }
     case "degree":
       return degreeBand(n).label;
     case "none":

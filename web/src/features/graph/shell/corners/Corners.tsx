@@ -24,6 +24,7 @@ import { ColourDots } from "./ColourDots";
 import { useCorners, type Layer } from "./cornersStore";
 import { Fan, type FanCard } from "./Fan";
 import { BUTTON, EDGE, fanCapacity } from "./geometry";
+import { useGallery } from "../../views/galleryStore";
 import { LIST_WIDTH, PinList } from "./PinList";
 import { recentSources, viewCards } from "./panelModel";
 import { ViewsPanel } from "./ViewsPanel";
@@ -33,7 +34,8 @@ import { browserSessions, newChat, resumeSession } from "./sessions";
 import { useShellTour } from "./shellTour";
 import { ThinkIcon } from "./ThinkIcon";
 import { TypesCard } from "./TypesCard";
-import { applySpec, captureSpec, suggestName } from "./viewSpec";
+import { useLayers } from "../../layers/store";
+import { applySpec, captureSpec, recognisedV1, suggestName } from "./viewSpec";
 
 export interface CornersProps {
   nodes: readonly GNode[];
@@ -107,6 +109,12 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
     const byId = new Map(nodes.map((n) => [n.id, n]));
     return [...favSlugs].flatMap((id) => (byId.has(id) ? [{ id, title: byId.get(id)!.title || id }] : [])).sort((a, b) => a.title.localeCompare(b.title));
   }, [intent, favSlugs, nodes]);
+  const openGallery = intent
+    ? () => {
+        closeAll();
+        useGallery.getState().show();
+      }
+    : undefined;
   const focusFavorite = (id: string) => {
     if (visible.has(id)) useGraphUi.getState().requestFocus(id, true);
     else showPicked([id]);
@@ -127,7 +135,7 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
   const deps = useMemo(() => ({ applyView, showPicked }), [applyView, showPicked]);
   const pin = async (name: string) => {
     try {
-      const res = await pinView(f, name, captureSpec(useGraphUi.getState()) as unknown as Record<string, unknown>);
+      const res = await pinView(f, name, captureSpec(useGraphUi.getState(), intent ? useLayers.getState().stack : undefined) as unknown as Record<string, unknown>);
       if (res.view) setActive(res.view.id);
       setNotice(`Pinned "${name}"`);
       reload();
@@ -161,9 +169,9 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
     if (!pendingView) return;
     useShellStore.getState().clearPendingView();
     setActive(pendingView.id);
-    if (!applySpec(pendingView.spec, deps)) setNotice("Nothing in this view can be restored here");
+    if (!applySpec(pendingView.spec, deps, { name: pendingView.name })) setNotice("Nothing in this view can be restored here");
   }, [pendingView, deps, setActive]);
-  const recognised = useCallback((spec: Record<string, unknown>) => ["story", "types", "depths", "colorBy", "sizeBy", "hiddenKeys", "quick", "pages"].some((k) => k in spec), []);
+  const recognised = useCallback((spec: Record<string, unknown>) => recognisedV1(spec) || (intent && spec.v === 2), [intent]);
 
   // ---- fans
   const thinkCards = useMemo<FanCard[]>(() => {
@@ -321,7 +329,7 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
                   suggest={suggestName(ui)}
                   onApply={(spec, id) => {
                     if (id) setActive(id);
-                    if (!applySpec(spec, deps)) setNotice("Nothing in this step can be restored here");
+                    if (!applySpec(spec, deps, id ? { name: views.data?.find((v) => v.id === id)?.name ?? "Pinned view" } : undefined)) setNotice("Nothing in this step can be restored here");
                   }}
                   onPin={(n) => void pin(n)}
                   onRename={(id, n) => void rename(id, n)}
@@ -329,6 +337,7 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
                   canApply={recognised}
                   favorites={favorites}
                   onFavorite={focusFavorite}
+                  onAllViews={openGallery}
                 />
               </div>
             </div>
@@ -342,7 +351,7 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
               suggest={suggestName(ui)}
               onApply={(spec, id) => {
                 if (id) setActive(id);
-                if (!applySpec(spec, deps)) setNotice("Nothing in this step can be restored here");
+                if (!applySpec(spec, deps, id ? { name: views.data?.find((v) => v.id === id)?.name ?? "Pinned view" } : undefined)) setNotice("Nothing in this step can be restored here");
               }}
               onPin={(n) => void pin(n)}
               onRename={(id, n) => void rename(id, n)}
@@ -350,6 +359,7 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
               canApply={recognised}
               favorites={favorites}
               onFavorite={focusFavorite}
+                  onAllViews={openGallery}
             />
           )}
           <CornerButton id={BTN_ID.pins} label="Pinned views" data-tour="graph-views" on={pinsOpen} style={{ position: "absolute", left: EDGE, top: EDGE }} onClick={() => toggle("pins")}>

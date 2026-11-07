@@ -96,6 +96,9 @@ export function createHttpDataSource(fetchImpl: Fetch = (...a) => fetch(...a), b
 
     shapeGraph: (text) => run(() => client.POST("/api/graph/shape", { body: { text, limit: 500 } }), "/api/graph/shape"),
 
+    layersFromText: (text, op, opts) =>
+      run(() => client.POST("/api/graph/layers", { body: { text, op, ...(opts?.backend ? { backend: opts.backend } : {}), ...(opts?.fallback ? { fallback: opts.fallback } : {}) } }), "/api/graph/layers"),
+
     getRelationProposals: ({ min, max, kind }) =>
       run(
         () => client.GET("/api/relations/proposals", { params: { query: { min, max, ...(kind ? { kind } : {}) } } }),
@@ -103,6 +106,7 @@ export function createHttpDataSource(fetchImpl: Fetch = (...a) => fetch(...a), b
       ),
 
     listViews: () => run(() => client.GET("/api/views"), "/api/views"),
+    listReadyViews: () => run(() => client.GET("/api/views/ready"), "/api/views/ready"),
     listRecent: () => run(() => client.GET("/api/recent"), "/api/recent"),
     addRecent: (text, spec) => run(() => client.POST("/api/recent", { body: { text, spec: spec ?? {} } }), "/api/recent"),
 

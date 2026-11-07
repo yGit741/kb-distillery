@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { DataSourceProvider } from "@/api";
+import { DataSourceProvider, type DataSource, type LayersResult } from "@/api";
 import { withFlag } from "@/flags/testing";
 import { mockDataSource } from "@/test/datasource";
 import { sampleNodes } from "../fixtures";
@@ -13,12 +13,13 @@ import { parseMode, useShellStore } from "./shellStore";
 const SHOWN = new Set(sampleNodes.map((n) => n.type));
 const byId = new Map(sampleNodes.map((n) => [n.id, n] as const));
 
-function setup() {
+function setup(over: Partial<DataSource> = {}) {
   const ds = mockDataSource({
     search: async () => ({ hits: [], total: 0 }),
     listRecent: async () => ({ recent: [] }),
     listViews: async () => ({ views: [] }),
     addRecent: vi.fn(async () => ({ recent: [] })),
+    ...over,
   });
   return render(
     <DataSourceProvider source={ds}>
@@ -70,16 +71,17 @@ describe("the line, graph-intent on", () => {
     });
   });
 
-  it("routes a > sentence the rules cannot read to the shape path and records the op", async () => {
+  it("routes a > sentence the rules cannot read to the layers endpoint with the op, not to the shape path", async () => {
     await withFlag("graph-intent", true, async () => {
-      setup();
+      const layersFromText = vi.fn(async () => ({ layers: [], lines: [], explanation: "", backend: "subscription", usd: 0, warnings: [] }) as LayersResult);
+      setup({ layersFromText });
       const seen: (string | null)[] = [];
       const off = useShellStore.subscribe((st) => seen.push(st.pendingShape));
       await userEvent.type(box(), ">+ make it feel calmer");
       await userEvent.keyboard("{Enter}");
       off();
-      expect(seen).toContain("make it feel calmer");
-      expect(useShellStore.getState().pendingOp).toBe("stack");
+      expect(layersFromText).toHaveBeenCalledWith("make it feel calmer", "stack");
+      expect(seen.filter(Boolean)).toEqual([]);
     });
   });
 
@@ -98,10 +100,12 @@ describe("the line, graph-intent on", () => {
 });
 
 describe("the line, graph-intent off", () => {
-  it("keeps the knowledge base icon, the old placeholder and the old empty text", async () => {
+  it("keeps the old placeholder and the old empty text, with no knowledge base icon in the line", async () => {
     await withFlag("graph-intent", false, async () => {
       setup();
-      expect(await screen.findByRole("button", { name: /knowledge base/i })).toBeInTheDocument();
+      await screen.findByRole("combobox");
+      // the owner removed the icon in both states: the kb switcher is the app bar badge or /knowledge
+      expect(screen.queryByRole("button", { name: /knowledge base/i })).not.toBeInTheDocument();
       expect(box().getAttribute("placeholder")).toMatch(/^Search /);
       expect(box().getAttribute("placeholder")).not.toMatch(/everything/);
       await userEvent.type(box(), "/zzzzqq");

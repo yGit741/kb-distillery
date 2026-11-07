@@ -6,6 +6,8 @@ import {
   CornerDownRight,
   Feather,
   History,
+  Layers,
+  LayoutGrid,
   ListFilter,
   Maximize,
   MessageSquare,
@@ -14,6 +16,7 @@ import {
   RefreshCw,
   Search,
   SlidersHorizontal,
+  Star,
   Undo2,
   Wand2,
   Wind,
@@ -39,7 +42,11 @@ import type { GLink, GNode } from "../types";
 import { Chips } from "../layers/Chips";
 import { makeLayer, newLayerId, type Layer, type ViewStack } from "../layers/model";
 import { ResolvedLine } from "../layers/ResolvedLine";
+import { anchorLayers, applyLayers, isAnchored, readyCard, specLayers, stackLines, type ReadyCard } from "../layers/readyViews";
+import { Gallery } from "../views/Gallery";
+import { useGallery } from "../views/galleryStore";
 import { useLayers } from "../layers/store";
+import { useLlmLayers } from "../layers/useLlmLayers";
 import { ACTION_ITEMS, setActionItems, type MenuContext } from "../menu";
 import { NodeMenu } from "../NodeMenu";
 import { exportPages } from "../export/runExport";
@@ -77,6 +84,7 @@ const ICONS: Record<CommandIcon, ReactNode> = {
   kb: <ArrowRightLeft aria-hidden className="size-4" strokeWidth={1.6} />,
   go: <CornerDownRight aria-hidden className="size-4" strokeWidth={1.6} />,
   think: <Feather aria-hidden className="size-4" strokeWidth={1.6} />,
+  favorite: <Star aria-hidden className="size-4" strokeWidth={1.6} />,
 };
 
 const NOTICE_MS = 3200;
@@ -185,6 +193,9 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
   const live = ds.kind !== "embedded";
   const recentQ = useApiQuery(["recent"], (d) => d.listRecent(), { enabled: live, retry: false, staleTime: 5_000 });
   const viewsQ = useApiQuery(["views"], (d) => d.listViews(), { enabled: live, retry: false, staleTime: 5_000 });
+  // flag graph-intent: the kit's ready views (lines of the query language; each is read here, never by the server)
+  const readyQ = useApiQuery(["views", "ready"], (d) => d.listReadyViews(), { enabled: live && intent && !IS_SHARE, retry: false, staleTime: 60_000 });
+  const ready = useMemo<ReadyCard[]>(() => (readyQ.data?.views ?? []).map(readyCard), [readyQ.data]);
   const kbQ = useApiQuery(["kb"], (d) => d.getKb(), { staleTime: Infinity, retry: false });
   const kbListQ = useApiQuery(["kb-list"], (d) => d.listKbs(), { enabled: kbViewOn, staleTime: 30_000 });
   const results = usePageResults(nodes, byId, raw, !slash && text.length > 0);
@@ -248,9 +259,10 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
         setParams,
         kbs: kbViewOn ? (kbListQ.data?.kbs ?? []).map((k) => ({ id: k.id, name: k.name, active: k.active, error: k.error })) : [],
         share: IS_SHARE,
+        intent,
         views: viewChoices,
       }),
-    [onFit, onZoom, onReheat, onRefresh, tools, host, setParams, kbViewOn, kbListQ.data, viewChoices],
+    [onFit, onZoom, onReheat, onRefresh, tools, host, setParams, kbViewOn, kbListQ.data, viewChoices, intent],
   );
 
   const index = useMemo(
@@ -271,6 +283,13 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
     input.current?.focus();
   }, []);
 
+  // flag graph-intent: a `>` sentence the rules cannot read is read by the model (POST /api/graph/layers)
+  const llm = useLlmLayers({ nodes, onPlan: (plan, typed, op) => settleSentence(plan, typed, op, {}) });
+  // an answer on its way is dropped when the panel closes
+  const cancelLlm = llm.cancel;
+  useEffect(() => {
+    if (!open) cancelLlm();
+  }, [open, cancelLlm]);
   const { undo, cancel } = useShape({
     byId,
     shownTypes,
@@ -354,10 +373,13 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
       label: c.label,
       hint: c.hint,
       lead: c.toolIcon ?? ICONS[c.icon],
-      run: done(() => {
-        c.run();
-        record(`/${c.label}`, { command: c.id });
-      }),
+      // a command that opens a list in the line (`/views`, `/favorites`) fills the line and keeps it open
+      run: c.fill
+        ? () => focusBar(c.fill)
+        : done(() => {
+            c.run();
+            record(`/${c.label}`, { command: c.id });
+          }),
     });
 
     if (viewMode) {
@@ -385,8 +407,8 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
         hint: parsed.op ? LINE_COPY.explainers[parsed.op] : undefined,
         lead: <Wand2 aria-hidden className="size-4" strokeWidth={1.6} />,
         run: () => {
-          // the grammar reads the sentence into layers; text it cannot read goes down the shape path, where useShape
-          // records it as one `show` layer (so the chip row shows it and undo works)
+          // the grammar reads the sentence into layers; text it cannot read is read by the model (useLlmLayers),
+          // whose layers take the same route
           if (parsed.op === "remove") {
             const gone = useLayers.getState().apply("remove", parsed.text);
             useShellStore.getState().say(gone ? "Removed it from the view." : "No layer of the view matches that.");
@@ -395,6 +417,77 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
           }
           if (useLayers.getState().preview && previewKey.current === `${parsed.op ?? "replace"}:${parsed.text}`) return commitPreview(parsed.text);
           runSentence(parsed.text, parsed.op ?? "replace", {});
+        },
+      });
+      return out;
+    }
+
+    if (slash && intent && /^views(\s|$)/i.test(raw.slice(1))) {
+      // /views [words]: recent, then pinned, then the kit's ready views, each narrowed by the words; Enter replaces the
+      // view, Shift+Enter adds to it. The last row is always the gallery.
+      const words = raw.slice(1).trim().replace(/^\S+\s*/, "").toLowerCase().split(/\s+/).filter(Boolean);
+      const hit = (name: string) => words.every((w) => name.toLowerCase().includes(w));
+      const seen = new Set<string>();
+      const fresh = (name: string) => {
+        const k = name.trim().toLowerCase();
+        if (!k || seen.has(k) || !hit(name)) return false;
+        seen.add(k);
+        return true;
+      };
+      const VC = LINE_COPY.views;
+      const apply = (name: string, layers: readonly Layer[], shift: boolean) => {
+        const op = shift ? "stack" : "replace";
+        if (applyLayers(op, layers)) {
+          record(name, { stack: useLayers.getState().stack, lines: stackLines(layers) });
+          useShellStore.getState().say(shift ? VC.added(name) : VC.applied(name));
+        }
+        close();
+      };
+      for (const s of [...(recentQ.data?.recent ?? [])].reverse()) {
+        const savedLayers = specLayers({ v: 2, layers: (s.spec.stack as ViewStack | undefined)?.layers });
+        if (!savedLayers || !fresh(s.text)) continue;
+        out.push({ key: `views-recent:${s.at}:${s.text}`, section: VC.recent, label: s.text, lead: <History aria-hidden className="size-4" strokeWidth={1.6} />, run: (shift) => apply(s.text, savedLayers, shift) });
+      }
+      for (const v of viewsQ.data?.views ?? []) {
+        if (!fresh(v.name)) continue;
+        const layers = specLayers(v.spec);
+        out.push({
+          key: `views-pinned:${v.id}`,
+          section: VC.pinned,
+          label: v.name,
+          lead: <Pin aria-hidden className="size-4" strokeWidth={1.6} />,
+          // a pin from before layer stacks (V1) opens through the corner's own path, as one legacy layer
+          run: (shift) => (layers ? apply(v.name, layers, shift) : done(() => runView(v))()),
+        });
+      }
+      for (const r of ready) {
+        if (!hit(r.name)) continue; // ready views are their own section: a recent step of the same name does not hide them
+        out.push({
+          key: `views-ready:${r.id}`,
+          section: VC.ready,
+          label: r.name,
+          hint: r.layers ? r.description : VC.cannotRun,
+          lead: <Layers aria-hidden className="size-4" strokeWidth={1.6} />,
+          run: (shift) => {
+            if (!r.layers) return useShellStore.getState().say(VC.cannotRunSay(r.name));
+            // a view that needs one page takes the page in focus; with none (or several) the gallery asks for a name
+            if (!isAnchored(r.layers)) return apply(r.name, r.layers, shift);
+            const sel = [...useKb.getState().selection];
+            if (sel.length === 1) return apply(`${r.name.replace(/\u2026$/, "").trim()} ${byId.get(sel[0]!)?.title || sel[0]}`, anchorLayers(r.layers, nodes, sel[0]!), shift);
+            close();
+            useGallery.getState().show();
+          },
+        });
+      }
+      out.push({
+        key: "views-gallery",
+        section: LINE_COPY.groups.views,
+        label: VC.gallery,
+        hint: VC.galleryHint,
+        lead: <LayoutGrid aria-hidden className="size-4" strokeWidth={1.6} />,
+        run: () => {
+          close();
+          useGallery.getState().show();
         },
       });
       return out;
@@ -588,7 +681,7 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
     if (askRow) out.push(askRow);
     return out;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [slash, viewMode, intent, index, raw, text, commands, recentQ.data, viewsQ.data, results, colorBy, onFocus, onRead, onShowMentions, record, close, shaping, canUndo, layersUndo, undoShape, live, didYou, nodes, favs, byId, textHits, router]);
+  }, [slash, viewMode, intent, index, raw, text, commands, recentQ.data, viewsQ.data, results, colorBy, onFocus, onRead, onShowMentions, record, close, shaping, canUndo, layersUndo, undoShape, live, didYou, nodes, favs, byId, ready, focusBar, textHits, router]);
 
   /** A recent step: a command runs again; anything else goes back into the box to be edited or run. */
   function runRecent(s: RecentStep) {
@@ -640,7 +733,6 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
   useEffect(() => {
     if (!open) setMenu(null);
   }, [open]);
-  /** Read a `>` sentence into layers and apply them; a name left open asks, text the rules cannot read goes to the shape path. */
   /** Second Enter: apply what the canvas is showing, remember it in Recent and close like any apply. */
   function commitPreview(typed: string) {
     const lines = useLayers.getState().preview?.lines ?? [];
@@ -657,9 +749,13 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
     record(layers.map((l) => l.text).join(" · "), { stack: useLayers.getState().stack, lines: layers.map((l) => l.text) });
     close();
   }
+  /** Read a `>` sentence into layers and apply them; a name left open asks, text the rules cannot read goes to the model. */
   function runSentence(typed: string, op: "replace" | "stack", chosen: Record<string, string>) {
     const focus = [...useKb.getState().selection][0];
-    const plan = planSentence(typed, nodes, { focus, chosen });
+    settleSentence(planSentence(typed, nodes, { focus, chosen }), typed, op, { focus, chosen });
+  }
+
+  function settleSentence(plan: Plan, typed: string, op: "replace" | "stack", ctx: { focus?: string; chosen?: Record<string, string> }) {
     const say = useShellStore.getState().say;
     if (plan.kind === "ready") {
       setDidYou(null);
@@ -668,11 +764,7 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
       useLayers.getState().setPreview(op, plan.layers);
     } else if (plan.kind === "ask") setDidYou({ text: typed, op, pick: plan.pick, chosen: plan.chosen });
     else if (plan.kind === "missing") say(LINE_COPY.noSuchPage(plan.name));
-    else {
-      say(LINE_COPY.sentenceFallback);
-      useShellStore.getState().setPendingOp(op);
-      requestShape(typed);
-    }
+    else llm.request(typed, op, ctx);
   }
 
   // a line typed in the overlay on another screen: take it over so the first Enter previews it here
@@ -774,7 +866,6 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
         inputRef={input}
         placeholder={intent ? LINE_COPY.placeholder : `Search ${kbName}`}
         notice={open ? undefined : notice?.text}
-        kb={intent ? undefined : { name: kbName, onClick: () => focusBar("/knowledge") }}
       />
       {intent && <Chips byId={byId} />}
       {intent && open && viewMode && <ResolvedLine lines={preview?.lines ?? null} count={preview?.count ?? 0} editing={editingLine} onEditing={setEditingLine} onApply={applyWritten} />}
@@ -796,6 +887,16 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
           />,
           document.body,
         )}
+      {intent && (
+        <Gallery
+          nodes={nodes}
+          ready={ready}
+          pinned={viewsQ.data?.views ?? []}
+          recent={recentQ.data?.recent ?? []}
+          onRecord={(label, layers) => record(label, { stack: useLayers.getState().stack, lines: stackLines(layers) })}
+          onLegacy={(v) => runView(v as Parameters<typeof runView>[0])}
+        />
+      )}
     </div>
   );
 }

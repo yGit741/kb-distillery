@@ -234,3 +234,43 @@ def test_kit_agent_table_is_validated(tmp_path, monkeypatch):
     kit.load.cache_clear() if hasattr(kit.load, "cache_clear") else None
     with pytest.raises(kit.KitError, match="skills must be a list"):
         kit.load("bad")
+
+
+class ReadyViewsTest(unittest.TestCase):
+    def test_base_ships_its_views_and_research_adds_to_them(self):
+        base = {v["id"]: v for v in kit.views("base")}
+        for vid in ("contradictions", "orphans", "hubs", "by-type", "recent-additions", "gaps",
+                    "open-contradictions", "frontier", "quiet-hubs", "neighborhood"):
+            self.assertIn(vid, base)
+        research = kit.views("research")
+        ids = [v["id"] for v in research]
+        self.assertTrue(set(base) <= set(ids))
+        self.assertIn("open-questions", ids)
+        self.assertEqual({v["kit"] for v in research}, {"base", "research"})
+        for v in research:
+            self.assertTrue(v["layers"] and v["name"] and v["description"])
+
+    def test_a_child_view_replaces_the_parent_one_with_the_same_id(self):
+        with tempfile.TemporaryDirectory() as d:
+            for name, extra in (("base", ""), ("kid", 'extends = "base"\n')):
+                os.makedirs(os.path.join(d, name, "views"))
+                with open(os.path.join(d, name, "kit.toml"), "w") as f:
+                    f.write(f'[kit]\nname = "{name}"\nversion = 1\n{extra}')
+            with open(os.path.join(d, "base", "views", "v.toml"), "w") as f:
+                f.write('[[view]]\nid = "a"\nname = "A"\ndescription = "one"\nlayers = ["show nodes all"]\n')
+            with open(os.path.join(d, "kid", "views", "v.toml"), "w") as f:
+                f.write('[[view]]\nid = "a"\nname = "A2"\ndescription = "two"\nlayers = ["hide nodes all"]\n')
+            with patch.dict(os.environ, {kit.KITS_DIR_ENV: d}):
+                got = kit.views("kid")
+        self.assertEqual([(v["id"], v["name"], v["kit"]) for v in got], [("a", "A2", "kid")])
+
+    def test_a_malformed_view_names_the_file_and_key(self):
+        with tempfile.TemporaryDirectory() as d:
+            os.makedirs(os.path.join(d, "base", "views"))
+            with open(os.path.join(d, "base", "kit.toml"), "w") as f:
+                f.write('[kit]\nname = "base"\nversion = 1\n')
+            with open(os.path.join(d, "base", "views", "v.toml"), "w") as f:
+                f.write('[[view]]\nid = "a"\nname = "A"\ndescription = "one"\nlayers = []\n')
+            with patch.dict(os.environ, {kit.KITS_DIR_ENV: d}):
+                with self.assertRaisesRegex(kit.KitError, "v.toml.*layers"):
+                    kit.views("base")

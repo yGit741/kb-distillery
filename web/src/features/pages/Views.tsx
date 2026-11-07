@@ -65,7 +65,7 @@ export function HomeView({ g, index }: { g: LinkGraph; index: PageIndex }) {
         <Section title="Start from a topic" hint="Each topic page is a map into one research direction.">
           <Grid g={g} cards={h.topics.slice(0, 9)} />
           {h.topics.length > 9 && (
-            <Link to={PAGES_TO} search={{ type: "topic" } as never} className="text-sm text-primary hover:underline">
+            <Link to={PAGES_TO} search={{ type: "topic" } as never} className="inline-flex min-h-6 items-center text-sm text-primary hover:underline">
               All {h.topics.length} topics →
             </Link>
           )}

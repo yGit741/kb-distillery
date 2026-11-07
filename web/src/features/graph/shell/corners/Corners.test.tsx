@@ -8,6 +8,10 @@ import { sampleNodes, sampleSnapshot } from "../../fixtures";
 import { parseSchema } from "../../schema";
 import { assignAreaColors } from "../../style";
 import { DEFAULT_PREFS, useGraphUi } from "../../store";
+import { EMPTY_STACK, makeLayer } from "../../layers/model";
+import { useLayers } from "../../layers/store";
+import { useFavorites } from "../../favorites/store";
+import { resetGallery, useGallery } from "../../views/galleryStore";
 import { useChatDock } from "../../tools/chatDockStore";
 import { useSparkPanel } from "../sparkPanelStore";
 import { Corners, type CornersProps } from "./Corners";
@@ -158,6 +162,61 @@ describe("pinned views", () => {
     const post = server.calls.find((c) => c.method === "POST")!;
     expect(post.body).toMatchObject({ name: "My dive", spec: { v: 1, colorBy: "depth" } });
     expect(await screen.findByRole("button", { name: /^My dive/ })).toBeInTheDocument();
+  });
+
+  it("graph-intent on: pinning writes the layer stack { v: 2, layers, text }; with no layers it still writes V1", async () => {
+    await withFlag("graph-intent", true, async () => {
+      const server = fakeServer();
+      useLayers.setState({ stack: { v: 2, layers: [makeLayer("show", "nodes", { nodes: [{ t: "degree", op: ">=", n: 8 }] }, "Hubs")] } });
+      mount(server);
+      await userEvent.click(pins());
+      await userEvent.click(await screen.findByRole("button", { name: "Pin this view" }));
+      const input = screen.getByRole("textbox", { name: /name for the pinned view/i });
+      await userEvent.clear(input);
+      await userEvent.type(input, "Stack{Enter}");
+      await waitFor(() => expect(server.calls.some((c) => c.method === "POST")).toBe(true));
+      expect(server.calls.find((c) => c.method === "POST")!.body).toMatchObject({ name: "Stack", spec: { v: 2, text: "Hubs", layers: [{ kind: "show", text: "Hubs" }] } });
+    });
+    useLayers.setState({ stack: EMPTY_STACK });
+  });
+
+  it("graph-intent on: a pinned V1 view is applied through the layer stack as one chip named like the pin", async () => {
+    await withFlag("graph-intent", true, async () => {
+      const applyLegacy = vi.fn();
+      useLayers.setState({ stack: EMPTY_STACK, history: [], future: [], graph: { nodes: [], links: [], show: vi.fn(), applyLegacy } });
+      mount(fakeServer({ views: [{ id: "alpha", name: "Alpha view" }] }));
+      await userEvent.click(pins());
+      await userEvent.click(await screen.findByRole("button", { name: /^Alpha view/ }));
+      expect(useLayers.getState().stack.layers.map((l) => l.text)).toEqual(["Alpha view"]);
+      expect(applyLegacy).toHaveBeenCalled();
+    });
+    useLayers.setState({ stack: EMPTY_STACK, graph: null });
+  });
+
+  it("graph-intent on: the list holds the pinned views, favorites, Pin this view, Recent and All views; All views opens the gallery", async () => {
+    await withFlag("graph-intent", true, async () => {
+      useFavorites.setState({ slugs: new Set(["idea-margin"]) });
+      resetGallery();
+      mount(fakeServer({ views: [{ id: "alpha", name: "Alpha view" }] }));
+      await userEvent.click(pins());
+      await screen.findByRole("button", { name: /^Alpha view/ });
+      const rows = [...document.querySelectorAll("[data-lens-row]")].filter((r) => r.getAttribute("data-lens-row") !== "div").map((r) => r.getAttribute("aria-label"));
+      expect(rows).toEqual(["Alpha view, just now", "Pin this view", "Favorites: idea margin", "Show recent steps", "All views\u2026"]);
+      await userEvent.click(screen.getByRole("button", { name: "All views\u2026" }));
+      expect(useGallery.getState().open).toBe(true);
+      expect(useCorners.getState().has("pins")).toBe(false);
+    });
+    resetGallery();
+    useFavorites.setState({ slugs: new Set() });
+  });
+
+  it("graph-intent off: no All views entry", async () => {
+    await withFlag("graph-intent", false, async () => {
+      mount(fakeServer());
+      await userEvent.click(pins());
+      await screen.findByRole("button", { name: "Pin this view" });
+      expect(screen.queryByRole("button", { name: /All views/ })).toBeNull();
+    });
   });
 
   it("zero pins: only the plus card, the divider and Recent", async () => {

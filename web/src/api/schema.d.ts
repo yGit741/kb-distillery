@@ -449,6 +449,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/graph/layers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Turn free text into layer objects (show, hide, style) through the shared LLM tool */
+        post: operations["post_layers_api_graph_layers_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/graph/queries": {
         parameters: {
             query?: never;
@@ -1104,6 +1121,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/views/ready": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Ready views from the kb's kit */
+        get: operations["ready_views_api_views_ready_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/views/{view_id}": {
         parameters: {
             query?: never;
@@ -1126,6 +1160,32 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** AboutCond */
+        AboutCond: {
+            /** Phrase */
+            phrase: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            t: "about";
+        };
+        /** AllEdgesCond */
+        AllEdgesCond: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            t: "all";
+        };
+        /** AllNodesCond */
+        AllNodesCond: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            t: "all";
+        };
         /** AttachmentInfo */
         AttachmentInfo: {
             /** Bytes */
@@ -1224,6 +1284,14 @@ export interface components {
             file: string;
             /** Session */
             session: string;
+        };
+        /** By */
+        By: {
+            /**
+             * By
+             * @description a page property or `degree`
+             */
+            by: string;
         };
         /**
          * ChatAnswer
@@ -1621,6 +1689,31 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
+        /** CountCond */
+        CountCond: {
+            /** N */
+            n: number;
+            /**
+             * Op
+             * @enum {string}
+             */
+            op: ">=" | ">" | "<=" | "<" | "=";
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            t: "count";
+        };
+        /** CreatedWithinCond */
+        CreatedWithinCond: {
+            /** Days */
+            days: number;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            t: "createdWithin";
+        };
         /** CypherRequest */
         CypherRequest: {
             /**
@@ -1635,6 +1728,21 @@ export interface components {
             query: string;
         } & {
             [key: string]: unknown;
+        };
+        /** DegreeCond */
+        DegreeCond: {
+            /** N */
+            n: number;
+            /**
+             * Op
+             * @enum {string}
+             */
+            op: ">=" | ">" | "<=" | "<" | "=";
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            t: "degree";
         };
         /** DeployState */
         DeployState: {
@@ -1706,6 +1814,29 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
+        /** DirectionCond */
+        DirectionCond: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            t: "direction";
+            /**
+             * Value
+             * @enum {string}
+             */
+            value: "in" | "out" | "both";
+        };
+        /** EdgeTypeCond */
+        EdgeTypeCond: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            t: "type";
+            /** Value */
+            value: string;
+        };
         /** EmailHeader */
         EmailHeader: {
             /** Date */
@@ -1716,6 +1847,16 @@ export interface components {
             subject?: string | null;
         } & {
             [key: string]: unknown;
+        };
+        /** EndpointsCond */
+        EndpointsCond: {
+            /** Slugs */
+            slugs: string[];
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            t: "endpoints";
         };
         /** ErrorBody */
         ErrorBody: {
@@ -1732,6 +1873,14 @@ export interface components {
             slug: string;
         } & {
             [key: string]: unknown;
+        };
+        /** FavoriteCond */
+        FavoriteCond: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            t: "favorite";
         };
         /** FavoriteList */
         FavoriteList: {
@@ -2037,6 +2186,18 @@ export interface components {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
         };
+        /** HasEdgeCond */
+        HasEdgeCond: {
+            /** Exists */
+            exists?: false | null;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            t: "hasEdge";
+            /** Type */
+            type: string;
+        };
         /** HealthSnapshot */
         HealthSnapshot: {
             /** Compression Pct */
@@ -2133,6 +2294,31 @@ export interface components {
             wiki_tokens: number;
         } & {
             [key: string]: unknown;
+        };
+        /** HopsCond */
+        HopsCond: {
+            /** N */
+            n: number;
+            /**
+             * Of
+             * @description a page slug or title, `$favorites` or `$focus`
+             */
+            of: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            t: "hops";
+        };
+        /** InAreaCond */
+        InAreaCond: {
+            /** Area */
+            area: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            t: "inArea";
         };
         /** InfraBranch */
         InfraBranch: {
@@ -2457,6 +2643,104 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
+        /** Layer */
+        Layer: {
+            /** Id */
+            id: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "show" | "hide" | "style";
+            style?: components["schemas"]["LayerStyle"] | null;
+            subgraph: components["schemas"]["Subgraph"];
+            /**
+             * Target
+             * @enum {string}
+             */
+            target: "nodes" | "edges";
+            /**
+             * Text
+             * @description plain words for the chip; empty lets the app describe the layer
+             */
+            text: string;
+        };
+        /** LayerStyle */
+        LayerStyle: {
+            /** Color */
+            color?: ("type" | "layer" | "depth" | "status" | "area" | "degree" | "evidence" | "score" | "none") | components["schemas"]["By"] | null;
+            /** Label */
+            label?: string | null;
+            /** Size */
+            size?: ("connections" | "in" | "out" | "uniform" | "tier" | "evidence" | "score" | "gap" | "logdeg") | components["schemas"]["By"] | null;
+            /** Width */
+            width?: ("thin" | "normal" | "thick") | components["schemas"]["By"] | null;
+        };
+        /** LayersRequest */
+        LayersRequest: {
+            /**
+             * Backend
+             * @description LLM backend for this request; default $KB_LLM_BACKEND, then subscription. `batch` waits minutes to hours and does not suit an interactive line
+             */
+            backend?: ("subscription" | "api" | "batch") | null;
+            /**
+             * Fallback
+             * @description Backend tried once when the first one is unavailable, fails or is rate-limited. Default: `api` when the first is the subscription (and a key exists), else none. `none` turns it off
+             */
+            fallback?: ("subscription" | "api" | "batch" | "none") | null;
+            /**
+             * Op
+             * @description How the caller will combine the answer with the current view; `remove` asks which layer the text names
+             * @default replace
+             * @enum {string}
+             */
+            op: "replace" | "stack" | "remove";
+            /**
+             * Text
+             * @description A `>` sentence the rules parser could not read
+             */
+            text: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** LayersResponse */
+        LayersResponse: {
+            /**
+             * Backend
+             * @description the LLM backend that answered
+             */
+            backend: string;
+            /**
+             * Explanation
+             * @default
+             */
+            explanation: string;
+            /**
+             * Fallback From
+             * @description the backend tried first, when `backend` took over from it
+             */
+            fallback_from?: string | null;
+            /** Layers */
+            layers: components["schemas"]["Layer"][];
+            /**
+             * Lines
+             * @description each layer in the query language, one line per layer
+             */
+            lines: string[];
+            /**
+             * Usd
+             * @description cost reported by the backend that answered
+             * @default 0
+             */
+            usd: number;
+            /**
+             * Warnings
+             * @default []
+             */
+            warnings: string[];
+        } & {
+            [key: string]: unknown;
+        };
         /** LifecycleSnapshot */
         LifecycleSnapshot: {
             /** Branch */
@@ -2502,6 +2786,26 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
+        /** LinkedFromTypeCond */
+        LinkedFromTypeCond: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            t: "linkedFromType";
+            /** Type */
+            type: string;
+        };
+        /** MentionedInCond */
+        MentionedInCond: {
+            /** Chat */
+            chat: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            t: "mentionedIn";
+        };
         /** MergeQueue */
         MergeQueue: {
             holder?: components["schemas"]["QueueEntry"] | null;
@@ -2517,6 +2821,16 @@ export interface components {
             waiters: components["schemas"]["QueueEntry"][];
         } & {
             [key: string]: unknown;
+        };
+        /** NameCond */
+        NameCond: {
+            /** Slugs */
+            slugs: string[];
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            t: "name";
         };
         /** NamedQuery */
         NamedQuery: {
@@ -2567,6 +2881,16 @@ export interface components {
             summary?: string | null;
         } & {
             [key: string]: unknown;
+        };
+        /** NotCond */
+        NotCond: {
+            /** Cond */
+            cond: components["schemas"]["TypeCond"] | components["schemas"]["DegreeCond"] | components["schemas"]["HopsCond"] | components["schemas"]["NameCond"] | components["schemas"]["TextCond"] | components["schemas"]["FavoriteCond"] | components["schemas"]["AboutCond"] | components["schemas"]["InAreaCond"] | components["schemas"]["CreatedWithinCond"] | components["schemas"]["LinkedFromTypeCond"] | components["schemas"]["PathsCond"] | components["schemas"]["HasEdgeCond"] | components["schemas"]["MentionedInCond"] | components["schemas"]["NotCond"] | components["schemas"]["AllNodesCond"];
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            t: "not";
         };
         /** OpsSession */
         OpsSession: {
@@ -2743,6 +3067,20 @@ export interface components {
             nodes: string[];
         } & {
             [key: string]: unknown;
+        };
+        /** PathsCond */
+        PathsCond: {
+            /** A */
+            a: string;
+            /** B */
+            b: string;
+            /** N */
+            n: number;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            t: "paths";
         };
         /**
          * PipelineSnapshot
@@ -2937,6 +3275,31 @@ export interface components {
              * @default
              */
             text: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /**
+         * ReadyView
+         * @description A view the kit ships: `layers` are lines of the graph's query language (the frontend parses them).
+         */
+        ReadyView: {
+            /** Description */
+            description: string;
+            /** Id */
+            id: string;
+            /** Kit */
+            kit: string;
+            /** Layers */
+            layers: string[];
+            /** Name */
+            name: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** ReadyViewList */
+        ReadyViewList: {
+            /** Views */
+            views: components["schemas"]["ReadyView"][];
         } & {
             [key: string]: unknown;
         };
@@ -3597,6 +3960,13 @@ export interface components {
             layout?: ("force" | "radial" | "grid" | "timeline") | null;
             size_by?: components["schemas"]["Target"] | null;
         };
+        /** Subgraph */
+        Subgraph: {
+            /** Edges */
+            edges?: (components["schemas"]["EdgeTypeCond"] | components["schemas"]["DirectionCond"] | components["schemas"]["EndpointsCond"] | components["schemas"]["CountCond"] | components["schemas"]["AllEdgesCond"])[] | null;
+            /** Nodes */
+            nodes?: (components["schemas"]["TypeCond"] | components["schemas"]["DegreeCond"] | components["schemas"]["HopsCond"] | components["schemas"]["NameCond"] | components["schemas"]["TextCond"] | components["schemas"]["FavoriteCond"] | components["schemas"]["AboutCond"] | components["schemas"]["InAreaCond"] | components["schemas"]["CreatedWithinCond"] | components["schemas"]["LinkedFromTypeCond"] | components["schemas"]["PathsCond"] | components["schemas"]["HasEdgeCond"] | components["schemas"]["MentionedInCond"] | components["schemas"]["NotCond"] | components["schemas"]["AllNodesCond"])[] | null;
+        };
         /** SuggestedPage */
         SuggestedPage: {
             /** Id */
@@ -3631,6 +4001,16 @@ export interface components {
              * @description the property name when `by` is `prop`
              */
             name?: string | null;
+        };
+        /** TextCond */
+        TextCond: {
+            /** Phrase */
+            phrase: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            t: "text";
         };
         /** TextHit */
         TextHit: {
@@ -3774,6 +4154,16 @@ export interface components {
             type?: string | null;
         } & {
             [key: string]: unknown;
+        };
+        /** TypeCond */
+        TypeCond: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            t: "type";
+            /** Value */
+            value: string | string[];
         };
         /** ValidationError */
         ValidationError: {
@@ -5075,6 +5465,51 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
                 };
+            };
+        };
+    };
+    post_layers_api_graph_layers_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LayersRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LayersResponse"];
+                };
+            };
+            /** @description Unknown or unusable LLM backend */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The model's answer was not a valid list of layers: `detail` says why and quotes the answer */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The LLM backend failed */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -6513,6 +6948,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    ready_views_api_views_ready_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReadyViewList"];
                 };
             };
         };

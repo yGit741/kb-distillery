@@ -1,0 +1,24 @@
+{
+  "name": "names, hops, paths, not",
+  "stack": {
+    "v": 2,
+    "layers": [
+      {"id": "L1", "kind": "show", "target": "nodes", "text": "",
+       "subgraph": {"nodes": [{"t": "not", "cond": {"t": "degree", "op": "=", "n": 0}}, {"t": "hops", "of": "Learning theory", "n": 3}]}},
+      {"id": "L2", "kind": "show", "target": "nodes", "text": "", "subgraph": {"nodes": [{"t": "paths", "a": "Learning theory", "b": "Compression", "n": 4}]}},
+      {"id": "L3", "kind": "hide", "target": "nodes", "text": "",
+       "subgraph": {"nodes": [{"t": "type", "value": ["paper", "idea"]}, {"t": "inArea", "area": "ml \"core\""}, {"t": "createdWithin", "days": 30}]}},
+      {"id": "L4", "kind": "show", "target": "nodes", "text": "", "subgraph": {"nodes": [{"t": "hops", "of": "$favorites", "n": 2}, {"t": "favorite"}, {"t": "about", "phrase": "tensor rank"}]}},
+      {"id": "L5", "kind": "show", "target": "edges", "text": "", "subgraph": {"edges": [{"t": "type", "value": "supports"}, {"t": "count", "op": ">", "n": 1}]}},
+      {"id": "L6", "kind": "style", "target": "nodes", "text": "", "subgraph": {"nodes": [{"t": "linkedFromType", "type": "paper"}]}, "style": {"size": {"by": "year"}}}
+    ]
+  },
+  "lines": [
+    "show nodes not degree = 0 and within 3 hops of \"Learning theory\"",
+    "show nodes paths between \"Learning theory\" and \"Compression\" up to 4 hops",
+    "hide nodes type paper or idea and in area \"ml \\\"core\\\"\" and created > 30d",
+    "show nodes within 2 hops of favorites and favorite and about \"tensor rank\"",
+    "show edges type supports and count > 1",
+    "style nodes size by year for linked_from type paper"
+  ]
+}
