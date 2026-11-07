@@ -1,5 +1,6 @@
 import type { StyleSpec } from "@/api";
 import type { ViewSpecV1 } from "../shell/corners/viewSpec";
+import { LINE_COPY } from "../shell/copy";
 import { LINK_KINDS, planStyle } from "../shell/shape";
 import type { ColorBy, SizeBy } from "../style";
 import type { GLink, GNode } from "../types";
@@ -19,7 +20,8 @@ export type NodeCond =
   | { t: "name"; slugs: string[] }
   | { t: "text"; phrase: string }
   | { t: "favorite" }
-  | { t: "about"; phrase: string }
+  /** Pages close in meaning to `phrase`. `slugs` is the answer of the meaning service (filled in before the layer is applied, see meaning.ts); `slug` marks "similar to this": the page whose own card asked. */
+  | { t: "about"; phrase: string; slug?: string; slugs?: string[] }
   | { t: "inArea"; area: string }
   | { t: "createdWithin"; days: number }
   | { t: "linkedFromType"; type: string }
@@ -395,9 +397,15 @@ export function evaluate(vs: ViewStack, graph: EvalGraph): Evaluation {
           }
           keep = (n) => graph.favorites!.has(n.id);
           break;
-        case "about":
-          skip(`${label}: about "${c.phrase}" (matching by meaning is not available yet)`);
-          continue;
+        case "about": {
+          if (!c.slugs) {
+            skip(`${label}: about "${c.phrase}" (${LINE_COPY.meaningOff})`);
+            continue;
+          }
+          const near = new Set(c.slugs);
+          keep = (n) => near.has(n.id);
+          break;
+        }
         case "text":
           skip(`${label}: mentioning "${c.phrase}" (text search is not available yet)`);
           continue;
