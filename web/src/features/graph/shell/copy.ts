@@ -14,6 +14,11 @@ export const LINE_COPY = {
   searchInstead: (text: string) => `Search for '${text}' instead`,
   viewRow: "Change the view:",
   viewEmpty: "Describe the view you want after >, for example colour by area.",
+  /** A `>` sentence the rules could not read goes to the model; this says so while it works. */
+  asking: "Not a sentence I can read by rules, so I am asking a model.",
+  /** Which backend read the sentence; the cost is said when the API answered (the subscription is not charged per call). */
+  interpretedBy: (backend: string, usd: number, fromBackend?: string | null) =>
+    `Interpreted by ${backend}${backend === "api" ? `, about $${usd < 0.01 ? usd.toFixed(4) : usd.toFixed(2)}` : ""}${fromBackend ? ` (${fromBackend} did not answer)` : ""}.`,
   /** Search result groups, in their fixed order (flag graph-intent). */
   groups: {
     pages: "Pages",

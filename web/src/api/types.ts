@@ -34,6 +34,7 @@ export type GraphRelation = S["GraphRelation"];
 export type NamedQuery = S["NamedQuery"];
 export type QueryTable = S["QueryTable"];
 export type ShapeResult = S["ShapeResponse"];
+export type LayersResult = S["LayersResponse"];
 export type StyleSpec = S["StyleSpec"];
 export type StyleTarget = S["Target"];
 export type RelationProposals = S["RelationProposals"];
