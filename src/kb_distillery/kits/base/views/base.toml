@@ -54,3 +54,9 @@ id = "quiet-hubs"
 name = "Quiet hubs"
 description = "Pages with eight or more links that no think note has taken up."
 layers = ["show nodes degree >= 8 and not linked_from type think"]
+
+[[view]]
+id = "neighborhood"
+name = "Neighborhood of\u2026"
+description = "The pages within two links of one page: the page in focus, or one you name."
+layers = ["show nodes within 2 hops of this"]

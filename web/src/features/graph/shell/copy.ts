@@ -14,6 +14,11 @@ export const LINE_COPY = {
   searchInstead: (text: string) => `Search for '${text}' instead`,
   viewRow: "Change the view:",
   viewEmpty: "Describe the view you want after >, for example colour by area.",
+  /** A `>` sentence the rules could not read goes to the model; this says so while it works. */
+  asking: "Not a sentence I can read by rules, so I am asking a model.",
+  /** Which backend read the sentence; the cost is said when the API answered (the subscription is not charged per call). */
+  interpretedBy: (backend: string, usd: number, fromBackend?: string | null) =>
+    `Interpreted by ${backend}${backend === "api" ? `, about $${usd < 0.01 ? usd.toFixed(4) : usd.toFixed(2)}` : ""}${fromBackend ? ` (${fromBackend} did not answer)` : ""}.`,
   /** Search result groups, in their fixed order (flag graph-intent). */
   groups: {
     pages: "Pages",
@@ -66,10 +71,34 @@ export const LINE_COPY = {
     ready: "Ready views",
     gallery: "Open gallery\u2026",
     galleryHint: "all views",
+    allViews: "All views\u2026",
     cannotRun: "Cannot run on this kb",
     cannotRunSay: (name: string) => `${name} cannot run on this kb.`,
     applied: (name: string) => `Applied ${name}.`,
     added: (name: string) => `Added ${name} to the view.`,
+  },
+  /** The view gallery: a window of every view, with its filter, cards and anchored-view field. */
+  gallery: {
+    title: "Views",
+    command: { label: "Gallery", hint: "all views" },
+    filterLabel: "Filter views",
+    filterPlaceholder: "Filter by name or description",
+    ready: "Ready views",
+    pinned: "Pinned",
+    recent: "Recent",
+    empty: "No view matches.",
+    close: "Close",
+    apply: "Apply",
+    add: "Add",
+    pin: "Pin",
+    cannotRun: "Cannot run on this kb.",
+    usesFocus: (title: string) => `Uses ${title}`,
+    nameLabel: (view: string) => `Page for ${view}`,
+    namePlaceholder: "Name a page, then Enter",
+    noPage: (name: string) => `No page matches ${name}.`,
+    didYouMean: "Did you mean",
+    pinned1: (name: string) => `Pinned ${name}.`,
+    pinFailed: "Could not pin this view.",
   },
   favoritesCommand: { label: "Favorites", hint: "the pages you marked" },
   exportNone: "Could not read those pages to export.",

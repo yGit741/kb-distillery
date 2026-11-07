@@ -77,6 +77,9 @@ class Result:
     model: str = ""
     stop_reason: str = ""
     usage: dict = dataclasses.field(default_factory=dict)
+    backend_used: str = ""        # the backend that produced this result (differs from the first choice after a fallback)
+    fallback_from: str = ""       # the backend that was tried first and failed, when `fallback=` took over
+    fallback_why: str = ""        # why it was not used: its availability fix text or its error
 
     @property
     def ok(self):
@@ -143,9 +146,49 @@ def normalize(requests):
 
 
 # --- entry points --------------------------------------------------------------------------------------
-def ask(prompt, backend=None, **kw):
-    """One prompt → one Result. `kw` are Request fields (system, model, max_tokens, effort)."""
-    return run([Request(prompt=prompt, **kw)], backend=backend)[0]
+def ask(prompt, backend=None, fallback=None, run_kw=None, **kw):
+    """One prompt → one Result. `kw` are Request fields (system, model, max_tokens, effort); `run_kw` goes to `run`
+    (workers, poll_every, wait_s). With `fallback=<backend>` a first choice that is unavailable, fails or is rate-limited
+    is retried once on the fallback when that one is available (see `run_with_fallback`)."""
+    return run_with_fallback([Request(prompt=prompt, **kw)], backend=backend, fallback=fallback, **(run_kw or {}))[0]
+
+
+def run_with_fallback(requests, backend=None, fallback=None, **run_kw):
+    """`run`, but when the first-choice backend cannot answer, the requests that failed go once to `fallback`.
+
+    "Cannot answer" = the backend is not available (`availability()`), the call raised a transport error, or a result
+    came back with an error and no text. A fallback that is itself unavailable (no API key) is not tried: the first
+    choice's failure is returned as it is. Every Result carries `backend_used`; a Result that came from the fallback
+    also has `fallback_from` and `fallback_why`. Unknown backend names raise LLMError up front."""
+    first = resolve_backend(backend)
+    second = resolve_backend(fallback) if fallback else None
+    if second is None or second == first:
+        out = run(requests, backend=first, **run_kw)
+        for r in out:
+            r.backend_used = r.backend or first
+        return out
+    reqs = normalize(requests)
+    avail = availability()
+    why = "" if avail[first]["ok"] else avail[first]["why"]
+    out = None
+    if not why:
+        try:
+            out = run(reqs, backend=first, **run_kw)
+        except (HTTPFail, OSError) as e:
+            why = f"the {first} backend failed: {e}"
+    if out is None:
+        out = [Result(id=r.id, backend=first, model=model_id(r.model), error=why) for r in reqs]
+    for r in out:
+        r.backend_used = r.backend or first
+    failed = [i for i, r in enumerate(out) if r.error and not r.text]
+    if not failed or not avail[second]["ok"]:
+        return out
+    for i, r in zip(failed, run([reqs[i] for i in failed], backend=second, **run_kw)):
+        r.backend_used = r.backend or second
+        r.fallback_from = first
+        r.fallback_why = out[i].error
+        out[i] = r
+    return out
 
 
 def run(requests, backend=None, workers=4, poll_every=30, wait_s=24 * 3600):

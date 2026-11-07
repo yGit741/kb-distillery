@@ -33,6 +33,11 @@ export interface DataSource {
   runGraphQuery(name: string, params: Record<string, string>): Promise<T.QueryTable>;
   /** Free text (or Cypher, or a style clause list) to a graph view: the pages as rows plus the style (local app only). */
   shapeGraph(text: string): Promise<T.ShapeResult>;
+  /**
+   * A `>` sentence the rules parser could not read, as layer objects through the LLM (local app only). `backend` and
+   * `fallback` default to the server's choice (subscription, then api when it fails); the answer says which one replied.
+   */
+  layersFromText(text: string, op: "replace" | "stack" | "remove", opts?: { backend?: "subscription" | "api" | "batch"; fallback?: "subscription" | "api" | "batch" | "none" }): Promise<T.LayersResult>;
   /** LLM relation proposals in a confidence range 0..1 (local app only), best first, with a 10-bucket histogram. */
   getRelationProposals(opts: { min: number; max: number; kind?: string }): Promise<T.RelationProposals>;
 

@@ -1,6 +1,12 @@
 import { withAlpha, type CanvasColors } from "../canvasTheme";
 import type { ReplayView } from "./replay";
 
+/**
+ * Opacity of the pages the focus leaves dim (the trail or the cited pages stay lit). On the dark canvas a mark's
+ * colours are luminous, so the same alpha reads far less dim than on white: dark goes lower to match light.
+ */
+export const LIT_DIM = { light: 0.3, dark: 0.16 } as const;
+
 export interface ReplayDrawing {
   view: ReplayView;
   candidates: ReadonlySet<string>;
@@ -30,9 +36,15 @@ export function drawReplayMark(ctx: CanvasRenderingContext2D, id: string, x: num
   };
   const around = r + 3 / scale;
   ctx.save();
+  if (maybe && !bad && !missed) {
+    // one link away, not read: a dashed ring set clear of the mark, on a solid underlay in the canvas background, so the
+    // dashes stay dashes against a bright type ring in either theme (and at a small zoom) instead of blurring into one
+    const out = r + 5.5 / scale;
+    ring(out, 3.5, withAlpha(c.background, Math.max(alpha, 0.6)));
+    ring(out, 1.6, withAlpha(c.text, 0.9 * Math.max(alpha, 0.6)), 3);
+  }
   if (bad) ring(around, 2.2, c.warn, 3);
   else if (missed) ring(around, 2.2, c.ring, 3);
-  else if (maybe) ring(around, 1.5, withAlpha(c.text, 0.85 * Math.max(alpha, 0.6)), 3);
   if (role === "seen") ring(around, 1.4, withAlpha(c.muted, 0.95));
   else if (role === "read" || role === "cited") {
     const color = role === "cited" ? c.ring : c.text;

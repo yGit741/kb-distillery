@@ -4,7 +4,7 @@ import { LINE_COPY } from "../shell/copy";
 
 /**
  * Casual English into layers (flag graph-intent): rules only, no model call. Text it cannot read comes back as
- * `unknown`, which the shell sends down the older shape path. Every word it understands lives in a table below.
+ * `unknown`, which the shell sends to the model (useLlmLayers). Every word it understands lives in a table below.
  */
 
 export interface Sentence {

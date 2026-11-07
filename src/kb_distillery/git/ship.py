@@ -52,7 +52,7 @@ ROOT = checkout_root()
 
 from kb_distillery.ops.daily_sync import changed_paths, has_open_sessions, run_git
 from kb_distillery.git import app_token, claims, commit_policy, events, flag_merge, gate_cache, gate_slot, night, review_gate, rounds, worktree_lock
-from kb_distillery.vault.schema import GATE_PREFIXES as GP, GIT_POLICY_MODE, INDEX_REL, SCHEMA_VERSION, is_index_path
+from kb_distillery.vault.schema import GATE_PREFIXES as GP, GIT_POLICY_MODE, INDEX_REL, SCHEMA_VERSION, is_index_path, lane_of
 
 GATES = [
     ("tests", [sys.executable, "-m", "pytest", "-q", "-n", "6", "-m", "not serial", "tests"]),
@@ -470,15 +470,24 @@ def run_gate(name, cmd, root=ROOT):
     try:
         with gate_slot.sequence(root) as slot:
             slot.ensure()            # a real run takes the machine-wide slot; reused gates never reach here
+            if subprocess.run is _REAL_RUN and gate_slot.is_heavy(name, cmd) and not os.environ.get(gate_slot.HELD_ENV):
+                gate_slot.wait_for_load(slot.wait)
             started = time.monotonic()
-            with open(log, "w", encoding="utf-8") as f:
-                rc = subprocess.run(cmd, cwd=root, stdout=f, stderr=subprocess.STDOUT,
-                                    env=gate_slot.child_env()).returncode
+            if subprocess.run is _REAL_RUN:
+                rc, why = gate_slot.supervise(cmd, root, log, env=gate_slot.child_env())
+            else:
+                why = None
+                with open(log, "w", encoding="utf-8") as f:
+                    rc = subprocess.run(cmd, cwd=root, stdout=f, stderr=subprocess.STDOUT,
+                                        env=gate_slot.child_env()).returncode
     except gate_slot.GateSlotTimeout as e:
         print(f"error: {e}")
         return False
     secs = int(time.monotonic() - started)
     shown = os.path.relpath(log, root)
+    if why:
+        print(f"error: {gate_slot.hung_message(name, why, shown)}")
+        return False
     if rc == 0:
         print(f"gate: {name} ok ({secs}s, log {shown})")
         return True
@@ -555,9 +564,16 @@ def _run_checks(root, skip_reason, paths):
         try:
             with gate_slot.sequence(root) as slot:
                 slot.ensure()
+                if subprocess.run is _REAL_RUN and gate_slot.is_heavy(name, cmd) and not os.environ.get(gate_slot.HELD_ENV):
+                    gate_slot.wait_for_load(slot.wait)
                 print(f"check: {name}")
-                cp = subprocess.run(cmd, cwd=root, capture_output=True, text=True, check=False,
-                                    env=gate_slot.child_env())
+                if subprocess.run is _REAL_RUN:
+                    cp = _supervised_check(name, cmd, root)
+                    if cp is None:
+                        return False
+                else:
+                    cp = subprocess.run(cmd, cwd=root, capture_output=True, text=True, check=False,
+                                        env=gate_slot.child_env())
         except gate_slot.GateSlotTimeout as e:
             print(f"error: {e}")
             return False
@@ -568,6 +584,19 @@ def _run_checks(root, skip_reason, paths):
             return False
         _remember(root, key)
     return True
+
+
+def _supervised_check(name, cmd, root):
+    """A check run under the watchdog (output in a log file, read back); None when it was stopped as hung."""
+    log_dir = os.path.join(root, ".cache", "ship-gates")
+    os.makedirs(log_dir, exist_ok=True)
+    log = os.path.join(log_dir, f"{time.strftime('%Y%m%d-%H%M%S')}-check-{name}.log")
+    rc, why = gate_slot.supervise(cmd, root, log, env=gate_slot.child_env())
+    if why:
+        print(f"error: {gate_slot.hung_message(name, why, os.path.relpath(log, root))}")
+        return None
+    with open(log, encoding="utf-8", errors="replace") as f:
+        return subprocess.CompletedProcess(cmd, rc, f.read(), "")
 
 
 def _out(cp):
@@ -922,9 +951,9 @@ def cmd_pr(title=None, skip_tests=False, root=ROOT, gates=True, notes_file=None,
         claims.warn(paths or claims.touched_dirs(branch_files(root)), branch, root)
     except Exception as e:  # the overlap check never fails ship pr
         print(f"note: overlap check skipped — {e}")
-    existing = gh(["pr", "view", branch, "--json", "number,url"], root)
-    if existing.returncode == 0 and existing.stdout.strip():
-        info = json.loads(existing.stdout)
+    existing = gh(["pr", "view", branch, "--json", "number,url,state"], root)
+    info = json.loads(existing.stdout) if existing.returncode == 0 and existing.stdout.strip() else None
+    if info and info.get("state", "OPEN") == "OPEN":     # a merged or closed PR of a reused branch name is not this one
         print(f"PR #{info['number']} already open: {info['url']} (pushed new commits)")
         if skip_checks or review_line or no_review:
             gh(["pr", "edit", branch, "--body", pr_body(subjects, _read_notes(notes_file), skip_checks, round_no, paths, review_line, no_review)], root)
@@ -1044,10 +1073,31 @@ def cmd_approve(number, root=ROOT):
     return cp.returncode
 
 
+_CONFLICT_MARKER = re.compile(r"^(<<<<<<< |>>>>>>> )", re.M)
+
+
+def _both_edited(root):
+    """Unmerged paths where both sides changed a text file in place (porcelain UU or AA): the only conflicts
+    `sync --continue` stages for you. Deleted/renamed sides (DU, UD, AU, ...) always need a deliberate `git rm`/`git add`."""
+    out = run_git(["status", "--porcelain", "-z"], cwd=root).stdout
+    return {e[3:] for e in out.split("\0") if e[:2] in ("UU", "AA")}
+
+
+def _resolved_file(root, rel):
+    """True when the path is a text file that holds no conflict markers (a binary one is never auto-resolved)."""
+    full = os.path.join(root, rel)
+    if not os.path.isfile(full):
+        return False
+    with open(full, "rb") as f:
+        data = f.read()
+    return b"\0" not in data and not _CONFLICT_MARKER.search(data.decode("utf-8", "replace"))
+
+
 def cmd_sync(cont=False, abort=False, root=ROOT, gates=True):
     """Bring origin/main into this infra branch as a merge commit (the first step of `merge`, on its
-    own, for a PR whose base moved). Conflicts are left in the tree to resolve by hand: edit, `git add`,
-    then `ship sync --continue` (gates, then the merge commit); `--abort` drops the merge."""
+    own, for a PR whose base moved). Conflicts are left in the tree to resolve by hand: edit the files,
+    then `ship sync --continue` stages every unmerged file that no longer holds conflict markers (never a
+    knowledge path), then runs the gates and makes the merge commit; `--abort` drops the merge."""
     branch = current_branch(root)
     if not branch.startswith("infra/"):
         print(f"error: ship sync runs on an infra/<feature> branch (current: {branch or 'detached'})")
@@ -1065,9 +1115,18 @@ def cmd_sync(cont=False, abort=False, root=ROOT, gates=True):
             print("error: no merge in progress — run ship sync first")
             return 1
         unmerged = [p for p in run_git(["diff", "--name-only", "--diff-filter=U"], cwd=root).stdout.split("\n") if p]
-        if unmerged:
-            print("error: unresolved conflicts — fix and `git add` them first:")
-            for p in unmerged:
+        left, editable = [], _both_edited(root)
+        for p in unmerged:
+            if p in editable and lane_of(p) != "knowledge" and _resolved_file(root, p):
+                cp = run_git(["add", "--", p], cwd=root)
+                if cp.returncode == 0:
+                    print(f"staged {p} (resolved)")
+                    continue
+                print(_out(cp))
+            left.append(p)
+        if left:
+            print("error: unresolved conflicts — edit out the conflict markers, then `pixi run ship -- sync --continue`:")
+            for p in left:
                 print(f"  {p}")
             return 1
         if gates and not run_gates(root):
@@ -1097,7 +1156,7 @@ def cmd_sync(cont=False, abort=False, root=ROOT, gates=True):
             done = run_git(["commit", "--no-edit"], cwd=root)
             print(_out(done) or f"flag files merged automatically ({', '.join(unmerged)})")
             return done.returncode
-        print(f"conflicts in {len(unmerged)} file(s) — resolve, `git add`, then: pixi run ship -- sync --continue")
+        print(f"conflicts in {len(unmerged)} file(s) — resolve, then: pixi run ship -- sync --continue")
         for p in unmerged:
             print(f"  {p}")
         return 1
