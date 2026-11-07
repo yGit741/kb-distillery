@@ -24,7 +24,7 @@ import { candidatesOf } from "./shell/replay";
 import { ReplayLegend } from "./shell/ReplayLegend";
 import { useReplay } from "./shell/replayStore";
 import { useSparkOpen } from "./shell/SparkPanelHost";
-import { SPARK_PANEL_W } from "./shell/layout";
+import { SEARCH_LINE_H, SPARK_PANEL_W, useShellTop } from "./shell/layout";
 import { useFullChat } from "./shell/useFullChat";
 import { drawPile, formatOfPile, isPile, isPileId, pileRadius } from "./rawLayer";
 import { DRAG_PX } from "./selection";
@@ -131,6 +131,9 @@ const DOUBLE_MS = 380;
  */
 const NO_NAMES: ReadonlyMap<string, string> = new Map();
 
+/** Air between the search line and the cited pages a cite fit frames (a page mark and its label above it). */
+const CITE_FIT_AIR = 56;
+
 export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
   { model, byId, neighbors, visible, imp, className, onOpenMenu, onBackgroundContext, onOpenReader, onOpenPile },
   ref,
@@ -169,6 +172,10 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
   const citeSlugs = useCites((s) => s.slugs);
   const citeFitTick = useCites((s) => s.fitTick);
   const sparkOpen = useSparkOpen();
+  // the floating search line lies over the canvas's top: a cite fit keeps the pages below it
+  const shellTop = useShellTop();
+  const shellTopRef = useRef(shellTop);
+  shellTopRef.current = shellTop;
   // the full chat gives the canvas its own box (the right pane): frame inside it, with room for the labels
   const { full: fullChat } = useFullChat();
   const sparkChat = useFlag("spark-chat");
@@ -485,7 +492,7 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
       const ids = live.current.cited;
       if (!ids.size) return;
       pendingFit.current = false;
-      if (fg.current?.fitIn((n) => ids.has(n.id), sparkOpen && !fullChat ? SPARK_PANEL_W : 0, 600, fullChat ? 110 : 72)) {
+      if (fg.current?.fitIn((n) => ids.has(n.id), sparkOpen && !fullChat ? SPARK_PANEL_W : 0, 600, fullChat ? 110 : 72, shellTopRef.current + SEARCH_LINE_H + CITE_FIT_AIR)) {
         window.setTimeout(() => {
           k.current = fg.current?.zoom() ?? 1;
           recompute();
