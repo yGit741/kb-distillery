@@ -54,6 +54,8 @@ Open the line, type `/`, then a word of the name to filter the list. The section
 
 ## Shaping the graph in words
 
+With the `graph-intent` flag on, a `>` sentence is read by rules first, with no model call. Only text the rules cannot read goes to the model, through `POST /api/graph/layers`, which answers layers instead of Cypher; it runs on the subscription by default, falls back once to the API when the subscription fails, and says which backend answered and the cost when the API did (see Billing in the [HTTP API](../reference/http-api.md)). The rest of this section is the older Cypher route.
+
 Free text becomes a view in two parts: a Cypher selection (which nodes) and a style (how they are drawn). `POST /api/graph/shape` does the work; its request and response are in the [HTTP API](../reference/http-api.md).
 
 Text that starts with `MATCH (` is raw Cypher and runs as written, with no model call. A line that holds only style clauses keeps the current nodes and changes how they are drawn, also with no model call. Anything else goes through the shared LLM tool once, so it is billed on the backend you configured (`$KB_LLM_BACKEND`, default subscription).

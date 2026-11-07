@@ -1,0 +1,17 @@
+{
+  "name": "hubs and a style",
+  "stack": {
+    "v": 2,
+    "layers": [
+      {"id": "L1", "kind": "show", "target": "nodes", "text": "",
+       "subgraph": {"nodes": [{"t": "degree", "op": ">=", "n": 5}, {"t": "hasEdge", "type": "think", "exists": false}]}},
+      {"id": "L2", "kind": "style", "target": "nodes", "text": "color by type", "subgraph": {}, "style": {"color": "type"}},
+      {"id": "L3", "kind": "style", "target": "edges", "text": "", "subgraph": {"edges": [{"t": "type", "value": "contradicts"}]}, "style": {"width": "thick"}}
+    ]
+  },
+  "lines": [
+    "show nodes degree >= 5 and having edge think exists = false",
+    "style nodes color by type",
+    "style edges width by thick for type contradicts"
+  ]
+}

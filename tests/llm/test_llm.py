@@ -500,3 +500,56 @@ def test_no_llm_calls_outside_kb_llm():
                     hits.add(rel)
     assert hits - LEGACY == set(), "call Claude through kb_distillery.llm, not directly"
     assert LEGACY - hits == set(), "a legacy caller moved to kb_distillery.llm: drop it from LEGACY"
+
+
+# --- fallback chain: subscription first, api when it cannot answer -----------------------------------------
+def _avail(sub=True, api=True):
+    def ok(b):
+        return {"ok": b, "why": "" if b else "not available", "fix": ""}
+    return lambda: {"subscription": ok(sub), "api": ok(api), "batch": ok(api)}
+
+
+def test_fallback_not_asked_when_the_first_backend_answers(monkeypatch):
+    monkeypatch.setattr(llm, "availability", _avail())
+    monkeypatch.setattr(llm, "_cli", lambda *a: cli_ok("from cli"))
+    r = llm.ask("q", backend="subscription", fallback="api")
+    assert r.text == "from cli" and r.backend_used == "subscription" and r.fallback_from == ""
+
+
+def test_fallback_to_api_when_the_subscription_fails(monkeypatch):
+    monkeypatch.setattr(llm, "availability", _avail())
+    bad = subprocess.CompletedProcess([], 1, stdout="", stderr="rate limit reached")
+    monkeypatch.setattr(llm, "_cli", lambda *a: bad)
+    api = FakeAPI({("POST", "/v1/messages"): [message("from api")]})
+    monkeypatch.setattr(llm, "_http", api)
+    r = llm.ask("q", backend="subscription", fallback="api")
+    assert r.ok and r.text == "from api" and r.backend == "api" and r.backend_used == "api"
+    assert r.fallback_from == "subscription" and "rate limit" in r.fallback_why and r.usd > 0
+    assert len(api.calls) == 1
+
+
+def test_fallback_when_the_subscription_is_not_available_never_calls_it(monkeypatch):
+    monkeypatch.setattr(llm, "availability", _avail(sub=False))
+    monkeypatch.setattr(llm, "_http", FakeAPI({("POST", "/v1/messages"): [message("via api")]}))
+    r = llm.ask("q", backend="subscription", fallback="api")           # _cli is the autouse "unexpected call" guard
+    assert r.text == "via api" and r.fallback_from == "subscription" and r.fallback_why == "not available"
+
+
+def test_fallback_without_a_key_returns_the_first_failure(monkeypatch):
+    monkeypatch.setattr(llm, "availability", _avail(api=False))
+    monkeypatch.setattr(llm, "_cli", lambda *a: subprocess.CompletedProcess([], 1, stdout="", stderr="boom"))
+    r = llm.ask("q", backend="subscription", fallback="api")
+    assert not r.ok and r.backend_used == "subscription" and "boom" in r.error
+
+
+def test_fallback_is_off_without_the_argument_and_for_the_same_backend(monkeypatch):
+    monkeypatch.setattr(llm, "availability", lambda: (_ for _ in ()).throw(AssertionError("no probe without a fallback")))
+    monkeypatch.setattr(llm, "_cli", lambda *a: subprocess.CompletedProcess([], 1, stdout="", stderr="boom"))
+    monkeypatch.setattr(llm, "_sleep", lambda s: None)
+    assert not llm.ask("q", backend="subscription").ok
+    assert not llm.ask("q", backend="subscription", fallback="subscription").ok
+
+
+def test_fallback_name_is_checked_up_front():
+    with pytest.raises(llm.LLMError):
+        llm.ask("q", backend="subscription", fallback="nope")

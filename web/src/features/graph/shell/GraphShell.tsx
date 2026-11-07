@@ -45,6 +45,7 @@ import { anchorLayers, applyLayers, isAnchored, readyCard, specLayers, stackLine
 import { Gallery } from "../views/Gallery";
 import { useGallery } from "../views/galleryStore";
 import { useLayers } from "../layers/store";
+import { useLlmLayers } from "../layers/useLlmLayers";
 import { ACTION_ITEMS, setActionItems, type MenuContext } from "../menu";
 import { NodeMenu } from "../NodeMenu";
 import { exportPages } from "../export/runExport";
@@ -274,6 +275,13 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
     input.current?.focus();
   }, []);
 
+  // flag graph-intent: a `>` sentence the rules cannot read is read by the model (POST /api/graph/layers)
+  const llm = useLlmLayers({ nodes, onPlan: (plan, typed, op) => settleSentence(plan, typed, op, {}) });
+  // an answer on its way is dropped when the panel closes
+  const cancelLlm = llm.cancel;
+  useEffect(() => {
+    if (!open) cancelLlm();
+  }, [open, cancelLlm]);
   const { undo, cancel } = useShape({
     byId,
     shownTypes,
@@ -391,8 +399,8 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
         hint: parsed.op ? LINE_COPY.explainers[parsed.op] : undefined,
         lead: <Wand2 aria-hidden className="size-4" strokeWidth={1.6} />,
         run: () => {
-          // the grammar reads the sentence into layers; text it cannot read goes down the shape path, where useShape
-          // records it as one `show` layer (so the chip row shows it and undo works)
+          // the grammar reads the sentence into layers; text it cannot read is read by the model (useLlmLayers),
+          // whose layers take the same route
           if (parsed.op === "remove") {
             const gone = useLayers.getState().apply("remove", parsed.text);
             useShellStore.getState().say(gone ? "Removed it from the view." : "No layer of the view matches that.");
@@ -703,7 +711,6 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
   useEffect(() => {
     if (!open) setMenu(null);
   }, [open]);
-  /** Read a `>` sentence into layers and apply them; a name left open asks, text the rules cannot read goes to the shape path. */
   /** Second Enter: apply what the canvas is showing, remember it in Recent and close like any apply. */
   function commitPreview(typed: string) {
     const lines = useLayers.getState().preview?.lines ?? [];
@@ -720,9 +727,13 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
     record(layers.map((l) => l.text).join(" · "), { stack: useLayers.getState().stack, lines: layers.map((l) => l.text) });
     close();
   }
+  /** Read a `>` sentence into layers and apply them; a name left open asks, text the rules cannot read goes to the model. */
   function runSentence(typed: string, op: "replace" | "stack", chosen: Record<string, string>) {
     const focus = [...useKb.getState().selection][0];
-    const plan = planSentence(typed, nodes, { focus, chosen });
+    settleSentence(planSentence(typed, nodes, { focus, chosen }), typed, op, { focus, chosen });
+  }
+
+  function settleSentence(plan: Plan, typed: string, op: "replace" | "stack", ctx: { focus?: string; chosen?: Record<string, string> }) {
     const say = useShellStore.getState().say;
     if (plan.kind === "ready") {
       setDidYou(null);
@@ -731,11 +742,7 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
       useLayers.getState().setPreview(op, plan.layers);
     } else if (plan.kind === "ask") setDidYou({ text: typed, op, pick: plan.pick, chosen: plan.chosen });
     else if (plan.kind === "missing") say(LINE_COPY.noSuchPage(plan.name));
-    else {
-      say(LINE_COPY.sentenceFallback);
-      useShellStore.getState().setPendingOp(op);
-      requestShape(typed);
-    }
+    else llm.request(typed, op, ctx);
   }
 
   // a line typed in the overlay on another screen: take it over so the first Enter previews it here
