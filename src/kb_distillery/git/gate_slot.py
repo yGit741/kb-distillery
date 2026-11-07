@@ -174,9 +174,10 @@ def tree_cpu(pgid, window=1.5, sleep=time.sleep):
 
 def load_limit():
     try:
-        return float(os.environ["KB_GATE_MAX_LOAD"])
+        v = float(os.environ["KB_GATE_MAX_LOAD"])
     except (KeyError, ValueError):
-        return 2.0 * (os.cpu_count() or 1)
+        v = 0.0
+    return v if v > 0 else 2.0 * (os.cpu_count() or 1)
 
 
 def is_heavy(name, cmd):

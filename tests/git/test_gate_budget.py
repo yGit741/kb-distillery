@@ -107,6 +107,10 @@ class LoadCase(unittest.TestCase):
             os.environ.pop("KB_GATE_MAX_LOAD", None)
             self.assertEqual(gate_slot.load_limit(), 2.0 * (os.cpu_count() or 1))
 
+    def test_nonpositive_limit_falls_back(self):
+        with patch.dict(os.environ, {"KB_GATE_MAX_LOAD": "0"}):
+            self.assertEqual(gate_slot.load_limit(), 2.0 * (os.cpu_count() or 1))
+
     def test_heavy_detection(self):
         self.assertTrue(gate_slot.is_heavy("web-vitest", ["npm", "run"]))
         self.assertTrue(gate_slot.is_heavy("x", ["pixi", "run", "test-e2e"]))

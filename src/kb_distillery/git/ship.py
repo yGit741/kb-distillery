@@ -951,9 +951,9 @@ def cmd_pr(title=None, skip_tests=False, root=ROOT, gates=True, notes_file=None,
         claims.warn(paths or claims.touched_dirs(branch_files(root)), branch, root)
     except Exception as e:  # the overlap check never fails ship pr
         print(f"note: overlap check skipped — {e}")
-    existing = gh(["pr", "view", branch, "--json", "number,url"], root)
-    if existing.returncode == 0 and existing.stdout.strip():
-        info = json.loads(existing.stdout)
+    existing = gh(["pr", "view", branch, "--json", "number,url,state"], root)
+    info = json.loads(existing.stdout) if existing.returncode == 0 and existing.stdout.strip() else None
+    if info and info.get("state", "OPEN") == "OPEN":     # a merged or closed PR of a reused branch name is not this one
         print(f"PR #{info['number']} already open: {info['url']} (pushed new commits)")
         if skip_checks or review_line or no_review:
             gh(["pr", "edit", branch, "--body", pr_body(subjects, _read_notes(notes_file), skip_checks, round_no, paths, review_line, no_review)], root)
