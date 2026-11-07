@@ -51,7 +51,7 @@ export const NODE_SPECS: Spec<NodeCond>[] = [
   {
     re: new RegExp(`^within (\\d+) hops? of (?:${STR}|(favorites|this))$`),
     read: (m) => ({ t: "hops", n: Number(m[1]), of: ofValue(m[3]!, m[2]) }),
-    write: (c) => (c.t === "hops" ? `within ${c.n} hops of ${ofWord(c.of)}` : null),
+    write: (c) => (c.t === "hops" ? `within ${c.n} hop${c.n === 1 ? "" : "s"} of ${ofWord(c.of)}` : null),
   },
   {
     re: new RegExp(`^paths between ${STR} and ${STR} up to (\\d+) hops?$`),

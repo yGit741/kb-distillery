@@ -57,6 +57,8 @@ export interface DataSource {
   search(q: string, limit?: number): Promise<T.SearchResult>;
   /** Tier 2 of the search line: full text over pages, think notes, chats and raw text (the embedded share has none). */
   searchText(q: string, opts?: { kinds?: readonly string[]; limit?: number; signal?: AbortSignal }): Promise<T.TextSearch>;
+  /** Pages close in meaning to a phrase (`q`) or to a page (`slug`); rejects with 503 when semantic search is off (local app only). */
+  searchSimilar(opts: { q?: string; slug?: string; k?: number }, signal?: AbortSignal): Promise<T.SimilarResult>;
   findPath(a: string, b: string): Promise<T.PathResult>;
 
   // pipeline, corpus, raw

@@ -14,6 +14,12 @@ const base = (): Chat => ({
 });
 
 describe("applyEvent", () => {
+  it("a re-sent tool step updates what it says and keeps what it leaves out", () => {
+    let c = base();
+    c = applyEvent(c, { type: "tool", step: { name: "Grep", summary: "grep x", id: "g", status: "running", round: 2, kind: "keyword", query: "x" } });
+    c = applyEvent(c, { type: "tool", step: { name: "Grep", summary: "grep x", id: "g", status: "done", seen: ["a"] } });
+    expect(c.messages[1]!.trace).toEqual([{ name: "Grep", summary: "grep x", id: "g", status: "done", round: 2, kind: "keyword", query: "x", seen: ["a"] }]);
+  });
   it("accumulates deltas, tool steps by id, sources, session and usage", () => {
     let c = base();
     c = applyEvent(c, { type: "delta", text: "Hel" });

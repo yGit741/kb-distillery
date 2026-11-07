@@ -1,9 +1,9 @@
 import { FileText, Layers, MessageSquare, NotebookPen, Pin } from "lucide-react";
-import type { GNode } from "../types";
 import type { PinnedView, TextHit } from "@/api";
 import { NodeSwatch } from "../encoding/NodeMarkSvg";
 import { swatchColor } from "../nodeColor";
 import type { ColorBy } from "../style";
+import type { GNode } from "../types";
 import type { Command } from "./commands";
 import { LINE_COPY } from "./copy";
 import type { PageResult } from "./usePageResults";
@@ -13,6 +13,7 @@ import { isThink, matchTier1, placeOnce, type Candidate, type GroupId, type Plac
 const PAGES_SHOWN = 6;
 const THINK_SHOWN = 4;
 const RELATED_SHOWN = 3;
+const MEANING_SHOWN = 5;
 
 export interface GroupedArgs {
   text: string;
@@ -28,6 +29,11 @@ export interface GroupedArgs {
   /** Enter on a set row highlights the set. */
   highlightSet: (ids: string[]) => void;
   runView: (v: PinnedView) => void;
+  /**
+   * Flag semantic-search: the answer of the meaning service for this text, best first. Present (even empty), it is the
+   * "Related by meaning" group; absent, that group is the older related hits of the text search.
+   */
+  meaning?: readonly { node: GNode; score: number }[];
   /** Page ids marked favorite: those rows carry a small mark. */
   favorites?: ReadonlySet<string>;
   /** Tier 2: the server's full-text hits for exactly this text (./useTextHits); they fill the sections after the tier-1 groups. */
@@ -128,7 +134,9 @@ export function groupedRows(a: GroupedArgs): PanelRow[] {
         const group = isThink(r.node) ? "think" : "pages";
         return [{ group, via: r.snippet ? "text" : "title", node: r.node, snippet: r.snippet }, ...(r.also ?? []).map<Candidate>((via) => ({ group, via, node: r.node }))];
       }),
-    ...a.results.filter((r) => r.related).map<Candidate>((r) => ({ group: "related", via: "related", node: r.node, snippet: r.snippet })),
+    ...(a.meaning
+      ? a.meaning.map<Candidate>((m) => ({ group: "related", via: "related", node: m.node, score: m.score }))
+      : a.results.filter((r) => r.related).map<Candidate>((r) => ({ group: "related", via: "related", node: r.node, snippet: r.snippet }))),
   ];
   const placed = placeOnce(cands);
   const label = (g: GroupId) => LINE_COPY.groups[g];
@@ -138,7 +146,7 @@ export function groupedRows(a: GroupedArgs): PanelRow[] {
     section: label(g),
     label: p.node.title || p.node.id,
     detail: p.snippet,
-    hint: p.node.type.replace(/-/g, " "),
+    hint: p.score !== undefined ? String(p.score) : p.node.type.replace(/-/g, " "),
     fav: a.favorites?.has(p.node.id) || undefined,
     mark: p.also.length ? { text: p.also.map((v) => LINE_COPY.alsoMark[v]).join(" · "), title: p.also.map((v) => LINE_COPY.alsoTitle[v]).join("; ") } : undefined,
     lead: <NodeSwatch type={p.node.type} color={swatchColor(p.node, a.colorBy)} className="size-3.5" />,
@@ -173,7 +181,7 @@ export function groupedRows(a: GroupedArgs): PanelRow[] {
     const cmd = a.commands.find((x) => x.id === c.id);
     if (cmd) out.push({ ...a.commandRow(cmd), key: `command:${c.id}`, section: label("commands") });
   }
-  placed.related.slice(0, RELATED_SHOWN).forEach((p) => out.push(pageRow(p, "related")));
+  placed.related.slice(0, a.meaning ? MEANING_SHOWN : RELATED_SHOWN).forEach((p) => out.push(pageRow(p, "related")));
   // tier 2 goes last, so it only ever adds rows below those already on show
   if (a.textHits?.length) {
     const shown = new Set<string>();

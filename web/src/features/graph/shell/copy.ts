@@ -48,6 +48,7 @@ export const LINE_COPY = {
     think: { label: "Think", hint: "quick note" },
     export: { label: "Export", hint: "OKF bundle", why: "Needs the graph intent line" },
     highlight: { label: "Highlight", hint: "Enter" },
+    readSet: { label: "Read", hint: "one after another" },
     showSet: { label: "Show only", hint: "these pages" },
     addToView: { label: "Add to view", hint: "on top" },
     color: { label: "Color", hint: "by type" },
@@ -60,6 +61,10 @@ export const LINE_COPY = {
     mark: "Favorite",
     toggle: (on: boolean) => (on ? "Remove from favorites" : "Add to favorites"),
   },
+  /** The reader's stepper over a set of pages. */
+  reader: { of: (i: number, n: number) => `${i} of ${n}`, prev: "Previous page", next: "Next page", nav: "Pages in this set" },
+  /** A layer made by Expand. */
+  neighborsOf: (title: string) => `neighbors of ${title}`,
   /** `/views`: recent and pinned views, the kit's ready views, then the gallery. */
   views: {
     command: { label: "Views", hint: "recent, pinned and ready" },
@@ -121,6 +126,18 @@ export const LINE_COPY = {
     handOffHint: "opens the graph",
     empty: "Type to search pages, / for commands.",
     emptyShare: "Type to search pages.",
+  },
+  /** Meaning search (flags graph-intent and semantic-search). */
+  meaningOff: "meaning search is off",
+  focusOneFirst: "Focus one node first",
+  /** The last row of the panel: opens the chat with the focus and the shown pages as context. */
+  askRow: "Ask about",
+  askHint: "opens the chat",
+  /** Lines of the chat draft that carry the context. */
+  chatContext: {
+    focus: "Focus",
+    shown: (n: number) => `Shown in the graph (${n})`,
+    more: (n: number) => `and ${n} more`,
   },
   didYouMean: (name: string) => `Did you mean "${name}"?`,
   noSuchPage: (name: string) => `No page is called "${name}".`,

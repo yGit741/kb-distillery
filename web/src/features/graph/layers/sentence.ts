@@ -1,5 +1,6 @@
 import { FAVORITES, FOCUS, makeLayer, type EdgeCond, type Layer, type NodeCond, type Op } from "./model";
 import { print } from "./grammar";
+import { LINE_COPY } from "../shell/copy";
 
 /**
  * Casual English into layers (flag graph-intent): rules only, no model call. Text it cannot read comes back as
@@ -165,11 +166,19 @@ function clauseLayers(clause: string): Layer[] | null {
   }
   m = c.match(/^(?:what|how) (?:connects?|links?) (.+?) (?:and|to|with) (.+)$/i) ?? c.match(/^(?:show )?(?:paths?|connections?) between (.+?) and (.+)$/i);
   if (m) return [makeLayer("show", "nodes", { nodes: [{ t: "paths", a: nameOf(m[1]!), b: nameOf(m[2]!), n: 4 }] })];
+  m = c.match(/^(?:(?:show )?(?:the )?neighbou?rs of|neighbou?rhood of|expand) (.+)$/i);
+  if (m) {
+    const of = nameOf(m[1]!);
+    return [makeLayer("show", "nodes", { nodes: [{ t: "hops", of, n: 1 }] }, LINE_COPY.neighborsOf(of === FOCUS ? "this" : of))];
+  }
   m = c.match(/^(?:similar to|like) (.+)$/i);
   if (m) {
     const of = nameOf(m[1]!);
     return [makeLayer("show", "nodes", { nodes: [{ t: "about", phrase: of }] }), makeLayer("show", "nodes", { nodes: [{ t: "name", slugs: [of] }] })];
   }
+  // meaning: only a quoted phrase, so ordinary sentences with the word "about" keep their old reading
+  m = c.match(/^(?:show )?(?:(?:nodes|pages|notes) )?about\s+["“](.+?)["”]$/i);
+  if (m) return [makeLayer("show", "nodes", { nodes: [{ t: "about", phrase: m[1]!.trim() }] })];
   const f = filterClause(c);
   return f ? [f] : null;
 }

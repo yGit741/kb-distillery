@@ -1,5 +1,5 @@
 import { createMemoryHistory } from "@tanstack/react-router";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { DataSource } from "@/api";
 import { withFlag } from "@/flags/testing";
@@ -76,6 +76,18 @@ describe("the search line on every screen (flag graph-intent)", () => {
       await userEvent.keyboard("{Enter}");
       await waitFor(() => expect(router.state.location.pathname).toBe("/pages/margin-theory"));
       expect(screen.queryByTestId("search-overlay")).toBeNull();
+    }));
+
+  it("Read in a row's menu navigates to the page: there is no graph to read beside", () =>
+    withFlag("graph-intent", true, async () => {
+      const { router } = mount();
+      await screen.findByRole("tablist", { name: "System sections" });
+      await key("k");
+      await userEvent.type(await line(), "margin theory");
+      const row = await screen.findByRole("option", { name: /Margin theory/ });
+      await userEvent.click(within(row).getByRole("button", { name: "Actions" }));
+      await userEvent.click(await screen.findByRole("menuitem", { name: /^Read/ }));
+      await waitFor(() => expect(router.state.location.pathname).toBe("/pages/margin-theory"));
     }));
 
   it("Shift+Enter goes to the graph and selects the page", () =>
