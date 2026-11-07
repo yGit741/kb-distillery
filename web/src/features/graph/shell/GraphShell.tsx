@@ -824,7 +824,7 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
     useShellStore.getState().clearLine();
     if (intentRef.current) focusBar(line);
   }, [focusBar]);
-  /** Whether the highlighted row was chosen (arrow keys or pointer) rather than being the first row by default. */
+  /** Whether the highlighted row was chosen (arrow keys) rather than being the first row by default. */
   const picked = useRef(false);
   useEffect(() => {
     picked.current = false;
@@ -872,7 +872,7 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
       if (e.nativeEvent.isComposing) return;
       e.preventDefault();
       setHintMode(null);
-      // a bare `/views`: Enter shows the list; only a row picked by arrow keys (or the pointer) applies
+      // a bare `/views`: Enter shows the list; only a row picked by arrow keys applies
       if (slash && intent && /^views\s*$/i.test(line.slice(1)) && !picked.current) return setOpen(true);
       rows[idx]?.run(e.shiftKey);
     } else if (e.key === "Tab" && intent && useLayers.getState().preview && !e.shiftKey) {
@@ -927,10 +927,7 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
       />
       {intent && <Chips byId={byId} />}
       {intent && open && viewMode && <ResolvedLine lines={preview?.lines ?? null} count={preview?.count ?? 0} editing={editingLine} onEditing={setEditingLine} onApply={applyWritten} />}
-      {open && <SearchPanel rows={rows} idx={idx} onHover={(i) => {
-          picked.current = true;
-          setIdx(i);
-        }} empty={empty} status={status} hint={sentenceBlocked ? LINE_COPY.sentenceUnavailable : hintMode ? LINE_COPY.hints[hintMode] : undefined} views={!text && !slash && viewChoices.length ? viewChoices : undefined} onMenu={intent ? (i, at) => rows[i]?.actions && openMenu(rows[i]!.actions!, at) : undefined} />}
+      {open && <SearchPanel rows={rows} idx={idx} onHover={setIdx} empty={empty} status={status} hint={sentenceBlocked ? LINE_COPY.sentenceUnavailable : hintMode ? LINE_COPY.hints[hintMode] : undefined} views={!text && !slash && viewChoices.length ? viewChoices : undefined} onMenu={intent ? (i, at) => rows[i]?.actions && openMenu(rows[i]!.actions!, at) : undefined} />}
       {menu &&
         createPortal(
           <NodeMenu
