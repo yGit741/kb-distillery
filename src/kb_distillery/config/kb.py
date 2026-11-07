@@ -9,7 +9,8 @@ The engine is code only. A knowledge base is a folder holding a `kb.toml`; it ma
 
 `--kb` and `$KB` take an id or a path: a value containing `/` or starting with `.` or `~` is a path, anything else an id.
 Selection, first hit wins: `--kb`, `$KB`, the nearest `kb.toml` above the current folder (only outside a checkout), the
-only knowledge base there is. `$KB_ROOT` is internal: tools set it to hand a resolved folder to the processes they start
+only knowledge base there is, then the one named by `[kb] default = "<id>"` in the engine config (`~/.config/kb-distillery/engine.toml`,
+`$KB_ENGINE_CONFIG` moves it) when several exist. `$KB_ROOT` is internal: tools set it to hand a resolved folder to the processes they start
 (the share build, qmd, hooks); users never do.
 Nothing here imports the rest of `kb` (only `kb_distillery.config.resources`, which imports nothing), so
 `kb_distillery.config.paths` and `kb_distillery.vault.schema` can build on it at import time. No repository root is computed at
@@ -247,8 +248,21 @@ def kb_above(start: str | None = None) -> str | None:
         here = parent
 
 
+def default_kb() -> str | None:
+    """The id in `[kb] default` of the engine config; None when unset, unreadable or not a known knowledge base."""
+    cfg = os.environ.get("KB_ENGINE_CONFIG") or os.path.join(os.path.expanduser("~"), ".config", "kb-distillery", "engine.toml")
+    try:
+        import tomllib
+        with open(cfg, "rb") as f:
+            section = tomllib.load(f).get("kb")
+    except (OSError, ValueError, ImportError):
+        return None
+    pick = section.get("default") if isinstance(section, dict) else None
+    return pick if isinstance(pick, str) and pick in discover() else None
+
+
 def selected() -> str | None:
-    """`--kb`, `$KB`, the kb folder the shell is in, or the only knowledge base: an id or a path; None when nothing decides."""
+    """`--kb`, `$KB`, the kb folder the shell is in, the only knowledge base, or the configured default: an id or a path; None when nothing decides."""
     pick = _ARGV_KB or os.environ.get("KB")
     if pick:
         return pick
@@ -256,7 +270,9 @@ def selected() -> str | None:
     if above:
         return above
     known = discover()
-    return next(iter(known)) if len(known) == 1 else None
+    if len(known) == 1:
+        return next(iter(known))
+    return default_kb()
 
 
 def _version(text, path) -> tuple[int, int]:
