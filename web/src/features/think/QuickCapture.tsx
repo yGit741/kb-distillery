@@ -7,10 +7,11 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Feather } from "lucide-react";
 import { useDataSource } from "@/api";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
-import { useUi } from "@/app/ui-store";
+import { captureFooter, useUi } from "@/app/ui-store";
 
 export default function QuickCapture() {
-  const { captureOpen, setCaptureOpen } = useUi();
+  const { captureOpen, setCaptureOpen, captureContext } = useUi();
+  const footer = captureFooter(captureContext);
   const ds = useDataSource();
   const qc = useQueryClient();
   const [text, setText] = useState("");
@@ -44,7 +45,7 @@ export default function QuickCapture() {
   });
 
   const submit = () => {
-    if (text.trim() && !save.isPending) save.mutate(text);
+    if (text.trim() && !save.isPending) save.mutate(footer ? `${text.trimEnd()}\n${footer}` : text);
   };
 
   return (
@@ -86,6 +87,11 @@ export default function QuickCapture() {
               aria-label="Quick thought"
               className="w-full resize-none rounded-md border bg-background p-2 text-sm outline-none focus:ring-1 focus:ring-ring"
             />
+            {footer && (
+              <p className="whitespace-pre-wrap break-words text-xs text-muted-foreground" aria-label="Attached context">
+                {footer}
+              </p>
+            )}
             {save.isError && <p className="text-xs text-bad">Could not save — {String((save.error as Error).message ?? save.error)}</p>}
             <p className="text-xs text-muted-foreground">⏎ save to think/inbox.md · ⇧⏎ new line · esc close</p>
           </>

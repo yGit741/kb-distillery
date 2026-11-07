@@ -9,6 +9,7 @@ import { useKb } from "@/lib/store";
 import { useApiQuery } from "@/lib/useApiQuery";
 import { IS_SHARE } from "@/share/env";
 import type { ToolHost } from "../hostContext";
+import { openCaptureAbout } from "../captureAbout";
 import { ACTION_ITEMS, type MenuContext } from "../menu";
 import { NodeMenu } from "../NodeMenu";
 import { goCommands, filterCommands, type Command } from "./commands";
@@ -224,7 +225,7 @@ function Sheet({ onClose }: { onClose: () => void }) {
       focus: then((id: string) => onGraph(id)),
       highlight: then((ids: string[]) => { useKb.getState().setSelection(ids); go("/graph"); }),
       chat: then((ids: string[]) => { go("/graph"); useChatDock.getState().ask(askAbout(ids.map((id) => ({ id })))); }),
-      think: then(() => useUi.getState().setCaptureOpen(true)),
+      think: then((ids: string[]) => openCaptureAbout(ids)),
     };
   }, [byId, openNode, onGraph, go, onClose]);
   const items = useMemo(() => ACTION_ITEMS.filter((i) => OVERLAY_ACTIONS.has(i.id)), []);

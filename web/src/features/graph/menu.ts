@@ -13,10 +13,12 @@ export interface MenuContext {
   focus?: (id: string) => void;
   showOnly?: (ids: string[], label: string) => void;
   addToView?: (ids: string[], label: string) => void;
-  expand?: (id: string) => void;
+  expand?: (ids: string[]) => void;
+  /** Read a set beside the graph, first page first, with a stepper. */
+  readSet?: (ids: string[]) => void;
   colorSet?: (ids: string[], label: string) => void;
   chat?: (ids: string[]) => void;
-  think?: (id: string) => void;
+  think?: (ids: string[]) => void;
   highlight?: (ids: string[]) => void;
   exportPages?: (ids: string[]) => void;
 }
@@ -64,7 +66,7 @@ export const ACTION_ITEMS: MenuItem[] = [
   { id: "focus", label: A.focus.label, hint: A.focus.hint, run: (n, c) => c.focus?.(n.id) },
   { id: "show", label: A.show.label, hint: A.show.hint, run: (n, c) => c.showOnly?.([n.id], n.title || n.id) },
   { id: "read", label: A.read.label, hint: A.read.hint, run: (n, c) => c.openReader(n.id) },
-  { id: "expand", label: A.expand.label, hint: A.expand.hint, run: (n, c) => c.expand?.(n.id) },
+  { id: "expand", label: A.expand.label, hint: A.expand.hint, run: (n, c) => c.expand?.([n.id]) },
   {
     id: "favorite",
     label: A.favorite.label,
@@ -75,7 +77,7 @@ export const ACTION_ITEMS: MenuItem[] = [
     run: (n) => void useFavorites.getState().toggle(n.id),
   },
   { id: "chat", label: A.chat.label, hint: A.chat.hint, when: () => !IS_SHARE, run: (n, c) => c.chat?.([n.id]) },
-  { id: "think", label: A.think.label, hint: A.think.hint, when: () => !IS_SHARE, run: (n, c) => c.think?.(n.id) },
+  { id: "think", label: A.think.label, hint: A.think.hint, when: () => !IS_SHARE, run: (n, c) => c.think?.([n.id]) },
   { id: "export", label: A.export.label, hint: A.export.hint, enabled: () => flag("graph-intent"), why: A.export.why, run: (n, c) => c.exportPages?.([n.id]) },
 ];
 
@@ -83,6 +85,9 @@ export const ACTION_ITEMS: MenuItem[] = [
 export const setActionItems = (ids: string[], label: string): MenuItem[] => [
   { id: "highlight", label: A.highlight.label, hint: A.highlight.hint, run: (_n, c) => c.highlight?.(ids) },
   { id: "show", label: A.showSet.label, hint: A.showSet.hint, run: (_n, c) => c.showOnly?.(ids, label) },
+  { id: "read", label: A.readSet.label, hint: A.readSet.hint, run: (n, c) => (c.readSet ? c.readSet(ids) : c.openReader(ids[0] ?? n.id)) },
+  { id: "expand", label: A.expand.label, hint: A.expand.hint, run: (_n, c) => c.expand?.(ids) },
+  { id: "think", label: A.think.label, hint: A.think.hint, when: () => !IS_SHARE, run: (_n, c) => c.think?.(ids) },
   { id: "add", label: A.addToView.label, hint: A.addToView.hint, run: (_n, c) => c.addToView?.(ids, label) },
   { id: "color", label: A.color.label, hint: A.color.hint, run: (_n, c) => c.colorSet?.(ids, label) },
   { id: "chat", label: A.chatSet.label, hint: A.chatSet.hint, run: (_n, c) => c.chat?.(ids) },
