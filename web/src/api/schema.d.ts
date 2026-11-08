@@ -2626,6 +2626,8 @@ export interface components {
             meta_overrides: string[];
             /** Name */
             name: string;
+            /** Read Only */
+            read_only: boolean;
             /** Relaunch */
             relaunch: string;
             /** Root */

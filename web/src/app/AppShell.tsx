@@ -11,6 +11,7 @@ import { SearchOverlay } from "@/features/graph/shell/SearchOverlay";
 import { ShareChip } from "./ShareChip";
 import { ToursMenu } from "./ToursMenu";
 import { KbBadge } from "./KbBadge";
+import { ReadOnlyBanner } from "./ReadOnlyBanner";
 import { useEmbed } from "./embed";
 import { useHeaderFolded } from "./headerFold";
 import { HEADER_SLOT_ID } from "./headerSlot";
@@ -73,6 +74,7 @@ export function AppShell() {
         )}
       </header>
       )}
+      {!embed && <ReadOnlyBanner />}
       <main className={embed ? "min-w-0 flex-1" : "mx-auto w-full min-w-0 max-w-6xl flex-1 px-4 py-4"}>
         <Outlet />
       </main>

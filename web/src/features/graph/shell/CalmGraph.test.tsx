@@ -1,11 +1,11 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, within } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { DataSourceProvider } from "@/api";
 import { withFlag } from "@/flags/testing";
 import { mockDataSource } from "@/test/datasource";
 import { sampleNodes, sampleSnapshot } from "../fixtures";
-import { CALM_STORY, STORIES, storyById, storyTypes } from "../lab/views";
+import { STORIES, storyById, storyTypes } from "../lab/views";
 import { parseSchema } from "../schema";
 import { useGraphUi } from "../store";
 import { GraphShell } from "./GraphShell";
@@ -52,30 +52,23 @@ beforeEach(() => {
 const box = () => screen.getByRole("combobox", { name: /search the graph/i });
 
 describe("flag calm-graph on", () => {
-  it("lists the same views as the pinned cards in one switcher and marks the shown one", () =>
+  it("the search dropdown has no Concepts, Thesis, Gaps or Sources tabs", () =>
     withFlag("calm-graph", true, async () => {
-      const cards = viewCards(sampleNodes, schema);
-      expect(cards.map((c) => c.id)).toEqual(expect.arrayContaining(["concepts", "sources"]));
-      useGraphUi.setState({ story: CALM_STORY });
       mount();
       await userEvent.click(box());
-      const group = screen.getByTestId("view-switcher");
-      const names = within(group).getAllByRole("button").map((b) => b.textContent);
-      expect(names).toEqual(cards.map((c) => c.name));
-      expect(within(group).getByRole("button", { name: "Concepts" })).toHaveAttribute("aria-pressed", "true");
-      expect(within(group).getByRole("button", { name: "Sources" })).toHaveAttribute("aria-pressed", "false");
+      expect(screen.queryByTestId("view-switcher")).not.toBeInTheDocument();
+      expect(screen.queryByTestId("view-panel")).not.toBeInTheDocument();
+      expect(screen.queryByRole("group", { name: "Switch view" })).not.toBeInTheDocument();
+      for (const name of ["Concepts", "Thesis", "Gaps", "Sources"]) expect(screen.queryByRole("button", { name })).not.toBeInTheDocument();
     }));
 
-  it("picking a view hands its card on and has a slash command", () =>
+  it("picking a view goes through its slash command", () =>
     withFlag("calm-graph", true, async () => {
       const onView = mount();
       await userEvent.click(box());
-      await userEvent.click(within(screen.getByTestId("view-switcher")).getByRole("button", { name: "Sources" }));
-      expect(onView).toHaveBeenCalledWith(expect.objectContaining({ id: "sources", spec: { v: 1, story: "sources" } }));
-      await userEvent.click(box());
       await userEvent.keyboard("/view: sou");
-      expect(screen.getByRole("option", { name: /View: Sources/ })).toBeInTheDocument();
-      expect(screen.queryByTestId("view-switcher")).not.toBeInTheDocument();
+      await userEvent.click(screen.getByRole("option", { name: /View: Sources/ }));
+      expect(onView).toHaveBeenCalledWith(expect.objectContaining({ id: "sources", spec: { v: 1, story: "sources" } }));
     }));
 
   it("names the two layers by schema, never by type name, so any kit gets them", () =>
