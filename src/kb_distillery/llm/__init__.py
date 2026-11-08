@@ -1,4 +1,4 @@
-"""The one door to an LLM. Every feature that calls Claude goes through here, never its own `claude -p`,
+"""The one door to an LLM. Every feature that calls an LLM goes through here, never its own `claude -p`,
 SDK or HTTP call, so billing is a flag instead of a rewrite.
 
 Three backends, same Request in, same Result out, results always in input order:
@@ -7,6 +7,12 @@ Three backends, same Request in, same Result out, results always in input order:
   * api          — POST /v1/messages with the key from ANTHROPIC_API_KEY or ~/.config/kb-distillery/anthropic_key;
   * batch        — the Message Batches API: half price, results within hours. `run()` submits and waits;
     `submit()` + `collect()` split that across processes (the manifest under .cache/llm/batches/ keeps the order).
+
+Providers: the model vendor, a second axis next to the backend. `claude` (default), `openai` and `gemini`, each a small
+stdlib adapter under `kb_distillery.llm.providers` (`complete(request, model_id, key)`, `availability()`). Only `claude`
+runs on all three backends; `openai` and `gemini` are `api` only (one blocking call per request, on the same thread pool)
+and refuse images. Keys: ANTHROPIC_API_KEY / OPENAI_API_KEY / GEMINI_API_KEY or ~/.config/kb-distillery/<provider>_key.
+Provider precedence: `Request.provider`, then $KB_LLM_PROVIDER, then `claude`. A request's model must belong to its provider.
 
 Backend precedence: the `backend=` argument, then $KB_LLM_BACKEND, then DEFAULT_BACKEND.
 Stdlib only, like kb_distillery.services.chat.
@@ -24,20 +30,33 @@ import urllib.error
 import urllib.request
 
 from kb_distillery.config import userdir
+from kb_distillery.llm import providers
 
 BACKENDS = ("subscription", "api", "batch")
 DEFAULT_BACKEND = "subscription"
 ENV_BACKEND = "KB_LLM_BACKEND"
+PROVIDERS = providers.PROVIDERS
+DEFAULT_PROVIDER = "claude"
+ENV_PROVIDER = "KB_LLM_PROVIDER"
 
 MODELS = {"haiku": "claude-haiku-5-5", "sonnet": "claude-sonnet-5-5", "opus": "claude-opus-5-5",
           "fable": "claude-fable-5-1"}
-# USD per million tokens, Anthropic first-party list prices (checked 2026-10-30, same table as kb_distillery.services.chat).
+# USD per million tokens, first-party list prices. Claude rows checked 2026-10-30 (same table as
+# kb_distillery.services.chat); OpenAI and Gemini rows entered 2026-11-08 from memory of the public price pages,
+# cache_read is the cached-input rate, and Gemini prices are the <=200k-token tier. Re-check the `# verify` rows.
 PRICES = {
     "claude-haiku-5-5": {"in": 0.10, "out": 0.50, "cache_read": 0.01},
     "claude-sonnet-5-5": {"in": 2.00, "out": 10.00, "cache_read": 0.20},
     "claude-opus-5-5": {"in": 4.00, "out": 20.00, "cache_read": 0.20},
     "claude-fable-5-1": {"in": 10.00, "out": 50.00, "cache_read": 0.25},
+    "gpt-4.1": {"in": 2.00, "out": 8.00, "cache_read": 0.50},
+    "gpt-4.1-mini": {"in": 0.40, "out": 1.60, "cache_read": 0.10},
+    "gpt-4.1-nano": {"in": 0.10, "out": 0.40, "cache_read": 0.025},
+    "gemini-2.5-pro": {"in": 1.25, "out": 10.00, "cache_read": 0.31},         # verify
+    "gemini-2.5-flash": {"in": 0.30, "out": 2.50, "cache_read": 0.075},       # verify
+    "gemini-2.5-flash-lite": {"in": 0.10, "out": 0.40, "cache_read": 0.025},  # verify
 }
+MODEL_PROVIDER_PREFIX = {"claude-": "claude", "gpt-": "openai", "gemini-": "gemini"}
 IMAGE_TYPES = {".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png", ".gif": "image/gif",
                ".webp": "image/webp"}
 CACHE_WRITE_5M = 1.25
@@ -65,6 +84,7 @@ class Request:
     max_tokens: int = 8192        # a ceiling, not a cost: thinking counts against it, billing is per token used
     effort: str = "low"
     images: tuple = ()            # image file paths shown before the prompt
+    provider: str = ""            # claude / openai / gemini; empty = $KB_LLM_PROVIDER, then claude
 
 
 @dataclasses.dataclass
@@ -92,6 +112,19 @@ def resolve_backend(backend=None):
     if b not in BACKENDS:
         raise LLMError(f"unknown backend {b!r}; pick one of {', '.join(BACKENDS)}")
     return b
+
+
+def resolve_provider(provider=None):
+    p = (provider or os.environ.get(ENV_PROVIDER) or DEFAULT_PROVIDER).strip().lower()
+    if p not in PROVIDERS:
+        raise LLMError(f"unknown provider {p!r}; pick one of {', '.join(PROVIDERS)}")
+    return p
+
+
+def model_provider(model):
+    """The provider a model id belongs to ("claude" for the aliases)."""
+    m = model_id(model)
+    return next(p for pre, p in MODEL_PROVIDER_PREFIX.items() if m.startswith(pre))
 
 
 def model_id(model):
@@ -135,7 +168,13 @@ def normalize(requests):
             raise LLMError(f"duplicate request id {r.id!r}")
         seen.add(r.id)
         model_id(r.model)
+        r.provider = resolve_provider(r.provider)
+        if model_provider(r.model) != r.provider:
+            raise LLMError(f"model {r.model!r} is a {model_provider(r.model)} model but the provider is {r.provider}; "
+                           f"pass a {r.provider} model or --provider {model_provider(r.model)}")
         r.images = tuple(r.images)
+        if r.images and r.provider != "claude":
+            raise LLMError("images need the claude provider")
         for p in r.images:
             if os.path.splitext(p)[1].lower() not in IMAGE_TYPES:
                 raise LLMError(f"{p}: images must be one of {', '.join(sorted(IMAGE_TYPES))}")
@@ -197,6 +236,10 @@ def run(requests, backend=None, workers=4, poll_every=30, wait_s=24 * 3600):
     b = resolve_backend(backend)
     if not reqs:
         return []
+    for r in reqs:
+        if r.provider != "claude" and b != "api":
+            raise LLMError(f"the {r.provider} provider runs on the api backend only (got {b}); "
+                           f"subscription and batch are Claude-only")
     if b == "batch":
         bid = submit(reqs)
         return collect(bid, poll_every=poll_every, wait_s=wait_s)
@@ -248,11 +291,21 @@ def _keyed(backend):
                     f"set ANTHROPIC_API_KEY or put the key in {KEY_FILE} (the {backend} backend bills the API)")}
 
 
+def _provider_status():
+    out = {}
+    for name in PROVIDERS:
+        ok, why = providers.get(name).availability()
+        out[name] = {"ok": ok, "why": why, "fix": "" if ok else why}
+    return out
+
+
 def availability():
-    """{backend: {ok, why, fix}} for subscription, api and batch, without any LLM call, network or session.
+    """{backend: {ok, why, fix}} for subscription, api and batch, plus "providers": {provider: {ok, why, fix}} (key
+    findable per vendor), without any LLM call, network or session.
     Subscription = the `claude` CLI is on PATH and `claude auth status` says logged in; api and batch = a key is
     findable by `api_key()`. The app greys AI features out when no backend is ok."""
-    return {"subscription": _subscription(), "api": _keyed("api"), "batch": _keyed("batch")}
+    return {"subscription": _subscription(), "api": _keyed("api"), "batch": _keyed("batch"),
+            "providers": _provider_status()}
 
 
 # --- subscription: claude -p ---------------------------------------------------------------------------
@@ -344,8 +397,8 @@ def _http(method, url, key, body=None, timeout=600):
         raise HTTPFail(0, f"cannot reach the API: {getattr(e, 'reason', e)}") from None
 
 
-def _call(method, path, body=None, retries=3):
-    key = api_key()
+def _call(method, path, body=None, retries=3, key=None):
+    key = key or api_key()
     if not key:
         raise HTTPFail(0, f"no API key: set ANTHROPIC_API_KEY or write {KEY_FILE}")
     for attempt in range(retries + 1):
@@ -391,13 +444,12 @@ def _from_message(res, msg, batch=False):
 
 
 def _ask_api(r):
-    res = Result(id=r.id, backend="api", model=model_id(r.model))
+    """One request through its provider's adapter (Claude: the Messages API)."""
+    adapter = providers.get(resolve_provider(r.provider))
     try:
-        msg = json.loads(_call("POST", "/messages", params(r)))
-    except (HTTPFail, ValueError) as e:
-        res.error = str(e)[:300]
-        return res
-    return _from_message(res, msg)
+        return adapter.complete(r, model_id(r.model), adapter.api_key())
+    except HTTPFail as e:
+        return Result(id=r.id, backend="api", model=model_id(r.model), error=str(e)[:300])
 
 
 # --- batch: /v1/messages/batches -----------------------------------------------------------------------
