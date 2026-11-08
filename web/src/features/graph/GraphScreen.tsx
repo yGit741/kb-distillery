@@ -45,6 +45,7 @@ import { Panels } from "./Panels";
 import { Corners } from "./shell/corners/Corners";
 import { parseKbs } from "@/lib/kbSelection";
 import { useFlag } from "@/flags/useFlag";
+import { FirstRunCard } from "@/features/first-run/FirstRunCard";
 import { relationIndex } from "./relationGroups";
 import { TOOLS, toolOn, useVisibleTools, type GraphToolContext } from "./tools";
 import { useExperiments } from "./tools/experiments";
@@ -88,6 +89,7 @@ export function GraphScreen({ search, host }: { search: GraphSearch; host: Graph
   const kbs = useMemo(() => picked ?? [], [picked?.join(",")]); // eslint-disable-line react-hooks/exhaustive-deps
   // `?chat=` (flag chat-full): /chat and /chat/<id> land here; the full chat opens on that chat, then the param goes
   const chatFull = useFlag("chat-full");
+  const firstRun = useFlag("screen.first-run");
   const sparkChat = useFlag("spark-chat");
   const chatFlag = chatFull && sparkChat;
   const chatParam = search.chat;
@@ -210,7 +212,7 @@ export function GraphScreen({ search, host }: { search: GraphSearch; host: Graph
   if (!model.nodes.length)
     return (
       <FullBleed>
-        <div className="p-4"><Empty>The vault has no pages yet.</Empty></div>
+        {firstRun ? <FirstRunCard host={host} /> : <div className="p-4"><Empty>The vault has no pages yet.</Empty></div>}
       </FullBleed>
     );
   return (
