@@ -32,6 +32,8 @@ def temp_config(tmp_path, monkeypatch):
     monkeypatch.setattr(chat_data, "INBOX", str(tmp_path / "inbox"))
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
     monkeypatch.setattr("kb_distillery.llm.claude_available", lambda refresh=False: (True, ""))   # not this machine's login
+    monkeypatch.setattr("kb_distillery.services.chat_agent.subscription_status",
+                        lambda *a, **k: {"logged_in": False, "email": None, "plan": None, "error": None})
     return cfg
 
 
@@ -344,3 +346,12 @@ def test_direct_backend_is_not_gated_by_the_agent_check(client, no_claude):
 def test_a_stored_chat_key_counts_as_claude(client, no_claude, temp_config):
     assert client.post("/api/chat/keys", json={"name": "a", "key": KEY}, headers=LOOPBACK).status_code == 200
     assert client.get("/api/chat/status").json()["claude"]["available"] is True
+
+
+def test_409_reprobes_so_a_fresh_login_is_not_refused(client, monkeypatch):
+    from kb_distillery import llm
+    seen = []
+    monkeypatch.setattr("kb_distillery.llm.claude_available",
+                        lambda refresh=False: seen.append(refresh) or ((True, "") if refresh else (False, llm.NEEDS_CLAUDE)))
+    r = client.post("/api/chat", json={"question": "q", "backend": "agent"}, headers=LOOPBACK)
+    assert seen == [False, True] and r.status_code != 409

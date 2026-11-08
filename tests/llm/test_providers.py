@@ -241,6 +241,7 @@ def test_cli_provider_flag(monkeypatch, capsys):
 
 def test_claude_available_follows_key_or_login(monkeypatch):
     from kb_distillery import llm
+    monkeypatch.setitem(llm._claude_cache, "value", None)      # restored afterwards: no leak into other tests
     monkeypatch.setattr(llm, "api_key", lambda: "")
     monkeypatch.setattr(llm, "_subscription", lambda: {"ok": False, "why": "", "fix": ""})
     assert llm.claude_available(refresh=True) == (False, llm.NEEDS_CLAUDE)

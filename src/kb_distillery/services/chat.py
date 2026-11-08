@@ -186,14 +186,16 @@ def key_hint(key):
     return f"sk-ant-…{key[-4:]}" if key and len(key) > 8 else ""
 
 
-def claude_status(settings=None):
+def claude_status(settings=None, refresh=False):
     """{available, reason}: can a Claude-agent feature run? True with a stored or env chat key, a logged-in `claude`
     subscription, or any key/login the provider layer finds (`llm.claude_available`). No LLM call. When not,
-    `reason` is the text of the HTTP 409 and the "needs Claude" badge."""
+    `reason` is the text of the HTTP 409 and the "needs Claude" badge. `refresh` re-probes the login (no cache)."""
     from kb_distillery import llm
     from kb_distillery.services import chat_agent  # here, not at the top: chat_agent imports this module
+    if refresh:       # a login made a moment ago must count: drop both cached negatives
+        chat_agent._SUB_CACHE["value"] = None
     key, _ = load_api_key(settings or load_settings())
-    if key or chat_agent.subscription_status()["logged_in"] or llm.claude_available()[0]:
+    if key or chat_agent.subscription_status()["logged_in"] or llm.claude_available(refresh=refresh)[0]:
         return {"available": True, "reason": ""}
     return {"available": False, "reason": llm.NEEDS_CLAUDE}
 
