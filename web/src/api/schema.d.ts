@@ -346,6 +346,76 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/digest/jobs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Digest jobs, newest first */
+        get: operations["jobs_api_digest_jobs_get"];
+        put?: never;
+        /** Start a digest job: full digests in a worker, one knowledge step per finished source */
+        post: operations["start_api_digest_jobs_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/digest/jobs/{job_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One digest job */
+        get: operations["job_api_digest_jobs__job_id__get"];
+        put?: never;
+        post?: never;
+        /** Cancel a digest job: the source in flight rolls back, finished ones stay committed */
+        delete: operations["cancel_api_digest_jobs__job_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/digest/jobs/{job_id}/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** SSE: a `job` event on every change, `end` when the job stops */
+        get: operations["job_events_api_digest_jobs__job_id__events_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/digest/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** What a digest job would cost and take, on its default backend and on each of the three (no model call) */
+        post: operations["preview_api_digest_preview_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/favorites": {
         parameters: {
             query?: never;
@@ -1280,6 +1350,31 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
+        /** BackendOption */
+        BackendOption: {
+            /** Available */
+            available: boolean;
+            /** Backend */
+            backend: string;
+            /** Billed Usd */
+            billed_usd: number;
+            /** Cost Usd */
+            cost_usd: number;
+            /** Cost Worst Usd */
+            cost_worst_usd: number;
+            /** Eta */
+            eta: string;
+            /** Seconds */
+            seconds: number;
+            /** Tokens In */
+            tokens_in: number;
+            /** Tokens Out */
+            tokens_out: number;
+            /** Why */
+            why: string;
+        } & {
+            [key: string]: unknown;
+        };
         /** Backlink */
         Backlink: {
             /**
@@ -1865,6 +1960,108 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
+        /** DigestJob */
+        DigestJob: {
+            /** Backend */
+            backend: string;
+            /**
+             * Backend Why
+             * @default
+             */
+            backend_why: string;
+            /** Created */
+            created: string;
+            /** Current */
+            current?: string | null;
+            /** Depth */
+            depth: string;
+            /** Error */
+            error?: string | null;
+            /** Finished */
+            finished?: string | null;
+            /** Id */
+            id: string;
+            /** Model */
+            model: string;
+            /** Provider */
+            provider: string;
+            /** Sources */
+            sources: components["schemas"]["JobSource"][];
+            /**
+             * Spent Usd
+             * @default 0
+             */
+            spent_usd: number;
+            /** Started */
+            started?: string | null;
+            /** Status */
+            status: string;
+            /** Tier */
+            tier: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** DigestJobList */
+        DigestJobList: {
+            /** Jobs */
+            jobs: components["schemas"]["DigestJob"][];
+        } & {
+            [key: string]: unknown;
+        };
+        /** DigestPreview */
+        DigestPreview: {
+            /** Backend */
+            backend: string;
+            /** Backend Why */
+            backend_why: string;
+            /** Billed Usd */
+            billed_usd: number;
+            /** Cost Usd */
+            cost_usd: number;
+            /** Cost Worst Usd */
+            cost_worst_usd: number;
+            /** Depth */
+            depth: string;
+            /** Eta */
+            eta: string;
+            /** Model */
+            model: string;
+            /** Options */
+            options: components["schemas"]["BackendOption"][];
+            /** Provider */
+            provider: string;
+            /** Requests */
+            requests: number;
+            /** Seconds */
+            seconds: number;
+            /** Skipped */
+            skipped: components["schemas"]["SkippedSource"][];
+            /** Sources */
+            sources: number;
+            /** Tier */
+            tier: string;
+            /** Tokens In */
+            tokens_in: number;
+            /** Tokens Out */
+            tokens_out: number;
+        } & {
+            [key: string]: unknown;
+        };
+        /**
+         * DigestRequest
+         * @description Raw paths to digest in full. `backend` (subscription | api | batch) and `model` are optional: left out, the billing
+         *     defaults pick them (`backend_why` in the reply says which rule did).
+         */
+        DigestRequest: {
+            /** Backend */
+            backend?: string | null;
+            /** Model */
+            model?: string | null;
+            /** Raws */
+            raws: string[];
+        } & {
+            [key: string]: unknown;
+        };
         /** DigestResult */
         DigestResult: {
             /**
@@ -2433,6 +2630,24 @@ export interface components {
             last: string;
             /** Name */
             name: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** JobSource */
+        JobSource: {
+            /**
+             * Note
+             * @default
+             */
+            note: string;
+            /** Page */
+            page?: string | null;
+            /** Raw */
+            raw: string;
+            /** Seconds */
+            seconds?: number | null;
+            /** Status */
+            status: string;
         } & {
             [key: string]: unknown;
         };
@@ -4136,6 +4351,15 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
+        /** SkippedSource */
+        SkippedSource: {
+            /** Raw */
+            raw: string;
+            /** Reason */
+            reason: string;
+        } & {
+            [key: string]: unknown;
+        };
         /** SnapshotTag */
         SnapshotTag: {
             /** Date */
@@ -5443,6 +5667,256 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
                 };
+            };
+        };
+    };
+    jobs_api_digest_jobs_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DigestJobList"];
+                };
+            };
+        };
+    };
+    start_api_digest_jobs_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DigestRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DigestJob"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Method Not Allowed */
+            405: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    job_api_digest_jobs__job_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DigestJob"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cancel_api_digest_jobs__job_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DigestJob"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Method Not Allowed */
+            405: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    job_events_api_digest_jobs__job_id__events_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    preview_api_digest_preview_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DigestRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DigestPreview"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Method Not Allowed */
+            405: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
