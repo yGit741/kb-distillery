@@ -383,3 +383,52 @@ describe("flag calm-graph", () => {
       act(() => setFlagOverrides({}));
     }));
 });
+
+describe("the empty-space menu", () => {
+  it("closes on Escape, even from the search line, and on a press outside it", async () => {
+    render(wrap(withGraph(), <><input aria-label="outside" /><GraphScreen search={{}} host={host} /></>));
+    await screen.findByTestId("graph-stats");
+    const open = () => act(() => void screen.getByTestId("graph-canvas").dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, clientX: 40, clientY: 40 })));
+
+    open();
+    expect(screen.getByRole("menu", { name: "Graph" })).toBeInTheDocument();
+    screen.getByLabelText("outside").focus();
+    await userEvent.keyboard("{Escape}");
+    expect(screen.queryByRole("menu", { name: "Graph" })).not.toBeInTheDocument();
+
+    open();
+    expect(screen.getByRole("menu", { name: "Graph" })).toBeInTheDocument();
+    await userEvent.pointer({ keys: "[MouseLeft]", target: screen.getByLabelText("outside") });
+    expect(screen.queryByRole("menu", { name: "Graph" })).not.toBeInTheDocument();
+  });
+});
+
+describe("first-run card (flag screen.first-run)", () => {
+  const empty = () => wrap(withGraph({ getGraph: async () => sampleSnapshot({ nodes: [], links: [], node_count: 0 }) }), <GraphScreen search={{}} host={host} />);
+
+  it("on: an empty kb shows the card and its actions route to the inbox / Start", () =>
+    withFlag("screen.first-run", true, async () => {
+      render(empty());
+      expect(await screen.findByRole("heading", { name: "Build your knowledge base" })).toBeInTheDocument();
+      expect(screen.queryByText(/no pages yet/i)).not.toBeInTheDocument();
+      await userEvent.click(screen.getByRole("link", { name: /drop files here/i }));
+      expect(host.go).toHaveBeenCalledWith("/system", { tab: "pipeline" });
+      await userEvent.click(screen.getByRole("link", { name: /link a local folder/i }));
+      await userEvent.click(screen.getByRole("link", { name: /open an example/i }));
+      expect(host.go).toHaveBeenCalledWith("/", { start: "true" });
+    }));
+
+  it("on: the card is gone once the kb has a page", () =>
+    withFlag("screen.first-run", true, async () => {
+      render(wrap(withGraph(), <GraphScreen search={{}} host={host} />));
+      expect(await screen.findByTestId("graph-stats")).toBeInTheDocument();
+      expect(screen.queryByTestId("first-run")).not.toBeInTheDocument();
+    }));
+
+  it("off: the plain empty message stays", () =>
+    withFlag("screen.first-run", false, async () => {
+      render(empty());
+      expect(await screen.findByText(/no pages yet/i)).toBeInTheDocument();
+      expect(screen.queryByTestId("first-run")).not.toBeInTheDocument();
+    }));
+});

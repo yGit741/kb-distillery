@@ -23,22 +23,46 @@ def dist_dir() -> str:
     return str(resource("_webapp"))
 
 
+def _try_prebuilt(dist, want):
+    """Fetch the release's prebuilt bundle into `dist`; True when it is usable for sources hashing to `want` (or None)."""
+    from kb_distillery.webbuild import bundle_enabled, bundle_matches_sources, fetch_prebuilt, installed_version
+
+    if not bundle_enabled():
+        return False
+    accept = None if want is None else (lambda d: bundle_matches_sources(d, want))      # decided before dist is replaced
+    if not fetch_prebuilt(installed_version(), dist, accept=accept):
+        print("frontend: no usable prebuilt bundle for this version, building locally", flush=True)
+        return False
+    if want is not None:
+        (Path(dist) / STAMP).write_text(want + "\n")
+    return True
+
+
 def ensure_app_dist(frontend=None, runner=None, dist=None):
     """Build `src/kb_distillery/_webapp` from the current sources when they changed since the last build.
+
+    When the dist is missing or stale, the release's prebuilt bundle is tried first (`webbuild.fetch_prebuilt`, skipped
+    with `KB_WEB_BUNDLE=0`; only for the real `_webapp`, i.e. when `dist` is not passed). It is kept unless its
+    `SOURCE_HASH` differs from this checkout's `web/` hash, in which case (a dev checkout) the local build runs.
 
     Returns "fresh", "built" or a warning string; a failed or impossible build keeps the old dist. An installed
     package has no sources to build from: it serves the bundled shell as it is."""
     from kb_distillery.webbuild import frontend_source_hash
 
     frontend = frontend or frontend_dir()
+    prebuilt = dist is None
     dist = Path(dist or dist_dir())
     if frontend is None:
+        if not (dist / "index.html").is_file() and prebuilt and _try_prebuilt(dist, None):
+            return "fetched"
         return "fresh" if (dist / "index.html").is_file() else "no bundled web app in this install (build it from a checkout)"
     frontend = Path(frontend)
     want = frontend_source_hash(frontend)
     stamp = dist / STAMP
     if (dist / "index.html").is_file() and stamp.is_file() and stamp.read_text().strip() == want:
         return "fresh"
+    if prebuilt and _try_prebuilt(dist, want):
+        return "fetched"
     run = runner or subprocess.run
     if not (frontend / "node_modules").is_dir():
         # a fresh clone has no node_modules: install them once (same as `pixi run web-install`, needs the network)

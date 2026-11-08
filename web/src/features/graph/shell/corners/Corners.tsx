@@ -7,7 +7,7 @@ import { useUi } from "@/app/ui-store";
 import { cn } from "@/lib/utils";
 import { useApiQuery } from "@/lib/useApiQuery";
 import { useKb } from "@/lib/store";
-import { IS_SHARE } from "@/share/env";
+import { useCapabilities } from "../capabilities";
 import { useTheme } from "@/theme/theme";
 import { colorChannel, COLOR_TITLE } from "../../encoding/channels";
 import type { ToolHost } from "../../hostContext";
@@ -71,7 +71,8 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
   const qc = useQueryClient();
   const ui = useGraphUi();
   const theme = useTheme((s) => s.theme);
-  const server = ds.kind === "http" && !IS_SHARE;
+  const caps = useCapabilities();
+  const server = ds.kind === "http" && caps.saveViews;
   const sparkChat = useFlag("spark-chat");
   const intent = useFlag("graph-intent");
   const favSlugs = useFavorites((s) => s.slugs);
@@ -99,6 +100,9 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
 
   // ---- data
   const views = useQuery({ queryKey: ["corners", "views"], queryFn: () => listViews(f), enabled: server && pinsOpen, staleTime: 0 });
+  // a shared site has no server: its saved views are baked into the page and only opened here
+  const readOnlyPins = !server && caps.readViews && ds.kind === "embedded";
+  const sharedViews = useApiQuery(["views"], (d) => d.listViews(), { enabled: readOnlyPins && pinsOpen, retry: false });
   const [recentOn, setRecentOn] = useState(false);
   const recent = useQuery({ queryKey: ["corners", "recent"], queryFn: () => listRecent(f), enabled: server && pinsOpen && recentOn, staleTime: 0 });
   const think = useApiQuery(["think"], (d) => d.listThink(), { enabled: server && thinkOpen });
@@ -451,6 +455,33 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
         </>
       )}
 
+      {readOnlyPins && (
+        <>
+          <PinList
+            readOnly
+            open={pinsOpen}
+            views={sharedViews.data?.views}
+            viewsError={sharedViews.isError ? "error" : undefined}
+            recent={undefined}
+            suggest=""
+            onApply={(spec, id) => {
+              setActive(id);
+              if (!applySpec(spec, deps, { name: sharedViews.data?.views.find((v) => v.id === id)?.name ?? "Saved view" })) setNotice("Nothing in this view can be restored here");
+            }}
+            onPin={() => {}}
+            onRename={() => {}}
+            onRecentOpen={() => {}}
+            canApply={recognised}
+            favorites={favorites}
+            onFavorite={focusFavorite}
+            onAllViews={openGallery}
+          />
+          <CornerButton id={BTN_ID.pins} label="Saved views" data-tour="graph-views" on={pinsOpen} style={{ position: "absolute", left: EDGE, top: EDGE }} onClick={() => toggle("pins")}>
+            <PushPin />
+          </CornerButton>
+        </>
+      )}
+
       {notice && (
         <div
           role="status"
@@ -471,7 +502,7 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
         areaHeight={areaHeight}
         thinkCards={Math.max(1, thinkCards.length)}
       />
-      <TypesCard concepts={concepts} sources={sources} onToggle={(t) => ui.toggleType(t, allTypes, schema.defaultVisible)} onSpot={spot} />
+      <TypesCard concepts={concepts} sources={sources} onToggle={(types, on) => ui.setLayerTypes(types, on, allTypes, schema.defaultVisible)} onSpot={spot} />
     </div>
   );
 }

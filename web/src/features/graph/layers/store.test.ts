@@ -139,6 +139,24 @@ describe("layer store", () => {
   });
 });
 
+describe("a style layer alone", () => {
+  it("keeps every page drawn and the story (its page types) in place", () => {
+    useGraphUi.setState({ story: "orient" });
+    useLayers.getState().apply("replace", [makeLayer("style", "nodes", {}, "colour by depth", { style: { color: "depth" } })]);
+    expect(shown).not.toHaveBeenCalled();
+    expect(useGraphUi.getState().view).toBeNull();
+    expect(useGraphUi.getState().colorBy).toBe("depth");
+    expect(useGraphUi.getState().story).toBe("orient");
+  });
+
+  it("stacked onto a show layer, the shown set stays", () => {
+    useLayers.getState().apply("replace", [papers()]);
+    useLayers.getState().apply("stack", [makeLayer("style", "nodes", {}, "colour by depth", { style: { color: "depth" } })]);
+    expect(shown).toHaveBeenLastCalledWith(["2019-fine-grained", "2020-listed-paper"]);
+    expect(useGraphUi.getState().colorBy).toBe("depth");
+  });
+});
+
 describe("preview", () => {
   it("setPreview leaves the stack alone and cancel gives back a tint", () => {
     const style = makeLayer("style", "nodes", {}, "colour by depth", { style: { color: "depth" } });

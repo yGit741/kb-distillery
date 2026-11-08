@@ -64,4 +64,4 @@ Read-only: no network, no LLM call, no lint, nothing written.
 `{backend: {ok, why, fix}}` for `subscription`, `api`, `batch`, with no LLM call. Subscription = the `claude` CLI is on
 PATH and `claude auth status` says logged in with a subscription. api and batch = `api_key()` finds a key
 (`ANTHROPIC_API_KEY`, then `~/.config/kb-distillery/anthropic_key`); the key itself is never reported. All three backends
-stay selectable per run (`--backend`, `$KB_LLM_BACKEND`); the app uses this to grey out AI features when none is ok.
+stay selectable per run (`--backend`, `$KB_LLM_BACKEND`); an extra `providers` entry reports the same for each vendor (`claude`, `openai`, `gemini`); the app uses this to grey out AI features when none is ok.

@@ -31,6 +31,18 @@ pixi is solved for macOS (`osx-arm64`, `osx-64`) and Linux (`linux-64`). Tests d
 
 Knowledge bases live in `~/knowledge/<id>` (or under `$KB_DISTILLERY_HOME`), each in its own git repository. Do not add pages, sources, notes, local paths, names or keys to tracked files. The privacy ratchet in `tests/lint/` fails on personal strings and token-shaped text in tracked files, and CI runs a secret scan.
 
+## Repository layout
+
+| Folder | What it holds |
+|---|---|
+| `.github/` | CI workflows, issue and pull request templates, security policy and code of conduct |
+| `docs/` | public documentation and guides |
+| `examples/` | the sample knowledge base (`demo/`) and scheduler templates (`launchd/`) |
+| `scripts/` | git and Claude hooks and launch scripts |
+| `src/` | the `kb_distillery` Python package and its kits |
+| `tests/` | the test suite, mirroring `src/` |
+| `web/` | the React app |
+
 ## Change flow
 
 Never commit to `main`. Use `ship`, which wraps branch, commit, gates and pull request.

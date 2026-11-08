@@ -13,6 +13,10 @@ export const LINE_COPY = {
   /** The last row under the closest options; `text` is what was typed after the slash. */
   searchInstead: (text: string) => `Search for '${text}' instead`,
   viewRow: "Change the view:",
+  /** Shown in place of the `>` mode on a shared site, where the view cannot be changed by writing. */
+  sentenceUnavailable: "Changing the view is not available here",
+  /** The placeholder of the line on a shared site: no `>` segment. */
+  placeholderShare: "Search everything · / commands",
   viewEmpty: "Describe the view you want after >, for example colour by area.",
   /** A `>` sentence the rules could not read goes to the model; this says so while it works. */
   asking: "Not a sentence I can read by rules, so I am asking a model.",
@@ -82,7 +86,7 @@ export const LINE_COPY = {
   /** The view gallery: a window of every view, with its filter, cards and anchored-view field. */
   gallery: {
     title: "Views",
-    command: { label: "Gallery", hint: "all views" },
+    command: { label: "View gallery", hint: "all views" },
     filterLabel: "Filter views",
     filterPlaceholder: "Filter by name or description",
     ready: "Ready views",

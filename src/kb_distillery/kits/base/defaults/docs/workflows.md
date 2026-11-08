@@ -96,3 +96,14 @@ python3 -m kb_distillery.distill abort <think-file>
 ```
 
 `think/` is never agent-edited. See `.claude/skills/distill-think/SKILL.md`.
+
+## Providers
+
+Every LLM call goes through `kb_distillery.llm`, which has two independent choices. The **backend** is how a call is billed
+and run: `subscription` (`claude -p`), `api` or `batch` (`--backend`, `$KB_LLM_BACKEND`). The **provider** is the model
+vendor: `claude` (default), `openai` or `gemini` (`--provider`, `$KB_LLM_PROVIDER`, or `Request.provider`). Each non-Claude
+provider is a small stdlib adapter in `llm/providers/`; it runs on the `api` backend only (subscription and batch are
+Claude-only and raise `LLMError`) and takes text, not images. Keys come from `ANTHROPIC_API_KEY`, `OPENAI_API_KEY` or
+`GEMINI_API_KEY`, or the file `~/.config/kb-distillery/<provider>_key`; `llm.availability()["providers"]` reports which
+are usable. A request's model must belong to its provider (`gpt-4.1-mini`, `gemini-2.5-flash`, or a Claude alias).
+Example: `pixi run llm -- ask "hello" --provider openai --model gpt-4.1-mini`.

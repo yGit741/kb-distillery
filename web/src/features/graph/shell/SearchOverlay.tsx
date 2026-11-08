@@ -8,6 +8,7 @@ import { useFlag } from "@/flags/useFlag";
 import { useKb } from "@/lib/store";
 import { useApiQuery } from "@/lib/useApiQuery";
 import { IS_SHARE } from "@/share/env";
+import { useCapabilities } from "./capabilities";
 import type { ToolHost } from "../hostContext";
 import { openCaptureAbout } from "../captureAbout";
 import { ACTION_ITEMS, type MenuContext } from "../menu";
@@ -62,6 +63,7 @@ export function SearchOverlay() {
 
 function Sheet({ onClose }: { onClose: () => void }) {
   const ds = useDataSource();
+  const caps = useCapabilities();
   const navigate = useNavigate();
   const [raw, setRaw] = useState("");
   const [idx, setIdx] = useState(0);
@@ -80,14 +82,17 @@ function Sheet({ onClose }: { onClose: () => void }) {
 
   const live = ds.kind !== "embedded";
   const graphQ = useApiQuery(["graph", false], (d) => d.getGraph());
-  const viewsQ = useApiQuery(["views"], (d) => d.listViews(), { enabled: live, retry: false, staleTime: 5_000 });
+  const viewsQ = useApiQuery(["views"], (d) => d.listViews(), { enabled: live || caps.readViews, retry: false, staleTime: 5_000 });
   const nodes = useMemo<GNode[]>(() => graphQ.data?.nodes ?? [], [graphQ.data]);
   const byId = useMemo(() => new Map(nodes.map((n) => [n.id, n] as const)), [nodes]);
-  const parsed = parseMode(raw);
-  const text = raw.trim();
-  const slash = raw.startsWith("/");
-  const viewMode = parsed.mode === "view";
-  const results = usePageResults(nodes, byId, raw, !slash && !viewMode && text.length > 0);
+  // a shared site cannot change the view by writing: `>` is dropped and the rest is searched
+  const sentenceBlocked = !caps.sentences && raw.startsWith(">");
+  const line = sentenceBlocked ? raw.replace(/^>[+-]?\s*/, "") : raw;
+  const parsed = parseMode(line);
+  const text = line.trim();
+  const slash = line.startsWith("/");
+  const viewMode = caps.sentences && parsed.mode === "view";
+  const results = usePageResults(nodes, byId, line, !slash && !viewMode && text.length > 0);
 
   const commands = useMemo<Command[]>(
     () => [
@@ -137,7 +142,7 @@ function Sheet({ onClose }: { onClose: () => void }) {
     });
     if (viewMode) {
       // the sentence is read and previewed on the graph: hand it over and go there
-      if (!parsed.text || !live || IS_SHARE) return [];
+      if (!parsed.text || !live || !caps.sentences) return [];
       return [
         {
           key: "view-handoff",
@@ -157,7 +162,7 @@ function Sheet({ onClose }: { onClose: () => void }) {
         },
       ];
     }
-    if (slash) return filterCommands(commands, raw.slice(1)).map(commandRow);
+    if (slash) return filterCommands(commands, line.slice(1)).map(commandRow);
     if (!text) {
       return (viewsQ.data?.views ?? []).map<PanelRow>((v) => ({
         key: `view:${v.id}`,
@@ -187,7 +192,7 @@ function Sheet({ onClose }: { onClose: () => void }) {
       },
       runView: showView,
     });
-    if (!IS_SHARE) {
+    if (caps.ask) {
       out.push({
         key: "ask",
         section: "Actions",
@@ -207,7 +212,7 @@ function Sheet({ onClose }: { onClose: () => void }) {
     }
     return out;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [viewMode, slash, raw, text, parsed.text, live, commands, index, results, viewsQ.data, byId, openNode, onGraph, showView, go, onClose]);
+  }, [viewMode, slash, line, caps.ask, caps.sentences, text, parsed.text, live, commands, index, results, viewsQ.data, byId, openNode, onGraph, showView, go, onClose]);
 
   useEffect(() => setIdx(0), [raw]);
   useEffect(() => setIdx((i) => Math.min(i, Math.max(rows.length - 1, 0))), [rows.length]);
@@ -236,7 +241,7 @@ function Sheet({ onClose }: { onClose: () => void }) {
     setMenu({ target, x: r.right - 24, y: r.bottom + 4 });
   }, [rows]);
 
-  const empty = viewMode ? LINE_COPY.viewEmpty : slash ? LINE_COPY.hints.command : text ? "Nothing matches." : live && !IS_SHARE ? O.empty : O.emptyShare;
+  const empty = viewMode ? LINE_COPY.viewEmpty : slash ? LINE_COPY.hints.command : text ? "Nothing matches." : live && caps.ask ? O.empty : O.emptyShare;
 
   return (
     <div
@@ -257,8 +262,9 @@ function Sheet({ onClose }: { onClose: () => void }) {
           rows={rows}
           idx={idx}
           setIdx={setIdx}
-          placeholder={LINE_COPY.placeholder}
+          placeholder={caps.sentences ? LINE_COPY.placeholder : LINE_COPY.placeholderShare}
           empty={empty}
+          hint={sentenceBlocked ? LINE_COPY.sentenceUnavailable : undefined}
           inputRef={input}
           onClose={onClose}
           onMenu={openMenu}
