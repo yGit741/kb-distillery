@@ -46,8 +46,8 @@ def test_first_other_provider_with_a_key(world):
     assert llm.resolve() == ("openai", "api")
 
 
-def test_nothing_set_up_falls_back_to_claude_api(world):
-    assert llm.resolve() == ("claude", "api")
+def test_nothing_set_up_falls_back_to_claude_default(world):
+    assert llm.resolve() == ("claude", llm.DEFAULT_BACKEND)
 
 
 def test_precedence_arg_env_kb(world, monkeypatch):
@@ -92,3 +92,13 @@ def test_cli_ask_uses_resolve(world, monkeypatch, capsys):
     assert seen["provider"] == "openai" and seen["backend"] == "api" and seen["model"] == "gpt-4.1-mini"
     with pytest.raises(llm.LLMError):
         cli.main(["ask", "hi", "--provider", "gemini", "--backend", "batch"])
+
+
+def test_not_logged_in_and_no_key_keeps_the_default_backend(world):
+    assert llm.resolve("claude") == ("claude", llm.DEFAULT_BACKEND)
+
+
+def test_claude_only_backend_never_auto_picks_another_vendor(world, monkeypatch):
+    world.keys["openai"] = True
+    monkeypatch.setenv("KB_LLM_BACKEND", "batch")
+    assert llm.resolve() == ("claude", "batch")

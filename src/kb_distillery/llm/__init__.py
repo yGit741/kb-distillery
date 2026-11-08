@@ -13,7 +13,10 @@ stdlib adapter under `kb_distillery.llm.providers` (`complete(request, model_id,
 runs on all three backends; `openai` and `gemini` are `api` only (one blocking call per request, on the same thread pool)
 and refuse images. Keys: ANTHROPIC_API_KEY / OPENAI_API_KEY / GEMINI_API_KEY or ~/.config/kb-distillery/<provider>_key.
 Provider: `Request.provider`; when empty it follows the model (a Claude alias or `gpt-*` / `gemini-*` id). Entry points that
-choose the model themselves (the CLI) use `resolve_provider()`: argument, then $KB_LLM_PROVIDER, then `claude`.
+choose the model themselves (the CLI) use `resolve(provider, backend)`: provider = argument, $KB_LLM_PROVIDER, `[llm] provider`
+in the kb's kb.toml, else automatic (Claude subscription if logged in, else Claude API key, else the first vendor with a
+key); backend = argument, $KB_LLM_BACKEND, else subscription when logged in, else api when a key exists. Library callers
+that name their model keep `resolve_backend()`; wiring them to `resolve()` is up to each feature.
 A request's model must belong to its provider.
 
 Backend precedence: the `backend=` argument, then $KB_LLM_BACKEND, then DEFAULT_BACKEND.
@@ -154,14 +157,16 @@ def resolve(provider=None, backend=None, kb=None):
     if chosen is None:
         sub = _subscription()["ok"]
         others = (n for n in PROVIDERS if n != "claude" and providers.get(n).availability()[0])
-        chosen = "claude" if (sub or api_key()) else next(others, "claude")
+        claude_only_backend = b in ("subscription", "batch")      # a backend only Claude has: do not auto-pick another vendor
+        chosen = "claude" if (sub or api_key() or claude_only_backend) else next(others, "claude")
     if chosen != "claude":
         if b not in (None, "api"):
             raise LLMError(f"the {chosen} provider runs on the api backend only (got {b}); "
                            f"subscription and batch are Claude-only")
         return chosen, "api"
     if b is None:
-        b = "subscription" if (_subscription()["ok"] if sub is None else sub) else "api"
+        logged_in = _subscription()["ok"] if sub is None else sub
+        b = DEFAULT_BACKEND if (logged_in or not api_key()) else "api"
     return chosen, b
 
 
