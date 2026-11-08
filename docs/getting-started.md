@@ -6,6 +6,23 @@ Supported platforms: macOS (Apple silicon and Intel) and Linux x86-64. Windows i
 
 AI features are optional. Reading, linking, linting and the app work without a key. A digest needs a Claude login or an Anthropic API key; only Anthropic models are supported.
 
+## Install in two lines
+
+```bash
+git clone https://github.com/yGit741/kb-distillery kb-distillery && cd kb-distillery
+./install.sh
+```
+
+What it does: it checks the system (macOS, Linux or WSL2), installs pixi if it is missing, runs `pixi install`, runs `distill doctor`, creates a default knowledge base called `my-kb` when you have none (an existing one is left alone and used), checks it again and opens the app. It asks no questions and needs no model key. Running it again only updates the environment and opens the app. Flags: `--no-open`, `--kb-id <id>`, `--kit base|research`, `--dir <parent>`, `--dry-run` (print the commands, run nothing).
+
+### Windows (WSL2)
+
+Windows itself is not supported. Install WSL2 with Ubuntu (`wsl --install -d Ubuntu` in an administrator PowerShell), open the Ubuntu terminal, then run the same two lines inside it.
+
+## Step by step
+
+The rest of this page is what `install.sh` does, one command at a time.
+
 ## 1. Install
 
 ```bash

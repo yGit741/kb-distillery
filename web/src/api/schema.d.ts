@@ -687,6 +687,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/line/route": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Read a plain line as a page search, a view change, a command or a question */
+        post: operations["post_line_route_api_line_route_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/ops": {
         parameters: {
             query?: never;
@@ -2869,6 +2886,79 @@ export interface components {
             pr_merges: number;
             /** Undone */
             undone: number;
+        } & {
+            [key: string]: unknown;
+        };
+        /** LineCommand */
+        LineCommand: {
+            /** Id */
+            id: string;
+            /** Label */
+            label: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** LineRouteRequest */
+        LineRouteRequest: {
+            /**
+             * Backend
+             * @description LLM backend for this request; default $KB_LLM_BACKEND, then subscription. A batch never answers within the deadline, so it reads as a page search
+             */
+            backend?: ("subscription" | "api" | "batch") | null;
+            /**
+             * Commands
+             * @description The commands the line offers, by id and name
+             */
+            commands?: components["schemas"]["LineCommand"][];
+            /**
+             * Fallback
+             * @description Backend tried once when the first one fails. Default none: routing never moves to a paid backend by itself
+             */
+            fallback?: ("subscription" | "api" | "batch" | "none") | null;
+            /**
+             * Text
+             * @description A line the browser's rules could not place
+             */
+            text: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** LineRouteResponse */
+        LineRouteResponse: {
+            /**
+             * Backend
+             * @description The LLM backend that answered; empty when none was asked
+             * @default
+             */
+            backend: string;
+            /**
+             * Command
+             * @description The command id, only for intent `command`
+             */
+            command?: string | null;
+            /** Fallback From */
+            fallback_from?: string | null;
+            /**
+             * Intent
+             * @enum {string}
+             */
+            intent: "search" | "view" | "command" | "ask";
+            /**
+             * Reason
+             * @description Why the line reads as a search when the model could not place it
+             * @default
+             */
+            reason: string;
+            /**
+             * Text
+             * @description The line to pass on (the model may tidy it)
+             */
+            text: string;
+            /**
+             * Usd
+             * @default 0
+             */
+            usd: number;
         } & {
             [key: string]: unknown;
         };
@@ -6045,6 +6135,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["LifecycleSnapshot"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_line_route_api_line_route_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LineRouteRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LineRouteResponse"];
                 };
             };
             /** @description Validation Error */

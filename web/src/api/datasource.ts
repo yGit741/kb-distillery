@@ -38,6 +38,12 @@ export interface DataSource {
    * `fallback` default to the server's choice (subscription, then api when it fails); the answer says which one replied.
    */
   layersFromText(text: string, op: "replace" | "stack" | "remove", opts?: { backend?: "subscription" | "api" | "batch"; fallback?: "subscription" | "api" | "batch" | "none" }): Promise<T.LayersResult>;
+  /**
+   * A plain line of the search line that the browser's rules could not place, read by the LLM (local app only): a page
+   * search, a view change, a command (one of `commands`) or a question. Never fails for the model's sake: a failure
+   * answers `search` with a `reason`.
+   */
+  routeLine(text: string, commands: readonly { id: string; label: string }[], opts?: { signal?: AbortSignal }): Promise<T.LineRoute>;
   /** LLM relation proposals in a confidence range 0..1 (local app only), best first, with a 10-bucket histogram. */
   getRelationProposals(opts: { min: number; max: number; kind?: string }): Promise<T.RelationProposals>;
 
