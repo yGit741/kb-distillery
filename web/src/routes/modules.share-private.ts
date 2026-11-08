@@ -2,4 +2,4 @@
 import type { FeatureModule } from "./modules";
 
 /** Share build `private`: the core screens plus every screen.* flag on for private. Nothing else is imported. */
-export const modules = import.meta.glob<FeatureModule>(["../features/home/index.tsx", "../features/graph/index.tsx", "../features/pages/index.tsx", "../features/lifecycle/index.tsx", "../features/share/index.tsx", "../features/start/index.tsx"], { eager: true });
+export const modules = import.meta.glob<FeatureModule>(["../features/home/index.tsx", "../features/graph/index.tsx", "../features/pages/index.tsx", "../features/about/index.tsx", "../features/lifecycle/index.tsx", "../features/share/index.tsx", "../features/start/index.tsx"], { eager: true });

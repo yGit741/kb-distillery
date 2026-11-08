@@ -35,23 +35,35 @@ export function resolveConcept(v: Vault, wanted: string | undefined, seed: numbe
 }
 
 /**
- * Home is one intro card (approved mock v16): title and byline, the "How a page gets here" glossary, and the
- * inner card that picks a concept and shows its ego graph and the pipeline of one source it relies on.
+ * Home is one intro card (approved mock v16): title and byline, and the inner card that picks a concept and shows its ego graph and the pipeline of one source it relies on.
  */
 export function HomeScreen({ host, concept, startForced }: { host: HomeHost; concept?: string; startForced?: boolean }) {
   return (
     <>
       <StartCard forced={startForced} onDismissed={host.closeStart} />
-      <HomeBody host={host} concept={concept} />
+      <MapCard host={host} concept={concept} />
     </>
   );
 }
 
-function HomeBody({ host, concept: wanted }: { host: HomeHost; concept?: string }) {
+/** What the card says above the explorer. Home: the map's title; What is it?: its own title, the glossary above the explorer. */
+export interface MapIntro {
+  id: string;
+  title: string;
+  byline: string;
+  /** "How a page gets here" (Raw -> Source -> Concept) and the reading depths, above Pick a Concept */
+  glossary?: boolean;
+}
+const HOME_INTRO: MapIntro = { id: "home-intro", title: "A Map of the Knowledge That Interests Me", byline: "Created by my research agent and me." };
+
+/** The map card: a title, optionally the glossary, and Pick a Concept (ego graph, one source's pipeline, Back). */
+export function MapCard({ host, concept: wanted, intro = HOME_INTRO }: { host: HomeHost; concept?: string; intro?: MapIntro }) {
   const q = useApiQuery(["graph", false], (d) => d.getGraph());
   const publicOnly = SHARE_PROFILE === "public";
   const [seed, setSeed] = useState(newSeed);
   const [local, setLocal] = useState<string | undefined>(undefined);
+  // the concepts shown before this one, newest last: Back walks them (the URL is replaced on each pick, so the browser's Back cannot)
+  const [trail, setTrail] = useState<string[]>([]);
   const vault = useMemo(() => {
     const data = q.data;
     if (!data) return null;
@@ -64,7 +76,9 @@ function HomeBody({ host, concept: wanted }: { host: HomeHost; concept?: string 
   if (q.isError) return <ErrorState title="Could not load the graph" error={q.error} onRetry={() => void q.refetch()} />;
   if (!vault || !concept) return <Empty>Nothing to show yet: digest a few sources and link them.</Empty>;
 
+  const leave = () => setTrail((t) => (t[t.length - 1] === concept ? t : [...t, concept].slice(-50)));
   const pick = (id: string) => {
+    if (id !== concept) leave();
     setLocal(id);
     setSeed(newSeed());
     host.setConcept?.(id);
@@ -74,21 +88,37 @@ function HomeBody({ host, concept: wanted }: { host: HomeHost; concept?: string 
     const next = drawPickable(vault, rng(s), publicOnly ? isPublic : undefined);
     setSeed(s);
     if (next) {
+      if (next !== concept) leave();
       setLocal(next);
       host.setConcept?.(next);
     }
   };
 
+  // a concept that left the graph (or the public subset) since it was shown is skipped, not drawn at random
+  const keep = (id: string) => {
+    const n = vault.byId.get(id);
+    return isPickable(n) && (!publicOnly || isPublic(n));
+  };
+  const live = trail.filter(keep);
+  const back = () => {
+    const prev = live[live.length - 1];
+    if (!prev) return;
+    setTrail(live.slice(0, -1));
+    setLocal(prev);
+    setSeed(newSeed());
+    host.setConcept?.(prev);
+  };
+
   return (
-    <Card className="mx-auto w-full min-w-0 max-w-[1100px] px-4 pb-5 pt-4 sm:px-5" aria-labelledby="home-intro">
+    <Card className="mx-auto w-full min-w-0 max-w-[1100px] px-4 pb-5 pt-4 sm:px-5" aria-labelledby={intro.id}>
       <div>
-        <h1 id="home-intro" className="text-[22px] font-semibold tracking-tight [text-wrap:balance]">
-          A Map of the Knowledge That Interests Me
+        <h1 id={intro.id} className="text-[22px] font-semibold tracking-tight [text-wrap:balance]">
+          {intro.title}
         </h1>
-        <p className="mt-0.5 text-xs tracking-wide text-muted-foreground">Created by my research agent and me.</p>
+        <p className="mt-0.5 text-xs tracking-wide text-muted-foreground">{intro.byline}</p>
       </div>
-      <Glossary />
-      <ConceptExplorer vault={vault} concept={concept} seed={seed} publicOnly={publicOnly} host={host} onPick={pick} onShuffle={shuffle} />
+      {intro.glossary && <Glossary />}
+      <ConceptExplorer vault={vault} concept={concept} seed={seed} publicOnly={publicOnly} host={host} onPick={pick} onShuffle={shuffle} onBack={live.length ? back : undefined} backTo={vault.byId.get(live[live.length - 1] ?? "")?.title || live[live.length - 1]} />
     </Card>
   );
 }
