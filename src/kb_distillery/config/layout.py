@@ -19,3 +19,4 @@ MANIFEST = "meta/corpus.tsv"        # the corpus manifest
 OPS_DIR = "meta/.ops"
 INGEST_DIR = "meta/.ingest"
 DISTILL_DIR = "meta/.distill"
+JOBS_DIR = "meta/.jobs"           # app digest jobs (kb_distillery.services.digest_jobs)
