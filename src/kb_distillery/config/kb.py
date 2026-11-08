@@ -381,6 +381,22 @@ def vault_root() -> str:
     return kb.root if kb else (checkout_root() or os.getcwd())
 
 
+def is_engine_checkout(root: str) -> bool:
+    """True when `root` is the engine's own checkout (or its main working tree) and not a knowledge base: it has no
+    kb.toml. Knowledge state (meta/.ops, metrics) must never be written there."""
+    if not root or os.path.isfile(os.path.join(root, CONFIG_NAME)):
+        return False
+    here = os.path.realpath(root)
+    return here in {os.path.realpath(p) for p in (checkout_root(), primary_root()) if p}
+
+
+def require_kb_root(root: str, what: str = "this command") -> None:
+    """Refuse to write knowledge state into the engine checkout (no knowledge base was selected)."""
+    if is_engine_checkout(root):
+        raise KbConfigError(f"{what} needs a knowledge base, but the folder is the engine repo ({root}), which is not one — "
+                            f"pass --kb <id|path> or set KB")
+
+
 READ_ONLY_MESSAGE = "this knowledge base is read-only (example kb)"
 READ_ONLY_ENV = "KB_READ_ONLY"
 

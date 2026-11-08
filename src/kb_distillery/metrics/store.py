@@ -25,6 +25,8 @@ def path(name, root=None):
             root = primary_checkout(vault_root())
         except Exception:  # noqa: BLE001 — not a git checkout (tests, exports)
             root = vault_root()
+    from kb_distillery.config.kb import require_kb_root
+    require_kb_root(root, "metrics")
     return os.path.join(root, OPS_DIR, METRICS_DIR, name)
 
 
