@@ -88,7 +88,7 @@ describe("the view gallery (graph-intent)", () => {
       await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
       await userEvent.click(box());
       await userEvent.type(box(), "/gallery");
-      await userEvent.click(await screen.findByRole("option", { name: /^Gallery/ }));
+      await userEvent.click(await screen.findByRole("option", { name: /^View gallery/ }));
       expect(await screen.findByRole("dialog", { name: "Views" })).toBeInTheDocument();
     });
   });
@@ -209,7 +209,7 @@ describe("the view gallery (graph-intent)", () => {
       setup();
       await userEvent.type(box(), "/");
       await screen.findByRole("option", { name: /Fit to view/ });
-      expect(screen.queryByRole("option", { name: /^Gallery/ })).toBeNull();
+      expect(screen.queryByRole("option", { name: /^View gallery/ })).toBeNull();
       act(() => useGallery.getState().show());
       expect(screen.queryByRole("dialog")).toBeNull();
     });
