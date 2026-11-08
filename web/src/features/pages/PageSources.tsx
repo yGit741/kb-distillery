@@ -256,8 +256,8 @@ export function SourcesMarginDots({ sources, articleRef }: { sources: PageSource
   }, [measure, articleRef]);
   return (
     <>
-      {dots.map((d) => (
-        <span key={d.heading} className="group absolute -left-4 z-10" style={{ top: d.top }} data-testid="sources-margin-dot">
+      {dots.map((d, i) => (
+        <span key={`${i}-${d.heading}`} className="group absolute -left-4 z-10" style={{ top: d.top }} data-testid="sources-margin-dot">
           <button
             type="button"
             aria-label={`Cited here: ${d.titles.join(", ")}`}

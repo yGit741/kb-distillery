@@ -57,7 +57,7 @@ def _sections(body, needles):
         if m:
             heading = m.group(2)
             continue
-        if heading and heading not in hits and any(n and n in line for n in needles):
+        if heading and heading not in hits and any(n and re.search(r"(?<![\w.-])" + re.escape(n) + r"(?![\w-])", line) for n in needles):
             hits.append(heading)
     return hits
 

@@ -190,7 +190,7 @@ export function PageReader({ g, detail, embed, pinned, onTogglePin, onConnect, v
           <MiniGraph g={g} slug={card.id} />
         </div>
         {sources.length > 0 && (
-          <Fold title={sourcesOn ? "Linked source pages" : "Sources"} count={sources.length}>
+          <Fold title={sourcesOn && pageSources?.length ? "Linked source pages" : "Sources"} count={sources.length}>
             <PageList g={g} items={sources.map((id) => ({ id }))} empty="" />
           </Fold>
         )}
