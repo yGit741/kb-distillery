@@ -23,18 +23,11 @@ raw/**/*.pdf
 raw/**/*.epub
 raw/assets/
 
-# Ingest pipeline staging (session backups, claims, plans)
-meta/.ingest/
-
 # Researcher profile staging (manifests, verify snapshots)
 meta/.researcher/
-meta/.migrate/
 
 # Distill pipeline staging (session backups, plans)
 meta/.distill/
-
-# Catalog outcome log (events + failures; the dashboard's Ingestion status) — local, never committed
-meta/.catalog/
 
 # Semantic find bundles (transient LLM review packets)
 meta/.semfind/

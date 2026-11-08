@@ -119,3 +119,11 @@ def test_empty_text_asks_nobody(monkeypatch):
 def test_the_route_refuses_a_foreign_origin(client):
     r = client.post("/api/line/route", json={"text": "x"}, headers={"Origin": "https://evil.example.com"})
     assert r.status_code == 403
+
+
+def test_a_read_only_server_refuses_the_route(client, monkeypatch):
+    monkeypatch.setenv("KB_READ_ONLY", "1")
+    with mock.patch.object(llm, "ask") as ask:
+        r = client.post("/api/line/route", json={"text": "x"}, headers=ORIGIN)
+    assert r.status_code == 405
+    ask.assert_not_called()

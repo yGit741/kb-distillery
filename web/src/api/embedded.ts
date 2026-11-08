@@ -123,6 +123,8 @@ export function createEmbeddedDataSource(blob: ShareBlob | undefined = globalThi
       // The snapshot was captured by the share builder: no local policy state, JSON-safe stats keys.
       return { ...l, policy: { ...l.policy, hooks_installed: l.policy?.hooks_installed ?? false } };
     },
+    listViews: async () => ({ views: data.views ?? [] }),
+    listReadyViews: async () => ({ views: data.readyViews ?? [] }),
     getShareStatus: async () => ({ status: null, chip: null }),
     getRawCard: async (slug) => {
       const card = data.rawCards?.[slug];

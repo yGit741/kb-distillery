@@ -8,7 +8,7 @@ import { HEADER_SLOT_ID } from "@/app/headerSlot";
 import { Empty, ErrorState, Loading } from "@/components/states";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { IS_SHARE } from "@/share/env";
+import { useCapabilities } from "./shell/capabilities";
 import { useKb } from "@/lib/store";
 import { useApiQuery } from "@/lib/useApiQuery";
 import type { GraphSearch } from "@/routes/search";
@@ -275,6 +275,7 @@ function Loaded({
   onRefresh: () => void;
   dsKind: string;
 }) {
+  const caps = useCapabilities();
   const visibleTools = useVisibleTools();
   const shell = useFlag("graph-shell");
   const headerFold = useFlag("header-fold");
@@ -755,7 +756,7 @@ function Loaded({
           <Button size="sm" variant="ghost" onClick={() => ui.set({ detailsOpen: true })}>
             Details
           </Button>
-          {!IS_SHARE && (
+          {caps.ask && (
             <Button size="sm" variant="ghost" onClick={() => useChatDock.getState().ask(askAbout(selected))}>
               Ask
             </Button>

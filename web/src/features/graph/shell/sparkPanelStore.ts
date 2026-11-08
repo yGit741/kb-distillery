@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { flag } from "@/flags";
-import { IS_SHARE } from "@/share/env";
+import { capabilities } from "./capabilities";
 
 /**
  * State of the left chat panel (flag `spark-chat`). `key` changes each time a chat is opened, so the panel remounts
@@ -26,5 +26,5 @@ export const useSparkPanel = create<SparkPanelState>((set) => ({
  * panel lives in the shell frame) and never in a share build (no chat code there). Every opener asks this one rule.
  */
 export function chatInPanel(): boolean {
-  return flag("spark-chat") && flag("graph-shell") && !IS_SHARE && import.meta.env.MODE !== "share";
+  return flag("spark-chat") && flag("graph-shell") && capabilities().chat && import.meta.env.MODE !== "share";
 }

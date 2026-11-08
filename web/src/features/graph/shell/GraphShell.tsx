@@ -29,7 +29,7 @@ import { useDataSource, type PinnedView, type RecentStep } from "@/api";
 import { useFlag } from "@/flags/useFlag";
 import { useKb } from "@/lib/store";
 import { useApiQuery } from "@/lib/useApiQuery";
-import { IS_SHARE } from "@/share/env";
+import { useCapabilities } from "./capabilities";
 import { NodeSwatch } from "../encoding/NodeMarkSvg";
 import { useToolHost } from "../hostContext";
 import type { ColorBy } from "../style";
@@ -140,10 +140,12 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
   const calm = useFlag("calm-graph");
   const intent = useFlag("graph-intent");
   // flag line-routing: Enter on a plain line (or a / line no command fits) reads it by itself
-  const routing = useFlag("line-routing") && intent;
-  // meaning (flags graph-intent and semantic-search): never on the share build or the embedded data
+  const caps = useCapabilities();
+  // (not on a shared site: it cannot write a view or ask a model)
+  const routing = useFlag("line-routing") && intent && caps.sentences;
+  // meaning (flags graph-intent and semantic-search): a model call, so never on the share build or the embedded data
   const semantic = useFlag("semantic-search");
-  const meaningOn = intent && semantic && !IS_SHARE && ds.kind !== "embedded";
+  const meaningOn = intent && semantic && caps.serverSearch && ds.kind !== "embedded";
   const kbViewOn = useFlag("kb-view") && ds.kind !== "embedded";
   const [raw, setRaw] = useState("");
   const [open, setOpen] = useState(false);
@@ -192,10 +194,13 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
     return () => useLayers.getState().setGraph(null);
   }, [intent, nodes, links, favs, favsLoaded, meaningOn, ds]);
 
-  const text = raw.trim();
-  const slash = raw.startsWith("/");
-  const parsed = parseMode(raw);
-  const viewMode = intent && parsed.mode === "view";
+  // a shared site cannot change the view by writing: `>` is dropped and the rest is searched (with one quiet line saying so)
+  const sentenceBlocked = intent && !caps.sentences && raw.startsWith(">");
+  const line = sentenceBlocked ? raw.replace(/^>[+-]?\s*/, "") : raw;
+  const text = line.trim();
+  const slash = line.startsWith("/");
+  const parsed = parseMode(line);
+  const viewMode = intent && caps.sentences && parsed.mode === "view";
   const [hintMode, setHintMode] = useState<LineMode | null>(null);
   // flag line-routing: which way the last line went, said in the panel while it stays open; an arrow key is a pick
   const [routedHint, setRoutedHint] = useState<string | null>(null);
@@ -205,16 +210,16 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
 
   // ---- data: recent steps and pinned views (rest), the knowledge bases (kb-view), page results (typing)
   const live = ds.kind !== "embedded";
-  const recentQ = useApiQuery(["recent"], (d) => d.listRecent(), { enabled: live, retry: false, staleTime: 5_000 });
-  const viewsQ = useApiQuery(["views"], (d) => d.listViews(), { enabled: live, retry: false, staleTime: 5_000 });
+  const recentQ = useApiQuery(["recent"], (d) => d.listRecent(), { enabled: live && caps.recentSteps, retry: false, staleTime: 5_000 });
+  const viewsQ = useApiQuery(["views"], (d) => d.listViews(), { enabled: live || caps.readViews, retry: false, staleTime: 5_000 });
   // flag graph-intent: the kit's ready views (lines of the query language; each is read here, never by the server)
-  const readyQ = useApiQuery(["views", "ready"], (d) => d.listReadyViews(), { enabled: live && intent && !IS_SHARE, retry: false, staleTime: 60_000 });
+  const readyQ = useApiQuery(["views", "ready"], (d) => d.listReadyViews(), { enabled: (live || caps.readViews) && intent, retry: false, staleTime: 60_000 });
   const ready = useMemo<ReadyCard[]>(() => (readyQ.data?.views ?? []).map(readyCard), [readyQ.data]);
   const kbQ = useApiQuery(["kb"], (d) => d.getKb(), { staleTime: Infinity, retry: false });
   const kbListQ = useApiQuery(["kb-list"], (d) => d.listKbs(), { enabled: kbViewOn, staleTime: 30_000 });
-  const results = usePageResults(nodes, byId, raw, !slash && text.length > 0);
+  const results = usePageResults(nodes, byId, line, !slash && text.length > 0);
   const router = useRouter({ warn: false });
-  const textHits = useTextHits(raw, intent && !slash && text.length > 0);
+  const textHits = useTextHits(line, intent && caps.serverSearch && !slash && text.length > 0);
   const meaningHits = useMeaningHits(text, meaningOn && !slash && !viewMode);
   const meaning = useMemo(
     () => (meaningOn ? meaningHits.flatMap((h) => (byId.get(h.slug) ? [{ node: byId.get(h.slug)!, score: h.score }] : [])) : undefined),
@@ -222,8 +227,8 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
   );
   const kbName = kbQ.data?.name ?? "Knowledge Base";
   useEffect(() => {
-    if (intent && live) void useFavorites.getState().load();
-  }, [intent, live, nodes, kbQ.data?.id]);
+    if (intent && (live || caps.favoriteMark)) void useFavorites.getState().load();
+  }, [intent, live, caps.favoriteMark, nodes, kbQ.data?.id]);
   // flag graph-intent: the tier-1 index, built once per graph load (page entries) and joined with the small name lists
   const baseIndex = useMemo(() => (intent ? buildSearchIndex(nodes) : null), [intent, nodes]);
   const [menu, setMenu] = useState<{ target: RowTarget; x: number; y: number } | null>(null);
@@ -249,13 +254,13 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
 
   const record = useCallback(
     (label: string, spec: Record<string, unknown>) => {
-      if (!live) return;
+      if (!live || !caps.recentSteps) return;
       // re-running the same step must not fill the server's short history with copies
       const newest = recentQ.data?.recent.at(-1);
       if (newest && newest.text === label) return;
       ds.addRecent(label, spec).then((r) => qc.setQueryData(["recent"], r), () => {});
     },
-    [ds, qc, live, recentQ.data],
+    [ds, qc, live, caps.recentSteps, recentQ.data],
   );
 
   // ---- flag calm-graph: one switcher of views (open at rest) and a `/view` command for each
@@ -277,7 +282,7 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
         host,
         setParams,
         kbs: kbViewOn ? (kbListQ.data?.kbs ?? []).map((k) => ({ id: k.id, name: k.name, active: k.active, error: k.error })) : [],
-        share: IS_SHARE,
+        share: !caps.saveViews,
         intent,
         views: viewChoices,
       }),
@@ -402,7 +407,7 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
     });
 
     if (viewMode) {
-      if (!parsed.text || !live || IS_SHARE) return out;
+      if (!parsed.text || !live || !caps.sentences) return out;
       if (didYou && didYou.text === parsed.text) {
         for (const o of didYou.pick.options)
           out.push({
@@ -441,10 +446,10 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
       return out;
     }
 
-    if (slash && intent && /^views(\s|$)/i.test(raw.slice(1))) {
+    if (slash && intent && /^views(\s|$)/i.test(line.slice(1))) {
       // /views [words]: recent, then pinned, then the kit's ready views, each narrowed by the words; Enter replaces the
       // view, Shift+Enter adds to it. The last row is always the gallery.
-      const words = raw.slice(1).trim().replace(/^\S+\s*/, "").toLowerCase().split(/\s+/).filter(Boolean);
+      const words = line.slice(1).trim().replace(/^\S+\s*/, "").toLowerCase().split(/\s+/).filter(Boolean);
       const hit = (name: string) => words.every((w) => name.toLowerCase().includes(w));
       const seen = new Set<string>();
       const fresh = (name: string) => {
@@ -512,9 +517,9 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
       return out;
     }
 
-    if (slash && intent && /^fav/i.test(raw.slice(1).trim())) {
+    if (slash && intent && /^fav/i.test(line.slice(1).trim())) {
       // /favorites [words]: the favorite pages as rows, Enter focuses one
-      const rest = raw.slice(1).trim().replace(/^\S+\s*/, "");
+      const rest = line.slice(1).trim().replace(/^\S+\s*/, "");
       out.push(
         ...favoriteRows(
           {
@@ -533,16 +538,16 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
       return out;
     }
     if (slash) {
-      const matches = filterCommands(commands, raw.slice(1));
+      const matches = filterCommands(commands, line.slice(1));
       for (const g of GROUP_ORDER) matches.filter((c) => c.group === g).forEach((c) => out.push(commandRow(c)));
       if (intent && !matches.length) {
-        for (const c of closestCommands(commands, raw.slice(1), 3, routing ? MIN_CLOSEST : 0)) out.push({ ...commandRow(c), section: LINE_COPY.closestHeading });
+        for (const c of closestCommands(commands, line.slice(1), 3, routing ? MIN_CLOSEST : 0)) out.push({ ...commandRow(c), section: LINE_COPY.closestHeading });
         out.push({
           key: "search-instead",
           section: LINE_COPY.closestHeading,
-          label: LINE_COPY.searchInstead(raw.slice(1).trim()),
+          label: LINE_COPY.searchInstead(line.slice(1).trim()),
           lead: <Search aria-hidden className="size-4" strokeWidth={1.6} />,
-          run: () => focusBar(raw.slice(1).trim()),
+          run: () => focusBar(line.slice(1).trim()),
         });
       }
       return out;
@@ -583,7 +588,7 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
     }
 
     const asksShape = looksLikeShape(text);
-    const canShape = live && !IS_SHARE;
+    const canShape = live && caps.shape;
     const shapeRow: PanelRow = {
       key: "shape",
       section: "Actions",
@@ -601,7 +606,7 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
         requestShape(text);
       },
     };
-    const askRow: PanelRow | null = IS_SHARE
+    const askRow: PanelRow | null = !caps.ask
       ? null
       : {
           key: "ask",
@@ -706,7 +711,7 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
     if (askRow) out.push(askRow);
     return out;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [slash, viewMode, intent, routing, index, raw, text, commands, recentQ.data, viewsQ.data, results, colorBy, onFocus, onRead, onShowMentions, record, close, shaping, canUndo, layersUndo, undoShape, live, didYou, nodes, favs, byId, ready, focusBar, meaning, textHits, router]);
+  }, [slash, viewMode, intent, routing, index, line, text, commands, recentQ.data, viewsQ.data, results, colorBy, onFocus, onRead, onShowMentions, record, close, shaping, canUndo, layersUndo, undoShape, live, didYou, nodes, favs, byId, ready, focusBar, meaning, textHits, router]);
 
   /** A recent step: a command runs again; anything else goes back into the box to be edited or run. */
   function runRecent(s: RecentStep) {
@@ -754,9 +759,9 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
       colorSet: then((ids: string[], label: string) => useLayers.getState().apply("stack", [makeLayer("style", "nodes", { nodes: [{ t: "name", slugs: ids }] }, label, { style: { color: "type" } })])),
       chat: then((ids: string[]) => useChatDock.getState().ask(chatContextDraft("", ids))),
       think: then((ids: string[]) => openCaptureAbout(ids)),
-      exportPages: then((ids: string[]) => void exportPages(ds, ids, { kbName, isShare: IS_SHARE, say: useShellStore.getState().say })),
+      exportPages: then((ids: string[]) => void exportPages(ds, ids, { kbName, isShare: !caps.exportNotes, say: useShellStore.getState().say })),
     };
-  }, [onRead, onFocus, byId, close, ds, kbName]);
+  }, [onRead, onFocus, byId, close, ds, kbName, caps.exportNotes]);
   const openMenu = useCallback((target: RowTarget, at: HTMLElement) => {
     const r = at.getBoundingClientRect();
     setMenu({ target, x: r.right - 24, y: r.bottom + 4 });
@@ -857,7 +862,7 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
   const routePages = useMemo(() => nodes.map((n) => ({ id: n.id, title: n.title || n.id })), [nodes]);
   const rowsNow = useRef(rows);
   rowsNow.current = rows;
-  const lineRoute = useLineRoute({ pages: routePages, commands, canAsk: live && !IS_SHARE, onRoute: (r) => actOnRoute(r) });
+  const lineRoute = useLineRoute({ pages: routePages, commands, canAsk: live && caps.ask, onRoute: (r) => actOnRoute(r) });
   const cancelRoute = lineRoute.cancel;
   useEffect(() => cancelRoute(), [raw, open, cancelRoute]);
   useEffect(() => {
@@ -961,7 +966,7 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
         ? { kind: "shape", text: pillText(shape.styleText, shape.pages) || "Shaped", skipped: shape.skipped }
         : null;
 
-  const empty = viewMode ? LINE_COPY.viewEmpty : slash ? (intent ? (/^fav/i.test(raw.slice(1).trim()) ? (favs.size ? "No favorite matches." : LINE_COPY.favorites.empty) : LINE_COPY.hints.command) : "No command matches.") : text ? "Nothing matches." : live && !IS_SHARE ? "Type to search pages, / for commands, or ask a question." : "Type to search pages.";
+  const empty = viewMode ? LINE_COPY.viewEmpty : slash ? (intent ? (/^fav/i.test(line.slice(1).trim()) ? (favs.size ? "No favorite matches." : LINE_COPY.favorites.empty) : LINE_COPY.hints.command) : "No command matches.") : text ? "Nothing matches." : live && caps.ask ? "Type to search pages, / for commands, or ask a question." : "Type to search pages.";
 
   return (
     <div
@@ -986,12 +991,12 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
         onKeyDown={onKeyDown}
         activeId={rows.length ? optionId(idx) : undefined}
         inputRef={input}
-        placeholder={intent ? LINE_COPY.placeholder : `Search ${kbName}`}
+        placeholder={intent ? (caps.sentences ? LINE_COPY.placeholder : LINE_COPY.placeholderShare) : `Search ${kbName}`}
         notice={open ? undefined : notice?.text}
       />
       {intent && <Chips byId={byId} />}
       {intent && open && viewMode && <ResolvedLine lines={preview?.lines ?? null} count={preview?.count ?? 0} editing={editingLine} onEditing={setEditingLine} onApply={applyWritten} />}
-      {open && <SearchPanel rows={rows} idx={idx} onHover={setIdx} empty={empty} status={status} hint={routedHint ?? (hintMode ? LINE_COPY.hints[hintMode] : undefined)} views={!text && !slash && viewChoices.length ? viewChoices : undefined} onMenu={intent ? (i, at) => rows[i]?.actions && openMenu(rows[i]!.actions!, at) : undefined} />}
+      {open && <SearchPanel rows={rows} idx={idx} onHover={setIdx} empty={empty} status={status} hint={routedHint ?? (sentenceBlocked ? LINE_COPY.sentenceUnavailable : hintMode ? LINE_COPY.hints[hintMode] : undefined)} views={!text && !slash && viewChoices.length ? viewChoices : undefined} onMenu={intent ? (i, at) => rows[i]?.actions && openMenu(rows[i]!.actions!, at) : undefined} />}
       {menu &&
         createPortal(
           <NodeMenu
