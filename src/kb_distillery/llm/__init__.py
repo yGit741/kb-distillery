@@ -71,6 +71,7 @@ TIER_MODELS = {
     "gemini": {"light": "gemini-2.5-flash-lite", "standard": "gemini-2.5-flash", "strong": "gemini-2.5-pro"},  # verify
 }
 TIERS_FILE = userdir.path("llm.toml")
+_TIER_CACHE = {}          # path -> (mtime_ns, parsed), so a big batch parses the file once
 MODEL_PROVIDER_PREFIX = {"claude-": "claude", "gpt-": "openai", "gemini-": "gemini"}
 IMAGE_TYPES = {".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png", ".gif": "image/gif",
                ".webp": "image/webp"}
@@ -183,14 +184,21 @@ def resolve(provider=None, backend=None, kb=None):
 def tier_config(path=None):
     """The user's llm.toml as a dict ({} when absent); a broken file raises LLMError naming it."""
     path = path or TIERS_FILE
-    if not os.path.isfile(path):
+    try:
+        stamp = os.stat(path).st_mtime_ns
+    except OSError:
         return {}
+    hit = _TIER_CACHE.get(path)
+    if hit and hit[0] == stamp:
+        return hit[1]
     import tomllib
     try:
         with open(path, "rb") as f:
-            return tomllib.load(f)
+            cfg = tomllib.load(f)
     except (OSError, ValueError) as e:
         raise LLMError(f"{path}: {e}") from e
+    _TIER_CACHE[path] = (stamp, cfg)
+    return cfg
 
 
 def tier_model(provider, tier, path=None):
@@ -202,8 +210,11 @@ def tier_model(provider, tier, path=None):
     cfg = tier_config(path)
     for mid, row in (cfg.get("prices") or {}).items():
         if isinstance(row, dict) and mid not in PRICES:
-            PRICES[mid] = {"in": float(row["in"]), "out": float(row["out"]),
-                           "cache_read": float(row.get("cache_read", row["in"]))}
+            try:
+                PRICES[mid] = {"in": float(row["in"]), "out": float(row["out"]),
+                               "cache_read": float(row.get("cache_read", row["in"]))}
+            except (KeyError, TypeError, ValueError) as e:
+                raise LLMError(f"{path or TIERS_FILE}: [prices.\"{mid}\"] needs numeric in and out ({e!r})") from e
     name = str((cfg.get(provider) or {}).get(tier) or TIER_MODELS[provider][tier])
     m = MODELS.get(name, name)
     if m not in PRICES:

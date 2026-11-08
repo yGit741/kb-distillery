@@ -63,3 +63,17 @@ def test_tier_does_not_change_the_backend(monkeypatch):
     assert llm.resolve("claude", "batch") == ("claude", "batch")
     with pytest.raises(llm.LLMError):
         llm.resolve("openai", "batch")
+
+
+def test_malformed_price_row_names_the_file(clean):
+    clean.write_text('[prices."gpt-5"]\nin = 1.0\n')
+    with pytest.raises(llm.LLMError, match="needs numeric in and out"):
+        llm.tier_model("claude", "light")
+
+
+def test_file_is_parsed_once_until_it_changes(clean, monkeypatch):
+    clean.write_text('[claude]\nlight = "sonnet"\n')
+    monkeypatch.setattr(llm, "_TIER_CACHE", {})
+    assert llm.tier_model("claude", "light") == "claude-sonnet-5-5"
+    clean.write_text('[claude]\nlight = "opus"\n# changed\n')
+    assert llm.tier_model("claude", "light") == "claude-opus-5-5"

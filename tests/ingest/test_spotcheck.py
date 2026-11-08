@@ -28,7 +28,7 @@ class SpotCheck(unittest.TestCase):
                 spotcheck.log("article-c", "maybe", path=path)
             rows = [json.loads(l) for l in open(path, encoding="utf-8")]
             self.assertEqual([r["verdict"] for r in rows], ["ok", "fix"])
-            self.assertEqual(rows[0]["model"], spotcheck.CHECK_MODEL)
+            self.assertEqual(rows[0]["model"], "claude-sonnet-5-5")
             self.assertEqual(spotcheck.status(path), {"ok": 1, "fix": 1})
         self.assertEqual(spotcheck.DEFAULT_MODEL, "light")
 
