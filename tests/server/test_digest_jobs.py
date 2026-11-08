@@ -84,12 +84,16 @@ def fake_llm(monkeypatch, replies=None):
 
 
 def sync_worker(monkeypatch, kb):
-    """Spawn runs the worker body in-process, to the end, and returns a finished process."""
-    def spawn(root, job_id):
-        svc.run_job(job_id, root)
-        return FakeProc()
+    """The worker body runs in-process, to the end, right after start_job spawned a (fake, finished) process."""
+    real = svc.start_job
+    monkeypatch.setattr(svc, "spawn", lambda root, job_id: FakeProc())
 
-    monkeypatch.setattr(svc, "spawn", spawn)
+    def start(*a, **k):
+        job = real(*a, **k)
+        svc.run_job(job["id"], kb)
+        return svc._load(kb, job["id"])
+
+    monkeypatch.setattr(svc, "start_job", start)
 
 
 def test_preview_makes_no_model_call_and_prices_every_backend(client):
@@ -233,7 +237,8 @@ def test_cancel_kills_the_worker_group_and_rolls_back_the_session_in_flight(clie
         kills.append((pid, sig))
         proc.alive = False
 
-    monkeypatch.setattr(os, "killpg", killpg)
+    monkeypatch.setattr(os, "kill", killpg)
+    monkeypatch.setattr(os, "killpg", lambda pid, sig: pytest.fail("the worker stopped on SIGTERM: no SIGKILL"))
     r = client.delete(f"/api/digest/jobs/{job_id}", headers=LOOPBACK)
     assert r.status_code == 200, r.text
     out = DigestJob.model_validate(r.json())
@@ -265,3 +270,50 @@ def test_the_real_worker_process_runs_a_job_in_its_own_group(kb):
     assert proc.wait(120) == 0, open(os.path.join(svc.job_dir(kb, job["id"]), "worker.log")).read()
     done = svc._load(kb, job["id"])
     assert done["status"] == "done" and done["pid"] == proc.pid
+
+
+def test_start_refuses_a_backend_that_is_not_available(client, monkeypatch):
+    monkeypatch.setattr(llm, "availability", lambda: {**AVAIL, "api": {"ok": False, "why": "no API key", "fix": "set it"}})
+    r = client.post("/api/digest/jobs", json={"raws": RAWS, "backend": "api"}, headers=LOOPBACK)
+    assert r.status_code == 422 and "no API key" in r.json()["detail"]
+
+
+def test_a_worker_never_revives_a_job_that_was_stopped_before_it_started(kb, monkeypatch):
+    monkeypatch.setattr(svc, "spawn", lambda root, job_id: FakeProc(alive=True))
+    job = svc.start_job(RAWS[:1], "api", root=kb)
+    monkeypatch.setattr(os, "kill", lambda pid, sig: setattr(svc._PROCS[job["id"]], "alive", False))
+    assert svc.cancel(job["id"], kb)["status"] == "cancelled"
+    monkeypatch.setattr(digest_many, "digest_one", lambda *a: pytest.fail("a cancelled job digests nothing"))
+    assert svc.run_job(job["id"], kb) == 0 and svc._load(kb, job["id"])["status"] == "cancelled"
+
+
+def test_cancel_of_a_job_that_just_ended_keeps_its_result(kb, monkeypatch):
+    proc = FakeProc(alive=True)
+    monkeypatch.setattr(svc, "spawn", lambda root, job_id: proc)
+    job = svc.start_job(RAWS[:1], "api", root=kb)
+
+    def finish(pid, sig):                     # the worker writes `done` as the signal lands
+        j = svc._load(kb, job["id"])
+        j["status"], j["sources"][0]["status"] = "done", "finalized"
+        svc._save(kb, j)
+        proc.alive = False
+
+    monkeypatch.setattr(os, "kill", finish)
+    assert svc.cancel(job["id"], kb)["status"] == "done"
+
+
+def test_a_source_finalized_while_stopping_stays_finalized(kb, monkeypatch):
+    proc = FakeProc(alive=True)
+    monkeypatch.setattr(svc, "spawn", lambda root, job_id: proc)
+    job = svc.start_job(RAWS[:1], "api", root=kb)
+    sid = session_mod.session_id(ingest_paths.sha1_file(RAWS[0]), {})
+    ingest_paths.save_session(sid, {"raw": RAWS[0], "status": "closed", "backup_files": [], "new_files": []})
+    with open(os.path.join(ingest_paths.session_dir(sid), "plan.json"), "w") as f:
+        json.dump({"wiki_slug": "a"}, f)
+    j = svc._load(kb, job["id"])
+    j.update(status="running", current=RAWS[0])
+    j["sources"][0]["status"] = "digesting"
+    svc._save(kb, j)
+    monkeypatch.setattr(os, "kill", lambda pid, sig: setattr(proc, "alive", False))
+    out = svc.cancel(job["id"], kb)
+    assert out["status"] == "cancelled" and out["sources"][0]["status"] == "finalized" and out["sources"][0]["page"] == "wiki/a.md"

@@ -262,3 +262,17 @@ def test_digest_one_rolls_back_a_session_stopped_mid_finalize(vault, monkeypatch
     with pytest.raises(SystemExit):
         digest_many.digest_one(RAW, str(claims))
     assert rolled == [("s1", "aborted")]
+
+
+def test_sigterm_waits_for_the_end_of_finalize():
+    import os
+    import signal
+    got = []
+    old = signal.signal(signal.SIGTERM, lambda signum, frame: got.append(signum))
+    try:
+        with digest_many._term_deferred():
+            os.kill(os.getpid(), signal.SIGTERM)
+            assert got == []                                   # held while finalize and its commit run
+        assert got == [signal.SIGTERM]                         # delivered right after
+    finally:
+        signal.signal(signal.SIGTERM, old)

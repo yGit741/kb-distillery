@@ -9,7 +9,8 @@ HTTP-free (`kb_distillery.server.routers.digest_jobs` relays `JobError(status, m
 
   preview(raws, backend, model)   no model call: tokens from the extracted text, USD from `llm.cost`, a time estimate
   start_job(raws, backend, model) checks, writes job.json, spawns `python -m kb_distillery.services.digest_jobs run <id>`
-  cancel(job_id)                  SIGTERM to the worker's process group, then SIGKILL; the open session rolls back
+  cancel(job_id)                  SIGTERM to the worker (a finalize in flight ends first), SIGKILL to its group after a
+                                  minute; the open session rolls back
   events(job_id)                  (event, data) pairs for `server.sse`: `job` on every change, `end` when it stops
 
 The worker reuses `ingest.digest_many`: `build_request` makes the claim-fill request, `llm.run` sends it (batch: every
@@ -51,8 +52,9 @@ TIER = "standard"                  # placeholder until model tiers (R3.2) fill i
 SECONDS = {"subscription": 180, "api": 120, "batch": 120}   # rough wall time per source: fill + map/draft/finalize/lint
 BATCH_SECONDS = 4 * 3600           # a typical batch wait (the API allows up to 24 hours)
 BATCH_ETA = "a few hours, up to 24 (half price)"
-CANCEL_WAIT = 10.0                 # seconds between SIGTERM and SIGKILL
+CANCEL_WAIT = 60.0                 # seconds between SIGTERM and SIGKILL (a finalize in flight runs lint, then commits)
 POLL = 0.5                         # seconds between job.json reads in `events`
+PING_EVERY = 10                    # polls between keep-alive pings on an unchanged job
 STOP_AFTER = digest_many.STOP_AFTER
 LIVE = ("queued", "running")
 START_GRACE = 60.0                 # seconds a queued job may go without its worker's pid
@@ -207,28 +209,33 @@ def _session_of(raw: str) -> str | None:
         return None
 
 
-def _rollback(raw: str | None) -> bool:
-    """Roll back the session of `raw` when a stopped worker left it open or half-finalized → True when it did."""
+def _settle(raw: str | None) -> tuple[str | None, str | None]:
+    """(state, session id) of the session a stopped worker left for `raw`: an open or half-finalized one is rolled back
+    here ("rolled back"), one the worker rolled back itself is "rolled back" too, a closed one is "finalized"."""
     sid = raw and _session_of(raw)
     if not sid:
-        return False
+        return None, None
     try:
         status = ingest_paths.load_session(sid).get("status")
     except (FileNotFoundError, ValueError):
-        return False
-    if status not in ("open", "finalizing"):
-        return False
-    session_mod.rollback(sid, "aborted")
-    return True
+        return None, sid
+    if status in ("open", "finalizing"):
+        session_mod.rollback(sid, "aborted")
+        return "rolled back", sid
+    return {"aborted": "rolled back", "closed": "finalized"}.get(status), sid
 
 
 def _close(root: str, job: dict, status: str, note: str) -> dict:
     """Mark a stopped job `status`: its current source rolls back, every unfinished source takes the note."""
-    rolled = _rollback(job.get("current"))
+    current = job.get("current")
+    state, sid = _settle(current)
     for s in job["sources"]:
-        if s["status"] in ("pending", "filling", "digesting"):
+        if s["raw"] == current and state == "finalized" and s["status"] == "digesting":
+            s.update(status="finalized", page=_page_of(sid),
+                     note="finished while the job stopped; if its kb(digest) commit is missing, `ops sync` makes it")
+        elif s["status"] in ("pending", "filling", "digesting"):
             s["status"] = "cancelled" if status == "cancelled" else "failed"
-            s["note"] = note + (" (its session rolled back)" if rolled and s["raw"] == job.get("current") else "")
+            s["note"] = note + (" (its session rolled back)" if state == "rolled back" and s["raw"] == current else "")
     job.update(status=status, current=None, finished=_now(), error=None if status == "cancelled" else note)
     _save(root, job)
     _PROCS.pop(job["id"], None)
@@ -236,7 +243,12 @@ def _close(root: str, job: dict, status: str, note: str) -> dict:
 
 
 def _reconcile(root: str, job: dict) -> dict:
-    if job["status"] in LIVE and not _alive(job):
+    if job["status"] not in LIVE:
+        proc = _PROCS.pop(job["id"], None)                    # reap a worker that ended on its own
+        if proc is not None:
+            proc.poll()
+        return job
+    if not _alive(job):
         job = _load(root, job["id"])                          # the worker may have written its last state as it went
         if job["status"] in LIVE:
             return _close(root, job, "failed", "the worker stopped before the job ended")
@@ -260,7 +272,7 @@ def list_jobs(root: str | None = None) -> list[dict]:
 
 
 def _spawn(root: str, job_id: str) -> subprocess.Popen:
-    """The worker: its own process group (so a cancel reaches its `claude -p` and finalize children), no stdin."""
+    """The worker: its own process group (so a last-resort SIGKILL reaches its `claude -p` and finalize children), no stdin."""
     log = open(os.path.join(job_dir(root, job_id), "worker.log"), "ab")
     try:
         return subprocess.Popen([sys.executable, "-m", "kb_distillery.services.digest_jobs", "run", job_id],
@@ -278,6 +290,9 @@ def start_job(raws, backend: str | None = None, model: str | None = None, root: 
     raws = _check_raws(raws)
     model = _model(model)
     chosen, why = default_backend(len(raws), root, backend)
+    avail = llm.availability()[chosen]
+    if not avail["ok"]:
+        raise JobError(422, f"the {chosen} backend is not available: {avail['why']}" + (f" ({avail['fix']})" if avail["fix"] else ""))
     with _lock(root):
         live = [j for j in list_jobs(root) if j["status"] in LIVE]
         if live:
@@ -305,8 +320,14 @@ def start_job(raws, backend: str | None = None, model: str | None = None, root: 
 
 
 def cancel(job_id: str, root: str | None = None) -> dict:
-    """Stop a live job: SIGTERM its process group, SIGKILL after CANCEL_WAIT; the source in flight rolls back."""
+    """Stop a live job: SIGTERM to the worker (it rolls back its open session; a finalize in flight finishes and commits
+    first), SIGKILL to its whole process group after CANCEL_WAIT; whatever session is left open rolls back here."""
     root = root or DEFAULT_ROOT
+    with _lock(root):
+        return _cancel(root, job_id)
+
+
+def _cancel(root: str, job_id: str) -> dict:
     job = get(job_id, root)
     if job["status"] not in LIVE:
         raise JobError(409, f"job {job_id} already ended ({job['status']})")
@@ -314,7 +335,7 @@ def cancel(job_id: str, root: str | None = None) -> dict:
     pid = proc.pid if proc is not None else job.get("pid")
     if pid:
         with contextlib.suppress(ProcessLookupError, PermissionError):
-            os.killpg(pid, signal.SIGTERM)
+            os.kill(pid, signal.SIGTERM)
         deadline = time.monotonic() + CANCEL_WAIT
         while _alive(job) and time.monotonic() < deadline:
             time.sleep(0.1)
@@ -325,21 +346,28 @@ def cancel(job_id: str, root: str | None = None) -> dict:
             if proc is not None:
                 with contextlib.suppress(subprocess.TimeoutExpired):
                     proc.wait(5)
-    return _close(root, _load(root, job_id), "cancelled", "cancelled")
+    job = _load(root, job_id)
+    if job["status"] not in LIVE:                             # it ended on its own just before the signal
+        _PROCS.pop(job_id, None)
+        return job
+    return _close(root, job, "cancelled", "cancelled")
 
 
 def events(job_id: str, root: str | None = None, poll: float = POLL):
     """(event, data) pairs for `server.sse.sse_response`: `job` whenever job.json changes, `end` once it has stopped."""
     root = root or DEFAULT_ROOT
-    last = None
+    last, n = None, 0
     while True:
         job = get(job_id, root)
         if job != last:
             yield "job", job
             last = job
+        elif n % PING_EVERY == 0:
+            yield "ping", None                                # lets the stream notice a client that went away
         if job["status"] not in LIVE:
             yield "end", {"id": job_id, "status": job["status"]}
             return
+        n += 1
         time.sleep(poll)
 
 
@@ -390,9 +418,12 @@ def _on_term(signum, frame):
 def run_job(job_id: str, root: str | None = None) -> int:
     """The worker body: fill, then one `digest_one` session per source, saving job.json after every step."""
     root = root or DEFAULT_ROOT
-    job = _load(root, job_id)
-    job.update(status="running", started=_now(), pid=os.getpid())   # its process group id too (start_new_session)
-    _save(root, job)
+    with _lock(root):
+        job = _load(root, job_id)
+        if job["status"] != "queued":                           # cancelled or given up on before it started
+            return 0
+        job.update(status="running", started=_now(), pid=os.getpid())   # its process group id too (start_new_session)
+        _save(root, job)
     backend, model = job["backend"], job["model"]
     pending = [s for s in job["sources"] if s["status"] == "pending"]
     failed_row = 0
