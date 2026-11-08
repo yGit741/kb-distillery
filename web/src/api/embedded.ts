@@ -48,6 +48,7 @@ export function createEmbeddedDataSource(blob: ShareBlob | undefined = globalThi
     addRecent: absent,
     listPages: absent,
     getPage: absent,
+    getPageSources: absent,
     getPageSource: absent,
     search: absent,
     searchText: absent,

@@ -141,6 +141,11 @@ export function createHttpDataSource(fetchImpl: Fetch = (...a) => fetch(...a), b
         () => client.GET("/api/pages/{slug}", { params: { path: { slug }, query: opts?.kb ? { kb: opts.kb } : {} } }),
         `/api/pages/${slug}`,
       ),
+    getPageSources: (slug, opts) =>
+      run(
+        () => client.GET("/api/pages/{slug}/sources", { params: { path: { slug }, query: opts?.kb ? { kb: opts.kb } : {} } }),
+        `/api/pages/${slug}/sources`,
+      ),
     getPageSource: async (slug) => {
       const path = `/api/pages/${encodeURIComponent(slug)}/source`;
       let res: Response;
