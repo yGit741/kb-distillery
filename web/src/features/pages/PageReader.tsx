@@ -1,12 +1,15 @@
 import { Link } from "@tanstack/react-router";
 import { Check, Copy, ExternalLink, Pin, PinOff } from "lucide-react";
-import { useCallback, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useMemo, useRef, useState, type ReactNode } from "react";
 import type { PageDetail } from "@/api/types";
 import { Markdown } from "@/components/Markdown";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { useVariant, VARIANTS } from "@/components/variants";
+import { useFlag } from "@/flags/useFlag";
 import { agoLabel, bareSlug, fmList, fmString, layerOf, mtimeOf, prepareMarkdown, titleOf, type LinkGraph } from "./lib";
 import { MiniGraph } from "./MiniGraph";
+import { SourcesCountMark, SourcesFooter, SourcesMarginDots, SourcesSideTab, usePageSources } from "./PageSources";
 import { PAGES_TO, FactBadges, Fold, PageLink, TypeDot } from "./parts";
 import { VideoView, isVideoRaw } from "./VideoView";
 
@@ -75,6 +78,11 @@ export function PageReader({ g, detail, embed, pinned, onTogglePin, onConnect, v
   const raw = fmString(fm, "raw");
   const book = fmString(fm, "book");
   const topLink = embed ? { target: "_top" } : {};
+  const sourcesOn = useFlag("ui.page-sources");
+  const spec = VARIANTS["page-sources"]!;
+  const [placement] = useVariant("page-sources", spec.options.map((o) => o.id), spec.default);
+  const pageSources = usePageSources(card.id, kb, sourcesOn);
+  const articleRef = useRef<HTMLElement>(null);
   const sources = useMemo(
     () =>
       layer === "source"
@@ -87,7 +95,7 @@ export function PageReader({ g, detail, embed, pinned, onTogglePin, onConnect, v
 
   return (
     <div className="grid min-w-0 gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
-      <article className="flex min-w-0 flex-col gap-4">
+      <article ref={articleRef} className="relative flex min-w-0 flex-col gap-4">
         <header className="flex flex-col gap-2">
           <h1 className="flex items-start gap-2 text-2xl font-semibold leading-tight">
             <TypeDot type={card.type} className="mt-1 size-5" />
@@ -149,6 +157,7 @@ export function PageReader({ g, detail, embed, pinned, onTogglePin, onConnect, v
                 <a href={`obsidian://open?file=${encodeURIComponent(detail.path)}`}>Open in Obsidian</a>
               </Button>
             )}
+            {sourcesOn && placement === "hover-marks" && pageSources && <SourcesCountMark sources={pageSources} />}
             <span className="text-xs text-muted-foreground">
               {card.words} words{mtimeOf(card) ? ` · edited ${agoLabel(mtimeOf(card))}` : ""}
             </span>
@@ -156,6 +165,9 @@ export function PageReader({ g, detail, embed, pinned, onTogglePin, onConnect, v
         </header>
 
         <Markdown resolveSlug={resolveSlug} linkSearch={linkSearch}>{markdown}</Markdown>
+
+        {sourcesOn && placement === "footer" && pageSources && <SourcesFooter sources={pageSources} />}
+        {sourcesOn && placement === "hover-marks" && pageSources && <SourcesMarginDots sources={pageSources} articleRef={articleRef} />}
 
         {detail.broken.length > 0 && (
           <p className="rounded-lg border border-warn/40 bg-warn/10 p-3 text-sm">
@@ -178,7 +190,7 @@ export function PageReader({ g, detail, embed, pinned, onTogglePin, onConnect, v
           <MiniGraph g={g} slug={card.id} />
         </div>
         {sources.length > 0 && (
-          <Fold title="Sources" count={sources.length}>
+          <Fold title={sourcesOn && pageSources?.length ? "Linked source pages" : "Sources"} count={sources.length}>
             <PageList g={g} items={sources.map((id) => ({ id }))} empty="" />
           </Fold>
         )}
@@ -207,6 +219,7 @@ export function PageReader({ g, detail, embed, pinned, onTogglePin, onConnect, v
         </Fold>
       </aside>
 
+      {sourcesOn && placement === "side-tab" && <SourcesSideTab sources={pageSources} />}
       {isVideoRaw(raw) && <VideoView raw={raw} className="lg:col-span-2" />}
     </div>
   );
