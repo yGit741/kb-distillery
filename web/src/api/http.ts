@@ -189,6 +189,14 @@ export function createHttpDataSource(fetchImpl: Fetch = (...a) => fetch(...a), b
     digestRaw: (path) =>
       run(() => client.POST("/api/raw/{path}/digest", { params: { path: { path } } }), `/api/raw/${path}/digest`),
 
+    previewDigest: (raws, backend) =>
+      run(() => client.POST("/api/digest/preview", { body: { raws, ...(backend ? { backend } : {}) } }), "/api/digest/preview"),
+    startDigestJob: (raws, backend) =>
+      run(() => client.POST("/api/digest/jobs", { body: { raws, ...(backend ? { backend } : {}) } }), "/api/digest/jobs"),
+    listDigestJobs: () => run(() => client.GET("/api/digest/jobs"), "/api/digest/jobs"),
+    cancelDigestJob: (id) =>
+      run(() => client.DELETE("/api/digest/jobs/{job_id}", { params: { path: { job_id: id } } }), `/api/digest/jobs/${id}`),
+
     listScopes: () => run(() => client.GET("/api/scopes"), "/api/scopes"),
     getScope: (slug) => run(() => client.GET("/api/scopes/{slug}", { params: { path: { slug } } }), `/api/scopes/${slug}`),
     resolveScope: (body) => run(() => client.POST("/api/scopes/resolve", { body }), "/api/scopes/resolve"),

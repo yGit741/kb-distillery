@@ -1,5 +1,7 @@
 import { Library } from "lucide-react";
 import type { ReactNode } from "react";
+import { DigestJobs } from "@/features/digest/DigestJobs";
+import { useFlag } from "@/flags/useFlag";
 import { AddSources } from "@/components/AddSources";
 
 /** Where the example action goes (it falls back to Start). */
@@ -31,6 +33,7 @@ function Action({ icon, title, hint, onClick, href }: { icon: ReactNode; title: 
 /** Calm first-run card for a knowledge base with no pages yet (flag screen.first-run). */
 export function FirstRunCard({ host }: { host: FirstRunHost }) {
   const start = { start: "true" };
+  const digestJobs = useFlag("screen.digest-jobs");
   return (
     <div className="flex h-full min-h-[24rem] items-center justify-center p-4" data-testid="first-run">
       <section aria-labelledby="first-run-title" className="w-full max-w-md rounded-xl border bg-card p-6 shadow-sm">
@@ -38,6 +41,7 @@ export function FirstRunCard({ host }: { host: FirstRunHost }) {
         <p className="mt-1 text-sm text-muted-foreground">Add some sources and the graph fills in as they are digested.</p>
         <div className="mt-5 flex flex-col gap-4">
           <AddSources />
+          {digestJobs && <DigestJobs />}
           <Action icon={<Library />} title="Open an example knowledge base" hint="See how a finished one looks" onClick={() => host.go("/", start)} href={host.href("/", start)} />
         </div>
       </section>

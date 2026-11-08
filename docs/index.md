@@ -13,6 +13,7 @@ kb-distillery turns sources you collect into a linked, linted wiki. You keep the
 - [Kit](concepts/kit.md): the schema a knowledge base follows.
 - [Think](concepts/think.md): one personal journal outside every knowledge base.
 - [Digest tiers](concepts/digest-tiers.md): easy, full and deep.
+- [Language models](concepts/llm.md): providers, model tiers and billing.
 - [Relations and proposals](concepts/relations-and-proposals.md): typed links and how they are proposed.
 - [Publishing](concepts/publishing.md): an optional static site.
 
