@@ -102,6 +102,13 @@ def main(argv=None):
     p.add_argument("--no-push", action="store_true", help="commit but do not push")
     args = p.parse_args(argv)
 
+    from kb_distillery.config.kb import KbConfigError, require_kb_root
+    try:
+        require_kb_root(ROOT, "the nightly sync")
+    except KbConfigError as e:
+        print(f"error: {e}", file=sys.stderr)
+        return 2
+
     # Knowledge is committed one operation at a time by meta/ops; the nightly run
     # only commits human think/ edits and labelled leftovers, then pushes main + tags.
     from kb_distillery.ops import core as ops_core

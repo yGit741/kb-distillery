@@ -81,7 +81,7 @@ class CodegenTests(unittest.TestCase):
             (root / "meta").mkdir()
             shutil.copy(FLAGS_TOML, root / "meta" / "flags.toml")
             self.assertEqual(codegen.main(["--check"], root=root), 2)  # no feature folders yet
-            for s in ("home", "graph", "pages", "lifecycle", "share", "start"):
+            for s in (*codegen.SHARE_CORE_SCREENS, "lifecycle", "share", "start"):
                 (root / f"web/src/features/{s}").mkdir(parents=True)
                 (root / f"web/src/features/{s}/index.tsx").write_text("")
             self.assertEqual(codegen.main(["--check"], root=root), 1)  # nothing generated yet

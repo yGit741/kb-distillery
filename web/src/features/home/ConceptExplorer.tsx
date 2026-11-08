@@ -1,4 +1,4 @@
-import { Shuffle } from "lucide-react";
+import { ArrowLeft, Shuffle } from "lucide-react";
 import { FullGraphIcon } from "./FullGraphIcon";
 import { useId, useMemo, useState, type KeyboardEvent } from "react";
 import { findPages } from "@/features/graph/pageSearch";
@@ -126,6 +126,8 @@ export function ConceptExplorer({
   host,
   onPick,
   onShuffle,
+  onBack,
+  backTo,
 }: {
   vault: Vault;
   concept: string;
@@ -134,6 +136,10 @@ export function ConceptExplorer({
   host: HomeHost;
   onPick: (id: string) => void;
   onShuffle: () => void;
+  /** Back to the concept shown before this one; absent when there is none (the button stays, disabled, so nothing moves). */
+  onBack?: () => void;
+  /** that concept's title, for the tooltip */
+  backTo?: string;
 }) {
   const [reader, setReader] = useState<string | null>(null);
   const node = vault.byId.get(concept)!;
@@ -160,6 +166,16 @@ export function ConceptExplorer({
   return (
     <section aria-label="Pick a concept" data-tour="home-start" className="mt-4 rounded-xl border bg-muted/25 p-3 text-[13.5px]">
       <div className="flex h-11 items-center gap-3 rounded-xl border bg-card px-1.5">
+        <button
+          type="button"
+          onClick={onBack}
+          disabled={!onBack}
+          aria-label="Back to the previous concept"
+          title={backTo ? `Back to ${backTo}` : "No previous concept yet"}
+          className="inline-flex size-8 shrink-0 items-center justify-center rounded-full text-foreground hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:text-muted-foreground/50 disabled:hover:bg-transparent"
+        >
+          <ArrowLeft aria-hidden className="size-4" strokeWidth={2.4} />
+        </button>
         <button
           type="button"
           onClick={onShuffle}
