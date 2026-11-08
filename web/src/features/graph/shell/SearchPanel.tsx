@@ -48,8 +48,6 @@ interface Props {
   /** Shown when there are no rows. */
   empty: string;
   status?: PanelStatus | null;
-  /** Flag calm-graph: the one switcher of views, shown above the rows. Absent: the panel is as before. */
-  views?: readonly ViewChoice[];
   /** Flag graph-intent: a quiet one-line hint at the top, shown the first time a mode is used. */
   hint?: string;
   /** Flag graph-intent: opens the action menu of row `i` (the trailing control, or the right arrow key). */
@@ -57,7 +55,7 @@ interface Props {
 }
 
 /** The unfolded panel: rows in labelled sections, one highlighted, scrolling past a maximum height. */
-export function SearchPanel({ rows, idx, onHover, empty, status, views, hint, onMenu }: Props) {
+export function SearchPanel({ rows, idx, onHover, empty, status, hint, onMenu }: Props) {
   const groups: { section: string; items: { row: PanelRow; i: number }[] }[] = [];
   rows.forEach((row, i) => {
     const last = groups[groups.length - 1];
@@ -71,7 +69,7 @@ export function SearchPanel({ rows, idx, onHover, empty, status, views, hint, on
       aria-label="Search results and commands"
       className={cn(
         "overflow-y-auto overscroll-contain text-sm",
-        views ? "max-h-[min(55vh,26rem)]" : "mt-1.5 max-h-[min(65vh,30rem)] rounded-[14px] border bg-popover p-2 shadow-[var(--shadow)]",
+        "mt-1.5 max-h-[min(65vh,30rem)] rounded-[14px] border bg-popover p-2 shadow-[var(--shadow)]",
       )}
       // keep focus in the input while the pointer works the list
       onMouseDown={(e) => e.preventDefault()}
@@ -142,36 +140,7 @@ export function SearchPanel({ rows, idx, onHover, empty, status, views, hint, on
       )}
     </div>
   );
-  if (!views?.length) return list;
-  return (
-    <div className="mt-1.5 rounded-[14px] border bg-popover p-2 shadow-[var(--shadow)]" data-testid="view-panel">
-      <ViewSwitcher views={views} />
-      {list}
-    </div>
-  );
-}
-
-/** The one switcher: the views that fit this knowledge base as a row of small segments, the shown one pressed. */
-function ViewSwitcher({ views }: { views: readonly ViewChoice[] }) {
-  return (
-    <div role="group" aria-label="Switch view" data-testid="view-switcher" className="mb-1.5 flex gap-0.5 rounded-[10px] bg-muted p-0.5" onMouseDown={(e) => e.preventDefault()}>
-      {views.map((v) => (
-        <button
-          key={v.id}
-          type="button"
-          aria-pressed={v.active}
-          title={v.count ? `${v.name}: ${v.count}` : v.name}
-          onClick={v.run}
-          className={cn(
-            "min-h-7 min-w-6 flex-1 truncate rounded-lg px-2.5 text-[12.5px] text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-            v.active && "bg-popover font-medium text-foreground shadow-sm",
-          )}
-        >
-          {v.name}
-        </button>
-      ))}
-    </div>
-  );
+  return list;
 }
 
 /** One quiet line at the top of the panel. It adds no colour of its own: the status palette is only for the error mark. */
