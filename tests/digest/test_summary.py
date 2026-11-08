@@ -128,7 +128,7 @@ def test_apply_writes_and_skips_changed(tmp_path, monkeypatch):
             {"slug": "b", "summary": good, "problems": [], "summary_from": "stale0000000"}], str(props))
     assert P.apply(root=str(tmp_path), path=str(props)) == ["a"]
     text = (wiki / "a.md").read_text()
-    assert f'description: "{good}"' in text and "generated: {by: summarize/sonnet}\n" in text and P.status(P.load_pages(str(tmp_path))[0]) == "ok"
+    assert f'description: "{good}"' in text and "generated: {by: summarize/claude-sonnet-5-5}\n" in text and P.status(P.load_pages(str(tmp_path))[0]) == "ok"
     assert os.path.getsize(wiki / "b.md") == len(PAGE.encode())
 
 

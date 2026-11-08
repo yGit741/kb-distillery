@@ -42,7 +42,7 @@ def main(argv=None):
     a = sub.add_parser("ask")
     a.add_argument("prompt")
     a.add_argument("--backend", choices=llm.BACKENDS)
-    a.add_argument("--provider", choices=llm.PROVIDERS, help="claude, openai or gemini (default $KB_LLM_PROVIDER, then claude)")
+    a.add_argument("--provider", choices=llm.PROVIDERS, help="claude, openai or gemini (default $KB_LLM_PROVIDER, the kb's [llm] provider, else the first one set up)")
     a.add_argument("--model", default=None, help="alias or model id (default: haiku, or the provider's small model)")
     a.add_argument("--system", default="")
     a.add_argument("--max-tokens", type=int, default=1024)
@@ -58,8 +58,7 @@ def main(argv=None):
     args = ap.parse_args(argv)
 
     if args.cmd == "ask":
-        provider = llm.resolve_provider(args.provider)
-        backend = args.backend or (None if provider == "claude" else "api")   # only Claude has other backends
+        provider, backend = llm.resolve(args.provider, args.backend)
         model = args.model or DEFAULT_MODELS[provider]
         return _print([llm.ask(args.prompt, backend=backend, model=model, system=args.system, provider=provider,
                                max_tokens=args.max_tokens, effort=args.effort)])

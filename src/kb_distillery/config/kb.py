@@ -397,11 +397,64 @@ def require_kb_root(root: str, what: str = "this command") -> None:
                             f"pass --kb <id|path> or set KB")
 
 
+READ_ONLY_MESSAGE = "this knowledge base is read-only (example kb)"
+READ_ONLY_ENV = "KB_READ_ONLY"
+
+
+class ReadOnlyError(KbConfigError):
+    """A write was attempted on a read-only knowledge base."""
+
+
+def examples_dirs() -> list[str]:
+    """The `examples/` folders of this engine checkout (and of its primary working tree, from a linked worktree)."""
+    out = []
+    for base in (checkout_root(), primary_root()):
+        if base:
+            path = os.path.realpath(os.path.join(base, "examples"))
+            if path not in out:
+                out.append(path)
+    return out
+
+
+def is_read_only(root: str | None = None, examples: list[str] | None = None) -> bool:
+    """True when the kb at `root` (default: the active one) must not be written: `$KB_READ_ONLY=1`, `[kb] read_only = true`
+    in its kb.toml, or its folder lies under the engine's `examples/` (`examples` replaces that list; tests use it)."""
+    if os.environ.get(READ_ONLY_ENV) == "1":
+        return True
+    root = os.path.realpath(root or vault_root())
+    for ex in (examples_dirs() if examples is None else [os.path.realpath(e) for e in examples]):
+        if root == ex or root.startswith(ex + os.sep):
+            return True
+    try:
+        with open(os.path.join(root, CONFIG_NAME), "rb") as f:
+            kb = _toml_load(f).get("kb")
+    except (OSError, ValueError):
+        return False
+    return isinstance(kb, dict) and kb.get("read_only") is True
+
+
+def require_writable(root: str | None = None) -> None:
+    """The one write guard: raises ReadOnlyError (message READ_ONLY_MESSAGE) when the kb is read-only."""
+    if is_read_only(root):
+        raise ReadOnlyError(READ_ONLY_MESSAGE)
+
+
+def list_examples() -> dict[str, str]:
+    """Example kbs under the engine's `examples/` (a folder holding a kb.toml): name -> folder."""
+    found = {}
+    for ex in examples_dirs():
+        if os.path.isdir(ex):
+            for name in sorted(os.listdir(ex)):
+                if os.path.isfile(os.path.join(ex, name, CONFIG_NAME)):
+                    found.setdefault(name, os.path.join(ex, name))
+    return found
+
+
 def describe(cfg: KbConfig | None) -> dict:
     return {"id": cfg.id if cfg else None, "name": cfg.name if cfg else None, "root": cfg.root if cfg else vault_root(),
             "git_root": cfg.git_root if cfg else None, "config": cfg.path if cfg else None,
             "schema_version": ".".join(map(str, cfg.schema_version)) if cfg else None,
-            "think_root": think_root(vault_root())}
+            "think_root": think_root(vault_root()), "read_only": is_read_only(cfg.root if cfg else None)}
 
 
 def main(argv=None):
@@ -425,6 +478,19 @@ def main(argv=None):
         for k, v in describe(cfg).items():
             print(f"{k:<16} {v}")
         return 0
+    if cmd == "open-example":
+        name = argv[1] if len(argv) > 1 and not argv[1].startswith("-") else ""
+        known = list_examples()
+        if name not in known:
+            print(f"error: no example kb {name!r} (available: {', '.join(known) or 'none'})", file=sys.stderr)
+            return 2
+        os.environ["KB"], os.environ[READ_ONLY_ENV] = known[name], "1"
+        launch = os.path.join(checkout_root() or "", "scripts", "launch.sh")
+        if not os.path.isfile(launch):
+            print("error: open-example needs an engine checkout (scripts/launch.sh)", file=sys.stderr)
+            return 2
+        import subprocess
+        return subprocess.call(["bash", launch, *argv[2:]], env=dict(os.environ, KB_PYTHON=os.environ.get("KB_PYTHON") or sys.executable))
     if cmd == "root":
         try:
             cfg = current()

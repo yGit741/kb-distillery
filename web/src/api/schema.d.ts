@@ -346,6 +346,76 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/digest/jobs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Digest jobs, newest first */
+        get: operations["jobs_api_digest_jobs_get"];
+        put?: never;
+        /** Start a digest job: full digests in a worker, one knowledge step per finished source */
+        post: operations["start_api_digest_jobs_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/digest/jobs/{job_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One digest job */
+        get: operations["job_api_digest_jobs__job_id__get"];
+        put?: never;
+        post?: never;
+        /** Cancel a digest job: the source in flight rolls back, finished ones stay committed */
+        delete: operations["cancel_api_digest_jobs__job_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/digest/jobs/{job_id}/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** SSE: a `job` event on every change, `end` when the job stops */
+        get: operations["job_events_api_digest_jobs__job_id__events_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/digest/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** What a digest job would cost and take, on its default backend and on each of the three (no model call) */
+        post: operations["preview_api_digest_preview_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/favorites": {
         parameters: {
             query?: never;
@@ -681,6 +751,23 @@ export interface paths {
         get: operations["get_lifecycle_api_lifecycle_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/line/route": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Read a plain line as a page search, a view change, a command or a question */
+        post: operations["post_line_route_api_line_route_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1263,6 +1350,31 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
+        /** BackendOption */
+        BackendOption: {
+            /** Available */
+            available: boolean;
+            /** Backend */
+            backend: string;
+            /** Billed Usd */
+            billed_usd: number;
+            /** Cost Usd */
+            cost_usd: number;
+            /** Cost Worst Usd */
+            cost_worst_usd: number;
+            /** Eta */
+            eta: string;
+            /** Seconds */
+            seconds: number;
+            /** Tokens In */
+            tokens_in: number;
+            /** Tokens Out */
+            tokens_out: number;
+            /** Why */
+            why: string;
+        } & {
+            [key: string]: unknown;
+        };
         /** Backlink */
         Backlink: {
             /**
@@ -1587,6 +1699,13 @@ export interface components {
              */
             backend: string;
             /**
+             * @default {
+             *       "available": true,
+             *       "reason": ""
+             *     }
+             */
+            claude: components["schemas"]["ClaudeAvailability"];
+            /**
              * Default Model
              * @default
              */
@@ -1674,6 +1793,24 @@ export interface components {
             title: string;
             /** Year */
             year?: number | null;
+        } & {
+            [key: string]: unknown;
+        };
+        /**
+         * ClaudeAvailability
+         * @description Whether Claude can run at all. Agent features show "Needs Claude" and answer 409 with `reason` when it cannot.
+         */
+        ClaudeAvailability: {
+            /**
+             * Available
+             * @default true
+             */
+            available: boolean;
+            /**
+             * Reason
+             * @default
+             */
+            reason: string;
         } & {
             [key: string]: unknown;
         };
@@ -1845,6 +1982,108 @@ export interface components {
              * @default 0
              */
             rollbacks_7d: number;
+        } & {
+            [key: string]: unknown;
+        };
+        /** DigestJob */
+        DigestJob: {
+            /** Backend */
+            backend: string;
+            /**
+             * Backend Why
+             * @default
+             */
+            backend_why: string;
+            /** Created */
+            created: string;
+            /** Current */
+            current?: string | null;
+            /** Depth */
+            depth: string;
+            /** Error */
+            error?: string | null;
+            /** Finished */
+            finished?: string | null;
+            /** Id */
+            id: string;
+            /** Model */
+            model: string;
+            /** Provider */
+            provider: string;
+            /** Sources */
+            sources: components["schemas"]["JobSource"][];
+            /**
+             * Spent Usd
+             * @default 0
+             */
+            spent_usd: number;
+            /** Started */
+            started?: string | null;
+            /** Status */
+            status: string;
+            /** Tier */
+            tier: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** DigestJobList */
+        DigestJobList: {
+            /** Jobs */
+            jobs: components["schemas"]["DigestJob"][];
+        } & {
+            [key: string]: unknown;
+        };
+        /** DigestPreview */
+        DigestPreview: {
+            /** Backend */
+            backend: string;
+            /** Backend Why */
+            backend_why: string;
+            /** Billed Usd */
+            billed_usd: number;
+            /** Cost Usd */
+            cost_usd: number;
+            /** Cost Worst Usd */
+            cost_worst_usd: number;
+            /** Depth */
+            depth: string;
+            /** Eta */
+            eta: string;
+            /** Model */
+            model: string;
+            /** Options */
+            options: components["schemas"]["BackendOption"][];
+            /** Provider */
+            provider: string;
+            /** Requests */
+            requests: number;
+            /** Seconds */
+            seconds: number;
+            /** Skipped */
+            skipped: components["schemas"]["SkippedSource"][];
+            /** Sources */
+            sources: number;
+            /** Tier */
+            tier: string;
+            /** Tokens In */
+            tokens_in: number;
+            /** Tokens Out */
+            tokens_out: number;
+        } & {
+            [key: string]: unknown;
+        };
+        /**
+         * DigestRequest
+         * @description Raw paths to digest in full. `backend` (subscription | api | batch) and `model` are optional: left out, the billing
+         *     defaults pick them (`backend_why` in the reply says which rule did).
+         */
+        DigestRequest: {
+            /** Backend */
+            backend?: string | null;
+            /** Model */
+            model?: string | null;
+            /** Raws */
+            raws: string[];
         } & {
             [key: string]: unknown;
         };
@@ -2419,6 +2658,24 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
+        /** JobSource */
+        JobSource: {
+            /**
+             * Note
+             * @default
+             */
+            note: string;
+            /** Page */
+            page?: string | null;
+            /** Raw */
+            raw: string;
+            /** Seconds */
+            seconds?: number | null;
+            /** Status */
+            status: string;
+        } & {
+            [key: string]: unknown;
+        };
         /** KbDigestPart */
         KbDigestPart: {
             /**
@@ -2609,6 +2866,8 @@ export interface components {
             meta_overrides: string[];
             /** Name */
             name: string;
+            /** Read Only */
+            read_only: boolean;
             /** Relaunch */
             relaunch: string;
             /** Root */
@@ -2867,6 +3126,79 @@ export interface components {
             pr_merges: number;
             /** Undone */
             undone: number;
+        } & {
+            [key: string]: unknown;
+        };
+        /** LineCommand */
+        LineCommand: {
+            /** Id */
+            id: string;
+            /** Label */
+            label: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** LineRouteRequest */
+        LineRouteRequest: {
+            /**
+             * Backend
+             * @description LLM backend for this request; default $KB_LLM_BACKEND, then subscription. A batch never answers within the deadline, so it reads as a page search
+             */
+            backend?: ("subscription" | "api" | "batch") | null;
+            /**
+             * Commands
+             * @description The commands the line offers, by id and name
+             */
+            commands?: components["schemas"]["LineCommand"][];
+            /**
+             * Fallback
+             * @description Backend tried once when the first one fails. Default none: routing never moves to a paid backend by itself
+             */
+            fallback?: ("subscription" | "api" | "batch" | "none") | null;
+            /**
+             * Text
+             * @description A line the browser's rules could not place
+             */
+            text: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** LineRouteResponse */
+        LineRouteResponse: {
+            /**
+             * Backend
+             * @description The LLM backend that answered; empty when none was asked
+             * @default
+             */
+            backend: string;
+            /**
+             * Command
+             * @description The command id, only for intent `command`
+             */
+            command?: string | null;
+            /** Fallback From */
+            fallback_from?: string | null;
+            /**
+             * Intent
+             * @enum {string}
+             */
+            intent: "search" | "view" | "command" | "ask";
+            /**
+             * Reason
+             * @description Why the line reads as a search when the model could not place it
+             * @default
+             */
+            reason: string;
+            /**
+             * Text
+             * @description The line to pass on (the model may tidy it)
+             */
+            text: string;
+            /**
+             * Usd
+             * @default 0
+             */
+            usd: number;
         } & {
             [key: string]: unknown;
         };
@@ -4044,6 +4376,15 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
+        /** SkippedSource */
+        SkippedSource: {
+            /** Raw */
+            raw: string;
+            /** Reason */
+            reason: string;
+        } & {
+            [key: string]: unknown;
+        };
         /** SnapshotTag */
         SnapshotTag: {
             /** Date */
@@ -4660,6 +5001,13 @@ export interface operations {
             };
             /** @description bad request */
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description the Agent backend needs Claude (a login or an Anthropic key) */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -5354,6 +5702,256 @@ export interface operations {
             };
         };
     };
+    jobs_api_digest_jobs_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DigestJobList"];
+                };
+            };
+        };
+    };
+    start_api_digest_jobs_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DigestRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DigestJob"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Method Not Allowed */
+            405: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    job_api_digest_jobs__job_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DigestJob"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cancel_api_digest_jobs__job_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DigestJob"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Method Not Allowed */
+            405: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    job_events_api_digest_jobs__job_id__events_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    preview_api_digest_preview_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DigestRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DigestPreview"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Method Not Allowed */
+            405: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     list_favorites_api_favorites_get: {
         parameters: {
             query?: {
@@ -6043,6 +6641,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["LifecycleSnapshot"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_line_route_api_line_route_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LineRouteRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LineRouteResponse"];
                 };
             };
             /** @description Validation Error */

@@ -19,6 +19,10 @@ export interface DataSource {
   getKbInbox(): Promise<T.KbInbox>;
   /** Local app only: import every pending upload as a new knowledge base and report back to the site. */
   pullKbInbox(): Promise<T.KbInboxPull>;
+  /** Local app only: store files in the kb inbox (no LLM); one result per file. */
+  addInboxFiles(files: File[]): Promise<T.InboxAddResult>;
+  /** Local app only: copy the supported files of a local folder into the inbox. */
+  linkInboxFolder(path: string): Promise<T.LinkFolderResult>;
   getOps(refresh?: boolean): Promise<T.OpsSnapshot>;
 
   // graph
@@ -38,6 +42,12 @@ export interface DataSource {
    * `fallback` default to the server's choice (subscription, then api when it fails); the answer says which one replied.
    */
   layersFromText(text: string, op: "replace" | "stack" | "remove", opts?: { backend?: "subscription" | "api" | "batch"; fallback?: "subscription" | "api" | "batch" | "none" }): Promise<T.LayersResult>;
+  /**
+   * A plain line of the search line that the browser's rules could not place, read by the LLM (local app only): a page
+   * search, a view change, a command (one of `commands`) or a question. Never fails for the model's sake: a failure
+   * answers `search` with a `reason`.
+   */
+  routeLine(text: string, commands: readonly { id: string; label: string }[], opts?: { signal?: AbortSignal }): Promise<T.LineRoute>;
   /** LLM relation proposals in a confidence range 0..1 (local app only), best first, with a 10-bucket histogram. */
   getRelationProposals(opts: { min: number; max: number; kind?: string }): Promise<T.RelationProposals>;
 
@@ -72,6 +82,11 @@ export interface DataSource {
   /** The raw file itself (local only). */
   rawFileUrl(path: string): string | null;
   digestRaw(path: string): Promise<T.DigestResult>;
+  /** Digest jobs (local app only). A preview makes no model call; `backend` picks one of subscription | api | batch, else the billing defaults choose. */
+  previewDigest(raws: string[], backend?: string): Promise<T.DigestPreview>;
+  startDigestJob(raws: string[], backend?: string): Promise<T.DigestJob>;
+  listDigestJobs(): Promise<T.DigestJobList>;
+  cancelDigestJob(id: string): Promise<T.DigestJob>;
   /** A scrap-youtube bundle by its raw item `raw/videos/<dir>/video.md` (local only). */
   getVideo(path: string): Promise<T.VideoBundle>;
 

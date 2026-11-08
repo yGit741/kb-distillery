@@ -15,6 +15,7 @@ import { PlanPanel } from "./PlanPanel";
 import { PromptPanel } from "./PromptPanel";
 import { STATUS_KEY, SessionPanel } from "./SessionPanel";
 import { isCustom, parsePrompts, pick, setEdit, systemFor, type Edits } from "./prompts";
+import { NeedsClaudeBadge } from "./NeedsClaudeBadge";
 import { authPayload, authValue, backendLabel, effectiveBackend, parseStatus } from "./status";
 import { readJson, writeJson } from "./storage";
 import { canSave, chatTitle, savableMessages } from "./thread";
@@ -199,6 +200,7 @@ function ChatBody({ status: rawStatus, prompts: rawPrompts, scopes, initialScope
             <span aria-hidden className={`size-2 rounded-full ${chip.ok ? "bg-ok" : "bg-bad"}`} />
             {chip.text}
           </span>
+          {!view.claudeAvailable && <NeedsClaudeBadge reason={view.claudeReason} />}
           {scope && <span className="rounded-md bg-accent-soft px-2 py-0.5 text-xs text-primary">scope: {scope}</span>}
           <div className="ml-auto flex gap-1">
             <Button variant="ghost" size="sm" className="lg:hidden" onClick={() => setRailOpen((o) => !o)} aria-expanded={railOpen}>

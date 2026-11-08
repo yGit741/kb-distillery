@@ -168,8 +168,31 @@ function sharedPrefix(a: string, b: string): number {
   return n;
 }
 
+/** Whether a typed word fits a word of a command's name: the same word, its start, or one letter off. */
+function wordFits(w: string, lw: string): boolean {
+  if (w === lw) return true;
+  if (w.length >= 3 && lw.startsWith(w)) return true;
+  return w.length >= 3 && Math.abs(w.length - lw.length) <= 1 && levenshtein(w, lw) <= 1;
+}
+
+/**
+ * How well a line fits a command's name, 0..1: the words that fit a word of the label, over the larger of the two word
+ * counts. "zoom out" fits Zoom out at 1; a long sentence that shares a word or two with a name scores near 0.
+ */
+export function commandScore(c: Pick<Command, "label">, text: string): number {
+  const words = text.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  const labelWords = c.label.toLowerCase().split(/[\s:]+/).filter(Boolean);
+  if (!words.length || !labelWords.length) return 0;
+  const fit = words.filter((w) => labelWords.some((lw) => wordFits(w, lw))).length;
+  return fit / Math.max(words.length, labelWords.length);
+}
+
+/** Closest options below this score are not offered (flag line-routing): a sentence is not a typo of a command. */
+export const MIN_CLOSEST = 0.34;
+
 /** Up to `limit` commands nearest to the text: most shared word prefixes first, then the smallest edit distance on the label. */
-export function closestCommands(all: readonly Command[], text: string, limit = 3): Command[] {
+export function closestCommands(all: readonly Command[], text: string, limit = 3, minScore = 0): Command[] {
+  if (minScore > 0) all = all.filter((c) => commandScore(c, text) >= minScore);
   const t = text.trim().toLowerCase();
   const words = t.split(/\s+/).filter(Boolean);
   const scored = all.map((c) => {

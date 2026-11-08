@@ -242,3 +242,59 @@ def test_map_plans_the_existing_page_not_a_second_one(vault, monkeypatch):
     (vault / "wiki" / "blog-k-1.md").write_text("---\ntype: blog-post\nraw: raw/web-clips/k-1.md\n---\n# P\n")
     assert map_mod._existing_page("raw/web-clips/k-1.md", "article", "article-k-1") == ("blog-post", "blog-k-1")
     assert map_mod._existing_page("raw/web-clips/k-9.md", "article", "article-k-9") == ("article", "article-k-9")
+
+
+def test_digest_one_rolls_back_a_session_stopped_mid_finalize(vault, monkeypatch, tmp_path):
+    """A cancel (SystemExit from SIGTERM) during finalize leaves status `finalizing`: digest_one rolls it back."""
+    rolled = []
+    monkeypatch.setattr(digest_many.session_mod, "find_open_session", lambda raw: None)
+    monkeypatch.setattr(digest_many.session_mod, "begin", lambda raw, depth, scope: "s1")
+    monkeypatch.setattr(digest_many, "session_dir", lambda sha: str(tmp_path))
+    monkeypatch.setattr(digest_many.session_mod, "load_session", lambda sha: {"status": "finalizing"})
+    monkeypatch.setattr(digest_many.session_mod, "rollback", lambda sha, reason: rolled.append((sha, reason)))
+
+    def stopped(sha):
+        raise SystemExit(143)
+
+    monkeypatch.setattr(extract, "run_extract", stopped)
+    claims = tmp_path / "c.json"
+    claims.write_text("{}")
+    with pytest.raises(SystemExit):
+        digest_many.digest_one(RAW, str(claims))
+    assert rolled == [("s1", "aborted")]
+
+
+def test_sigterm_waits_for_the_end_of_finalize():
+    import os
+    import signal
+    got = []
+    old = signal.signal(signal.SIGTERM, lambda signum, frame: got.append(signum))
+    try:
+        with digest_many._term_deferred():
+            os.kill(os.getpid(), signal.SIGTERM)
+            assert got == []                                   # held while finalize and its commit run
+        assert got == [signal.SIGTERM]                         # delivered right after
+    finally:
+        signal.signal(signal.SIGTERM, old)
+
+
+def test_sigterm_is_held_while_another_thread_is_alive():
+    # the full suite has helper threads alive; a per-thread mask let the signal through to one of them
+    import os
+    import signal
+    import threading
+    got, stop = [], threading.Event()
+    helpers = [threading.Thread(target=stop.wait, daemon=True) for _ in range(4)]
+    for t in helpers:
+        t.start()
+    old = signal.signal(signal.SIGTERM, lambda signum, frame: got.append(signum))
+    try:
+        with digest_many._term_deferred():
+            for _ in range(20):
+                os.kill(os.getpid(), signal.SIGTERM)
+            sum(range(10000))                                  # give a stray handler a chance to run
+            assert got == []
+        assert got == [signal.SIGTERM]                         # re-raised once after the block
+    finally:
+        signal.signal(signal.SIGTERM, old)
+        stop.set()

@@ -61,6 +61,21 @@ export function createHttpDataSource(fetchImpl: Fetch = (...a) => fetch(...a), b
     return body as T;
   }
 
+  async function postRaw<T>(path: string, init: RequestInit): Promise<T> {
+    let res: Response;
+    try {
+      res = await fetchImpl(path, { method: "POST", cache: "no-store", ...init });
+    } catch (e) {
+      throw new ApiError(`Could not reach ${path}: ${e instanceof Error ? e.message : String(e)}`);
+    }
+    const body: unknown = await res.json().catch(() => undefined);
+    if (!res.ok) {
+      const fallback = res.status === 405 ? "This knowledge base is read-only." : res.status === 413 ? "That is too large to add." : `${path} answered ${res.status}`;
+      throw new ApiError(message(body, fallback), res.status);
+    }
+    return body as T;
+  }
+
   return {
     kind: "http",
 
@@ -73,6 +88,13 @@ export function createHttpDataSource(fetchImpl: Fetch = (...a) => fetch(...a), b
     importKb: (req) => postImport<T_.KbImportResult>("/api/kb/import", req),
     getKbInbox: () => run(() => client.GET("/api/kb/inbox"), "/api/kb/inbox"),
     pullKbInbox: () => run(() => client.POST("/api/kb/inbox/pull"), "/api/kb/inbox/pull"),
+    addInboxFiles: (files) => {
+      const form = new FormData();
+      for (const f of files) form.append("files", f, f.name);
+      return postRaw<T_.InboxAddResult>("/api/inbox/files", { body: form });
+    },
+    linkInboxFolder: (path) =>
+      postRaw<T_.LinkFolderResult>("/api/inbox/link-folder", { headers: { "Content-Type": "application/json" }, body: JSON.stringify({ path }) }),
     getOps: (refresh) =>
       run(() => client.GET("/api/ops", { params: { query: refresh ? { refresh: "1" } : {} } }), "/api/ops"),
 
@@ -96,6 +118,8 @@ export function createHttpDataSource(fetchImpl: Fetch = (...a) => fetch(...a), b
 
     shapeGraph: (text) => run(() => client.POST("/api/graph/shape", { body: { text, limit: 500 } }), "/api/graph/shape"),
 
+    routeLine: (text, commands, opts) =>
+      run(() => client.POST("/api/line/route", { body: { text, commands: commands.map((c) => ({ id: c.id, label: c.label })) }, ...(opts?.signal ? { signal: opts.signal } : {}) }), "/api/line/route"),
     layersFromText: (text, op, opts) =>
       run(() => client.POST("/api/graph/layers", { body: { text, op, ...(opts?.backend ? { backend: opts.backend } : {}), ...(opts?.fallback ? { fallback: opts.fallback } : {}) } }), "/api/graph/layers"),
 
@@ -164,6 +188,14 @@ export function createHttpDataSource(fetchImpl: Fetch = (...a) => fetch(...a), b
       run(() => client.GET("/api/videos/{path}", { params: { path: { path } } }), `/api/videos/${path}`),
     digestRaw: (path) =>
       run(() => client.POST("/api/raw/{path}/digest", { params: { path: { path } } }), `/api/raw/${path}/digest`),
+
+    previewDigest: (raws, backend) =>
+      run(() => client.POST("/api/digest/preview", { body: { raws, ...(backend ? { backend } : {}) } }), "/api/digest/preview"),
+    startDigestJob: (raws, backend) =>
+      run(() => client.POST("/api/digest/jobs", { body: { raws, ...(backend ? { backend } : {}) } }), "/api/digest/jobs"),
+    listDigestJobs: () => run(() => client.GET("/api/digest/jobs"), "/api/digest/jobs"),
+    cancelDigestJob: (id) =>
+      run(() => client.DELETE("/api/digest/jobs/{job_id}", { params: { path: { job_id: id } } }), `/api/digest/jobs/${id}`),
 
     listScopes: () => run(() => client.GET("/api/scopes"), "/api/scopes"),
     getScope: (slug) => run(() => client.GET("/api/scopes/{slug}", { params: { path: { slug } } }), `/api/scopes/${slug}`),

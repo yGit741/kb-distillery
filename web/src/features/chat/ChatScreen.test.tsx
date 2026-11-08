@@ -67,6 +67,20 @@ describe("ChatScreen", () => {
     expect(screen.getByText("Teach me tensor rank")).toBeInTheDocument();
   });
 
+  it("marks agent features Needs Claude when nothing can run Claude, and keeps the controls", async () => {
+    setup({ getChatStatus: async () => chatStatus({ claude: { available: false, reason: "Needs Claude: sign in." } }) });
+    const marks = await screen.findAllByTestId("needs-claude");
+    expect(marks[0]).toHaveTextContent("Needs Claude");
+    expect(screen.getByRole("option", { name: /Agent — reads the vault itself \(Needs Claude\)/ })).toBeInTheDocument();
+    expect(await box()).toBeEnabled();
+  });
+
+  it("shows no Needs Claude mark when Claude is available", async () => {
+    setup();
+    await screen.findByTestId("backend-chip");
+    expect(screen.queryByTestId("needs-claude")).toBeNull();
+  });
+
   it("shows an error with retry when the service is unreachable", async () => {
     setup({ getChatStatus: async () => { throw new Error("down"); } });
     expect(await screen.findByRole("alert")).toHaveTextContent("The chat service is unreachable");

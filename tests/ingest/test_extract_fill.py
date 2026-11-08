@@ -133,4 +133,4 @@ def test_cli_extract_passes_flags_and_exit_code(monkeypatch):
     got = {}
     monkeypatch.setattr(extract, "run_extract", lambda sha, **kw: (got.update(sha=sha, **kw), 1)[1])
     assert cli.main(["extract", "abc123", "--fill", "--backend", "api"]) == 1
-    assert got == {"sha": "abc123", "fill": True, "backend": "api", "model": "sonnet"}
+    assert got == {"sha": "abc123", "fill": True, "backend": "api", "model": "standard"}

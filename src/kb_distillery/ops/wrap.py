@@ -9,6 +9,7 @@ import os
 import sys
 
 from . import core
+from kb_distillery.config.kb import ReadOnlyError, require_writable
 from kb_distillery.vault.schema import is_page_file
 
 # (subcommand, sub-subcommand or None) -> (op, already linted by the command)
@@ -97,6 +98,12 @@ def run(cli_main, argv=None, table=INGEST, begin_table=None):
     key = (pos[0] if pos else None, pos[1] if len(pos) > 1 else None)
     entry = table.get(key) or table.get((key[0], None))
     begin_op = (begin_table or {}).get((key[0], None))
+    if (entry or begin_op) and "--dry-run" not in argv and "-h" not in argv and "--help" not in argv:
+        try:
+            require_writable(core.ROOT)
+        except ReadOnlyError as e:
+            print(f"ops: {e}", file=sys.stderr)
+            return 2
     if skip or not (entry or begin_op):
         return cli_main(argv)
 

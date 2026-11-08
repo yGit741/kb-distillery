@@ -107,3 +107,20 @@ Claude-only and raise `LLMError`) and takes text, not images. Keys come from `AN
 `GEMINI_API_KEY`, or the file `~/.config/kb-distillery/<provider>_key`; `llm.availability()["providers"]` reports which
 are usable. A request's model must belong to its provider (`gpt-4.1-mini`, `gemini-2.5-flash`, or a Claude alias).
 Example: `pixi run llm -- ask "hello" --provider openai --model gpt-4.1-mini`.
+
+### Model tiers
+
+Features ask for a tier, not a model: `light` (quick answers, abstract skims, line routing), `standard` (digests, fills) or
+`strong`. `Request(model="light")`, `--model light` and `llm.model_id("light")` resolve it for the request's provider via
+`llm.tier_model(provider, tier)`: the user's `~/.config/kb-distillery/llm.toml` (`[claude]`, `[openai]`, `[gemini]` tables,
+optional `[prices."<id>"]`; example in `kits/base/defaults/llm.example.toml`), else the built-in map (Claude haiku, sonnet, opus).
+A tier never changes the backend or the provider.
+
+### Billing
+
+`llm.resolve(provider, backend, kb)` picks the provider and backend for `llm ask` and `doctor`: provider = argument, `$KB_LLM_PROVIDER`, `[llm] provider`
+in kb.toml, else automatic (Claude if logged in or keyed, else the first keyed of OpenAI and Gemini); backend = argument,
+`$KB_LLM_BACKEND`, else subscription when logged in, API when only a key exists. Only `llm ask` and `doctor` honour the provider
+setting so far; other features run on Claude. Digest jobs do not use it: they default to the subscription (when logged in, else the API) for up to `[llm] bulk_threshold` sources
+(default 5) and to the API above it; Batch is chosen per job (half price, up to 24 hours). OpenAI and Gemini prices are
+unverified. The user-facing explanation is `docs/concepts/llm.md`.

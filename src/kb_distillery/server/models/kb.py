@@ -30,6 +30,7 @@ class KbInfo(ApiModel):
     id: str | None
     name: str
     root: str
+    read_only: bool                 # example kb, `[kb] read_only` or $KB_READ_ONLY: no write is accepted
     config: str | None
     schema_version: str
     git: KbGitState

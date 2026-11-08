@@ -13,7 +13,10 @@ stdlib adapter under `kb_distillery.llm.providers` (`complete(request, model_id,
 runs on all three backends; `openai` and `gemini` are `api` only (one blocking call per request, on the same thread pool)
 and refuse images. Keys: ANTHROPIC_API_KEY / OPENAI_API_KEY / GEMINI_API_KEY or ~/.config/kb-distillery/<provider>_key.
 Provider: `Request.provider`; when empty it follows the model (a Claude alias or `gpt-*` / `gemini-*` id). Entry points that
-choose the model themselves (the CLI) use `resolve_provider()`: argument, then $KB_LLM_PROVIDER, then `claude`.
+choose the model themselves (the CLI) use `resolve(provider, backend)`: provider = argument, $KB_LLM_PROVIDER, `[llm] provider`
+in the kb's kb.toml, else automatic (Claude subscription if logged in, else Claude API key, else the first vendor with a
+key); backend = argument, $KB_LLM_BACKEND, else subscription when logged in, else api when a key exists. Library callers
+that name their model keep `resolve_backend()`; wiring them to `resolve()` is up to each feature.
 A request's model must belong to its provider.
 
 Backend precedence: the `backend=` argument, then $KB_LLM_BACKEND, then DEFAULT_BACKEND.
@@ -58,6 +61,17 @@ PRICES = {
     "gemini-2.5-flash": {"in": 0.30, "out": 2.50, "cache_read": 0.075},       # verify
     "gemini-2.5-flash-lite": {"in": 0.10, "out": 0.40, "cache_read": 0.025},  # verify
 }
+# Tiers: a feature asks for how much model it needs, not which one. Built-in map per provider; the user file
+# ~/.config/kb-distillery/llm.toml (example: kits/base/defaults/llm.example.toml) overrides it. Values are aliases or
+# model ids that PRICES knows; `[prices."<id>"]` in the file adds a price row for a model of the user's own.
+TIERS = ("light", "standard", "strong")
+TIER_MODELS = {
+    "claude": {"light": "haiku", "standard": "sonnet", "strong": "opus"},
+    "openai": {"light": "gpt-4.1-nano", "standard": "gpt-4.1-mini", "strong": "gpt-4.1"},                  # verify
+    "gemini": {"light": "gemini-2.5-flash-lite", "standard": "gemini-2.5-flash", "strong": "gemini-2.5-pro"},  # verify
+}
+TIERS_FILE = userdir.path("llm.toml")
+_TIER_CACHE = {}          # path -> (mtime_ns, parsed), so a big batch parses the file once
 MODEL_PROVIDER_PREFIX = {"claude-": "claude", "gpt-": "openai", "gemini-": "gemini"}
 IMAGE_TYPES = {".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png", ".gif": "image/gif",
                ".webp": "image/webp"}
@@ -123,13 +137,103 @@ def resolve_provider(provider=None):
     return p
 
 
+def kb_provider(kb=None):
+    """`[llm] provider` of a kb's kb.toml ("" when unset); `kb` is a KbConfig, default the selected kb. An unknown
+    name raises LLMError naming the file."""
+    if kb is None:
+        from kb_distillery.config import kb as kbconfig
+        kb = kbconfig.current()
+    if kb is None:
+        return ""
+    p = str(kb.section("llm").get("provider") or "").strip().lower()
+    if p and p not in PROVIDERS:
+        raise LLMError(f"{kb.path}: [llm] provider {p!r} is unknown; pick one of {', '.join(PROVIDERS)}")
+    return p
+
+
+def resolve(provider=None, backend=None, kb=None):
+    """The one (provider, backend) a feature should run with.
+
+    Provider: the argument, then $KB_LLM_PROVIDER, then `[llm] provider` in the kb's kb.toml, else automatic: `claude`
+    when its subscription is logged in or it has an API key, otherwise the first other provider that has a key, and
+    `claude` when nothing has one (so the failure message says what to set up).
+    Backend: the argument, then $KB_LLM_BACKEND, else for `claude` the subscription when logged in and the API
+    otherwise, and `api` for the other providers. Subscription and batch are Claude-only: asking for them with another
+    provider raises LLMError. Callers pass the pair to `run(..., backend=)` and `Request(provider=)`; no LLM call here."""
+    explicit = (provider or os.environ.get(ENV_PROVIDER) or kb_provider(kb) or "").strip()
+    chosen = resolve_provider(explicit) if explicit else None
+    explicit_backend = backend or os.environ.get(ENV_BACKEND)
+    b = resolve_backend(explicit_backend) if explicit_backend else None
+    sub = None
+    if chosen is None:
+        sub = _subscription()["ok"]
+        others = (n for n in PROVIDERS if n != "claude" and providers.get(n).availability()[0])
+        claude_only_backend = b in ("subscription", "batch")      # a backend only Claude has: do not auto-pick another vendor
+        chosen = "claude" if (sub or api_key() or claude_only_backend) else next(others, "claude")
+    if chosen != "claude":
+        if b not in (None, "api"):
+            raise LLMError(f"the {chosen} provider runs on the api backend only (got {b}); "
+                           f"subscription and batch are Claude-only")
+        return chosen, "api"
+    if b is None:
+        logged_in = _subscription()["ok"] if sub is None else sub
+        b = DEFAULT_BACKEND if (logged_in or not api_key()) else "api"
+    return chosen, b
+
+
+def tier_config(path=None):
+    """The user's llm.toml as a dict ({} when absent); a broken file raises LLMError naming it."""
+    path = path or TIERS_FILE
+    try:
+        stamp = os.stat(path).st_mtime_ns
+    except OSError:
+        return {}
+    hit = _TIER_CACHE.get(path)
+    if hit and hit[0] == stamp:
+        return hit[1]
+    import tomllib
+    try:
+        with open(path, "rb") as f:
+            cfg = tomllib.load(f)
+    except (OSError, ValueError) as e:
+        raise LLMError(f"{path}: {e}") from e
+    _TIER_CACHE[path] = (stamp, cfg)
+    return cfg
+
+
+def tier_model(provider, tier, path=None):
+    """The model id for (provider, tier): the user's llm.toml `[<provider>] <tier> = "..."`, else the built-in map.
+    The value may be an alias or a model id; it must belong to the provider and have a price row."""
+    provider = resolve_provider(provider)
+    if tier not in TIERS:
+        raise LLMError(f"unknown tier {tier!r}; pick one of {', '.join(TIERS)}")
+    cfg = tier_config(path)
+    for mid, row in (cfg.get("prices") or {}).items():
+        if isinstance(row, dict) and mid not in PRICES:
+            try:
+                PRICES[mid] = {"in": float(row["in"]), "out": float(row["out"]),
+                               "cache_read": float(row.get("cache_read", row["in"]))}
+            except (KeyError, TypeError, ValueError) as e:
+                raise LLMError(f"{path or TIERS_FILE}: [prices.\"{mid}\"] needs numeric in and out ({e!r})") from e
+    name = str((cfg.get(provider) or {}).get(tier) or TIER_MODELS[provider][tier])
+    m = MODELS.get(name, name)
+    if m not in PRICES:
+        raise LLMError(f"{TIERS_FILE}: {provider}.{tier} = {name!r} has no price; add [prices.\"{name}\"] with in, out")
+    if next((p for pre, p in MODEL_PROVIDER_PREFIX.items() if m.startswith(pre)), None) != provider:
+        raise LLMError(f"{TIERS_FILE}: {provider}.{tier} = {name!r} is not a {provider} model")
+    return m
+
+
 def model_provider(model):
     """The provider a model id belongs to ("claude" for the aliases)."""
     m = model_id(model)
     return next(p for pre, p in MODEL_PROVIDER_PREFIX.items() if m.startswith(pre))
 
 
-def model_id(model):
+def model_id(model, provider=None):
+    """A model alias, tier (`light` / `standard` / `strong`, resolved for `provider`, default per resolve_provider) or id."""
+    if model in TIERS:
+        return tier_model(provider, model)
     m = MODELS.get(model, model)
     if m not in PRICES:
         raise LLMError(f"unknown model {model!r}; pick one of {', '.join(MODELS)} or {', '.join(PRICES)}")
@@ -169,6 +273,9 @@ def normalize(requests):
         if r.id in seen:
             raise LLMError(f"duplicate request id {r.id!r}")
         seen.add(r.id)
+        if r.model in TIERS:      # a tier is provider-neutral: it takes the request's provider (else $KB_LLM_PROVIDER, claude)
+            r.provider = resolve_provider(r.provider)
+            r.model = tier_model(r.provider, r.model)
         model_id(r.model)
         # an empty provider follows the model (so a $KB_LLM_PROVIDER default never breaks a caller that named its
         # model); resolve_provider() with the env var is for entry points that pick a model for the provider (the CLI)
@@ -319,6 +426,28 @@ def availability():
     findable by `api_key()`. The app greys AI features out when no backend is ok."""
     return {"subscription": _subscription(), "api": _keyed("api"), "batch": _keyed("batch"),
             "providers": _provider_status()}
+
+
+NEEDS_CLAUDE = "Needs Claude: sign in with `claude login` or add an Anthropic API key."
+_CLAUDE_TTL = 30
+_claude_cache = {"at": 0.0, "value": None}
+
+
+def claude_available(refresh=False):
+    """(ok, reason): can the Claude provider run at all (a logged-in subscription or an Anthropic API key)? Features that
+    need Claude's agent (chat agent, deep digest, deep research, skill runs) check this before starting and answer HTTP 409
+    with `reason` (which is NEEDS_CLAUDE when not ok). No LLM call; the login probe is cached for 30 seconds."""
+    now = time.monotonic()
+    if not refresh and _claude_cache["value"] is not None and now - _claude_cache["at"] < _CLAUDE_TTL:
+        return _claude_cache["value"]
+    if api_key():
+        value = (True, "API key found")
+    elif _subscription()["ok"]:
+        value = (True, "logged in to a Claude subscription")
+    else:
+        value = (False, NEEDS_CLAUDE)
+    _claude_cache.update(at=now, value=value)
+    return value
 
 
 # --- subscription: claude -p ---------------------------------------------------------------------------
