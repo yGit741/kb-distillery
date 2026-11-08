@@ -242,3 +242,23 @@ def test_map_plans_the_existing_page_not_a_second_one(vault, monkeypatch):
     (vault / "wiki" / "blog-k-1.md").write_text("---\ntype: blog-post\nraw: raw/web-clips/k-1.md\n---\n# P\n")
     assert map_mod._existing_page("raw/web-clips/k-1.md", "article", "article-k-1") == ("blog-post", "blog-k-1")
     assert map_mod._existing_page("raw/web-clips/k-9.md", "article", "article-k-9") == ("article", "article-k-9")
+
+
+def test_digest_one_rolls_back_a_session_stopped_mid_finalize(vault, monkeypatch, tmp_path):
+    """A cancel (SystemExit from SIGTERM) during finalize leaves status `finalizing`: digest_one rolls it back."""
+    rolled = []
+    monkeypatch.setattr(digest_many.session_mod, "find_open_session", lambda raw: None)
+    monkeypatch.setattr(digest_many.session_mod, "begin", lambda raw, depth, scope: "s1")
+    monkeypatch.setattr(digest_many, "session_dir", lambda sha: str(tmp_path))
+    monkeypatch.setattr(digest_many.session_mod, "load_session", lambda sha: {"status": "finalizing"})
+    monkeypatch.setattr(digest_many.session_mod, "rollback", lambda sha, reason: rolled.append((sha, reason)))
+
+    def stopped(sha):
+        raise SystemExit(143)
+
+    monkeypatch.setattr(extract, "run_extract", stopped)
+    claims = tmp_path / "c.json"
+    claims.write_text("{}")
+    with pytest.raises(SystemExit):
+        digest_many.digest_one(RAW, str(claims))
+    assert rolled == [("s1", "aborted")]

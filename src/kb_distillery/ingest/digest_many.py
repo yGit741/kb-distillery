@@ -233,9 +233,9 @@ def digest_one(raw, claims_path):
         rc = subprocess.run([sys.executable, "-m", "kb_distillery.ingest", "finalize", sha], cwd=ROOT).returncode
         if rc != 0:
             raise RuntimeError("finalize failed (rolled back)")
-    except BaseException:
-        if session_mod.load_session(sha)["status"] == "open":
-            session_mod.abort(sha)
+    except BaseException:                                       # also a cancel (SystemExit from SIGTERM) mid-finalize
+        if session_mod.load_session(sha)["status"] in ("open", "finalizing"):
+            session_mod.rollback(sha, "aborted")
         raise
     return sha
 
