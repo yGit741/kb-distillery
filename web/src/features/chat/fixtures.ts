@@ -21,6 +21,7 @@ export function chatStatus(over: Partial<ChatStatus> = {}): ChatStatus {
     models: [{ id: "m1", label: "Model One" }],
     default_model: "m1",
     spend: { credit: 100, spent: 10, left: 90, turns: 3, cycle_start: "2026-10-01", next_reset: "2026-10-31", subscription_turns: 0 },
+    claude: { available: true, reason: "" },
     ...over,
   };
 }

@@ -45,7 +45,8 @@ def direct_events(payload, key, model, question, history, scope):
 
 
 @router.post("/api/chat", summary="Ask the research chat (server-sent events)",
-             responses={200: {"content": {"text/event-stream": {}}}, 400: {"description": "bad request"}})
+             responses={200: {"content": {"text/event-stream": {}}}, 400: {"description": "bad request"},
+                        409: {"description": "the Agent backend needs Claude (a login or an Anthropic key)"}})
 def post_chat(req: ChatRequest):
     if is_read_only():
         return _err(405, "this server is read-only (KB_READ_ONLY is set): the chat is not available here")
@@ -57,6 +58,9 @@ def post_chat(req: ChatRequest):
     backend = payload.get("backend") or settings["backend"]
     if backend not in chat_data.BACKENDS:
         return _err(400, f"unknown backend {backend!r}")
+    if backend == "agent" and not (claude := chat_data.claude_status(settings))["available"] \
+            and not (claude := chat_data.claude_status(settings, refresh=True))["available"]:
+        return _err(409, claude["reason"])      # nothing can run Claude: the control stays visible, marked "needs Claude"
     billing = payload.get("billing") if runtime.effective("agent-mode") and backend == "agent" else None
     if billing:       # the composer line's pick decides who pays; it replaces the stored account choice for this turn
         auth_mode = "subscription" if billing == "subscription" else "api_key"

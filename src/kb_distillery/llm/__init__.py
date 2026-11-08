@@ -428,6 +428,28 @@ def availability():
             "providers": _provider_status()}
 
 
+NEEDS_CLAUDE = "Needs Claude: sign in with `claude login` or add an Anthropic API key."
+_CLAUDE_TTL = 30
+_claude_cache = {"at": 0.0, "value": None}
+
+
+def claude_available(refresh=False):
+    """(ok, reason): can the Claude provider run at all (a logged-in subscription or an Anthropic API key)? Features that
+    need Claude's agent (chat agent, deep digest, deep research, skill runs) check this before starting and answer HTTP 409
+    with `reason` (which is NEEDS_CLAUDE when not ok). No LLM call; the login probe is cached for 30 seconds."""
+    now = time.monotonic()
+    if not refresh and _claude_cache["value"] is not None and now - _claude_cache["at"] < _CLAUDE_TTL:
+        return _claude_cache["value"]
+    if api_key():
+        value = (True, "API key found")
+    elif _subscription()["ok"]:
+        value = (True, "logged in to a Claude subscription")
+    else:
+        value = (False, NEEDS_CLAUDE)
+    _claude_cache.update(at=now, value=value)
+    return value
+
+
 # --- subscription: claude -p ---------------------------------------------------------------------------
 def _env():
     return {k: v for k, v in os.environ.items() if k not in _SCRUBBED and not k.startswith(("PIXI_", "CONDA_"))}
