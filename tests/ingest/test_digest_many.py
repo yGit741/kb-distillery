@@ -276,3 +276,25 @@ def test_sigterm_waits_for_the_end_of_finalize():
         assert got == [signal.SIGTERM]                         # delivered right after
     finally:
         signal.signal(signal.SIGTERM, old)
+
+
+def test_sigterm_is_held_while_another_thread_is_alive():
+    # the full suite has helper threads alive; a per-thread mask let the signal through to one of them
+    import os
+    import signal
+    import threading
+    got, stop = [], threading.Event()
+    helpers = [threading.Thread(target=stop.wait, daemon=True) for _ in range(4)]
+    for t in helpers:
+        t.start()
+    old = signal.signal(signal.SIGTERM, lambda signum, frame: got.append(signum))
+    try:
+        with digest_many._term_deferred():
+            for _ in range(20):
+                os.kill(os.getpid(), signal.SIGTERM)
+            sum(range(10000))                                  # give a stray handler a chance to run
+            assert got == []
+        assert got == [signal.SIGTERM]                         # re-raised once after the block
+    finally:
+        signal.signal(signal.SIGTERM, old)
+        stop.set()

@@ -224,15 +224,23 @@ def cmd_collect(a):
 
 @contextlib.contextmanager
 def _term_deferred():
-    """Hold SIGTERM (main thread only) until the block ends; a SIGTERM sent meanwhile is delivered right after it."""
+    """Hold SIGTERM until the block ends; a SIGTERM sent meanwhile is raised again right after it.
+
+    Swaps the Python-level handler instead of masking the thread: a mask covers only the calling
+    thread, so with any other thread alive the kernel hands the signal to that one and the handler
+    still runs mid-block. Python handlers always run in the main thread, so this only works there.
+    """
     if threading.current_thread() is not threading.main_thread():
         yield
         return
-    signal.pthread_sigmask(signal.SIG_BLOCK, {signal.SIGTERM})
+    pending = []
+    old = signal.signal(signal.SIGTERM, lambda signum, frame: pending.append(signum))
     try:
         yield
     finally:
-        signal.pthread_sigmask(signal.SIG_UNBLOCK, {signal.SIGTERM})
+        signal.signal(signal.SIGTERM, signal.SIG_DFL if old is None else old)   # None: set outside Python
+        if pending:
+            signal.raise_signal(signal.SIGTERM)
 
 
 def digest_one(raw, claims_path):
