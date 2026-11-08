@@ -48,7 +48,7 @@ def active():
     root = paths.ROOT
     return {
         "id": cfg.id if cfg else None, "name": cfg.name if cfg else "No knowledge base selected",
-        "root": root, "config": cfg.path if cfg else None,
+        "root": root, "read_only": kbconfig.is_read_only(root), "config": cfg.path if cfg else None,
         "schema_version": ".".join(map(str, cfg.schema_version if cfg else schema.SCHEMA_VERSION)),
         "git": git_state(root),
         "think_root": paths.THINK_PATH, "think_git": git_state(paths.THINK_PATH),

@@ -90,7 +90,8 @@ def test_a_read_only_server_refuses_every_write_with_405(client, kb):
                      lambda: client.post("/api/recent", json={"text": "x"}, headers=LOOPBACK),
                      lambda: client.delete("/api/recent", headers=LOOPBACK)):
             r = call()
-            assert r.status_code == 405 and "read-only" in r.json()["error"]
+            body = r.json()           # the kb guard answers 403 {"detail"}; /api/recent keeps its own 405 {"error"}
+            assert r.status_code in (403, 405) and "read-only" in (body.get("detail") or body.get("error"))
         assert client.get("/api/views").status_code == 200 and client.get("/api/recent").status_code == 200
     assert commits(kb) == n and not os.path.exists(os.path.join(kb, ".local"))
 

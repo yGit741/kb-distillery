@@ -10,6 +10,7 @@ from urllib.parse import urlparse
 from fastapi import HTTPException, Path, Request
 from starlette.responses import JSONResponse
 
+from kb_distillery.config import kb as kbconfig
 from kb_distillery.services import corpus
 
 MAX_BODY_BYTES = 4 * 1024 * 1024
@@ -48,6 +49,25 @@ def require_loopback_origin(request: Request):
     origin = request.headers.get("origin")
     if origin is None or not is_loopback_host(urlparse(origin).hostname):
         raise HTTPException(403, "cross-origin or origin-less mutation refused")
+
+
+# Mutating routes that touch only local app state (flags, chat sessions and settings) or compute a read (graph queries,
+# scope resolution), and the ones that create a *new* kb elsewhere: they stay open on a read-only kb.
+READ_ONLY_OPEN = ("/api/flags", "/api/sessions", "/api/chat", "/api/graph", "/api/recent", "/api/scopes/resolve",
+                  "/api/kb/import", "/api/kb/inbox")
+READ_ONLY_CLOSED = ("/api/chat/saved",)           # writes raw/inbox/ of the active kb
+
+
+def require_writable_kb(request: Request):
+    """App-wide dependency. On a read-only kb (example, `[kb] read_only`, $KB_READ_ONLY) every mutation that writes
+    the kb is 403; `READ_ONLY_OPEN` routes only touch app state."""
+    if request.method not in MUTATING:
+        return
+    path = request.url.path
+    if path.startswith(READ_ONLY_OPEN) and not path.startswith(READ_ONLY_CLOSED):
+        return
+    if kbconfig.is_read_only():
+        raise HTTPException(403, kbconfig.READ_ONLY_MESSAGE)
 
 
 def safe_raw_path(path: str = Path(...)) -> str:

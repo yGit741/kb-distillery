@@ -38,6 +38,8 @@ Run a module with `python -m kb_distillery.<package>.<module>` (pixi tasks do; `
 
 ## distill and knowledge bases
 
+**Read-only kbs.** `kb_distillery.config.kb.is_read_only(root)` is true for a kb under the engine's `examples/`, with `[kb] read_only = true`, or when `KB_READ_ONLY=1`. Every write path goes through `require_writable` (`ops.core` entry points, the `ops.wrap` writers, and the server's `require_writable_kb` dependency, 403 on mutating routes except app-state routes listed in `server/security.py`). New write paths call the same guard.
+
 `distill <command> [args…]` (inside the repo: `pixi run distill --help`, or `python -m kb_distillery`; for a kb elsewhere see "`distill` on PATH" below) runs the module or script behind it, with the
 rest of the command line passed through, so `--kb` goes after the command. The package `src/kb_distillery/cli/` imports
 no kb code, so `--help` works with no knowledge base selected. `kbd` is the old name: it prints one deprecation line and
@@ -47,6 +49,7 @@ forwards (`cli/legacy.py` holds the mapping table; it goes after one release).
 |---|---|---|
 | `distill init` / `doctor` | `kbd init` / `doctor` | first kb from a template / check the environment and a kb |
 | `distill kb list` / `kb show` | `kbd kb-list` / `kb-show` | every kb and where it is / the selected one, resolved |
+| `distill kb open-example <name>` | | launch the app on `examples/<name>` with `KB_READ_ONLY=1` |
 | `distill lint [--health]` | `kbd lint` / `health` | the schema is the linter |
 | `distill launch` | `kbd launch` and `kbd app` | restart the app detached and open it (installed package: serve in the foreground) |
 | `distill hooks install` / `hook <name>` | `kbd install-kb-hooks` | git + Claude Code hooks into a kb (hooks live in `src/kb_distillery/kits/base/hooks/`) / the stable entry the hooks call, failing closed |

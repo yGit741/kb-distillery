@@ -85,10 +85,10 @@ The linter is the schema. If it passes, the pages are valid. It also regenerates
 ```bash
 pixi run distill kb show --kb examples/demo
 pixi run distill doctor --kb examples/demo
-pixi run distill launch --kb examples/demo
+pixi run distill kb open-example demo
 ```
 
-`distill lint` rewrites generated files, so run it on a copy of the demo.
+`distill kb open-example <name>` opens a knowledge base from `examples/` in the app, read-only: every write (adding sources, notes, favorites, `distill ops`) is refused with "this knowledge base is read-only (example kb)", and a banner at the top of the app says so. Create your own knowledge base (step 2) to add sources. A kb is also read-only when its `kb.toml` has `read_only = true` under `[kb]` or `KB_READ_ONLY=1` is set. To experiment with writes, work on a copy of the demo.
 
 ## Choose how a model is billed
 
