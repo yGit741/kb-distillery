@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 # Install (or reinstall) the nightly knowledge-lane sync as a user launchd agent.
 # Runs `pixi run daily-sync` at 22:00 local; a run missed while asleep fires on wake.
-# Usage: pixi run install-sync            uninstall: pixi run install-sync -- --uninstall
+# Usage: pixi run install-sync -- --kb <id|path>      (or KB=<id|path> pixi run install-sync)
+#        uninstall: pixi run install-sync -- --uninstall
+# The job runs against that knowledge base: the engine repo is not one.
 set -euo pipefail
 
 cd "$(dirname "$0")/../.."
@@ -17,8 +19,15 @@ if [[ "${1:-}" == "--uninstall" ]]; then
   exit 0
 fi
 
+KB_REF="${KB:-}"
+if [[ "${1:-}" == "--kb" ]]; then KB_REF="${2:-}"; fi
+if [[ -z "$KB_REF" ]]; then
+  echo "error: pass the knowledge base the nightly job should sync: pixi run install-sync -- --kb <id|path> (or set KB)" >&2
+  exit 2
+fi
+
 mkdir -p "$(dirname "$DEST")" "$(dirname "$LOG")"
-sed -e "s|__ROOT__|$PWD|g" -e "s|__PIXI__|$PIXI|g" -e "s|__LOG__|$LOG|g" \
+sed -e "s|__ROOT__|$PWD|g" -e "s|__PIXI__|$PIXI|g" -e "s|__LOG__|$LOG|g" -e "s|__KB__|$KB_REF|g" \
   examples/launchd/$LABEL.plist >"$DEST"
 launchctl bootstrap "gui/$(id -u)" "$DEST"
 echo "installed $LABEL → daily 22:00, log: $LOG"

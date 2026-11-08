@@ -82,6 +82,11 @@ export interface DataSource {
   /** The raw file itself (local only). */
   rawFileUrl(path: string): string | null;
   digestRaw(path: string): Promise<T.DigestResult>;
+  /** Digest jobs (local app only). A preview makes no model call; `backend` picks one of subscription | api | batch, else the billing defaults choose. */
+  previewDigest(raws: string[], backend?: string): Promise<T.DigestPreview>;
+  startDigestJob(raws: string[], backend?: string): Promise<T.DigestJob>;
+  listDigestJobs(): Promise<T.DigestJobList>;
+  cancelDigestJob(id: string): Promise<T.DigestJob>;
   /** A scrap-youtube bundle by its raw item `raw/videos/<dir>/video.md` (local only). */
   getVideo(path: string): Promise<T.VideoBundle>;
 
