@@ -893,6 +893,126 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/proposals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Proposals, newest first (optionally one status) */
+        get: operations["list_proposals_api_proposals_get"];
+        put?: never;
+        /** Create a proposal (revision 1): hunks and tier-1 checks computed here */
+        post: operations["create_api_proposals_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/proposals/{pid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One proposal: current revision's hunks, decisions, checks, stale recomputed */
+        get: operations["get_api_proposals__pid__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/proposals/{pid}/apply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Apply the accepted hunks as one knowledge step (409 stale, 422 blocking checks) */
+        post: operations["apply_api_proposals__pid__apply_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/proposals/{pid}/decisions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Accept, reject or correct one hunk ({hunk_id, decision}) or several ({decisions: [...]}) */
+        post: operations["decide_api_proposals__pid__decisions_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/proposals/{pid}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reject the whole proposal (kept on disk with its reason) */
+        post: operations["reject_api_proposals__pid__reject_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/proposals/{pid}/render": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Each touched page as it is now, with the hunks positioned by block index */
+        get: operations["render_api_proposals__pid__render_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/proposals/{pid}/revisions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** A new revision; decisions survive for hunks whose before/after are unchanged */
+        post: operations["revise_api_proposals__pid__revisions_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/raw/{path}": {
         parameters: {
             query?: never;
@@ -1341,6 +1461,31 @@ export interface components {
              */
             t: "all";
         };
+        /** Applied */
+        Applied: {
+            /** At */
+            at: string;
+            /** Commit */
+            commit?: string | null;
+            /**
+             * Hunks
+             * @default []
+             */
+            hunks: string[];
+            /** Kb Version */
+            kb_version?: string | null;
+        } & {
+            [key: string]: unknown;
+        };
+        /** ApplyResult */
+        ApplyResult: {
+            /** Commit */
+            commit: string | null;
+            /** Kb Version */
+            kb_version: string | null;
+        } & {
+            [key: string]: unknown;
+        };
         /** AttachmentInfo */
         AttachmentInfo: {
             /** Bytes */
@@ -1777,6 +1922,35 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
+        /** CheckCounts */
+        CheckCounts: {
+            /**
+             * Blocking
+             * @default 0
+             */
+            blocking: number;
+            /** Errors */
+            errors: number;
+            /** Warnings */
+            warnings: number;
+        } & {
+            [key: string]: unknown;
+        };
+        /** Checks */
+        Checks: {
+            /**
+             * Tier1
+             * @default []
+             */
+            tier1: components["schemas"]["Finding"][];
+            /**
+             * Tier2
+             * @default []
+             */
+            tier2: components["schemas"]["Finding"][];
+        } & {
+            [key: string]: unknown;
+        };
         /** CitationGraph */
         CitationGraph: {
             /** Links */
@@ -1914,6 +2088,19 @@ export interface components {
              */
             t: "count";
         };
+        /** Counts */
+        Counts: {
+            /** Accepted */
+            accepted: number;
+            /** Corrected */
+            corrected: number;
+            /** Hunks */
+            hunks: number;
+            /** Rejected */
+            rejected: number;
+        } & {
+            [key: string]: unknown;
+        };
         /** CreatedWithinCond */
         CreatedWithinCond: {
             /** Days */
@@ -1936,6 +2123,36 @@ export interface components {
              * @description Cypher (supported subset); strings in double quotes
              */
             query: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** DecisionItem */
+        DecisionItem: {
+            /** Comment */
+            comment?: string | null;
+            /**
+             * Decision
+             * @enum {string}
+             */
+            decision: "accept" | "reject" | "correct";
+            /** Hunk Id */
+            hunk_id: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /**
+         * DecisionRequest
+         * @description One decision ({hunk_id, decision, comment?}) or a bulk form ({decisions: [...]}).
+         */
+        DecisionRequest: {
+            /** Comment */
+            comment?: string | null;
+            /** Decision */
+            decision?: ("accept" | "reject" | "correct") | null;
+            /** Decisions */
+            decisions?: components["schemas"]["DecisionItem"][] | null;
+            /** Hunk Id */
+            hunk_id?: string | null;
         } & {
             [key: string]: unknown;
         };
@@ -2216,6 +2433,26 @@ export interface components {
             slugs: string[];
             /** Version */
             version?: string | null;
+        } & {
+            [key: string]: unknown;
+        };
+        /** Finding */
+        Finding: {
+            /** Code */
+            code: string;
+            /** Hunk Id */
+            hunk_id?: string | null;
+            /** Message */
+            message: string;
+            /**
+             * Severity
+             * @enum {string}
+             */
+            severity: "error" | "warning" | "info";
+            /** Slug */
+            slug: string;
+            /** Source */
+            source?: string | null;
         } & {
             [key: string]: unknown;
         };
@@ -2621,6 +2858,77 @@ export interface components {
              * @enum {string}
              */
             t: "hops";
+        };
+        /** Hunk */
+        Hunk: {
+            /** After */
+            after: string;
+            /**
+             * At
+             * @default 0
+             */
+            at: number;
+            /** Before */
+            before: string;
+            /** Id */
+            id: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "prose" | "structure";
+            /**
+             * Links Added
+             * @default []
+             */
+            links_added: string[];
+            /**
+             * Links Removed
+             * @default []
+             */
+            links_removed: string[];
+            /** Op */
+            op: string;
+            /** Op Id */
+            op_id: string;
+            /**
+             * Reason
+             * @default
+             */
+            reason: string;
+            /** Slug */
+            slug: string;
+            /**
+             * Sources
+             * @default []
+             */
+            sources: string[];
+            /**
+             * Span
+             * @default 0
+             */
+            span: number;
+            /** Tokens */
+            tokens: string[][];
+        } & {
+            [key: string]: unknown;
+        };
+        /** HunkDecision */
+        HunkDecision: {
+            /** At */
+            at?: string | null;
+            /**
+             * Comment
+             * @default
+             */
+            comment: string;
+            /**
+             * Decision
+             * @enum {string}
+             */
+            decision: "accept" | "reject" | "correct";
+        } & {
+            [key: string]: unknown;
         };
         /** InAreaCond */
         InAreaCond: {
@@ -3694,12 +4002,198 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
+        /** Producer */
+        Producer: {
+            /**
+             * Context
+             * @default {}
+             */
+            context: {
+                [key: string]: unknown;
+            };
+            /**
+             * Instruction
+             * @default
+             */
+            instruction: string;
+            /**
+             * Kind
+             * @default manual
+             * @enum {string}
+             */
+            kind: "manual" | "chat" | "flags" | "ingest" | "restructure" | "lint" | "restore";
+        } & {
+            [key: string]: unknown;
+        };
+        /** ProducerKindOnly */
+        ProducerKindOnly: {
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "manual" | "chat" | "flags" | "ingest" | "restructure" | "lint" | "restore";
+        } & {
+            [key: string]: unknown;
+        };
         /** PromptsResponse */
         PromptsResponse: {
             /** Prompts */
             prompts: {
                 [key: string]: unknown;
             }[];
+        } & {
+            [key: string]: unknown;
+        };
+        /** Proposal */
+        Proposal: {
+            applied?: components["schemas"]["Applied"] | null;
+            /** Base */
+            base: {
+                [key: string]: string | null;
+            };
+            check_counts: components["schemas"]["CheckCounts"];
+            checks: components["schemas"]["Checks"];
+            counts: components["schemas"]["Counts"];
+            /** Created */
+            created: string;
+            /** Current */
+            current: number;
+            /** Decisions */
+            decisions: {
+                [key: string]: components["schemas"]["HunkDecision"];
+            };
+            /** Hunks */
+            hunks: components["schemas"]["Hunk"][];
+            /** Id */
+            id: string;
+            producer: components["schemas"]["Producer"];
+            /** Revision */
+            revision: number;
+            /** Revisions */
+            revisions: components["schemas"]["Revision"][];
+            /** Stale */
+            stale: boolean;
+            /**
+             * Stale Pages
+             * @default []
+             */
+            stale_pages: string[];
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "open" | "applied" | "rejected" | "stale";
+            /** Title */
+            title: string;
+            /** Updated */
+            updated: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** ProposalCreate */
+        ProposalCreate: {
+            /** Note */
+            note?: string | null;
+            /** Ops */
+            ops: components["schemas"]["ProposalOp"][];
+            /**
+             * @default {
+             *       "context": {},
+             *       "instruction": "",
+             *       "kind": "manual"
+             *     }
+             */
+            producer: components["schemas"]["Producer"];
+            /** Title */
+            title: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** ProposalList */
+        ProposalList: {
+            /** Proposals */
+            proposals: components["schemas"]["ProposalSummary"][];
+        } & {
+            [key: string]: unknown;
+        };
+        /**
+         * ProposalOp
+         * @description One typed op. Fields by kind: edit_page {slug, new_text}, create_page {slug, text}, tombstone_page {slug,
+         *     redirect_to}, rewrite_link {slug, from_slug, to_slug}, move_block {from_slug, to_slug, block_id}, set_frontmatter
+         *     {slug, key, value}; every op may carry `reason` and `sources`.
+         */
+        ProposalOp: {
+            /** Block Id */
+            block_id?: string | null;
+            /** From Slug */
+            from_slug?: string | null;
+            /** Id */
+            id?: string | null;
+            /** Key */
+            key?: string | null;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "edit_page" | "create_page" | "tombstone_page" | "rewrite_link" | "move_block" | "set_frontmatter";
+            /** New Text */
+            new_text?: string | null;
+            /**
+             * Reason
+             * @default
+             */
+            reason: string;
+            /** Redirect To */
+            redirect_to?: string | null;
+            /** Slug */
+            slug?: string | null;
+            /**
+             * Sources
+             * @default []
+             */
+            sources: string[];
+            /** Text */
+            text?: string | null;
+            /** To Slug */
+            to_slug?: string | null;
+            /** Value */
+            value?: string | null;
+        } & {
+            [key: string]: unknown;
+        };
+        /** ProposalRender */
+        ProposalRender: {
+            /** Id */
+            id: string;
+            /** Pages */
+            pages: components["schemas"]["RenderPage"][];
+            /** Revision */
+            revision: number;
+            /** Stale */
+            stale: boolean;
+        } & {
+            [key: string]: unknown;
+        };
+        /** ProposalSummary */
+        ProposalSummary: {
+            checks: components["schemas"]["CheckCounts"];
+            counts: components["schemas"]["Counts"];
+            /** Created */
+            created: string;
+            /** Id */
+            id: string;
+            /** Pages */
+            pages: string[];
+            producer: components["schemas"]["ProducerKindOnly"];
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "open" | "applied" | "rejected" | "stale";
+            /** Title */
+            title: string;
+            /** Updated */
+            updated: string;
         } & {
             [key: string]: unknown;
         };
@@ -3896,6 +4390,13 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
+        /** RejectRequest */
+        RejectRequest: {
+            /** Reason */
+            reason?: string | null;
+        } & {
+            [key: string]: unknown;
+        };
         /** RelationProposal */
         RelationProposal: {
             /** Confidence */
@@ -3942,6 +4443,84 @@ export interface components {
             shown: number;
             /** Total */
             total: number;
+        } & {
+            [key: string]: unknown;
+        };
+        /** RenderBlock */
+        RenderBlock: {
+            /** Index */
+            index: number;
+            /** Kind */
+            kind: string;
+            /** Text */
+            text: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** RenderHunk */
+        RenderHunk: {
+            /** At */
+            at: number;
+            /** Id */
+            id: string;
+            /** Kind */
+            kind: string;
+            /** Op */
+            op: string;
+            /** Span */
+            span: number;
+        } & {
+            [key: string]: unknown;
+        };
+        /** RenderPage */
+        RenderPage: {
+            /** Blocks */
+            blocks: components["schemas"]["RenderBlock"][];
+            /** Exists */
+            exists: boolean;
+            /** Hunks */
+            hunks: components["schemas"]["RenderHunk"][];
+            /**
+             * My Notes
+             * @default
+             */
+            my_notes: string;
+            /** Slug */
+            slug: string;
+            /** Text */
+            text: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** Revision */
+        Revision: {
+            /**
+             * Checks
+             * @default []
+             */
+            checks: components["schemas"]["Finding"][];
+            /** Created */
+            created: string;
+            /** Hunks */
+            hunks: components["schemas"]["Hunk"][];
+            /** N */
+            n: number;
+            /**
+             * Note
+             * @default
+             */
+            note: string;
+            /** Ops */
+            ops: components["schemas"]["ProposalOp"][];
+        } & {
+            [key: string]: unknown;
+        };
+        /** RevisionCreate */
+        RevisionCreate: {
+            /** Note */
+            note?: string | null;
+            /** Ops */
+            ops: components["schemas"]["ProposalOp"][];
         } & {
             [key: string]: unknown;
         };
@@ -7047,6 +7626,451 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["PipelineSnapshot"];
                 };
+            };
+        };
+    };
+    list_proposals_api_proposals_get: {
+        parameters: {
+            query?: {
+                /** @description open | applied | rejected | stale */
+                status?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProposalList"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_api_proposals_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProposalCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Proposal"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Method Not Allowed */
+            405: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    get_api_proposals__pid__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                pid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Proposal"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Method Not Allowed */
+            405: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    apply_api_proposals__pid__apply_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                pid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApplyResult"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Method Not Allowed */
+            405: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    decide_api_proposals__pid__decisions_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                pid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DecisionRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Proposal"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Method Not Allowed */
+            405: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    reject_api_proposals__pid__reject_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                pid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["RejectRequest"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Proposal"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Method Not Allowed */
+            405: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    render_api_proposals__pid__render_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                pid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProposalRender"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Method Not Allowed */
+            405: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    revise_api_proposals__pid__revisions_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                pid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RevisionCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Proposal"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Method Not Allowed */
+            405: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
