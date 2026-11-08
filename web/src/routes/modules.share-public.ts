@@ -2,4 +2,4 @@
 import type { FeatureModule } from "./modules";
 
 /** Share build `public`: the core screens plus every screen.* flag on for public. Nothing else is imported. */
-export const modules = import.meta.glob<FeatureModule>(["../features/home/index.tsx", "../features/graph/index.tsx", "../features/pages/index.tsx"], { eager: true });
+export const modules = import.meta.glob<FeatureModule>(["../features/home/index.tsx", "../features/graph/index.tsx", "../features/pages/index.tsx", "../features/about/index.tsx"], { eager: true });

@@ -82,7 +82,7 @@ class FlagSyncTests(unittest.TestCase):
                                            "GIT_CONFIG_GLOBAL": os.devnull, "GIT_CONFIG_NOSYSTEM": "1"})
         self.env.start()
         self._write(self.repo, ".gitignore", ".claude/worktrees/\n")
-        for s in ("home", "graph", "pages"):
+        for s in codegen.SHARE_CORE_SCREENS:
             self._write(self.repo, f"web/src/features/{s}/index.tsx", "")
         self._flags(self.repo, "a")
         self._write(self.repo, "meta/tool.py", "x\n")

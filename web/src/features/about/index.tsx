@@ -1,0 +1,18 @@
+import { useSearch } from "@tanstack/react-router";
+import { MapCard } from "@/features/home/HomeScreen";
+import { useMapHost } from "@/features/home";
+import type { SearchById } from "@/routes/search";
+
+const INTRO = {
+  id: "what-is-it",
+  title: "A Map of the Knowledge That Interests Me",
+  byline: "Created by my research agent and me.",
+  glossary: true,
+};
+
+/** What is it?: the whole map card, the glossary (Raw -> Source -> Concept, reading depths) and Pick a Concept, the concept in `?concept=`. */
+export default function WhatIsIt() {
+  const host = useMapHost("/what-is-it");
+  const { concept } = useSearch({ strict: false }) as SearchById["about"];
+  return <MapCard host={host} concept={concept} intro={INTRO} />;
+}
