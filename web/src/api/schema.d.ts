@@ -842,6 +842,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/pages/{slug}/sources": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The sources behind one page: title, format, disposition and where the page cites them */
+        get: operations["get_page_sources_api_pages__slug__sources_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/path": {
         parameters: {
             query?: never;
@@ -3469,6 +3486,104 @@ export interface components {
              * @default 0
              */
             wanted_total: number;
+        } & {
+            [key: string]: unknown;
+        };
+        /** PageSource */
+        PageSource: {
+            /** Added */
+            added?: string | null;
+            /**
+             * Cited In Sections
+             * @default []
+             */
+            cited_in_sections: string[];
+            /**
+             * Disposition
+             * @default
+             */
+            disposition: string;
+            /**
+             * Format
+             * @default
+             */
+            format: string;
+            /** Id */
+            id: string;
+            /**
+             * Kind
+             * @default other
+             */
+            kind: string;
+            /** Path Rel */
+            path_rel?: string | null;
+            /** Route */
+            route?: string | null;
+            /** Slug */
+            slug?: string | null;
+            /** Title */
+            title: string;
+            /** Url */
+            url?: string | null;
+            /**
+             * Via
+             * @default []
+             */
+            via: string[];
+        } & {
+            [key: string]: unknown;
+        };
+        /** PageSourceCounts */
+        PageSourceCounts: {
+            /**
+             * By Disposition
+             * @default {}
+             */
+            by_disposition: {
+                [key: string]: number;
+            };
+            /**
+             * External
+             * @default 0
+             */
+            external: number;
+            /**
+             * Pages
+             * @default 0
+             */
+            pages: number;
+            /**
+             * Raw
+             * @default 0
+             */
+            raw: number;
+            /**
+             * Total
+             * @default 0
+             */
+            total: number;
+        } & {
+            [key: string]: unknown;
+        };
+        /** PageSources */
+        PageSources: {
+            /**
+             * @default {
+             *       "by_disposition": {},
+             *       "external": 0,
+             *       "pages": 0,
+             *       "raw": 0,
+             *       "total": 0
+             *     }
+             */
+            counts: components["schemas"]["PageSourceCounts"];
+            /** Slug */
+            slug: string;
+            /**
+             * Sources
+             * @default []
+             */
+            sources: components["schemas"]["PageSource"][];
         } & {
             [key: string]: unknown;
         };
@@ -6819,6 +6934,46 @@ export interface operations {
                 };
             };
             /** @description unknown slug */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_page_sources_api_pages__slug__sources_get: {
+        parameters: {
+            query?: {
+                kb?: string;
+            };
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PageSources"];
+                };
+            };
+            /** @description unknown slug or knowledge base */
             404: {
                 headers: {
                     [name: string]: unknown;
