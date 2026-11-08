@@ -95,7 +95,7 @@ export const LINE_COPY = {
   /** The view gallery: a window of every view, with its filter, cards and anchored-view field. */
   gallery: {
     title: "Views",
-    command: { label: "Gallery", hint: "all views" },
+    command: { label: "View gallery", hint: "all views" },
     filterLabel: "Filter views",
     filterPlaceholder: "Filter by name or description",
     ready: "Ready views",

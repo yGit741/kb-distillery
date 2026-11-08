@@ -164,6 +164,7 @@ def check_llm(avail=None) -> list[Check]:
     if avail is None:
         from kb_distillery import llm
         avail = llm.availability()
+    avail = {k: v for k, v in avail.items() if k != "providers"}      # per-vendor keys are not a backend
     out = []
     for backend, a in avail.items():
         if a["ok"]:

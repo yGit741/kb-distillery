@@ -202,9 +202,8 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
   const parsed = parseMode(line);
   const viewMode = intent && caps.sentences && parsed.mode === "view";
   const [hintMode, setHintMode] = useState<LineMode | null>(null);
-  // flag line-routing: which way the last line went, said in the panel while it stays open; an arrow key is a pick
+  // flag line-routing: which way the last line went, said in the panel while it stays open
   const [routedHint, setRoutedHint] = useState<string | null>(null);
-  const picked = useRef(false);
   // q3: a name that needs the user's pick before the sentence applies
   const [didYou, setDidYou] = useState<{ text: string; op: "replace" | "stack"; pick: Extract<Plan, { kind: "ask" }>["pick"]; chosen: Record<string, string> } | null>(null);
 
@@ -832,9 +831,11 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
     useShellStore.getState().clearLine();
     if (intentRef.current) focusBar(line);
   }, [focusBar]);
+  /** Whether the highlighted row was chosen (arrow keys) rather than being the first row by default. */
+  const picked = useRef(false);
   useEffect(() => {
-    setIdx(0);
     picked.current = false;
+    setIdx(0);
   }, [raw]);
   useEffect(() => {
     if (!preview || !intent) return;
@@ -920,10 +921,8 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
       e.preventDefault();
       setOpen(true);
       const n = rows.length;
-      if (n) {
-        setIdx((i) => (e.key === "ArrowDown" ? (i + 1) % n : (i - 1 + n) % n));
-        picked.current = true;
-      }
+      picked.current = true;
+      if (n) setIdx((i) => (e.key === "ArrowDown" ? (i + 1) % n : (i - 1 + n) % n));
     } else if (e.key === "ArrowRight" && intent && open) {
       // the right arrow opens the highlighted row's menu once the caret is past the last letter
       const at = document.getElementById(optionId(idx));
@@ -937,9 +936,11 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
       if (e.nativeEvent.isComposing) return;
       e.preventDefault();
       setHintMode(null);
-      // a row picked with the arrows or the pointer runs as picked
-      const line = routing && !e.shiftKey && !picked.current && idx === 0 ? routableLine() : null;
-      if (line) lineRoute.route(line);
+      // a bare `/views`: Enter shows the list; only a row picked by arrow keys applies
+      if (slash && intent && /^views\s*$/i.test(line.slice(1)) && !picked.current) return setOpen(true);
+      // flag line-routing: a row picked with the arrows or the pointer runs as picked
+      const routed = routing && !e.shiftKey && !picked.current && idx === 0 ? routableLine() : null;
+      if (routed) lineRoute.route(routed);
       else rows[idx]?.run(e.shiftKey);
     } else if (e.key === "Tab" && intent && useLayers.getState().preview && !e.shiftKey) {
       e.preventDefault();

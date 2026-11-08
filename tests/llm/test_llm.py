@@ -482,7 +482,8 @@ LEGACY = {
     "metrics/golden.py",
     "services/chat.py",           # dashboard chat (interactive, streaming)
 }
-DIRECT = re.compile(r'"claude",\s*"-p"|api\.anthropic\.com|import anthropic|from anthropic|claude_agent_sdk')
+DIRECT = re.compile(r'"claude",\s*"-p"|api\.anthropic\.com|import anthropic|from anthropic|claude_agent_sdk'
+                    r'|import openai|from openai|import google\.generativeai|from google import genai|from google\.generativeai')
 
 
 def test_no_llm_calls_outside_kb_llm():
