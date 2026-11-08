@@ -73,17 +73,19 @@ def test_ops_entry_points_refuse(tmp_path, monkeypatch):
 
 
 def test_server_refuses_kb_writes_but_not_app_state(tmp_path, monkeypatch):
+    """KB_READ_ONLY=1 is the server-wide switch: its documented answer is 405 (see tests/server/test_read_only.py)."""
     root = make_repo(str(tmp_path))
     monkeypatch.setenv("KB_READ_ONLY", "1")
     with mock.patch.dict(os.environ, ENV), TestClient(create_app()) as c:
-        r = c.post("/api/favorites", json={"slug": "alpha"}, headers=LOOPBACK)
-        assert r.status_code == 403 and r.json() == {"detail": MESSAGE}
-        assert c.post("/api/think/capture", json={"text": "hi"}, headers=LOOPBACK).status_code == 403
-        assert c.delete("/api/views/v1", headers=LOOPBACK).status_code == 403
-        assert c.delete("/api/sessions/s1", headers=LOOPBACK).status_code == 403
-        assert c.post("/api/recent", json={"text": "x"}, headers=LOOPBACK).status_code == 403
-        assert c.delete("/api/chat/attachments/s1/a1", headers=LOOPBACK).status_code == 403
-        assert c.put("/api/flags/nope", json={}, headers=LOOPBACK).status_code != 403
+        r = c.post("/api/think/capture", json={"text": "hi"}, headers=LOOPBACK)
+        assert r.status_code == 405 and MESSAGE in r.text
+        assert c.post("/api/favorites", json={"slug": "alpha"}, headers=LOOPBACK).status_code == 405
+        assert c.post("/api/think/capture", json={"text": "hi"}, headers=LOOPBACK).status_code == 405
+        assert c.delete("/api/views/v1", headers=LOOPBACK).status_code == 405
+        assert c.delete("/api/sessions/s1", headers=LOOPBACK).status_code == 405
+        assert c.post("/api/recent", json={"text": "x"}, headers=LOOPBACK).status_code == 405
+        assert c.delete("/api/chat/attachments/s1/a1", headers=LOOPBACK).status_code == 405
+        assert c.put("/api/flags/nope", json={}, headers=LOOPBACK).status_code != 405
         assert c.get("/api/kb").json()["read_only"] is True
     assert os.path.isdir(root)
 
@@ -107,6 +109,8 @@ def test_server_refuses_on_examples_path_without_env(tmp_path):
     root = make_repo(str(tmp_path))
     with mock.patch.dict(os.environ, ENV), mock.patch.object(kbconfig, "examples_dirs", return_value=[str(tmp_path)]), \
             mock.patch.object(kbconfig, "vault_root", return_value=root), TestClient(create_app()) as c:
+        r = c.post("/api/recent", json={"text": "x"}, headers=LOOPBACK)
+        assert r.status_code == 403 and r.json() == {"detail": MESSAGE}
         assert c.delete("/api/sessions/s1", headers=LOOPBACK).status_code == 403
-        assert c.post("/api/recent", json={"text": "x"}, headers=LOOPBACK).status_code == 403
+        assert c.post("/api/think/capture", json={"text": "hi"}, headers=LOOPBACK).status_code == 403
     assert not os.path.exists(os.path.join(root, ".local"))

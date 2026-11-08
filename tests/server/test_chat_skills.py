@@ -139,7 +139,7 @@ def test_a_session_file_keeps_no_session_listed_until_it_is_saved(client):
 def test_read_only_server_refuses_put(client, monkeypatch):
     monkeypatch.setenv(store.READ_ONLY_ENV, "1")
     r = put(client, [])
-    assert r.status_code in (403, 405) and "read-only" in (r.json().get("detail") or r.json().get("error"))
+    assert r.status_code == 405 and r.json()["error"]
 
 
 # ── the agent request ──

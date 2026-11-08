@@ -57,6 +57,7 @@ def require_loopback_origin(request: Request):
 # sessions, recent steps, attachments and skills (they write under <kb>/.local).
 READ_ONLY_OPEN = ("/api/flags", "/api/graph", "/api/scopes/resolve", "/api/chat/answer", "/api/chat/message",
                   "/api/chat/settings", "/api/chat/keys", "/api/kb/import", "/api/kb/inbox")
+SELF_REFUSING = ("/api/sessions", "/api/chat/skills", "/api/favorites", "/api/views", "/api/recent")
 READ_ONLY_OPEN_EXACT = ("/api/chat",)
 
 
@@ -70,8 +71,15 @@ def require_writable_kb(request: Request):
     unless its route is in `READ_ONLY_OPEN`."""
     if request.method not in MUTATING or _read_only_open(request.url.path):
         return
-    if kbconfig.is_read_only():
-        raise HTTPException(403, kbconfig.READ_ONLY_MESSAGE)
+    if not kbconfig.is_read_only():
+        return
+    if os.environ.get(kbconfig.READ_ONLY_ENV) == "1":
+        # a server started with KB_READ_ONLY=1 (the shared site) keeps its documented 405 {"error"} on the routes that
+        # already refuse themselves; every other write gets the same 405 here
+        if request.url.path.rstrip("/").startswith(SELF_REFUSING):
+            return
+        raise HTTPException(405, kbconfig.READ_ONLY_MESSAGE)
+    raise HTTPException(403, kbconfig.READ_ONLY_MESSAGE)
 
 
 def safe_raw_path(path: str = Path(...)) -> str:

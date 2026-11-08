@@ -81,8 +81,7 @@ def test_a_read_only_server_refuses_every_write_with_405(client, kb):
     with mock.patch.dict(os.environ, {fav_svc.READ_ONLY_ENV: "1"}):
         for r in (client.post("/api/favorites", json={"slug": "alpha"}, headers=LOOPBACK),
                   client.delete("/api/favorites/alpha", headers=LOOPBACK)):
-            body = r.json()           # the kb guard answers 403 {"detail"}
-            assert r.status_code in (403, 405) and "read-only" in (body.get("detail") or body.get("error"))
+            assert r.status_code == 405 and "read-only" in r.json()["error"]
         assert client.get("/api/favorites").status_code == 200
     assert commits(kb) == n
 

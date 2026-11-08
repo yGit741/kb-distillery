@@ -120,7 +120,7 @@ def test_read_only_refuses_every_write_but_reads_work(client, kb, monkeypatch, v
     for r in (put(client, "a1"), put(client, "fresh"),
               client.patch("/api/sessions/a1", json={"title": "x"}, headers=LOOPBACK),
               client.delete("/api/sessions/a1", headers=LOOPBACK)):
-        assert r.status_code in (403, 405) and "read-only" in (r.json().get("detail") or r.json().get("error"))
+        assert r.status_code == 405 and "read-only" in r.json()["error"]
     assert not os.path.exists(os.path.join(kb, ".local", "sessions", "fresh.json"))
     assert client.get("/api/sessions/a1").status_code == 200
     assert [s["id"] for s in client.get("/api/sessions").json()["sessions"]] == ["a1"]
