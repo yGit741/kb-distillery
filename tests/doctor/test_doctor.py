@@ -25,8 +25,8 @@ def no_keys(monkeypatch, tmp_path):
 def test_availability_nothing(monkeypatch, no_keys):
     monkeypatch.setattr(llm, "_which", lambda n: None)
     a = llm.availability()
-    assert set(a) == set(llm.BACKENDS)
-    for v in a.values():
+    assert set(a) == set(llm.BACKENDS) | {"providers"}
+    for v in [*(a[b] for b in llm.BACKENDS), *a["providers"].values()]:
         assert v["ok"] is False and v["why"] and v["fix"]
 
 
