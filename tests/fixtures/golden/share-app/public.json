@@ -6,6 +6,7 @@
   "manifest.json"
  ],
  "kb_data": {
+  "favorites": [],
   "graph": {
    "concept_links": [
     {
@@ -1921,7 +1922,129 @@
     ]
    }
   },
-  "rawCards": {}
+  "rawCards": {},
+  "readyViews": [
+   {
+    "description": "Pages that share a contradicts link, and the links between them.",
+    "id": "contradictions",
+    "kit": "base",
+    "layers": [
+     "show nodes having edge contradicts",
+     "show edges type contradicts"
+    ],
+    "name": "Contradictions"
+   },
+   {
+    "description": "Pages with no links at all.",
+    "id": "orphans",
+    "kit": "base",
+    "layers": [
+     "show nodes degree = 0"
+    ],
+    "name": "Orphans"
+   },
+   {
+    "description": "Pages with eight or more links.",
+    "id": "hubs",
+    "kit": "base",
+    "layers": [
+     "show nodes degree >= 8"
+    ],
+    "name": "Hubs"
+   },
+   {
+    "description": "Colour every page by its type.",
+    "id": "by-type",
+    "kit": "base",
+    "layers": [
+     "style nodes color by type"
+    ],
+    "name": "By type"
+   },
+   {
+    "description": "Pages added in the last 30 days.",
+    "id": "recent-additions",
+    "kit": "base",
+    "layers": [
+     "show nodes created > 30d"
+    ],
+    "name": "Recent additions"
+   },
+   {
+    "description": "Barely linked pages near your favorites, where a link may be missing. Matching by meaning is not available yet, so this looks at links only.",
+    "id": "gaps",
+    "kit": "base",
+    "layers": [
+     "show nodes within 3 hops of favorites and degree <= 1"
+    ],
+    "name": "Gaps"
+   },
+   {
+    "description": "Contradictions near your favorites that no think note has taken up.",
+    "id": "open-contradictions",
+    "kit": "base",
+    "layers": [
+     "show nodes having edge contradicts and within 2 hops of favorites and not linked_from type think",
+     "show edges type contradicts"
+    ],
+    "name": "Open contradictions"
+   },
+   {
+    "description": "Pages added in the last 30 days that have fewer than two links.",
+    "id": "frontier",
+    "kit": "base",
+    "layers": [
+     "show nodes created > 30d and degree < 2"
+    ],
+    "name": "Frontier"
+   },
+   {
+    "description": "Pages with eight or more links that no think note has taken up.",
+    "id": "quiet-hubs",
+    "kit": "base",
+    "layers": [
+     "show nodes degree >= 8 and not linked_from type think"
+    ],
+    "name": "Quiet hubs"
+   },
+   {
+    "description": "The pages within two links of one page: the page in focus, or one you name.",
+    "id": "neighborhood",
+    "kit": "base",
+    "layers": [
+     "show nodes within 2 hops of this"
+    ],
+    "name": "Neighborhood of…"
+   },
+   {
+    "description": "Every question page.",
+    "id": "open-questions",
+    "kit": "research",
+    "layers": [
+     "show nodes type question"
+    ],
+    "name": "Open questions"
+   },
+   {
+    "description": "Pages that name an open problem in their area.",
+    "id": "open-problems",
+    "kit": "research",
+    "layers": [
+     "show nodes having edge open-problem-in"
+    ],
+    "name": "Open problems"
+   },
+   {
+    "description": "The authors and thinkers the knowledge base mentions.",
+    "id": "people",
+    "kit": "research",
+    "layers": [
+     "show nodes type person"
+    ],
+    "name": "People"
+   }
+  ],
+  "views": []
  },
  "manifest": {
   "built_at": "2026-01-02T03:04:05Z",

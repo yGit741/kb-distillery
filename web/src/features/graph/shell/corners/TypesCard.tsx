@@ -1,16 +1,18 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { cn } from "@/lib/utils";
 import { ShapeIcon, SourceIcon } from "../../encoding/NodeMarkSvg";
-import { markOf, TYPE_LABEL_OVERRIDE } from "../../encoding/spec";
+import { markOf } from "../../encoding/spec";
 import type { TypeRow } from "../../legendModel";
 import { useReducedMotion } from "./motion";
 import { useCorners } from "./cornersStore";
+import { groupTypes, typeName, type TypeGroup } from "./typeGroups";
 
 interface Props {
   concepts: readonly TypeRow[];
   /** sources, with the collections folded in */
   sources: readonly TypeRow[];
-  onToggle: (type: string) => void;
+  /** show (on) or hide every one of these types */
+  onToggle: (types: readonly string[], on: boolean) => void;
   /** spotlight the pages of these types while the pointer is on them (null = none) */
   onSpot: (types: readonly string[] | null) => void;
 }
@@ -21,13 +23,12 @@ const SPOT_IN_MS = 120;
 const SPOT_OUT_MS = 160;
 /** a group scrolls sideways (out of sight, from the centre outwards) when the screen is too narrow for all its names */
 const GROUP = "flex h-6 min-w-0 max-w-full items-center overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden";
-const nameOf = (r: TypeRow) => TYPE_LABEL_OVERRIDE[r.id] ?? r.label;
 
 /**
  * The page types, at the bottom centre, 8px from the edge: folded, the marks sit in a tight row (concepts left of a
  * thin divider, sources right of it); pressed, ONE card opens around them and the marks unfold into names with
  * counts, concepts to the left and sources to the right, the divider staying at the centre of the screen. A
- * dimmed name is a type that is hidden (sources are by default). Pressing a name hides or shows that type.
+ * dimmed name is a type that is hidden (sources are by default). Types that share an icon are one name with their counts summed; pressing a name hides or shows all of them.
  */
 export function TypesCard({ concepts, sources, onToggle, onSpot }: Props) {
   const MS = useReducedMotion() ? 0 : FULL_MS;
@@ -44,13 +45,17 @@ export function TypesCard({ concepts, sources, onToggle, onSpot }: Props) {
     if (timer.current) clearTimeout(timer.current);
     timer.current = setTimeout(() => onSpot(types), types ? SPOT_IN_MS : SPOT_OUT_MS);
   };
-  if (!concepts.length && !sources.length) return null;
+  const conceptGroups = useMemo(() => groupTypes(concepts), [concepts]);
+  const sourceGroups = useMemo(() => groupTypes(sources), [sources]);
+  if (!conceptGroups.length && !sourceGroups.length) return null;
 
-  const item = (r: TypeRow, side: "left" | "right", i: number) => {
-    const label = nameOf(r);
+  const item = (r: TypeGroup, side: "left" | "right", i: number) => {
+    const label = r.label;
+    const ids = r.members.map((m) => m.id);
+    const lead = r.members[0]!;
     const icon = (
       <span key="i" className={cn("grid size-[15px] flex-none place-items-center rounded-full transition-colors", open ? "bg-transparent" : "bg-background")}>
-        {r.layer === "source" ? <SourceIcon type={r.id} className="size-3" /> : <ShapeIcon shape={markOf(r.id)} className="size-3" />}
+        {lead.layer === "source" ? <SourceIcon type={r.id} className="size-3" /> : <ShapeIcon shape={markOf(r.id)} className="size-3" />}
       </span>
     );
     const text = (
@@ -65,17 +70,17 @@ export function TypesCard({ concepts, sources, onToggle, onSpot }: Props) {
     );
     return (
       <button
-        key={r.id}
+        key={r.key}
         type="button"
         tabIndex={open ? 0 : -1}
         aria-hidden={!open}
         aria-pressed={r.shown}
         aria-label={`${label}, ${r.total}`}
-        title={`${r.shown ? "Hide" : "Show"} every ${label.toLowerCase()}`}
+        title={`${r.shown ? "Hide" : "Show"} every ${label.toLowerCase()}${r.members.length > 1 ? ` (${r.members.map((m) => `${typeName(m)} ${m.total}`).join(", ")})` : ""}`}
         data-type={r.id}
-        onClick={() => open && onToggle(r.id)}
-        onMouseEnter={() => open && spot([r.id])}
-        onFocus={() => open && spot([r.id])}
+        onClick={() => open && onToggle(ids, !r.shown)}
+        onMouseEnter={() => open && spot(ids)}
+        onFocus={() => open && spot(ids)}
         onBlur={() => spot(null)}
         className={cn(
           "flex h-6 shrink-0 items-center rounded-lg transition-[margin,color] motion-reduce:transition-none",
@@ -121,9 +126,9 @@ export function TypesCard({ concepts, sources, onToggle, onSpot }: Props) {
           onClick={() => toggle("types")}
         />
       )}
-      <div className={`${GROUP} flex-row-reverse justify-self-end`}>{concepts.map((r, i) => item(r, "left", i))}</div>
+      <div className={`${GROUP} flex-row-reverse justify-self-end`}>{conceptGroups.map((r, i) => item(r, "left", i))}</div>
       <span aria-hidden className={cn("block w-px rounded-sm bg-border transition-[margin,height] motion-reduce:transition-none", open ? "mx-3.5 h-4" : "mx-2 h-3")} style={{ transitionDuration: `${MS}ms` }} />
-      <div className={`${GROUP} justify-self-start`}>{sources.map((r, i) => item(r, "right", i))}</div>
+      <div className={`${GROUP} justify-self-start`}>{sourceGroups.map((r, i) => item(r, "right", i))}</div>
     </div>
   );
 }

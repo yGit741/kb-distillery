@@ -18,6 +18,7 @@ import {
   specLayers,
   type ReadyCard,
 } from "../layers/readyViews";
+import { useCapabilities } from "../shell/capabilities";
 import { LINE_COPY } from "../shell/copy";
 import {
   defaultFetch,
@@ -132,6 +133,7 @@ function GalleryBody({
   onLegacy,
 }: Props) {
   const hide = useGallery((s) => s.hide);
+  const caps = useCapabilities();
   const qc = useQueryClient();
   const selection = useKb((s) => s.selection);
   const [filter, setFilter] = useState("");
@@ -400,7 +402,7 @@ function GalleryBody({
                       )}
                       <div className="flex h-7 flex-none items-center gap-1">
                         {(["apply", "add", "pin"] as const).map((op) => {
-                          if (op === "pin" && c.section === "pinned")
+                          if (op === "pin" && (c.section === "pinned" || !caps.saveViews))
                             return null;
                           return (
                             <button
