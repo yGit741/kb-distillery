@@ -7,13 +7,16 @@ ingest session open at a time (hard rule 6), the cached claims dropped into the 
 them, `map` / `draft` / `finalize` as for a hand digest, so each source ends in its own `kb(digest)` commit.
 Everything is resumable: state.json holds each source's status, so re-running continues where it stopped."""
 import argparse
+import contextlib
 import hashlib
 import json
 import os
 import re
 import shutil
+import signal
 import subprocess
 import sys
+import threading
 import time
 
 from kb_distillery.ingest.sources.books import book as book_mod
@@ -26,7 +29,7 @@ from kb_distillery.storage import StorageError, for_kb
 from .verify import existing_digest_for_raw
 from kb_distillery.vault.schema import is_page_file
 
-MODEL = "sonnet"
+MODEL = "standard"
 MAX_TEXT = 60_000          # chars of source text per request: a ceiling on cost, not a summary
 OUT_TOKENS = 4_000         # expected reply size, for the up-front estimate only (the ceiling is extract.FILL_MAX_TOKENS)
 STOP_AFTER = 3             # consecutive failed sessions that stop `drive`
@@ -219,6 +222,19 @@ def cmd_collect(a):
     return 0
 
 
+@contextlib.contextmanager
+def _term_deferred():
+    """Hold SIGTERM (main thread only) until the block ends; a SIGTERM sent meanwhile is delivered right after it."""
+    if threading.current_thread() is not threading.main_thread():
+        yield
+        return
+    signal.pthread_sigmask(signal.SIG_BLOCK, {signal.SIGTERM})
+    try:
+        yield
+    finally:
+        signal.pthread_sigmask(signal.SIG_UNBLOCK, {signal.SIGTERM})
+
+
 def digest_one(raw, claims_path):
     """One full-digest session from cached claims → the sha (after finalize committed it)."""
     if session_mod.find_open_session(raw):
@@ -230,12 +246,13 @@ def digest_one(raw, claims_path):
             raise RuntimeError("claims did not validate")
         map_mod.run_map(sha, no_questions=True)
         draft.run_draft(sha)
-        rc = subprocess.run([sys.executable, "-m", "kb_distillery.ingest", "finalize", sha], cwd=ROOT).returncode
+        with _term_deferred():          # a cancel waits for finalize and its kb(digest) commit, never cuts them in half
+            rc = subprocess.run([sys.executable, "-m", "kb_distillery.ingest", "finalize", sha], cwd=ROOT).returncode
         if rc != 0:
             raise RuntimeError("finalize failed (rolled back)")
-    except BaseException:
-        if session_mod.load_session(sha)["status"] == "open":
-            session_mod.abort(sha)
+    except BaseException:                                       # also a cancel (SystemExit from SIGTERM) mid-finalize
+        if session_mod.load_session(sha)["status"] in ("open", "finalizing"):
+            session_mod.rollback(sha, "aborted")
         raise
     return sha
 

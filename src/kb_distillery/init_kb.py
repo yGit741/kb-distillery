@@ -53,6 +53,7 @@ __pycache__/
 # Engine runtime state: never knowledge
 meta/.ops/
 meta/.ingest/
+meta/.jobs/
 meta/.catalog/
 meta/.migrate/
 .cache/

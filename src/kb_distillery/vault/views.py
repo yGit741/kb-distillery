@@ -239,10 +239,15 @@ def _exclude_file(root):
 def ensure_local_ignored(root):
     """Make sure `.local/` is ignored in this checkout even when its tracked ignore file predates the rule: add it to the
     repository's local exclude file (untracked, per clone). Best effort; the ops commit path never stages it anyway."""
+    ensure_ignored(root, f"{LOCAL_DIR}/")
+
+
+def ensure_ignored(root, rule):
+    """Add one ignore `rule` (e.g. `meta/.jobs/`) to the repository's local exclude file when it is not there yet, for a
+    kb whose tracked ignore file predates the rule. Best effort: a kb that is not a repo is left alone."""
     exclude = _exclude_file(root)
     if not exclude:
         return
-    rule = f"{LOCAL_DIR}/"
     try:
         try:
             with open(exclude, encoding="utf-8") as f:

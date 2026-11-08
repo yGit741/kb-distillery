@@ -6,7 +6,7 @@ pick is deterministic (a hash of the slug), so a batch and its re-run choose the
 log is append-only: meta/.ingest/easy/spotcheck.jsonl (local, gitignored with meta/.ingest).
 
     python -m kb_distillery.ingest easy-spotcheck pick <slug> [<slug> ...]      # which pages to re-read
-    python -m kb_distillery.ingest easy-spotcheck log <slug> --model sonnet --verdict ok|fix [--note "…"]
+    python -m kb_distillery.ingest easy-spotcheck log <slug> --model standard --verdict ok|fix [--note "…"]
     python -m kb_distillery.ingest easy-spotcheck status                       # counts per verdict
 """
 import hashlib
@@ -18,8 +18,8 @@ from datetime import datetime, timezone
 from .paths import ROOT
 
 RATE = 0.05
-DEFAULT_MODEL = "haiku"          # easy-digest default
-CHECK_MODEL = "sonnet"           # the stronger re-reader
+DEFAULT_MODEL = "light"          # easy-digest default
+CHECK_MODEL = "standard"           # the stronger re-reader
 VERDICTS = ("ok", "fix")
 LOG = os.path.join(ROOT, "meta", ".ingest", "easy", "spotcheck.jsonl")
 
@@ -38,6 +38,8 @@ def pick(slugs, rate=RATE):
 
 
 def log(slug, verdict, model=CHECK_MODEL, note="", path=None):
+    from kb_distillery import llm
+    model = llm.model_id(model)       # record the model that read, not the tier name
     if verdict not in VERDICTS:
         raise ValueError(f"verdict must be one of {VERDICTS}")
     path = path or LOG

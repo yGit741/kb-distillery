@@ -10,7 +10,7 @@ from kb_distillery.vault.schema import PARSED_FILENAME
 from .paths import session_dir, load_session, person_from_raw
 from .schemas import validate_claims
 
-FILL_MODEL = "sonnet"
+FILL_MODEL = "standard"
 FILL_EFFORT = "medium"
 FILL_MAX_TOKENS = 16000
 PROMPT_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "extract_prompt.md")
