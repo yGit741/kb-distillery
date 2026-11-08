@@ -237,3 +237,18 @@ def test_cli_provider_flag(monkeypatch, capsys):
     monkeypatch.setattr(providers, "post_json", Fake(GEMINI_OK))
     assert cli.main(["ask", "hi"]) == 0
     assert '"model": "gemini-2.5-flash"' in capsys.readouterr().out
+
+
+def test_claude_available_follows_key_or_login(monkeypatch):
+    from kb_distillery import llm
+    monkeypatch.setattr(llm, "api_key", lambda: "")
+    monkeypatch.setattr(llm, "_subscription", lambda: {"ok": False, "why": "", "fix": ""})
+    assert llm.claude_available(refresh=True) == (False, llm.NEEDS_CLAUDE)
+    monkeypatch.setattr(llm, "_subscription", lambda: {"ok": True, "why": "", "fix": ""})
+    assert llm.claude_available(refresh=True)[0] is True
+    monkeypatch.setattr(llm, "_subscription", lambda: {"ok": False, "why": "", "fix": ""})
+    monkeypatch.setattr(llm, "api_key", lambda: "sk-ant-x")
+    assert llm.claude_available(refresh=True)[0] is True
+    monkeypatch.setattr(llm, "api_key", lambda: "")
+    assert llm.claude_available()[0] is True          # cached for a moment
+    assert llm.claude_available(refresh=True)[0] is False

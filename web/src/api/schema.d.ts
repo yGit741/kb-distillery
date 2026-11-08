@@ -1604,6 +1604,13 @@ export interface components {
              */
             backend: string;
             /**
+             * @default {
+             *       "available": true,
+             *       "reason": ""
+             *     }
+             */
+            claude: components["schemas"]["ClaudeAvailability"];
+            /**
              * Default Model
              * @default
              */
@@ -1691,6 +1698,24 @@ export interface components {
             title: string;
             /** Year */
             year?: number | null;
+        } & {
+            [key: string]: unknown;
+        };
+        /**
+         * ClaudeAvailability
+         * @description Whether Claude can run at all. Agent features show "Needs Claude" and answer 409 with `reason` when it cannot.
+         */
+        ClaudeAvailability: {
+            /**
+             * Available
+             * @default true
+             */
+            available: boolean;
+            /**
+             * Reason
+             * @default
+             */
+            reason: string;
         } & {
             [key: string]: unknown;
         };
@@ -4752,6 +4777,13 @@ export interface operations {
             };
             /** @description bad request */
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description the Agent backend needs Claude (a login or an Anthropic key) */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
