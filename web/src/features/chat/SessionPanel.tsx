@@ -10,7 +10,8 @@ import { SkillsPanel } from "./SkillsPanel";
 import { sessionIdOf } from "./serverStorage";
 import { fmtUsd } from "./format";
 import { ago, type SessionEntry } from "./sessions";
-import { authPayload, authValue, backendLabel, type StatusView } from "./status";
+import { NeedsClaudeBadge } from "./NeedsClaudeBadge";
+import { NEEDS_CLAUDE, authPayload, authValue, backendLabel, type StatusView } from "./status";
 
 export const STATUS_KEY = ["chat", "status"] as const;
 
@@ -128,11 +129,19 @@ export function SessionPanel({ status, scopes, model, onModel, scope, onScope, s
       <Field
         label="Backend"
         hint={
-          status.agentAvailable
-            ? status.agentVersion
-              ? `Claude Agent SDK ${status.agentVersion} · read-only over wiki/, raw/, think/`
-              : undefined
-            : `Agent backend unavailable: ${status.agentError || "SDK missing"}. Using Direct.`
+          <>
+            {status.agentAvailable
+              ? status.agentVersion
+                ? `Claude Agent SDK ${status.agentVersion} · read-only over wiki/, raw/, think/`
+                : undefined
+              : `Agent backend unavailable: ${status.agentError || "SDK missing"}. Using Direct.`}
+            {!status.claudeAvailable && (
+              <span className="mt-1 flex flex-col items-start gap-1">
+                <NeedsClaudeBadge reason={status.claudeReason} />
+                <span>{status.claudeReason}</span>
+              </span>
+            )}
+          </>
         }
       >
         <Select
@@ -140,7 +149,9 @@ export function SessionPanel({ status, scopes, model, onModel, scope, onScope, s
           onChange={(e) => settings.mutate({ backend: e.target.value })}
           aria-label="Backend"
         >
-          <option value="agent" disabled={!status.agentAvailable}>Agent — reads the vault itself</option>
+          <option value="agent" disabled={!status.agentAvailable}>
+            Agent — reads the vault itself{!status.claudeAvailable ? ` (${NEEDS_CLAUDE})` : ""}
+          </option>
           <option value="direct">Direct — retrieval + one call</option>
         </Select>
       </Field>

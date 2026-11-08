@@ -31,6 +31,9 @@ def temp_config(tmp_path, monkeypatch):
     monkeypatch.setattr(chat_data, "KEY_FILE", str(cfg / "anthropic_key"))
     monkeypatch.setattr(chat_data, "INBOX", str(tmp_path / "inbox"))
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.setattr("kb_distillery.llm.claude_available", lambda refresh=False: (True, ""))   # not this machine's login
+    monkeypatch.setattr("kb_distillery.services.chat_agent.subscription_status",
+                        lambda *a, **k: {"logged_in": False, "email": None, "plan": None, "error": None})
     return cfg
 
 
@@ -307,3 +310,48 @@ def test_answer_reaches_the_waiting_turn(client):
 def test_answer_needs_a_loopback_origin_and_a_valid_body(client):
     assert client.post("/api/chat/answer", json={"id": "x", "answers": {}}).status_code in (400, 403)
     assert client.post("/api/chat/answer", json={"answers": {}}, headers=LOOPBACK).status_code == 422
+
+
+# ── "needs Claude": the Agent backend is refused (409) when nothing can run Claude ──
+@pytest.fixture
+def no_claude(monkeypatch):
+    from kb_distillery import llm
+    monkeypatch.setattr("kb_distillery.llm.claude_available", lambda refresh=False: (False, llm.NEEDS_CLAUDE))
+    monkeypatch.setattr("kb_distillery.services.chat_agent.subscription_status",
+                        lambda *a, **k: {"logged_in": False, "error": "no login"})
+
+
+def test_status_reports_claude_available(client):
+    body = client.get("/api/chat/status").json()
+    ChatStatus.model_validate(body)
+    assert body["claude"] == {"available": True, "reason": ""}
+
+
+def test_status_reports_needs_claude(client, no_claude):
+    from kb_distillery import llm
+    assert client.get("/api/chat/status").json()["claude"] == {"available": False, "reason": llm.NEEDS_CLAUDE}
+
+
+def test_agent_chat_is_refused_with_409_without_claude(client, no_claude):
+    from kb_distillery import llm
+    r = client.post("/api/chat", json={"question": "q", "backend": "agent"}, headers=LOOPBACK)
+    assert r.status_code == 409 and r.json() == {"error": llm.NEEDS_CLAUDE}
+
+
+def test_direct_backend_is_not_gated_by_the_agent_check(client, no_claude):
+    r = client.post("/api/chat", json={"question": "q", "backend": "direct"}, headers=LOOPBACK)
+    assert r.status_code == 400 and "no API key" in r.json()["error"]
+
+
+def test_a_stored_chat_key_counts_as_claude(client, no_claude, temp_config):
+    assert client.post("/api/chat/keys", json={"name": "a", "key": KEY}, headers=LOOPBACK).status_code == 200
+    assert client.get("/api/chat/status").json()["claude"]["available"] is True
+
+
+def test_409_reprobes_so_a_fresh_login_is_not_refused(client, monkeypatch):
+    from kb_distillery import llm
+    seen = []
+    monkeypatch.setattr("kb_distillery.llm.claude_available",
+                        lambda refresh=False: seen.append(refresh) or ((True, "") if refresh else (False, llm.NEEDS_CLAUDE)))
+    r = client.post("/api/chat", json={"question": "q", "backend": "agent"}, headers=LOOPBACK)
+    assert seen == [False, True] and r.status_code != 409
