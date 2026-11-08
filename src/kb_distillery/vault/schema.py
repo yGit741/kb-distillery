@@ -322,6 +322,7 @@ TOOLING_PATHS = [
     ".claude/",
     ".github/",
     "LICENSE",           # open-source files at the repo root
+    "install.sh",        # the two-line installer
 ]
 
 
