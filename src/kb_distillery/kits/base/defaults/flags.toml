@@ -257,3 +257,13 @@ expires = 2027-02-06
 kind = "runtime"
 default = false
 envs = { local = true, private = false, public = false }
+
+[[flag]]
+name = "ui.page-sources"
+description = "Pages: the raw files, source pages and URLs behind the page being read, in one of three placements (footer, side tab, hover marks). Read-only; the private site may show it, public snapshots do not."
+owner = "maintainer"
+created = 2026-11-08
+expires = 2027-02-06
+kind = "runtime"
+default = false
+envs = { local = true, private = true, public = false }

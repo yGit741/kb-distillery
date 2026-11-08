@@ -62,6 +62,8 @@ export interface DataSource {
   listPages(opts?: { kb?: string }): Promise<T.PageIndex>;
   /** `kb`: read the page from another knowledge base (the result is `read_only`). */
   getPage(slug: string, opts?: { kb?: string }): Promise<T.PageDetail>;
+  /** The raw files, source pages and URLs behind a page (local app and private site; the public snapshot has none). */
+  getPageSources(slug: string, opts?: { kb?: string }): Promise<T.PageSources>;
   /** The page file as stored (frontmatter and body); the OKF export copies it. */
   getPageSource(slug: string): Promise<string>;
   search(q: string, limit?: number): Promise<T.SearchResult>;

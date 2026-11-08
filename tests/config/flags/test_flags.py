@@ -90,7 +90,7 @@ class CodegenTests(unittest.TestCase):
             gen = (root / codegen.GEN_TS).read_text(encoding="utf-8")
             toml_names = sorted(f["name"] for f in tomllib.loads((root / "meta" / "flags.toml").read_text())["flag"])   # read independently of load()
             union = " | ".join(json.dumps(n) for n in toml_names)
-            self.assertIn(f"export type FlagName = "agent-mode" | "calm-graph" | "chat-full" | "graph-intent" | "graph-relations" | "graph-shell" | "header-fold" | "inbox-pickup" | "kb-view" | "legend-counts" | "line-routing" | "parsed-pdf" | "pin-fan" | "research-tools" | "screen.digest-jobs" | "screen.first-run" | "screen.lifecycle" | "screen.share" | "screen.start" | "screen.think" | "semantic-search" | "show-thinking" | "spark-chat" | "ui.system-flags-tab" | "views-panel";", gen)
+            self.assertIn(f"export type FlagName = "agent-mode" | "calm-graph" | "chat-full" | "graph-intent" | "graph-relations" | "graph-shell" | "header-fold" | "inbox-pickup" | "kb-view" | "legend-counts" | "line-routing" | "parsed-pdf" | "pin-fan" | "research-tools" | "screen.digest-jobs" | "screen.first-run" | "screen.lifecycle" | "screen.share" | "screen.start" | "screen.think" | "semantic-search" | "show-thinking" | "spark-chat" | "ui.page-sources" | "ui.system-flags-tab" | "views-panel";", gen)
             pub = (root / codegen.modules_path("public")).read_text(encoding="utf-8")
             priv = (root / codegen.modules_path("private")).read_text(encoding="utf-8")
             self.assertNotIn("lifecycle", pub)
