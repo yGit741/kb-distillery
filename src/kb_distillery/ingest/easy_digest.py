@@ -14,7 +14,7 @@ from kb_distillery.vault import frontmatter, links, wikiio
 from kb_distillery.vault.schema import unit_slug_for_raw, unit_type_for_raw
 
 EASY_DIR = os.path.join(ROOT, "meta", ".ingest", "easy")
-FILL_MODEL = "haiku"          # a skim of the abstract, not analysis
+FILL_MODEL = "light"          # a skim of the abstract, not analysis
 
 
 def _resolve_raw(arg):

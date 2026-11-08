@@ -106,6 +106,30 @@ describe("flag spark-chat: the left chat panel", () => {
     );
   });
 
+  it.each([
+    [false, true],
+    [true, false],
+  ])("marks the chat Needs Claude only when Claude is missing (available %s)", async (available, marked) => {
+    await withFlag("chat-full", false, () =>
+    withFlag("graph-shell", true, () =>
+      withFlag("spark-chat", true, async () => {
+        const base = ds();
+        screenWith({ ...base, getChatStatus: async () => chatStatus({ claude: { available, reason: available ? "" : "Needs Claude: sign in." } }) });
+        await screen.findByTestId("graph-shell");
+        act(() => newChat());
+        await screen.findByTestId("spark-panel");
+        await waitFor(() => expect(screen.getByPlaceholderText("Type / for commands")).toBeInTheDocument());
+        if (marked) {
+          expect(screen.getByTestId("chat-needs-claude")).toHaveTextContent("Needs Claude");
+          expect(screen.getByPlaceholderText("Type / for commands")).toBeEnabled();      // nothing hidden, nothing disabled
+        } else {
+          expect(screen.queryByTestId("chat-needs-claude")).not.toBeInTheDocument();
+        }
+      }),
+    ),
+    );
+  });
+
   it("on: picking a stored chat opens the panel with its title", async () => {
     // the plain panel on purpose: chat-full (on locally) adds the size control, attach and @page
     await withFlag("chat-full", false, () =>

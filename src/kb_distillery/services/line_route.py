@@ -14,7 +14,7 @@ import concurrent.futures
 
 from kb_distillery import llm
 
-MODEL = "haiku"
+MODEL = "light"
 EFFORT = "low"
 MAX_TOKENS = 200
 TIMEOUT_S = 15.0
