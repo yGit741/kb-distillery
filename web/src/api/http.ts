@@ -96,6 +96,8 @@ export function createHttpDataSource(fetchImpl: Fetch = (...a) => fetch(...a), b
 
     shapeGraph: (text) => run(() => client.POST("/api/graph/shape", { body: { text, limit: 500 } }), "/api/graph/shape"),
 
+    routeLine: (text, commands, opts) =>
+      run(() => client.POST("/api/line/route", { body: { text, commands: commands.map((c) => ({ id: c.id, label: c.label })) }, ...(opts?.signal ? { signal: opts.signal } : {}) }), "/api/line/route"),
     layersFromText: (text, op, opts) =>
       run(() => client.POST("/api/graph/layers", { body: { text, op, ...(opts?.backend ? { backend: opts.backend } : {}), ...(opts?.fallback ? { fallback: opts.fallback } : {}) } }), "/api/graph/layers"),
 

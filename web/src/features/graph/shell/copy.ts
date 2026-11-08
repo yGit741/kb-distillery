@@ -10,6 +10,15 @@ export const LINE_COPY = {
     command: "Type a command name. Press Enter to run the highlighted one.",
   } satisfies Record<LineMode, string>,
   closestHeading: "Closest options",
+  /** Flag line-routing: Enter on a plain line reads it by itself; these say which way it went, so the prefixes are learnt. */
+  route: {
+    reading: "Reading your line…",
+    view: (text: string) => `Read as a view change: ${text}. A line that starts with > goes there directly.`,
+    ask: "Read as a question, so it went to the chat.",
+    command: (label: string) => `Read as a command: ${label}. A line that starts with / lists the commands.`,
+    search: (title: string) => `Read as a page search: ${title}.`,
+    nothing: (text: string) => `Read as a page search, but nothing matches '${text}'.`,
+  },
   /** The last row under the closest options; `text` is what was typed after the slash. */
   searchInstead: (text: string) => `Search for '${text}' instead`,
   viewRow: "Change the view:",
