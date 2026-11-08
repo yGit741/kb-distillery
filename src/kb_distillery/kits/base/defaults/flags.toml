@@ -180,9 +180,19 @@ envs = { local = true, private = true, public = false }
 
 [[flag]]
 name = "views-panel"
-description = "Graph: the pinned corner opens a panel with saved views, recent sources and chats, commands and settings (with the dark mode toggle) above the pinned list"
+description = "Graph: the pinned corner opens a panel with saved views, recent sources and chats, commands and settings (with the dark mode toggle) above the pinned list; flag pin-fan on replaces it"
 owner = "maintainer"
 created = 2026-11-05
+expires = 2027-02-01
+kind = "runtime"
+default = false
+envs = { local = true, private = true, public = false }
+
+[[flag]]
+name = "pin-fan"
+description = "Graph: the pinned corner opens a fan of cards like Think and Agent: Pin this view, then each pinned view, then All views; takes the place of the views panel"
+owner = "maintainer"
+created = 2026-11-08
 expires = 2027-02-01
 kind = "runtime"
 default = false
