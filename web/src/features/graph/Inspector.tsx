@@ -16,7 +16,7 @@ import type { GRelation } from "./types";
 import { swatchColor } from "./nodeColor";
 import { useFavorites } from "./favorites/store";
 import { LINE_COPY } from "./shell/copy";
-import { IS_SHARE } from "@/share/env";
+import { useCapabilities } from "./shell/capabilities";
 
 const NB_MAX = 40;
 export const obsidianUri = (path: string) => `obsidian://open?file=${encodeURIComponent(path)}`;
@@ -57,7 +57,8 @@ function FavoriteControl({ id }: { id: string }) {
   const on = useFavorites((s) => s.slugs.has(id));
   const C = LINE_COPY.favorites;
   const icon = <Star aria-hidden className={cn("size-4", on && "text-foreground")} strokeWidth={1.6} />;
-  if (IS_SHARE) return on ? <span role="img" aria-label={C.mark} className="mt-0.5 text-muted-foreground"><Star aria-hidden className="size-4" strokeWidth={1.6} /></span> : null;
+  const caps = useCapabilities();
+  if (!caps.favoriteToggle) return on && caps.favoriteMark ? <span role="img" aria-label={C.mark} className="mt-0.5 text-muted-foreground"><Star aria-hidden className="size-4" strokeWidth={1.6} /></span> : null;
   return (
     <button
       type="button"

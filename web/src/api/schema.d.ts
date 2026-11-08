@@ -534,6 +534,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/inbox/files": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Add uploaded files to the knowledge base (no model call, one knowledge step) */
+        post: operations["add_files_api_inbox_files_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/inbox/link-folder": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Take the supported files of a folder on this machine (no model call, one knowledge step) */
+        post: operations["link_folder_api_inbox_link_folder_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/kb": {
         parameters: {
             query?: never;
@@ -1294,6 +1328,11 @@ export interface components {
             items: components["schemas"]["BacklogItem"][];
         } & {
             [key: string]: unknown;
+        };
+        /** Body_add_files_api_inbox_files_post */
+        Body_add_files_api_inbox_files_post: {
+            /** Files */
+            files: string[];
         };
         /** Body_post_attachment_api_chat_attachments_post */
         Body_post_attachment_api_chat_attachments_post: {
@@ -2337,6 +2376,34 @@ export interface components {
              */
             t: "inArea";
         };
+        /** InboxAddResult */
+        InboxAddResult: {
+            /** Commit */
+            commit?: string | null;
+            /** Files */
+            files: components["schemas"]["InboxFileResult"][];
+            /** Version */
+            version?: string | null;
+        } & {
+            [key: string]: unknown;
+        };
+        /**
+         * InboxFileResult
+         * @description What happened to one uploaded file: `added` (stored and catalogued), `duplicate` (same content already in the kb),
+         *     or `refused` (`reason` says why). `raw_path` is where an added file lives now.
+         */
+        InboxFileResult: {
+            /** Name */
+            name: string;
+            /** Raw Path */
+            raw_path?: string | null;
+            /** Reason */
+            reason?: string | null;
+            /** Status */
+            status: string;
+        } & {
+            [key: string]: unknown;
+        };
         /** InfraBranch */
         InfraBranch: {
             /** Ahead */
@@ -2802,6 +2869,31 @@ export interface components {
             pr_merges: number;
             /** Undone */
             undone: number;
+        } & {
+            [key: string]: unknown;
+        };
+        /** LinkFolderRequest */
+        LinkFolderRequest: {
+            /** Path */
+            path: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** LinkFolderResult */
+        LinkFolderResult: {
+            /** Commit */
+            commit?: string | null;
+            /** Files Catalogued */
+            files_catalogued: number;
+            /** Linked */
+            linked: boolean;
+            /**
+             * Skipped
+             * @default 0
+             */
+            skipped: number;
+            /** Version */
+            version?: string | null;
         } & {
             [key: string]: unknown;
         };
@@ -5680,6 +5772,110 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["HealthSnapshot"];
                 };
+            };
+        };
+    };
+    add_files_api_inbox_files_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_add_files_api_inbox_files_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InboxAddResult"];
+                };
+            };
+            /** @description Method Not Allowed */
+            405: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Content Too Large */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    link_folder_api_inbox_link_folder_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LinkFolderRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LinkFolderResult"];
+                };
+            };
+            /** @description Method Not Allowed */
+            405: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Content Too Large */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

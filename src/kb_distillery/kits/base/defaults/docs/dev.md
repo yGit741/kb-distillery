@@ -173,3 +173,7 @@ text queries); `kb_distillery.search.vectors` reads it for graph math — neares
 `.pixi` env into it (`pixi.toml`'s `[activation.env]` `PYTHONPATH` makes `import kb` resolve to the
 worktree's own source) and symlinks the gitignored `raw/` binaries so lint passes. Run code there as
 `pixi run <task>` / `pixi run python -m kb_distillery.…` rather than a bare `python3`, which may not see the worktree's `kb_distillery`.
+
+## Prebuilt web bundle
+
+A release tag `v<version>` carries `webapp-<version>.tar.gz` and `.sha256` (built by `.github/workflows/web-bundle.yml`). When `src/kb_distillery/_webapp` is missing or stale, `distill launch` first calls `kb_distillery.webbuild.fetch_prebuilt` (sha256-checked, unpacked to a temp dir and renamed into place) and only builds `web/` locally when there is no bundle for this version, no network, or the bundle's `SOURCE_HASH` differs from the checkout's `web/` (a dev checkout keeps building). Force a local build with `KB_WEB_BUNDLE=0`; point at a fork's releases with `KB_WEB_BUNDLE_REPO=owner/name`. The checksum comes from the same release as the archive (it guards against corruption, not a tampered release), and the repo defaults to the checkout's origin.

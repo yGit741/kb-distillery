@@ -1,9 +1,10 @@
 """POST /api/graph/shape — free text to a graph view: Cypher plus a style clause."""
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
 from kb_distillery.graph import shape_translate
 from kb_distillery.graph.shape import ShapeError
 from kb_distillery.server.models.shape import ShapeRequest, ShapeResponse
+from kb_distillery.server.readonly import refuse_when_read_only
 
 router = APIRouter(tags=["graph"])
 ERRORS = {400: {"description": "Unknown or unusable LLM backend"},
@@ -11,7 +12,7 @@ ERRORS = {400: {"description": "Unknown or unusable LLM backend"},
           502: {"description": "The LLM backend failed"}}
 
 
-@router.post("/api/graph/shape", response_model=ShapeResponse, responses=ERRORS,
+@router.post("/api/graph/shape", dependencies=[Depends(refuse_when_read_only)], response_model=ShapeResponse, responses=ERRORS,
              summary="Turn free text into a graph view: Cypher selection plus style clause")
 def post_shape(body: ShapeRequest):
     try:

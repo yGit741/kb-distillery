@@ -125,7 +125,8 @@ function draw(next: ViewStack, g: GraphContext | null): { skipped: string[] } {
     set.hiddenLinkKinds = owned.kinds.was;
     owned.kinds = null;
   }
-  if (Object.keys(set).length) useGraphUi.setState({ ...set, story: "" });
+  // the story stays: it names the page types drawn, and a stack that only styles (colour, size) must not empty the canvas
+  if (Object.keys(set).length) useGraphUi.setState(set);
   const legacy = next.layers.find((l) => l.legacy);
   if (legacy?.legacy) g.applyLegacy?.(legacy.legacy as unknown as Record<string, unknown>);
   else if (ev.nodeIds) g.show([...ev.nodeIds]);

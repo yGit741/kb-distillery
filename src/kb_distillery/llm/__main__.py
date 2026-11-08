@@ -9,6 +9,9 @@ import sys
 from kb_distillery import llm
 
 
+DEFAULT_MODELS = {"claude": "haiku", "openai": "gpt-4.1-mini", "gemini": "gemini-2.5-flash"}
+
+
 def _requests(path):
     out = []
     with open(path, encoding="utf-8") as f:
@@ -39,7 +42,8 @@ def main(argv=None):
     a = sub.add_parser("ask")
     a.add_argument("prompt")
     a.add_argument("--backend", choices=llm.BACKENDS)
-    a.add_argument("--model", default="haiku")
+    a.add_argument("--provider", choices=llm.PROVIDERS, help="claude, openai or gemini (default $KB_LLM_PROVIDER, then claude)")
+    a.add_argument("--model", default=None, help="alias or model id (default: haiku, or the provider's small model)")
     a.add_argument("--system", default="")
     a.add_argument("--max-tokens", type=int, default=1024)
     a.add_argument("--effort", default="low")
@@ -54,7 +58,10 @@ def main(argv=None):
     args = ap.parse_args(argv)
 
     if args.cmd == "ask":
-        return _print([llm.ask(args.prompt, backend=args.backend, model=args.model, system=args.system,
+        provider = llm.resolve_provider(args.provider)
+        backend = args.backend or (None if provider == "claude" else "api")   # only Claude has other backends
+        model = args.model or DEFAULT_MODELS[provider]
+        return _print([llm.ask(args.prompt, backend=backend, model=model, system=args.system, provider=provider,
                                max_tokens=args.max_tokens, effort=args.effort)])
     if args.cmd == "submit":
         print(llm.submit(_requests(args.file)))
