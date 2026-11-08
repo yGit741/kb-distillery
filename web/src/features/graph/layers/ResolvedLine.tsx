@@ -3,7 +3,7 @@ import { LINE_COPY } from "../shell/copy";
 import { isParseError, parse } from "./grammar";
 import type { Layer } from "./model";
 
-const ROW = "flex min-h-6 items-center gap-2 px-1 text-xs text-muted-foreground";
+const ROW = "flex min-h-6 items-center gap-2 px-1 text-sm text-muted-foreground";
 
 /**
  * The quiet row under the search line while a `>` sentence is previewed (flag graph-intent): the resolved lines
@@ -59,7 +59,7 @@ export function ResolvedLine({
       </button>
     );
   return (
-    <div className="px-1 py-1 text-xs" data-testid="resolved-line">
+    <div className="px-1 py-1 text-sm" data-testid="resolved-line">
       <textarea
         ref={field}
         aria-label={LINE_COPY.preview.editLabel}

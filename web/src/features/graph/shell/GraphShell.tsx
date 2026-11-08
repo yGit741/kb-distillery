@@ -824,7 +824,12 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
     useShellStore.getState().clearLine();
     if (intentRef.current) focusBar(line);
   }, [focusBar]);
-  useEffect(() => setIdx(0), [raw]);
+  /** Whether the highlighted row was chosen (arrow keys) rather than being the first row by default. */
+  const picked = useRef(false);
+  useEffect(() => {
+    picked.current = false;
+    setIdx(0);
+  }, [raw]);
   useEffect(() => {
     if (!preview || !intent) return;
     if (previewKey.current !== `${parsed.op ?? "replace"}:${parsed.text}`) {
@@ -852,6 +857,7 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
       e.preventDefault();
       setOpen(true);
       const n = rows.length;
+      picked.current = true;
       if (n) setIdx((i) => (e.key === "ArrowDown" ? (i + 1) % n : (i - 1 + n) % n));
     } else if (e.key === "ArrowRight" && intent && open) {
       // the right arrow opens the highlighted row's menu once the caret is past the last letter
@@ -866,6 +872,8 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
       if (e.nativeEvent.isComposing) return;
       e.preventDefault();
       setHintMode(null);
+      // a bare `/views`: Enter shows the list; only a row picked by arrow keys applies
+      if (slash && intent && /^views\s*$/i.test(line.slice(1)) && !picked.current) return setOpen(true);
       rows[idx]?.run(e.shiftKey);
     } else if (e.key === "Tab" && intent && useLayers.getState().preview && !e.shiftKey) {
       e.preventDefault();
