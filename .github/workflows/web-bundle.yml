@@ -1,0 +1,38 @@
+# Builds the React app once per release and attaches it, so `distill launch` on a fresh clone downloads it instead of building.
+name: web-bundle
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "release tag to attach the bundle to (e.g. v0.1.0)"
+        required: true
+permissions:
+  contents: write
+jobs:
+  bundle:
+    runs-on: ubuntu-latest
+    env:
+      TAG: ${{ github.event.inputs.tag || github.ref_name }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
+      - uses: prefix-dev/setup-pixi@v0.8.1
+        with:
+          pixi-version: v0.76.1
+          cache: false
+      - run: pixi run web-build
+      - name: Package the bundle
+        run: |
+          version="${TAG#v}"
+          pixi run python -c "from kb_distillery.webbuild import frontend_source_hash; print(frontend_source_hash('web'))" > src/kb_distillery/_webapp/SOURCE_HASH
+          tar -czf "webapp-${version}.tar.gz" -C src/kb_distillery/_webapp .
+          sha256sum "webapp-${version}.tar.gz" > "webapp-${version}.sha256"
+      - name: Attach to the release
+        run: |
+          version="${TAG#v}"
+          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --draft=false --notes "web bundle"
+          gh release upload "$TAG" "webapp-${version}.tar.gz" "webapp-${version}.sha256" --clobber
