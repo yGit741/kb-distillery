@@ -157,3 +157,27 @@ describe("fromViewSpecV1", () => {
     expect(evaluate(s, graph).nodeIds).toBeNull();
   });
 });
+
+describe("a style layer never restricts the pages", () => {
+  const sized = (): Layer => makeLayer("style", "nodes", {}, "", { style: { color: "type" } });
+
+  it("a stack of only style layers draws every page and applies the colour", () => {
+    const ev = evaluate(stack(EMPTY_STACK, [sized()]), graph);
+    expect(ev.nodeIds).toBeNull();
+    expect(ev.patch.colorBy).toBe("type");
+  });
+
+  it("show then style keeps the show set and the colour", () => {
+    const withShow = stack(EMPTY_STACK, [show("papers", [{ t: "type", value: "paper" }])]);
+    const ev = evaluate(stack(withShow, [sized()]), graph);
+    expect([...ev.nodeIds!].sort()).toEqual(["2019-fine-grained", "2020-listed-paper"]);
+    expect(ev.patch.colorBy).toBe("type");
+  });
+
+  it("replacing with a show-only sentence keeps the style layer and its colour", () => {
+    const styled = stack(EMPTY_STACK, [sized()]);
+    const ev = evaluate(replace(styled, [show("papers", [{ t: "type", value: "paper" }])]), graph);
+    expect(ev.patch.colorBy).toBe("type");
+    expect(ev.nodeIds?.size).toBe(2);
+  });
+});

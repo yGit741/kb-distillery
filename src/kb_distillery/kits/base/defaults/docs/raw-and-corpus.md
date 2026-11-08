@@ -76,3 +76,12 @@ Other members of a course/series are named **`<short>-<topic>.<ext>`**, where `s
 Provenance is kept, not lost: the original name lives in `meta/raw-renames.tsv` (old → new; the one-off script that applied it, `rename_raw.py`, is retired) and, for `.md`, in frontmatter `original_name`/`title`/`aliases`. Raw `.md` files carry filter tags — `source/blog-not-exact`, `source/course-book`, `source/daniel-notes-on-maman`, `source/theorem-and-definitions`, `subject/<x>`, `course/<x>`; PDFs are filtered by filename prefix (`file:linear-algebra-1-`).
 
 ⚠️ reMarkable's `X (annotations).pdf` exports are **ink-only overlays**, not annotated documents — typically a few KB against a multi-MB source, and unreadable on their own. They have all been deleted. If new ones appear, do not delete the source document in their favour.
+
+## Adding sources from the app
+
+Two endpoints add sources with no model call (`src/kb_distillery/services/inbox_add.py`, router `inbox_add.py`):
+
+- `POST /api/inbox/files` (multipart, field `files`, one or more): each file is saved under `raw/inbox/` through the kb's storage connector, then catalogued as `distill ingest` drains the inbox. A file is `refused` when `catalog` has no format for its extension (`.pdf`, slides, `.md`/`.html`, images), `duplicate` when its sha1 is already in `meta/corpus.tsv`, in the inbox or earlier in the same upload, else `added` with its `raw_path`. A name that is taken keeps both files (`-2` suffix). Body cap: 64 MB (`security.UPLOAD_PATHS`).
+- `POST /api/inbox/link-folder` `{path}`: an absolute folder outside the kb (and not containing it). Its supported files (at most 500 files / 512 MB, hidden files and symlinks skipped) go through the same save-and-catalog path, so linking the same folder again finds every file as a duplicate and commits nothing. Nothing is written to `kb.toml`: `[storage]` names the connector for the kb's own `raw/`, and a folder of loose sources is not that.
+
+Each call that adds something is one knowledge step, `kb(catalog): add N sources from the app` or `kb(catalog): link folder <name>` (`catalog` is the op for sources entering `raw/`). A read-only server (`KB_READ_ONLY=1`) answers 405; an open ops session answers 409.

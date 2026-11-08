@@ -8,7 +8,7 @@ import { HEADER_SLOT_ID } from "@/app/headerSlot";
 import { Empty, ErrorState, Loading } from "@/components/states";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { IS_SHARE } from "@/share/env";
+import { useCapabilities } from "./shell/capabilities";
 import { useKb } from "@/lib/store";
 import { useApiQuery } from "@/lib/useApiQuery";
 import type { GraphSearch } from "@/routes/search";
@@ -45,6 +45,7 @@ import { Panels } from "./Panels";
 import { Corners } from "./shell/corners/Corners";
 import { parseKbs } from "@/lib/kbSelection";
 import { useFlag } from "@/flags/useFlag";
+import { FirstRunCard } from "@/features/first-run/FirstRunCard";
 import { relationIndex } from "./relationGroups";
 import { TOOLS, toolOn, useVisibleTools, type GraphToolContext } from "./tools";
 import { useExperiments } from "./tools/experiments";
@@ -88,6 +89,7 @@ export function GraphScreen({ search, host }: { search: GraphSearch; host: Graph
   const kbs = useMemo(() => picked ?? [], [picked?.join(",")]); // eslint-disable-line react-hooks/exhaustive-deps
   // `?chat=` (flag chat-full): /chat and /chat/<id> land here; the full chat opens on that chat, then the param goes
   const chatFull = useFlag("chat-full");
+  const firstRun = useFlag("screen.first-run");
   const sparkChat = useFlag("spark-chat");
   const chatFlag = chatFull && sparkChat;
   const chatParam = search.chat;
@@ -210,7 +212,7 @@ export function GraphScreen({ search, host }: { search: GraphSearch; host: Graph
   if (!model.nodes.length)
     return (
       <FullBleed>
-        <div className="p-4"><Empty>The vault has no pages yet.</Empty></div>
+        {firstRun ? <FirstRunCard host={host} /> : <div className="p-4"><Empty>The vault has no pages yet.</Empty></div>}
       </FullBleed>
     );
   return (
@@ -275,6 +277,7 @@ function Loaded({
   onRefresh: () => void;
   dsKind: string;
 }) {
+  const caps = useCapabilities();
   const visibleTools = useVisibleTools();
   const shell = useFlag("graph-shell");
   const headerFold = useFlag("header-fold");
@@ -755,7 +758,7 @@ function Loaded({
           <Button size="sm" variant="ghost" onClick={() => ui.set({ detailsOpen: true })}>
             Details
           </Button>
-          {!IS_SHARE && (
+          {caps.ask && (
             <Button size="sm" variant="ghost" onClick={() => useChatDock.getState().ask(askAbout(selected))}>
               Ask
             </Button>
