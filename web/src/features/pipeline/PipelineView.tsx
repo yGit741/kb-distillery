@@ -4,6 +4,8 @@ import { DEPTH_COLORS } from "@/theme/palette";
 import type { PipelineSearch } from "@/routes/search";
 import { Empty, ErrorState, Loading } from "@/components/states";
 import { AddSources } from "@/components/AddSources";
+import { DigestJobs } from "@/features/digest/DigestJobs";
+import { useFlag } from "@/flags/useFlag";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useApiQuery } from "@/lib/useApiQuery";
@@ -160,6 +162,7 @@ function IngestionLog({ data }: { data: SnapshotData }) {
 
 export function PipelineView({ search, onSearch }: { search: PipelineSearch; onSearch: (p: SearchPatch) => void }) {
   const q = useApiQuery(["pipeline"], (ds) => ds.getPipeline());
+  const digestJobs = useFlag("screen.digest-jobs");
   const data = useMemo(() => (q.data ? parseSnapshot(q.data) : null), [q.data]);
   const view: View = oneOf(search.view, VIEWS, "list");
   const group: Group = oneOf(search.group, GROUPS, "none");
@@ -226,6 +229,8 @@ export function PipelineView({ search, onSearch }: { search: PipelineSearch; onS
         <h2 className="mb-2 text-sm font-semibold">Add sources</h2>
         <AddSources />
       </section>
+
+      {digestJobs && <DigestJobs />}
 
       <Toolbar data={data} search={search} onSearch={onSearch} shown={layout.filtered.length} />
 
