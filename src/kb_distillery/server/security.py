@@ -51,20 +51,24 @@ def require_loopback_origin(request: Request):
         raise HTTPException(403, "cross-origin or origin-less mutation refused")
 
 
-# Mutating routes that touch only local app state (flags, chat sessions and settings) or compute a read (graph queries,
-# scope resolution), and the ones that create a *new* kb elsewhere: they stay open on a read-only kb.
-READ_ONLY_OPEN = ("/api/flags", "/api/sessions", "/api/chat", "/api/graph", "/api/recent", "/api/scopes/resolve",
-                  "/api/kb/import", "/api/kb/inbox")
-READ_ONLY_CLOSED = ("/api/chat/saved",)           # writes raw/inbox/ of the active kb
+# Mutating routes that touch no kb folder, matched whole (a path equals one, or continues after one + "/"): feature flags,
+# chat turns and settings (their state lives outside the kb), graph and scope queries that only compute a read, and the
+# routes that create a *new* kb elsewhere. Everything else that mutates is refused on a read-only kb, including chat
+# sessions, recent steps, attachments and skills (they write under <kb>/.local).
+READ_ONLY_OPEN = ("/api/flags", "/api/graph", "/api/scopes/resolve", "/api/chat/answer", "/api/chat/message",
+                  "/api/chat/settings", "/api/chat/keys", "/api/kb/import", "/api/kb/inbox")
+READ_ONLY_OPEN_EXACT = ("/api/chat",)
+
+
+def _read_only_open(path: str) -> bool:
+    path = path.rstrip("/")
+    return path in READ_ONLY_OPEN_EXACT or any(path == p or path.startswith(p + "/") for p in READ_ONLY_OPEN)
 
 
 def require_writable_kb(request: Request):
-    """App-wide dependency. On a read-only kb (example, `[kb] read_only`, $KB_READ_ONLY) every mutation that writes
-    the kb is 403; `READ_ONLY_OPEN` routes only touch app state."""
-    if request.method not in MUTATING:
-        return
-    path = request.url.path
-    if path.startswith(READ_ONLY_OPEN) and not path.startswith(READ_ONLY_CLOSED):
+    """App-wide dependency. On a read-only kb (example, `[kb] read_only`, $KB_READ_ONLY) every mutation is 403
+    unless its route is in `READ_ONLY_OPEN`."""
+    if request.method not in MUTATING or _read_only_open(request.url.path):
         return
     if kbconfig.is_read_only():
         raise HTTPException(403, kbconfig.READ_ONLY_MESSAGE)

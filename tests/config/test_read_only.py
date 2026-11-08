@@ -80,7 +80,10 @@ def test_server_refuses_kb_writes_but_not_app_state(tmp_path, monkeypatch):
         assert r.status_code == 403 and r.json() == {"detail": MESSAGE}
         assert c.post("/api/think/capture", json={"text": "hi"}, headers=LOOPBACK).status_code == 403
         assert c.delete("/api/views/v1", headers=LOOPBACK).status_code == 403
-        assert c.put("/api/sessions/s1", json={}, headers=LOOPBACK).json().get("detail") != MESSAGE
+        assert c.delete("/api/sessions/s1", headers=LOOPBACK).status_code == 403
+        assert c.post("/api/recent", json={"text": "x"}, headers=LOOPBACK).status_code == 403
+        assert c.delete("/api/chat/attachments/s1/a1", headers=LOOPBACK).status_code == 403
+        assert c.put("/api/flags/nope", json={}, headers=LOOPBACK).status_code != 403
         assert c.get("/api/kb").json()["read_only"] is True
     assert os.path.isdir(root)
 
@@ -98,3 +101,12 @@ def test_open_example_refuses_unknown_name(tmp_path, capsys):
     with mock.patch.object(kbconfig, "examples_dirs", return_value=[str(ex)]):
         assert kbconfig.main(["open-example", "nope"]) == 2
     assert "available: demo" in capsys.readouterr().err
+
+
+def test_server_refuses_on_examples_path_without_env(tmp_path):
+    root = make_repo(str(tmp_path))
+    with mock.patch.dict(os.environ, ENV), mock.patch.object(kbconfig, "examples_dirs", return_value=[str(tmp_path)]), \
+            mock.patch.object(kbconfig, "vault_root", return_value=root), TestClient(create_app()) as c:
+        assert c.delete("/api/sessions/s1", headers=LOOPBACK).status_code == 403
+        assert c.post("/api/recent", json={"text": "x"}, headers=LOOPBACK).status_code == 403
+    assert not os.path.exists(os.path.join(root, ".local"))
