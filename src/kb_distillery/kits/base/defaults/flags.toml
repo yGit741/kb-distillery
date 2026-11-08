@@ -247,3 +247,13 @@ expires = 2027-02-06
 kind = "runtime"
 default = false
 envs = { local = true, private = false, public = false }
+
+[[flag]]
+name = "ui.proposals"
+description = "Agent proposals: review, accept and apply agent changes to the wiki"
+owner = "maintainer"
+created = 2026-11-08
+expires = 2027-05-08
+kind = "runtime"
+default = false
+envs = { local = true, private = false, public = false }
