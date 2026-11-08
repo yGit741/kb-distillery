@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { ComposerLine } from "@/features/chat/ComposerLine";
 import { cn } from "@/lib/utils";
 import { MessageList } from "@/features/chat/MessageList";
+import { NeedsClaudeBadge } from "@/features/chat/NeedsClaudeBadge";
 import { parsePrompts } from "@/features/chat/prompts";
 import { quickSendOptions } from "@/features/chat/QuickAsk";
 import { STATUS_KEY } from "@/features/chat/SessionPanel";
@@ -314,6 +315,12 @@ function Body({ status, prompts, scope, full, rich, listOpen, onClose, server }:
         {notice && (
           <p role="status" data-testid="chat-notice" className="border-b px-5 py-2 text-xs text-muted-foreground">
             {notice}
+          </p>
+        )}
+        {!view.claudeAvailable && (
+          <p role="status" data-testid="chat-needs-claude" className="flex flex-wrap items-center gap-2 border-b px-5 py-2 text-xs text-muted-foreground">
+            <NeedsClaudeBadge reason={view.claudeReason} />
+            {view.claudeReason}
           </p>
         )}
         {tools?.open && <ChatTools prompts={parsePrompts(prompts)} todo={chat.todo} busy={busy} sessionId={sessionIdOf(chat.id)} />}

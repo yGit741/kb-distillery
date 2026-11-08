@@ -67,6 +67,12 @@ class ChatAuth(ApiModel):
     subscription: dict[str, Any] = {}
 
 
+class ClaudeAvailability(ApiModel):
+    """Whether Claude can run at all. Agent features show "Needs Claude" and answer 409 with `reason` when it cannot."""
+    available: bool = True
+    reason: str = ""
+
+
 class ChatStatus(ApiModel):
     key: bool
     key_origin: Optional[str] = None
@@ -80,6 +86,7 @@ class ChatStatus(ApiModel):
     models: list[dict[str, Any]] = []
     default_model: str = ""
     spend: dict[str, Any] = {}
+    claude: ClaudeAvailability = ClaudeAvailability()
 
 
 class ChatSettings(ApiModel):

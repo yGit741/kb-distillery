@@ -25,6 +25,9 @@ export interface StatusView {
   agentAvailable: boolean;
   agentVersion: string;
   agentError: string;
+  /** false when nothing can run Claude: agent controls stay visible, marked "Needs Claude" */
+  claudeAvailable: boolean;
+  claudeReason: string;
   authMode: "api_key" | "subscription";
   subscription: { loggedIn: boolean; plan: string; email: string; error: string };
   keys: { name: string; hint: string; origin: string }[];
@@ -61,6 +64,8 @@ export function parseStatus(st: ChatStatus): StatusView {
     agentAvailable: st.agent.available === true,
     agentVersion: str(st.agent.version),
     agentError: str(st.agent.error),
+    claudeAvailable: st.claude?.available !== false,
+    claudeReason: str(st.claude?.reason),
     authMode: st.auth.mode === "subscription" ? "subscription" : "api_key",
     subscription: { loggedIn: sub.logged_in === true, plan: str(sub.plan), email: str(sub.email), error: str(sub.error) },
     keys: st.auth.keys.map((k) => ({ name: k.name, hint: k.hint, origin: k.origin })),
@@ -102,3 +107,6 @@ export function authPayload(value: string) {
     ? ({ auth_mode: "subscription" } as const)
     : ({ auth_mode: "api_key", active_key: value.startsWith("key:") ? value.slice(4) : "" } as const);
 }
+
+/** The short mark on agent controls when Claude cannot run. */
+export const NEEDS_CLAUDE = "Needs Claude";

@@ -186,6 +186,20 @@ def key_hint(key):
     return f"sk-ant-…{key[-4:]}" if key and len(key) > 8 else ""
 
 
+def claude_status(settings=None, refresh=False):
+    """{available, reason}: can a Claude-agent feature run? True with a stored or env chat key, a logged-in `claude`
+    subscription, or any key/login the provider layer finds (`llm.claude_available`). No LLM call. When not,
+    `reason` is the text of the HTTP 409 and the "needs Claude" badge. `refresh` re-probes the login (no cache)."""
+    from kb_distillery import llm
+    from kb_distillery.services import chat_agent  # here, not at the top: chat_agent imports this module
+    if refresh:       # a login made a moment ago must count: drop both cached negatives
+        chat_agent._SUB_CACHE["value"] = None
+    key, _ = load_api_key(settings or load_settings())
+    if key or chat_agent.subscription_status()["logged_in"] or llm.claude_available(refresh=refresh)[0]:
+        return {"available": True, "reason": ""}
+    return {"available": False, "reason": llm.NEEDS_CLAUDE}
+
+
 def status():
     settings = load_settings()
     key, origin = load_api_key(settings)
@@ -195,7 +209,8 @@ def status():
             "backend": settings["backend"], "agent": chat_agent.sdk_info(),
             "auth": {"mode": settings["auth_mode"], "active_key": origin or "", "keys": list_keys(),
                      "keys_dir": KEYS_DIR, "subscription": chat_agent.subscription_status()},
-            "models": MODELS, "default_model": DEFAULT_MODEL, "spend": spend_summary(settings=settings)}
+            "models": MODELS, "default_model": DEFAULT_MODEL, "spend": spend_summary(settings=settings),
+            "claude": claude_status(settings)}
 
 
 # ── Spend tracking (local estimate) ──────────────────────────────────────
