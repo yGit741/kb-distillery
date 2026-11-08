@@ -441,18 +441,13 @@ describe("legends", () => {
     return screen.getByRole("group", { name: /colour legend/i });
   };
 
-  it("legend-counts on: the slide-out lists five themes with their counts and a +N more row that lists the rest", () =>
+  it("legend-counts on: pressing the dots lists every theme with its count and there is no +N more row", () =>
     withFlag("legend-counts", true, async () => {
       const legend = await openLegend();
-      const listed = () => within(legend).getAllByRole("button", { pressed: true });
-      expect(listed()).toHaveLength(5);
-      expect(listed()[0]).toHaveTextContent(/8$/);
-      const more = within(legend).getByRole("button", { name: "+3 more" });
-      await userEvent.click(more);
-      expect(listed()).toHaveLength(8);
-      expect(within(legend).getByRole("button", { name: "Show fewer" })).toBeInTheDocument();
-      await userEvent.click(screen.getByRole("button", { name: "Show fewer" }));
-      expect(listed()).toHaveLength(5);
+      const listed = within(legend).getAllByRole("button", { pressed: true });
+      expect(listed).toHaveLength(8);
+      expect(listed[0]).toHaveTextContent(/8$/);
+      expect(within(legend).queryByRole("button", { name: /more|fewer/i })).toBeNull();
     }));
 
   it("legend-counts off: every theme is listed and there is no +N more row", () =>
