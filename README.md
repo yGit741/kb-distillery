@@ -11,12 +11,11 @@ kb-distillery builds a knowledge base from sources you collect. You put papers, 
 Supported platforms: macOS (Apple silicon and Intel) and Linux x86-64. Windows is not supported. Installing the wheel with pip needs Python 3.11 or newer (older Pythons fail with a confusing `grand-cypher` error). You need [pixi](https://pixi.sh) and git. Clone this repository and run:
 
 ```bash
-pixi install
-pixi run distill init
-pixi run distill launch --kb <id>
+git clone <repo-url> kb-distillery && cd kb-distillery
+./install.sh
 ```
 
-`distill init` asks for an id, a name and a kit. It creates `~/knowledge/<id>/` as a git repository and runs `distill doctor`. The first launch builds the app with Node (installed by pixi) and needs network access, which takes a few minutes. The app opens at `http://127.0.0.1:8765`.
+It installs pixi if needed, creates a default knowledge base and opens the app (Windows: use WSL2, see [Getting started](docs/getting-started.md)). To do it by hand, `pixi install`, `pixi run distill init` and `pixi run distill launch --kb <id>`; `distill init` asks for an id, a name and a kit. It creates `~/knowledge/<id>/` as a git repository and runs `distill doctor`. The first launch builds the app with Node (installed by pixi) and needs network access, which takes a few minutes. The app opens at `http://127.0.0.1:8765`.
 
 Digests use Anthropic models only, through a Claude login or an Anthropic API key. Everything else works without one. See [Getting started](docs/getting-started.md).
 
