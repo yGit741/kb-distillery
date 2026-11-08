@@ -72,6 +72,31 @@ describe("/views (graph-intent)", () => {
     });
   });
 
+  it("a bare /views then Enter keeps the list; an arrow then Enter applies the row", async () => {
+    await withFlag("graph-intent", true, async () => {
+      const ds = setup();
+      void ds;
+      await userEvent.type(box(), "/views");
+      await screen.findByRole("option", { name: /Hubs/ });
+      await userEvent.keyboard("{Enter}");
+      expect(useLayers.getState().stack.layers).toHaveLength(0);
+      expect(screen.getAllByRole("option").length).toBeGreaterThan(3);
+      await userEvent.keyboard("{ArrowDown}{Enter}");
+      await waitFor(() => expect(useLayers.getState().stack.layers.length).toBeGreaterThan(0));
+    });
+  });
+
+  it("/gallery lists the Gallery command alone", async () => {
+    await withFlag("graph-intent", true, async () => {
+      setup();
+      await userEvent.type(box(), "/gallery");
+      await screen.findByRole("option", { name: /View gallery/ });
+      expect(labels()).toHaveLength(1);
+      await userEvent.keyboard("{Enter}");
+      expect(await screen.findByRole("dialog", { name: "Views" })).toBeInTheDocument();
+    });
+  });
+
   it("narrows by the typed words", async () => {
     await withFlag("graph-intent", true, async () => {
       setup();
