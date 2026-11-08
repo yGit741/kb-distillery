@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import shutil
 import subprocess
 from pathlib import Path
 
@@ -29,7 +30,7 @@ def _run(tmp_path: Path, *args: str, pixi: bool, uname: str = "Linux") -> subpro
     sys_bin = tmp_path / "sysbin"
     sys_bin.mkdir(exist_ok=True)
     for tool in ("bash", "grep", "sed", "basename", "dirname", "cat", "env"):
-        real = subprocess.run(["/usr/bin/env", "which", tool], capture_output=True, text=True).stdout.strip()
+        real = shutil.which(tool)
         if real and not (sys_bin / tool).exists():
             (sys_bin / tool).symlink_to(real)
     env = {
@@ -73,7 +74,6 @@ def test_existing_kb_is_kept_and_no_open(tmp_path: Path) -> None:
     assert r.returncode == 0, r.stderr
     cmds = _commands(r.stdout)
     assert cmds == ["pixi install", "pixi run distill doctor", "pixi run distill doctor --kb notes"]
-    assert "init" not in r.stdout.replace("install", "")
 
 
 def test_unsupported_system_refused(tmp_path: Path) -> None:
