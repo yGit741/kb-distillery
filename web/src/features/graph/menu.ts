@@ -1,5 +1,5 @@
 import { flag } from "@/flags";
-import { IS_SHARE } from "@/share/env";
+import { capabilities } from "./shell/capabilities";
 import { LINE_COPY } from "./shell/copy";
 import { useFavorites } from "./favorites/store";
 import type { GNode } from "./types";
@@ -73,11 +73,11 @@ export const ACTION_ITEMS: MenuItem[] = [
     labelOf: (n) => (useFavorites.getState().isFavorite(n.id) ? A.favorite.unlabel : A.favorite.label),
     hint: A.favorite.hint,
     // the share build is read-only: no toggle there
-    when: () => !IS_SHARE,
+    when: () => capabilities().favoriteToggle,
     run: (n) => void useFavorites.getState().toggle(n.id),
   },
-  { id: "chat", label: A.chat.label, hint: A.chat.hint, when: () => !IS_SHARE, run: (n, c) => c.chat?.([n.id]) },
-  { id: "think", label: A.think.label, hint: A.think.hint, when: () => !IS_SHARE, run: (n, c) => c.think?.([n.id]) },
+  { id: "chat", label: A.chat.label, hint: A.chat.hint, when: () => capabilities().chat, run: (n, c) => c.chat?.([n.id]) },
+  { id: "think", label: A.think.label, hint: A.think.hint, when: () => capabilities().think, run: (n, c) => c.think?.([n.id]) },
   { id: "export", label: A.export.label, hint: A.export.hint, enabled: () => flag("graph-intent"), why: A.export.why, run: (n, c) => c.exportPages?.([n.id]) },
 ];
 
@@ -87,9 +87,9 @@ export const setActionItems = (ids: string[], label: string): MenuItem[] => [
   { id: "show", label: A.showSet.label, hint: A.showSet.hint, run: (_n, c) => c.showOnly?.(ids, label) },
   { id: "read", label: A.readSet.label, hint: A.readSet.hint, run: (n, c) => (c.readSet ? c.readSet(ids) : c.openReader(ids[0] ?? n.id)) },
   { id: "expand", label: A.expand.label, hint: A.expand.hint, run: (_n, c) => c.expand?.(ids) },
-  { id: "think", label: A.think.label, hint: A.think.hint, when: () => !IS_SHARE, run: (_n, c) => c.think?.(ids) },
+  { id: "think", label: A.think.label, hint: A.think.hint, when: () => capabilities().think, run: (_n, c) => c.think?.(ids) },
   { id: "add", label: A.addToView.label, hint: A.addToView.hint, run: (_n, c) => c.addToView?.(ids, label) },
   { id: "color", label: A.color.label, hint: A.color.hint, run: (_n, c) => c.colorSet?.(ids, label) },
-  { id: "chat", label: A.chatSet.label, hint: A.chatSet.hint, run: (_n, c) => c.chat?.(ids) },
+  { id: "chat", label: A.chatSet.label, hint: A.chatSet.hint, when: () => capabilities().chat, run: (_n, c) => c.chat?.(ids) },
   { id: "export", label: A.export.label, hint: A.export.hint, enabled: () => flag("graph-intent"), why: A.export.why, run: (_n, c) => c.exportPages?.(ids) },
 ];

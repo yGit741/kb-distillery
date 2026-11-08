@@ -4,7 +4,7 @@ import { useChatDock } from "../tools/chatDockStore";
 import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import { useDataSource } from "@/api";
 import { useFlag } from "@/flags/useFlag";
-import { IS_SHARE } from "@/share/env";
+import { capabilities } from "./capabilities";
 import { ErrorState, Loading } from "@/components/states";
 import { Button } from "@/components/ui/button";
 import { ComposerLine } from "@/features/chat/ComposerLine";
@@ -85,7 +85,7 @@ export function SparkPanel({ scope }: { scope?: string }) {
           </div>
         </Column>
       ) : (
-        <Body status={status.data} prompts={promptsQ.data.prompts} scope={scope ?? ""} {...bar} server={ds.kind === "http" && !IS_SHARE} />
+        <Body status={status.data} prompts={promptsQ.data.prompts} scope={scope ?? ""} {...bar} server={ds.kind === "http" && capabilities().chat} />
       )}
     </aside>
   );

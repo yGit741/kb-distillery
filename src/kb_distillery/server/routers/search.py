@@ -1,10 +1,11 @@
 """Search: full text (tier 2 of the search line: SQLite FTS5 index under the kb's `.cache/search/`, built on first use and kept
 fresh by the writers; an empty list when there is nothing to find) and meaning (pages close in meaning to a phrase or a page)."""
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Depends, Query
 from fastapi.responses import JSONResponse
 
 from kb_distillery.search import fts
 from kb_distillery.server.models.search import SimilarResult, TextSearch
+from kb_distillery.server.readonly import refuse_when_read_only
 from kb_distillery.services import kbview
 from kb_distillery.services import similar as svc
 
@@ -27,7 +28,7 @@ def search_text(q: str = "", kinds: str = Query("", description="comma list of p
     return {"query": q, "hits": hits}
 
 
-@router.get("/api/search/similar", response_model=SimilarResult, summary="Pages close in meaning to a phrase or a page",
+@router.get("/api/search/similar", dependencies=[Depends(refuse_when_read_only)], response_model=SimilarResult, summary="Pages close in meaning to a phrase or a page",
             responses={404: {"description": "unknown slug"}, 422: {"description": "neither q nor slug"},
                        503: {"description": "semantic search is off or its service is down"}})
 def search_similar(q: str = "", slug: str = "", k: int = 20):
