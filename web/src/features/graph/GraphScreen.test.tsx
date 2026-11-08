@@ -406,14 +406,13 @@ describe("the empty-space menu", () => {
 describe("first-run card (flag screen.first-run)", () => {
   const empty = () => wrap(withGraph({ getGraph: async () => sampleSnapshot({ nodes: [], links: [], node_count: 0 }) }), <GraphScreen search={{}} host={host} />);
 
-  it("on: an empty kb shows the card and its actions route to the inbox / Start", () =>
+  it("on: an empty kb shows the card with the drop zone, the folder form and the example link", () =>
     withFlag("screen.first-run", true, async () => {
       render(empty());
       expect(await screen.findByRole("heading", { name: "Build your knowledge base" })).toBeInTheDocument();
       expect(screen.queryByText(/no pages yet/i)).not.toBeInTheDocument();
-      await userEvent.click(screen.getByRole("link", { name: /drop files here/i }));
-      expect(host.go).toHaveBeenCalledWith("/system", { tab: "pipeline" });
-      await userEvent.click(screen.getByRole("link", { name: /link a local folder/i }));
+      expect(screen.getByRole("button", { name: /drop files here/i })).toBeInTheDocument();
+      expect(screen.getByRole("form", { name: /link a local folder/i })).toBeInTheDocument();
       await userEvent.click(screen.getByRole("link", { name: /open an example/i }));
       expect(host.go).toHaveBeenCalledWith("/", { start: "true" });
     }));

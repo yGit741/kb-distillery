@@ -1,7 +1,8 @@
-import { FolderOpen, Library, Upload } from "lucide-react";
+import { Library } from "lucide-react";
 import type { ReactNode } from "react";
+import { AddSources } from "@/components/AddSources";
 
-/** Where the three actions go until the upload endpoint exists (inbox lives in System > Pipeline; the example falls back to Start). */
+/** Where the example action goes (it falls back to Start). */
 export interface FirstRunHost {
   go: (to: string, search?: Record<string, string>) => void;
   href: (to: string, search?: Record<string, string>) => string;
@@ -29,16 +30,14 @@ function Action({ icon, title, hint, onClick, href }: { icon: ReactNode; title: 
 
 /** Calm first-run card for a knowledge base with no pages yet (flag screen.first-run). */
 export function FirstRunCard({ host }: { host: FirstRunHost }) {
-  const inbox = { tab: "pipeline" };
   const start = { start: "true" };
   return (
     <div className="flex h-full min-h-[24rem] items-center justify-center p-4" data-testid="first-run">
       <section aria-labelledby="first-run-title" className="w-full max-w-md rounded-xl border bg-card p-6 shadow-sm">
         <h2 id="first-run-title" className="text-lg font-semibold text-foreground">Build your knowledge base</h2>
         <p className="mt-1 text-sm text-muted-foreground">Add some sources and the graph fills in as they are digested.</p>
-        <div className="mt-5 flex flex-col gap-2">
-          <Action icon={<Upload />} title="Drop files here" hint="Papers, notes and articles go to the inbox" onClick={() => host.go("/system", inbox)} href={host.href("/system", inbox)} />
-          <Action icon={<FolderOpen />} title="Link a local folder" hint="Point at a folder you already keep" onClick={() => host.go("/system", inbox)} href={host.href("/system", inbox)} />
+        <div className="mt-5 flex flex-col gap-4">
+          <AddSources />
           <Action icon={<Library />} title="Open an example knowledge base" hint="See how a finished one looks" onClick={() => host.go("/", start)} href={host.href("/", start)} />
         </div>
       </section>
