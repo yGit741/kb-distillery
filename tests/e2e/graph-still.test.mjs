@@ -234,7 +234,9 @@ e2e("a filter change moves none of the pages that stay", async () => {
     } else {
       await page.getByRole("button", { name: "Show page types" }).click();
       await page.waitForTimeout(600);
-      hide = page.locator('[data-corners="types"] button[aria-pressed="true"]').first();
+      // pin the entry by its type id: once it is hidden it is no longer the first pressed one
+      const id = await page.locator('[data-corners="types"] button[aria-pressed="true"]').first().getAttribute("data-type");
+      hide = page.locator(`[data-corners="types"] button[data-type="${id}"]`);
       show = hide;
     }
     // hiding pages: the pages that stay must stay put (hiding a type re-frames the view for the new set of types,
