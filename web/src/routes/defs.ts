@@ -1,7 +1,7 @@
 import { flag, type FlagName } from "@/flags";
 
 /**
- * Static route metadata. Order = palette order; `nav` picks the top-bar tabs (Home · Graph · System · Chat · Think).
+ * Static route metadata. Order = palette order; `nav` picks the top-bar tabs (Home · Graph · System · Chat · Think · What is it?).
  * Which screen a route shows is NOT decided here: it follows the feature folders (see registry.ts).
  */
 export interface RouteDef {
@@ -33,6 +33,7 @@ const ALL_ROUTE_DEFS: readonly RouteDef[] = [
   { id: "lifecycle", path: "/lifecycle", label: "Lifecycle", blurb: "Versions, history, snapshots and working state.", flag: "screen.lifecycle", movedTo: { id: "system", search: { tab: "history" } } },
   { id: "share", path: "/share", label: "Share", blurb: "Public snapshots of the private site.", flag: "screen.share", nav: true },
   { id: "think", path: "/think", label: "Think", blurb: "Your own slow notes: edit, and capture quick thoughts.", flag: "screen.think", nav: true },
+  { id: "about", path: "/what-is-it", label: "What is it?", blurb: "How a file becomes a page in this map: raw, source, concept, and reading depth.", nav: true },
   { id: "start", path: "/start", label: "Start", blurb: "How to add and edit knowledge, and how to build a feature.", flag: "screen.start", movedTo: { id: "home", search: { start: true } } },
   { id: "covector", path: "/covector", label: "Covector", blurb: "Interactive picture of a covector acting on a vector.", runtimeFlag: "research-tools" },
   // A route whose flag is off in this env is dropped here (screen.share: private site only).

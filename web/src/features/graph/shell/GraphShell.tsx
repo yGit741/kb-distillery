@@ -972,8 +972,9 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
   return (
     <div
       ref={box}
-      className="pointer-events-auto absolute left-1/2 z-30 -translate-x-1/2 transition-[width] duration-200 motion-reduce:transition-none"
-      style={{ top, width: open ? "min(640px, calc(100% - 9rem))" : "min(520px, calc(100% - 9rem))" }}
+      className="pointer-events-auto absolute left-1/2 z-30 -translate-x-1/2"
+      // one width open or closed: the line never jumps when it gets focus
+      style={{ top, width: "min(640px, calc(100% - 9rem))" }}
       data-testid="graph-shell"
       onBlur={(e) => {
         const to = e.relatedTarget as HTMLElement | null;
