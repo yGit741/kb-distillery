@@ -65,4 +65,5 @@ A request about a kb's content ("digest this paper", "what do I know about …")
 | change the ingest/digest/distill CLIs or the skill ladder | `src/kb_distillery/kits/base/defaults/docs/workflows.md` |
 | change think-note distillation | `src/kb_distillery/kits/base/defaults/docs/think.md` |
 | change coherence warnings or semantic lint | `src/kb_distillery/kits/base/defaults/docs/semantic-lint.md` |
+| change how agent proposals are reviewed or applied | `src/kb_distillery/kits/base/defaults/docs/proposals.md` |
 | write or change a skill | `docs/guides/write-a-skill.md` |
