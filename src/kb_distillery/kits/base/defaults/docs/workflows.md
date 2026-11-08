@@ -118,9 +118,9 @@ A tier never changes the backend or the provider.
 
 ### Billing
 
-The default provider and backend follow `llm.resolve(provider, backend, kb)`: provider = argument, `$KB_LLM_PROVIDER`, `[llm] provider`
+`llm.resolve(provider, backend, kb)` picks the provider and backend for `llm ask` and `doctor`: provider = argument, `$KB_LLM_PROVIDER`, `[llm] provider`
 in kb.toml, else automatic (Claude if logged in or keyed, else the first keyed of OpenAI and Gemini); backend = argument,
 `$KB_LLM_BACKEND`, else subscription when logged in, API when only a key exists. Only `llm ask` and `doctor` honour the provider
-setting so far; other features run on Claude. Digest jobs default to the subscription for up to `[llm] bulk_threshold` sources
+setting so far; other features run on Claude. Digest jobs do not use it: they default to the subscription (when logged in, else the API) for up to `[llm] bulk_threshold` sources
 (default 5) and to the API above it; Batch is chosen per job (half price, up to 24 hours). OpenAI and Gemini prices are
 unverified. The user-facing explanation is `docs/concepts/llm.md`.

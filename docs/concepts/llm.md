@@ -17,7 +17,7 @@ Choose a provider, first match wins:
 1. the argument (`distill llm ask --provider openai`)
 2. `$KB_LLM_PROVIDER`
 3. `[llm] provider = "gemini"` in the knowledge base's `kb.toml`
-4. automatic: Claude when its subscription is logged in or it has an API key, otherwise the first of OpenAI and Gemini that has a key, otherwise Claude (so the error says what to set up)
+4. automatic: Claude when its subscription is logged in or it has an API key, otherwise the first of OpenAI and Gemini that has a key, otherwise Claude (so the error says what to set up). If you ask for the subscription or batch backend, the automatic choice stays on Claude
 
 `distill doctor` lists each provider, whether it is usable, and which provider and backend a call gets by default.
 
@@ -47,7 +47,7 @@ A feature asks for a tier, not a model. The tier never changes the provider or t
 | `standard` | digests, claim fills, video reads | sonnet | gpt-4.1-mini | gemini-2.5-flash |
 | `strong` | hard reasoning | opus | gpt-4.1 | gemini-2.5-pro |
 
-Easy digests and line routing use `light`. Full digests, source extraction and the digest jobs use `standard`. Nothing asks for `strong` by default; pass `--model strong` where a command takes `--model`.
+Easy digests and line routing use `light`. Full digests, source extraction and the digest jobs use `standard`. Relation proposals, translations and chat still use fixed Claude aliases (sonnet or haiku), so `llm.toml` does not move them. Nothing asks for `strong` by default; pass `--model strong` where a command takes `--model`.
 
 To change what a tier means, copy `src/kb_distillery/kits/base/defaults/llm.example.toml` to `~/.config/kb-distillery/llm.toml` and edit the `[claude]`, `[openai]` and `[gemini]` tables. A value is an alias or a model id. A model the engine has no price for needs a row:
 
@@ -61,7 +61,7 @@ Prices are USD per million tokens. The OpenAI and Gemini defaults and prices hav
 
 ## Billing
 
-Spend is recorded per call, with the model actually used. Subscription calls are recorded as free.
+The chat screen keeps a spend ledger. Digest jobs and relation proposals show an estimate or a total instead, and subscription calls count as zero.
 
 Digest jobs show a preview before they start: the cost and the time for each backend. The default is one choice:
 
@@ -74,8 +74,7 @@ Set the threshold in `kb.toml`:
 
 ```toml
 [llm]
-provider = "claude"
 bulk_threshold = 5
 ```
 
-See also [Digest tiers](digest-tiers.md) (the digest levels, not model tiers), [Config files and environment](../reference/config-files.md) and the CLI: `distill llm ask|submit|status|collect`.
+See also [Digest tiers](digest-tiers.md) (the digest levels, not model tiers), and the CLI: `distill llm ask|submit|status|collect`.
