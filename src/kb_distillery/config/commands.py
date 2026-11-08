@@ -33,6 +33,8 @@ COMMANDS: dict[str, Cmd] = {
     "kb": Cmd("knowledge bases", "group", sub={
         "list": Cmd("every knowledge base and where it is", target="kb_distillery.config.kb", fixed=("list",), config_check=False),
         "show": Cmd("the selected knowledge base, resolved", target="kb_distillery.config.kb", fixed=("show",), config_check=False),
+        "open-example": Cmd("open an example kb (examples/<name>) in the app, read-only", target="kb_distillery.config.kb",
+                            fixed=("open-example",), config_check=False),
         "import": Cmd("import an OKF bundle (folder or .zip) as a new knowledge base", target="kb_distillery.import_kb",
                       forward_help=True),
         "inbox": Cmd("uploads parked on the site: list, pull (import each as a new kb on this Mac)", target="kb_distillery.inbox",

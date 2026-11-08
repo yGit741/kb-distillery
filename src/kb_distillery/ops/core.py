@@ -19,6 +19,7 @@ import secrets
 import subprocess
 import sys
 
+from kb_distillery.config.kb import ReadOnlyError, require_writable
 from kb_distillery.config.paths import THINK_PATH, vault_root
 META_DIR = os.path.join(vault_root(), "meta")
 ROOT = vault_root()
@@ -41,6 +42,14 @@ NIGHTLY_LOG = os.path.expanduser("~/Library/Logs/kb-distillery-daily-sync.log")
 
 class OpsError(RuntimeError):
     pass
+
+
+def _require_writable(root):
+    """Every writing entry point starts here: a read-only kb (example, `[kb] read_only`, $KB_READ_ONLY) refuses."""
+    try:
+        require_writable(root)
+    except ReadOnlyError as e:
+        raise OpsError(str(e)) from None
 
 
 # ---------- small helpers ----------
@@ -418,6 +427,7 @@ def commit_op(op, target, summary=None, paths=None, lint=True, trailers=None, ro
     other open sessions are never included. The step is pushed right away (see push_main)
     so main never sits ahead of origin waiting for the night.
     """
+    _require_writable(root)
     if op not in cp.KB_OPS:
         raise OpsError(f"unknown op {op!r} (one of {', '.join(cp.KB_OPS)})")
     ctx = contextlib.nullcontext() if _locked else ops_lock(root)
@@ -503,6 +513,7 @@ def current_session(root=ROOT):
 # ---------- free-form edit sessions ----------
 
 def begin(op, target, summary=None, root=ROOT):
+    _require_writable(root)
     if op not in cp.KB_OPS or op in ("think", "undo", "restore"):
         raise OpsError(f"begin takes a writing op (import, catalog, digest, refine, distill), not {op!r}")
     if current_session(root):
@@ -583,6 +594,7 @@ def _set_from(root, rev, path):
 
 def undo(rev, root=ROOT):
     """Reverse one agent knowledge step as a new kb(undo) commit (restorable files only)."""
+    _require_writable(root)
     with ops_lock(root):
         _require_main(root)
         sha = _git(root, "rev-parse", "--verify", f"{rev}^{{commit}}", check=True).stdout.strip()
@@ -623,6 +635,7 @@ def undo(rev, root=ROOT):
 
 def restore(tag, root=ROOT):
     """Bring the restorable set back to snapshot `tag` as one new kb(restore) commit."""
+    _require_writable(root)
     with ops_lock(root):
         _require_main(root)
         if not cp.KB_TAG.match(tag):
@@ -651,6 +664,7 @@ def restore(tag, root=ROOT):
 
 def snapshot(label=None, root=ROOT):
     """Annotated tag kb-x.y.z on the newest knowledge step of main."""
+    _require_writable(root)
     version = cp.last_version(root, "main")
     if not version:
         raise OpsError("no knowledge version on main yet — nothing to snapshot")
