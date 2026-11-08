@@ -90,8 +90,8 @@ def test_gemini_request_usage_and_cost(monkeypatch):
     r = llm.ask("q", backend="api", provider="gemini", model="gemini-2.5-flash", system="sys", max_tokens=9)
     assert r.ok and r.text == "hello" and r.model == "gemini-2.5-flash"
     c = fake.calls[0]
-    assert c["url"] == ("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent"
-                        "?key=g-key")
+    assert c["url"] == "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent"
+    assert c["headers"]["x-goog-api-key"] == "g-key" and "g-key" not in c["url"]
     assert c["body"]["systemInstruction"] == {"parts": [{"text": "sys"}]}
     assert c["body"]["generationConfig"] == {"maxOutputTokens": 9}
     assert r.usage == {"input_tokens": 600, "output_tokens": 200, "cache_read_input_tokens": 400}
@@ -160,8 +160,25 @@ def test_non_claude_refuses_subscription_and_batch(backend, prov, model):
 def test_model_must_match_provider():
     with pytest.raises(llm.LLMError, match="claude model"):
         llm.ask("q", backend="api", provider="openai", model="haiku")
-    with pytest.raises(llm.LLMError, match="openai model"):
-        llm.ask("q", backend="api", model="gpt-4.1")
+    r = llm.normalize([llm.Request(prompt="q", model="gpt-4.1")])[0]       # empty provider follows the model
+    assert r.provider == "openai"
+
+
+def test_env_provider_does_not_break_claude_callers(monkeypatch):
+    monkeypatch.setenv("KB_LLM_PROVIDER", "openai")
+    assert llm.normalize([llm.Request(prompt="q", model="haiku")])[0].provider == "claude"
+
+
+def test_submit_refuses_non_claude():
+    with pytest.raises(llm.LLMError, match="api backend only"):
+        llm.submit([llm.Request(prompt="q", model="gpt-4.1")])
+
+
+def test_fallback_skipped_for_non_claude(monkeypatch):
+    monkeypatch.setenv("OPENAI_API_KEY", "k")          # no Anthropic key at all
+    monkeypatch.setattr(providers, "post_json", Fake(OPENAI_OK))
+    r = llm.ask("q", backend="api", fallback="subscription", provider="openai", model="gpt-4.1")
+    assert r.ok and r.backend_used == "api"
 
 
 @pytest.mark.parametrize("prov,model", [("openai", "gpt-4.1"), ("gemini", "gemini-2.5-pro")])

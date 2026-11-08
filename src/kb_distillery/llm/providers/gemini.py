@@ -32,7 +32,7 @@ def complete(request, model_id, key):
     if request.system:
         body["systemInstruction"] = {"parts": [{"text": request.system}]}
     try:
-        out = post_retrying(f"{ROOT}/{model_id}:generateContent?key={key}", {}, body)
+        out = post_retrying(f"{ROOT}/{model_id}:generateContent", {"x-goog-api-key": key}, body)
     except llm.HTTPFail as e:
         res.error = str(e)[:300].replace(key, "***")
         return res

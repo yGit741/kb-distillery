@@ -12,7 +12,9 @@ Providers: the model vendor, a second axis next to the backend. `claude` (defaul
 stdlib adapter under `kb_distillery.llm.providers` (`complete(request, model_id, key)`, `availability()`). Only `claude`
 runs on all three backends; `openai` and `gemini` are `api` only (one blocking call per request, on the same thread pool)
 and refuse images. Keys: ANTHROPIC_API_KEY / OPENAI_API_KEY / GEMINI_API_KEY or ~/.config/kb-distillery/<provider>_key.
-Provider precedence: `Request.provider`, then $KB_LLM_PROVIDER, then `claude`. A request's model must belong to its provider.
+Provider: `Request.provider`; when empty it follows the model (a Claude alias or `gpt-*` / `gemini-*` id). Entry points that
+choose the model themselves (the CLI) use `resolve_provider()`: argument, then $KB_LLM_PROVIDER, then `claude`.
+A request's model must belong to its provider.
 
 Backend precedence: the `backend=` argument, then $KB_LLM_BACKEND, then DEFAULT_BACKEND.
 Stdlib only, like kb_distillery.services.chat.
@@ -43,15 +45,15 @@ MODELS = {"haiku": "claude-haiku-5-5", "sonnet": "claude-sonnet-5-5", "opus": "c
           "fable": "claude-fable-5-1"}
 # USD per million tokens, first-party list prices. Claude rows checked 2026-10-30 (same table as
 # kb_distillery.services.chat); OpenAI and Gemini rows entered 2026-11-08 from memory of the public price pages,
-# cache_read is the cached-input rate, and Gemini prices are the <=200k-token tier. Re-check the `# verify` rows.
+# cache_read is the cached-input rate, and Gemini prices are the <=200k-token tier. Re-check every `# verify` row.
 PRICES = {
     "claude-haiku-5-5": {"in": 0.10, "out": 0.50, "cache_read": 0.01},
     "claude-sonnet-5-5": {"in": 2.00, "out": 10.00, "cache_read": 0.20},
     "claude-opus-5-5": {"in": 4.00, "out": 20.00, "cache_read": 0.20},
     "claude-fable-5-1": {"in": 10.00, "out": 50.00, "cache_read": 0.25},
-    "gpt-4.1": {"in": 2.00, "out": 8.00, "cache_read": 0.50},
-    "gpt-4.1-mini": {"in": 0.40, "out": 1.60, "cache_read": 0.10},
-    "gpt-4.1-nano": {"in": 0.10, "out": 0.40, "cache_read": 0.025},
+    "gpt-4.1": {"in": 2.00, "out": 8.00, "cache_read": 0.50},  # verify
+    "gpt-4.1-mini": {"in": 0.40, "out": 1.60, "cache_read": 0.10},  # verify
+    "gpt-4.1-nano": {"in": 0.10, "out": 0.40, "cache_read": 0.025},  # verify
     "gemini-2.5-pro": {"in": 1.25, "out": 10.00, "cache_read": 0.31},         # verify
     "gemini-2.5-flash": {"in": 0.30, "out": 2.50, "cache_read": 0.075},       # verify
     "gemini-2.5-flash-lite": {"in": 0.10, "out": 0.40, "cache_read": 0.025},  # verify
@@ -168,7 +170,9 @@ def normalize(requests):
             raise LLMError(f"duplicate request id {r.id!r}")
         seen.add(r.id)
         model_id(r.model)
-        r.provider = resolve_provider(r.provider)
+        # an empty provider follows the model (so a $KB_LLM_PROVIDER default never breaks a caller that named its
+        # model); resolve_provider() with the env var is for entry points that pick a model for the provider (the CLI)
+        r.provider = resolve_provider(r.provider) if r.provider else model_provider(r.model)
         if model_provider(r.model) != r.provider:
             raise LLMError(f"model {r.model!r} is a {model_provider(r.model)} model but the provider is {r.provider}; "
                            f"pass a {r.provider} model or --provider {model_provider(r.model)}")
@@ -207,6 +211,11 @@ def run_with_fallback(requests, backend=None, fallback=None, **run_kw):
             r.backend_used = r.backend or first
         return out
     reqs = normalize(requests)
+    if any(r.provider != "claude" for r in reqs):     # other vendors have the api backend only: nothing to fall back to
+        out = run(reqs, backend=first, **run_kw)
+        for r in out:
+            r.backend_used = r.backend or first
+        return out
     avail = availability()
     why = "" if avail[first]["ok"] else avail[first]["why"]
     out = None
@@ -230,16 +239,20 @@ def run_with_fallback(requests, backend=None, fallback=None, **run_kw):
     return out
 
 
+def _claude_only(reqs, backend):
+    for r in reqs:
+        if r.provider != "claude" and backend != "api":
+            raise LLMError(f"the {r.provider} provider runs on the api backend only (got {backend}); "
+                           f"subscription and batch are Claude-only")
+
+
 def run(requests, backend=None, workers=4, poll_every=30, wait_s=24 * 3600):
     """Many prompts → Results in the same order. Batch submits, polls every `poll_every` s, gives up after `wait_s`."""
     reqs = normalize(requests)
     b = resolve_backend(backend)
     if not reqs:
         return []
-    for r in reqs:
-        if r.provider != "claude" and b != "api":
-            raise LLMError(f"the {r.provider} provider runs on the api backend only (got {b}); "
-                           f"subscription and batch are Claude-only")
+    _claude_only(reqs, b)
     if b == "batch":
         bid = submit(reqs)
         return collect(bid, poll_every=poll_every, wait_s=wait_s)
@@ -476,6 +489,7 @@ def submit(requests, root=None):
     reqs = normalize(requests)
     if not reqs:
         raise LLMError("empty batch")
+    _claude_only(reqs, "batch")
     if len(reqs) > BATCH_MAX:
         raise LLMError(f"{len(reqs)} requests; a batch holds at most {BATCH_MAX}")
     out = json.loads(_call("POST", "/messages/batches",
