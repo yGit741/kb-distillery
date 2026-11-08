@@ -19,6 +19,10 @@ export interface DataSource {
   getKbInbox(): Promise<T.KbInbox>;
   /** Local app only: import every pending upload as a new knowledge base and report back to the site. */
   pullKbInbox(): Promise<T.KbInboxPull>;
+  /** Local app only: store files in the kb inbox (no LLM); one result per file. */
+  addInboxFiles(files: File[]): Promise<T.InboxAddResult>;
+  /** Local app only: copy the supported files of a local folder into the inbox. */
+  linkInboxFolder(path: string): Promise<T.LinkFolderResult>;
   getOps(refresh?: boolean): Promise<T.OpsSnapshot>;
 
   // graph

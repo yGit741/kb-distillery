@@ -3,6 +3,7 @@ import { DEPTHS, type Depth } from "@/api/model";
 import { DEPTH_COLORS } from "@/theme/palette";
 import type { PipelineSearch } from "@/routes/search";
 import { Empty, ErrorState, Loading } from "@/components/states";
+import { AddSources } from "@/components/AddSources";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useApiQuery } from "@/lib/useApiQuery";
@@ -220,6 +221,11 @@ export function PipelineView({ search, onSearch }: { search: PipelineSearch; onS
           {statusSeg("skipped", counts.status.skipped)}
         </Step>
       </div>
+
+      <section aria-label="Add sources" className="rounded-lg border bg-card p-3">
+        <h2 className="mb-2 text-sm font-semibold">Add sources</h2>
+        <AddSources />
+      </section>
 
       <Toolbar data={data} search={search} onSearch={onSearch} shown={layout.filtered.length} />
 
