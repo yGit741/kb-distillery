@@ -23,9 +23,8 @@ export function progress(j: DigestJob): { done: number; total: number } {
 export const JOB_LABEL: Record<string, string> = {
   queued: "Waiting to start",
   running: "Running",
-  finished: "Finished",
-  finalized: "Finished",
   done: "Finished",
+  finished: "Finished",
   failed: "Stopped with an error",
   cancelled: "Cancelled",
 };

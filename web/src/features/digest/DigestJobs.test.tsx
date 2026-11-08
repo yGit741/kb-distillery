@@ -108,6 +108,16 @@ describe("digest jobs (flag on)", () => {
       expect(screen.getByRole("button", { name: /^Start/ })).toBeDisabled();
     }));
 
+  it("does not offer Start when every source would be left out", () =>
+    withFlag("screen.digest-jobs", true, async () => {
+      const p = { ...preview, requests: 0, skipped: [{ raw: "raw/web-clips/queued.md", reason: "already digested" }] };
+      await mount(pipeline(), { previewDigest: async () => p });
+      await userEvent.click(within(await screen.findByRole("list", { name: "Sources to digest" })).getByLabelText(/queued\.md/));
+      await userEvent.click(screen.getByRole("button", { name: /Preview digest/ }));
+      expect(await screen.findByTestId("digest-skipped")).toHaveTextContent("already digested");
+      expect(screen.getByRole("button", { name: /^Start/ })).toBeDisabled();
+    }));
+
   it("lists a running job with progress and cancels it", () =>
     withFlag("screen.digest-jobs", true, async () => {
       const cancelDigestJob = vi.fn(async () => job({ status: "cancelled" }));

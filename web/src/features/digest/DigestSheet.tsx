@@ -78,7 +78,8 @@ export function DigestSheet({ raws, onClose, onStarted }: { raws: string[] | nul
     gcTime: 0,
   });
   const [picked, setPicked] = useState<string>();
-  useEffect(() => setPicked(undefined), [raws]);
+  const rawsKey = raws?.join("\n");
+  useEffect(() => setPicked(undefined), [rawsKey]);
   const backend = picked ?? q.data?.backend ?? "";
   const start = useMutation({
     mutationFn: () => ds.startDigestJob(raws ?? [], backend || undefined),
@@ -88,7 +89,7 @@ export function DigestSheet({ raws, onClose, onStarted }: { raws: string[] | nul
       onClose();
     },
   });
-  useEffect(() => start.reset(), [raws]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => start.reset(), [rawsKey]); // eslint-disable-line react-hooks/exhaustive-deps
   const chosen = q.data?.options.find((o) => o.backend === backend);
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
@@ -104,7 +105,7 @@ export function DigestSheet({ raws, onClose, onStarted }: { raws: string[] | nul
           {start.isError && <p role="alert" className="mt-3 text-sm text-bad" data-testid="digest-refusal">{errorLine(start.error)}</p>}
           <div className="mt-5 flex justify-end gap-2">
             <Button variant="secondary" size="sm" onClick={onClose}>Close</Button>
-            <Button size="sm" disabled={!q.data || !chosen?.available || start.isPending} onClick={() => start.mutate()}>
+            <Button size="sm" disabled={!q.data || q.data.requests === 0 || !chosen?.available || start.isPending} onClick={() => start.mutate()}>
               {start.isPending ? "Starting…" : `Start on ${BACKEND_LABEL[backend] ?? "backend"}`}
             </Button>
           </div>

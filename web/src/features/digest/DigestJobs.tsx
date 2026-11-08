@@ -6,13 +6,13 @@ import { DigestSheet } from "./DigestSheet";
 import { JobList } from "./JobList";
 import { nameOf } from "./format";
 
-/** Sources that can be digested now: filed or still in the inbox, no note yet. One entry per unit. */
+/** Sources that can be digested now: cataloged, no note yet. One entry per unit. */
 function useCandidates() {
   const q = useApiQuery(["pipeline"], (ds) => ds.getPipeline());
   const items = useMemo(() => {
     if (!q.data) return [];
     return parseSnapshot(q.data).units
-      .filter((u) => u.status === "undigested" || u.status === "inbox")
+      .filter((u) => u.status === "undigested")
       .map((u) => u.primary.path);
   }, [q.data]);
   return { items, loading: q.isPending, error: q.isError };

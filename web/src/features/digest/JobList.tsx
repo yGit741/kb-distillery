@@ -89,6 +89,9 @@ export function JobList({ focus }: { focus?: string }) {
   const live = jobs.filter(isLive).length;
   const prev = useRef(live);
   useEffect(() => {
+    void qc.invalidateQueries({ queryKey: ["pipeline"] });
+  }, [qc]);
+  useEffect(() => {
     if (live < prev.current) {
       void qc.invalidateQueries({ queryKey: ["graph"] });
       void qc.invalidateQueries({ queryKey: ["pipeline"] });
@@ -105,7 +108,7 @@ export function JobList({ focus }: { focus?: string }) {
   }
   if (!jobs.length) return <p className="text-sm text-muted-foreground">No digest jobs yet.</p>;
   return (
-    <ul className="flex flex-col gap-2" aria-label="Digest jobs">
+    <ul className="flex flex-col gap-2" aria-label="Digest job list">
       {jobs.map((j) => (
         <Job key={j.id} job={j} open={open[j.id] ?? (j.id === focus || isLive(j))} onToggle={() => setOpen((o) => ({ ...o, [j.id]: !(o[j.id] ?? (j.id === focus || isLive(j))) }))} />
       ))}
