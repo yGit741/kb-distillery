@@ -65,6 +65,8 @@ def identity_env(root):
 
 
 def _ops_dir(root):
+    from kb_distillery.config.kb import require_kb_root
+    require_kb_root(root, "knowledge ops")
     path = os.path.join(root, OPS_DIR)
     os.makedirs(path, exist_ok=True)
     return path
