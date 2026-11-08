@@ -12,10 +12,10 @@ After the sync, it runs the hygiene checks and sends the nightly report when som
 ## Install
 
 ```bash
-pixi run install-sync
+pixi run install-sync -- --kb <id|path>
 ```
 
-This fills the plist template `examples/launchd/*daily-sync.plist` with your paths and loads it as a user agent. It runs `pixi run daily-sync` every day at 22:00 local time. A run missed during sleep starts on wake.
+Name the knowledge base to sync (an id, a path, or set `KB`); the repository itself is not one, and the job refuses to run against it. This fills the plist template `examples/launchd/*daily-sync.plist` with your paths and loads it as a user agent. It runs `pixi run daily-sync` for that knowledge base every day at 22:00 local time. A run missed during sleep starts on wake.
 
 To remove it:
 

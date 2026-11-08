@@ -35,6 +35,7 @@ export type HomeSearch = { concept?: string; start?: true };
 
 export interface SearchById {
   home: HomeSearch;
+  about: { concept?: string };
   graph: GraphSearch;
   pages: PagesSearch;
   chat: ChatSearch;
@@ -53,6 +54,7 @@ const pipelineSearch = (r: Raw): PipelineSearch =>
   clean({ format: str(r.format), q: str(r.q), depth: str(r.depth), collection: str(r.collection), status: str(r.status), view: str(r.view), group: str(r.group), backlog: oneOf(r.backlog, ["queued"] as const), item: str(r.item) });
 
 export const SEARCH: { [K in keyof SearchById]: (raw: Raw) => SearchById[K] } = {
+  about: (r) => clean({ concept: str(r.concept) }),
   home: (r) => clean({ concept: str(r.concept), start: oneOf(r.start, ["1", "true"] as const) ? (true as const) : undefined }),
   lifecycle: () => ({}),
   think: (r) => clean({ note: str(r.note) }),

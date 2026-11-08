@@ -39,8 +39,8 @@ const welcome = (): TourStep => ({
   target: INTRO,
   place: "bottom",
   title: "What you are looking at",
-  // source: AGENTS.md (Karpathy LLM-wiki pattern, agent-owned wiki/ over user-owned raw/); features/home/glossary.tsx (Raw → Source → Concept)
-  body: "Every paper, lecture and blog post added to this vault is distilled by an agent into linked notes, in the pattern of Karpathy's LLM wiki. The strip below shows how a raw file becomes a source and then concepts.",
+  // source: AGENTS.md (Karpathy LLM-wiki pattern, agent-owned wiki/ over user-owned raw/); features/about (the What is it? tab: features/home/glossary.tsx, Raw → Source → Concept)
+  body: "Every paper, lecture and blog post added to this vault is distilled by an agent into linked notes, in the pattern of Karpathy's LLM wiki. The last tab in the top bar shows how a raw file becomes a source and then concepts.",
 });
 
 /** B2: the picker's ego graph is one slice of the graph */

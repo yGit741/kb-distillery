@@ -8,9 +8,9 @@ const ids = (m: Record<string, unknown>) =>
 
 /** Build-time route inclusion: the share builds import a literal list, never the chat / ops / scopes screens. */
 describe("share route modules", () => {
-  it("public = home + graph + pages", () => expect(ids(pub)).toEqual(["graph", "home", "pages"]));
-  it("private = home + graph + pages + lifecycle + share + start", () =>
-    expect(ids(priv)).toEqual(["graph", "home", "lifecycle", "pages", "share", "start"]));
+  it("public = home + graph + pages + what is it", () => expect(ids(pub)).toEqual(["about", "graph", "home", "pages"]));
+  it("private = home + graph + pages + what is it + lifecycle + share + start", () =>
+    expect(ids(priv)).toEqual(["about", "graph", "home", "lifecycle", "pages", "share", "start"]));
   it("the full app still has every screen", () => {
     expect(ids(all)).toEqual(expect.arrayContaining(["chat", "graph", "lifecycle", "pages", "pipeline", "scopes"]));
   });

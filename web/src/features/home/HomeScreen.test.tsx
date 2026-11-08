@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { ApiError, DataSourceProvider, type DataSource, type GraphSnapshot } from "@/api";
 import { mockDataSource } from "@/test/datasource";
 import { node } from "@/features/graph/fixtures";
@@ -107,12 +107,12 @@ describe("Home screen", () => {
     expect(await screen.findByText(/nothing to show yet/i)).toBeInTheDocument();
   });
 
-  it("shows the title, the glossary and the picked concept with one source's pipeline", async () => {
+  it("shows the title and the picked concept with one source's pipeline; the glossary lives on What is it?", async () => {
     const getRawCard = vi.fn(async () => rawCard);
     wrap(mockDataSource({ getGraph: async () => snapshot, getPage, getRawCard }), <HomeScreen host={host} concept="hub" />);
     expect(await screen.findByRole("heading", { name: "A Map of the Knowledge That Interests Me" })).toBeInTheDocument();
     expect(screen.getByText("Created by my research agent and me.")).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "How a page gets here" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "How a page gets here" })).toBeNull();
     expect(screen.queryByRole("heading", { name: "Draw a Subgraph" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Tours" })).toBeNull(); // the menu lives in the app header
     expect(screen.getByRole("combobox", { name: "Pick a concept" })).toHaveValue("The hub");
@@ -202,5 +202,32 @@ describe("Home screen", () => {
     expect(resolveConcept(v, "q-x", 1, false)).toBe("q-x");
     expect(["hub", "q-x"]).toContain(resolveConcept(v, "p0", 1, false));
     expect(matchConcepts(snapshot.nodes as never, "p").every((n) => n.layer !== "source")).toBe(true);
+  });
+});
+
+describe("Back next to Pick a Concept", () => {
+  /** Stands in for the router: setConcept writes the URL, which comes back as the `concept` prop. */
+  function Routed({ setConcept }: { setConcept: (s: string) => void }) {
+    const [concept, set] = useState("hub");
+    return <HomeScreen host={{ ...host, setConcept: (s) => (setConcept(s), set(s)) }} concept={concept} />;
+  }
+
+  it("is disabled at first, then returns to the concept shown before and disables again", async () => {
+    const setConcept = vi.fn();
+    wrap(mockDataSource({ getGraph: async () => snapshot, getPage, getRawCard: async () => rawCard }), <Routed setConcept={setConcept} />);
+    const box = await screen.findByRole("combobox", { name: "Pick a concept" });
+    const back = screen.getByRole("button", { name: "Back to the previous concept" });
+    expect(back).toBeDisabled();
+    await userEvent.clear(box);
+    await userEvent.type(box, "why");
+    await userEvent.keyboard("{Enter}");
+    expect(setConcept).toHaveBeenLastCalledWith("q-x");
+    await waitFor(() => expect(box).toHaveValue("Why?"));
+    expect(back).toBeEnabled();
+    expect(back).toHaveAttribute("title", "Back to The hub");
+    await userEvent.click(back);
+    expect(setConcept).toHaveBeenLastCalledWith("hub");
+    await waitFor(() => expect(box).toHaveValue("The hub"));
+    expect(back).toBeDisabled();
   });
 });

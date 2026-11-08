@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<!-- Template: install.sh fills in __ROOT__, __PIXI__ and __LOG__. -->
+<!-- Template: install.sh fills in __ROOT__, __PIXI__, __LOG__ and __KB__. -->
 <plist version="1.0">
 <dict>
   <key>Label</key>
@@ -9,7 +9,7 @@
   <array>
     <string>/bin/zsh</string>
     <string>-lc</string>
-    <string>cd "__ROOT__" &amp;&amp; echo "=== $(date)" &amp;&amp; "__PIXI__" run daily-sync</string>
+    <string>cd "__ROOT__" &amp;&amp; echo "=== $(date)" &amp;&amp; KB="__KB__" "__PIXI__" run daily-sync</string>
   </array>
   <key>StartCalendarInterval</key>
   <dict>
