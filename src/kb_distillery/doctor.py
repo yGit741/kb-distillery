@@ -160,10 +160,22 @@ def check_publisher(cfg, publisher_for=None) -> Check:
 
 
 # --- llm, frontend -------------------------------------------------------------------------------------------
+def _provider_choice(vendors) -> Check:
+    """Which provider a feature gets when nothing is passed: $KB_LLM_PROVIDER, the kb's `[llm] provider`, else the first set up."""
+    from kb_distillery import llm
+    try:
+        provider, backend = llm.resolve()
+    except llm.LLMError as e:
+        return Check("llm default", WARN, str(e), "fix `[llm] provider` in kb.toml or $KB_LLM_PROVIDER / $KB_LLM_BACKEND")
+    return Check("llm default", PASS if vendors.get(provider, {}).get("ok") else INFO,
+                 f"{provider} on the {backend} backend")
+
+
 def check_llm(avail=None) -> list[Check]:
     if avail is None:
         from kb_distillery import llm
         avail = llm.availability()
+    vendors = avail.get("providers") or {}
     avail = {k: v for k, v in avail.items() if k != "providers"}      # per-vendor keys are not a backend
     out = []
     for backend, a in avail.items():
@@ -171,6 +183,13 @@ def check_llm(avail=None) -> list[Check]:
             out.append(Check(f"llm {backend}", PASS, a["why"]))
         else:
             out.append(Check(f"llm {backend}", INFO, f"{a['why']}; AI features that use it stay off", a["fix"]))
+    for name, a in vendors.items():
+        if a["ok"]:
+            out.append(Check(f"llm provider {name}", PASS, a["why"]))
+        else:
+            out.append(Check(f"llm provider {name}", INFO, a["why"], a["fix"]))
+    if vendors:
+        out.append(_provider_choice(vendors))
     if not any(a["ok"] for a in avail.values()):
         out.append(Check("llm", INFO, "no AI backend available: everything else works without one",
                          "add a Claude subscription login (`claude login`) or an API key when you want AI features"))

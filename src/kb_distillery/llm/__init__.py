@@ -123,6 +123,48 @@ def resolve_provider(provider=None):
     return p
 
 
+def kb_provider(kb=None):
+    """`[llm] provider` of a kb's kb.toml ("" when unset); `kb` is a KbConfig, default the selected kb. An unknown
+    name raises LLMError naming the file."""
+    if kb is None:
+        from kb_distillery.config import kb as kbconfig
+        kb = kbconfig.current()
+    if kb is None:
+        return ""
+    p = str(kb.section("llm").get("provider") or "").strip().lower()
+    if p and p not in PROVIDERS:
+        raise LLMError(f"{kb.path}: [llm] provider {p!r} is unknown; pick one of {', '.join(PROVIDERS)}")
+    return p
+
+
+def resolve(provider=None, backend=None, kb=None):
+    """The one (provider, backend) a feature should run with.
+
+    Provider: the argument, then $KB_LLM_PROVIDER, then `[llm] provider` in the kb's kb.toml, else automatic: `claude`
+    when its subscription is logged in or it has an API key, otherwise the first other provider that has a key, and
+    `claude` when nothing has one (so the failure message says what to set up).
+    Backend: the argument, then $KB_LLM_BACKEND, else for `claude` the subscription when logged in and the API
+    otherwise, and `api` for the other providers. Subscription and batch are Claude-only: asking for them with another
+    provider raises LLMError. Callers pass the pair to `run(..., backend=)` and `Request(provider=)`; no LLM call here."""
+    explicit = (provider or os.environ.get(ENV_PROVIDER) or kb_provider(kb) or "").strip()
+    chosen = resolve_provider(explicit) if explicit else None
+    explicit_backend = backend or os.environ.get(ENV_BACKEND)
+    b = resolve_backend(explicit_backend) if explicit_backend else None
+    sub = None
+    if chosen is None:
+        sub = _subscription()["ok"]
+        others = (n for n in PROVIDERS if n != "claude" and providers.get(n).availability()[0])
+        chosen = "claude" if (sub or api_key()) else next(others, "claude")
+    if chosen != "claude":
+        if b not in (None, "api"):
+            raise LLMError(f"the {chosen} provider runs on the api backend only (got {b}); "
+                           f"subscription and batch are Claude-only")
+        return chosen, "api"
+    if b is None:
+        b = "subscription" if (_subscription()["ok"] if sub is None else sub) else "api"
+    return chosen, b
+
+
 def model_provider(model):
     """The provider a model id belongs to ("claude" for the aliases)."""
     m = model_id(model)

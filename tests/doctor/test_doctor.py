@@ -202,3 +202,16 @@ def test_config_folder_only_the_old_one_is_a_fail_with_the_exact_mv(monkeypatch,
     assert old.is_dir() and not (tmp_path / ".config" / "kb-distillery").exists()   # reported, never moved
     (tmp_path / ".config" / "kb-distillery").mkdir()
     assert doctor.check_config_dir().status == PASS
+
+
+def test_llm_lists_every_provider_and_the_default(monkeypatch):
+    off = {b: {"ok": False, "why": "no", "fix": "do x"} for b in llm.BACKENDS}
+    vendors = {"claude": {"ok": False, "why": "no key", "fix": "set k"},
+               "openai": {"ok": True, "why": "key", "fix": ""},
+               "gemini": {"ok": False, "why": "no key", "fix": "set g"}}
+    monkeypatch.setattr(llm, "resolve", lambda: ("openai", "api"))
+    out = doctor.check_llm({**off, "providers": vendors})
+    assert status(out, "llm provider openai") == PASS and status(out, "llm provider gemini") == INFO
+    assert next(c for c in out if c.name == "llm default").detail == "openai on the api backend"
+    monkeypatch.setattr(llm, "resolve", lambda: (_ for _ in ()).throw(llm.LLMError("bad provider")))
+    assert status(doctor.check_llm({**off, "providers": vendors}), "llm default") == WARN
