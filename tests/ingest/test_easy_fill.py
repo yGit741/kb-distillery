@@ -184,7 +184,7 @@ def test_cli_routes_backend_and_model(tmp_path, monkeypatch):
     monkeypatch.setattr(ed, "easy_digest_many", lambda ts, **kw: (calls.update(many=(ts, kw)), ([], [], []))[1])
     assert cli.main(["easy-digest", "paper-a", "--fill", "--backend", "batch"]) == 0
     t, kw = calls["one"]
-    assert t == "paper-a" and kw["fill"] and kw["backend"] == "batch" and kw["model"] == "haiku"
+    assert t == "paper-a" and kw["fill"] and kw["backend"] == "batch" and kw["model"] == "light"
     assert cli.main(["easy-digest", "a", "b", "--fill", "--model", "sonnet", "--no-lint"]) == 0
     ts, kw = calls["many"]
     assert ts == ["a", "b"] and kw["model"] == "sonnet" and kw["backend"] is None and kw["lint"] is False

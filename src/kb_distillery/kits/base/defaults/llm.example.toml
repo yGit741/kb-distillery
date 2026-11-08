@@ -1,0 +1,28 @@
+# Copy to ~/.config/kb-distillery/llm.toml to change which model each tier means. Without the file the values
+# below are the built-in defaults. A feature asks for a tier (light, standard, strong), never a model name:
+#   light     quick answers, abstract skims, routing
+#   standard  digests and fills
+#   strong    hard reasoning
+# A value is an alias (claude: haiku, sonnet, opus, fable) or a model id. The tier never changes the backend
+# (subscription, api, batch) or the provider; those are chosen per run.
+
+[claude]
+light = "haiku"
+standard = "sonnet"
+strong = "opus"
+
+[openai]          # api backend only; prices unverified
+light = "gpt-4.1-nano"
+standard = "gpt-4.1-mini"
+strong = "gpt-4.1"
+
+[gemini]          # api backend only; prices unverified
+light = "gemini-2.5-flash-lite"
+standard = "gemini-2.5-flash"
+strong = "gemini-2.5-pro"
+
+# A model that is not in the built-in price table needs a row (USD per million tokens), for example:
+# [prices."gpt-5"]
+# in = 1.25
+# out = 10.00
+# cache_read = 0.125

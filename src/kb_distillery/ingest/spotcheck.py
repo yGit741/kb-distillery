@@ -18,8 +18,8 @@ from datetime import datetime, timezone
 from .paths import ROOT
 
 RATE = 0.05
-DEFAULT_MODEL = "haiku"          # easy-digest default
-CHECK_MODEL = "sonnet"           # the stronger re-reader
+DEFAULT_MODEL = "light"          # easy-digest default
+CHECK_MODEL = "standard"           # the stronger re-reader
 VERDICTS = ("ok", "fix")
 LOG = os.path.join(ROOT, "meta", ".ingest", "easy", "spotcheck.jsonl")
 

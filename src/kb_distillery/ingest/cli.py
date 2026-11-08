@@ -19,7 +19,7 @@ def _add_llm_flags(sp, default_model):
     from kb_distillery import llm
     sp.add_argument("--backend", choices=llm.BACKENDS, default=None,
                     help=f"subscription / api / batch (default: ${llm.ENV_BACKEND}, then {llm.DEFAULT_BACKEND})")
-    sp.add_argument("--model", default=default_model, help=f"model alias or id (default {default_model})")
+    sp.add_argument("--model", default=default_model, help=f"tier (light, standard, strong), model alias or id (default {default_model})")
 
 
 def _add_scope_flags(sp):
@@ -183,7 +183,7 @@ def main(argv=None):
     vd = sub.add_parser("video-digest", help="full/deep digest of a video page: read the top anchors with Claude (LLM)")
     vd.add_argument("target", help="raw/videos/<name>/video.md or its video- page slug")
     vd.add_argument("--tier", choices=["full", "deep"], default="full", help="full ~15 frames/hour · deep ~30/hour")
-    _add_llm_flags(vd, default_model="sonnet")
+    _add_llm_flags(vd, default_model="standard")
 
     sm = sub.add_parser("scrap-mail", help="parse .mbox/.eml export, or fetch via IMAP, to raw/inbox/mail-.../ (0 LLM)")
     sm.add_argument("source", nargs="?", default=None, help="path to a local .mbox or .eml export")
@@ -225,7 +225,7 @@ def main(argv=None):
     ed.add_argument("--no-tick", action="store_true", help="batch: leave the hub row for the orchestrator")
     ed.add_argument("--no-lint", action="store_true", help="batch: lint once at the end instead")
     ed.add_argument("--fill", action="store_true", help="kb_distillery.llm writes Problem + Main result (else the agent does)")
-    _add_llm_flags(ed, default_model="haiku")
+    _add_llm_flags(ed, default_model="light")
 
     sc = sub.add_parser("easy-spotcheck", help="~5%% of easy digests re-read by a stronger model (0 LLM here)")
     sc_sub = sc.add_subparsers(dest="sc_cmd", required=True)
@@ -234,7 +234,7 @@ def main(argv=None):
     sc_log = sc_sub.add_parser("log", help="record a re-read verdict")
     sc_log.add_argument("slug")
     sc_log.add_argument("--verdict", required=True, choices=("ok", "fix"))
-    sc_log.add_argument("--model", default="sonnet")
+    sc_log.add_argument("--model", default="standard")
     sc_log.add_argument("--note", default="")
     sc_sub.add_parser("status", help="verdict counts")
     fd = sub.add_parser("full-digest", help="standard paper note (medium LLM)")
@@ -268,7 +268,7 @@ def main(argv=None):
     e = sub.add_parser("extract", help="extract PDF text; validate claims.json")
     e.add_argument("session")
     e.add_argument("--fill", action="store_true", help="kb_distillery.llm fills the claims.json template (else the agent does)")
-    _add_llm_flags(e, default_model="sonnet")
+    _add_llm_flags(e, default_model="standard")
 
     m = sub.add_parser("map", help="build plan.json from claims")
     m.add_argument("session")

@@ -30,7 +30,7 @@ class SpotCheck(unittest.TestCase):
             self.assertEqual([r["verdict"] for r in rows], ["ok", "fix"])
             self.assertEqual(rows[0]["model"], spotcheck.CHECK_MODEL)
             self.assertEqual(spotcheck.status(path), {"ok": 1, "fix": 1})
-        self.assertEqual(spotcheck.DEFAULT_MODEL, "haiku")
+        self.assertEqual(spotcheck.DEFAULT_MODEL, "light")
 
 
 if __name__ == "__main__":

@@ -14,7 +14,7 @@ from kb_distillery.vault.summary import (body_of, hand_written, needs_summary, n
 from kb_distillery.lint.lint import parse_frontmatter
 from kb_distillery.vault.schema import is_page_file
 
-MODEL = "sonnet"
+MODEL = "standard"
 PER_CALL = 10                 # pages per model call
 WORKERS = 4                   # calls in flight (subscription / api; a batch is one submission)
 MAX_TOKENS = 16000            # ten summaries plus thinking
@@ -176,6 +176,7 @@ def propose(pages, model=MODEL, per_call=PER_CALL, workers=WORKERS, log=print, o
     `on_rows(rows)` runs as each call finishes (the CLI saves there, so Ctrl-C keeps what was paid for).
     `backend="batch"` sends all chunks as one batch, and the retries as a second one."""
     batch = llm.resolve_backend(backend) == "batch"
+    model = llm.model_id(model)       # a tier becomes the model it names, so rows and `generated.by` record the real one
 
     def done(rs):
         stamp = now_stamp()                # kept in proposals.jsonl; `generated` holds only `by`
@@ -285,7 +286,7 @@ def apply(slugs=None, root=None, path=PROPOSALS, out_dir=None):
         if r["summary_from"] != summary_hash(page["text"]):
             continue                                      # page changed since the proposal: re-run it
         new = set_fields(page["text"], {"description": f'"{r["summary"]}"', "summary_from": r["summary_from"],
-                                        "generated": "{by: %s}" % tool_actor(r.get("model") or MODEL)})
+                                        "generated": "{by: %s}" % tool_actor(r.get("model") or llm.model_id(MODEL))})
         if new != page["text"]:
             tmp = page["path"] + ".tmp"
             with open(tmp, "w", encoding="utf-8") as f:
