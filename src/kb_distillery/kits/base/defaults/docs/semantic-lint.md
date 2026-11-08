@@ -25,3 +25,5 @@ python3 -m kb_distillery.search.semfind topic theme-info-theory   # `theme` / `m
 Manifest: `meta/coherence-warnings.tsv` (regenerated on lint; statuses persist).
 
 After full/deep digest or distill apply: `SEMFIND_READY` → `.claude/skills/semantic-lint-hop/SKILL.md`. On-demand topic audit: `.claude/skills/lint-moc/SKILL.md`.
+
+Proposal review reuses these signals: tier 2 of the proposal checks adds open internal warnings on a touched page and a scoped model review of the change (see `proposals.md`, Check tiers).

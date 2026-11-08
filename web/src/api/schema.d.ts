@@ -911,6 +911,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/proposals/suggestions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Nightly tier-3 suggestions without an edit (findings the owner may draft or dismiss) */
+        get: operations["suggestions_api_proposals_suggestions_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/proposals/{pid}": {
         parameters: {
             query?: never;
@@ -939,6 +956,23 @@ export interface paths {
         put?: never;
         /** Apply the accepted hunks as one knowledge step (409 stale, 422 blocking checks) */
         post: operations["apply_api_proposals__pid__apply_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/proposals/{pid}/checks/semantic": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Tier-2 scoped semantic check of the current revision (one model call per touched page) */
+        post: operations["semantic_api_proposals__pid__checks_semantic_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2440,10 +2474,14 @@ export interface components {
         Finding: {
             /** Code */
             code: string;
+            /** Evidence */
+            evidence?: string | null;
             /** Hunk Id */
             hunk_id?: string | null;
             /** Message */
             message: string;
+            /** Neighbour Slug */
+            neighbour_slug?: string | null;
             /**
              * Severity
              * @enum {string}
@@ -4092,6 +4130,8 @@ export interface components {
         };
         /** ProposalCreate */
         ProposalCreate: {
+            /** Backend */
+            backend?: ("subscription" | "api" | "batch") | null;
             /** Note */
             note?: string | null;
             /** Ops */
@@ -4104,6 +4144,11 @@ export interface components {
              *     }
              */
             producer: components["schemas"]["Producer"];
+            /**
+             * Semantic
+             * @default false
+             */
+            semantic: boolean;
             /** Title */
             title: string;
         } & {
@@ -4517,10 +4562,17 @@ export interface components {
         };
         /** RevisionCreate */
         RevisionCreate: {
+            /** Backend */
+            backend?: ("subscription" | "api" | "batch") | null;
             /** Note */
             note?: string | null;
             /** Ops */
             ops: components["schemas"]["ProposalOp"][];
+            /**
+             * Semantic
+             * @default false
+             */
+            semantic: boolean;
         } & {
             [key: string]: unknown;
         };
@@ -4780,6 +4832,22 @@ export interface components {
             related?: components["schemas"]["SearchHit"][] | null;
             /** Total */
             total: number;
+        } & {
+            [key: string]: unknown;
+        };
+        /** SemanticRequest */
+        SemanticRequest: {
+            /** Backend */
+            backend?: ("subscription" | "api" | "batch") | null;
+        } & {
+            [key: string]: unknown;
+        };
+        /** SemanticResult */
+        SemanticResult: {
+            /** Findings */
+            findings: components["schemas"]["Finding"][];
+            /** Revision */
+            revision: number;
         } & {
             [key: string]: unknown;
         };
@@ -5151,6 +5219,47 @@ export interface components {
              * @default []
              */
             via: string[];
+        } & {
+            [key: string]: unknown;
+        };
+        /**
+         * Suggestion
+         * @description A nightly tier-3 finding with no concrete edit: the owner may draft a proposal from it or dismiss it.
+         */
+        Suggestion: {
+            /** Created */
+            created: string;
+            /**
+             * Detail
+             * @default
+             */
+            detail: string;
+            /** Finding */
+            finding: string;
+            /** Id */
+            id: string;
+            /**
+             * Kind
+             * @default suggestion
+             * @constant
+             */
+            kind: "suggestion";
+            /** Slugs */
+            slugs: string[];
+            /**
+             * Status
+             * @default open
+             */
+            status: string;
+            /** Summary */
+            summary: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** SuggestionList */
+        SuggestionList: {
+            /** Suggestions */
+            suggestions: components["schemas"]["Suggestion"][];
         } & {
             [key: string]: unknown;
         };
@@ -7718,6 +7827,33 @@ export interface operations {
                 };
                 content?: never;
             };
+            /** @description Bad Gateway */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    suggestions_api_proposals_suggestions_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuggestionList"];
+                };
+            };
         };
     };
     get_api_proposals__pid__get: {
@@ -7775,6 +7911,13 @@ export interface operations {
                 };
                 content?: never;
             };
+            /** @description Bad Gateway */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
     };
     apply_api_proposals__pid__apply_post: {
@@ -7827,6 +7970,81 @@ export interface operations {
             };
             /** @description Unprocessable Content */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bad Gateway */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    semantic_api_proposals__pid__checks_semantic_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                pid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["SemanticRequest"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SemanticResult"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Method Not Allowed */
+            405: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bad Gateway */
+            502: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -7893,6 +8111,13 @@ export interface operations {
                 };
                 content?: never;
             };
+            /** @description Bad Gateway */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
     };
     reject_api_proposals__pid__reject_post: {
@@ -7949,6 +8174,13 @@ export interface operations {
             };
             /** @description Unprocessable Content */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bad Gateway */
+            502: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -8011,6 +8243,13 @@ export interface operations {
                 };
                 content?: never;
             };
+            /** @description Bad Gateway */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
     };
     revise_api_proposals__pid__revisions_post: {
@@ -8067,6 +8306,13 @@ export interface operations {
             };
             /** @description Unprocessable Content */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bad Gateway */
+            502: {
                 headers: {
                     [name: string]: unknown;
                 };

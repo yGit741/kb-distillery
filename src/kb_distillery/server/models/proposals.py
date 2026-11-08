@@ -6,6 +6,7 @@ from kb_distillery.server.models.base import ApiModel
 ProducerKind = Literal["manual", "chat", "flags", "ingest", "restructure", "lint", "restore"]
 Status = Literal["open", "applied", "rejected", "stale"]
 Decision = Literal["accept", "reject", "correct"]
+Backend = Literal["subscription", "api", "batch"]
 
 
 class Producer(ApiModel):
@@ -40,6 +41,8 @@ class Finding(ApiModel):
     slug: str
     hunk_id: str | None = None
     source: str | None = None
+    evidence: str | None = None
+    neighbour_slug: str | None = None
 
 
 class Hunk(ApiModel):
@@ -145,11 +148,24 @@ class ProposalCreate(ApiModel):
     producer: Producer = Producer()
     ops: list[ProposalOp]
     note: str | None = None
+    semantic: bool = False          # run the tier-2 scoped semantic check right after tier 1
+    backend: Backend | None = None  # model backend for tier 2 (default $KB_LLM_BACKEND, then subscription)
 
 
 class RevisionCreate(ApiModel):
     ops: list[ProposalOp]
     note: str | None = None
+    semantic: bool = False
+    backend: Backend | None = None
+
+
+class SemanticRequest(ApiModel):
+    backend: Backend | None = None
+
+
+class SemanticResult(ApiModel):
+    revision: int
+    findings: list[Finding]
 
 
 class DecisionItem(ApiModel):
@@ -203,3 +219,19 @@ class ProposalRender(ApiModel):
     revision: int
     stale: bool
     pages: list[RenderPage]
+
+
+class Suggestion(ApiModel):
+    """A nightly tier-3 finding with no concrete edit: the owner may draft a proposal from it or dismiss it."""
+    id: str
+    kind: Literal["suggestion"] = "suggestion"
+    finding: str
+    slugs: list[str]
+    detail: str = ""
+    summary: str
+    created: str
+    status: str = "open"
+
+
+class SuggestionList(ApiModel):
+    suggestions: list[Suggestion]
