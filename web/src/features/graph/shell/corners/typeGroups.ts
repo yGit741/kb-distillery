@@ -34,7 +34,8 @@ const MARK_LABEL: Readonly<Record<string, string>> = Object.fromEntries(MARK_KEY
 export function groupTypes(rows: readonly TypeRow[]): TypeGroup[] {
   const by = new Map<string, TypeRow[]>();
   for (const r of rows) {
-    const key = r.layer === "source" ? `glyph:${glyphOf(r.id)}` : `mark:${markOf(r.id)}`;
+    // a non-source type that still has the fallback mark (a kit type not yet registered) stands alone
+    const key = r.layer === "source" ? `glyph:${glyphOf(r.id)}` : markOf(r.id) === "source" ? `id:${r.id}` : `mark:${markOf(r.id)}`;
     by.set(key, [...(by.get(key) ?? []), r]);
   }
   return [...by.entries()].map(([key, members]) => {

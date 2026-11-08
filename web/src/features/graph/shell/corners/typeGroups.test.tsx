@@ -42,6 +42,11 @@ describe("groupTypes", () => {
     expect(g[0]!.shown).toBe(false);
   });
 
+  it("keeps unregistered non-source types apart", () => {
+    const g = groupTypes([row("zzx", "Zzx", "concept", 1), row("zzy", "Zzy", "concept", 2)]);
+    expect(g.map((x) => x.label)).toEqual(["Zzx", "Zzy"]);
+  });
+
   it("pluralises in one place", () => {
     expect(pluralize("Article / post")).toBe("Articles / posts");
     expect(pluralize("Mail")).toBe("Mail");
