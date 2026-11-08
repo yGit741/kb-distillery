@@ -13,7 +13,10 @@ stdlib adapter under `kb_distillery.llm.providers` (`complete(request, model_id,
 runs on all three backends; `openai` and `gemini` are `api` only (one blocking call per request, on the same thread pool)
 and refuse images. Keys: ANTHROPIC_API_KEY / OPENAI_API_KEY / GEMINI_API_KEY or ~/.config/kb-distillery/<provider>_key.
 Provider: `Request.provider`; when empty it follows the model (a Claude alias or `gpt-*` / `gemini-*` id). Entry points that
-choose the model themselves (the CLI) use `resolve_provider()`: argument, then $KB_LLM_PROVIDER, then `claude`.
+choose the model themselves (the CLI) use `resolve(provider, backend)`: provider = argument, $KB_LLM_PROVIDER, `[llm] provider`
+in the kb's kb.toml, else automatic (Claude subscription if logged in, else Claude API key, else the first vendor with a
+key); backend = argument, $KB_LLM_BACKEND, else subscription when logged in, else api when a key exists. Library callers
+that name their model keep `resolve_backend()`; wiring them to `resolve()` is up to each feature.
 A request's model must belong to its provider.
 
 Backend precedence: the `backend=` argument, then $KB_LLM_BACKEND, then DEFAULT_BACKEND.
@@ -121,6 +124,50 @@ def resolve_provider(provider=None):
     if p not in PROVIDERS:
         raise LLMError(f"unknown provider {p!r}; pick one of {', '.join(PROVIDERS)}")
     return p
+
+
+def kb_provider(kb=None):
+    """`[llm] provider` of a kb's kb.toml ("" when unset); `kb` is a KbConfig, default the selected kb. An unknown
+    name raises LLMError naming the file."""
+    if kb is None:
+        from kb_distillery.config import kb as kbconfig
+        kb = kbconfig.current()
+    if kb is None:
+        return ""
+    p = str(kb.section("llm").get("provider") or "").strip().lower()
+    if p and p not in PROVIDERS:
+        raise LLMError(f"{kb.path}: [llm] provider {p!r} is unknown; pick one of {', '.join(PROVIDERS)}")
+    return p
+
+
+def resolve(provider=None, backend=None, kb=None):
+    """The one (provider, backend) a feature should run with.
+
+    Provider: the argument, then $KB_LLM_PROVIDER, then `[llm] provider` in the kb's kb.toml, else automatic: `claude`
+    when its subscription is logged in or it has an API key, otherwise the first other provider that has a key, and
+    `claude` when nothing has one (so the failure message says what to set up).
+    Backend: the argument, then $KB_LLM_BACKEND, else for `claude` the subscription when logged in and the API
+    otherwise, and `api` for the other providers. Subscription and batch are Claude-only: asking for them with another
+    provider raises LLMError. Callers pass the pair to `run(..., backend=)` and `Request(provider=)`; no LLM call here."""
+    explicit = (provider or os.environ.get(ENV_PROVIDER) or kb_provider(kb) or "").strip()
+    chosen = resolve_provider(explicit) if explicit else None
+    explicit_backend = backend or os.environ.get(ENV_BACKEND)
+    b = resolve_backend(explicit_backend) if explicit_backend else None
+    sub = None
+    if chosen is None:
+        sub = _subscription()["ok"]
+        others = (n for n in PROVIDERS if n != "claude" and providers.get(n).availability()[0])
+        claude_only_backend = b in ("subscription", "batch")      # a backend only Claude has: do not auto-pick another vendor
+        chosen = "claude" if (sub or api_key() or claude_only_backend) else next(others, "claude")
+    if chosen != "claude":
+        if b not in (None, "api"):
+            raise LLMError(f"the {chosen} provider runs on the api backend only (got {b}); "
+                           f"subscription and batch are Claude-only")
+        return chosen, "api"
+    if b is None:
+        logged_in = _subscription()["ok"] if sub is None else sub
+        b = DEFAULT_BACKEND if (logged_in or not api_key()) else "api"
+    return chosen, b
 
 
 def model_provider(model):
