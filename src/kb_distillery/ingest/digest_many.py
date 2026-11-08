@@ -29,7 +29,7 @@ from kb_distillery.storage import StorageError, for_kb
 from .verify import existing_digest_for_raw
 from kb_distillery.vault.schema import is_page_file
 
-MODEL = "sonnet"
+MODEL = "standard"
 MAX_TEXT = 60_000          # chars of source text per request: a ceiling on cost, not a summary
 OUT_TOKENS = 4_000         # expected reply size, for the up-front estimate only (the ceiling is extract.FILL_MAX_TOKENS)
 STOP_AFTER = 3             # consecutive failed sessions that stop `drive`

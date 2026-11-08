@@ -10,7 +10,7 @@ import sys
 
 from kb_distillery import llm
 
-READ_MODEL = "sonnet"
+READ_MODEL = "standard"
 READ_EFFORT = "medium"
 READ_MAX_TOKENS = 8192
 READ_PROMPT = """The image is a frame from an educational video.
