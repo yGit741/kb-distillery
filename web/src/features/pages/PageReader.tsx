@@ -10,6 +10,7 @@ import { useFlag } from "@/flags/useFlag";
 import { agoLabel, bareSlug, fmList, fmString, layerOf, mtimeOf, prepareMarkdown, titleOf, type LinkGraph } from "./lib";
 import { MiniGraph } from "./MiniGraph";
 import { SourcesCountMark, SourcesFooter, SourcesMarginDots, SourcesSideTab, usePageSources } from "./PageSources";
+import { HistoryClock, HistoryCompare, HistoryPanel, HistoryTimeline, useHistory, useHistoryEntry } from "./PageHistory";
 import { PAGES_TO, FactBadges, Fold, PageLink, TypeDot } from "./parts";
 import { VideoView, isVideoRaw } from "./VideoView";
 
@@ -82,6 +83,9 @@ export function PageReader({ g, detail, embed, pinned, onTogglePin, onConnect, v
   const spec = VARIANTS["page-sources"]!;
   const [placement] = useVariant("page-sources", spec.options.map((o) => o.id), spec.default);
   const pageSources = usePageSources(card.id, kb, sourcesOn);
+  const historyOn = useFlag("ui.page-history") && !viewOnly && !embed;
+  const historyEntry = useHistoryEntry();
+  const history = useHistory(card.id, historyOn);
   const articleRef = useRef<HTMLElement>(null);
   const sources = useMemo(
     () =>
@@ -157,16 +161,22 @@ export function PageReader({ g, detail, embed, pinned, onTogglePin, onConnect, v
                 <a href={`obsidian://open?file=${encodeURIComponent(detail.path)}`}>Open in Obsidian</a>
               </Button>
             )}
+            {historyOn && historyEntry === "header" && <HistoryClock h={history} />}
             {sourcesOn && placement === "hover-marks" && pageSources && <SourcesCountMark sources={pageSources} />}
             <span className="text-xs text-muted-foreground">
               {card.words} words{mtimeOf(card) ? ` · edited ${agoLabel(mtimeOf(card))}` : ""}
             </span>
           </div>
+          {historyOn && historyEntry === "timeline" && <HistoryTimeline h={history} />}
         </header>
 
-        <Markdown resolveSlug={resolveSlug} linkSearch={linkSearch}>{markdown}</Markdown>
+        {historyOn && history.comparing ? (
+          <HistoryCompare slug={card.id} h={history} />
+        ) : (
+          <Markdown resolveSlug={resolveSlug} linkSearch={linkSearch}>{markdown}</Markdown>
+        )}
 
-        {sourcesOn && placement === "footer" && pageSources && <SourcesFooter sources={pageSources} />}
+        {!history.comparing && sourcesOn && placement === "footer" && pageSources && <SourcesFooter sources={pageSources} />}
         {sourcesOn && placement === "hover-marks" && pageSources && <SourcesMarginDots sources={pageSources} articleRef={articleRef} />}
 
         {detail.broken.length > 0 && (
@@ -219,6 +229,7 @@ export function PageReader({ g, detail, embed, pinned, onTogglePin, onConnect, v
         </Fold>
       </aside>
 
+      {historyOn && historyEntry === "header" && <HistoryPanel h={history} />}
       {sourcesOn && placement === "side-tab" && <SourcesSideTab sources={pageSources} />}
       {isVideoRaw(raw) && <VideoView raw={raw} className="lg:col-span-2" />}
     </div>

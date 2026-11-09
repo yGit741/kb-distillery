@@ -143,6 +143,16 @@ export function createHttpDataSource(fetchImpl: Fetch = (...a) => fetch(...a), b
     rejectProposal: (id, reason) =>
       run(() => client.POST("/api/proposals/{pid}/reject", { params: { path: { pid: id } }, body: { reason: reason ?? null } }), `/api/proposals/${id}/reject`),
 
+    getPageHistory: (slug) =>
+      run(() => client.GET("/api/pages/{slug}/history", { params: { path: { slug } } }), `/api/pages/${slug}/history`),
+    comparePage: (slug, from, to) =>
+      run(
+        () => client.GET("/api/pages/{slug}/compare", { params: { path: { slug }, query: { from, ...(to ? { to } : {}) } } }),
+        `/api/pages/${slug}/compare`,
+      ),
+    restorePage: (slug, body) =>
+      run(() => client.POST("/api/pages/{slug}/restore", { params: { path: { slug } }, body: { ...body, to: body.to ?? "working" } }), `/api/pages/${slug}/restore`),
+
     listViews: () => run(() => client.GET("/api/views"), "/api/views"),
     listReadyViews: () => run(() => client.GET("/api/views/ready"), "/api/views/ready"),
     listRecent: () => run(() => client.GET("/api/recent"), "/api/recent"),

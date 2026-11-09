@@ -17,6 +17,8 @@ export interface HunkCtx {
   onDecide: (d: Decision, comment?: string) => void;
   onCorrect: (open: boolean) => void;
   onFocus: () => void;
+  /** Replaces Accept / Reject / Correct with one action button (page history: "Restore block"). */
+  action?: { label: string; onClick: () => void; disabled?: boolean; note?: string };
 }
 
 /** Word marks for a hunk's tokens. `show` picks which side: both (inline), before only, after only. */
@@ -63,6 +65,26 @@ const STATE: Record<Decision, { label: string; icon: typeof Check }> = {
 /** Accept / Reject / Correct for one hunk, the quiet state mark once decided, and the inline correction box. */
 export function HunkControls({ ctx, layout = "column", correct = true }: { ctx: HunkCtx; layout?: "column" | "row"; correct?: boolean }) {
   const { decision, readOnly } = ctx;
+  if (ctx.action) {
+    const a = ctx.action;
+    return (
+      <div className="flex flex-col items-start gap-1" data-testid="hunk-controls">
+        <button
+          type="button"
+          disabled={a.disabled}
+          onClick={(e) => {
+            e.stopPropagation();
+            ctx.onFocus();
+            a.onClick();
+          }}
+          className="h-7 rounded-md px-2.5 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:pointer-events-none disabled:opacity-50"
+        >
+          {a.label}
+        </button>
+        {a.note && <p className="text-xs text-muted-foreground">{a.note}</p>}
+      </div>
+    );
+  }
   const btn = (d: Decision, label: string, key: string) => (
     <button
       type="button"

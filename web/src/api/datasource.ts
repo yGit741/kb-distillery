@@ -60,6 +60,13 @@ export interface DataSource {
   applyProposal(id: string): Promise<T.ApplyResult>;
   rejectProposal(id: string, reason?: string): Promise<T.Proposal>;
 
+  // page history (flag ui.page-history): git versions of one page, a compare, and restore as a proposal
+  getPageHistory(slug: string): Promise<T.PageHistory>;
+  /** Hunks turning version `from` into `to` (a sha, or "working"), the shape the proposal diff renders. */
+  comparePage(slug: string, from: string, to?: string): Promise<T.PageCompare>;
+  /** Creates a restore proposal (the page is not written); `blocks` are compare hunk ids, absent = the whole version. */
+  restorePage(slug: string, body: { sha: string; blocks?: string[]; to?: string }): Promise<T.RestoreResult>;
+
   // pinned views (meta/views.json) and the recent steps of the graph search panel (local, never committed)
   listViews(): Promise<T.ViewList>;
   /** The ready views the kb's kit ships: each layer is a line of the graph's query language, parsed by the frontend. */
