@@ -101,6 +101,8 @@ class Pipeline:
         self.root = root
         self.env = {**{k: v for k, v in os.environ.items() if not k.startswith("KB_") and k != "KB"},
                     "KB_ROOT": root,       # the temp vault is the kb (the code symlinked into it no longer finds it by itself)
+                    # the suite's fixture share config (conftest): the share build reads it, never the developer's ~/.config
+                    **({"KB_SHARE_CONFIG": os.environ["KB_SHARE_CONFIG"]} if os.environ.get("KB_SHARE_CONFIG") else {}),
                     "KB_OPS_DISABLE": "1", "KB_NO_PUSH": "1", "PYTHONDONTWRITEBYTECODE": "1",
                     "PYTHONHASHSEED": "0", "TZ": "UTC", "NO_PROXY": "*",
                     "PYTHONPATH": os.path.join(root, "src")}
@@ -289,6 +291,7 @@ def write_golden(outputs, files):
             f.write("\n")
 
 
+@pytest.mark.timeout(600)      # setUpClass runs the whole pipeline; the wall-clock budget below is the real limit
 class PipelineE2E(unittest.TestCase):
     @classmethod
     def setUpClass(cls):

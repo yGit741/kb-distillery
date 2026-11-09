@@ -22,6 +22,9 @@ pydantic = ">=2"
 httpx = ">=0.28.1,<0.29"
 # runtime dependencies of pyproject.toml that the editable install used to supply: declared here so nothing leaves the env
 pyyaml = ">=6"
+pytest-timeout = ">=2.4.0,<3"
+ruff = ">=0.17.4,<0.18"
+uv = ">=0.13.7,<0.14"       # builds and installs the wheel in tests/cli/test_install_wheel.py (`pixi run test-wheel`, CI job `wheel`)
 
 [activation.env]
 # THE way `import kb_distillery` resolves in this env. The package is deliberately NOT a [pypi-dependencies] entry
@@ -93,8 +96,12 @@ ops = "python -m kb_distillery.ops"
 metrics = "python -m kb_distillery.metrics"
 install-hooks = "git config core.hooksPath scripts/githooks"
 install-kb-hooks = "python -m kb_distillery.cli hooks install"
-test = "pytest tests"
-test-wheel = { cmd = "pytest tests/cli/test_install_wheel.py -q", env = { KB_TEST_WHEEL = "1", PYTHONPATH = "" } }
+# the suite: one parallel pass, then the `serial` wall-clock tests alone (ship's tests gate and CI's shards do the same)
+test = "pytest tests -n auto -m 'not serial'"
+test-serial = "pytest tests -m serial"
+ruff = "ruff check src tests"     # syntax errors and undefined names ([tool.ruff] in pyproject.toml); a commit gate and a CI step
+# the test itself strips PYTHONPATH from the installed CLI's environment; pytest and conftest still need the package
+test-wheel = { cmd = "pytest tests/cli/test_install_wheel.py -q", env = { KB_TEST_WHEEL = "1" } }
 build-wheel = { cmd = "python -m build --wheel --outdir dist", depends-on = ["web-build"] }   # the wheel ships the built app (_webapp)
 web-install = "npm ci --prefix web"
 web-dev = "npm run dev --prefix web"

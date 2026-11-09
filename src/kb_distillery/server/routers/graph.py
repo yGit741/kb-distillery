@@ -4,7 +4,8 @@ from fastapi import APIRouter, HTTPException, Query
 
 from kb_distillery.server.models.graph import GraphSnapshot
 from kb_distillery.services import kbview
-from kb_distillery.graph.snapshot import build_graph_snapshot, merge_snapshots
+from kb_distillery.graph.cache import cached_graph_snapshot
+from kb_distillery.graph.snapshot import merge_snapshots
 
 router = APIRouter(tags=["graph"])
 
@@ -24,7 +25,7 @@ def get_graph(layer: str = Query("", description="`raw` adds the data layer; any
         raise HTTPException(400, "the raw layer is only available for the server's own knowledge base")
     if len(views) == 1:
         v = views[0]
-        snap = build_graph_snapshot(layer=raw, view=None if v.active else v)
+        snap = cached_graph_snapshot(layer=raw, view=None if v.active else v)
         snap["kbs"] = [{"id": v.id, "name": v.name, "active": v.active}]
         return snap
-    return merge_snapshots([(v, build_graph_snapshot(view=None if v.active else v)) for v in views])
+    return merge_snapshots([(v, cached_graph_snapshot(view=None if v.active else v)) for v in views])
