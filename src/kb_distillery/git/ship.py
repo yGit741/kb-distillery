@@ -917,6 +917,7 @@ def cmd_pr(title=None, skip_tests=False, root=ROOT, gates=True, notes_file=None,
     if not subjects:
         print("error: no commits on this branch yet — ship commit first")
         return 1
+    explicit_title = title       # given on the command line: an open PR is retitled to it (its type must cover the newest commits)
     title = title or (subjects[0] if len(subjects) == 1 else None)
     if not title:
         top = commit_policy.highest_type(subjects)
@@ -956,6 +957,9 @@ def cmd_pr(title=None, skip_tests=False, root=ROOT, gates=True, notes_file=None,
     info = json.loads(existing.stdout) if existing.returncode == 0 and existing.stdout.strip() else None
     if info and info.get("state", "OPEN") == "OPEN":     # a merged or closed PR of a reused branch name is not this one
         print(f"PR #{info['number']} already open: {info['url']} (pushed new commits)")
+        if explicit_title:
+            gh(["pr", "edit", branch, "--title", explicit_title], root)
+            print(f"retitled: {explicit_title}")
         if skip_checks or review_line or no_review:
             gh(["pr", "edit", branch, "--body", pr_body(subjects, _read_notes(notes_file), skip_checks, round_no, paths, review_line, no_review)], root)
         if why:
