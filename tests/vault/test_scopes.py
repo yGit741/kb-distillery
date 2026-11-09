@@ -174,6 +174,10 @@ class LintVaultTests(unittest.TestCase):
     """A tiny temp vault through the real collect_snapshot (same seams as test_lint_ci)."""
 
     def setUp(self):
+        env = mock.patch.dict(os.environ)
+        env.start()
+        self.addCleanup(env.stop)
+        os.environ.pop("KB_CI", None)       # these tests assert lint's normal mode; CI mode (a CI runner sets KB_CI=1) is tested below, explicitly
         self.root = tempfile.mkdtemp(prefix="kb-scopes-")
         for d in ("wiki", "meta", "raw/printed-docs"):
             os.makedirs(os.path.join(self.root, d))
