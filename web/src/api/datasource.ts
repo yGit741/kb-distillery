@@ -51,6 +51,15 @@ export interface DataSource {
   /** LLM relation proposals in a confidence range 0..1 (local app only), best first, with a 10-bucket histogram. */
   getRelationProposals(opts: { min: number; max: number; kind?: string }): Promise<T.RelationProposals>;
 
+  // agent proposals (flag ui.proposals): the owner reviews an agent change hunk by hunk
+  listProposals(status?: string): Promise<T.ProposalSummary[]>;
+  getProposal(id: string): Promise<T.Proposal>;
+  getProposalRender(id: string): Promise<T.ProposalRender>;
+  /** Accept, reject or correct one hunk; answers the whole proposal as it now is. */
+  decideProposal(id: string, d: { hunk_id: string; decision: T.Decision; comment?: string }): Promise<T.Proposal>;
+  applyProposal(id: string): Promise<T.ApplyResult>;
+  rejectProposal(id: string, reason?: string): Promise<T.Proposal>;
+
   // pinned views (meta/views.json) and the recent steps of the graph search panel (local, never committed)
   listViews(): Promise<T.ViewList>;
   /** The ready views the kb's kit ships: each layer is a line of the graph's query language, parsed by the frontend. */
