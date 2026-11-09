@@ -1,0 +1,6 @@
+# Trust tiers for agent proposals: which hunk classes are applied without review, which need a normal review,
+# and which always need an explicit decision (never bulk-accepted). A kb overrides any list in its kb.toml [proposals].
+[proposals]
+auto_apply = ["links", "format", "typos"]
+review     = ["claims", "structure", "new_page"]
+explicit   = ["tombstone", "merge", "split", "rename"]

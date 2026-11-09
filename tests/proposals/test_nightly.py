@@ -60,7 +60,7 @@ def test_submit_sends_one_batch_and_collect_writes_a_lint_proposal_and_a_suggest
     p = service.get(got["proposals"][0], root=kb)
     assert p["status"] == "open" and p["producer"]["kind"] == "lint" and p["hunks"]
     assert read(kb, "alpha") != edit                                            # nothing was applied
-    assert {s["finding"] for s in nightly.list_suggestions(kb)} == {"overlap", "oversized"}
+    assert {s["finding"] for s in nightly.list_suggestions(kb)} == {"overlap", "oversized", "contradiction"}
     assert not os.path.isfile(os.path.join(kb, ".local", "proposals-nightly", "msgbatch_1.json"))
 
 

@@ -102,6 +102,17 @@ publisher = "cloudflare"        # or "none", or a name a package registers
 
 See [Publishing](../concepts/publishing.md).
 
+## [proposals]
+
+```toml
+[proposals]
+auto_apply = ["links", "format", "typos"]     # hunk classes applied without review (when the producer asks)
+review     = ["claims", "structure", "new_page"]
+explicit   = ["tombstone", "merge", "split", "rename"]   # always need an explicit decision
+```
+
+Optional. Every key you leave out keeps the kit default shown here. See the trust tiers section of `defaults/docs/proposals.md`.
+
 ## Other files in a knowledge base
 
 | Path | Meaning |
