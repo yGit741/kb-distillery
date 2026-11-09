@@ -230,6 +230,17 @@ class SelectionTests(RepoCase):
         _write(self.root, "tests/lint/test_x.py")
         self.assertEqual(self.sel("tests/lint/test_x.py"), ["tests/lint/test_x.py", "tests/test_top.py"])
 
+    def test_test_data_maps_to_its_own_test_dir(self):
+        _write(self.root, "tests/lint/privacy_baseline.txt")
+        self.assertEqual(self.sel("tests/lint/privacy_baseline.txt"), ["tests/lint", "tests/test_top.py"])
+        _write(self.root, "tests/git/test_new.py")
+        self.assertEqual(self.sel("tests/lint/privacy_baseline.txt", "tests/git/test_new.py"),
+                         ["tests/lint", "tests/git/test_new.py", "tests/test_top.py"])
+
+    def test_shared_fixtures_and_loose_test_files_still_run_full(self):
+        for p in ("tests/fixtures/x", "tests/fixtures/kb/a/b.md", "tests/loose.txt", "tests/nodir/x.txt", "tests/conftest.py"):
+            self.assertIsNone(self.sel(p), p)
+
     def test_generated_files_do_not_force_a_full_run(self):
         got = gate_cache.test_subset(["src/kb_distillery/git/a.py", "examples/demo/wiki/index.md"], self.root,
                                      ignore=ship.is_generated)
