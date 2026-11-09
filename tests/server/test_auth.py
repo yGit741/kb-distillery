@@ -42,12 +42,17 @@ def clean_env(monkeypatch):
     for var in AUTH_VARS:
         monkeypatch.delenv(var, raising=False)
     security._jwks_cache.clear()
+    security._jwks_tried.clear()
     yield
     security._jwks_cache.clear()
+    security._jwks_tried.clear()
+
+
+AUD = "aud-tag-1"
 
 
 def token(keys, email=EMAIL, exp=3600, kid="k1", signer="private", **extra):
-    claims = {"email": email, **extra}
+    claims = {"email": email, "aud": AUD, **extra}
     if exp is not None:
         claims["exp"] = int(time.time()) + exp
     return jwt.encode(claims, keys[signer], algorithm="RS256", headers={"kid": kid})
@@ -66,7 +71,7 @@ def proxy_env(monkeypatch, **extra):
 
 
 def jwt_env(monkeypatch, keys, **extra):
-    proxy_env(monkeypatch, KB_AUTH_JWKS_URL=JWKS_URL, **extra)
+    proxy_env(monkeypatch, **{"KB_AUTH_JWKS_URL": JWKS_URL, "KB_AUTH_AUDIENCE": AUD, **extra})
     fetch = mock.Mock(return_value=jwks(keys))
     monkeypatch.setattr(security, "_fetch_jwks", fetch)
     return fetch
@@ -129,10 +134,11 @@ def test_auth_off_loopback_bind_allowed_with_proxy_config(monkeypatch, keys):
 
 @pytest.mark.parametrize("env", [
     {"KB_AUTH": "yes-please"},                                                       # unknown mode: no silent fallback
-    {"KB_AUTH": "proxy", "KB_AUTH_JWKS_URL": JWKS_URL},                              # no email
+    {"KB_AUTH": "proxy", "KB_AUTH_JWKS_URL": JWKS_URL, "KB_AUTH_AUDIENCE": "a"},     # no email
+    {"KB_AUTH": "proxy", "KB_AUTH_EMAIL": EMAIL, "KB_AUTH_JWKS_URL": JWKS_URL},     # JWKS without audience
     {"KB_AUTH": "proxy", "KB_AUTH_EMAIL": EMAIL},                                    # no identity source
     {"KB_AUTH": "proxy", "KB_AUTH_EMAIL": EMAIL, "KB_AUTH_HEADER": "X-Email"},       # header without CIDR
-    {"KB_AUTH": "proxy", "KB_AUTH_EMAIL": EMAIL, "KB_AUTH_JWKS_URL": "http://team.example.com/certs"},
+    {"KB_AUTH": "proxy", "KB_AUTH_EMAIL": EMAIL, "KB_AUTH_AUDIENCE": "a", "KB_AUTH_JWKS_URL": "http://team.example.com/certs"},
     {"KB_AUTH": "proxy", "KB_AUTH_EMAIL": EMAIL, "KB_AUTH_JWT_KEY": "-----BEGIN nonsense-----"},
 ])
 def test_auth_bad_config_refuses_to_start(monkeypatch, env):
@@ -211,29 +217,35 @@ def test_auth_alg_none_and_algorithm_confusion(monkeypatch, keys):
 
 def test_auth_jwks_symmetric_key_refused(monkeypatch, keys):
     """A JWKS that (wrongly or maliciously) carries an `oct` key still cannot verify an HS256 token."""
-    proxy_env(monkeypatch, KB_AUTH_JWKS_URL=JWKS_URL)
+    proxy_env(monkeypatch, KB_AUTH_JWKS_URL=JWKS_URL, KB_AUTH_AUDIENCE=AUD)
     secret = b"s" * 32
     monkeypatch.setattr(security, "_fetch_jwks", lambda url: {"keys": [
         {"kty": "oct", "kid": "k1", "alg": "HS256", "k": b64(secret)}]})
-    hs = jwt.encode({"email": EMAIL, "exp": int(time.time()) + 3600}, secret, algorithm="HS256", headers={"kid": "k1"})
+    hs = jwt.encode({"email": EMAIL, "aud": AUD, "exp": int(time.time()) + 3600}, secret, algorithm="HS256", headers={"kid": "k1"})
     assert client().get("/api/_ping", headers={"Cf-Access-Jwt-Assertion": hs}).status_code == 401
 
 
 def test_auth_audience(monkeypatch, keys):
-    jwt_env(monkeypatch, keys, KB_AUTH_AUDIENCE="aud-tag-1")
+    jwt_env(monkeypatch, keys)
     c = client()
-    assert c.get("/api/_ping", headers={"Cf-Access-Jwt-Assertion": token(keys, aud=["aud-tag-1"])}).status_code == 200
+    assert c.get("/api/_ping", headers={"Cf-Access-Jwt-Assertion": token(keys, aud=[AUD])}).status_code == 200
     assert c.get("/api/_ping", headers={"Cf-Access-Jwt-Assertion": token(keys, aud="aud-tag-2")}).status_code == 401
-    assert c.get("/api/_ping", headers={"Cf-Access-Jwt-Assertion": token(keys)}).status_code == 401
+    no_aud = jwt.encode({"email": EMAIL, "exp": int(time.time()) + 60}, keys["private"], algorithm="RS256",
+                        headers={"kid": "k1"})
+    assert c.get("/api/_ping", headers={"Cf-Access-Jwt-Assertion": no_aud}).status_code == 401
 
 
 def test_auth_unknown_kid_and_failed_fetch(monkeypatch, keys):
     fetch = jwt_env(monkeypatch, keys)
     c = client()
     assert c.get("/api/_ping", headers={"Cf-Access-Jwt-Assertion": token(keys, kid="rotated")}).status_code == 401
+    assert fetch.call_count == 1                        # an unknown kid right after a fetch does not refetch
     security._jwks_cache.clear()
+    security._jwks_tried.clear()
     fetch.side_effect = OSError("network down")
-    assert c.get("/api/_ping", headers={"Cf-Access-Jwt-Assertion": token(keys)}).status_code == 401
+    for _ in range(5):
+        assert c.get("/api/_ping", headers={"Cf-Access-Jwt-Assertion": token(keys)}).status_code == 401
+    assert fetch.call_count == 2                        # a dead endpoint is tried once per throttle window
 
 
 def test_auth_bad_token_is_not_retried_as_header(monkeypatch, keys):

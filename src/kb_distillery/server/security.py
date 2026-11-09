@@ -5,13 +5,14 @@ rules keep a web page in another tab (or a DNS-rebinding host name) from driving
 
 `KB_AUTH=proxy` (self-hosting behind an identity-aware proxy): binding beyond loopback is allowed, and every request
 must prove its user: a JWT signed by the proxy (`Cf-Access-Jwt-Assertion` or `Authorization: Bearer`, verified against
-`KB_AUTH_JWKS_URL` or the static public key `KB_AUTH_JWT_KEY`, asymmetric algorithms only, `exp` required, `aud`
-checked against `KB_AUTH_AUDIENCE` when set) or the header `KB_AUTH_HEADER`, accepted only from a direct peer inside
+`KB_AUTH_JWKS_URL` with `KB_AUTH_AUDIENCE` (required there), or the static public key `KB_AUTH_JWT_KEY` (audience
+optional); asymmetric algorithms only, `exp` required) or the header `KB_AUTH_HEADER`, accepted only from a direct peer inside
 `KB_AUTH_TRUSTED_PROXY_CIDR` (the proxy must overwrite that header). The identity's email must equal `KB_AUTH_EMAIL`
 (case-folded). X-Forwarded-For is never read. Mutations need an Origin on the request's own host.
 """
 import ipaddress
 import json
+import logging
 import os
 import threading
 import time
@@ -19,6 +20,7 @@ import urllib.request
 from dataclasses import dataclass
 from urllib.parse import urlparse
 
+import anyio.to_thread
 import jwt
 
 from fastapi import HTTPException, Path, Request
@@ -71,6 +73,8 @@ def require_loopback_origin(request: Request):
             return
     elif origin is not None and is_loopback_host(urlparse(origin).hostname):
         return
+    if origin is not None and auth_mode() == "proxy":
+        raise HTTPException(403, "cross-origin mutation refused: Origin must match Host (the proxy must preserve Host)")
     raise HTTPException(403, "cross-origin or origin-less mutation refused")
 
 
@@ -145,6 +149,9 @@ def load_auth_config() -> AuthConfig | None:
         raise SystemExit("KB_AUTH=proxy needs KB_AUTH_JWKS_URL or KB_AUTH_JWT_KEY (a signed token), "
                          "or KB_AUTH_HEADER with KB_AUTH_TRUSTED_PROXY_CIDR (a trusted header)")
     audience = (env.get("KB_AUTH_AUDIENCE") or "").strip() or None
+    if jwks_url and not audience:
+        # one JWKS signs tokens for every app of a provider team: without aud, another app's token would pass
+        raise SystemExit("KB_AUTH_JWKS_URL needs KB_AUTH_AUDIENCE (the application's audience, e.g. the Access AUD tag)")
     return AuthConfig(email=email, jwks_url=jwks_url, jwt_key=jwt_key, audience=audience, header=header,
                       trusted_cidrs=cidrs)
 
@@ -157,23 +164,27 @@ def _fetch_jwks(url):
 
 _jwks_lock = threading.Lock()
 _jwks_cache: dict = {}          # url -> (fetched_at, {kid: PyJWK})
+_jwks_tried: dict = {}          # url -> time of the last fetch attempt, successful or not
+log = logging.getLogger(__name__)
 
 
 def _jwks_key(url, kid):
-    """The signing key with this `kid` from the JWKS at `url`: cached for JWKS_TTL_S, refetched on an unknown kid (at
-    most every JWKS_REFETCH_MIN_S). None when not found or the fetch fails."""
+    """The signing key with this `kid` from the JWKS at `url`: cached for JWKS_TTL_S, refetched when stale or on an
+    unknown kid. Any fetch attempt (a failed one too) waits JWKS_REFETCH_MIN_S after the last, so garbage tokens or a
+    dead endpoint cannot make every request fetch. None when not found or the fetch fails."""
     with _jwks_lock:
         now = time.monotonic()
         fetched_at, keys = _jwks_cache.get(url, (None, {}))
+        tried = _jwks_tried.get(url)
         stale = fetched_at is None or now - fetched_at > JWKS_TTL_S
-        unknown = kid not in keys and (fetched_at is None or now - fetched_at > JWKS_REFETCH_MIN_S)
-        if stale or unknown:
+        if (stale or kid not in keys) and (tried is None or now - tried > JWKS_REFETCH_MIN_S):
+            _jwks_tried[url] = now
             try:
                 keyset = jwt.PyJWKSet.from_dict(_fetch_jwks(url))
                 keys = {k.key_id: k for k in keyset.keys if k.key_id}
                 _jwks_cache[url] = (now, keys)
-            except Exception:  # noqa: BLE001 (a failed fetch or a bad document refuses the request)
-                pass
+            except Exception as exc:  # noqa: BLE001 (a failed fetch or a bad document refuses the request)
+                log.warning("KB_AUTH_JWKS_URL fetch failed: %s", exc)
         return keys.get(kid)
 
 
@@ -249,7 +260,9 @@ class ProxyAuthMiddleware:
                 repeated.add(key)
             headers.setdefault(key, value.decode("latin-1"))
         identity_headers = {JWT_HEADER, "authorization", self.config.header}
-        if not repeated & identity_headers and authenticate(self.config, headers, scope.get("client")) is not None:
+        # in a worker thread: a JWKS fetch must not block the event loop
+        if not repeated & identity_headers and await anyio.to_thread.run_sync(
+                authenticate, self.config, headers, scope.get("client")) is not None:
             return await self.app(scope, receive, send)
         if scope["type"] == "websocket":
             return await send({"type": "websocket.close", "code": 1008})
