@@ -60,7 +60,7 @@ function Pill({ children, className }: { children: ReactNode; className?: string
   return <span className={cn("flex h-5 w-[190px] flex-none items-center gap-2 overflow-hidden rounded-full bg-card px-[9px] shadow-[var(--shadow)]", className)}>{children}</span>;
 }
 
-function NameInput({ initial, label, onSubmit }: { initial: string; label: string; onSubmit: (v: string) => void }) {
+export function NameInput({ initial, label, onSubmit }: { initial: string; label: string; onSubmit: (v: string) => void }) {
   const end = useCorners((s) => s.endEdit);
   const [v, setV] = useState(initial);
   return (
