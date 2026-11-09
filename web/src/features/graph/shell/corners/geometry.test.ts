@@ -36,6 +36,16 @@ describe("fan geometry", () => {
     }
   });
 
+  it("Pins is Agent mirrored top to bottom: it grows down from the top-left with the same tilt as Think", () => {
+    for (let i = 0; i < 6; i++) {
+      const a = fanTransform("agent", i).match(/-?\d+(\.\d+)?/g)!.map(Number);
+      const p = fanTransform("pins", i).match(/-?\d+(\.\d+)?/g)!.map(Number);
+      expect(p[0]).toBeCloseTo(a[0]!, 1);
+      expect(p[1]).toBeCloseTo(-a[1]!, 1);
+      expect(p[2]).toBeCloseTo(a[2]!, 1);
+    }
+  });
+
   it("leaves 10px between the corner button and the first card", () => {
     // the first card's picture ends FAN_STACK_EDGE + fanPoint(0).y from the screen edge; the button ends EDGE + BUTTON
     expect(FAN_STACK_EDGE + fanPoint(0).y - (EDGE + BUTTON)).toBeCloseTo(FAN_GAP, 6);
