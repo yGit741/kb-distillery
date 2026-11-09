@@ -7,7 +7,7 @@ from fastapi.responses import JSONResponse
 
 from kb_distillery.proposals import service as svc
 from kb_distillery.proposals.model import ProposalError
-from kb_distillery.server.models.proposals import (ApplyResult, DecisionRequest, Proposal, ProposalCreate, ProposalList,
+from kb_distillery.server.models.proposals import (ApplyResult, DecisionRequest, Proposal, ProposalCreate, ProposalList, RebaseResult,
                                                    ProposalRender, RejectRequest, RevisionCreate, SemanticRequest,
                                                    SemanticResult, Suggestion, SuggestionList, TrustTiers, Feed)
 from kb_distillery.server.readonly import refuse_when_read_only
@@ -29,8 +29,9 @@ def _ops(ops):
 
 
 @router.get("/api/proposals", response_model=ProposalList, summary="Proposals, newest first (optionally one status)")
-def list_proposals(status: str | None = Query(None, description="open | applied | rejected | stale")):
-    return _call(lambda: {"proposals": svc.list_proposals(status)})
+def list_proposals(status: str | None = Query(None, description="open (open + stale) | applied | undone | rejected | stale | all"),
+                   group: str | None = Query(None, description="page | class | time: also fill `groups`")):
+    return _call(svc.inbox, status, group=group)
 
 
 @router.get("/api/proposals/suggestions", response_model=SuggestionList,
@@ -75,6 +76,12 @@ def get(pid: str):
 def revise(pid: str, body: RevisionCreate):
     return _call(svc.revise, pid, _ops(body.ops), body.note, semantic=body.semantic, backend=body.backend,
                  auto=body.auto)
+
+
+@router.post("/api/proposals/{pid}/rebase", dependencies=WRITE, response_model=RebaseResult, responses=ERRORS,
+             summary="Recompute the hunks against the pages as they are now; hunks whose text vanished are dropped and listed")
+def rebase(pid: str):
+    return _call(svc.rebase, pid)
 
 
 @router.post("/api/proposals/{pid}/decisions", dependencies=WRITE, response_model=Proposal, responses=ERRORS,

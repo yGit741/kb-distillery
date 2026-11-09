@@ -260,3 +260,31 @@ def render(base_texts: dict, hunks: list[dict]) -> list[dict]:
                     "hunks": [{"id": h["id"], "kind": h["kind"], "op": h["op"], "at": h["at"], "span": h["span"]}
                               for h in hunks if h["slug"] == slug]})
     return out
+
+
+def rebase_edit(base_text: str, current_text: str, hunks: list[dict]) -> tuple[str, list[dict]]:
+    """(text, dropped): `current_text` with every hunk of an edit re-applied where its `before` blocks still sit.
+
+    A hunk whose before blocks are gone from the current page (somebody rewrote that paragraph) is dropped; a pure
+    insertion is anchored on the block that preceded it in `base_text`. `## My notes` of the current text is kept.
+    """
+    blocks = split_blocks(wikiio.strip_my_notes(current_text))
+    base_blocks = split_blocks(wikiio.strip_my_notes(base_text or ""))
+    dropped = []
+    for h in sorted(hunks, key=lambda x: (x["at"], x["span"]), reverse=True):
+        keys = [_key(b) for b in blocks]
+        want = [_key(b) for b in split_blocks(h["before"])]
+        new = split_blocks(h["after"])
+        at = None
+        if want:
+            at = next((i for i in range(len(keys) - len(want) + 1) if keys[i:i + len(want)] == want), None)
+        elif h["at"] == 0:
+            at = 0
+        else:
+            prev = _key(base_blocks[h["at"] - 1]) if 0 < h["at"] <= len(base_blocks) else None
+            at = next((i + 1 for i, k in enumerate(keys) if k == prev), None) if prev is not None else None
+        if at is None:
+            dropped.append(h)
+            continue
+        blocks[at:at + len(want)] = new
+    return wikiio.preserve_my_notes(current_text, "".join(b["raw"] for b in blocks)), dropped

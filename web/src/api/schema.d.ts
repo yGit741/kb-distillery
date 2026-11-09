@@ -1047,6 +1047,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/proposals/{pid}/rebase": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Recompute the hunks against the pages as they are now; hunks whose text vanished are dropped and listed */
+        post: operations["rebase_api_proposals__pid__rebase_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/proposals/{pid}/reject": {
         parameters: {
             query?: never;
@@ -2468,6 +2485,40 @@ export interface components {
              */
             value: "in" | "out" | "both";
         };
+        /**
+         * DroppedHunk
+         * @description A hunk a rebase could not carry over: its before text is gone from the changed page.
+         */
+        DroppedHunk: {
+            /**
+             * After
+             * @default
+             */
+            after: string;
+            /**
+             * Before
+             * @default
+             */
+            before: string;
+            /** Hunk Id */
+            hunk_id: string;
+            /**
+             * Klass
+             * @default
+             */
+            klass: string;
+            /** Op */
+            op: string;
+            /**
+             * Reason
+             * @default
+             */
+            reason: string;
+            /** Slug */
+            slug: string;
+        } & {
+            [key: string]: unknown;
+        };
         /** EdgeTypeCond */
         EdgeTypeCond: {
             /**
@@ -2564,6 +2615,11 @@ export interface components {
              * @default false
              */
             auto: boolean;
+            /**
+             * Blocked By
+             * @default []
+             */
+            blocked_by: string[];
             /** Classes */
             classes: string[];
             /** Commit */
@@ -4288,8 +4344,26 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
+        /** ProposalGroup */
+        ProposalGroup: {
+            /** Count */
+            count: number;
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+            /** Proposals */
+            proposals: components["schemas"]["ProposalSummary"][];
+        } & {
+            [key: string]: unknown;
+        };
         /** ProposalList */
         ProposalList: {
+            /**
+             * Groups
+             * @default []
+             */
+            groups: components["schemas"]["ProposalGroup"][];
             /** Proposals */
             proposals: components["schemas"]["ProposalSummary"][];
         } & {
@@ -4356,6 +4430,13 @@ export interface components {
         /** ProposalSummary */
         ProposalSummary: {
             checks: components["schemas"]["CheckCounts"];
+            /**
+             * Classes
+             * @default {}
+             */
+            classes: {
+                [key: string]: number;
+            };
             counts: components["schemas"]["Counts"];
             /** Created */
             created: string;
@@ -4365,12 +4446,29 @@ export interface components {
             pages: string[];
             producer: components["schemas"]["ProducerKindOnly"];
             /**
+             * Stale Pages
+             * @default []
+             */
+            stale_pages: string[];
+            /**
              * Status
              * @enum {string}
              */
             status: "open" | "applied" | "rejected" | "stale" | "undone";
+            /**
+             * Tiers
+             * @default {}
+             */
+            tiers: {
+                [key: string]: number;
+            };
             /** Title */
             title: string;
+            /**
+             * Top Class
+             * @default
+             */
+            top_class: string;
             /** Updated */
             updated: string;
         } & {
@@ -4532,6 +4630,14 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
+        /** RebaseResult */
+        RebaseResult: {
+            /** Dropped */
+            dropped: components["schemas"]["DroppedHunk"][];
+            proposal: components["schemas"]["Proposal"];
+        } & {
+            [key: string]: unknown;
+        };
         /** RecentAppendRequest */
         RecentAppendRequest: {
             /**
@@ -4680,6 +4786,11 @@ export interface components {
             checks: components["schemas"]["Finding"][];
             /** Created */
             created: string;
+            /**
+             * Dropped
+             * @default []
+             */
+            dropped: components["schemas"]["DroppedHunk"][];
             /** Hunks */
             hunks: components["schemas"]["Hunk"][];
             /** N */
@@ -7925,8 +8036,10 @@ export interface operations {
     list_proposals_api_proposals_get: {
         parameters: {
             query?: {
-                /** @description open | applied | rejected | stale */
+                /** @description open (open + stale) | applied | undone | rejected | stale | all */
                 status?: string | null;
+                /** @description page | class | time: also fill `groups` */
+                group?: string | null;
             };
             header?: never;
             path?: never;
@@ -8374,6 +8487,70 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Proposal"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Method Not Allowed */
+            405: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bad Gateway */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    rebase_api_proposals__pid__rebase_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                pid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RebaseResult"];
                 };
             };
             /** @description Bad Request */
