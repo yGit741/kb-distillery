@@ -57,6 +57,28 @@ class MergeFlagsTomlTests(unittest.TestCase):
         self.assertIn("# about mine\n[[flag]]\nname = \"mine\"", out)
         self.assertIsNone(flag_merge.merge_flags_toml("# one\n\n" + _toml("a"), "# two\n\n" + _toml("a"), _toml("a")))
 
+    def test_pin_leaves_a_template_union_alone(self):
+        # main's test builds the union at test time; pinning it would paste quoted names into the f-string
+        template = '            self.assertIn(f"export type FlagName = {union};", gen)\n'
+        self.assertEqual(flag_merge._pin_text(template, 'export type FlagName = "a" | "b";'), template)
+        literal = "    self.assertIn('export type FlagName = \"old\";', gen)\n"
+        self.assertIn('FlagName = "a" | "b";', flag_merge._pin_text(literal, 'export type FlagName = "a" | "b";'))
+
+    def test_pin_file_hunks_keep_the_template(self):
+        tpl = '        self.assertIn(f"export type FlagName = {union};", gen)\n'
+        lit = "        self.assertIn('export type FlagName = \"a\" | \"b\";', gen)\n"
+        union = 'export type FlagName = "a" | "b" | "c";'
+        hunk = lambda ours, theirs: f"x = 1\n<<<<<<< ours\n{ours}=======\n{theirs}>>>>>>> theirs\ny = 2\n"  # noqa: E731
+        # both sides hold the template: kept as is
+        self.assertEqual(flag_merge._resolve_pin_file(hunk(tpl, tpl), union), f"x = 1\n{tpl}y = 2\n")
+        # a branch cut before main's change (stale literal) against main's template: the template wins, from either side
+        self.assertEqual(flag_merge._resolve_pin_file(hunk(lit, tpl), union), f"x = 1\n{tpl}y = 2\n")
+        self.assertEqual(flag_merge._resolve_pin_file(hunk(tpl, lit), union), f"x = 1\n{tpl}y = 2\n")
+        # two literals: ours, re-pinned to the regenerated union
+        self.assertIn(union, flag_merge._resolve_pin_file(hunk(lit, lit), union))
+        # any other difference is not resolvable
+        self.assertIsNone(flag_merge._resolve_pin_file(hunk(tpl, "other = 3\n"), union))
+
     def test_edit_on_both_sides_is_not_resolved(self):
         base = _toml("a")
         self.assertIsNone(flag_merge.merge_flags_toml(_toml("a").replace("d a", "mine"), _toml("a").replace("d a", "theirs"), base))
