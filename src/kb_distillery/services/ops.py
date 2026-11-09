@@ -2,7 +2,7 @@
 
 Read-only apart from running the hygiene checks (git reads, `gh pr list`, the Cloudflare snapshot
 listing). Always describes the primary checkout, so a dashboard started from a worktree still
-shows the whole vault. Results are cached until the vault change signature moves (CACHE_SECONDS is a long backstop); `refresh=True` reruns them.
+shows the whole vault. Results are cached until the vault change signature moves (CACHE_SECONDS is a backstop); `refresh=True` reruns them.
 """
 import datetime
 import os
@@ -14,7 +14,7 @@ from kb_distillery.config.paths import vault_root
 META_DIR = os.path.join(vault_root(), "meta")
 
 ROOT = vault_root()
-CACHE_SECONDS = 900
+CACHE_SECONDS = 300
 LOG_LINES = 120
 _cache = {"at": 0.0, "data": None, "sig": None}
 _lock = threading.Lock()
@@ -216,7 +216,7 @@ def _signature():
 
 
 def build_ops_snapshot(refresh=False):
-    """Cached by change signature, not a clock; CACHE_SECONDS is only a long backstop for state no file covers
+    """Cached by change signature, not a clock; CACHE_SECONDS is only a backstop for state no file covers
     (`gh pr list`, remote hygiene)."""
     sig = _signature()
     with _lock:

@@ -8,6 +8,7 @@ build in flight instead of starting a second one. `KB_GRAPH_CACHE=0` turns the c
 
 A hit returns a shallow copy of the cached snapshot (callers add top-level keys such as `kbs`); do not mutate
 the nested nodes/links."""
+import datetime
 import hashlib
 import os
 import threading
@@ -127,10 +128,11 @@ def _tree_stats(base, root, content=False):
 
 
 def full_signature(root, extra=()):
-    """`signature` plus every file under raw/ and meta/, the root-level files (what a whole-vault pass such as the
+    """`signature` plus every file under raw/, meta/ and think/, today's date (flag expiry), the root-level files (what a whole-vault pass such as the
     health lint reads) and the stats of the `extra` files. For results derived from more than the wiki graph."""
     parts = [signature(root), _tree_stats(os.path.join(root, "raw"), root),
-             _tree_stats(os.path.join(root, "meta"), root, content=True)]
+             _tree_stats(os.path.join(root, "meta"), root, content=True),
+             _tree_stats(os.path.join(root, "think"), root), datetime.date.today().isoformat()]
     try:
         parts.append(",".join(sorted(f"{e.name}:{_stat_part(e.path)}" for e in os.scandir(root) if e.is_file())))
     except OSError:
