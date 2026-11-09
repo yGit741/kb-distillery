@@ -220,8 +220,13 @@ class CiGates(unittest.TestCase):
         """`ship pr` stopped running checks_for's lanes locally (CI is the gate): every one of them is a CI step."""
         checks = runs(self.jobs["checks"])
         for task in LANE_CHECKS:
-            self.assertIn(task, checks)
-        self.assertTrue(self.jobs["checks"]["env"]["PLAYWRIGHT_MODULE"].endswith("playwright/index.mjs"))     # else the e2e tests skip silently
+            self.assertTrue(any(task in r for r in checks), f"{task} missing from the checks job: {checks}")
+        self.assertIn("pixi run web-build", checks)                                                           # the browser suites serve the built app
+        # the e2e suites join index.mjs to $PLAYWRIGHT_MODULE (a package dir) and skip when it is missing: a skip must fail the job
+        self.assertTrue(self.jobs["checks"]["env"]["PLAYWRIGHT_MODULE"].endswith("node_modules/playwright"))
+        for suite in ("test-e2e", "test-ui-principles"):
+            step = next(r for r in checks if f"pixi run {suite}" in r)
+            self.assertIn("skip", step, f"{suite}: a skipped suite must fail the step")
 
 
 class SecretScan(unittest.TestCase):

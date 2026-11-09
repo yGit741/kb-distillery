@@ -111,7 +111,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       KB_CI: "1"
-      PLAYWRIGHT_MODULE: /home/runner/pw/node_modules/playwright/index.mjs     # tests/e2e and web/tests resolve playwright from it
+      PLAYWRIGHT_MODULE: /home/runner/pw/node_modules/playwright     # the package dir: tests/e2e and web/tests join index.mjs to it
     steps:
       - uses: actions/checkout@v4
         with:
@@ -128,10 +128,13 @@ jobs:
       - run: pixi run web-install
       - run: pixi run api-schema-check
       - run: pixi run flags-check
+      - run: pixi run web-build     # both browser suites serve the built app (src/kb_distillery/_webapp is gitignored)
       - name: Playwright (the npm package and Chromium; pixi does not ship it)
         run: mkdir -p ~/pw && cd ~/pw && npm init -y > /dev/null && npm i --no-fund --no-audit playwright@1 && npx playwright install --with-deps chromium
-      - run: pixi run test-e2e
-      - run: pixi run test-ui-principles
+      - name: Graph e2e (a skipped suite is a failure here, never a silent green)
+        run: set -o pipefail; pixi run test-e2e 2>&1 | tee e2e.log; ! grep -Eq '^# skip(ped)? [1-9]' e2e.log
+      - name: ui-principles, every screen (same rule)
+        run: set -o pipefail; pixi run test-ui-principles 2>&1 | tee ui.log; ! grep -Eq '^# skip(ped)? [1-9]' ui.log
 
   wheel:     # builds the wheel, installs it into a clean venv, runs the installed CLI (tests/cli/test_install_wheel.py)
     runs-on: ubuntu-latest
