@@ -6,6 +6,11 @@ meta/corpus.tsv for the raw layer), the dates file of a share build, and the git
 history). Any edit, add, delete or commit therefore rebuilds. One lock per key: concurrent callers wait for the
 build in flight instead of starting a second one. `KB_GRAPH_CACHE=0` turns the cache off (every call builds).
 
+The real server process (`python -m kb_distillery.server`) calls `start_refresher()`: one daemon thread builds the
+default snapshots (own kb, with and without the raw layer) at start and re-checks the signature every
+`KB_GRAPH_WARM_INTERVAL` seconds (default 30), rebuilding when it changed, so the first request after a long idle
+is a hit. `KB_GRAPH_WARM=0` turns it off; nothing else starts it (tests, share builds).
+
 A hit returns a shallow copy of the cached snapshot (callers add top-level keys such as `kbs`); do not mutate
 the nested nodes/links."""
 import hashlib
@@ -91,3 +96,61 @@ def cached_graph_snapshot(layer=None, view=None, relations=None):
         snap = _snap.build_graph_snapshot(layer=layer, view=view, relations=rel_on)
         _entries[key] = (sig, snap)
         return dict(snap)
+
+
+WARM_ENV = "KB_GRAPH_WARM"
+WARM_INTERVAL_ENV = "KB_GRAPH_WARM_INTERVAL"
+_WARM_LAYERS = (None, "raw")
+_refresher = None    # (thread, stop event)
+
+
+def warm_enabled():
+    return enabled() and os.environ.get(WARM_ENV, "1").strip().lower() not in ("0", "false", "off", "no")
+
+
+def warm():
+    """Bring the default snapshots of the active kb up to date (a build only when missing or stale)."""
+    for layer in _WARM_LAYERS:
+        cached_graph_snapshot(layer=layer)
+
+
+def _interval():
+    try:
+        return max(0.05, float(os.environ.get(WARM_INTERVAL_ENV, "30")))
+    except ValueError:
+        return 30.0
+
+
+def start_refresher(interval=None):
+    """Start the warm-up and refresh thread once; returns it, or None when `KB_GRAPH_WARM=0` / the cache is off."""
+    global _refresher
+    if not warm_enabled():
+        return None
+    with _guard:
+        if _refresher and _refresher[0].is_alive():
+            return _refresher[0]
+        every = interval if interval is not None else _interval()
+        stop = threading.Event()
+
+        def run():
+            while True:
+                try:
+                    warm()
+                except Exception:        # a half-written page or a broken kb must not kill the refresher
+                    pass
+                if stop.wait(every):
+                    return
+
+        thread = threading.Thread(target=run, name="graph-warm", daemon=True)
+        _refresher = (thread, stop)
+        thread.start()
+        return thread
+
+
+def stop_refresher():
+    global _refresher
+    with _guard:
+        cur, _refresher = _refresher, None
+    if cur:
+        cur[1].set()
+        cur[0].join(timeout=30)

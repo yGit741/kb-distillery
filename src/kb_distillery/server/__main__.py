@@ -36,6 +36,8 @@ def main(argv=None):
     print("(Ctrl+C to stop)", flush=True)
     if not args.no_open:
         webbrowser.open(f"{base}/app/start")
+    from kb_distillery.graph.cache import start_refresher
+    start_refresher()                 # warm the graph snapshot in a daemon thread and keep it fresh (KB_GRAPH_WARM=0: off)
     uvicorn.run(create_app(), host=args.host, port=args.port, log_level="warning")
     return 0
 
