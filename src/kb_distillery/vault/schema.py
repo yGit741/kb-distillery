@@ -307,6 +307,7 @@ TOOLING_PATHS = [
     "web/",
     "examples/",
     "scripts/",
+    "tools/",           # temporary: lets `ship commit` stage the deletion of tools/; removed again in the next commit
     "README.md",
     "CHANGELOG.md",
     "CONTRIBUTING.md",

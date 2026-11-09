@@ -72,6 +72,7 @@ RETIRED = {
 ALLOWED = {
     "*": {"tests/test_no_old_paths.py",
           "CHANGELOG.md"},      # a changelog names the old paths to say where they went
+    "tools/": {"src/kb_distillery/vault/schema.py"},   # temporary, see schema.py
     "python -m kb.": {"src/kb_distillery/publish/site/build.py"},
     "backend/src or backend/tests": {"src/kb_distillery/publish/site/build.py", "tests/publish/cloudflare/test_share_app.py",
                                      "tests/publish/cloudflare/test_share_versions.py", "pixi.toml"},
