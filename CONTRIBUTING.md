@@ -52,7 +52,7 @@ Never commit to `main`. Use `ship`, which wraps branch, commit, pull request and
 3. `pixi run ship -- commit "chore(<component>): summary"` runs the fast local gates (ruff, lint-imports and the tests that mirror the files you changed) and commits them. The type is `paradigm`, `schema`, `feat`, `fix` or `chore`; `chore` covers docs, tests and refactors. Keep the subject to 72 characters and do not use apostrophes (pixi re-quotes the message and the commit silently fails).
 4. If `main` moved, `pixi run ship -- sync` merges it into your branch. Resolve any conflict, `git add` the files, then `pixi run ship -- sync --continue`.
 5. `pixi run ship -- pr --title "chore(<component>): summary"` pushes the branch and opens the pull request; CI runs every gate on it. `--hold` keeps it from merging until a maintainer approves.
-6. A maintainer reviews and merges with `pixi run ship -- merge`, which enqueues the PR in GitHub's merge queue and waits for it (always a merge commit; `--no-wait` returns right after enqueueing). Pull requests that change the schema are held until a maintainer approves them.
+6. A maintainer reviews and merges with `pixi run ship -- merge`, which arms GitHub's auto-merge on the PR (the merge queue, where the repository has one) and waits for it (always a merge commit; `--no-wait` returns right after enqueueing). Pull requests that change the schema are held until a maintainer approves them.
 
 `ship` expects the maintainers' GitHub setup. From a fork, make the same change on a branch and open an ordinary pull request; the checks are the same.
 
