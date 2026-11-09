@@ -47,8 +47,8 @@ jobs:
       - run: pixi run lint-skills
       - run: pixi run licenses     # fails on a GPL / LGPL / AGPL package (PyMuPDF was one); allowlist in lint/licenses.py
       - run: pixi run lint-imports
-      - run: pixi run lint
-      - run: pixi run okf-check
+      - run: pixi run lint -- --kb examples/demo         # the demo kb, as the ship gate lints it (no kb is selected on a runner)
+      - run: pixi run okf-check -- --kb examples/demo
       - run: pixi run ruff
       - name: Privacy ratchet (no personal strings or token shapes in new files)
         run: pixi run pytest -q tests/lint/test_privacy_ratchet.py

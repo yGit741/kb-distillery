@@ -171,7 +171,9 @@ class CiGates(unittest.TestCase):
     def test_lint_job_runs_every_cheap_gate(self):
         lint = runs(self.jobs["lint"])
         for task in LINT_TASKS:
-            self.assertIn(task, lint)
+            self.assertTrue(any(r == task or r.startswith(task + " ") for r in lint), f"{task} missing from the lint job: {lint}")
+        for task in ("pixi run lint", "pixi run okf-check"):       # a runner has no kb selected: lint the demo kb, as the ship gate does
+            self.assertTrue(any(r.startswith(task + " -- --kb examples/demo") for r in lint), lint)
         self.assertTrue(any("test_privacy_ratchet" in r for r in lint))
 
     def test_pytest_shards_cover_every_tests_dir_exactly_once(self):

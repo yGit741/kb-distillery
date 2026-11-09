@@ -14,6 +14,7 @@ Two groups of tests are tied to the vault they run against, and skip instead of 
 import atexit
 import os
 import shutil
+import sys
 import tempfile
 
 os.environ["KB_APP_CONFIG"] = os.path.join(os.sep, "nonexistent", "kb-app.toml")
@@ -34,6 +35,16 @@ if not os.environ.get("KB") and not os.environ.get("KB_ROOT"):
     os.environ["KB_DISTILLERY_HOME"] = os.path.join(_tmp, "bases")
     os.environ.pop("KB_BASES_DIR", None)
     os.makedirs(os.environ["KB_DISTILLERY_HOME"])
+
+# `distill` on PATH, running THIS checkout: the git hooks a kb installs call it by name (`command -v distill`, fail closed),
+# a clean machine (CI) has none, and a developer's own launcher would run some other checkout's code.
+_SRC = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "src")
+_shim_dir = tempfile.mkdtemp(prefix="kb-distill-shim-")
+atexit.register(shutil.rmtree, _shim_dir, True)
+with open(os.path.join(_shim_dir, "distill"), "w", encoding="utf-8") as _f:
+    _f.write(f'#!/bin/sh\n: "${{PYTHONPATH:={_SRC}}}"\nexport PYTHONPATH\nexec "{sys.executable}" -m kb_distillery.cli "$@"\n')
+os.chmod(os.path.join(_shim_dir, "distill"), 0o755)
+os.environ["PATH"] = _shim_dir + os.pathsep + os.environ.get("PATH", "")
 
 import pytest
 
