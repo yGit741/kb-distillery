@@ -23,6 +23,7 @@ python -m kb_distillery.server --kb <id|path> --port 8765 --no-open
 
 - `KB_AUTH_EMAIL` is the one login allowed in. It is compared without regard to case.
 - `KB_AUTH_HEADER` names the header that carries the login. The app reads it only from a direct connection inside `KB_AUTH_TRUSTED_PROXY_CIDR`; the same header from anywhere else is refused.
+- The login must be an email address, because `KB_AUTH_EMAIL` must contain an `@`. A tailnet login that is a bare username can never match.
 - If any of these is missing or invalid, the server exits with a message naming it.
 
 ## Publish it on the tailnet

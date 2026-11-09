@@ -12,7 +12,7 @@ The app serves one user. Their email is `KB_AUTH_EMAIL`, and every request must 
 | `KB_AUTH_EMAIL` | The one email allowed in. Required. Compared without regard to case. |
 | `KB_AUTH_JWKS_URL` | An `https` address of the proxy's signing keys. Use with `KB_AUTH_AUDIENCE`. |
 | `KB_AUTH_AUDIENCE` | The token audience. Mandatory whenever `KB_AUTH_JWKS_URL` is set. |
-| `KB_AUTH_JWT_KEY` | A PEM public key, or a path to one, in place of a key-set address. The audience is optional. Private keys and shared secrets are refused. |
+| `KB_AUTH_JWT_KEY` | A PEM public key, or a path to one, in place of a key-set address. If both are set, the static key is used to verify tokens. The audience is optional. Private keys and shared secrets are refused. |
 | `KB_AUTH_HEADER` | Name of a header that carries the email, for proxies that do not sign tokens. |
 | `KB_AUTH_TRUSTED_PROXY_CIDR` | Comma-separated address ranges the header may come from. Required with `KB_AUTH_HEADER`. |
 
@@ -30,7 +30,7 @@ You need at least one identity source: a key-set address, a public key, or a hea
 
 - With `KB_AUTH=proxy`, `--host` may be any address, for example `--host 0.0.0.0`. Without it, anything but loopback stops the server.
 - Prefer loopback when the proxy runs on the same machine. If the proxy is on another host or in a container, bind a private interface and list only that proxy's range in `KB_AUTH_TRUSTED_PROXY_CIDR`.
-- Every route needs the identity, including the API docs, static files and websockets. Without it the answer is `401 authentication required`.
+- Every route needs the identity, including the API docs, static files and websockets. Without it the answer is `401 authentication required`; a websocket is closed with code 1008.
 
 ## What the proxy must do
 
@@ -41,7 +41,7 @@ You need at least one identity source: a key-set address, a public key, or a hea
 
 ## Example: oauth2-proxy
 
-oauth2-proxy signs people in with your identity provider and forwards the email in `X-Forwarded-Email` when `--pass-user-headers` is on (the default).
+oauth2-proxy signs people in with your identity provider and can forward the email in `X-Forwarded-Email`. Check your oauth2-proxy version's options so that it sets this header from the signed-in session and never passes through a value the client sent. The range `127.0.0.1/32` is right only when oauth2-proxy runs on the same host as the app.
 
 ```bash
 export KB_AUTH=proxy
@@ -64,7 +64,7 @@ oauth2-proxy \
   --cookie-secret=<random secret>
 ```
 
-Put TLS in front of port 4180 (a reverse proxy or a load balancer) at a name such as `kb.example.com`, and forward the Host header unchanged. oauth2-proxy replaces `X-Forwarded-Email` with the signed-in user's value.
+Put TLS in front of port 4180 (a reverse proxy or a load balancer) at a name such as `kb.example.com`, and forward the Host header unchanged. Verify, with a request that carries a made-up `X-Forwarded-Email`, that the app still sees the signed-in user.
 
 ## Example: a company SSO header
 
