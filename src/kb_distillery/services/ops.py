@@ -2,7 +2,7 @@
 
 Read-only apart from running the hygiene checks (git reads, `gh pr list`, the Cloudflare snapshot
 listing). Always describes the primary checkout, so a dashboard started from a worktree still
-shows the whole vault. Results are cached for CACHE_SECONDS; `refresh=True` reruns them.
+shows the whole vault. Results are cached until the vault change signature moves (CACHE_SECONDS is a long backstop); `refresh=True` reruns them.
 """
 import datetime
 import os
@@ -14,9 +14,9 @@ from kb_distillery.config.paths import vault_root
 META_DIR = os.path.join(vault_root(), "meta")
 
 ROOT = vault_root()
-CACHE_SECONDS = 60
+CACHE_SECONDS = 900
 LOG_LINES = 120
-_cache = {"at": 0.0, "data": None}
+_cache = {"at": 0.0, "data": None, "sig": None}
 _lock = threading.Lock()
 
 
@@ -207,10 +207,22 @@ def deploy():
         return None
 
 
+def _signature():
+    """What the cached snapshot is derived from: the vault change signature plus the nightly log and run history."""
+    from kb_distillery.graph import cache
+    from kb_distillery.ops import runlog
+    from kb_distillery.ops.core import NIGHTLY_LOG
+    return cache.full_signature(vault_root(), extra=(NIGHTLY_LOG, runlog.path(vault_root())))
+
+
 def build_ops_snapshot(refresh=False):
+    """Cached by change signature, not a clock; CACHE_SECONDS is only a long backstop for state no file covers
+    (`gh pr list`, remote hygiene)."""
+    sig = _signature()
     with _lock:
-        if refresh or not _cache["data"] or time.monotonic() - _cache["at"] > CACHE_SECONDS:
-            _cache["data"], _cache["at"] = _build(), time.monotonic()
+        if (refresh or not _cache["data"] or _cache.get("sig") != sig
+                or time.monotonic() - _cache["at"] > CACHE_SECONDS):
+            _cache["data"], _cache["at"], _cache["sig"] = _build(), time.monotonic(), sig
         data = _cache["data"]
     return {**data, "queue": merge_queue(), "deploy": deploy()}
 

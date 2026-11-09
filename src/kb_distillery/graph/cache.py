@@ -29,6 +29,7 @@ def enabled():
 def clear():
     with _guard:
         _entries.clear()
+        _memos.clear()
 
 
 def _stat_part(path):
@@ -91,3 +92,67 @@ def cached_graph_snapshot(layer=None, view=None, relations=None):
         snap = _snap.build_graph_snapshot(layer=layer, view=view, relations=rel_on)
         _entries[key] = (sig, snap)
         return dict(snap)
+
+
+def _tree_stats(base, root, content=False):
+    """Hash of (relpath, mtime_ns, size) of every non-hidden file under `base` (any extension). With `content`, the
+    file bytes stand in for mtime: the lint rewrites some meta files with the same bytes, which is no change."""
+    out = []
+    stack = [base]
+    while stack:
+        d = stack.pop()
+        try:
+            it = os.scandir(d)
+        except OSError:
+            continue
+        with it:
+            for e in it:
+                if e.name.startswith("."):
+                    continue
+                try:
+                    if e.is_dir(follow_symlinks=False):
+                        stack.append(e.path)
+                    else:
+                        st = e.stat()
+                        if content and st.st_size < 8_000_000:
+                            with open(e.path, "rb") as f:
+                                mark = hashlib.sha1(f.read()).hexdigest()
+                        else:
+                            mark = str(st.st_mtime_ns)
+                        out.append(f"{os.path.relpath(e.path, root)}:{mark}:{st.st_size}")
+                except OSError:
+                    continue
+    out.sort()
+    return hashlib.sha1("\n".join(out).encode()).hexdigest()
+
+
+def full_signature(root, extra=()):
+    """`signature` plus every file under raw/ and meta/, the root-level files (what a whole-vault pass such as the
+    health lint reads) and the stats of the `extra` files. For results derived from more than the wiki graph."""
+    parts = [signature(root), _tree_stats(os.path.join(root, "raw"), root),
+             _tree_stats(os.path.join(root, "meta"), root, content=True)]
+    try:
+        parts.append(",".join(sorted(f"{e.name}:{_stat_part(e.path)}" for e in os.scandir(root) if e.is_file())))
+    except OSError:
+        pass
+    parts += [f"{x}:{_stat_part(x)}" for x in extra]
+    return hashlib.sha1("|".join(parts).encode()).hexdigest()
+
+
+_memos = {}          # name -> (signature, value, built at)
+_memo_lock = threading.Lock()
+
+
+def memo(name, sig_fn, build):
+    """`build()` once per change signature `sig_fn()`; concurrent callers wait for the build in flight.
+    `KB_GRAPH_CACHE=0` disables it."""
+    if not enabled():
+        return build()
+    sig = sig_fn()
+    with _memo_lock:
+        hit = _memos.get(name)
+        if hit and hit[0] == sig:
+            return hit[1]
+        value = build()
+        _memos[name] = (sig, value)
+        return value
