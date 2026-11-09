@@ -16,7 +16,7 @@ const done = () => { inflight = Math.max(0, inflight - 1); last = Date.now(); };
 page.on("requestfinished", done); page.on("requestfailed", done);
 const idle = async (t0) => {
   for (;;) {
-    if (inflight === 0 && Date.now() - last >= 500) return { ms: Math.round(last - t0), timed_out: false };
+    if (inflight === 0 && Date.now() - last >= 500) return { ms: Math.max(0, Math.round(last - t0)), timed_out: false };
     if (Date.now() - t0 > timeout) return { ms: Date.now() - t0, timed_out: true };
     await new Promise((r) => setTimeout(r, 50));
   }
@@ -36,7 +36,7 @@ for (const pass of ["pass1", "pass2"]) {
   for (const href of tabs) {
     t0 = Date.now(); n0 = apiCount;
     const loc = page.locator(`a[href="${href}"]`).first();
-    try { await loc.click({ timeout: 10000 }); } catch (e) { out[pass][href] = { ms: null, api_requests: 0, timed_out: false, error: "click failed" }; continue; }
+    try { await loc.click({ timeout: 60000 }); } catch (e) { out[pass][href] = { ms: null, api_requests: 0, timed_out: false, error: "click failed" }; continue; }
     r = await idle(t0);
     out[pass][href] = { ms: r.ms, api_requests: apiCount - n0, timed_out: r.timed_out };
   }
