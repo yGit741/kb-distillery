@@ -125,3 +125,11 @@ Build ops from whatever the producer knows (an LLM answer through `kb_distillery
 result) and call `kb_distillery.proposals.service.create(title, ops, producer={kind, instruction, context})`; for the
 owner's correction call `service.revise(id, ops, note)`. Never write pages yourself: the core cuts hunks, checks them
 and applies only what the owner accepted.
+
+## Chat on a page
+
+`POST /api/pages/{slug}/chat` ({message, selections, mentions, backend?}) asks `kb_distillery.llm` for edits
+{before, after, reason, sources} and turns the found ones into one `edit_page` proposal (producer `chat`); a `before`
+that is missing or lies in `## My notes` is skipped and reported. The thread lives in `<kb>/.local/chat/<slug>.json`
+(`GET` the same path); `GET /api/pages/mentions?q=` feeds the @ picker. Code: `kb_distillery.proposals.chat`; UI flag
+`ui.page-chat` (entry variants `page-chat-entry`).

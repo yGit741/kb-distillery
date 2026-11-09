@@ -36,6 +36,17 @@ export const VARIANTS: Record<string, VariantSpec> = {
       { id: "reading", label: "Reading", hint: "The finished page, clean; a thin bar in the gutter opens a note with the old text and the controls." },
     ],
   },
+  "page-chat-entry": {
+    label: "Page chat entry",
+    default: "selection",
+    options: [
+      { id: "selection", label: "Selection", hint: "Nothing shows until you select text; a small Ask about this toolbar appears there, plus a muted Chat link in the header." },
+      { id: "bubble", label: "Bubble", hint: "A soft floating button bottom-right that opens the chat as a right drawer." },
+      { id: "gutter", label: "Gutter", hint: "A thin icon in the right margin of the block under the pointer; click to ask about that block." },
+      { id: "command", label: "Command bar", hint: "/ or Cmd+K on a page opens a bar to ask, mention a page or open the chat; a hint in the header." },
+      { id: "rail", label: "Rail", hint: "A collapsed Discuss rail on the right edge that expands into the chat and remembers if it was open." },
+    ],
+  },
 };
 
 const PREFIX = "kbd.variants.";

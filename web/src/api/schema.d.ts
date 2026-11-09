@@ -808,6 +808,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/pages/mentions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Pages for the @mention picker (prefix, then fuzzy) */
+        get: operations["mentions_api_pages_mentions_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/pages/{slug}": {
         parameters: {
             query?: never;
@@ -819,6 +836,24 @@ export interface paths {
         get: operations["get_page_api_pages__slug__get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/pages/{slug}/chat": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The page's chat thread: messages and the proposals they produced */
+        get: operations["get_thread_api_pages__slug__chat_get"];
+        put?: never;
+        /** Ask about the page; edits come back as a proposal to review */
+        post: operations["post_chat_api_pages__slug__chat_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1793,6 +1828,50 @@ export interface components {
             subscription: {
                 [key: string]: unknown;
             };
+        } & {
+            [key: string]: unknown;
+        };
+        /** ChatMessage */
+        ChatMessage: {
+            /**
+             * At
+             * @default
+             */
+            at: string;
+            /**
+             * Hunks
+             * @default 0
+             */
+            hunks: number;
+            /**
+             * Mentions
+             * @default []
+             */
+            mentions: string[];
+            /** Proposal Id */
+            proposal_id?: string | null;
+            /**
+             * Role
+             * @enum {string}
+             */
+            role: "user" | "assistant";
+            /**
+             * Selections
+             * @default []
+             */
+            selections: components["schemas"]["Selection"][];
+            /**
+             * Skipped
+             * @default []
+             */
+            skipped: components["schemas"]["Skipped"][];
+            /** Text */
+            text: string;
+            /**
+             * Unknown Mentions
+             * @default []
+             */
+            unknown_mentions: string[];
         } & {
             [key: string]: unknown;
         };
@@ -3728,6 +3807,25 @@ export interface components {
             /** Type */
             type: string;
         };
+        /** MentionHit */
+        MentionHit: {
+            /** Slug */
+            slug: string;
+            /** Title */
+            title: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** MentionList */
+        MentionList: {
+            /**
+             * Pages
+             * @default []
+             */
+            pages: components["schemas"]["MentionHit"][];
+        } & {
+            [key: string]: unknown;
+        };
         /** MentionedInCond */
         MentionedInCond: {
             /** Chat */
@@ -3901,6 +3999,61 @@ export interface components {
             words: number;
             /** Year */
             year?: number | null;
+        } & {
+            [key: string]: unknown;
+        };
+        /** PageChatReply */
+        PageChatReply: {
+            /**
+             * Hunks
+             * @default 0
+             */
+            hunks: number;
+            /** Proposal Id */
+            proposal_id?: string | null;
+            /** Reply */
+            reply: string;
+            /**
+             * Skipped
+             * @default []
+             */
+            skipped: components["schemas"]["Skipped"][];
+            /**
+             * Unknown Mentions
+             * @default []
+             */
+            unknown_mentions: string[];
+        } & {
+            [key: string]: unknown;
+        };
+        /** PageChatRequest */
+        PageChatRequest: {
+            /** Backend */
+            backend?: ("subscription" | "api" | "batch") | null;
+            /**
+             * Mentions
+             * @default []
+             */
+            mentions: string[];
+            /** Message */
+            message: string;
+            /**
+             * Selections
+             * @default []
+             */
+            selections: components["schemas"]["Selection"][];
+        } & {
+            [key: string]: unknown;
+        };
+        /** PageChatThread */
+        PageChatThread: {
+            /**
+             * Messages
+             * @default []
+             */
+            messages: components["schemas"]["ChatMessage"][];
+            /** Slug */
+            slug: string;
         } & {
             [key: string]: unknown;
         };
@@ -4974,6 +5127,18 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
+        /** Selection */
+        Selection: {
+            /** Block At */
+            block_at?: number | null;
+            /**
+             * Text
+             * @default
+             */
+            text: string;
+        } & {
+            [key: string]: unknown;
+        };
         /** SemanticRequest */
         SemanticRequest: {
             /** Backend */
@@ -5274,6 +5439,15 @@ export interface components {
         SimilarResult: {
             /** Hits */
             hits: components["schemas"]["SimilarHit"][];
+        } & {
+            [key: string]: unknown;
+        };
+        /** Skipped */
+        Skipped: {
+            /** Before */
+            before: string;
+            /** Reason */
+            reason: string;
         } & {
             [key: string]: unknown;
         };
@@ -7743,6 +7917,38 @@ export interface operations {
             };
         };
     };
+    mentions_api_pages_mentions_get: {
+        parameters: {
+            query?: {
+                /** @description what the owner typed after @ */
+                q?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MentionList"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_page_api_pages__slug__get: {
         parameters: {
             query?: {
@@ -7780,6 +7986,124 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
                 };
+            };
+        };
+    };
+    get_thread_api_pages__slug__chat_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PageChatThread"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Method Not Allowed */
+            405: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bad Gateway */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    post_chat_api_pages__slug__chat_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PageChatRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PageChatReply"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Method Not Allowed */
+            405: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bad Gateway */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

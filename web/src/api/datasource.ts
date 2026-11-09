@@ -73,6 +73,11 @@ export interface DataSource {
   getPage(slug: string, opts?: { kb?: string }): Promise<T.PageDetail>;
   /** The raw files, source pages and URLs behind a page (local app and private site; the public snapshot has none). */
   getPageSources(slug: string, opts?: { kb?: string }): Promise<T.PageSources>;
+  /** Chat on a page: the reply plus the proposal its edits became (never a direct write). */
+  postPageChat(slug: string, body: T.PageChatRequest): Promise<T.PageChatReply>;
+  getPageChat(slug: string): Promise<T.PageChatThread>;
+  /** Pages for the @mention picker. */
+  searchMentions(q: string): Promise<T.MentionHit[]>;
   /** The page file as stored (frontmatter and body); the OKF export copies it. */
   getPageSource(slug: string): Promise<string>;
   search(q: string, limit?: number): Promise<T.SearchResult>;

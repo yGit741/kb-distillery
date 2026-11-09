@@ -9,6 +9,7 @@ import { useVariant, VARIANTS } from "@/components/variants";
 import { useFlag } from "@/flags/useFlag";
 import { agoLabel, bareSlug, fmList, fmString, layerOf, mtimeOf, prepareMarkdown, titleOf, type LinkGraph } from "./lib";
 import { MiniGraph } from "./MiniGraph";
+import { PageChat, PageChatHeader, usePageChatState } from "./PageChat";
 import { SourcesCountMark, SourcesFooter, SourcesMarginDots, SourcesSideTab, usePageSources } from "./PageSources";
 import { PAGES_TO, FactBadges, Fold, PageLink, TypeDot } from "./parts";
 import { VideoView, isVideoRaw } from "./VideoView";
@@ -83,6 +84,10 @@ export function PageReader({ g, detail, embed, pinned, onTogglePin, onConnect, v
   const [placement] = useVariant("page-sources", spec.options.map((o) => o.id), spec.default);
   const pageSources = usePageSources(card.id, kb, sourcesOn);
   const articleRef = useRef<HTMLElement>(null);
+  const chatFlag = useFlag("ui.page-chat");
+  const proposalsFlag = useFlag("ui.proposals");
+  const chatOn = chatFlag && proposalsFlag && !viewOnly && !embed;
+  const chat = usePageChatState(card.id);
   const sources = useMemo(
     () =>
       layer === "source"
@@ -158,6 +163,7 @@ export function PageReader({ g, detail, embed, pinned, onTogglePin, onConnect, v
               </Button>
             )}
             {sourcesOn && placement === "hover-marks" && pageSources && <SourcesCountMark sources={pageSources} />}
+            {chatOn && <PageChatHeader chat={chat} />}
             <span className="text-xs text-muted-foreground">
               {card.words} words{mtimeOf(card) ? ` · edited ${agoLabel(mtimeOf(card))}` : ""}
             </span>
@@ -166,6 +172,7 @@ export function PageReader({ g, detail, embed, pinned, onTogglePin, onConnect, v
 
         <Markdown resolveSlug={resolveSlug} linkSearch={linkSearch}>{markdown}</Markdown>
 
+        {chatOn && <PageChat slug={card.id} chat={chat} articleRef={articleRef} />}
         {sourcesOn && placement === "footer" && pageSources && <SourcesFooter sources={pageSources} />}
         {sourcesOn && placement === "hover-marks" && pageSources && <SourcesMarginDots sources={pageSources} articleRef={articleRef} />}
 
