@@ -1,3 +1,4 @@
+import { keepPreviousData } from "@tanstack/react-query";
 import { Search } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { SearchHit } from "@/api";
@@ -59,6 +60,7 @@ export function Finder({ nodes, byId, colorBy, visible, onFocus, onRead, onShowP
   const text = useApiQuery<{ hits: SearchHit[]; related?: SearchHit[] | null }>(["graph-text", debounced], (ds) => ds.search(debounced, 12), {
     enabled: !agent && debounced.length >= 2,
     staleTime: 60_000,
+    placeholderData: keepPreviousData,
   });
 
   const pages = useMemo(() => (agent ? [] : findPages(nodes, q)), [nodes, q, agent]);

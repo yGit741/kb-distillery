@@ -1,3 +1,4 @@
+import { keepPreviousData } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import type { SearchHit } from "@/api";
 import { useApiQuery } from "@/lib/useApiQuery";
@@ -30,6 +31,7 @@ export function usePageResults(nodes: readonly GNode[], byId: ReadonlyMap<string
   const text = useApiQuery<{ hits: SearchHit[]; related?: SearchHit[] | null }>(["graph-text", debounced], (ds) => ds.search(debounced, 12), {
     enabled: enabled && debounced.length >= 2,
     staleTime: 60_000,
+    placeholderData: keepPreviousData,
   });
   const pages = useMemo(() => (enabled ? findPages(nodes, q) : []), [nodes, q, enabled]);
   const texts = useMemo(

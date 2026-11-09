@@ -82,6 +82,7 @@ function Job({ job, open, onToggle }: { job: DigestJob; open: boolean; onToggle:
 export function JobList({ focus }: { focus?: string }) {
   const qc = useQueryClient();
   const q = useApiQuery(["digest-jobs"], (ds) => ds.listDigestJobs(), {
+    staleTime: 0, // live: always refetch on mount, poll while a job runs
     refetchInterval: (query) => (query.state.data?.jobs.some(isLive) ? 2000 : false),
   });
   const [open, setOpen] = useState<Record<string, boolean>>({});
@@ -94,6 +95,7 @@ export function JobList({ focus }: { focus?: string }) {
   useEffect(() => {
     if (live < prev.current) {
       void qc.invalidateQueries({ queryKey: ["graph"] });
+      for (const k of ["pages", "page", "pages-index", "citations"]) void qc.invalidateQueries({ queryKey: [k] }); // new pages show everywhere
       void qc.invalidateQueries({ queryKey: ["pipeline"] });
     }
     prev.current = live;
