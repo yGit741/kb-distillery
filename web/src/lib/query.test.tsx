@@ -41,7 +41,7 @@ describe("createQueryClient", () => {
 });
 
 describe("prefetchHeavy", () => {
-  it("warms the graph and pipeline on an http source, nothing on an embedded one", async () => {
+  it("warms the graph on an http source, nothing on an embedded one", async () => {
     const getGraph = vi.fn(async () => ({ nodes: [], links: [] }));
     const getPipeline = vi.fn(async () => ({}));
     const client = createQueryClient();
@@ -50,7 +50,7 @@ describe("prefetchHeavy", () => {
     prefetchHeavy(client, { kind: "http", getGraph, getPipeline } as unknown as DataSource);
     await client.prefetchQuery({ queryKey: GRAPH_KEY, queryFn: getGraph }); // deduped with the in-flight prefetch
     expect(getGraph).toHaveBeenCalledTimes(1);
-    expect(getPipeline).toHaveBeenCalledTimes(1);
+    expect(getPipeline).not.toHaveBeenCalled(); // the pipeline is live data; its screen fetches it
     expect(client.getQueryData(GRAPH_KEY)).toBeTruthy();
   });
 });

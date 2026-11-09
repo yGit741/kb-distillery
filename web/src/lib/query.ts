@@ -11,11 +11,10 @@ export const QUERY_GC_MS = 30 * 60_000;
 /** The one key of the default graph snapshot (public layer, this kb): the Graph, Home, search and palette all share it. */
 export const GRAPH_KEY = ["graph", false, ""] as const;
 
-/** Warm the heavy queries a top-level tab needs, so the first tab switch finds them cached. Failures stay silent. */
+/** Warm the heavy query a top-level tab needs (the graph), so the first tab switch finds them cached. Failures stay silent. */
 export function prefetchHeavy(client: QueryClient, ds: DataSource): void {
   if (ds.kind !== "http") return;
   void client.prefetchQuery({ queryKey: GRAPH_KEY, queryFn: () => ds.getGraph() });
-  void client.prefetchQuery({ queryKey: ["pipeline"], queryFn: () => ds.getPipeline() });
 }
 
 export function createQueryClient(): QueryClient {
