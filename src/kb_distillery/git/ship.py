@@ -958,7 +958,10 @@ def cmd_pr(title=None, skip_tests=False, root=ROOT, gates=True, notes_file=None,
     if info and info.get("state", "OPEN") == "OPEN":     # a merged or closed PR of a reused branch name is not this one
         print(f"PR #{info['number']} already open: {info['url']} (pushed new commits)")
         if explicit_title:
-            gh(["pr", "edit", branch, "--title", explicit_title], root)
+            cp = gh(["pr", "edit", branch, "--title", explicit_title], root)
+            if cp.returncode != 0:       # a silent failure would leave `ship merge` refusing the old title with no clue why
+                print(f"error: could not retitle PR #{info['number']}: {_out(cp)}")
+                return 1
             print(f"retitled: {explicit_title}")
         if skip_checks or review_line or no_review:
             gh(["pr", "edit", branch, "--body", pr_body(subjects, _read_notes(notes_file), skip_checks, round_no, paths, review_line, no_review)], root)
