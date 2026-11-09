@@ -186,7 +186,7 @@ def _dates_for(root):
     if sha and hit and hit[0] == sha:
         return hit[1]
     dates = _git_dates(root)
-    if sha:
+    if sha and dates:      # an empty result may be a failed `git log`: do not pin it to this commit
         _DATES_CACHE[root] = (sha, dates)
     return dates
 
