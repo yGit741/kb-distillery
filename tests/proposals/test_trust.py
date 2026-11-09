@@ -162,7 +162,7 @@ def test_undo_refused_when_a_later_commit_touched_the_page(kb):
     b = _create(kb, _edit(kb, "alpha", ("More text here.", "Other text.")))
     service.decide(b["id"], [{"hunk_id": h["id"], "decision": "accept"} for h in b["hunks"]], root=kb)
     service.apply(b["id"], root=kb)                                       # a manual apply, later commit on alpha
-    assert service.feed(root=kb)[1]["undoable"] is False
+    assert {f["id"]: f for f in service.feed(root=kb)}[a["id"]]["undoable"] is False   # by id: both applies may share a second
     n = commits(kb)
     with pytest.raises(ProposalError) as e:
         service.undo(a["id"], root=kb)

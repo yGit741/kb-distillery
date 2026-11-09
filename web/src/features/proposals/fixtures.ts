@@ -4,19 +4,19 @@ import type { Proposal, ProposalRender } from "@/api";
 export function proposalFixture(over: Partial<Proposal> = {}): Proposal {
   const hunks: Proposal["hunks"] = [
     {
-      id: "h-soften", op_id: "op1", op: "edit_page", slug: "tensor-rank", kind: "prose", at: 2, span: 1,
+      id: "h-soften", op_id: "op1", op: "edit_page", slug: "tensor-rank", kind: "prose", klass: "claims", at: 2, span: 1,
       before: "Rank always determines the cost.\n\n", after: "Rank often determines the cost.\n\n",
       tokens: [["equal", "Rank "], ["delete", "always"], ["insert", "often"], ["equal", " determines the cost.\n\n"]],
       reason: "the claim is too strong", sources: ["paper-x"], links_added: [], links_removed: [],
     },
     {
-      id: "h-link", op_id: "op1", op: "edit_page", slug: "tensor-rank", kind: "structure", at: 4, span: 1,
+      id: "h-link", op_id: "op1", op: "edit_page", slug: "tensor-rank", kind: "structure", klass: "links", at: 4, span: 1,
       before: "See the survey.\n", after: "See the survey and [Matrix rank](matrix-rank.md).\n",
       tokens: [["equal", "See the survey"], ["insert", " and [Matrix rank](matrix-rank.md)"], ["equal", ".\n"]],
       reason: "", sources: [], links_added: ["matrix-rank"], links_removed: [],
     },
     {
-      id: "h-fm", op_id: "op2", op: "set_frontmatter", slug: "tensor-rank", kind: "structure", at: 0, span: 0,
+      id: "h-fm", op_id: "op2", op: "set_frontmatter", slug: "tensor-rank", kind: "structure", klass: "structure", at: 0, span: 0,
       before: "", after: "maturity: draft", tokens: [["insert", "maturity: draft"]],
       reason: "", sources: [], links_added: [], links_removed: [],
     },
