@@ -129,6 +129,20 @@ export function createHttpDataSource(fetchImpl: Fetch = (...a) => fetch(...a), b
         "/api/relations/proposals",
       ),
 
+    listProposals: async (status) =>
+      (await run(() => client.GET("/api/proposals", { params: { query: status ? { status } : {} } }), "/api/proposals")).proposals,
+    getProposal: (id) => run(() => client.GET("/api/proposals/{pid}", { params: { path: { pid: id } } }), `/api/proposals/${id}`),
+    getProposalRender: (id) =>
+      run(() => client.GET("/api/proposals/{pid}/render", { params: { path: { pid: id } } }), `/api/proposals/${id}/render`),
+    decideProposal: (id, d) =>
+      run(
+        () => client.POST("/api/proposals/{pid}/decisions", { params: { path: { pid: id } }, body: { hunk_id: d.hunk_id, decision: d.decision, comment: d.comment ?? "" } }),
+        `/api/proposals/${id}/decisions`,
+      ),
+    applyProposal: (id) => run(() => client.POST("/api/proposals/{pid}/apply", { params: { path: { pid: id } } }), `/api/proposals/${id}/apply`),
+    rejectProposal: (id, reason) =>
+      run(() => client.POST("/api/proposals/{pid}/reject", { params: { path: { pid: id } }, body: { reason: reason ?? null } }), `/api/proposals/${id}/reject`),
+
     listViews: () => run(() => client.GET("/api/views"), "/api/views"),
     listReadyViews: () => run(() => client.GET("/api/views/ready"), "/api/views/ready"),
     listRecent: () => run(() => client.GET("/api/recent"), "/api/recent"),
