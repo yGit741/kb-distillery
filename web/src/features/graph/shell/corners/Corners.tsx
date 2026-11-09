@@ -25,7 +25,7 @@ import { useCorners, type Layer } from "./cornersStore";
 import { Fan, type FanCard } from "./Fan";
 import { BUTTON, EDGE, fanCapacity } from "./geometry";
 import { useGallery } from "../../views/galleryStore";
-import { LIST_WIDTH, PinList } from "./PinList";
+import { LIST_WIDTH, NameInput, PinList } from "./PinList";
 import { recentSources, viewCards } from "./panelModel";
 import { ViewsPanel } from "./ViewsPanel";
 import { SEARCH_LINE_H, useShellTop } from "../layout";
@@ -76,10 +76,13 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
   const sparkChat = useFlag("spark-chat");
   const intent = useFlag("graph-intent");
   const favSlugs = useFavorites((s) => s.slugs);
-  const viewsPanel = useFlag("views-panel");
+  const pinFanFlag = useFlag("pin-fan");
+  // flag pin-fan: the pinned corner is a fan like Think and Agent, and the views panel steps aside
+  const viewsPanel = useFlag("views-panel") && !pinFanFlag;
   const root = useRef<HTMLDivElement>(null);
   const order = useCorners((s) => s.order);
   const menu = useCorners((s) => s.menu);
+  const edit = useCorners((s) => s.edit);
   const activeView = useCorners((s) => s.activeView);
   const { toggle, openMenu, closeMenu, closeTop, closeAll, setActive } = useCorners.getState();
   const shellTop = useShellTop();
@@ -100,6 +103,8 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
 
   // ---- data
   const views = useQuery({ queryKey: ["corners", "views"], queryFn: () => listViews(f), enabled: server && pinsOpen, staleTime: 0 });
+  // flag pin-fan; without the gallery (graph-intent off) a fan cannot reach views past its room, so that kb keeps the list
+  const pinFan = pinFanFlag && (intent || (views.data?.length ?? 0) <= cap - 1);
   // a shared site has no server: its saved views are baked into the page and only opened here
   const readOnlyPins = !server && caps.readViews && ds.kind === "embedded";
   const sharedViews = useApiQuery(["views"], (d) => d.listViews(), { enabled: readOnlyPins && pinsOpen, retry: false });
@@ -209,6 +214,27 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
     const rows = chatRows.length > room ? [...cards.slice(0, room - 1), { key: "__all", title: "All chats", meta: String(chatRows.length) }] : cards;
     return [fresh, ...rows];
   }, [chatRows, cap, sparkChat]);
+
+  // flag pin-fan: "Pin this view" first, then the pinned views newest first, then "All views" when they overflow
+  const pinCards = useMemo<FanCard[]>(() => {
+    if (!pinFan) return [];
+    const fresh: FanCard = { key: "__new", title: "Pin this view", isNew: true };
+    const list = [...(views.data ?? [])].reverse();
+    const cards = list.map((v) => ({ key: v.id, title: v.name, meta: v.id === activeView ? "open" : ago(v.created) }));
+    const room = cap - 1;
+    const rows = list.length > room && openGallery ? [...cards.slice(0, room - 1), { key: "__all", title: "All views", meta: String(list.length) }] : cards.slice(0, room);
+    return [fresh, ...rows];
+  }, [pinFan, views.data, activeView, cap, openGallery]);
+  const pickPin = (key: string) => {
+    if (key === "__new") return useCorners.getState().startEdit({ kind: "pin" });
+    if (key === "__all") return openGallery?.();
+    const v = views.data?.find((x) => x.id === key);
+    if (!v) return;
+    toggle("pins");
+    setActive(v.id);
+    if (!applySpec(v.spec, deps, { name: v.name })) setNotice("Nothing in this view can be restored here");
+  };
+  const editName = edit?.kind === "rename" ? (views.data?.find((v) => v.id === edit.id)?.name ?? "") : suggestName(ui);
 
   const pickThink = (key: string) => {
     toggle("think");
@@ -345,6 +371,20 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
                 />
               </div>
             </div>
+          ) : pinFan ? (
+            <>
+              <Fan kind="pins" open={pinsOpen} label="Pinned views" cards={pinCards} empty="" onPick={pickPin} />
+              {pinsOpen && edit && (
+                <div style={placeMenu("left", "top")} className="pointer-events-auto z-[30] flex h-7 w-[220px] items-center rounded-full border bg-card px-3 shadow-[var(--shadow)]">
+                  <NameInput
+                    key={edit.kind === "rename" ? edit.id : "pin"}
+                    initial={editName}
+                    label={edit.kind === "rename" ? "New name for the pinned view" : "Name for the pinned view"}
+                    onSubmit={(n) => (edit.kind === "rename" ? void rename(edit.id, n) : void pin(n))}
+                  />
+                </div>
+              )}
+            </>
           ) : (
             <PinList
               open={pinsOpen}
@@ -485,9 +525,9 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
       {notice && (
         <div
           role="status"
-          className={cn("absolute rounded-full border bg-card px-3 py-1 text-xs shadow-[var(--shadow)]", pinsOpen ? "truncate" : "left-1/2 -translate-x-1/2")}
+          className={cn("absolute rounded-full border bg-card px-3 py-1 text-xs shadow-[var(--shadow)]", pinsOpen && !pinFan ? "truncate" : "left-1/2 -translate-x-1/2")}
           // while the pinned panel is open the notice sits to its right, so the two never overlap
-          style={{ top: shellTop + SEARCH_LINE_H + 13, ...(pinsOpen ? { left: EDGE + LIST_WIDTH + 12, maxWidth: `calc(100% - ${EDGE * 2 + LIST_WIDTH + 72}px)` } : {}) }}
+          style={{ top: shellTop + SEARCH_LINE_H + 13, ...(pinsOpen && !pinFan ? { left: EDGE + LIST_WIDTH + 12, maxWidth: `calc(100% - ${EDGE * 2 + LIST_WIDTH + 72}px)` } : {}) }}
         >
           {notice}
         </div>

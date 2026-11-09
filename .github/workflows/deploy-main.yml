@@ -18,7 +18,8 @@
 # fetch-depth: 0 — the "never older" guard asks git whether the live sha is an ancestor of HEAD,
 # and the builder reads KB-Version trailers / kb-x.y.z tags from history. KB_CI=1 — raw/ binaries
 # are gitignored, so tests that lint must trust the committed manifest (see ci.yml).
-# Self-hosted Mac runner, no GitHub cache — see ci.yml.
+# GitHub-hosted `ubuntu-latest`, like ci.yml: the self-hosted Mac runner is gone, and a schedule that waits for one
+# queues a dead run every morning. wrangler is fetched by npx at deploy time; web-install gives the site build its node modules.
 name: deploy-main
 on:
   schedule:
@@ -29,7 +30,7 @@ concurrency:
   cancel-in-progress: false     # a running deploy finishes; the next run queues behind it
 jobs:
   deploy:
-    runs-on: [self-hosted, macOS, ARM64]
+    runs-on: ubuntu-latest
     env:
       KB_CI: "1"
       KB_SHARE_AUTODEPLOY: "0"
@@ -41,7 +42,12 @@ jobs:
       - uses: prefix-dev/setup-pixi@v0.8.1
         with:
           pixi-version: v0.76.1
-          cache: false
+          cache: true
+      - uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: npm-${{ runner.os }}-${{ hashFiles('web/package-lock.json') }}
+      - run: pixi run web-install
       - name: Did the deploy owner deploy in the last 24 h?
         id: owner
         run: |
@@ -51,8 +57,8 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       - if: steps.owner.outputs.stale == '1'
         run: pixi run test
-      - name: Build main and deploy it to the `kb` Worker (skips are success)
-        if: steps.owner.outputs.stale == '1'
+      - name: Build main and deploy it to the `kb` Worker (skips are success; never from a dispatch on another branch)
+        if: steps.owner.outputs.stale == '1' && github.ref == 'refs/heads/main'
         run: pixi run share -- deploy-main
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}

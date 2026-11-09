@@ -138,7 +138,9 @@ describe("corner buttons", () => {
 });
 
 describe("pinned views", () => {
-  it("lists the pinned views, newest data from GET /api/views, and applies one through the spec", async () => {
+  // the floating list and the views panel stay behind flag pin-fan off; the fan has its own tests
+  const itList = (name: string, fn: () => unknown) => it(name, () => withFlag("pin-fan", false, fn as () => Promise<void>));
+  itList("lists the pinned views, newest data from GET /api/views, and applies one through the spec", async () => {
     const applyView = vi.fn();
     mount(fakeServer({ views: [{ id: "alpha", name: "Alpha view" }, { id: "beta", name: "Beta view" }] }), { applyView });
     await userEvent.click(pins());
@@ -149,7 +151,7 @@ describe("pinned views", () => {
     expect(useGraphUi.getState().shownTypes).toBeNull(); // the spec said "all types"
   });
 
-  it("pins the current view with a name typed inline (POST /api/views {name, spec})", async () => {
+  itList("pins the current view with a name typed inline (POST /api/views {name, spec})", async () => {
     const server = fakeServer({ views: [{ id: "alpha", name: "Alpha view" }] });
     useGraphUi.setState({ colorBy: "depth" });
     mount(server);
@@ -164,7 +166,7 @@ describe("pinned views", () => {
     expect(await screen.findByRole("button", { name: /^My dive/ })).toBeInTheDocument();
   });
 
-  it("graph-intent on: pinning writes the layer stack { v: 2, layers, text }; with no layers it still writes V1", async () => {
+  itList("graph-intent on: pinning writes the layer stack { v: 2, layers, text }; with no layers it still writes V1", async () => {
     await withFlag("graph-intent", true, async () => {
       const server = fakeServer();
       useLayers.setState({ stack: { v: 2, layers: [makeLayer("show", "nodes", { nodes: [{ t: "degree", op: ">=", n: 8 }] }, "Hubs")] } });
@@ -180,7 +182,7 @@ describe("pinned views", () => {
     useLayers.setState({ stack: EMPTY_STACK });
   });
 
-  it("graph-intent on: a pinned V1 view is applied through the layer stack as one chip named like the pin", async () => {
+  itList("graph-intent on: a pinned V1 view is applied through the layer stack as one chip named like the pin", async () => {
     await withFlag("graph-intent", true, async () => {
       const applyLegacy = vi.fn();
       useLayers.setState({ stack: EMPTY_STACK, history: [], future: [], graph: { nodes: [], links: [], show: vi.fn(), applyLegacy } });
@@ -193,7 +195,7 @@ describe("pinned views", () => {
     useLayers.setState({ stack: EMPTY_STACK, graph: null });
   });
 
-  it("graph-intent on: the list holds the pinned views, favorites, Pin this view, Recent and All views; All views opens the gallery", async () => {
+  itList("graph-intent on: the list holds the pinned views, favorites, Pin this view, Recent and All views; All views opens the gallery", async () => {
     await withFlag("graph-intent", true, async () => {
       useFavorites.setState({ slugs: new Set(["idea-margin"]) });
       resetGallery();
@@ -210,7 +212,7 @@ describe("pinned views", () => {
     useFavorites.setState({ slugs: new Set() });
   });
 
-  it("graph-intent off: no All views entry", async () => {
+  itList("graph-intent off: no All views entry", async () => {
     await withFlag("graph-intent", false, async () => {
       mount(fakeServer());
       await userEvent.click(pins());
@@ -219,7 +221,7 @@ describe("pinned views", () => {
     });
   });
 
-  it("zero pins: only the plus card, the divider and Recent", async () => {
+  itList("zero pins: only the plus card, the divider and Recent", async () => {
     mount(fakeServer());
     await userEvent.click(pins());
     await screen.findByRole("button", { name: "Pin this view" });
@@ -227,7 +229,7 @@ describe("pinned views", () => {
     expect(screen.getByRole("button", { name: "Show recent steps" })).toBeInTheDocument();
   });
 
-  it("40 pins and very long names stay in one scrolling list, a name is cut with an ellipsis, not wrapped", async () => {
+  itList("40 pins and very long names stay in one scrolling list, a name is cut with an ellipsis, not wrapped", async () => {
     const many = Array.from({ length: 40 }, (_, i) => ({ id: `v${i}`, name: i === 0 ? "A very long pinned view name ".repeat(6) : `View ${i}` }));
     mount(fakeServer({ views: many }));
     await userEvent.click(pins());
@@ -238,7 +240,7 @@ describe("pinned views", () => {
     expect(long.className).toContain("max-w-[120px]");
   });
 
-  it("the lens grows the hovered row and less its neighbours, and lets go when the pointer leaves", async () => {
+  itList("the lens grows the hovered row and less its neighbours, and lets go when the pointer leaves", async () => {
     mount(fakeServer({ views: [1, 2, 3, 4].map((i) => ({ id: `v${i}`, name: `View ${i}` })) }));
     await userEvent.click(pins());
     await screen.findByRole("button", { name: /^View 4/ });
@@ -252,7 +254,7 @@ describe("pinned views", () => {
     await waitFor(() => expect(Number(row(2).dataset.scale)).toBeLessThan(1.05), { timeout: 3000 });
   });
 
-  it("'...' renames the opened view and unpins it (PATCH, DELETE)", async () => {
+  itList("'...' renames the opened view and unpins it (PATCH, DELETE)", async () => {
     const server = fakeServer({ views: [{ id: "alpha", name: "Alpha view" }] });
     mount(server);
     await userEvent.click(pins());
@@ -268,7 +270,7 @@ describe("pinned views", () => {
     await waitFor(() => expect(server.calls.some((c) => c.method === "DELETE" && c.url === "/api/views/alpha")).toBe(true));
   });
 
-  it("Recent unfolds the last steps, newest first", async () => {
+  itList("Recent unfolds the last steps, newest first", async () => {
     const recent = [
       { at: "2026-11-01T10:00:00Z", text: "Oldest step", spec: { v: 1, types: "all" } },
       { at: "2026-11-02T10:00:00Z", text: "Newest step", spec: { v: 1, types: "all" } },
@@ -542,4 +544,84 @@ describe("flag spark-chat on the agent fan", () => {
       expect(within(group).queryByRole("button", { name: /running/ })).not.toBeInTheDocument();
       expect(group.querySelectorAll(".bg-ok")).toHaveLength(0);
     }));
+});
+
+describe("flag pin-fan: the pinned corner is a fan", () => {
+  const card = (name: RegExp | string) => within(document.querySelector('[data-fan="pins"]') as HTMLElement).getByRole("button", { name });
+
+  it("opens a fan from the top-left: Pin this view first, then the pinned views newest first; a view applies and folds the fan", () =>
+    withFlag("pin-fan", true, async () => {
+      mount(fakeServer({ views: [{ id: "alpha", name: "Alpha view" }, { id: "beta", name: "Beta view" }] }));
+      await userEvent.click(pins());
+      await screen.findByRole("button", { name: /^Beta view/ });
+      const fan = document.querySelector('[data-fan="pins"]') as HTMLElement;
+      expect(fan).toHaveAttribute("data-open", "true");
+      expect(screen.queryByRole("group", { name: "Views panel" })).toBeNull();
+      const names = within(fan).getAllByRole("button").map((b) => b.getAttribute("aria-label") ?? "");
+      expect(names[0]).toBe("Pin this view");
+      expect(names[1]).toMatch(/^Beta view/);
+      expect(names[2]).toMatch(/^Alpha view/);
+      await userEvent.click(card(/^Alpha view/));
+      expect(useCorners.getState().activeView).toBe("alpha");
+      expect(useGraphUi.getState().shownTypes).toBeNull(); // the spec said "all types"
+      expect(fan).toHaveAttribute("data-open", "false");
+    }));
+
+  it("Pin this view asks for a name inline and posts it; the new view joins the fan", () =>
+    withFlag("pin-fan", true, async () => {
+      const server = fakeServer();
+      mount(server);
+      await userEvent.click(pins());
+      await userEvent.click(card("Pin this view"));
+      const input = screen.getByRole("textbox", { name: /name for the pinned view/i });
+      await userEvent.clear(input);
+      await userEvent.type(input, "My dive{Enter}");
+      await waitFor(() => expect(server.calls.some((c) => c.method === "POST")).toBe(true));
+      expect(server.calls.find((c) => c.method === "POST")!.body).toMatchObject({ name: "My dive" });
+      expect(await screen.findByRole("button", { name: /^My dive/ })).toBeInTheDocument();
+    }));
+
+  it("'...' renames the open view inline (PATCH)", () =>
+    withFlag("pin-fan", true, async () => {
+      const server = fakeServer({ views: [{ id: "alpha", name: "Alpha view" }] });
+      mount(server);
+      await userEvent.click(pins());
+      await userEvent.click(await screen.findByRole("button", { name: /^Alpha view/ }));
+      await userEvent.click(pins());
+      await userEvent.click(screen.getByRole("button", { name: "Pinned view options" }));
+      await userEvent.click(screen.getByRole("button", { name: /^Rename/ }));
+      const input = screen.getByRole("textbox", { name: /new name for the pinned view/i });
+      expect(input).toHaveValue("Alpha view");
+      await userEvent.clear(input);
+      await userEvent.type(input, "Renamed{Enter}");
+      await waitFor(() => expect(server.calls.find((c) => c.method === "PATCH")?.body).toEqual({ name: "Renamed" }));
+    }));
+
+  it("more pins than fit: the last card is All views and opens the gallery (graph-intent on)", () =>
+    withFlag("pin-fan", true, () =>
+      withFlag("graph-intent", true, async () => {
+        resetGallery();
+        const many = Array.from({ length: 30 }, (_, i) => ({ id: `v${i}`, name: `View ${i}` }));
+        mount(fakeServer({ views: many }));
+        await userEvent.click(pins());
+        const all = await screen.findByRole("button", { name: /^All views, 30/ });
+        expect(within(document.querySelector('[data-fan="pins"]') as HTMLElement).getAllByRole("button").length).toBeLessThan(30);
+        await userEvent.click(all);
+        expect(useGallery.getState().open).toBe(true);
+      }),
+    ));
+});
+
+describe("flag pin-fan without the gallery", () => {
+  it("graph-intent off and more pins than the fan holds: the corner keeps the scrolling list, so every view stays reachable", () =>
+    withFlag("pin-fan", true, () =>
+      withFlag("graph-intent", false, async () => {
+        const many = Array.from({ length: 30 }, (_, i) => ({ id: `v${i}`, name: `View ${i}` }));
+        mount(fakeServer({ views: many }));
+        await userEvent.click(pins());
+        expect(await screen.findByRole("button", { name: /^View 0/ })).toBeInTheDocument();
+        expect(screen.getByRole("button", { name: /^View 29/ })).toBeInTheDocument();
+        expect(document.querySelector('[data-fan="pins"]')).toBeNull();
+      }),
+    ));
 });

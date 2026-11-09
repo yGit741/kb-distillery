@@ -20,6 +20,7 @@ import pytest
 from kb_distillery.config.resources import require_repo_root
 
 pytestmark = [pytest.mark.wheel,
+              pytest.mark.timeout(900),      # the wheel build and a clean venv install take minutes, not the default 120 s
               pytest.mark.skipif(os.environ.get("KB_TEST_WHEEL") != "1", reason="slow: run `pixi run test-wheel` (CI job `wheel`)")]
 
 REPO = require_repo_root("tests/cli/test_install_wheel.py")

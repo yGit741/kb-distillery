@@ -6,7 +6,7 @@ forgotten window closes itself and a stale one never keeps holds off for days.
 
 While open: `ship pr` labels nothing `hold` (schema/paradigm included), `ship merge` merges a PR that
 carries a `hold` label (the merge is still pinned to the head sha it gated), and the merge-nudge Stop hook
-stays silent. Gates, CI and tests are untouched: a red gate still blocks the merge.
+stays silent. CI and tests are untouched: a red `all-green` still blocks the merge.
 `ship approve` stays user-only; the window never lifts anything by itself outside `ship merge`.
 """
 import json

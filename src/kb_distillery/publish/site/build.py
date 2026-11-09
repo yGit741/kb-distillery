@@ -565,7 +565,8 @@ def app_page(template, data, manifest_fields, title=DEFAULT_TITLE):
     (what the footer line shows). The module script runs after parsing, so it finds `#kb-data`."""
     meta = {k: manifest_fields[k] for k in ("kb_version", "content_sha", "viewer_sha", "profile", "built_at")}
     blob = dict(data, meta=meta)
-    title = f"<title>{_html.escape(f"{title} — kb {manifest_fields['kb_version']}")}</title>"
+    heading = f"{title} — kb {manifest_fields['kb_version']}"     # not nested in the f-string below: Python 3.11 refuses reused quotes
+    title = f"<title>{_html.escape(heading)}</title>"
     if "</head>" not in template or not _TITLE_RE.search(template):
         raise BuildError("the app's index.html has no <title> / </head>; rebuild the frontend (pixi run web-install)")
     page = _TITLE_RE.sub(lambda _m: title, template, count=1)
