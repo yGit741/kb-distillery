@@ -4,7 +4,7 @@ from typing import Any, Literal
 from kb_distillery.server.models.base import ApiModel
 
 ProducerKind = Literal["manual", "chat", "flags", "ingest", "restructure", "lint", "restore"]
-Status = Literal["open", "applied", "rejected", "stale"]
+Status = Literal["open", "applied", "rejected", "stale", "undone"]
 Decision = Literal["accept", "reject", "correct"]
 Backend = Literal["subscription", "api", "batch"]
 
@@ -60,6 +60,7 @@ class Hunk(ApiModel):
     links_removed: list[str] = []
     at: int = 0
     span: int = 0
+    klass: str = ""                 # links | format | typos | claims | structure | new_page | tombstone | merge | split | rename
 
 
 class Revision(ApiModel):
@@ -75,6 +76,7 @@ class HunkDecision(ApiModel):
     decision: Decision
     comment: str = ""
     at: str | None = None
+    suggested: bool = False         # pre-marked by the trust tiers; any decision of the owner replaces it
 
 
 class Checks(ApiModel):
@@ -87,6 +89,13 @@ class Applied(ApiModel):
     kb_version: str | None = None
     at: str
     hunks: list[str] = []
+    auto: bool = False
+    pages: list[str] = []
+
+
+class Undone(ApiModel):
+    at: str
+    commit: str | None = None
 
 
 class Counts(ApiModel):
@@ -141,6 +150,7 @@ class Proposal(ApiModel):
     counts: Counts
     check_counts: CheckCounts
     applied: Applied | None = None
+    undone: Undone | None = None
 
 
 class ProposalCreate(ApiModel):
@@ -150,6 +160,7 @@ class ProposalCreate(ApiModel):
     note: str | None = None
     semantic: bool = False          # run the tier-2 scoped semantic check right after tier 1
     backend: Backend | None = None  # model backend for tier 2 (default $KB_LLM_BACKEND, then subscription)
+    auto: bool = False              # apply at once when every hunk is an auto-apply class and tier 1 has no error
 
 
 class RevisionCreate(ApiModel):
@@ -157,6 +168,7 @@ class RevisionCreate(ApiModel):
     note: str | None = None
     semantic: bool = False
     backend: Backend | None = None
+    auto: bool = False
 
 
 class SemanticRequest(ApiModel):
@@ -231,7 +243,37 @@ class Suggestion(ApiModel):
     summary: str
     created: str
     status: str = "open"
+    key: str = ""
+    source: str = ""                # "coherence" for the 0-LLM ones; finding is then contradiction | duplicate
+    draft: str = ""                 # action hint: "ask the agent to draft a fix"
+    coherence_id: str | None = None
 
 
 class SuggestionList(ApiModel):
     suggestions: list[Suggestion]
+
+
+class TrustTiers(ApiModel):
+    """The kb's hunk classes per trust tier; `source` says whether kb.toml [proposals] set it or the kit default did."""
+    auto_apply: list[str]
+    review: list[str]
+    explicit: list[str]
+    source: Literal["kb.toml", "default"]
+
+
+class FeedItem(ApiModel):
+    id: str
+    title: str
+    status: Literal["applied", "undone"]
+    pages: list[str]
+    hunks: int
+    classes: list[str]
+    applied_at: str
+    commit: str | None = None
+    auto: bool = False
+    undoable: bool
+    undone_at: str | None = None
+
+
+class Feed(ApiModel):
+    feed: list[FeedItem]

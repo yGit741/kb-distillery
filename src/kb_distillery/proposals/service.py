@@ -6,10 +6,13 @@ functions one to one. Failures are `ProposalError(status, message)`. `DEFAULT_RO
 """
 from __future__ import annotations
 
+import subprocess
+
 from kb_distillery.config.kb import ReadOnlyError, require_writable
 from kb_distillery.config.paths import vault_root
 from kb_distillery.proposals import apply as applier
-from kb_distillery.proposals import checks, checks_semantic, diff, store
+from kb_distillery.ops import core as opscore
+from kb_distillery.proposals import checks, checks_semantic, diff, store, trust
 from kb_distillery.proposals.model import (DECISIONS, ProposalError, new_id, now, sha, touched_slugs, validate_ops,
                                            validate_producer)
 
@@ -27,6 +30,39 @@ def _writable(root):
     except ReadOnlyError as e:
         raise ProposalError(405, str(e)) from None
     return root
+
+
+def _klass(h):
+    return h.get("klass") or trust.classify_hunk(h)
+
+
+def _premark(root, p):
+    """Hunks of an auto-apply class without a decision get a `suggested` accept the UI can show (one click to keep)."""
+    cfg = trust.tiers(root)
+    for h in p["revisions"][p["current"]]["hunks"]:
+        if h["id"] not in p["decisions"] and trust.tier_of(_klass(h), cfg) == "auto_apply":
+            p["decisions"][h["id"]] = {"decision": "accept", "comment": "", "suggested": True, "at": now()}
+
+
+def _auto_ok(root, p):
+    """True when every hunk is an auto-apply class and tier 1 found no error."""
+    hunks = p["revisions"][p["current"]]["hunks"]
+    cfg = trust.tiers(root)
+    return (bool(hunks) and all(trust.tier_of(_klass(h), cfg) == "auto_apply" for h in hunks)
+            and not any(f["severity"] == "error" for f in p["checks"]["tier1"]))
+
+
+def _finish(root, p, auto):
+    """After a new revision: pre-mark the boring hunks; apply the whole proposal when the producer asked and it is all boring."""
+    p = store.load(root, p["id"])
+    _premark(root, p)
+    store.save(root, p)
+    if auto and _auto_ok(root, p):
+        try:
+            apply(p["id"], root, auto=True)
+        except ProposalError:
+            pass                                   # stays open with its suggested accepts for the owner
+    return full(store.load(root, p["id"]), root)
 
 
 def _revision(root, ops, note, n):
@@ -71,7 +107,7 @@ def full(p, root=None) -> dict:
     out["stale"] = out["status"] == "stale"
     rev = p["revisions"][p["current"]]
     out["revision"] = rev["n"]
-    out["hunks"] = rev["hunks"]
+    out["hunks"] = [h if h.get("klass") else dict(h, klass=_klass(h)) for h in rev["hunks"]]
     out["counts"], out["check_counts"] = _counts(p)
     return out
 
@@ -94,7 +130,7 @@ def get(pid, root=None) -> dict:
     return full(store.load(root, pid), root)
 
 
-def create(title, ops, producer=None, note=None, root=None, semantic=False, backend=None) -> dict:
+def create(title, ops, producer=None, note=None, root=None, semantic=False, backend=None, auto=False) -> dict:
     root = _writable(root)
     title = " ".join(str(title or "").split())
     if not title:
@@ -106,7 +142,7 @@ def create(title, ops, producer=None, note=None, root=None, semantic=False, back
          "status": "open", "base": base, "base_texts": base_texts, "revisions": [rev], "current": 0,
          "decisions": {}, "checks": {"tier1": rev["checks"], "tier2": []}, "applied": None}
     store.save(root, p)
-    return full(_maybe_semantic(root, p, semantic, backend), root)
+    return _finish(root, _maybe_semantic(root, p, semantic, backend), auto)
 
 
 def _maybe_semantic(root, p, semantic, backend):
@@ -138,7 +174,7 @@ def _open(root, pid):
     return p
 
 
-def revise(pid, ops, note=None, root=None, semantic=False, backend=None) -> dict:
+def revise(pid, ops, note=None, root=None, semantic=False, backend=None, auto=False) -> dict:
     """A new revision against the pages as they are now; decisions survive for hunks whose content is identical."""
     root = _writable(root)
     p = _open(root, pid)
@@ -149,7 +185,7 @@ def revise(pid, ops, note=None, root=None, semantic=False, backend=None) -> dict
     p.update(current=len(p["revisions"]) - 1, base=base, base_texts=base_texts, status="open", updated=now(),
              checks={"tier1": rev["checks"], "tier2": []})
     store.save(root, p)
-    return full(_maybe_semantic(root, p, semantic, backend), root)
+    return _finish(root, _maybe_semantic(root, p, semantic, backend), auto)
 
 
 def decide(pid, decisions, root=None) -> dict:
@@ -171,11 +207,14 @@ def decide(pid, decisions, root=None) -> dict:
     return full(p, root)
 
 
-def apply(pid, root=None) -> dict:
+def apply(pid, root=None, auto=False) -> dict:
     root = _writable(root)
     p = store.load(root, pid)
+    if auto:                                       # auto-apply accepts what it applies, as suggested decisions
+        for h in p["revisions"][p["current"]]["hunks"]:
+            p["decisions"].setdefault(h["id"], {"decision": "accept", "comment": "", "suggested": True, "at": now()})
     try:
-        out = applier.apply(root, p)
+        out = applier.apply(root, p, auto=auto)
     finally:
         p["updated"] = now()
         store.save(root, p)                      # a stale mark or the applied record, either way kept
@@ -204,3 +243,78 @@ def suggestions(root=None) -> list[dict]:
     """The nightly tier-3 suggestions that carry no edit (the review inbox lists them next to the proposals)."""
     from kb_distillery.proposals import nightly
     return nightly.list_suggestions(_root(root))
+
+
+def trust_tiers(root=None) -> dict:
+    """The kb's effective trust tiers: {auto_apply, review, explicit, source: "kb.toml" | "default"}."""
+    return trust.tiers(_root(root))
+
+
+def _blockers(root, p):
+    """Later first-parent commits that changed a page this proposal's commit wrote (a page back at the
+    state of that commit, for example after an undo of the later step, is no blocker): [{slug, commits: ["abc1234 subject"]}]."""
+    commit = (p.get("applied") or {}).get("commit")
+    pages = (p.get("applied") or {}).get("pages") or list(p["base"])
+    if not commit:
+        return None
+    out = []
+    for slug in pages:
+        proc = opscore._git(root, "log", "--first-parent", "--format=%h %s", f"{commit}..HEAD", "--", f"wiki/{slug}.md")
+        if proc.returncode != 0:
+            return None
+        lines = [ln for ln in proc.stdout.splitlines() if ln.strip()]
+        if lines and opscore._blob(root, "HEAD", f"wiki/{slug}.md") != opscore._blob(root, commit, f"wiki/{slug}.md"):
+            out.append({"slug": slug, "commits": lines})
+    return out
+
+
+def feed(since=None, root=None) -> list[dict]:
+    """Applied (and undone) proposals, newest first: what changed without or after review, and whether it can be undone."""
+    root = _root(root)
+    out = []
+    for pid in store.all_ids(root):
+        p = store.load(root, pid)
+        ap = p.get("applied")
+        if p["status"] not in ("applied", "undone") or not ap:
+            continue
+        if since and ap["at"] < since:
+            continue
+        rev = p["revisions"][p["current"]]
+        used = [h for h in rev["hunks"] if h["id"] in set(ap.get("hunks") or [h["id"] for h in rev["hunks"]])]
+        blockers = _blockers(root, p) if p["status"] == "applied" else None
+        item = {"id": p["id"], "title": p["title"], "status": p["status"], "pages": ap.get("pages") or list(p["base"]),
+                "hunks": len(used), "classes": sorted({_klass(h) for h in used}), "applied_at": ap["at"],
+                "commit": ap.get("commit"), "auto": bool(ap.get("auto")), "undoable": blockers == [] and p["status"] == "applied"}
+        if p.get("undone"):
+            item["undone_at"] = p["undone"]["at"]
+        out.append(item)
+    return sorted(out, key=lambda i: i["applied_at"], reverse=True)
+
+
+def undo(pid, root=None) -> dict:
+    """Revert the one commit this proposal made (ops undo); 409 naming the pages when later commits touched them."""
+    root = _writable(root)
+    p = store.load(root, pid)
+    if p["status"] == "undone":
+        raise ProposalError(409, "proposal was already undone")
+    if p["status"] != "applied" or not (p.get("applied") or {}).get("commit"):
+        raise ProposalError(409, f"proposal is {p['status']}, there is nothing to undo")
+    blockers = _blockers(root, p)
+    if blockers is None:
+        raise ProposalError(409, "cannot read the history of the applied commit")
+    if blockers:
+        names = ", ".join(b["slug"] for b in blockers)
+        raise ProposalError(409, f"later commits changed the same pages: {names}; undo or resolve those first",
+                            {"pages": [b["slug"] for b in blockers], "blockers": blockers})
+    try:
+        commit = opscore.undo(p["applied"]["commit"], root=root)
+    except (opscore.OpsError, subprocess.CalledProcessError) as e:
+        raise ProposalError(409, f"undo refused: {e}") from None
+    p.update(status="undone", undone={"at": now(), "commit": commit if isinstance(commit, str) else None}, updated=now())
+    store.save(root, p)
+    return full(p, root)
+
+
+def dismiss_suggestion(sid, root=None) -> dict:
+    from kb_distillery.proposals import nightly
+    return nightly.dismiss_suggestion(_writable(root), sid)

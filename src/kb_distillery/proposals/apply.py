@@ -38,7 +38,7 @@ def accepted(proposal) -> set[str]:
     return {hid for hid, d in proposal["decisions"].items() if d.get("decision") == "accept"}
 
 
-def apply(root: str, proposal: dict) -> dict:
+def apply(root: str, proposal: dict, auto: bool = False) -> dict:
     """Commit the accepted hunks; returns {commit, kb_version}. Mutates `proposal` (status, applied) for the caller to save."""
     if proposal["status"] not in ("open", "stale"):
         raise ProposalError(409, f"proposal is {proposal['status']}, not open")
@@ -92,5 +92,6 @@ def apply(root: str, proposal: dict) -> dict:
     m = cp.SUBJECT_KB.match(subject)
     version = f"kb-{subject.rsplit('(kb-', 1)[1].rstrip(')')}" if m else None
     proposal["status"] = "applied"
-    proposal["applied"] = {"commit": commit, "kb_version": version, "at": now(), "hunks": sorted(ok)}
+    proposal["applied"] = {"commit": commit, "kb_version": version, "at": now(), "hunks": sorted(ok), "auto": bool(auto),
+                          "pages": sorted(texts)}
     return {"commit": commit, "kb_version": version}

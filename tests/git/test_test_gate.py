@@ -13,10 +13,10 @@ def _read(rel):
 
 
 class TestsGateParallel(unittest.TestCase):
-    def test_tests_gate_carries_n6(self):
+    def test_tests_gate_runs_on_every_core(self):
         cmd = dict(ship.GATES)["tests"]
         self.assertIn("-n", cmd)
-        self.assertEqual(cmd[cmd.index("-n") + 1], "6")
+        self.assertEqual(cmd[cmd.index("-n") + 1], "auto")
 
     def test_pytest_xdist_is_declared(self):
         if not os.path.isfile(os.path.join(ROOT, "pixi.toml")):

@@ -911,6 +911,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/proposals/feed": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Applied proposals, newest first, with undoable (auto-applied ones included) */
+        get: operations["feed_api_proposals_feed_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/proposals/suggestions": {
         parameters: {
             query?: never;
@@ -920,6 +937,40 @@ export interface paths {
         };
         /** Nightly tier-3 suggestions without an edit (findings the owner may draft or dismiss) */
         get: operations["suggestions_api_proposals_suggestions_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/proposals/suggestions/{sid}/dismiss": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Dismiss a suggestion (persisted; a dismissed coherence suggestion stays dismissed) */
+        post: operations["dismiss_suggestion_api_proposals_suggestions__sid__dismiss_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/proposals/trust": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The kb's trust tiers (kb.toml [proposals], else the kit default); edit kb.toml by hand */
+        get: operations["trust_api_proposals_trust_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1041,6 +1092,23 @@ export interface paths {
         put?: never;
         /** A new revision; decisions survive for hunks whose before/after are unchanged */
         post: operations["revise_api_proposals__pid__revisions_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/proposals/{pid}/undo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Revert the commit this proposal made (409 naming the pages when later commits touched them) */
+        post: operations["undo_api_proposals__pid__undo_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1499,6 +1567,11 @@ export interface components {
         Applied: {
             /** At */
             at: string;
+            /**
+             * Auto
+             * @default false
+             */
+            auto: boolean;
             /** Commit */
             commit?: string | null;
             /**
@@ -1508,6 +1581,11 @@ export interface components {
             hunks: string[];
             /** Kb Version */
             kb_version?: string | null;
+            /**
+             * Pages
+             * @default []
+             */
+            pages: string[];
         } & {
             [key: string]: unknown;
         };
@@ -2470,6 +2548,46 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
+        /** Feed */
+        Feed: {
+            /** Feed */
+            feed: components["schemas"]["FeedItem"][];
+        } & {
+            [key: string]: unknown;
+        };
+        /** FeedItem */
+        FeedItem: {
+            /** Applied At */
+            applied_at: string;
+            /**
+             * Auto
+             * @default false
+             */
+            auto: boolean;
+            /** Classes */
+            classes: string[];
+            /** Commit */
+            commit?: string | null;
+            /** Hunks */
+            hunks: number;
+            /** Id */
+            id: string;
+            /** Pages */
+            pages: string[];
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "applied" | "undone";
+            /** Title */
+            title: string;
+            /** Undoable */
+            undoable: boolean;
+            /** Undone At */
+            undone_at?: string | null;
+        } & {
+            [key: string]: unknown;
+        };
         /** Finding */
         Finding: {
             /** Code */
@@ -2916,6 +3034,11 @@ export interface components {
              */
             kind: "prose" | "structure";
             /**
+             * Klass
+             * @default
+             */
+            klass: string;
+            /**
              * Links Added
              * @default []
              */
@@ -2965,6 +3088,11 @@ export interface components {
              * @enum {string}
              */
             decision: "accept" | "reject" | "correct";
+            /**
+             * Suggested
+             * @default false
+             */
+            suggested: boolean;
         } & {
             [key: string]: unknown;
         };
@@ -4120,9 +4248,10 @@ export interface components {
              * Status
              * @enum {string}
              */
-            status: "open" | "applied" | "rejected" | "stale";
+            status: "open" | "applied" | "rejected" | "stale" | "undone";
             /** Title */
             title: string;
+            undone?: components["schemas"]["Undone"] | null;
             /** Updated */
             updated: string;
         } & {
@@ -4130,6 +4259,11 @@ export interface components {
         };
         /** ProposalCreate */
         ProposalCreate: {
+            /**
+             * Auto
+             * @default false
+             */
+            auto: boolean;
             /** Backend */
             backend?: ("subscription" | "api" | "batch") | null;
             /** Note */
@@ -4234,7 +4368,7 @@ export interface components {
              * Status
              * @enum {string}
              */
-            status: "open" | "applied" | "rejected" | "stale";
+            status: "open" | "applied" | "rejected" | "stale" | "undone";
             /** Title */
             title: string;
             /** Updated */
@@ -4562,6 +4696,11 @@ export interface components {
         };
         /** RevisionCreate */
         RevisionCreate: {
+            /**
+             * Auto
+             * @default false
+             */
+            auto: boolean;
             /** Backend */
             backend?: ("subscription" | "api" | "batch") | null;
             /** Note */
@@ -5227,6 +5366,8 @@ export interface components {
          * @description A nightly tier-3 finding with no concrete edit: the owner may draft a proposal from it or dismiss it.
          */
         Suggestion: {
+            /** Coherence Id */
+            coherence_id?: string | null;
             /** Created */
             created: string;
             /**
@@ -5234,10 +5375,20 @@ export interface components {
              * @default
              */
             detail: string;
+            /**
+             * Draft
+             * @default
+             */
+            draft: string;
             /** Finding */
             finding: string;
             /** Id */
             id: string;
+            /**
+             * Key
+             * @default
+             */
+            key: string;
             /**
              * Kind
              * @default suggestion
@@ -5246,6 +5397,11 @@ export interface components {
             kind: "suggestion";
             /** Slugs */
             slugs: string[];
+            /**
+             * Source
+             * @default
+             */
+            source: string;
             /**
              * Status
              * @default open
@@ -5432,6 +5588,25 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
+        /**
+         * TrustTiers
+         * @description The kb's hunk classes per trust tier; `source` says whether kb.toml [proposals] set it or the kit default did.
+         */
+        TrustTiers: {
+            /** Auto Apply */
+            auto_apply: string[];
+            /** Explicit */
+            explicit: string[];
+            /** Review */
+            review: string[];
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "kb.toml" | "default";
+        } & {
+            [key: string]: unknown;
+        };
         /** TypeCond */
         TypeCond: {
             /**
@@ -5441,6 +5616,15 @@ export interface components {
             t: "type";
             /** Value */
             value: string | string[];
+        };
+        /** Undone */
+        Undone: {
+            /** At */
+            at: string;
+            /** Commit */
+            commit?: string | null;
+        } & {
+            [key: string]: unknown;
         };
         /** ValidationError */
         ValidationError: {
@@ -7836,6 +8020,38 @@ export interface operations {
             };
         };
     };
+    feed_api_proposals_feed_get: {
+        parameters: {
+            query?: {
+                /** @description ISO timestamp; only proposals applied at or after it */
+                since?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Feed"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     suggestions_api_proposals_suggestions_get: {
         parameters: {
             query?: never;
@@ -7852,6 +8068,90 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SuggestionList"];
+                };
+            };
+        };
+    };
+    dismiss_suggestion_api_proposals_suggestions__sid__dismiss_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Suggestion"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Method Not Allowed */
+            405: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bad Gateway */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    trust_api_proposals_trust_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TrustTiers"];
                 };
             };
         };
@@ -8266,6 +8566,70 @@ export interface operations {
                 "application/json": components["schemas"]["RevisionCreate"];
             };
         };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Proposal"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Method Not Allowed */
+            405: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bad Gateway */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    undo_api_proposals__pid__undo_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                pid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             /** @description Successful Response */
             200: {
