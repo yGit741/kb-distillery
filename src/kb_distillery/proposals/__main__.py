@@ -23,6 +23,9 @@ def main(argv=None):
             for x in cands:
                 print(f"{x['id']}  {x['kind']:<9}  {','.join(x['slugs'])}  {x['detail']}")
             print(f"{len(cands)} request(s) would be sent; nothing was called")
+            known = {r.get("coherence_id") for r in nightly.list_suggestions(a.kb)}
+            print(f"{len([w for w in nightly._coherence_pairs(a.kb) if w['id'] not in known])} coherence suggestion(s) "
+                  f"would be written (0 LLM)")
             return 0
         out = nightly.submit(a.kb, a.backend) if a.cmd == "nightly" else nightly.collect(a.kb, a.batch)
     except Exception as e:  # noqa: BLE001  (a CLI prints the failure, it does not trace)

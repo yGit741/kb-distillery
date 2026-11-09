@@ -14,7 +14,7 @@ import ProposalsScreen from "./index";
 
 function setup(over: Partial<DataSource> = {}, p: Proposal = proposalFixture()) {
   const decideProposal = vi.fn(async (_id: string, d: { hunk_id: string; decision: string; comment?: string }) =>
-    proposalFixture({ decisions: { [d.hunk_id]: { decision: d.decision as "accept", comment: d.comment ?? "" } }, counts: { hunks: 3, accepted: d.decision === "accept" ? 1 : 0, rejected: 0, corrected: 0 } }),
+    proposalFixture({ decisions: { [d.hunk_id]: { decision: d.decision as "accept", comment: d.comment ?? "", suggested: false } }, counts: { hunks: 3, accepted: d.decision === "accept" ? 1 : 0, rejected: 0, corrected: 0 } }),
   );
   const ds = mockDataSource({ getProposal: async () => p, getProposalRender: async () => renderFixture, decideProposal, ...over });
   const root = createRootRoute();
@@ -120,7 +120,7 @@ describe("proposal review screen", () => {
   it("keeps Apply off with the reason while an error finding targets a hunk that is not rejected", async () => {
     const blocked = proposalFixture({
       checks: { tier1: [{ severity: "error", code: "link", message: "link to a missing page", slug: "tensor-rank", hunk_id: "h-link", source: "tier1" }], tier2: [] },
-      decisions: { "h-soften": { decision: "accept", comment: "" }, "h-link": { decision: "accept", comment: "" } },
+      decisions: { "h-soften": { decision: "accept", comment: "", suggested: false }, "h-link": { decision: "accept", comment: "", suggested: false } },
       counts: { hunks: 3, accepted: 2, rejected: 0, corrected: 0 },
     });
     expect(applyBlocker(blocked, blocked.checks.tier1, blocked.hunks)).toMatch(/reject it to apply the rest/);
@@ -131,7 +131,7 @@ describe("proposal review screen", () => {
     await userEvent.click(screen.getByRole("button", { name: "1 error" }));
     expect(screen.getByRole("dialog", { name: "Check findings" })).toHaveTextContent("link to a missing page");
 
-    const ok = proposalFixture({ decisions: { "h-soften": { decision: "accept", comment: "" } }, counts: { hunks: 3, accepted: 1, rejected: 0, corrected: 0 } });
+    const ok = proposalFixture({ decisions: { "h-soften": { decision: "accept", comment: "", suggested: false } }, counts: { hunks: 3, accepted: 1, rejected: 0, corrected: 0 } });
     expect(applyBlocker(ok, [...ok.checks.tier1], ok.hunks)).toBeNull();
   });
 

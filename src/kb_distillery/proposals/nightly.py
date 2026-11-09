@@ -12,6 +12,7 @@ from __future__ import annotations
 import csv
 import json
 import os
+import re
 import statistics
 
 from kb_distillery import llm
@@ -105,18 +106,21 @@ def _dir(root, name):
 
 
 def submit(root: str, backend: str = "batch") -> dict:
+    """The nightly run: 0-LLM coherence suggestions first, then one batch of fix requests for the candidates."""
+    mine = suggest_from_coherence(root)
     cands = scan(root)
     if not cands:
-        return {"batch": None, "candidates": 0}
+        return {"batch": None, "candidates": 0, "coherence_suggestions": len(mine)}
     reqs = requests_for(root, cands)
     if backend == "batch":
         bid = llm.submit(reqs)
         record = {"batch": bid, "backend": backend, "submitted": now(), "candidates": cands}
         with open(os.path.join(_dir(root, BATCH_DIR), f"{bid}.json"), "w", encoding="utf-8") as f:
             json.dump(record, f, indent=1)
-        return {"batch": bid, "candidates": len(cands)}
+        return {"batch": bid, "candidates": len(cands), "coherence_suggestions": len(mine)}
     results = llm.run(reqs, backend=backend)
-    return {"batch": None, "candidates": len(cands), "written": write(root, cands, results)}
+    return {"batch": None, "candidates": len(cands), "written": write(root, cands, results),
+            "coherence_suggestions": len(mine)}
 
 
 def collect(root: str, bid: str, wait_s: int = 24 * 3600) -> dict:
@@ -201,3 +205,65 @@ def list_suggestions(root: str) -> list[dict]:
             with open(os.path.join(d, n), encoding="utf-8") as f:
                 out.append(json.load(f))
     return sorted(out, key=lambda r: r["created"], reverse=True)
+
+
+COHERENCE_KINDS = ("contradiction", "duplicate")
+DRAFT_HINT = "ask the agent to draft a fix"
+_SID = re.compile(r"^[0-9a-f]{4,32}$")
+
+
+def _coherence_pairs(root):
+    """Open coherence warnings that involve exactly two pages: [{id, finding, slugs, summary}] (0 LLM)."""
+    path = os.path.join(root, "meta", "coherence-warnings.tsv")
+    if not os.path.isfile(path):
+        return []
+    out = []
+    with open(path, encoding="utf-8", newline="") as f:
+        for row in csv.DictReader(f, delimiter="\t"):
+            slugs = [s for s in (row.get("slugs") or "").split(",") if s]
+            summary = row.get("summary") or ""
+            if row.get("status") != "open" or len(slugs) != 2 or not row.get("id"):
+                continue
+            if "duplicate" in summary.lower():
+                finding = "duplicate"
+            elif row.get("kind") in ("internal", "external"):
+                finding = "contradiction"
+            else:
+                continue                                  # asymmetric links, drift, ...: not a two-page conflict
+            if all(os.path.isfile(os.path.join(root, "wiki", f"{s}.md")) for s in slugs):
+                out.append({"id": row["id"], "finding": finding, "slugs": slugs, "summary": summary})
+    return out
+
+
+def suggest_from_coherence(root: str) -> list[str]:
+    """One `suggestion` record per open two-page coherence warning, deduped by coherence id (a dismissed one stays
+    dismissed; one the nightly model run already turned into a suggestion or proposal is skipped). Returns new ids."""
+    known = {r.get("coherence_id") for r in list_suggestions(root) if r.get("coherence_id")}
+    known |= {key for kind, key in _seen(root) if kind == "coherence"}
+    made = []
+    for w in _coherence_pairs(root):
+        if w["id"] in known:
+            continue
+        sid = new_id()
+        a, b = w["slugs"]
+        rec = {"id": sid, "kind": "suggestion", "finding": w["finding"], "key": w["id"], "coherence_id": w["id"],
+               "source": "coherence", "slugs": w["slugs"], "detail": w["summary"],
+               "summary": f"Possible {w['finding']} between {a} and {b}: {w['summary']}", "draft": DRAFT_HINT,
+               "created": now(), "status": "open"}
+        with open(os.path.join(_dir(root, SUGGESTIONS), f"{sid}.json"), "w", encoding="utf-8") as f:
+            json.dump(rec, f, indent=1)
+        made.append(sid)
+    return made
+
+
+def dismiss_suggestion(root: str, sid: str) -> dict:
+    """Mark a suggestion dismissed (persisted; the coherence dedupe keeps it from coming back)."""
+    path = os.path.join(root, LOCAL_DIR, SUGGESTIONS, f"{sid}.json")
+    if not _SID.match(sid or "") or not os.path.isfile(path):
+        raise ProposalError(404, f"no suggestion {sid!r}")
+    with open(path, encoding="utf-8") as f:
+        rec = json.load(f)
+    rec.update(status="dismissed", dismissed=now())
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(rec, f, indent=1)
+    return rec

@@ -7,7 +7,7 @@ import re
 import secrets
 
 PRODUCER_KINDS = ("manual", "chat", "flags", "ingest", "restructure", "lint", "restore")
-STATUSES = ("open", "applied", "rejected", "stale")
+STATUSES = ("open", "applied", "rejected", "stale", "undone")
 DECISIONS = ("accept", "reject", "correct")
 SEVERITIES = ("error", "warning", "info")
 

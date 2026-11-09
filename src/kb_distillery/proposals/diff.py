@@ -12,6 +12,7 @@ import difflib
 import hashlib
 import re
 
+from kb_distillery.proposals import trust
 from kb_distillery.proposals.model import NOT_YET, ProposalError
 from kb_distillery.vault import links as page_links
 from kb_distillery.vault import wikiio
@@ -76,11 +77,13 @@ def _links(text):
 
 def _hunk(slug, op, before, after, structural, at=0, span=0):
     added, removed = sorted(_links(after) - _links(before)), sorted(_links(before) - _links(after))
-    return {"id": "", "op_id": op["id"], "op": op["kind"], "slug": slug,
-            "kind": "structure" if structural or added or removed else "prose",
-            "before": before, "after": after, "tokens": word_tokens(before, after),
-            "reason": op.get("reason", ""), "sources": op.get("sources", []),
-            "links_added": added, "links_removed": removed, "at": at, "span": span}
+    h = {"id": "", "op_id": op["id"], "op": op["kind"], "slug": slug,
+         "kind": "structure" if structural or added or removed else "prose",
+         "before": before, "after": after, "tokens": word_tokens(before, after),
+         "reason": op.get("reason", ""), "sources": op.get("sources", []),
+         "links_added": added, "links_removed": removed, "at": at, "span": span}
+    h["klass"] = trust.classify_hunk(h)
+    return h
 
 
 def _key(block):

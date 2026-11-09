@@ -9,7 +9,7 @@ from kb_distillery.proposals import service as svc
 from kb_distillery.proposals.model import ProposalError
 from kb_distillery.server.models.proposals import (ApplyResult, DecisionRequest, Proposal, ProposalCreate, ProposalList,
                                                    ProposalRender, RejectRequest, RevisionCreate, SemanticRequest,
-                                                   SemanticResult, SuggestionList)
+                                                   SemanticResult, Suggestion, SuggestionList, TrustTiers, Feed)
 from kb_distillery.server.readonly import refuse_when_read_only
 
 router = APIRouter(tags=["proposals"])
@@ -39,11 +39,29 @@ def suggestions():
     return _call(lambda: {"suggestions": svc.suggestions()})
 
 
+@router.post("/api/proposals/suggestions/{sid}/dismiss", dependencies=WRITE, response_model=Suggestion,
+             responses=ERRORS, summary="Dismiss a suggestion (persisted; a dismissed coherence suggestion stays dismissed)")
+def dismiss_suggestion(sid: str):
+    return _call(svc.dismiss_suggestion, sid)
+
+
+@router.get("/api/proposals/trust", response_model=TrustTiers,
+            summary="The kb's trust tiers (kb.toml [proposals], else the kit default); edit kb.toml by hand")
+def trust():
+    return _call(svc.trust_tiers)
+
+
+@router.get("/api/proposals/feed", response_model=Feed,
+            summary="Applied proposals, newest first, with undoable (auto-applied ones included)")
+def feed(since: str | None = Query(None, description="ISO timestamp; only proposals applied at or after it")):
+    return _call(lambda: {"feed": svc.feed(since)})
+
+
 @router.post("/api/proposals", dependencies=WRITE, response_model=Proposal, responses=ERRORS,
              summary="Create a proposal (revision 1): hunks and tier-1 checks computed here")
 def create(body: ProposalCreate):
     return _call(svc.create, body.title, _ops(body.ops), body.producer.model_dump(), body.note, semantic=body.semantic,
-                 backend=body.backend)
+                 backend=body.backend, auto=body.auto)
 
 
 @router.get("/api/proposals/{pid}", response_model=Proposal, responses=ERRORS,
@@ -55,7 +73,8 @@ def get(pid: str):
 @router.post("/api/proposals/{pid}/revisions", dependencies=WRITE, response_model=Proposal, responses=ERRORS,
              summary="A new revision; decisions survive for hunks whose before/after are unchanged")
 def revise(pid: str, body: RevisionCreate):
-    return _call(svc.revise, pid, _ops(body.ops), body.note, semantic=body.semantic, backend=body.backend)
+    return _call(svc.revise, pid, _ops(body.ops), body.note, semantic=body.semantic, backend=body.backend,
+                 auto=body.auto)
 
 
 @router.post("/api/proposals/{pid}/decisions", dependencies=WRITE, response_model=Proposal, responses=ERRORS,
@@ -92,3 +111,9 @@ def render(pid: str):
              summary="Tier-2 scoped semantic check of the current revision (one model call per touched page)")
 def semantic(pid: str, body: SemanticRequest | None = None):
     return _call(svc.semantic, pid, body.backend if body else None)
+
+
+@router.post("/api/proposals/{pid}/undo", dependencies=WRITE, response_model=Proposal, responses=ERRORS,
+             summary="Revert the commit this proposal made (409 naming the pages when later commits touched them)")
+def undo(pid: str):
+    return _call(svc.undo, pid)
