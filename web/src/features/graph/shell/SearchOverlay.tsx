@@ -7,6 +7,7 @@ import { flag } from "@/flags";
 import { useFlag } from "@/flags/useFlag";
 import { useKb } from "@/lib/store";
 import { useApiQuery } from "@/lib/useApiQuery";
+import { GRAPH_KEY } from "@/lib/query";
 import { IS_SHARE } from "@/share/env";
 import { useCapabilities } from "./capabilities";
 import type { ToolHost } from "../hostContext";
@@ -81,7 +82,7 @@ function Sheet({ onClose }: { onClose: () => void }) {
   const host = useMemo<ToolHost>(() => ({ go: (to, search) => (onClose(), go(to, search)), href: (to) => to, openPage: (slug) => (onClose(), go(`/pages/${encodeURIComponent(slug)}`)) }), [go, onClose]);
 
   const live = ds.kind !== "embedded";
-  const graphQ = useApiQuery(["graph", false], (d) => d.getGraph());
+  const graphQ = useApiQuery([...GRAPH_KEY], (d) => d.getGraph());
   const viewsQ = useApiQuery(["views"], (d) => d.listViews(), { enabled: live || caps.readViews, retry: false, staleTime: 5_000 });
   const nodes = useMemo<GNode[]>(() => graphQ.data?.nodes ?? [], [graphQ.data]);
   const byId = useMemo(() => new Map(nodes.map((n) => [n.id, n] as const)), [nodes]);

@@ -3,6 +3,7 @@ import { Feather, MessageSquare } from "lucide-react";
 import { flag } from "@/flags";
 import { useChatDock } from "@/features/graph/tools/chatDockStore";
 import { useApiQuery } from "@/lib/useApiQuery";
+import { GRAPH_KEY } from "@/lib/query";
 import { SYSTEM_TABS } from "@/routes/search";
 import { useEffect } from "react";
 import {
@@ -47,7 +48,7 @@ export function CommandPalette() {
     void navigate({ to: to as "/", search: search as never });
   };
   // pages come from the graph snapshot, fetched only once the palette is opened (and cached with the graph)
-  const graph = useApiQuery(["graph", false], (d) => d.getGraph(), { enabled: paletteOpen });
+  const graph = useApiQuery([...GRAPH_KEY], (d) => d.getGraph(), { enabled: paletteOpen });
   const pages = graph.data?.nodes ?? [];
 
   return (

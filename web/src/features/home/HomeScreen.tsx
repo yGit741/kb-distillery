@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Empty, ErrorState, Loading } from "@/components/states";
 import { useApiQuery } from "@/lib/useApiQuery";
+import { GRAPH_KEY } from "@/lib/query";
 import { SHARE_PROFILE } from "@/share/env";
 import { isPublic } from "@/features/graph/publicPredicate";
 import type { GNode } from "@/features/graph/types";
@@ -58,7 +59,7 @@ const HOME_INTRO: MapIntro = { id: "home-intro", title: "A Map of the Knowledge 
 
 /** The map card: a title, optionally the glossary, and Pick a Concept (ego graph, one source's pipeline, Back). */
 export function MapCard({ host, concept: wanted, intro = HOME_INTRO }: { host: HomeHost; concept?: string; intro?: MapIntro }) {
-  const q = useApiQuery(["graph", false], (d) => d.getGraph());
+  const q = useApiQuery([...GRAPH_KEY], (d) => d.getGraph());
   const publicOnly = SHARE_PROFILE === "public";
   const [seed, setSeed] = useState(newSeed);
   const [local, setLocal] = useState<string | undefined>(undefined);
