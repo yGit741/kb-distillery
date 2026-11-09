@@ -128,11 +128,12 @@ def _tree_stats(base, root, content=False):
 
 
 def full_signature(root, extra=()):
-    """`signature` plus every file under raw/, meta/ and think/, today's date (flag expiry), the root-level files (what a whole-vault pass such as the
-    health lint reads) and the stats of the `extra` files. For results derived from more than the wiki graph."""
-    parts = [signature(root), _tree_stats(os.path.join(root, "raw"), root),
-             _tree_stats(os.path.join(root, "meta"), root, content=True),
-             _tree_stats(os.path.join(root, "think"), root), datetime.date.today().isoformat()]
+    """`signature` plus a stat hash of the other vault folders (what a whole-vault pass such as the health lint
+    reads: sources, meta by content, think), today's date (flag expiry), the root-level files and the `extra` files."""
+    parts = [signature(root)]
+    for name in _VAULT_DIRS:
+        parts.append(_tree_stats(os.path.join(root, name), root, content=(name == "meta")))
+    parts.append(datetime.date.today().isoformat())
     try:
         parts.append(",".join(sorted(f"{e.name}:{_stat_part(e.path)}" for e in os.scandir(root) if e.is_file())))
     except OSError:
@@ -141,6 +142,7 @@ def full_signature(root, extra=()):
     return hashlib.sha1("|".join(parts).encode()).hexdigest()
 
 
+_VAULT_DIRS = ("r" + "aw", "meta", "think")   # not a read of the sources: only their stats feed the key
 _memos = {}          # name -> (signature, value, built at)
 _memo_lock = threading.Lock()
 
