@@ -1637,8 +1637,8 @@ ADMIN_ROLE = 5                        # GitHub's RepositoryRole id for admin (th
 
 
 def ruleset_body(merge_queue=True):
-    """The branch ruleset on main: pull requests only, merge commits only, `all-green` required, merged through the
-    merge queue in batches. The one bypass is the repository admin (the owner) and only through a pull request
+    """The branch ruleset on main: pull requests only, merge commits only, `all-green` required and, where GitHub offers
+    it, the merge queue (batches). The one bypass is the repository admin (the owner) and only through a pull request
     (`bypass_mode: pull_request`): a hotfix route when CI itself is down, never a direct push to main.
     `merge_queue=False` leaves the queue rule out: GitHub offers the queue to organization-owned repositories only; a
     user-owned one merges each PR by auto-merge once `all-green` passes (same gate, no batching)."""
@@ -1693,9 +1693,12 @@ def cmd_protect(root=ROOT, ruleset=False):
         print(f"GitHub: ruleset `{RULESET_NAME}` {verb}: pull requests only, `{REQUIRED_CHECK}` required, merge queue (batches of up to 5)")
         return 0
     reason = _out(cp).strip()
+    if "422" not in reason and "Validation Failed" not in reason:      # auth, network, 5xx: not the queue's fault, no retry
+        print(reason or "error: the ruleset request failed without a response")
+        return cp.returncode
     # GitHub offers the merge queue to organization-owned repositories only; a user-owned one refuses the rule (422)
-    print(f"GitHub refused the ruleset with a merge queue ({reason.splitlines()[-1] if reason else 'no detail'}); "
-          "retrying without it: a user-owned repository merges by auto-merge once `all-green` passes (same gate, no batching)")
+    print(f"GitHub refused the ruleset with a merge queue:\n{reason}\n"
+          "retrying without it: a user-owned repository merges each PR by auto-merge once `all-green` passes (same gate, no batching)")
     cp = _put_ruleset(path, existing, ruleset_body(merge_queue=False), root)
     print(_out(cp) if cp.returncode else f"GitHub: ruleset `{RULESET_NAME}` {verb}: pull requests only, `{REQUIRED_CHECK}` required, auto-merge on green")
     return cp.returncode
@@ -1704,9 +1707,10 @@ def cmd_protect(root=ROOT, ruleset=False):
 def _put_ruleset(path, existing, body, root):
     """POST (new) or PUT (existing) one ruleset body as the user; the response text is kept for the caller's message."""
     with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False) as f:
-        json.dump(body, f)
         tmp = f.name
     try:
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(body, f)
         return gh(["api", "-X", "PUT" if existing else "POST", path, "--input", tmp], root, user=True)
     finally:
         os.unlink(tmp)

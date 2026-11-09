@@ -1,4 +1,6 @@
 """`ship protect`: the repo's merge settings as the user and, with --ruleset, the branch ruleset on main (create or update)."""
+import contextlib
+import io
 import json
 import os
 import unittest
@@ -17,7 +19,9 @@ def _cp(stdout="", rc=0):
 
 
 class ProtectTest(unittest.TestCase):
-    def _run(self, rulesets, ruleset=True, queue_refused=False):
+    def _run(self, rulesets, ruleset=True, queue_refused=False, put_error=None, quiet=True):
+        """`queue_refused`: GitHub answers 422 to a body with the merge_queue rule (a user-owned repository);
+        `put_error`: every ruleset write fails with this stderr; `quiet=False` leaves print alone for a stdout capture."""
         calls, bodies = [], []
 
         def fake_gh(args, root=None, user=False):
@@ -27,11 +31,14 @@ class ProtectTest(unittest.TestCase):
             if "--input" in args:
                 with open(args[args.index("--input") + 1]) as f:
                     bodies.append(json.load(f))
+                if put_error:
+                    return SimpleNamespace(returncode=1, stdout="", stderr=put_error)
                 if queue_refused and any(r["type"] == "merge_queue" for r in bodies[-1]["rules"]):
-                    return SimpleNamespace(returncode=1, stdout="", stderr="gh: Validation Failed (HTTP 422)")
+                    return SimpleNamespace(returncode=1, stdout='{"message": "Validation Failed", "errors": ["merge_queue"]}',
+                                           stderr="gh: Validation Failed (HTTP 422)")
             return _cp()
 
-        with patch.object(ship, "gh", fake_gh), patch("builtins.print"):
+        with patch.object(ship, "gh", fake_gh), (patch("builtins.print") if quiet else contextlib.nullcontext()):
             rc = ship.cmd_protect(root="/tmp", ruleset=ruleset)
         return rc, [a for a, _ in calls], [u for _, u in calls], bodies
 
@@ -72,6 +79,30 @@ class ProtectTest(unittest.TestCase):
                          [r["type"] for r in bodies[0]["rules"] if r["type"] != "merge_queue"])      # nothing else dropped
         self.assertEqual(sum("POST" in a for a in args), 2)
         self.assertFalse(any("--silent" in a for a in args if "--input" in a))      # GitHub's reason for a refused ruleset must reach the user
+
+    def test_the_refusal_reason_is_printed_in_full(self):
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            self._run([], queue_refused=True, quiet=False)
+        self.assertIn('"errors": ["merge_queue"]', out.getvalue())       # the body gh hides behind --silent
+
+    def test_an_existing_ruleset_is_updated_in_place_without_the_queue(self):
+        rc, args, _, bodies = self._run([{"id": 42, "name": "main"}], queue_refused=True)
+        self.assertEqual(rc, 0)
+        puts = [a for a in args if "PUT" in a]
+        self.assertEqual(len(puts), 2)
+        self.assertTrue(all(a[3] == "repos/{owner}/{repo}/rulesets/42" for a in puts))
+        self.assertFalse(any(r["type"] == "merge_queue" for r in bodies[1]["rules"]))
+
+    def test_a_failure_that_is_not_a_422_is_not_retried(self):
+        rc, args, _, bodies = self._run([], put_error="gh: HTTP 403: Resource not accessible by personal access token")
+        self.assertEqual(rc, 1)
+        self.assertEqual(len(bodies), 1)                                 # one attempt, the reason printed, no stripped retry
+
+    def test_both_attempts_failing_stops_after_two(self):
+        rc, args, _, bodies = self._run([], put_error="gh: Validation Failed (HTTP 422)")
+        self.assertEqual(rc, 1)
+        self.assertEqual(len(bodies), 2)
 
     def test_ruleset_requires_all_green_and_merges_through_the_queue(self):
         body = ship.ruleset_body()
