@@ -8,7 +8,7 @@
 # Runners: GitHub-hosted `ubuntu-latest` only. A fork's pull request never reaches a self-hosted machine
 # (tests/ci/test_workflows.py fails on any other runner).
 #
-# Jobs: `lint` (the cheap gates, ~1-2 min), `tests` (pytest in 4 static shards, each with `-n auto` and a
+# Jobs: `lint` (the cheap gates, ~1-2 min), `tests` (pytest in 5 static shards, each with `-n auto` and a
 # per-test timeout; the shard list and the `--ignore`s of the last shard must cover every tests/ dir exactly
 # once, tests/ci/test_workflows.py checks that), `web` (web-check), `wheel`, `worker`, and `all-green`, the
 # fan-in that is green only when every other job succeeded (cancelled or skipped count as red). Branch
@@ -60,9 +60,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - shard: git-ops
-            paths: tests/git tests/ops tests/metrics
+        include:     # sized so the slowest shard (git: real repos and subprocesses) stays near a minute
+          - shard: git
+            paths: tests/git
+          - shard: ops-vault
+            paths: tests/ops tests/metrics tests/vault
           - shard: server
             paths: tests/server tests/services tests/llm tests/proposals tests/graph
           - shard: ingest-publish
@@ -70,7 +72,7 @@ jobs:
             serial: tests/ingest
           - shard: rest
             paths: >-
-              tests --ignore=tests/git --ignore=tests/ops --ignore=tests/metrics
+              tests --ignore=tests/git --ignore=tests/ops --ignore=tests/metrics --ignore=tests/vault
               --ignore=tests/server --ignore=tests/services --ignore=tests/llm --ignore=tests/proposals --ignore=tests/graph
               --ignore=tests/ingest --ignore=tests/publish --ignore=tests/digest --ignore=tests/distill
     name: tests (${{ matrix.shard }})
@@ -104,8 +106,19 @@ jobs:
         with:
           path: ~/.npm
           key: npm-${{ runner.os }}-${{ hashFiles('web/package-lock.json') }}
-      - run: pixi run web-install
-      - run: pixi run web-check
+      - name: Does this pull request touch the app? (a merge-group run and a main push always check it)
+        id: app
+        env:
+          BASE: ${{ github.base_ref }}
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ] && git diff --quiet "origin/$BASE...HEAD" -- web/ pixi.toml pixi.lock \
+               src/kb_distillery/config/flags src/kb_distillery/kits/base/defaults/flags.toml src/kb_distillery/webbuild.py scripts/check-untracked-dist.sh; then
+            echo "skip=1" >> "$GITHUB_OUTPUT"; echo "no app change in this pull request: web-check waits for the merge queue"
+          fi
+      - if: steps.app.outputs.skip != '1'
+        run: pixi run web-install
+      - if: steps.app.outputs.skip != '1'
+        run: pixi run web-check
 
   checks:     # the lane checks `ship pr` used to run locally: API schema, flags registry, the graph e2e still-canvas test, ui-principles
     runs-on: ubuntu-latest
