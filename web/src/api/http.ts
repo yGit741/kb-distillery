@@ -163,6 +163,14 @@ export function createHttpDataSource(fetchImpl: Fetch = (...a) => fetch(...a), b
     postPageChat: (slug, body) =>
       run(() => client.POST("/api/pages/{slug}/chat", { params: { path: { slug } }, body }), `/api/pages/${slug}/chat`),
     getPageChat: (slug) => run(() => client.GET("/api/pages/{slug}/chat", { params: { path: { slug } } }), `/api/pages/${slug}/chat`),
+    listPageFlags: (slug) => run(() => client.GET("/api/pages/{slug}/flags", { params: { path: { slug } } }), `/api/pages/${slug}/flags`),
+    addPageFlag: (slug, body) =>
+      run(() => client.POST("/api/pages/{slug}/flags", { params: { path: { slug } }, body }), `/api/pages/${slug}/flags`),
+    deletePageFlag: async (slug, id) => {
+      await run(() => client.DELETE("/api/pages/{slug}/flags/{flag_id}", { params: { path: { slug, flag_id: id } } }), `/api/pages/${slug}/flags/${id}`);
+    },
+    fixPageFlags: (slug) =>
+      run(() => client.POST("/api/pages/{slug}/flags/fix", { params: { path: { slug } }, body: {} }), `/api/pages/${slug}/flags/fix`),
     searchMentions: async (q) =>
       (await run(() => client.GET("/api/pages/mentions", { params: { query: { q } } }), "/api/pages/mentions")).pages,
     getPageSource: async (slug) => {
