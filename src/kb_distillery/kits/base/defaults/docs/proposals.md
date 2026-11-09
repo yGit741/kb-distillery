@@ -39,7 +39,33 @@ step per applied proposal.
 Run on every new revision, before anyone sees it; no model: (a) every link in the new text resolves to a page or to a
 page the same proposal creates, (b) the lint checks of `kb_distillery.lint.lint` on an in-memory copy of the pages
 with the proposal's result overlaid (the real tree is not written) plus the My notes rule, (c) the privacy ratchet
-terms on the new text, (d) the frontmatter still parses. Tier 2 (model-based review) is reserved.
+terms on the new text, (d) the frontmatter still parses.
+
+## Check tiers
+
+Three tiers, cheapest first; only tier 1 can block apply.
+
+1. **Tier 1, structural** (above): deterministic, runs on every revision, severity up to `error`.
+2. **Tier 2, scoped semantic** (`proposals/checks_semantic.py`): one `kb_distillery.llm.ask` call per touched page.
+   Scope = the touched pages plus their direct graph neighbours (links out and links in, `## My notes` links ignored),
+   capped at `KB_PROPOSAL_SEMANTIC_CAP` pages (default 20), so cost follows the change, not the kb. The model sees the
+   after-text of the page's hunks and neighbour excerpts and returns JSON findings `{code: contradiction | unsupported |
+   duplicate | overclaim, severity: warning | info, message, hunk_id, evidence, neighbour_slug}`; findings on an unknown
+   hunk id are dropped and `error` is never produced. Open internal coherence warnings
+   (`meta/coherence-warnings.tsv`, 0 LLM) on a touched page are added as `coherence` findings. The result replaces
+   `checks.tier2` of the proposal. Trigger: `POST /api/proposals/{id}/checks/semantic {backend?}` (synchronous, returns
+   `{revision, findings}`), or `semantic: true` (and `backend`) on `POST /api/proposals` and `.../revisions`, which runs
+   it right after tier 1 (a failed model call then leaves one `semantic-unavailable` info finding).
+3. **Tier 3, nightly suggestions** (`proposals/nightly.py`): `pixi run proposals-nightly -- --kb <path> [--backend
+   batch] [--dry-run]` scans for open coherence warnings, near-duplicate pages (title and link overlap) and pages over
+   3x the median body length, and submits ONE batch asking for a fix per finding. `python -m kb_distillery.proposals
+   collect --kb <path> <batch>` writes each answer: a concrete `edit_page` text becomes an open proposal with
+   producer.kind `lint`; anything else becomes a `suggestion` record in `<kb>/.local/suggestions/`, listed by
+   `GET /api/proposals/suggestions`. `--dry-run` prints the candidates and the request count and calls nothing. Tier 3
+   never applies anything.
+
+**Billing.** Tier 2 follows the request's `backend` (default `$KB_LLM_BACKEND`, then subscription); all three are
+selectable. Tier 3 defaults to the Batch API (half price, collected later) and takes `--backend` too.
 
 ## API
 
