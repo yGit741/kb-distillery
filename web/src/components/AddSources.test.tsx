@@ -60,6 +60,25 @@ describe("AddSources", () => {
     expect(await screen.findByText(/3 files catalogued/)).toBeInTheDocument();
   });
 
+  it("the folder form shows the skipped count and is busy while linking", async () => {
+    let done: (v: { linked: boolean; files_catalogued: number; skipped: number }) => void = () => {};
+    const linkInboxFolder = vi.fn(() => new Promise<{ linked: boolean; files_catalogued: number; skipped: number }>((res) => { done = res; }));
+    show({ linkInboxFolder });
+    await userEvent.type(screen.getByPlaceholderText(/folder path/), "/Users/jdoe/papers");
+    await userEvent.click(screen.getByRole("button", { name: "Link" }));
+    const busy = screen.getByRole("button", { name: "Linking…" });
+    expect(busy).toBeDisabled();
+    fireEvent.submit(screen.getByRole("form", { name: /link a local folder/i }));
+    expect(linkInboxFolder).toHaveBeenCalledTimes(1);
+    done({ linked: true, files_catalogued: 1, skipped: 2 });
+    expect(await screen.findByText(/1 file catalogued from this folder, 2 skipped/)).toBeInTheDocument();
+  });
+
+  it("renders nothing when the data source is not http (read-only build)", () => {
+    show({ kind: "embedded" });
+    expect(screen.queryByTestId("add-sources")).not.toBeInTheDocument();
+  });
+
   it("an API error renders as one plain line", async () => {
     show({
       addInboxFiles: async () => { throw new ApiError("This knowledge base is read-only.", 405); },
@@ -81,6 +100,12 @@ describe("http data source: inbox", () => {
     const ds = createHttpDataSource(fetchImpl as unknown as typeof fetch, "http://x");
     await expect(ds.addInboxFiles([file("a.txt")])).rejects.toMatchObject({ message: "File too large", status: 413 });
     expect(fetchImpl.mock.calls[0]?.[0]).toBe("/api/inbox/files");
+  });
+
+  it("reads an array detail (validation errors) as one line", async () => {
+    const fetchImpl = vi.fn(async () => new Response(JSON.stringify({ detail: [{ msg: "Field required" }, { msg: "Bad path" }] }), { status: 422 }));
+    const ds = createHttpDataSource(fetchImpl as unknown as typeof fetch, "http://x");
+    await expect(ds.linkInboxFolder("/p")).rejects.toMatchObject({ message: "Field required; Bad path", status: 422 });
   });
 
   it("posts the folder path as JSON", async () => {

@@ -8,6 +8,7 @@ import { installTours } from "@/features/tour/tours";
 import { loadFlagOverrides } from "@/flags/load";
 import "@/features/home/tours"; // the Home → Graph journeys, so `?tour=` works on any route
 import "@/features/system/tours"; // the knowledge-base tour (what this app loads, from where)
+import "@/features/first-run/tours"; // the first-run card tour (`?tour=first-run`)
 import "./index.css";
 
 // A share build carries its data in the page; the embedded DataSource reads it from this global.
