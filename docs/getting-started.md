@@ -1,6 +1,6 @@
 # Getting started
 
-This page takes you from a clone to a first digest. You need [pixi](https://pixi.sh) and git. Node is installed by pixi.
+This page takes you from a clone to a first digest. You need git. The installer adds [pixi](https://pixi.sh), and pixi installs Node.
 
 Supported platforms: macOS (Apple silicon and Intel), Linux x86-64, and Windows through WSL2. Installing the wheel with pip needs Python 3.11 or newer; older Pythons fail with a confusing `grand-cypher` error.
 
@@ -9,7 +9,7 @@ AI features are optional. Reading, linking, linting and the app work without a k
 ## Install in two lines
 
 ```bash
-git clone <repo-url> && cd kb-distillery
+git clone <repo-url> kb-distillery && cd kb-distillery
 ./install.sh
 ```
 
@@ -24,7 +24,7 @@ The installer runs on Windows inside WSL2, not in PowerShell or cmd.
 3. Clone into the Linux home folder, for example `~/kb-distillery`, and run the same two lines there. Avoid `/mnt/c/...`: file access across the Windows boundary is slow and breaks git file modes.
 4. The app listens on `http://127.0.0.1:8765`. Open that address in your Windows browser. If it does not load, run `wsl --update` and try again.
 
-Your knowledge base lives in the Linux home folder (`~/knowledge/<id>/`). To reach it from Windows, open `\\wsl$\Ubuntu\home\<you>\knowledge` in Explorer.
+Your knowledge base lives in the Linux home folder (`~/knowledge/<id>/`). To reach it from Windows, open `\\wsl.localhost\Ubuntu\home\<you>\knowledge` in Explorer.
 
 ## Step by step
 

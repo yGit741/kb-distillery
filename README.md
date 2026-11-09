@@ -11,7 +11,7 @@ kb-distillery builds a knowledge base from sources you collect. You put papers, 
 You need git. Supported platforms: macOS (Apple silicon and Intel), Linux x86-64, and Windows through WSL2 ([setup](docs/getting-started.md#windows-wsl2)). Clone this repository and run the installer:
 
 ```bash
-git clone <repo-url> && cd kb-distillery
+git clone <repo-url> kb-distillery && cd kb-distillery
 ./install.sh
 ```
 
