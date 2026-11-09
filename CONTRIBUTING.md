@@ -1,5 +1,15 @@
 # Contributing
 
+## How contributions work
+
+- **Issues are welcome.** Bug reports, feature requests and questions: use the issue templates. A small, reproducible report is the most useful contribution there is.
+- **Core pull requests are by invitation.** The engine (`src/`, `web/`, the kits) has a strict layer contract and a schema that migrates people's knowledge bases, so changes to it start from an issue where the maintainer agrees on the approach and invites you to send it. Unsolicited core pull requests may be closed with thanks. Documentation fixes, typo fixes and examples are always welcome as pull requests without an invitation.
+- **Extensions are separate packages.** Kits, storage connectors, publishers and skills live in their own repositories and plug in through entry points; you do not need our permission or a merge to ship one. See "Extending" below.
+
+Who decides what: [GOVERNANCE.md](GOVERNANCE.md). How we behave: [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md). Vulnerability reports: [.github/SECURITY.md](.github/SECURITY.md), never a public issue.
+
+The rest of this file is for invited contributors and for maintainers.
+
 This repository is the engine of kb-distillery: the code, the kits and the guides. A knowledge base is not part of it.
 
 ## Set up
@@ -35,7 +45,7 @@ Knowledge bases live in `~/knowledge/<id>` (or under `$KB_DISTILLERY_HOME`), eac
 
 | Folder | What it holds |
 |---|---|
-| `.github/` | CI workflows, issue and pull request templates, security policy and code of conduct |
+| `.github/` | CI workflows, issue and pull request templates and the security policy |
 | `docs/` | public documentation and guides |
 | `examples/` | the sample knowledge base (`demo/`) and scheduler templates (`launchd/`) |
 | `scripts/` | git and Claude hooks and launch scripts |
@@ -82,4 +92,4 @@ Each guide names the contract test the implementation must pass.
 
 ## Conduct and license
 
-See [`.github/CODE_OF_CONDUCT.md`](.github/CODE_OF_CONDUCT.md). Contributions are released under the [MIT license](LICENSE).
+See [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) and [GOVERNANCE.md](GOVERNANCE.md). Contributions are released under the [MIT license](LICENSE).
