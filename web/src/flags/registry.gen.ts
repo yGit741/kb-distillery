@@ -199,27 +199,27 @@ export const FLAGS: Readonly<Record<FlagName, FlagMeta>> = {
     }
   },
   "screen.digest-jobs": {
-    "description": "Pipeline and first-run card: pick sources, preview what a digest costs on each backend, start it as a job, watch it and cancel it, open the pages it wrote",
+    "description": "Pipeline and first-run card: pick sources, preview what a digest costs on each backend, start it as a job, watch it and cancel it, open the pages it wrote. On for local; private and public stay off.",
     "owner": "maintainer",
     "created": "2026-11-08",
     "expires": "2027-02-06",
     "kind": "runtime",
     "default": false,
     "envs": {
-      "local": false,
+      "local": true,
       "private": false,
       "public": false
     }
   },
   "screen.first-run": {
-    "description": "Graph: an empty knowledge base shows a 'Build your knowledge base' card (drop files, link a folder, open an example) instead of the plain empty message",
+    "description": "Graph: an empty knowledge base shows a 'Build your knowledge base' card (drop files, link a folder, digest what you added, open an example) instead of the plain empty message. On for local; private and public stay off.",
     "owner": "maintainer",
     "created": "2026-11-08",
     "expires": "2027-02-06",
     "kind": "runtime",
     "default": false,
     "envs": {
-      "local": false,
+      "local": true,
       "private": false,
       "public": false
     }

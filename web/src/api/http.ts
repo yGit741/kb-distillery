@@ -11,6 +11,11 @@ function message(error: unknown, fallback: string): string {
   if (error && typeof error === "object") {
     const e = (error as { error?: unknown; detail?: unknown }).error ?? (error as { detail?: unknown }).detail;
     if (typeof e === "string") return e;
+    // FastAPI validation errors: detail is a list of { msg } objects
+    if (Array.isArray(e)) {
+      const msgs = e.map((d) => (typeof d === "string" ? d : (d as { msg?: unknown } | null)?.msg)).filter((m): m is string => typeof m === "string" && m !== "");
+      if (msgs.length) return msgs.join("; ");
+    }
   }
   return fallback;
 }

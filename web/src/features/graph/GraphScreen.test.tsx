@@ -78,10 +78,11 @@ describe("GraphScreen states", () => {
     expect(await screen.findByTestId("graph-stats")).toBeInTheDocument();
   });
 
-  it("shows an empty state for an empty vault", async () => {
-    render(wrap(withGraph({ getGraph: async () => sampleSnapshot({ nodes: [], links: [], node_count: 0 }) }), <GraphScreen search={{}} host={host} />));
-    expect(await screen.findByText(/no pages yet/i)).toBeInTheDocument();
-  });
+  it("shows an empty state for an empty vault", () =>
+    withFlag("screen.first-run", false, async () => {
+      render(wrap(withGraph({ getGraph: async () => sampleSnapshot({ nodes: [], links: [], node_count: 0 }) }), <GraphScreen search={{}} host={host} />));
+      expect(await screen.findByText(/no pages yet/i)).toBeInTheDocument();
+    }));
 });
 
 describe("legend and filters", () => {
@@ -413,6 +414,8 @@ describe("first-run card (flag screen.first-run)", () => {
       expect(screen.queryByText(/no pages yet/i)).not.toBeInTheDocument();
       expect(screen.getByRole("button", { name: /drop files here/i })).toBeInTheDocument();
       expect(screen.getByRole("form", { name: /link a local folder/i })).toBeInTheDocument();
+      // the tour's targets exist on the card
+      expect(document.querySelector('[data-tour="first-run"] [aria-label="Drop files here"]')).not.toBeNull();
       await userEvent.click(screen.getByRole("link", { name: /open an example/i }));
       expect(host.go).toHaveBeenCalledWith("/", { start: "true" });
     }));
