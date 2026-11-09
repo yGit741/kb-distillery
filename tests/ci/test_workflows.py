@@ -101,8 +101,10 @@ class RunnerSafety(unittest.TestCase):
     @unittest.skipUnless(os.path.isfile(os.path.join(DIR, "deploy-main.yml")), "owner workflow: export-ignored from the public repo")
     def test_deploy_main_never_runs_on_pull_requests(self):
         wf = load("deploy-main.yml")
-        self.assertFalse(PR_TRIGGERS & set(triggers(wf)), "deploy-main (self-hosted, holds deploy credentials) must not run on pull requests")
+        self.assertFalse(PR_TRIGGERS & set(triggers(wf)), "deploy-main (holds deploy credentials) must not run on pull requests")
         self.assertTrue(set(triggers(wf)) <= {"push", "schedule", "workflow_dispatch"}, set(triggers(wf)))
+        deploy = next(s for _, s in steps(wf) if str(s.get("name", "")).startswith("Build main and deploy"))
+        self.assertIn("github.ref == 'refs/heads/main'", deploy["if"])      # a dispatch from another branch never deploys it
 
 
 CI_JOBS = {"lint", "tests", "web", "checks", "wheel", "worker", "all-green"}

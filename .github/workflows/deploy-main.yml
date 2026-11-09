@@ -57,8 +57,8 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       - if: steps.owner.outputs.stale == '1'
         run: pixi run test
-      - name: Build main and deploy it to the `kb` Worker (skips are success)
-        if: steps.owner.outputs.stale == '1'
+      - name: Build main and deploy it to the `kb` Worker (skips are success; never from a dispatch on another branch)
+        if: steps.owner.outputs.stale == '1' && github.ref == 'refs/heads/main'
         run: pixi run share -- deploy-main
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
