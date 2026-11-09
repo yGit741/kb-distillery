@@ -110,6 +110,9 @@ pixi run lint-strict               ingest-finalize checks
 pixi run ingest-status             open ingest sessions
 pixi run distill-propose -- <slug> propose graph brief from think page
 pixi run distill-apply -- <slug>   apply distill plan to public KB
+pixi run test                      the suite in parallel (`-n auto`, every test but the `serial` ones; a test fails after 120 s, pytest-timeout)
+pixi run test-serial               the `serial` wall-clock tests alone (CI runs them in the shard that owns their dir)
+pixi run ruff                      syntax errors and undefined names (ruff; [tool.ruff] in pyproject.toml)
 pixi run test-e2e                  graph page mouse/keyboard scheme in headless Chromium (needs the playwright npm package)
 pixi run test-ui-principles        every app screen, light + dark, against the [auto] ui-principles (see § PR gates)
 pixi run lint-skills               validate every skills folder (each kit skills folder and .claude/skills)

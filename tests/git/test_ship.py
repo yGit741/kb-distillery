@@ -470,6 +470,21 @@ class PrFlowTests(unittest.TestCase):
         self.assertNotIn("--squash", merge_line)
         self.assertIn("feat(ops): add thing (#7)", merge_line)
 
+    def test_pr_with_a_title_retitles_an_open_pr(self):
+        """A second commit can raise the PR's type (chore -> fix): `ship pr --title` must retitle, or merge refuses forever."""
+        wt = self._start()
+        self._write(wt, "meta/tool.py")
+        ship.cmd_commit("chore(ops): add thing", root=wt, gates=False)
+        self.assertEqual(ship.cmd_pr(root=wt, gates=False), 0)
+        calls = open(os.path.join(self.ghdir, "calls.log")).read().splitlines()
+        self.assertFalse(any(l.startswith("pr edit") and "--title" in l for l in calls))          # the first pr created it, no edit
+        self._write(wt, "meta/tool2.py")
+        ship.cmd_commit("fix(ops): add the other thing", root=wt, gates=False)
+        self.assertEqual(ship.cmd_pr(title="fix(ops): add things", root=wt, gates=False), 0)
+        calls = open(os.path.join(self.ghdir, "calls.log")).read().splitlines()
+        self.assertTrue(any(l.startswith("pr edit") and l.endswith("--title fix(ops): add things") for l in calls), calls)
+        self.assertEqual(sum(l.startswith("pr create") for l in calls), 1)
+
     def test_pr_and_merge_post_events(self):
         wt = self._start()
         self._write(wt, "meta/tool.py")
