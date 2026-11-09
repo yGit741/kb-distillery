@@ -34,16 +34,16 @@ export function fanPoint(i: number): FanPoint {
   return { x: FAN_R * (1 - Math.cos(a)), y: FAN_R * Math.sin(a), deg: (a * 180) / Math.PI };
 }
 
-export type FanKind = "agent" | "think";
+export type FanKind = "agent" | "think" | "pins";
 
 /**
  * The CSS transform of card `i`. Agent grows up from the bottom-left, Think is the same arc turned 180
  * degrees about the middle of the screen: it grows down from the top-right (the tilt keeps its sign, the
- * card's text is never upside down).
+ * card's text is never upside down). Pins is Agent mirrored top to bottom: it grows down from the top-left.
  */
 export function fanTransform(kind: FanKind, i: number): string {
   const p = fanPoint(i);
-  const [dx, dy] = kind === "agent" ? [p.x, -p.y] : [-p.x, p.y];
+  const [dx, dy] = kind === "agent" ? [p.x, -p.y] : kind === "pins" ? [p.x, p.y] : [-p.x, p.y];
   return `translate(${dx.toFixed(2)}px, ${dy.toFixed(2)}px) rotate(${p.deg.toFixed(2)}deg)`;
 }
 

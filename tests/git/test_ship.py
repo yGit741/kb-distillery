@@ -107,9 +107,24 @@ echo "$*" >> "$log"
 if [ "$1 $2" = "pr view" ]; then
   [ -f "$FAKE_GH_DIR/created" ] || exit 1
   labels=""; [ -f "$FAKE_GH_DIR/held" ] && labels='{"name": "hold"}'
-  head=$(cat "$FAKE_GH_DIR/head" 2>/dev/null)
-  echo '{"number": 7, "url": "https://example/pr/7", "title": "feat(ops): add thing", "state": "OPEN", "headRefOid": "'"$head"'", "labels": ['"$labels"']}'
+  head=$(cat "$FAKE_GH_DIR/head" 2>/dev/null || git rev-parse HEAD 2>/dev/null)     # a test pins an old sha; else the branch head
+  state=OPEN; [ -f "$FAKE_GH_DIR/merged" ] && state=MERGED
+  auto=null; [ -f "$FAKE_GH_DIR/armed" ] && auto='{"enabledAt": "now"}'
+  body=$(cat "$FAKE_GH_DIR/body" 2>/dev/null)
+  echo '{"number": 7, "url": "https://example/pr/7", "title": "feat(ops): add thing", "state": "'"$state"'", "headRefOid": "'"$head"'", "labels": ['"$labels"'], "body": "'"$body"'", "mergeable": "MERGEABLE", "mergeStateStatus": "CLEAN", "autoMergeRequest": '"$auto"', "statusCheckRollup": []}'
   exit 0
+fi
+if [ "$1 $2" = "pr merge" ]; then
+  # --auto arms auto-merge and GitHub merges later (here: at once); FAKE_NO_AUTO=1 plays a repository without a ruleset
+  case "$*" in *"--disable-auto"*) rm -f "$FAKE_GH_DIR/armed"; exit 0;; esac
+  case "$*" in *"--auto"*)
+    if [ -n "$FAKE_NO_AUTO" ]; then echo "X Pull request #7 is in clean status" >&2; exit 1; fi
+    touch "$FAKE_GH_DIR/armed" "$FAKE_GH_DIR/merged"; exit 0;;
+  esac
+  touch "$FAKE_GH_DIR/merged"; exit 0
+fi
+if [ "$1 $2" = "pr edit" ]; then
+  case "$*" in *"--body "*) printf '%s' "${*#*--body }" > "$FAKE_GH_DIR/body";; esac
 fi
 if [ "$1" = "api" ]; then
   case "$*" in *"/reviews"*) cat "$FAKE_GH_DIR/reviews.jsonl" 2>/dev/null; exit 0;; esac
@@ -467,8 +482,54 @@ class PrFlowTests(unittest.TestCase):
         self.assertEqual(calls.count("pr create"), 1)
         merge_line = [l for l in calls.splitlines() if l.startswith("pr merge")][0]
         self.assertIn("--merge", merge_line)
+        self.assertIn("--auto", merge_line)              # GitHub merges it: CI and the merge queue decide, not this machine
         self.assertNotIn("--squash", merge_line)
-        self.assertIn("feat(ops): add thing (#7)", merge_line)
+        self.assertIn("--subject feat(ops): add thing (#7)", merge_line)   # a direct merge (no ruleset yet) keeps the convention
+        self.assertIn("kb-event v1 · merged", calls)     # watched until MERGED, then the post-merge steps ran
+
+    def test_merge_without_a_ruleset_merges_directly_with_the_subject(self):
+        """Until `ship protect --ruleset` ran, GitHub refuses --auto ("clean status"): the PR merges directly, titled as before."""
+        wt = self._start()
+        self._write(wt, "meta/tool.py")
+        ship.cmd_commit("feat(ops): add thing", root=wt, gates=False)
+        self.assertEqual(ship.cmd_pr(root=wt, gates=False), 0)
+        with patch.dict(os.environ, {"FAKE_NO_AUTO": "1"}):
+            self.assertEqual(ship.cmd_merge(root=wt, gates=False), 0)
+        merges = [l for l in open(os.path.join(self.ghdir, "calls.log")).read().splitlines() if l.startswith("pr merge")]
+        self.assertEqual(len(merges), 2)
+        self.assertIn("--auto", merges[0])
+        self.assertNotIn("--auto", merges[1])
+        self.assertIn("--subject feat(ops): add thing (#7)", merges[1])
+        self.assertNotIn("--squash", merges[1])
+
+    def test_merge_no_wait_returns_after_enqueueing_and_a_rerun_finishes(self):
+        wt = self._start()
+        self._write(wt, "meta/tool.py")
+        ship.cmd_commit("feat(ops): add thing", root=wt, gates=False)
+        self.assertEqual(ship.cmd_pr(root=wt, gates=False), 0)
+        self.assertEqual(ship.cmd_merge(root=wt, gates=False, wait=False), 0)
+        events_of = lambda: [l.split(" · ")[1] for l in open(os.path.join(self.ghdir, "calls.log")).read().splitlines()
+                             if l.startswith("pr comment 7 --body kb-event v1")]
+        self.assertEqual(events_of(), ["claimed", "queued"])            # enqueued and returned: no post-merge step yet
+        self.assertEqual(ship.cmd_merge(root=wt, gates=False), 0)      # the PR is MERGED by now: finish up
+        self.assertEqual(events_of(), ["claimed", "queued", "merged"])
+        calls = open(os.path.join(self.ghdir, "calls.log")).read().splitlines()
+        self.assertEqual(sum(l.startswith("pr merge") for l in calls), 1)
+
+    def test_pr_with_a_title_retitles_an_open_pr(self):
+        """A second commit can raise the PR's type (chore -> fix): `ship pr --title` must retitle, or merge refuses forever."""
+        wt = self._start()
+        self._write(wt, "meta/tool.py")
+        ship.cmd_commit("chore(ops): add thing", root=wt, gates=False)
+        self.assertEqual(ship.cmd_pr(root=wt, gates=False), 0)
+        calls = open(os.path.join(self.ghdir, "calls.log")).read().splitlines()
+        self.assertFalse(any(l.startswith("pr edit") and "--title" in l for l in calls))          # the first pr created it, no edit
+        self._write(wt, "meta/tool2.py")
+        ship.cmd_commit("fix(ops): add the other thing", root=wt, gates=False)
+        self.assertEqual(ship.cmd_pr(title="fix(ops): add things", root=wt, gates=False), 0)
+        calls = open(os.path.join(self.ghdir, "calls.log")).read().splitlines()
+        self.assertTrue(any(l.startswith("pr edit") and l.endswith("--title fix(ops): add things") for l in calls), calls)
+        self.assertEqual(sum(l.startswith("pr create") for l in calls), 1)
 
     def test_pr_and_merge_post_events(self):
         wt = self._start()
@@ -478,7 +539,7 @@ class PrFlowTests(unittest.TestCase):
         self.assertEqual(ship.cmd_merge(root=wt, gates=False), 0)
         posted = [l.split(" · ")[1] for l in open(os.path.join(self.ghdir, "calls.log")).read().splitlines()
                   if l.startswith("pr comment 7 --body kb-event v1")]
-        self.assertEqual(posted, ["claimed", "queued", "checks-passed", "merged"])
+        self.assertEqual(posted, ["claimed", "queued", "merged"])       # the checks are CI's now: no local checks-passed
         claimed = [l for l in open(os.path.join(self.ghdir, "calls.log")) if "· claimed ·" in l][0]
         self.assertIn("branch=infra/ops-thing dirs=meta", claimed)
 
@@ -491,7 +552,7 @@ class PrFlowTests(unittest.TestCase):
             self.assertEqual(ship.cmd_merge(root=wt, gates=False), 0)
         calls = open(os.path.join(self.ghdir, "calls.log")).read()
         self.assertEqual(calls.count("pr merge"), 1)
-        self.assertEqual(calls.count("pr comment"), 8)   # 4 events × (try + one retry)
+        self.assertEqual(calls.count("pr comment"), 6)   # 3 events (claimed, queued, merged) × (try + one retry)
 
     def test_plain_pr_is_not_held_and_merges_without_approval(self):
         wt = self._start()

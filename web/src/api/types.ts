@@ -45,6 +45,18 @@ export type StyleTarget = S["Target"];
 export type RelationProposals = S["RelationProposals"];
 export type RelationProposal = S["RelationProposal"];
 
+// agent proposals (flag ui.proposals)
+export type Proposal = S["Proposal"];
+export type ProposalSummary = S["ProposalSummary"];
+export type ProposalRender = S["ProposalRender"];
+export type RenderPage = S["RenderPage"];
+export type Hunk = S["Hunk"];
+export type HunkDecision = S["HunkDecision"];
+export type Finding = S["Finding"];
+export type ProposalRevision = S["Revision"];
+export type ApplyResult = S["ApplyResult"];
+export type Decision = "accept" | "reject" | "correct";
+
 // corpus, raw, citations, pipeline, health, ops
 export type CorpusTable = S["CorpusTable"];
 export type CorpusRow = S["CorpusRow"];

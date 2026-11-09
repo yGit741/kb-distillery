@@ -120,6 +120,14 @@ def test_subset(paths, root, ignore=lambda p: False):
                 targets.add(p)
         elif "/" not in p and p.endswith(".md"):
             continue
+        elif p.startswith((".github/", ".claude/skills/")):
+            # the workflows are read by tests/ci, tests/git (ship protect) and tests/publish (share ci); skills by the skills lint tests
+            readers = ("tests/ci", "tests/git", "tests/publish") if p.startswith(".github/") else ("tests/lint",)
+            if not all(os.path.isdir(os.path.join(root, r)) for r in readers):
+                return None
+            targets.update(readers)
+        elif p.startswith("docs/") and p.endswith(".md"):    # public docs: only the top-level invariants (always run) look at them
+            continue
         else:
             return None
     top = sorted(f"tests/{n}" for n in os.listdir(os.path.join(root, "tests"))

@@ -23,6 +23,10 @@ FLAG_FILES = frozenset({
 _BLOCK = "[[flag]]"
 _NAME = re.compile(r'^name\s*=\s*"([^"]*)"', re.M)
 _UNION = re.compile(r"export type FlagName = [^;]*;")
+# the test's pinned copy: a literal union only. A template (`{union}`, built from flags.toml at test time) is left alone,
+# or pinning would paste quoted names into an f-string and break the file. (Flag names never contain a brace.)
+_PINNED = re.compile(r"export type FlagName = [^;{]*;")
+_UNION_LINE = re.compile(r"^.*export type FlagName = [^;]*;.*$", re.M)
 _HUNK = re.compile(r"<<<<<<< [^\n]*\n(.*?)(?:\|\|\|\|\|\|\| [^\n]*\n.*?)?=======\n(.*?)>>>>>>> [^\n]*\n", re.S)
 
 
@@ -95,7 +99,7 @@ def merge_flags_toml(ours: str, theirs: str, base: str | None = None) -> str | N
 
 
 def _pin_text(text: str, union_line: str) -> str:
-    return _UNION.sub(lambda _m: union_line, text)
+    return _PINNED.sub(lambda _m: union_line, text)
 
 
 def _resolve_pin_file(text: str, union_line: str) -> str | None:
@@ -104,9 +108,14 @@ def _resolve_pin_file(text: str, union_line: str) -> str | None:
 
     def hunk(m):
         nonlocal ok
-        if _UNION.sub("U", m.group(1)) != _UNION.sub("U", m.group(2)):
+        ours, theirs = m.group(1), m.group(2)
+        # the sides may differ only in the union line (pinned literal or template, quoted either way)
+        if _UNION_LINE.sub("U", ours) != _UNION_LINE.sub("U", theirs):
             ok = False
-        return m.group(1)
+            return ours
+        # a template (built at test time) beats a stale pinned literal from either side
+        templated = lambda side: bool(_UNION.search(side)) and not _PINNED.search(side)  # noqa: E731
+        return theirs if templated(theirs) and not templated(ours) else ours
 
     out = _HUNK.sub(hunk, text)
     return _pin_text(out, union_line) if ok and "<<<<<<<" not in out else None
@@ -142,7 +151,7 @@ def resolve(root, unmerged: list[str] | None = None) -> bool:
             pin.write_text(fixed, encoding="utf-8", newline="\n")
         elif pin.is_file():                 # merged cleanly, but the union may still be stale
             text = pin.read_text(encoding="utf-8")
-            if _UNION.search(text) and _pin_text(text, union.group(0)) != text:
+            if _PINNED.search(text) and _pin_text(text, union.group(0)) != text:
                 pin.write_text(_pin_text(text, union.group(0)), encoding="utf-8", newline="\n")
                 unmerged = [*unmerged, FLAGS_TEST]
     except Exception:

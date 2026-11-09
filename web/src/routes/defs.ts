@@ -36,6 +36,7 @@ const ALL_ROUTE_DEFS: readonly RouteDef[] = [
   { id: "about", path: "/what-is-it", label: "What is it?", blurb: "How a file becomes a page in this map: raw, source, concept, and reading depth.", nav: true },
   { id: "start", path: "/start", label: "Start", blurb: "How to add and edit knowledge, and how to build a feature.", flag: "screen.start", movedTo: { id: "home", search: { start: true } } },
   { id: "covector", path: "/covector", label: "Covector", blurb: "Interactive picture of a covector acting on a vector.", runtimeFlag: "research-tools" },
+  { id: "proposals", path: "/proposals", label: "Proposals", blurb: "Review agent changes to pages, hunk by hunk, and apply what you accept.", extraPaths: ["/proposals/$id"], runtimeFlag: "ui.proposals" },
   // A route whose flag is off in this env is dropped here (screen.share: private site only).
 ];
 
