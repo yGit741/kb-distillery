@@ -19,6 +19,7 @@ kb-distillery turns sources you collect into a linked, linted wiki. You keep the
 
 ## Guides
 
+- [Build an extension](guides/build-an-extension.md): kits, skills, connectors and publishers as installed packages
 - [Write a kit](guides/write-a-kit.md)
 - [Write a skill](guides/write-a-skill.md)
 - [Add a storage connector](guides/add-a-storage-connector.md)

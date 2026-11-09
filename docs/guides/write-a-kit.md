@@ -76,6 +76,7 @@ If you need a type for one knowledge base only, add it to that knowledge base's 
 - Any other top-level table is rejected until the engine gives it a meaning.
 - Bump `version` when a knowledge base must notice the change.
 - Another kits folder can be set with `KB_KITS_DIR`.
+- To ship a kit as a separately installed package instead of a change to the engine, register it in the `kb_distillery.kits` entry-point group: [Build an extension](build-an-extension.md).
 
 ## Errors
 

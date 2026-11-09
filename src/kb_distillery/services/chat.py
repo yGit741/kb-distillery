@@ -376,7 +376,7 @@ def kit_prompt_dirs(kb=None):
         names = kit.chain(cfg.kit)
     except kit.KitError:
         return []
-    return [d for d in (os.path.join(kit.kits_dir(), n, "prompts") for n in names) if os.path.isdir(d)]
+    return [d for d in (os.path.join(kit.kit_dir(n), "prompts") for n in names) if os.path.isdir(d)]
 
 
 def list_prompts(prompts_dir=PROMPTS_DIR, extra_dirs=None):
