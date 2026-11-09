@@ -49,7 +49,7 @@ def _walk_stats(base, root, out):
             if e.name.startswith("."):
                 continue
             try:
-                if e.is_dir(follow_symlinks=True):
+                if e.is_dir(follow_symlinks=False):
                     _walk_stats(e.path, root, out)
                 elif e.name.endswith(".md"):
                     st = e.stat()
