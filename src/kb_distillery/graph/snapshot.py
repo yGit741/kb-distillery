@@ -201,7 +201,7 @@ def build_graph_snapshot(layer=None, view=None, relations=None):
     kb_id = view.id if view else _active_id()
     pages = load_pages(root)
     inbound = inbound_index(pages)
-    dates = _git_dates() if view is None or view.active else _dates_for(root)
+    dates = _dates_for(root)
     if not dates and os.environ.get(DATES_ENV):   # a share build's export has no history: its dates come in a file
         import json
 
