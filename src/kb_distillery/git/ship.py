@@ -874,7 +874,7 @@ def pr_body(subjects, notes="", skipped_checks=None, round_no=None, paths=None, 
     head = ([f"Round: #{round_no}"] if round_no else []) + ([claims.claims_line(paths)] if paths else [])
     lines = (head + [""] if head else []) + ["## Summary", ""] + [f"- {s}" for s in subjects] + [
         "", "## Gates", "", f"- CI (`.github/workflows/ci.yml`): the required check `{REQUIRED_CHECK}` gates this PR; "
-        "it merges through the GitHub merge queue (`pixi run ship -- merge`)"]
+        "GitHub merges it once that is green (`pixi run ship -- merge` arms auto-merge; the merge queue where the repository has one)"]
     kind = _schema_kind(subjects)
     if kind:
         lines += ["", "## Schema", "",
@@ -1636,11 +1636,13 @@ GITHUB_ACTIONS_APP = 15368            # the integration id GitHub Actions report
 ADMIN_ROLE = 5                        # GitHub's RepositoryRole id for admin (the owner's hotfix bypass, PRs only)
 
 
-def ruleset_body():
+def ruleset_body(merge_queue=True):
     """The branch ruleset on main: pull requests only, merge commits only, `all-green` required, merged through the
     merge queue in batches. The one bypass is the repository admin (the owner) and only through a pull request
-    (`bypass_mode: pull_request`): a hotfix route when CI itself is down, never a direct push to main."""
-    return {
+    (`bypass_mode: pull_request`): a hotfix route when CI itself is down, never a direct push to main.
+    `merge_queue=False` leaves the queue rule out: GitHub offers the queue to organization-owned repositories only; a
+    user-owned one merges each PR by auto-merge once `all-green` passes (same gate, no batching)."""
+    body = {
         "name": RULESET_NAME, "target": "branch", "enforcement": "active",
         "conditions": {"ref_name": {"include": ["~DEFAULT_BRANCH"], "exclude": []}},
         "bypass_actors": [{"actor_id": ADMIN_ROLE, "actor_type": "RepositoryRole", "bypass_mode": "pull_request"}],
@@ -1654,12 +1656,14 @@ def ruleset_body():
             {"type": "required_status_checks", "parameters": {
                 "strict_required_status_checks_policy": False, "do_not_enforce_on_create": False,
                 "required_status_checks": [{"context": REQUIRED_CHECK, "integration_id": GITHUB_ACTIONS_APP}]}},
-            {"type": "merge_queue", "parameters": {
-                "merge_method": "MERGE", "grouping_strategy": "ALLGREEN", "max_entries_to_build": 5,
-                "min_entries_to_merge": 1, "max_entries_to_merge": 5, "min_entries_to_merge_wait_minutes": 2,
-                "check_response_timeout_minutes": 60}},
         ],
     }
+    if merge_queue:
+        body["rules"].append({"type": "merge_queue", "parameters": {
+            "merge_method": "MERGE", "grouping_strategy": "ALLGREEN", "max_entries_to_build": 5,
+            "min_entries_to_merge": 1, "max_entries_to_merge": 5, "min_entries_to_merge_wait_minutes": 2,
+            "check_response_timeout_minutes": 60}})
+    return body
 
 
 def cmd_protect(root=ROOT, ruleset=False):
@@ -1668,8 +1672,8 @@ def cmd_protect(root=ROOT, ruleset=False):
     carry the convention). `--ruleset` installs or updates the branch ruleset on main (`ruleset_body`).
     Everything runs as the user: the GitHub App has no administration permission."""
     cp = gh(["repo", "edit", "--enable-merge-commit=true", "--enable-squash-merge=false",
-             "--enable-rebase-merge=false", "--delete-branch-on-merge=true"], root, user=True)
-    print(_out(cp) or "GitHub: merge commits only; squash and rebase merges disabled")
+             "--enable-rebase-merge=false", "--delete-branch-on-merge=true", "--enable-auto-merge=true"], root, user=True)
+    print(_out(cp) or "GitHub: merge commits only; squash and rebase merges disabled; auto-merge on (ship merge arms it)")
     if cp.returncode:
         return cp.returncode
     cp = gh(["api", "-X", "PATCH", "repos/{owner}/{repo}", "-f", "merge_commit_title=PR_TITLE",
@@ -1682,17 +1686,30 @@ def cmd_protect(root=ROOT, ruleset=False):
         print(_out(cp))
         return cp.returncode
     existing = next((r for r in json.loads(cp.stdout or "[]") if r.get("name") == RULESET_NAME), None)
-    with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False) as f:
-        json.dump(ruleset_body(), f)
-        body = f.name
-    try:
-        path = "repos/{owner}/{repo}/rulesets" + (f"/{existing['id']}" if existing else "")
-        cp = gh(["api", "-X", "PUT" if existing else "POST", path, "--input", body, "--silent"], root, user=True)
-    finally:
-        os.unlink(body)
-    print(_out(cp) if cp.returncode else f"GitHub: ruleset `{RULESET_NAME}` {'updated' if existing else 'created'}: "
-          f"pull requests only, `{REQUIRED_CHECK}` required, merge queue (batches of up to 5)")
+    path = "repos/{owner}/{repo}/rulesets" + (f"/{existing['id']}" if existing else "")
+    verb = "updated" if existing else "created"
+    cp = _put_ruleset(path, existing, ruleset_body(merge_queue=True), root)
+    if cp.returncode == 0:
+        print(f"GitHub: ruleset `{RULESET_NAME}` {verb}: pull requests only, `{REQUIRED_CHECK}` required, merge queue (batches of up to 5)")
+        return 0
+    reason = _out(cp).strip()
+    # GitHub offers the merge queue to organization-owned repositories only; a user-owned one refuses the rule (422)
+    print(f"GitHub refused the ruleset with a merge queue ({reason.splitlines()[-1] if reason else 'no detail'}); "
+          "retrying without it: a user-owned repository merges by auto-merge once `all-green` passes (same gate, no batching)")
+    cp = _put_ruleset(path, existing, ruleset_body(merge_queue=False), root)
+    print(_out(cp) if cp.returncode else f"GitHub: ruleset `{RULESET_NAME}` {verb}: pull requests only, `{REQUIRED_CHECK}` required, auto-merge on green")
     return cp.returncode
+
+
+def _put_ruleset(path, existing, body, root):
+    """POST (new) or PUT (existing) one ruleset body as the user; the response text is kept for the caller's message."""
+    with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False) as f:
+        json.dump(body, f)
+        tmp = f.name
+    try:
+        return gh(["api", "-X", "PUT" if existing else "POST", path, "--input", tmp], root, user=True)
+    finally:
+        os.unlink(tmp)
 
 
 def cmd_drop(branch, root=ROOT):
