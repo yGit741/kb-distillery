@@ -65,6 +65,7 @@ artifacts = ["src/kb_distillery/_webapp/**"]
 testpaths = ["tests"]
 python_files = ["test_*.py"]
 addopts = "-p no:cacheprovider"
+timeout = 120      # pytest-timeout: a hung test fails in two minutes instead of stalling a shard; slow suites raise it with @pytest.mark.timeout
 markers = [
     "serial: asserts a wall-clock budget, so it runs alone in a single process (the tests gate's second pass); never in the -n pass",
     "wheel: builds the wheel and installs it into a temp venv (slow, needs network for the build backend); CI job `wheel`",

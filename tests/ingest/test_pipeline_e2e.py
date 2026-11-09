@@ -289,6 +289,7 @@ def write_golden(outputs, files):
             f.write("\n")
 
 
+@pytest.mark.timeout(600)      # setUpClass runs the whole pipeline; the wall-clock budget below is the real limit
 class PipelineE2E(unittest.TestCase):
     @classmethod
     def setUpClass(cls):

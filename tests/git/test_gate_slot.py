@@ -36,17 +36,24 @@ def _lock_free(qdir):
         os.close(fd)
 
 
-def _worker(root, name, start_at, log_path, hold):
+def _worker(root, name, go, release, log_path):
+    """Take the slot when told (`go`), hold it until told (`release`): arrival and hold are driven, never timed."""
     os.environ.pop(gate_slot.HELD_ENV, None)
-    while time.time() < start_at:
-        time.sleep(0.005)
+    go.wait(30)
     with gate_slot.sequence(root, log=lambda *_: None) as s:
         s.ensure()
         with open(log_path, "a") as f:
             f.write(f"start {name}\n")
-        time.sleep(hold)
+        release.wait(30)
         with open(log_path, "a") as f:
             f.write(f"end {name}\n")
+
+
+def _lines(path):
+    if not os.path.exists(path):
+        return []
+    with open(path) as f:
+        return f.read().split("\n")[:-1]
 
 
 def _die_holding(root, ready):
@@ -66,16 +73,32 @@ class SlotCase(unittest.TestCase):
         self.addCleanup(env.stop)
         os.environ.pop(gate_slot.HELD_ENV, None)    # these tests exercise the real lock, in tmp repos only
 
+    def _wait_for(self, cond, what, timeout=20):
+        deadline = time.time() + timeout
+        while time.time() < deadline:
+            if cond():
+                return
+            time.sleep(0.02)
+        self.fail(f"timed out waiting for {what}")
+
     def run_two(self, roots):
+        """p0 takes the slot and holds it; p1 asks for it meanwhile and may only start once p0 has ended."""
         log = os.path.join(tempfile.mkdtemp(), "log")
-        at = time.time() + 0.5
-        ps = [mp.Process(target=_worker, args=(r, f"p{i}", at, log, 0.4)) for i, r in enumerate(roots)]
+        go, release = [mp.Event() for _ in roots], [mp.Event() for _ in roots]
+        ps = [mp.Process(target=_worker, args=(r, f"p{i}", go[i], release[i], log)) for i, r in enumerate(roots)]
         for p in ps:
             p.start()
+        go[0].set()
+        self._wait_for(lambda: _lines(log) == ["start p0"], "p0 to take the slot")
+        go[1].set()
+        time.sleep(0.3)
+        self.assertEqual(_lines(log), ["start p0"])          # p1 waits while p0 holds
+        release[0].set()
+        self._wait_for(lambda: _lines(log) == ["start p0", "end p0", "start p1"], "p1 to take the slot after p0")
+        release[1].set()
         for p in ps:
             p.join(20)
-        with open(log) as f:
-            return f.read().split("\n")[:-1]
+        return _lines(log)
 
     def assert_serial(self, lines):
         self.assertEqual(len(lines), 4)

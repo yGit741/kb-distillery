@@ -18,15 +18,22 @@ def _git_repo():
     return d
 
 
-def _worker(root, name, start_at, log_path, hold):
-    while time.time() < start_at:
-        time.sleep(0.005)
+def _worker(root, name, go, release, log_path):
+    """Enqueue when told (`go`), hold the slot until told (`release`): arrival and hold are driven, never timed."""
+    go.wait(30)
     with mq.merge_slot(root, name, log=lambda *_: None):
         with open(log_path, "a") as f:
             f.write(f"start {name}\n")
-        time.sleep(hold)
+        release.wait(30)
         with open(log_path, "a") as f:
             f.write(f"end {name}\n")
+
+
+def _lines(path):
+    if not os.path.exists(path):
+        return []
+    with open(path) as f:
+        return f.read().split("\n")[:-1]
 
 
 class QueueTest(unittest.TestCase):
@@ -34,23 +41,47 @@ class QueueTest(unittest.TestCase):
         self.root = _git_repo()
         self.qdir = mq.common_dir(self.root)
 
+    def _wait_for(self, cond, what, timeout=20):
+        deadline = time.time() + timeout
+        while time.time() < deadline:
+            if cond():
+                return
+            time.sleep(0.02)
+        self.fail(f"timed out waiting for {what}")
+
     def test_common_dir_is_shared_git_dir(self):
         self.assertEqual(os.path.realpath(self.qdir), os.path.realpath(os.path.join(self.root, ".git")))
 
     def test_processes_serialized_fifo(self):
+        """a, b, c enqueue in that order (each only after the previous one is in the file); each holds until released,
+        and the log shows strictly start/end pairs in arrival order. No sleeps decide the order, so load cannot flip it."""
         log = os.path.join(self.root, "log.txt")
         ctx = mp.get_context("spawn")
-        procs = []
-        t0 = time.time() + 1.5
-        for i, name in enumerate(["a", "b", "c"]):
-            p = ctx.Process(target=_worker, args=(self.root, name, t0 + i * 0.3, log, 0.4))
+        names = ["a", "b", "c"]
+        go = {n: ctx.Event() for n in names}
+        release = {n: ctx.Event() for n in names}
+        procs = [ctx.Process(target=_worker, args=(self.root, n, go[n], release[n], log)) for n in names]
+        for p in procs:
             p.start()
-            procs.append(p)
+        queued = lambda: [e["branch"] for e in mq.entries(self.qdir)]
+        for n in names:
+            go[n].set()
+            self._wait_for(lambda: n in queued(), f"{n} to enqueue")
+        self._wait_for(lambda: _lines(log) == ["start a"], "a to take the slot")
+        self.assertEqual(queued(), names)
+        time.sleep(0.3)
+        self.assertEqual(_lines(log), ["start a"])          # b and c wait while a holds
+        expected = ["start a"]
+        for i, n in enumerate(names):
+            release[n].set()
+            expected.append(f"end {n}")
+            if i + 1 < len(names):
+                expected.append(f"start {names[i + 1]}")
+            self._wait_for(lambda: _lines(log) == expected, f"{n} to end and the next one to start")
         for p in procs:
             p.join(30)
             self.assertEqual(p.exitcode, 0)
-        lines = open(log).read().split()
-        self.assertEqual(lines, ["start", "a", "end", "a", "start", "b", "end", "b", "start", "c", "end", "c"])
+        self.assertEqual(_lines(log), ["start a", "end a", "start b", "end b", "start c", "end c"])
         self.assertEqual(mq.entries(self.qdir), [])
 
     def _seed(self, **kw):

@@ -1,31 +1,41 @@
-# PR checks (informational, no branch protection). Runs the same gates as `pixi run ship`.
+# The gates. CI is the truth for a PR: `pixi run ship` opens the PR and enqueues the merge, GitHub runs these
+# jobs on the PR and again on the merge-queue group, and the one required check `all-green` decides the merge.
 #
-# Runs on every push and every pull request. The runner follows the repo's visibility: while the repo is
-# private the jobs run on a self-hosted runner (macOS arm64); once it is public they run on GitHub-hosted
-# `macos-latest` (arm64), so a fork's code never runs on a self-hosted machine. That is not the whole
-# defence: a fork PR can bring its own workflow file naming `self-hosted`, so before going public remove the runner
-# from the repo (or set Settings > Actions > "Require approval for all outside collaborators").
-# `runs-on` takes `fromJSON(...)` (a label list) and `&&`/`||` picks it; `private` is the repository context,
-# not a secret. tests/ci/test_workflows.py fails on any pull_request job that could land on `self-hosted` when public.
+# Triggers: every pull request, every merge-queue group (`merge_group`), pushes to main (the post-merge run) and
+# a manual dispatch. Branch pushes alone do not run (a branch without a PR has nothing to gate), so a push to a
+# PR branch runs CI once, not twice.
+#
+# Runners: GitHub-hosted `ubuntu-latest` only. A fork's pull request never reaches a self-hosted machine
+# (tests/ci/test_workflows.py fails on any other runner).
+#
+# Jobs: `lint` (the cheap gates, ~1-2 min), `tests` (pytest in 4 static shards, each with `-n auto` and a
+# per-test timeout; the shard list and the `--ignore`s of the last shard must cover every tests/ dir exactly
+# once, tests/ci/test_workflows.py checks that), `web` (web-check), `wheel`, `worker`, and `all-green`, the
+# fan-in that is green only when every other job succeeded (cancelled or skipped count as red). Branch
+# protection names `all-green` alone, so the shards need no naming there.
+#
+# Concurrency: a newer push to the same PR replaces its running check; a merge-group run is never cancelled
+# (GitHub treats a cancelled group as failed and drops it from the queue).
 #
 # KB_CI=1: a cloud checkout may lack gitignored raw binaries that meta/corpus.tsv lists; the flag makes lint
 # read the committed manifest as the truth instead of reconciling it against disk.
-#
-# setup-pixi cache: false, because checkout's `git clean -ffdx` removes .pixi/ each run and a self-hosted runner
-# keeps pixi's package cache, so a reinstall is local and fast.
 name: ci
 on:
-  push:
   pull_request:
+  merge_group:
+  push:
+    branches: [main]
   workflow_dispatch:
 concurrency:
-  group: ci-${{ github.ref }}
-  cancel-in-progress: true     # a newer push to the same branch or PR replaces the running check
+  group: ci-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+env:
+  PIXI_VERSION: v0.76.1
 jobs:
-  python:     # pytest (includes the privacy ratchet), skills lint, layer contract, kb lint
-    runs-on: ${{ github.event.repository.private && fromJSON('["self-hosted","macOS","ARM64"]') || 'macos-latest' }}
+  lint:     # skills lint, licences, layer contract, kb lint, okf check, ruff, privacy ratchet
+    runs-on: ubuntu-latest
     env:
-      KB_CI: "1"     # tests that build dashboard snapshots run lint too (test_digestion_data)
+      KB_CI: "1"
       KB_PRIVACY_TERMS: ${{ secrets.KB_PRIVACY_TERMS }}     # personal terms the privacy ratchet looks for (comma list); empty = token shapes only
     steps:
       - uses: actions/checkout@v4
@@ -35,18 +45,52 @@ jobs:
       - uses: prefix-dev/setup-pixi@v0.8.1
         with:
           pixi-version: v0.76.1
-          cache: false
-      - run: pixi run test
-      - name: Privacy ratchet (no personal strings or token shapes in new files; also part of the suite above)
-        run: pixi run pytest tests/lint/test_privacy_ratchet.py
+          cache: true
       - run: pixi run lint-skills
       - run: pixi run licenses     # fails on a GPL / LGPL / AGPL package (PyMuPDF was one); allowlist in lint/licenses.py
       - run: pixi run lint-imports
       - run: pixi run lint
-      # ruff is not a pixi dependency yet, so there is no ruff step; it joins here once pixi.toml carries it.
+      - run: pixi run okf-check
+      - run: pixi run ruff
+      - name: Privacy ratchet (no personal strings or token shapes in new files)
+        run: pixi run pytest -q tests/lint/test_privacy_ratchet.py
+
+  tests:     # pytest (the `serial` wall-clock test runs alone, in the shard that owns tests/ingest)
+    runs-on: ubuntu-latest
+    env:
+      KB_CI: "1"
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - shard: git-ops
+            paths: tests/git tests/ops tests/metrics
+          - shard: server
+            paths: tests/server tests/services tests/llm tests/proposals tests/graph
+          - shard: ingest-publish
+            paths: tests/ingest tests/publish tests/digest tests/distill
+            serial: tests/ingest
+          - shard: rest
+            paths: >-
+              tests --ignore=tests/git --ignore=tests/ops --ignore=tests/metrics
+              --ignore=tests/server --ignore=tests/services --ignore=tests/llm --ignore=tests/proposals --ignore=tests/graph
+              --ignore=tests/ingest --ignore=tests/publish --ignore=tests/digest --ignore=tests/distill
+    name: tests (${{ matrix.shard }})
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - run: git show-ref -q refs/heads/main || git branch main origin/main   # a PR checkout has no local main
+      - uses: prefix-dev/setup-pixi@v0.8.1
+        with:
+          pixi-version: v0.76.1
+          cache: true
+      - run: pixi run pytest -q -n auto -m "not serial" ${{ matrix.paths }}
+      - if: matrix.serial
+        run: pixi run pytest -q -m serial ${{ matrix.serial }}
 
   web:     # flags codegen check, tsc, vitest, build:check, check-untracked-dist (all inside the web-check task)
-    runs-on: ${{ github.event.repository.private && fromJSON('["self-hosted","macOS","ARM64"]') || 'macos-latest' }}
+    runs-on: ubuntu-latest
     env:
       KB_CI: "1"
     steps:
@@ -57,12 +101,16 @@ jobs:
       - uses: prefix-dev/setup-pixi@v0.8.1
         with:
           pixi-version: v0.76.1
-          cache: false
+          cache: true
+      - uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: npm-${{ runner.os }}-${{ hashFiles('web/package-lock.json') }}
       - run: pixi run web-install
       - run: pixi run web-check
 
   wheel:     # builds the wheel, installs it into a clean venv, runs the installed CLI (tests/cli/test_install_wheel.py)
-    runs-on: ${{ github.event.repository.private && fromJSON('["self-hosted","macOS","ARM64"]') || 'macos-latest' }}
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
@@ -71,11 +119,15 @@ jobs:
       - uses: prefix-dev/setup-pixi@v0.8.1
         with:
           pixi-version: v0.76.1
-          cache: false
+          cache: true
+      - uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: npm-${{ runner.os }}-${{ hashFiles('web/package-lock.json') }}
       - run: pixi run test-wheel
 
   worker:     # Cloudflare worker node tests
-    runs-on: ${{ github.event.repository.private && fromJSON('["self-hosted","macOS","ARM64"]') || 'macos-latest' }}
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
@@ -84,6 +136,22 @@ jobs:
       - uses: prefix-dev/setup-pixi@v0.8.1
         with:
           pixi-version: v0.76.1
-          cache: false
+          cache: true
+      - uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: npm-${{ runner.os }}-${{ hashFiles('web/package-lock.json') }}
       - run: pixi run web-install   # esbuild + js-yaml for the Worker inbox's checker bundle (worker-bundle)
       - run: pixi run test-worker
+
+  all-green:     # the one required check: every job above succeeded (cancelled or skipped is red too)
+    needs: [lint, tests, web, wheel, worker]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Every job succeeded
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          echo "$RESULTS"
+          for r in $RESULTS; do [ "$r" = success ] || exit 1; done

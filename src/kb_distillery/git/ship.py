@@ -38,6 +38,7 @@ import json
 import os
 import re
 import shutil
+import tempfile
 import subprocess
 import time
 import sys
@@ -1397,11 +1398,66 @@ def _snapshot_after_schema(primary, feature, push=True):
     return tag
 
 
-def cmd_protect(root=ROOT):
-    """Repository settings that keep PR history intact: merge commits only (no squash, no rebase)."""
+RULESET_NAME = "main"
+REQUIRED_CHECK = "all-green"          # the fan-in job in .github/workflows/ci.yml; the one check the ruleset requires
+GITHUB_ACTIONS_APP = 15368            # the integration id GitHub Actions reports its checks under
+
+
+def ruleset_body():
+    """The branch ruleset on main: pull requests only, merge commits only, `all-green` required, merged through the
+    merge queue in batches. No bypass actors: nothing pushes main past the queue (git_guard already forbids raw pushes)."""
+    return {
+        "name": RULESET_NAME, "target": "branch", "enforcement": "active",
+        "conditions": {"ref_name": {"include": ["~DEFAULT_BRANCH"], "exclude": []}},
+        "bypass_actors": [],
+        "rules": [
+            {"type": "deletion"},
+            {"type": "non_fast_forward"},
+            {"type": "pull_request", "parameters": {
+                "required_approving_review_count": 0, "dismiss_stale_reviews_on_push": False,
+                "require_code_owner_review": False, "require_last_push_approval": False,
+                "required_review_thread_resolution": False, "allowed_merge_methods": ["merge"]}},
+            {"type": "required_status_checks", "parameters": {
+                "strict_required_status_checks_policy": False, "do_not_enforce_on_create": False,
+                "required_status_checks": [{"context": REQUIRED_CHECK, "integration_id": GITHUB_ACTIONS_APP}]}},
+            {"type": "merge_queue", "parameters": {
+                "merge_method": "MERGE", "grouping_strategy": "ALLGREEN", "max_entries_to_build": 5,
+                "min_entries_to_merge": 1, "max_entries_to_merge": 5, "min_entries_to_merge_wait_minutes": 2,
+                "check_response_timeout_minutes": 60}},
+        ],
+    }
+
+
+def cmd_protect(root=ROOT, ruleset=False):
+    """Repository settings that keep PR history intact: merge commits only (no squash, no rebase), titled
+    `<title> (#N)` with the PR body (the merge queue writes the merge commit, so the repo's merge-commit settings
+    carry the convention). `--ruleset` installs or updates the branch ruleset on main (`ruleset_body`).
+    Everything runs as the user: the GitHub App has no administration permission."""
     cp = gh(["repo", "edit", "--enable-merge-commit=true", "--enable-squash-merge=false",
              "--enable-rebase-merge=false", "--delete-branch-on-merge=true"], root, user=True)
     print(_out(cp) or "GitHub: merge commits only; squash and rebase merges disabled")
+    if cp.returncode:
+        return cp.returncode
+    cp = gh(["api", "-X", "PATCH", "repos/{owner}/{repo}", "-f", "merge_commit_title=PR_TITLE",
+             "-f", "merge_commit_message=PR_BODY", "--silent"], root, user=True)
+    print(_out(cp) if cp.returncode else "GitHub: merge commits titled `<title> (#N)` with the PR body")
+    if cp.returncode or not ruleset:
+        return cp.returncode
+    cp = gh(["api", "repos/{owner}/{repo}/rulesets"], root, user=True)
+    if cp.returncode:
+        print(_out(cp))
+        return cp.returncode
+    existing = next((r for r in json.loads(cp.stdout or "[]") if r.get("name") == RULESET_NAME), None)
+    with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False) as f:
+        json.dump(ruleset_body(), f)
+        body = f.name
+    try:
+        path = "repos/{owner}/{repo}/rulesets" + (f"/{existing['id']}" if existing else "")
+        cp = gh(["api", "-X", "PUT" if existing else "POST", path, "--input", body, "--silent"], root, user=True)
+    finally:
+        os.unlink(body)
+    print(_out(cp) if cp.returncode else f"GitHub: ruleset `{RULESET_NAME}` {'updated' if existing else 'created'}: "
+          f"pull requests only, `{REQUIRED_CHECK}` required, merge queue (batches of up to 5)")
     return cp.returncode
 
 
@@ -1687,7 +1743,8 @@ def _main(argv):
     ev = sub.add_parser("events", help="print PR N's kb-event lines (claimed, queued, checks, merged, deployed)")
     ev.add_argument("number", type=int)
     sub.add_parser("whoami", help="which identity gh calls use (App bot or user fallback)")
-    sub.add_parser("protect", help="GitHub settings: merge commits only, no squash/rebase")
+    pt = sub.add_parser("protect", help="GitHub settings: merge commits only, titled `<title> (#N)`; --ruleset adds the main ruleset")
+    pt.add_argument("--ruleset", action="store_true", help="install/update the ruleset on main: PRs only, `all-green` required, merge queue")
     tg = sub.add_parser("tag", help="annotated tag on main of the engine, a kb (--kb) or another repo (--repo); never pushed")
     tg.add_argument("name", help="e.g. pre-distillery (kb-* names belong to `ops snapshot`)")
     tg.add_argument("--at", metavar="REV", help="commit to tag (default main; must be reachable from main)")
@@ -1702,7 +1759,7 @@ def _main(argv):
             return staleness.cmd_prune_stale(apply=args.apply)
         return cmd_drop(args.drop) if args.drop else cmd_prune(args.apply)
     if args.cmd == "protect":
-        return cmd_protect()
+        return cmd_protect(ruleset=args.ruleset)
     if args.cmd == "whoami":
         print(app_token.whoami(ROOT))
         return 0
