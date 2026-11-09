@@ -13,9 +13,9 @@ import sys
 
 from kb_distillery.config import pages as page_conventions
 from kb_distillery.storage import pdf
-from kb_distillery.vault import frontmatter
+from kb_distillery.vault import frontmatter, links
 from kb_distillery.ingest.sources.web import blog
-from .paths import ROOT, person_from_raw, set_collection, _page_type
+from .paths import ROOT, page_title, person_from_raw, set_collection, _page_type
 from .verify import existing_digest_for_raw
 from kb_distillery.vault.schema import (ASSET_NAME, RAW_CHATS, RAW_EMAILS, RAW_VIDEOS, VIDEO_ITEM, RAW_HANDWRITTEN, RAW_IMAGES,  # noqa: E402
                     RAW_PRESENTATIONS, RAW_PRINTED, RAW_WEB, CONTENTS_COLLECTIONS, make_slug, strip_prefix)

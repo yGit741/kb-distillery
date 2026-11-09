@@ -25,8 +25,10 @@ case "$1 $2" in
     while [ $# -gt 0 ]; do [ "$1" = "--body" ] && echo "$2" >> "$d/comments.txt"; shift; done; exit 0;;
   "pr view")
     [ -f "$d/created" ] || exit 1
-    echo '{"number": 7, "url": "https://example/pr/7", "title": "feat(ops): add thing", "state": "OPEN", "labels": [], "body": "Round: #42\n"}'; exit 0;;
+    state=OPEN; [ -f "$d/merged" ] && state=MERGED
+    echo '{"number": 7, "url": "https://example/pr/7", "title": "feat(ops): add thing", "state": "'"$state"'", "labels": [], "body": "Round: #42\n", "mergeable": "MERGEABLE", "autoMergeRequest": {"enabledAt": "now"}, "statusCheckRollup": []}'; exit 0;;
   "pr create") touch "$d/created"; echo "https://example/pr/7"; exit 0;;
+  "pr merge") touch "$d/merged"; exit 0;;     # --auto: GitHub merges once CI is green (here: at once)
 esac
 [ "$1" = "api" ] && { cat "$d/comments.txt" 2>/dev/null; exit 0; }
 exit 0

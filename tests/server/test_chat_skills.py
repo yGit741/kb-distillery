@@ -28,6 +28,10 @@ def kb(tmp_path, monkeypatch):
     subprocess.run(["git", "-C", root, "init", "-q"], check=True, stdin=subprocess.DEVNULL)
     monkeypatch.delenv(store.READ_ONLY_ENV, raising=False)
     monkeypatch.setenv("KB_APP_CONFIG", "/nonexistent/app.toml")
+    # the Agent backend's "can Claude run" probe: answered here, never by this machine's login (as tests/server/test_chat.py does)
+    monkeypatch.setattr("kb_distillery.llm.claude_available", lambda refresh=False: (True, ""))
+    monkeypatch.setattr("kb_distillery.services.chat_agent.subscription_status",
+                        lambda *a, **k: {"logged_in": False, "email": None, "plan": None, "error": None})
     monkeypatch.setattr(agent_skills, "CACHE_PATH", str(tmp_path / ".cache"))
     with mock.patch.object(store, "DEFAULT_ROOT", root):
         yield root

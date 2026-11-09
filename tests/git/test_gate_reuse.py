@@ -241,8 +241,23 @@ class SelectionTests(RepoCase):
     def test_full_fallback_on_config_and_unmappable_changes(self):
         for p in ("pixi.toml", "pyproject.toml", "tests/conftest.py", "tests/git/conftest.py", "pixi.lock",
                   "src/kb_distillery/config/paths.py", "src/kb_distillery/nomirror/x.py", "tests/fixtures/data.json",
-                  "src/kb_distillery/kits/base/skills/x/SKILL.md", ".claude/skills/x/SKILL.md", "web/src/a.ts"):
+                  "src/kb_distillery/kits/base/skills/x/SKILL.md", "web/src/a.ts"):
             self.assertIsNone(self.sel("src/kb_distillery/git/ship.py", p), p)
+
+    def test_workflows_skills_and_public_docs_map_to_their_readers(self):
+        """CI workflows are read by tests/ci, skills by the skills lint tests, public docs by nobody: no full run for them."""
+        for rel in ("tests/ci/test_w.py", "tests/lint/test_s.py", "tests/publish/test_p.py"):
+            _write(self.root, rel)
+        # the workflows have three readers: tests/ci, tests/git (ship protect reads ci.yml) and tests/publish (share ci)
+        self.assertEqual(self.sel(".github/workflows/ci.yml"), ["tests/ci", "tests/git", "tests/publish", "tests/test_top.py"])
+        self.assertEqual(self.sel(".claude/skills/x/SKILL.md"), ["tests/lint", "tests/test_top.py"])
+        self.assertEqual(self.sel("docs/guides/write-a-skill.md", "README.md"), ["tests/test_top.py"])
+        self.assertEqual(self.sel(".github/workflows/ci.yml", "src/kb_distillery/git/ship.py"),
+                         ["tests/ci", "tests/git", "tests/publish", "tests/test_top.py"])
+
+    def test_workflow_mapping_needs_every_reader_dir(self):
+        _write(self.root, "tests/ci/test_w.py")
+        self.assertIsNone(self.sel(".github/workflows/ci.yml"))          # no tests/publish in this repo: run full
 
 
 class RefusalTests(RepoCase):
@@ -288,7 +303,16 @@ class RefusalTests(RepoCase):
         files = _g(self.root, "show", "--name-only", "--format=", "HEAD").splitlines()
         self.assertEqual(files, ["src/kb_distillery/git/a.py"])
         self.assertIn("tests subset", out.getvalue())
-        # pr: tests reran as a full run, lint and lint-skills were reused (same content, generated files left out)
+        self.assertNotIn("gate: lint ok", out.getvalue())          # CI lints the PR: the commit gates are the fast ones
+        # KB_SHIP_LOCAL_GATES=1: the commit runs every gate (lint's regenerated files still stay out of the commit),
+        # and a later full run reuses lint and lint-skills (same content)
+        _write(self.root, "src/kb_distillery/git/b.py", "more")
+        out = io.StringIO()
+        with patch.dict(os.environ, {ship.LOCAL_GATES_ENV: "1"}), contextlib.redirect_stdout(out):
+            self.assertEqual(ship.cmd_commit("feat(git): more", root=self.root), 0)
+        self.assertIn("gate: lint ok", out.getvalue())
+        files = _g(self.root, "show", "--name-only", "--format=", "HEAD").splitlines()
+        self.assertEqual(files, ["src/kb_distillery/git/b.py"])
         out = self.gates(scope="full")
         self.assertIn("gate: tests ok", out)
         self.assertIn("gate: lint reused", out)
