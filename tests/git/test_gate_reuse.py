@@ -288,7 +288,16 @@ class RefusalTests(RepoCase):
         files = _g(self.root, "show", "--name-only", "--format=", "HEAD").splitlines()
         self.assertEqual(files, ["src/kb_distillery/git/a.py"])
         self.assertIn("tests subset", out.getvalue())
-        # pr: tests reran as a full run, lint and lint-skills were reused (same content, generated files left out)
+        self.assertNotIn("gate: lint ok", out.getvalue())          # CI lints the PR: the commit gates are the fast ones
+        # KB_SHIP_LOCAL_GATES=1: the commit runs every gate (lint's regenerated files still stay out of the commit),
+        # and a later full run reuses lint and lint-skills (same content)
+        _write(self.root, "src/kb_distillery/git/b.py", "more")
+        out = io.StringIO()
+        with patch.dict(os.environ, {ship.LOCAL_GATES_ENV: "1"}), contextlib.redirect_stdout(out):
+            self.assertEqual(ship.cmd_commit("feat(git): more", root=self.root), 0)
+        self.assertIn("gate: lint ok", out.getvalue())
+        files = _g(self.root, "show", "--name-only", "--format=", "HEAD").splitlines()
+        self.assertEqual(files, ["src/kb_distillery/git/b.py"])
         out = self.gates(scope="full")
         self.assertIn("gate: tests ok", out)
         self.assertIn("gate: lint reused", out)

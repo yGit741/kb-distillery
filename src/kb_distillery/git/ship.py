@@ -32,6 +32,7 @@ version first and carry the bumped KB-Version on their merge commit.
 Knowledge-lane paths are never staged here (except migrated files in a schema PR).
 """
 import argparse
+import contextlib
 import glob
 import importlib.util
 import json
@@ -55,8 +56,15 @@ from kb_distillery.ops.daily_sync import changed_paths, has_open_sessions, run_g
 from kb_distillery.git import app_token, claims, commit_policy, events, flag_merge, gate_cache, gate_slot, night, review_gate, rounds, worktree_lock
 from kb_distillery.vault.schema import GATE_PREFIXES as GP, GIT_POLICY_MODE, INDEX_REL, SCHEMA_VERSION, is_index_path, lane_of
 
+# CI is the gate: .github/workflows/ci.yml runs the whole list below on every PR and merge-queue group, and the
+# required check `all-green` decides the merge. Locally, `ship commit` runs COMMIT_GATES on the mirrored test subset
+# (under two minutes, no machine-wide slot); `ship pr` pushes and `ship merge` enqueues. KB_SHIP_LOCAL_GATES=1 keeps
+# the old full local run in every step (offline work, or a CI outage).
+LOCAL_GATES_ENV = "KB_SHIP_LOCAL_GATES"
+COMMIT_GATES = ("ruff", "lint-imports", "tests", "web-typecheck")
 GATES = [
-    ("tests", [sys.executable, "-m", "pytest", "-q", "-n", "6", "-m", "not serial", "tests"]),
+    ("ruff", ["ruff", "check", "src", "tests"]),     # syntax errors and undefined names; seconds
+    ("tests", [sys.executable, "-m", "pytest", "-q", "-n", "auto", "-m", "not serial", "tests"]),
     # tests that assert a wall-clock budget (`@pytest.mark.serial`): alone in one process, after the parallel pass
     ("tests-serial", [sys.executable, "-m", "pytest", "-q", "-m", "serial", "tests"]),
     ("lint-skills", [sys.executable, "-m", "kb_distillery.lint.lint_skills"]),
@@ -75,6 +83,11 @@ FORBIDDEN_MERGE_FLAGS = {"--squash", "--rebase", "-s", "-r"}
 
 
 _REAL_RUN = subprocess.run     # a gate result is only recorded or reused while this is the runner (tests mock it)
+
+
+def local_gates():
+    """True when the full gate set runs locally in every step (KB_SHIP_LOCAL_GATES=1) instead of in CI."""
+    return bool(os.environ.get(LOCAL_GATES_ENV))
 
 
 def is_generated(path):
@@ -393,13 +406,16 @@ def okf_command(root=ROOT):
     return [c.replace("kb_distillery.lint.lint", "kb_distillery.lint.okf_check") for c in lint_command(root)]
 
 
-def run_gates(root=ROOT, skip_tests=False, scope="full"):
-    """`_run_gates` as one gate-slot sequence: the slot is taken at the first real run and held to the last gate."""
+def run_gates(root=ROOT, skip_tests=False, scope="full", only=None, slot=True):
+    """`_run_gates` as one gate-slot sequence: the slot is taken at the first real run and held to the last gate.
+    `only` keeps the named gates (COMMIT_GATES); `slot=False` runs without the machine-wide slot (the fast commit gates)."""
+    if not slot:
+        return _run_gates(root, skip_tests, scope, only, slot=False)
     with gate_slot.sequence(root):
-        return _run_gates(root, skip_tests, scope)
+        return _run_gates(root, skip_tests, scope, only)
 
 
-def _run_gates(root, skip_tests, scope):
+def _run_gates(root, skip_tests, scope, only=None, slot=True):
     """Lint-skills, lint and the tests (plus the frontend gates when web/ changed). `scope="subset"` (ship commit)
     runs the tests that mirror the touched code plus the top-level invariants; anything it cannot map runs full.
     A gate that already passed on the same content (see gate_cache) is reused, not rerun."""
@@ -411,8 +427,8 @@ def _run_gates(root, skip_tests, scope):
     if scope == "subset" and not skip_tests:
         selection = gate_cache.test_subset(branch_files(root), root, ignore=is_generated)
         if selection:
-            # one single-process run of the selection: it includes any serial test, so the serial pass is dropped
-            gates = [(n, [sys.executable, "-m", "pytest", "-q", *selection] if n == "tests" else c)
+            # one parallel run of the selection: it includes any serial test, so the serial pass is dropped
+            gates = [(n, [sys.executable, "-m", "pytest", "-q", "-n", "auto", *selection] if n == "tests" else c)
                      for n, c in gates if n != "tests-serial"]
             scopes.pop("tests-serial", None)
             scopes["tests"] = "subset"
@@ -426,6 +442,8 @@ def _run_gates(root, skip_tests, scope):
         for n, _ in extra:
             scopes[n] = "full"
             extras[n] = "+".join(x for x, _ in extra)
+    if only:
+        gates = [(n, c) for n, c in gates if n in only]
     sha = _fingerprint(root)               # before any gate runs: lint rewrites generated files
     if not skip_tests and not _xdist_ok(gates, scopes, extras, root, sha):
         return False
@@ -435,7 +453,7 @@ def _run_gates(root, skip_tests, scope):
         key = gate_cache.make_key(name, scopes[name], sha, _kb_value(), extras.get(name, ""))
         if _reused(root, key):
             continue
-        if not run_gate(name, cmd, root):
+        if not run_gate(name, cmd, root, slot=slot):
             return False
         _remember(root, key)
     return True
@@ -461,18 +479,20 @@ def _xdist_ok(gates, scopes, extras, root, sha):
 GATE_TAIL_LINES = 25          # what a failing gate shows; the rest is in its log
 
 
-def run_gate(name, cmd, root=ROOT):
+def run_gate(name, cmd, root=ROOT, slot=True):
     """Run one gate with its full output in `.cache/ship-gates/<time>-<name>.log` instead of in the terminal (a test
     run is thousands of lines: in a conversation they are re-read on every later turn). Prints one line when it
-    passes, and the last GATE_TAIL_LINES lines plus the log path when it fails. True on a pass."""
+    passes, and the last GATE_TAIL_LINES lines plus the log path when it fails. True on a pass.
+    `slot=False` (the fast commit gates) neither takes the machine-wide slot nor waits for load."""
     log_dir = os.path.join(root, ".cache", "ship-gates")
     os.makedirs(log_dir, exist_ok=True)
     log = os.path.join(log_dir, f"{time.strftime('%Y%m%d-%H%M%S')}-{name}.log")
     try:
-        with gate_slot.sequence(root) as slot:
-            slot.ensure()            # a real run takes the machine-wide slot; reused gates never reach here
-            if subprocess.run is _REAL_RUN and gate_slot.is_heavy(name, cmd) and not os.environ.get(gate_slot.HELD_ENV):
-                gate_slot.wait_for_load(slot.wait)
+        with (gate_slot.sequence(root) if slot else contextlib.nullcontext()) as seq:
+            if slot:
+                seq.ensure()         # a real run takes the machine-wide slot; reused gates never reach here
+                if subprocess.run is _REAL_RUN and gate_slot.is_heavy(name, cmd) and not os.environ.get(gate_slot.HELD_ENV):
+                    gate_slot.wait_for_load(seq.wait)
             started = time.monotonic()
             if subprocess.run is _REAL_RUN:
                 rc, why = gate_slot.supervise(cmd, root, log, env=gate_slot.child_env())
@@ -804,7 +824,10 @@ def cmd_commit(message, skip_tests=False, root=ROOT, gates=True):
     if not paths:
         print("nothing to commit")
         return 0
-    if gates and not run_gates(root, skip_tests, scope="subset"):
+    # the fast gates (ruff, the layer contract, the mirrored tests in parallel, tsc when web/ changed), no slot: CI runs
+    # the rest on the PR. KB_SHIP_LOCAL_GATES=1: every gate, in the slot, as before.
+    local = local_gates()
+    if gates and not run_gates(root, skip_tests, scope="subset", only=None if local else COMMIT_GATES, slot=local):
         print("nothing committed")
         return 1
     tracked = set(filter(None, run_git(["ls-files", "-z"], cwd=root).stdout.split("\0")))
@@ -850,7 +873,8 @@ def _schema_kind(subjects):
 def pr_body(subjects, notes="", skipped_checks=None, round_no=None, paths=None, review=None, no_review=None):
     head = ([f"Round: #{round_no}"] if round_no else []) + ([claims.claims_line(paths)] if paths else [])
     lines = (head + [""] if head else []) + ["## Summary", ""] + [f"- {s}" for s in subjects] + [
-        "", "## Gates", "", "- unit tests · lint-skills · lint (run by `pixi run ship -- pr`)"]
+        "", "## Gates", "", f"- CI (`.github/workflows/ci.yml`): the required check `{REQUIRED_CHECK}` gates this PR; "
+        "it merges through the GitHub merge queue (`pixi run ship -- merge`)"]
     kind = _schema_kind(subjects)
     if kind:
         lines += ["", "## Schema", "",
@@ -937,11 +961,14 @@ def cmd_pr(title=None, skip_tests=False, root=ROOT, gates=True, notes_file=None,
                   '       (or bypass with --no-review "<reason>"; the reason goes in the PR body)')
             return 1
     review_line = review_gate.summary_line(review_rec) if review_rec else None
-    with gate_slot.sequence(root):      # gates and checks of this run are not interleaved with another run's
-        if gates and not run_gates(root, skip_tests):
-            return 1
-        if gates and not run_checks(root, skip_checks):
-            return 1
+    if skip_checks and not local_gates():
+        print(f"note: --skip-checks applies only with {LOCAL_GATES_ENV}=1; CI runs the lane checks on the PR (the reason still lands in the body)")
+    if gates and local_gates():         # otherwise CI runs the gates and the lane checks on the pushed PR
+        with gate_slot.sequence(root):      # gates and checks of this run are not interleaved with another run's
+            if not run_gates(root, skip_tests):
+                return 1
+            if not run_checks(root, skip_checks):
+                return 1
     push = app_token.run_git_push(["push", "-u", "origin", branch], cwd=root)
     print(_out(push))
     if push.returncode != 0:
@@ -1137,7 +1164,7 @@ def cmd_sync(cont=False, abort=False, root=ROOT, gates=True):
             for p in left:
                 print(f"  {p}")
             return 1
-        if gates and not run_gates(root):
+        if gates and local_gates() and not run_gates(root):      # otherwise CI re-runs on the pushed merge commit
             print("nothing committed — the merge stays in progress")
             return 1
         cp = run_git(["commit", "--no-edit"], cwd=root)
@@ -1208,20 +1235,56 @@ def _snapshot_before_schema(primary, feature):
     return current, True
 
 
+MERGE_POLL = 30                 # seconds between looks at the PR while CI and the merge queue work
+MERGE_WATCH_ENV = "KB_MERGE_WATCH"
+DEFAULT_WATCH = 60 * 60
+PR_FIELDS = "number,title,state,labels,body,headRefOid,mergeable,mergeStateStatus,autoMergeRequest,statusCheckRollup"
+_RED = {"FAILURE", "TIMED_OUT", "ACTION_REQUIRED", "ERROR", "STARTUP_FAILURE"}   # not CANCELLED: a superseded run reads so for a moment
+QUEUE_QUERY = ("query($owner: String!, $name: String!, $number: Int!) { repository(owner: $owner, name: $name) "
+               "{ pullRequest(number: $number) { isInMergeQueue mergeQueueEntry { state position } } } }")
+
+
+def _watch_seconds():
+    try:
+        return float(os.environ.get(MERGE_WATCH_ENV) or DEFAULT_WATCH)
+    except ValueError:
+        return float(DEFAULT_WATCH)
+
+
+def _queue_state(pr_number, root):
+    """True when GitHub holds the PR in its merge queue, False when it does not, None when the answer is unknown.
+    `gh pr view --json` has no queue field: once a PR enters the queue `autoMergeRequest` goes away, so the watch
+    asks GraphQL before it concludes that the PR was dropped."""
+    cp = gh(["api", "graphql", "-F", "owner={owner}", "-F", "name={repo}", "-F", f"number={pr_number}",
+             "-f", f"query={QUEUE_QUERY}"], root)
+    if cp.returncode != 0:
+        return None
+    try:
+        pr = json.loads(cp.stdout)["data"]["repository"]["pullRequest"]
+    except (ValueError, KeyError, TypeError):
+        return None
+    return bool(pr.get("isInMergeQueue") or pr.get("mergeQueueEntry"))
+
+
 def cmd_merge(local=False, pr_number=None, title=None, skip_tests=False, no_push=False, root=ROOT, gates=True,
-              skip_checks=None):
-    """Serialized through the merge queue (kb_distillery.git.queue): one merge at a time across all worktrees."""
-    from kb_distillery.git import queue as merge_queue
+              skip_checks=None, wait=True):
+    """Merge the branch's PR. Default: GitHub merges it — the hold check runs here, then `gh pr merge --auto` enqueues
+    the PR, CI (the required check) and the merge queue decide, and this command watches until it lands, then does the
+    post-merge steps (events, primary checkout, worktree). `--no-wait` returns right after enqueueing. Nothing runs
+    locally unless KB_SHIP_LOCAL_GATES=1. `--local` is the offline path: the local merge queue, main synced into the
+    branch, the gates here, `merge --no-ff` into main."""
     branch = current_branch(root)
     if not branch.startswith("infra/"):
         print(f"error: ship merge runs on an infra/<feature> branch (current: {branch or 'detached'})")
         return 1
-    ev_pr = pr_number or (None if local else _pr_number(branch, root))
-    events.post(ev_pr, "queued", _head_sha(root), root=root, branch=branch)
+    if not local:
+        return _merge_remote(branch, title, skip_tests, no_push, root, gates, skip_checks, wait)
+    from kb_distillery.git import queue as merge_queue
+    events.post(pr_number, "queued", _head_sha(root), root=root, branch=branch)
     try:
         with merge_queue.merge_slot(root, branch, pr=pr_number):
-            rc = _merge_locked(branch, local, pr_number, title, skip_tests, no_push, root, gates, skip_checks,
-                               ev_pr=ev_pr)
+            rc = _merge_locked(branch, True, pr_number, title, skip_tests, no_push, root, gates, skip_checks,
+                               ev_pr=pr_number)
     except merge_queue.QueueTimeout as e:
         print(f"error: {e}")
         return 1
@@ -1230,11 +1293,232 @@ def cmd_merge(local=False, pr_number=None, title=None, skip_tests=False, no_push
     return rc
 
 
-def _merge_locked(branch, local, pr_number, title, skip_tests, no_push, root, gates, skip_checks, ev_pr=None):
-    approved_head = None
+def _pr_info(ref, root, fields=PR_FIELDS):
+    """`gh pr view` as a dict, or None when the branch has no PR (or gh failed)."""
+    view = gh(["pr", "view", str(ref), "--json", fields], root)
+    if view.returncode != 0 or not view.stdout.strip():
+        return None
+    try:
+        return json.loads(view.stdout)
+    except ValueError:
+        return None
+
+
+def _merge_remote(branch, title, skip_tests, no_push, root, gates, skip_checks, wait):
+    approved_head, detail = None, ""
     feature = branch[len("infra/"):]
     primary = primary_checkout(root)
     round_no = rounds.branch_round(branch, root)  # read before _finish_merge deletes the branch config
+    run_git(["fetch", "-q", "origin"], cwd=root)
+    if not no_push:
+        app_token.run_git_push(["push", "-u", "origin", branch], cwd=root)
+    info = _pr_info(branch, root)
+    if info is None:
+        print("error: no PR for this branch — run ship pr first")
+        return 1
+    pr_number = info["number"]
+    subjects = _branch_commits(root)
+    title = title or info["title"]
+    kind = _schema_kind(subjects + [title])
+    labels = {l.get("name") for l in info.get("labels") or []}
+    if info.get("state") == "MERGED":          # a `--no-wait` run, or a watch that was interrupted: finish the job
+        if (info.get("headRefOid") or "") != _head_sha(root):
+            print(f"error: PR #{pr_number} is merged but at {(info.get('headRefOid') or '')[:7]}, not this branch's head "
+                  f"{_head_sha(root)[:7]} — a reused branch name? run ship pr for the new work")
+            return 1
+        print(f"PR #{pr_number} is already merged — finishing up")
+        held = info.get("headRefOid") if HOLD_LABEL in labels else None      # the label still on a merged PR comes off
+        return _after_merged(pr_number, branch, feature, primary, root, round_no, kind, held, "", no_push)
+    if info.get("state") not in (None, "OPEN"):
+        print(f"error: PR #{pr_number} is {info['state']}")
+        return 1
+    if info.get("mergeable") == "CONFLICTING":
+        print(f"error: main conflicts with {branch} — pixi run ship -- sync, resolve, ship commit, then ship merge again")
+        return 1
+    if skip_checks and not local_gates():
+        print(f"note: --skip-checks applies only with {LOCAL_GATES_ENV}=1; CI runs the lane checks on the PR")
+    if HOLD_LABEL in labels:
+        head = info.get("headRefOid") or ""
+        verdict, detail = review_approval(pr_number, head, root)
+        if verdict != "ok" and night.active(root) and REVIEW_LABEL not in labels:
+            verdict, detail = "ok", "night window open: hold waived"
+        if verdict != "ok":
+            print(f"error: PR #{pr_number} is held for the user's approval ({detail}) — ask them to "
+                  f"approve the review on GitHub, or run: pixi run ship -- approve {pr_number}")
+            return 1
+        # the label stays until the merge lands: a failed step leaves the PR held; the merge is pinned to the approved sha
+        approved_head = head
+        print(f"PR #{pr_number} {detail} — merging the approved sha")
+    problems = commit_policy.check_pr_title(title, subjects)
+    if problems:
+        print("error: " + "\n       ".join(problems) + "\n       (pass --title to ship pr: it retitles the PR)")
+        return 1
+    subject = f"{title} (#{pr_number})"
+    if commit_policy.parse_message(subject).kind != "pr-merge":
+        print(f"error: merge subject does not follow the convention: {subject!r}")
+        return 1
+    if gates and local_gates():
+        with gate_slot.sequence(root):
+            if not run_gates(root, skip_tests):
+                events.post(pr_number, "checks-failed", _head_sha(root), root=root, stage="gates")
+                return 1
+            if not run_checks(root, skip_checks):
+                events.post(pr_number, "checks-failed", _head_sha(root), root=root, stage="checks")
+                return 1
+    body_lines = [f"- {s}" for s in subjects]
+    if kind:
+        clashes = _knowledge_clashes(root, primary, "origin/main")
+        if clashes:
+            print("error: uncommitted knowledge in the primary checkout differs from this PR's migrated notes:")
+            for p in clashes[:10]:
+                print(f"  {p}")
+            print("commit them (pixi run ops -- record …) or align them first")
+            return 1
+        current, ok = _snapshot_before_schema(primary, feature)
+        if not ok:
+            return 1
+        try:
+            version = commit_policy.merge_version(SCHEMA_VERSION, current, kind)
+        except ValueError as e:
+            print(f"error: {e}")
+            return 1
+        trailer = "KB-Version: " + commit_policy.fmt_version(version)
+        body_lines += ["", trailer]
+        # the merge queue writes the merge commit from the PR body (repo setting merge_commit_message=PR_BODY,
+        # `ship protect`), so the version trailer must be the PR body's last line. It is computed now, at enqueue
+        # time: another schema PR merging first while this one waits would make it stale, so schema PRs (held, rare)
+        # are merged one at a time.
+        pr_text = (info.get("body") or "").rstrip()
+        kept = "\n".join(l for l in pr_text.splitlines() if not l.startswith("KB-Version:")).rstrip()
+        wanted = f"{kept}\n\n{trailer}\n"
+        if pr_text != wanted.rstrip():
+            cp = gh(["pr", "edit", str(pr_number), "--body", wanted], root)
+            if cp.returncode != 0:
+                print(f"error: could not write the version trailer into PR #{pr_number}: {_out(cp)}")
+                return 1
+    events.post(pr_number, "queued", _head_sha(root), root=root, branch=branch)
+    args = ["pr", "merge", str(pr_number), "--merge", "--auto"]
+    if approved_head:
+        args += ["--match-head-commit", approved_head]   # a push after the review never rides along
+    assert not FORBIDDEN_MERGE_FLAGS & set(args), "ship never squashes or rebases"
+    cp = gh(args, root)
+    if cp.returncode != 0:
+        if not _auto_merge_unavailable(_out(cp)):
+            print(_out(cp))
+            return 1
+        # no ruleset on main yet (auto-merge needs one: `pixi run ship -- protect --ruleset`): merge directly, as before
+        print(f"note: auto-merge is not available on this repository ({_out(cp).strip().splitlines()[-1]}) — merging directly")
+        direct = ["pr", "merge", str(pr_number), "--merge", "--subject", subject, "--body", "\n".join(body_lines)]
+        if approved_head:
+            direct += ["--match-head-commit", approved_head]
+        cp = gh(direct, root)
+        print(_out(cp))
+        if cp.returncode != 0:
+            return 1
+        after = _pr_info(pr_number, root) or {}
+        if after.get("state") != "MERGED":      # a queue took it after all: watch it like any enqueued PR
+            if not wait:
+                return 0
+            return _watch_merge(pr_number, branch, feature, primary, root, round_no, kind, approved_head, detail, no_push)
+        return _after_merged(pr_number, branch, feature, primary, root, round_no, kind, approved_head, detail, no_push)
+    print(_out(cp) or f"PR #{pr_number} enqueued — GitHub merges it once `{REQUIRED_CHECK}` passes")
+    if not wait:
+        print("--no-wait: run `pixi run ship -- merge` again once it has landed (primary checkout, worktree, events)")
+        return 0
+    return _watch_merge(pr_number, branch, feature, primary, root, round_no, kind, approved_head, detail, no_push)
+
+
+def _auto_merge_unavailable(text):
+    """gh's refusals when the base branch has no protection: auto-merge is only offered under a ruleset."""
+    t = text.lower()
+    return "auto-merge is not allowed" in t or "clean status" in t or "auto merge is not allowed" in t
+
+
+def _check_states(info):
+    """[(name, state)] from statusCheckRollup: check runs carry conclusion, commit statuses carry state."""
+    out = []
+    for c in info.get("statusCheckRollup") or []:
+        out.append((c.get("name") or c.get("context") or "?", (c.get("conclusion") or c.get("state") or "").upper()))
+    return out
+
+
+def _watch_merge(pr_number, branch, feature, primary, root, round_no, kind, approved_head, detail, no_push,
+                 sleep=time.sleep, clock=time.monotonic, queue_state=None):
+    """Look at the PR every MERGE_POLL seconds until GitHub merged it (then the post-merge steps), or until a required
+    check failed, the PR left the queue, an approved head moved, or KB_MERGE_WATCH ran out (then exit 1; the fix is a
+    new commit + ship pr, and `ship merge` again). "Left the queue" needs two polls in a row with neither auto-merge
+    armed nor a queue entry (GraphQL): entering the queue clears `autoMergeRequest`, and one stale answer must not end it."""
+    queue_state = queue_state or _queue_state
+    deadline = clock() + _watch_seconds()
+    announced, gone = False, 0
+    while True:
+        info = _pr_info(pr_number, root) or {}
+        state = info.get("state")
+        if state == "MERGED":
+            return _after_merged(pr_number, branch, feature, primary, root, round_no, kind, approved_head, detail, no_push)
+        if state == "CLOSED":
+            print(f"error: PR #{pr_number} was closed without merging")
+            return 1
+        head = info.get("headRefOid") or ""
+        if approved_head and head and head != approved_head:
+            gh(["pr", "merge", str(pr_number), "--disable-auto"], root)
+            print(f"error: PR #{pr_number} moved to {head[:7]} after the approval of {approved_head[:7]} — re-approve, then ship merge again")
+            return 1
+        red = [n for n, s in _check_states(info) if s in _RED]
+        if red:
+            events.post(pr_number, "checks-failed", head, root=root, stage="ci")
+            print(f"error: CI is red on PR #{pr_number}: {', '.join(red)} — fix it, ship commit, ship pr; then ship merge again "
+                  f"(`gh pr checks {pr_number}` has the links)")
+            return 1
+        gone = gone + 1 if info and info.get("autoMergeRequest") is None and queue_state(pr_number, root) is False else 0
+        if gone >= 2:
+            print(f"error: PR #{pr_number} left the merge queue (a merge-group check failed, or auto-merge was turned off) — "
+                  f"see the PR's checks, then ship merge again to re-enqueue")
+            return 1
+        if clock() > deadline:
+            print(f"error: PR #{pr_number} has not merged after {int(_watch_seconds() // 60)} min "
+                  f"({MERGE_WATCH_ENV}); auto-merge stays armed — ship merge again later to finish up")
+            return 1
+        if not announced:
+            print(f"waiting for CI and the merge queue on PR #{pr_number} (every {MERGE_POLL}s; Ctrl-C is safe, auto-merge stays armed)")
+            announced = True
+        sleep(MERGE_POLL)
+
+
+def _after_merged(pr_number, branch, feature, primary, root, round_no, kind, approved_head, detail, no_push):
+    """The PR is merged on GitHub: lift the hold label, post events, update the primary checkout, remove the worktree."""
+    if approved_head:
+        gh(["pr", "edit", str(pr_number), "--remove-label", HOLD_LABEL], root)
+        night_merge = detail.startswith("night window")
+        events.post(pr_number, "approved", approved_head, root=root,
+                    by="night-window" if night_merge else app_token.owner_login(),
+                    via="night" if night_merge else "review")
+    run_git(["fetch", "-q", "origin", "main"], cwd=root)
+    # GitHub deletes the head branch on merge (`ship protect`: delete-branch-on-merge); a repository without that setting gets it here
+    if run_git(["ls-remote", "--exit-code", "--heads", "origin", branch], cwd=root).returncode == 0:
+        app_token.run_git_push(["push", "origin", "--delete", branch], cwd=root)
+    events.post(pr_number, "merged", _head_sha(root, "origin/main"), root=root, branch=branch)
+    rounds.on_event(round_no, feature, "merged", _head_sha(root, "origin/main"), pr=pr_number, root=root)
+    from kb_distillery.ops import core as ops_core
+    try:
+        print(f"primary checkout: {ops_core.update_main(primary)}")
+        ops_core.share_autodeploy(f"merge {branch}", primary)
+    except ops_core.OpsError as e:
+        print(f"note: primary checkout not updated — {e}")
+    _finish_merge(branch, feature, kind, primary, root, push=not no_push)
+    return 0
+
+
+def _merge_locked(branch, local, pr_number, title, skip_tests, no_push, root, gates, skip_checks, ev_pr=None):
+    """`ship merge --local`, inside the local merge queue: sync main into the branch, run the gates here, then
+    `merge --no-ff` into main in the primary checkout and push it. `local` is always True here: a PR merges on GitHub
+    through `_merge_remote`."""
+    feature = branch[len("infra/"):]
+    primary = primary_checkout(root)
+    round_no = rounds.branch_round(branch, root)  # read before _finish_merge deletes the branch config
+    if pr_number is None or not title:
+        print("error: --local needs --pr N and --title (subject is '<title> (#N)')")
+        return 1
 
     run_git(["fetch", "-q", "origin"], cwd=root)
     base = "origin/main" if run_git(["rev-parse", "-q", "--verify", "origin/main"], cwd=root).returncode == 0 else "main"
@@ -1266,43 +1550,10 @@ def _merge_locked(branch, local, pr_number, title, skip_tests, no_push, root, ga
     events.post(ev_pr, "checks-passed", _head_sha(root), root=root,
                 gates="ran" if gates else "skipped", skip_checks=skip_checks)
 
-    if local:
-        if pr_number is None or not title:
-            print("error: --local needs --pr N and --title (subject is '<title> (#N)')")
-            return 1
-    else:
-        if not no_push:
-            app_token.run_git_push(["push", "-u", "origin", branch], cwd=root)
-        view = gh(["pr", "view", branch, "--json", "number,title,state,labels,body,headRefOid"], root)
-        if view.returncode != 0:
-            print("error: no PR for this branch — run ship pr first")
-            print(_out(view))
-            return 1
-        info = json.loads(view.stdout)
-        if info.get("state") not in (None, "OPEN"):
-            print(f"error: PR #{info['number']} is {info['state']}")
-            return 1
-        if HOLD_LABEL in {l.get("name") for l in info.get("labels") or []}:
-            head = info.get("headRefOid") or ""
-            verdict, detail = review_approval(info["number"], head, root)
-            if (verdict != "ok" and night.active(root)
-                    and REVIEW_LABEL not in {l.get("name") for l in info.get("labels") or []}):
-                verdict, detail = "ok", "night window open: hold waived"
-            if verdict != "ok":
-                print(f"error: PR #{info['number']} is held for the user's approval ({detail}) — ask them to "
-                      f"approve the review on GitHub, or run: pixi run ship -- approve {info['number']}")
-                return 1
-            # the label stays until the merge succeeds: a failed step leaves the PR held, so new
-            # commits are re-checked on the next run; the merge itself is pinned to the approved sha
-            approved_head = head
-            print(f"PR #{info['number']} {detail} — merging the approved sha")
-        pr_number, title = info["number"], title or info["title"]
-        round_no = round_no or rounds.round_from_pr_body(info.get("body"))
-
     subjects = _branch_commits(root)
     problems = commit_policy.check_pr_title(title, subjects)
     if problems:
-        print("error: " + "\n       ".join(problems) + "\n       (retitle the PR on GitHub or pass --title)")
+        print("error: " + "\n       ".join(problems) + "\n       (pass --title)")
         return 1
     subject = f"{title} (#{pr_number})"
     # the commit list makes `git log --first-parent` readable without GitHub; trailers stay last
@@ -1331,56 +1582,27 @@ def _merge_locked(branch, local, pr_number, title, skip_tests, no_push, root, ga
         return 1
     body = "\n".join(body_lines)
 
-    if local:
-        if current_branch(primary) != "main":
-            print("error: primary checkout is not on main")
-            return 1
-        msg = subject + ("\n\n" + body if body else "")
-        cp = run_git(["merge", "--no-ff", "-m", msg, branch], cwd=primary)
-        print(_out(cp))
-        if cp.returncode != 0:
-            run_git(["merge", "--abort"], cwd=primary)
-            return 1
-        rc = 0
-        if not no_push:
-            push = app_token.run_git_push(["push", "origin", "main"], cwd=primary)
-            print(_out(push))
-            rc = push.returncode
-            if rc == 0:
-                from kb_distillery.ops import core as ops_core
-                ops_core.share_autodeploy(f"merge {branch} (local)", primary)
-        if cp.returncode == 0:
-            events.post(ev_pr or pr_number, "merged", _head_sha(primary, "main"), root=root, branch=branch)
-            rounds.on_event(round_no, feature, "merged", _head_sha(primary, "main"), pr=ev_pr or pr_number, root=root)
-        _finish_merge(branch, feature, kind, primary, root, push=not no_push)
-        return rc
-
-    args = ["pr", "merge", str(pr_number), "--merge", "--subject", subject, "--body", body]
-    if approved_head:
-        args += ["--match-head-commit", approved_head]   # a push after the review never rides along
-    assert not FORBIDDEN_MERGE_FLAGS & set(args), "ship never squashes or rebases"
-    merged = gh(args, root)
-    print(_out(merged))
-    if merged.returncode != 0:
+    if current_branch(primary) != "main":
+        print("error: primary checkout is not on main")
         return 1
-    if approved_head:
-        gh(["pr", "edit", str(pr_number), "--remove-label", HOLD_LABEL], root)
-        night_merge = detail.startswith("night window")
-        events.post(pr_number, "approved", approved_head, root=root,
-                    by="night-window" if night_merge else app_token.owner_login(),
-                    via="night" if night_merge else "review")
-    app_token.run_git_push(["push", "origin", "--delete", branch], cwd=root)
-    run_git(["fetch", "-q", "origin", "main"], cwd=root)
-    events.post(pr_number, "merged", _head_sha(root, "origin/main"), root=root, branch=branch)
-    rounds.on_event(round_no, feature, "merged", _head_sha(root, "origin/main"), pr=pr_number, root=root)
-    from kb_distillery.ops import core as ops_core
-    try:
-        print(f"primary checkout: {ops_core.update_main(primary)}")
-        ops_core.share_autodeploy(f"merge {branch}", primary)
-    except ops_core.OpsError as e:
-        print(f"note: primary checkout not updated — {e}")
+    msg = subject + ("\n\n" + body if body else "")
+    cp = run_git(["merge", "--no-ff", "-m", msg, branch], cwd=primary)
+    print(_out(cp))
+    if cp.returncode != 0:
+        run_git(["merge", "--abort"], cwd=primary)
+        return 1
+    rc = 0
+    if not no_push:
+        push = app_token.run_git_push(["push", "origin", "main"], cwd=primary)
+        print(_out(push))
+        rc = push.returncode
+        if rc == 0:
+            from kb_distillery.ops import core as ops_core
+            ops_core.share_autodeploy(f"merge {branch} (local)", primary)
+    events.post(ev_pr or pr_number, "merged", _head_sha(primary, "main"), root=root, branch=branch)
+    rounds.on_event(round_no, feature, "merged", _head_sha(primary, "main"), pr=ev_pr or pr_number, root=root)
     _finish_merge(branch, feature, kind, primary, root, push=not no_push)
-    return 0
+    return rc
 
 
 def _finish_merge(branch, feature, kind, primary, root, push=True):
@@ -1737,6 +1959,7 @@ def _main(argv):
     m.add_argument("--title", help="PR title (required with --local)")
     m.add_argument("--skip-tests", action="store_true")
     m.add_argument("--no-push", action="store_true")
+    m.add_argument("--no-wait", action="store_true", help="enqueue on GitHub and return; run merge again once it landed")
     m.add_argument("--skip-checks", metavar="REASON", help="bypass the lane checks; the reason is printed")
     sy = sub.add_parser("sync", help="merge origin/main into this infra branch (conflicts left to resolve)")
     sy.add_argument("--continue", dest="cont", action="store_true", help="gates, then commit the resolved merge")
@@ -1808,7 +2031,7 @@ def _main(argv):
         from kb_distillery.config import kb as kbconfig
         return cmd_tag(args.name, args.at, kbconfig.explicit_kb(), args.repo, args.message)
     return _locked("merge", cmd_merge, args.local, args.pr, args.title, args.skip_tests, args.no_push,
-                   skip_checks=args.skip_checks)
+                   skip_checks=args.skip_checks, wait=not args.no_wait)
 
 
 if __name__ == "__main__":

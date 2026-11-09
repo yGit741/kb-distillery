@@ -107,6 +107,32 @@ jobs:
       - run: pixi run web-install
       - run: pixi run web-check
 
+  checks:     # the lane checks `ship pr` used to run locally: API schema, flags registry, the graph e2e still-canvas test, ui-principles
+    runs-on: ubuntu-latest
+    env:
+      KB_CI: "1"
+      PLAYWRIGHT_MODULE: /home/runner/pw/node_modules/playwright/index.mjs     # tests/e2e and web/tests resolve playwright from it
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - run: git show-ref -q refs/heads/main || git branch main origin/main   # a PR checkout has no local main
+      - uses: prefix-dev/setup-pixi@v0.8.1
+        with:
+          pixi-version: v0.76.1
+          cache: true
+      - uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: npm-${{ runner.os }}-${{ hashFiles('web/package-lock.json') }}
+      - run: pixi run web-install
+      - run: pixi run api-schema-check
+      - run: pixi run flags-check
+      - name: Playwright (the npm package and Chromium; pixi does not ship it)
+        run: mkdir -p ~/pw && cd ~/pw && npm init -y > /dev/null && npm i --no-fund --no-audit playwright@1 && npx playwright install --with-deps chromium
+      - run: pixi run test-e2e
+      - run: pixi run test-ui-principles
+
   wheel:     # builds the wheel, installs it into a clean venv, runs the installed CLI (tests/cli/test_install_wheel.py)
     runs-on: ubuntu-latest
     steps:
@@ -143,7 +169,7 @@ jobs:
       - run: pixi run test-worker
 
   all-green:     # the one required check: every job above succeeded (cancelled or skipped is red too)
-    needs: [lint, tests, web, wheel, worker]
+    needs: [lint, tests, web, checks, wheel, worker]
     if: always()
     runs-on: ubuntu-latest
     steps:

@@ -105,7 +105,8 @@ class RunnerSafety(unittest.TestCase):
         self.assertTrue(set(triggers(wf)) <= {"push", "schedule", "workflow_dispatch"}, set(triggers(wf)))
 
 
-CI_JOBS = {"lint", "tests", "web", "wheel", "worker", "all-green"}
+CI_JOBS = {"lint", "tests", "web", "checks", "wheel", "worker", "all-green"}
+LANE_CHECKS = ("pixi run api-schema-check", "pixi run flags-check", "pixi run test-e2e", "pixi run test-ui-principles")
 LINT_TASKS = ("pixi run lint-skills", "pixi run licenses", "pixi run lint-imports", "pixi run lint", "pixi run okf-check", "pixi run ruff")
 
 
@@ -214,6 +215,13 @@ class CiGates(unittest.TestCase):
     def test_web_wheel_and_worker_tasks(self):
         for name, task in (("web", "pixi run web-check"), ("wheel", "pixi run test-wheel"), ("worker", "pixi run test-worker")):
             self.assertIn(task, runs(self.jobs[name]), name)
+
+    def test_the_lane_checks_ship_no_longer_runs_locally_run_in_ci(self):
+        """`ship pr` stopped running checks_for's lanes locally (CI is the gate): every one of them is a CI step."""
+        checks = runs(self.jobs["checks"])
+        for task in LANE_CHECKS:
+            self.assertIn(task, checks)
+        self.assertTrue(self.jobs["checks"]["env"]["PLAYWRIGHT_MODULE"].endswith("playwright/index.mjs"))     # else the e2e tests skip silently
 
 
 class SecretScan(unittest.TestCase):
