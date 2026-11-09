@@ -246,16 +246,18 @@ class SelectionTests(RepoCase):
 
     def test_workflows_skills_and_public_docs_map_to_their_readers(self):
         """CI workflows are read by tests/ci, skills by the skills lint tests, public docs by nobody: no full run for them."""
-        _write(self.root, "tests/ci/test_w.py")
-        _write(self.root, "tests/lint/test_s.py")
-        self.assertEqual(self.sel(".github/workflows/ci.yml"), ["tests/ci", "tests/test_top.py"])
+        for rel in ("tests/ci/test_w.py", "tests/lint/test_s.py", "tests/publish/test_p.py"):
+            _write(self.root, rel)
+        # the workflows have three readers: tests/ci, tests/git (ship protect reads ci.yml) and tests/publish (share ci)
+        self.assertEqual(self.sel(".github/workflows/ci.yml"), ["tests/ci", "tests/git", "tests/publish", "tests/test_top.py"])
         self.assertEqual(self.sel(".claude/skills/x/SKILL.md"), ["tests/lint", "tests/test_top.py"])
         self.assertEqual(self.sel("docs/guides/write-a-skill.md", "README.md"), ["tests/test_top.py"])
         self.assertEqual(self.sel(".github/workflows/ci.yml", "src/kb_distillery/git/ship.py"),
-                         ["tests/ci", "tests/git", "tests/test_top.py"])
+                         ["tests/ci", "tests/git", "tests/publish", "tests/test_top.py"])
 
-    def test_workflow_mapping_needs_the_reader_dir(self):
-        self.assertIsNone(self.sel(".github/workflows/ci.yml"))          # no tests/ci in this repo: run full
+    def test_workflow_mapping_needs_every_reader_dir(self):
+        _write(self.root, "tests/ci/test_w.py")
+        self.assertIsNone(self.sel(".github/workflows/ci.yml"))          # no tests/publish in this repo: run full
 
 
 class RefusalTests(RepoCase):

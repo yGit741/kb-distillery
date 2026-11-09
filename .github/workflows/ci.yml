@@ -8,7 +8,7 @@
 # Runners: GitHub-hosted `ubuntu-latest` only. A fork's pull request never reaches a self-hosted machine
 # (tests/ci/test_workflows.py fails on any other runner).
 #
-# Jobs: `lint` (the cheap gates, ~1-2 min), `tests` (pytest in 4 static shards, each with `-n auto` and a
+# Jobs: `lint` (the cheap gates, ~1-2 min), `tests` (pytest in 5 static shards, each with `-n auto` and a
 # per-test timeout; the shard list and the `--ignore`s of the last shard must cover every tests/ dir exactly
 # once, tests/ci/test_workflows.py checks that), `web` (web-check), `wheel`, `worker`, and `all-green`, the
 # fan-in that is green only when every other job succeeded (cancelled or skipped count as red). Branch
