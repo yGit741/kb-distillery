@@ -9,7 +9,7 @@ from __future__ import annotations
 from kb_distillery.config.kb import ReadOnlyError, require_writable
 from kb_distillery.config.paths import vault_root
 from kb_distillery.proposals import apply as applier
-from kb_distillery.proposals import checks, diff, store
+from kb_distillery.proposals import checks, checks_semantic, diff, store
 from kb_distillery.proposals.model import (DECISIONS, ProposalError, new_id, now, sha, touched_slugs, validate_ops,
                                            validate_producer)
 
@@ -94,7 +94,7 @@ def get(pid, root=None) -> dict:
     return full(store.load(root, pid), root)
 
 
-def create(title, ops, producer=None, note=None, root=None) -> dict:
+def create(title, ops, producer=None, note=None, root=None, semantic=False, backend=None) -> dict:
     root = _writable(root)
     title = " ".join(str(title or "").split())
     if not title:
@@ -106,7 +106,29 @@ def create(title, ops, producer=None, note=None, root=None) -> dict:
          "status": "open", "base": base, "base_texts": base_texts, "revisions": [rev], "current": 0,
          "decisions": {}, "checks": {"tier1": rev["checks"], "tier2": []}, "applied": None}
     store.save(root, p)
-    return full(p, root)
+    return full(_maybe_semantic(root, p, semantic, backend), root)
+
+
+def _maybe_semantic(root, p, semantic, backend):
+    """Tier 2 right after tier 1 when asked; a failed model call leaves an info finding, never a failed request."""
+    if not semantic:
+        return p
+    try:
+        checks_semantic.run(root, p["id"], backend)
+    except Exception as e:  # noqa: BLE001  (the proposal is saved; a failed review must not fail the request)
+        p = store.load(root, p["id"])
+        rev = p["revisions"][p["current"]]
+        slug = rev["hunks"][0]["slug"] if rev["hunks"] else (rev["ops"][0].get("slug") or "")
+        p["checks"]["tier2"] = [checks.finding("info", "semantic-unavailable", f"semantic check not run: {e}", slug,
+                                               source="tier2")]
+        store.save(root, p)
+    return store.load(root, p["id"])
+
+
+def semantic(pid, backend=None, root=None) -> dict:
+    """Run the tier-2 scoped semantic check on the current revision (synchronous); returns {findings, revision}."""
+    root = _writable(root)
+    return checks_semantic.run(root, pid, backend)
 
 
 def _open(root, pid):
@@ -116,7 +138,7 @@ def _open(root, pid):
     return p
 
 
-def revise(pid, ops, note=None, root=None) -> dict:
+def revise(pid, ops, note=None, root=None, semantic=False, backend=None) -> dict:
     """A new revision against the pages as they are now; decisions survive for hunks whose content is identical."""
     root = _writable(root)
     p = _open(root, pid)
@@ -127,7 +149,7 @@ def revise(pid, ops, note=None, root=None) -> dict:
     p.update(current=len(p["revisions"]) - 1, base=base, base_texts=base_texts, status="open", updated=now(),
              checks={"tier1": rev["checks"], "tier2": []})
     store.save(root, p)
-    return full(p, root)
+    return full(_maybe_semantic(root, p, semantic, backend), root)
 
 
 def decide(pid, decisions, root=None) -> dict:
@@ -176,3 +198,9 @@ def render(pid, root=None) -> dict:
     current = {s: applier.read_page(root, s) for s in p["base"]}
     return {"id": p["id"], "revision": rev["n"], "stale": bool(applier.stale_slugs(root, p)),
             "pages": diff.render(current, rev["hunks"])}
+
+
+def suggestions(root=None) -> list[dict]:
+    """The nightly tier-3 suggestions that carry no edit (the review inbox lists them next to the proposals)."""
+    from kb_distillery.proposals import nightly
+    return nightly.list_suggestions(_root(root))

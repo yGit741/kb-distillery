@@ -8,11 +8,12 @@ from fastapi.responses import JSONResponse
 from kb_distillery.proposals import service as svc
 from kb_distillery.proposals.model import ProposalError
 from kb_distillery.server.models.proposals import (ApplyResult, DecisionRequest, Proposal, ProposalCreate, ProposalList,
-                                                   ProposalRender, RejectRequest, RevisionCreate)
+                                                   ProposalRender, RejectRequest, RevisionCreate, SemanticRequest,
+                                                   SemanticResult, SuggestionList)
 from kb_distillery.server.readonly import refuse_when_read_only
 
 router = APIRouter(tags=["proposals"])
-ERRORS = {400: {}, 404: {}, 405: {}, 409: {}, 422: {}}
+ERRORS = {400: {}, 404: {}, 405: {}, 409: {}, 422: {}, 502: {}}
 WRITE = [Depends(refuse_when_read_only)]
 
 
@@ -32,10 +33,17 @@ def list_proposals(status: str | None = Query(None, description="open | applied 
     return _call(lambda: {"proposals": svc.list_proposals(status)})
 
 
+@router.get("/api/proposals/suggestions", response_model=SuggestionList,
+            summary="Nightly tier-3 suggestions without an edit (findings the owner may draft or dismiss)")
+def suggestions():
+    return _call(lambda: {"suggestions": svc.suggestions()})
+
+
 @router.post("/api/proposals", dependencies=WRITE, response_model=Proposal, responses=ERRORS,
              summary="Create a proposal (revision 1): hunks and tier-1 checks computed here")
 def create(body: ProposalCreate):
-    return _call(svc.create, body.title, _ops(body.ops), body.producer.model_dump(), body.note)
+    return _call(svc.create, body.title, _ops(body.ops), body.producer.model_dump(), body.note, semantic=body.semantic,
+                 backend=body.backend)
 
 
 @router.get("/api/proposals/{pid}", response_model=Proposal, responses=ERRORS,
@@ -47,7 +55,7 @@ def get(pid: str):
 @router.post("/api/proposals/{pid}/revisions", dependencies=WRITE, response_model=Proposal, responses=ERRORS,
              summary="A new revision; decisions survive for hunks whose before/after are unchanged")
 def revise(pid: str, body: RevisionCreate):
-    return _call(svc.revise, pid, _ops(body.ops), body.note)
+    return _call(svc.revise, pid, _ops(body.ops), body.note, semantic=body.semantic, backend=body.backend)
 
 
 @router.post("/api/proposals/{pid}/decisions", dependencies=WRITE, response_model=Proposal, responses=ERRORS,
@@ -78,3 +86,9 @@ def reject(pid: str, body: RejectRequest | None = None):
             summary="Each touched page as it is now, with the hunks positioned by block index")
 def render(pid: str):
     return _call(svc.render, pid)
+
+
+@router.post("/api/proposals/{pid}/checks/semantic", dependencies=WRITE, response_model=SemanticResult, responses=ERRORS,
+             summary="Tier-2 scoped semantic check of the current revision (one model call per touched page)")
+def semantic(pid: str, body: SemanticRequest | None = None):
+    return _call(svc.semantic, pid, body.backend if body else None)
