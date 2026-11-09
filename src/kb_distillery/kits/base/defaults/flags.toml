@@ -277,3 +277,13 @@ expires = 2027-02-06
 kind = "runtime"
 default = false
 envs = { local = true, private = true, public = false }
+
+[[flag]]
+name = "ui.page-chat"
+description = "Pages: chat on the page being read; the reply's edits become a proposal to review (needs ui.proposals). Five entry points as variants."
+owner = "maintainer"
+created = 2026-11-09
+expires = 2027-05-09
+kind = "runtime"
+default = false
+envs = { local = true, private = false, public = false }
