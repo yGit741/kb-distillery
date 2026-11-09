@@ -27,6 +27,15 @@ export const VARIANTS: Record<string, VariantSpec> = {
       { id: "hover-marks", label: "Hover marks", hint: "A count in the header with a popover, plus a faint dot beside each section that cites a source." },
     ],
   },
+  "proposal-diff": {
+    label: "Proposal diff",
+    default: "inline",
+    options: [
+      { id: "inline", label: "Inline", hint: "The page as it reads, changed words marked in place, controls in the right margin." },
+      { id: "side-by-side", label: "Side by side", hint: "Before and after in two columns per block; unchanged paragraphs fold to one line." },
+      { id: "reading", label: "Reading", hint: "The finished page, clean; a thin bar in the gutter opens a note with the old text and the controls." },
+    ],
+  },
 };
 
 const PREFIX = "kbd.variants.";

@@ -307,7 +307,6 @@ TOOLING_PATHS = [
     "web/",
     "examples/",
     "scripts/",
-    "tools/",           # tools/hooks-python.sh and tools/hooks/ stubs for old settings.json copies, until Phase 9
     "README.md",
     "CHANGELOG.md",
     "CONTRIBUTING.md",
