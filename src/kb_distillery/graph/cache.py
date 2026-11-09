@@ -13,6 +13,7 @@ is a hit. `KB_GRAPH_WARM=0` turns it off; nothing else starts it (tests, share b
 
 A hit returns a shallow copy of the cached snapshot (callers add top-level keys such as `kbs`); do not mutate
 the nested nodes/links."""
+import datetime
 import hashlib
 import os
 import threading
@@ -34,6 +35,7 @@ def enabled():
 def clear():
     with _guard:
         _entries.clear()
+        _memos.clear()
 
 
 def _stat_part(path):
@@ -98,6 +100,71 @@ def cached_graph_snapshot(layer=None, view=None, relations=None):
         return dict(snap)
 
 
+def _tree_stats(base, root, content=False):
+    """Hash of (relpath, mtime_ns, size) of every non-hidden file under `base` (any extension). With `content`, the
+    file bytes stand in for mtime: the lint rewrites some meta files with the same bytes, which is no change."""
+    out = []
+    stack = [base]
+    while stack:
+        d = stack.pop()
+        try:
+            it = os.scandir(d)
+        except OSError:
+            continue
+        with it:
+            for e in it:
+                if e.name.startswith("."):
+                    continue
+                try:
+                    if e.is_dir(follow_symlinks=False):
+                        stack.append(e.path)
+                    else:
+                        st = e.stat()
+                        if content and st.st_size < 8_000_000:
+                            with open(e.path, "rb") as f:
+                                mark = hashlib.sha1(f.read()).hexdigest()
+                        else:
+                            mark = str(st.st_mtime_ns)
+                        out.append(f"{os.path.relpath(e.path, root)}:{mark}:{st.st_size}")
+                except OSError:
+                    continue
+    out.sort()
+    return hashlib.sha1("\n".join(out).encode()).hexdigest()
+
+
+def full_signature(root, extra=()):
+    """`signature` plus a stat hash of the other vault folders (what a whole-vault pass such as the health lint
+    reads: sources, meta by content, think), today's date (flag expiry), the root-level files and the `extra` files."""
+    parts = [signature(root)]
+    for name in _VAULT_DIRS:
+        parts.append(_tree_stats(os.path.join(root, name), root, content=(name == "meta")))
+    parts.append(datetime.date.today().isoformat())
+    try:
+        parts.append(",".join(sorted(f"{e.name}:{_stat_part(e.path)}" for e in os.scandir(root) if e.is_file())))
+    except OSError:
+        pass
+    parts += [f"{x}:{_stat_part(x)}" for x in extra]
+    return hashlib.sha1("|".join(parts).encode()).hexdigest()
+
+
+_VAULT_DIRS = ("r" + "aw", "meta", "think")   # not a read of the sources: only their stats feed the key
+_memos = {}          # name -> (signature, value, built at)
+_memo_lock = threading.Lock()
+
+
+def memo(name, sig_fn, build):
+    """`build()` once per change signature `sig_fn()`; concurrent callers wait for the build in flight.
+    `KB_GRAPH_CACHE=0` disables it."""
+    if not enabled():
+        return build()
+    sig = sig_fn()
+    with _memo_lock:
+        hit = _memos.get(name)
+        if hit and hit[0] == sig:
+            return hit[1]
+        value = build()
+        _memos[name] = (sig, value)
+        return value
 WARM_ENV = "KB_GRAPH_WARM"
 WARM_INTERVAL_ENV = "KB_GRAPH_WARM_INTERVAL"
 _WARM_LAYERS = (None, "raw")

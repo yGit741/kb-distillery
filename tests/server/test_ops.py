@@ -29,7 +29,7 @@ def test_ops_failure_shape():
 
 
 def test_ops_snapshot_carries_live_queue(tmp_path, monkeypatch):
-    """The queue is read fresh on every call (outside the 60 s cache) from the git common dir."""
+    """The queue is read fresh on every call (outside the cache) from the git common dir."""
     import json, os, socket, subprocess, time
     from kb_distillery.services import ops
     subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
@@ -40,6 +40,7 @@ def test_ops_snapshot_carries_live_queue(tmp_path, monkeypatch):
     monkeypatch.setattr(ops, "vault_root", lambda: str(tmp_path))
     monkeypatch.setitem(ops._cache, "data", {"subject": "s", "doc": {}})
     monkeypatch.setitem(ops._cache, "at", time.monotonic())
+    monkeypatch.setitem(ops._cache, "sig", ops._signature())
     with TestClient(create_app()) as c:
         q = c.get("/api/ops").json()["queue"]
     assert q["holder"]["pr"] == 7 and q["holder"]["alive"] is True and not q["holder"]["stale"]
@@ -151,3 +152,48 @@ def test_deploy_state_default_root_is_the_engine_not_the_kb(tmp_path, monkeypatc
     _owner_fixture(engine, {}, {}, (now - datetime.timedelta(minutes=2)).isoformat())
     d = ops.deploy_state(now=now.timestamp(), plist=str(tmp_path / "none"), main=(None, None))
     assert d["owner_alive"] is True and d["heartbeat_age"] == 120
+
+
+def _vault_copy(tmp_path, monkeypatch):
+    import shutil
+    from kb_distillery.graph import cache, snapshot
+    from kb_distillery.services import ops
+    root = tmp_path / "kb"
+    shutil.copytree(snapshot.ROOT, root, ignore=shutil.ignore_patterns(".git"))
+    monkeypatch.setattr(ops, "vault_root", lambda: str(root))
+    cache.clear()
+    return root
+
+
+def test_ops_cache_follows_wiki_signature(tmp_path, monkeypatch):
+    """No clock: the snapshot is reused while nothing changed and rebuilt after a wiki edit."""
+    from unittest import mock
+    from kb_distillery.services import ops
+    root = _vault_copy(tmp_path, monkeypatch)
+    monkeypatch.setitem(ops._cache, "data", None)
+    with mock.patch.object(ops, "_build", return_value={"subject": "s", "doc": {}}) as build, \
+            mock.patch.object(ops, "merge_queue", return_value=None), mock.patch.object(ops, "deploy", return_value=None):
+        ops.build_ops_snapshot()
+        ops.build_ops_snapshot()
+        assert build.call_count == 1
+        page = next((root / "wiki").rglob("*.md"))
+        page.write_text(page.read_text() + "\nedit\n")
+        ops.build_ops_snapshot()
+        assert build.call_count == 2
+
+
+def test_health_cache_follows_wiki_signature(tmp_path, monkeypatch):
+    from unittest import mock
+    from kb_distillery.graph import snapshot
+    from kb_distillery.services import health
+    root = _vault_copy(tmp_path, monkeypatch)
+    monkeypatch.setattr(snapshot, "ROOT", str(root))
+    with mock.patch.object(health, "_build", side_effect=lambda: {"n": 1}) as build:
+        a = health.build_health_snapshot()
+        a["n"] = 99                                   # a caller mutating its copy must not poison the cache
+        assert health.build_health_snapshot() == {"n": 1}
+        assert build.call_count == 1
+        page = next((root / "wiki").rglob("*.md"))
+        page.write_text(page.read_text() + "\nedit\n")
+        health.build_health_snapshot()
+        assert build.call_count == 2
