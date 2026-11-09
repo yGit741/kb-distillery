@@ -11,6 +11,7 @@ on-disk form, `convert()` is the engine both the migration and `to_disk()` share
 reads the same markdown a person reads.
 """
 import re
+from functools import lru_cache
 
 # -- the legacy wikilink form (My notes, extension fields, model output) ---------------------------------------------
 # Target slug only: `[[slug` up to `|`, `#`, `]` or an escaped pipe. Use with findall/search.
@@ -34,10 +35,16 @@ _LINK_TARGET = re.compile(r"\[\[([^\]|#\\]+)|(?<!!)\[(?:[^\[\]\\\n]|\\.)*\]\(([^
 _COMMENT = re.compile(r"<!--.*?-->", re.S)
 
 
+@lru_cache(maxsize=2048)
+def _targets(text: str) -> tuple[str, ...]:
+    return tuple((m.group(1) or m.group(2)).strip() for m in _LINK_TARGET.finditer(_COMMENT.sub("", text)))
+
+
 def targets(text: str) -> list[str]:
     """Stripped slugs `text` links to, in order, duplicates kept: markdown page links and (My notes) wikilinks. An
-    HTML comment is not read (a template's `<!-- [Title](slug.md) -->` hint links nothing)."""
-    return [(m.group(1) or m.group(2)).strip() for m in _LINK_TARGET.finditer(_COMMENT.sub("", text or ""))]
+    HTML comment is not read (a template's `<!-- [Title](slug.md) -->` hint links nothing). Pure in `text`, so the
+    scan is memoised (a graph build asks for the same page text several times); every call gets a fresh list."""
+    return list(_targets(text or ""))
 
 
 def wikilink_targets(text: str) -> list[str]:

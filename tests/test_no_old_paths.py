@@ -67,12 +67,11 @@ RETIRED = {
         r"kb_distillery[./]api\b|from kb_distillery import[^\n#]*\bapi\b|(?<![\w/.-])tests/api\b|\{api,services\}"),
     "Lane E renames (summaries is now digest)": re.compile(r"kb_distillery[./]summaries\b|from kb_distillery import[^\n#]*\bsummaries\b|tests/vault/test_summary\b"),
 }
-# (pattern name -> files that may name it): the tools/ entry of TOOLING_PATHS (until Phase 9), the share builder that still builds
+# (pattern name -> files that may name it): the share builder that still builds
 # refs from before the move, and this test.
 ALLOWED = {
     "*": {"tests/test_no_old_paths.py",
           "CHANGELOG.md"},      # a changelog names the old paths to say where they went
-    "tools/": {"src/kb_distillery/vault/schema.py"},               # TOOLING_PATHS keeps tools/ for the two remaining stubs until Phase 9
     "python -m kb.": {"src/kb_distillery/publish/site/build.py"},
     "backend/src or backend/tests": {"src/kb_distillery/publish/site/build.py", "tests/publish/cloudflare/test_share_app.py",
                                      "tests/publish/cloudflare/test_share_versions.py", "pixi.toml"},
