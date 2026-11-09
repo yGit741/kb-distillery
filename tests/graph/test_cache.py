@@ -1,5 +1,6 @@
 """The graph snapshot cache: a second call reuses the build, any change rebuilds, KB_GRAPH_CACHE=0 never caches."""
 import os
+import shutil
 import threading
 import time
 
@@ -9,7 +10,12 @@ from kb_distillery.graph import cache, snapshot
 
 
 @pytest.fixture(autouse=True)
-def _fresh(monkeypatch):
+def _fresh(monkeypatch, tmp_path):
+    # A private copy of the fixture kb: the suite's copy is shared by every xdist worker, and two tests here
+    # add and remove pages, which would race the builds of the other tests.
+    root = os.path.join(str(tmp_path), "kb")
+    shutil.copytree(snapshot.ROOT, root, symlinks=True)
+    monkeypatch.setattr(snapshot, "ROOT", root)
     monkeypatch.delenv(cache.ENV, raising=False)
     cache.clear()
     yield
@@ -97,7 +103,16 @@ def test_concurrent_callers_share_one_build(monkeypatch):
 
 
 def test_signature_is_cheap_and_stable():
+    # Cheap = stat-only: no slower than a few plain walks of the same tree, whatever the machine load.
+    wiki = os.path.join(snapshot.ROOT, "wiki")
+    t = time.perf_counter()
+    for _ in range(3):
+        for r, _d, files in os.walk(wiki):
+            for f in files:
+                os.stat(os.path.join(r, f))
+    walk = time.perf_counter() - t
     t = time.perf_counter()
     a = cache.signature(snapshot.ROOT)
-    assert time.perf_counter() - t < 0.1
+    sig = time.perf_counter() - t
+    assert sig < max(walk * 10, 0.5), f"signature {sig:.3f}s vs 3 walks {walk:.3f}s"
     assert a == cache.signature(snapshot.ROOT)

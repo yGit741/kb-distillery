@@ -66,7 +66,7 @@ def signature(root, layer=None):
     for rel in _SIDE_FILES:
         parts.append(f"{rel}:{_stat_part(os.path.join(root, rel))}")
     if layer == "raw":
-        parts.append("corpus:" + _stat_part(os.path.join(_snap.ROOT, "meta", "corpus.tsv")))
+        parts.append("corpus:" + _stat_part(os.path.join(root, "meta", "corpus.tsv")))
     dates_file = os.environ.get(_snap.DATES_ENV, "")
     if dates_file:
         parts.append(f"dates:{dates_file}:{_stat_part(dates_file)}")
