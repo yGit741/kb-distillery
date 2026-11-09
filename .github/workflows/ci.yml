@@ -107,6 +107,35 @@ jobs:
       - run: pixi run web-install
       - run: pixi run web-check
 
+  checks:     # the lane checks `ship pr` used to run locally: API schema, flags registry, the graph e2e still-canvas test, ui-principles
+    runs-on: ubuntu-latest
+    env:
+      KB_CI: "1"
+      PLAYWRIGHT_MODULE: /home/runner/pw/node_modules/playwright     # the package dir: tests/e2e and web/tests join index.mjs to it
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - run: git show-ref -q refs/heads/main || git branch main origin/main   # a PR checkout has no local main
+      - uses: prefix-dev/setup-pixi@v0.8.1
+        with:
+          pixi-version: v0.76.1
+          cache: true
+      - uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: npm-${{ runner.os }}-${{ hashFiles('web/package-lock.json') }}
+      - run: pixi run web-install
+      - run: pixi run api-schema-check
+      - run: pixi run flags-check
+      - run: pixi run web-build     # both browser suites serve the built app (src/kb_distillery/_webapp is gitignored)
+      - name: Playwright (the npm package and Chromium; pixi does not ship it)
+        run: mkdir -p ~/pw && cd ~/pw && npm init -y > /dev/null && npm i --no-fund --no-audit playwright@1 && npx playwright install --with-deps chromium
+      - name: Graph e2e (a skipped suite is a failure here, never a silent green)
+        run: set -o pipefail; pixi run test-e2e 2>&1 | tee e2e.log; ! grep -Eq '^# skip(ped)? [1-9]' e2e.log
+      - name: ui-principles, every screen (same rule)
+        run: set -o pipefail; pixi run test-ui-principles 2>&1 | tee ui.log; ! grep -Eq '^# skip(ped)? [1-9]' ui.log
+
   wheel:     # builds the wheel, installs it into a clean venv, runs the installed CLI (tests/cli/test_install_wheel.py)
     runs-on: ubuntu-latest
     steps:
@@ -143,7 +172,7 @@ jobs:
       - run: pixi run test-worker
 
   all-green:     # the one required check: every job above succeeded (cancelled or skipped is red too)
-    needs: [lint, tests, web, wheel, worker]
+    needs: [lint, tests, web, checks, wheel, worker]
     if: always()
     runs-on: ubuntu-latest
     steps:
