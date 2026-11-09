@@ -56,6 +56,15 @@ def _lines(path):
         return f.read().split("\n")[:-1]
 
 
+def _release_all(events, procs):
+    for ev in events:
+        ev.set()
+    for p in procs:
+        p.join(5)
+        if p.is_alive():
+            p.terminate()
+
+
 def _die_holding(root, ready):
     os.environ.pop(gate_slot.HELD_ENV, None)
     s = gate_slot.Sequence(root, log=lambda *_: None)
@@ -86,6 +95,7 @@ class SlotCase(unittest.TestCase):
         log = os.path.join(tempfile.mkdtemp(), "log")
         go, release = [mp.Event() for _ in roots], [mp.Event() for _ in roots]
         ps = [mp.Process(target=_worker, args=(r, f"p{i}", go[i], release[i], log)) for i, r in enumerate(roots)]
+        self.addCleanup(_release_all, go + release, ps)       # a failed assertion leaves no waiter behind
         for p in ps:
             p.start()
         go[0].set()

@@ -36,6 +36,15 @@ def _lines(path):
         return f.read().split("\n")[:-1]
 
 
+def _release_all(events, procs):
+    for ev in events:
+        ev.set()
+    for p in procs:
+        p.join(5)
+        if p.is_alive():
+            p.terminate()
+
+
 class QueueTest(unittest.TestCase):
     def setUp(self):
         self.root = _git_repo()
@@ -61,6 +70,7 @@ class QueueTest(unittest.TestCase):
         go = {n: ctx.Event() for n in names}
         release = {n: ctx.Event() for n in names}
         procs = [ctx.Process(target=_worker, args=(self.root, n, go[n], release[n], log)) for n in names]
+        self.addCleanup(_release_all, list(go.values()) + list(release.values()), procs)   # a failed assertion leaves no waiter behind
         for p in procs:
             p.start()
         queued = lambda: [e["branch"] for e in mq.entries(self.qdir)]

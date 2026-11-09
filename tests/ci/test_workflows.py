@@ -205,6 +205,7 @@ class CiGates(unittest.TestCase):
     def test_a_merge_group_run_is_never_cancelled(self):
         c = self.wf["concurrency"]
         self.assertIn("github.ref", c["group"])
+        self.assertIn("github.event_name", c["group"])                 # a main push and a merge group never share a group
         self.assertIsNot(c["cancel-in-progress"], True)
         self.assertIn("pull_request", str(c["cancel-in-progress"]))     # only a newer push to the same PR cancels
 

@@ -29,8 +29,6 @@ on:
 concurrency:
   group: ci-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
-env:
-  PIXI_VERSION: v0.76.1
 jobs:
   lint:     # skills lint, licences, layer contract, kb lint, okf check, ruff, privacy ratchet
     runs-on: ubuntu-latest

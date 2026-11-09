@@ -38,10 +38,10 @@ import json
 import os
 import re
 import shutil
-import tempfile
 import subprocess
 import time
 import sys
+import tempfile
 
 from kb_distillery.config import kb as kbconfig
 from kb_distillery.config.kb import checkout_root
@@ -1401,15 +1401,17 @@ def _snapshot_after_schema(primary, feature, push=True):
 RULESET_NAME = "main"
 REQUIRED_CHECK = "all-green"          # the fan-in job in .github/workflows/ci.yml; the one check the ruleset requires
 GITHUB_ACTIONS_APP = 15368            # the integration id GitHub Actions reports its checks under
+ADMIN_ROLE = 5                        # GitHub's RepositoryRole id for admin (the owner's hotfix bypass, PRs only)
 
 
 def ruleset_body():
     """The branch ruleset on main: pull requests only, merge commits only, `all-green` required, merged through the
-    merge queue in batches. No bypass actors: nothing pushes main past the queue (git_guard already forbids raw pushes)."""
+    merge queue in batches. The one bypass is the repository admin (the owner) and only through a pull request
+    (`bypass_mode: pull_request`): a hotfix route when CI itself is down, never a direct push to main."""
     return {
         "name": RULESET_NAME, "target": "branch", "enforcement": "active",
         "conditions": {"ref_name": {"include": ["~DEFAULT_BRANCH"], "exclude": []}},
-        "bypass_actors": [],
+        "bypass_actors": [{"actor_id": ADMIN_ROLE, "actor_type": "RepositoryRole", "bypass_mode": "pull_request"}],
         "rules": [
             {"type": "deletion"},
             {"type": "non_fast_forward"},

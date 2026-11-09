@@ -65,7 +65,8 @@ class ProtectTest(unittest.TestCase):
         self.assertEqual([c["context"] for c in rules["required_status_checks"]["required_status_checks"]], [ship.REQUIRED_CHECK])
         self.assertEqual(rules["pull_request"]["allowed_merge_methods"], ["merge"])
         self.assertEqual(rules["merge_queue"]["merge_method"], "MERGE")
-        self.assertEqual(body["bypass_actors"], [])                     # nothing pushes main past the queue
+        # the owner's hotfix route: the admin role may bypass, through a pull request only, never by pushing main
+        self.assertEqual(body["bypass_actors"], [{"actor_id": ship.ADMIN_ROLE, "actor_type": "RepositoryRole", "bypass_mode": "pull_request"}])
         self.assertEqual(body["conditions"]["ref_name"]["include"], ["~DEFAULT_BRANCH"])
 
     def test_the_required_check_is_a_job_in_ci_yml(self):
