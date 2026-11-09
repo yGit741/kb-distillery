@@ -241,8 +241,21 @@ class SelectionTests(RepoCase):
     def test_full_fallback_on_config_and_unmappable_changes(self):
         for p in ("pixi.toml", "pyproject.toml", "tests/conftest.py", "tests/git/conftest.py", "pixi.lock",
                   "src/kb_distillery/config/paths.py", "src/kb_distillery/nomirror/x.py", "tests/fixtures/data.json",
-                  "src/kb_distillery/kits/base/skills/x/SKILL.md", ".claude/skills/x/SKILL.md", "web/src/a.ts"):
+                  "src/kb_distillery/kits/base/skills/x/SKILL.md", "web/src/a.ts"):
             self.assertIsNone(self.sel("src/kb_distillery/git/ship.py", p), p)
+
+    def test_workflows_skills_and_public_docs_map_to_their_readers(self):
+        """CI workflows are read by tests/ci, skills by the skills lint tests, public docs by nobody: no full run for them."""
+        _write(self.root, "tests/ci/test_w.py")
+        _write(self.root, "tests/lint/test_s.py")
+        self.assertEqual(self.sel(".github/workflows/ci.yml"), ["tests/ci", "tests/test_top.py"])
+        self.assertEqual(self.sel(".claude/skills/x/SKILL.md"), ["tests/lint", "tests/test_top.py"])
+        self.assertEqual(self.sel("docs/guides/write-a-skill.md", "README.md"), ["tests/test_top.py"])
+        self.assertEqual(self.sel(".github/workflows/ci.yml", "src/kb_distillery/git/ship.py"),
+                         ["tests/ci", "tests/git", "tests/test_top.py"])
+
+    def test_workflow_mapping_needs_the_reader_dir(self):
+        self.assertIsNone(self.sel(".github/workflows/ci.yml"))          # no tests/ci in this repo: run full
 
 
 class RefusalTests(RepoCase):

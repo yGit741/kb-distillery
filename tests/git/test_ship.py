@@ -484,7 +484,7 @@ class PrFlowTests(unittest.TestCase):
         self.assertIn("--merge", merge_line)
         self.assertIn("--auto", merge_line)              # GitHub merges it: CI and the merge queue decide, not this machine
         self.assertNotIn("--squash", merge_line)
-        self.assertNotIn("--subject", merge_line)        # the queue titles the commit `<title> (#N)` (repo setting, ship protect)
+        self.assertIn("--subject feat(ops): add thing (#7)", merge_line)   # a direct merge (no ruleset yet) keeps the convention
         self.assertIn("kb-event v1 · merged", calls)     # watched until MERGED, then the post-merge steps ran
 
     def test_merge_without_a_ruleset_merges_directly_with_the_subject(self):

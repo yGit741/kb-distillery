@@ -120,6 +120,13 @@ def test_subset(paths, root, ignore=lambda p: False):
                 targets.add(p)
         elif "/" not in p and p.endswith(".md"):
             continue
+        elif p.startswith((".github/", ".claude/skills/")):   # the workflows: tests/ci reads them; skills: the skills lint tests
+            mirror = "tests/ci" if p.startswith(".github/") else "tests/lint"
+            if not os.path.isdir(os.path.join(root, mirror)):
+                return None
+            targets.add(mirror)
+        elif p.startswith("docs/") and p.endswith(".md"):    # public docs: nothing executes them
+            continue
         else:
             return None
     top = sorted(f"tests/{n}" for n in os.listdir(os.path.join(root, "tests"))

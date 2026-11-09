@@ -1397,7 +1397,10 @@ def _merge_remote(branch, title, skip_tests, no_push, root, gates, skip_checks, 
                 print(f"error: could not write the version trailer into PR #{pr_number}: {_out(cp)}")
                 return 1
     events.post(pr_number, "queued", _head_sha(root), root=root, branch=branch)
-    args = ["pr", "merge", str(pr_number), "--merge", "--auto"]
+    # the subject and body ride along in every case: the merge queue writes its own commit from the repo's merge-commit
+    # settings (`ship protect`), but a repository without a ruleset merges directly and would otherwise title the
+    # commit "Merge pull request #N from …" (that happened once, to #238)
+    args = ["pr", "merge", str(pr_number), "--merge", "--auto", "--subject", subject, "--body", "\n".join(body_lines)]
     if approved_head:
         args += ["--match-head-commit", approved_head]   # a push after the review never rides along
     assert not FORBIDDEN_MERGE_FLAGS & set(args), "ship never squashes or rebases"

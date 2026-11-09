@@ -216,6 +216,17 @@ class CiGates(unittest.TestCase):
         for name, task in (("web", "pixi run web-check"), ("wheel", "pixi run test-wheel"), ("worker", "pixi run test-worker")):
             self.assertIn(task, runs(self.jobs[name]), name)
 
+    def test_web_check_is_skipped_only_on_a_pull_request_without_app_changes(self):
+        """A Python-only PR need not pay the Vite build; a merge-group run (the real merge) and a main push always do."""
+        steps_ = self.jobs["web"]["steps"]
+        gate = next(s for s in steps_ if s.get("id") == "app")
+        self.assertIn("github.event_name }}\" = \"pull_request\"", gate["run"])
+        self.assertIn("git diff --quiet", gate["run"])
+        self.assertIn("web/", gate["run"])
+        for task in ("pixi run web-install", "pixi run web-check"):
+            step = next(s for s in steps_ if s.get("run") == task)
+            self.assertEqual(step["if"], "steps.app.outputs.skip != '1'", task)
+
     def test_the_lane_checks_ship_no_longer_runs_locally_run_in_ci(self):
         """`ship pr` stopped running checks_for's lanes locally (CI is the gate): every one of them is a CI step."""
         checks = runs(self.jobs["checks"])
