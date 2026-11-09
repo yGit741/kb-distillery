@@ -12,7 +12,8 @@ DEFAULT_PORT = 8765
 def main(argv=None):
     parser = argparse.ArgumentParser(description="kb-distillery app server")
     parser.add_argument("--port", type=int, default=DEFAULT_PORT)
-    parser.add_argument("--host", default="127.0.0.1", help="loopback only")
+    parser.add_argument("--host", default="127.0.0.1",
+                        help="loopback only, unless KB_AUTH=proxy (self-hosting behind an identity-aware proxy)")
     parser.add_argument("--no-open", action="store_true", help="do not open a browser tab")
     parser.add_argument("--no-build", action="store_true", help="serve src/kb_distillery/_webapp as is (skip the rebuild check)")
     parser.add_argument("--kb", default=None, help="knowledge base id or folder path (else $KB; see `distill kb list`)")
@@ -38,7 +39,9 @@ def main(argv=None):
         webbrowser.open(f"{base}/app/start")
     from kb_distillery.graph.cache import start_refresher
     start_refresher()                 # warm the graph snapshot in a daemon thread and keep it fresh (KB_GRAPH_WARM=0: off)
-    uvicorn.run(create_app(), host=args.host, port=args.port, log_level="warning")
+    # proxy_headers=False: the ASGI client stays the TCP peer, never an X-Forwarded-For value (the trusted-header
+    # check in security.authenticate depends on it)
+    uvicorn.run(create_app(), host=args.host, port=args.port, log_level="warning", proxy_headers=False)
     return 0
 
 
