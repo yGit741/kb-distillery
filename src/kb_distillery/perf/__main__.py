@@ -102,10 +102,11 @@ def listeners():
 def start_server(kb):
     port = free_port()
     env = dict(os.environ, KB_SHARE_AUTODEPLOY="0")
+    cmd = [sys.executable, "-m", "kb_distillery.server", "--port", str(port), "--no-open", "--no-build"]
     if kb:
+        env.pop("KB_ROOT", None)          # $KB_ROOT outranks $KB: an explicit --kb must win
         env["KB"] = kb
-    proc = subprocess.Popen([sys.executable, "-m", "kb_distillery.server", "--port", str(port), "--no-open", "--no-build"],
-                            env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    proc = subprocess.Popen(cmd, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     t0 = time.perf_counter()
     while time.perf_counter() - t0 < 120:
         if proc.poll() is not None:
@@ -157,7 +158,9 @@ def table(rep):
         lines.append(f"{'tab':<20}{'pass1 ms':>10}{'api':>5}{'pass2 ms':>10}{'api':>5}")
         for t in b["tabs"]:
             a, c = b["pass1"].get(t, {}), b["pass2"].get(t, {})
-            lines.append(f"{t:<20}{a.get('ms', '-'):>10}{a.get('api_requests', '-'):>5}{c.get('ms', '-'):>10}{c.get('api_requests', '-'):>5}")
+            def ms(x):
+                return ("TIMEOUT " if x.get("timed_out") else "FAIL " if x.get("error") else "") + str(x.get("ms", "-"))
+            lines.append(f"{t:<20}{ms(a):>10}{a.get('api_requests', '-'):>5}{ms(c):>10}{c.get('api_requests', '-'):>5}")
     return "\n".join(lines)
 
 
@@ -170,7 +173,7 @@ def main(argv=None):
     ap.add_argument("--out", default=None, help="report path (default .cache/perf/<stamp>.json)")
     a = ap.parse_args(argv)
     rep = run(a.kb, a.url, a.idle, not a.no_browser)
-    out = Path(a.out) if a.out else Path(".cache/perf") / (datetime.now().strftime("%Y%m%d-%H%M%S") + ".json")
+    out = Path(a.out) if a.out else Path(__file__).resolve().parents[3] / ".cache" / "perf" / (datetime.now().strftime("%Y%m%d-%H%M%S") + ".json")
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(rep, indent=2, sort_keys=True) + "\n")
     print(table(rep))
