@@ -1,11 +1,25 @@
-"""Local-only guards: loopback bind, loopback Origin/Host on mutations, 4 MB body cap, raw path guard.
+"""Server guards: bind address, Origin/Host on mutations, 4 MB body cap, raw path guard, opt-in proxy identity.
 
-The API serves a private vault to its owner on this machine. Nothing here is authentication: the rules
-keep a web page in another tab (or a DNS-rebinding host name) from driving it.
+Default (loopback mode): the API serves a private vault to its owner on this machine and has no authentication; the
+rules keep a web page in another tab (or a DNS-rebinding host name) from driving it.
+
+`KB_AUTH=proxy` (self-hosting behind an identity-aware proxy): binding beyond loopback is allowed, and every request
+must prove its user: a JWT signed by the proxy (`Cf-Access-Jwt-Assertion` or `Authorization: Bearer`, verified against
+`KB_AUTH_JWKS_URL` or the static public key `KB_AUTH_JWT_KEY`, asymmetric algorithms only, `exp` required, `aud`
+checked against `KB_AUTH_AUDIENCE` when set) or the header `KB_AUTH_HEADER`, accepted only from a direct peer inside
+`KB_AUTH_TRUSTED_PROXY_CIDR` (the proxy must overwrite that header). The identity's email must equal `KB_AUTH_EMAIL`
+(case-folded). X-Forwarded-For is never read. Mutations need an Origin on the request's own host.
 """
 import ipaddress
+import json
 import os
+import threading
+import time
+import urllib.request
+from dataclasses import dataclass
 from urllib.parse import urlparse
+
+import jwt
 
 from fastapi import HTTPException, Path, Request
 from starlette.responses import JSONResponse
@@ -36,19 +50,210 @@ def is_loopback_host(host):
 
 
 def assert_loopback_bind(host):
-    """Refuse to listen on anything but a loopback address (the API has no authentication)."""
-    if not is_loopback_host(host):
-        raise SystemExit(f"refusing to bind {host!r}: the API is local-only (use 127.0.0.1 or ::1)")
+    """Refuse to listen on anything but a loopback address unless `KB_AUTH=proxy` is configured (loopback mode has no
+    authentication). An invalid `KB_AUTH` configuration is refused whatever the host."""
+    config = load_auth_config()
+    if config is None and not is_loopback_host(host):
+        raise SystemExit(f"refusing to bind {host!r}: the API is local-only (use 127.0.0.1 or ::1, "
+                         "or set KB_AUTH=proxy behind an identity-aware proxy)")
 
 
 def require_loopback_origin(request: Request):
-    """App-wide dependency. A mutating request must carry a loopback Origin (browsers always send one on
-    POST); a foreign or missing Origin is refused."""
+    """App-wide dependency. A mutating request must carry an Origin (browsers always send one on POST): a loopback
+    one in loopback mode, one on the request's own host (host and port equal to `Host`) in proxy mode. A foreign or
+    missing Origin is refused."""
     if request.method not in MUTATING:
         return
     origin = request.headers.get("origin")
-    if origin is None or not is_loopback_host(urlparse(origin).hostname):
-        raise HTTPException(403, "cross-origin or origin-less mutation refused")
+    if origin is not None and auth_mode() == "proxy":
+        host = (request.headers.get("host") or "").strip().lower()
+        if host and urlparse(origin).netloc.lower() == host:
+            return
+    elif origin is not None and is_loopback_host(urlparse(origin).hostname):
+        return
+    raise HTTPException(403, "cross-origin or origin-less mutation refused")
+
+
+# ---- opt-in proxy identity (KB_AUTH=proxy) ----
+
+AUTH_ENV = "KB_AUTH"
+JWT_HEADER = "cf-access-jwt-assertion"
+# Asymmetric only: the algorithm is never taken from the token, so `alg: none` and HS256 signed with the public key
+# (algorithm confusion) are refused by construction.
+JWT_ALGORITHMS = ("RS256", "RS384", "RS512", "PS256", "PS384", "PS512", "ES256", "ES384", "ES512", "EdDSA")
+JWT_LEEWAY_S = 30
+JWKS_TTL_S = 600
+JWKS_REFETCH_MIN_S = 30
+JWKS_TIMEOUT_S = 5
+
+
+@dataclass(frozen=True)
+class AuthConfig:
+    email: str                      # case-folded
+    jwks_url: str | None = None
+    jwt_key: object | None = None   # a loaded public key
+    audience: str | None = None
+    header: str | None = None       # lower-cased header name
+    trusted_cidrs: tuple = ()
+
+
+def auth_mode() -> str:
+    """`loopback` (default: `KB_AUTH` unset, empty or `loopback`) or `proxy`; anything else is a SystemExit."""
+    mode = (os.environ.get(AUTH_ENV) or "loopback").strip().lower()
+    if mode not in ("loopback", "proxy"):
+        raise SystemExit(f"{AUTH_ENV}={mode!r} is not a mode: use proxy, or leave it unset for loopback")
+    return mode
+
+
+def _load_public_key(value):
+    from cryptography.hazmat.primitives.serialization import load_pem_public_key
+    text = value.strip()
+    if not text.startswith("-----BEGIN"):
+        try:
+            with open(os.path.expanduser(text), "rb") as fh:
+                text = fh.read().decode()
+        except OSError as exc:
+            raise SystemExit(f"KB_AUTH_JWT_KEY: cannot read {text!r}: {exc}") from None
+    try:
+        return load_pem_public_key(text.encode())
+    except ValueError:
+        raise SystemExit("KB_AUTH_JWT_KEY must be a PEM public key (or a path to one); secrets are not accepted") from None
+
+
+def load_auth_config() -> AuthConfig | None:
+    """None in loopback mode; in proxy mode the validated config, or a SystemExit naming what is missing."""
+    if auth_mode() != "proxy":
+        return None
+    env = os.environ
+    email = (env.get("KB_AUTH_EMAIL") or "").strip().casefold()
+    if "@" not in email:
+        raise SystemExit("KB_AUTH=proxy needs KB_AUTH_EMAIL (the one user allowed in)")
+    jwks_url = (env.get("KB_AUTH_JWKS_URL") or "").strip() or None
+    if jwks_url and urlparse(jwks_url).scheme != "https":
+        raise SystemExit("KB_AUTH_JWKS_URL must be an https URL")
+    key_value = (env.get("KB_AUTH_JWT_KEY") or "").strip()
+    jwt_key = _load_public_key(key_value) if key_value else None
+    header = (env.get("KB_AUTH_HEADER") or "").strip().lower() or None
+    cidr_text = (env.get("KB_AUTH_TRUSTED_PROXY_CIDR") or "").strip()
+    try:
+        cidrs = tuple(ipaddress.ip_network(c.strip(), strict=False) for c in cidr_text.split(",") if c.strip())
+    except ValueError as exc:
+        raise SystemExit(f"KB_AUTH_TRUSTED_PROXY_CIDR: {exc}") from None
+    if header and not cidrs:
+        raise SystemExit("KB_AUTH_HEADER needs KB_AUTH_TRUSTED_PROXY_CIDR (the proxy's address range)")
+    if not (jwks_url or jwt_key or header):
+        raise SystemExit("KB_AUTH=proxy needs KB_AUTH_JWKS_URL or KB_AUTH_JWT_KEY (a signed token), "
+                         "or KB_AUTH_HEADER with KB_AUTH_TRUSTED_PROXY_CIDR (a trusted header)")
+    audience = (env.get("KB_AUTH_AUDIENCE") or "").strip() or None
+    return AuthConfig(email=email, jwks_url=jwks_url, jwt_key=jwt_key, audience=audience, header=header,
+                      trusted_cidrs=cidrs)
+
+
+def _fetch_jwks(url):
+    """GET the JWKS document (tests replace this; they never touch the network)."""
+    with urllib.request.urlopen(url, timeout=JWKS_TIMEOUT_S) as resp:     # noqa: S310 (https enforced in config)
+        return json.loads(resp.read())
+
+
+_jwks_lock = threading.Lock()
+_jwks_cache: dict = {}          # url -> (fetched_at, {kid: PyJWK})
+
+
+def _jwks_key(url, kid):
+    """The signing key with this `kid` from the JWKS at `url`: cached for JWKS_TTL_S, refetched on an unknown kid (at
+    most every JWKS_REFETCH_MIN_S). None when not found or the fetch fails."""
+    with _jwks_lock:
+        now = time.monotonic()
+        fetched_at, keys = _jwks_cache.get(url, (None, {}))
+        stale = fetched_at is None or now - fetched_at > JWKS_TTL_S
+        unknown = kid not in keys and (fetched_at is None or now - fetched_at > JWKS_REFETCH_MIN_S)
+        if stale or unknown:
+            try:
+                keyset = jwt.PyJWKSet.from_dict(_fetch_jwks(url))
+                keys = {k.key_id: k for k in keyset.keys if k.key_id}
+                _jwks_cache[url] = (now, keys)
+            except Exception:  # noqa: BLE001 (a failed fetch or a bad document refuses the request)
+                pass
+        return keys.get(kid)
+
+
+def _jwt_email(config, token):
+    """The verified token's `email` claim, or None."""
+    try:
+        header = jwt.get_unverified_header(token)
+        if header.get("alg") not in JWT_ALGORITHMS:
+            return None
+        if config.jwt_key is not None:
+            key = config.jwt_key
+        else:
+            jwk = _jwks_key(config.jwks_url, header.get("kid"))
+            if jwk is None:
+                return None
+            key = jwk.key
+        claims = jwt.decode(token, key, algorithms=list(JWT_ALGORITHMS), audience=config.audience,
+                            leeway=JWT_LEEWAY_S,
+                            options={"require": ["exp"], "verify_aud": config.audience is not None})
+    except jwt.PyJWTError:
+        return None
+    email = claims.get("email")
+    return email if isinstance(email, str) else None
+
+
+def _peer_trusted(config, client):
+    """Is the TCP peer (the ASGI scope's client, never X-Forwarded-For) inside the trusted proxy range?"""
+    if not client:
+        return False
+    try:
+        ip = ipaddress.ip_address(str(client[0]).strip("[]"))
+    except ValueError:
+        return False
+    return any(ip in net for net in config.trusted_cidrs)
+
+
+def authenticate(config, headers, client):
+    """The request's email (case-folded) when it is the allowed user, else None.
+    `headers` maps lower-cased names to values; `client` is the ASGI scope's (host, port)."""
+    token = headers.get(JWT_HEADER)
+    if not token:
+        auth = headers.get("authorization", "")
+        if auth[:7].lower() == "bearer ":
+            token = auth[7:].strip()
+    if token and (config.jwks_url or config.jwt_key is not None):
+        email = _jwt_email(config, token)           # a bad token is refused, never retried as a header
+    elif config.header and config.header in headers:
+        if not _peer_trusted(config, client):
+            return None                             # the identity header from outside the proxy range: a spoof
+        email = headers[config.header]
+    else:
+        return None
+    if not email:
+        return None
+    email = email.strip().casefold()
+    return email if email == config.email else None
+
+
+class ProxyAuthMiddleware:
+    """Pure ASGI, outermost: in proxy mode every http and websocket request (docs, static files and 404s included)
+    must carry the allowed user's identity, else 401. In loopback mode it passes everything through."""
+
+    def __init__(self, app):
+        self.app, self.config = app, load_auth_config()
+
+    async def __call__(self, scope, receive, send):
+        if self.config is None or scope["type"] not in ("http", "websocket"):
+            return await self.app(scope, receive, send)
+        headers, repeated = {}, set()
+        for name, value in scope["headers"]:
+            key = name.decode("latin-1").lower()
+            if key in headers:
+                repeated.add(key)
+            headers.setdefault(key, value.decode("latin-1"))
+        identity_headers = {JWT_HEADER, "authorization", self.config.header}
+        if not repeated & identity_headers and authenticate(self.config, headers, scope.get("client")) is not None:
+            return await self.app(scope, receive, send)
+        if scope["type"] == "websocket":
+            return await send({"type": "websocket.close", "code": 1008})
+        return await JSONResponse({"detail": "authentication required"}, 401)(scope, receive, send)
 
 
 # Mutating routes that touch no kb folder, matched whole (a path equals one, or continues after one + "/"): feature flags,
