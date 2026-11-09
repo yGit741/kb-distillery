@@ -72,8 +72,11 @@ describe("view cards", () => {
   });
 });
 
+// the floating list and the views panel stay behind flag pin-fan off; the fan has its own tests (Corners.test.tsx)
+const itList = (name: string, fn: () => unknown) => it(name, () => withFlag("pin-fan", false, fn as () => Promise<void>));
+
 describe("flag views-panel on", () => {
-  it("opens the four sections above the pinned list and applies a view", () =>
+  itList("opens the four sections above the pinned list and applies a view", () =>
     withFlag("calm-graph", false, () => withFlag("views-panel", true, async () => {
       mount();
       await userEvent.click(screen.getByRole("button", { name: "Pinned views" }));
@@ -85,7 +88,7 @@ describe("flag views-panel on", () => {
       expect(useGraphUi.getState().shownTypes).toEqual(new Set(["paper", "course"].filter((t) => schema.types.find((x) => x.id === t && x.layer === "source"))));
     })));
 
-  it("lists the recent chats and the dark mode switch flips the theme", () =>
+  itList("lists the recent chats and the dark mode switch flips the theme", () =>
     withFlag("views-panel", true, async () => {
       useTheme.setState({ theme: "light" });
       mount(server([{ id: "s1", title: "Parity chat", updated: today }]));
@@ -98,7 +101,7 @@ describe("flag views-panel on", () => {
       useTheme.setState({ theme: "light" });
     }));
 
-  it("the notice never overlaps the open panel: it sits to its right", () =>
+  itList("the notice never overlaps the open panel: it sits to its right", () =>
     withFlag("views-panel", true, async () => {
       mount();
       await userEvent.click(screen.getByRole("button", { name: "Pinned views" }));
@@ -111,7 +114,7 @@ describe("flag views-panel on", () => {
 });
 
 describe("flag views-panel off", () => {
-  it("keeps the plain pinned list: no panel", () =>
+  itList("keeps the plain pinned list: no panel", () =>
     withFlag("views-panel", false, async () => {
       mount();
       await userEvent.click(screen.getByRole("button", { name: "Pinned views" }));
