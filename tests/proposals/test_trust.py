@@ -32,11 +32,19 @@ def klasses(p):
 
 @pytest.mark.parametrize("pair,expected", [
     (("A [Beta](beta.md) b.", "A [Beta](gamma.md) b."), "links"),
-    (("A [Beta](beta.md) b.", "A [the beta page](beta.md) b."), "links"),
+    (("A Beta b.", "A [Beta](beta.md) b."), "links"),
+    (("A [Beta](beta.md) b.", "A Beta b."), "links"),
+    (("A [Beta](beta.md) b.", "A [the beta page](beta.md) b."), "claims"),   # the words the reader sees changed
+    (("A [Beta](beta.md) b.", "A b."), "claims"),                            # a link deleted with its text
     (("The first claim is strong.", "The   first claim is strong!"), "format"),
     (("- one\n- two\n", "* one\n* two\n"), "format"),
     (("## Details\n", "### Details\n"), "format"),
+    (("It grew 3.5% a year.", "It grew 35% a year."), "claims"),             # punctuation inside a number
+    (("A fall of -5 points.", "A fall of 5 points."), "claims"),
     (("The first claim is strong.", "The first claim is strng."), "typos"),
+    (("The result was reproducible.", "The result was reproducable."), "typos"),
+    (("This is not true.", "This is now true."), "claims"),                  # short words flip meaning
+    (("It was never shown.", "It was newer shown."), "claims"),              # negations are never typos
     (("The first claim is strong.", "The first claim may hold."), "claims"),
     (("It grew 12 percent.", "It grew 13 percent."), "claims"),
     (("## Details\n", "## Notes\n"), "structure"),
@@ -50,7 +58,7 @@ def test_classify_text(pair, expected):
 def test_classes_on_real_hunks(kb):
     p = _create(kb, _edit(kb, "alpha", ("is strong.", "is strng."), ("More text here.", "Other text.")))
     assert sorted(klasses(p)) == ["claims", "typos"]
-    lk = _create(kb, _edit(kb, "alpha", ("[Beta](beta.md)", "[Gamma](gamma.md)")))
+    lk = _create(kb, _edit(kb, "alpha", ("[Beta](beta.md)", "[Beta](gamma.md)")))
     assert klasses(lk) == ["links"] and lk["hunks"][0]["kind"] == "structure"
     s = _create(kb, [{"kind": "set_frontmatter", "slug": "beta", "key": "description", "value": "New."}])
     assert klasses(s) == ["structure"]

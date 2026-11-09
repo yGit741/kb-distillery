@@ -70,18 +70,24 @@ selectable. Tier 3 defaults to the Batch API (half price, collected later) and t
 ## Trust tiers
 
 Every hunk gets one class (`klass`, set by the core, deterministic, no model; files from before it load and get it on read):
-`links` (only link targets or labels changed), `format` (whitespace, list markers, heading levels, punctuation),
-`typos` (one word changed, edit distance up to 2, no digits), `claims` (any other prose change), `structure`
+`links` (a link added, retargeted or unwrapped while the words the reader sees stay the same; a changed label or a
+link deleted with its text is `claims`), `format` (whitespace, list markers, heading levels, punctuation outside
+numbers), `typos` (one word of five letters or more changed by one edit, two for words of eight or more; no digits, never
+a negation such as "not" or "never"), `claims` (any other prose change, and any change to a number), `structure`
 (frontmatter, headings added or removed, `set_frontmatter`, `rewrite_link`), `new_page`, and the explicit ops
-`tombstone`, `merge`, `split` (`move_block`), `rename`. A kb's `kb.toml` sets which class sits in which tier; the base kit
-default (`kits/base/defaults/proposals.toml`) applies to any key it leaves out:
+`tombstone`, `split` (`move_block`), plus `merge` and `rename`, reserved for the restructure producers (no op emits them
+yet). A kb's `kb.toml` sets which class sits in which tier; the base kit default (`kits/base/defaults/proposals.toml`)
+applies to any key it leaves out:
 
 ```toml
 [proposals]
 auto_apply = ["links", "format", "typos"]     # applied without review (when the producer asks, see below)
 review     = ["claims", "structure", "new_page"]
-explicit   = ["tombstone", "merge", "split", "rename"]   # always an explicit decision, never bulk-accepted
+explicit   = ["tombstone", "merge", "split", "rename"]   # never auto-applied; a review UI must ask per hunk
 ```
+
+The core enforces the first tier (nothing outside `auto_apply` applies without a decision); the `explicit` list is
+what a review UI reads to refuse a bulk accept over those hunks.
 
 `GET /api/proposals/trust` returns `{auto_apply, review, explicit, source: "kb.toml" | "default"}`; there is no write
 endpoint, edit kb.toml by hand.

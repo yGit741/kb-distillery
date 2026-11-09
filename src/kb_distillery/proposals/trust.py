@@ -1,7 +1,7 @@
 """Trust tiers: classify a hunk into one class and say which tier of the kb that class belongs to.
 
-Classes: `links`, `format`, `typos`, `claims`, `structure`, `new_page` and the explicit ops `tombstone`, `merge`, `split`,
-`rename`. Tiers come from the kb's `[proposals]` table in kb.toml (keys `auto_apply`, `review`, `explicit`); a missing
+Classes: `links`, `format`, `typos`, `claims`, `structure`, `new_page` and the explicit ops `tombstone`, `split` (`merge` and
+`rename` are reserved for producers not built yet). Tiers come from the kb's `[proposals]` table in kb.toml (keys `auto_apply`, `review`, `explicit`); a missing
 key falls back to the base kit's `defaults/proposals.toml`. Classification is deterministic and uses no model.
 """
 from __future__ import annotations
@@ -19,10 +19,12 @@ CLASSES = ("links", "format", "typos", "claims", "structure", "new_page", "tombs
 DEFAULTS_FILE = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "kits", "base", "defaults",
                              "proposals.toml")
 
-_LINK = re.compile(r"\[[^\]\n]*\]\([^)\n]*\)")
+_LINK = re.compile(r"\[([^\]\n]*)\]\([^)\n]*\)")
 _LIST_MARK = re.compile(r"^[ \t]*(?:[-*+]|\d+[.)])[ \t]+", re.M)
 _WORD = re.compile(r"[^\W\d_]+|\d+", re.UNICODE)
-MAX_TYPO_DISTANCE = 2
+_NUMBER = re.compile(r"[-+]?\d[\d.,]*%?")
+MIN_TYPO_WORD = 5        # shorter words flip meaning too easily (not/now, is/it) to count as a typo
+NEGATIONS = frozenset({"never", "none", "nothing", "nobody", "cannot", "without", "unlike", "false"})
 
 
 def _load(path):
@@ -99,7 +101,14 @@ def _is_typo(before: str, after: str) -> bool:
     x, y = diff[0]
     if any(c.isdigit() for c in x + y):
         return False
-    return _distance(x.lower(), y.lower()) <= MAX_TYPO_DISTANCE
+    x, y = x.lower(), y.lower()
+    if x in NEGATIONS or y in NEGATIONS or max(len(x), len(y)) < MIN_TYPO_WORD:
+        return False
+    return _distance(x, y) <= (2 if max(len(x), len(y)) >= 8 else 1)
+
+
+def _numbers(text: str) -> list[str]:
+    return _NUMBER.findall(text)
 
 
 def classify_text(before: str, after: str) -> str:
@@ -108,12 +117,14 @@ def classify_text(before: str, after: str) -> str:
         return "structure"
     if sorted(_headings(before)) != sorted(_headings(after)):
         return "structure"
-    nolinks_b, nolinks_a = _LINK.sub("", before), _LINK.sub("", after)
-    if before != after and nolinks_b == nolinks_a:
-        return "links"
+    if _numbers(before) != _numbers(after):
+        return "claims"           # a changed number is a changed claim, whatever else moved
+    labels_b, labels_a = _LINK.sub(r"\1", before), _LINK.sub(r"\1", after)   # links reduced to their label text
+    if before != after and labels_b == labels_a:
+        return "links"            # a link added, retargeted or unwrapped; the words the reader sees are the same
     if _skeleton(before) == _skeleton(after):
         return "format"
-    if _skeleton(nolinks_b) == _skeleton(nolinks_a):
+    if _skeleton(labels_b) == _skeleton(labels_a):
         return "links"
     if _is_typo(before, after):
         return "typos"
