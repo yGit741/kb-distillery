@@ -5,11 +5,31 @@ write with 405. Errors are `{"detail": message, ...}` with 400, 404, 405, 409 (s
 from fastapi import APIRouter, Depends, Query
 from fastapi.responses import JSONResponse
 
+from kb_distillery.proposals import restructure
 from kb_distillery.proposals import service as svc
 from kb_distillery.proposals.model import ProposalError
-from kb_distillery.server.models.proposals import (ApplyResult, DecisionRequest, Proposal, ProposalCreate, ProposalList,
-                                                   ProposalRender, RejectRequest, RevisionCreate, SemanticRequest,
-                                                   SemanticResult, Suggestion, SuggestionList, TrustTiers, Feed)
+from kb_distillery.server.models.proposals import (
+    ApplyResult,
+    DecisionRequest,
+    ExtractRequest,
+    Feed,
+    MergePreview,
+    MergeRequest,
+    Proposal,
+    ProposalCreate,
+    ProposalList,
+    ProposalRender,
+    RejectRequest,
+    RestructureBlocks,
+    RestructureResult,
+    RevisionCreate,
+    SemanticRequest,
+    SemanticResult,
+    SplitRequest,
+    Suggestion,
+    SuggestionList,
+    TrustTiers,
+)
 from kb_distillery.server.readonly import refuse_when_read_only
 
 router = APIRouter(tags=["proposals"])
@@ -62,6 +82,36 @@ def feed(since: str | None = Query(None, description="ISO timestamp; only propos
 def create(body: ProposalCreate):
     return _call(svc.create, body.title, _ops(body.ops), body.producer.model_dump(), body.note, semantic=body.semantic,
                  backend=body.backend, auto=body.auto)
+
+
+@router.get("/api/proposals/restructure/blocks", response_model=RestructureBlocks, responses=ERRORS,
+            summary="A page's blocks with the indices cuts and ranges use (the cut view)")
+def restructure_blocks(slug: str = Query(...)):
+    return _call(restructure.blocks, slug)
+
+
+@router.get("/api/proposals/restructure/merge-preview", response_model=MergePreview, responses=ERRORS,
+            summary="The pages whose links a merge would rewrite (no proposal is made)")
+def merge_preview(slugs: str = Query(..., description="comma-separated page slugs"), survivor: str = Query(...)):
+    return _call(restructure.merge_preview, [s for s in slugs.split(",") if s], survivor)
+
+
+@router.post("/api/proposals/restructure/merge", dependencies=WRITE, response_model=RestructureResult, responses=ERRORS,
+             summary="Merge pages into a survivor as a proposal (tombstones, link rewrites, `ripple`)")
+def merge(body: MergeRequest):
+    return _call(restructure.merge, body.slugs, body.survivor, body.title, body.backend)
+
+
+@router.post("/api/proposals/restructure/split", dependencies=WRITE, response_model=RestructureResult, responses=ERRORS,
+             summary="Split a page at block cuts into new pages as a proposal")
+def split(body: SplitRequest):
+    return _call(restructure.split, body.slug, body.cuts, body.titles)
+
+
+@router.post("/api/proposals/restructure/extract", dependencies=WRITE, response_model=RestructureResult, responses=ERRORS,
+             summary="Extract one block range into a new page, leaving a link behind, as a proposal")
+def extract(body: ExtractRequest):
+    return _call(restructure.extract, body.slug, body.from_at, body.to_at, body.title)
 
 
 @router.get("/api/proposals/{pid}", response_model=Proposal, responses=ERRORS,

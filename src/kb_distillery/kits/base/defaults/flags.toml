@@ -299,6 +299,16 @@ default = false
 envs = { local = true, private = false, public = false }
 
 [[flag]]
+name = "ui.restructure"
+description = "Pages: merge, split and extract a page as a proposal (the Restructure entry on the page view, two entry variants: menu and command). Needs ui.proposals."
+owner = "maintainer"
+created = 2026-11-10
+expires = 2027-05-10
+kind = "runtime"
+default = false
+envs = { local = true, private = false, public = false }
+
+[[flag]]
 name = "ui.ingest"
 description = "Ingest screen: drop a paper or paste a URL, pick how deeply to read it, and get a proposal that creates the source and concept pages. Two layouts as variants (wizard, single)."
 owner = "maintainer"

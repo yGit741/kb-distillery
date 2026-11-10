@@ -59,6 +59,12 @@ export interface DataSource {
   decideProposal(id: string, d: { hunk_id: string; decision: T.Decision; comment?: string }): Promise<T.Proposal>;
   applyProposal(id: string): Promise<T.ApplyResult>;
   rejectProposal(id: string, reason?: string): Promise<T.Proposal>;
+  /** Restructure producers (ui.restructure): each makes a proposal, nothing is written until review. */
+  getRestructureBlocks(slug: string): Promise<T.RestructureBlocks>;
+  getMergePreview(slugs: string[], survivor: string): Promise<T.MergePreview>;
+  restructureMerge(body: { slugs: string[]; survivor: string; title?: string }): Promise<T.RestructureResult>;
+  restructureSplit(body: { slug: string; cuts: number[]; titles: string[] }): Promise<T.RestructureResult>;
+  restructureExtract(body: { slug: string; from_at: number; to_at: number; title: string }): Promise<T.RestructureResult>;
 
   // page history (flag ui.page-history): git versions of one page, a compare, and restore as a proposal
   getPageHistory(slug: string): Promise<T.PageHistory>;

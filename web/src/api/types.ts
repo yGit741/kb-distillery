@@ -56,6 +56,10 @@ export type RelationProposal = S["RelationProposal"];
 
 // agent proposals (flag ui.proposals)
 export type Proposal = S["Proposal"];
+export type RestructureResult = S["RestructureResult"];
+export type RestructureBlocks = S["RestructureBlocks"];
+export type MergePreview = S["MergePreview"];
+export type RippleItem = S["RippleItem"];
 export type ProposalSummary = S["ProposalSummary"];
 export type ProposalRender = S["ProposalRender"];
 export type RenderPage = S["RenderPage"];

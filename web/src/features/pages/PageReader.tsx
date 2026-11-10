@@ -9,6 +9,8 @@ import { useVariant, VARIANTS } from "@/components/variants";
 import { useFlag } from "@/flags/useFlag";
 import { agoLabel, bareSlug, fmList, fmString, layerOf, mtimeOf, prepareMarkdown, titleOf, type LinkGraph } from "./lib";
 import { MiniGraph } from "./MiniGraph";
+import { RestructureDialogs } from "../restructure/dialogs";
+import { RestructureMenu } from "../restructure/entry";
 import { PageChat, PageChatHeader, usePageChatState } from "./PageChat";
 import { FlagMarks, FlagsHeader, usePageFlags } from "./PageFlags";
 import { SelectionToolbar } from "./SelectionToolbar";
@@ -93,6 +95,7 @@ export function PageReader({ g, detail, embed, pinned, onTogglePin, onConnect, v
   const chatFlag = useFlag("ui.page-chat");
   const proposalsFlag = useFlag("ui.proposals");
   const chatOn = chatFlag && proposalsFlag && !viewOnly && !embed;
+  const restructureOn = useFlag("ui.restructure") && proposalsFlag && !viewOnly && !embed;
   const chat = usePageChatState(card.id);
   const flagsOn = useFlag("ui.page-flags") && proposalsFlag && !viewOnly && !embed;
   const flags = usePageFlags(card.id, flagsOn);
@@ -173,6 +176,7 @@ export function PageReader({ g, detail, embed, pinned, onTogglePin, onConnect, v
             )}
             {historyOn && historyEntry === "header" && <HistoryClock h={history} />}
             {sourcesOn && placement === "hover-marks" && pageSources && <SourcesCountMark sources={pageSources} />}
+            {restructureOn && <RestructureMenu chatAvailable={chatOn} />}
             {chatOn && <PageChatHeader chat={chat} />}
             {flagsOn && <FlagsHeader flags={flags} />}
             <span className="text-xs text-muted-foreground">
@@ -189,6 +193,7 @@ export function PageReader({ g, detail, embed, pinned, onTogglePin, onConnect, v
         )}
 
         {chatOn && <PageChat slug={card.id} chat={chat} articleRef={articleRef} />}
+        {restructureOn && <RestructureDialogs slug={card.id} title={card.title} />}
         {!history.comparing && (askFromSelection || flagsOn) && (
           <SelectionToolbar
             articleRef={articleRef}

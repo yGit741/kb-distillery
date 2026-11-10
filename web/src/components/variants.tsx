@@ -44,6 +44,14 @@ export const VARIANTS: Record<string, VariantSpec> = {
       { id: "reading", label: "Reading", hint: "The finished page, clean; a thin bar in the gutter opens a note with the old text and the controls." },
     ],
   },
+  "restructure-entry": {
+    label: "Restructure entry",
+    default: "menu",
+    options: [
+      { id: "menu", label: "Menu", hint: "A quiet Restructure button in the page header opens a small menu: Merge into, Split, Extract." },
+      { id: "command", label: "Commands", hint: "No button; type /merge @page, /split or /extract in the page chat, with the same @ picker." },
+    ],
+  },
   "ingest-layout": {
     label: "Ingest layout",
     default: "single",
