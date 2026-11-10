@@ -60,16 +60,12 @@ class ReleaseWorkflow(unittest.TestCase):
         for task in ("lint-skills", "lint-imports", "ruff", "web-check", "test-wheel", "build-wheel"):
             self.assertRegex(text, rf"pixi run {re.escape(task)}\b")
 
-
-if __name__ == "__main__":
-    unittest.main()
-
-
-class DockerJobGuardTests(unittest.TestCase):
     def test_docker_job_is_off_until_the_dockerfile_exists(self):
         import os
         root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-        text = open(os.path.join(root, ".github", "workflows", "release.yml")).read()
-        job = text.split("\n  docker:", 1)[1].split("\n  pypi:", 1)[0]
         if not os.path.exists(os.path.join(root, "Dockerfile")):
-            self.assertIn("if: false", job)
+            self.assertIs(self.wf["jobs"]["docker"].get("if"), False)
+
+
+if __name__ == "__main__":
+    unittest.main()
