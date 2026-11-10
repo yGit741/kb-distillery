@@ -4,10 +4,7 @@ All notable changes to this project are listed here. The format follows [Keep a 
 
 ## [Unreleased]
 
-### Added
-
-- Page history with compare and restore as a proposal (open pull request).
-- Container image, a remote check in `distill doctor`, and the release workflow (open pull request).
+Nothing yet.
 
 ## [0.1.0]
 
@@ -34,6 +31,16 @@ Initial public release: the first version made public. It is not tagged or publi
 - Graph shell: search line with meaning search, layers and views, favorites, an action menu on every row, export of a subgraph as an OKF bundle, and a first-run map.
 - Sources on a page, full-text search index and a read-only graph line on the shared site.
 - Performance: a graph snapshot cache with background warm-up, a 5-minute query cache, and `pixi run perf`.
+- Review inbox for proposals: stale proposals are rebased onto the current page, set-aside items stay visible, and a feed lists what was applied automatically. Behind the `ui.proposals` flag, on in the local app only.
+- Page history: list the versions of a page, compare any two with the proposal diff, and restore a version or a block as a proposal. Behind the `ui.page-history` flag.
+- Merge, split and extract pages as proposals, from a menu or a command on the page view. Behind the `ui.restructure` flag.
+- Ingest from the app: drop a paper or paste a URL, pick how deeply to read it, and review the result as a proposal. Behind the `ui.ingest` flag.
+- Variants tab on the System screen to pick between component designs, reset to defaults and copy the choices; a what's-new tour; and demo content that exercises proposals. The tab is behind the `ui.variant-chooser` flag.
+- `distill doctor` understands proxy mode and checks a remote instance.
+- Dockerfile for self-hosting. CI builds the image and smoke-tests it on every pull request, and the release workflow publishes it to GHCR.
+- Release workflow: a `v*` tag builds the wheel, the web bundle and the image, and cuts the release notes from this changelog. Publishing to PyPI is present but switched off.
+- Public-readiness checks in CI: nothing owner-only is exported, and the privacy checks run on the exported tree.
+- Two-line install in the getting-started guide and the README.
 
 ### Changed
 

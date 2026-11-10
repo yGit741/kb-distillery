@@ -16,26 +16,26 @@ Versions stay at `0.x` until the file formats and interfaces are stable. A `0.x`
 - Storage connectors (local folder, Google Drive mount) and a publisher plugin interface with a Cloudflare publisher, an audit step and named snapshots.
 - Think journal and `distill send`, with provenance on both sides.
 - Digest tiers: easy, full and deep, in a transactional session.
-- Typed relations and proposals: trust tiers, auto-apply with undo, coherence suggestions, a review screen, chat on a page that produces proposals, and flags on inaccurate spans.
+- Typed relations and proposals: trust tiers, auto-apply with undo, coherence suggestions, a review inbox, chat on a page that produces proposals, flags on inaccurate spans, page history with restore, merge/split/extract, and ingest from the app. The page-level features are behind flags that are on in the local app only.
 - Versioned knowledge operations: one commit each, undo, restore, snapshots, tags `kb-x.y.z`.
 - A typed HTTP API with a generated schema, and a React app that serves every screen.
 - Self-hosting with an opt-in proxy identity, and guides for [Tailscale](guides/self-host-tailscale.md), [Cloudflare Access](guides/self-host-cloudflare.md) and [any proxy](guides/self-host-any-proxy.md).
 - Open Knowledge Format as the shape of a knowledge base, checked by `pixi run okf-check`.
 - A layer contract between packages, checked by `pixi run lint-imports`.
+- A Dockerfile for self-hosting, built and smoke-tested in CI, a remote check in `distill doctor`, a release workflow that runs on `v*` tags, and public-readiness checks (owner-only paths stay out of the export, privacy checks pass).
 - Continuous integration as the merge gate, a wheel that installs into a clean environment, and a contribution model with a code of conduct and governance (see [CONTRIBUTING.md](../CONTRIBUTING.md) and [GOVERNANCE.md](../GOVERNANCE.md)).
 - Hooks that keep agents from writing to `raw/` or running ad-hoc git writes in a knowledge base.
 - Linux x86-64 and macOS (Apple silicon and Intel). Two features are macOS-only: OCR through `ocrmac` and the keychain.
 
 ## Next
 
-Work in progress, then the steps only the repository owner can take.
+The steps only the repository owner can take, then known follow-ups.
 
-- Container image and a remote health check in `distill doctor`.
-- Release workflow: build the wheel, the web bundle and the image from a `v*` tag, and cut the release notes from the changelog.
-- Public-readiness checks in CI: nothing private is exported, and the privacy ratchet passes with the full term list.
 - Make the repository public.
-- Tag `v0.1.0`.
+- Tag `v0.1.0`; the release workflow then builds the wheel, the web bundle and the image.
 - Announce the release.
+- Container healthcheck: it runs `distill doctor` and does not yet probe whether the server is answering.
+- Page history has nothing to show on the demo knowledge base, which has no earlier versions.
 
 ## Ideas
 
