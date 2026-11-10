@@ -31,7 +31,7 @@ def test_full_flow(client, kb):  # noqa: F811
 
     listed = ProposalList.model_validate(client.get("/api/proposals").json()).proposals
     assert [s.id for s in listed] == [p.id] and listed[0].counts.hunks == 2 and listed[0].pages == ["alpha"]
-    assert client.get("/api/proposals?status=applied").json() == {"proposals": []}
+    assert client.get("/api/proposals?status=applied").json()["proposals"] == []
 
     got = Proposal.model_validate(client.get(f"/api/proposals/{p.id}").json())
     assert got.stale is False and [h.id for h in got.hunks] == [h.id for h in p.hunks]

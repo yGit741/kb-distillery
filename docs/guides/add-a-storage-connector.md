@@ -84,4 +84,6 @@ raw.list("raw/printed-docs/")
 
 `kb_distillery.storage.for_kb()` returns the connector itself, for code that needs `local_copy` or `auth`.
 
+Packaging and testing it as an installed extension: [Build an extension](build-an-extension.md).
+
 More: [storage.md](../../src/kb_distillery/kits/base/defaults/docs/storage.md)

@@ -73,8 +73,8 @@ def test_create_set_frontmatter_rewrite_link():
     assert "[[gamma]]" in out["alpha"] and out["delta"].startswith("---")
 
 
-def test_tombstone_and_move_block_validate_but_do_not_apply_yet():
-    ops = validate_ops([{"kind": "tombstone_page", "slug": "alpha", "redirect_to": "beta"}])
+def test_move_block_validates_but_does_not_apply_yet():
+    ops = validate_ops([{"kind": "move_block", "from_slug": "alpha", "to_slug": "beta", "block_id": "b1"}])
     hunks, _ = diff.build({"alpha": OLD}, ops)
     with pytest.raises(ProposalError) as e:
         diff.compose({"alpha": OLD}, ops, hunks, {hunks[0]["id"]})

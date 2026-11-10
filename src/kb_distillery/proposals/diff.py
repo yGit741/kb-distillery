@@ -158,6 +158,19 @@ def _rewrite_links(text, from_slug, to_slug):
     return fm + new_body, pairs
 
 
+def tombstone_text(text, redirect_to, title=None):
+    """The page `text` turned into a tombstone: its front matter plus `redirect_to: <slug>.md`, a one-line body that
+    links the new home, and its `## My notes` (the owner's text is never dropped)."""
+    shown = page_links.shown_title(title or "") or redirect_to
+    mine = wikiio.my_notes(text)
+    fm = wikiio.split_page(wikiio.set_key(text, "redirect_to", page_links.page_path(redirect_to)))[0] \
+        if wikiio.split_page(text)[0] else ""
+    heading = page_links.title_of(text, "")
+    out = f"{fm}\n# {heading}\n\nThis page moved to {page_links.link(redirect_to, shown)}.\n" if heading else \
+        f"{fm}\nThis page moved to {page_links.link(redirect_to, shown)}.\n"
+    return out + ("\n" + mine if mine else "")
+
+
 def _uniq(hunks):
     seen = {}
     for h in hunks:
@@ -166,6 +179,11 @@ def _uniq(hunks):
         seen[base] = n + 1
         h["id"] = base if n == 0 else f"{base}-{n}"
     return hunks
+
+
+def _title(work, slug):
+    text = work.get(slug)
+    return page_links.title_of(text, slug) if text else slug
 
 
 def _order(ops):
@@ -217,7 +235,8 @@ def build(base_texts: dict, ops: list[dict]) -> tuple[list[dict], dict]:
         elif kind == "tombstone_page":
             if work.get(slug) is None:
                 raise ProposalError(400, f"tombstone_page: no page {slug}")
-            hunks.append(_hunk(slug, op, "", f"tombstone {slug} -> {op['redirect_to']}", True))
+            hunks.append(_hunk(slug, op, work[slug], f"tombstone {slug} -> {op['redirect_to']}", True))
+            work[slug] = tombstone_text(work[slug], op["redirect_to"], _title(work, op["redirect_to"]))
         elif kind == "move_block":
             hunks.append(_hunk(op["from_slug"], op, "", f"move block {op['block_id']} -> {op['to_slug']}", True))
     return _uniq(hunks), work
@@ -246,6 +265,8 @@ def compose(base_texts: dict, ops: list[dict], hunks: list[dict], accepted: set[
             work[slug] = _set_frontmatter(work[slug], op["key"], op["value"])
         elif kind == "rewrite_link":
             work[slug] = _rewrite_links(work[slug], op["from_slug"], op["to_slug"])[0]
+        elif kind == "tombstone_page":
+            work[slug] = tombstone_text(work[slug], op["redirect_to"], _title(work, op["redirect_to"]))
     return {s: t for s, t in work.items() if t is not None and t != base_texts.get(s)}
 
 
@@ -260,3 +281,37 @@ def render(base_texts: dict, hunks: list[dict]) -> list[dict]:
                     "hunks": [{"id": h["id"], "kind": h["kind"], "op": h["op"], "at": h["at"], "span": h["span"]}
                               for h in hunks if h["slug"] == slug]})
     return out
+
+
+def rebase_edit(base_text: str, current_text: str, hunks: list[dict]) -> tuple[str, list[dict]]:
+    """(text, dropped): `current_text` with every hunk of an edit re-applied where its `before` blocks still sit.
+
+    A hunk whose before blocks are gone from the current page (somebody rewrote that paragraph) is dropped; a pure
+    insertion is anchored on the block that preceded it in `base_text`. `## My notes` of the current text is kept.
+    """
+    blocks = split_blocks(wikiio.strip_my_notes(current_text))
+    base_blocks = split_blocks(wikiio.strip_my_notes(base_text or ""))
+    dropped = []
+    # where each base block index now sits (the offset of the last matching run at or before it), to tell copies apart
+    sm = difflib.SequenceMatcher(None, [_key(b) for b in base_blocks], [_key(b) for b in blocks], autojunk=False)
+    shift = lambda i: next((m.b - m.a for m in reversed(sm.get_matching_blocks()) if m.a <= i), 0)  # noqa: E731
+    for h in sorted(hunks, key=lambda x: (x["at"], x["span"]), reverse=True):
+        keys = [_key(b) for b in blocks]
+        goal = h["at"] + shift(h["at"])
+        want = [_key(b) for b in split_blocks(h["before"])]
+        new = split_blocks(h["after"])
+        at = None
+        if want:
+            hits = [i for i in range(len(keys) - len(want) + 1) if keys[i:i + len(want)] == want]
+            at = min(hits, key=lambda i: abs(i - goal)) if hits else None     # the copy nearest where it was
+        elif h["at"] == 0:
+            at = 0
+        else:
+            prev = _key(base_blocks[h["at"] - 1]) if 0 < h["at"] <= len(base_blocks) else None
+            hits = [i + 1 for i, k in enumerate(keys) if k == prev] if prev is not None else []
+            at = min(hits, key=lambda i: abs(i - goal)) if hits else None
+        if at is None:
+            dropped.append(h)
+            continue
+        blocks[at:at + len(want)] = new
+    return wikiio.preserve_my_notes(current_text, "".join(b["raw"] for b in blocks)), dropped

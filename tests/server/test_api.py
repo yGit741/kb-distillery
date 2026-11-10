@@ -133,7 +133,8 @@ def test_body_cap_and_host_check():
     assert c.get("/api/lifecycle?limit=1", headers={"Host": "evil.example"}).status_code == 400
 
 
-def test_loopback_bind_check():
+def test_loopback_bind_check(monkeypatch):
+    monkeypatch.delenv("KB_AUTH", raising=False)
     security.assert_loopback_bind("127.0.0.1")
     security.assert_loopback_bind("localhost")
     security.assert_loopback_bind("::1")

@@ -27,6 +27,23 @@ export const VARIANTS: Record<string, VariantSpec> = {
       { id: "hover-marks", label: "Hover marks", hint: "A count in the header with a popover, plus a faint dot beside each section that cites a source." },
     ],
   },
+  "proposal-inbox": {
+    label: "Proposal inbox",
+    default: "by-page",
+    options: [
+      { id: "by-page", label: "By page", hint: "One section per page with its proposals inside; a proposal on three pages shows under each." },
+      { id: "by-class", label: "By kind", hint: "Sections by what changed, claims first and typos last, so the risky ones are read first." },
+      { id: "timeline", label: "Timeline", hint: "One flat list, newest first, with a chip per kind of change." },
+    ],
+  },
+  "page-history-entry": {
+    label: "Page history entry",
+    default: "header",
+    options: [
+      { id: "header", label: "Header", hint: "A clock in the page header opens a right panel listing the versions, newest first." },
+      { id: "timeline", label: "Timeline", hint: "A thin strip of dots under the title, one per version; hover reads it, click picks it." },
+    ],
+  },
   "proposal-diff": {
     label: "Proposal diff",
     default: "inline",
@@ -34,6 +51,31 @@ export const VARIANTS: Record<string, VariantSpec> = {
       { id: "inline", label: "Inline", hint: "The page as it reads, changed words marked in place, controls in the right margin." },
       { id: "side-by-side", label: "Side by side", hint: "Before and after in two columns per block; unchanged paragraphs fold to one line." },
       { id: "reading", label: "Reading", hint: "The finished page, clean; a thin bar in the gutter opens a note with the old text and the controls." },
+    ],
+  },
+  "restructure-entry": {
+    label: "Restructure entry",
+    default: "menu",
+    options: [
+      { id: "menu", label: "Menu", hint: "A quiet Restructure button in the page header opens a small menu: Merge into, Split, Extract." },
+      { id: "command", label: "Commands", hint: "No button; type /merge @page, /split or /extract in the page chat, with the same @ picker." },
+    ],
+  },
+  "ingest-layout": {
+    label: "Ingest layout",
+    default: "single",
+    options: [
+      { id: "single", label: "Single page", hint: "Drop zone, how deeply to read it, and the job card stacked on one page; everything stays in view." },
+      { id: "wizard", label: "Wizard", hint: "Three steps shown one at a time: pick the source, say what it is, watch it progress." },
+    ],
+  },
+  "page-flag-mark": {
+    label: "Flagged span on a page",
+    default: "underline",
+    options: [
+      { id: "underline", label: "Underline", hint: "A soft wavy underline in the warning hue under the flagged words; the note shows on hover." },
+      { id: "margin", label: "Margin", hint: "A small flag in the left margin of the block; the text stays untouched and the note opens from the marker." },
+      { id: "tint", label: "Tint", hint: "A light warm background on the flagged words; the note shows on hover." },
     ],
   },
   "page-chat-entry": {

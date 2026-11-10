@@ -214,6 +214,8 @@ def _post_chat(client, **extra):
     with mock.patch("kb_distillery.server.routers.chat.chat_agent.sdk_info", return_value={"available": True}), \
          mock.patch("kb_distillery.server.routers.chat.chat_agent.stream_agent", stream), \
          mock.patch("kb_distillery.server.routers.chat.chat_agent.build_agent_system", return_value="SYS"), \
+         mock.patch("kb_distillery.server.routers.chat.chat_agent.subscription_status",
+                    return_value={"logged_in": True, "email": "me@example.com", "plan": "max", "error": None}), \
          mock.patch.object(chat_data, "load_api_key", return_value=("sk-ant-api03-" + "x" * 30, "env")):
         r = client.post("/api/chat", json={"question": "hi", "backend": "agent", **extra}, headers=LOOPBACK)
     return r, getattr(stream, "kw", {})
