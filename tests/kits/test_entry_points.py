@@ -49,17 +49,20 @@ class EntryPointExtensions(unittest.TestCase):
         write(os.path.join(root, "fx_recipes", "skill", "__init__.py"))
         write(os.path.join(root, "fx_recipes", "skill", "SKILL.md"), SKILL_MD)
         write(os.path.join(root, "fx_recipes", "broken", "__init__.py"))       # no kit.toml: skipped
+        write(os.path.join(root, "fx_raises", "__init__.py"), "raise RuntimeError('broken third-party package')\n")
+        write(os.path.join(root, "fx_raises", "kit", "__init__.py"))
+        write(os.path.join(root, "fx_raises", "kit", "kit.toml"), KIT_TOML)
         sys.path.insert(0, root)
         self.addCleanup(sys.path.remove, root)
         eps = {
             kit.KITS_GROUP: {"recipes": "fx_recipes.kit", "base": "fx_recipes.kit", "nope": "fx_recipes.broken",
-                             "ghost": "no_such_pkg_xyz.kit"},
+                             "ghost": "no_such_pkg_xyz.kit", "raises": "fx_raises.kit"},
             kit.SKILLS_GROUP: {"fixture-skill": "fx_recipes.skill:thing", "deep-research": "fx_recipes.skill"},
         }
         p = patch.object(kit, "_entry_points", lambda group: dict(eps.get(group, {})))
         p.start()
         self.addCleanup(p.stop)
-        self.addCleanup(lambda: [sys.modules.pop(m) for m in list(sys.modules) if m.startswith("fx_recipes")])
+        self.addCleanup(lambda: [sys.modules.pop(m) for m in list(sys.modules) if m.startswith(("fx_recipes", "fx_raises"))])
 
     def test_installed_kit_is_known_and_loads(self):
         self.assertIn("recipes", kit.names())
@@ -72,6 +75,11 @@ class EntryPointExtensions(unittest.TestCase):
         self.assertNotIn("nope", kit.names())
         self.assertNotIn("ghost", kit.names())
         self.assertFalse(kit.exists("nope"))
+
+    def test_a_package_that_raises_on_import_is_skipped(self):
+        self.assertNotIn("raises", kit.names())                 # names() scans every installed package
+        self.assertFalse(kit.exists("raises"))
+        self.assertEqual(kit.kit_dir("base"), os.path.join(kit.kits_dir(), "base"))
 
     def test_built_in_name_wins(self):
         self.assertEqual(kit.kit_dir("base"), os.path.join(kit.kits_dir(), "base"))
@@ -96,3 +104,9 @@ class EntryPointExtensions(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class CorruptMetadata(unittest.TestCase):
+    def test_corrupt_metadata_is_ignored(self):
+        with patch.object(kit.metadata, "entry_points", side_effect=RuntimeError("bad dist")):
+            self.assertEqual(kit._entry_points(kit.KITS_GROUP), {})

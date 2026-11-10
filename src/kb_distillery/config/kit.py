@@ -76,15 +76,21 @@ def _is_name(name: str) -> bool:
 
 def _entry_points(group: str) -> dict:
     """{name: 'module[:attr]'} for the installed packages in `group`. One place to patch in tests."""
-    return {ep.name: ep.value for ep in metadata.entry_points(group=group)}
+    try:
+        return {ep.name: ep.value for ep in metadata.entry_points(group=group)}
+    except Exception:                       # a corrupt installed dist must not break every kb
+        return {}
 
 
 def _package_dir(spec_value: str) -> str | None:
-    """The folder of the package an entry-point value names (`my_pkg.kit` or `my_pkg.kit:attr`), without running it."""
+    """The folder of the package an entry-point value names (`my_pkg.kit` or `my_pkg.kit:attr`).
+
+    The module itself is not run, but a dotted name imports its parent packages; any error there skips the package.
+    """
     module = spec_value.partition(":")[0].strip()
     try:
         spec = importlib.util.find_spec(module)
-    except (ImportError, ValueError):
+    except Exception:                       # a third-party __init__ that raises must not break every kb
         return None
     if spec is None:
         return None
