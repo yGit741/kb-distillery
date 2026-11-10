@@ -175,7 +175,7 @@ text queries); `kb_distillery.search.vectors` reads it for graph math — neares
 The graph snapshot is the expensive build (seconds on a 1,100-page kb), so it is cached and reused:
 
 - **Graph snapshot:** `kb_distillery.graph.cache` keys it on the vault change signature (mtime and size of every wiki page and the side files it reads, plus git HEAD); an unchanged vault serves the cached build, concurrent callers share one build in flight. `KB_GRAPH_CACHE=0` turns the cache off (every call builds).
-- **Health and ops:** `/api/health` and `/api/ops` reuse that same signature instead of a 60 s TTL, so they recompute after the vault changed; ops also keeps a 300 s backstop for state no file covers (open PRs) and recomputes on `refresh=1`.
+- **Health, ops and pipeline:** `/api/health`, `/api/ops` and `/api/pipeline` reuse that same signature instead of a 60 s TTL, so they recompute after the vault changed; ops also keeps a 300 s backstop for state no file covers (open PRs) and recomputes on `refresh=1`.
 - **Warm at start:** the server builds the snapshot in a daemon thread at start and a refresher re-checks the signature every `KB_GRAPH_WARM_INTERVAL` seconds (default 30), so the first request after idle is a hit. `KB_GRAPH_WARM=0` turns it off; tests and share builds never start it. The server process runs BLAS on one thread (`OPENBLAS_NUM_THREADS`, `OMP_NUM_THREADS`, `MKL_NUM_THREADS` default to 1 in `kb_distillery.server.__main__`, a value you set is kept): the similar-to products are small, and OpenBLAS's spinning per-core pool starved the event loop on a busy machine.
 - **Frontend:** the app keeps query results for 5 minutes (`staleTime`), shares one graph query key across screens and prefetches the graph, so switching tabs does not refetch.
 
