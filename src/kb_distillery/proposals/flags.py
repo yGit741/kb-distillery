@@ -15,7 +15,7 @@ import uuid
 
 from kb_distillery import llm
 from kb_distillery.proposals import apply as applier
-from kb_distillery.proposals import service
+from kb_distillery.proposals import service, store
 from kb_distillery.proposals.chat import PAGE_CHARS, SLUG, parse
 from kb_distillery.proposals.edits import apply_edits, split
 from kb_distillery.proposals.model import ProposalError, now
@@ -68,7 +68,7 @@ def _plain(s: str) -> str:
 
 def _on_page(text: str, editable: str) -> bool:
     """The flagged span is still on the page: as written, or as rendered (the owner selects rendered text)."""
-    return bool(text) and (text in editable or " ".join(text.replace("_", "").split()) in _plain(editable))
+    return bool(text) and (text in editable or " ".join(text.replace("_", "").replace("*", "").split()) in _plain(editable))
 
 
 def _view(row, editable) -> dict:
@@ -77,10 +77,22 @@ def _view(row, editable) -> dict:
             "orphaned": row.get("resolved_by") is None and not _on_page(row.get("text", ""), editable)}
 
 
+def _reopened(root, row) -> dict:
+    """A flag whose proposal was rejected or undone is open again: nothing fixed it."""
+    pid = row.get("resolved_by")
+    if pid:
+        try:
+            if store.load(root, pid).get("status") in ("rejected", "undone"):
+                return dict(row, resolved_by=None)
+        except Exception:  # noqa: BLE001  (a missing proposal file: keep the flag as it was)
+            pass
+    return row
+
+
 def list_flags(slug, root=None) -> list[dict]:
     root = _root(root)
     editable = split(_page(root, slug))[0]
-    return [_view(r, editable) for r in _load(root, slug)]
+    return [_view(_reopened(root, r), editable) for r in _load(root, slug)]
 
 
 def count(slug, root=None) -> dict:
@@ -166,7 +178,8 @@ def fix(slug, backend=None, root=None) -> dict:
                            root=root, backend=backend)
         out["proposal_id"], out["hunks"] = p["id"], len(p["hunks"])
         ids = set(out["flag_ids"])
-        _save(root, slug, [dict(r, resolved_by=p["id"]) if r["id"] in ids else r for r in rows])
+        # reload: flags added or removed while the model ran must survive
+        _save(root, slug, [dict(r, resolved_by=p["id"]) if r["id"] in ids else r for r in _load(root, slug)])
     else:
         out["flag_ids"] = []  # nothing was proposed, so nothing is resolved
     if not out["reply"]:

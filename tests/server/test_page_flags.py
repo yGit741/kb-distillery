@@ -123,3 +123,18 @@ def test_read_only_server_refuses_writes(client, kb, monkeypatch):  # noqa: F811
 def test_rendered_text_counts_as_on_the_page(client, kb):  # noqa: F811
     f = _flag(client, text="A second paragraph links Beta.")  # the page holds [Beta](beta.md)
     assert not f.orphaned
+
+
+def test_flags_added_during_the_model_call_survive_and_rejected_proposals_reopen(client, kb):  # noqa: F811
+    a = _flag(client)
+
+    def during(*_a, **_k):
+        _flag(client, text="More text here.", note="added meanwhile")
+        return _reply([{"before": "is strong.", "after": "may hold.", "reason": ""}])
+
+    with mock.patch.object(llm, "ask", side_effect=during):
+        out = PageFlagFixReply.model_validate(client.post("/api/pages/alpha/flags/fix", json={}, headers=LOOPBACK).json())
+    rows = {f.text: f for f in _flags(client)}
+    assert len(rows) == 2 and rows["More text here."].resolved_by is None and rows[a.text].resolved_by == out.proposal_id
+    assert client.post(f"/api/proposals/{out.proposal_id}/reject", json={}, headers=LOOPBACK).status_code == 200
+    assert all(f.resolved_by is None for f in _flags(client))
