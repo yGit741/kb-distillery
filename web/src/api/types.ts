@@ -64,6 +64,11 @@ export type HunkDecision = S["HunkDecision"];
 export type Finding = S["Finding"];
 export type ProposalRevision = S["Revision"];
 export type ApplyResult = S["ApplyResult"];
+// page history (flag ui.page-history)
+export type PageVersion = S["PageVersion"];
+export type PageHistory = S["PageHistory"];
+export type PageCompare = S["PageCompare"];
+export type RestoreResult = S["RestoreResult"];
 export type Decision = "accept" | "reject" | "correct";
 
 // corpus, raw, citations, pipeline, health, ops

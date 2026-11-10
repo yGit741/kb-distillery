@@ -27,6 +27,14 @@ export const VARIANTS: Record<string, VariantSpec> = {
       { id: "hover-marks", label: "Hover marks", hint: "A count in the header with a popover, plus a faint dot beside each section that cites a source." },
     ],
   },
+  "page-history-entry": {
+    label: "Page history entry",
+    default: "header",
+    options: [
+      { id: "header", label: "Header", hint: "A clock in the page header opens a right panel listing the versions, newest first." },
+      { id: "timeline", label: "Timeline", hint: "A thin strip of dots under the title, one per version; hover reads it, click picks it." },
+    ],
+  },
   "proposal-diff": {
     label: "Proposal diff",
     default: "inline",
