@@ -56,6 +56,7 @@ const TIER_DOT = { explicit: "bg-warn", review: "bg-muted-foreground/50", auto_a
 export function ProposalRow({ p, showPages = true }: { p: ProposalSummary; showPages?: boolean }) {
   const tier = tierMark(p.tiers);
   const state = p.status === "stale" ? "open" : p.status;
+  const [setAside, setSetAside] = useState(0);
   return (
     <li className="flex flex-col gap-1.5 py-3" data-testid="proposal-row" data-id={p.id}>
       <div className="flex items-baseline gap-3">
@@ -72,13 +73,18 @@ export function ProposalRow({ p, showPages = true }: { p: ProposalSummary; showP
           <span className={cn("size-1.5 rounded-full", TIER_DOT[tier.id])} aria-hidden />
           {tier.label}
         </span>
+        {setAside > 0 && (
+          <span role="status" className="text-foreground/80">
+            Rebased; {setAside} {setAside === 1 ? "change" : "changes"} set aside. <Link to={`/proposals/${encodeURIComponent(p.id)}` as "/"} className="underline">See which</Link>
+          </span>
+        )}
         {p.stale_pages.length > 0 && (
           <span className="inline-flex items-center gap-2" data-testid="stale-badge">
             <span className="inline-flex items-center gap-1 text-foreground/80" title={p.stale_pages.join(", ")}>
               <span className="size-1.5 rounded-full bg-warn" aria-hidden />
               page changed since
             </span>
-            <RebaseButton id={p.id} />
+            <RebaseButton id={p.id} onDone={(r) => setSetAside(r.dropped.length)} />
           </span>
         )}
       </div>

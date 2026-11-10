@@ -271,18 +271,24 @@ def rebase_edit(base_text: str, current_text: str, hunks: list[dict]) -> tuple[s
     blocks = split_blocks(wikiio.strip_my_notes(current_text))
     base_blocks = split_blocks(wikiio.strip_my_notes(base_text or ""))
     dropped = []
+    # where each base block index now sits (the offset of the last matching run at or before it), to tell copies apart
+    sm = difflib.SequenceMatcher(None, [_key(b) for b in base_blocks], [_key(b) for b in blocks], autojunk=False)
+    shift = lambda i: next((m.b - m.a for m in reversed(sm.get_matching_blocks()) if m.a <= i), 0)  # noqa: E731
     for h in sorted(hunks, key=lambda x: (x["at"], x["span"]), reverse=True):
         keys = [_key(b) for b in blocks]
+        goal = h["at"] + shift(h["at"])
         want = [_key(b) for b in split_blocks(h["before"])]
         new = split_blocks(h["after"])
         at = None
         if want:
-            at = next((i for i in range(len(keys) - len(want) + 1) if keys[i:i + len(want)] == want), None)
+            hits = [i for i in range(len(keys) - len(want) + 1) if keys[i:i + len(want)] == want]
+            at = min(hits, key=lambda i: abs(i - goal)) if hits else None     # the copy nearest where it was
         elif h["at"] == 0:
             at = 0
         else:
             prev = _key(base_blocks[h["at"] - 1]) if 0 < h["at"] <= len(base_blocks) else None
-            at = next((i + 1 for i, k in enumerate(keys) if k == prev), None) if prev is not None else None
+            hits = [i + 1 for i, k in enumerate(keys) if k == prev] if prev is not None else []
+            at = min(hits, key=lambda i: abs(i - goal)) if hits else None
         if at is None:
             dropped.append(h)
             continue

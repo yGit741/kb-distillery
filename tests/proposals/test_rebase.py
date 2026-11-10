@@ -72,3 +72,19 @@ def test_rebase_drops_a_create_page_whose_page_now_exists(kb):  # noqa: F811
     out = service.rebase(p["id"], root=kb)
     assert [d["slug"] for d in out["dropped"]] == ["delta"] and out["dropped"][0]["klass"] == "new_page"
     assert [h["slug"] for h in out["proposal"]["hunks"]] == ["alpha"]
+
+
+def test_rebase_anchors_on_the_copy_nearest_the_original_position(kb):  # noqa: F811
+    twice = read(kb, "alpha").replace("More text here.", "Same line.\n\n## Again\n\nSame line.")
+    write(kb, "alpha", twice)
+    p = service.create("Second copy", [{"kind": "edit_page", "slug": "alpha",
+                                        "new_text": twice[::-1][::-1].replace("Same line.\n\n## My notes", "Changed line.\n\n## My notes")}], root=kb)
+    assert len(p["hunks"]) == 1 and p["hunks"][0]["before"].startswith("Same line.")
+    write(kb, "alpha", twice.replace("# alpha", "# alpha\n\nIntro."))
+    out = service.rebase(p["id"], root=kb)
+    text = out["proposal"]["hunks"][0]["after"]
+    assert out["dropped"] == [] and text.startswith("Changed line.")
+    service.decide(p["id"], [{"hunk_id": out["proposal"]["hunks"][0]["id"], "decision": "accept"}], root=kb)
+    service.apply(p["id"], root=kb)
+    body = read(kb, "alpha")
+    assert body.index("Same line.") < body.index("## Again") < body.index("Changed line.")
