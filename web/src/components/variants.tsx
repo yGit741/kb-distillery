@@ -44,6 +44,14 @@ export const VARIANTS: Record<string, VariantSpec> = {
       { id: "reading", label: "Reading", hint: "The finished page, clean; a thin bar in the gutter opens a note with the old text and the controls." },
     ],
   },
+  "ingest-layout": {
+    label: "Ingest layout",
+    default: "single",
+    options: [
+      { id: "single", label: "Single page", hint: "Drop zone, how deeply to read it, and the job card stacked on one page; everything stays in view." },
+      { id: "wizard", label: "Wizard", hint: "Three steps shown one at a time: pick the source, say what it is, watch it progress." },
+    ],
+  },
   "page-flag-mark": {
     label: "Flagged span on a page",
     default: "underline",

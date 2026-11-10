@@ -31,7 +31,7 @@ from kb_distillery.services import corpus
 
 MAX_BODY_BYTES = 4 * 1024 * 1024
 # A bundle upload is a zipped folder of notes, and /api/inbox/files takes source files: these routes take a larger body than the 4 MB every other one gets.
-UPLOAD_PATHS = frozenset({"/api/kb/import", "/api/kb/import/validate", "/api/inbox/files"})
+UPLOAD_PATHS = frozenset({"/api/kb/import", "/api/kb/import/validate", "/api/inbox/files", "/api/ingest"})
 MAX_UPLOAD_BYTES = 64 * 1024 * 1024
 CHAT_UPLOAD_PREFIX = "/api/chat/attachments"      # a 20 MB attachment plus the multipart form overhead
 MAX_CHAT_UPLOAD_BYTES = 21 * 1024 * 1024

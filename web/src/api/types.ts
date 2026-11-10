@@ -79,6 +79,17 @@ export type RawCard = S["RawCard"];
 export type DigestResult = S["DigestResult"];
 export type DigestPreview = S["DigestPreview"];
 export type DigestJob = S["DigestJob"];
+export type IngestJob = S["IngestJob"];
+export type IngestStep = S["IngestStep"];
+export type IngestStarted = S["IngestStarted"];
+/** What the Ingest screen sends: a file or a URL, plus how deeply to read it. */
+export interface IngestInput {
+  file?: File;
+  url?: string;
+  tier: string;
+  collection?: string;
+  backend?: string;
+}
 export type DigestJobList = S["DigestJobList"];
 export type DigestBackendOption = S["BackendOption"];
 export type CitationGraph = S["CitationGraph"];
