@@ -4,9 +4,11 @@ This page lists what is shipped, what is next, ideas that are not scheduled, and
 
 ## Release cadence
 
-Versions stay at `0.x` until the file formats and interfaces are stable. A `0.x` tag is cut every two to four weeks from the `[Unreleased]` section of the [changelog](../CHANGELOG.md), with patch releases on demand. Each tag carries the changelog notes and the prebuilt web bundle.
+Versions stay at `0.x` until the file formats and interfaces are stable. We aim to cut a `0.x` tag every two to four weeks from the `[Unreleased]` section of the [changelog](../CHANGELOG.md), with patch releases on demand. Each tag carries the changelog notes and the prebuilt web bundle.
 
 ## Shipped
+
+Many app features below sit behind feature flags that are on in the local app only and off by default on the shared site; the registry is `src/kb_distillery/kits/base/defaults/flags.toml`.
 
 - One-script install for macOS, Linux and WSL2, a first-run card in the app, and `distill doctor`. The first launch works without a model.
 - Knowledge bases as separate folders, each its own git repository. The engine tracks only `examples/demo`, and example knowledge bases open read-only.
@@ -16,7 +18,7 @@ Versions stay at `0.x` until the file formats and interfaces are stable. A `0.x`
 - Storage connectors (local folder, Google Drive mount) and a publisher plugin interface with a Cloudflare publisher, an audit step and named snapshots.
 - Think journal and `distill send`, with provenance on both sides.
 - Digest tiers: easy, full and deep, in a transactional session.
-- Typed relations and proposals: trust tiers, auto-apply with undo, coherence suggestions, a review inbox, chat on a page that produces proposals, flags on inaccurate spans, page history with restore, merge/split/extract, and ingest from the app. The page-level features are behind flags that are on in the local app only.
+- Typed relations and proposals: trust tiers, auto-apply with undo, coherence suggestions, a review inbox, chat on a page that produces proposals, flags on inaccurate spans, page history with restore, merge/split/extract, and ingest from the app. 
 - Versioned knowledge operations: one commit each, undo, restore, snapshots, tags `kb-x.y.z`.
 - A typed HTTP API with a generated schema, and a React app that serves every screen.
 - Self-hosting with an opt-in proxy identity, and guides for [Tailscale](guides/self-host-tailscale.md), [Cloudflare Access](guides/self-host-cloudflare.md) and [any proxy](guides/self-host-any-proxy.md).

@@ -8,7 +8,7 @@ Nothing yet.
 
 ## [0.1.0]
 
-Initial public release: the first version made public. It is not tagged or published as a package until the repository goes public.
+Initial public release: the first version made public. Many app features are behind feature flags that are on in the local app only and off by default elsewhere (see `src/kb_distillery/kits/base/defaults/flags.toml`); bullets name a flag where one applies. It is not tagged or published as a package until the repository goes public.
 
 ### Added
 
@@ -37,7 +37,7 @@ Initial public release: the first version made public. It is not tagged or publi
 - Ingest from the app: drop a paper or paste a URL, pick how deeply to read it, and review the result as a proposal. Behind the `ui.ingest` flag.
 - Variants tab on the System screen to pick between component designs, reset to defaults and copy the choices; a what's-new tour; and demo content that exercises proposals. The tab is behind the `ui.variant-chooser` flag.
 - `distill doctor` understands proxy mode and checks a remote instance.
-- Dockerfile for self-hosting. CI builds the image and smoke-tests it on every pull request, and the release workflow publishes it to GHCR.
+- Dockerfile for self-hosting. CI builds the image and smoke-tests it on every pull request, and the release workflow will publish it to GHCR when a tag is cut.
 - Release workflow: a `v*` tag builds the wheel, the web bundle and the image, and cuts the release notes from this changelog. Publishing to PyPI is present but switched off.
 - Public-readiness checks in CI: nothing owner-only is exported, and the privacy checks run on the exported tree.
 - Two-line install in the getting-started guide and the README.
