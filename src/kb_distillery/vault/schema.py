@@ -98,7 +98,7 @@ def strip_prefix(slug):
 from kb_distillery.config.layout import META_DIR, QUARANTINE_DIR, RAW_DIR, THINK_DIR, WIKI_DIR  # noqa: E402,F401
 
 # Markdown allowed at the vault root.
-ROOT_MD = {"AGENTS.md", "CLAUDE.md", "README.md", "CHANGELOG.md", "CONTRIBUTING.md"}
+ROOT_MD = {"AGENTS.md", "CLAUDE.md", "README.md", "CHANGELOG.md", "CONTRIBUTING.md", "CODE_OF_CONDUCT.md", "GOVERNANCE.md"}
 
 # Top-level vault shape — only these dirs/files may sit at the root (dot-* tooling exempt).
 FRONTEND_DIR = "web"                 # React app (tooling lane); node_modules is gitignored
@@ -310,6 +310,8 @@ TOOLING_PATHS = [
     "README.md",
     "CHANGELOG.md",
     "CONTRIBUTING.md",
+    "CODE_OF_CONDUCT.md",
+    "GOVERNANCE.md",
     "pyproject.toml",
     "AGENTS.md",
     "CLAUDE.md",

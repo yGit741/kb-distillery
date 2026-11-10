@@ -9,6 +9,9 @@ import { useVariant, VARIANTS } from "@/components/variants";
 import { useFlag } from "@/flags/useFlag";
 import { agoLabel, bareSlug, fmList, fmString, layerOf, mtimeOf, prepareMarkdown, titleOf, type LinkGraph } from "./lib";
 import { MiniGraph } from "./MiniGraph";
+import { PageChat, PageChatHeader, usePageChatState } from "./PageChat";
+import { FlagMarks, FlagsHeader, usePageFlags } from "./PageFlags";
+import { SelectionToolbar } from "./SelectionToolbar";
 import { SourcesCountMark, SourcesFooter, SourcesMarginDots, SourcesSideTab, usePageSources } from "./PageSources";
 import { HistoryClock, HistoryCompare, HistoryPanel, HistoryTimeline, useHistory, useHistoryEntry } from "./PageHistory";
 import { PAGES_TO, FactBadges, Fold, PageLink, TypeDot } from "./parts";
@@ -87,6 +90,13 @@ export function PageReader({ g, detail, embed, pinned, onTogglePin, onConnect, v
   const historyEntry = useHistoryEntry();
   const history = useHistory(card.id, historyOn);
   const articleRef = useRef<HTMLElement>(null);
+  const chatFlag = useFlag("ui.page-chat");
+  const proposalsFlag = useFlag("ui.proposals");
+  const chatOn = chatFlag && proposalsFlag && !viewOnly && !embed;
+  const chat = usePageChatState(card.id);
+  const flagsOn = useFlag("ui.page-flags") && proposalsFlag && !viewOnly && !embed;
+  const flags = usePageFlags(card.id, flagsOn);
+  const askFromSelection = chatOn && chat.entry === "selection";
   const sources = useMemo(
     () =>
       layer === "source"
@@ -163,6 +173,8 @@ export function PageReader({ g, detail, embed, pinned, onTogglePin, onConnect, v
             )}
             {historyOn && historyEntry === "header" && <HistoryClock h={history} />}
             {sourcesOn && placement === "hover-marks" && pageSources && <SourcesCountMark sources={pageSources} />}
+            {chatOn && <PageChatHeader chat={chat} />}
+            {flagsOn && <FlagsHeader flags={flags} />}
             <span className="text-xs text-muted-foreground">
               {card.words} words{mtimeOf(card) ? ` · edited ${agoLabel(mtimeOf(card))}` : ""}
             </span>
@@ -176,6 +188,15 @@ export function PageReader({ g, detail, embed, pinned, onTogglePin, onConnect, v
           <Markdown resolveSlug={resolveSlug} linkSearch={linkSearch}>{markdown}</Markdown>
         )}
 
+        {chatOn && <PageChat slug={card.id} chat={chat} articleRef={articleRef} />}
+        {!history.comparing && (askFromSelection || flagsOn) && (
+          <SelectionToolbar
+            articleRef={articleRef}
+            onAsk={askFromSelection ? (c) => (chat.addChip(c), chat.setOpen(true)) : undefined}
+            onFlag={flagsOn ? flags.markInaccurate : undefined}
+          />
+        )}
+        {!history.comparing && flagsOn && <FlagMarks flags={flags} articleRef={articleRef} markdown={markdown} />}
         {!history.comparing && sourcesOn && placement === "footer" && pageSources && <SourcesFooter sources={pageSources} />}
         {sourcesOn && placement === "hover-marks" && pageSources && <SourcesMarginDots sources={pageSources} articleRef={articleRef} />}
 
