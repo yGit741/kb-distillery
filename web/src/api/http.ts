@@ -220,6 +220,28 @@ export function createHttpDataSource(fetchImpl: Fetch = (...a) => fetch(...a), b
 
     previewDigest: (raws, backend) =>
       run(() => client.POST("/api/digest/preview", { body: { raws, ...(backend ? { backend } : {}) } }), "/api/digest/preview"),
+    startIngest: (input) => {
+      if (input.file) {
+        const form = new FormData();
+        form.append("file", input.file, input.file.name);
+        form.append("tier", input.tier);
+        if (input.collection) form.append("collection", input.collection);
+        if (input.backend) form.append("backend", input.backend);
+        return postRaw<T_.IngestStarted>("/api/ingest", { body: form });
+      }
+      return postRaw<T_.IngestStarted>("/api/ingest", {
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: input.url ?? "", tier: input.tier, collection: input.collection ?? "", backend: input.backend ?? null }),
+      });
+    },
+    getIngestJob: (id) => run(() => client.GET("/api/ingest/{job_id}", { params: { path: { job_id: id } } }), `/api/ingest/${id}`),
+    ingestEvents: async (id, signal) => {
+      try {
+        return await fetchImpl(`/api/ingest/${encodeURIComponent(id)}/events`, { headers: { Accept: "text/event-stream" }, signal, cache: "no-store" });
+      } catch (e) {
+        throw new ApiError(`Could not reach /api/ingest/${id}/events: ${e instanceof Error ? e.message : String(e)}`);
+      }
+    },
     startDigestJob: (raws, backend) =>
       run(() => client.POST("/api/digest/jobs", { body: { raws, ...(backend ? { backend } : {}) } }), "/api/digest/jobs"),
     listDigestJobs: () => run(() => client.GET("/api/digest/jobs"), "/api/digest/jobs"),

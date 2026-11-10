@@ -3,6 +3,7 @@ import { Link, Outlet, useRouterState } from "@tanstack/react-router";
 import { Moon, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { routeOffered } from "@/routes/defs";
 import { ROUTES } from "@/routes/registry";
 import { ShareFooter } from "@/share/ShareFooter";
 import { useTheme } from "@/theme/theme";
@@ -30,6 +31,7 @@ export function AppShell() {
   const { theme, toggle } = useTheme();
   const embed = useEmbed();
   const agentMode = useFlag("agent-mode");
+  useFlag("ui.ingest"); // re-render the nav when a runtime flag that adds a tab arrives
   // flag views-panel: on the graph the dark mode switch lives in the pinned panel (Settings); other screens keep it here
   const onGraph = useRouterState({ select: (s) => s.location.pathname }) === "/graph";
   // the panel only renders its switch with a server behind it (as Corners does): share and static builds keep the header one
@@ -48,7 +50,7 @@ export function AppShell() {
       >
         <KbBadge />
         <nav aria-label="Main" className="flex min-w-0 shrink items-center gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {ROUTES.filter((r) => r.nav).map((r) => (
+          {ROUTES.filter((r) => r.nav && routeOffered(r)).map((r) => (
             <Link
               key={r.id}
               to={r.path}
