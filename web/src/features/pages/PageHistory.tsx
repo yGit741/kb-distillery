@@ -179,7 +179,7 @@ export function HistoryCompare({ slug, h }: { slug: string; h: History }) {
   const [made, setMade] = useState<{ id: string; what: string }[]>([]);
   const [error, setError] = useState<string | null>(null);
   const restore = useMutation({
-    mutationFn: (v: { blocks?: string[]; what: string }) => ds.restorePage(slug, { sha: from!, ...(v.blocks ? { blocks: v.blocks } : {}), ...(to !== WORKING ? { to: to! } : {}) }).then((r) => ({ ...r, what: v.what })),
+    mutationFn: (v: { blocks?: string[]; what: string }) => ds.restorePage(slug, { sha: from!, ...(v.blocks ? { blocks: v.blocks } : {}) }).then((r) => ({ ...r, what: v.what })),
     onSuccess: (r) => {
       setMade((m) => [...m, { id: r.proposal_id, what: r.what }]);
       setError(null);
@@ -198,7 +198,7 @@ export function HistoryCompare({ slug, h }: { slug: string; h: History }) {
     onDecide: () => {},
     onCorrect: () => {},
     onFocus: () => {},
-    action: {
+    action: to !== WORKING ? undefined : {
       label: restored.has(hk.id) ? "Proposed" : "Restore block",
       disabled: restore.isPending || restored.has(hk.id),
       onClick: () => restore.mutate({ blocks: [hk.id], what: "a block" }, { onSuccess: () => setRestored((s) => new Set(s).add(hk.id)) }),

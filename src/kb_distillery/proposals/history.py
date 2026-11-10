@@ -16,7 +16,7 @@ from kb_distillery.proposals.model import ProposalError, check_slug
 from kb_distillery.vault import wikiio
 
 WORKING = "working"
-_SHA = re.compile(r"^[0-9a-f]{4,40}$")
+_SHA = re.compile(r"^[0-9a-f]{7,40}$")
 _KIND = re.compile(r"^kb\(([\w-]+)\):")
 _SEP = "\x1f"
 
@@ -86,7 +86,7 @@ def _revert(slug, old, new, hunk_ids):
         if tag == "equal":
             parts += [b["raw"] for b in nb[j1:j2]]
             continue
-        chosen = ob[i1:i2] if ids[k] in hunk_ids else nb[j1:j2]
+        chosen = ob[i1:i2] if k < len(ids) and ids[k] in hunk_ids else nb[j1:j2]
         k += 1
         parts += [b["raw"] for b in chosen]
     return wikiio.preserve_my_notes(new, "".join(parts))
@@ -100,6 +100,8 @@ def restore(slug, sha, blocks=None, to=WORKING, root=None) -> dict:
     old = version_text(slug, sha, root)
     current = applier.read_page(root, slug)
     if blocks:
+        if to != WORKING:
+            raise ProposalError(400, "a block can only be restored into the current page (compare against `working`)")
         new = version_text(slug, to, root)
         known = {h["id"] for h in _hunks(slug, old, new)}
         unknown = sorted(set(blocks) - known)

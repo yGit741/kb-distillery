@@ -103,3 +103,10 @@ def test_restore_of_the_current_text_is_409_and_needs_loopback(client, versions)
     exp = versions[2]
     assert client.post("/api/pages/alpha/restore", json={"sha": exp}, headers=LOOPBACK).status_code == 409
     assert client.post("/api/pages/alpha/restore", json={"sha": exp}).status_code in (403, 400)
+
+
+def test_block_restore_against_an_older_version_is_refused(client, versions):
+    first, soft, exp = versions
+    hunks = client.get("/api/pages/alpha/compare", params={"from": first, "to": soft}).json()["hunks"]
+    r = client.post("/api/pages/alpha/restore", json={"sha": first, "blocks": [hunks[0]["id"]], "to": soft}, headers=LOOPBACK)
+    assert r.status_code == 400
