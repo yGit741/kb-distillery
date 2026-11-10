@@ -33,7 +33,7 @@ The rest of this page is what `install.sh` does, one command at a time.
 ## 1. Install
 
 ```bash
-git clone <repo-url>
+git clone <repo-url> kb-distillery
 cd kb-distillery
 pixi install
 ```
@@ -109,7 +109,7 @@ A new knowledge base has no pages, so the graph is empty. The app can fill it wi
 - A "Build your knowledge base" card on the empty graph lets you drop files, link a folder on this machine, or open an example. Files and folders are added to `raw/inbox/` and catalogued, with no model call. Duplicates and unsupported file types are reported and skipped.
 - The Pipeline screen and the card can start a digest job: pick sources, see a preview of the cost on each backend, start the job, watch it and cancel it. Each finished source is its own commit, and sources finished before a cancel stay. Jobs run one source at a time and need a Claude login or an Anthropic API key.
 
-The card and the digest jobs are behind the flags `screen.first-run` and `screen.digest-jobs` (`src/kb_distillery/kits/base/defaults/flags.toml`), which are off for now. Until they are switched on, add sources with the commands in step 5.
+The card and the digest jobs are behind the flags `screen.first-run` and `screen.digest-jobs` (`src/kb_distillery/kits/base/defaults/flags.toml`), which are on for a local app and off for private and public sites. If you do not see them, add sources with the commands in step 5.
 
 ## Try the demo first
 
