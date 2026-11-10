@@ -19,6 +19,7 @@ kb-distillery turns sources you collect into a linked, linted wiki. You keep the
 
 ## Guides
 
+- [Build an extension](guides/build-an-extension.md): kits, skills, connectors and publishers as installed packages
 - [Write a kit](guides/write-a-kit.md)
 - [Write a skill](guides/write-a-skill.md)
 - [Add a storage connector](guides/add-a-storage-connector.md)
@@ -26,6 +27,9 @@ kb-distillery turns sources you collect into a linked, linted wiki. You keep the
 - [Import a bundle](guides/import-a-bundle.md)
 - [The graph shell](guides/graph-shell.md)
 - [Run the nightly job](guides/run-the-nightly-job.md)
+- [Self-host behind Tailscale](guides/self-host-tailscale.md)
+- [Self-host behind Cloudflare](guides/self-host-cloudflare.md)
+- [Self-host behind any proxy](guides/self-host-any-proxy.md)
 
 ## Reference
 

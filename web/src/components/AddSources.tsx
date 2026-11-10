@@ -23,6 +23,7 @@ export function AddSources({ className }: { className?: string }) {
   const [folder, setFolder] = useState("");
   const [linked, setLinked] = useState<string>();
   const [folderError, setFolderError] = useState<string>();
+  const [linking, setLinking] = useState(false);
 
   const refresh = () => {
     void qc.invalidateQueries({ queryKey: ["graph"] });
@@ -54,17 +55,24 @@ export function AddSources({ className }: { className?: string }) {
   async function link(e: FormEvent) {
     e.preventDefault();
     const path = folder.trim();
-    if (!path) return;
+    if (!path || linking) return;
+    setLinking(true);
     setFolderError(undefined);
     setLinked(undefined);
     try {
       const r = await ds.linkInboxFolder(path);
-      setLinked(`${r.files_catalogued} ${r.files_catalogued === 1 ? "file" : "files"} catalogued from this folder.`);
+      const skipped = r.skipped > 0 ? `, ${r.skipped} skipped` : "";
+      setLinked(`${r.files_catalogued} ${r.files_catalogued === 1 ? "file" : "files"} catalogued from this folder${skipped}.`);
       refresh();
     } catch (err) {
       setFolderError(errorLine(err));
+    } finally {
+      setLinking(false);
     }
   }
+
+  // A read-only build (share snapshot) has no server to add sources to.
+  if (ds.kind !== "http") return null;
 
   return (
     <div className={cn("flex flex-col gap-3", className)} data-testid="add-sources">
@@ -128,7 +136,7 @@ export function AddSources({ className }: { className?: string }) {
         </label>
         <div className="flex gap-2">
           <Input id="add-sources-folder" value={folder} onChange={(e) => setFolder(e.target.value)} placeholder="Paste a folder path, e.g. /Users/me/papers" />
-          <Button type="submit" size="sm" variant="secondary" disabled={!folder.trim()}>Link</Button>
+          <Button type="submit" size="sm" variant="secondary" disabled={!folder.trim() || linking}>{linking ? "Linking…" : "Link"}</Button>
         </div>
         {linked && <p className="text-sm text-muted-foreground">{linked}</p>}
         {folderError && <p role="alert" className="text-sm text-bad">{folderError}</p>}

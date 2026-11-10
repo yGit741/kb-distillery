@@ -56,7 +56,7 @@ def _kit_defaults(root=None):
     if cfg is None or not cfg.kit:
         return []
     from kb_distillery.config import kit                  # lazy, like KbConfig.section
-    return [os.path.join(kit.kits_dir(), name, "defaults") for name in reversed(kit.chain(cfg.kit))]
+    return [os.path.join(kit.kit_dir(name), "defaults") for name in reversed(kit.chain(cfg.kit))]
 
 
 def meta_file(*parts, root=None):

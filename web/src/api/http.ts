@@ -11,6 +11,11 @@ function message(error: unknown, fallback: string): string {
   if (error && typeof error === "object") {
     const e = (error as { error?: unknown; detail?: unknown }).error ?? (error as { detail?: unknown }).detail;
     if (typeof e === "string") return e;
+    // FastAPI validation errors: detail is a list of { msg } objects
+    if (Array.isArray(e)) {
+      const msgs = e.map((d) => (typeof d === "string" ? d : (d as { msg?: unknown } | null)?.msg)).filter((m): m is string => typeof m === "string" && m !== "");
+      if (msgs.length) return msgs.join("; ");
+    }
   }
   return fallback;
 }
@@ -131,6 +136,14 @@ export function createHttpDataSource(fetchImpl: Fetch = (...a) => fetch(...a), b
 
     listProposals: async (status) =>
       (await run(() => client.GET("/api/proposals", { params: { query: status ? { status } : {} } }), "/api/proposals")).proposals,
+    getProposalInbox: (opts) =>
+      run(
+        () => client.GET("/api/proposals", { params: { query: { ...(opts?.status ? { status: opts.status } : {}), ...(opts?.group ? { group: opts.group } : {}) } } }),
+        "/api/proposals",
+      ),
+    rebaseProposal: (id) => run(() => client.POST("/api/proposals/{pid}/rebase", { params: { path: { pid: id } } }), `/api/proposals/${id}/rebase`),
+    getProposalFeed: () => run(() => client.GET("/api/proposals/feed"), "/api/proposals/feed"),
+    undoProposal: (id) => run(() => client.POST("/api/proposals/{pid}/undo", { params: { path: { pid: id } } }), `/api/proposals/${id}/undo`),
     getProposal: (id) => run(() => client.GET("/api/proposals/{pid}", { params: { path: { pid: id } } }), `/api/proposals/${id}`),
     getProposalRender: (id) =>
       run(() => client.GET("/api/proposals/{pid}/render", { params: { path: { pid: id } } }), `/api/proposals/${id}/render`),
@@ -142,6 +155,26 @@ export function createHttpDataSource(fetchImpl: Fetch = (...a) => fetch(...a), b
     applyProposal: (id) => run(() => client.POST("/api/proposals/{pid}/apply", { params: { path: { pid: id } } }), `/api/proposals/${id}/apply`),
     rejectProposal: (id, reason) =>
       run(() => client.POST("/api/proposals/{pid}/reject", { params: { path: { pid: id } }, body: { reason: reason ?? null } }), `/api/proposals/${id}/reject`),
+    getRestructureBlocks: (slug) =>
+      run(() => client.GET("/api/proposals/restructure/blocks", { params: { query: { slug } } }), "/api/proposals/restructure/blocks"),
+    getMergePreview: (slugs, survivor) =>
+      run(
+        () => client.GET("/api/proposals/restructure/merge-preview", { params: { query: { slugs: slugs.join(","), survivor } } }),
+        "/api/proposals/restructure/merge-preview",
+      ),
+    restructureMerge: (body) => run(() => client.POST("/api/proposals/restructure/merge", { body }), "/api/proposals/restructure/merge"),
+    restructureSplit: (body) => run(() => client.POST("/api/proposals/restructure/split", { body }), "/api/proposals/restructure/split"),
+    restructureExtract: (body) => run(() => client.POST("/api/proposals/restructure/extract", { body }), "/api/proposals/restructure/extract"),
+
+    getPageHistory: (slug) =>
+      run(() => client.GET("/api/pages/{slug}/history", { params: { path: { slug } } }), `/api/pages/${slug}/history`),
+    comparePage: (slug, from, to) =>
+      run(
+        () => client.GET("/api/pages/{slug}/compare", { params: { path: { slug }, query: { from, ...(to ? { to } : {}) } } }),
+        `/api/pages/${slug}/compare`,
+      ),
+    restorePage: (slug, body) =>
+      run(() => client.POST("/api/pages/{slug}/restore", { params: { path: { slug } }, body: { ...body, to: body.to ?? "working" } }), `/api/pages/${slug}/restore`),
 
     listViews: () => run(() => client.GET("/api/views"), "/api/views"),
     listReadyViews: () => run(() => client.GET("/api/views/ready"), "/api/views/ready"),
@@ -163,6 +196,14 @@ export function createHttpDataSource(fetchImpl: Fetch = (...a) => fetch(...a), b
     postPageChat: (slug, body) =>
       run(() => client.POST("/api/pages/{slug}/chat", { params: { path: { slug } }, body }), `/api/pages/${slug}/chat`),
     getPageChat: (slug) => run(() => client.GET("/api/pages/{slug}/chat", { params: { path: { slug } } }), `/api/pages/${slug}/chat`),
+    listPageFlags: (slug) => run(() => client.GET("/api/pages/{slug}/flags", { params: { path: { slug } } }), `/api/pages/${slug}/flags`),
+    addPageFlag: (slug, body) =>
+      run(() => client.POST("/api/pages/{slug}/flags", { params: { path: { slug } }, body }), `/api/pages/${slug}/flags`),
+    deletePageFlag: async (slug, id) => {
+      await run(() => client.DELETE("/api/pages/{slug}/flags/{flag_id}", { params: { path: { slug, flag_id: id } } }), `/api/pages/${slug}/flags/${id}`);
+    },
+    fixPageFlags: (slug) =>
+      run(() => client.POST("/api/pages/{slug}/flags/fix", { params: { path: { slug } }, body: {} }), `/api/pages/${slug}/flags/fix`),
     searchMentions: async (q) =>
       (await run(() => client.GET("/api/pages/mentions", { params: { query: { q } } }), "/api/pages/mentions")).pages,
     getPageSource: async (slug) => {
@@ -215,6 +256,28 @@ export function createHttpDataSource(fetchImpl: Fetch = (...a) => fetch(...a), b
 
     previewDigest: (raws, backend) =>
       run(() => client.POST("/api/digest/preview", { body: { raws, ...(backend ? { backend } : {}) } }), "/api/digest/preview"),
+    startIngest: (input) => {
+      if (input.file) {
+        const form = new FormData();
+        form.append("file", input.file, input.file.name);
+        form.append("tier", input.tier);
+        if (input.collection) form.append("collection", input.collection);
+        if (input.backend) form.append("backend", input.backend);
+        return postRaw<T_.IngestStarted>("/api/ingest", { body: form });
+      }
+      return postRaw<T_.IngestStarted>("/api/ingest", {
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: input.url ?? "", tier: input.tier, collection: input.collection ?? "", backend: input.backend ?? null }),
+      });
+    },
+    getIngestJob: (id) => run(() => client.GET("/api/ingest/{job_id}", { params: { path: { job_id: id } } }), `/api/ingest/${id}`),
+    ingestEvents: async (id, signal) => {
+      try {
+        return await fetchImpl(`/api/ingest/${encodeURIComponent(id)}/events`, { headers: { Accept: "text/event-stream" }, signal, cache: "no-store" });
+      } catch (e) {
+        throw new ApiError(`Could not reach /api/ingest/${id}/events: ${e instanceof Error ? e.message : String(e)}`);
+      }
+    },
     startDigestJob: (raws, backend) =>
       run(() => client.POST("/api/digest/jobs", { body: { raws, ...(backend ? { backend } : {}) } }), "/api/digest/jobs"),
     listDigestJobs: () => run(() => client.GET("/api/digest/jobs"), "/api/digest/jobs"),

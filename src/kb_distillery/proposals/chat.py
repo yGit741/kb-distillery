@@ -16,11 +16,11 @@ import re
 from kb_distillery import llm
 from kb_distillery.proposals import apply as applier
 from kb_distillery.proposals import service
+from kb_distillery.proposals.edits import MY_NOTES, apply_edits, split as _split  # noqa: F401  (shared with flags)
 from kb_distillery.proposals.model import ProposalError, now
 from kb_distillery.vault import links
 from kb_distillery.vault import pages as vault_pages
 
-MY_NOTES = "## My notes"
 SLUG = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
 MENTION_CHARS = 2000
 PAGE_CHARS = 20000
@@ -29,12 +29,6 @@ SYSTEM = ("You edit one page of a personal wiki on the owner's request. Reply wi
 
 def _root(root):
     return root or service.DEFAULT_ROOT
-
-
-def _split(text):
-    """(editable part, My notes part): the second starts at `## My notes` or is empty."""
-    i = text.find("\n" + MY_NOTES)
-    return (text, "") if i < 0 else (text[:i + 1], text[i + 1:])
 
 
 def _thread_path(root, slug):
@@ -95,24 +89,6 @@ def parse(raw: str) -> tuple[str, list[dict]]:
               "sources": [str(s) for s in r.get("sources") or [] if isinstance(s, str)]}
              for r in (rows if isinstance(rows, list) else []) if isinstance(r, dict)]
     return str(obj.get("reply") or "").strip(), edits
-
-
-def apply_edits(text: str, edits: list[dict]) -> tuple[str, list[dict], list[dict]]:
-    """(new text, applied edits, skipped [{before, reason}]); only the part above `## My notes` changes."""
-    editable, notes = _split(text)
-    applied, skipped = [], []
-    for e in edits:
-        b = e["before"]
-        if not b.strip():
-            skipped.append({"before": b, "reason": "empty before"})
-        elif b in editable:
-            editable = editable.replace(b, e["after"], 1)
-            applied.append(e)
-        elif notes and b in notes:
-            skipped.append({"before": b, "reason": "in My notes, which is never edited"})
-        else:
-            skipped.append({"before": b, "reason": "text not found on the page"})
-    return editable + notes, applied, skipped
 
 
 def mentions(q: str, root=None, limit=8) -> list[dict]:

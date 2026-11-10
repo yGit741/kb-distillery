@@ -1,9 +1,10 @@
 """distill doctor: check the environment and a knowledge base, and say how to fix each problem.
 
-    distill doctor [--kb <id|path>] [--json]
+    distill doctor [--kb <id|path>] [--host <addr>] [--json]
 
-Prints PASS / WARN / FAIL / INFO with a one-line fix each. Exit code 0 unless something FAILs. Read-only: no network,
-no LLM call, no lint (lint writes index.md), nothing written. Every check is a small function that takes what it looks
+Prints PASS / WARN / FAIL / INFO with a one-line fix each. Exit code 0 unless something FAILs. Read-only: no LLM call,
+no lint (lint writes index.md), nothing written. The one network call is a GET of the JWKS document, and only when
+KB_AUTH=proxy and KB_AUTH_JWKS_URL are both set. Every check is a small function that takes what it looks
 at as arguments, so a test fakes the world instead of touching it.
 
 INFO is for things that are fine to leave off (no publisher, no LLM login): AI features stay off until a Claude
@@ -212,8 +213,72 @@ def check_frontend(frontend_dir: str, node: bool, dist: str = "") -> Check:
                  "nothing to do: the first launch installs the frontend dependencies and builds the app (needs the network, takes a minute or two)")
 
 
+# --- proxy identity (KB_AUTH=proxy) ---------------------------------------------------------------------------
+def check_remote(env=None, host: str | None = None, fetch=None) -> list[Check]:
+    """The self-hosting settings (`kb_distillery.server.security`). `host` is the address the server will bind (`--host`);
+    `fetch` GETs a JWKS URL and returns the document (default: the server's own fetcher; tests fake it)."""
+    from urllib.parse import urlparse
+
+    from kb_distillery.server import security
+    env = os.environ if env is None else env
+    get = lambda k: (env.get(k) or "").strip()            # noqa: E731
+    mode = (get(security.AUTH_ENV) or "loopback").lower()
+    off_loopback = bool(host) and not security.is_loopback_host(host)
+    if mode not in ("loopback", "proxy"):
+        return [Check("remote access", FAIL, f"{security.AUTH_ENV}={mode!r} is not a mode", "use KB_AUTH=proxy, or leave it unset for loopback")]
+    if mode == "loopback":
+        if off_loopback:
+            return [Check("remote access", WARN, f"bind address {host} is off loopback and KB_AUTH is not proxy (the server refuses to start)",
+                          "bind 127.0.0.1, or set KB_AUTH=proxy behind an identity-aware proxy (see the self-hosting guides)")]
+        return [Check("remote access", INFO, "local only (KB_AUTH unset): the server listens on loopback")]
+    out = [Check("remote access", PASS, "KB_AUTH=proxy: identity is checked on every request")]
+    email = get("KB_AUTH_EMAIL").casefold()
+    if "@" in email:
+        out.append(Check("auth email", PASS, f"only {email} is let in"))
+    else:
+        out.append(Check("auth email", FAIL, "KB_AUTH_EMAIL is not set to an address", "set KB_AUTH_EMAIL to the one user allowed in"))
+    jwks_url, audience = get("KB_AUTH_JWKS_URL"), get("KB_AUTH_AUDIENCE")
+    if jwks_url:
+        if audience:
+            out.append(Check("auth audience", PASS, "KB_AUTH_AUDIENCE is set"))
+        else:
+            out.append(Check("auth audience", FAIL, "KB_AUTH_JWKS_URL is set without KB_AUTH_AUDIENCE",
+                             "set KB_AUTH_AUDIENCE to the application audience (Cloudflare Access: the AUD tag)"))
+        if urlparse(jwks_url).scheme != "https":
+            out.append(Check("auth jwks", FAIL, f"{jwks_url} is not an https URL", "use the https JWKS URL of your identity provider"))
+        else:
+            try:
+                doc = (fetch or security._fetch_jwks)(jwks_url)
+                if isinstance(doc, dict) and isinstance(doc.get("keys"), list) and doc["keys"]:
+                    out.append(Check("auth jwks", PASS, f"{jwks_url} is reachable ({len(doc['keys'])} key(s))"))
+                else:
+                    out.append(Check("auth jwks", FAIL, f"{jwks_url} answered, but not with a JWKS document", "check the URL points at the provider's JWKS (certs) endpoint"))
+            except Exception as e:                       # noqa: BLE001 (any failure is one doctor line)
+                out.append(Check("auth jwks", WARN, f"{jwks_url} is not reachable from here: {e}",
+                                 "check the URL and this machine's network; the server refuses tokens until it can fetch the keys"))
+    if get("KB_AUTH_HEADER"):
+        import ipaddress
+        cidrs = [c.strip() for c in get("KB_AUTH_TRUSTED_PROXY_CIDR").split(",") if c.strip()]
+        try:
+            for c in cidrs:
+                ipaddress.ip_network(c, strict=False)
+            if cidrs:
+                out.append(Check("auth proxy range", PASS, f"{get('KB_AUTH_HEADER')} is trusted from {', '.join(cidrs)}"))
+            else:
+                out.append(Check("auth proxy range", FAIL, "KB_AUTH_HEADER is set without KB_AUTH_TRUSTED_PROXY_CIDR",
+                                 "set KB_AUTH_TRUSTED_PROXY_CIDR to the proxy's address range, e.g. 10.0.0.0/8"))
+        except ValueError as e:
+            out.append(Check("auth proxy range", FAIL, f"KB_AUTH_TRUSTED_PROXY_CIDR: {e}", "use CIDR ranges separated by commas, e.g. 10.0.0.0/8,127.0.0.1/32"))
+    if env is os.environ and not any(c.status == FAIL for c in out):   # the server's own loader has the last word (key, identity source)
+        try:
+            security.load_auth_config()
+        except SystemExit as e:
+            out.append(Check("auth config", FAIL, str(e), "fix the KB_AUTH_* settings above"))
+    return out
+
+
 # --- run -----------------------------------------------------------------------------------------------------
-def run_checks(ref: str | None = None) -> list[Check]:
+def run_checks(ref: str | None = None, host: str | None = None, remote: bool = True) -> list[Check]:
     node = check_node()
     checks = [*check_python(), node, *check_git(), check_config_dir()]
     known = kbconfig.discover()
@@ -225,6 +290,8 @@ def run_checks(ref: str | None = None) -> list[Check]:
         if cfg:
             checks += [check_kb_layout(cfg), check_storage(cfg), check_publisher(cfg)]
     checks += check_llm()
+    if remote:                                              # `distill init` skips it: a new kb says nothing about serving
+        checks += check_remote(host=host)
     repo = repo_root()
     checks.append(check_frontend(str(repo / "web") if repo else "", node.status == PASS))
     return checks
@@ -247,10 +314,11 @@ def exit_code(checks: list[Check]) -> int:
 
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(prog="distill doctor", description=__doc__.split("\n\n")[0])
+    ap.add_argument("--host", default=None, help="the address you will start the server on (warns when it is off loopback without KB_AUTH=proxy)")
     ap.add_argument("--json", action="store_true", help="machine-readable output")
     args = ap.parse_args(argv)
     ref = kbconfig.explicit_kb() or os.environ.get("KB") or kbconfig.kb_above()   # --kb (already stripped from argv), $KB, the kb folder you are in
-    checks = run_checks(ref)
+    checks = run_checks(ref, args.host)
     if args.json:
         print(json.dumps([asdict(c) for c in checks], indent=1))
     else:

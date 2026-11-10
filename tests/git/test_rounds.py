@@ -1,7 +1,9 @@
 """kb_distillery.git.rounds: open, tick on merge, status output, failures never break ship."""
 import contextlib
 import io
+import json
 import os
+import subprocess
 import unittest
 from unittest.mock import patch
 
@@ -55,7 +57,64 @@ class PureTests(unittest.TestCase):
     def test_guard(self):
         self.assertTrue(git_guard.is_allowlisted('pixi run ship -- round open "x" --features a,b'))
         self.assertTrue(git_guard.is_allowlisted("pixi run ship -- round status 4"))
+        self.assertTrue(git_guard.is_allowlisted('pixi run ship -- round close 4 --moved "a=b"'))
         self.assertTrue(git_guard.violation("gh issue edit 4 --body x"))
+
+
+class CloseTests(unittest.TestCase):
+    BODY = rounds.render_body("R", ["a", "b", "c"])
+
+    def _run(self, args, labels=("round",), state="OPEN", done=("a",)):
+        body = self.BODY
+        for f in done:
+            body = rounds.tick(body, f, 5)
+        calls = []
+
+        def gh(a, root):
+            calls.append(a)
+            out = json.dumps({"body": body, "state": state, "labels": [{"name": n} for n in labels]}) if a[:2] == ["issue", "view"] else ""
+            return subprocess.CompletedProcess(a, 0, out, "")
+
+        buf = io.StringIO()
+        with patch.object(events, "_gh", gh), patch.object(events, "read", lambda n, r=None: []), \
+                contextlib.redirect_stdout(buf):
+            rc = ship.main(["round", "close", "9", *args])
+        return rc, buf.getvalue(), calls
+
+    def test_refuses_unfinished(self):
+        rc, out, calls = self._run([])
+        self.assertEqual(rc, 1)
+        self.assertIn("b, c", out)
+        self.assertFalse([c for c in calls if c[:2] in (["issue", "close"], ["issue", "comment"])])
+
+    def test_passes_with_moved(self):
+        rc, out, calls = self._run(["--moved", "b=backlog card", "--moved", "c=shipped in #58", "--note", "bye"])
+        self.assertEqual(rc, 0)
+        comment = [c for c in calls if c[:2] == ["issue", "comment"]]
+        self.assertEqual(len(comment), 1)
+        text = comment[0][-1]
+        self.assertIn("1 merged", text)
+        self.assertIn("moved: b -- backlog card", text)
+        self.assertIn("bye", text)
+        self.assertEqual(calls[-1][:3], ["issue", "close", "9"])
+
+    def test_refuses_non_round_issue(self):
+        rc, out, calls = self._run(["--moved", "b=x", "--moved", "c=y"], labels=("bug",))
+        self.assertEqual(rc, 1)
+        self.assertIn("round", out)
+        self.assertNotIn(["issue", "close", "9"], calls)
+
+    def test_noop_when_closed(self):
+        rc, out, calls = self._run([], state="CLOSED")
+        self.assertEqual(rc, 0)
+        self.assertIn("already closed", out)
+        self.assertEqual([c for c in calls if c[:2] != ["issue", "view"]], [])
+
+    def test_bad_moved_and_unknown_feature(self):
+        self.assertEqual(self._run(["--moved", "nonote"])[0], 2)
+        rc, out, _ = self._run(["--moved", "zzz=x", "--moved", "b=x", "--moved", "c=y"])
+        self.assertEqual(rc, 1)
+        self.assertIn("zzz", out)
 
 
 @needs_git

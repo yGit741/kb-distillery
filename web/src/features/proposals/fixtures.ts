@@ -49,3 +49,39 @@ export const renderFixture: ProposalRender = {
     hunks: [],
   }],
 } as unknown as ProposalRender;
+
+import type { FeedItem, ProposalGroup, ProposalList, ProposalSummary } from "@/api";
+
+export function summaryFixture(over: Partial<ProposalSummary> = {}): ProposalSummary {
+  return {
+    id: "p1", title: "Soften the rank claim", status: "open", producer: { kind: "chat" },
+    created: "2026-11-08T20:00:00+00:00", updated: "2026-11-08T20:00:00+00:00", pages: ["tensor-rank"],
+    counts: { hunks: 1, accepted: 0, rejected: 0, corrected: 0 }, checks: { errors: 0, warnings: 0, blocking: 0 },
+    classes: { claims: 1 }, tiers: { auto_apply: 0, review: 1, explicit: 0 }, stale_pages: [], top_class: "claims",
+    ...over,
+  } as ProposalSummary;
+}
+
+const CLASS_RANK = ["claims", "structure", "new_page", "links", "format", "typos"];
+
+/** What GET /api/proposals?group= answers for these rows (the server's grouping rules, small). */
+export function inboxFixture(rows: ProposalSummary[], group?: string): ProposalList {
+  const buckets = new Map<string, ProposalSummary[]>();
+  for (const p of rows) for (const k of group === "page" ? p.pages : group === "class" ? [p.top_class] : []) buckets.set(k, [...(buckets.get(k) ?? []), p]);
+  const keys = [...buckets.keys()].sort((a, b) => (group === "class" ? CLASS_RANK.indexOf(a) - CLASS_RANK.indexOf(b) : a.localeCompare(b)));
+  const groups: ProposalGroup[] = keys.map((key) => ({ key, label: key, count: buckets.get(key)!.length, proposals: buckets.get(key)! }));
+  return { proposals: rows, groups } as ProposalList;
+}
+
+export const inboxRows: ProposalSummary[] = [
+  summaryFixture(),
+  summaryFixture({ id: "p2", title: "Fix twenty link targets", pages: ["matrix-rank", "tensor-rank"], classes: { links: 20 }, tiers: { auto_apply: 20, review: 0, explicit: 0 }, top_class: "links", counts: { hunks: 20, accepted: 20, rejected: 0, corrected: 0 } }),
+  summaryFixture({ id: "p3", title: "Add a new survey page", pages: ["survey"], classes: { new_page: 1, typos: 2 }, tiers: { auto_apply: 2, review: 1, explicit: 0 }, top_class: "new_page" }),
+  summaryFixture({ id: "p4", title: "Retarget a link", status: "stale", pages: ["matrix-rank"], classes: { links: 1 }, tiers: { auto_apply: 1, review: 0, explicit: 0 }, top_class: "links", stale_pages: ["matrix-rank"] }),
+];
+
+export const feedItems: FeedItem[] = [
+  { id: "f1", title: "Fix a typo", status: "applied", pages: ["tensor-rank"], hunks: 1, classes: ["typos"], applied_at: "2026-11-09T02:00:00+00:00", commit: "abc1234def", auto: true, undoable: true, blocked_by: [] },
+  { id: "f2", title: "Tidy links", status: "applied", pages: ["matrix-rank"], hunks: 3, classes: ["links"], applied_at: "2026-11-09T01:00:00+00:00", commit: "bcd2345efa", auto: true, undoable: false, blocked_by: ["matrix-rank"] },
+  { id: "f3", title: "Old format fix", status: "undone", pages: ["survey"], hunks: 1, classes: ["format"], applied_at: "2026-11-08T01:00:00+00:00", commit: null, auto: true, undoable: false, blocked_by: [], undone_at: "2026-11-08T03:00:00+00:00" },
+];

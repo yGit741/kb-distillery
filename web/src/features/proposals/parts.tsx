@@ -1,7 +1,9 @@
 import { Link } from "@tanstack/react-router";
 import { Check, MessageSquare, X } from "lucide-react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import type { Decision, Hunk } from "@/api";
+import { useDataSource, type Decision, type Hunk, type RebaseResult } from "@/api";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { pageTo } from "@/features/pages/parts";
 import { readable, type ChangeKind } from "./model";
@@ -17,6 +19,8 @@ export interface HunkCtx {
   onDecide: (d: Decision, comment?: string) => void;
   onCorrect: (open: boolean) => void;
   onFocus: () => void;
+  /** Replaces Accept / Reject / Correct with one action button (page history: "Restore block"). */
+  action?: { label: string; onClick: () => void; disabled?: boolean; note?: string };
 }
 
 /** Word marks for a hunk's tokens. `show` picks which side: both (inline), before only, after only. */
@@ -63,6 +67,26 @@ const STATE: Record<Decision, { label: string; icon: typeof Check }> = {
 /** Accept / Reject / Correct for one hunk, the quiet state mark once decided, and the inline correction box. */
 export function HunkControls({ ctx, layout = "column", correct = true }: { ctx: HunkCtx; layout?: "column" | "row"; correct?: boolean }) {
   const { decision, readOnly } = ctx;
+  if (ctx.action) {
+    const a = ctx.action;
+    return (
+      <div className="flex flex-col items-start gap-1" data-testid="hunk-controls">
+        <button
+          type="button"
+          disabled={a.disabled}
+          onClick={(e) => {
+            e.stopPropagation();
+            ctx.onFocus();
+            a.onClick();
+          }}
+          className="h-7 rounded-md px-2.5 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:pointer-events-none disabled:opacity-50"
+        >
+          {a.label}
+        </button>
+        {a.note && <p className="text-xs text-muted-foreground">{a.note}</p>}
+      </div>
+    );
+  }
   const btn = (d: Decision, label: string, key: string) => (
     <button
       type="button"
@@ -165,3 +189,70 @@ export function WhyLine({ hunk, extra }: { hunk: Hunk; extra?: ReactNode }) {
 
 /** The one colour ramp of a change kind (gutter bars, legend). Insert green, delete red, modified the accent. */
 export const KIND_BAR: Record<ChangeKind, string> = { insert: "bg-ok/70", delete: "bg-bad/70", modified: "bg-primary/70" };
+
+
+/** A small segmented choice (filters, layouts, views). */
+export function Segmented({ label, value, options, onChange }: { label: string; value: string; options: { id: string; label: string; hint?: string | undefined }[]; onChange: (id: string) => void }) {
+  return (
+    <div role="radiogroup" aria-label={label} className="inline-flex items-center rounded-md border p-0.5">
+      {options.map((o) => (
+        <button
+          key={o.id}
+          type="button"
+          role="radio"
+          aria-checked={value === o.id}
+          title={o.hint}
+          onClick={() => onChange(o.id)}
+          className={cn("h-6 rounded px-2 text-xs text-muted-foreground transition-colors hover:text-foreground", value === o.id && "bg-muted font-medium text-foreground")}
+        >
+          {o.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/** Underlined tabs: a section switcher (inbox | feed, the pages of a proposal). */
+export function Tabs({ label, value, items, onChange }: { label: string; value: string; items: { id: string; label: string; note?: string | undefined; mark?: boolean | undefined }[]; onChange: (id: string) => void }) {
+  return (
+    <div role="tablist" aria-label={label} className="flex flex-wrap items-end gap-x-4 border-b">
+      {items.map((t) => (
+        <button
+          key={t.id}
+          type="button"
+          role="tab"
+          aria-selected={value === t.id}
+          onClick={() => onChange(t.id)}
+          className={cn("-mb-px flex items-center gap-1.5 border-b-2 border-transparent pb-1.5 pt-1 text-sm text-muted-foreground transition-colors hover:text-foreground", value === t.id && "border-foreground/70 font-medium text-foreground")}
+        >
+          {t.label}
+          {t.note && <span className="text-xs font-normal text-muted-foreground">{t.note}</span>}
+          {t.mark && <span className="size-1.5 rounded-full bg-warn" role="img" aria-label="page changed since" />}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/** Rebase one proposal onto the pages as they are now; `onDone` gets the result (what was dropped). */
+export function RebaseButton({ id, onDone, size = "sm" }: { id: string; onDone?: (r: RebaseResult) => void; size?: "sm" | "default" }) {
+  const ds = useDataSource();
+  const qc = useQueryClient();
+  const m = useMutation({
+    mutationFn: () => ds.rebaseProposal(id),
+    onSuccess: (r) => {
+      qc.setQueryData(["proposal", id], r.proposal);
+      void qc.invalidateQueries({ queryKey: ["proposals"] });
+      void qc.invalidateQueries({ queryKey: ["proposal-render", id] });
+      onDone?.(r);
+    },
+  });
+  return (
+    <span className="inline-flex flex-col items-start gap-0.5">
+      <Button variant="outline" size={size} disabled={m.isPending} onClick={(e) => { e.stopPropagation(); m.mutate(); }}>
+        {m.isPending ? "Rebasing" : "Rebase"}
+      </Button>
+      {m.error && <span role="alert" className="text-xs text-bad">{m.error instanceof Error ? m.error.message : String(m.error)}</span>}
+    </span>
+  );
+}

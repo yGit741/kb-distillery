@@ -32,6 +32,10 @@ export type PageChatRequest = S["PageChatRequest"];
 export type PageChatThread = S["PageChatThread"];
 export type ChatMessage = S["ChatMessage"];
 export type MentionHit = S["MentionHit"];
+export type PageFlag = S["PageFlag"];
+export type PageFlagList = S["PageFlagList"];
+export type PageFlagRequest = S["PageFlagRequest"];
+export type PageFlagFixReply = S["PageFlagFixReply"];
 export type SearchResult = S["SearchResult"];
 export type SearchHit = S["SearchHit"];
 export type TextSearch = S["TextSearch"];
@@ -52,7 +56,17 @@ export type RelationProposal = S["RelationProposal"];
 
 // agent proposals (flag ui.proposals)
 export type Proposal = S["Proposal"];
+export type RestructureResult = S["RestructureResult"];
+export type RestructureBlocks = S["RestructureBlocks"];
+export type MergePreview = S["MergePreview"];
+export type RippleItem = S["RippleItem"];
 export type ProposalSummary = S["ProposalSummary"];
+export type ProposalList = S["ProposalList"];
+export type ProposalGroup = S["ProposalGroup"];
+export type RebaseResult = S["RebaseResult"];
+export type DroppedHunk = S["DroppedHunk"];
+export type ProposalFeed = S["Feed"];
+export type FeedItem = S["FeedItem"];
 export type ProposalRender = S["ProposalRender"];
 export type RenderPage = S["RenderPage"];
 export type Hunk = S["Hunk"];
@@ -60,6 +74,11 @@ export type HunkDecision = S["HunkDecision"];
 export type Finding = S["Finding"];
 export type ProposalRevision = S["Revision"];
 export type ApplyResult = S["ApplyResult"];
+// page history (flag ui.page-history)
+export type PageVersion = S["PageVersion"];
+export type PageHistory = S["PageHistory"];
+export type PageCompare = S["PageCompare"];
+export type RestoreResult = S["RestoreResult"];
 export type Decision = "accept" | "reject" | "correct";
 
 // corpus, raw, citations, pipeline, health, ops
@@ -70,6 +89,17 @@ export type RawCard = S["RawCard"];
 export type DigestResult = S["DigestResult"];
 export type DigestPreview = S["DigestPreview"];
 export type DigestJob = S["DigestJob"];
+export type IngestJob = S["IngestJob"];
+export type IngestStep = S["IngestStep"];
+export type IngestStarted = S["IngestStarted"];
+/** What the Ingest screen sends: a file or a URL, plus how deeply to read it. */
+export interface IngestInput {
+  file?: File;
+  url?: string;
+  tier: string;
+  collection?: string;
+  backend?: string;
+}
 export type DigestJobList = S["DigestJobList"];
 export type DigestBackendOption = S["BackendOption"];
 export type CitationGraph = S["CitationGraph"];
