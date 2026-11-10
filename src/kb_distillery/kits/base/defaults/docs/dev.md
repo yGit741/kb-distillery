@@ -170,6 +170,19 @@ text queries); `kb_distillery.search.vectors` reads it for graph math — neares
 - **Expiry:** `lint` (`check_flags`) warns when a flag expires within 14 days and errors once it has expired or the registry is invalid; retire it with `meta/templates/flag-cleanup-pr.md` (`chore(flags): remove <name>`).
 - **Not flags:** `apply_profile` in `kb_distillery/publish/site/build.py` (what data a public build strips) is privacy, not a feature switch, and stays on the profile.
 
+## Performance
+
+The graph snapshot is the expensive build (seconds on a 1,100-page kb), so it is cached and reused:
+
+- **Graph snapshot:** `kb_distillery.graph.cache` keys it on the vault change signature (mtime and size of every wiki page and the side files it reads, plus git HEAD); an unchanged vault serves the cached build, concurrent callers share one build in flight. `KB_GRAPH_CACHE=0` turns the cache off (every call builds).
+- **Health and ops:** `/api/health` and `/api/ops` reuse that same signature instead of a 60 s TTL, so they recompute after the vault changed; ops also keeps a 300 s backstop for state no file covers (open PRs) and recomputes on `refresh=1`.
+- **Warm at start:** the server builds the snapshot in a daemon thread at start and a refresher re-checks the signature every `KB_GRAPH_WARM_INTERVAL` seconds (default 30), so the first request after idle is a hit. `KB_GRAPH_WARM=0` turns it off; tests and share builds never start it.
+- **Frontend:** the app keeps query results for 5 minutes (`staleTime`), shares one graph query key across screens and prefetches the graph, so switching tabs does not refetch.
+
+Measure with `pixi run perf -- --kb <path>` (`--idle N` sets the pause before the reopen round, `--no-browser` skips the Playwright tab passes, `--url` benches a running server). It starts a fresh server, times each endpoint cold, warm and after the idle pause, then times the tabs in a browser, and writes `.cache/perf/<stamp>.json` (`--out` renames it). Run it on a copy of the kb, never the real one, and note the machine load: a busy machine inflates every number.
+
+Order of magnitude: on a 1,100-page kb, `/api/graph`, `/api/health` and `/api/ops` went from seconds to well under a second once warm; a cold first call still pays one build.
+
 ## Worktrees
 
 `pixi run ship -- start <feature> --worktree` creates the worktree, symlinks the primary checkout's
