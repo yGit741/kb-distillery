@@ -1951,13 +1951,17 @@ def _main(argv):
     mv.add_argument("src")
     mv.add_argument("dst")
     sub.add_parser("claims", help="list every lane's claimed (or touched) paths")
-    ro = sub.add_parser("round", help="round issues for multi-PR efforts (open / status)")
+    ro = sub.add_parser("round", help="round issues for multi-PR efforts (open / status / close)")
     rsub = ro.add_subparsers(dest="round_cmd", required=True)
     rop = rsub.add_parser("open", help="open a `round` issue with one checklist line per feature")
     rop.add_argument("title")
     rop.add_argument("--features", required=True, help="comma-separated kebab-case features")
     rst = rsub.add_parser("status", help="checklist + latest event per feature, one line each")
     rst.add_argument("number", type=int)
+    rcl = rsub.add_parser("close", help="close a round issue once every feature is merged or named in --moved")
+    rcl.add_argument("number", type=int)
+    rcl.add_argument("--moved", action="append", default=[], metavar="FEATURE=NOTE", help="an unfinished feature moved elsewhere (repeatable)")
+    rcl.add_argument("--note", default="", help="free text added to the closing comment")
     c = sub.add_parser("commit")
     c.add_argument("message")
     c.add_argument("--skip-tests", action="store_true")
@@ -2022,6 +2026,8 @@ def _main(argv):
     if args.cmd == "round":
         if args.round_cmd == "open":
             return rounds.cmd_open(args.title, args.features, ROOT)
+        if args.round_cmd == "close":
+            return rounds.cmd_close(args.number, args.moved, args.note, ROOT)
         return rounds.cmd_status(args.number, ROOT)
     if args.cmd == "mv":
         return cmd_mv(args.src, args.dst)
