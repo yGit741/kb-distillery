@@ -53,6 +53,13 @@ export interface DataSource {
 
   // agent proposals (flag ui.proposals): the owner reviews an agent change hunk by hunk
   listProposals(status?: string): Promise<T.ProposalSummary[]>;
+  /** The review inbox: `status` open (open + stale) | applied | undone | all, `group` page | class | time fills `groups`. */
+  getProposalInbox(opts?: { status?: string; group?: string }): Promise<T.ProposalList>;
+  /** Recompute the hunks against the pages as they are now; hunks whose text vanished come back as `dropped`. */
+  rebaseProposal(id: string): Promise<T.RebaseResult>;
+  /** Applied and undone proposals, newest first (auto-applied ones included), each with `undoable` and `blocked_by`. */
+  getProposalFeed(): Promise<T.ProposalFeed>;
+  undoProposal(id: string): Promise<T.Proposal>;
   getProposal(id: string): Promise<T.Proposal>;
   getProposalRender(id: string): Promise<T.ProposalRender>;
   /** Accept, reject or correct one hunk; answers the whole proposal as it now is. */

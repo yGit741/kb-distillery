@@ -136,6 +136,14 @@ export function createHttpDataSource(fetchImpl: Fetch = (...a) => fetch(...a), b
 
     listProposals: async (status) =>
       (await run(() => client.GET("/api/proposals", { params: { query: status ? { status } : {} } }), "/api/proposals")).proposals,
+    getProposalInbox: (opts) =>
+      run(
+        () => client.GET("/api/proposals", { params: { query: { ...(opts?.status ? { status: opts.status } : {}), ...(opts?.group ? { group: opts.group } : {}) } } }),
+        "/api/proposals",
+      ),
+    rebaseProposal: (id) => run(() => client.POST("/api/proposals/{pid}/rebase", { params: { path: { pid: id } } }), `/api/proposals/${id}/rebase`),
+    getProposalFeed: () => run(() => client.GET("/api/proposals/feed"), "/api/proposals/feed"),
+    undoProposal: (id) => run(() => client.POST("/api/proposals/{pid}/undo", { params: { path: { pid: id } } }), `/api/proposals/${id}/undo`),
     getProposal: (id) => run(() => client.GET("/api/proposals/{pid}", { params: { path: { pid: id } } }), `/api/proposals/${id}`),
     getProposalRender: (id) =>
       run(() => client.GET("/api/proposals/{pid}/render", { params: { path: { pid: id } } }), `/api/proposals/${id}/render`),

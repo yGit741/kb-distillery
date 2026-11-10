@@ -9,9 +9,9 @@ import { useVariant, VARIANTS } from "@/components/variants";
 import { cn } from "@/lib/utils";
 import { useApiQuery } from "@/lib/useApiQuery";
 import { pageTo } from "@/features/pages/parts";
-import { applyBlocker, decisionOf, placement, reviewOrder, structureLine } from "./model";
+import { applyBlocker, classLabel, decisionOf, placement, readable, reviewOrder, structureLine } from "./model";
 import { DEFAULT_DIFF_VIEW, DIFF_COMPONENT, DIFF_VIEWS, type DiffView } from "./ProposalDiff";
-import { HunkControls, type HunkCtx } from "./parts";
+import { HunkControls, RebaseButton, Segmented, Tabs, type HunkCtx } from "./parts";
 
 const COMPONENT = "proposal-diff";
 
@@ -26,6 +26,7 @@ export function ReviewScreen({ id }: { id: string }) {
   const [focus, setFocus] = useState<string | null>(null);
   const [correcting, setCorrecting] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [pageTab, setPageTab] = useState("");
 
   const put = (p: Proposal) => qc.setQueryData(["proposal", id], p);
   const decide = useMutation({
@@ -64,8 +65,9 @@ export function ReviewScreen({ id }: { id: string }) {
     [p, isCurrent, shownRev],
   );
   const renderPages = isCurrent ? pages : [];
-  const order = useMemo(() => reviewOrder(hunks, renderPages), [hunks, renderPages]);
-  const readOnly = !p || !isCurrent || p.status === "applied" || p.status === "rejected";
+  const shown = useMemo(() => (pageTab ? hunks.filter((h) => h.slug === pageTab) : hunks), [hunks, pageTab]);
+  const order = useMemo(() => reviewOrder(shown, renderPages), [shown, renderPages]);
+  const readOnly = !p || !isCurrent || p.status === "applied" || p.status === "rejected" || p.status === "undone";
 
   const act = useCallback(
     (h: Hunk, d: Decision, comment?: string) => {
@@ -124,8 +126,10 @@ export function ReviewScreen({ id }: { id: string }) {
     onFocus: () => setFocus(h.id),
   });
   const pageOf = (h: Hunk) => renderPages.find((pg) => pg.slug === h.slug);
-  const strip = hunks.filter((h) => placement(h, pageOf(h)) === "structure");
+  const strip = shown.filter((h) => placement(h, pageOf(h)) === "structure");
   const slugs = [...new Set([...Object.keys(p.base), ...hunks.map((h) => h.slug)])];
+  const visible = pageTab && slugs.includes(pageTab) ? [pageTab] : slugs;
+  const dropped = isCurrent ? p.revisions[current]?.dropped ?? [] : [];
   const blocker = applyBlocker(p, [...p.checks.tier1, ...p.checks.tier2], p.hunks);
   const accepted = p.counts.accepted;
   const Diff = DIFF_COMPONENT[view as DiffView];
@@ -151,10 +155,28 @@ export function ReviewScreen({ id }: { id: string }) {
       />
       <div className="flex flex-col gap-2 empty:hidden">
         {p.stale && (
-          <p role="status" className="flex items-center gap-2 rounded-lg border bg-muted/50 px-3 py-2 text-sm text-foreground/85" data-testid="stale-banner">
+          <div role="status" className="flex items-center gap-3 rounded-lg border bg-muted/50 px-3 py-2 text-sm text-foreground/85" data-testid="stale-banner">
             <Info className="size-4 shrink-0 text-muted-foreground" aria-hidden />
-            The page changed since this proposal was made. Apply is off until the producer makes a new revision.
-          </p>
+            <span className="min-w-0 flex-1">
+              The page changed since this proposal was made{p.stale_pages.length ? ` (${p.stale_pages.join(", ")})` : ""}. Apply is off until you rebase: the changes are carried onto the current text, and any whose text is gone are set aside.
+            </span>
+            <RebaseButton id={id} />
+          </div>
+        )}
+        {dropped.length > 0 && (
+          <details className="rounded-lg border bg-card px-3 py-2 text-sm" data-testid="dropped-list" open>
+            <summary className="cursor-pointer text-foreground/85">
+              {dropped.length} {dropped.length === 1 ? "change" : "changes"} could not be carried over after the rebase
+            </summary>
+            <ul className="mt-2 flex flex-col gap-2">
+              {dropped.map((d) => (
+                <li key={d.hunk_id} className="text-xs text-muted-foreground">
+                  <span className="font-medium text-foreground/80">{d.slug}</span> · {classLabel(d.klass)} · {d.reason}
+                  <span className="mt-0.5 block truncate" title={d.after || d.before}>{readable((d.after || d.before).trim())}</span>
+                </li>
+              ))}
+            </ul>
+          </details>
         )}
         {!isCurrent && (
           <p className="text-sm text-muted-foreground">You are looking at v{p.revisions[shownRev]?.n}. Decisions apply to the current revision, v{p.revision}.</p>
@@ -162,6 +184,18 @@ export function ReviewScreen({ id }: { id: string }) {
         {apply.isSuccess && <p role="status" className="text-sm text-muted-foreground">Applied as {apply.data.kb_version ?? "a new knowledge step"}.</p>}
         {error && <p role="alert" className="text-sm text-bad">{error}</p>}
       </div>
+
+      {slugs.length > 1 && (
+        <Tabs
+          label="Pages in this proposal"
+          value={pageTab && slugs.includes(pageTab) ? pageTab : ""}
+          onChange={setPageTab}
+          items={[
+            { id: "", label: "All pages", note: String(hunks.length) },
+            ...slugs.map((s) => ({ id: s, label: s, note: String(hunks.filter((h) => h.slug === s).length), mark: p.stale_pages.includes(s) })),
+          ]}
+        />
+      )}
 
       {strip.length > 0 && (
         <section aria-label="Structure changes" className="rounded-lg border bg-card">
@@ -180,7 +214,7 @@ export function ReviewScreen({ id }: { id: string }) {
                 >
                   <span className="w-28 shrink-0 font-medium">{line.what}</span>
                   <span className="min-w-0 flex-1 truncate font-mono text-xs text-muted-foreground" title={line.detail}>{line.detail}</span>
-                  {slugs.length > 1 && <span className="shrink-0 text-xs text-muted-foreground">{h.slug}</span>}
+                  {visible.length > 1 && <span className="shrink-0 text-xs text-muted-foreground">{h.slug}</span>}
                   <HunkControls ctx={{ ...c, correcting: false }} layout="row" correct={false} />
                 </li>
               );
@@ -189,17 +223,17 @@ export function ReviewScreen({ id }: { id: string }) {
         </section>
       )}
 
-      {slugs.map((slug) => {
-        const mine = hunks.filter((h) => h.slug === slug && placement(h, pageOf(h)) === "flow");
+      {visible.map((slug) => {
+        const mine = shown.filter((h) => h.slug === slug && placement(h, pageOf(h)) === "flow");
         if (!mine.length) return null;
         return (
           <article key={slug} aria-label={`Changes to ${slug}`} className="flex flex-col gap-3">
-            {slugs.length > 1 && <h2 className="text-sm font-medium text-muted-foreground">{slug}</h2>}
+            {visible.length > 1 && <h2 className="text-sm font-medium text-muted-foreground">{slug}</h2>}
             <Diff page={pageOf(mine[0]!)} slug={slug} hunks={mine} ctx={ctx} />
           </article>
         );
       })}
-      {!hunks.length && <p className="py-6 text-center text-sm text-muted-foreground">This revision changes nothing.</p>}
+      {!shown.length && <p className="py-6 text-center text-sm text-muted-foreground">This revision changes nothing.</p>}
 
       <footer className="sticky bottom-0 -mx-4 mt-auto border-t bg-background/95 px-4 py-2 text-xs text-muted-foreground backdrop-blur">
         <kbd className="font-sans font-medium text-foreground/80">j</kbd> / <kbd className="font-sans font-medium text-foreground/80">k</kbd> next / previous change ·{" "}
@@ -229,28 +263,8 @@ interface HeaderProps {
   onRejectAll: () => void;
 }
 
-function Segmented({ label, value, options, onChange }: { label: string; value: string; options: { id: string; label: string; hint?: string }[]; onChange: (id: string) => void }) {
-  return (
-    <div role="radiogroup" aria-label={label} className="inline-flex items-center rounded-md border p-0.5">
-      {options.map((o) => (
-        <button
-          key={o.id}
-          type="button"
-          role="radio"
-          aria-checked={value === o.id}
-          title={o.hint}
-          onClick={() => onChange(o.id)}
-          className={cn("h-6 rounded px-2 text-xs text-muted-foreground transition-colors hover:text-foreground", value === o.id && "bg-muted font-medium text-foreground")}
-        >
-          {o.label}
-        </button>
-      ))}
-    </div>
-  );
-}
-
 function Header({ p, slugs, findings, shownRev, onRev, view, onView, accepted, blocker, busy, onApply, onRejectAll }: HeaderProps) {
-  const closed = p.status === "applied" || p.status === "rejected";
+  const closed = p.status === "applied" || p.status === "rejected" || p.status === "undone";
   const producer = [p.producer.kind, p.producer.instruction].filter(Boolean).join(" · ");
   return (
     <header className="flex flex-col gap-3 border-b pb-4">

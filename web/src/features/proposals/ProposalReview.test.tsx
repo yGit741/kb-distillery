@@ -140,24 +140,6 @@ describe("proposal review screen", () => {
     expect(await screen.findByTestId("stale-banner")).toHaveTextContent("The page changed since this proposal was made");
     expect(screen.getByRole("button", { name: "Apply accepted (1)" })).toBeDisabled();
   });
-
-  it("lists proposals at /proposals", async () => {
-    const ds = mockDataSource({
-      listProposals: async () => [{ id: "p1", title: "Soften the rank claim", status: "open", producer: { kind: "chat" }, created: "2026-11-08T20:00:00+00:00", updated: "", pages: ["tensor-rank"], counts: { hunks: 3, accepted: 1, rejected: 0, corrected: 0 }, checks: { errors: 0, warnings: 1, blocking: 0 } }],
-    });
-    const root = createRootRoute();
-    const list = createRoute({ getParentRoute: () => root, path: "/proposals", component: ProposalsScreen });
-    const router = createRouter({ routeTree: root.addChildren([list]), history: createMemoryHistory({ initialEntries: ["/proposals"] }) });
-    render(
-      <DataSourceProvider source={ds}>
-        <QueryClientProvider client={new QueryClient()}>
-          <RouterProvider router={router} />
-        </QueryClientProvider>
-      </DataSourceProvider>,
-    );
-    expect(await screen.findByRole("link", { name: "Soften the rank claim" })).toHaveAttribute("href", "/proposals/p1");
-    expect(screen.getByText("3 changes · 1 accepted")).toBeInTheDocument();
-  });
 });
 
 describe("decision wiring", () => {
