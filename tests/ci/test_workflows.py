@@ -88,7 +88,7 @@ class RunnerSafety(unittest.TestCase):
                 self.assertTrue(runs_on_is_safe_for_forks(job["runs-on"]),
                                 f"{name}/{job_name}: runs-on {job['runs-on']!r} may reach a self-hosted runner from a fork pull request; "
                                 "use a GitHub-hosted label")
-        self.assertGreaterEqual(checked, 7)       # ci.yml (6 jobs) + secret-scan.yml
+        self.assertGreaterEqual(checked, 7)       # ci.yml (7 jobs) + secret-scan.yml
 
     def test_the_guard_itself_rejects_self_hosted_labels_and_expressions(self):
         for bad in (["self-hosted", "macOS", "ARM64"], "self-hosted", ["macos-latest"],
@@ -107,7 +107,7 @@ class RunnerSafety(unittest.TestCase):
         self.assertIn("github.ref == 'refs/heads/main'", deploy["if"])      # a dispatch from another branch never deploys it
 
 
-CI_JOBS = {"lint", "tests", "web", "checks", "wheel", "worker", "all-green"}
+CI_JOBS = {"lint", "tests", "web", "checks", "wheel", "worker", "docker", "all-green"}
 LANE_CHECKS = ("pixi run api-schema-check", "pixi run flags-check", "pixi run test-e2e", "pixi run test-ui-principles")
 LINT_TASKS = ("pixi run lint-skills", "pixi run licenses", "pixi run lint-imports", "pixi run lint", "pixi run okf-check", "pixi run ruff")
 

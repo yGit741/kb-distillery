@@ -78,7 +78,7 @@ jobs:
           mkdir -p out
           tar -czf "out/webapp-${version}.tar.gz" -C src/kb_distillery/_webapp .
           cp dist/*.whl out/
-          (cd out && sha256sum *.whl "webapp-${version}.tar.gz" > SHA256SUMS)
+          (cd out && sha256sum *.whl "webapp-${version}.tar.gz" > SHA256SUMS && sha256sum "webapp-${version}.tar.gz" > "webapp-${version}.sha256")     # the .sha256 is what fetch_prebuilt reads
           pixi run python -m kb_distillery.git.release --notes "$version" > out/notes.md
       - uses: actions/upload-artifact@v4
         with:
@@ -108,11 +108,10 @@ jobs:
           if ! gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --title "$GITHUB_REF_NAME" --notes-file out/notes.md --verify-tag
           fi
-          gh release upload "$GITHUB_REF_NAME" out/*.whl out/webapp-*.tar.gz out/SHA256SUMS --repo "$GITHUB_REPOSITORY" --clobber
+          gh release upload "$GITHUB_REF_NAME" out/*.whl out/webapp-*.tar.gz out/webapp-*.sha256 out/SHA256SUMS --repo "$GITHUB_REPOSITORY" --clobber
 
   docker:     # multi-arch image from ./Dockerfile; pushed to GHCR only on a tag
-    # Off until the Dockerfile (R4.2) is on main: flip `if: false` to `if: true` in the PR that adds it.
-    if: false
+    # On: ci.yml's `docker` job builds the same Dockerfile (amd64, no push) and smoke-tests it on every PR.
     needs: release
     runs-on: ubuntu-latest
     permissions:

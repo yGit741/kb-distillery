@@ -20,6 +20,6 @@ Set by the maintainer; nothing in the tooling fixes it. Any newer version can be
 
 ## What the tag does
 
-`release.yml` runs the CI gates, builds the wheel and the web bundle, creates the GitHub release with the notes cut from the matching `## [0.2.0]` section, and (once the Dockerfile lands and the `docker` job is switched on; it is `if: false` until then) pushes the multi-arch image (`linux/amd64`, `linux/arm64`, from the repo `Dockerfile`) to `ghcr.io/<owner>/<repo>` tagged `0.2.0`, `0.2` and `latest`. A PyPI job is present but disabled (`if: false`) until the PyPI project and trusted publishing exist. The workflow stops if the tag does not match the `pyproject.toml` version.
+`release.yml` runs the CI gates, builds the wheel and the web bundle, creates the GitHub release with the notes cut from the matching `## [0.2.0]` section, and (the `docker` job) pushes the multi-arch image (`linux/amd64`, `linux/arm64`, from the repo `Dockerfile`) to `ghcr.io/<owner>/<repo>` tagged `0.2.0`, `0.2` and `latest`. A PyPI job is present but disabled (`if: false`) until the PyPI project and trusted publishing exist. The workflow stops if the tag does not match the `pyproject.toml` version.
 
 To re-attach only the web bundle to an existing release, run the `web-bundle` workflow by hand with the tag.
