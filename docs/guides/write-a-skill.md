@@ -40,3 +40,5 @@ every `bash` block against the real CLI.
 **Every writing skill ends in one op commit.** Writer CLIs commit automatically (`--no-commit` to skip); any other wiki edit is wrapped in `distill ops begin …` / `distill ops commit` (see `wiki-edit`). Skills never run git writes themselves.
 
 **Digest rule:** bare `digest` → ask tier; never auto-pick `full-digest`.
+
+To ship a skill as a separately installed package, register it in the `kb_distillery.skills` entry-point group: [Build an extension](build-an-extension.md).
