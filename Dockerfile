@@ -20,7 +20,7 @@ ARG VERSION
 ARG KB_WEB_BUNDLE_REPO
 ENV PIP_DISABLE_PIP_VERSION_CHECK=1 PIP_NO_CACHE_DIR=1
 COPY dist/ /dist/
-RUN test -n "${VERSION}" && python -m venv /opt/venv \
+RUN { test -n "${VERSION}" || { echo "VERSION build-arg required"; exit 1; }; } && python -m venv /opt/venv \
  && /opt/venv/bin/pip install /dist/kb_distillery-${VERSION}-*.whl
 # Unpack the prebuilt web bundle into the installed package, unless the wheel already carries one. A missing or
 # corrupt bundle fails the build instead of shipping an image without a UI.
@@ -49,7 +49,7 @@ COPY --from=build /opt/venv /opt/venv
 ENV PATH=/opt/venv/bin:$PATH \
     PYTHONUNBUFFERED=1 \
     KB_DISTILLERY_HOME=/data \
-    XDG_CONFIG_HOME=/data/.config \
+    HOME=/data \
     KB_GRAPH_WARM=1 \
     KB_AUTH=proxy
 USER kb
