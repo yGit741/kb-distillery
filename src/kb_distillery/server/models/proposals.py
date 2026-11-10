@@ -277,3 +277,50 @@ class FeedItem(ApiModel):
 
 class Feed(ApiModel):
     feed: list[FeedItem]
+
+
+class RippleItem(ApiModel):
+    slug: str
+    links: int
+
+
+class RestructureResult(Proposal):
+    """The proposal a restructure producer made, plus the pages whose links to the changed page(s) it touches."""
+    ripple: list[RippleItem] = []
+
+
+class MergeRequest(ApiModel):
+    slugs: list[str]
+    survivor: str
+    title: str | None = None
+    backend: Backend | None = None      # set -> an LLM pass proposes a tidier merged body instead of plain concatenation
+
+
+class SplitRequest(ApiModel):
+    slug: str
+    cuts: list[int]                      # block indices (`at` of the render blocks) where a new piece starts
+    titles: list[str]                    # one title per cut: the names of the new pages
+
+
+class ExtractRequest(ApiModel):
+    slug: str
+    from_at: int
+    to_at: int                           # inclusive block range
+    title: str
+
+
+class MergePreview(ApiModel):
+    ripple: list[RippleItem] = []
+
+
+class RestructureBlock(ApiModel):
+    index: int
+    kind: str
+    text: str
+
+
+class RestructureBlocks(ApiModel):
+    slug: str
+    title: str
+    first: int                           # the first content block: cuts and ranges start there or later
+    blocks: list[RestructureBlock]

@@ -21,7 +21,7 @@ OP_KINDS = {
     "set_frontmatter": ("slug", "key", "value"),
 }
 OPTIONAL = {"reason": "", "sources": None}
-NOT_YET = ("tombstone_page", "move_block")          # validated, but apply raises until a later item fills them
+NOT_YET = ("move_block",)                           # validated, but apply raises until a later item fills it
 
 SLUG = re.compile(r"^[a-z0-9][a-z0-9._-]*$")
 KEY = re.compile(r"^[A-Za-z_][A-Za-z0-9_-]*$")

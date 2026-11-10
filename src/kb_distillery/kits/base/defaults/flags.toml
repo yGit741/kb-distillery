@@ -287,3 +287,13 @@ expires = 2027-05-09
 kind = "runtime"
 default = false
 envs = { local = true, private = false, public = false }
+
+[[flag]]
+name = "ui.restructure"
+description = "Pages: merge, split and extract a page as a proposal (the Restructure entry on the page view, two entry variants: menu and command). Needs ui.proposals."
+owner = "maintainer"
+created = 2026-11-10
+expires = 2027-05-10
+kind = "runtime"
+default = false
+envs = { local = true, private = false, public = false }

@@ -147,6 +147,16 @@ export function createHttpDataSource(fetchImpl: Fetch = (...a) => fetch(...a), b
     applyProposal: (id) => run(() => client.POST("/api/proposals/{pid}/apply", { params: { path: { pid: id } } }), `/api/proposals/${id}/apply`),
     rejectProposal: (id, reason) =>
       run(() => client.POST("/api/proposals/{pid}/reject", { params: { path: { pid: id } }, body: { reason: reason ?? null } }), `/api/proposals/${id}/reject`),
+    getRestructureBlocks: (slug) =>
+      run(() => client.GET("/api/proposals/restructure/blocks", { params: { query: { slug } } }), "/api/proposals/restructure/blocks"),
+    getMergePreview: (slugs, survivor) =>
+      run(
+        () => client.GET("/api/proposals/restructure/merge-preview", { params: { query: { slugs: slugs.join(","), survivor } } }),
+        "/api/proposals/restructure/merge-preview",
+      ),
+    restructureMerge: (body) => run(() => client.POST("/api/proposals/restructure/merge", { body }), "/api/proposals/restructure/merge"),
+    restructureSplit: (body) => run(() => client.POST("/api/proposals/restructure/split", { body }), "/api/proposals/restructure/split"),
+    restructureExtract: (body) => run(() => client.POST("/api/proposals/restructure/extract", { body }), "/api/proposals/restructure/extract"),
 
     listViews: () => run(() => client.GET("/api/views"), "/api/views"),
     listReadyViews: () => run(() => client.GET("/api/views/ready"), "/api/views/ready"),
