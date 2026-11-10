@@ -474,5 +474,9 @@ def build_digestion_snapshot():
     on a large kb and reruns only after an edit; the `server` block is cheap and recomputed on every call."""
     from kb_distillery.graph import cache
     root = ROOT
-    data = cache.memo("pipeline:" + root, lambda: cache.full_signature(root), _build)
+    data = cache.memo("pipeline:" + root, lambda: cache.full_signature(root, dirs=_STATE_DIRS), _build)
     return {**data, "server": _server_block()}
+
+
+# the hidden state folders `_build` reads besides the vault proper; the signature's folder walk skips dot entries
+_STATE_DIRS = (os.path.join("meta", ".catalog"), os.path.join("meta", ".ingest"), os.path.join("meta", ".distill"))

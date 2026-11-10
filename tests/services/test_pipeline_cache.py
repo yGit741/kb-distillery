@@ -35,6 +35,21 @@ def test_pipeline_builds_once_per_vault_state_and_again_after_an_edit(kb, monkey
     assert len(builds) == 2 and third["summary"]["files"] == 2
 
 
+def test_pipeline_rebuilds_when_hidden_state_under_meta_changes(kb, monkeypatch):
+    """`meta/.ingest`, `meta/.catalog` and `meta/.distill` feed the snapshot but are dot folders the vault walk skips."""
+    builds = []
+    monkeypatch.setattr(dd, "_build", lambda: builds.append(1) or {"summary": {}, "items": []})
+    dd.build_digestion_snapshot()
+    for rel in (os.path.join("meta", ".ingest", "abc", "session.json"), os.path.join("meta", ".catalog", "failures.jsonl"),
+                os.path.join("meta", ".distill", "x", "plan.json")):
+        path = os.path.join(kb, rel)
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, "a", encoding="utf-8") as fh:
+            fh.write('{"ts": "2026-01-01T00:00:00Z"}\n')
+        dd.build_digestion_snapshot()
+    assert len(builds) == 4
+
+
 def test_pipeline_cache_off_builds_every_call(kb, monkeypatch):
     monkeypatch.setenv(cache.ENV, "0")
     builds = []

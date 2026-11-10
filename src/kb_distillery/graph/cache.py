@@ -132,10 +132,12 @@ def _tree_stats(base, root, content=False):
     return hashlib.sha1("\n".join(out).encode()).hexdigest()
 
 
-def full_signature(root, extra=()):
+def full_signature(root, extra=(), dirs=()):
     """`signature` plus a stat hash of the other vault folders (what a whole-vault pass such as the health lint
-    reads: sources, meta by content, think), today's date (flag expiry), the root-level files and the `extra` files."""
+    reads: sources, meta by content, think), today's date (flag expiry), the root-level files, the `extra` files
+    and the `dirs` (vault-relative; hidden folders such as `meta/.ingest`, which the folder walk skips, go here)."""
     parts = [signature(root)]
+    parts += [_tree_stats(os.path.join(root, d), root) for d in dirs]
     for name in _VAULT_DIRS:
         parts.append(_tree_stats(os.path.join(root, name), root, content=(name == "meta")))
     parts.append(datetime.date.today().isoformat())
