@@ -27,6 +27,14 @@ export const VARIANTS: Record<string, VariantSpec> = {
       { id: "hover-marks", label: "Hover marks", hint: "A count in the header with a popover, plus a faint dot beside each section that cites a source." },
     ],
   },
+  "page-history-entry": {
+    label: "Page history entry",
+    default: "header",
+    options: [
+      { id: "header", label: "Header", hint: "A clock in the page header opens a right panel listing the versions, newest first." },
+      { id: "timeline", label: "Timeline", hint: "A thin strip of dots under the title, one per version; hover reads it, click picks it." },
+    ],
+  },
   "proposal-diff": {
     label: "Proposal diff",
     default: "inline",
@@ -42,6 +50,14 @@ export const VARIANTS: Record<string, VariantSpec> = {
     options: [
       { id: "menu", label: "Menu", hint: "A quiet Restructure button in the page header opens a small menu: Merge into, Split, Extract." },
       { id: "command", label: "Commands", hint: "No button; type /merge @page, /split or /extract in the page chat, with the same @ picker." },
+    ],
+  },
+  "ingest-layout": {
+    label: "Ingest layout",
+    default: "single",
+    options: [
+      { id: "single", label: "Single page", hint: "Drop zone, how deeply to read it, and the job card stacked on one page; everything stays in view." },
+      { id: "wizard", label: "Wizard", hint: "Three steps shown one at a time: pick the source, say what it is, watch it progress." },
     ],
   },
   "page-flag-mark": {

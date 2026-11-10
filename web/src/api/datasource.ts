@@ -66,6 +66,13 @@ export interface DataSource {
   restructureSplit(body: { slug: string; cuts: number[]; titles: string[] }): Promise<T.RestructureResult>;
   restructureExtract(body: { slug: string; from_at: number; to_at: number; title: string }): Promise<T.RestructureResult>;
 
+  // page history (flag ui.page-history): git versions of one page, a compare, and restore as a proposal
+  getPageHistory(slug: string): Promise<T.PageHistory>;
+  /** Hunks turning version `from` into `to` (a sha, or "working"), the shape the proposal diff renders. */
+  comparePage(slug: string, from: string, to?: string): Promise<T.PageCompare>;
+  /** Creates a restore proposal (the page is not written); `blocks` are compare hunk ids, absent = the whole version. */
+  restorePage(slug: string, body: { sha: string; blocks?: string[]; to?: string }): Promise<T.RestoreResult>;
+
   // pinned views (meta/views.json) and the recent steps of the graph search panel (local, never committed)
   listViews(): Promise<T.ViewList>;
   /** The ready views the kb's kit ships: each layer is a line of the graph's query language, parsed by the frontend. */
@@ -112,6 +119,11 @@ export interface DataSource {
   digestRaw(path: string): Promise<T.DigestResult>;
   /** Digest jobs (local app only). A preview makes no model call; `backend` picks one of subscription | api | batch, else the billing defaults choose. */
   previewDigest(raws: string[], backend?: string): Promise<T.DigestPreview>;
+  /** Ingest from the app (flag ui.ingest, local app only): a file or URL becomes one proposal; the job streams its steps as SSE. */
+  startIngest(input: T.IngestInput): Promise<T.IngestStarted>;
+  getIngestJob(id: string): Promise<T.IngestJob>;
+  /** GET /api/ingest/{id}/events; the caller reads `response.body` as server-sent events (`job`, then `end`). */
+  ingestEvents(id: string, signal?: AbortSignal): Promise<Response>;
   startDigestJob(raws: string[], backend?: string): Promise<T.DigestJob>;
   listDigestJobs(): Promise<T.DigestJobList>;
   cancelDigestJob(id: string): Promise<T.DigestJob>;
