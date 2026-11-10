@@ -52,6 +52,8 @@ jobs:
       - run: pixi run ruff
       - name: Privacy ratchet (no personal strings or token shapes in new files)
         run: pixi run pytest -q tests/lint/test_privacy_ratchet.py
+      - name: Public export (owner-only paths export-ignored and absent from git archive, privacy scan of the archive)
+        run: pixi run check-export
 
   tests:     # pytest (the `serial` wall-clock test runs alone, in the shard that owns tests/ingest)
     runs-on: ubuntu-latest
