@@ -860,6 +860,75 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/pages/{slug}/flags": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The page's flags */
+        get: operations["list_flags_api_pages__slug__flags_get"];
+        put?: never;
+        /** Mark a span of the page as inaccurate */
+        post: operations["add_api_pages__slug__flags_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/pages/{slug}/flags/count": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** How many flags are open on the page */
+        get: operations["count_api_pages__slug__flags_count_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/pages/{slug}/flags/fix": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Turn every open flag into one proposal that addresses them */
+        post: operations["fix_api_pages__slug__flags_fix_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/pages/{slug}/flags/{flag_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Remove a flag */
+        delete: operations["remove_api_pages__slug__flags__flag_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/pages/{slug}/source": {
         parameters: {
             query?: never;
@@ -4092,6 +4161,121 @@ export interface components {
              * @default []
              */
             suggested: components["schemas"]["SuggestedPage"][];
+        } & {
+            [key: string]: unknown;
+        };
+        /** PageFlag */
+        PageFlag: {
+            /** Block At */
+            block_at?: number | null;
+            /**
+             * Created
+             * @default
+             */
+            created: string;
+            /** Id */
+            id: string;
+            /**
+             * Note
+             * @default
+             */
+            note: string;
+            /**
+             * Orphaned
+             * @default false
+             */
+            orphaned: boolean;
+            /** Resolved By */
+            resolved_by?: string | null;
+            /** Text */
+            text: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** PageFlagCount */
+        PageFlagCount: {
+            /**
+             * Open
+             * @default 0
+             */
+            open: number;
+            /**
+             * Orphaned
+             * @default 0
+             */
+            orphaned: number;
+        } & {
+            [key: string]: unknown;
+        };
+        /** PageFlagFixReply */
+        PageFlagFixReply: {
+            /**
+             * Flag Ids
+             * @default []
+             */
+            flag_ids: string[];
+            /**
+             * Hunks
+             * @default 0
+             */
+            hunks: number;
+            /**
+             * Orphaned
+             * @default []
+             */
+            orphaned: string[];
+            /** Proposal Id */
+            proposal_id?: string | null;
+            /**
+             * Reply
+             * @default
+             */
+            reply: string;
+            /**
+             * Skipped
+             * @default []
+             */
+            skipped: components["schemas"]["Skipped"][];
+        } & {
+            [key: string]: unknown;
+        };
+        /** PageFlagFixRequest */
+        PageFlagFixRequest: {
+            /** Backend */
+            backend?: ("subscription" | "api" | "batch") | null;
+        } & {
+            [key: string]: unknown;
+        };
+        /** PageFlagList */
+        PageFlagList: {
+            /**
+             * Flags
+             * @default []
+             */
+            flags: components["schemas"]["PageFlag"][];
+            /** Slug */
+            slug: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** PageFlagRemoved */
+        PageFlagRemoved: {
+            /** Id */
+            id: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** PageFlagRequest */
+        PageFlagRequest: {
+            /** Block At */
+            block_at?: number | null;
+            /**
+             * Note
+             * @default
+             */
+            note: string;
+            /** Text */
+            text: string;
         } & {
             [key: string]: unknown;
         };
@@ -8068,6 +8252,300 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PageChatReply"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Method Not Allowed */
+            405: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bad Gateway */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    list_flags_api_pages__slug__flags_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PageFlagList"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Method Not Allowed */
+            405: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bad Gateway */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    add_api_pages__slug__flags_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PageFlagRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PageFlag"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Method Not Allowed */
+            405: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bad Gateway */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    count_api_pages__slug__flags_count_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PageFlagCount"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Method Not Allowed */
+            405: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bad Gateway */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    fix_api_pages__slug__flags_fix_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PageFlagFixRequest"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PageFlagFixReply"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Method Not Allowed */
+            405: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bad Gateway */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    remove_api_pages__slug__flags__flag_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+                flag_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PageFlagRemoved"];
                 };
             };
             /** @description Bad Request */

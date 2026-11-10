@@ -11,6 +11,11 @@ function message(error: unknown, fallback: string): string {
   if (error && typeof error === "object") {
     const e = (error as { error?: unknown; detail?: unknown }).error ?? (error as { detail?: unknown }).detail;
     if (typeof e === "string") return e;
+    // FastAPI validation errors: detail is a list of { msg } objects
+    if (Array.isArray(e)) {
+      const msgs = e.map((d) => (typeof d === "string" ? d : (d as { msg?: unknown } | null)?.msg)).filter((m): m is string => typeof m === "string" && m !== "");
+      if (msgs.length) return msgs.join("; ");
+    }
   }
   return fallback;
 }
@@ -163,6 +168,14 @@ export function createHttpDataSource(fetchImpl: Fetch = (...a) => fetch(...a), b
     postPageChat: (slug, body) =>
       run(() => client.POST("/api/pages/{slug}/chat", { params: { path: { slug } }, body }), `/api/pages/${slug}/chat`),
     getPageChat: (slug) => run(() => client.GET("/api/pages/{slug}/chat", { params: { path: { slug } } }), `/api/pages/${slug}/chat`),
+    listPageFlags: (slug) => run(() => client.GET("/api/pages/{slug}/flags", { params: { path: { slug } } }), `/api/pages/${slug}/flags`),
+    addPageFlag: (slug, body) =>
+      run(() => client.POST("/api/pages/{slug}/flags", { params: { path: { slug } }, body }), `/api/pages/${slug}/flags`),
+    deletePageFlag: async (slug, id) => {
+      await run(() => client.DELETE("/api/pages/{slug}/flags/{flag_id}", { params: { path: { slug, flag_id: id } } }), `/api/pages/${slug}/flags/${id}`);
+    },
+    fixPageFlags: (slug) =>
+      run(() => client.POST("/api/pages/{slug}/flags/fix", { params: { path: { slug } }, body: {} }), `/api/pages/${slug}/flags/fix`),
     searchMentions: async (q) =>
       (await run(() => client.GET("/api/pages/mentions", { params: { query: { q } } }), "/api/pages/mentions")).pages,
     getPageSource: async (slug) => {

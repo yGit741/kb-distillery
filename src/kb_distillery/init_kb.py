@@ -96,7 +96,7 @@ def plan_target(parent: str, kb_id: str, home: str | None = None) -> str:
 
 def _kit_dir(kit_name: str) -> str:
     from kb_distillery.config import kit as kits
-    return os.path.join(kits.kits_dir(), kits.canonical(kit_name))
+    return kits.kit_dir(kit_name)
 
 
 def _sync_file(src: str, dest: str) -> str | None:
@@ -148,6 +148,8 @@ def skill_sources(kit: str) -> dict[str, str]:
         for skill in sorted(os.listdir(root)):
             if not skill.startswith(("_", ".")) and os.path.isfile(os.path.join(root, skill, "SKILL.md")):
                 out[skill] = os.path.join(root, skill)
+    for skill, folder in kits.skill_dirs().items():          # skills installed packages add: every kit gets them, a kit's own wins
+        out.setdefault(skill, folder)
     return out
 
 

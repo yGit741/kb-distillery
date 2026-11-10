@@ -230,23 +230,23 @@ envs = { local = true, private = false, public = false }
 
 [[flag]]
 name = "screen.first-run"
-description = "Graph: an empty knowledge base shows a 'Build your knowledge base' card (drop files, link a folder, open an example) instead of the plain empty message"
+description = "Graph: an empty knowledge base shows a 'Build your knowledge base' card (drop files, link a folder, digest what you added, open an example) instead of the plain empty message. On for local; private and public stay off."
 owner = "maintainer"
 created = 2026-11-08
 expires = 2027-02-06
 kind = "runtime"
 default = false
-envs = { local = false, private = false, public = false }
+envs = { local = true, private = false, public = false }
 
 [[flag]]
 name = "screen.digest-jobs"
-description = "Pipeline and first-run card: pick sources, preview what a digest costs on each backend, start it as a job, watch it and cancel it, open the pages it wrote"
+description = "Pipeline and first-run card: pick sources, preview what a digest costs on each backend, start it as a job, watch it and cancel it, open the pages it wrote. On for local; private and public stay off."
 owner = "maintainer"
 created = 2026-11-08
 expires = 2027-02-06
 kind = "runtime"
 default = false
-envs = { local = false, private = false, public = false }
+envs = { local = true, private = false, public = false }
 
 [[flag]]
 name = "line-routing"
@@ -281,6 +281,16 @@ envs = { local = true, private = true, public = false }
 [[flag]]
 name = "ui.page-chat"
 description = "Pages: chat on the page being read; the reply's edits become a proposal to review (needs ui.proposals). Five entry points as variants."
+owner = "maintainer"
+created = 2026-11-09
+expires = 2027-05-09
+kind = "runtime"
+default = false
+envs = { local = true, private = false, public = false }
+
+[[flag]]
+name = "ui.page-flags"
+description = "Pages: mark a sentence inaccurate with a short note while reading, see the flags on the page in one of three looks, and fix every flagged passage with one proposal (needs ui.proposals)."
 owner = "maintainer"
 created = 2026-11-09
 expires = 2027-05-09
