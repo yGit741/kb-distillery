@@ -75,6 +75,13 @@ class CheckExport(unittest.TestCase):
         self.assertIn("docs/guide.md", r.stderr)
         self.assertNotIn("docs/archive/old.md", r.stderr)
 
+    def test_baselined_file_is_allowed(self):
+        self.base()
+        self.put("src/a.py", "KEY = 'ghp_" + "a" * 24 + "'\n")
+        self.put("tests/lint/privacy_baseline.txt", "src/a.py\n")
+        r = self.run_script()
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+
 
 if __name__ == "__main__":
     unittest.main()
