@@ -76,6 +76,16 @@ def test_every_producer_and_screen_has_something(kb):
     assert {p["status"] for p in service.list_proposals(root=kb)} >= {"open", "rejected", "undone"}
 
 
-def test_seed_lifts_read_only_only_while_seeding(kb):
-    demo.seed(kb)
-    assert service._writable is not service._root
+def test_seed_works_on_a_read_only_kb_and_restores_the_guard(kb, monkeypatch):
+    from kb_distillery.config.kb import ReadOnlyError
+
+    def refuse(root=None):
+        raise ReadOnlyError("read-only")
+
+    monkeypatch.setattr("kb_distillery.proposals.service.require_writable", refuse)
+    guard = service._writable
+    out = demo.seed(kb)
+    assert len(out["proposals"]) == 9
+    assert service._writable is guard
+    with pytest.raises(Exception, match="read-only"):
+        service.create("x", [{"kind": "set_frontmatter", "slug": "skill-pytorch", "key": "maturity", "value": "seed"}], root=kb)

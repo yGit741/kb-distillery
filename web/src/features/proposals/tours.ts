@@ -113,8 +113,8 @@ const SUMMARY =
 function sync(): void {
   if (!flag("ui.proposals")) return unregisterTour(PROPOSALS_TOUR);
   registerTour(PROPOSALS_TOUR, proposalsTourSteps(), SUMMARY);
-  defaultDataSource()
-    .listProposals("open")
+  Promise.resolve()
+    .then(() => defaultDataSource().listProposals("open"))
     .then(
       (rows) =>
         flag("ui.proposals") &&
