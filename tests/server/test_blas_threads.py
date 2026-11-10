@@ -27,7 +27,8 @@ def test_main_caps_blas_threads_before_serving(monkeypatch):
     from kb_distillery.graph import cache
 
     for var in server_main.BLAS_THREAD_VARS:
-        monkeypatch.delenv(var, raising=False)
+        monkeypatch.setenv(var, "unset-by-test")      # recorded, so the value main() sets is undone after the test
+        monkeypatch.delenv(var)
     monkeypatch.setattr(cache, "start_refresher", lambda: None)
     seen = {}
     monkeypatch.setattr(uvicorn, "run", mock.Mock(side_effect=lambda *a, **k: seen.update(
