@@ -222,7 +222,7 @@ jobs:
         run: |
           docker run --rm kb-distillery:ci distill --help
           docker run --rm kb-distillery:ci python -c "from kb_distillery.config.resources import resource; assert (resource('_webapp') / 'index.html').is_file()"
-          docker run --rm kb-distillery:ci distill doctor
+          docker run --rm -e KB_AUTH_EMAIL=ci@example.com -e KB_AUTH_JWKS_URL=https://proxy.example.com/keys -e KB_AUTH_AUDIENCE=ci kb-distillery:ci distill doctor     # the image refuses to run without an identity setup, as in production
 
   all-green:     # the one required check: every job above succeeded (cancelled or skipped is red too)
     needs: [lint, tests, web, checks, wheel, worker, docker]
