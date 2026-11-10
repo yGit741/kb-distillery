@@ -85,12 +85,24 @@ PKG_PREFIX = "src/kb_distillery/"
 CONFIG_NAMES = {"pixi.toml", "pixi.lock", "pyproject.toml", "setup.cfg", "pytest.ini", "tox.ini", "conftest.py"}
 
 
+SHARED_TEST_DIRS = {"fixtures", "testdata", "harness"}     # read by tests in other dirs
+
+
+def _has_test_module(d):
+    """True when the dir holds a `test_*.py` somewhere below it, so mapping data to it runs real tests."""
+    for _, _, files in os.walk(d):
+        if any(f.startswith("test_") and f.endswith(".py") for f in files):
+            return True
+    return False
+
+
 def test_subset(paths, root, ignore=lambda p: False):
     """Pytest targets for a commit-time subset run, or None when the touched paths cannot be mapped (run full).
 
-    Targets: `tests/<pkg>` for each touched `src/kb_distillery/<pkg>/`, each changed `tests/**/test_*.py`, `tests/<dir>` for a changed non-Python file under it, and always
+    Targets: `tests/<pkg>` for each touched `src/kb_distillery/<pkg>/`, each changed `tests/**/test_*.py`,
+    `tests/<dir>` for a changed data file in a dir with its own pytest modules, and always
     the top-level `tests/test_*.py` (repo-wide invariants a mirror-only selection would miss). Anything else that
-    can change test outcomes (config, conftest, shared fixtures, a package without a mirror, the kits (kit defaults and skills),
+    can change test outcomes (config, conftest, shared test data, a package without a mirror, the kits (kit defaults, skills),
     web/, examples/ ...) returns None. Only top-level `*.md` files are free.
     """
     targets = set()
@@ -112,9 +124,11 @@ def test_subset(paths, root, ignore=lambda p: False):
             name = os.path.basename(p)
             if not p.endswith(".py"):
                 # test data beside one test dir (tests/lint/privacy_baseline.txt) belongs to that dir; shared
-                # fixtures (tests/fixtures/...) and loose top-level files are read by unknown tests
+                # data (fixtures, testdata, harness), loose top-level files and dirs with no pytest module of their
+                # own (the node e2e specs) are read by unknown tests
                 parts = p.split("/")
-                if len(parts) < 3 or parts[1] == "fixtures" or not os.path.isdir(os.path.join(root, "tests", parts[1])):
+                owner = os.path.join(root, "tests", parts[1]) if len(parts) >= 3 else None
+                if owner is None or parts[1] in SHARED_TEST_DIRS or not _has_test_module(owner):
                     return None
                 targets.add(f"tests/{parts[1]}")
                 continue

@@ -231,6 +231,7 @@ class SelectionTests(RepoCase):
         self.assertEqual(self.sel("tests/lint/test_x.py"), ["tests/lint/test_x.py", "tests/test_top.py"])
 
     def test_test_data_maps_to_its_own_test_dir(self):
+        _write(self.root, "tests/lint/test_privacy_ratchet.py")
         _write(self.root, "tests/lint/privacy_baseline.txt")
         self.assertEqual(self.sel("tests/lint/privacy_baseline.txt"), ["tests/lint", "tests/test_top.py"])
         _write(self.root, "tests/git/test_new.py")
@@ -239,6 +240,15 @@ class SelectionTests(RepoCase):
 
     def test_shared_fixtures_and_loose_test_files_still_run_full(self):
         for p in ("tests/fixtures/x", "tests/fixtures/kb/a/b.md", "tests/loose.txt", "tests/nodir/x.txt", "tests/conftest.py"):
+            self.assertIsNone(self.sel(p), p)
+
+    def test_shared_data_and_dirs_without_pytest_modules_run_full(self):
+        _write(self.root, "tests/testdata/e2e/golden.json")        # read by tests/ingest, not by tests/testdata
+        _write(self.root, "tests/testdata/test_like_name.py")
+        _write(self.root, "tests/harness/test_harness.py")
+        _write(self.root, "tests/harness/data.txt")
+        _write(self.root, "tests/e2e/graph-still.test.mjs")         # node specs: no pytest module in the dir
+        for p in ("tests/testdata/e2e/golden.json", "tests/harness/data.txt", "tests/e2e/graph-still.test.mjs"):
             self.assertIsNone(self.sel(p), p)
 
     def test_generated_files_do_not_force_a_full_run(self):
