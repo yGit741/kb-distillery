@@ -150,7 +150,7 @@ export function PageReader({ g, detail, embed, pinned, onTogglePin, onConnect, v
               {raw && raw !== "none" && <RawFile path={raw} />}
             </p>
           )}
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2" data-tour="page-actions">
             {viewOnly && (
               <Badge variant="outline" data-tour="page-view-only" title="This page is from another knowledge base: you can read it here, not change it.">
                 View only · {viewOnly}

@@ -108,3 +108,6 @@ kbs/*
 
 # The Worker inbox bundles the web checker at deploy/test time (build-okf.mjs); never committed
 src/kb_distillery/publish/cloudflare/worker/okf.gen.js
+
+# The demo kb's local state (proposals, flags, chat threads; `pixi run demo-proposals` seeds it)
+examples/demo/.local/

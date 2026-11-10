@@ -157,3 +157,21 @@ the proposal plus `ripple: [{slug, links}]`, the pages that link to the changed 
 
 The web app offers them behind the `ui.restructure` flag (page header menu, or `/merge @page`, `/split`, `/extract` in
 the page chat: variant `restructure-entry`).
+
+## Trying it: demo seed, tour, variant chooser
+
+- **Demo seed.** `pixi run demo-proposals` (`python -m kb_distillery.proposals demo --kb <path>`,
+  `src/kb_distillery/proposals/demo.py`) writes a small thesis story into the demo kb's `.local/`: proposals from
+  every producer (chat, flags, ingest, lint, restructure merge/split/extract, manual), one undone auto-apply for the
+  feed, one rejected chat edit, three open flags and a page chat thread. Fixtures only: no model call, no network,
+  no write outside `.local/`, never an apply (`examples/` kbs are read-only, so the screens show but do not apply).
+  Idempotent: seeded records carry fixed `de00…` ids and a run replaces the previous seed. Serve it with
+  `python -m kb_distillery.server --kb examples/demo --port <spare>`.
+- **Tour.** `whats-new-proposals` (`web/src/features/proposals/tours.ts`, in the Tours menu while `ui.proposals` is
+  on, or `?tour=whats-new-proposals`) walks the inbox, a review, the page with the most open proposals (chat, flags,
+  sources, history, restructure), ingest and the chooser. Its targets hold for every variant.
+- **Variant chooser.** System → Variants (flag `ui.variant-chooser`, `web/src/features/system/VariantsView.tsx`)
+  lists every component of the `VARIANTS` registry (`web/src/components/variants.tsx`) with its options, the
+  default marked and a Try it link. A pick writes `kbd.variants.<component>` and open screens follow at once;
+  Reset to defaults clears every key; Copy choices gives one line per component, e.g.
+  `proposal-diff: reading (default inline)`, to tell an agent which designs won.

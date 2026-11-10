@@ -137,3 +137,11 @@ export function tierMark(tiers: Record<string, number>): { id: "explicit" | "rev
 export function undoBlocker(blockedBy: string[]): string {
   return blockedBy.length ? `Later changes touched ${blockedBy.join(", ")}; undo or resolve those first.` : "Its history cannot be read, so it cannot be undone safely.";
 }
+
+/** Where to show a proposals feature: the page most open proposals touch, and the newest open proposal (chooser "Try it", tour). */
+export function tryTargets(rows: readonly { id: string; pages: readonly string[] }[]): { page?: string; proposal?: string } {
+  const n = new Map<string, number>();
+  for (const r of rows) for (const p of r.pages) n.set(p, (n.get(p) ?? 0) + 1);
+  const page = [...n.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0]?.[0];
+  return { page, proposal: rows[0]?.id };
+}

@@ -42,13 +42,13 @@ export function RestructureMenu({ chatAvailable }: { chatAvailable: boolean }) {
   }, [open]);
   if (entry === "command")
     return (
-      <span className="text-xs text-muted-foreground" title="Type these in the page chat">
+      <span className="text-xs text-muted-foreground" title="Type these in the page chat" data-tour="page-restructure">
         <kbd className="rounded border px-1 font-mono text-[0.7rem]">/merge</kbd> <kbd className="rounded border px-1 font-mono text-[0.7rem]">/split</kbd>{" "}
         <kbd className="rounded border px-1 font-mono text-[0.7rem]">/extract</kbd>
       </span>
     );
   return (
-    <div ref={ref} className="relative">
+    <div ref={ref} className="relative" data-tour="page-restructure">
       <Button variant="ghost" size="sm" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
         <Ellipsis /> Restructure
       </Button>

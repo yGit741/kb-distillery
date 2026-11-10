@@ -327,3 +327,13 @@ expires = 2027-05-09
 kind = "runtime"
 default = false
 envs = { local = true, private = false, public = false }
+
+[[flag]]
+name = "ui.variant-chooser"
+description = "System: a Variants tab that lists every component with several designs, lets the owner pick one at runtime, reset to defaults, and copy the choices as text."
+owner = "maintainer"
+created = 2026-11-10
+expires = 2027-02-07
+kind = "runtime"
+default = false
+envs = { local = true, private = false, public = false }

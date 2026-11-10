@@ -138,3 +138,38 @@ export function useVariant(component: string, options: readonly string[], fallba
   const set = useCallback((id: string) => setVariant(component, id), [component]);
   return [value, set];
 }
+
+/** The id saved for `component` in this browser, or null when it follows the default. */
+export function savedVariant(component: string): string | null {
+  return read(component) ?? memory.get(component) ?? null;
+}
+
+/** Forget the choice of `component`: it follows its registry default again (every open screen re-renders). */
+export function resetVariant(component: string): void {
+  try {
+    localStorage.removeItem(PREFIX + component);
+  } catch {
+    /* blocked storage: nothing was saved there */
+  }
+  memory.delete(component);
+  listeners.forEach((l) => l());
+}
+
+export function resetAllVariants(): void {
+  Object.keys(VARIANTS).forEach(resetVariant);
+}
+
+/** The current choices as plain lines an agent can read, e.g. `page-sources: side-tab (default footer)`. */
+export function variantChoicesText(): string {
+  return Object.entries(VARIANTS)
+    .map(([c, spec]) => {
+      const now = getVariant(c, spec.options.map((o) => o.id), spec.default);
+      return `${c}: ${now}${now === spec.default ? " (default)" : ` (default ${spec.default})`}`;
+    })
+    .join("\n");
+}
+
+/** `variantChoicesText()` that re-renders the caller whenever any choice changes. */
+export function useVariantChoicesText(): string {
+  return useSyncExternalStore(subscribe, variantChoicesText, variantChoicesText);
+}
