@@ -263,13 +263,13 @@ def check_remote(env=None, host: str | None = None, fetch=None) -> list[Check]:
             for c in cidrs:
                 ipaddress.ip_network(c, strict=False)
             if cidrs:
-                out.append(Check("auth proxy range", PASS, f"{env.get('KB_AUTH_HEADER').strip()} is trusted from {', '.join(cidrs)}"))
+                out.append(Check("auth proxy range", PASS, f"{get('KB_AUTH_HEADER')} is trusted from {', '.join(cidrs)}"))
             else:
                 out.append(Check("auth proxy range", FAIL, "KB_AUTH_HEADER is set without KB_AUTH_TRUSTED_PROXY_CIDR",
                                  "set KB_AUTH_TRUSTED_PROXY_CIDR to the proxy's address range, e.g. 10.0.0.0/8"))
         except ValueError as e:
             out.append(Check("auth proxy range", FAIL, f"KB_AUTH_TRUSTED_PROXY_CIDR: {e}", "use CIDR ranges separated by commas, e.g. 10.0.0.0/8,127.0.0.1/32"))
-    if not any(c.status == FAIL for c in out):               # the server's own loader has the last word (key, identity source)
+    if env is os.environ and not any(c.status == FAIL for c in out):   # the server's own loader has the last word (key, identity source)
         try:
             security.load_auth_config()
         except SystemExit as e:
@@ -278,7 +278,7 @@ def check_remote(env=None, host: str | None = None, fetch=None) -> list[Check]:
 
 
 # --- run -----------------------------------------------------------------------------------------------------
-def run_checks(ref: str | None = None, host: str | None = None) -> list[Check]:
+def run_checks(ref: str | None = None, host: str | None = None, remote: bool = True) -> list[Check]:
     node = check_node()
     checks = [*check_python(), node, *check_git(), check_config_dir()]
     known = kbconfig.discover()
@@ -290,7 +290,8 @@ def run_checks(ref: str | None = None, host: str | None = None) -> list[Check]:
         if cfg:
             checks += [check_kb_layout(cfg), check_storage(cfg), check_publisher(cfg)]
     checks += check_llm()
-    checks += check_remote(host=host)
+    if remote:                                              # `distill init` skips it: a new kb says nothing about serving
+        checks += check_remote(host=host)
     repo = repo_root()
     checks.append(check_frontend(str(repo / "web") if repo else "", node.status == PASS))
     return checks

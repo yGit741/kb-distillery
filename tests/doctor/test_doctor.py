@@ -281,5 +281,5 @@ def test_remote_proxy_without_identity_source_fails_via_the_server_loader(monkey
         monkeypatch.setenv(k, v)
     for k in ("KB_AUTH_JWKS_URL", "KB_AUTH_JWT_KEY", "KB_AUTH_HEADER"):
         monkeypatch.delenv(k, raising=False)
-    assert status(doctor.check_remote(env=env), "auth config") == FAIL
+    assert status(doctor.check_remote(env=os.environ), "auth config") == FAIL
     assert security.auth_mode() == "proxy"
