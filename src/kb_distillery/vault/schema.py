@@ -324,6 +324,8 @@ TOOLING_PATHS = [
     ".github/",
     "LICENSE",           # open-source files at the repo root
     "install.sh",        # the two-line installer
+    "Dockerfile",        # self-hosting image (multi-arch)
+    ".dockerignore",
 ]
 
 
