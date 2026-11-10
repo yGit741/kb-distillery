@@ -80,6 +80,7 @@ licenses = "python -m kb_distillery.lint.licenses"
 # layer contract in pyproject.toml [tool.importlinter]; needs `import-linter` (dev extra) in the env
 lint-imports = "python -c \"from importlinter.cli import lint_imports_command as m; m()\" --no-cache"
 test-skills = "pytest tests/lint/test_skills.py"
+check-export = "bash scripts/check-export.sh"   # public-readiness: owner-only paths stay out of git archive HEAD
 index-researcher = "python -m kb_distillery.ingest index-researcher"
 export-kb = "python -m kb_distillery.publish.export"
 share = "python -m kb_distillery.publish.cloudflare"

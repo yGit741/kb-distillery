@@ -6,7 +6,8 @@
 # 3. The privacy ratchet (kb_distillery.lint.privacy) finds no personal string in the archive beyond the files listed
 #    in tests/lint/privacy_baseline.txt. The terms are read from $KB_PRIVACY_TERMS or ~/.config/kb-distillery/privacy.toml
 #    and are never in this script; with neither (CI), that sub-check is skipped with a message and only the
-#    token shapes (API keys, private keys) are checked.
+#    token shapes (API keys, private keys) are checked. OWNER_ONLY names real tracked files (a missing path is skipped,
+#    so a made-up one would never be tested).
 # Exit 0 when every check that ran passed.
 set -euo pipefail
 engine="$(cd "$(dirname "$0")/.." && pwd)"      # where kb_distillery.lint.privacy lives
@@ -19,7 +20,7 @@ OWNER_ONLY="CLAUDE.md
 .integrator.toml
 .github/workflows/deploy-main.yml
 examples/launchd/switch.sh
-docs/archive/x.md"
+docs/archive/ROADMAP.md"
 
 fail=0
 say() { printf '%s\n' "$*"; }
