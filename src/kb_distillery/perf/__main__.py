@@ -159,6 +159,8 @@ def table(rep):
         for t in b["tabs"]:
             a, c = b["pass1"].get(t, {}), b["pass2"].get(t, {})
             def ms(x):
+                if x.get("skipped"):
+                    return "skipped"
                 return ("TIMEOUT " if x.get("timed_out") else "FAIL " if x.get("error") else "") + str(x.get("ms", "-"))
             lines.append(f"{t:<20}{ms(a):>10}{a.get('api_requests', '-'):>5}{ms(c):>10}{c.get('api_requests', '-'):>5}")
     return "\n".join(lines)

@@ -12,6 +12,8 @@ import { MiniGraph } from "./MiniGraph";
 import { RestructureDialogs } from "../restructure/dialogs";
 import { RestructureMenu } from "../restructure/entry";
 import { PageChat, PageChatHeader, usePageChatState } from "./PageChat";
+import { FlagMarks, FlagsHeader, usePageFlags } from "./PageFlags";
+import { SelectionToolbar } from "./SelectionToolbar";
 import { SourcesCountMark, SourcesFooter, SourcesMarginDots, SourcesSideTab, usePageSources } from "./PageSources";
 import { PAGES_TO, FactBadges, Fold, PageLink, TypeDot } from "./parts";
 import { VideoView, isVideoRaw } from "./VideoView";
@@ -91,6 +93,9 @@ export function PageReader({ g, detail, embed, pinned, onTogglePin, onConnect, v
   const chatOn = chatFlag && proposalsFlag && !viewOnly && !embed;
   const restructureOn = useFlag("ui.restructure") && proposalsFlag && !viewOnly && !embed;
   const chat = usePageChatState(card.id);
+  const flagsOn = useFlag("ui.page-flags") && proposalsFlag && !viewOnly && !embed;
+  const flags = usePageFlags(card.id, flagsOn);
+  const askFromSelection = chatOn && chat.entry === "selection";
   const sources = useMemo(
     () =>
       layer === "source"
@@ -168,6 +173,7 @@ export function PageReader({ g, detail, embed, pinned, onTogglePin, onConnect, v
             {sourcesOn && placement === "hover-marks" && pageSources && <SourcesCountMark sources={pageSources} />}
             {restructureOn && <RestructureMenu chatAvailable={chatOn} />}
             {chatOn && <PageChatHeader chat={chat} />}
+            {flagsOn && <FlagsHeader flags={flags} />}
             <span className="text-xs text-muted-foreground">
               {card.words} words{mtimeOf(card) ? ` · edited ${agoLabel(mtimeOf(card))}` : ""}
             </span>
@@ -178,6 +184,14 @@ export function PageReader({ g, detail, embed, pinned, onTogglePin, onConnect, v
 
         {chatOn && <PageChat slug={card.id} chat={chat} articleRef={articleRef} />}
         {restructureOn && <RestructureDialogs slug={card.id} title={card.title} />}
+        {(askFromSelection || flagsOn) && (
+          <SelectionToolbar
+            articleRef={articleRef}
+            onAsk={askFromSelection ? (c) => (chat.addChip(c), chat.setOpen(true)) : undefined}
+            onFlag={flagsOn ? flags.markInaccurate : undefined}
+          />
+        )}
+        {flagsOn && <FlagMarks flags={flags} articleRef={articleRef} markdown={markdown} />}
         {sourcesOn && placement === "footer" && pageSources && <SourcesFooter sources={pageSources} />}
         {sourcesOn && placement === "hover-marks" && pageSources && <SourcesMarginDots sources={pageSources} articleRef={articleRef} />}
 

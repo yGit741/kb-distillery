@@ -27,6 +27,11 @@ tables in its own kit.toml, so `research` types exactly what `academic-research`
 
 The kits folder is `$KB_KITS_DIR` (tests, a second kits folder) or the package's own `kits/`.
 
+An installed package adds a kit through the `kb_distillery.kits` entry-point group (`my-kit = "my_pkg.kit"`: a
+package whose folder holds `kit.toml`, plus the skills, defaults and views folders of a built-in one) and a loose skill
+through `kb_distillery.skills` (`my-skill = "my_pkg.skill"`: a package whose folder holds `SKILL.md`). A built-in
+name always wins. See docs/guides/build-an-extension.md.
+
 Ready views are files, not a kit.toml table: `kits/<name>/views/*.toml` (see `views()`).
 
 Reserved for later phases (rejected in a kit.toml until a phase gives them a meaning): lint rules, migrations, samples. A kit's page skeletons and docs live beside it in `kits/<name>/defaults/`; a kit that extends another carries
@@ -35,9 +40,11 @@ only the files it changes (`kb_distillery.config.paths.meta_file` looks child ki
 from __future__ import annotations
 
 import copy
+import importlib.util
 import os
 import tomllib
 from functools import lru_cache
+from importlib import metadata
 
 from kb_distillery.config.resources import resource
 
@@ -46,6 +53,8 @@ PAGES = "pages"                            # page conventions (takeaways heading
 AGENT = "agent"                            # chat-agent defaults: `skills` (the app skills it may use), see kb_distillery.services.agent_skills
 ALLOWED = {"kit", PAGES, AGENT, *OWNED}           # every top-level table a kit.toml may hold today
 KITS_DIR_ENV = "KB_KITS_DIR"
+KITS_GROUP = "kb_distillery.kits"           # entry-point group: kit name -> a package folder holding kit.toml
+SKILLS_GROUP = "kb_distillery.skills"       # entry-point group: skill name -> a package folder holding SKILL.md
 KIT_FILE = "kit.toml"
 KB_DOCS = ("page-model", "kits", "publish", "storage", "raw-and-corpus", "collections", "think", "workflows",
            "semantic-lint")      # the docs a kb's AGENTS.md routes to; `distill init` copies them to its `.claude/docs/`
@@ -65,8 +74,39 @@ def _is_name(name: str) -> bool:
     return bool(name) and os.sep not in name and "/" not in name and not name.startswith(".")
 
 
-def path_of(name: str) -> str:
-    return os.path.join(kits_dir(), canonical(name), KIT_FILE)
+def _entry_points(group: str) -> dict:
+    """{name: 'module[:attr]'} for the installed packages in `group`. One place to patch in tests."""
+    try:
+        return {ep.name: ep.value for ep in metadata.entry_points(group=group)}
+    except Exception:                       # a corrupt installed dist must not break every kb
+        return {}
+
+
+def _package_dir(spec_value: str) -> str | None:
+    """The folder of the package an entry-point value names (`my_pkg.kit` or `my_pkg.kit:attr`).
+
+    The module itself is not run, but a dotted name imports its parent packages; any error there skips the package.
+    """
+    module = spec_value.partition(":")[0].strip()
+    try:
+        spec = importlib.util.find_spec(module)
+    except Exception:                       # a third-party __init__ that raises must not break every kb
+        return None
+    if spec is None:
+        return None
+    if spec.submodule_search_locations:
+        return next(iter(spec.submodule_search_locations), None)
+    return os.path.dirname(spec.origin) if spec.origin else None
+
+
+def _extension_dirs(group: str, marker: str) -> dict[str, str]:
+    """name -> folder for the installed extensions of `group` whose folder holds `marker`; a broken one is skipped."""
+    out: dict[str, str] = {}
+    for name, value in sorted(_entry_points(group).items()):
+        folder = _package_dir(value) if _is_name(name) else None
+        if folder and os.path.isfile(os.path.join(folder, marker)):
+            out[name] = folder
+    return out
 
 
 def _has_file(name: str) -> bool:
@@ -79,13 +119,34 @@ def canonical(name: str) -> str:
     return LEGACY_NAMES.get(name, name) if not _has_file(name) else name
 
 
+def kit_dir(name: str) -> str:
+    """The folder of kit `name`: the kits folder's own, else an installed package's (entry-point group `kb_distillery.kits`).
+    A built-in name cannot be taken by a package. Returns the kits-folder path when neither exists."""
+    name = canonical(name)
+    own = os.path.join(kits_dir(), name)
+    if _has_file(name) or not _is_name(name):
+        return own
+    return _extension_dirs(KITS_GROUP, KIT_FILE).get(name, own)
+
+
+def skill_dirs() -> dict[str, str]:
+    """skill name -> folder, for the skills installed packages add (entry-point group `kb_distillery.skills`)."""
+    return _extension_dirs(SKILLS_GROUP, "SKILL.md")
+
+
+def path_of(name: str) -> str:
+    return os.path.join(kit_dir(name), KIT_FILE)
+
+
 def exists(name: str) -> bool:
-    return _has_file(canonical(name))
+    name = canonical(name)
+    return _has_file(name) or name in _extension_dirs(KITS_GROUP, KIT_FILE)
 
 
 def names() -> list[str]:
     base = kits_dir()
-    return sorted(d for d in os.listdir(base) if _has_file(d)) if os.path.isdir(base) else []
+    own = {d for d in os.listdir(base) if _has_file(d)} if os.path.isdir(base) else set()
+    return sorted(own | set(_extension_dirs(KITS_GROUP, KIT_FILE)))
 
 
 @lru_cache(maxsize=32)
@@ -185,7 +246,7 @@ def views(name: str) -> list[dict]:
     """
     out: dict[str, dict] = {}
     for kit in chain(name):
-        folder = os.path.join(kits_dir(), kit, VIEWS_DIR)
+        folder = os.path.join(kit_dir(kit), VIEWS_DIR)
         if not os.path.isdir(folder):
             continue
         for fname in sorted(os.listdir(folder)):

@@ -44,6 +44,15 @@ export const VARIANTS: Record<string, VariantSpec> = {
       { id: "command", label: "Commands", hint: "No button; type /merge @page, /split or /extract in the page chat, with the same @ picker." },
     ],
   },
+  "page-flag-mark": {
+    label: "Flagged span on a page",
+    default: "underline",
+    options: [
+      { id: "underline", label: "Underline", hint: "A soft wavy underline in the warning hue under the flagged words; the note shows on hover." },
+      { id: "margin", label: "Margin", hint: "A small flag in the left margin of the block; the text stays untouched and the note opens from the marker." },
+      { id: "tint", label: "Tint", hint: "A light warm background on the flagged words; the note shows on hover." },
+    ],
+  },
   "page-chat-entry": {
     label: "Page chat entry",
     default: "selection",
