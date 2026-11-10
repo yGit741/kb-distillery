@@ -4,6 +4,11 @@ All notable changes to this project are listed here. The format follows [Keep a 
 
 ## [Unreleased]
 
+### Added
+
+- Page history with compare and restore as a proposal (in review).
+- Container image, a remote check in `distill doctor`, and the release workflow (in review).
+
 ## [0.1.0]
 
 Initial public release: the first version made public. It is not tagged or published as a package until the repository goes public.
@@ -19,3 +24,23 @@ Initial public release: the first version made public. It is not tagged or publi
 - Source connectors under `ingest/sources` (books, chat, Google Drive, mail, researcher, web, YouTube).
 - `pyproject.toml` with extras `gdrive`, `ingest-heavy` and `dev`; a layer contract checked by `import-linter`; issue templates, a pull request template and `SECURITY.md`.
 - `examples/demo`, a sample knowledge base about a made-up job search.
+- One-script install for macOS, Linux and WSL2, a prebuilt web bundle fetched from the release, and read-only example knowledge bases that open read-only.
+- First-run card in the app: drop files or link a folder to add sources without a model call, then run digest jobs with a cost preview, progress and cancel.
+- LLM provider adapters for Anthropic, OpenAI and Gemini, provider config, model tiers (light, standard, strong), `llm ask --provider`, and a docs page on providers, tiers and billing. Agent features that need Claude are marked in the app.
+- Proposals: trust tiers, auto-apply with undo, scoped semantic checks, nightly suggestions and a review screen with three diff views. Chat on a page produces proposals; inaccurate spans can be flagged and fixed in one proposal.
+- Entry points for third-party kits and skills, and a guide to building extensions.
+- Opt-in proxy identity for self-hosting (`KB_AUTH=proxy`) with guides for Tailscale, Cloudflare Access and any proxy.
+- Contribution model, code of conduct and governance documents.
+- Graph shell: search line with meaning search, layers and views, favorites, an action menu on every row, export of a subgraph as an OKF bundle, and a first-run map.
+- Sources on a page, full-text search index and a read-only graph line on the shared site.
+- Performance: a graph snapshot cache with background warm-up, a 5-minute query cache, and `pixi run perf`.
+
+### Changed
+
+- `ship` uses CI as the merge gate: `commit` runs the fast local gates, `pr` pushes and `merge` arms auto-merge.
+- Repository root tidied for open source; the `tools/` forwarding stubs are removed.
+
+### Fixed
+
+- `distill ops` refuses to treat the engine repository as a knowledge base.
+- Digest keeps the SIGTERM hold during finalize with threads alive.
