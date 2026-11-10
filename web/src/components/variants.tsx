@@ -27,6 +27,23 @@ export const VARIANTS: Record<string, VariantSpec> = {
       { id: "hover-marks", label: "Hover marks", hint: "A count in the header with a popover, plus a faint dot beside each section that cites a source." },
     ],
   },
+  "proposal-inbox": {
+    label: "Proposal inbox",
+    default: "by-page",
+    options: [
+      { id: "by-page", label: "By page", hint: "One section per page with its proposals inside; a proposal on three pages shows under each." },
+      { id: "by-class", label: "By kind", hint: "Sections by what changed, claims first and typos last, so the risky ones are read first." },
+      { id: "timeline", label: "Timeline", hint: "One flat list, newest first, with a chip per kind of change." },
+    ],
+  },
+  "page-history-entry": {
+    label: "Page history entry",
+    default: "header",
+    options: [
+      { id: "header", label: "Header", hint: "A clock in the page header opens a right panel listing the versions, newest first." },
+      { id: "timeline", label: "Timeline", hint: "A thin strip of dots under the title, one per version; hover reads it, click picks it." },
+    ],
+  },
   "proposal-diff": {
     label: "Proposal diff",
     default: "inline",
@@ -34,6 +51,22 @@ export const VARIANTS: Record<string, VariantSpec> = {
       { id: "inline", label: "Inline", hint: "The page as it reads, changed words marked in place, controls in the right margin." },
       { id: "side-by-side", label: "Side by side", hint: "Before and after in two columns per block; unchanged paragraphs fold to one line." },
       { id: "reading", label: "Reading", hint: "The finished page, clean; a thin bar in the gutter opens a note with the old text and the controls." },
+    ],
+  },
+  "restructure-entry": {
+    label: "Restructure entry",
+    default: "menu",
+    options: [
+      { id: "menu", label: "Menu", hint: "A quiet Restructure button in the page header opens a small menu: Merge into, Split, Extract." },
+      { id: "command", label: "Commands", hint: "No button; type /merge @page, /split or /extract in the page chat, with the same @ picker." },
+    ],
+  },
+  "ingest-layout": {
+    label: "Ingest layout",
+    default: "single",
+    options: [
+      { id: "single", label: "Single page", hint: "Drop zone, how deeply to read it, and the job card stacked on one page; everything stays in view." },
+      { id: "wizard", label: "Wizard", hint: "Three steps shown one at a time: pick the source, say what it is, watch it progress." },
     ],
   },
   "page-flag-mark": {
@@ -104,4 +137,39 @@ export function useVariant(component: string, options: readonly string[], fallba
   const value = useSyncExternalStore(subscribe, snap, () => fallback);
   const set = useCallback((id: string) => setVariant(component, id), [component]);
   return [value, set];
+}
+
+/** The id saved for `component` in this browser, or null when it follows the default. */
+export function savedVariant(component: string): string | null {
+  return read(component) ?? memory.get(component) ?? null;
+}
+
+/** Forget the choice of `component`: it follows its registry default again (every open screen re-renders). */
+export function resetVariant(component: string): void {
+  try {
+    localStorage.removeItem(PREFIX + component);
+  } catch {
+    /* blocked storage: nothing was saved there */
+  }
+  memory.delete(component);
+  listeners.forEach((l) => l());
+}
+
+export function resetAllVariants(): void {
+  Object.keys(VARIANTS).forEach(resetVariant);
+}
+
+/** The current choices as plain lines an agent can read, e.g. `page-sources: side-tab (default footer)`. */
+export function variantChoicesText(): string {
+  return Object.entries(VARIANTS)
+    .map(([c, spec]) => {
+      const now = getVariant(c, spec.options.map((o) => o.id), spec.default);
+      return `${c}: ${now}${now === spec.default ? " (default)" : ` (default ${spec.default})`}`;
+    })
+    .join("\n");
+}
+
+/** `variantChoicesText()` that re-renders the caller whenever any choice changes. */
+export function useVariantChoicesText(): string {
+  return useSyncExternalStore(subscribe, variantChoicesText, variantChoicesText);
 }

@@ -53,12 +53,32 @@ export interface DataSource {
 
   // agent proposals (flag ui.proposals): the owner reviews an agent change hunk by hunk
   listProposals(status?: string): Promise<T.ProposalSummary[]>;
+  /** The review inbox: `status` open (open + stale) | applied | undone | all, `group` page | class | time fills `groups`. */
+  getProposalInbox(opts?: { status?: string; group?: string }): Promise<T.ProposalList>;
+  /** Recompute the hunks against the pages as they are now; hunks whose text vanished come back as `dropped`. */
+  rebaseProposal(id: string): Promise<T.RebaseResult>;
+  /** Applied and undone proposals, newest first (auto-applied ones included), each with `undoable` and `blocked_by`. */
+  getProposalFeed(): Promise<T.ProposalFeed>;
+  undoProposal(id: string): Promise<T.Proposal>;
   getProposal(id: string): Promise<T.Proposal>;
   getProposalRender(id: string): Promise<T.ProposalRender>;
   /** Accept, reject or correct one hunk; answers the whole proposal as it now is. */
   decideProposal(id: string, d: { hunk_id: string; decision: T.Decision; comment?: string }): Promise<T.Proposal>;
   applyProposal(id: string): Promise<T.ApplyResult>;
   rejectProposal(id: string, reason?: string): Promise<T.Proposal>;
+  /** Restructure producers (ui.restructure): each makes a proposal, nothing is written until review. */
+  getRestructureBlocks(slug: string): Promise<T.RestructureBlocks>;
+  getMergePreview(slugs: string[], survivor: string): Promise<T.MergePreview>;
+  restructureMerge(body: { slugs: string[]; survivor: string; title?: string }): Promise<T.RestructureResult>;
+  restructureSplit(body: { slug: string; cuts: number[]; titles: string[] }): Promise<T.RestructureResult>;
+  restructureExtract(body: { slug: string; from_at: number; to_at: number; title: string }): Promise<T.RestructureResult>;
+
+  // page history (flag ui.page-history): git versions of one page, a compare, and restore as a proposal
+  getPageHistory(slug: string): Promise<T.PageHistory>;
+  /** Hunks turning version `from` into `to` (a sha, or "working"), the shape the proposal diff renders. */
+  comparePage(slug: string, from: string, to?: string): Promise<T.PageCompare>;
+  /** Creates a restore proposal (the page is not written); `blocks` are compare hunk ids, absent = the whole version. */
+  restorePage(slug: string, body: { sha: string; blocks?: string[]; to?: string }): Promise<T.RestoreResult>;
 
   // pinned views (meta/views.json) and the recent steps of the graph search panel (local, never committed)
   listViews(): Promise<T.ViewList>;
@@ -106,6 +126,11 @@ export interface DataSource {
   digestRaw(path: string): Promise<T.DigestResult>;
   /** Digest jobs (local app only). A preview makes no model call; `backend` picks one of subscription | api | batch, else the billing defaults choose. */
   previewDigest(raws: string[], backend?: string): Promise<T.DigestPreview>;
+  /** Ingest from the app (flag ui.ingest, local app only): a file or URL becomes one proposal; the job streams its steps as SSE. */
+  startIngest(input: T.IngestInput): Promise<T.IngestStarted>;
+  getIngestJob(id: string): Promise<T.IngestJob>;
+  /** GET /api/ingest/{id}/events; the caller reads `response.body` as server-sent events (`job`, then `end`). */
+  ingestEvents(id: string, signal?: AbortSignal): Promise<Response>;
   startDigestJob(raws: string[], backend?: string): Promise<T.DigestJob>;
   listDigestJobs(): Promise<T.DigestJobList>;
   cancelDigestJob(id: string): Promise<T.DigestJob>;

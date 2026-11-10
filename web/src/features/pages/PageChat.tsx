@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { useVariant, VARIANTS } from "@/components/variants";
 import { useApiQuery } from "@/lib/useApiQuery";
 import { cn } from "@/lib/utils";
+import { SlashHints, useRestructureSlash } from "../restructure/entry";
 
 export type SelectionChip = { block_at: number | null; text: string };
 export const ENTRY_IDS = ["selection", "bubble", "gutter", "command", "rail"] as const;
@@ -347,6 +348,7 @@ export function Composer({
   const query = at ? at[2]! : null;
   const hits = useMentionSearch(query);
   const picking = query !== null && hits.length > 0;
+  const restructure = useRestructureSlash();
   useEffect(() => setPick(0), [query]);
 
   const insert = (slug: string) => {
@@ -361,6 +363,11 @@ export function Composer({
   const submit = () => {
     const message = chat.draft.trim();
     if (!message || pending) return;
+    if (restructure.run(message, chat.mentions)) {
+      chat.setDraft("");
+      chat.setMentions([]);
+      return;
+    }
     onSend({ message, selections: chat.chips, mentions: chat.mentions });
   };
   const onKey = (e: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -392,6 +399,7 @@ export function Composer({
           ))}
         </ul>
       )}
+      {restructure.enabled && !picking && <SlashHints draft={chat.draft} onPick={(k) => chat.setDraft(`/${k} `)} />}
       {hasChips && (
         <div className="mb-2 flex flex-wrap gap-1.5">
           {chat.chips.map((c, i) => (

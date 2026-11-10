@@ -1,15 +1,15 @@
 # Getting started
 
-This page takes you from a clone to a first digest. You need [pixi](https://pixi.sh) and git. Node is installed by pixi.
+This page takes you from a clone to a first digest. You need git. The installer adds [pixi](https://pixi.sh), and pixi installs Node.
 
-Supported platforms: macOS (Apple silicon and Intel) and Linux x86-64. Windows is not supported. Installing the wheel with pip needs Python 3.11 or newer; older Pythons fail with a confusing `grand-cypher` error.
+Supported platforms: macOS (Apple silicon and Intel), Linux x86-64, and Windows through WSL2. Installing the wheel with pip needs Python 3.11 or newer; older Pythons fail with a confusing `grand-cypher` error.
 
-AI features are optional. Reading, linking, linting and the app work without a key. A digest needs a Claude login or an Anthropic API key; only Anthropic models are supported.
+AI features are optional. Reading, linking, linting and the app work without a key. A digest needs a Claude login or an Anthropic API key; digests run on Claude only. Other providers are described in [Language models](concepts/llm.md).
 
 ## Install in two lines
 
 ```bash
-git clone https://github.com/yGit741/kb-distillery kb-distillery && cd kb-distillery
+git clone <repo-url> kb-distillery && cd kb-distillery
 ./install.sh
 ```
 
@@ -17,7 +17,14 @@ What it does: it checks the system (macOS, Linux or WSL2), installs pixi if it i
 
 ### Windows (WSL2)
 
-Windows itself is not supported. Install WSL2 with Ubuntu (`wsl --install -d Ubuntu` in an administrator PowerShell), open the Ubuntu terminal, then run the same two lines inside it.
+The installer runs on Windows inside WSL2, not in PowerShell or cmd.
+
+1. In an administrator PowerShell, run `wsl --install -d Ubuntu`, then restart if Windows asks.
+2. Open the Ubuntu terminal and make sure `git` and `curl` exist: `sudo apt update && sudo apt install -y git curl`.
+3. Clone into the Linux home folder, for example `~/kb-distillery`, and run the same two lines there. Avoid `/mnt/c/...`: file access across the Windows boundary is slow and breaks git file modes.
+4. The app listens on `http://127.0.0.1:8765`. Open that address in your Windows browser. If it does not load, run `wsl --update` and try again.
+
+Your knowledge base lives in the Linux home folder (`~/knowledge/<id>/`). To reach it from Windows, open `\\wsl.localhost\Ubuntu\home\<you>\knowledge` in Explorer.
 
 ## Step by step
 
@@ -26,7 +33,7 @@ The rest of this page is what `install.sh` does, one command at a time.
 ## 1. Install
 
 ```bash
-git clone https://github.com/yGit741/kb-distillery kb-distillery
+git clone <repo-url> kb-distillery
 cd kb-distillery
 pixi install
 ```
@@ -95,6 +102,15 @@ pixi run distill lint --kb my-kb
 
 The linter is the schema. If it passes, the pages are valid. It also regenerates `index.md` and `meta/corpus.tsv`.
 
+## Your first sources in the app
+
+A new knowledge base has no pages, so the graph is empty. The app can fill it without the command line:
+
+- A "Build your knowledge base" card on the empty graph lets you drop files, link a folder on this machine, or open an example. Files and folders are added to `raw/inbox/` and catalogued, with no model call. Duplicates and unsupported file types are reported and skipped.
+- The Pipeline screen and the card can start a digest job: pick sources, see a preview of the cost on each backend, start the job, watch it and cancel it. Each finished source is its own commit, and sources finished before a cancel stay. Jobs run one source at a time and need a Claude login or an Anthropic API key.
+
+The card and the digest jobs are behind the flags `screen.first-run` and `screen.digest-jobs` (`src/kb_distillery/kits/base/defaults/flags.toml`), which are on for a local app and off for private and public sites. If you do not see them, add sources with the commands in step 5.
+
 ## Try the demo first
 
 `examples/demo` is a small knowledge base about a made-up job search. It is tracked in this repository.
@@ -109,7 +125,7 @@ pixi run distill kb open-example demo
 
 ## Choose how a model is billed
 
-Every model call goes through one tool. It has three backends: `subscription` (your `claude login`), `api` (your Anthropic key) and `batch` (the Batch API, half price, results later). Pick one per run with `--backend`, or set `KB_LLM_BACKEND`. The default is `subscription`. See [ADR 0001](adr/0001-single-llm-gateway.md).
+Every model call goes through one tool. It has three backends: `subscription` (your `claude login`), `api` (your Anthropic key) and `batch` (the Batch API, half price, results later). Pick one per run with `--backend`, or set `KB_LLM_BACKEND`. The default is `subscription`. Providers, tiers and prices are in [Language models](concepts/llm.md); the design is in [ADR 0001](adr/0001-single-llm-gateway.md).
 
 ## Next
 

@@ -45,6 +45,7 @@ pixi run ship -- events 12                      # kb-event lines on PR 12 (claim
 pixi run ship -- round open "Phase 2" --features a,b   # multi-PR effort: issue #R with a checklist
 pixi run ship -- start a --worktree --round 40    # link the branch; pr/merge mirror events + tick on #40
 pixi run ship -- round status 40                # checklist + latest event per feature (one line each)
+pixi run ship -- round close 40 --moved "f=note"   # close once all merged or --moved (optional --note)
 pixi run ops -- migrate --check
 ```
 

@@ -10,7 +10,7 @@
 #
 # Jobs: `lint` (the cheap gates, ~1-2 min), `tests` (pytest in 5 static shards, each with `-n auto` and a
 # per-test timeout; the shard list and the `--ignore`s of the last shard must cover every tests/ dir exactly
-# once, tests/ci/test_workflows.py checks that), `web` (web-check), `wheel`, `worker`, and `all-green`, the
+# once, tests/ci/test_workflows.py checks that), `web` (web-check), `wheel`, `worker`, `docker` (builds the Dockerfile without pushing, smoke-tests the image), and `all-green`, the
 # fan-in that is green only when every other job succeeded (cancelled or skipped count as red). Branch
 # protection names `all-green` alone, so the shards need no naming there.
 #
@@ -52,6 +52,8 @@ jobs:
       - run: pixi run ruff
       - name: Privacy ratchet (no personal strings or token shapes in new files)
         run: pixi run pytest -q tests/lint/test_privacy_ratchet.py
+      - name: Public export (owner-only paths export-ignored and absent from git archive, privacy scan of the archive)
+        run: pixi run check-export
 
   tests:     # pytest (the `serial` wall-clock test runs alone, in the shard that owns tests/ingest)
     runs-on: ubuntu-latest
@@ -184,8 +186,46 @@ jobs:
       - run: pixi run web-install   # esbuild + js-yaml for the Worker inbox's checker bundle (worker-bundle)
       - run: pixi run test-worker
 
+  docker:     # builds ./Dockerfile for real (linux/amd64, nothing is pushed) and runs the CLI inside the image
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - run: git show-ref -q refs/heads/main || git branch main origin/main   # a PR checkout has no local main
+      - uses: prefix-dev/setup-pixi@v0.8.1
+        with:
+          pixi-version: v0.76.1
+          cache: true
+      - uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: npm-${{ runner.os }}-${{ hashFiles('web/package-lock.json') }}
+      - run: pixi run build-wheel     # the Dockerfile's build context needs dist/*.whl, as in release.yml (the wheel carries the built app)
+      - id: version
+        run: echo "version=$(pixi run python -c 'from kb_distillery.git.release import current_version; print(current_version())')" >> "$GITHUB_OUTPUT"
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/amd64
+          push: false
+          load: true
+          tags: kb-distillery:ci
+          build-args: |
+            VERSION=${{ steps.version.outputs.version }}
+            KB_WEB_BUNDLE_REPO=${{ github.repository }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: Smoke test (the CLI runs, the app bundle is inside, as the unprivileged user)
+        run: |
+          docker run --rm kb-distillery:ci distill --help
+          docker run --rm kb-distillery:ci python -c "from kb_distillery.config.resources import resource; assert (resource('_webapp') / 'index.html').is_file()"
+          docker run --rm -e KB_AUTH_EMAIL=ci@example.com -e KB_AUTH_JWKS_URL=https://proxy.example.com/keys -e KB_AUTH_AUDIENCE=ci kb-distillery:ci distill doctor     # the image refuses to run without an identity setup, as in production
+
   all-green:     # the one required check: every job above succeeded (cancelled or skipped is red too)
-    needs: [lint, tests, web, checks, wheel, worker]
+    needs: [lint, tests, web, checks, wheel, worker, docker]
     if: always()
     runs-on: ubuntu-latest
     steps:

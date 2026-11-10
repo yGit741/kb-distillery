@@ -1,0 +1,31 @@
+# Build context for the Dockerfile: only dist/ (the wheel) is needed. Everything else stays out, above all any
+# knowledge (raw/, wiki/, think/, meta/), git history and agent state.
+.git
+.gitignore
+.gitattributes
+.claude
+.github
+.cache
+.backlog
+.pixi
+.obsidian
+.env
+.env.*
+*.pem
+*.key
+raw/
+wiki/
+think/
+meta/
+_quarantine/
+node_modules
+web/
+tests/
+docs/
+examples/
+scripts/
+src/
+__pycache__
+*.pyc
+.pytest_cache
+.ruff_cache

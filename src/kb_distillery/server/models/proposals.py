@@ -63,6 +63,17 @@ class Hunk(ApiModel):
     klass: str = ""                 # links | format | typos | claims | structure | new_page | tombstone | merge | split | rename
 
 
+class DroppedHunk(ApiModel):
+    """A hunk a rebase could not carry over: its before text is gone from the changed page."""
+    hunk_id: str
+    slug: str
+    klass: str = ""
+    op: str
+    before: str = ""
+    after: str = ""
+    reason: str = ""
+
+
 class Revision(ApiModel):
     n: int
     created: str
@@ -70,6 +81,7 @@ class Revision(ApiModel):
     ops: list[ProposalOp]
     hunks: list[Hunk]
     checks: list[Finding] = []
+    dropped: list[DroppedHunk] = []     # set on a rebased revision
 
 
 class HunkDecision(ApiModel):
@@ -125,10 +137,22 @@ class ProposalSummary(ApiModel):
     pages: list[str]
     counts: Counts
     checks: CheckCounts
+    classes: dict[str, int] = {}        # hunks per class, e.g. {"claims": 1, "links": 4}
+    tiers: dict[str, int] = {}          # hunks per trust tier: auto_apply | review | explicit
+    stale_pages: list[str] = []         # pages that changed since the proposal was made (open ones only)
+    top_class: str = ""                 # the riskiest class present (claims > structure > new_page > ... > typos)
+
+
+class ProposalGroup(ApiModel):
+    key: str                            # a page slug, a class or a day (YYYY-MM-DD)
+    label: str
+    count: int
+    proposals: list[ProposalSummary]
 
 
 class ProposalList(ApiModel):
     proposals: list[ProposalSummary]
+    groups: list[ProposalGroup] = []    # only with ?group=page|class|time
 
 
 class Proposal(ApiModel):
@@ -151,6 +175,11 @@ class Proposal(ApiModel):
     check_counts: CheckCounts
     applied: Applied | None = None
     undone: Undone | None = None
+
+
+class RebaseResult(ApiModel):
+    proposal: Proposal
+    dropped: list[DroppedHunk]
 
 
 class ProposalCreate(ApiModel):
@@ -272,8 +301,56 @@ class FeedItem(ApiModel):
     commit: str | None = None
     auto: bool = False
     undoable: bool
+    blocked_by: list[str] = []      # pages later commits changed: why a not-undoable item cannot be undone
     undone_at: str | None = None
 
 
 class Feed(ApiModel):
     feed: list[FeedItem]
+
+
+class RippleItem(ApiModel):
+    slug: str
+    links: int
+
+
+class RestructureResult(Proposal):
+    """The proposal a restructure producer made, plus the pages whose links to the changed page(s) it touches."""
+    ripple: list[RippleItem] = []
+
+
+class MergeRequest(ApiModel):
+    slugs: list[str]
+    survivor: str
+    title: str | None = None
+    backend: Backend | None = None      # set -> an LLM pass proposes a tidier merged body instead of plain concatenation
+
+
+class SplitRequest(ApiModel):
+    slug: str
+    cuts: list[int]                      # block indices (`at` of the render blocks) where a new piece starts
+    titles: list[str]                    # one title per cut: the names of the new pages
+
+
+class ExtractRequest(ApiModel):
+    slug: str
+    from_at: int
+    to_at: int                           # inclusive block range
+    title: str
+
+
+class MergePreview(ApiModel):
+    ripple: list[RippleItem] = []
+
+
+class RestructureBlock(ApiModel):
+    index: int
+    kind: str
+    text: str
+
+
+class RestructureBlocks(ApiModel):
+    slug: str
+    title: str
+    first: int                           # the first content block: cuts and ranges start there or later
+    blocks: list[RestructureBlock]

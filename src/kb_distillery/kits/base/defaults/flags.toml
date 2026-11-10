@@ -269,6 +269,16 @@ default = false
 envs = { local = true, private = false, public = false }
 
 [[flag]]
+name = "ui.page-history"
+description = "Pages: how a page changed over time. Lists its versions, compares any two with the proposal diff, restores a version or a block as a proposal."
+owner = "maintainer"
+created = 2026-11-09
+expires = 2027-05-09
+kind = "runtime"
+default = false
+envs = { local = true, private = false, public = false }
+
+[[flag]]
 name = "ui.page-sources"
 description = "Pages: the raw files, source pages and URLs behind the page being read, in one of three placements (footer, side tab, hover marks). Read-only; the private site may show it, public snapshots do not."
 owner = "maintainer"
@@ -289,11 +299,41 @@ default = false
 envs = { local = true, private = false, public = false }
 
 [[flag]]
+name = "ui.restructure"
+description = "Pages: merge, split and extract a page as a proposal (the Restructure entry on the page view, two entry variants: menu and command). Needs ui.proposals."
+owner = "maintainer"
+created = 2026-11-10
+expires = 2027-05-10
+kind = "runtime"
+default = false
+envs = { local = true, private = false, public = false }
+
+[[flag]]
+name = "ui.ingest"
+description = "Ingest screen: drop a paper or paste a URL, pick how deeply to read it, and get a proposal that creates the source and concept pages. Two layouts as variants (wizard, single)."
+owner = "maintainer"
+created = 2026-11-10
+expires = 2027-05-10
+kind = "runtime"
+default = false
+envs = { local = true, private = false, public = false }
+
+[[flag]]
 name = "ui.page-flags"
 description = "Pages: mark a sentence inaccurate with a short note while reading, see the flags on the page in one of three looks, and fix every flagged passage with one proposal (needs ui.proposals)."
 owner = "maintainer"
 created = 2026-11-09
 expires = 2027-05-09
+kind = "runtime"
+default = false
+envs = { local = true, private = false, public = false }
+
+[[flag]]
+name = "ui.variant-chooser"
+description = "System: a Variants tab that lists every component with several designs, lets the owner pick one at runtime, reset to defaults, and copy the choices as text."
+owner = "maintainer"
+created = 2026-11-10
+expires = 2027-02-07
 kind = "runtime"
 default = false
 envs = { local = true, private = false, public = false }

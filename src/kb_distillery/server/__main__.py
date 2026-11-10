@@ -2,14 +2,32 @@
 
 Before serving it rebuilds `src/kb_distillery/_webapp` (gitignored build output) when the frontend sources changed."""
 import argparse
+import os
+import sys
 import webbrowser
 
 from kb_distillery.server.security import assert_loopback_bind
 
 DEFAULT_PORT = 8765
+BLAS_THREAD_VARS = ("OPENBLAS_NUM_THREADS", "OMP_NUM_THREADS", "MKL_NUM_THREADS")
+
+
+def limit_blas_threads(environ=None):
+    """One BLAS thread for the server process; False when numpy was already imported (the caps no longer apply).
+
+    The graph's similar-to math is a handful of matrix products per snapshot build, run in the warm thread. With
+    the default pool (one spinning OpenBLAS thread per core) those products starve the event loop on a busy
+    machine: every request waited for minutes at load 8x the cores, and answered in under a second with one
+    thread. A value already in the environment is kept. Must run before numpy is first imported."""
+    environ = os.environ if environ is None else environ
+    for var in BLAS_THREAD_VARS:
+        environ.setdefault(var, "1")
+    return "numpy" not in sys.modules
 
 
 def main(argv=None):
+    if not limit_blas_threads():
+        print("note: numpy was imported before the server started; BLAS thread caps not applied", flush=True)
     parser = argparse.ArgumentParser(description="kb-distillery app server")
     parser.add_argument("--port", type=int, default=DEFAULT_PORT)
     parser.add_argument("--host", default="127.0.0.1",
