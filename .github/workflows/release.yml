@@ -111,8 +111,7 @@ jobs:
           gh release upload "$GITHUB_REF_NAME" out/*.whl out/webapp-*.tar.gz out/webapp-*.sha256 out/SHA256SUMS --repo "$GITHUB_REPOSITORY" --clobber
 
   docker:     # multi-arch image from ./Dockerfile; pushed to GHCR only on a tag
-    # Off until the Dockerfile (R4.2) is on main: flip `if: false` to `if: true` in the PR that adds it.
-    if: false
+    # On: ci.yml's `docker` job builds the same Dockerfile (amd64, no push) and smoke-tests it on every PR.
     needs: release
     runs-on: ubuntu-latest
     permissions:

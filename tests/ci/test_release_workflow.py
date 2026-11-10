@@ -60,11 +60,8 @@ class ReleaseWorkflow(unittest.TestCase):
         for task in ("lint-skills", "lint-imports", "ruff", "web-check", "test-wheel", "build-wheel"):
             self.assertRegex(text, rf"pixi run {re.escape(task)}\b")
 
-    def test_docker_job_is_off_until_the_dockerfile_exists(self):
-        import os
-        root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-        if not os.path.exists(os.path.join(root, "Dockerfile")):
-            self.assertIs(self.wf["jobs"]["docker"].get("if"), False)
+    def test_docker_job_is_on_now_the_dockerfile_exists(self):
+        self.assertIsNot(self.wf["jobs"]["docker"].get("if"), False)
 
 
 if __name__ == "__main__":
