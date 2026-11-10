@@ -33,6 +33,7 @@ if (!tabs || !tabs.length) {
 }
 // top-level tabs the shell can offer; one missing from the nav in this flag set is reported as skipped, not as a failed click
 const EXPECTED = ["/app/", "/app/graph", "/app/system", "/app/chat", "/app/think", "/app/what-is-it", "/app/share"];
+const discovered = new Set(tabs);
 if (!opts.tabs || !opts.tabs.length) tabs = [...tabs, ...EXPECTED.filter((t) => !tabs.includes(t))];
 out.tabs = tabs;
 const navLink = (href) => page.locator(`header nav a[href="${href}"]`).first();
@@ -45,11 +46,13 @@ const openBar = async () => {
 for (const pass of ["pass1", "pass2"]) {
   for (const href of tabs) {
     // the bar stays in the DOM when folded, so a link that is absent is a tab this flag set does not offer
-    if ((await navLink(href).count()) === 0) {
+    if ((await navLink(href).count()) === 0 && !discovered.has(href)) {
       out[pass][href] = { ms: null, api_requests: 0, timed_out: false, skipped: "not in the nav for this flag set" };
       continue;
     }
-    try { await openBar(); } catch (e) { out[pass][href] = { ms: null, api_requests: 0, timed_out: false, error: "click failed" }; continue; }
+    // the graph folds the bar from an effect that can land after the last idle, so settle, then check right before the click
+    await page.waitForTimeout(300);
+    try { await openBar(); } catch (e) { out[pass][href] = { ms: null, api_requests: 0, timed_out: false, error: "app bar would not open" }; continue; }
     t0 = Date.now(); n0 = apiCount;
     try { await navLink(href).click({ timeout: 60000 }); } catch (e) { out[pass][href] = { ms: null, api_requests: 0, timed_out: false, error: "click failed" }; continue; }
     r = await idle(t0);
