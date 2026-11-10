@@ -116,3 +116,31 @@ def test_signature_is_cheap_and_stable():
     sig = time.perf_counter() - t
     assert sig < max(walk * 10, 0.5), f"signature {sig:.3f}s vs 3 walks {walk:.3f}s"
     assert a == cache.signature(snapshot.ROOT)
+
+
+def test_refresher_warms_then_rebuilds_on_change(monkeypatch, counted):
+    monkeypatch.setenv(cache.WARM_ENV, "1")
+    thread = cache.start_refresher(interval=0.1)
+    try:
+        deadline = time.time() + 60
+        while len(counted) < 2 and time.time() < deadline:      # default + raw layer built without any request
+            time.sleep(0.05)
+        assert len(counted) == 2
+        n = len(counted)
+        cache.cached_graph_snapshot()
+        assert len(counted) == n                                  # a request now is a hit
+        path = _a_page()
+        st = os.stat(path)
+        os.utime(path, ns=(st.st_atime_ns, st.st_mtime_ns + 5_000_000_000))
+        deadline = time.time() + 60
+        while len(counted) < n + 1 and time.time() < deadline:
+            time.sleep(0.05)
+        assert len(counted) > n                                   # rebuilt in the background
+    finally:
+        cache.stop_refresher()
+    assert not thread.is_alive()
+
+
+def test_refresher_off_switch(monkeypatch):
+    monkeypatch.setenv(cache.WARM_ENV, "0")
+    assert cache.start_refresher(interval=0.1) is None

@@ -638,6 +638,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/ingest": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Start an ingest job: multipart `file` (+ tier, collection, backend) or JSON {url, tier, collection, backend} */
+        post: operations["start_api_ingest_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/ingest/{job_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One ingest job */
+        get: operations["job_api_ingest__job_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/ingest/{job_id}/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** SSE: a `job` event on every change, `end` when the job stops */
+        get: operations["job_events_api_ingest__job_id__events_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/kb": {
         parameters: {
             query?: never;
@@ -808,6 +859,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/pages/mentions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Pages for the @mention picker (prefix, then fuzzy) */
+        get: operations["mentions_api_pages_mentions_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/pages/{slug}": {
         parameters: {
             query?: never;
@@ -819,6 +887,144 @@ export interface paths {
         get: operations["get_page_api_pages__slug__get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/pages/{slug}/chat": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The page's chat thread: messages and the proposals they produced */
+        get: operations["get_thread_api_pages__slug__chat_get"];
+        put?: never;
+        /** Ask about the page; edits come back as a proposal to review */
+        post: operations["post_chat_api_pages__slug__chat_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/pages/{slug}/compare": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Hunks turning version `from` into `to` (a sha, or `working`), as the review screen renders them */
+        get: operations["page_compare_api_pages__slug__compare_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/pages/{slug}/flags": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The page's flags */
+        get: operations["list_flags_api_pages__slug__flags_get"];
+        put?: never;
+        /** Mark a span of the page as inaccurate */
+        post: operations["add_api_pages__slug__flags_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/pages/{slug}/flags/count": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** How many flags are open on the page */
+        get: operations["count_api_pages__slug__flags_count_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/pages/{slug}/flags/fix": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Turn every open flag into one proposal that addresses them */
+        post: operations["fix_api_pages__slug__flags_fix_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/pages/{slug}/flags/{flag_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Remove a flag */
+        delete: operations["remove_api_pages__slug__flags__flag_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/pages/{slug}/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The versions of one page from the kb's git log, newest first */
+        get: operations["page_history_api_pages__slug__history_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/pages/{slug}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Restore a version (or chosen blocks of it) as a proposal; the page is not written */
+        post: operations["page_restore_api_pages__slug__restore_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -922,6 +1128,91 @@ export interface paths {
         get: operations["feed_api_proposals_feed_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/proposals/restructure/blocks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** A page's blocks with the indices cuts and ranges use (the cut view) */
+        get: operations["restructure_blocks_api_proposals_restructure_blocks_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/proposals/restructure/extract": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Extract one block range into a new page, leaving a link behind, as a proposal */
+        post: operations["extract_api_proposals_restructure_extract_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/proposals/restructure/merge": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Merge pages into a survivor as a proposal (tombstones, link rewrites, `ripple`) */
+        post: operations["merge_api_proposals_restructure_merge_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/proposals/restructure/merge-preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The pages whose links a merge would rewrite (no proposal is made) */
+        get: operations["merge_preview_api_proposals_restructure_merge_preview_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/proposals/restructure/split": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Split a page at block cuts into new pages as a proposal */
+        post: operations["split_api_proposals_restructure_split_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1813,6 +2104,50 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
+        /** ChatMessage */
+        ChatMessage: {
+            /**
+             * At
+             * @default
+             */
+            at: string;
+            /**
+             * Hunks
+             * @default 0
+             */
+            hunks: number;
+            /**
+             * Mentions
+             * @default []
+             */
+            mentions: string[];
+            /** Proposal Id */
+            proposal_id?: string | null;
+            /**
+             * Role
+             * @enum {string}
+             */
+            role: "user" | "assistant";
+            /**
+             * Selections
+             * @default []
+             */
+            selections: components["schemas"]["Selection"][];
+            /**
+             * Skipped
+             * @default []
+             */
+            skipped: components["schemas"]["Skipped"][];
+            /** Text */
+            text: string;
+            /**
+             * Unknown Mentions
+             * @default []
+             */
+            unknown_mentions: string[];
+        } & {
+            [key: string]: unknown;
+        };
         /**
          * ChatMessageIn
          * @description Body of POST /api/chat/message: `text` becomes the next user message of the live turn for `session`.
@@ -2559,6 +2894,19 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
+        /** ExtractRequest */
+        ExtractRequest: {
+            /** From At */
+            from_at: number;
+            /** Slug */
+            slug: string;
+            /** Title */
+            title: string;
+            /** To At */
+            to_at: number;
+        } & {
+            [key: string]: unknown;
+        };
         /** FavoriteAddRequest */
         FavoriteAddRequest: {
             /** Slug */
@@ -3205,6 +3553,56 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
+        /** IngestJob */
+        IngestJob: {
+            /**
+             * Collection
+             * @default
+             */
+            collection: string;
+            /** Error */
+            error?: string | null;
+            /** Id */
+            id: string;
+            /**
+             * Pages
+             * @default []
+             */
+            pages: string[];
+            /** Proposal Id */
+            proposal_id?: string | null;
+            /** Source */
+            source: string;
+            /** Status */
+            status: string;
+            /** Steps */
+            steps: components["schemas"]["IngestStep"][];
+            /** Tier */
+            tier: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** IngestStarted */
+        IngestStarted: {
+            /** Job Id */
+            job_id: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** IngestStep */
+        IngestStep: {
+            /**
+             * Detail
+             * @default
+             */
+            detail: string;
+            /** Name */
+            name: string;
+            /** State */
+            state: string;
+        } & {
+            [key: string]: unknown;
+        };
         /** JobSource */
         JobSource: {
             /**
@@ -3784,6 +4182,25 @@ export interface components {
             /** Type */
             type: string;
         };
+        /** MentionHit */
+        MentionHit: {
+            /** Slug */
+            slug: string;
+            /** Title */
+            title: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** MentionList */
+        MentionList: {
+            /**
+             * Pages
+             * @default []
+             */
+            pages: components["schemas"]["MentionHit"][];
+        } & {
+            [key: string]: unknown;
+        };
         /** MentionedInCond */
         MentionedInCond: {
             /** Chat */
@@ -3793,6 +4210,16 @@ export interface components {
              * @enum {string}
              */
             t: "mentionedIn";
+        };
+        /** MergePreview */
+        MergePreview: {
+            /**
+             * Ripple
+             * @default []
+             */
+            ripple: components["schemas"]["RippleItem"][];
+        } & {
+            [key: string]: unknown;
         };
         /** MergeQueue */
         MergeQueue: {
@@ -3807,6 +4234,19 @@ export interface components {
              * @default []
              */
             waiters: components["schemas"]["QueueEntry"][];
+        } & {
+            [key: string]: unknown;
+        };
+        /** MergeRequest */
+        MergeRequest: {
+            /** Backend */
+            backend?: ("subscription" | "api" | "batch") | null;
+            /** Slugs */
+            slugs: string[];
+            /** Survivor */
+            survivor: string;
+            /** Title */
+            title?: string | null;
         } & {
             [key: string]: unknown;
         };
@@ -3960,6 +4400,73 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
+        /** PageChatReply */
+        PageChatReply: {
+            /**
+             * Hunks
+             * @default 0
+             */
+            hunks: number;
+            /** Proposal Id */
+            proposal_id?: string | null;
+            /** Reply */
+            reply: string;
+            /**
+             * Skipped
+             * @default []
+             */
+            skipped: components["schemas"]["Skipped"][];
+            /**
+             * Unknown Mentions
+             * @default []
+             */
+            unknown_mentions: string[];
+        } & {
+            [key: string]: unknown;
+        };
+        /** PageChatRequest */
+        PageChatRequest: {
+            /** Backend */
+            backend?: ("subscription" | "api" | "batch") | null;
+            /**
+             * Mentions
+             * @default []
+             */
+            mentions: string[];
+            /** Message */
+            message: string;
+            /**
+             * Selections
+             * @default []
+             */
+            selections: components["schemas"]["Selection"][];
+        } & {
+            [key: string]: unknown;
+        };
+        /** PageChatThread */
+        PageChatThread: {
+            /**
+             * Messages
+             * @default []
+             */
+            messages: components["schemas"]["ChatMessage"][];
+            /** Slug */
+            slug: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** PageCompare */
+        PageCompare: {
+            /** From */
+            from: string;
+            /** Hunks */
+            hunks: components["schemas"]["Hunk"][];
+            page: components["schemas"]["RenderPage"];
+            /** To */
+            to: string;
+        } & {
+            [key: string]: unknown;
+        };
         /** PageDetail */
         PageDetail: {
             /**
@@ -3995,6 +4502,130 @@ export interface components {
              * @default []
              */
             suggested: components["schemas"]["SuggestedPage"][];
+        } & {
+            [key: string]: unknown;
+        };
+        /** PageFlag */
+        PageFlag: {
+            /** Block At */
+            block_at?: number | null;
+            /**
+             * Created
+             * @default
+             */
+            created: string;
+            /** Id */
+            id: string;
+            /**
+             * Note
+             * @default
+             */
+            note: string;
+            /**
+             * Orphaned
+             * @default false
+             */
+            orphaned: boolean;
+            /** Resolved By */
+            resolved_by?: string | null;
+            /** Text */
+            text: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** PageFlagCount */
+        PageFlagCount: {
+            /**
+             * Open
+             * @default 0
+             */
+            open: number;
+            /**
+             * Orphaned
+             * @default 0
+             */
+            orphaned: number;
+        } & {
+            [key: string]: unknown;
+        };
+        /** PageFlagFixReply */
+        PageFlagFixReply: {
+            /**
+             * Flag Ids
+             * @default []
+             */
+            flag_ids: string[];
+            /**
+             * Hunks
+             * @default 0
+             */
+            hunks: number;
+            /**
+             * Orphaned
+             * @default []
+             */
+            orphaned: string[];
+            /** Proposal Id */
+            proposal_id?: string | null;
+            /**
+             * Reply
+             * @default
+             */
+            reply: string;
+            /**
+             * Skipped
+             * @default []
+             */
+            skipped: components["schemas"]["Skipped"][];
+        } & {
+            [key: string]: unknown;
+        };
+        /** PageFlagFixRequest */
+        PageFlagFixRequest: {
+            /** Backend */
+            backend?: ("subscription" | "api" | "batch") | null;
+        } & {
+            [key: string]: unknown;
+        };
+        /** PageFlagList */
+        PageFlagList: {
+            /**
+             * Flags
+             * @default []
+             */
+            flags: components["schemas"]["PageFlag"][];
+            /** Slug */
+            slug: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** PageFlagRemoved */
+        PageFlagRemoved: {
+            /** Id */
+            id: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** PageFlagRequest */
+        PageFlagRequest: {
+            /** Block At */
+            block_at?: number | null;
+            /**
+             * Note
+             * @default
+             */
+            note: string;
+            /** Text */
+            text: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** PageHistory */
+        PageHistory: {
+            /** Slug */
+            slug: string;
+            /** Versions */
+            versions: components["schemas"]["PageVersion"][];
         } & {
             [key: string]: unknown;
         };
@@ -4114,6 +4745,21 @@ export interface components {
              * @default []
              */
             sources: components["schemas"]["PageSource"][];
+        } & {
+            [key: string]: unknown;
+        };
+        /** PageVersion */
+        PageVersion: {
+            /** Date */
+            date: string;
+            /** Kind */
+            kind: string;
+            /** Sha */
+            sha: string;
+            /** Short */
+            short: string;
+            /** Subject */
+            subject: string;
         } & {
             [key: string]: unknown;
         };
@@ -4777,6 +5423,106 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
+        /** RestoreRequest */
+        RestoreRequest: {
+            /** Blocks */
+            blocks?: string[] | null;
+            /** Sha */
+            sha: string;
+            /**
+             * To
+             * @default working
+             */
+            to: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** RestoreResult */
+        RestoreResult: {
+            /** Proposal Id */
+            proposal_id: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** RestructureBlock */
+        RestructureBlock: {
+            /** Index */
+            index: number;
+            /** Kind */
+            kind: string;
+            /** Text */
+            text: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** RestructureBlocks */
+        RestructureBlocks: {
+            /** Blocks */
+            blocks: components["schemas"]["RestructureBlock"][];
+            /** First */
+            first: number;
+            /** Slug */
+            slug: string;
+            /** Title */
+            title: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /**
+         * RestructureResult
+         * @description The proposal a restructure producer made, plus the pages whose links to the changed page(s) it touches.
+         */
+        RestructureResult: {
+            applied?: components["schemas"]["Applied"] | null;
+            /** Base */
+            base: {
+                [key: string]: string | null;
+            };
+            check_counts: components["schemas"]["CheckCounts"];
+            checks: components["schemas"]["Checks"];
+            counts: components["schemas"]["Counts"];
+            /** Created */
+            created: string;
+            /** Current */
+            current: number;
+            /** Decisions */
+            decisions: {
+                [key: string]: components["schemas"]["HunkDecision"];
+            };
+            /** Hunks */
+            hunks: components["schemas"]["Hunk"][];
+            /** Id */
+            id: string;
+            producer: components["schemas"]["Producer"];
+            /** Revision */
+            revision: number;
+            /** Revisions */
+            revisions: components["schemas"]["Revision"][];
+            /**
+             * Ripple
+             * @default []
+             */
+            ripple: components["schemas"]["RippleItem"][];
+            /** Stale */
+            stale: boolean;
+            /**
+             * Stale Pages
+             * @default []
+             */
+            stale_pages: string[];
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "open" | "applied" | "rejected" | "stale" | "undone";
+            /** Title */
+            title: string;
+            undone?: components["schemas"]["Undone"] | null;
+            /** Updated */
+            updated: string;
+        } & {
+            [key: string]: unknown;
+        };
         /** Revision */
         Revision: {
             /**
@@ -4823,6 +5569,15 @@ export interface components {
              * @default false
              */
             semantic: boolean;
+        } & {
+            [key: string]: unknown;
+        };
+        /** RippleItem */
+        RippleItem: {
+            /** Links */
+            links: number;
+            /** Slug */
+            slug: string;
         } & {
             [key: string]: unknown;
         };
@@ -5082,6 +5837,18 @@ export interface components {
             related?: components["schemas"]["SearchHit"][] | null;
             /** Total */
             total: number;
+        } & {
+            [key: string]: unknown;
+        };
+        /** Selection */
+        Selection: {
+            /** Block At */
+            block_at?: number | null;
+            /**
+             * Text
+             * @default
+             */
+            text: string;
         } & {
             [key: string]: unknown;
         };
@@ -5388,6 +6155,15 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
+        /** Skipped */
+        Skipped: {
+            /** Before */
+            before: string;
+            /** Reason */
+            reason: string;
+        } & {
+            [key: string]: unknown;
+        };
         /** SkippedSource */
         SkippedSource: {
             /** Raw */
@@ -5405,6 +6181,17 @@ export interface components {
             label: string;
             /** Tag */
             tag: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** SplitRequest */
+        SplitRequest: {
+            /** Cuts */
+            cuts: number[];
+            /** Slug */
+            slug: string;
+            /** Titles */
+            titles: string[];
         } & {
             [key: string]: unknown;
         };
@@ -7573,6 +8360,147 @@ export interface operations {
             };
         };
     };
+    start_api_ingest_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    backend?: string;
+                    collection?: string;
+                    tier?: string;
+                    url?: string;
+                };
+                "multipart/form-data": Record<string, never>;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IngestStarted"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Method Not Allowed */
+            405: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Content Too Large */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unsupported Media Type */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    job_api_ingest__job_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IngestJob"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    job_events_api_ingest__job_id__events_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_kb_api_kb_get: {
         parameters: {
             query?: never;
@@ -7854,6 +8782,38 @@ export interface operations {
             };
         };
     };
+    mentions_api_pages_mentions_get: {
+        parameters: {
+            query?: {
+                /** @description what the owner typed after @ */
+                q?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MentionList"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_page_api_pages__slug__get: {
         parameters: {
             query?: {
@@ -7878,6 +8838,602 @@ export interface operations {
             };
             /** @description unknown slug */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_thread_api_pages__slug__chat_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PageChatThread"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Method Not Allowed */
+            405: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bad Gateway */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    post_chat_api_pages__slug__chat_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PageChatRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PageChatReply"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Method Not Allowed */
+            405: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bad Gateway */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    page_compare_api_pages__slug__compare_get: {
+        parameters: {
+            query: {
+                from: string;
+                to?: string;
+            };
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PageCompare"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Method Not Allowed */
+            405: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_flags_api_pages__slug__flags_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PageFlagList"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Method Not Allowed */
+            405: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bad Gateway */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    add_api_pages__slug__flags_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PageFlagRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PageFlag"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Method Not Allowed */
+            405: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bad Gateway */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    count_api_pages__slug__flags_count_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PageFlagCount"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Method Not Allowed */
+            405: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bad Gateway */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    fix_api_pages__slug__flags_fix_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PageFlagFixRequest"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PageFlagFixReply"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Method Not Allowed */
+            405: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bad Gateway */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    remove_api_pages__slug__flags__flag_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+                flag_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PageFlagRemoved"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Method Not Allowed */
+            405: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bad Gateway */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    page_history_api_pages__slug__history_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PageHistory"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Method Not Allowed */
+            405: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    page_restore_api_pages__slug__restore_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RestoreRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RestoreResult"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Method Not Allowed */
+            405: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Conflict */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -8162,6 +9718,334 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
                 };
+            };
+        };
+    };
+    restructure_blocks_api_proposals_restructure_blocks_get: {
+        parameters: {
+            query: {
+                slug: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RestructureBlocks"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Method Not Allowed */
+            405: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bad Gateway */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    extract_api_proposals_restructure_extract_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ExtractRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RestructureResult"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Method Not Allowed */
+            405: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bad Gateway */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    merge_api_proposals_restructure_merge_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MergeRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RestructureResult"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Method Not Allowed */
+            405: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bad Gateway */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    merge_preview_api_proposals_restructure_merge_preview_get: {
+        parameters: {
+            query: {
+                /** @description comma-separated page slugs */
+                slugs: string;
+                survivor: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MergePreview"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Method Not Allowed */
+            405: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bad Gateway */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    split_api_proposals_restructure_split_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SplitRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RestructureResult"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Method Not Allowed */
+            405: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bad Gateway */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

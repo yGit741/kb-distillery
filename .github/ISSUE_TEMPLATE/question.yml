@@ -1,0 +1,15 @@
+name: Question
+description: You are stuck or unsure how something is meant to work.
+labels: [question]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Check the docs and the getting-started guide first. Do not paste knowledge base content, tokens or personal paths.
+  - type: textarea
+    id: question
+    attributes:
+      label: Question
+      description: What you are trying to do, what you tried, and where you got stuck.
+    validations:
+      required: true

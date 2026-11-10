@@ -46,7 +46,10 @@ def create_app(routers_package=ROUTERS_PACKAGE, dist=None, allowed_hosts=None) -
     app = FastAPI(title="kb-distillery API", version="1",
                   dependencies=[Depends(security.require_loopback_origin), Depends(security.require_writable_kb)])
     app.add_middleware(security.BodyLimitMiddleware)
-    app.add_middleware(TrustedHostMiddleware, allowed_hosts=allowed_hosts or ALLOWED_HOSTS)
+    proxied = security.load_auth_config() is not None
+    # behind an identity-aware proxy the public host name is not loopback; every request is authenticated instead
+    app.add_middleware(TrustedHostMiddleware, allowed_hosts=allowed_hosts or (["*"] if proxied else ALLOWED_HOSTS))
+    app.add_middleware(security.ProxyAuthMiddleware)       # added last = outermost; a no-op in loopback mode
 
     for _name, router in discover_routers(routers_package):
         app.include_router(router)

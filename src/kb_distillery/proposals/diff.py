@@ -158,6 +158,19 @@ def _rewrite_links(text, from_slug, to_slug):
     return fm + new_body, pairs
 
 
+def tombstone_text(text, redirect_to, title=None):
+    """The page `text` turned into a tombstone: its front matter plus `redirect_to: <slug>.md`, a one-line body that
+    links the new home, and its `## My notes` (the owner's text is never dropped)."""
+    shown = page_links.shown_title(title or "") or redirect_to
+    mine = wikiio.my_notes(text)
+    fm = wikiio.split_page(wikiio.set_key(text, "redirect_to", page_links.page_path(redirect_to)))[0] \
+        if wikiio.split_page(text)[0] else ""
+    heading = page_links.title_of(text, "")
+    out = f"{fm}\n# {heading}\n\nThis page moved to {page_links.link(redirect_to, shown)}.\n" if heading else \
+        f"{fm}\nThis page moved to {page_links.link(redirect_to, shown)}.\n"
+    return out + ("\n" + mine if mine else "")
+
+
 def _uniq(hunks):
     seen = {}
     for h in hunks:
@@ -166,6 +179,11 @@ def _uniq(hunks):
         seen[base] = n + 1
         h["id"] = base if n == 0 else f"{base}-{n}"
     return hunks
+
+
+def _title(work, slug):
+    text = work.get(slug)
+    return page_links.title_of(text, slug) if text else slug
 
 
 def _order(ops):
@@ -217,7 +235,8 @@ def build(base_texts: dict, ops: list[dict]) -> tuple[list[dict], dict]:
         elif kind == "tombstone_page":
             if work.get(slug) is None:
                 raise ProposalError(400, f"tombstone_page: no page {slug}")
-            hunks.append(_hunk(slug, op, "", f"tombstone {slug} -> {op['redirect_to']}", True))
+            hunks.append(_hunk(slug, op, work[slug], f"tombstone {slug} -> {op['redirect_to']}", True))
+            work[slug] = tombstone_text(work[slug], op["redirect_to"], _title(work, op["redirect_to"]))
         elif kind == "move_block":
             hunks.append(_hunk(op["from_slug"], op, "", f"move block {op['block_id']} -> {op['to_slug']}", True))
     return _uniq(hunks), work
@@ -246,6 +265,8 @@ def compose(base_texts: dict, ops: list[dict], hunks: list[dict], accepted: set[
             work[slug] = _set_frontmatter(work[slug], op["key"], op["value"])
         elif kind == "rewrite_link":
             work[slug] = _rewrite_links(work[slug], op["from_slug"], op["to_slug"])[0]
+        elif kind == "tombstone_page":
+            work[slug] = tombstone_text(work[slug], op["redirect_to"], _title(work, op["redirect_to"]))
     return {s: t for s, t in work.items() if t is not None and t != base_texts.get(s)}
 
 

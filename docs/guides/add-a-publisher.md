@@ -26,7 +26,7 @@ A `Snapshot(ref, name, public, options)` says what to publish. No `name` means t
 my-host = "my_pkg.host:MyHost"
 ```
 
-A package cannot use a built-in name (`none`, `cloudflare`).
+A package cannot use a built-in name (`none`, `cloudflare`). Packaging and testing: [Build an extension](build-an-extension.md).
 
 ## Select it
 

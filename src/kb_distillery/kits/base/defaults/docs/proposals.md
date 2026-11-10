@@ -18,8 +18,9 @@ One JSON file per proposal in `<kb>/.local/proposals/<id>.json` (kb-local state,
 - **Revision**: n, created, note (why: for example the owner's correction), ops, hunks, tier-1 findings.
 - **Ops** (small on purpose; every producer composes them): `edit_page {slug, new_text}` (whole page),
   `create_page {slug, text}`, `set_frontmatter {slug, key, value}`, `rewrite_link {slug, from_slug, to_slug}`,
-  `tombstone_page {slug, redirect_to}` and `move_block {from_slug, to_slug, block_id}` (validated; apply refuses
-  them with 501 until they are implemented). Every op may carry `reason` and `sources`.
+  `tombstone_page {slug, redirect_to}` (apply turns the page into a tombstone: its front matter plus
+  `redirect_to: <slug>.md`, one line linking the new home, its `## My notes` kept) and `move_block {from_slug, to_slug,
+  block_id}` (validated; apply refuses it with 501 until it is implemented). Every op may carry `reason` and `sources`.
 - **Hunks** are computed by the core, never by the producer. A page is split into blocks (the frontmatter, then
   paragraphs, headings and list groups of the body without My notes); difflib aligns old and new blocks and each
   changed run is one hunk `{id, op_id, slug, kind: prose|structure, before, after, tokens, links_added,
@@ -125,3 +126,34 @@ Build ops from whatever the producer knows (an LLM answer through `kb_distillery
 result) and call `kb_distillery.proposals.service.create(title, ops, producer={kind, instruction, context})`; for the
 owner's correction call `service.revise(id, ops, note)`. Never write pages yourself: the core cuts hunks, checks them
 and applies only what the owner accepted.
+
+## Chat on a page
+
+`POST /api/pages/{slug}/chat` ({message, selections, mentions, backend?}) asks `kb_distillery.llm` for edits
+{before, after, reason, sources} and turns the found ones into one `edit_page` proposal (producer `chat`); a `before`
+that is missing or lies in `## My notes` is skipped and reported. The thread lives in `<kb>/.local/chat/<slug>.json`
+(`GET` the same path); `GET /api/pages/mentions?q=` feeds the @ picker. Code: `kb_distillery.proposals.chat`; UI flag
+`ui.page-chat` (entry variants `page-chat-entry`).
+
+## Restructure producers (merge, split, extract)
+
+`kb_distillery.proposals.restructure` builds the ops and calls `service.create` with producer
+`{kind: "restructure", context: {action: merge|split|extract, ...}}`; nothing is written until review. Every response is
+the proposal plus `ripple: [{slug, links}]`, the pages that link to the changed page(s).
+
+- `POST /api/proposals/restructure/merge {slugs, survivor, title?, backend?}`: `edit_page(survivor)` (the survivor's
+  text plus each other page as a `## Title` section, headings one level deeper; front matter: survivor wins on scalars,
+  `tags`, `aliases` (the merged slugs are added) and `related` are the union), `tombstone_page` per other page and
+  `rewrite_link` per page and merged slug (prose links only; `## My notes` is never rewritten). The other pages'
+  `## My notes` ride along in a `## Notes carried over` section of the survivor (`edit_page` keeps each page's own
+  section untouched and last) and stay on the tombstone too. With `backend` an LLM pass (`kb_distillery.llm`) tidies
+  the body instead of plain concatenation. `GET .../merge-preview?slugs=a,b&survivor=a` returns only the `ripple`.
+- `POST .../split {slug, cuts, titles}`: `cuts` are block indices (`GET .../blocks?slug=` lists them; the first content
+  block is `first`), one title per cut. Each piece after the first is a `create_page` (slug from the title through the
+  kit's slug prefix, front matter copied with the new title); the original keeps the first piece and a `## Continued
+  in` list. Cuts must be strictly increasing and fall after the first content block: otherwise 400.
+- `POST .../extract {slug, from_at, to_at, title}`: the inclusive block range becomes a new page, a one-line link to
+  it replaces the range.
+
+The web app offers them behind the `ui.restructure` flag (page header menu, or `/merge @page`, `/split`, `/extract` in
+the page chat: variant `restructure-entry`).

@@ -79,7 +79,7 @@ def _free_name(name: str, taken: set) -> str:
     return candidate
 
 
-def _step(root: str, items, summary_fn):
+def _step(root: str, items, summary_fn, collection: str = ""):
     """Save `items` ([(name, bytes)]) into raw/inbox/, catalog them, commit once. Returns (results, sha | None)."""
     try:
         store = for_kb(root=root)
@@ -123,7 +123,7 @@ def _step(root: str, items, summary_fn):
                     results.append({"name": shown, "status": "added", "raw_path": INBOX + name})
             if not added:
                 return results, None
-            _catalog(added, results)
+            _catalog(added, results, collection)
             sha = core.commit_op("catalog", "app-upload", summary_fn(len(added)), paths=core.changed_since(before, root),
                                  root=root, _locked=True)
             return results, sha
@@ -131,7 +131,7 @@ def _step(root: str, items, summary_fn):
         raise SourceError(409, "knowledge step refused: " + str(e)) from e
 
 
-def _catalog(added, results):
+def _catalog(added, results, collection):
     """Catalog each new inbox file as `drain_inbox` does (one lint at the end, by the commit). A file catalog cannot place stays
     in raw/inbox/ and says why."""
     was = catalog._LINT_DEFERRED
@@ -140,7 +140,7 @@ def _catalog(added, results):
         for name, i in added:
             try:
                 with contextlib.redirect_stdout(io.StringIO()):
-                    dest, _slug = catalog.catalog(INBOX + name)
+                    dest, _slug = catalog.catalog(INBOX + name, collection=collection)
                 results[i]["raw_path"] = dest
             except (ValueError, NotImplementedError, OSError) as e:
                 results[i]["reason"] = f"stored in raw/inbox/ but not catalogued yet: {e}"
@@ -153,9 +153,9 @@ def _result(sha, root):
     return {"commit": sha, "version": ("kb-" + cp.fmt_version(version)) if version else None}
 
 
-def add_files(files, root: str | None = None) -> dict:
+def add_files(files, root: str | None = None, collection: str = "") -> dict:
     root = root or DEFAULT_ROOT
-    results, sha = _step(root, files, lambda n: f"add {n} source{'s' if n != 1 else ''} from the app")
+    results, sha = _step(root, files, lambda n: f"add {n} source{'s' if n != 1 else ''} from the app", collection)
     return {"files": results, **_result(sha, root)}
 
 
