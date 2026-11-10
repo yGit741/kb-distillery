@@ -377,7 +377,9 @@ def _items(rows, pages, collections, now, failed=(), cataloged=(), cataloged_at=
     return items
 
 
-def build_digestion_snapshot():
+def _build():
+    """The snapshot minus the `server` block: everything here is derived from the vault (pages, sources, the
+    catalog and ingest state under meta/, the wiki history), so it is memoised on the vault change signature."""
     snap = collect_snapshot(quiet=True)
     rows = snap.pop("_rows", {})
     pages = _load_pages()
@@ -441,15 +443,8 @@ def build_digestion_snapshot():
         "errors": values.get("errors", 0),
     }
 
-    code_mtime = _code_mtime()
     return {
         "generated_at": snap.get("generated_at", _now()),
-        "server": {
-            "started_at": _iso(STARTED_AT),
-            "code_mtime": _iso(code_mtime) if code_mtime else "",
-            "stale": code_mtime > STARTED_AT + 1,
-            "root": ROOT,
-        },
         "summary": summary,
         "items": items,
         "inbox": inbox,
@@ -462,3 +457,22 @@ def build_digestion_snapshot():
         "distill_review": distill_review,
         "shallow_papers": shallow_papers,
     }
+
+
+def _server_block():
+    code_mtime = _code_mtime()
+    return {
+        "started_at": _iso(STARTED_AT),
+        "code_mtime": _iso(code_mtime) if code_mtime else "",
+        "stale": code_mtime > STARTED_AT + 1,
+        "root": ROOT,
+    }
+
+
+def build_digestion_snapshot():
+    """Cached by the vault change signature (`graph.cache.memo`, like health and ops): the build takes seconds
+    on a large kb and reruns only after an edit; the `server` block is cheap and recomputed on every call."""
+    from kb_distillery.graph import cache
+    root = ROOT
+    data = cache.memo("pipeline:" + root, lambda: cache.full_signature(root), _build)
+    return {**data, "server": _server_block()}
