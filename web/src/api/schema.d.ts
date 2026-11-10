@@ -860,6 +860,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/pages/{slug}/compare": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Hunks turning version `from` into `to` (a sha, or `working`), as the review screen renders them */
+        get: operations["page_compare_api_pages__slug__compare_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/pages/{slug}/flags": {
         parameters: {
             query?: never;
@@ -924,6 +941,40 @@ export interface paths {
         post?: never;
         /** Remove a flag */
         delete: operations["remove_api_pages__slug__flags__flag_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/pages/{slug}/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The versions of one page from the kb's git log, newest first */
+        get: operations["page_history_api_pages__slug__history_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/pages/{slug}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Restore a version (or chosen blocks of it) as a proposal; the page is not written */
+        post: operations["page_restore_api_pages__slug__restore_post"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -4126,6 +4177,18 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
+        /** PageCompare */
+        PageCompare: {
+            /** From */
+            from: string;
+            /** Hunks */
+            hunks: components["schemas"]["Hunk"][];
+            page: components["schemas"]["RenderPage"];
+            /** To */
+            to: string;
+        } & {
+            [key: string]: unknown;
+        };
         /** PageDetail */
         PageDetail: {
             /**
@@ -4279,6 +4342,15 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
+        /** PageHistory */
+        PageHistory: {
+            /** Slug */
+            slug: string;
+            /** Versions */
+            versions: components["schemas"]["PageVersion"][];
+        } & {
+            [key: string]: unknown;
+        };
         /** PageIndex */
         PageIndex: {
             /** Generated At */
@@ -4395,6 +4467,21 @@ export interface components {
              * @default []
              */
             sources: components["schemas"]["PageSource"][];
+        } & {
+            [key: string]: unknown;
+        };
+        /** PageVersion */
+        PageVersion: {
+            /** Date */
+            date: string;
+            /** Kind */
+            kind: string;
+            /** Sha */
+            sha: string;
+            /** Short */
+            short: string;
+            /** Subject */
+            subject: string;
         } & {
             [key: string]: unknown;
         };
@@ -5005,6 +5092,27 @@ export interface components {
             slug: string;
             /** Text */
             text: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** RestoreRequest */
+        RestoreRequest: {
+            /** Blocks */
+            blocks?: string[] | null;
+            /** Sha */
+            sha: string;
+            /**
+             * To
+             * @default working
+             */
+            to: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** RestoreResult */
+        RestoreResult: {
+            /** Proposal Id */
+            proposal_id: string;
         } & {
             [key: string]: unknown;
         };
@@ -8291,6 +8399,68 @@ export interface operations {
             };
         };
     };
+    page_compare_api_pages__slug__compare_get: {
+        parameters: {
+            query: {
+                from: string;
+                to?: string;
+            };
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PageCompare"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Method Not Allowed */
+            405: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_flags_api_pages__slug__flags_get: {
         parameters: {
             query?: never;
@@ -8582,6 +8752,128 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    page_history_api_pages__slug__history_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PageHistory"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Method Not Allowed */
+            405: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    page_restore_api_pages__slug__restore_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RestoreRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RestoreResult"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Method Not Allowed */
+            405: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
             };
         };
     };

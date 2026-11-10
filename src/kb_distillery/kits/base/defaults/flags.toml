@@ -269,6 +269,16 @@ default = false
 envs = { local = true, private = false, public = false }
 
 [[flag]]
+name = "ui.page-history"
+description = "Pages: how a page changed over time. Lists its versions, compares any two with the proposal diff, restores a version or a block as a proposal."
+owner = "maintainer"
+created = 2026-11-09
+expires = 2027-05-09
+kind = "runtime"
+default = false
+envs = { local = true, private = false, public = false }
+
+[[flag]]
 name = "ui.page-sources"
 description = "Pages: the raw files, source pages and URLs behind the page being read, in one of three placements (footer, side tab, hover marks). Read-only; the private site may show it, public snapshots do not."
 owner = "maintainer"
