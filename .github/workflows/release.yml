@@ -39,6 +39,8 @@ jobs:
         with:
           path: ~/.npm
           key: npm-${{ runner.os }}-${{ hashFiles('web/package-lock.json') }}
+      - name: The tagged commit is on main
+        run: git fetch origin main && git merge-base --is-ancestor "$GITHUB_SHA" origin/main
       - name: The tag matches pyproject.toml
         run: |
           version="${GITHUB_REF_NAME#v}"
@@ -103,10 +105,14 @@ jobs:
           path: out
       - name: Create the release
         run: |
-          gh release create "$GITHUB_REF_NAME" out/*.whl out/webapp-*.tar.gz out/SHA256SUMS \
-            --repo "$GITHUB_REPOSITORY" --title "$GITHUB_REF_NAME" --notes-file out/notes.md --verify-tag
+          if ! gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --title "$GITHUB_REF_NAME" --notes-file out/notes.md --verify-tag
+          fi
+          gh release upload "$GITHUB_REF_NAME" out/*.whl out/webapp-*.tar.gz out/SHA256SUMS --repo "$GITHUB_REPOSITORY" --clobber
 
   docker:     # multi-arch image from ./Dockerfile; pushed to GHCR only on a tag
+    # Off until the Dockerfile (R4.2) is on main: flip `if: false` to `if: true` in the PR that adds it.
+    if: false
     needs: release
     runs-on: ubuntu-latest
     permissions:
