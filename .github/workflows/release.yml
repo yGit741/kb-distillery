@@ -1,0 +1,161 @@
+# Release: runs on a `v*` tag only (the owner pushes it after `pixi run ship -- tag v<x.y.z>`; see
+# src/kb_distillery/git/release.py and docs/guides/release.md).
+#
+# Chain: gates -> build (wheel + web bundle) -> release (GitHub release, notes cut from the matching CHANGELOG
+# section, assets attached) -> docker (multi-arch image from `Dockerfile`, pushed to GHCR) and pypi (present but off).
+# The image build needs the release assets (the Dockerfile fetches webapp-<version>.tar.gz from the release), hence the order.
+#
+# The gates call the same pixi tasks ci.yml runs, in one job (a reusable ci.yml would need a job-level `uses`, which
+# tests/ci/test_workflows.py's per-job shape check does not allow; a tag push has no PR to gate, so run them here).
+#
+# Permissions: read by default; `contents: write` only on the job that creates the release, `packages: write` only on
+# the image job. tests/ci/test_release_workflow.py pins this. web-bundle.yml no longer triggers on tags (this
+# workflow builds the bundle); it stays as a manual dispatch to re-attach a bundle to an existing release.
+name: release
+on:
+  push:
+    tags: ["v*"]
+permissions:
+  contents: read
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  gates:     # the ci.yml gates, on the tagged commit
+    runs-on: ubuntu-latest
+    env:
+      KB_CI: "1"
+      PLAYWRIGHT_MODULE: /home/runner/pw/node_modules/playwright
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - run: git show-ref -q refs/heads/main || git branch main origin/main
+      - uses: prefix-dev/setup-pixi@v0.8.1
+        with:
+          pixi-version: v0.76.1
+          cache: true
+      - uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: npm-${{ runner.os }}-${{ hashFiles('web/package-lock.json') }}
+      - name: The tag matches pyproject.toml
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          have=$(pixi run python -c "from kb_distillery.git.release import current_version; print(current_version())")
+          [ "$have" = "$version" ] || { echo "tag $GITHUB_REF_NAME does not match pyproject.toml version $have"; exit 1; }
+      - run: pixi run lint-skills
+      - run: pixi run licenses
+      - run: pixi run lint-imports
+      - run: pixi run lint -- --kb examples/demo
+      - run: pixi run okf-check -- --kb examples/demo
+      - run: pixi run ruff
+      - run: pixi run pytest -q -n auto -m "not serial" tests
+      - run: pixi run pytest -q -m serial tests/ingest
+      - run: pixi run web-install
+      - run: pixi run web-check
+      - run: pixi run api-schema-check
+      - run: pixi run flags-check
+      - run: pixi run test-wheel
+      - run: pixi run test-worker
+
+  build:     # the wheel (it carries the built app) and the web bundle the Docker image downloads
+    needs: gates
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: prefix-dev/setup-pixi@v0.8.1
+        with:
+          pixi-version: v0.76.1
+          cache: true
+      - run: pixi run build-wheel     # depends on web-build
+      - name: Package the web bundle and the release notes
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          pixi run python -c "from kb_distillery.webbuild import frontend_source_hash; print(frontend_source_hash('web'))" > src/kb_distillery/_webapp/SOURCE_HASH
+          mkdir -p out
+          tar -czf "out/webapp-${version}.tar.gz" -C src/kb_distillery/_webapp .
+          cp dist/*.whl out/
+          (cd out && sha256sum *.whl "webapp-${version}.tar.gz" > SHA256SUMS)
+          pixi run python -m kb_distillery.git.release --notes "$version" > out/notes.md
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-assets
+          path: out/
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheel-dist
+          path: dist/*.whl
+          if-no-files-found: error
+
+  release:     # the GitHub release: notes from CHANGELOG.md, wheel + web bundle + checksums attached
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-assets
+          path: out
+      - name: Create the release
+        run: |
+          gh release create "$GITHUB_REF_NAME" out/*.whl out/webapp-*.tar.gz out/SHA256SUMS \
+            --repo "$GITHUB_REPOSITORY" --title "$GITHUB_REF_NAME" --notes-file out/notes.md --verify-tag
+
+  docker:     # multi-arch image from ./Dockerfile; pushed to GHCR only on a tag
+    needs: release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: wheel-dist
+          path: dist
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        if: startsWith(github.ref, 'refs/tags/v')
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+      - id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: ${{ startsWith(github.ref, 'refs/tags/v') }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            VERSION=${{ steps.meta.outputs.version }}
+            KB_WEB_BUNDLE_REPO=${{ github.repository }}
+
+  pypi:     # present but off: flip `if: false` to `if: true` once the PyPI project and trusted publishing exist.
+    # Enabling it also needs `permissions: id-token: write` on this job (trusted publishing); leave it out until then
+    # so the workflow's permissions stay at contents/packages write.
+    if: false
+    needs: release
+    runs-on: ubuntu-latest
+    environment: pypi
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: wheel-dist
+          path: dist
+      - uses: pypa/gh-action-pypi-publish@v1.12.4
