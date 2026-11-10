@@ -71,7 +71,7 @@ export function blockingFindings(findings: Finding[], p: Proposal): Finding[] {
 export function applyBlocker(p: Proposal, findings: Finding[], hunks: Hunk[]): string | null {
   if (p.status === "applied") return "This proposal is already applied.";
   if (p.status === "rejected") return "This proposal was rejected.";
-  if (p.stale) return "The page changed since this proposal was made.";
+  if (p.stale) return "The page changed since this proposal was made. Rebase it first.";
   const blocking = blockingFindings(findings, p);
   if (blocking.length) {
     const h = hunks.find((x) => x.id === blocking[0]!.hunk_id);
@@ -107,4 +107,33 @@ export function structureLine(h: Hunk): { what: string; detail: string } {
   if (h.op === "tombstone_page") return { what: "Retire page", detail: h.after.replace(/^tombstone\s+/, "") };
   if (h.op === "move_block") return { what: "Move block", detail: h.after.replace(/^move block\s+/, "") };
   return { what: "Frontmatter", detail: `${h.links_added.length + h.links_removed.length ? "links " : ""}${readable(h.after).trim().split("\n").length} lines` };
+}
+
+/** Hunk classes in the order the owner should read them: what changes a claim first, typos last. */
+export const CLASS_ORDER = ["claims", "structure", "new_page", "tombstone", "split", "merge", "rename", "links", "format", "typos"] as const;
+export const CLASS_LABEL: Record<string, string> = {
+  claims: "Claims", structure: "Structure", new_page: "New pages", tombstone: "Retired pages", split: "Splits", merge: "Merges",
+  rename: "Renames", links: "Links", format: "Formatting", typos: "Typos",
+};
+export const CLASS_HINT: Record<string, string> = {
+  claims: "Wording that changes what a page says. Read these first.",
+  structure: "Headings, frontmatter and link rewrites.",
+  new_page: "Pages the agent wants to add.",
+  tombstone: "Pages the agent wants to retire.",
+  links: "Links added or retargeted; the words stay the same.",
+  format: "Spacing and layout only.",
+  typos: "One misspelled word at a time.",
+};
+export const classLabel = (k: string) => CLASS_LABEL[k] ?? k.replace(/_/g, " ");
+
+/** The strictest trust tier a proposal touches, as the row's one mark. */
+export function tierMark(tiers: Record<string, number>): { id: "explicit" | "review" | "auto_apply"; label: string; hint: string } {
+  if (tiers.explicit) return { id: "explicit", label: "explicit", hint: "Has a change that is never applied without your explicit go-ahead." };
+  if (tiers.review) return { id: "review", label: "review", hint: "Has a change you review before it applies." };
+  return { id: "auto_apply", label: "auto-apply", hint: "Every change is of a kind the kb applies by itself." };
+}
+
+/** Rebase blocker sentence for a feed item that cannot be undone. */
+export function undoBlocker(blockedBy: string[]): string {
+  return blockedBy.length ? `Later changes touched ${blockedBy.join(", ")}; undo or resolve those first.` : "Its history cannot be read, so it cannot be undone safely.";
 }

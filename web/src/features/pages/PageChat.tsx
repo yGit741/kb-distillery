@@ -8,14 +8,15 @@ import { Button } from "@/components/ui/button";
 import { useVariant, VARIANTS } from "@/components/variants";
 import { useApiQuery } from "@/lib/useApiQuery";
 import { cn } from "@/lib/utils";
+import { SlashHints, useRestructureSlash } from "../restructure/entry";
 
 export type SelectionChip = { block_at: number | null; text: string };
 export const ENTRY_IDS = ["selection", "bubble", "gutter", "command", "rail"] as const;
-const BLOCKS = "p, li, h1, h2, h3, h4, h5, h6, blockquote, pre, td";
+export const BLOCKS = "p, li, h1, h2, h3, h4, h5, h6, blockquote, pre, td";
 const RAIL_KEY = "kbd.page-chat.rail";
 
 /** The article's text blocks (the page body; the header with title and badges is not a block). */
-function blocksOf(root: HTMLElement): Element[] {
+export function blocksOf(root: HTMLElement): Element[] {
   return Array.from(root.querySelectorAll(BLOCKS)).filter((el) => !el.closest("header"));
 }
 
@@ -106,7 +107,6 @@ export function PageChat({ slug, chat, articleRef }: { slug: string; chat: PageC
           <MessageCircle className="size-4" aria-hidden /> Ask about this page
         </button>
       )}
-      {chat.entry === "selection" && <SelectionToolbar articleRef={articleRef} onAsk={ask} />}
       {chat.entry === "gutter" && <GutterMarks articleRef={articleRef} onAsk={ask} />}
       {chat.entry === "command" && <CommandBar chat={chat} />}
       {chat.entry === "rail" && !chat.open && (
@@ -122,45 +122,6 @@ export function PageChat({ slug, chat, articleRef }: { slug: string; chat: PageC
       )}
       {chat.open && <ChatPanel slug={slug} chat={chat} />}
     </>
-  );
-}
-
-function SelectionToolbar({ articleRef, onAsk }: { articleRef: RefObject<HTMLElement | null>; onAsk: (c: SelectionChip) => void }) {
-  const [at, setAt] = useState<{ x: number; y: number; chip: SelectionChip } | null>(null);
-  useEffect(() => {
-    const onUp = () => {
-      const sel = window.getSelection();
-      const text = sel?.toString().trim() ?? "";
-      const root = articleRef.current;
-      if (!sel || !text || !root || sel.rangeCount === 0 || !root.contains(sel.anchorNode)) {
-        setAt(null);
-        return;
-      }
-      const r = sel.getRangeAt(0).getBoundingClientRect();
-      setAt({ x: r.left + r.width / 2, y: r.top, chip: { block_at: blockIndexOf(root, sel.anchorNode), text } });
-    };
-    document.addEventListener("mouseup", onUp);
-    document.addEventListener("keyup", onUp);
-    return () => {
-      document.removeEventListener("mouseup", onUp);
-      document.removeEventListener("keyup", onUp);
-    };
-  }, [articleRef]);
-  if (!at) return null;
-  return (
-    <div className="fixed z-40 -translate-x-1/2 -translate-y-full pb-2" style={{ left: at.x, top: at.y }}>
-      <button
-        type="button"
-        onMouseDown={(e) => e.preventDefault()}
-        onClick={() => {
-          onAsk(at.chip);
-          setAt(null);
-        }}
-        className="inline-flex items-center gap-1.5 rounded-md border bg-card px-2.5 py-1 text-xs shadow-sm hover:bg-muted"
-      >
-        <MessageSquarePlus className="size-3.5" aria-hidden /> Ask about this
-      </button>
-    </div>
   );
 }
 
@@ -387,6 +348,7 @@ export function Composer({
   const query = at ? at[2]! : null;
   const hits = useMentionSearch(query);
   const picking = query !== null && hits.length > 0;
+  const restructure = useRestructureSlash();
   useEffect(() => setPick(0), [query]);
 
   const insert = (slug: string) => {
@@ -401,6 +363,11 @@ export function Composer({
   const submit = () => {
     const message = chat.draft.trim();
     if (!message || pending) return;
+    if (restructure.run(message, chat.mentions)) {
+      chat.setDraft("");
+      chat.setMentions([]);
+      return;
+    }
     onSend({ message, selections: chat.chips, mentions: chat.mentions });
   };
   const onKey = (e: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -432,6 +399,7 @@ export function Composer({
           ))}
         </ul>
       )}
+      {restructure.enabled && !picking && <SlashHints draft={chat.draft} onPick={(k) => chat.setDraft(`/${k} `)} />}
       {hasChips && (
         <div className="mb-2 flex flex-wrap gap-1.5">
           {chat.chips.map((c, i) => (

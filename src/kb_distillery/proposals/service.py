@@ -87,11 +87,29 @@ def _counts(p):
              "blocking": len(checks.blocking(found, p["decisions"]))})
 
 
-def summary(p) -> dict:
+def summary(p, cfg=None, stale=None) -> dict:
+    """The list row: counts, the hunk classes and trust tiers of the current revision, the pages that changed since."""
     counts, found = _counts(p)
+    hunks = p["revisions"][p["current"]]["hunks"]
+    cfg = cfg or {"auto_apply": [], "review": [], "explicit": []}
+    classes, tiers = {}, {"auto_apply": 0, "review": 0, "explicit": 0}
+    for h in hunks:
+        k = _klass(h)
+        classes[k] = classes.get(k, 0) + 1
+        tiers[trust.tier_of(k, cfg)] += 1
     return {"id": p["id"], "title": p["title"], "status": p["status"], "producer": {"kind": p["producer"]["kind"]},
             "created": p["created"], "updated": p["updated"], "pages": list(p["base"]), "counts": counts,
-            "checks": found}
+            "checks": found, "classes": classes, "tiers": tiers, "stale_pages": stale or [],
+            "top_class": top_class(classes)}
+
+
+# riskiest first: what the owner has to read before the boring link fixes
+CLASS_ORDER = ("claims", "structure", "new_page", "tombstone", "split", "merge", "rename", "links", "format", "typos")
+
+
+def top_class(classes) -> str:
+    rank = {k: i for i, k in enumerate(CLASS_ORDER)}
+    return min(classes, key=lambda k: rank.get(k, len(rank)), default="")
 
 
 def full(p, root=None) -> dict:
@@ -112,17 +130,62 @@ def full(p, root=None) -> dict:
     return out
 
 
-def list_proposals(status=None, root=None) -> list[dict]:
+STATUS_FILTERS = {"open": ("open", "stale"), "stale": ("stale",), "applied": ("applied",), "undone": ("undone",),
+                  "rejected": ("rejected",)}
+GROUPS = ("page", "class", "time")
+
+
+def _groups(rows, group):
+    """[{key, label, count, proposals}] for `group` in page | class | time; a multi-page proposal sits under each page,
+    otherwise a proposal sits once (class: under its riskiest class; time: under the day it was last updated)."""
+    buckets: dict[str, list[dict]] = {}
+    for s in rows:
+        if group == "page":
+            keys = s["pages"] or [""]
+        elif group == "class":
+            keys = [s["top_class"] or "other"]
+        else:
+            keys = [(s["updated"] or "")[:10]]
+        for k in keys:
+            buckets.setdefault(k, []).append(s)
+    if group == "class":
+        rank = {k: i for i, k in enumerate(CLASS_ORDER)}
+        order = sorted(buckets, key=lambda k: (rank.get(k, len(rank)), k))
+    elif group == "time":
+        order = sorted(buckets, reverse=True)
+    else:
+        order = sorted(buckets, key=lambda k: (-len(buckets[k]), k))
+    return [{"key": k, "label": k, "count": len(buckets[k]), "proposals": buckets[k]} for k in order]
+
+
+def inbox(status=None, root=None, group=None) -> dict:
+    """{proposals, groups}: newest first. `status`: open (open + stale) | applied | undone | rejected | stale | all (or none).
+    `groups` is filled only when `group` is page | class | time."""
     root = _root(root)
+    if status in (None, "", "all"):
+        want = None
+    elif status in STATUS_FILTERS:
+        want = STATUS_FILTERS[status]
+    else:
+        raise ProposalError(400, f"status {status!r} is not one of all, {', '.join(STATUS_FILTERS)}")
+    if group and group not in GROUPS:
+        raise ProposalError(400, f"group {group!r} is not one of {', '.join(GROUPS)}")
+    cfg = trust.tiers(root)
     out = []
     for pid in store.all_ids(root):
         p = store.load(root, pid)
-        s = summary(p)
+        stale = applier.stale_slugs(root, p) if p["status"] in ("open", "stale") else []
+        s = summary(p, cfg, stale)
         if p["status"] in ("open", "stale"):
-            s["status"] = "stale" if applier.stale_slugs(root, p) else "open"
-        if not status or s["status"] == status:
+            s["status"] = "stale" if stale else "open"
+        if want is None or s["status"] in want:
             out.append(s)
-    return sorted(out, key=lambda s: s["updated"], reverse=True)
+    out.sort(key=lambda s: s["updated"], reverse=True)
+    return {"proposals": out, "groups": _groups(out, group) if group else []}
+
+
+def list_proposals(status=None, root=None) -> list[dict]:
+    return inbox(status, root)["proposals"]
 
 
 def get(pid, root=None) -> dict:
@@ -174,11 +237,8 @@ def _open(root, pid):
     return p
 
 
-def revise(pid, ops, note=None, root=None, semantic=False, backend=None, auto=False) -> dict:
-    """A new revision against the pages as they are now; decisions survive for hunks whose content is identical."""
-    root = _writable(root)
-    p = _open(root, pid)
-    rev, base, base_texts = _revision(root, ops, note, len(p["revisions"]) + 1)
+def _install(root, p, rev, base, base_texts, semantic, backend, auto):
+    """Make `rev` the proposal's current revision; decisions survive for hunks whose content-based id is unchanged."""
     ids = {h["id"] for h in rev["hunks"]}
     p["decisions"] = {hid: d for hid, d in p["decisions"].items() if hid in ids}
     p["revisions"].append(rev)
@@ -186,6 +246,67 @@ def revise(pid, ops, note=None, root=None, semantic=False, backend=None, auto=Fa
              checks={"tier1": rev["checks"], "tier2": []})
     store.save(root, p)
     return _finish(root, _maybe_semantic(root, p, semantic, backend), auto)
+
+
+def revise(pid, ops, note=None, root=None, semantic=False, backend=None, auto=False) -> dict:
+    """A new revision against the pages as they are now; decisions survive for hunks whose content is identical."""
+    root = _writable(root)
+    p = _open(root, pid)
+    rev, base, base_texts = _revision(root, ops, note, len(p["revisions"]) + 1)
+    return _install(root, p, rev, base, base_texts, semantic, backend, auto)
+
+
+def _dropped(h, why):
+    return {"hunk_id": h["id"], "slug": h["slug"], "klass": _klass(h), "op": h["op"], "before": h["before"],
+            "after": h["after"], "reason": why}
+
+
+def rebase(pid, root=None) -> dict:
+    """Recompute the hunks of an open proposal against the pages as they are now.
+
+    Edits are re-applied where their before text still sits; a hunk whose before text vanished is dropped and listed
+    (`dropped`, also kept on the new revision). Decisions on surviving hunks stay (hunk ids are content-based).
+    Returns {proposal, dropped}; 409 when nothing survives (reject the proposal instead)."""
+    root = _writable(root)
+    p = _open(root, pid)
+    rev = p["revisions"][p["current"]]
+    stale = set(applier.stale_slugs(root, p))
+    if not stale:
+        return {"proposal": full(p, root), "dropped": []}
+    dropped, ops = [], []
+    for op in diff._order(rev["ops"]):
+        mine = [h for h in rev["hunks"] if h["op_id"] == op["id"]]
+        slug = op.get("slug")
+        if slug not in stale and not (op["kind"] == "move_block" and {op["from_slug"], op["to_slug"]} & stale):
+            ops.append(op)
+            continue
+        current = applier.read_page(root, slug) if slug else None
+        if op["kind"] == "edit_page":
+            if current is None:
+                dropped += [_dropped(h, "the page no longer exists") for h in mine]
+                continue
+            text, gone = diff.rebase_edit(p["base_texts"].get(slug) or "", current, mine)
+            dropped += [_dropped(h, "the text it changed is no longer on the page") for h in gone]
+            if len(gone) < len(mine):
+                ops.append(dict(op, new_text=text))
+            continue
+        if op["kind"] == "create_page" and current is not None:
+            dropped += [_dropped(h, "the page now exists") for h in mine]
+            continue
+        try:                                        # set_frontmatter / rewrite_link / tombstone: keep when still valid
+            texts = {s: applier.read_page(root, s) for s in touched_slugs(ops + [op])}
+            diff.build(texts, ops + [op])
+        except ProposalError as e:
+            dropped += [_dropped(h, str(e)) for h in mine]
+            continue
+        ops.append(op)
+    if not ops:
+        raise ProposalError(409, "nothing of this proposal still applies to the changed pages: reject it",
+                            {"dropped": dropped})
+    new_rev, base, base_texts = _revision(root, [{k: v for k, v in o.items() if k != "id"} for o in ops],
+                                          "rebased onto the current pages", len(p["revisions"]) + 1)
+    new_rev["dropped"] = dropped
+    return {"proposal": _install(root, p, new_rev, base, base_texts, False, None, False), "dropped": dropped}
 
 
 def decide(pid, decisions, root=None) -> dict:
@@ -284,7 +405,8 @@ def feed(since=None, root=None) -> list[dict]:
         blockers = _blockers(root, p) if p["status"] == "applied" else None
         item = {"id": p["id"], "title": p["title"], "status": p["status"], "pages": ap.get("pages") or list(p["base"]),
                 "hunks": len(used), "classes": sorted({_klass(h) for h in used}), "applied_at": ap["at"],
-                "commit": ap.get("commit"), "auto": bool(ap.get("auto")), "undoable": blockers == [] and p["status"] == "applied"}
+                "commit": ap.get("commit"), "auto": bool(ap.get("auto")), "undoable": blockers == [] and p["status"] == "applied",
+                "blocked_by": [b["slug"] for b in blockers or []]}
         if p.get("undone"):
             item["undone_at"] = p["undone"]["at"]
         out.append(item)

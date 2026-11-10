@@ -35,10 +35,10 @@ export function FirstRunCard({ host }: { host: FirstRunHost }) {
   const start = { start: "true" };
   const digestJobs = useFlag("screen.digest-jobs");
   return (
-    <div className="flex h-full min-h-[24rem] items-center justify-center p-4" data-testid="first-run">
-      <section aria-labelledby="first-run-title" className="w-full max-w-md rounded-xl border bg-card p-6 shadow-sm">
+    <div className="flex h-full min-h-[24rem] overflow-y-auto p-4" data-testid="first-run">
+      <section aria-labelledby="first-run-title" data-tour="first-run" className="m-auto w-full max-w-xl rounded-xl border bg-card p-6 shadow-sm">
         <h2 id="first-run-title" className="text-lg font-semibold text-foreground">Build your knowledge base</h2>
-        <p className="mt-1 text-sm text-muted-foreground">Add some sources and the graph fills in as they are digested.</p>
+        <p className="mt-1 text-sm text-muted-foreground">Add sources, digest them, and the graph fills in page by page.</p>
         <div className="mt-5 flex flex-col gap-4">
           <AddSources />
           {digestJobs && <DigestJobs />}
