@@ -8,16 +8,16 @@ kb-distillery builds a knowledge base from sources you collect. You put papers, 
 
 ## Quick start
 
-Supported platforms: macOS (Apple silicon and Intel) and Linux x86-64. Windows is supported through WSL2 only. Installing the wheel with pip needs Python 3.11 or newer (older Pythons fail with a confusing `grand-cypher` error). You need [pixi](https://pixi.sh) and git. Clone this repository and run:
+You need git. Supported platforms: macOS (Apple silicon and Intel), Linux x86-64, and Windows through WSL2 ([setup](docs/getting-started.md#windows-wsl2)). Clone this repository and run the installer:
 
 ```bash
 git clone <repo-url> kb-distillery && cd kb-distillery
 ./install.sh
 ```
 
-It installs pixi if needed, creates a default knowledge base and opens the app (Windows: use WSL2, see [Getting started](docs/getting-started.md)). To do it by hand, `pixi install`, `pixi run distill init` and `pixi run distill launch --kb <id>`; `distill init` asks for an id, a name and a kit. It creates `~/knowledge/<id>/` as a git repository and runs `distill doctor`. The first launch builds the app with Node (installed by pixi) and needs network access, which takes a few minutes. The app opens at `http://127.0.0.1:8765`.
+It installs [pixi](https://pixi.sh) if needed, creates a default knowledge base called `my-kb` (an existing one is used), checks the setup and opens the app at `http://127.0.0.1:8765`. It asks no questions and needs no model key. The first launch builds the app with Node (installed by pixi) and needs network access, which takes a few minutes. To do the steps by hand, see [Getting started](docs/getting-started.md).
 
-Digests use Anthropic models only, through a Claude login or an Anthropic API key. Everything else works without one. See [Getting started](docs/getting-started.md).
+Digests need a Claude login or an Anthropic API key and run on Claude only; see [Language models](docs/concepts/llm.md). Everything else works without a key.
 
 To skip the questions, for scripts and CI: `pixi run distill init --kit base ~/knowledge --yes` (the directory is the parent folder; add `--kb-id <id>` to name it, default `my-kb`). `launch --kb` takes that id, or a path.
 
