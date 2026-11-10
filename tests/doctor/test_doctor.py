@@ -215,3 +215,71 @@ def test_llm_lists_every_provider_and_the_default(monkeypatch):
     assert next(c for c in out if c.name == "llm default").detail == "openai on the api backend"
     monkeypatch.setattr(llm, "resolve", lambda: (_ for _ in ()).throw(llm.LLMError("bad provider")))
     assert status(doctor.check_llm({**off, "providers": vendors}), "llm default") == WARN
+
+
+# --- remote access (KB_AUTH=proxy) -------------------------------------------------------------------------
+JWKS = {"keys": [{"kty": "RSA", "kid": "k1"}]}
+
+
+def remote(env, host=None, fetch=None, **_):
+    return doctor.check_remote(env=env, host=host, fetch=fetch or (lambda url: JWKS))
+
+
+def test_remote_default_is_local_only():
+    c = remote({})
+    assert [x.status for x in c] == [INFO]
+
+
+def test_remote_off_loopback_without_proxy_warns():
+    assert status(remote({}, host="0.0.0.0"), "remote access") == WARN
+    assert status(remote({}, host="127.0.0.1"), "remote access") == INFO
+
+
+def test_remote_unknown_mode_fails():
+    assert status(remote({"KB_AUTH": "oauth"}), "remote access") == FAIL
+
+
+def test_remote_proxy_requires_email_and_prints_it():
+    env = {"KB_AUTH": "proxy", "KB_AUTH_JWKS_URL": "https://t.example.com/certs", "KB_AUTH_AUDIENCE": "aud"}
+    assert status(remote(env), "auth email") == FAIL
+    c = remote({**env, "KB_AUTH_EMAIL": " Me@Example.com "})
+    assert status(c, "auth email") == PASS
+    assert "me@example.com" in next(x for x in c if x.name == "auth email").detail
+    assert not any(x.status == FAIL for x in c)
+
+
+def test_remote_jwks_needs_audience_and_https():
+    base = {"KB_AUTH": "proxy", "KB_AUTH_EMAIL": "me@example.com"}
+    assert status(remote({**base, "KB_AUTH_JWKS_URL": "https://t.example.com/c"}), "auth audience") == FAIL
+    c = remote({**base, "KB_AUTH_JWKS_URL": "http://t.example.com/c", "KB_AUTH_AUDIENCE": "a"})
+    assert status(c, "auth jwks") == FAIL and status(c, "auth audience") == PASS
+
+
+def test_remote_jwks_reachability_uses_the_injected_fetch():
+    env = {"KB_AUTH": "proxy", "KB_AUTH_EMAIL": "me@example.com", "KB_AUTH_JWKS_URL": "https://t.example.com/c", "KB_AUTH_AUDIENCE": "a"}
+    assert status(remote(env), "auth jwks") == PASS
+
+    def down(url):
+        raise OSError("timed out")
+    assert status(remote(env, fetch=down), "auth jwks") == WARN
+    assert status(remote(env, fetch=lambda url: {"nope": 1}), "auth jwks") == FAIL
+    assert status(remote(env, fetch=lambda url: {"keys": []}), "auth jwks") == FAIL
+
+
+def test_remote_trusted_header_needs_a_parsing_cidr():
+    base = {"KB_AUTH": "proxy", "KB_AUTH_EMAIL": "me@example.com", "KB_AUTH_HEADER": "X-User"}
+    assert status(remote(base), "auth proxy range") == FAIL
+    assert status(remote({**base, "KB_AUTH_TRUSTED_PROXY_CIDR": "not-a-cidr"}), "auth proxy range") == FAIL
+    c = remote({**base, "KB_AUTH_TRUSTED_PROXY_CIDR": "10.0.0.0/8, 127.0.0.1"})
+    assert status(c, "auth proxy range") == PASS and not any(x.status == FAIL for x in c)
+
+
+def test_remote_proxy_without_identity_source_fails_via_the_server_loader(monkeypatch):
+    from kb_distillery.server import security
+    env = {"KB_AUTH": "proxy", "KB_AUTH_EMAIL": "me@example.com"}
+    for k, v in env.items():
+        monkeypatch.setenv(k, v)
+    for k in ("KB_AUTH_JWKS_URL", "KB_AUTH_JWT_KEY", "KB_AUTH_HEADER"):
+        monkeypatch.delenv(k, raising=False)
+    assert status(doctor.check_remote(env=env), "auth config") == FAIL
+    assert security.auth_mode() == "proxy"
