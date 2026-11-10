@@ -8,9 +8,28 @@ from fastapi.responses import JSONResponse
 from kb_distillery.proposals import restructure
 from kb_distillery.proposals import service as svc
 from kb_distillery.proposals.model import ProposalError
-from kb_distillery.server.models.proposals import (ApplyResult, DecisionRequest, ExtractRequest, MergePreview, MergeRequest, Proposal, ProposalCreate, ProposalList,
-                                                   ProposalRender, RejectRequest, RestructureBlocks, RestructureResult, RevisionCreate, SplitRequest, SemanticRequest,
-                                                   SemanticResult, Suggestion, SuggestionList, TrustTiers, Feed)
+from kb_distillery.server.models.proposals import (
+    ApplyResult,
+    DecisionRequest,
+    ExtractRequest,
+    Feed,
+    MergePreview,
+    MergeRequest,
+    Proposal,
+    ProposalCreate,
+    ProposalList,
+    ProposalRender,
+    RejectRequest,
+    RestructureBlocks,
+    RestructureResult,
+    RevisionCreate,
+    SemanticRequest,
+    SemanticResult,
+    SplitRequest,
+    Suggestion,
+    SuggestionList,
+    TrustTiers,
+)
 from kb_distillery.server.readonly import refuse_when_read_only
 
 router = APIRouter(tags=["proposals"])

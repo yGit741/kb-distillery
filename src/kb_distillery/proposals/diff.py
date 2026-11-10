@@ -235,7 +235,7 @@ def build(base_texts: dict, ops: list[dict]) -> tuple[list[dict], dict]:
         elif kind == "tombstone_page":
             if work.get(slug) is None:
                 raise ProposalError(400, f"tombstone_page: no page {slug}")
-            hunks.append(_hunk(slug, op, "", f"tombstone {slug} -> {op['redirect_to']}", True))
+            hunks.append(_hunk(slug, op, work[slug], f"tombstone {slug} -> {op['redirect_to']}", True))
             work[slug] = tombstone_text(work[slug], op["redirect_to"], _title(work, op["redirect_to"]))
         elif kind == "move_block":
             hunks.append(_hunk(op["from_slug"], op, "", f"move block {op['block_id']} -> {op['to_slug']}", True))
