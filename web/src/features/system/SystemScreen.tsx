@@ -14,12 +14,13 @@ import { SYSTEM_TABS, type SearchById, type SystemTab } from "@/routes/search";
 import { needsYou, showOwnerOps, tiles, timeline, type EventKind, type HealthLike, type LifecycleLike, type OpsLike, type Tile, type Tone } from "./model";
 import { HealthView } from "./HealthView";
 import { FlagsView } from "./FlagsView";
+import { VariantsView } from "./VariantsView";
 import { KnowledgeBasesView } from "./KnowledgeBasesView";
 import "./tours";
 import { FLAG_ENV } from "@/flags";
 import { useFlag } from "@/flags/useFlag";
 
-const TAB_LABEL: Record<SystemTab, string> = { overview: "Overview", backlog: "Backlog", pipeline: "Pipeline", history: "History", health: "Health", flags: "Flags", kbs: "Knowledge bases" };
+const TAB_LABEL: Record<SystemTab, string> = { overview: "Overview", backlog: "Backlog", pipeline: "Pipeline", history: "History", health: "Health", flags: "Flags", variants: "Variants", kbs: "Knowledge bases" };
 
 // warn text is amber (under 4.5:1 on white): the dot carries the warning, the value stays readable.
 const TONE_TEXT: Record<Tone, string> = { ok: "text-ok", warn: "text-foreground", bad: "text-bad", "": "text-foreground" };
@@ -190,7 +191,8 @@ export function SystemScreen() {
   // Flags tab: always in the local app (it is where ui.system-flags-tab itself is flipped); elsewhere gated by that flag.
   const flagsTab = useFlag("ui.system-flags-tab") || FLAG_ENV === "local";
   // Backlog tab: the local app only (the cards are local files; the share API has no backlog).
-  const tabs = SYSTEM_TABS.filter((t) => (t !== "flags" || flagsTab) && (t !== "backlog" || FLAG_ENV === "local"));
+  const variantsTab = useFlag("ui.variant-chooser");
+  const tabs = SYSTEM_TABS.filter((t) => (t !== "flags" || flagsTab) && (t !== "backlog" || FLAG_ENV === "local") && (t !== "variants" || variantsTab));
   const openBacklog = useOpenBacklogCount();
   const tab: SystemTab = search.tab && tabs.includes(search.tab) ? search.tab : "overview";
   const lc = useApiQuery(["lifecycle"], (d) => d.getLifecycle());
@@ -229,6 +231,7 @@ export function SystemScreen() {
       {tab === "pipeline" && <PipelineScreen />}
       {tab === "history" && <LifecycleScreen />}
       {tab === "flags" && <FlagsView />}
+      {tab === "variants" && <VariantsView />}
       {tab === "kbs" && <KnowledgeBasesView />}
       {tab === "health" && <HealthView health={healthData} error={health.error} onRetry={() => void health.refetch()} />}
     </div>

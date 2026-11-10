@@ -53,6 +53,7 @@ digest-instructions = "python -m kb_distillery.vault.digest"
 health = "python -m kb_distillery.lint.lint --health"
 lint-strict = "python -m kb_distillery.lint.lint --ingest-strict"
 app = "python -m kb_distillery.server --port 8765"
+demo-proposals = "python -m kb_distillery.proposals demo --kb examples/demo"   # seed the demo's local proposals (fixtures, idempotent)
 api-schema = "python -m kb_distillery.server.export_schema"
 api-schema-check = "python -m kb_distillery.server.export_schema --check"
 launch = "bash scripts/launch.sh"

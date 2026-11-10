@@ -1,4 +1,5 @@
-"""`python -m kb_distillery.proposals nightly --kb <path> [--backend batch] [--dry-run]` and `... collect --kb <path> BATCH`."""
+"""`python -m kb_distillery.proposals nightly --kb <path> [--backend batch] [--dry-run]`, `... collect --kb <path> BATCH`
+and `... demo --kb examples/demo` (seed the demo's local proposals; fixtures, no model call)."""
 import argparse
 import json
 import sys
@@ -16,8 +17,15 @@ def main(argv=None):
     c = sub.add_parser("collect", help="turn a finished nightly batch into proposals and suggestions")
     c.add_argument("--kb", required=True)
     c.add_argument("batch")
+    d = sub.add_parser("demo", help="seed a kb's .local/ with demo proposals, flags and a chat thread (fixtures only)")
+    d.add_argument("--kb", default="examples/demo")
     a = ap.parse_args(argv)
     try:
+        if a.cmd == "demo":
+            from kb_distillery.proposals import demo
+            out = demo.seed(a.kb)
+            print(f"seeded {len(out['proposals'])} proposals and {len(out['flags'])} flags under {a.kb}/.local")
+            return 0
         if a.cmd == "nightly" and a.dry_run:
             cands = nightly.scan(a.kb)
             for x in cands:
