@@ -6,8 +6,8 @@ All notable changes to this project are listed here. The format follows [Keep a 
 
 ### Added
 
-- Page history with compare and restore as a proposal (in review).
-- Container image, a remote check in `distill doctor`, and the release workflow (in review).
+- Page history with compare and restore as a proposal (open pull request).
+- Container image, a remote check in `distill doctor`, and the release workflow (open pull request).
 
 ## [0.1.0]
 
