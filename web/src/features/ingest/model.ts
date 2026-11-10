@@ -59,6 +59,14 @@ export function urlProblem(text: string): string | null {
 }
 
 const POLL_MS = 1500;
+const LOST_AFTER = 4;
+
+function lostJob(id: string, last: IngestJob | null): IngestJob {
+  const steps = (last?.steps ?? ["fetch", "convert", "digest", "propose"].map((name) => ({ name, state: "pending", detail: "" })))
+    .map((s) => (s.state === "active" ? { ...s, state: "failed", detail: "" } : s));
+  return { id, status: "failed", source: last?.source ?? "", tier: last?.tier ?? "", collection: last?.collection ?? "", steps, pages: [], proposal_id: null,
+    error: "the server lost track of this job, perhaps it restarted. Check Proposals before trying again." };
+}
 
 /**
  * The state of one ingest job: the server's SSE stream (`job` events, then `end`), with a plain poll as the fallback
@@ -77,11 +85,18 @@ export function useIngestJob(jobId: string | null): IngestJob | null {
       if (j.status !== "running") ended = true;
     };
     const poll = async () => {
+      let misses = 0;
       while (!ctl.signal.aborted && !ended) {
         try {
           take(await ds.getIngestJob(jobId));
+          misses = 0;
         } catch {
-          /* try again on the next tick */
+          // the job is gone (the server restarted) or the server is down: stop after a few tries and say so
+          if (++misses >= LOST_AFTER) {
+            ended = true;
+            if (!ctl.signal.aborted) setJob((j) => lostJob(jobId, j));
+            break;
+          }
         }
         if (!ended) await new Promise((r) => setTimeout(r, POLL_MS));
       }

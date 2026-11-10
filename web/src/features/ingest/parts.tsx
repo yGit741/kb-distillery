@@ -90,7 +90,7 @@ function Choice({ name, checked, onPick, title, hint }: { name: string; checked:
 }
 
 /** Triage: what was dropped, how deeply to read it, which model backend runs it, the collection, and the Ingest button. */
-export function TriageCard({ flow, collections }: { flow: Flow; collections: string[] }) {
+export function TriageCard({ flow, collections, onBack }: { flow: Flow; collections: string[]; onBack?: () => void }) {
   const listId = useId();
   const tierName = useId();
   const backendName = useId();
@@ -129,9 +129,12 @@ export function TriageCard({ flow, collections }: { flow: Flow; collections: str
           <datalist id={listId}>{collections.map((c) => <option key={c} value={c} />)}</datalist>
         </div>
         {flow.startError && <p role="alert" className="text-sm text-muted-foreground">{flow.startError}</p>}
-        <Button className="self-start" onClick={flow.start} disabled={busy}>
-          {flow.starting ? "Starting" : flow.jobId ? "Started" : "Ingest"}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button onClick={flow.start} disabled={busy}>
+            {flow.starting ? "Starting" : flow.jobId ? "Started" : "Ingest"}
+          </Button>
+          {onBack && <Button variant="ghost" onClick={onBack} disabled={busy}>Back</Button>}
+        </div>
       </CardContent>
     </Card>
   );
@@ -207,7 +210,7 @@ export function JobCard({ job, source, started, onAgain }: { job: IngestJob | nu
           </div>
         )}
         {ended && onAgain && (
-          <Button variant="ghost" size="sm" className="self-start" onClick={onAgain}>{job?.status === "failed" ? "Start over" : "Ingest another"}</Button>
+          <Button variant="outline" size="sm" className="self-start" onClick={onAgain}>{job?.status === "failed" ? "Start over" : "Ingest another"}</Button>
         )}
       </CardContent>
     </Card>

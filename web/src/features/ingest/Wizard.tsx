@@ -45,10 +45,7 @@ export function WizardLayout({ flow }: { flow: Flow }) {
         </Card>
       )}
       {at === 1 && (
-        <>
-          <TriageCard flow={flow} collections={collections} />
-          <Button variant="ghost" className="self-start" onClick={() => setStep(0)} disabled={flow.starting}>Back</Button>
-        </>
+        <TriageCard flow={flow} collections={collections} onBack={() => setStep(0)} />
       )}
       {at === 2 && (
         <JobCard job={flow.job} source={flow.source ? sourceName(flow.source) : ""} started onAgain={() => { flow.reset(); setStep(0); }} />

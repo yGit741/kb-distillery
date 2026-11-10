@@ -25,12 +25,16 @@ import ipaddress
 import os
 import re
 import secrets
+import socket
 import threading
-import traceback
 import time
-from urllib.parse import urlparse
+import traceback
+import urllib.error
+import urllib.request
+from urllib.parse import urljoin, urlparse
 
 from kb_distillery import llm
+from kb_distillery.config import net
 from kb_distillery.config.paths import vault_root
 from kb_distillery.ingest import digest_many, extract
 from kb_distillery.ingest import scrap
@@ -93,10 +97,57 @@ def check_url(url) -> str:
         ip = ipaddress.ip_address(host)
     except ValueError:
         ip = None
-    if (ip and (ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved or ip.is_unspecified)) or \
+    if (ip and _private(ip)) or \
             host == "localhost" or host.endswith((".localhost", ".local", ".internal", ".lan")) or "." not in host and not ip:
         raise IngestError(422, "that address points at this machine or its network; paste a public web address")
     return url
+
+
+def _private(ip):
+    return ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved or ip.is_unspecified or ip.is_multicast
+
+
+def _resolve_public(host):
+    """Every address `host` resolves to must be public (this also catches short forms such as 127.1, and DNS names
+    that point inside); IngestError otherwise."""
+    try:
+        infos = socket.getaddrinfo(host, None, proto=socket.IPPROTO_TCP)
+    except OSError:
+        raise IngestError(502, "that address could not be found") from None
+    for info in infos:
+        ip = ipaddress.ip_address(info[4][0].split("%", 1)[0])
+        if _private(ip) or (ip.version == 6 and ip.ipv4_mapped and _private(ip.ipv4_mapped)):
+            raise IngestError(422, "that address points at this machine or its network; paste a public web address")
+
+
+class _NoRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+
+MAX_REDIRECTS = 5
+
+
+def _download(url):
+    """(bytes, Content-Type) of a public URL: each redirect hop is checked again, and the body is capped."""
+    opener = urllib.request.build_opener(urllib.request.HTTPSHandler(context=net.ssl_context()), _NoRedirect)
+    for _ in range(MAX_REDIRECTS + 1):
+        check_url(url)
+        _resolve_public(urlparse(url).hostname)
+        req = urllib.request.Request(url, headers={"User-Agent": "kb-distillery-ingest/1.0"})
+        try:
+            resp = opener.open(req, timeout=60)
+        except urllib.error.HTTPError as e:
+            if e.code in (301, 302, 303, 307, 308) and e.headers.get("Location"):
+                url = urljoin(url, e.headers["Location"])
+                continue
+            raise
+        with resp:
+            data = resp.read(inbox_add.MAX_FILE_BYTES + 1)
+            if len(data) > inbox_add.MAX_FILE_BYTES:
+                raise IngestError(413, f"that address answers with more than {inbox_add.MAX_FILE_BYTES >> 20} MB")
+            return data, resp.headers.get("Content-Type", "") or ""
+    raise IngestError(502, "that address redirects too many times")
 
 
 def check_upload(name, data):
@@ -195,7 +246,9 @@ def start_url(url, tier=None, collection=None, backend=None, root=None) -> dict:
 def _fetch(url):
     """(name, bytes) of a URL; IngestError when the answer is not a document this screen takes."""
     try:
-        data, ctype = scrap._fetch(url)
+        data, ctype = _download(url)
+    except IngestError:
+        raise
     except Exception as e:                                      # noqa: BLE001 - urllib raises many kinds
         raise IngestError(502, f"could not fetch that address ({e.__class__.__name__}: {e})") from None
     ctype = (ctype or "").lower()
@@ -283,13 +336,13 @@ def _digest(job, root, raw_rel, text, url):
     r = llm.ask(prompt, backend=backend, model=MODEL_TIER[job["tier"]], effort=extract.FILL_EFFORT,
                 max_tokens=extract.FILL_MAX_TOKENS)
     if not r.ok and not r.text:
-        raise IngestError(502, f"the model could not be reached ({r.error}); the source is saved, try again")
+        raise IngestError(502, f"the model could not be reached ({r.error}); the source is already filed under raw/, digest it from the Pipeline screen")
     claims, reason = extract.claims_from_result(r, template)
     if reason:
-        raise IngestError(422, f"the model's reply could not be used ({reason}); the source is saved, try again")
+        raise IngestError(422, f"the model's reply could not be used ({reason}); the source is already filed under raw/, digest it from the Pipeline screen")
     if url and not claims.get("url"):
         claims["url"] = url
-    _step(job, "digest", "done", f"{len(claims['results'])} result(s), {len(claims['concepts'])} concept(s)")
+    _step(job, "digest", "done", f"{len(claims.get('results') or [])} result(s), {len(claims.get('concepts') or [])} concept(s)")
     return claims
 
 
@@ -321,7 +374,7 @@ def source_page(slug, page_type, raw_rel, tier, claims, concept_links, title, ur
     results = claims.get("results") or []
     key_claims = "\n".join(f"- {r}" for r in results[1:] or results)
     concepts = ", ".join(concept_links) or "<!-- [Title](slug.md) -->"
-    return (fm + f"\n# {title}\n\n**Problem:** {claims['problem']}\n\n**Main result:** {results[0]}\n\n"
+    return (fm + f"\n# {title}\n\n**Problem:** {claims.get('problem', '')}\n\n**Main result:** {results[0] if results else ''}\n\n"
             f"## Setup & assumptions\n\n{claims.get('method', '')}\n\n## Key claims\n\n{key_claims}\n\n"
             f"## Links out\n- Concepts: {concepts}\n")
 
@@ -367,10 +420,10 @@ def build_ops(root, raw_rel, tier, claims, url):
         if os.path.isfile(path):
             with open(path, encoding="utf-8") as f:
                 old = f.read()
-            new = add_source_link(old, source_link)
+            new_text = add_source_link(old, source_link)
             concept_links.append(links.page_link(cslug, titles))
-            if new != old:
-                ops.append({"kind": "edit_page", "slug": cslug, "new_text": new,
+            if new_text != old:
+                ops.append({"kind": "edit_page", "slug": cslug, "new_text": new_text,
                             "reason": f"the new source {title} is about this idea"})
         elif new < MAX_NEW_CONCEPTS:
             new += 1

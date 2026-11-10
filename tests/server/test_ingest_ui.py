@@ -99,7 +99,7 @@ def test_listed_tier_makes_no_model_call(client, kb, fake_llm):
 
 
 def test_url_is_fetched_then_digested(client, kb, fake_llm):
-    with mock.patch.object(svc.scrap, "_fetch", return_value=(b"<html><body><p>Tensor rank page</p></body></html>", "text/html")):
+    with mock.patch.object(svc, "_download", return_value=(b"<html><body><p>Tensor rank page</p></body></html>", "text/html")):
         r = client.post("/api/ingest", json={"url": "https://example.org/a/tensor", "tier": "easy"}, headers=LOOPBACK)
         job = wait(client, r.json()["job_id"])
     assert job.status == "done", job.error
@@ -128,7 +128,7 @@ def test_bad_inputs(client, kb):
 def test_model_failure_is_calm_and_nothing_is_proposed(client, kb):
     with mock.patch.object(llm, "ask", return_value=llm.Result(id="r0", error="rate limited")):
         job = wait(client, upload(client).json()["job_id"])
-    assert job.status == "failed" and job.proposal_id is None and "try again" in job.error
+    assert job.status == "failed" and job.proposal_id is None and "Pipeline screen" in job.error
     assert [s.state for s in job.steps][2] == "failed"
     assert proposals.list_proposals(root=kb) == []
 
@@ -155,3 +155,22 @@ def test_events_stream_ends_with_the_final_job(client, kb, fake_llm):
 def test_read_only_server_refuses(client, kb, monkeypatch):
     monkeypatch.setenv("KB_READ_ONLY", "1")
     assert upload(client).status_code == 405
+
+
+def test_private_targets_are_refused_after_resolving(monkeypatch):
+    """Short IPv4 forms and names that resolve inside are refused at every hop, before any connection."""
+    import socket
+    monkeypatch.setattr(socket, "getaddrinfo", lambda host, *a, **k: [(2, 1, 6, "", ("127.0.0.1", 0))])
+    for url in ("http://127.1/x", "http://inside.example.org/x"):
+        with pytest.raises(svc.IngestError) as e:
+            svc._download(url)
+        assert e.value.status == 422
+
+
+def test_existing_then_new_concept_both_land(kb):
+    """An idea page that exists, then a new one: the edit and the create both become ops (no counter mix-up)."""
+    claims = dict(CLAIMS, concepts=["alpha", "brand new idea"])
+    ops, _title, _slugs = svc.build_ops(str(kb), "raw/printed-docs/notes.md", "full", claims, "")
+    kinds = {(o["kind"], o["slug"]) for o in ops}
+    assert ("create_page", "brand-new-idea") in kinds
+    assert any(o["slug"] == "alpha" for o in ops)
