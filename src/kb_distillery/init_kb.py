@@ -415,7 +415,7 @@ def main(argv=None) -> int:
         return 1
     print(f"created {target} (own git repository, kit {kits.canonical(kit)}, schema {'.'.join(map(str, kbconfig.SCHEMA_VERSION))})\n")
     from kb_distillery import doctor
-    checks = doctor.run_checks(target)
+    checks = doctor.run_checks(target, remote=False)
     print(doctor.render(checks))
     print(f"\nOpen the dashboard:  {launch_command(target, kb_id, parent)}")
     print(LLM_LINE)
