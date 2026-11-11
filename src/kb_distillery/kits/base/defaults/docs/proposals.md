@@ -170,6 +170,11 @@ the page chat: variant `restructure-entry`).
 - **Tour.** `whats-new-proposals` (`web/src/features/proposals/tours.ts`, in the Tours menu while `ui.proposals` is
   on, or `?tour=whats-new-proposals`) walks the inbox, a review, the page with the most open proposals (chat, flags,
   sources, history, restructure), ingest and the chooser. Its targets hold for every variant.
+- **Defaults.** The owner's picks are the registry defaults: the inbox groups **By kind** (claims first, typos
+  last) and flagged spans show as a **tint**; the other components keep their first option. The inbox header carries
+  a quiet View switch (By kind, By page, Timeline, the same pattern as the review's View) that writes the same
+  `kbd.variants.proposal-inbox` key as the chooser, so the two stay in sync. A text selection always opens the
+  selection toolbar; a flag's note opens on hover or a plain click, never over a selection.
 - **Variant chooser.** System → Variants (flag `ui.variant-chooser`, `web/src/features/system/VariantsView.tsx`)
   lists every component of the `VARIANTS` registry (`web/src/components/variants.tsx`) with its options, the
   default marked and a Try it link. A pick writes `kbd.variants.<component>` and open screens follow at once;

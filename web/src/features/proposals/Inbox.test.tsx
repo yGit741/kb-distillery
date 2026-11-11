@@ -3,7 +3,7 @@ import { createMemoryHistory, createRootRoute, createRoute, createRouter, Router
 import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { DataSourceProvider, type DataSource, type Proposal } from "@/api";
-import { setVariant } from "@/components/variants";
+import { resetVariant, savedVariant, setVariant } from "@/components/variants";
 import { mockDataSource } from "@/test/datasource";
 import { feedItems, inboxFixture, inboxRows, proposalFixture, renderFixture } from "./fixtures";
 import ProposalsScreen from "./index";
@@ -31,21 +31,21 @@ afterEach(() => {
   } catch {
     /* no storage */
   }
-  act(() => setVariant("proposal-inbox", "by-page"));
+  act(() => resetVariant("proposal-inbox"));
 });
 
 const headings = () => screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent);
 
 describe("review inbox layouts", () => {
   it("by-page: one section per page, a proposal on two pages under each", async () => {
-    const { getProposalInbox } = setup();
+    act(() => setVariant("proposal-inbox", "by-page"));
+    const { getProposalInbox} = setup();
     expect(await screen.findAllByRole("link", { name: "Fix twenty link targets" })).toHaveLength(2);
     expect(getProposalInbox).toHaveBeenCalledWith({ status: "open", group: "page" });
     expect(headings()).toEqual(["matrix-rank", "survey", "tensor-rank"]);
   });
 
-  it("by-class: claims first, links after, with a class chip count", async () => {
-    act(() => setVariant("proposal-inbox", "by-class"));
+  it("by-class is the default: claims first, links after, with a class chip count", async () => {
     const { getProposalInbox } = setup();
     await screen.findByRole("link", { name: "Soften the rank claim" });
     expect(getProposalInbox).toHaveBeenCalledWith({ status: "open", group: "class" });
@@ -64,11 +64,25 @@ describe("review inbox layouts", () => {
     expect(screen.getAllByTestId("proposal-row").map((r) => r.getAttribute("data-id"))).toEqual(["p1", "p2", "p3", "p4"]);
   });
 
+  it("the View switch lists By kind first, defaults to it and shares the chooser's saved choice", async () => {
+    const { getProposalInbox } = setup();
+    await screen.findByRole("link", { name: "Soften the rank claim" });
+    const radios = within(screen.getByRole("radiogroup", { name: "View" })).getAllByRole("radio");
+    expect(radios.map((r) => r.textContent)).toEqual(["by kind", "by page", "timeline"]);
+    expect(radios[0]).toHaveAttribute("aria-checked", "true");
+    await userEvent.click(radios[2]!);
+    await waitFor(() => expect(getProposalInbox).toHaveBeenLastCalledWith({ status: "open" }));
+    expect(savedVariant("proposal-inbox")).toBe("timeline");
+    act(() => setVariant("proposal-inbox", "by-page")); // the chooser writes the same key
+    await waitFor(() => expect(screen.getByRole("radio", { name: "by page" })).toHaveAttribute("aria-checked", "true"));
+    await waitFor(() => expect(headings()).toEqual(["matrix-rank", "survey", "tensor-rank"]));
+  });
+
   it("the filter bar asks for the chosen status", async () => {
     const { getProposalInbox } = setup();
     await screen.findByRole("link", { name: "Soften the rank claim" });
     await userEvent.click(screen.getByRole("radio", { name: "Applied" }));
-    await waitFor(() => expect(getProposalInbox).toHaveBeenLastCalledWith({ status: "applied", group: "page" }));
+    await waitFor(() => expect(getProposalInbox).toHaveBeenLastCalledWith({ status: "applied", group: "class" }));
   });
 
   it("a stale proposal shows the badge and Rebase calls the endpoint", async () => {
