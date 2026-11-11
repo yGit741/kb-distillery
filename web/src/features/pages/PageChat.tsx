@@ -73,7 +73,7 @@ export function usePageChatState(slug: string) {
 }
 export type PageChatState = ReturnType<typeof usePageChatState>;
 
-/** The small header piece some entries add: a muted "Chat" link (selection) or a key hint (command). */
+/** The small header piece some entries add: an Edit button (selection) or a key hint (command). */
 export function PageChatHeader({ chat }: { chat: PageChatState }) {
   if (chat.entry === "selection")
     return (
@@ -267,7 +267,7 @@ export function ChatPanel({ slug, chat }: { slug: string; chat: PageChatState })
   return (
     <aside aria-label="Page chat" className="fixed bottom-0 right-0 top-0 z-40 flex w-[26rem] max-w-[100vw] flex-col border-l bg-background shadow-lg">
       <header className="flex items-center justify-between border-b px-4 py-3">
-        <h2 className="text-sm font-medium">Edit this page</h2>
+        <h2 className="text-sm font-medium">{chat.entry === "selection" ? "Edit this page" : "Discuss this page"}</h2>
         <Button variant="ghost" size="sm" aria-label="Close chat" onClick={() => chat.setOpen(false)}>
           <PanelRightClose />
         </Button>
