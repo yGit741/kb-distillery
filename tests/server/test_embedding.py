@@ -29,3 +29,28 @@ def test_no_store_is_a_200_that_says_so(monkeypatch, tmp_path):
     with TestClient(create_app()) as c:
         r = c.get("/api/embedding")
     assert r.status_code == 200 and EmbeddingReport.model_validate(r.json()).built is False
+
+
+def test_get_carries_the_names_status(monkeypatch):
+    monkeypatch.setattr(router, "build_embedding_report", lambda: REPORT)
+    with TestClient(create_app()) as c:
+        body = EmbeddingReport.model_validate(c.get("/api/embedding").json())
+    assert body.names is not None and body.names.state in ("none", "stale", "current") and body.names.default_backend
+
+
+def test_post_names_starts_a_run_with_the_chosen_backend(monkeypatch):
+    seen = {}
+    monkeypatch.setattr(router, "build_embedding_report", lambda: REPORT)
+    monkeypatch.setattr(router.embedding_names, "start", lambda backend=None: seen.update(backend=backend))
+    with TestClient(create_app()) as c:
+        r = c.post("/api/embedding/names", json={"backend": "api"}, headers={"Origin": "http://127.0.0.1:8765"})
+    assert r.status_code == 200 and seen == {"backend": "api"} and EmbeddingReport.model_validate(r.json())
+
+
+def test_post_names_passes_the_refusal_on(monkeypatch):
+    def refuse(backend=None):
+        raise router.embedding_names.NamesError(409, "names are already being made")
+    monkeypatch.setattr(router.embedding_names, "start", refuse)
+    with TestClient(create_app()) as c:
+        r = c.post("/api/embedding/names", json={}, headers={"Origin": "http://127.0.0.1:8765"})
+    assert r.status_code == 409 and "already" in r.json()["detail"]

@@ -100,6 +100,52 @@ describe("System · Embedding", () => {
     expect(xs()).toEqual(before);
   });
 
+  it("no names yet: offers the run with the server's default backend and sends the picked one", async () => {
+    const sent: (string | undefined)[] = [];
+    const none = { state: "none", default_backend: "subscription", usd: 0, failed: 0 };
+    open({
+      getEmbedding: async () => ({ ...report, names: none }),
+      nameEmbedding: async (backend) => {
+        sent.push(backend);
+        return { ...report, names: { ...none, state: "running", backend } };
+      },
+    });
+    const bar = await screen.findByTestId("embedding-names");
+    expect(within(bar).getByText(/No names yet/)).toBeInTheDocument();
+    expect(within(bar).getByRole("button", { name: "Subscription" })).toHaveAttribute("aria-pressed", "true");
+    await userEvent.click(within(bar).getByRole("button", { name: "API" }));
+    await userEvent.click(within(bar).getByRole("button", { name: "Name dimensions and clusters" }));
+    expect(sent).toEqual(["api"]);
+    expect(await within(bar).findByText(/Naming on API/)).toBeInTheDocument();
+    expect(within(bar).getByRole("button", { name: "Name dimensions and clusters" })).toBeDisabled();
+  });
+
+  it("current names label the components, the clusters and the map's axes", async () => {
+    open({
+      getEmbedding: async () => ({
+        ...report,
+        names: { state: "current", default_backend: "subscription", backend: "subscription", model: "sonnet", usd: 0.04, at: "2026-11-11T09:00:00Z", failed: 0 },
+        components: report.components!.map((c, i) => (i === 0 ? { ...c, low_name: "learning theory", high_name: "combinatorics", why: "Theory of training against discrete maths." } : c)),
+        clusters: report.clusters.map((c, i) => (i === 0 ? { ...c, name: "Generalization bounds", why: "Pages on margins." } : c)),
+      }),
+    });
+    expect(await screen.findByText(/Named by sonnet on Subscription, \$0.04/)).toBeInTheDocument();
+    expect(screen.getByText("Theory of training against discrete maths.", { exact: false })).toBeInTheDocument();
+    expect(screen.getByText("learning theory:")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Generalization bounds/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Cluster 2/ })).toBeInTheDocument();
+    expect(screen.getByText(/Left to right: learning theory to combinatorics/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Name again" })).toBeEnabled();
+  });
+
+  it("stale names and a failed run say so", async () => {
+    open({ getEmbedding: async () => ({ ...report, names: { state: "stale", default_backend: "api", usd: 0, failed: 0, error: "not logged in" } }) });
+    const bar = await screen.findByTestId("embedding-names");
+    expect(within(bar).getByText(/vectors changed since the names were made/)).toBeInTheDocument();
+    expect(within(bar).getByRole("alert")).toHaveTextContent("not logged in");
+    expect(within(bar).getByRole("button", { name: "API" })).toHaveAttribute("aria-pressed", "true");
+  });
+
   it("lists very similar pairs with their cosine", async () => {
     open({ getEmbedding: async () => report });
     expect(await screen.findByText("0.991")).toBeInTheDocument();

@@ -423,10 +423,27 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Embedding health, clusters and map */
+        /** Embedding health, clusters, components and names */
         get: operations["get_embedding_api_embedding_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/embedding/names": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Start naming the components and clusters with an LLM */
+        post: operations["name_embedding_api_embedding_names_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2900,8 +2917,12 @@ export interface components {
             cohesion: number;
             /** Id */
             id: number;
+            /** Name */
+            name?: string | null;
             /** Size */
             size: number;
+            /** Why */
+            why?: string | null;
         } & {
             [key: string]: unknown;
         };
@@ -2911,12 +2932,18 @@ export interface components {
             cumulative: number;
             /** High */
             high: components["schemas"]["EmbeddingPage"][];
+            /** High Name */
+            high_name?: string | null;
             /** Index */
             index: number;
             /** Low */
             low: components["schemas"]["EmbeddingPage"][];
+            /** Low Name */
+            low_name?: string | null;
             /** Variance */
             variance: number;
+            /** Why */
+            why?: string | null;
         } & {
             [key: string]: unknown;
         };
@@ -2926,6 +2953,40 @@ export interface components {
             b: components["schemas"]["EmbeddingPage"];
             /** Cosine */
             cosine: number;
+        } & {
+            [key: string]: unknown;
+        };
+        /** EmbeddingNames */
+        EmbeddingNames: {
+            /** At */
+            at?: string | null;
+            /** Backend */
+            backend?: string | null;
+            /** Default Backend */
+            default_backend: string;
+            /** Error */
+            error?: string | null;
+            /**
+             * Failed
+             * @default 0
+             */
+            failed: number;
+            /** Model */
+            model?: string | null;
+            /** State */
+            state: string;
+            /**
+             * Usd
+             * @default 0
+             */
+            usd: number;
+        } & {
+            [key: string]: unknown;
+        };
+        /** EmbeddingNamesRequest */
+        EmbeddingNamesRequest: {
+            /** Backend */
+            backend?: string | null;
         } & {
             [key: string]: unknown;
         };
@@ -2997,6 +3058,7 @@ export interface components {
             missing: components["schemas"]["EmbeddingPage"][];
             /** Model */
             model?: string | null;
+            names?: components["schemas"]["EmbeddingNames"] | null;
             /** Ok */
             ok: boolean;
             /** Points */
@@ -7994,6 +8056,51 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["EmbeddingReport"];
                 };
+            };
+        };
+    };
+    name_embedding_api_embedding_names_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EmbeddingNamesRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmbeddingReport"];
+                };
+            };
+            /** @description Method Not Allowed */
+            405: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

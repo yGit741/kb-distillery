@@ -1,8 +1,11 @@
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
+import { useDataSource } from "@/api";
 import type { EmbeddingReport } from "@/api/types";
 import { CopyButton } from "@/components/CopyButton";
 import { Empty, ErrorState, Loading } from "@/components/states";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useApiQuery } from "@/lib/useApiQuery";
 import { cn } from "@/lib/utils";
@@ -11,6 +14,54 @@ import { clusterColor } from "@/theme/palette";
 type Page = EmbeddingReport["missing"][number];
 type Point = EmbeddingReport["points"][number];
 type Axes = { x: number; y: number };
+
+const BACKENDS = ["subscription", "api", "batch"] as const;
+const BACKEND_LABEL: Record<string, string> = { subscription: "Subscription", api: "API", batch: "Batch API" };
+const clusterLabel = (c: { id: number; name?: string | null }) => c.name || `Cluster ${c.id + 1}`;
+
+/** Names by LLM: pick the billing backend, start the run, and say where the names stand. */
+function NamesBar({ r }: { r: EmbeddingReport }) {
+  const ds = useDataSource();
+  const qc = useQueryClient();
+  const names = r.names;
+  const [backend, setBackend] = useState<string>(names?.default_backend ?? "subscription");
+  const run = useMutation({ mutationFn: () => ds.nameEmbedding(backend), onSuccess: (data) => qc.setQueryData(["embedding"], data) });
+  if (!names) return null;
+  const running = names.state === "running" || run.isPending;
+  const failure = run.error instanceof Error ? run.error.message : names.error;
+  const made = names.at ? ` on ${BACKEND_LABEL[names.backend ?? ""] ?? names.backend}${names.usd ? `, $${names.usd.toFixed(2)}` : ""}` : "";
+  const status =
+    running ? `Naming on ${BACKEND_LABEL[names.state === "running" ? (names.backend ?? backend) : backend]}. ${(names.backend ?? backend) === "batch" ? "A batch can take hours; the names appear here when it is done." : "This takes about a minute."}`
+    : names.state === "current" ? `Named by ${names.model}${made}.${names.failed ? ` ${names.failed} could not be named.` : ""}`
+    : names.state === "stale" ? "The vectors changed since the names were made. Name them again."
+    : "No names yet. An LLM can name each component and cluster from its pages.";
+  return (
+    <div className="flex flex-col gap-1.5 rounded-lg border p-3" data-testid="embedding-names">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+        <div className="flex items-center gap-1" role="group" aria-label="Billing backend for naming">
+          <span className="text-xs text-muted-foreground">Billing</span>
+          {BACKENDS.map((b) => (
+            <button
+              key={b}
+              type="button"
+              aria-pressed={backend === b}
+              disabled={running}
+              onClick={() => setBackend(b)}
+              className="rounded-md px-2 py-1 text-xs text-muted-foreground hover:bg-accent disabled:opacity-60 aria-pressed:bg-accent-soft aria-pressed:text-primary"
+            >
+              {BACKEND_LABEL[b]}
+            </button>
+          ))}
+        </div>
+        <Button size="sm" variant="secondary" disabled={running} onClick={() => run.mutate()}>
+          {names.state === "current" ? "Name again" : "Name dimensions and clusters"}
+        </Button>
+      </div>
+      <p className="text-xs text-muted-foreground" aria-live="polite">{status}</p>
+      {failure && !running && <p className="text-xs text-bad" role="alert">The last run made no names: {failure}</p>}
+    </div>
+  );
+}
 
 const pct = (v: number) => `${(v * 100).toFixed(1)}%`;
 
@@ -81,7 +132,7 @@ function HealthCard({ r }: { r: EmbeddingReport }) {
   );
 }
 
-function AxisPicker({ label, value, count, onPick }: { label: string; value: number; count: number; onPick: (i: number) => void }) {
+function AxisPicker({ label, value, count, onPick, titles }: { label: string; value: number; count: number; onPick: (i: number) => void; titles: (string | undefined)[] }) {
   return (
     <div className="flex items-center gap-1" role="group" aria-label={`${label} axis component`}>
       <span className="w-12 text-xs text-muted-foreground">{label} axis</span>
@@ -90,6 +141,7 @@ function AxisPicker({ label, value, count, onPick }: { label: string; value: num
           key={i}
           type="button"
           aria-pressed={value === i}
+          title={titles[i]}
           onClick={() => onPick(i)}
           className="size-6 rounded-md text-xs tabular-nums text-muted-foreground hover:bg-accent aria-pressed:bg-accent-soft aria-pressed:text-primary"
         >
@@ -110,6 +162,9 @@ function MapCard({ r, axes, setAxes }: { r: EmbeddingReport; axes: Axes; setAxes
   // A report with fewer components than the picked axis (after a rebuild) falls back to the first two.
   if (count > 1 && (axes.x >= count || axes.y >= count)) axes = { x: 0, y: 1 };
   const at = (p: Point, i: number, fallback: number) => p.pc?.[i] ?? fallback;
+  const titles = (r.components ?? []).map((c) => (c.low_name && c.high_name ? `${c.low_name} to ${c.high_name}` : undefined));
+  const axisName = (i: number) => titles[i] ?? `component ${i + 1}`;
+  const nameOf = new Map(r.clusters.map((c) => [c.id, clusterLabel(c)]));
   const x = (p: Point) => PAD + at(p, axes.x, p.x) * (W - 2 * PAD);
   const y = (p: Point) => PAD + (1 - at(p, axes.y, p.y)) * (H - 2 * PAD);
 
@@ -125,8 +180,8 @@ function MapCard({ r, axes, setAxes }: { r: EmbeddingReport; axes: Axes; setAxes
         <div className="flex min-w-0 flex-col gap-1">
           {count > 2 && (
             <div className="flex flex-wrap gap-x-6 gap-y-1">
-              <AxisPicker label="X" value={axes.x} count={count} onPick={(i) => setAxes({ ...axes, x: i })} />
-              <AxisPicker label="Y" value={axes.y} count={count} onPick={(i) => setAxes({ ...axes, y: i })} />
+              <AxisPicker label="X" value={axes.x} count={count} onPick={(i) => setAxes({ ...axes, x: i })} titles={titles} />
+              <AxisPicker label="Y" value={axes.y} count={count} onPick={(i) => setAxes({ ...axes, y: i })} titles={titles} />
             </div>
           )}
           <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`Map of ${r.points.length} pages in ${r.k} clusters`} className="w-full rounded-lg border bg-background">
@@ -148,7 +203,7 @@ function MapCard({ r, axes, setAxes }: { r: EmbeddingReport; axes: Axes; setAxes
             ))}
           </svg>
           <p className="h-5 truncate text-xs text-muted-foreground" aria-live="polite">
-            {point ? `${point.title} · cluster ${point.cluster + 1}` : "Hover a dot for its page, click to open it."}
+            {point ? `${point.title} · ${nameOf.get(point.cluster) ?? `cluster ${point.cluster + 1}`}` : count > 1 ? `Left to right: ${axisName(axes.x)}. Bottom to top: ${axisName(axes.y)}.` : "Hover a dot for its page, click to open it."}
           </p>
         </div>
         <div className="flex min-w-0 flex-col gap-1">
@@ -163,12 +218,13 @@ function MapCard({ r, axes, setAxes }: { r: EmbeddingReport; axes: Axes; setAxes
                   className="flex w-full items-center gap-2 rounded-md px-1 pt-2 text-left text-sm hover:bg-accent aria-pressed:bg-accent-soft"
                 >
                   <span aria-hidden className="size-3 shrink-0 rounded-full" style={{ background: clusterColor(c.id) }} />
-                  <span className="font-medium">Cluster {c.id + 1}</span>
+                  <span className="min-w-0 font-medium">{clusterLabel(c)}</span>
                   <span className="text-muted-foreground tabular-nums">{c.size} pages</span>
                   <span className="ml-auto text-xs text-muted-foreground tabular-nums" title="Mean cosine of its pages to the cluster centre">
                     cohesion {c.cohesion.toFixed(2)}
                   </span>
                 </button>
+                {c.why && <p className="px-1 pl-6 text-xs">{c.why}</p>}
                 <p className="px-1 pb-2 pl-6 text-xs text-muted-foreground">
                   {c.central.map((p, i) => (
                     <span key={p.slug}>
@@ -212,6 +268,7 @@ function DimensionsCard({ r, axes, setAxes }: { r: EmbeddingReport; axes: Axes; 
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
+        <NamesBar r={r} />
         <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-1 text-sm">
           <dt className="text-muted-foreground" title="Participation ratio: how many directions the variance is really spread over">Effective dimensions</dt>
           <dd className="tabular-nums" data-testid="embedding-effective-dim">about {Math.round(r.effective_dim ?? 0)} of {r.dim.toLocaleString()}</dd>
@@ -237,26 +294,34 @@ function DimensionsCard({ r, axes, setAxes }: { r: EmbeddingReport; axes: Axes; 
         </div>
         <ul className="flex flex-col">
           {components.map((c) => (
-            <li key={c.index} className="grid gap-x-4 gap-y-1 border-b py-2 text-sm last:border-b-0 lg:grid-cols-[11rem_minmax(0,1fr)_minmax(0,1fr)]">
+            <li key={c.index} className="grid gap-x-4 gap-y-1 border-b py-2 text-sm last:border-b-0 lg:grid-cols-[15rem_minmax(0,1fr)_minmax(0,1fr)]">
+              {c.low_name && c.high_name && (
+                <p className="lg:col-span-3">
+                  <span className="font-medium">{c.low_name}</span>
+                  <span className="text-muted-foreground"> to </span>
+                  <span className="font-medium">{c.high_name}</span>
+                  {c.why && <span className="text-muted-foreground"> · {c.why}</span>}
+                </p>
+              )}
               <div className="flex items-baseline gap-2">
-                <span className="font-medium">Component {c.index + 1}</span>
+                <span className="whitespace-nowrap font-medium">Component {c.index + 1}</span>
                 <span className="text-xs text-muted-foreground tabular-nums">{pct(c.variance)}</span>
                 <button
                   type="button"
                   aria-label={`Show component ${c.index + 1} on the map`}
                   disabled={axes.x === c.index}
                   onClick={() => setAxes({ x: c.index, y: axes.y === c.index ? axes.x : axes.y })}
-                  className="ml-auto rounded-md px-1.5 py-0.5 text-xs text-primary hover:bg-accent disabled:text-muted-foreground disabled:hover:bg-transparent lg:ml-0"
+                  className="ml-auto whitespace-nowrap rounded-md px-1.5 py-0.5 text-xs text-primary hover:bg-accent disabled:text-muted-foreground disabled:hover:bg-transparent lg:ml-0"
                 >
                   {axes.x === c.index ? "on X axis" : "Show on map"}
                 </button>
               </div>
               <p className="min-w-0 text-xs text-muted-foreground">
-                <span className="font-medium text-foreground">Low end: </span>
+                <span className="font-medium text-foreground">{c.low_name ?? "Low end"}: </span>
                 {ends(c.low)}
               </p>
               <p className="min-w-0 text-xs text-muted-foreground">
-                <span className="font-medium text-foreground">High end: </span>
+                <span className="font-medium text-foreground">{c.high_name ?? "High end"}: </span>
                 {ends(c.high)}
               </p>
             </li>
@@ -298,7 +363,8 @@ function DuplicatesCard({ r }: { r: EmbeddingReport }) {
 
 /** Embedding: is the vector store there and current, and how the pages group by meaning (0 LLM, from the card vectors). */
 export function EmbeddingView() {
-  const q = useApiQuery(["embedding"], (d) => d.getEmbedding(), { staleTime: 60_000 });
+  // While a naming run is going, ask again every few seconds so the names appear when it ends.
+  const q = useApiQuery(["embedding"], (d) => d.getEmbedding(), { staleTime: 60_000, refetchInterval: (query) => (query.state.data?.names?.state === "running" ? 4000 : false) });
   const [axes, setAxes] = useState<Axes>({ x: 0, y: 1 });
   if (q.error) return <ErrorState title="Could not load the embedding report" error={q.error} onRetry={() => void q.refetch()} />;
   if (!q.data) return <Loading label="Reading the vectors" rows={3} />;

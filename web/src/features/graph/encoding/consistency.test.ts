@@ -32,6 +32,7 @@ const CIRCLE_OK: Readonly<Record<string, { n: number; why: string }>> = {
   "features/graph/lab/draw.ts": { n: 2, why: "the label lens (Full Graph feature)" },
   "features/home/FullGraphIcon.tsx": { n: 4, why: "the Open in Full Graph icon" },
   "features/pages/MiniGraph.tsx": { n: 2, why: "the focus ring and the keyboard focus ring around a mark" },
+  "features/system/EmbeddingView.tsx": { n: 1, why: "the Embedding scatter: a statistical plot (position = principal components, one small dot per page), not a graph of page marks" },
   "features/covector/CovectorScreen.tsx": { n: 1, why: "the dot at the tip of the test vector in the covector picture, not a page" },
 };
 
