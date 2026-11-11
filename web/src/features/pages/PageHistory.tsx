@@ -1,8 +1,6 @@
-import { useMutation } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
 import { Clock, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { useDataSource, type Hunk, type PageVersion } from "@/api";
+import type { Hunk, PageVersion } from "@/api";
 import { ErrorState, Loading } from "@/components/states";
 import { Button } from "@/components/ui/button";
 import { useVariant, VARIANTS } from "@/components/variants";
@@ -170,40 +168,17 @@ export function HistoryTimeline({ h }: { h: History }) {
   );
 }
 
-/** The compare view: the proposal diff components over the hunks of two versions, with the restore actions. */
+/** The compare view: the proposal diff components over the hunks of two versions, read-only. */
 export function HistoryCompare({ slug, h }: { slug: string; h: History }) {
-  const ds = useDataSource();
   const { from, to } = h;
   const [view, setView] = useVariant("proposal-diff", DIFF_VIEWS, DEFAULT_DIFF_VIEW);
   const q = useApiQuery(["page-compare", slug, from, to], (d) => d.comparePage(slug, from!, to!), { enabled: !!from && !!to, retry: false });
-  const [made, setMade] = useState<{ id: string; what: string }[]>([]);
-  const [error, setError] = useState<string | null>(null);
-  const restore = useMutation({
-    mutationFn: (v: { blocks?: string[]; what: string }) => ds.restorePage(slug, { sha: from!, ...(v.blocks ? { blocks: v.blocks } : {}) }).then((r) => ({ ...r, what: v.what })),
-    onSuccess: (r) => {
-      setMade((m) => [...m, { id: r.proposal_id, what: r.what }]);
-      setError(null);
-    },
-    onError: (e) => setError(e instanceof Error ? e.message : String(e)),
-  });
   const fromV = h.versions.find((v) => v.sha === from);
   const toV = h.versions.find((v) => v.sha === to);
   const hunks: Hunk[] = q.data?.hunks ?? [];
   const Diff = DIFF_COMPONENT[view as DiffView];
-  const [restored, setRestored] = useState<Set<string>>(new Set());
-  const ctx = (hk: Hunk): HunkCtx => ({
-    focused: false,
-    readOnly: false,
-    correcting: false,
-    onDecide: () => {},
-    onCorrect: () => {},
-    onFocus: () => {},
-    action: to !== WORKING ? undefined : {
-      label: restored.has(hk.id) ? "Proposed" : "Restore block",
-      disabled: restore.isPending || restored.has(hk.id),
-      onClick: () => restore.mutate({ blocks: [hk.id], what: "a block" }, { onSuccess: () => setRestored((s) => new Set(s).add(hk.id)) }),
-    },
-  });
+  // history only shows: a version is compared, never restored from here (edits start from the page's review mode)
+  const ctx = (): HunkCtx => ({ focused: false, readOnly: true, correcting: false, onDecide: () => {}, onCorrect: () => {}, onFocus: () => {} });
   return (
     <section aria-label="Compare versions" className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b pb-3">
@@ -231,24 +206,8 @@ export function HistoryCompare({ slug, h }: { slug: string; h: History }) {
             ))}
           </div>
           <Button variant="ghost" size="sm" onClick={() => h.setComparing(false)}>Back to page</Button>
-          <Button size="sm" disabled={restore.isPending || !hunks.length} onClick={() => restore.mutate({ what: "the whole page" })}>
-            Restore this version
-          </Button>
         </div>
       </div>
-      {error && <p role="alert" className="text-sm text-bad">{error}</p>}
-      {made.length > 0 && (
-        <ul className="flex flex-col gap-1" aria-label="Restore proposals">
-          {made.map((m) => (
-            <li key={m.id} role="status" className="text-sm text-muted-foreground">
-              Proposed restoring {m.what}.{" "}
-              <Link to={`/proposals/${encodeURIComponent(m.id)}` as "/"} className="text-primary hover:underline">
-                Review the proposal
-              </Link>
-            </li>
-          ))}
-        </ul>
-      )}
       {q.isLoading && <Loading label="Comparing" />}
       {q.error && <ErrorState title="Could not compare these versions" error={q.error} onRetry={() => void q.refetch()} />}
       {q.data && !hunks.length && <p className="py-6 text-center text-sm text-muted-foreground">These two versions read the same.</p>}

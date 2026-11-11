@@ -39,14 +39,13 @@ describe("Pages of another knowledge base (kb-view)", () => {
     resetEmbed();
   });
 
-  it("flag on: reads the page view only, hides pin/connect/Obsidian, links keep ?kb=", () =>
+  it("flag on: reads the page view only, hides pin and connect, links keep ?kb=", () =>
     withFlag("kb-view", true, async () => {
       const calls: { kb?: string }[] = [];
       open("/pages/shared?kb=beta", calls);
       expect(await screen.findByText(/View only · Beta/)).toBeInTheDocument();
       expect(screen.queryByRole("button", { name: /Pin/ })).toBeNull();
       expect(screen.queryByRole("button", { name: /Connect to/ })).toBeNull();
-      expect(screen.queryByText("Open in Obsidian")).toBeNull();
       const link = screen.getAllByRole("link", { name: "Title note" })[0]!;
       expect(link.getAttribute("href")).toContain("kb=beta");
       expect(calls.some((c) => c.kb === "beta")).toBe(true);

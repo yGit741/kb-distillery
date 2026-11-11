@@ -89,7 +89,8 @@ describe("Page history (ui.page-history)", () => {
       await userEvent.click(within(panel).getByRole("button", { name: "Compare" }));
       await waitFor(() => expect(comparePage).toHaveBeenCalledWith("claim", "b".repeat(40), "working"));
       await waitFor(() => expect(document.querySelector('[data-hunk="h1"]')).not.toBeNull());
-      expect(screen.getByRole("button", { name: "Restore block" })).toBeInTheDocument();
+      // history only shows: nothing here restores or edits
+      expect(screen.queryByRole("button", { name: /Restore/ })).toBeNull();
     }));
 
   it("timeline: two dots compare the older with the newer, whatever the click order", () =>
@@ -105,34 +106,6 @@ describe("Page history (ui.page-history)", () => {
       await userEvent.click(dots[0]!); // oldest
       await userEvent.click(within(strip).getByRole("button", { name: "Compare" }));
       await waitFor(() => expect(comparePage).toHaveBeenCalledWith("claim", "a".repeat(40), "c".repeat(40)));
-    }));
-
-  it.each(["inline", "side-by-side", "reading"])("restore: Restore this version posts the sha and links the proposal (%s diff)", (view) =>
-    withFlag("ui.page-history", true, async () => {
-      setVariant("page-history-entry", "timeline");
-      act(() => setVariant("proposal-diff", view));
-      const restorePage = vi.fn(async () => ({ proposal_id: "p9" }));
-      open({ comparePage: async (_s, f, t) => compare(f, t ?? "working"), restorePage });
-      const strip = await screen.findByRole("navigation", { name: "Page history timeline" });
-      await userEvent.click((await within(strip).findAllByRole("button", { name: /kb\(|chore/ }))[1]!);
-      await userEvent.click(within(strip).getByRole("button", { name: "Compare" }));
-      await userEvent.click(await screen.findByRole("button", { name: "Restore this version" }));
-      await waitFor(() => expect(restorePage).toHaveBeenCalledWith("claim", { sha: "b".repeat(40) }));
-      const link = await screen.findByRole("link", { name: "Review the proposal" });
-      expect(link.getAttribute("href")).toContain("/proposals/p9");
-    }));
-
-  it("restore block: posts only that hunk id", () =>
-    withFlag("ui.page-history", true, async () => {
-      setVariant("page-history-entry", "timeline");
-      const restorePage = vi.fn(async () => ({ proposal_id: "p10" }));
-      open({ comparePage: async (_s, f, t) => compare(f, t ?? "working"), restorePage });
-      const strip = await screen.findByRole("navigation", { name: "Page history timeline" });
-      await userEvent.click((await within(strip).findAllByRole("button", { name: /kb\(|chore/ }))[0]!);
-      await userEvent.click(within(strip).getByRole("button", { name: "Compare" }));
-      await userEvent.click(await screen.findByRole("button", { name: "Restore block" }));
-      await waitFor(() => expect(restorePage).toHaveBeenCalledWith("claim", { sha: "a".repeat(40), blocks: ["h1"] }));
-      expect(await screen.findByRole("link", { name: "Review the proposal" })).toBeInTheDocument();
     }));
 
   it("off: no history entry at all", () =>

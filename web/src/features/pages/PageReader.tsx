@@ -175,11 +175,6 @@ export function PageReader({ g, detail, embed, pinned, onTogglePin, onConnect, v
                 Connect to…
               </Button>
             )}
-            {!viewOnly && (
-              <Button variant="ghost" size="sm" asChild>
-                <a href={`obsidian://open?file=${encodeURIComponent(detail.path)}`}>Open in Obsidian</a>
-              </Button>
-            )}
             {historyOn && historyEntry === "header" && <HistoryClock h={history} />}
             {sourcesOn && placement === "hover-marks" && pageSources && <SourcesCountMark sources={pageSources} />}
             {restructureOn && <RestructureMenu chatAvailable={chatOn} />}
