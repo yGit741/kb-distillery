@@ -29,7 +29,7 @@ import { BrowseView, HomeView, PathView, SearchView } from "./Views";
 const isTyping = (t: EventTarget | null) =>
   t instanceof HTMLElement && (t.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(t.tagName));
 
-function Chips({ title, slugs, g, current }: { title: string; slugs: string[]; g: LinkGraph; current?: string }) {
+function Chips({ title, slugs, g, current, onPick }: { title: string; slugs: string[]; g: LinkGraph; current?: string; onPick?: () => void }) {
   if (!slugs.length) return null;
   return (
     <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs [scrollbar-width:thin]" aria-label={title} role="list">
@@ -39,6 +39,7 @@ function Chips({ title, slugs, g, current }: { title: string; slugs: string[]; g
           key={s}
           role="listitem"
           to={pageTo(s)}
+          onClick={onPick}
           className={cn(
             "inline-flex max-w-48 shrink-0 items-center gap-1.5 rounded-full border px-2 py-0.5 hover:bg-accent",
             s === current && "border-primary text-primary",
@@ -161,11 +162,38 @@ export default function PagesScreen() {
     return () => window.removeEventListener("keydown", onKey);
   }, [embed, surprise, togglePin, navigate, slug, kb]);
 
+  // Escape leaves the path finder, also while typing in its fields
+  const pathOpen = !!path;
+  useEffect(() => {
+    if (!pathOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape" || e.defaultPrevented) return;
+      // another layer owns this Escape: an open dialog, or a field outside the finder (the search box)
+      if (document.querySelector('[role="dialog"]')) return;
+      const el = e.target instanceof Element ? e.target : null;
+      if (isTyping(e.target) && !el?.closest("[data-path-finder]")) return;
+      closePath();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [pathOpen, closePath]);
+
   let body;
   if (index.isPending) body = <Loading label="Loading pages" rows={4} />;
   else if (index.isError || !g || !index.data)
     body = <ErrorState title="Could not load the page index." error={index.error} onRetry={() => void index.refetch()} />;
-  else if (path) body = <PathView key={`${path.a}|${path.b}`} g={g} initialA={path.a} initialB={path.b} onAsk={askPath} />;
+  else if (path)
+    body = (
+      <PathView
+        key={`${path.a}|${path.b}`}
+        g={g}
+        initialA={path.a}
+        initialB={path.b}
+        onAsk={askPath}
+        onClose={closePath}
+        backTo={slug ? (g.byId.get(slug)?.title ?? slug) : undefined}
+      />
+    );
   else if (slug) {
     if (detail.isPending) body = <Loading label="Loading page" rows={5} />;
     else if (detail.isError)
@@ -215,8 +243,8 @@ export default function PagesScreen() {
               <RouteIcon />
             </Button>
           </div>
-          {g && <Chips title="Pinned" slugs={pins.filter((s) => g.byId.has(s))} g={g} current={slug} />}
-          {g && <Chips title="Trail" slugs={trail.filter((s) => g.byId.has(s))} g={g} current={slug} />}
+          {g && <Chips title="Pinned" slugs={pins.filter((s) => g.byId.has(s))} g={g} current={slug} onPick={() => setPath(null)} />}
+          {g && <Chips title="Trail" slugs={trail.filter((s) => g.byId.has(s))} g={g} current={slug} onPick={() => setPath(null)} />}
         </div>
       )}
       {body}
