@@ -174,3 +174,68 @@ def test_existing_then_new_concept_both_land(kb):
     kinds = {(o["kind"], o["slug"]) for o in ops}
     assert ("create_page", "brand-new-idea") in kinds
     assert any(o["slug"] == "alpha" for o in ops)
+
+
+# --- the list: jobs are kept under .local, newest first, with the proposal's live status ---------------------------
+def test_jobs_are_kept_under_local_and_listed(client, kb, fake_llm):
+    first = wait(client, upload(client, "one.md", NOTE + b"one").json()["job_id"])
+    second = wait(client, upload(client, "two.md", NOTE + b"two", tier="listed").json()["job_id"])
+    path = os.path.join(kb, ".local", "ingest", first.id + ".json")
+    assert os.path.isfile(path) and not [n for n in os.listdir(os.path.dirname(path)) if n.endswith(".tmp")]
+    rows = client.get("/api/ingest").json()
+    assert [r["id"] for r in rows] == [second.id, first.id]
+    row = rows[1]
+    assert row["source"] == "one.md" and row["kind"] == "file" and row["tier"] == "full" and row["status"] == "done"
+    assert row["started"] <= row["finished"] and row["step"] == "propose" and row["error"] is None
+    assert row["proposal_id"] == first.proposal_id and row["proposal_status"] == "open" and row["proposal_updated"]
+    assert not os.path.exists(os.path.join(kb, "wiki", "tensor-rank.md"))
+
+
+def test_proposal_status_is_read_live(client, kb, fake_llm):
+    job = wait(client, upload(client).json()["job_id"])
+    proposals.reject(job.proposal_id, "not now", root=kb)
+    assert client.get("/api/ingest").json()[0]["proposal_status"] == "rejected"
+
+
+def test_failed_job_is_listed_with_its_reason(client, kb):
+    with mock.patch.object(llm, "ask", return_value=llm.Result(id="r0", error="rate limited")):
+        job = wait(client, upload(client).json()["job_id"])
+    row = client.get("/api/ingest").json()[0]
+    assert row["id"] == job.id and row["status"] == "failed" and row["step"] == "digest"
+    assert "Pipeline screen" in row["error"] and row["proposal_id"] is None and row["proposal_status"] is None
+
+
+def test_running_record_without_a_thread_is_interrupted(client, kb):
+    """A record left 'running' by a stopped server shows as interrupted, in the list and on its own endpoint."""
+    d = os.path.join(kb, ".local", "ingest")
+    os.makedirs(d)
+    rec = {"id": "0badc0de", "status": "running", "source": "https://example.org/a", "kind": "url", "tier": "easy",
+           "collection": "", "backend": "", "proposal_id": None, "pages": [], "error": None, "created": 1.0,
+           "finished": None, "steps": [{"name": "fetch", "state": "done", "detail": ""},
+                                       {"name": "convert", "state": "active", "detail": "reading the text"},
+                                       {"name": "digest", "state": "pending", "detail": ""},
+                                       {"name": "propose", "state": "pending", "detail": ""}]}
+    with open(os.path.join(d, "0badc0de.json"), "w", encoding="utf-8") as f:
+        json.dump(rec, f)
+    row = client.get("/api/ingest").json()[0]
+    assert row["status"] == "interrupted" and row["step"] == "convert" and "stopped" in row["error"]
+    one = IngestJob.model_validate(client.get("/api/ingest/0badc0de").json())
+    assert one.status == "interrupted"
+    assert "stopped" in client.get("/api/ingest/0badc0de/events").text
+
+
+def test_list_is_bounded_and_survives_read_only(client, kb, monkeypatch):
+    d = os.path.join(kb, ".local", "ingest")
+    os.makedirs(d)
+    for i in range(205):
+        with open(os.path.join(d, f"{i:08x}.json"), "w", encoding="utf-8") as f:
+            json.dump({"id": f"{i:08x}", "status": "failed", "source": "x.md", "tier": "full", "collection": "",
+                       "backend": "", "proposal_id": None, "pages": [], "error": "e", "created": float(i + 1),
+                       "finished": float(i + 1), "steps": [{"name": "fetch", "state": "failed", "detail": ""}]}, f)
+    monkeypatch.setenv("KB_READ_ONLY", "1")
+    rows = client.get("/api/ingest").json()
+    assert len(rows) == 200 and rows[0]["id"] == f"{204:08x}"
+
+
+def test_empty_list(client, kb):
+    assert client.get("/api/ingest").json() == []

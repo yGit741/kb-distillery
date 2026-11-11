@@ -163,7 +163,7 @@ the page chat: variant `restructure-entry`).
 - **Demo seed.** `pixi run demo-proposals` (`python -m kb_distillery.proposals demo --kb <path>`,
   `src/kb_distillery/proposals/demo.py`) writes a small thesis story into the demo kb's `.local/`: proposals from
   every producer (chat, flags, ingest, lint, restructure merge/split/extract, manual), one undone auto-apply for the
-  feed, one rejected chat edit, three open flags and a page chat thread. Fixtures only: no model call, no network,
+  feed, one rejected chat edit, three open flags, a page chat thread and six Ingest screen rows (one in each group). Fixtures only: no model call, no network,
   no write outside `.local/`, never an apply (`examples/` kbs are read-only, so the screens show but do not apply).
   Idempotent: seeded records carry fixed `de00…` ids and a run replaces the previous seed. Serve it with
   `python -m kb_distillery.server --kb examples/demo --port <spare>`.

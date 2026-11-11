@@ -11,21 +11,27 @@ background thread of the server process:
   propose   the would-be pages become ONE proposal (`proposals.service.create`, producer kind `ingest`): a create_page
             op for the source page and for each new concept, an edit_page op for a page that already exists
 
+Each job's public record is kept as small JSON under `<kb>/.local/ingest/<id>.json` (kb-local state, never committed),
+so the list survives a restart; a record still "running" that no thread of this process owns is shown as "interrupted".
+
 Nothing here writes `wiki/`; the owner reviews the proposal. The one exception is catalog's own bookkeeping, unchanged:
 a paper PDF still gets its depth-listed stub, and a `collection` that is a course or series gets its Contents row.
 When the stub is there, the proposal edits it rather than creating a second page.
 
   start_file(name, data, ...)  validates, returns {job_id}      start_url(url, ...)  same, for a URL
   get(job_id)                  {status, steps, proposal_id?, error?}
+  listing(root)                the jobs newest first (the last 200), each with its proposal's live status
   events(job_id)               (event, data) pairs for `server.sse`: `job` on every change, `end` when it stops
 """
 from __future__ import annotations
 
 import ipaddress
+import json
 import os
 import re
 import secrets
 import socket
+import tempfile
 import threading
 import time
 import traceback
@@ -42,7 +48,7 @@ from kb_distillery.proposals import service as proposals
 from kb_distillery.proposals.model import ProposalError
 from kb_distillery.services import inbox_add
 from kb_distillery.vault import frontmatter, links
-from kb_distillery.vault.schema import DEPTH, unit_slug_for_raw, unit_type_for_raw
+from kb_distillery.vault.schema import DEPTH, LOCAL_DIR, unit_slug_for_raw, unit_type_for_raw
 
 DEFAULT_ROOT = vault_root()
 TIERS = DEPTH                                   # listed | easy | full | deep
@@ -54,6 +60,9 @@ MAX_NEW_CONCEPTS = 4
 POLL = 0.4
 PING_EVERY = 25
 STEPS = ("fetch", "convert", "digest", "propose")
+LOCAL_SUBDIR = "ingest"
+KEEP = 200
+_ID = re.compile(r"^[0-9a-f]{8}$")
 _SLUG = re.compile(r"[^a-z0-9]+")
 _JOBS: dict[str, dict] = {}
 _LOCK = threading.Lock()
@@ -161,13 +170,41 @@ def check_upload(name, data):
 
 
 # --- job state ---------------------------------------------------------------------------------------------------
-def _new_job(source, tier, collection, backend):
-    job = {"id": secrets.token_hex(4), "status": "running", "source": source, "tier": tier, "collection": collection,
-           "backend": backend or "", "steps": [{"name": n, "state": "pending", "detail": ""} for n in STEPS],
-           "proposal_id": None, "pages": [], "error": None, "created": time.time()}
+def _new_job(source, tier, collection, backend, root, kind):
+    job = {"id": secrets.token_hex(4), "status": "running", "source": source, "kind": kind, "tier": tier,
+           "collection": collection, "backend": backend or "",
+           "steps": [{"name": n, "state": "pending", "detail": ""} for n in STEPS],
+           "proposal_id": None, "pages": [], "error": None, "created": time.time(), "finished": None, "root": root}
     with _LOCK:
         _JOBS[job["id"]] = job
+    _save(job)
     return job
+
+
+def _folder(root):
+    return os.path.join(root, LOCAL_DIR, LOCAL_SUBDIR)
+
+
+def _record(job) -> dict:
+    with _LOCK:
+        return {"id": job["id"], "status": job["status"], "source": job["source"], "kind": job["kind"],
+                "tier": job["tier"], "collection": job["collection"], "backend": job["backend"],
+                "steps": [dict(s) for s in job["steps"]], "proposal_id": job["proposal_id"], "pages": list(job["pages"]),
+                "error": job["error"], "created": job["created"], "finished": job["finished"]}
+
+
+def _save(job):
+    """Write the job's public record atomically; a disk problem never stops the job itself."""
+    rec = _record(job)
+    d = _folder(job["root"])
+    try:
+        os.makedirs(d, exist_ok=True)
+        fd, tmp = tempfile.mkstemp(dir=d, suffix=".tmp")
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            json.dump(rec, f, indent=1, ensure_ascii=False)
+        os.replace(tmp, os.path.join(d, rec["id"] + ".json"))
+    except OSError:
+        traceback.print_exc()
 
 
 def _step(job, name, state, detail=""):
@@ -175,28 +212,91 @@ def _step(job, name, state, detail=""):
         for s in job["steps"]:
             if s["name"] == name:
                 s["state"], s["detail"] = state, detail
+    _save(job)
+
+
+def _current_step(rec) -> str:
+    """The step the job is on (or stopped at): the active/failed one, else the first pending, else the last."""
+    steps = rec["steps"]
+    for want in ("active", "failed"):
+        for s in steps:
+            if s["state"] == want:
+                return s["name"]
+    for s in steps:
+        if s["state"] == "pending":
+            return s["name"]
+    return steps[-1]["name"]
 
 
 def _public(job) -> dict:
-    with _LOCK:
-        return {"id": job["id"], "status": job["status"], "source": job["source"], "tier": job["tier"],
-                "collection": job["collection"], "steps": [dict(s) for s in job["steps"]],
-                "proposal_id": job["proposal_id"], "pages": list(job["pages"]), "error": job["error"]}
+    rec = _record(job)
+    return {k: rec[k] for k in ("id", "status", "source", "tier", "collection", "steps", "proposal_id", "pages", "error")} | \
+        {"kind": rec["kind"], "backend": rec["backend"], "started": rec["created"], "finished": rec["finished"], "step": _current_step(rec)}
 
 
-def get(job_id: str) -> dict:
+def _from_disk(root, job_id):
+    if not _ID.match(job_id or ""):
+        return None
+    try:
+        with open(os.path.join(_folder(root), job_id + ".json"), encoding="utf-8") as f:
+            rec = json.load(f)
+    except (OSError, ValueError):
+        return None
+    if rec.get("status") == "running" and job_id not in _JOBS and not rec.get("demo"):
+        # its thread died with the last server process (a demo seed record is a fixture that stays "running")
+        rec["status"] = "interrupted"
+        rec["error"] = "the server stopped while this was running"
+        for s in rec.get("steps", []):
+            if s["state"] == "active":
+                s["state"], s["detail"] = "failed", rec["error"]
+    rec.setdefault("kind", "url" if str(rec.get("source", "")).startswith(("http://", "https://")) else "file")
+    rec["root"] = root
+    return rec
+
+
+def get(job_id: str, root=None) -> dict:
     job = _JOBS.get(job_id)
-    if not job:
+    if job:
+        return _public(job)
+    rec = _from_disk(root or DEFAULT_ROOT, job_id)
+    if not rec:
         raise IngestError(404, f"no ingest job {job_id!r}")
-    return _public(job)
+    return _public(rec)
 
 
-def events(job_id: str, poll: float = POLL):
+def listing(root=None, limit=KEEP) -> list[dict]:
+    """The last `limit` jobs of this kb, newest first. Each carries `proposal_status` (open, stale, applied, rejected,
+    undone) and `proposal_updated`, read from the proposals now, or None when the job has no proposal (or it no longer exists)."""
+    root = root or DEFAULT_ROOT
+    d = _folder(root)
+    names = [n[:-5] for n in os.listdir(d) if n.endswith(".json") and _ID.match(n[:-5])] if os.path.isdir(d) else []
+    rows = []
+    for n in names:
+        job = _JOBS.get(n)
+        rec = _public(job) if job and job["root"] == root else None
+        if rec is None:
+            disk = _from_disk(root, n)
+            rec = _public(disk) if disk else None
+        if rec:
+            rows.append(rec)
+    rows.sort(key=lambda r: r["started"], reverse=True)
+    rows = rows[:limit]
+    live = {}
+    if any(r["proposal_id"] for r in rows):
+        try:
+            live = {p["id"]: p for p in proposals.inbox(None, root)["proposals"]}
+        except ProposalError:
+            live = {}
+    return [{**r, "proposal_status": live[r["proposal_id"]]["status"] if r["proposal_id"] in live else None,
+             "proposal_updated": live[r["proposal_id"]]["updated"] if r["proposal_id"] in live else None} for r in rows]
+
+
+def events(job_id: str, poll: float = POLL, root=None):
     """`job` whenever the job changes, a ping on a quiet stretch, `end` once it is done or failed."""
     last, quiet = None, 0
     while True:
         try:
-            cur = get(job_id)
+            cur = get(job_id, root)
         except IngestError:
             yield "end", {"status": "gone"}
             return
@@ -231,14 +331,14 @@ def _spawn(job, work):
 def start_file(name, data, tier=None, collection=None, backend=None, root=None) -> dict:
     root, tier, collection = _prepare(tier, collection, backend, root)
     check_upload(name, data)
-    job = _new_job(name or "upload", tier, collection, backend)
+    job = _new_job(name or "upload", tier, collection, backend, root, "file")
     return _spawn(job, lambda: _run(job, root, name, data, "", fetch=None))
 
 
 def start_url(url, tier=None, collection=None, backend=None, root=None) -> dict:
     root, tier, collection = _prepare(tier, collection, backend, root)
     url = check_url(url)
-    job = _new_job(url, tier, collection, backend)
+    job = _new_job(url, tier, collection, backend, root, "url")
     return _spawn(job, lambda: _run(job, root, None, None, url, fetch=_fetch))
 
 
@@ -267,7 +367,8 @@ def _fail(job, message):
         for s in job["steps"]:
             if s["state"] == "active":
                 s["state"], s["detail"] = "failed", message
-        job["status"], job["error"] = "failed", message
+        job["status"], job["error"], job["finished"] = "failed", message, time.time()
+    _save(job)
 
 
 def _run(job, root, name, data, url, fetch):
@@ -448,4 +549,5 @@ def _propose(job, root, raw_rel, claims, url):
                                    "context": {"source": raw_rel, "tier": job["tier"], "collection": job["collection"]}})
     _step(job, "propose", "done", f"{len(slugs)} page{'s' if len(slugs) != 1 else ''}")
     with _LOCK:
-        job["proposal_id"], job["pages"], job["status"] = p["id"], slugs, "done"
+        job["proposal_id"], job["pages"], job["status"], job["finished"] = p["id"], slugs, "done", time.time()
+    _save(job)

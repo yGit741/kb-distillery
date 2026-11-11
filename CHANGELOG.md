@@ -34,7 +34,7 @@ Initial public release: the first version made public. Many app features are beh
 - Review inbox for proposals: stale proposals are rebased onto the current page, set-aside items stay visible, and a feed lists what was applied automatically. Behind the `ui.proposals` flag, on in the local app only.
 - Page history: list the versions of a page, compare any two with the proposal diff, and restore a version or a block as a proposal. Behind the `ui.page-history` flag.
 - Merge, split and extract pages as proposals, from a menu or a command on the page view. Behind the `ui.restructure` flag.
-- Ingest from the app: drop a paper or paste a URL, pick how deeply to read it, and review the result as a proposal. Behind the `ui.ingest` flag.
+- Ingest from the app: drop a paper or paste a URL, pick how deeply to read it, and review the result as a proposal. The screen lists what you brought in like an inbox (in progress, waiting for your review, done, did not finish) and keeps the list across restarts. Behind the `ui.ingest` flag.
 - Variants tab on the System screen to pick between component designs, reset to defaults and copy the choices; a what's-new tour; and demo content that exercises proposals. The tab is behind the `ui.variant-chooser` flag.
 - `distill doctor` understands proxy mode and checks a remote instance.
 - Dockerfile for self-hosting. CI builds the image and smoke-tests it on every pull request, and the release workflow will publish it to GHCR when a tag is cut.
