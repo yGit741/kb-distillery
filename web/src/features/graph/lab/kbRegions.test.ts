@@ -1,5 +1,5 @@
 import { formatKbs, parseKbs } from "@/lib/kbSelection";
-import { kbAnchors, kbGroups, kbLabelSpot, KB_PAD } from "./kbRegions";
+import { kbAnchors, kbGroups, kbLabelSpot, kbNameBottom, KB_NAME_GAP, KB_PAD } from "./kbRegions";
 import type { SimNode } from "../types";
 
 const n = (id: string, kb: string, x: number, y: number) => ({ id, kb, x, y }) as unknown as SimNode;
@@ -20,6 +20,15 @@ describe("kb regions", () => {
     expect(g.get("alpha")!.length).toBe(2);
     expect(g.get("beta")!.length).toBe(1);
     expect(kbLabelSpot(g.get("alpha")!)).toEqual({ x: 50, top: -20 - KB_PAD });
+  });
+
+  it("puts a region's name just above its outline, and lifts it only over a page label under the name", () => {
+    // nothing in the way: one small gap above the outline
+    expect(kbNameBottom(200, 100, 60, [])).toBe(100 - KB_NAME_GAP);
+    // a page label inside the outline, or beside the name, changes nothing
+    expect(kbNameBottom(200, 100, 60, [[170, 110, 230, 124], [300, 60, 380, 74]])).toBe(100 - KB_NAME_GAP);
+    // a label that sticks out above the outline under the name: the name clears it by the same gap
+    expect(kbNameBottom(200, 100, 60, [[150, 62, 250, 96]])).toBe(62 - KB_NAME_GAP);
   });
 });
 

@@ -59,6 +59,24 @@ describe("header knowledge base menu (kb-view)", () => {
       expect(await screen.findByText(/No knowledge base is shown/)).toBeInTheDocument();
     }));
 
+  it("an app opened on a folder outside the bases dir still lists its own knowledge base, so every region has a row", () =>
+    withFlag("kb-view", true, async () => {
+      const { router } = open("/graph?kbs=beta,gamma", {
+        getKb: async () => ({ ...info, id: "gamma", name: "Gamma" }) as KbInfo,
+        listKbs: async () => ({ ...list(), active: "", kbs: [row("alpha", "Alpha"), row("beta", "Beta")] }),
+      });
+      await userEvent.click(await screen.findByRole("button", { name: "Knowledge bases" }));
+      const menu = await screen.findByRole("dialog", { name: /Knowledge bases on the graph/ });
+      const boxes = within(menu).getAllByRole("checkbox");
+      expect(boxes).toHaveLength(3);
+      const own = within(menu).getByRole("checkbox", { name: /Gamma/ });
+      expect(boxes[0]).toBe(own);
+      expect(own).toBeChecked();
+      expect(own.closest("label")).toHaveTextContent("this app");
+      await userEvent.click(own);
+      await waitFor(() => expect(router.state.location.search).toMatchObject({ kbs: "beta" }));
+    }));
+
   it("lists the knowledge bases of the bases dir and offers no add-folder form (one discovery path)", () =>
     withFlag("kb-view", true, async () => {
       open("/graph");

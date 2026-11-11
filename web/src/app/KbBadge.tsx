@@ -36,7 +36,7 @@ export function KbBadge() {
       {id && <span className="rounded-full border px-1.5 py-px text-[11px] font-normal text-muted-foreground">{id}</span>}
     </>
   );
-  if (kbView && q.data) return <KbMenu title={title} active={id} />;
+  if (kbView && q.data) return <KbMenu title={title} active={id} activeName={name} />;
   const link = (
     <Link
       to={"/system" as never}
@@ -74,7 +74,7 @@ function WithAdd({ adapter, children }: { adapter: ImportAdapter; children: Reac
 }
 
 /** The header menu: tick the knowledge bases the graph shows (none is allowed). */
-function KbMenu({ title, active }: { title: React.ReactNode; active: string | null }) {
+function KbMenu({ title, active, activeName }: { title: React.ReactNode; active: string | null; activeName: string }) {
   const [open, setOpen] = useState(false);
   const [adding, setAdding] = useState(false);
   const adapter = useImportAdapter();
@@ -85,7 +85,9 @@ function KbMenu({ title, active }: { title: React.ReactNode; active: string | nu
   const raw = onGraph ? (loc.search as Record<string, unknown>).kbs : undefined;
   const picked = parseKbs(typeof raw === "string" ? raw : undefined);
   const list = useApiQuery(["kb-list"], (d) => d.listKbs(), { staleTime: 30_000 });
-  const rows = list.data?.kbs ?? [];
+  const listed = list.data?.kbs ?? [];
+  // an app opened on a folder outside the bases dir (`--kb <path>`) is on the graph too: it gets its row, first
+  const rows = active && list.data && !listed.some((r) => r.id === active) ? [{ id: active, name: activeName, root: "", error: "", active: true }, ...listed] : listed;
   const shown = picked ?? (active ? [active] : []);
   const others = shown.filter((k) => k !== active).length;
 
