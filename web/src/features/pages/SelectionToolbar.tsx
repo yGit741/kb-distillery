@@ -1,4 +1,4 @@
-import { Flag, MessageSquarePlus } from "lucide-react";
+import { Flag, Pencil } from "lucide-react";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type RefObject } from "react";
 import { blockIndexOf, type SelectionChip } from "./PageChat";
 
@@ -28,7 +28,7 @@ export function placeToolbar(sel: Box, size: { w: number; h: number }, view: { w
 type Held = { range: Range; chip: SelectionChip };
 
 /**
- * A small toolbar next to the selected text: Ask about this (page chat) and Mark inaccurate (page flags, with an inline
+ * A small toolbar next to the selected text: Edit (page chat, with the selection attached) and Mark inaccurate (page flags, with an inline
  * note field: Enter saves, Escape cancels). Each action shows only when its handler is given.
  */
 export function SelectionToolbar({
@@ -136,7 +136,7 @@ export function SelectionToolbar({
               }}
               className={btn}
             >
-              <MessageSquarePlus className="size-3.5" aria-hidden /> Ask about this
+              <Pencil className="size-3.5" aria-hidden /> Edit
             </button>
           )}
           {onFlag && (
