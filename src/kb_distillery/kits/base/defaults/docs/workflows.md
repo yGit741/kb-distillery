@@ -33,6 +33,7 @@ python3 -m kb_distillery.ingest scrap-youtube <url>   # a lecture/video → inbo
 python3 -m kb_distillery.ingest video-digest raw/videos/<name>/video.md --tier full|deep   # read the top anchors with Claude
 python3 -m kb_distillery.ingest catalog <inbox-path>     # → raw/<format>/ (+ paper- Source page at depth listed, papers only)
 python3 -m kb_distillery.ingest catalog <inbox-path> --collection <collection|person> [--format <folder>] [--title T]
+# a cataloged paper also gets its Semantic Scholar references and citers in .cache/citations.json (0 LLM, best effort; KB_INGEST_CITATIONS=0 skips)
 python3 -m kb_distillery.ingest easy-digest <slug|raw>   # depth easy: abstract skim (ticks a collection row if a member)
 python3 -m kb_distillery.ingest easy-digest <raw> --into <page> [--no-tick --no-lint]   # series page / batch mode
 python3 -m kb_distillery.ingest full-digest <raw>        # medium: begin→finalize
