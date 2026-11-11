@@ -101,7 +101,7 @@ describe("Page chat (ui.page-chat)", () => {
       expect(await screen.findByRole("button", { name: "Discuss this page" })).toBeInTheDocument();
       expect(screen.queryByRole("button", { name: "Ask about this page" })).toBeNull();
       setVariant("page-chat-entry", "selection");
-      expect(await screen.findByRole("button", { name: "Chat" })).toBeInTheDocument();
+      expect(await screen.findByRole("button", { name: "Edit this page" })).toBeInTheDocument();
       setVariant("page-chat-entry", "command");
       expect(await screen.findByText("to ask")).toBeInTheDocument();
       fireEvent.keyDown(window, { key: "/" });

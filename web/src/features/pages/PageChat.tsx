@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { AtSign, MessageCircle, MessageSquarePlus, PanelRightClose, Quote, Send, X } from "lucide-react";
+import { AtSign, MessageCircle, MessageSquarePlus, PanelRightClose, Pencil, Quote, Send, X } from "lucide-react";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent, type ReactNode, type RefObject } from "react";
 import { useDataSource } from "@/api";
 import type { ChatMessage, MentionHit, PageChatReply } from "@/api/types";
@@ -73,13 +73,13 @@ export function usePageChatState(slug: string) {
 }
 export type PageChatState = ReturnType<typeof usePageChatState>;
 
-/** The small header piece some entries add: a muted "Chat" link (selection) or a key hint (command). */
+/** The small header piece some entries add: an Edit button (selection) or a key hint (command). */
 export function PageChatHeader({ chat }: { chat: PageChatState }) {
   if (chat.entry === "selection")
     return (
-      <button type="button" className="text-xs text-muted-foreground hover:text-foreground hover:underline" onClick={() => chat.setOpen(true)}>
-        Chat
-      </button>
+      <Button variant="outline" size="sm" aria-label="Edit this page" title="Say what to change; the edits come back for you to review" onClick={() => chat.setOpen(true)}>
+        <Pencil aria-hidden /> Edit
+      </Button>
     );
   if (chat.entry === "command")
     return (
@@ -267,7 +267,7 @@ export function ChatPanel({ slug, chat }: { slug: string; chat: PageChatState })
   return (
     <aside aria-label="Page chat" className="fixed bottom-0 right-0 top-0 z-40 flex w-[26rem] max-w-[100vw] flex-col border-l bg-background shadow-lg">
       <header className="flex items-center justify-between border-b px-4 py-3">
-        <h2 className="text-sm font-medium">Discuss this page</h2>
+        <h2 className="text-sm font-medium">{chat.entry === "selection" ? "Edit this page" : "Discuss this page"}</h2>
         <Button variant="ghost" size="sm" aria-label="Close chat" onClick={() => chat.setOpen(false)}>
           <PanelRightClose />
         </Button>
