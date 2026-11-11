@@ -22,7 +22,7 @@ class IngestStep(ApiModel):
 
 class IngestJob(ApiModel):
     id: str
-    status: str                         # running | done | failed
+    status: str                         # running | done | failed | interrupted (the server stopped mid-run)
     source: str
     tier: str
     collection: str = ""
@@ -30,3 +30,14 @@ class IngestJob(ApiModel):
     proposal_id: str | None = None      # set when status is done
     pages: list[str] = []               # the pages the proposal creates or edits
     error: str | None = None            # set when status is failed, in plain words
+    kind: str = "file"                  # file | url
+    started: float = 0                  # epoch seconds
+    finished: float | None = None
+    backend: str = ""                   # as asked at the start; "" = the server default
+    step: str = ""                      # the step it is on, or stopped at
+
+
+class IngestListItem(IngestJob):
+    """One row of GET /api/ingest: the job plus its proposal's status read now."""
+    proposal_status: str | None = None  # open | stale | applied | rejected | undone; None without a proposal
+    proposal_updated: str | None = None  # when the proposal last changed (its own timestamp)

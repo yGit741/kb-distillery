@@ -271,6 +271,7 @@ export function createHttpDataSource(fetchImpl: Fetch = (...a) => fetch(...a), b
       });
     },
     getIngestJob: (id) => run(() => client.GET("/api/ingest/{job_id}", { params: { path: { job_id: id } } }), `/api/ingest/${id}`),
+    listIngest: () => run(() => client.GET("/api/ingest"), "/api/ingest"),
     ingestEvents: async (id, signal) => {
       try {
         return await fetchImpl(`/api/ingest/${encodeURIComponent(id)}/events`, { headers: { Accept: "text/event-stream" }, signal, cache: "no-store" });

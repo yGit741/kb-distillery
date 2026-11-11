@@ -4,9 +4,11 @@ something to show: `pixi run demo-proposals` (= `python -m kb_distillery.proposa
 The story: Dana, the demo's owner, is turning her clinical NLP notes into a thesis chapter while she job-hunts. She
 asks the page chat to soften a claim and check it against a paper, flags two sentences while reading, drops a new paper
 in, lets the nightly lint tidy front matter, merges two pages that grew into one topic, splits a long notes page,
-extracts a section into its own page, and looks back at one fix she undid and one chat edit she turned down.
+extracts a section into its own page, and looks back at one fix she undid and one chat edit she turned down. Her
+Ingest screen shows one row in each group: a paper still being read, one waiting for her review, one she applied and
+one she rejected, and two that did not finish.
 
-Fixtures only: no model call, no network. Writes nothing but `<kb>/.local/` (proposals, flags, one chat thread) and
+Fixtures only: no model call, no network. Writes nothing but `<kb>/.local/` (proposals, flags, ingest jobs, one chat thread) and
 never applies a proposal, so the tracked pages stay as they are. Idempotent: every seeded record carries a fixed
 `de00...` id; a run removes the previous seed and writes it again.
 """
@@ -21,6 +23,7 @@ import os
 from kb_distillery.proposals import flags as page_flags
 from kb_distillery.proposals import restructure, service, store
 from kb_distillery.proposals.model import ProposalError
+from kb_distillery.services import ingest_ui
 from kb_distillery.vault import links
 
 PREFIX = "de00"
@@ -70,6 +73,8 @@ def clear(root) -> None:
         with open(path, encoding="utf-8") as f:
             msgs = json.load(f).get("messages") or []
         _write_thread(root, [m for m in msgs if not m.get("demo")])
+    for p in glob.glob(os.path.join(root, ".local", ingest_ui.LOCAL_SUBDIR, f"{PREFIX}*.json")):
+        os.remove(p)
 
 
 def _write_thread(root, messages):
@@ -163,7 +168,63 @@ def _proposals(root):
             producer={"kind": "chat", "instruction": "make the opening stronger",
                       "context": {"message": "make the opening stronger", "mentions": [], "selections": []}},
             root=root), {"status": "rejected"}),
+        (10, 70, lambda: service.create(
+            "Ingest: Calibration of clinical risk scores",
+            [{"kind": "edit_page", "slug": "skill-system-design", "new_text": typo_text, "reason": "link the new paper"}],
+            producer={"kind": "ingest", "instruction": "ingest raw/papers/calibration-of-clinical-risk-scores.pdf",
+                      "context": {"source": "raw/papers/calibration-of-clinical-risk-scores.pdf", "tier": "full",
+                                  "collection": ""}},
+            note="tier full", root=root),
+         {"status": "applied", "applied": {"at": _stamp(68), "pages": ["skill-system-design"], "hunks": None,
+                                           "commit": None, "auto": False}}),
+        (11, 80, lambda: service.create(
+            "Ingest: A survey of federated learning",
+            [{"kind": "edit_page", "slug": "skill-clinical-nlp", "new_text": rejected, "reason": "link the new paper"}],
+            producer={"kind": "ingest", "instruction": "ingest https://example.org/federated-learning-survey",
+                      "context": {"source": "raw/web-clips/federated-learning-survey.html", "tier": "easy",
+                                  "collection": ""}},
+            note="tier easy", root=root), {"status": "rejected"}),
     ]
+
+
+def _ingests():
+    """[(n, hours_ago, source, kind, tier, status, failed step, error, proposal number)]: the Ingest screen's rows."""
+    return [
+        (1, 0.05, "https://example.org/rare-disease-nlp", "url", "full", "running", "digest", None, None),
+        (2, 9, "negation-aware-clinical-ner.pdf", "file", "easy", "done", None, None, 3),
+        (3, 70, "calibration-of-clinical-risk-scores.pdf", "file", "full", "done", None, None, 10),
+        (4, 80, "https://example.org/federated-learning-survey", "url", "easy", "done", None, None, 11),
+        (5, 26, "https://example.org/missing-page", "url", "easy", "failed", "fetch", "that address could not be found", None),
+        (6, 100, "interview-notes.pdf", "file", "full", "interrupted", "convert", "the server stopped while this was running", None),
+    ]
+
+
+def _write_ingests(root):
+    d = os.path.join(root, ".local", ingest_ui.LOCAL_SUBDIR)
+    os.makedirs(d, exist_ok=True)
+    ids = []
+    for n, hours, source, kind, tier, status, at, error, prop in _ingests():
+        jid = f"{PREFIX}{n:04x}"
+        t = datetime.datetime.now(datetime.timezone.utc).timestamp() - hours * 3600
+        steps = []
+        for name in ingest_ui.STEPS:
+            state = "done" if status == "done" else "pending"
+            if status != "done" and at:
+                state = "done" if ingest_ui.STEPS.index(name) < ingest_ui.STEPS.index(at) else ("failed" if name == at else "pending")
+            if name == "fetch" and kind == "file":
+                state = "skipped"
+            steps.append({"name": name, "state": state, "detail": ""})
+        if status == "running":
+            steps[1]["state"], steps[2]["state"] = "done", "active"
+            steps[2]["detail"] = "reading with the default backend"
+        rec = {"id": jid, "status": status, "source": source, "kind": kind, "tier": tier, "collection": "", "backend": "",
+               "steps": steps, "proposal_id": f"{PREFIX}{prop:04x}" if prop else None,
+               "pages": ["skill-clinical-nlp"] if prop else [], "error": error, "created": t,
+               "finished": None if status == "running" else t + 40, "demo": True}
+        with open(os.path.join(d, jid + ".json"), "w", encoding="utf-8") as f:
+            json.dump(rec, f, indent=1)
+        ids.append(jid)
+    return ids
 
 
 FLAGS = [
@@ -181,6 +242,7 @@ def seed(root) -> dict:
     with _local_writes():
         for n, hours, make, extra in _proposals(root):
             ids.append(_fix(root, make(), n, hours, **extra))
+    ingest_ids = _write_ingests(root)
     flag_ids = []
     for i, (slug, text, note) in enumerate(FLAGS, 1):
         row = page_flags.add(slug, text, note, root=root)
@@ -203,4 +265,4 @@ def seed(root) -> dict:
               "skipped": [], "unknown_mentions": [],
               "text": "The paper supports a narrower claim: evaluation is hardest on rare conditions. I proposed two edits."}]
     _write_thread(root, msgs)
-    return {"proposals": ids, "flags": flag_ids}
+    return {"proposals": ids, "flags": flag_ids, "ingests": ingest_ids}
