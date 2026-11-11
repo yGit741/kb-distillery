@@ -160,3 +160,63 @@ def test_spectrum_is_never_longer_than_the_rank():
     m = svc._unit(np.asarray([[1, 0, 0], [0, 1, 0]], dtype=np.float32))
     coords, ratios, _ = svc.pca(m)
     assert coords.shape[1] == len(ratios) == 1
+
+
+def test_similarity_counts_every_pair_once_and_each_pages_nearest(tmp_path):
+    db, cards = _store(tmp_path, _blobs())
+    sim = svc.build_embedding_report(db, cards)["similarity"]
+    assert sim["pairs"] == 60 * 59 // 2 == sum(sim["counts"]) and sum(sim["nearest"]) == sim["pages"] == 60 and sim["sampled"] is False
+    assert len(sim["edges"]) == len(sim["counts"]) + 1 == len(sim["nearest"]) + 1 and sim["edges"][-1] == 1.0
+    p, near = sim["percentiles"], sim["nearest_percentiles"]
+    assert p["p1"] <= p["p50"] <= p["p99"] and near["p50"] > p["p50"]      # a nearest neighbour is closer than a random pair
+    assert p["p50"] < 0.3 and near["p50"] > 0.9                             # three far-apart groups, tight inside
+
+
+def test_similarity_needs_two_pages(tmp_path):
+    db, cards = _store(tmp_path, [("a", [1, 0])])
+    assert svc.build_embedding_report(db, cards)["similarity"] is None
+
+
+def test_sample_pairs_stay_in_range_and_follow_the_seed(tmp_path):
+    db, cards = _store(tmp_path, _blobs())
+    close = svc.sample_pairs(0.9, 1.0, n=5, seed=1, db_path=db, cards_dir=cards)
+    assert close["count"] == 3 * (20 * 19 // 2) and len(close["pairs"]) == 5
+    assert all(0.9 <= d["cosine"] <= 1.0 and d["a"]["slug"][0] == d["b"]["slug"][0] and d["a"]["slug"] != d["b"]["slug"] for d in close["pairs"])
+    assert [d["cosine"] for d in close["pairs"]] == sorted((d["cosine"] for d in close["pairs"]), reverse=True)
+    assert close["pairs"][0]["a"]["title"].startswith("Title of ")
+    key = lambda r: [(d["a"]["slug"], d["b"]["slug"]) for d in r["pairs"]]      # noqa: E731
+    assert key(close) == key(svc.sample_pairs(0.9, 1.0, n=5, seed=1, db_path=db, cards_dir=cards))
+    assert key(close) != key(svc.sample_pairs(0.9, 1.0, n=5, seed=2, db_path=db, cards_dir=cards))
+    far = svc.sample_pairs(-1.0, 0.5, n=50, seed=0, db_path=db, cards_dir=cards)
+    assert far["count"] == 3 * 20 * 20 and len(far["pairs"]) == svc.PAIRS_MAX
+    assert all(d["a"]["slug"][0] != d["b"]["slug"][0] for d in far["pairs"])
+
+
+def test_sample_pairs_without_a_store_or_matches_is_empty(tmp_path):
+    assert svc.sample_pairs(0, 1, db_path=str(tmp_path / "no.sqlite"), cards_dir=str(tmp_path)) == {"count": 0, "pairs": []}
+    db, cards = _store(tmp_path, _blobs())
+    assert svc.sample_pairs(0.5, 0.6, db_path=db, cards_dir=cards) == {"count": 0, "pairs": []}
+
+
+def test_large_stores_measure_pairs_on_a_sample_of_pages(tmp_path, monkeypatch):
+    monkeypatch.setattr(svc, "PAIR_ROWS_MAX", 30)
+    db, cards = _store(tmp_path, _blobs())
+    sim = svc.build_embedding_report(db, cards)["similarity"]
+    assert sim["sampled"] is True and sim["pages"] == 30 and sim["pairs"] == 30 * 29 // 2
+    assert svc.sample_pairs(0.9, 1.0, n=3, db_path=db, cards_dir=cards)["count"] <= 30 * 29 // 2
+
+
+def test_every_bar_holds_exactly_the_pairs_the_sampler_finds_for_its_edges(tmp_path):
+    rng = np.random.RandomState(7)
+    rows = [(f"p{i:03d}", rng.normal(size=6)) for i in range(120)] + [("twin-a", [1, 2, 3, 4, 5, 6]), ("twin-b", [1, 2, 3, 4, 5, 6])]
+    db, cards = _store(tmp_path, rows)
+    sim = svc.build_embedding_report(db, cards)["similarity"]
+    assert sim["edges"][0] < 0 and sim["counts"][-1] >= 1               # negative cosines and the identical pair are both counted
+    for i, count in enumerate(sim["counts"]):
+        assert svc.sample_pairs(sim["edges"][i], sim["edges"][i + 1], n=1, db_path=db, cards_dir=cards)["count"] == count
+
+
+def test_a_broken_vector_does_not_break_the_report(tmp_path):
+    db, cards = _store(tmp_path, _blobs() + [("broken", [float("nan")] * 8)])
+    r = svc.build_embedding_report(db, cards)
+    assert r["similarity"]["pairs"] == 61 * 60 // 2

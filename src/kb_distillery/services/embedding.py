@@ -20,11 +20,15 @@ CENTRAL = 3                  # pages named per cluster, closest to its centre fi
 AXES = 8                     # principal components the map can use as an axis
 SPECTRUM = 20                # components in the variance chart
 ENDS = 4                     # pages named at each end of a component
+BIN = 0.025                  # width of a bar in the pair-similarity histogram
+PAIR_ROWS_MAX = 3000         # above this many pages the pair statistics use a random sample of pages (4.5M pairs)
+PAIRS_MAX = 20               # example pairs per request
+PERCENTILES = (1, 5, 25, 50, 75, 95, 99)
 SEED = 0
 
 
 EMPTY_MAP = {"k": 0, "silhouette": 0.0, "clusters": [], "points": [], "duplicates": [],
-             "spectrum": [], "effective_dim": 0.0, "mean_cosine": 0.0, "components": []}
+             "spectrum": [], "effective_dim": 0.0, "mean_cosine": 0.0, "components": [], "similarity": None}
 
 
 def _titles(cards_dir):
@@ -149,6 +153,74 @@ def duplicates(m, slugs, threshold=DUPLICATE_COSINE, limit=DUPLICATES_MAX):
     return found[:limit]
 
 
+def _pair_rows(m, seed=SEED):
+    """(rows, sampled): every row, or a random PAIR_ROWS_MAX of them when all pairs would be too many."""
+    if len(m) <= PAIR_ROWS_MAX:
+        return np.arange(len(m)), False
+    return np.sort(np.random.RandomState(seed).choice(len(m), PAIR_ROWS_MAX, replace=False)), True
+
+
+def _square(m, rows):
+    """The cosine of every row of `rows` with every other, in float64 (the histogram and the pair sampler must put a
+    cosine near a bar's edge in the same bar); a broken vector (NaN) counts as unrelated."""
+    sub = m[rows].astype(np.float64)
+    return np.clip(np.nan_to_num(_dot(sub, sub.T)), -1, 1)
+
+
+def similarity(m):
+    """How similar two pages are, over every pair: a histogram in BIN-wide bars, the same for each page's nearest
+    neighbour, and the percentiles of both. None with fewer than two pages. Exact up to PAIR_ROWS_MAX pages (about
+    4.5 million pairs); beyond that it is measured on a random sample of pages and says so (`sampled`)."""
+    if len(m) < 2:
+        return None
+    rows, sampled = _pair_rows(m)
+    sims = _square(m, rows)
+    pairs = sims[np.triu_indices(len(rows), k=1)]
+    np.fill_diagonal(sims, -np.inf)
+    nearest = sims.max(axis=1)
+    lo = float(np.floor(pairs.min() / BIN) * BIN)
+    n_bins = max(1, int(round((1.0 - lo) / BIN)))
+    edges = [round(lo + i * BIN, 3) for i in range(n_bins + 1)]
+    edges[-1] = 1.0
+    cut = np.array(edges)
+    cut[-1] = 1.0 + 1e-6                 # a cosine of exactly 1 belongs to the last bar
+    pct = lambda a: {f"p{p}": round(float(np.percentile(a, p)), 3) for p in PERCENTILES}     # noqa: E731
+    return {"edges": edges, "counts": [int(c) for c in np.histogram(pairs, bins=cut)[0]],
+            "nearest": [int(c) for c in np.histogram(nearest, bins=cut)[0]], "pairs": int(len(pairs)),
+            "pages": int(len(rows)), "sampled": sampled, "percentiles": pct(pairs), "nearest_percentiles": pct(nearest)}
+
+
+def sample_pairs(lo, hi, n=8, seed=0, db_path=None, cards_dir=None):
+    """Random page pairs whose cosine is in [lo, hi) → {"count": pairs in the range, "pairs": [{a, b, cosine}]},
+    closest first. `seed` picks which ones, so the same request shows the same pairs and the next seed shows others.
+    Counted over the same pages as `similarity` (all of them up to PAIR_ROWS_MAX)."""
+    db_path, cards_dir = db_path or vectors.DB_PATH, cards_dir or vectors.CARDS_DIR
+    n = max(1, min(int(n), PAIRS_MAX))
+    empty = {"count": 0, "pairs": []}
+    if not os.path.exists(db_path):
+        return empty
+    try:
+        v = vectors.load(db_path)
+    except ValueError:
+        return empty
+    if v is None or len(v) < 2:
+        return empty
+    rows, _sampled = _pair_rows(v.m)
+    sims = _square(v.m, rows)
+    hi = hi + 1e-6 if hi >= 1.0 else hi
+    inside = sims >= lo
+    inside &= sims < hi
+    ii, jj = np.where(np.triu(inside, k=1))
+    if not len(ii):
+        return empty
+    pick = np.random.RandomState(int(seed) % (2 ** 31)).choice(len(ii), min(n, len(ii)), replace=False)
+    titles = _titles(cards_dir)
+    ref = lambda i: {"slug": v.slugs[rows[i]], "title": titles.get(v.slugs[rows[i]], v.slugs[rows[i]])}     # noqa: E731
+    found = sorted(({"a": ref(ii[k]), "b": ref(jj[k]), "cosine": round(float(sims[ii[k], jj[k]]), 3)} for k in pick),
+                   key=lambda d: -d["cosine"])
+    return {"count": int(len(ii)), "pairs": found}
+
+
 def _titled(value, titles):
     """A copy of `value` where every {"slug": s, ...} also carries its page title (the slug when it has no card)."""
     if isinstance(value, list):
@@ -191,7 +263,8 @@ def _map(v):
     spread = {"spectrum": [round(r, 4) for r in ratios], "effective_dim": round(effective, 1),
               "mean_cosine": round(float(centre @ centre), 3), "components": components}
     dups = [{"a": ref(a), "b": ref(b), "cosine": round(c, 3)} for a, b, c in duplicates(v.m, v.slugs)]
-    return {"k": len(clusters), "silhouette": round(score, 3), "clusters": clusters, "points": points, "duplicates": dups, **spread}
+    return {"k": len(clusters), "silhouette": round(score, 3), "clusters": clusters, "points": points, "duplicates": dups, **spread,
+            "similarity": similarity(v.m)}
 
 
 def build_embedding_report(db_path=None, cards_dir=None):
@@ -216,5 +289,6 @@ def build_embedding_report(db_path=None, cards_dir=None):
         return {**base, "ok": False, "line": str(e)}
     if v is None or not len(v):
         return base
+    v.m = np.nan_to_num(v.m)             # a broken vector (NaN) becomes a zero vector: unrelated to everything
     heavy = cache.memo("embedding:" + db_path, lambda: (st.st_mtime_ns, st.st_size), lambda: _map(v))
     return {**base, "model": v.model, "dim": int(v.m.shape[1]), **_titled(heavy, titles)}
