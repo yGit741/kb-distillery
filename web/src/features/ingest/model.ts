@@ -264,9 +264,10 @@ export function useIngestFlow(opts: { inbox?: boolean } = {}): Flow {
   const [year, setYear] = useState("");
   const file = source?.kind === "file" ? source.file : null;
   useEffect(() => setYear(file ? yearGuess(file.name) : ""), [file]);
-  // a member of a course, series or book is filed by its collection, not by a year
-  const yearAsked = !!file && needsYear(file) && !collection.trim();
-  const yearMissing = yearAsked && !yearOk(year);
+  // a member of a course, series or book is filed by its collection, not by a year: with a collection the year is
+  // still offered (another kind of collection files the PDF as a paper) but no longer holds the start back
+  const yearAsked = !!file && needsYear(file);
+  const yearMissing = yearAsked && !collection.trim() && !yearOk(year);
   const [jobId, setJobId] = useState<string | null>(null);
   const [startError, setStartError] = useState<string | null>(null);
   const live = useRef(true);
@@ -279,7 +280,7 @@ export function useIngestFlow(opts: { inbox?: boolean } = {}): Flow {
         tier,
         collection: collection.trim() || undefined,
         backend: tier === "listed" ? undefined : backend || undefined,
-        year: yearAsked ? year.trim() : undefined,
+        year: yearAsked && yearOk(year) ? year.trim() : undefined,
       };
       return { input, started: await ds.startIngest(input) };
     },

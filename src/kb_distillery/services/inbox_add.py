@@ -116,13 +116,14 @@ def _step(root: str, items, summary_fn, collection: str = "", year: int | None =
                     results.append({"name": shown, "status": "refused", "reason": f"larger than {MAX_FILE_BYTES >> 20} MB"})
                 elif _sha(data) in shas:
                     results.append({"name": shown, "status": "duplicate", "reason": "the same content is already in this knowledge base"})
-                elif _sha(data) in waiting and year and waiting[_sha(data)].startswith(INBOX):
+                elif _sha(data) in waiting and year:
                     key = waiting.pop(_sha(data))               # the year it was waiting for: file the stored copy
                     shas.add(_sha(data))
                     added.append((key[len(INBOX):], len(results)))
                     results.append({"name": shown, "status": "added", "raw_path": key})
                 elif _sha(data) in waiting:
-                    results.append({"name": shown, "status": "duplicate", "reason": "the same content is already in this knowledge base"})
+                    results.append({"name": shown, "status": "duplicate", "waiting": waiting[_sha(data)],
+                                    "reason": "the same content is already stored in raw/inbox/, waiting to be filed"})
                 else:
                     name = _free_name(name, names)
                     store.put(INBOX + name, data)

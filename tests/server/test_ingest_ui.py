@@ -282,7 +282,7 @@ def test_a_drop_stuck_for_its_year_is_filed_when_dropped_again_with_one(client, 
     assert first.status == "failed" and "cannot tell the year" in first.error
     assert os.listdir(os.path.join(kb, "raw", "inbox")) == ["WikiLoop-2607.26604.pdf"]
     again = wait(client, upload(client, "WikiLoop-2607.26604.pdf", b"%PDF-1.4 body").json()["job_id"])
-    assert again.status == "failed" and "already" in again.error                             # still no year: nothing new to try
+    assert again.status == "failed" and "not filed yet" in again.error                       # still no year: nothing new to try
     job = wait(client, upload(client, "2026-wikiloop.pdf", b"%PDF-1.4 body", year="2026").json()["job_id"])
     assert job.status == "done", job.error
     assert paper_catalog[-1] == {"path": "raw/inbox/WikiLoop-2607.26604.pdf", "year": 2026}   # the stored copy, not a second one

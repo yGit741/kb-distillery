@@ -434,6 +434,8 @@ def _convert(job, root, name, data, year=None):
     except inbox_add.SourceError as e:
         raise IngestError(e.status, e.message) from None
     f = res["files"][0]
+    if f["status"] == "duplicate" and f.get("waiting"):
+        raise IngestError(409, "this source is already stored but not filed yet; if it is a paper, drop it again with its year")
     if f["status"] == "duplicate":
         raise IngestError(409, "this source is already in the knowledge base")
     if f["status"] == "refused":

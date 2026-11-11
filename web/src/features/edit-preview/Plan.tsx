@@ -213,7 +213,7 @@ function PlanDialog({ plan }: { plan: NonNullable<ReturnType<typeof useEditPrevi
           {plan.error ? (
             <p role="alert" className="pt-10 text-center text-sm text-foreground/85">{plan.error}</p>
           ) : plan.file && !plan.jobId ? (
-            <GoAhead file={plan.file} />
+            <GoAhead key={`${plan.file.name}:${plan.file.size}:${plan.file.lastModified}`} file={plan.file} />
           ) : proposalId ? (
             <ProposalPlan id={proposalId} onLeave={close} />
           ) : job && job.status !== "running" ? (
