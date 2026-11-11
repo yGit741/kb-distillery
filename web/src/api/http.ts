@@ -52,6 +52,8 @@ export function createHttpDataSource(fetchImpl: Fetch = (...a) => fetch(...a), b
       if (req.id) form.append("id", req.id);
       if (req.kit) form.append("kit", req.kit);
       init = { body: form };
+    } else if ("path" in req) {
+      init = { headers: { "Content-Type": "application/json" }, body: JSON.stringify({ path: req.path, id: req.id || null, kit: req.kit || null }) };
     } else {
       init = { headers: { "Content-Type": "application/json" }, body: JSON.stringify({ git_url: req.gitUrl, id: req.id || null, kit: req.kit || null }) };
     }
@@ -93,6 +95,8 @@ export function createHttpDataSource(fetchImpl: Fetch = (...a) => fetch(...a), b
     listKbs: () => run(() => client.GET("/api/kb/list"), "/api/kb/list"),
     previewKbImport: (req) => postImport<T_.KbImportPreview>("/api/kb/import/validate", req),
     importKb: (req) => postImport<T_.KbImportResult>("/api/kb/import", req),
+    getKbLibrary: () => run(() => client.GET("/api/kb/library"), "/api/kb/library"),
+    setKbLibrary: (path) => run(() => client.PUT("/api/kb/library", { body: { path } }), "/api/kb/library"),
     getKbInbox: () => run(() => client.GET("/api/kb/inbox"), "/api/kb/inbox"),
     pullKbInbox: () => run(() => client.POST("/api/kb/inbox/pull"), "/api/kb/inbox/pull"),
     addInboxFiles: (files) => {

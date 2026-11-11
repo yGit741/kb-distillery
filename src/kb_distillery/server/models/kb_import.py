@@ -26,3 +26,21 @@ class KbImportResult(ApiModel):
     name: str
     root: str
     pages: int
+
+
+class KbLibraryBundle(ApiModel):
+    """One OKF bundle found in the knowledge library."""
+    path: str
+    name: str
+    kind: str                       # "folder" or "zip"
+    added: bool = False             # already the recorded import source of a knowledge base here
+
+
+class KbLibrary(ApiModel):
+    """The knowledge library (a local folder of bundles) and what a scan of it found."""
+    path: str | None
+    bundles: list[KbLibraryBundle]
+
+
+class KbLibraryPut(ApiModel):
+    path: str | None = None         # absolute folder; null or empty clears the library

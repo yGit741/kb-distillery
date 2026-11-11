@@ -1,12 +1,12 @@
 import { Link } from "@tanstack/react-router";
-import { FolderUp, Loader2 } from "lucide-react";
+import { Ellipsis, FolderUp, Loader2 } from "lucide-react";
 import { useEffect, useRef, useState, type DragEvent } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import type { ImportAdapter, ImportOutcome, ImportPreview, ImportSource } from "./adapter";
+import type { ImportAdapter, ImportOutcome, ImportPreview, ImportSource, LibraryInfo } from "./adapter";
 import { bundleFromDrop, bundleFromFileInput, bundleFromFolderInput, BundleSourceError } from "./bundleFiles";
 import { ResultCard } from "./ResultCard";
 
@@ -25,7 +25,67 @@ function Findings({ items, tone }: { items: string[]; tone: "bad" | "warn" }) {
   );
 }
 
-function SourceStep({ onSource, busy, error }: { onSource: (s: ImportSource) => void; busy: boolean; error: string }) {
+/** The OKF bundles found in the knowledge library, each with an Add button that previews it like any other source. */
+function LibraryList({ library, onSource, busy }: { library: LibraryInfo; onSource: (s: ImportSource) => void; busy: boolean }) {
+  return (
+    <section className="flex flex-col gap-1.5" aria-label="From your library">
+      <h3 className="text-xs font-medium text-muted-foreground">From your library</h3>
+      <p className="break-all text-xs text-muted-foreground">{library.path}</p>
+      {library.bundles.length === 0 ? (
+        <p className="text-sm text-muted-foreground">No OKF bundles found in this folder.</p>
+      ) : (
+        <ul className="flex max-h-48 flex-col divide-y overflow-auto rounded-lg border">
+          {library.bundles.map((b) => (
+            <li key={b.path} className="flex items-center gap-2 px-3 py-2">
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-medium">{b.name}</p>
+                <p className="truncate text-xs text-muted-foreground" title={b.path}>{b.kind === "zip" ? "zip" : "folder"} · {b.path}</p>
+              </div>
+              <Button size="sm" variant="outline" disabled={busy || b.added} aria-label={`${b.added ? "Added" : "Add"} ${b.name}`}
+                onClick={() => onSource({ kind: "path", path: b.path })}>
+                {b.added ? "Added" : "Add"}
+              </Button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
+/** Inline form for the library folder: browsers cannot give a real path from a folder picker, so it is typed or pasted. */
+function LibraryForm({ initial, onSave, onCancel }: { initial: string; onSave: (path: string) => Promise<void>; onCancel: () => void }) {
+  const [value, setValue] = useState(initial);
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState("");
+  const save = async () => {
+    setSaving(true);
+    setErr("");
+    try {
+      await onSave(value.trim());
+    } catch (e) {
+      setErr(message(e));
+      setSaving(false);
+    }
+  };
+  return (
+    <form className="flex flex-col gap-1.5" onSubmit={(e) => { e.preventDefault(); void save(); }}>
+      <label htmlFor="kb-library-path" className="text-xs font-medium text-muted-foreground">Knowledge library folder</label>
+      <div className="flex gap-2">
+        <Input id="kb-library-path" value={value} onChange={(e) => setValue(e.target.value)} placeholder="/Users/you/okf-bundles" spellCheck={false} autoFocus />
+        <Button type="submit" disabled={saving}>{saving && <Loader2 aria-hidden className="animate-spin" />}Save</Button>
+        <Button type="button" variant="ghost" onClick={onCancel} disabled={saving}>Cancel</Button>
+      </div>
+      <p className="text-xs text-muted-foreground">An absolute folder path on this computer. Leave it empty to remove the library.</p>
+      {err && <p role="alert" className="text-sm text-bad break-words">{err}</p>}
+    </form>
+  );
+}
+
+function SourceStep({ onSource, busy, error, library, setting, onSaveLibrary, onCancelSetting }: {
+  onSource: (s: ImportSource) => void; busy: boolean; error: string;
+  library: LibraryInfo | null; setting: boolean; onSaveLibrary: (path: string) => Promise<void>; onCancelSetting: () => void;
+}) {
   const [over, setOver] = useState(false);
   const [err, setErr] = useState("");
   const [url, setUrl] = useState("");
@@ -49,6 +109,8 @@ function SourceStep({ onSource, busy, error }: { onSource: (s: ImportSource) => 
 
   return (
     <div className="flex flex-col gap-3">
+      {setting && <LibraryForm initial={library?.path ?? ""} onSave={onSaveLibrary} onCancel={onCancelSetting} />}
+      {!setting && library?.path && <LibraryList library={library} onSource={onSource} busy={busy} />}
       <div
         onDragOver={(e) => { e.preventDefault(); setOver(true); }}
         onDragLeave={() => setOver(false)}
@@ -175,13 +237,38 @@ export function AddKnowledgeBase({ adapter, open, onOpenChange }: { adapter: Imp
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const qc = useQueryClient();
+  const access = adapter.library;
+  const [library, setLibrary] = useState<LibraryInfo | null>(null);
+  const [menu, setMenu] = useState(false);
+  const [setting, setSetting] = useState(false);
+
+  const rescan = () => {
+    setMenu(false);
+    setError("");
+    access?.get().then(setLibrary, (e) => setError(message(e)));
+  };
+  const saveLibrary = async (path: string) => {
+    if (!access) return;
+    setLibrary(await access.set(path || null));
+    setSetting(false);
+  };
 
   useEffect(() => {
     if (open) return;
     setStep({ name: "source" });
     setBusy(false);
     setError("");
+    setMenu(false);
+    setSetting(false);
   }, [open]);
+
+  // the library is scanned each time the dialog opens
+  useEffect(() => {
+    if (!open || !access) return;
+    let live = true;
+    access.get().then((l) => live && setLibrary(l), () => undefined);
+    return () => { live = false; };
+  }, [open, access]);
 
   const choose = async (source: ImportSource) => {
     setBusy(true);
@@ -202,11 +289,33 @@ export function AddKnowledgeBase({ adapter, open, onOpenChange }: { adapter: Imp
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="p-4" aria-describedby="kb-import-help">
+        {access && (
+          <div className="absolute right-3 top-3">
+            <Button variant="ghost" size="icon" aria-label="More options" aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu((m) => !m)}>
+              <Ellipsis aria-hidden className="size-4" strokeWidth={1.6} />
+            </Button>
+            {menu && (
+              <div role="menu" className="absolute right-0 top-full z-10 mt-1 flex w-52 flex-col rounded-lg border bg-popover p-1 shadow-[var(--shadow)]">
+                <button type="button" role="menuitem" className="rounded-md px-2 py-1.5 text-left text-sm hover:bg-accent"
+                  onClick={() => { setMenu(false); setStep({ name: "source" }); setSetting(true); }}>
+                  Set knowledge library…
+                </button>
+                <button type="button" role="menuitem" className="rounded-md px-2 py-1.5 text-left text-sm hover:bg-accent disabled:opacity-50"
+                  disabled={!library?.path} onClick={rescan}>
+                  Rescan library
+                </button>
+              </div>
+            )}
+          </div>
+        )}
         <DialogTitle className="text-base font-semibold">Add knowledge base</DialogTitle>
         <DialogDescription id="kb-import-help" className="mb-3 mt-1 text-sm text-muted-foreground">
           Import an OKF bundle as a new knowledge base. Your current one is not changed.
         </DialogDescription>
-        {step.name === "source" && <SourceStep onSource={(s) => void choose(s)} busy={busy} error={error} />}
+        {step.name === "source" && (
+          <SourceStep onSource={(s) => void choose(s)} busy={busy} error={error} library={library} setting={setting}
+            onSaveLibrary={saveLibrary} onCancelSetting={() => setSetting(false)} />
+        )}
         {step.name === "preview" && (
           <PreviewStep adapter={adapter} source={step.source} preview={step.preview} onBack={() => setStep({ name: "source" })} onDone={done} />
         )}

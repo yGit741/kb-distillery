@@ -111,6 +111,69 @@ describe("Add knowledge base dialog (System → Knowledge bases)", () => {
   });
 });
 
+describe("knowledge library (overflow menu)", () => {
+  const bundles = [
+    { path: "/lib/notes", name: "notes", kind: "folder" as const, added: false },
+    { path: "/lib/old.zip", name: "old", kind: "zip" as const, added: true },
+  ];
+
+  it("lists the library's bundles and Add previews one by path", async () => {
+    const { ds } = await system({ getKbLibrary: async () => ({ path: "/lib", bundles }) });
+    await userEvent.click(await addButton());
+    expect(await screen.findByText("From your library")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Added old" })).toBeDisabled();
+    await userEvent.click(screen.getByRole("button", { name: "Add notes" }));
+    await screen.findByText("My notes");
+    expect(ds.previewKbImport).toHaveBeenCalledWith({ path: "/lib/notes", id: undefined });
+  });
+
+  it("Set knowledge library saves the typed path and shows what was found", async () => {
+    const setKbLibrary = vi.fn(async (path: string | null) => ({ path, bundles }));
+    await system({ getKbLibrary: async () => ({ path: null, bundles: [] }), setKbLibrary });
+    await userEvent.click(await addButton());
+    await userEvent.click(await screen.findByRole("button", { name: "More options" }));
+    await userEvent.click(screen.getByRole("menuitem", { name: "Set knowledge library…" }));
+    await userEvent.type(screen.getByLabelText("Knowledge library folder"), "/lib");
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    expect(setKbLibrary).toHaveBeenCalledWith("/lib");
+    expect(await screen.findByRole("button", { name: "Add notes" })).toBeInTheDocument();
+  });
+
+  it("a refused path shows the server's message and keeps the form", async () => {
+    await system({ getKbLibrary: async () => ({ path: null, bundles: [] }), setKbLibrary: async () => { throw new Error("not an existing folder"); } });
+    await userEvent.click(await addButton());
+    await userEvent.click(await screen.findByRole("button", { name: "More options" }));
+    await userEvent.click(screen.getByRole("menuitem", { name: "Set knowledge library…" }));
+    await userEvent.type(screen.getByLabelText("Knowledge library folder"), "/nope");
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("not an existing folder");
+  });
+
+  it("Rescan library asks the server again", async () => {
+    const getKbLibrary = vi.fn(async () => ({ path: "/lib", bundles: [] as typeof bundles }));
+    await system({ getKbLibrary });
+    await userEvent.click(await addButton());
+    await screen.findByText("No OKF bundles found in this folder.");
+    await userEvent.click(screen.getByRole("button", { name: "More options" }));
+    await userEvent.click(screen.getByRole("menuitem", { name: "Rescan library" }));
+    await waitFor(() => expect(getKbLibrary).toHaveBeenCalledTimes(2));
+  });
+
+  it("an adapter without a library has no menu", async () => {
+    const adapter: ImportAdapter = {
+      validate: async () => ({ id: "x", name: "X", pages: 1, source: "x.zip", errors: [], warnings: [] }),
+      submit: async () => ({ state: "received", message: "ok" }),
+    };
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <AddKnowledgeBase adapter={adapter} open onOpenChange={() => {}} />
+      </QueryClientProvider>,
+    );
+    await screen.findByTestId("kb-drop");
+    expect(screen.queryByRole("button", { name: "More options" })).toBeNull();
+  });
+});
+
 describe("header menu entry (kb-view)", () => {
   it("has + Add knowledge base, which opens the same dialog", () =>
     withFlag("kb-view", true, async () => {

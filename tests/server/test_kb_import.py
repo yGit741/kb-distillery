@@ -180,3 +180,63 @@ def test_credentials_in_a_git_url_are_not_recorded(client, world, monkeypatch):
     monkeypatch.setattr(import_kb, "_clone", fake_clone)
     j = client.post("/api/kb/import/validate", json={"git_url": "https://token@example.com/me/n.git"}, headers=ORIGIN).json()
     assert "token" not in j["source"]
+
+
+# --- the knowledge library: a local folder of bundles ---
+
+@pytest.fixture
+def library(world, tmp_path):
+    lib = tmp_path / "lib"
+    (lib / "notes" / "wiki").mkdir(parents=True)
+    (lib / "notes" / "wiki" / "alpha.md").write_text(PAGE)
+    (lib / "notes" / "wiki" / "beta.md").write_text(BETA)
+    (lib / "empty").mkdir()
+    (lib / ".hidden").mkdir()
+    (lib / ".hidden" / "x.md").write_text(PAGE)
+    (lib / "zipped.zip").write_bytes(make_zip())
+    (lib / "junk.zip").write_bytes(b"not a zip")
+    return lib
+
+
+def test_library_unset_is_empty(client):
+    assert client.get("/api/kb/library").json() == {"path": None, "bundles": []}
+
+
+def test_library_set_scan_clear(client, library):
+    r = client.put("/api/kb/library", json={"path": str(library)}, headers=ORIGIN)
+    assert r.status_code == 200
+    body = client.get("/api/kb/library").json()
+    assert body["path"] == os.path.realpath(library)
+    assert [(b["name"], b["kind"]) for b in body["bundles"]] == [("notes", "folder"), ("zipped", "zip")]
+    assert not any(b["added"] for b in body["bundles"])
+    assert client.put("/api/kb/library", json={"path": None}, headers=ORIGIN).json() == {"path": None, "bundles": []}
+
+
+def test_library_rejects_a_missing_or_relative_folder(client, library):
+    assert client.put("/api/kb/library", json={"path": str(library / "nope")}, headers=ORIGIN).status_code == 422
+    assert client.put("/api/kb/library", json={"path": "relative/dir"}, headers=ORIGIN).status_code == 422
+
+
+def test_import_from_a_library_path_and_added_flag(client, library, world):
+    client.put("/api/kb/library", json={"path": str(library)}, headers=ORIGIN)
+    src = str(library / "notes")
+    r = client.post("/api/kb/import/validate", json={"path": src}, headers=ORIGIN)
+    assert r.status_code == 200 and r.json()["pages"] == 2 and r.json()["ok"]
+    r = client.post("/api/kb/import", json={"path": src, "id": "from-lib"}, headers=ORIGIN)
+    assert r.status_code == 200 and r.json()["id"] == "from-lib"
+    added = {b["name"]: b["added"] for b in client.get("/api/kb/library").json()["bundles"]}
+    assert added == {"notes": True, "zipped": False}
+
+
+def test_import_path_outside_the_library_is_422(client, library, tmp_path):
+    outside = tmp_path / "outside"
+    (outside / "wiki").mkdir(parents=True)
+    (outside / "wiki" / "alpha.md").write_text(PAGE)
+    for body in ({"path": str(outside)}, {"path": str(library / ".." / "outside")}):
+        assert client.post("/api/kb/import/validate", json=body, headers=ORIGIN).status_code == 422
+    client.put("/api/kb/library", json={"path": str(library)}, headers=ORIGIN)
+    assert client.post("/api/kb/import/validate", json={"path": str(outside)}, headers=ORIGIN).status_code == 422
+
+
+def test_import_path_without_a_library_is_422(client, library):
+    assert client.post("/api/kb/import/validate", json={"path": str(library / "notes")}, headers=ORIGIN).status_code == 422
