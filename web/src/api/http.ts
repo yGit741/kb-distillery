@@ -87,6 +87,7 @@ export function createHttpDataSource(fetchImpl: Fetch = (...a) => fetch(...a), b
     getLifecycle: () => run(() => client.GET("/api/lifecycle"), "/api/lifecycle"),
     getShareStatus: () => run(() => client.GET("/api/share/status"), "/api/share/status"),
     getHealth: () => run(() => client.GET("/api/health"), "/api/health"),
+    getEmbedding: () => run(() => client.GET("/api/embedding"), "/api/embedding"),
     getKb: () => run(() => client.GET("/api/kb"), "/api/kb"),
     listKbs: () => run(() => client.GET("/api/kb/list"), "/api/kb/list"),
     previewKbImport: (req) => postImport<T_.KbImportPreview>("/api/kb/import/validate", req),

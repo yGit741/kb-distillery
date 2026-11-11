@@ -416,6 +416,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/embedding": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Embedding health, clusters and map */
+        get: operations["get_embedding_api_embedding_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/favorites": {
         parameters: {
             query?: never;
@@ -2872,6 +2889,89 @@ export interface components {
             sender?: string | null;
             /** Subject */
             subject?: string | null;
+        } & {
+            [key: string]: unknown;
+        };
+        /** EmbeddingCluster */
+        EmbeddingCluster: {
+            /** Central */
+            central: components["schemas"]["EmbeddingPage"][];
+            /** Cohesion */
+            cohesion: number;
+            /** Id */
+            id: number;
+            /** Size */
+            size: number;
+        } & {
+            [key: string]: unknown;
+        };
+        /** EmbeddingDuplicate */
+        EmbeddingDuplicate: {
+            a: components["schemas"]["EmbeddingPage"];
+            b: components["schemas"]["EmbeddingPage"];
+            /** Cosine */
+            cosine: number;
+        } & {
+            [key: string]: unknown;
+        };
+        /** EmbeddingPage */
+        EmbeddingPage: {
+            /** Slug */
+            slug: string;
+            /** Title */
+            title: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** EmbeddingPoint */
+        EmbeddingPoint: {
+            /** Cluster */
+            cluster: number;
+            /** Slug */
+            slug: string;
+            /** Title */
+            title: string;
+            /** X */
+            x: number;
+            /** Y */
+            y: number;
+        } & {
+            [key: string]: unknown;
+        };
+        /** EmbeddingReport */
+        EmbeddingReport: {
+            /** Built */
+            built: boolean;
+            /** Cards */
+            cards: number;
+            /** Changed */
+            changed: components["schemas"]["EmbeddingPage"][];
+            /** Clusters */
+            clusters: components["schemas"]["EmbeddingCluster"][];
+            /** Dim */
+            dim: number;
+            /** Duplicate Cosine */
+            duplicate_cosine: number;
+            /** Duplicates */
+            duplicates: components["schemas"]["EmbeddingDuplicate"][];
+            /** K */
+            k: number;
+            /** Line */
+            line: string;
+            /** Missing */
+            missing: components["schemas"]["EmbeddingPage"][];
+            /** Model */
+            model?: string | null;
+            /** Ok */
+            ok: boolean;
+            /** Points */
+            points: components["schemas"]["EmbeddingPoint"][];
+            /** Removed */
+            removed: components["schemas"]["EmbeddingPage"][];
+            /** Silhouette */
+            silhouette: number;
+            /** Vectors */
+            vectors: number;
         } & {
             [key: string]: unknown;
         };
@@ -7834,6 +7934,26 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    get_embedding_api_embedding_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmbeddingReport"];
+                };
             };
         };
     };

@@ -1,0 +1,179 @@
+"""Embedding health and a first semantic map (0 LLM): is the card vector store there and up to date, which pages
+sit suspiciously close together, and how the pages group by meaning.
+
+Everything is computed from `kb_distillery.search.vectors` (one unit vector per page card) with numpy only:
+spherical k-means with k picked by silhouette, and a 2D PCA projection for the map. The heavy part is reused
+while the store file is unchanged; freshness is read on every call."""
+import os
+
+import numpy as np
+
+from kb_distillery.search import vectors
+
+DUPLICATE_COSINE = 0.97      # two different pages this close usually share a boilerplate summary, or are one page twice
+DUPLICATES_MAX = 40
+K_CANDIDATES = (4, 6, 8, 10)       # at most the 10 colours of the area palette, so one colour is one cluster
+MIN_PER_CLUSTER = 8          # k never exceeds pages / this
+SILHOUETTE_SAMPLE = 800
+CENTRAL = 3                  # pages named per cluster, closest to its centre first
+SEED = 0
+
+
+def _titles(cards_dir):
+    """{slug: title} from the cards' first line (`# <title>`)."""
+    out = {}
+    if not os.path.isdir(cards_dir):
+        return out
+    for f in os.listdir(cards_dir):
+        if not f.endswith(".md"):
+            continue
+        with open(os.path.join(cards_dir, f), encoding="utf-8") as fh:
+            first = fh.readline().strip()
+        out[f[:-3]] = first[2:].strip() if first.startswith("# ") else f[:-3]
+    return out
+
+
+def _dot(a, b):
+    """a @ b without the spurious float32 matmul warnings Accelerate raises on macOS."""
+    with np.errstate(all="ignore"):
+        return a @ b
+
+
+def _unit(m):
+    n = np.linalg.norm(m, axis=1, keepdims=True)
+    return m / np.where(n == 0, 1, n)
+
+
+def kmeans(m, k, iters=30, seed=SEED):
+    """Spherical k-means over unit rows → (labels, unit centres). Deterministic: k-means++ start from `seed`."""
+    rng = np.random.RandomState(seed)
+    n = len(m)
+    centres = [m[rng.randint(n)]]
+    for _ in range(1, k):
+        d = np.clip(1 - np.max(_dot(m, np.stack(centres).T), axis=1), 0, None) ** 2
+        total = d.sum()
+        centres.append(m[rng.choice(n, p=d / total) if total > 0 else rng.randint(n)])
+    c = np.stack(centres)
+    labels = np.full(n, -1)
+    for _ in range(iters):
+        new = np.argmax(_dot(m, c.T), axis=1)
+        if np.array_equal(new, labels):
+            break
+        labels = new
+        for j in range(k):
+            members = m[labels == j]
+            if len(members):
+                c[j] = members.sum(axis=0)
+        c = _unit(c)
+    return labels, c
+
+
+def silhouette(m, labels, sample=SILHOUETTE_SAMPLE, seed=SEED):
+    """Mean silhouette on cosine distance (over at most `sample` rows); 0.0 when fewer than two clusters hold rows."""
+    if len(m) > sample:
+        pick = np.random.RandomState(seed).choice(len(m), sample, replace=False)
+        m, labels = m[pick], labels[pick]
+    ids = [j for j in np.unique(labels)]
+    if len(ids) < 2:
+        return 0.0
+    dist = 1 - _dot(m, m.T).astype(np.float64)
+    sums = np.stack([dist[:, labels == j].sum(axis=1) for j in ids], axis=1)
+    sizes = np.array([(labels == j).sum() for j in ids])
+    own = np.searchsorted(ids, labels)
+    rows = np.arange(len(m))
+    own_n = sizes[own]
+    a = sums[rows, own] / np.maximum(own_n - 1, 1)
+    other = sums / sizes
+    other[rows, own] = np.inf
+    b = other.min(axis=1)
+    s = np.where(own_n > 1, (b - a) / np.maximum(np.maximum(a, b), 1e-12), 0.0)
+    return float(s.mean())
+
+
+def cluster(m):
+    """(labels, centres, silhouette) with k picked by silhouette; one cluster when there are too few pages to split."""
+    n = len(m)
+    ks = [k for k in K_CANDIDATES if k * MIN_PER_CLUSTER <= n]
+    if not ks:
+        centre = _unit(m.sum(axis=0, keepdims=True)) if n else np.zeros((0, m.shape[1] if m.ndim == 2 else 0))
+        return np.zeros(n, dtype=int), centre, 0.0
+    best = None
+    for k in ks:
+        labels, centres = kmeans(m, k)
+        score = silhouette(m, labels)
+        if best is None or score > best[2]:
+            best = (labels, centres, score)
+    return best
+
+
+def project(m):
+    """Rows as 2D points in [0, 1]² along the two directions of largest variance (PCA)."""
+    if len(m) < 2:
+        return np.full((len(m), 2), 0.5)
+    x = m - m.mean(axis=0)
+    _u, _s, vt = np.linalg.svd(x, full_matrices=False)
+    p = _dot(x, vt[:2].T)
+    if p.shape[1] < 2:
+        p = np.hstack([p, np.zeros((len(p), 2 - p.shape[1]))])
+    lo, hi = p.min(axis=0), p.max(axis=0)
+    return (p - lo) / np.where(hi - lo == 0, 1, hi - lo)
+
+
+def duplicates(m, slugs, threshold=DUPLICATE_COSINE, limit=DUPLICATES_MAX):
+    """[(a, b, cosine)] of the page pairs at or above `threshold`, closest first."""
+    found = []
+    for start in range(0, len(m), 512):
+        sims = _dot(m[start:start + 512], m.T)
+        for i, j in zip(*np.where(sims >= threshold)):
+            if start + i < j:
+                found.append((slugs[start + i], slugs[j], float(sims[i, j])))
+    found.sort(key=lambda t: (-t[2], t[0], t[1]))
+    return found[:limit]
+
+
+def _map(v, titles):
+    """The part that depends on the vectors alone: clusters, map points and near-duplicates."""
+    ref = lambda s: {"slug": s, "title": titles.get(s, s)}     # noqa: E731
+    if not len(v):
+        return {"k": 0, "silhouette": 0.0, "clusters": [], "points": [], "duplicates": []}
+    labels, centres, score = cluster(v.m)
+    order = sorted(set(labels.tolist()), key=lambda j: (-int((labels == j).sum()), j))    # largest first
+    rank = {j: i for i, j in enumerate(order)}
+    clusters = []
+    for j in order:
+        idx = np.where(labels == j)[0]
+        closeness = _dot(v.m[idx], centres[j])
+        top = idx[np.argsort(-closeness)[:CENTRAL]]
+        clusters.append({"id": rank[j], "size": int(len(idx)), "cohesion": round(float(closeness.mean()), 3),
+                         "central": [ref(v.slugs[i]) for i in top]})
+    xy = project(v.m)
+    points = [{**ref(s), "x": round(float(xy[i, 0]), 4), "y": round(float(xy[i, 1]), 4), "cluster": rank[int(labels[i])]}
+              for i, s in enumerate(v.slugs)]
+    dups = [{"a": ref(a), "b": ref(b), "cosine": round(c, 3)} for a, b, c in duplicates(v.m, v.slugs)]
+    return {"k": len(clusters), "silhouette": round(score, 3), "clusters": clusters, "points": points, "duplicates": dups}
+
+
+def build_embedding_report(db_path=None, cards_dir=None):
+    """The Embedding tab's data: store status, pages behind, near-duplicates, clusters and map points."""
+    db_path, cards_dir = db_path or vectors.DB_PATH, cards_dir or vectors.CARDS_DIR
+    ok, line = vectors.status(db_path, cards_dir)
+    fresh = vectors.freshness(db_path, cards_dir)
+    base = {"built": fresh is not None, "ok": ok, "line": line, "model": None, "dim": 0, "cards": 0, "vectors": 0,
+            "missing": [], "changed": [], "removed": [], "duplicate_cosine": DUPLICATE_COSINE,
+            "k": 0, "silhouette": 0.0, "clusters": [], "points": [], "duplicates": []}
+    if fresh is None:
+        return base
+    titles = _titles(cards_dir)
+    ref = lambda s: {"slug": s, "title": titles.get(s, s)}     # noqa: E731
+    base.update(cards=fresh["cards"], vectors=fresh["vectors"],
+                **{k: [ref(s) for s in fresh[k]] for k in ("missing", "changed", "removed")})
+    try:
+        v = vectors.load(db_path)
+    except ValueError as e:              # a half-rebuilt store (mixed models): report it, draw nothing
+        return {**base, "ok": False, "line": str(e)}
+    if v is None or not len(v):
+        return base
+    from kb_distillery.graph import cache
+    st = os.stat(db_path)
+    heavy = cache.memo("embedding:" + db_path, lambda: (st.st_mtime_ns, st.st_size), lambda: _map(v, titles))
+    return {**base, "model": v.model, "dim": int(v.m.shape[1]), **heavy}
