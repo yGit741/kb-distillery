@@ -167,6 +167,84 @@ def _relink_root_links(wiki: str) -> int:
     return count
 
 
+SIBLING_SKIP = {WIKI_DIR, "meta", "think"}     # the engine rebuilds meta/; think/ is never imported
+
+
+def _copy_siblings(bundle: str, root: str) -> list[str]:
+    """When `bundle` is a `wiki/` inside a kb-shaped folder, copy the folders beside it (`raw/`, `examples/` ...) into
+    `root` next to the staged wiki -> their names. Hidden folders, `meta/` and `think/` stay behind; files beside wiki/
+    (README, usecase cards) are not knowledge and are not copied."""
+    if os.path.basename(os.path.normpath(bundle)) != WIKI_DIR:
+        return []
+    parent = os.path.dirname(os.path.normpath(bundle))
+    names = []
+    for n in _entries(parent):
+        src = os.path.join(parent, n)
+        if n in SIBLING_SKIP or n.startswith(".") or os.path.islink(src) or not os.path.isdir(src):
+            continue
+        dest = os.path.join(root, n) if n == "raw" else os.path.join(root, "raw", n)
+        shutil.copytree(src, dest, symlinks=True, dirs_exist_ok=True, ignore=shutil.ignore_patterns(*IGNORED))
+        names.append(n)
+    linked = _linked_files(os.path.join(root, WIKI_DIR), parent)
+    for n in linked:
+        os.makedirs(os.path.join(root, "raw"), exist_ok=True)
+        shutil.copy2(os.path.join(parent, n), os.path.join(root, "raw", n))
+        names.append(n)
+    moved = [n for n in names if n != "raw"]
+    if moved:
+        _rehome_links(os.path.join(root, WIKI_DIR), moved)
+    return names
+
+
+def _linked_files(wiki: str, parent: str) -> list[str]:
+    """Plain files beside wiki/ (a README, a use-case card) that a page links to: they come along as raw/<name>."""
+    files = [n for n in _entries(parent) if not n.startswith(".") and os.path.isfile(os.path.join(parent, n))
+             and not os.path.islink(os.path.join(parent, n))]
+    if not files:
+        return []
+    pat = re.compile(r"\]\((?:(?:\.\./)+|/)(" + "|".join(re.escape(n) for n in files) + r")[)#\s]")
+    found = set()
+    for base, _, names in os.walk(wiki):
+        for f in names:
+            if f.endswith(".md"):
+                with open(os.path.join(base, f), encoding="utf-8") as fh:
+                    found.update(pat.findall(fh.read()))
+    return sorted(found)
+
+
+def _rehome_links(wiki: str, moved: list[str]) -> None:
+    """A kb holds only wiki/, raw/, meta/ (and think/): a folder like `examples/` lands as `raw/examples/`, and links
+    into it (`../examples/x`, `/examples/x`) are rewritten to match, in the staged copy only."""
+    alt = "|".join(re.escape(n) for n in moved)
+    pat = re.compile(r"\]\(((?:\.\./)+|/)(" + alt + r")(?=[/)#\s])")
+    for base, _, files in os.walk(wiki):
+        for f in files:
+            if not f.endswith(".md"):
+                continue
+            path = os.path.join(base, f)
+            with open(path, encoding="utf-8") as fh:
+                text = fh.read()
+            new = pat.sub(lambda m: f"]({m.group(1)}raw/{m.group(2)}", text)
+            if new != text:
+                with open(path, "w", encoding="utf-8") as fh:
+                    fh.write(new)
+
+
+def _imported_dirs(staged_wiki: str) -> list[str]:
+    """The folders that came beside the staged wiki (see `_copy_siblings`)."""
+    root = os.path.dirname(os.path.normpath(staged_wiki))
+    return [n for n in _entries(root) if n != WIKI_DIR and os.path.isdir(os.path.join(root, n))]
+
+
+def _ships_with_bundle(root: str, rel: str, msg: str) -> bool:
+    """A `boundary` finding whose link goes into raw/ and whose file came with the bundle (not think/, not missing)."""
+    href = msg.partition(": ")[2]
+    path = href.partition("#")[0]
+    target = path.lstrip("/") if path.startswith("/") else os.path.normpath(os.path.join(os.path.dirname(rel), path))
+    full = os.path.realpath(os.path.join(root, target))
+    return target.split("/", 1)[0] == "raw" and full.startswith(os.path.realpath(root) + os.sep) and os.path.isfile(full)
+
+
 def _findings(bundle: str, stage: str) -> tuple[int, list[str], list[str], str]:
     """okf-check `bundle` as the `wiki/` of a throwaway root -> (page count, errors, warnings, staged wiki). Errors block
     an import. Bundle-root links (`/slug.md`) are rewritten to `slug.md` in the staged copy first, and the import copies
@@ -179,11 +257,27 @@ def _findings(bundle: str, stage: str) -> tuple[int, list[str], list[str], str]:
             if os.path.islink(os.path.join(base, n)):
                 return 0, [f"the bundle contains a symlink: {os.path.relpath(os.path.join(base, n), root)}"], [], wiki
     warnings = []
+    siblings = _copy_siblings(bundle, root)
+    for base, dirs, files in os.walk(root):
+        for n in dirs + files:
+            if os.path.islink(os.path.join(base, n)):
+                return 0, [f"the bundle contains a symlink: {os.path.relpath(os.path.join(base, n), root)}"], [], wiki
+    if siblings:
+        warnings.append("folder(s) beside wiki/ imported with it: "
+                        + ", ".join("raw/" if s == "raw" else f"{s} (as raw/{s})" for s in siblings))
     relinked = _relink_root_links(wiki)
     if relinked:
         warnings.append(f"{relinked} link(s) written from the bundle root (/slug.md) were rewritten as relative links (slug.md)")
     findings, count = okf_check.check(root)
-    errors = [f"{rel}: [{rule}] {msg}" for rel, items in sorted(findings.items()) for rule, msg in items]
+    errors, shipped = [], 0
+    for rel, items in sorted(findings.items()):
+        for rule, msg in items:
+            if rule == "boundary" and _ships_with_bundle(root, rel, msg):
+                shipped += 1
+                continue
+            errors.append(f"{rel}: [{rule}] {msg}")
+    if shipped:
+        warnings.append(f"{shipped} link(s) from wiki/ point into the bundle's own raw/: kept as written (raw/ is imported too)")
     if not count and not errors:
         errors.append("the bundle has no pages (no .md files besides index.md / log.md)")
     return count, errors, warnings, wiki
@@ -262,6 +356,11 @@ def _build(bundle: str, rep: Report, kit: str | None, parent: str, name: str | N
     try:
         shutil.copytree(bundle, os.path.join(target, WIKI_DIR), dirs_exist_ok=True, symlinks=False,
                         ignore=shutil.ignore_patterns(*IGNORED))
+        staged_root = os.path.dirname(os.path.normpath(bundle))
+        for n in _entries(staged_root):
+            if n != WIKI_DIR and os.path.isdir(os.path.join(staged_root, n)):
+                shutil.copytree(os.path.join(staged_root, n), os.path.join(target, n), dirs_exist_ok=True, symlinks=False,
+                                ignore=shutil.ignore_patterns(*IGNORED))
         _record_source(target, rep)
         # The OKF check is the gate; the kit lint is stricter (layer, maturity, raw, description length ...) and a valid
         # OKF bundle from elsewhere rarely meets it, so its findings are warnings: the pages import as written.
@@ -334,7 +433,7 @@ def import_bundle(src: str, kit: str | None = None, kb_id: str | None = None, pa
             from kb_distillery.ops.core import OpsError, _commit_paths, _message
             with init_kb._identity_if_missing():
                 try:
-                    sha = _commit_paths(target, [WIKI_DIR, "meta", kbconfig.CONFIG_NAME],
+                    sha = _commit_paths(target, [WIKI_DIR, "meta", kbconfig.CONFIG_NAME, *_imported_dirs(staged)],
                                         _message("import", f"{count} page(s) from {os.path.basename(label.rstrip('/'))}",
                                                  cp.next_version(target), kb_id))
                 except OpsError as e:
