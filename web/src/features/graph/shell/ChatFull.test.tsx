@@ -111,8 +111,8 @@ describe("flag chat-full: one chat surface in three sizes", () => {
       expect(screen.queryByTestId("chat-list")).not.toBeInTheDocument();
       await userEvent.click(screen.getByRole("button", { name: "Full screen" }));
       expect(panel).toHaveAttribute("data-size", "full");
-      // (jsdom rewrites min() inside calc; the browser reads: 100% minus the right pane, at most 48% and 720px)
-      expect(panel.style.width).toMatch(/^calc\(100% - /);
+      // (jsdom folds the calc; the browser reads 100% minus the right pane, half the width by default)
+      expect(panel.style.width).toMatch(/^calc\((100% - |50%)/); // half and half by default
       const list = await screen.findByTestId("chat-list");
       expect(within(list).getByRole("button", { name: /New chat/ })).toBeInTheDocument();
       await waitFor(() => expect(within(list).getByText("Pinned")).toBeInTheDocument());
@@ -128,15 +128,14 @@ describe("flag chat-full: one chat surface in three sizes", () => {
       // the plan, skills and prompts sit in the chat column's header
       await userEvent.click(screen.getByRole("button", { name: "Plan, skills and prompts" }));
       expect(screen.getByTestId("chat-tools")).toBeInTheDocument();
-      // the page viewer folds down by its handle, the graph takes the whole pane, and the handle brings it back
-      await userEvent.click(screen.getByRole("button", { name: "Fold the page viewer down" }));
-      expect(screen.queryByTestId("chat-explorer")).not.toBeInTheDocument();
-      expect(screen.getByTestId("graph-shell").parentElement?.style.bottom).not.toBe("50%");
-      await userEvent.click(screen.getByRole("button", { name: "Show the page viewer" }));
-      expect(screen.getByTestId("chat-explorer")).toBeInTheDocument();
+      // the page viewer has no handle of its own: its reader's close shuts it and the graph takes the whole pane
+      expect(screen.queryByRole("button", { name: /page viewer/ })).not.toBeInTheDocument();
       // the chat list and the page viewer resize by their edges
       expect(screen.getByRole("separator", { name: "Resize the chat list" })).toBeInTheDocument();
       expect(screen.getByRole("separator", { name: "Resize the page viewer" })).toBeInTheDocument();
+      await userEvent.click(within(screen.getByTestId("chat-explorer")).getByRole("button", { name: "Close reader" }));
+      expect(screen.queryByTestId("chat-explorer")).not.toBeInTheDocument();
+      expect(screen.getByTestId("graph-shell").parentElement?.style.bottom).not.toBe("50%");
       await userEvent.click(screen.getByRole("button", { name: "Back to the panel" }));
       expect(panel).toHaveAttribute("data-size", "panel");
       expect(screen.queryByTestId("chat-explorer")).not.toBeInTheDocument();
@@ -316,14 +315,14 @@ describe("chat list and composer helpers", () => {
 });
 
 describe("flag chat-full: the header controls", () => {
-  it("on: close and size are the first two header buttons in the panel and in full screen, so they never move", async () => {
+  it("on: close, tools and size are the first three header buttons; tools sit between close and size in both sizes, so the book never moves", async () => {
     await on(async () => {
       sessionsFetch([]);
       const panel = await opened();
-      const firstTwo = () => [...panel.querySelector("header")!.querySelectorAll("button")].slice(0, 2).map((b) => b.getAttribute("aria-label"));
-      expect(firstTwo()).toEqual(["Close chat", "Full screen"]);
+      const firstThree = () => [...panel.querySelector("header")!.querySelectorAll("button")].slice(0, 3).map((b) => b.getAttribute("aria-label"));
+      expect(firstThree()).toEqual(["Close chat", "Plan, skills and prompts", "Full screen"]);
       await userEvent.click(screen.getByRole("button", { name: "Full screen" }));
-      await waitFor(() => expect(firstTwo()).toEqual(["Close chat", "Back to the panel"]));
+      await waitFor(() => expect(firstThree()).toEqual(["Close chat", "Plan, skills and prompts", "Back to the panel"]));
     });
   });
 });
