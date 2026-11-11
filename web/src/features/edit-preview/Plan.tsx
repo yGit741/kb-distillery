@@ -1,12 +1,12 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { X } from "lucide-react";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useDataSource, type Hunk, type Proposal } from "@/api";
 import { ErrorState, Loading } from "@/components/states";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
-import { useIngestJob } from "@/features/ingest/model";
+import { BACKENDS, useIngestJob } from "@/features/ingest/model";
 import { applyBlocker, changeKind, decisionOf } from "@/features/proposals/model";
 import { useApiQuery } from "@/lib/useApiQuery";
 import { useEditPreview } from "./store";
@@ -54,12 +54,14 @@ export function ProposalPlan({ id, onLeave }: { id: string; onLeave: () => void 
   const r = useApiQuery(["proposal-render", id], (d) => d.getProposalRender(id));
   const index = useApiQuery(["pages", "index", ""], (d) => d.listPages(), { staleTime: 60_000 });
   const p = q.data;
+  // "new" and "safe" need the render and the page list: until both are here nothing is counted or offered
+  const ready = !!r.data && !!index.data;
   const plan = useMemo(() => {
-    if (!p) return null;
+    if (!p || !ready) return null;
     const rendered = new Map((r.data?.pages ?? []).map((pg) => [pg.slug, pg.exists]));
     const cards = new Map((index.data?.pages ?? []).map((c) => [c.id, c]));
     return planOf(p, (s) => rendered.get(s) ?? cards.has(s), (s) => cards.get(s));
-  }, [p, r.data, index.data]);
+  }, [p, ready, r.data, index.data]);
   const acceptSafe = useMutation({
     mutationFn: async (hunks: Hunk[]) => {
       let last: Proposal | undefined;
@@ -70,8 +72,9 @@ export function ProposalPlan({ id, onLeave }: { id: string; onLeave: () => void 
     onSettled: () => void qc.invalidateQueries({ queryKey: ["proposal", id] }),
   });
   const apply = useMutation({ mutationFn: () => ds.applyProposal(id), onSuccess: () => void qc.invalidateQueries() });
-  if (q.isLoading) return <Loading label="Loading the plan" />;
-  if (q.error || !p || !plan) return <ErrorState title="Could not load this proposal" error={q.error} onRetry={() => void q.refetch()} />;
+  const error = q.error ?? r.error ?? index.error;
+  if (error) return <ErrorState title="Could not load this proposal" error={error} onRetry={() => void Promise.all([q.refetch(), r.refetch(), index.refetch()])} />;
+  if (!p || !plan) return <Loading label="Loading the plan" />;
   const openPage = (slug: string) => {
     onLeave();
     void navigate({ to: `/pages/${encodeURIComponent(slug)}` as "/", search: { review: id } as never });
@@ -122,6 +125,45 @@ export function ProposalPlan({ id, onLeave }: { id: string; onLeave: () => void 
   );
 }
 
+/**
+ * The one question before a dropped source is read: which backend runs the model. A single source is always read
+ * deep. Nothing is sent until "Read this source"; closing the pop-up drops the file and costs nothing.
+ */
+function GoAhead({ file }: { file: File }) {
+  const ds = useDataSource();
+  const showPlan = useEditPreview((s) => s.showPlan);
+  const [backend, setBackend] = useState<string>("");
+  const start = useMutation({
+    mutationFn: () => ds.startIngest({ file, tier: "deep", backend: backend || undefined }),
+    // only if this file's go-ahead is still on screen: a closed pop-up stays closed
+    onSuccess: (started) => useEditPreview.getState().plan?.file === file && showPlan({ name: file.name, jobId: started.job_id }),
+  });
+  return (
+    <div className="mx-auto flex max-w-md flex-col gap-4 pt-10" data-testid="plan-go-ahead">
+      <div>
+        <p className="text-sm font-medium">{file.name}</p>
+        <p className="text-sm text-muted-foreground">It will be read in full, and what it would create, update and link comes back as a plan. Nothing changes until you apply it.</p>
+      </div>
+      <fieldset className="flex flex-col gap-1.5" disabled={start.isPending}>
+        <legend className="mb-1.5 text-sm font-medium">Run the model on</legend>
+        <div className="inline-flex w-fit rounded-md border p-0.5" role="radiogroup" aria-label="Run the model on">
+          {BACKENDS.map((b) => (
+            <label key={b.id || "default"} className="cursor-pointer rounded-[5px] px-3 py-1 text-sm text-muted-foreground has-[:checked]:bg-accent-soft has-[:checked]:text-foreground">
+              <input type="radio" name="plan-backend" className="sr-only" checked={backend === b.id} onChange={() => setBackend(b.id)} />
+              {b.label}
+            </label>
+          ))}
+        </div>
+        <p className="text-xs text-muted-foreground">Default is the server's setting. Batch is half price and slower.</p>
+      </fieldset>
+      {start.error && <p role="alert" className="text-sm text-foreground/85">{start.error instanceof Error ? start.error.message : "Could not start reading this file."}</p>}
+      <Button className="self-start" disabled={start.isPending} onClick={() => start.mutate()}>
+        {start.isPending ? "Starting" : "Read this source"}
+      </Button>
+    </div>
+  );
+}
+
 const upper = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 /**
@@ -154,6 +196,8 @@ function PlanDialog({ plan }: { plan: NonNullable<ReturnType<typeof useEditPrevi
         <div className="min-h-0 overflow-auto p-6">
           {plan.error ? (
             <p role="alert" className="pt-10 text-center text-sm text-foreground/85">{plan.error}</p>
+          ) : plan.file && !plan.jobId ? (
+            <GoAhead file={plan.file} />
           ) : proposalId ? (
             <ProposalPlan id={proposalId} onLeave={close} />
           ) : job && job.status !== "running" ? (

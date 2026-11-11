@@ -1,5 +1,4 @@
 import { useEffect } from "react";
-import { useDataSource } from "@/api";
 import { fileProblem } from "@/features/ingest/model";
 import { useFlag } from "@/flags/useFlag";
 import { PlanSheet } from "./Plan";
@@ -12,7 +11,8 @@ const SAMPLE = "sample";
 
 /**
  * Mounts the edit preview on the graph (flag ui.edit-preview). A file dropped anywhere on the graph opens the pop-up
- * straight away: with ui.ingest on the file is read for real (always deep) and its proposal arrives as a plan graph;
+ * straight away: with ui.ingest on the pop-up asks once which backend to read it on (always deep), then its proposal arrives as a
+ * plan graph;
  * without it the sample sheet plays. `?preview=<proposal id>` opens that proposal's plan. A drop that another
  * control took (the add-sources card) is left alone.
  */
@@ -66,19 +66,13 @@ function SampleDrop() {
   return null;
 }
 
-/** One dropped source is always read deep; the job's proposal becomes the plan on screen. */
+/** A dropped file opens the pop-up on a go-ahead step; reading starts there, never on the drop itself. */
 function RealDrop() {
-  const ds = useDataSource();
   const showPlan = useEditPreview((s) => s.showPlan);
   useWindowDrop((file) => {
     if (!file || useEditPreview.getState().plan) return;
     const problem = fileProblem(file);
-    if (problem) return showPlan({ name: file.name, error: problem });
-    showPlan({ name: file.name });
-    ds.startIngest({ file, tier: "deep" }).then(
-      (started) => showPlan({ name: file.name, jobId: started.job_id }),
-      (e: unknown) => showPlan({ name: file.name, error: e instanceof Error ? e.message : "Could not start reading this file." }),
-    );
+    showPlan(problem ? { name: file.name, error: problem } : { name: file.name, file });
   });
   return null;
 }

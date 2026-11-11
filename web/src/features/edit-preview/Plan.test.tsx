@@ -79,7 +79,7 @@ describe("edit preview plan", () => {
       expect(screen.queryByTestId("plan-sheet")).toBeNull();
     }));
 
-  it("a dropped file is read deep, shows its step, then the plan of its proposal", () =>
+  it("a dropped file asks once, is read deep, shows its step, then the plan of its proposal", () =>
     on(async () => {
       const startIngest = vi.fn(async () => ({ job_id: "j1" }));
       let done = false;
@@ -88,7 +88,12 @@ describe("edit preview plan", () => {
       await screen.findByText(() => true, undefined, { timeout: 50 }).catch(() => undefined);
       fireEvent.drop(window, { dataTransfer: { types: ["Files"], files: [new File(["x"], "paper.pdf", { type: "application/pdf" })] } });
       const sheet = await screen.findByTestId("plan-sheet");
-      await waitFor(() => expect(startIngest).toHaveBeenCalledWith(expect.objectContaining({ tier: "deep" })));
+      // the drop itself starts nothing: one go-ahead with the backend choice comes first
+      expect(await within(sheet).findByTestId("plan-go-ahead")).toHaveTextContent("paper.pdf");
+      expect(startIngest).not.toHaveBeenCalled();
+      await userEvent.click(within(sheet).getByRole("radio", { name: "Batch" }));
+      await userEvent.click(within(sheet).getByRole("button", { name: "Read this source" }));
+      await waitFor(() => expect(startIngest).toHaveBeenCalledWith(expect.objectContaining({ tier: "deep", backend: "batch" })));
       expect(await within(sheet).findByText(/Reading the source: digest · page 3 of 9/)).toBeInTheDocument();
       done = true;
       expect(await within(sheet).findByTestId("plan-line", undefined, { timeout: 4000 })).toBeInTheDocument();

@@ -6,6 +6,8 @@ export type View = { kind: "all" } | { kind: "page"; slug: string; focus: string
 
 /** The real plan on screen: a job still reading a dropped file, or the proposal it (or anything else) made. */
 export interface PlanTarget {
+  /** A dropped file waiting for the go-ahead: nothing is read, and nothing is spent, until the person starts it. */
+  file?: File;
   jobId?: string;
   proposalId?: string;
   /** The dropped file's name, shown until the proposal has a title. */
