@@ -699,7 +699,7 @@ export interface paths {
         /** The ingest jobs of this kb, newest first (the last 200), each with its proposal's current status */
         get: operations["jobs_api_ingest_get"];
         put?: never;
-        /** Start an ingest job: multipart `file` (+ tier, collection, backend) or JSON {url, tier, collection, backend} */
+        /** Start an ingest job: multipart `file` (+ tier, collection, backend, year) or JSON {url, tier, collection, backend} */
         post: operations["start_api_ingest_post"];
         delete?: never;
         options?: never;

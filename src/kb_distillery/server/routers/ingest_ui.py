@@ -22,7 +22,7 @@ def _call(fn, *args, **kw):
 
 
 @router.post("/api/ingest", dependencies=[Depends(refuse_when_read_only)], response_model=IngestStarted, responses=ERRORS,
-             summary="Start an ingest job: multipart `file` (+ tier, collection, backend) or JSON {url, tier, collection, backend}",
+             summary="Start an ingest job: multipart `file` (+ tier, collection, backend, year) or JSON {url, tier, collection, backend}",
              openapi_extra={"requestBody": {"content": {"application/json": {"schema": {"type": "object", "properties": {"url": {"type": "string"}, "tier": {"type": "string"}, "collection": {"type": "string"}, "backend": {"type": "string"}}}},
                                                          "multipart/form-data": {"schema": {"type": "object"}}}}})
 async def start(request: Request):
@@ -33,7 +33,8 @@ async def start(request: Request):
         if up is None or not hasattr(up, "read"):
             raise HTTPException(422, "attach a file as the `file` field, or send JSON with a url")
         data = await up.read()
-        return _call(svc.start_file, up.filename or "", data, form.get("tier"), form.get("collection"), form.get("backend") or None)
+        return _call(svc.start_file, up.filename or "", data, form.get("tier"), form.get("collection"), form.get("backend") or None,
+                     year=form.get("year"))
     try:
         body = IngestUrlRequest.model_validate(await request.json())
     except Exception:                                                        # noqa: BLE001 - malformed JSON / fields

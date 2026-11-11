@@ -6,7 +6,8 @@ import { useDataSource, type Hunk, type Proposal } from "@/api";
 import { ErrorState, Loading } from "@/components/states";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
-import { BACKENDS, useIngestJob } from "@/features/ingest/model";
+import { BACKENDS, needsYear, useIngestJob, yearGuess, yearOk } from "@/features/ingest/model";
+import { YearField } from "@/features/ingest/parts";
 import { applyBlocker, changeKind, decisionOf } from "@/features/proposals/model";
 import { useApiQuery } from "@/lib/useApiQuery";
 import { useEditPreview } from "./store";
@@ -133,10 +134,13 @@ function GoAhead({ file }: { file: File }) {
   const ds = useDataSource();
   const showPlan = useEditPreview((s) => s.showPlan);
   const [backend, setBackend] = useState<string>("");
+  // a paper is filed by its year: when the file name has none it is asked here, before anything is stored
+  const askYear = needsYear(file);
+  const [year, setYear] = useState(() => yearGuess(file.name));
   // a read-only knowledge base (the example one) refuses every write: say so here, before offering to read anything
   const kb = useApiQuery(["kb"], (d) => d.getKb(), { staleTime: Infinity, retry: false });
   const start = useMutation({
-    mutationFn: () => ds.startIngest({ file, tier: "deep", backend: backend || undefined }),
+    mutationFn: () => ds.startIngest({ file, tier: "deep", backend: backend || undefined, year: askYear ? year : undefined }),
     // only if this file's go-ahead is still on screen: a closed pop-up stays closed
     onSuccess: (started) => useEditPreview.getState().plan?.file === file && showPlan({ name: file.name, jobId: started.job_id }),
   });
@@ -167,8 +171,9 @@ function GoAhead({ file }: { file: File }) {
         </div>
         <p className="text-xs text-muted-foreground">Default is the server's setting. Batch is half price and slower.</p>
       </fieldset>
+      {askYear && <YearField name={file.name} value={year} onChange={setYear} disabled={start.isPending} />}
       {start.error && <p role="alert" className="text-sm text-foreground/85">{start.error instanceof Error ? start.error.message : "Could not start reading this file."}</p>}
-      <Button className="self-start" disabled={start.isPending} onClick={() => start.mutate()}>
+      <Button className="self-start" disabled={start.isPending || (askYear && !yearOk(year))} onClick={() => start.mutate()}>
         {start.isPending ? "Starting" : "Read this source"}
       </Button>
     </div>

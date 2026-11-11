@@ -86,17 +86,50 @@ describe("edit preview plan", () => {
       const job = () => ({ id: "j1", status: done ? "done" : "running", source: "paper.pdf", tier: "deep", collection: "", kind: "file", backend: "", started: 0, finished: null, step: "digest", error: null, pages: [], proposal_id: done ? "p1" : null, steps: [{ name: "digest", state: "active", detail: "page 3 of 9" }] });
       setup({ startIngest: startIngest as never, getIngestJob: (async () => job()) as never, ingestEvents: (async () => new Response(null, { status: 500 })) as never });
       await screen.findByText(() => true, undefined, { timeout: 50 }).catch(() => undefined);
-      fireEvent.drop(window, { dataTransfer: { types: ["Files"], files: [new File(["x"], "paper.pdf", { type: "application/pdf" })] } });
+      fireEvent.drop(window, { dataTransfer: { types: ["Files"], files: [new File(["x"], "2024-paper.pdf", { type: "application/pdf" })] } });
       const sheet = await screen.findByTestId("plan-sheet");
       // the drop itself starts nothing: one go-ahead with the backend choice comes first
       expect(await within(sheet).findByTestId("plan-go-ahead")).toHaveTextContent("paper.pdf");
       expect(startIngest).not.toHaveBeenCalled();
+      expect(within(sheet).queryByTestId("year-field")).toBeNull();                       // the name already says the year
       await userEvent.click(within(sheet).getByRole("radio", { name: "Batch" }));
       await userEvent.click(within(sheet).getByRole("button", { name: "Read this source" }));
       await waitFor(() => expect(startIngest).toHaveBeenCalledWith(expect.objectContaining({ tier: "deep", backend: "batch" })));
       expect(await within(sheet).findByText(/Reading the source: digest · page 3 of 9/)).toBeInTheDocument();
       done = true;
       expect(await within(sheet).findByTestId("plan-line", undefined, { timeout: 4000 })).toBeInTheDocument();
+    }));
+
+  it("a paper whose file name has no year asks for it before it can be read", () =>
+    on(async () => {
+      const startIngest = vi.fn(async () => ({ job_id: "j1" }));
+      setup({ startIngest: startIngest as never, getIngestJob: (async () => { throw new Error("gone"); }) as never, ingestEvents: (async () => new Response(null, { status: 500 })) as never });
+      await screen.findByText(() => true, undefined, { timeout: 50 }).catch(() => undefined);
+      fireEvent.drop(window, { dataTransfer: { types: ["Files"], files: [new File(["x"], "survey.pdf", { type: "application/pdf" })] } });
+      const sheet = await screen.findByTestId("plan-sheet");
+      const read = await within(sheet).findByRole("button", { name: "Read this source" });
+      const year = within(sheet).getByLabelText("Year of the paper");
+      expect(read).toBeDisabled();
+      expect(within(sheet).getByTestId("year-field")).toHaveTextContent("the file name does not have one");
+      await userEvent.type(year, "20x2");
+      expect(year).toHaveValue("202");
+      expect(read).toBeDisabled();
+      await userEvent.type(year, "1");
+      await userEvent.click(read);
+      await waitFor(() => expect(startIngest).toHaveBeenCalledWith(expect.objectContaining({ tier: "deep", year: "2021" })));
+    }));
+
+  it("an arXiv number in the name fills the year in advance", () =>
+    on(async () => {
+      const startIngest = vi.fn(async () => ({ job_id: "j1" }));
+      setup({ startIngest: startIngest as never, getIngestJob: (async () => { throw new Error("gone"); }) as never, ingestEvents: (async () => new Response(null, { status: 500 })) as never });
+      await screen.findByText(() => true, undefined, { timeout: 50 }).catch(() => undefined);
+      fireEvent.drop(window, { dataTransfer: { types: ["Files"], files: [new File(["x"], "WikiLoop-2607.26604.pdf", { type: "application/pdf" })] } });
+      const sheet = await screen.findByTestId("plan-sheet");
+      expect(await within(sheet).findByLabelText("Year of the paper")).toHaveValue("2026");
+      expect(within(sheet).getByTestId("year-field")).toHaveTextContent("Read from the arXiv number");
+      await userEvent.click(within(sheet).getByRole("button", { name: "Read this source" }));
+      await waitFor(() => expect(startIngest).toHaveBeenCalledWith(expect.objectContaining({ year: "2026" })));
     }));
 
   it("a file that cannot be ingested says why and starts nothing", () =>

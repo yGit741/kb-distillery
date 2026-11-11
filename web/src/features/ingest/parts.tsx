@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import type { IngestJob } from "@/api/types";
 import { useFlag } from "@/flags/useFlag";
 import { cn } from "@/lib/utils";
-import { ACCEPT, BACKENDS, fileProblem, sizeLabel, sourceKind, sourceName, TIERS, urlProblem, type Flow, type Source } from "./model";
+import { ACCEPT, BACKENDS, fileProblem, sizeLabel, sourceKind, sourceName, TIERS, urlProblem, yearGuess, yearOk, type Flow, type Source } from "./model";
 
 /** Drag a file in, click to choose one, or paste a web address and press Use. */
 export function SourcePicker({ onSource, tall }: { onSource: (s: Source) => void; tall?: boolean }) {
@@ -90,6 +90,24 @@ function Choice({ name, checked, onPick, title, hint }: { name: string; checked:
   );
 }
 
+/**
+ * The year of a paper whose file name has none. A paper is filed as `<year>-<title>`, so the source cannot be read
+ * until this is filled; an arXiv number in the name fills it in advance.
+ */
+export function YearField({ name, value, onChange, disabled }: { name: string; value: string; onChange: (y: string) => void; disabled?: boolean }) {
+  const id = useId();
+  const guessed = !!value && value === yearGuess(name);
+  return (
+    <div className="flex flex-col gap-1.5" data-testid="year-field">
+      <label htmlFor={id} className="text-sm font-medium">Year of the paper</label>
+      <Input id={id} value={value} onChange={(e) => onChange(e.target.value.replace(/\D/g, "").slice(0, 4))} inputMode="numeric" placeholder="such as 2024" className="w-28" disabled={disabled} autoComplete="off" aria-describedby={id + "-hint"} aria-invalid={!!value && !yearOk(value)} />
+      <p id={id + "-hint"} className="text-xs text-muted-foreground">
+        {guessed ? "Read from the arXiv number in the file name. Change it if it is wrong." : "A paper is filed by its year, and the file name does not have one."}
+      </p>
+    </div>
+  );
+}
+
 /** Triage: what was dropped, how deeply to read it, which model backend runs it, the collection, and the Ingest button. */
 export function TriageCard({ flow, collections, onBack }: { flow: Flow; collections: string[]; onBack?: () => void }) {
   const listId = useId();
@@ -129,9 +147,10 @@ export function TriageCard({ flow, collections, onBack }: { flow: Flow; collecti
           <Input id={listId + "-in"} list={listId} value={flow.collection} onChange={(e) => flow.setCollection(e.target.value)} placeholder="a course, series or book page" disabled={busy} autoComplete="off" />
           <datalist id={listId}>{collections.map((c) => <option key={c} value={c} />)}</datalist>
         </div>
+        {flow.yearAsked && flow.source.kind === "file" && <YearField name={flow.source.file.name} value={flow.year} onChange={flow.setYear} disabled={busy} />}
         {flow.startError && <p role="alert" className="text-sm text-muted-foreground">{flow.startError}</p>}
         <div className="flex items-center gap-2">
-          <Button onClick={flow.start} disabled={busy}>
+          <Button onClick={flow.start} disabled={busy || flow.yearMissing}>
             {flow.starting ? "Starting" : flow.jobId ? "Started" : "Ingest"}
           </Button>
           {onBack && <Button variant="ghost" onClick={onBack} disabled={busy}>Back</Button>}

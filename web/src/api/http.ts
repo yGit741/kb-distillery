@@ -270,6 +270,7 @@ export function createHttpDataSource(fetchImpl: Fetch = (...a) => fetch(...a), b
         form.append("tier", input.tier);
         if (input.collection) form.append("collection", input.collection);
         if (input.backend) form.append("backend", input.backend);
+        if (input.year) form.append("year", input.year);
         return postRaw<T_.IngestStarted>("/api/ingest", { body: form });
       }
       return postRaw<T_.IngestStarted>("/api/ingest", {

@@ -100,6 +100,8 @@ export interface IngestInput {
   tier: string;
   collection?: string;
   backend?: string;
+  /** a paper PDF whose file name carries no year: the year it is filed under */
+  year?: string;
 }
 export type DigestJobList = S["DigestJobList"];
 export type DigestBackendOption = S["BackendOption"];
