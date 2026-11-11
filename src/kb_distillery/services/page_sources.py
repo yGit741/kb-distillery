@@ -47,7 +47,7 @@ def _body(text):
 
 
 def _sections(body, needles):
-    """Headings of the sections of `body` whose text contains any of `needles`, in page order."""
+    """Headings of the sections of `body` whose text contains any of `needles`, in page order; never `## My notes`."""
     heading, hits, in_code = "", [], False
     for line in body.splitlines():
         if line.lstrip().startswith("```"):
@@ -57,7 +57,7 @@ def _sections(body, needles):
             continue
         m = _HEADING.match(line)
         if m:
-            heading = m.group(2)
+            heading = "" if (len(m.group(1)), m.group(2)) == (2, "My notes") else m.group(2)
             continue
         if heading and heading not in hits and any(n and re.search(r"(?<![\w.-])" + re.escape(n) + r"(?![\w-])", line) for n in needles):
             hits.append(heading)
@@ -110,8 +110,6 @@ def build_sources(slug, view=None):
         needles = [path, os.path.basename(path)] + ([f"{owner}.md", f"[[{owner}]]"] if owner else [])
         it["cited_in_sections"] = _sections(body, needles)
 
-    for p in raw_paths(fm):
-        add_raw(p, "raw")
     def add_page(ps, via):
         """Source page `ps`: its raw files when it names any, else the page itself."""
         sfm = pages[ps][1]
@@ -128,6 +126,8 @@ def build_sources(slug, view=None):
         if via not in it["via"]:
             it["via"].append(via)
 
+    for p in raw_paths(fm):
+        add_raw(p, "raw")
     for res in _resources(fm):
         ps = page_slug(res)
         if ps and ps in pages and ps != slug:

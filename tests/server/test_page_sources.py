@@ -61,7 +61,7 @@ sources: []
 
 ## My notes
 
-My own pointer to [[ps-paper-z]] and [Paper Z](ps-paper-z.md).
+My own pointer to [[ps-paper-z]] and [Paper Z](ps-paper-z.md); [Paper Y](ps-paper-y.md) once more.
 """
 ROW = "raw/printed-docs/2026-paper-x.pdf\tabc123\tprinted-docs\tsource\tps-paper-x\t\t\n"
 
@@ -71,7 +71,9 @@ def client():
     root = paths.ROOT
     made = {f"wiki/{n}.md": t for n, t in (("ps-paper-x", PAPER), ("ps-soft-claims", IDEA), ("ps-bare", BARE),
                                                 ("ps-paper-y", NOTE), ("ps-paper-z", NOTE.replace("Paper Y", "Paper Z")),
-                                                ("ps-linked", LINKED))}
+                                                ("ps-linked", LINKED),
+                                                ("ps-paper-w", PAPER.replace("paper-x", "paper-w").replace("Paper X", "Paper W")),
+                                                ("ps-linked-w", "---\ntype: idea\nlayer: concept\n---\n\n# W idea\n\n## Evidence\n\nSee [Paper W](ps-paper-w.md).\n"))}
     corpus = os.path.join(root, "meta", "corpus.tsv")
     old = open(corpus, encoding="utf-8").read() if os.path.exists(corpus) else None
     os.makedirs(os.path.dirname(corpus), exist_ok=True)
@@ -118,6 +120,12 @@ def test_concept_page_counts_source_pages_linked_in_its_text(client):
     assert page.cited_in_sections == ["Connections"] and page.added == "2026-09-01"
     assert (raw.title, raw.slug, raw.via, raw.cited_in_sections) == ("Paper X", "ps-paper-x", ["links"], ["Connections"])
     assert body.counts.total == 2 and body.counts.raw == 1 and body.counts.pages == 1
+
+
+def test_linked_source_page_with_a_raw_file_only_the_link_names(client):
+    body = client.get("/api/pages/ps-linked-w/sources").json()
+    assert [(s["id"], s["slug"], s["via"], s["cited_in_sections"]) for s in body["sources"]] == [
+        ("raw/printed-docs/2026-paper-w.pdf", "ps-paper-w", ["links"], ["Evidence"])]
 
 
 def test_declared_source_that_is_also_linked_is_listed_once(client):
