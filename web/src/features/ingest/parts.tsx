@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import type { IngestJob } from "@/api/types";
+import { useFlag } from "@/flags/useFlag";
 import { cn } from "@/lib/utils";
 import { ACCEPT, BACKENDS, fileProblem, sizeLabel, sourceKind, sourceName, TIERS, urlProblem, type Flow, type Source } from "./model";
 
@@ -165,6 +166,8 @@ function title(job: IngestJob | null, started: boolean): string {
  * a quiet failure note, and at the end the link to the proposal.
  */
 export function JobCard({ job, source, started, onAgain }: { job: IngestJob | null; source: string; started: boolean; onAgain?: () => void }) {
+  // flag ui.edit-preview: the finished proposal opens as its plan graph over the graph
+  const plan = useFlag("ui.edit-preview");
   const steps = job?.steps ?? IDLE_STEPS;
   const ended = job?.status === "done" || job?.status === "failed";
   return (
@@ -203,7 +206,7 @@ export function JobCard({ job, source, started, onAgain }: { job: IngestJob | nu
               <p className="truncate font-mono text-xs text-muted-foreground" title={job.pages.join(", ")}>{job.pages.join(", ")}</p>
             )}
             <Button asChild size="sm" className="self-start">
-              <Link to={`/proposals/${encodeURIComponent(job.proposal_id)}` as "/"}>
+              <Link to={(plan ? "/graph" : `/proposals/${encodeURIComponent(job.proposal_id)}`) as "/"} search={(plan ? { preview: job.proposal_id } : {}) as never}>
                 Review the proposal <ArrowRight className="size-4" strokeWidth={1.5} aria-hidden />
               </Link>
             </Button>
