@@ -873,12 +873,14 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
   // ---- knowledge base names: DOM labels just above each region's outline (lifted only over a page label of that
   // region that sticks out under the name), placed every frame, draggable (moves the region)
   const kbLabels = useRef(new Map<string, HTMLButtonElement>());
-  const placeKbLabels = (placed: readonly { id: string; box: readonly number[] }[] = []) => {
+  const placeKbLabels = (placed: readonly { id: string; box: readonly number[] }[]) => {
     const g = fg.current;
     const el = wrap.current;
     if (!g || !el || !kbLabels.current.size) return;
     const box = el.getBoundingClientRect();
     const groups = kbGroups(g.nodes().filter((n) => !isPile(n)));
+    // read every width first, then write: a width read after a style write would lay the page out once per region
+    const widths = new Map([...kbLabels.current].map(([id, label]) => [id, label.offsetWidth]));
     for (const [id, label] of kbLabels.current) {
       const list = groups.get(id);
       const spot = list?.length ? kbLabelSpot(list) : null;
@@ -889,7 +891,7 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
       }
       const own = new Set(list!.map((n) => n.id));
       const x = p.x - box.left;
-      const bottom = kbNameBottom(x, p.y - box.top, label.offsetWidth / 2, placed.filter((l) => own.has(l.id)).map((l) => l.box));
+      const bottom = kbNameBottom(x, p.y - box.top, (widths.get(id) ?? 0) / 2, placed.filter((l) => own.has(l.id)).map((l) => l.box));
       label.style.visibility = "visible";
       label.style.transform = `translate(${x}px, ${bottom}px) translate(-50%, -100%)`;
     }
