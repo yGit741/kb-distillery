@@ -409,9 +409,11 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
                   onAllViews={openGallery}
             />
           )}
-          <CornerButton id={BTN_ID.pins} label="Pinned views" data-tour="graph-views" on={pinsOpen} style={{ position: "absolute", left: EDGE, top: EDGE }} onClick={() => toggle("pins")}>
-            <PushPin />
-          </CornerButton>
+          {!chatOpen && (
+            <CornerButton id={BTN_ID.pins} label="Pinned views" data-tour="graph-views" on={pinsOpen} style={{ position: "absolute", left: EDGE, top: EDGE }} onClick={() => toggle("pins")}>
+              <PushPin />
+            </CornerButton>
+          )}
           {pinsOpen && (
             <>
               <MoreButton label="Pinned view options" on={menuOpen("pins")} style={moreAt("left", "top")} onClick={() => (menu?.owner === "pins" ? closeMenu() : openMenu("pins"))} />
@@ -521,9 +523,11 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
             onFavorite={focusFavorite}
             onAllViews={openGallery}
           />
-          <CornerButton id={BTN_ID.pins} label="Saved views" data-tour="graph-views" on={pinsOpen} style={{ position: "absolute", left: EDGE, top: EDGE }} onClick={() => toggle("pins")}>
-            <PushPin />
-          </CornerButton>
+          {!chatOpen && (
+            <CornerButton id={BTN_ID.pins} label="Saved views" data-tour="graph-views" on={pinsOpen} style={{ position: "absolute", left: EDGE, top: EDGE }} onClick={() => toggle("pins")}>
+              <PushPin />
+            </CornerButton>
+          )}
         </>
       )}
 
