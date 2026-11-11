@@ -1,7 +1,7 @@
 import "katex/dist/katex.min.css";
 import { Link } from "@tanstack/react-router";
 import type { Link as MdLink, Root, Text } from "mdast";
-import { useMemo, useRef, type ComponentProps } from "react";
+import { useMemo, useRef, type ComponentProps, type ReactNode } from "react";
 import ReactMarkdown from "react-markdown";
 import rehypeHighlight from "rehype-highlight";
 import rehypeKatex from "rehype-katex";
@@ -77,6 +77,8 @@ function urlTransform(url: string): string {
   return "";
 }
 
+type RemarkPlugin = NonNullable<ComponentProps<typeof ReactMarkdown>["remarkPlugins"]>[number];
+
 export interface MarkdownProps {
   children: string;
   className?: string;
@@ -89,6 +91,8 @@ export interface MarkdownProps {
   /** Numbered citations (flag show-thinking): a page link whose slug has a number gets it as a small superscript, and
    * hovering the link or the number reports the slug; `hot` is the slug to highlight (hovered here or on the graph). */
   cite?: CiteHooks;
+  /** Numbered source markers (pages, Footer variant): a remark plugin that adds `sup[data-source-mark=n]` nodes, and how to draw number `n`. */
+  marks?: { plugin: RemarkPlugin; render: (n: number) => ReactNode };
 }
 
 export interface CiteHooks {
@@ -102,7 +106,9 @@ export interface CiteHooks {
  * to /pages/<slug>. Raw HTML in the source is not rendered (react-markdown escapes it), so there is
  * nothing to sanitise and no dangerouslySetInnerHTML.
  */
-export function Markdown({ children, className, resolveSlug, transformUrl, linkSearch, cite: citeProp }: MarkdownProps) {
+export function Markdown({ children, className, resolveSlug, transformUrl, linkSearch, cite: citeProp, marks }: MarkdownProps) {
+  const marksRef = useRef(marks);
+  marksRef.current = marks;
   // read at render through a ref, so a new hooks object (a hover) never rebuilds the components and remounts the links
   const citeRef = useRef(citeProp);
   citeRef.current = citeProp;
@@ -145,6 +151,11 @@ export function Markdown({ children, className, resolveSlug, transformUrl, linkS
           </a>
         );
       },
+      sup({ node: _node, children: kids, ...rest }) {
+        const n = (rest as Record<string, unknown>)["data-source-mark"];
+        if (n !== undefined && marksRef.current) return <>{marksRef.current.render(Number(n))}</>;
+        return <sup {...rest}>{kids}</sup>;
+      },
       table({ node: _node, children: kids }) {
         return (
           <div className="overflow-x-auto">
@@ -159,10 +170,12 @@ export function Markdown({ children, className, resolveSlug, transformUrl, linkS
     }),
     [resolveSlug, transformUrl, linkSearch],
   );
+  const plugin = marks?.plugin;
+  const remarkPlugins = useMemo(() => [remarkGfm, remarkMath, remarkWikilinks, ...(plugin ? [plugin] : [])], [plugin]);
   return (
     <div className={cn("kb-prose", className)}>
       <ReactMarkdown
-        remarkPlugins={[remarkGfm, remarkMath, remarkWikilinks]}
+        remarkPlugins={remarkPlugins}
         rehypePlugins={[rehypeKatex, [rehypeHighlight, { detect: false, ignoreMissing: true }]]}
         urlTransform={urlTransform}
         components={components}
