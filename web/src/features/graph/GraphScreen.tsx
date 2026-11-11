@@ -7,6 +7,7 @@ import { HEADER_SLOT_ID } from "@/app/headerSlot";
 import { Empty, ErrorState, Loading } from "@/components/states";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { EditPreviewHost } from "@/features/edit-preview/Host";
 import { useCapabilities } from "./shell/capabilities";
 import { useKb } from "@/lib/store";
 import { useApiQuery } from "@/lib/useApiQuery";
@@ -230,6 +231,7 @@ export function GraphScreen({ search, host }: { search: GraphSearch; host: Graph
         onRefresh={() => void qc.invalidateQueries({ queryKey: ["graph"] })}
         dsKind={ds.kind}
       />
+      {ds.kind !== "embedded" && <EditPreviewHost preview={search.preview} />}
     </FullBleed>
   );
 }

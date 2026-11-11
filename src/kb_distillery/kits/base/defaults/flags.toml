@@ -337,3 +337,13 @@ expires = 2027-02-07
 kind = "runtime"
 default = false
 envs = { local = true, private = false, public = false }
+
+[[flag]]
+name = "ui.edit-preview"
+description = "Edit preview: one sheet over the graph where every change to the knowledge base is reviewed before it is applied (queue, triage groups, the page as a document, graph and chat). Fixture data until the queue lands."
+owner = "maintainer"
+created = 2026-11-11
+expires = 2027-02-09
+kind = "runtime"
+default = false
+envs = { local = true, private = false, public = false }
