@@ -126,11 +126,13 @@ function ResizeEdge({ width }: { width: number }) {
         const up = () => {
           window.removeEventListener("pointermove", move);
           window.removeEventListener("pointerup", up);
+          window.removeEventListener("pointercancel", up);
           document.body.style.cursor = "";
         };
         document.body.style.cursor = "col-resize";
         window.addEventListener("pointermove", move);
         window.addEventListener("pointerup", up);
+        window.addEventListener("pointercancel", up);
       }}
       onKeyDown={(e) => {
         if (e.key === "ArrowLeft") set(width - 24);

@@ -297,6 +297,10 @@ function Loaded({
   const explorerOpen = useChatFull((s) => s.explorerOpen);
   const ds = useDataSource();
   const ui = useGraphUi();
+  // a page opened from the graph in the full chat brings the folded page viewer back up
+  useEffect(() => {
+    if (fullChat && ui.readerSlug) useChatFull.getState().setExplorerOpen(true);
+  }, [fullChat, ui.readerSlug]);
   const selection = useKb((s) => s.selection);
   const canvas = useRef<CanvasHandle>(null);
   const [menu, setMenu] = useState<{ id: string; x: number; y: number } | null>(null);
