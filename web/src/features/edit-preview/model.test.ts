@@ -1,4 +1,5 @@
 import { SAMPLE_ITEM as item } from "./fixtures";
+import { fitTitle } from "./TouchedGraph";
 import { NO_DECISIONS, acceptAdditions, acceptBulk, acceptRestOfPage, applyCount, bulkLabel, groupsOf, lookPages, openOf, openOnPage, pageSummary } from "./model";
 
 const page = (slug: string) => item.pages.find((p) => p.slug === slug)!;
@@ -41,5 +42,11 @@ describe("edit preview model", () => {
     expect(pageSummary(page("attention"))).toBe("1 rewrite, 1 addition, 1 link");
     expect(bulkLabel(page("flashattention"))).toBe("3 links, 1 fix");
     expect(bulkLabel({ links: 0, fixes: 2 })).toBe("2 fixes");
+  });
+
+  it("graph labels keep whole words", () => {
+    expect(fitTitle("KV cache", 16)).toBe("KV cache");
+    expect(fitTitle("Senior ML Engineer, Perception (Acme)", 16)).toBe("Senior ML …");
+    expect(fitTitle("Negation-aware-clinical-ner", 16)).toBe("Negation-aware-c …");
   });
 });

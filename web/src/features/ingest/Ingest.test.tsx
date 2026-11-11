@@ -6,6 +6,7 @@ import { vi } from "vitest";
 import { DataSourceProvider, type DataSource } from "@/api";
 import type { IngestInput, IngestJob, IngestListItem } from "@/api/types";
 import { setVariant } from "@/components/variants";
+import { withFlag } from "@/flags/testing";
 import { mockDataSource } from "@/test/datasource";
 import IngestScreen from "./index";
 
@@ -210,7 +211,14 @@ describe("the inbox of ingests", () => {
     item("r6", { source: "paper.pdf", status: "interrupted", proposal_id: null, proposal_status: null, pages: [], error: "the server stopped while this was running" }),
   ];
 
-  it("lists each group, hides the empty ones, and links a waiting row to its review", async () => {
+  it("ui.edit-preview on: a waiting row opens its plan over the graph", () =>
+    withFlag("ui.edit-preview", true, async () => {
+      setup({ listIngest: async () => rows });
+      const waiting = (await screen.findByText("waiting.pdf")).closest("a");
+      expect(waiting?.getAttribute("href")).toContain("/graph?preview=p-r2");
+    }));
+
+  it("lists each group, hides the empty ones, and links a waiting row to its review", () => withFlag("ui.edit-preview", false, async () => {
     setup({ listIngest: async () => rows, ingestEvents: async () => sse([["job", job(["done", "done", "active"], { id: "r1", step: "digest" })]]) });
     const names = async () => (await screen.findAllByRole("heading", { level: 2 })).map((h) => h.textContent);
     expect(await names()).toEqual(["In progress", "Waiting for your review", "Done", "Did not finish"]);
@@ -220,7 +228,7 @@ describe("the inbox of ingests", () => {
     expect(done[0]).toHaveTextContent("Applied");
     expect(done[1]).toHaveTextContent("Rejected");
     expect(within(done[0]!).getByText("kept.md")).toBeInTheDocument();
-  });
+  }));
 
   it("shows a running row live with its step", async () => {
     setup({ listIngest: async () => [rows[0]!], ingestEvents: async () => sse([["job", job(["done", "done", "active"], { id: "r1", step: "digest", steps: STEPS.map((name, i) => ({ name, state: i < 2 ? "done" : i === 2 ? "active" : "pending", detail: i === 2 ? "reading with the api backend" : "" })) })]]) });

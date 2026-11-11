@@ -4,6 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import type { IngestListItem } from "@/api/types";
 import { Button } from "@/components/ui/button";
 import { Empty, ErrorState, Loading } from "@/components/states";
+import { useFlag } from "@/flags/useFlag";
 import { useApiQuery } from "@/lib/useApiQuery";
 import { cn } from "@/lib/utils";
 import { groupIngests, INGEST_LIST_KEY, tierLabel, useIngestJob, useRetryIngest, whenLabel } from "./model";
@@ -18,11 +19,11 @@ function Meta({ i }: { i: IngestListItem }) {
 }
 
 /** The first line of a row: the source, its state in muted words, and when. */
-function Head({ i, state, when, to }: { i: IngestListItem; state: string; when: string; to?: string | null }) {
+function Head({ i, state, when, to, search }: { i: IngestListItem; state: string; when: string; to?: string | null; search?: Record<string, string> }) {
   const name = <span className="min-w-0 truncate font-medium" title={i.source}>{i.source}</span>;
   return (
     <div className="flex items-baseline gap-3">
-      {to ? <Link to={to as "/"} className="min-w-0 truncate font-medium hover:underline" title={i.source}>{i.source}</Link> : name}
+      {to ? <Link to={to as "/"} search={(search ?? {}) as never} className="min-w-0 truncate font-medium hover:underline" title={i.source}>{i.source}</Link> : name}
       <span className="shrink-0 text-xs text-muted-foreground" data-testid="row-state">{state}</span>
       <span className="ml-auto shrink-0 whitespace-nowrap text-xs text-muted-foreground">{when}</span>
     </div>
@@ -56,9 +57,11 @@ function RunningRow({ i }: { i: IngestListItem }) {
 
 function ReviewRow({ i }: { i: IngestListItem }) {
   const stale = i.proposal_status === "stale";
+  // flag ui.edit-preview: a source waiting for review opens as its plan graph over the graph
+  const plan = useFlag("ui.edit-preview");
   return (
     <li className="flex flex-col gap-1 py-3" data-testid="ingest-row" data-id={i.id} data-group="review">
-      <Head i={i} state={stale ? "Pages changed since" : "Ready"} when={whenLabel(i.finished ?? i.started)} to={i.proposal_id ? `/proposals/${encodeURIComponent(i.proposal_id)}` : null} />
+      <Head i={i} state={stale ? "Pages changed since" : "Ready"} when={whenLabel(i.finished ?? i.started)} to={i.proposal_id ? (plan ? "/graph" : `/proposals/${encodeURIComponent(i.proposal_id)}`) : null} search={plan && i.proposal_id ? { preview: i.proposal_id } : undefined} />
       <div className="flex flex-wrap items-center gap-x-3 text-xs text-muted-foreground">
         <Meta i={i} />
         <span>{i.pages.length} {i.pages.length === 1 ? "page" : "pages"} to review</span>

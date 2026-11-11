@@ -21,7 +21,7 @@ describe("edit preview sheet", () => {
   });
 
   it("ui.edit-preview on: the link opens the sheet on all changes, with the queue, the graph and Apply held back", async () => {
-    await withFlag("ui.edit-preview", true, async () => {
+    await withFlag("ui.ingest", false, () => withFlag("ui.edit-preview", true, async () => {
       render(<EditPreviewHost preview="sample" />);
       expect(await screen.findByRole("dialog", { name: "Scaling laws for sparse attention" })).toBeInTheDocument();
       expect(within(screen.getByRole("navigation", { name: "Queue" })).getAllByRole("listitem")).toHaveLength(5);
@@ -29,11 +29,11 @@ describe("edit preview sheet", () => {
       for (const name of ["Before you start", "Needs a look", "Additions", "Links and fixes", "Left out"]) expect(screen.getByRole("region", { name })).toBeInTheDocument();
       expect(screen.getByText("13 still open")).toBeInTheDocument();
       expect(apply()).toBeDisabled();
-    });
+    }));
   });
 
   it("clears the easy groups in bulk, decides the rest in the page, then applies", async () => {
-    await withFlag("ui.edit-preview", true, async () => {
+    await withFlag("ui.ingest", false, () => withFlag("ui.edit-preview", true, async () => {
       const user = userEvent.setup();
       render(<EditPreviewHost preview="sample" />);
       await user.click(await screen.findByRole("button", { name: "Accept all 3" }));
@@ -61,11 +61,11 @@ describe("edit preview sheet", () => {
       expect(screen.getByText(/Everything is decided/)).toBeInTheDocument();
       await user.click(screen.getByRole("button", { name: "Apply 12 changes" }));
       expect(screen.getByRole("heading", { name: "Nothing was written" })).toBeInTheDocument();
-    });
+    }));
   });
 
   it("a dropped file opens the sheet reading, and closing keeps the decisions", async () => {
-    await withFlag("ui.edit-preview", true, async () => {
+    await withFlag("ui.ingest", false, () => withFlag("ui.edit-preview", true, async () => {
       const user = userEvent.setup();
       render(<EditPreviewHost />);
       expect(sheet()).toBeNull();
@@ -77,6 +77,6 @@ describe("edit preview sheet", () => {
       expect(sheet()).toBeNull();
       act(() => useEditPreview.getState().show());
       expect(await screen.findByText("10 still open")).toBeInTheDocument();
-    });
+    }));
   });
 });

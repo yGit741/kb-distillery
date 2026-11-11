@@ -4,7 +4,22 @@ import { NO_DECISIONS, acceptAdditions, acceptBulk, acceptRestOfPage, type Decis
 /** What the middle column shows: every change in groups, or one page as a document. */
 export type View = { kind: "all" } | { kind: "page"; slug: string; focus: string | null };
 
+/** The real plan on screen: a job still reading a dropped file, or the proposal it (or anything else) made. */
+export interface PlanTarget {
+  /** A dropped file waiting for the go-ahead: nothing is read, and nothing is spent, until the person starts it. */
+  file?: File;
+  jobId?: string;
+  proposalId?: string;
+  /** The dropped file's name, shown until the proposal has a title. */
+  name?: string;
+  error?: string;
+}
+
 interface State {
+  /** The plan pop-up (a real source or proposal); null = closed. Separate from the sample sheet below. */
+  plan: PlanTarget | null;
+  showPlan: (p: PlanTarget) => void;
+  closePlan: () => void;
   open: boolean;
   /** A dropped file is being read: the sheet is up, its pages are still arriving. */
   reading: boolean;
@@ -35,6 +50,9 @@ const without = <T,>(o: Record<string, T>, k: string): Record<string, T> => {
 };
 
 export const useEditPreview = create<State>((set) => ({
+  plan: null,
+  showPlan: (plan) => set({ plan }),
+  closePlan: () => set({ plan: null }),
   open: false,
   reading: false,
   view: { kind: "all" },
@@ -53,5 +71,5 @@ export const useEditPreview = create<State>((set) => ({
   acceptBulk: (item) => set((s) => ({ decisions: acceptBulk(item, s.decisions) })),
   acceptRest: (page) => set((s) => ({ decisions: acceptRestOfPage(page, s.decisions) })),
   apply: () => set({ applied: true, view: { kind: "all" } }),
-  reset: () => set({ open: false, reading: false, view: { kind: "all" }, decisions: NO_DECISIONS, applied: false }),
+  reset: () => set({ plan: null, open: false, reading: false, view: { kind: "all" }, decisions: NO_DECISIONS, applied: false }),
 }));
