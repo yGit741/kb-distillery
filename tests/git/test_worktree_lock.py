@@ -38,7 +38,12 @@ class Case(unittest.TestCase):
         _g(self.main, "commit", "-q", "--allow-empty", "-m", "init")
         self.wt = os.path.join(t, "wt")
         _g(self.main, "worktree", "add", "-q", "-b", "infra/x", self.wt)
-        self.addCleanup(lambda: os.environ.pop(worktree_lock.HELD_ENV, None))
+        # Each test starts with no lock held, whatever the caller's environment says: `ship commit` holds this
+        # worktree's lock while it runs the tests and exports HELD_ENV, and the lock restores that value on release.
+        env = unittest.mock.patch.dict(os.environ)
+        env.start()
+        self.addCleanup(env.stop)
+        os.environ.pop(worktree_lock.HELD_ENV, None)
 
     def _child(self, root):
         """A separate python process holding the lock; ends when its stdin closes (bounded, killed in teardown)."""
