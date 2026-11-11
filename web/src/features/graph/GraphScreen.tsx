@@ -1,6 +1,5 @@
 import { keepPreviousData, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { ChevronDown, ChevronUp } from "lucide-react";
 import { createPortal } from "react-dom";
 import { useDataSource } from "@/api";
 import { useHeaderFolded } from "@/app/headerFold";
@@ -303,6 +302,8 @@ function Loaded({
   const viewerH = useChatFull((s) => s.viewerH);
   const ds = useDataSource();
   const ui = useGraphUi();
+  // the page viewer under the graph in the full chat: shown only while a page is open in it
+  const viewerShown = explorerOpen && !!ui.readerSlug;
   // the page viewer under the graph in the full chat shows only once a page is opened (a click on a node, a cited
   // page): growing to full with a page left open from before keeps it shut
   const seenReader = useRef(ui.readerSlug);
@@ -633,7 +634,7 @@ function Loaded({
     <HostContext.Provider value={host}>
       <div className="absolute inset-0" data-testid="graph-area">
       {/* the full chat leaves the canvas the top of the right pane */}
-      <div className="absolute" style={fullChat ? { left: chatPanelWidth(true, false, undefined, paneW), right: 0, top: 0, bottom: explorerOpen ? `${viewerH}%` : 0 } : { inset: 0 }}>
+      <div className="absolute" style={fullChat ? { left: chatPanelWidth(true, false, undefined, paneW), right: 0, top: 0, bottom: viewerShown ? `${viewerH}%` : 0 } : { inset: 0 }}>
       <GraphCanvas
         ref={canvas}
         model={model}
@@ -664,7 +665,7 @@ function Loaded({
           style={{
             left: fullChat ? chatPanelWidth(true, false, undefined, paneW) : sparkOpen ? sparkPanelW : 0,
             right: reader && !fullChat ? "min(34rem, 100%)" : 0,
-            bottom: fullChat && explorerOpen ? `${viewerH}%` : 0,
+            bottom: fullChat && viewerShown ? `${viewerH}%` : 0,
           }}
         >
           {headerFold && <HeaderFold />}
@@ -818,55 +819,22 @@ function Loaded({
       {shell && <SparkPanelHost scope={search.scope} />}
       {fullChat && !foldedChat && (
         <>
-          {explorerOpen ? (
-          <div className="absolute bottom-0 right-0 z-30" style={{ width: paneWidth(paneW), height: `${viewerH}%` }}>
-            {/* the viewer's top edge: drag it up or down to share the pane with the graph */}
-            <DragEdge
-              label="Resize the page viewer"
-              axis="y"
-              testId="viewer-resize"
-              start={viewerH}
-              onDrag={(d, h0) => {
-                const pane = document.querySelector<HTMLElement>("[data-testid=graph-screen]")?.clientHeight || window.innerHeight;
-                useChatFull.getState().setViewerH(h0 - (d / pane) * 100);
-              }}
-            />
-            {/* the handle on the viewer's top edge folds it down; the graph takes the whole pane */}
-            <button
-              type="button"
-              aria-label="Fold the page viewer down"
-              title="Fold the page viewer down"
-              data-testid="explorer-handle"
-              onClick={() => useChatFull.getState().setExplorerOpen(false)}
-              className="group pointer-events-auto absolute left-1/2 top-0 z-10 grid h-4 w-16 -translate-x-1/2 -translate-y-1/2 place-items-center focus-visible:outline-none"
-            >
-              <span className="grid h-3.5 w-12 place-items-center rounded-full border bg-card text-muted-foreground shadow-[var(--shadow)] group-hover:text-foreground group-focus-visible:ring-2 group-focus-visible:ring-ring">
-                <ChevronDown aria-hidden className="size-3" strokeWidth={1.8} />
-              </span>
-            </button>
-            <ChatExplorer
-              byId={byId}
-              colorBy={ui.colorBy}
-              slug={ui.readerSlug}
-              onPick={openReader}
-              pageHref={(slug) => host.pageHref(slug)}
-              onClose={() => ui.set({ readerSlug: null })}
-            />
-          </div>
-          ) : (
-            <button
-              type="button"
-              aria-label="Show the page viewer"
-              title="Show the page viewer"
-              data-testid="explorer-handle"
-              onClick={() => useChatFull.getState().setExplorerOpen(true)}
-              className="group pointer-events-auto absolute bottom-0 z-30 grid h-6 w-16 translate-x-1/2 place-items-center focus-visible:outline-none"
-              style={{ right: `calc(${paneWidth(paneW)} / 2)` }}
-            >
-              <span className="grid h-4 w-12 place-items-center rounded-t-md border border-b-0 bg-card text-muted-foreground shadow-[var(--shadow)] group-hover:text-foreground group-focus-visible:ring-2 group-focus-visible:ring-ring">
-                <ChevronUp aria-hidden className="size-3" strokeWidth={1.8} />
-              </span>
-            </button>
+          {viewerShown && (
+            <div className="absolute bottom-0 right-0 z-30" style={{ width: paneWidth(paneW), height: `${viewerH}%` }}>
+              {/* the viewer's top edge: drag it up or down to share the pane with the graph */}
+              <DragEdge
+                label="Resize the page viewer"
+                axis="y"
+                testId="viewer-resize"
+                start={viewerH}
+                onDrag={(d, h0) => {
+                  const pane = document.querySelector<HTMLElement>("[data-testid=graph-screen]")?.clientHeight || window.innerHeight;
+                  useChatFull.getState().setViewerH(h0 - (d / pane) * 100);
+                }}
+              />
+              {/* only a page: its own X closes the viewer and the graph takes the whole pane again */}
+              <ChatExplorer byId={byId} slug={ui.readerSlug!} pageHref={(slug) => host.pageHref(slug)} onClose={() => ui.set({ readerSlug: null })} />
+            </div>
           )}
           {/* the edge between chat and graph: drag it to give either side more room (double click resets) */}
           <div

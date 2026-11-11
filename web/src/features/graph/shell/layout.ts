@@ -19,8 +19,8 @@ export const SPARK_PANEL_W = 400;
 export const FULL_RAIL_W = 44;
 /** Chat list column in the full chat. */
 export const FULL_LIST_W = 232;
-/** The right pane of the full chat (graph on top, mini explorer below): up to this wide, at most this share of the width. */
-export const FULL_PANE_W = "min(48%, 720px)";
+/** The right pane of the full chat (graph on top, page viewer below): half the width until its edge is dragged. */
+export const FULL_PANE_W = "50%";
 
 /** Width of the chat panel's box: the panel size, or the full chat up to the right pane (a rail when folded). */
 export function chatPanelWidth(full: boolean, folded: boolean, panelW: number = SPARK_PANEL_W, paneW: number | null = null): string {

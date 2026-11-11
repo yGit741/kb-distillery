@@ -27,6 +27,7 @@ import { useLabHud } from "../lab/hud";
 import type { CiteHooks } from "@/components/Markdown";
 import { ChatList } from "./ChatList";
 import { ChatTools } from "./ChatTools";
+import { CitesButton } from "./CitesButton";
 import { PANEL_MAX_W, PANEL_MIN_W, useChatFull } from "./chatFullStore";
 import { chatPanelWidth } from "./layout";
 import { DragEdge } from "./DragEdge";
@@ -167,6 +168,22 @@ function Header({ title, full, rich, listOpen, onClose, tools }: BarProps & { ti
         <Button variant="ghost" size="icon" className={`${btn} -ml-3`} aria-label="Close chat" onClick={onClose}>
           <X aria-hidden strokeWidth={1.6} />
         </Button>
+        {/* the tools sit between close and the book, in both sizes, so the book never moves */}
+        {rich && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className={`${btn} relative`}
+            aria-label="Plan, skills and prompts"
+            aria-expanded={tools?.open ?? false}
+            title="Plan, skills and prompts"
+            disabled={!tools}
+            onClick={tools?.toggle}
+          >
+            <SlidersHorizontal aria-hidden strokeWidth={1.6} />
+            {tools?.planning && <span aria-hidden className="absolute right-1.5 top-1.5 size-1.5 rounded-full bg-primary" />}
+          </Button>
+        )}
         {rich && (
           <Button
             variant="ghost"
@@ -191,12 +208,6 @@ function Header({ title, full, rich, listOpen, onClose, tools }: BarProps & { ti
         </h2>
         <p className="text-xs text-muted-foreground">knows the graph you are looking at</p>
       </div>
-      {full && tools && (
-        <Button variant="ghost" size="icon" className={`${btn} relative`} aria-label="Plan, skills and prompts" aria-expanded={tools.open} title="Plan, skills and prompts" onClick={tools.toggle}>
-          <SlidersHorizontal aria-hidden strokeWidth={1.6} />
-          {tools.planning && <span aria-hidden className="absolute right-1.5 top-1.5 size-1.5 rounded-full bg-primary" />}
-        </Button>
-      )}
     </header>
   );
 }
@@ -357,7 +368,7 @@ function Body({ status, prompts, scope, full, rich, listOpen, onClose, server }:
   }, [notice]);
 
   const planning = !!chat.todo?.some((t) => t.status !== "completed") && busy;
-  const tools = full && rich ? { open: toolsOpen, toggle: () => setToolsOpen((o) => !o), planning } : undefined;
+  const tools = rich ? { open: toolsOpen, toggle: () => setToolsOpen((o) => !o), planning } : undefined;
 
   return (
     <>
@@ -392,7 +403,14 @@ function Body({ status, prompts, scope, full, rich, listOpen, onClose, server }:
               busy={busy}
               onRegenerate={() => regenerate(options())}
               onAnswer={answer}
-              actions={thinkingOn ? undefined : (m, i) => (m.role === "assistant" ? <ReplayControl message={m} index={i} /> : null)}
+              actions={(m, i) =>
+                m.role === "assistant" ? (
+                  <>
+                    <CitesButton message={m} />
+                    {!thinkingOn && <ReplayControl message={m} index={i} />}
+                  </>
+                ) : null
+              }
               below={thinkingOn ? undefined : (m, i) => (m.role === "assistant" ? <ReplaySteps message={m} index={i} /> : null)}
               thinking={thinkingOn ? (m, _i, streaming) => <ShowThinking message={m} streaming={streaming} /> : undefined}
               cite={citeHooks}
