@@ -1,6 +1,7 @@
 """The sources behind one wiki page (0 LLM, read-only): the raw files named by its `raw:` field, the pages and
-URLs named by its `sources:` field, and the corpus rows that cite it, each with title, format, disposition and
-the sections of the page that mention it. Built from `meta/corpus.tsv`, the page frontmatter and `raw_card.kind_of`."""
+URLs named by its `sources:` field, the corpus rows that cite it and, on a concept page, the source pages its text
+links to, each with title, format, disposition and the sections of the page that mention it. Built from
+`meta/corpus.tsv`, the page frontmatter and text, and `raw_card.kind_of`."""
 import os
 import re
 from collections import Counter
@@ -10,8 +11,9 @@ from kb_distillery.graph.raw_layer import prettify, raw_format, split_dispositio
 from kb_distillery.lint.lint import raw_paths
 from kb_distillery.search.semfind import load_pages
 from kb_distillery.services.raw_card import kind_of
-from kb_distillery.vault.links import page_slug
+from kb_distillery.vault.links import page_slug, prose, targets
 from kb_distillery.vault.pages import read_manifest
+from kb_distillery.vault.schema import layer_of
 
 _HEADING = re.compile(r"^(#{1,6})\s+(.+?)\s*#*\s*$")
 
@@ -70,6 +72,10 @@ def _added(fm):
     return None
 
 
+def _layer(fm):
+    return layer_of(fm.get("type")) or str(fm.get("layer") or "")
+
+
 def build_sources(slug, view=None):
     """{slug, sources, counts} of page `slug` in the active knowledge base (or of `view`), or None when unknown."""
     root = view.root if view else None
@@ -106,20 +112,26 @@ def build_sources(slug, view=None):
 
     for p in raw_paths(fm):
         add_raw(p, "raw")
+    def add_page(ps, via):
+        """Source page `ps`: its raw files when it names any, else the page itself."""
+        sfm = pages[ps][1]
+        sub_paths = raw_paths(sfm)
+        for p in sub_paths:
+            add_raw(p, via, ps)
+        if sub_paths:
+            return
+        it = items.setdefault(ps, {
+            "id": ps, "title": _title(pages[ps][2], ps), "kind": str(sfm.get("type") or "page"), "format": "page",
+            "disposition": "page", "path_rel": None, "slug": ps, "url": None, "route": f"/pages/{ps}",
+            "via": [], "cited_in_sections": _sections(body, [f"{ps}.md", f"[[{ps}]]"]),
+            "added": _added(sfm)})
+        if via not in it["via"]:
+            it["via"].append(via)
+
     for res in _resources(fm):
         ps = page_slug(res)
         if ps and ps in pages and ps != slug:
-            sfm = pages[ps][1]
-            sub_paths = raw_paths(sfm)
-            if sub_paths:
-                for p in sub_paths:
-                    add_raw(p, "sources", ps)
-                continue
-            items.setdefault(ps, {
-                "id": ps, "title": _title(pages[ps][2], ps), "kind": str(sfm.get("type") or "page"), "format": "page",
-                "disposition": "page", "path_rel": None, "slug": ps, "url": None, "route": f"/pages/{ps}",
-                "via": ["sources"], "cited_in_sections": _sections(body, [f"{ps}.md", f"[[{ps}]]"]),
-                "added": _added(sfm)})
+            add_page(ps, "sources")
         elif re.match(r"https?://", res, re.I):
             url = res
             host = re.sub(r"^https?://(www\.)?", "", url).split("/")[0]
@@ -131,6 +143,13 @@ def build_sources(slug, view=None):
     for path, row in manifest.items():
         if (row.get("slug") or "").strip() == slug and row.get("disposition") != "sidecar" and path not in items:
             add_raw(path, "corpus", slug)
+    # A concept page cites its sources as links in the text (`sources:` is often empty there): each source page the
+    # prose links to counts, in reading order. `## My notes`, code and comments are not prose; a source or collection
+    # page links other sources as neighbours or members, not as what it rests on.
+    if _layer(fm) == "concept":
+        for ps in dict.fromkeys(targets(prose(body))):
+            if ps != slug and ps in pages and _layer(pages[ps][1]) == "source":
+                add_page(ps, "links")
 
     out = list(items.values())
     counts = {"total": len(out), "raw": sum(1 for i in out if i["path_rel"]),

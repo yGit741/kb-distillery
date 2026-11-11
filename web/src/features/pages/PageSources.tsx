@@ -43,6 +43,9 @@ export function usePageSources(slug: string, kb: string | undefined, enabled: bo
 export const footerId = (n: number) => `page-source-${n}`;
 export const sourceNoun = (n: number) => `${n} source${n === 1 ? "" : "s"}`;
 
+/** Named only by a link in the page text, not by the page's `raw:` / `sources:` fields or the corpus. */
+export const linkedOnly = (s: PageSource) => s.via.length === 1 && s.via[0] === "links";
+
 function SourceGlyph({ kind }: { kind: string }) {
   const Icon = GLYPH[kind] ?? File;
   return <Icon className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" aria-hidden />;
@@ -89,6 +92,7 @@ export function SourceRow({ s, n }: { s: PageSource; n?: number }) {
         <span className="truncate text-xs text-muted-foreground">
           {s.format}
           {s.added ? ` · ${s.added}` : ""}
+          {linkedOnly(s) ? " · linked in the text" : ""}
           {s.cited_in_sections.length > 0 ? ` · cited in ${s.cited_in_sections.join(", ")}` : ""}
           {s.path_rel && s.slug ? (
             <>

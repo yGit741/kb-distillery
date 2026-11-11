@@ -12,7 +12,7 @@ class PageSource(ApiModel):
     slug: str | None = None                     # the wiki page that digests it, when there is one
     url: str | None = None
     route: str | None = None                    # app route that opens it (raw viewer or page)
-    via: list[str] = []                         # raw | sources | corpus: which field named it
+    via: list[str] = []                         # raw | sources | corpus | links: what named it (links: a link in the text)
     cited_in_sections: list[str] = []           # headings of the sections that mention it
     added: str | None = None
 

@@ -177,7 +177,8 @@ Templates for every type: `meta/templates/<type>.md`.
 ## Sources on a page (reading view)
 
 `GET /api/pages/{slug}/sources` (`kb_distillery.services.page_sources`) lists what a page rests on: the raw files named by
-`raw:`, the pages and URLs named by `sources:`, and the corpus rows that cite it, each with title, kind, format,
+`raw:`, the pages and URLs named by `sources:`, the corpus rows that cite it and, on a concept page, the source pages
+its text links to (`via: links`; `## My notes`, code and comments do not count), each with title, kind, format,
 disposition, date and `cited_in_sections` (the headings whose text names it by raw path, file name, page link or URL;
 never `## My notes`). It is computed on every request; nothing is stored. The web app shows it behind
 `ui.page-sources`, in the variant saved as `page-sources` (default **Footer**):
