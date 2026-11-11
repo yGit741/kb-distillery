@@ -141,15 +141,15 @@ export function openOf(item: PreviewItem, d: Decisions): Open {
   const g = groupsOf(item);
   const undecided = (rows: Row[]) => rows.filter((r) => !d.changes[r.change.id]).length;
   const bulkOpen = (pages: PreviewPage[]) => pages.filter((p) => !d.bulk[p.slug]).reduce((n, p) => n + bulkCount(p), 0);
-  const look = undecided(g.look) + g.lookBulk.filter((p) => !d.bulk[p.slug]).length;
+  const look = undecided(g.look) + bulkOpen(g.lookBulk);
   const additions = undecided(g.additions);
   const bulk = bulkOpen(g.bulk);
   return { look, additions, bulk, total: look + additions + bulk };
 }
 
-/** Undecided changes and bulk rows on one page: a protected page moves on only at zero. */
+/** Undecided changes, links and fixes on one page, one by one: a protected page moves on only at zero. */
 export function openOnPage(p: PreviewPage, d: Decisions): number {
-  return changesOf(p).filter((c) => !d.changes[c.id]).length + (bulkCount(p) > 0 && !d.bulk[p.slug] ? 1 : 0);
+  return changesOf(p).filter((c) => !d.changes[c.id]).length + (d.bulk[p.slug] ? 0 : bulkCount(p));
 }
 
 export const pageDone = (p: PreviewPage, d: Decisions): boolean => openOnPage(p, d) === 0;

@@ -218,8 +218,8 @@ function AllChanges({ item }: { item: PreviewItem }) {
       )}
       <div className="flex max-w-[76ch] items-center gap-3 pb-2">
         <span className="text-sm text-muted-foreground">{open.total ? `${open.total} still open` : "Everything is decided. One commit; you can undo it."}</span>
-        <Button className="ml-auto" disabled={open.total > 0} onClick={s.apply}>
-          Apply {apply.changes} {apply.changes === 1 ? "change" : "changes"}
+        <Button className="ml-auto" disabled={open.total > 0 || apply.changes === 0} onClick={s.apply}>
+          {open.total === 0 && apply.changes === 0 ? "Nothing to apply" : `Apply ${apply.changes} ${apply.changes === 1 ? "change" : "changes"}`}
         </Button>
       </div>
     </>
@@ -279,6 +279,7 @@ function ChangeBlock({ c, focused }: { c: Change; focused: boolean }) {
 function PageDoc({ item, page, focus }: { item: PreviewItem; page: PreviewPage; focus: string | null }) {
   const s = useEditPreview();
   const d = s.decisions;
+  const setFocus = useEditPreview((st) => st.focus);
   const [similar, setSimilar] = useState(false);
   const firstOpen = changesOf(page).find((c) => !d.changes[c.id])?.id ?? null;
   const focused = focus && !d.changes[focus] ? focus : firstOpen;
@@ -292,15 +293,16 @@ function PageDoc({ item, page, focus }: { item: PreviewItem; page: PreviewPage; 
   // j / k step through the open changes of the page, like the arrows of a reader
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if ((e.key !== "j" && e.key !== "k") || (e.target as HTMLElement).closest("input, textarea")) return;
+      if ((e.key !== "j" && e.key !== "k") || e.metaKey || e.ctrlKey || e.altKey) return;
+      if ((e.target as HTMLElement).closest("input, textarea, select, [contenteditable]")) return;
       const open = changesOf(page).filter((c) => !useEditPreview.getState().decisions.changes[c.id]);
       if (!open.length) return;
       const i = open.findIndex((c) => c.id === focused);
-      s.focus(open[Math.max(0, Math.min(open.length - 1, i + (e.key === "j" ? 1 : -1)))]!.id);
+      setFocus(open[Math.max(0, Math.min(open.length - 1, i + (e.key === "j" ? 1 : -1)))]!.id);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [page, focused, s]);
+  }, [page, focused, setFocus]);
 
   return (
     <>

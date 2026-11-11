@@ -39,7 +39,7 @@ export function TouchedGraph({ pages, shown, current, done, onPick }: { pages: P
           const { x, y } = place(i, pages.length);
           const on = p.slug === current;
           return (
-            <g key={p.slug} role="button" tabIndex={0} aria-label={`Open ${p.title}`} aria-current={on || undefined} className="cursor-pointer outline-none [&:focus-visible_.focus-ring]:stroke-primary" onClick={() => onPick(p.slug)} onKeyDown={(e) => e.key === "Enter" && onPick(p.slug)}>
+            <g key={p.slug} role="button" tabIndex={0} aria-label={`Open ${p.title}`} aria-current={on || undefined} className="cursor-pointer outline-none [&:focus-visible_.focus-ring]:stroke-primary" onClick={() => onPick(p.slug)} onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), onPick(p.slug))}>
               <circle cx={x} cy={y} r={R + 4} fill="none" strokeWidth={1.5} className={cn("focus-ring", on ? "stroke-primary" : "stroke-transparent")} />
               <NodeMarkG type={p.type} x={x} y={y} r={R} color={color.color(nodes[i]!)} background="var(--card)" glyph />
               {done(p) && <path d={`M${x + R - 1},${y - R - 1} l3,3 l5,-6`} fill="none" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" className="stroke-foreground" />}

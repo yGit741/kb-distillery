@@ -26,7 +26,8 @@ function Mounted({ preview }: { preview?: string }) {
     const drop = (e: DragEvent) => {
       if (!hasFiles(e) || e.defaultPrevented) return;
       e.preventDefault();
-      show({ reading: true });
+      // a second file while the sheet is up does not restart the reading
+      if (!useEditPreview.getState().open) show({ reading: true });
     };
     window.addEventListener("dragover", over);
     window.addEventListener("drop", drop);
