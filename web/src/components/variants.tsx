@@ -29,10 +29,10 @@ export const VARIANTS: Record<string, VariantSpec> = {
   },
   "proposal-inbox": {
     label: "Proposal inbox",
-    default: "by-page",
+    default: "by-class",
     options: [
-      { id: "by-page", label: "By page", hint: "One section per page with its proposals inside; a proposal on three pages shows under each." },
       { id: "by-class", label: "By kind", hint: "Sections by what changed, claims first and typos last, so the risky ones are read first." },
+      { id: "by-page", label: "By page", hint: "One section per page with its proposals inside; a proposal on three pages shows under each." },
       { id: "timeline", label: "Timeline", hint: "One flat list, newest first, with a chip per kind of change." },
     ],
   },
@@ -71,7 +71,7 @@ export const VARIANTS: Record<string, VariantSpec> = {
   },
   "page-flag-mark": {
     label: "Flagged span on a page",
-    default: "underline",
+    default: "tint",
     options: [
       { id: "underline", label: "Underline", hint: "A soft wavy underline in the warning hue under the flagged words; the note shows on hover." },
       { id: "margin", label: "Margin", hint: "A small flag in the left margin of the block; the text stays untouched and the note opens from the marker." },

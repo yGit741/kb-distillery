@@ -201,26 +201,58 @@ export function FlagMarks({ flags, articleRef, markdown }: { flags: PageFlagsSta
     hold();
     closer.current = setTimeout(() => setActive(null), 250);
   };
-  // underline and tint are hit-tested on the article so the words stay selectable and links stay clickable
+  // A selection in the article always belongs to the selection toolbar: the note never opens over it.
+  const selecting = useCallback(() => {
+    const root = articleRef.current;
+    const sel = window.getSelection();
+    return !!root && !!sel && sel.rangeCount > 0 && !!sel.toString().trim() && root.contains(sel.anchorNode);
+  }, [articleRef]);
+  useEffect(() => {
+    const onSelect = () => {
+      if (!selecting()) return;
+      hold();
+      setActive(null);
+      setPinned(null);
+    };
+    document.addEventListener("selectionchange", onSelect);
+    document.addEventListener("mouseup", onSelect);
+    return () => {
+      document.removeEventListener("selectionchange", onSelect);
+      document.removeEventListener("mouseup", onSelect);
+    };
+  }, [selecting]);
+  // underline and tint are hit-tested on the article so the words stay selectable and links stay clickable:
+  // hover shows the note, a plain click (no selection) pins it, a drag or an existing selection never opens it
   useEffect(() => {
     const root = articleRef.current;
     if (!root || look === "margin") return;
-    const onMove = (e: MouseEvent) => {
+    const hitAt = (e: MouseEvent) => {
       const base = root.getBoundingClientRect();
-      const hit = placed.find((p) => p.rects.some((r) => inside(r, e.clientX - base.left, e.clientY - base.top)));
+      return placed.find((p) => p.rects.some((r) => inside(r, e.clientX - base.left, e.clientY - base.top)));
+    };
+    const onMove = (e: MouseEvent) => {
+      if (e.buttons !== 0 || selecting()) return;
+      const hit = hitAt(e);
       if (hit) {
         hold();
         setActive(hit.flag.id);
       } else if (active) release();
     };
+    const onClick = (e: MouseEvent) => {
+      if (selecting() || (e.target as Element | null)?.closest?.("a, button")) return;
+      const hit = hitAt(e);
+      if (hit) setPinned((p) => (p === hit.flag.id ? null : hit.flag.id));
+    };
     root.addEventListener("mousemove", onMove);
+    root.addEventListener("click", onClick);
     root.addEventListener("mouseleave", release);
     return () => {
       root.removeEventListener("mousemove", onMove);
+      root.removeEventListener("click", onClick);
       root.removeEventListener("mouseleave", release);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [articleRef, look, placed, active]);
+  }, [articleRef, look, placed, active, selecting]);
 
   const shown = pinned ?? active;
   const target = placed.find((p) => p.flag.id === shown);

@@ -34,7 +34,7 @@ export function proposalsTourSteps({
       dim: 0.3,
       title: "Every change is a proposal",
       // source: features/proposals/Inbox.tsx; src/kb_distillery/proposals/service.py (inbox)
-      body: "Chat, flags, ingest, restructure and the nightly lint never write a page. They leave a **proposal** here, grouped the way the inbox variant says.",
+      body: "Chat, flags, ingest, restructure and the nightly lint never write a page. They leave a **proposal** here, grouped by kind of change; the View switch regroups them by page or by time.",
     },
     {
       go: review,

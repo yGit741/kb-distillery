@@ -5,7 +5,7 @@ import { createAppRouter } from "@/app/router";
 import type { DataSource } from "@/api";
 import type { PageCard, PageDetail, PageFlag, PageFlagFixReply, PageFlagRequest, PageIndex } from "@/api/types";
 import { resetEmbed } from "@/app/embed";
-import { setVariant } from "@/components/variants";
+import { resetAllVariants, setVariant } from "@/components/variants";
 import { withFlag } from "@/flags/testing";
 import { mockDataSource } from "@/test/datasource";
 import { placeToolbar } from "./SelectionToolbar";
@@ -64,6 +64,7 @@ async function select(text: string) {
 describe("Page flags (ui.page-flags)", () => {
   beforeEach(() => {
     localStorage.clear();
+    resetAllVariants();
     resetEmbed();
   });
   afterEach(() => vi.restoreAllMocks());
@@ -101,7 +102,7 @@ describe("Page flags (ui.page-flags)", () => {
       open({ flags: [flag()], removed });
       await screen.findByText("The first claim is strong.");
       const marks = await screen.findByTestId("flag-marks");
-      await waitFor(() => expect(marks.querySelectorAll(".flag-wave").length).toBeGreaterThan(0)); // default: underline
+      await waitFor(() => expect(marks.querySelectorAll(".flag-wave").length).toBeGreaterThan(0));
       expect(marks).toHaveAttribute("data-look", "underline");
       setVariant("page-flag-mark", "tint");
       await waitFor(() => expect(screen.getByTestId("flag-marks")).toHaveAttribute("data-look", "tint"));
@@ -126,6 +127,34 @@ describe("Page flags (ui.page-flags)", () => {
       fireEvent.mouseMove(article, { clientX: 0, clientY: 0 });
       expect(await screen.findByRole("dialog", { name: "Flag" })).toHaveTextContent("too strong");
     }));
+
+  it("the default look is tint", () =>
+    on(async () => {
+      open({ flags: [flag()] });
+      expect(await screen.findByTestId("flag-marks")).toHaveAttribute("data-look", "tint");
+    }));
+
+  for (const look of ["underline", "margin", "tint"] as const) {
+    it(`${look}: a selection starting inside a flagged span gives the toolbar, never the note; a plain click or hover gives the note`, () =>
+      on(async () => {
+        setVariant("page-flag-mark", look);
+        open({ flags: [flag()] });
+        const article = (await screen.findByText("The first claim is strong.")).closest("article")!;
+        await waitFor(() => expect(screen.getAllByTestId("flag-mark").length).toBeGreaterThan(0));
+        // a drag over the flagged words: button held while moving, then a selection
+        fireEvent.mouseMove(article, { clientX: 0, clientY: 0, buttons: 1 });
+        expect(screen.queryByRole("dialog", { name: "Flag" })).toBeNull();
+        await select("The first claim is strong.");
+        fireEvent.mouseMove(article, { clientX: 0, clientY: 0 });
+        expect(await screen.findByRole("toolbar", { name: "Selection" })).toBeInTheDocument();
+        expect(screen.queryByRole("dialog", { name: "Flag" })).toBeNull();
+        vi.restoreAllMocks();
+        if (look === "margin") return;
+        // without a selection, a plain click on the words opens the note
+        fireEvent.click(article, { clientX: 0, clientY: 0 });
+        expect(await screen.findByRole("dialog", { name: "Flag" })).toHaveTextContent("too strong");
+      }));
+  }
 
   it("Fix all flagged posts once and shows the proposal link; it is disabled with a reason when nothing is flagged", () =>
     on(async () => {

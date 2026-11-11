@@ -11,9 +11,9 @@ import { FeedList } from "./Feed";
 import { RebaseButton, Segmented, Tabs } from "./parts";
 
 export const INBOX_COMPONENT = "proposal-inbox";
-export const INBOX_LAYOUTS = ["by-page", "by-class", "timeline"] as const;
+export const INBOX_LAYOUTS = ["by-class", "by-page", "timeline"] as const;
 export type InboxLayout = (typeof INBOX_LAYOUTS)[number];
-export const DEFAULT_INBOX_LAYOUT: InboxLayout = "by-page";
+export const DEFAULT_INBOX_LAYOUT: InboxLayout = "by-class";
 const GROUP_OF: Record<InboxLayout, string | undefined> = { "by-page": "page", "by-class": "class", timeline: undefined };
 const FILTERS = [
   { id: "open", label: "Open" },
@@ -152,8 +152,8 @@ export function Inbox() {
         </div>
         {tab === "inbox" && (
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            Layout
-            <Segmented label="Layout" value={layout} options={(VARIANTS[INBOX_COMPONENT]?.options ?? []).map((o) => ({ id: o.id, label: o.label.toLowerCase(), hint: o.hint }))} onChange={setLayout} />
+            View
+            <Segmented label="View" value={layout} options={(VARIANTS[INBOX_COMPONENT]?.options ?? []).map((o) => ({ id: o.id, label: o.label.toLowerCase(), hint: o.hint }))} onChange={setLayout} />
           </div>
         )}
       </header>
