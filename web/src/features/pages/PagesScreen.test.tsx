@@ -133,6 +133,17 @@ describe("Pages screen", () => {
     expect(finder()).not.toBeInTheDocument();
   });
 
+  it("leaving a path that is in the URL clears ?a=&b=, and Escape in the search box keeps the finder", async () => {
+    const router = open("/pages/alpha?a=alpha&b=beta");
+    await screen.findByText("alpha links beta");
+    await userEvent.type(screen.getByRole("combobox", { name: /search/i }), "x{Escape}");
+    expect(screen.getByRole("heading", { name: "How are two pages connected?" })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Back to Title alpha" }));
+    expect(await screen.findByRole("heading", { level: 1, name: "Title alpha" })).toBeInTheDocument();
+    await waitFor(() => expect(router.state.location.search).not.toHaveProperty("a"));
+    expect(router.state.location.search).not.toHaveProperty("b");
+  });
+
   it("goes back to the pages home when the finder was opened without a page", async () => {
     open("/pages");
     await screen.findByRole("heading", { name: "Pages" });

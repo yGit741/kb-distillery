@@ -244,7 +244,7 @@ export function PathView({
   };
   const names = [...g.byId.values()];
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4" data-path-finder>
       <header className="flex flex-col gap-2">
         {onClose && (
           <Button type="button" variant="ghost" size="sm" onClick={onClose} title="Esc" className="-ml-2 w-fit max-w-full text-muted-foreground">

@@ -167,7 +167,12 @@ export default function PagesScreen() {
   useEffect(() => {
     if (!pathOpen) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && !e.defaultPrevented) closePath();
+      if (e.key !== "Escape" || e.defaultPrevented) return;
+      // another layer owns this Escape: an open dialog, or a field outside the finder (the search box)
+      if (document.querySelector('[role="dialog"]')) return;
+      const el = e.target instanceof Element ? e.target : null;
+      if (isTyping(e.target) && !el?.closest("[data-path-finder]")) return;
+      closePath();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
