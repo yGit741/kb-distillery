@@ -94,10 +94,6 @@ class Case(unittest.TestCase):
             pass
 
     def test_reentrant_in_one_run(self):
-        # run under `ship commit`, the gate itself holds a lock and exports HELD_ENV: start from a clean slate
-        saved = os.environ.pop(worktree_lock.HELD_ENV, None)
-        if saved is not None:
-            self.addCleanup(os.environ.__setitem__, worktree_lock.HELD_ENV, saved)
         with worktree_lock.hold(self.wt, "merge"):
             with worktree_lock.hold(self.wt, "commit"):
                 pass
