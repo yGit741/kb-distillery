@@ -97,6 +97,17 @@ export const STORIES: readonly Story[] = [
     layers: ["concept", "source"],
   },
   {
+    id: "citations",
+    name: "Citations: who cites whom",
+    story: "As a reader of the papers, I want every cataloged paper and its cites links in one map, coloured by how far each got (no citation data, listed, then each digest depth), so that the founding papers and the gaps in my reading show at a glance.",
+    lab: {},
+    colorBy: "depth",
+    sizeBy: "connections",
+    layoutMode: "free",
+    layers: ["source"],
+    tool: { id: "citations" },
+  },
+  {
     id: "map",
     name: "Map: what is in the vault",
     story: "As a reader who opens this vault for the first time, I want the territory at a glance: every theme on a ring, the ideas and questions inside each, and only the sources actually read, so that breadth shows without the noise of imports and stubs.",
