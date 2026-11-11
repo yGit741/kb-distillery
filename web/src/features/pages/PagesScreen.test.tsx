@@ -94,6 +94,7 @@ describe("Pages screen", () => {
   it("finds a path between two pages", async () => {
     open("/pages/alpha");
     await screen.findByRole("heading", { level: 1, name: "Title alpha" });
+    expect(screen.queryByText("Open in Obsidian")).toBeNull();
     await userEvent.click(screen.getByRole("button", { name: "Connect to…" }));
     await userEvent.type(screen.getByLabelText("To page"), "beta");
     await userEvent.click(screen.getByRole("button", { name: "Find path" }));
@@ -104,6 +105,7 @@ describe("Pages screen", () => {
   it("keeps the asked path in the URL and restores it from ?a=&b=", async () => {
     const router = open("/pages/alpha");
     await screen.findByRole("heading", { level: 1, name: "Title alpha" });
+    expect(screen.queryByText("Open in Obsidian")).toBeNull();
     await userEvent.click(screen.getByRole("button", { name: "Connect to…" }));
     await userEvent.type(screen.getByLabelText("To page"), "beta");
     await userEvent.click(screen.getByRole("button", { name: "Find path" }));

@@ -178,7 +178,7 @@ export function HistoryCompare({ slug, h }: { slug: string; h: History }) {
   const hunks: Hunk[] = q.data?.hunks ?? [];
   const Diff = DIFF_COMPONENT[view as DiffView];
   // history only shows: a version is compared, never restored from here (edits start from the page's review mode)
-  const ctx = (): HunkCtx => ({ focused: false, readOnly: true, correcting: false, onDecide: () => {}, onCorrect: () => {}, onFocus: () => {} });
+  const ctx = (): HunkCtx => ({ focused: false, readOnly: true, hidden: true, correcting: false, onDecide: () => {}, onCorrect: () => {}, onFocus: () => {} });
   return (
     <section aria-label="Compare versions" className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b pb-3">

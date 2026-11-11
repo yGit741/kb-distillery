@@ -91,6 +91,7 @@ describe("Page history (ui.page-history)", () => {
       await waitFor(() => expect(document.querySelector('[data-hunk="h1"]')).not.toBeNull());
       // history only shows: nothing here restores or edits
       expect(screen.queryByRole("button", { name: /Restore/ })).toBeNull();
+      expect(screen.queryByRole("button", { name: /Accept|Reject|Correct/ })).toBeNull();
     }));
 
   it("timeline: two dots compare the older with the newer, whatever the click order", () =>
