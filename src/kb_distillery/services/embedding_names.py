@@ -156,6 +156,8 @@ def name_all(backend=None, db_path=None, cards_dir=None):
     if v is None or not len(v):
         raise NamesError(409, "no vectors to name: build the vector store first")
     reqs = build_requests(report, v, _cards(cards_dir))
+    if not reqs:
+        raise NamesError(409, "nothing to name: the store has no components or clusters")
     results = llm.run([r for _, _, r in reqs], backend=backend)
     record = {"signature": sig, "backend": backend, "model": MODEL, "usd": 0.0, "failed": 0,
               "at": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
@@ -172,6 +174,8 @@ def name_all(backend=None, db_path=None, cards_dir=None):
     record["usd"] = round(record["usd"], 4)
     if record["failed"] == len(reqs):
         raise NamesError(502, f"no names came back: {first_error}")
+    if signature(db_path) != sig:        # the vectors were rebuilt while the model was answering: these names are not theirs
+        raise NamesError(409, "the vectors changed during the run; the names were not saved. Name them again.")
     path = names_path(db_path)
     tmp = path + ".tmp"
     with open(tmp, "w", encoding="utf-8") as f:
@@ -197,20 +201,23 @@ def start(backend=None, db_path=None, cards_dir=None):
         _errors.pop(db_path, None)
 
     def work():
+        error = None
         try:
             name_all(backend, db_path, cards_dir)
         except NamesError as e:
-            _errors[db_path] = e.detail
+            error = e.detail
         except Exception as e:          # noqa: BLE001  the thread must always clear its running mark
-            _errors[db_path] = f"{type(e).__name__}: {e}"
+            error = f"{type(e).__name__}: {e}"
         finally:
-            with _lock:
+            with _lock:                  # one step: a poll never sees "running" with this run's error, or the reverse
                 _running.pop(db_path, None)
+                if error:
+                    _errors[db_path] = error
 
     threading.Thread(target=work, name="embedding-names", daemon=True).start()
 
 
-def status(db_path=None):
+def status(db_path=None, saved=None):
     """{state, backend, model, usd, at, failed, error, default_backend} for the report; state is none / running /
     current / stale (the vectors changed since the names were made)."""
     db_path = db_path or vectors.DB_PATH
@@ -218,13 +225,14 @@ def status(db_path=None):
         default = llm.resolve_backend()
     except llm.LLMError:
         default = llm.DEFAULT_BACKEND
+    with _lock:
+        running, error = _running.get(db_path), _errors.get(db_path)
     out = {"state": "none", "backend": None, "model": None, "usd": 0.0, "at": None, "failed": 0,
-           "error": _errors.get(db_path), "default_backend": default}
-    saved = load(db_path)
+           "error": error, "default_backend": default}
+    saved = load(db_path) if saved is None else saved
     if saved:
         out.update(state="current" if saved.get("signature") == signature(db_path) else "stale",
                    **{k: saved.get(k, out[k]) for k in ("backend", "model", "usd", "at", "failed")})
-    running = _running.get(db_path)
     if running:
         out.update(state="running", backend=running["backend"])
     return out
@@ -233,9 +241,9 @@ def status(db_path=None):
 def apply(report, db_path=None):
     """`report` with `names` (the status) and, while the saved names are current, each component's `low_name`,
     `high_name`, `why` and each cluster's `name`, `why`."""
-    st = status(db_path)
-    saved = load(db_path) if st["state"] in ("current", "running") else None
-    if saved and saved.get("signature") != signature(db_path):
+    saved = load(db_path)                # one read: the status and the names shown come from the same record
+    st = status(db_path, saved or {})
+    if not saved or saved.get("signature") != signature(db_path):
         saved = None
     comps, clusters = (saved or {}).get("components", {}), (saved or {}).get("clusters", {})
     out = dict(report)

@@ -54,3 +54,16 @@ def test_post_names_passes_the_refusal_on(monkeypatch):
     with TestClient(create_app()) as c:
         r = c.post("/api/embedding/names", json={}, headers={"Origin": "http://127.0.0.1:8765"})
     assert r.status_code == 409 and "already" in r.json()["detail"]
+
+
+def test_post_names_is_refused_on_a_read_only_server_and_without_a_loopback_origin(monkeypatch):
+    started = []
+    monkeypatch.setattr(router, "build_embedding_report", lambda: REPORT)
+    monkeypatch.setattr(router.embedding_names, "start", lambda backend=None: started.append(backend))
+    with TestClient(create_app()) as c:
+        assert c.post("/api/embedding/names", json={}).status_code == 403
+        assert c.post("/api/embedding/names", json={}, headers={"Origin": "https://evil.example"}).status_code == 403
+    monkeypatch.setenv("KB_READ_ONLY", "1")
+    with TestClient(create_app()) as c:
+        assert c.post("/api/embedding/names", json={}, headers={"Origin": "http://127.0.0.1:8765"}).status_code == 405
+    assert started == []

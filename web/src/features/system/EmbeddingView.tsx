@@ -27,11 +27,15 @@ function NamesBar({ r }: { r: EmbeddingReport }) {
   const [backend, setBackend] = useState<string>(names?.default_backend ?? "subscription");
   const run = useMutation({ mutationFn: () => ds.nameEmbedding(backend), onSuccess: (data) => qc.setQueryData(["embedding"], data) });
   if (!names) return null;
-  const running = names.state === "running" || run.isPending;
-  const failure = run.error instanceof Error ? run.error.message : names.error;
+  const serverRunning = names.state === "running";
+  const running = serverRunning || run.isPending;
+  const runBackend = serverRunning ? (names.backend ?? backend) : backend;
+  // A refused click (409, 405) is shown until the next state the server reports; after that the server's word counts.
+  const refused = run.error instanceof Error && run.data === undefined && run.failureCount > 0 ? run.error.message : null;
+  const failure = names.state === "current" ? null : (refused ?? names.error);
   const made = names.at ? ` on ${BACKEND_LABEL[names.backend ?? ""] ?? names.backend}${names.usd ? `, $${names.usd.toFixed(2)}` : ""}` : "";
   const status =
-    running ? `Naming on ${BACKEND_LABEL[names.state === "running" ? (names.backend ?? backend) : backend]}. ${(names.backend ?? backend) === "batch" ? "A batch can take hours; the names appear here when it is done." : "This takes about a minute."}`
+    running ? `Naming on ${BACKEND_LABEL[runBackend]}. ${runBackend === "batch" ? "A batch can take hours; the names appear here when it is done." : "This takes about a minute."}`
     : names.state === "current" ? `Named by ${names.model}${made}.${names.failed ? ` ${names.failed} could not be named.` : ""}`
     : names.state === "stale" ? "The vectors changed since the names were made. Name them again."
     : "No names yet. An LLM can name each component and cluster from its pages.";

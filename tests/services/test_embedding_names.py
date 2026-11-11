@@ -127,3 +127,27 @@ def test_a_failed_background_run_keeps_its_reason(store, monkeypatch):
         time.sleep(0.02)
     st = svc.status(db)
     assert st["state"] == "none" and "rate limited" in st["error"]
+
+
+def test_names_made_while_the_vectors_were_rebuilt_are_not_saved(store, monkeypatch):
+    db, cards = store
+
+    def run(requests, backend=None, **kw):
+        con = sqlite3.connect(db)            # vectors-build lands while the model is answering
+        con.execute("DELETE FROM vectors WHERE slug = 'c19'")
+        con.commit()
+        con.close()
+        return [llm.Result(id=r.id, text='{"low": "a", "high": "b", "why": "c", "name": "n"}') for r in requests]
+    monkeypatch.setattr(svc.llm, "run", run)
+    with pytest.raises(svc.NamesError, match="vectors changed") as e:
+        svc.name_all(None, db, cards)
+    assert e.value.status == 409 and svc.load(db) is None
+
+
+def test_a_store_with_nothing_to_name_says_so(store, monkeypatch):
+    db, cards = store
+    _fake(monkeypatch)
+    monkeypatch.setattr(svc, "build_requests", lambda *a: [])
+    with pytest.raises(svc.NamesError, match="nothing to name") as e:
+        svc.name_all(None, db, cards)
+    assert e.value.status == 409
