@@ -147,3 +147,16 @@ def test_map_is_reused_until_the_store_changes_and_titles_stay_live(tmp_path, mo
     con.commit()
     con.close()
     assert len(svc.build_embedding_report(db, cards)["points"]) == 59 and len(calls) == 2
+
+
+def test_identical_off_axis_vectors_are_not_a_noise_component():
+    for n in (2, 5, 17, 39):
+        m = svc._unit(np.tile(np.asarray([0.3, 0.4, 0.5], dtype=np.float32), (n, 1)))
+        coords, ratios, effective = svc.pca(m)
+        assert coords.shape == (n, 0) and ratios == [] and effective == 0.0
+
+
+def test_spectrum_is_never_longer_than_the_rank():
+    m = svc._unit(np.asarray([[1, 0, 0], [0, 1, 0]], dtype=np.float32))
+    coords, ratios, _ = svc.pca(m)
+    assert coords.shape[1] == len(ratios) == 1

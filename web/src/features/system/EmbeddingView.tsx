@@ -106,10 +106,13 @@ function MapCard({ r, axes, setAxes }: { r: EmbeddingReport; axes: Axes; setAxes
   const [hovered, setHovered] = useState<number | null>(null);
   const [point, setPoint] = useState<Point | null>(null);
   const active = hovered ?? pinned;
+  const count = r.components?.length ?? 0;
+  // A report with fewer components than the picked axis (after a rebuild) falls back to the first two.
+  if (count > 1 && (axes.x >= count || axes.y >= count)) axes = { x: 0, y: 1 };
   const at = (p: Point, i: number, fallback: number) => p.pc?.[i] ?? fallback;
   const x = (p: Point) => PAD + at(p, axes.x, p.x) * (W - 2 * PAD);
   const y = (p: Point) => PAD + (1 - at(p, axes.y, p.y)) * (H - 2 * PAD);
-  const count = r.components?.length ?? 0;
+
   return (
     <Card>
       <CardHeader>
@@ -300,7 +303,7 @@ export function EmbeddingView() {
   if (q.error) return <ErrorState title="Could not load the embedding report" error={q.error} onRetry={() => void q.refetch()} />;
   if (!q.data) return <Loading label="Reading the vectors" rows={3} />;
   const r = q.data;
-  const emptyText = !r.built ? "No vector store yet: build it with the command above, then reload." : r.ok || r.vectors ? "No vectors to map yet." : r.line;
+  const emptyText = !r.built ? "No vector store yet: build it with the command above, then reload." : r.ok ? "No vectors to map yet." : r.line;
   return (
     <div className="flex flex-col gap-4">
       <HealthCard r={r} />

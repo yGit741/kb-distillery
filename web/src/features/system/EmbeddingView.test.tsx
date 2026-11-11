@@ -112,6 +112,12 @@ describe("System · Embedding", () => {
     expect(screen.queryByRole("img")).not.toBeInTheDocument();
   });
 
+  it("a store that cannot be read says why instead of a generic empty message", async () => {
+    open({ getEmbedding: async () => ({ ...report, ok: false, line: "vectors.sqlite mixes models [a, b]", missing: [], changed: [], clusters: [], points: [], duplicates: [], spectrum: [], components: [] }) });
+    expect((await screen.findAllByText(/mixes models/)).length).toBeGreaterThan(0);
+    expect(screen.queryByText("No vectors to map yet.")).not.toBeInTheDocument();
+  });
+
   it("an error offers a retry", async () => {
     open({ getEmbedding: async () => { throw new ApiError("no such route", 404); } });
     expect(await screen.findByText("Could not load the embedding report")).toBeInTheDocument();

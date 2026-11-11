@@ -125,15 +125,16 @@ def pca(m, axes=AXES, spectrum=SPECTRUM):
     _u, sv, vt = np.linalg.svd(x, full_matrices=False)
     var = sv ** 2
     total = var.sum()
-    if total <= 0:
+    if total <= 1e-10 * len(m):          # unit rows that are all the same: what is left is rounding noise
         return np.full((len(m), 0), 0.5), [], 0.0
-    keep = int(min(axes, (var > total * 1e-12).sum()))
+    rank = int((var > total * 1e-12).sum())
+    keep = min(axes, rank)
     comps = vt[:keep]
     comps = comps * np.where(comps[np.arange(keep), np.abs(comps).argmax(axis=1)] < 0, -1, 1)[:, None]
     p = _dot(x, comps.T)
     lo, hi = p.min(axis=0), p.max(axis=0)
     coords = (p - lo) / np.where(hi - lo == 0, 1, hi - lo)
-    return coords, [float(v) for v in (var / total)[:spectrum]], float(total ** 2 / (var ** 2).sum())
+    return coords, [float(v) for v in (var / total)[:min(spectrum, rank)]], float(total ** 2 / (var ** 2).sum())
 
 
 def duplicates(m, slugs, threshold=DUPLICATE_COSINE, limit=DUPLICATES_MAX):
