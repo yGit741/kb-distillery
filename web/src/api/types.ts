@@ -106,6 +106,7 @@ export type DigestBackendOption = S["BackendOption"];
 export type CitationGraph = S["CitationGraph"];
 export type PipelineSnapshot = S["PipelineSnapshot"];
 export type HealthSnapshot = S["HealthSnapshot"];
+export type EmbeddingReport = S["EmbeddingReport"];
 
 // the knowledge base behind this app, and the ones the explorer can load
 export type KbInfo = S["KbInfo"];

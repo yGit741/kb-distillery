@@ -23,6 +23,8 @@ export function createEmbeddedDataSource(blob: ShareBlob | undefined = globalThi
     getLifecycle: absent,
     getShareStatus: absent,
     getHealth: absent,
+    getEmbedding: absent,
+    nameEmbedding: absent,
     getKb: absent,
     listKbs: absent,
     previewKbImport: absent,

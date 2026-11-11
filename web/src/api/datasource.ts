@@ -8,6 +8,10 @@ export interface DataSource {
   getLifecycle(): Promise<T.LifecycleSnapshot>;
   getShareStatus(): Promise<T.ShareStatus>;
   getHealth(): Promise<T.HealthSnapshot>;
+  /** Embedding health (store vs cards), near-duplicates, clusters by meaning and the 2D map points. */
+  getEmbedding(): Promise<T.EmbeddingReport>;
+  /** Local app only: start an LLM run that names the components and clusters (backend: subscription | api | batch). */
+  nameEmbedding(backend?: string): Promise<T.EmbeddingReport>;
   /** The knowledge base this app serves (kb.toml, folder, git, types) and the ones the explorer can load. */
   getKb(): Promise<T.KbInfo>;
   listKbs(): Promise<T.KbList>;

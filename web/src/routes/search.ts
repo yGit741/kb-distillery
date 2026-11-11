@@ -21,8 +21,8 @@ export type PagesSearch = { kb?: string; q?: string; layer?: string; type?: stri
 export type GraphSearch = { select?: string; focus?: string; scope?: string; layer?: string; raw?: "1"; search?: string; pages?: string; from?: "home"; view?: string; kbs?: string; tool?: string; chat?: string; ask?: string } & RelationsSearch & Pick<ScopesSearch, "draft">;
 export type ScopesSearch = { scope?: string; draft?: string };
 export type PipelineSearch = { format?: string; q?: string; depth?: string; collection?: string; status?: string; view?: string; group?: string; backlog?: "queued"; item?: string };
-export type SystemTab = "overview" | "backlog" | "pipeline" | "history" | "health" | "flags" | "variants" | "kbs";
-export const SYSTEM_TABS: readonly SystemTab[] = ["overview", "backlog", "pipeline", "history", "health", "flags", "variants", "kbs"];
+export type SystemTab = "overview" | "backlog" | "pipeline" | "history" | "health" | "embedding" | "flags" | "variants" | "kbs";
+export const SYSTEM_TABS: readonly SystemTab[] = ["overview", "backlog", "pipeline", "history", "health", "embedding", "flags", "variants", "kbs"];
 /** System hosts the pipeline view, so it keeps the pipeline's params (its own `view` included) next to `tab`. */
 export type SystemSearch = PipelineSearch & { tab?: SystemTab };
 export type NoSearch = Record<string, never>;

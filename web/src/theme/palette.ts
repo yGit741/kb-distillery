@@ -96,3 +96,6 @@ export function areaColor(area?: string | null): string {
   for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) >>> 0;
   return AREA_COLORS[h % AREA_COLORS.length] as string;
 }
+
+/** A semantic cluster's colour (Embedding map): cluster 0 is the largest; ids past the palette wrap. */
+export const clusterColor = (id: number): string => AREA_COLORS[((id % AREA_COLORS.length) + AREA_COLORS.length) % AREA_COLORS.length] as string;

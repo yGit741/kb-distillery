@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 import { SYSTEM_TABS, type SearchById, type SystemTab } from "@/routes/search";
 import { needsYou, showOwnerOps, tiles, timeline, type EventKind, type HealthLike, type LifecycleLike, type OpsLike, type Tile, type Tone } from "./model";
 import { HealthView } from "./HealthView";
+import { EmbeddingView } from "./EmbeddingView";
 import { FlagsView } from "./FlagsView";
 import { VariantsView } from "./VariantsView";
 import { KnowledgeBasesView } from "./KnowledgeBasesView";
@@ -20,7 +21,7 @@ import "./tours";
 import { FLAG_ENV } from "@/flags";
 import { useFlag } from "@/flags/useFlag";
 
-const TAB_LABEL: Record<SystemTab, string> = { overview: "Overview", backlog: "Backlog", pipeline: "Pipeline", history: "History", health: "Health", flags: "Flags", variants: "Variants", kbs: "Knowledge bases" };
+const TAB_LABEL: Record<SystemTab, string> = { overview: "Overview", backlog: "Backlog", pipeline: "Pipeline", history: "History", health: "Health", embedding: "Embedding", flags: "Flags", variants: "Variants", kbs: "Knowledge bases" };
 
 // warn text is amber (under 4.5:1 on white): the dot carries the warning, the value stays readable.
 const TONE_TEXT: Record<Tone, string> = { ok: "text-ok", warn: "text-foreground", bad: "text-bad", "": "text-foreground" };
@@ -233,6 +234,7 @@ export function SystemScreen() {
       {tab === "flags" && <FlagsView />}
       {tab === "variants" && <VariantsView />}
       {tab === "kbs" && <KnowledgeBasesView />}
+      {tab === "embedding" && <EmbeddingView />}
       {tab === "health" && <HealthView health={healthData} error={health.error} onRetry={() => void health.refetch()} />}
     </div>
   );
