@@ -10,6 +10,12 @@ import { readJson, writeJson } from "@/features/chat/storage";
 export const BUSY_NOTICE = "An answer is still on its way. Stop it first, then switch chats.";
 const LIST_KEY = "kbchat.full.list";
 const FOLD_KEY = "kbchat.full.folded";
+const WIDTH_KEY = "kbchat.panel.width";
+const EXPLORER_KEY = "kbchat.full.explorer";
+/** The panel's width bounds when dragged by its edge. */
+export const PANEL_MIN_W = 320;
+export const PANEL_MAX_W = 760;
+const clampW = (w: number) => Math.round(Math.min(PANEL_MAX_W, Math.max(PANEL_MIN_W, w)));
 
 interface ChatFullState {
   full: boolean;
@@ -18,6 +24,12 @@ interface ChatFullState {
   setFull: (full: boolean) => void;
   toggleList: () => void;
   setFolded: (folded: boolean) => void;
+  /** Width of the panel size, dragged by its right edge (remembered per browser). */
+  panelW: number;
+  setPanelW: (w: number) => void;
+  /** The page viewer under the graph in the full chat; its handle folds it down. */
+  explorerOpen: boolean;
+  setExplorerOpen: (open: boolean) => void;
   /** Page ids of the graph, so the composer's @ can complete them (set by the graph screen). */
   pages: readonly { id: string; title: string }[];
   setPages: (pages: readonly { id: string; title: string }[]) => void;
@@ -42,7 +54,25 @@ export const useChatFull = create<ChatFullState>((set, get) => ({
   full: false,
   listOpen: readJson("local", LIST_KEY, true),
   folded: readJson("local", FOLD_KEY, false),
-  setFull: (full) => set({ full }),
+  // growing to full always shows the right pane and its page viewer
+  setFull: (full) => {
+    if (full) {
+      writeJson("local", FOLD_KEY, false);
+      writeJson("local", EXPLORER_KEY, true);
+      set({ full, folded: false, explorerOpen: true });
+    } else set({ full });
+  },
+  panelW: clampW(readJson("local", WIDTH_KEY, 400)),
+  setPanelW: (w) => {
+    const panelW = clampW(w);
+    writeJson("local", WIDTH_KEY, panelW);
+    set({ panelW });
+  },
+  explorerOpen: readJson("local", EXPLORER_KEY, true),
+  setExplorerOpen: (explorerOpen) => {
+    writeJson("local", EXPLORER_KEY, explorerOpen);
+    set({ explorerOpen });
+  },
   toggleList: () => {
     const listOpen = !get().listOpen;
     writeJson("local", LIST_KEY, listOpen);

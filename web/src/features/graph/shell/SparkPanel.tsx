@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { Maximize2, Minimize2, PanelLeft, SlidersHorizontal, X } from "lucide-react";
+import { PanelLeft, SlidersHorizontal, X } from "lucide-react";
 import { useChatDock } from "../tools/chatDockStore";
 import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import { useDataSource } from "@/api";
@@ -27,7 +27,7 @@ import { useLabHud } from "../lab/hud";
 import type { CiteHooks } from "@/components/Markdown";
 import { ChatList } from "./ChatList";
 import { ChatTools } from "./ChatTools";
-import { useChatFull } from "./chatFullStore";
+import { PANEL_MAX_W, PANEL_MIN_W, useChatFull } from "./chatFullStore";
 import { FULL_LIST_W, chatPanelWidth } from "./layout";
 import { SparkComposer } from "./SparkComposer";
 import { citedSlugs, slugOfHref } from "./cites";
@@ -50,6 +50,7 @@ export function SparkPanel({ scope }: { scope?: string }) {
   const full = rich && sizeFull;
   const folded = useChatFull((s) => s.folded);
   const listOpen = useChatFull((s) => s.listOpen);
+  const panelW = useChatFull((s) => s.panelW);
   const status = useQuery({ queryKey: STATUS_KEY, queryFn: () => ds.getChatStatus() });
   const promptsQ = useQuery({ queryKey: ["chat", "prompts"], queryFn: () => ds.getChatPrompts() });
   const bar = { full, rich, listOpen, onClose: close };
@@ -62,15 +63,17 @@ export function SparkPanel({ scope }: { scope?: string }) {
         "spark-panel-in pointer-events-auto absolute inset-y-0 left-0 z-40 flex max-w-full border-r bg-card text-card-foreground shadow-[var(--shadow)]",
         full && "transition-[width] duration-200 motion-reduce:transition-none",
       )}
-      style={{ width: chatPanelWidth(full, folded) }}
+      style={{ width: chatPanelWidth(full, folded, panelW) }}
       onKeyDown={(e) => {
-        // Escape anywhere in the panel closes it, and stops here: the graph's own Escape (selection, reader) waits
+        // Escape anywhere in the panel stops here (the graph's own Escape waits): the first one puts out the glow of
+        // the cited pages on the graph, the next one closes the panel
         if (e.key === "Escape" && !e.defaultPrevented) {
           e.stopPropagation();
-          close();
+          if (!clearGlow()) close();
         }
       }}
     >
+      {!full && <ResizeEdge width={panelW} />}
       {status.isPending || promptsQ.isPending ? (
         <Column>
           <Header title="New chat" {...bar} />
@@ -89,6 +92,51 @@ export function SparkPanel({ scope }: { scope?: string }) {
         <Body status={status.data} prompts={promptsQ.data.prompts} scope={scope ?? ""} {...bar} server={ds.kind === "http" && capabilities().chat} />
       )}
     </aside>
+  );
+}
+
+/** Puts out the graph glow of the answer on screen (cited pages, the thinking view); true when there was one. */
+function clearGlow(): boolean {
+  const lit = useCites.getState().slugs.length > 0 || useThinking.getState().view !== null;
+  if (!lit) return false;
+  useCites.getState().clear();
+  useThinking.getState().dismiss();
+  return true;
+}
+
+/** The panel's right edge: drag it to widen or narrow the panel; arrow keys step it. */
+function ResizeEdge({ width }: { width: number }) {
+  const set = useChatFull.getState().setPanelW;
+  return (
+    <div
+      role="separator"
+      aria-orientation="vertical"
+      aria-label="Resize the chat panel"
+      aria-valuenow={width}
+      aria-valuemin={PANEL_MIN_W}
+      aria-valuemax={PANEL_MAX_W}
+      tabIndex={0}
+      data-testid="spark-resize"
+      className="absolute inset-y-0 -right-1 z-10 w-2 cursor-col-resize after:absolute after:inset-y-0 after:left-1/2 after:w-px after:-translate-x-1/2 after:bg-transparent hover:after:bg-ring focus-visible:outline-none focus-visible:after:bg-ring"
+      onPointerDown={(e) => {
+        e.preventDefault();
+        const x0 = e.clientX;
+        const w0 = width;
+        const move = (ev: PointerEvent) => set(w0 + ev.clientX - x0);
+        const up = () => {
+          window.removeEventListener("pointermove", move);
+          window.removeEventListener("pointerup", up);
+          document.body.style.cursor = "";
+        };
+        document.body.style.cursor = "col-resize";
+        window.addEventListener("pointermove", move);
+        window.addEventListener("pointerup", up);
+      }}
+      onKeyDown={(e) => {
+        if (e.key === "ArrowLeft") set(width - 24);
+        else if (e.key === "ArrowRight") set(width + 24);
+      }}
+    />
   );
 }
 
@@ -119,14 +167,14 @@ function Header({ title, full, rich, listOpen, onClose, tools }: BarProps & { ti
           size="icon"
           className={btn}
           aria-label={full ? "Back to the panel" : "Full screen"}
+          aria-pressed={full}
           title={full ? "Back to the panel" : "Full screen"}
-          onClick={() => useChatFull.getState().setFull(!full)}
+          onClick={() => {
+            const s = useChatFull.getState();
+            if (!full && !listOpen) s.toggleList();
+            s.setFull(!full);
+          }}
         >
-          {full ? <Minimize2 aria-hidden strokeWidth={1.6} /> : <Maximize2 aria-hidden strokeWidth={1.6} />}
-        </Button>
-      )}
-      {full && (
-        <Button variant="ghost" size="icon" className={btn} aria-label="Chat list" aria-pressed={listOpen} title={listOpen ? "Hide the chat list" : "Show the chat list"} onClick={() => useChatFull.getState().toggleList()}>
           <PanelLeft aria-hidden strokeWidth={1.6} />
         </Button>
       )}

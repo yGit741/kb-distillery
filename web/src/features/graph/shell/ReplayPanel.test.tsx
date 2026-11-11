@@ -179,6 +179,9 @@ describe("flag spark-chat: replay how an answer was built", () => {
       expect(useReplay.getState().view).not.toBeNull();
       await userEvent.click(screen.getByRole("button", { name: "How this answer was built" })); // the control closes it too
       expect(useReplay.getState().view).toBeNull();
+      // the next Escape puts out the cited pages' glow on the graph, and the one after closes the panel
+      await userEvent.keyboard("{Escape}");
+      expect(screen.getByTestId("spark-panel")).toBeInTheDocument();
       await userEvent.keyboard("{Escape}");
       expect(screen.queryByTestId("spark-panel")).not.toBeInTheDocument();
     });

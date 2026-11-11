@@ -25,7 +25,7 @@ import { candidatesOf } from "./shell/replay";
 import { ReplayLegend } from "./shell/ReplayLegend";
 import { useReplay } from "./shell/replayStore";
 import { useSparkOpen } from "./shell/SparkPanelHost";
-import { SEARCH_LINE_H, SPARK_PANEL_W, useShellTop } from "./shell/layout";
+import { SEARCH_LINE_H, useShellTop } from "./shell/layout";
 import { useFullChat } from "./shell/useFullChat";
 import { drawPile, formatOfPile, isPile, isPileId, pileRadius } from "./rawLayer";
 import { DRAG_PX } from "./selection";
@@ -40,6 +40,7 @@ import { useThinking } from "./shell/thinkingStore";
 import { personInitials, SOURCE_GLYPH_PX } from "./encoding/spec";
 import { colorOf, effectiveColorBy, layeredRadii, METRIC_COLORS, nodeRadius, semanticRadius, type ColorBy, type SizeBy } from "./style";
 import type { GNode, GraphModel, SimLink, SimNode } from "./types";
+import { useChatFull } from "./shell/chatFullStore";
 
 export interface CanvasHandle {
   screenOf: (id: string) => { x: number; y: number } | null;
@@ -546,7 +547,7 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
       const ids = live.current.cited;
       if (!ids.size) return;
       pendingFit.current = false;
-      if (fg.current?.fitIn((n) => ids.has(n.id), sparkOpen && !fullChat ? SPARK_PANEL_W : 0, 600, fullChat ? 110 : 72, shellTopRef.current + SEARCH_LINE_H + CITE_FIT_AIR)) {
+      if (fg.current?.fitIn((n) => ids.has(n.id), sparkOpen && !fullChat ? useChatFull.getState().panelW : 0, 600, fullChat ? 110 : 72, shellTopRef.current + SEARCH_LINE_H + CITE_FIT_AIR)) {
         window.setTimeout(() => {
           k.current = fg.current?.zoom() ?? 1;
           recompute();
