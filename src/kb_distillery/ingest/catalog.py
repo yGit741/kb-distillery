@@ -326,8 +326,25 @@ def catalog_paper(inbox_rel, collection="", slug=None, title=None, year=None, ur
         print(f"created {wiki_rel} (depth: listed)")
     else:
         print(f"wiki exists: {wiki_rel}")
+    fetch_citations(wiki_slug)
     _run_lint()
     return dest_rel, wiki_slug
+
+
+CITATIONS_ENV = "KB_INGEST_CITATIONS"   # "0" turns the per-paper citation fetch off (offline work)
+
+
+def fetch_citations(slug):
+    """Fill the citation cache for one just-cataloged paper (Semantic Scholar, 0 LLM), so every paper has its
+    references and citers from its first, lowest tier on. Best effort: a paper with no id, a miss or a network
+    error never fails the catalog step; `search.citations fetch` retries later."""
+    if os.environ.get(CITATIONS_ENV, "1") == "0":
+        return
+    try:
+        from kb_distillery.search import citations
+        citations.fetch(slugs=[slug])
+    except Exception as e:  # noqa: BLE001 — the catalog step must not depend on the network
+        print(f"citations: skipped for {slug} ({e}); run `python3 -m kb_distillery.search.citations fetch` later")
 
 
 def catalog_email(inbox_rel, collection="", **_kwargs):
