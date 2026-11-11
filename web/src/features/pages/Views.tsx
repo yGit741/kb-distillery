@@ -1,4 +1,5 @@
 import { Link } from "@tanstack/react-router";
+import { ArrowLeft } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { LAYER_TYPES } from "@/api/model";
 import type { PageCard, PageIndex } from "@/api/types";
@@ -210,7 +211,23 @@ export function SearchView({ g, q }: { g: LinkGraph; q: string }) {
   );
 }
 
-export function PathView({ g, initialA = "", initialB = "", onAsk }: { g: LinkGraph; initialA?: string; initialB?: string; onAsk?: (a: string, b: string) => void }) {
+export function PathView({
+  g,
+  initialA = "",
+  initialB = "",
+  onAsk,
+  onClose,
+  backTo,
+}: {
+  g: LinkGraph;
+  initialA?: string;
+  initialB?: string;
+  onAsk?: (a: string, b: string) => void;
+  /** Leave the finder: back to the page it was opened from, or to the pages home. */
+  onClose?: () => void;
+  /** Title of the page the finder was opened from, when there is one. */
+  backTo?: string;
+}) {
   const [draft, setDraft] = useState({ a: initialA, b: initialB });
   const [ask, setAsk] = useState<{ a: string; b: string } | null>(initialA && initialB ? { a: initialA, b: initialB } : null);
   const res = useApiQuery(["pages", "path", ask?.a, ask?.b], (ds) => ds.findPath(ask!.a, ask!.b), {
@@ -229,6 +246,12 @@ export function PathView({ g, initialA = "", initialB = "", onAsk }: { g: LinkGr
   return (
     <div className="flex flex-col gap-4">
       <header className="flex flex-col gap-2">
+        {onClose && (
+          <Button type="button" variant="ghost" size="sm" onClick={onClose} title="Esc" className="-ml-2 w-fit max-w-full text-muted-foreground">
+            <ArrowLeft />
+            <span className="truncate">{backTo ? `Back to ${backTo}` : "Back to pages"}</span>
+          </Button>
+        )}
         <h1 className="text-2xl font-semibold">How are two pages connected?</h1>
         <p className="text-sm text-muted-foreground">Shortest chain of links in either direction, with the sentence behind each link.</p>
         <form onSubmit={submit} className="flex flex-col gap-2 sm:flex-row sm:items-center">

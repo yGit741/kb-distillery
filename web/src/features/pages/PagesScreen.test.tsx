@@ -111,6 +111,36 @@ describe("Pages screen", () => {
     await waitFor(() => expect(router.state.location.search).toMatchObject({ a: "alpha", b: "beta" }));
   });
 
+  it("leaves the path finder by the back button, Escape, or the page's trail chip", async () => {
+    open("/pages/alpha");
+    await screen.findByRole("heading", { level: 1, name: "Title alpha" });
+    const openFinder = () => userEvent.click(screen.getByRole("button", { name: "Connect to…" }));
+    const finder = () => screen.queryByRole("heading", { name: "How are two pages connected?" });
+
+    await openFinder();
+    await userEvent.click(screen.getByRole("button", { name: "Back to Title alpha" }));
+    expect(await screen.findByRole("heading", { level: 1, name: "Title alpha" })).toBeInTheDocument();
+    expect(finder()).not.toBeInTheDocument();
+
+    await openFinder();
+    await userEvent.type(screen.getByLabelText("To page"), "be{Escape}");
+    expect(await screen.findByRole("heading", { level: 1, name: "Title alpha" })).toBeInTheDocument();
+    expect(finder()).not.toBeInTheDocument();
+
+    await openFinder();
+    await userEvent.click(within(screen.getByRole("list", { name: "Trail" })).getByText("Title alpha"));
+    expect(await screen.findByRole("heading", { level: 1, name: "Title alpha" })).toBeInTheDocument();
+    expect(finder()).not.toBeInTheDocument();
+  });
+
+  it("goes back to the pages home when the finder was opened without a page", async () => {
+    open("/pages");
+    await screen.findByRole("heading", { name: "Pages" });
+    await userEvent.click(screen.getByRole("button", { name: "Connect two pages" }));
+    await userEvent.click(screen.getByRole("button", { name: "Back to pages" }));
+    expect(await screen.findByRole("heading", { name: "Pages" })).toBeInTheDocument();
+  });
+
   it("opens a shared path link straight to the result", async () => {
     open("/pages?a=alpha&b=beta");
     expect(await screen.findByText("alpha links beta")).toBeInTheDocument();
