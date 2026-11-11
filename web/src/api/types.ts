@@ -113,14 +113,16 @@ export type KbRow = S["KbRow"];
 export type KbType = S["KbType"];
 export type KbImportPreview = S["KbImportPreview"];
 export type KbImportResult = S["KbImportResult"];
+export type KbLibrary = S["KbLibrary"];
+export type KbLibraryBundle = S["KbLibraryBundle"];
 export type KbInbox = S["KbInbox"];
 export type KbInboxItem = S["KbInboxItem"];
 export type KbInboxPull = S["KbInboxPull"];
 export type InboxAddResult = S["InboxAddResult"];
 export type InboxFileResult = S["InboxFileResult"];
 export type LinkFolderResult = S["LinkFolderResult"];
-/** The body of the import routes (local app only): a zipped bundle, or a git URL; `id` and `kit` are optional. */
-export type KbImportRequest = ({ file: File } | { gitUrl: string }) & { id?: string; kit?: string };
+/** The body of the import routes (local app only): a zipped bundle, a git URL, or a path inside the knowledge library; `id` and `kit` are optional. */
+export type KbImportRequest = ({ file: File } | { gitUrl: string } | { path: string }) & { id?: string; kit?: string };
 export type ViewList = S["ViewList"];
 export type PinnedView = S["View"];
 export type ReadyView = S["ReadyView"];

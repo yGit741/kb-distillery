@@ -774,6 +774,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/kb/library": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The knowledge library and the OKF bundles found in it */
+        get: operations["get_library_api_kb_library_get"];
+        /** Set (or clear, with an empty path) the knowledge library folder */
+        put: operations["put_library_api_kb_library_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/kb/list": {
         parameters: {
             query?: never;
@@ -3826,6 +3844,44 @@ export interface components {
             think_root: string;
             /** Types */
             types: components["schemas"]["KbType"][];
+        } & {
+            [key: string]: unknown;
+        };
+        /**
+         * KbLibrary
+         * @description The knowledge library (a local folder of bundles) and what a scan of it found.
+         */
+        KbLibrary: {
+            /** Bundles */
+            bundles: components["schemas"]["KbLibraryBundle"][];
+            /** Path */
+            path: string | null;
+        } & {
+            [key: string]: unknown;
+        };
+        /**
+         * KbLibraryBundle
+         * @description One OKF bundle found in the knowledge library.
+         */
+        KbLibraryBundle: {
+            /**
+             * Added
+             * @default false
+             */
+            added: boolean;
+            /** Kind */
+            kind: string;
+            /** Name */
+            name: string;
+            /** Path */
+            path: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** KbLibraryPut */
+        KbLibraryPut: {
+            /** Path */
+            path?: string | null;
         } & {
             [key: string]: unknown;
         };
@@ -8531,9 +8587,10 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": {
-                    git_url: string;
+                    git_url?: string;
                     id?: string | null;
                     kit?: string | null;
+                    path?: string;
                 };
                 "multipart/form-data": {
                     /** Format: binary */
@@ -8565,9 +8622,10 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": {
-                    git_url: string;
+                    git_url?: string;
                     id?: string | null;
                     kit?: string | null;
+                    path?: string;
                 };
                 "multipart/form-data": {
                     /** Format: binary */
@@ -8626,6 +8684,57 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["KbInboxPull"];
                 };
+            };
+        };
+    };
+    get_library_api_kb_library_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KbLibrary"];
+                };
+            };
+        };
+    };
+    put_library_api_kb_library_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["KbLibraryPut"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KbLibrary"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

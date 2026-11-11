@@ -15,6 +15,10 @@ export interface DataSource {
   previewKbImport(req: T.KbImportRequest): Promise<T.KbImportPreview>;
   /** Local app only: import it. */
   importKb(req: T.KbImportRequest): Promise<T.KbImportResult>;
+  /** Local app only: the knowledge library (a folder of OKF bundles) and what a scan of it finds. */
+  getKbLibrary(): Promise<T.KbLibrary>;
+  /** Local app only: set the library folder (null clears it); answers with a fresh scan. 422 when it is not a folder. */
+  setKbLibrary(path: string | null): Promise<T.KbLibrary>;
   /** Local app only: the deployed site's upload inbox (pending, imported, failed) as the server reads it. */
   getKbInbox(): Promise<T.KbInbox>;
   /** Local app only: import every pending upload as a new knowledge base and report back to the site. */

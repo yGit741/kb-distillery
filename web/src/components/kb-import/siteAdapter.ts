@@ -26,13 +26,21 @@ interface Report {
   item?: string;
 }
 
+type SiteSource = Exclude<ImportSource, { kind: "path" }>;
+
+/** The site receives a zip or a git URL; a folder path on this Mac means nothing to it. */
+function siteSource(source: ImportSource): SiteSource {
+  if (source.kind === "path") throw new Error("A folder on this computer cannot be sent to the site.");
+  return source;
+}
+
 /** The name the Worker derives the id from: a zip's own file name (it drops the extension), or the last part of a repository URL. */
-function nameOf(source: ImportSource): string {
+function nameOf(source: SiteSource): string {
   if (source.kind === "zip") return source.file.name;
   return source.url.split("#")[0]!.replace(/\/+$/, "").split(/[/:]/).pop()!.replace(/\.git$/i, "");
 }
 
-function request(path: string, source: ImportSource): [string, RequestInit] {
+function request(path: string, source: SiteSource): [string, RequestInit] {
   const headers: Record<string, string> = { Accept: "application/json", "X-KB-Admin": "1" };
   const init: RequestInit = { method: "POST", cache: "no-store", credentials: "same-origin", headers };
   if (source.kind === "zip") {
@@ -45,7 +53,7 @@ function request(path: string, source: ImportSource): [string, RequestInit] {
   return [path, { ...init, body: JSON.stringify({ git_url: source.url, ...(source.id ? { id: source.id } : {}) }) }];
 }
 
-async function post(fetchImpl: typeof fetch, path: string, source: ImportSource): Promise<Report> {
+async function post(fetchImpl: typeof fetch, path: string, source: SiteSource): Promise<Report> {
   const [url, init] = request(path, source);
   let res: Response;
   try {
@@ -68,7 +76,7 @@ async function post(fetchImpl: typeof fetch, path: string, source: ImportSource)
 }
 
 /** Turns the Worker's report into what the dialog's preview step shows. */
-function preview(source: ImportSource, r: Report): ImportPreview {
+function preview(source: SiteSource, r: Report): ImportPreview {
   const id = source.id || r.id || suggestId(source.kind === "zip" ? sourceStem(nameOf(source)) : nameOf(source));
   const errors = [...(r.errors ?? [])];
   if (id && RESERVED.has(id)) errors.push(`The id "${id}" is reserved. Pick another one.`);
@@ -85,9 +93,12 @@ function preview(source: ImportSource, r: Report): ImportPreview {
 
 export function createSiteImportAdapter(fetchImpl: typeof fetch = (...a) => fetch(...a)): ImportAdapter {
   return {
-    validate: async (source) => preview(source, await post(fetchImpl, VALIDATE, source)),
-    submit: async (source): Promise<ImportOutcome> => {
-      const r = await post(fetchImpl, CREATE, source);
+    validate: async (input) => {
+      const source = siteSource(input);
+      return preview(source, await post(fetchImpl, VALIDATE, source));
+    },
+    submit: async (input): Promise<ImportOutcome> => {
+      const r = await post(fetchImpl, CREATE, siteSource(input));
       return { state: "received", message: RECEIVED, ref: r.item };
     },
   };
