@@ -174,6 +174,23 @@ Concepts (generated sections first, then `## My notes`, always last):
 
 Templates for every type: `meta/templates/<type>.md`.
 
+## Sources on a page (reading view)
+
+`GET /api/pages/{slug}/sources` (`kb_distillery.services.page_sources`) lists what a page rests on: the raw files named by
+`raw:`, the pages and URLs named by `sources:`, and the corpus rows that cite it, each with title, kind, format,
+disposition, date and `cited_in_sections` (the headings whose text names it by raw path, file name, page link or URL;
+never `## My notes`). It is computed on every request; nothing is stored. The web app shows it behind
+`ui.page-sources`, in the variant saved as `page-sources` (default **Footer**):
+
+- The footer numbers the sources 1..n in the endpoint's order.
+- Footer variant only: a small `[n]` follows the first link or mention that names the source in each section that
+  cites it (a link to its page or address, its raw path in text or code); when the section cites it in a way the
+  rendered text cannot locate, the marker ends that section's heading. A source no section cites has a number in
+  the footer and no marker. Markers are added to the rendered tree only (`web/src/features/pages/sourceMarks.tsx`):
+  the number is drawn by CSS, so it is never in the page text, a copy, a flag or a proposal diff. Hover or focus
+  shows the source (title, kind, date, where it is filed, a link); a click scrolls to and flashes its footer entry.
+- The side-tab and hover-marks variants are unchanged and carry no numbers or markers.
+
 ## Topic whitelist (`area:`)
 
 `statistics`, `optimization-theory`, `learning-theory`, `info-theory`, `implicit-regularization`, `tensor-factorization`, `complex-nn`, `quantum`, `boolean-analysis`, `fourier-analysis` (`TOPIC_SLUGS`). Each has exactly one topic page `theme-<slug>` (`type: topic`). Courses are `course-*` collections, not topics.

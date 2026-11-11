@@ -40,6 +40,7 @@ export function usePageSources(slug: string, kb: string | undefined, enabled: bo
   return q.data?.sources;
 }
 
+export const footerId = (n: number) => `page-source-${n}`;
 export const sourceNoun = (n: number) => `${n} source${n === 1 ? "" : "s"}`;
 
 function SourceGlyph({ kind }: { kind: string }) {
@@ -48,7 +49,7 @@ function SourceGlyph({ kind }: { kind: string }) {
 }
 
 /** Where a click on a source goes: the raw item in the pipeline view, else the wiki page, else the web address. */
-function SourceTitle({ s }: { s: PageSource }) {
+export function SourceTitle({ s }: { s: PageSource }) {
   const cls = "min-w-0 truncate text-primary hover:underline";
   if (s.path_rel)
     return (
@@ -71,9 +72,14 @@ function SourceTitle({ s }: { s: PageSource }) {
   return <span className="min-w-0 truncate">{s.title}</span>;
 }
 
-export function SourceRow({ s }: { s: PageSource }) {
+export function SourceRow({ s, n }: { s: PageSource; n?: number }) {
   return (
-    <li className="flex min-w-0 items-start gap-2 text-sm" data-testid="page-source">
+    <li
+      id={n ? footerId(n) : undefined}
+      className={cn("flex min-w-0 items-start gap-2 text-sm", n && "-mx-1.5 rounded px-1.5 py-0.5 transition-colors duration-500 data-[flash]:bg-muted")}
+      data-testid="page-source"
+    >
+      {n ? <span className="mt-0.5 w-4 shrink-0 text-right text-xs tabular-nums text-muted-foreground" data-testid="source-number">{n}</span> : null}
       <SourceGlyph kind={s.kind} />
       <div className="flex min-w-0 flex-1 flex-col">
         <span className="flex min-w-0 items-center gap-2">
@@ -98,11 +104,11 @@ export function SourceRow({ s }: { s: PageSource }) {
   );
 }
 
-function SourceList({ sources }: { sources: PageSource[] }) {
+function SourceList({ sources, numbered }: { sources: PageSource[]; numbered?: boolean }) {
   return (
     <ul className="flex flex-col gap-2" aria-label="Sources">
-      {sources.map((s) => (
-        <SourceRow key={s.id} s={s} />
+      {sources.map((s, i) => (
+        <SourceRow key={s.id} s={s} {...(numbered ? { n: i + 1 } : {})} />
       ))}
     </ul>
   );
@@ -116,7 +122,7 @@ export function SourcesFooter({ sources }: { sources: PageSource[] }) {
       <h2 className="text-sm font-medium text-muted-foreground">
         Sources <span className="font-normal">{sources.length}</span>
       </h2>
-      <SourceList sources={sources} />
+      <SourceList sources={sources} numbered />
     </section>
   );
 }
@@ -221,7 +227,7 @@ export function SourcesCountMark({ sources }: { sources: PageSource[] }) {
   );
 }
 
-const norm = (s: string) => s.toLowerCase().replace(/\[([^\]]*)\]\([^)]*\)/g, "$1").replace(/[^\p{L}\p{N}]+/gu, "");
+export const norm = (s: string) => s.toLowerCase().replace(/\[([^\]]*)\]\([^)]*\)/g, "$1").replace(/[^\p{L}\p{N}]+/gu, "");
 
 interface Dot {
   top: number;
