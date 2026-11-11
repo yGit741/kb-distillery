@@ -338,13 +338,22 @@ def fetch_citations(slug):
     """Fill the citation cache for one just-cataloged paper (Semantic Scholar, 0 LLM), so every paper has its
     references and citers from its first, lowest tier on. Best effort: a paper with no id, a miss or a network
     error never fails the catalog step; `search.citations fetch` retries later."""
-    if os.environ.get(CITATIONS_ENV, "1") == "0":
+    if os.environ.get(CITATIONS_ENV, "1") == "0" or _CITATIONS_DOWN:
         return
     try:
         from kb_distillery.search import citations
-        citations.fetch(slugs=[slug])
+        cache = citations.fetch(slugs=[slug])
+        failed = slug in citations.vault_papers() and slug not in cache["slugs"] and slug not in cache["misses"]
     except Exception as e:  # noqa: BLE001 — the catalog step must not depend on the network
-        print(f"citations: skipped for {slug} ({e}); run `python3 -m kb_distillery.search.citations fetch` later")
+        print(f"citations: skipped for {slug} ({e})")
+        failed = True
+    if failed:   # rate-limited or offline: stop trying for the rest of this run, so a batch is not slowed per paper
+        _CITATIONS_DOWN.append(slug)
+        print("citations: Semantic Scholar unavailable, not fetching for the rest of this run; "
+              "run `python3 -m kb_distillery.search.citations fetch` later")
+
+
+_CITATIONS_DOWN = []   # set once a fetch fails in this process
 
 
 def catalog_email(inbox_rel, collection="", **_kwargs):
