@@ -5,12 +5,15 @@ import type { GNode } from "@/features/graph/types";
 import { cn } from "@/lib/utils";
 import type { PreviewPage } from "./model";
 
+/** What the graph needs from a touched page (an edit preview page, or a page of a proposal). */
+export type TouchedPage = Pick<PreviewPage, "slug" | "title" | "type" | "areas" | "isNew">;
+
 const W = 320;
 const H = 200;
 const R = 8;
 
 /** A touched page as a graph node, for the shared encoding (mark by type, colour by theme). */
-function node(p: PreviewPage): GNode {
+function node(p: TouchedPage): GNode {
   return { id: p.slug, label: p.title, title: p.title, type: p.type, layer: "concept", areas: p.areas, year: null, inDegree: 0, outDegree: 0, path: "", added: "" } as unknown as GNode;
 }
 
@@ -24,7 +27,7 @@ function place(i: number, n: number): { x: number; y: number } {
  * The pages one queued item touches, around the item itself: the mark is the page's type, a dashed spoke is a
  * page this item creates, a ring is the page being read and a tick is a page with nothing left to decide.
  */
-export function TouchedGraph({ pages, shown, current, done, onPick }: { pages: PreviewPage[]; shown: number; current: string | null; done: (p: PreviewPage) => boolean; onPick: (slug: string) => void }) {
+export function TouchedGraph<T extends TouchedPage>({ pages, shown, current, done, onPick }: { pages: T[]; shown: number; current: string | null; done: (p: T) => boolean; onPick: (slug: string) => void }) {
   const nodes = useMemo(() => pages.map(node), [pages]);
   const color = useMemo(() => colorChannel("area", { areas: areaSlots(nodes) }), [nodes]);
   return (

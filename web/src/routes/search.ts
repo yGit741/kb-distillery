@@ -17,7 +17,7 @@ const oneOf = <T extends string>(v: unknown, allowed: readonly T[]): T | undefin
 };
 
 export type ChatSearch = { session?: string; scope?: string; q?: string };
-export type PagesSearch = { kb?: string; q?: string; layer?: string; type?: string; status?: string; area?: string; embed?: string; a?: string; b?: string };
+export type PagesSearch = { kb?: string; q?: string; layer?: string; type?: string; status?: string; area?: string; embed?: string; a?: string; b?: string; review?: string };
 export type GraphSearch = { select?: string; focus?: string; scope?: string; layer?: string; raw?: "1"; search?: string; pages?: string; from?: "home"; view?: string; kbs?: string; tool?: string; chat?: string; ask?: string; preview?: string } & RelationsSearch & Pick<ScopesSearch, "draft">;
 export type ScopesSearch = { scope?: string; draft?: string };
 export type PipelineSearch = { format?: string; q?: string; depth?: string; collection?: string; status?: string; view?: string; group?: string; backlog?: "queued"; item?: string };
@@ -60,7 +60,7 @@ export const SEARCH: { [K in keyof SearchById]: (raw: Raw) => SearchById[K] } = 
   think: (r) => clean({ note: str(r.note) }),
   chat: (r) => clean({ session: str(r.session), scope: str(r.scope), q: str(r.q) }),
   pages: (r) =>
-    clean({ kb: str(r.kb), q: str(r.q), layer: str(r.layer), type: str(r.type), status: str(r.status), area: str(r.area), embed: str(r.embed), a: str(r.a), b: str(r.b) }),
+    clean({ kb: str(r.kb), q: str(r.q), layer: str(r.layer), type: str(r.type), status: str(r.status), area: str(r.area), embed: str(r.embed), a: str(r.a), b: str(r.b), review: str(r.review) }),
   graph: (r) =>
     clean({
       kbs: str(r.kbs),

@@ -12,6 +12,7 @@ import { MiniGraph } from "./MiniGraph";
 import { RestructureDialogs } from "../restructure/dialogs";
 import { RestructureMenu } from "../restructure/entry";
 import { PageChat, PageChatHeader, usePageChatState } from "./PageChat";
+import { ReviewBody, ReviewCard, ReviewLine, usePageReview, WaitingLine } from "./PageReview";
 import { FlagMarks, FlagsHeader, usePageFlags } from "./PageFlags";
 import { SelectionToolbar } from "./SelectionToolbar";
 import { numberSources, remarkSourceMarks, SourceMarker } from "./sourceMarks";
@@ -66,11 +67,13 @@ export interface PageReaderProps {
   pinned: boolean;
   onTogglePin: () => void;
   onConnect: () => void;
+  /** `?review=<proposal id>` (flag ui.page-review): the page shows that proposal's edits in place. */
+  review?: string;
   /** The knowledge base's name when the page is from another one than the server's own (read-only). */
   viewOnly?: string;
 }
 
-export function PageReader({ g, detail, embed, pinned, onTogglePin, onConnect, viewOnly }: PageReaderProps) {
+export function PageReader({ g, detail, embed, pinned, onTogglePin, onConnect, viewOnly, review }: PageReaderProps) {
   // a page of another knowledge base: no pin, connect or Obsidian (they act on the server's own), links stay in it
   const kb = viewOnly ? (detail.kb ?? undefined) : undefined;
   const linkSearch = useMemo(() => (kb ? { kb } : undefined), [kb]);
@@ -102,6 +105,8 @@ export function PageReader({ g, detail, embed, pinned, onTogglePin, onConnect, v
   const proposalsFlag = useFlag("ui.proposals");
   const chatOn = chatFlag && proposalsFlag && !viewOnly && !embed;
   const restructureOn = useFlag("ui.restructure") && proposalsFlag && !viewOnly && !embed;
+  const reviewOn = useFlag("ui.page-review") && proposalsFlag && !viewOnly && !embed;
+  const rv = usePageReview(card.id, reviewOn ? review : undefined);
   const chat = usePageChatState(card.id);
   const flagsOn = useFlag("ui.page-flags") && proposalsFlag && !viewOnly && !embed;
   const flags = usePageFlags(card.id, flagsOn);
@@ -119,6 +124,7 @@ export function PageReader({ g, detail, embed, pinned, onTogglePin, onConnect, v
   return (
     <div className="grid min-w-0 gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
       <article ref={articleRef} className="relative flex min-w-0 flex-col gap-4">
+        {rv.on && <ReviewLine rv={rv} slug={card.id} />}
         <header className="flex flex-col gap-2">
           <h1 className="flex items-start gap-2 text-2xl font-semibold leading-tight">
             <TypeDot type={card.type} className="mt-1 size-5" />
@@ -185,9 +191,12 @@ export function PageReader({ g, detail, embed, pinned, onTogglePin, onConnect, v
             </span>
           </div>
           {historyOn && historyEntry === "timeline" && <HistoryTimeline h={history} />}
+          {reviewOn && !rv.on && <WaitingLine slug={card.id} />}
         </header>
 
-        {historyOn && history.comparing ? (
+        {rv.on ? (
+          <ReviewBody rv={rv} slug={card.id} />
+        ) : historyOn && history.comparing ? (
           <HistoryCompare slug={card.id} h={history} />
         ) : (
           <Markdown resolveSlug={resolveSlug} linkSearch={linkSearch} marks={marks}>{markdown}</Markdown>
@@ -195,14 +204,14 @@ export function PageReader({ g, detail, embed, pinned, onTogglePin, onConnect, v
 
         {chatOn && <PageChat slug={card.id} chat={chat} articleRef={articleRef} />}
         {restructureOn && <RestructureDialogs slug={card.id} title={card.title} />}
-        {!history.comparing && (askFromSelection || flagsOn) && (
+        {!rv.on && !history.comparing && (askFromSelection || flagsOn) && (
           <SelectionToolbar
             articleRef={articleRef}
             onAsk={askFromSelection ? (c) => (chat.addChip(c), chat.setOpen(true)) : undefined}
             onFlag={flagsOn ? flags.markInaccurate : undefined}
           />
         )}
-        {!history.comparing && flagsOn && <FlagMarks flags={flags} articleRef={articleRef} markdown={`${marks ? "marks:" : ""}${markdown}`} />}
+        {!rv.on && !history.comparing && flagsOn && <FlagMarks flags={flags} articleRef={articleRef} markdown={`${marks ? "marks:" : ""}${markdown}`} />}
         {!history.comparing && sourcesOn && placement === "footer" && pageSources && <SourcesFooter sources={pageSources} />}
         {sourcesOn && placement === "hover-marks" && pageSources && <SourcesMarginDots sources={pageSources} articleRef={articleRef} />}
 
@@ -217,7 +226,8 @@ export function PageReader({ g, detail, embed, pinned, onTogglePin, onConnect, v
       </article>
 
       <aside className="flex min-w-0 flex-col gap-3" aria-label="Neighbourhood">
-        <div className="rounded-lg border bg-card p-3">
+        {rv.on && <ReviewCard rv={rv} g={g} slug={card.id} />}
+        <div className="rounded-lg border bg-card p-3" hidden={rv.on}>
           <h2 className="mb-2 text-sm font-medium">
             Neighbourhood{" "}
             <span className="text-xs font-normal text-muted-foreground">

@@ -34,7 +34,9 @@ function open(sent: PageChatRequest[] = [], reply?: () => Promise<never>) {
   render(<App source={mockDataSource(ds)} router={createAppRouter(createMemoryHistory({ initialEntries: ["/pages/claim"] }), "")} />);
 }
 
-const on = (fn: () => Promise<void>) => withFlag("ui.proposals", true, () => withFlag("ui.page-chat", true, fn));
+// ui.page-review off here: the proposal card leads to the separate review screen (on: PageReview.test.tsx and the last test below)
+const on = (fn: () => Promise<void>, inPage = false) =>
+  withFlag("ui.proposals", true, () => withFlag("ui.page-chat", true, () => withFlag("ui.page-review", inPage, fn)));
 
 describe("Page chat (ui.page-chat)", () => {
   beforeEach(() => {
@@ -115,4 +117,17 @@ describe("Page chat (ui.page-chat)", () => {
       await screen.findByText("The first claim is strong.");
       expect(screen.queryByRole("button", { name: "Ask about this page" })).toBeNull();
     }));
+
+  it("ui.page-review on: the proposal card opens the review in this page", () =>
+    on(async () => {
+      setVariant("page-chat-entry", "rail");
+      open();
+      fireEvent.click(await screen.findByRole("button", { name: "Discuss this page" }));
+      const panel = await screen.findByRole("complementary", { name: "Page chat" });
+      const box = within(panel).getByRole("textbox", { name: "Message" });
+      fireEvent.change(box, { target: { value: "soften this", selectionStart: 11 } });
+      fireEvent.keyDown(box, { key: "Enter" });
+      const cardLink = await within(panel).findByTestId("proposal-card");
+      expect(cardLink.getAttribute("href")).toContain("/pages/claim?review=p1");
+    }, true));
 });

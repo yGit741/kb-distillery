@@ -212,6 +212,7 @@ export default function PagesScreen() {
           pinned={pins.includes(slug)}
           onTogglePin={togglePin}
           onConnect={() => setPath({ a: slug, b: "" })}
+          review={search.review}
           viewOnly={viewOnly}
         />
       );
