@@ -194,7 +194,7 @@ export function PageReader({ g, detail, embed, pinned, onTogglePin, onConnect, v
           {reviewOn && !rv.on && <WaitingLine slug={card.id} />}
         </header>
 
-        {rv.on ? (
+        {rv.here && !rv.applied ? (
           <ReviewBody rv={rv} slug={card.id} />
         ) : historyOn && history.comparing ? (
           <HistoryCompare slug={card.id} h={history} />
@@ -204,14 +204,14 @@ export function PageReader({ g, detail, embed, pinned, onTogglePin, onConnect, v
 
         {chatOn && <PageChat slug={card.id} chat={chat} articleRef={articleRef} />}
         {restructureOn && <RestructureDialogs slug={card.id} title={card.title} />}
-        {!rv.on && !history.comparing && (askFromSelection || flagsOn) && (
+        {!rv.here && !history.comparing && (askFromSelection || flagsOn) && (
           <SelectionToolbar
             articleRef={articleRef}
             onAsk={askFromSelection ? (c) => (chat.addChip(c), chat.setOpen(true)) : undefined}
             onFlag={flagsOn ? flags.markInaccurate : undefined}
           />
         )}
-        {!rv.on && !history.comparing && flagsOn && <FlagMarks flags={flags} articleRef={articleRef} markdown={`${marks ? "marks:" : ""}${markdown}`} />}
+        {!rv.here && !history.comparing && flagsOn && <FlagMarks flags={flags} articleRef={articleRef} markdown={`${marks ? "marks:" : ""}${markdown}`} />}
         {!history.comparing && sourcesOn && placement === "footer" && pageSources && <SourcesFooter sources={pageSources} />}
         {sourcesOn && placement === "hover-marks" && pageSources && <SourcesMarginDots sources={pageSources} articleRef={articleRef} />}
 
@@ -226,8 +226,8 @@ export function PageReader({ g, detail, embed, pinned, onTogglePin, onConnect, v
       </article>
 
       <aside className="flex min-w-0 flex-col gap-3" aria-label="Neighbourhood">
-        {rv.on && <ReviewCard rv={rv} g={g} slug={card.id} />}
-        <div className="rounded-lg border bg-card p-3" hidden={rv.on}>
+        {rv.here && <ReviewCard rv={rv} g={g} slug={card.id} />}
+        <div className="rounded-lg border bg-card p-3" hidden={rv.here}>
           <h2 className="mb-2 text-sm font-medium">
             Neighbourhood{" "}
             <span className="text-xs font-normal text-muted-foreground">

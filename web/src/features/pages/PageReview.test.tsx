@@ -95,4 +95,30 @@ describe("Page review (ui.page-review)", () => {
       await userEvent.click(await within(cardEl).findByRole("link", { name: "Back to the page" }));
       await waitFor(() => expect(screen.queryByTestId("review-line")).toBeNull());
     }));
+
+  it("a proposal that does not change this page: the page reads as usual, with a way to a page it changes", () =>
+    on(async () => {
+      open("/pages/tensor-rank?review=p1", { getProposal: async () => proposalFixture({ base: { "matrix-rank": "abc" }, hunks: [] }) });
+      const line = await screen.findByTestId("review-line");
+      expect(await within(line).findByRole("link", { name: "Go to a page it changes" })).toHaveAttribute("href", expect.stringContaining("/pages/matrix-rank?review=p1"));
+      expect(screen.queryByTestId("review-card")).toBeNull();
+      expect(screen.getByText("Rank always determines the cost.")).toBeInTheDocument();
+    }));
+
+  it("a rejected proposal opened by its link: read-only, with the reason instead of Apply", () =>
+    on(async () => {
+      open("/pages/tensor-rank?review=p1", { getProposal: async () => proposalFixture({ status: "rejected" }) });
+      const cardEl = await screen.findByTestId("review-card");
+      expect(within(cardEl).getByText(/This proposal was rejected/)).toBeInTheDocument();
+      expect(within(cardEl).queryByRole("button", { name: /^Apply/ })).toBeNull();
+      expect(within(cardEl).getByRole("button", { name: /^Reject: Rank often determines/ })).toBeDisabled();
+    }));
+
+  it("ui.proposals off: no review even with ui.page-review on", () =>
+    withFlag("ui.proposals", false, () =>
+      withFlag("ui.page-review", true, async () => {
+        open("/pages/tensor-rank?review=p1");
+        expect(await screen.findByText("Rank always determines the cost.")).toBeInTheDocument();
+        expect(screen.queryByTestId("review-line")).toBeNull();
+      })));
 });

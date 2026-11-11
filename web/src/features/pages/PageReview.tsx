@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { Check, X } from "lucide-react";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useDataSource, type Decision, type Hunk, type Proposal, type RenderPage } from "@/api";
 import { ErrorState, Loading } from "@/components/states";
 import { Button } from "@/components/ui/button";
@@ -36,6 +36,12 @@ export function usePageReview(slug: string, id: string | undefined) {
   const [correcting, setCorrecting] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const fail = (e: unknown) => setError(e instanceof Error ? e.message : String(e));
+  // another page or another proposal: nothing of the last one stays selected or reported
+  useEffect(() => {
+    setFocus(null);
+    setCorrecting(null);
+    setError(null);
+  }, [slug, id]);
   const decide = useMutation({
     mutationFn: (v: { hunk_id: string; decision: Decision; comment?: string }) => ds.decideProposal(id!, v),
     onSuccess: (p) => {
@@ -85,7 +91,10 @@ export function usePageReview(slug: string, id: string | undefined) {
     setFocus(h.id);
     document.querySelector(`[data-hunk="${h.id}"]`)?.scrollIntoView?.({ block: "center" });
   };
-  return { on: !!id, id, p, page, hunks, slugs, readOnly, ctx, act, pick, focus, apply, error, loading: q.isLoading || r.isLoading, failed: q.error ?? r.error, retry: () => void Promise.all([q.refetch(), r.refetch()]) };
+  /** The proposal is loaded and does not change this page: the page reads as usual, with a way to a page it does change. */
+  const elsewhere = !!p && !slugs.includes(slug);
+  const applied = p?.status === "applied";
+  return { on: !!id, here: !!id && !elsewhere, elsewhere, applied, id, p, page, hunks, slugs, readOnly, ctx, act, pick, focus, apply, error, loading: q.isLoading || r.isLoading, failed: q.error ?? r.error, retry: () => void Promise.all([q.refetch(), r.refetch()]) };
 }
 export type PageReviewState = ReturnType<typeof usePageReview>;
 
@@ -96,6 +105,14 @@ export function ReviewLine({ rv, slug }: { rv: PageReviewState; slug: string }) 
   return (
     <p role="status" data-testid="review-line" className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border bg-muted/50 px-3 py-1.5 text-xs text-muted-foreground">
       <span className="text-foreground/85">Reviewing: {rv.p?.title ?? "a proposal"}</span>
+      {rv.elsewhere && rv.slugs[0] && (
+        <span>
+          It does not change this page.{" "}
+          <Link to={pageTo(rv.slugs[0])} search={search(rv.id)} className="text-primary hover:underline">
+            Go to a page it changes
+          </Link>
+        </span>
+      )}
       {at >= 0 && rv.slugs.length > 1 && (
         <span>
           page {at + 1} of {rv.slugs.length}
@@ -135,9 +152,10 @@ export function ReviewCard({ rv, g, slug }: { rv: PageReviewState; g: LinkGraph;
   if (!p) return null;
   const decided = (s: string) => p.hunks.filter((h) => h.slug === s).every((h) => decisionOf(p, h.id));
   const blocker = applyBlocker(p, [...p.checks.tier1, ...p.checks.tier2], p.hunks);
-  const applied = p.status === "applied";
+  const applied = rv.applied;
+  const closed = p.status === "rejected" || p.status === "undone";
   const next = rv.slugs.find((s) => s !== slug && !decided(s));
-  const mark = "grid size-6 place-items-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground disabled:pointer-events-none disabled:opacity-50";
+  const mark = "grid size-6 place-items-center rounded-md text-muted-foreground outline-none hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50";
   return (
     <section aria-label="Review" data-testid="review-card" className="flex flex-col gap-3 rounded-lg border bg-card p-3">
       {touched.length > 1 && (
@@ -153,7 +171,7 @@ export function ReviewCard({ rv, g, slug }: { rv: PageReviewState; g: LinkGraph;
         <ul className="flex flex-col">
           {rv.hunks.map((h) => {
             const d = decisionOf(p, h.id);
-            const name = short(h, 5);
+            const name = short(h, 5) || CHANGE_LABEL[changeKind(h)];
             return (
               <li key={h.id} data-queue={h.id} className={cn("flex items-center gap-1 border-b py-1 last:border-b-0", rv.focus === h.id && "bg-muted/60")}>
                 <button type="button" onClick={() => rv.pick(h)} className="min-w-0 flex-1 truncate px-1 text-left text-sm hover:underline" title={name}>
@@ -185,6 +203,10 @@ export function ReviewCard({ rv, g, slug }: { rv: PageReviewState; g: LinkGraph;
             Back to the page
           </Link>
         </p>
+      ) : closed ? (
+        <p role="status" className="text-sm text-muted-foreground">
+          This proposal was {p.status}. Nothing here can be applied.
+        </p>
       ) : (
         <div className="flex flex-col gap-1.5">
           {next && (
@@ -206,7 +228,7 @@ export function ReviewCard({ rv, g, slug }: { rv: PageReviewState; g: LinkGraph;
 /** Under the page header while reading: the open proposals that touch this page, each one click from its review. */
 export function WaitingLine({ slug }: { slug: string }) {
   const search = useReviewSearch();
-  const q = useApiQuery(["proposals", "open"], (d) => d.listProposals("open"));
+  const q = useApiQuery(["proposals", "open"], (d) => d.listProposals("open"), { retry: false });
   const mine = (q.data ?? []).filter((s) => s.pages.includes(slug));
   if (!mine.length) return null;
   return (
