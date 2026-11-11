@@ -79,8 +79,9 @@ def _free_name(name: str, taken: set) -> str:
     return candidate
 
 
-def _step(root: str, items, summary_fn, collection: str = ""):
-    """Save `items` ([(name, bytes)]) into raw/inbox/, catalog them, commit once. Returns (results, sha | None)."""
+def _step(root: str, items, summary_fn, collection: str = "", year: int | None = None):
+    """Save `items` ([(name, bytes)]) into raw/inbox/, catalog them, commit once. Returns (results, sha | None).
+    With a `year`, a file whose content already waits in raw/inbox/ (stored earlier, not catalogued) is filed from there."""
     try:
         store = for_kb(root=root)
     except StorageError as e:
@@ -95,9 +96,10 @@ def _step(root: str, items, summary_fn, collection: str = ""):
             shas, names = _corpus(root)
             inbox_keys = list(store.list(INBOX))
             names |= {os.path.basename(k) for k in inbox_keys}
+            waiting = {}                                        # sha1 -> key of a file stored in the inbox, not catalogued
             for k in inbox_keys:
                 try:
-                    shas.add(store.info(k).sha1[:12])
+                    waiting[store.info(k).sha1[:12]] = k
                 except StorageError:
                     pass
             results, added = [], []
@@ -114,6 +116,14 @@ def _step(root: str, items, summary_fn, collection: str = ""):
                     results.append({"name": shown, "status": "refused", "reason": f"larger than {MAX_FILE_BYTES >> 20} MB"})
                 elif _sha(data) in shas:
                     results.append({"name": shown, "status": "duplicate", "reason": "the same content is already in this knowledge base"})
+                elif _sha(data) in waiting and year:
+                    key = waiting.pop(_sha(data))               # the year it was waiting for: file the stored copy
+                    shas.add(_sha(data))
+                    added.append((key[len(INBOX):], len(results)))
+                    results.append({"name": shown, "status": "added", "raw_path": key})
+                elif _sha(data) in waiting:
+                    results.append({"name": shown, "status": "duplicate", "waiting": waiting[_sha(data)],
+                                    "reason": "the same content is already stored in raw/inbox/, waiting to be filed"})
                 else:
                     name = _free_name(name, names)
                     store.put(INBOX + name, data)
@@ -123,7 +133,7 @@ def _step(root: str, items, summary_fn, collection: str = ""):
                     results.append({"name": shown, "status": "added", "raw_path": INBOX + name})
             if not added:
                 return results, None
-            _catalog(added, results, collection)
+            _catalog(added, results, collection, year)
             sha = core.commit_op("catalog", "app-upload", summary_fn(len(added)), paths=core.changed_since(before, root),
                                  root=root, _locked=True)
             return results, sha
@@ -131,7 +141,7 @@ def _step(root: str, items, summary_fn, collection: str = ""):
         raise SourceError(409, "knowledge step refused: " + str(e)) from e
 
 
-def _catalog(added, results, collection):
+def _catalog(added, results, collection, year=None):
     """Catalog each new inbox file as `drain_inbox` does (one lint at the end, by the commit). A file catalog cannot place stays
     in raw/inbox/ and says why."""
     was = catalog._LINT_DEFERRED
@@ -140,7 +150,7 @@ def _catalog(added, results, collection):
         for name, i in added:
             try:
                 with contextlib.redirect_stdout(io.StringIO()):
-                    dest, _slug = catalog.catalog(INBOX + name, collection=collection)
+                    dest, _slug = catalog.catalog(INBOX + name, collection=collection, year=year)
                 results[i]["raw_path"] = dest
             except (ValueError, NotImplementedError, OSError) as e:
                 results[i]["reason"] = f"stored in raw/inbox/ but not catalogued yet: {e}"
@@ -153,9 +163,9 @@ def _result(sha, root):
     return {"commit": sha, "version": ("kb-" + cp.fmt_version(version)) if version else None}
 
 
-def add_files(files, root: str | None = None, collection: str = "") -> dict:
+def add_files(files, root: str | None = None, collection: str = "", year: int | None = None) -> dict:
     root = root or DEFAULT_ROOT
-    results, sha = _step(root, files, lambda n: f"add {n} source{'s' if n != 1 else ''} from the app", collection)
+    results, sha = _step(root, files, lambda n: f"add {n} source{'s' if n != 1 else ''} from the app", collection, year)
     return {"files": results, **_result(sha, root)}
 
 

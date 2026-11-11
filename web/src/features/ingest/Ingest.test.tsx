@@ -139,8 +139,34 @@ describe("triage", () => {
     expect(summary).toHaveTextContent("PDF document");
     expect(summary).toHaveTextContent("raw/printed-docs/");
     await user.click(screen.getByRole("radio", { name: "Batch" }));
+    // a paper is filed by its year and this name has none: Ingest waits for it
+    expect(screen.getByRole("button", { name: "Ingest" })).toBeDisabled();
+    await user.type(screen.getByLabelText("Year of the paper"), "2019");
     await user.click(screen.getByRole("button", { name: "Ingest" }));
     await waitFor(() => expect(startIngest.mock.calls[0]![0].backend).toBe("batch"));
+    expect(startIngest.mock.calls[0]![0].year).toBe("2019");
+  });
+
+  it("asks no year when the name has one or for a note, and does not insist on it for a member of a collection", async () => {
+    const { startIngest } = setup();
+    const user = userEvent.setup();
+    await user.upload(await screen.findByLabelText("Choose a file"), new File(["%PDF"], "2019-paper.pdf", { type: "application/pdf" }));
+    await screen.findByTestId("source-summary");
+    expect(screen.queryByTestId("year-field")).toBeNull();
+    await user.click(screen.getByRole("button", { name: "Change" }));
+    await user.upload(await screen.findByLabelText("Choose a file"), note());
+    await screen.findByTestId("source-summary");
+    expect(screen.queryByTestId("year-field")).toBeNull();
+    await user.click(screen.getByRole("button", { name: "Change" }));
+    await user.upload(await screen.findByLabelText("Choose a file"), new File(["%PDF"], "lecture-3.pdf", { type: "application/pdf" }));
+    expect(await screen.findByTestId("year-field")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Ingest" })).toBeDisabled();
+    // a member of a collection is filed by the collection: the year stays on offer but no longer holds Ingest back
+    await user.type(screen.getByLabelText(/Collection/), "course-ml");
+    expect(screen.getByTestId("year-field")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Ingest" }));
+    await waitFor(() => expect(startIngest).toHaveBeenCalledTimes(1));
+    expect(startIngest.mock.calls[0]![0].year).toBeUndefined();
   });
 
   it("Listed makes no model call, so no backend is sent", async () => {

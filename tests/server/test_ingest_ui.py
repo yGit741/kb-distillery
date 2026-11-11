@@ -249,3 +249,48 @@ def test_a_foreign_record_file_does_not_break_the_list(client, kb, fake_llm):
             f.write(body)
     rows = client.get("/api/ingest").json()
     assert len(rows) == 1 and rows[0]["status"] == "done"
+
+
+@pytest.fixture
+def paper_catalog(kb):
+    """catalog.catalog for a paper PDF, without a real PDF: no year in the name and none given is a refusal that leaves
+    the file in the inbox; with a year the file moves to raw/printed-docs/<year>-<name>."""
+    calls = []
+
+    def fake(inbox_rel, collection="", fmt=None, title=None, year=None):
+        calls.append({"path": inbox_rel, "year": year})
+        name = os.path.basename(inbox_rel)
+        if not year:
+            raise ValueError(f"cannot tell the year of {name!r} — pass --year YYYY (left in inbox)")
+        dest = f"raw/printed-docs/{year}-{name.lower()}"
+        os.makedirs(os.path.join(kb, "raw", "printed-docs"), exist_ok=True)
+        os.replace(os.path.join(kb, inbox_rel), os.path.join(kb, dest))
+        return dest, None
+    with mock.patch.object(catalog, "catalog", fake), mock.patch.object(svc.extract, "extract_text", return_value="Tensor rank. " * 40):
+        yield calls
+
+
+def test_a_year_names_a_paper_whose_file_name_has_none(client, kb, fake_llm, paper_catalog):
+    job = wait(client, upload(client, "WikiLoop-2607.26604.pdf", b"%PDF-1.4 body", year="2026").json()["job_id"])
+    assert job.status == "done", job.error
+    assert paper_catalog == [{"path": "raw/inbox/WikiLoop-2607.26604.pdf", "year": 2026}]
+    assert os.path.isfile(os.path.join(kb, "raw", "printed-docs", "2026-wikiloop-2607.26604.pdf"))
+
+
+def test_a_drop_stuck_for_its_year_is_filed_when_dropped_again_with_one(client, kb, fake_llm, paper_catalog):
+    first = wait(client, upload(client, "WikiLoop-2607.26604.pdf", b"%PDF-1.4 body").json()["job_id"])
+    assert first.status == "failed" and "cannot tell the year" in first.error
+    assert os.listdir(os.path.join(kb, "raw", "inbox")) == ["WikiLoop-2607.26604.pdf"]
+    again = wait(client, upload(client, "WikiLoop-2607.26604.pdf", b"%PDF-1.4 body").json()["job_id"])
+    assert again.status == "failed" and "not filed yet" in again.error                       # still no year: nothing new to try
+    job = wait(client, upload(client, "2026-wikiloop.pdf", b"%PDF-1.4 body", year="2026").json()["job_id"])
+    assert job.status == "done", job.error
+    assert paper_catalog[-1] == {"path": "raw/inbox/WikiLoop-2607.26604.pdf", "year": 2026}   # the stored copy, not a second one
+    assert not os.listdir(os.path.join(kb, "raw", "inbox"))
+
+
+@pytest.mark.parametrize("year", ["abcd", "26", "3024"])
+def test_a_bad_year_is_refused_before_anything_is_stored(client, kb, year):
+    r = upload(client, "paper.pdf", b"%PDF-1.4 body", year=year)
+    assert r.status_code == 422 and "four digits" in r.json()["detail"]
+    assert not os.path.isdir(os.path.join(kb, "raw", "inbox")) and client.get("/api/ingest").json() == []

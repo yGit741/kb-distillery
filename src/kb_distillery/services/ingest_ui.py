@@ -93,6 +93,19 @@ def _clean_collection(collection, root):
     return collection
 
 
+def _clean_year(year):
+    """The year the owner typed for a paper whose file name carries none; None when the field was left empty."""
+    if year is None or str(year).strip() == "":
+        return None
+    try:
+        y = int(str(year).strip())
+    except ValueError:
+        y = 0
+    if not 1800 <= y <= 2099:
+        raise IngestError(422, "the year must be four digits, such as 2024")
+    return y
+
+
 def check_url(url) -> str:
     """The URL, or IngestError(422): http(s) only, a real host, no credentials, nothing on this machine or its network."""
     url = (url or "").strip() if isinstance(url, str) else ""
@@ -349,11 +362,12 @@ def _spawn(job, work):
     return {"job_id": job["id"]}
 
 
-def start_file(name, data, tier=None, collection=None, backend=None, root=None) -> dict:
+def start_file(name, data, tier=None, collection=None, backend=None, root=None, year=None) -> dict:
     root, tier, collection = _prepare(tier, collection, backend, root)
+    year = _clean_year(year)
     check_upload(name, data)
     job = _new_job(name or "upload", tier, collection, backend, root, "file")
-    return _spawn(job, lambda: _run(job, root, name, data, "", fetch=None))
+    return _spawn(job, lambda: _run(job, root, name, data, "", fetch=None, year=year))
 
 
 def start_url(url, tier=None, collection=None, backend=None, root=None) -> dict:
@@ -392,7 +406,7 @@ def _fail(job, message):
     _save(job)
 
 
-def _run(job, root, name, data, url, fetch):
+def _run(job, root, name, data, url, fetch, year=None):
     try:
         if fetch:
             _step(job, "fetch", "active", url)
@@ -400,7 +414,7 @@ def _run(job, root, name, data, url, fetch):
             _step(job, "fetch", "done", f"{name} ({len(data) // 1024 or 1} KB)")
         else:
             _step(job, "fetch", "skipped", "uploaded from this machine")
-        raw_rel, text = _convert(job, root, name, data)
+        raw_rel, text = _convert(job, root, name, data, year)
         claims = _digest(job, root, raw_rel, text, url)
         _propose(job, root, raw_rel, claims, url)
     except IngestError as e:
@@ -412,14 +426,16 @@ def _run(job, root, name, data, url, fetch):
         _fail(job, f"something went wrong ({e.__class__.__name__}: {e}); nothing was changed in the wiki")
 
 
-def _convert(job, root, name, data):
+def _convert(job, root, name, data, year=None):
     _step(job, "convert", "active", "saving the source")
     name = _as_catalog_name(name)
     try:
-        res = inbox_add.add_files([(name, data)], root=root, collection=job["collection"])
+        res = inbox_add.add_files([(name, data)], root=root, collection=job["collection"], year=year)
     except inbox_add.SourceError as e:
         raise IngestError(e.status, e.message) from None
     f = res["files"][0]
+    if f["status"] == "duplicate" and f.get("waiting"):
+        raise IngestError(409, "this source is already stored but not filed yet; if it is a paper, drop it again with its year")
     if f["status"] == "duplicate":
         raise IngestError(409, "this source is already in the knowledge base")
     if f["status"] == "refused":

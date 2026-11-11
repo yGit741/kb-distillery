@@ -48,6 +48,29 @@ export function fileProblem(f: File): string | null {
   return null;
 }
 
+const YEAR_IN_NAME = /(1[89]\d{2}|20\d{2})/;
+const ARXIV_ID = /(?:^|[^\d])(\d{2})(0[1-9]|1[0-2])\.\d{4,5}(?:v\d+)?(?:[^\d]|$)/;
+
+/**
+ * A paper is filed as `<year>-<title>.pdf`, and the year is read from the file name (catalog._suggest_paper_name). True
+ * when this file is a PDF whose name carries none, so the person has to say it before the file can be filed.
+ */
+export function needsYear(f: File): boolean {
+  const stem = f.name.replace(/\.[^.]*$/, "").toLowerCase();
+  return f.name.toLowerCase().endsWith(".pdf") && !YEAR_IN_NAME.test(stem);
+}
+
+/** The year an arXiv number in the name stands for (`2607.26604` is July 2026), or "" when there is none. */
+export function yearGuess(name: string): string {
+  const m = ARXIV_ID.exec(name);
+  return m ? "20" + m[1] : "";
+}
+
+/** True for a year the server takes: four digits, 1800 to 2099. */
+export function yearOk(text: string): boolean {
+  return /^(1[89]|20)\d{2}$/.test(text.trim());
+}
+
 /** null when `text` looks like a web address we can send, else a plain sentence. */
 export function urlProblem(text: string): string | null {
   try {
@@ -214,6 +237,11 @@ export interface Flow {
   setCollection: (c: string) => void;
   backend: string;
   setBackend: (b: string) => void;
+  /** the year of a paper whose file name has none; `yearMissing` blocks the start until it is given */
+  year: string;
+  setYear: (y: string) => void;
+  yearAsked: boolean;
+  yearMissing: boolean;
   start: () => void;
   starting: boolean;
   startError: string | null;
@@ -233,6 +261,13 @@ export function useIngestFlow(opts: { inbox?: boolean } = {}): Flow {
   const [tier, setTier] = useState<TierId>(DEFAULT_TIER);
   const [collection, setCollection] = useState("");
   const [backend, setBackend] = useState("");
+  const [year, setYear] = useState("");
+  const file = source?.kind === "file" ? source.file : null;
+  useEffect(() => setYear(file ? yearGuess(file.name) : ""), [file]);
+  // a member of a course, series or book is filed by its collection, not by a year: with a collection the year is
+  // still offered (another kind of collection files the PDF as a paper) but no longer holds the start back
+  const yearAsked = !!file && needsYear(file);
+  const yearMissing = yearAsked && !collection.trim() && !yearOk(year);
   const [jobId, setJobId] = useState<string | null>(null);
   const [startError, setStartError] = useState<string | null>(null);
   const live = useRef(true);
@@ -245,6 +280,7 @@ export function useIngestFlow(opts: { inbox?: boolean } = {}): Flow {
         tier,
         collection: collection.trim() || undefined,
         backend: tier === "listed" ? undefined : backend || undefined,
+        year: yearAsked && yearOk(year) ? year.trim() : undefined,
       };
       return { input, started: await ds.startIngest(input) };
     },
@@ -266,5 +302,5 @@ export function useIngestFlow(opts: { inbox?: boolean } = {}): Flow {
     setCollection("");
     m.reset();
   }, [m]);
-  return { source, setSource, tier, setTier, collection, setCollection, backend, setBackend, start: () => m.mutate(), starting: m.isPending, startError, jobId, job, reset };
+  return { source, setSource, tier, setTier, collection, setCollection, backend, setBackend, year, setYear, yearAsked, yearMissing, start: () => m.mutate(), starting: m.isPending, startError, jobId, job, reset };
 }
