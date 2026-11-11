@@ -119,8 +119,11 @@ describe("flag chat-full: one chat surface in three sizes", () => {
       expect(within(list).getByText("Today")).toBeInTheDocument();
       expect(within(list).getByText("Earlier")).toBeInTheDocument();
       expect(within(list).getByText("running")).toBeInTheDocument();
-      expect(screen.getByTestId("chat-explorer")).toBeInTheDocument();
-      // the graph keeps the top of the right pane: its frame starts where the panel ends and stops above the explorer
+      // the page viewer waits for a page: the graph takes the whole right pane until one is opened
+      expect(screen.queryByTestId("chat-explorer")).not.toBeInTheDocument();
+      expect(screen.getByTestId("graph-shell").parentElement?.style.bottom).not.toBe("50%");
+      act(() => useGraphUi.setState({ readerSlug: "idea-margin" }));
+      expect(await screen.findByTestId("chat-explorer")).toBeInTheDocument();
       expect(screen.getByTestId("graph-shell").parentElement).toHaveStyle({ bottom: "50%" });
       // the plan, skills and prompts sit in the chat column's header
       await userEvent.click(screen.getByRole("button", { name: "Plan, skills and prompts" }));
@@ -131,27 +134,27 @@ describe("flag chat-full: one chat surface in three sizes", () => {
       expect(screen.getByTestId("graph-shell").parentElement?.style.bottom).not.toBe("50%");
       await userEvent.click(screen.getByRole("button", { name: "Show the page viewer" }));
       expect(screen.getByTestId("chat-explorer")).toBeInTheDocument();
+      // the chat list and the page viewer resize by their edges
+      expect(screen.getByRole("separator", { name: "Resize the chat list" })).toBeInTheDocument();
+      expect(screen.getByRole("separator", { name: "Resize the page viewer" })).toBeInTheDocument();
       await userEvent.click(screen.getByRole("button", { name: "Back to the panel" }));
       expect(panel).toHaveAttribute("data-size", "panel");
       expect(screen.queryByTestId("chat-explorer")).not.toBeInTheDocument();
     });
   });
 
-  it("on: the tab on the graph's left edge folds the right pane to a rail, one click brings it back, and the fold is remembered", async () => {
+  it("on: the edge between the chat and the graph resizes them, is remembered, and a double click resets it", async () => {
     await on(async () => {
       sessionsFetch([]);
       const panel = await opened();
       await userEvent.click(screen.getByRole("button", { name: "Full screen" }));
-      await userEvent.click(await screen.findByRole("button", { name: "Fold the graph pane" }));
-      const rail = screen.getByTestId("chat-rail");
-      expect(panel.style.width).toContain("44px");
-      expect(screen.queryByTestId("chat-explorer")).not.toBeInTheDocument();
-      expect(localStorage.getItem("kbchat.full.folded")).toBe("true");
-      for (const name of ["Open the graph pane", "Graph", "Pages"]) expect(within(rail).getByRole("button", { name })).toBeInTheDocument();
-      await userEvent.click(within(rail).getByRole("button", { name: "Open the graph pane" }));
-      expect(screen.queryByTestId("chat-rail")).not.toBeInTheDocument();
-      expect(screen.getByTestId("chat-explorer")).toBeInTheDocument();
-      expect(localStorage.getItem("kbchat.full.folded")).toBe("false");
+      expect(screen.queryByRole("button", { name: "Fold the graph pane" })).not.toBeInTheDocument();
+      const edge = await screen.findByRole("separator", { name: "Resize the chat and the graph" });
+      act(() => useChatFull.getState().setPaneW(500));
+      expect(panel.style.width).toContain("500px");
+      expect(localStorage.getItem("kbchat.full.pane")).toBe("500");
+      await userEvent.dblClick(edge);
+      expect(useChatFull.getState().paneW).toBeNull();
     });
   });
 

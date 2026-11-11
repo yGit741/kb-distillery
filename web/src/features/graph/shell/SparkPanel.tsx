@@ -28,7 +28,8 @@ import type { CiteHooks } from "@/components/Markdown";
 import { ChatList } from "./ChatList";
 import { ChatTools } from "./ChatTools";
 import { PANEL_MAX_W, PANEL_MIN_W, useChatFull } from "./chatFullStore";
-import { FULL_LIST_W, chatPanelWidth } from "./layout";
+import { chatPanelWidth } from "./layout";
+import { DragEdge } from "./DragEdge";
 import { SparkComposer } from "./SparkComposer";
 import { citedSlugs, slugOfHref } from "./cites";
 import { useCites } from "./citeStore";
@@ -51,6 +52,7 @@ export function SparkPanel({ scope }: { scope?: string }) {
   const folded = useChatFull((s) => s.folded);
   const listOpen = useChatFull((s) => s.listOpen);
   const panelW = useChatFull((s) => s.panelW);
+  const paneW = useChatFull((s) => s.paneW);
   const status = useQuery({ queryKey: STATUS_KEY, queryFn: () => ds.getChatStatus() });
   const promptsQ = useQuery({ queryKey: ["chat", "prompts"], queryFn: () => ds.getChatPrompts() });
   const bar = { full, rich, listOpen, onClose: close };
@@ -63,7 +65,7 @@ export function SparkPanel({ scope }: { scope?: string }) {
         "spark-panel-in pointer-events-auto absolute inset-y-0 left-0 z-40 flex max-w-full border-r bg-card text-card-foreground shadow-[var(--shadow)]",
         full && "transition-[width] duration-200 motion-reduce:transition-none",
       )}
-      style={{ width: chatPanelWidth(full, folded, panelW) }}
+      style={{ width: chatPanelWidth(full, folded, panelW, paneW) }}
       onKeyDown={(e) => {
         // Escape anywhere in the panel stops here (the graph's own Escape waits): the first one puts out the glow of
         // the cited pages on the graph, the next one closes the panel
@@ -157,29 +159,32 @@ interface BarProps {
 
 function Header({ title, full, rich, listOpen, onClose, tools }: BarProps & { title: string }) {
   const btn = "size-8";
+  const listW = useChatFull((s) => s.listW);
   return (
     <header className="flex items-start gap-2 border-b px-5 py-3">
-      {/* close and size sit at the left and never move: the list toggle and the title come after them */}
-      <Button variant="ghost" size="icon" className={`${btn} -ml-3`} aria-label="Close chat" onClick={onClose}>
-        <X aria-hidden strokeWidth={1.6} />
-      </Button>
-      {rich && (
-        <Button
-          variant="ghost"
-          size="icon"
-          className={btn}
-          aria-label={full ? "Back to the panel" : "Full screen"}
-          aria-pressed={full}
-          title={full ? "Back to the panel" : "Full screen"}
-          onClick={() => {
-            const s = useChatFull.getState();
-            if (!full && !listOpen) s.toggleList();
-            s.setFull(!full);
-          }}
-        >
-          <PanelLeft aria-hidden strokeWidth={1.6} />
+      {/* close and size sit at the left and never move: in full the list opens under them and the title moves right */}
+      <div className="flex shrink-0 items-start gap-2" style={full && listOpen ? { width: listW - 20 } : undefined}>
+        <Button variant="ghost" size="icon" className={`${btn} -ml-3`} aria-label="Close chat" onClick={onClose}>
+          <X aria-hidden strokeWidth={1.6} />
         </Button>
-      )}
+        {rich && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className={btn}
+            aria-label={full ? "Back to the panel" : "Full screen"}
+            aria-pressed={full}
+            title={full ? "Back to the panel" : "Full screen"}
+            onClick={() => {
+              const s = useChatFull.getState();
+              if (!full && !listOpen) s.toggleList();
+              s.setFull(!full);
+            }}
+          >
+            <PanelLeft aria-hidden strokeWidth={1.6} />
+          </Button>
+        )}
+      </div>
       <div className="min-w-0 flex-1">
         <h2 className="truncate text-[15px] font-semibold" data-testid="spark-title">
           {title}
@@ -281,6 +286,7 @@ type Status = Parameters<typeof parseStatus>[0];
 type Prompts = Parameters<typeof parsePrompts>[0];
 
 function Body({ status, prompts, scope, full, rich, listOpen, onClose, server }: { status: Status; prompts: Prompts; scope: string; server: boolean } & BarProps) {
+  const listW = useChatFull((s) => s.listW);
   const { chat, busy, send, regenerate, answer, stop } = useChatSession();
   const view = useMemo(() => parseStatus(status), [status]);
   const [modelPick, setModelPick] = useState(() => readJson("local", "kbchat.model", ""));
@@ -355,13 +361,16 @@ function Body({ status, prompts, scope, full, rich, listOpen, onClose, server }:
 
   return (
     <>
-      {full && listOpen && (
-        <div className="w-[var(--list-w)] shrink-0 border-r" style={{ "--list-w": `${FULL_LIST_W}px` } as React.CSSProperties}>
-          <ChatList activeId={chat.id} server={server} />
-        </div>
-      )}
       <Column>
         <Header title={title} full={full} rich={rich} listOpen={listOpen} onClose={onClose} tools={tools} />
+        <div className="flex min-h-0 flex-1">
+          {full && listOpen && (
+            <div className="relative w-[var(--list-w)] shrink-0 border-r" style={{ "--list-w": `${listW}px` } as React.CSSProperties}>
+              <ChatList activeId={chat.id} server={server} />
+              <DragEdge label="Resize the chat list" axis="x" testId="list-resize" start={listW} onDrag={(d, w0) => useChatFull.getState().setListW(w0 + d)} />
+            </div>
+          )}
+          <Column>
         {notice && (
           <p role="status" data-testid="chat-notice" className="border-b px-5 py-2 text-xs text-muted-foreground">
             {notice}
@@ -421,6 +430,8 @@ function Body({ status, prompts, scope, full, rich, listOpen, onClose, server }:
           ) : (
             <p className="text-xs text-muted-foreground">{chip.text}</p>
           )}
+        </div>
+          </Column>
         </div>
       </Column>
     </>

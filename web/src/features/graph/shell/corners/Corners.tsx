@@ -34,6 +34,7 @@ import { browserSessions, newChat, resumeSession } from "./sessions";
 import { useShellTour } from "./shellTour";
 import { ThinkIcon } from "./ThinkIcon";
 import { TypesCard } from "./TypesCard";
+import { useSparkPanel } from "../sparkPanelStore";
 import { useLayers } from "../../layers/store";
 import { applySpec, captureSpec, recognisedV1, suggestName } from "./viewSpec";
 
@@ -89,6 +90,8 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
   const pinsOpen = order.includes("pins");
   const thinkOpen = order.includes("think");
   const agentOpen = order.includes("agent");
+  // the chat already on screen: its corner button would only open what is open
+  const chatOpen = useSparkPanel((s) => s.open);
 
   // ---- the screen's height: how many cards a fan may show, where the legend can sit
   const [areaHeight, setAreaHeight] = useState(() => (typeof window === "undefined" ? 800 : Math.max(320, window.innerHeight - 48)));
@@ -461,9 +464,11 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
             </>
           )}
 
-          <CornerButton id={BTN_ID.agent} label="Agent chats" data-tour="graph-agent" on={agentOpen} style={{ position: "absolute", left: EDGE, bottom: EDGE }} onClick={() => toggle("agent")}>
-            <Sparkles className="size-[22px]" strokeWidth={1.75} aria-hidden />
-          </CornerButton>
+          {!chatOpen && (
+            <CornerButton id={BTN_ID.agent} label="Agent chats" data-tour="graph-agent" on={agentOpen} style={{ position: "absolute", left: EDGE, bottom: EDGE }} onClick={() => toggle("agent")}>
+              <Sparkles className="size-[22px]" strokeWidth={1.75} aria-hidden />
+            </CornerButton>
+          )}
           <Fan kind="agent" open={agentOpen} label="Agent chats" cards={agentCards} empty={sessions.isLoading ? "Loading chats" : "No chats yet"} onPick={pickAgent} />
           {agentOpen && (
             <>

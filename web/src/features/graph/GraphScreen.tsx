@@ -1,6 +1,6 @@
 import { keepPreviousData, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { ChevronDown, ChevronRight, ChevronUp } from "lucide-react";
+import { ChevronDown, ChevronUp } from "lucide-react";
 import { createPortal } from "react-dom";
 import { useDataSource } from "@/api";
 import { useHeaderFolded } from "@/app/headerFold";
@@ -55,15 +55,19 @@ import "./tours";
 import { GraphShell } from "./shell/GraphShell";
 import { HeaderFold } from "./shell/HeaderFold";
 import { ChatExplorer } from "./shell/ChatExplorer";
+import { DragEdge } from "./shell/DragEdge";
 import { ChatRail } from "./shell/ChatRail";
 import { BUSY_NOTICE, useChatFull } from "./shell/chatFullStore";
 import { defaultFetch } from "./shell/corners/api";
 import { loadSession, newChat } from "./shell/corners/sessions";
 import { readJson } from "@/features/chat/storage";
-import { FULL_PANE_W, chatPanelWidth, useShellTop } from "./shell/layout";
+import { chatPanelWidth, paneWidth, useShellTop } from "./shell/layout";
 import { useFullChat } from "./shell/useFullChat";
 import { chatInPanel, useSparkPanel } from "./shell/sparkPanelStore";
 import { SparkPanelHost, useSparkOpen } from "./shell/SparkPanelHost";
+
+/** The right pane keeps at least 320px, and the chat (with its list) at least 480px. */
+const clampPane = (w: number, total: number) => Math.round(Math.max(320, Math.min(total - 480, w)));
 
 /** How the screen reaches the rest of the app (the router lives in index.tsx; tests pass plain functions). */
 export interface GraphHost extends ToolHost {
@@ -295,11 +299,17 @@ function Loaded({
   const { full: fullChat, folded: foldedChat } = useFullChat();
   const sparkPanelW = useChatFull((s) => s.panelW);
   const explorerOpen = useChatFull((s) => s.explorerOpen);
+  const paneW = useChatFull((s) => s.paneW);
+  const viewerH = useChatFull((s) => s.viewerH);
   const ds = useDataSource();
   const ui = useGraphUi();
-  // a page opened from the graph in the full chat brings the folded page viewer back up
+  // the page viewer under the graph in the full chat shows only once a page is opened (a click on a node, a cited
+  // page): growing to full with a page left open from before keeps it shut
+  const seenReader = useRef(ui.readerSlug);
   useEffect(() => {
-    if (fullChat && ui.readerSlug) useChatFull.getState().setExplorerOpen(true);
+    const changed = ui.readerSlug !== seenReader.current;
+    seenReader.current = ui.readerSlug;
+    if (fullChat && ui.readerSlug && changed) useChatFull.getState().setExplorerOpen(true);
   }, [fullChat, ui.readerSlug]);
   const selection = useKb((s) => s.selection);
   const canvas = useRef<CanvasHandle>(null);
@@ -578,19 +588,14 @@ function Loaded({
     [model, byId, visible, selection, focus, openReader],
   );
 
-  // flag chat-full: the composer completes @pages from this graph, and a node clicked while the chat is full lands in it
+  // flag chat-full: the composer completes @pages from this graph. While the chat is full a click on a node opens its page
+  // in the viewer below the graph, and a double click hands it to the composer as @page
   const chatOn = useFlag("chat-full");
   useEffect(() => {
     if (!chatOn) return;
     useChatFull.getState().setPages(model.nodes.map((n) => ({ id: n.id, title: n.title || n.id })));
     return () => useChatFull.getState().setPages([]);
   }, [chatOn, model]);
-  const lastPicked = useRef<string | null>(null);
-  useEffect(() => {
-    const id = selection.size === 1 ? [...selection][0]! : null;
-    if (id && id !== lastPicked.current && fullChat) useChatFull.getState().mentionPage(id, byId.get(id)?.title || id);
-    lastPicked.current = id;
-  }, [selection, fullChat, byId]);
   const railColors = useMemo(() => {
     const seen = new Set<string>();
     for (const n of model.nodes) {
@@ -628,7 +633,7 @@ function Loaded({
     <HostContext.Provider value={host}>
       <div className="absolute inset-0" data-testid="graph-area">
       {/* the full chat leaves the canvas the top of the right pane */}
-      <div className="absolute" style={fullChat ? { left: chatPanelWidth(true, false), right: 0, top: 0, bottom: explorerOpen ? "50%" : 0 } : { inset: 0 }}>
+      <div className="absolute" style={fullChat ? { left: chatPanelWidth(true, false, undefined, paneW), right: 0, top: 0, bottom: explorerOpen ? `${viewerH}%` : 0 } : { inset: 0 }}>
       <GraphCanvas
         ref={canvas}
         model={model}
@@ -644,7 +649,8 @@ function Loaded({
           useKb.getState().clearSelection();
           setBgMenu({ x, y });
         }}
-        onOpenReader={openReader}
+        onClickNode={fullChat ? openReader : undefined}
+        onOpenReader={fullChat ? (id) => useChatFull.getState().mentionPage(id, byId.get(id)?.title || id) : openReader}
         onOpenPile={(format) => useLayer.getState().openDrawer({ kind: "format", format })}
       />
       </div>
@@ -656,9 +662,9 @@ function Loaded({
           className="pointer-events-none absolute top-0 transition-[left,right] duration-200 motion-reduce:transition-none"
           hidden={foldedChat}
           style={{
-            left: fullChat ? chatPanelWidth(true, false) : sparkOpen ? sparkPanelW : 0,
+            left: fullChat ? chatPanelWidth(true, false, undefined, paneW) : sparkOpen ? sparkPanelW : 0,
             right: reader && !fullChat ? "min(34rem, 100%)" : 0,
-            bottom: fullChat && explorerOpen ? "50%" : 0,
+            bottom: fullChat && explorerOpen ? `${viewerH}%` : 0,
           }}
         >
           {headerFold && <HeaderFold />}
@@ -813,7 +819,18 @@ function Loaded({
       {fullChat && !foldedChat && (
         <>
           {explorerOpen ? (
-          <div className="absolute bottom-0 right-0 z-30 h-1/2" style={{ width: FULL_PANE_W }}>
+          <div className="absolute bottom-0 right-0 z-30" style={{ width: paneWidth(paneW), height: `${viewerH}%` }}>
+            {/* the viewer's top edge: drag it up or down to share the pane with the graph */}
+            <DragEdge
+              label="Resize the page viewer"
+              axis="y"
+              testId="viewer-resize"
+              start={viewerH}
+              onDrag={(d, h0) => {
+                const pane = document.querySelector<HTMLElement>("[data-testid=graph-screen]")?.clientHeight || window.innerHeight;
+                useChatFull.getState().setViewerH(h0 - (d / pane) * 100);
+              }}
+            />
             {/* the handle on the viewer's top edge folds it down; the graph takes the whole pane */}
             <button
               type="button"
@@ -844,26 +861,45 @@ function Loaded({
               data-testid="explorer-handle"
               onClick={() => useChatFull.getState().setExplorerOpen(true)}
               className="group pointer-events-auto absolute bottom-0 z-30 grid h-6 w-16 translate-x-1/2 place-items-center focus-visible:outline-none"
-              style={{ right: `calc(${FULL_PANE_W} / 2)` }}
+              style={{ right: `calc(${paneWidth(paneW)} / 2)` }}
             >
               <span className="grid h-4 w-12 place-items-center rounded-t-md border border-b-0 bg-card text-muted-foreground shadow-[var(--shadow)] group-hover:text-foreground group-focus-visible:ring-2 group-focus-visible:ring-ring">
                 <ChevronUp aria-hidden className="size-3" strokeWidth={1.8} />
               </span>
             </button>
           )}
-          <button
-            type="button"
-            aria-label="Fold the graph pane"
-            title="Fold the graph pane"
-            onClick={() => useChatFull.getState().setFolded(true)}
-            className="group pointer-events-auto absolute top-1/4 z-[41] grid h-12 w-6 -translate-y-1/2 place-items-center focus-visible:outline-none"
-            style={{ left: chatPanelWidth(true, false) }}
-          >
-            {/* the hit target is 24px wide; the tab you see stays slim */}
-            <span className="grid h-12 w-4 place-items-center rounded-r-md border border-l-0 bg-card text-muted-foreground shadow-[var(--shadow)] group-hover:text-foreground group-focus-visible:ring-2 group-focus-visible:ring-ring">
-              <ChevronRight aria-hidden className="size-3.5" strokeWidth={1.8} />
-            </span>
-          </button>
+          {/* the edge between chat and graph: drag it to give either side more room (double click resets) */}
+          <div
+            role="separator"
+            aria-orientation="vertical"
+            aria-label="Resize the chat and the graph"
+            tabIndex={0}
+            data-testid="pane-resize"
+            className="pointer-events-auto absolute inset-y-0 z-[41] w-2 -translate-x-1/2 cursor-col-resize after:absolute after:inset-y-0 after:left-1/2 after:w-px after:-translate-x-1/2 after:bg-transparent after:transition-colors hover:after:bg-ring focus-visible:outline-none focus-visible:after:bg-ring"
+            style={{ left: chatPanelWidth(true, false, undefined, paneW) }}
+            onDoubleClick={() => useChatFull.getState().setPaneW(null)}
+            onKeyDown={(e) => {
+              const box = e.currentTarget.parentElement!.getBoundingClientRect();
+              const cur = paneW ?? box.right - e.currentTarget.getBoundingClientRect().left;
+              if (e.key === "ArrowLeft") useChatFull.getState().setPaneW(clampPane(cur + 24, box.width));
+              else if (e.key === "ArrowRight") useChatFull.getState().setPaneW(clampPane(cur - 24, box.width));
+            }}
+            onPointerDown={(e) => {
+              e.preventDefault();
+              const box = e.currentTarget.parentElement!.getBoundingClientRect();
+              const move = (ev: PointerEvent) => useChatFull.getState().setPaneW(clampPane(box.right - ev.clientX, box.width));
+              const up = () => {
+                window.removeEventListener("pointermove", move);
+                window.removeEventListener("pointerup", up);
+                window.removeEventListener("pointercancel", up);
+                document.body.style.cursor = "";
+              };
+              document.body.style.cursor = "col-resize";
+              window.addEventListener("pointermove", move);
+              window.addEventListener("pointerup", up);
+              window.addEventListener("pointercancel", up);
+            }}
+          />
         </>
       )}
       {foldedChat && <ChatRail colors={railColors} />}

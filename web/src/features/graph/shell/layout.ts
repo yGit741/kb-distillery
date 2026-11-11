@@ -23,7 +23,13 @@ export const FULL_LIST_W = 232;
 export const FULL_PANE_W = "min(48%, 720px)";
 
 /** Width of the chat panel's box: the panel size, or the full chat up to the right pane (a rail when folded). */
-export function chatPanelWidth(full: boolean, folded: boolean, panelW: number = SPARK_PANEL_W): string {
+export function chatPanelWidth(full: boolean, folded: boolean, panelW: number = SPARK_PANEL_W, paneW: number | null = null): string {
   if (!full) return `${panelW}px`;
-  return `calc(100% - ${folded ? `${FULL_RAIL_W}px` : FULL_PANE_W})`;
+  return `calc(100% - ${folded ? `${FULL_RAIL_W}px` : paneWidth(paneW)})`;
+}
+
+/** The right pane's width in the full chat: dragged by the edge between chat and graph, else the default share. */
+export function paneWidth(paneW: number | null): string {
+  // clamped where it is read too: a width saved on a wider window still leaves the chat its 480px
+  return paneW ? `min(${paneW}px, calc(100% - 480px))` : FULL_PANE_W;
 }
