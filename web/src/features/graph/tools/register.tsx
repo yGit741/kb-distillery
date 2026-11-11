@@ -73,7 +73,10 @@ if (import.meta.env.MODE !== "share") {
 }
 
 // the corpus-wide citation map: every cataloged paper and its cites links (a sheet; the story "citations" opens it)
-registerTool({ id: "citations", label: "Citation map", icon: <Quote aria-hidden />, sheet: (ctx) => <CitationMapSheet ctx={ctx} /> });
+// local app only: a shared site carries no citation cache (/api/citations is a local endpoint)
+if (import.meta.env.MODE !== "share") {
+  registerTool({ id: "citations", label: "Citation map", icon: <Quote aria-hidden />, sheet: (ctx) => <CitationMapSheet ctx={ctx} /> });
+}
 
 registerMenuItem(
   {

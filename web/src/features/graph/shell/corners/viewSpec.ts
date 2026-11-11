@@ -1,5 +1,5 @@
 import { flag } from "@/flags";
-import { storyById, storyKnown } from "../../lab/views";
+import { storyById, storyKnown, storyOffered } from "../../lab/views";
 import { describe, fromViewSpecV1, type Layer, type ViewStack } from "../../layers/model";
 import { applyLayers, specLayers } from "../../layers/readyViews";
 import { useLayers } from "../../layers/store";
@@ -42,7 +42,10 @@ export function toolStoryOpen(ui: Pick<CaptureUi, "story" | "flyout">): string {
 }
 
 /** Whether a spec names a view that opens a tool: it restores through the screen's view path, never as layers. */
-export const isToolStorySpec = (spec: Record<string, unknown>): boolean => typeof spec.story === "string" && !!storyById(spec.story)?.tool && storyKnown(spec.story);
+export const isToolStorySpec = (spec: Record<string, unknown>): boolean => {
+  const st = typeof spec.story === "string" ? storyById(spec.story) : undefined;
+  return !!st?.tool && storyKnown(st.id) && storyOffered(st);
+};
 
 /**
  * The spec to pin. With a layer stack that has layers (flag graph-intent) it is the stack, `{ v: 2, layers, text }`;
