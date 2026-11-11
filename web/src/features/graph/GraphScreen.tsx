@@ -1,6 +1,6 @@
 import { keepPreviousData, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { ChevronRight } from "lucide-react";
+import { ChevronDown, ChevronRight, ChevronUp } from "lucide-react";
 import { createPortal } from "react-dom";
 import { useDataSource } from "@/api";
 import { useHeaderFolded } from "@/app/headerFold";
@@ -60,7 +60,7 @@ import { BUSY_NOTICE, useChatFull } from "./shell/chatFullStore";
 import { defaultFetch } from "./shell/corners/api";
 import { loadSession, newChat } from "./shell/corners/sessions";
 import { readJson } from "@/features/chat/storage";
-import { FULL_PANE_W, SPARK_PANEL_W, chatPanelWidth, useShellTop } from "./shell/layout";
+import { FULL_PANE_W, chatPanelWidth, useShellTop } from "./shell/layout";
 import { useFullChat } from "./shell/useFullChat";
 import { chatInPanel, useSparkPanel } from "./shell/sparkPanelStore";
 import { SparkPanelHost, useSparkOpen } from "./shell/SparkPanelHost";
@@ -293,8 +293,14 @@ function Loaded({
   const shellTop = useShellTop();
   const sparkOpen = useSparkOpen();
   const { full: fullChat, folded: foldedChat } = useFullChat();
+  const sparkPanelW = useChatFull((s) => s.panelW);
+  const explorerOpen = useChatFull((s) => s.explorerOpen);
   const ds = useDataSource();
   const ui = useGraphUi();
+  // a page opened from the graph in the full chat brings the folded page viewer back up
+  useEffect(() => {
+    if (fullChat && ui.readerSlug) useChatFull.getState().setExplorerOpen(true);
+  }, [fullChat, ui.readerSlug]);
   const selection = useKb((s) => s.selection);
   const canvas = useRef<CanvasHandle>(null);
   const [menu, setMenu] = useState<{ id: string; x: number; y: number } | null>(null);
@@ -622,7 +628,7 @@ function Loaded({
     <HostContext.Provider value={host}>
       <div className="absolute inset-0" data-testid="graph-area">
       {/* the full chat leaves the canvas the top of the right pane */}
-      <div className="absolute" style={fullChat ? { left: chatPanelWidth(true, false), right: 0, top: 0, bottom: "50%" } : { inset: 0 }}>
+      <div className="absolute" style={fullChat ? { left: chatPanelWidth(true, false), right: 0, top: 0, bottom: explorerOpen ? "50%" : 0 } : { inset: 0 }}>
       <GraphCanvas
         ref={canvas}
         model={model}
@@ -650,9 +656,9 @@ function Loaded({
           className="pointer-events-none absolute top-0 transition-[left,right] duration-200 motion-reduce:transition-none"
           hidden={foldedChat}
           style={{
-            left: fullChat ? chatPanelWidth(true, false) : sparkOpen ? SPARK_PANEL_W : 0,
+            left: fullChat ? chatPanelWidth(true, false) : sparkOpen ? sparkPanelW : 0,
             right: reader && !fullChat ? "min(34rem, 100%)" : 0,
-            bottom: fullChat ? "50%" : 0,
+            bottom: fullChat && explorerOpen ? "50%" : 0,
           }}
         >
           {headerFold && <HeaderFold />}
@@ -806,7 +812,21 @@ function Loaded({
       {shell && <SparkPanelHost scope={search.scope} />}
       {fullChat && !foldedChat && (
         <>
+          {explorerOpen ? (
           <div className="absolute bottom-0 right-0 z-30 h-1/2" style={{ width: FULL_PANE_W }}>
+            {/* the handle on the viewer's top edge folds it down; the graph takes the whole pane */}
+            <button
+              type="button"
+              aria-label="Fold the page viewer down"
+              title="Fold the page viewer down"
+              data-testid="explorer-handle"
+              onClick={() => useChatFull.getState().setExplorerOpen(false)}
+              className="group pointer-events-auto absolute left-1/2 top-0 z-10 grid h-4 w-16 -translate-x-1/2 -translate-y-1/2 place-items-center focus-visible:outline-none"
+            >
+              <span className="grid h-3.5 w-12 place-items-center rounded-full border bg-card text-muted-foreground shadow-[var(--shadow)] group-hover:text-foreground group-focus-visible:ring-2 group-focus-visible:ring-ring">
+                <ChevronDown aria-hidden className="size-3" strokeWidth={1.8} />
+              </span>
+            </button>
             <ChatExplorer
               byId={byId}
               colorBy={ui.colorBy}
@@ -816,6 +836,21 @@ function Loaded({
               onClose={() => ui.set({ readerSlug: null })}
             />
           </div>
+          ) : (
+            <button
+              type="button"
+              aria-label="Show the page viewer"
+              title="Show the page viewer"
+              data-testid="explorer-handle"
+              onClick={() => useChatFull.getState().setExplorerOpen(true)}
+              className="group pointer-events-auto absolute bottom-0 z-30 grid h-6 w-16 translate-x-1/2 place-items-center focus-visible:outline-none"
+              style={{ right: `calc(${FULL_PANE_W} / 2)` }}
+            >
+              <span className="grid h-4 w-12 place-items-center rounded-t-md border border-b-0 bg-card text-muted-foreground shadow-[var(--shadow)] group-hover:text-foreground group-focus-visible:ring-2 group-focus-visible:ring-ring">
+                <ChevronUp aria-hidden className="size-3" strokeWidth={1.8} />
+              </span>
+            </button>
+          )}
           <button
             type="button"
             aria-label="Fold the graph pane"

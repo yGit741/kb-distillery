@@ -125,10 +125,12 @@ describe("flag chat-full: one chat surface in three sizes", () => {
       // the plan, skills and prompts sit in the chat column's header
       await userEvent.click(screen.getByRole("button", { name: "Plan, skills and prompts" }));
       expect(screen.getByTestId("chat-tools")).toBeInTheDocument();
-      // the list folds from the header and the choice is remembered
-      await userEvent.click(screen.getByRole("button", { name: "Chat list" }));
-      expect(screen.queryByTestId("chat-list")).not.toBeInTheDocument();
-      expect(localStorage.getItem("kbchat.full.list")).toBe("false");
+      // the page viewer folds down by its handle, the graph takes the whole pane, and the handle brings it back
+      await userEvent.click(screen.getByRole("button", { name: "Fold the page viewer down" }));
+      expect(screen.queryByTestId("chat-explorer")).not.toBeInTheDocument();
+      expect(screen.getByTestId("graph-shell").parentElement?.style.bottom).not.toBe("50%");
+      await userEvent.click(screen.getByRole("button", { name: "Show the page viewer" }));
+      expect(screen.getByTestId("chat-explorer")).toBeInTheDocument();
       await userEvent.click(screen.getByRole("button", { name: "Back to the panel" }));
       expect(panel).toHaveAttribute("data-size", "panel");
       expect(screen.queryByTestId("chat-explorer")).not.toBeInTheDocument();

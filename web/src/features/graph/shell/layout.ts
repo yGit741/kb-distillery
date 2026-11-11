@@ -23,7 +23,7 @@ export const FULL_LIST_W = 232;
 export const FULL_PANE_W = "min(48%, 720px)";
 
 /** Width of the chat panel's box: the panel size, or the full chat up to the right pane (a rail when folded). */
-export function chatPanelWidth(full: boolean, folded: boolean): string {
-  if (!full) return `${SPARK_PANEL_W}px`;
+export function chatPanelWidth(full: boolean, folded: boolean, panelW: number = SPARK_PANEL_W): string {
+  if (!full) return `${panelW}px`;
   return `calc(100% - ${folded ? `${FULL_RAIL_W}px` : FULL_PANE_W})`;
 }
