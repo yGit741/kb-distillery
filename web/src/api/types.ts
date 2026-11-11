@@ -90,6 +90,7 @@ export type DigestResult = S["DigestResult"];
 export type DigestPreview = S["DigestPreview"];
 export type DigestJob = S["DigestJob"];
 export type IngestJob = S["IngestJob"];
+export type IngestListItem = S["IngestListItem"];
 export type IngestStep = S["IngestStep"];
 export type IngestStarted = S["IngestStarted"];
 /** What the Ingest screen sends: a file or a URL, plus how deeply to read it. */

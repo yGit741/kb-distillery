@@ -133,6 +133,8 @@ export interface DataSource {
   /** Ingest from the app (flag ui.ingest, local app only): a file or URL becomes one proposal; the job streams its steps as SSE. */
   startIngest(input: T.IngestInput): Promise<T.IngestStarted>;
   getIngestJob(id: string): Promise<T.IngestJob>;
+  /** GET /api/ingest: the last 200 ingests, newest first, each with its proposal's status read now. */
+  listIngest(): Promise<T.IngestListItem[]>;
   /** GET /api/ingest/{id}/events; the caller reads `response.body` as server-sent events (`job`, then `end`). */
   ingestEvents(id: string, signal?: AbortSignal): Promise<Response>;
   startDigestJob(raws: string[], backend?: string): Promise<T.DigestJob>;

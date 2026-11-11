@@ -72,7 +72,7 @@ def test_every_producer_and_screen_has_something(kb):
     assert {"chat", "flags", "ingest", "lint", "restructure", "manual"} <= kinds
     actions = {store.load(kb, pid)["producer"]["context"].get("action") for pid in store.all_ids(kb)}
     assert {"merge", "split", "extract"} <= actions
-    assert [i["id"] for i in service.feed(root=kb)] == ["de000008"]
+    assert {i["id"] for i in service.feed(root=kb)} == {"de000008", "de00000a"}
     assert {p["status"] for p in service.list_proposals(root=kb)} >= {"open", "rejected", "undone"}
 
 
@@ -85,7 +85,20 @@ def test_seed_works_on_a_read_only_kb_and_restores_the_guard(kb, monkeypatch):
     monkeypatch.setattr("kb_distillery.proposals.service.require_writable", refuse)
     guard = service._writable
     out = demo.seed(kb)
-    assert len(out["proposals"]) == 9
+    assert len(out["proposals"]) == 11
     assert service._writable is guard
     with pytest.raises(Exception, match="read-only"):
         service.create("x", [{"kind": "set_frontmatter", "slug": "skill-pytorch", "key": "maturity", "value": "seed"}], root=kb)
+
+
+def test_ingest_screen_has_a_row_in_each_group(kb):
+    from kb_distillery.services import ingest_ui
+    demo.seed(kb)
+    demo.seed(kb)
+    rows = ingest_ui.listing(kb)
+    groups = {}
+    for r in rows:
+        key = r["status"] if r["status"] != "done" else r["proposal_status"]
+        groups.setdefault(key, []).append(r["source"])
+    assert {k: len(v) for k, v in groups.items()} == {"running": 1, "open": 1, "applied": 1, "rejected": 1, "failed": 1, "interrupted": 1}
+    assert len(rows) == 6 and rows[0]["status"] == "running"

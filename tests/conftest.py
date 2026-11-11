@@ -122,3 +122,10 @@ def _no_real_claude_sessions(monkeypatch, tmp_path_factory):
 
 
 _EMPTY_PROJECTS = {}
+
+
+@pytest.fixture(autouse=True)
+def _no_citation_fetch(monkeypatch):
+    """Cataloging a paper fetches its citations from Semantic Scholar: tests never touch the network
+    (`tests/ingest/test_catalog_citations.py` covers the hook with a fake)."""
+    monkeypatch.setenv("KB_INGEST_CITATIONS", "0")

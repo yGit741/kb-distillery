@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { useDataSource } from "@/api";
-import type { IngestJob } from "@/api/types";
+import type { IngestInput, IngestJob, IngestListItem } from "@/api/types";
 import { LAYER_TYPES } from "@/api/model";
 import { splitFrames } from "@/features/chat/sse";
 import { useApiQuery } from "@/lib/useApiQuery";
@@ -65,6 +65,7 @@ function lostJob(id: string, last: IngestJob | null): IngestJob {
   const steps = (last?.steps ?? ["fetch", "convert", "digest", "propose"].map((name) => ({ name, state: "pending", detail: "" })))
     .map((s) => (s.state === "active" ? { ...s, state: "failed", detail: "" } : s));
   return { id, status: "failed", source: last?.source ?? "", tier: last?.tier ?? "", collection: last?.collection ?? "", steps, pages: [], proposal_id: null,
+    kind: last?.kind ?? "file", backend: last?.backend ?? "", started: last?.started ?? 0, finished: null, step: last?.step ?? "",
     error: "the server lost track of this job, perhaps it restarted. Check Proposals before trying again." };
 }
 
@@ -136,6 +137,67 @@ export function useIngestJob(jobId: string | null): IngestJob | null {
   return job;
 }
 
+// --- the inbox of ingests -------------------------------------------------------------------------------------------
+export const INGEST_LIST_KEY = ["ingest-list"] as const;
+
+export type IngestGroupId = "progress" | "review" | "done" | "failed";
+export const INGEST_GROUPS: { id: IngestGroupId; title: string }[] = [
+  { id: "progress", title: "In progress" },
+  { id: "review", title: "Waiting for your review" },
+  { id: "done", title: "Done" },
+  { id: "failed", title: "Did not finish" },
+];
+
+/** Where one ingest stands: running; done with its proposal still open (or stale); done and decided; or stopped. */
+export function groupOf(i: Pick<IngestListItem, "status" | "proposal_status">): IngestGroupId {
+  if (i.status === "running") return "progress";
+  if (i.status === "done") return i.proposal_status === "open" || i.proposal_status === "stale" ? "review" : "done";
+  return "failed";
+}
+
+/** The items by group, newest first inside each (the server sends them that way), empty groups left out. */
+export function groupIngests(items: IngestListItem[]): { id: IngestGroupId; title: string; items: IngestListItem[] }[] {
+  return INGEST_GROUPS.map((g) => ({ ...g, items: items.filter((i) => groupOf(i) === g.id) })).filter((g) => g.items.length > 0);
+}
+
+/** A time from the server: epoch seconds (a job) or an ISO string (a proposal). */
+export function whenLabel(t: number | string | null | undefined): string {
+  if (t === null || t === undefined || t === 0 || t === "") return "";
+  const d = new Date(typeof t === "number" ? t * 1000 : t);
+  return Number.isNaN(d.getTime()) ? String(t) : d.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
+}
+
+export const tierLabel = (t: string): string => TIERS.find((x) => x.id === t)?.label ?? t;
+
+/** The row shown the moment a job starts, until the server's own list answers. */
+export function pendingItem(id: string, input: IngestInput): IngestListItem {
+  return {
+    id, status: "running", source: input.file ? input.file.name : input.url ?? "", kind: input.file ? "file" : "url", tier: input.tier,
+    collection: input.collection ?? "", backend: input.backend ?? "", started: Date.now() / 1000, finished: null, step: "fetch",
+    steps: ["fetch", "convert", "digest", "propose"].map((name) => ({ name, state: "pending", detail: "" })),
+    pages: [], proposal_id: null, error: null, proposal_status: null, proposal_updated: null,
+  };
+}
+
+/** Puts the row of a job that just started at the top of the list, then lets the server's own list replace it. */
+function addPending(qc: QueryClient, id: string, input: IngestInput) {
+  qc.setQueryData<IngestListItem[]>(INGEST_LIST_KEY, (rows) => [pendingItem(id, input), ...(rows ?? []).filter((r) => r.id !== id)]);
+  void qc.invalidateQueries({ queryKey: INGEST_LIST_KEY });
+}
+
+/** Starts an ingest again from a list row (a web address only: a file has to be dropped again). */
+export function useRetryIngest() {
+  const ds = useDataSource();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (i: IngestListItem) => {
+      const input: IngestInput = { url: i.source, tier: i.tier, collection: i.collection || undefined, backend: i.backend || undefined };
+      return { input, started: await ds.startIngest(input) };
+    },
+    onSuccess: ({ input, started }) => addPending(qc, started.job_id, input),
+  });
+}
+
 /** Collection pages (course, series, book, notebook) the person may file the source under; empty when the list fails. */
 export function useCollections(): string[] {
   const q = useApiQuery(["ingest-collections"], (ds) => ds.listPages(), { staleTime: 60_000 });
@@ -160,9 +222,13 @@ export interface Flow {
   reset: () => void;
 }
 
-/** Everything both layouts share: the chosen source, the triage answers, the started job. */
-export function useIngestFlow(): Flow {
+/**
+ * Everything both layouts share: the chosen source, the triage answers, the started job. With `inbox` the started job
+ * becomes a row of the list and the form is cleared at once, ready for the next source.
+ */
+export function useIngestFlow(opts: { inbox?: boolean } = {}): Flow {
   const ds = useDataSource();
+  const qc = useQueryClient();
   const [source, setSource] = useState<Source | null>(null);
   const [tier, setTier] = useState<TierId>(DEFAULT_TIER);
   const [collection, setCollection] = useState("");
@@ -172,18 +238,23 @@ export function useIngestFlow(): Flow {
   const live = useRef(true);
   useEffect(() => () => void (live.current = false), []);
   const m = useMutation({
-    mutationFn: () => {
+    mutationFn: async () => {
       if (!source) throw new Error("Choose a source first.");
-      return ds.startIngest({
+      const input: IngestInput = {
         ...(source.kind === "file" ? { file: source.file } : { url: source.url }),
         tier,
         collection: collection.trim() || undefined,
         backend: tier === "listed" ? undefined : backend || undefined,
-      });
+      };
+      return { input, started: await ds.startIngest(input) };
     },
-    onSuccess: (r) => {
+    onSuccess: ({ input, started }) => {
       setStartError(null);
-      setJobId(r.job_id);
+      if (!opts.inbox) return setJobId(started.job_id);
+      addPending(qc, started.job_id, input);
+      setSource(null);
+      setCollection("");
+      m.reset();
     },
     onError: (e) => setStartError(e instanceof Error ? e.message : "Could not start. Try again."),
   });

@@ -14,6 +14,7 @@ import { RestructureMenu } from "../restructure/entry";
 import { PageChat, PageChatHeader, usePageChatState } from "./PageChat";
 import { FlagMarks, FlagsHeader, usePageFlags } from "./PageFlags";
 import { SelectionToolbar } from "./SelectionToolbar";
+import { numberSources, remarkSourceMarks, SourceMarker } from "./sourceMarks";
 import { SourcesCountMark, SourcesFooter, SourcesMarginDots, SourcesSideTab, usePageSources } from "./PageSources";
 import { HistoryClock, HistoryCompare, HistoryPanel, HistoryTimeline, useHistory, useHistoryEntry } from "./PageHistory";
 import { PAGES_TO, FactBadges, Fold, PageLink, TypeDot } from "./parts";
@@ -88,6 +89,11 @@ export function PageReader({ g, detail, embed, pinned, onTogglePin, onConnect, v
   const spec = VARIANTS["page-sources"]!;
   const [placement] = useVariant("page-sources", spec.options.map((o) => o.id), spec.default);
   const pageSources = usePageSources(card.id, kb, sourcesOn);
+  const marks = useMemo(() => {
+    if (!sourcesOn || placement !== "footer" || !pageSources?.length) return undefined;
+    const items = numberSources(pageSources);
+    return { plugin: remarkSourceMarks(items), render: (n: number) => <SourceMarker item={items[n - 1]!} /> };
+  }, [sourcesOn, placement, pageSources]);
   const historyOn = useFlag("ui.page-history") && !viewOnly && !embed;
   const historyEntry = useHistoryEntry();
   const history = useHistory(card.id, historyOn);
@@ -189,7 +195,7 @@ export function PageReader({ g, detail, embed, pinned, onTogglePin, onConnect, v
         {historyOn && history.comparing ? (
           <HistoryCompare slug={card.id} h={history} />
         ) : (
-          <Markdown resolveSlug={resolveSlug} linkSearch={linkSearch}>{markdown}</Markdown>
+          <Markdown resolveSlug={resolveSlug} linkSearch={linkSearch} marks={marks}>{markdown}</Markdown>
         )}
 
         {chatOn && <PageChat slug={card.id} chat={chat} articleRef={articleRef} />}
@@ -201,7 +207,7 @@ export function PageReader({ g, detail, embed, pinned, onTogglePin, onConnect, v
             onFlag={flagsOn ? flags.markInaccurate : undefined}
           />
         )}
-        {!history.comparing && flagsOn && <FlagMarks flags={flags} articleRef={articleRef} markdown={markdown} />}
+        {!history.comparing && flagsOn && <FlagMarks flags={flags} articleRef={articleRef} markdown={`${marks ? "marks:" : ""}${markdown}`} />}
         {!history.comparing && sourcesOn && placement === "footer" && pageSources && <SourcesFooter sources={pageSources} />}
         {sourcesOn && placement === "hover-marks" && pageSources && <SourcesMarginDots sources={pageSources} articleRef={articleRef} />}
 

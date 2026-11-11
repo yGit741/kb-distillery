@@ -645,7 +645,8 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /** The ingest jobs of this kb, newest first (the last 200), each with its proposal's current status */
+        get: operations["jobs_api_ingest_get"];
         put?: never;
         /** Start an ingest job: multipart `file` (+ tier, collection, backend) or JSON {url, tier, collection, backend} */
         post: operations["start_api_ingest_post"];
@@ -3574,14 +3575,26 @@ export interface components {
         /** IngestJob */
         IngestJob: {
             /**
+             * Backend
+             * @default
+             */
+            backend: string;
+            /**
              * Collection
              * @default
              */
             collection: string;
             /** Error */
             error?: string | null;
+            /** Finished */
+            finished?: number | null;
             /** Id */
             id: string;
+            /**
+             * Kind
+             * @default file
+             */
+            kind: string;
             /**
              * Pages
              * @default []
@@ -3591,8 +3604,76 @@ export interface components {
             proposal_id?: string | null;
             /** Source */
             source: string;
+            /**
+             * Started
+             * @default 0
+             */
+            started: number;
             /** Status */
             status: string;
+            /**
+             * Step
+             * @default
+             */
+            step: string;
+            /** Steps */
+            steps: components["schemas"]["IngestStep"][];
+            /** Tier */
+            tier: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /**
+         * IngestListItem
+         * @description One row of GET /api/ingest: the job plus its proposal's status read now.
+         */
+        IngestListItem: {
+            /**
+             * Backend
+             * @default
+             */
+            backend: string;
+            /**
+             * Collection
+             * @default
+             */
+            collection: string;
+            /** Error */
+            error?: string | null;
+            /** Finished */
+            finished?: number | null;
+            /** Id */
+            id: string;
+            /**
+             * Kind
+             * @default file
+             */
+            kind: string;
+            /**
+             * Pages
+             * @default []
+             */
+            pages: string[];
+            /** Proposal Id */
+            proposal_id?: string | null;
+            /** Proposal Status */
+            proposal_status?: string | null;
+            /** Proposal Updated */
+            proposal_updated?: string | null;
+            /** Source */
+            source: string;
+            /**
+             * Started
+             * @default 0
+             */
+            started: number;
+            /** Status */
+            status: string;
+            /**
+             * Step
+             * @default
+             */
+            step: string;
             /** Steps */
             steps: components["schemas"]["IngestStep"][];
             /** Tier */
@@ -8413,6 +8494,26 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    jobs_api_ingest_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IngestListItem"][];
+                };
             };
         };
     };

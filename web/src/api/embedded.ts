@@ -91,6 +91,7 @@ export function createEmbeddedDataSource(blob: ShareBlob | undefined = globalThi
     previewDigest: absent,
     startIngest: absent,
     getIngestJob: absent,
+    listIngest: absent,
     ingestEvents: absent,
     startDigestJob: absent,
     listDigestJobs: absent,

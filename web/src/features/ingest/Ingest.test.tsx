@@ -4,16 +4,23 @@ import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { vi } from "vitest";
 import { DataSourceProvider, type DataSource } from "@/api";
-import type { IngestInput, IngestJob } from "@/api/types";
+import type { IngestInput, IngestJob, IngestListItem } from "@/api/types";
 import { setVariant } from "@/components/variants";
 import { mockDataSource } from "@/test/datasource";
 import IngestScreen from "./index";
 
 const STEPS = ["fetch", "convert", "digest", "propose"];
 const job = (states: string[], over: Partial<IngestJob> = {}): IngestJob => ({
-  id: "j1", status: "running", source: "notes.md", tier: "full", collection: "", pages: [], proposal_id: null, error: null,
+  id: "j1", status: "running", source: "notes.md", kind: "file", tier: "full", collection: "", backend: "", started: 1_700_000_000, finished: null, step: "fetch",
+  pages: [], proposal_id: null, error: null,
   steps: STEPS.map((name, i) => ({ name, state: states[i] ?? "pending", detail: name === "convert" && states[1] === "done" ? "raw/web-clips/notes.md" : "" })),
   ...over,
+});
+
+/** A row of GET /api/ingest. */
+const item = (id: string, over: Partial<IngestListItem> = {}): IngestListItem => ({
+  ...job(["skipped", "done", "done", "done"], { id, status: "done", proposal_id: `p-${id}`, pages: ["a", "b"], finished: 1_700_000_100 }),
+  proposal_status: "open", proposal_updated: null, ...over,
 });
 
 const enc = new TextEncoder();
@@ -31,9 +38,15 @@ function sse(frames: [string, unknown][]): Response {
 }
 
 function setup(over: Partial<DataSource> = {}) {
-  const startIngest = vi.fn(async (_input: IngestInput) => ({ job_id: "j1" }));
+  const listed: IngestListItem[] = [];                      // what the server would list after each start
+  const startIngest = vi.fn(async (input: IngestInput) => {
+    const id = `j${listed.length + 1}`;
+    listed.unshift(item(id, { status: "running", source: input.file?.name ?? input.url ?? "", proposal_id: null, proposal_status: null, pages: [], finished: null }));
+    return { job_id: id };
+  });
   const ds = mockDataSource({
     startIngest,
+    listIngest: async () => [...listed],
     listPages: async () => ({ pages: [{ id: "series-rl", type: "series" }, { id: "alpha", type: "idea" }] }) as never,
     ingestEvents: async () => sse([["job", job(["skipped", "active"])], ["job", job(["skipped", "done", "active"])], ["job", job(["skipped", "done", "done", "done"], { status: "done", proposal_id: "p9", pages: ["article-notes", "tensor-rank"] })], ["end", { status: "done" }]]),
     ...over,
@@ -74,11 +87,10 @@ describe("single layout", () => {
     expect(arg.file!.name).toBe("notes.md");
     expect(arg.tier).toBe("full");
     expect(arg.collection).toBeUndefined();
-    const link = await screen.findByRole("link", { name: /Review the proposal/ });
-    expect(link).toHaveAttribute("href", "/proposals/p9");
-    const card = screen.getByLabelText("Ingest progress");
-    expect(within(card).getByText("raw/web-clips/notes.md")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Ingest another" })).toBeInTheDocument();
+    const row = await screen.findByTestId("ingest-row");              // the row is there at once, with the form cleared
+    expect(row).toHaveTextContent("notes.md");
+    expect(screen.queryByTestId("source-summary")).toBeNull();
+    expect(screen.getByLabelText("Choose a file")).toBeInTheDocument();
   });
 
   it("sends a pasted address after Use, and the triage choices change the payload", async () => {
@@ -89,9 +101,9 @@ describe("single layout", () => {
     expect(await screen.findByText("https://example.org/paper")).toBeInTheDocument();
     await user.click(screen.getByRole("radio", { name: /Easy/ }));
     await user.type(screen.getByLabelText(/Collection/), "series-rl");
+    expect(document.querySelectorAll("datalist option")).toHaveLength(1); // only the collection page, not the idea
     await user.click(screen.getByRole("button", { name: "Ingest" }));
     await waitFor(() => expect(startIngest).toHaveBeenCalledWith({ url: "https://example.org/paper", tier: "easy", collection: "series-rl", backend: undefined }));
-    expect(document.querySelectorAll("datalist option")).toHaveLength(1); // only the collection page, not the idea
   });
 
   it("refuses a bad address and an unsupported file in plain words, without calling the server", async () => {
@@ -142,20 +154,22 @@ describe("triage", () => {
     expect(startIngest.mock.calls[0]![0].backend).toBeUndefined();
   });
 
-  it("the single layout keeps the progress card in view before the job starts", async () => {
+  it("the single layout is the form with the inbox under it", async () => {
     setup();
-    const card = await screen.findByLabelText("Ingest progress");
-    expect(card).toHaveTextContent("Shows here once you start.");
+    expect(await screen.findByLabelText("Choose a file")).toBeInTheDocument();
     expect(document.querySelector("[data-layout=single]")).not.toBeNull();
+    expect(screen.queryByLabelText("Ingest progress")).toBeNull();
   });
 });
 
-describe("job card", () => {
+describe("job card (wizard)", () => {
   it("falls back to polling when the stream cannot be opened, and says a failure calmly", async () => {
+    act(() => setVariant("ingest-layout", "wizard"));
     const getIngestJob = vi.fn(async () => job(["skipped", "done", "failed"], { status: "failed", error: "The model could not be reached; try again." }));
     setup({ ingestEvents: async () => { throw new Error("no stream"); }, getIngestJob });
     const user = userEvent.setup();
     await user.upload(await screen.findByLabelText("Choose a file"), note());
+    await user.click(screen.getByRole("button", { name: "Next" }));
     await user.click(screen.getByRole("button", { name: "Ingest" }));
     expect(await screen.findByText(/could not be reached; try again\./)).toBeInTheDocument();
     expect(screen.getByText("Nothing was added to your pages.")).toBeInTheDocument();
@@ -181,5 +195,73 @@ describe("wizard layout", () => {
     expect(startIngest.mock.calls[0]![0].tier).toBe("deep");
     expect(await screen.findByRole("link", { name: /Review the proposal/ })).toBeInTheDocument();
     expect(screen.queryByRole("radio")).toBeNull();
+  });
+});
+
+
+describe("the inbox of ingests", () => {
+  const rows: IngestListItem[] = [
+    item("r1", { status: "running", proposal_id: null, proposal_status: null, pages: [], finished: null, source: "https://example.org/live", kind: "url", step: "digest",
+      steps: STEPS.map((name, i) => ({ name, state: i < 2 ? "done" : i === 2 ? "active" : "pending", detail: i === 2 ? "reading with the default backend" : "" })) }),
+    item("r2", { source: "waiting.pdf", proposal_status: "open" }),
+    item("r3", { source: "kept.md", proposal_status: "applied", proposal_updated: "2026-11-09T10:00:00+00:00" }),
+    item("r4", { source: "turned-down.md", proposal_status: "rejected" }),
+    item("r5", { source: "https://example.org/broken", kind: "url", tier: "easy", status: "failed", proposal_id: null, proposal_status: null, pages: [], error: "that address could not be found", step: "fetch" }),
+    item("r6", { source: "paper.pdf", status: "interrupted", proposal_id: null, proposal_status: null, pages: [], error: "the server stopped while this was running" }),
+  ];
+
+  it("lists each group, hides the empty ones, and links a waiting row to its review", async () => {
+    setup({ listIngest: async () => rows, ingestEvents: async () => sse([["job", job(["done", "done", "active"], { id: "r1", step: "digest" })]]) });
+    const names = async () => (await screen.findAllByRole("heading", { level: 2 })).map((h) => h.textContent);
+    expect(await names()).toEqual(["In progress", "Waiting for your review", "Done", "Did not finish"]);
+    const waiting = screen.getByText("waiting.pdf").closest("a");
+    expect(waiting).toHaveAttribute("href", "/proposals/p-r2");
+    const done = screen.getAllByTestId("ingest-row").filter((r) => r.dataset.group === "done");
+    expect(done[0]).toHaveTextContent("Applied");
+    expect(done[1]).toHaveTextContent("Rejected");
+    expect(within(done[0]!).getByText("kept.md")).toBeInTheDocument();
+  });
+
+  it("shows a running row live with its step", async () => {
+    setup({ listIngest: async () => [rows[0]!], ingestEvents: async () => sse([["job", job(["done", "done", "active"], { id: "r1", step: "digest", steps: STEPS.map((name, i) => ({ name, state: i < 2 ? "done" : i === 2 ? "active" : "pending", detail: i === 2 ? "reading with the api backend" : "" })) })]]) });
+    const row = await screen.findByTestId("ingest-row");
+    expect(row).toHaveTextContent("Working");
+    await waitFor(() => expect(row).toHaveTextContent("Digesting · reading with the api backend"));
+  });
+
+  it("says why one did not finish; Try again re-sends a web address, a file is dropped again", async () => {
+    const { startIngest } = setup({ listIngest: async () => rows.slice(4) });
+    const user = userEvent.setup();
+    const broken = (await screen.findByText("https://example.org/broken")).closest("li")!;
+    expect(broken).toHaveTextContent("That address could not be found");
+    expect(broken).toHaveTextContent("Stopped");
+    const interrupted = screen.getByText("paper.pdf").closest("li")!;
+    expect(interrupted).toHaveTextContent("Interrupted");
+    expect(interrupted).toHaveTextContent("Drop the file again");
+    expect(within(interrupted).queryByRole("button", { name: "Try again" })).toBeNull();
+    await user.click(within(broken).getByRole("button", { name: "Try again" }));
+    await waitFor(() => expect(startIngest).toHaveBeenCalledWith({ url: "https://example.org/broken", tier: "easy", collection: undefined, backend: undefined }));
+  });
+
+  it("starting adds a row at once and a second one can follow while the first runs", async () => {
+    const { startIngest } = setup({ ingestEvents: async () => new Promise<Response>(() => {}) });
+    const user = userEvent.setup();
+    for (const name of ["one.md", "two.md"]) {
+      await user.upload(await screen.findByLabelText("Choose a file"), new File(["# x"], name, { type: "text/markdown" }));
+      await user.click(screen.getByRole("button", { name: "Ingest" }));
+      await waitFor(() => expect(screen.getAllByTestId("ingest-row").some((r) => r.textContent?.includes(name))).toBe(true));
+    }
+    expect(startIngest).toHaveBeenCalledTimes(2);
+    expect(screen.getAllByTestId("ingest-row")).toHaveLength(2);
+  });
+
+  it("has a modest empty state and an error with a retry", async () => {
+    setup();
+    expect(await screen.findByText("Nothing brought in yet. What you add shows up here.")).toBeInTheDocument();
+  });
+
+  it("says plainly when the list cannot be loaded", async () => {
+    setup({ listIngest: async () => { throw new Error("down"); } });
+    expect(await screen.findByText("Could not load your ingests.")).toBeInTheDocument();
   });
 });

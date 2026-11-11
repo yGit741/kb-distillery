@@ -131,6 +131,11 @@
 .kb-prose pre code { background: none; padding: 0; }
 .kb-prose table { display: block; overflow-x: auto; border-collapse: collapse; }
 .kb-prose th, .kb-prose td { border: 1px solid var(--border); padding: 0.25rem 0.5rem; }
+/* Numbered source markers (features/pages/sourceMarks.tsx): the number is drawn here, so there is no text to copy or match. */
+.kb-prose .kb-src-sup { position: relative; top: -0.45em; margin-left: 1px; font-size: 0.72em; line-height: 0; vertical-align: baseline; white-space: nowrap; user-select: none; -webkit-user-select: none; }
+.kb-prose .kb-src { display: inline-block; padding: 0 1px; border-radius: 2px; background: none; color: var(--muted-foreground); font: inherit; line-height: 1.2; cursor: pointer; font-variant-numeric: tabular-nums; }
+.kb-prose .kb-src::before { content: "[" attr(data-n) "]"; }
+.kb-prose .kb-src:hover, .kb-prose .kb-src:focus-visible { color: var(--primary); }
 .kb-prose img { max-width: 100%; height: auto; }
 .kb-prose .katex-display { overflow-x: auto; overflow-y: hidden; }
 .hljs-comment, .hljs-quote { color: var(--muted-foreground); font-style: italic; }
