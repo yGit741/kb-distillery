@@ -60,6 +60,24 @@ function padPoints(list: readonly SimNode[]): [number, number][] {
   return [[x0, y0], [x1, y0], [x1, y1], [x0, y1]];
 }
 
+/** The gap (CSS px) between a region's outline and its name, and between a page label and the name lifted over it. */
+export const KB_NAME_GAP = 8;
+
+/**
+ * The y (CSS px) of the bottom edge of a region's name: just above the outline's top, lifted only as far as needed to
+ * clear a page label of that region that sticks out above the outline under the name. `boxes` are label boxes
+ * [x0, y0, x1, y1] in the same CSS px frame as `x` and `top`.
+ */
+export function kbNameBottom(x: number, top: number, halfWidth: number, boxes: readonly (readonly number[])[]): number {
+  let y = top - KB_NAME_GAP;
+  for (const [x0, y0, x1] of boxes) {
+    if (x0 === undefined || y0 === undefined || x1 === undefined) continue;
+    if (x1 < x - halfWidth || x0 > x + halfWidth) continue; // beside the name, not under it
+    if (y0 < top) y = Math.min(y, y0 - KB_NAME_GAP);
+  }
+  return y;
+}
+
 /** Where a region's name sits: centred over it, just above the top of its outline (graph units). */
 export function kbLabelSpot(list: readonly SimNode[]): { x: number; top: number } {
   let x0 = Infinity, x1 = -Infinity, top = Infinity;

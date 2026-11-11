@@ -133,11 +133,22 @@ function GoAhead({ file }: { file: File }) {
   const ds = useDataSource();
   const showPlan = useEditPreview((s) => s.showPlan);
   const [backend, setBackend] = useState<string>("");
+  // a read-only knowledge base (the example one) refuses every write: say so here, before offering to read anything
+  const kb = useApiQuery(["kb"], (d) => d.getKb(), { staleTime: Infinity, retry: false });
   const start = useMutation({
     mutationFn: () => ds.startIngest({ file, tier: "deep", backend: backend || undefined }),
     // only if this file's go-ahead is still on screen: a closed pop-up stays closed
     onSuccess: (started) => useEditPreview.getState().plan?.file === file && showPlan({ name: file.name, jobId: started.job_id }),
   });
+  if (kb.data?.read_only)
+    return (
+      <div className="mx-auto flex max-w-md flex-col gap-2 pt-10" data-testid="plan-go-ahead">
+        <p className="text-sm font-medium">{file.name}</p>
+        <p role="status" className="text-sm text-muted-foreground">
+          {kb.data.name} is a read-only knowledge base, so a source cannot be added to it. Open your own knowledge base and drop the file there.
+        </p>
+      </div>
+    );
   return (
     <div className="mx-auto flex max-w-md flex-col gap-4 pt-10" data-testid="plan-go-ahead">
       <div>

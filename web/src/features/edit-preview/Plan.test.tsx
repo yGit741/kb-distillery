@@ -108,4 +108,16 @@ describe("edit preview plan", () => {
       expect(await screen.findByRole("alert")).toHaveTextContent(/cannot be ingested here/);
       expect(startIngest).not.toHaveBeenCalled();
     }));
+
+  it("a read-only knowledge base says so on the drop and offers nothing to start", () =>
+    on(async () => {
+      const startIngest = vi.fn();
+      setup({ startIngest: startIngest as never, getKb: (async () => ({ id: "demo", name: "Job Search (demo)", read_only: true })) as never });
+      await act(async () => {});
+      fireEvent.drop(window, { dataTransfer: { types: ["Files"], files: [new File(["x"], "paper.pdf", { type: "application/pdf" })] } });
+      const step = await screen.findByTestId("plan-go-ahead");
+      expect(await within(step).findByRole("status")).toHaveTextContent("Job Search (demo) is a read-only knowledge base");
+      expect(within(step).queryByRole("button", { name: "Read this source" })).toBeNull();
+      expect(startIngest).not.toHaveBeenCalled();
+    }));
 });
