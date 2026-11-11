@@ -56,8 +56,8 @@ export function readCanvasColors(root: HTMLElement = document.documentElement): 
       ring: v("--primary", FALLBACK.ring),
       muted: v("--muted-foreground", FALLBACK.muted),
       warn: v("--warn", FALLBACK.warn),
-      ok: v("--ok", "#16a34a"),
-      bad: v("--bad", "#dc2626"),
+      ok: v("--ok", FALLBACK.muted),   // the app always defines the status tokens; muted only in a bare test DOM
+      bad: v("--bad", FALLBACK.warn),
       font: getComputedStyle(document.body).fontFamily || FALLBACK.font,
     };
   } catch {

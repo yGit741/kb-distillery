@@ -42,7 +42,7 @@ export function CitationMap({ isSource, papers, onPick }: Props) {
   const fg = useRef<ForceGraphHandle>(null);
   const hover = useRef<string | null>(null);
   const colors = useRef(readCanvasColors());
-  const channel = useMemo(() => statusChannel(colors.current.ok ?? "#16a34a", colors.current.bad ?? "#dc2626"), []);
+  const channel = useMemo(() => statusChannel(colors.current.ok ?? colors.current.muted, colors.current.bad ?? colors.current.warn), []);
   const [showUnlinked, setShowUnlinked] = useState(false);
 
   const m = useMemo(() => (q.data && !q.data.missing ? citationMap(q.data, isSource, papers) : null), [q.data, isSource, papers]);
