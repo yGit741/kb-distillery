@@ -31,7 +31,7 @@ export interface GraphTool {
   /** The panel body shown in the toolbar flyout when the tool is open. */
   panel?: (ctx: GraphToolContext) => ReactNode;
   /** A whole screen folded into the graph (Relations, Scopes): shown as a wide sheet on the right, the canvas stays live. */
-  sheet?: () => ReactNode;
+  sheet?: (ctx: GraphToolContext) => ReactNode;
   /** Always-on overlay (a drag rectangle, a basket chip). Must not take pointer events during gestures. */
   overlay?: (ctx: GraphToolContext) => ReactNode;
   /** An experiment id (./experiments): the tool exists only while that experiment is switched on. */

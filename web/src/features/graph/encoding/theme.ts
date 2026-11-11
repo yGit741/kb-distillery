@@ -8,6 +8,9 @@ export interface CanvasColors {
   muted: string;
   /** the --warn status token: experiment halos */
   warn: string;
+  /** the --ok / --bad status tokens: the citation map's fetched-to-deep ramp */
+  ok?: string;
+  bad?: string;
   font: string;
 }
 
@@ -53,6 +56,8 @@ export function readCanvasColors(root: HTMLElement = document.documentElement): 
       ring: v("--primary", FALLBACK.ring),
       muted: v("--muted-foreground", FALLBACK.muted),
       warn: v("--warn", FALLBACK.warn),
+      ok: v("--ok", FALLBACK.muted),   // the app always defines the status tokens; muted only in a bare test DOM
+      bad: v("--bad", FALLBACK.warn),
       font: getComputedStyle(document.body).fontFamily || FALLBACK.font,
     };
   } catch {

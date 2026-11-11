@@ -68,7 +68,7 @@ export function Panels({ onReheat, onRefresh, refreshing, stats, toolContext }: 
         style={{ right: PANEL_SIDE, top: PANEL_INSET, bottom: PANEL_INSET }}
       >
         {header}
-        <div className="min-h-0 flex-1 overflow-y-auto">{activeTool.sheet()}</div>
+        <div className="min-h-0 flex-1 overflow-y-auto">{activeTool.sheet(toolContext)}</div>
       </section>
     );
   }

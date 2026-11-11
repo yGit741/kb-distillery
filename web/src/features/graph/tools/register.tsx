@@ -1,7 +1,8 @@
-import { Boxes, Layers, MessageSquare, MousePointerSquareDashed, ShoppingBasket, TextSearch, Waypoints } from "lucide-react";
+import { Boxes, Quote, Layers, MessageSquare, MousePointerSquareDashed, ShoppingBasket, TextSearch, Waypoints } from "lucide-react";
 import { RelationsScreen } from "@/features/relations/RelationsScreen";
 import { ScopesScreen } from "@/features/scopes/ScopesScreen";
 import { ChatDock, ChatToolPanel } from "./ChatDock";
+import { CitationMapSheet } from "../CitationMapSheet";
 import { CorpusDrawer } from "../CorpusDrawer";
 import { useLayer } from "../layerStore";
 import { registerMenuItem } from "../menu";
@@ -69,6 +70,12 @@ if (import.meta.env.MODE !== "share") {
     panel: (ctx) => <QueryPanel ctx={ctx} />,
     featureFlag: "graph-relations",
   });
+}
+
+// the corpus-wide citation map: every cataloged paper and its cites links (a sheet; the story "citations" opens it)
+// local app only: a shared site carries no citation cache (/api/citations is a local endpoint)
+if (import.meta.env.MODE !== "share") {
+  registerTool({ id: "citations", label: "Citation map", icon: <Quote aria-hidden />, sheet: (ctx) => <CitationMapSheet ctx={ctx} /> });
 }
 
 registerMenuItem(

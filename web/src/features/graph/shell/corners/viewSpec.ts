@@ -1,5 +1,5 @@
 import { flag } from "@/flags";
-import { storyById, storyKnown } from "../../lab/views";
+import { storyById, storyKnown, storyOffered } from "../../lab/views";
 import { describe, fromViewSpecV1, type Layer, type ViewStack } from "../../layers/model";
 import { applyLayers, specLayers } from "../../layers/readyViews";
 import { useLayers } from "../../layers/store";
@@ -33,7 +33,19 @@ export interface ViewSpecV2 {
 }
 
 type Ui = ReturnType<typeof useGraphUi.getState>;
-type CaptureUi = Pick<Ui, "story" | "colorBy" | "sizeBy" | "shownTypes" | "shownDepths" | "hiddenKeys" | "quick" | "view">;
+type CaptureUi = Pick<Ui, "story" | "colorBy" | "sizeBy" | "shownTypes" | "shownDepths" | "hiddenKeys" | "quick" | "view"> & { flyout?: Ui["flyout"] };
+
+/** The named view whose tool is open now (the citation map), or "": such a view pins as `{ v: 1, story }` alone. */
+export function toolStoryOpen(ui: Pick<CaptureUi, "story" | "flyout">): string {
+  const st = ui.story ? storyById(ui.story) : undefined;
+  return st?.tool && ui.flyout === st.tool.id ? st.id : "";
+}
+
+/** Whether a spec names a view that opens a tool: it restores through the screen's view path, never as layers. */
+export const isToolStorySpec = (spec: Record<string, unknown>): boolean => {
+  const st = typeof spec.story === "string" ? storyById(spec.story) : undefined;
+  return !!st?.tool && storyKnown(st.id) && storyOffered(st);
+};
 
 /**
  * The spec to pin. With a layer stack that has layers (flag graph-intent) it is the stack, `{ v: 2, layers, text }`;
@@ -42,6 +54,9 @@ type CaptureUi = Pick<Ui, "story" | "colorBy" | "sizeBy" | "shownTypes" | "shown
 export function captureSpec(ui: CaptureUi): ViewSpecV1;
 export function captureSpec(ui: CaptureUi, stack: ViewStack | undefined): ViewSpecV1 | ViewSpecV2;
 export function captureSpec(ui: CaptureUi, stack?: ViewStack): ViewSpecV1 | ViewSpecV2 {
+  // a view that is a tool (the citation map) is its name: the knobs and layers behind the sheet are not the view
+  const tool = toolStoryOpen(ui);
+  if (tool) return { v: 1, story: tool } as ViewSpecV1;
   if (stack?.layers.length) return { v: 2, layers: stack.layers, text: stack.layers.map(describe).join(" · ") };
   const pages = ui.view ? [...ui.view.hits].slice(0, 2000) : [];
   return {
@@ -73,6 +88,8 @@ const isArr = (v: unknown): v is string[] => Array.isArray(v) && v.every((x) => 
 export function applySpec(spec: Record<string, unknown>, deps: ApplyDeps, pin?: { name: string }): boolean {
   // flag graph-intent: a pinned view is a layer stack. A v2 spec applies as layers (replacing the view); a V1 spec as one
   // "legacy" layer named like the pin, drawn by `applySpecV1` through the layer store.
+  // a view that opens a tool (the citation map) has no layer form: it goes through the screen's own view path
+  if (isToolStorySpec(spec)) return applySpecV1(spec, deps);
   if (flag("graph-intent")) {
     const layers = specLayers(spec);
     if (layers) return applyLayers("replace", layers);
