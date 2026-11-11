@@ -69,10 +69,10 @@ export function SparkPanel({ scope }: { scope?: string }) {
       style={{ width: chatPanelWidth(full, folded, panelW, paneW) }}
       onKeyDown={(e) => {
         // Escape anywhere in the panel stops here (the graph's own Escape waits): the first one puts out the glow of
-        // the cited pages on the graph, the next one closes the panel
+        // the cited pages on the graph; it never closes the panel (the X does)
         if (e.key === "Escape" && !e.defaultPrevented) {
           e.stopPropagation();
-          if (!clearGlow()) close();
+          clearGlow();
         }
       }}
     >

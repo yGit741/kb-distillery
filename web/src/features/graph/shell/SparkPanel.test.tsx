@@ -166,7 +166,7 @@ describe("flag spark-chat: the left chat panel", () => {
     );
   });
 
-  it("on: Escape from any control in the panel closes it", async () => {
+  it("on: Escape from any control in the panel keeps it open", async () => {
     await withFlag("graph-shell", true, () =>
       withFlag("spark-chat", true, async () => {
         screenWith();
@@ -175,7 +175,8 @@ describe("flag spark-chat: the left chat panel", () => {
         await screen.findByTestId("spark-panel");
         screen.getByRole("button", { name: "Close chat" }).focus();
         await userEvent.keyboard("{Escape}");
-        expect(screen.queryByTestId("spark-panel")).not.toBeInTheDocument();
+        await userEvent.keyboard("{Escape}");
+        expect(screen.getByTestId("spark-panel")).toBeInTheDocument();
       }),
     );
   });
