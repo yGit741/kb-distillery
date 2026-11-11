@@ -450,6 +450,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/embedding/pairs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Random page pairs in a cosine range */
+        get: operations["get_pairs_api_embedding_pairs_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/favorites": {
         parameters: {
             query?: never;
@@ -3018,6 +3035,15 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
+        /** EmbeddingPairs */
+        EmbeddingPairs: {
+            /** Count */
+            count: number;
+            /** Pairs */
+            pairs: components["schemas"]["EmbeddingDuplicate"][];
+        } & {
+            [key: string]: unknown;
+        };
         /** EmbeddingPoint */
         EmbeddingPoint: {
             /** Cluster */
@@ -3086,6 +3112,7 @@ export interface components {
             removed: components["schemas"]["EmbeddingPage"][];
             /** Silhouette */
             silhouette: number;
+            similarity?: components["schemas"]["EmbeddingSimilarity"] | null;
             /**
              * Spectrum
              * @default []
@@ -3093,6 +3120,31 @@ export interface components {
             spectrum: number[];
             /** Vectors */
             vectors: number;
+        } & {
+            [key: string]: unknown;
+        };
+        /** EmbeddingSimilarity */
+        EmbeddingSimilarity: {
+            /** Counts */
+            counts: number[];
+            /** Edges */
+            edges: number[];
+            /** Nearest */
+            nearest: number[];
+            /** Nearest Percentiles */
+            nearest_percentiles: {
+                [key: string]: number;
+            };
+            /** Pages */
+            pages: number;
+            /** Pairs */
+            pairs: number;
+            /** Percentiles */
+            percentiles: {
+                [key: string]: number;
+            };
+            /** Sampled */
+            sampled: boolean;
         } & {
             [key: string]: unknown;
         };
@@ -8238,6 +8290,40 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    get_pairs_api_embedding_pairs_get: {
+        parameters: {
+            query?: {
+                lo?: number;
+                hi?: number;
+                n?: number;
+                seed?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmbeddingPairs"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
             };
         };
     };

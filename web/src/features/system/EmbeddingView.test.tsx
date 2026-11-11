@@ -146,6 +146,45 @@ describe("System · Embedding", () => {
     expect(within(bar).getByRole("button", { name: "API" })).toHaveAttribute("aria-pressed", "true");
   });
 
+  it("Similarity: the distribution, and a clicked bar shows pairs from that range, with others on request", async () => {
+    const asked: [number, number, number | undefined][] = [];
+    const similarity = {
+      edges: [0, 0.25, 0.5, 0.75, 1], counts: [10, 40, 5, 1], nearest: [0, 0, 2, 1], pairs: 56, pages: 3, sampled: false,
+      percentiles: { p1: 0.05, p5: 0.1, p25: 0.2, p50: 0.31, p75: 0.4, p95: 0.52, p99: 0.7 },
+      nearest_percentiles: { p1: 0.5, p5: 0.52, p25: 0.6, p50: 0.68, p75: 0.8, p95: 0.9, p99: 0.95 },
+    };
+    open({
+      getEmbedding: async () => ({ ...report, similarity }),
+      getEmbeddingPairs: async (lo, hi, seed) => {
+        asked.push([lo, hi, seed]);
+        return { count: 5, pairs: [{ a: page("margin", "Margin"), b: page("ramsey", `Pair ${lo}-${seed}`), cosine: lo + 0.01 }] };
+      },
+    });
+    expect(await screen.findByTestId("embedding-pair-median")).toHaveTextContent("typically 0.31, and 9 in 10 between 0.10 and 0.52");
+    const bars = within(screen.getByRole("group", { name: "Pair similarity histogram" })).getAllByRole("button");
+    expect(bars).toHaveLength(4);
+    expect(bars[2]).toHaveAttribute("aria-pressed", "true"); // the bar of a typical nearest neighbour (0.68)
+    expect(await screen.findByRole("link", { name: "Pair 0.5-0" })).toBeInTheDocument();
+    await userEvent.click(bars[1] as HTMLElement);
+    expect(await screen.findByRole("link", { name: "Pair 0.25-0" })).toBeInTheDocument();
+    expect(screen.getByText("(40 pairs)")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Show others" }));
+    expect(await screen.findByRole("link", { name: "Pair 0.25-1" })).toBeInTheDocument();
+    expect(asked).toEqual([[0.5, 0.75, 0], [0.25, 0.5, 0], [0.25, 0.5, 1]]);
+  });
+
+  it("Similarity: opens on the last bar when nearest neighbours are identical, and offers no others when all pairs are shown", async () => {
+    const same = { p1: 1, p5: 1, p25: 1, p50: 1, p75: 1, p95: 1, p99: 1 };
+    open({
+      getEmbedding: async () => ({ ...report, similarity: { edges: [0.5, 0.75, 1], counts: [3, 2], nearest: [0, 3], pairs: 5, pages: 3, sampled: false, percentiles: same, nearest_percentiles: same } }),
+      getEmbeddingPairs: async () => ({ count: 1, pairs: [{ a: page("margin", "Margin"), b: page("margin-2", "Margin again"), cosine: 1 }] }),
+    });
+    const bars = within(await screen.findByRole("group", { name: "Pair similarity histogram" })).getAllByRole("button");
+    expect(bars[1]).toHaveAttribute("aria-pressed", "true");
+    await screen.findByText("1.000");
+    expect(screen.getByRole("button", { name: "Show others" })).toBeDisabled();
+  });
+
   it("lists very similar pairs with their cosine", async () => {
     open({ getEmbedding: async () => report });
     expect(await screen.findByText("0.991")).toBeInTheDocument();

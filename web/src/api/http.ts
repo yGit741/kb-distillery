@@ -90,6 +90,7 @@ export function createHttpDataSource(fetchImpl: Fetch = (...a) => fetch(...a), b
     getShareStatus: () => run(() => client.GET("/api/share/status"), "/api/share/status"),
     getHealth: () => run(() => client.GET("/api/health"), "/api/health"),
     getEmbedding: () => run(() => client.GET("/api/embedding"), "/api/embedding"),
+    getEmbeddingPairs: (lo, hi, seed = 0) => run(() => client.GET("/api/embedding/pairs", { params: { query: { lo, hi, n: 8, seed } } }), "/api/embedding/pairs"),
     nameEmbedding: (backend) => run(() => client.POST("/api/embedding/names", { body: backend ? { backend } : {} }), "/api/embedding/names"),
     getKb: () => run(() => client.GET("/api/kb"), "/api/kb"),
     listKbs: () => run(() => client.GET("/api/kb/list"), "/api/kb/list"),

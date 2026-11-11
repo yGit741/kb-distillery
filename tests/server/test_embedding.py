@@ -67,3 +67,19 @@ def test_post_names_is_refused_on_a_read_only_server_and_without_a_loopback_orig
     with TestClient(create_app()) as c:
         assert c.post("/api/embedding/names", json={}, headers={"Origin": "http://127.0.0.1:8765"}).status_code == 405
     assert started == []
+
+
+def test_pairs_endpoint_passes_the_range_and_validates(monkeypatch):
+    from kb_distillery.server.models.embedding import EmbeddingPairs
+    seen = {}
+
+    def fake(lo, hi, n, seed):
+        seen.update(lo=lo, hi=hi, n=n, seed=seed)
+        return {"count": 7, "pairs": [{"a": {"slug": "a", "title": "A"}, "b": {"slug": "b", "title": "B"}, "cosine": 0.61}]}
+    monkeypatch.setattr(router, "sample_pairs", fake)
+    with TestClient(create_app()) as c:
+        r = c.get("/api/embedding/pairs", params={"lo": 0.6, "hi": 0.625, "n": 6, "seed": 3})
+        assert r.status_code == 200 and seen == {"lo": 0.6, "hi": 0.625, "n": 6, "seed": 3}
+        assert EmbeddingPairs.model_validate(r.json()).pairs[0].cosine == 0.61
+        assert c.get("/api/embedding/pairs", params={"lo": -3}).status_code == 422
+        assert c.get("/api/embedding/pairs", params={"n": 500}).status_code == 422

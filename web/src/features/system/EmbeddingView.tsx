@@ -336,6 +336,116 @@ function DimensionsCard({ r, axes, setAxes }: { r: EmbeddingReport; axes: Axes; 
   );
 }
 
+type Similarity = NonNullable<EmbeddingReport["similarity"]>;
+
+/** The bar a cosine falls in. */
+const binOf = (sim: Similarity, v: number) => {
+  const next = sim.edges.findIndex((e, i) => i > 0 && v < e);
+  return next < 0 ? sim.counts.length - 1 : next - 1; // at or past the last edge (a cosine of 1): the last bar
+};
+
+function PairExamples({ sim, bin }: { sim: Similarity; bin: number }) {
+  const [seed, setSeed] = useState(0);
+  const lo = sim.edges[bin] as number;
+  const hi = sim.edges[bin + 1] as number;
+  // `sim.pairs` and the bar's count tie the cached examples to this build of the vectors.
+  const q = useApiQuery(["embedding-pairs", sim.pairs, sim.counts[bin], lo, hi, seed], (d) => d.getEmbeddingPairs(lo, hi, seed), { staleTime: 60_000, placeholderData: (prev) => prev });
+  const more = !!q.data && q.data.count > q.data.pairs.length;
+  return (
+    <div className="flex min-w-0 flex-col gap-1">
+      <div className="flex items-center gap-2">
+        <p className="text-sm">
+          <span className="font-medium">Pairs between {lo.toFixed(3)} and {hi.toFixed(3)}</span>{" "}
+          <span className="text-muted-foreground tabular-nums">({(sim.counts[bin] ?? 0).toLocaleString()} pairs)</span>
+        </p>
+        <Button size="sm" variant="secondary" className="ml-auto" disabled={!more || q.isPlaceholderData} title={q.data && !more ? "These are all the pairs in this range" : undefined} onClick={() => setSeed((n) => n + 1)}>
+          Show others
+        </Button>
+      </div>
+      <div className="min-h-56">
+        {q.error ? (
+          <ErrorState title="Could not load example pairs" error={q.error} onRetry={() => void q.refetch()} />
+        ) : !q.data ? (
+          <Loading label="Picking example pairs" rows={2} />
+        ) : !q.data.pairs.length ? (
+          <Empty>No pairs in this range.</Empty>
+        ) : (
+          <ul className={cn("flex flex-col transition-opacity", q.isPlaceholderData && "opacity-50")}>
+            {q.data.pairs.map((d) => (
+              <li key={`${d.a.slug}|${d.b.slug}`} className="flex items-baseline gap-3 border-b py-1.5 text-sm last:border-b-0">
+                <span className="w-12 shrink-0 text-xs text-muted-foreground tabular-nums">{d.cosine.toFixed(3)}</span>
+                <span className="min-w-0 break-words">
+                  <Link to={pageTo(d.a.slug)} className="hover:underline">{d.a.title}</Link>
+                  <span className="text-muted-foreground"> and </span>
+                  <Link to={pageTo(d.b.slug)} className="hover:underline">{d.b.title}</Link>
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function SimilarityCard({ sim }: { sim: Similarity }) {
+  const p = sim.percentiles;
+  const near = sim.nearest_percentiles;
+  const [bin, setBin] = useState(() => binOf(sim, near.p50 ?? 0));
+  const top = Math.max(...sim.counts, 1);
+  const topNear = Math.max(...sim.nearest, 1);
+  const marks = sim.edges.slice(0, -1).map((e, i) => (Math.round(e * 1000) % 100 === 0 ? e.toFixed(1) : i === 0 ? e.toFixed(2) : ""));
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Similarity</CardTitle>
+        <CardDescription>
+          What a cosine means in this knowledge base: the similarity of {sim.sampled ? `the pairs among a random ${sim.pages.toLocaleString()} pages` : "every pair of pages"} ({sim.pairs.toLocaleString()} pairs). Click a bar to read random pairs that are that similar.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-4">
+        <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-1 text-sm">
+          <dt className="text-muted-foreground">Two random pages</dt>
+          <dd className="tabular-nums" data-testid="embedding-pair-median">typically {(p.p50 ?? 0).toFixed(2)}, and 9 in 10 between {(p.p5 ?? 0).toFixed(2)} and {(p.p95 ?? 0).toFixed(2)}</dd>
+          <dt className="text-muted-foreground">A page and its nearest neighbour</dt>
+          <dd className="tabular-nums">typically {(near.p50 ?? 0).toFixed(2)}, and 9 in 10 between {(near.p5 ?? 0).toFixed(2)} and {(near.p95 ?? 0).toFixed(2)}</dd>
+          <dt className="text-muted-foreground">Unusually close</dt>
+          <dd className="tabular-nums">above {(p.p99 ?? 0).toFixed(2)} (only 1 pair in 100)</dd>
+        </dl>
+        <div>
+          <p className="mb-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+            <span className="flex items-center gap-1.5"><span aria-hidden className="size-2.5 rounded-sm bg-primary/60" />All pairs</span>
+            <span className="flex items-center gap-1.5"><span aria-hidden className="h-0.5 w-3 bg-foreground" />Each page with its nearest neighbour</span>
+            <span>Each series is scaled to its own tallest bar.</span>
+          </p>
+          <div className="flex h-32 items-stretch gap-px" role="group" aria-label="Pair similarity histogram">
+            {sim.counts.map((c, i) => (
+              <button
+                key={i}
+                type="button"
+                aria-pressed={bin === i}
+                aria-label={`${(sim.edges[i] as number).toFixed(3)} to ${(sim.edges[i + 1] as number).toFixed(3)}: ${c.toLocaleString()} pairs`}
+                title={`${(sim.edges[i] as number).toFixed(3)} to ${(sim.edges[i + 1] as number).toFixed(3)}: ${c.toLocaleString()} pairs, ${(sim.nearest[i] ?? 0).toLocaleString()} nearest neighbours`}
+                onClick={() => setBin(i)}
+                className="relative flex min-w-0 flex-1 flex-col justify-end rounded-t hover:bg-accent aria-pressed:bg-accent-soft"
+              >
+                <span className="block w-full rounded-t bg-primary/60" style={{ height: c ? `${Math.max(1.5, (c / top) * 100)}%` : 0 }} />
+                {!!sim.nearest[i] && <span aria-hidden className="absolute inset-x-0 h-0.5 bg-foreground" style={{ bottom: `${((sim.nearest[i] as number) / topNear) * 100}%` }} />}
+              </button>
+            ))}
+          </div>
+          <div className="flex gap-px text-[11px] text-muted-foreground tabular-nums" aria-hidden>
+            {marks.map((m, i) => (
+              <span key={i} className="min-w-0 flex-1 overflow-visible whitespace-nowrap">{m}</span>
+            ))}
+          </div>
+        </div>
+        <PairExamples key={bin} sim={sim} bin={bin} />
+      </CardContent>
+    </Card>
+  );
+}
+
 function DuplicatesCard({ r }: { r: EmbeddingReport }) {
   return (
     <Card>
@@ -379,6 +489,7 @@ export function EmbeddingView() {
       <HealthCard r={r} />
       {r.points.length ? <MapCard r={r} axes={axes} setAxes={setAxes} /> : <Empty>{emptyText}</Empty>}
       {!!r.points.length && <DimensionsCard r={r} axes={axes} setAxes={setAxes} />}
+      {!!r.points.length && r.similarity && <SimilarityCard sim={r.similarity} />}
       {!!r.points.length && <DuplicatesCard r={r} />}
     </div>
   );

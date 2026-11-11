@@ -42,6 +42,22 @@ class EmbeddingDuplicate(ApiModel):
     cosine: float
 
 
+class EmbeddingSimilarity(ApiModel):
+    edges: list[float]            # bar boundaries, one more than the bars
+    counts: list[int]             # page pairs per bar
+    nearest: list[int]            # pages per bar, by the cosine to their nearest neighbour
+    pairs: int                    # pairs counted
+    pages: int                    # pages they are among
+    sampled: bool                 # True: measured on a random sample of pages, not all of them
+    percentiles: dict[str, float]            # p1 … p99 of the pair cosines
+    nearest_percentiles: dict[str, float]    # the same for a page's nearest neighbour
+
+
+class EmbeddingPairs(ApiModel):
+    count: int                    # pairs in the asked range
+    pairs: list[EmbeddingDuplicate]
+
+
 class EmbeddingNames(ApiModel):
     state: str                    # none | running | current | stale (vectors changed since the names were made)
     backend: str | None = None    # the backend of the saved names, or of the run in flight
@@ -79,3 +95,4 @@ class EmbeddingReport(ApiModel):
     mean_cosine: float = 0.0      # mean cosine between two pages; near 1 = all vectors point the same way
     components: list[EmbeddingComponent] = []
     names: EmbeddingNames | None = None
+    similarity: EmbeddingSimilarity | None = None
