@@ -239,3 +239,13 @@ def test_list_is_bounded_and_survives_read_only(client, kb, monkeypatch):
 
 def test_empty_list(client, kb):
     assert client.get("/api/ingest").json() == []
+
+
+def test_a_foreign_record_file_does_not_break_the_list(client, kb, fake_llm):
+    d = os.path.join(kb, ".local", "ingest")
+    wait(client, upload(client).json()["job_id"])
+    for name, body in (("deadbeef", "{}"), ("cafef00d", "[]"), ("0badf00d", "not json"), ("0000beef", '{"id": "0000beef", "steps": []}')):
+        with open(os.path.join(d, name + ".json"), "w", encoding="utf-8") as f:
+            f.write(body)
+    rows = client.get("/api/ingest").json()
+    assert len(rows) == 1 and rows[0]["status"] == "done"

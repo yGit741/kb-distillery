@@ -178,7 +178,22 @@ def _new_job(source, tier, collection, backend, root, kind):
     with _LOCK:
         _JOBS[job["id"]] = job
     _save(job)
+    _prune(job["root"])
     return job
+
+
+def _prune(root):
+    """Keep the newest KEEP record files of this kb (by modification time); older ones are removed."""
+    d = _folder(root)
+    try:
+        files = [os.path.join(d, n) for n in os.listdir(d) if n.endswith(".json") and _ID.fullmatch(n[:-5])]
+        if len(files) <= KEEP:
+            return
+        files.sort(key=os.path.getmtime, reverse=True)
+        for f in files[KEEP:]:
+            os.remove(f)
+    except OSError:
+        pass
 
 
 def _folder(root):
@@ -235,13 +250,19 @@ def _public(job) -> dict:
 
 
 def _from_disk(root, job_id):
-    if not _ID.match(job_id or ""):
+    if not _ID.fullmatch(job_id or ""):
         return None
     try:
         with open(os.path.join(_folder(root), job_id + ".json"), encoding="utf-8") as f:
             rec = json.load(f)
     except (OSError, ValueError):
         return None
+    need = {"id", "status", "source", "tier", "collection", "steps", "created"}
+    if not isinstance(rec, dict) or not need <= rec.keys() or not isinstance(rec["steps"], list) or not rec["steps"] \
+            or not all(isinstance(x, dict) and "name" in x and "state" in x for x in rec["steps"]):
+        return None                                                 # a record this code did not write: skipped, not fatal
+    for k, v in (("backend", ""), ("pages", []), ("proposal_id", None), ("error", None), ("finished", None)):
+        rec.setdefault(k, v)
     if rec.get("status") == "running" and job_id not in _JOBS and not rec.get("demo"):
         # its thread died with the last server process (a demo seed record is a fixture that stays "running")
         rec["status"] = "interrupted"
@@ -269,7 +290,7 @@ def listing(root=None, limit=KEEP) -> list[dict]:
     undone) and `proposal_updated`, read from the proposals now, or None when the job has no proposal (or it no longer exists)."""
     root = root or DEFAULT_ROOT
     d = _folder(root)
-    names = [n[:-5] for n in os.listdir(d) if n.endswith(".json") and _ID.match(n[:-5])] if os.path.isdir(d) else []
+    names = [n[:-5] for n in os.listdir(d) if n.endswith(".json") and _ID.fullmatch(n[:-5])] if os.path.isdir(d) else []
     rows = []
     for n in names:
         job = _JOBS.get(n)
@@ -285,7 +306,7 @@ def listing(root=None, limit=KEEP) -> list[dict]:
     if any(r["proposal_id"] for r in rows):
         try:
             live = {p["id"]: p for p in proposals.inbox(None, root)["proposals"]}
-        except ProposalError:
+        except Exception:                                           # noqa: BLE001 - the status is a courtesy, never fatal
             live = {}
     return [{**r, "proposal_status": live[r["proposal_id"]]["status"] if r["proposal_id"] in live else None,
              "proposal_updated": live[r["proposal_id"]]["updated"] if r["proposal_id"] in live else None} for r in rows]
