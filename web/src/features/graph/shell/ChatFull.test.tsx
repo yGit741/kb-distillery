@@ -137,21 +137,18 @@ describe("flag chat-full: one chat surface in three sizes", () => {
     });
   });
 
-  it("on: the tab on the graph's left edge folds the right pane to a rail, one click brings it back, and the fold is remembered", async () => {
+  it("on: the edge between the chat and the graph resizes them, is remembered, and a double click resets it", async () => {
     await on(async () => {
       sessionsFetch([]);
       const panel = await opened();
       await userEvent.click(screen.getByRole("button", { name: "Full screen" }));
-      await userEvent.click(await screen.findByRole("button", { name: "Fold the graph pane" }));
-      const rail = screen.getByTestId("chat-rail");
-      expect(panel.style.width).toContain("44px");
-      expect(screen.queryByTestId("chat-explorer")).not.toBeInTheDocument();
-      expect(localStorage.getItem("kbchat.full.folded")).toBe("true");
-      for (const name of ["Open the graph pane", "Graph", "Pages"]) expect(within(rail).getByRole("button", { name })).toBeInTheDocument();
-      await userEvent.click(within(rail).getByRole("button", { name: "Open the graph pane" }));
-      expect(screen.queryByTestId("chat-rail")).not.toBeInTheDocument();
-      expect(screen.getByTestId("chat-explorer")).toBeInTheDocument();
-      expect(localStorage.getItem("kbchat.full.folded")).toBe("false");
+      expect(screen.queryByRole("button", { name: "Fold the graph pane" })).not.toBeInTheDocument();
+      const edge = await screen.findByRole("separator", { name: "Resize the chat and the graph" });
+      act(() => useChatFull.getState().setPaneW(500));
+      expect(panel.style.width).toContain("500px");
+      expect(localStorage.getItem("kbchat.full.pane")).toBe("500");
+      await userEvent.dblClick(edge);
+      expect(useChatFull.getState().paneW).toBeNull();
     });
   });
 

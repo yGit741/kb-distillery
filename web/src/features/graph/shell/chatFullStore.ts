@@ -12,6 +12,7 @@ const LIST_KEY = "kbchat.full.list";
 const FOLD_KEY = "kbchat.full.folded";
 const WIDTH_KEY = "kbchat.panel.width";
 const EXPLORER_KEY = "kbchat.full.explorer";
+const PANE_KEY = "kbchat.full.pane";
 /** The panel's width bounds when dragged by its edge. */
 export const PANEL_MIN_W = 320;
 export const PANEL_MAX_W = 760;
@@ -28,6 +29,9 @@ interface ChatFullState {
   panelW: number;
   setPanelW: (w: number) => void;
   /** The page viewer under the graph in the full chat; its handle folds it down. */
+  /** Width of the right pane (graph and page viewer) in the full chat, dragged by its edge; null is the default share. */
+  paneW: number | null;
+  setPaneW: (w: number | null) => void;
   explorerOpen: boolean;
   setExplorerOpen: (open: boolean) => void;
   /** Page ids of the graph, so the composer's @ can complete them (set by the graph screen). */
@@ -67,6 +71,11 @@ export const useChatFull = create<ChatFullState>((set, get) => ({
     const panelW = clampW(w);
     writeJson("local", WIDTH_KEY, panelW);
     set({ panelW });
+  },
+  paneW: readJson<number | null>("local", PANE_KEY, null),
+  setPaneW: (paneW) => {
+    writeJson("local", PANE_KEY, paneW);
+    set({ paneW });
   },
   explorerOpen: readJson("local", EXPLORER_KEY, true),
   setExplorerOpen: (explorerOpen) => {
