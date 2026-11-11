@@ -2905,6 +2905,21 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
+        /** EmbeddingComponent */
+        EmbeddingComponent: {
+            /** Cumulative */
+            cumulative: number;
+            /** High */
+            high: components["schemas"]["EmbeddingPage"][];
+            /** Index */
+            index: number;
+            /** Low */
+            low: components["schemas"]["EmbeddingPage"][];
+            /** Variance */
+            variance: number;
+        } & {
+            [key: string]: unknown;
+        };
         /** EmbeddingDuplicate */
         EmbeddingDuplicate: {
             a: components["schemas"]["EmbeddingPage"];
@@ -2927,6 +2942,11 @@ export interface components {
         EmbeddingPoint: {
             /** Cluster */
             cluster: number;
+            /**
+             * Pc
+             * @default []
+             */
+            pc: number[];
             /** Slug */
             slug: string;
             /** Title */
@@ -2948,16 +2968,31 @@ export interface components {
             changed: components["schemas"]["EmbeddingPage"][];
             /** Clusters */
             clusters: components["schemas"]["EmbeddingCluster"][];
+            /**
+             * Components
+             * @default []
+             */
+            components: components["schemas"]["EmbeddingComponent"][];
             /** Dim */
             dim: number;
             /** Duplicate Cosine */
             duplicate_cosine: number;
             /** Duplicates */
             duplicates: components["schemas"]["EmbeddingDuplicate"][];
+            /**
+             * Effective Dim
+             * @default 0
+             */
+            effective_dim: number;
             /** K */
             k: number;
             /** Line */
             line: string;
+            /**
+             * Mean Cosine
+             * @default 0
+             */
+            mean_cosine: number;
             /** Missing */
             missing: components["schemas"]["EmbeddingPage"][];
             /** Model */
@@ -2970,6 +3005,11 @@ export interface components {
             removed: components["schemas"]["EmbeddingPage"][];
             /** Silhouette */
             silhouette: number;
+            /**
+             * Spectrum
+             * @default []
+             */
+            spectrum: number[];
             /** Vectors */
             vectors: number;
         } & {

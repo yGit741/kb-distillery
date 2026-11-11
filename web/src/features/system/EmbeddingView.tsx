@@ -10,6 +10,9 @@ import { clusterColor } from "@/theme/palette";
 
 type Page = EmbeddingReport["missing"][number];
 type Point = EmbeddingReport["points"][number];
+type Axes = { x: number; y: number };
+
+const pct = (v: number) => `${(v * 100).toFixed(1)}%`;
 
 const REBUILD = "pixi run vectors-build";
 const W = 1000;
@@ -78,24 +81,51 @@ function HealthCard({ r }: { r: EmbeddingReport }) {
   );
 }
 
-function MapCard({ r }: { r: EmbeddingReport }) {
+function AxisPicker({ label, value, count, onPick }: { label: string; value: number; count: number; onPick: (i: number) => void }) {
+  return (
+    <div className="flex items-center gap-1" role="group" aria-label={`${label} axis component`}>
+      <span className="w-12 text-xs text-muted-foreground">{label} axis</span>
+      {Array.from({ length: count }, (_, i) => (
+        <button
+          key={i}
+          type="button"
+          aria-pressed={value === i}
+          onClick={() => onPick(i)}
+          className="size-6 rounded-md text-xs tabular-nums text-muted-foreground hover:bg-accent aria-pressed:bg-accent-soft aria-pressed:text-primary"
+        >
+          {i + 1}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function MapCard({ r, axes, setAxes }: { r: EmbeddingReport; axes: Axes; setAxes: (a: Axes) => void }) {
   const navigate = useNavigate();
   const [pinned, setPinned] = useState<number | null>(null);
   const [hovered, setHovered] = useState<number | null>(null);
   const [point, setPoint] = useState<Point | null>(null);
   const active = hovered ?? pinned;
-  const x = (p: Point) => PAD + p.x * (W - 2 * PAD);
-  const y = (p: Point) => PAD + (1 - p.y) * (H - 2 * PAD);
+  const at = (p: Point, i: number, fallback: number) => p.pc?.[i] ?? fallback;
+  const x = (p: Point) => PAD + at(p, axes.x, p.x) * (W - 2 * PAD);
+  const y = (p: Point) => PAD + (1 - at(p, axes.y, p.y)) * (H - 2 * PAD);
+  const count = r.components?.length ?? 0;
   return (
     <Card>
       <CardHeader>
         <CardTitle>Semantic map</CardTitle>
         <CardDescription>
-          Each dot is a page, placed by the two main directions of its vector, so pages close in meaning sit close together. {r.k} clusters, separation {r.silhouette.toFixed(2)} (silhouette, 1 is perfectly apart).
+          Each dot is a page, placed along two principal components of the vectors, so pages close in meaning sit close together. {r.k} clusters, separation {r.silhouette.toFixed(2)} (silhouette, 1 is perfectly apart).
         </CardDescription>
       </CardHeader>
       <CardContent className="grid gap-4 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
         <div className="flex min-w-0 flex-col gap-1">
+          {count > 2 && (
+            <div className="flex flex-wrap gap-x-6 gap-y-1">
+              <AxisPicker label="X" value={axes.x} count={count} onPick={(i) => setAxes({ ...axes, x: i })} />
+              <AxisPicker label="Y" value={axes.y} count={count} onPick={(i) => setAxes({ ...axes, y: i })} />
+            </div>
+          )}
           <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`Map of ${r.points.length} pages in ${r.k} clusters`} className="w-full rounded-lg border bg-background">
             {r.points.map((p) => (
               <circle
@@ -155,6 +185,85 @@ function MapCard({ r }: { r: EmbeddingReport }) {
   );
 }
 
+function DimensionsCard({ r, axes, setAxes }: { r: EmbeddingReport; axes: Axes; setAxes: (a: Axes) => void }) {
+  const spectrum = r.spectrum ?? [];
+  const components = r.components ?? [];
+  if (!components.length) return null;
+  const top = Math.max(...spectrum, 1e-9);
+  const shown = spectrum.reduce((a, b) => a + b, 0);
+  const ends = (pages: Page[]) =>
+    pages.map((p, i) => (
+      <span key={p.slug}>
+        {i > 0 && " · "}
+        <Link to={pageTo(p.slug)} className="hover:text-foreground hover:underline">
+          {p.title}
+        </Link>
+      </span>
+    ));
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Dimensions</CardTitle>
+        <CardDescription>
+          The {r.dim.toLocaleString()} raw dimensions mean nothing one by one. Principal components do: each is a direction along which the pages really differ, read from the pages at its two ends.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-4">
+        <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-1 text-sm">
+          <dt className="text-muted-foreground" title="Participation ratio: how many directions the variance is really spread over">Effective dimensions</dt>
+          <dd className="tabular-nums" data-testid="embedding-effective-dim">about {Math.round(r.effective_dim ?? 0)} of {r.dim.toLocaleString()}</dd>
+          <dt className="text-muted-foreground">First {spectrum.length} components explain</dt>
+          <dd className="tabular-nums">{pct(shown)} of the variance</dd>
+          <dt className="text-muted-foreground" title="Mean cosine between two pages. Near 1 would mean every vector points the same way">Mean similarity of two pages</dt>
+          <dd className="tabular-nums">{(r.mean_cosine ?? 0).toFixed(2)}</dd>
+        </dl>
+        <div>
+          <p className="mb-1 text-xs font-medium text-muted-foreground">Variance explained by each component</p>
+          <div className="flex h-24 items-end gap-1" role="img" aria-label={`Variance explained by the first ${spectrum.length} components`}>
+            {spectrum.map((v, i) => (
+              <div key={i} className="flex h-full min-w-0 flex-1 flex-col justify-end" title={`Component ${i + 1}: ${pct(v)}`}>
+                <div className="rounded-t bg-primary/60" style={{ height: `${Math.max(2, (v / top) * 100)}%` }} />
+              </div>
+            ))}
+          </div>
+          <div className="flex gap-1 text-[11px] text-muted-foreground tabular-nums">
+            {spectrum.map((_, i) => (
+              <span key={i} className="min-w-0 flex-1 text-center">{i + 1}</span>
+            ))}
+          </div>
+        </div>
+        <ul className="flex flex-col">
+          {components.map((c) => (
+            <li key={c.index} className="grid gap-x-4 gap-y-1 border-b py-2 text-sm last:border-b-0 lg:grid-cols-[11rem_minmax(0,1fr)_minmax(0,1fr)]">
+              <div className="flex items-baseline gap-2">
+                <span className="font-medium">Component {c.index + 1}</span>
+                <span className="text-xs text-muted-foreground tabular-nums">{pct(c.variance)}</span>
+                <button
+                  type="button"
+                  aria-label={`Show component ${c.index + 1} on the map`}
+                  disabled={axes.x === c.index}
+                  onClick={() => setAxes({ x: c.index, y: axes.y === c.index ? axes.x : axes.y })}
+                  className="ml-auto rounded-md px-1.5 py-0.5 text-xs text-primary hover:bg-accent disabled:text-muted-foreground disabled:hover:bg-transparent lg:ml-0"
+                >
+                  {axes.x === c.index ? "on X axis" : "Show on map"}
+                </button>
+              </div>
+              <p className="min-w-0 text-xs text-muted-foreground">
+                <span className="font-medium text-foreground">Low end: </span>
+                {ends(c.low)}
+              </p>
+              <p className="min-w-0 text-xs text-muted-foreground">
+                <span className="font-medium text-foreground">High end: </span>
+                {ends(c.high)}
+              </p>
+            </li>
+          ))}
+        </ul>
+      </CardContent>
+    </Card>
+  );
+}
+
 function DuplicatesCard({ r }: { r: EmbeddingReport }) {
   return (
     <Card>
@@ -187,13 +296,16 @@ function DuplicatesCard({ r }: { r: EmbeddingReport }) {
 /** Embedding: is the vector store there and current, and how the pages group by meaning (0 LLM, from the card vectors). */
 export function EmbeddingView() {
   const q = useApiQuery(["embedding"], (d) => d.getEmbedding(), { staleTime: 60_000 });
+  const [axes, setAxes] = useState<Axes>({ x: 0, y: 1 });
   if (q.error) return <ErrorState title="Could not load the embedding report" error={q.error} onRetry={() => void q.refetch()} />;
   if (!q.data) return <Loading label="Reading the vectors" rows={3} />;
   const r = q.data;
+  const emptyText = !r.built ? "No vector store yet: build it with the command above, then reload." : r.ok || r.vectors ? "No vectors to map yet." : r.line;
   return (
     <div className="flex flex-col gap-4">
       <HealthCard r={r} />
-      {r.points.length ? <MapCard r={r} /> : <Empty>{r.built ? "No vectors to map yet." : "No vector store yet: build it with the command above, then reload."}</Empty>}
+      {r.points.length ? <MapCard r={r} axes={axes} setAxes={setAxes} /> : <Empty>{emptyText}</Empty>}
+      {!!r.points.length && <DimensionsCard r={r} axes={axes} setAxes={setAxes} />}
       {!!r.points.length && <DuplicatesCard r={r} />}
     </div>
   );

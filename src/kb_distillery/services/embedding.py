@@ -2,7 +2,8 @@
 sit suspiciously close together, and how the pages group by meaning.
 
 Everything is computed from `kb_distillery.search.vectors` (one unit vector per page card) with numpy only:
-spherical k-means with k picked by silhouette, and a 2D PCA projection for the map. The heavy part is reused
+spherical k-means with k picked by silhouette, and PCA for the map axes, the variance spectrum and what each
+principal component separates. The heavy part is reused
 while the store file is unchanged; freshness is read on every call."""
 import os
 
@@ -16,7 +17,14 @@ K_CANDIDATES = (4, 6, 8, 10)       # at most the 10 colours of the area palette,
 MIN_PER_CLUSTER = 8          # k never exceeds pages / this
 SILHOUETTE_SAMPLE = 800
 CENTRAL = 3                  # pages named per cluster, closest to its centre first
+AXES = 8                     # principal components the map can use as an axis
+SPECTRUM = 20                # components in the variance chart
+ENDS = 4                     # pages named at each end of a component
 SEED = 0
+
+
+EMPTY_MAP = {"k": 0, "silhouette": 0.0, "clusters": [], "points": [], "duplicates": [],
+             "spectrum": [], "effective_dim": 0.0, "mean_cosine": 0.0, "components": []}
 
 
 def _titles(cards_dir):
@@ -106,17 +114,26 @@ def cluster(m):
     return best
 
 
-def project(m):
-    """Rows as 2D points in [0, 1]² along the two directions of largest variance (PCA)."""
+def pca(m, axes=AXES, spectrum=SPECTRUM):
+    """Principal components of the rows → (coords, ratios, effective): `coords` is rows × min(axes, rank) scaled to
+    [0, 1] per component, `ratios` the share of variance of the first `spectrum` components, `effective` the
+    participation ratio (how many directions the variance is really spread over). The sign of a component is fixed
+    (its largest loading is positive), so the same store always draws the same map."""
     if len(m) < 2:
-        return np.full((len(m), 2), 0.5)
-    x = m - m.mean(axis=0)
-    _u, _s, vt = np.linalg.svd(x, full_matrices=False)
-    p = _dot(x, vt[:2].T)
-    if p.shape[1] < 2:
-        p = np.hstack([p, np.zeros((len(p), 2 - p.shape[1]))])
+        return np.full((len(m), 0), 0.5), [], 0.0
+    x = (m - m.mean(axis=0)).astype(np.float64)
+    _u, sv, vt = np.linalg.svd(x, full_matrices=False)
+    var = sv ** 2
+    total = var.sum()
+    if total <= 0:
+        return np.full((len(m), 0), 0.5), [], 0.0
+    keep = int(min(axes, (var > total * 1e-12).sum()))
+    comps = vt[:keep]
+    comps = comps * np.where(comps[np.arange(keep), np.abs(comps).argmax(axis=1)] < 0, -1, 1)[:, None]
+    p = _dot(x, comps.T)
     lo, hi = p.min(axis=0), p.max(axis=0)
-    return (p - lo) / np.where(hi - lo == 0, 1, hi - lo)
+    coords = (p - lo) / np.where(hi - lo == 0, 1, hi - lo)
+    return coords, [float(v) for v in (var / total)[:spectrum]], float(total ** 2 / (var ** 2).sum())
 
 
 def duplicates(m, slugs, threshold=DUPLICATE_COSINE, limit=DUPLICATES_MAX):
@@ -131,11 +148,24 @@ def duplicates(m, slugs, threshold=DUPLICATE_COSINE, limit=DUPLICATES_MAX):
     return found[:limit]
 
 
-def _map(v, titles):
-    """The part that depends on the vectors alone: clusters, map points and near-duplicates."""
-    ref = lambda s: {"slug": s, "title": titles.get(s, s)}     # noqa: E731
+def _titled(value, titles):
+    """A copy of `value` where every {"slug": s, ...} also carries its page title (the slug when it has no card)."""
+    if isinstance(value, list):
+        return [_titled(x, titles) for x in value]
+    if isinstance(value, dict):
+        out = {k: _titled(x, titles) for k, x in value.items()}
+        if "slug" in out:
+            out["title"] = titles.get(out["slug"], out["slug"])
+        return out
+    return value
+
+
+def _map(v):
+    """The part that depends on the vectors alone (pages by slug, no titles): clusters, map points, components
+    and near-duplicates."""
+    ref = lambda s: {"slug": s}     # noqa: E731
     if not len(v):
-        return {"k": 0, "silhouette": 0.0, "clusters": [], "points": [], "duplicates": []}
+        return {**EMPTY_MAP}
     labels, centres, score = cluster(v.m)
     order = sorted(set(labels.tolist()), key=lambda j: (-int((labels == j).sum()), j))    # largest first
     rank = {j: i for i, j in enumerate(order)}
@@ -146,11 +176,21 @@ def _map(v, titles):
         top = idx[np.argsort(-closeness)[:CENTRAL]]
         clusters.append({"id": rank[j], "size": int(len(idx)), "cohesion": round(float(closeness.mean()), 3),
                          "central": [ref(v.slugs[i]) for i in top]})
-    xy = project(v.m)
-    points = [{**ref(s), "x": round(float(xy[i, 0]), 4), "y": round(float(xy[i, 1]), 4), "cluster": rank[int(labels[i])]}
+    coords, ratios, effective = pca(v.m)
+    points = [{**ref(s), "x": round(float(coords[i, 0]), 4) if coords.shape[1] else 0.5,
+               "y": round(float(coords[i, 1]), 4) if coords.shape[1] > 1 else 0.5,
+               "pc": [round(float(c), 4) for c in coords[i]], "cluster": rank[int(labels[i])]}
               for i, s in enumerate(v.slugs)]
+    components = []
+    for a in range(coords.shape[1]):
+        by = np.argsort(coords[:, a])
+        components.append({"index": a, "variance": round(ratios[a], 4), "cumulative": round(sum(ratios[:a + 1]), 4),
+                           "low": [ref(v.slugs[i]) for i in by[:ENDS]], "high": [ref(v.slugs[i]) for i in by[::-1][:ENDS]]})
+    centre = v.m.mean(axis=0)
+    spread = {"spectrum": [round(r, 4) for r in ratios], "effective_dim": round(effective, 1),
+              "mean_cosine": round(float(centre @ centre), 3), "components": components}
     dups = [{"a": ref(a), "b": ref(b), "cosine": round(c, 3)} for a, b, c in duplicates(v.m, v.slugs)]
-    return {"k": len(clusters), "silhouette": round(score, 3), "clusters": clusters, "points": points, "duplicates": dups}
+    return {"k": len(clusters), "silhouette": round(score, 3), "clusters": clusters, "points": points, "duplicates": dups, **spread}
 
 
 def build_embedding_report(db_path=None, cards_dir=None):
@@ -160,20 +200,20 @@ def build_embedding_report(db_path=None, cards_dir=None):
     fresh = vectors.freshness(db_path, cards_dir)
     base = {"built": fresh is not None, "ok": ok, "line": line, "model": None, "dim": 0, "cards": 0, "vectors": 0,
             "missing": [], "changed": [], "removed": [], "duplicate_cosine": DUPLICATE_COSINE,
-            "k": 0, "silhouette": 0.0, "clusters": [], "points": [], "duplicates": []}
+            **EMPTY_MAP}
     if fresh is None:
         return base
     titles = _titles(cards_dir)
     ref = lambda s: {"slug": s, "title": titles.get(s, s)}     # noqa: E731
     base.update(cards=fresh["cards"], vectors=fresh["vectors"],
                 **{k: [ref(s) for s in fresh[k]] for k in ("missing", "changed", "removed")})
+    from kb_distillery.graph import cache
+    st = os.stat(db_path)                # before the load: a store rewritten in between is rebuilt on the next call
     try:
         v = vectors.load(db_path)
     except ValueError as e:              # a half-rebuilt store (mixed models): report it, draw nothing
         return {**base, "ok": False, "line": str(e)}
     if v is None or not len(v):
         return base
-    from kb_distillery.graph import cache
-    st = os.stat(db_path)
-    heavy = cache.memo("embedding:" + db_path, lambda: (st.st_mtime_ns, st.st_size), lambda: _map(v, titles))
-    return {**base, "model": v.model, "dim": int(v.m.shape[1]), **heavy}
+    heavy = cache.memo("embedding:" + db_path, lambda: (st.st_mtime_ns, st.st_size), lambda: _map(v))
+    return {**base, "model": v.model, "dim": int(v.m.shape[1]), **_titled(heavy, titles)}

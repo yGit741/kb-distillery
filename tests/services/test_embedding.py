@@ -103,3 +103,47 @@ def test_mixed_models_report_the_reason(tmp_path):
     con.close()
     r = svc.build_embedding_report(db, cards)
     assert r["ok"] is False and "mixes models" in r["line"] and r["points"] == []
+
+
+def test_components_order_variance_and_name_both_ends(tmp_path):
+    db, cards = _store(tmp_path, _blobs())
+    r = svc.build_embedding_report(db, cards)
+    assert r["spectrum"] == sorted(r["spectrum"], reverse=True) and 0.99 < sum(r["spectrum"]) <= 1.001
+    assert [c["index"] for c in r["components"]] == list(range(len(r["components"]))) and len(r["components"]) <= svc.AXES
+    first = r["components"][0]
+    assert first["variance"] == r["spectrum"][0] and r["components"][1]["cumulative"] > first["cumulative"]
+    ends = [{p["slug"][0] for p in first[k]} for k in ("low", "high")]
+    assert all(len(e) == 1 for e in ends) and ends[0] != ends[1]          # each end is one group, and not the same one
+    p = r["points"][0]
+    assert len(p["pc"]) == len(r["components"]) and (p["x"], p["y"]) == (p["pc"][0], p["pc"][1])
+    assert 1.5 < r["effective_dim"] < 3 and 0 < r["mean_cosine"] < 1      # three groups: two directions carry it
+
+
+def test_pca_is_the_same_on_every_run():
+    m = svc._unit(np.asarray([v for _, v in _blobs()], dtype=np.float32))
+    a, b = svc.pca(m), svc.pca(m.copy())
+    assert np.array_equal(a[0], b[0]) and a[1] == b[1]
+
+
+def test_identical_vectors_have_no_components(tmp_path):
+    db, cards = _store(tmp_path, [(f"p{i}", [1, 0, 0]) for i in range(3)])
+    r = svc.build_embedding_report(db, cards)
+    assert r["components"] == [] and r["spectrum"] == [] and all(p["pc"] == [] and p["x"] == 0.5 for p in r["points"])
+
+
+def test_map_is_reused_until_the_store_changes_and_titles_stay_live(tmp_path, monkeypatch):
+    monkeypatch.setenv("KB_GRAPH_CACHE", "1")
+    db, cards = _store(tmp_path, _blobs())
+    calls = []
+    real = svc._map
+    monkeypatch.setattr(svc, "_map", lambda v: calls.append(1) or real(v))
+    first = svc.build_embedding_report(db, cards)
+    (tmp_path / "qmd-cards" / "a00.md").write_text("# Renamed\n\nsummary\n", encoding="utf-8")
+    second = svc.build_embedding_report(db, cards)
+    assert len(calls) == 1 and first["k"] == second["k"]
+    assert next(p for p in second["points"] if p["slug"] == "a00")["title"] == "Renamed"
+    con = sqlite3.connect(db)
+    con.execute("DELETE FROM vectors WHERE slug = 'c19'")
+    con.commit()
+    con.close()
+    assert len(svc.build_embedding_report(db, cards)["points"]) == 59 and len(calls) == 2
