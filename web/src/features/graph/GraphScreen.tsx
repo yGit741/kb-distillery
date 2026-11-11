@@ -823,12 +823,6 @@ function Loaded({
       .setPages(model.nodes.map((n) => ({ id: n.id, title: n.title || n.id })));
     return () => useChatFull.getState().setPages([]);
   }, [chatOn, model]);
-  const lastPicked = useRef<string | null>(null);
-  useEffect(() => {
-    const id = selection.size === 1 ? [...selection][0]! : null;
-    if (id && id !== lastPicked.current && fullChat) openReader(id);
-    lastPicked.current = id;
-  }, [selection, fullChat, openReader]);
   const railColors = useMemo(() => {
     const seen = new Set<string>();
     for (const n of model.nodes) {

@@ -30,5 +30,6 @@ export function chatPanelWidth(full: boolean, folded: boolean, panelW: number = 
 
 /** The right pane's width in the full chat: dragged by the edge between chat and graph, else the default share. */
 export function paneWidth(paneW: number | null): string {
-  return paneW ? `${paneW}px` : FULL_PANE_W;
+  // clamped where it is read too: a width saved on a wider window still leaves the chat its 480px
+  return paneW ? `min(${paneW}px, calc(100% - 480px))` : FULL_PANE_W;
 }

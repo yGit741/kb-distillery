@@ -63,6 +63,8 @@ interface Props {
   /** right-click on empty space, with where (client coordinates) */
   onBackgroundContext: (x: number, y: number) => void;
   onOpenReader: (id: string) => void;
+  /** a plain single click on a page node (no modifier), after it is selected */
+  onClickNode?: (id: string) => void;
   /** A pile of the data layer was clicked: open the files of that format. */
   onOpenPile?: (format: string) => void;
 }
@@ -141,7 +143,7 @@ const NO_NAMES: ReadonlyMap<string, string> = new Map();
 const CITE_FIT_AIR = 56;
 
 export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
-  { model, byId, neighbors, visible: baseVisible, imp, className, onOpenMenu, onBackgroundContext, onOpenReader, onOpenPile },
+  { model, byId, neighbors, visible: baseVisible, imp, className, onOpenMenu, onBackgroundContext, onOpenReader, onOpenPile, onClickNode },
   ref,
 ) {
   const ui = useGraphUi();
@@ -254,8 +256,8 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
   const fitSeen = useRef(citeFitTick); // the tick a remounted canvas starts at is not a request
   // a `>` sentence waiting for its second Enter (flag graph-intent): the pages it would keep light up, the rest dims
   const previewIds = useLayers((st) => st.preview?.ids ?? null);
-  const live = useRef({ ui, theme, selection, byId, neighbors, visible, cited, previewIds, replay, think, onOpenReader, onOpenMenu, onBackgroundContext, onOpenPile });
-  live.current = { ui, theme, selection, byId, neighbors, visible, cited, previewIds, replay, think, onOpenReader, onOpenMenu, onBackgroundContext, onOpenPile };
+  const live = useRef({ ui, theme, selection, byId, neighbors, visible, cited, previewIds, replay, think, onOpenReader, onOpenMenu, onBackgroundContext, onOpenPile, onClickNode });
+  live.current = { ui, theme, selection, byId, neighbors, visible, cited, previewIds, replay, think, onOpenReader, onOpenMenu, onBackgroundContext, onOpenPile, onClickNode };
 
   rs.current.imp = imp;
   const names = useMemo(() => areaNames(model.nodes, model.kbs), [model]);
@@ -790,7 +792,10 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
       if (!rp && live.current.cited.has(id)) useCites.getState().scrollTo(id);
       const kb = useKb.getState();
       if (ev.shiftKey || ev.metaKey || ev.ctrlKey) kb.toggle(id);
-      else kb.setSelection([id]);
+      else {
+        kb.setSelection([id]);
+        live.current.onClickNode?.(id);
+      }
     },
     [],
   );

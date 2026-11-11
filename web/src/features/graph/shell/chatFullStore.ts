@@ -28,7 +28,6 @@ interface ChatFullState {
   /** Width of the panel size, dragged by its right edge (remembered per browser). */
   panelW: number;
   setPanelW: (w: number) => void;
-  /** The page viewer under the graph in the full chat; its handle folds it down. */
   /** Width of the right pane (graph and page viewer) in the full chat, dragged by its edge; null is the default share. */
   paneW: number | null;
   setPaneW: (w: number | null) => void;
