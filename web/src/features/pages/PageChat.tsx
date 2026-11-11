@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button";
 import { useVariant, VARIANTS } from "@/components/variants";
 import { useApiQuery } from "@/lib/useApiQuery";
 import { cn } from "@/lib/utils";
+import { useFlag } from "@/flags/useFlag";
+import { pageTo, usePageSearch } from "./parts";
 import { SlashHints, useRestructureSlash } from "../restructure/entry";
 
 export type SelectionChip = { block_at: number | null; text: string };
@@ -279,7 +281,7 @@ export function ChatPanel({ slug, chat }: { slug: string; chat: PageChatState })
           </p>
         )}
         {messages.map((m, i) => (
-          <Message key={i} m={m} />
+          <Message key={i} m={m} slug={slug} />
         ))}
         {send.isPending && <p className="text-sm text-muted-foreground">Thinking…</p>}
       </div>
@@ -293,7 +295,10 @@ export function ChatPanel({ slug, chat }: { slug: string; chat: PageChatState })
   );
 }
 
-function Message({ m }: { m: Local }) {
+function Message({ m, slug }: { m: Local; slug: string }) {
+  // flag ui.page-review: the proposal opens in this page, not on the separate review screen
+  const inPage = useFlag("ui.page-review");
+  const search = usePageSearch() as Record<string, string>;
   if (m.role === "user")
     return (
       <div className="ml-8 rounded-lg bg-muted px-3 py-2 text-sm">
@@ -309,7 +314,8 @@ function Message({ m }: { m: Local }) {
       <p className="whitespace-pre-wrap">{m.text}</p>
       {m.proposal_id && (
         <Link
-          to={`/proposals/${encodeURIComponent(m.proposal_id)}` as "/"}
+          to={inPage ? pageTo(slug) : (`/proposals/${encodeURIComponent(m.proposal_id)}` as "/")}
+          search={(inPage ? { ...search, review: m.proposal_id } : {}) as never}
           className="rounded-lg border bg-card px-3 py-2 hover:bg-muted"
           data-testid="proposal-card"
         >

@@ -347,3 +347,13 @@ expires = 2027-02-09
 kind = "runtime"
 default = false
 envs = { local = true, private = false, public = false }
+
+[[flag]]
+name = "ui.page-review"
+description = "Pages: review a proposal inside the page it changes. The page shows the edits in place, the side card shows the pages the proposal touches and the queue of edits on this page, and the page chat's proposal card opens it (needs ui.proposals)."
+owner = "maintainer"
+created = 2026-11-11
+expires = 2027-02-09
+kind = "runtime"
+default = false
+envs = { local = true, private = false, public = false }
