@@ -171,63 +171,63 @@ SIBLING_SKIP = {WIKI_DIR, "meta", "think"}     # the engine rebuilds meta/; thin
 
 
 def _copy_siblings(bundle: str, root: str) -> list[str]:
-    """When `bundle` is a `wiki/` inside a kb-shaped folder, copy the folders beside it (`raw/`, `examples/` ...) into
-    `root` next to the staged wiki -> their names. Hidden folders, `meta/` and `think/` stay behind; files beside wiki/
-    (README, usecase cards) are not knowledge and are not copied."""
+    """When `bundle` is the `wiki/` of a kb-shaped folder (a `raw/` beside it), copy what sits beside it into `root`
+    next to the staged wiki -> the names copied: `raw/` as raw/, other folders (`examples/` ...) as raw/<name>/, and
+    plain files a page links to (a use-case card) as raw/<name>. Hidden entries, `meta/` and `think/` stay behind, and
+    nothing already in raw/ is overwritten. Links that leave wiki/ for a moved name are rewritten to match."""
     if os.path.basename(os.path.normpath(bundle)) != WIKI_DIR:
         return []
     parent = os.path.dirname(os.path.normpath(bundle))
+    if not os.path.isdir(os.path.join(parent, "raw")) or os.path.islink(os.path.join(parent, "raw")):
+        return []
     names = []
     for n in _entries(parent):
         src = os.path.join(parent, n)
         if n in SIBLING_SKIP or n.startswith(".") or os.path.islink(src) or not os.path.isdir(src):
             continue
         dest = os.path.join(root, n) if n == "raw" else os.path.join(root, "raw", n)
-        shutil.copytree(src, dest, symlinks=True, dirs_exist_ok=True, ignore=shutil.ignore_patterns(*IGNORED))
+        if n != "raw" and os.path.lexists(os.path.join(parent, "raw", n)):
+            continue                                   # raw/<n> already ships with the bundle: keep it
+        shutil.copytree(src, dest, symlinks=True, dirs_exist_ok=n == "raw", ignore=shutil.ignore_patterns(*IGNORED))
         names.append(n)
-    linked = _linked_files(os.path.join(root, WIKI_DIR), parent)
-    for n in linked:
-        os.makedirs(os.path.join(root, "raw"), exist_ok=True)
+    wiki = os.path.join(root, WIKI_DIR)
+    files = [n for n in _entries(parent) if not n.startswith(".") and os.path.isfile(os.path.join(parent, n))
+             and not os.path.islink(os.path.join(parent, n)) and not os.path.lexists(os.path.join(root, "raw", n))]
+    for n in sorted(_outward_names(wiki, files)):
         shutil.copy2(os.path.join(parent, n), os.path.join(root, "raw", n))
         names.append(n)
     moved = [n for n in names if n != "raw"]
     if moved:
-        _rehome_links(os.path.join(root, WIKI_DIR), moved)
+        _outward_names(wiki, moved, rewrite=True)
     return names
 
 
-def _linked_files(wiki: str, parent: str) -> list[str]:
-    """Plain files beside wiki/ (a README, a use-case card) that a page links to: they come along as raw/<name>."""
-    files = [n for n in _entries(parent) if not n.startswith(".") and os.path.isfile(os.path.join(parent, n))
-             and not os.path.islink(os.path.join(parent, n))]
-    if not files:
-        return []
-    pat = re.compile(r"\]\((?:(?:\.\./)+|/)(" + "|".join(re.escape(n) for n in files) + r")[)#\s]")
-    found = set()
-    for base, _, names in os.walk(wiki):
-        for f in names:
-            if f.endswith(".md"):
-                with open(os.path.join(base, f), encoding="utf-8") as fh:
-                    found.update(pat.findall(fh.read()))
-    return sorted(found)
-
-
-def _rehome_links(wiki: str, moved: list[str]) -> None:
-    """A kb holds only wiki/, raw/, meta/ (and think/): a folder like `examples/` lands as `raw/examples/`, and links
-    into it (`../examples/x`, `/examples/x`) are rewritten to match, in the staged copy only."""
-    alt = "|".join(re.escape(n) for n in moved)
-    pat = re.compile(r"\]\(((?:\.\./)+|/)(" + alt + r")(?=[/)#\s])")
+def _outward_names(wiki: str, names: list[str], rewrite: bool = False) -> set[str]:
+    """The `names` that a page links to OUTSIDE wiki/ (`/name` or exactly one `../` per level of the page, plus one) ->
+    that set. With `rewrite`, those links become `.../raw/name` in place (staged copy only)."""
+    if not names:
+        return set()
+    pat = re.compile(r"\]\(((?:\.\./)+|/)(" + "|".join(re.escape(n) for n in names) + r")(?=[/)#\s])")
+    found: set[str] = set()
     for base, _, files in os.walk(wiki):
+        depth = len(os.path.relpath(base, wiki).split(os.sep)) if os.path.relpath(base, wiki) != "." else 0
         for f in files:
             if not f.endswith(".md"):
                 continue
             path = os.path.join(base, f)
             with open(path, encoding="utf-8") as fh:
                 text = fh.read()
-            new = pat.sub(lambda m: f"]({m.group(1)}raw/{m.group(2)}", text)
-            if new != text:
+
+            def sub(m):
+                if m.group(1) != "/" and m.group(1).count("../") != depth + 1:
+                    return m.group(0)
+                found.add(m.group(2))
+                return f"]({m.group(1)}raw/{m.group(2)}"
+            new = pat.sub(sub, text)
+            if rewrite and new != text:
                 with open(path, "w", encoding="utf-8") as fh:
                     fh.write(new)
+    return found
 
 
 def _imported_dirs(staged_wiki: str) -> list[str]:

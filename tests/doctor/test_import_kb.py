@@ -31,6 +31,7 @@ def world(monkeypatch, tmp_path):
 def make_bundle(root, pages=None):
     os.makedirs(root, exist_ok=True)
     for name, text in (pages or {"alpha.md": PAGE, "beta.md": BETA}).items():
+        os.makedirs(os.path.dirname(os.path.join(root, name)), exist_ok=True)
         with open(os.path.join(root, name), "w", encoding="utf-8") as f:
             f.write(text)
     return str(root)
@@ -267,3 +268,19 @@ def test_a_raw_link_to_a_missing_file_still_blocks(world, tmp_path):
     os.makedirs(src / "raw")
     rep = import_kb.validate_bundle(str(src))
     assert any("[boundary]" in e for e in rep.errors)
+
+
+def test_siblings_need_a_raw_folder_and_inner_links_stay(world, tmp_path):
+    loose = tmp_path / "downloads"
+    make_bundle(loose / "wiki")
+    os.makedirs(loose / "photos")
+    rep = import_kb.validate_bundle(str(loose / "wiki"))
+    assert not any("beside wiki/" in w for w in rep.warnings)
+    src = tmp_path / "kbsrc"
+    make_bundle(src / "wiki", {"alpha.md": PAGE, "beta.md": BETA,
+                               "examples/a.md": "---\ntype: idea\nlayer: concept\nmaturity: seed\n---\n# A\n",
+                               "sub/c.md": "---\ntype: idea\nlayer: concept\nmaturity: seed\n---\n# C\n\nSee [a](../examples/a.md).\n"})
+    os.makedirs(src / "raw")
+    os.makedirs(src / "examples")
+    target = import_kb.import_bundle(str(src))
+    assert "](../examples/a.md)" in open(os.path.join(target, "wiki", "sub", "c.md"), encoding="utf-8").read()
