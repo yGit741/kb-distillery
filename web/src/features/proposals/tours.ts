@@ -74,7 +74,7 @@ export function proposalsTourSteps({
       place: "bottom",
       title: "How the page changed",
       // source: features/pages/PageHistory.tsx; src/kb_distillery/proposals/history.py
-      body: "Every version of the page from the knowledge base's history. Compare two, and **restore** one as a proposal.",
+      body: "Every version of the page from the knowledge base's history. Compare any two to see what changed.",
     },
     {
       target: '[data-tour="page-restructure"]',

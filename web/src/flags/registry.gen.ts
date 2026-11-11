@@ -368,7 +368,7 @@ export const FLAGS: Readonly<Record<FlagName, FlagMeta>> = {
     }
   },
   "ui.page-history": {
-    "description": "Pages: how a page changed over time. Lists its versions, compares any two with the proposal diff, restores a version or a block as a proposal.",
+    "description": "Pages: how a page changed over time. Lists its versions and compares any two with the proposal diff. Read-only: edits start from the page, not from its history.",
     "owner": "maintainer",
     "created": "2026-11-09",
     "expires": "2027-05-09",
