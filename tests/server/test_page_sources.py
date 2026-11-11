@@ -36,13 +36,44 @@ Shown in [Paper X](ps-paper-x.md) and at https://example.org/blog/post.
 Nothing cited here.
 """
 BARE = "---\ntype: idea\nlayer: concept\nsources: []\n---\n\n# Bare idea\n"
+NOTE = """---
+type: paper
+layer: source
+created: 2026-09-01
+---
+
+# Paper Y
+
+Builds on [Paper X](ps-paper-x.md).
+"""
+LINKED = """---
+type: idea
+layer: concept
+sources: []
+---
+
+# Linked idea
+
+## Connections
+
+- [Paper Y](ps-paper-y.md) states it; [Paper X](ps-paper-x.md) tests it, and [Paper Y](ps-paper-y.md) again.
+- Related: [Soft claims](ps-soft-claims.md). `[Not a link](ps-bare.md)`
+
+## My notes
+
+My own pointer to [[ps-paper-z]] and [Paper Z](ps-paper-z.md); [Paper Y](ps-paper-y.md) once more.
+"""
 ROW = "raw/printed-docs/2026-paper-x.pdf\tabc123\tprinted-docs\tsource\tps-paper-x\t\t\n"
 
 
 @pytest.fixture
 def client():
     root = paths.ROOT
-    made = {f"wiki/{n}.md": t for n, t in (("ps-paper-x", PAPER), ("ps-soft-claims", IDEA), ("ps-bare", BARE))}
+    made = {f"wiki/{n}.md": t for n, t in (("ps-paper-x", PAPER), ("ps-soft-claims", IDEA), ("ps-bare", BARE),
+                                                ("ps-paper-y", NOTE), ("ps-paper-z", NOTE.replace("Paper Y", "Paper Z")),
+                                                ("ps-linked", LINKED),
+                                                ("ps-paper-w", PAPER.replace("paper-x", "paper-w").replace("Paper X", "Paper W")),
+                                                ("ps-linked-w", "---\ntype: idea\nlayer: concept\n---\n\n# W idea\n\n## Evidence\n\nSee [Paper W](ps-paper-w.md).\n"))}
     corpus = os.path.join(root, "meta", "corpus.tsv")
     old = open(corpus, encoding="utf-8").read() if os.path.exists(corpus) else None
     os.makedirs(os.path.dirname(corpus), exist_ok=True)
@@ -72,12 +103,40 @@ def test_concept_page_lists_source_page_raw_file_and_url(client):
     by = {s.id: s for s in body.sources}
     raw = by["raw/printed-docs/2026-paper-x.pdf"]
     assert (raw.title, raw.kind, raw.format, raw.disposition) == ("Paper X", "pdf", "printed-docs", "source")
-    assert raw.slug == "ps-paper-x" and raw.added == "2026-10-01" and raw.via == ["sources"]
+    assert raw.slug == "ps-paper-x" and raw.added == "2026-10-01" and raw.via == ["sources", "links"]
     assert raw.route == "/pipeline?q=raw/printed-docs/2026-paper-x.pdf"
     assert raw.cited_in_sections == ["Evidence"]
     web = by["https://example.org/blog/post"]
     assert web.disposition == "external" and web.kind == "web" and web.cited_in_sections == ["Evidence"]
     assert body.counts.raw == 1 and body.counts.external == 1 and body.counts.by_disposition == {"source": 1, "external": 1}
+
+
+def test_concept_page_counts_source_pages_linked_in_its_text(client):
+    body = PageSources.model_validate(client.get("/api/pages/ps-linked/sources").json())
+    # reading order, once each; the concept page, the code span and `## My notes` do not count
+    assert [s.id for s in body.sources] == ["ps-paper-y", "raw/printed-docs/2026-paper-x.pdf"]
+    page, raw = body.sources
+    assert (page.format, page.disposition, page.slug, page.route, page.via) == ("page", "page", "ps-paper-y", "/pages/ps-paper-y", ["links"])
+    assert page.cited_in_sections == ["Connections"] and page.added == "2026-09-01"
+    assert (raw.title, raw.slug, raw.via, raw.cited_in_sections) == ("Paper X", "ps-paper-x", ["links"], ["Connections"])
+    assert body.counts.total == 2 and body.counts.raw == 1 and body.counts.pages == 1
+
+
+def test_linked_source_page_with_a_raw_file_only_the_link_names(client):
+    body = client.get("/api/pages/ps-linked-w/sources").json()
+    assert [(s["id"], s["slug"], s["via"], s["cited_in_sections"]) for s in body["sources"]] == [
+        ("raw/printed-docs/2026-paper-w.pdf", "ps-paper-w", ["links"], ["Evidence"])]
+
+
+def test_declared_source_that_is_also_linked_is_listed_once(client):
+    body = client.get("/api/pages/ps-soft-claims/sources").json()
+    raw = [s for s in body["sources"] if s["slug"] == "ps-paper-x"]
+    assert len(raw) == 1 and raw[0]["via"] == ["sources", "links"]
+
+
+def test_source_page_does_not_count_the_sources_it_links(client):
+    body = client.get("/api/pages/ps-paper-y/sources").json()
+    assert body["sources"] == []
 
 
 def test_source_page_lists_its_own_raw_file(client):

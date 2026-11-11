@@ -54,6 +54,15 @@ describe("Sources on a page (ui.page-sources)", () => {
       expect(within(section).getByRole("link", { name: "example.org/a" }).getAttribute("href")).toBe("https://example.org/a");
     }));
 
+  it("footer: a source named only by a link in the text says so", () =>
+    withFlag("ui.page-sources", true, async () => {
+      setVariant("page-sources", "footer");
+      open({ ...some, sources: [{ ...some.sources[0]!, via: ["links"] }, { ...some.sources[1]!, via: ["sources", "links"] }] });
+      const section = await screen.findByRole("region", { name: "Page sources" });
+      expect(within(section).getByText(/printed-docs · 2026-10-01 · linked in the text · cited in Evidence/)).toBeInTheDocument();
+      expect(within(section).getAllByText(/linked in the text/)).toHaveLength(1);
+    }));
+
   it("footer: nothing is rendered without sources", () =>
     withFlag("ui.page-sources", true, async () => {
       setVariant("page-sources", "footer");
