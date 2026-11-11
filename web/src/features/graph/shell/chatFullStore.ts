@@ -13,6 +13,10 @@ const FOLD_KEY = "kbchat.full.folded";
 const WIDTH_KEY = "kbchat.panel.width";
 const EXPLORER_KEY = "kbchat.full.explorer";
 const PANE_KEY = "kbchat.full.pane";
+const LIST_W_KEY = "kbchat.full.listw";
+const VIEWER_H_KEY = "kbchat.full.viewerh";
+const clampList = (w: number) => Math.round(Math.min(420, Math.max(160, w)));
+const clampViewer = (h: number) => Math.round(Math.min(80, Math.max(20, h)));
 /** The panel's width bounds when dragged by its edge. */
 export const PANEL_MIN_W = 320;
 export const PANEL_MAX_W = 760;
@@ -31,6 +35,13 @@ interface ChatFullState {
   /** Width of the right pane (graph and page viewer) in the full chat, dragged by its edge; null is the default share. */
   paneW: number | null;
   setPaneW: (w: number | null) => void;
+  /** Width of the chat list column in the full chat, dragged by its right edge. */
+  listW: number;
+  setListW: (w: number) => void;
+  /** Height of the page viewer under the graph, in percent of the pane, dragged by its top edge. */
+  viewerH: number;
+  setViewerH: (h: number) => void;
+  /** The page viewer under the graph in the full chat; its handle folds it down. */
   explorerOpen: boolean;
   setExplorerOpen: (open: boolean) => void;
   /** Page ids of the graph, so the composer's @ can complete them (set by the graph screen). */
@@ -57,12 +68,11 @@ export const useChatFull = create<ChatFullState>((set, get) => ({
   full: false,
   listOpen: readJson("local", LIST_KEY, true),
   folded: readJson("local", FOLD_KEY, false),
-  // growing to full always shows the right pane and its page viewer
+  // growing to full always shows the right pane; the page viewer under it waits for a page to be opened
   setFull: (full) => {
     if (full) {
       writeJson("local", FOLD_KEY, false);
-      writeJson("local", EXPLORER_KEY, true);
-      set({ full, folded: false, explorerOpen: true });
+      set({ full, folded: false, explorerOpen: false });
     } else set({ full });
   },
   panelW: clampW(readJson("local", WIDTH_KEY, 400)),
@@ -75,6 +85,18 @@ export const useChatFull = create<ChatFullState>((set, get) => ({
   setPaneW: (paneW) => {
     writeJson("local", PANE_KEY, paneW);
     set({ paneW });
+  },
+  listW: clampList(readJson("local", LIST_W_KEY, 232)),
+  setListW: (w) => {
+    const listW = clampList(w);
+    writeJson("local", LIST_W_KEY, listW);
+    set({ listW });
+  },
+  viewerH: clampViewer(readJson("local", VIEWER_H_KEY, 50)),
+  setViewerH: (h) => {
+    const viewerH = clampViewer(h);
+    writeJson("local", VIEWER_H_KEY, viewerH);
+    set({ viewerH });
   },
   explorerOpen: readJson("local", EXPLORER_KEY, true),
   setExplorerOpen: (explorerOpen) => {

@@ -119,8 +119,11 @@ describe("flag chat-full: one chat surface in three sizes", () => {
       expect(within(list).getByText("Today")).toBeInTheDocument();
       expect(within(list).getByText("Earlier")).toBeInTheDocument();
       expect(within(list).getByText("running")).toBeInTheDocument();
-      expect(screen.getByTestId("chat-explorer")).toBeInTheDocument();
-      // the graph keeps the top of the right pane: its frame starts where the panel ends and stops above the explorer
+      // the page viewer waits for a page: the graph takes the whole right pane until one is opened
+      expect(screen.queryByTestId("chat-explorer")).not.toBeInTheDocument();
+      expect(screen.getByTestId("graph-shell").parentElement?.style.bottom).not.toBe("50%");
+      act(() => useGraphUi.setState({ readerSlug: "idea-margin" }));
+      expect(await screen.findByTestId("chat-explorer")).toBeInTheDocument();
       expect(screen.getByTestId("graph-shell").parentElement).toHaveStyle({ bottom: "50%" });
       // the plan, skills and prompts sit in the chat column's header
       await userEvent.click(screen.getByRole("button", { name: "Plan, skills and prompts" }));
@@ -131,6 +134,9 @@ describe("flag chat-full: one chat surface in three sizes", () => {
       expect(screen.getByTestId("graph-shell").parentElement?.style.bottom).not.toBe("50%");
       await userEvent.click(screen.getByRole("button", { name: "Show the page viewer" }));
       expect(screen.getByTestId("chat-explorer")).toBeInTheDocument();
+      // the chat list and the page viewer resize by their edges
+      expect(screen.getByRole("separator", { name: "Resize the chat list" })).toBeInTheDocument();
+      expect(screen.getByRole("separator", { name: "Resize the page viewer" })).toBeInTheDocument();
       await userEvent.click(screen.getByRole("button", { name: "Back to the panel" }));
       expect(panel).toHaveAttribute("data-size", "panel");
       expect(screen.queryByTestId("chat-explorer")).not.toBeInTheDocument();
