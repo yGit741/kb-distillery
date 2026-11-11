@@ -31,6 +31,7 @@ def world(monkeypatch, tmp_path):
 def make_bundle(root, pages=None):
     os.makedirs(root, exist_ok=True)
     for name, text in (pages or {"alpha.md": PAGE, "beta.md": BETA}).items():
+        os.makedirs(os.path.dirname(os.path.join(root, name)), exist_ok=True)
         with open(os.path.join(root, name), "w", encoding="utf-8") as f:
             f.write(text)
     return str(root)
@@ -235,3 +236,51 @@ def test_bundle_root_links_are_rewritten_relative(world, tmp_path):
 
     broken = make_bundle(tmp_path / "broken", {"alpha.md": PAGE.replace("[beta](beta.md)", "[gone](/gone.md)"), "beta.md": BETA})
     assert any("unresolved: /gone.md" in e for e in import_kb.validate_bundle(broken).errors)
+
+
+def test_raw_and_sibling_folders_come_with_the_bundle(world, tmp_path):
+    src = tmp_path / "kbsrc"
+    make_bundle(src / "wiki", {"alpha.md": PAGE.replace("See [beta](beta.md).", "From [notes](../raw/notes.md) and [x](/raw/x.md); "
+                                                       "run [demo](../examples/demo.py), see [card](../usecase.md)."), "beta.md": BETA})
+    os.makedirs(src / "raw")
+    (src / "raw" / "notes.md").write_text("notes\n")
+    (src / "raw" / "x.md").write_text("x\n")
+    os.makedirs(src / "examples")
+    (src / "examples" / "demo.py").write_text("print(1)\n")
+    (src / "README.md").write_text("not knowledge\n")
+    (src / "usecase.md").write_text("card\n")
+    rep = import_kb.validate_bundle(str(src))
+    assert rep.errors == []
+    assert any("raw/" in w and "examples/" in w for w in rep.warnings)
+    target = import_kb.import_bundle(str(src))
+    assert os.path.isfile(os.path.join(target, "raw", "notes.md"))
+    assert os.path.isfile(os.path.join(target, "raw", "examples", "demo.py"))
+    assert "../raw/examples/demo.py" in open(os.path.join(target, "wiki", "alpha.md"), encoding="utf-8").read()
+    assert os.path.isfile(os.path.join(target, "raw", "usecase.md"))
+    assert "not knowledge" not in open(os.path.join(target, "README.md"), encoding="utf-8").read()
+    tracked = subprocess.run(["git", "ls-files"], cwd=target, capture_output=True, text=True).stdout
+    assert "raw/notes.md" in tracked and "raw/examples/demo.py" in tracked
+
+
+def test_a_raw_link_to_a_missing_file_still_blocks(world, tmp_path):
+    src = tmp_path / "kbsrc"
+    make_bundle(src / "wiki", {"alpha.md": PAGE.replace("See [beta](beta.md).", "See [gone](../raw/gone.md)."), "beta.md": BETA})
+    os.makedirs(src / "raw")
+    rep = import_kb.validate_bundle(str(src))
+    assert any("[boundary]" in e for e in rep.errors)
+
+
+def test_siblings_need_a_raw_folder_and_inner_links_stay(world, tmp_path):
+    loose = tmp_path / "downloads"
+    make_bundle(loose / "wiki")
+    os.makedirs(loose / "photos")
+    rep = import_kb.validate_bundle(str(loose / "wiki"))
+    assert not any("beside wiki/" in w for w in rep.warnings)
+    src = tmp_path / "kbsrc"
+    make_bundle(src / "wiki", {"alpha.md": PAGE, "beta.md": BETA,
+                               "examples/a.md": "---\ntype: idea\nlayer: concept\nmaturity: seed\n---\n# A\n",
+                               "sub/c.md": "---\ntype: idea\nlayer: concept\nmaturity: seed\n---\n# C\n\nSee [a](../examples/a.md).\n"})
+    os.makedirs(src / "raw")
+    os.makedirs(src / "examples")
+    target = import_kb.import_bundle(str(src))
+    assert "](../examples/a.md)" in open(os.path.join(target, "wiki", "sub", "c.md"), encoding="utf-8").read()
