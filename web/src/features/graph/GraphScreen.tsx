@@ -39,7 +39,7 @@ import { computeVisible } from "./rules";
 import { assignAreaColors, colorKey, effectiveColorBy } from "./style";
 import { registerTypeMarks } from "./encoding/spec";
 import { defaultTypes, parseSchema, withDataTypes } from "./schema";
-import { applySubject } from "./subject";
+import { applySubject, subjectOf } from "./subject";
 import { SideReader, type ReaderStep } from "./SideReader";
 import { useGraphUi } from "./store";
 import { Panels } from "./Panels";
@@ -646,6 +646,7 @@ function Loaded({
         byId={byId}
         neighbors={neighbors}
         visible={visible}
+        sourcesView={subjectOf(schema, shownTypes) === "sources"}
         imp={imp}
         className="absolute inset-0"
         onOpenMenu={(id, x, y) => setMenu({ id, x, y })}

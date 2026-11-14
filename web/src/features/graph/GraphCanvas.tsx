@@ -58,6 +58,8 @@ interface Props {
   byId: ReadonlyMap<string, GNode>;
   neighbors: NeighborMap;
   visible: ReadonlySet<string>;
+  /** flag graph-intent: the graph is in its Sources view (the drawn types say so, the same reading as the switch) */
+  sourcesView?: boolean;
   /** the importance score of the visible pages (lab/importance), shared with the rail */
   imp: Importance;
   className?: string;
@@ -150,7 +152,7 @@ const NO_NAMES: ReadonlyMap<string, string> = new Map();
 const CITE_FIT_AIR = 56;
 
 export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
-  { model, byId, neighbors, visible: baseVisible, imp, className, onOpenMenu, onBackgroundContext, onOpenReader, onOpenPile, onClickNode },
+  { model, byId, neighbors, visible: baseVisible, sourcesView = false, imp, className, onOpenMenu, onBackgroundContext, onOpenReader, onOpenPile, onClickNode },
   ref,
 ) {
   const ui = useGraphUi();
@@ -432,7 +434,8 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
   const ringRef = useRef<{ model: GraphModel; linkDistance: number; ring: Map<string, readonly [number, number]> } | null>(null);
   // flag graph-intent, the Sources view (a source page is drawn): sources sit on the left, concepts on the right
   const intentOn = useFlag("graph-intent");
-  const sides = useMemo(() => intentOn && data.nodes.some((n) => n.layer === "source"), [intentOn, data]);
+  // (several knowledge bases keep their own regions: no sides there, and no neutral concepts either)
+  const sides = useMemo(() => intentOn && sourcesView && (model.kbs?.length ?? 0) <= 1 && data.nodes.some((n) => n.layer === "source"), [intentOn, sourcesView, model, data]);
   // ... and in the Concepts view each concept carries a quiet count of its sources, over the whole kb
   const srcCount = useMemo(() => (intentOn ? sourceCounts(model.nodes, neighbors) : null), [intentOn, model, neighbors]);
   const viewRef = useRef({ sides, srcCount });
@@ -478,23 +481,28 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
             },
           }
         : null,
-    [anchors, ui.areaPull, kbIds, sides, ui.linkDistance, data],
+    [anchors, ui.areaPull, kbIds, sides, ui.linkDistance, data.nodes.length],
   );
   // the first layout already uses the mode and pull (settled off screen); only the user's later change animates
   // (compared by value, so StrictMode's second mount run doesn't count as a change)
   const layoutWas = useRef<string | null>(null);
   useEffect(() => {
     const now = `${ui.layoutMode}|${ui.areaPull}|${sides}`;
-    const changed = layoutWas.current !== null && layoutWas.current !== now;
-    const sidesChanged = changed && layoutWas.current!.split("|")[2] !== String(sides);
-    if (changed) fg.current?.reheat();
+    if (layoutWas.current !== null && layoutWas.current !== now) fg.current?.reheat();
     layoutWas.current = now;
-    // switching between Concepts and Sources is a layout command: once the two sides have moved apart (or back),
-    // the camera frames the new shape
-    if (!sidesChanged) return;
+  }, [ui.layoutMode, ui.areaPull, sides]);
+  // switching between Concepts and Sources is a layout command (the switch, `> sources`, or a view that draws the
+  // other subject): once the two sides have moved apart (or back), the camera frames the new shape. Its own effect,
+  // so another layout knob changed meanwhile does not cancel it.
+  const sidesWas = useRef<boolean | null>(null);
+  useEffect(() => {
+    const first = sidesWas.current === null;
+    const same = sidesWas.current === sides;
+    sidesWas.current = sides;
+    if (first || same) return;
     const t = setTimeout(() => useGraphUi.getState().fit(), SIDE_SETTLE_MS);
     return () => clearTimeout(t);
-  }, [ui.layoutMode, ui.areaPull, sides]);
+  }, [sides]);
 
   useEffect(() => {
     fg.current?.refresh();

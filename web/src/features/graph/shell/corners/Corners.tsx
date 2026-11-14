@@ -297,7 +297,7 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
   }, [nodes, visible, shownTypes, ui.hiddenKeys, ui.predicate]);
   // flag graph-intent, Sources view: the colour is the sources' (the concepts beside them are neutral), so the key
   // lists the sources' values only
-  const sourcesOnly = useFlag("graph-intent") && subjectOf(schema, shownTypes) === "sources";
+  const sourcesOnly = intent && subjectOf(schema, shownTypes) === "sources";
   const key = useMemo(
     () => (by === "type" ? [] : colorChannel(by, { ramp }).rows(nodes.filter((n) => keyPool.has(n.id) && (!sourcesOnly || n.layer === "source")))),
     [nodes, keyPool, by, ramp, sourcesOnly],
