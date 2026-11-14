@@ -377,6 +377,23 @@ def math_tokens(src: str, off: int = 0) -> list:
     return em.toks
 
 
+SMALL = 4
+
+
+def kept(old: str, new: str) -> float:
+    """The share of `old`'s content tokens that `new` still has, in order (1.0 = everything kept, with or without
+    additions; also 1.0 when `old` has fewer than SMALL of them). A replacement that keeps little of what it replaces is
+    about some other place of the page."""
+    def content(md):                                                # letters, digits, symbols: not brackets or accents
+        return [t.key.lower() for t in page_tokens(md)[0] if not (t.key.endswith("[") or t.key in ("]", "][")
+                                                                    or t.key.startswith("acc:"))]
+    a, b = content(old), content(new)
+    if len(a) < SMALL:
+        return 1.0                                                  # too short to tell: one symbol is the whole formula
+    same = sum(blk.size for blk in difflib.SequenceMatcher(None, a, b, autojunk=False).get_matching_blocks())
+    return same / len(a)
+
+
 def dollars(text: str) -> int:
     """Unescaped `$` signs in `text`: a replacement that changes their parity would break every formula after it."""
     return len(re.findall(r"(?<!\\)\$", text))

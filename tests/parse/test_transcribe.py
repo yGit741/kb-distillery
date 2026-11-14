@@ -54,7 +54,8 @@ class FakeLLM:
             page = int(r.id[1:])
             if r.id.startswith("p"):
                 text = self.reader_pages.get(page)
-                out.append(llm.Result(r.id, text=text or "", error="" if text else "no reply", usd=0.03, stop_reason="end_turn"))
+                out.append(llm.Result(r.id, text="<<<PAGE\n%sPAGE>>>" % text if text else "", error="" if text else "no reply",
+                                      usd=0.03, stop_reason="end_turn"))
             elif r.id.startswith("a"):
                 f = self.findings.get(page, [])
                 out.append(llm.Result(r.id, text="no json here" if f is None else json.dumps({"findings": f}), usd=0.02,
@@ -193,7 +194,15 @@ def test_transcript_and_marks_read_back(pdf, tmp_path, monkeypatch):
 
 
 def test_reader_drops_a_code_fence_and_refuses_a_cut_reply(pdf, tmp_path, monkeypatch):
-    assert reader.clean("```markdown\n# T\n\ntext\n```") == "# T\n\ntext\n"
+    assert reader.clean("<<<PAGE\n```markdown\n# T\n\ntext\n```\nPAGE>>>") == "# T\n\ntext\n"
+    assert reader.clean("I will skip the plan.\n\n<<<PAGE\n# T\nPAGE>>>\nDone.") == "# T\n"
+    assert reader.clean("I read both images, so here it is:\n# T") is None
+
+    def chatty(requests, backend=None, **kw):
+        return [llm.Result(r.id, text="The task is a single transcription.\n\nSome page text", stop_reason="end_turn") for r in requests]
+    monkeypatch.setattr(llm, "run", chatty)
+    res = reader.read(pdf, [2], str(tmp_path / "w0"), backend="api", log=lambda *_: None)
+    assert res["read"] == [] and "markers" in res["failed"][2]
 
     def cut(requests, backend=None, **kw):
         return [llm.Result(r.id, text="half a page", stop_reason="max_tokens") for r in requests]
@@ -243,9 +252,9 @@ def test_a_fix_that_would_break_a_formula_is_not_applied(pdf, tmp_path, monkeypa
 
 
 def test_a_mark_never_lands_inside_a_word(pdf, tmp_path, monkeypatch):
-    f = {2: [{"snippet": "Second pa", "fix": "Third pa", "page_says": "Third", "severity": "minor", "sure": True}]}
+    f = {2: [{"snippet": "Second pa", "fix": "Sekond pa", "page_says": "Sekond", "severity": "minor", "sure": True}]}
     run(pdf, tmp_path, monkeypatch, FakeLLM(OK, findings=f))
-    assert store.read_page(str(tmp_path / "store"), SHA, 2)["markdown"].startswith("Third page [!](mark:")
+    assert store.read_page(str(tmp_path / "store"), SHA, 2)["markdown"].startswith("Sekond page [!](mark:")
 
 
 def test_a_wrapper_cut_by_a_judged_place_leaves_no_stray_command():
@@ -268,3 +277,16 @@ def test_deep_or_broken_latex_never_crashes():
     for src in ("{" * 3000 + "x" + "}" * 3000, "x_", "x^", "\\frac{", "\\begin", "a\\", "\\sqrt[", "}}}{{{", ""):
         compare.math_tokens(src)
     assert compare.dollars("a $x$ \\$5") == 2
+
+
+def test_a_fix_about_another_place_is_not_applied():
+    assert transcribe.sane_fix("$\\hat{p} \\in \\mathbb{R}^{\\hat{d}}$", "$\\hat{p} \\in \\mathbb{R}^{d}$")
+    assert not transcribe.sane_fix("$\\hat{p} \\in \\mathbb{R}^{\\hat{d}}$", "$\\hat{p}_i = \\hat{C}_i \\hat{B}_i$")
+    assert transcribe.sane_fix("Intro text.", "Intro text. A lost line.")                 # additions keep everything
+    it = judge.Item(1, (0, 12), (0, 12), "$a + b c d$", "$a - b c d$")
+    level, fix, _ = transcribe.decide(it, judge.Verdict(1, "neither", True, "$x_i = y_i z_i w$"))
+    assert level == "!!" and fix is None
+    text, marks = transcribe.audited("so $a + b c d$ holds", [], [{"snippet": "$a + b c d$", "fix": "$q = r s t$", "page_says": "q",
+                                                                   "severity": "serious", "sure": True}])
+    assert text == "so $a + b c d$ holds" and marks[0]["level"] == "!!"
+    assert transcribe.sane_fix("$a$", "$c$")                                              # one symbol: nothing to compare

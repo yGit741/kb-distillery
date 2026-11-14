@@ -64,6 +64,15 @@ def _box_for(boxes: list, a: int, b: int):
     return [min(x[0] for x in hit), min(x[1] for x in hit), max(x[2] for x in hit), max(x[3] for x in hit)]
 
 
+KEEP = 0.4                   # a fix must keep at least this share of the content tokens it replaces
+
+
+def sane_fix(old: str, new: str) -> bool:
+    """A replacement is applied only when it keeps the formula open/closed as it was and is still about the same text:
+    a fix that keeps less than KEEP of the old content tokens was written for some other place of the page."""
+    return compare.dollars(new) % 2 == compare.dollars(old) % 2 and compare.kept(old, new) >= KEEP
+
+
 def decide(item: judge.Item, v: judge.Verdict | None) -> tuple:
     """(level or "", replacement or None, reason) for one judged place."""
     if v is None or not v.verdict:
@@ -71,8 +80,8 @@ def decide(item: judge.Item, v: judge.Verdict | None) -> tuple:
     if v.verdict == "transcript":
         return ("", None, "") if v.sure else ("!", None, "the two readings differ; the judge kept the transcript but was not sure")
     fix = v.fix.strip() if v.fix and v.fix.strip() and v.fix.strip() != item.transcript.strip() else None
-    if fix is not None and compare.dollars(fix) % 2 != compare.dollars(item.transcript) % 2:
-        fix = None                                                  # it would open or close a formula: not applied
+    if fix is not None and not sane_fix(item.transcript, fix):
+        fix = None                                                  # not applied
     if fix is None:
         return "!!", None, "the judge says the transcript is wrong here and gave no usable fix"
     if not v.sure:
@@ -145,8 +154,8 @@ def audited(md: str, marks: list, findings: list | None) -> tuple:
         says = "the auditor: the page says %s" % (f["page_says"] or "something else here")
         span = audit.locate(md, f["snippet"])
         fix = _unwrap(f["fix"]) if f["fix"].strip() and f["fix"].strip() != f["snippet"].strip() else None
-        if span is not None and fix is not None and compare.dollars(fix) % 2 != compare.dollars(md[span[0]:span[1]]) % 2:
-            fix = None                                              # it would open or close a formula: not applied
+        if span is not None and fix is not None and not sane_fix(md[span[0]:span[1]], fix):
+            fix = None                                              # not applied
         if span is None or any(o[0] < span[1] and o[1] > span[0] for o in ops):
             loose.append({"level": "!!", "reason": says + " (near: %s)" % f["snippet"][:60], "other": "", "was": "",
                           "a_span": None, "pos": span[1] if span else 0})
