@@ -7,6 +7,9 @@
   --background: #f3efe6; /* warm paper */
   /* the dots under the graph: a quiet paper texture, never a mark */
   --canvas-dot: rgba(60, 50, 30, 0.1);
+  /* a hollow node's centre: one step lighter than the ground (paper 55% toward white), so a ring reads as a mark
+     on the paper and not as a hole in it, and never as a bright white disc */
+  --node-centre: #f8f6f1;
 }
 
 /* :root.dark, not .dark: this file is imported before index.css, whose :root (same weight as .dark) would win */
@@ -17,6 +20,7 @@
   --popover: #1f2126;
   --muted-foreground: #9aa2b6; /* about 5.3:1 on the muted surface over the card */
   --canvas-dot: rgba(255, 255, 255, 0.06);
+  --node-centre: #232528; /* one step above graphite (6% toward the foreground) */
 }
 
 /* The graph's ground: warm paper with dots (light), graphite with dots (dark). Only under the graph. */
