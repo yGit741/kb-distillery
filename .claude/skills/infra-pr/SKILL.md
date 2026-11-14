@@ -37,7 +37,8 @@ pixi run ship -- pr --title "feat(dashboard): graph legend redesign"
 pixi run ship -- pr --hold                      # the user wants to review it
 pixi run ship -- merge
 pixi run ship -- merge --no-wait                # enqueue and return; run merge again later to finish up
-pixi run ship -- night start --until 07:00     # overnight: no holds, CI decides (expires by itself)
+pixi run ship -- night start --until 07:00     # overnight: no holds, CI decides (expires by itself); gates use every core at normal priority
+pixi run ship -- night report                   # gate durations per load band (was the machine saturated?)
 pixi run ship -- approve 12                     # USER ONLY (blocked for agents); or the owner's GitHub Approve review
 pixi run ship -- status
 pixi run ship -- claims                         # every lane's claimed / touched paths

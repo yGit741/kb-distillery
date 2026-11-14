@@ -17,11 +17,14 @@ import contextlib
 import fcntl
 import json
 import os
+import shutil
 import signal
 import socket
 import subprocess
+import sys
 import time
 
+from kb_distillery.git import night
 from kb_distillery.git.queue import _env_seconds, _pid_alive, common_dir, fmt_age
 
 LOCK_NAME = "kb-gate.lock"
@@ -30,6 +33,9 @@ HELD_ENV = "KB_GATE_SLOT_HELD"
 DEFAULT_WAIT = 45 * 60
 COMMIT_WAIT = 10 * 60  # KB_COMMIT_GATE_WAIT: how long `ship commit` waits for the slot (its gates take about two minutes)
 WORKERS = 4            # KB_GATE_WORKERS: pytest-xdist workers of a local tests gate (a number, or `auto` = one per core)
+NICE = ("nice", "-n", "10")                        # a daytime gate yields to whoever is at the keyboard
+UTILITY = ("taskpolicy", "-c", "utility")          # macOS: the utility scheduler class (not `-b`, which pins a process
+#                                                    to the efficiency cores and throttles its disk access)
 POLL = 0.2
 IDLE_MIN = 10          # KB_GATE_IDLE_MIN: no log output for this long AND ~0% CPU = hung
 STEP_MAX_MIN = 45      # KB_GATE_STEP_MAX_MIN: hard cap for one gate step
@@ -180,25 +186,53 @@ def commit_wait():
     return _env_seconds("KB_COMMIT_GATE_WAIT", COMMIT_WAIT)
 
 
-def workers():
-    """The `-n` value of a local tests gate: KB_GATE_WORKERS (a number, or `auto`), else WORKERS capped by the core
-    count. One worker per core in every lane at once is what overloaded the machine; CI calls pytest itself with
-    `-n auto` and never reads this."""
+def is_night(root):
+    """True while the night window of the repository at `root` is open (`ship night start`): nobody is at the
+    keyboard, so gates may use the whole machine. False when there is no root or the window cannot be read."""
+    if not root:
+        return False
+    try:
+        return night.active(root)
+    except (OSError, ValueError, subprocess.SubprocessError):
+        return False
+
+
+def workers(root=None):
+    """The `-n` value of a local tests gate: KB_GATE_WORKERS (a number, or `auto`); else one per core while the
+    night window is open, and WORKERS capped by the core count by day. One worker per core in every lane at once is
+    what overloaded the machine; CI calls pytest itself with `-n auto` and never reads this."""
     v = os.environ.get("KB_GATE_WORKERS", "").strip().lower()
     if v == "auto":
         return "auto"
     with contextlib.suppress(ValueError):
         if int(v) > 0:
             return str(int(v))
+    if is_night(root):
+        return "auto"
     return str(min(WORKERS, os.cpu_count() or 1))
 
 
-def with_workers(cmd):
-    """`cmd` with the value after pytest's `-n` replaced by `workers()`; unchanged when it has no `-n`."""
+def with_workers(cmd, root=None):
+    """`cmd` with the value after pytest's `-n` replaced by `workers(root)`; unchanged when it has no `-n`."""
     cmd = list(cmd)
     if "-n" in cmd[:-1]:
-        cmd[cmd.index("-n") + 1] = workers()
+        cmd[cmd.index("-n") + 1] = workers(root)
     return cmd
+
+
+def priority_prefix(root=None):
+    """What a real gate command is started through so it does not slow the desktop: by day `nice`, plus the utility
+    scheduler class on macOS; nothing while the night window is open. KB_GATE_PRIORITY=normal turns it off,
+    KB_GATE_PRIORITY=low keeps it on at night too. Measured cost: about 3% on one test file."""
+    choice = os.environ.get("KB_GATE_PRIORITY", "").strip().lower()
+    if choice == "normal" or (choice != "low" and is_night(root)):
+        return []
+    prefix = []
+    if sys.platform == "darwin" and shutil.which(UTILITY[0]):
+        prefix += UTILITY
+    if shutil.which(NICE[0]):
+        prefix += NICE
+    return prefix
 
 
 def load_limit():
