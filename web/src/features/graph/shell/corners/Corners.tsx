@@ -298,11 +298,12 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
     toggle("agent");
     useChatDock.getState().ask(text);
   };
+  // the list stays open (with what was typed) until the thought is saved, so a failed save loses nothing
   const writeThought = (text: string) => {
-    toggle("think");
     void ds
       .captureThink(text)
       .then(() => {
+        if (useCorners.getState().has("think")) toggle("think");
         setNotice("Saved to your Think inbox");
         void qc.invalidateQueries({ queryKey: ["think"] });
       })
@@ -548,7 +549,6 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
                 icon={() => <Brain className="size-3" strokeWidth={1.8} />}
                 onPick={pickThink}
                 onSubmit={writeThought}
-                onClose={() => toggle("think")}
               />
             )
           ) : (
@@ -597,7 +597,6 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
                 icon={() => <Sparkles className="size-3" strokeWidth={1.8} />}
                 onPick={pickAgent}
                 onSubmit={askNew}
-                onClose={() => toggle("agent")}
               />
             )
           ) : (

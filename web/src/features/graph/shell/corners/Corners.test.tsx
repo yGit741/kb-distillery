@@ -965,10 +965,41 @@ describe("graph-corners: the spark and the brain open quick lists", () => {
       await waitFor(() => expect(captureThink).toHaveBeenCalledWith("rank is not additive"));
     }));
 
+  it("the spark: the up arrow picks an older chat and Enter opens it; Enter on an empty line does nothing", () =>
+    withFlag("graph-corners", true, async () => {
+      const ask = vi.spyOn(useChatDock.getState(), "ask");
+      mount(withChats(), {}, { kind: "http" });
+      await userEvent.click(agent());
+      const line = await screen.findByRole("combobox", { name: "Ask something new, or find a chat" });
+      await waitFor(() => expect(within(screen.getByRole("listbox", { name: "Chats" })).getAllByRole("option")).toHaveLength(4));
+      await userEvent.keyboard("{Enter}");
+      expect(ask).not.toHaveBeenCalled();
+      expect(line).toHaveFocus();
+      await userEvent.keyboard("{ArrowUp}{ArrowUp}");
+      const picked = within(screen.getByRole("listbox", { name: "Chats" })).getByRole("option", { selected: true });
+      expect(line).toHaveAttribute("aria-activedescendant", picked.id);
+      expect(picked).toHaveTextContent("What cites Gunasekar 2017?"); // the second newest, one step further from the line
+      await userEvent.keyboard("{Enter}");
+      expect(screen.queryByRole("combobox", { name: "Ask something new, or find a chat" })).toBeNull();
+      expect(ask).not.toHaveBeenCalled();
+      ask.mockRestore();
+    }));
+
+  it("Esc closes the list once and gives the focus back to its button", () =>
+    withFlag("graph-corners", true, async () => {
+      mount(fakeServer(), {}, { kind: "http" });
+      await userEvent.click(think());
+      await screen.findByRole("combobox", { name: "Write a thought, or find a note" });
+      await userEvent.keyboard("{Escape}");
+      expect(screen.queryByRole("combobox", { name: "Write a thought, or find a note" })).toBeNull();
+      expect(think()).toHaveFocus();
+    }));
+
   it("flag off: the spark and the brain still open their fans", () =>
     withFlag("graph-corners", false, async () => {
       mount(fakeServer(), {}, { kind: "http" });
       await userEvent.click(think());
       expect(screen.queryByRole("combobox", { name: "Write a thought, or find a note" })).toBeNull();
+      expect(await screen.findByText("b-note")).toBeInTheDocument(); // a fan card
     }));
 });
