@@ -78,3 +78,16 @@ def test_flag_is_registered_and_dark_by_default():
     from kb_distillery.config.flags import registry
     f = registry.load().get(FLAG)
     assert f.default is False and not any([f.envs.local, f.envs.private, f.envs.public])
+
+
+def test_resolutions_roundtrip_atomic(tmp_path):
+    root, sha = str(tmp_path), "ab" * 20
+    assert store.resolutions(root, sha) == {}
+    store.write_resolution(root, sha, 188, 3, "correct", "ignored", "rank", time="2026-11-14T00:00:00Z")
+    rec = store.write_resolution(root, sha, 188, 4, "fixed", "$x^2$", "rank")
+    got = store.resolutions(root, sha)
+    assert got["p0188/3"] == {"action": "correct", "text": "", "slug": "rank", "time": "2026-11-14T00:00:00Z"}
+    assert got["p0188/4"] == rec and rec["text"] == "$x^2$" and rec["time"].endswith("Z")
+    assert not [n for n in os.listdir(os.path.join(root, sha)) if n.endswith(".tmp")]
+    with pytest.raises(ValueError):
+        store.write_resolution(root, sha, 1, 1, "maybe", "", "rank")

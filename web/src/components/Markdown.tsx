@@ -7,11 +7,15 @@ import rehypeHighlight from "rehype-highlight";
 import rehypeKatex from "rehype-katex";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
+import { useFlag } from "@/flags/useFlag";
 import { cn } from "@/lib/utils";
 
 /** `[[slug]]` or `[[slug|label]]` (the wikilinks left in a page's `## My notes`); the link is marked with this scheme so the renderer can route it. */
 const WIKILINK = /\[\[([^\[\]|\n]+?)(?:\|([^\[\]\n]+?))?\]\]/g;
 const SCHEME = "kbwiki:";
+/** An unsure-formula mark `[!](mark:<sha12>/p0188/3)` (parse transcripts and digests): `!` one voice decided, `!!` unsettled. */
+const DOUBT = "mark:";
+const DOUBT_REF = /^[0-9a-f]{12}\/p\d{4}\/\d+$/;
 /** A page link `slug.md` or `slug.md#heading` (flat, no folder or scheme): `[Title](slug.md)` is how pages link. */
 const PAGE_HREF = /^([^/:#?]+)\.md(#.*)?$/;
 
@@ -73,6 +77,7 @@ function splitText(node: Text): Node[] {
 /** react-markdown's default urlTransform strips unknown schemes; keep ours, drop javascript:/data: etc. */
 function urlTransform(url: string): string {
   if (url.startsWith(SCHEME)) return url;
+  if (url.startsWith(DOUBT) && DOUBT_REF.test(url.slice(DOUBT.length))) return url;
   if (/^(https?:|mailto:|#|\/|\.\.?\/)/i.test(url) || !/^[a-z][a-z0-9+.-]*:/i.test(url)) return url;
   return "";
 }
@@ -93,6 +98,9 @@ export interface MarkdownProps {
   cite?: CiteHooks;
   /** Numbered source markers (pages, Footer variant): a remark plugin that adds `sup[data-source-mark=n]` nodes, and how to draw number `n`. */
   marks?: { plugin: RemarkPlugin; render: (n: number) => ReactNode };
+  /** Unsure-formula marks (flag parsed-pdf): how to draw the mark `ref` (`<sha12>/p0188/3`) of `level`. Without it, or with
+   * the flag off, a mark is plain small text. */
+  doubt?: { render: (ref: string, level: "!" | "!!") => ReactNode };
 }
 
 export interface CiteHooks {
@@ -106,7 +114,10 @@ export interface CiteHooks {
  * to /pages/<slug>. Raw HTML in the source is not rendered (react-markdown escapes it), so there is
  * nothing to sanitise and no dangerouslySetInnerHTML.
  */
-export function Markdown({ children, className, resolveSlug, transformUrl, linkSearch, cite: citeProp, marks }: MarkdownProps) {
+export function Markdown({ children, className, resolveSlug, transformUrl, linkSearch, cite: citeProp, marks, doubt }: MarkdownProps) {
+  const doubtOn = useFlag("parsed-pdf");
+  const doubtRef = useRef(doubtOn ? doubt : undefined);
+  doubtRef.current = doubtOn ? doubt : undefined;
   const marksRef = useRef(marks);
   marksRef.current = marks;
   // read at render through a ref, so a new hooks object (a hover) never rebuilds the components and remounts the links
@@ -115,6 +126,16 @@ export function Markdown({ children, className, resolveSlug, transformUrl, linkS
   const components = useMemo<ComponentProps<typeof ReactMarkdown>["components"]>(
     () => ({
       a({ href, children: kids, node: _node, ...rest }) {
+        if (href?.startsWith(DOUBT)) {
+          const level = String(Array.isArray(kids) ? kids.join("") : kids) === "!!" ? "!!" : "!";
+          const draw = doubtRef.current;
+          if (draw) return <>{draw.render(href.slice(DOUBT.length), level)}</>;
+          return (
+            <span className="ml-0.5 align-super text-[10px] font-semibold text-muted-foreground" data-doubt={level}>
+              {level}
+            </span>
+          );
+        }
         if (href?.startsWith(SCHEME)) {
           const raw = decodeURIComponent(href.slice(SCHEME.length));
           const resolved = resolveSlug ? resolveSlug(raw) : raw;

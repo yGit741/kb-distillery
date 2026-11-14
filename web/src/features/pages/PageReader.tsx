@@ -20,6 +20,7 @@ import { SourcesCountMark, SourcesFooter, SourcesMarginDots, SourcesSideTab, use
 import { HistoryClock, HistoryCompare, HistoryPanel, HistoryTimeline, useHistory, useHistoryEntry } from "./PageHistory";
 import { PAGES_TO, FactBadges, Fold, PageLink, TypeDot } from "./parts";
 import { VideoView, isVideoRaw } from "./VideoView";
+import { DoubtMark } from "@/components/DoubtMark";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -80,6 +81,11 @@ export function PageReader({ g, detail, embed, pinned, onTogglePin, onConnect, v
   const { card, frontmatter: fm } = detail;
   const layer = layerOf(card.type);
   const resolveSlug = useCallback((raw: string) => (g.byId.has(bareSlug(raw)) ? bareSlug(raw) : null), [g]);
+  const doubtReadOnly = !!viewOnly || !!embed;
+  const doubt = useMemo(
+    () => ({ render: (ref: string, level: "!" | "!!") => <DoubtMark ref_={ref} level={level} slug={card.id} readOnly={doubtReadOnly} /> }),
+    [card.id, doubtReadOnly],
+  );
   const markdown = useMemo(() => prepareMarkdown(detail.markdown, (s) => g.byId.get(s)?.title), [detail.markdown, g]);
 
   const authors = fmList(fm, "authors");
@@ -199,7 +205,7 @@ export function PageReader({ g, detail, embed, pinned, onTogglePin, onConnect, v
         ) : historyOn && history.comparing ? (
           <HistoryCompare slug={card.id} h={history} />
         ) : (
-          <Markdown resolveSlug={resolveSlug} linkSearch={linkSearch} marks={marks}>{markdown}</Markdown>
+          <Markdown resolveSlug={resolveSlug} linkSearch={linkSearch} marks={marks} doubt={doubt}>{markdown}</Markdown>
         )}
 
         {chatOn && <PageChat slug={card.id} chat={chat} articleRef={articleRef} />}

@@ -150,3 +150,34 @@ def checked_text(root: str, sha: str, pages: list | None = None) -> str | None:
     if not recs or any(r is None or r["status"] == "needs-human" for r in recs):
         return None
     return "\n\n".join(r["markdown"] for r in recs)
+
+
+RESOLUTION_ACTIONS = ("correct", "fixed")
+
+
+def resolutions_path(root: str, sha: str) -> str:
+    return os.path.join(_dir(root, sha), "resolutions.json")
+
+
+def resolutions(root: str, sha: str) -> dict:
+    """What the owner decided about marks: `{"p0188/3": {action, text, slug, time}}`; empty when nothing is decided."""
+    try:
+        with open(resolutions_path(root, sha), encoding="utf-8") as f:
+            data = json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
+def write_resolution(root: str, sha: str, page: int, mark_id: int, action: str, text: str, slug: str,
+                     time: str | None = None) -> dict:
+    """Record one decision: `correct` (the formula stays as it is, `text` empty) or `fixed` (`text` is the replacement)."""
+    if action not in RESOLUTION_ACTIONS:
+        raise ValueError("action %r not in %s" % (action, RESOLUTION_ACTIONS))
+    import datetime
+    rec = {"action": action, "text": text if action == "fixed" else "", "slug": slug,
+           "time": time or datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")}
+    data = resolutions(root, sha)
+    data["p%04d/%d" % (page, mark_id)] = rec
+    _write_json(resolutions_path(root, sha), data)
+    return rec
