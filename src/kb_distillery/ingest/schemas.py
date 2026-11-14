@@ -1,9 +1,11 @@
 """Validate claims.json and plan.json without third-party deps."""
 import os
+import re
 import sys
 
 from kb_distillery.vault.schema import EQUATION_TYPES, SOURCE_TYPES
 
+MARK_LINK = re.compile(r"\[(!!?)\]\(mark:[0-9a-f]{12}/p\d{4}/\d+\)")
 REQUIRED_CLAIMS = ("raw", "title", "problem", "method", "results", "concepts")
 REQUIRED_PLAN = ("wiki_slug", "type", "link_existing", "create_concepts", "moc_updates", "question_updates")
 
@@ -31,6 +33,14 @@ def validate_claims(data, page_type=None):
     for eq in equations:
         if not isinstance(eq, dict) or "latex" not in eq:
             raise ValueError("each equation needs a latex field")
+        if eq.get("mark") and not (isinstance(eq["mark"], str) and MARK_LINK.fullmatch(eq["mark"].strip())):
+            raise ValueError("an equation's mark must be the mark link exactly as the transcript wrote it")
+    exercises = data.get("exercises", [])
+    if not isinstance(exercises, list) or any(not isinstance(x, dict) or not isinstance(x.get("statement", ""), str)
+                                              for x in exercises):
+        raise ValueError("claims: 'exercises' must be a list of {label, statement}")
+    if not isinstance(data.get("notes", ""), str):
+        raise ValueError("claims: 'notes' must be a string")
     if page_type in EQUATION_TYPES and not any(isinstance(eq["latex"], str) and eq["latex"].strip() not in ("", "—") for eq in equations):
         raise ValueError(f"claims.equations must be non-empty for a {page_type} page (extract defining equations)")
     return True

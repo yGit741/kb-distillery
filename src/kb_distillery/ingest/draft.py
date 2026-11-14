@@ -31,16 +31,33 @@ def _equations_block(equations):
         label = eq.get("label", "")
         if label:
             lines.append(f"**{label}:**")
+        mark = (eq.get("mark") or "").strip()                       # an unsettled formula keeps its mark link
         if "\n" in latex or len(latex) > 80:
             lines.append(f"$${latex}$$")
+            if mark:
+                lines += ["", mark]
         else:
-            lines.append(f"${latex}$")
+            lines.append(f"${latex}$" + (f" {mark}" if mark else ""))
         vars_ = eq.get("variables") or {}
         if vars_:
             vline = ", ".join(f"${k}$: {v}" for k, v in vars_.items())
             lines.append(f"Variables: {vline}")
         lines.append("")
     return "\n".join(lines) if lines else "—"
+
+
+def _exercises_block(claims):
+    """`## Exercises` (a book part's exercises, in full) and `## Notes and references`, each only when claims has it."""
+    out = []
+    rows = [x for x in claims.get("exercises") or [] if (x.get("statement") or "").strip()]
+    if rows:
+        out.append("## Exercises\n")
+        for x in rows:
+            label = (x.get("label") or "").strip()
+            out.append((f"**{label}.** " if label else "") + x["statement"].strip() + "\n")
+    if (claims.get("notes") or "").strip():
+        out.append("## Notes and references\n\n" + claims["notes"].strip() + "\n")
+    return ("\n".join(out) + "\n") if out else ""
 
 
 def _title_yaml(title):
@@ -156,7 +173,7 @@ discussed_with: []
 - {results[-1] if len(results) > 1 else main_result}
 - Concepts: {concepts_links}
 
-## Links out
+{_exercises_block(claims)}## Links out
 
 - Concepts: {concepts_links}
 {links_person}"""
