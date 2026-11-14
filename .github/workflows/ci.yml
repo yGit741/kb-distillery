@@ -16,6 +16,11 @@
 # fan-in that is green only when every other job succeeded (cancelled or skipped count as red). Branch
 # protection names `all-green` alone, so the shards need no naming there.
 #
+# `docker` and `install-macos` are the slow platform jobs: on a pull request they run only when it touches their
+# files (the `changes` job decides: the Dockerfile and its smoke script, install.sh, the dependency files, this
+# workflow), and `all-green` accepts their skip there and nowhere else. A merge-queue group, a push to main and a
+# manual dispatch always run both.
+#
 # Concurrency: a newer push to the same PR replaces its running check; a merge-group run is never cancelled
 # (GitHub treats a cancelled group as failed and drops it from the queue).
 #
@@ -188,7 +193,33 @@ jobs:
       - run: pixi run web-install   # esbuild + js-yaml for the Worker inbox's checker bundle (worker-bundle)
       - run: pixi run test-worker
 
+  changes:     # which platform jobs this pull request needs: one whose files it touches (every other event runs both)
+    runs-on: ubuntu-latest
+    outputs:
+      docker: ${{ steps.diff.outputs.docker }}
+      macos: ${{ steps.diff.outputs.macos }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Does this pull request touch the image or the installer?
+        id: diff
+        env:
+          BASE: ${{ github.base_ref }}
+          EVENT: ${{ github.event_name }}
+        run: |
+          touched() { [ "$EVENT" != pull_request ] || ! git diff --quiet "origin/$BASE...HEAD" -- "$@"; }
+          if touched .github/workflows/ci.yml pyproject.toml pixi.toml pixi.lock Dockerfile .dockerignore .github/scripts/docker-smoke.sh; then
+            echo "docker=1" >> "$GITHUB_OUTPUT"
+          fi
+          if touched .github/workflows/ci.yml pyproject.toml pixi.toml pixi.lock install.sh; then
+            echo "macos=1" >> "$GITHUB_OUTPUT"
+          fi
+          cat "$GITHUB_OUTPUT"
+
   docker:     # builds ./Dockerfile for real (linux/amd64, nothing is pushed) and runs the CLI inside the image
+    needs: changes
+    if: needs.changes.outputs.docker == '1'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -244,6 +275,8 @@ jobs:
           KB_DISTILLERY_HOME="$RUNNER_TEMP/knowledge" pixi run distill doctor --kb my-kb
 
   install-macos:     # the same on Apple silicon (one plain runner label per job: the fork-safety test rejects expressions)
+    needs: changes
+    if: needs.changes.outputs.macos == '1'
     runs-on: macos-latest
     timeout-minutes: 20
     steps:
@@ -257,14 +290,24 @@ jobs:
           pixi run distill --help
           KB_DISTILLERY_HOME="$RUNNER_TEMP/knowledge" pixi run distill doctor --kb my-kb
 
-  all-green:     # the one required check: every job above succeeded (cancelled or skipped is red too)
-    needs: [lint, tests, web, checks, wheel, worker, docker, install-linux, install-macos]
+  all-green:     # the one required check: every job above succeeded (cancelled or skipped is red too, but see below)
+    needs: [changes, lint, tests, web, checks, wheel, worker, docker, install-linux, install-macos]
     if: always()
     runs-on: ubuntu-latest
     steps:
-      - name: Every job succeeded
+      - name: Every job succeeded (docker and install-macos may be skipped on a pull request that touches none of their files)
         env:
-          RESULTS: ${{ join(needs.*.result, ' ') }}
+          NEEDS: ${{ toJSON(needs) }}
+          EVENT: ${{ github.event_name }}
         run: |
-          echo "$RESULTS"
-          for r in $RESULTS; do [ "$r" = success ] || exit 1; done
+          python3 -c '
+          import json, os, sys
+          may_skip = {"docker", "install-macos"} if os.environ["EVENT"] == "pull_request" else set()
+          bad = []
+          for job, need in sorted(json.loads(os.environ["NEEDS"]).items()):
+              result = need["result"]
+              print(job, result)
+              if result != "success" and not (result == "skipped" and job in may_skip):
+                  bad.append(job)
+          sys.exit("not green: " + ", ".join(bad) if bad else 0)
+          '

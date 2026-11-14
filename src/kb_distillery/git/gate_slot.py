@@ -28,6 +28,8 @@ LOCK_NAME = "kb-gate.lock"
 HOLDER_NAME = "kb-gate.holder"
 HELD_ENV = "KB_GATE_SLOT_HELD"
 DEFAULT_WAIT = 45 * 60
+COMMIT_WAIT = 10 * 60  # KB_COMMIT_GATE_WAIT: how long `ship commit` waits for the slot (its gates take about two minutes)
+WORKERS = 4            # KB_GATE_WORKERS: pytest-xdist workers of a local tests gate (a number, or `auto` = one per core)
 POLL = 0.2
 IDLE_MIN = 10          # KB_GATE_IDLE_MIN: no log output for this long AND ~0% CPU = hung
 STEP_MAX_MIN = 45      # KB_GATE_STEP_MAX_MIN: hard cap for one gate step
@@ -99,7 +101,8 @@ class Sequence:
                     announced = True
                 if time.monotonic() - started > self.wait:
                     raise GateSlotTimeout(f"gate slot: gave up after {fmt_age(self.wait)} waiting for "
-                                          f"{_describe(_holder(self.qdir))} — raise KB_GATE_WAIT or check "
+                                          f"{_describe(_holder(self.qdir))} — raise KB_GATE_WAIT "
+                                          f"(KB_COMMIT_GATE_WAIT for `ship commit`) or check "
                                           f"{os.path.join(self.qdir, HOLDER_NAME)}")
                 time.sleep(POLL)
         except BaseException:
@@ -170,6 +173,32 @@ def tree_cpu(pgid, window=1.5, sleep=time.sleep):
     before = _group_cpu_seconds(pgid)
     sleep(window)
     return max(0.0, _group_cpu_seconds(pgid) - before) / window * 100.0
+
+
+def commit_wait():
+    """Seconds `ship commit` waits for the slot before it gives up (KB_COMMIT_GATE_WAIT)."""
+    return _env_seconds("KB_COMMIT_GATE_WAIT", COMMIT_WAIT)
+
+
+def workers():
+    """The `-n` value of a local tests gate: KB_GATE_WORKERS (a number, or `auto`), else WORKERS capped by the core
+    count. One worker per core in every lane at once is what overloaded the machine; CI calls pytest itself with
+    `-n auto` and never reads this."""
+    v = os.environ.get("KB_GATE_WORKERS", "").strip().lower()
+    if v == "auto":
+        return "auto"
+    with contextlib.suppress(ValueError):
+        if int(v) > 0:
+            return str(int(v))
+    return str(min(WORKERS, os.cpu_count() or 1))
+
+
+def with_workers(cmd):
+    """`cmd` with the value after pytest's `-n` replaced by `workers()`; unchanged when it has no `-n`."""
+    cmd = list(cmd)
+    if "-n" in cmd[:-1]:
+        cmd[cmd.index("-n") + 1] = workers()
+    return cmd
 
 
 def load_limit():
