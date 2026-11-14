@@ -81,7 +81,7 @@ export function EmbeddingLayer({ nodes, neighbors }: { nodes: readonly GNode[]; 
   useEffect(() => {
     if (!view) return;
     const c = useCorners.getState();
-    if (c.order.includes("legend") === (view === "missing")) c.toggle("legend");
+    if (c.order.includes("legend") === (view === "missing")) c.toggle("legend", { remember: false });
   }, [view]);
 
   if (!on || !r || !view) return null;

@@ -16,7 +16,9 @@ interface CornersState {
 
   has: (l: Layer) => boolean;
   /** Pins close both fans; a fan closes the pins; the two fans may be open together. */
-  toggle: (l: "pins" | "think" | "agent" | "legend" | "types") => void;
+  /** `remember: false` for a toggle the app makes itself (a view opening or folding the legend): only the user's own
+   *  minus or opener is saved */
+  toggle: (l: "pins" | "think" | "agent" | "legend" | "types", opts?: { remember?: boolean }) => void;
   openMenu: (owner: MenuOwner, id?: string) => void;
   closeMenu: () => void;
   startEdit: (e: Edit) => void;
@@ -71,10 +73,10 @@ export const useCorners = create<CornersState>((set, get) => ({
   activeView: null,
 
   has: (l) => get().order.includes(l),
-  toggle: (l) =>
+  toggle: (l, opts) =>
     set((s) => {
       let base = s.order;
-      if (LEGENDS.includes(l)) rememberFolded(l, base.includes(l));
+      if (LEGENDS.includes(l) && opts?.remember !== false) rememberFolded(l, base.includes(l));
       if (base.includes(l)) base = without(base, l);
       else {
         // pins close both fans, a fan closes the pins, the two fans may be open together
