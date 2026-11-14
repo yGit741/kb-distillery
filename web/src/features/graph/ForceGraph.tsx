@@ -20,6 +20,8 @@ export interface Forces {
 export interface Anchor {
   target: (n: SimNode) => readonly [number, number] | null;
   strength: number;
+  /** discs no free node may enter (Citations by meaning: the uncited clumps); one that drifts in is put on the rim */
+  keepOut?: readonly { x: number; y: number; r: number }[];
 }
 
 /** What the canvas asks of the host. All callbacks may change identity between renders. */
@@ -171,6 +173,8 @@ export const ForceGraph = forwardRef<ForceGraphHandle, ForceGraphProps & { class
       .linkWidth((l) => latest.current.linkWidth(asLink(l)))
       .linkLabel((l) => latest.current.linkLabel(asLink(l)))
       .linkCanvasObject((l, ctx, s) => latest.current.drawLinkAfter(asLink(l), ctx, s))
+      // a citation bends a little, always the same way, so links into one paper separate and their direction reads
+      .linkCurvature((l) => (asLink(l as LinkObject).kind === "cites" ? 0.12 : 0))
       .linkDirectionalArrowRelPos(0.85)
       .onNodeHover((n) => latest.current.onNodeHover(asSim(n)))
       .onNodeClick((n, ev) => latest.current.onNodeClick(n as SimNode, ev))
@@ -199,6 +203,23 @@ export const ForceGraph = forwardRef<ForceGraphHandle, ForceGraphProps & { class
           const m = n as SimNode & { vx?: number; vy?: number };
           m.vx = (m.vx ?? 0) + (t[0] - n.x) * a.strength * alpha;
           m.vy = (m.vy ?? 0) + (t[1] - n.y) * a.strength * alpha;
+        }
+        if (!a.keepOut?.length) return;
+        for (const n of simNodes) {
+          if (n.fx != null || n.x == null || n.y == null) continue;
+          for (const d of a.keepOut) {
+            const dx: number = n.x - d.x;
+            const dy: number = n.y - d.y;
+            const dist: number = Math.hypot(dx, dy);
+            if (dist >= d.r) continue;
+            const ux: number = dist > 1e-3 ? dx / dist : 1;
+            const uy: number = dist > 1e-3 ? dy / dist : 0;
+            n.x = d.x + ux * d.r;
+            n.y = d.y + uy * d.r;
+            const m = n as SimNode & { vx?: number; vy?: number };
+            m.vx = (m.vx ?? 0) * 0.5;
+            m.vy = (m.vy ?? 0) * 0.5;
+          }
         }
       },
       { initialize: (ns: NodeObject[]) => void (simNodes = ns as SimNode[]) },
@@ -345,7 +366,7 @@ export const ForceGraph = forwardRef<ForceGraphHandle, ForceGraphProps & { class
   useEffect(() => {
     // a cites link always shows who cites whom; other links only with the Directional arrows setting (the accessor
     // reads each link's kind when it draws, so only the setting is a dependency)
-    fg.current?.linkDirectionalArrowLength((l) => (props.arrows || asLink(l as LinkObject).kind === "cites" ? 4 : 0));
+    fg.current?.linkDirectionalArrowLength((l) => (props.arrows || asLink(l as LinkObject).kind === "cites" ? 3 : 0));
   }, [props.arrows]);
 
   useImperativeHandle(

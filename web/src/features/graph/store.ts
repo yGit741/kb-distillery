@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { flag } from "@/flags";
 import type { GraphView } from "./pageSearch";
 import { DEFAULT_LAB, sanitizeLab, type LabConfig } from "./lab/config";
 import { DEFAULT_STORY, storyById, storyLab, type LayoutMode } from "./lab/views";
@@ -249,7 +250,8 @@ export const useGraphUi = create<GraphUiState>((set, get) => ({
       view: null,
       hiddenKeys: new Set(),
       hiddenLinkKinds: new Set(),
-      quick: { ...QUICK_OFF, ...st.quick },
+      // Citations by meaning draws the uncited papers too (quiet clumps on the rim), so it drops the Connected filter
+      quick: st.id === "citations" && flag("citations-meaning") ? { ...QUICK_OFF } : { ...QUICK_OFF, ...st.quick },
       revealed: new Set(),
     });
   },

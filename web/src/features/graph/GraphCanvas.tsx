@@ -35,7 +35,9 @@ import { drawPile, formatOfPile, isPile, isPileId, pileRadius } from "./rawLayer
 import { DRAG_PX } from "./selection";
 import { useGraphUi } from "./store";
 import { useDecor } from "./tools/decor";
-import { meaningPositions } from "./embedding/model";
+import { meaningPositions, topicIndex } from "./embedding/model";
+import { useEmbedding } from "./embedding/EmbeddingLayer";
+import { rimLayout, type RimLabel, type RimLayout } from "./citationRim";
 import { useEmbedView } from "./embedding/store";
 import { useCorners } from "./shell/corners/cornersStore";
 import { drawNode as drawNodeMark } from "./encoding/canvas";
@@ -103,6 +105,29 @@ const SIDE_SETTLE_MS = 1400;
 const MAP_FIT_BOTTOM = 150;
 /** the meaning map draws links at this share of their usual opacity */
 const MAP_EDGE = 0.12;
+/** Citations by meaning: a cites link's opacity at rest (thin and light, but the web still reads; overlaps darken) */
+const RIM_EDGE = 0.5;
+
+/** The topic names of Citations by meaning, on each clump's outer side, at a constant screen size. */
+function drawRimLabels(ctx: CanvasRenderingContext2D, labels: readonly RimLabel[], scale: number, colors: CanvasColors) {
+  ctx.save();
+  const px = 12 / scale;
+  for (const l of labels) {
+    ctx.textAlign = l.align;
+    ctx.textBaseline = l.baseline < 0 ? "bottom" : l.baseline > 0 ? "top" : "middle";
+    ctx.font = `600 ${px}px ${colors.font}`;
+    ctx.fillStyle = colors.text;
+    const name = l.name;
+    ctx.fillText(name, l.x, l.y);
+    const w = ctx.measureText(name + "  ").width;
+    ctx.font = `400 ${px}px ${colors.font}`;
+    ctx.fillStyle = colors.muted;
+    const cx = l.align === "left" ? l.x + w : l.align === "right" ? l.x - w : l.x;
+    if (l.align === "center") ctx.fillText(String(l.count), l.x, l.y + (l.baseline > 0 ? px * 1.2 : -px * 1.2));
+    else ctx.fillText(String(l.count), cx, l.y);
+  }
+  ctx.restore();
+}
 /** px kept free on the right of the meaning map for the open colour legend */
 const MAP_FIT_RIGHT = 290;
 const COUNT_MIN_PX = 9;
@@ -332,8 +357,10 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
   const layered = useMemo(() => layeredRadii(model.nodes.filter((n) => shown.has(n.id) && !popSet.has(n.id)), radiusOpts), [model, shown, radiusOpts, popSet]);
   const layeredRef = useRef(layered);
   layeredRef.current = layered;
+  // uncited papers in a Citations-by-meaning clump are drawn smaller and quieter: context, not the subject
+  const quietRef = useRef<ReadonlySet<string>>(new Set());
   const radius = useCallback(
-    (n: GNode) => (isPile(n) ? pileRadius(n) : (layeredRef.current?.get(n.id) ?? nodeRadius(n, radiusRef.current))),
+    (n: GNode) => (isPile(n) ? pileRadius(n) : (layeredRef.current?.get(n.id) ?? nodeRadius(n, radiusRef.current)) * (quietRef.current.has(n.id) ? 0.75 : 1)),
     [],
   );
 
@@ -503,6 +530,35 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
     }
     return true;
   }, [data, mapOn, pcs, axes, ui.linkDistance]);
+  // flag citations-meaning, the Citations view: papers grouped by their embedding topic, each topic's uncited papers
+  // pinned as a clump on the rim and its cited ones pulled toward the middle (./citationRim)
+  const rimFlag = useFlag("citations-meaning");
+  const liveStory = liveEdgeStory(ui.edgeStory, ui.shownTypes, storyById);
+  const { report: embedding } = useEmbedding();
+  const rimPins = useRef(new Set<string>());
+  const rim = useMemo<RimLayout | null>(() => {
+    const nodes = data.nodes as SimNode[];
+    for (const n of nodes) if (rimPins.current.has(n.id)) n.fx = n.fy = undefined;
+    rimPins.current.clear();
+    if (!rimFlag || liveStory !== "citations" || !embedding || meaning) return null;
+    const t = topicIndex(embedding);
+    const papers = nodes.filter((n) => !isPile(n));
+    const order = embedding.clusters.map((c) => c.id);
+    const rs0 = papers.map((n) => radius(n)).sort((a, b) => a - b);
+    const dot = 2 * (rs0[rs0.length >> 1] || 4);
+    const out = rimLayout(papers.map((n) => ({ id: n.id, degree: (n.inDegree ?? 0) + (n.outDegree ?? 0) })), (id) => t.of.get(id), t.names, dot, order);
+    for (const n of nodes) {
+      const p = out.pins.get(n.id);
+      if (!p) continue;
+      n.fx = n.x = p[0];
+      n.fy = n.y = p[1];
+      rimPins.current.add(n.id);
+    }
+    return out;
+  }, [data, rimFlag, liveStory, embedding, meaning, radius]);
+  const rimRef = useRef(rim);
+  rimRef.current = rim;
+  quietRef.current = rim ? new Set(rim.pins.keys()) : new Set();
   const anchors = useMemo(() => {
     const nodes = data.nodes as SimNode[];
     if (meaning) return null;
@@ -532,6 +588,8 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
         ? null
         : kbIds.length
         ? { strength: 0.12, target: (n) => (n.kb ? (kbAnchor.current.get(n.kb) ?? null) : null) }
+        : rim
+        ? { strength: 0.06, target: (n) => rim.pull.get(n.id) ?? null, keepOut: rim.discs }
         : viewForces?.pack
         ? { strength: viewForces.pack, target: () => [0, 0] }
         : sides
@@ -549,7 +607,7 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
             },
           }
         : null,
-    [anchors, ui.areaPull, kbIds, sides, ui.linkDistance, data.nodes.length, viewForces, meaning],
+    [anchors, ui.areaPull, kbIds, sides, ui.linkDistance, data.nodes.length, viewForces, meaning, rim],
   );
   // the first layout already uses the mode and pull (settled off screen); only the user's later change animates
   // (compared by value, so StrictMode's second mount run doesn't count as a change)
@@ -943,7 +1001,7 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
       const tk = live.current.think;
       const r0 = radius(n) * (live.current.ui.spotlight?.has(n.type) ? 1.3 : 1) * (tk?.pop.has(n.id) ? popScale(popAt.current.get(n.id), performance.now()) : 1);
       const r = semanticRadius(r0, scale, rs.current.zr);
-      const alpha = fadedNodeOpacity(n.id, focus, rs.current.prevFocus, rs.current.fadeT);
+      const alpha = fadedNodeOpacity(n.id, focus, rs.current.prevFocus, rs.current.fadeT) * (rimRef.current?.pins.has(n.id) ? 0.7 : 1);
       const isSel = selected.has(n.id);
       const halo = useDecor.getState().halo?.get(n.id);
       if (halo) {
@@ -1072,6 +1130,8 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
       // one outline per knowledge base when several share the canvas; no area tints (they had no legend, overlapped,
       // and put a second colour meaning under the node colouring)
       if (kbIds.length) drawKbOutlines(ctx, kbGroups(g.nodes().filter((n) => !isPile(n))), scale, rs.current.colors.muted);
+      const rl = rimRef.current?.labels;
+      if (rl?.length) drawRimLabels(ctx, rl, scale, rs.current.colors);
     },
     [names, kbIds],
   );
@@ -1089,7 +1149,8 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
       const cfg = live.current.ui.lab;
       const res = drawLabelLayer({
         ctx,
-        nodes: g.nodes().filter((n) => !isPile(n)),
+        // a quiet clump's papers carry no standing label (the clump is named); hover still names one
+        nodes: g.nodes().filter((n) => !isPile(n) && (!quietRef.current.has(n.id) || n.id === rs.current.hover)),
         fitIds: coreRef.current,
         width: el.clientWidth,
         height: el.clientHeight,
@@ -1171,7 +1232,8 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
     // a popped source brings only its links to the answer's pages (flag show-thinking)
     const tk = live.current.think;
     if (tk && (tk.pop.has(a) || tk.pop.has(b)) && !tk.links.has(linkKey(a, b))) return withAlpha(colors.link, 0);
-    return withAlpha(colors.link, fade * fadedLinkOpacity(a, b, focus, prevFocus, fadeT, live.current.ui.linkOpacity * (calmOn ? CALM_EDGE : 1) * mapEdge, l.kind));
+    const base = rimRef.current && l.kind === "cites" ? RIM_EDGE : live.current.ui.linkOpacity * (calmOn ? CALM_EDGE : 1) * mapEdge;
+    return withAlpha(colors.link, fade * fadedLinkOpacity(a, b, focus, prevFocus, fadeT, base, l.kind));
   }, [calmOn]);
   const linkWidth = useCallback((l: SimLink) => (l.kind === "shared" ? 0.35 + Math.min(l.shared ?? 1, 6) * 0.1 : 0.8), []);
   const linkLabel = useCallback(

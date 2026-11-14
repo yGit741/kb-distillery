@@ -1,3 +1,4 @@
+import { withFlag } from "@/flags/testing";
 import { DEFAULT_PREFS, loadPrefs, savePrefs, useGraphUi } from "./store";
 
 const ALL = ["paper", "course", "topic", "idea", "person"];
@@ -116,9 +117,12 @@ describe("views (user stories)", () => {
   });
   it("Citations keeps drawing its cites links through a legend click, and drops them on another view", () => {
     const g = useGraphUi.getState;
-    g().applyStory("citations");
-    expect(g().edgeStory).toBe("citations");
+    // with the uncited papers drawn as clumps (flag citations-meaning) the view drops its Connected filter
+    withFlag("citations-meaning", false, () => g().applyStory("citations"));
     expect(g().quick.connected).toBe(1);
+    withFlag("citations-meaning", true, () => g().applyStory("citations"));
+    expect(g().quick.connected).toBe(0);
+    expect(g().edgeStory).toBe("citations");
     g().toggleKey("Ingest only");
     expect(g().story).toBe("");
     expect(g().edgeStory).toBe("citations");
