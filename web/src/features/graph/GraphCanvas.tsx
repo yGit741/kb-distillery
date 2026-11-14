@@ -36,6 +36,7 @@ import { useGraphUi } from "./store";
 import { useDecor } from "./tools/decor";
 import { meaningPositions } from "./embedding/model";
 import { useEmbedView } from "./embedding/store";
+import { useCorners } from "./shell/corners/cornersStore";
 import { drawNode as drawNodeMark } from "./encoding/canvas";
 import { drawReplayMark, drawReplayPath, LIT_DIM } from "./shell/replayDraw";
 import { linkKey, popSources } from "./shell/thinking";
@@ -636,7 +637,7 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
     const pick = core.size > 1 ? (n: SimNode) => core.has(n.id) || isPile(n) : undefined;
     // the meaning map frames every page with room under it, so the lowest labels stay clear of the subject switch
     // (positions not settled yet: the usual fit, so the camera is never left unframed)
-    const mapped = useEmbedView.getState().view === "map" && !!fg.current?.fitIn(pick ?? (() => true), 0, ms, 72, 96, MAP_FIT_BOTTOM, MAP_FIT_RIGHT);
+    const mapped = useEmbedView.getState().view === "map" && !!fg.current?.fitIn(pick ?? (() => true), 0, ms, 72, 96, MAP_FIT_BOTTOM, useCorners.getState().order.includes("legend") ? MAP_FIT_RIGHT : 0);
     if (!mapped) fg.current?.fit(pick, ms);
     framed.current = true;
     window.setTimeout(() => {
@@ -1171,13 +1172,14 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
     const a = endId(l.source);
     const b = endId(l.target);
     // the meaning map: position carries the meaning, so links stay a faint trace (not the force layout's web)
-    const fade = (useDecor.getState().linkFade?.(a, b) ?? 1) * (useEmbedView.getState().view === "map" ? MAP_EDGE : 1);
+    const fade = useDecor.getState().linkFade?.(a, b) ?? 1;
+    const mapEdge = useEmbedView.getState().view === "map" ? MAP_EDGE : 1;
     // a hidden kind keeps its place in the layout and is simply not drawn
     if (live.current.ui.hiddenLinkKinds.has(l.kind)) return withAlpha(colors.link, 0);
     // a popped source brings only its links to the answer's pages (flag show-thinking)
     const tk = live.current.think;
     if (tk && (tk.pop.has(a) || tk.pop.has(b)) && !tk.links.has(linkKey(a, b))) return withAlpha(colors.link, 0);
-    return withAlpha(colors.link, fade * fadedLinkOpacity(a, b, focus, prevFocus, fadeT, live.current.ui.linkOpacity * (calmOn ? CALM_EDGE : 1), l.kind));
+    return withAlpha(colors.link, fade * fadedLinkOpacity(a, b, focus, prevFocus, fadeT, live.current.ui.linkOpacity * (calmOn ? CALM_EDGE : 1) * mapEdge, l.kind));
   }, [calmOn]);
   const linkWidth = useCallback((l: SimLink) => (l.kind === "shared" ? 0.35 + Math.min(l.shared ?? 1, 6) * 0.1 : 0.8), []);
   const linkLabel = useCallback(
