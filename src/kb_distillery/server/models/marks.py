@@ -25,10 +25,12 @@ class MarkDetail(ApiModel):
     crop_url: str | None = None
     resolution: MarkResolution | None = None
     read_only: bool = False
+    default_backend: str = "subscription"   # $KB_LLM_BACKEND, else subscription
 
 
 class MarkResolveRequest(ApiModel):
     slug: str
+    expected_current: str | None = None   # the formula as shown; 409 when the page now holds another
 
 
 class MarkFixRequest(ApiModel):
@@ -46,6 +48,7 @@ class MarkFixReply(ApiModel):
 class MarkApplyRequest(ApiModel):
     slug: str
     replacement: str
+    expected_current: str | None = None   # `current` from fix; 409 when the page changed since
 
 
 class MarkStepResult(ApiModel):
@@ -53,3 +56,4 @@ class MarkStepResult(ApiModel):
     slug: str
     commit: str | None = None       # the kb(refine) commit
     version: str | None = None
+    warning: str | None = None      # the page changed but the decision was not recorded

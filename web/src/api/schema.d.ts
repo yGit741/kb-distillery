@@ -4742,6 +4742,8 @@ export interface components {
         };
         /** MarkApplyRequest */
         MarkApplyRequest: {
+            /** Expected Current */
+            expected_current?: string | null;
             /** Replacement */
             replacement: string;
             /** Slug */
@@ -4757,6 +4759,11 @@ export interface components {
         MarkDetail: {
             /** Crop Url */
             crop_url?: string | null;
+            /**
+             * Default Backend
+             * @default subscription
+             */
+            default_backend: string;
             /** Id */
             id: unknown;
             /** Level */
@@ -4840,6 +4847,8 @@ export interface components {
         };
         /** MarkResolveRequest */
         MarkResolveRequest: {
+            /** Expected Current */
+            expected_current?: string | null;
             /** Slug */
             slug: string;
         } & {
@@ -4855,6 +4864,8 @@ export interface components {
             slug: string;
             /** Version */
             version?: string | null;
+            /** Warning */
+            warning?: string | null;
         } & {
             [key: string]: unknown;
         };

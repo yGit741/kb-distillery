@@ -28,7 +28,7 @@
     "cmdk": "^1.0.0",
     "force-graph": "1.43.5",
     "js-yaml": "4.3.2",
-    "katex": "^0.19.1",
+    "katex": "^0.16.47",
     "lucide-react": "^0.460.0",
     "openapi-fetch": "^0.17.0",
     "react": "^19.0.0",

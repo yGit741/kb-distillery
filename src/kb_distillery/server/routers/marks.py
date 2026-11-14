@@ -37,7 +37,7 @@ def get_crop(sha12: str, page: str, mark_id: int):
 @router.post(BASE + "/resolve", dependencies=[Depends(refuse_when_read_only)], response_model=MarkStepResult, responses=ERRORS,
              summary="Correct as is: remove the mark link from the page, keep the formula (one knowledge step)")
 def resolve(sha12: str, page: str, mark_id: int, body: MarkResolveRequest):
-    return _call(svc.resolve, sha12, page, mark_id, body.slug)
+    return _call(svc.resolve, sha12, page, mark_id, body.slug, body.expected_current)
 
 
 @router.post(BASE + "/fix", dependencies=[Depends(refuse_when_read_only)], response_model=MarkFixReply, responses=ERRORS,
@@ -51,4 +51,4 @@ def fix(sha12: str, page: str, mark_id: int, body: MarkFixRequest):
 @router.post(BASE + "/apply", dependencies=[Depends(refuse_when_read_only)], response_model=MarkStepResult, responses=ERRORS,
              summary="Approve a fix: replace the formula the mark follows and remove the mark (one knowledge step)")
 def apply(sha12: str, page: str, mark_id: int, body: MarkApplyRequest):
-    return _call(svc.apply, sha12, page, mark_id, body.slug, body.replacement)
+    return _call(svc.apply, sha12, page, mark_id, body.slug, body.replacement, body.expected_current)

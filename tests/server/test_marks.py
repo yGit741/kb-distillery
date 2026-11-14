@@ -132,7 +132,7 @@ def test_apply_replaces_the_formula(client, kb):
 
 def test_apply_refuses_odd_dollars_and_changed_form(client, kb):
     before, n = page(kb), commits(kb)
-    for bad in ("$r = n + 1", "$$r$$"):
+    for bad in ("$r = n + 1", "$$r$$", "$a$ [x](https://example.com) $b$"):
         r = client.post(f"{BASE}/3/apply", json={"slug": "rank", "replacement": bad}, headers=LOOPBACK)
         assert r.status_code == 422
     assert page(kb) == before and commits(kb) == n
@@ -151,3 +151,45 @@ def test_read_only_kb_refuses(client, kb):
 def test_read_only_server_refuses_with_405(client, kb):
     with mock.patch.dict(os.environ, {"KB_READ_ONLY": "1"}):
         assert client.post(f"{BASE}/3/fix", json={"slug": "rank", "instruction": "x"}, headers=LOOPBACK).status_code == 405
+
+
+def test_apply_refuses_when_the_page_changed(client, kb):
+    r = client.post(f"{BASE}/3/apply", json={"slug": "rank", "replacement": "$r = n + 1$", "expected_current": "$r = 0$"},
+                    headers=LOOPBACK)
+    assert r.status_code == 409 and "changed" in r.json()["detail"]
+    ok = client.post(f"{BASE}/3/apply", json={"slug": "rank", "replacement": "$r = n + 1$",
+                                              "expected_current": "$r = n - 1$"}, headers=LOOPBACK)
+    assert ok.status_code == 200 and "$r = n + 1$ here." in page(kb)
+
+
+def test_apply_checks_page_before_replacement(client, kb):
+    r = client.post(f"{BASE}/3/apply", json={"slug": "nope", "replacement": "$x"}, headers=LOOPBACK)
+    assert r.status_code == 404
+
+
+def test_fix_on_read_only_kb_spends_no_call(client, kb):
+    with open(os.path.join(kb, "kb.toml"), "w", encoding="utf-8") as f:
+        f.write('[kb]\nread_only = true\n')
+    with mock.patch.object(svc.llm, "ask") as ask:
+        r = client.post(f"{BASE}/3/fix", json={"slug": "rank", "instruction": "x"}, headers=LOOPBACK)
+    assert r.status_code == 403 and not ask.called
+
+
+def test_default_backend_comes_from_env(client, kb):
+    with mock.patch.dict(os.environ, {"KB_LLM_BACKEND": "api"}):
+        assert MarkDetail.model_validate(client.get(f"{BASE}/3").json()).default_backend == "api"
+
+
+def test_resolution_write_failure_is_a_warning(client, kb):
+    with mock.patch.object(svc.store, "write_resolution", side_effect=OSError("disk full")):
+        r = client.post(f"{BASE}/3/resolve", json={"slug": "rank"}, headers=LOOPBACK)
+    assert r.status_code == 200 and "disk full" in MarkStepResult.model_validate(r.json()).warning
+
+
+def test_crlf_page_stays_crlf(client, kb):
+    with open(os.path.join(kb, "wiki", "rank.md"), "w", encoding="utf-8", newline="") as f:
+        f.write(PAGE.replace("\n", "\r\n"))
+    assert client.post(f"{BASE}/3/resolve", json={"slug": "rank"}, headers=LOOPBACK).status_code == 200
+    with open(os.path.join(kb, "wiki", "rank.md"), encoding="utf-8", newline="") as f:
+        raw = f.read()
+    assert "\r\n" in raw and "\n" not in raw.replace("\r\n", "")

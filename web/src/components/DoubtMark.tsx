@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { useDataSource } from "@/api";
+import { ApiError, useDataSource } from "@/api";
 import type { MarkFixRequest } from "@/api/types";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
@@ -59,7 +59,7 @@ function DoubtPanel({ ref_, level, slug, readOnly, onDone }: DoubtMarkProps & { 
   const q = useApiQuery(["marks", ref_], (d) => d.getMark(ref_), { retry: false });
   const [fixing, setFixing] = useState(false);
   const [instruction, setInstruction] = useState("");
-  const [backend, setBackend] = useState<Backend>("subscription");
+  const [picked, setPicked] = useState<Backend | null>(null);
   const refresh = async () => {
     await Promise.all([
       qc.invalidateQueries({ queryKey: ["pages", "page", slug] }),
@@ -68,13 +68,18 @@ function DoubtPanel({ ref_, level, slug, readOnly, onDone }: DoubtMarkProps & { 
     ]);
     onDone();
   };
+  const m = q.data;
+  const backend: Backend = picked ?? ((m?.default_backend as Backend | undefined) || "subscription");
   const resolve = useMutation({ mutationFn: () => ds.resolveMark(ref_, slug), onSuccess: refresh });
   const fix = useMutation({ mutationFn: () => ds.fixMark(ref_, { slug, instruction, backend }) });
-  const apply = useMutation({ mutationFn: (replacement: string) => ds.applyMark(ref_, slug, replacement), onSuccess: refresh });
-  const m = q.data;
+  const apply = useMutation({
+    mutationFn: (v: { replacement: string; current: string }) => ds.applyMark(ref_, slug, v.replacement, v.current || undefined),
+    onSuccess: refresh,
+  });
   const canWrite = !readOnly && !!m && !m.read_only && !m.resolution;
   const busy = resolve.isPending || fix.isPending || apply.isPending;
   const error = [resolve.error, fix.error, apply.error].find(Boolean);
+  const changed = error instanceof ApiError && error.status === 409;
   const proposal = fix.data?.replacement;
 
   return (
@@ -99,6 +104,9 @@ function DoubtPanel({ ref_, level, slug, readOnly, onDone }: DoubtMarkProps & { 
                 <div className="rounded-md border p-3" data-testid="doubt-proposal">
                   <Markdown>{proposal}</Markdown>
                 </div>
+                <code className="block overflow-x-auto whitespace-pre rounded bg-muted px-2 py-1 font-mono text-xs" data-testid="doubt-source">
+                  {proposal}
+                </code>
                 <span className="text-xs text-muted-foreground">Proposed</span>
               </div>
             )}
@@ -132,7 +140,7 @@ function DoubtPanel({ ref_, level, slug, readOnly, onDone }: DoubtMarkProps & { 
                 Model billing
                 <select
                   value={backend}
-                  onChange={(e) => setBackend(e.target.value as Backend)}
+                  onChange={(e) => setPicked(e.target.value as Backend)}
                   className="h-7 rounded-md border bg-background px-1.5 text-xs text-foreground"
                 >
                   {BACKENDS.map((b) => (
@@ -142,14 +150,26 @@ function DoubtPanel({ ref_, level, slug, readOnly, onDone }: DoubtMarkProps & { 
               </label>
             </div>
           )}
-          {error && <p className="text-bad" role="alert">{error instanceof Error ? error.message : String(error)}</p>}
+          {error && (
+            <p className="text-bad" role="alert">
+              {error instanceof Error ? error.message : String(error)}
+              {changed && (
+                <>
+                  {" "}
+                  <button type="button" className="underline underline-offset-2" onClick={() => void refresh()}>
+                    Reload the page
+                  </button>
+                </>
+              )}
+            </p>
+          )}
           {canWrite && (
             <div className="flex flex-wrap justify-end gap-2">
               {proposal ? (
                 <>
-                  <Button variant="ghost" size="sm" disabled={busy} onClick={() => (fix.reset(), setFixing(false))}>Cancel</Button>
+                  <Button variant="ghost" size="sm" disabled={busy} onClick={onDone}>Cancel</Button>
                   <Button variant="outline" size="sm" disabled={busy} onClick={() => fix.reset()}>Try again</Button>
-                  <Button size="sm" disabled={busy} onClick={() => apply.mutate(proposal)}>{apply.isPending ? "Saving…" : "Approve"}</Button>
+                  <Button size="sm" disabled={busy} onClick={() => apply.mutate({ replacement: proposal, current: fix.data?.current ?? "" })}>{apply.isPending ? "Saving…" : "Approve"}</Button>
                 </>
               ) : fixing ? (
                 <>

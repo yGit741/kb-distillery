@@ -226,13 +226,20 @@ export function createHttpDataSource(fetchImpl: Fetch = (...a) => fetch(...a), b
       const p = markPath(ref);
       return run(() => client.GET("/api/marks/{sha12}/{page}/{mark_id}", { params: { path: p } }), `/api/marks/${ref}`);
     },
-    resolveMark: (ref, slug) =>
-      run(() => client.POST("/api/marks/{sha12}/{page}/{mark_id}/resolve", { params: { path: markPath(ref) }, body: { slug } }), `/api/marks/${ref}/resolve`),
+    resolveMark: (ref, slug, expectedCurrent) =>
+      run(
+        () => client.POST("/api/marks/{sha12}/{page}/{mark_id}/resolve", { params: { path: markPath(ref) }, body: { slug, expected_current: expectedCurrent ?? null } }),
+        `/api/marks/${ref}/resolve`,
+      ),
     fixMark: (ref, body) =>
       run(() => client.POST("/api/marks/{sha12}/{page}/{mark_id}/fix", { params: { path: markPath(ref) }, body }), `/api/marks/${ref}/fix`),
-    applyMark: (ref, slug, replacement) =>
+    applyMark: (ref, slug, replacement, expectedCurrent) =>
       run(
-        () => client.POST("/api/marks/{sha12}/{page}/{mark_id}/apply", { params: { path: markPath(ref) }, body: { slug, replacement } }),
+        () =>
+          client.POST("/api/marks/{sha12}/{page}/{mark_id}/apply", {
+            params: { path: markPath(ref) },
+            body: { slug, replacement, expected_current: expectedCurrent ?? null },
+          }),
         `/api/marks/${ref}/apply`,
       ),
     searchMentions: async (q) =>

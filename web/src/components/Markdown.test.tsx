@@ -132,3 +132,16 @@ describe("Markdown unsure-formula marks", () => {
     });
   });
 });
+
+describe("Markdown doubt tag on display formulas", () => {
+  it("moves a mark on the line after $$…$$ into the equation's tag", async () => {
+    await withFlag("parsed-pdf", true, async () => {
+      const { container } = await renderMd("$$\nx = 1\n$$\n[!](mark:0123456789ab/p0188/4)\n\nAfter.", {
+        doubt: { render: (ref) => <button type="button" data-ref={ref}>!</button> },
+      });
+      const wrap = container.querySelector(".kb-doubt-display");
+      expect(wrap?.querySelector(".katex-display")).not.toBeNull();
+      expect(wrap?.querySelector(".kb-doubt-tag button[data-ref]")).not.toBeNull();
+    });
+  });
+});

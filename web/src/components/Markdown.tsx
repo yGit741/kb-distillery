@@ -47,6 +47,39 @@ export function remarkWikilinks() {
   };
 }
 
+/** Remark plugin: a paragraph holding only a doubt mark right after a display formula becomes that formula's tag
+ * (`div.kb-doubt-display` > math + `p.kb-doubt-tag`), so the mark sits at the right of the equation, not on its own line. */
+export function remarkDoubtTag() {
+  const isTag = (n: Node | undefined): boolean => {
+    if (n?.type !== "paragraph") return false;
+    const kids = n.children.filter((c) => !(c.type === "text" && !c.value.trim()));
+    return kids.length === 1 && kids[0]!.type === "link" && kids[0]!.url.startsWith(DOUBT);
+  };
+  return (tree: Root) => {
+    const walk = (parent: { children: Node[] }) => {
+      const out: Node[] = [];
+      for (let i = 0; i < parent.children.length; i++) {
+        const child = parent.children[i]!;
+        const next = parent.children[i + 1];
+        if (child.type === "math" && isTag(next)) {
+          (next as { data?: object }).data = { hProperties: { className: ["kb-doubt-tag"] } };
+          out.push({
+            type: "doubtDisplay",
+            data: { hName: "div", hProperties: { className: ["kb-doubt-display"] } },
+            children: [child, next],
+          } as unknown as Node);
+          i++;
+          continue;
+        }
+        if ("children" in child && child.type !== "paragraph") walk(child as { children: Node[] });
+        out.push(child);
+      }
+      parent.children = out;
+    };
+    walk(tree);
+  };
+}
+
 const safeDecode = (s: string): string => {
   try {
     return decodeURIComponent(s);
@@ -192,7 +225,7 @@ export function Markdown({ children, className, resolveSlug, transformUrl, linkS
     [resolveSlug, transformUrl, linkSearch],
   );
   const plugin = marks?.plugin;
-  const remarkPlugins = useMemo(() => [remarkGfm, remarkMath, remarkWikilinks, ...(plugin ? [plugin] : [])], [plugin]);
+  const remarkPlugins = useMemo(() => [remarkGfm, remarkMath, remarkWikilinks, remarkDoubtTag, ...(plugin ? [plugin] : [])], [plugin]);
   return (
     <div className={cn("kb-prose", className)}>
       <ReactMarkdown
