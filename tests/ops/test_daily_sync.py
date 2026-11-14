@@ -105,3 +105,25 @@ class StagePathsTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+def test_distill_already_on_path_changes_nothing():
+    from kb_distillery.ops import daily_sync
+    env = {"PATH": "/usr/bin"}
+    assert daily_sync.ensure_distill_on_path(env, which=lambda name, path=None: "/x/distill") is None
+    assert env["PATH"] == "/usr/bin"
+
+
+def test_missing_distill_gets_a_working_launcher(tmp_path, monkeypatch):
+    import os
+    import subprocess
+    from kb_distillery.config import kb as kbconfig
+    from kb_distillery.ops import daily_sync
+    monkeypatch.setattr(kbconfig, "checkout_root", lambda: str(tmp_path))
+    env = {"PATH": "/usr/bin:/bin"}
+    added = daily_sync.ensure_distill_on_path(env, which=lambda name, path=None: None)
+    assert env["PATH"].split(os.pathsep)[0] == added
+    shim = os.path.join(added, "distill")
+    assert os.access(shim, os.X_OK)
+    out = subprocess.run([shim, "--help"], capture_output=True, text=True, timeout=60, env={"PATH": env["PATH"]})
+    assert out.returncode == 0, out.stderr[-500:]

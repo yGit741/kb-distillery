@@ -13,8 +13,10 @@ Shared git helpers (run_git, changed_paths, has_open_sessions) live here.
 import argparse
 import datetime
 import os
+import shutil
 import subprocess
 import sys
+import tempfile
 
 from kb_distillery.config.paths import vault_root
 META_DIR = os.path.join(vault_root(), "meta")
@@ -96,6 +98,42 @@ def inbox_pickup(run=subprocess.run):
     return proc.returncode
 
 
+SHIM = """#!/bin/sh
+# Written by kb_distillery.ops.daily_sync: the nightly runs under launchd, whose PATH may not hold `distill`.
+PYTHONPATH='{src}' exec '{python}' -m kb_distillery "$@"
+"""
+
+
+def ensure_distill_on_path(environ=None, which=shutil.which):
+    """The kb's git hooks call `distill` and fail closed without it, so a launchd run whose PATH lacks it would skip
+    every commit. When `distill` does not resolve, put this engine's own launcher first on PATH (inherited by every
+    git hook the sync runs). Returns the folder added, or None when nothing was needed."""
+    environ = os.environ if environ is None else environ
+    if which("distill", path=environ.get("PATH")):
+        return None
+    bindir = os.path.dirname(sys.executable)
+    if not os.access(os.path.join(bindir, "distill"), os.X_OK):
+        from kb_distillery.config.kb import checkout_root
+        base = checkout_root()
+        bindir = os.path.join(base, ".cache", "bin") if base else os.path.join(tempfile.gettempdir(), "kb-distillery-bin")
+        os.makedirs(bindir, exist_ok=True)
+        shim = os.path.join(bindir, "distill")
+        src = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        text = SHIM.format(src=src, python=sys.executable)
+        try:
+            with open(shim, encoding="utf-8") as f:
+                same = f.read() == text
+        except OSError:
+            same = False
+        if not same:
+            with open(shim, "w", encoding="utf-8") as f:
+                f.write(text)
+        os.chmod(shim, 0o755)
+    environ["PATH"] = os.pathsep.join([bindir, environ.get("PATH", "")])
+    print(f"note: `distill` was not on PATH; using {os.path.join(bindir, 'distill')}")
+    return bindir
+
+
 def main(argv=None):
     p = argparse.ArgumentParser(description="Daily vault git sync")
     p.add_argument("--dry-run", action="store_true", help="print actions, no git write")
@@ -111,6 +149,7 @@ def main(argv=None):
 
     # Knowledge is committed one operation at a time by meta/ops; the nightly run
     # only commits human think/ edits and labelled leftovers, then pushes main + tags.
+    ensure_distill_on_path()          # the kb's hooks fail closed without it (launchd's PATH may lack it)
     from kb_distillery.ops import core as ops_core
     rc = ops_core.sync(push=not args.no_push, dry_run=args.dry_run)
     if not args.dry_run:
