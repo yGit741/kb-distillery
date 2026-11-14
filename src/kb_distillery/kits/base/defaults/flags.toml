@@ -396,4 +396,4 @@ created = 2026-11-14
 expires = 2027-02-11
 kind = "runtime"
 default = false
-envs = { local = false, private = false, public = false }
+envs = { local = true, private = false, public = false }
