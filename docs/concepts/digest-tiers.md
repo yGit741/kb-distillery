@@ -21,7 +21,7 @@ The page records the tier in its `depth` field: `listed` (cataloged, not read), 
 ## Batches and books
 
 - `distill digest many`: fills claims for many sources in one batch, then runs the full digest on each.
-- `--part N`, `--pages A-B`, `--section SPEC`: digest part of a book. `ingest toc <raw>` prints the partition.
+- `--chapter N`, `--chapters A-B`, `--all`, `--section SPEC`: digest a book by chapter, one part page each. Ingest builds the book page first; `ingest toc <raw>` prints its chapters.
 - `--row N`: digest one row of a course or series table. Pass the collection slug as the path.
 
 ## Billing

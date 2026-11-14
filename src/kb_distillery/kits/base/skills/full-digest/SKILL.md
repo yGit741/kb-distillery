@@ -39,7 +39,7 @@ distill ingest abort <sha>
 
 ## Agent steps after `begin` / `full-digest`
 
-1. Run `extract` — read `meta/.ingest/<sha>/extracted.text` (the whole document; a book must be scoped with `--part`/`--pages`). If
+1. Run `extract` — read `meta/.ingest/<sha>/extracted.text` (the whole document; a book is digested by chapter, `--chapter N`). If
    the raw entity has a `parsed.md` sidecar (e.g. `raw/emails/<YYYY-MM-DD-thread>/parsed.md`),
    `extracted.text` is that sidecar's content instead of raw PDF/thread text.
 2. Write `claims.json` with real LaTeX equations, results, ideas — or run `extract <sha> --fill`: `kb_distillery.llm`
@@ -69,19 +69,19 @@ is never guessed for it, and `open_questions` spawn no `q-` stubs in a bulk run.
 
 ## Books (≥60 pages)
 
-A book is digested one **part** at a time — never whole. `toc` prints the book's partition
-(or a proposed one if the book has no `type: book` page yet):
+A book is digested one **chapter** at a time — never whole. Ingest (`catalog`, or `ingest book <raw>`
+for a PDF filed earlier) builds the `book-<stem>` page and its `## Chapters` table first; digest is
+refused until it exists. `toc` prints the chapters with their fixed ids:
 
 ```bash
-distill ingest toc <raw>                     # [x] digested · [ ] backlog · [-] skip
-distill ingest full-digest <raw> --part N    # a row; --pages A-B carves a new one
+distill ingest toc <raw>                          # [x] digested · [ ] backlog · [-] skip
+distill ingest full-digest <raw> --chapter 3      # or --chapters 1-3, --all (one session per chapter)
 ```
 
-The session id is `<sha>-p<A>-<B>`. `map` names the page `part-<book stem>-<topic>` with
-`type: part`; `finalize` ticks the row on the `book-<stem>` page (creating it on the first part;
-a long handwritten PDF gets a `notebook-<stem>` collection instead).
-`claims.json` `title` is the part's title; set `book_title` too when the book page is new.
-After the first part, write the book page's `## Overview` paragraph — lint warns until it exists.
+The session id is `<sha>-<chapter id>`. `map` names the page `part-<book stem>-<id>-<topic>` with
+`type: part` and `chapter: <id>`; `finalize` ticks the chapter's row on the book page.
+`claims.json` `title` is the chapter's title. Write the book page's `## Overview` paragraph once —
+lint warns until it exists. Rules: `.claude/docs/collections.md` § Books and chapters.
 
 ## Course / series rows
 
@@ -103,7 +103,7 @@ member auto-scopes to its row.
 
 A Source page (`layer: source`) at `depth: full`, `maturity: digested`, Key equations required at finalize.
 An existing page (e.g. `depth: listed` or `easy`) is deepened in place. For a book: a `type: part`
-page plus an updated partition row. For a collection row: a Source page plus a ticked Contents row.
+page plus a ticked chapter row. For a collection row: a Source page plus a ticked Contents row.
 
 ## Quality bar
 
@@ -115,7 +115,7 @@ page plus an updated partition row. For a collection row: a Source page plus a t
 ## Pitfalls
 
 - The negation-word polarity check is now a warning (score capped at 60): it only fires when a negation sits within a few tokens of topic words the other page asserts, and never between a paper and its own new stubs. Do not reword honest assumptions to silence it; `coherence dismiss <id>` if it is spurious.
-- A paper with long appendices (60+ pages) is treated as a paper when it has an abstract and no chapter outline; otherwise pass `--whole-book`.
+- A paper with long appendices (60+ pages) is treated as a paper when it has an abstract and no chapter outline.
 - Idea and `q-` stubs are registered with the session automatically (map and finalize), so an aborted finalize removes them and restores topic-page `## Papers` lines; the old `staging/` is kept as `staging-aborted-<time>/`, and `begin` restores `claims.json`/`plan.json` of an aborted session.
 - Topic slugs in `claims.json` `concepts` (a protocol key, kept) map to `area:`, not to new idea pages.
 

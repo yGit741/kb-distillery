@@ -31,9 +31,9 @@ from kb_distillery.vault.schema import (ASSET_NAME, ASSET_PREFIX, BARE_TYPES, BL
                     ROOT_LINT_IGNORE, ROOT_MD, CONTENTS_COLLECTIONS, SIDECAR_ELIGIBLE_KINDS, SLUG_PREFIX,
                     TOPIC_PREFIX, TOPIC_SLUGS, THINK_DIR, TYPE_STATUS, WIKI_DIR, YEARED, strip_prefix, INDEX_REL, OKF_VERSION, RESERVED_PAGES, TYPE_LABEL, TYPE_ORDER, is_page_file, is_index_path,
                     LAYER_OF, RETIRED_DEPTH, RETIRED_DISPOSITIONS, RETIRED_KEYS, RETIRED_TYPES)
-from kb_distillery.vault.books import (DIGESTED, OVERVIEW_HEADING, OVERVIEW_MIN_CHARS, PARTITION_HEADING, SKIP,
-                   book_status, coverage, coverage_line, find_row, overview_ok,
-                   parse_partition, validate)
+from kb_distillery.vault.books import (CHAPTERS_HEADING, DIGESTED, OVERVIEW_HEADING, OVERVIEW_MIN_CHARS,
+                                       PARTITION_HEADING, SKIP, book_status, chapter_coverage, coverage,
+                                       coverage_line, find_chapter, overview_ok, parse_chapters, valid_id, validate)
 from kb_distillery.vault import frontmatter, hubs, links
 from kb_distillery.vault import pages as vault_pages
 from kb_distillery.vault import persons
@@ -991,13 +991,30 @@ def _page_range(fm):
     return (int(m.group(1)), int(m.group(2))) if m else None
 
 
+def _outline_chapters(rel, fm):
+    v = str(fm.get("outline_chapters") or "").strip()
+    if not v:
+        return None
+    if not v.isdigit():
+        err(rel, f"outline_chapters: {v!r} is not a number")
+        return None
+    return int(v)
+
+
 def check_books(pages):
-    """Page-range hubs (book, notebook): an Overview, a valid page partition, and part pages
-    that agree with their row both ways. Returns {hub slug: (rel, fm, rows)}."""
-    hubs = {}
+    """Page-range hubs (book, notebook): an Overview, a valid `## Chapters` table with fixed ids,
+    and part pages that agree with their chapter row both ways. Returns {hub slug: (rel, fm, rows)}."""
+    hubs, legacy = {}, set()
     for slug, (rel, fm, text) in pages.items():
         t = fm.get("type")
         if t not in PARTITION_COLLECTIONS:
+            continue
+        if CHAPTERS_HEADING not in text and PARTITION_HEADING in text:
+            err(rel, f"still on the pre-1.6 {PARTITION_HEADING} table — run `pixi run ops -- migrate`; if migrate "
+                     "left this book alone, its report names the row to hand-fix: fix that row, then migrate again "
+                     "(its part pages are checked once it has a Chapters table)")
+            legacy.add(slug)
+            hubs[slug] = (rel, fm, [])
             continue
         try:
             total = int(str(fm.get("book_pages") or "").strip())
@@ -1008,12 +1025,12 @@ def check_books(pages):
             warn(rel, f"{t} needs an {OVERVIEW_HEADING} paragraph (≥{OVERVIEW_MIN_CHARS} chars): "
                       "what it is, how it is organised, why it matters here")
         rows = []
-        if PARTITION_HEADING not in text:
-            err(rel, f"type {t} requires a {PARTITION_HEADING} table — "
-                     "`python3 -m kb_distillery.ingest toc <raw>` proposes one")
+        if CHAPTERS_HEADING not in text:
+            err(rel, f"type {t} requires a {CHAPTERS_HEADING} table — "
+                     "`python3 -m kb_distillery.ingest book <raw>` builds one")
         else:
-            rows = parse_partition(text)
-            errs, warns = validate(rows, total)
+            rows = parse_chapters(text)
+            errs, warns = validate(rows, total, _outline_chapters(rel, fm))
             for m in errs:
                 err(rel, m)
             for m in warns:
@@ -1023,11 +1040,14 @@ def check_books(pages):
                 warn(rel, f"stale coverage line — expected `{line}`")
             derived = book_status(rows)
             if rows and fm.get("maturity") != derived:
-                warn(rel, f"maturity: {fm.get('maturity')} but the partition says {derived}")
+                warn(rel, f"maturity: {fm.get('maturity')} but the chapters say {derived}")
         for r in rows:
-            target = pages.get(r["slug"])
+            target = pages.get(r["slug"]) if r["slug"] else None
+            if r["status"] in DIGESTED and r["slug"] and not target:
+                err(rel, f"chapter {r['id']} is marked {r['status']} but its part page "
+                         f"[[{r['slug']}]] does not exist")
             if target and target[1].get("type") != "part":
-                err(rel, f"partition row p.{r['start']}–{r['end']} links [[{r['slug']}]], "
+                err(rel, f"chapter {r['id']} links [[{r['slug']}]], "
                          f"a {target[1].get('type')} page — rows link type: part pages")
         hubs[slug] = (rel, fm, rows)
 
@@ -1035,30 +1055,41 @@ def check_books(pages):
         if fm.get("type") != "part":
             continue
         book = str(fm.get("book") or "")
+        if book in legacy:
+            continue                                # one error on the book page says it all
         if book not in hubs:
             err(rel, f"type part requires `book:` naming a book or notebook page (got {book!r})")
             continue
         _brel, bfm, rows = hubs[book]
         if str(bfm.get("raw") or "") != str(fm.get("raw") or ""):
             err(rel, f"raw: differs from its book [[{book}]]")
-        stem = f"{SLUG_PREFIX['part']}{strip_prefix(book)}-"
-        if not slug.startswith(stem):
-            warn(rel, f"part slug should start with `{stem}` (its hub's slug without the prefix)")
-        rng = _page_range(fm)
-        if not rng:
-            err(rel, "type part requires `section_pages: A-B`")
+        cid = str(fm.get("chapter") or "").strip()
+        if not cid:
+            err(rel, "type part requires `chapter:` — the id of its row on the book page (ch3, appA)")
             continue
-        row = find_row(rows, *rng)
+        if not valid_id(cid):
+            err(rel, f"chapter: {cid!r} is not a chapter id (ch3, ch11a, appA)")
+            continue
+        stem = f"{SLUG_PREFIX['part']}{strip_prefix(book)}-"
+        if not (slug == stem + cid.lower() or slug.startswith(f"{stem}{cid.lower()}-")):
+            warn(rel, f"part slug should start with `{stem}{cid.lower()}-` (book stem, then chapter id)")
+        linked = [r for r in rows if r["slug"] == slug]
+        if linked and linked[0]["id"] != cid:
+            err(rel, f"chapter id changed: this page is `chapter: {cid}` but [[{book}]] links it from "
+                     f"row {linked[0]['id']!r} — a row keeps its id forever")
+            continue
+        row = find_chapter(rows, cid)
         if not row:
-            err(rel, f"section_pages {rng[0]}-{rng[1]} matches no row of [[{book}]] "
-                     f"{PARTITION_HEADING}")
+            err(rel, f"chapter: {cid} has no row in [[{book}]] {CHAPTERS_HEADING}")
             continue
         if row["slug"] != slug:
-            err(rel, f"[[{book}]] row p.{rng[0]}–{rng[1]} links [[{row['slug'] or '—'}]], "
-                     "not this page")
+            err(rel, f"[[{book}]] row {cid} links [[{row['slug'] or '—'}]], not this page")
+        rng = _page_range(fm)
+        if rng and rng != (row["start"], row["end"]):
+            err(rel, f"section_pages {rng[0]}-{rng[1]} differ from [[{book}]] row {cid} "
+                     f"(p.{row['start']}–{row['end']})")
         if row["status"] != fm.get("depth"):
-            err(rel, f"depth {fm.get('depth')!r} but [[{book}]] row says "
-                     f"{row['status']!r}")
+            err(rel, f"depth {fm.get('depth')!r} but [[{book}]] row {cid} says {row['status']!r}")
     return hubs
 
 
@@ -1177,7 +1208,7 @@ def check_collections(pages, tables, rows):
 
 def book_coverage(pages, hubs=None):
     """raw path -> {'covered', 'total', 'sections': [(slug, start, end)]} for books.
-    A book hub's partition is the truth (skip rows count toward neither number). Raw files
+    A book hub's chapters table is the truth (skip rows count toward neither number). Raw files
     with no hub fall back to `section_pages:` / `book_pages:` on their pages. No PDF is
     opened: this runs on every lint."""
     out = {}
@@ -1187,7 +1218,9 @@ def book_coverage(pages, hubs=None):
             continue
         covered, total = coverage(rows)
         done = [r for r in rows if r["start"] is not None and r["status"] in DIGESTED]
-        out[raw] = {"covered": covered, "total": total,
+        ch_done, ch_total = chapter_coverage(rows)
+        out[raw] = {"covered": covered, "total": total, "chapters_done": ch_done, "chapters": ch_total,
+                    "chapter_ids": [r["id"] for r in sorted(done, key=lambda r: r["start"])],
                     "sections": sorted(((r["slug"], r["start"], r["end"]) for r in done),
                                        key=lambda x: x[1])}
     sections, totals = {}, {}
@@ -1217,6 +1250,12 @@ def check_book_coverage(pages, rows, coverage=None):
     for raw, cov in sorted(coverage.items()):
         total = cov["total"]
         if total and cov["covered"] >= total:
+            continue
+        if "chapters" in cov:
+            warn(raw, f"book partially digested — {cov['chapters_done']} / {cov['chapters']} chapters: "
+                      f"{', '.join(cov['chapter_ids']) or 'none'}. "
+                      "Run `python3 -m kb_distillery.ingest toc <raw>` for what is left.")
+            partial.append({"raw": raw, **cov})
             continue
         pct = f"{100 * cov['covered'] // total}%" if total else "?"
         chapters = ", ".join(f"p.{a}-{b}" for _s, a, b in cov["sections"])

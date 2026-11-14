@@ -178,7 +178,7 @@ function One({ n, byId, neighbors, colorBy, revealed, pageHref, onFocus, onRead,
       {book && (
         <details className="rounded-md border px-2 py-1">
           <summary className="cursor-pointer text-sm font-medium">
-            Partition · {book.done}/{book.content} pp · {pct}%
+            Chapters · {book.done} / {book.content} chapters
           </summary>
           <div className="my-1.5 h-1.5 overflow-hidden rounded bg-secondary" aria-hidden>
             <div className="h-full bg-primary" style={{ width: `${pct}%` }} />
@@ -188,7 +188,7 @@ function One({ n, byId, neighbors, colorBy, revealed, pageHref, onFocus, onRead,
               .filter((q) => q.status !== "skip")
               .map((q) => {
                 const m = q.slug ? byId.get(q.slug) : undefined;
-                const pages = `p.${q.start}–${q.end}`;
+                const pages = `${q.id ? `${q.id} · ` : ""}p.${q.start}–${q.end}`;
                 return m ? (
                   <Row key={q.start} n={{ ...m, title: q.title }} colorBy={colorBy} onGo={() => onFocus(m.id, false)}>
                     <small className="text-muted-foreground">

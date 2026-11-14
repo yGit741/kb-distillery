@@ -39,7 +39,7 @@
    {
     "kind": "wikilink",
     "source": "book-2020-tiny-book",
-    "target": "part-2020-tiny-book-pages-1-10"
+    "target": "part-2020-tiny-book-ch1-ranks-of-tensors"
    },
    {
     "kind": "wikilink",
@@ -78,17 +78,17 @@
    },
    {
     "kind": "wikilink",
-    "source": "part-2020-tiny-book-pages-1-10",
+    "source": "part-2020-tiny-book-ch1-ranks-of-tensors",
     "target": "book-2020-tiny-book"
    },
    {
     "kind": "wikilink",
-    "source": "part-2020-tiny-book-pages-1-10",
+    "source": "part-2020-tiny-book-ch1-ranks-of-tensors",
     "target": "tensor-rank"
    },
    {
     "kind": "wikilink",
-    "source": "part-2020-tiny-book-pages-1-10",
+    "source": "part-2020-tiny-book-ch1-ranks-of-tensors",
     "target": "theme-learning-theory"
    },
    {
@@ -147,7 +147,7 @@
     "target": "theme-learning-theory"
    }
   ],
-  "node_count": 16,
+  "node_count": 15,
   "nodes": [
    {
     "added": "",
@@ -238,22 +238,24 @@
      "learning-theory"
     ],
     "book": {
-     "content": 61,
-     "done": 10,
+     "content": 2,
+     "done": 1,
      "parts": [
       {
-       "end": 10,
-       "slug": "part-2020-tiny-book-pages-1-10",
+       "end": 30,
+       "id": "ch1",
+       "slug": "part-2020-tiny-book-ch1-ranks-of-tensors",
        "start": 1,
        "status": "full",
-       "title": "Pages 1–10"
+       "title": "Chapter 1. Ranks of tensors"
       },
       {
        "end": 61,
+       "id": "ch2",
        "slug": "",
-       "start": 11,
+       "start": 31,
        "status": "—",
-       "title": "Whole book"
+       "title": "Chapter 2. Bounds"
       }
      ],
      "total": 61
@@ -268,7 +270,7 @@
     "maturity": "reading",
     "outDegree": 1,
     "path": "wiki/book-2020-tiny-book.md",
-    "preview": "Coverage: 10 / 61 pp (16%) · skip rows excluded · parts ≤ 60 pp",
+    "preview": "Coverage: 1 / 2 chapters · skip rows excluded",
     "properties": {
      "area": "learning-theory",
      "authors": "B. Writer",
@@ -381,34 +383,6 @@
     "added": "",
     "areas": [],
     "changed": "",
-    "depth": "listed",
-    "id": "paper-2020-tiny-book",
-    "inDegree": 0,
-    "kb": "e2e",
-    "label": "paper-2020-tiny-book",
-    "layer": "source",
-    "maturity": "to-read",
-    "outDegree": 0,
-    "path": "wiki/paper-2020-tiny-book.md",
-    "preview": "Problem: Main result:",
-    "properties": {
-     "links_in": "0",
-     "links_out": "0",
-     "maturity": "to-read",
-     "raw": "raw/printed-docs/2020-tiny-book.pdf",
-     "slug": "paper-2020-tiny-book",
-     "type": "paper",
-     "year": "2020"
-    },
-    "slug": "paper-2020-tiny-book",
-    "title": "Tiny Book",
-    "type": "paper",
-    "year": 2020
-   },
-   {
-    "added": "",
-    "areas": [],
-    "changed": "",
     "depth": "easy",
     "id": "paper-2023-easy-skim-paper",
     "inDegree": 0,
@@ -475,19 +449,20 @@
     ],
     "changed": "",
     "depth": "full",
-    "id": "part-2020-tiny-book-pages-1-10",
+    "id": "part-2020-tiny-book-ch1-ranks-of-tensors",
     "inDegree": 1,
     "kb": "e2e",
-    "label": "part-2020-tiny-book-pages-1-10",
+    "label": "part-2020-tiny-book-ch1-ranks-of-tensors",
     "layer": "source",
     "maturity": "digested",
     "outDegree": 3,
     "part": {
      "book": "book-2020-tiny-book",
-     "pages": "1-10",
-     "section": "Pages 1–10"
+     "chapter": "ch1",
+     "pages": "1-30",
+     "section": "Chapter 1. Ranks of tensors"
     },
-    "path": "wiki/part-2020-tiny-book-pages-1-10.md",
+    "path": "wiki/part-2020-tiny-book-ch1-ranks-of-tensors.md",
     "preview": "Problem: What is the rank of a tensor? Main result: Tensor rank can exceed every flattening rank.",
     "properties": {
      "area": "learning-theory",
@@ -496,11 +471,11 @@
      "links_out": "3",
      "maturity": "digested",
      "raw": "raw/printed-docs/2020-tiny-book.pdf",
-     "slug": "part-2020-tiny-book-pages-1-10",
+     "slug": "part-2020-tiny-book-ch1-ranks-of-tensors",
      "type": "part",
      "year": "2020"
     },
-    "slug": "part-2020-tiny-book-pages-1-10",
+    "slug": "part-2020-tiny-book-ch1-ranks-of-tensors",
     "title": "Tiny Book",
     "type": "part",
     "year": 2020
@@ -952,7 +927,7 @@
    ],
    "version": [
     1,
-    5
+    6
    ]
   }
  },
@@ -960,7 +935,7 @@
   "links": [
    [
     "book-2020-tiny-book",
-    "part-2020-tiny-book-pages-1-10"
+    "part-2020-tiny-book-ch1-ranks-of-tensors"
    ],
    [
     "course-test-ml",
@@ -991,15 +966,15 @@
     "theme-learning-theory"
    ],
    [
-    "part-2020-tiny-book-pages-1-10",
+    "part-2020-tiny-book-ch1-ranks-of-tensors",
     "book-2020-tiny-book"
    ],
    [
-    "part-2020-tiny-book-pages-1-10",
+    "part-2020-tiny-book-ch1-ranks-of-tensors",
     "tensor-rank"
    ],
    [
-    "part-2020-tiny-book-pages-1-10",
+    "part-2020-tiny-book-ch1-ranks-of-tensors",
     "theme-learning-theory"
    ],
    [
@@ -1096,10 +1071,10 @@
     "in": 1,
     "maturity": "reading",
     "out": 1,
-    "preview": "Coverage: 10 / 61 pp (16%) · skip rows excluded · parts ≤ 60 pp",
+    "preview": "Coverage: 1 / 2 chapters · skip rows excluded",
     "title": "Tiny Book (2020)",
     "type": "book",
-    "words": 111,
+    "words": 109,
     "year": 2020
    },
    {
@@ -1147,19 +1122,6 @@
    },
    {
     "areas": [],
-    "depth": "listed",
-    "id": "paper-2020-tiny-book",
-    "in": 0,
-    "maturity": "to-read",
-    "out": 0,
-    "preview": "Problem: Main result:",
-    "title": "Tiny Book",
-    "type": "paper",
-    "words": 29,
-    "year": 2020
-   },
-   {
-    "areas": [],
     "depth": "easy",
     "id": "paper-2023-easy-skim-paper",
     "in": 0,
@@ -1191,14 +1153,14 @@
      "learning-theory"
     ],
     "depth": "full",
-    "id": "part-2020-tiny-book-pages-1-10",
+    "id": "part-2020-tiny-book-ch1-ranks-of-tensors",
     "in": 1,
     "maturity": "digested",
     "out": 3,
     "preview": "Problem: What is the rank of a tensor? Main result: Tensor rank can exceed every flattening rank.",
     "title": "Tiny Book",
     "type": "part",
-    "words": 74,
+    "words": 79,
     "year": 2020
    },
    {
@@ -1381,8 +1343,8 @@
   "book-2020-tiny-book": {
    "backlinks": [
     {
-     "context": "Part of Tiny Book (2020) · pp. 1–10 · Pages 1–10",
-     "id": "part-2020-tiny-book-pages-1-10"
+     "context": "Part of Tiny Book (2020) · pp. 1–30 · Chapter 1. Ranks of tensors",
+     "id": "part-2020-tiny-book-ch1-ranks-of-tensors"
     }
    ],
    "broken": [],
@@ -1395,10 +1357,10 @@
     "in": 1,
     "maturity": "reading",
     "out": 1,
-    "preview": "Coverage: 10 / 61 pp (16%) · skip rows excluded · parts ≤ 60 pp",
+    "preview": "Coverage: 1 / 2 chapters · skip rows excluded",
     "title": "Tiny Book (2020)",
     "type": "book",
-    "words": 111,
+    "words": 109,
     "year": 2020
    },
    "frontmatter": {
@@ -1411,15 +1373,16 @@
     "book_pages": "61",
     "layer": "collection",
     "maturity": "reading",
+    "outline_chapters": "2",
     "raw": "raw/printed-docs/2020-tiny-book.pdf",
     "title": "\"Tiny Book (2020)\"",
     "type": "book",
     "year": "2020"
    },
    "kb": "e2e",
-   "markdown": "# Tiny Book (2020)\n\n## Overview\n\n<!-- At least one paragraph: what the book is, how it is organised, its stance, and why it matters. Lint warns until this is written. -->\n\n## Partition\n\nCoverage: **10 / 61 pp (16%)** · skip rows excluded · parts ≤ 60 pp\n\n| # | Part | Pages | Status | Note |\n|---|------|-------|--------|------|\n| 1 | Pages 1–10 | 1–10 | full | [part-2020-tiny-book-pages-1-10](part-2020-tiny-book-pages-1-10.md) |\n| 2 | Whole book | 11–61 | — |  |\n\n## Key concepts\n\n<!-- Book-wide concepts as [Concept](concept.md) links, filled in as parts are digested. -->\n\n## Threads\n\n<!-- Links, open questions, connected papers and people. -->\n",
+   "markdown": "# Tiny Book (2020)\n\n## Overview\n\n<!-- At least one paragraph: what the book is, how it is organised, its stance, and why it matters. Lint warns until this is written. -->\n\n## Chapters\n\nCoverage: **1 / 2 chapters** · skip rows excluded\n\n| Id | Chapter | Pages | Status | Note |\n|----|---------|-------|--------|------|\n| ch1 | Chapter 1. Ranks of tensors | 1–30 | full | [part-2020-tiny-book-ch1-ranks-of-tensors](part-2020-tiny-book-ch1-ranks-of-tensors.md) |\n| ch2 | Chapter 2. Bounds | 31–61 | — |  |\n\n## Key concepts\n\n<!-- Book-wide concepts as [Concept](concept.md) links, filled in as parts are digested. -->\n\n## Threads\n\n<!-- Links, open questions, connected papers and people. -->\n",
    "outbound": [
-    "part-2020-tiny-book-pages-1-10"
+    "part-2020-tiny-book-ch1-ranks-of-tensors"
    ],
    "path": "wiki/book-2020-tiny-book.md",
    "read_only": false,
@@ -1537,7 +1500,7 @@
      ]
     },
     {
-     "id": "part-2020-tiny-book-pages-1-10",
+     "id": "part-2020-tiny-book-ch1-ranks-of-tensors",
      "score": 0.97,
      "shared": 2,
      "via": [
@@ -1593,39 +1556,6 @@
    "markdown": "# 2026 01 02 Rank Thread\n\n**With:** <!-- [Name](person-slug.md) -->\n\n**What it was about:**\n\n## Key claims\n-\n\n## Key equations\n\n## Takeaways\n\n## Connections\n\n## Links out\n- Concepts: <!-- [Title](slug.md) -->\n",
    "outbound": [],
    "path": "wiki/mail-2026-01-02-rank-thread.md",
-   "read_only": false,
-   "suggested": []
-  },
-  "paper-2020-tiny-book": {
-   "backlinks": [],
-   "broken": [],
-   "card": {
-    "areas": [],
-    "depth": "listed",
-    "id": "paper-2020-tiny-book",
-    "in": 0,
-    "maturity": "to-read",
-    "out": 0,
-    "preview": "Problem: Main result:",
-    "title": "Tiny Book",
-    "type": "paper",
-    "words": 29,
-    "year": 2020
-   },
-   "frontmatter": {
-    "depth": "listed",
-    "layer": "source",
-    "maturity": "to-read",
-    "raw": "raw/printed-docs/2020-tiny-book.pdf",
-    "status": "draft",
-    "title": "\"Tiny Book\"",
-    "type": "paper",
-    "year": "2020"
-   },
-   "kb": "e2e",
-   "markdown": "# Tiny Book\n\n**Problem:**\n\n**Main result:**\n\n## Setup & assumptions\n\n## Proof idea (sketch only)\n\n## Key equations\n\n## Takeaways\n-\n\n## Links out\n- Concepts: <!-- [Title](slug.md) -->\n",
-   "outbound": [],
-   "path": "wiki/paper-2020-tiny-book.md",
    "read_only": false,
    "suggested": []
   },
@@ -1723,7 +1653,7 @@
      ]
     },
     {
-     "id": "part-2020-tiny-book-pages-1-10",
+     "id": "part-2020-tiny-book-ch1-ranks-of-tensors",
      "score": 0.97,
      "shared": 2,
      "via": [
@@ -1751,10 +1681,10 @@
     }
    ]
   },
-  "part-2020-tiny-book-pages-1-10": {
+  "part-2020-tiny-book-ch1-ranks-of-tensors": {
    "backlinks": [
     {
-     "context": "listed in a table under “Partition”",
+     "context": "listed in a table under “Chapters”",
      "id": "book-2020-tiny-book"
     }
    ],
@@ -1764,14 +1694,14 @@
      "learning-theory"
     ],
     "depth": "full",
-    "id": "part-2020-tiny-book-pages-1-10",
+    "id": "part-2020-tiny-book-ch1-ranks-of-tensors",
     "in": 1,
     "maturity": "digested",
     "out": 3,
     "preview": "Problem: What is the rank of a tensor? Main result: Tensor rank can exceed every flattening rank.",
     "title": "Tiny Book",
     "type": "part",
-    "words": 74,
+    "words": 79,
     "year": 2020
    },
    "frontmatter": {
@@ -1782,24 +1712,25 @@
      "B. Writer"
     ],
     "book": "book-2020-tiny-book",
+    "chapter": "ch1",
     "depth": "full",
     "layer": "source",
     "maturity": "digested",
     "raw": "raw/printed-docs/2020-tiny-book.pdf",
-    "section": "Pages 1–10",
-    "section_pages": "1-10",
+    "section": "Chapter 1. Ranks of tensors",
+    "section_pages": "1-30",
     "title": "\"Tiny Book\"",
     "type": "part",
     "year": "2020"
    },
    "kb": "e2e",
-   "markdown": "# Tiny Book\n\n> Part of [book-2020-tiny-book](book-2020-tiny-book.md) · pp. 1–10 · Pages 1–10\n\n**Problem:** What is the rank of a tensor?\n\n**Main result:** Tensor rank can exceed every flattening rank.\n\n## Setup & assumptions\n\nDefinitions and examples.\n\n## Proof idea (sketch only)\n\n\n\n## Key equations\n\n**flat:**\n$\\operatorname{rank}(T) \\ge \\operatorname{rank}(T_{(1)})$\n\n\n## Takeaways\n\n- Tensor rank can exceed every flattening rank.\n- Concepts: [Tensor rank](tensor-rank.md), [Learning theory](theme-learning-theory.md)\n\n## Links out\n\n- Concepts: [Tensor rank](tensor-rank.md), [Learning theory](theme-learning-theory.md)\n",
+   "markdown": "# Tiny Book\n\n> Part of [Tiny Book (2020)](book-2020-tiny-book.md) · pp. 1–30 · Chapter 1. Ranks of tensors\n\n**Problem:** What is the rank of a tensor?\n\n**Main result:** Tensor rank can exceed every flattening rank.\n\n## Setup & assumptions\n\nDefinitions and examples.\n\n## Proof idea (sketch only)\n\n\n\n## Key equations\n\n**flat:**\n$\\operatorname{rank}(T) \\ge \\operatorname{rank}(T_{(1)})$\n\n\n## Takeaways\n\n- Tensor rank can exceed every flattening rank.\n- Concepts: [Tensor rank](tensor-rank.md), [Learning theory](theme-learning-theory.md)\n\n## Links out\n\n- Concepts: [Tensor rank](tensor-rank.md), [Learning theory](theme-learning-theory.md)\n",
    "outbound": [
     "book-2020-tiny-book",
     "tensor-rank",
     "theme-learning-theory"
    ],
-   "path": "wiki/part-2020-tiny-book-pages-1-10.md",
+   "path": "wiki/part-2020-tiny-book-ch1-ranks-of-tensors.md",
    "read_only": false,
    "suggested": [
     {
@@ -1905,7 +1836,7 @@
      ]
     },
     {
-     "id": "part-2020-tiny-book-pages-1-10",
+     "id": "part-2020-tiny-book-ch1-ranks-of-tensors",
      "score": 0.97,
      "shared": 2,
      "via": [
@@ -1979,7 +1910,7 @@
     },
     {
      "context": "Concepts: Tensor rank, Learning theory",
-     "id": "part-2020-tiny-book-pages-1-10"
+     "id": "part-2020-tiny-book-ch1-ranks-of-tensors"
     },
     {
      "context": "Main result: A talk-length argument that Tensor rank is the right lens.",
@@ -2058,7 +1989,7 @@
     },
     {
      "context": "Concepts: Tensor rank, Learning theory",
-     "id": "part-2020-tiny-book-pages-1-10"
+     "id": "part-2020-tiny-book-ch1-ranks-of-tensors"
     },
     {
      "context": "listed under “Threads”",
@@ -2165,7 +2096,7 @@
      ]
     },
     {
-     "id": "part-2020-tiny-book-pages-1-10",
+     "id": "part-2020-tiny-book-ch1-ranks-of-tensors",
      "score": 0.97,
      "shared": 2,
      "via": [

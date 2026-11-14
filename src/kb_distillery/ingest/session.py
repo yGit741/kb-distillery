@@ -27,15 +27,15 @@ def _staging_dir(sha):
 
 
 def session_id(sha, scope):
-    """One session per raw file — or per page range for a book part, so a second part of the
-    same book never inherits the first part's claims/plan/staging."""
-    if (scope or {}).get("book") and (scope or {}).get("pages"):
-        a, b = scope["pages"]
-        return f"{sha}-p{a}-{b}"
+    """One session per raw file — or per chapter for a book, so a second chapter of the same
+    book never inherits the first chapter's claims/plan/staging."""
+    if (scope or {}).get("book") and (scope or {}).get("chapter"):
+        return f"{sha}-{scope['chapter']}"
     return sha
 
 
-def find_open_session(raw_rel):
+def find_open_session(raw_rel, sid=None):
+    """An open session on raw_rel; with `sid`, only that session (one per book chapter)."""
     ingest = os.path.join(ROOT, "meta", ".ingest")
     if not os.path.isdir(ingest):
         return None
@@ -45,7 +45,7 @@ def find_open_session(raw_rel):
             continue
         with open(sp, encoding="utf-8") as f:
             s = json.load(f)
-        if s.get("raw") == raw_rel and s.get("status") == "open":
+        if s.get("raw") == raw_rel and s.get("status") == "open" and (sid is None or sha == sid):
             return sha
     return None
 
@@ -88,12 +88,12 @@ def _archive_stale(sha):
 
 def begin(raw_rel, depth="full", scope=None):
     raw_rel = verify_raw(raw_rel)
-    existing = find_open_session(raw_rel)
+    sha = session_id(sha1_file(raw_rel), scope)
+    existing = find_open_session(raw_rel, sha if (scope or {}).get("chapter") else None)
     if existing:
         print(f"session already open: {existing}")
         return existing
 
-    sha = session_id(sha1_file(raw_rel), scope)
     sdir = session_dir(sha)
     carried = _archive_stale(sha)
     os.makedirs(os.path.join(sdir, "backup"), exist_ok=True)
@@ -107,8 +107,9 @@ def begin(raw_rel, depth="full", scope=None):
     backup_files = []
     book = (scope or {}).get("book")
     digest = existing_digest_for_raw(raw_rel, scope["pages"] if book else None)
-    hub = book_mod.find_hub(raw_rel) if book else None
-    for rel in dict.fromkeys(r for r in (digest, hub and hub[0]) if r):
+    # the book page is backed up when finalize ticks it, not here: several chapter sessions may be
+    # open at once, and a stale copy restored on abort would undo another chapter's tick
+    for rel in [digest] if digest else []:
         shutil.copy2(os.path.join(ROOT, rel), _backup_path(sha, rel))
         backup_files.append(rel)
 
@@ -268,9 +269,9 @@ def finalize(sha):
 
 
 def _record_book_part(sha, session, plan):
-    """A part digest ticks its row on the book hub page — creating the hub if needed."""
+    """A chapter digest ticks its row on the book page (ingest built it)."""
     scope = session.get("scope") or {}
-    if plan.get("type") != "part" or not scope.get("pages"):
+    if plan.get("type") != "part" or not scope.get("chapter"):
         return
     claims = {}
     cpath = os.path.join(session_dir(sha), "claims.json")
@@ -280,14 +281,17 @@ def _record_book_part(sha, session, plan):
     meta = {"authors": claims.get("authors"), "year": claims.get("year"),
             "url": claims.get("url"), "area": plan.get("areas_resolved") or [],
             "book_title": claims.get("book_title")}
-    a, b = scope["pages"]
     status = session.get("depth") or "full"
-    hub_rel, created = book_mod.record_part(session["raw"], a, b, plan["wiki_slug"], status,
-                                            scope.get("label") or f"Pages {a}–{b}", meta)
-    if created:
-        session.setdefault("new_files", []).append(hub_rel)
+    hub = book_mod.find_hub(session["raw"])
+    if hub and hub[0] not in session["backup_files"]:      # rollback restores it if lint fails
+        shutil.copy2(os.path.join(ROOT, hub[0]), _backup_path(sha, hub[0]))
+        session["backup_files"].append(hub[0])
+    hub_rel, _created = book_mod.record_part(session["raw"], scope["chapter"], plan["wiki_slug"], status,
+                                             meta)
+    if hub_rel not in session.setdefault("modified_files", []):
+        session["modified_files"].append(hub_rel)
     save_session(sha, session)
-    print(f"book hub {hub_rel} {'created — write its ## Overview' if created else 'updated'}")
+    print(f"book page {hub_rel} chapter {scope['chapter']} → {plan['wiki_slug']} ({status})")
 
 
 def _record_hub_row(sha, session, plan):

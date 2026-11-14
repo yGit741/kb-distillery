@@ -243,7 +243,7 @@ def prepare(arg, into=None, tick=True):
         raise ValueError(f"{raw_rel}: a video bundle is digested through its video.md")
     from kb_distillery.ingest.sources.books import book as book_mod
     if book_mod.is_book(os.path.join(ROOT, raw_rel)):
-        raise ValueError(f"{raw_rel} is a book: skim it by part (full-digest --part N / --pages A-B; see `toc`)")
+        raise ValueError(f"{raw_rel} is a book: digest it by chapter (full-digest --chapter N; see `toc`)")
     slug = unit_slug_for_raw(raw_rel, page_type)
     existing = existing_digest_for_raw(raw_rel)
     if existing:

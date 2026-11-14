@@ -227,8 +227,9 @@ class TestBookGate(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             p = self._pdf(d, 70, "A Paper\nAlice, Bob\nAbstract\nWe show things.")
             self.assertFalse(book.is_book(p))
-            rng, _label, blocked = book.gate("raw/x.pdf", p, None, None, False)
+            rows, blocked = book.gate("raw/x.pdf", p)
             self.assertIsNone(blocked)
+            self.assertEqual(rows, [])
 
     def test_real_book_stays_gated(self):
         with tempfile.TemporaryDirectory() as d:

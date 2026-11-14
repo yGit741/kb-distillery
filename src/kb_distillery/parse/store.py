@@ -87,6 +87,19 @@ def transcript(root: str, sha: str, pages: list) -> str | None:
     return "\n\n".join(r["markdown"].strip() for r in recs) + "\n"
 
 
+def coverage(root: str, sha: str, first: int, last: int) -> dict:
+    """How much of pages first..last is stored: {"pages": stored, "of": n, "!": marks, "!!": marks}."""
+    out = {"pages": 0, "of": last - first + 1, "!": 0, "!!": 0}
+    for n in range(first, last + 1):
+        rec = read_page(root, sha, n)
+        if rec:
+            out["pages"] += 1
+            for m in rec.get("marks", []):
+                if m.get("level") in ("!", "!!"):
+                    out[m["level"]] += 1
+    return out
+
+
 def marks(root: str, sha: str, pages: list | None = None) -> list:
     """Every mark record of the stored pages, each with its `page`."""
     out = []

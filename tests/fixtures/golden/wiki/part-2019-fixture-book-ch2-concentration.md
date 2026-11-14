@@ -2,6 +2,7 @@
 type: part
 layer: source
 book: book-2019-fixture-book
+chapter: ch2
 authors: [Fixture Author]
 year: 2019
 area: [learning-theory]
@@ -18,7 +19,7 @@ discussed_with: []
 
 # Fixture book, chapter 2: concentration
 
-> Part of [book-2019-fixture-book](book-2019-fixture-book.md) · pp. 16–30 · Chapter 2. Concentration
+> Part of [Fixture Book (2019)](book-2019-fixture-book.md) · pp. 16–30 · Chapter 2. Concentration
 
 **Problem:** Show that fixture sums concentrate.
 

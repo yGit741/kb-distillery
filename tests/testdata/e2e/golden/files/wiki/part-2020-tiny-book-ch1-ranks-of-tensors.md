@@ -2,14 +2,15 @@
 type: part
 layer: source
 book: book-2020-tiny-book
+chapter: ch1
 authors: [B. Writer]
 year: 2020
 area: [learning-theory]
 maturity: digested
 depth: full
 raw: raw/printed-docs/2020-tiny-book.pdf
-section: Pages 1–10
-section_pages: 1-10
+section: Chapter 1. Ranks of tensors
+section_pages: 1-30
 citekey: 
 url: 
 recommended_by: []
@@ -18,7 +19,7 @@ discussed_with: []
 
 # Tiny Book
 
-> Part of [book-2020-tiny-book](book-2020-tiny-book.md) · pp. 1–10 · Pages 1–10
+> Part of [Tiny Book (2020)](book-2020-tiny-book.md) · pp. 1–30 · Chapter 1. Ranks of tensors
 
 **Problem:** What is the rank of a tensor?
 

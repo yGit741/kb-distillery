@@ -14,7 +14,7 @@ Read this root first, then open only the one section you need; each section list
 - [Courses](course/index.md) — 1 page. Course hubs listing their lectures and notes.
 - [Series](series/index.md) — 1 page. Series hubs grouping related posts or articles.
 - [Books](book/index.md) — 1 page. Books, with the parts digested from them.
-- [Papers](paper/index.md) — 3 pages. Digested papers, one page each.
+- [Papers](paper/index.md) — 2 pages. Digested papers, one page each.
 - [Book parts](part/index.md) — 1 page. Page ranges of a book, digested on their own.
 - [Lectures](lecture/index.md) — 2 pages. One page per class session.
 - [Articles](article/index.md) — 1 page. Web articles and tutorials.

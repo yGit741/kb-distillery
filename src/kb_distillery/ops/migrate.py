@@ -122,8 +122,10 @@ def preflight(root, bump=False):
         os.makedirs(copy)
         _snapshot(root, copy)
         link_bulk(root, copy)
-        with contextlib.redirect_stdout(io.StringIO()):          # the copy's progress is not the kb's
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):          # the copy's progress is not the kb's…
             ids = _apply(copy, pending)
+        notes = [l for l in buf.getvalue().splitlines() if l.startswith("NOTE ")]   # …but its notes are
         if bump:
             _bump_kb_toml(copy)
         env = dict(os.environ, KB_ROOT=copy)
@@ -136,6 +138,8 @@ def preflight(root, bump=False):
             if proc.returncode != 0 and not lines:
                 lines = [f"ERROR {mod} failed: " + " | ".join(((proc.stdout or "") + (proc.stderr or "")).splitlines()[-3:])]
             findings += lines
+    if findings and notes:
+        findings = [f"migration report: {n}" for n in notes] + findings
     return ids, findings
 
 

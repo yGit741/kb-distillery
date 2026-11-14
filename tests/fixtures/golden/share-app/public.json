@@ -45,7 +45,7 @@
      "target": "theme-info-theory"
     }
    ],
-   "etag": "0002c2637ce37bf8",
+   "etag": "631b1e2361bc5be5",
    "facets": {
     "areas": [
      "info-theory",
@@ -860,7 +860,7 @@
     ],
     "version": [
      1,
-     5
+     6
     ]
    }
   },
@@ -1191,7 +1191,7 @@
   },
   "meta": {
    "built_at": "2026-01-02T03:04:05Z",
-   "content_sha": "0002c2637ce37bf87a263cc1618fe9322fccf92e",
+   "content_sha": "631b1e2361bc5be536d4f051fb14caecb5427e19",
    "kb_version": "0.1.1",
    "profile": "public",
    "viewer_sha": "<viewer>"

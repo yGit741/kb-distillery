@@ -23,16 +23,23 @@ def _add_llm_flags(sp, default_model):
 
 
 def _add_scope_flags(sp):
-    sp.add_argument("--part", default=None, metavar="N",
-                    help="row number of the book's partition, as printed by `toc`")
-    sp.add_argument("--pages", default=None, metavar="A-B",
-                    help="page range to read, 1-based inclusive (e.g. 19-42)")
-    sp.add_argument("--section", default=None, metavar="SPEC",
-                    help="chapter number, #index or title text from `toc`")
-    sp.add_argument("--whole-book", action="store_true",
-                    help="skip the book gate and skim the first 25 pages")
+    g = sp.add_mutually_exclusive_group()
+    g.add_argument("--chapter", default=None, metavar="ID",
+                   help="one chapter of a book: 3, ch3, ch11a, appA (ids from `toc`)")
+    g.add_argument("--chapters", default=None, metavar="SEL",
+                   help="several chapters, one part page each: 1-3, ch1-ch3, 2,5,appA")
+    g.add_argument("--all", dest="all_chapters", action="store_true",
+                   help="every undigested chapter of a book, one part page each")
+    g.add_argument("--section", default=None, metavar="SPEC",
+                   help="outline entry (chapter number, #index or title text); resolves to its chapter")
     sp.add_argument("--row", default=None, metavar="N",
                     help="row of a course/series Contents table; pass the hub slug as raw_path")
+    sp.add_argument("--redo", action="store_true",
+                    help="a book chapter that is already digested: digest it again, rewriting its page in place")
+    sp.add_argument("--no-exercises", dest="exercises", action="store_false",
+                    help="a book chapter: leave its exercises out of the page (they are in by default)")
+    sp.add_argument("--notes", action="store_true",
+                    help="a book chapter: also digest its historical notes and references")
 
 
 def cmd_status(_args):
@@ -79,30 +86,75 @@ def _row_scope(args):
     return {"hub": hub, "row": n, "raws": row["raws"], "label": row["title"]}, 0
 
 
-def _scope(args):
-    """Resolve --row/--pages/--section against the raw file; returns (scope_dict, error_code)."""
+def _scopes(args):
+    """Resolve --row / --chapter / --chapters / --all / --section against the raw file; returns
+    ([scope_dict, …], error_code). A book yields one scope per chapter; anything else one scope."""
     row_scope, code = _row_scope(args)
     if code or row_scope:
-        return row_scope, code
+        return [row_scope], code
     raw_rel = book_mod.verify_for_scope(args.raw_path)
     raw_abs = os.path.join(ROOT, raw_rel)
-    rng, label, blocked = book_mod.gate(
-        raw_rel, raw_abs,
-        getattr(args, "pages", None), getattr(args, "section", None),
-        getattr(args, "whole_book", False), getattr(args, "part", None))
+    rows, blocked = book_mod.gate(
+        raw_rel, raw_abs, chapter=getattr(args, "chapter", None),
+        chapters=getattr(args, "chapters", None), all_chapters=getattr(args, "all_chapters", False),
+        section=getattr(args, "section", None), redo=getattr(args, "redo", False))
     if blocked:
         print(blocked, file=sys.stderr)
         return None, 2
-    if not rng:
-        return {}, 0
-    scope = {"pages": list(rng), "label": label}
-    if not getattr(args, "whole_book", False) and book_mod.is_book(raw_abs):
-        scope["book"] = book_mod.hub_slug(raw_rel)     # → a type: part page on its book hub
-    return scope, 0
+    if not rows:
+        return [{}], 0
+    book = book_mod.hub_slug(raw_rel)                  # → one type: part page per chapter
+    extra = {}
+    if not getattr(args, "exercises", True):
+        extra["exercises"] = False
+    if getattr(args, "notes", False):
+        extra["notes"] = True
+    return [{"pages": [r["start"], r["end"]], "label": r["title"], "chapter": r["id"], "book": book, **extra,
+             **({"slug": r["slug"]} if r.get("slug") else {})}       # a digested row (--redo): its page is rewritten
+            for r in rows], 0
+
+
+def cmd_book(args):
+    """Build the book page (## Chapters) for a filed book PDF: outline, then page headings."""
+    raw_rel = book_mod.verify_for_scope(args.raw_path)
+    raw_abs = os.path.join(ROOT, raw_rel)
+    if not os.path.isfile(raw_abs) or not raw_abs.lower().endswith(".pdf"):
+        print(f"book: no such PDF: {args.raw_path}", file=sys.stderr)
+        return 1
+    if book_mod.find_hub(raw_rel):
+        print(f"book: {raw_rel} already has a book page — `toc {raw_rel}` shows its chapters")
+        return 0
+    try:
+        hub_rel, rows = book_mod.build_book(raw_rel, raw_abs, chapters_file=args.chapters_file)
+    except book_mod.BookError as e:
+        print(f"book: {e}", file=sys.stderr)
+        return 2
+    print(f"created {hub_rel} — {len(rows)} rows; write its ## Overview")
+    return 0
+
+
+def _transcript_lines(raw_abs, rows):
+    """Per chapter, how much of it has a checked transcript in meta/parsed and how many formulas are marked unsure
+    (nothing when the book has no stored page at all)."""
+    from kb_distillery.parse import store
+    proot = store.parsed_root(ROOT)
+    with open(raw_abs, "rb") as f:
+        sha = store.sha1_bytes(f.read())
+    if not store.pages_on_disk(proot, sha):
+        return []
+    out = ["", "Checked transcript (meta/parsed):"]
+    for r in rows:
+        if r["start"] is None or r["status"] == book_mod.SKIP:
+            continue
+        c = store.coverage(proot, sha, r["start"], r["end"])
+        state = "none" if not c["pages"] else "%d / %d pages" % (c["pages"], c["of"])
+        marks = "" if not c["pages"] else ", %d marked ! and %d marked !!" % (c["!"], c["!!"])
+        out.append("  %-6s %s%s" % (r["id"], state, marks))
+    return out
 
 
 def cmd_toc(args):
-    """The book's partition (from its hub page, or proposed); --depth 2+ adds the PDF outline."""
+    """The book's chapters (from its book page); --depth 2+ adds the PDF outline."""
     raw_rel = book_mod.verify_for_scope(args.raw_path)
     raw_abs = os.path.join(ROOT, raw_rel)
     if not os.path.isfile(raw_abs):
@@ -113,25 +165,40 @@ def cmd_toc(args):
         return 1
     if book_mod._pdf() is None:
         return 1
-    rows, total, hub_rel = book_mod.partition_for(raw_rel, raw_abs)
-    if rows:
-        print(book_mod.format_partition(rows, total, raw_rel, hub_rel))
-    if args.depth > 1 or not rows:
+    rows, total, hub_rel = book_mod.chapters_for(raw_rel)
+    if hub_rel:
+        print(book_mod.format_chapters(rows, total, raw_rel, hub_rel))
+        for line in _transcript_lines(raw_abs, rows):
+            print(line)
+    elif book_mod.is_book(raw_abs):
+        print(book_mod.ingest_hint(raw_rel), file=sys.stderr)
+    if args.depth > 1 or not hub_rel:
         entries, total, source = book_mod.read_toc(raw_abs)
         if not entries:
             print(f"{raw_rel} — {total} pages, no readable table of contents.", file=sys.stderr)
-            return 0 if rows else 1
+            return 0 if hub_rel else 1
         print("\nPDF outline:\n" + book_mod.format_toc(entries, total, source, raw_rel,
                                                         depth=args.depth))
     return 0
 
 
+def _begin_all(args, depth):
+    scopes, code = _scopes(args)
+    if code:
+        return None, code
+    shas = [session.begin(args.raw_path, depth=depth, scope=sc) for sc in scopes]
+    if len(shas) > 1:
+        print(f"\n{len(shas)} chapter sessions, run each through extract → map → draft → finalize:")
+        for sc, sha in zip(scopes, shas):
+            print(f"  {sc['chapter']}\t{sha}")
+    return shas, 0
+
+
 def cmd_full_digest(args):
-    scope, code = _scope(args)
+    shas, code = _begin_all(args, "full")
     if code:
         return code
-    sha = session.begin(args.raw_path, depth="full", scope=scope)
-    print(f"\nfull-digest session {sha} — next: extract → claims.json → map → draft → finalize")
+    print(f"\nfull-digest session {shas[0]} — next: extract → claims.json → map → draft → finalize")
     print("See .claude/skills/full-digest/SKILL.md")
     return 0
 
@@ -140,11 +207,10 @@ def cmd_deep_digest(args):
     if not args.confirm_heavy:
         print("deep-digest requires --confirm-heavy (heavy LLM tier ~25-40k+ tokens)", file=sys.stderr)
         return 1
-    scope, code = _scope(args)
+    shas, code = _begin_all(args, "deep")
     if code:
         return code
-    sha = session.begin(args.raw_path, depth="deep", scope=scope)
-    print(f"\ndeep-digest session {sha} — extended neighbor linking in plan.json")
+    print(f"\ndeep-digest session {shas[0]} — extended neighbor linking in plan.json")
     print("See .claude/skills/deep-digest/SKILL.md")
     return 0
 
@@ -214,6 +280,9 @@ def main(argv=None):
     cat.add_argument("--title", default=None, help="row title on the hub's Contents table")
     cat.add_argument("--year", type=int, default=None,
                      help="publication year, for a PDF whose name does not carry it (never guessed)")
+    cat.add_argument("--chapters-file", default=None, metavar="FILE",
+                     help="a book's chapter breaks by hand, lines of id<TAB>title<TAB>first-last "
+                          "(when its outline and headings give none)")
 
     di = sub.add_parser("drain-inbox", help="catalog all inbox files (0 LLM)")
     di.add_argument("--collection", "--course", default="")
@@ -257,7 +326,12 @@ def main(argv=None):
                         "their page cites (wrong downloads; 0 LLM)")
     rf.add_argument("--apply", action="store_true", help="download and replace; default lists only")
 
-    tc = sub.add_parser("toc", help="a book's page partition (or a proposed one) + outline (0 LLM)")
+    bk = sub.add_parser("book", help="build the book page and its ## Chapters table for a filed book PDF (0 LLM)")
+    bk.add_argument("raw_path")
+    bk.add_argument("--chapters-file", default=None, metavar="FILE",
+                    help="chapter breaks by hand, lines of id<TAB>title<TAB>first-last")
+
+    tc = sub.add_parser("toc", help="a book's chapters (ids, pages, status) + outline (0 LLM)")
     tc.add_argument("raw_path")
     tc.add_argument("--depth", type=int, default=1, help="1 = chapters only, 2 = include sections")
 
@@ -372,7 +446,7 @@ def main(argv=None):
     if args.cmd == "catalog":
         try:
             catalog.catalog(args.inbox_path, collection=args.collection, fmt=args.format,
-                            title=args.title, year=args.year)
+                            title=args.title, year=args.year, chapters_file=args.chapters_file)
         except (ValueError, NotImplementedError, OSError) as e:
             print(f"catalog failed: {e}\n(logged — the dashboard's Ingestion status shows it)", file=sys.stderr)
             return 1
@@ -412,6 +486,8 @@ def main(argv=None):
         return digest_many.run(args.dm_args)
     if args.cmd == "toc":
         return cmd_toc(args)
+    if args.cmd == "book":
+        return cmd_book(args)
     if args.cmd == "refetch-raw":
         return backfill_mod.refetch_raw(dry_run=not args.apply)
     if args.cmd == "backfill-authors":
@@ -419,11 +495,8 @@ def main(argv=None):
             return backfill_mod.fix_urls(dry_run=args.dry_run)
         return backfill_mod.backfill_authors(dry_run=args.dry_run)
     if args.cmd == "begin":
-        scope, code = _scope(args)
-        if code:
-            return code
-        session.begin(args.raw_path, scope=scope)
-        return 0
+        _shas, code = _begin_all(args, "full")
+        return code
     if args.cmd == "extract":
         return extract.run_extract(args.session, fill=args.fill, backend=args.backend, model=args.model)
     if args.cmd == "map":

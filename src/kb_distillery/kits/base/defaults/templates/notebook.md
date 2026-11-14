@@ -4,6 +4,7 @@ layer: collection
 area: {{area}}
 raw: {{raw}}
 book_pages: {{book_pages}}
+outline_chapters: {{outline_chapters}}
 maturity: {{maturity}}
 related: []
 description:
@@ -15,9 +16,9 @@ description:
 
 <!-- At least one paragraph: what this handwritten notebook covers, when it was written, how it is organised. Lint warns until this is written. -->
 
-## Partition
+## Chapters
 
-{{partition}}
+{{chapters}}
 
 ## Threads
 

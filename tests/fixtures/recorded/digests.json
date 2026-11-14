@@ -32,10 +32,10 @@
       "year": 2019
     },
     "depth": "full",
-    "overview": "A fixture book of four chapters, used by the pipeline harness to exercise the page partition, part digests and the coverage line. It has no real content.",
+    "overview": "A fixture book of four chapters, used by the pipeline harness to exercise the chapters table, part digests and the coverage line. It has no real content.",
     "raw": "raw/printed-docs/2019-fixture-book.pdf",
     "scope": [
-      "--part",
+      "--chapter",
       "2"
     ]
   },

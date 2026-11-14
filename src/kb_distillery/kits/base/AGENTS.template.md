@@ -61,7 +61,7 @@ When the request is unclear, ask one short question.
 | publish or share the kb as a site, or set `[publish]` | `.claude/docs/publish.md` |
 | read or write raw sources from code, or set `[storage]` | `.claude/docs/storage.md` |
 | touch `raw/` or `meta/corpus.tsv`: format folders, inbox, dispositions, file naming | `.claude/docs/raw-and-corpus.md` |
-| work on a course / series Contents table, digest a collection row, or digest a book | `.claude/docs/collections.md` |
+| work on a course / series Contents table, digest a collection row, or ingest / digest a book (by chapter) | `.claude/docs/collections.md` |
 | send a think note into kbs, or cite `think:` | `.claude/docs/think.md` |
 | pick a skill tier or run the ingest / query / distill CLIs | `.claude/docs/workflows.md` |
 | handle coherence warnings or semantic lint | `.claude/docs/semantic-lint.md` |

@@ -47,17 +47,21 @@ def _equations_block(equations):
     return "\n".join(lines) if lines else "—"
 
 
-def _exercises_block(claims):
-    """`## Exercises` (a book part's exercises, in full) and `## Notes and references`, each only when claims has it."""
+def _exercises_block(claims, scope=None):
+    """`## Exercises` (a book part's exercises, in full) and `## Notes and references`, each only when claims has it.
+    With the session's `scope`, what was not asked for is left out even if the model filled it in: exercises after
+    `--no-exercises`, notes without `--notes`."""
     out = []
-    rows = [x for x in claims.get("exercises") or [] if (x.get("statement") or "").strip()]
+    want_ex = scope is None or scope.get("exercises", True)
+    want_notes = scope is None or bool(scope.get("notes"))
+    rows = [x for x in claims.get("exercises") or [] if (x.get("statement") or "").strip()] if want_ex else []
     if rows:
         out.append("## Exercises\n")
         for x in rows:
             label = str(x.get("label") or "").strip()
             statement = re.sub(r"(?m)^[ \t]*#{1,6}[ \t]+", "", x["statement"].strip())
             out.append((f"**{label}.** " if label else "") + statement + "\n")
-    if (claims.get("notes") or "").strip():
+    if want_notes and (claims.get("notes") or "").strip():
         notes = re.sub(r"(?m)^[ \t]*#{1,6}[ \t]+(.*)$", r"**\1**", claims["notes"].strip())     # no headings of its own
         out.append("## Notes and references\n\n" + notes + "\n")
     return ("\n".join(out) + "\n") if out else ""
@@ -77,6 +81,13 @@ def question_name(text, limit=QUESTION_TITLE_MAX):
         return text
     cut = text[:limit - 1].rsplit(" ", 1)[0].rstrip(" ,;:")
     return cut + "…"
+
+
+def _citekey(key, chapter):
+    """A chapter page's citekey carries its chapter id: `writer2020tiny-ch3`."""
+    if not key or not chapter or key.endswith(f"-{chapter}"):
+        return key
+    return f"{key}-{chapter}"
 
 
 def run_draft(sha):
@@ -130,7 +141,9 @@ def run_draft(sha):
     if book:
         a, b = scope["pages"]
         section = (scope.get("label") or "").replace("#", "").replace(":", " –")
-        head = (f"type: part\nlayer: source\n{title_fm}book: {book}\n", f"section: {section}\nsection_pages: {a}-{b}\n",
+        chapter = scope.get("chapter") or ""
+        head = (f"type: part\nlayer: source\n{title_fm}book: {book}\nchapter: {chapter}\n",
+                f"section: {section}\nsection_pages: {a}-{b}\n",
                 f"\n> Part of {links.page_link(book, known)} · pp. {a}–{b} · {section}\n")
         plan["areas_resolved"] = areas
     elif plan.get("hub"):
@@ -147,7 +160,7 @@ area: [{", ".join(areas)}]
 maturity: {paper_status}
 {draft_fm}depth: {digestion}
 raw: {raw_field}
-{head[1]}citekey: {claims.get("citekey") or ""}
+{head[1]}citekey: {_citekey(claims.get("citekey") or "", scope.get("chapter") if book else "")}
 url: {claims.get("url") or ""}
 recommended_by: {recommended_by}
 discussed_with: []
@@ -176,7 +189,7 @@ discussed_with: []
 - {results[-1] if len(results) > 1 else main_result}
 - Concepts: {concepts_links}
 
-{_exercises_block(claims)}## Links out
+{_exercises_block(claims, scope)}## Links out
 
 - Concepts: {concepts_links}
 {links_person}"""

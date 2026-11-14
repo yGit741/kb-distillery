@@ -2,7 +2,7 @@
  "links": [
   [
    "book-2020-tiny-book",
-   "part-2020-tiny-book-pages-1-10"
+   "part-2020-tiny-book-ch1-ranks-of-tensors"
   ],
   [
    "course-test-ml",
@@ -33,15 +33,15 @@
    "theme-learning-theory"
   ],
   [
-   "part-2020-tiny-book-pages-1-10",
+   "part-2020-tiny-book-ch1-ranks-of-tensors",
    "book-2020-tiny-book"
   ],
   [
-   "part-2020-tiny-book-pages-1-10",
+   "part-2020-tiny-book-ch1-ranks-of-tensors",
    "tensor-rank"
   ],
   [
-   "part-2020-tiny-book-pages-1-10",
+   "part-2020-tiny-book-ch1-ranks-of-tensors",
    "theme-learning-theory"
   ],
   [
@@ -138,10 +138,10 @@
    "in": 1,
    "maturity": "reading",
    "out": 1,
-   "preview": "Coverage: 10 / 61 pp (16%) · skip rows excluded · parts ≤ 60 pp",
+   "preview": "Coverage: 1 / 2 chapters · skip rows excluded",
    "title": "Tiny Book (2020)",
    "type": "book",
-   "words": 111,
+   "words": 109,
    "year": 2020
   },
   {
@@ -189,19 +189,6 @@
   },
   {
    "areas": [],
-   "depth": "listed",
-   "id": "paper-2020-tiny-book",
-   "in": 0,
-   "maturity": "to-read",
-   "out": 0,
-   "preview": "Problem: Main result:",
-   "title": "Tiny Book",
-   "type": "paper",
-   "words": 29,
-   "year": 2020
-  },
-  {
-   "areas": [],
    "depth": "easy",
    "id": "paper-2023-easy-skim-paper",
    "in": 0,
@@ -233,14 +220,14 @@
     "learning-theory"
    ],
    "depth": "full",
-   "id": "part-2020-tiny-book-pages-1-10",
+   "id": "part-2020-tiny-book-ch1-ranks-of-tensors",
    "in": 1,
    "maturity": "digested",
    "out": 3,
    "preview": "Problem: What is the rank of a tensor? Main result: Tensor rank can exceed every flattening rank.",
    "title": "Tiny Book",
    "type": "part",
-   "words": 74,
+   "words": 79,
    "year": 2020
   },
   {

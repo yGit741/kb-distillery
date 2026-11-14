@@ -134,7 +134,7 @@ def _title(text, slug):
 # collections: book/notebook partitions and course/series contents tables
 # --------------------------------------------------------------------------
 def _collections(pages):
-    from kb_distillery.vault.books import coverage as page_coverage, parse_partition
+    from kb_distillery.vault.books import chapter_coverage, parse_chapters
     from kb_distillery.vault import hubs
     out = []
     for slug, (_rel, fm, text) in sorted(pages.items()):
@@ -142,10 +142,10 @@ def _collections(pages):
         if t not in COLLECTION_TYPES:
             continue
         if t in PARTITION_COLLECTIONS:
-            rows = parse_partition(text)
-            done, total = page_coverage(rows) if rows else (0, 0)
-            unit = "pp"
-            rows = [{"title": r["title"], "pages": [r["start"], r["end"]], "status": r["status"],
+            rows = parse_chapters(text)
+            done, total = chapter_coverage(rows) if rows else (0, 0)
+            unit = "chapters"
+            rows = [{"id": r["id"], "title": r["title"], "pages": [r["start"], r["end"]], "status": r["status"],
                      "slug": r["slug"], "raws": []} for r in rows]
         else:
             rows = hubs.parse_contents(text)

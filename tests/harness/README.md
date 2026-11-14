@@ -36,7 +36,7 @@ pixi run test                           # includes the fast unit tests (test_har
 | `source-blog-post-hebrew` | Not-Exact tagged post -> catalog creates the blog page -> easy-digest |
 | `source-conversation-email` | `scrap-mail` of an mbox -> catalog -> full-digest |
 | `source-ai-chat` | catalog -> chat pipeline (`chat_build` tree + `chat_render` page); the transactional digest is refused by lint for chats |
-| `collection-book` | 62-page PDF with an outline -> `full-digest --part 2` -> book hub with partition, Overview written |
+| `collection-book` | 62-page PDF with an outline -> catalog builds the book page and its chapters -> `full-digest --chapter 2` -> part page, Overview written |
 | `collection-course-member-1/2` | slides catalogued with `--collection`/`--title` -> `full-digest <hub> --row 1`, easy-digest row 2 |
 | video | seeded hand-written page (there is no ingest path for videos) |
 

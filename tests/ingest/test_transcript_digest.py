@@ -138,6 +138,10 @@ def test_an_equation_keeps_its_mark_and_exercises_get_their_own_section():
                                  "notes": "First proved in 1999."})
     assert ex.startswith("## Exercises\n\n**2.1.** Show $a=b$.\n") and "## Notes and references\n\nFirst proved" in ex
     assert draft._exercises_block({}) == ""
+    both = {"exercises": [{"label": "2.1", "statement": "Show $a=b$."}], "notes": "First proved in 1999."}
+    assert "Notes and references" not in draft._exercises_block(both, {"pages": [1, 2]})        # notes only with --notes
+    assert "Notes and references" in draft._exercises_block(both, {"notes": True})
+    assert draft._exercises_block(both, {"exercises": False}) == ""
     odd = draft._exercises_block({"exercises": [{"label": 3.36, "statement": "## Hint\nDo it."}], "notes": "## History\nOld.\n## Links out"})
     assert "**3.36.** Hint\nDo it." in odd and odd.count("## ") == 2 and "**History**" in odd and "**Links out**" in odd
 
@@ -152,3 +156,31 @@ def test_claims_validation_of_marks_exercises_and_notes():
                      ({"exercises": "none"}, "exercises"), ({"notes": ["x"]}, "notes")):
         with pytest.raises(ValueError, match=why):
             schemas.validate_claims({**base, **bad})
+
+
+def test_exercise_and_notes_switches_reach_the_chapter_scope(monkeypatch):
+    import argparse
+    from kb_distillery.ingest import cli
+    rows = [{"start": 2, "end": 3, "title": "Two", "id": "ch2"}]
+    monkeypatch.setattr(cli, "_row_scope", lambda args: (None, 0))
+    monkeypatch.setattr(cli.book_mod, "verify_for_scope", lambda p: p)
+    monkeypatch.setattr(cli.book_mod, "gate", lambda *a, **k: (rows, None))
+    monkeypatch.setattr(cli.book_mod, "hub_slug", lambda raw: "book-x")
+    base = {"raw_path": "raw/printed-docs/x.pdf", "chapter": "2"}
+    (plain,), _ = cli._scopes(argparse.Namespace(**base, exercises=True, notes=False))
+    assert "exercises" not in plain and "notes" not in plain and plain["chapter"] == "ch2"
+    (off,), _ = cli._scopes(argparse.Namespace(**base, exercises=False, notes=True))
+    assert off["exercises"] is False and off["notes"] is True
+
+
+def test_a_redone_chapter_keeps_its_page(monkeypatch):
+    import argparse
+    from kb_distillery.ingest import cli
+    rows = [{"start": 2, "end": 3, "title": "Two", "id": "ch2", "slug": "part-x-ch2-old-name", "status": "full"}]
+    seen = {}
+    monkeypatch.setattr(cli, "_row_scope", lambda args: (None, 0))
+    monkeypatch.setattr(cli.book_mod, "verify_for_scope", lambda p: p)
+    monkeypatch.setattr(cli.book_mod, "gate", lambda *a, **k: (seen.update(k) or (rows, None)))
+    monkeypatch.setattr(cli.book_mod, "hub_slug", lambda raw: "book-x")
+    (sc,), _ = cli._scopes(argparse.Namespace(raw_path="raw/printed-docs/x.pdf", chapter="2", redo=True, exercises=True, notes=False))
+    assert seen["redo"] is True and sc["slug"] == "part-x-ch2-old-name"

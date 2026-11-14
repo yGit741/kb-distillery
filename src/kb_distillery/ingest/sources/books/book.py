@@ -1,7 +1,8 @@
-"""Generic book handling: detect long PDFs, read their table of contents, pick a section.
+"""Generic book handling: detect long PDFs, build their chapters, pick chapters to digest.
 
-A book is any PDF long enough that a 25-page skim from the front is meaningless. Digesting one
-is always scoped: the CLI prints the TOC and refuses to guess which part you meant.
+A book is any PDF long enough that a 25-page skim from the front is meaningless. Ingest builds
+its book page with a `## Chapters` table first (`build_book`); digest then works one chapter at
+a time and refuses to run before that page exists.
 
 Section ranges are 1-based inclusive page numbers as printed by `toc`, matching what the PDF
 outline reports (physical PDF pages, which for a typeset book run ahead of the printed folios).
@@ -17,9 +18,10 @@ from kb_distillery.config.paths import meta_file
 from kb_distillery.storage import pdf as pdflib
 from kb_distillery.vault import frontmatter, wikiio
 from kb_distillery.lint.lint import parse_frontmatter
-from kb_distillery.vault.schema import PARTITION_COLLECTIONS, RAW_HANDWRITTEN, SLUG_PREFIX, is_page_file, make_slug, strip_prefix
-from kb_distillery.vault.books import (DIGESTED, PART_MAX_PAGES, SKIP, book_status, carve, coverage_line, find_row,
-                   parse_partition, propose, replace_partition)
+from kb_distillery.vault.schema import RAW_HANDWRITTEN, SLUG_PREFIX, is_page_file, make_slug, strip_prefix
+from kb_distillery.vault import books as core
+from kb_distillery.vault.books import (DIGESTED, SKIP, book_status, content_ids, coverage_line,
+                                       parse_chapters, propose, replace_chapters, row_at, select, set_chapter)
 
 BOOK_MIN_PAGES = 60         # below this a PDF is a paper: digest it whole
 BOOK_MIN_SECTIONS = 3        # a TOC needs at least this many entries to be worth offering
@@ -208,22 +210,6 @@ def find_section(entries, spec):
     return min(hits, key=lambda e: (e["level"], e["start"])) if hits else None
 
 
-def parse_pages(spec, total=None):
-    """'19-42' or '19' → (19, 42). Returns None when unparseable."""
-    if not spec:
-        return None
-    m = re.fullmatch(r"\s*(\d+)\s*(?:[-:]\s*(\d+)\s*)?", str(spec))
-    if not m:
-        return None
-    start = int(m.group(1))
-    end = int(m.group(2)) if m.group(2) else start
-    if end < start:
-        start, end = end, start
-    if total:
-        start, end = max(1, min(start, total)), max(1, min(end, total))
-    return start, end
-
-
 def digested_ranges(raw_rel):
     """[(slug, start, end)] already digested from this raw file, read from wiki frontmatter."""
     import glob
@@ -252,14 +238,6 @@ def _overlap(a, b, ranges):
     return None
 
 
-def _example(shown):
-    """Pick a chapter-ish entry for the usage hint, not the preface."""
-    for e in shown:
-        if e["number"]:
-            return f"{e['start']}-{e['end']}"
-    return f"{shown[0]['start']}-{shown[0]['end']}"
-
-
 def format_toc(entries, total, source, raw_rel, depth=1):
     """Human-readable contents listing for the terminal."""
     tops = top_level(entries)
@@ -281,16 +259,91 @@ def format_toc(entries, total, source, raw_rel, depth=1):
         lines.append(row + (f"  → {slug}" if slug else ""))
     lines += [
         "",
-        "Digest one section, not the book:",
-        f"  python3 -m kb_distillery.ingest full-digest {raw_rel} --section 1",
-        f"  python3 -m kb_distillery.ingest full-digest {raw_rel} --pages {_example(shown)}" if shown else "",
-        "  (--section takes a chapter number, #index or title text; --whole-book overrides this gate)",
+        "Digest by chapter (the book page's ## Chapters table):",
+        f"  python3 -m kb_distillery.ingest full-digest {raw_rel} --chapter 1",
+        "  (--section takes a chapter number, #index or title text and resolves to its chapter)",
     ]
     return "\n".join(l for l in lines if l is not None)
 
 
 # --------------------------------------------------------------------------
-# book hub page + partition
+# chapters at ingest: outline, then page headings, else a clear stop
+# --------------------------------------------------------------------------
+HEADING_LINES = 3            # a chapter heading sits in the first lines of its page
+CHAPTERS_FILE_HINT = (
+    "Supply the chapter breaks by hand: write a text file with one chapter per line,\n"
+    "  id<TAB>title<TAB>first-last      e.g.  ch1<TAB>Chapter 1. Basics<TAB>19-42\n"
+    "(ids: front, ch1, ch2, …, appA, back; pages are physical PDF pages and must cover the whole book),\n"
+    "then run again with --chapters-file <file>.")
+
+
+class BookError(ValueError):
+    """Ingest could not build a book's chapters. The message carries the hint."""
+
+
+def _from_headings(doc):
+    """Chapter entries from page headings: a page whose first lines say 'Chapter N' / 'Appendix X'."""
+    entries, seen = [], set()
+    for i in range(doc.page_count):
+        lines = [l.strip() for l in doc.page_text(i).splitlines() if l.strip()][:HEADING_LINES]
+        for n, line in enumerate(lines):
+            if not re.match(r"^(chapter|appendix)\s+\w", line, re.I):
+                continue
+            title = line
+            if len(line.split()) <= 2 and n + 1 < len(lines):
+                title = f"{line}. {lines[n + 1]}"         # 'Chapter 3' / 'Influences' on two lines
+            cid = core.chapter_id(title)
+            if cid and cid not in seen:
+                seen.add(cid)
+                entries.append({"level": 1, "title": title, "start": i + 1})
+            break
+    return _finish(entries, doc.page_count) if len(entries) >= 2 else []
+
+
+def chapter_rows(raw_path):
+    """(rows, total, source): chapters from the PDF outline, else from page headings; rows is []
+    when neither yields numbered chapters (`source` 'none')."""
+    reader = _pdf()
+    if not reader or not os.path.isfile(raw_path):
+        return [], 0, "none"
+    doc = reader.PdfDoc(raw_path)
+    try:
+        total = doc.page_count
+        rows = propose(_from_outline(doc), total)
+        if rows:
+            return rows, total, "outline"
+        rows = propose(_from_headings(doc), total)
+        return rows, total, ("headings" if rows else "none")
+    finally:
+        doc.close()
+
+
+def plan_chapters(raw_path, chapters_file=None, notebook=False):
+    """(rows, total, outline_chapters, source) for a book PDF. Raises BookError with the
+    chapters-file hint when no chapters can be found; never guesses. A handwritten notebook with no
+    chapters is read in fixed-size page sections (sec1, sec2, …; source 'sections') instead."""
+    total = page_count(raw_path)
+    if chapters_file:
+        try:
+            with open(chapters_file, encoding="utf-8") as f:
+                rows = core.parse_chapters_file(f.read(), total)
+        except OSError as e:
+            raise BookError(f"cannot read --chapters-file: {e}") from e
+        except ValueError as e:
+            raise BookError(f"{e}\n{CHAPTERS_FILE_HINT}") from e
+        return rows, total, len(content_ids(rows)), "file"
+    rows, total, source = chapter_rows(raw_path)
+    if not rows and notebook and total:
+        rows = core.notebook_sections(total)
+        return rows, total, len(rows), "sections"
+    if not rows:
+        raise BookError(f"{os.path.basename(raw_path)} is a book ({total} pages) but neither its PDF "
+                        f"outline nor its page headings give numbered chapters.\n{CHAPTERS_FILE_HINT}")
+    return rows, total, len(content_ids(rows)), source
+
+
+# --------------------------------------------------------------------------
+# the book page
 # --------------------------------------------------------------------------
 def hub_type(raw_rel):
     """A long handwritten PDF is a notebook; anything else long is a book."""
@@ -308,18 +361,7 @@ def _wiki_pages(wiki_dir):
 
 def find_hub(raw_rel):
     """(wiki_rel, text) of the book/notebook page for this raw file, or None."""
-    for path in sorted(_wiki_pages(os.path.join(ROOT, "wiki"))):
-        try:
-            with open(path, encoding="utf-8") as f:
-                text = f.read()
-        except OSError:
-            continue
-        if f"raw: {raw_rel}" not in text[:2000]:
-            continue
-        fm = parse_frontmatter(text) or {}
-        if fm.get("type") in PARTITION_COLLECTIONS and str(fm.get("raw") or "") == raw_rel:
-            return os.path.relpath(path, ROOT).replace(os.sep, "/"), text
-    return None
+    return core.find_hub(ROOT, raw_rel)
 
 
 def hub_slug(raw_rel):
@@ -330,121 +372,105 @@ def hub_slug(raw_rel):
     return make_slug(hub_type(raw_rel), re.sub(r"\.pdf$", "", os.path.basename(raw_rel), flags=re.I))
 
 
-def partition_for(raw_rel, raw_path):
-    """(rows, total, hub_rel). From the hub page when it exists, else proposed from the outline
-    (hub_rel None). Rows are sorted by start page."""
+def chapters_for(raw_rel):
+    """(rows, total, hub_rel) from the book page, or ([], pages, None) when there is none yet."""
     hub = find_hub(raw_rel)
-    if hub:
-        fm = parse_frontmatter(hub[1]) or {}
-        try:
-            total = int(str(fm.get("book_pages") or "0"))
-        except ValueError:
-            total = 0
-        rows = [r for r in parse_partition(hub[1]) if r["start"] is not None]
-        return sorted(rows, key=lambda r: r["start"]), total or page_count(raw_path), hub[0]
-    entries, total, _source = read_toc(raw_path)
-    return propose(entries, total), total, None
+    if not hub:
+        return [], 0, None
+    fm = parse_frontmatter(hub[1]) or {}
+    try:
+        total = int(str(fm.get("book_pages") or "0"))
+    except ValueError:
+        total = 0
+    rows = [r for r in parse_chapters(hub[1]) if r["start"] is not None]
+    return sorted(rows, key=lambda r: r["start"]), total, hub[0]
 
 
-def format_partition(rows, total, raw_rel, hub_rel):
-    """Terminal view of a book's partition, `[x]` digested, `[ ]` backlog, `[-]` skip."""
-    where = (f"book page [[{os.path.basename(hub_rel)[:-3]}]]" if hub_rel else
-             "no book page yet — PROPOSED partition, written on the first scoped digest")
-    lines = [f"{raw_rel} — {total} pages · {where}", coverage_line(rows).replace("**", ""), ""]
-    width = min(max((len(r["title"]) for r in rows), default=10), 64)
+def ingest_hint(raw_rel):
+    return (f"{raw_rel} is a book with no book page yet — ingest builds its chapters first:\n"
+            f"  python3 -m kb_distillery.ingest book {raw_rel}   [--chapters-file <file>]")
+
+
+def format_chapters(rows, total, raw_rel, hub_rel):
+    """Terminal view of a book's chapters, `[x]` digested, `[ ]` backlog, `[-]` skip."""
+    lines = [f"{raw_rel} — {total} pages · book page [[{os.path.basename(hub_rel)[:-3]}]]",
+             coverage_line(rows).replace("**", ""), ""]
+    width = min(max((len(r["title"]) for r in rows), default=10), 60)
+    idw = max((len(r["id"]) for r in rows), default=4)
     nxt = None
-    for i, r in enumerate(rows, 1):
+    for r in rows:
         mark = "[x]" if r["status"] in DIGESTED else "[-]" if r["status"] == SKIP else "[ ]"
-        title = r["title"] if len(r["title"]) <= 64 else r["title"][:61] + "…"
+        title = r["title"] if len(r["title"]) <= 60 else r["title"][:57] + "…"
         n = r["end"] - r["start"] + 1
         tail = f"  {r['status']} → {r['slug']}" if r["slug"] else ("  skip" if r["status"] == SKIP else "")
-        lines.append(f"  {mark} {i:>3}. {title.ljust(width)}  p.{r['start']}–{r['end']}  ({n}p){tail}")
+        lines.append(f"  {mark} {r['id'].ljust(idw)}  {title.ljust(width)}  p.{r['start']}–{r['end']}  ({n}p){tail}")
         if nxt is None and r["status"] not in DIGESTED and r["status"] != SKIP:
-            nxt = i
-    lines += ["", "Digest one part, not the book:"]
+            nxt = r["id"]
+    lines += ["", "Digest by chapter:"]
     if nxt:
-        lines.append(f"  python3 -m kb_distillery.ingest full-digest {raw_rel} --part {nxt}")
-    lines += ["  (--part N takes a row number above; --pages A-B carves a new part out of undigested",
-              "   rows; --section picks an outline entry — `toc --depth 2` shows the outline)"]
+        lines.append(f"  python3 -m kb_distillery.ingest full-digest {raw_rel} --chapter {nxt}")
+    lines += ["  (--chapter 3 / ch3 / appA, --chapters 1-3, --all; --section resolves an outline entry",
+              "   to its chapter — `toc --depth 2` shows the outline)"]
     return "\n".join(lines)
 
 
-def _label_for(entries, start, end):
-    """A row title for an ad-hoc page range: the outline entries it spans."""
-    inside = [e for e in entries if start <= e["start"] <= end]
-    if not inside:
-        return f"Pages {start}–{end}"
-    lvl = min(e["level"] for e in inside)
-    names = [e["title"] for e in inside if e["level"] == lvl]
-    return names[0] if len(names) == 1 else f"{names[0]} → {names[-1]}"
-
-
-def gate(raw_rel, raw_path, pages, section, whole_book, part=None):
-    """Books must be scoped. Returns (page_range, label, blocked_message).
-    For a book the range must be carvable from its partition: it may cut undigested rows,
-    never a digested one."""
-    if whole_book or not is_book(raw_path):
-        rng = parse_pages(pages, page_count(raw_path)) if pages else None
-        return rng, (f"pages {rng[0]}–{rng[1]}" if rng else None), None
-
-    rows, total, hub_rel = partition_for(raw_rel, raw_path)
-    view = format_partition(rows, total, raw_rel, hub_rel)
-    entries = None
-    rng = label = None
-    if part:
-        try:
-            row = rows[int(str(part).lstrip("#")) - 1]
-        except (ValueError, IndexError):
-            return None, None, f"no part {part!r} — rows run 1–{len(rows)}.\n\n{view}"
-        if row["status"] == SKIP:
-            return None, None, (f"part {part} ({row['title']}) is marked skip. Change its Status "
-                                f"to — on the book page, or use --pages.\n\n{view}")
-        rng, label = (row["start"], row["end"]), row["title"]
-    elif pages:
-        rng = parse_pages(pages, total)
-        if not rng:
-            return None, None, f"cannot read --pages {pages!r}; use A-B.\n\n{view}"
-    elif section:
-        entries, total, _source = read_toc(raw_path)
+def gate(raw_rel, raw_path, chapter=None, chapters=None, all_chapters=False, section=None, redo=False):
+    """Digest of a book works by chapter. Returns (rows, blocked_message): the undigested chapter
+    rows to digest (one part page each), or None and why. Not a book: ([], None). `redo` lets
+    chapters that are already digested through: their part pages are written again in place
+    (frontmatter and `## My notes` kept, as for any page that is deepened)."""
+    asked = chapter or chapters or all_chapters or section
+    if not is_book(raw_path):
+        if asked:
+            return None, f"{raw_rel} is not a book — digest it whole, without chapter flags."
+        return [], None
+    rows, total, hub_rel = chapters_for(raw_rel)
+    if not hub_rel:
+        return None, ingest_hint(raw_rel)
+    view = format_chapters(rows, total, raw_rel, hub_rel)
+    if not asked:
+        return None, f"{raw_rel} is a book ({total} pages) — digest it by chapter.\n\n{view}"
+    if section:
+        entries, _t, _s = read_toc(raw_path)
         hit = find_section(entries, section)
-        if not hit:
-            return None, None, f"no section matching {section!r}.\n\n{view}"
-        rng, label = (hit["start"], hit["end"]), hit["title"]
-    elif not rows:
-        return None, None, (
-            f"{raw_rel} is {total} pages and has no readable table of contents.\n"
-            f"Pick a page range explicitly, e.g. --pages 19-42, or pass --whole-book "
-            f"(the flag for a paper with long appendices) to digest it whole.")
+        row = row_at(rows, hit["start"]) if hit else None
+        if not row:
+            return None, f"no chapter for section {section!r}.\n\n{view}"
+        sel = row["id"]
     else:
-        return None, None, (f"{raw_rel} is a book ({total} pages) — digest one part of it.\n"
-                            f"(a paper with long appendices? pass --whole-book to digest it whole)\n\n"
-                            + view)
-
-    same = find_row(rows, *rng)
-    if same and same["status"] in DIGESTED:
-        return None, None, (f"pages {rng[0]}–{rng[1]} are already digested as [[{same['slug']}]].\n"
-                            f"Edit that page, or pick another part:\n\n{view}")
-    if not label:
-        if same:
-            label = same["title"]
-        else:
-            if entries is None:
-                entries, _t, _s = read_toc(raw_path)
-            label = _label_for(entries, *rng)
+        sel = "all" if all_chapters else (chapters or chapter)
     try:
-        carve(rows, rng[0], rng[1], "full", "", label)
+        picked = select(rows, sel)
     except ValueError as e:
-        return None, None, f"{e}.\n\n{view}"
-    return rng, label, None
+        return None, f"{e}\n\n{view}"
+    single = bool(chapter or section)
+    skipped = [r for r in picked if r["status"] == SKIP]
+    if single and skipped:
+        return None, (f"chapter {skipped[0]['id']} ({skipped[0]['title']}) is marked skip. Change its "
+                      f"Status to — on the book page first.\n\n{view}")
+    done = [r for r in picked if r["status"] in DIGESTED]
+    if single and done and not redo:
+        return None, (f"chapter {done[0]['id']} is already digested as [[{done[0]['slug']}]]. "
+                      f"Edit that page, pass --redo to digest it again, or pick another chapter:\n\n{view}")
+    todo = [r for r in picked if (redo or r["status"] not in DIGESTED) and r["status"] != SKIP]
+    if not todo:
+        return None, f"nothing left to digest in {sel!r}.\n\n{view}"
+    return todo, None
 
 
-def part_slug(book, label):
-    """`part-<book stem>-ch1-boolean-functions-…` / `…-part-i-foundations` from a row title.
+def part_slug(book, label, chapter=None):
+    """`part-<book stem>-ch1-boolean-functions-…` from the chapter id and its row title.
     A title too long to keep whole gets a short hash of the full title, so two long titles that
     share a prefix never land on the same page."""
     full = re.sub(r"-{2,}", "-", re.sub(r"[^a-z0-9]+", "-", str(label).lower()).strip("-"))
-    s = re.sub(r"^chapter-(\d+)-", r"ch\1-", full)
-    s = re.sub(r"^part-([0-9ivx]+)-", r"part-\1-", s)
+    if chapter:
+        topic = re.sub(r"^(?:chapter|ch|lecture)-?[0-9ivxlc]+-", "", full)
+        topic = re.sub(r"^appendix-[a-z]-", "", topic)
+        topic = re.sub(r"^[0-9]+-", "", topic)
+        s = f"{chapter.lower()}-{topic}".strip("-") if topic else chapter.lower()
+    else:
+        s = re.sub(r"^chapter-(\d+)-", r"ch\1-", full)
+        s = re.sub(r"^part-([0-9ivx]+)-", r"part-\1-", s)
     if len(s) > 48:
         tag = hashlib.sha1(" ".join(str(label).split()).lower().encode("utf-8")).hexdigest()[:6]
         s = f"{s[:41].rstrip('-')}-{tag}"
@@ -456,16 +482,16 @@ def pdf_title(raw_path):
     if not reader or not os.path.isfile(raw_path):
         return ""
     doc = reader.PdfDoc(raw_path)
-    title = doc.title
+    title = " ".join((doc.title or "").split())
     doc.close()
-    return " ".join(title.split())
+    return "" if title.lower() == "untitled" else title      # a PDF writer's placeholder, not a title
 
 
 def _set_status(text, status):
     return wikiio.set_key(text, "maturity", status)      # front matter only, never a body line
 
 
-def new_hub_text(raw_rel, rows, total, meta=None):
+def new_hub_text(raw_rel, rows, total, meta=None, outline_chapters=None):
     """A fresh book/notebook page from its template. Overview is left for a human/agent."""
     meta = meta or {}
     base = re.sub(r"\.pdf$", "", os.path.basename(raw_rel), flags=re.I)
@@ -480,36 +506,53 @@ def new_hub_text(raw_rel, rows, total, meta=None):
         "raw": raw_rel,
         "url": meta.get("url") or "",
         "book_pages": str(total),
+        "outline_chapters": str(outline_chapters if outline_chapters is not None else len(content_ids(rows))),
         "maturity": book_status(rows),
-        "partition": "",
+        "chapters": "",
     }
     with open(template_for(hub_type(raw_rel)), encoding="utf-8") as f:
         text = f.read()
     for k, v in fill.items():
         text = text.replace("{{" + k + "}}", v)
     text = frontmatter.fill_conventions(frontmatter.fill_title(text))
-    return replace_partition(text, rows, PART_MAX_PAGES)
+    return replace_chapters(text, rows)
 
 
-def record_part(raw_rel, start, end, slug, status, label, meta=None):
-    """Mark pages start–end as digested part [[slug]] on the book page, creating the page from
-    the proposed partition if it does not exist. Returns (wiki_rel, created)."""
-    raw_path = os.path.join(ROOT, raw_rel)
-    rows, total, hub_rel = partition_for(raw_rel, raw_path)
-    created = hub_rel is None
-    if created:
-        hub_rel = f"wiki/{hub_slug(raw_rel)}.md"
-        text = None
-    else:
-        with open(os.path.join(ROOT, hub_rel), encoding="utf-8") as f:
-            text = f.read()
-    same = find_row(rows, start, end)
-    title = same["title"] if same and same["title"] else label
-    rows = carve(rows, start, end, status, slug, title)
-    if created:
-        text = new_hub_text(raw_rel, rows, total, meta)
-    else:
-        text = _set_status(wikiio.edit_body(text, lambda t: replace_partition(t, rows, PART_MAX_PAGES)),
-                           book_status(rows))
+def build_book(raw_rel, raw_path=None, chapters_file=None, meta=None):
+    """Write the book page with its `## Chapters` table for a filed book PDF. Returns
+    (wiki_rel, rows); an existing book page is left alone. Raises BookError when no chapters can be
+    found (nothing is written)."""
+    raw_path = raw_path or os.path.join(ROOT, raw_rel)
+    hub = find_hub(raw_rel)
+    if hub:
+        return hub[0], chapters_for(raw_rel)[0]
+    rows, total, n, source = plan_chapters(raw_path, chapters_file, notebook=hub_type(raw_rel) == "notebook")
+    if source == "sections":
+        print(f"{raw_rel}: a handwritten notebook with no chapters — read in {len(rows)} sections of "
+              f"{core.NOTEBOOK_SECTION_PAGES} pages (sec1…sec{len(rows)}); rename or re-split them on its page")
+    wiki_rel = f"wiki/{hub_slug(raw_rel)}.md"
+    text = new_hub_text(raw_rel, rows, total, meta, outline_chapters=n)
+    wikiio.write_page(os.path.join(ROOT, wiki_rel), text)
+    return wiki_rel, rows
+
+
+def record_part(raw_rel, chapter, slug, status, meta=None):
+    """Mark chapter `chapter` as digested part [[slug]] on the book page. Returns (wiki_rel, False).
+    Raises ValueError when there is no book page or no such chapter (ingest builds both)."""
+    rows, _total, hub_rel = chapters_for(raw_rel)
+    if not hub_rel:
+        raise ValueError(ingest_hint(raw_rel))
+    try:
+        rows = set_chapter(rows, chapter, status, slug)
+    except KeyError:
+        raise ValueError(f"[[{hub_slug(raw_rel)}]] has no chapter {chapter!r}") from None
+    with open(os.path.join(ROOT, hub_rel), encoding="utf-8") as f:
+        text = f.read()
+    text = _set_status(wikiio.edit_body(text, lambda t: replace_chapters(t, rows)), book_status(rows))
+    fm = parse_frontmatter(text) or {}
+    for key in ("authors", "area", "url"):        # the first digest knows what the PDF did not
+        val = (meta or {}).get(key)
+        if val and not fm.get(key):
+            text = wikiio.set_key(text, key, "[" + ", ".join(val) + "]" if isinstance(val, list) else str(val))
     wikiio.write_page(os.path.join(ROOT, hub_rel), text)
-    return hub_rel, created
+    return hub_rel, False
