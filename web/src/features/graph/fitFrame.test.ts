@@ -27,6 +27,13 @@ describe("fitFrame", () => {
     expect(screenY(tall.y0, cam, 900)).toBeGreaterThanOrEqual(96 - 0.5);
   });
 
+  it("a right inset keeps the pages left of an open legend", () => {
+    const wide = { x0: -900, x1: 900, y0: -10, y1: 10 };
+    const cam = fitFrame(wide, 1440, 900, { left: 0, top: 96, pad: 72, right: 290 });
+    expect(screenX(wide.x1, cam, 1440)).toBeLessThanOrEqual(1440 - 290 - 72 + 0.5);
+    expect(screenX(wide.x0, cam, 1440)).toBeGreaterThanOrEqual(72 - 0.5);
+  });
+
   it("without the search line obstacle the same cluster sits under the line", () => {
     const tall = { x0: -60, x1: 60, y0: -900, y1: 900 };
     const cam = fitFrame(tall, W, H, { left: 0, top: 0, pad: 20 });

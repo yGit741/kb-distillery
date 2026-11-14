@@ -6,6 +6,7 @@ import { DataSourceProvider } from "@/api";
 import type { EmbeddingReport } from "@/api/types";
 import { withFlag } from "@/flags/testing";
 import { useKb } from "@/lib/store";
+import { useCorners } from "../shell/corners/cornersStore";
 import { mockDataSource } from "@/test/datasource";
 import { PROBLEM_HUES, TOPIC_COLORS, topicColor } from "@/theme/palette";
 import { applySpec, captureSpec, recognisedV1 } from "../shell/corners/viewSpec";
@@ -180,6 +181,10 @@ describe("the embedding layer on the graph", () => {
       expect(useEmbedView.getState().axes).toEqual([0, 2]);
       expect(within(card).getByTestId("closeness")).toHaveTextContent("median 0.32");
       await waitFor(() => expect(useEmbedView.getState().pc?.get("ramsey")).toEqual([1, 1, 0]));
+      // the colour is the view: its legend opens (and folds again for missing links, whose list sits there)
+      expect(useCorners.getState().order).toContain("legend");
+      applyEmbed({ view: "missing" });
+      await waitFor(() => expect(useCorners.getState().order).not.toContain("legend"));
     }));
 
   it("missing links: the lens, the ranked list, the orphans tab, and a row selects its pages", () =>

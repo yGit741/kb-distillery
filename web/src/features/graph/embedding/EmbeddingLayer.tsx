@@ -77,10 +77,11 @@ export function EmbeddingLayer({ nodes, neighbors }: { nodes: readonly GNode[]; 
   }, [view, pairs]);
 
   // the missing-links list sits where the open colour legend would: the lens greys the colours anyway, so it folds
+  // ... while Topics and the meaning map open it: there the colour is the view (the map keeps room for it on the right)
   useEffect(() => {
-    if (view !== "missing") return;
+    if (!view) return;
     const c = useCorners.getState();
-    if (c.order.includes("legend")) c.toggle("legend");
+    if (c.order.includes("legend") === (view === "missing")) c.toggle("legend");
   }, [view]);
 
   if (!on || !r || !view) return null;

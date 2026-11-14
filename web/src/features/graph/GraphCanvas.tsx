@@ -99,6 +99,10 @@ const SIDE_PULL = 0.3;
 const SIDE_SETTLE_MS = 1400;
 /** px kept free under the meaning map: a label under the lowest page plus the Concepts/Sources switch */
 const MAP_FIT_BOTTOM = 150;
+/** the meaning map draws links at this share of their usual opacity */
+const MAP_EDGE = 0.12;
+/** px kept free on the right of the meaning map for the open colour legend */
+const MAP_FIT_RIGHT = 290;
 const COUNT_MIN_PX = 9;
 
 const EMPTY_IMPORTANCE: Importance = { score: new Map(), terms: new Map(), qrank: new Map(), maxScore: 1 };
@@ -578,7 +582,7 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
 
   // ---- tool decor (experiment halos, faded links) is read at draw time; a change only needs a redraw
   useEffect(() => useDecor.subscribe(() => fg.current?.refresh()), []);
-  useEffect(() => useEmbedView.subscribe((a, b) => (a.lens !== b.lens || a.pc !== b.pc) && fg.current?.refresh()), []);
+  useEffect(() => useEmbedView.subscribe((a, b) => (a.lens !== b.lens || a.pc !== b.pc || a.view !== b.view) && fg.current?.refresh()), []);
   useEffect(() => {
     fg.current?.refresh();
   }, [thinkHot]);
@@ -632,7 +636,7 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
     const pick = core.size > 1 ? (n: SimNode) => core.has(n.id) || isPile(n) : undefined;
     // the meaning map frames every page with room under it, so the lowest labels stay clear of the subject switch
     // (positions not settled yet: the usual fit, so the camera is never left unframed)
-    const mapped = useEmbedView.getState().view === "map" && !!fg.current?.fitIn(pick ?? (() => true), 0, ms, 72, 96, MAP_FIT_BOTTOM);
+    const mapped = useEmbedView.getState().view === "map" && !!fg.current?.fitIn(pick ?? (() => true), 0, ms, 72, 96, MAP_FIT_BOTTOM, MAP_FIT_RIGHT);
     if (!mapped) fg.current?.fit(pick, ms);
     framed.current = true;
     window.setTimeout(() => {
@@ -1166,7 +1170,8 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
     const { focus, prevFocus, fadeT, colors } = rs.current;
     const a = endId(l.source);
     const b = endId(l.target);
-    const fade = useDecor.getState().linkFade?.(a, b) ?? 1;
+    // the meaning map: position carries the meaning, so links stay a faint trace (not the force layout's web)
+    const fade = (useDecor.getState().linkFade?.(a, b) ?? 1) * (useEmbedView.getState().view === "map" ? MAP_EDGE : 1);
     // a hidden kind keeps its place in the layout and is simply not drawn
     if (live.current.ui.hiddenLinkKinds.has(l.kind)) return withAlpha(colors.link, 0);
     // a popped source brings only its links to the answer's pages (flag show-thinking)
