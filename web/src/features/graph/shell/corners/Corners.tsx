@@ -41,6 +41,8 @@ import { browserSessions, newChat, resumeSession } from "./sessions";
 import { useShellTour } from "./shellTour";
 import { ThinkIcon } from "./ThinkIcon";
 import { TypesCard } from "./TypesCard";
+import { useChatDock } from "../../tools/chatDockStore";
+import { QuickList, type QuickRow } from "./QuickList";
 import { useSparkPanel } from "../sparkPanelStore";
 import { useLayers } from "../../layers/store";
 import { applySpec, captureSpec, recognisedV1, suggestName } from "./viewSpec";
@@ -286,6 +288,27 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
     if (key === "__all") host.go("/think");
     else host.go("/think", { note: key });
   };
+  // flag graph-corners: the quick lists under the spark and the brain (every chat or note, newest first)
+  const chatQuick = useMemo<QuickRow[]>(() => chatRows.map((r) => ({ key: r.id, title: r.title, meta: chatWhen(r), running: !!r.live || r.status === "running" })), [chatRows]);
+  const noteQuick = useMemo<QuickRow[]>(
+    () => [...(think.data?.notes ?? [])].sort((a, b) => b.mtime - a.mtime).map((n) => ({ key: n.name, title: n.name.replace(/\.md$/, ""), meta: ago(new Date(n.mtime * 1000).toISOString()) })),
+    [think.data],
+  );
+  const askNew = (text: string) => {
+    toggle("agent");
+    useChatDock.getState().ask(text);
+  };
+  // the list stays open (with what was typed) until the thought is saved, so a failed save loses nothing
+  const writeThought = (text: string) => {
+    void ds
+      .captureThink(text)
+      .then(() => {
+        if (useCorners.getState().has("think")) toggle("think");
+        setNotice("Saved to your Think inbox");
+        void qc.invalidateQueries({ queryKey: ["think"] });
+      })
+      .catch(() => setNotice("Could not save the thought"));
+  };
   const pickAgent = (key: string) => {
     toggle("agent");
     if (key === "__new") return newChat();
@@ -516,7 +539,21 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
           <CornerButton id={BTN_ID.think} label="Think notes" data-tour="graph-think" on={thinkOpen} disc={discs} style={{ position: "absolute", right: EDGE, top: EDGE }} onClick={() => toggle("think")}>
             {discs ? <Brain aria-hidden data-icon="think" className="size-[18px]" strokeWidth={1.6} /> : <ThinkIcon />}
           </CornerButton>
-          <Fan kind="think" open={thinkOpen} label="Think notes" cards={thinkCards} empty={think.isLoading ? "Loading notes" : "No think notes yet"} onPick={pickThink} />
+          {discs ? (
+            thinkOpen && (
+              <QuickList
+                corner="top-right"
+                label="Think notes"
+                placeholder="Write a thought, or find a note"
+                rows={noteQuick}
+                icon={() => <Brain className="size-3" strokeWidth={1.8} />}
+                onPick={pickThink}
+                onSubmit={writeThought}
+              />
+            )
+          ) : (
+            <Fan kind="think" open={thinkOpen} label="Think notes" cards={thinkCards} empty={think.isLoading ? "Loading notes" : "No think notes yet"} onPick={pickThink} />
+          )}
           {thinkOpen && (
             <>
               <MoreButton label="Think options" on={menuOpen("think")} style={moreAt("right", "top")} onClick={() => (menu?.owner === "think" ? closeMenu() : openMenu("think"))} />
@@ -550,7 +587,21 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
               <Sparkles className={discs ? "size-[18px]" : "size-[22px]"} strokeWidth={discs ? 1.6 : 1.75} aria-hidden />
             </CornerButton>
           )}
-          <Fan kind="agent" open={agentOpen} label="Agent chats" cards={agentCards} empty={sessions.isLoading ? "Loading chats" : "No chats yet"} onPick={pickAgent} />
+          {discs ? (
+            agentOpen && (
+              <QuickList
+                corner="bottom-left"
+                label="Chats"
+                placeholder="Ask something new, or find a chat"
+                rows={chatQuick}
+                icon={() => <Sparkles className="size-3" strokeWidth={1.8} />}
+                onPick={pickAgent}
+                onSubmit={askNew}
+              />
+            )
+          ) : (
+            <Fan kind="agent" open={agentOpen} label="Agent chats" cards={agentCards} empty={sessions.isLoading ? "Loading chats" : "No chats yet"} onPick={pickAgent} />
+          )}
           {agentOpen && (
             <>
               <MoreButton label="Agent options" on={menuOpen("agent")} style={moreAt("left", "bottom")} onClick={() => (menu?.owner === "agent" ? closeMenu() : openMenu("agent"))} />
