@@ -40,10 +40,12 @@ export interface Story {
   tool?: { id: string; flag?: string };
   /** A feature flag (kits/base/defaults/flags.toml): the view is offered only while it is on. */
   featureFlag?: FlagName;
+  /** The view needs the local server's data (a shared site has none): never offered in a share build. */
+  localOnly?: boolean;
 }
 
 /** Whether the view is offered now (its feature flag, if any, is on). Saved and linked views still apply. */
-export const storyOffered = (s: Story): boolean => !s.featureFlag || flag(s.featureFlag);
+export const storyOffered = (s: Story): boolean => (!s.featureFlag || flag(s.featureFlag)) && !(s.localOnly && import.meta.env.MODE === "share");
 
 /** The flag behind the views that exist for the research toolkit and the seed below. */
 const RESEARCH_TOOLS = "research-tools" as const;
@@ -112,6 +114,9 @@ export const STORIES: readonly Story[] = [
     // the main graph with its links swapped for `cites` (computed from the citation cache); papers with no cites
     // link stay out through the Connected filter, which the reader switches off to see them
     edges: ["cites"],
+    // the links are typed relations (flag graph-relations) computed from the local citation cache
+    featureFlag: "graph-relations",
+    localOnly: true,
     quick: { connected: 1 },
     forces: { charge: -60, linkDistance: 40, pack: 0.08 },
     lab: { degBasis: "nohub", strategy: "count", count: 12, scope: "screen", zoomGrowth: 1.5, regions: "off", hulls: false, questionLabels: "none", wrapT2: 100 },

@@ -134,9 +134,12 @@ const depthOf = (n: GNode): string => n.depth || "listed";
 /** The --bad status token, read once per theme: an ingested source nobody digested yet stands out on the ramp. */
 const attention = new Map<string, string>();
 function attentionColor(theme: string): string {
-  let c = attention.get(theme);
-  if (!c) attention.set(theme, (c = readCanvasColors().bad ?? UNKNOWN_COLOR));
-  return c;
+  const hit = attention.get(theme);
+  if (hit) return hit;
+  const bad = readCanvasColors().bad;
+  if (!bad) return UNKNOWN_COLOR;          // the tokens are not there yet: read again next time
+  attention.set(theme, bad);
+  return bad;
 }
 
 /** Where the page sits on an ordered colouring, 0..1; undefined when the colouring does not apply to it. */

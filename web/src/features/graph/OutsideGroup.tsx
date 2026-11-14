@@ -12,7 +12,7 @@ const DOTS = 18;
  * drawn as one small group at the side: a few dots in the view's colours, split like the counts, and a line per
  * colour. A click shows them on the canvas (the Connected filter off), like the legend's own filter chip.
  */
-export function OutsideGroup({ nodes, colorBy, noun, onShow }: { nodes: readonly GNode[]; colorBy: ColorBy; noun: string; onShow: () => void }) {
+export function OutsideGroup({ nodes, colorBy, noun, empty = false, onShow }: { nodes: readonly GNode[]; colorBy: ColorBy; noun: string; empty?: boolean; onShow: () => void }) {
   const theme = useTheme((s) => s.theme);
   const by = effectiveColorBy(colorBy);
   const rows = useMemo(() => colorChannel(by, { ramp: RAMP_BY.has(by) ? theme : null }).rows(nodes), [nodes, by, theme]);
@@ -38,6 +38,7 @@ export function OutsideGroup({ nodes, colorBy, noun, onShow }: { nodes: readonly
       <span className="text-muted-foreground">
         <b className="font-medium text-foreground">{nodes.length}</b> {noun} not linked
       </span>
+      {empty && <span className="text-muted-foreground">No citation links yet: fetch them with the citations command.</span>}
       <span className="flex flex-col gap-0.5">
         {rows.map((r) => (
           <span key={r.label} className="flex items-center gap-1.5">

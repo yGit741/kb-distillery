@@ -326,11 +326,12 @@ def cites_edges(pages, root):
     if not isinstance(papers, dict):
         return []
     slug_of = {pid: p["slug"] for pid, p in papers.items()
-               if isinstance(p, dict) and p.get("slug") in pages}
+               if isinstance(p, dict) and isinstance(p.get("slug"), str) and p["slug"] in pages}
     edges, seen = [], set()
     for pid, slug in sorted(slug_of.items(), key=lambda kv: kv[1]):
-        for ref in papers[pid].get("references") or []:
-            to = slug_of.get(ref)
+        refs = papers[pid].get("references")
+        for ref in refs if isinstance(refs, list) else []:
+            to = slug_of.get(ref) if isinstance(ref, str) else None      # a hand-edited cache never 500s the graph
             if to and to != slug and (slug, to) not in seen:
                 seen.add((slug, to))
                 edges.append(_edge(slug, to, CITES, COMPUTED))

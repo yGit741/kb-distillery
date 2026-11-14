@@ -181,6 +181,8 @@ def test_cites_come_from_the_citation_cache_between_this_kbs_papers(tmp_path):
         "C": {"slug": "p-c", "references": []},
         "X": {"slug": None, "references": ["A"]},                               # a stub, not a page of the kb
         "G": {"slug": "gone", "references": ["A"]},                             # cached but no longer in the wiki
+        "H": {"slug": ["p-a"], "references": [{"x": 1}, ["A"], "A"]},          # malformed entries: skipped, no error
+        "I": {"slug": "p-c", "references": "A"},
     }
     (tmp_path / ".cache" / "citations.json").write_text(json.dumps({"papers": papers}), encoding="utf-8")
     out = R.cites_edges(pages, str(tmp_path))

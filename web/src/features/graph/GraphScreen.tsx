@@ -158,8 +158,8 @@ export function GraphScreen({ search, host }: { search: GraphSearch; host: Graph
   const etag = snap?.etag;
   const model = useMemo(() => (snap ? toModel(snap) : null), [etag, snap?.layer]); // eslint-disable-line react-hooks/exhaustive-deps
   // a view that draws a relation (Citations: `cites`) swaps the links for it; every other view draws the model as is
-  const story = useGraphUi((s) => s.story);
-  const drawn = useMemo(() => (model ? withStoryEdges(model, storyById(story)) : null), [model, story]);
+  const edgeStory = useGraphUi((s) => s.edgeStory);
+  const drawn = useMemo(() => (model ? withStoryEdges(model, storyById(edgeStory)) : null), [model, edgeStory]);
   // the kit's types, plus any type the pages carry that the kit does not define (an imported OKF bundle's), so the
   // Map, the legend and the marks treat them as real types
   const schema = useMemo(() => {
@@ -358,7 +358,7 @@ function Loaded({
   // the legend's one-click filters run last, on what the others left (./quickFilters)
   const visible = useMemo(() => applyQuick(filtered, byId, neighbors, selection, ui.quick), [filtered, byId, neighbors, selection, ui.quick]);
   // a view that draws a relation (Citations) shows the pages no such link reaches as one small group at the side
-  const drawsEdges = !!storyById(ui.story)?.edges?.length;
+  const drawsEdges = !!storyById(ui.edgeStory)?.edges?.length;
   const outside = useMemo(
     () => (drawsEdges ? [...filtered].filter((id) => !visible.has(id) && !neighbors.get(id)?.length).map((id) => byId.get(id)!).filter(Boolean) : []),
     [drawsEdges, filtered, visible, neighbors, byId],
@@ -673,7 +673,7 @@ function Loaded({
       />
       </div>
       {outside.length > 0 && (
-        <OutsideGroup nodes={outside} colorBy={ui.colorBy} noun="papers" onShow={() => useGraphUi.setState({ quick: { ...ui.quick, connected: 0 } })} />
+        <OutsideGroup nodes={outside} colorBy={ui.colorBy} noun="papers" empty={!model.links.length} onShow={() => useGraphUi.setState({ quick: { ...ui.quick, connected: 0 } })} />
       )}
       {/* the search box lives in the app header when there is one (the embed has none: it floats over the canvas) */}
       {shell ? (

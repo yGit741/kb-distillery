@@ -5,7 +5,7 @@ import { applyLayers, specLayers } from "../../layers/readyViews";
 import { useLayers } from "../../layers/store";
 import type { QuickFilters } from "../../quickFilters";
 import { useGraphUi } from "../../store";
-import type { ColorBy, SizeBy } from "../../style";
+import { DEPTH_LABEL, type ColorBy, type SizeBy } from "../../style";
 
 /**
  * What a pinned view stores (`POST /api/views` spec; the server keeps it opaque). Sets become arrays. `story` is the
@@ -33,7 +33,7 @@ export interface ViewSpecV2 {
 }
 
 type Ui = ReturnType<typeof useGraphUi.getState>;
-type CaptureUi = Pick<Ui, "story" | "colorBy" | "sizeBy" | "shownTypes" | "shownDepths" | "hiddenKeys" | "quick" | "view"> & { flyout?: Ui["flyout"] };
+type CaptureUi = Pick<Ui, "story" | "colorBy" | "sizeBy" | "shownTypes" | "shownDepths" | "hiddenKeys" | "quick" | "view"> & { flyout?: Ui["flyout"]; edgeStory?: Ui["edgeStory"] };
 
 /** A view that is its name: it opens a tool, or draws a relation as its links (Citations: `cites`). */
 const ownsView = (st: ReturnType<typeof storyById>): boolean => !!st && (!!st.tool || !!st.edges?.length);
@@ -67,7 +67,8 @@ export function captureSpec(ui: CaptureUi, stack?: ViewStack): ViewSpecV1 | View
   const pages = ui.view ? [...ui.view.hits].slice(0, 2000) : [];
   return {
     v: 1,
-    story: ui.story,
+    // a legend click clears `story` but the relation view stays on: it pins under its name, with the knobs on top
+    story: ui.story || ui.edgeStory || "",
     colorBy: ui.colorBy,
     sizeBy: ui.sizeBy,
     types: ui.shownTypes === undefined ? "default" : ui.shownTypes === null ? "all" : [...ui.shownTypes].sort(),
@@ -124,7 +125,8 @@ export function applySpecV1(spec: Record<string, unknown>, deps: ApplyDeps): boo
   else if (isArr(spec.depths)) patch.shownDepths = new Set(spec.depths);
   if (typeof spec.colorBy === "string") patch.colorBy = spec.colorBy as ColorBy;
   if (typeof spec.sizeBy === "string") patch.sizeBy = spec.sizeBy as SizeBy;
-  if (isArr(spec.hiddenKeys)) patch.hiddenKeys = new Set(spec.hiddenKeys);
+  // depth keys were renamed (listed -> Ingest only, …): an older pin still hides the same rows
+  if (isArr(spec.hiddenKeys)) patch.hiddenKeys = new Set(spec.hiddenKeys.map((k) => DEPTH_LABEL[k] ?? k));
   if (spec.quick && typeof spec.quick === "object") patch.quick = { ...useGraphUi.getState().quick, ...(spec.quick as Partial<QuickFilters>) };
   if (Object.keys(patch).length) {
     // a spec with no named view stands on its own: the story marker clears, as for any change by hand
