@@ -26,7 +26,7 @@ import json
 import os
 import re
 
-from . import audit, compare, judge, reader, store
+from . import audit, compare, figures, judge, reader, store
 from . import run as runner
 from .engines import EngineError
 
@@ -265,6 +265,29 @@ def _parser_page(engine, work: str, page: int) -> tuple:
     return engine.markdown(rec), (engine.boxes(rec) if hasattr(engine, "boxes") else [])
 
 
+def _figure_boxes(engine, work: str, page: int) -> list:
+    """The parser's image regions of a page (fractions of the page, reading order); [] when the engine has none."""
+    if engine is None or not hasattr(engine, "figures"):
+        return []
+    with open(runner.cache_path(work, engine.name, page), encoding="utf-8") as f:
+        rec = json.load(f)
+    return [list(b) for b in engine.figures(rec, 1.0, 1.0)]
+
+
+def figure_marks(md: str, marks: list, figs: list, sha: str, page: int) -> tuple:
+    """A `!!` mark right after every figure with a `problem` (no region found, or not placed by the reader)."""
+    marks = list(marks)
+    for f in figs:
+        if not f.get("problem"):
+            continue
+        n = max([m["id"] for m in marks], default=0) + 1
+        marks.append({"id": n, "level": "!!", "reason": "figure %d: %s" % (f["id"], f["problem"]), "text": "", "was": "",
+                      "other": "", "box": f.get("box")})
+        fl = figures.link(f.get("label") or "Figure", sha, page, f["id"])
+        md = md.replace(fl, fl + " " + mark_link("!!", sha, page, n), 1)
+    return md, marks
+
+
 def llm_backend(backend: str | None) -> str:
     from kb_distillery import llm
     return llm.resolve_backend(backend)
@@ -279,7 +302,7 @@ def estimate(n_pages: int, backend: str, with_audit: bool = True) -> float:
 def transcribe(pdf: str, pages: list, work: str, root: str, sha: str, engine=None, backend: str | None = None,
                model: str = reader.MODEL, judge_model: str = judge.MODEL, audit_model: str | None = audit.MODEL,
                source: str = "", page_count: int = 0, force: bool = False, max_usd: float | None = None,
-               retry_backend: str | None = None, log=print) -> dict:
+               retry_backend: str | None = None, describe_figures: bool = True, log=print) -> dict:
     """Read `pages` of `pdf` with the parser and the reader, judge their differences, audit the result and store the
     marked transcript under `<root>/<sha>/`. `work` holds every intermediate (resumable: nothing already done is done
     again). A request that fails (an error, a cut or unreadable reply, a refusal) is tried once more, on `retry_backend`
@@ -364,7 +387,9 @@ def transcribe(pdf: str, pages: list, work: str, root: str, sha: str, engine=Non
             if p in lone and p not in checked:
                 continue                                            # its page mark says it was not checked
             stage[p] = audited(stage[p][0], stage[p][1], findings.get(p))
-    out = {"pages": {}, "marks": {"!": 0, "!!": 0}, "usd": round(usd, 4), "failed": dict(r["failed"]), "skipped": skipped}
+    out = {"pages": {}, "marks": {"!": 0, "!!": 0}, "usd": round(usd, 4), "failed": dict(r["failed"]), "skipped": skipped,
+           "figures": 0}
+    done: dict = {}                                                  # page -> (Markdown, marks, figures)
     for p in pages:
         if p in stage:
             md, marks = finish(stage[p][0], stage[p][1], parser_md.get(p), boxes.get(p, []), sha, p)
@@ -379,11 +404,23 @@ def transcribe(pdf: str, pages: list, work: str, root: str, sha: str, engine=Non
         else:
             out["failed"].setdefault(p, "neither the parser nor the reader produced this page")
             continue
+        md, figs = figures.place(md, _figure_boxes(engine, work, p) if p in parsed else [], sha, p)
+        md, marks = figure_marks(md, marks, figs, sha, p)
         write_crops(pdf, p, marks, root, sha)
+        figures.write_crops(pdf, p, figs, root, sha)
+        done[p] = (md, marks, figs)
+    if describe_figures and any(f for _m, _k, f in done.values()):
+        figs_by_page = {p: f for p, (_m, _k, f) in done.items() if f}
+        n_figs = sum(len(f) for f in figs_by_page.values())
+        if not over("figure descriptions", n_figs, figures.USD_PER_FIGURE):
+            out["usd"] = round(out["usd"] + figures.describe(figs_by_page, root, sha, work, backend=backend, model=model,
+                                                             force=force, log=log), 4)
+    for p, (md, marks, figs) in done.items():
         rec = store.write_transcript_page(root, sha, p, md, marks, engine="reader:%s+%s+audit:%s" % (
             "none" if p in lone else model, engine.name if engine is not None and p in parsed else "none",
-            audit_model if audit_model and p in checked else "none"))
+            audit_model if audit_model and p in checked else "none"), figures=figs)
         out["pages"][p] = rec["status"]
+        out["figures"] += len(figs)
         for m in marks:
             out["marks"][m["level"]] += 1
     store.write_manifest(root, sha, source or os.path.basename(pdf), page_count,

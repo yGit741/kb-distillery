@@ -193,3 +193,17 @@ def test_crlf_page_stays_crlf(client, kb):
     with open(os.path.join(kb, "wiki", "rank.md"), encoding="utf-8", newline="") as f:
         raw = f.read()
     assert "\r\n" in raw and "\n" not in raw.replace("\r\n", "")
+
+
+def test_a_figure_png_is_served_and_nothing_outside_its_folder(kb, client):
+    proot = store.parsed_root(kb)
+    store.write_transcript_page(proot, SHA, 73, "![Figure 3.1](figure:%s/p0073/1)" % S12, [], figures=[
+        {"id": 1, "file": "p0073-1.png"}, {"id": 2, "file": "../crops/p0188-3.png"}])
+    os.makedirs(os.path.join(proot, SHA, "figures"))
+    with open(os.path.join(proot, SHA, "figures", "p0073-1.png"), "wb") as f:
+        f.write(PNG)
+    r = client.get(f"/api/figures/{S12}/p0073/1")
+    assert r.status_code == 200 and r.content == PNG and r.headers["content-type"] == "image/png"
+    assert client.get(f"/api/figures/{S12}/p0073/2").status_code == 404
+    assert client.get(f"/api/figures/{S12}/p0073/9").status_code == 404
+    assert client.get(f"/api/figures/{S12}/x/1").status_code == 404

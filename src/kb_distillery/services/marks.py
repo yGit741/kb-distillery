@@ -228,6 +228,24 @@ def _crop_path(root: str, sha: str, mark: dict) -> str | None:
     return full
 
 
+def figure_file(sha12: str, page: str, fig_id: int) -> str:
+    """The PNG of one figure of a transcript page (`![…](figure:<sha12>/p0073/1)`), inside meta/parsed/<sha>/figures/."""
+    root = _root()
+    sha = resolve_sha(root, sha12)
+    rec = store.read_page(store.parsed_root(root), sha, _page_no(page))
+    for f in (rec or {}).get("figures", []):
+        if str(f.get("id")) == str(fig_id):
+            name = f.get("file") or ""
+            if not name or name != os.path.basename(name) or not name.lower().endswith(".png"):
+                break
+            d = os.path.realpath(os.path.join(store.parsed_root(root), sha, "figures"))
+            full = os.path.realpath(os.path.join(d, name))
+            if os.path.dirname(full) == d and os.path.isfile(full):
+                return full
+            break
+    raise MarkError(404, "no such figure")
+
+
 def lookup(sha12: str, page: str, mark_id: int) -> dict:
     root = _root()
     sha, n, mark = _record(root, sha12, page, mark_id)

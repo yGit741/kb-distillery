@@ -152,3 +152,27 @@ def test_claims_validation_of_marks_exercises_and_notes():
                      ({"exercises": "none"}, "exercises"), ({"notes": ["x"]}, "notes")):
         with pytest.raises(ValueError, match=why):
             schemas.validate_claims({**base, **bad})
+
+
+@pytest.mark.flag("parsed-pdf", True)
+def test_figures_reach_the_text_and_the_draft_lists_every_one(kb):
+    from kb_distillery.parse import figures as figs_mod
+    fig = {"id": 1, "label": "Figure 1.1", "caption": "**Figure 1.1.** A tree", "box": [0.2, 0.2, 0.8, 0.6],
+           "file": "p0001-1.png", "description": "A tree with root $x_1$.", "problem": ""}
+    md = "Page one.\n\n" + figs_mod.link("Figure 1.1", kb["sha"], 1, 1) + "\n\n**Figure 1.1.** A tree\n"
+    store.write_transcript_page(kb["proot"], kb["sha"], 1, md, [], figures=[fig])
+    text = extract.extract_text(kb["raw"], pages=(1, 2))
+    assert "described from its image: A tree with root $x_1$.]*" in text
+    figs = extract.transcript_figures(kb["raw"], (1, 2))
+    assert figs == [{"ref": "figure:%s/p0001/1" % kb["sha"][:12], "label": "Figure 1.1", "caption": "**Figure 1.1.** A tree",
+                     "description": "A tree with root $x_1$.", "page": 1}]
+    block = draft._figures_block(figs + [{"ref": "figure:%s/p0002/1" % kb["sha"][:12], "label": "", "caption": "",
+                                          "description": "", "page": 2}])
+    assert block.startswith("## Figures\n\n![Figure 1.1](figure:%s/p0001/1)\n" % kb["sha"][:12])
+    assert "*What it shows (described from the image):* A tree with root $x_1$." in block
+    assert "*Figure, page 2 (no printed caption)*" in block and draft._figures_block([]) == ""
+
+
+@pytest.mark.flag("parsed-pdf", False)
+def test_flag_off_has_no_figures(kb):
+    assert extract.transcript_figures(kb["raw"], (1, 2)) == []

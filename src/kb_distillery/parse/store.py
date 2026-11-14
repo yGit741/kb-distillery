@@ -71,10 +71,12 @@ def write_page(root: str, sha: str, page: int, markdown: str, flags: list, statu
     return rec
 
 
-def write_transcript_page(root: str, sha: str, page: int, markdown: str, marks: list, engine: str = "") -> dict:
-    """Store one page of a marked transcript: `verified` without marks, `marked` with them (the records ride along)."""
+def write_transcript_page(root: str, sha: str, page: int, markdown: str, marks: list, engine: str = "",
+                          figures: list | None = None) -> dict:
+    """Store one page of a marked transcript: `verified` without marks, `marked` with them (the records ride along).
+    `figures`: the page's figure records (`parse.figures`), each with its PNG under `figures/`."""
     rec = {"page": page, "status": "marked" if marks else "verified", "markdown": markdown, "engine": engine,
-           "flags": [], "marks": [dict(m) for m in marks]}
+           "flags": [], "marks": [dict(m) for m in marks], "figures": [dict(f) for f in figures or []]}
     _write_json(page_path(root, sha, page), rec)
     return rec
 
@@ -94,6 +96,16 @@ def marks(root: str, sha: str, pages: list | None = None) -> list:
         rec = read_page(root, sha, n)
         for m in (rec or {}).get("marks", []):
             out.append(dict(m, page=n))
+    return out
+
+
+def figures(root: str, sha: str, pages: list | None = None) -> list:
+    """Every figure record of the stored pages, in page order, each with its `page`."""
+    out = []
+    for n in (pages if pages is not None else pages_on_disk(root, sha)):
+        rec = read_page(root, sha, n)
+        for f in (rec or {}).get("figures", []):
+            out.append(dict(f, page=n))
     return out
 
 
