@@ -994,7 +994,9 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
         drawKbOutlines(ctx, kbGroups(g.nodes().filter((n) => !isPile(n))), scale, rs.current.colors.muted);
         return;
       }
-      const hulls = effectiveColorBy(u.colorBy) !== "area";
+      // the Health colouring keeps red and amber for problems alone: no area tint under it
+      const by = effectiveColorBy(u.colorBy);
+      const hulls = by !== "area" && by !== "support";
       if (hulls) drawHulls(ctx, g.nodes().filter((n) => !isPile(n)), scale, names, u.lab.hullSigma);
     },
     [names, kbIds],

@@ -16,6 +16,8 @@ const ROW = 28;
 const GAP_W = 220;
 /** a long kind draws its busiest sources; the rest is said in words, never cut silently */
 const MAX_SOURCES = 250;
+/** an idle list shows this many pages until it is opened */
+const IDLE_ROWS = 5;
 
 const titleOf = (n: GNode): string => n.title || n.id;
 
@@ -31,13 +33,15 @@ interface Props {
 }
 
 /**
- * Inside a source kind (flag knowledge-health): the kind's sources on the left, the concepts they feed on the right,
- * least supported first, a line for every link between the two. Under them, the sources that feed nothing yet:
- * waiting to be digested, or digested with no concept. Resting on a row lights its links; pressing it opens the page.
+ * Inside a source kind (flag knowledge-health). First what needs care: the sources that feed nothing yet, waiting to
+ * be digested or digested with no concept (a few of each, the rest on demand). Then the kind's sources in use on the
+ * left and the concepts they feed on the right, least supported first, a line for every link between the two.
+ * Resting on a row lights its links; pressing it opens the page.
  */
 export function KindView({ kind, nodes, neighbors, byId, support, onRead, onClose }: Props) {
   const d = useMemo(() => kindDetail(kind, nodes, neighbors, byId, support), [kind, nodes, neighbors, byId, support]);
   const [hot, setHot] = useState<string | null>(null);
+  const [open, setOpen] = useState<ReadonlySet<string>>(new Set());
   // the search line floats over the top of the area: the kind starts under it
   const top = useShellTop() + SEARCH_LINE_H + 14;
   // Esc leaves the kind, unless a page is open over it: then Esc closes the page first (capture: read before it closes)
@@ -85,7 +89,7 @@ export function KindView({ kind, nodes, neighbors, byId, support, onRead, onClos
         </h3>
         <p className="text-[11px] text-muted-foreground">{why}</p>
         <ul className="mt-1.5">
-          {pages.map((n) => (
+          {(open.has(title) ? pages : pages.slice(0, IDLE_ROWS)).map((n) => (
             <li key={n.id}>
               <button type="button" onClick={() => onRead(n.id)} title={titleOf(n)} className={cn("flex h-7 w-full min-w-0 items-center gap-2 rounded-md px-2 text-left text-[12px] text-muted-foreground hover:bg-accent hover:text-foreground", RING)}>
                 <SourceIcon type={n.type} className="size-3.5 flex-none" />
@@ -94,6 +98,16 @@ export function KindView({ kind, nodes, neighbors, byId, support, onRead, onClos
             </li>
           ))}
         </ul>
+        {pages.length > IDLE_ROWS && (
+          <button
+            type="button"
+            aria-expanded={open.has(title)}
+            onClick={() => setOpen((o) => new Set(o.has(title) ? [...o].filter((t) => t !== title) : [...o, title]))}
+            className={cn("mt-0.5 h-7 rounded-md px-2 text-[12px] text-muted-foreground hover:bg-accent hover:text-foreground", RING)}
+          >
+            {open.has(title) ? "Show fewer" : `Show all ${pages.length}`}
+          </button>
+        )}
       </section>
     );
 
@@ -114,6 +128,12 @@ export function KindView({ kind, nodes, neighbors, byId, support, onRead, onClos
       </header>
       <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-10">
         <div className="mx-auto w-full max-w-[1040px]">
+          {(d.waiting.length > 0 || d.unlinked.length > 0) && (
+            <div className="mb-6 grid grid-cols-1 items-start gap-x-10 gap-y-5 border-b pb-5 md:grid-cols-2">
+              {idle("Waiting", "Listed, not digested yet.", d.waiting)}
+              {idle("Feed no concept", "Digested, but linked to no concept page.", d.unlinked)}
+            </div>
+          )}
           {sources.length > 0 ? (
             <>
               <div className="flex text-[11px] text-muted-foreground">
@@ -169,12 +189,6 @@ export function KindView({ kind, nodes, neighbors, byId, support, onRead, onClos
             </>
           ) : (
             <p className="px-2 py-6 text-[12px] text-muted-foreground">None of these sources feeds a concept yet.</p>
-          )}
-          {(d.waiting.length > 0 || d.unlinked.length > 0) && (
-            <div className="mt-8 grid grid-cols-1 gap-x-10 gap-y-6 border-t pt-5 md:grid-cols-2">
-              {idle("Waiting", "Listed, not digested yet.", d.waiting)}
-              {idle("Feed no concept", "Digested, but linked to no concept page.", d.unlinked)}
-            </div>
           )}
         </div>
       </div>

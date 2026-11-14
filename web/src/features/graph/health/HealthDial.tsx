@@ -57,6 +57,8 @@ interface Props {
 /**
  * The Health view's dial (flag knowledge-health): the source kinds on a shallow arc at the left edge, one ring each,
  * bare over the graph like the shell's other corners (a ring sits on its own small disc; the names float beside it).
+ * In a narrow area (under 1100px: a split pane, a page open beside the graph) the names fold away and a kind shows
+ * its name on a small card while the pointer or the focus is on it, so they never sit on the graph's own labels.
  * It reads health by kind while the map beside it reads health by concept. Resting the pointer on a kind lights the
  * concepts it feeds on the map; pressing it goes inside the kind (./KindView).
  */
@@ -99,7 +101,7 @@ export function HealthDial({ nodes, neighbors, byId }: Props) {
           <path data-part="dial-line" d={line} fill="none" strokeWidth={1} strokeLinecap="round" className="stroke-border" />
         </svg>
       )}
-      <div className="h-4 pl-1 text-[11px] leading-4 text-muted-foreground">Sources by kind</div>
+      <div className="h-4 whitespace-nowrap pl-1 text-[11px] leading-4 text-muted-foreground">Sources by kind</div>
       {kinds.map((kind, i) => {
         const t = (2 * i) / last - 1;
         return (
@@ -124,7 +126,10 @@ export function HealthDial({ nodes, neighbors, byId }: Props) {
               <KindRing k={kind} />
               <SourceIcon type={kind.type} className="absolute size-4 text-muted-foreground transition-colors group-hover:text-foreground motion-reduce:transition-none" />
             </span>
-            <span className="min-w-0 leading-tight">
+            <span
+              data-part="names"
+              className="min-w-0 rounded-lg leading-tight transition-opacity motion-reduce:transition-none @max-[1100px]:bg-card @max-[1100px]:px-2 @max-[1100px]:py-1 @max-[1100px]:opacity-0 @max-[1100px]:shadow-[var(--shadow)] @max-[1100px]:group-hover:opacity-100 @max-[1100px]:group-focus-visible:opacity-100"
+            >
               <span className="block whitespace-nowrap text-[12px] text-foreground">
                 {kind.label} <span className="tabular-nums text-muted-foreground">{kind.total}</span>
               </span>

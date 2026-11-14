@@ -128,6 +128,21 @@ describe("inside a source kind", () => {
     expect(screen.getByRole("group", { name: "Sources by kind" })).toBeInTheDocument();
   });
 
+  it("what needs care comes first, a few pages of each list, the rest on demand", async () => {
+    const many = [...Array.from({ length: 7 }, (_, i) => src(`w${i}`, "paper", "listed")), src("p-used", "paper", "full"), node("idea-a", { type: "idea" })];
+    render(<HealthLayer nodes={many} neighbors={neighbors} byId={new Map(many.map((n) => [n.id, n] as const))} support={support} onRead={onRead} />);
+    await userEvent.click(screen.getByRole("button", { name: /^Papers/ }));
+    const view = screen.getByRole("region", { name: /papers/i });
+    const waiting = view.querySelector("[data-idle=Waiting]") as HTMLElement;
+    // above the sources in use
+    expect(waiting.compareDocumentPosition(view.querySelector("[data-health=links]")!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(within(waiting).getAllByRole("listitem")).toHaveLength(5);
+    await userEvent.click(within(waiting).getByRole("button", { name: "Show all 7" }));
+    expect(within(waiting).getAllByRole("listitem")).toHaveLength(7);
+    await userEvent.click(within(waiting).getByRole("button", { name: "Show fewer" }));
+    expect(within(waiting).getAllByRole("listitem")).toHaveLength(5);
+  });
+
   it("a kind whose sources feed nothing says so", async () => {
     const lone = [src("m1", "mail", "listed")];
     render(<HealthLayer nodes={lone} neighbors={new Map()} byId={new Map(lone.map((n) => [n.id, n] as const))} support={new Map()} onRead={onRead} />);

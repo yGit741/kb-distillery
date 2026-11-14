@@ -22,5 +22,10 @@ export function HealthLayer({ nodes, neighbors, byId, support, onRead }: Props) 
   const leave = useHealth((s) => s.leave);
   useEffect(() => () => useHealth.getState().leave(), []);
   if (inside) return <KindView kind={inside} nodes={nodes} neighbors={neighbors} byId={byId} support={support} onRead={onRead} onClose={leave} />;
-  return <HealthDial nodes={nodes} neighbors={neighbors} byId={byId} />;
+  // its own container, so the dial can fold its names away when the graph's area is narrow (a split pane, an open page)
+  return (
+    <div className="pointer-events-none absolute inset-0 @container">
+      <HealthDial nodes={nodes} neighbors={neighbors} byId={byId} />
+    </div>
+  );
 }
