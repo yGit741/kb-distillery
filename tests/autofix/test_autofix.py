@@ -141,21 +141,73 @@ def test_gate_holds_weakened_tests():
 
 
 @pytest.mark.flag("nightly-autofix", True)
-def test_hook_runs_autofix_when_flag_on(tmp_path, monkeypatch):
+def test_hook_runs_autofix_and_reads_its_summary(tmp_path, monkeypatch):
     from kb_distillery.ops import core
     monkeypatch.setattr(core, "AUTOFIX_LOG", str(tmp_path / "autofix.log"))
     calls = []
-    rc = core.nightly_autofix(str(tmp_path), run=lambda cmd, **kw: calls.append(cmd) or
-                              subprocess.CompletedProcess(cmd, 0))
-    assert rc == 0 and calls[0][1:4] == ["-m", "kb_distillery.autofix", "nightly"]
+
+    def run(cmd, **kw):
+        calls.append(cmd)
+        assert json.load(open(cmd[cmd.index("--run-json") + 1]))["status"] == "error"
+        with open(cmd[cmd.index("--summary") + 1], "w") as f:
+            json.dump([{"step": "sync", "fixable": True, "outcome": "merged: https://github.com/octocat/kb/pull/9",
+                        "issue": 4, "repo": "https://github.com/octocat/kb"}], f)
+        return subprocess.CompletedProcess(cmd, 0)
+    results, why = core.nightly_autofix(str(tmp_path), _run(), run=run)
+    assert calls[0][1:4] == ["-m", "kb_distillery.autofix", "nightly"] and why == ""
+    assert results[0]["outcome"].startswith("merged")
 
 
 @pytest.mark.flag("nightly-autofix", False)
 def test_hook_is_dark_when_flag_off(tmp_path):
     from kb_distillery.ops import core
     calls = []
-    assert core.nightly_autofix(str(tmp_path), run=lambda cmd, **kw: calls.append(cmd)) is None
+    assert core.nightly_autofix(str(tmp_path), _run(), run=lambda cmd, **kw: calls.append(cmd)) is None
     assert calls == []
+
+
+def _res(outcome, fixable=True, issue=4):
+    return {"step": "sync", "fixable": fixable, "why": "a kb data finding", "outcome": outcome, "issue": issue,
+            "repo": "https://github.com/octocat/kb"}
+
+
+@pytest.mark.parametrize("results,expect", [
+    ([_res("held: https://github.com/octocat/kb/pull/12")], "Nightly failed · fix ready, needs your approval (PR #12)"),
+    ([_res("merged: https://github.com/octocat/kb/pull/12")], "Nightly failed · fixed automatically (PR #12)"),
+    ([_res("no fix: gave-up")], "Nightly failed · tried to fix, could not (issue #4)"),
+    ([_res("skipped: already attempted on 2026-11-13 (one attempt per signature)")],
+     "Nightly failed again · fix already tried, needs you (issue #4)"),
+    ([_res("created", fixable=False)], "Nightly failed · needs you, not auto-fixable (issue #4)"),
+    ([_res("created", fixable=False), _res("held: https://github.com/octocat/kb/pull/3")],
+     "Nightly failed · fix ready, needs your approval (PR #3)"),
+    ([], "Nightly failed · auto-fix did not run (no result)"),
+])
+def test_one_mail_headline(results, expect):
+    from kb_distillery.ops import nightly_report
+    assert nightly_report.autofix_headline(results) == expect
+
+
+def test_mail_subject_carries_the_fix_outcome():
+    from kb_distillery.ops import nightly_report
+    from kb_distillery.ops.report import model as m
+
+    class Report:
+        def kinds(self):
+            return ["sync-skipped"]
+    doc = m.Doc("Nightly", "error", "1 thing needs you — x", [m.Section("", [m.Banner("error", "1 thing needs you")])])
+    nightly_report.apply_autofix(doc, [_res("held: https://github.com/octocat/kb/pull/12")])
+    subject = nightly_report.subject(doc, Report(), "[kb]")
+    assert subject.endswith("Nightly failed · fix ready, needs your approval (PR #12)")
+    assert [s.id for s in doc.sections][1] == "autofix"
+    assert ["Fix PR #12", "https://github.com/octocat/kb/pull/12"] in doc.links
+    assert "ship -- approve 12" in doc.sections[1].blocks[0].items[0].fix
+
+
+def test_summary_and_run_json(tmp_path):
+    kb = _write_runs(tmp_path, _run(status="ok"))
+    done = cli.nightly(kb, root=str(tmp_path), run_gh=FakeGh(), run=_run())
+    rows = cli.summary(done, str(tmp_path))
+    assert rows[0]["step"] == "sync" and rows[0]["issue"] == 41 and rows[0]["outcome"] == "created"
 
 
 def test_gate_counts_a_rename_as_a_delete():
@@ -185,3 +237,36 @@ def test_unlisted_issues_never_open_a_duplicate(tmp_path):
         rc = 1 if args[:2] == ["issue", "list"] else 0
         return subprocess.CompletedProcess(args, rc, "", "")
     assert issue.open_or_reuse(f, _run(), str(tmp_path), run_gh=gh)[0] is None
+
+
+@pytest.mark.flag("nightly-autofix", True)
+def test_timeout_still_reads_what_the_fixer_did(tmp_path, monkeypatch):
+    from kb_distillery.ops import core
+    monkeypatch.setattr(core, "AUTOFIX_LOG", str(tmp_path / "autofix.log"))
+
+    def run(cmd, **kw):
+        with open(cmd[cmd.index("--summary") + 1], "w") as f:
+            json.dump([_res("created")], f)
+        raise subprocess.TimeoutExpired(cmd, 1)
+    results, why = core.nightly_autofix(str(tmp_path), _run(), run=run)
+    assert results[0]["issue"] == 4 and why.startswith("timed out")
+
+
+@pytest.mark.flag("nightly-autofix", True)
+def test_bad_summary_is_ignored(tmp_path, monkeypatch):
+    from kb_distillery.ops import core
+    monkeypatch.setattr(core, "AUTOFIX_LOG", str(tmp_path / "autofix.log"))
+
+    def run(cmd, **kw):
+        with open(cmd[cmd.index("--summary") + 1], "w") as f:
+            json.dump({"not": "a list"}, f)
+        return subprocess.CompletedProcess(cmd, 0)
+    assert core.nightly_autofix(str(tmp_path), _run(), run=run) == ([], "")
+
+
+def test_held_plus_ticket_is_an_error_night():
+    from kb_distillery.ops import nightly_report
+    from kb_distillery.ops.report import model as m
+    doc = m.Doc("Nightly", "error", "x", [m.Section("", [m.Banner("error", "x")])])
+    nightly_report.apply_autofix(doc, [_res("held: https://github.com/octocat/kb/pull/3"), _res("created", fixable=False)])
+    assert doc.status == "error"

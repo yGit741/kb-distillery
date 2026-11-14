@@ -81,7 +81,7 @@ class Harness:
 
 def test_small_fix_merges(monkeypatch, tmp_path):
     h = Harness(monkeypatch, tmp_path)
-    assert h.run().startswith("merged")
+    assert h.run().startswith("merge pending")
     assert h.calls == ["start", "commit", "review", "pr", "merge"]
     attempt = list(h.state.values())[0]["attempt"]
     assert attempt["pr"] == 77 and attempt["held"] is False and attempt["usd"] == 1.75

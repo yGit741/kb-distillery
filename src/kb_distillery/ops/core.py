@@ -857,14 +857,29 @@ def sync_hygiene(root=ROOT, failed=False, error=None, head_before=None, rc=None)
         except Exception as e:  # noqa: BLE001 — a broken report falls back to the plain hygiene mail
             print(f"note: nightly report failed — {type(e).__name__}: {e}")
             run.step("report", "error", error=f"{type(e).__name__}: {e}")
-        outcome = notify.notify_report(report, root, sync_failed=failed or bool(error), error=error, tail=tail, doc=doc)
+        status = doc.status if doc else "error" if failed or report.errors else "warn" if report.findings else "ok"
+        extra = ""
+        if status == "error":
+            try:            # the mail must go out whatever the auto-fix does
+                fixed = nightly_autofix(root, {**run.record, "status": "error", "hygiene": report.as_dict()})
+                if fixed is not None:
+                    results, why = fixed
+                    head = None
+                    if doc is not None and (results or why):
+                        from . import nightly_report
+                        head = nightly_report.apply_autofix(doc, results, why)
+                    run.step("autofix", "error" if why else "ok", issues=len(results), outcome=head or why)
+                    extra = head or why
+            except Exception as e:  # noqa: BLE001 — a broken auto-fix never costs the night its mail
+                print(f"note: nightly autofix failed — {type(e).__name__}: {e}")
+                run.step("autofix", "error", error=f"{type(e).__name__}: {e}")
+                extra = "autofix-crashed"
+        outcome = notify.notify_report(report, root, sync_failed=failed or bool(error), error=error, tail=tail, doc=doc,
+                                       fingerprint_extra=extra)
         run.step("notify", "ok" if outcome in ("sent", "clean", "throttled") else "warn", outcome=outcome)
         run.set(hygiene=report.as_dict(), threads=[t.as_dict() for t in threads], notify=outcome,
                 deploy=_deploy_state(root))
-        status = doc.status if doc else "error" if failed or report.errors else "warn" if report.findings else "ok"
-        run.finish(status=status)
-        if status == "error":
-            nightly_autofix(root)
+        run.finish(status=status)          # the night as it ran: a fix does not turn a red night green
         return outcome
     except Exception as e:  # noqa: BLE001 — hygiene must never fail the sync
         print(f"note: hygiene checks failed — {type(e).__name__}: {e}")
@@ -877,26 +892,47 @@ def sync_hygiene(root=ROOT, failed=False, error=None, head_before=None, rc=None)
 
 
 AUTOFIX_LOG = os.path.expanduser("~/Library/Logs/kb-distillery-autofix.log")
-AUTOFIX_TIMEOUT = 3 * 3600
+AUTOFIX_TIMEOUT = 75 * 60      # the mail waits for the fixer: it queues its merge (CI finishes after the mail)
 
 
-def nightly_autofix(root=ROOT, run=subprocess.run):
-    """Flag `nightly-autofix` (off by default): a red night opens or reuses one `nightly-fail` issue per failure and
-    hands engine failures to the fixer (`python -m kb_distillery.autofix nightly`, a separate process: services is
-    not ours to import). Runs in the foreground (launchd would end a detached child), logs to AUTOFIX_LOG and never
-    fails the sync."""
+def nightly_autofix(root=ROOT, record=None, run=subprocess.run):
+    """Flag `nightly-autofix` (off by default): before the nightly mail goes out, a red night opens or reuses one
+    `nightly-fail` issue per failure and hands engine failures to the fixer (`python -m kb_distillery.autofix nightly`,
+    a separate process: services is not ours to import), so the one mail says what happened. Runs in the foreground
+    (launchd would end a detached child), logs to AUTOFIX_LOG and never fails the sync.
+
+    Returns None when the flag is off, else (results, error): `results` is the fixer's summary list (see
+    `kb_distillery.autofix.__main__.summary`), `error` a short reason when it did not finish."""
     from kb_distillery.config.flags import runtime
     if not runtime.effective("nightly-autofix"):
         return None
-    try:
-        with open(AUTOFIX_LOG, "a", encoding="utf-8") as log:
-            proc = run([sys.executable, "-m", "kb_distillery.autofix", "nightly", "--kb-root", root],
-                       stdout=log, stderr=subprocess.STDOUT, check=False, timeout=AUTOFIX_TIMEOUT)
-    except (OSError, subprocess.SubprocessError) as e:
-        print(f"note: nightly autofix skipped — {e}")
-        return None
-    print(f"autofix: finished with exit {proc.returncode} (log: {AUTOFIX_LOG})")
-    return proc.returncode
+    import tempfile
+    with tempfile.TemporaryDirectory(prefix="kb-autofix-") as tmp:
+        run_json, summary = os.path.join(tmp, "run.json"), os.path.join(tmp, "summary.json")
+        with open(run_json, "w", encoding="utf-8") as f:
+            json.dump(record or {}, f, default=str)
+        cmd = [sys.executable, "-m", "kb_distillery.autofix", "nightly", "--kb-root", root]
+        if record:
+            cmd += ["--run-json", run_json]
+        cmd += ["--summary", summary]
+        why = ""
+        try:
+            with open(AUTOFIX_LOG, "a", encoding="utf-8") as log:
+                proc = run(cmd, stdout=log, stderr=subprocess.STDOUT, check=False, timeout=AUTOFIX_TIMEOUT)
+            if proc.returncode:
+                why = f"exit {proc.returncode}, see the auto-fix log"
+        except subprocess.TimeoutExpired:
+            why = f"timed out after {AUTOFIX_TIMEOUT // 60} min, see the issue and the auto-fix log"
+        except (OSError, subprocess.SubprocessError) as e:
+            why = f"did not start: {type(e).__name__}"
+        try:
+            with open(summary, encoding="utf-8") as f:
+                results = json.load(f)
+        except (OSError, ValueError):
+            results = []
+    results = [r for r in results if isinstance(r, dict)] if isinstance(results, list) else []
+    print(f"autofix: {why or 'finished'} (log: {AUTOFIX_LOG})")
+    return results, why
 
 
 def _sync(push, dry_run, root, prefer=None):

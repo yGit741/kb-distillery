@@ -143,7 +143,7 @@ def log_tail(path, n=30):
 
 
 def notify_report(report, root=ROOT, sync_failed=False, error=None, tail=None, cfg=None, now=None, send=None,
-                  doc=None):
+                  doc=None, fingerprint_extra=""):
     """Decide and send. Returns "clean" | "throttled" | "sent" | "not-sent" (never raises).
 
     With a nightly-report `doc` and `mode = "digest"`, a clean night is mailed too; the throttle
@@ -157,7 +157,7 @@ def notify_report(report, root=ROOT, sync_failed=False, error=None, tail=None, c
     digest = doc is not None and cfg.get("mode") == "digest"
     if not hits and not sync_failed and not digest:
         return "clean"
-    fingerprint = report.fingerprint()
+    fingerprint = report.fingerprint() + (f"|{fingerprint_extra}" if fingerprint_extra else "")
     if sync_failed:
         last_line = (error or "").strip().splitlines()[-1:]
         fingerprint += "|sync-failed:" + (last_line[0] if last_line else "")
