@@ -1,16 +1,15 @@
 import { useEffect, useMemo, useRef } from "react";
 import { useDataSource } from "@/api";
-import { useFlag } from "@/flags/useFlag";
 import { DELETED_EVENT, FAILED_EVENT, OPEN_EVENT, SYNCED_EVENT, chatIdOf, createMirror, fromDoc, migrateBrowserChat, serverSessionsOn, sessionBus, setChatBusy, type SessionMeta } from "./serverStorage";
 import type { Chat } from "./thread";
 
 /**
- * The server-side half of `useChatSession` (flag `agent-mode`): mirrors the chat after each finished turn, copies the
- * browser-held chat once on first load, and lets the past-chats list open a stored chat. Flag off: no effect runs.
+ * The server-side half of `useChatSession` (the live local backend): mirrors the chat after each finished turn, copies the
+ * browser-held chat once on first load, and lets the past-chats list open a stored chat. A share build: no effect runs.
  */
 export function useServerSessions(chat: Chat, busy: boolean, meta: SessionMeta | null, open: (c: Chat) => void) {
   const ds = useDataSource();
-  const on = useFlag("agent-mode") && serverSessionsOn(ds);
+  const on = serverSessionsOn(ds);
   const mirror = useMemo(() => createMirror(ds, {
     onSynced: (id) => sessionBus.dispatchEvent(new CustomEvent(SYNCED_EVENT, { detail: id })),
     onError: (id, message) => sessionBus.dispatchEvent(new CustomEvent(FAILED_EVENT, { detail: { id, message } })),

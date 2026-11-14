@@ -34,7 +34,7 @@ export function groupChats(rows: readonly SessionRow[], now = new Date()): { lab
  * The chat list of the full chat (flag `chat-full`): the spark fan grown into a column. New chat, Pinned, Today and
  * Earlier, each row with its status or day. A click opens that chat in the chat column next to it.
  */
-export function ChatList({ activeId, server }: { activeId: string; server: boolean }) {
+export function ChatList({ activeId, server, limit, onMore }: { activeId: string; server: boolean; limit?: number; onMore?: () => void }) {
   const q = useQuery({
     queryKey: ["corners", "sessions"],
     queryFn: () => listSessions(defaultFetch),
@@ -44,7 +44,9 @@ export function ChatList({ activeId, server }: { activeId: string; server: boole
     refetchInterval: REFRESH_MS,
   });
   const rows = useMemo<SessionRow[]>(() => q.data ?? browserSessions(), [q.data]);
-  const groups = useMemo(() => groupChats(rows), [rows]);
+  const shown = useMemo(() => (limit ? rows.slice(0, limit) : rows), [rows, limit]);
+  const groups = useMemo(() => groupChats(shown), [shown]);
+  const compact = limit !== undefined;
   const open = (row: SessionRow) => {
     if (plain(row.id) === plain(activeId) || !mayLeave()) return;
     void (async () => {
@@ -57,7 +59,12 @@ export function ChatList({ activeId, server }: { activeId: string; server: boole
     })();
   };
   return (
-    <nav aria-label="Chats" data-testid="chat-list" className="flex h-full w-full min-w-0 flex-col gap-4 overflow-y-auto bg-background px-2 py-3">
+    <nav
+      aria-label={compact ? "Recent chats" : "Chats"}
+      data-testid={compact ? "recent-chats" : "chat-list"}
+      className={cn("flex w-full min-w-0 flex-col gap-4", compact ? "mt-6" : "h-full overflow-y-auto bg-background px-2 py-3")}
+    >
+      {!compact && (
       <button
         type="button"
         onClick={() => mayLeave() && newChat()}
@@ -66,8 +73,9 @@ export function ChatList({ activeId, server }: { activeId: string; server: boole
         <Plus aria-hidden className="size-4 shrink-0" strokeWidth={1.6} />
         New chat
       </button>
+      )}
       {q.isPending && server && <p className="px-2.5 text-xs text-muted-foreground">Loading chats</p>}
-      {!q.isPending && !groups.length && <p className="px-2.5 text-xs text-muted-foreground">No saved chats yet.</p>}
+      {!q.isPending && !groups.length && !compact && <p className="px-2.5 text-xs text-muted-foreground">No saved chats yet.</p>}
       {groups.map((g) => (
         <section key={g.label} aria-label={g.label} className="flex flex-col gap-0.5">
           <h3 className="px-2.5 pb-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{g.label}</h3>
@@ -94,6 +102,16 @@ export function ChatList({ activeId, server }: { activeId: string; server: boole
           })}
         </section>
       ))}
+      {compact && onMore && rows.length > shown.length && (
+        <button
+          type="button"
+          data-testid="all-chats"
+          onClick={onMore}
+          className="self-start rounded-lg px-2.5 py-1 text-xs text-muted-foreground hover:bg-secondary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          All chats ({rows.length})
+        </button>
+      )}
     </nav>
   );
 }

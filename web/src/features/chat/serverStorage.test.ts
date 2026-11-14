@@ -49,14 +49,12 @@ describe("ids and documents", () => {
   });
 });
 
-describe("the flag gates server sessions", () => {
-  it("is on only for the live backend with agent-mode on", () => {
+describe("server sessions follow the backend, not a flag", () => {
+  it("are on for the live backend, agent-mode on or off, and off in a share build", () => {
     const http = mockDataSource();
-    withFlag("agent-mode", true, () => {
-      expect(serverSessionsOn(http)).toBe(true);
-      expect(serverSessionsOn(mockDataSource({ kind: "embedded" }))).toBe(false);
-    });
-    withFlag("agent-mode", false, () => expect(serverSessionsOn(http)).toBe(false));
+    withFlag("agent-mode", false, () => expect(serverSessionsOn(http)).toBe(true));
+    withFlag("agent-mode", true, () => expect(serverSessionsOn(http)).toBe(true));
+    expect(serverSessionsOn(mockDataSource({ kind: "embedded" }))).toBe(false);
   });
 });
 

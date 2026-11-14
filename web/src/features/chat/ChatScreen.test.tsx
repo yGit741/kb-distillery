@@ -29,6 +29,9 @@ function setup(over: Partial<DataSource> = {}, url = "/chat") {
   const ds = mockDataSource({
     getChatStatus: async () => chatStatus(),
     getChatPrompts: async () => ({ prompts: [{ id: "query", title: "Query", description: "d", text: "base prompt" }, { id: "learn", title: "Learn", description: "", text: "teach" }] }),
+    // every live backend keeps chats now: an empty store, and a turn mirrored to it
+    listSessions: async () => ({ sessions: [] }),
+    putSession: async (id: string) => ({ id, title: "t", created: "", updated: "", messages: [], usage: { cost_usd: 0, turns: 0 } }) as never,
     listScopes: async () => ({ scopes: [{ slug: "scope-rl", title: "RL basics", maturity: "open", files: 3, digested: 1, uncovered: 2, coverage: 0.33 }] }),
     chatStream: async (body, signal) => {
       const stream = fakeStream(signal);
