@@ -470,7 +470,13 @@ describe("legends", () => {
     const page = themed.find((n) => n.areas[0] === "theme-3")!;
     const label = colorKey(page, effectiveColorBy(useGraphUi.getState().colorBy));
     const row = legend.querySelector<HTMLElement>(`button[data-row="${label}"]`)!;
-    fireEvent.mouseEnter(row);
+    // right after the opening click the pointer has not moved: the row under it is not chosen
+    fireEvent.mouseMove(row);
+    await new Promise((r) => setTimeout(r, 200));
+    expect(useGraphUi.getState().spotIds).toBeNull();
+    expect(row.className).not.toMatch(/hover:bg-accent/);
+    moveAway();
+    fireEvent.mouseMove(row);
     await waitFor(() => expect(useGraphUi.getState().spotIds).not.toBeNull());
     expect([...useGraphUi.getState().spotIds!].sort()).toEqual(themed.filter((n) => colorKey(n, effectiveColorBy(useGraphUi.getState().colorBy)) === label).map((n) => n.id).sort());
     expect(useGraphUi.getState().spotIds!.size).toBe(5);
@@ -482,12 +488,13 @@ describe("legends", () => {
     const legend = await openLegend();
     const label = colorKey(themed.find((n) => n.areas[0] === "theme-2")!, effectiveColorBy(useGraphUi.getState().colorBy));
     const row = legend.querySelector<HTMLElement>(`button[data-row="${label}"]`)!;
-    fireEvent.mouseEnter(row);
+    moveAway();
+    fireEvent.mouseMove(row);
     await waitFor(() => expect(useGraphUi.getState().spotIds?.size).toBe(6));
     fireEvent.click(row);
     expect(useGraphUi.getState().spotIds).toBeNull();
     fireEvent.mouseLeave(row);
-    fireEvent.mouseEnter(row);
+    fireEvent.mouseMove(row);
     await new Promise((r) => setTimeout(r, 200));
     expect(useGraphUi.getState().spotIds).toBeNull();
   });
