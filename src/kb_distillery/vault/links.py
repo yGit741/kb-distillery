@@ -52,9 +52,20 @@ def wikilink_targets(text: str) -> list[str]:
     return [m.strip() for m in WIKILINK_TARGET.findall(_COMMENT.sub("", text or ""))]
 
 
+_LABEL_MATH = re.compile(r"(\$[^$\n]+\$)")
+
+
 def escape_label(label: str) -> str:
-    """Link text that reads as the literal `label`: backslash and square brackets escaped."""
-    return re.sub(r"([\\\[\]])", r"\\\1", str(label))
+    """Link text that reads as the literal `label`: square brackets and backslashes escaped. Inside `$..$` maths a
+    backslash is escaped only where it could be read as an escape (before `[`, `]` or `\\`), since a renderer reads maths
+    raw: `$T_\\rho$` keeps its one backslash, where `$T_\\\\rho$` would show a doubled one."""
+    out = []
+    for i, part in enumerate(_LABEL_MATH.split(str(label))):
+        if i % 2:
+            out.append(re.sub(r"\\(?=[\\\[\]])|([\[\]])", lambda m: "\\" + (m.group(1) or "\\"), part))
+        else:
+            out.append(re.sub(r"([\\\[\]])", r"\\\1", part))
+    return "".join(out)
 
 
 def link(slug: str, label=None, anchor: str | None = None, up: int = 0) -> str:
@@ -74,7 +85,7 @@ def page_link(slug: str, titles=None, label=None, up: int = 0) -> str:
 
 def link_parts(m) -> tuple[str, str, str]:
     """(unescaped label, slug, anchor) of a PAGE_LINK match."""
-    return re.sub(r"\\(.)", r"\1", m.group(1)), m.group(2), m.group(3) or ""
+    return re.sub(r"\\([\\\[\]])", r"\1", m.group(1)), m.group(2), m.group(3) or ""
 
 
 def slugify(heading: str) -> str:

@@ -3,6 +3,7 @@ import { Link } from "@tanstack/react-router";
 import { Dices, Home, Route as RouteIcon } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ApiError } from "@/api";
+import { plainTitle } from "@/components/Markdown";
 import { Empty, ErrorState, Loading } from "@/components/states";
 import { Button } from "@/components/ui/button";
 import { useEmbed } from "@/app/embed";
@@ -118,7 +119,7 @@ export default function PagesScreen() {
   const detailOk = detail.data && slug === detail.data.card.id;
   useEffect(() => {
     if (!detailOk || !slug) return;
-    document.title = `${detail.data.card.title} - Pages`;
+    document.title = `${plainTitle(detail.data.card.title)} - Pages`;
     if (kb) return;                    // the trail is the server's own pages; a read-only page is not on it
     setTrail((t) => {
       const next = withTrail(t, slug);

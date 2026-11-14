@@ -90,6 +90,28 @@ export function remarkDoubtTag() {
   };
 }
 
+/** `\tag{N}` numbers a display equation; KaTeX refuses it in inline maths (a numbered equation quoted inside a sentence).
+ * There it becomes ` \qquad(N)`, the number the reader would see. */
+export function inlineTag(tex: string): string {
+  return tex.replace(/\\tag\*?\{([^{}]*)\}/g, "\\qquad($1)");
+}
+
+/** Remark plugin: `inlineTag` on every inline formula (value and the text node mdast-util-math already made from it). */
+export function remarkInlineTag() {
+  type MathNode = { type: string; value?: string; children?: MathNode[]; data?: { hChildren?: { type: string; value: string }[] } };
+  return (tree: Root) => {
+    const walk = (n: MathNode) => {
+      if (n.type === "inlineMath" && typeof n.value === "string") {
+        n.value = inlineTag(n.value);
+        for (const c of n.data?.hChildren ?? []) if (c.type === "text") c.value = inlineTag(c.value);
+        return;
+      }
+      for (const c of n.children ?? []) walk(c);
+    };
+    walk(tree as unknown as MathNode);
+  };
+}
+
 const safeDecode = (s: string): string => {
   try {
     return decodeURIComponent(s);
@@ -238,7 +260,7 @@ export function Markdown({ children, className, resolveSlug, transformUrl, linkS
     [resolveSlug, transformUrl, linkSearch],
   );
   const plugin = marks?.plugin;
-  const remarkPlugins = useMemo(() => [remarkGfm, remarkMath, remarkWikilinks, remarkDoubtTag, ...(plugin ? [plugin] : [])], [plugin]);
+  const remarkPlugins = useMemo(() => [remarkGfm, remarkMath, remarkInlineTag, remarkWikilinks, remarkDoubtTag, ...(plugin ? [plugin] : [])], [plugin]);
   return (
     <div className={cn("kb-prose", className)}>
       <ReactMarkdown
@@ -251,4 +273,34 @@ export function Markdown({ children, className, resolveSlug, transformUrl, linkS
       </ReactMarkdown>
     </div>
   );
+}
+
+const unwrap = { p: ({ children }: { children?: ReactNode }) => <>{children}</> };
+const MATH_ONLY = { remark: [remarkMath, remarkInlineTag], rehype: [rehypeKatex] };
+/** `$..$` as Pandoc reads it in a short line: no space just inside either `$`, no digit right after the closing one,
+ * so "costs $5 and $6" stays text. */
+const TITLE_MATH = /\$(?=\S)([^$\n]*?\S)\$(?!\d)/g;
+
+/** A short line of text (a page title) with its `$...$` maths typeset by KaTeX, through the same remark-math path as a
+ * page body; only the formulas are parsed, the rest is shown as plain text (a title is never Markdown). */
+export function MathText({ text }: { text: string }) {
+  const out: ReactNode[] = [];
+  let at = 0;
+  for (const m of text.matchAll(TITLE_MATH)) {
+    if (m.index > at) out.push(text.slice(at, m.index));
+    out.push(
+      <ReactMarkdown key={m.index} remarkPlugins={MATH_ONLY.remark} rehypePlugins={MATH_ONLY.rehype} components={unwrap}>
+        {m[0]}
+      </ReactMarkdown>,
+    );
+    at = m.index + m[0].length;
+  }
+  if (at === 0) return <>{text}</>;
+  out.push(text.slice(at));
+  return <>{out}</>;
+}
+
+/** A title as plain text (the browser tab): `$W_K^\\top$` reads `W_K^top`; a `$` that is no formula stays. */
+export function plainTitle(text: string): string {
+  return text.replace(TITLE_MATH, (_m, tex: string) => tex.replace(/\\([a-zA-Z]+)/g, "$1"));
 }

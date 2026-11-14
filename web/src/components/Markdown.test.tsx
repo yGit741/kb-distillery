@@ -1,7 +1,7 @@
 import { createMemoryHistory, createRootRoute, createRoute, createRouter, RouterProvider } from "@tanstack/react-router";
 import { render, screen, waitFor } from "@testing-library/react";
 import { withFlag } from "@/flags/testing";
-import { figureUrl, Markdown, type MarkdownProps } from "./Markdown";
+import { figureUrl, inlineTag, Markdown, MathText, plainTitle, type MarkdownProps } from "./Markdown";
 
 async function renderMd(source: string, props: Partial<MarkdownProps> = {}) {
   const root = createRootRoute();
@@ -158,5 +158,27 @@ describe("figures of a transcribed PDF", () => {
     const img = container.querySelector("img.kb-figure");
     expect(img?.getAttribute("src")).toBe("/api/figures/0123456789ab/p0073/1");
     expect(img?.getAttribute("alt")).toBe("Figure 3.1");
+  });
+
+  it("numbers an inline formula's \\tag instead of failing it", async () => {
+    expect(inlineTag("q(x)=x,\\tag{1.11}")).toBe("q(x)=x,\\qquad(1.11)");
+    const { container } = await renderMd("the polynomial $$q(x)=x,\\tag{1.11}$$ over the reals");
+    expect(container.querySelector(".katex")).not.toBeNull();
+    expect(container.querySelector(".katex-error")).toBeNull();
+  });
+
+  it("typesets maths in a title and keeps plain titles as text", () => {
+    const { container } = render(<h1><MathText text={"Decomposition of $W_QW_K^\\top$"} /></h1>);
+    expect(container.querySelector("h1 .katex")).not.toBeNull();
+    expect(container.querySelector("h1 p")).toBeNull();
+    expect(render(<h1><MathText text="Plain title" /></h1>).container.textContent).toBe("Plain title");
+    expect(plainTitle("Operator $W_QW_K^\\top$")).toBe("Operator W_QW_K^top");
+    expect(plainTitle("Costs $5 and $6")).toBe("Costs $5 and $6");
+    const price = render(<h1><MathText text={"Costs $5 and $6"} /></h1>).container;
+    expect(price.querySelector(".katex")).toBeNull();
+    expect(price.textContent).toBe("Costs $5 and $6");
+    const list = render(<h1><MathText text={"1. A *list* title with $x$"} /></h1>).container;
+    expect(list.querySelector("ol, em")).toBeNull();
+    expect(list.querySelectorAll(".katex").length).toBe(1);
   });
 });

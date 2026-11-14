@@ -2,7 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { Check, Copy, ExternalLink, Pin, PinOff } from "lucide-react";
 import { useCallback, useMemo, useRef, useState, type ReactNode } from "react";
 import type { PageDetail } from "@/api/types";
-import { Markdown } from "@/components/Markdown";
+import { Markdown, MathText } from "@/components/Markdown";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useVariant, VARIANTS } from "@/components/variants";
@@ -134,7 +134,9 @@ export function PageReader({ g, detail, embed, pinned, onTogglePin, onConnect, v
         <header className="flex flex-col gap-2">
           <h1 className="flex items-start gap-2 text-2xl font-semibold leading-tight">
             <TypeDot type={card.type} className="mt-1 size-5" />
-            {card.title}
+            <span className="min-w-0">
+              <MathText text={card.title} />
+            </span>
           </h1>
           <FactBadges card={card} />
           {(card.areas.length > 0 || book) && (
