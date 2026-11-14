@@ -41,7 +41,7 @@ describe("Cmd+K on the shared site (graph-intent on)", () => {
       await waitFor(() => expect(document.body).toBeTruthy());
       await userEvent.keyboard("{Control>}k{/Control}");
       const box = await screen.findByRole("combobox");
-      expect(box.getAttribute("placeholder")).toBe("Search everything · / commands");
+      expect(box.getAttribute("placeholder")).toBe("Explore Your Knowledge");
       await userEvent.type(box, "marg");
       expect(await screen.findByRole("option", { name: /Margin theory/ })).toBeInTheDocument();
       expect(screen.queryByRole("option", { name: /Ask the agent/ })).toBeNull();

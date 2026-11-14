@@ -1015,6 +1015,7 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
         inputRef={input}
         placeholder={intent ? (caps.sentences ? LINE_COPY.placeholder : LINE_COPY.placeholderShare) : `Search ${kbName}`}
         notice={open ? undefined : notice?.text}
+        keys={intent ? (caps.sentences ? LINE_COPY.keys : LINE_COPY.keysShare) : undefined}
         square={lineBox.square}
       />
       {intent && <Chips byId={byId} />}

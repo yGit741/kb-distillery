@@ -55,7 +55,21 @@ describe("the line, graph-intent on", () => {
     await withFlag("graph-intent", true, async () => {
       setup();
       expect(screen.queryByRole("button", { name: /knowledge base/i })).not.toBeInTheDocument();
-      expect(box()).toHaveAttribute("placeholder", "Search everything · / commands");
+      expect(box()).toHaveAttribute("placeholder", "Explore Your Knowledge");
+    });
+  });
+
+  it("shows the > and / key caps only while the line has the focus and is empty", async () => {
+    await withFlag("graph-intent", true, async () => {
+      setup();
+      const keys = screen.getByTestId("line-keys");
+      expect(keys).not.toHaveAttribute("data-shown");
+      await userEvent.click(box());
+      expect(keys).toHaveAttribute("data-shown", "true");
+      expect(keys).toHaveTextContent(">change the view");
+      expect(keys).toHaveTextContent("/commands");
+      await userEvent.type(box(), "ten");
+      expect(keys).not.toHaveAttribute("data-shown");
     });
   });
 
