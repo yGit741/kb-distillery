@@ -1,5 +1,5 @@
 import { DEPTHS, LAYERS, type Layer } from "@/api/model";
-import { colorKey, colorOf, KEY_ORDER, NO_AREA, ordinalOf, OTHER_AREAS, PEOPLE, RAMP_BY, type AreaSlots, type ColorBy } from "./style";
+import { colorKey, colorOf, KEY_ORDER, NO_AREA, NO_TOPIC, ordinalOf, OTHER_AREAS, PEOPLE, RAMP_BY, type AreaSlots, type ColorBy } from "./style";
 import { presentTypes, type GraphSchema, type TypeInfo } from "./schema";
 import type { GNode } from "./types";
 
@@ -86,7 +86,7 @@ export function colorKeyRows(nodes: readonly GNode[], visible: ReadonlySet<strin
   }
   const ordered = ramp && RAMP_BY.has(by);
   // the catch-all rows ("Other areas", "No area") close the list whatever their counts
-  const last = (r: KeyRow) => (r.label === PEOPLE ? 1 : r.label === OTHER_AREAS ? 2 : r.label === NO_AREA ? 3 : 0);
+  const last = (r: KeyRow) => (r.label === PEOPLE ? 1 : r.label === OTHER_AREAS ? 2 : r.label === NO_AREA || r.label === NO_TOPIC ? 3 : 0);
   const fixed = KEY_ORDER[by];
   const rank = (r: KeyRow) => (fixed ? (fixed.indexOf(r.label) + 1 || fixed.length + 1) : 0);
   const sorted = [...rows.values()].sort(

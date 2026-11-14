@@ -13,6 +13,10 @@ export interface FanCard {
   live?: boolean;
   /** the "New chat" card (flag spark-chat): a plus in place of the picture */
   isNew?: boolean;
+  /** a built-in view offered until it is pinned (flag ui.embedding-views): dashed, quieter */
+  suggested?: boolean;
+  /** the tooltip, when it should say more than the title */
+  hint?: string;
 }
 
 interface Props {
@@ -61,7 +65,7 @@ export function Fan({ kind, open, label, cards, empty, onPick }: Props) {
             key={c.key || "none"}
             type="button"
             disabled={none}
-            title={none ? undefined : c.title}
+            title={none ? undefined : (c.hint ?? c.title)}
             aria-label={none ? undefined : `${c.title}${c.meta ? `, ${c.meta}` : ""}`}
             onClick={() => onPick(c.key)}
             data-card={i}
@@ -81,6 +85,8 @@ export function Fan({ kind, open, label, cards, empty, onPick }: Props) {
               <span aria-hidden className="grid h-[50px] w-[72px] flex-none place-items-center rounded-[7px] border bg-card text-muted-foreground shadow-[var(--shadow)]">
                 <Plus className="size-5" strokeWidth={1.6} />
               </span>
+            ) : c.suggested ? (
+              <span aria-hidden className="block h-[50px] w-[72px] flex-none rounded-[7px] border border-dashed border-muted-foreground/50 bg-card/60" />
             ) : (
               <CardThumb accent={kind === "think" ? "warn" : "primary"} />
             )}
@@ -88,6 +94,7 @@ export function Fan({ kind, open, label, cards, empty, onPick }: Props) {
             <span
               className={cn(
                 "flex h-[26px] items-center overflow-hidden rounded-full bg-card px-3 text-[13px] shadow-[var(--shadow)] transition-colors duration-150",
+                c.suggested && "border border-dashed border-muted-foreground/50 bg-card/80 text-muted-foreground shadow-none",
                 none ? "text-muted-foreground" : "group-hover:bg-primary group-hover:text-primary-foreground group-focus-visible:bg-primary group-focus-visible:text-primary-foreground",
               )}
               style={{ width: PILL_W }}

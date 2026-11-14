@@ -1,6 +1,7 @@
 import { LayoutGrid, Plus, Star } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type ElementType, type KeyboardEvent, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
+import type { EmbedView } from "../../embedding/model";
 import { LINE_COPY } from "../copy";
 import { ago, type PinnedView, type RecentStep } from "./api";
 import { useCorners } from "./cornersStore";
@@ -34,6 +35,9 @@ interface Props {
   onAllViews?: () => void;
   /** A shared site: the saved views can be opened, but not pinned, renamed or stepped back through. */
   readOnly?: boolean;
+  /** Flag ui.embedding-views: built-in views offered (dashed) until pinned; absent or empty: no section. */
+  suggested?: readonly { view: EmbedView; name: string; hint: string }[];
+  onSuggest?: (view: EmbedView) => void;
 }
 
 type Entry =
@@ -44,7 +48,9 @@ type Entry =
   | (LensRow & { type: "stack" })
   | (LensRow & { type: "all" })
   | (LensRow & { type: "step"; step: RecentStep; index: number })
-  | (LensRow & { type: "note"; text: string });
+  | (LensRow & { type: "note"; text: string })
+  | (LensRow & { type: "label"; text: string })
+  | (LensRow & { type: "sug"; view: EmbedView; name: string; hint: string });
 
 /** the two back layers of the Recent stack: tilted behind the front one, almost flat while the steps are open */
 const stackLayer = (k: number, open: boolean): string => {
@@ -90,7 +96,7 @@ export function NameInput({ initial, label, onSubmit }: { initial: string; label
  * pill at half size; under the pointer the Dock lens grows the row and spreads its neighbours. Order: the pinned
  * views, a "+" card to pin the current view, a faint divider, then "Recent" (a stack that unfolds the last steps).
  */
-export function PinList({ open, views, viewsError, recent, recentError, suggest, onApply, onPin, onRename, onRecentOpen, canApply, embedded, favorites, onFavorite, onAllViews, readOnly }: Props) {
+export function PinList({ open, views, viewsError, recent, recentError, suggest, onApply, onPin, onRename, onRecentOpen, canApply, embedded, favorites, onFavorite, onAllViews, readOnly, suggested, onSuggest }: Props) {
   const edit = useCorners((s) => s.edit);
   const active = useCorners((s) => s.activeView);
   const startEdit = useCorners((s) => s.startEdit);
@@ -106,6 +112,10 @@ export function PinList({ open, views, viewsError, recent, recentError, suggest,
     for (const v of views ?? []) out.push({ type: "pin", kind: "row", hb: hb("row"), key: `pin-${v.id}`, view: v });
     if (!readOnly) out.push({ type: "add", kind: "add", hb: hb("add"), key: "add" });
     for (const f of favorites ?? []) out.push({ type: "fav", kind: "row", hb: hb("row"), key: `fav-${f.id}`, id: f.id, title: f.title });
+    if (suggested?.length && !readOnly) {
+      out.push({ type: "label", kind: "row", hb: hb("row"), key: "sug-label", text: "Suggested from meaning" });
+      for (const sg of suggested) out.push({ type: "sug", kind: "row", hb: hb("row"), key: `sug-${sg.view}`, ...sg });
+    }
     out.push({ type: "div", kind: "div", hb: hb("div"), key: "div" });
     if (!readOnly) out.push({ type: "stack", kind: "stack", hb: hb("stack"), key: "stack" });
     if (recentOpen && !readOnly) {
@@ -115,7 +125,7 @@ export function PinList({ open, views, viewsError, recent, recentError, suggest,
     }
     if (onAllViews) out.push({ type: "all", kind: "row", hb: hb("row"), key: "all" });
     return out;
-  }, [views, viewsError, recent, recentError, recentOpen, favorites, onAllViews, readOnly]);
+  }, [views, viewsError, recent, recentError, recentOpen, favorites, onAllViews, readOnly, suggested]);
 
   const { focusRow, release, kick } = useLens(lens, entries, els);
   useEffect(() => {
@@ -171,6 +181,21 @@ export function PinList({ open, views, viewsError, recent, recentError, suggest,
                     <span className="truncate">{e.text}</span>
                   </Pill>
                 </div>
+              );
+            if (e.type === "label")
+              return (
+                <div key={e.key} ref={b.ref} data-lens-row="label" aria-hidden style={b.style} className="absolute left-0 flex items-center pl-[60px] [transform-origin:22px_50%]">
+                  <span className="text-[10.5px] text-muted-foreground">{e.text}</span>
+                </div>
+              );
+            if (e.type === "sug")
+              return (
+                <button key={e.key} type="button" {...b} aria-label={`Suggested view: ${e.name}`} title={e.hint} onClick={() => onSuggest?.(e.view)} className={cn(b.className, "pointer-events-auto")}>
+                  <span className="block h-5 w-[30px] flex-none rounded-[5px] border border-dashed border-muted-foreground/50" aria-hidden />
+                  <Pill className="border border-dashed border-muted-foreground/50 bg-transparent text-muted-foreground shadow-none group-hover:text-foreground">
+                    <span className="truncate text-[11.5px]">{e.name}</span>
+                  </Pill>
+                </button>
               );
             if (e.type === "add") {
               const editing = edit?.kind === "pin";

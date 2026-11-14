@@ -1,4 +1,5 @@
 import { flag } from "@/flags";
+import { applyEmbed, captureEmbed, embedOf, leaveEmbed, type EmbedSpec } from "../../embedding/store";
 import { storyById, storyKnown, storyOffered } from "../../lab/views";
 import { describe, fromViewSpecV1, type Layer, type ViewStack } from "../../layers/model";
 import { applyLayers, specLayers } from "../../layers/readyViews";
@@ -57,9 +58,12 @@ export const isToolStorySpec = (spec: Record<string, unknown>): boolean => {
  * The spec to pin. With a layer stack that has layers (flag graph-intent) it is the stack, `{ v: 2, layers, text }`;
  * otherwise the knobs as before (V1), so a view set by hand still pins.
  */
-export function captureSpec(ui: CaptureUi): ViewSpecV1;
-export function captureSpec(ui: CaptureUi, stack: ViewStack | undefined): ViewSpecV1 | ViewSpecV2;
-export function captureSpec(ui: CaptureUi, stack?: ViewStack): ViewSpecV1 | ViewSpecV2 {
+export function captureSpec(ui: CaptureUi): ViewSpecV1 | EmbedSpec;
+export function captureSpec(ui: CaptureUi, stack: ViewStack | undefined): ViewSpecV1 | ViewSpecV2 | EmbedSpec;
+export function captureSpec(ui: CaptureUi, stack?: ViewStack): ViewSpecV1 | ViewSpecV2 | EmbedSpec {
+  // an embedding view (flag ui.embedding-views) is its own small spec: the view and the meaning map's axes
+  const embed = captureEmbed();
+  if (embed) return embed;
   // a view that is its name (a tool, or Citations): the knobs and layers it sets are not a separate view
   const tool = toolStoryOpen(ui);
   if (tool) return { v: 1, story: tool } as ViewSpecV1;
@@ -95,6 +99,10 @@ const isArr = (v: unknown): v is string[] => Array.isArray(v) && v.every((x) => 
 export function applySpec(spec: Record<string, unknown>, deps: ApplyDeps, pin?: { name: string }): boolean {
   // flag graph-intent: a pinned view is a layer stack. A v2 spec applies as layers (replacing the view); a V1 spec as one
   // "legacy" layer named like the pin, drawn by `applySpecV1` through the layer store.
+  const embed = embedOf(spec);
+  if (embed) return applyEmbed(embed);
+  // any other view leaves the embedding view (and its topic colouring; the spec's own colouring applies after)
+  if (recognisedV1(spec) || spec.v === 2) leaveEmbed();
   // a view that is its name (a tool, or Citations) has no layer form: it goes through the screen's own view path
   if (isToolStorySpec(spec)) return applySpecV1(spec, deps);
   if (flag("graph-intent")) {
@@ -105,7 +113,7 @@ export function applySpec(spec: Record<string, unknown>, deps: ApplyDeps, pin?: 
   return applySpecV1(spec, deps);
 }
 
-const V1_KEYS = ["story", "types", "depths", "colorBy", "sizeBy", "hiddenKeys", "quick", "pages"];
+const V1_KEYS = ["embed", "story", "types", "depths", "colorBy", "sizeBy", "hiddenKeys", "quick", "pages"];
 /** Whether a spec holds anything the V1 restore understands. */
 export const recognisedV1 = (spec: Record<string, unknown>): boolean => V1_KEYS.some((k) => k in spec);
 
