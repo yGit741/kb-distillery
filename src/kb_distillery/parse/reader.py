@@ -26,7 +26,8 @@ Transcribe the page EXACTLY as printed into Markdown with LaTeX. Rules:
 - Inline maths in $...$, display maths in $$...$$ (one block per displayed equation; an equation number becomes \\tag{N}).
 - Every mathematical symbol, however short (a lone variable f, w, T), goes in $...$.
 - Preserve bold, calligraphic, blackboard and fraktur letters (\\mathbf, \\boldsymbol, \\mathcal, \\mathbb, \\mathfrak), accents (bar, hat, tilde, dot), primes, sub- and superscripts and their order, delimiters, and the exact limits of sums, integrals, min, max.
-- Running head and page number: first lines, as plain text. Headings as #, ##. Theorem-like labels as printed.
+- Leave out the running head, the running foot and the page number: they are not part of the text. Footnotes stay, at the end.
+- Headings as #, ##. Theorem-like labels as printed.
 - A figure becomes the single line ![](figure) followed by its caption; do not transcribe text drawn inside a figure. A table becomes an HTML <table>.
 - The overlap between the two images must appear once.
 - If you cannot read a symbol with confidence, still give your best reading and wrap the uncertain part in \\unsure{...}.

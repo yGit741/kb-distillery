@@ -1,16 +1,19 @@
 """PDF pages -> a marked transcript in the parsed store.
 
     parser (MinerU, local)  --+
-                              +--> compare --> judge (only where they differ) --> transcript with `!` / `!!` marks
-    reader (vision model)   --+
+                              +--> compare --> judge (only where they differ) --> auditor (whole page) --> transcript
+    reader (vision model)   --+                                                                          with marks
 
 The reader's page is the transcript. The parser is the independent witness: where the two agree symbol for symbol the
-text stands unmarked. Where they differ the judge looks at the page again:
+text stands. Where they differ the judge looks at the page again, and at the end the auditor reads the whole result
+against the page once more. What comes out carries a mark wherever a single voice decided:
 
     the judge is sure the transcript is right        no mark
     the judge is sure it is wrong and gives a fix    the fix is applied, mark `!`
     the judge hesitates, or gives no answer          mark `!!` (its fix, if any, is applied)
     the reader itself wrote \\unsure{...}             mark `!`
+    the auditor finds a difference                   its fix is applied, mark `!`; `!!` when it is unsure, gives no fix,
+                                                     or the place cannot be found
     a page with only one reading                     the whole page is marked (`!` reader only, `!!` parser only)
 
 A mark is a Markdown link right after the formula, `[!](mark:<sha12>/p0188/3)`, plus a record in the page's JSON with the
@@ -22,24 +25,32 @@ import json
 import os
 import re
 
-from . import compare, judge, reader, store
+from . import audit, compare, judge, reader, store
 from . import run as runner
 from .engines import EngineError
 
 PAD = 0.012                  # crop padding, as a fraction of the page
 CROP_WIDTH = 1600
 LEVELS = ("!", "!!")
+MARK_LINK = re.compile(r"\[(!!?)\]\(mark:([0-9a-f]{12})/p(\d{4})/(\d+)\)")
 
 
 def mark_link(level: str, sha: str, page: int, n: int) -> str:
     return "[%s](mark:%s/p%04d/%d)" % (level, sha[:12], page, n)
 
 
-MARK_LINK = re.compile(r"\[(!!?)\]\(mark:([0-9a-f]{12})/p(\d{4})/(\d+)\)")
-
-
 def _worse(a: str, b: str) -> str:
     return a if LEVELS.index(a) >= LEVELS.index(b) else b
+
+
+def _unwrap(text: str) -> str:
+    """`\\unsure{x}` -> `x`, innermost last."""
+    while True:
+        sp = judge.unsure_spans(text)
+        if not sp:
+            return text
+        s, e, i0, i1 = sp[-1]
+        text = text[:s] + text[i0:i1] + text[e:]
 
 
 def _box_for(boxes: list, a: int, b: int):
@@ -68,84 +79,128 @@ def decide(item: judge.Item, v: judge.Verdict | None) -> tuple:
         "the other reading" if v.verdict == "other" else "neither reading")
 
 
-def assemble(al: compare.Alignment | None, md: str, items: list, verdicts: dict, boxes: list, sha: str, page: int) -> tuple:
-    """(Markdown with mark links, [mark records]) of one page. `md` is the reader's page; `al` is None without a parser."""
-    _, spans = compare.page_tokens(md)
-    ops: list = []                                   # (start, end, replacement or None, level, reason, item or None)
+def apply_edits(md: str, edits: list) -> tuple:
+    """Apply non-overlapping `edits` [(start, end, new text)] -> (new Markdown, remap). `remap(pos)` moves an offset of
+    the old text to the new one; an offset inside a replaced stretch lands at the end of its replacement."""
+    edits = sorted(edits, key=lambda e: e[0])
+    out, pos, table, shift = [], 0, [], 0
+    for s, e, new in edits:
+        out.append(md[pos:s])
+        out.append(new)
+        pos = e
+        shift += len(new) - (e - s)
+        table.append((s, e, e + shift))                            # old stretch -> end of its replacement in the new text
+    out.append(md[pos:])
+
+    def remap(p: int) -> int:
+        delta = 0
+        for s, e, end_new in table:
+            if p <= s:
+                break
+            if p < e:
+                return end_new
+            delta = end_new - e
+        return p + delta
+    return "".join(out), remap
+
+
+def judged(md: str, items: list, verdicts: dict) -> tuple:
+    """Stage one on the reader's page: (text with the judge's fixes and without \\unsure wrappers, [marks with `pos`])."""
+    ops: list = []                                   # (start, end, new text, mark)
     for it in items:
         level, fix, reason = decide(it, verdicts.get(it.id))
-        if level or fix is not None:
-            ops.append([it.span[0], it.span[1], fix, level or "!", reason, it])
-    for s, e, _i0, _i1 in judge.unsure_spans(md):
-        over = [o for o in ops if o[0] < e and o[1] > s]
-        if over:
-            continue                                                # the judged place already carries a mark
-        ops.append([s, e, None, "!", "the reader marked this as hard to read", None])
-    ops.sort(key=lambda o: o[0])
-    marks: list = []
-    pending: dict = {}                               # insertion point in the original text -> mark number
-    for o in ops:
-        s, e, fix, level, reason, it = o
-        encl = [sp for sp in spans if sp.a <= s and e <= sp.b]
-        at = encl[0].b if encl else e
-        text_now = fix if fix is not None else md[s:e]
-        if at in pending:                                           # two places in one formula share a mark
-            m = marks[pending[at] - 1]
-            m["level"] = _worse(m["level"], level)
-            m["reason"] += "; " + reason
+        if level:
+            new = _unwrap(fix if fix is not None else md[it.span[0]:it.span[1]])
+            ops.append((it.span[0], it.span[1], new, {"level": level, "reason": reason, "other": it.other,
+                                                      "was": md[it.span[0]:it.span[1]] if fix is not None else "",
+                                                      "a_span": it.other_span}))
+    wrappers = judge.unsure_spans(md)
+    for s, e, i0, i1 in wrappers:
+        if any(o[0] < e and o[1] > s for o in ops):
+            continue                                                # a marked place already covers it
+        if any(s2 <= s and e <= e2 and (s2, e2) != (s, e) for s2, e2, _a, _b in wrappers):
+            continue                                                # nested: the outer wrapper carries the mark
+        ops.append((s, e, _unwrap(md[i0:i1]), {"level": "!", "reason": "the reader marked this as hard to read",
+                                               "other": "", "was": "", "a_span": None}))
+    text, remap = apply_edits(md, [(s, e, new) for s, e, new, _m in ops])
+    marks = [dict(m, pos=remap(e)) for _s, e, _new, m in ops]
+    return text, marks
+
+
+def audited(md: str, marks: list, findings: list | None) -> tuple:
+    """Stage two: apply the auditor's findings to the text of stage one -> (text, marks with `pos` moved along)."""
+    if findings is None:
+        return md, marks + [{"level": "!", "reason": "the auditor gave no readable answer for this page", "other": "",
+                             "was": "", "a_span": None, "pos": 0}]
+    ops, loose = [], []
+    for f in findings:
+        says = "the auditor: the page says %s" % (f["page_says"] or "something else here")
+        span = audit.locate(md, f["snippet"])
+        fix = _unwrap(f["fix"]) if f["fix"].strip() and f["fix"].strip() != f["snippet"].strip() else None
+        if span is None or any(o[0] < span[1] and o[1] > span[0] for o in ops):
+            loose.append({"level": "!!", "reason": says + " (near: %s)" % f["snippet"][:60], "other": "", "was": "",
+                          "a_span": None, "pos": span[1] if span else 0})
+            continue
+        level = "!" if (fix is not None and f["sure"]) else "!!"
+        ops.append((span[0], span[1], fix if fix is not None else md[span[0]:span[1]],
+                    {"level": level, "reason": says, "other": "", "was": md[span[0]:span[1]] if fix is not None else "",
+                     "a_span": None}))
+    text, remap = apply_edits(md, [(s, e, new) for s, e, new, _m in ops])
+    out = [dict(m, pos=remap(m["pos"])) for m in marks]
+    out += [dict(m, pos=remap(e)) for _s, e, _new, m in ops]
+    out += [dict(m, pos=remap(m["pos"])) for m in loose]
+    return text, out
+
+
+def finish(md: str, marks: list, parser_md: str | None, boxes: list, sha: str, page: int) -> tuple:
+    """Put each mark's link right after its formula (after a display block: on its own line; a mark with no place: on top
+    of the page) -> (Markdown, [mark records])."""
+    _, spans = compare.page_tokens(md)
+    al = None
+    grouped: dict = {}
+    for m in sorted(marks, key=lambda m: m["pos"]):
+        pos = m["pos"]
+        encl = [sp for sp in spans if sp.a < pos <= sp.b]
+        at = encl[0].b if encl else pos
+        text = md[encl[0].a:encl[0].b] if encl else md[max(0, pos - 80):pos].strip()
+        if at in grouped:
+            g = grouped[at]
+            g["level"] = _worse(g["level"], m["level"])
+            g["reason"] += "; " + m["reason"]
+            g["was"] = g["was"] or m["was"]
+            g["other"] = g["other"] or m["other"]
+            continue
+        if m.get("a_span") is not None:
+            a_lo, a_hi = m["a_span"]
+        elif parser_md is not None and pos > 0:
+            al = al or compare.align(parser_md, md)
+            a_lo = a_hi = al.b_to_a(max(0, pos - 1))
         else:
-            n = len(marks) + 1
-            pending[at] = n
-            a_lo, a_hi = it.other_span if it is not None else ((al.b_to_a(s),) * 2 if al is not None else (0, 0))
-            marks.append({"id": n, "level": level, "reason": reason, "text": _plain(text_now),
-                          "was": md[s:e] if fix is not None else "", "other": it.other if it is not None else "",
-                          "box": _box_for(boxes, a_lo, a_hi) if boxes else None, "at": at})
-    text = _insert_links(md, ops, marks, pending, sha, page)
-    for m in marks:
-        m.pop("at")
-    return _unwrap_unsure(text), marks
-
-
-def _insert_links(md: str, ops: list, marks: list, pending: dict, sha: str, page: int) -> str:
-    """Apply the replacements and put each mark's link right after its formula (after a display block: its own line)."""
-    events = [(o[0], 0, o) for o in ops] + [(at, 1, n) for at, n in pending.items()]
-    events.sort(key=lambda t: (t[0], t[1]))
-    out, pos = [], 0
-    for at, kind, payload in events:
-        if kind == 0:
-            s, e, fix = payload[0], payload[1], payload[2]
-            out.append(md[pos:s])
-            out.append(fix if fix is not None else md[s:e])
-            pos = e
+            a_lo = a_hi = None
+        grouped[at] = {"level": m["level"], "reason": m["reason"], "text": text if pos > 0 else "", "was": m["was"],
+                       "other": m["other"], "box": _box_for(boxes, a_lo, a_hi) if (boxes and a_lo is not None) else None}
+    recs = [dict(grouped[at], id=n, at=at) for n, at in enumerate(sorted(grouped), 1)]
+    out, pos = [], len(md)
+    for r in reversed(recs):
+        link = mark_link(r["level"], sha, page, r["id"])
+        at = r.pop("at")
+        if at == 0:
+            piece = link + "\n\n"
+        elif md[max(0, at - 2):at] == "$$":
+            piece = "\n\n" + link
         else:
-            if at > pos:
-                out.append(md[pos:at])
-                pos = at
-            m = marks[payload - 1]
-            link = mark_link(m["level"], sha, page, m["id"])
-            before = "".join(out)[-2:]
-            out.append(("\n\n" + link) if before == "$$" else (" " + link))
-    out.append(md[pos:])
-    return "".join(out)
+            piece = " " + link
+        out.append(md[at:pos])
+        out.append(piece)
+        pos = at
+    out.append(md[:pos])
+    return "".join(reversed(out)), recs
 
 
-def _unwrap_unsure(md: str) -> str:
-    while True:
-        sp = judge.unsure_spans(md)
-        if not sp:
-            return md
-        s, e, i0, i1 = sp[-1]
-        md = md[:s] + md[i0:i1] + md[e:]
-
-
-def _plain(text: str) -> str:
-    return _unwrap_unsure(text)
-
-
-def page_mark(md: str, level: str, reason: str, sha: str, page: int) -> tuple:
-    """A page with one reading only: one mark for the whole page, placed on top (no box: the crop is the page)."""
+def page_mark(md: str, marks: list, level: str, reason: str, sha: str, page: int) -> tuple:
+    """A page with one reading only: one more mark for the whole page, on top (id 0, no box: the crop is the page)."""
     return mark_link(level, sha, page, 0) + "\n\n" + md, [{"id": 0, "level": level, "reason": reason, "text": "",
-                                                           "was": "", "other": "", "box": None}]
+                                                           "was": "", "other": "", "box": None}] + marks
 
 
 def write_crops(pdf: str, page: int, marks: list, root: str, sha: str) -> None:
@@ -170,15 +225,27 @@ def write_crops(pdf: str, page: int, marks: list, root: str, sha: str) -> None:
         m["crop"] = name
 
 
-def estimate(n_pages: int, backend: str) -> float:
-    return round(reader.estimate(n_pages, backend) + n_pages * judge.USD_PER_PAGE.get(backend, 0.012), 2)
+def _parser_page(engine, work: str, page: int) -> tuple:
+    """(Markdown, [(start, end, box)]) of the parser's page: its body without running heads when the engine can tell."""
+    with open(runner.cache_path(work, engine.name, page), encoding="utf-8") as f:
+        rec = json.load(f)
+    if hasattr(engine, "body"):
+        return engine.body(rec)
+    return engine.markdown(rec), (engine.boxes(rec) if hasattr(engine, "boxes") else [])
+
+
+def estimate(n_pages: int, backend: str, with_audit: bool = True) -> float:
+    per = reader.USD_PER_PAGE.get(backend, 0.035) + judge.USD_PER_PAGE.get(backend, 0.012)
+    per += audit.USD_PER_PAGE.get(backend, 0.035) if with_audit else 0.0
+    return round(n_pages * per, 2)
 
 
 def transcribe(pdf: str, pages: list, work: str, root: str, sha: str, engine=None, backend: str | None = None,
-               model: str = reader.MODEL, judge_model: str = judge.MODEL, source: str = "", page_count: int = 0,
-               force: bool = False, log=print) -> dict:
-    """Read `pages` of `pdf` with the parser and the reader, judge their differences and store the marked transcript
-    under `<root>/<sha>/`. `work` holds every intermediate (resumable: nothing already done is done again).
+               model: str = reader.MODEL, judge_model: str = judge.MODEL, audit_model: str | None = audit.MODEL,
+               source: str = "", page_count: int = 0, force: bool = False, log=print) -> dict:
+    """Read `pages` of `pdf` with the parser and the reader, judge their differences, audit the result and store the
+    marked transcript under `<root>/<sha>/`. `work` holds every intermediate (resumable: nothing already done is done
+    again). `audit_model=None` skips the auditor.
     Returns {"pages": {page: status}, "marks": {"!": n, "!!": n}, "usd": x, "failed": {page: why}}."""
     usd = 0.0
     parsed: set = set()
@@ -191,45 +258,48 @@ def transcribe(pdf: str, pages: list, work: str, root: str, sha: str, engine=Non
     r = reader.read(pdf, pages, work, backend=backend, model=model, force=force, log=log)
     usd += r["usd"]
     have = set(r["read"]) | set(r["skipped"])
-    aligned: dict = {}
+    parser_md: dict = {}
+    boxes: dict = {}
+    reader_md: dict = {}
     todo: dict = {}
     images: dict = {}
     for p in pages:
-        if p in have and p in parsed:
-            with open(runner.md_path(work, p), encoding="utf-8") as f:
-                md_a = f.read()
+        if p in have:
             with open(reader.page_path(work, p), encoding="utf-8") as f:
-                md_b = f.read()
-            al = compare.align(md_a, md_b)
-            aligned[p] = al
-            todo[p] = judge.items(al)
+                reader_md[p] = f.read()
+        if p in have and p in parsed:
+            parser_md[p], boxes[p] = _parser_page(engine, work, p)
+            todo[p] = judge.items(compare.align(parser_md[p], reader_md[p]))
             if todo[p]:
                 images[p] = reader.render(pdf, p, work)
     verdicts, j_usd = judge.ask(todo, images, work, backend=backend, model=judge_model, log=log)
     usd += j_usd
+    stage: dict = {}                                                 # page -> (text, marks) after the judge
+    for p in reader_md:
+        stage[p] = judged(reader_md[p], todo.get(p, []), verdicts.get(p, {}))
+    if audit_model:
+        findings, a_usd = audit.ask({p: t for p, (t, _m) in stage.items()},
+                                    {p: reader.render(pdf, p, work) for p in stage},
+                                    work, backend=backend, model=audit_model, log=log)
+        usd += a_usd
+        for p in stage:
+            stage[p] = audited(stage[p][0], stage[p][1], findings.get(p))
     out = {"pages": {}, "marks": {"!": 0, "!!": 0}, "usd": round(usd, 4), "failed": dict(r["failed"])}
     for p in pages:
-        if p in aligned:
-            with open(runner.cache_path(work, engine.name, p), encoding="utf-8") as f:
-                boxes = engine.boxes(json.load(f)) if hasattr(engine, "boxes") else []
-            al = aligned[p]
-            md, marks = assemble(al, al.md_b, todo[p], verdicts.get(p, {}), boxes, sha, p)
-        elif p in have:
-            with open(reader.page_path(work, p), encoding="utf-8") as f:
-                text = f.read()
-            body, inner = assemble(None, text, [], {}, [], sha, p)
-            md, marks = page_mark(body, "!", "only the reader read this page (no parser output to compare with)", sha, p)
-            for m in inner:                                          # the reader's own \unsure marks keep their numbers
-                marks.append(m)
+        if p in stage:
+            md, marks = finish(stage[p][0], stage[p][1], parser_md.get(p), boxes.get(p, []), sha, p)
+            if p not in parsed:
+                md, marks = page_mark(md, marks, "!", "only the reader read this page (no parser output to compare with)",
+                                      sha, p)
         elif p in parsed:
-            with open(runner.md_path(work, p), encoding="utf-8") as f:
-                md, marks = page_mark(f.read(), "!!", "only the parser read this page (the reader failed)", sha, p)
+            text, _b = _parser_page(engine, work, p)
+            md, marks = page_mark(text, [], "!!", "only the parser read this page (the reader failed)", sha, p)
         else:
             out["failed"].setdefault(p, "neither the parser nor the reader produced this page")
             continue
         write_crops(pdf, p, marks, root, sha)
-        rec = store.write_transcript_page(root, sha, p, md, marks, engine="reader:%s+%s" % (
-            model, engine.name if engine is not None and p in parsed else "none"))
+        rec = store.write_transcript_page(root, sha, p, md, marks, engine="reader:%s+%s+audit:%s" % (
+            model, engine.name if engine is not None and p in parsed else "none", audit_model or "none"))
         out["pages"][p] = rec["status"]
         for m in marks:
             out["marks"][m["level"]] += 1

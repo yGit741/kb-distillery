@@ -6,10 +6,10 @@ never into a knowledge base).
     parse check <pdf> --out DIR [--pages ...]                         feed the parsed pages through the verifier
     parse sample <pdf> [-n 100] [--seed 7] [--build 60]               stratified page picks, build / unseen
     parse transcribe <pdf> --pages 1-5,8 --store DIR [--work DIR] [--backend subscription|api|batch] [--max-usd N]
-                                                                      parser + reader + judge -> marked transcript
+                                                                      parser + reader + judge + auditor -> marked transcript
     parse marks --store DIR --sha SHA [--pages ...]                   the `!` / `!!` marks of a stored transcript
 
-`transcribe` is the only command that calls a model (the reader and the judge, through kb_distillery.llm); it prints its
+`transcribe` is the only command that calls a model (reader, judge and auditor, through kb_distillery.llm); it prints its
 cost estimate first and stops when the estimate is above --max-usd. `--store` is a parsed store: a kb's `meta/parsed`,
 or any directory.
 """
@@ -130,7 +130,8 @@ def cmd_transcribe(a) -> int:
     with open(pdf, "rb") as f:
         sha = store.sha1_bytes(f.read())
     backend = llm.resolve_backend(a.backend)
-    est = transcribe.estimate(len(pages), backend)
+    audit_model = None if a.audit_model == "none" else a.audit_model
+    est = transcribe.estimate(len(pages), backend, with_audit=bool(audit_model))
     print("transcribe: %d page(s), backend %s, estimated cost $%.2f" % (len(pages), backend, est), file=sys.stderr)
     if a.max_usd is not None and est > a.max_usd:
         raise SystemExit("estimate $%.2f is above --max-usd %.2f: nothing was run" % (est, a.max_usd))
@@ -139,7 +140,7 @@ def cmd_transcribe(a) -> int:
     work = _guard_out(a.work) if a.work else default_work(sha)
     res = transcribe.transcribe(pdf, pages, work, os.path.abspath(a.store), sha,
                                 engine=None if a.engine == "none" else _engine(a.engine), backend=backend,
-                                model=a.model, judge_model=a.judge_model, page_count=count, force=a.force,
+                                model=a.model, judge_model=a.judge_model, audit_model=audit_model, page_count=count, force=a.force,
                                 log=lambda m: print(m, file=sys.stderr, flush=True))
     by = {}
     for st in res["pages"].values():
@@ -176,6 +177,7 @@ def main(argv=None) -> int:
     t.add_argument("--backend", default=None, choices=("subscription", "api", "batch"))
     t.add_argument("--model", default="sonnet")
     t.add_argument("--judge-model", default="sonnet")
+    t.add_argument("--audit-model", default="opus", help="the last whole-page check; 'none' skips it")
     t.add_argument("--max-usd", type=float, default=None)
     t.add_argument("--dry-run", action="store_true", help="print the estimate and stop")
     t.add_argument("--force", action="store_true")
