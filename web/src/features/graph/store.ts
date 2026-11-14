@@ -73,6 +73,8 @@ export interface GraphUiState extends GraphPrefs {
   typeLabels: ReadonlySet<string>;
   /** Types spotlit from the legend (a chip under the pointer): the rest fades, through the hover fade. null = none. */
   spotlight: ReadonlySet<string> | null;
+  /** Pages spotlit by id (the Health dial: the concepts a source kind feeds): the rest fades the same way. null = none. */
+  spotIds: ReadonlySet<string> | null;
   /** The legend's one-click filters (./quickFilters): Recent, Connected, Backbone, Neighbours, Path. */
   quick: QuickFilters;
   view: GraphView | null;
@@ -164,6 +166,7 @@ export const useGraphUi = create<GraphUiState>((set, get) => ({
   hiddenKeys: new Set(),
   hiddenLinkKinds: new Set(),
   spotlight: null,
+  spotIds: null,
   quick: QUICK_OFF,
   search: "",
   rules: [],

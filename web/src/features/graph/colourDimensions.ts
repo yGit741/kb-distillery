@@ -1,7 +1,10 @@
 import type { ColorBy } from "./style";
 
-/** The two things the graph can be about: the concepts I think with, or the sources I read. */
-export type GraphSubject = "concepts" | "sources";
+/**
+ * What the graph can be about: the concepts I think with, the sources I read, or (flag knowledge-health) how well
+ * the concepts are backed by sources.
+ */
+export type GraphSubject = "concepts" | "sources" | "health";
 
 export interface Dimension {
   by: ColorBy;
@@ -23,6 +26,7 @@ export const DIMENSIONS: Readonly<Record<GraphSubject, readonly Dimension[]>> = 
     { by: "depth", label: "digest status" },
     { by: "added", label: "date added" },
   ],
+  health: [{ by: "support", label: "source support" }],
 };
 
 /**

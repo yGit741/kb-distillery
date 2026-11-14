@@ -1,9 +1,9 @@
-import { depthColor, layerColor, statusColor, typeColor, UNKNOWN_COLOR } from "@/theme/palette";
+import { depthColor, layerColor, statusColor, supportColor, typeColor, UNKNOWN_COLOR } from "@/theme/palette";
 import { areaDisplay } from "./displayNames";
 import { markOf, RING_BOOST } from "./encoding/spec";
 import { degreeOf, type GNode } from "./types";
 
-export type ColorBy = "type" | "layer" | "depth" | "status" | "area" | "degree" | "evidence" | "score" | "none" | "format" | "recency" | "added";
+export type ColorBy = "type" | "layer" | "depth" | "status" | "area" | "degree" | "evidence" | "score" | "none" | "format" | "recency" | "added" | "support";
 export type SizeBy = "connections" | "in" | "out" | "uniform" | "tier" | "evidence" | "score" | "gap" | "logdeg";
 
 /** Size and colour modes that read a 0..1 signal of the importance score (lab/importance) instead of the page. */
@@ -109,6 +109,26 @@ export type AreaSlots = ReadonlyMap<string, string>;
 /** An area's colour: its slot, grey past the palette, lighter grey for none. */
 export const areaHue = (area?: string | null, slots: AreaSlots = AREA_SLOT): string => (!area ? NONE_GREY : (slots.get(area) ?? OTHER_GREY));
 
+/**
+ * How many source pages back a concept, as the Health view says it. People are not counted (a person page is not a
+ * claim): they keep their own ink and their own row of the key.
+ */
+export type Support = "none" | "one" | "many";
+export const SUPPORT_LABEL: Readonly<Record<Support, string>> = { none: "No source", one: "One source", many: "Two or more sources" };
+let SUPPORT: ReadonlyMap<string, number> = new Map();
+/** The source count behind each concept (./subject sourceCounts), set by the graph screen for the "support" colouring. */
+export function assignSupport(counts: ReadonlyMap<string, number>): ReadonlyMap<string, number> {
+  SUPPORT = counts;
+  return SUPPORT;
+}
+export function supportOf(n: GNode, counts: ReadonlyMap<string, number> = SUPPORT): Support | null {
+  if (n.layer !== "concept" || n.type === "person") return null;
+  const c = counts.get(n.id) ?? 0;
+  return c === 0 ? "none" : c === 1 ? "one" : "many";
+}
+/** A colour key with a fixed order (worst first) instead of largest first. */
+export const KEY_ORDER: Readonly<Partial<Record<ColorBy, readonly string[]>>> = { support: [SUPPORT_LABEL.none, SUPPORT_LABEL.one, SUPPORT_LABEL.many] };
+
 /** Colourings with an order (little -> much): they take the neutral ramp, not a hue. */
 export const RAMP_BY: ReadonlySet<ColorBy> = new Set(["depth", "degree", "evidence", "score", "recency", "added"]);
 /** Continuous colourings: their legend is one gradient bar with its two ends named, never a list of swatches. */
@@ -198,6 +218,10 @@ export function colorOf(n: GNode, by: ColorBy, metric?: number, ramp?: "light" |
       const t = ordinalOf(n, by);
       return t === undefined ? UNKNOWN_COLOR : sequentialColor(t);
     }
+    case "support": {
+      const s = supportOf(n);
+      return s ? supportColor(s) : n.type === "person" ? PERSON_INK : UNKNOWN_COLOR;
+    }
     case "layer":
       return layerColor(n.layer);
     case "depth":
@@ -224,6 +248,10 @@ export function colorKey(n: GNode, by: ColorBy, slots: AreaSlots = AREA_SLOT): s
       return "Recency: light = old, dark = new";
     case "added":
       return "Date added: light = old, dark = new";
+    case "support": {
+      const s = supportOf(n);
+      return s ? SUPPORT_LABEL[s] : n.type === "person" ? PEOPLE : "(not a concept)";
+    }
     case "layer":
       return n.layer || "unknown";
     case "depth":

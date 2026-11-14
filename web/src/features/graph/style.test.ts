@@ -1,8 +1,8 @@
 import type { GNode } from "./types";
 import { node } from "./fixtures";
-import { AREA_PALETTE, areaHue, assignAreaColors, colorKey, colorOf, layeredRadii, nodeRadius, NONE_GREY, OTHER_GREY } from "./style";
+import { AREA_PALETTE, areaHue, assignAreaColors, assignSupport, colorKey, colorOf, layeredRadii, nodeRadius, NONE_GREY, OTHER_GREY, PERSON_INK, supportOf } from "./style";
 import { RING_BOOST } from "./encoding/spec";
-import { TYPE_COLORS, DEPTH_COLORS, LAYER_COLORS, UNKNOWN_COLOR } from "@/theme/palette";
+import { TYPE_COLORS, DEPTH_COLORS, LAYER_COLORS, SUPPORT_COLORS, UNKNOWN_COLOR } from "@/theme/palette";
 
 describe("colorOf", () => {
   const paper = node("p", { type: "paper", layer: "source", depth: "deep", status: "digested", areas: ["info-theory"], inDegree: 7, outDegree: 6 });
@@ -124,5 +124,29 @@ describe("a kb without areas (an imported OKF bundle)", () => {
     // and the Full Graph of a kb with areas keeps its pages without one grey
     assignAreaColors([node("x", "concept", ["math"]), loose]);
     expect(colorKey(loose, "area")).toBe("No area");
+  });
+});
+
+describe("colour by source support (the Health view)", () => {
+  const idea = (id: string) => node(id, { type: "idea" });
+  afterEach(() => void assignSupport(new Map()));
+
+  it("a concept with no source is the problem colour, one source the warning, two or more stay grey", () => {
+    assignSupport(new Map([["one", 1], ["many", 4]]));
+    expect(colorOf(idea("none"), "support")).toBe(SUPPORT_COLORS.none);
+    expect(colorOf(idea("one"), "support")).toBe(SUPPORT_COLORS.one);
+    expect(colorOf(idea("many"), "support")).toBe(SUPPORT_COLORS.many);
+    expect(colorKey(idea("none"), "support")).toBe("No source");
+    expect(colorKey(idea("one"), "support")).toBe("One source");
+    expect(colorKey(idea("many"), "support")).toBe("Two or more sources");
+  });
+
+  it("sources, collections and people are not counted", () => {
+    expect(supportOf(node("p", { type: "paper", layer: "source" }))).toBeNull();
+    expect(supportOf(node("b", { type: "book", layer: "collection" }))).toBeNull();
+    expect(supportOf(node("jane", { type: "person" }))).toBeNull();
+    expect(colorOf(node("jane", { type: "person" }), "support")).toBe(PERSON_INK);
+    expect(colorKey(node("jane", { type: "person" }), "support")).toBe("People");
+    expect(colorOf(node("p", { type: "paper", layer: "source" }), "support")).toBe(UNKNOWN_COLOR);
   });
 });

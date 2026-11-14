@@ -36,10 +36,11 @@ import { ViewsBar } from "./views/ViewsBar";
 import { NodeMenu } from "./NodeMenu";
 import { applyQuick } from "./quickFilters";
 import { computeVisible } from "./rules";
-import { assignAreaColors, colorKey, effectiveColorBy } from "./style";
+import { assignAreaColors, assignSupport, colorKey, effectiveColorBy } from "./style";
 import { registerTypeMarks } from "./encoding/spec";
 import { defaultTypes, parseSchema, withDataTypes } from "./schema";
-import { applySubject, subjectOf } from "./subject";
+import { applySubject, sourceCounts, subjectOf } from "./subject";
+import { HealthLayer } from "./health/HealthLayer";
 import { SideReader, type ReaderStep } from "./SideReader";
 import { useGraphUi } from "./store";
 import { Panels } from "./Panels";
@@ -326,6 +327,8 @@ function Loaded({
   useMemo(() => assignAreaColors(model.nodes), [model]);
   const byId = useMemo(() => new Map(model.nodes.map((n) => [n.id, n] as const)), [model]);
   const neighbors = useMemo(() => buildNeighborMap(model.links), [model]);
+  // the source count behind each concept: the "support" colouring and the Health view read it
+  const support = useMemo(() => assignSupport(sourceCounts(model.nodes, neighbors)), [model, neighbors]);
   const relations = useMemo(() => (model.relations ? relationIndex(model.relations) : undefined), [model]);
   const shownTypes = useMemo(() => {
     if (ui.shownTypes !== undefined) return ui.shownTypes;
@@ -334,6 +337,10 @@ function Loaded({
     if (fromStory) return fromStory;
     return defaultTypes(schema, model.nodes);
   }, [ui.shownTypes, ui.story, schema, model]);
+  // flag knowledge-health (with graph-intent): concepts alone, coloured by source support, is the Health view
+  const intentFlag = useFlag("graph-intent");
+  const healthOn = useFlag("knowledge-health") && intentFlag;
+  const healthView = healthOn && subjectOf(schema, shownTypes, effectiveColorBy(ui.colorBy)) === "health";
   const filtered = useMemo(
     () =>
       computeVisible(model.nodes, {
@@ -685,6 +692,7 @@ function Loaded({
             onShowExact={(ids) => showPicked(ids, true)}
             shownTypes={shownTypes}
             onSubject={(s) => applySubject(s, schema, shownTypes)}
+            healthWord={healthOn}
             onShowMentions={(query) => void showMentions(query)}
             onFit={() => ui.fit()}
             onZoom={(f) => canvas.current?.zoomBy(f)}
@@ -696,6 +704,7 @@ function Loaded({
             onPickView={pickView}
           />
           <Corners nodes={model.nodes} visible={visible} schema={schema} shownTypes={shownTypes} stats={stats} host={host} applyView={applyView} showPicked={showPicked} />
+          {healthView && <HealthLayer nodes={model.nodes} neighbors={neighbors} byId={byId} support={support} onRead={openReader} />}
         </div>
       ) : headerSlot ? (
         createPortal(finder, headerSlot)

@@ -505,7 +505,7 @@ describe("legends", () => {
   });
 
   it("graph-intent on: a Concepts / Sources switch; Concepts lists no source type and offers the concept colourings", () =>
-    withFlag("graph-intent", true, async () => {
+    withFlag("knowledge-health", false, () => withFlag("graph-intent", true, async () => {
       mount();
       const sw = screen.getByRole("radiogroup", { name: /what the graph shows/i });
       expect(within(sw).getByRole("radio", { name: "Concepts" })).toHaveAttribute("aria-checked", "true");
@@ -522,10 +522,10 @@ describe("legends", () => {
       expect(shown.has("paper")).toBe(true);
       expect(shown.has("topic")).toBe(true);
       expect(useGraphUi.getState().colorBy).toBe("format");
-    }));
+    })));
 
   it("graph-intent on, Sources view: the source types are listed and the colourings are the source ones", () =>
-    withFlag("graph-intent", true, () => {
+    withFlag("knowledge-health", false, () => withFlag("graph-intent", true, () => {
       useGraphUi.setState({ colorBy: "format" });
       mount(fakeServer(), { visible: new Set(sampleNodes.map((n) => n.id)), shownTypes: new Set([...schema.defaultVisible, "paper"]) });
       expect(within(screen.getByRole("radiogroup", { name: /what the graph shows/i })).getByRole("radio", { name: "Sources" })).toHaveAttribute("aria-checked", "true");
@@ -535,7 +535,32 @@ describe("legends", () => {
       // the colour key lists the sources' values only: the concepts beside them are neutral
       const rows = [...screen.getByRole("group", { name: /colour legend/i }).querySelectorAll("button[data-row]")].map((b) => b.getAttribute("data-row"));
       expect(rows).toEqual(["paper"]);
-    }));
+    })));
+
+  it("knowledge-health on: the switch reads Concepts / Health, and Health colours the concepts by source support", () =>
+    withFlag("graph-intent", true, () =>
+      withFlag("knowledge-health", true, async () => {
+        mount();
+        const sw = screen.getByRole("radiogroup", { name: /what the graph shows/i });
+        expect(within(sw).getAllByRole("radio").map((r) => r.textContent)).toEqual(["Concepts", "Health"]);
+        await userEvent.click(within(sw).getByRole("radio", { name: "Health" }));
+        expect(useGraphUi.getState().colorBy).toBe("support");
+        expect(within(sw).getByRole("radio", { name: "Health" })).toHaveAttribute("aria-checked", "true");
+        // concepts only: no source type on the card, and the legend offers the one colouring
+        expect(screen.getByRole("group", { name: "Page types" }).querySelector("[data-type=paper]")).toBeNull();
+        const pick = within(screen.getByRole("group", { name: /colour legend/i })).getByRole("combobox", { name: "Color by" });
+        expect(within(pick).getAllByRole("option").map((o) => o.textContent)).toEqual(["source support"]);
+        await userEvent.click(within(sw).getByRole("radio", { name: "Concepts" }));
+        expect(useGraphUi.getState().colorBy).toBe("area");
+      })));
+
+  it("knowledge-health off: the switch stays Concepts / Sources", () =>
+    withFlag("graph-intent", true, () =>
+      withFlag("knowledge-health", false, () => {
+        mount();
+        const sw = screen.getByRole("radiogroup", { name: /what the graph shows/i });
+        expect(within(sw).getAllByRole("radio").map((r) => r.textContent)).toEqual(["Concepts", "Sources"]);
+      })));
 
   it("graph-intent off: no switch, and the types card keeps its source side", () =>
     withFlag("graph-intent", false, () => {

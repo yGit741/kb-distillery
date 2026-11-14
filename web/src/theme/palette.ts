@@ -64,6 +64,16 @@ export const STATUS_COLORS = {
   archived: "#565f89",
 } as const;
 
+/**
+ * How well a concept is backed by sources (the graph's Health view). A problem takes a status hue, a healthy page
+ * stays grey; each value reads on the light and on the dark canvas (3:1 or more against both).
+ */
+export const SUPPORT_COLORS = {
+  none: "#dc2626",
+  one: "#c2820c",
+  many: "#7c808b",
+} as const;
+
 export const AREA_COLORS = [
   "#7aa2ff", "#ff6b7a", "#9ece6a", "#f6c177", "#bb9af7",
   "#73daca", "#e0af68", "#ff9e64", "#89ddff", "#c792ea",
@@ -87,6 +97,7 @@ export const typeColor = (type?: string | null): string => lookup(TYPE_COLORS, t
 export const layerColor = (layer?: string | null): string => lookup(LAYER_COLORS, layer);
 export const depthColor = (depth?: string | null): string => lookup(DEPTH_COLORS, depth);
 export const statusColor = (status?: string | null): string => lookup(STATUS_COLORS, status);
+export const supportColor = (support: keyof typeof SUPPORT_COLORS): string => SUPPORT_COLORS[support];
 export const pileColor = (pile?: string | null): string => lookup(PILE_COLORS, pile);
 
 /** Stable colour per area slug (same string hash as graph.js, so colours match the legacy graph). */

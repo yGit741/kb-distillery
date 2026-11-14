@@ -348,7 +348,8 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
     rs.current.hops = hops;
     // a legend spotlight (a type chip under the pointer) is a focus on every drawn page of the type: same fade
     const spot = u.spotlight;
-    const spotIds = spot ? new Set([...vis].filter((id) => spot.has(ids.get(id)?.type ?? ""))) : null;
+    const byIds = u.spotIds;
+    const spotIds = byIds ? new Set([...vis].filter((id) => byIds.has(id))) : spot ? new Set([...vis].filter((id) => spot.has(ids.get(id)?.type ?? ""))) : null;
     const base = hops ? { core: new Set(sel), lit: new Set(hops.keys()) } : computeFocus(sel, hover, nb, u.highlight);
     const preIds = pre ? new Set([...pre].filter((id) => vis.has(id))) : null;
     const next: Focus | null = preIds
@@ -520,7 +521,7 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
   useEffect(() => {
     rs.current.colors = readCanvasColors();
     recompute();
-  }, [recompute, theme, visible, selection, byId, neighbors, ui.highlight, ui.lab, ui.typeLabels, ui.spotlight, ui.colorBy, ui.linkOpacity, radiusOpts, layered, imp, cited, previewIds, calmOn]);
+  }, [recompute, theme, visible, selection, byId, neighbors, ui.highlight, ui.lab, ui.typeLabels, ui.spotlight, ui.spotIds, ui.colorBy, ui.linkOpacity, radiusOpts, layered, imp, cited, previewIds, calmOn]);
 
   // a changed set of pages is framed after a moment and framed again once the layout settles: at the moment the
   // pages may still be drifting from their old places, and a single early fit left a view (Thesis) in a corner.

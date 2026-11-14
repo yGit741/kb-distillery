@@ -1,7 +1,7 @@
 import { buildNeighborMap } from "./graphData";
 import { parseSchema } from "./schema";
 import { DEFAULT_PREFS, useGraphUi } from "./store";
-import { applySubject, colourFor, sideOffset, sourceCounts, subjectOf, subjectWord, typesFor } from "./subject";
+import { applySubject, colourFor, sideOffset, sourceCounts, subjectOf, subjectsFor, subjectWord, typesFor } from "./subject";
 import { node } from "./fixtures";
 
 const schema = parseSchema({
@@ -92,5 +92,32 @@ describe("the two sides of the Sources view", () => {
   it("sit further apart as more pages are drawn", () => {
     expect(sideOffset(70, 25)).toBe(Math.max(220, 70 * (2 + 5 / 4)));
     expect(sideOffset(70, 900)).toBeGreaterThan(sideOffset(70, 25));
+  });
+});
+
+describe("the Health view (flag knowledge-health)", () => {
+  beforeEach(() => useGraphUi.setState({ ...DEFAULT_PREFS, shownTypes: undefined, hiddenKeys: new Set() }));
+
+  it("is the concepts alone coloured by source support; a drawn source type is still Sources", () => {
+    expect(subjectOf(schema, new Set(["topic", "idea"]), "support")).toBe("health");
+    expect(subjectOf(schema, new Set(["topic", "idea"]), "area")).toBe("concepts");
+    expect(subjectOf(schema, new Set(["topic", "paper"]), "support")).toBe("sources");
+  });
+
+  it("switching to it keeps the concept types and takes its one colouring; switching back leaves that colouring", () => {
+    expect(applySubject("health", schema, new Set(["idea", "paper"]))).toBe(true);
+    expect([...useGraphUi.getState().shownTypes!]).toEqual(["idea"]);
+    expect(useGraphUi.getState().colorBy).toBe("support");
+    expect(applySubject("health", schema, useGraphUi.getState().shownTypes!)).toBe(false);
+    expect(applySubject("concepts", schema, useGraphUi.getState().shownTypes!)).toBe(true);
+    expect(useGraphUi.getState().colorBy).toBe("area");
+  });
+
+  it("takes the place of Sources on the switch, and its view word is known only with the flag", () => {
+    expect(subjectsFor(false).map((s) => s.label)).toEqual(["Concepts", "Sources"]);
+    expect(subjectsFor(true).map((s) => s.label)).toEqual(["Concepts", "Health"]);
+    expect(subjectWord("health")).toBeNull();
+    expect(subjectWord("Health view", true)).toBe("health");
+    expect(subjectWord("sources", true)).toBe("sources");
   });
 });
