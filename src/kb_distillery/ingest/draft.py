@@ -47,17 +47,21 @@ def _equations_block(equations):
     return "\n".join(lines) if lines else "—"
 
 
-def _exercises_block(claims):
-    """`## Exercises` (a book part's exercises, in full) and `## Notes and references`, each only when claims has it."""
+def _exercises_block(claims, scope=None):
+    """`## Exercises` (a book part's exercises, in full) and `## Notes and references`, each only when claims has it.
+    With the session's `scope`, what was not asked for is left out even if the model filled it in: exercises after
+    `--no-exercises`, notes without `--notes`."""
     out = []
-    rows = [x for x in claims.get("exercises") or [] if (x.get("statement") or "").strip()]
+    want_ex = scope is None or scope.get("exercises", True)
+    want_notes = scope is None or bool(scope.get("notes"))
+    rows = [x for x in claims.get("exercises") or [] if (x.get("statement") or "").strip()] if want_ex else []
     if rows:
         out.append("## Exercises\n")
         for x in rows:
             label = str(x.get("label") or "").strip()
             statement = re.sub(r"(?m)^[ \t]*#{1,6}[ \t]+", "", x["statement"].strip())
             out.append((f"**{label}.** " if label else "") + statement + "\n")
-    if (claims.get("notes") or "").strip():
+    if want_notes and (claims.get("notes") or "").strip():
         notes = re.sub(r"(?m)^[ \t]*#{1,6}[ \t]+(.*)$", r"**\1**", claims["notes"].strip())     # no headings of its own
         out.append("## Notes and references\n\n" + notes + "\n")
     return ("\n".join(out) + "\n") if out else ""
@@ -185,7 +189,7 @@ discussed_with: []
 - {results[-1] if len(results) > 1 else main_result}
 - Concepts: {concepts_links}
 
-{_exercises_block(claims)}## Links out
+{_exercises_block(claims, scope)}## Links out
 
 - Concepts: {concepts_links}
 {links_person}"""
