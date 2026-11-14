@@ -74,6 +74,7 @@ afterEach(() => {
   act(() => setVariant("ingest-layout", "single"));
 });
 
+
 const note = () => new File(["# Notes\n\ntext"], "notes.md", { type: "text/markdown" });
 
 describe("single layout", () => {
@@ -272,4 +273,23 @@ describe("the inbox of ingests", () => {
     setup({ listIngest: async () => { throw new Error("down"); } });
     expect(await screen.findByText("Could not load your ingests.")).toBeInTheDocument();
   });
+});
+
+describe("flag ui.data-system-split", () => {
+  it("off: the add flow alone, no tab row", () => withFlag("ui.data-system-split", false, async () => {
+    setup();
+    expect(await screen.findByRole("heading", { name: "Ingest" })).toBeInTheDocument();
+    expect(screen.queryByRole("tablist", { name: "Ingest sections" })).toBeNull();
+  }));
+
+  it("on: tabs Overview, Pipeline, Health, History; Overview has the tiles, Add with the flow, and Data issues", () => withFlag("ui.data-system-split", true, async () => {
+    setup();
+    const tabs = await screen.findByRole("tablist", { name: "Ingest sections" });
+    expect(within(tabs).getAllByRole("tab").map((t) => t.textContent)).toEqual(["Overview", "Pipeline", "Health", "History"]);
+    expect(within(tabs).getByRole("tab", { name: "Overview" })).toHaveAttribute("aria-selected", "true");
+    // Overview: the four data tiles, then Add (the add flow inside), Data issues and Recent data changes
+    expect(["tile-inbox", "tile-queue", "tile-lint", "tile-version"].every((id) => screen.getByTestId(id))).toBe(true);
+    expect(screen.getByText("Data issues")).toBeInTheDocument();
+    expect(await screen.findByLabelText("Choose a file")).toBeInTheDocument();
+  }));
 });

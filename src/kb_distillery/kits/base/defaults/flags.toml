@@ -319,6 +319,16 @@ default = false
 envs = { local = true, private = false, public = false }
 
 [[flag]]
+name = "ui.data-system-split"
+description = "Split System by owner: Ingest owns the data (tiles Inbox, Queue, Lint, Version; tabs Overview, Pipeline, Health, History), System owns the machine (Nightly, Deploy, Open work; tabs Overview, Knowledge bases, Dev). Off: the nine-tab System as before."
+owner = "maintainer"
+created = 2026-11-14
+expires = 2027-02-12
+kind = "runtime"
+default = false
+envs = { local = true, private = false, public = false }
+
+[[flag]]
 name = "ui.page-flags"
 description = "Pages: mark a sentence inaccurate with a short note while reading, see the flags on the page in one of three looks, and fix every flagged passage with one proposal (needs ui.proposals)."
 owner = "maintainer"

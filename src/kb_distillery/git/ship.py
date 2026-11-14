@@ -7,6 +7,7 @@
     python3 -m kb_distillery.git.ship merge                          # sync main → gates → merge commit "<title> (#N)"
     python3 -m kb_distillery.git.ship approve N                      # USER ONLY: lift the hold on PR #N
     python3 -m kb_distillery.git.ship night start [--until HH:MM|--hours N] | stop | status   # overnight: holds do not block (expires)
+    python3 -m kb_distillery.git.ship night report [--hours N]       # gate durations per load band: the evidence for the night limit
     python3 -m kb_distillery.git.ship merge --local --pr N           # offline: git merge --no-ff into main
     python3 -m kb_distillery.git.ship mv SRC DST                     # git mv of tracked paths inside the repo, on an infra/* branch
     python3 -m kb_distillery.git.ship status                         # pending changes grouped by lane
@@ -53,17 +54,20 @@ META_DIR = os.path.join(vault_root(), "meta")
 ROOT = checkout_root()
 
 from kb_distillery.ops.daily_sync import changed_paths, has_open_sessions, run_git
-from kb_distillery.git import app_token, claims, commit_policy, events, flag_merge, gate_cache, gate_slot, night, review_gate, rounds, worktree_lock
+from kb_distillery.git import app_token, claims, commit_policy, events, flag_merge, gate_cache, gate_slot, gate_timings, night, review_gate, rounds, worktree_lock
 from kb_distillery.vault.schema import GATE_PREFIXES as GP, GIT_POLICY_MODE, INDEX_REL, SCHEMA_VERSION, is_index_path, lane_of
 
 # CI is the gate: .github/workflows/ci.yml runs the whole list below on every PR and merge-queue group, and the
 # required check `all-green` decides the merge. Locally, `ship commit` runs COMMIT_GATES on the mirrored test subset
-# (under two minutes, no machine-wide slot); `ship pr` pushes and `ship merge` enqueues. KB_SHIP_LOCAL_GATES=1 keeps
+# (under two minutes, inside the machine-wide gate slot so two lanes never run their gates at once, on at most
+# gate_slot.workers() pytest workers, at low priority by day: gate_slot.priority_prefix()); `ship pr` pushes and `ship merge` enqueues. KB_SHIP_LOCAL_GATES=1 keeps
 # the old full local run in every step (offline work, or a CI outage).
 LOCAL_GATES_ENV = "KB_SHIP_LOCAL_GATES"
-COMMIT_GATES = ("ruff", "lint-imports", "tests", "web-typecheck")
+COMMIT_GATES = ("ruff", "lint-imports", "tests")
 GATES = [
     ("ruff", ["ruff", "check", "src", "tests"]),     # syntax errors and undefined names; seconds
+    # `-n auto` is a placeholder: `_run_gates` sets the worker count (gate_slot.workers(): 4 by day unless
+    # KB_GATE_WORKERS, one per core while the night window is open)
     ("tests", [sys.executable, "-m", "pytest", "-q", "-n", "auto", "-m", "not serial", "tests"]),
     # tests that assert a wall-clock budget (`@pytest.mark.serial`): alone in one process, after the parallel pass
     ("tests-serial", [sys.executable, "-m", "pytest", "-q", "-m", "serial", "tests"]),
@@ -406,12 +410,13 @@ def okf_command(root=ROOT):
     return [c.replace("kb_distillery.lint.lint", "kb_distillery.lint.okf_check") for c in lint_command(root)]
 
 
-def run_gates(root=ROOT, skip_tests=False, scope="full", only=None, slot=True):
+def run_gates(root=ROOT, skip_tests=False, scope="full", only=None, slot=True, wait=None):
     """`_run_gates` as one gate-slot sequence: the slot is taken at the first real run and held to the last gate.
-    `only` keeps the named gates (COMMIT_GATES); `slot=False` runs without the machine-wide slot (the fast commit gates)."""
+    `only` keeps the named gates (COMMIT_GATES); `wait` is how long to wait for the slot (default KB_GATE_WAIT; the
+    commit gates pass the shorter gate_slot.commit_wait()); `slot=False` runs without the machine-wide slot."""
     if not slot:
         return _run_gates(root, skip_tests, scope, only, slot=False)
-    with gate_slot.sequence(root):
+    with gate_slot.sequence(root, wait=wait):
         return _run_gates(root, skip_tests, scope, only)
 
 
@@ -421,20 +426,23 @@ def _run_gates(root, skip_tests, scope, only=None, slot=True):
     A gate that already passed on the same content (see gate_cache) is reused, not rerun."""
     link_untracked_raw(root)
     own = {"lint": lint_command, "okf-check": okf_command}
-    gates = [(name, own[name](root) if name in own else cmd) for name, cmd in GATES]
+    gates = [(name, own[name](root) if name in own else gate_slot.with_workers(cmd, root) if name == "tests" else cmd)
+             for name, cmd in GATES]
     scopes = {name: "full" for name, _ in gates}
     extras = {}
     if scope == "subset" and not skip_tests:
         selection = gate_cache.test_subset(branch_files(root), root, ignore=is_generated)
         if selection:
             # one parallel run of the selection: it includes any serial test, so the serial pass is dropped
-            gates = [(n, [sys.executable, "-m", "pytest", "-q", "-n", "auto", *selection] if n == "tests" else c)
+            gates = [(n, [sys.executable, "-m", "pytest", "-q", "-n", gate_slot.workers(root), *selection] if n == "tests" else c)
                      for n, c in gates if n != "tests-serial"]
             scopes.pop("tests-serial", None)
             scopes["tests"] = "subset"
             extras["tests"] = ",".join(selection)
             print(f"gate: tests subset ({len(selection)} targets)")
-    if not skip_tests and frontend_changed(root):
+    # a run limited to gates that are not the app's (the commit gates) drops them before the npm install, not after
+    wants_frontend = not only or any(n in only for n, _ in FRONTEND_GATES)
+    if not skip_tests and wants_frontend and frontend_changed(root):
         extra = frontend_gates(root)
         if extra is None:
             return False
@@ -479,11 +487,17 @@ def _xdist_ok(gates, scopes, extras, root, sha):
 GATE_TAIL_LINES = 25          # what a failing gate shows; the rest is in its log
 
 
+def _workers_of(cmd):
+    """The value after pytest's `-n` in a gate command, or "" when it has none."""
+    cmd = list(map(str, cmd))
+    return cmd[cmd.index("-n") + 1] if "-n" in cmd[:-1] else ""
+
+
 def run_gate(name, cmd, root=ROOT, slot=True):
     """Run one gate with its full output in `.cache/ship-gates/<time>-<name>.log` instead of in the terminal (a test
     run is thousands of lines: in a conversation they are re-read on every later turn). Prints one line when it
     passes, and the last GATE_TAIL_LINES lines plus the log path when it fails. True on a pass.
-    `slot=False` (the fast commit gates) neither takes the machine-wide slot nor waits for load."""
+    `slot=False` neither takes the machine-wide slot nor waits for load."""
     log_dir = os.path.join(root, ".cache", "ship-gates")
     os.makedirs(log_dir, exist_ok=True)
     log = os.path.join(log_dir, f"{time.strftime('%Y%m%d-%H%M%S')}-{name}.log")
@@ -495,7 +509,13 @@ def run_gate(name, cmd, root=ROOT, slot=True):
                     gate_slot.wait_for_load(seq.wait)
             started = time.monotonic()
             if subprocess.run is _REAL_RUN:
-                rc, why = gate_slot.supervise(cmd, root, log, env=gate_slot.child_env())
+                # a real run: below the desktop by day, and one line of load against duration for `ship night report`
+                night_open = gate_slot.is_night(root)        # read once: the priority and the recorded mode agree
+                load, mem, branch = gate_timings.snapshot(root)
+                rc, why = gate_slot.supervise(gate_slot.priority_prefix(root, night_open) + list(cmd), root, log,
+                                              env=gate_slot.child_env())
+                gate_timings.record(root, name, time.monotonic() - started, -1 if why else rc, load, mem,
+                                    workers=_workers_of(cmd), mode="night" if night_open else "day", branch=branch)
             else:
                 why = None
                 with open(log, "w", encoding="utf-8") as f:
@@ -612,7 +632,7 @@ def _supervised_check(name, cmd, root):
     log_dir = os.path.join(root, ".cache", "ship-gates")
     os.makedirs(log_dir, exist_ok=True)
     log = os.path.join(log_dir, f"{time.strftime('%Y%m%d-%H%M%S')}-check-{name}.log")
-    rc, why = gate_slot.supervise(cmd, root, log, env=gate_slot.child_env())
+    rc, why = gate_slot.supervise(gate_slot.priority_prefix(root) + list(cmd), root, log, env=gate_slot.child_env())
     if why:
         print(f"error: {gate_slot.hung_message(name, why, os.path.relpath(log, root))}")
         return None
@@ -824,10 +844,12 @@ def cmd_commit(message, skip_tests=False, root=ROOT, gates=True):
     if not paths:
         print("nothing to commit")
         return 0
-    # the fast gates (ruff, the layer contract, the mirrored tests in parallel, tsc when web/ changed), no slot: CI runs
-    # the rest on the PR. KB_SHIP_LOCAL_GATES=1: every gate, in the slot, as before.
+    # the fast gates (ruff, the layer contract, the mirrored tests on a few workers): CI runs the rest on the PR. They
+    # take the machine-wide slot like every gate run, so parallel lanes commit one after the other, but wait for it
+    # only commit_wait(). KB_SHIP_LOCAL_GATES=1: every gate, with the long wait, as before.
     local = local_gates()
-    if gates and not run_gates(root, skip_tests, scope="subset", only=None if local else COMMIT_GATES, slot=local):
+    if gates and not run_gates(root, skip_tests, scope="subset", only=None if local else COMMIT_GATES,
+                               wait=None if local else gate_slot.commit_wait()):
         print("nothing committed")
         return 1
     tracked = set(filter(None, run_git(["ls-files", "-z"], cwd=root).stdout.split("\0")))
@@ -1090,7 +1112,10 @@ def approval_label(number, head_sha, root=ROOT):
 
 
 def cmd_night(action, until=None, hours=None, root=ROOT):
-    """Open/close/show the night window (see `night.py`)."""
+    """Open/close/show the night window (see `night.py`); `report` prints gate durations per load band."""
+    if action == "report":
+        print(gate_timings.report(root, hours=hours))
+        return 0
     if action == "start":
         night.start(root, until=until, hours=hours)
     elif action == "stop":
@@ -1976,9 +2001,10 @@ def _main(argv):
     rv.add_argument("--pass", dest="summary", metavar="SUMMARY", required=True, help="one-line review summary")
     rv.add_argument("--findings", type=int, metavar="N", help="number of findings the reviewer raised (all fixed)")
     ni = sub.add_parser("night", help="the night window: while open no PR is held and held PRs merge (auto-expires)")
-    ni.add_argument("action", choices=["start", "stop", "status"])
+    ni.add_argument("action", choices=["start", "stop", "status", "report"])
     ni.add_argument("--until", metavar="HH:MM", help="close at the next HH:MM (local time)")
-    ni.add_argument("--hours", type=float, help=f"or close after N hours (default {night.DEFAULT_HOURS:g}, max {night.MAX_HOURS:g})")
+    ni.add_argument("--hours", type=float, help=f"start: close after N hours (default {night.DEFAULT_HOURS:g}, max {night.MAX_HOURS:g}); "
+                                                f"report: look back N hours (default {gate_timings.DEFAULT_HOURS:g})")
     ap = sub.add_parser("approve", help="USER ONLY: lift the hold on PR N (agents are blocked by git_guard)")
     ap.add_argument("number", type=int)
     m = sub.add_parser("merge")

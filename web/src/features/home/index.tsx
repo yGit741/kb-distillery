@@ -3,6 +3,7 @@ import type { SearchById } from "@/routes/search";
 import { useMemo } from "react";
 import { withDefaultView } from "@/features/graph/defaultView";
 import { HomeScreen, type HomeHost } from "./HomeScreen";
+import { useDataSystemSplit } from "@/app/knowledgeNav";
 
 const base = (import.meta.env.BASE_URL as string).replace(/\/$/, "");
 
@@ -29,5 +30,7 @@ export function useMapHost(at: "/" | "/what-is-it"): HomeHost {
 export default function Home() {
   const host = useMapHost("/");
   const { concept, start } = useSearch({ strict: false }) as SearchById["home"];
-  return <HomeScreen host={host} concept={concept} startForced={start === true} />;
+  // flag ui.data-system-split: "What is it?" folds into Home, so the map card carries its glossary
+  const glossary = useDataSystemSplit();
+  return <HomeScreen host={host} concept={concept} startForced={start === true} glossary={glossary} />;
 }
