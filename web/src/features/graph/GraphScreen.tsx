@@ -39,7 +39,7 @@ import { computeVisible } from "./rules";
 import { assignAreaColors, assignSupport, colorKey, effectiveColorBy } from "./style";
 import { registerTypeMarks } from "./encoding/spec";
 import { defaultTypes, parseSchema, withDataTypes } from "./schema";
-import { applySubject, sourceCounts, subjectOf } from "./subject";
+import { applySubject, settledColour, sourceCounts, subjectOf } from "./subject";
 import { HealthLayer } from "./health/HealthLayer";
 import { SideReader, type ReaderStep } from "./SideReader";
 import { useGraphUi } from "./store";
@@ -341,6 +341,11 @@ function Loaded({
   const intentFlag = useFlag("graph-intent");
   const healthOn = useFlag("knowledge-health") && intentFlag;
   const healthView = healthOn && subjectOf(schema, shownTypes, effectiveColorBy(ui.colorBy)) === "health";
+  // the Health colouring restored outside Health (a saved view, a typed shape, the flag off) falls back to the view's own
+  useEffect(() => {
+    const settled = settledColour(effectiveColorBy(ui.colorBy), healthOn, schema, shownTypes);
+    if (settled) useGraphUi.setState({ colorBy: settled });
+  }, [ui.colorBy, healthOn, schema, shownTypes]);
   const filtered = useMemo(
     () =>
       computeVisible(model.nodes, {

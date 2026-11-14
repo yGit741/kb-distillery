@@ -24,6 +24,7 @@ const links = [
   { source: "v-used", target: "idea-a" },
   { source: "l-used", target: "topic-c" },
   { source: "p-used", target: "jane" },
+  { source: "p-waiting", target: "topic-c" }, // a stub's link: the source is still waiting
 ];
 const neighbors = buildNeighborMap(links);
 const byId = new Map(nodes.map((n) => [n.id, n] as const));
@@ -55,6 +56,9 @@ describe("health by source kind", () => {
     expect([...fedConcepts("paper", nodes, neighbors, byId)].sort()).toEqual(["idea-a", "idea-b", "jane"]);
     expect([...fedConcepts("play", nodes, neighbors, byId)].sort()).toEqual(["idea-a", "topic-c"]);
     expect(fedConcepts("mail", nodes, neighbors, byId).size).toBe(0);
+    // topic-c is linked from a waiting paper only: papers do not feed it yet, here or inside the kind
+    expect(fedConcepts("paper", nodes, neighbors, byId).has("topic-c")).toBe(false);
+    expect(kindDetail("paper", nodes, neighbors, byId, support).concepts.some((c) => c.node.id === "topic-c")).toBe(false);
   });
 
   it("inside a kind: busiest source first, least supported concept first, idle sources apart", () => {

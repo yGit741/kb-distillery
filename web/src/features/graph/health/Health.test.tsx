@@ -121,8 +121,13 @@ describe("inside a source kind", () => {
     await userEvent.keyboard("{Escape}");
     expect(useHealth.getState().inside).toBe("paper");
     act(() => useGraphUi.setState({ readerSlug: null }));
+    // the press that leaves the kind does nothing else: the screen's own Esc handler never hears it
+    const screenEsc = vi.fn();
+    window.addEventListener("keydown", screenEsc);
     await userEvent.keyboard("{Escape}");
+    window.removeEventListener("keydown", screenEsc);
     expect(useHealth.getState().inside).toBeNull();
+    expect(screenEsc).not.toHaveBeenCalled();
     await userEvent.click(screen.getByRole("button", { name: /^Papers/ }));
     await userEvent.click(screen.getByRole("button", { name: "Health" }));
     expect(screen.getByRole("group", { name: "Sources by kind" })).toBeInTheDocument();

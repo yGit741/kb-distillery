@@ -1,3 +1,4 @@
+import { flag } from "@/flags";
 import { DIMENSIONS, type GraphSubject } from "./colourDimensions";
 import { sourcesOf, type NeighborMap } from "./graphData";
 import type { GraphSchema } from "./schema";
@@ -53,9 +54,21 @@ export function colourFor(subject: GraphSubject, by: ColorBy): ColorBy {
 /** Switch the graph to a view: its types, a colouring it offers, and no colour value left hidden from the other. */
 export function applySubject(subject: GraphSubject, schema: GraphSchema, shownTypes: ReadonlySet<string> | null): boolean {
   const by = effectiveColorBy(useGraphUi.getState().colorBy);
-  if (subjectOf(schema, shownTypes, by) === subject) return false;
+  const health = flag("knowledge-health") && flag("graph-intent");
+  if (subjectOf(schema, shownTypes, health ? by : undefined) === subject) return false;
   useGraphUi.setState({ shownTypes: typesFor(subject, schema, shownTypes), colorBy: colourFor(subject, by), hiddenKeys: new Set(), story: "" });
   return true;
+}
+
+/**
+ * The "support" colouring belongs to the Health view alone. A saved view or a typed shape can restore it anywhere, so
+ * when it is on outside Health (the flag off, or source types drawn) this names the colouring to fall back to: the
+ * first one the view on screen offers. null = the colouring may stay.
+ */
+export function settledColour(by: ColorBy, health: boolean, schema: GraphSchema, shownTypes: ReadonlySet<string> | null): ColorBy | null {
+  if (by !== "support") return null;
+  if (health && subjectOf(schema, shownTypes, by) === "health") return null;
+  return colourFor(subjectOf(schema, shownTypes), by);
 }
 
 /** How many distinct source pages each concept links to (in either direction), over the whole kb. */

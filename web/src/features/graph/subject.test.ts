@@ -1,7 +1,8 @@
 import { buildNeighborMap } from "./graphData";
 import { parseSchema } from "./schema";
 import { DEFAULT_PREFS, useGraphUi } from "./store";
-import { applySubject, colourFor, sideOffset, sourceCounts, subjectOf, subjectsFor, subjectWord, typesFor } from "./subject";
+import { withFlag } from "@/flags/testing";
+import { applySubject, colourFor, settledColour, sideOffset, sourceCounts, subjectOf, subjectsFor, subjectWord, typesFor } from "./subject";
 import { node } from "./fixtures";
 
 const schema = parseSchema({
@@ -120,4 +121,27 @@ describe("the Health view (flag knowledge-health)", () => {
     expect(subjectWord("Health view", true)).toBe("health");
     expect(subjectWord("sources", true)).toBe("sources");
   });
+
+  it("the support colouring restored outside Health falls back to the view's own first colouring", () => {
+    const concepts = new Set(["topic", "idea"]);
+    expect(settledColour("support", true, schema, concepts)).toBeNull(); // Health itself
+    expect(settledColour("area", false, schema, concepts)).toBeNull(); // any other colouring is left alone
+    expect(settledColour("support", false, schema, concepts)).toBe("area"); // the flag off
+    expect(settledColour("support", true, schema, new Set(["topic", "paper"]))).toBe("format"); // sources drawn
+  });
+
+  it("knowledge-health off: a restored support colouring does not make the view read as Health", () =>
+    withFlag("knowledge-health", false, () => {
+      useGraphUi.setState({ colorBy: "support" });
+      expect(applySubject("concepts", schema, new Set(["topic", "idea"]))).toBe(false); // already Concepts
+      expect(useGraphUi.getState().colorBy).toBe("support"); // untouched here; the screen settles it
+    }));
+
+  it("knowledge-health on: Concepts leaves Health and its colouring", () =>
+    withFlag("graph-intent", true, () =>
+      withFlag("knowledge-health", true, () => {
+        useGraphUi.setState({ colorBy: "support" });
+        expect(applySubject("concepts", schema, new Set(["topic", "idea"]))).toBe(true);
+        expect(useGraphUi.getState().colorBy).toBe("area");
+      })));
 });

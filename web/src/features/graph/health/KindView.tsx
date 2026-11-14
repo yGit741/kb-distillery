@@ -50,6 +50,8 @@ export function KindView({ kind, nodes, neighbors, byId, support, onRead, onClos
       if (e.key !== "Escape" || useGraphUi.getState().readerSlug) return;
       const t = e.target;
       if (t instanceof HTMLElement && t.matches("input, textarea, select, [contenteditable=true]")) return;
+      // this press only leaves the kind: the screen's own Esc (clear the selection, close a panel) waits for the next
+      e.stopPropagation();
       onClose();
     };
     window.addEventListener("keydown", onKey, true);

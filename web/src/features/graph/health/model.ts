@@ -49,10 +49,16 @@ export function sourceKinds(nodes: readonly GNode[], neighbors: NeighborMap, byI
   return [...out.values()].sort((a, b) => b.total - a.total || a.label.localeCompare(b.label));
 }
 
-/** The concept pages a kind's sources link to: what the dial spotlights on the map. */
+/**
+ * The concept pages a kind's digested sources link to: what the dial spotlights on the map, and the same concepts the
+ * inside of the kind lists (a waiting source feeds nothing yet, whatever its stub links to).
+ */
 export function fedConcepts(kind: SourceGlyph, nodes: readonly GNode[], neighbors: NeighborMap, byId: ById): Set<string> {
   const out = new Set<string>();
-  for (const n of nodes) if (n.layer === "source" && glyphOf(n.type) === kind) for (const c of conceptsOf(n.id, neighbors, byId)) out.add(c);
+  for (const n of nodes) {
+    if (n.layer !== "source" || glyphOf(n.type) !== kind || sourceState(n, neighbors, byId) === "waiting") continue;
+    for (const c of conceptsOf(n.id, neighbors, byId)) out.add(c);
+  }
   return out;
 }
 
