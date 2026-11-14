@@ -1,7 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { useMemo } from "react";
 import { colorChannel, GraphLegend, NodeMarkG, personInitials } from "@/features/graph/encoding";
-import { areaSlots } from "@/features/graph/style";
+import { areaSlots, useAreaPalette } from "@/features/graph/style";
 import type { GNode } from "@/features/graph/types";
 import { cardNode, ringLayout, titleOf, type LinkGraph } from "./lib";
 import { pageTo, usePageSearch } from "./parts";
@@ -21,7 +21,8 @@ export function MiniGraph({ g, slug }: { g: LinkGraph; slug: string }) {
   const ring = useMemo(() => ringLayout(g, slug), [g, slug]);
   const search = usePageSearch();
   // theme colours ranked over every page, the way the Full Graph ranks its model
-  const color = useMemo(() => colorChannel("area", { areas: areaSlots([...g.byId.values()]) }), [g]);
+  const areaHues = useAreaPalette();
+  const color = useMemo(() => colorChannel("area", { areas: areaSlots([...g.byId.values()], areaHues) }), [g, areaHues]);
   const nodes = useMemo(
     () => [slug, ...ring.nodes.map((n) => n.id)].map((id) => g.byId.get(id)).filter((c) => !!c).map(cardNode),
     [g, slug, ring],

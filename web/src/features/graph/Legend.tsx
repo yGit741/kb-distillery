@@ -12,7 +12,7 @@ import { COLOR_TITLE, colorChannel, sizeChannel } from "./encoding/channels";
 import { LegendSwatch, LegendTitle } from "./encoding/GraphLegend";
 import { ShapeIcon, SourceIcon } from "./encoding/NodeMarkSvg";
 import { markOf, TYPE_LABEL_OVERRIDE } from "./encoding/spec";
-import { effectiveColorBy, METRIC_COLORS, neutralRamp, NO_AREA, OTHER_AREAS, RAMP_BY, RAMP_MEANING, RAMP_STEPS, type ColorBy } from "./style";
+import { effectiveColorBy, METRIC_COLORS, neutralRamp, NO_AREA, OTHER_AREAS, RAMP_BY, RAMP_MEANING, RAMP_STEPS, useAreaPalette, type ColorBy } from "./style";
 import type { GNode } from "./types";
 
 interface Props {
@@ -150,7 +150,8 @@ export function Legend({ nodes, visible, schema, shownTypes, stats, quickHidden 
     for (const n of nodes) if ((!shownTypes || shownTypes.has(n.type)) && (!keep || keep(n))) pool.add(n.id);
     return pool;
   }, [nodes, visible, shownTypes, ui.hiddenKeys, ui.predicate]);
-  const key = useMemo(() => (by === "type" ? [] : colorChannel(by, { ramp }).rows(nodes.filter((n) => keyPool.has(n.id)))), [nodes, keyPool, by, ramp]);
+  const areaHues = useAreaPalette(); // the area key follows the chosen area colours
+  const key = useMemo(() => (by === "type" ? [] : colorChannel(by, { ramp }).rows(nodes.filter((n) => keyPool.has(n.id)))), [nodes, keyPool, by, ramp, areaHues]);
   const allTypes = useMemo(() => groups.flatMap((g) => g.rows.map((r) => r.id)), [groups]);
   const defaults = useMemo(() => [...defaultTypes(schema, nodes)], [schema, nodes]);
   const hullsOn = by !== "area";

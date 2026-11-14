@@ -5,7 +5,7 @@ import { findPages } from "@/features/graph/pageSearch";
 import { isPublic } from "@/features/graph/publicPredicate";
 import { colorChannel, GraphLegend, NodeMarkSvg } from "@/features/graph/encoding";
 import { SideReader } from "@/features/graph/SideReader";
-import { areaSlots } from "@/features/graph/style";
+import { areaSlots, useAreaPalette } from "@/features/graph/style";
 import type { GNode } from "@/features/graph/types";
 import { cn } from "@/lib/utils";
 import { PipelineStrip } from "./PipelineStrip";
@@ -155,7 +155,8 @@ export function ConceptExplorer({
   const search = graphSearch(sample, sample.focus, draw?.id ?? null);
   // colour = theme, like the Full Graph's Map: area slots ranked over the whole vault (as the Full Graph ranks its
   // model), passed to the channel rather than set globally, so a theme keeps its colour and nothing else is touched
-  const color = useMemo(() => colorChannel("area", { areas: areaSlots([...vault.byId.values()]) }), [vault]);
+  const areaHues = useAreaPalette();
+  const color = useMemo(() => colorChannel("area", { areas: areaSlots([...vault.byId.values()], areaHues) }), [vault, areaHues]);
   const drawnNodes = useMemo(() => sample.nodes.map((id) => vault.byId.get(id)).filter((n): n is GNode => !!n), [sample, vault]);
   const pickNode = (id: string) => {
     const n = vault.byId.get(id);

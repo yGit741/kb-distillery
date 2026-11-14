@@ -1,6 +1,6 @@
 import type { GNode } from "./types";
 import { node } from "./fixtures";
-import { AREA_PALETTE, areaHue, assignAreaColors, assignSupport, colorKey, colorOf, layeredRadii, nodeRadius, NONE_GREY, OTHER_GREY, PERSON_INK, supportOf } from "./style";
+import { AREA_PALETTE, areaHue, areaPalette, areaSlots, useAreaPalette, assignAreaColors, assignSupport, colorKey, colorOf, layeredRadii, nodeRadius, NONE_GREY, OTHER_GREY, PERSON_INK, supportOf } from "./style";
 import { RING_BOOST } from "./encoding/spec";
 import { TYPE_COLORS, DEPTH_COLORS, LAYER_COLORS, SUPPORT_COLORS, UNKNOWN_COLOR } from "@/theme/palette";
 
@@ -148,5 +148,41 @@ describe("colour by source support (the Health view)", () => {
     expect(colorOf(node("jane", { type: "person" }), "support")).toBe(PERSON_INK);
     expect(colorKey(node("jane", { type: "person" }), "support")).toBe("People");
     expect(colorOf(node("p", { type: "paper", layer: "source" }), "support")).toBe(UNKNOWN_COLOR);
+  });
+});
+
+describe("area colour variants", () => {
+  const nodes = ["a", "a", "a", "b", "b", "c"].map((area, i) => ({ id: `n${i}`, type: "idea", areas: [area] }));
+  it("Current keeps the Paired twelve; Field and Clear give eight hues, a light and a dark set", () => {
+    expect(areaPalette("current", false)).toBe(AREA_PALETTE);
+    expect(areaPalette("field", false)).toHaveLength(8);
+    expect(areaPalette("clear", true)).not.toEqual(areaPalette("clear", false));
+    expect(areaPalette("nonsense", true)).toBe(AREA_PALETTE);
+  });
+  it("the largest area takes the first hue of the chosen set", () => {
+    const field = areaPalette("field", false);
+    const slots = areaSlots(nodes as never, field);
+    expect(slots.get("a")).toBe(field[0]);
+    expect(slots.get("c")).toBe(field[2]);
+  });
+});
+
+describe("useAreaPalette", () => {
+  it("follows the area-colours variant and the theme, one constant array per choice", async () => {
+    const { renderHook, act } = await import("@testing-library/react");
+    const { setVariant, resetVariant } = await import("@/components/variants");
+    const { useTheme } = await import("@/theme/theme");
+    useTheme.getState().set("light");
+    const { result } = renderHook(() => useAreaPalette());
+    expect(result.current).toBe(AREA_PALETTE);
+    act(() => setVariant("area-colours", "field"));
+    expect(result.current).toBe(areaPalette("field", false));
+    act(() => useTheme.getState().set("dark"));
+    expect(result.current).toBe(areaPalette("field", true));
+    act(() => {
+      resetVariant("area-colours");
+      useTheme.getState().set("light");
+    });
+    expect(result.current).toBe(AREA_PALETTE);
   });
 });

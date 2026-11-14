@@ -40,7 +40,7 @@ import { OutsideGroup } from "./OutsideGroup";
 import { RimList } from "./RimList";
 import { applyQuick } from "./quickFilters";
 import { computeVisible } from "./rules";
-import { assignAreaColors, assignSupport, colorKey, effectiveColorBy } from "./style";
+import { assignAreaColors, assignSupport, colorKey, effectiveColorBy, useAreaPalette } from "./style";
 import { registerTypeMarks } from "./encoding/spec";
 import { defaultTypes, parseSchema, withDataTypes } from "./schema";
 import { applySubject, settledColour, sourceCounts, subjectOf } from "./subject";
@@ -331,7 +331,9 @@ function Loaded({
   const [note, setNote] = useState("");
 
   // area colours by size, before anything below colours a node, a hull or a key row
-  useMemo(() => assignAreaColors(model.nodes), [model]);
+  // variant area-colours: Current, Field or Clear, with the light or dark set to match the theme on screen
+  const areaHues = useAreaPalette();
+  useMemo(() => assignAreaColors(model.nodes, areaHues), [model, areaHues]);
   const byId = useMemo(() => new Map(model.nodes.map((n) => [n.id, n] as const)), [model]);
   const neighbors = useMemo(() => buildNeighborMap(model.links), [model]);
   // the source count behind each concept: the "support" colouring and the Health view read it

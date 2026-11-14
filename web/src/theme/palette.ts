@@ -120,3 +120,19 @@ export const topicColor = (id: number): string => TOPIC_COLORS[((id % TOPIC_COLO
 
 /** A semantic cluster's colour (Embedding map): cluster 0 is the largest; ids past the palette wrap. */
 export const clusterColor = (id: number): string => AREA_COLORS[((id % AREA_COLORS.length) + AREA_COLORS.length) % AREA_COLORS.length] as string;
+
+/**
+ * Area colours to choose from (variant `area-colours`), from the canvas-palette mockup: eight hues each, a light and
+ * a dark set that belong together. Field is calm and soft; Clear is crisp. Areas past the eighth are "Other areas".
+ * "current" keeps the graph's ColorBrewer Paired twelve (features/graph/style.ts AREA_PALETTE).
+ */
+export const AREA_PALETTES: Readonly<Record<"field" | "clear", { light: readonly string[]; dark: readonly string[] }>> = {
+  field: {
+    light: ["#4a7fc1", "#d4704a", "#3fa384", "#d1a23a", "#c46a96", "#5f9a3c", "#7a68c9", "#c9585a"],
+    dark: ["#5b84e0", "#d4644f", "#2f9f7c", "#b38526", "#c25d8d", "#4d9a3b", "#8676dd", "#cc5a5a"],
+  },
+  clear: {
+    light: ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4", "#008300", "#6250d6", "#e34948"],
+    dark: ["#3987e5", "#d95926", "#199e70", "#c98500", "#d55181", "#0ca30c", "#9085e9", "#e66767"],
+  },
+};

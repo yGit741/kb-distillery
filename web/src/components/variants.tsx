@@ -100,6 +100,15 @@ export const VARIANTS: Record<string, VariantSpec> = {
       { id: "rail", label: "Rail", hint: "A collapsed Discuss rail on the right edge that expands into the chat and remembers if it was open." },
     ],
   },
+  "area-colours": {
+    label: "Area colours on the graph",
+    default: "current",
+    options: [
+      { id: "current", label: "Current", hint: "ColorBrewer Paired: twelve hues in strong and pale pairs, as the graph has them today." },
+      { id: "field", label: "Field", hint: "Eight calm, soft hues tuned for the warm paper and the graphite ground; the rest are Other areas." },
+      { id: "clear", label: "Clear", hint: "Eight crisp, saturated hues that pass the contrast checks on paper; the rest are Other areas." },
+    ],
+  },
 };
 
 const PREFIX = "kbd.variants.";

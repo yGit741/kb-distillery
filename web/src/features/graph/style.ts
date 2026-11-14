@@ -1,5 +1,7 @@
+import { useVariant } from "@/components/variants";
+import { useTheme } from "@/theme/theme";
 import { readCanvasColors } from "./encoding/theme";
-import { depthColor, layerColor, statusColor, supportColor, topicColor, typeColor, UNKNOWN_COLOR } from "@/theme/palette";
+import { AREA_PALETTES, depthColor, layerColor, statusColor, supportColor, topicColor, typeColor, UNKNOWN_COLOR } from "@/theme/palette";
 import { areaDisplay } from "./displayNames";
 import { markOf, RING_BOOST } from "./encoding/spec";
 import { degreeOf, type GNode } from "./types";
@@ -61,6 +63,25 @@ export const AREA_PALETTE: readonly string[] = [
   // Paired's pale yellow (#FFFF99) vanishes on the light canvas: a mustard in its slot
   "#A6CEE3", "#B2DF8A", "#FB9A99", "#FDBF6F", "#CAB2D6", "#D9B43B",
 ];
+export const AREA_SET_IDS = ["current", "field", "clear"] as const;
+export type AreaSet = (typeof AREA_SET_IDS)[number];
+/** The area hues of a variant (`area-colours`) for the theme on screen. Each set is one constant array, so its
+ *  identity changes only when the choice or the theme does (safe as a memo dependency). */
+export function areaPalette(set: string, dark: boolean): readonly string[] {
+  if (set === "field" || set === "clear") return AREA_PALETTES[set][dark ? "dark" : "light"];
+  return AREA_PALETTE;
+}
+
+/**
+ * The area hues every surface ranks its areas onto (the full graph, Home, a page's mini graph, the edit preview), so
+ * an area has the same colour everywhere; a memo or a redraw that colours by area depends on it.
+ */
+export function useAreaPalette(): readonly string[] {
+  const [set] = useVariant("area-colours", AREA_SET_IDS, "current");
+  const dark = useTheme((s) => s.theme) === "dark";
+  return areaPalette(set, dark);
+}
+
 /** The two greys sit far apart in lightness: "Other areas" a solid mid grey, "No area" a faint one. */
 export const OTHER_GREY = "#7C808B";
 /** No area: darker than the edges' grey, so a page without one never reads as a link. */
@@ -82,15 +103,15 @@ export const areaOf = (n: Pick<GNode, "areas" | "type">, typeAsArea = false): st
  * The areas' colours by size (pages whose first area it is), largest first; ties by name. Pure: no global set.
  * Over pages none of which has an area, the page types take the slots instead, so such a kb is not all grey.
  */
-export function areaSlots(nodes: readonly Pick<GNode, "areas" | "type">[]): ReadonlyMap<string, string> {
+export function areaSlots(nodes: readonly Pick<GNode, "areas" | "type">[], palette: readonly string[] = AREA_PALETTE): ReadonlyMap<string, string> {
   const typeAsArea = nodes.length > 0 && !nodes.some((n) => n.areas.length > 0);
   const count = new Map<string, number>();
   for (const n of nodes) {
     const a = areaOf(n, typeAsArea);
     if (a) count.set(a, (count.get(a) ?? 0) + 1);
   }
-  const ranked = [...count].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).slice(0, AREA_PALETTE.length);
-  const slots = new Map(ranked.map(([a], i) => [a, AREA_PALETTE[i]!]));
+  const ranked = [...count].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).slice(0, palette.length);
+  const slots = new Map(ranked.map(([a], i) => [a, palette[i]!]));
   if (typeAsArea) TYPE_KEYED.add(slots);
   return slots;
 }
@@ -99,8 +120,8 @@ export function areaSlots(nodes: readonly Pick<GNode, "areas" | "type">[]): Read
 export const typeKeyed = (slots: ReadonlyMap<string, string>): boolean => TYPE_KEYED.has(slots);
 
 /** The Full Graph's area colours (`areaSlots` over its model), the default for every colouring by area. */
-export function assignAreaColors(nodes: readonly GNode[]): ReadonlyMap<string, string> {
-  AREA_SLOT = areaSlots(nodes);
+export function assignAreaColors(nodes: readonly GNode[], palette: readonly string[] = AREA_PALETTE): ReadonlyMap<string, string> {
+  AREA_SLOT = areaSlots(nodes, palette);
   return AREA_SLOT;
 }
 

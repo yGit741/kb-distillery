@@ -16,7 +16,7 @@ import { predicateFn } from "../../publicPredicate";
 import { defaultTypes, type GraphSchema } from "../../schema";
 import { useGraphUi } from "../../store";
 import { useFavorites } from "../../favorites/store";
-import { BAR_BY, colorKey, effectiveColorBy, neutralRamp, RAMP_BY, RAMP_MEANING, RAMP_STEPS } from "../../style";
+import { BAR_BY, colorKey, effectiveColorBy, neutralRamp, RAMP_BY, RAMP_MEANING, RAMP_STEPS, useAreaPalette } from "../../style";
 import { dimensionsFor, withTopic, type GraphSubject } from "../../colourDimensions";
 import { useEmbedding } from "../../embedding/EmbeddingLayer";
 import { embedSpec, sameEmbed, SUGGESTED, useEmbedView } from "../../embedding/store";
@@ -323,9 +323,10 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
   // lists the sources' values only
   const sourcesOnly = intent && subjectOf(schema, shownTypes) === "sources";
   const topicsLoaded = useEmbedView((s) => s.pc);
+  const areaHues = useAreaPalette(); // the area key follows the chosen area colours
   const key = useMemo(
     () => (by === "type" ? [] : colorChannel(by, { ramp }).rows(nodes.filter((n) => keyPool.has(n.id) && (!sourcesOnly || n.layer === "source")))),
-    [nodes, keyPool, by, ramp, sourcesOnly, topicsLoaded],
+    [nodes, keyPool, by, ramp, sourcesOnly, topicsLoaded, areaHues],
   );
   // hovering a colour value lights its drawn pages, the rest fade (the canvas' spotIds fade, as the page types do)
   const spotKey = useCallback(
