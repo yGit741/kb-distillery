@@ -34,7 +34,8 @@ export function SearchBar({ value, onChange, open, onOpen, onKeyDown, activeId, 
   return (
     <div
       className={cn(
-        "flex h-11 items-center gap-2.5 rounded-[14px] border bg-card px-3.5 text-sm shadow-[var(--shadow)]",
+        // a size container: the key caps leave when the line itself is narrow (a side panel open), not only the window
+        "@container flex h-11 items-center gap-2.5 rounded-[14px] border bg-card px-3.5 text-sm shadow-[var(--shadow)]",
         "transition-[border-color,box-shadow] duration-200 motion-reduce:transition-none",
         "focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/25",
         square === "left" && "rounded-l-none",
@@ -50,6 +51,7 @@ export function SearchBar({ value, onChange, open, onOpen, onKeyDown, activeId, 
         aria-autocomplete="list"
         aria-activedescendant={open ? activeId : undefined}
         aria-label="Search the graph, run a command (/), or ask"
+        aria-description={keys?.length ? keys.map((k) => `Type ${k.key} for ${k.label}`).join(", ") : undefined}
         type="text"
         autoComplete="off"
         spellCheck={false}
@@ -70,7 +72,7 @@ export function SearchBar({ value, onChange, open, onOpen, onKeyDown, activeId, 
           aria-hidden
           data-testid="line-keys"
           data-shown={showKeys || undefined}
-          className={cn("flex flex-none items-center gap-3 whitespace-nowrap text-xs text-muted-foreground transition-opacity duration-150 motion-reduce:transition-none max-[720px]:hidden", showKeys ? "opacity-100" : "pointer-events-none opacity-0")}
+          className={cn("flex flex-none items-center gap-3 whitespace-nowrap text-xs text-muted-foreground transition-opacity duration-150 motion-reduce:transition-none @max-[360px]:hidden", showKeys ? "opacity-100" : "pointer-events-none opacity-0")}
         >
           {keys.map((k) => (
             <span key={k.key} className="flex items-center gap-1.5">

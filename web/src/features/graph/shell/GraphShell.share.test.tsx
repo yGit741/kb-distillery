@@ -81,6 +81,9 @@ describe("the shared site, graph-intent on: what visitors can do", () => {
     await withFlag("graph-intent", true, async () => {
       setup();
       expect(box()).toHaveAttribute("placeholder", "Explore Your Knowledge");
+      // the key caps offer only the commands: the view cannot be changed by writing here
+      expect(screen.getByTestId("line-keys")).toHaveTextContent("/commands");
+      expect(screen.getByTestId("line-keys")).not.toHaveTextContent("change the view");
     });
   });
 

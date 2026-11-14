@@ -70,13 +70,28 @@ function useLineCentre(strip: RefObject<HTMLDivElement | null>): number {
       const b = own.getBoundingClientRect();
       setDx(Math.round(a.left + a.width / 2 - (b.left + b.width / 2)));
     };
-    measure();
-    if (typeof ResizeObserver === "undefined") return;
+    if (typeof ResizeObserver === "undefined") return measure();
     const ro = new ResizeObserver(measure);
+    let line: HTMLElement | null = null;
+    // the line can mount after this strip, or be rebuilt (a flag or the full chat): follow it whenever the frame's
+    // children change, and measure again
+    const follow = () => {
+      const now = frame.querySelector<HTMLElement>("[data-testid=graph-shell]");
+      if (now !== line) {
+        if (line) ro.unobserve(line);
+        line = now;
+        if (line) ro.observe(line);
+      }
+      measure();
+    };
     ro.observe(own);
-    const line = frame.querySelector<HTMLElement>("[data-testid=graph-shell]");
-    if (line) ro.observe(line);
-    return () => ro.disconnect();
+    follow();
+    const mo = new MutationObserver(follow);
+    mo.observe(frame, { childList: true });
+    return () => {
+      ro.disconnect();
+      mo.disconnect();
+    };
   }, [strip]);
   return dx;
 }
