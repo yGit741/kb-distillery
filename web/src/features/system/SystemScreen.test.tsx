@@ -5,6 +5,7 @@ import { App } from "@/app/providers";
 import { createAppRouter } from "@/app/router";
 import { ApiError, type DataSource } from "@/api";
 import { mockDataSource } from "@/test/datasource";
+import { withFlag } from "@/flags/testing";
 
 const lifecycle = {
   version: "1.0.9",
@@ -74,4 +75,46 @@ describe("System screen", () => {
       vi.unstubAllGlobals();
     }
   });
+});
+
+describe("System screen, flag ui.data-system-split", () => {
+  it("on: three tiles, tabs Overview, Knowledge bases, Dev, and Recent runs instead of the mixed timeline", () => withFlag("ui.data-system-split", true, async () => {
+    open("/system");
+    const tabs = await screen.findByRole("tablist", { name: "System sections" });
+    expect([...tabs.querySelectorAll('[role="tab"]')].map((t) => t.textContent?.replace(/\d+$/, ""))).toEqual(["Overview", "Knowledge bases", "Dev"]);
+    expect(["tile-nightly", "tile-deploy", "tile-work"].every((id) => screen.getByTestId(id))).toBe(true);
+    expect(screen.queryByTestId("tile-lint")).toBeNull();
+    expect(await screen.findByText("Recent runs")).toBeInTheDocument();
+    expect(screen.queryByText("Timeline")).toBeNull();
+  }));
+
+  it("on: old data tabs land in Ingest, old dev tabs in Dev", () => withFlag("ui.data-system-split", true, async () => {
+    const router = open("/system?tab=history");
+    await waitFor(() => expect(router.state.location.pathname).toBe("/ingest"));
+    expect(router.state.location.search).toMatchObject({ tab: "history" });
+  }));
+
+  it("off: the nine-tab System stays", () => withFlag("ui.data-system-split", false, async () => {
+    open("/system");
+    expect(await screen.findByText("Timeline")).toBeInTheDocument();
+    expect(screen.getByTestId("tile-lint")).toBeInTheDocument();
+  }));
+});
+
+describe("movedTab", () => {
+  it("sends data tabs to Ingest with the pipeline's params, dev tabs to Dev, and keeps the rest", async () => {
+    const { movedTab } = await import("./SystemScreen");
+    expect(movedTab({ tab: "pipeline", status: "partial" })).toEqual({ to: "/ingest", search: { tab: "pipeline", status: "partial" } });
+    expect(movedTab({ tab: "variants" })).toEqual({ to: "/system", search: { tab: "dev", dev: "variants" } });
+    expect(movedTab({ tab: "kbs" })).toBeUndefined();
+    expect(movedTab({})).toBeUndefined();
+  });
+});
+
+describe("System screen, split without Ingest", () => {
+  it("ui.data-system-split on but ui.ingest off: no split, the data tabs stay reachable here", () => withFlag("ui.data-system-split", true, () => withFlag("ui.ingest", false, async () => {
+    open("/system?tab=history");
+    const tabs = await screen.findByRole("tablist", { name: "System sections" });
+    expect([...tabs.querySelectorAll('[role="tab"]')].map((t) => t.textContent)).toContain("History");
+  })));
 });

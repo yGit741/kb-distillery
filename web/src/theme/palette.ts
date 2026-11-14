@@ -64,6 +64,16 @@ export const STATUS_COLORS = {
   archived: "#565f89",
 } as const;
 
+/**
+ * How well a concept is backed by sources (the graph's Health view). A problem takes a status hue, a healthy page
+ * stays grey; each value reads on the light and on the dark canvas (3:1 or more against both).
+ */
+export const SUPPORT_COLORS = {
+  none: "#dc2626",
+  one: "#c2820c",
+  many: "#7c808b",
+} as const;
+
 export const AREA_COLORS = [
   "#7aa2ff", "#ff6b7a", "#9ece6a", "#f6c177", "#bb9af7",
   "#73daca", "#e0af68", "#ff9e64", "#89ddff", "#c792ea",
@@ -87,6 +97,7 @@ export const typeColor = (type?: string | null): string => lookup(TYPE_COLORS, t
 export const layerColor = (layer?: string | null): string => lookup(LAYER_COLORS, layer);
 export const depthColor = (depth?: string | null): string => lookup(DEPTH_COLORS, depth);
 export const statusColor = (status?: string | null): string => lookup(STATUS_COLORS, status);
+export const supportColor = (support: keyof typeof SUPPORT_COLORS): string => SUPPORT_COLORS[support];
 export const pileColor = (pile?: string | null): string => lookup(PILE_COLORS, pile);
 
 /** Stable colour per area slug (same string hash as graph.js, so colours match the legacy graph). */
@@ -96,6 +107,16 @@ export function areaColor(area?: string | null): string {
   for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) >>> 0;
   return AREA_COLORS[h % AREA_COLORS.length] as string;
 }
+
+/**
+ * The graph's topic colours (flag ui.embedding-views): the graph's categorical palette (ColorBrewer Paired) without
+ * its red, pink, orange and amber slots, which are kept for problems; strong hues first. Topic 0 is the largest; ids
+ * past the list wrap.
+ */
+export const TOPIC_COLORS: readonly string[] = ["#1F78B4", "#33A02C", "#6A3D9A", "#17BECF", "#00797F", "#A6CEE3", "#B2DF8A", "#CAB2D6"];
+/** The reds, oranges and ambers a topic must never take (problem colours, in either palette). */
+export const PROBLEM_HUES: readonly string[] = ["#ff6b7a", "#ff9e64", "#f6c177", "#e0af68", "#e31a1c", "#fb9a99", "#ff7f00", "#fdbf6f", "#d9b43b", "#b15928"];
+export const topicColor = (id: number): string => TOPIC_COLORS[((id % TOPIC_COLORS.length) + TOPIC_COLORS.length) % TOPIC_COLORS.length]!;
 
 /** A semantic cluster's colour (Embedding map): cluster 0 is the largest; ids past the palette wrap. */
 export const clusterColor = (id: number): string => AREA_COLORS[((id % AREA_COLORS.length) + AREA_COLORS.length) % AREA_COLORS.length] as string;

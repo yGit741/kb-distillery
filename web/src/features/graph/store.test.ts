@@ -114,4 +114,18 @@ describe("views (user stories)", () => {
     useGraphUi.getState().applyStory("nope");
     expect(useGraphUi.getState().story).toBe("");
   });
+  it("Citations keeps drawing its cites links through a legend click, and drops them on another view", () => {
+    const g = useGraphUi.getState;
+    g().applyStory("citations");
+    expect(g().edgeStory).toBe("citations");
+    expect(g().quick.connected).toBe(1);
+    g().toggleKey("Ingest only");
+    expect(g().story).toBe("");
+    expect(g().edgeStory).toBe("citations");
+    g().applyStory("questions");
+    expect(g().edgeStory).toBe("");
+    g().applyStory("citations");
+    g().resetFilters();
+    expect(g().edgeStory).toBe("");
+  });
 });

@@ -50,3 +50,19 @@ describe("depthRows / colorKeyRows", () => {
     expect(colorKeyRows(sampleNodes, new Set(), "status")).toEqual([]);
   });
 });
+
+describe("the source-support key", () => {
+  it("lists the worst value first, whatever the counts", async () => {
+    const { assignSupport } = await import("./style");
+    const { node } = await import("./fixtures");
+    const pages = [node("a", { type: "idea" }), node("b", { type: "idea" }), node("c", { type: "idea" }), node("d", { type: "idea" })];
+    assignSupport(new Map([["a", 3], ["b", 2], ["c", 1]]));
+    const rows = colorKeyRows(pages, new Set(pages.map((n) => n.id)), "support");
+    expect(rows.map((r) => [r.label, r.count])).toEqual([
+      ["No source", 1],
+      ["One source", 1],
+      ["Two or more sources", 2],
+    ]);
+    assignSupport(new Map());
+  });
+});

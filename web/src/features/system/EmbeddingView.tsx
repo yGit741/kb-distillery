@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { useDataSource } from "@/api";
+import { useFlag } from "@/flags/useFlag";
 import type { EmbeddingReport } from "@/api/types";
 import { CopyButton } from "@/components/CopyButton";
 import { Empty, ErrorState, Loading } from "@/components/states";
@@ -480,6 +481,8 @@ export function EmbeddingView() {
   // While a naming run is going, ask again every few seconds so the names appear when it ends.
   const q = useApiQuery(["embedding"], (d) => d.getEmbedding(), { staleTime: 60_000, refetchInterval: (query) => (query.state.data?.names?.state === "running" ? 4000 : false) });
   const [axes, setAxes] = useState<Axes>({ x: 0, y: 1 });
+  // flag ui.embedding-views: the views of meaning live in the graph; System keeps the status and the names
+  const inGraph = useFlag("ui.embedding-views");
   if (q.error) return <ErrorState title="Could not load the embedding report" error={q.error} onRetry={() => void q.refetch()} />;
   if (!q.data) return <Loading label="Reading the vectors" rows={3} />;
   const r = q.data;
@@ -487,10 +490,36 @@ export function EmbeddingView() {
   return (
     <div className="flex flex-col gap-4">
       <HealthCard r={r} />
-      {r.points.length ? <MapCard r={r} axes={axes} setAxes={setAxes} /> : <Empty>{emptyText}</Empty>}
-      {!!r.points.length && <DimensionsCard r={r} axes={axes} setAxes={setAxes} />}
-      {!!r.points.length && r.similarity && <SimilarityCard sim={r.similarity} />}
-      {!!r.points.length && <DuplicatesCard r={r} />}
+      {inGraph ? (
+        <>
+          {r.names && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Names</CardTitle>
+                <CardDescription>An LLM names each topic and each direction of meaning from its pages; the graph uses these names.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <NamesBar r={r} />
+              </CardContent>
+            </Card>
+          )}
+          {r.points.length ? (
+            <p className="text-sm text-muted-foreground" data-testid="embedding-in-graph">
+              Topics, Meaning map and Missing links live in the graph&apos;s pinned views.
+            </p>
+          ) : (
+            <Empty>{emptyText}</Empty>
+          )}
+          {!!r.points.length && <DuplicatesCard r={r} />}
+        </>
+      ) : (
+        <>
+          {r.points.length ? <MapCard r={r} axes={axes} setAxes={setAxes} /> : <Empty>{emptyText}</Empty>}
+          {!!r.points.length && <DimensionsCard r={r} axes={axes} setAxes={setAxes} />}
+          {!!r.points.length && r.similarity && <SimilarityCard sim={r.similarity} />}
+          {!!r.points.length && <DuplicatesCard r={r} />}
+        </>
+      )}
     </div>
   );
 }

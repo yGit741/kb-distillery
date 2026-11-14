@@ -14,7 +14,8 @@ against the page once more. What comes out carries a mark wherever a single voic
     the reader itself wrote \\unsure{...}             mark `!`
     the auditor finds a difference                   its fix is applied, mark `!`; `!!` when it is unsure, gives no fix,
                                                      or the place cannot be found
-    a page with only one reading                     the whole page is marked (`!` reader only, `!!` parser only)
+    a page with only one reading                     the whole page is marked: `!` reader only; parser only (the reader's
+                                                     reply was cut or refused) `!` once the auditor checked it, else `!!`
 
 A mark is a Markdown link right after the formula, `[!](mark:<sha12>/p0188/3)`, plus a record in the page's JSON with the
 other reading, what was replaced and a crop of that place of the page (`crops/p0188-3.png`).
@@ -64,6 +65,15 @@ def _box_for(boxes: list, a: int, b: int):
     return [min(x[0] for x in hit), min(x[1] for x in hit), max(x[2] for x in hit), max(x[3] for x in hit)]
 
 
+KEEP = 0.5                   # a fix must keep at least this share of the content tokens it replaces
+
+
+def sane_fix(old: str, new: str) -> bool:
+    """A replacement is applied only when it keeps the formula open/closed as it was and is still about the same text:
+    a fix that keeps less than KEEP of the old content tokens was written for some other place of the page."""
+    return compare.dollars(new) % 2 == compare.dollars(old) % 2 and compare.kept(old, new) >= KEEP
+
+
 def decide(item: judge.Item, v: judge.Verdict | None) -> tuple:
     """(level or "", replacement or None, reason) for one judged place."""
     if v is None or not v.verdict:
@@ -71,8 +81,8 @@ def decide(item: judge.Item, v: judge.Verdict | None) -> tuple:
     if v.verdict == "transcript":
         return ("", None, "") if v.sure else ("!", None, "the two readings differ; the judge kept the transcript but was not sure")
     fix = v.fix.strip() if v.fix and v.fix.strip() and v.fix.strip() != item.transcript.strip() else None
-    if fix is not None and compare.dollars(fix) % 2 != compare.dollars(item.transcript) % 2:
-        fix = None                                                  # it would open or close a formula: not applied
+    if fix is not None and not sane_fix(item.transcript, fix):
+        fix = None                                                  # not applied
     if fix is None:
         return "!!", None, "the judge says the transcript is wrong here and gave no usable fix"
     if not v.sure:
@@ -145,8 +155,8 @@ def audited(md: str, marks: list, findings: list | None) -> tuple:
         says = "the auditor: the page says %s" % (f["page_says"] or "something else here")
         span = audit.locate(md, f["snippet"])
         fix = _unwrap(f["fix"]) if f["fix"].strip() and f["fix"].strip() != f["snippet"].strip() else None
-        if span is not None and fix is not None and compare.dollars(fix) % 2 != compare.dollars(md[span[0]:span[1]]) % 2:
-            fix = None                                              # it would open or close a formula: not applied
+        if span is not None and fix is not None and not sane_fix(md[span[0]:span[1]], fix):
+            fix = None                                              # not applied
         if span is None or any(o[0] < span[1] and o[1] > span[0] for o in ops):
             loose.append({"level": "!!", "reason": says + " (near: %s)" % f["snippet"][:60], "other": "", "was": "",
                           "a_span": None, "pos": span[1] if span else 0})
@@ -269,10 +279,11 @@ def estimate(n_pages: int, backend: str, with_audit: bool = True) -> float:
 def transcribe(pdf: str, pages: list, work: str, root: str, sha: str, engine=None, backend: str | None = None,
                model: str = reader.MODEL, judge_model: str = judge.MODEL, audit_model: str | None = audit.MODEL,
                source: str = "", page_count: int = 0, force: bool = False, max_usd: float | None = None,
-               log=print) -> dict:
+               retry_backend: str | None = None, log=print) -> dict:
     """Read `pages` of `pdf` with the parser and the reader, judge their differences, audit the result and store the
     marked transcript under `<root>/<sha>/`. `work` holds every intermediate (resumable: nothing already done is done
-    again). `audit_model=None` skips the auditor. `max_usd` is a ceiling on the run: a stage whose estimate would cross
+    again). A request that fails (an error, a cut or unreadable reply, a refusal) is tried once more, on `retry_backend`
+    when given. `audit_model=None` skips the auditor. `max_usd` is a ceiling on the run: a stage whose estimate would cross
     it is skipped (no judge: every difference becomes `!!`; no auditor: pages are stored unaudited) and named in "skipped".
     Returns {"pages": {page: status}, "marks": {"!": n, "!!": n}, "usd": x, "failed": {page: why}}."""
     usd = 0.0
@@ -283,8 +294,25 @@ def transcribe(pdf: str, pages: list, work: str, root: str, sha: str, engine=Non
             parsed = set(res["parsed"]) | set(res["skipped"])
         except EngineError as e:
             log("parser unavailable, pages will carry a single-reader mark: %s" % e)
+    again = retry_backend or backend                                # a failed request gets one more try, there
+    skipped: list = []
+    bk, bk_again = llm_backend(backend), llm_backend(again)
+
+    def over(stage_name: str, n: int, per_page: dict, on: str = bk) -> bool:
+        if max_usd is None or usd + n * per_page.get(on, 0.0) <= max_usd:
+            return False
+        log("%s skipped: it would take the run above $%.2f" % (stage_name, max_usd))
+        skipped.append(stage_name)
+        return True
+
     r = reader.read(pdf, pages, work, backend=backend, model=model, force=force, log=log)
     usd += r["usd"]
+    if r["failed"] and not over("reader retry", len(r["failed"]), reader.USD_PER_PAGE, bk_again):
+        log("reader: %d page(s) failed, trying once more" % len(r["failed"]))
+        r2 = reader.read(pdf, sorted(r["failed"]), work, backend=again, model=model, force=force, log=log)
+        usd += r2["usd"]
+        r["read"] += r2["read"]
+        r["failed"] = r2["failed"]
     have = set(r["read"]) | set(r["skipped"])
     parser_md: dict = {}
     boxes: dict = {}
@@ -300,45 +328,61 @@ def transcribe(pdf: str, pages: list, work: str, root: str, sha: str, engine=Non
             todo[p] = judge.items(compare.align(parser_md[p], reader_md[p]))
             if todo[p]:
                 images[p] = reader.render(pdf, p, work)
-    skipped: list = []
-    bk = llm_backend(backend)
-
-    def over(stage_name: str, n: int, per_page: dict) -> bool:
-        if max_usd is None or usd + n * per_page.get(bk, 0.0) <= max_usd:
-            return False
-        log("%s skipped: it would take the run above $%.2f" % (stage_name, max_usd))
-        skipped.append(stage_name)
-        return True
-
     verdicts, j_usd = ({}, 0.0) if over("judge", sum(1 for v in todo.values() if v), judge.USD_PER_PAGE) else \
         judge.ask(todo, images, work, backend=backend, model=judge_model, force=force, log=log)
     usd += j_usd
+    mute = {p: todo[p] for p in verdicts if todo.get(p) and not any(v.verdict for v in verdicts[p].values())}
+    if mute and "judge" not in skipped and not over("judge retry", len(mute), judge.USD_PER_PAGE, bk_again):
+        log("judge: no readable answer for %d page(s), trying once more" % len(mute))
+        v2, j2 = judge.ask(mute, images, work, backend=again, model=judge_model, log=log)
+        usd += j2
+        verdicts.update(v2)
     stage: dict = {}                                                 # page -> (text, marks) after the judge
     for p in reader_md:
         stage[p] = judged(reader_md[p], todo.get(p, []), verdicts.get(p, {}))
+    lone = [p for p in pages if p in parsed and p not in have]      # the reader gave nothing: the parser's page stands in
+    for p in lone:
+        parser_md[p], boxes[p] = _parser_page(engine, work, p)
+        stage[p] = (parser_md[p], [])
+    blank = {p for p in lone if not parser_md[p].strip()}            # nothing on the page: nothing to audit
+    checked: set = set()                                             # pages the auditor answered for
     if audit_model and not over("auditor", len(stage), audit.USD_PER_PAGE):
-        findings, a_usd = audit.ask({p: t for p, (t, _m) in stage.items()},
-                                    {p: reader.render(pdf, p, work) for p in stage},
+        findings, a_usd = audit.ask({p: t for p, (t, _m) in stage.items() if p not in blank},
+                                    {p: reader.render(pdf, p, work) for p in stage if p not in blank},
                                     work, backend=backend, model=audit_model, force=force, log=log)
         usd += a_usd
+        deaf = sorted(p for p in stage if p not in blank and findings.get(p) is None)
+        if deaf and not over("auditor retry", len(deaf), audit.USD_PER_PAGE, bk_again):
+            log("auditor: no readable answer for %d page(s), trying once more" % len(deaf))
+            f2, a2 = audit.ask({p: stage[p][0] for p in deaf}, {p: reader.render(pdf, p, work) for p in deaf},
+                               work, backend=again, model=audit_model, log=log)
+            usd += a2
+            findings.update(f2)
         for p in stage:
+            if findings.get(p) is not None:
+                checked.add(p)
+            if p in lone and p not in checked:
+                continue                                            # its page mark says it was not checked
             stage[p] = audited(stage[p][0], stage[p][1], findings.get(p))
     out = {"pages": {}, "marks": {"!": 0, "!!": 0}, "usd": round(usd, 4), "failed": dict(r["failed"]), "skipped": skipped}
     for p in pages:
         if p in stage:
             md, marks = finish(stage[p][0], stage[p][1], parser_md.get(p), boxes.get(p, []), sha, p)
-            if p not in parsed:
+            if p in lone and p in checked:
+                md, marks = page_mark(md, marks, "!", "the reader gave no page here (its reply was cut or refused); this is "
+                                      "the parser's page, checked by the auditor", sha, p)
+            elif p in lone:
+                md, marks = page_mark(md, marks, "!!", "only the parser read this page (the reader failed)", sha, p)
+            elif p not in parsed:
                 md, marks = page_mark(md, marks, "!", "only the reader read this page (no parser output to compare with)",
                                       sha, p)
-        elif p in parsed:
-            text, _b = _parser_page(engine, work, p)
-            md, marks = page_mark(text, [], "!!", "only the parser read this page (the reader failed)", sha, p)
         else:
             out["failed"].setdefault(p, "neither the parser nor the reader produced this page")
             continue
         write_crops(pdf, p, marks, root, sha)
         rec = store.write_transcript_page(root, sha, p, md, marks, engine="reader:%s+%s+audit:%s" % (
-            model, engine.name if engine is not None and p in parsed else "none", audit_model or "none"))
+            "none" if p in lone else model, engine.name if engine is not None and p in parsed else "none",
+            audit_model if audit_model and p in checked else "none"))
         out["pages"][p] = rec["status"]
         for m in marks:
             out["marks"][m["level"]] += 1

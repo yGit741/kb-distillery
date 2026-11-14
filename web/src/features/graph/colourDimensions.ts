@@ -1,7 +1,10 @@
 import type { ColorBy } from "./style";
 
-/** The two things the graph can be about: the concepts I think with, or the sources I read. */
-export type GraphSubject = "concepts" | "sources";
+/**
+ * What the graph can be about: the concepts I think with, the sources I read, or (flag knowledge-health) how well
+ * the concepts are backed by sources.
+ */
+export type GraphSubject = "concepts" | "sources" | "health";
 
 export interface Dimension {
   by: ColorBy;
@@ -23,6 +26,7 @@ export const DIMENSIONS: Readonly<Record<GraphSubject, readonly Dimension[]>> = 
     { by: "depth", label: "digest status" },
     { by: "added", label: "date added" },
   ],
+  health: [{ by: "support", label: "source support" }],
 };
 
 /**
@@ -34,3 +38,8 @@ export function dimensionsFor(subjects: readonly GraphSubject[]): Dimension[] {
   for (const s of subjects) for (const d of DIMENSIONS[s]) if (!out.some((o) => o.by === d.by)) out.push(d);
   return out;
 }
+
+/** Flag ui.embedding-views: the concepts' "topic" colouring (embedding cluster), offered once the embedding is loaded. */
+export const TOPIC_DIMENSION: Dimension = { by: "topic", label: "topic" };
+export const withTopic = (dims: readonly Dimension[], on: boolean): Dimension[] =>
+  on && !dims.some((d) => d.by === "topic") ? [...dims, TOPIC_DIMENSION] : dims.filter((d) => d.by !== "topic");

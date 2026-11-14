@@ -16,7 +16,7 @@ import unittest
 from unittest.mock import patch
 
 from kb_distillery.git import gate_slot, queue, ship
-from tests.git.test_gate_reuse import RepoCase, _g
+from tests.git.test_gate_reuse import RepoCase, _g, _write
 
 
 def _repo():
@@ -248,6 +248,64 @@ class ReuseTakesNoSlot(RepoCase):
             os.environ.pop(gate_slot.HELD_ENV, None)
             out = self.gates()
         self.assertEqual(out.count("gate slot: taken"), 1)
+
+
+class CommitTakesTheSlot(RepoCase):
+    """`ship commit` used to run its gates outside the slot: several lanes committing at once piled their gates up."""
+
+    def commit(self):
+        _write(self.root, "src/kb_distillery/git/a.py", "mine")
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            rc = ship.cmd_commit("feat(git): thing", root=self.root)
+        return rc, out.getvalue()
+
+    def test_commit_gates_run_in_the_slot_with_the_short_wait(self):
+        os.environ["KB_COMMIT_GATE_WAIT"] = "7"
+        with patch.object(ship, "run_gates", return_value=False) as gates:
+            rc, _ = self.commit()
+        self.assertEqual(rc, 1)
+        kw = gates.call_args.kwargs
+        self.assertEqual(kw["wait"], 7.0)
+        self.assertEqual(kw["only"], ship.COMMIT_GATES)
+        self.assertIsNot(kw.get("slot", True), False)
+
+    def test_local_gates_mode_keeps_the_long_wait(self):
+        os.environ[ship.LOCAL_GATES_ENV] = "1"
+        with patch.object(ship, "run_gates", return_value=False) as gates:
+            self.commit()
+        self.assertIsNone(gates.call_args.kwargs["wait"])
+        self.assertIsNone(gates.call_args.kwargs["only"])
+
+    def test_the_default_wait_is_ten_minutes(self):
+        os.environ.pop("KB_COMMIT_GATE_WAIT", None)
+        self.assertEqual(gate_slot.commit_wait(), 600.0)
+
+    def test_a_second_commit_waits_for_the_first_and_says_so(self):
+        os.environ.pop(gate_slot.HELD_ENV, None)
+        os.environ["KB_COMMIT_GATE_WAIT"] = "0.3"
+        qdir = queue.common_dir(self.root)
+        fd = os.open(os.path.join(qdir, gate_slot.LOCK_NAME), os.O_RDWR | os.O_CREAT, 0o644)   # another lane's gate run
+        fcntl.flock(fd, fcntl.LOCK_EX)
+        try:
+            rc, out = self.commit()
+        finally:
+            os.close(fd)
+        self.assertEqual(rc, 1)
+        self.assertIn("gate slot: waiting for", out)
+        self.assertIn("error: gate slot: gave up", out)
+        self.assertIn("KB_COMMIT_GATE_WAIT", out)
+        self.assertIn("nothing committed", out)
+        self.assertEqual(self.runs(), [])                               # no gate ran while the other lane held the slot
+
+    def test_a_commit_alone_takes_the_slot_and_frees_it(self):
+        os.environ.pop(gate_slot.HELD_ENV, None)
+        with patch.object(ship.gate_cache, "test_subset", return_value=None):     # unmapped: the (fake) full tests gate
+            rc, out = self.commit()
+        self.assertEqual(rc, 0, out)
+        self.assertEqual(self.runs(), ["tests"])                        # of the fake gates only the commit gate ran
+        self.assertEqual(out.count("gate slot: taken"), 1)
+        self.assertTrue(_lock_free(queue.common_dir(self.root)))
 
 
 class OrderTests(unittest.TestCase):

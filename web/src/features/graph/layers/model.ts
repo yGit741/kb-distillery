@@ -51,7 +51,8 @@ export interface Subgraph {
 }
 
 export interface LayerStyle {
-  color?: ColorBy | { by: string };
+  /** "topic" (flag ui.embedding-views) is a view of its own, never a layer colour */
+  color?: Exclude<ColorBy, "topic"> | { by: string };
   size?: SizeBy | { by: string };
   width?: "thin" | "normal" | "thick" | { by: string };
   label?: string;
@@ -515,6 +516,6 @@ export function withParam(layer: Layer, p: MainParam): Layer {
   if (p.kind === "hops") next.subgraph.nodes = (layer.subgraph.nodes ?? []).map((c) => (c.t === "hops" ? { ...c, n: Math.max(1, Math.round(p.n)) } : c));
   else if (p.kind === "node") next.subgraph.nodes = (layer.subgraph.nodes ?? []).map((c) => (c.t === "name" ? { ...c, slugs: p.value.split(",").map((s) => s.trim()).filter(Boolean) } : c));
   else if (p.kind === "edgeType") next.subgraph.edges = (layer.subgraph.edges ?? []).map((c) => (c.t === "type" ? { ...c, value: p.value } : c));
-  else next.style = { ...layer.style, color: p.value as ColorBy };
+  else next.style = { ...layer.style, color: p.value as Exclude<ColorBy, "topic"> };
   return next;
 }

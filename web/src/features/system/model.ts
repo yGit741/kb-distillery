@@ -1,5 +1,3 @@
-import type { SystemTab } from "@/routes/search";
-
 /**
  * Pure shaping of the three snapshots System reads (lifecycle, ops, health) into one status strip and one
  * timeline. Each number comes from exactly one snapshot, so the strip cannot show two versions of a count.
@@ -13,7 +11,8 @@ export interface Tile {
   value: string;
   hint: string;
   tone: Tone;
-  tab: SystemTab;
+  /** The tab the tile opens on its own screen (System or, flag ui.data-system-split, Ingest). */
+  tab: string;
 }
 
 /** The parts of the loosely typed snapshots that System reads. */
@@ -354,3 +353,92 @@ export function needsYou(ops?: OpsLike): { threads: Thread[]; findings: Finding[
   const threads = [...(ops?.threads ?? [])].sort((a, b) => rank(a) - rank(b) || (b.age_hours ?? 0) - (a.age_hours ?? 0));
   return { threads, findings: ops?.hygiene?.findings ?? [] };
 }
+
+/* ---- flag ui.data-system-split: the strip and the events split by owner (Ingest: data, System: machine) ---- */
+
+/** Ingest's four tiles: Inbox, Queue, Lint, Version. Each tile opens an Ingest tab. */
+export function ingestTiles(lc?: LifecycleLike, health?: HealthLike): Tile[] {
+  const v = health?.values ?? {};
+  const st = health?.statuses ?? {};
+  const dirty = Object.values(lc?.working?.lanes ?? {}).reduce((a, b) => a + num(b), 0);
+  const inbox = num(health?.inbox_count);
+  return [
+    {
+      id: "inbox",
+      label: "Inbox",
+      value: health ? String(inbox) : "…",
+      hint: health ? "files waiting to be sorted" : "",
+      tone: health ? (inbox ? "warn" : "ok") : "",
+      tab: "pipeline",
+    },
+    {
+      id: "queue",
+      label: "Queue",
+      value: health ? String(num(v.queued)) : "…",
+      hint: health ? `to digest · ${plural(num(v.partial_books), "partial book")}` : "",
+      tone: "",
+      tab: "pipeline",
+    },
+    {
+      id: "lint",
+      label: "Lint",
+      value: health ? `${num(v.errors)} / ${num(v.warnings)}` : "…",
+      hint: health ? "errors / warnings" : "",
+      tone: health ? (num(v.errors) ? "bad" : tone(st.warnings) || "ok") : "",
+      tab: "health",
+    },
+    {
+      id: "version",
+      label: "Version",
+      value: lc?.version ? `kb-${lc.version}` : "…",
+      hint: lc ? (dirty ? plural(dirty, "uncommitted file") : "working tree clean") : "",
+      tone: lc ? (dirty ? "warn" : "ok") : "",
+      tab: "history",
+    },
+  ];
+}
+
+/**
+ * System's three tiles: Nightly, Deploy, Open work. Open work folds in the old Open work, Stale work, Merges and
+ * Hygiene tiles: its tone is the worst of the four and its hint says what is behind it. Without owner operations
+ * only Open work is left.
+ */
+export function systemTiles(ops?: OpsLike): Tile[] {
+  const all: Tile[] = [
+    { id: "nightly", label: "Nightly", ...nightlyTile(ops, ops?.nightly?.summary ?? ""), tab: "overview" },
+    { id: "deploy", label: "Deploy", ...deployTile(ops), tab: "overview" },
+    { id: "work", label: "Open work", ...openWorkTile(ops), tab: "overview" },
+  ];
+  return showOwnerOps(ops) ? all : all.filter((t) => t.id === "work");
+}
+
+const WORST: Tone[] = ["bad", "warn", "ok", ""];
+const worst = (...ts: Tone[]): Tone => WORST.find((w) => ts.includes(w)) ?? "";
+
+function openWorkTile(ops: OpsLike | undefined): Pick<Tile, "value" | "hint" | "tone"> {
+  if (!ops) return { value: "…", hint: "", tone: "" };
+  const threads = ops.threads ?? [];
+  const attention = threads.filter((t) => t.status === "warn" || t.status === "bad").length;
+  const hy = ops.hygiene;
+  const hyTone: Tone = hy ? (num(hy.errors) ? "bad" : num(hy.warnings) ? "warn" : "ok") : "";
+  const merges = mergesTile(ops);
+  const stale = staleTile(ops);
+  const hint = [
+    attention ? `${attention} need attention` : "",
+    showOwnerOps(ops) ? (merges.value === "idle" ? "merges idle" : `merge ${merges.value}`) : "",
+    stale.value === "none" ? "nothing stale" : stale.value !== "…" ? `${stale.value} stale` : "",
+    hy && (num(hy.errors) || num(hy.warnings)) ? `hygiene ${num(hy.errors)} / ${num(hy.warnings)}` : "",
+  ];
+  return {
+    value: String(threads.length),
+    hint: hint.filter(Boolean).join(" · "),
+    tone: worst(attention ? "warn" : "ok", hyTone, showOwnerOps(ops) ? merges.tone : "", stale.tone),
+  };
+}
+
+/** Ingest "Recent data changes": knowledge steps only, newest first. */
+export const dataChanges = (lc?: LifecycleLike, limit = 8): Event[] => timeline(lc, undefined, 200).filter((e) => e.kind === "knowledge").slice(0, limit);
+/** System Dev "Recent merges": tooling merges only, newest first. */
+export const recentMerges = (lc?: LifecycleLike, limit = 8): Event[] => timeline(lc, undefined, 200).filter((e) => e.kind === "tooling").slice(0, limit);
+/** System Overview "Recent runs": nightly jobs (with how the site deploy in each ended), newest first. */
+export const recentRuns = (ops?: OpsLike, limit = 8): Event[] => timeline(undefined, ops, 200).slice(0, limit);
