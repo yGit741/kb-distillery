@@ -510,12 +510,12 @@ def run_gate(name, cmd, root=ROOT, slot=True):
             started = time.monotonic()
             if subprocess.run is _REAL_RUN:
                 # a real run: below the desktop by day, and one line of load against duration for `ship night report`
-                load, mem = gate_timings.machine()
-                rc, why = gate_slot.supervise(gate_slot.priority_prefix(root) + list(cmd), root, log,
+                night_open = gate_slot.is_night(root)        # read once: the priority and the recorded mode agree
+                load, mem, branch = gate_timings.snapshot(root)
+                rc, why = gate_slot.supervise(gate_slot.priority_prefix(root, night_open) + list(cmd), root, log,
                                               env=gate_slot.child_env())
                 gate_timings.record(root, name, time.monotonic() - started, -1 if why else rc, load, mem,
-                                    workers=_workers_of(cmd), mode="night" if gate_slot.is_night(root) else "day",
-                                    branch=current_branch(root))
+                                    workers=_workers_of(cmd), mode="night" if night_open else "day", branch=branch)
             else:
                 why = None
                 with open(log, "w", encoding="utf-8") as f:

@@ -34,8 +34,9 @@ DEFAULT_WAIT = 45 * 60
 COMMIT_WAIT = 10 * 60  # KB_COMMIT_GATE_WAIT: how long `ship commit` waits for the slot (its gates take about two minutes)
 WORKERS = 4            # KB_GATE_WORKERS: pytest-xdist workers of a local tests gate (a number, or `auto` = one per core)
 NICE = ("nice", "-n", "10")                        # a daytime gate yields to whoever is at the keyboard
-UTILITY = ("taskpolicy", "-c", "utility")          # macOS: the utility scheduler class (not `-b`, which pins a process
-#                                                    to the efficiency cores and throttles its disk access)
+# macOS: the utility scheduler class. Not `-b` (background), which pins a process to the efficiency cores and
+# throttles its disk access.
+UTILITY = ("taskpolicy", "-c", "utility")
 POLL = 0.2
 IDLE_MIN = 10          # KB_GATE_IDLE_MIN: no log output for this long AND ~0% CPU = hung
 STEP_MAX_MIN = 45      # KB_GATE_STEP_MAX_MIN: hard cap for one gate step
@@ -220,12 +221,15 @@ def with_workers(cmd, root=None):
     return cmd
 
 
-def priority_prefix(root=None):
+def priority_prefix(root=None, night_open=None):
     """What a real gate command is started through so it does not slow the desktop: by day `nice`, plus the utility
-    scheduler class on macOS; nothing while the night window is open. KB_GATE_PRIORITY=normal turns it off,
-    KB_GATE_PRIORITY=low keeps it on at night too. Measured cost: about 3% on one test file."""
+    scheduler class on macOS; nothing while the night window is open (`night_open`, read from `root` when not
+    given). KB_GATE_PRIORITY=normal turns it off, KB_GATE_PRIORITY=low keeps it on at night too. Measured cost:
+    about 3% on one test file."""
     choice = os.environ.get("KB_GATE_PRIORITY", "").strip().lower()
-    if choice == "normal" or (choice != "low" and is_night(root)):
+    if choice == "normal":
+        return []
+    if choice != "low" and (is_night(root) if night_open is None else night_open):
         return []
     prefix = []
     if sys.platform == "darwin" and shutil.which(UTILITY[0]):
