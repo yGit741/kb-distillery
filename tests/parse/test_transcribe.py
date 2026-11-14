@@ -167,7 +167,14 @@ def test_one_reading_only_marks_the_whole_page(pdf, tmp_path, monkeypatch):
     assert res["pages"][2] == "marked"
     res = run(pdf, tmp_path / "b", monkeypatch, FakeLLM(reader_pages={1: READER[1]}))          # the reader fails on page 2
     rec = store.read_page(str(tmp_path / "b" / "store"), SHA, 2)
-    assert rec["markdown"].startswith("[!!](mark:") and 2 in res["failed"]
+    assert rec["markdown"].startswith("[!](mark:") and "checked by the auditor" in rec["marks"][0]["reason"] and 2 in res["failed"]
+    assert "Second page with $f ( w )$ only." in rec["markdown"]                              # the parser's page stands in
+    f = {2: [{"snippet": "$f ( w )$", "fix": "$f ( \\mathbf{w} )$", "page_says": "bold w", "severity": "minor", "sure": True}]}
+    run(pdf, tmp_path / "c", monkeypatch, FakeLLM(reader_pages={1: READER[1]}, findings=f))
+    rec = store.read_page(str(tmp_path / "c" / "store"), SHA, 2)
+    assert "$f ( \\mathbf{w} )$ [!](mark:" in rec["markdown"] and len(rec["marks"]) == 2            # audited and fixed
+    run(pdf, tmp_path / "d", monkeypatch, FakeLLM(reader_pages={1: READER[1]}, findings={2: None}))
+    assert store.read_page(str(tmp_path / "d" / "store"), SHA, 2)["markdown"].startswith("[!!](mark:")   # not audited
 
 
 def test_resume_reads_and_judges_nothing_twice(pdf, tmp_path, monkeypatch):
@@ -322,7 +329,8 @@ def test_retries_respect_the_ceiling_and_force(pdf, tmp_path, monkeypatch):
     monkeypatch.setattr(llm, "run", failing)
     res = transcribe.transcribe(pdf, [1], str(tmp_path / "w"), str(tmp_path / "s"), SHA, engine=FakeEngine(), backend="subscription",
                                 retry_backend="api", max_usd=0.01, log=lambda *_: None)
-    assert calls == [("p", "subscription")] and "reader retry" in res["skipped"]          # the paid retry would cross $0.01
+    assert ("p", "api") not in calls and "reader retry" in res["skipped"]                 # the paid retry would cross $0.01
+    assert calls[0] == ("p", "subscription") and ("a", "api") not in calls               # the parser's page is audited, free
     stale = tmp_path / "w2" / "reader"
     stale.mkdir(parents=True)
     (stale / "p0001.md").write_text("an old page\n")

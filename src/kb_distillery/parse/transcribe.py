@@ -14,7 +14,8 @@ against the page once more. What comes out carries a mark wherever a single voic
     the reader itself wrote \\unsure{...}             mark `!`
     the auditor finds a difference                   its fix is applied, mark `!`; `!!` when it is unsure, gives no fix,
                                                      or the place cannot be found
-    a page with only one reading                     the whole page is marked (`!` reader only, `!!` parser only)
+    a page with only one reading                     the whole page is marked: `!` reader only; parser only (the reader's
+                                                     reply was cut or refused) `!` once the auditor checked it, else `!!`
 
 A mark is a Markdown link right after the formula, `[!](mark:<sha12>/p0188/3)`, plus a record in the page's JSON with the
 other reading, what was replaced and a crop of that place of the page (`crops/p0188-3.png`).
@@ -339,6 +340,11 @@ def transcribe(pdf: str, pages: list, work: str, root: str, sha: str, engine=Non
     stage: dict = {}                                                 # page -> (text, marks) after the judge
     for p in reader_md:
         stage[p] = judged(reader_md[p], todo.get(p, []), verdicts.get(p, {}))
+    lone = [p for p in pages if p in parsed and p not in have]      # the reader gave nothing: the parser's page stands in
+    for p in lone:
+        parser_md[p], boxes[p] = _parser_page(engine, work, p)
+        stage[p] = (parser_md[p], [])
+    checked: set = set()                                             # pages the auditor answered for
     if audit_model and not over("auditor", len(stage), audit.USD_PER_PAGE):
         findings, a_usd = audit.ask({p: t for p, (t, _m) in stage.items()},
                                     {p: reader.render(pdf, p, work) for p in stage},
@@ -352,17 +358,21 @@ def transcribe(pdf: str, pages: list, work: str, root: str, sha: str, engine=Non
             usd += a2
             findings.update(f2)
         for p in stage:
+            if findings.get(p) is not None:
+                checked.add(p)
             stage[p] = audited(stage[p][0], stage[p][1], findings.get(p))
     out = {"pages": {}, "marks": {"!": 0, "!!": 0}, "usd": round(usd, 4), "failed": dict(r["failed"]), "skipped": skipped}
     for p in pages:
         if p in stage:
             md, marks = finish(stage[p][0], stage[p][1], parser_md.get(p), boxes.get(p, []), sha, p)
-            if p not in parsed:
+            if p in lone and p in checked:
+                md, marks = page_mark(md, marks, "!", "the reader gave no page here (its reply was cut or refused); this is "
+                                      "the parser's page, checked by the auditor", sha, p)
+            elif p in lone:
+                md, marks = page_mark(md, marks, "!!", "only the parser read this page (the reader failed)", sha, p)
+            elif p not in parsed:
                 md, marks = page_mark(md, marks, "!", "only the reader read this page (no parser output to compare with)",
                                       sha, p)
-        elif p in parsed:
-            text, _b = _parser_page(engine, work, p)
-            md, marks = page_mark(text, [], "!!", "only the parser read this page (the reader failed)", sha, p)
         else:
             out["failed"].setdefault(p, "neither the parser nor the reader produced this page")
             continue

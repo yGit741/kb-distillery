@@ -32,9 +32,12 @@ A mark is a Markdown link right after the formula it belongs to: `[!](mark:<sha1
 | the reader wrote `\unsure{…}` | `!` |
 | the auditor finds a difference and is sure of its fix | fix applied, `!` |
 | the auditor is unsure, gives no fix, or its place cannot be found | `!!` |
-| only one of parser and reader produced the page | one mark for the whole page (`!` reader only, `!!` parser only) |
+| only the reader produced the page | one mark for the whole page, `!` |
+| only the parser produced the page | the auditor checks the parser's page; one mark for the whole page, `!` when it did, `!!` when it could not |
 
 `!` means "one voice decided, probably right". `!!` means "nobody could settle it": whoever uses the formula must look at the crop.
+
+A reader reply can come back cut or refused: models stop long verbatim copies of prose-heavy book pages (a chapter's opening page, a preface). The reply must hold the page between `<<<PAGE` and `PAGE>>>` lines, so a cut reply is never mistaken for a page; it is tried once more, then the parser's page stands in.
 
 ## The store
 
