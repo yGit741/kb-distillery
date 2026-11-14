@@ -143,6 +143,8 @@ def test_gate_holds_weakened_tests():
 @pytest.mark.flag("nightly-autofix", True)
 def test_hook_runs_autofix_and_reads_its_summary(tmp_path, monkeypatch):
     from kb_distillery.ops import core
+    monkeypatch.setenv("KB_NIGHTLY", "1")
+    monkeypatch.delenv("PYTEST_CURRENT_TEST", raising=False)
     monkeypatch.setattr(core, "AUTOFIX_LOG", str(tmp_path / "autofix.log"))
     calls = []
 
@@ -242,6 +244,8 @@ def test_unlisted_issues_never_open_a_duplicate(tmp_path):
 @pytest.mark.flag("nightly-autofix", True)
 def test_timeout_still_reads_what_the_fixer_did(tmp_path, monkeypatch):
     from kb_distillery.ops import core
+    monkeypatch.setenv("KB_NIGHTLY", "1")
+    monkeypatch.delenv("PYTEST_CURRENT_TEST", raising=False)
     monkeypatch.setattr(core, "AUTOFIX_LOG", str(tmp_path / "autofix.log"))
 
     def run(cmd, **kw):
@@ -255,6 +259,8 @@ def test_timeout_still_reads_what_the_fixer_did(tmp_path, monkeypatch):
 @pytest.mark.flag("nightly-autofix", True)
 def test_bad_summary_is_ignored(tmp_path, monkeypatch):
     from kb_distillery.ops import core
+    monkeypatch.setenv("KB_NIGHTLY", "1")
+    monkeypatch.delenv("PYTEST_CURRENT_TEST", raising=False)
     monkeypatch.setattr(core, "AUTOFIX_LOG", str(tmp_path / "autofix.log"))
 
     def run(cmd, **kw):
@@ -270,3 +276,17 @@ def test_held_plus_ticket_is_an_error_night():
     doc = m.Doc("Nightly", "error", "x", [m.Section("", [m.Banner("error", "x")])])
     nightly_report.apply_autofix(doc, [_res("held: https://github.com/octocat/kb/pull/3"), _res("created", fixable=False)])
     assert doc.status == "error"
+
+
+@pytest.mark.flag("nightly-autofix", True)
+@pytest.mark.parametrize("nightly", [None, "1"])
+def test_autofix_never_runs_outside_the_real_nightly(tmp_path, monkeypatch, nightly):
+    """A sync run by a test (or any command but daily_sync.main) never opens issues or starts the fixer."""
+    from kb_distillery.ops import core
+    if nightly:
+        monkeypatch.setenv("KB_NIGHTLY", nightly)          # pytest's own PYTEST_CURRENT_TEST still blocks it
+    else:
+        monkeypatch.delenv("KB_NIGHTLY", raising=False)
+    calls = []
+    assert core.nightly_autofix(str(tmp_path), _run(), run=lambda cmd, **kw: calls.append(cmd)) is None
+    assert calls == []

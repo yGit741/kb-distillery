@@ -107,8 +107,14 @@ def test_start_failure_does_not_use_up_the_attempt(monkeypatch, tmp_path):
 
 def test_no_change_drops_the_branch(monkeypatch, tmp_path):
     h = Harness(monkeypatch, tmp_path, agent_text="RESULT: not-engine - a kb data problem", changed=False)
+    removed = []
+    real_run = subprocess.run
+    monkeypatch.setattr(fixer.subprocess, "run", lambda cmd, **kw: removed.append(cmd) or
+                        subprocess.CompletedProcess(cmd, 0, "", "") if cmd[:3] == ["git", "worktree", "remove"]
+                        else real_run(cmd, **kw))
     assert h.run() == "no fix: not-engine"
     assert h.calls == ["start", "prune"]
+    assert removed and removed[0][-1] == str(h.wt)          # the worktree goes before the branch is dropped
 
 
 def test_failed_gates_drop_the_branch(monkeypatch, tmp_path):
