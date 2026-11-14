@@ -2,7 +2,7 @@
 export type LineMode = "search" | "view" | "command";
 
 export const LINE_COPY = {
-  placeholder: "Search everything · > change the view · / commands",
+  placeholder: "Search everything · / commands",
   /** One quiet line per mode, shown the first time that mode is used. */
   hints: {
     search: "Type to search pages, or ask a question.",

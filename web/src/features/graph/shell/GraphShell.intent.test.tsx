@@ -55,7 +55,7 @@ describe("the line, graph-intent on", () => {
     await withFlag("graph-intent", true, async () => {
       setup();
       expect(screen.queryByRole("button", { name: /knowledge base/i })).not.toBeInTheDocument();
-      expect(box()).toHaveAttribute("placeholder", "Search everything · > change the view · / commands");
+      expect(box()).toHaveAttribute("placeholder", "Search everything · / commands");
     });
   });
 
