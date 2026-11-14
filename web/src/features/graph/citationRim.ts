@@ -68,7 +68,7 @@ export function rimLayout(
   // the web's radius grows with the cited papers; the clumps sit a clear margin outside it
   const cited = papers.filter((p) => p.degree > 0).length;
   const spacing = dot * 1.25; // centre to centre inside a clump: dots just apart
-  const inner = Math.max(dot * 12, Math.sqrt(cited) * dot * 8.5);
+  const inner = Math.max(dot * 10, Math.sqrt(cited) * dot * 6.5);
   const pins = new Map<string, [number, number]>();
   const pull = new Map<string, [number, number]>();
   const labels: RimLabel[] = [];
@@ -82,7 +82,7 @@ export function rimLayout(
   const clumpR = (n: number) => Math.sqrt(n + 0.5) * spacing * 0.56;
   const biggest = Math.max(0, ...ring.map((t) => groups.get(t)!.filter((p) => p.degree === 0).length));
   // ... and far enough out that two neighbouring clumps never touch: each sector's arc must hold its clump
-  let rim = inner + dot * 4 + clumpR(biggest);
+  let rim = inner + dot * 2.5 + clumpR(biggest);
   for (const t of ring) {
     const m = groups.get(t)!;
     const need = (2 * clumpR(m.filter((p) => p.degree === 0).length) + dot * 3) / sweepOf(t);
@@ -124,7 +124,7 @@ export function rimLayout(
     });
   }
   // the web's circle ends a clear margin before the nearest clump begins
-  const web = Math.max(inner, rim - clumpR(biggest) - dot * 4);
+  const web = Math.max(inner, rim - clumpR(biggest) - dot * 2.5);
   return { pins, pull, labels, discs, web };
 }
 

@@ -19,7 +19,8 @@ export interface Forces {
 /** Pull each node toward a point (its theme's anchor), or leave it alone when `target` returns null. */
 export interface Anchor {
   target: (n: SimNode) => readonly [number, number] | null;
-  strength: number;
+  /** one strength for all, or per node (Citations by meaning: small groups pulled harder than the web) */
+  strength: number | ((n: SimNode) => number);
   /** discs no free node may enter (Citations by meaning: the uncited clumps); one that drifts in is put on the rim */
   keepOut?: readonly { x: number; y: number; r: number }[];
   /** a circle round the origin no free node may leave (Citations by meaning: the cited web stays inside the clumps) */
@@ -46,7 +47,7 @@ export interface ForceGraphProps {
   linkLabel: (l: SimLink) => string;
   onNodeHover: (n: SimNode | null) => void;
   onNodeClick: (n: SimNode, ev: MouseEvent) => void;
-  onLinkClick: (ev: MouseEvent) => void;
+  onLinkClick: (ev: MouseEvent, link?: SimLink) => void;
   onBackgroundClick: (ev: MouseEvent) => void;
   onZoom: (k: number) => void;
   onEngineStop: () => void;
@@ -182,7 +183,7 @@ export const ForceGraph = forwardRef<ForceGraphHandle, ForceGraphProps & { class
       .linkDirectionalArrowRelPos(0.85)
       .onNodeHover((n) => latest.current.onNodeHover(asSim(n)))
       .onNodeClick((n, ev) => latest.current.onNodeClick(n as SimNode, ev))
-      .onLinkClick((_l, ev) => latest.current.onLinkClick(ev))
+      .onLinkClick((l, ev) => latest.current.onLinkClick(ev, asLink(l as LinkObject)))
       .onBackgroundClick((ev) => latest.current.onBackgroundClick(ev))
       .onRenderFramePost((ctx, s) => latest.current.drawFramePost(ctx, s))
       .onRenderFramePre((ctx, s) => latest.current.drawFramePre?.(ctx, s))
@@ -205,8 +206,9 @@ export const ForceGraph = forwardRef<ForceGraphHandle, ForceGraphProps & { class
           const t = a.target(n);
           if (!t || n.x == null || n.y == null) continue;
           const m = n as SimNode & { vx?: number; vy?: number };
-          m.vx = (m.vx ?? 0) + (t[0] - n.x) * a.strength * alpha;
-          m.vy = (m.vy ?? 0) + (t[1] - n.y) * a.strength * alpha;
+          const k = typeof a.strength === "function" ? a.strength(n) : a.strength;
+          m.vx = (m.vx ?? 0) + (t[0] - n.x) * k * alpha;
+          m.vy = (m.vy ?? 0) + (t[1] - n.y) * k * alpha;
         }
         if (a.keepIn) {
           for (const n of simNodes) {

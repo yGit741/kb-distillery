@@ -1,4 +1,5 @@
-import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef } from "react";
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
+import { Search } from "lucide-react";
 import { trackTypesStrip } from "./typesStrip";
 import { useKb } from "@/lib/store";
 import { cn } from "@/lib/utils";
@@ -39,6 +40,7 @@ import { meaningPositions, topicIndex } from "./embedding/model";
 import { useEmbedding } from "./embedding/EmbeddingLayer";
 import { clumpAt, rimLayout, type RimLabel, type RimLayout } from "./citationRim";
 import { useRimList } from "./rimListStore";
+import { CITE_DWELL_MS, CITE_HOLD_MS, drawCite, pickCite } from "./citeHover";
 import { useEmbedView } from "./embedding/store";
 import { useCorners } from "./shell/corners/cornersStore";
 import { drawNode as drawNodeMark } from "./encoding/canvas";
@@ -110,6 +112,43 @@ const MAP_EDGE = 0.12;
 const RIM_EDGE = 0.5;
 /** Citations by meaning: a softer push between papers, so the web settles inside its circle instead of pressing on it */
 const RIM_CHARGE = -30;
+
+
+/** A soft glow under the outer band of an open clump's dots: the clump reads as lifted, with no outline drawn. */
+function drawClumpGlow(
+  ctx: CanvasRenderingContext2D,
+  d: { x: number; y: number; r: number },
+  ids: readonly string[],
+  pins: ReadonlyMap<string, [number, number]>,
+  colors: CanvasColors,
+) {
+  const at = ids.map((id) => pins.get(id)).filter((p): p is [number, number] => !!p);
+  if (!at.length) return;
+  const dist = at.map(([x, y]) => Math.hypot(x - d.x, y - d.y));
+  const far = Math.max(...dist);
+  const band = Math.max(far * 0.72, far - 14);
+  const glow = 11;
+  ctx.save();
+  at.forEach(([x, y], i) => {
+    if (dist[i]! < band) return;
+    const g = ctx.createRadialGradient(x, y, 0, x, y, glow);
+    g.addColorStop(0, withAlpha(colors.ring, 0.32));
+    g.addColorStop(1, withAlpha(colors.ring, 0));
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(x, y, glow, 0, Math.PI * 2);
+    ctx.fill();
+  });
+  ctx.restore();
+}
+
+/** While a citation is shown, every dot but its two papers dims to 40 %. */
+function citeFade(l: SimLink | null, id: string): number {
+  if (!l) return 1;
+  const a = typeof l.source === "object" ? l.source.id : l.source;
+  const b = typeof l.target === "object" ? l.target.id : l.target;
+  return id === a || id === b ? 1 : 0.4;
+}
 
 /** While a clump's list is open, everything else fades to 40 % so the clump and its list read together. */
 function rimOpenFade(id: string): number {
@@ -368,8 +407,10 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
   layeredRef.current = layered;
   // uncited papers in a Citations-by-meaning clump are drawn smaller and quieter: context, not the subject
   const quietRef = useRef<ReadonlySet<string>>(new Set());
+  /** Citations by meaning is drawn: its dots a little smaller than elsewhere */
+  const rimOnRef = useRef(false);
   const radius = useCallback(
-    (n: GNode) => (isPile(n) ? pileRadius(n) : (layeredRef.current?.get(n.id) ?? nodeRadius(n, radiusRef.current)) * (quietRef.current.has(n.id) ? 0.75 : 1)),
+    (n: GNode) => (isPile(n) ? pileRadius(n) : (layeredRef.current?.get(n.id) ?? nodeRadius(n, radiusRef.current)) * (quietRef.current.has(n.id) ? 0.75 : 1) * (rimOnRef.current ? 0.82 : 1)),
     [],
   );
 
@@ -547,7 +588,8 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
   const liveStory = liveEdgeStory(ui.edgeStory, ui.shownTypes, storyById);
   const { report: embedding } = useEmbedding();
   const rimPins = useRef(new Set<string>());
-  const rim = useMemo<RimLayout | null>(() => {
+  const rimSig = useRef<{ sig: string; rim: (RimLayout & { small: ReadonlySet<string> }) | null }>({ sig: "", rim: null });
+  const rim = useMemo<(RimLayout & { small: ReadonlySet<string> }) | null>(() => {
     const nodes = data.nodes as SimNode[];
     for (const n of nodes) if (rimPins.current.has(n.id)) n.fx = n.fy = undefined;
     rimPins.current.clear();
@@ -559,6 +601,19 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
     const rs0 = papers.map((n) => layeredRef.current?.get(n.id) ?? nodeRadius(n, radiusRef.current)).sort((a, b) => a - b);
     const dot = 2 * (rs0[rs0.length >> 1] || 4);
     const out = rimLayout(papers.map((n) => ({ id: n.id, degree: (n.inDegree ?? 0) + (n.outDegree ?? 0) })), (id) => t.of.get(id), t.names, dot, order);
+    // small groups of cited papers (a pair, a chain of three) are pulled to the web harder than the web itself, so
+    // they sit beside it instead of drifting toward a clump
+    const free = papers.filter((n) => !out.pins.has(n.id));
+    const parent = new Map(free.map((n) => [n.id, n.id] as [string, string]));
+    const find = (x: string): string => (parent.get(x) === x ? x : (parent.set(x, find(parent.get(x)!)), parent.get(x)!));
+    for (const l of data.links) {
+      const a = typeof l.source === "object" ? (l.source as SimNode).id : (l.source as string);
+      const b = typeof l.target === "object" ? (l.target as SimNode).id : (l.target as string);
+      if (parent.has(a) && parent.has(b)) parent.set(find(a), find(b));
+    }
+    const size = new Map<string, number>();
+    for (const n of free) size.set(find(n.id), (size.get(find(n.id)) ?? 0) + 1);
+    const small = new Set(free.filter((n) => (size.get(find(n.id)) ?? 0) <= 4).map((n) => n.id));
     for (const n of nodes) {
       const p = out.pins.get(n.id);
       if (!p) continue;
@@ -566,11 +621,69 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
       n.fy = n.y = p[1];
       rimPins.current.add(n.id);
     }
-    return out;
+    // the same clumps as before (a click, a selection): keep the very same layout, so nothing re-runs or shakes
+    const sig = `${[...out.pins].map(([id, [x, y]]) => `${id}:${Math.round(x)}:${Math.round(y)}`).join(",")}|${Math.round(out.web)}|${out.labels.map((l) => `${l.name}:${Math.round(l.x)}:${Math.round(l.y)}`).join(",")}|${[...small].join(",")}`;
+    if (rimSig.current.sig === sig && rimSig.current.rim) return rimSig.current.rim;
+    const rimOut = { ...out, small };
+    rimSig.current = { sig, rim: rimOut };
+    return rimOut;
   }, [data, rimFlag, liveStory, embedding, meaning, layered]);
   const rimRef = useRef(rim);
   rimRef.current = rim;
   useEffect(() => useRimList.subscribe(() => fg.current?.refresh()), []);
+  // the hovered (or clicked, then pinned) citation: Citations by meaning shows it without a tooltip (./citeHover)
+  const cite = useRef<{ link: SimLink | null; pinned: boolean; timer: number; pending: SimLink | null | undefined }>({ link: null, pinned: false, timer: 0, pending: undefined });
+  const dataRef = useRef(data);
+  dataRef.current = data;
+  const setCite = useCallback((link: SimLink | null, pinned = false) => {
+    const c = cite.current;
+    window.clearTimeout(c.timer);
+    c.pending = undefined;
+    if (c.link === link && c.pinned === pinned) return;
+    c.link = link;
+    c.pinned = pinned;
+    fg.current?.refresh();
+  }, []);
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && cite.current.link && setCite(null);
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [setCite]);
+  useEffect(() => {
+    if (!rim) setCite(null);
+  }, [rim, setCite]);
+  // new data: the shown citation's papers are new objects, so it is dropped (a pinned one too)
+  useEffect(() => setCite(null), [data, setCite]);
+  useEffect(() => () => window.clearTimeout(cite.current.timer), []);
+  // the magnifier over a hovered clump, placed at the clump's centre in the canvas box
+  const [lens, setLens] = useState<{ name: string; ids: readonly string[]; left: number; top: number } | null>(null);
+  const rimHover = useCallback((ev: React.MouseEvent) => {
+    const rl = rimRef.current?.labels;
+    const g = fg.current;
+    const box = wrap.current?.getBoundingClientRect();
+    if (!rimRef.current || !g || !box) return setLens(null);
+    const p = g.graphAt(ev.clientX, ev.clientY);
+    // the citation under the pointer, with hysteresis and a short dwell; a dot under the pointer wins; a pinned one stays
+    const ct = cite.current;
+    if (p && !ct.pinned) {
+      const next = rs.current.hover ? null : pickCite(dataRef.current.links as SimLink[], ct.link, p.x, p.y, g.zoom());
+      if (next === ct.link) {
+        window.clearTimeout(ct.timer);
+        ct.pending = undefined;
+      } else if (next !== ct.pending) {
+        // a change already waiting for the same edge keeps its clock: slow movement along an edge still shows it
+        window.clearTimeout(ct.timer);
+        ct.pending = next;
+        ct.timer = window.setTimeout(() => setCite(next), next ? CITE_DWELL_MS : CITE_HOLD_MS);
+      }
+    }
+    const hit = p && rl?.length ? clumpAt(rl, p.x, p.y, 70 / Math.max(g.zoom(), 0.05)) : null;
+    const c = hit?.disc ? g.screenOf({ x: hit.disc.x, y: hit.disc.y }) : null;
+    if (!hit || !c) return setLens(null);
+    const left = c.x - box.left;
+    const top = c.y - box.top;
+    setLens((was) => (was && was.name === hit.name && was.ids === hit.ids && Math.abs(was.left - left) < 1 && Math.abs(was.top - top) < 1 ? was : { name: hit.name, ids: hit.ids, left, top }));
+  }, [setCite]);
   useEffect(() => {
     if (!rim) useRimList.getState().close();
     // the topics arrive after the graph's first layout: lay out again with the rim's pins, pull and bounds, so the
@@ -583,6 +696,7 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
     }
   }, [rim]);
   quietRef.current = rim ? new Set(rim.pins.keys()) : new Set();
+  rimOnRef.current = !!rim;
   const anchors = useMemo(() => {
     const nodes = data.nodes as SimNode[];
     if (meaning) return null;
@@ -613,7 +727,7 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
         : kbIds.length
         ? { strength: 0.12, target: (n) => (n.kb ? (kbAnchor.current.get(n.kb) ?? null) : null) }
         : rim
-        ? { strength: 0.04, target: (n) => rim.pull.get(n.id) ?? null, keepOut: rim.discs, keepIn: rim.web }
+        ? { strength: (n) => (rim.small.has(n.id) ? 0.16 : 0.04), target: (n) => rim.pull.get(n.id) ?? null, keepOut: rim.discs, keepIn: rim.web }
         : viewForces?.pack
         ? { strength: viewForces.pack, target: () => [0, 0] }
         : sides
@@ -968,6 +1082,7 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
   // ---- clicks
   const clickNode = useCallback(
     (id: string, ev: MouseEvent) => {
+      if (cite.current.pinned) setCite(null);
       // a paper in an uncited clump opens its topic's list, scrolled to it (the clump itself never moves)
       if (quietRef.current.has(id)) {
         const l = rimRef.current?.labels.find((x) => x.ids.includes(id));
@@ -1014,6 +1129,7 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
         clickNode(id, ev);
         return;
       }
+      if (cite.current.link) setCite(null);
       // a click on a clump or its name opens the clump's list; any other empty click closes an open one
       const rl = rimRef.current?.labels;
       const g = fg.current;
@@ -1046,7 +1162,7 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
       const tk = live.current.think;
       const r0 = radius(n) * (live.current.ui.spotlight?.has(n.type) ? 1.3 : 1) * (tk?.pop.has(n.id) ? popScale(popAt.current.get(n.id), performance.now()) : 1);
       const r = semanticRadius(r0, scale, rs.current.zr);
-      const alpha = fadedNodeOpacity(n.id, focus, rs.current.prevFocus, rs.current.fadeT) * (rimRef.current?.pins.has(n.id) ? 0.7 : 1) * (rimOpenFade(n.id));
+      const alpha = fadedNodeOpacity(n.id, focus, rs.current.prevFocus, rs.current.fadeT) * (rimRef.current?.pins.has(n.id) ? 0.7 : 1) * (rimOpenFade(n.id)) * citeFade(cite.current.link, n.id);
       const isSel = selected.has(n.id);
       const halo = useDecor.getState().halo?.get(n.id);
       if (halo) {
@@ -1177,18 +1293,11 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
       if (kbIds.length) drawKbOutlines(ctx, kbGroups(g.nodes().filter((n) => !isPile(n))), scale, rs.current.colors.muted);
       const rl = rimRef.current?.labels;
       if (rl?.length) {
-        // the open clump keeps a soft ring while its list is up
+        // the open clump: a soft glow on its outer dots while its list is up (no hard ring)
         const open = useRimList.getState().open;
         const d = open ? rl.find((l) => l.name === open.name)?.disc : null;
-        if (d) {
-          ctx.save();
-          ctx.beginPath();
-          ctx.arc(d.x, d.y, d.r, 0, Math.PI * 2);
-          ctx.strokeStyle = withAlpha(rs.current.colors.ring, 0.6);
-          ctx.lineWidth = 2 / scale;
-          ctx.stroke();
-          ctx.restore();
-        }
+        const pins = rimRef.current?.pins;
+        if (d && open && pins) drawClumpGlow(ctx, d, open.ids, pins, rs.current.colors);
         drawRimLabels(ctx, rl, scale, rs.current.colors);
       }
     },
@@ -1208,8 +1317,9 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
       const cfg = live.current.ui.lab;
       const res = drawLabelLayer({
         ctx,
-        // a quiet clump's papers carry no standing label (the clump is named); hover still names one
-        nodes: g.nodes().filter((n) => !isPile(n) && (!quietRef.current.has(n.id) || n.id === rs.current.hover || rs.current.selected.has(n.id))),
+        // a quiet clump's papers carry no standing label (the clump is named); hover still names one. While a citation
+        // is shown its two full titles are the only words on the canvas besides the clump names
+        nodes: g.nodes().filter((n) => !isPile(n) && (!quietRef.current.has(n.id) || n.id === rs.current.hover || rs.current.selected.has(n.id)) && !cite.current.link),
         fitIds: coreRef.current,
         width: el.clientWidth,
         height: el.clientHeight,
@@ -1217,7 +1327,7 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
         imp: score,
         forced,
         hops,
-        dim: (id) => nodeOpacity(id, focus) < 0.5,
+        dim: (id) => !!cite.current.link || nodeOpacity(id, focus) < 0.5,
         radius,
         colors,
         areaNames: kbIds.length ? NO_NAMES : names,   // knowledge base names are the DOM labels below
@@ -1233,6 +1343,7 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
         },
       });
       placeKbLabels(res.plan.placed);
+      if (cite.current.link) drawCite(ctx, cite.current.link, g.zoom(), rs.current.colors, (n) => radius(n));
       f.churn = f.churn * 0.9 + res.changes * (1000 / Math.max(16, dt)) * 0.1;
       rs.current.zr = res.zr;
       if (now - f.hudAt > 250) {
@@ -1291,7 +1402,8 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
     // a popped source brings only its links to the answer's pages (flag show-thinking)
     const tk = live.current.think;
     if (tk && (tk.pop.has(a) || tk.pop.has(b)) && !tk.links.has(linkKey(a, b))) return withAlpha(colors.link, 0);
-    const base = rimRef.current && l.kind === "cites" ? RIM_EDGE : live.current.ui.linkOpacity * (calmOn ? CALM_EDGE : 1) * mapEdge;
+    const hot = cite.current.link;
+    const base = (rimRef.current && l.kind === "cites" ? RIM_EDGE : live.current.ui.linkOpacity * (calmOn ? CALM_EDGE : 1) * mapEdge) * (hot && hot !== l ? 0.25 : 1);
     return withAlpha(colors.link, fade * fadedLinkOpacity(a, b, focus, prevFocus, fadeT, base, l.kind));
   }, [calmOn]);
   const linkWidth = useCallback((l: SimLink) => (l.kind === "shared" ? 0.35 + Math.min(l.shared ?? 1, 6) * 0.1 : 0.8), []);
@@ -1323,6 +1435,11 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
     <div
       ref={wrap}
       data-testid="graph-canvas"
+      onMouseMove={rimHover}
+      onMouseLeave={() => {
+        setLens(null);
+        if (!cite.current.pinned) setCite(null);
+      }}
       className={cn(
         "relative size-full [&.graph-pointer_canvas]:cursor-pointer",
         ui.magnet && "[&:not(.graph-pointer)_canvas]:[cursor:var(--magnet-cursor,default)]",
@@ -1347,12 +1464,26 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
         linkLabel={linkLabel}
         onNodeHover={onNodeHover}
         onNodeClick={onNodeClick}
-        onLinkClick={onNearMiss}
+        onLinkClick={(ev, l) => (rim && l?.kind === "cites" ? setCite(l, true) : onNearMiss(ev))}
         onBackgroundClick={onNearMiss}
         onZoom={onZoom}
         onEngineStop={onEngineStop}
       />
       <canvas ref={overlay} aria-hidden className="pointer-events-none absolute inset-0 size-full" />
+      {lens && (
+        // Citations by meaning: over a clump, a magnifier opens its list (search, sort)
+        <button
+          type="button"
+          aria-label={`Explore ${lens.name}: ${lens.ids.length} uncited papers`}
+          title={`Explore ${lens.name}`}
+          data-testid="clump-lens"
+          className="pointer-events-auto absolute z-[6] grid size-8 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border bg-card text-muted-foreground shadow-[var(--shadow)] transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          style={{ left: lens.left, top: lens.top }}
+          onClick={() => useRimList.getState().show(lens.name, lens.ids)}
+        >
+          <Search aria-hidden className="size-4" strokeWidth={1.6} />
+        </button>
+      )}
       {replay && <ReplayLegend atEnd={replay.view.atEnd} />}
       {think && <ThinkingLegend web={think.view.web.length > 0} />}
       {kbIds.map((id) => (

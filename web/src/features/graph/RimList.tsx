@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { X } from "lucide-react";
+import { ArrowDownWideNarrow, ArrowUpNarrowWide, Search, X } from "lucide-react";
 import { useKb } from "@/lib/store";
 import { cn } from "@/lib/utils";
 import { useTheme } from "@/theme/theme";
@@ -22,19 +22,29 @@ export function RimList({ byId, colorBy }: { byId: ReadonlyMap<string, GNode>; c
   const close = useRimList((s) => s.close);
   const theme = useTheme((s) => s.theme);
   const [sort, setSort] = useState<Sort>("digest");
+  // each sort has its natural direction (deepest digest, newest, A to Z); the arrow flips it
+  const [flip, setFlip] = useState(false);
+  const [q, setQ] = useState("");
+  useEffect(() => {
+    setQ("");
+    setFlip(false);
+  }, [open?.name]);
   const list = useRef<HTMLUListElement>(null);
   const by = effectiveColorBy(colorBy);
   const rows = useMemo(() => {
     const ns = (open?.ids ?? []).map((id) => byId.get(id)).filter((n): n is GNode => !!n);
     const title = (n: GNode) => n.title || n.id;
-    return ns.sort((a, b) =>
+    const words = q.trim().toLowerCase().split(/\s+/).filter(Boolean);
+    const hit = (n: GNode) => words.every((w) => `${title(n)} ${n.year ?? ""}`.toLowerCase().includes(w));
+    const sorted = ns.filter(hit).sort((a, b) =>
       sort === "year"
         ? (b.year ?? 0) - (a.year ?? 0) || title(a).localeCompare(title(b))
         : sort === "title"
         ? title(a).localeCompare(title(b))
         : (DEPTH_RANK[a.depth || "listed"] ?? 9) - (DEPTH_RANK[b.depth || "listed"] ?? 9) || title(a).localeCompare(title(b)),
     );
-  }, [open, byId, sort]);
+    return flip ? sorted.reverse() : sorted;
+  }, [open, byId, sort, flip, q]);
   useEffect(() => {
     if (!focus) return;
     list.current?.querySelector(`[data-id="${CSS.escape(focus)}"]`)?.scrollIntoView({ block: "nearest" });
@@ -58,7 +68,7 @@ export function RimList({ byId, colorBy }: { byId: ReadonlyMap<string, GNode>; c
             {open.name}
           </h2>
           <p className="text-xs text-muted-foreground">
-            {rows.length} uncited {rows.length === 1 ? "paper" : "papers"}
+            {q.trim() ? `${rows.length} of ${open.ids.length}` : rows.length} uncited {open.ids.length === 1 ? "paper" : "papers"}
           </p>
         </div>
         <label className="flex items-center gap-1 text-xs text-muted-foreground">
@@ -69,10 +79,35 @@ export function RimList({ byId, colorBy }: { byId: ReadonlyMap<string, GNode>; c
             <option value="title">Title</option>
           </select>
         </label>
+        <button
+          type="button"
+          onClick={() => setFlip((f) => !f)}
+          aria-label={flip ? "Sort the other way (now reversed)" : "Reverse the order"}
+          aria-pressed={flip}
+          title={flip ? "Reversed: press for the natural order" : "Reverse the order"}
+          className={cn("grid size-6 place-items-center rounded-full text-muted-foreground hover:bg-accent hover:text-foreground", RING)}
+        >
+          {flip ? <ArrowUpNarrowWide aria-hidden className="size-3.5" strokeWidth={1.6} /> : <ArrowDownWideNarrow aria-hidden className="size-3.5" strokeWidth={1.6} />}
+        </button>
         <button type="button" onClick={close} aria-label="Close the list" title="Close (Esc)" className={cn("grid size-6 place-items-center rounded-full text-muted-foreground hover:bg-accent hover:text-foreground", RING)}>
           <X aria-hidden className="size-3.5" strokeWidth={1.6} />
         </button>
       </header>
+      <label className="mx-3 mt-2 flex items-center gap-2 rounded-lg border bg-background px-2.5 py-1.5 text-sm focus-within:ring-2 focus-within:ring-ring">
+        <Search aria-hidden className="size-3.5 flex-none text-muted-foreground" strokeWidth={1.6} />
+        <input
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="Search these papers"
+          aria-label="Search these papers"
+          className="min-w-0 flex-1 bg-transparent outline-none placeholder:text-muted-foreground"
+        />
+        {q && (
+          <button type="button" onClick={() => setQ("")} aria-label="Clear the search" className={cn("grid size-5 place-items-center rounded-full text-muted-foreground hover:text-foreground", RING)}>
+            <X aria-hidden className="size-3" strokeWidth={1.6} />
+          </button>
+        )}
+      </label>
       <ul ref={list} className="min-h-0 flex-1 overflow-y-auto py-1">
         {rows.map((n) => (
           <li key={n.id} data-id={n.id}>
