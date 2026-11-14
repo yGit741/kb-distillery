@@ -30,6 +30,7 @@ const GROUP = "flex h-6 min-w-0 max-w-full items-center overflow-x-auto [scrollb
  * The page types, at the bottom centre, 8px from the edge: folded, the marks sit in a tight row (concepts left of a
  * thin divider, sources right of it); pressed, ONE card opens around them and the marks unfold into names with
  * counts, concepts to the left and sources to the right, the divider staying at the centre of the screen. A
+ * double click on a name (two clicks on the same spot) folds the card and leaves that type as it was. A
  * dimmed name is a type that is hidden (sources are by default). Types that share an icon are one name with their counts summed; pressing a name hides or shows all of them.
  */
 export function TypesCard({ concepts, sources, onToggle, onSpot }: Props) {
@@ -94,7 +95,13 @@ export function TypesCard({ concepts, sources, onToggle, onSpot }: Props) {
         aria-label={`${label}, ${r.total}`}
         title={`${r.shown ? "Hide" : "Show"} every ${label.toLowerCase()}${r.members.length > 1 ? ` (${r.members.map((m) => `${typeName(m)} ${m.total}`).join(", ")})` : ""}`}
         data-type={r.id}
-        onClick={() => open && onToggle(ids, !r.shown)}
+        onClick={(e) => {
+          if (!open) return;
+          // a second click on the same spot is a double click: it takes this change back and folds the card
+          const was = r.shown;
+          still.markUndo(e, () => onToggle(ids, was));
+          onToggle(ids, !was);
+        }}
         // a chip that slid under a still pointer is not chosen: it lights once the pointer moves
         onMouseMove={() => open && still.settled && spot(ids)}
         onFocus={() => open && spot(ids)}

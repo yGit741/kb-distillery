@@ -645,6 +645,38 @@ describe("legends", () => {
     expect(useGraphUi.getState().shownTypes).toBe(before);
   });
 
+  it("a double click on a name in the open types card folds it and undoes the first click's change", async () => {
+    mount();
+    const card = screen.getByRole("group", { name: "Page types" });
+    await userEvent.click(screen.getByRole("button", { name: /show page types/i }));
+    moveAway();
+    const shown = () => useGraphUi.getState().shownTypes?.has("topic") ?? true; // null: the defaults, topic among them
+    const before = shown();
+    const topic = screen.getByRole("button", { name: /^Topic/ });
+    fireEvent.click(topic, { clientX: 200, clientY: 200, detail: 1 });
+    expect(shown()).toBe(!before); // the first click changes it
+    fireEvent.click(screen.getByRole("button", { name: /^Topic/ }), { clientX: 201, clientY: 200, detail: 2 });
+    expect(card).toHaveAttribute("data-open", "false");
+    expect(shown()).toBe(before);
+  });
+
+  it("two clicks on a name with a move between them are two plain clicks, and the card stays open", async () => {
+    mount();
+    const card = screen.getByRole("group", { name: "Page types" });
+    await userEvent.click(screen.getByRole("button", { name: /show page types/i }));
+    moveAway();
+    const shown = () => useGraphUi.getState().shownTypes?.has("topic") ?? true; // null: the defaults, topic among them
+    const before = shown();
+    const topic = screen.getByRole("button", { name: /^Topic/ });
+    fireEvent.click(topic, { clientX: 200, clientY: 200, detail: 1 });
+    fireEvent.mouseMove(window, { clientX: 260, clientY: 200 });
+    expect(shown()).toBe(!before);
+    // the props here stay as mounted, so the row still reads as shown: a plain second click hides it again, no undo
+    fireEvent.click(screen.getByRole("button", { name: /^Topic/ }), { clientX: 260, clientY: 200, detail: 1 });
+    expect(card).toHaveAttribute("data-open", "true");
+    expect(shown()).toBe(!before);
+  });
+
   it("the header reads Color by, with a dropdown of the concept colourings; sources add theirs once drawn", async () => {
     mount();
     const legend = screen.getByRole("group", { name: /colour legend/i });
