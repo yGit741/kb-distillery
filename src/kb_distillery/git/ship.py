@@ -58,12 +58,14 @@ from kb_distillery.vault.schema import GATE_PREFIXES as GP, GIT_POLICY_MODE, IND
 
 # CI is the gate: .github/workflows/ci.yml runs the whole list below on every PR and merge-queue group, and the
 # required check `all-green` decides the merge. Locally, `ship commit` runs COMMIT_GATES on the mirrored test subset
-# (under two minutes, no machine-wide slot); `ship pr` pushes and `ship merge` enqueues. KB_SHIP_LOCAL_GATES=1 keeps
+# (under two minutes, inside the machine-wide gate slot so two lanes never run their gates at once, on at most
+# gate_slot.workers() pytest workers); `ship pr` pushes and `ship merge` enqueues. KB_SHIP_LOCAL_GATES=1 keeps
 # the old full local run in every step (offline work, or a CI outage).
 LOCAL_GATES_ENV = "KB_SHIP_LOCAL_GATES"
-COMMIT_GATES = ("ruff", "lint-imports", "tests", "web-typecheck")
+COMMIT_GATES = ("ruff", "lint-imports", "tests")
 GATES = [
     ("ruff", ["ruff", "check", "src", "tests"]),     # syntax errors and undefined names; seconds
+    # `-n auto` is a placeholder: `_run_gates` sets the worker count (gate_slot.workers(): 4 unless KB_GATE_WORKERS)
     ("tests", [sys.executable, "-m", "pytest", "-q", "-n", "auto", "-m", "not serial", "tests"]),
     # tests that assert a wall-clock budget (`@pytest.mark.serial`): alone in one process, after the parallel pass
     ("tests-serial", [sys.executable, "-m", "pytest", "-q", "-m", "serial", "tests"]),
@@ -406,12 +408,13 @@ def okf_command(root=ROOT):
     return [c.replace("kb_distillery.lint.lint", "kb_distillery.lint.okf_check") for c in lint_command(root)]
 
 
-def run_gates(root=ROOT, skip_tests=False, scope="full", only=None, slot=True):
+def run_gates(root=ROOT, skip_tests=False, scope="full", only=None, slot=True, wait=None):
     """`_run_gates` as one gate-slot sequence: the slot is taken at the first real run and held to the last gate.
-    `only` keeps the named gates (COMMIT_GATES); `slot=False` runs without the machine-wide slot (the fast commit gates)."""
+    `only` keeps the named gates (COMMIT_GATES); `wait` is how long to wait for the slot (default KB_GATE_WAIT; the
+    commit gates pass the shorter gate_slot.commit_wait()); `slot=False` runs without the machine-wide slot."""
     if not slot:
         return _run_gates(root, skip_tests, scope, only, slot=False)
-    with gate_slot.sequence(root):
+    with gate_slot.sequence(root, wait=wait):
         return _run_gates(root, skip_tests, scope, only)
 
 
@@ -421,20 +424,23 @@ def _run_gates(root, skip_tests, scope, only=None, slot=True):
     A gate that already passed on the same content (see gate_cache) is reused, not rerun."""
     link_untracked_raw(root)
     own = {"lint": lint_command, "okf-check": okf_command}
-    gates = [(name, own[name](root) if name in own else cmd) for name, cmd in GATES]
+    gates = [(name, own[name](root) if name in own else gate_slot.with_workers(cmd) if name == "tests" else cmd)
+             for name, cmd in GATES]
     scopes = {name: "full" for name, _ in gates}
     extras = {}
     if scope == "subset" and not skip_tests:
         selection = gate_cache.test_subset(branch_files(root), root, ignore=is_generated)
         if selection:
             # one parallel run of the selection: it includes any serial test, so the serial pass is dropped
-            gates = [(n, [sys.executable, "-m", "pytest", "-q", "-n", "auto", *selection] if n == "tests" else c)
+            gates = [(n, [sys.executable, "-m", "pytest", "-q", "-n", gate_slot.workers(), *selection] if n == "tests" else c)
                      for n, c in gates if n != "tests-serial"]
             scopes.pop("tests-serial", None)
             scopes["tests"] = "subset"
             extras["tests"] = ",".join(selection)
             print(f"gate: tests subset ({len(selection)} targets)")
-    if not skip_tests and frontend_changed(root):
+    # a run limited to gates that are not the app's (the commit gates) drops them before the npm install, not after
+    wants_frontend = not only or any(n in only for n, _ in FRONTEND_GATES)
+    if not skip_tests and wants_frontend and frontend_changed(root):
         extra = frontend_gates(root)
         if extra is None:
             return False
@@ -483,7 +489,7 @@ def run_gate(name, cmd, root=ROOT, slot=True):
     """Run one gate with its full output in `.cache/ship-gates/<time>-<name>.log` instead of in the terminal (a test
     run is thousands of lines: in a conversation they are re-read on every later turn). Prints one line when it
     passes, and the last GATE_TAIL_LINES lines plus the log path when it fails. True on a pass.
-    `slot=False` (the fast commit gates) neither takes the machine-wide slot nor waits for load."""
+    `slot=False` neither takes the machine-wide slot nor waits for load."""
     log_dir = os.path.join(root, ".cache", "ship-gates")
     os.makedirs(log_dir, exist_ok=True)
     log = os.path.join(log_dir, f"{time.strftime('%Y%m%d-%H%M%S')}-{name}.log")
@@ -824,10 +830,12 @@ def cmd_commit(message, skip_tests=False, root=ROOT, gates=True):
     if not paths:
         print("nothing to commit")
         return 0
-    # the fast gates (ruff, the layer contract, the mirrored tests in parallel, tsc when web/ changed), no slot: CI runs
-    # the rest on the PR. KB_SHIP_LOCAL_GATES=1: every gate, in the slot, as before.
+    # the fast gates (ruff, the layer contract, the mirrored tests on a few workers): CI runs the rest on the PR. They
+    # take the machine-wide slot like every gate run, so parallel lanes commit one after the other, but wait for it
+    # only commit_wait(). KB_SHIP_LOCAL_GATES=1: every gate, with the long wait, as before.
     local = local_gates()
-    if gates and not run_gates(root, skip_tests, scope="subset", only=None if local else COMMIT_GATES, slot=local):
+    if gates and not run_gates(root, skip_tests, scope="subset", only=None if local else COMMIT_GATES,
+                               wait=None if local else gate_slot.commit_wait()):
         print("nothing committed")
         return 1
     tracked = set(filter(None, run_git(["ls-files", "-z"], cwd=root).stdout.split("\0")))
