@@ -2,7 +2,12 @@
 export type LineMode = "search" | "view" | "command";
 
 export const LINE_COPY = {
-  placeholder: "Search everything · / commands",
+  placeholder: "Explore Your Knowledge",
+  /** The key caps at the line's right end while it has the focus and nothing is typed yet. */
+  keys: [
+    { key: ">", label: "change the view" },
+    { key: "/", label: "commands" },
+  ],
   /** One quiet line per mode, shown the first time that mode is used. */
   hints: {
     search: "Type to search pages, or ask a question.",
@@ -27,7 +32,9 @@ export const LINE_COPY = {
   /** Shown in place of the `>` mode on a shared site, where the view cannot be changed by writing. */
   sentenceUnavailable: "Changing the view is not available here",
   /** The placeholder of the line on a shared site: no `>` segment. */
-  placeholderShare: "Search everything · / commands",
+  placeholderShare: "Explore Your Knowledge",
+  /** A shared site cannot change the view by writing, so only the commands key is offered. */
+  keysShare: [{ key: "/", label: "commands" }],
   viewEmpty: "Describe the view you want after >, for example colour by area.",
   /** A `>` sentence the rules could not read goes to the model; this says so while it works. */
   asking: "Not a sentence I can read by rules, so I am asking a model.",

@@ -80,7 +80,7 @@ describe("the shared site, graph-intent on: what visitors can do", () => {
   it("drops the > segment from the placeholder", async () => {
     await withFlag("graph-intent", true, async () => {
       setup();
-      expect(box()).toHaveAttribute("placeholder", "Search everything · / commands");
+      expect(box()).toHaveAttribute("placeholder", "Explore Your Knowledge");
     });
   });
 
