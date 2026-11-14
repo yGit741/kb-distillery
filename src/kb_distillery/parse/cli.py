@@ -5,6 +5,13 @@ never into a knowledge base).
     parse status --out DIR [--pages ...]                              pages done / missing, seconds per page
     parse check <pdf> --out DIR [--pages ...]                         feed the parsed pages through the verifier
     parse sample <pdf> [-n 100] [--seed 7] [--build 60]               stratified page picks, build / unseen
+    parse transcribe <pdf> --pages 1-5,8 --store DIR [--work DIR] [--backend subscription|api|batch] [--max-usd N]
+                                                                      parser + reader + judge -> marked transcript
+    parse marks --store DIR --sha SHA [--pages ...]                   the `!` / `!!` marks of a stored transcript
+
+`transcribe` is the only command that calls a model (the reader and the judge, through kb_distillery.llm); it prints its
+cost estimate first and stops when the estimate is above --max-usd. `--store` is a parsed store: a kb's `meta/parsed`,
+or any directory.
 """
 from __future__ import annotations
 
@@ -105,9 +112,78 @@ def cmd_sample(a) -> int:
     return 0
 
 
+def default_work(sha: str) -> str:
+    base = os.environ.get("KB_PARSE_WORK") or os.path.join(os.path.expanduser("~"), ".cache", "kb-distillery", "parse")
+    return os.path.join(base, sha[:12])
+
+
+def cmd_transcribe(a) -> int:
+    from kb_distillery import llm
+
+    from . import store, transcribe
+    pdf = os.path.abspath(a.pdf)
+    count = _page_count(pdf)
+    try:
+        pages = runner.parse_pages(a.pages, count)
+    except ValueError as e:
+        raise SystemExit("bad --pages: %s" % e)
+    with open(pdf, "rb") as f:
+        sha = store.sha1_bytes(f.read())
+    backend = llm.resolve_backend(a.backend)
+    est = transcribe.estimate(len(pages), backend)
+    print("transcribe: %d page(s), backend %s, estimated cost $%.2f" % (len(pages), backend, est), file=sys.stderr)
+    if a.max_usd is not None and est > a.max_usd:
+        raise SystemExit("estimate $%.2f is above --max-usd %.2f: nothing was run" % (est, a.max_usd))
+    if a.dry_run:
+        return 0
+    work = _guard_out(a.work) if a.work else default_work(sha)
+    res = transcribe.transcribe(pdf, pages, work, os.path.abspath(a.store), sha,
+                                engine=None if a.engine == "none" else _engine(a.engine), backend=backend,
+                                model=a.model, judge_model=a.judge_model, page_count=count, force=a.force,
+                                log=lambda m: print(m, file=sys.stderr, flush=True))
+    by = {}
+    for st in res["pages"].values():
+        by[st] = by.get(st, 0) + 1
+    print(json.dumps({"sha": sha, "pages": by, "marks": res["marks"], "usd": res["usd"],
+                      "failed": {str(k): v for k, v in res["failed"].items()}}))
+    return 1 if res["failed"] else 0
+
+
+def cmd_marks(a) -> int:
+    from . import store
+    pages = runner.parse_pages(a.pages) if a.pages else None
+    for m in store.marks(os.path.abspath(a.store), a.sha, pages):
+        print("p%04d/%d  %-2s  %s" % (m["page"], m["id"], m["level"], m["reason"]))
+        if m.get("was"):
+            print("      was:   %s" % m["was"].replace("\n", " ")[:160])
+        if m.get("text"):
+            print("      now:   %s" % m["text"].replace("\n", " ")[:160])
+        if m.get("other"):
+            print("      other: %s" % m["other"].replace("\n", " ")[:160])
+    return 0
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(prog="parse", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="cmd", required=True)
+    t = sub.add_parser("transcribe")
+    t.set_defaults(fn=cmd_transcribe)
+    t.add_argument("pdf")
+    t.add_argument("--pages", required=True, help="'1-5,8' or 'all'")
+    t.add_argument("--store", required=True, help="parsed store: a kb's meta/parsed, or any directory")
+    t.add_argument("--work", default="", help="intermediates (default ~/.cache/kb-distillery/parse/<sha12>)")
+    t.add_argument("--engine", default="mineru", help="'mineru' or 'none' (reader only: every page is marked)")
+    t.add_argument("--backend", default=None, choices=("subscription", "api", "batch"))
+    t.add_argument("--model", default="sonnet")
+    t.add_argument("--judge-model", default="sonnet")
+    t.add_argument("--max-usd", type=float, default=None)
+    t.add_argument("--dry-run", action="store_true", help="print the estimate and stop")
+    t.add_argument("--force", action="store_true")
+    mk = sub.add_parser("marks")
+    mk.set_defaults(fn=cmd_marks)
+    mk.add_argument("--store", required=True)
+    mk.add_argument("--sha", required=True)
+    mk.add_argument("--pages", default="")
     for name, fn in (("run", cmd_run), ("status", cmd_status), ("check", cmd_check), ("sample", cmd_sample)):
         s = sub.add_parser(name)
         s.set_defaults(fn=fn)
