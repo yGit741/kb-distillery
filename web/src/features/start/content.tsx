@@ -106,8 +106,8 @@ export const EDIT_ROWS: EditEntry[] = [
   },
   {
     want: "One chapter of a book",
-    say: c("full-digest <book> part 3"),
-    skill: <>{c("full-digest")} ({c("--part")})</>,
+    say: c("full-digest <book> chapter 3"),
+    skill: <>{c("full-digest")} ({c("--chapter")})</>,
     lands: kb("kb(digest)"),
   },
   {

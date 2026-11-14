@@ -86,7 +86,8 @@ class BookChaptersMigration(unittest.TestCase):
         write(self.root, "wiki/part-2010-tiny-fields-ch1-groups.md", part("Chapter 1. Groups", "9-30"))
         write(self.root, "wiki/part-2010-tiny-fields-fields-basics.md", part("Chapter 3. Fields", "61-80"))
         write(self.root, "wiki/idea-x.md", "---\ntype: idea\nrelated: [part-2010-tiny-fields-fields-basics.md]\n---\n\n"
-                                          "See [Fields](part-2010-tiny-fields-fields-basics.md#towers).\n")
+                                          "See [Fields](part-2010-tiny-fields-fields-basics.md#towers).\n\n"
+                                          "## My notes\n\nMine: [[part-2010-tiny-fields-fields-basics]]\n")
         write(self.root, "think/note.md", "[[part-2010-tiny-fields-fields-basics]]\n")
 
     def tearDown(self):
@@ -123,6 +124,12 @@ class BookChaptersMigration(unittest.TestCase):
         self.assertIn("(part-2010-tiny-fields-ch3a-fields-basics.md#towers)", idea)
         self.assertIn("related: [part-2010-tiny-fields-ch3a-fields-basics.md]", idea)
         self.assertEqual(read(self.root, "think/note.md"), "[[part-2010-tiny-fields-fields-basics]]\n")
+        self.assertTrue(idea.endswith("## My notes\n\nMine: [[part-2010-tiny-fields-fields-basics]]\n"))
+        from kb_distillery.vault import links
+        fms = {fn[:-3]: lint.parse_frontmatter(read(self.root, f"wiki/{fn}")) or {}
+               for fn in os.listdir(os.path.join(self.root, "wiki"))}
+        self.assertEqual(links.resolve_slug("part-2010-tiny-fields-fields-basics", set(fms), links.alias_map(fms)),
+                         "part-2010-tiny-fields-ch3a-fields-basics")
 
     def test_lint_is_clean_on_the_migrated_book(self):
         mig.apply(self.root)

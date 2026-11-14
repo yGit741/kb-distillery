@@ -12,7 +12,8 @@ For every `type: book` / `type: notebook` page that still has `## Partition` and
     its chapter count.
 Every part page linked from a row gets `chapter: <id>`. A part page whose slug does not carry its id after the
 book stem is renamed to `part-<stem>-<id>-<rest>`; its old slug goes into `aliases:` and every link to it in
-wiki/ is rewritten, so nothing breaks (think/ is user-owned: links there are reported, aliases resolve them).
+wiki/ is rewritten outside `## My notes`, so nothing breaks (My notes and think/ are user-owned: their links stay,
+aliases resolve them; think/ hits are reported).
 A book whose table cannot be read (a skip row between chapters, an unreadable Pages cell) is left alone and
 reported; lint then points at it. Idempotent: a book with `## Chapters` and a part with `chapter:` are skipped.
 
@@ -22,7 +23,7 @@ import argparse
 import os
 import re
 
-from kb_distillery.vault import books, links
+from kb_distillery.vault import books, links, wikiio
 
 PRODUCES = (1, 6)
 OLD_HEADING = "## Partition"
@@ -99,6 +100,8 @@ def assign_ids(rows):
             split = bool(re.fullmatch(r"[a-z]", prev["id"][len(cid):]))
             if not digested and prev["status"] not in books.DIGESTED and not split:
                 prev["end"] = r["end"]                       # one chapter again: merge
+                if re.match(r"(?i)^(chapter|appendix)\b", prev["title"]):
+                    prev["title"] = prev["title"].split(": ")[0]     # 'Chapter 11. X: 11.1 … → 11.7 …' → 'Chapter 11. X'
                 continue
             if not split:
                 prev["id"] = cid + "a"
@@ -221,7 +224,9 @@ def apply(root, dry_run=False):
                 continue
             p = os.path.join(wiki, fn)
             text = _read(p)
-            new = _relink(text, mapping)
+            # ## My notes is the user's and never rewritten (its old-slug links resolve through aliases:)
+            new = wikiio.preserve_my_notes(text, _relink(wikiio.strip_my_notes(text), mapping)) \
+                if wikiio.my_notes(text) else _relink(text, mapping)
             if new != text:
                 _write(p, new)
                 report["relinked"] += 1

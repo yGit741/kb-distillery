@@ -28,7 +28,6 @@ PARTITION_HEADING = "## Partition"      # the pre-1.6 table; migration 0016 rewr
 OVERVIEW_HEADING = "## Overview"
 OVERVIEW_MIN_CHARS = 120
 CHAPTER_LONG_PAGES = 60      # warn above this; a long chapter is kept whole, splitting is manual
-PART_MAX_PAGES = CHAPTER_LONG_PAGES
 SKIP = "skip"
 TODO = "—"
 DIGESTED = ("easy", "full", "deep")

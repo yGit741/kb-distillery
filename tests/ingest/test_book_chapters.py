@@ -122,3 +122,24 @@ def test_record_part_ticks_the_row_by_id(kb):
     assert "authors: [Octo Cat]" in text and "maturity: reading" in text
     with pytest.raises(ValueError, match="no chapter 'ch9'"):
         book.record_part("raw/printed-docs/2011-tiny-rings.pdf", "ch9", "x", "full")
+
+
+def test_aborting_one_chapter_keeps_another_chapters_tick(kb, monkeypatch):
+    from kb_distillery.ingest import paths
+    raw = "raw/printed-docs/2011-tiny-rings.pdf"
+    make_pdf(kb / raw, 70, toc=OUTLINE)
+    book.build_book(raw)
+    monkeypatch.setattr(session, "ROOT", str(kb))
+    monkeypatch.setattr(paths, "INGEST_ROOT", str(kb / "meta/.ingest"))
+    monkeypatch.setattr(session, "verify_raw", lambda r: r)
+    monkeypatch.setattr(session, "sha1_file", lambda r: "abc")
+    monkeypatch.setattr(session, "existing_digest_for_raw", lambda *a: None)
+    scope = {"book": "book-2011-tiny-rings", "label": "x"}
+    s1 = session.begin(raw, scope={**scope, "chapter": "ch1", "pages": [4, 29]})
+    s2 = session.begin(raw, scope={**scope, "chapter": "ch2", "pages": [30, 59]})
+    assert (s1, s2) == ("abc-ch1", "abc-ch2")
+    session._record_book_part(s1, session.load_session(s1), {"type": "part", "wiki_slug": "part-2011-tiny-rings-ch1-groups"})
+    assert session.abort(s2) == 0
+    text = (kb / "wiki/book-2011-tiny-rings.md").read_text(encoding="utf-8")
+    assert books.find_chapter(books.parse_chapters(text), "ch1")["status"] == "full"
+    assert "wiki/book-2011-tiny-rings.md" in session.load_session(s1)["modified_files"]

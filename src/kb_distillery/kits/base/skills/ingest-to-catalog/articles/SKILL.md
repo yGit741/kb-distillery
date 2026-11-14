@@ -36,4 +36,4 @@ distill ingest catalog raw/inbox/<file>.pdf --collection nadav-cohen
 distill ingest catalog raw/inbox/<file>.pdf --collection course-runi-rl --title "Course book"
 ```
 
-A PDF of ≥60 pages is a book: digest it scoped (`toc`, `--part`), which creates its `book-` collection.
+A PDF of ≥60 pages is a book: catalog builds its `book-` page and `## Chapters` table; digest it by chapter (`toc`, `--chapter N`).

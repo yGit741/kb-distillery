@@ -107,8 +107,9 @@ def begin(raw_rel, depth="full", scope=None):
     backup_files = []
     book = (scope or {}).get("book")
     digest = existing_digest_for_raw(raw_rel, scope["pages"] if book else None)
-    hub = book_mod.find_hub(raw_rel) if book else None
-    for rel in dict.fromkeys(r for r in (digest, hub and hub[0]) if r):
+    # the book page is backed up when finalize ticks it, not here: several chapter sessions may be
+    # open at once, and a stale copy restored on abort would undo another chapter's tick
+    for rel in [digest] if digest else []:
         shutil.copy2(os.path.join(ROOT, rel), _backup_path(sha, rel))
         backup_files.append(rel)
 
@@ -281,12 +282,16 @@ def _record_book_part(sha, session, plan):
             "url": claims.get("url"), "area": plan.get("areas_resolved") or [],
             "book_title": claims.get("book_title")}
     status = session.get("depth") or "full"
-    hub_rel, created = book_mod.record_part(session["raw"], scope["chapter"], plan["wiki_slug"], status,
-                                            meta)
-    if created:
-        session.setdefault("new_files", []).append(hub_rel)
+    hub = book_mod.find_hub(session["raw"])
+    if hub and hub[0] not in session["backup_files"]:      # rollback restores it if lint fails
+        shutil.copy2(os.path.join(ROOT, hub[0]), _backup_path(sha, hub[0]))
+        session["backup_files"].append(hub[0])
+    hub_rel, _created = book_mod.record_part(session["raw"], scope["chapter"], plan["wiki_slug"], status,
+                                             meta)
+    if hub_rel not in session.setdefault("modified_files", []):
+        session["modified_files"].append(hub_rel)
     save_session(sha, session)
-    print(f"book hub {hub_rel} {'created — write its ## Overview' if created else 'updated'}")
+    print(f"book page {hub_rel} chapter {scope['chapter']} → {plan['wiki_slug']} ({status})")
 
 
 def _record_hub_row(sha, session, plan):
