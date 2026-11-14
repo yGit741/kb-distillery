@@ -5,12 +5,14 @@
 # a manual dispatch. Branch pushes alone do not run (a branch without a PR has nothing to gate), so a push to a
 # PR branch runs CI once, not twice.
 #
-# Runners: GitHub-hosted `ubuntu-latest` only. A fork's pull request never reaches a self-hosted machine
-# (tests/ci/test_workflows.py fails on any other runner).
+# Runners: GitHub-hosted only (`ubuntu-latest`, and `macos-latest` for `install-macos`). A fork's pull
+# request never reaches a self-hosted machine (tests/ci/test_workflows.py fails on any other runner). The full
+# suite on macOS (Apple silicon and Intel) and the linux/arm64 image run nightly in platforms-nightly.yml, so PRs stay fast.
 #
 # Jobs: `lint` (the cheap gates, ~1-2 min), `tests` (pytest in 5 static shards, each with `-n auto` and a
 # per-test timeout; the shard list and the `--ignore`s of the last shard must cover every tests/ dir exactly
-# once, tests/ci/test_workflows.py checks that), `web` (web-check), `wheel`, `worker`, `docker` (builds the Dockerfile without pushing, smoke-tests the image), and `all-green`, the
+# once, tests/ci/test_workflows.py checks that), `web` (web-check), `wheel`, `worker`, `docker` (builds the Dockerfile without pushing, runs the image until its HEALTHCHECK is healthy: .github/scripts/docker-smoke.sh),
+# `install-linux` / `install-macos` (install.sh on clean runners), and `all-green`, the
 # fan-in that is green only when every other job succeeded (cancelled or skipped count as red). Branch
 # protection names `all-green` alone, so the shards need no naming there.
 #
@@ -223,9 +225,40 @@ jobs:
           docker run --rm kb-distillery:ci distill --help
           docker run --rm kb-distillery:ci python -c "from kb_distillery.config.resources import resource; assert (resource('_webapp') / 'index.html').is_file()"
           docker run --rm -e KB_AUTH_EMAIL=ci@example.com -e KB_AUTH_JWKS_URL=https://proxy.example.com/keys -e KB_AUTH_AUDIENCE=ci kb-distillery:ci distill doctor     # the image refuses to run without an identity setup, as in production
+      - name: Run the image and wait for its HEALTHCHECK (healthy with the server up, unhealthy with it down; logs on failure)
+        timeout-minutes: 6
+        run: .github/scripts/docker-smoke.sh kb-distillery:ci
+
+  install-linux:     # ./install.sh on a clean runner, as a new user runs it (Linux also stands for WSL2, which is Ubuntu)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - run: git config --global user.name octocat && git config --global user.email me@example.com
+      - name: install.sh (installs pixi, the environment and a first kb; no app launch)
+        run: ./install.sh --no-open --dir "$RUNNER_TEMP/knowledge"
+      - name: The CLI works from the installed environment
+        run: |
+          export PATH="$HOME/.pixi/bin:$PATH"
+          pixi run distill --help
+          KB_DISTILLERY_HOME="$RUNNER_TEMP/knowledge" pixi run distill doctor --kb my-kb
+
+  install-macos:     # the same on Apple silicon (one plain runner label per job: the fork-safety test rejects expressions)
+    runs-on: macos-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - run: git config --global user.name octocat && git config --global user.email me@example.com
+      - name: install.sh (installs pixi, the environment and a first kb; no app launch)
+        run: ./install.sh --no-open --dir "$RUNNER_TEMP/knowledge"
+      - name: The CLI works from the installed environment
+        run: |
+          export PATH="$HOME/.pixi/bin:$PATH"
+          pixi run distill --help
+          KB_DISTILLERY_HOME="$RUNNER_TEMP/knowledge" pixi run distill doctor --kb my-kb
 
   all-green:     # the one required check: every job above succeeded (cancelled or skipped is red too)
-    needs: [lint, tests, web, checks, wheel, worker, docker]
+    needs: [lint, tests, web, checks, wheel, worker, docker, install-linux, install-macos]
     if: always()
     runs-on: ubuntu-latest
     steps:
