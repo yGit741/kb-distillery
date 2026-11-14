@@ -631,8 +631,9 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
     const core = multiKb.current ? new Set<string>() : largestComponent(live.current.visible, live.current.neighbors);
     const pick = core.size > 1 ? (n: SimNode) => core.has(n.id) || isPile(n) : undefined;
     // the meaning map frames every page with room under it, so the lowest labels stay clear of the subject switch
-    if (useEmbedView.getState().view === "map") fg.current?.fitIn(pick ?? (() => true), 0, ms, 72, 96, MAP_FIT_BOTTOM);
-    else fg.current?.fit(pick, ms);
+    // (positions not settled yet: the usual fit, so the camera is never left unframed)
+    const mapped = useEmbedView.getState().view === "map" && !!fg.current?.fitIn(pick ?? (() => true), 0, ms, 72, 96, MAP_FIT_BOTTOM);
+    if (!mapped) fg.current?.fit(pick, ms);
     framed.current = true;
     window.setTimeout(() => {
       k.current = fg.current?.zoom() ?? 1;

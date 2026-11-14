@@ -503,9 +503,13 @@ export function EmbeddingView() {
               </CardContent>
             </Card>
           )}
-          <p className="text-sm text-muted-foreground" data-testid="embedding-in-graph">
-            Topics, Meaning map and Missing links live in the graph&apos;s pinned views.
-          </p>
+          {r.points.length ? (
+            <p className="text-sm text-muted-foreground" data-testid="embedding-in-graph">
+              Topics, Meaning map and Missing links live in the graph&apos;s pinned views.
+            </p>
+          ) : (
+            <Empty>{emptyText}</Empty>
+          )}
           {!!r.points.length && <DuplicatesCard r={r} />}
         </>
       ) : (
