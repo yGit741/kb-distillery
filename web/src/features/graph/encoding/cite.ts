@@ -56,7 +56,7 @@ export function drawCite(n: SimNode, ctx: CanvasRenderingContext2D, scale: numbe
     y: n.y,
     r: o.r,
     color: o.color,
-    background: c.background,
+    background: c.nodeCentre ?? c.background,
     font: c.font,
     ring: c.ring,
     state: o.state,
