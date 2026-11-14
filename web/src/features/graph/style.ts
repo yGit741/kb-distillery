@@ -114,7 +114,11 @@ export const RAMP_BY: ReadonlySet<ColorBy> = new Set(["depth", "degree", "eviden
 /** Continuous colourings: their legend is one gradient bar with its two ends named, never a list of swatches. */
 export const BAR_BY: ReadonlySet<ColorBy> = new Set(["evidence", "score", "recency", "added"]);
 const DAY_MS = 86_400_000;
-/** How fresh a date is, 0 (a year old or more) to 1 (this week), in the ramp's five steps; undefined without a date. */
+/**
+ * How fresh a date is, 0 (a year old or more) to 1 (this week); undefined without a date. It returns exactly the
+ * ramp's `RAMP_STEPS` values (i / 4), so a node matches a step of the legend bar without the metric snap
+ * (`rampStep`); colourDimensions.test.ts pins that.
+ */
 export function freshness(date: string | undefined | null, now: number = Date.now()): number | undefined {
   const at = date ? Date.parse(date) : NaN;
   if (Number.isNaN(at)) return undefined;

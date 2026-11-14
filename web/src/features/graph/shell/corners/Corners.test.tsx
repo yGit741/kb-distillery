@@ -490,6 +490,19 @@ describe("legends", () => {
     expect([...useGraphUi.getState().shownTypes!].sort()).toEqual([...schema.defaultVisible].sort());
   });
 
+  it("a kb with no page of a default type: hiding one of its types keeps the others drawn", async () => {
+    // every page is a company or a role; the kit's defaults (topic, idea, question) match none of them
+    const own = parseSchema({ types: [{ id: "topic", label: "Topic", layer: "concept" }, { id: "company", label: "Company", layer: "concept" }, { id: "role", label: "Role", layer: "concept" }], default_visible: ["topic"] });
+    const pages = [{ ...sampleNodes[0]!, id: "c1", type: "company" }, { ...sampleNodes[0]!, id: "r1", type: "role" }];
+    mount(fakeServer(), { nodes: pages, visible: new Set(["c1", "r1"]), schema: own, shownTypes: new Set(["topic", "company", "role"]) });
+    await userEvent.click(screen.getByRole("button", { name: /show page types/i }));
+    moveAway();
+    await userEvent.click(screen.getByRole("button", { name: /^Company/ }));
+    const shown = useGraphUi.getState().shownTypes;
+    expect(shown?.has("company")).toBe(false);
+    expect(shown?.has("role")).toBe(true);
+  });
+
   it("two clicks on the same spot open and close the colour legend, and never hide the name under the pointer", async () => {
     mount();
     const legend = screen.getByRole("group", { name: /colour legend/i });
@@ -526,7 +539,7 @@ describe("legends", () => {
     mount();
     const legend = screen.getByRole("group", { name: /colour legend/i });
     const pick = within(legend).getByRole("combobox", { name: "Color by" });
-    expect(within(legend).getByRole("button", { name: /hide the colour names/i })).toHaveTextContent("Color by");
+    expect(within(legend).getByRole("button", { name: /color by: hide the names/i })).toHaveTextContent("Color by");
     expect(within(pick).getAllByRole("option").map((o) => o.textContent)).toEqual(["theme", "type", "maturity", "recency", "source count"]);
     await userEvent.selectOptions(pick, "maturity");
     expect(useGraphUi.getState().colorBy).toBe("status");

@@ -6,7 +6,7 @@ import { StackKey } from "./layers/StackKey";
 import { LAYER_LABEL, layerGroups, type LayerGroup } from "./legendModel";
 import { QUICK_OFF, QUICK_STEPS, type QuickFilters } from "./quickFilters";
 import { predicateFn } from "./publicPredicate";
-import type { GraphSchema } from "./schema";
+import { defaultTypes, type GraphSchema } from "./schema";
 import { useGraphUi } from "./store";
 import { COLOR_TITLE, colorChannel, sizeChannel } from "./encoding/channels";
 import { LegendSwatch, LegendTitle } from "./encoding/GraphLegend";
@@ -152,7 +152,7 @@ export function Legend({ nodes, visible, schema, shownTypes, stats, quickHidden 
   }, [nodes, visible, shownTypes, ui.hiddenKeys, ui.predicate]);
   const key = useMemo(() => (by === "type" ? [] : colorChannel(by, { ramp }).rows(nodes.filter((n) => keyPool.has(n.id)))), [nodes, keyPool, by, ramp]);
   const allTypes = useMemo(() => groups.flatMap((g) => g.rows.map((r) => r.id)), [groups]);
-  const defaults = schema.defaultVisible;
+  const defaults = useMemo(() => [...defaultTypes(schema, nodes)], [schema, nodes]);
   const hullsOn = by !== "area";
   const sourcesShown = useMemo(() => nodes.some((n) => n.layer === "source" && visible.has(n.id)), [nodes, visible]);
   // two groups in the key: concepts, and sources with the collections folded in (courses, books, series are read too)

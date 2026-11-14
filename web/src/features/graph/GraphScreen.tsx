@@ -192,8 +192,8 @@ export function GraphScreen({ search, host }: { search: GraphSearch; host: Graph
   useEffect(() => {
     if (!kbsKey || !etag) return;
     const shown = useGraphUi.getState().shownTypes;
-    if (shown && schema.defaultVisible.some((t) => !shown.has(t)))
-      useGraphUi.setState({ shownTypes: new Set([...shown, ...schema.defaultVisible]) });
+    const defaults = [...defaultTypes(schema, model?.nodes ?? [])];
+    if (shown && defaults.some((t) => !shown.has(t))) useGraphUi.setState({ shownTypes: new Set([...shown, ...defaults]) });
   }, [kbsKey, etag]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (noneShown)

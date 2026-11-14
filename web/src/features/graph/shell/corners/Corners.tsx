@@ -13,7 +13,7 @@ import { colorChannel, COLOR_TITLE } from "../../encoding/channels";
 import type { ToolHost } from "../../hostContext";
 import { layerGroups, type LayerGroup, type TypeRow } from "../../legendModel";
 import { predicateFn } from "../../publicPredicate";
-import type { GraphSchema } from "../../schema";
+import { defaultTypes, type GraphSchema } from "../../schema";
 import { useGraphUi } from "../../store";
 import { useFavorites } from "../../favorites/store";
 import { BAR_BY, effectiveColorBy, neutralRamp, RAMP_BY, RAMP_MEANING, RAMP_STEPS } from "../../style";
@@ -565,7 +565,7 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
         areaHeight={areaHeight}
         thinkCards={Math.max(1, thinkCards.length)}
       />
-      <TypesCard concepts={concepts} sources={sources} onToggle={(types, on) => ui.setLayerTypes(types, on, allTypes, schema.defaultVisible)} onSpot={spot} />
+      <TypesCard concepts={concepts} sources={sources} onToggle={(types, on) => ui.setLayerTypes(types, on, allTypes, [...defaultTypes(schema, nodes)])} onSpot={spot} />
     </div>
   );
 }

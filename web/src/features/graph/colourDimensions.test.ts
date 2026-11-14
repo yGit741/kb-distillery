@@ -48,3 +48,15 @@ describe("recency and date added", () => {
     expect(colorOf(a!, "format")).toBe(colorOf(a!, "type"));
   });
 });
+
+describe("the freshness steps are the legend bar's steps", () => {
+  it("every value freshness returns is one of the ramp's RAMP_STEPS stops", async () => {
+    const { RAMP_STEPS, rampStep } = await import("./style");
+    const now = Date.parse("2026-11-14T00:00:00Z");
+    for (const d of ["2026-11-12", "2026-10-20", "2026-09-01", "2026-01-01", "2024-01-01"]) {
+      const t = freshness(d, now)!;
+      expect(rampStep(t)).toBe(t);
+      expect(Number.isInteger(t * (RAMP_STEPS - 1))).toBe(true);
+    }
+  });
+});

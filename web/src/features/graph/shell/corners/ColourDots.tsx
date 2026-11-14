@@ -91,7 +91,7 @@ export function ColourDots({ rows, title, by, dimensions, onPick, bar, hidden, t
         className="flex items-center justify-center gap-0.5 self-stretch overflow-hidden whitespace-nowrap text-[10px] font-medium uppercase tracking-wide text-muted-foreground transition-[height,opacity]"
         style={{ height: open ? 22 : 0, opacity: open ? 1 : 0, transitionDuration: `${MS}ms` }}
       >
-        <button type="button" tabIndex={open ? 0 : -1} aria-label="Hide the colour names" aria-expanded={open} title="Hide the names" className={cn("pointer-events-auto rounded px-1 uppercase", RING)} onClick={() => toggle("legend")}>
+        <button type="button" tabIndex={open ? 0 : -1} aria-label="Color by: hide the names" aria-expanded={open} title="Hide the names" className={cn("pointer-events-auto rounded px-1 uppercase", RING)} onClick={() => toggle("legend")}>
           Color by
         </button>
         <select
