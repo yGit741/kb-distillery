@@ -912,6 +912,95 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/marks/{sha12}/{page}/{mark_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One unsure-formula mark: its record, crop url and resolution */
+        get: operations["get_mark_api_marks__sha12___page___mark_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/marks/{sha12}/{page}/{mark_id}/apply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Approve a fix: replace the formula the mark follows and remove the mark (one knowledge step) */
+        post: operations["apply_api_marks__sha12___page___mark_id__apply_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/marks/{sha12}/{page}/{mark_id}/crop": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The crop of the original page the mark sits in (PNG) */
+        get: operations["get_crop_api_marks__sha12___page___mark_id__crop_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/marks/{sha12}/{page}/{mark_id}/fix": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Fix me: ask a model for the corrected formula (nothing is saved)
+         * @description One `kb_distillery.llm` request with the crop image. Backend: `backend`, else $KB_LLM_BACKEND, else subscription;
+         *     all three work, but `batch` is a poor fit for an interactive call: it can take minutes and gives up after 10.
+         */
+        post: operations["fix_api_marks__sha12___page___mark_id__fix_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/marks/{sha12}/{page}/{mark_id}/resolve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Correct as is: remove the mark link from the page, keep the formula (one knowledge step) */
+        post: operations["resolve_api_marks__sha12___page___mark_id__resolve_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/ops": {
         parameters: {
             query?: never;
@@ -4671,6 +4760,135 @@ export interface components {
             t: "linkedFromType";
             /** Type */
             type: string;
+        };
+        /** MarkApplyRequest */
+        MarkApplyRequest: {
+            /** Expected Current */
+            expected_current?: string | null;
+            /** Replacement */
+            replacement: string;
+            /** Slug */
+            slug: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /**
+         * MarkDetail
+         * @description One mark record from the parsed store: `level` `!` (one voice decided) or `!!` (unsettled), `reason`, `text` (the
+         *     formula now), `was` (what a fix replaced), `other` (the parser's reading). `crop_url` is null without a crop file.
+         */
+        MarkDetail: {
+            /** Crop Url */
+            crop_url?: string | null;
+            /**
+             * Default Backend
+             * @default subscription
+             */
+            default_backend: string;
+            /** Id */
+            id: unknown;
+            /** Level */
+            level: string;
+            /** Other */
+            other?: string | null;
+            /** Page */
+            page: string;
+            /**
+             * Read Only
+             * @default false
+             */
+            read_only: boolean;
+            /**
+             * Reason
+             * @default
+             */
+            reason: string;
+            resolution?: components["schemas"]["MarkResolution"] | null;
+            /** Sha */
+            sha: string;
+            /**
+             * Text
+             * @default
+             */
+            text: string;
+            /** Was */
+            was?: string | null;
+        } & {
+            [key: string]: unknown;
+        };
+        /** MarkFixReply */
+        MarkFixReply: {
+            /**
+             * Backend
+             * @default
+             */
+            backend: string;
+            /**
+             * Current
+             * @default
+             */
+            current: string;
+            /** Replacement */
+            replacement: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** MarkFixRequest */
+        MarkFixRequest: {
+            /** Backend */
+            backend?: ("subscription" | "api" | "batch") | null;
+            /** Instruction */
+            instruction: string;
+            /** Slug */
+            slug: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** MarkResolution */
+        MarkResolution: {
+            /** Action */
+            action: string;
+            /**
+             * Slug
+             * @default
+             */
+            slug: string;
+            /**
+             * Text
+             * @default
+             */
+            text: string;
+            /**
+             * Time
+             * @default
+             */
+            time: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** MarkResolveRequest */
+        MarkResolveRequest: {
+            /** Expected Current */
+            expected_current?: string | null;
+            /** Slug */
+            slug: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** MarkStepResult */
+        MarkStepResult: {
+            /** Commit */
+            commit?: string | null;
+            /** Ok */
+            ok: boolean;
+            /** Slug */
+            slug: string;
+            /** Version */
+            version?: string | null;
+            /** Warning */
+            warning?: string | null;
+        } & {
+            [key: string]: unknown;
         };
         /** MentionHit */
         MentionHit: {
@@ -9456,6 +9674,323 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
                 };
+            };
+        };
+    };
+    get_mark_api_marks__sha12___page___mark_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sha12: string;
+                page: string;
+                mark_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MarkDetail"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Method Not Allowed */
+            405: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bad Gateway */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    apply_api_marks__sha12___page___mark_id__apply_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sha12: string;
+                page: string;
+                mark_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MarkApplyRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MarkStepResult"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Method Not Allowed */
+            405: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bad Gateway */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    get_crop_api_marks__sha12___page___mark_id__crop_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sha12: string;
+                page: string;
+                mark_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                    "image/png": unknown;
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    fix_api_marks__sha12___page___mark_id__fix_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sha12: string;
+                page: string;
+                mark_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MarkFixRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MarkFixReply"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Method Not Allowed */
+            405: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bad Gateway */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    resolve_api_marks__sha12___page___mark_id__resolve_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sha12: string;
+                page: string;
+                mark_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MarkResolveRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MarkStepResult"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Method Not Allowed */
+            405: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bad Gateway */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

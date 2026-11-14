@@ -138,6 +138,13 @@
 .kb-prose .kb-src:hover, .kb-prose .kb-src:focus-visible { color: var(--primary); }
 .kb-prose img { max-width: 100%; height: auto; }
 .kb-prose .katex-display { overflow-x: auto; overflow-y: hidden; }
+/* a doubt mark after a display formula sits at the right of the equation, like an equation tag */
+.kb-prose .kb-doubt-display { position: relative; padding-right: 2rem; }
+.kb-prose .kb-doubt-display > .kb-doubt-tag { position: absolute; right: 0; top: 50%; transform: translateY(-50%); margin: 0; }
+@media (max-width: 640px) {
+  .kb-prose .kb-doubt-display { padding-right: 0; }
+  .kb-prose .kb-doubt-display > .kb-doubt-tag { position: static; transform: none; text-align: right; }
+}
 .hljs-comment, .hljs-quote { color: var(--muted-foreground); font-style: italic; }
 .hljs-keyword, .hljs-selector-tag, .hljs-literal, .hljs-built_in { color: var(--primary); }
 .hljs-string, .hljs-number, .hljs-title, .hljs-attr { color: var(--ok); }

@@ -20,6 +20,12 @@ function message(error: unknown, fallback: string): string {
   return fallback;
 }
 
+/** `<sha12>/p0188/3` (a mark link's target after `mark:`) as the route's path params. */
+const markPath = (ref: string) => {
+  const [sha12 = "", page = "", id = ""] = ref.split("/");
+  return { sha12, page, mark_id: Number(id) };
+};
+
 const encodePath = (p: string) => p.split("/").map(encodeURIComponent).join("/");
 
 /** Live backend, typed from the generated OpenAPI `paths`. Paths already start with /api. */
@@ -216,6 +222,26 @@ export function createHttpDataSource(fetchImpl: Fetch = (...a) => fetch(...a), b
     },
     fixPageFlags: (slug) =>
       run(() => client.POST("/api/pages/{slug}/flags/fix", { params: { path: { slug } }, body: {} }), `/api/pages/${slug}/flags/fix`),
+    getMark: (ref) => {
+      const p = markPath(ref);
+      return run(() => client.GET("/api/marks/{sha12}/{page}/{mark_id}", { params: { path: p } }), `/api/marks/${ref}`);
+    },
+    resolveMark: (ref, slug, expectedCurrent) =>
+      run(
+        () => client.POST("/api/marks/{sha12}/{page}/{mark_id}/resolve", { params: { path: markPath(ref) }, body: { slug, expected_current: expectedCurrent ?? null } }),
+        `/api/marks/${ref}/resolve`,
+      ),
+    fixMark: (ref, body) =>
+      run(() => client.POST("/api/marks/{sha12}/{page}/{mark_id}/fix", { params: { path: markPath(ref) }, body }), `/api/marks/${ref}/fix`),
+    applyMark: (ref, slug, replacement, expectedCurrent) =>
+      run(
+        () =>
+          client.POST("/api/marks/{sha12}/{page}/{mark_id}/apply", {
+            params: { path: markPath(ref) },
+            body: { slug, replacement, expected_current: expectedCurrent ?? null },
+          }),
+        `/api/marks/${ref}/apply`,
+      ),
     searchMentions: async (q) =>
       (await run(() => client.GET("/api/pages/mentions", { params: { query: { q } } }), "/api/pages/mentions")).pages,
     getPageSource: async (slug) => {

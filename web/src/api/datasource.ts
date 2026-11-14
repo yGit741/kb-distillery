@@ -114,6 +114,14 @@ export interface DataSource {
   deletePageFlag(slug: string, id: string): Promise<void>;
   /** One proposal that addresses every open flag; the flags are resolved by it. */
   fixPageFlags(slug: string): Promise<T.PageFlagFixReply>;
+  /** Unsure-formula marks (`[!](mark:<sha12>/p0188/3)`, flag parsed-pdf): `ref` is the part after `mark:`. */
+  getMark(ref: string): Promise<T.MarkDetail>;
+  /** "Correct as is": the mark link leaves the page, the formula stays (one knowledge step). */
+  resolveMark(ref: string, slug: string, expectedCurrent?: string): Promise<T.MarkStepResult>;
+  /** "Fix me": the model's corrected formula; nothing is saved. */
+  fixMark(ref: string, body: T.MarkFixRequest): Promise<T.MarkFixReply>;
+  /** Approve a fix: the formula is replaced and the mark leaves the page (one knowledge step). */
+  applyMark(ref: string, slug: string, replacement: string, expectedCurrent?: string): Promise<T.MarkStepResult>;
   /** Pages for the @mention picker. */
   searchMentions(q: string): Promise<T.MentionHit[]>;
   /** The page file as stored (frontmatter and body); the OKF export copies it. */

@@ -1,5 +1,6 @@
 import { createMemoryHistory, createRootRoute, createRoute, createRouter, RouterProvider } from "@tanstack/react-router";
 import { render, screen, waitFor } from "@testing-library/react";
+import { withFlag } from "@/flags/testing";
 import { Markdown, type MarkdownProps } from "./Markdown";
 
 async function renderMd(source: string, props: Partial<MarkdownProps> = {}) {
@@ -98,5 +99,49 @@ describe("Markdown", () => {
     const ok = links.find((a) => a.textContent === "ok")!;
     expect(ok).toHaveAttribute("href", "https://example.org");
     expect(ok).toHaveAttribute("rel", "noopener noreferrer");
+  });
+});
+
+describe("Markdown unsure-formula marks", () => {
+  const src = "Rank $r = n - 1$ [!!](mark:0123456789ab/p0188/3) here.";
+  const doubt = { render: (ref: string, level: "!" | "!!") => <button type="button" data-ref={ref}>{level}</button> };
+
+  it("draws the doubt hook after the formula when parsed-pdf is on", async () => {
+    await withFlag("parsed-pdf", true, async () => {
+      const { container } = await renderMd(src, { doubt });
+      expect(container.querySelector(".katex")).not.toBeNull();
+      const b = container.querySelector("button[data-ref]");
+      expect(b?.getAttribute("data-ref")).toBe("0123456789ab/p0188/3");
+      expect(b?.textContent).toBe("!!");
+    });
+  });
+
+  it("is plain small text with no button when parsed-pdf is off", async () => {
+    await withFlag("parsed-pdf", false, async () => {
+      const { container } = await renderMd(src, { doubt });
+      expect(container.querySelector("button")).toBeNull();
+      expect(container.querySelector("[data-doubt]")?.textContent).toBe("!!");
+      expect(container.querySelector("a")).toBeNull();
+    });
+  });
+
+  it("drops a mark link whose target is not a mark ref", async () => {
+    await withFlag("parsed-pdf", true, async () => {
+      const { container } = await renderMd("x [!](mark:../../etc/passwd)", { doubt });
+      expect(container.querySelector("button")).toBeNull();
+    });
+  });
+});
+
+describe("Markdown doubt tag on display formulas", () => {
+  it("moves a mark on the line after $$…$$ into the equation's tag", async () => {
+    await withFlag("parsed-pdf", true, async () => {
+      const { container } = await renderMd("$$\nx = 1\n$$\n[!](mark:0123456789ab/p0188/4)\n\nAfter.", {
+        doubt: { render: (ref) => <button type="button" data-ref={ref}>!</button> },
+      });
+      const wrap = container.querySelector(".kb-doubt-display");
+      expect(wrap?.querySelector(".katex-display")).not.toBeNull();
+      expect(wrap?.querySelector(".kb-doubt-tag button[data-ref]")).not.toBeNull();
+    });
   });
 });
