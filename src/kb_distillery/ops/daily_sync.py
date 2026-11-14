@@ -6,9 +6,9 @@ commits human think/ edits as kb(think), commits any labelled leftovers when no
 session is open, then pushes main with its snapshot tags. Tooling ships via src/kb_distillery/git/ship.py.
 Shared git helpers (run_git, changed_paths, has_open_sessions) live here.
 
-    python3 -m kb_distillery.ops.daily_sync
-    python3 -m kb_distillery.ops.daily_sync --dry-run
-    python3 -m kb_distillery.ops.daily_sync --no-push
+    python3 -m kb_distillery.ops.nightly              (pixi run daily-sync; ops.nightly explains why not this module)
+    python3 -m kb_distillery.ops.nightly --dry-run
+    python3 -m kb_distillery.ops.nightly --no-push
 """
 import argparse
 import datetime

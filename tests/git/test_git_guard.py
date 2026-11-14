@@ -81,6 +81,8 @@ class ViolationTests(unittest.TestCase):
         "pixi run ship -- pr --notes ~/.config/kb-agents/key.pem",
     ]
     ALLOWED = [
+        "python3 -m kb_distillery.ops.nightly --dry-run",
+        "python3 src/kb_distillery/ops/nightly.py --dry-run",
         "git status",
         "git log --oneline -5",
         "git diff main",

@@ -290,3 +290,28 @@ def test_autofix_never_runs_outside_the_real_nightly(tmp_path, monkeypatch, nigh
     calls = []
     assert core.nightly_autofix(str(tmp_path), _run(), run=lambda cmd, **kw: calls.append(cmd)) is None
     assert calls == []
+
+
+def test_issue_gh_refuses_inside_tests(tmp_path):
+    cp = issue.gh(["issue", "list"], str(tmp_path))
+    assert cp.returncode == 1 and "tests" in cp.stderr
+
+
+def test_seen_again_comment_at_most_once_a_day(tmp_path):
+    f = detect.failures(_run())[0]
+    kb = _write_runs(tmp_path, _run())
+    gh = FakeGh(issues=[{"number": 7, "body": issue.MARK.format(f.signature)}])
+    cli.nightly(kb, root=str(tmp_path), run_gh=gh)
+    cli.nightly(kb, root=str(tmp_path), run_gh=gh, run=_run(started="2026-11-13T23:30:00"))
+    assert sum(c[:2] == ["issue", "comment"] for c in gh.calls) == 1
+    cli.nightly(kb, root=str(tmp_path), run_gh=gh, run=_run(started="2026-11-14T22:00:00"))
+    assert sum(c[:2] == ["issue", "comment"] for c in gh.calls) == 2
+
+
+def test_nightly_entry_runs_without_a_runtime_warning():
+    import subprocess as sp
+    import sys
+    out = sp.run([sys.executable, "-W", "error::RuntimeWarning", "-m", "kb_distillery.ops.nightly", "--help"],
+                 capture_output=True, text=True, timeout=120)
+    assert out.returncode == 0, out.stderr[-600:]
+    assert "RuntimeWarning" not in out.stderr
