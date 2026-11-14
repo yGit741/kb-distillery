@@ -50,7 +50,8 @@ distill lint
 
 1. **Target and original.** Take the kb the owner named (`/thought-ingest yonatan-thesis …`). Name the thought
    `capture-<YYYY-MM-DD>-<slug>` (date it was written, short kebab slug of its subject) and check the name is free with
-   `distill ingest resolve`. A pasted image is first saved to a scratch file of that name (keep its extension).
+   `distill ingest resolve`. `scrap` keeps the file's own name, so a pasted image, and a path the owner gives under
+   another name, is first copied to a scratch file of that name (keep its extension).
 2. **Extract.** If you can see the image in this session, transcribe it yourself, carefully: text as Markdown, maths as
    LaTeX (`$\hat f(i)=\langle f,\phi_i\rangle$`), the owner's numbering and emphasis kept. A file you cannot see goes
    through `distill llm ask … --image <file> --model opus` (Billing below). List every reading you are unsure of
@@ -85,7 +86,8 @@ distill lint
 
 Extraction in-session costs no extra call. A file extracted outside the session goes through `distill llm ask --image`,
 the one LLM door: `--backend subscription` (default, your `claude login`), `api` (Anthropic key, per token) or `batch`
-(half price, slow: for a pile of old pages, not one fresh thought). Model `opus`: a misread hat or conjugate costs more
+(half price, slow: for a pile of old pages, not one fresh thought). Images need the `claude` provider; `openai` and
+`gemini` refuse them. Model `opus`: a misread hat or conjugate costs more
 than the call.
 
 ## Output

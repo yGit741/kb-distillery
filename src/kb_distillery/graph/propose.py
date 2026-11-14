@@ -38,7 +38,7 @@ KINDS = ("extends", "uses", "contradicts", "example-of", "open-problem-in", "add
 EASY_KINDS = frozenset({"example-of", "addresses", "open-problem-in"})
 SYMMETRIC = frozenset({"contradicts"})
 NOTE_REQUIRED = frozenset({"contradicts"})
-PAPER_LIKE = frozenset({"paper", "blog-post", "article", "part", "lecture", "video"})
+PAPER_LIKE = frozenset({"paper", "blog-post", "article", "part", "lecture", "video", "capture"})
 WORK = PAPER_LIKE | {"idea"}
 GATES = {           # kind → (from types, to types); a declared kind without a gate takes any two distinct pages
     "extends": (WORK, WORK),

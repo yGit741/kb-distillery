@@ -43,6 +43,7 @@ export const SOURCE_TYPES = [
   { type: "article", label: "Article" },
   { type: "blog-post", label: "Blog post" },
   { type: "ai-chat", label: "Chat" },
+  { type: "capture", label: "Capture" },
 ] as const;
 
 export const DEPTHS: readonly { depth: Depth; label: string; text: string }[] = [

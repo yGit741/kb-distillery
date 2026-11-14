@@ -19,6 +19,7 @@ export const TYPE_COLORS: Record<PageType, string> = {
   mail: "#73daca",
   "ai-chat": "#ff9e64",
   "blog-post": "#ff79c6",
+  capture: "#b4f9f8",
   // collection
   book: "#d16bd8",
   notebook: "#c099ff",

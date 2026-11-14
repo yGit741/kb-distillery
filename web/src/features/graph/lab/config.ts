@@ -198,6 +198,7 @@ export const TYPE_RANK: Readonly<Record<string, number>> = {
   "blog-post": 0.25,
   article: 0.2,
   "ai-chat": 0.2,
+  capture: 0.3,
 };
 
 /** How much a source counts as evidence by how deeply it was read (easy is a knob). */

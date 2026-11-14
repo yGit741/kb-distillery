@@ -3,7 +3,7 @@
  * Every page has a `layer` and a `type` inside it; sources also carry a `depth`.
  */
 export const LAYER_TYPES = {
-  source: ["paper", "part", "lecture", "article", "video", "mail", "ai-chat", "blog-post"],
+  source: ["paper", "part", "lecture", "article", "video", "mail", "ai-chat", "blog-post", "capture"],
   collection: ["book", "notebook", "course", "series", "scope"], // scope is aux
   concept: ["idea", "topic", "question", "person", "distilled-think"], // distilled-think is aux
 } as const;

@@ -126,6 +126,7 @@ const GLYPH: Readonly<Record<string, SourceGlyph>> = {
   pdf: "paper",
   "ai-chat": "sparkle",
   chat: "sparkle",
+  capture: "handwritten",
   mail: "mail",
   email: "mail",
   conversation: "mail",
