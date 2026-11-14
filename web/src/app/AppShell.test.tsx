@@ -93,3 +93,24 @@ describe("AppShell", () => {
     resetEmbed();
   });
 });
+
+describe("AppShell, flag ui.data-system-split", () => {
+  it("on: the bar is Home, Knowledge, Ingest, System; Knowledge has its own tab row on its screens", () => withFlag("ui.data-system-split", true, () => withFlag("ui.ingest", true, async () => {
+    const router = createAppRouter(createMemoryHistory({ initialEntries: ["/app/system"] }));
+    render(<App source={ds} router={router} />);
+    const nav = await screen.findByRole("navigation", { name: "Main" });
+    expect([...nav.querySelectorAll("a")].map((a) => a.textContent)).toEqual(["Home", "Knowledge", "Ingest", "System"]);
+    expect(screen.queryByRole("tablist", { name: "Knowledge sections" })).toBeNull(); // only under Knowledge
+    await router.navigate({ to: "/think" as "/" });
+    const tabs = await screen.findByRole("tablist", { name: "Knowledge sections" });
+    expect([...tabs.querySelectorAll("a")].map((a) => a.textContent)).toEqual(["Graph", "Pages", "Think"]);
+  })));
+
+  it("off: no Knowledge item and no Knowledge tab row", () => withFlag("ui.data-system-split", false, async () => {
+    const router = createAppRouter(createMemoryHistory({ initialEntries: ["/app/think"] }));
+    render(<App source={ds} router={router} />);
+    const nav = await screen.findByRole("navigation", { name: "Main" });
+    expect([...nav.querySelectorAll("a")].map((a) => a.textContent)).not.toContain("Knowledge");
+    expect(screen.queryByRole("tablist", { name: "Knowledge sections" })).toBeNull();
+  }));
+});

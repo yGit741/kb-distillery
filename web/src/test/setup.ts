@@ -1,6 +1,7 @@
 import "@testing-library/jest-dom/vitest";
 import { cleanup, configure } from "@testing-library/react";
 import { afterEach } from "vitest";
+import { pinFlag } from "@/flags/testing";
 
 afterEach(() => cleanup());
 
@@ -44,3 +45,7 @@ for (const name of ["localStorage", "sessionStorage"] as const) {
     Object.defineProperty(window, name, { value: s, configurable: true, writable: true });
   }
 }
+
+// Flag ui.data-system-split is on in the local app, so it would reshape every screen test. Suites keep the layout they
+// were written against; the split's own tests switch it on with withFlag("ui.data-system-split", true, …).
+pinFlag("ui.data-system-split", false);

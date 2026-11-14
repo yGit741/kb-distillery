@@ -38,11 +38,11 @@ export function resolveConcept(v: Vault, wanted: string | undefined, seed: numbe
 /**
  * Home is one intro card (approved mock v16): title and byline, and the inner card that picks a concept and shows its ego graph and the pipeline of one source it relies on.
  */
-export function HomeScreen({ host, concept, startForced }: { host: HomeHost; concept?: string; startForced?: boolean }) {
+export function HomeScreen({ host, concept, startForced, glossary }: { host: HomeHost; concept?: string; startForced?: boolean; glossary?: boolean }) {
   return (
     <>
       <StartCard forced={startForced} onDismissed={host.closeStart} />
-      <MapCard host={host} concept={concept} />
+      <MapCard host={host} concept={concept} intro={glossary ? { ...HOME_INTRO, glossary: true } : HOME_INTRO} />
     </>
   );
 }

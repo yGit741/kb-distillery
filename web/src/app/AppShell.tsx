@@ -12,6 +12,7 @@ import { SearchOverlay } from "@/features/graph/shell/SearchOverlay";
 import { ShareChip } from "./ShareChip";
 import { ToursMenu } from "./ToursMenu";
 import { KbBadge } from "./KbBadge";
+import { inKnowledge, KNOWLEDGE_TABS, SPLIT_TOP, useDataSystemSplit } from "./knowledgeNav";
 import { ReadOnlyBanner } from "./ReadOnlyBanner";
 import { useEmbed } from "./embed";
 import { useHeaderFolded } from "./headerFold";
@@ -26,6 +27,54 @@ const QuickCapture = lazy(() => import("@/features/think/QuickCapture"));
 // The Cmd-J quick ask (flag `agent-mode`) is lazy for the same reason.
 const QuickAsk = lazy(() => import("@/features/chat/QuickAsk"));
 
+const NAV_LINK = "shrink-0 rounded-md px-2.5 py-1.5 text-sm text-muted-foreground hover:bg-accent hover:text-accent-foreground [&.active]:bg-accent-soft [&.active]:text-primary";
+
+/**
+ * Flag ui.data-system-split: four top items. Knowledge is active on Graph, Pages and Think, which
+ * get their own tab row under the bar (KnowledgeTabs). Chat lives in the graph's spark panel.
+ */
+function SplitNav({ pathname }: { pathname: string }) {
+  const knowledge = inKnowledge(pathname);
+  const top = (id: string) => ROUTES.find((r) => r.id === id && routeOffered(r));
+  const item = (id: string) => {
+    const r = top(id);
+    return r ? (
+      <Link key={r.id} to={r.path} activeOptions={{ exact: r.path === "/", includeSearch: false }} className={NAV_LINK}>
+        {r.label}
+      </Link>
+    ) : null;
+  };
+  return (
+    <>
+      {item("home")}
+      <Link to={"/graph" as "/"} data-status={knowledge ? "active" : undefined} className={cn(NAV_LINK, knowledge && "active")} activeOptions={{ includeSearch: false }}>
+        Knowledge
+      </Link>
+      {SPLIT_TOP.filter((id) => id !== "home").map(item)}
+    </>
+  );
+}
+
+/** Knowledge's tab row (flag ui.data-system-split), under the bar on Graph, Pages and Think, as Ingest and System have theirs. */
+function KnowledgeTabs() {
+  const offered = (id: string) => ROUTES.some((r) => r.id === id && routeOffered(r));
+  return (
+    <div className="mb-4 flex gap-1 border-b" role="tablist" aria-label="Knowledge sections">
+      {KNOWLEDGE_TABS.filter((t) => offered(t.id)).map((t) => (
+        <Link
+          key={t.id}
+          to={t.path as "/"}
+          role="tab"
+          activeOptions={{ includeSearch: false }}
+          className="-mb-px border-b-2 border-transparent px-3 py-2 text-sm text-muted-foreground hover:text-foreground [&.active]:border-primary [&.active]:text-foreground"
+        >
+          {t.label}
+        </Link>
+      ))}
+    </div>
+  );
+}
+
 /** One top nav, ONE theme toggle, ONE command palette, one share chip. Screens render in <Outlet/>. */
 export function AppShell() {
   const { theme, toggle } = useTheme();
@@ -33,7 +82,10 @@ export function AppShell() {
   const agentMode = useFlag("agent-mode");
   useFlag("ui.ingest"); // re-render the nav when a runtime flag that adds a tab arrives
   // flag views-panel: on the graph the dark mode switch lives in the pinned panel (Settings); other screens keep it here
-  const onGraph = useRouterState({ select: (s) => s.location.pathname }) === "/graph";
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const onGraph = pathname === "/graph";
+  // flag ui.data-system-split: the bar is Home, Knowledge (Graph, Pages, Think), Ingest, System
+  const split = useDataSystemSplit();
   // the panel only renders its switch with a server behind it (as Corners does): share and static builds keep the header one
   const panelHasSwitch = useDataSource().kind === "http" && !IS_SHARE;
   const themeInPanel = useFlag("views-panel") && useFlag("graph-shell") && onGraph && panelHasSwitch;
@@ -50,12 +102,12 @@ export function AppShell() {
       >
         <KbBadge />
         <nav aria-label="Main" className="flex min-w-0 shrink items-center gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {ROUTES.filter((r) => r.nav && routeOffered(r)).map((r) => (
+          {split ? <SplitNav pathname={pathname} /> : ROUTES.filter((r) => r.nav && routeOffered(r)).map((r) => (
             <Link
               key={r.id}
               to={r.path}
               activeOptions={{ exact: r.path === "/", includeSearch: false }}
-              className="shrink-0 rounded-md px-2.5 py-1.5 text-sm text-muted-foreground hover:bg-accent hover:text-accent-foreground [&.active]:bg-accent-soft [&.active]:text-primary"
+              className={NAV_LINK}
             >
               {r.label}
             </Link>
@@ -78,6 +130,7 @@ export function AppShell() {
       )}
       {!embed && <ReadOnlyBanner />}
       <main className={embed ? "min-w-0 flex-1" : "mx-auto w-full min-w-0 max-w-6xl flex-1 px-4 py-4"}>
+        {split && !embed && inKnowledge(pathname) && <KnowledgeTabs />}
         <Outlet />
       </main>
       <ShareFooter />
