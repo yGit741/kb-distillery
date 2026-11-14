@@ -13,8 +13,8 @@
 # per-test timeout; the shard list and the `--ignore`s of the last shard must cover every tests/ dir exactly
 # once, tests/ci/test_workflows.py checks that), `web` (web-check), `wheel`, `worker`, `docker` (builds the Dockerfile without pushing, runs the image until its HEALTHCHECK is healthy: .github/scripts/docker-smoke.sh),
 # `install-linux` / `install-macos` (install.sh on clean runners), and `all-green`, the
-# fan-in that is green only when every other job succeeded (cancelled or skipped count as red). Branch
-# protection names `all-green` alone, so the shards need no naming there.
+# fan-in that is green only when every other job succeeded (cancelled or skipped count as red, with the one
+# exception below). Branch protection names `all-green` alone, so the shards need no naming there.
 #
 # `docker` and `install-macos` are the slow platform jobs: on a pull request they run only when it touches their
 # files (the `changes` job decides: the Dockerfile and its smoke script, install.sh, the dependency files, this
