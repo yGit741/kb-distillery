@@ -106,6 +106,7 @@ export type DigestBackendOption = S["BackendOption"];
 export type CitationGraph = S["CitationGraph"];
 export type PipelineSnapshot = S["PipelineSnapshot"];
 export type HealthSnapshot = S["HealthSnapshot"];
+export type KnowledgeHealth = S["KnowledgeHealth"];
 export type EmbeddingReport = S["EmbeddingReport"];
 export type EmbeddingPairs = S["EmbeddingPairs"];
 

@@ -8,6 +8,8 @@ export interface DataSource {
   getLifecycle(): Promise<T.LifecycleSnapshot>;
   getShareStatus(): Promise<T.ShareStatus>;
   getHealth(): Promise<T.HealthSnapshot>;
+  /** Knowledge health: anomaly groups over the wiki graph, computed per request. */
+  getKnowledgeHealth(opts?: { minJaccard?: number; limit?: number }): Promise<T.KnowledgeHealth>;
   /** Embedding health (store vs cards), near-duplicates, clusters by meaning and the 2D map points. */
   getEmbedding(): Promise<T.EmbeddingReport>;
   /** Random page pairs whose cosine is in [lo, hi); `seed` picks which ones. */

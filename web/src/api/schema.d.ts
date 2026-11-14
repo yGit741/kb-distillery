@@ -655,6 +655,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/health/knowledge": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Knowledge health: anomaly groups */
+        get: operations["get_knowledge_health_api_health_knowledge_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/inbox/files": {
         parameters: {
             query?: never;
@@ -3580,6 +3597,56 @@ export interface components {
             /** Type */
             type: string;
         };
+        /** HealthPage */
+        HealthPage: {
+            /**
+             * Degree
+             * @default 0
+             */
+            degree: number;
+            /** Depth */
+            depth?: string | null;
+            /** Id */
+            id: string;
+            /**
+             * Layer
+             * @default
+             */
+            layer: string;
+            /** Source */
+            source?: string | null;
+            /**
+             * Title
+             * @default
+             */
+            title: string;
+            /**
+             * Type
+             * @default
+             */
+            type: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** HealthPair */
+        HealthPair: {
+            /** A */
+            a: string;
+            /**
+             * A Title
+             * @default
+             */
+            a_title: string;
+            /** B */
+            b: string;
+            /**
+             * B Title
+             * @default
+             */
+            b_title: string;
+        } & {
+            [key: string]: unknown;
+        };
         /** HealthSnapshot */
         HealthSnapshot: {
             /** Compression Pct */
@@ -4322,6 +4389,17 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
+        /** KnowledgeHealth */
+        KnowledgeHealth: {
+            hubs: components["schemas"]["PageGroup"];
+            missing_links: components["schemas"]["MissingLinkGroup"];
+            orphans: components["schemas"]["PageGroup"];
+            single_source_concepts: components["schemas"]["PageGroup"];
+            undigested_sources: components["schemas"]["PageGroup"];
+            unsupported_links: components["schemas"]["PairGroup"];
+        } & {
+            [key: string]: unknown;
+        };
         /** Layer */
         Layer: {
             /** Id */
@@ -4638,6 +4716,38 @@ export interface components {
             survivor: string;
             /** Title */
             title?: string | null;
+        } & {
+            [key: string]: unknown;
+        };
+        /** MissingLink */
+        MissingLink: {
+            /** A */
+            a: string;
+            /**
+             * A Title
+             * @default
+             */
+            a_title: string;
+            /** B */
+            b: string;
+            /**
+             * B Title
+             * @default
+             */
+            b_title: string;
+            /** Score */
+            score: number;
+            /** Shared */
+            shared: string[];
+        } & {
+            [key: string]: unknown;
+        };
+        /** MissingLinkGroup */
+        MissingLinkGroup: {
+            /** Count */
+            count: number;
+            /** Items */
+            items: components["schemas"]["MissingLink"][];
         } & {
             [key: string]: unknown;
         };
@@ -5011,6 +5121,15 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
+        /** PageGroup */
+        PageGroup: {
+            /** Count */
+            count: number;
+            /** Items */
+            items: components["schemas"]["HealthPage"][];
+        } & {
+            [key: string]: unknown;
+        };
         /** PageHistory */
         PageHistory: {
             /** Slug */
@@ -5151,6 +5270,15 @@ export interface components {
             short: string;
             /** Subject */
             subject: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** PairGroup */
+        PairGroup: {
+            /** Count */
+            count: number;
+            /** Items */
+            items: components["schemas"]["HealthPair"][];
         } & {
             [key: string]: unknown;
         };
@@ -8742,6 +8870,40 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HealthSnapshot"];
+                };
+            };
+        };
+    };
+    get_knowledge_health_api_health_knowledge_get: {
+        parameters: {
+            query?: {
+                /** @description missing_links: minimum Jaccard over linked source pages */
+                min_jaccard?: number;
+                /** @description items per group; `count` stays the full count */
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KnowledgeHealth"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
