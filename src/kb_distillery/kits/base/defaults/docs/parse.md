@@ -58,6 +58,14 @@ distill parse run|status|check|sample …        # the parser alone and the olde
 
 **Billing.** The reader, the judge and the auditor are `kb_distillery.llm` requests with images: the backend is the usual `--backend` / `$KB_LLM_BACKEND` choice, all three work. MinerU is local and free.
 
+## Digest reads the transcript
+
+With the `parsed-pdf` flag on, `ingest.extract.extract_text` returns the stored transcript of a PDF whenever every page asked for is in `meta/parsed/` (the text then starts with `[transcript of pages A-B …]`); otherwise it reads the text layer as before. A book part is stricter: `extract` refuses to run without its transcript and prints the `distill parse transcribe` command to run first.
+
+- `extract --fill` sends the crops of the marked formulas with the request (`!!` first, at most 20) and tells the model to check each marked formula it uses against its crop: settled, the link is dropped; not settled, the link stays right after the formula. In `claims.json` an equation carries its link in `equations[].mark`; `draft` writes it after the equation.
+- A book part's template has `exercises` (every exercise, in full; on unless the session's scope says `exercises: false`) and, on request (`notes: true`), `notes`. `draft` writes them as `## Exercises` and `## Notes and references` near the end of the page.
+- An agent filling `claims.json` by hand follows the same rules: `extract_prompt.md`, "Marked formulas".
+
 ## Measuring
 
 Do not trust a change to a prompt or to `compare.py` without numbers: plant known errors in stored transcripts and count how many the auditor finds, and audit unmarked formulas on pages the tuning never saw. The first measurement (38 dense pages, 114 planted errors of ten kinds) had the auditor find all 114.
