@@ -27,6 +27,7 @@ const CIRCLE_OK: Readonly<Record<string, { n: number; why: string }>> = {
   "features/home/SampleGraph.tsx": { n: 1, why: "pointer hit areas (invisible), not marks" },
   "features/graph/GraphCanvas.tsx": { n: 1, why: "experiment halos (tools/decor) under a node, a Full Graph feature" },
   "features/graph/rawLayer.ts": { n: 4, why: "raw piles: stacks of raw files, not pages (Full Graph feature)" },
+  "features/graph/shell/corners/SubjectToggle.tsx": { n: 3, why: "the view switch's line icon for Concepts (three linked rings, a UI icon), never a page mark" },
   "features/graph/shell/thinkingDraw.ts": { n: 5, why: "show-thinking: the citation badge, the hover ring and the temporary web-source mark (not a page), never a page mark" },
   "features/graph/shell/replayDraw.ts": { n: 2, why: "the replay's trail rings around a mark (Full Graph feature, flag spark-chat), never a mark itself" },
   "features/graph/magnet.ts": { n: 2, why: "the magnet hover bubble (Full Graph feature)" },
