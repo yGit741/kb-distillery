@@ -397,3 +397,13 @@ expires = 2027-02-11
 kind = "runtime"
 default = false
 envs = { local = true, private = false, public = false }
+
+[[flag]]
+name = "citations-meaning"
+description = "Graph, Citations view: papers grouped by meaning (embedding topics). Each topic's uncited papers form a quiet clump on the outer rim, labelled on its outer side; cited papers and their thin, lightly arced citation links fill the middle. Needs ui.embedding-views (the topics) and a built embedding."
+owner = "maintainer"
+created = 2026-11-14
+expires = 2027-02-12
+kind = "runtime"
+default = true
+envs = { local = true, private = true, public = false }

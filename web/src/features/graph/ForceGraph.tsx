@@ -20,6 +20,10 @@ export interface Forces {
 export interface Anchor {
   target: (n: SimNode) => readonly [number, number] | null;
   strength: number;
+  /** discs no free node may enter (Citations by meaning: the uncited clumps); one that drifts in is put on the rim */
+  keepOut?: readonly { x: number; y: number; r: number }[];
+  /** a circle round the origin no free node may leave (Citations by meaning: the cited web stays inside the clumps) */
+  keepIn?: number;
 }
 
 /** What the canvas asks of the host. All callbacks may change identity between renders. */
@@ -27,6 +31,8 @@ export interface ForceGraphProps {
   data: GraphData;
   forces: Forces;
   arrows: boolean;
+  /** Citations by meaning (flag citations-meaning): cites links bend a little and carry smaller arrowheads */
+  citeArc?: boolean;
   nodeRadius: (n: SimNode) => number;
   drawNode: (n: SimNode, ctx: CanvasRenderingContext2D, scale: number) => void;
   drawFramePost: (ctx: CanvasRenderingContext2D, scale: number) => void;
@@ -59,6 +65,8 @@ export interface ForceGraphHandle {
   /** Frame the given pages inside the canvas minus `left` px on its left side (a panel lies over that strip) and `top` px on its top (the search line). False when they have no place yet. */
   fitIn(include: (n: SimNode) => boolean, left: number, ms?: number, pad?: number, top?: number, bottom?: number, right?: number): boolean;
   screenOf(n: { x?: number; y?: number }): { x: number; y: number } | null;
+  /** The graph point under a client (viewport) point, or null before the graph is up. */
+  graphAt(clientX: number, clientY: number): { x: number; y: number } | null;
   reheat(): void;
   refresh(): void;
   /** push the nodes around a screen point apart, gently, for about a second; the layout then settles and stays */
@@ -199,6 +207,48 @@ export const ForceGraph = forwardRef<ForceGraphHandle, ForceGraphProps & { class
           const m = n as SimNode & { vx?: number; vy?: number };
           m.vx = (m.vx ?? 0) + (t[0] - n.x) * a.strength * alpha;
           m.vy = (m.vy ?? 0) + (t[1] - n.y) * a.strength * alpha;
+        }
+        if (a.keepIn) {
+          for (const n of simNodes) {
+            if (n.fx != null || n.x == null || n.y == null) continue;
+            // this force runs last, so it sees the tick's velocity: where position plus velocity would leave the
+            // circle, the node is put on it and its outward motion dropped (a clamp alone is undone by the move)
+            const m = n as SimNode & { vx?: number; vy?: number };
+            const nx: number = n.x + (m.vx ?? 0);
+            const ny: number = n.y + (m.vy ?? 0);
+            const d: number = Math.hypot(nx, ny);
+            if (d <= a.keepIn) continue;
+            const ux: number = nx / d;
+            const uy: number = ny / d;
+            n.x = ux * a.keepIn;
+            n.y = uy * a.keepIn;
+            const vr: number = (m.vx ?? 0) * ux + (m.vy ?? 0) * uy;
+            if (vr > 0) {
+              m.vx = (m.vx ?? 0) - vr * ux;
+              m.vy = (m.vy ?? 0) - vr * uy;
+            }
+          }
+        }
+        if (!a.keepOut?.length) return;
+        for (const n of simNodes) {
+          if (n.fx != null || n.x == null || n.y == null) continue;
+          for (const d of a.keepOut) {
+            const m = n as SimNode & { vx?: number; vy?: number };
+            const dx: number = n.x + (m.vx ?? 0) - d.x;
+            const dy: number = n.y + (m.vy ?? 0) - d.y;
+            const dist: number = Math.hypot(dx, dy);
+            if (dist >= d.r) continue;
+            const ux: number = dist > 1e-3 ? dx / dist : 1;
+            const uy: number = dist > 1e-3 ? dy / dist : 0;
+            n.x = d.x + ux * d.r;
+            n.y = d.y + uy * d.r;
+            // drop the motion into the disc
+            const vr: number = (m.vx ?? 0) * ux + (m.vy ?? 0) * uy;
+            if (vr < 0) {
+              m.vx = (m.vx ?? 0) - vr * ux;
+              m.vy = (m.vy ?? 0) - vr * uy;
+            }
+          }
         }
       },
       { initialize: (ns: NodeObject[]) => void (simNodes = ns as SimNode[]) },
@@ -345,8 +395,11 @@ export const ForceGraph = forwardRef<ForceGraphHandle, ForceGraphProps & { class
   useEffect(() => {
     // a cites link always shows who cites whom; other links only with the Directional arrows setting (the accessor
     // reads each link's kind when it draws, so only the setting is a dependency)
-    fg.current?.linkDirectionalArrowLength((l) => (props.arrows || asLink(l as LinkObject).kind === "cites" ? 4 : 0));
-  }, [props.arrows]);
+    const tip = props.citeArc ? 3 : 4;
+    fg.current?.linkDirectionalArrowLength((l) => (props.arrows || asLink(l as LinkObject).kind === "cites" ? tip : 0));
+    // Citations by meaning: a citation bends a little, always the same way, so links into one paper separate
+    fg.current?.linkCurvature((l) => (props.citeArc && asLink(l as LinkObject).kind === "cites" ? 0.12 : 0));
+  }, [props.arrows, props.citeArc]);
 
   useImperativeHandle(
     ref,
@@ -402,6 +455,13 @@ export const ForceGraph = forwardRef<ForceGraphHandle, ForceGraphProps & { class
           if (!inst) return;
           releaseHeld();
           reheat(inst);
+        },
+        graphAt: (cx, cy) => {
+          const inst = g();
+          const r = host.current?.getBoundingClientRect();
+          if (!inst || !r) return null;
+          const p = inst.screen2GraphCoords(cx - r.left, cy - r.top);
+          return { x: p.x, y: p.y };
         },
         spreadAt: (cx, cy, radiusPx = 160) => {
           const inst = g();

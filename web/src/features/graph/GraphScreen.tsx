@@ -37,6 +37,7 @@ import { predicateFn } from "./publicPredicate";
 import { ViewsBar } from "./views/ViewsBar";
 import { NodeMenu } from "./NodeMenu";
 import { OutsideGroup } from "./OutsideGroup";
+import { RimList } from "./RimList";
 import { applyQuick } from "./quickFilters";
 import { computeVisible } from "./rules";
 import { assignAreaColors, assignSupport, colorKey, effectiveColorBy } from "./style";
@@ -730,6 +731,7 @@ function Loaded({
           />
           <EmbeddingLayer nodes={model.nodes} neighbors={neighbors} />
           <Corners nodes={model.nodes} visible={visible} schema={schema} shownTypes={shownTypes} stats={stats} host={host} applyView={applyView} showPicked={showPicked} />
+          <RimList byId={byId} colorBy={ui.colorBy} />
           {healthView && <HealthLayer nodes={model.nodes} neighbors={neighbors} byId={byId} support={support} onRead={openReader} />}
         </div>
       ) : headerSlot ? (

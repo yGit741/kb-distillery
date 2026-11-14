@@ -25,7 +25,7 @@ const CIRCLE_OK: Readonly<Record<string, { n: number; why: string }>> = {
   "features/graph/ForceGraph.tsx": { n: 1, why: "pointer hit areas (invisible), not marks" },
   "features/edit-preview/TouchedGraph.tsx": { n: 1, why: "the ring around the page being read and the keyboard focus ring (state around a mark, never a mark)" },
   "features/home/SampleGraph.tsx": { n: 1, why: "pointer hit areas (invisible), not marks" },
-  "features/graph/GraphCanvas.tsx": { n: 1, why: "experiment halos (tools/decor) under a node, a Full Graph feature" },
+  "features/graph/GraphCanvas.tsx": { n: 2, why: "experiment halos (tools/decor) under a node, and the ring round an open uncited clump (Citations by meaning): not nodes" },
   "features/graph/rawLayer.ts": { n: 4, why: "raw piles: stacks of raw files, not pages (Full Graph feature)" },
   "features/graph/shell/corners/SubjectToggle.tsx": { n: 3, why: "the view switch's line icon for Concepts (three linked rings, a UI icon), never a page mark" },
   "features/graph/shell/thinkingDraw.ts": { n: 5, why: "show-thinking: the citation badge, the hover ring and the temporary web-source mark (not a page), never a page mark" },
