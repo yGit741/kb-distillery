@@ -310,10 +310,11 @@ def relations_on():
 
 
 def _relations_etag(etag, root):
-    """The page etag plus what relations read besides pages (kb.toml [edges], aliases, card vectors), so a
+    """The page etag plus what relations read besides pages (kb.toml [edges], aliases, card vectors, citations), so a
     snapshot with relations never shares an etag with one without, nor with one built from older inputs."""
     parts = [etag, "relations"]
-    for rel in ("kb.toml", os.path.join("meta", "aliases.tsv"), os.path.join(".cache", "vectors.sqlite")):
+    for rel in ("kb.toml", os.path.join("meta", "aliases.tsv"), os.path.join(".cache", "vectors.sqlite"),
+                os.path.join(".cache", "citations.json")):
         try:
             st = os.stat(os.path.join(root, rel))
             parts.append(f"{rel}:{st.st_mtime_ns}:{st.st_size}")

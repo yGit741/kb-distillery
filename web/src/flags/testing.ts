@@ -3,6 +3,7 @@
  * too (test-only seam) — and restores it afterwards, also for async `fn`. `python -m kb_distillery.config.flags.coverage` scans
  * *.test.ts(x) for `withFlag("<name>", true|false` and needs both states for every flag in meta/flags.toml.
  */
+import { afterEach, beforeEach } from "vitest";
 import { setTestFlagOverrides, type FlagName } from "./index";
 
 const forced: Partial<Record<FlagName, boolean>> = {};
@@ -27,4 +28,24 @@ export function withFlag<T>(name: FlagName, on: boolean, fn: () => T): T {
   if (out instanceof Promise) return out.finally(restore) as T;
   restore();
   return out;
+}
+
+/**
+ * Pin a flag for every test in the enclosing file or describe block (vitest beforeEach/afterEach), for suites written
+ * against one state. Each flag still needs `withFlag(name, true)` and `withFlag(name, false)` somewhere for coverage.
+ */
+export function pinFlag(name: FlagName, on: boolean): void {
+  let had = false;
+  let old: boolean | undefined;
+  beforeEach(() => {
+    had = name in forced;
+    old = forced[name];
+    forced[name] = on;
+    setTestFlagOverrides(forced);
+  });
+  afterEach(() => {
+    if (had) forced[name] = old;
+    else delete forced[name];
+    setTestFlagOverrides(forced);
+  });
 }

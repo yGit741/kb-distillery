@@ -21,7 +21,8 @@ import threading
 from kb_distillery.graph import snapshot as _snap
 
 ENV = "KB_GRAPH_CACHE"
-_SIDE_FILES = ("kb.toml", os.path.join("meta", "aliases.tsv"), os.path.join(".cache", "vectors.sqlite"))
+_SIDE_FILES = ("kb.toml", os.path.join("meta", "aliases.tsv"), os.path.join(".cache", "vectors.sqlite"),
+               os.path.join(".cache", "citations.json"))
 
 _entries = {}        # key -> (signature, snapshot)
 _locks = {}          # key -> Lock

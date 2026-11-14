@@ -231,3 +231,14 @@ describe("Back next to Pick a Concept", () => {
     expect(back).toBeDisabled();
   });
 });
+
+describe("Home with the glossary (flag ui.data-system-split folds What is it? into Home)", () => {
+  it("shows How a page gets here only when asked", async () => {
+    const { unmount } = wrap(mockDataSource({ getGraph: async () => snapshot, getPage, getRawCard: async () => rawCard }), <HomeScreen host={host} concept="hub" glossary />);
+    expect(await screen.findByRole("heading", { name: "How a page gets here" })).toBeInTheDocument();
+    unmount();
+    wrap(mockDataSource({ getGraph: async () => snapshot, getPage, getRawCard: async () => rawCard }), <HomeScreen host={host} concept="hub" />);
+    await screen.findAllByText(/hub/i);
+    expect(screen.queryByRole("heading", { name: "How a page gets here" })).toBeNull();
+  });
+});

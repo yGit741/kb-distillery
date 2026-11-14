@@ -21,10 +21,17 @@ export type PagesSearch = { kb?: string; q?: string; layer?: string; type?: stri
 export type GraphSearch = { select?: string; focus?: string; scope?: string; layer?: string; raw?: "1"; search?: string; pages?: string; from?: "home"; view?: string; kbs?: string; tool?: string; chat?: string; ask?: string; preview?: string } & RelationsSearch & Pick<ScopesSearch, "draft">;
 export type ScopesSearch = { scope?: string; draft?: string };
 export type PipelineSearch = { format?: string; q?: string; depth?: string; collection?: string; status?: string; view?: string; group?: string; backlog?: "queued"; item?: string };
-export type SystemTab = "overview" | "backlog" | "pipeline" | "history" | "health" | "embedding" | "flags" | "variants" | "kbs";
-export const SYSTEM_TABS: readonly SystemTab[] = ["overview", "backlog", "pipeline", "history", "health", "embedding", "flags", "variants", "kbs"];
+export type SystemTab = "overview" | "backlog" | "pipeline" | "history" | "health" | "embedding" | "flags" | "variants" | "kbs" | "dev";
+export const SYSTEM_TABS: readonly SystemTab[] = ["overview", "backlog", "pipeline", "history", "health", "embedding", "flags", "variants", "kbs", "dev"];
+/** Flag ui.data-system-split: the sections of System's Dev tab (`?tab=dev&dev=flags`). */
+export type DevSection = "backlog" | "flags" | "variants" | "queue" | "embedding";
+export const DEV_SECTIONS: readonly DevSection[] = ["backlog", "flags", "variants", "queue", "embedding"];
 /** System hosts the pipeline view, so it keeps the pipeline's params (its own `view` included) next to `tab`. */
-export type SystemSearch = PipelineSearch & { tab?: SystemTab };
+export type SystemSearch = PipelineSearch & { tab?: SystemTab; dev?: DevSection };
+export type IngestTab = "overview" | "pipeline" | "health" | "history";
+export const INGEST_TABS: readonly IngestTab[] = ["overview", "pipeline", "health", "history"];
+/** Ingest (flag ui.data-system-split) hosts the pipeline view too, so it keeps the pipeline's params next to `tab`. */
+export type IngestSearch = PipelineSearch & { tab?: IngestTab };
 export type NoSearch = Record<string, never>;
 /** Relation proposals: the confidence range in whole percent (`?min=90&max=100`) and one kind. */
 export type RelationsSearch = { min?: string; max?: string; kind?: string };
@@ -42,6 +49,7 @@ export interface SearchById {
   scopes: ScopesSearch;
   pipeline: PipelineSearch;
   system: SystemSearch;
+  ingest: IngestSearch;
   lifecycle: NoSearch;
   think: ThinkSearch;
   relations: RelationsSearch;
@@ -86,7 +94,8 @@ export const SEARCH: { [K in keyof SearchById]: (raw: Raw) => SearchById[K] } = 
       draft: str(r.draft),
     }),
   scopes: (r) => clean({ scope: str(r.scope), draft: str(r.draft) }),
-  system: (r) => clean({ ...pipelineSearch(r), tab: oneOf(r.tab, SYSTEM_TABS) }),
+  system: (r) => clean({ ...pipelineSearch(r), tab: oneOf(r.tab, SYSTEM_TABS), dev: oneOf(r.dev, DEV_SECTIONS) }),
+  ingest: (r) => clean({ ...pipelineSearch(r), tab: oneOf(r.tab, INGEST_TABS) }),
   pipeline: (r) => pipelineSearch(r),
   relations: (r) => clean({ min: str(r.min), max: str(r.max), kind: str(r.kind) }),
 };

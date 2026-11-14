@@ -147,7 +147,9 @@ export function ColourDots({ rows, title, by, dimensions, onPick, bar, hidden, t
             style={{ height: open ? LEGEND_OPEN_ROW : LEGEND_REST_ROW, transitionDuration: `${MS}ms` }}
           >
             <span
-              className={cn("max-w-0 overflow-hidden whitespace-nowrap text-[12.5px] opacity-0 transition-[max-width,opacity,margin]", open && "mr-2.5 max-w-[170px] opacity-100", off && "text-muted-foreground line-through")}
+              // a long name (a topic named by the LLM) ends in an ellipsis; the full name is its tooltip
+              title={r.label}
+              className={cn("max-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-[12.5px] opacity-0 transition-[max-width,opacity,margin]", open && "mr-2.5 max-w-[210px] opacity-100", off && "text-muted-foreground line-through")}
               style={{ transitionDuration: `${MS}ms`, transitionDelay: `${i * 14}ms` }}
             >
               {r.label}

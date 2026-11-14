@@ -11,7 +11,7 @@ from typing import Annotated, Literal, Union
 from pydantic import BaseModel, ConfigDict, Field
 
 Op = Literal[">=", ">", "<=", "<", "="]
-ColorBy = Literal["type", "layer", "depth", "status", "area", "degree", "evidence", "score", "none", "format", "recency", "added"]
+ColorBy = Literal["type", "layer", "depth", "status", "area", "degree", "evidence", "score", "none", "format", "recency", "added", "support"]
 SizeBy = Literal["connections", "in", "out", "uniform", "tier", "evidence", "score", "gap", "logdeg"]
 Width = Literal["thin", "normal", "thick"]
 

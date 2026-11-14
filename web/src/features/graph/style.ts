@@ -1,9 +1,10 @@
-import { depthColor, layerColor, statusColor, typeColor, UNKNOWN_COLOR } from "@/theme/palette";
+import { readCanvasColors } from "./encoding/theme";
+import { depthColor, layerColor, statusColor, supportColor, topicColor, typeColor, UNKNOWN_COLOR } from "@/theme/palette";
 import { areaDisplay } from "./displayNames";
 import { markOf, RING_BOOST } from "./encoding/spec";
 import { degreeOf, type GNode } from "./types";
 
-export type ColorBy = "type" | "layer" | "depth" | "status" | "area" | "degree" | "evidence" | "score" | "none" | "format" | "recency" | "added";
+export type ColorBy = "type" | "layer" | "depth" | "status" | "area" | "degree" | "evidence" | "score" | "none" | "format" | "recency" | "added" | "support" | "topic";
 export type SizeBy = "connections" | "in" | "out" | "uniform" | "tier" | "evidence" | "score" | "gap" | "logdeg";
 
 /** Size and colour modes that read a 0..1 signal of the importance score (lab/importance) instead of the page. */
@@ -109,6 +110,34 @@ export type AreaSlots = ReadonlyMap<string, string>;
 /** An area's colour: its slot, grey past the palette, lighter grey for none. */
 export const areaHue = (area?: string | null, slots: AreaSlots = AREA_SLOT): string => (!area ? NONE_GREY : (slots.get(area) ?? OTHER_GREY));
 
+/**
+ * How many source pages back a concept, as the Health view says it. People are not counted (a person page is not a
+ * claim): they keep their own ink and their own row of the key.
+ */
+export type Support = "none" | "one" | "many";
+export const SUPPORT_LABEL: Readonly<Record<Support, string>> = { none: "No source", one: "One source", many: "Two or more sources" };
+let SUPPORT: ReadonlyMap<string, number> = new Map();
+/** The source count behind each concept (./subject sourceCounts), set by the graph screen for the "support" colouring. */
+export function assignSupport(counts: ReadonlyMap<string, number>): ReadonlyMap<string, number> {
+  SUPPORT = counts;
+  return SUPPORT;
+}
+export function supportOf(n: GNode, counts: ReadonlyMap<string, number> = SUPPORT): Support | null {
+  if (n.layer !== "concept" || n.type === "person") return null;
+  const c = counts.get(n.id) ?? 0;
+  return c === 0 ? "none" : c === 1 ? "one" : "many";
+}
+/** A colour key with a fixed order (worst first) instead of largest first. */
+export const KEY_ORDER: Readonly<Partial<Record<ColorBy, readonly string[]>>> = { support: [SUPPORT_LABEL.none, SUPPORT_LABEL.one, SUPPORT_LABEL.many] };
+/** Topics (flag ui.embedding-views): each page's embedding cluster and each cluster's name, set once the embedding loads. */
+let TOPICS: { of: ReadonlyMap<string, number>; names: ReadonlyMap<number, string> } = { of: new Map(), names: new Map() };
+export function setTopics(of: ReadonlyMap<string, number>, names: ReadonlyMap<number, string>): void {
+  TOPICS = { of, names };
+}
+/** A page without a vector has no topic: the neutral "none" colour, its own key row (sorted last). */
+export const NO_TOPIC = "No vector";
+const topicOf = (n: Pick<GNode, "id">): number | undefined => TOPICS.of.get(n.id);
+
 /** Colourings with an order (little -> much): they take the neutral ramp, not a hue. */
 export const RAMP_BY: ReadonlySet<ColorBy> = new Set(["depth", "degree", "evidence", "score", "recency", "added"]);
 /** Continuous colourings: their legend is one gradient bar with its two ends named, never a list of swatches. */
@@ -126,6 +155,20 @@ export function freshness(date: string | undefined | null, now: number = Date.no
   return days <= 7 ? 1 : days <= 30 ? 0.75 : days <= 90 ? 0.5 : days <= 365 ? 0.25 : 0;
 }
 const DEPTH_T: Readonly<Record<string, number>> = { listed: 0, easy: 1 / 3, full: 2 / 3, deep: 1 };
+/** How each depth reads in a colour key: a listed source was ingested but never digested. */
+export const DEPTH_LABEL: Readonly<Record<string, string>> = { listed: "Ingest only", easy: "Easy digest", full: "Full digest", deep: "Deep digest" };
+const depthOf = (n: GNode): string => n.depth || "listed";
+
+/** The --bad status token, read once per theme: an ingested source nobody digested yet stands out on the ramp. */
+const attention = new Map<string, string>();
+function attentionColor(theme: string): string {
+  const hit = attention.get(theme);
+  if (hit) return hit;
+  const bad = readCanvasColors().bad;
+  if (!bad) return UNKNOWN_COLOR;          // the tokens are not there yet: read again next time
+  attention.set(theme, bad);
+  return bad;
+}
 
 /** Where the page sits on an ordered colouring, 0..1; undefined when the colouring does not apply to it. */
 export function ordinalOf(n: GNode, by: ColorBy, metric?: number): number | undefined {
@@ -154,7 +197,7 @@ export const rampStep = (t: number): number => Math.round(Math.max(0, Math.min(1
 export const RAMP_MEANING: Readonly<Partial<Record<ColorBy, { what: string; low: string; high: string }>>> = {
   evidence: { what: "How many digested sources back the page", low: "little", high: "much" },
   score: { what: "How central the page is (importance score)", low: "peripheral", high: "central" },
-  depth: { what: "How deeply the source was read", low: "listed", high: "deep" },
+  depth: { what: "How deeply the source was read", low: "ingest only", high: "deep digest" },
   degree: { what: "How many links the page has", low: "few", high: "many" },
   recency: { what: "How recently the page changed", low: "a year or more", high: "this week" },
   added: { what: "When the page was added", low: "a year or more", high: "this week" },
@@ -182,6 +225,8 @@ const RAMP_DARK = ["#2B4C8C", "#2C7FB8", "#41B6C4", "#7FCDBB", "#D2F0B4"].map(he
  */
 export function colorOf(n: GNode, by: ColorBy, metric?: number, ramp?: "light" | "dark" | null, slots?: AreaSlots): string {
   if (ramp && RAMP_BY.has(by)) {
+    // ingested but never digested is a state to act on, not the low end of the ramp: the status red
+    if (by === "depth" && n.layer === "source" && depthOf(n) === "listed") return attentionColor(ramp);
     const t = ordinalOf(n, by, metric);
     // a continuous signal snaps to the legend bar's steps: neighbours stay apart, and the node matches its step
     return t === undefined ? UNKNOWN_COLOR : neutralRamp(METRIC_COLORS.has(by) ? rampStep(t) : t, ramp === "dark");
@@ -198,6 +243,10 @@ export function colorOf(n: GNode, by: ColorBy, metric?: number, ramp?: "light" |
       const t = ordinalOf(n, by);
       return t === undefined ? UNKNOWN_COLOR : sequentialColor(t);
     }
+    case "support": {
+      const s = supportOf(n);
+      return s ? supportColor(s) : n.type === "person" ? PERSON_INK : UNKNOWN_COLOR;
+    }
     case "layer":
       return layerColor(n.layer);
     case "depth":
@@ -208,6 +257,10 @@ export function colorOf(n: GNode, by: ColorBy, metric?: number, ramp?: "light" |
       return n.type === "person" && !n.areas[0] ? PERSON_INK : areaHue(areaOf(n, typeKeyed(slots ?? AREA_SLOT)), slots);
     case "degree":
       return degreeBand(n).color;
+    case "topic": {
+      const t = topicOf(n);
+      return t === undefined ? NONE_GREY : topicColor(t);
+    }
     default:
       return "#7aa2ff";
   }
@@ -224,10 +277,14 @@ export function colorKey(n: GNode, by: ColorBy, slots: AreaSlots = AREA_SLOT): s
       return "Recency: light = old, dark = new";
     case "added":
       return "Date added: light = old, dark = new";
+    case "support": {
+      const s = supportOf(n);
+      return s ? SUPPORT_LABEL[s] : n.type === "person" ? PEOPLE : "(not a concept)";
+    }
     case "layer":
       return n.layer || "unknown";
     case "depth":
-      return n.layer === "source" ? n.depth || "listed" : "(not a source)";
+      return n.layer === "source" ? (DEPTH_LABEL[depthOf(n)] ?? depthOf(n)) : "(not a source)";
     case "status":
       return n.maturity || "(none)";
     case "area":
@@ -238,6 +295,10 @@ export function colorKey(n: GNode, by: ColorBy, slots: AreaSlots = AREA_SLOT): s
       }
     case "degree":
       return degreeBand(n).label;
+    case "topic": {
+      const t = topicOf(n);
+      return t === undefined ? NO_TOPIC : (TOPICS.names.get(t) ?? `Topic ${t + 1}`);
+    }
     case "none":
       return "All pages";
     default:
@@ -335,4 +396,5 @@ export function semanticRadius(rGraph: number, scale: number, zr: number): numbe
 }
 
 /** Type is the mark (./encoding), so colour by type would repeat the shape: such a view colours by area instead. */
-export const effectiveColorBy = (by: ColorBy): ColorBy => (by === "type" ? "area" : by);
+/** A topic colouring without topics loaded (flag off, no embedding) colours by theme instead of all grey. */
+export const effectiveColorBy = (by: ColorBy): ColorBy => (by === "type" || (by === "topic" && !TOPICS.of.size) ? "area" : by);

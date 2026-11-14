@@ -178,7 +178,8 @@ def cmd_transcribe(a) -> int:
     work = _guard_out(a.work) if a.work else default_work(sha)
     res = transcribe.transcribe(pdf, pages, work, store_dir, sha,
                                 engine=None if a.engine == "none" else _engine(a.engine), backend=backend,
-                                model=a.model, judge_model=a.judge_model, audit_model=audit_model, page_count=count, max_usd=a.max_usd, force=a.force,
+                                model=a.model, judge_model=a.judge_model, audit_model=audit_model, page_count=count, max_usd=a.max_usd,
+                                retry_backend=a.retry_backend, force=a.force,
                                 log=lambda m: print(m, file=sys.stderr, flush=True))
     by = {}
     for st in res["pages"].values():
@@ -220,6 +221,8 @@ def main(argv=None) -> int:
     t.add_argument("--judge-model", default="sonnet")
     t.add_argument("--audit-model", default="opus", help="the last whole-page check; 'none' skips it")
     t.add_argument("--max-usd", type=float, default=None)
+    t.add_argument("--retry-backend", default=None, choices=("subscription", "api", "batch"),
+                   help="where a failed request is tried once more (default: the same backend)")
     t.add_argument("--dry-run", action="store_true", help="print the estimate and stop")
     t.add_argument("--force", action="store_true")
     mk = sub.add_parser("marks")

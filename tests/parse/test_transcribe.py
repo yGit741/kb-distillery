@@ -54,7 +54,8 @@ class FakeLLM:
             page = int(r.id[1:])
             if r.id.startswith("p"):
                 text = self.reader_pages.get(page)
-                out.append(llm.Result(r.id, text=text or "", error="" if text else "no reply", usd=0.03, stop_reason="end_turn"))
+                out.append(llm.Result(r.id, text="<<<PAGE\n%sPAGE>>>" % text if text else "", error="" if text else "no reply",
+                                      usd=0.03, stop_reason="end_turn"))
             elif r.id.startswith("a"):
                 f = self.findings.get(page, [])
                 out.append(llm.Result(r.id, text="no json here" if f is None else json.dumps({"findings": f}), usd=0.02,
@@ -166,7 +167,15 @@ def test_one_reading_only_marks_the_whole_page(pdf, tmp_path, monkeypatch):
     assert res["pages"][2] == "marked"
     res = run(pdf, tmp_path / "b", monkeypatch, FakeLLM(reader_pages={1: READER[1]}))          # the reader fails on page 2
     rec = store.read_page(str(tmp_path / "b" / "store"), SHA, 2)
-    assert rec["markdown"].startswith("[!!](mark:") and 2 in res["failed"]
+    assert rec["markdown"].startswith("[!](mark:") and "checked by the auditor" in rec["marks"][0]["reason"] and 2 in res["failed"]
+    assert "Second page with $f ( w )$ only." in rec["markdown"]                              # the parser's page stands in
+    f = {2: [{"snippet": "$f ( w )$", "fix": "$f ( \\mathbf{w} )$", "page_says": "bold w", "severity": "minor", "sure": True}]}
+    run(pdf, tmp_path / "c", monkeypatch, FakeLLM(reader_pages={1: READER[1]}, findings=f))
+    rec = store.read_page(str(tmp_path / "c" / "store"), SHA, 2)
+    assert "$f ( \\mathbf{w} )$ [!](mark:" in rec["markdown"] and len(rec["marks"]) == 2            # audited and fixed
+    run(pdf, tmp_path / "d", monkeypatch, FakeLLM(reader_pages={1: READER[1]}, findings={2: None}))
+    rec = store.read_page(str(tmp_path / "d" / "store"), SHA, 2)
+    assert rec["markdown"].startswith("[!!](mark:") and len(rec["marks"]) == 1 and "reader:none" in rec["engine"]   # not audited
 
 
 def test_resume_reads_and_judges_nothing_twice(pdf, tmp_path, monkeypatch):
@@ -193,7 +202,18 @@ def test_transcript_and_marks_read_back(pdf, tmp_path, monkeypatch):
 
 
 def test_reader_drops_a_code_fence_and_refuses_a_cut_reply(pdf, tmp_path, monkeypatch):
-    assert reader.clean("```markdown\n# T\n\ntext\n```") == "# T\n\ntext\n"
+    assert reader.clean("<<<PAGE\n```markdown\n# T\n\ntext\n```\nPAGE>>>") == "# T\n\ntext\n"
+    assert reader.clean("I will skip the plan.\n\n<<<PAGE\n# T\nPAGE>>>\nDone.") == "# T\n"
+    assert reader.clean("I read both images, so here it is:\n# T") is None
+    assert reader.clean("<<<PAGE\r\nhi\r\nPAGE>>>\r\n") == "hi\n"
+    assert reader.clean("<<<PAGE\nsee the PAGE>>> marker\nmore text\nPAGE>>>") == "see the PAGE>>> marker\nmore text\n"
+    assert reader.clean("<<<PAGE\nPAGE>>>") == "\n"                                   # a blank page is a page
+
+    def chatty(requests, backend=None, **kw):
+        return [llm.Result(r.id, text="The task is a single transcription.\n\nSome page text", stop_reason="end_turn") for r in requests]
+    monkeypatch.setattr(llm, "run", chatty)
+    res = reader.read(pdf, [2], str(tmp_path / "w0"), backend="api", log=lambda *_: None)
+    assert res["read"] == [] and "markers" in res["failed"][2]
 
     def cut(requests, backend=None, **kw):
         return [llm.Result(r.id, text="half a page", stop_reason="max_tokens") for r in requests]
@@ -243,9 +263,9 @@ def test_a_fix_that_would_break_a_formula_is_not_applied(pdf, tmp_path, monkeypa
 
 
 def test_a_mark_never_lands_inside_a_word(pdf, tmp_path, monkeypatch):
-    f = {2: [{"snippet": "Second pa", "fix": "Third pa", "page_says": "Third", "severity": "minor", "sure": True}]}
+    f = {2: [{"snippet": "Second pa", "fix": "Sekond pa", "page_says": "Sekond", "severity": "minor", "sure": True}]}
     run(pdf, tmp_path, monkeypatch, FakeLLM(OK, findings=f))
-    assert store.read_page(str(tmp_path / "store"), SHA, 2)["markdown"].startswith("Third page [!](mark:")
+    assert store.read_page(str(tmp_path / "store"), SHA, 2)["markdown"].startswith("Sekond page [!](mark:")
 
 
 def test_a_wrapper_cut_by_a_judged_place_leaves_no_stray_command():
@@ -296,3 +316,54 @@ def test_coverage_counts_stored_pages_and_marks(tmp_path):
     store.write_transcript_page(root, SHA, 2, "x", [{"id": 1, "level": "!"}, {"id": 2, "level": "!!"}])
     store.write_transcript_page(root, SHA, 3, "y", [])
     assert store.coverage(root, SHA, 2, 5) == {"pages": 2, "of": 4, "!": 1, "!!": 1}
+
+
+def test_a_fix_about_another_place_is_not_applied():
+    assert transcribe.sane_fix("$\\hat{p} \\in \\mathbb{R}^{\\hat{d}}$", "$\\hat{p} \\in \\mathbb{R}^{d}$")
+    assert not transcribe.sane_fix("$\\hat{p} \\in \\mathbb{R}^{\\hat{d}}$", "$\\hat{p}_i = \\hat{C}_i \\hat{B}_i$")
+    assert transcribe.sane_fix("Intro text.", "Intro text. A lost line.")                 # additions keep everything
+    it = judge.Item(1, (0, 12), (0, 12), "$a + b c d$", "$a - b c d$")
+    level, fix, _ = transcribe.decide(it, judge.Verdict(1, "neither", True, "$x_i = y_i z_i w$"))
+    assert level == "!!" and fix is None
+    text, marks = transcribe.audited("so $a + b c d$ holds", [], [{"snippet": "$a + b c d$", "fix": "$q = r s t$", "page_says": "q",
+                                                                   "severity": "serious", "sure": True}])
+    assert text == "so $a + b c d$ holds" and marks[0]["level"] == "!!"
+    assert transcribe.sane_fix("$a$", "$c$")                                              # one symbol: nothing to compare
+
+
+def test_a_failed_request_is_tried_once_more(pdf, tmp_path, monkeypatch):
+    state = {"n": 0, "backends": []}
+    good = FakeLLM(OK)
+
+    def flaky(requests, backend=None, **kw):
+        state["n"] += 1
+        state["backends"].append(backend)
+        if state["n"] in (1, 3, 5):                                  # first reader, first judge, first audit call fail
+            return [llm.Result(r.id, text="", error="blocked", stop_reason="") if r.id.startswith("p")
+                    else llm.Result(r.id, text="not json", stop_reason="end_turn") for r in requests]
+        return good(requests, backend=backend, **kw)
+    monkeypatch.setattr(llm, "run", flaky)
+    res = transcribe.transcribe(pdf, [1], str(tmp_path / "w"), str(tmp_path / "s"), SHA, engine=FakeEngine(), backend="batch",
+                                retry_backend="subscription", log=lambda *_: None)
+    assert res["failed"] == {} and res["pages"][1] == "marked" and res["marks"] == {"!": 1, "!!": 0}
+    assert state["backends"] == ["batch", "subscription"] * 3
+
+
+def test_retries_respect_the_ceiling_and_force(pdf, tmp_path, monkeypatch):
+    calls = []
+
+    def failing(requests, backend=None, **kw):
+        calls.append((requests[0].id[0], backend))
+        return [llm.Result(r.id, text="", error="blocked") for r in requests]
+    monkeypatch.setattr(llm, "run", failing)
+    res = transcribe.transcribe(pdf, [1], str(tmp_path / "w"), str(tmp_path / "s"), SHA, engine=FakeEngine(), backend="subscription",
+                                retry_backend="api", max_usd=0.01, log=lambda *_: None)
+    assert ("p", "api") not in calls and "reader retry" in res["skipped"]                 # the paid retry would cross $0.01
+    assert calls[0] == ("p", "subscription") and ("a", "subscription") in calls          # the parser's page is audited, free
+    assert "auditor" not in res["skipped"]
+    stale = tmp_path / "w2" / "reader"
+    stale.mkdir(parents=True)
+    (stale / "p0001.md").write_text("an old page\n")
+    res = transcribe.transcribe(pdf, [1], str(tmp_path / "w2"), str(tmp_path / "s2"), SHA, engine=FakeEngine({}), backend="api",
+                                force=True, log=lambda *_: None)
+    assert 1 in res["failed"] and "old page" not in json.dumps(res)                      # the stale file is not passed off as read

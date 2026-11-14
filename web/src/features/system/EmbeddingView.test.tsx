@@ -1,6 +1,7 @@
 import { createMemoryHistory } from "@tanstack/react-router";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { pinFlag, withFlag } from "@/flags/testing";
 import { App } from "@/app/providers";
 import { createAppRouter } from "@/app/router";
 import { ApiError, type DataSource } from "@/api";
@@ -13,6 +14,8 @@ const report: EmbeddingReport = {
   built: true, ok: false, line: "3 vectors for 4 cards, behind (1 changed, 1 missing)", model: "test-model", dim: 1024, cards: 4, vectors: 3,
   missing: [page("new-idea", "New idea")], changed: [page("margin", "Margin")], removed: [], duplicate_cosine: 0.97,
   duplicates: [{ a: page("margin", "Margin"), b: page("margin-2", "Margin again"), cosine: 0.991 }],
+  near: [],
+  isolated: [],
   k: 2, silhouette: 0.31,
   clusters: [
     { id: 0, size: 2, cohesion: 0.82, central: [page("margin", "Margin")] },
@@ -45,7 +48,9 @@ function open(over: Partial<DataSource>) {
   return router;
 }
 
-describe("System · Embedding", () => {
+describe("System · Embedding, flag ui.embedding-views off (every view of meaning here)", () => {
+  pinFlag("ui.embedding-views", false);
+
   it("is a System tab", async () => {
     open({ getEmbedding: async () => report });
     const tabs = await screen.findByRole("tablist", { name: "System sections" });
@@ -208,4 +213,26 @@ describe("System · Embedding", () => {
     expect(await screen.findByText("Could not load the embedding report")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Try again" })).toBeInTheDocument();
   });
+});
+
+describe("System · Embedding, flag ui.embedding-views on (the views live in the graph)", () => {
+  it("keeps the status, the pages behind and the names, points to the graph, and draws no map, dimensions or similarity", () =>
+    withFlag("ui.embedding-views", true, async () => {
+      open({ getEmbedding: async () => ({ ...report, names: { state: "none", default_backend: "subscription", usd: 0, failed: 0 } }) });
+      expect(await screen.findByTestId("embedding-state")).toHaveTextContent("Behind the cards");
+      expect(screen.getByText("pixi run vectors-build")).toBeInTheDocument();
+      expect(screen.getByRole("link", { name: "New idea" })).toBeInTheDocument();
+      expect(within(screen.getByTestId("embedding-names")).getByRole("button", { name: "Name dimensions and clusters" })).toBeEnabled();
+      expect(screen.getByTestId("embedding-in-graph")).toHaveTextContent("Topics, Meaning map and Missing links live in the graph's pinned views.");
+      expect(screen.queryByTestId("embedding-effective-dim")).not.toBeInTheDocument();
+      expect(screen.queryByRole("group", { name: "Pair similarity histogram" })).not.toBeInTheDocument();
+      expect(screen.queryByText("Low end:")).not.toBeInTheDocument();
+    }));
+
+  it("flag off keeps the map and the dimensions", () =>
+    withFlag("ui.embedding-views", false, async () => {
+      open({ getEmbedding: async () => report });
+      expect(await screen.findByTestId("embedding-effective-dim")).toBeInTheDocument();
+      expect(screen.queryByTestId("embedding-in-graph")).not.toBeInTheDocument();
+    }));
 });

@@ -1,0 +1,91 @@
+# The slower platform checks, kept off pull requests so the fast CI stays fast: the full suite on macOS (Apple
+# silicon and Intel) and the Docker image built natively for linux/arm64 (ARM servers, Raspberry Pi, Graviton)
+# and run until it is healthy. Nothing is pushed or deployed. A red run shows in the Actions tab and GitHub
+# mails the workflow's last editor; it is a bug to fix in a normal PR. Forks do not run it: GitHub keeps
+# scheduled workflows off in forks until their owner turns them on.
+name: platforms-nightly
+on:
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+jobs:
+  tests-macos:
+    runs-on: macos-latest
+    timeout-minutes: 60
+    env:
+      KB_CI: "1"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - run: git show-ref -q refs/heads/main || git branch main origin/main
+      - uses: prefix-dev/setup-pixi@v0.8.1
+        with:
+          pixi-version: v0.76.1
+          cache: true
+      - run: pixi run pytest -q -n auto -m "not serial" tests
+      - run: pixi run pytest -q -m serial tests
+
+  tests-macos-intel:
+    runs-on: macos-15-intel
+    timeout-minutes: 60
+    env:
+      KB_CI: "1"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - run: git show-ref -q refs/heads/main || git branch main origin/main
+      - uses: prefix-dev/setup-pixi@v0.8.1
+        with:
+          pixi-version: v0.76.1
+          cache: true
+      - run: pixi run pytest -q -n auto -m "not serial" tests
+      - run: pixi run pytest -q -m serial tests
+
+  wheel:     # pixi has no linux-arm64 environment: the pure-Python wheel is built here and handed to the arm64 job
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: prefix-dev/setup-pixi@v0.8.1
+        with:
+          pixi-version: v0.76.1
+          cache: true
+      - run: pixi run build-wheel     # carries the built app, as in ci.yml's docker job
+      - id: version
+        run: echo "version=$(pixi run python -c 'from kb_distillery.git.release import current_version; print(current_version())')" >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheel
+          path: dist/*.whl
+
+  docker-arm64:
+    needs: wheel
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: wheel
+          path: dist
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/arm64
+          push: false
+          load: true
+          tags: kb-distillery:ci
+          build-args: |
+            VERSION=${{ needs.wheel.outputs.version }}
+            KB_WEB_BUNDLE_REPO=${{ github.repository }}
+      - name: Run the image and wait for its HEALTHCHECK
+        timeout-minutes: 6
+        run: .github/scripts/docker-smoke.sh kb-distillery:ci

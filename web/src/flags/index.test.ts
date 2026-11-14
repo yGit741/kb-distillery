@@ -1,11 +1,12 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { FLAGS, FLAG_ENV, FLAG_NAMES, flag, flagIn, setFlagOverrides, type FlagName } from "./index";
+import { FLAGS, FLAG_ENV, FLAG_NAMES, flag, flagIn, setFlagOverrides, setTestFlagOverrides, type FlagName } from "./index";
 
 afterEach(() => setFlagOverrides({}));
 
 describe("flag()", () => {
   it("the test bundle runs as the local app", () => expect(FLAG_ENV).toBe("local"));
   it("resolves the local value of every flag", () => {
+    setTestFlagOverrides({}); // the registry itself, not the suite-wide pins of src/test/setup.ts (restored after each test)
     for (const n of FLAG_NAMES) expect(flag(n)).toBe(FLAGS[n].envs.local);
   });
   it("per-env values come from the registry", () => {

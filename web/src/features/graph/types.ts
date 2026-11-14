@@ -6,11 +6,12 @@ import { parseRawLayer } from "./rawLayer";
 /** A node as the API returns it (layer, type, depth, areas, degrees, preview, properties). */
 export type GNode = GraphNode;
 
-/** A link between two page ids. `shared` links are drawn between concepts that share sources. */
+/** A link between two page ids. `shared` links are drawn between concepts that share sources; `cites` (a paper
+ * cites a paper) only in a view that draws that relation (./lab/views `edges`), always with its arrow. */
 export interface GLink {
   source: string;
   target: string;
-  kind: "wikilink" | "related" | "book" | "shared" | "pile-page" | "pile-pile";
+  kind: "wikilink" | "related" | "book" | "shared" | "cites" | "pile-page" | "pile-pile";
   shared?: number;
   /** pile links: source files behind the edge */
   count?: number;
@@ -109,7 +110,8 @@ export interface GraphModel {
   kbs?: readonly GraphKb[];
   /** Present while the data layer is loaded (`?raw=1`). Piles are drawn but are not pages: never in `nodes`. */
   raw?: RawLayer;
-  /** Typed relations (flag `graph-relations`): present only when the snapshot carries them. Never drawn. */
+  /** Typed relations (flag `graph-relations`): present only when the snapshot carries them. Drawn only by a view
+   * that names their kind (./storyEdges). */
   relations?: readonly GRelation[];
 }
 

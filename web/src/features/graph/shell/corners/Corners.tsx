@@ -17,8 +17,10 @@ import { defaultTypes, type GraphSchema } from "../../schema";
 import { useGraphUi } from "../../store";
 import { useFavorites } from "../../favorites/store";
 import { BAR_BY, effectiveColorBy, neutralRamp, RAMP_BY, RAMP_MEANING, RAMP_STEPS } from "../../style";
-import { dimensionsFor, type GraphSubject } from "../../colourDimensions";
-import { applySubject, subjectOf } from "../../subject";
+import { dimensionsFor, withTopic, type GraphSubject } from "../../colourDimensions";
+import { useEmbedding } from "../../embedding/EmbeddingLayer";
+import { embedSpec, sameEmbed, SUGGESTED, useEmbedView } from "../../embedding/store";
+import { applySubject, subjectOf, subjectsFor } from "../../subject";
 import { SubjectToggle } from "./SubjectToggle";
 import type { GNode } from "../../types";
 import { ago, chatWhen, defaultFetch, listRecent, listSessions, listViews, pinView, renameView, unpinView, type Fetcher, type SessionRow } from "./api";
@@ -80,6 +82,8 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
   const server = ds.kind === "http" && caps.saveViews;
   const sparkChat = useFlag("spark-chat");
   const intent = useFlag("graph-intent");
+  // flag knowledge-health: the switch reads Concepts / Health
+  const health = useFlag("knowledge-health") && intent;
   const favSlugs = useFavorites((s) => s.slugs);
   const pinFanFlag = useFlag("pin-fan");
   // flag pin-fan: the pinned corner is a fan like Think and Agent, and the views panel steps aside
@@ -112,6 +116,12 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
   const views = useQuery({ queryKey: ["corners", "views"], queryFn: () => listViews(f), enabled: server && pinsOpen, staleTime: 0 });
   // flag pin-fan; without the gallery (graph-intent off) a fan cannot reach views past its room, so that kb keeps the list
   const pinFan = pinFanFlag && (intent || (views.data?.length ?? 0) <= cap - 1);
+  // flag ui.embedding-views: the embedding behind the topic colouring and the three suggested views
+  const embedding = useEmbedding().report;
+  const suggestions = useMemo(
+    () => (server && embedding ? SUGGESTED.filter((sg) => !(views.data ?? []).some((v) => sameEmbed(v.spec, embedSpec(sg.view)))) : []),
+    [server, embedding, views.data],
+  );
   // a shared site has no server: its saved views are baked into the page and only opened here
   const readOnlyPins = !server && caps.readViews && ds.kind === "embedded";
   const sharedViews = useApiQuery(["views"], (d) => d.listViews(), { enabled: readOnlyPins && pinsOpen, retry: false });
@@ -149,6 +159,13 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
   const target = menu?.owner === "pins" ? (menu.id ?? activeView) : null;
   const targetView = views.data?.find((v) => v.id === target);
   const deps = useMemo(() => ({ applyView, showPicked }), [applyView, showPicked]);
+  const applySuggested = useCallback(
+    (view: (typeof SUGGESTED)[number]["view"]) => {
+      setActive(null);
+      if (!applySpec(embedSpec(view, view === "map" ? useEmbedView.getState().axes : undefined), deps)) setNotice("Nothing in this view can be restored here");
+    },
+    [deps, setActive],
+  );
   const pin = async (name: string) => {
     try {
       const res = await pinView(f, name, captureSpec(useGraphUi.getState(), intent ? useLayers.getState().stack : undefined) as unknown as Record<string, unknown>);
@@ -230,11 +247,18 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
     const cards = list.map((v) => ({ key: v.id, title: v.name, meta: v.id === activeView ? "open" : ago(v.created) }));
     const room = cap - 1;
     const rows = list.length > room && openGallery ? [...cards.slice(0, room - 1), { key: "__all", title: "All views", meta: String(list.length) }] : cards.slice(0, room);
-    return [fresh, ...rows];
-  }, [pinFan, views.data, activeView, cap, openGallery]);
+    // the embedding views, dashed, while they are not pinned (only as many as there is room for)
+    const sug: FanCard[] = suggestions.map((sg) => ({ key: `__sug-${sg.view}`, title: sg.name, meta: "from meaning", suggested: true, hint: sg.hint }));
+    return [fresh, ...rows, ...sug.slice(0, Math.max(0, room - rows.length))];
+  }, [pinFan, views.data, activeView, cap, openGallery, suggestions]);
   const pickPin = (key: string) => {
     if (key === "__new") return useCorners.getState().startEdit({ kind: "pin" });
     if (key === "__all") return openGallery?.();
+    const sg = SUGGESTED.find((x) => key === `__sug-${x.view}`);
+    if (sg) {
+      toggle("pins");
+      return applySuggested(sg.view);
+    }
     const v = views.data?.find((x) => x.id === key);
     if (!v) return;
     toggle("pins");
@@ -298,9 +322,10 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
   // flag graph-intent, Sources view: the colour is the sources' (the concepts beside them are neutral), so the key
   // lists the sources' values only
   const sourcesOnly = intent && subjectOf(schema, shownTypes) === "sources";
+  const topicsLoaded = useEmbedView((s) => s.pc);
   const key = useMemo(
     () => (by === "type" ? [] : colorChannel(by, { ramp }).rows(nodes.filter((n) => keyPool.has(n.id) && (!sourcesOnly || n.layer === "source")))),
-    [nodes, keyPool, by, ramp, sourcesOnly],
+    [nodes, keyPool, by, ramp, sourcesOnly, topicsLoaded],
   );
   const groups = useMemo(() => layerGroups(nodes, visible, schema, shownTypes), [nodes, visible, schema, shownTypes]);
   const allTypes = useMemo(() => groups.flatMap((g) => g.rows.map((r) => r.id)), [groups]);
@@ -313,8 +338,11 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
   const sourcesDrawn = useMemo(() => nodes.some((n) => n.layer === "source" && visible.has(n.id)), [nodes, visible]);
   // flag graph-intent: the graph is about concepts or about sources (read from the drawn types), and each view has
   // its own colourings and only the legends for what it draws
-  const subject = useMemo(() => subjectOf(schema, shownTypes), [schema, shownTypes]);
-  const dimensions = useMemo(() => dimensionsFor(intent ? [subject] : sourcesDrawn ? ["concepts", "sources"] : ["concepts"]), [intent, subject, sourcesDrawn]);
+  const subject = useMemo(() => subjectOf(schema, shownTypes, health ? by : undefined), [schema, shownTypes, health, by]);
+  const dimensions = useMemo(
+    () => withTopic(dimensionsFor(intent ? [subject] : sourcesDrawn ? ["concepts", "sources"] : ["concepts"]), !!embedding && (!intent || subject === "concepts")),
+    [intent, subject, sourcesDrawn, embedding],
+  );
   const pickSubject = (s: GraphSubject) => void applySubject(s, schema, shownTypes);
   // The legend's changes leave the view's story. While the drawn types still come from that story, pin them first:
   // hiding a colour or changing the colouring must never change which types are drawn.
@@ -389,6 +417,8 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
                   onRecentOpen={setRecentOn}
                   canApply={recognised}
                   favorites={favorites}
+                  suggested={suggestions}
+                  onSuggest={applySuggested}
                   onFavorite={focusFavorite}
                   onAllViews={openGallery}
                 />
@@ -425,6 +455,8 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
               onRecentOpen={setRecentOn}
               canApply={recognised}
               favorites={favorites}
+              suggested={suggestions}
+              onSuggest={applySuggested}
               onFavorite={focusFavorite}
                   onAllViews={openGallery}
             />
@@ -578,8 +610,8 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
         areaHeight={areaHeight}
         thinkCards={Math.max(1, thinkCards.length)}
       />
-      {intent && allTypes.length > 0 && <SubjectToggle subject={subject} onPick={pickSubject} />}
-      <TypesCard concepts={concepts} sources={intent && subject === "concepts" ? NO_ROWS : sources} onToggle={(types, on) => ui.setLayerTypes(types, on, allTypes, [...defaultTypes(schema, nodes)])} onSpot={spot} />
+      {intent && allTypes.length > 0 && <SubjectToggle subject={subject} onPick={pickSubject} subjects={subjectsFor(health)} />}
+      <TypesCard concepts={concepts} sources={intent && subject !== "sources" ? NO_ROWS : sources} onToggle={(types, on) => ui.setLayerTypes(types, on, allTypes, [...defaultTypes(schema, nodes)])} onSpot={spot} />
     </div>
   );
 }
