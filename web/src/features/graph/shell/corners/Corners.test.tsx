@@ -964,3 +964,97 @@ describe("graph-corners: the pinned views hang from the pin in a loop", () => {
       expect(document.querySelector("[data-corners=pin-loop]")).toBeNull();
     }));
 });
+
+describe("graph-corners: the spark and the brain open quick lists", () => {
+  const chats = [
+    { id: "c1", title: "Oldest chat", updated: "2026-11-01T10:00:00Z", status: "idle" },
+    { id: "c2", title: "Tensor rank vs CP rank", updated: "2026-11-02T10:00:00Z", status: "idle" },
+    { id: "c3", title: "Why does AdamW decouple decay?", updated: "2026-11-03T10:00:00Z", status: "running" },
+    { id: "c4", title: "What cites Gunasekar 2017?", updated: "2026-11-04T10:00:00Z", status: "idle" },
+    { id: "c5", title: "Summarise the implicit bias paper", updated: "2026-11-05T10:00:00Z", status: "idle" },
+  ];
+  // the server lists them newest first
+  const withChats = () => fakeServer({ sessions: [...chats].reverse() });
+
+  it("the spark: the line takes the cursor, the four newest chats sit above it, the running one has a green spark", () =>
+    withFlag("graph-corners", true, async () => {
+      mount(withChats(), {}, { kind: "http" });
+      await userEvent.click(agent());
+      const line = await screen.findByRole("combobox", { name: "Ask something new, or find a chat" });
+      expect(line).toHaveFocus();
+      const list = screen.getByRole("listbox", { name: "Chats" });
+      await waitFor(() => expect(within(list).getAllByRole("option")).toHaveLength(4));
+      expect(within(list).queryByText("Oldest chat")).toBeNull(); // only the four newest
+      const running = list.querySelector("[data-quick-row=c3] span")!;
+      expect(running).toHaveClass("text-ok");
+    }));
+
+  it("the spark: typing filters every chat, and Enter starts a new chat with the line", () =>
+    withFlag("graph-corners", true, async () => {
+      const ask = vi.spyOn(useChatDock.getState(), "ask");
+      mount(withChats(), {}, { kind: "http" });
+      await userEvent.click(agent());
+      const line = await screen.findByRole("combobox", { name: "Ask something new, or find a chat" });
+      await userEvent.type(line, "oldest");
+      const list = screen.getByRole("listbox", { name: "Chats" });
+      await waitFor(() => expect(within(list).getAllByRole("option").map((o) => o.textContent)).toEqual([expect.stringContaining("Oldest chat")]));
+      await userEvent.clear(line);
+      await userEvent.type(line, "what is a junta?{Enter}");
+      expect(ask).toHaveBeenCalledWith("what is a junta?");
+      ask.mockRestore();
+    }));
+
+  it("the brain: the line writes a thought, the newest notes sit under it, a pick opens the note", () =>
+    withFlag("graph-corners", true, async () => {
+      const captureThink = vi.fn(async () => ({ name: "inbox.md", mtime: 1 }));
+      mount(fakeServer(), {}, { kind: "http", captureThink } as never);
+      await userEvent.click(think());
+      const line = await screen.findByRole("combobox", { name: "Write a thought, or find a note" });
+      expect(line).toHaveFocus();
+      const list = screen.getByRole("listbox", { name: "Think notes" });
+      await waitFor(() => expect(within(list).getAllByRole("option").map((o) => o.textContent)).toEqual([expect.stringContaining("c-note"), expect.stringContaining("b-note"), expect.stringContaining("a-note")]));
+      await userEvent.click(within(list).getAllByRole("option")[1]!);
+      expect(host.go).toHaveBeenCalledWith("/think", { note: "b-note.md" });
+      await userEvent.click(think());
+      await userEvent.type(await screen.findByRole("combobox", { name: "Write a thought, or find a note" }), "rank is not additive{Enter}");
+      await waitFor(() => expect(captureThink).toHaveBeenCalledWith("rank is not additive"));
+    }));
+
+  it("the spark: the up arrow picks an older chat and Enter opens it; Enter on an empty line does nothing", () =>
+    withFlag("graph-corners", true, async () => {
+      const ask = vi.spyOn(useChatDock.getState(), "ask");
+      mount(withChats(), {}, { kind: "http" });
+      await userEvent.click(agent());
+      const line = await screen.findByRole("combobox", { name: "Ask something new, or find a chat" });
+      await waitFor(() => expect(within(screen.getByRole("listbox", { name: "Chats" })).getAllByRole("option")).toHaveLength(4));
+      await userEvent.keyboard("{Enter}");
+      expect(ask).not.toHaveBeenCalled();
+      expect(line).toHaveFocus();
+      await userEvent.keyboard("{ArrowUp}{ArrowUp}");
+      const picked = within(screen.getByRole("listbox", { name: "Chats" })).getByRole("option", { selected: true });
+      expect(line).toHaveAttribute("aria-activedescendant", picked.id);
+      expect(picked).toHaveTextContent("What cites Gunasekar 2017?"); // the second newest, one step further from the line
+      await userEvent.keyboard("{Enter}");
+      expect(screen.queryByRole("combobox", { name: "Ask something new, or find a chat" })).toBeNull();
+      expect(ask).not.toHaveBeenCalled();
+      ask.mockRestore();
+    }));
+
+  it("Esc closes the list once and gives the focus back to its button", () =>
+    withFlag("graph-corners", true, async () => {
+      mount(fakeServer(), {}, { kind: "http" });
+      await userEvent.click(think());
+      await screen.findByRole("combobox", { name: "Write a thought, or find a note" });
+      await userEvent.keyboard("{Escape}");
+      expect(screen.queryByRole("combobox", { name: "Write a thought, or find a note" })).toBeNull();
+      expect(think()).toHaveFocus();
+    }));
+
+  it("flag off: the spark and the brain still open their fans", () =>
+    withFlag("graph-corners", false, async () => {
+      mount(fakeServer(), {}, { kind: "http" });
+      await userEvent.click(think());
+      expect(screen.queryByRole("combobox", { name: "Write a thought, or find a note" })).toBeNull();
+      expect(await screen.findByText("b-note")).toBeInTheDocument(); // a fan card
+    }));
+});
