@@ -291,13 +291,15 @@ def test_render_md_without_a_transcript_still_lists_the_anchors():
 
 
 def _tiny_video(path, seconds=260):
-    """A 1 fps grey video: a dark 'board' whose chalk lines grow, so analyse has something to measure."""
-    cv2 = fx._cv()
-    out = cv2.VideoWriter(str(path), cv2.VideoWriter_fourcc(*"mp4v"), 1, (320, 180))
-    for s in range(seconds):
-        g = _board_frame(chalk_lines=1 + (s // 40) % 5)
-        out.write(cv2.cvtColor(g, cv2.COLOR_GRAY2BGR))
-    out.release()
+    """A 1 fps grey H.264 mp4, like a yt-dlp download: a dark 'board' whose chalk lines grow, so analyse has
+    something to measure. Encoded by the bundled ffmpeg, not cv2.VideoWriter, whose mp4v writer produces no
+    readable file on Intel Macs (and production never writes video with OpenCV)."""
+    import subprocess
+    from kb_distillery.ingest.sources.youtube.fetch import ffmpeg_exe
+    raw = b"".join(_board_frame(chalk_lines=1 + (s // 40) % 5).tobytes() for s in range(seconds))
+    subprocess.run([ffmpeg_exe(), "-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", "gray", "-s", f"{fx.W}x{fx.H}",
+                    "-r", "1", "-i", "-", "-c:v", "libx264", "-pix_fmt", "yuv420p", str(path)], input=raw, check=True)
+    assert os.path.getsize(path) > 0
     return str(path)
 
 
