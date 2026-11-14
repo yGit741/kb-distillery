@@ -34,8 +34,9 @@ interface Props {
 
 /**
  * Flag graph-corners: the pinned views hang from the pin in a vertical loop, partly overlapped and curving gently
- * into the border. The pin holds the pile and never moves; the cards are what moves. Both ends of the pile fade
- * into the border: clicking a faded card, or the wheel, turns the loop. Hover outlines a card and shows its
+ * into the border: the top card is in front, each one below peeks out with its name. The pin holds the pile and
+ * never moves; the cards are what moves. Both ends of the pile fade into the border (the card before the front one
+ * as a sheet tucked behind it, the last one at the bottom): clicking a faded one, or the wheel, turns the loop. Hover outlines a card and shows its
  * details; the view on screen has a small blue dot and a blue name. Pinning the current view is a command of the
  * search line (/pin), so the pile holds only what was pinned.
  */
@@ -69,8 +70,10 @@ export function PinLoop({ open, views, active, areaHeight, onApply, empty }: Pro
       </p>
     ) : null;
 
-  // slot 0 is the top of the pile; with a loop the two end slots are faded and turn the loop when pressed
+  // slot 0 is the front card; with a loop the last slot is faded, and the card before the front one waits as a
+  // faded sheet behind it: both turn the loop when pressed
   const slots = Array.from({ length: fits }, (_, s) => list[(s + turn) % n]!);
+  const before = looping ? list[(turn - 1 + n) % n]! : null;
   const mid = (fits - 1) / 2;
   return (
     <div
@@ -84,8 +87,20 @@ export function PinLoop({ open, views, active, areaHeight, onApply, empty }: Pro
       className={cn("pointer-events-none absolute z-[16] transition-opacity duration-300 motion-reduce:transition-none", open ? "opacity-100" : "opacity-0")}
       style={{ left: EDGE + 4, top: LOOP_TOP, width: LOOP_W + 40, height: LOOP_H + (fits - 1) * LOOP_STEP }}
     >
+      {before && (
+        <button
+          type="button"
+          data-end="before"
+          aria-label={`${before.name}, turn the pile back`}
+          title={`Turn the pile back to ${before.name}`}
+          onClick={() => spin(-1)}
+          className="pointer-events-auto absolute left-0 rounded-[11px] border bg-card shadow-[var(--shadow)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          style={{ top: -10, width: LOOP_W, height: 40, zIndex: 0, opacity: 0.45, transform: "translateX(-6px) rotate(-5deg)", transformOrigin: "0 0" }}
+        />
+      )}
       {slots.map((v, s) => {
-        const end = looping && (s === 0 || s === fits - 1);
+        // with a single card on screen it stays the one to press; the sheet behind it and the wheel turn the pile
+        const end = looping && fits > 1 && s === fits - 1;
         // a gentle curve into the border: the middle card stands furthest out, the ends lean back toward the edge
         const k = fits > 1 ? (s - mid) / Math.max(1, mid) : 0;
         const x = Math.round(14 * (1 - k * k));
@@ -93,14 +108,15 @@ export function PinLoop({ open, views, active, areaHeight, onApply, empty }: Pro
         const on = v.id === active;
         return (
           <div
-            key={`${v.id}-${s}`}
+            key={v.id}
             role="listitem"
             className="absolute left-0"
             style={{
               top: s * LOOP_STEP,
-              zIndex: fits - Math.abs(Math.round(s - mid)),
+              // the top card in front: each card below is behind the one above it and shows its name strip
+              zIndex: fits - s + 1,
               transform: `translateX(${x}px) rotate(${deg}deg)`,
-              transition: still ? undefined : "transform .45s cubic-bezier(.32,.72,0,1), opacity .28s",
+              transition: still ? undefined : "top .45s cubic-bezier(.32,.72,0,1), transform .45s cubic-bezier(.32,.72,0,1), opacity .28s",
               opacity: end ? 0.45 : 1,
             }}
           >
@@ -111,7 +127,7 @@ export function PinLoop({ open, views, active, areaHeight, onApply, empty }: Pro
               aria-current={on || undefined}
               aria-label={end ? `${v.name}, turn the pile` : v.name}
               title={end ? `Turn the pile to ${v.name}` : `${v.name}, pinned ${ago(v.created)}`}
-              onClick={() => (end ? spin(s === 0 ? -1 : 1) : onApply(v.id))}
+              onClick={() => (end ? spin(1) : onApply(v.id))}
               className={cn(
                 "group pointer-events-auto relative block overflow-hidden rounded-[11px] border bg-card text-left shadow-[var(--shadow)] transition-[border-color,box-shadow] duration-150 motion-reduce:transition-none",
                 "hover:border-primary hover:ring-2 hover:ring-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",

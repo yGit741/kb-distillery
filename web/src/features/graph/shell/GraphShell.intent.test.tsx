@@ -1,4 +1,3 @@
-import { useCorners } from "./corners/cornersStore";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -10,6 +9,7 @@ import { useGraphUi } from "../store";
 import { useChatDock } from "../tools/chatDockStore";
 import { GraphShell } from "./GraphShell";
 import { parseMode, useShellStore } from "./shellStore";
+import { useCorners } from "./corners/cornersStore";
 
 const SHOWN = new Set(sampleNodes.map((n) => n.type));
 const byId = new Map(sampleNodes.map((n) => [n.id, n] as const));

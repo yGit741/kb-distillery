@@ -117,7 +117,7 @@ export function buildCommands(c: CommandCtx): Command[] {
       ? [
           { id: "views", label: LINE_COPY.views.command.label, group: "View", icon: "labels", hint: LINE_COPY.views.command.hint, keywords: "saved pinned recent ready", fill: "/views ", run: () => {} } satisfies Command,
           // flag graph-corners: the pinned corner holds only pinned views, so pinning the view on screen is a command
-          ...(flag("graph-corners")
+          ...(flag("graph-corners") && !c.share
             ? [{ id: "pin-view", label: LINE_COPY.pinCommand.label, group: "View", icon: "labels", hint: LINE_COPY.pinCommand.hint, keywords: "pin save keep remember view", run: pinThisView } satisfies Command]
             : []),
           { id: "gallery", label: LINE_COPY.gallery.command.label, group: "View", icon: "labels", hint: LINE_COPY.gallery.command.hint, keywords: "views ready pinned recent browse", run: () => useGallery.getState().show() } satisfies Command,

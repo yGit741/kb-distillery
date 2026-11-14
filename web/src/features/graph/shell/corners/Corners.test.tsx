@@ -724,7 +724,7 @@ describe("legends", () => {
 
   it("the legend slides down out of the Think fan's arc, and back when Think closes", async () => {
     window.innerHeight = 900;
-    const many = Array.from({ length: 16 }, (_, i) => ({ name: `n${i}.md`, mtime: 1_700_000_000 + i, size: 1 }));
+    const many = Array.from({ length: 9 }, (_, i) => ({ name: `n${i}.md`, mtime: 1_700_000_000 + i, size: 1 }));
     mount(fakeServer(), {}, { listThink: async () => ({ capture_note: "x", notes: many }) });
     const legend = screen.getByRole("group", { name: /colour legend/i });
     const top = () => parseFloat(legend.style.top);
@@ -941,10 +941,13 @@ describe("graph-corners: the pinned views hang from the pin in a loop", () => {
       const shown = cards().length;
       expect(shown).toBeLessThan(many.length);
       const ends = cards().filter((c) => c.dataset.end);
-      expect(ends).toHaveLength(2);
-      const firstBefore = cards()[1]!.dataset.view;
-      await userEvent.click(ends[1]!);
-      expect(cards()[0]!.dataset.view).toBe(firstBefore); // turned by one
+      expect(ends).toHaveLength(1); // the faded last card; the sheet before the front one is the other end
+      const secondBefore = cards()[1]!.dataset.view;
+      const frontBefore = cards()[0]!.dataset.view;
+      await userEvent.click(ends[0]!);
+      expect(cards()[0]!.dataset.view).toBe(secondBefore); // turned forward by one
+      await userEvent.click(screen.getByRole("button", { name: /turn the pile back/ }));
+      expect(cards()[0]!.dataset.view).toBe(frontBefore); // and back again
       expect(useCorners.getState().activeView).toBeNull(); // a faded end turns, it does not apply
       expect(pins().getBoundingClientRect().top).toBe(pinAt);
     }));
