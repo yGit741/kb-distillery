@@ -344,13 +344,14 @@ def transcribe(pdf: str, pages: list, work: str, root: str, sha: str, engine=Non
     for p in lone:
         parser_md[p], boxes[p] = _parser_page(engine, work, p)
         stage[p] = (parser_md[p], [])
+    blank = {p for p in lone if not parser_md[p].strip()}            # nothing on the page: nothing to audit
     checked: set = set()                                             # pages the auditor answered for
     if audit_model and not over("auditor", len(stage), audit.USD_PER_PAGE):
-        findings, a_usd = audit.ask({p: t for p, (t, _m) in stage.items()},
-                                    {p: reader.render(pdf, p, work) for p in stage},
+        findings, a_usd = audit.ask({p: t for p, (t, _m) in stage.items() if p not in blank},
+                                    {p: reader.render(pdf, p, work) for p in stage if p not in blank},
                                     work, backend=backend, model=audit_model, force=force, log=log)
         usd += a_usd
-        deaf = sorted(p for p in stage if findings.get(p) is None)
+        deaf = sorted(p for p in stage if p not in blank and findings.get(p) is None)
         if deaf and not over("auditor retry", len(deaf), audit.USD_PER_PAGE, bk_again):
             log("auditor: no readable answer for %d page(s), trying once more" % len(deaf))
             f2, a2 = audit.ask({p: stage[p][0] for p in deaf}, {p: reader.render(pdf, p, work) for p in deaf},
@@ -360,6 +361,8 @@ def transcribe(pdf: str, pages: list, work: str, root: str, sha: str, engine=Non
         for p in stage:
             if findings.get(p) is not None:
                 checked.add(p)
+            if p in lone and p not in checked:
+                continue                                            # its page mark says it was not checked
             stage[p] = audited(stage[p][0], stage[p][1], findings.get(p))
     out = {"pages": {}, "marks": {"!": 0, "!!": 0}, "usd": round(usd, 4), "failed": dict(r["failed"]), "skipped": skipped}
     for p in pages:
@@ -378,7 +381,8 @@ def transcribe(pdf: str, pages: list, work: str, root: str, sha: str, engine=Non
             continue
         write_crops(pdf, p, marks, root, sha)
         rec = store.write_transcript_page(root, sha, p, md, marks, engine="reader:%s+%s+audit:%s" % (
-            model, engine.name if engine is not None and p in parsed else "none", audit_model or "none"))
+            "none" if p in lone else model, engine.name if engine is not None and p in parsed else "none",
+            audit_model if audit_model and p in checked else "none"))
         out["pages"][p] = rec["status"]
         for m in marks:
             out["marks"][m["level"]] += 1

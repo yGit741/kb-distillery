@@ -33,7 +33,7 @@ A mark is a Markdown link right after the formula it belongs to: `[!](mark:<sha1
 | the auditor finds a difference and is sure of its fix | fix applied, `!` |
 | the auditor is unsure, gives no fix, or its place cannot be found | `!!` |
 | only the reader produced the page | one mark for the whole page, `!` |
-| only the parser produced the page | the auditor checks the parser's page; one mark for the whole page, `!` when it did, `!!` when it could not |
+| only the parser produced the page | the auditor checks the parser's page; one mark for the whole page: `!` when it did, `!!` when it did not (the auditor is off, the cost ceiling skipped it, or its answer was unreadable twice) |
 
 `!` means "one voice decided, probably right". `!!` means "nobody could settle it": whoever uses the formula must look at the crop.
 

@@ -174,7 +174,8 @@ def test_one_reading_only_marks_the_whole_page(pdf, tmp_path, monkeypatch):
     rec = store.read_page(str(tmp_path / "c" / "store"), SHA, 2)
     assert "$f ( \\mathbf{w} )$ [!](mark:" in rec["markdown"] and len(rec["marks"]) == 2            # audited and fixed
     run(pdf, tmp_path / "d", monkeypatch, FakeLLM(reader_pages={1: READER[1]}, findings={2: None}))
-    assert store.read_page(str(tmp_path / "d" / "store"), SHA, 2)["markdown"].startswith("[!!](mark:")   # not audited
+    rec = store.read_page(str(tmp_path / "d" / "store"), SHA, 2)
+    assert rec["markdown"].startswith("[!!](mark:") and len(rec["marks"]) == 1 and "reader:none" in rec["engine"]   # not audited
 
 
 def test_resume_reads_and_judges_nothing_twice(pdf, tmp_path, monkeypatch):
@@ -330,7 +331,8 @@ def test_retries_respect_the_ceiling_and_force(pdf, tmp_path, monkeypatch):
     res = transcribe.transcribe(pdf, [1], str(tmp_path / "w"), str(tmp_path / "s"), SHA, engine=FakeEngine(), backend="subscription",
                                 retry_backend="api", max_usd=0.01, log=lambda *_: None)
     assert ("p", "api") not in calls and "reader retry" in res["skipped"]                 # the paid retry would cross $0.01
-    assert calls[0] == ("p", "subscription") and ("a", "api") not in calls               # the parser's page is audited, free
+    assert calls[0] == ("p", "subscription") and ("a", "subscription") in calls          # the parser's page is audited, free
+    assert "auditor" not in res["skipped"]
     stale = tmp_path / "w2" / "reader"
     stale.mkdir(parents=True)
     (stale / "p0001.md").write_text("an old page\n")
