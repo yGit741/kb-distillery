@@ -8,7 +8,7 @@
   0
  ],
  [
-  "kb_distillery.ingest catalog raw/inbox/2020-tiny-book.pdf",
+  "kb_distillery.ingest catalog raw/inbox/2020-tiny-book.pdf --chapters-file meta/2020-tiny-book.chapters.tsv",
   0
  ],
  [
@@ -96,27 +96,27 @@
   0
  ],
  [
-  "kb_distillery.ingest full-digest raw/printed-docs/2020-tiny-book.pdf --pages 1-10",
+  "kb_distillery.ingest full-digest raw/printed-docs/2020-tiny-book.pdf --chapter 1",
   0
  ],
  [
-  "kb_distillery.ingest extract ec2fd4a59241-p1-10",
+  "kb_distillery.ingest extract ec2fd4a59241-ch1",
   0
  ],
  [
-  "kb_distillery.ingest extract ec2fd4a59241-p1-10",
+  "kb_distillery.ingest extract ec2fd4a59241-ch1",
   0
  ],
  [
-  "kb_distillery.ingest map ec2fd4a59241-p1-10",
+  "kb_distillery.ingest map ec2fd4a59241-ch1",
   0
  ],
  [
-  "kb_distillery.ingest draft ec2fd4a59241-p1-10",
+  "kb_distillery.ingest draft ec2fd4a59241-ch1",
   0
  ],
  [
-  "kb_distillery.ingest finalize ec2fd4a59241-p1-10",
+  "kb_distillery.ingest finalize ec2fd4a59241-ch1",
   0
  ],
  [

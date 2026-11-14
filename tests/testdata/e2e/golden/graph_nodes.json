@@ -49,13 +49,6 @@
   "type": "mail"
  },
  {
-  "depth": "listed",
-  "id": "paper-2020-tiny-book",
-  "layer": "source",
-  "maturity": "to-read",
-  "type": "paper"
- },
- {
   "depth": "easy",
   "id": "paper-2023-easy-skim-paper",
   "layer": "source",
@@ -71,7 +64,7 @@
  },
  {
   "depth": "full",
-  "id": "part-2020-tiny-book-pages-1-10",
+  "id": "part-2020-tiny-book-ch1-ranks-of-tensors",
   "layer": "source",
   "maturity": "digested",
   "type": "part"

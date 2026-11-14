@@ -7,6 +7,7 @@ area: [learning-theory]
 raw: raw/printed-docs/2020-tiny-book.pdf
 url: 
 book_pages: 61
+outline_chapters: 2
 maturity: reading
 recommended_by: []
 related: []
@@ -19,14 +20,14 @@ description:
 
 <!-- At least one paragraph: what the book is, how it is organised, its stance, and why it matters. Lint warns until this is written. -->
 
-## Partition
+## Chapters
 
-Coverage: **10 / 61 pp (16%)** · skip rows excluded · parts ≤ 60 pp
+Coverage: **1 / 2 chapters** · skip rows excluded
 
-| # | Part | Pages | Status | Note |
-|---|------|-------|--------|------|
-| 1 | Pages 1–10 | 1–10 | full | [part-2020-tiny-book-pages-1-10](part-2020-tiny-book-pages-1-10.md) |
-| 2 | Whole book | 11–61 | — |  |
+| Id | Chapter | Pages | Status | Note |
+|----|---------|-------|--------|------|
+| ch1 | Chapter 1. Ranks of tensors | 1–30 | full | [part-2020-tiny-book-ch1-ranks-of-tensors](part-2020-tiny-book-ch1-ranks-of-tensors.md) |
+| ch2 | Chapter 2. Bounds | 31–61 | — |  |
 
 ## Key concepts
 

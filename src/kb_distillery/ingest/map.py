@@ -110,7 +110,7 @@ def run_map(sha, no_questions=False):
     if book:
         from kb_distillery.ingest.sources.books.book import part_slug
         page_type = "part"
-        wiki_slug = part_slug(book, scope.get("label") or f"pages-{scope['pages'][0]}")
+        wiki_slug = part_slug(book, scope.get("label") or "", scope.get("chapter"))
     else:
         page_type, wiki_slug = _existing_page(claims["raw"], page_type, wiki_slug)
     person = claims.get("person") or person_from_raw(claims["raw"])

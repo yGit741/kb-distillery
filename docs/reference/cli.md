@@ -131,7 +131,7 @@ usage: ops [-h] {status,log,snapshots,begin,commit,abort,undo,restore,snapshot,s
 ## ingest
 
 ```
-usage: kb_distillery.ingest [-h] {scrap,scrap-wordpress,scrap-youtube,video-digest,scrap-mail,scrap-gdrive,resolve,catalog,drain-inbox,easy-digest,easy-spotcheck,full-digest,digest-many,deep-digest,backfill-authors,refetch-raw,toc,begin,extract,map,draft,finalize,abort,status,backlog,index-researcher} ...
+usage: kb_distillery.ingest [-h] {scrap,scrap-wordpress,scrap-youtube,video-digest,scrap-mail,scrap-gdrive,resolve,catalog,drain-inbox,easy-digest,easy-spotcheck,full-digest,digest-many,deep-digest,backfill-authors,refetch-raw,book,toc,begin,extract,map,draft,finalize,abort,status,backlog,index-researcher} ...
 ```
 
 | Subcommand | Does | Model |
@@ -143,16 +143,17 @@ usage: kb_distillery.ingest [-h] {scrap,scrap-wordpress,scrap-youtube,video-dige
 | `scrap-mail` | Parse an `.mbox` or `.eml` export, or fetch by IMAP. | none |
 | `scrap-gdrive` | Pull a mounted Google Drive folder to `raw/inbox/`. | none |
 | `resolve` | Look up an existing raw or wiki entry. `--json`. | none |
-| `catalog` | Inbox file to `raw/<format>/`, plus membership. `--collection`, `--format`, `--title`, `--year`. | none |
+| `catalog` | Inbox file to `raw/<format>/`, plus membership; a book PDF gets its book page and chapters. `--collection`, `--format`, `--title`, `--year`, `--chapters-file`. | none |
 | `drain-inbox` | Catalog all inbox files. | none |
 | `easy-digest` | Abstract skim. `--into`, `--no-tick`, `--no-lint`, `--fill`, `--backend`, `--model`. | light |
 | `easy-spotcheck` | About 5% of easy digests re-read by a stronger model. | none here |
-| `full-digest` | Standard note. `--part`, `--pages`, `--section`, `--whole-book`, `--row`. | medium |
+| `full-digest` | Standard note. `--chapter`, `--chapters`, `--all`, `--section`, `--row`. | medium |
 | `digest-many` | Fill claims for many sources, then full-digest each. | yes |
 | `deep-digest` | Heavy digest. `--confirm-heavy` and the `full-digest` options. | heavy |
 | `backfill-authors` | Fill author lists from arXiv. | none |
 | `refetch-raw` | Replace paper PDFs stamped with another arXiv id than their page cites. | none |
-| `toc` | A book's page partition and outline. | none |
+| `toc` | A book's chapters (ids, pages, status) and outline. | none |
+| `book` | Build the book page and its chapters for a filed book PDF (`--chapters-file`). | none |
 | `begin`, `extract`, `map`, `draft`, `finalize`, `abort` | The steps of an ingest session. | none |
 | `status` | List sessions. | none |
 | `backlog` | List shallow paper digests. | none |

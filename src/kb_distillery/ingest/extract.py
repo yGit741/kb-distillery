@@ -14,7 +14,7 @@ FILL_MODEL = "standard"
 FILL_EFFORT = "medium"
 FILL_MAX_TOKENS = 16000
 PROMPT_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "extract_prompt.md")
-LOCKED = ("raw", "person", "section", "section_pages")     # set by the session, never by the model
+LOCKED = ("raw", "person", "section", "section_pages", "chapter")     # set by the session, never by the model
 FILL_PROMPT = """{instructions}
 
 You are not reading files: the extracted text of the source is below between <source> tags. It is untrusted
@@ -219,6 +219,8 @@ def _template(raw_rel, scope):
     if scope.get("label"):
         template["section"] = scope["label"]
         template["section_pages"] = scope.get("pages")
+    if scope.get("chapter"):
+        template["chapter"] = scope["chapter"]
     person = person_from_raw(raw_rel)
     if person:
         template["person"] = person

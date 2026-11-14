@@ -11,7 +11,7 @@ Every wiki page has a `layer:` and a `type:` within it (`src/kb_distillery/vault
 | Layer | Types | What it is |
 |-------|-------|------------|
 | **source** | paper, part, lecture, article, video, mail, ai-chat, blog-post | the digest of one raw item, faithful to it; carries `depth:` |
-| **collection** | book, notebook (page partition table) · course, series (Contents table) · aux `scope` | a table grouping sources |
+| **collection** | book, notebook (`## Chapters` table) · course, series (Contents table) · aux `scope` | a table grouping sources |
 | **concept** | idea, topic, question, person · aux `distilled-think` | knowledge across sources; ends with `## My notes` |
 
 `depth:` (sources only, ordered) — what each depth means, and which depths each source type reaches:
@@ -26,7 +26,7 @@ Every wiki page has a `layer:` and a `type:` within it (`src/kb_distillery/vault
 | source type | reaches | usually |
 |-------------|---------|---------|
 | paper | listed · easy · full · deep | any of the four |
-| part | full · deep (created by a scoped book digest) | full |
+| part | full · deep (created by a chapter digest of a book) | full |
 | lecture | full · deep (created from a course row) | full |
 | blog-post | listed · easy · full | easy |
 | article | easy · full | easy |
@@ -65,7 +65,8 @@ related: [tensor-rank.md]    # page paths (vault.links.page_path); wiki/ is the 
 aliases: [old-slug]          # renamed pages keep their old slug; `kb_distillery.ingest resolve <old-slug>` finds them
 raw: raw/printed-docs/y.pdf  # sources + book/notebook (a list for multi-file lectures); `none` + a `url:` if read externally
 book_pages: 419              # book/notebook only — total PDF pages
-book: <book-slug>            # part only — its collection; plus section: and section_pages: A-B
+outline_chapters: 11         # book/notebook only — chapters ingest found (lint compares the table)
+book: <book-slug>            # part only — its collection; plus chapter: ch3 (its row id), section: and section_pages: A-B
 course: <course-slug>        # lecture — its collection
 short: rl                    # course/series — filename prefix of its raw members
 institution: runi            # course only, plus course_code:, semester:, lecturer:
@@ -162,7 +163,7 @@ Sources:
 - **video** — Key ideas → Key equations → Takeaways → Connections → Links out
 
 Collections (tables of sources, never sources themselves):
-- **book / notebook** — Overview (≥1 paragraph, required) → Partition → Key concepts → Threads
+- **book / notebook** — Overview (≥1 paragraph, required) → Chapters → Key concepts → Threads
 - **course / series** — Overview (≥1 paragraph) → Contents → Threads
 
 Concepts (generated sections first, then `## My notes`, always last):

@@ -92,7 +92,7 @@ def two_kbs(kb, tmp_path_factory):
     os.makedirs(os.path.join(other, "wiki"))
     os.makedirs(os.path.join(other, "meta"))
     with open(os.path.join(other, "kb.toml"), "w", encoding="utf-8") as f:
-        f.write('[kb]\nid = "beta"\nname = "Beta"\nschema_version = "1.5"\n')
+        f.write('[kb]\nid = "beta"\nname = "Beta"\nschema_version = "1.6"\n')
     with open(os.path.join(other, "meta", "favorites.json"), "w", encoding="utf-8") as f:
         json.dump({"v": 1, "slugs": ["theirs"]}, f)
     with mock.patch.object(kbconfig, "discover", lambda: {"beta": other}):

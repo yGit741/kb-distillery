@@ -2,6 +2,7 @@
 type: part
 layer: source
 book: {{book}}
+chapter: {{chapter}}
 authors: []
 year: {{year}}
 area: []

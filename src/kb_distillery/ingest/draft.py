@@ -59,6 +59,13 @@ def question_name(text, limit=QUESTION_TITLE_MAX):
     return cut + "…"
 
 
+def _citekey(key, chapter):
+    """A chapter page's citekey carries its chapter id: `writer2020tiny-ch3`."""
+    if not key or not chapter or key.endswith(f"-{chapter}"):
+        return key
+    return f"{key}-{chapter}"
+
+
 def run_draft(sha):
     session = load_session(sha)
     sdir = session_dir(sha)
@@ -110,7 +117,9 @@ def run_draft(sha):
     if book:
         a, b = scope["pages"]
         section = (scope.get("label") or "").replace("#", "").replace(":", " –")
-        head = (f"type: part\nlayer: source\n{title_fm}book: {book}\n", f"section: {section}\nsection_pages: {a}-{b}\n",
+        chapter = scope.get("chapter") or ""
+        head = (f"type: part\nlayer: source\n{title_fm}book: {book}\nchapter: {chapter}\n",
+                f"section: {section}\nsection_pages: {a}-{b}\n",
                 f"\n> Part of {links.page_link(book, known)} · pp. {a}–{b} · {section}\n")
         plan["areas_resolved"] = areas
     elif plan.get("hub"):
@@ -127,7 +136,7 @@ area: [{", ".join(areas)}]
 maturity: {paper_status}
 {draft_fm}depth: {digestion}
 raw: {raw_field}
-{head[1]}citekey: {claims.get("citekey") or ""}
+{head[1]}citekey: {_citekey(claims.get("citekey") or "", scope.get("chapter") if book else "")}
 url: {claims.get("url") or ""}
 recommended_by: {recommended_by}
 discussed_with: []

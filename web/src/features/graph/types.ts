@@ -57,10 +57,13 @@ export type SimNode = GNode & Positioned;
 export type SimLink = Omit<GLink, "source" | "target"> & { source: string | SimNode; target: string | SimNode };
 
 export interface BookInfo {
+  /** chapters digested */
   done: number;
+  /** chapters (front/back matter excluded; a split chapter counts once) */
   content: number;
+  /** book pages */
   total: number;
-  parts: { title: string; start: number; end: number; status: string; slug: string }[];
+  parts: { id: string; title: string; start: number; end: number; status: string; slug: string }[];
 }
 
 export interface PartInfo {
@@ -75,6 +78,7 @@ export function bookOf(n: GNode): BookInfo | null {
   const b = n["book"];
   if (!isObj(b) || !Array.isArray(b["parts"])) return null;
   const parts = (b["parts"] as unknown[]).filter(isObj).map((p) => ({
+    id: String(p["id"] ?? ""),
     title: String(p["title"] ?? ""),
     start: Number(p["start"] ?? 0),
     end: Number(p["end"] ?? 0),

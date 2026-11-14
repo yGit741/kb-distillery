@@ -130,7 +130,7 @@ def build_request(raw_rel, model=MODEL):
     from kb_distillery import llm
     scope = scope_for(raw_rel)
     if book_mod.is_book(os.path.join(ROOT, raw_rel)):
-        return None, "a book: digest it by part (full-digest --pages / --section)"
+        return None, "a book: digest it by chapter (full-digest --chapter N / --chapters A-B / --all)"
     text = extract.extract_text(os.path.join(ROOT, raw_rel))
     if not text or not text.strip():
         return None, "no text extracted"

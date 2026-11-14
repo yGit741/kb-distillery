@@ -7,6 +7,7 @@ area: {{area}}
 raw: {{raw}}
 url: {{url}}
 book_pages: {{book_pages}}
+outline_chapters: {{outline_chapters}}
 maturity: {{maturity}}
 recommended_by: []
 related: []
@@ -19,9 +20,9 @@ description:
 
 <!-- At least one paragraph: what the book is, how it is organised, its stance, and why it matters. Lint warns until this is written. -->
 
-## Partition
+## Chapters
 
-{{partition}}
+{{chapters}}
 
 ## Key concepts
 

@@ -279,9 +279,18 @@ def _join(dest_rel, collection, title):
     print(f"collection → {collection}")
 
 
-def catalog_paper(inbox_rel, collection="", slug=None, title=None, year=None, url=""):
-    """A paper PDF → raw/printed-docs/<year>-<title>.pdf + a `paper-` catalog stub."""
+def catalog_paper(inbox_rel, collection="", slug=None, title=None, year=None, url="", chapters_file=None):
+    """A paper PDF → raw/printed-docs/<year>-<title>.pdf + a `paper-` catalog stub. A book PDF
+    gets its `book-` page with a `## Chapters` table instead; when no chapters can be found it
+    stops before moving anything (BookError, a ValueError carrying the hint)."""
+    from kb_distillery.ingest.sources.books import book as book_mod
     inbox_rel = _check_inbox(inbox_rel)
+    try:
+        is_book = book_mod.is_book(os.path.join(ROOT, inbox_rel))
+    except Exception:                       # an unreadable PDF is not a book: catalog it as a paper
+        is_book = False
+    if is_book:
+        book_mod.plan_chapters(os.path.join(ROOT, inbox_rel), chapters_file)   # raises: the PDF stays put
     filename = os.path.basename(inbox_rel)
     authors = None
     meta = None if slug else _arxiv_lookup(filename)
@@ -315,6 +324,13 @@ def catalog_paper(inbox_rel, collection="", slug=None, title=None, year=None, ur
     moved = _move(os.path.join(ROOT, inbox_rel), os.path.join(ROOT, dest_rel))
     print(f"{'moved' if moved else 'already at'} → {dest_rel}")
     _join(dest_rel, collection, title or stem)
+
+    if is_book:
+        meta = {"book_title": title, "year": year, "url": url, "authors": authors}
+        wiki_rel, rows = book_mod.build_book(dest_rel, chapters_file=chapters_file, meta=meta)
+        print(f"book page {wiki_rel}: {len(rows)} chapter rows — write its ## Overview")
+        _run_lint()
+        return dest_rel, os.path.basename(wiki_rel)[:-3]
 
     wiki_slug = make_slug("paper", stem)
     wiki_rel = f"wiki/{wiki_slug}.md"
@@ -515,7 +531,7 @@ def log_event(kind, **fields):
         f.write(json.dumps(fields, ensure_ascii=False) + "\n")
 
 
-def catalog(inbox_rel, collection="", fmt=None, title=None, year=None):
+def catalog(inbox_rel, collection="", fmt=None, title=None, year=None, chapters_file=None):
     """Detect the format (or take --format) and route. A typed PDF is a paper unless it joins a
     course/series, where it is a member row (a course book, typed notes) instead.
     Every outcome is logged: a refusal keeps its reason so the inbox can show why a file is stuck."""
@@ -536,7 +552,8 @@ def catalog(inbox_rel, collection="", fmt=None, title=None, year=None):
             dest, slug = catalog_file(rel, fmt)              # lint binds it as asset:<clip>
         elif (fmt == RAW_PRINTED and rel.lower().endswith(".pdf")
                 and _page_type(collection) not in CONTENTS_COLLECTIONS):
-            dest, slug = catalog_paper(rel, collection=collection, title=title, year=year)
+            dest, slug = catalog_paper(rel, collection=collection, title=title, year=year,
+                                       chapters_file=chapters_file)
         else:
             dest, slug = catalog_file(rel, fmt, collection=collection, title=title)
     except (ValueError, NotImplementedError, OSError) as e:

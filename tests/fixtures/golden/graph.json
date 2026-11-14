@@ -219,7 +219,7 @@
    "target": "theme-info-theory"
   }
  ],
- "node_count": 29,
+ "node_count": 28,
  "nodes": [
   {
    "added": "",
@@ -283,11 +283,12 @@
     "learning-theory"
    ],
    "book": {
-    "content": 62,
-    "done": 15,
+    "content": 4,
+    "done": 1,
     "parts": [
      {
       "end": 15,
+      "id": "ch1",
       "slug": "",
       "start": 1,
       "status": "—",
@@ -295,6 +296,7 @@
      },
      {
       "end": 30,
+      "id": "ch2",
       "slug": "part-2019-fixture-book-ch2-concentration",
       "start": 16,
       "status": "full",
@@ -302,6 +304,7 @@
      },
      {
       "end": 46,
+      "id": "ch3",
       "slug": "",
       "start": 31,
       "status": "—",
@@ -309,6 +312,7 @@
      },
      {
       "end": 62,
+      "id": "ch4",
       "slug": "",
       "start": 47,
       "status": "—",
@@ -327,7 +331,7 @@
    "maturity": "reading",
    "outDegree": 1,
    "path": "wiki/book-2019-fixture-book.md",
-   "preview": "A fixture book of four chapters, used by the pipeline harness to exercise the page partition, part digests and the coverage line. It has no real content.",
+   "preview": "A fixture book of four chapters, used by the pipeline harness to exercise the chapters table, part digests and the coverage line. It has no real content.",
    "properties": {
     "area": "learning-theory",
     "authors": "Fixture Author",
@@ -559,34 +563,6 @@
   },
   {
    "added": "",
-   "areas": [],
-   "changed": "",
-   "depth": "listed",
-   "id": "paper-2019-fixture-book",
-   "inDegree": 0,
-   "kb": "harness",
-   "label": "paper-2019-fixture-book",
-   "layer": "source",
-   "maturity": "to-read",
-   "outDegree": 0,
-   "path": "wiki/paper-2019-fixture-book.md",
-   "preview": "Problem: Main result:",
-   "properties": {
-    "links_in": "0",
-    "links_out": "0",
-    "maturity": "to-read",
-    "raw": "raw/printed-docs/2019-fixture-book.pdf",
-    "slug": "paper-2019-fixture-book",
-    "type": "paper",
-    "year": "2019"
-   },
-   "slug": "paper-2019-fixture-book",
-   "title": "Fixture Book",
-   "type": "paper",
-   "year": 2019
-  },
-  {
-   "added": "",
    "areas": [
     "learning-theory"
    ],
@@ -667,6 +643,7 @@
    "outDegree": 3,
    "part": {
     "book": "book-2019-fixture-book",
+    "chapter": "ch2",
     "pages": "16-30",
     "section": "Chapter 2. Concentration"
    },
@@ -1102,6 +1079,304 @@
    "year": 2024
   }
  ],
+ "relations": [
+  {
+   "kind": "mentions",
+   "note": "",
+   "origin": "computed",
+   "source": "book-2019-fixture-book",
+   "target": "part-2019-fixture-book-ch2-concentration",
+   "weight": 1.0
+  },
+  {
+   "kind": "mentions",
+   "note": "",
+   "origin": "computed",
+   "source": "course-fixture-rl",
+   "target": "lecture-rl-fixture-1",
+   "weight": 1.0
+  },
+  {
+   "kind": "mentions",
+   "note": "",
+   "origin": "computed",
+   "source": "course-fixture-rl",
+   "target": "lecture-rl-fixture-2",
+   "weight": 1.0
+  },
+  {
+   "kind": "mentions",
+   "note": "",
+   "origin": "computed",
+   "source": "course-fixture-rl",
+   "target": "theme-learning-theory",
+   "weight": 1.0
+  },
+  {
+   "kind": "mentions",
+   "note": "",
+   "origin": "computed",
+   "source": "generalization",
+   "target": "theme-learning-theory",
+   "weight": 1.0
+  },
+  {
+   "kind": "mentions",
+   "note": "",
+   "origin": "computed",
+   "source": "lecture-rl-fixture-1",
+   "target": "course-fixture-rl",
+   "weight": 1.0
+  },
+  {
+   "kind": "mentions",
+   "note": "",
+   "origin": "computed",
+   "source": "lecture-rl-fixture-1",
+   "target": "theme-learning-theory",
+   "weight": 1.0
+  },
+  {
+   "kind": "mentions",
+   "note": "",
+   "origin": "computed",
+   "source": "mail-2024-02-01-fixture-thread-about-a-lemma",
+   "target": "noise-stability",
+   "weight": 1.0
+  },
+  {
+   "kind": "mentions",
+   "note": "",
+   "origin": "computed",
+   "source": "mail-2024-02-01-fixture-thread-about-a-lemma",
+   "target": "theme-boolean-analysis",
+   "weight": 1.0
+  },
+  {
+   "kind": "mentions",
+   "note": "",
+   "origin": "computed",
+   "source": "noise-stability",
+   "target": "theme-boolean-analysis",
+   "weight": 1.0
+  },
+  {
+   "kind": "mentions",
+   "note": "",
+   "origin": "computed",
+   "source": "paper-2020-local-fixture-paper",
+   "target": "generalization",
+   "weight": 1.0
+  },
+  {
+   "kind": "mentions",
+   "note": "",
+   "origin": "computed",
+   "source": "paper-2020-local-fixture-paper",
+   "target": "theme-learning-theory",
+   "weight": 1.0
+  },
+  {
+   "kind": "mentions",
+   "note": "",
+   "origin": "computed",
+   "source": "paper-2021-arxiv-style-fixture",
+   "target": "shannon-entropy",
+   "weight": 1.0
+  },
+  {
+   "kind": "mentions",
+   "note": "",
+   "origin": "computed",
+   "source": "paper-2021-arxiv-style-fixture",
+   "target": "theme-info-theory",
+   "weight": 1.0
+  },
+  {
+   "kind": "mentions",
+   "note": "",
+   "origin": "computed",
+   "source": "part-2019-fixture-book-ch2-concentration",
+   "target": "book-2019-fixture-book",
+   "weight": 1.0
+  },
+  {
+   "kind": "mentions",
+   "note": "",
+   "origin": "computed",
+   "source": "part-2019-fixture-book-ch2-concentration",
+   "target": "noise-stability",
+   "weight": 1.0
+  },
+  {
+   "kind": "mentions",
+   "note": "",
+   "origin": "computed",
+   "source": "part-2019-fixture-book-ch2-concentration",
+   "target": "theme-learning-theory",
+   "weight": 1.0
+  },
+  {
+   "kind": "mentions",
+   "note": "",
+   "origin": "computed",
+   "source": "q-does-the-fixture-tail-bound-extend-to-dependent-variables",
+   "target": "part-2019-fixture-book-ch2-concentration",
+   "weight": 1.0
+  },
+  {
+   "kind": "mentions",
+   "note": "",
+   "origin": "computed",
+   "source": "q-is-the-fixture-bound-tight-for-deep-models",
+   "target": "paper-2020-local-fixture-paper",
+   "weight": 1.0
+  },
+  {
+   "kind": "mentions",
+   "note": "",
+   "origin": "computed",
+   "source": "series-fixture-author-blog",
+   "target": "article-author-fixture-post-one",
+   "weight": 1.0
+  },
+  {
+   "kind": "mentions",
+   "note": "",
+   "origin": "computed",
+   "source": "series-fixture-author-blog",
+   "target": "theme-boolean-analysis",
+   "weight": 1.0
+  },
+  {
+   "kind": "mentions",
+   "note": "",
+   "origin": "computed",
+   "source": "shannon-entropy",
+   "target": "theme-info-theory",
+   "weight": 1.0
+  },
+  {
+   "kind": "mentions",
+   "note": "",
+   "origin": "computed",
+   "source": "theme-boolean-analysis",
+   "target": "mail-2024-02-01-fixture-thread-about-a-lemma",
+   "weight": 1.0
+  },
+  {
+   "kind": "mentions",
+   "note": "",
+   "origin": "computed",
+   "source": "theme-info-theory",
+   "target": "paper-2021-arxiv-style-fixture",
+   "weight": 1.0
+  },
+  {
+   "kind": "mentions",
+   "note": "",
+   "origin": "computed",
+   "source": "theme-learning-theory",
+   "target": "book-2019-fixture-book",
+   "weight": 1.0
+  },
+  {
+   "kind": "mentions",
+   "note": "",
+   "origin": "computed",
+   "source": "theme-learning-theory",
+   "target": "lecture-rl-fixture-1",
+   "weight": 1.0
+  },
+  {
+   "kind": "mentions",
+   "note": "",
+   "origin": "computed",
+   "source": "theme-learning-theory",
+   "target": "paper-2020-local-fixture-paper",
+   "weight": 1.0
+  },
+  {
+   "kind": "mentions",
+   "note": "",
+   "origin": "computed",
+   "source": "video-fixture-talk",
+   "target": "shannon-entropy",
+   "weight": 1.0
+  },
+  {
+   "kind": "mentions",
+   "note": "",
+   "origin": "computed",
+   "source": "video-fixture-talk",
+   "target": "theme-info-theory",
+   "weight": 1.0
+  },
+  {
+   "kind": "shares-source",
+   "note": "1 shared source",
+   "origin": "computed",
+   "source": "generalization",
+   "target": "q-is-the-fixture-bound-tight-for-deep-models",
+   "weight": 1.0
+  },
+  {
+   "kind": "shares-source",
+   "note": "1 shared source",
+   "origin": "computed",
+   "source": "generalization",
+   "target": "theme-learning-theory",
+   "weight": 1.0
+  },
+  {
+   "kind": "shares-source",
+   "note": "1 shared source",
+   "origin": "computed",
+   "source": "noise-stability",
+   "target": "q-does-the-fixture-tail-bound-extend-to-dependent-variables",
+   "weight": 1.0
+  },
+  {
+   "kind": "shares-source",
+   "note": "1 shared source",
+   "origin": "computed",
+   "source": "noise-stability",
+   "target": "theme-boolean-analysis",
+   "weight": 1.0
+  },
+  {
+   "kind": "shares-source",
+   "note": "1 shared source",
+   "origin": "computed",
+   "source": "noise-stability",
+   "target": "theme-learning-theory",
+   "weight": 1.0
+  },
+  {
+   "kind": "shares-source",
+   "note": "1 shared source",
+   "origin": "computed",
+   "source": "q-does-the-fixture-tail-bound-extend-to-dependent-variables",
+   "target": "theme-learning-theory",
+   "weight": 1.0
+  },
+  {
+   "kind": "shares-source",
+   "note": "1 shared source",
+   "origin": "computed",
+   "source": "q-is-the-fixture-bound-tight-for-deep-models",
+   "target": "theme-learning-theory",
+   "weight": 1.0
+  },
+  {
+   "kind": "shares-source",
+   "note": "2 shared sources",
+   "origin": "computed",
+   "source": "shannon-entropy",
+   "target": "theme-info-theory",
+   "weight": 2.0
+  }
+ ],
  "schema": {
   "collection_types": [
    "book",
@@ -1399,7 +1674,7 @@
   ],
   "version": [
    1,
-   5
+   6
   ]
  }
 }

@@ -10,7 +10,7 @@ from datetime import datetime, timezone
 from kb_distillery.config.paths import vault_root
 META_DIR = os.path.join(vault_root(), "meta")
 
-from kb_distillery.vault.books import DIGESTED, coverage, parse_partition
+from kb_distillery.vault.books import DIGESTED, chapter_coverage, parse_chapters
 from kb_distillery.vault.graph import inbound_index, outbound_links
 from kb_distillery.search.semfind import load_pages
 from kb_distillery.vault import frontmatter
@@ -23,7 +23,7 @@ YEAR_PREFIX = re.compile(r"^(1[89]|20)\d{2}-")
 FM_SKIP = frozenset({"type", "layer", "maturity", "status", "title", "generated", "area", "year", "role", "affiliation", "lab", "email",
                    "url", "raw", "related", "depth", "citekey", "authors",
                    "recommended_by", "discussed_with", "scholar", "tau_profile", "optional",
-                   "book", "section", "section_pages", "book_pages"})
+                   "book", "chapter", "section", "section_pages", "book_pages", "outline_chapters"})
 FM_ORDER = ("type", "maturity", "area", "year", "role", "affiliation", "lab", "email",
             "url", "raw", "related", "citekey", "authors")
 
@@ -115,22 +115,24 @@ def _areas(fm):
 
 
 def _book_info(fm, text):
-    """Partition summary for a book hub node: coverage + rows (digested ones link a part)."""
-    rows = [r for r in parse_partition(text) if r["start"] is not None]
-    done, content = coverage(rows)
+    """Chapters summary for a book hub node: chapters digested / chapters + rows (digested ones
+    link a part)."""
+    rows = [r for r in parse_chapters(text) if r["start"] is not None]
+    done, content = chapter_coverage(rows)
     total = str(fm.get("book_pages") or "").strip()
     return {
         "done": done,
         "content": content,
         "total": int(total) if total.isdigit() else 0,
-        "parts": [{"title": r["title"], "start": r["start"], "end": r["end"],
+        "parts": [{"id": r["id"], "title": r["title"], "start": r["start"], "end": r["end"],
                    "status": r["status"], "slug": r["slug"] if r["status"] in DIGESTED else ""}
                   for r in sorted(rows, key=lambda r: r["start"])],
     }
 
 
 def _part_info(fm):
-    return {"book": str(fm.get("book") or ""), "pages": str(fm.get("section_pages") or ""),
+    return {"book": str(fm.get("book") or ""), "chapter": str(fm.get("chapter") or ""),
+            "pages": str(fm.get("section_pages") or ""),
             "section": str(fm.get("section") or "")}
 
 

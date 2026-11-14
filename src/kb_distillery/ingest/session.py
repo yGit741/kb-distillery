@@ -27,15 +27,15 @@ def _staging_dir(sha):
 
 
 def session_id(sha, scope):
-    """One session per raw file — or per page range for a book part, so a second part of the
-    same book never inherits the first part's claims/plan/staging."""
-    if (scope or {}).get("book") and (scope or {}).get("pages"):
-        a, b = scope["pages"]
-        return f"{sha}-p{a}-{b}"
+    """One session per raw file — or per chapter for a book, so a second chapter of the same
+    book never inherits the first chapter's claims/plan/staging."""
+    if (scope or {}).get("book") and (scope or {}).get("chapter"):
+        return f"{sha}-{scope['chapter']}"
     return sha
 
 
-def find_open_session(raw_rel):
+def find_open_session(raw_rel, sid=None):
+    """An open session on raw_rel; with `sid`, only that session (one per book chapter)."""
     ingest = os.path.join(ROOT, "meta", ".ingest")
     if not os.path.isdir(ingest):
         return None
@@ -45,7 +45,7 @@ def find_open_session(raw_rel):
             continue
         with open(sp, encoding="utf-8") as f:
             s = json.load(f)
-        if s.get("raw") == raw_rel and s.get("status") == "open":
+        if s.get("raw") == raw_rel and s.get("status") == "open" and (sid is None or sha == sid):
             return sha
     return None
 
@@ -88,12 +88,12 @@ def _archive_stale(sha):
 
 def begin(raw_rel, depth="full", scope=None):
     raw_rel = verify_raw(raw_rel)
-    existing = find_open_session(raw_rel)
+    sha = session_id(sha1_file(raw_rel), scope)
+    existing = find_open_session(raw_rel, sha if (scope or {}).get("chapter") else None)
     if existing:
         print(f"session already open: {existing}")
         return existing
 
-    sha = session_id(sha1_file(raw_rel), scope)
     sdir = session_dir(sha)
     carried = _archive_stale(sha)
     os.makedirs(os.path.join(sdir, "backup"), exist_ok=True)
@@ -268,9 +268,9 @@ def finalize(sha):
 
 
 def _record_book_part(sha, session, plan):
-    """A part digest ticks its row on the book hub page — creating the hub if needed."""
+    """A chapter digest ticks its row on the book page (ingest built it)."""
     scope = session.get("scope") or {}
-    if plan.get("type") != "part" or not scope.get("pages"):
+    if plan.get("type") != "part" or not scope.get("chapter"):
         return
     claims = {}
     cpath = os.path.join(session_dir(sha), "claims.json")
@@ -280,10 +280,9 @@ def _record_book_part(sha, session, plan):
     meta = {"authors": claims.get("authors"), "year": claims.get("year"),
             "url": claims.get("url"), "area": plan.get("areas_resolved") or [],
             "book_title": claims.get("book_title")}
-    a, b = scope["pages"]
     status = session.get("depth") or "full"
-    hub_rel, created = book_mod.record_part(session["raw"], a, b, plan["wiki_slug"], status,
-                                            scope.get("label") or f"Pages {a}–{b}", meta)
+    hub_rel, created = book_mod.record_part(session["raw"], scope["chapter"], plan["wiki_slug"], status,
+                                            meta)
     if created:
         session.setdefault("new_files", []).append(hub_rel)
     save_session(sha, session)

@@ -1,6 +1,6 @@
 # Collections: courses, series, books
 
-> Contents tables, partitions and how their rows are digested. Part of the doc router in [`AGENTS.md`](../../../../../../AGENTS.md).
+> Contents tables, book chapters and how their rows are digested. Part of the doc router in [`AGENTS.md`](../../../../../../AGENTS.md).
 
 ## Course and series collections
 
@@ -28,40 +28,61 @@ or non-PDF `printed-docs/` → `article-`; `printed-docs/` PDF → `paper-`. LLM
 pages through the chat pipeline instead. `finalize` ticks the row; `easy-digest` ticks it too and
 sets `maturity: digested`. A raw path that is a collection member auto-scopes to its row.
 
-## Books and parts
+## Books and chapters
 
-**Books are a collection plus parts.** A PDF of ≥60 pages is a book. It gets one `type: book` page
-(slug `book-<PDF stem>`; a long handwritten PDF is a `notebook-<stem>`) holding an `## Overview` paragraph and a `## Partition` table that splits
-pages `1..book_pages` into **disjoint, exhaustive parts** — a part can be a chapter, merged short
-chapters or half a long one; front/back matter rows are `skip`. Each digested part is its own
-`type: part` page (slug `part-<book stem>-<topic>`); undigested parts are table rows, not pages.
-
-```
-| # | Part | Pages | Status | Note |
-|---|------|-------|--------|------|
-| 1 | Front matter · Prefaces | 1–18 | skip | |
-| 2 | Chapter 1. Boolean functions and the Fourier expansion | 19–42 | full | [Chapter 1](part-2014-analysis-of-boolean-functions-ch1-fourier-expansion.md) |
-| 3 | Chapter 2. Basic concepts and social choice | 43–68 | — | |
-```
-
-Digesting a book is always scoped — the CLI prints the partition and exits 2 instead of guessing:
+**Books are a collection of chapters.** A PDF of ≥60 pages is a book. Filing it (`catalog`) builds the
+whole book first: one `type: book` page (slug `book-<PDF stem>`; a long handwritten PDF is a
+`notebook-<stem>`, built with `ingest book <raw>`) holding an `## Overview` paragraph and a `## Chapters`
+table that splits pages `1..book_pages` into **disjoint, exhaustive chapters**. The table comes from the
+PDF outline, falling back to chapter headings at the top of pages; front and back matter rows are
+`skip`, and exercises or end-of-chapter notes fold into their chapter. When neither gives numbered
+chapters, ingest stops with an error and leaves the PDF where it is — it never guesses. Supply the
+breaks by hand with `--chapters-file <file>`, one chapter per line, tab-separated:
 
 ```
-python3 -m kb_distillery.ingest toc <raw>                     # partition [x]/[ ]/[-]; --depth 2 adds the outline
-python3 -m kb_distillery.ingest full-digest <raw> --part 3    # a row of the partition
-python3 -m kb_distillery.ingest full-digest <raw> --pages 43-55  # carves a new part out of undigested rows
-python3 -m kb_distillery.ingest full-digest <raw> --section 2 # an outline entry (chapter number, #index, text)
-python3 -m kb_distillery.ingest full-digest <raw> --whole-book  # override the gate (writes a paper)
+front	Front matter · Preface	1-18
+ch1	Chapter 1. Boolean functions and the Fourier expansion	19-42
+ch2	Chapter 2. Basic concepts and social choice	43-68
+back	Bibliography · Index	391-419
 ```
 
-The first scoped digest creates the book page from `meta/templates/book.md` with a partition
-proposed from the PDF outline (split only at chapter/section boundaries, ≤60 pp per part); write
-its Overview by hand. `finalize` writes the `type: part` page and ticks its row. A part's identity
-is its page range — the `#` column is display order and renumbers when a row is split.
+From then on the raw file is `partial` in `meta/corpus.tsv` until every chapter is digested.
 
-**The partition is the truth** (`src/kb_distillery/vault/books.py`, checked by lint): gaps or overlaps are errors,
-a part over 60 pages is a warning, a digested row must link its part page and match its
-`depth`, and the part's `book:`/`raw:`/`section_pages:` must agree with its row.
-Coverage = digested pages ÷ non-skip pages; below 100% the raw file is `partial` in
-`meta/corpus.tsv` — never `source` — warns on every run and counts in `--health` as
-`partial-books`. The book's `maturity` follows coverage. Re-digesting a finished part is refused.
+```
+| Id | Chapter | Pages | Status | Note |
+|----|---------|-------|--------|------|
+| front | Front matter · Prefaces | 1–18 | skip | |
+| ch1 | Chapter 1. Boolean functions and the Fourier expansion | 19–42 | full | [Chapter 1](part-2014-analysis-of-boolean-functions-ch1-fourier-expansion.md) |
+| ch2 | Chapter 2. Basic concepts and social choice | 43–68 | — | |
+```
+
+**Each row has a fixed id**, the book's own numbering: `ch1`, `ch11`, `appA`, plus `front` and `back`.
+A row keeps its id forever. A very long chapter stays whole (lint only warns); split it by hand into
+lettered rows `ch11a`, `ch11b`. Rows are never merged. The id is the part page's `chapter: ch3`, the
+middle of its slug (`part-<book stem>-ch3-<topic>`) and the suffix of its citekey.
+
+Digest works by chapter only, one `type: part` page per chapter; digesting a book before its book page
+exists is refused with a hint to ingest it first:
+
+```
+python3 -m kb_distillery.ingest book <raw> [--chapters-file F]   # build the book page of an already filed PDF
+python3 -m kb_distillery.ingest toc <raw>                     # chapters [x]/[ ]/[-] with ids; --depth 2 adds the outline
+python3 -m kb_distillery.ingest full-digest <raw> --chapter 3     # one chapter (3, ch3, ch11a, appA)
+python3 -m kb_distillery.ingest full-digest <raw> --chapters 1-3  # several, one session and page each
+python3 -m kb_distillery.ingest full-digest <raw> --all           # every undigested chapter
+python3 -m kb_distillery.ingest full-digest <raw> --section 2.3   # an outline entry, resolved to its chapter
+```
+
+Write the book page's Overview by hand. `finalize` writes the `type: part` page and ticks its row.
+Code that works per chapter reads `kb_distillery.vault.books.chapters(root, raw)` and resolves
+selectors with `books.select(rows, "1-3")`.
+
+**The chapters table is the truth** (`src/kb_distillery/vault/books.py`, checked by lint). Errors: a
+missing, malformed or duplicate id; an id that changed (a part's `chapter:` differs from the row that
+links it); a chapter count that differs from `outline_chapters:` (the count ingest found; a split
+chapter counts once); a part whose `chapter:` has no row; a row marked digested whose part page does
+not exist; gaps and overlaps. A part's `section_pages:` and `depth` must match its row. Coverage is
+digested chapters ÷ chapters (`3 / 11 chapters`, skip rows excluded); below all of them the raw file
+is `partial`, warns on every run and counts in `--health` as `partial-books`. The book's `maturity`
+follows coverage. Re-digesting a finished chapter is refused. Books from before schema 1.6 had a
+`## Partition` table; migration 0016 rewrote it (old part slugs stay as `aliases:`).

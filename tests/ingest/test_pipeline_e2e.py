@@ -69,7 +69,7 @@ def build_vault(root):
     # goldens were recorded with, so the test gives the same answer whichever kb the suite runs under
     areas = sorted(GOLDEN_AREAS)
     with open(os.path.join(root, "kb.toml"), "w", encoding="utf-8") as f:
-        f.write('[kb]\nid = "e2e"\nname = "E2E fixture vault"\nschema_version = "1.5"\n\n[types]\nareas = ['
+        f.write('[kb]\nid = "e2e"\nname = "E2E fixture vault"\nschema_version = "1.6"\n\n[types]\nareas = ['
                 + ", ".join(f'"{a}"' for a in areas) + "]\n")
     for name in os.listdir(os.path.join(DATA, "seed", "meta")):
         shutil.copy(os.path.join(DATA, "seed", "meta", name), os.path.join(root, "meta", name))
@@ -165,7 +165,9 @@ def run_pipeline(root):
     # --- catalog
     p.ingest("catalog", "raw/inbox/2024-tiny-rank-paper.pdf")
     p.ingest("catalog", "raw/inbox/2023-easy-skim-paper.pdf")
-    p.ingest("catalog", "raw/inbox/2020-tiny-book.pdf")
+    # the tiny book has no outline and no page headings: its chapters come from a hand-written file
+    p.write("meta/2020-tiny-book.chapters.tsv", "ch1\tChapter 1. Ranks of tensors\t1-30\nch2\tChapter 2. Bounds\t31-61\n")
+    p.ingest("catalog", "raw/inbox/2020-tiny-book.pdf", "--chapters-file", "meta/2020-tiny-book.chapters.tsv")
     p.ingest("catalog", "raw/inbox/clip-why-rank-matters.md")
     p.ingest("catalog", "raw/inbox/blog-post.md")
     p.ingest("catalog", "raw/inbox/slides-intro.pdf", "--collection", "course-test-ml",
@@ -184,7 +186,7 @@ def run_pipeline(root):
     p.full_digest("paper", "full-digest", "raw/printed-docs/2024-tiny-rank-paper.pdf")
     p.full_digest("lecture", "full-digest", "course-test-ml", "--row", "1",
                   raw="raw/presentations/tml-slides-intro.pdf")
-    p.full_digest("part", "full-digest", "raw/printed-docs/2020-tiny-book.pdf", "--pages", "1-10")
+    p.full_digest("part", "full-digest", "raw/printed-docs/2020-tiny-book.pdf", "--chapter", "1")
     # --- checks
     lint = p.run("src/kb_distillery/lint/lint.py", module=False, ok=False)
     coherence = p.run("src/kb_distillery/vault/coherence.py", "status", module=False, ok=False)

@@ -83,7 +83,7 @@ After filing: `distill lint`. The ops step logs itself in `wiki/log.md` (OKF sha
 
 - **Main directions:** the `theme-*` pages the question touches, and open `q-*` pages
 - **Course provenance:** `course-*` / `series-*` collections — their `## Contents` table lists every member and its digest
-- **Books:** `book-*` / `notebook-*` collections — `## Partition` links each digested `part-*`
+- **Books:** `book-*` / `notebook-*` collections — `## Chapters` links each digested `part-*`
 - **Activity:** `wiki/log.md`
 - **Human scratch:** `think/my-true-research-start-here.md` (read if relevant; do not edit)
 

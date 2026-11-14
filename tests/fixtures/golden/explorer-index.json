@@ -153,10 +153,10 @@
    "in": 2,
    "maturity": "reading",
    "out": 1,
-   "preview": "A fixture book of four chapters, used by the pipeline harness to exercise the page partition, part digests and the coverage line. It has no real content.",
+   "preview": "A fixture book of four chapters, used by the pipeline harness to exercise the chapters table, part digests and the coverage line. It has no real content.",
    "title": "Fixture Book (2019)",
    "type": "book",
-   "words": 138,
+   "words": 132,
    "year": 2019
   },
   {
@@ -261,19 +261,6 @@
    "year": null
   },
   {
-   "areas": [],
-   "depth": "listed",
-   "id": "paper-2019-fixture-book",
-   "in": 0,
-   "maturity": "to-read",
-   "out": 0,
-   "preview": "Problem: Main result:",
-   "title": "Fixture Book",
-   "type": "paper",
-   "words": 29,
-   "year": 2019
-  },
-  {
    "areas": [
     "learning-theory"
    ],
@@ -315,7 +302,7 @@
    "preview": "Problem: Show that fixture sums concentrate. Main result: Sums of independent fixture variables concentrate.",
    "title": "Fixture book, chapter 2: concentration",
    "type": "part",
-   "words": 83,
+   "words": 85,
    "year": 2019
   },
   {
@@ -453,7 +440,7 @@
    "preview": "Fixture topic for the pipeline harness.",
    "title": "Learning Theory",
    "type": "topic",
-   "words": 44,
+   "words": 46,
    "year": null
   },
   {

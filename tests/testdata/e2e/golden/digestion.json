@@ -3,37 +3,39 @@
  "coherence": [],
  "collections": [
   {
-   "covered": 10,
+   "covered": 1,
    "maturity": "reading",
-   "pct": 16,
+   "pct": 50,
    "raw": "raw/printed-docs/2020-tiny-book.pdf",
    "rows": [
     {
+     "id": "ch1",
      "pages": [
       1,
-      10
+      30
      ],
      "raws": [],
-     "slug": "part-2020-tiny-book-pages-1-10",
+     "slug": "part-2020-tiny-book-ch1-ranks-of-tensors",
      "status": "full",
-     "title": "Pages 1–10"
+     "title": "Chapter 1. Ranks of tensors"
     },
     {
+     "id": "ch2",
      "pages": [
-      11,
+      31,
       61
      ],
      "raws": [],
      "slug": "",
      "status": "—",
-     "title": "Whole book"
+     "title": "Chapter 2. Bounds"
     }
    ],
    "slug": "book-2020-tiny-book",
    "title": "Tiny Book (2020)",
-   "total": 61,
+   "total": 2,
    "type": "book",
-   "unit": "pp"
+   "unit": "chapters"
   },
   {
    "covered": 1,
@@ -298,7 +300,7 @@
    "dest": "raw/printed-docs/2020-tiny-book.pdf",
    "format": "printed-docs",
    "path": "raw/inbox/2020-tiny-book.pdf",
-   "slug": "paper-2020-tiny-book"
+   "slug": "book-2020-tiny-book"
   },
   {
    "collection": "",
@@ -316,9 +318,6 @@
   }
  ],
  "shallow_papers": [
-  {
-   "slug": "paper-2020-tiny-book"
-  },
   {
    "slug": "paper-2023-easy-skim-paper"
   }
@@ -361,7 +360,7 @@
    "easy": 4,
    "full": 2
   },
-  "shallow_papers": 2
+  "shallow_papers": 1
  },
  "titles": {
   "book-2020-tiny-book": "Tiny Book (2020)",
