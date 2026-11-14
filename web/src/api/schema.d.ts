@@ -3009,6 +3009,17 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
+        /** EmbeddingIsolated */
+        EmbeddingIsolated: {
+            /** Nearest */
+            nearest: number;
+            /** Slug */
+            slug: string;
+            /** Title */
+            title: string;
+        } & {
+            [key: string]: unknown;
+        };
         /** EmbeddingNames */
         EmbeddingNames: {
             /** At */
@@ -3107,6 +3118,11 @@ export interface components {
              * @default 0
              */
             effective_dim: number;
+            /**
+             * Isolated
+             * @default []
+             */
+            isolated: components["schemas"]["EmbeddingIsolated"][];
             /** K */
             k: number;
             /** Line */
@@ -3121,6 +3137,11 @@ export interface components {
             /** Model */
             model?: string | null;
             names?: components["schemas"]["EmbeddingNames"] | null;
+            /**
+             * Near
+             * @default []
+             */
+            near: components["schemas"]["EmbeddingDuplicate"][];
             /** Ok */
             ok: boolean;
             /** Points */

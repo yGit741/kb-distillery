@@ -95,6 +95,30 @@ def test_near_duplicates_are_pairs_once_closest_first(tmp_path):
     assert all(d["cosine"] >= svc.DUPLICATE_COSINE for d in r["duplicates"])
 
 
+def test_near_pairs_sit_between_near_and_duplicate_closest_first(tmp_path):
+    # a·b ~0.9 (near), a·e = 1 (duplicate), c alone
+    db, cards = _store(tmp_path, [("a", [1, 0, 0]), ("b", [1, 0.5, 0]), ("c", [0, 0, 1]), ("e", [1, 0, 0])])
+    r = svc.build_embedding_report(db, cards)
+    pairs = [(d["a"]["slug"], d["b"]["slug"]) for d in r["near"]]
+    assert ("a", "b") in pairs and ("a", "e") not in pairs and all("c" not in p for p in pairs)
+    assert all(svc.NEAR_COSINE <= d["cosine"] < svc.DUPLICATE_COSINE for d in r["near"])
+    assert [d["cosine"] for d in r["near"]] == sorted((d["cosine"] for d in r["near"]), reverse=True)
+    assert r["near"][0]["a"]["title"] == "Title of a"
+
+
+def test_isolated_pages_are_the_furthest_from_any_other(tmp_path):
+    rows = _blobs(n_per=20) + [("lone", [0, 0, 0, 0, 0, 0, 0, 1])]
+    db, cards = _store(tmp_path, rows)
+    r = svc.build_embedding_report(db, cards)
+    assert r["isolated"][0]["slug"] == "lone"
+    assert r["isolated"][0]["nearest"] < 0.2
+    assert len(r["isolated"]) <= svc.ISOLATED_MAX
+
+
+def test_isolated_needs_three_pages():
+    assert svc.isolated(np.eye(2, dtype=np.float32), ["a", "b"]) == []
+
+
 def test_mixed_models_report_the_reason(tmp_path):
     db, cards = _store(tmp_path, [("a", [1, 0])])
     con = sqlite3.connect(db)
