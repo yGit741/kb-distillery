@@ -15,6 +15,8 @@ interface Props {
   sources: readonly TypeRow[];
   /** show (on) or hide every one of these types */
   onToggle: (types: readonly string[], on: boolean) => void;
+  /** what to call to put the drawn types back exactly as they are now (a double click takes its first click back) */
+  keep?: () => () => void;
   /** spotlight the pages of these types while the pointer is on them (null = none) */
   onSpot: (types: readonly string[] | null) => void;
 }
@@ -29,11 +31,10 @@ const GROUP = "flex h-6 min-w-0 max-w-full items-center overflow-x-auto [scrollb
 /**
  * The page types, at the bottom centre, 8px from the edge: folded, the marks sit in a tight row (concepts left of a
  * thin divider, sources right of it); pressed, ONE card opens around them and the marks unfold into names with
- * counts, concepts to the left and sources to the right, the divider staying at the centre of the screen. A
- * double click on a name (two clicks on the same spot) folds the card and leaves that type as it was. A
- * dimmed name is a type that is hidden (sources are by default). Types that share an icon are one name with their counts summed; pressing a name hides or shows all of them.
+ * counts, concepts to the left and sources to the right, the divider staying at the centre of the screen.
+ * A double click on a name folds the card and leaves the types as they were before it. A dimmed name is a type that is hidden (sources are by default). Types that share an icon are one name with their counts summed; pressing a name hides or shows all of them.
  */
-export function TypesCard({ concepts, sources, onToggle, onSpot }: Props) {
+export function TypesCard({ concepts, sources, onToggle, keep, onSpot }: Props) {
   const MS = useReducedMotion() ? 0 : FULL_MS;
   const open = useCorners((s) => s.order.includes("types"));
   const toggle = useCorners((s) => s.toggle);
@@ -99,7 +100,7 @@ export function TypesCard({ concepts, sources, onToggle, onSpot }: Props) {
           if (!open) return;
           // a second click on the same spot is a double click: it takes this change back and folds the card
           const was = r.shown;
-          still.markUndo(e, () => onToggle(ids, was));
+          still.markUndo(e, keep?.() ?? (() => onToggle(ids, was)));
           onToggle(ids, !was);
         }}
         // a chip that slid under a still pointer is not chosen: it lights once the pointer moves

@@ -13,8 +13,8 @@ export const STILL_PX = 4;
  * are never still clicks. `settled` is false from the opening click until the pointer moves away: until then nothing
  * under the pointer may look chosen (no hover tint, no spotlight), since the row only slid there.
  *
- * `markUndo` goes on a row's own click inside an open legend: a second click on the same spot then reads as a double
- * click on that row. It undoes what the first click did and closes the legend, so a double click never leaves a
+ * `markUndo` goes on a row's own click inside an open legend: a second click on the same spot, inside the browser's
+ * own double-click time (`detail` 2 or more), then reads as a double click on that row. It undoes what the first click did and closes the legend, so a double click never leaves a
  * change behind.
  */
 export function useStillClick(open: boolean, close: () => void) {
@@ -60,8 +60,8 @@ export function useStillClick(open: boolean, close: () => void) {
       if (!open || !p || e.detail === 0) return;
       if (Math.hypot(e.clientX - p.x, e.clientY - p.y) > STILL_PX) return;
       const u = undo.current;
-      // after a row's click, only a second click on that same row is a double click
-      if (u && !(e.target instanceof Node && u.row instanceof Node && u.row.contains(e.target))) {
+      // after a row's click, only a quick second click on that same row is a double click; a slow one is a plain click
+      if (u && (e.detail < 2 || !(e.target instanceof Node && u.row instanceof Node && u.row.contains(e.target)))) {
         at.current = null;
         undo.current = null;
         return;

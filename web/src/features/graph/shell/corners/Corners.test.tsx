@@ -652,12 +652,25 @@ describe("legends", () => {
     moveAway();
     const shown = () => useGraphUi.getState().shownTypes?.has("topic") ?? true; // null: the defaults, topic among them
     const before = shown();
+    const types = useGraphUi.getState().shownTypes;
     const topic = screen.getByRole("button", { name: /^Topic/ });
     fireEvent.click(topic, { clientX: 200, clientY: 200, detail: 1 });
     expect(shown()).toBe(!before); // the first click changes it
     fireEvent.click(screen.getByRole("button", { name: /^Topic/ }), { clientX: 201, clientY: 200, detail: 2 });
     expect(card).toHaveAttribute("data-open", "false");
     expect(shown()).toBe(before);
+    expect(useGraphUi.getState().shownTypes).toBe(types); // the very same value, not a copy
+  });
+
+  it("a slow second click on the same name (no double-click timing) is a plain click", async () => {
+    mount();
+    const card = screen.getByRole("group", { name: "Page types" });
+    await userEvent.click(screen.getByRole("button", { name: /show page types/i }));
+    moveAway();
+    const topic = () => screen.getByRole("button", { name: /^Topic/ });
+    fireEvent.click(topic(), { clientX: 200, clientY: 200, detail: 1 });
+    fireEvent.click(topic(), { clientX: 200, clientY: 200, detail: 1 });
+    expect(card).toHaveAttribute("data-open", "true");
   });
 
   it("two clicks on a name with a move between them are two plain clicks, and the card stays open", async () => {
