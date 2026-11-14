@@ -30,6 +30,10 @@ interface ThemeState {
   theme: Theme;
   set: (theme: Theme) => void;
   toggle: () => void;
+  /** Flag graph-corners: a screen that shows its own theme switch says so while it is on screen, so the app bar
+   *  drops its own and there is always exactly one. */
+  elsewhere: boolean;
+  setElsewhere: (on: boolean) => void;
 }
 
 export const useTheme = create<ThemeState>((set, get) => ({
@@ -44,4 +48,6 @@ export const useTheme = create<ThemeState>((set, get) => ({
     set({ theme });
   },
   toggle: () => get().set(get().theme === "dark" ? "light" : "dark"),
+  elsewhere: false,
+  setElsewhere: (elsewhere) => set({ elsewhere }),
 }));

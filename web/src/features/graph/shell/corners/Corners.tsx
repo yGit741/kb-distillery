@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Sparkles } from "lucide-react";
+import { Brain, Moon, Sparkles, Sun } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useDataSource } from "@/api";
 import { useFlag } from "@/flags/useFlag";
@@ -24,7 +24,8 @@ import { applySubject, subjectOf } from "../../subject";
 import { SubjectToggle } from "./SubjectToggle";
 import type { GNode } from "../../types";
 import { ago, chatWhen, defaultFetch, listRecent, listSessions, listViews, pinView, renameView, unpinView, type Fetcher, type SessionRow } from "./api";
-import { ActionPill, CornerButton, MoreButton, PillAction, PushPin } from "./CornerButton";
+import { ActionPill, CornerButton, LinePin, MoreButton, PillAction, PushPin } from "./CornerButton";
+import { IS_SHARE } from "@/share/env";
 import { ColourDots } from "./ColourDots";
 import { useCorners, type Layer } from "./cornersStore";
 import { Fan, type FanCard } from "./Fan";
@@ -78,6 +79,15 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
   const qc = useQueryClient();
   const ui = useGraphUi();
   const theme = useTheme((s) => s.theme);
+  // flag graph-corners: four raised discs with line icons, and the graph's one theme switch in the bottom-right corner
+  const discs = useFlag("graph-corners");
+  const themeCorner = discs && ds.kind === "http" && !IS_SHARE;
+  // while the disc is on screen the app bar leaves out its own switch: one theme switch, always
+  useEffect(() => {
+    if (!themeCorner) return;
+    useTheme.getState().setElsewhere(true);
+    return () => useTheme.getState().setElsewhere(false);
+  }, [themeCorner]);
   const caps = useCapabilities();
   const server = ds.kind === "http" && caps.saveViews;
   const sparkChat = useFlag("spark-chat");
@@ -375,7 +385,7 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
   const menuOpen = (o: Layer) => menu?.owner === o;
 
   return (
-    <div ref={root} data-corners="root" data-testid="graph-corners" className="pointer-events-none absolute inset-0 z-20">
+    <div ref={root} data-corners="root" data-testid="graph-corners" className={cn("pointer-events-none absolute inset-0 z-20", discs && "kb-corners")}>
       <span className="sr-only" data-testid="graph-stats">
         {stats}
       </span>
@@ -408,6 +418,7 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
                   void resumeSession(f, row, !!sessions.data).catch(fail);
                 }}
                 done={closeAll}
+                noThemeSwitch={themeCorner}
               />
               <p className="pointer-events-none flex-none px-3 text-[10.5px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">Pinned</p>
               <div className="relative min-h-[150px] flex-1">
@@ -473,8 +484,8 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
             />
           )}
           {!chatOpen && (
-            <CornerButton id={BTN_ID.pins} label="Pinned views" data-tour="graph-views" on={pinsOpen} style={{ position: "absolute", left: EDGE, top: EDGE }} onClick={() => toggle("pins")}>
-              <PushPin />
+            <CornerButton id={BTN_ID.pins} label="Pinned views" data-tour="graph-views" on={pinsOpen} disc={discs} style={{ position: "absolute", left: EDGE, top: EDGE }} onClick={() => toggle("pins")}>
+              {discs ? <LinePin /> : <PushPin />}
             </CornerButton>
           )}
           {pinsOpen && (
@@ -497,8 +508,8 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
             </>
           )}
 
-          <CornerButton id={BTN_ID.think} label="Think notes" data-tour="graph-think" on={thinkOpen} style={{ position: "absolute", right: EDGE, top: EDGE }} onClick={() => toggle("think")}>
-            <ThinkIcon />
+          <CornerButton id={BTN_ID.think} label="Think notes" data-tour="graph-think" on={thinkOpen} disc={discs} style={{ position: "absolute", right: EDGE, top: EDGE }} onClick={() => toggle("think")}>
+            {discs ? <Brain aria-hidden data-icon="think" className="size-[18px]" strokeWidth={1.6} /> : <ThinkIcon />}
           </CornerButton>
           <Fan kind="think" open={thinkOpen} label="Think notes" cards={thinkCards} empty={think.isLoading ? "Loading notes" : "No think notes yet"} onPick={pickThink} />
           {thinkOpen && (
@@ -530,8 +541,8 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
           )}
 
           {!chatOpen && (
-            <CornerButton id={BTN_ID.agent} label="Agent chats" data-tour="graph-agent" on={agentOpen} style={{ position: "absolute", left: EDGE, bottom: EDGE }} onClick={() => toggle("agent")}>
-              <Sparkles className="size-[22px]" strokeWidth={1.75} aria-hidden />
+            <CornerButton id={BTN_ID.agent} label="Agent chats" data-tour="graph-agent" on={agentOpen} disc={discs} style={{ position: "absolute", left: EDGE, bottom: EDGE }} onClick={() => toggle("agent")}>
+              <Sparkles className={discs ? "size-[18px]" : "size-[22px]"} strokeWidth={discs ? 1.6 : 1.75} aria-hidden />
             </CornerButton>
           )}
           <Fan kind="agent" open={agentOpen} label="Agent chats" cards={agentCards} empty={sessions.isLoading ? "Loading chats" : "No chats yet"} onPick={pickAgent} />
@@ -587,8 +598,8 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
             onAllViews={openGallery}
           />
           {!chatOpen && (
-            <CornerButton id={BTN_ID.pins} label="Saved views" data-tour="graph-views" on={pinsOpen} style={{ position: "absolute", left: EDGE, top: EDGE }} onClick={() => toggle("pins")}>
-              <PushPin />
+            <CornerButton id={BTN_ID.pins} label="Saved views" data-tour="graph-views" on={pinsOpen} disc={discs} style={{ position: "absolute", left: EDGE, top: EDGE }} onClick={() => toggle("pins")}>
+              {discs ? <LinePin /> : <PushPin />}
             </CornerButton>
           )}
         </>
@@ -603,6 +614,18 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
         >
           {notice}
         </div>
+      )}
+
+      {themeCorner && (
+        <CornerButton
+          disc
+          data-corners="theme"
+          label={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
+          style={{ position: "absolute", right: EDGE, bottom: EDGE }}
+          onClick={() => useTheme.getState().toggle()}
+        >
+          {theme === "dark" ? <Sun aria-hidden className="size-[18px]" strokeWidth={1.6} /> : <Moon aria-hidden className="size-[18px]" strokeWidth={1.6} />}
+        </CornerButton>
       )}
 
       <ColourDots

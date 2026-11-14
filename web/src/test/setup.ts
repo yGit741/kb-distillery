@@ -49,3 +49,5 @@ for (const name of ["localStorage", "sessionStorage"] as const) {
 // Flag ui.data-system-split is on in the local app, so it would reshape every screen test. Suites keep the layout they
 // were written against; the split's own tests switch it on with withFlag("ui.data-system-split", true, …).
 pinFlag("ui.data-system-split", false);
+// Flag graph-corners is on in the local app and reshapes the graph's corners; its own tests switch it on with withFlag.
+pinFlag("graph-corners", false);

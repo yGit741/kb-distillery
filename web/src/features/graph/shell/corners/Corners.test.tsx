@@ -18,6 +18,7 @@ import { useSparkPanel } from "../sparkPanelStore";
 import { Corners, type CornersProps } from "./Corners";
 import { fanReach } from "./geometry";
 import { resetCorners, useCorners } from "./cornersStore";
+import { useTheme } from "@/theme/theme";
 
 const schema = parseSchema(sampleSnapshot().schema);
 const visible = new Set(sampleNodes.filter((n) => ["topic", "idea", "question"].includes(n.type)).map((n) => n.id));
@@ -872,4 +873,39 @@ describe("flag pin-fan without the gallery", () => {
         expect(document.querySelector('[data-fan="pins"]')).toBeNull();
       }),
     ));
+});
+
+describe("graph-corners: one raised disc per corner, and the theme switch in the fourth", () => {
+  const themeBtn = () => screen.queryByRole("button", { name: /switch to (dark|light) theme/i });
+
+  it("flag on: the pin, brain and spark are raised discs that look the same open and closed", () =>
+    withFlag("graph-corners", true, async () => {
+      mount(fakeServer(), {}, { kind: "http" });
+      for (const b of [pins(), think(), agent()]) expect(b).toHaveAttribute("data-disc");
+      expect(screen.getByTestId("graph-corners")).toHaveClass("kb-corners");
+      const before = think().className;
+      await userEvent.click(think());
+      expect(think()).toHaveAttribute("aria-expanded", "true");
+      expect(think().className).toBe(before); // no "on" look: what it opened shows the state
+      expect(think().querySelector("[data-icon=think]")?.tagName.toLowerCase()).toBe("svg");
+    }));
+
+  it("flag on: the bottom-right disc switches the theme, through the app's one theme store", () =>
+    withFlag("graph-corners", true, async () => {
+      useTheme.getState().set("light");
+      mount(fakeServer(), {}, { kind: "http" });
+      await userEvent.click(themeBtn()!);
+      expect(useTheme.getState().theme).toBe("dark");
+      expect(themeBtn()).toHaveAccessibleName("Switch to light theme");
+      expect(useTheme.getState().elsewhere).toBe(true); // the app bar leaves its own switch out meanwhile
+      useTheme.getState().set("light");
+    }));
+
+  it("flag off: the corners keep their bare icons and there is no theme corner", () =>
+    withFlag("graph-corners", false, () => {
+      mount(fakeServer(), {}, { kind: "http" });
+      expect(pins()).not.toHaveAttribute("data-disc");
+      expect(themeBtn()).toBeNull();
+      expect(screen.getByTestId("graph-corners")).not.toHaveClass("kb-corners");
+    }));
 });

@@ -1,4 +1,6 @@
+import { Pin } from "lucide-react";
 import { forwardRef, type ButtonHTMLAttributes, type ReactNode } from "react";
+import { useVariant } from "@/components/variants";
 import { cn } from "@/lib/utils";
 import { BUTTON } from "./geometry";
 
@@ -12,6 +14,14 @@ export function PushPin({ className }: { className?: string }) {
       </g>
     </svg>
   );
+}
+
+const PIN_WEIGHTS = ["normal", "bolder"] as const;
+
+/** Flag graph-corners: the line pin, tilted, in the set the other corners use; its weight is a variant. 18px. */
+export function LinePin() {
+  const [weight] = useVariant("corner-pin", PIN_WEIGHTS, "normal");
+  return <Pin aria-hidden data-icon="pin" className="size-[18px] rotate-45" strokeWidth={weight === "bolder" ? 2.2 : 1.6} />;
 }
 
 /** Three small dots: the "..." beside a corner button (round-capped strokes, so they match the icons' line ends). */
@@ -28,11 +38,33 @@ const RING = "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring
 interface Props extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, "children"> {
   label: string;
   on?: boolean;
+  /** flag graph-corners: a raised disc that looks the same open and closed (what it opened shows the state) */
+  disc?: boolean;
   children: ReactNode;
 }
 
 /** A corner button: a bare icon, a faint round fill on hover or while its panel is open. No card behind it. */
-export const CornerButton = forwardRef<HTMLButtonElement, Props>(function CornerButton({ label, on, className, style, children, ...rest }, ref) {
+export const CornerButton = forwardRef<HTMLButtonElement, Props>(function CornerButton({ label, on, disc, className, style, children, ...rest }, ref) {
+  if (disc)
+    return (
+      <button
+        ref={ref}
+        type="button"
+        aria-label={label}
+        title={label}
+        aria-expanded={on}
+        data-disc
+        className={cn("group pointer-events-auto relative isolate grid place-items-center rounded-full text-foreground", RING, className)}
+        style={{ width: BUTTON, height: BUTTON, ...style }}
+        {...rest}
+      >
+        <span
+          aria-hidden
+          className="absolute inset-[5px] -z-10 rounded-full border bg-[var(--raised)] shadow-[var(--raised-shadow)] transition-colors duration-150 group-hover:border-foreground/30 motion-reduce:transition-none"
+        />
+        {children}
+      </button>
+    );
   return (
     <button
       ref={ref}
