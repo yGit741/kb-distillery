@@ -1,5 +1,6 @@
 """Render wiki markdown into session staging/ from claims + plan."""
 import json
+import re
 import os
 import sys
 
@@ -53,10 +54,12 @@ def _exercises_block(claims):
     if rows:
         out.append("## Exercises\n")
         for x in rows:
-            label = (x.get("label") or "").strip()
-            out.append((f"**{label}.** " if label else "") + x["statement"].strip() + "\n")
+            label = str(x.get("label") or "").strip()
+            statement = re.sub(r"(?m)^[ \t]*#{1,6}[ \t]+", "", x["statement"].strip())
+            out.append((f"**{label}.** " if label else "") + statement + "\n")
     if (claims.get("notes") or "").strip():
-        out.append("## Notes and references\n\n" + claims["notes"].strip() + "\n")
+        notes = re.sub(r"(?m)^[ \t]*#{1,6}[ \t]+(.*)$", r"**\1**", claims["notes"].strip())     # no headings of its own
+        out.append("## Notes and references\n\n" + notes + "\n")
     return ("\n".join(out) + "\n") if out else ""
 
 

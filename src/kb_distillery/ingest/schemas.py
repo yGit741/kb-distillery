@@ -33,11 +33,13 @@ def validate_claims(data, page_type=None):
     for eq in equations:
         if not isinstance(eq, dict) or "latex" not in eq:
             raise ValueError("each equation needs a latex field")
+        if isinstance(eq["latex"], str) and MARK_LINK.search(eq["latex"]):
+            raise ValueError("a mark link goes in the equation's `mark` field, never inside `latex`")
         if eq.get("mark") and not (isinstance(eq["mark"], str) and MARK_LINK.fullmatch(eq["mark"].strip())):
             raise ValueError("an equation's mark must be the mark link exactly as the transcript wrote it")
     exercises = data.get("exercises", [])
     if not isinstance(exercises, list) or any(not isinstance(x, dict) or not isinstance(x.get("statement", ""), str)
-                                              for x in exercises):
+                                              or not isinstance(x.get("label", ""), str) for x in exercises):
         raise ValueError("claims: 'exercises' must be a list of {label, statement}")
     if not isinstance(data.get("notes", ""), str):
         raise ValueError("claims: 'notes' must be a string")

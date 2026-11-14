@@ -84,6 +84,43 @@ def test_a_book_part_without_its_transcript_is_refused_with_the_command(kb, tmp_
     assert not os.path.exists(os.path.join(str(tmp_path), "extracted.text"))
 
 
+@pytest.mark.flag("parsed-pdf", False)
+def test_flag_off_leaves_a_book_part_template_as_it_was():
+    t = extract._template("raw/printed-docs/2020-book.pdf", {"label": "Ch. 2", "pages": [2, 3], "notes": True})
+    assert "exercises" not in t and "notes" not in t
+
+
+@pytest.mark.flag("parsed-pdf", True)
+def test_filled_claims_validate_without_a_transcript_and_a_stuck_page_says_so(kb, tmp_path, monkeypatch, capsys):
+    monkeypatch.setattr(extract, "load_session", lambda sha: {"raw": "raw/printed-docs/2020-book.pdf", "scope": {"pages": [2, 3], "label": "Ch. 2"}})
+    monkeypatch.setattr(extract, "session_dir", lambda sha: str(tmp_path))
+    monkeypatch.setattr("kb_distillery.config.paths.vault_root", lambda: str(kb["root"]))
+    store.write_page(kb["proot"], kb["sha"], 3, "x", [{"kind": "lost", "detail": "d"}])           # needs-human
+    assert extract.run_extract("abc") == 1 and "need a human" in capsys.readouterr().err
+    good = {"raw": "raw/printed-docs/2020-book.pdf", "title": "T", "problem": "p", "method": "m", "results": ["x"], "concepts": []}
+    (tmp_path / "claims.json").write_text(json.dumps(good))
+    assert extract.run_extract("abc") == 0                                                      # nothing to read: validate only
+    assert extract.transcript_gap(str(tmp_path / "elsewhere.pdf"), (1, 2)) is None
+
+
+@pytest.mark.flag("parsed-pdf", True)
+def test_crops_that_cannot_be_sent_do_not_stop_the_fill(kb, tmp_path, monkeypatch, capsys):
+    calls = []
+
+    def run(reqs, backend=None, **kw):
+        calls.append(reqs[0].images)
+        if reqs[0].images:
+            raise llm.LLMError("images need the claude provider")
+        good = {"raw": "r", "title": "T", "problem": "p", "method": "m", "results": ["x"], "concepts": []}
+        return [llm.Result(id=r.id, text=json.dumps(good)) for r in reqs]
+    monkeypatch.setattr(llm, "run", run)
+    text = extract.extract_text(kb["raw"], pages=(1, 2))
+    assert extract.fill_claims({"raw": "r"}, text, str(tmp_path), crops=extract.mark_crops(kb["raw"], text)) == 0
+    assert len(calls) == 2 and not calls[1] and "filling without them" in capsys.readouterr().err
+    assert extract.mark_crops(kb["raw"], "$x$ [!](mark:ffffffffffff/p0001/1)") == []          # another file's mark
+
+
+@pytest.mark.flag("parsed-pdf", True)
 def test_a_book_part_template_asks_for_exercises_and_for_notes_only_on_request():
     t = extract._template("raw/printed-docs/2020-book.pdf", {"label": "Ch. 2", "pages": [2, 3]})
     assert t["exercises"] == [{"label": "", "statement": ""}] and "notes" not in t
@@ -101,6 +138,8 @@ def test_an_equation_keeps_its_mark_and_exercises_get_their_own_section():
                                  "notes": "First proved in 1999."})
     assert ex.startswith("## Exercises\n\n**2.1.** Show $a=b$.\n") and "## Notes and references\n\nFirst proved" in ex
     assert draft._exercises_block({}) == ""
+    odd = draft._exercises_block({"exercises": [{"label": 3.36, "statement": "## Hint\nDo it."}], "notes": "## History\nOld.\n## Links out"})
+    assert "**3.36.** Hint\nDo it." in odd and odd.count("## ") == 2 and "**History**" in odd and "**Links out**" in odd
 
 
 def test_claims_validation_of_marks_exercises_and_notes():
@@ -108,6 +147,8 @@ def test_claims_validation_of_marks_exercises_and_notes():
     assert schemas.validate_claims({**base, "equations": [{"latex": "a", "mark": "[!](mark:0123456789ab/p0002/1)"}],
                                     "exercises": [{"label": "1", "statement": "s"}], "notes": "n"})
     for bad, why in (({"equations": [{"latex": "a", "mark": "see the crop"}]}, "mark link"),
+                     ({"equations": [{"latex": "a [!](mark:0123456789ab/p0002/1)"}]}, "never inside"),
+                     ({"exercises": [{"label": 3.36, "statement": "s"}]}, "exercises"),
                      ({"exercises": "none"}, "exercises"), ({"notes": ["x"]}, "notes")):
         with pytest.raises(ValueError, match=why):
             schemas.validate_claims({**base, **bad})

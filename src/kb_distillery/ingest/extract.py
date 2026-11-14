@@ -126,6 +126,40 @@ def transcript(raw_path, pages=None):
     return head + text
 
 
+def transcript_gap(raw_path, pages):
+    """Why a book part (`pages`) cannot be digested yet while the `parsed-pdf` flag is on, or None when it can: a part
+    is digested from its checked transcript, never from the text layer. Sources outside a kb folder are not held."""
+    from kb_distillery import parse
+    if not (parse.enabled() and pages and str(raw_path).lower().endswith(".pdf") and os.path.isfile(raw_path)):
+        return None
+    root = kb_root_of(raw_path)
+    if root is None or transcript(raw_path, pages) is not None:
+        return None
+    from kb_distillery.parse import store
+    proot = store.parsed_root(root)
+    with open(raw_path, "rb") as f:
+        sha = store.sha1_bytes(f.read())
+    want = range(int(pages[0]), int(pages[1]) + 1)
+    recs = {n: store.read_page(proot, sha, n) for n in want}
+    stuck = [n for n, r in recs.items() if r and r["status"] == "needs-human"]
+    if stuck:
+        return "page(s) %s of the stored transcript need a human (status needs-human in meta/parsed)" % stuck
+    missing = [n for n, r in recs.items() if r is None]
+    rel = os.path.relpath(raw_path, root)
+    return ("no checked transcript for %d of its page(s). Run\n  distill parse transcribe %s --pages %d-%d --store meta/parsed\n"
+            "first (a book part is digested from its transcript while the parsed-pdf flag is on)."
+            % (len(missing), rel, want[0], want[-1]))
+
+
+def _filled_claims(path):
+    """True when claims.json exists and is no longer the empty template."""
+    try:
+        with open(path, encoding="utf-8") as f:
+            return not is_template(json.load(f))
+    except (OSError, ValueError):
+        return False
+
+
 def mark_crops(raw_path, text, limit=MAX_CROPS):
     """[(mark link text, crop path)] for the marks in `text` whose crop file exists, `!!` first, at most `limit`."""
     root = kb_root_of(raw_path)
@@ -137,15 +171,16 @@ def mark_crops(raw_path, text, limit=MAX_CROPS):
         dirs = os.listdir(proot)
     except OSError:
         return []
+    if not MARK.search(text) or not os.path.isfile(raw_path):
+        return []
+    with open(raw_path, "rb") as f:
+        sha = store.sha1_bytes(f.read())
     out, seen = [], set()
     for m in MARK.finditer(text):
-        if m.group(0) in seen:
+        if m.group(0) in seen or m.group(2) != sha[:12] or sha not in dirs:      # only this file's own marks
             continue
         seen.add(m.group(0))
-        shas = [d for d in dirs if d.startswith(m.group(2))]
-        if len(shas) != 1:
-            continue
-        path = os.path.join(proot, shas[0], "crops", "p%s-%s.png" % (m.group(3), m.group(4)))
+        path = os.path.join(proot, sha, "crops", "p%s-%s.png" % (m.group(3), m.group(4)))
         if os.path.isfile(path):
             out.append((m.group(0), path))
     out.sort(key=lambda t: 0 if t[0].startswith("[!!]") else 1)
@@ -222,9 +257,16 @@ def fill_claims(template, text, sdir, backend=None, model=FILL_MODEL, crops=()):
     reply lands in claims.draft.json with the reason, so the agent can fix it instead of starting over).
     `crops` [(mark link, crop path)] ride along as images so marked formulas are checked against the page."""
     from kb_distillery import llm
-    kw = {"images": tuple(p for _l, p in crops)} if crops else {}
-    r = llm.ask(fill_prompt(template, text, crops), backend=backend, model=model, effort=FILL_EFFORT,
-                max_tokens=FILL_MAX_TOKENS_EXERCISES if "exercises" in template else FILL_MAX_TOKENS, **kw)
+    ceiling = FILL_MAX_TOKENS_EXERCISES if "exercises" in template else FILL_MAX_TOKENS
+    try:
+        r = llm.ask(fill_prompt(template, text, crops), backend=backend, model=model, effort=FILL_EFFORT,
+                    max_tokens=ceiling, **({"images": tuple(p for _l, p in crops)} if crops else {}))
+    except llm.LLMError as e:
+        if not crops:
+            raise
+        print(f"fill: the crops of marked formulas could not be sent ({e}); filling without them, marks are kept",
+              file=sys.stderr)
+        r = llm.ask(fill_prompt(template, text), backend=backend, model=model, effort=FILL_EFFORT, max_tokens=ceiling)
     where = f"{r.backend}, {r.model}, ${r.usd:.4f}"
     if not r.ok and not r.text:
         print(f"fill failed ({where}): {r.error}", file=sys.stderr)
@@ -256,14 +298,13 @@ def run_extract(sha, fill=False, backend=None, model=FILL_MODEL):
 
     scope = session.get("scope") or {}
     pages = tuple(scope["pages"]) if scope.get("pages") else None
-    from kb_distillery import parse
-    if parse.enabled() and pages and raw_path.lower().endswith(".pdf") and transcript(raw_path, pages) is None:
-        print(f"no checked transcript for pages {pages[0]}-{pages[1]} of {raw_rel}: run\n"
-              f"  distill parse transcribe {raw_rel} --pages {pages[0]}-{pages[1]} --store meta/parsed\n"
-              "first (a book part is digested from its transcript while the parsed-pdf flag is on).", file=sys.stderr)
+    sdir = session_dir(sha)
+    filled = _filled_claims(os.path.join(sdir, "claims.json"))
+    gap = None if filled else transcript_gap(raw_path, pages)       # validating filled claims needs no text
+    if gap:
+        print(f"{raw_rel}, pages {pages[0]}-{pages[1]}: {gap}", file=sys.stderr)
         return 1
     text = extract_text(raw_path, pages=pages)
-    sdir = session_dir(sha)
     text_path = os.path.join(sdir, "extracted.text")
     if text:
         with open(text_path, "w", encoding="utf-8") as f:
@@ -316,10 +357,12 @@ def _template(raw_rel, scope):
     if scope.get("label"):
         template["section"] = scope["label"]
         template["section_pages"] = scope.get("pages")
-    if scope.get("pages") and scope.get("exercises", True):          # a book part: exercises are on unless switched off
-        template["exercises"] = [{"label": "", "statement": ""}]
-    if scope.get("pages") and scope.get("notes"):                    # historical notes and references: only on request
-        template["notes"] = ""
+    from kb_distillery import parse
+    if parse.enabled() and scope.get("pages"):                       # a book part read from its transcript (dark otherwise)
+        if scope.get("exercises", True):                             # exercises are on unless switched off
+            template["exercises"] = [{"label": "", "statement": ""}]
+        if scope.get("notes"):                                       # historical notes and references: only on request
+            template["notes"] = ""
     person = person_from_raw(raw_rel)
     if person:
         template["person"] = person
