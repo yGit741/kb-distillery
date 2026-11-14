@@ -1,0 +1,24 @@
+/*
+ * The ground the app sits on: warm paper (light) and graphite (dark), the card one step above it, and the
+ * faint dots under the graph (.kb-canvas). Colour values live here, in src/theme/, like the data palette;
+ * index.css keeps the rest of the shadcn tokens.
+ */
+:root {
+  --background: #f3efe6; /* warm paper */
+  /* the dots under the graph: a quiet paper texture, never a mark */
+  --canvas-dot: rgba(60, 50, 30, 0.1);
+}
+
+.dark {
+  --background: #17181c; /* graphite */
+  --card: #1f2126; /* --surface-solid (opaque: no glass blur in the shell); one step above graphite */
+  --popover: #1f2126;
+  --muted-foreground: #9aa2b6; /* about 5.3:1 on the muted surface over the card */
+  --canvas-dot: rgba(255, 255, 255, 0.06);
+}
+
+/* The graph's ground: warm paper with dots (light), graphite with dots (dark). Only under the graph. */
+.kb-canvas {
+  background-image: radial-gradient(var(--canvas-dot) 1px, transparent 1.3px);
+  background-size: 18px 18px;
+}
