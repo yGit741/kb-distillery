@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { colorChannel, GraphLegend, NodeMarkG } from "@/features/graph/encoding";
-import { areaSlots } from "@/features/graph/style";
+import { areaSlots, useAreaPalette } from "@/features/graph/style";
 import type { GNode } from "@/features/graph/types";
 import { cn } from "@/lib/utils";
 import type { PreviewPage } from "./model";
@@ -51,7 +51,8 @@ function labelAt(p: { x: number; y: number; cos: number; sin: number }): { x: nu
 export function TouchedGraph<T extends TouchedPage>({ pages, shown, current, done, onPick, wide }: { pages: T[]; shown: number; current: string | null; done: (p: T) => boolean; onPick: (slug: string) => void; wide?: boolean }) {
   const z = wide ? SIZE.wide : SIZE.card;
   const nodes = useMemo(() => pages.map(node), [pages]);
-  const color = useMemo(() => colorChannel("area", { areas: areaSlots(nodes) }), [nodes]);
+  const areaHues = useAreaPalette();
+  const color = useMemo(() => colorChannel("area", { areas: areaSlots(nodes, areaHues) }), [nodes, areaHues]);
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-1 px-3 pb-2">
       <svg viewBox={`0 0 ${z.w} ${z.h}`} role="group" aria-label="Pages this touches" className="min-h-0 w-full flex-1">

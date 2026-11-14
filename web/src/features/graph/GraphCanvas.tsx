@@ -50,7 +50,7 @@ import { drawCiteBadge, drawGlow, drawHotRing, drawWebSource, popScale, THINK_DI
 import { ThinkingLegend } from "./shell/ThinkingLegend";
 import { useThinking } from "./shell/thinkingStore";
 import { personInitials, SOURCE_GLYPH_PX } from "./encoding/spec";
-import { colorOf, effectiveColorBy, layeredRadii, METRIC_COLORS, nodeRadius, NONE_GREY, semanticRadius, type ColorBy, type SizeBy } from "./style";
+import { colorOf, effectiveColorBy, layeredRadii, METRIC_COLORS, nodeRadius, NONE_GREY, semanticRadius, useAreaPalette, type ColorBy, type SizeBy } from "./style";
 import type { GNode, GraphModel, SimLink, SimNode } from "./types";
 import { useChatFull } from "./shell/chatFullStore";
 
@@ -787,11 +787,13 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
   // a favorite page wears a quiet ring (flag graph-intent)
   useEffect(() => useFavorites.subscribe(() => fg.current?.refresh()), []);
 
+  // the area hues (variant area-colours): GraphScreen ranks the areas onto them first, then this redraws
+  const areaHues = useAreaPalette();
   // ---- redraw when anything the draw reads changes
   useEffect(() => {
     rs.current.colors = readCanvasColors();
     recompute();
-  }, [recompute, theme, visible, selection, byId, neighbors, ui.highlight, ui.lab, ui.typeLabels, ui.spotlight, ui.spotIds, ui.colorBy, ui.linkOpacity, radiusOpts, layered, imp, cited, previewIds, calmOn]);
+  }, [recompute, theme, areaHues, visible, selection, byId, neighbors, ui.highlight, ui.lab, ui.typeLabels, ui.spotlight, ui.spotIds, ui.colorBy, ui.linkOpacity, radiusOpts, layered, imp, cited, previewIds, calmOn]);
 
   // a changed set of pages is framed after a moment and framed again once the layout settles: at the moment the
   // pages may still be drifting from their old places, and a single early fit left a view (Thesis) in a corner.
