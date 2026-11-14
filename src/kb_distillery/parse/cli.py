@@ -6,6 +6,7 @@ never into a knowledge base).
     parse check <pdf> --out DIR [--pages ...]                         feed the parsed pages through the verifier
     parse sample <pdf> [-n 100] [--seed 7] [--build 60]               stratified page picks, build / unseen
     parse transcribe <pdf> --pages 1-5,8 --store DIR [--work DIR] [--backend subscription|api|batch] [--max-usd N]
+    parse transcribe <raw> --kb KB --chapter 3|1-3|all                one chapter, several, or the whole book
                                                                       parser + reader + judge + auditor -> marked transcript
     parse marks --store DIR --sha SHA [--pages ...]                   the `!` / `!!` marks of a stored transcript
 
@@ -117,16 +118,50 @@ def default_work(sha: str) -> str:
     return os.path.join(base, sha[:12])
 
 
+def chapter_pages(kb: str, raw_rel: str, selector: str) -> str:
+    """The pages of the chapters `selector` picks in a book of the kb at `kb`, as a `--pages` string ('19-42,69-92')."""
+    from kb_distillery.vault import books
+    try:
+        rows = books.select(books.chapters(kb, raw_rel), selector)
+    except (LookupError, ValueError) as e:
+        raise SystemExit(str(e))
+    if not rows:
+        raise SystemExit("no chapter matches %r" % selector)
+    return ",".join("%d-%d" % (r.first_page, r.last_page) for r in rows)
+
+
+def _target(a) -> tuple:
+    """(pdf path, pages string, store directory) of a transcribe call. With --kb the PDF may be given as its raw path
+    inside that kb, the store defaults to its meta/parsed, and --chapter picks pages from the book's Chapters table."""
+    from . import store
+    kb = os.path.abspath(os.path.expanduser(a.kb)) if a.kb else ""
+    pdf = a.pdf if os.path.isabs(a.pdf) or not kb or os.path.exists(a.pdf) else os.path.join(kb, a.pdf)
+    pdf = os.path.abspath(pdf)
+    if not os.path.isfile(pdf):
+        raise SystemExit("no such file: %s" % a.pdf)
+    if bool(a.pages) == bool(a.chapter):
+        raise SystemExit("give exactly one of --pages and --chapter")
+    if a.chapter:
+        if not kb:
+            raise SystemExit("--chapter needs --kb (the chapters are read from the book page of that knowledge base)")
+        pages = chapter_pages(kb, os.path.relpath(os.path.realpath(pdf), os.path.realpath(kb)), a.chapter)
+    else:
+        pages = a.pages
+    if not (a.store or kb):
+        raise SystemExit("give --store, or --kb to use its meta/parsed")
+    return pdf, pages, os.path.abspath(a.store) if a.store else store.parsed_root(kb)
+
+
 def cmd_transcribe(a) -> int:
     from kb_distillery import llm
 
     from . import store, transcribe
-    pdf = os.path.abspath(a.pdf)
+    pdf, pages_arg, store_dir = _target(a)
     count = _page_count(pdf)
     try:
-        pages = runner.parse_pages(a.pages, count)
+        pages = runner.parse_pages(pages_arg, count)
     except ValueError as e:
-        raise SystemExit("bad --pages: %s" % e)
+        raise SystemExit("bad pages %r: %s" % (pages_arg, e))
     with open(pdf, "rb") as f:
         sha = store.sha1_bytes(f.read())
     backend = llm.resolve_backend(a.backend)
@@ -138,7 +173,7 @@ def cmd_transcribe(a) -> int:
     if a.dry_run:
         return 0
     work = _guard_out(a.work) if a.work else default_work(sha)
-    res = transcribe.transcribe(pdf, pages, work, os.path.abspath(a.store), sha,
+    res = transcribe.transcribe(pdf, pages, work, store_dir, sha,
                                 engine=None if a.engine == "none" else _engine(a.engine), backend=backend,
                                 model=a.model, judge_model=a.judge_model, audit_model=audit_model, page_count=count, max_usd=a.max_usd, force=a.force,
                                 log=lambda m: print(m, file=sys.stderr, flush=True))
@@ -170,8 +205,11 @@ def main(argv=None) -> int:
     t = sub.add_parser("transcribe")
     t.set_defaults(fn=cmd_transcribe)
     t.add_argument("pdf")
-    t.add_argument("--pages", required=True, help="'1-5,8' or 'all'")
-    t.add_argument("--store", required=True, help="parsed store: a kb's meta/parsed, or any directory")
+    t.add_argument("--pages", default="", help="'1-5,8' or 'all'")
+    t.add_argument("--chapter", default="", metavar="SEL",
+                   help="chapters of a book instead of --pages: 3, ch3, 1-3, 2,appA, all (needs --kb)")
+    t.add_argument("--kb", default="", help="a knowledge base folder: the PDF may be its raw path, the store is its meta/parsed")
+    t.add_argument("--store", default="", help="parsed store: a kb's meta/parsed, or any directory")
     t.add_argument("--work", default="", help="intermediates (default ~/.cache/kb-distillery/parse/<sha12>)")
     t.add_argument("--engine", default="mineru", help="'mineru' or 'none' (reader only: every page is marked)")
     t.add_argument("--backend", default=None, choices=("subscription", "api", "batch"))

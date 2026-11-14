@@ -34,6 +34,10 @@ def _add_scope_flags(sp):
                    help="outline entry (chapter number, #index or title text); resolves to its chapter")
     sp.add_argument("--row", default=None, metavar="N",
                     help="row of a course/series Contents table; pass the hub slug as raw_path")
+    sp.add_argument("--no-exercises", dest="exercises", action="store_false",
+                    help="a book chapter: leave its exercises out of the page (they are in by default)")
+    sp.add_argument("--notes", action="store_true",
+                    help="a book chapter: also digest its historical notes and references")
 
 
 def cmd_status(_args):
@@ -98,7 +102,12 @@ def _scopes(args):
     if not rows:
         return [{}], 0
     book = book_mod.hub_slug(raw_rel)                  # → one type: part page per chapter
-    return [{"pages": [r["start"], r["end"]], "label": r["title"], "chapter": r["id"], "book": book}
+    extra = {}
+    if not getattr(args, "exercises", True):
+        extra["exercises"] = False
+    if getattr(args, "notes", False):
+        extra["notes"] = True
+    return [{"pages": [r["start"], r["end"]], "label": r["title"], "chapter": r["id"], "book": book, **extra}
             for r in rows], 0
 
 
@@ -121,6 +130,26 @@ def cmd_book(args):
     return 0
 
 
+def _transcript_lines(raw_abs, rows):
+    """Per chapter, how much of it has a checked transcript in meta/parsed and how many formulas are marked unsure
+    (nothing when the book has no stored page at all)."""
+    from kb_distillery.parse import store
+    proot = store.parsed_root(ROOT)
+    with open(raw_abs, "rb") as f:
+        sha = store.sha1_bytes(f.read())
+    if not store.pages_on_disk(proot, sha):
+        return []
+    out = ["", "Checked transcript (meta/parsed):"]
+    for r in rows:
+        if r["start"] is None or r["status"] == book_mod.SKIP:
+            continue
+        c = store.coverage(proot, sha, r["start"], r["end"])
+        state = "none" if not c["pages"] else "%d / %d pages" % (c["pages"], c["of"])
+        marks = "" if not c["pages"] else ", %d marked ! and %d marked !!" % (c["!"], c["!!"])
+        out.append("  %-6s %s%s" % (r["id"], state, marks))
+    return out
+
+
 def cmd_toc(args):
     """The book's chapters (from its book page); --depth 2+ adds the PDF outline."""
     raw_rel = book_mod.verify_for_scope(args.raw_path)
@@ -136,6 +165,8 @@ def cmd_toc(args):
     rows, total, hub_rel = book_mod.chapters_for(raw_rel)
     if hub_rel:
         print(book_mod.format_chapters(rows, total, raw_rel, hub_rel))
+        for line in _transcript_lines(raw_abs, rows):
+            print(line)
     elif book_mod.is_book(raw_abs):
         print(book_mod.ingest_hint(raw_rel), file=sys.stderr)
     if args.depth > 1 or not hub_rel:

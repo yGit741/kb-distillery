@@ -268,3 +268,31 @@ def test_deep_or_broken_latex_never_crashes():
     for src in ("{" * 3000 + "x" + "}" * 3000, "x_", "x^", "\\frac{", "\\begin", "a\\", "\\sqrt[", "}}}{{{", ""):
         compare.math_tokens(src)
     assert compare.dollars("a $x$ \\$5") == 2
+
+
+def test_cli_target_by_pages_or_by_chapter(pdf, tmp_path, monkeypatch):
+    import argparse
+    from kb_distillery.vault import books
+    kb = tmp_path / "kb"
+    (kb / "raw").mkdir(parents=True)
+    os.rename(pdf, str(kb / "raw" / "book.pdf"))
+    monkeypatch.setattr(books, "chapters", lambda root, raw: [
+        books.Chapter("front", "Front", 1, 1, "skip"), books.Chapter("ch1", "One", 2, 2, "—"), books.Chapter("ch2", "Two", 3, 3, "—")])
+
+    def ns(**kw):
+        return argparse.Namespace(**{"pdf": "raw/book.pdf", "pages": "", "chapter": "", "kb": str(kb), "store": "", **kw})
+    path, pages, st = cli._target(ns(chapter="1-2"))
+    assert path == str(kb / "raw" / "book.pdf") and pages == "2-2,3-3" and st == str(kb / "meta" / "parsed")
+    assert cli._target(ns(chapter="all"))[1] == "2-2,3-3"                                  # skip rows are left out
+    assert cli._target(ns(pages="1-2", store=str(tmp_path / "s")))[2] == str(tmp_path / "s")
+    for bad in (ns(), ns(pages="1", chapter="1"), ns(chapter="1", kb="", pdf=str(kb / "raw" / "book.pdf"), store="x"),
+                ns(chapter="9"), ns(pdf="raw/none.pdf", pages="1")):
+        with pytest.raises(SystemExit):
+            cli._target(bad)
+
+
+def test_coverage_counts_stored_pages_and_marks(tmp_path):
+    root = str(tmp_path)
+    store.write_transcript_page(root, SHA, 2, "x", [{"id": 1, "level": "!"}, {"id": 2, "level": "!!"}])
+    store.write_transcript_page(root, SHA, 3, "y", [])
+    assert store.coverage(root, SHA, 2, 5) == {"pages": 2, "of": 4, "!": 1, "!!": 1}

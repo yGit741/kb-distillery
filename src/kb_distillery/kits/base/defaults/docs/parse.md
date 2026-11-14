@@ -54,6 +54,16 @@ distill parse marks --store DIR --sha <raw-sha1> [--pages …]
 distill parse run|status|check|sample …        # the parser alone and the older text-layer verifier
 ```
 
+A book is transcribed by chapter, several chapters, or whole, from its Chapters table (`collections.md`):
+
+```
+distill parse transcribe raw/printed-docs/<book>.pdf --kb . --chapter 3        # also 1-3, 2,appA, all
+distill ingest toc raw/printed-docs/<book>.pdf                                 # per chapter: pages stored, marks
+distill ingest full-digest raw/printed-docs/<book>.pdf --chapter 3 [--no-exercises] [--notes]
+```
+
+Pages already stored are not read again, so a chapter done today costs nothing when the whole book is run later. Front and back matter rows (`skip`) are never transcribed by `--chapter all`.
+
 `transcribe` prints its cost estimate before it runs and stops when the estimate is above `--max-usd`. Everything is cached per page under `~/.cache/kb-distillery/parse/<sha12>/` (`$KB_PARSE_WORK`), so a stopped run resumes and a second run costs nothing. `--audit-model none` skips the auditor; `--engine none` skips the parser (every page then carries a page mark).
 
 **Billing.** The reader, the judge and the auditor are `kb_distillery.llm` requests with images: the backend is the usual `--backend` / `$KB_LLM_BACKEND` choice, all three work. MinerU is local and free.
@@ -63,7 +73,7 @@ distill parse run|status|check|sample …        # the parser alone and the olde
 With the `parsed-pdf` flag on, `ingest.extract.extract_text` returns the stored transcript of a PDF whenever every page asked for is in `meta/parsed/` (the text then starts with `[transcript of pages A-B …]`); otherwise it reads the text layer as before. A book part is stricter: `extract` refuses to run without its transcript and prints the `distill parse transcribe` command to run first.
 
 - `extract --fill` sends the crops of the marked formulas with the request (`!!` first, at most 20) and tells the model to check each marked formula it uses against its crop: settled, the link is dropped; not settled, the link stays right after the formula. In `claims.json` an equation carries its link in `equations[].mark`; `draft` writes it after the equation.
-- A book part's template has `exercises` (every exercise, in full; on unless the session's scope says `exercises: false`) and, on request (`notes: true`), `notes`. `draft` writes them as `## Exercises` and `## Notes and references` near the end of the page.
+- A book chapter's template has `exercises` (every exercise, in full; on unless the digest was started with `--no-exercises`) and, with `--notes`, `notes`. `draft` writes them as `## Exercises` and `## Notes and references` near the end of the page.
 - An agent filling `claims.json` by hand follows the same rules: `extract_prompt.md`, "Marked formulas".
 
 ## Measuring

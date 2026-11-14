@@ -152,3 +152,18 @@ def test_claims_validation_of_marks_exercises_and_notes():
                      ({"exercises": "none"}, "exercises"), ({"notes": ["x"]}, "notes")):
         with pytest.raises(ValueError, match=why):
             schemas.validate_claims({**base, **bad})
+
+
+def test_exercise_and_notes_switches_reach_the_chapter_scope(monkeypatch):
+    import argparse
+    from kb_distillery.ingest import cli
+    rows = [{"start": 2, "end": 3, "title": "Two", "id": "ch2"}]
+    monkeypatch.setattr(cli, "_row_scope", lambda args: (None, 0))
+    monkeypatch.setattr(cli.book_mod, "verify_for_scope", lambda p: p)
+    monkeypatch.setattr(cli.book_mod, "gate", lambda *a, **k: (rows, None))
+    monkeypatch.setattr(cli.book_mod, "hub_slug", lambda raw: "book-x")
+    base = {"raw_path": "raw/printed-docs/x.pdf", "chapter": "2"}
+    (plain,), _ = cli._scopes(argparse.Namespace(**base, exercises=True, notes=False))
+    assert "exercises" not in plain and "notes" not in plain and plain["chapter"] == "ch2"
+    (off,), _ = cli._scopes(argparse.Namespace(**base, exercises=False, notes=True))
+    assert off["exercises"] is False and off["notes"] is True
