@@ -906,6 +906,10 @@ def nightly_autofix(root=ROOT, record=None, run=subprocess.run):
     from kb_distillery.config.flags import runtime
     if not runtime.effective("nightly-autofix"):
         return None
+    # only the real nightly (daily_sync.main sets KB_NIGHTLY=1) and never a test: a sync run by a test or by another
+    # command must not open issues or start the fixer
+    if os.environ.get("KB_NIGHTLY") != "1" or "PYTEST_CURRENT_TEST" in os.environ:
+        return None
     import tempfile
     with tempfile.TemporaryDirectory(prefix="kb-autofix-") as tmp:
         run_json, summary = os.path.join(tmp, "run.json"), os.path.join(tmp, "summary.json")

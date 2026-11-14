@@ -276,6 +276,13 @@ def fix(failure, number, state, root, save, log=print):
     wt = m.group(1)
 
     def drop(result, text, counted=True):
+        # ship refuses to drop a branch that is checked out: the fixer removes its own worktree first, then
+        # `prune --drop` saves any commits to _quarantine/ and deletes the branch
+        try:
+            subprocess.run(["git", "worktree", "remove", "--force", wt], cwd=root, capture_output=True, text=True,
+                           check=False, timeout=120)
+        except (OSError, subprocess.SubprocessError) as e:
+            log(f"autofix: worktree {wt} not removed — {e}")
         ship(["prune", "--drop", branch], root, timeout=300)
         return finish(result, text, counted)
 

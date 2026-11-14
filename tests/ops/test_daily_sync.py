@@ -103,9 +103,6 @@ class StagePathsTests(unittest.TestCase):
             self.assertNotIn("pixi.toml", paths)
 
 
-if __name__ == "__main__":
-    unittest.main()
-
 
 def test_distill_already_on_path_changes_nothing():
     from kb_distillery.ops import daily_sync
@@ -122,8 +119,33 @@ def test_missing_distill_gets_a_working_launcher(tmp_path, monkeypatch):
     monkeypatch.setattr(kbconfig, "checkout_root", lambda: str(tmp_path))
     env = {"PATH": "/usr/bin:/bin"}
     added = daily_sync.ensure_distill_on_path(env, which=lambda name, path=None: None)
-    assert env["PATH"].split(os.pathsep)[0] == added
+    assert added == str(tmp_path / ".cache" / "bin")
+    assert env["PATH"].split(os.pathsep) == [added, "/usr/bin", "/bin"]
     shim = os.path.join(added, "distill")
     assert os.access(shim, os.X_OK)
     out = subprocess.run([shim, "--help"], capture_output=True, text=True, timeout=60, env={"PATH": env["PATH"]})
     assert out.returncode == 0, out.stderr[-500:]
+
+
+def test_empty_path_gets_no_current_directory_entry(tmp_path, monkeypatch):
+    from kb_distillery.config import kb as kbconfig
+    from kb_distillery.ops import daily_sync
+    monkeypatch.setattr(kbconfig, "checkout_root", lambda: str(tmp_path))
+    env = {}
+    added = daily_sync.ensure_distill_on_path(env, which=lambda name, path=None: None)
+    assert env["PATH"] == added
+
+
+def test_unwritable_launcher_never_raises(tmp_path, monkeypatch):
+    from kb_distillery.config import kb as kbconfig
+    from kb_distillery.ops import daily_sync
+    (tmp_path / ".cache").write_text("a file, not a folder")
+    monkeypatch.setattr(kbconfig, "checkout_root", lambda: str(tmp_path))
+    env = {"PATH": "/usr/bin"}
+    assert daily_sync.ensure_distill_on_path(env, which=lambda name, path=None: None) is None
+    assert env["PATH"] == "/usr/bin"
+
+
+if __name__ == "__main__":
+    unittest.main()
+

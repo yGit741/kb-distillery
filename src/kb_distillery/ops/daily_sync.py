@@ -13,10 +13,10 @@ Shared git helpers (run_git, changed_paths, has_open_sessions) live here.
 import argparse
 import datetime
 import os
+import shlex
 import shutil
 import subprocess
 import sys
-import tempfile
 
 from kb_distillery.config.paths import vault_root
 META_DIR = os.path.join(vault_root(), "meta")
@@ -100,36 +100,49 @@ def inbox_pickup(run=subprocess.run):
 
 SHIM = """#!/bin/sh
 # Written by kb_distillery.ops.daily_sync: the nightly runs under launchd, whose PATH may not hold `distill`.
-PYTHONPATH='{src}' exec '{python}' -m kb_distillery "$@"
+PYTHONPATH={src}${{PYTHONPATH:+:$PYTHONPATH}} exec {python} -m kb_distillery "$@"
 """
+
+
+def _prepend(environ, folder):
+    environ["PATH"] = os.pathsep.join([folder, *[p for p in environ.get("PATH", "").split(os.pathsep) if p]])
 
 
 def ensure_distill_on_path(environ=None, which=shutil.which):
     """The kb's git hooks call `distill` and fail closed without it, so a launchd run whose PATH lacks it would skip
-    every commit. When `distill` does not resolve, put this engine's own launcher first on PATH (inherited by every
-    git hook the sync runs). Returns the folder added, or None when nothing was needed."""
+    every commit. When `distill` does not resolve, put a launcher for this engine (this checkout's code, this
+    interpreter) in `<checkout>/.cache/bin` first on PATH, which every git hook the sync runs inherits. An installed
+    package uses the `distill` next to its interpreter. Returns the folder added, or None. Never raises."""
     environ = os.environ if environ is None else environ
     if which("distill", path=environ.get("PATH")):
         return None
-    bindir = os.path.dirname(sys.executable)
-    if not os.access(os.path.join(bindir, "distill"), os.X_OK):
-        from kb_distillery.config.kb import checkout_root
-        base = checkout_root()
-        bindir = os.path.join(base, ".cache", "bin") if base else os.path.join(tempfile.gettempdir(), "kb-distillery-bin")
-        os.makedirs(bindir, exist_ok=True)
-        shim = os.path.join(bindir, "distill")
-        src = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-        text = SHIM.format(src=src, python=sys.executable)
-        try:
-            with open(shim, encoding="utf-8") as f:
-                same = f.read() == text
-        except OSError:
-            same = False
-        if not same:
-            with open(shim, "w", encoding="utf-8") as f:
-                f.write(text)
-        os.chmod(shim, 0o755)
-    environ["PATH"] = os.pathsep.join([bindir, environ.get("PATH", "")])
+    from kb_distillery.config.kb import checkout_root
+    base = checkout_root()
+    try:
+        if base is None:
+            bindir = os.path.dirname(sys.executable)
+            if not os.access(os.path.join(bindir, "distill"), os.X_OK):
+                print("warning: `distill` is not on PATH and no launcher could be made: the kb hooks will refuse commits")
+                return None
+        else:
+            bindir = os.path.join(base, ".cache", "bin")
+            os.makedirs(bindir, exist_ok=True)
+            shim = os.path.join(bindir, "distill")
+            src = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+            text = SHIM.format(src=shlex.quote(src), python=shlex.quote(sys.executable))
+            try:
+                with open(shim, encoding="utf-8") as f:
+                    same = f.read() == text
+            except OSError:
+                same = False
+            if not same:
+                with open(shim, "w", encoding="utf-8") as f:
+                    f.write(text)
+            os.chmod(shim, 0o755)
+    except OSError as e:
+        print(f"warning: `distill` is not on PATH and its launcher could not be written ({e})")
+        return None
+    _prepend(environ, bindir)
     print(f"note: `distill` was not on PATH; using {os.path.join(bindir, 'distill')}")
     return bindir
 
@@ -150,6 +163,8 @@ def main(argv=None):
     # Knowledge is committed one operation at a time by meta/ops; the nightly run
     # only commits human think/ edits and labelled leftovers, then pushes main + tags.
     ensure_distill_on_path()          # the kb's hooks fail closed without it (launchd's PATH may lack it)
+    if not args.dry_run:
+        os.environ["KB_NIGHTLY"] = "1"    # the nightly auto-fix runs only here (ops.core.nightly_autofix)
     from kb_distillery.ops import core as ops_core
     rc = ops_core.sync(push=not args.no_push, dry_run=args.dry_run)
     if not args.dry_run:
