@@ -2,7 +2,7 @@
 
 This page takes you from a clone to a first digest. You need git. The installer adds [pixi](https://pixi.sh), and pixi installs Node.
 
-Supported platforms: macOS (Apple silicon and Intel), Linux x86-64, and Windows through WSL2. Installing the wheel with pip needs Python 3.11 or newer; older Pythons fail with a confusing `grand-cypher` error.
+Supported platforms: macOS (Apple silicon on 13 or newer, Intel on 14 or newer), Linux x86-64, and Windows through WSL2. Installing the wheel with pip needs Python 3.11 or newer; older Pythons fail with a confusing `grand-cypher` error.
 
 AI features are optional. Reading, linking, linting and the app work without a key. A digest needs a Claude login or an Anthropic API key; digests run on Claude only. Other providers are described in [Language models](concepts/llm.md).
 
