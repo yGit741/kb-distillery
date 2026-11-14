@@ -278,10 +278,11 @@ def estimate(n_pages: int, backend: str, with_audit: bool = True) -> float:
 def transcribe(pdf: str, pages: list, work: str, root: str, sha: str, engine=None, backend: str | None = None,
                model: str = reader.MODEL, judge_model: str = judge.MODEL, audit_model: str | None = audit.MODEL,
                source: str = "", page_count: int = 0, force: bool = False, max_usd: float | None = None,
-               log=print) -> dict:
+               retry_backend: str | None = None, log=print) -> dict:
     """Read `pages` of `pdf` with the parser and the reader, judge their differences, audit the result and store the
     marked transcript under `<root>/<sha>/`. `work` holds every intermediate (resumable: nothing already done is done
-    again). `audit_model=None` skips the auditor. `max_usd` is a ceiling on the run: a stage whose estimate would cross
+    again). A request that fails (an error, a cut or unreadable reply, a refusal) is tried once more, on `retry_backend`
+    when given. `audit_model=None` skips the auditor. `max_usd` is a ceiling on the run: a stage whose estimate would cross
     it is skipped (no judge: every difference becomes `!!`; no auditor: pages are stored unaudited) and named in "skipped".
     Returns {"pages": {page: status}, "marks": {"!": n, "!!": n}, "usd": x, "failed": {page: why}}."""
     usd = 0.0
@@ -292,8 +293,15 @@ def transcribe(pdf: str, pages: list, work: str, root: str, sha: str, engine=Non
             parsed = set(res["parsed"]) | set(res["skipped"])
         except EngineError as e:
             log("parser unavailable, pages will carry a single-reader mark: %s" % e)
+    again = retry_backend or backend                                # a failed request gets one more try, there
     r = reader.read(pdf, pages, work, backend=backend, model=model, force=force, log=log)
     usd += r["usd"]
+    if r["failed"]:
+        log("reader: %d page(s) failed, trying once more" % len(r["failed"]))
+        r2 = reader.read(pdf, sorted(r["failed"]), work, backend=again, model=model, log=log)
+        usd += r2["usd"]
+        r["read"] += r2["read"]
+        r["failed"] = r2["failed"]
     have = set(r["read"]) | set(r["skipped"])
     parser_md: dict = {}
     boxes: dict = {}
@@ -322,6 +330,12 @@ def transcribe(pdf: str, pages: list, work: str, root: str, sha: str, engine=Non
     verdicts, j_usd = ({}, 0.0) if over("judge", sum(1 for v in todo.values() if v), judge.USD_PER_PAGE) else \
         judge.ask(todo, images, work, backend=backend, model=judge_model, force=force, log=log)
     usd += j_usd
+    mute = {p: todo[p] for p in verdicts if todo.get(p) and not any(v.verdict for v in verdicts[p].values())}
+    if mute and "judge" not in skipped:
+        log("judge: no readable answer for %d page(s), trying once more" % len(mute))
+        v2, j2 = judge.ask(mute, images, work, backend=again, model=judge_model, log=log)
+        usd += j2
+        verdicts.update(v2)
     stage: dict = {}                                                 # page -> (text, marks) after the judge
     for p in reader_md:
         stage[p] = judged(reader_md[p], todo.get(p, []), verdicts.get(p, {}))
@@ -330,6 +344,13 @@ def transcribe(pdf: str, pages: list, work: str, root: str, sha: str, engine=Non
                                     {p: reader.render(pdf, p, work) for p in stage},
                                     work, backend=backend, model=audit_model, force=force, log=log)
         usd += a_usd
+        deaf = sorted(p for p in stage if findings.get(p) is None)
+        if deaf:
+            log("auditor: no readable answer for %d page(s), trying once more" % len(deaf))
+            f2, a2 = audit.ask({p: stage[p][0] for p in deaf}, {p: reader.render(pdf, p, work) for p in deaf},
+                               work, backend=again, model=audit_model, log=log)
+            usd += a2
+            findings.update(f2)
         for p in stage:
             stage[p] = audited(stage[p][0], stage[p][1], findings.get(p))
     out = {"pages": {}, "marks": {"!": 0, "!!": 0}, "usd": round(usd, 4), "failed": dict(r["failed"]), "skipped": skipped}

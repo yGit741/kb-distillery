@@ -290,3 +290,21 @@ def test_a_fix_about_another_place_is_not_applied():
                                                                    "severity": "serious", "sure": True}])
     assert text == "so $a + b c d$ holds" and marks[0]["level"] == "!!"
     assert transcribe.sane_fix("$a$", "$c$")                                              # one symbol: nothing to compare
+
+
+def test_a_failed_request_is_tried_once_more(pdf, tmp_path, monkeypatch):
+    state = {"n": 0, "backends": []}
+    good = FakeLLM(OK)
+
+    def flaky(requests, backend=None, **kw):
+        state["n"] += 1
+        state["backends"].append(backend)
+        if state["n"] in (1, 3, 5):                                  # first reader, first judge, first audit call fail
+            return [llm.Result(r.id, text="", error="blocked", stop_reason="") if r.id.startswith("p")
+                    else llm.Result(r.id, text="not json", stop_reason="end_turn") for r in requests]
+        return good(requests, backend=backend, **kw)
+    monkeypatch.setattr(llm, "run", flaky)
+    res = transcribe.transcribe(pdf, [1], str(tmp_path / "w"), str(tmp_path / "s"), SHA, engine=FakeEngine(), backend="batch",
+                                retry_backend="subscription", log=lambda *_: None)
+    assert res["failed"] == {} and res["pages"][1] == "marked" and res["marks"] == {"!": 1, "!!": 0}
+    assert state["backends"] == ["batch", "subscription"] * 3
