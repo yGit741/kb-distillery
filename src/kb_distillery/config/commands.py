@@ -77,6 +77,8 @@ COMMANDS: dict[str, Cmd] = {
     "lint": Cmd("lint the selected knowledge base (the schema is the linter); --health adds the summary",
                 target="kb_distillery.lint.lint", config_check=False),
     "llm": Cmd("the one door to Claude: ask, submit, status, collect", target="kb_distillery.llm", forward_help=True),
+    "parse": Cmd("PDF pages to a checked transcript: run, check, sample, transcribe, marks (dark: parsed-pdf flag)",
+                 target="kb_distillery.parse.cli", forward_help=True),
     "search": Cmd("search a knowledge base", "group", sub={
         "text": Cmd("full text over pages, think notes, chats and raw text: distill search text \"<query>\" [--rebuild]",
                     target="kb_distillery.search.fts", forward_help=True),

@@ -56,7 +56,10 @@ USER kb
 WORKDIR /data
 VOLUME /data
 EXPOSE 8765
-HEALTHCHECK --interval=60s --timeout=30s --start-period=30s --retries=3 CMD ["distill", "doctor"]
+# Healthy = the setup checks pass (`distill doctor`) and the server accepts a connection on its port (no request, so no
+# identity header is needed in proxy mode).
+HEALTHCHECK --interval=60s --timeout=30s --start-period=30s --retries=3 \
+  CMD distill doctor && python -c "import socket; socket.create_connection(('127.0.0.1', 8765), 5).close()"
 # Binding 0.0.0.0 is allowed only because KB_AUTH=proxy is the image default: the server refuses a non-loopback
 # bind in any other mode, and refuses to start in proxy mode without KB_AUTH_EMAIL and an identity source.
 CMD ["python", "-m", "kb_distillery.server", "--host", "0.0.0.0", "--port", "8765", "--no-open", "--no-build"]

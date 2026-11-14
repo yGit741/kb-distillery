@@ -1,7 +1,8 @@
 """Parsed pages on disk: `<root>/<raw-sha1>/manifest.json` plus `pNNNN.json`, one per page.
 
-JSON, not Markdown (lint treats every `meta/**/*.md` as a wikilink target). Status per page is `verified` (no flag),
-`repaired` (a model fix that passed the verifier) or `needs-human`; nothing else reaches a digest as checked text.
+JSON, not Markdown (lint treats every `meta/**/*.md` as a wikilink target). Status per page is `verified` (no flag, no
+mark), `repaired` (a model fix that passed the verifier), `marked` (a transcript whose unsure places carry `!` / `!!`
+mark links, see `transcribe`) or `needs-human`; nothing else reaches a digest as checked text.
 `root` is always a parameter: the live location is `<kb>/meta/parsed` (`parsed_root`), tests pass a tmp dir.
 """
 from __future__ import annotations
@@ -12,7 +13,7 @@ import os
 import tempfile
 from collections import Counter
 
-STATUSES = ("verified", "repaired", "needs-human")
+STATUSES = ("verified", "repaired", "marked", "needs-human")
 
 
 def parsed_root(kb_root: str) -> str:
@@ -68,6 +69,32 @@ def write_page(root: str, sha: str, page: int, markdown: str, flags: list, statu
         rec["repaired_from"] = repaired_from
     _write_json(page_path(root, sha, page), rec)
     return rec
+
+
+def write_transcript_page(root: str, sha: str, page: int, markdown: str, marks: list, engine: str = "") -> dict:
+    """Store one page of a marked transcript: `verified` without marks, `marked` with them (the records ride along)."""
+    rec = {"page": page, "status": "marked" if marks else "verified", "markdown": markdown, "engine": engine,
+           "flags": [], "marks": [dict(m) for m in marks]}
+    _write_json(page_path(root, sha, page), rec)
+    return rec
+
+
+def transcript(root: str, sha: str, pages: list) -> str | None:
+    """The stored pages joined in order, mark links included; None when any of them is missing or needs a human."""
+    recs = [read_page(root, sha, n) for n in pages]
+    if not recs or any(r is None or r["status"] == "needs-human" for r in recs):
+        return None
+    return "\n\n".join(r["markdown"].strip() for r in recs) + "\n"
+
+
+def marks(root: str, sha: str, pages: list | None = None) -> list:
+    """Every mark record of the stored pages, each with its `page`."""
+    out = []
+    for n in (pages if pages is not None else pages_on_disk(root, sha)):
+        rec = read_page(root, sha, n)
+        for m in (rec or {}).get("marks", []):
+            out.append(dict(m, page=n))
+    return out
 
 
 def read_page(root: str, sha: str, page: int) -> dict | None:

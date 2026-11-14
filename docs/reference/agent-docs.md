@@ -18,5 +18,6 @@ Agents that work in a knowledge base read short documents instead of this site. 
 | [think.md](../../src/kb_distillery/kits/base/defaults/docs/think.md) | Sending a think note into knowledge bases, provenance, `think:` citations. |
 | [workflows.md](../../src/kb_distillery/kits/base/defaults/docs/workflows.md) | Choosing a skill tier, running the ingest, query and distill commands. |
 | [semantic-lint.md](../../src/kb_distillery/kits/base/defaults/docs/semantic-lint.md) | Handling coherence warnings and the semantic checks. |
+| [parse.md](../../src/kb_distillery/kits/base/defaults/docs/parse.md) | How PDF pages become a checked transcript with `!` / `!!` marks. |
 
 To write a skill, read [Write a skill](../guides/write-a-skill.md).

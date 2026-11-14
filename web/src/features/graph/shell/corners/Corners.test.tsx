@@ -426,7 +426,8 @@ describe("legends", () => {
     expect(useGraphUi.getState().shownTypes?.has("topic")).toBe(false);
   });
 
-  it("the types card has concepts on the left of the divider and sources on the right", async () => {
+  it("the types card has concepts on the left of the divider and sources on the right", () =>
+    withFlag("graph-intent", false, () => {
     mount();
     const card = screen.getByRole("group", { name: "Page types" });
     const [left, right] = [...card.children].filter((e) => e.tagName === "DIV") as HTMLElement[];
@@ -436,7 +437,7 @@ describe("legends", () => {
     // the divider sits between the two groups
     expect(left!.nextElementSibling).toHaveAttribute("aria-hidden", "true");
     expect(left!.nextElementSibling!.nextElementSibling).toBe(right);
-  });
+    }));
 
   // eight themes with 8, 7 ... 1 pages each, so the counts differ and the list is longer than five
   const themed = Array.from({ length: 8 }, (_, t) => Array.from({ length: 8 - t }, (_, i) => ({ ...sampleNodes[0]!, id: `t${t}-p${i}`, areas: [`theme-${t}`] }))).flat();
@@ -503,6 +504,43 @@ describe("legends", () => {
     expect(shown?.has("role")).toBe(true);
   });
 
+  it("graph-intent on: a Concepts / Sources switch; Concepts lists no source type and offers the concept colourings", () =>
+    withFlag("graph-intent", true, async () => {
+      mount();
+      const sw = screen.getByRole("radiogroup", { name: /what the graph shows/i });
+      expect(within(sw).getByRole("radio", { name: "Concepts" })).toHaveAttribute("aria-checked", "true");
+      const card = screen.getByRole("group", { name: "Page types" });
+      expect(card.querySelector("[data-type=topic]")).not.toBeNull();
+      expect(card.querySelector("[data-type=paper]")).toBeNull();
+      const pick = within(screen.getByRole("group", { name: /colour legend/i })).getByRole("combobox", { name: "Color by" });
+      expect(within(pick).getAllByRole("option").map((o) => o.textContent)).toEqual(["theme", "type", "maturity", "recency", "source count"]);
+      await userEvent.click(within(sw).getByRole("radio", { name: "Sources" }));
+      const shown = useGraphUi.getState().shownTypes!;
+      expect(shown.has("paper")).toBe(true);
+      expect(shown.has("topic")).toBe(true);
+      expect(useGraphUi.getState().colorBy).toBe("format");
+    }));
+
+  it("graph-intent on, Sources view: the source types are listed and the colourings are the source ones", () =>
+    withFlag("graph-intent", true, () => {
+      useGraphUi.setState({ colorBy: "format" });
+      mount(fakeServer(), { visible: new Set(sampleNodes.map((n) => n.id)), shownTypes: new Set([...schema.defaultVisible, "paper"]) });
+      expect(within(screen.getByRole("radiogroup", { name: /what the graph shows/i })).getByRole("radio", { name: "Sources" })).toHaveAttribute("aria-checked", "true");
+      expect(screen.getByRole("group", { name: "Page types" }).querySelector("[data-type=paper]")).not.toBeNull();
+      const pick = within(screen.getByRole("group", { name: /colour legend/i })).getByRole("combobox", { name: "Color by" });
+      expect(within(pick).getAllByRole("option").map((o) => o.textContent)).toEqual(["format", "digest status", "date added"]);
+      // the colour key lists the sources' values only: the concepts beside them are neutral
+      const rows = [...screen.getByRole("group", { name: /colour legend/i }).querySelectorAll("button[data-row]")].map((b) => b.getAttribute("data-row"));
+      expect(rows).toEqual(["paper"]);
+    }));
+
+  it("graph-intent off: no switch, and the types card keeps its source side", () =>
+    withFlag("graph-intent", false, () => {
+      mount();
+      expect(screen.queryByRole("radiogroup", { name: /what the graph shows/i })).toBeNull();
+      expect(screen.getByRole("group", { name: "Page types" }).querySelector("[data-type=paper]")).not.toBeNull();
+    }));
+
   it("two clicks on the same spot open and close the colour legend, and never hide the name under the pointer", async () => {
     mount();
     const legend = screen.getByRole("group", { name: /colour legend/i });
@@ -545,13 +583,14 @@ describe("legends", () => {
     expect(useGraphUi.getState().colorBy).toBe("status");
   });
 
-  it("with a source on screen the dropdown also offers digest status and date added", () => {
+  it("with a source on screen the dropdown also offers digest status and date added", () =>
+    withFlag("graph-intent", false, () => {
     const paper = sampleNodes.find((n) => n.layer === "source")!;
     mount(fakeServer(), { visible: new Set(sampleNodes.map((n) => n.id)) });
     expect(paper).toBeDefined();
     const pick = within(screen.getByRole("group", { name: /colour legend/i })).getByRole("combobox", { name: "Color by" });
     expect(within(pick).getAllByRole("option").map((o) => o.textContent)).toEqual(["theme", "type", "maturity", "recency", "source count", "digest status", "date added"]);
-  });
+    }));
 
   it("a continuous colouring shows one gradient bar with its two ends, not swatches", async () => {
     useGraphUi.setState({ colorBy: "recency" });
