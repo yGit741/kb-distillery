@@ -77,7 +77,7 @@ function KnowledgeTabs() {
 
 /** One top nav, ONE theme toggle, ONE command palette, one share chip. Screens render in <Outlet/>. */
 export function AppShell() {
-  const { theme, toggle } = useTheme();
+  const { theme, toggle, elsewhere } = useTheme();
   const embed = useEmbed();
   const agentMode = useFlag("agent-mode");
   useFlag("ui.ingest"); // re-render the nav when a runtime flag that adds a tab arrives
@@ -88,7 +88,12 @@ export function AppShell() {
   const split = useDataSystemSplit();
   // the panel only renders its switch with a server behind it (as Corners does): share and static builds keep the header one
   const panelHasSwitch = useDataSource().kind === "http" && !IS_SHARE;
-  const themeInPanel = useFlag("views-panel") && useFlag("graph-shell") && onGraph && panelHasSwitch;
+  // flag graph-corners: on the graph the switch is the bottom-right corner disc instead, still one switch on screen
+  // every hook runs on every render (flags can arrive later from the server), then the switch's place is worked out
+  const viewsPanelOn = useFlag("views-panel");
+  const shellOn = useFlag("graph-shell");
+  // flag graph-corners: the graph's corner disc says while it is on screen (`elsewhere`), so the bar leaves its own out
+  const themeInPanel = (viewsPanelOn && shellOn && onGraph && panelHasSwitch) || (elsewhere && onGraph);
   // flag header-fold: on the graph the bar folds away above the screen (the graph's chevron brings it back)
   const folded = useHeaderFolded();
   return (

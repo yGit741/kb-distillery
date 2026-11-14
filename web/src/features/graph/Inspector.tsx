@@ -37,6 +37,8 @@ interface Props {
   relations?: ReadonlyMap<string, readonly GRelation[]>;
   /** In the calm shell the colour dots sit on the right edge: the card keeps clear of them. */
   clearOfEdge?: boolean;
+  /** flag graph-corners: the theme disc holds the bottom-right corner, so the card starts left of it */
+  clearOfCorner?: boolean;
 }
 
 function Row({ n, colorBy, onGo, children }: { n: GNode; colorBy: ColorBy; onGo: () => void; children?: React.ReactNode }) {
@@ -79,7 +81,7 @@ export function Inspector(p: Props) {
   return (
     <aside
       aria-label="Selected page"
-      className={cn("pointer-events-auto absolute bottom-3 z-20 flex max-h-[62%] w-[min(24rem,calc(100%-1.5rem))] flex-col rounded-lg border bg-card text-card-foreground shadow-[var(--shadow)] max-sm:left-3 max-sm:w-auto", p.clearOfEdge ? "right-11" : "right-3")}
+      className={cn("pointer-events-auto absolute bottom-3 z-20 flex max-h-[62%] w-[min(24rem,calc(100%-1.5rem))] flex-col rounded-lg border bg-card text-card-foreground shadow-[var(--shadow)] max-sm:left-3 max-sm:w-auto", p.clearOfCorner ? "right-[4.5rem]" : p.clearOfEdge ? "right-11" : "right-3")}
     >
       <Button variant="ghost" size="icon" className="absolute right-1 top-1 size-7" aria-label="Close details" onClick={p.onClose}>
         <X aria-hidden />

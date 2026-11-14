@@ -307,6 +307,7 @@ function Loaded({
   const shellTop = useShellTop();
   const sparkOpen = useSparkOpen();
   const { full: fullChat, folded: foldedChat } = useFullChat();
+  const cornersFlag = useFlag("graph-corners");
   const sparkPanelW = useChatFull((s) => s.panelW);
   const explorerOpen = useChatFull((s) => s.explorerOpen);
   const paneW = useChatFull((s) => s.paneW);
@@ -842,6 +843,7 @@ function Loaded({
           onToggleSources={(ids) => ui.toggleReveal(ids)}
           relations={relations}
           clearOfEdge={shell}
+          clearOfCorner={shell && cornersFlag}
         />
       )}
       {reader && !fullChat && <SideReader slug={reader.slug ?? reader.id} kb={host.foreignKb?.(reader.id)} title={reader.title || reader.id} pageHref={host.pageHref(reader.id)} onClose={() => ui.set({ readerSlug: null, readerSet: [] })} step={readerStep} />}

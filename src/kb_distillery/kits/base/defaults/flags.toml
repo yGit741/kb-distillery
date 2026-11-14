@@ -407,3 +407,13 @@ expires = 2027-02-12
 kind = "runtime"
 default = true
 envs = { local = true, private = true, public = false }
+
+[[flag]]
+name = "graph-corners"
+description = "Graph: the unified corners. Four raised discs with line icons (pin, brain, spark, theme) and one theme switch on the graph; the spark and the brain open quick lists, the pin a loop of pinned views. Steps 5 to 8 of the unified graph screen, released by flipping this flag."
+owner = "maintainer"
+created = 2026-11-14
+expires = 2027-02-12
+kind = "runtime"
+default = false
+envs = { local = true, private = false, public = false }

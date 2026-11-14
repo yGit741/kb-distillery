@@ -73,6 +73,8 @@ export interface ViewsPanelProps {
   onChat: (row: SessionRow) => void;
   /** closes the corner panels once a command ran */
   done: () => void;
+  /** flag graph-corners: the theme switch moved to its own corner, so the panel leaves it out */
+  noThemeSwitch?: boolean;
 }
 
 /**
@@ -90,6 +92,7 @@ export function ViewsPanel({
   onView,
   onChat,
   done,
+  noThemeSwitch,
 }: ViewsPanelProps) {
   const tools = useVisibleTools();
   const tool = (id: string) => tools.find((t) => t.id === id);
@@ -304,17 +307,19 @@ export function ViewsPanel({
             )}
           </div>
         )}
-        <button
-          type="button"
-          role="switch"
-          aria-checked={theme === "dark"}
-          onClick={toggleTheme}
-          className={ROW}
-        >
-          {theme === "dark" ? <Moon {...ICON} /> : <Sun {...ICON} />}
-          <span className="truncate">Dark mode</span>
-          <Meta>{theme === "dark" ? "on" : "off"}</Meta>
-        </button>
+        {!noThemeSwitch && (
+          <button
+            type="button"
+            role="switch"
+            aria-checked={theme === "dark"}
+            onClick={toggleTheme}
+            className={ROW}
+          >
+            {theme === "dark" ? <Moon {...ICON} /> : <Sun {...ICON} />}
+            <span className="truncate">Dark mode</span>
+            <Meta>{theme === "dark" ? "on" : "off"}</Meta>
+          </button>
+        )}
       </Section>
     </div>
   );

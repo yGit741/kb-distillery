@@ -1,3 +1,4 @@
+import { useTheme } from "@/theme/theme";
 import { createMemoryHistory } from "@tanstack/react-router";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -58,6 +59,30 @@ describe("AppShell", () => {
         }),
       );
     }
+  });
+
+  it("flag graph-corners: exactly one theme switch on every screen, also when the graph cannot load", async () => {
+    await withFlag("graph-corners", true, () =>
+      withFlag("views-panel", false, () =>
+      withFlag("graph-shell", true, async () => {
+        for (const path of ["/app/system", "/app/graph"]) {
+          const router = createAppRouter(createMemoryHistory({ initialEntries: [path] }));
+          const { unmount } = render(<App source={ds} router={router} />);
+          await screen.findByRole("navigation", { name: "Main", hidden: true });
+          // the graph here has no data, so its corners may not mount: whichever place has it, there is one switch
+          await waitFor(() => expect(screen.queryAllByRole("button", { name: /switch to/i, hidden: true })).toHaveLength(1));
+          unmount();
+        }
+        // with the corner disc on screen the bar leaves its own switch out, and brings it back once the disc is gone
+        useTheme.getState().setElsewhere(true);
+        const router = createAppRouter(createMemoryHistory({ initialEntries: ["/app/graph"] }));
+        const { unmount } = render(<App source={ds} router={router} />);
+        await screen.findByRole("navigation", { name: "Main", hidden: true });
+        expect(document.querySelector("header")!.querySelectorAll("button[aria-label^='Switch to']")).toHaveLength(0);
+        unmount();
+        useTheme.getState().setElsewhere(false);
+      })),
+    );
   });
 
   it("sends the folded Pipeline and Lifecycle screens to their System tabs, search kept", async () => {

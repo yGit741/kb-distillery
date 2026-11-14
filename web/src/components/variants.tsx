@@ -18,6 +18,14 @@ export interface VariantSpec {
  * The choice is per browser, saved under `kbd.variants.<component>`.
  */
 export const VARIANTS: Record<string, VariantSpec> = {
+  "corner-pin": {
+    label: "Pin line weight (flag graph-corners)",
+    default: "normal",
+    options: [
+      { id: "normal", label: "Normal", hint: "The pin drawn with the same line as the brain, the spark and the theme icon." },
+      { id: "bolder", label: "Bolder", hint: "A heavier line, so the pin holding the pile reads first among the four corners." },
+    ],
+  },
   "view-switch": {
     label: "Concepts / Sources switch",
     default: "quiet",

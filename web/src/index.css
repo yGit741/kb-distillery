@@ -1,6 +1,7 @@
 @import "tailwindcss";
 /* the ground the app sits on (background, cards, the graph's dots): its colour values live in src/theme/ */
 @import "./theme/surfaces.css";
+@import "./theme/corners.css";
 
 @custom-variant dark (&:where(.dark, .dark *));
 
