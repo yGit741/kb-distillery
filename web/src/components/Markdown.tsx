@@ -16,6 +16,16 @@ const SCHEME = "kbwiki:";
 /** An unsure-formula mark `[!](mark:<sha12>/p0188/3)` (parse transcripts and digests): `!` one voice decided, `!!` unsettled. */
 const DOUBT = "mark:";
 const DOUBT_REF = /^[0-9a-f]{12}\/p\d{4}\/\d+$/;
+/** A figure of a transcribed PDF `![Figure 3.1](figure:<sha12>/p0073/1)`: the PNG cut from the page, served by the API. */
+const FIGURE = "figure:";
+const FIGURE_REF = /^([0-9a-f]{12})\/(p\d{4})\/(\d+)$/;
+
+/** The API url of a figure ref, or null when `src` is not one. */
+export function figureUrl(src: string): string | null {
+  if (!src.startsWith(FIGURE)) return null;
+  const m = FIGURE_REF.exec(src.slice(FIGURE.length));
+  return m ? `/api/figures/${m[1]}/${m[2]}/${m[3]}` : null;
+}
 /** A page link `slug.md` or `slug.md#heading` (flat, no folder or scheme): `[Title](slug.md)` is how pages link. */
 const PAGE_HREF = /^([^/:#?]+)\.md(#.*)?$/;
 
@@ -111,6 +121,7 @@ function splitText(node: Text): Node[] {
 function urlTransform(url: string): string {
   if (url.startsWith(SCHEME)) return url;
   if (url.startsWith(DOUBT) && DOUBT_REF.test(url.slice(DOUBT.length))) return url;
+  if (url.startsWith(FIGURE) && FIGURE_REF.test(url.slice(FIGURE.length))) return url;
   if (/^(https?:|mailto:|#|\/|\.\.?\/)/i.test(url) || !/^[a-z][a-z0-9+.-]*:/i.test(url)) return url;
   return "";
 }
@@ -218,6 +229,8 @@ export function Markdown({ children, className, resolveSlug, transformUrl, linkS
         );
       },
       img({ src, alt, node: _node }) {
+        const fig = typeof src === "string" ? figureUrl(src) : null;
+        if (fig) return <img src={fig} alt={alt ?? "Figure"} loading="lazy" className="kb-figure" />;
         const url = typeof src === "string" ? (transformUrl ? transformUrl(src) : src) : undefined;
         return <img src={url} alt={alt ?? ""} loading="lazy" />;
       },

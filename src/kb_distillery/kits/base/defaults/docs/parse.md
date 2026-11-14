@@ -15,6 +15,7 @@ The text layer of a typeset PDF loses mathematics: symbols drop out, scripts lan
 | compare | `compare.py` | both pages become streams of canonical tokens (LaTeX style, spacing and the prose/maths border do not matter) and are aligned | none |
 | judge | `judge.py` | for each place the two differ, a model looks at the page again with both readings | one call a page that has differences |
 | auditor | `audit.py` | a stronger model reads the finished page against the image and lists every difference | one call a page |
+| figures | `figures.py` | each figure the reader placed (`![](figure)`) is paired with the parser's image region, cut as a PNG, linked, and described by a model | one call a figure |
 | store | `transcribe.py`, `store.py` | fixes applied, marks placed, crops cut, page written | none |
 
 The reader's page is the transcript; the parser is the independent witness and gives the geometry for the crops. Running heads and page numbers are left out by both.
@@ -39,12 +40,31 @@ A mark is a Markdown link right after the formula it belongs to: `[!](mark:<sha1
 
 A reader reply can come back cut or refused: models stop long verbatim copies of prose-heavy book pages (a chapter's opening page, a preface). The reply must hold the page between `<<<PAGE` and `PAGE>>>` lines, so a cut reply is never mistaken for a page; it is tried once more, then the parser's page stands in.
 
+## Figures
+
+The reader writes a figure as `![](figure)` followed by its caption, and never transcribes what is drawn inside it. The parser's image regions (glyph-sized ones dropped) are paired with those placeholders in reading order. Each figure becomes `![Figure 3.1](figure:<sha12>/p0073/1)` in the page, a PNG `figures/p0073-1.png` and a record in the page's `figures` list: `id`, `label` ("Figure 3.1", from the caption), `caption`, `box`, `file`, `description` and `problem`.
+
+- **Description.** One `kb_distillery.llm` request per figure, sent with its crop and caption. The model describes what is drawn (kind of figure, axes, curves, nodes, labels in LaTeX) between `<<<FIGURE` and `FIGURE>>>` lines, and a reply without those lines is tried once more. It is cached per crop under the work dir, so an unchanged figure is never asked twice. `--no-figure-descriptions` skips it.
+- **Problems.** A placeholder with no region keeps the whole page as its crop. A region the reader did not place is added at the end of the page. Both get a `!!` mark right after the figure link.
+- **Explorer.** `GET /api/figures/<sha12>/p0073/1` serves the PNG, and the page renderer draws a `figure:` image from it.
+- **Digest.** A digest of transcribed pages lists every figure under `## Figures`: the image, its caption and its description. `extract` writes them to `figures.json` in the session and `draft` writes the section, so a figure never depends on the model remembering it. The text the model reads has each description after its figure.
+
+## Completeness
+
+`distill parse complete <pdf> --pages … --store DIR` counts what reached the transcript against independent witnesses. It calls no model and exits 1 when something needs a look.
+
+- **Formulas.** Every display formula the parser read is lined up with the transcript; one of which less than half is found is listed as possibly missing. The share of the parser's maths tokens found is the page's coverage. A split or merged display formula can show up as a false alarm, so open the page before trusting the report.
+- **Figures.** The number of parser regions, the number of figure links, and the captions the PDF's text layer prints ("Figure 3.1") must agree; every figure with a `problem` is listed.
+
+The five test chapters (105 pages, 3 books): 284 of 285 display formulas were found (the one miss is a formula the two readings split differently), 98 to 99.8% maths coverage, and 11 of 11 figures were cut, captioned and described.
+
 ## The store
 
 `<store>/<raw-sha1>/` is `<kb>/meta/parsed/<raw-sha1>/` in a knowledge base:
 
 - `pNNNN.json`: `status` (`verified` without marks, `marked` with), `markdown` (mark links inline) and `marks`: each with `id`, `level`, `reason`, `text` (the formula now), `was` (what a fix replaced), `other` (the parser's reading), `box` and `crop`.
 - `crops/pNNNN-<id>.png`: the block of the page the mark sits in.
+- `figures/pNNNN-<id>.png`: each figure, cut from a 2400-pixel render of the page.
 - `manifest.json`: pages per status and pages still missing.
 
 `store.transcript(root, sha, pages)` returns the joined Markdown of a page range; `store.marks(…)` the mark records.
@@ -54,12 +74,13 @@ A reader reply can come back cut or refused: models stop long verbatim copies of
 ```
 distill parse transcribe <pdf> --pages 1-5,8 --store DIR [--backend subscription|api|batch] [--max-usd N] [--dry-run]
 distill parse marks --store DIR --sha <raw-sha1> [--pages …]
+distill parse complete <pdf> --pages … --store DIR [--json]   # formulas and figures found, no model call
 distill parse run|status|check|sample …        # the parser alone and the older text-layer verifier
 ```
 
 `transcribe` prints its cost estimate before it runs and stops when the estimate is above `--max-usd`. Everything is cached per page under `~/.cache/kb-distillery/parse/<sha12>/` (`$KB_PARSE_WORK`), so a stopped run resumes and a second run costs nothing. `--audit-model none` skips the auditor; `--engine none` skips the parser (every page then carries a page mark).
 
-**Billing.** The reader, the judge and the auditor are `kb_distillery.llm` requests with images: the backend is the usual `--backend` / `$KB_LLM_BACKEND` choice, all three work. MinerU is local and free.
+**Billing.** The reader, the judge, the auditor and the figure descriptions are `kb_distillery.llm` requests with images: the backend is the usual `--backend` / `$KB_LLM_BACKEND` choice, all three work. MinerU is local and free.
 
 ## Digest reads the transcript
 

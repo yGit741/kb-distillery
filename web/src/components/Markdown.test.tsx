@@ -1,7 +1,7 @@
 import { createMemoryHistory, createRootRoute, createRoute, createRouter, RouterProvider } from "@tanstack/react-router";
 import { render, screen, waitFor } from "@testing-library/react";
 import { withFlag } from "@/flags/testing";
-import { Markdown, type MarkdownProps } from "./Markdown";
+import { figureUrl, Markdown, type MarkdownProps } from "./Markdown";
 
 async function renderMd(source: string, props: Partial<MarkdownProps> = {}) {
   const root = createRootRoute();
@@ -143,5 +143,20 @@ describe("Markdown doubt tag on display formulas", () => {
       expect(wrap?.querySelector(".katex-display")).not.toBeNull();
       expect(wrap?.querySelector(".kb-doubt-tag button[data-ref]")).not.toBeNull();
     });
+  });
+});
+
+describe("figures of a transcribed PDF", () => {
+  it("maps a figure ref to its API url and nothing else", () => {
+    expect(figureUrl("figure:0123456789ab/p0073/1")).toBe("/api/figures/0123456789ab/p0073/1");
+    expect(figureUrl("figure:../../etc/p0073/1")).toBeNull();
+    expect(figureUrl("https://example.com/x.png")).toBeNull();
+  });
+
+  it("renders the figure from the API with its label as alt text", async () => {
+    const { container } = await renderMd("![Figure 3.1](figure:0123456789ab/p0073/1)\n\n**Figure 3.1.** A tree");
+    const img = container.querySelector("img.kb-figure");
+    expect(img?.getAttribute("src")).toBe("/api/figures/0123456789ab/p0073/1");
+    expect(img?.getAttribute("alt")).toBe("Figure 3.1");
   });
 });

@@ -63,6 +63,33 @@ def _exercises_block(claims):
     return ("\n".join(out) + "\n") if out else ""
 
 
+def _figures_block(figs):
+    """`## Figures`: every figure of a transcribed source, in page order, with its caption and what it shows. Written
+    from the parse store (`figures.json` in the session), not by the model, so no figure is left out."""
+    rows = [f for f in figs or [] if f.get("ref")]
+    if not rows:
+        return ""
+    out = ["## Figures\n"]
+    for f in rows:
+        label = (f.get("label") or "Figure").replace("]", ")").replace("[", "(")
+        out.append(f"![{label}]({f['ref']})\n")
+        cap = " ".join((f.get("caption") or "").split())
+        out.append((cap if cap else f"*{label}, page {f.get('page')} (no printed caption)*") + "\n")
+        desc = " ".join((f.get("description") or "").split())
+        if desc:
+            out.append(f"*What it shows (described from the image):* {desc}\n")
+    return "\n".join(out) + "\n"
+
+
+def _session_figures(sdir):
+    try:
+        with open(os.path.join(sdir, "figures.json"), encoding="utf-8") as f:
+            data = json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return []
+    return data if isinstance(data, list) else []
+
+
 def _title_yaml(title):
     """`title: "…"` plus its newline, or '' when the title is the `# ` heading the page is written with."""
     line = frontmatter.title_line(title)
@@ -176,7 +203,7 @@ discussed_with: []
 - {results[-1] if len(results) > 1 else main_result}
 - Concepts: {concepts_links}
 
-{_exercises_block(claims)}## Links out
+{_figures_block(_session_figures(sdir))}{_exercises_block(claims)}## Links out
 
 - Concepts: {concepts_links}
 {links_person}"""

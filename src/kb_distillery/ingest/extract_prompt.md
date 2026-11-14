@@ -21,3 +21,7 @@ When the template has an `exercises` field (a book part), fill it with **every**
 ## Marked formulas
 
 A source that starts with `[transcript of pages …]` was read from the page images and checked. A formula followed by `[!](mark:…)` or `[!!](mark:…)` was not settled (`!`: probably right, `!!`: unsettled). Its crop of the original page is `meta/parsed/<raw-sha1>/crops/p<page>-<n>.png` (the link is `mark:<first 12 of the sha1>/p<page>/<n>`). For a marked formula you use: open the crop, write what it shows; drop the link when the crop settles it, keep the link right after the formula when it does not (in `equations`, put the link in the item's `mark` field, never inside `latex`). Never drop a `[!!]` link without looking at its crop.
+
+## Figures
+
+In a transcript a figure is a link `![Figure 3.1](figure:<sha12>/p<page>/<n>)` followed by its caption and an italic line describing what it shows (read from its image). The page gets a `## Figures` section with every figure, written by `draft` from the parse store: do not copy figures into `claims.json`. Use what a figure shows where it carries the argument (a decision tree, a plot of a bound), and refer to it by its number.

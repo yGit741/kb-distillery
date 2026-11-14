@@ -8,8 +8,9 @@ never into a knowledge base).
     parse transcribe <pdf> --pages 1-5,8 --store DIR [--work DIR] [--backend subscription|api|batch] [--max-usd N]
                                                                       parser + reader + judge + auditor -> marked transcript
     parse marks --store DIR --sha SHA [--pages ...]                   the `!` / `!!` marks of a stored transcript
+    parse complete <pdf> --pages ... --store DIR                      formulas and figures found vs the parser / captions
 
-`transcribe` is the only command that calls a model (reader, judge and auditor, through kb_distillery.llm); it prints its
+`transcribe` is the only command that calls a model (reader, judge, auditor and figure descriptions, through kb_distillery.llm); it prints its
 cost estimate first and stops when the estimate is above --max-usd. `--store` is a parsed store: a kb's `meta/parsed`,
 or any directory.
 """
@@ -141,14 +142,28 @@ def cmd_transcribe(a) -> int:
     res = transcribe.transcribe(pdf, pages, work, os.path.abspath(a.store), sha,
                                 engine=None if a.engine == "none" else _engine(a.engine), backend=backend,
                                 model=a.model, judge_model=a.judge_model, audit_model=audit_model, page_count=count, max_usd=a.max_usd,
-                                retry_backend=a.retry_backend, force=a.force,
+                                retry_backend=a.retry_backend, force=a.force, describe_figures=not a.no_figure_descriptions,
                                 log=lambda m: print(m, file=sys.stderr, flush=True))
     by = {}
     for st in res["pages"].values():
         by[st] = by.get(st, 0) + 1
-    print(json.dumps({"sha": sha, "pages": by, "marks": res["marks"], "usd": res["usd"], "skipped": res["skipped"],
+    print(json.dumps({"sha": sha, "pages": by, "marks": res["marks"], "figures": res.get("figures", 0), "usd": res["usd"],
+                      "skipped": res["skipped"],
                       "failed": {str(k): v for k, v in res["failed"].items()}}))
     return 1 if res["failed"] else 0
+
+
+def cmd_complete(a) -> int:
+    """Formulas and figures of a stored transcript against the parser and the PDF's captions (no model call)."""
+    from . import complete, store
+    pdf = os.path.abspath(a.pdf)
+    with open(pdf, "rb") as f:
+        sha = store.sha1_bytes(f.read())
+    pages = runner.parse_pages(a.pages, _page_count(pdf))
+    work = _guard_out(a.work) if a.work else default_work(sha)
+    rep = complete.report(pdf, os.path.abspath(a.store), sha, pages, work, None if a.engine == "none" else _engine(a.engine))
+    print(json.dumps(rep, ensure_ascii=False) if a.json else complete.render(rep))
+    return 1 if rep["problems"] or rep["missing_pages"] else 0
 
 
 def cmd_marks(a) -> int:
@@ -183,7 +198,17 @@ def main(argv=None) -> int:
     t.add_argument("--retry-backend", default=None, choices=("subscription", "api", "batch"),
                    help="where a failed request is tried once more (default: the same backend)")
     t.add_argument("--dry-run", action="store_true", help="print the estimate and stop")
+    t.add_argument("--no-figure-descriptions", action="store_true",
+                   help="cut and link figures but do not ask a model what each one shows")
     t.add_argument("--force", action="store_true")
+    c = sub.add_parser("complete")
+    c.set_defaults(fn=cmd_complete)
+    c.add_argument("pdf")
+    c.add_argument("--pages", required=True, help="'1-5,8' or 'all'")
+    c.add_argument("--store", required=True)
+    c.add_argument("--work", default="")
+    c.add_argument("--engine", default="mineru")
+    c.add_argument("--json", action="store_true")
     mk = sub.add_parser("marks")
     mk.set_defaults(fn=cmd_marks)
     mk.add_argument("--store", required=True)

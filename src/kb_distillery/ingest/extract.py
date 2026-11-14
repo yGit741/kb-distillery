@@ -16,6 +16,7 @@ FILL_MAX_TOKENS = 16000
 FILL_MAX_TOKENS_EXERCISES = 32000     # a chapter's exercises are copied in full
 MAX_CROPS = 20                        # crops of marked formulas shown to the model in one fill (`!!` first)
 MARK = re.compile(r"\[(!!?)\]\(mark:([0-9a-f]{12})/p(\d{4})/(\d+)\)")
+FIG_MARKED = re.compile(r"\(figure:[0-9a-f]{12}/p\d{4}/\d+\) $")     # text ending in a figure link: its mark follows
 MARKS_NOTE = """
 Marks. The source is a checked transcript. A formula followed by a link `[!](mark:…)` or `[!!](mark:…)` was not settled
 when the page was read (`!`: probably right; `!!`: unsettled). {crops}For every marked formula you copy into the claims:
@@ -120,10 +121,33 @@ def transcript(raw_path, pages=None):
     text = store.transcript(proot, sha, want)
     if text is None:
         return None
-    n = len(MARK.findall(text))
+    from kb_distillery.parse import figures as figs_mod
+    figs = store.figures(proot, sha, want)
+    n = sum(1 for m in MARK.finditer(text)                         # a figure's own mark is no formula's
+            if not FIG_MARKED.search(text[max(0, m.start() - 48):m.start()]))
+    text = figs_mod.with_descriptions(text, {(sha[:12], f["page"], f["id"]): f for f in figs})
     head = "[transcript of pages %d-%d, checked against the page images; %s]\n\n" % (
         want[0], want[-1], "%d formula(s) carry a `!` / `!!` mark link" % n if n else "no formula is marked unsure")
     return head + text
+
+
+def transcript_figures(raw_path, pages=None):
+    """The figure records of a PDF's stored transcript pages (`[{ref, label, caption, description, page}]`), [] when
+    there is none (flag off, no store, not a PDF)."""
+    from kb_distillery import parse
+    if not parse.enabled() or not str(raw_path).lower().endswith(".pdf") or not os.path.isfile(raw_path):
+        return []
+    root = kb_root_of(raw_path)
+    if root is None:
+        return []
+    from kb_distillery.parse import store
+    proot = store.parsed_root(root)
+    with open(raw_path, "rb") as f:
+        sha = store.sha1_bytes(f.read())
+    want = list(range(int(pages[0]), int(pages[1]) + 1)) if pages else None
+    return [{"ref": "figure:%s/p%04d/%d" % (sha[:12], f["page"], f["id"]), "label": f.get("label") or "",
+             "caption": f.get("caption") or "", "description": f.get("description") or "", "page": f["page"]}
+            for f in store.figures(proot, sha, want)]
 
 
 def transcript_gap(raw_path, pages):
@@ -306,6 +330,15 @@ def run_extract(sha, fill=False, backend=None, model=FILL_MODEL):
         return 1
     text = extract_text(raw_path, pages=pages)
     text_path = os.path.join(sdir, "extracted.text")
+    figs = transcript_figures(raw_path, pages)      # what draft lists under ## Figures, this scope only
+    fig_path = os.path.join(sdir, "figures.json")
+    if figs:
+        with open(fig_path, "w", encoding="utf-8") as f:
+            json.dump(figs, f, indent=1, ensure_ascii=False)
+            f.write("\n")
+        print(f"wrote {fig_path} ({len(figs)} figure(s): draft lists every one under ## Figures)")
+    elif os.path.isfile(fig_path):
+        os.unlink(fig_path)
     if text:
         with open(text_path, "w", encoding="utf-8") as f:
             f.write(text)
