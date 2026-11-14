@@ -16,7 +16,7 @@ import { predicateFn } from "../../publicPredicate";
 import { defaultTypes, type GraphSchema } from "../../schema";
 import { useGraphUi } from "../../store";
 import { useFavorites } from "../../favorites/store";
-import { BAR_BY, effectiveColorBy, neutralRamp, RAMP_BY, RAMP_MEANING, RAMP_STEPS } from "../../style";
+import { BAR_BY, colorKey, effectiveColorBy, neutralRamp, RAMP_BY, RAMP_MEANING, RAMP_STEPS } from "../../style";
 import { dimensionsFor, withTopic, type GraphSubject } from "../../colourDimensions";
 import { useEmbedding } from "../../embedding/EmbeddingLayer";
 import { embedSpec, sameEmbed, SUGGESTED, useEmbedView } from "../../embedding/store";
@@ -327,6 +327,12 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
     () => (by === "type" ? [] : colorChannel(by, { ramp }).rows(nodes.filter((n) => keyPool.has(n.id) && (!sourcesOnly || n.layer === "source")))),
     [nodes, keyPool, by, ramp, sourcesOnly, topicsLoaded],
   );
+  // hovering a colour value lights its drawn pages, the rest fade (the canvas' spotIds fade, as the page types do)
+  const spotKey = useCallback(
+    (label: string | null) =>
+      useGraphUi.setState({ spotIds: label ? new Set(nodes.filter((n) => keyPool.has(n.id) && (!sourcesOnly || n.layer === "source") && colorKey(n, by) === label).map((n) => n.id)) : null }),
+    [nodes, keyPool, by, sourcesOnly],
+  );
   const groups = useMemo(() => layerGroups(nodes, visible, schema, shownTypes), [nodes, visible, schema, shownTypes]);
   const allTypes = useMemo(() => groups.flatMap((g) => g.rows.map((r) => r.id)), [groups]);
   const [concepts, sources] = useMemo((): [TypeRow[], TypeRow[]] => {
@@ -349,7 +355,7 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
   const pinTypes = () => (useGraphUi.getState().shownTypes === undefined ? { shownTypes: shownTypes ? new Set(shownTypes) : null } : {});
   useShellTour(`${server}|${allTypes.length > 0}`);
   const spot = useCallback((types: readonly string[] | null) => useGraphUi.setState({ spotlight: types ? new Set(types) : null }), []);
-  useEffect(() => () => useGraphUi.setState({ spotlight: null }), []);
+  useEffect(() => () => useGraphUi.setState({ spotlight: null, spotIds: null }), []);
 
   const placeMenu = (side: "left" | "right", corner: "top" | "bottom"): React.CSSProperties => ({
     position: "absolute",
@@ -603,6 +609,7 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
         bar={ramp && BAR_BY.has(by) && RAMP_MEANING[by] ? { stops: Array.from({ length: RAMP_STEPS }, (_, i) => neutralRamp(i / (RAMP_STEPS - 1), ramp === "dark")), low: RAMP_MEANING[by]!.low, high: RAMP_MEANING[by]!.high } : undefined}
         hidden={ui.hiddenKeys}
         toggleable={!BAR_BY.has(by)}
+        onSpot={spotKey}
         onToggle={(label) => {
           useGraphUi.setState(pinTypes());
           ui.toggleKey(label);
