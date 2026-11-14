@@ -1,5 +1,5 @@
 /**
- * Server-side chat sessions (flag `agent-mode`): the open chat is mirrored to `PUT /api/sessions/{id}` after every
+ * Server-side chat sessions (every local kb, in `<kb>/.local/sessions/`): the open chat is mirrored to `PUT /api/sessions/{id}` after every
  * completed turn, so past chats live in one place (`<kb>/.local/sessions/`) instead of one browser tab.
  *
  * The browser still holds the open chat while it streams (`useChatSession`); this file only copies finished turns out
@@ -8,7 +8,6 @@
  * document again).
  */
 import type { DataSource, SessionPutRequest } from "@/api";
-import { flag } from "@/flags";
 import { readJson, writeJson } from "./storage";
 import type { Chat } from "./thread";
 
@@ -18,8 +17,8 @@ export const CHAT_KEY = "kbchat.chat";
 export const MIGRATED_KEY = "kbchat.sessions.migrated";
 export const MIRROR_DELAY_MS = 800;
 
-/** Server sessions exist only on the live local backend, behind the flag (never in a share build). */
-export const serverSessionsOn = (ds: DataSource): boolean => ds.kind === "http" && flag("agent-mode");
+/** Server sessions exist only on the live local backend (never in a share build): each kb keeps its own chats. */
+export const serverSessionsOn = (ds: DataSource): boolean => ds.kind === "http";
 
 /** `kb-chat:20261103101500-abc123` <-> `20261103101500-abc123` (the server id is a plain slug). */
 export const sessionIdOf = (chatId: string): string => chatId.replace(/^kb-chat:/, "");

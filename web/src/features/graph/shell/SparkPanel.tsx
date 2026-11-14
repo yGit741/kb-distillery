@@ -293,6 +293,9 @@ function useCitedPages(scroller: RefObject<HTMLDivElement | null>, messages: Cha
   return { slugs, idx };
 }
 
+/** How many past chats a new, empty chat lists under its intro; the rest are one click away in the full list. */
+const RECENT_CHATS = 8;
+
 type Status = Parameters<typeof parseStatus>[0];
 type Prompts = Parameters<typeof parsePrompts>[0];
 
@@ -396,7 +399,21 @@ function Body({ status, prompts, scope, full, rich, listOpen, onClose, server }:
         {tools?.open && <ChatTools prompts={parsePrompts(prompts)} todo={chat.todo} busy={busy} sessionId={sessionIdOf(chat.id)} />}
         <div ref={scroller} className="flex min-h-0 flex-1 flex-col overflow-y-auto px-5 py-4 [&_[data-cited-now]]:rounded-sm [&_[data-cited-now]]:bg-primary/10 [&_[data-cited-now]]:transition-colors [&_li[data-testid=tool-line]]:w-fit [&_li[data-testid=tool-line]]:max-w-full [&_li[data-testid=tool-line]]:rounded-md [&_li[data-testid=tool-line]]:bg-secondary/60 [&_li[data-testid=tool-line]]:px-2 [&_li[data-testid=tool-line]]:py-0.5">
           {chat.messages.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Ask about the pages on the graph. The agent searches and reads your wiki, read-only, and cites what it opened.</p>
+            <>
+              <p className="text-sm text-muted-foreground">Ask about the pages on the graph. The agent searches and reads your wiki, read-only, and cites what it opened.</p>
+              {server && !(full && listOpen) && (
+                <ChatList
+                  activeId={chat.id}
+                  server={server}
+                  limit={RECENT_CHATS}
+                  onMore={() => {
+                    const s = useChatFull.getState();
+                    s.setFull(true);
+                    if (!s.listOpen) s.toggleList();
+                  }}
+                />
+              )}
+            </>
           ) : (
             <MessageList
               messages={chat.messages}

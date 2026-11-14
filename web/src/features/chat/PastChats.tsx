@@ -4,7 +4,6 @@ import { useEffect, useState, useSyncExternalStore } from "react";
 import { useDataSource, type SessionSummary } from "@/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useFlag } from "@/flags/useFlag";
 import { fmtUsd } from "./format";
 import { DELETED_EVENT, FAILED_EVENT, OPEN_EVENT, SYNCED_EVENT, chatBusy, serverSessionsOn, sessionBus, subscribeChatBusy } from "./serverStorage";
 
@@ -15,10 +14,10 @@ const when = (iso: string) => {
   return Number.isNaN(d.getTime()) ? "" : d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
 };
 
-/** Past chats kept on this machine (flag `agent-mode`): open, rename, delete. Renders nothing with the flag off. */
+/** Past chats kept on this machine (the live local backend): open, rename, delete. Renders nothing in a share build. */
 export function PastChats() {
   const ds = useDataSource();
-  const on = useFlag("agent-mode") && serverSessionsOn(ds);
+  const on = serverSessionsOn(ds);
   if (!on) return null;
   return <PastChatsList />;
 }

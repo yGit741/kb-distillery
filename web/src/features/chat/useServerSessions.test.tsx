@@ -76,10 +76,10 @@ describe("useChatSession with the agent-mode flag", () => {
     });
   });
 
-  it("off: the browser path alone, no server call and no marker", async () => {
+  it("a share build: the browser path alone, no server call and no marker", async () => {
     await withFlag("agent-mode", false, async () => {
       writeJson("session", CHAT_KEY, stored);
-      const { putSession, wrapper } = setup();
+      const { putSession, wrapper } = setup({ kind: "embedded" });
       const { result } = renderHook(() => useChatSession(), { wrapper });
       act(() => result.current.send("q", opts));
       await waitFor(() => expect(result.current.busy).toBe(false));
@@ -94,10 +94,10 @@ describe("useChatSession with the agent-mode flag", () => {
 describe("PastChats", () => {
   const summary = (id: string, title: string) => ({ id, title, created: "2026-11-03T10:00:00Z", updated: "2026-11-03T10:00:00Z", turns: 2, cost_usd: 0.05, preview: "first question", status: "idle" as const });
 
-  it("off: renders nothing and never lists", async () => {
+  it("a share build: renders nothing and never lists", async () => {
     await withFlag("agent-mode", false, async () => {
       const listSessions = vi.fn();
-      const { wrapper } = setup({ listSessions });
+      const { wrapper } = setup({ listSessions, kind: "embedded" });
       const { container } = render(<PastChats />, { wrapper });
       expect(container).toBeEmptyDOMElement();
       expect(listSessions).not.toHaveBeenCalled();
