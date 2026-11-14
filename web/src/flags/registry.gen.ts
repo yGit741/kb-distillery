@@ -360,10 +360,10 @@ export const FLAGS: Readonly<Record<FlagName, FlagMeta>> = {
     "created": "2026-11-14",
     "expires": "2027-02-11",
     "kind": "runtime",
-    "default": false,
+    "default": true,
     "envs": {
       "local": true,
-      "private": false,
+      "private": true,
       "public": false
     }
   },

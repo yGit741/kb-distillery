@@ -36,6 +36,7 @@ import { useGraphUi } from "./store";
 import { useDecor } from "./tools/decor";
 import { meaningPositions } from "./embedding/model";
 import { useEmbedView } from "./embedding/store";
+import { useCorners } from "./shell/corners/cornersStore";
 import { drawNode as drawNodeMark } from "./encoding/canvas";
 import { drawReplayMark, drawReplayPath, LIT_DIM } from "./shell/replayDraw";
 import { linkKey, popSources } from "./shell/thinking";
@@ -97,6 +98,12 @@ interface RenderState {
 /** How strongly the Sources view pulls each side to its place, and how big a concept must be on screen to show its count. */
 const SIDE_PULL = 0.3;
 const SIDE_SETTLE_MS = 1400;
+/** px kept free under the meaning map: a label under the lowest page plus the Concepts/Sources switch */
+const MAP_FIT_BOTTOM = 150;
+/** the meaning map draws links at this share of their usual opacity */
+const MAP_EDGE = 0.12;
+/** px kept free on the right of the meaning map for the open colour legend */
+const MAP_FIT_RIGHT = 290;
 const COUNT_MIN_PX = 9;
 
 const EMPTY_IMPORTANCE: Importance = { score: new Map(), terms: new Map(), qrank: new Map(), maxScore: 1 };
@@ -576,7 +583,7 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
 
   // ---- tool decor (experiment halos, faded links) is read at draw time; a change only needs a redraw
   useEffect(() => useDecor.subscribe(() => fg.current?.refresh()), []);
-  useEffect(() => useEmbedView.subscribe((a, b) => (a.lens !== b.lens || a.pc !== b.pc) && fg.current?.refresh()), []);
+  useEffect(() => useEmbedView.subscribe((a, b) => (a.lens !== b.lens || a.pc !== b.pc || a.view !== b.view) && fg.current?.refresh()), []);
   useEffect(() => {
     fg.current?.refresh();
   }, [thinkHot]);
@@ -627,7 +634,11 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
     if (!live.current.visible.size) return;
     // several knowledge bases are separate islands by design: frame them all, not the largest one
     const core = multiKb.current ? new Set<string>() : largestComponent(live.current.visible, live.current.neighbors);
-    fg.current?.fit(core.size > 1 ? (n) => core.has(n.id) || isPile(n) : undefined, ms);
+    const pick = core.size > 1 ? (n: SimNode) => core.has(n.id) || isPile(n) : undefined;
+    // the meaning map frames every page with room under it, so the lowest labels stay clear of the subject switch
+    // (positions not settled yet: the usual fit, so the camera is never left unframed)
+    const mapped = useEmbedView.getState().view === "map" && !!fg.current?.fitIn(pick ?? (() => true), 0, ms, 72, 96, MAP_FIT_BOTTOM, useCorners.getState().order.includes("legend") ? MAP_FIT_RIGHT : 0);
+    if (!mapped) fg.current?.fit(pick, ms);
     framed.current = true;
     window.setTimeout(() => {
       k.current = fg.current?.zoom() ?? 1;
@@ -1160,13 +1171,15 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
     const { focus, prevFocus, fadeT, colors } = rs.current;
     const a = endId(l.source);
     const b = endId(l.target);
+    // the meaning map: position carries the meaning, so links stay a faint trace (not the force layout's web)
     const fade = useDecor.getState().linkFade?.(a, b) ?? 1;
+    const mapEdge = useEmbedView.getState().view === "map" ? MAP_EDGE : 1;
     // a hidden kind keeps its place in the layout and is simply not drawn
     if (live.current.ui.hiddenLinkKinds.has(l.kind)) return withAlpha(colors.link, 0);
     // a popped source brings only its links to the answer's pages (flag show-thinking)
     const tk = live.current.think;
     if (tk && (tk.pop.has(a) || tk.pop.has(b)) && !tk.links.has(linkKey(a, b))) return withAlpha(colors.link, 0);
-    return withAlpha(colors.link, fade * fadedLinkOpacity(a, b, focus, prevFocus, fadeT, live.current.ui.linkOpacity * (calmOn ? CALM_EDGE : 1), l.kind));
+    return withAlpha(colors.link, fade * fadedLinkOpacity(a, b, focus, prevFocus, fadeT, live.current.ui.linkOpacity * (calmOn ? CALM_EDGE : 1) * mapEdge, l.kind));
   }, [calmOn]);
   const linkWidth = useCallback((l: SimLink) => (l.kind === "shared" ? 0.35 + Math.min(l.shared ?? 1, 6) * 0.1 : 0.8), []);
   const linkLabel = useCallback(

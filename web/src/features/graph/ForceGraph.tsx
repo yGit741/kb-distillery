@@ -57,7 +57,7 @@ export interface ForceGraphHandle {
   centerOn(x: number, y: number, k?: number, ms?: number): void;
   fit(include?: (n: SimNode) => boolean, ms?: number): void;
   /** Frame the given pages inside the canvas minus `left` px on its left side (a panel lies over that strip) and `top` px on its top (the search line). False when they have no place yet. */
-  fitIn(include: (n: SimNode) => boolean, left: number, ms?: number, pad?: number, top?: number): boolean;
+  fitIn(include: (n: SimNode) => boolean, left: number, ms?: number, pad?: number, top?: number, bottom?: number, right?: number): boolean;
   screenOf(n: { x?: number; y?: number }): { x: number; y: number } | null;
   reheat(): void;
   refresh(): void;
@@ -377,7 +377,7 @@ export const ForceGraph = forwardRef<ForceGraphHandle, ForceGraphProps & { class
           const pad = Math.round(Math.min(90, Math.max(24, (host.current?.clientWidth ?? 800) * 0.08)));
           g()?.zoomToFit(ms, pad, include ? (n) => include(n as SimNode) : undefined);
         },
-        fitIn: (include, left, ms = 600, pad = 72, top = pad) => {
+        fitIn: (include, left, ms = 600, pad = 72, top = pad, bottom = pad, right = 0) => {
           const inst = g();
           const el = host.current;
           if (!inst || !el?.clientWidth || !el.clientHeight) return false;
@@ -385,7 +385,7 @@ export const ForceGraph = forwardRef<ForceGraphHandle, ForceGraphProps & { class
           if (!ns.length || ns.some((n) => !Number.isFinite(n.x) || !Number.isFinite(n.y))) return false;
           const xs = ns.map((n) => n.x as number);
           const ys = ns.map((n) => n.y as number);
-          const v = fitFrame({ x0: Math.min(...xs), x1: Math.max(...xs), y0: Math.min(...ys), y1: Math.max(...ys) }, el.clientWidth, el.clientHeight, { left, top, pad });
+          const v = fitFrame({ x0: Math.min(...xs), x1: Math.max(...xs), y0: Math.min(...ys), y1: Math.max(...ys) }, el.clientWidth, el.clientHeight, { left, top, pad, bottom, right });
           inst.centerAt(v.x, v.y, ms);
           inst.zoom(v.k, ms);
           return true;
