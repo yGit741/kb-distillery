@@ -20,7 +20,9 @@ def g(cwd, *args):
 
 class Send(unittest.TestCase):
     def setUp(self):
-        tmp = tempfile.TemporaryDirectory()
+        # a git child of the run can still be writing .git/objects when a slow runner (the Intel Mac nightly)
+        # reaches cleanup; a leftover temp file must not fail the test
+        tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
         self.addCleanup(tmp.cleanup)
         self.base = os.path.realpath(tmp.name)
         for name in ("a", "b"):
