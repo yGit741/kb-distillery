@@ -13,6 +13,7 @@ import { ForceGraph, type Anchor, type ForceGraphHandle } from "./ForceGraph";
 import { buildGraphData, edgeWeight, edgeWeights, largestComponent, sameSet, type NeighborMap } from "./graphData";
 import { createHoverIntent, createSpeedMeter, HOVER_TUNING } from "./hoverIntent";
 import { drawArcs } from "./lab/arcs";
+import { storyById } from "./lab/views";
 import { drawHulls, drawLabelLayer, type FadeState } from "./lab/draw";
 import { useLabHud } from "./lab/hud";
 import { hopsFrom, type Importance } from "./lab/importance";
@@ -434,8 +435,14 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
   const ringRef = useRef<{ model: GraphModel; linkDistance: number; ring: Map<string, readonly [number, number]> } | null>(null);
   // flag graph-intent, the Sources view (a source page is drawn): sources sit on the left, concepts on the right
   const intentOn = useFlag("graph-intent");
+  // a view may set its own layout forces (Citations packs its small components close); the prefs apply otherwise
+  const viewForces = storyById(ui.edgeStory)?.forces;
   // (several knowledge bases keep their own regions: no sides there, and no neutral concepts either)
-  const sides = useMemo(() => intentOn && sourcesView && (model.kbs?.length ?? 0) <= 1 && data.nodes.some((n) => n.layer === "source"), [intentOn, sourcesView, model, data]);
+  // (both sides drawn: a view of sources alone, such as Citations, lays out freely instead of as one squeezed column)
+  const sides = useMemo(
+    () => intentOn && sourcesView && (model.kbs?.length ?? 0) <= 1 && data.nodes.some((n) => n.layer === "source") && data.nodes.some((n) => n.layer === "concept"),
+    [intentOn, sourcesView, model, data],
+  );
   // ... and in the Concepts view each concept carries a quiet count of its sources, over the whole kb
   const srcCount = useMemo(() => (intentOn ? sourceCounts(model.nodes, neighbors) : null), [intentOn, model, neighbors]);
   const viewRef = useRef({ sides, srcCount });
@@ -466,6 +473,8 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
     () =>
       kbIds.length
         ? { strength: 0.12, target: (n) => (n.kb ? (kbAnchor.current.get(n.kb) ?? null) : null) }
+        : viewForces?.pack
+        ? { strength: viewForces.pack, target: () => [0, 0] }
         : sides
         ? {
             // pulled sideways only: the target keeps the page's own height, so each side settles as a loose column
@@ -481,7 +490,7 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
             },
           }
         : null,
-    [anchors, ui.areaPull, kbIds, sides, ui.linkDistance, data.nodes.length],
+    [anchors, ui.areaPull, kbIds, sides, ui.linkDistance, data.nodes.length, viewForces],
   );
   // the first layout already uses the mode and pull (settled off screen); only the user's later change animates
   // (compared by value, so StrictMode's second mount run doesn't count as a change)
@@ -1133,7 +1142,7 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
         ref={fg}
         className="size-full"
         data={data}
-        forces={{ charge: ui.charge, linkDistance: ui.linkDistance, gravity: ui.gravity }}
+        forces={{ charge: viewForces?.charge ?? ui.charge, linkDistance: viewForces?.linkDistance ?? ui.linkDistance, gravity: viewForces?.gravity ?? ui.gravity }}
         arrows={ui.arrows}
         nodeRadius={radius}
         drawNode={drawNode}

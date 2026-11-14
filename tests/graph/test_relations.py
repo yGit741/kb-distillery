@@ -167,6 +167,30 @@ def test_similar_to_needs_the_vector_store(tmp_path):
     assert out[0]["kind"] == "similar-to" and 0.99 < out[0]["weight"] <= 1.0    # pages not in the wiki skipped
 
 
+def test_cites_come_from_the_citation_cache_between_this_kbs_papers(tmp_path):
+    import json
+
+    pages = _pages({s: _page(["type: paper"]) for s in ("p-a", "p-b", "p-c")})
+    assert R.cites_edges(pages, str(tmp_path)) == []                            # no cache: omitted, no error
+    (tmp_path / ".cache").mkdir()
+    (tmp_path / ".cache" / "citations.json").write_text("{not json", encoding="utf-8")
+    assert R.cites_edges(pages, str(tmp_path)) == []                            # unreadable: omitted
+    papers = {
+        "A": {"slug": "p-a", "references": ["B", "C", "X", "B", "A"]},          # dup, self and outside refs dropped
+        "B": {"slug": "p-b", "references": ["C"]},
+        "C": {"slug": "p-c", "references": []},
+        "X": {"slug": None, "references": ["A"]},                               # a stub, not a page of the kb
+        "G": {"slug": "gone", "references": ["A"]},                             # cached but no longer in the wiki
+        "H": {"slug": ["p-a"], "references": [{"x": 1}, ["A"], "A"]},          # malformed entries: skipped, no error
+        "I": {"slug": "p-c", "references": "A"},
+    }
+    (tmp_path / ".cache" / "citations.json").write_text(json.dumps({"papers": papers}), encoding="utf-8")
+    out = R.cites_edges(pages, str(tmp_path))
+    assert [(e["source"], e["target"]) for e in out] == [("p-a", "p-b"), ("p-a", "p-c"), ("p-b", "p-c")]
+    assert {e["kind"] for e in out} == {"cites"} and {e["origin"] for e in out} == {"computed"}
+    assert R.CITES in R.COMPUTED_KINDS
+
+
 def test_stored_wins_over_a_computed_edge_with_the_same_key():
     pages = _pages({"jane": _page(["type: person", "advisors: [bob]", "relations:", "  - to: bob",
                                    "    kind: student-of", "    note: PhD 2019"]),
