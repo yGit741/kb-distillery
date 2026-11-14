@@ -56,7 +56,7 @@ beforeEach(() => {
 });
 
 describe("flag header-fold on the graph screen", () => {
-  it("on: the chevron opens the bar and a double click on the hairline folds it", () =>
+  it("on: the chevron opens the bar and a double click on the hairline folds and unfolds it", () =>
     withFlag("graph-shell", true, () =>
       withFlag("header-fold", true, async () => {
         screenWith();
@@ -68,6 +68,23 @@ describe("flag header-fold on the graph screen", () => {
         expect(screen.getByRole("button", { name: "Hide the app bar" })).toHaveAttribute("aria-expanded", "true");
         fireEvent.doubleClick(screen.getByTestId("header-fold"));
         expect(frame.className).toContain("top-0");
+        // the same double click on the same strip brings it back
+        fireEvent.doubleClick(screen.getByTestId("header-fold"));
+        expect(frame.className).toContain("top-12");
+      }),
+    ));
+
+  it("on: the chevron sits centred in the 14px row above the search line, not pulled up past the top edge", () =>
+    withFlag("graph-shell", true, () =>
+      withFlag("header-fold", true, async () => {
+        screenWith();
+        const btn = await screen.findByRole("button", { name: "Show the app bar" });
+        // a 24px hit target centred on the 14px row (equal -my), so a second press on the same spot still lands
+        expect(btn.className).toContain("h-6");
+        expect(btn.className).toContain("-my-[5px]");
+        expect(btn.className).toContain("items-center");
+        expect(btn.className).not.toMatch(/-mt-|items-end/);
+        expect(screen.getByTestId("header-fold").className).toContain("h-3.5");
       }),
     ));
 

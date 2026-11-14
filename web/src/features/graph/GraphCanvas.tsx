@@ -14,7 +14,8 @@ import { buildGraphData, edgeWeight, edgeWeights, largestComponent, sameSet, typ
 import { createHoverIntent, createSpeedMeter, HOVER_TUNING } from "./hoverIntent";
 import { drawArcs } from "./lab/arcs";
 import { storyById } from "./lab/views";
-import { drawHulls, drawLabelLayer, type FadeState } from "./lab/draw";
+import { liveEdgeStory } from "./storyEdges";
+import { drawLabelLayer, type FadeState } from "./lab/draw";
 import { useLabHud } from "./lab/hud";
 import { hopsFrom, type Importance } from "./lab/importance";
 import { FORCED } from "./lab/labelPlan";
@@ -467,7 +468,7 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
   // flag graph-intent, the Sources view (a source page is drawn): sources sit on the left, concepts on the right
   const intentOn = useFlag("graph-intent");
   // a view may set its own layout forces (Citations packs its small components close); the prefs apply otherwise
-  const viewForces = storyById(ui.edgeStory)?.forces;
+  const viewForces = storyById(liveEdgeStory(ui.edgeStory, ui.shownTypes, storyById))?.forces;
   // (several knowledge bases keep their own regions: no sides there, and no neutral concepts either)
   // (both sides drawn: a view of sources alone, such as Citations, lays out freely instead of as one squeezed column)
   const sides = useMemo(
@@ -1068,18 +1069,9 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
       if (arcs?.length) drawArcs(ctx, g.nodes(), arcs, scale, rs.current.colors);
       const lens = useEmbedView.getState().lens;
       if (lens?.pairs.length) drawCandidates(ctx, g.nodes(), lens.pairs, scale, rs.current.colors.ring);
-      const u = live.current.ui;
-      // hulls say where (area tints, or one per knowledge base when several share the canvas) and show only
-      // when the nodes do not already say it with their colour
-      if (kbIds.length) {
-        drawKbOutlines(ctx, kbGroups(g.nodes().filter((n) => !isPile(n))), scale, rs.current.colors.muted);
-        return;
-      }
-      // the Health colouring keeps red and amber for problems alone: no area tint under it; nor under a topic
-      // colouring or the missing-links lens (two groupings at once would compete)
-      const by = effectiveColorBy(u.colorBy);
-      const hulls = by !== "area" && by !== "support" && by !== "topic" && !lens;
-      if (hulls) drawHulls(ctx, g.nodes().filter((n) => !isPile(n)), scale, names, u.lab.hullSigma);
+      // one outline per knowledge base when several share the canvas; no area tints (they had no legend, overlapped,
+      // and put a second colour meaning under the node colouring)
+      if (kbIds.length) drawKbOutlines(ctx, kbGroups(g.nodes().filter((n) => !isPile(n))), scale, rs.current.colors.muted);
     },
     [names, kbIds],
   );

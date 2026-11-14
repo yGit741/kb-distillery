@@ -232,8 +232,12 @@ e2e("a filter change moves none of the pages that stay", async () => {
       hide = chip.first();
       show = page.getByRole("button", { name: "Show all" });
     } else {
-      await page.getByRole("button", { name: "Show page types" }).click();
-      await page.waitForTimeout(600);
+      // the page-types card starts open; open it only when a saved fold closed it
+      const opener = page.getByRole("button", { name: "Show page types" });
+      if (await opener.count()) {
+        await opener.click();
+        await page.waitForTimeout(600);
+      }
       // pin the entry by its type id: once it is hidden it is no longer the first pressed one
       const id = await page.locator('[data-corners="types"] button[aria-pressed="true"]').first().getAttribute("data-type");
       hide = page.locator(`[data-corners="types"] button[data-type="${id}"]`);

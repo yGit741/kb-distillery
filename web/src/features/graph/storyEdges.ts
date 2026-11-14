@@ -27,3 +27,17 @@ export function withStoryEdges<M extends { nodes: readonly GNode[]; links: reado
   const nodes = model.nodes.map((n) => ({ ...n, inDegree: into.get(n.id) ?? 0, outDegree: out.get(n.id) ?? 0 }));
   return { ...model, nodes, links };
 }
+
+/**
+ * The edge view that is really on screen: the one the store names, while the types drawn are still the view's own.
+ * A saved preference or a switch of what the graph shows can leave `edgeStory` behind with other types drawn (the
+ * Concepts view carrying Citations' empty `cites` links); then the page links are drawn as on any view.
+ */
+export function liveEdgeStory(id: string, shownTypes: ReadonlySet<string> | null | undefined, find: (id: string) => Pick<Story, "edges" | "types"> | undefined): string {
+  const st = id ? find(id) : undefined;
+  if (!st?.edges?.length) return "";
+  if (!st.types?.length) return id;
+  // null = every type is drawn (the view's own included)
+  if (shownTypes === null) return id;
+  return shownTypes && st.types.every((t) => shownTypes.has(t)) ? id : "";
+}

@@ -605,7 +605,8 @@ describe("legends", () => {
     mount();
     const legend = screen.getByRole("group", { name: /colour legend/i });
     const pick = within(legend).getByRole("combobox", { name: "Color by" });
-    expect(within(legend).getByRole("button", { name: /color by: hide the names/i })).toHaveTextContent("Color by");
+    expect(legend).toHaveTextContent("Color by");
+    expect(within(legend).getByRole("button", { name: "Hide the colour legend" })).toBeInTheDocument();
     expect(within(pick).getAllByRole("option").map((o) => o.textContent)).toEqual(["theme", "type", "maturity", "recency", "source count"]);
     await userEvent.selectOptions(pick, "maturity");
     expect(useGraphUi.getState().colorBy).toBe("status");

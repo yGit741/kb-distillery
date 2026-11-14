@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { ChevronDown } from "lucide-react";
 import { useFlag } from "@/flags/useFlag";
 import { cn } from "@/lib/utils";
 import type { Dimension } from "../../colourDimensions";
@@ -88,27 +89,42 @@ export function ColourDots({ rows, title, by, dimensions, onPick, bar, hidden, t
       )}
       <div
         data-row="header"
-        className="flex items-center justify-center gap-0.5 self-stretch overflow-hidden whitespace-nowrap text-[10px] font-medium uppercase tracking-wide text-muted-foreground transition-[height,opacity]"
+        className="relative flex items-center justify-center gap-0.5 self-stretch overflow-hidden whitespace-nowrap text-[10px] font-medium uppercase tracking-wide text-muted-foreground transition-[height,opacity]"
         style={{ height: open ? 22 : 0, opacity: open ? 1 : 0, transitionDuration: `${MS}ms` }}
       >
-        <button type="button" tabIndex={open ? 0 : -1} aria-label="Color by: hide the names" aria-expanded={open} title="Hide the names" className={cn("pointer-events-auto rounded px-1 uppercase", RING)} onClick={() => toggle("legend")}>
-          Color by
-        </button>
-        <select
+        <label className="pointer-events-auto relative flex cursor-pointer items-center gap-1 rounded py-0.5 pl-1 pr-1 hover:bg-accent">
+          <span>Color by</span>
+          <ChevronDown aria-hidden className="size-3 text-muted-foreground" strokeWidth={1.6} />
+          <span className="font-semibold text-foreground">{known ? dimensions.find((d) => d.by === by)?.label : title}</span>
+          {/* the native select covers the label, invisible: the chevron sits between "Color by" and what is coloured */}
+          <select
+            tabIndex={open ? 0 : -1}
+            aria-label="Color by"
+            title="Choose what the colour shows"
+            value={known ? by : ""}
+            onChange={(e) => onPick(e.target.value as ColorBy)}
+            className={cn("absolute inset-0 cursor-pointer appearance-none opacity-0", RING)}
+          >
+            {!known && <option value="">{title}</option>}
+            {dimensions.map((d) => (
+              <option key={d.by} value={d.by}>
+                {d.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        {/* folding: one small muted dot on the colour circles' column, just above the top circle */}
+        <button
+          type="button"
           tabIndex={open ? 0 : -1}
-          aria-label="Color by"
-          title="Choose what the colour shows"
-          value={known ? by : ""}
-          onChange={(e) => onPick(e.target.value as ColorBy)}
-          className={cn("pointer-events-auto cursor-pointer rounded bg-transparent py-0.5 pl-0.5 pr-1 text-[10px] font-semibold uppercase tracking-wide text-foreground hover:bg-accent", RING)}
+          aria-label="Hide the colour legend"
+          aria-expanded={open}
+          title="Hide the legend"
+          className={cn("group pointer-events-auto absolute bottom-0 right-0 grid h-4 w-3 place-items-center rounded-full", RING)}
+          onClick={() => toggle("legend")}
         >
-          {!known && <option value="">{title}</option>}
-          {dimensions.map((d) => (
-            <option key={d.by} value={d.by}>
-              {d.label}
-            </option>
-          ))}
-        </select>
+          <i aria-hidden className="block size-1.5 rounded-full bg-muted-foreground/50 transition-colors group-hover:bg-foreground" />
+        </button>
       </div>
       {bar && (
         <div data-row="bar" className="flex flex-col items-stretch gap-1" style={{ width: open ? 168 : 10 }}>

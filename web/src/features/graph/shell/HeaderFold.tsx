@@ -24,12 +24,13 @@ export function HeaderFold() {
     <div
       data-testid="header-fold"
       data-folded={folded || undefined}
-      className={cn("absolute inset-x-0 top-0 z-[31] flex h-3.5 justify-center", folded ? "pointer-events-none" : "pointer-events-auto")}
-      title={folded ? undefined : "Double-click here to hide the app bar"}
+      className="pointer-events-auto absolute inset-x-0 top-0 z-[31] flex h-3.5 justify-center"
+      title={folded ? "Double-click here to show the app bar" : "Double-click here to hide the app bar"}
       onDoubleClick={(e) => {
-        // the chevron handles its own clicks; the strip around it folds on a double click
-        if (folded || (e.target instanceof HTMLElement && e.target.closest("button"))) return;
-        useHeaderFold.getState().set(true);
+        // the chevron handles its own clicks; a double click on the strip around it folds or unfolds the bar, so
+        // the same spot (the top edge of the graph) works both ways
+        if (e.target instanceof HTMLElement && e.target.closest("button")) return;
+        toggle();
       }}
     >
       <button
@@ -40,7 +41,7 @@ export function HeaderFold() {
         onClick={toggle}
         onDoubleClick={(e) => e.stopPropagation()}
         className={cn(
-          "pointer-events-auto -mt-2.5 flex h-6 w-9 items-end justify-center pb-px rounded-full bg-background text-muted-foreground shadow-[0_0_10px_6px_var(--background)] transition-colors hover:text-foreground motion-reduce:transition-none",
+          "pointer-events-auto -my-[5px] flex h-6 w-9 items-center justify-center rounded-full bg-background text-muted-foreground shadow-[0_0_10px_6px_var(--background)] transition-colors hover:text-foreground motion-reduce:transition-none",
           RING,
         )}
       >
