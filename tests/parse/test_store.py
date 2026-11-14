@@ -22,7 +22,7 @@ def test_roundtrip_and_status(tmp_path):
     assert store.read_page(root, SHA, 9) is None
     assert sorted(os.listdir(os.path.join(root, SHA))) == ["p0001.json", "p0002.json", "p0003.json"]
     m = store.write_manifest(root, SHA, "raw/book.pdf", 4, engine="t")
-    assert m["status"] == {"verified": 1, "repaired": 1, "needs-human": 1} and m["missing"] == [4]
+    assert m["status"] == {"verified": 1, "repaired": 1, "marked": 0, "needs-human": 1} and m["missing"] == [4]
     assert store.read_manifest(root, SHA) == m
     assert json.load(open(os.path.join(root, SHA, "manifest.json")))["sha1"] == SHA
 

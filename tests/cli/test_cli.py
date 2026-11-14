@@ -87,7 +87,7 @@ class CommandTableTests(unittest.TestCase):
     def test_the_commands_of_the_plan_are_there(self):
         self.assertEqual(
             set(tree.COMMANDS),
-            {"init", "doctor", "kb", "launch", "hooks", "hook", "ops", "ship", "ingest", "digest", "send", "lint", "llm", "search", "share", "propose"})
+            {"init", "doctor", "kb", "launch", "hooks", "hook", "ops", "ship", "ingest", "digest", "send", "lint", "llm", "parse", "search", "share", "propose"})
         self.assertEqual(set(tree.COMMANDS["kb"].sub), {"list", "show", "takeaways", "import", "inbox", "open-example"})
         self.assertEqual(set(tree.COMMANDS["search"].sub), {"text"})
         self.assertEqual(set(tree.COMMANDS["hooks"].sub), {"install"})
@@ -201,6 +201,7 @@ class DispatchTests(TempHome):
             ("send", "note.md", "--to", "a,b"): ("kb_distillery.distill.send", ["note.md", "--to", "a,b"]),
             ("lint",): ("kb_distillery.lint.lint", []),
             ("llm", "status"): ("kb_distillery.llm", ["status"]),
+            ("parse", "status", "--out", "o"): ("kb_distillery.parse.cli", ["status", "--out", "o"]),
             ("share", "status"): ("kb_distillery.publish.cloudflare", ["status"]),
             ("propose", "review"): ("kb_distillery.graph.propose", ["review"]),
             ("hooks", "install", "--kb", "demo"): ("kb_distillery.git.install_hooks", ["--kb", "demo"]),

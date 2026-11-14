@@ -90,6 +90,12 @@ class MinerU:
     def figures(self, record: dict, width: float, height: float) -> list:
         return figure_boxes(record, width, height)
 
+    def boxes(self, record: dict) -> list:
+        return chunk_boxes(record)
+
+    def body(self, record: dict) -> tuple:
+        return body(record)
+
 
 SKIP: set = set()          # running heads and page numbers are kept: dropping them would only make the verifier miss them
 
@@ -131,33 +137,61 @@ def _spans(content) -> str:
     return "".join(out)
 
 
-def _block(b: dict) -> list:
-    """Markdown chunks of one block (a chunk is a paragraph, a display equation, a table...)."""
+FURNITURE = {"page_number", "header", "footer"}        # running heads and page numbers: not part of the text
+
+
+def _block(b: dict, box=None, skip=frozenset()) -> list:
+    """(Markdown chunk, box) pairs of one block (a chunk is a paragraph, a display equation, a table...). The box is the
+    block's own `bbox` (fractions of the page: x0, y0, x1, y1), else the enclosing block's."""
     t, c = b.get("type"), b.get("content")
-    if t in SKIP:
+    box = tuple(b["bbox"]) if b.get("bbox") and len(b["bbox"]) == 4 else box
+    if t in SKIP or t in skip:
         return []
     if t == "equation":
-        return ["$$\n%s\n$$" % _no_dollar(c if isinstance(c, str) else _spans(c))]
+        return [("$$\n%s\n$$" % _no_dollar(c if isinstance(c, str) else _spans(c)), box)]
     if t == "paragraph_title" or t == "title":
-        return ["%s %s" % ("#" * max(1, min(6, int(b.get("level", 1)) + 1)), _spans(c).strip())]
+        return [("%s %s" % ("#" * max(1, min(6, int(b.get("level", 1)) + 1)), _spans(c).strip()), box)]
     if t in ("image", "table", "list", "code", "algorithm") and isinstance(c, list) and c and "type" in c[0] \
             and c[0]["type"] not in ("text", "equation_inline"):
-        return [x for sub in c for x in _block(sub)]
+        return [x for sub in c for x in _block(sub, box, skip)]
     if t == "list" and isinstance(c, list):
-        return [x for sub in c for x in _block(sub)]
+        return [x for sub in c for x in _block(sub, box, skip)]
     if t == "image_body":
-        return ["![](image)"]
+        return [("![](image)", box)]
     if t == "table_body":
-        return [_table(c if isinstance(c, str) else _spans(c))]
+        return [(_table(c if isinstance(c, str) else _spans(c)), box)]
     txt = _spans(c).strip()
-    return [txt] if txt else []
+    return [(txt, box)] if txt else []
+
+
+def chunks(record: dict, skip=frozenset()) -> list:
+    """[(Markdown chunk, box or None)] of one middle-JSON page, in MinerU's reading order, without block types in `skip`."""
+    return [x for b in record.get("blocks", []) for x in _block(b, None, skip)]
+
+
+def body(record: dict) -> tuple:
+    """(Markdown, [(start, end, box)]) of the page without its running head, footer and page number."""
+    out, parts, pos = [], [], 0
+    for md, box in chunks(record, FURNITURE):
+        out.append((pos, pos + len(md), box))
+        parts.append(md)
+        pos += len(md) + 2
+    return "\n\n".join(parts) + "\n", out
 
 
 def to_markdown(record: dict) -> str:
     """Markdown of one middle-JSON page, in MinerU's reading order. Image bodies stay a placeholder (the figure's pixels
     are not text); the engine is run with --disable-image-analysis so nothing is read out of a plot."""
-    chunks = [x for b in record.get("blocks", []) for x in _block(b)]
-    return "\n\n".join(chunks) + "\n"
+    return "\n\n".join(md for md, _ in chunks(record)) + "\n"
+
+
+def chunk_boxes(record: dict) -> list:
+    """[(start, end, box)] over the characters of `to_markdown(record)`: which block each stretch came from."""
+    out, pos = [], 0
+    for md, box in chunks(record):
+        out.append((pos, pos + len(md), box))
+        pos += len(md) + 2
+    return out
 
 
 def figure_boxes(record: dict, width: float, height: float) -> list:
