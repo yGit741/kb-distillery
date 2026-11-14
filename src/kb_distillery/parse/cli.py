@@ -140,12 +140,12 @@ def cmd_transcribe(a) -> int:
     work = _guard_out(a.work) if a.work else default_work(sha)
     res = transcribe.transcribe(pdf, pages, work, os.path.abspath(a.store), sha,
                                 engine=None if a.engine == "none" else _engine(a.engine), backend=backend,
-                                model=a.model, judge_model=a.judge_model, audit_model=audit_model, page_count=count, force=a.force,
+                                model=a.model, judge_model=a.judge_model, audit_model=audit_model, page_count=count, max_usd=a.max_usd, force=a.force,
                                 log=lambda m: print(m, file=sys.stderr, flush=True))
     by = {}
     for st in res["pages"].values():
         by[st] = by.get(st, 0) + 1
-    print(json.dumps({"sha": sha, "pages": by, "marks": res["marks"], "usd": res["usd"],
+    print(json.dumps({"sha": sha, "pages": by, "marks": res["marks"], "usd": res["usd"], "skipped": res["skipped"],
                       "failed": {str(k): v for k, v in res["failed"].items()}}))
     return 1 if res["failed"] else 0
 

@@ -116,7 +116,7 @@ def _lex(s: str, off: int) -> list:
             nxt = s[i + 1:i + 2]
             if nxt == "\\":
                 out.append(("cmd", "\\", off + i, off + i + 2))
-            elif nxt in "{}|%&#$_":
+            elif nxt and nxt in "{}|%&#$_":
                 out.append(("ch", {"|": "‖"}.get(nxt, nxt) if nxt != "{" and nxt != "}" else nxt, off + i, off + i + 2))
                 if nxt in "{}":
                     out[-1] = ("esc", nxt, off + i, off + i + 2)
@@ -133,8 +133,11 @@ def _lex(s: str, off: int) -> list:
     return out
 
 
-def _tree(lx: list, i: int = 0, stop: str = "") -> tuple:
-    """Nodes: a lexeme tuple, or ("grp", [nodes], start, end)."""
+MAX_DEPTH = 150
+
+
+def _tree(lx: list, i: int = 0, stop: str = "", depth: int = 0) -> tuple:
+    """Nodes: a lexeme tuple, or ("grp", [nodes], start, end). Braces nested deeper than MAX_DEPTH are read as flat."""
     nodes = []
     while i < len(lx):
         k = lx[i]
@@ -143,8 +146,11 @@ def _tree(lx: list, i: int = 0, stop: str = "") -> tuple:
                 return nodes, i + 1
             i += 1                                                  # a stray brace
             continue
+        if k[0] == "lb" and depth >= MAX_DEPTH:
+            i += 1
+            continue
         if k[0] == "lb":
-            inner, j = _tree(lx, i + 1, "rb")
+            inner, j = _tree(lx, i + 1, "rb", depth + 1)
             end = lx[j - 1][3] if j - 1 < len(lx) else k[3]
             nodes.append(("grp", inner, k[2], end))
             i = j
@@ -369,6 +375,11 @@ def math_tokens(src: str, off: int = 0) -> list:
     nodes, _ = _tree(_lex(src, off))
     _walk(nodes, em)
     return em.toks
+
+
+def dollars(text: str) -> int:
+    """Unescaped `$` signs in `text`: a replacement that changes their parity would break every formula after it."""
+    return len(re.findall(r"(?<!\\)\$", text))
 
 
 # ---------------------------------------------------------------- Markdown page -> tokens

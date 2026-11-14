@@ -210,3 +210,61 @@ def test_cli_estimate_and_cap(pdf, tmp_path, monkeypatch, capsys):
         cli.main(args + ["--max-usd", "0.01"])
     assert cli.main(args + ["--dry-run"]) == 0 and not os.path.exists(str(tmp_path / "s"))
     assert "estimated cost $" in capsys.readouterr().err
+
+
+def test_a_garbled_judge_reply_is_no_verdict_and_is_not_cached(pdf, tmp_path, monkeypatch):
+    its = judge.items(compare.align(PARSER[1], READER[1]))
+    assert not any(v.verdict for v in judge.parse_reply('{"items":[{"id":[1],"verdict":"other"},{"id":true,"verdict":"other"}]}', its).values())
+
+    def cut(requests, backend=None, **kw):
+        return [llm.Result(r.id, text='{"items":[{"id":1,"verdict":"transcript","sure":true}', stop_reason="max_tokens") for r in requests]
+    monkeypatch.setattr(llm, "run", cut)
+    res, _ = judge.ask({1: its}, {1: ()}, str(tmp_path), backend="api", log=lambda *_: None)
+    assert not any(v.verdict for v in res[1].values()) and not os.path.exists(judge.cache_path(str(tmp_path), 1))
+
+
+def test_cached_answers_are_for_one_model(pdf, tmp_path, monkeypatch):
+    fake = FakeLLM(OK)
+    run(pdf, tmp_path, monkeypatch, fake)
+    again = FakeLLM(OK)
+    monkeypatch.setattr(llm, "run", again)
+    transcribe.transcribe(pdf, [1, 2], str(tmp_path / "work"), str(tmp_path / "store"), SHA, engine=FakeEngine(),
+                          backend="api", judge_model="opus", audit_model="sonnet", log=lambda *_: None)
+    assert again.calls == ["j0001", "a0001", "a0002"]
+
+
+def test_a_fix_that_would_break_a_formula_is_not_applied(pdf, tmp_path, monkeypatch):
+    f = {2: [{"snippet": "f(w)$ only", "fix": "g(w) only", "page_says": "g", "severity": "serious", "sure": True}]}
+    run(pdf, tmp_path, monkeypatch, FakeLLM(OK, findings=f))
+    rec = store.read_page(str(tmp_path / "store"), SHA, 2)
+    assert "$f(w)$ only [!!](mark:" in rec["markdown"] and rec["marks"][0]["was"] == ""
+    text, marks = transcribe.audited("a $x$ b", [], [{"snippet": "x$ b", "fix": "y", "page_says": "y", "severity": "serious", "sure": True}])
+    assert text == "a $x$ b" and marks[0]["level"] == "!!"
+
+
+def test_a_mark_never_lands_inside_a_word(pdf, tmp_path, monkeypatch):
+    f = {2: [{"snippet": "Second pa", "fix": "Third pa", "page_says": "Third", "severity": "minor", "sure": True}]}
+    run(pdf, tmp_path, monkeypatch, FakeLLM(OK, findings=f))
+    assert store.read_page(str(tmp_path / "store"), SHA, 2)["markdown"].startswith("Third page [!](mark:")
+
+
+def test_a_wrapper_cut_by_a_judged_place_leaves_no_stray_command():
+    md = "so \\unsure{$a$ and more words} then $b$ ok"
+    it = judge.Item(1, (md.index("$a$"), md.index("$a$") + 3), (0, 3), "$a$", "$c$")
+    text, marks = transcribe.judged(md, [it], {1: judge.Verdict(1, "other", True, "$c$")})
+    assert "\\unsure" not in text and text.startswith("so $c$ and more words then") and len(marks) == 1
+
+
+def test_a_ceiling_skips_the_stage_that_would_cross_it(pdf, tmp_path, monkeypatch):
+    fake = FakeLLM(OK)
+    monkeypatch.setattr(llm, "run", fake)
+    res = transcribe.transcribe(pdf, [1, 2], str(tmp_path / "w"), str(tmp_path / "s"), SHA, engine=FakeEngine(),
+                                backend="api", max_usd=0.065, log=lambda *_: None)
+    assert res["skipped"] == ["judge", "auditor"] and fake.calls == ["p0001", "p0002"]
+    assert res["marks"]["!!"] == 2                                           # unjudged differences
+
+
+def test_deep_or_broken_latex_never_crashes():
+    for src in ("{" * 3000 + "x" + "}" * 3000, "x_", "x^", "\\frac{", "\\begin", "a\\", "\\sqrt[", "}}}{{{", ""):
+        compare.math_tokens(src)
+    assert compare.dollars("a $x$ \\$5") == 2

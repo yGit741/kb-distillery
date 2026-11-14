@@ -30,17 +30,24 @@ Answer with one JSON object and nothing else:
 
 "serious": a reader would get a different mathematical statement or lose content. "sure": false when you cannot make out the printed symbols with confidence. For lost content, the snippet is the transcript text just before the gap and the fix is that text followed by what is missing. An empty list is a fine answer.
 
-=====TRANSCRIPT=====
-%s
-=====END====="""
+=====TRANSCRIPT %(tag)s=====
+%(md)s
+=====END %(tag)s====="""
 
 
 def cache_path(out: str, page: int) -> str:
     return os.path.join(out, "audit", "p%04d.json" % page)
 
 
-def _key(md: str) -> str:
-    return hashlib.sha1(md.encode("utf-8")).hexdigest()
+def _key(md: str, model: str = MODEL) -> str:
+    """What a cached audit was given for: the exact text, the model and the prompt."""
+    return hashlib.sha1("\x00".join((md, model, PROMPT)).encode("utf-8")).hexdigest()
+
+
+def prompt(md: str) -> str:
+    """The transcript sits between markers that carry a tag derived from it, so text inside it cannot close the block."""
+    tag = hashlib.sha1(("audit" + md).encode("utf-8")).hexdigest()[:10]
+    return PROMPT % {"tag": tag, "md": md}
 
 
 def parse_reply(text: str) -> list | None:
@@ -75,7 +82,8 @@ def locate(md: str, snippet: str) -> tuple | None:
     return idx[j], idx[j + len(want) - 1] + 1
 
 
-def ask(pages: dict, images: dict, out: str, backend: str | None = None, model: str = MODEL, log=print) -> tuple:
+def ask(pages: dict, images: dict, out: str, backend: str | None = None, model: str = MODEL, force: bool = False,
+        log=print) -> tuple:
     """`pages` {page: Markdown} -> ({page: [findings] or None}, usd). Cached per page, keyed by the exact text audited."""
     res: dict = {}
     reqs, todo = [], []
@@ -83,12 +91,12 @@ def ask(pages: dict, images: dict, out: str, backend: str | None = None, model: 
         try:
             with open(cache_path(out, p), encoding="utf-8") as f:
                 rec = json.load(f)
-            if rec.get("key") == _key(md):
+            if not force and rec.get("key") == _key(md, model):
                 res[p] = rec["findings"]
                 continue
         except (FileNotFoundError, json.JSONDecodeError):
             pass
-        reqs.append(llm.Request(prompt=PROMPT % md, id="a%04d" % p, model=model, images=images[p], max_tokens=8000,
+        reqs.append(llm.Request(prompt=prompt(md), id="a%04d" % p, model=model, images=images[p], max_tokens=8000,
                                 effort="medium"))
         todo.append(p)
     usd = 0.0
@@ -97,11 +105,11 @@ def ask(pages: dict, images: dict, out: str, backend: str | None = None, model: 
         log("audit: %d page(s), model %s, backend %s" % (len(reqs), model, backend))
         for p, r in zip(todo, llm.run(reqs, backend=backend)):
             usd += r.usd if backend != "subscription" else 0.0
-            res[p] = parse_reply(r.text) if r.ok else None
+            res[p] = parse_reply(r.text) if r.ok and r.stop_reason != "max_tokens" else None
             if res[p] is not None:
                 path = cache_path(out, p)
                 os.makedirs(os.path.dirname(path), exist_ok=True)
                 with open(path + ".tmp", "w", encoding="utf-8") as f:
-                    json.dump({"key": _key(pages[p]), "findings": res[p]}, f, ensure_ascii=False, indent=1)
+                    json.dump({"key": _key(pages[p], model), "findings": res[p]}, f, ensure_ascii=False, indent=1)
                 os.replace(path + ".tmp", path)
     return res, round(usd, 4)

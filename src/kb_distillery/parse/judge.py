@@ -6,6 +6,7 @@ it sits in); `ask()` returns a verdict per item; `transcribe` turns verdicts int
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import re
@@ -125,7 +126,7 @@ def parse_reply(text: str, its: list) -> dict:
         obj = None
     rows = obj.get("items") if isinstance(obj, dict) else None
     for row in rows if isinstance(rows, list) else []:
-        if not isinstance(row, dict) or row.get("id") not in out:
+        if not isinstance(row, dict) or type(row.get("id")) is not int or row["id"] not in out:
             continue
         v = str(row.get("verdict", "")).strip().lower()
         if v not in ("transcript", "other", "neither"):
@@ -139,19 +140,26 @@ def cache_path(out: str, page: int) -> str:
     return os.path.join(out, "judge", "p%04d.json" % page)
 
 
-def load(out: str, page: int, its: list) -> dict | None:
-    """Cached verdicts of `page`, only when they were given for exactly these items."""
+def _asked(its: list, model: str) -> dict:
+    """What a cached answer was given for: the exact texts, the model and the prompt."""
+    return {"items": [[i.transcript, i.other] for i in its], "model": model,
+            "prompt": hashlib.sha1(PROMPT.encode("utf-8")).hexdigest()[:12]}
+
+
+def load(out: str, page: int, its: list, model: str = MODEL) -> dict | None:
+    """Cached verdicts of `page`, only when they were given for exactly these items by this model and prompt."""
     try:
         with open(cache_path(out, page), encoding="utf-8") as f:
             rec = json.load(f)
     except (FileNotFoundError, json.JSONDecodeError):
         return None
-    if rec.get("asked") != [[i.transcript, i.other] for i in its]:
+    if rec.get("asked") != _asked(its, model):
         return None
     return {v["id"]: Verdict(v["id"], v["verdict"], v["sure"], v["fix"]) for v in rec["verdicts"]}
 
 
-def ask(todo: dict, images: dict, out: str, backend: str | None = None, model: str = MODEL, log=print) -> tuple:
+def ask(todo: dict, images: dict, out: str, backend: str | None = None, model: str = MODEL, force: bool = False,
+        log=print) -> tuple:
     """`todo` {page: [Item]} -> ({page: {item id: Verdict}}, usd). Pages with no item cost nothing; verdicts are cached
     per page next to the transcript, keyed by the exact texts that were asked about."""
     res: dict = {}
@@ -160,7 +168,7 @@ def ask(todo: dict, images: dict, out: str, backend: str | None = None, model: s
         if not its:
             res[p] = {}
             continue
-        hit = load(out, p, its)
+        hit = None if force else load(out, p, its, model)
         if hit is not None:
             res[p] = hit
             continue
@@ -174,12 +182,13 @@ def ask(todo: dict, images: dict, out: str, backend: str | None = None, model: s
         for p, r in zip(pages, llm.run(reqs, backend=backend)):
             usd += r.usd if backend != "subscription" else 0.0
             its = todo[p]
-            res[p] = parse_reply(r.text if r.ok else "", its)
-            if r.ok:
+            cut = r.stop_reason == "max_tokens"                      # a cut reply is no answer: its JSON may be partial
+            res[p] = parse_reply(r.text if r.ok and not cut else "", its)
+            if r.ok and not cut and any(v.verdict for v in res[p].values()):
                 path = cache_path(out, p)
                 os.makedirs(os.path.dirname(path), exist_ok=True)
                 with open(path + ".tmp", "w", encoding="utf-8") as f:
-                    json.dump({"asked": [[i.transcript, i.other] for i in its],
+                    json.dump({"asked": _asked(its, model),
                                "verdicts": [vars(v) for v in res[p].values()]}, f, ensure_ascii=False, indent=1)
                 os.replace(path + ".tmp", path)
     return res, round(usd, 4)
