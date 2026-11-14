@@ -8,6 +8,7 @@
  * document again).
  */
 import type { DataSource, SessionPutRequest } from "@/api";
+import { capabilities } from "@/features/graph/shell/capabilities";
 import { readJson, writeJson } from "./storage";
 import type { Chat } from "./thread";
 
@@ -18,7 +19,7 @@ export const MIGRATED_KEY = "kbchat.sessions.migrated";
 export const MIRROR_DELAY_MS = 800;
 
 /** Server sessions exist only on the live local backend (never in a share build): each kb keeps its own chats. */
-export const serverSessionsOn = (ds: DataSource): boolean => ds.kind === "http";
+export const serverSessionsOn = (ds: DataSource): boolean => ds.kind === "http" && capabilities().chat;
 
 /** `kb-chat:20261103101500-abc123` <-> `20261103101500-abc123` (the server id is a plain slug). */
 export const sessionIdOf = (chatId: string): string => chatId.replace(/^kb-chat:/, "");

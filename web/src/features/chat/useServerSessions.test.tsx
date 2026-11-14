@@ -44,7 +44,7 @@ beforeEach(() => {
   sessionStorage.clear();
 });
 
-describe("useChatSession with the agent-mode flag", () => {
+describe("useChatSession mirroring to the server", () => {
   it("on: mirrors a finished turn to the server after the debounce, with model and backend", async () => {
     await withFlag("agent-mode", true, async () => {
       const { putSession, wrapper } = setup();
