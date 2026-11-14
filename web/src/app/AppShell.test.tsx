@@ -95,6 +95,7 @@ describe("AppShell", () => {
 });
 
 describe("AppShell, flag ui.data-system-split", () => {
+  beforeEach(() => resetEmbed()); // an earlier ?embed=1 test leaves embed mode on
   it("on: the bar is Home, Knowledge, Ingest, System; Knowledge has its own tab row on its screens", () => withFlag("ui.data-system-split", true, () => withFlag("ui.ingest", true, async () => {
     const router = createAppRouter(createMemoryHistory({ initialEntries: ["/app/system"] }));
     render(<App source={ds} router={router} />);
