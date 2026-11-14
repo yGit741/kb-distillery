@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef } from "react";
+import { Minus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ShapeIcon, SourceIcon } from "../../encoding/NodeMarkSvg";
 import { markOf } from "../../encoding/spec";
@@ -122,9 +123,19 @@ export function TypesCard({ concepts, sources, onToggle, onSpot }: Props) {
       {/* the one card behind both groups, symmetric around the fixed centre */}
       <span
         aria-hidden
-        onClick={() => open && toggle("types")}
-        className={cn("absolute -inset-x-3.5 -inset-y-[2.5px] -z-10 rounded-[14px] bg-card shadow-[var(--shadow)] transition-opacity duration-300 motion-reduce:transition-none", open ? "pointer-events-auto cursor-pointer opacity-100" : "opacity-0")}
+        className={cn("absolute -inset-x-3.5 -inset-y-[2.5px] -z-10 rounded-[14px] bg-card shadow-[var(--shadow)] transition-opacity duration-300 motion-reduce:transition-none", open ? "pointer-events-auto opacity-100" : "opacity-0")}
       />
+      {open && (
+        <button
+          type="button"
+          aria-label="Hide the page types"
+          title="Hide the page types"
+          className={cn("pointer-events-auto absolute -right-[38px] top-1/2 grid size-5 -translate-y-1/2 place-items-center rounded-full bg-card text-muted-foreground shadow-[var(--shadow)] hover:text-foreground", RING)}
+          onClick={() => toggle("types")}
+        >
+          <Minus aria-hidden className="size-3" strokeWidth={1.6} />
+        </button>
+      )}
       {!open && (
         <button
           ref={opener}

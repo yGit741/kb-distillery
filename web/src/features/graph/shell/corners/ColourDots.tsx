@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { Minus } from "lucide-react";
 import { useFlag } from "@/flags/useFlag";
 import { cn } from "@/lib/utils";
 import type { Dimension } from "../../colourDimensions";
@@ -91,9 +92,7 @@ export function ColourDots({ rows, title, by, dimensions, onPick, bar, hidden, t
         className="flex items-center justify-center gap-0.5 self-stretch overflow-hidden whitespace-nowrap text-[10px] font-medium uppercase tracking-wide text-muted-foreground transition-[height,opacity]"
         style={{ height: open ? 22 : 0, opacity: open ? 1 : 0, transitionDuration: `${MS}ms` }}
       >
-        <button type="button" tabIndex={open ? 0 : -1} aria-label="Color by: hide the names" aria-expanded={open} title="Hide the names" className={cn("pointer-events-auto rounded px-1 uppercase", RING)} onClick={() => toggle("legend")}>
-          Color by
-        </button>
+        <span className="px-1">Color by</span>
         <select
           tabIndex={open ? 0 : -1}
           aria-label="Color by"
@@ -109,6 +108,9 @@ export function ColourDots({ rows, title, by, dimensions, onPick, bar, hidden, t
             </option>
           ))}
         </select>
+        <button type="button" tabIndex={open ? 0 : -1} aria-label="Hide the colour legend" aria-expanded={open} title="Hide the legend" className={cn("pointer-events-auto ml-auto grid size-5 place-items-center rounded-full text-muted-foreground hover:bg-accent hover:text-foreground", RING)} onClick={() => toggle("legend")}>
+          <Minus aria-hidden className="size-3" strokeWidth={1.6} />
+        </button>
       </div>
       {bar && (
         <div data-row="bar" className="flex flex-col items-stretch gap-1" style={{ width: open ? 168 : 10 }}>

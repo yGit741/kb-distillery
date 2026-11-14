@@ -41,8 +41,31 @@ function settle(order: Layer[], menu: Snap["menu"], edit: Snap["edit"]): Snap {
   return { order: o, menu: m, edit: e };
 }
 
+/** The two legends start open; one the user folds with its minus stays folded until they open it again. */
+const LEGENDS: Layer[] = ["legend", "types"];
+const FOLDED_KEY = "kb-graph-legends-folded";
+function foldedLegends(): Set<Layer> {
+  try {
+    return new Set(JSON.parse(localStorage.getItem(FOLDED_KEY) ?? "[]") as Layer[]);
+  } catch {
+    return new Set();
+  }
+}
+function rememberFolded(l: Layer, folded: boolean) {
+  try {
+    const s = foldedLegends();
+    if (folded) s.add(l);
+    else s.delete(l);
+    localStorage.setItem(FOLDED_KEY, JSON.stringify([...s]));
+  } catch {
+    /* no storage: the legends simply start open */
+  }
+}
+const openLegends = (): Layer[] => LEGENDS.filter((l) => !foldedLegends().has(l));
+const keepLegends = (order: Layer[]) => order.filter((l) => LEGENDS.includes(l));
+
 export const useCorners = create<CornersState>((set, get) => ({
-  order: [],
+  order: openLegends(),
   menu: null,
   edit: null,
   activeView: null,
@@ -51,6 +74,7 @@ export const useCorners = create<CornersState>((set, get) => ({
   toggle: (l) =>
     set((s) => {
       let base = s.order;
+      if (LEGENDS.includes(l)) rememberFolded(l, base.includes(l));
       if (base.includes(l)) base = without(base, l);
       else {
         // pins close both fans, a fan closes the pins, the two fans may be open together
@@ -69,12 +93,13 @@ export const useCorners = create<CornersState>((set, get) => ({
   setActive: (activeView) => set({ activeView }),
   closeTop: () => {
     const { order, menu, edit } = get();
-    const top = order[order.length - 1];
+    // Esc closes fans, lists and menus; the legends close only with their own minus
+    const top = [...order].reverse().find((l) => !LEGENDS.includes(l));
     if (!top) return null;
-    set(settle(order.slice(0, -1), top === "menu" ? null : menu, top === "edit" ? null : edit));
+    set(settle(without(order, top), top === "menu" ? null : menu, top === "edit" ? null : edit));
     return top;
   },
-  closeAll: () => set({ order: [], menu: null, edit: null }),
+  closeAll: () => set((s) => ({ order: keepLegends(s.order), menu: null, edit: null })),
 }));
 
 export const resetCorners = () => useCorners.setState({ order: [], menu: null, edit: null, activeView: null });
