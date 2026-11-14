@@ -51,7 +51,11 @@ def _log_tail():
 def repo_url(root):
     """https URL of the engine repo's origin, "" when unknown."""
     import subprocess
-    cp = subprocess.run(["git", "remote", "get-url", "origin"], cwd=root, capture_output=True, text=True, check=False)
+    try:
+        cp = subprocess.run(["git", "remote", "get-url", "origin"], cwd=root, capture_output=True, text=True,
+                            check=False, timeout=10)
+    except (OSError, subprocess.SubprocessError):
+        return ""
     url = (cp.stdout or "").strip()
     if url.startswith("git@github.com:"):
         url = "https://github.com/" + url.split(":", 1)[1]

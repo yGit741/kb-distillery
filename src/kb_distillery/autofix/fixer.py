@@ -329,8 +329,9 @@ def fix(failure, number, state, root, save, log=print):
     if held:
         return finish(f"held: {url}", f"Fix proposed in {url}, **held for your approval**:\n"
                       + "".join(f"- {w}\n" for w in why) + f"\nSpent {attempt['usd']:.2f} USD.")
-    cp = ship(["merge"], wt, timeout=3600)
-    merged = cp.returncode == 0
-    return finish(f"{'merged' if merged else 'merge pending'}: {url}",
-                  f"Fix {url} {'merged' if merged else 'opened; the merge did not finish: ' + tail(cp, 8)}. "
-                  f"Spent {attempt['usd']:.2f} USD.")
+    cp = ship(["merge", "--no-wait"], wt, timeout=600)   # the nightly mail waits for us: CI finishes after it
+    queued = cp.returncode == 0
+    return finish(f"merge pending: {url}" if queued else f"held: {url}",
+                  f"Fix {url} " + ("is queued: it merges when CI passes. " if queued else
+                                   f"opened, but the merge could not be queued:\n```\n{tail(cp, 8)}\n```\n")
+                  + f"Spent {attempt['usd']:.2f} USD.")

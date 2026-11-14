@@ -281,8 +281,7 @@ def apply_autofix(doc, results, error=""):
     head = autofix_headline(results, error)
     kinds = {_autofix_kind(r) for r in results or []}
     # the night failed either way; it only needs nothing from the owner when the fix merged or is merging
-    doc.status = "warn" if not error and kinds and kinds <= {"merged", "pending"} else \
-        "warn" if not error and "held" in kinds else "error"
+    doc.status = "warn" if not error and kinds and kinds <= {"merged", "pending", "held"} else "error"
     banner = doc.sections[0].blocks[0] if doc.sections and doc.sections[0].blocks else None
     if isinstance(banner, m.Banner):
         banner.title, banner.status = head, doc.status

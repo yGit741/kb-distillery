@@ -237,3 +237,36 @@ def test_unlisted_issues_never_open_a_duplicate(tmp_path):
         rc = 1 if args[:2] == ["issue", "list"] else 0
         return subprocess.CompletedProcess(args, rc, "", "")
     assert issue.open_or_reuse(f, _run(), str(tmp_path), run_gh=gh)[0] is None
+
+
+@pytest.mark.flag("nightly-autofix", True)
+def test_timeout_still_reads_what_the_fixer_did(tmp_path, monkeypatch):
+    from kb_distillery.ops import core
+    monkeypatch.setattr(core, "AUTOFIX_LOG", str(tmp_path / "autofix.log"))
+
+    def run(cmd, **kw):
+        with open(cmd[cmd.index("--summary") + 1], "w") as f:
+            json.dump([_res("created")], f)
+        raise subprocess.TimeoutExpired(cmd, 1)
+    results, why = core.nightly_autofix(str(tmp_path), _run(), run=run)
+    assert results[0]["issue"] == 4 and why.startswith("timed out")
+
+
+@pytest.mark.flag("nightly-autofix", True)
+def test_bad_summary_is_ignored(tmp_path, monkeypatch):
+    from kb_distillery.ops import core
+    monkeypatch.setattr(core, "AUTOFIX_LOG", str(tmp_path / "autofix.log"))
+
+    def run(cmd, **kw):
+        with open(cmd[cmd.index("--summary") + 1], "w") as f:
+            json.dump({"not": "a list"}, f)
+        return subprocess.CompletedProcess(cmd, 0)
+    assert core.nightly_autofix(str(tmp_path), _run(), run=run) == ([], "")
+
+
+def test_held_plus_ticket_is_an_error_night():
+    from kb_distillery.ops import nightly_report
+    from kb_distillery.ops.report import model as m
+    doc = m.Doc("Nightly", "error", "x", [m.Section("", [m.Banner("error", "x")])])
+    nightly_report.apply_autofix(doc, [_res("held: https://github.com/octocat/kb/pull/3"), _res("created", fixable=False)])
+    assert doc.status == "error"
