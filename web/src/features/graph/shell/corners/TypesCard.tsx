@@ -6,6 +6,7 @@ import type { TypeRow } from "../../legendModel";
 import { useReducedMotion } from "./motion";
 import { useCorners } from "./cornersStore";
 import { groupTypes, typeName, type TypeGroup } from "./typeGroups";
+import { useStillClick } from "./useStillClick";
 
 interface Props {
   concepts: readonly TypeRow[];
@@ -34,6 +35,7 @@ export function TypesCard({ concepts, sources, onToggle, onSpot }: Props) {
   const MS = useReducedMotion() ? 0 : FULL_MS;
   const open = useCorners((s) => s.order.includes("types"));
   const toggle = useCorners((s) => s.toggle);
+  const still = useStillClick(open, () => toggle("types"));
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const box = useRef<HTMLDivElement>(null);
   const opener = useRef<HTMLButtonElement>(null);
@@ -106,6 +108,7 @@ export function TypesCard({ concepts, sources, onToggle, onSpot }: Props) {
       data-corners="types"
       data-tour="graph-types"
       data-open={open}
+      onClickCapture={still.onClickCapture}
       className="pointer-events-none absolute bottom-[3.5px] [.gt-active_&]:bottom-[76px] left-1/2 z-[24] grid h-6 w-max max-w-[calc(100%-160px)] -translate-x-1/2 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center"
       onMouseLeave={() => spot(null)}
     >
@@ -123,7 +126,10 @@ export function TypesCard({ concepts, sources, onToggle, onSpot }: Props) {
           title="Page types: press to show the names"
           aria-expanded={false}
           className={cn("pointer-events-auto absolute -inset-x-3.5 -inset-y-[2.5px] cursor-pointer rounded-[14px] transition-colors hover:bg-accent motion-reduce:transition-none", RING)}
-          onClick={() => toggle("types")}
+          onClick={(e) => {
+            still.mark(e);
+            toggle("types");
+          }}
         />
       )}
       <div className={`${GROUP} flex-row-reverse justify-self-end`}>{conceptGroups.map((r, i) => item(r, "left", i))}</div>

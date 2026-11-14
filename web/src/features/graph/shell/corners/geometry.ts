@@ -82,6 +82,9 @@ export function fanReach(n: number): number {
 export const LEGEND_REST_ROW = 10;
 export const LEGEND_OPEN_ROW = 24;
 export const LEGEND_PAD = 8;
+/** A continuous colouring: the gradient bar's height at rest (it stands on the edge), and header + bar + ends spread. */
+export const LEGEND_BAR_REST = 44;
+export const LEGEND_BAR_OPEN = 22 + 10 + 4 + 14;
 
 /** Height of the legend: a tight stack at rest, spread into names when pressed. */
 export const legendHeight = (rows: number, open: boolean): number => 2 * LEGEND_PAD + rows * (open ? LEGEND_OPEN_ROW : LEGEND_REST_ROW) + (open ? 22 : 2);

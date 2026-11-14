@@ -148,7 +148,7 @@ Request: {text}
 
 # ---- the answer
 _BY = re.compile(r"^[\w-]+$")
-_COLORS = {"type", "layer", "depth", "status", "area", "degree", "evidence", "score", "none"}
+_COLORS = {"type", "layer", "depth", "status", "area", "degree", "evidence", "score", "none", "format", "recency", "added"}
 _SIZES = {"connections", "in", "out", "uniform", "tier", "evidence", "score", "gap", "logdeg"}
 _WIDTHS = {"thin", "normal", "thick"}
 

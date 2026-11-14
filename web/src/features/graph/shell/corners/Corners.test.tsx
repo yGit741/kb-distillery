@@ -410,10 +410,14 @@ describe("Think and Agent fans", () => {
   });
 });
 
+/** The pointer leaves the spot of the last click (further than the still-click threshold). */
+const moveAway = () => fireEvent.mouseMove(window, { clientX: 60, clientY: 60 });
+
 describe("legends", () => {
   it("pressing a type name in the types card hides or shows that type", async () => {
     mount();
     await userEvent.click(screen.getByRole("button", { name: /show page types/i }));
+    moveAway();
     const person = screen.getByRole("button", { name: /^Person/ });
     expect(person).toHaveAttribute("aria-pressed", "false"); // hidden by default: dimmed
     await userEvent.click(person);
@@ -467,9 +471,96 @@ describe("legends", () => {
     expect(legend).toHaveAttribute("data-open", "true");
     const row = within(legend).getAllByRole("button", { pressed: true })[0]!;
     const label = row.getAttribute("data-row")!;
+    moveAway();
     await userEvent.click(row);
     expect(useGraphUi.getState().hiddenKeys.has(label)).toBe(true);
     expect(row).toHaveAttribute("aria-pressed", "false");
+  });
+
+  it("hiding a colour or changing the colouring keeps the drawn types, also when they still come from the view's story", async () => {
+    mount();
+    expect(useGraphUi.getState().shownTypes).toBeUndefined();
+    const legend = screen.getByRole("group", { name: /colour legend/i });
+    await userEvent.click(screen.getByRole("button", { name: /show colour names/i }));
+    moveAway();
+    await userEvent.click(within(legend).getAllByRole("button", { pressed: true })[0]!);
+    expect([...useGraphUi.getState().shownTypes!].sort()).toEqual([...schema.defaultVisible].sort());
+    useGraphUi.setState({ shownTypes: undefined });
+    await userEvent.selectOptions(within(legend).getByRole("combobox", { name: "Color by" }), "maturity");
+    expect([...useGraphUi.getState().shownTypes!].sort()).toEqual([...schema.defaultVisible].sort());
+  });
+
+  it("a kb with no page of a default type: hiding one of its types keeps the others drawn", async () => {
+    // every page is a company or a role; the kit's defaults (topic, idea, question) match none of them
+    const own = parseSchema({ types: [{ id: "topic", label: "Topic", layer: "concept" }, { id: "company", label: "Company", layer: "concept" }, { id: "role", label: "Role", layer: "concept" }], default_visible: ["topic"] });
+    const pages = [{ ...sampleNodes[0]!, id: "c1", type: "company" }, { ...sampleNodes[0]!, id: "r1", type: "role" }];
+    mount(fakeServer(), { nodes: pages, visible: new Set(["c1", "r1"]), schema: own, shownTypes: new Set(["topic", "company", "role"]) });
+    await userEvent.click(screen.getByRole("button", { name: /show page types/i }));
+    moveAway();
+    await userEvent.click(screen.getByRole("button", { name: /^Company/ }));
+    const shown = useGraphUi.getState().shownTypes;
+    expect(shown?.has("company")).toBe(false);
+    expect(shown?.has("role")).toBe(true);
+  });
+
+  it("two clicks on the same spot open and close the colour legend, and never hide the name under the pointer", async () => {
+    mount();
+    const legend = screen.getByRole("group", { name: /colour legend/i });
+    await userEvent.click(screen.getByRole("button", { name: /show colour names/i }));
+    expect(legend).toHaveAttribute("data-open", "true");
+    // the pointer has not moved: the name that slid under it does not take the click
+    await userEvent.click(within(legend).getAllByRole("button", { pressed: true })[0]!);
+    expect(legend).toHaveAttribute("data-open", "false");
+    expect(useGraphUi.getState().hiddenKeys.size).toBe(0);
+  });
+
+  it("a drift under the threshold still counts as the same spot", async () => {
+    mount();
+    const legend = screen.getByRole("group", { name: /colour legend/i });
+    await userEvent.click(screen.getByRole("button", { name: /show colour names/i }));
+    fireEvent.mouseMove(window, { clientX: 2, clientY: 2 });
+    await userEvent.click(within(legend).getAllByRole("button", { pressed: true })[0]!);
+    expect(legend).toHaveAttribute("data-open", "false");
+    expect(useGraphUi.getState().hiddenKeys.size).toBe(0);
+  });
+
+  it("the types card follows the same rule: two clicks on the same spot open and close it", async () => {
+    mount();
+    const card = screen.getByRole("group", { name: "Page types" });
+    const before = useGraphUi.getState().shownTypes;
+    await userEvent.click(screen.getByRole("button", { name: /show page types/i }));
+    expect(card).toHaveAttribute("data-open", "true");
+    await userEvent.click(screen.getByRole("button", { name: /^Topic/ }));
+    expect(card).toHaveAttribute("data-open", "false");
+    expect(useGraphUi.getState().shownTypes).toBe(before);
+  });
+
+  it("the header reads Color by, with a dropdown of the concept colourings; sources add theirs once drawn", async () => {
+    mount();
+    const legend = screen.getByRole("group", { name: /colour legend/i });
+    const pick = within(legend).getByRole("combobox", { name: "Color by" });
+    expect(within(legend).getByRole("button", { name: /color by: hide the names/i })).toHaveTextContent("Color by");
+    expect(within(pick).getAllByRole("option").map((o) => o.textContent)).toEqual(["theme", "type", "maturity", "recency", "source count"]);
+    await userEvent.selectOptions(pick, "maturity");
+    expect(useGraphUi.getState().colorBy).toBe("status");
+  });
+
+  it("with a source on screen the dropdown also offers digest status and date added", () => {
+    const paper = sampleNodes.find((n) => n.layer === "source")!;
+    mount(fakeServer(), { visible: new Set(sampleNodes.map((n) => n.id)) });
+    expect(paper).toBeDefined();
+    const pick = within(screen.getByRole("group", { name: /colour legend/i })).getByRole("combobox", { name: "Color by" });
+    expect(within(pick).getAllByRole("option").map((o) => o.textContent)).toEqual(["theme", "type", "maturity", "recency", "source count", "digest status", "date added"]);
+  });
+
+  it("a continuous colouring shows one gradient bar with its two ends, not swatches", async () => {
+    useGraphUi.setState({ colorBy: "recency" });
+    mount();
+    const legend = screen.getByRole("group", { name: /colour legend/i });
+    expect(legend.querySelector("[data-row=bar]")).not.toBeNull();
+    expect(within(legend).queryAllByRole("button", { pressed: true })).toHaveLength(0);
+    await userEvent.click(screen.getByRole("button", { name: /show colour names/i }));
+    expect(legend).toHaveTextContent("this week");
   });
 
   it("the legend slides down out of the Think fan's arc, and back when Think closes", async () => {

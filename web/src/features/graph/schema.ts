@@ -63,3 +63,14 @@ export function presentTypes(schema: GraphSchema, inData: readonly string[]): Ty
 
 export const typeLabel = (schema: GraphSchema, id: string): string =>
   schema.types.find((t) => t.id === id)?.label ?? title(id || "unknown");
+
+/**
+ * The types drawn when nothing else decides (no view, no filter of your own): the kit's `default_visible`. A kb
+ * whose pages are all of its own types has no page of those (its concepts are companies, roles, skills): there the
+ * default is the whole concept layer, so leaving a view never draws an empty graph.
+ */
+export function defaultTypes(schema: GraphSchema, nodes: readonly { type: string }[]): Set<string> {
+  const defaults = new Set(schema.defaultVisible);
+  if (nodes.length && !nodes.some((n) => defaults.has(n.type))) return new Set(schema.types.filter((t) => t.layer === "concept").map((t) => t.id));
+  return defaults;
+}
