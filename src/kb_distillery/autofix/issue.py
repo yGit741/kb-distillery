@@ -16,7 +16,9 @@ MARK_RE = re.compile(r"<!-- nightly-sig: ([0-9a-f]+) -->")
 
 
 def gh(args, root):
-    """`gh args` as the App, then as the user; a CompletedProcess either way."""
+    """`gh args` as the App, then as the user; a CompletedProcess either way. Never from a test (AGENTS.md rule 10)."""
+    if "PYTEST_CURRENT_TEST" in os.environ:
+        return subprocess.CompletedProcess(["gh", *args], 1, "", "refused: no GitHub calls from tests")
     from kb_distillery.git import events
     cp = events._gh(args, root)
     if cp.returncode == 0:
@@ -65,8 +67,9 @@ def find_open(signature, root, run_gh=gh):
     return None
 
 
-def open_or_reuse(failure, run, root, log_tail="", kb="", run_gh=gh, dry_run=False):
-    """(issue number or None, "created"|"reused"|"dry-run"|"failed: …")."""
+def open_or_reuse(failure, run, root, log_tail="", kb="", run_gh=gh, dry_run=False, comment_again=True):
+    """(issue number or None, "created"|"reused"|"dry-run"|"failed: …"). `comment_again=False` reuses an open issue
+    without the "seen again" comment (the caller already commented today)."""
     try:
         number = find_open(failure.signature, root, run_gh)
         if number == UNKNOWN:
@@ -74,8 +77,9 @@ def open_or_reuse(failure, run, root, log_tail="", kb="", run_gh=gh, dry_run=Fal
         if dry_run:
             return number, f"dry-run: would {'comment on #%s' % number if number else 'open a new issue'}"
         if number:
-            run_gh(["issue", "comment", str(number), "--body",
-                    f"Seen again in the nightly run of {(run or {}).get('started', '?')}."], root)
+            if comment_again:
+                run_gh(["issue", "comment", str(number), "--body",
+                        f"Seen again in the nightly run of {(run or {}).get('started', '?')}."], root)
             return number, "reused"
         run_gh(["label", "create", LABEL, "--force", "--color", "B60205",
                 "--description", "a nightly run failed (kb_distillery.autofix)"], root)

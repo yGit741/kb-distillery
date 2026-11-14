@@ -82,8 +82,11 @@ def nightly(kb_root, dry_run=False, root=None, run_gh=issue.gh, fix=None, out=pr
     kb = os.path.basename(os.path.normpath(kb_root))
     state = load_state(root)
     done = []
+    today = (run.get("started") or "")[:10]
     for f in fails:
-        number, how = issue.open_or_reuse(f, run, root, log_tail=tail, kb=kb, run_gh=run_gh, dry_run=dry_run)
+        seen_today = bool(today) and str((state.get(f.signature) or {}).get("last") or "")[:10] == today
+        number, how = issue.open_or_reuse(f, run, root, log_tail=tail, kb=kb, run_gh=run_gh, dry_run=dry_run,
+                                          comment_again=not seen_today)
         route = "fixer" if f.fixable else "ticket only"
         out(f"autofix: {f.signature} {f.step}: issue {('#%s' % number) if number else '-'} ({how}); {route}: {f.why}")
         if not dry_run:
