@@ -10,7 +10,7 @@
  */
 :root {
   color-scheme: light;
-  --background: #f4f4f5; /* --bg */
+  --background: #f3efe6; /* warm paper (was #f4f4f5) */
   --foreground: #18181b; /* --text */
   --card: #ffffff; /* --surface */
   --card-foreground: #18181b;
@@ -21,7 +21,7 @@
   --secondary: rgba(0, 0, 0, 0.04); /* --control-bg */
   --secondary-foreground: #18181b;
   --muted: rgba(0, 0, 0, 0.04);
-  --muted-foreground: color-mix(in srgb, var(--color-zinc-500) 80%, var(--color-zinc-600)); /* --muted: about 4.7:1 on the muted surface */
+  --muted-foreground: color-mix(in srgb, var(--color-zinc-500) 50%, var(--color-zinc-600)); /* --muted: about 4.9:1 on the muted surface over warm paper */
   --accent: rgba(0, 0, 0, 0.08); /* --control-bg-hover: shadcn "accent" = hover surface */
   --accent-foreground: #18181b;
   --accent-soft: color-mix(in srgb, var(--primary) 9%, transparent); /* 9%: --primary text on it stays at least 4.5:1 */
@@ -35,22 +35,24 @@
   --radius: 0.75rem; /* 12px */
   --shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
   --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  /* the dots under the graph (.kb-canvas): a quiet paper texture, never a mark */
+  --canvas-dot: rgba(60, 50, 30, 0.1);
 }
 
 .dark {
   color-scheme: dark;
-  --background: #0c0d10;
+  --background: #17181c; /* graphite (was #0c0d10) */
   --foreground: #eceff4;
-  --card: #18181b; /* --surface-solid (opaque: no glass blur in the shell) */
+  --card: #1f2126; /* --surface-solid (opaque: no glass blur in the shell); one step above graphite */
   --card-foreground: #eceff4;
-  --popover: #18181b;
+  --popover: #1f2126;
   --popover-foreground: #eceff4;
   --primary: #7aa2ff;
   --primary-foreground: #0c0d10;
   --secondary: rgba(255, 255, 255, 0.06);
   --secondary-foreground: #eceff4;
   --muted: rgba(255, 255, 255, 0.06);
-  --muted-foreground: #8b93a7;
+  --muted-foreground: #9aa2b6; /* about 5.3:1 on the muted surface over the #1f2126 card */
   --accent: rgba(255, 255, 255, 0.1);
   --accent-foreground: #eceff4;
   --accent-soft: rgba(122, 162, 255, 0.18);
@@ -63,6 +65,7 @@
   --bad: #ff6b7a;
   --radius: 0.875rem; /* 14px */
   --shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+  --canvas-dot: rgba(255, 255, 255, 0.06);
 }
 
 @theme inline {
@@ -93,6 +96,12 @@
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
   --font-sans: var(--font-sans);
+}
+
+/* The graph's ground: warm paper with dots (light), graphite with dots (dark). Only under the graph. */
+.kb-canvas {
+  background-image: radial-gradient(var(--canvas-dot) 1px, transparent 1.3px);
+  background-size: 18px 18px;
 }
 
 @layer base {

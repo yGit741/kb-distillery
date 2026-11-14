@@ -661,7 +661,7 @@ function Loaded({
 
   return (
     <HostContext.Provider value={host}>
-      <div className="absolute inset-0" data-testid="graph-area">
+      <div className="kb-canvas absolute inset-0" data-testid="graph-area">
       {/* the full chat leaves the canvas the top of the right pane */}
       <div className="absolute" style={fullChat ? { left: chatPanelWidth(true, false, undefined, paneW), right: 0, top: 0, bottom: viewerShown ? `${viewerH}%` : 0 } : { inset: 0 }}>
       <GraphCanvas
