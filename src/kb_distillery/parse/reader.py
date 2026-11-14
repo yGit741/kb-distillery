@@ -62,7 +62,8 @@ def render(pdf: str, page: int, out: str) -> tuple:
 def clean(text: str) -> str | None:
     """The page out of a reply: what stands between the `<<<PAGE` and `PAGE>>>` marker lines (a code fence around it is
     dropped). None when the markers are missing: a reply with a remark of the model's own in it is not a transcript."""
-    m = re.search(r"^[ \t]*<<<PAGE[ \t]*\n(.*?)\n?[ \t]*PAGE>>>[ \t]*$", text, re.S | re.M)
+    text = text.replace("\r\n", "\n").replace("\r", "\n")
+    m = re.search(r"^[ \t]*<<<PAGE[ \t]*\n(.*)^[ \t]*PAGE>>>[ \t]*$", text, re.S | re.M)   # up to the last closing line
     if not m:
         return None
     body = m.group(1).strip()
@@ -101,7 +102,7 @@ def read(pdf: str, pages: list, out: str, backend: str | None = None, model: str
             res["failed"][p] = r.error[:300]
         elif r.stop_reason == "max_tokens":
             res["failed"][p] = "reply cut at the token ceiling"
-        elif not (clean(r.text) or "").strip():
+        elif clean(r.text) is None:
             res["failed"][p] = "the reply held no page between the <<<PAGE and PAGE>>> markers"
         else:
             path = page_path(out, p)

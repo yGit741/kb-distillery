@@ -64,7 +64,7 @@ def _box_for(boxes: list, a: int, b: int):
     return [min(x[0] for x in hit), min(x[1] for x in hit), max(x[2] for x in hit), max(x[3] for x in hit)]
 
 
-KEEP = 0.4                   # a fix must keep at least this share of the content tokens it replaces
+KEEP = 0.5                   # a fix must keep at least this share of the content tokens it replaces
 
 
 def sane_fix(old: str, new: str) -> bool:
@@ -294,11 +294,21 @@ def transcribe(pdf: str, pages: list, work: str, root: str, sha: str, engine=Non
         except EngineError as e:
             log("parser unavailable, pages will carry a single-reader mark: %s" % e)
     again = retry_backend or backend                                # a failed request gets one more try, there
+    skipped: list = []
+    bk, bk_again = llm_backend(backend), llm_backend(again)
+
+    def over(stage_name: str, n: int, per_page: dict, on: str = bk) -> bool:
+        if max_usd is None or usd + n * per_page.get(on, 0.0) <= max_usd:
+            return False
+        log("%s skipped: it would take the run above $%.2f" % (stage_name, max_usd))
+        skipped.append(stage_name)
+        return True
+
     r = reader.read(pdf, pages, work, backend=backend, model=model, force=force, log=log)
     usd += r["usd"]
-    if r["failed"]:
+    if r["failed"] and not over("reader retry", len(r["failed"]), reader.USD_PER_PAGE, bk_again):
         log("reader: %d page(s) failed, trying once more" % len(r["failed"]))
-        r2 = reader.read(pdf, sorted(r["failed"]), work, backend=again, model=model, log=log)
+        r2 = reader.read(pdf, sorted(r["failed"]), work, backend=again, model=model, force=force, log=log)
         usd += r2["usd"]
         r["read"] += r2["read"]
         r["failed"] = r2["failed"]
@@ -317,21 +327,11 @@ def transcribe(pdf: str, pages: list, work: str, root: str, sha: str, engine=Non
             todo[p] = judge.items(compare.align(parser_md[p], reader_md[p]))
             if todo[p]:
                 images[p] = reader.render(pdf, p, work)
-    skipped: list = []
-    bk = llm_backend(backend)
-
-    def over(stage_name: str, n: int, per_page: dict) -> bool:
-        if max_usd is None or usd + n * per_page.get(bk, 0.0) <= max_usd:
-            return False
-        log("%s skipped: it would take the run above $%.2f" % (stage_name, max_usd))
-        skipped.append(stage_name)
-        return True
-
     verdicts, j_usd = ({}, 0.0) if over("judge", sum(1 for v in todo.values() if v), judge.USD_PER_PAGE) else \
         judge.ask(todo, images, work, backend=backend, model=judge_model, force=force, log=log)
     usd += j_usd
     mute = {p: todo[p] for p in verdicts if todo.get(p) and not any(v.verdict for v in verdicts[p].values())}
-    if mute and "judge" not in skipped:
+    if mute and "judge" not in skipped and not over("judge retry", len(mute), judge.USD_PER_PAGE, bk_again):
         log("judge: no readable answer for %d page(s), trying once more" % len(mute))
         v2, j2 = judge.ask(mute, images, work, backend=again, model=judge_model, log=log)
         usd += j2
@@ -345,7 +345,7 @@ def transcribe(pdf: str, pages: list, work: str, root: str, sha: str, engine=Non
                                     work, backend=backend, model=audit_model, force=force, log=log)
         usd += a_usd
         deaf = sorted(p for p in stage if findings.get(p) is None)
-        if deaf:
+        if deaf and not over("auditor retry", len(deaf), audit.USD_PER_PAGE, bk_again):
             log("auditor: no readable answer for %d page(s), trying once more" % len(deaf))
             f2, a2 = audit.ask({p: stage[p][0] for p in deaf}, {p: reader.render(pdf, p, work) for p in deaf},
                                work, backend=again, model=audit_model, log=log)

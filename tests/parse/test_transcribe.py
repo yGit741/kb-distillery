@@ -197,6 +197,9 @@ def test_reader_drops_a_code_fence_and_refuses_a_cut_reply(pdf, tmp_path, monkey
     assert reader.clean("<<<PAGE\n```markdown\n# T\n\ntext\n```\nPAGE>>>") == "# T\n\ntext\n"
     assert reader.clean("I will skip the plan.\n\n<<<PAGE\n# T\nPAGE>>>\nDone.") == "# T\n"
     assert reader.clean("I read both images, so here it is:\n# T") is None
+    assert reader.clean("<<<PAGE\r\nhi\r\nPAGE>>>\r\n") == "hi\n"
+    assert reader.clean("<<<PAGE\nsee the PAGE>>> marker\nmore text\nPAGE>>>") == "see the PAGE>>> marker\nmore text\n"
+    assert reader.clean("<<<PAGE\nPAGE>>>") == "\n"                                   # a blank page is a page
 
     def chatty(requests, backend=None, **kw):
         return [llm.Result(r.id, text="The task is a single transcription.\n\nSome page text", stop_reason="end_turn") for r in requests]
@@ -308,3 +311,21 @@ def test_a_failed_request_is_tried_once_more(pdf, tmp_path, monkeypatch):
                                 retry_backend="subscription", log=lambda *_: None)
     assert res["failed"] == {} and res["pages"][1] == "marked" and res["marks"] == {"!": 1, "!!": 0}
     assert state["backends"] == ["batch", "subscription"] * 3
+
+
+def test_retries_respect_the_ceiling_and_force(pdf, tmp_path, monkeypatch):
+    calls = []
+
+    def failing(requests, backend=None, **kw):
+        calls.append((requests[0].id[0], backend))
+        return [llm.Result(r.id, text="", error="blocked") for r in requests]
+    monkeypatch.setattr(llm, "run", failing)
+    res = transcribe.transcribe(pdf, [1], str(tmp_path / "w"), str(tmp_path / "s"), SHA, engine=FakeEngine(), backend="subscription",
+                                retry_backend="api", max_usd=0.01, log=lambda *_: None)
+    assert calls == [("p", "subscription")] and "reader retry" in res["skipped"]          # the paid retry would cross $0.01
+    stale = tmp_path / "w2" / "reader"
+    stale.mkdir(parents=True)
+    (stale / "p0001.md").write_text("an old page\n")
+    res = transcribe.transcribe(pdf, [1], str(tmp_path / "w2"), str(tmp_path / "s2"), SHA, engine=FakeEngine({}), backend="api",
+                                force=True, log=lambda *_: None)
+    assert 1 in res["failed"] and "old page" not in json.dumps(res)                      # the stale file is not passed off as read
