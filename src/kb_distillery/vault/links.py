@@ -52,11 +52,20 @@ def wikilink_targets(text: str) -> list[str]:
     return [m.strip() for m in WIKILINK_TARGET.findall(_COMMENT.sub("", text or ""))]
 
 
+_LABEL_MATH = re.compile(r"(\$[^$\n]+\$)")
+
+
 def escape_label(label: str) -> str:
-    """Link text that reads as the literal `label`: square brackets escaped, and a backslash only where it could be read
-    as an escape (before `[`, `]`, `\\` or at the end). A TeX command such as `$T_\\rho$` keeps its one backslash, since a
-    Markdown renderer reads maths raw: `$T_\\\\rho$` would show a doubled backslash."""
-    return re.sub(r"\\(?=[\\\[\]]|$)|([\[\]])", lambda m: "\\" + (m.group(1) or "\\"), str(label))
+    """Link text that reads as the literal `label`: square brackets and backslashes escaped. Inside `$..$` maths a
+    backslash is escaped only where it could be read as an escape (before `[`, `]` or `\\`), since a renderer reads maths
+    raw: `$T_\\rho$` keeps its one backslash, where `$T_\\\\rho$` would show a doubled one."""
+    out = []
+    for i, part in enumerate(_LABEL_MATH.split(str(label))):
+        if i % 2:
+            out.append(re.sub(r"\\(?=[\\\[\]])|([\[\]])", lambda m: "\\" + (m.group(1) or "\\"), part))
+        else:
+            out.append(re.sub(r"([\\\[\]])", r"\\\1", part))
+    return "".join(out)
 
 
 def link(slug: str, label=None, anchor: str | None = None, up: int = 0) -> str:

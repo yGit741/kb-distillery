@@ -173,5 +173,12 @@ describe("figures of a transcribed PDF", () => {
     expect(container.querySelector("h1 p")).toBeNull();
     expect(render(<h1><MathText text="Plain title" /></h1>).container.textContent).toBe("Plain title");
     expect(plainTitle("Operator $W_QW_K^\\top$")).toBe("Operator W_QW_K^top");
+    expect(plainTitle("Costs $5 and $6")).toBe("Costs $5 and $6");
+    const price = render(<h1><MathText text={"Costs $5 and $6"} /></h1>).container;
+    expect(price.querySelector(".katex")).toBeNull();
+    expect(price.textContent).toBe("Costs $5 and $6");
+    const list = render(<h1><MathText text={"1. A *list* title with $x$"} /></h1>).container;
+    expect(list.querySelector("ol, em")).toBeNull();
+    expect(list.querySelectorAll(".katex").length).toBe(1);
   });
 });

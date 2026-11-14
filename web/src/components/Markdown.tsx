@@ -276,19 +276,31 @@ export function Markdown({ children, className, resolveSlug, transformUrl, linkS
 }
 
 const unwrap = { p: ({ children }: { children?: ReactNode }) => <>{children}</> };
+const MATH_ONLY = { remark: [remarkMath, remarkInlineTag], rehype: [rehypeKatex] };
+/** `$..$` as Pandoc reads it in a short line: no space just inside either `$`, no digit right after the closing one,
+ * so "costs $5 and $6" stays text. */
+const TITLE_MATH = /\$(?=\S)([^$\n]*?\S)\$(?!\d)/g;
 
-/** A short line of text (a page title) with its `$...$` maths typeset, through the same remark-math + KaTeX path as a
- * page body; text without a `$` is returned as it is. */
+/** A short line of text (a page title) with its `$...$` maths typeset by KaTeX, through the same remark-math path as a
+ * page body; only the formulas are parsed, the rest is shown as plain text (a title is never Markdown). */
 export function MathText({ text }: { text: string }) {
-  if (!text.includes("$")) return <>{text}</>;
-  return (
-    <ReactMarkdown remarkPlugins={[remarkMath, remarkInlineTag]} rehypePlugins={[rehypeKatex]} components={unwrap}>
-      {text}
-    </ReactMarkdown>
-  );
+  const out: ReactNode[] = [];
+  let at = 0;
+  for (const m of text.matchAll(TITLE_MATH)) {
+    if (m.index > at) out.push(text.slice(at, m.index));
+    out.push(
+      <ReactMarkdown key={m.index} remarkPlugins={MATH_ONLY.remark} rehypePlugins={MATH_ONLY.rehype} components={unwrap}>
+        {m[0]}
+      </ReactMarkdown>,
+    );
+    at = m.index + m[0].length;
+  }
+  if (at === 0) return <>{text}</>;
+  out.push(text.slice(at));
+  return <>{out}</>;
 }
 
-/** A title as plain text (the browser tab): `$W_K^\\top$` reads `W_K^top`. */
+/** A title as plain text (the browser tab): `$W_K^\\top$` reads `W_K^top`; a `$` that is no formula stays. */
 export function plainTitle(text: string): string {
-  return text.replace(/\$([^$]+)\$/g, (_m, tex: string) => tex.replace(/\\([a-zA-Z]+)/g, "$1"));
+  return text.replace(TITLE_MATH, (_m, tex: string) => tex.replace(/\\([a-zA-Z]+)/g, "$1"));
 }

@@ -47,28 +47,46 @@ def _equations_block(equations):
     return "\n".join(lines) if lines else "—"
 
 
+_FENCE = re.compile(r"(```.*?```|~~~.*?~~~)", re.S)
 _MATH = re.compile(r"(\$\$.+?\$\$|\$[^$\n]+?\$)", re.S)
-_TEX_PROSE = [
+_CODE = re.compile(r"(`[^`\n]+`)")
+_TEX_QUOTES = [                                                           # before code spans are set aside: `x' is no code
     (re.compile(r"``"), "\u201c"),                                        # ``quoted'' -> curly quotes, each side
     (re.compile(r"''"), "\u201d"),                                        # on its own: maths may sit between them
-    (re.compile(r"(?<![`\w])`(?=[^`\s])"), "\u2018"),                      # `single' quote: a lone backtick is code
+    (re.compile(r"`([^`'\n]+)'"), "\u2018\\1\u2019"),                     # `single' (a backtick closed by a quote)
+]
+_TEX_PROSE = [
     (re.compile(r"\\(?:emph|textit)\{([^{}]*)\}"), r"*\1*"),
     (re.compile(r"\\textbf\{([^{}]*)\}"), r"**\1**"),
     (re.compile(r"(?<=\w)~(?=[\w(])"), " "),                              # Theorem~3.2: TeX's tie
     (re.compile(r"(?<=\w)---(?=\w)"), "\u2014"),
     (re.compile(r"(?<=\w)--(?=\w)"), "\u2013"),                         # Goldreich--Levin
-    (re.compile(r"(?<= )---?(?= )"), "\u2013"),                           # a spaced dash: T -- with
+    (re.compile(r"(?<=\w )--(?= \w)"), "\u2013"),                         # a spaced dash between words: T -- with
 ]
 
 
+def _sub_all(rules, text: str) -> str:
+    for pat, rep in rules:
+        text = pat.sub(rep, text)
+    return text
+
+
 def _tex_prose(text: str) -> str:
-    """TeX prose markup a model copied from a book (``quotes'', \\emph{..}, \\textbf{..}, ~, --) as the Markdown it
-    means; maths (`$..$`, `$$..$$`) is left as it is. A renderer would show the TeX raw, or read `` as code."""
-    parts = _MATH.split(text or "")
-    for i in range(0, len(parts), 2):
-        for pat, rep in _TEX_PROSE:
-            parts[i] = pat.sub(rep, parts[i])
-    return "".join(parts)
+    """TeX prose markup a model copied from a book (``quotes'', `quotes', \\emph{..}, \\textbf{..}, ~, --) as the
+    Markdown it means. Maths (`$..$`, `$$..$$`), fenced code and `code` spans are left as they are, and a table's
+    `| --- |` row too. A renderer would show the TeX raw, or read `` as code."""
+    out = []
+    for i, block in enumerate(_FENCE.split(text or "")):
+        if i % 2:
+            out.append(block)
+            continue
+        for j, part in enumerate(_MATH.split(block)):
+            if j % 2:
+                out.append(part)
+                continue
+            for k, bit in enumerate(_CODE.split(_sub_all(_TEX_QUOTES, part))):
+                out.append(bit if k % 2 else _sub_all(_TEX_PROSE, bit))
+    return "".join(out)
 
 
 def _exercises_block(claims):
