@@ -20,7 +20,7 @@ import { BAR_BY, effectiveColorBy, neutralRamp, RAMP_BY, RAMP_MEANING, RAMP_STEP
 import { dimensionsFor, withTopic, type GraphSubject } from "../../colourDimensions";
 import { useEmbedding } from "../../embedding/EmbeddingLayer";
 import { embedSpec, sameEmbed, SUGGESTED, useEmbedView } from "../../embedding/store";
-import { applySubject, subjectOf, subjectsFor } from "../../subject";
+import { applySubject, subjectOf } from "../../subject";
 import { SubjectToggle } from "./SubjectToggle";
 import type { GNode } from "../../types";
 import { ago, chatWhen, defaultFetch, listRecent, listSessions, listViews, pinView, renameView, unpinView, type Fetcher, type SessionRow } from "./api";
@@ -82,7 +82,7 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
   const server = ds.kind === "http" && caps.saveViews;
   const sparkChat = useFlag("spark-chat");
   const intent = useFlag("graph-intent");
-  // flag knowledge-health: the switch reads Concepts / Health
+  // flag knowledge-health: Health is a lens on concepts (typed "health"); the switch stays Concepts / Sources
   const health = useFlag("knowledge-health") && intent;
   const favSlugs = useFavorites((s) => s.slugs);
   const pinFanFlag = useFlag("pin-fan");
@@ -610,7 +610,8 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
         areaHeight={areaHeight}
         thinkCards={Math.max(1, thinkCards.length)}
       />
-      {intent && allTypes.length > 0 && <SubjectToggle subject={subject} onPick={pickSubject} subjects={subjectsFor(health)} />}
+      {/* the switch is always Concepts / Sources; Health is a lens on concepts, reached by typing "health" */}
+      {intent && <SubjectToggle subject={subject === "health" ? "concepts" : subject} onPick={(s) => (subject === "health" && s === "concepts" ? undefined : pickSubject(s))} top={shellTop} />}
       <TypesCard concepts={concepts} sources={intent && subject !== "sources" ? NO_ROWS : sources} onToggle={(types, on) => ui.setLayerTypes(types, on, allTypes, [...defaultTypes(schema, nodes)])} onSpot={spot} />
     </div>
   );

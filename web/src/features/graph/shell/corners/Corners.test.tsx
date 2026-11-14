@@ -1,11 +1,12 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { DataSourceProvider, type DataSource } from "@/api";
 import { withFlag } from "@/flags/testing";
 import { mockDataSource } from "@/test/datasource";
 import { sampleNodes, sampleSnapshot } from "../../fixtures";
 import { parseSchema } from "../../schema";
+import { applySubject } from "../../subject";
 import { assignAreaColors } from "../../style";
 import { DEFAULT_PREFS, useGraphUi } from "../../store";
 import { EMPTY_STACK, makeLayer } from "../../layers/model";
@@ -537,21 +538,23 @@ describe("legends", () => {
       expect(rows).toEqual(["paper"]);
     })));
 
-  it("knowledge-health on: the switch reads Concepts / Health, and Health colours the concepts by source support", () =>
+  it("knowledge-health on: the switch stays Concepts / Sources; Health (typed) colours the concepts by source support", () =>
     withFlag("graph-intent", true, () =>
       withFlag("knowledge-health", true, async () => {
         mount();
         const sw = screen.getByRole("radiogroup", { name: /what the graph shows/i });
-        expect(within(sw).getAllByRole("radio").map((r) => r.textContent)).toEqual(["Concepts", "Health"]);
-        await userEvent.click(within(sw).getByRole("radio", { name: "Health" }));
+        expect(within(sw).getAllByRole("radio").map((r) => r.textContent)).toEqual(["Concepts", "Sources"]);
+        // Health is a lens on concepts, reached from the line ("health"), so the switch keeps Concepts checked
+        act(() => void applySubject("health", schema, new Set(schema.defaultVisible)));
         expect(useGraphUi.getState().colorBy).toBe("support");
-        expect(within(sw).getByRole("radio", { name: "Health" })).toHaveAttribute("aria-checked", "true");
-        // concepts only: no source type on the card, and the legend offers the one colouring
-        expect(screen.getByRole("group", { name: "Page types" }).querySelector("[data-type=paper]")).toBeNull();
+        expect(within(sw).getByRole("radio", { name: "Concepts" })).toHaveAttribute("aria-checked", "true");
         const pick = within(screen.getByRole("group", { name: /colour legend/i })).getByRole("combobox", { name: "Color by" });
         expect(within(pick).getAllByRole("option").map((o) => o.textContent)).toEqual(["source support"]);
+        // pressing the already-checked Concepts keeps Health instead of leaving it silently
         await userEvent.click(within(sw).getByRole("radio", { name: "Concepts" }));
-        expect(useGraphUi.getState().colorBy).toBe("area");
+        expect(useGraphUi.getState().colorBy).toBe("support");
+        await userEvent.click(within(sw).getByRole("radio", { name: "Sources" }));
+        expect(useGraphUi.getState().shownTypes?.has("paper")).toBe(true);
       })));
 
   it("knowledge-health off: the switch stays Concepts / Sources", () =>

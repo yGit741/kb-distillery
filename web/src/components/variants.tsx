@@ -18,6 +18,17 @@ export interface VariantSpec {
  * The choice is per browser, saved under `kbd.variants.<component>`.
  */
 export const VARIANTS: Record<string, VariantSpec> = {
+  "view-switch": {
+    label: "Concepts / Sources switch",
+    default: "quiet",
+    options: [
+      { id: "quiet", label: "Quiet", hint: "A small flat switch just left of the search line, shorter than it and with its own gap, so it never reads as part of the line." },
+      { id: "words", label: "Words", hint: "Two plain words left of the search line; the chosen one is darker and underlined. The least chrome." },
+      { id: "icons", label: "Icons", hint: "The quiet switch with two line icons instead of words; the name shows on hover and to screen readers." },
+      { id: "dock", label: "Docked", hint: "Joined to the search line's left edge with one shared seam, the same height as the line." },
+      { id: "tab", label: "Tab below", hint: "A small tab hanging under the centre of the search line; the dropdown covers it while open." },
+    ],
+  },
   "page-sources": {
     label: "Sources on a page",
     default: "footer",

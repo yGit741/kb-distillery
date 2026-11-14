@@ -17,19 +17,22 @@ interface Props {
   placeholder: string;
   /** A quiet one-line notice shown in place of the placeholder for a moment. */
   notice?: string;
+  /** The side where the Concepts / Sources switch meets the line: those corners lose their rounding. */
+  square?: "left" | null;
 }
 
 /**
  * The search bar at top centre: just the input, no icons or shortcut hint (the knowledge base switcher is the
  * app bar's badge, or "/knowledge" here). It is the combobox; the panel under it (SearchPanel) is its listbox.
  */
-export function SearchBar({ value, onChange, open, onOpen, onKeyDown, activeId, inputRef, placeholder, notice }: Props) {
+export function SearchBar({ value, onChange, open, onOpen, onKeyDown, activeId, inputRef, placeholder, notice, square }: Props) {
   return (
     <div
       className={cn(
         "flex h-11 items-center gap-2.5 rounded-[14px] border bg-card px-3.5 text-sm shadow-[var(--shadow)]",
         "transition-[border-color,box-shadow] duration-200 motion-reduce:transition-none",
         "focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/25",
+        square === "left" && "rounded-l-none",
       )}
     >
       <input

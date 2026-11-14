@@ -2,7 +2,7 @@ import { buildNeighborMap } from "./graphData";
 import { parseSchema } from "./schema";
 import { DEFAULT_PREFS, useGraphUi } from "./store";
 import { withFlag } from "@/flags/testing";
-import { applySubject, colourFor, settledColour, sideOffset, sourceCounts, subjectOf, subjectsFor, subjectWord, typesFor } from "./subject";
+import { applySubject, colourFor, settledColour, sideOffset, sourceCounts, subjectOf, subjectWord, typesFor } from "./subject";
 import { node } from "./fixtures";
 
 const schema = parseSchema({
@@ -129,9 +129,7 @@ describe("the Health view (flag knowledge-health)", () => {
     expect(useGraphUi.getState().colorBy).toBe("area");
   });
 
-  it("takes the place of Sources on the switch, and its view word is known only with the flag", () => {
-    expect(subjectsFor(false).map((s) => s.label)).toEqual(["Concepts", "Sources"]);
-    expect(subjectsFor(true).map((s) => s.label)).toEqual(["Concepts", "Health"]);
+  it("is reached by its view word, known only with the flag", () => {
     expect(subjectWord("health")).toBeNull();
     expect(subjectWord("Health view", true)).toBe("health");
     expect(subjectWord("sources", true)).toBe("sources");

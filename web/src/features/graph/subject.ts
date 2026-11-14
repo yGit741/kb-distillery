@@ -13,8 +13,8 @@ import type { GNode } from "./types";
  * sources on one side. Which view is on is read from the drawn types (a source type drawn = Sources), so a saved
  * view, the types card and the `>` line all agree with the toggle, and the selection carries across.
  *
- * Health (flag knowledge-health) takes the place of Sources on the switch: the concepts alone, coloured by how many
- * sources back them. It is read from the colouring ("support") the same way, so a saved view keeps it.
+ * Health (flag knowledge-health) is a lens on Concepts, reached by typing "health": the concepts alone, coloured by how
+ * many sources back them; the switch keeps reading Concepts / Sources. It is read from the colouring ("support") the same way, so a saved view keeps it.
  */
 export interface SubjectOption {
   id: GraphSubject;
@@ -26,8 +26,6 @@ export const SUBJECTS: readonly SubjectOption[] = [
   { id: "sources", label: "Sources", hint: "Sources on the left, concepts on the right" },
 ];
 export const HEALTH: SubjectOption = { id: "health", label: "Health", hint: "Which concepts and which kinds of source need care" };
-/** The switch's two views: Concepts and Sources, or Concepts and Health under flag knowledge-health. */
-export const subjectsFor = (health: boolean): readonly SubjectOption[] => (health ? [SUBJECTS[0]!, HEALTH] : SUBJECTS);
 
 const typesOf = (schema: GraphSchema, layer: string): string[] => schema.types.filter((t) => t.layer === layer).map((t) => t.id);
 

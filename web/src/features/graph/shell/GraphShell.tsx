@@ -75,7 +75,8 @@ import { useLayer } from "../layerStore";
 import { favoriteRows, groupedRows } from "./groupedRows";
 import { useFavorites } from "../favorites/store";
 import { buildSearchIndex, withNames, type RowTarget } from "./searchGroups";
-import { SHELL_TOP } from "./layout";
+import { placeFor, SHELL_TOP, useFrameWidth, viewSwitchBox } from "./layout";
+import { useViewSwitchPlace } from "./corners/SubjectToggle";
 
 const ICONS: Record<CommandIcon, ReactNode> = {
   fit: <Maximize aria-hidden className="size-4" strokeWidth={1.6} />,
@@ -145,6 +146,9 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
   const tools = useVisibleTools();
   const calm = useFlag("calm-graph");
   const intent = useFlag("graph-intent");
+  // the Concepts / Sources switch sits beside the line (flag graph-intent): the line makes room for it
+  // (Corners draws it whenever graph-intent is on; both read the same place and the same graph-area width)
+  const switchPlace = useViewSwitchPlace();
   // flag line-routing: Enter on a plain line (or a / line no command fits) reads it by itself
   const caps = useCapabilities();
   // (not on a shared site: it cannot write a view or ask a model)
@@ -158,6 +162,8 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
   const [idx, setIdx] = useState(0);
   const input = useRef<HTMLInputElement>(null);
   const box = useRef<HTMLDivElement>(null);
+  const frameW = useFrameWidth(box);
+  const lineBox = viewSwitchBox(intent && onSubject ? placeFor(switchPlace, frameW) : null);
   const notice = useShellStore((s) => s.notice);
   const shaping = useShellStore((s) => s.shaping);
   const shape = useShellStore((s) => s.shape);
@@ -986,9 +992,9 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
   return (
     <div
       ref={box}
-      className="pointer-events-auto absolute left-1/2 z-30 -translate-x-1/2"
+      className="pointer-events-auto absolute z-30"
       // one width open or closed: the line never jumps when it gets focus
-      style={{ top, width: "min(640px, calc(100% - 9rem))" }}
+      style={{ top, left: lineBox.barLeft, width: lineBox.barWidth }}
       data-testid="graph-shell"
       onBlur={(e) => {
         const to = e.relatedTarget as HTMLElement | null;
@@ -1009,6 +1015,7 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
         inputRef={input}
         placeholder={intent ? (caps.sentences ? LINE_COPY.placeholder : LINE_COPY.placeholderShare) : `Search ${kbName}`}
         notice={open ? undefined : notice?.text}
+        square={lineBox.square}
       />
       {intent && <Chips byId={byId} />}
       {intent && open && viewMode && <ResolvedLine lines={preview?.lines ?? null} count={preview?.count ?? 0} editing={editingLine} onEditing={setEditingLine} onApply={applyWritten} />}
