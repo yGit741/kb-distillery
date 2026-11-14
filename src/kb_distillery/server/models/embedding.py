@@ -42,6 +42,12 @@ class EmbeddingDuplicate(ApiModel):
     cosine: float
 
 
+class EmbeddingIsolated(ApiModel):
+    slug: str
+    title: str
+    nearest: float                # cosine to its nearest other page
+
+
 class EmbeddingSimilarity(ApiModel):
     edges: list[float]            # bar boundaries, one more than the bars
     counts: list[int]             # page pairs per bar
@@ -86,6 +92,8 @@ class EmbeddingReport(ApiModel):
     removed: list[EmbeddingPage]  # vectors whose card is gone
     duplicate_cosine: float       # the threshold `duplicates` uses
     duplicates: list[EmbeddingDuplicate]
+    near: list[EmbeddingDuplicate] = []          # close in meaning (NEAR_COSINE up to duplicate_cosine), closest first
+    isolated: list[EmbeddingIsolated] = []       # semantic orphans: the pages furthest from any other
     k: int
     silhouette: float
     clusters: list[EmbeddingCluster]

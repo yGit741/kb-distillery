@@ -13,6 +13,9 @@ from kb_distillery.search import vectors
 
 DUPLICATE_COSINE = 0.97      # two different pages this close usually share a boilerplate summary, or are one page twice
 DUPLICATES_MAX = 40
+NEAR_COSINE = 0.80           # close in meaning: a candidate link when the two pages are not linked yet
+NEAR_MAX = 300               # the graph drops the pairs that are already linked, so this keeps some spare
+ISOLATED_MAX = 60            # pages whose nearest neighbour is far: semantic orphans
 K_CANDIDATES = (4, 6, 8, 10)       # at most the 10 colours of the area palette, so one colour is one cluster
 MIN_PER_CLUSTER = 8          # k never exceeds pages / this
 SILHOUETTE_SAMPLE = 800
@@ -27,7 +30,7 @@ PERCENTILES = (1, 5, 25, 50, 75, 95, 99)
 SEED = 0
 
 
-EMPTY_MAP = {"k": 0, "silhouette": 0.0, "clusters": [], "points": [], "duplicates": [],
+EMPTY_MAP = {"k": 0, "silhouette": 0.0, "clusters": [], "points": [], "duplicates": [], "near": [], "isolated": [],
              "spectrum": [], "effective_dim": 0.0, "mean_cosine": 0.0, "components": [], "similarity": None}
 
 
@@ -153,6 +156,34 @@ def duplicates(m, slugs, threshold=DUPLICATE_COSINE, limit=DUPLICATES_MAX):
     return found[:limit]
 
 
+def near_pairs(m, slugs, lo=NEAR_COSINE, hi=DUPLICATE_COSINE, limit=NEAR_MAX):
+    """[(a, b, cosine)] of the page pairs in [lo, hi): close in meaning but not near-duplicates, closest first."""
+    found = []
+    for start in range(0, len(m), 512):
+        sims = _dot(m[start:start + 512], m.T)
+        for i, j in zip(*np.where((sims >= lo) & (sims < hi))):
+            if start + i < j:
+                found.append((slugs[start + i], slugs[j], float(sims[i, j])))
+    found.sort(key=lambda t: (-t[2], t[0], t[1]))
+    return found[:limit]
+
+
+def isolated(m, slugs, limit=ISOLATED_MAX):
+    """[(slug, nearest cosine)] of the pages furthest from every other page (the lowest 5% by nearest neighbour,
+    at most `limit`), furthest first. Empty with fewer than three pages."""
+    if len(m) < 3:
+        return []
+    nearest = np.full(len(m), -1.0)
+    for start in range(0, len(m), 512):
+        sims = np.nan_to_num(_dot(m[start:start + 512], m.T).astype(np.float64), nan=-1.0)
+        rows = np.arange(min(512, len(m) - start))
+        sims[rows, start + rows] = -np.inf
+        nearest[start:start + len(rows)] = sims.max(axis=1)
+    cut = np.percentile(nearest, 5)
+    idx = [i for i in np.argsort(nearest, kind="stable") if nearest[i] <= cut][:limit]
+    return [(slugs[i], float(nearest[i])) for i in idx]
+
+
 def _pair_rows(m, seed=SEED):
     """(rows, sampled): every row, or a random PAIR_ROWS_MAX of them when all pairs would be too many."""
     if len(m) <= PAIR_ROWS_MAX:
@@ -263,7 +294,10 @@ def _map(v):
     spread = {"spectrum": [round(r, 4) for r in ratios], "effective_dim": round(effective, 1),
               "mean_cosine": round(float(centre @ centre), 3), "components": components}
     dups = [{"a": ref(a), "b": ref(b), "cosine": round(c, 3)} for a, b, c in duplicates(v.m, v.slugs)]
-    return {"k": len(clusters), "silhouette": round(score, 3), "clusters": clusters, "points": points, "duplicates": dups, **spread,
+    near = [{"a": ref(a), "b": ref(b), "cosine": round(c, 3)} for a, b, c in near_pairs(v.m, v.slugs)]
+    lone = [{**ref(s), "nearest": round(c, 3)} for s, c in isolated(v.m, v.slugs)]
+    return {"k": len(clusters), "silhouette": round(score, 3), "clusters": clusters, "points": points, "duplicates": dups,
+            "near": near, "isolated": lone, **spread,
             "similarity": similarity(v.m)}
 
 
