@@ -17,7 +17,9 @@ import { defaultTypes, type GraphSchema } from "../../schema";
 import { useGraphUi } from "../../store";
 import { useFavorites } from "../../favorites/store";
 import { BAR_BY, effectiveColorBy, neutralRamp, RAMP_BY, RAMP_MEANING, RAMP_STEPS } from "../../style";
-import { dimensionsFor } from "../../colourDimensions";
+import { dimensionsFor, type GraphSubject } from "../../colourDimensions";
+import { applySubject, subjectOf } from "../../subject";
+import { SubjectToggle } from "./SubjectToggle";
 import type { GNode } from "../../types";
 import { ago, chatWhen, defaultFetch, listRecent, listSessions, listViews, pinView, renameView, unpinView, type Fetcher, type SessionRow } from "./api";
 import { ActionPill, CornerButton, MoreButton, PillAction, PushPin } from "./CornerButton";
@@ -56,6 +58,7 @@ export interface CornersProps {
 }
 
 const LAYER_ORDER = ["concept", "collection", "source"] as const;
+const NO_ROWS: readonly TypeRow[] = [];
 const isTyping = (t: EventTarget | null) => t instanceof HTMLElement && t.matches("input, textarea, select, [contenteditable=true]");
 const BTN_ID = { pins: "corner-pins", think: "corner-think", agent: "corner-agent" } as const;
 const MORE = 6; // gap between a corner button and its "..."
@@ -292,7 +295,13 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
     for (const n of nodes) if ((!shownTypes || shownTypes.has(n.type)) && (!keep || keep(n))) pool.add(n.id);
     return pool;
   }, [nodes, visible, shownTypes, ui.hiddenKeys, ui.predicate]);
-  const key = useMemo(() => (by === "type" ? [] : colorChannel(by, { ramp }).rows(nodes.filter((n) => keyPool.has(n.id)))), [nodes, keyPool, by, ramp]);
+  // flag graph-intent, Sources view: the colour is the sources' (the concepts beside them are neutral), so the key
+  // lists the sources' values only
+  const sourcesOnly = intent && subjectOf(schema, shownTypes) === "sources";
+  const key = useMemo(
+    () => (by === "type" ? [] : colorChannel(by, { ramp }).rows(nodes.filter((n) => keyPool.has(n.id) && (!sourcesOnly || n.layer === "source")))),
+    [nodes, keyPool, by, ramp, sourcesOnly],
+  );
   const groups = useMemo(() => layerGroups(nodes, visible, schema, shownTypes), [nodes, visible, schema, shownTypes]);
   const allTypes = useMemo(() => groups.flatMap((g) => g.rows.map((r) => r.id)), [groups]);
   const [concepts, sources] = useMemo((): [TypeRow[], TypeRow[]] => {
@@ -302,7 +311,11 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
   }, [groups]);
   // "Color by" offers the concept colourings, and the source ones once a source is on screen
   const sourcesDrawn = useMemo(() => nodes.some((n) => n.layer === "source" && visible.has(n.id)), [nodes, visible]);
-  const dimensions = useMemo(() => dimensionsFor(sourcesDrawn ? ["concepts", "sources"] : ["concepts"]), [sourcesDrawn]);
+  // flag graph-intent: the graph is about concepts or about sources (read from the drawn types), and each view has
+  // its own colourings and only the legends for what it draws
+  const subject = useMemo(() => subjectOf(schema, shownTypes), [schema, shownTypes]);
+  const dimensions = useMemo(() => dimensionsFor(intent ? [subject] : sourcesDrawn ? ["concepts", "sources"] : ["concepts"]), [intent, subject, sourcesDrawn]);
+  const pickSubject = (s: GraphSubject) => void applySubject(s, schema, shownTypes);
   // The legend's changes leave the view's story. While the drawn types still come from that story, pin them first:
   // hiding a colour or changing the colouring must never change which types are drawn.
   const pinTypes = () => (useGraphUi.getState().shownTypes === undefined ? { shownTypes: shownTypes ? new Set(shownTypes) : null } : {});
@@ -565,7 +578,8 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
         areaHeight={areaHeight}
         thinkCards={Math.max(1, thinkCards.length)}
       />
-      <TypesCard concepts={concepts} sources={sources} onToggle={(types, on) => ui.setLayerTypes(types, on, allTypes, [...defaultTypes(schema, nodes)])} onSpot={spot} />
+      {intent && allTypes.length > 0 && <SubjectToggle subject={subject} onPick={pickSubject} />}
+      <TypesCard concepts={concepts} sources={intent && subject === "concepts" ? NO_ROWS : sources} onToggle={(types, on) => ui.setLayerTypes(types, on, allTypes, [...defaultTypes(schema, nodes)])} onSpot={spot} />
     </div>
   );
 }

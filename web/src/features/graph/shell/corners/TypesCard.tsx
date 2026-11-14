@@ -133,7 +133,8 @@ export function TypesCard({ concepts, sources, onToggle, onSpot }: Props) {
         />
       )}
       <div className={`${GROUP} flex-row-reverse justify-self-end`}>{conceptGroups.map((r, i) => item(r, "left", i))}</div>
-      <span aria-hidden className={cn("block w-px rounded-sm bg-border transition-[margin,height] motion-reduce:transition-none", open ? "mx-3.5 h-4" : "mx-2 h-3")} style={{ transitionDuration: `${MS}ms` }} />
+      {/* the divider stands between two groups; a view that draws one layer only (Concepts) has none */}
+      <span aria-hidden className={cn("block w-px rounded-sm bg-border transition-[margin,height] motion-reduce:transition-none", open ? "mx-3.5 h-4" : "mx-2 h-3", !(conceptGroups.length && sourceGroups.length) && "invisible")} style={{ transitionDuration: `${MS}ms` }} />
       <div className={`${GROUP} justify-self-start`}>{sourceGroups.map((r, i) => item(r, "right", i))}</div>
     </div>
   );
