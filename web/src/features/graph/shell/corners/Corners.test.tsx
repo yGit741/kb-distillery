@@ -18,6 +18,7 @@ import { useSparkPanel } from "../sparkPanelStore";
 import { Corners, type CornersProps } from "./Corners";
 import { fanReach } from "./geometry";
 import { resetCorners, useCorners } from "./cornersStore";
+import { loopFits } from "./PinLoop";
 import { useTheme } from "@/theme/theme";
 
 const schema = parseSchema(sampleSnapshot().schema);
@@ -723,7 +724,7 @@ describe("legends", () => {
 
   it("the legend slides down out of the Think fan's arc, and back when Think closes", async () => {
     window.innerHeight = 900;
-    const many = Array.from({ length: 9 }, (_, i) => ({ name: `n${i}.md`, mtime: 1_700_000_000 + i, size: 1 }));
+    const many = Array.from({ length: 16 }, (_, i) => ({ name: `n${i}.md`, mtime: 1_700_000_000 + i, size: 1 }));
     mount(fakeServer(), {}, { listThink: async () => ({ capture_note: "x", notes: many }) });
     const legend = screen.getByRole("group", { name: /colour legend/i });
     const top = () => parseFloat(legend.style.top);
@@ -907,5 +908,59 @@ describe("graph-corners: one raised disc per corner, and the theme switch in the
       expect(pins()).not.toHaveAttribute("data-disc");
       expect(themeBtn()).toBeNull();
       expect(screen.getByTestId("graph-corners")).not.toHaveClass("kb-corners");
+    }));
+});
+
+describe("graph-corners: the pinned views hang from the pin in a loop", () => {
+  const many = Array.from({ length: 16 }, (_, i) => ({ id: `v${i}`, name: `View ${i}` }));
+  const cards = () => [...document.querySelectorAll<HTMLButtonElement>("[data-corners=pin-loop] [data-view]")];
+
+  it("as many cards as fit between the pin and the spark; a short window shows fewer", () => {
+    expect(loopFits(900)).toBeGreaterThan(loopFits(560));
+    expect(loopFits(200)).toBe(1);
+  });
+
+  it("pressing a card applies its view, and the view on screen has a blue dot and name", () =>
+    withFlag("graph-corners", true, async () => {
+      const server = fakeServer({ views: [{ id: "a", name: "Alpha" }, { id: "b", name: "Beta" }] });
+      mount(server, {}, { kind: "http" });
+      await userEvent.click(pins());
+      await waitFor(() => expect(cards()).toHaveLength(2));
+      expect(cards()[0]).toHaveAccessibleName("Beta"); // newest first
+      await userEvent.click(cards()[1]!);
+      expect(useCorners.getState().activeView).toBe("a");
+      await waitFor(() => expect(document.querySelector("[data-view=a]")).toHaveAttribute("aria-current", "true"));
+    }));
+
+  it("with more views than fit, the faded ends turn the loop and the pin never moves", () =>
+    withFlag("graph-corners", true, async () => {
+      mount(fakeServer({ views: many }), {}, { kind: "http" });
+      await userEvent.click(pins());
+      await waitFor(() => expect(cards().length).toBeGreaterThan(1));
+      const pinAt = pins().getBoundingClientRect().top;
+      const shown = cards().length;
+      expect(shown).toBeLessThan(many.length);
+      const ends = cards().filter((c) => c.dataset.end);
+      expect(ends).toHaveLength(2);
+      const firstBefore = cards()[1]!.dataset.view;
+      await userEvent.click(ends[1]!);
+      expect(cards()[0]!.dataset.view).toBe(firstBefore); // turned by one
+      expect(useCorners.getState().activeView).toBeNull(); // a faded end turns, it does not apply
+      expect(pins().getBoundingClientRect().top).toBe(pinAt);
+    }));
+
+  it("nothing pinned: the corner says how to pin, and /pin in the search line opens the name field", () =>
+    withFlag("graph-corners", true, async () => {
+      mount(fakeServer(), {}, { kind: "http" });
+      await userEvent.click(pins());
+      expect(await screen.findByText(/Type \/pin in the search line/)).toBeInTheDocument();
+    }));
+
+  it("flag off: the pinned corner keeps its list", () =>
+    withFlag("graph-corners", false, async () => {
+      mount(fakeServer({ views: [{ id: "a", name: "Alpha" }] }), {}, { kind: "http" });
+      await userEvent.click(pins());
+      await screen.findByText("Alpha");
+      expect(document.querySelector("[data-corners=pin-loop]")).toBeNull();
     }));
 });

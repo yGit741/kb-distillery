@@ -41,6 +41,7 @@ import { browserSessions, newChat, resumeSession } from "./sessions";
 import { useShellTour } from "./shellTour";
 import { ThinkIcon } from "./ThinkIcon";
 import { TypesCard } from "./TypesCard";
+import { PinLoop } from "./PinLoop";
 import { useSparkPanel } from "../sparkPanelStore";
 import { useLayers } from "../../layers/store";
 import { applySpec, captureSpec, recognisedV1, suggestName } from "./viewSpec";
@@ -397,7 +398,33 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
 
       {server && (
         <>
-          {viewsPanel ? (
+          {discs ? (
+            <>
+              <PinLoop
+                open={pinsOpen}
+                views={views.data ?? []}
+                active={activeView}
+                areaHeight={areaHeight}
+                empty={views.isLoading ? "Loading pinned views" : "Nothing pinned yet. Type /pin in the search line to pin this view."}
+                onApply={(id) => {
+                  const v = views.data?.find((x) => x.id === id);
+                  if (!v) return;
+                  setActive(v.id);
+                  if (!applySpec(v.spec, deps, { name: v.name })) setNotice("Nothing in this view can be restored here");
+                }}
+              />
+              {pinsOpen && edit && (
+                <div style={placeMenu("left", "top")} className="pointer-events-auto z-[30] flex h-7 w-[220px] items-center rounded-full border bg-card px-3 shadow-[var(--shadow)]">
+                  <NameInput
+                    key={edit.kind === "rename" ? edit.id : "pin"}
+                    initial={editName}
+                    label={edit.kind === "rename" ? "New name for the pinned view" : "Name for the pinned view"}
+                    onSubmit={(n) => (edit.kind === "rename" ? void rename(edit.id, n) : void pin(n))}
+                  />
+                </div>
+              )}
+            </>
+          ) : viewsPanel ? (
             <div
               role="group"
               aria-label="Views panel"

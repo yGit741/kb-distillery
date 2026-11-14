@@ -1,3 +1,4 @@
+import { useCorners } from "./corners/cornersStore";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -71,6 +72,18 @@ describe("the line, graph-intent on", () => {
       await userEvent.type(box(), "ten");
       expect(keys).not.toHaveAttribute("data-shown");
     });
+  });
+
+  it("flag graph-corners: /pin offers to pin this view and opens the pinned corner's name field", async () => {
+    await withFlag("graph-intent", true, () =>
+      withFlag("graph-corners", true, async () => {
+        setup();
+        await userEvent.type(box(), "/pin");
+        await userEvent.click(await screen.findByRole("option", { name: /Pin this view/ }));
+        expect(useCorners.getState().has("pins")).toBe(true);
+        expect(useCorners.getState().edit).toEqual({ kind: "pin" });
+      }),
+    );
   });
 
   it("offers the closest commands and a search row for an unknown slash command", async () => {
