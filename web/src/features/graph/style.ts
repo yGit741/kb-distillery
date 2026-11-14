@@ -3,7 +3,7 @@ import { areaDisplay } from "./displayNames";
 import { markOf, RING_BOOST } from "./encoding/spec";
 import { degreeOf, type GNode } from "./types";
 
-export type ColorBy = "type" | "layer" | "depth" | "status" | "area" | "degree" | "evidence" | "score" | "none";
+export type ColorBy = "type" | "layer" | "depth" | "status" | "area" | "degree" | "evidence" | "score" | "none" | "format" | "recency" | "added";
 export type SizeBy = "connections" | "in" | "out" | "uniform" | "tier" | "evidence" | "score" | "gap" | "logdeg";
 
 /** Size and colour modes that read a 0..1 signal of the importance score (lab/importance) instead of the page. */
@@ -110,7 +110,17 @@ export type AreaSlots = ReadonlyMap<string, string>;
 export const areaHue = (area?: string | null, slots: AreaSlots = AREA_SLOT): string => (!area ? NONE_GREY : (slots.get(area) ?? OTHER_GREY));
 
 /** Colourings with an order (little -> much): they take the neutral ramp, not a hue. */
-export const RAMP_BY: ReadonlySet<ColorBy> = new Set(["depth", "degree", "evidence", "score"]);
+export const RAMP_BY: ReadonlySet<ColorBy> = new Set(["depth", "degree", "evidence", "score", "recency", "added"]);
+/** Continuous colourings: their legend is one gradient bar with its two ends named, never a list of swatches. */
+export const BAR_BY: ReadonlySet<ColorBy> = new Set(["evidence", "score", "recency", "added"]);
+const DAY_MS = 86_400_000;
+/** How fresh a date is, 0 (a year old or more) to 1 (this week), in the ramp's five steps; undefined without a date. */
+export function freshness(date: string | undefined | null, now: number = Date.now()): number | undefined {
+  const at = date ? Date.parse(date) : NaN;
+  if (Number.isNaN(at)) return undefined;
+  const days = (now - at) / DAY_MS;
+  return days <= 7 ? 1 : days <= 30 ? 0.75 : days <= 90 ? 0.5 : days <= 365 ? 0.25 : 0;
+}
 const DEPTH_T: Readonly<Record<string, number>> = { listed: 0, easy: 1 / 3, full: 2 / 3, deep: 1 };
 
 /** Where the page sits on an ordered colouring, 0..1; undefined when the colouring does not apply to it. */
@@ -123,6 +133,10 @@ export function ordinalOf(n: GNode, by: ColorBy, metric?: number): number | unde
     case "evidence":
     case "score":
       return metric;
+    case "recency":
+      return freshness(n.changed || n.added);
+    case "added":
+      return freshness(n.added);
     default:
       return undefined;
   }
@@ -138,6 +152,8 @@ export const RAMP_MEANING: Readonly<Partial<Record<ColorBy, { what: string; low:
   score: { what: "How central the page is (importance score)", low: "peripheral", high: "central" },
   depth: { what: "How deeply the source was read", low: "listed", high: "deep" },
   degree: { what: "How many links the page has", low: "few", high: "many" },
+  recency: { what: "How recently the page changed", low: "a year or more", high: "this week" },
+  added: { what: "When the page was added", low: "a year or more", high: "this week" },
 };
 
 /** Grey to black (light theme) or dim to white (dark) for a 0..1 signal: lightness, so it never fights the area hues. */
@@ -171,7 +187,13 @@ export function colorOf(n: GNode, by: ColorBy, metric?: number, ramp?: "light" |
     case "score":
       return metric === undefined ? UNKNOWN_COLOR : sequentialColor(metric);
     case "type":
+    case "format":
       return typeColor(n.type);
+    case "recency":
+    case "added": {
+      const t = ordinalOf(n, by);
+      return t === undefined ? UNKNOWN_COLOR : sequentialColor(t);
+    }
     case "layer":
       return layerColor(n.layer);
     case "depth":
@@ -194,6 +216,10 @@ export function colorKey(n: GNode, by: ColorBy, slots: AreaSlots = AREA_SLOT): s
       return "Evidence: light = little, dark = much";
     case "score":
       return "Importance: light = low, dark = high";
+    case "recency":
+      return "Recency: light = old, dark = new";
+    case "added":
+      return "Date added: light = old, dark = new";
     case "layer":
       return n.layer || "unknown";
     case "depth":

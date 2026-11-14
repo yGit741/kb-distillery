@@ -1,15 +1,24 @@
 import { useEffect, useRef } from "react";
 import { useFlag } from "@/flags/useFlag";
 import { cn } from "@/lib/utils";
+import type { Dimension } from "../../colourDimensions";
 import type { KeyRow } from "../../legendModel";
+import type { ColorBy } from "../../style";
 import { useReducedMotion } from "./motion";
 import { useCorners } from "./cornersStore";
-import { EDGE, legendHeight, legendTop, LEGEND_OPEN_ROW, LEGEND_PAD, LEGEND_REST_ROW } from "./geometry";
+import { EDGE, legendHeight, legendTop, LEGEND_BAR_OPEN, LEGEND_BAR_REST, LEGEND_OPEN_ROW, LEGEND_PAD, LEGEND_REST_ROW } from "./geometry";
+import { useStillClick } from "./useStillClick";
 
 interface Props {
   rows: readonly KeyRow[];
   /** "theme", "citation role": what the colour answers */
   title: string;
+  /** the colouring in use, and the ones the header's dropdown offers for what is drawn */
+  by: ColorBy;
+  dimensions: readonly Dimension[];
+  onPick: (by: ColorBy) => void;
+  /** a continuous colouring: one gradient bar (its steps, low to high) with its two ends named, no swatches */
+  bar?: { stops: readonly string[]; low: string; high: string };
   hidden: ReadonlySet<string>;
   /** an ordered scale cannot hide pages by value */
   toggleable: boolean;
@@ -23,10 +32,12 @@ const FULL_MS = 315; // the mockup's --k (.35) x .9s
 
 /**
  * The colour legend: a tight stack of dots on the right edge, 8px from it. Press it and it spreads into the
- * names (with counts); pressing a name hides or shows that value, like the old legend did. While the Think fan is
+ * names (with counts) under a centred header, "Color by [dimension]", whose dimension is a quiet dropdown; pressing
+ * a name hides or shows that value. A continuous colouring shows one gradient bar instead of dots. Two clicks on
+ * the same spot open and close it (./useStillClick), so the second never lands on a name. While the Think fan is
  * open the stack moves down out of the fan's arc, so the two never overlap.
  */
-export function ColourDots({ rows, title, hidden, toggleable, onToggle, areaHeight, thinkCards }: Props) {
+export function ColourDots({ rows, title, by, dimensions, onPick, bar, hidden, toggleable, onToggle, areaHeight, thinkCards }: Props) {
   const open = useCorners((s) => s.order.includes("legend"));
   const thinkOpen = useCorners((s) => s.order.includes("think"));
   const toggle = useCorners((s) => s.toggle);
@@ -38,10 +49,12 @@ export function ColourDots({ rows, title, hidden, toggleable, onToggle, areaHeig
     if (!open && box.current?.contains(document.activeElement) && document.activeElement !== opener.current) opener.current?.focus();
   }, [open]);
   const counts = useFlag("legend-counts");
-  if (!rows.length) return null;
+  const still = useStillClick(open, () => toggle("legend"));
+  if (!rows.length && !bar) return null;
+  const known = dimensions.some((d) => d.by === by);
   // pressed, the card lists every colour; a long list scrolls inside the screen area instead of running off it
   const fit = Math.max(0, areaHeight - 2 * EDGE);
-  const h = Math.min(legendHeight(rows.length, open), fit || Infinity);
+  const h = Math.min(bar ? 2 * LEGEND_PAD + (open ? LEGEND_BAR_OPEN : LEGEND_BAR_REST) : legendHeight(rows.length, open), fit || Infinity);
   const top = legendTop({ areaHeight, height: h, thinkOpen, thinkCards });
   return (
     <div
@@ -52,9 +65,10 @@ export function ColourDots({ rows, title, hidden, toggleable, onToggle, areaHeig
       data-tour="graph-legend"
       data-open={open}
       data-shifted={thinkOpen}
+      onClickCapture={still.onClickCapture}
       className={cn(
-        "pointer-events-none absolute right-0 z-[18] flex flex-col items-end rounded-[14px] transition-[top,background-color,box-shadow] motion-reduce:transition-none",
-        open ? "bg-card shadow-[var(--shadow)]" : "bg-transparent",
+        "absolute right-0 z-[18] flex flex-col items-end rounded-[14px] transition-[top,background-color,box-shadow] motion-reduce:transition-none",
+        open ? "pointer-events-auto bg-card shadow-[var(--shadow)]" : "pointer-events-none bg-transparent",
       )}
       style={{ top, maxHeight: open && fit ? fit : undefined, overflowY: open ? "auto" : undefined, paddingTop: LEGEND_PAD, paddingBottom: LEGEND_PAD, paddingLeft: open ? 12 : 8, paddingRight: 8, transitionDuration: `${MS}ms` }}
     >
@@ -66,18 +80,57 @@ export function ColourDots({ rows, title, hidden, toggleable, onToggle, areaHeig
           title={`Colour is ${title}: press to show the names`}
           aria-expanded={false}
           className={cn("pointer-events-auto absolute inset-0 rounded-[14px]", RING)}
-          onClick={() => toggle("legend")}
+          onClick={(e) => {
+            still.mark(e);
+            toggle("legend");
+          }}
         />
       )}
       <div
-        className="overflow-hidden whitespace-nowrap text-[10px] font-medium uppercase tracking-wide text-muted-foreground transition-[height,opacity]"
+        data-row="header"
+        className="flex items-center justify-center gap-0.5 self-stretch overflow-hidden whitespace-nowrap text-[10px] font-medium uppercase tracking-wide text-muted-foreground transition-[height,opacity]"
         style={{ height: open ? 22 : 0, opacity: open ? 1 : 0, transitionDuration: `${MS}ms` }}
       >
-        <button type="button" tabIndex={open ? 0 : -1} aria-label={`Colour = ${title}: hide names`} aria-expanded={open} title="Hide the names" className={cn("pointer-events-auto rounded px-1", RING)} onClick={() => toggle("legend")}>
-          Colour = {title}
+        <button type="button" tabIndex={open ? 0 : -1} aria-label="Hide the colour names" aria-expanded={open} title="Hide the names" className={cn("pointer-events-auto rounded px-1 uppercase", RING)} onClick={() => toggle("legend")}>
+          Color by
         </button>
+        <select
+          tabIndex={open ? 0 : -1}
+          aria-label="Color by"
+          title="Choose what the colour shows"
+          value={known ? by : ""}
+          onChange={(e) => onPick(e.target.value as ColorBy)}
+          className={cn("pointer-events-auto cursor-pointer rounded bg-transparent py-0.5 pl-0.5 pr-1 text-[10px] font-semibold uppercase tracking-wide text-foreground hover:bg-accent", RING)}
+        >
+          {!known && <option value="">{title}</option>}
+          {dimensions.map((d) => (
+            <option key={d.by} value={d.by}>
+              {d.label}
+            </option>
+          ))}
+        </select>
       </div>
-      {rows.map((r, i) => {
+      {bar && (
+        <div data-row="bar" className="flex flex-col items-stretch gap-1" style={{ width: open ? 168 : 10 }}>
+          <i
+            aria-hidden
+            className="block rounded-full"
+            style={{
+              height: open ? 10 : LEGEND_BAR_REST,
+              // at rest the bar stands on the edge like the dots, high on top; spread, it reads left (low) to right
+              background: `linear-gradient(${open ? "to right" : "to top"}, ${bar.stops.join(", ")})`,
+              boxShadow: open ? "none" : "0 0 0 1.5px var(--background)",
+            }}
+          />
+          {open && (
+            <span className="flex justify-between text-[11px] leading-tight text-muted-foreground">
+              <span>{bar.low}</span>
+              <span>{bar.high}</span>
+            </span>
+          )}
+        </div>
+      )}
+      {!bar && rows.map((r, i) => {
         const off = hidden.has(r.label);
         return (
           <button

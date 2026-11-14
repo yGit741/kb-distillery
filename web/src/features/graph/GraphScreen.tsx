@@ -38,7 +38,7 @@ import { applyQuick } from "./quickFilters";
 import { computeVisible } from "./rules";
 import { assignAreaColors, colorKey, effectiveColorBy } from "./style";
 import { registerTypeMarks } from "./encoding/spec";
-import { parseSchema, withDataTypes } from "./schema";
+import { defaultTypes, parseSchema, withDataTypes } from "./schema";
 import { SideReader, type ReaderStep } from "./SideReader";
 import { useGraphUi } from "./store";
 import { Panels } from "./Panels";
@@ -329,8 +329,10 @@ function Loaded({
   const shownTypes = useMemo(() => {
     if (ui.shownTypes !== undefined) return ui.shownTypes;
     // a view that names layers (Map) draws those layers of this kb's own schema, whatever its kit
-    return storyTypes(storyById(ui.story), schema) ?? new Set(schema.defaultVisible);
-  }, [ui.shownTypes, ui.story, schema]);
+    const fromStory = storyTypes(storyById(ui.story), schema);
+    if (fromStory) return fromStory;
+    return defaultTypes(schema, model.nodes);
+  }, [ui.shownTypes, ui.story, schema, model]);
   const filtered = useMemo(
     () =>
       computeVisible(model.nodes, {

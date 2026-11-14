@@ -4347,7 +4347,7 @@ export interface components {
         /** LayerStyle */
         LayerStyle: {
             /** Color */
-            color?: ("type" | "layer" | "depth" | "status" | "area" | "degree" | "evidence" | "score" | "none") | components["schemas"]["By"] | null;
+            color?: ("type" | "layer" | "depth" | "status" | "area" | "degree" | "evidence" | "score" | "none" | "format" | "recency" | "added") | components["schemas"]["By"] | null;
             /** Label */
             label?: string | null;
             /** Size */

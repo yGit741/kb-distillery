@@ -16,7 +16,8 @@ import { predicateFn } from "../../publicPredicate";
 import type { GraphSchema } from "../../schema";
 import { useGraphUi } from "../../store";
 import { useFavorites } from "../../favorites/store";
-import { effectiveColorBy, METRIC_COLORS, RAMP_BY } from "../../style";
+import { BAR_BY, effectiveColorBy, neutralRamp, RAMP_BY, RAMP_MEANING, RAMP_STEPS } from "../../style";
+import { dimensionsFor } from "../../colourDimensions";
 import type { GNode } from "../../types";
 import { ago, chatWhen, defaultFetch, listRecent, listSessions, listViews, pinView, renameView, unpinView, type Fetcher, type SessionRow } from "./api";
 import { ActionPill, CornerButton, MoreButton, PillAction, PushPin } from "./CornerButton";
@@ -299,6 +300,12 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
     const read = LAYER_ORDER.filter((l) => l !== "concept").flatMap((l) => groups.find((g) => g.layer === l)?.rows ?? []);
     return [c, read];
   }, [groups]);
+  // "Color by" offers the concept colourings, and the source ones once a source is on screen
+  const sourcesDrawn = useMemo(() => nodes.some((n) => n.layer === "source" && visible.has(n.id)), [nodes, visible]);
+  const dimensions = useMemo(() => dimensionsFor(sourcesDrawn ? ["concepts", "sources"] : ["concepts"]), [sourcesDrawn]);
+  // The legend's changes leave the view's story. While the drawn types still come from that story, pin them first:
+  // hiding a colour or changing the colouring must never change which types are drawn.
+  const pinTypes = () => (useGraphUi.getState().shownTypes === undefined ? { shownTypes: shownTypes ? new Set(shownTypes) : null } : {});
   useShellTour(`${server}|${allTypes.length > 0}`);
   const spot = useCallback((types: readonly string[] | null) => useGraphUi.setState({ spotlight: types ? new Set(types) : null }), []);
   useEffect(() => () => useGraphUi.setState({ spotlight: null }), []);
@@ -544,10 +551,17 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
 
       <ColourDots
         rows={key}
-        title={COLOR_TITLE[by].toLowerCase()}
+        title={dimensions.find((d) => d.by === by)?.label ?? COLOR_TITLE[by].toLowerCase()}
+        by={by}
+        dimensions={dimensions}
+        onPick={(c) => useGraphUi.setState({ ...pinTypes(), colorBy: c, hiddenKeys: new Set(), story: "" })}
+        bar={ramp && BAR_BY.has(by) && RAMP_MEANING[by] ? { stops: Array.from({ length: RAMP_STEPS }, (_, i) => neutralRamp(i / (RAMP_STEPS - 1), ramp === "dark")), low: RAMP_MEANING[by]!.low, high: RAMP_MEANING[by]!.high } : undefined}
         hidden={ui.hiddenKeys}
-        toggleable={!METRIC_COLORS.has(by)}
-        onToggle={(label) => ui.toggleKey(label)}
+        toggleable={!BAR_BY.has(by)}
+        onToggle={(label) => {
+          useGraphUi.setState(pinTypes());
+          ui.toggleKey(label);
+        }}
         areaHeight={areaHeight}
         thinkCards={Math.max(1, thinkCards.length)}
       />
