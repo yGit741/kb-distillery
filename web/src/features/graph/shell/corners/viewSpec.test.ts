@@ -129,16 +129,16 @@ describe("a pinned view as a layer stack (graph-intent)", () => {
   });
 });
 
-describe("the citation map as a pinned view", () => {
-  it("pins as { v: 1, story: 'citations' } while its sheet is open, even with a layer stack", () => {
-    useGraphUi.setState({ story: "citations", flyout: "citations" });
+describe("the Citations view as a pinned view", () => {
+  it("pins as { v: 1, story: 'citations' } while it is on, even with a layer stack", () => {
+    useGraphUi.setState({ story: "citations", flyout: null });
     const stack: ViewStack = { ...EMPTY_STACK, layers: [makeLayer("show", "nodes", {}, "x")] };
     expect(captureSpec(useGraphUi.getState(), stack)).toEqual({ v: 1, story: "citations" });
-    useGraphUi.setState({ flyout: null });
-    expect(captureSpec(useGraphUi.getState())).toMatchObject({ v: 1, story: "citations", colorBy: expect.any(String) });
+    useGraphUi.setState({ story: "concepts" });
+    expect(captureSpec(useGraphUi.getState())).toMatchObject({ v: 1, story: "concepts", colorBy: expect.any(String) });
   });
 
-  it("restores through the view path (which opens the sheet), with graph-intent on too", () =>
+  it("restores through the view path, with graph-intent on too", () =>
     withFlag("graph-intent", true, () => {
       const deps = { applyView: vi.fn(), showPicked: vi.fn() };
       expect(applySpec({ v: 1, story: "citations" }, deps, { name: "Citations" })).toBe(true);

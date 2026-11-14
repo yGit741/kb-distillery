@@ -40,6 +40,7 @@ export const COLOR_TITLE: Readonly<Record<ColorBy, string>> = {
   format: "type",
   recency: "recency",
   added: "date added",
+  support: "source support",
 };
 
 /** Each size mode's title; uniform size is silent (no Size row). */

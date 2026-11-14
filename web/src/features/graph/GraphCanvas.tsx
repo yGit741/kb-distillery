@@ -13,6 +13,7 @@ import { ForceGraph, type Anchor, type ForceGraphHandle } from "./ForceGraph";
 import { buildGraphData, edgeWeight, edgeWeights, largestComponent, sameSet, type NeighborMap } from "./graphData";
 import { createHoverIntent, createSpeedMeter, HOVER_TUNING } from "./hoverIntent";
 import { drawArcs } from "./lab/arcs";
+import { storyById } from "./lab/views";
 import { drawHulls, drawLabelLayer, type FadeState } from "./lab/draw";
 import { useLabHud } from "./lab/hud";
 import { hopsFrom, type Importance } from "./lab/importance";
@@ -371,7 +372,8 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
     rs.current.hops = hops;
     // a legend spotlight (a type chip under the pointer) is a focus on every drawn page of the type: same fade
     const spot = u.spotlight;
-    const spotIds = spot ? new Set([...vis].filter((id) => spot.has(ids.get(id)?.type ?? ""))) : null;
+    const byIds = u.spotIds;
+    const spotIds = byIds ? new Set([...vis].filter((id) => byIds.has(id))) : spot ? new Set([...vis].filter((id) => spot.has(ids.get(id)?.type ?? ""))) : null;
     const base = hops ? { core: new Set(sel), lit: new Set(hops.keys()) } : computeFocus(sel, hover, nb, u.highlight);
     const preIds = pre ? new Set([...pre].filter((id) => vis.has(id))) : null;
     const next: Focus | null = preIds
@@ -457,8 +459,14 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
   const ringRef = useRef<{ model: GraphModel; linkDistance: number; ring: Map<string, readonly [number, number]> } | null>(null);
   // flag graph-intent, the Sources view (a source page is drawn): sources sit on the left, concepts on the right
   const intentOn = useFlag("graph-intent");
+  // a view may set its own layout forces (Citations packs its small components close); the prefs apply otherwise
+  const viewForces = storyById(ui.edgeStory)?.forces;
   // (several knowledge bases keep their own regions: no sides there, and no neutral concepts either)
-  const sides = useMemo(() => intentOn && sourcesView && (model.kbs?.length ?? 0) <= 1 && data.nodes.some((n) => n.layer === "source"), [intentOn, sourcesView, model, data]);
+  // (both sides drawn: a view of sources alone, such as Citations, lays out freely instead of as one squeezed column)
+  const sides = useMemo(
+    () => intentOn && sourcesView && (model.kbs?.length ?? 0) <= 1 && data.nodes.some((n) => n.layer === "source") && data.nodes.some((n) => n.layer === "concept"),
+    [intentOn, sourcesView, model, data],
+  );
   // ... and in the Concepts view each concept carries a quiet count of its sources, over the whole kb
   const srcCount = useMemo(() => (intentOn ? sourceCounts(model.nodes, neighbors) : null), [intentOn, model, neighbors]);
   const viewRef = useRef({ sides, srcCount });
@@ -516,6 +524,8 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
         ? null
         : kbIds.length
         ? { strength: 0.12, target: (n) => (n.kb ? (kbAnchor.current.get(n.kb) ?? null) : null) }
+        : viewForces?.pack
+        ? { strength: viewForces.pack, target: () => [0, 0] }
         : sides
         ? {
             // pulled sideways only: the target keeps the page's own height, so each side settles as a loose column
@@ -531,7 +541,7 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
             },
           }
         : null,
-    [anchors, ui.areaPull, kbIds, sides, ui.linkDistance, data.nodes.length, meaning],
+    [anchors, ui.areaPull, kbIds, sides, ui.linkDistance, data.nodes.length, viewForces, meaning],
   );
   // the first layout already uses the mode and pull (settled off screen); only the user's later change animates
   // (compared by value, so StrictMode's second mount run doesn't count as a change)
@@ -577,7 +587,7 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
   useEffect(() => {
     rs.current.colors = readCanvasColors();
     recompute();
-  }, [recompute, theme, visible, selection, byId, neighbors, ui.highlight, ui.lab, ui.typeLabels, ui.spotlight, ui.colorBy, ui.linkOpacity, radiusOpts, layered, imp, cited, previewIds, calmOn]);
+  }, [recompute, theme, visible, selection, byId, neighbors, ui.highlight, ui.lab, ui.typeLabels, ui.spotlight, ui.spotIds, ui.colorBy, ui.linkOpacity, radiusOpts, layered, imp, cited, previewIds, calmOn]);
 
   // a changed set of pages is framed after a moment and framed again once the layout settles: at the moment the
   // pages may still be drifting from their old places, and a single early fit left a view (Thesis) in a corner.
@@ -1054,8 +1064,10 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
         drawKbOutlines(ctx, kbGroups(g.nodes().filter((n) => !isPile(n))), scale, rs.current.colors.muted);
         return;
       }
-      // no area hulls under a topic colouring or the missing-links lens: two groupings at once would compete
-      const hulls = effectiveColorBy(u.colorBy) !== "area" && u.colorBy !== "topic" && !lens;
+      // the Health colouring keeps red and amber for problems alone: no area tint under it; nor under a topic
+      // colouring or the missing-links lens (two groupings at once would compete)
+      const by = effectiveColorBy(u.colorBy);
+      const hulls = by !== "area" && by !== "support" && by !== "topic" && !lens;
       if (hulls) drawHulls(ctx, g.nodes().filter((n) => !isPile(n)), scale, names, u.lab.hullSigma);
     },
     [names, kbIds],
@@ -1195,7 +1207,7 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
         ref={fg}
         className="size-full"
         data={data}
-        forces={{ charge: ui.charge, linkDistance: ui.linkDistance, gravity: ui.gravity }}
+        forces={{ charge: viewForces?.charge ?? ui.charge, linkDistance: viewForces?.linkDistance ?? ui.linkDistance, gravity: viewForces?.gravity ?? ui.gravity }}
         arrows={ui.arrows}
         nodeRadius={radius}
         drawNode={drawNode}

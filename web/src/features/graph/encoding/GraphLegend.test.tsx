@@ -62,8 +62,8 @@ describe("GraphLegend ramp", () => {
     render(<GraphLegend nodes={nodes} color={colorChannel("depth", { ramp: "light" })} density="compact" maxColors={2} />);
     const r = row("colour")!;
     expect(within(r).getByText("Colour = depth")).toBeInTheDocument();
-    expect(within(r).getByText("listed")).toBeInTheDocument();
-    expect(within(r).getByText("deep")).toBeInTheDocument();
+    expect(within(r).getByText("ingest only")).toBeInTheDocument();
+    expect(within(r).getByText("deep digest")).toBeInTheDocument();
     expect(within(r).queryByText(/^\+/)).toBeNull();
     expect(r.querySelectorAll("i")).toHaveLength(4);
   });

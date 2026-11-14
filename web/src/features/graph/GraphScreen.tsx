@@ -22,6 +22,7 @@ import { askAbout, useChatDock } from "./tools/chatDockStore";
 import "./directions/register";
 import { extendView, makeView, parsePages, scopeIds, type GraphView } from "./pageSearch";
 import { buildNeighborMap } from "./graphData";
+import { withStoryEdges } from "./storyEdges";
 import { GraphCanvas, type CanvasHandle } from "./GraphCanvas";
 import { Inspector } from "./Inspector";
 import { computeImportance } from "./lab/importance";
@@ -35,12 +36,14 @@ import { Legend } from "./Legend";
 import { predicateFn } from "./publicPredicate";
 import { ViewsBar } from "./views/ViewsBar";
 import { NodeMenu } from "./NodeMenu";
+import { OutsideGroup } from "./OutsideGroup";
 import { applyQuick } from "./quickFilters";
 import { computeVisible } from "./rules";
-import { assignAreaColors, colorKey, effectiveColorBy } from "./style";
+import { assignAreaColors, assignSupport, colorKey, effectiveColorBy } from "./style";
 import { registerTypeMarks } from "./encoding/spec";
 import { defaultTypes, parseSchema, withDataTypes } from "./schema";
-import { applySubject, subjectOf } from "./subject";
+import { applySubject, settledColour, sourceCounts, subjectOf } from "./subject";
+import { HealthLayer } from "./health/HealthLayer";
 import { SideReader, type ReaderStep } from "./SideReader";
 import { useGraphUi } from "./store";
 import { Panels } from "./Panels";
@@ -156,6 +159,9 @@ export function GraphScreen({ search, host }: { search: GraphSearch; host: Graph
   // The model is rebuilt only when the wiki changed (etag), not on every poll.
   const etag = snap?.etag;
   const model = useMemo(() => (snap ? toModel(snap) : null), [etag, snap?.layer]); // eslint-disable-line react-hooks/exhaustive-deps
+  // a view that draws a relation (Citations: `cites`) swaps the links for it; every other view draws the model as is
+  const edgeStory = useGraphUi((s) => s.edgeStory);
+  const drawn = useMemo(() => (model ? withStoryEdges(model, storyById(edgeStory)) : null), [model, edgeStory]);
   // the kit's types, plus any type the pages carry that the kit does not define (an imported OKF bundle's), so the
   // Map, the legend and the marks treat them as real types
   const schema = useMemo(() => {
@@ -224,7 +230,7 @@ export function GraphScreen({ search, host }: { search: GraphSearch; host: Graph
   return (
     <FullBleed>
       <Loaded
-        model={model}
+        model={drawn ?? model}
         schema={schema}
         host={kbHost}
         search={search}
@@ -327,6 +333,8 @@ function Loaded({
   useMemo(() => assignAreaColors(model.nodes), [model]);
   const byId = useMemo(() => new Map(model.nodes.map((n) => [n.id, n] as const)), [model]);
   const neighbors = useMemo(() => buildNeighborMap(model.links), [model]);
+  // the source count behind each concept: the "support" colouring and the Health view read it
+  const support = useMemo(() => assignSupport(sourceCounts(model.nodes, neighbors)), [model, neighbors]);
   const relations = useMemo(() => (model.relations ? relationIndex(model.relations) : undefined), [model]);
   const shownTypes = useMemo(() => {
     if (ui.shownTypes !== undefined) return ui.shownTypes;
@@ -335,6 +343,15 @@ function Loaded({
     if (fromStory) return fromStory;
     return defaultTypes(schema, model.nodes);
   }, [ui.shownTypes, ui.story, schema, model]);
+  // flag knowledge-health (with graph-intent): concepts alone, coloured by source support, is the Health view
+  const intentFlag = useFlag("graph-intent");
+  const healthOn = useFlag("knowledge-health") && intentFlag;
+  const healthView = healthOn && subjectOf(schema, shownTypes, effectiveColorBy(ui.colorBy)) === "health";
+  // the Health colouring restored outside Health (a saved view, a typed shape, the flag off) falls back to the view's own
+  useEffect(() => {
+    const settled = settledColour(effectiveColorBy(ui.colorBy), healthOn, schema, shownTypes);
+    if (settled) useGraphUi.setState({ colorBy: settled });
+  }, [ui.colorBy, healthOn, schema, shownTypes]);
   const filtered = useMemo(
     () =>
       computeVisible(model.nodes, {
@@ -353,6 +370,12 @@ function Loaded({
   );
   // the legend's one-click filters run last, on what the others left (./quickFilters)
   const visible = useMemo(() => applyQuick(filtered, byId, neighbors, selection, ui.quick), [filtered, byId, neighbors, selection, ui.quick]);
+  // a view that draws a relation (Citations) shows the pages no such link reaches as one small group at the side
+  const drawsEdges = !!storyById(ui.edgeStory)?.edges?.length;
+  const outside = useMemo(
+    () => (drawsEdges ? [...filtered].filter((id) => !visible.has(id) && !neighbors.get(id)?.length).map((id) => byId.get(id)!).filter(Boolean) : []),
+    [drawsEdges, filtered, visible, neighbors, byId],
+  );
   const imp = useMemo(() => computeImportance({ visible, byId, neighbors, cfg: ui.lab }), [visible, byId, neighbors, ui.lab]);
   const wide = useWide();
   const stats = `${visible.size} of ${model.nodes.length} pages · ${model.links.length} links · ${generatedAt.slice(0, 16).replace("T", " ")}${dsKind === "embedded" ? " · snapshot" : ""}`;
@@ -662,6 +685,9 @@ function Loaded({
         onOpenPile={(format) => useLayer.getState().openDrawer({ kind: "format", format })}
       />
       </div>
+      {outside.length > 0 && (
+        <OutsideGroup nodes={outside} colorBy={ui.colorBy} noun="papers" empty={!model.links.length} onShow={() => useGraphUi.setState({ quick: { ...ui.quick, connected: 0 } })} />
+      )}
       {/* the search box lives in the app header when there is one (the embed has none: it floats over the canvas) */}
       {shell ? (
         // the search line and the corner controls share one frame: it narrows while the side reader is open, so the reader never covers them
@@ -686,6 +712,7 @@ function Loaded({
             onShowExact={(ids) => showPicked(ids, true)}
             shownTypes={shownTypes}
             onSubject={(s) => applySubject(s, schema, shownTypes)}
+            healthWord={healthOn}
             onShowMentions={(query) => void showMentions(query)}
             onFit={() => ui.fit()}
             onZoom={(f) => canvas.current?.zoomBy(f)}
@@ -698,6 +725,7 @@ function Loaded({
           />
           <EmbeddingLayer nodes={model.nodes} neighbors={neighbors} />
           <Corners nodes={model.nodes} visible={visible} schema={schema} shownTypes={shownTypes} stats={stats} host={host} applyView={applyView} showPicked={showPicked} />
+          {healthView && <HealthLayer nodes={model.nodes} neighbors={neighbors} byId={byId} support={support} onRead={openReader} />}
         </div>
       ) : headerSlot ? (
         createPortal(finder, headerSlot)
