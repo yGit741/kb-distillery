@@ -89,6 +89,11 @@ export function createHttpDataSource(fetchImpl: Fetch = (...a) => fetch(...a), b
     getLifecycle: () => run(() => client.GET("/api/lifecycle"), "/api/lifecycle"),
     getShareStatus: () => run(() => client.GET("/api/share/status"), "/api/share/status"),
     getHealth: () => run(() => client.GET("/api/health"), "/api/health"),
+    getKnowledgeHealth: (opts) =>
+      run(
+        () => client.GET("/api/health/knowledge", { params: { query: { ...(opts?.minJaccard != null ? { min_jaccard: opts.minJaccard } : {}), ...(opts?.limit != null ? { limit: opts.limit } : {}) } } }),
+        "/api/health/knowledge",
+      ),
     getEmbedding: () => run(() => client.GET("/api/embedding"), "/api/embedding"),
     getEmbeddingPairs: (lo, hi, seed = 0) => run(() => client.GET("/api/embedding/pairs", { params: { query: { lo, hi, n: 8, seed } } }), "/api/embedding/pairs"),
     nameEmbedding: (backend) => run(() => client.POST("/api/embedding/names", { body: backend ? { backend } : {} }), "/api/embedding/names"),
