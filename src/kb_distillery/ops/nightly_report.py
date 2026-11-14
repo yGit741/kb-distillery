@@ -279,9 +279,13 @@ def apply_autofix(doc, results, error=""):
     """Put the auto-fix outcome into the nightly `doc`: banner title (hence the subject), an Auto-fix section right
     after the head, and links to the issue and PR."""
     head = autofix_headline(results, error)
+    kinds = {_autofix_kind(r) for r in results or []}
+    # the night failed either way; it only needs nothing from the owner when the fix merged or is merging
+    doc.status = "warn" if not error and kinds and kinds <= {"merged", "pending"} else \
+        "warn" if not error and "held" in kinds else "error"
     banner = doc.sections[0].blocks[0] if doc.sections and doc.sections[0].blocks else None
     if isinstance(banner, m.Banner):
-        banner.title = head
+        banner.title, banner.status = head, doc.status
     doc.headline = head + (" — " + doc.headline.split(" — ", 1)[1] if " — " in doc.headline else "")
     items = []
     status_of = {k: s for k, _, s in AUTOFIX_HEADLINES}
@@ -290,9 +294,15 @@ def apply_autofix(doc, results, error=""):
         repo, issue, pr = r.get("repo") or "", r.get("issue"), _num(r.get("outcome"), "pull")
         where = " · ".join(x for x in [f"issue #{issue}" if issue else "", f"PR #{pr}" if pr else ""] if x)
         fix = f"pixi run ship -- approve {pr}   # or approve the review on GitHub" if kind == "held" and pr else ""
+        said = r.get("outcome") or ""
+        detail = {"held": "fix ready, waiting for your approval",
+                  "merged": "fixed, the fix merged",
+                  "pending": "fix opened, merges when CI passes",
+                  "tried": said.replace("skipped: ", "").split(" (")[0],
+                  "ticket": f"ticket only: {r.get('why') or 'not an engine failure'}",
+                  "postponed": f"postponed: {said.split(': ', 1)[-1]}"}.get(kind, f"tried, no fix: {said.split(': ', 1)[-1]}")
         items.append(m.Item(status_of.get(kind, "warn"), r.get("step", "?"),
-                            f"{r.get('outcome') or ''}{' (' + r.get('why') + ')' if kind == 'ticket' else ''}"
-                            + (f" — {where}" if where else ""), fix))
+                            detail + (f" ({where})" if where else ""), fix))
         if repo and issue:
             doc.links.append([f"Issue #{issue}", f"{repo}/issues/{issue}"])
         if repo and pr:
