@@ -7,6 +7,7 @@ import { useApiQuery } from "@/lib/useApiQuery";
 import { cn } from "@/lib/utils";
 import type { NeighborMap } from "../graphData";
 import { BUTTON, EDGE } from "../shell/corners/geometry";
+import { useCorners } from "../shell/corners/cornersStore";
 import { useGraphUi } from "../store";
 import { setTopics } from "../style";
 import type { GNode } from "../types";
@@ -74,6 +75,13 @@ export function EmbeddingLayer({ nodes, neighbors }: { nodes: readonly GNode[]; 
     for (const p of pairs) pages.add(p.a.slug).add(p.b.slug);
     useEmbedView.getState().set({ lens: view === "missing" ? { pairs, pages } : null });
   }, [view, pairs]);
+
+  // the missing-links list sits where the open colour legend would: the lens greys the colours anyway, so it folds
+  useEffect(() => {
+    if (view !== "missing") return;
+    const c = useCorners.getState();
+    if (c.order.includes("legend")) c.toggle("legend");
+  }, [view]);
 
   if (!on || !r || !view) return null;
   if (view === "map") return <MeaningCard r={r} />;

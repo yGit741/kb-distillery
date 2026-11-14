@@ -7,7 +7,7 @@ import type { EmbeddingReport } from "@/api/types";
 import { withFlag } from "@/flags/testing";
 import { useKb } from "@/lib/store";
 import { mockDataSource } from "@/test/datasource";
-import { clusterColor } from "@/theme/palette";
+import { PROBLEM_HUES, TOPIC_COLORS, topicColor } from "@/theme/palette";
 import { applySpec, captureSpec, recognisedV1 } from "../shell/corners/viewSpec";
 import { DEFAULT_PREFS, useGraphUi } from "../store";
 import { colorKey, colorOf, NONE_GREY, setTopics } from "../style";
@@ -63,11 +63,25 @@ describe("embedding model", () => {
   it("colour by topic: the cluster's hue, its name in the key, neutral without a vector", () => {
     const t = topicIndex(report);
     setTopics(t.of, t.names);
-    expect(colorOf(node("ramsey"), "topic")).toBe(clusterColor(1));
+    expect(colorOf(node("ramsey"), "topic")).toBe(topicColor(1));
     expect(colorKey(node("margin"), "topic")).toBe("Learning theory");
     expect(colorOf(node("plain"), "topic")).toBe(NONE_GREY);
     expect(colorKey(node("plain"), "topic")).toBe("No vector");
     setTopics(new Map(), new Map());
+  });
+
+  it("topic colours never use red, orange or amber (kept for problems)", () => {
+    for (const c of TOPIC_COLORS) {
+      expect(PROBLEM_HUES).not.toContain(c.toLowerCase());
+      // no hue in the red-orange-amber band (0..50 and 330..360 degrees)
+      const [r, g, b] = [1, 3, 5].map((i) => parseInt(c.slice(i, i + 2), 16) / 255) as [number, number, number];
+      const max = Math.max(r, g, b);
+      const min = Math.min(r, g, b);
+      const d = max - min;
+      const h = d === 0 ? -1 : max === r ? (60 * ((g - b) / d) + 360) % 360 : max === g ? 60 * ((b - r) / d + 2) : 60 * ((r - g) / d + 4);
+      if (h >= 0 && d > 0.15) expect(h > 50 && h < 330).toBe(true);
+    }
+    for (let i = 0; i < 20; i++) expect(TOPIC_COLORS).toContain(topicColor(i));
   });
 
   it("meaning map: pages by two components, high up; pages without a vector in a column to the right", () => {

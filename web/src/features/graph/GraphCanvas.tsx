@@ -97,6 +97,8 @@ interface RenderState {
 /** How strongly the Sources view pulls each side to its place, and how big a concept must be on screen to show its count. */
 const SIDE_PULL = 0.3;
 const SIDE_SETTLE_MS = 1400;
+/** px kept free under the meaning map: a label under the lowest page plus the Concepts/Sources switch */
+const MAP_FIT_BOTTOM = 150;
 const COUNT_MIN_PX = 9;
 
 const EMPTY_IMPORTANCE: Importance = { score: new Map(), terms: new Map(), qrank: new Map(), maxScore: 1 };
@@ -627,7 +629,10 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
     if (!live.current.visible.size) return;
     // several knowledge bases are separate islands by design: frame them all, not the largest one
     const core = multiKb.current ? new Set<string>() : largestComponent(live.current.visible, live.current.neighbors);
-    fg.current?.fit(core.size > 1 ? (n) => core.has(n.id) || isPile(n) : undefined, ms);
+    const pick = core.size > 1 ? (n: SimNode) => core.has(n.id) || isPile(n) : undefined;
+    // the meaning map frames every page with room under it, so the lowest labels stay clear of the subject switch
+    if (useEmbedView.getState().view === "map") fg.current?.fitIn(pick ?? (() => true), 0, ms, 72, 96, MAP_FIT_BOTTOM);
+    else fg.current?.fit(pick, ms);
     framed.current = true;
     window.setTimeout(() => {
       k.current = fg.current?.zoom() ?? 1;

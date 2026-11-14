@@ -108,5 +108,15 @@ export function areaColor(area?: string | null): string {
   return AREA_COLORS[h % AREA_COLORS.length] as string;
 }
 
+/**
+ * The graph's topic colours (flag ui.embedding-views): the graph's categorical palette (ColorBrewer Paired) without
+ * its red, pink, orange and amber slots, which are kept for problems; strong hues first. Topic 0 is the largest; ids
+ * past the list wrap.
+ */
+export const TOPIC_COLORS: readonly string[] = ["#1F78B4", "#33A02C", "#6A3D9A", "#A6CEE3", "#B2DF8A", "#CAB2D6"];
+/** The reds, oranges and ambers a topic must never take (problem colours, in either palette). */
+export const PROBLEM_HUES: readonly string[] = ["#ff6b7a", "#ff9e64", "#f6c177", "#e0af68", "#e31a1c", "#fb9a99", "#ff7f00", "#fdbf6f", "#d9b43b", "#b15928"];
+export const topicColor = (id: number): string => TOPIC_COLORS[((id % TOPIC_COLORS.length) + TOPIC_COLORS.length) % TOPIC_COLORS.length]!;
+
 /** A semantic cluster's colour (Embedding map): cluster 0 is the largest; ids past the palette wrap. */
 export const clusterColor = (id: number): string => AREA_COLORS[((id % AREA_COLORS.length) + AREA_COLORS.length) % AREA_COLORS.length] as string;

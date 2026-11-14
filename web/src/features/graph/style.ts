@@ -1,5 +1,5 @@
 import { readCanvasColors } from "./encoding/theme";
-import { clusterColor, depthColor, layerColor, statusColor, supportColor, typeColor, UNKNOWN_COLOR } from "@/theme/palette";
+import { depthColor, layerColor, statusColor, supportColor, topicColor, typeColor, UNKNOWN_COLOR } from "@/theme/palette";
 import { areaDisplay } from "./displayNames";
 import { markOf, RING_BOOST } from "./encoding/spec";
 import { degreeOf, type GNode } from "./types";
@@ -259,7 +259,7 @@ export function colorOf(n: GNode, by: ColorBy, metric?: number, ramp?: "light" |
       return degreeBand(n).color;
     case "topic": {
       const t = topicOf(n);
-      return t === undefined ? NONE_GREY : clusterColor(t);
+      return t === undefined ? NONE_GREY : topicColor(t);
     }
     default:
       return "#7aa2ff";

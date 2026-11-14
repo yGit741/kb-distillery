@@ -385,5 +385,5 @@ owner = "maintainer"
 created = 2026-11-14
 expires = 2027-02-11
 kind = "runtime"
-default = false
-envs = { local = true, private = false, public = false }
+default = true
+envs = { local = true, private = true, public = false }
