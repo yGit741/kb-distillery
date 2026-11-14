@@ -620,7 +620,7 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
       rimPins.current.add(n.id);
     }
     // the same clumps as before (a click, a selection): keep the very same layout, so nothing re-runs or shakes
-    const sig = `${[...out.pins.keys()].join(",")}|${Math.round(out.web)}|${[...small].join(",")}`;
+    const sig = `${[...out.pins].map(([id, [x, y]]) => `${id}:${Math.round(x)}:${Math.round(y)}`).join(",")}|${Math.round(out.web)}|${out.labels.map((l) => `${l.name}:${Math.round(l.x)}:${Math.round(l.y)}`).join(",")}|${[...small].join(",")}`;
     if (rimSig.current.sig === sig && rimSig.current.rim) return rimSig.current.rim;
     const rimOut = { ...out, small };
     rimSig.current = { sig, rim: rimOut };
@@ -630,12 +630,13 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
   rimRef.current = rim;
   useEffect(() => useRimList.subscribe(() => fg.current?.refresh()), []);
   // the hovered (or clicked, then pinned) citation: Citations by meaning shows it without a tooltip (./citeHover)
-  const cite = useRef<{ link: SimLink | null; pinned: boolean; timer: number }>({ link: null, pinned: false, timer: 0 });
+  const cite = useRef<{ link: SimLink | null; pinned: boolean; timer: number; pending: SimLink | null | undefined }>({ link: null, pinned: false, timer: 0, pending: undefined });
   const dataRef = useRef(data);
   dataRef.current = data;
   const setCite = useCallback((link: SimLink | null, pinned = false) => {
     const c = cite.current;
     window.clearTimeout(c.timer);
+    c.pending = undefined;
     if (c.link === link && c.pinned === pinned) return;
     c.link = link;
     c.pinned = pinned;
@@ -649,27 +650,37 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
   useEffect(() => {
     if (!rim) setCite(null);
   }, [rim, setCite]);
+  // new data: the shown citation's papers are new objects, so it is dropped (a pinned one too)
+  useEffect(() => setCite(null), [data, setCite]);
+  useEffect(() => () => window.clearTimeout(cite.current.timer), []);
   // the magnifier over a hovered clump, placed at the clump's centre in the canvas box
   const [lens, setLens] = useState<{ name: string; ids: readonly string[]; left: number; top: number } | null>(null);
   const rimHover = useCallback((ev: React.MouseEvent) => {
     const rl = rimRef.current?.labels;
     const g = fg.current;
     const box = wrap.current?.getBoundingClientRect();
-    if (!rl?.length || !g || !box) return setLens(null);
+    if (!rimRef.current || !g || !box) return setLens(null);
     const p = g.graphAt(ev.clientX, ev.clientY);
     // the citation under the pointer, with hysteresis and a short dwell; a dot under the pointer wins; a pinned one stays
     const ct = cite.current;
     if (p && !ct.pinned) {
       const next = rs.current.hover ? null : pickCite(dataRef.current.links as SimLink[], ct.link, p.x, p.y, g.zoom());
-      if (next !== ct.link) {
+      if (next === ct.link) {
         window.clearTimeout(ct.timer);
+        ct.pending = undefined;
+      } else if (next !== ct.pending) {
+        // a change already waiting for the same edge keeps its clock: slow movement along an edge still shows it
+        window.clearTimeout(ct.timer);
+        ct.pending = next;
         ct.timer = window.setTimeout(() => setCite(next), next ? CITE_DWELL_MS : CITE_HOLD_MS);
-      } else window.clearTimeout(ct.timer);
+      }
     }
-    const hit = p ? clumpAt(rl, p.x, p.y, 70 / Math.max(g.zoom(), 0.05)) : null;
+    const hit = p && rl?.length ? clumpAt(rl, p.x, p.y, 70 / Math.max(g.zoom(), 0.05)) : null;
     const c = hit?.disc ? g.screenOf({ x: hit.disc.x, y: hit.disc.y }) : null;
     if (!hit || !c) return setLens(null);
-    setLens((was) => (was?.name === hit.name ? was : { name: hit.name, ids: hit.ids, left: c.x - box.left, top: c.y - box.top }));
+    const left = c.x - box.left;
+    const top = c.y - box.top;
+    setLens((was) => (was && was.name === hit.name && was.ids === hit.ids && Math.abs(was.left - left) < 1 && Math.abs(was.top - top) < 1 ? was : { name: hit.name, ids: hit.ids, left, top }));
   }, [setCite]);
   useEffect(() => {
     if (!rim) useRimList.getState().close();
@@ -1069,6 +1080,7 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
   // ---- clicks
   const clickNode = useCallback(
     (id: string, ev: MouseEvent) => {
+      if (cite.current.pinned) setCite(null);
       // a paper in an uncited clump opens its topic's list, scrolled to it (the clump itself never moves)
       if (quietRef.current.has(id)) {
         const l = rimRef.current?.labels.find((x) => x.ids.includes(id));
@@ -1394,10 +1406,7 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
   }, [calmOn]);
   const linkWidth = useCallback((l: SimLink) => (l.kind === "shared" ? 0.35 + Math.min(l.shared ?? 1, 6) * 0.1 : 0.8), []);
   const linkLabel = useCallback(
-    (l: SimLink) => {
-      // Citations by meaning: a citation names both papers in full and what joins them
-      return l.kind === "shared" && !live.current.ui.hiddenLinkKinds.has(l.kind) ? `${l.shared} shared source${l.shared === 1 ? "" : "s"}` : "";
-    },
+    (l: SimLink) => (l.kind === "shared" && !live.current.ui.hiddenLinkKinds.has(l.kind) ? `${l.shared} shared source${l.shared === 1 ? "" : "s"}` : ""),
     [],
   );
 
@@ -1425,7 +1434,10 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
       ref={wrap}
       data-testid="graph-canvas"
       onMouseMove={rimHover}
-      onMouseLeave={() => setLens(null)}
+      onMouseLeave={() => {
+        setLens(null);
+        if (!cite.current.pinned) setCite(null);
+      }}
       className={cn(
         "relative size-full [&.graph-pointer_canvas]:cursor-pointer",
         ui.magnet && "[&:not(.graph-pointer)_canvas]:[cursor:var(--magnet-cursor,default)]",
