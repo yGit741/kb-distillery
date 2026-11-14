@@ -2,6 +2,7 @@ import { create } from "zustand";
 import type { GraphView } from "./pageSearch";
 import { DEFAULT_LAB, sanitizeLab, type LabConfig } from "./lab/config";
 import { DEFAULT_STORY, storyById, storyLab, type LayoutMode } from "./lab/views";
+import { liveEdgeStory } from "./storyEdges";
 import type { Predicate } from "./publicPredicate";
 import { QUICK_OFF, type QuickFilters } from "./quickFilters";
 import { newRule, type Rule } from "./rules";
@@ -153,6 +154,12 @@ const pickPrefs = (s: GraphPrefs): GraphPrefs => Object.fromEntries(PREF_KEYS.ma
 const normalize = (next: Set<string>, all: readonly string[]) => (all.every((t) => next.has(t)) ? null : next);
 
 /** A saved view brings its drawn types and "Aa" types back on the next visit (they are not stored themselves). */
+/** New page types drawn: the view chip goes, and so do a view's own links once its types are no longer all drawn
+ *  (hiding every paper type in Citations goes back to page links with nothing still saying Citations). */
+function typesPatch(shownTypes: ReadonlySet<string> | null | undefined, edgeStory: string) {
+  return { shownTypes, story: "", edgeStory: liveEdgeStory(edgeStory, shownTypes, storyById) ? edgeStory : "" };
+}
+
 function initialView(p: GraphPrefs): Pick<GraphUiState, "shownTypes" | "typeLabels" | "predicate"> {
   const st = storyById(p.story);
   return st
@@ -188,7 +195,7 @@ export const useGraphUi = create<GraphUiState>((set, get) => ({
     const cur = get().shownTypes;
     const base = cur === undefined ? new Set(defaults) : new Set(cur ?? all);
     if (!base.delete(type)) base.add(type);
-    set({ shownTypes: normalize(base, all), story: "" });
+    set(typesPatch(normalize(base, all), get().edgeStory));
   },
   setLayerTypes: (types, on, all, defaults) => {
     const cur = get().shownTypes;
@@ -197,7 +204,7 @@ export const useGraphUi = create<GraphUiState>((set, get) => ({
       if (on) base.add(t);
       else base.delete(t);
     }
-    set({ shownTypes: normalize(base, all), story: "" });
+    set(typesPatch(normalize(base, all), get().edgeStory));
   },
   toggleDepth: (depth, all) => {
     const base = new Set(get().shownDepths ?? all);

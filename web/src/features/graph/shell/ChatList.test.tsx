@@ -30,6 +30,18 @@ describe("ChatList with a limit (the recent chats of a new chat)", () => {
     expect(onMore).toHaveBeenCalledTimes(1);
   });
 
+  it("always shows a pinned chat, even past the limit", async () => {
+    sessions.push({ id: "old-pin", title: "Pinned old chat", created: "2026-10-01T10:00:00Z", updated: "2026-10-01T10:00:00Z", pinned: true } as never);
+    try {
+      mount(<ChatList activeId="kb-chat:none" server limit={8} onMore={() => {}} />);
+      expect(await screen.findByText("Pinned old chat")).toBeInTheDocument();
+      expect(screen.getByText("Chat 6")).toBeInTheDocument();
+      expect(screen.queryByText("Chat 7")).toBeNull();
+    } finally {
+      sessions.pop();
+    }
+  });
+
   it("has no All chats button when every chat fits", async () => {
     mount(<ChatList activeId="kb-chat:none" server limit={20} onMore={() => {}} />);
     expect(await screen.findByText("Chat 10")).toBeInTheDocument();
