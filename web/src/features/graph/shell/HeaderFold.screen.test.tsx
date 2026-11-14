@@ -71,6 +71,19 @@ describe("flag header-fold on the graph screen", () => {
       }),
     ));
 
+  it("on: the chevron sits centred in the 14px row above the search line, not pulled up past the top edge", () =>
+    withFlag("graph-shell", true, () =>
+      withFlag("header-fold", true, async () => {
+        screenWith();
+        const btn = await screen.findByRole("button", { name: "Show the app bar" });
+        // same height as the row (h-3.5), centred in it, and no negative margin that would clip it at the top
+        expect(btn.className).toContain("h-3.5");
+        expect(btn.className).toContain("items-center");
+        expect(btn.className).not.toMatch(/-mt-|items-end/);
+        expect(screen.getByTestId("header-fold").className).toContain("h-3.5");
+      }),
+    ));
+
   it("on: a graph that fails to load keeps the bar, since there is no chevron to bring it back", () =>
     withFlag("graph-shell", true, () =>
       withFlag("header-fold", true, async () => {

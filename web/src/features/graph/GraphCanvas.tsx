@@ -14,6 +14,7 @@ import { buildGraphData, edgeWeight, edgeWeights, largestComponent, sameSet, typ
 import { createHoverIntent, createSpeedMeter, HOVER_TUNING } from "./hoverIntent";
 import { drawArcs } from "./lab/arcs";
 import { storyById } from "./lab/views";
+import { liveEdgeStory } from "./storyEdges";
 import { drawHulls, drawLabelLayer, type FadeState } from "./lab/draw";
 import { useLabHud } from "./lab/hud";
 import { hopsFrom, type Importance } from "./lab/importance";
@@ -467,7 +468,7 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
   // flag graph-intent, the Sources view (a source page is drawn): sources sit on the left, concepts on the right
   const intentOn = useFlag("graph-intent");
   // a view may set its own layout forces (Citations packs its small components close); the prefs apply otherwise
-  const viewForces = storyById(ui.edgeStory)?.forces;
+  const viewForces = storyById(liveEdgeStory(ui.edgeStory, ui.shownTypes, storyById))?.forces;
   // (several knowledge bases keep their own regions: no sides there, and no neutral concepts either)
   // (both sides drawn: a view of sources alone, such as Citations, lays out freely instead of as one squeezed column)
   const sides = useMemo(

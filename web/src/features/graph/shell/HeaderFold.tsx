@@ -40,7 +40,7 @@ export function HeaderFold() {
         onClick={toggle}
         onDoubleClick={(e) => e.stopPropagation()}
         className={cn(
-          "pointer-events-auto -mt-2.5 flex h-6 w-9 items-end justify-center pb-px rounded-full bg-background text-muted-foreground shadow-[0_0_10px_6px_var(--background)] transition-colors hover:text-foreground motion-reduce:transition-none",
+          "pointer-events-auto flex h-3.5 w-9 items-center justify-center rounded-full bg-background text-muted-foreground shadow-[0_0_10px_6px_var(--background)] transition-colors hover:text-foreground motion-reduce:transition-none",
           RING,
         )}
       >

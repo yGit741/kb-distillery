@@ -2,6 +2,7 @@ import { flag } from "@/flags";
 import { DIMENSIONS, type GraphSubject } from "./colourDimensions";
 import { sourcesOf, type NeighborMap } from "./graphData";
 import type { GraphSchema } from "./schema";
+import { QUICK_OFF } from "./quickFilters";
 import { useGraphUi } from "./store";
 import { effectiveColorBy, type ColorBy } from "./style";
 import type { GNode } from "./types";
@@ -56,7 +57,17 @@ export function applySubject(subject: GraphSubject, schema: GraphSchema, shownTy
   const by = effectiveColorBy(useGraphUi.getState().colorBy);
   const health = flag("knowledge-health") && flag("graph-intent");
   if (subjectOf(schema, shownTypes, health ? by : undefined) === subject) return false;
-  useGraphUi.setState({ shownTypes: typesFor(subject, schema, shownTypes), colorBy: colourFor(subject, by), hiddenKeys: new Set(), story: "" });
+  // leaving a view that draws a relation (Citations) takes its links and its Connected filter with it: the other
+  // view draws the page links again, and the layout re-runs on them. The legend's other filters stay.
+  const cur = useGraphUi.getState();
+  useGraphUi.setState({
+    shownTypes: typesFor(subject, schema, shownTypes),
+    colorBy: colourFor(subject, by),
+    hiddenKeys: new Set(),
+    story: "",
+    edgeStory: "",
+    ...(cur.edgeStory ? { quick: { ...cur.quick, connected: QUICK_OFF.connected } } : {}),
+  });
   return true;
 }
 

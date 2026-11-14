@@ -52,6 +52,21 @@ describe("switching the view", () => {
     expect(useGraphUi.getState().colorBy).toBe("format"); // both views offer it
   });
 
+  it("leaving Citations for Concepts drops its links and its Connected filter, so the page links draw again", () => {
+    useGraphUi.getState().applyStory("citations");
+    expect(useGraphUi.getState().edgeStory).toBe("citations");
+    expect(applySubject("concepts", schema, useGraphUi.getState().shownTypes!)).toBe(true);
+    const s = useGraphUi.getState();
+    expect(s.edgeStory).toBe("");
+    expect(s.quick.connected).toBe(0);
+  });
+
+  it("a plain switch keeps the legend's other quick filters", () => {
+    useGraphUi.setState({ quick: { ...useGraphUi.getState().quick, recent: 7 } });
+    applySubject("sources", schema, new Set(["topic", "idea"]));
+    expect(useGraphUi.getState().quick.recent).toBe(7);
+  });
+
   it("does nothing when the view is already on", () => {
     expect(applySubject("concepts", schema, new Set(["topic"]))).toBe(false);
     expect(useGraphUi.getState().hiddenKeys.size).toBe(1);

@@ -22,7 +22,7 @@ import { askAbout, useChatDock } from "./tools/chatDockStore";
 import "./directions/register";
 import { extendView, makeView, parsePages, scopeIds, type GraphView } from "./pageSearch";
 import { buildNeighborMap } from "./graphData";
-import { withStoryEdges } from "./storyEdges";
+import { liveEdgeStory, withStoryEdges } from "./storyEdges";
 import { GraphCanvas, type CanvasHandle } from "./GraphCanvas";
 import { Inspector } from "./Inspector";
 import { computeImportance } from "./lab/importance";
@@ -160,7 +160,7 @@ export function GraphScreen({ search, host }: { search: GraphSearch; host: Graph
   const etag = snap?.etag;
   const model = useMemo(() => (snap ? toModel(snap) : null), [etag, snap?.layer]); // eslint-disable-line react-hooks/exhaustive-deps
   // a view that draws a relation (Citations: `cites`) swaps the links for it; every other view draws the model as is
-  const edgeStory = useGraphUi((s) => s.edgeStory);
+  const edgeStory = useGraphUi((s) => liveEdgeStory(s.edgeStory, s.shownTypes, storyById));
   const drawn = useMemo(() => (model ? withStoryEdges(model, storyById(edgeStory)) : null), [model, edgeStory]);
   // the kit's types, plus any type the pages carry that the kit does not define (an imported OKF bundle's), so the
   // Map, the legend and the marks treat them as real types
@@ -371,7 +371,7 @@ function Loaded({
   // the legend's one-click filters run last, on what the others left (./quickFilters)
   const visible = useMemo(() => applyQuick(filtered, byId, neighbors, selection, ui.quick), [filtered, byId, neighbors, selection, ui.quick]);
   // a view that draws a relation (Citations) shows the pages no such link reaches as one small group at the side
-  const drawsEdges = !!storyById(ui.edgeStory)?.edges?.length;
+  const drawsEdges = !!liveEdgeStory(ui.edgeStory, ui.shownTypes, storyById);
   const outside = useMemo(
     () => (drawsEdges ? [...filtered].filter((id) => !visible.has(id) && !neighbors.get(id)?.length).map((id) => byId.get(id)!).filter(Boolean) : []),
     [drawsEdges, filtered, visible, neighbors, byId],
@@ -685,6 +685,11 @@ function Loaded({
         onOpenPile={(format) => useLayer.getState().openDrawer({ kind: "format", format })}
       />
       </div>
+      {drawsEdges && !model.links.length && (
+        <p className="pointer-events-none absolute inset-x-0 top-1/2 z-[5] mx-auto max-w-sm -translate-y-1/2 px-4 text-center text-sm text-muted-foreground" data-testid="no-citation-links">
+          This knowledge base has no citation links yet. Fetch them with the citations command, or switch the view back to Concepts.
+        </p>
+      )}
       {outside.length > 0 && (
         <OutsideGroup nodes={outside} colorBy={ui.colorBy} noun="papers" empty={!model.links.length} onShow={() => useGraphUi.setState({ quick: { ...ui.quick, connected: 0 } })} />
       )}
