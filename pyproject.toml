@@ -92,7 +92,7 @@ layers = [
     # entry points: the CLI, the HTTP server and the other `python -m` shells
     "cli : server : doctor : init_kb : perf : __main__",
     # use cases that compose the pipeline stages below, and the things that ship the result
-    "services : publish : webbuild : proposals",
+    "services : publish : webbuild : proposals : autofix",
     # pipeline stages, each one concern
     "ingest : digest : distill : graph : search : lint : metrics : ops : git : migrations : parse",
     # the vault model, the LLM gateway, storage connectors and the publisher port (they know nothing of the stages above)

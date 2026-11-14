@@ -387,3 +387,13 @@ expires = 2027-02-11
 kind = "runtime"
 default = true
 envs = { local = true, private = true, public = false }
+
+[[flag]]
+name = "nightly-autofix"
+description = "A red nightly run opens or reuses one nightly-fail GitHub issue per failure signature on the engine repo; engine failures go to an automated fixer whose PR merges itself unless the diff gate holds it for the owner."
+owner = "maintainer"
+created = 2026-11-14
+expires = 2027-02-11
+kind = "runtime"
+default = false
+envs = { local = false, private = false, public = false }

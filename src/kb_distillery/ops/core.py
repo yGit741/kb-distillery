@@ -861,8 +861,10 @@ def sync_hygiene(root=ROOT, failed=False, error=None, head_before=None, rc=None)
         run.step("notify", "ok" if outcome in ("sent", "clean", "throttled") else "warn", outcome=outcome)
         run.set(hygiene=report.as_dict(), threads=[t.as_dict() for t in threads], notify=outcome,
                 deploy=_deploy_state(root))
-        run.finish(status=doc.status if doc else
-                   "error" if failed or report.errors else "warn" if report.findings else "ok")
+        status = doc.status if doc else "error" if failed or report.errors else "warn" if report.findings else "ok"
+        run.finish(status=status)
+        if status == "error":
+            nightly_autofix(root)
         return outcome
     except Exception as e:  # noqa: BLE001 — hygiene must never fail the sync
         print(f"note: hygiene checks failed — {type(e).__name__}: {e}")
@@ -872,6 +874,29 @@ def sync_hygiene(root=ROOT, failed=False, error=None, head_before=None, rc=None)
             except Exception:  # noqa: BLE001 — the log is best effort
                 pass
         return None
+
+
+AUTOFIX_LOG = os.path.expanduser("~/Library/Logs/kb-distillery-autofix.log")
+AUTOFIX_TIMEOUT = 3 * 3600
+
+
+def nightly_autofix(root=ROOT, run=subprocess.run):
+    """Flag `nightly-autofix` (off by default): a red night opens or reuses one `nightly-fail` issue per failure and
+    hands engine failures to the fixer (`python -m kb_distillery.autofix nightly`, a separate process: services is
+    not ours to import). Runs in the foreground (launchd would end a detached child), logs to AUTOFIX_LOG and never
+    fails the sync."""
+    from kb_distillery.config.flags import runtime
+    if not runtime.effective("nightly-autofix"):
+        return None
+    try:
+        with open(AUTOFIX_LOG, "a", encoding="utf-8") as log:
+            proc = run([sys.executable, "-m", "kb_distillery.autofix", "nightly", "--kb-root", root],
+                       stdout=log, stderr=subprocess.STDOUT, check=False, timeout=AUTOFIX_TIMEOUT)
+    except (OSError, subprocess.SubprocessError) as e:
+        print(f"note: nightly autofix skipped — {e}")
+        return None
+    print(f"autofix: finished with exit {proc.returncode} (log: {AUTOFIX_LOG})")
+    return proc.returncode
 
 
 def _sync(push, dry_run, root, prefer=None):
