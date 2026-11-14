@@ -123,7 +123,7 @@ def transcript(raw_path, pages=None):
     from kb_distillery.parse import figures as figs_mod
     figs = store.figures(proot, sha, want)
     text = figs_mod.with_descriptions(text, {(sha[:12], f["page"], f["id"]): f for f in figs})
-    n = len(MARK.findall(text))
+    n = max(0, len(MARK.findall(text)) - sum(1 for f in figs if f.get("problem")))   # figure marks are not formulas
     head = "[transcript of pages %d-%d, checked against the page images; %s]\n\n" % (
         want[0], want[-1], "%d formula(s) carry a `!` / `!!` mark link" % n if n else "no formula is marked unsure")
     return head + text
@@ -328,20 +328,21 @@ def run_extract(sha, fill=False, backend=None, model=FILL_MODEL):
         return 1
     text = extract_text(raw_path, pages=pages)
     text_path = os.path.join(sdir, "extracted.text")
+    figs = transcript_figures(raw_path, pages) if text else []      # what draft lists under ## Figures, this scope only
+    fig_path = os.path.join(sdir, "figures.json")
+    if figs:
+        with open(fig_path, "w", encoding="utf-8") as f:
+            json.dump(figs, f, indent=1, ensure_ascii=False)
+            f.write("\n")
+        print(f"wrote {fig_path} ({len(figs)} figure(s): draft lists every one under ## Figures)")
+    elif os.path.isfile(fig_path):
+        os.unlink(fig_path)
     if text:
         with open(text_path, "w", encoding="utf-8") as f:
             f.write(text)
         scope_note = f" · scope: {scope.get('label')}" if scope.get("label") else ""
         print(f"wrote {text_path} ({len(text)} chars){scope_note}")
-        figs = transcript_figures(raw_path, pages)
-        fig_path = os.path.join(sdir, "figures.json")
-        if figs:
-            with open(fig_path, "w", encoding="utf-8") as f:
-                json.dump(figs, f, indent=1, ensure_ascii=False)
-                f.write("\n")
-            print(f"wrote {fig_path} ({len(figs)} figure(s): draft lists every one under ## Figures)")
-        elif os.path.isfile(fig_path):
-            os.unlink(fig_path)
+
     else:
         print("no text extracted — agent must read PDF directly")
 

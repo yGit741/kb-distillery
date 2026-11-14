@@ -22,8 +22,10 @@ import re
 
 PLACEHOLDER = re.compile(r"!\[[^\]\n]*\]\((?:figure|image)\)")
 LINK = re.compile(r"!\[([^\]\n]*)\]\(figure:([0-9a-f]{12})/p(\d{4})/(\d+)\)")
-CAPTION = re.compile(r"^\s*(?:\*\*|\*|_)?\s*((?:Figure|Fig\.|FIGURE)\s*[0-9A-Z][0-9A-Za-z.\-]*?)\.?(?:\*\*|\*|_)?[:.]?\s",
-                     re.M)
+CAPTION = re.compile(r"^\s*(?:\*\*|\*|_)?\s*((?:Figure|Fig\.|FIGURE)\s*[0-9A-Z][0-9A-Za-z.\-]*?)"
+                     r"(?:\.?(?:\*\*|\*|_)[:.]?|[:.])\s")      # a separator after the number: "Figure 3 shows" is prose
+MAX_CAPTION = 800
+MARK_LINK = re.compile(r"\s?\[!!?\]\(mark:[^)]*\)")
 MIN_SIDE = 0.04             # a parser region narrower or shorter than this share of the page is a glyph, not a figure
 PAD = 0.008
 FIG_WIDTH = 2400            # page render width for figure crops: a figure is read, not glanced at
@@ -57,15 +59,20 @@ def link(label: str, sha: str, page: int, n: int) -> str:
     return "![%s](figure:%s/p%04d/%d)" % (label.replace("]", ")").replace("[", "("), sha[:12], page, n)
 
 
-def _caption_near(md: str, start: int, end: int) -> tuple:
-    """(label, caption) of the caption paragraph right after a figure, else right before it, else ("", "")."""
-    after = md[end:].lstrip("\n").split("\n\n", 1)[0].strip()
-    before = md[:start].rstrip("\n").rsplit("\n\n", 1)[-1].strip()
-    for para in (after, before):
-        m = CAPTION.match(para + " ") if para else None
+def _caption_near(md: str, start: int, end: int, taken: int = 0) -> tuple:
+    """(label, caption) of the caption paragraph right after a figure, else right before it (unless that paragraph lies
+    before `taken`: an earlier figure's caption), else ("", ""). Placeholders and mark links are left out."""
+    rest = md[end:].lstrip("\n")
+    after = rest.split("\n\n", 1)[0]
+    after = PLACEHOLDER.split(after, 1)[0].strip()
+    head = md[:start].rstrip("\n")
+    cut = head.rfind("\n\n")
+    before = head[cut + 2:].strip() if cut + 2 >= taken else ""
+    for para, stop in ((after, end + (len(md[end:]) - len(rest)) + len(after)), (before, start)):
+        m = CAPTION.match(para + " ") if para and len(para) <= MAX_CAPTION else None
         if m:
-            return m.group(1).strip(), para
-    return "", ""
+            return m.group(1).strip(), MARK_LINK.sub("", para).strip(), stop
+    return "", "", 0
 
 
 def place(md: str, boxes: list, sha: str, page: int) -> tuple:
@@ -74,10 +81,11 @@ def place(md: str, boxes: list, sha: str, page: int) -> tuple:
     region without a placeholder is added at the end of the page. Both carry a `problem`."""
     regs = regions(boxes)
     found = list(PLACEHOLDER.finditer(md))
-    figs, out, pos = [], [], 0
+    figs, out, pos, taken = [], [], 0, 0
     for i, m in enumerate(found):
         n = i + 1
-        label, caption = _caption_near(md, m.start(), m.end())
+        label, caption, stop = _caption_near(md, m.start(), m.end(), taken)
+        taken = max(taken, stop, m.end())
         box = regs[i] if i < len(regs) else None
         problem = "" if box else "the parser found no figure region here: the crop is the whole page"
         figs.append({"id": n, "label": label, "caption": caption, "box": box, "file": "", "description": "",
@@ -125,7 +133,7 @@ def _desc_path(work: str, page: int, n: int) -> str:
     return os.path.join(work, "figures", "p%04d-%d.json" % (page, n))
 
 
-def _cached(work: str, page: int, f: dict) -> str | None:
+def cached(work: str, page: int, f: dict) -> str | None:
     """A description cached for this very crop (same box, same caption), else None."""
     try:
         with open(_desc_path(work, page, f["id"]), encoding="utf-8") as fh:
@@ -145,7 +153,7 @@ def describe(figs_by_page: dict, root: str, sha: str, work: str, backend: str | 
     todo, usd = [], 0.0
     for p, figs in sorted(figs_by_page.items()):
         for f in figs:
-            hit = None if force else _cached(work, p, f)
+            hit = None if force else cached(work, p, f)
             if hit:
                 f["description"] = hit
             elif f.get("file"):

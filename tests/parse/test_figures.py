@@ -125,3 +125,19 @@ def test_complete_finds_a_dropped_display_formula_and_a_missing_figure():
                                                              "display_found": 2, "math_tokens_coverage": 1.0,
                                                              "figures": 1, "problems": 0})
     json.dumps(rep)
+
+
+def test_captions_are_not_borrowed_prose_or_placeholders():
+    md = "![](figure)\n\nFigure 3.1: A.\n\n![](figure)\n\nFigure 3 shows the next thing.\n"
+    _md, figs = figures.place(md, [(0.2, 0.1, 0.8, 0.3), (0.2, 0.5, 0.8, 0.7)], SHA, 9)
+    assert figs[0]["label"] == "Figure 3.1" and figs[1]["label"] == "" and figs[1]["caption"] == ""
+    md = "![](figure)\n**Figure 1.** One [!](mark:%s/p0009/2)\n![](figure)\n" % S12
+    _md, figs = figures.place(md, [(0.2, 0.1, 0.8, 0.3), (0.2, 0.5, 0.8, 0.7)], SHA, 9)
+    assert figs[0]["caption"] == "**Figure 1.** One" and "figure)" not in figs[0]["caption"]
+
+
+def test_a_failing_description_backend_still_stores_the_pages(tmp_path, monkeypatch):
+    fake = FigLLM()
+    monkeypatch.setattr(figures, "describe", lambda *a, **k: (_ for _ in ()).throw(RuntimeError("batch down")))
+    _path, _eng, res = _run(tmp_path, monkeypatch, fake)
+    assert res["pages"] and store.read_page(str(tmp_path / "store"), SHA, 1)["figures"][0]["description"] == ""

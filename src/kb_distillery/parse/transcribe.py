@@ -411,10 +411,13 @@ def transcribe(pdf: str, pages: list, work: str, root: str, sha: str, engine=Non
         done[p] = (md, marks, figs)
     if describe_figures and any(f for _m, _k, f in done.values()):
         figs_by_page = {p: f for p, (_m, _k, f) in done.items() if f}
-        n_figs = sum(len(f) for f in figs_by_page.values())
-        if not over("figure descriptions", n_figs, figures.USD_PER_FIGURE):
-            out["usd"] = round(out["usd"] + figures.describe(figs_by_page, root, sha, work, backend=backend, model=model,
-                                                             force=force, log=log), 4)
+        n_figs = sum(1 for p, fs in figs_by_page.items() for f in fs if force or not figures.cached(work, p, f))
+        if n_figs == 0 or not over("figure descriptions", n_figs, figures.USD_PER_FIGURE):
+            try:                                                     # descriptions are optional: never lose the pages
+                out["usd"] = round(out["usd"] + figures.describe(figs_by_page, root, sha, work, backend=backend,
+                                                                 model=model, force=force, log=log), 4)
+            except Exception as e:                                   # noqa: BLE001 - any backend failure
+                log("figures: descriptions failed (%s); pages are stored without them" % e)
     for p, (md, marks, figs) in done.items():
         rec = store.write_transcript_page(root, sha, p, md, marks, engine="reader:%s+%s+audit:%s" % (
             "none" if p in lone else model, engine.name if engine is not None and p in parsed else "none",
