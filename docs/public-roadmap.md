@@ -33,7 +33,6 @@ Many app features below sit behind feature flags that are on in the local app on
 
 The steps only the repository owner can take, then known follow-ups.
 
-- Make the repository public.
 - Tag `v0.1.0`; the release workflow then builds the wheel, the web bundle and the image.
 - Announce the release.
 - Container healthcheck: it runs `distill doctor` and does not yet probe whether the server is answering.
