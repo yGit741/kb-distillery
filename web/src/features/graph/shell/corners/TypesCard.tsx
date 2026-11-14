@@ -50,6 +50,7 @@ export function TypesCard({ concepts, sources, onToggle, onSpot }: Props) {
   const conceptGroups = useMemo(() => groupTypes(concepts), [concepts]);
   const sourceGroups = useMemo(() => groupTypes(sources), [sources]);
   if (!conceptGroups.length && !sourceGroups.length) return null;
+  const both = conceptGroups.length > 0 && sourceGroups.length > 0;
 
   const item = (r: TypeGroup, side: "left" | "right", i: number) => {
     const label = r.label;
@@ -109,7 +110,13 @@ export function TypesCard({ concepts, sources, onToggle, onSpot }: Props) {
       data-tour="graph-types"
       data-open={open}
       onClickCapture={still.onClickCapture}
-      className="pointer-events-none absolute bottom-[3.5px] [.gt-active_&]:bottom-[76px] left-1/2 z-[24] grid h-6 w-max max-w-[calc(100%-160px)] -translate-x-1/2 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center"
+      data-groups={both ? 2 : 1}
+      className={cn(
+        "pointer-events-none absolute bottom-[3.5px] [.gt-active_&]:bottom-[76px] left-1/2 z-[24] grid h-6 w-max max-w-[calc(100%-160px)] -translate-x-1/2 items-center",
+        // two groups meet at a divider that stays on the screen's centre; one group alone (the Concepts view) is
+        // centred itself
+        both ? "grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]" : "grid-cols-1 justify-items-center",
+      )}
       onMouseLeave={() => spot(null)}
     >
       {/* the one card behind both groups, symmetric around the fixed centre */}
@@ -132,10 +139,15 @@ export function TypesCard({ concepts, sources, onToggle, onSpot }: Props) {
           }}
         />
       )}
-      <div className={`${GROUP} flex-row-reverse justify-self-end`}>{conceptGroups.map((r, i) => item(r, "left", i))}</div>
-      {/* the divider stands between two groups; a view that draws one layer only (Concepts) has none */}
-      <span aria-hidden className={cn("block w-px rounded-sm bg-border transition-[margin,height] motion-reduce:transition-none", open ? "mx-3.5 h-4" : "mx-2 h-3", !(conceptGroups.length && sourceGroups.length) && "invisible")} style={{ transitionDuration: `${MS}ms` }} />
-      <div className={`${GROUP} justify-self-start`}>{sourceGroups.map((r, i) => item(r, "right", i))}</div>
+      {both ? (
+        <>
+          <div className={`${GROUP} flex-row-reverse justify-self-end`}>{conceptGroups.map((r, i) => item(r, "left", i))}</div>
+          <span aria-hidden className={cn("block w-px rounded-sm bg-border transition-[margin,height] motion-reduce:transition-none", open ? "mx-3.5 h-4" : "mx-2 h-3")} style={{ transitionDuration: `${MS}ms` }} />
+          <div className={`${GROUP} justify-self-start`}>{sourceGroups.map((r, i) => item(r, "right", i))}</div>
+        </>
+      ) : (
+        <div className={GROUP}>{(conceptGroups.length ? conceptGroups : sourceGroups).map((r, i) => item(r, "right", i))}</div>
+      )}
     </div>
   );
 }
