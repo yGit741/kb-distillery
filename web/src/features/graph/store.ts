@@ -250,8 +250,9 @@ export const useGraphUi = create<GraphUiState>((set, get) => ({
       view: null,
       hiddenKeys: new Set(),
       hiddenLinkKinds: new Set(),
-      // Citations by meaning draws the uncited papers too (quiet clumps on the rim), so it drops the Connected filter
-      quick: st.id === "citations" && flag("citations-meaning") ? { ...QUICK_OFF } : { ...QUICK_OFF, ...st.quick },
+      // Citations by meaning draws the uncited papers too (quiet clumps on the rim), so it drops the Connected filter;
+      // it needs the embedding views (the topics), so without them the view keeps its cited web only
+      quick: st.id === "citations" && flag("citations-meaning") && flag("ui.embedding-views") ? { ...QUICK_OFF } : { ...QUICK_OFF, ...st.quick },
       revealed: new Set(),
     });
   },

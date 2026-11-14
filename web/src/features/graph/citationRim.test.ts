@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { rimLayout } from "./citationRim";
+import { clumpAt, rimLayout } from "./citationRim";
 
 const papers = [
   ...Array.from({ length: 20 }, (_, i) => ({ id: `a${i}`, degree: i < 5 ? 2 : 0 })),
@@ -23,6 +23,11 @@ describe("citationRim", () => {
     expect(clumpMin).toBeGreaterThan(pullR + 8);
   });
 
+  it("keeps the cited web's circle clear of every clump", () => {
+    const r = rimLayout(papers, topic, names, 8);
+    for (const d of r.discs) expect(Math.hypot(d.x, d.y) - d.r).toBeGreaterThan(r.web);
+  });
+
   it("packs a clump without overlap: no two pins closer than one dot", () => {
     const r = rimLayout(papers, topic, names, 8);
     const p = [...r.pins.values()];
@@ -32,5 +37,13 @@ describe("citationRim", () => {
   it("labels each topic with its name and paper count", () => {
     const r = rimLayout(papers, topic, names, 8);
     expect(r.labels.map((l) => [l.name, l.count])).toEqual([["Learning theory", 20], ["Statistics", 8]]);
+  });
+
+  it("finds the clump under a point: on its dots or its name, never in the web", () => {
+    const r = rimLayout(papers, topic, names, 8);
+    const l = r.labels[0]!;
+    expect(clumpAt(r.labels, l.disc!.x, l.disc!.y, 20)?.name).toBe("Learning theory");
+    expect(clumpAt(r.labels, l.x, l.y, 20)?.name).toBe("Learning theory");
+    expect(clumpAt(r.labels, 0, 0, 20)).toBeNull();
   });
 });

@@ -37,7 +37,8 @@ import { useGraphUi } from "./store";
 import { useDecor } from "./tools/decor";
 import { meaningPositions, topicIndex } from "./embedding/model";
 import { useEmbedding } from "./embedding/EmbeddingLayer";
-import { rimLayout, type RimLabel, type RimLayout } from "./citationRim";
+import { clumpAt, rimLayout, type RimLabel, type RimLayout } from "./citationRim";
+import { useRimList } from "./rimListStore";
 import { useEmbedView } from "./embedding/store";
 import { useCorners } from "./shell/corners/cornersStore";
 import { drawNode as drawNodeMark } from "./encoding/canvas";
@@ -107,6 +108,14 @@ const MAP_FIT_BOTTOM = 150;
 const MAP_EDGE = 0.12;
 /** Citations by meaning: a cites link's opacity at rest (thin and light, but the web still reads; overlaps darken) */
 const RIM_EDGE = 0.5;
+/** Citations by meaning: a softer push between papers, so the web settles inside its circle instead of pressing on it */
+const RIM_CHARGE = -30;
+
+/** While a clump's list is open, everything else fades to 40 % so the clump and its list read together. */
+function rimOpenFade(id: string): number {
+  const open = useRimList.getState().open;
+  return open && !open.set.has(id) ? 0.4 : 1;
+}
 
 /** The topic names of Citations by meaning, on each clump's outer side, at a constant screen size. */
 function drawRimLabels(ctx: CanvasRenderingContext2D, labels: readonly RimLabel[], scale: number, colors: CanvasColors) {
@@ -544,7 +553,8 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
     const t = topicIndex(embedding);
     const papers = nodes.filter((n) => !isPile(n));
     const order = embedding.clusters.map((c) => c.id);
-    const rs0 = papers.map((n) => radius(n)).sort((a, b) => a - b);
+    // the plain radius (never the clump shrink), so the layout does not depend on what was drawn before
+    const rs0 = papers.map((n) => layeredRef.current?.get(n.id) ?? nodeRadius(n, radiusRef.current)).sort((a, b) => a - b);
     const dot = 2 * (rs0[rs0.length >> 1] || 4);
     const out = rimLayout(papers.map((n) => ({ id: n.id, degree: (n.inDegree ?? 0) + (n.outDegree ?? 0) })), (id) => t.of.get(id), t.names, dot, order);
     for (const n of nodes) {
@@ -555,9 +565,21 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
       rimPins.current.add(n.id);
     }
     return out;
-  }, [data, rimFlag, liveStory, embedding, meaning, radius]);
+  }, [data, rimFlag, liveStory, embedding, meaning, layered]);
   const rimRef = useRef(rim);
   rimRef.current = rim;
+  useEffect(() => useRimList.subscribe(() => fg.current?.refresh()), []);
+  useEffect(() => {
+    if (!rim) useRimList.getState().close();
+    // the topics arrive after the graph's first layout: lay out again with the rim's pins, pull and bounds, so the
+    // cited web settles inside them instead of where the first layout left it
+    else {
+      fg.current?.reheat();
+      // and frame the result, clumps included, once it has settled
+      const t = window.setTimeout(() => mounted.current && fitRef.current(400), 1500);
+      return () => window.clearTimeout(t);
+    }
+  }, [rim]);
   quietRef.current = rim ? new Set(rim.pins.keys()) : new Set();
   const anchors = useMemo(() => {
     const nodes = data.nodes as SimNode[];
@@ -589,7 +611,7 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
         : kbIds.length
         ? { strength: 0.12, target: (n) => (n.kb ? (kbAnchor.current.get(n.kb) ?? null) : null) }
         : rim
-        ? { strength: 0.06, target: (n) => rim.pull.get(n.id) ?? null, keepOut: rim.discs }
+        ? { strength: 0.04, target: (n) => rim.pull.get(n.id) ?? null, keepOut: rim.discs, keepIn: rim.web }
         : viewForces?.pack
         ? { strength: viewForces.pack, target: () => [0, 0] }
         : sides
@@ -692,7 +714,8 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
     }
     if (!live.current.visible.size) return;
     // several knowledge bases are separate islands by design: frame them all, not the largest one
-    const core = multiKb.current ? new Set<string>() : largestComponent(live.current.visible, live.current.neighbors);
+    // ... and Citations by meaning frames the web and every clump round it (the clumps are the rest of the picture)
+    const core = multiKb.current || rimRef.current ? new Set<string>() : largestComponent(live.current.visible, live.current.neighbors);
     const pick = core.size > 1 ? (n: SimNode) => core.has(n.id) || isPile(n) : undefined;
     // the meaning map frames every page with room under it, so the lowest labels stay clear of the subject switch
     // (positions not settled yet: the usual fit, so the camera is never left unframed)
@@ -943,6 +966,14 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
   // ---- clicks
   const clickNode = useCallback(
     (id: string, ev: MouseEvent) => {
+      // a paper in an uncited clump opens its topic's list, scrolled to it (the clump itself never moves)
+      if (quietRef.current.has(id)) {
+        const l = rimRef.current?.labels.find((x) => x.ids.includes(id));
+        if (l) {
+          useRimList.getState().show(l.name, l.ids, id);
+          return;
+        }
+      }
       if (isPileId(id)) {
         live.current.onOpenPile?.(formatOfPile(id));
         return;
@@ -981,6 +1012,18 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
         clickNode(id, ev);
         return;
       }
+      // a click on a clump or its name opens the clump's list; any other empty click closes an open one
+      const rl = rimRef.current?.labels;
+      const g = fg.current;
+      if (rl?.length && g) {
+        const p = g.graphAt(ev.clientX, ev.clientY);
+        const hit = p ? clumpAt(rl, p.x, p.y, 70 / Math.max(g.zoom(), 0.05)) : null;
+        if (hit) {
+          useRimList.getState().show(hit.name, hit.ids);
+          return;
+        }
+        if (useRimList.getState().open) useRimList.getState().close();
+      }
       if (!ev.shiftKey && !ev.metaKey && !ev.ctrlKey) useKb.getState().clearSelection();
     },
     [clickNode],
@@ -1001,7 +1044,7 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
       const tk = live.current.think;
       const r0 = radius(n) * (live.current.ui.spotlight?.has(n.type) ? 1.3 : 1) * (tk?.pop.has(n.id) ? popScale(popAt.current.get(n.id), performance.now()) : 1);
       const r = semanticRadius(r0, scale, rs.current.zr);
-      const alpha = fadedNodeOpacity(n.id, focus, rs.current.prevFocus, rs.current.fadeT) * (rimRef.current?.pins.has(n.id) ? 0.7 : 1);
+      const alpha = fadedNodeOpacity(n.id, focus, rs.current.prevFocus, rs.current.fadeT) * (rimRef.current?.pins.has(n.id) ? 0.7 : 1) * (rimOpenFade(n.id));
       const isSel = selected.has(n.id);
       const halo = useDecor.getState().halo?.get(n.id);
       if (halo) {
@@ -1131,7 +1174,21 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
       // and put a second colour meaning under the node colouring)
       if (kbIds.length) drawKbOutlines(ctx, kbGroups(g.nodes().filter((n) => !isPile(n))), scale, rs.current.colors.muted);
       const rl = rimRef.current?.labels;
-      if (rl?.length) drawRimLabels(ctx, rl, scale, rs.current.colors);
+      if (rl?.length) {
+        // the open clump keeps a soft ring while its list is up
+        const open = useRimList.getState().open;
+        const d = open ? rl.find((l) => l.name === open.name)?.disc : null;
+        if (d) {
+          ctx.save();
+          ctx.beginPath();
+          ctx.arc(d.x, d.y, d.r, 0, Math.PI * 2);
+          ctx.strokeStyle = withAlpha(rs.current.colors.ring, 0.6);
+          ctx.lineWidth = 2 / scale;
+          ctx.stroke();
+          ctx.restore();
+        }
+        drawRimLabels(ctx, rl, scale, rs.current.colors);
+      }
     },
     [names, kbIds],
   );
@@ -1150,7 +1207,7 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
       const res = drawLabelLayer({
         ctx,
         // a quiet clump's papers carry no standing label (the clump is named); hover still names one
-        nodes: g.nodes().filter((n) => !isPile(n) && (!quietRef.current.has(n.id) || n.id === rs.current.hover)),
+        nodes: g.nodes().filter((n) => !isPile(n) && (!quietRef.current.has(n.id) || n.id === rs.current.hover || rs.current.selected.has(n.id))),
         fitIds: coreRef.current,
         width: el.clientWidth,
         height: el.clientHeight,
@@ -1274,8 +1331,9 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
         ref={fg}
         className="size-full"
         data={data}
-        forces={{ charge: viewForces?.charge ?? ui.charge, linkDistance: viewForces?.linkDistance ?? ui.linkDistance, gravity: viewForces?.gravity ?? ui.gravity }}
+        forces={{ charge: rim ? RIM_CHARGE : (viewForces?.charge ?? ui.charge), linkDistance: viewForces?.linkDistance ?? ui.linkDistance, gravity: rim ? 0 : (viewForces?.gravity ?? ui.gravity) }}
         arrows={ui.arrows}
+        citeArc={!!rim}
         nodeRadius={radius}
         drawNode={drawNode}
         drawFramePost={drawFramePost}

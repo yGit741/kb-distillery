@@ -3,8 +3,8 @@
  *
  * Papers are grouped by their embedding topic. The topics go round a ring in their own order, each sector as wide
  * as its share of papers. A topic's uncited papers (no `cites` link either way) are pinned as one tight spiral on the
- * outer rim of its sector; its cited papers are pulled, gently, toward the inner end of the sector, so the citation
- * web fills the middle and never runs through a clump. The topic's name sits on the clump's outer side.
+ * outer rim of its sector; its cited papers are pulled, gently, toward the middle and kept inside a circle clear of
+ * every clump, so the citation web fills the middle and never runs through a clump. The topic's name sits on the clump's outer side.
  */
 
 export interface RimInput {
@@ -14,6 +14,10 @@ export interface RimInput {
 }
 
 export interface RimLabel {
+  /** the topic's uncited papers (the clump), for its list */
+  ids: string[];
+  /** the clump's disc, so a click on it or its name opens the list */
+  disc: { x: number; y: number; r: number } | null;
   name: string;
   count: number;
   /** graph coordinates of the label's anchor, on the clump's outer side */
@@ -33,6 +37,8 @@ export interface RimLayout {
   labels: RimLabel[];
   /** one disc per clump (its spiral plus a margin): no cited paper may enter it */
   discs: { x: number; y: number; r: number }[];
+  /** the circle the cited papers stay inside: clear of every clump, so the web is always the middle */
+  web: number;
 }
 
 const GOLDEN = 2.399963229728653; // radians between two seeds of a sunflower
@@ -62,7 +68,7 @@ export function rimLayout(
   // the web's radius grows with the cited papers; the clumps sit a clear margin outside it
   const cited = papers.filter((p) => p.degree > 0).length;
   const spacing = dot * 1.25; // centre to centre inside a clump: dots just apart
-  const inner = Math.max(dot * 8, Math.sqrt(cited) * dot * 4);
+  const inner = Math.max(dot * 12, Math.sqrt(cited) * dot * 8.5);
   const pins = new Map<string, [number, number]>();
   const pull = new Map<string, [number, number]>();
   const labels: RimLabel[] = [];
@@ -91,7 +97,8 @@ export function rimLayout(
     const sin = Math.sin(mid);
     const orphans = members.filter((p) => p.degree === 0).sort((a, b) => (a.id < b.id ? -1 : 1));
     // cited papers: toward the inner part of their sector
-    for (const p of members) if (p.degree > 0) pull.set(p.id, [cos * inner * 0.4, sin * inner * 0.4]);
+    // cited papers: all toward the middle (the web is one picture, not split by topic), gently
+    for (const p of members) if (p.degree > 0) pull.set(p.id, [0, 0]);
     // uncited papers: a sunflower centred on the rim
     const cx = cos * rim;
     const cy = sin * rim;
@@ -99,12 +106,15 @@ export function rimLayout(
       const r = Math.sqrt(i + 0.5) * spacing * 0.56;
       pins.set(p.id, [cx + r * Math.cos(i * GOLDEN), cy + r * Math.sin(i * GOLDEN)]);
     });
-    if (orphans.length) discs.push({ x: cx, y: cy, r: clumpR(orphans.length) + dot * 1.5 });
+    const disc = orphans.length ? { x: cx, y: cy, r: clumpR(orphans.length) + dot * 1.5 } : null;
+    if (disc) discs.push(disc);
     // the name on the clump's outer side, running away from the centre
     const out = clumpR(orphans.length) + dot * 1.5;
     const lx = cx + cos * out;
     const ly = cy + sin * out;
     labels.push({
+      ids: orphans.map((p) => p.id),
+      disc,
       name: t === NONE ? "No vector" : (names.get(t) ?? `Topic ${t + 1}`),
       count: members.length,
       x: lx,
@@ -113,5 +123,17 @@ export function rimLayout(
       baseline: Math.abs(cos) < 0.3 ? (sin > 0 ? 1 : -1) : 0,
     });
   }
-  return { pins, pull, labels, discs };
+  // the web's circle ends a clear margin before the nearest clump begins
+  const web = Math.max(inner, rim - clumpR(biggest) - dot * 4);
+  return { pins, pull, labels, discs, web };
+}
+
+/** The clump a graph point falls on: inside its disc, or on its name (within `labelReach` of the label's anchor). */
+export function clumpAt(labels: readonly RimLabel[], x: number, y: number, labelReach: number): RimLabel | null {
+  for (const l of labels) {
+    if (!l.ids.length) continue;
+    if (l.disc && Math.hypot(x - l.disc.x, y - l.disc.y) <= l.disc.r) return l;
+    if (Math.hypot(x - l.x, y - l.y) <= labelReach) return l;
+  }
+  return null;
 }
