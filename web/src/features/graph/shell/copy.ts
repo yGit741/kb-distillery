@@ -125,6 +125,8 @@ export const LINE_COPY = {
     pinFailed: "Could not pin this view.",
   },
   favoritesCommand: { label: "Favorites", hint: "the pages you marked" },
+  /** Flag graph-corners: pin the view on screen (the pinned corner holds only what was pinned). */
+  pinCommand: { label: "Pin this view", hint: "keep it in the pinned corner" },
   exportNone: "Could not read those pages to export.",
   exportFailed: "Could not copy to the clipboard.",
   exported: (n: number) => `Copied ${n} ${n === 1 ? "page" : "pages"} as an OKF bundle.`,

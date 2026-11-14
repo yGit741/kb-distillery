@@ -2,6 +2,7 @@ import { SYSTEM_TABS } from "@/routes/search";
 import { routeOffered, ROUTE_DEFS } from "@/routes/defs";
 import { formatKbs } from "@/lib/kbSelection";
 import { flag } from "@/flags";
+import { useCorners } from "./corners/cornersStore";
 import { useUi } from "@/app/ui-store";
 import { useGraphUi } from "../store";
 import { useGallery } from "../views/galleryStore";
@@ -89,6 +90,13 @@ export function goCommands(host: ToolHost, share: boolean): Command[] {
 }
 
 /** Everything the toolbar and the command palette offer for the graph, as one flat list (order = display order). */
+/** Open the pinned corner with its name field, so the view on screen can be pinned under a name. */
+function pinThisView(): void {
+  const corners = useCorners.getState();
+  if (!corners.has("pins")) corners.toggle("pins");
+  corners.startEdit({ kind: "pin" });
+}
+
 export function buildCommands(c: CommandCtx): Command[] {
   const out: Command[] = [
     { id: "fit", label: "Fit to view", group: "View", icon: "fit", hint: "F", keywords: "zoom reset centre", run: c.onFit },
@@ -108,6 +116,10 @@ export function buildCommands(c: CommandCtx): Command[] {
     ...(c.intent
       ? [
           { id: "views", label: LINE_COPY.views.command.label, group: "View", icon: "labels", hint: LINE_COPY.views.command.hint, keywords: "saved pinned recent ready", fill: "/views ", run: () => {} } satisfies Command,
+          // flag graph-corners: the pinned corner holds only pinned views, so pinning the view on screen is a command
+          ...(flag("graph-corners") && !c.share
+            ? [{ id: "pin-view", label: LINE_COPY.pinCommand.label, group: "View", icon: "labels", hint: LINE_COPY.pinCommand.hint, keywords: "pin save keep remember view", run: pinThisView } satisfies Command]
+            : []),
           { id: "gallery", label: LINE_COPY.gallery.command.label, group: "View", icon: "labels", hint: LINE_COPY.gallery.command.hint, keywords: "views ready pinned recent browse", run: () => useGallery.getState().show() } satisfies Command,
           { id: "favorites", label: LINE_COPY.favoritesCommand.label, group: "View", icon: "favorite", hint: LINE_COPY.favoritesCommand.hint, keywords: "starred marked pages", fill: "/favorites ", run: () => {} } satisfies Command,
         ]
