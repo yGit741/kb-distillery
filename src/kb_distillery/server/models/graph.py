@@ -34,7 +34,7 @@ class GraphLink(ApiModel):
 class GraphRelation(GraphLink):
     """A typed relation (flag `graph-relations`, kb_distillery.graph.relations), keyed (source, target, kind)."""
     kind: str                            # a stored kind from kb.toml [edges] types, or mentions | shares-source |
-                                         # advisor-of | student-of | name-match | collaborates-with | similar-to
+                                         # advisor-of | student-of | name-match | collaborates-with | similar-to | cites
     origin: str                          # stored (the page's `relations:` block) | computed
     note: str = ""
     weight: float = 1.0

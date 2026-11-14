@@ -18,6 +18,8 @@ by `problems`. Computed kinds come from existing data:
     name-match         a source whose `authors:` names a person page, when neither page links the other
     collaborates-with  two person pages named together on one source's `authors:`
     similar-to         the closest pages by card vector (`<kb>/.cache/vectors.sqlite`), only when it exists
+    cites              paper A lists paper B in its references (`<kb>/.cache/citations.json`, Semantic Scholar),
+                       directed, only between pages of this kb, only when the cache exists
 
 Every edge is keyed (source, target, kind) and carries `origin` (stored | computed), `note` and `weight`; a stored
 edge wins over a computed one with the same key. Symmetric computed kinds are emitted once (source < target).
@@ -33,7 +35,8 @@ STORED, COMPUTED, PROPOSED = "stored", "computed", "proposed"
 PROPOSALS_FILE = "relations-proposals.jsonl"      # `<kb>/.cache/`, written by kb_distillery.graph.propose (every valid proposal)
 MENTIONS, SHARES_SOURCE, NAME_MATCH = "mentions", "shares-source", "name-match"
 ADVISOR_OF, STUDENT_OF, COLLABORATES_WITH, SIMILAR_TO = "advisor-of", "student-of", "collaborates-with", "similar-to"
-COMPUTED_KINDS = (MENTIONS, SHARES_SOURCE, ADVISOR_OF, STUDENT_OF, NAME_MATCH, COLLABORATES_WITH, SIMILAR_TO)
+CITES = "cites"
+COMPUTED_KINDS = (MENTIONS, SHARES_SOURCE, ADVISOR_OF, STUDENT_OF, NAME_MATCH, COLLABORATES_WITH, SIMILAR_TO, CITES)
 SIMILAR_K = 3            # each page's closest pages …
 SIMILAR_MIN = 0.75       # … at or above this cosine (a typical kb: ~200 pairs)
 
@@ -312,6 +315,28 @@ def similar_edges(pages, root, k=SIMILAR_K, min_cos=SIMILAR_MIN):
 _SIM_CACHE = {}          # one entry: (store, its mtime, page set, k, min) → edges
 
 
+def cites_edges(pages, root):
+    """cites from each paper to the papers in its references, both pages of this kb; [] without the cache."""
+    path = os.path.join(root, ".cache", "citations.json") if root else ""
+    try:
+        with open(path, encoding="utf-8") as f:
+            papers = json.load(f).get("papers")
+    except (OSError, ValueError, AttributeError):
+        return []                      # no cache or an unreadable one: no cites edges, never a 500
+    if not isinstance(papers, dict):
+        return []
+    slug_of = {pid: p["slug"] for pid, p in papers.items()
+               if isinstance(p, dict) and p.get("slug") in pages}
+    edges, seen = [], set()
+    for pid, slug in sorted(slug_of.items(), key=lambda kv: kv[1]):
+        for ref in papers[pid].get("references") or []:
+            to = slug_of.get(ref)
+            if to and to != slug and (slug, to) not in seen:
+                seen.add((slug, to))
+                edges.append(_edge(slug, to, CITES, COMPUTED))
+    return edges
+
+
 def build(pages, nodes, links, concept_links, config, root=None):
     """Every relation of a knowledge base, stored first, deduplicated on (source, target, kind)."""
     titles = {n["id"]: n.get("title", "") for n in nodes}
@@ -323,7 +348,8 @@ def build(pages, nodes, links, concept_links, config, root=None):
                     f"{c['shared']} shared source{'s' if c['shared'] != 1 else ''}", float(c["shared"]))
               for c in concept_links]
     groups = (stored_edges(pages, config), mentions, shares, person_edges(pages),
-              author_edges(pages, person_names(pages, titles, root), mentioned, layer_of), similar_edges(pages, root))
+              author_edges(pages, person_names(pages, titles, root), mentioned, layer_of), similar_edges(pages, root),
+              cites_edges(pages, root))
     out, seen = [], set()
     for group in groups:
         for e in group:

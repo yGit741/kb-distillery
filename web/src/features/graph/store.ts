@@ -241,7 +241,7 @@ export const useGraphUi = create<GraphUiState>((set, get) => ({
       view: null,
       hiddenKeys: new Set(),
       hiddenLinkKinds: new Set(),
-      quick: QUICK_OFF,
+      quick: { ...QUICK_OFF, ...st.quick },
       revealed: new Set(),
     });
   },

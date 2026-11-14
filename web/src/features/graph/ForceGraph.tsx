@@ -343,7 +343,8 @@ export const ForceGraph = forwardRef<ForceGraphHandle, ForceGraphProps & { class
   }, [props.forces.charge, props.forces.linkDistance, props.forces.gravity]);
 
   useEffect(() => {
-    fg.current?.linkDirectionalArrowLength(props.arrows ? 4 : 0);
+    // a cites link always shows who cites whom; other links only with the Directional arrows setting
+    fg.current?.linkDirectionalArrowLength((l) => (props.arrows || asLink(l as LinkObject).kind === "cites" ? 4 : 0));
   }, [props.arrows]);
 
   useImperativeHandle(

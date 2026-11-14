@@ -140,7 +140,6 @@ describe("graph consistency guard", () => {
   const SURFACES: Readonly<Record<string, { host: string; component: string; legend: "GraphLegend" | "Legend" }>> = {
     "features/graph/GraphCanvas.tsx": { host: "features/graph/GraphScreen.tsx", component: "GraphCanvas", legend: "Legend" },
     "features/graph/CitationView.tsx": { host: "features/graph/CitationView.tsx", component: "ForceGraph", legend: "GraphLegend" },
-    "features/graph/CitationMap.tsx": { host: "features/graph/CitationMap.tsx", component: "ForceGraph", legend: "GraphLegend" },
     "features/home/SampleGraph.tsx": { host: "features/home/ConceptExplorer.tsx", component: "SampleGraph", legend: "GraphLegend" },
     "features/pages/MiniGraph.tsx": { host: "features/pages/MiniGraph.tsx", component: "NodeMarkG", legend: "GraphLegend" },
     "features/edit-preview/TouchedGraph.tsx": { host: "features/edit-preview/TouchedGraph.tsx", component: "NodeMarkG", legend: "GraphLegend" },

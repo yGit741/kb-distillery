@@ -21,6 +21,7 @@ import { askAbout, useChatDock } from "./tools/chatDockStore";
 import "./directions/register";
 import { extendView, makeView, parsePages, scopeIds, type GraphView } from "./pageSearch";
 import { buildNeighborMap } from "./graphData";
+import { withStoryEdges } from "./storyEdges";
 import { GraphCanvas, type CanvasHandle } from "./GraphCanvas";
 import { Inspector } from "./Inspector";
 import { computeImportance } from "./lab/importance";
@@ -34,6 +35,7 @@ import { Legend } from "./Legend";
 import { predicateFn } from "./publicPredicate";
 import { ViewsBar } from "./views/ViewsBar";
 import { NodeMenu } from "./NodeMenu";
+import { OutsideGroup } from "./OutsideGroup";
 import { applyQuick } from "./quickFilters";
 import { computeVisible } from "./rules";
 import { assignAreaColors, colorKey, effectiveColorBy } from "./style";
@@ -155,6 +157,9 @@ export function GraphScreen({ search, host }: { search: GraphSearch; host: Graph
   // The model is rebuilt only when the wiki changed (etag), not on every poll.
   const etag = snap?.etag;
   const model = useMemo(() => (snap ? toModel(snap) : null), [etag, snap?.layer]); // eslint-disable-line react-hooks/exhaustive-deps
+  // a view that draws a relation (Citations: `cites`) swaps the links for it; every other view draws the model as is
+  const story = useGraphUi((s) => s.story);
+  const drawn = useMemo(() => (model ? withStoryEdges(model, storyById(story)) : null), [model, story]);
   // the kit's types, plus any type the pages carry that the kit does not define (an imported OKF bundle's), so the
   // Map, the legend and the marks treat them as real types
   const schema = useMemo(() => {
@@ -223,7 +228,7 @@ export function GraphScreen({ search, host }: { search: GraphSearch; host: Graph
   return (
     <FullBleed>
       <Loaded
-        model={model}
+        model={drawn ?? model}
         schema={schema}
         host={kbHost}
         search={search}
@@ -352,6 +357,12 @@ function Loaded({
   );
   // the legend's one-click filters run last, on what the others left (./quickFilters)
   const visible = useMemo(() => applyQuick(filtered, byId, neighbors, selection, ui.quick), [filtered, byId, neighbors, selection, ui.quick]);
+  // a view that draws a relation (Citations) shows the pages no such link reaches as one small group at the side
+  const drawsEdges = !!storyById(ui.story)?.edges?.length;
+  const outside = useMemo(
+    () => (drawsEdges ? [...filtered].filter((id) => !visible.has(id) && !neighbors.get(id)?.length).map((id) => byId.get(id)!).filter(Boolean) : []),
+    [drawsEdges, filtered, visible, neighbors, byId],
+  );
   const imp = useMemo(() => computeImportance({ visible, byId, neighbors, cfg: ui.lab }), [visible, byId, neighbors, ui.lab]);
   const wide = useWide();
   const stats = `${visible.size} of ${model.nodes.length} pages · ${model.links.length} links · ${generatedAt.slice(0, 16).replace("T", " ")}${dsKind === "embedded" ? " · snapshot" : ""}`;
@@ -661,6 +672,9 @@ function Loaded({
         onOpenPile={(format) => useLayer.getState().openDrawer({ kind: "format", format })}
       />
       </div>
+      {outside.length > 0 && (
+        <OutsideGroup nodes={outside} colorBy={ui.colorBy} noun="papers" onShow={() => useGraphUi.setState({ quick: { ...ui.quick, connected: 0 } })} />
+      )}
       {/* the search box lives in the app header when there is one (the embed has none: it floats over the canvas) */}
       {shell ? (
         // the search line and the corner controls share one frame: it narrows while the side reader is open, so the reader never covers them

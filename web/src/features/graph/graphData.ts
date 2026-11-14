@@ -108,7 +108,7 @@ export function edgeWeights(model: Pick<GraphModel, "links" | "conceptLinks">): 
     const k = a < b ? `${a}\0${b}` : `${b}\0${a}`;
     out.set(k, (out.get(k) ?? 0) + w);
   };
-  for (const l of model.links) if (l.kind === "wikilink" || l.kind === "related" || l.kind === "book") add(l.source, l.target, 1);
+  for (const l of model.links) if (l.kind === "wikilink" || l.kind === "related" || l.kind === "book" || l.kind === "cites") add(l.source, l.target, 1);
   for (const c of model.conceptLinks) add(c.source, c.target, c.shared);
   return out;
 }

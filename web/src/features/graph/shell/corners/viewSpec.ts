@@ -35,16 +35,22 @@ export interface ViewSpecV2 {
 type Ui = ReturnType<typeof useGraphUi.getState>;
 type CaptureUi = Pick<Ui, "story" | "colorBy" | "sizeBy" | "shownTypes" | "shownDepths" | "hiddenKeys" | "quick" | "view"> & { flyout?: Ui["flyout"] };
 
-/** The named view whose tool is open now (the citation map), or "": such a view pins as `{ v: 1, story }` alone. */
+/** A view that is its name: it opens a tool, or draws a relation as its links (Citations: `cites`). */
+const ownsView = (st: ReturnType<typeof storyById>): boolean => !!st && (!!st.tool || !!st.edges?.length);
+
+/** The named view that is on now and is its name (its tool open, or it draws a relation), or "": such a view
+ * pins as `{ v: 1, story }` alone. */
 export function toolStoryOpen(ui: Pick<CaptureUi, "story" | "flyout">): string {
   const st = ui.story ? storyById(ui.story) : undefined;
-  return st?.tool && ui.flyout === st.tool.id ? st.id : "";
+  if (!st) return "";
+  if (st.edges?.length) return st.id;
+  return st.tool && ui.flyout === st.tool.id ? st.id : "";
 }
 
-/** Whether a spec names a view that opens a tool: it restores through the screen's view path, never as layers. */
+/** Whether a spec names a view that is its name: it restores through the screen's view path, never as layers. */
 export const isToolStorySpec = (spec: Record<string, unknown>): boolean => {
   const st = typeof spec.story === "string" ? storyById(spec.story) : undefined;
-  return !!st?.tool && storyKnown(st.id) && storyOffered(st);
+  return ownsView(st) && storyKnown(st!.id) && storyOffered(st!);
 };
 
 /**
@@ -54,7 +60,7 @@ export const isToolStorySpec = (spec: Record<string, unknown>): boolean => {
 export function captureSpec(ui: CaptureUi): ViewSpecV1;
 export function captureSpec(ui: CaptureUi, stack: ViewStack | undefined): ViewSpecV1 | ViewSpecV2;
 export function captureSpec(ui: CaptureUi, stack?: ViewStack): ViewSpecV1 | ViewSpecV2 {
-  // a view that is a tool (the citation map) is its name: the knobs and layers behind the sheet are not the view
+  // a view that is its name (a tool, or Citations): the knobs and layers it sets are not a separate view
   const tool = toolStoryOpen(ui);
   if (tool) return { v: 1, story: tool } as ViewSpecV1;
   if (stack?.layers.length) return { v: 2, layers: stack.layers, text: stack.layers.map(describe).join(" · ") };
@@ -88,7 +94,7 @@ const isArr = (v: unknown): v is string[] => Array.isArray(v) && v.every((x) => 
 export function applySpec(spec: Record<string, unknown>, deps: ApplyDeps, pin?: { name: string }): boolean {
   // flag graph-intent: a pinned view is a layer stack. A v2 spec applies as layers (replacing the view); a V1 spec as one
   // "legacy" layer named like the pin, drawn by `applySpecV1` through the layer store.
-  // a view that opens a tool (the citation map) has no layer form: it goes through the screen's own view path
+  // a view that is its name (a tool, or Citations) has no layer form: it goes through the screen's own view path
   if (isToolStorySpec(spec)) return applySpecV1(spec, deps);
   if (flag("graph-intent")) {
     const layers = specLayers(spec);

@@ -1,6 +1,7 @@
 import type { Layer } from "@/api/model";
 import { flag, type FlagName } from "@/flags";
 import type { Predicate } from "../publicPredicate";
+import type { QuickFilters } from "../quickFilters";
 import type { ColorBy, SizeBy } from "../style";
 import { DEFAULT_LAB, type LabConfig } from "./config";
 
@@ -27,6 +28,14 @@ export interface Story {
   predicate?: Predicate;
   /** Pages the view is built around: they and their neighbours are drawn, the rest hidden. */
   seed?: readonly string[];
+  /** Relation kinds (`/api/graph` relations) the view draws as its links, in place of the page links: the
+   * Citations view draws `cites`. The rest of the graph (legend, labels, hover, the genealogy drawer) is unchanged. */
+  edges?: readonly string[];
+  /** Layout forces the view draws with, over the reader's own; `pack` pulls every page toward the middle, so
+   * small separate components sit close instead of drifting apart (Citations). */
+  forces?: Partial<{ charge: number; linkDistance: number; gravity: number; pack: number }>;
+  /** The legend's one-click filters the view starts with (the reader can switch them off as usual). */
+  quick?: Partial<QuickFilters>;
   /** A tool panel the view opens (and the experiment flag it needs). */
   tool?: { id: string; flag?: string };
   /** A feature flag (kits/base/defaults/flags.toml): the view is offered only while it is on. */
@@ -99,13 +108,17 @@ export const STORIES: readonly Story[] = [
   {
     id: "citations",
     name: "Citations: who cites whom",
-    story: "As a reader of the papers, I want every cataloged paper and its cites links in one map, coloured by how far each got (no citation data, listed, then each digest depth), so that the founding papers and the gaps in my reading show at a glance.",
-    lab: {},
+    story: "As a reader of the papers, I want my papers joined by who cites whom, the most cited named and each coloured by how deeply I read it, so that the founding papers and the gaps in my reading show at a glance.",
+    // the main graph with its links swapped for `cites` (computed from the citation cache); papers with no cites
+    // link stay out through the Connected filter, which the reader switches off to see them
+    edges: ["cites"],
+    quick: { connected: 1 },
+    forces: { charge: -60, linkDistance: 40, pack: 0.08 },
+    lab: { degBasis: "nohub", strategy: "count", count: 12, scope: "screen", zoomGrowth: 1.5, regions: "off", hulls: false, questionLabels: "none", wrapT2: 100 },
     colorBy: "depth",
-    sizeBy: "connections",
+    sizeBy: "in",
     layoutMode: "free",
-    layers: ["source"],
-    tool: { id: "citations" },
+    types: ["paper"],
   },
   {
     id: "map",
