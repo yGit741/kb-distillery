@@ -32,6 +32,7 @@ export const COLOR_TITLE: Readonly<Record<ColorBy, string>> = {
   depth: "depth",
   status: "status",
   area: "theme",
+  topic: "topic",
   degree: "links",
   evidence: "evidence",
   score: "importance",

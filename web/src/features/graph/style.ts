@@ -1,9 +1,9 @@
-import { depthColor, layerColor, statusColor, typeColor, UNKNOWN_COLOR } from "@/theme/palette";
+import { clusterColor, depthColor, layerColor, statusColor, typeColor, UNKNOWN_COLOR } from "@/theme/palette";
 import { areaDisplay } from "./displayNames";
 import { markOf, RING_BOOST } from "./encoding/spec";
 import { degreeOf, type GNode } from "./types";
 
-export type ColorBy = "type" | "layer" | "depth" | "status" | "area" | "degree" | "evidence" | "score" | "none" | "format" | "recency" | "added";
+export type ColorBy = "type" | "layer" | "depth" | "status" | "area" | "degree" | "evidence" | "score" | "none" | "format" | "recency" | "added" | "topic";
 export type SizeBy = "connections" | "in" | "out" | "uniform" | "tier" | "evidence" | "score" | "gap" | "logdeg";
 
 /** Size and colour modes that read a 0..1 signal of the importance score (lab/importance) instead of the page. */
@@ -109,6 +109,15 @@ export type AreaSlots = ReadonlyMap<string, string>;
 /** An area's colour: its slot, grey past the palette, lighter grey for none. */
 export const areaHue = (area?: string | null, slots: AreaSlots = AREA_SLOT): string => (!area ? NONE_GREY : (slots.get(area) ?? OTHER_GREY));
 
+/** Topics (flag ui.embedding-views): each page's embedding cluster and each cluster's name, set once the embedding loads. */
+let TOPICS: { of: ReadonlyMap<string, number>; names: ReadonlyMap<number, string> } = { of: new Map(), names: new Map() };
+export function setTopics(of: ReadonlyMap<string, number>, names: ReadonlyMap<number, string>): void {
+  TOPICS = { of, names };
+}
+/** A page without a vector has no topic: the neutral "none" colour, its own key row (sorted last). */
+export const NO_TOPIC = "No vector";
+const topicOf = (n: Pick<GNode, "id">): number | undefined => TOPICS.of.get(n.id);
+
 /** Colourings with an order (little -> much): they take the neutral ramp, not a hue. */
 export const RAMP_BY: ReadonlySet<ColorBy> = new Set(["depth", "degree", "evidence", "score", "recency", "added"]);
 /** Continuous colourings: their legend is one gradient bar with its two ends named, never a list of swatches. */
@@ -208,6 +217,10 @@ export function colorOf(n: GNode, by: ColorBy, metric?: number, ramp?: "light" |
       return n.type === "person" && !n.areas[0] ? PERSON_INK : areaHue(areaOf(n, typeKeyed(slots ?? AREA_SLOT)), slots);
     case "degree":
       return degreeBand(n).color;
+    case "topic": {
+      const t = topicOf(n);
+      return t === undefined ? NONE_GREY : clusterColor(t);
+    }
     default:
       return "#7aa2ff";
   }
@@ -238,6 +251,10 @@ export function colorKey(n: GNode, by: ColorBy, slots: AreaSlots = AREA_SLOT): s
       }
     case "degree":
       return degreeBand(n).label;
+    case "topic": {
+      const t = topicOf(n);
+      return t === undefined ? NO_TOPIC : (TOPICS.names.get(t) ?? `Topic ${t + 1}`);
+    }
     case "none":
       return "All pages";
     default:
@@ -335,4 +352,5 @@ export function semanticRadius(rGraph: number, scale: number, zr: number): numbe
 }
 
 /** Type is the mark (./encoding), so colour by type would repeat the shape: such a view colours by area instead. */
-export const effectiveColorBy = (by: ColorBy): ColorBy => (by === "type" ? "area" : by);
+/** A topic colouring without topics loaded (flag off, no embedding) colours by theme instead of all grey. */
+export const effectiveColorBy = (by: ColorBy): ColorBy => (by === "type" || (by === "topic" && !TOPICS.of.size) ? "area" : by);

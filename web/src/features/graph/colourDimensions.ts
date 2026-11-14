@@ -34,3 +34,8 @@ export function dimensionsFor(subjects: readonly GraphSubject[]): Dimension[] {
   for (const s of subjects) for (const d of DIMENSIONS[s]) if (!out.some((o) => o.by === d.by)) out.push(d);
   return out;
 }
+
+/** Flag ui.embedding-views: the concepts' "topic" colouring (embedding cluster), offered once the embedding is loaded. */
+export const TOPIC_DIMENSION: Dimension = { by: "topic", label: "topic" };
+export const withTopic = (dims: readonly Dimension[], on: boolean): Dimension[] =>
+  on && !dims.some((d) => d.by === "topic") ? [...dims, TOPIC_DIMENSION] : dims.filter((d) => d.by !== "topic");

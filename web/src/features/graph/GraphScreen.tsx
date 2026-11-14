@@ -1,4 +1,5 @@
 import { keepPreviousData, useQueryClient } from "@tanstack/react-query";
+import { EmbeddingLayer } from "./embedding/EmbeddingLayer";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useDataSource } from "@/api";
@@ -695,6 +696,7 @@ function Loaded({
             views={calmViews}
             onPickView={pickView}
           />
+          <EmbeddingLayer nodes={model.nodes} neighbors={neighbors} />
           <Corners nodes={model.nodes} visible={visible} schema={schema} shownTypes={shownTypes} stats={stats} host={host} applyView={applyView} showPicked={showPicked} />
         </div>
       ) : headerSlot ? (

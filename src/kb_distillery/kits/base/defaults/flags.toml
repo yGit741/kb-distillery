@@ -367,3 +367,13 @@ expires = 2027-02-09
 kind = "runtime"
 default = false
 envs = { local = true, private = false, public = false }
+
+[[flag]]
+name = "ui.embedding-views"
+description = "Graph: three views built on the page embedding, offered as suggested rows in the pinned views: colour concepts by topic (embedding cluster), the meaning map (pages placed by two principal components) and missing links (pages close in meaning with no link, plus semantic orphans)."
+owner = "maintainer"
+created = 2026-11-14
+expires = 2027-02-11
+kind = "runtime"
+default = false
+envs = { local = true, private = false, public = false }

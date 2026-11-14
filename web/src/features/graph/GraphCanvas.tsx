@@ -33,6 +33,8 @@ import { drawPile, formatOfPile, isPile, isPileId, pileRadius } from "./rawLayer
 import { DRAG_PX } from "./selection";
 import { useGraphUi } from "./store";
 import { useDecor } from "./tools/decor";
+import { meaningPositions } from "./embedding/model";
+import { useEmbedView } from "./embedding/store";
 import { drawNode as drawNodeMark } from "./encoding/canvas";
 import { drawReplayMark, drawReplayPath, LIT_DIM } from "./shell/replayDraw";
 import { linkKey, popSources } from "./shell/thinking";
@@ -40,7 +42,7 @@ import { drawCiteBadge, drawGlow, drawHotRing, drawWebSource, popScale, THINK_DI
 import { ThinkingLegend } from "./shell/ThinkingLegend";
 import { useThinking } from "./shell/thinkingStore";
 import { personInitials, SOURCE_GLYPH_PX } from "./encoding/spec";
-import { colorOf, effectiveColorBy, layeredRadii, METRIC_COLORS, nodeRadius, semanticRadius, type ColorBy, type SizeBy } from "./style";
+import { colorOf, effectiveColorBy, layeredRadii, METRIC_COLORS, nodeRadius, NONE_GREY, semanticRadius, type ColorBy, type SizeBy } from "./style";
 import type { GNode, GraphModel, SimLink, SimNode } from "./types";
 import { useChatFull } from "./shell/chatFullStore";
 
@@ -133,6 +135,27 @@ function themeAnchors(nodes: readonly SimNode[], ring: ReadonlyMap<string, reado
     if (t.areas[0] && !out.has(t.areas[0])) out.set(t.areas[0], p);
   }
   return out;
+}
+
+/** Missing links (flag ui.embedding-views): each candidate pair as a straight dashed line in the accent colour. */
+function drawCandidates(ctx: CanvasRenderingContext2D, nodes: readonly SimNode[], pairs: readonly { a: { slug: string }; b: { slug: string } }[], scale: number, color: string): void {
+  const at = new Map<string, SimNode>();
+  for (const n of nodes) if (n.x != null && n.y != null) at.set(n.id, n);
+  ctx.save();
+  ctx.strokeStyle = color;
+  ctx.globalAlpha = 0.75;
+  ctx.lineWidth = 1.4 / scale;
+  ctx.setLineDash([5 / scale, 4 / scale]);
+  ctx.beginPath();
+  for (const p of pairs) {
+    const s = at.get(p.a.slug);
+    const t = at.get(p.b.slug);
+    if (!s || !t) continue;
+    ctx.moveTo(s.x as number, s.y as number);
+    ctx.lineTo(t.x as number, t.y as number);
+  }
+  ctx.stroke();
+  ctx.restore();
 }
 
 const endId = (e: string | SimNode) => (typeof e === "string" ? e : e.id);
@@ -440,8 +463,33 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
   const srcCount = useMemo(() => (intentOn ? sourceCounts(model.nodes, neighbors) : null), [intentOn, model, neighbors]);
   const viewRef = useRef({ sides, srcCount });
   viewRef.current = { sides, srcCount };
+  // flag ui.embedding-views, the meaning map: every page pinned at its two components (pages without a vector in a
+  // column beside them); computed before the ring so that leaving the map hands the topics back to it
+  const mapOn = useEmbedView((s) => s.view === "map" && !!s.pc);
+  const axes = useEmbedView((s) => s.axes);
+  const pcs = useEmbedView((s) => s.pc);
+  const mapPins = useRef(new Set<string>());
+  const meaning = useMemo(() => {
+    const nodes = data.nodes as SimNode[];
+    if (!mapOn || !pcs) {
+      if (mapPins.current.size) for (const n of nodes) if (mapPins.current.has(n.id)) n.fx = n.fy = undefined;
+      mapPins.current.clear();
+      return false;
+    }
+    const half = (10 * Math.sqrt(nodes.length) + 60) * (ui.linkDistance / 28);
+    const pos = meaningPositions(nodes.filter((n) => !isPile(n)).map((n) => n.id), pcs, axes, half);
+    for (const n of nodes) {
+      const p = pos.get(n.id);
+      if (!p) continue;
+      n.fx = p[0];
+      n.fy = p[1];
+      mapPins.current.add(n.id);
+    }
+    return true;
+  }, [data, mapOn, pcs, axes, ui.linkDistance]);
   const anchors = useMemo(() => {
     const nodes = data.nodes as SimNode[];
+    if (meaning) return null;
     if (ui.layoutMode !== "anchored" || sides) {
       for (const n of nodes) if (n.type === "topic") n.fx = n.fy = undefined;
       return null;
@@ -452,7 +500,7 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
       ringRef.current = { model, linkDistance: ui.linkDistance, ring: themeRing(topics, nodes.length, ui.linkDistance) };
     }
     return themeAnchors(nodes, ringRef.current!.ring);
-  }, [data, model, ui.layoutMode, ui.linkDistance, sides]);
+  }, [data, model, ui.layoutMode, ui.linkDistance, sides, meaning]);
   // several knowledge bases: each is pulled toward its own anchor (a row, left to right), so its pages stay one
   // region and a page with no links cannot drift off; dragging a region's name moves its anchor
   const kbIds = useMemo(() => ((model.kbs?.length ?? 0) > 1 ? model.kbs!.map((k) => k.id) : []), [model]);
@@ -464,7 +512,9 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
   }, [kbIds, model, ui.linkDistance]);
   const anchor = useMemo<Anchor | null>(
     () =>
-      kbIds.length
+      meaning
+        ? null
+        : kbIds.length
         ? { strength: 0.12, target: (n) => (n.kb ? (kbAnchor.current.get(n.kb) ?? null) : null) }
         : sides
         ? {
@@ -481,16 +531,22 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
             },
           }
         : null,
-    [anchors, ui.areaPull, kbIds, sides, ui.linkDistance, data.nodes.length],
+    [anchors, ui.areaPull, kbIds, sides, ui.linkDistance, data.nodes.length, meaning],
   );
   // the first layout already uses the mode and pull (settled off screen); only the user's later change animates
   // (compared by value, so StrictMode's second mount run doesn't count as a change)
   const layoutWas = useRef<string | null>(null);
   useEffect(() => {
-    const now = `${ui.layoutMode}|${ui.areaPull}|${sides}`;
-    if (layoutWas.current !== null && layoutWas.current !== now) fg.current?.reheat();
+    const map = meaning ? axes.join(",") : "";
+    const now = `${ui.layoutMode}|${ui.areaPull}|${sides}|${map}`;
+    const was = layoutWas.current;
+    if (was !== null && was !== now) fg.current?.reheat();
     layoutWas.current = now;
-  }, [ui.layoutMode, ui.areaPull, sides]);
+    // entering, leaving or turning the meaning map is a layout command: frame the new shape once it has moved
+    if (was === null || was.slice(was.lastIndexOf("|") + 1) === map) return;
+    const t = setTimeout(() => useGraphUi.getState().fit(), SIDE_SETTLE_MS);
+    return () => clearTimeout(t);
+  }, [ui.layoutMode, ui.areaPull, sides, meaning, axes]);
   // switching between Concepts and Sources is a layout command (the switch, `> sources`, or a view that draws the
   // other subject): once the two sides have moved apart (or back), the camera frames the new shape. Its own effect,
   // so another layout knob changed meanwhile does not cancel it.
@@ -510,6 +566,7 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
 
   // ---- tool decor (experiment halos, faded links) is read at draw time; a change only needs a redraw
   useEffect(() => useDecor.subscribe(() => fg.current?.refresh()), []);
+  useEffect(() => useEmbedView.subscribe((a, b) => (a.lens !== b.lens || a.pc !== b.pc) && fg.current?.refresh()), []);
   useEffect(() => {
     fg.current?.refresh();
   }, [thinkHot]);
@@ -879,7 +936,9 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
       // flag show-thinking: a page that is not part of the answer is grey as well as dim
       // the Sources view colours the sources; the concepts beside them stay neutral, so the colour has one meaning
       const aside = viewRef.current.sides && n.layer !== "source";
-      const col = (tk && !role) || aside ? colors.muted : colorOf(n, by, METRIC_COLORS.has(by) ? metricOf(rs.current.imp, n, by) : undefined, live.current.theme);
+      // flag ui.embedding-views, missing links: the pages of a candidate pair keep their colour, the rest is grey
+      const lens = useEmbedView.getState().lens;
+      const col = lens && !lens.pages.has(n.id) ? NONE_GREY : (tk && !role) || aside ? colors.muted : colorOf(n, by, METRIC_COLORS.has(by) ? metricOf(rs.current.imp, n, by) : undefined, live.current.theme);
       if (role) drawGlow(ctx, n.x, n.y, r, col, role, scale, live.current.theme === "dark");
       // the shared encoding (./encoding): selection ring or hover glow, then the type's mark; a source is a plain dot
       // until it is big enough on screen (zoom) or under the pointer, then its type glyph
@@ -986,6 +1045,8 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
         });
       }
       if (arcs?.length) drawArcs(ctx, g.nodes(), arcs, scale, rs.current.colors);
+      const lens = useEmbedView.getState().lens;
+      if (lens?.pairs.length) drawCandidates(ctx, g.nodes(), lens.pairs, scale, rs.current.colors.ring);
       const u = live.current.ui;
       // hulls say where (area tints, or one per knowledge base when several share the canvas) and show only
       // when the nodes do not already say it with their colour
@@ -993,7 +1054,8 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
         drawKbOutlines(ctx, kbGroups(g.nodes().filter((n) => !isPile(n))), scale, rs.current.colors.muted);
         return;
       }
-      const hulls = effectiveColorBy(u.colorBy) !== "area";
+      // no area hulls under a topic colouring or the missing-links lens: two groupings at once would compete
+      const hulls = effectiveColorBy(u.colorBy) !== "area" && u.colorBy !== "topic" && !lens;
       if (hulls) drawHulls(ctx, g.nodes().filter((n) => !isPile(n)), scale, names, u.lab.hullSigma);
     },
     [names, kbIds],
