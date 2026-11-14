@@ -79,6 +79,8 @@ export function fanReach(n: number): number {
 
 // ---- colour legend ---------------------------------------------------------------------------------------
 
+/** Height of the open legend's header row ("Color by ⌄ topic"). */
+export const LEGEND_HEAD = 22;
 export const LEGEND_REST_ROW = 10;
 export const LEGEND_OPEN_ROW = 24;
 export const LEGEND_PAD = 8;
@@ -87,7 +89,14 @@ export const LEGEND_BAR_REST = 44;
 export const LEGEND_BAR_OPEN = 22 + 10 + 4 + 14;
 
 /** Height of the legend: a tight stack at rest, spread into names when pressed. */
-export const legendHeight = (rows: number, open: boolean): number => 2 * LEGEND_PAD + rows * (open ? LEGEND_OPEN_ROW : LEGEND_REST_ROW) + (open ? 22 : 2);
+export const legendHeight = (rows: number, open: boolean): number => 2 * LEGEND_PAD + rows * (open ? LEGEND_OPEN_ROW : LEGEND_REST_ROW) + (open ? LEGEND_HEAD : 2);
+/** Size of a colour circle in the open legend (ColourDots' size-3). */
+export const LEGEND_CIRCLE = 12;
+/**
+ * Where the fold dot's centre sits, from the card's top edge: halfway between that edge and the top of the first
+ * colour circle (or of the gradient bar), so it reads as the cap of the circles' column.
+ */
+export const legendFoldDotY = (bar: boolean): number => (LEGEND_PAD + LEGEND_HEAD + (bar ? 0 : (LEGEND_OPEN_ROW - LEGEND_CIRCLE) / 2)) / 2;
 
 /**
  * Top of the legend inside the screen area: centred on the right edge, and while the Think fan is open pushed

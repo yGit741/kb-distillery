@@ -381,7 +381,9 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
     // a legend spotlight (a type chip under the pointer) is a focus on every drawn page of the type: same fade
     const spot = u.spotlight;
     const byIds = u.spotIds;
-    const spotIds = byIds ? new Set([...vis].filter((id) => byIds.has(id))) : spot ? new Set([...vis].filter((id) => spot.has(ids.get(id)?.type ?? ""))) : null;
+    const spotAll = byIds ? new Set([...vis].filter((id) => byIds.has(id))) : spot ? new Set([...vis].filter((id) => spot.has(ids.get(id)?.type ?? ""))) : null;
+    // nothing drawn to light (a value just hidden under the pointer) is no spotlight, never a blank, all-dimmed graph
+    const spotIds = spotAll?.size ? spotAll : null;
     const base = hops ? { core: new Set(sel), lit: new Set(hops.keys()) } : computeFocus(sel, hover, nb, u.highlight);
     const preIds = pre ? new Set([...pre].filter((id) => vis.has(id))) : null;
     const next: Focus | null = preIds

@@ -7,7 +7,7 @@ import { mockDataSource } from "@/test/datasource";
 import { sampleNodes, sampleSnapshot } from "../../fixtures";
 import { parseSchema } from "../../schema";
 import { applySubject } from "../../subject";
-import { assignAreaColors } from "../../style";
+import { assignAreaColors, colorKey, effectiveColorBy } from "../../style";
 import { DEFAULT_PREFS, useGraphUi } from "../../store";
 import { EMPTY_STACK, makeLayer } from "../../layers/model";
 import { useLayers } from "../../layers/store";
@@ -464,6 +464,40 @@ describe("legends", () => {
       expect(within(legend).getAllByRole("button", { pressed: true })).toHaveLength(8);
       expect(within(legend).queryByRole("button", { name: /more/ })).toBeNull();
     }));
+
+  it("hovering a colour name lights that colour's pages and lets go on leaving", async () => {
+    const legend = await openLegend();
+    const page = themed.find((n) => n.areas[0] === "theme-3")!;
+    const label = colorKey(page, effectiveColorBy(useGraphUi.getState().colorBy));
+    const row = legend.querySelector<HTMLElement>(`button[data-row="${label}"]`)!;
+    fireEvent.mouseEnter(row);
+    await waitFor(() => expect(useGraphUi.getState().spotIds).not.toBeNull());
+    expect([...useGraphUi.getState().spotIds!].sort()).toEqual(themed.filter((n) => colorKey(n, effectiveColorBy(useGraphUi.getState().colorBy)) === label).map((n) => n.id).sort());
+    expect(useGraphUi.getState().spotIds!.size).toBe(5);
+    fireEvent.mouseLeave(row);
+    await waitFor(() => expect(useGraphUi.getState().spotIds).toBeNull());
+  });
+
+  it("hiding the colour under the pointer lets its spotlight go at once; a hidden colour lights nothing", async () => {
+    const legend = await openLegend();
+    const label = colorKey(themed.find((n) => n.areas[0] === "theme-2")!, effectiveColorBy(useGraphUi.getState().colorBy));
+    const row = legend.querySelector<HTMLElement>(`button[data-row="${label}"]`)!;
+    fireEvent.mouseEnter(row);
+    await waitFor(() => expect(useGraphUi.getState().spotIds?.size).toBe(6));
+    fireEvent.click(row);
+    expect(useGraphUi.getState().spotIds).toBeNull();
+    fireEvent.mouseLeave(row);
+    fireEvent.mouseEnter(row);
+    await new Promise((r) => setTimeout(r, 200));
+    expect(useGraphUi.getState().spotIds).toBeNull();
+  });
+
+  it("folding the legend leaves a spotlight it did not set (the source-kind dial shares it)", async () => {
+    await openLegend();
+    useGraphUi.setState({ spotIds: new Set(["t0-p0"]) });
+    await userEvent.click(screen.getByRole("button", { name: "Hide the colour legend" }));
+    expect([...useGraphUi.getState().spotIds!]).toEqual(["t0-p0"]);
+  });
 
   it("pressing the colour dots spreads them into names; pressing a name hides that colour", async () => {
     mount();

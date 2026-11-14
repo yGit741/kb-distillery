@@ -1,5 +1,4 @@
 import { useEffect, useRef } from "react";
-import { ChevronDown } from "lucide-react";
 import { useFlag } from "@/flags/useFlag";
 import { cn } from "@/lib/utils";
 import type { Dimension } from "../../colourDimensions";
@@ -7,10 +6,12 @@ import type { KeyRow } from "../../legendModel";
 import type { ColorBy } from "../../style";
 import { useReducedMotion } from "./motion";
 import { useCorners } from "./cornersStore";
-import { EDGE, legendHeight, legendTop, LEGEND_BAR_OPEN, LEGEND_BAR_REST, LEGEND_OPEN_ROW, LEGEND_PAD, LEGEND_REST_ROW } from "./geometry";
+import { EDGE, legendFoldDotY, legendHeight, legendTop, LEGEND_BAR_OPEN, LEGEND_BAR_REST, LEGEND_HEAD, LEGEND_OPEN_ROW, LEGEND_PAD, LEGEND_REST_ROW } from "./geometry";
 import { useStillClick } from "./useStillClick";
 
 interface Props {
+  /** spotlight the pages of this colour value while the pointer or focus is on its row (null = none) */
+  onSpot?: (label: string | null) => void;
   rows: readonly KeyRow[];
   /** "theme", "citation role": what the colour answers */
   title: string;
@@ -29,6 +30,9 @@ interface Props {
 }
 
 const RING = "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
+/** The hover spotlight settles before it lights, and lingers a little on the way out (as on the page types). */
+const SPOT_IN_MS = 120;
+const SPOT_OUT_MS = 160;
 const FULL_MS = 315; // the mockup's --k (.35) x .9s
 
 /**
@@ -38,7 +42,7 @@ const FULL_MS = 315; // the mockup's --k (.35) x .9s
  * the same spot open and close it (./useStillClick), so the second never lands on a name. While the Think fan is
  * open the stack moves down out of the fan's arc, so the two never overlap.
  */
-export function ColourDots({ rows, title, by, dimensions, onPick, bar, hidden, toggleable, onToggle, areaHeight, thinkCards }: Props) {
+export function ColourDots({ rows, title, by, dimensions, onPick, bar, hidden, toggleable, onToggle, areaHeight, thinkCards, onSpot }: Props) {
   const open = useCorners((s) => s.order.includes("legend"));
   const thinkOpen = useCorners((s) => s.order.includes("think"));
   const toggle = useCorners((s) => s.toggle);
@@ -50,6 +54,29 @@ export function ColourDots({ rows, title, by, dimensions, onPick, bar, hidden, t
     if (!open && box.current?.contains(document.activeElement) && document.activeElement !== opener.current) opener.current?.focus();
   }, [open]);
   const counts = useFlag("legend-counts");
+  // hover spotlight, like the page types: settle in, linger out, and let go when the card folds or unmounts
+  const spotTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const spot = (label: string | null) => {
+    if (!onSpot) return;
+    if (spotTimer.current) clearTimeout(spotTimer.current);
+    spotTimer.current = setTimeout(() => spotNow(label), label ? SPOT_IN_MS : SPOT_OUT_MS);
+  };
+  // clear only what this card lit, and only when it folds: another surface (the source-kind dial) shares spotIds
+  const lit = useRef(false);
+  const latest = useRef(onSpot);
+  latest.current = onSpot;
+  const spotNow = (label: string | null) => {
+    if (!label && !lit.current) return;
+    lit.current = !!label;
+    latest.current?.(label);
+  };
+  useEffect(() => {
+    if (open) return;
+    if (spotTimer.current) clearTimeout(spotTimer.current);
+    spotNow(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- spotNow reads refs; this runs on folding only
+  }, [open]);
+  useEffect(() => () => void (spotTimer.current && clearTimeout(spotTimer.current)), []);
   const still = useStillClick(open, () => toggle("legend"));
   if (!rows.length && !bar) return null;
   const known = dimensions.some((d) => d.by === by);
@@ -89,14 +116,16 @@ export function ColourDots({ rows, title, by, dimensions, onPick, bar, hidden, t
       )}
       <div
         data-row="header"
-        className="relative flex items-center justify-center gap-0.5 self-stretch overflow-hidden whitespace-nowrap text-[10px] font-medium uppercase tracking-wide text-muted-foreground transition-[height,opacity]"
-        style={{ height: open ? 22 : 0, opacity: open ? 1 : 0, transitionDuration: `${MS}ms` }}
+        className="relative flex items-center justify-center gap-0.5 self-stretch overflow-hidden whitespace-nowrap pr-4 text-[10px] font-medium uppercase tracking-wide text-muted-foreground transition-[height,opacity]"
+        style={{ height: open ? LEGEND_HEAD : 0, opacity: open ? 1 : 0, transitionDuration: `${MS}ms` }}
       >
-        <label className="pointer-events-auto relative flex cursor-pointer items-center gap-1 rounded py-0.5 pl-1 pr-1 hover:bg-accent">
+        <label className="group/pick pointer-events-auto relative flex h-full cursor-pointer items-center gap-1.5 rounded px-1 leading-3 hover:bg-accent">
           <span>Color by</span>
-          <ChevronDown aria-hidden className="size-3 text-muted-foreground" strokeWidth={1.6} />
-          <span className="font-semibold text-foreground">{known ? dimensions.find((d) => d.by === by)?.label : title}</span>
-          {/* the native select covers the label, invisible: the chevron sits between "Color by" and what is coloured */}
+          {/* a thin rule under the coloured-by word says "this opens a choice", quieter than a chevron */}
+          <span className="font-semibold text-foreground underline decoration-muted-foreground/60 decoration-1 underline-offset-[3px] group-hover/pick:decoration-foreground">
+            {known ? dimensions.find((d) => d.by === by)?.label : title}
+          </span>
+          {/* the native select covers the label, invisible, so the whole phrase opens it */}
           <select
             tabIndex={open ? 0 : -1}
             aria-label="Color by"
@@ -113,17 +142,21 @@ export function ColourDots({ rows, title, by, dimensions, onPick, bar, hidden, t
             ))}
           </select>
         </label>
-        {/* folding: one small muted dot on the colour circles' column, just above the top circle */}
+        {/* folding: three small muted dots over the colour circles' column, halfway between the card's edge and the top circle */}
         <button
           type="button"
           tabIndex={open ? 0 : -1}
           aria-label="Hide the colour legend"
           aria-expanded={open}
           title="Hide the legend"
-          className={cn("group pointer-events-auto absolute bottom-0 right-0 grid h-4 w-3 place-items-center rounded-full", RING)}
+          className={cn("group pointer-events-auto absolute -right-0.5 flex h-4 w-4 items-center justify-center gap-[2px] rounded-full", RING)}
+          // the header starts LEGEND_PAD below the card's edge; the 16px box is centred on the dots and on the circles' column
+          style={{ top: legendFoldDotY(!!bar) - LEGEND_PAD - 8 }}
           onClick={() => toggle("legend")}
         >
-          <i aria-hidden className="block size-1.5 rounded-full bg-muted-foreground/50 transition-colors group-hover:bg-foreground" />
+          {[0, 1, 2].map((i) => (
+            <i key={i} aria-hidden className="block size-[3px] rounded-full bg-muted-foreground/60 transition-colors group-hover:bg-foreground" />
+          ))}
         </button>
       </div>
       {bar && (
@@ -158,7 +191,18 @@ export function ColourDots({ rows, title, by, dimensions, onPick, bar, hidden, t
             aria-disabled={!toggleable || undefined}
             title={toggleable ? `${off ? "Show" : "Hide"} ${r.label} (${r.count})` : `${r.label} (${r.count})`}
             data-row={r.label}
-            onClick={() => toggleable && onToggle(r.label)}
+            onClick={() => {
+              if (!toggleable) return;
+              onToggle(r.label);
+              // the row just hid (or came back) under the pointer: light what is drawn now, at once
+              if (spotTimer.current) clearTimeout(spotTimer.current);
+              spotNow(off ? r.label : null);
+            }}
+            // a hidden value has nothing drawn to light up
+            onMouseEnter={() => open && spot(off ? null : r.label)}
+            onMouseLeave={() => spot(null)}
+            onFocus={() => open && spot(off ? null : r.label)}
+            onBlur={() => spot(null)}
             className={cn("flex items-center justify-end rounded-md transition-[height] motion-reduce:transition-none", open ? "pointer-events-auto hover:bg-accent" : "pointer-events-none", RING)}
             style={{ height: open ? LEGEND_OPEN_ROW : LEGEND_REST_ROW, transitionDuration: `${MS}ms` }}
           >
