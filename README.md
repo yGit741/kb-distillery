@@ -1,6 +1,6 @@
 # kb-distillery
 
-Supported platforms: macOS (Apple silicon and Intel) and Linux x86-64. Windows is supported through WSL2 only. Digests use Anthropic models only.
+Supported platforms: macOS (Apple silicon and Intel) and Linux x86-64. Windows is supported through WSL2 only. CI runs the installer on Linux and macOS and checks the Docker image becomes healthy on every pull request; the full suite on both Macs and the arm64 image run nightly. Digests use Anthropic models only.
 
 kb-distillery builds a knowledge base from sources you collect. You put papers, notes, web clips, mail and chats in a folder. An agent digests each source into a linked wiki page. A linter checks every page against a schema. An app shows the pages as a graph you can search and read. The knowledge stays in your own git repository, outside this one.
 
