@@ -35,7 +35,6 @@ The steps only the repository owner can take, then known follow-ups.
 
 - Tag `v0.1.0`; the release workflow then builds the wheel, the web bundle and the image.
 - Announce the release.
-- Container healthcheck: it runs `distill doctor` and does not yet probe whether the server is answering.
 - Page history has nothing to show on the demo knowledge base, which has no earlier versions.
 
 ## Ideas
