@@ -34,9 +34,11 @@ DIGESTED = ("easy", "full", "deep")
 ROW_STATUS = {SKIP, TODO, *DIGESTED}
 FRONT, BACK = "front", "back"
 
-# ch3, ch11a (a manual split), appA, appB2, front, back
-ID_RE = re.compile(r"^(?:front|back|ch\d+[a-z]?|app[A-Z]\d*[a-z]?)$")
+# ch3, ch11a (a manual split), appA, appB2, front, back; sec1, sec2 … for rows with no chapter number
+# (unnumbered rows of a migrated book, fixed-size sections of a handwritten notebook)
+ID_RE = re.compile(r"^(?:front|back|ch\d+[a-z]?|app[A-Z]\d*[a-z]?|sec\d+)$")
 _BASE = re.compile(r"^(ch\d+|app[A-Z]\d*)[a-z]?$")
+NOTEBOOK_SECTION_PAGES = 20  # a handwritten notebook with no chapters is read in sections of this many pages
 _PAGES = re.compile(r"^\s*(\d+)\s*(?:[–—-]\s*(\d+))?\s*$")
 _COMMENT = re.compile(r"<!--.*?-->", re.S)
 # Front/back matter: never a reading unit of its own.
@@ -47,9 +49,9 @@ _MATTER = re.compile(
 # End-of-chapter sections that fold into their chapter instead of getting a row.
 _FOLD = re.compile(r"^(exercises?|problems?|notes|notes and references|bibliographic notes|"
                    r"exercises and notes|chapter notes)\b", re.I)
-_CHAPTER = re.compile(r"^\s*(?:chapter|ch\.?|lecture)\s*([0-9]+|[IVXLC]+)\b", re.I)
+_CHAPTER = re.compile(r"^\s*(?:[Cc]hapter|CHAPTER|[Cc]h\.?|[Ll]ecture|LECTURE)\s*([0-9]+|[IVXLC]+(?=[\s.:,\-]|$))")
 _APPENDIX = re.compile(r"^\s*appendix\s*([A-Z])(?:[^a-z]|$)", re.I)
-_NUMBERED = re.compile(r"^\s*([0-9]+)(?:\.|\s)\s*\S")
+_NUMBERED = re.compile(r"^\s*([0-9]{1,3})(?:\.|\s)\s*\S")     # never a year: '2019 Survey' is no chapter
 
 
 # --------------------------------------------------------------------------
@@ -161,8 +163,18 @@ def parse_chapters(text):
                "end": end, "status": _status(cells[3]), "slug": link[0] if link else ""}
         if link and link[1] and link[1] != link[0]:
             row["link_text"] = link[1]
+        note = _note_text(cells[4])
+        if note:
+            row["note"] = note
         rows.append(row)
     return rows
+
+
+def _note_text(cell):
+    """Hand-written text of a Note cell, its first page link taken out."""
+    text = page_links.PAGE_LINK.sub("", cell, count=1) if page_links.PAGE_LINK.search(cell) else \
+        page_links.WIKILINK.sub("", cell, count=1)
+    return " ".join(text.split())
 
 
 def pages_of(row):
@@ -185,7 +197,7 @@ def validate(rows, total, outline_chapters=None, cap=CHAPTER_LONG_PAGES):
             errs.append(f"chapter row {r['title']!r}: missing id (ch3, appA, front, back)")
         elif not valid_id(r["id"]):
             errs.append(f"chapter row {r['title']!r}: id {r['id']!r} is not ch<N>, ch<N><letter>, "
-                        "app<X>, front or back")
+                        "app<X>, sec<N>, front or back")
         elif r["id"] in seen:
             errs.append(f"duplicate chapter id {r['id']!r} ({seen[r['id']]!r} and {r['title']!r})")
         else:
@@ -261,6 +273,8 @@ def render(rows, cap=CHAPTER_LONG_PAGES):
            "| Id | Chapter | Pages | Status | Note |", "|----|---------|-------|--------|------|"]
     for r in sorted(rows, key=lambda r: (r["start"] or 0)):
         note = page_links.link(r["slug"], r.get("link_text") or r["slug"]) if r["slug"] else ""
+        if r.get("note"):
+            note = f"{note} {r['note']}".strip().replace("|", "\\|")
         title = r["title"].replace("|", "\\|")
         out.append(f"| {r['id']} | {title} | {r['start']}–{r['end']} | {r['status']} | {note} |")
     return "\n".join(out)
@@ -269,9 +283,10 @@ def render(rows, cap=CHAPTER_LONG_PAGES):
 def replace_chapters(text, rows, cap=CHAPTER_LONG_PAGES):
     """Rewrite the `## Chapters` section of a book page in place (a `## Partition` heading is
     replaced too, so a migrated page carries one table)."""
-    body = render(rows, cap)
     heading = CHAPTERS_HEADING if CHAPTERS_HEADING in text else (
         PARTITION_HEADING if PARTITION_HEADING in text else None)
+    prose = section_prose(text, heading) if heading else ""
+    body = (prose + "\n\n" if prose else "") + render(rows, cap)
     if heading is None:
         return text.rstrip() + f"\n\n{CHAPTERS_HEADING}\n\n{body}\n"
     head, rest = text.split(heading, 1)
@@ -279,6 +294,19 @@ def replace_chapters(text, rows, cap=CHAPTER_LONG_PAGES):
     tail = next((i for i, l in enumerate(lines[1:], 1) if l.startswith("## ")), None)
     after = "\n".join(lines[tail:]) if tail is not None else ""
     return f"{head}{CHAPTERS_HEADING}\n\n{body}\n" + (f"\n{after}" if after else "")
+
+
+def section_prose(text, heading):
+    """Hand-written lines of a table section: everything but table rows and the generated Coverage line."""
+    keep = [l for l in section(text, heading).split("\n")
+            if not l.strip().startswith("|") and not l.strip().startswith("Coverage:")]
+    return "\n".join(keep).strip("\n")
+
+
+def notebook_sections(total, size=NOTEBOOK_SECTION_PAGES):
+    """Fixed-size page sections sec1, sec2, … covering 1..total: a handwritten notebook with no chapters."""
+    return [_row(f"sec{n}", f"Pages {a}–{min(a + size - 1, total)}", a, min(a + size - 1, total))
+            for n, a in enumerate(range(1, total + 1, size), 1)]
 
 
 def find_chapter(rows, cid):
@@ -479,6 +507,8 @@ def _norm_sel(tok):
         return f"ch{int(tok)}"
     if re.fullmatch(r"(?i)ch\d+[a-z]?", tok):
         return "ch" + tok[2:].lower()
+    if re.fullmatch(r"(?i)sec\d+", tok):
+        return "sec" + tok[3:]
     if re.fullmatch(r"(?i)app[a-z]\d*[a-z]?", tok):
         return "app" + tok[3].upper() + tok[4:]
     if re.fullmatch(r"[A-Z]", tok):
@@ -511,7 +541,7 @@ def select(rows, selector):
         m = re.fullmatch(r"(?i)(?:ch)?(\d+)\s*-\s*(?:ch)?(\d+)", tok)
         if m:
             a, b = sorted((int(m.group(1)), int(m.group(2))))
-            hits = [r for r in rows if re.fullmatch(r"ch\d+[a-z]?", rid(r))
+            hits = [r for r in rows if re.fullmatch(r"ch\d+[a-z]?", rid(r)) and rstatus(r) != SKIP
                     and a <= int(re.match(r"ch(\d+)", rid(r)).group(1)) <= b]
         else:
             want = _norm_sel(tok)

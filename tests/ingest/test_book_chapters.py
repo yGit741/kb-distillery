@@ -143,3 +143,14 @@ def test_aborting_one_chapter_keeps_another_chapters_tick(kb, monkeypatch):
     text = (kb / "wiki/book-2011-tiny-rings.md").read_text(encoding="utf-8")
     assert books.find_chapter(books.parse_chapters(text), "ch1")["status"] == "full"
     assert "wiki/book-2011-tiny-rings.md" in session.load_session(s1)["modified_files"]
+
+
+def test_handwritten_notebook_without_chapters_gets_page_sections(kb, capsys):
+    os.makedirs(kb / "raw/handwritten", exist_ok=True)
+    raw = "raw/handwritten/2011-lab-notes.pdf"
+    make_pdf(kb / raw, 70)
+    assert cli.main(["book", raw]) == 0
+    assert "sections of 20 pages" in capsys.readouterr().out
+    got = [(c.id, c.first_page, c.last_page) for c in books.chapters(str(kb), raw)]
+    assert got == [("sec1", 1, 20), ("sec2", 21, 40), ("sec3", 41, 60), ("sec4", 61, 70)]
+    assert (kb / "wiki/notebook-2011-lab-notes.md").exists()

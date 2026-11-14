@@ -34,6 +34,8 @@ def _add_scope_flags(sp):
                    help="outline entry (chapter number, #index or title text); resolves to its chapter")
     sp.add_argument("--row", default=None, metavar="N",
                     help="row of a course/series Contents table; pass the hub slug as raw_path")
+    sp.add_argument("--redo", action="store_true",
+                    help="a book chapter that is already digested: digest it again, rewriting its page in place")
     sp.add_argument("--no-exercises", dest="exercises", action="store_false",
                     help="a book chapter: leave its exercises out of the page (they are in by default)")
     sp.add_argument("--notes", action="store_true",
@@ -95,7 +97,7 @@ def _scopes(args):
     rows, blocked = book_mod.gate(
         raw_rel, raw_abs, chapter=getattr(args, "chapter", None),
         chapters=getattr(args, "chapters", None), all_chapters=getattr(args, "all_chapters", False),
-        section=getattr(args, "section", None))
+        section=getattr(args, "section", None), redo=getattr(args, "redo", False))
     if blocked:
         print(blocked, file=sys.stderr)
         return None, 2
@@ -107,7 +109,8 @@ def _scopes(args):
         extra["exercises"] = False
     if getattr(args, "notes", False):
         extra["notes"] = True
-    return [{"pages": [r["start"], r["end"]], "label": r["title"], "chapter": r["id"], "book": book, **extra}
+    return [{"pages": [r["start"], r["end"]], "label": r["title"], "chapter": r["id"], "book": book, **extra,
+             **({"slug": r["slug"]} if r.get("slug") else {})}       # a digested row (--redo): its page is rewritten
             for r in rows], 0
 
 

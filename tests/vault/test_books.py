@@ -145,6 +145,9 @@ class OutlineTest(unittest.TestCase):
         self.assertEqual(books.chapter_id("Appendix B: Proofs"), "appB")
         self.assertEqual(books.chapter_id("2.3 Total influence"), "")
         self.assertEqual(books.chapter_id("Some tips"), "")
+        self.assertEqual(books.chapter_id("Chapter Civil engineering"), "")
+        self.assertEqual(books.chapter_id("2019 Survey of methods"), "")
+        self.assertEqual(books.chapter_id("Chapter IV: Noise"), "ch4")
 
     def test_no_numbered_chapters_means_no_guess(self):
         self.assertEqual(books.propose([], 50), [])
@@ -176,6 +179,8 @@ class SelectorTest(unittest.TestCase):
         self.assertEqual(self.ids("appA"), ["appA"])
         self.assertEqual(self.ids("2,appA"), ["ch2", "appA"])
         self.assertEqual(self.ids("all"), ["ch1", "ch2", "ch11a", "ch11b", "appA"])
+        self.assertEqual([r["id"] for r in books.select(self.ROWS + [row("ch3", 53, 54, "skip")], "1-3")],
+                         ["ch1", "ch2"])                 # a range skips skip rows, like all
         with self.assertRaisesRegex(ValueError, "this book has: ch1, ch2"):
             self.ids("7")
 
@@ -256,7 +261,8 @@ class LintBooksTest(unittest.TestCase):
     def test_old_partition_table_points_at_migrate(self):
         h = hub_text().replace("## Chapters", "## Partition")
         _h, errs, _w = self.run_check({"book-2000-a-book": ("wiki/book-2000-a-book.md", lint.parse_frontmatter(h), h)})
-        self.assertTrue(any("ops -- migrate" in e for e in errs))
+        self.assertEqual(len(errs), 1)
+        self.assertIn("ops -- migrate", errs[0])
 
     def test_empty_overview_warns(self):
         _h, errs, warns = self.run_check(self.pages(overview=""))

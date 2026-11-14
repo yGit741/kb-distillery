@@ -318,9 +318,10 @@ def chapter_rows(raw_path):
         doc.close()
 
 
-def plan_chapters(raw_path, chapters_file=None):
+def plan_chapters(raw_path, chapters_file=None, notebook=False):
     """(rows, total, outline_chapters, source) for a book PDF. Raises BookError with the
-    chapters-file hint when no chapters can be found; never guesses."""
+    chapters-file hint when no chapters can be found; never guesses. A handwritten notebook with no
+    chapters is read in fixed-size page sections (sec1, sec2, …; source 'sections') instead."""
     total = page_count(raw_path)
     if chapters_file:
         try:
@@ -332,6 +333,9 @@ def plan_chapters(raw_path, chapters_file=None):
             raise BookError(f"{e}\n{CHAPTERS_FILE_HINT}") from e
         return rows, total, len(content_ids(rows)), "file"
     rows, total, source = chapter_rows(raw_path)
+    if not rows and notebook and total:
+        rows = core.notebook_sections(total)
+        return rows, total, len(rows), "sections"
     if not rows:
         raise BookError(f"{os.path.basename(raw_path)} is a book ({total} pages) but neither its PDF "
                         f"outline nor its page headings give numbered chapters.\n{CHAPTERS_FILE_HINT}")
@@ -410,9 +414,11 @@ def format_chapters(rows, total, raw_rel, hub_rel):
     return "\n".join(lines)
 
 
-def gate(raw_rel, raw_path, chapter=None, chapters=None, all_chapters=False, section=None):
+def gate(raw_rel, raw_path, chapter=None, chapters=None, all_chapters=False, section=None, redo=False):
     """Digest of a book works by chapter. Returns (rows, blocked_message): the undigested chapter
-    rows to digest (one part page each), or None and why. Not a book: ([], None)."""
+    rows to digest (one part page each), or None and why. Not a book: ([], None). `redo` lets
+    chapters that are already digested through: their part pages are written again in place
+    (frontmatter and `## My notes` kept, as for any page that is deepened)."""
     asked = chapter or chapters or all_chapters or section
     if not is_book(raw_path):
         if asked:
@@ -443,10 +449,10 @@ def gate(raw_rel, raw_path, chapter=None, chapters=None, all_chapters=False, sec
         return None, (f"chapter {skipped[0]['id']} ({skipped[0]['title']}) is marked skip. Change its "
                       f"Status to — on the book page first.\n\n{view}")
     done = [r for r in picked if r["status"] in DIGESTED]
-    if single and done:
+    if single and done and not redo:
         return None, (f"chapter {done[0]['id']} is already digested as [[{done[0]['slug']}]]. "
-                      f"Edit that page, or pick another chapter:\n\n{view}")
-    todo = [r for r in picked if r["status"] not in DIGESTED and r["status"] != SKIP]
+                      f"Edit that page, pass --redo to digest it again, or pick another chapter:\n\n{view}")
+    todo = [r for r in picked if (redo or r["status"] not in DIGESTED) and r["status"] != SKIP]
     if not todo:
         return None, f"nothing left to digest in {sel!r}.\n\n{view}"
     return todo, None
@@ -520,7 +526,10 @@ def build_book(raw_rel, raw_path=None, chapters_file=None, meta=None):
     hub = find_hub(raw_rel)
     if hub:
         return hub[0], chapters_for(raw_rel)[0]
-    rows, total, n, _source = plan_chapters(raw_path, chapters_file)
+    rows, total, n, source = plan_chapters(raw_path, chapters_file, notebook=hub_type(raw_rel) == "notebook")
+    if source == "sections":
+        print(f"{raw_rel}: a handwritten notebook with no chapters — read in {len(rows)} sections of "
+              f"{core.NOTEBOOK_SECTION_PAGES} pages (sec1…sec{len(rows)}); rename or re-split them on its page")
     wiki_rel = f"wiki/{hub_slug(raw_rel)}.md"
     text = new_hub_text(raw_rel, rows, total, meta, outline_chapters=n)
     wikiio.write_page(os.path.join(ROOT, wiki_rel), text)

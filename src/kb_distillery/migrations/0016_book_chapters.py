@@ -1,21 +1,27 @@
 """Book chapters (schema 1.6): a book's `## Partition` table becomes a `## Chapters` table with fixed ids.
 
-For every `type: book` / `type: notebook` page that still has `## Partition` and no `## Chapters`:
-  * each row gets an id from its title: `Chapter 3 …` → ch3, `Appendix A …` → appA, a skip row before the
-    first chapter → front, after the last one → back;
-  * two rows of one chapter (a chapter and its separate exercises row) merge into one row when neither is
-    digested; otherwise they become a lettered split (ch11a, ch11b);
-  * an unnumbered reading row ("Some tips") joins the row before it when neither is digested, else it is a
-    lettered split of that chapter; one before any chapter is ch0; a merged row "Chapter 3 → Chapter 4"
-    keeps the first chapter's id;
-  * the table is rewritten as `| Id | Chapter | Pages | Status | Note |` and `outline_chapters:` records
-    its chapter count.
-Every part page linked from a row gets `chapter: <id>`. A part page whose slug does not carry its id after the
-book stem is renamed to `part-<stem>-<id>-<rest>`; its old slug goes into `aliases:` and every link to it in
-wiki/ is rewritten outside `## My notes`, so nothing breaks (My notes and think/ are user-owned: their links stay,
-aliases resolve them; think/ hits are reported).
-A book whose table cannot be read (a skip row between chapters, an unreadable Pages cell) is left alone and
-reported; lint then points at it. Idempotent: a book with `## Chapters` and a part with `chapter:` are skipped.
+For every `type: book` / `type: notebook` page that still has `## Partition` and no `## Chapters`, every row is kept
+with its page range; only the ids are new:
+  * a row whose title names a chapter gets its id: `Chapter 3 …` → ch3, `Appendix A …` → appA (an "A → B" row
+    takes A's id); several rows of one chapter become a lettered split ch3a, ch3b … in book order (more than 26
+    rows of one chapter: all of them become sec<N> instead);
+  * a row with no chapter number (`Pages 19–42`, `Part II`, `Introduction`, a notebook date) is `sec1`, `sec2` …
+    in book order;
+  * skip rows before the first reading row are `front`, after the last one `back` (adjacent ones of a kind are
+    joined); a skip row between chapters keeps its own row as sec<N> with status skip;
+  * the one merge: an end-of-chapter row (exercises / notes / problems) joins the row of its chapter right before
+    it when neither is digested.
+Every join and every sec<N> id is listed in the report, one line each (`NOTE 0016 …`). Note-column text that is not
+a link is kept, prose under the heading is kept, the Coverage line is regenerated, `maturity:` follows the
+chapters and `outline_chapters:` records the chapter count. A row with an unreadable Pages cell leaves its book
+alone; the report names the book page and the row (`ops migrate` shows it).
+Every part page linked from a row gets `chapter: <id>`. A part page whose slug does not carry its (lower-cased) id
+after the book stem is renamed to `part-<stem>-<id>-<rest>`; its old slug goes into `aliases:` and every link to it
+in wiki/ is rewritten outside `## My notes`, so nothing breaks (My notes and think/ are user-owned: their links
+stay, aliases resolve them; think/ hits are reported).
+Idempotent: a book with `## Chapters` and a part with `chapter:` are skipped. Run directly (`__main__`) it has no
+rollback of its own: book pages are written first, then part pages, then renames and relinks; `ops migrate`
+snapshots the kb and restores it on any failure.
 
     python src/kb_distillery/migrations/0016_book_chapters.py [--root R] [--dry-run]
 """
@@ -40,7 +46,7 @@ def _old_rows(text):
         cells = [c.strip() for c in re.split(r"(?<!\\)\|", s.strip("|"))]
         if len(cells) < 4 or set(cells[0]) <= set("-: ") or cells[0] == "#":
             continue
-        cells += [""] * (5 - len(cells))
+        cells += [""] * max(0, 5 - len(cells))
         m = _PAGES.match(cells[2])
         st = cells[3].strip().strip("*`").lower()
         link = None
@@ -59,6 +65,13 @@ def _old_rows(text):
                "status": books.TODO if st in ("", "-", "—", "–") else st, "slug": link[0] if link else ""}
         if link and link[1] and link[1] != link[0]:
             row["link_text"] = link[1]
+        note = books._note_text(cells[4]) if len(cells) > 4 else ""
+        extra = [c for c in cells[5:] if c]
+        if extra:                                   # columns past Note: carried into the note, and reported
+            row["extra"] = extra
+            note = " ".join([note] + extra).strip()
+        if note:
+            row["note"] = note
         rows.append(row)
     return rows
 
@@ -68,51 +81,81 @@ def _fm(text, key):
     return m.group(1).strip() if m else ""
 
 
-def assign_ids(rows):
-    """Rows with ids, merged/split per the module rules. Raises ValueError when the table is unreadable."""
-    rows = sorted((dict(r) for r in rows), key=lambda r: r["start"] if r["start"] is not None else -1)
-    if any(r["start"] is None for r in rows):
-        raise ValueError("a row has an unreadable Pages cell")
+_FOLD = re.compile(r"(?i)\b(exercises?|problems?|notes)\b")
+
+
+def _fold_row(title):
+    """An end-of-chapter row: 'Chapter 11. X: 11.8 Exercises and notes'."""
+    tail = title.split(": ", 1)[1] if ": " in title else title
+    return bool(_FOLD.search(tail)) and not books.chapter_id(tail)
+
+
+class Unreadable(ValueError):
+    pass
+
+
+def assign_ids(rows, notes=None):
+    """Rows with ids per the module rules; every join and sec<N> id is appended to `notes`.
+    Raises Unreadable (naming the row) when a Pages cell cannot be read."""
+    notes = notes if notes is not None else []
+    rows = [dict(r) for r in rows]
+    for n, r in enumerate(rows, 1):
+        if r["start"] is None:
+            raise Unreadable(f"row {n} {r['title']!r}: unreadable Pages cell (use A–B)")
+    rows.sort(key=lambda r: r["start"])
     content = [i for i, r in enumerate(rows) if r["status"] != books.SKIP]
-    if not content:
-        raise ValueError("no reading rows")
-    first, last = content[0], content[-1]
-    out = []
+    first = content[0] if content else len(rows)
+    last = content[-1] if content else -1
+    out = []                                         # rows with "kind": front/back/sec or a chapter base id
     for i, r in enumerate(rows):
-        digested = r["status"] in books.DIGESTED
-        if r["status"] == books.SKIP:
-            if first < i < last:
-                raise ValueError(f"skip row {r['title']!r} sits between chapters")
-            r["id"] = books.FRONT if i < first else books.BACK
-            if out and out[-1]["id"] == r["id"]:
+        pages = f"p.{r['start']}–{r['end']}"
+        if r["status"] == books.SKIP and (i < first or i > last):
+            kind = books.FRONT if i < first else books.BACK
+            if out and out[-1]["kind"] == kind:
+                notes.append(f"joined skip row {r['title']!r} ({pages}) into {kind}")
                 out[-1].update(end=r["end"], title=f"{out[-1]['title']} · {r['title']}")
-            else:
-                out.append(r)
-            continue
-        cid = books.chapter_id(re.split(r"\s+→\s+", r["title"])[0])
-        prev = out[-1] if out and out[-1]["status"] != books.SKIP else None
-        if not cid:
-            if prev is None:
-                cid = "ch0"
-            else:
-                cid = books.base_id(prev["id"])
-        if prev and books.base_id(prev["id"]) == cid:
-            split = bool(re.fullmatch(r"[a-z]", prev["id"][len(cid):]))
-            if not digested and prev["status"] not in books.DIGESTED and not split:
-                prev["end"] = r["end"]                       # one chapter again: merge
-                if re.match(r"(?i)^(chapter|appendix)\b", prev["title"]):
-                    prev["title"] = prev["title"].split(": ")[0]     # 'Chapter 11. X: 11.1 … → 11.7 …' → 'Chapter 11. X'
                 continue
-            if not split:
-                prev["id"] = cid + "a"
-            letter = chr(ord(prev["id"][-1]) + 1)
-            r["id"] = cid + letter
+            out.append({**r, "kind": kind})
+            continue
+        if r["status"] == books.SKIP:
+            out.append({**r, "kind": "sec"})
+            continue
+        base = books.chapter_id(re.split(r"\s+→\s+", r["title"])[0])
+        prev = out[-1] if out else None
+        if (base and prev and prev["kind"] == base and _fold_row(r["title"])
+                and r["status"] not in books.DIGESTED and prev["status"] not in books.DIGESTED
+               ):
+            notes.append(f"joined {r['title']!r} ({pages}) into its chapter {base} (neither digested)")
+            prev["end"] = r["end"]
+            if re.match(r"(?i)^(chapter|appendix)\b", prev["title"]):
+                prev["title"] = prev["title"].split(": ")[0]
+            continue
+        out.append({**r, "kind": base or "sec"})
+    groups = {}
+    for r in out:
+        if r["kind"] not in (books.FRONT, books.BACK, "sec"):
+            groups.setdefault(r["kind"], []).append(r)
+    for base, rs in groups.items():
+        if len(rs) == 1:
+            rs[0]["id"] = base
+        elif len(rs) <= 26:
+            for k, r in enumerate(rs):
+                r["id"] = base + "abcdefghijklmnopqrstuvwxyz"[k]
+            notes.append(f"{base} spans {len(rs)} rows: kept as a split {rs[0]['id']}…{rs[-1]['id']}")
         else:
-            r["id"] = cid
-        out.append(r)
-    ids = [r["id"] for r in out]
-    if len(ids) != len(set(ids)):
-        raise ValueError(f"two rows resolve to one id: {sorted({i for i in ids if ids.count(i) > 1})}")
+            for r in rs:
+                r["kind"] = "sec"
+            notes.append(f"{base} spans {len(rs)} rows, more than 26 letters: they get sec<N> ids")
+    n = 0
+    for r in out:
+        if r["kind"] in (books.FRONT, books.BACK):
+            r["id"] = r["kind"]
+        elif r["kind"] == "sec":
+            n += 1
+            r["id"] = f"sec{n}"
+            notes.append(f"row {r['title']!r} (p.{r['start']}–{r['end']}"
+                         + (", skip" if r["status"] == books.SKIP else "") + f") has no chapter number: id sec{n}")
+        r.pop("kind", None)
     return out
 
 
@@ -163,61 +206,82 @@ def _write(p, text):
         f.write(text)
 
 
+def _note(report, rel, line):
+    report["notes"].append(f"{rel}: {line}")
+
+
 def apply(root, dry_run=False):
     root = os.path.abspath(root)
     wiki = os.path.join(root, "wiki")
+    report = {"books": 0, "parts": 0, "renamed": {}, "skipped": {}, "relinked": 0, "think": [], "notes": []}
     if not os.path.isdir(wiki):
-        return {"books": 0}
+        return report
     pages = {fn[:-3]: os.path.join(wiki, fn) for fn in sorted(os.listdir(wiki)) if fn.endswith(".md")}
-    report = {"books": 0, "parts": 0, "renamed": {}, "skipped": {}, "relinked": 0, "think": []}
-    texts = {}
+    book_texts, part_texts = {}, {}
     for slug, path in pages.items():
         text = _read(path)
         if _fm(text, "type") not in ("book", "notebook"):
             continue
         if books.CHAPTERS_HEADING in text or OLD_HEADING not in text:
             continue
+        rel = f"wiki/{slug}.md"
+        old = _old_rows(text)
+        notes = []
         try:
-            rows = assign_ids(_old_rows(text))
-        except ValueError as e:
-            report["skipped"][slug] = str(e)
+            rows = assign_ids(old, notes)
+        except Unreadable as e:
+            report["skipped"][slug] = f"{rel} left on {OLD_HEADING}: {e} — fix that row, then migrate again"
             continue
+        for line in notes:
+            _note(report, rel, line)
+        for r in old:
+            if r.get("extra"):
+                _note(report, rel, f"row {r['title']!r} had extra columns {r['extra']}: kept in its Note cell")
         stem = "part-" + re.sub(r"^(book|notebook)-", "", slug) + "-"
         for r in rows:
+            r.pop("extra", None)
             if not r["slug"] or r["slug"] not in pages:
                 continue
-            ptext = texts.get(r["slug"]) or _read(pages[r["slug"]])
-            texts[r["slug"]] = _set_chapter(ptext, r["id"])
+            ptext = part_texts.get(r["slug"]) or _read(pages[r["slug"]])
+            part_texts[r["slug"]] = _set_chapter(ptext, r["id"])
             report["parts"] += 1
-            old = r["slug"]
-            if old == stem + r["id"] or old.startswith(f"{stem}{r['id']}-") or not old.startswith(stem):
+            old_slug, cid = r["slug"], r["id"].lower()
+            if old_slug == stem + cid or old_slug.startswith(f"{stem}{cid}-") or not old_slug.startswith(stem):
                 continue
-            rest = re.sub(r"^ch\d+[a-z]?-", "", old[len(stem):])
-            new = f"{stem}{r['id']}-{rest}"
-            if new in pages or new in report["renamed"].values():
-                report["skipped"][old] = f"cannot rename to {new}: it exists"
+            rest = re.sub(r"^(?:ch\d+[a-z]?|app[a-z]\d*[a-z]?|sec\d+)-", "", old_slug[len(stem):])
+            new = f"{stem}{cid}-{rest}"
+            if new.lower() in {p.lower() for p in pages} or new in report["renamed"].values():
+                report["skipped"][old_slug] = f"cannot rename to {new}: it exists"
                 continue
-            report["renamed"][old] = new
+            report["renamed"][old_slug] = new
             r["slug"] = new
         n = len(books.content_ids(rows))
         new_text = books.replace_chapters(text, rows)
         head, sep, body = new_text.partition("\n---\n")
         if not re.search(r"^outline_chapters:", head, re.M):
             head = re.sub(r"^(book_pages:.*)$", rf"\1\noutline_chapters: {n}", head, count=1, flags=re.M)
-        texts[slug] = head + sep + body
+        head = re.sub(r"^maturity:.*$", f"maturity: {books.book_status(rows)}", head, count=1, flags=re.M)
+        book_texts[slug] = head + sep + body
         report["books"] += 1
     if dry_run:
         report["dry_run"] = True
         return report
     mapping = report["renamed"]
-    for slug, text in texts.items():
-        if slug in mapping:
-            head, sep, body = text.partition("\n---\n")
-            text = _add_alias(head, slug) + sep + body
-            _write(os.path.join(wiki, mapping[slug] + ".md"), text)
-            os.remove(pages[slug])
-        else:
+    for slug, text in book_texts.items():            # book pages first, then the parts they link
+        _write(pages[slug], text)
+    for slug, text in part_texts.items():
+        if slug not in mapping:
             _write(pages[slug], text)
+            continue
+        head, sep, body = text.partition("\n---\n")
+        old_path, new_path = pages[slug], os.path.join(wiki, mapping[slug] + ".md")
+        _write(old_path, _add_alias(head, slug) + sep + body)
+        if os.path.exists(new_path) and os.path.samefile(old_path, new_path):
+            tmp = old_path + ".0016-rename"            # a case-only rename on a case-insensitive filesystem
+            os.rename(old_path, tmp)
+            os.rename(tmp, new_path)
+        else:
+            os.rename(old_path, new_path)
     if mapping:
         for fn in sorted(os.listdir(wiki)):
             if not fn.endswith(".md"):
@@ -235,9 +299,12 @@ def apply(root, dry_run=False):
             for fn in files:
                 if fn.endswith(".md") and any(o in _read(os.path.join(d, fn)) for o in mapping):
                     report["think"].append(os.path.relpath(os.path.join(d, fn), root))
+    for line in report["notes"]:
+        print(f"NOTE 0016 {line}")
+    for why in report["skipped"].values():
+        print(f"NOTE 0016 {why}")
     print(f"book chapters: {report['books']} books, {report['parts']} part pages, "
           f"{len(mapping)} renamed (old slugs kept as aliases), {report['relinked']} pages relinked"
-          + (f"; left alone: {report['skipped']}" if report["skipped"] else "")
           + (f"; think/ still links old slugs (aliases resolve them): {report['think']}" if report["think"] else ""))
     return report
 

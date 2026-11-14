@@ -1004,10 +1004,17 @@ def _outline_chapters(rel, fm):
 def check_books(pages):
     """Page-range hubs (book, notebook): an Overview, a valid `## Chapters` table with fixed ids,
     and part pages that agree with their chapter row both ways. Returns {hub slug: (rel, fm, rows)}."""
-    hubs = {}
+    hubs, legacy = {}, set()
     for slug, (rel, fm, text) in pages.items():
         t = fm.get("type")
         if t not in PARTITION_COLLECTIONS:
+            continue
+        if CHAPTERS_HEADING not in text and PARTITION_HEADING in text:
+            err(rel, f"still on the pre-1.6 {PARTITION_HEADING} table — run `pixi run ops -- migrate`; if migrate "
+                     "left this book alone, its report names the row to hand-fix: fix that row, then migrate again "
+                     "(its part pages are checked once it has a Chapters table)")
+            legacy.add(slug)
+            hubs[slug] = (rel, fm, [])
             continue
         try:
             total = int(str(fm.get("book_pages") or "").strip())
@@ -1019,10 +1026,8 @@ def check_books(pages):
                       "what it is, how it is organised, why it matters here")
         rows = []
         if CHAPTERS_HEADING not in text:
-            hint = ("its old " + PARTITION_HEADING + " table needs `pixi run ops -- migrate`"
-                    if PARTITION_HEADING in text else
-                    "`python3 -m kb_distillery.ingest book <raw>` builds one")
-            err(rel, f"type {t} requires a {CHAPTERS_HEADING} table — {hint}")
+            err(rel, f"type {t} requires a {CHAPTERS_HEADING} table — "
+                     "`python3 -m kb_distillery.ingest book <raw>` builds one")
         else:
             rows = parse_chapters(text)
             errs, warns = validate(rows, total, _outline_chapters(rel, fm))
@@ -1050,6 +1055,8 @@ def check_books(pages):
         if fm.get("type") != "part":
             continue
         book = str(fm.get("book") or "")
+        if book in legacy:
+            continue                                # one error on the book page says it all
         if book not in hubs:
             err(rel, f"type part requires `book:` naming a book or notebook page (got {book!r})")
             continue

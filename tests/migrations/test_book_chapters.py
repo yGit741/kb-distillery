@@ -32,13 +32,15 @@ A made-up book.
 
 ## Partition
 
+Read the odd chapters first.
+
 Coverage: **30 / 108 pp (27%)** · skip rows excluded · parts ≤ 60 pp
 
 | # | Part | Pages | Status | Note |
 |---|------|-------|--------|------|
 | 1 | Front matter · Preface | 1–8 | skip |  |
 | 2 | Chapter 1. Groups | 9–30 | full | [Ch. 1](part-2010-tiny-fields-ch1-groups.md) |
-| 3 | Chapter 2. Rings | 31–60 | — |  |
+| 3 | Chapter 2. Rings | 31–60 | — | hand note | odd |
 | 4 | Chapter 3. Fields: 3.1 Basics → 3.4 Towers | 61–80 | full | [Fields](part-2010-tiny-fields-fields-basics.md) |
 | 5 | Chapter 3. Fields: 3.5 Exercises and notes | 81–95 | — |  |
 | 6 | Chapter 4. Galois: 4.1 → 4.3 | 96–105 | — |  |
@@ -104,12 +106,20 @@ class BookChaptersMigration(unittest.TestCase):
             ("ch2", 31, 60, "—"),
             ("ch3a", 61, 80, "full"),        # digested on its own: the exercises row stays a split
             ("ch3b", 81, 95, "—"),
-            ("ch4", 96, 116, "—"),           # exercises and the unnumbered hints merge (none digested)
+            ("ch4", 96, 110, "—"),           # the exercises row joins its chapter (neither digested)
+            ("sec1", 111, 116, "—"),         # an unnumbered row keeps its own row
             ("back", 117, 120, "skip"),
         ])
-        self.assertIn("outline_chapters: 4", text)
-        self.assertEqual(books.validate(rows, 120, 4)[0], [])
-        self.assertIn("Coverage: **1 / 4 chapters**", text)
+        self.assertIn("outline_chapters: 5", text)
+        self.assertIn("maturity: reading", text)
+        self.assertEqual(books.validate(rows, 120, 5)[0], [])
+        self.assertIn("Coverage: **1 / 5 chapters**", text)
+        self.assertIn("hand note", text)                # Note text that is not a link
+        self.assertIn("Read the odd chapters first.", text)   # prose under the heading
+        notes = "\n".join(report["notes"])
+        self.assertIn("joined 'Chapter 4. Galois: 4.4 Exercises'", notes)
+        self.assertIn("'A few hints' (p.111–116) has no chapter number: id sec1", notes)
+        self.assertIn("extra columns", notes)
         self.assertEqual(report["renamed"], {"part-2010-tiny-fields-fields-basics": "part-2010-tiny-fields-ch3a-fields-basics"})
         self.assertEqual(report["think"], ["think/note.md"])
 
@@ -153,6 +163,47 @@ class BookChaptersMigration(unittest.TestCase):
         report = mig.apply(self.root)
         self.assertIn("book-2010-tiny-fields", report["skipped"])
         self.assertIn("## Partition", read(self.root, "wiki/book-2010-tiny-fields.md"))
+
+    def assign(self, table):
+        return [(r["id"], r["start"], r["end"]) for r in mig.assign_ids(
+            [{"title": t, "start": a, "end": b, "status": st, "slug": sl} for t, a, b, st, sl in table])]
+
+    def test_unnumbered_titles_get_sec_ids_and_keep_every_row(self):
+        got = self.assign([("Introduction", 1, 10, "—", ""), ("Part II. Foundations", 11, 20, "—", ""),
+                           ("Chapters 3-4", 21, 30, "—", ""), ("Appendix 1", 31, 35, "—", ""),
+                           ("Conclusion", 36, 40, "full", "x")])
+        self.assertEqual(got, [("sec1", 1, 10), ("sec2", 11, 20), ("sec3", 21, 30), ("sec4", 31, 35), ("sec5", 36, 40)])
+
+    def test_old_pages_carve_is_kept(self):
+        got = self.assign([("Chapter 1. A", 1, 18, "—", ""), ("Pages 19–42", 19, 42, "full", "p"),
+                           ("Chapter 1. A", 43, 50, "—", "")])
+        self.assertEqual(got, [("ch1a", 1, 18), ("sec1", 19, 42), ("ch1b", 43, 50)])
+
+    def test_notebook_dates(self):
+        got = self.assign([("2023-01-05", 1, 20, "—", ""), ("2023-02-11", 21, 40, "full", "n"), ("p. 41–60", 41, 60, "—", "")])
+        self.assertEqual(got, [("sec1", 1, 20), ("sec2", 21, 40), ("sec3", 41, 60)])
+
+    def test_more_than_26_rows_of_one_chapter(self):
+        table = [(f"Chapter 2. Long: part {k}", 2 * k + 1, 2 * k + 2, "full", f"p{k}") for k in range(30)]
+        got = self.assign(table)
+        self.assertEqual([i for i, _a, _b in got], [f"sec{k}" for k in range(1, 31)])
+        self.assertTrue(all(books.valid_id(i) for i, _a, _b in got))
+        got = self.assign(table[:26])
+        self.assertEqual(got[-1][0], "ch2z")
+
+    def test_skip_row_between_chapters_keeps_its_row(self):
+        got = self.assign([("Chapter 1. A", 1, 10, "—", ""), ("Interlude", 11, 12, "skip", ""),
+                           ("Chapter 2. B", 13, 20, "—", "")])
+        self.assertEqual(got, [("ch1", 1, 10), ("sec1", 11, 12), ("ch2", 13, 20)])
+
+    def test_appendix_slug_is_lower_case_and_never_deleted(self):
+        write(self.root, "wiki/book-2010-tiny-fields.md", BOOK.replace(
+            "| 7 | Chapter 4. Galois: 4.4 Exercises | 106–110 | — |  |",
+            "| 7 | Appendix A. Tables | 106–110 | full | [A](part-2010-tiny-fields-appa-tables.md) |"))
+        write(self.root, "wiki/part-2010-tiny-fields-appa-tables.md", part("Appendix A. Tables", "106-110"))
+        report = mig.apply(self.root)
+        self.assertNotIn("part-2010-tiny-fields-appa-tables", report["renamed"])
+        self.assertIn("chapter: appA", read(self.root, "wiki/part-2010-tiny-fields-appa-tables.md"))
 
     def test_produces_the_current_schema(self):
         from kb_distillery.vault.schema import SCHEMA_VERSION

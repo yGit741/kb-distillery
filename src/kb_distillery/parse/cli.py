@@ -135,7 +135,10 @@ def _target(a) -> tuple:
     inside that kb, the store defaults to its meta/parsed, and --chapter picks pages from the book's Chapters table."""
     from . import store
     kb = os.path.abspath(os.path.expanduser(a.kb)) if a.kb else ""
-    pdf = a.pdf if os.path.isabs(a.pdf) or not kb or os.path.exists(a.pdf) else os.path.join(kb, a.pdf)
+    if os.path.isabs(a.pdf) or not kb:
+        pdf = a.pdf
+    else:                       # with --kb the kb-relative path wins over a same-named file in the current directory
+        pdf = os.path.join(kb, a.pdf) if os.path.exists(os.path.join(kb, a.pdf)) else a.pdf
     pdf = os.path.abspath(pdf)
     if not os.path.isfile(pdf):
         raise SystemExit("no such file: %s" % a.pdf)
@@ -144,7 +147,7 @@ def _target(a) -> tuple:
     if a.chapter:
         if not kb:
             raise SystemExit("--chapter needs --kb (the chapters are read from the book page of that knowledge base)")
-        pages = chapter_pages(kb, os.path.relpath(os.path.realpath(pdf), os.path.realpath(kb)), a.chapter)
+        pages = chapter_pages(kb, os.path.relpath(os.path.abspath(pdf), kb), a.chapter)
     else:
         pages = a.pages
     if not (a.store or kb):

@@ -23,13 +23,13 @@ def sections_by_type():
               "Connections", "Links out"],
     "part": ["Problem", "Main result", "Setup & assumptions", takeaways,
              "Connections", "Links out"],
-    "book": ["Overview", "Partition", "Key concepts", "Threads"],
+    "book": ["Overview", "Chapters", "Key concepts", "Threads"],
     "question": ["Question", "Why it matters", "Current state"],
     "idea": ["One-liner", "Intuition", "Formal", "Connections"],
     "topic": ["Scope", "Key concepts", "Threads", "Papers"],
     "course": ["Overview", "Contents", "Threads"],
     "series": ["Overview", "Contents", "Threads"],
-    "notebook": ["Overview", "Partition", "Threads"],
+    "notebook": ["Overview", "Chapters", "Threads"],
     }
 
 
