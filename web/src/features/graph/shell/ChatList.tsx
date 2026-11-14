@@ -44,7 +44,12 @@ export function ChatList({ activeId, server, limit, onMore }: { activeId: string
     refetchInterval: REFRESH_MS,
   });
   const rows = useMemo<SessionRow[]>(() => q.data ?? browserSessions(), [q.data]);
-  const shown = useMemo(() => (limit ? rows.slice(0, limit) : rows), [rows, limit]);
+  // a pinned chat always shows; the newest of the rest fill the limit
+  const shown = useMemo(() => {
+    if (!limit) return rows;
+    const pinned = rows.filter((r) => r.pinned);
+    return [...pinned, ...rows.filter((r) => !r.pinned).slice(0, Math.max(0, limit - pinned.length))];
+  }, [rows, limit]);
   const groups = useMemo(() => groupChats(shown), [shown]);
   const compact = limit !== undefined;
   const open = (row: SessionRow) => {
