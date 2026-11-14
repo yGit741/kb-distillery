@@ -3,6 +3,7 @@ and an engine failure goes to a fixer whose PR merges itself unless the diff gat
 
     detect.py   read the last run of meta/.ops/runs.jsonl, turn it into failures with a stable signature
     issue.py    open or reuse the GitHub issue for a signature (never fails the nightly)
+    fixer.py    one attempt per signature: Sonnet + Opus advisor in a worktree, then commit, review, gate, PR
     gate.py     measure a diff: the reasons a fix must wait for the owner (empty = may merge itself)
     __main__    `python -m kb_distillery.autofix nightly|gate`
 

@@ -1,6 +1,7 @@
 """`python -m kb_distillery.autofix nightly|gate`.
 
-    nightly [--kb-root DIR] [--dry-run]   the last nightly run -> one issue per failure signature (+ the fixer)
+    nightly [--kb-root DIR] [--dry-run] [--no-fix]   the last nightly run -> one issue per failure signature,
+                                                    then the fixer (fixer.py) for the engine failures
     gate [--cwd DIR] [--base REF]         print the diff gate's verdict for a branch
 """
 import argparse
@@ -80,6 +81,7 @@ def main(argv=None):
     n = sub.add_parser("nightly", help="ticket (and fix) the failures of the last nightly run")
     n.add_argument("--kb-root", default=None, help="the kb whose meta/.ops/runs.jsonl to read (default: $KB's root)")
     n.add_argument("--dry-run", action="store_true", help="print what would happen: no GitHub writes, no LLM calls")
+    n.add_argument("--no-fix", action="store_true", help="tickets only: do not start the fixer")
     g = sub.add_parser("gate", help="print the diff gate's verdict")
     g.add_argument("--cwd", default=".")
     g.add_argument("--base", default="origin/main")
@@ -91,7 +93,14 @@ def main(argv=None):
     from kb_distillery.config.paths import vault_root
     kb_root = args.kb_root or vault_root()
     print(f"=== autofix {datetime.datetime.now().isoformat(timespec='seconds')} kb={kb_root}")
-    nightly(kb_root, dry_run=args.dry_run)
+    root = engine_root()
+    fix = None
+    if not (args.dry_run or args.no_fix):
+        from kb_distillery.autofix import fixer
+
+        def fix(failure, number, state):
+            return fixer.fix(failure, number, state, root, save=lambda: save_state(root, state))
+    nightly(kb_root, dry_run=args.dry_run, root=root, fix=fix)
     return 0
 
 
