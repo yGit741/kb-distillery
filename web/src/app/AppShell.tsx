@@ -21,7 +21,6 @@ import { useDataSource } from "@/api";
 import { flag } from "@/flags";
 import { useFlag } from "@/flags/useFlag";
 import { IS_SHARE } from "@/share/env";
-import { useFullChat } from "@/features/graph/shell/useFullChat";
 
 // Quick capture ships with the think feature; the lazy import keeps it out of builds where the flag is off.
 const QuickCapture = lazy(() => import("@/features/think/QuickCapture"));
@@ -93,10 +92,8 @@ export function AppShell() {
   // every hook runs on every render (flags can arrive later from the server), then the switch's place is worked out
   const viewsPanelOn = useFlag("views-panel");
   const shellOn = useFlag("graph-shell");
-  // flag graph-corners: the graph's corner disc says it is on screen (`elsewhere`); the folded full chat hides the
-  // graph frame with it, so the bar keeps the switch then
-  const { folded: chatFolded } = useFullChat();
-  const themeInPanel = (viewsPanelOn && shellOn && onGraph && panelHasSwitch) || (elsewhere && onGraph && !chatFolded);
+  // flag graph-corners: the graph's corner disc says while it is on screen (`elsewhere`), so the bar leaves its own out
+  const themeInPanel = (viewsPanelOn && shellOn && onGraph && panelHasSwitch) || (elsewhere && onGraph);
   // flag header-fold: on the graph the bar folds away above the screen (the graph's chevron brings it back)
   const folded = useHeaderFolded();
   return (

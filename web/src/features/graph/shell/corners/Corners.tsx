@@ -26,6 +26,7 @@ import type { GNode } from "../../types";
 import { ago, chatWhen, defaultFetch, listRecent, listSessions, listViews, pinView, renameView, unpinView, type Fetcher, type SessionRow } from "./api";
 import { ActionPill, CornerButton, LinePin, MoreButton, PillAction, PushPin } from "./CornerButton";
 import { IS_SHARE } from "@/share/env";
+import { useFullChat } from "../useFullChat";
 import { ColourDots } from "./ColourDots";
 import { useCorners, type Layer } from "./cornersStore";
 import { Fan, type FanCard } from "./Fan";
@@ -82,12 +83,15 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
   // flag graph-corners: four raised discs with line icons, and the graph's one theme switch in the bottom-right corner
   const discs = useFlag("graph-corners");
   const themeCorner = discs && ds.kind === "http" && !IS_SHARE;
-  // while the disc is on screen the app bar leaves out its own switch: one theme switch, always
+  // while the disc is on screen the app bar leaves out its own switch: one theme switch, always (the folded full
+  // chat hides this frame, disc and all, so the bar keeps its switch then)
+  const { folded: chatFolded } = useFullChat();
+  const discShown = themeCorner && !chatFolded;
   useEffect(() => {
-    if (!themeCorner) return;
+    if (!discShown) return;
     useTheme.getState().setElsewhere(true);
     return () => useTheme.getState().setElsewhere(false);
-  }, [themeCorner]);
+  }, [discShown]);
   const caps = useCapabilities();
   const server = ds.kind === "http" && caps.saveViews;
   const sparkChat = useFlag("spark-chat");
