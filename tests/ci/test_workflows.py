@@ -107,7 +107,9 @@ class RunnerSafety(unittest.TestCase):
         self.assertIn("github.ref == 'refs/heads/main'", deploy["if"])      # a dispatch from another branch never deploys it
 
 
-CI_JOBS = {"lint", "tests", "web", "checks", "wheel", "worker", "docker", "all-green"}
+CI_JOBS = {"lint", "tests", "web", "checks", "wheel", "worker", "docker", "install-linux", "install-macos",
+           "all-green"}
+MACOS_JOBS = {"install-macos"}     # macOS is a supported platform: the installer runs on it per PR, the suite nightly
 LANE_CHECKS = ("pixi run api-schema-check", "pixi run flags-check", "pixi run test-e2e", "pixi run test-ui-principles")
 LINT_TASKS = ("pixi run lint-skills", "pixi run licenses", "pixi run lint-imports", "pixi run lint", "pixi run okf-check", "pixi run ruff")
 
@@ -167,7 +169,7 @@ class CiGates(unittest.TestCase):
     def test_jobs_and_runners(self):
         self.assertEqual(set(self.jobs), CI_JOBS)
         for name, job in self.jobs.items():
-            self.assertEqual(job["runs-on"], "ubuntu-latest", name)
+            self.assertEqual(job["runs-on"], "macos-latest" if name in MACOS_JOBS else "ubuntu-latest", name)
         for name in ("lint", "tests", "web"):
             self.assertEqual(str(self.jobs[name]["env"]["KB_CI"]), "1", name)
 
@@ -206,6 +208,32 @@ class CiGates(unittest.TestCase):
         self.assertEqual(set(job["needs"]), CI_JOBS - {"all-green"})
         self.assertEqual(str(job["if"]).strip(), "always()")            # it reports even when a needed job failed
         self.assertTrue(any("success" in r for r in runs(job)))         # and goes red unless every result is success
+
+    def test_the_docker_job_waits_for_the_image_to_be_healthy(self):
+        self.assertIn(".github/scripts/docker-smoke.sh kb-distillery:ci", runs(self.jobs["docker"]))
+        script = open(os.path.join(ROOT, ".github", "scripts", "docker-smoke.sh")).read()
+        self.assertIn('wait_for "$UP" healthy', script)
+        self.assertIn('wait_for "$DOWN" unhealthy', script)     # a down server must turn the check red
+
+    def test_the_installer_runs_on_macos_and_linux(self):
+        for name in ("install-linux", "install-macos"):
+            self.assertTrue(any(r.startswith("./install.sh --no-open") for r in runs(self.jobs[name])), name)
+
+    def test_the_suite_runs_nightly_on_both_macs_and_the_arm64_image_is_checked(self):
+        wf = load("platforms-nightly.yml")
+        self.assertFalse(PR_TRIGGERS & set(triggers(wf)), "the slow platform checks stay off pull requests")
+        self.assertEqual(wf["jobs"]["tests-macos"]["runs-on"], "macos-latest")
+        self.assertEqual(wf["jobs"]["tests-macos-intel"]["runs-on"], "macos-15-intel")
+        self.assertIn(".github/scripts/docker-smoke.sh kb-distillery:ci", runs(wf["jobs"]["docker-arm64"]))
+        self.assertIn("schedule", triggers(wf))
+        arm = wf["jobs"]["docker-arm64"]
+        self.assertEqual(arm["needs"], "wheel")                          # the arm64 image installs the wheel built on ubuntu
+        upload = next(s for s in wf["jobs"]["wheel"]["steps"] if s.get("uses", "").startswith("actions/upload-artifact"))
+        download = next(s for s in arm["steps"] if s.get("uses", "").startswith("actions/download-artifact"))
+        self.assertEqual(upload["with"]["name"], download["with"]["name"])
+        self.assertEqual(download["with"]["path"], "dist")
+        for name, job in wf["jobs"].items():
+            self.assertIn("timeout-minutes", job, f"{name}: a hung nightly job must not hold a runner for 6 hours")
 
     def test_a_merge_group_run_is_never_cancelled(self):
         c = self.wf["concurrency"]
