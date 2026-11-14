@@ -99,6 +99,14 @@ def test_healthcheck_runs_doctor():
     assert "NONE" not in hc[0].upper().split()[:1]
 
 
+def test_healthcheck_probes_the_port_the_server_listens_on():
+    (hc,) = of("HEALTHCHECK")
+    assert "create_connection" in hc
+    (port,) = re.findall(r"\('127\.0\.0\.1', (\d+)\)", hc)
+    assert re.search(rf"\"--port\",\s*\"{port}\"", " ".join(of("CMD"))), "healthcheck port differs from the CMD --port"
+    assert port in " ".join(of("EXPOSE")).split()
+
+
 def test_proxy_auth_is_the_image_default():
     env = " ".join(of("ENV"))
     assert re.search(r"\bKB_AUTH=proxy\b", env)
