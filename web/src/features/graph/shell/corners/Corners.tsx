@@ -355,6 +355,11 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
   const pinTypes = () => (useGraphUi.getState().shownTypes === undefined ? { shownTypes: shownTypes ? new Set(shownTypes) : null } : {});
   useShellTour(`${server}|${allTypes.length > 0}`);
   const spot = useCallback((types: readonly string[] | null) => useGraphUi.setState({ spotlight: types ? new Set(types) : null }), []);
+  // a double click on a type name puts the drawn types, and the story they belonged to, back exactly as they were
+  const keepTypes = useCallback(() => {
+    const { shownTypes: t, story, edgeStory } = useGraphUi.getState();
+    return () => useGraphUi.setState({ shownTypes: t, story, edgeStory });
+  }, []);
   useEffect(() => () => useGraphUi.setState({ spotlight: null, spotIds: null }), []);
 
   const placeMenu = (side: "left" | "right", corner: "top" | "bottom"): React.CSSProperties => ({
@@ -619,7 +624,7 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
       />
       {/* the switch is always Concepts / Sources; Health is a lens on concepts, reached by typing "health" */}
       {intent && <SubjectToggle subject={subject === "health" ? "concepts" : subject} onPick={(s) => (subject === "health" && s === "concepts" ? undefined : pickSubject(s))} top={shellTop} />}
-      <TypesCard concepts={concepts} sources={intent && subject !== "sources" ? NO_ROWS : sources} onToggle={(types, on) => ui.setLayerTypes(types, on, allTypes, [...defaultTypes(schema, nodes)])} onSpot={spot} />
+      <TypesCard concepts={concepts} sources={intent && subject !== "sources" ? NO_ROWS : sources} onToggle={(types, on) => ui.setLayerTypes(types, on, allTypes, [...defaultTypes(schema, nodes)])} keep={keepTypes} onSpot={spot} />
     </div>
   );
 }
