@@ -56,8 +56,10 @@ export function ColourDots({ rows, title, by, dimensions, onPick, bar, hidden, t
   const counts = useFlag("legend-counts");
   // hover spotlight, like the page types: settle in, linger out, and let go when the card folds or unmounts
   const spotTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const wanted = useRef<string | null>(null);
   const spot = (label: string | null) => {
-    if (!onSpot) return;
+    if (!onSpot || label === wanted.current) return;
+    wanted.current = label;
     if (spotTimer.current) clearTimeout(spotTimer.current);
     spotTimer.current = setTimeout(() => spotNow(label), label ? SPOT_IN_MS : SPOT_OUT_MS);
   };
@@ -73,6 +75,7 @@ export function ColourDots({ rows, title, by, dimensions, onPick, bar, hidden, t
   useEffect(() => {
     if (open) return;
     if (spotTimer.current) clearTimeout(spotTimer.current);
+    wanted.current = null;
     spotNow(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- spotNow reads refs; this runs on folding only
   }, [open]);
@@ -116,10 +119,10 @@ export function ColourDots({ rows, title, by, dimensions, onPick, bar, hidden, t
       )}
       <div
         data-row="header"
-        className="relative flex items-center justify-center gap-0.5 self-stretch overflow-hidden whitespace-nowrap pr-4 text-[10px] font-medium uppercase tracking-wide text-muted-foreground transition-[height,opacity]"
+        className="relative flex items-center justify-start gap-0.5 self-stretch overflow-hidden whitespace-nowrap pr-4 text-[10px] font-medium uppercase tracking-wide text-muted-foreground transition-[height,opacity]"
         style={{ height: open ? LEGEND_HEAD : 0, opacity: open ? 1 : 0, transitionDuration: `${MS}ms` }}
       >
-        <label className="group/pick pointer-events-auto relative flex h-full cursor-pointer items-center gap-1.5 rounded px-1 leading-3 hover:bg-accent">
+        <label className="group/pick pointer-events-auto relative -ml-1 flex h-full cursor-pointer items-center gap-1.5 rounded px-1 leading-3 hover:bg-accent">
           <span>Color by</span>
           {/* a thin rule under the coloured-by word says "this opens a choice", quieter than a chevron */}
           <span className="font-semibold text-foreground underline decoration-muted-foreground/60 decoration-1 underline-offset-[3px] group-hover/pick:decoration-foreground">
@@ -142,21 +145,19 @@ export function ColourDots({ rows, title, by, dimensions, onPick, bar, hidden, t
             ))}
           </select>
         </label>
-        {/* folding: three small muted dots over the colour circles' column, halfway between the card's edge and the top circle */}
+        {/* folding: one small dark dot over the colour circles' column, halfway between the card's edge and the top circle */}
         <button
           type="button"
           tabIndex={open ? 0 : -1}
           aria-label="Hide the colour legend"
           aria-expanded={open}
           title="Hide the legend"
-          className={cn("group pointer-events-auto absolute -right-0.5 flex h-4 w-4 items-center justify-center gap-[2px] rounded-full", RING)}
+          className={cn("group pointer-events-auto absolute -right-0.5 flex h-4 w-4 items-center justify-center rounded-full", RING)}
           // the header starts LEGEND_PAD below the card's edge; the 16px box is centred on the dots and on the circles' column
           style={{ top: legendFoldDotY(!!bar) - LEGEND_PAD - 8 }}
           onClick={() => toggle("legend")}
         >
-          {[0, 1, 2].map((i) => (
-            <i key={i} aria-hidden className="block size-[3px] rounded-full bg-muted-foreground/60 transition-colors group-hover:bg-foreground" />
-          ))}
+          <i aria-hidden className="block size-1 rounded-full bg-foreground transition-transform group-hover:scale-125" />
         </button>
       </div>
       {bar && (
@@ -196,26 +197,29 @@ export function ColourDots({ rows, title, by, dimensions, onPick, bar, hidden, t
               onToggle(r.label);
               // the row just hid (or came back) under the pointer: light what is drawn now, at once
               if (spotTimer.current) clearTimeout(spotTimer.current);
-              spotNow(off ? r.label : null);
+              wanted.current = off ? r.label : null;
+              spotNow(wanted.current);
             }}
             // a hidden value has nothing drawn to light up
-            onMouseEnter={() => open && spot(off ? null : r.label)}
+            // a row that slid under a still pointer is not chosen: it lights once the pointer moves
+            onMouseMove={() => open && still.settled && spot(off ? null : r.label)}
             onMouseLeave={() => spot(null)}
             onFocus={() => open && spot(off ? null : r.label)}
             onBlur={() => spot(null)}
-            className={cn("flex items-center justify-end rounded-md transition-[height] motion-reduce:transition-none", open ? "pointer-events-auto hover:bg-accent" : "pointer-events-none", RING)}
+            // open, a row spans the card: the name reads from the left edge, the count and the colour keep their right columns
+            className={cn("flex items-center justify-end rounded-md transition-[height] motion-reduce:transition-none", open ? cn("pointer-events-auto self-stretch", still.settled && "hover:bg-accent") : "pointer-events-none", RING)}
             style={{ height: open ? LEGEND_OPEN_ROW : LEGEND_REST_ROW, transitionDuration: `${MS}ms` }}
           >
             <span
               // a long name (a topic named by the LLM) ends in an ellipsis; the full name is its tooltip
               title={r.label}
-              className={cn("max-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-[12.5px] opacity-0 transition-[max-width,opacity,margin]", open && "mr-2.5 max-w-[210px] opacity-100", off && "text-muted-foreground line-through")}
+              className={cn("max-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-[12.5px] opacity-0 transition-[max-width,opacity,margin]", open && "mr-2.5 max-w-[210px] flex-1 text-left opacity-100", off && "text-muted-foreground line-through")}
               style={{ transitionDuration: `${MS}ms`, transitionDelay: `${i * 14}ms` }}
             >
               {r.label}
             </span>
             <small
-              className={cn("max-w-0 overflow-hidden whitespace-nowrap text-[11.5px] text-muted-foreground opacity-0 transition-[max-width,opacity,margin]", open && "mr-2.5 max-w-[30px] opacity-100")}
+              className={cn("max-w-0 overflow-hidden whitespace-nowrap text-[11.5px] text-muted-foreground opacity-0 transition-[max-width,opacity,margin]", open && "mr-2.5 min-w-[18px] max-w-[30px] text-right opacity-100")}
               style={{ transitionDuration: `${MS}ms`, transitionDelay: `${i * 14}ms` }}
             >
               <span className={counts ? "tabular-nums" : undefined}>{r.count}</span>

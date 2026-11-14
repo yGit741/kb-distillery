@@ -44,10 +44,22 @@ export function TypesCard({ concepts, sources, onToggle, onSpot }: Props) {
   useEffect(() => {
     if (!open && box.current?.contains(document.activeElement) && document.activeElement !== opener.current) opener.current?.focus();
   }, [open]);
+  const wanted = useRef<string | null>(null);
   const spot = (types: readonly string[] | null) => {
+    const k = types ? types.join("|") : null;
+    if (k === wanted.current) return;
+    wanted.current = k;
     if (timer.current) clearTimeout(timer.current);
     timer.current = setTimeout(() => onSpot(types), types ? SPOT_IN_MS : SPOT_OUT_MS);
   };
+  // folded (Escape, a click outside), the chips stop taking the pointer, so no leave ever comes: let go here
+  useEffect(() => {
+    if (open) return;
+    if (timer.current) clearTimeout(timer.current);
+    if (wanted.current !== null) onSpot(null);
+    wanted.current = null;
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- runs on folding only
+  }, [open]);
   const conceptGroups = useMemo(() => groupTypes(concepts), [concepts]);
   const sourceGroups = useMemo(() => groupTypes(sources), [sources]);
   if (!conceptGroups.length && !sourceGroups.length) return null;
@@ -83,12 +95,13 @@ export function TypesCard({ concepts, sources, onToggle, onSpot }: Props) {
         title={`${r.shown ? "Hide" : "Show"} every ${label.toLowerCase()}${r.members.length > 1 ? ` (${r.members.map((m) => `${typeName(m)} ${m.total}`).join(", ")})` : ""}`}
         data-type={r.id}
         onClick={() => open && onToggle(ids, !r.shown)}
-        onMouseEnter={() => open && spot(ids)}
+        // a chip that slid under a still pointer is not chosen: it lights once the pointer moves
+        onMouseMove={() => open && still.settled && spot(ids)}
         onFocus={() => open && spot(ids)}
         onBlur={() => spot(null)}
         className={cn(
           "flex h-6 shrink-0 items-center rounded-lg transition-[margin,color] motion-reduce:transition-none",
-          open ? "pointer-events-auto hover:bg-accent" : "pointer-events-none",
+          open ? cn("pointer-events-auto", still.settled && "hover:bg-accent") : "pointer-events-none",
           r.shown ? "text-foreground" : "text-muted-foreground",
           !open && (side === "left" ? "-mr-[5px] first:mr-0" : "-ml-[5px] first:ml-0"),
           open && (side === "left" ? "mr-3 first:mr-0" : "ml-3 first:ml-0"),

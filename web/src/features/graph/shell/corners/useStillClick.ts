@@ -1,4 +1,4 @@
-import { useEffect, useRef, type MouseEvent as ReactMouseEvent } from "react";
+import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
 
 /** How far the pointer may drift between two clicks and still count as "the same spot". */
 export const STILL_PX = 4;
@@ -10,18 +10,24 @@ export const STILL_PX = 4;
  * open and close, and they never reach a row that slid under the pointer when the legend opened.
  *
  * `mark` goes on the opener's click, `onClickCapture` on the legend's box. Keyboard presses (no pointer position)
- * are never still clicks.
+ * are never still clicks. `settled` is false from the opening click until the pointer moves away: until then nothing
+ * under the pointer may look chosen (no hover tint, no spotlight), since the row only slid there.
  */
 export function useStillClick(open: boolean, close: () => void) {
   const at = useRef<{ x: number; y: number } | null>(null);
+  const [settled, setSettled] = useState(true);
   useEffect(() => {
     if (!open) {
       at.current = null;
+      setSettled(true);
       return;
     }
     const move = (e: PointerEvent | MouseEvent) => {
       const p = at.current;
-      if (p && Math.hypot(e.clientX - p.x, e.clientY - p.y) > STILL_PX) at.current = null;
+      if (p && Math.hypot(e.clientX - p.x, e.clientY - p.y) > STILL_PX) {
+        at.current = null;
+        setSettled(true);
+      }
     };
     window.addEventListener("pointermove", move);
     window.addEventListener("mousemove", move);
@@ -31,8 +37,10 @@ export function useStillClick(open: boolean, close: () => void) {
     };
   }, [open]);
   return {
+    settled,
     mark: (e: ReactMouseEvent) => {
       at.current = e.detail === 0 ? null : { x: e.clientX, y: e.clientY };
+      setSettled(!at.current);
     },
     onClickCapture: (e: ReactMouseEvent) => {
       const p = at.current;
@@ -41,6 +49,7 @@ export function useStillClick(open: boolean, close: () => void) {
       e.preventDefault();
       e.stopPropagation();
       at.current = null;
+      setSettled(true);
       close();
     },
   };
