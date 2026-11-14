@@ -3,8 +3,8 @@ name = "kb-distillery"
 version = "0.1.0"
 description = "kb-distillery: the engine behind every knowledge base in ~/knowledge"
 channels = ["conda-forge"]
-# Intel Macs need macOS 14+: opencv-python-headless ships its osx-64 wheel for 14+ only, and below that pixi
-# falls back to the source tarball, which builds without a video backend (video digests then fail).
+# Intel Macs need macOS 14+: opencv-python-headless ships its osx-64 wheel for 14+ only; below that pixi
+# compiles OpenCV from the source tarball, which adds over ten minutes to every install.
 platforms = ["osx-arm64", { platform = "osx-64", macos = "14.0" }, "linux-64"]
 
 [dependencies]

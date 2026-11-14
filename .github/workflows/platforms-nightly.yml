@@ -23,6 +23,8 @@ jobs:
         with:
           pixi-version: v0.76.1
           cache: true
+      - name: OpenCV video backends (which readers this platform has)
+        run: pixi run python -c "import cv2; b = cv2.getBuildInformation(); print(b[b.find('Video I/O'):][:600])"
       - run: pixi run pytest -q -n auto -m "not serial" tests
       - run: pixi run pytest -q -m serial tests
 
@@ -40,6 +42,8 @@ jobs:
         with:
           pixi-version: v0.76.1
           cache: true
+      - name: OpenCV video backends (which readers this platform has)
+        run: pixi run python -c "import cv2; b = cv2.getBuildInformation(); print(b[b.find('Video I/O'):][:600])"
       - run: pixi run pytest -q -n auto -m "not serial" tests
       - run: pixi run pytest -q -m serial tests
 
