@@ -1,5 +1,4 @@
-import { useNavigate, useSearch } from "@tanstack/react-router";
-import { ExternalLink } from "lucide-react";
+import { Navigate, useNavigate, useSearch } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { CopyButton } from "@/components/CopyButton";
 import { Empty, ErrorState, Loading } from "@/components/states";
@@ -10,9 +9,11 @@ import { LifecycleScreen } from "@/features/lifecycle/LifecycleScreen";
 import { PipelineScreen } from "@/features/pipeline/PipelineScreen";
 import { useApiQuery } from "@/lib/useApiQuery";
 import { cn } from "@/lib/utils";
-import { SYSTEM_TABS, type SearchById, type SystemTab } from "@/routes/search";
-import { needsYou, showOwnerOps, tiles, timeline, type EventKind, type HealthLike, type LifecycleLike, type OpsLike, type Tile, type Tone } from "./model";
+import { DEV_SECTIONS, SYSTEM_TABS, type DevSection, type SearchById, type SystemTab } from "@/routes/search";
+import { needsYou, recentRuns, showOwnerOps, systemTiles, tiles, timeline, type EventKind, type HealthLike, type LifecycleLike, type OpsLike, type Tone } from "./model";
 import { HealthView } from "./HealthView";
+import { DevView } from "./DevView";
+import { EventList, StatusStrip, TONE_DOT } from "./StatusStrip";
 import { EmbeddingView } from "./EmbeddingView";
 import { FlagsView } from "./FlagsView";
 import { VariantsView } from "./VariantsView";
@@ -20,43 +21,9 @@ import { KnowledgeBasesView } from "./KnowledgeBasesView";
 import "./tours";
 import { FLAG_ENV } from "@/flags";
 import { useFlag } from "@/flags/useFlag";
+import { useDataSystemSplit } from "@/app/knowledgeNav";
 
-const TAB_LABEL: Record<SystemTab, string> = { overview: "Overview", backlog: "Backlog", pipeline: "Pipeline", history: "History", health: "Health", embedding: "Embedding", flags: "Flags", variants: "Variants", kbs: "Knowledge bases" };
-
-// warn text is amber (under 4.5:1 on white): the dot carries the warning, the value stays readable.
-const TONE_TEXT: Record<Tone, string> = { ok: "text-ok", warn: "text-foreground", bad: "text-bad", "": "text-foreground" };
-const TONE_DOT: Record<Tone, string> = { ok: "bg-ok", warn: "bg-warn", bad: "bg-bad", "": "bg-muted-foreground/40" };
-
-function StatusStrip({ items, onOpen }: { items: Tile[]; onOpen: (tab: SystemTab) => void }) {
-  return (
-    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5" aria-label="System status">
-      {items.map((t) => (
-        <button
-          key={t.id}
-          type="button"
-          data-testid={`tile-${t.id}`}
-          data-tone={t.tone}
-          onClick={() => onOpen(t.tab)}
-          className="flex min-w-0 flex-col gap-0.5 rounded-xl border bg-card p-3 text-left shadow-[var(--shadow)] hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-        >
-          <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <span aria-hidden className={cn("size-2 rounded-full", TONE_DOT[t.tone])} />
-            {t.label}
-          </span>
-          <span data-testid={`tile-${t.id}-value`} className={cn("text-lg font-semibold tabular-nums", TONE_TEXT[t.tone])}>{t.value}</span>
-          <span className="truncate text-xs text-muted-foreground" title={t.hint}>
-            {t.hint || " "}
-          </span>
-        </button>
-      ))}
-    </div>
-  );
-}
-
-const fmtTime = (iso: string) => {
-  const d = new Date(iso);
-  return Number.isNaN(d.getTime()) ? iso : d.toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
-};
+const TAB_LABEL: Record<SystemTab, string> = { overview: "Overview", backlog: "Backlog", pipeline: "Pipeline", history: "History", health: "Health", embedding: "Embedding", flags: "Flags", variants: "Variants", kbs: "Knowledge bases", dev: "Dev" };
 
 const FILTERS: { id: "all" | EventKind; label: string }[] = [
   { id: "all", label: "All" },
@@ -96,32 +63,7 @@ function Timeline({ lc, ops }: { lc?: LifecycleLike; ops?: OpsLike }) {
         ) : !shown.length ? (
           <Empty>No events.</Empty>
         ) : (
-          <ol className="flex flex-col">
-            {shown.map((e, i) => (
-              <li key={`${e.at}-${i}`} className="flex gap-3 border-b py-2 last:border-b-0">
-                <span className="w-28 shrink-0 pt-0.5 text-xs text-muted-foreground tabular-nums">{fmtTime(e.at)}</span>
-                <div className="min-w-0 flex-1">
-                  <p className="flex items-start gap-2 text-sm">
-                    <Badge variant={e.kind === "knowledge" ? "primary" : e.kind === "nightly" ? (e.tone === "bad" ? "bad" : e.tone === "warn" ? "warn" : "ok") : "outline"} className="shrink-0">
-                      {e.kind}
-                    </Badge>
-                    <span className="min-w-0 break-words">{e.title}</span>
-                  </p>
-                  {e.sub && (
-                    <p className="mt-0.5 text-xs text-muted-foreground">
-                      {e.href ? (
-                        <a href={e.href} target="_blank" rel="noreferrer" className="hover:underline">
-                          {e.sub} <ExternalLink aria-hidden className="inline size-3" />
-                        </a>
-                      ) : (
-                        e.sub
-                      )}
-                    </p>
-                  )}
-                </div>
-              </li>
-            ))}
-          </ol>
+          <EventList events={shown} label="Timeline" />
         )}
       </CardContent>
     </Card>
@@ -181,33 +123,72 @@ function NeedsYou({ ops, error, onRetry }: { ops?: OpsLike; error?: unknown; onR
   );
 }
 
+function RecentRuns({ ops }: { ops?: OpsLike }) {
+  const runs = useMemo(() => recentRuns(ops), [ops]);
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Recent runs</CardTitle>
+        <CardDescription>Nightly jobs and site deploys, with how each ended.</CardDescription>
+      </CardHeader>
+      <CardContent>
+        {!ops ? <Loading label="Loading recent runs" rows={3} /> : !runs.length ? <Empty>No runs yet.</Empty> : <EventList events={runs} label="Recent runs" />}
+      </CardContent>
+    </Card>
+  );
+}
+
+const TO_INGEST: readonly SystemTab[] = ["pipeline", "health", "history"];
+const TO_DEV: Partial<Record<SystemTab, DevSection>> = { backlog: "backlog", flags: "flags", variants: "variants", embedding: "embedding" };
+
+/** Flag ui.data-system-split: where an old System tab went, keeping the pipeline's own params; undefined when it stayed. */
+export function movedTab(search: SearchById["system"]): { to: string; search: Record<string, unknown> } | undefined {
+  const { tab, dev: _dev, ...rest } = search;
+  if (tab && TO_INGEST.includes(tab)) return { to: "/ingest", search: { ...rest, tab } };
+  const dev = tab ? TO_DEV[tab] : undefined;
+  if (dev) return { to: "/system", search: { tab: "dev", dev } };
+  return undefined;
+}
+
+/** Flag ui.data-system-split: System's tabs. Dev is the local app only (backlog, flags, variants are local tools). */
+const SPLIT_TABS: readonly SystemTab[] = ["overview", "kbs", "dev"];
+
 /**
  * System: everything about the machine, not the knowledge. One status strip (each number from one
- * snapshot), then tabs: Overview (needs-you + one timeline), Pipeline, History and Health. Replaces the
- * old Pipeline, Ops, Lifecycle and Health tabs; their screens are reused here as they are.
+ * snapshot), then tabs. Flag ui.data-system-split: three tiles (Nightly, Deploy, Open work) and tabs Overview
+ * (Needs you, Recent runs), Knowledge bases and Dev; the data tabs live in Ingest. Flag off: the nine tabs as before.
  */
 export function SystemScreen() {
   const search = useSearch({ strict: false }) as SearchById["system"];
   const navigate = useNavigate();
+  const split = useDataSystemSplit();
   // Flags tab: always in the local app (it is where ui.system-flags-tab itself is flipped); elsewhere gated by that flag.
   const flagsTab = useFlag("ui.system-flags-tab") || FLAG_ENV === "local";
   // Backlog tab: the local app only (the cards are local files; the share API has no backlog).
   const variantsTab = useFlag("ui.variant-chooser");
-  const tabs = SYSTEM_TABS.filter((t) => (t !== "flags" || flagsTab) && (t !== "backlog" || FLAG_ENV === "local") && (t !== "variants" || variantsTab));
+  const local = FLAG_ENV === "local";
+  const devSections: DevSection[] = DEV_SECTIONS.filter((d) => (d !== "flags" || flagsTab) && (d !== "backlog" || local) && (d !== "variants" || variantsTab));
+  const tabs = split
+    ? SPLIT_TABS.filter((t) => t !== "dev" || (local && devSections.length > 0))
+    : SYSTEM_TABS.filter((t) => t !== "dev" && (t !== "flags" || flagsTab) && (t !== "backlog" || local) && (t !== "variants" || variantsTab));
   const openBacklog = useOpenBacklogCount();
   const tab: SystemTab = search.tab && tabs.includes(search.tab) ? search.tab : "overview";
-  const lc = useApiQuery(["lifecycle"], (d) => d.getLifecycle());
+  const lc = useApiQuery(["lifecycle"], (d) => d.getLifecycle(), { enabled: !split });
   const ops = useApiQuery(["ops"], (d) => d.getOps(), { staleTime: 60_000 });
-  const health = useApiQuery(["health"], (d) => d.getHealth(), { staleTime: 60_000 });
+  const health = useApiQuery(["health"], (d) => d.getHealth(), { staleTime: 60_000, enabled: !split });
   const lcData = lc.data as LifecycleLike | undefined;
   const opsData = ops.data as OpsLike | undefined;
   const healthData = health.data as HealthLike | undefined;
-  const strip = useMemo(() => tiles(lcData, opsData, healthData), [lcData, opsData, healthData]);
-  const open = (t: SystemTab) => void navigate({ to: ".", search: { tab: t === "overview" ? undefined : t } as never });
+  const strip = useMemo(() => (split ? systemTiles(opsData) : tiles(lcData, opsData, healthData)), [split, lcData, opsData, healthData]);
+  const open = (t: string) => void navigate({ to: ".", search: { tab: t === "overview" ? undefined : t } as never });
+
+  // Old links (`?tab=pipeline`, `/pipeline`, `/lifecycle`, a tour's `?tab=variants`) land where the tab went.
+  const moved = split ? movedTab(search) : undefined;
+  if (moved) return <Navigate to={moved.to as "/"} search={moved.search as never} replace />;
 
   return (
     <div className="flex flex-col gap-4">
-      <StatusStrip items={strip} onOpen={open} />
+      <StatusStrip items={strip} onOpen={open} label="System status" cols={split ? "lg:grid-cols-3" : "lg:grid-cols-5"} />
       <div className="flex gap-1 border-b" role="tablist" aria-label="System sections">
         {tabs.map((t) => (
           <button
@@ -218,16 +199,17 @@ export function SystemScreen() {
             className="-mb-px border-b-2 border-transparent px-3 py-2 text-sm text-muted-foreground hover:text-foreground aria-selected:border-primary aria-selected:text-foreground"
           >
             {TAB_LABEL[t]}
-            {t === "backlog" && openBacklog ? <Badge className="ml-1.5" aria-label={`${openBacklog} open`}>{openBacklog}</Badge> : null}
+            {(t === "backlog" || t === "dev") && openBacklog && local ? <Badge className="ml-1.5" aria-label={`${openBacklog} open`}>{openBacklog}</Badge> : null}
           </button>
         ))}
       </div>
       {tab === "overview" && (
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
           <NeedsYou ops={opsData} error={ops.error} onRetry={() => void ops.refetch()} />
-          <Timeline lc={lcData} ops={opsData} />
+          {split ? <RecentRuns ops={opsData} /> : <Timeline lc={lcData} ops={opsData} />}
         </div>
       )}
+      {tab === "dev" && <DevView sections={devSections} />}
       {tab === "backlog" && <BacklogView />}
       {tab === "pipeline" && <PipelineScreen />}
       {tab === "history" && <LifecycleScreen />}

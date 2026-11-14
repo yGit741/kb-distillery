@@ -1,5 +1,5 @@
 import { askAbout } from "@/features/graph/tools/chatDockStore";
-import { needsYou, runReason, tiles, timeline, type HealthLike, type LifecycleLike, type OpsLike } from "./model";
+import { dataChanges, ingestTiles, needsYou, recentMerges, recentRuns, runReason, systemTiles, tiles, timeline, type HealthLike, type LifecycleLike, type OpsLike } from "./model";
 
 const lc: LifecycleLike = {
   version: "1.0.9",
@@ -147,3 +147,31 @@ describe("tiles for a kb that runs no owner operations", () => {
   });
 });
 
+
+describe("flag ui.data-system-split: the strip and the events split by owner", () => {
+  it("Ingest gets Inbox, Queue, Lint and Version, each opening an Ingest tab", () => {
+    const t = ingestTiles(lc, health);
+    expect(t.map((x) => [x.id, x.label, x.tab])).toEqual([["inbox", "Inbox", "pipeline"], ["queue", "Queue", "pipeline"], ["lint", "Lint", "health"], ["version", "Version", "history"]]);
+    expect(t[0]).toMatchObject({ value: "4", tone: "warn" });
+    expect(t[1]).toMatchObject({ value: "385", hint: "to digest · 2 partial books" });
+    expect(t[3]).toMatchObject({ value: "kb-1.0.9", hint: "1 uncommitted file" });
+    expect(ingestTiles().every((x) => x.value === "…")).toBe(true);
+  });
+
+  it("System gets Nightly, Deploy and one Open work tile that folds in merges, stale work and hygiene", () => {
+    const t = systemTiles(ops);
+    expect(t.map((x) => x.id)).toEqual(["nightly", "deploy", "work"]);
+    const work = t.find((x) => x.id === "work")!;
+    expect(work.value).toBe("2");
+    expect(work.hint).toContain("1 need attention");
+    expect(work.hint).toContain("hygiene 0 / 2");
+    expect(work.tone).toBe("warn");
+    expect(systemTiles({ ...ops, maintainer: false }).map((x) => x.id)).toEqual(["work"]);
+  });
+
+  it("knowledge steps go to Ingest, merges to Dev, nightly runs to System; none is mixed", () => {
+    expect(dataChanges(lc).map((e) => e.kind)).toEqual(["knowledge"]);
+    expect(recentMerges(lc).map((e) => e.kind)).toEqual(["tooling"]);
+    expect(recentRuns(ops).map((e) => e.kind)).toEqual(["nightly"]);
+  });
+});
