@@ -19,6 +19,11 @@ ERR = "git commit failed: kb hook pre-commit: 'distill' is not on PATH"
     ("Bash", {"command": "git diff origin/main"}, True),
     ("Bash", {"command": "git commit -am x"}, False),
     ("Bash", {"command": "cd x && git push"}, False),
+    ("Bash", {"command": "/usr/bin/git push origin main"}, False),
+    ("Bash", {"command": "git -C . commit -m x"}, False),
+    ("Bash", {"command": "python -c 'import subprocess'"}, False),
+    ("Bash", {"command": "rm --recursive build"}, False),
+    ("Bash", {"command": "git log --oneline -5"}, True),
     ("Bash", {"command": "gh issue list"}, False),
     ("Bash", {"command": "pixi run ship -- merge"}, False),
     ("Bash", {"command": "rm -rf build"}, False),
@@ -90,7 +95,14 @@ def test_dramatic_fix_is_held_and_never_merged(monkeypatch, tmp_path):
 
 def test_review_concerns_hold_the_pr(monkeypatch, tmp_path):
     h = Harness(monkeypatch, tmp_path, passed=False)
-    assert h.run().startswith("held") and "merge" not in h.calls
+    assert h.run().startswith("held") and "merge" not in h.calls and "review" not in h.calls
+
+
+def test_start_failure_does_not_use_up_the_attempt(monkeypatch, tmp_path):
+    h = Harness(monkeypatch, tmp_path)
+    monkeypatch.setattr(fixer, "ship", lambda args, cwd, timeout=0: subprocess.CompletedProcess(args, 1, "", "offline"))
+    assert h.run() == "failed: ship start"
+    assert "attempt" not in list(h.state.values())[0]
 
 
 def test_no_change_drops_the_branch(monkeypatch, tmp_path):

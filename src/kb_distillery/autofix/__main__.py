@@ -15,7 +15,10 @@ from kb_distillery.autofix import detect, gate, issue
 
 def engine_root():
     from kb_distillery.config.kb import checkout_root, primary_root
-    return primary_root() or checkout_root() or os.getcwd()
+    root = primary_root() or checkout_root()
+    if not root:
+        raise SystemExit("autofix: runs from an engine checkout only (an installed package has nothing to fix)")
+    return root
 
 
 def state_path(root):

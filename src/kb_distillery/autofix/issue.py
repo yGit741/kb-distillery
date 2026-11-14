@@ -11,6 +11,7 @@ import subprocess
 from kb_distillery.autofix import LABEL
 
 MARK = "<!-- nightly-sig: {} -->"
+UNKNOWN = -1          # the open issues could not be listed: never open a duplicate on a flaky GitHub
 MARK_RE = re.compile(r"<!-- nightly-sig: ([0-9a-f]+) -->")
 
 
@@ -38,7 +39,7 @@ def scrub(text):
 def body(failure, run, log_tail="", kb=""):
     started = (run or {}).get("started", "?")
     route = "goes to the fixer" if failure.fixable else f"ticket only ({failure.why})"
-    log_tail = scrub(log_tail)
+    log_tail = ""      # the log may quote private kb content: the owner reads it locally, never in an issue
     parts = [MARK.format(failure.signature),
              f"The nightly run of {started}{f' on kb `{kb}`' if kb else ''} failed at step `{failure.step}`.",
              "", "```", scrub(failure.message).strip()[-3000:], "```", "",
@@ -52,11 +53,11 @@ def find_open(signature, root, run_gh=gh):
     cp = run_gh(["issue", "list", "--label", LABEL, "--state", "open", "--limit", "200",
                  "--json", "number,body"], root)
     if cp.returncode != 0:
-        return None
+        return UNKNOWN
     try:
         items = json.loads(cp.stdout or "[]")
     except ValueError:
-        return None
+        return UNKNOWN
     for it in items:
         m = MARK_RE.search(it.get("body") or "")
         if m and m.group(1) == signature:
@@ -68,6 +69,8 @@ def open_or_reuse(failure, run, root, log_tail="", kb="", run_gh=gh, dry_run=Fal
     """(issue number or None, "created"|"reused"|"dry-run"|"failed: …")."""
     try:
         number = find_open(failure.signature, root, run_gh)
+        if number == UNKNOWN:
+            return None, "failed: could not list the open nightly-fail issues"
         if dry_run:
             return number, f"dry-run: would {'comment on #%s' % number if number else 'open a new issue'}"
         if number:

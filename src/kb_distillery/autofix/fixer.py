@@ -25,11 +25,14 @@ from kb_distillery.autofix import gate, issue
 MODEL = "sonnet"
 ADVISOR = "opus"
 MAX_TURNS = 80
+_OPT = r"(\s+-\S+(\s+[^\s-]\S*)?)*"     # options between the tool and its subcommand: git -C . commit
 DENY_BASH = re.compile(
-    r"(^|[;&|(\s])(git\s+(commit|push|merge|rebase|reset|tag|checkout|switch|stash|branch\s+-[dD]|worktree|remote|"
-    r"config|clean|revert|cherry-pick|am|apply)|gh\s|curl\s|wget\s|ssh\s|scp\s|sudo\s|launchctl\s|rm\s+-[a-z]*r|"
-    r"pip\s+install|npm\s+(install|i)\b|pixi\s+(add|install|global)|.*ship\b.*\b(commit|pr|merge|approve|start|prune)|"
-    r"share\b.*\b(deploy|rollback|snapshot)|chmod\s|crontab\s)|knowledge/|KB_DISTILLERY_HOME")
+    r"(^|[^\w.-])git" + _OPT + r"\s+(commit|push|merge|rebase|reset|tag|checkout|switch|stash|branch|worktree|remote|"
+    r"config|clean|revert|cherry-pick|am|apply|update-ref|filter-branch)\b"
+    r"|(^|[^\w.-])gh\s|(^|[^\w.-])(curl|wget|ssh|scp|sudo|launchctl|crontab|chmod)\s"
+    r"|(^|[^\w.-])rm\s+(-[a-z]*r|--recursive)|pip\s+install|npm\s+(install|i)\b|pixi\s+(add|install|global)"
+    r"|\bship\b.*\b(commit|pr|merge|approve|start|prune|review)\b|\bshare\b.*\b(deploy|rollback|snapshot)\b"
+    r"|subprocess|os\.system|knowledge/|KB_DISTILLERY_HOME|GH_TOKEN|GITHUB_TOKEN")
 DENY_EDIT = re.compile(r"(^|/)(wiki|raw|think)/|^\.github/|^\.git/|^\.claude/")
 
 SYSTEM = """You fix one failure of kb-distillery's nightly job, in the engine repository checked out in your working
@@ -40,8 +43,8 @@ Work like this:
 1. Reproduce or locate the cause from the error and the code. Read AGENTS.md first.
 2. Make the smallest change that fixes the cause in the engine. Add or adjust a test that would have caught it.
    Never weaken, skip or delete a test.
-3. Run the tests that cover the change: `KB_APP_CONFIG=/nonexistent/app.toml pixi run python -m pytest <paths> -q -n 4`
-   and `pixi run ruff check <files>`.
+3. Run the tests that cover the change: `python -m pytest <paths> -q -n 4` and `ruff check <files>` (both are on
+   your PATH; KB_APP_CONFIG already points at no config).
 4. Before you finish, ask the `advisor` subagent (Opus) to check the cause and your diff, and act on what it says.
 
 If the cause is in a knowledge base's data, in the owner's credentials, in the machine's setup outside this repository,
@@ -85,9 +88,17 @@ def daily_cap():
     return float(os.environ.get("KB_AUTOFIX_DAILY_CAP") or 10)
 
 
-def child_env():
-    env = dict(os.environ)
-    env.update(KB_APP_CONFIG="/nonexistent/app.toml", KB_SHARE_AUTODEPLOY="0")
+def tool_path():
+    """This interpreter's bin (ruff, pytest) and pixi's bin first: launchd's PATH has neither."""
+    extra = [os.path.dirname(sys.executable), os.path.expanduser("~/.pixi/bin")]
+    return os.pathsep.join([*extra, os.environ.get("PATH", "")])
+
+
+def child_env(tokens=True):
+    env = dict(os.environ, PATH=tool_path(), KB_APP_CONFIG="/nonexistent/app.toml", KB_SHARE_AUTODEPLOY="0")
+    if not tokens:
+        for k in ("GH_TOKEN", "GITHUB_TOKEN", "KB_GIT_TOKEN"):
+            env.pop(k, None)
     return env
 
 
@@ -154,6 +165,9 @@ def run_agent(prompt, wt, log=print):
                                  tools=("Read", "Edit", "Write", "Glob", "Grep", "Bash", "Task", "Agent"),
                                  agents={"advisor": ADVISOR_SPEC}, budget=budget(), max_turns=MAX_TURNS)
     hook, can_use = _hooks(wt)
+    saved = dict(os.environ)
+    os.environ.clear()
+    os.environ.update(child_env(tokens=False))      # the agent's CLI inherits this: tool PATH, no GitHub token
 
     async def go():
         texts, cost, err = [], 0.0, ""
@@ -176,7 +190,11 @@ def run_agent(prompt, wt, log=print):
             elif kind == "pending":
                 err = "the batch backend cannot run a live fixer: use api or subscription"
         return "\n".join(texts), float(cost or 0), err
-    return asyncio.run(go())
+    try:
+        return asyncio.run(go())
+    finally:
+        os.environ.clear()
+        os.environ.update(saved)
 
 
 def outcome_line(text):
@@ -238,11 +256,14 @@ def fix(failure, number, state, root, save, log=print):
 
     feature = f"nightly-fix-{sig}"
     branch = f"infra/{feature}"
-    entry["attempt"] = {"at": datetime.datetime.now().isoformat(timespec="seconds"), "branch": branch, "usd": 0.0}
-    save()
+    attempt = {"at": datetime.datetime.now().isoformat(timespec="seconds"), "branch": branch, "usd": 0.0}
 
-    def finish(result, text):
-        entry["attempt"]["result"] = result
+    def finish(result, text, counted=True):
+        """Record the outcome; an infrastructure failure before the agent really ran does not use up the attempt."""
+        if counted:
+            entry["attempt"] = {**attempt, "result": result}
+        else:
+            entry.setdefault("postponed", []).append({"at": attempt["at"], "result": result})
         save()
         issue.comment(number, text, root)
         return result
@@ -250,22 +271,24 @@ def fix(failure, number, state, root, save, log=print):
     cp = ship(["start", feature, "--worktree"], root, timeout=600)
     m = re.search(r"worktree ready: (\S+) on ", cp.stdout or "")
     if cp.returncode != 0 or not m:
-        return finish("failed: ship start", f"The fixer could not start a worktree:\n```\n{tail(cp)}\n```")
+        return finish("failed: ship start", f"The fixer could not start a worktree:\n```\n{tail(cp)}\n```",
+                      counted=False)
     wt = m.group(1)
 
-    def drop(result, text):
+    def drop(result, text, counted=True):
         ship(["prune", "--drop", branch], root, timeout=300)
-        return finish(result, text)
+        return finish(result, text, counted)
 
     prompt = (f"The nightly job failed at step `{failure.step}` with:\n\n```\n{failure.message[-3000:]}\n```\n\n"
               f"Issue #{number} has the log tail. Find the cause in this engine checkout and fix it.")
     text, usd, err = run_agent(prompt, wt, log=log)
-    entry["attempt"]["usd"] = round(usd, 4)
-    save()
+    attempt["usd"] = round(usd, 4)
     if err:
-        return drop(f"failed: {err[:120]}", f"The fixer stopped: {err[:500]} (spent {usd:.2f} USD).")
+        return drop(f"failed: {err[:120]}", f"The fixer stopped: {err[:500]} (spent {usd:.2f} USD).",
+                    counted=usd > 0.5)
     kind, summary = outcome_line(text)
-    changed = [l[3:] for l in git(wt, "status", "--porcelain", "--untracked-files=all").splitlines() if len(l) > 3]
+    changed = [l[3:].split(" -> ")[-1] for l in git(wt, "status", "--porcelain", "--untracked-files=all").splitlines()
+               if len(l) > 3]
     if kind != "fixed" or not changed:
         return drop(f"no fix: {kind}", f"The fixer made no change ({kind}): {summary}\n\nSpent {usd:.2f} USD.")
 
@@ -278,9 +301,9 @@ def fix(failure, number, state, root, save, log=print):
 
     diff = git(wt, "diff", "origin/main...HEAD")
     passed, rsummary, concerns, rusd = review(failure, diff)
-    entry["attempt"]["usd"] = round(usd + rusd, 4)
-    save()
-    ship(["review", "--pass", f"opus advisor: {rsummary}"[:200], "--findings", str(len(concerns))], wt, timeout=120)
+    attempt["usd"] = round(usd + rusd, 4)
+    if passed:
+        ship(["review", "--pass", f"opus advisor: {rsummary}"[:200]], wt, timeout=120)
 
     why = gate.measure(wt)
     if not passed:
@@ -294,18 +317,20 @@ def fix(failure, number, state, root, save, log=print):
                    "Diff gate: small, merges once CI is green.\n")
                 + f"\nCloses #{number}\n")
     args = ["pr", "--title", subject, "--notes", notes] + (["--hold"] if held else [])
+    if not passed:
+        args += ["--no-review", f"opus advisor raised concerns: {rsummary}"[:200]]
     cp = ship(args, wt, timeout=900)
     os.unlink(notes)
     pr = re.search(r"https://github\.com/\S+/pull/(\d+)", (cp.stdout or "") + (cp.stderr or ""))
     if cp.returncode != 0 or not pr:
         return finish("failed: ship pr", f"The fix is on `{branch}` but the PR did not open:\n```\n{tail(cp)}\n```")
     url = pr.group(0)
-    entry["attempt"].update(pr=int(pr.group(1)), held=held)
+    attempt.update(pr=int(pr.group(1)), held=held)
     if held:
         return finish(f"held: {url}", f"Fix proposed in {url}, **held for your approval**:\n"
-                      + "".join(f"- {w}\n" for w in why) + f"\nSpent {entry['attempt']['usd']:.2f} USD.")
+                      + "".join(f"- {w}\n" for w in why) + f"\nSpent {attempt['usd']:.2f} USD.")
     cp = ship(["merge"], wt, timeout=3600)
     merged = cp.returncode == 0
     return finish(f"{'merged' if merged else 'merge pending'}: {url}",
                   f"Fix {url} {'merged' if merged else 'opened; the merge did not finish: ' + tail(cp, 8)}. "
-                  f"Spent {entry['attempt']['usd']:.2f} USD.")
+                  f"Spent {attempt['usd']:.2f} USD.")

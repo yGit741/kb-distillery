@@ -156,3 +156,32 @@ def test_hook_is_dark_when_flag_off(tmp_path):
     calls = []
     assert core.nightly_autofix(str(tmp_path), run=lambda cmd, **kw: calls.append(cmd)) is None
     assert calls == []
+
+
+def test_gate_counts_a_rename_as_a_delete():
+    assert any("deletes" in r for r in gate.reasons("0\t0\tsrc/kb_distillery/x.py\n", "R100\tsrc/a.py\tsrc/b.py"))
+
+
+def test_gate_holds_binary_and_billing_paths():
+    assert any("binary" in r for r in gate.reasons("-\t-\tsrc/kb_distillery/ops/x.bin\n", ""))
+    assert any("LLM" in r for r in gate.reasons("1\t0\tsrc/kb_distillery/llm/__init__.py\n", ""))
+
+
+def test_network_errors_are_ticket_only():
+    run = _run(steps=[{"name": "sync", "status": "error", "error": "error: failed to push some refs to 'origin'"}],
+               findings=[])
+    assert [f.fixable for f in detect.failures(run)] == [False]
+
+
+def test_hygiene_issue_carries_no_kb_detail():
+    run = _run(findings=[{"severity": "error", "kind": "broken-link", "detail": "wiki/secret-page.md"}])
+    assert all("secret-page" not in f.message for f in detect.failures(run))
+
+
+def test_unlisted_issues_never_open_a_duplicate(tmp_path):
+    f = detect.failures(_run())[0]
+
+    def gh(args, root):
+        rc = 1 if args[:2] == ["issue", "list"] else 0
+        return subprocess.CompletedProcess(args, rc, "", "")
+    assert issue.open_or_reuse(f, _run(), str(tmp_path), run_gh=gh)[0] is None

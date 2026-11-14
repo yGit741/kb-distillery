@@ -15,7 +15,9 @@ SENSITIVE = [
     (re.compile(r"^src/kb_distillery/migrations/"), "migrations"),
     (re.compile(r"(^|/)(wiki|raw|think)/"), "knowledge paths (wiki/raw/think)"),
     (re.compile(r"^\.github/"), "CI workflows"),
-    (re.compile(r"^scripts/hooks/|^src/kb_distillery/git/"), "git hooks or ship"),
+    (re.compile(r"^scripts/|^src/kb_distillery/git/"), "scripts, git hooks or ship"),
+    (re.compile(r"^src/kb_distillery/(lint|llm|kits)/"), "lint, the LLM gateway (billing) or kits"),
+    (re.compile(r"(^|/)(ruff\.toml|\.importlinter|setup\.cfg|conftest\.py)$"), "test or lint config"),
     (re.compile(r"^\.claude/"), "agent settings"),
     (re.compile(r"^examples/launchd/"), "launchd jobs"),
     (re.compile(r"^src/kb_distillery/(publish|hosting)/|wrangler|(^|/)deploy"), "deploy"),
@@ -36,6 +38,8 @@ def reasons(numstat, name_status, patch=""):
             continue
         added, deleted, path = parts[0], parts[1], parts[-1]
         files.append(path)
+        if added == "-" and deleted == "-":
+            why.append(f"binary file {path}")
         lines += (int(added) if added.isdigit() else 0) + (int(deleted) if deleted.isdigit() else 0)
     if len(files) > MAX_FILES:
         why.append(f"{len(files)} files (more than {MAX_FILES})")
@@ -43,7 +47,7 @@ def reasons(numstat, name_status, patch=""):
         why.append(f"{lines} changed lines (more than {MAX_LINES})")
     for row in (name_status or "").splitlines():
         parts = row.split("\t")
-        if parts and parts[0].startswith("D"):
+        if parts and parts[0][:1] in ("D", "R"):
             why.append(f"deletes {parts[-1]}")
     hit = {}
     for path in files:
@@ -78,5 +82,6 @@ def measure(cwd, base="origin/main"):
     """The gate's reasons for the diff of HEAD against `base` in `cwd`."""
     def git(*args):
         return subprocess.run(["git", *args], cwd=cwd, capture_output=True, text=True, check=False).stdout
-    rng = f"{base}...HEAD"
-    return reasons(git("diff", "--numstat", rng), git("diff", "--name-status", rng), git("diff", rng))
+    rng = f"{base}...HEAD"     # --no-renames: a move out of a protected path is a delete plus an add, never a dodge
+    return reasons(git("diff", "--no-renames", "--numstat", rng), git("diff", "--no-renames", "--name-status", rng),
+                   git("diff", "--no-renames", rng))
