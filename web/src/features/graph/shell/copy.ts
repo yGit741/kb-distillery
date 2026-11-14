@@ -22,8 +22,8 @@ export const LINE_COPY = {
   /** The last row under the closest options; `text` is what was typed after the slash. */
   searchInstead: (text: string) => `Search for '${text}' instead`,
   viewRow: "Change the view:",
-  subject: { concepts: "Showing concepts and the links between them.", sources: "Showing sources beside the concepts they feed." },
-  subjectAlready: { concepts: "The graph already shows concepts.", sources: "The graph already shows sources." },
+  subject: { concepts: "Showing concepts and the links between them.", sources: "Showing sources beside the concepts they feed.", health: "Showing how well sources back each concept." },
+  subjectAlready: { concepts: "The graph already shows concepts.", sources: "The graph already shows sources.", health: "The graph already shows health." },
   /** Shown in place of the `>` mode on a shared site, where the view cannot be changed by writing. */
   sentenceUnavailable: "Changing the view is not available here",
   /** The placeholder of the line on a shared site: no `>` segment. */

@@ -116,6 +116,8 @@ interface Props {
   shownTypes: ReadonlySet<string> | null;
   /** `> concepts` / `> sources` (flag graph-intent): switch the graph's view; false when it is already on. */
   onSubject?: (s: GraphSubject) => boolean;
+  /** flag knowledge-health: "health" is a view word too */
+  healthWord?: boolean;
   /** "Show pages mentioning ...". */
   onShowMentions: (q: string) => void;
   onFit: () => void;
@@ -136,7 +138,7 @@ interface Props {
  * centre unfolds, on focus or Cmd/Ctrl+K, into recent steps and pinned views at rest, live page results while
  * typing, commands after a slash, and two free-text rows (ask the agent, shape the graph).
  */
-export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onShowExact, shownTypes, onSubject, onShowMentions, onFit, onZoom, onReheat, onRefresh, setParams, top = SHELL_TOP, views, onPickView }: Props) {
+export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onShowExact, shownTypes, onSubject, healthWord, onShowMentions, onFit, onZoom, onReheat, onRefresh, setParams, top = SHELL_TOP, views, onPickView }: Props) {
   const ds = useDataSource();
   const qc = useQueryClient();
   const host = useToolHost();
@@ -443,7 +445,7 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
             return;
           }
           // the two view words switch the view itself (the same as the Concepts / Sources switch on the graph)
-          const word = onSubject ? subjectWord(parsed.text) : null;
+          const word = onSubject ? subjectWord(parsed.text, healthWord) : null;
           if (word && onSubject) {
             const changed = onSubject(word);
             useShellStore.getState().say(changed ? LINE_COPY.subject[word] : LINE_COPY.subjectAlready[word]);
