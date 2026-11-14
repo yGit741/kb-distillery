@@ -512,6 +512,9 @@ describe("legends", () => {
       const card = screen.getByRole("group", { name: "Page types" });
       expect(card.querySelector("[data-type=topic]")).not.toBeNull();
       expect(card.querySelector("[data-type=paper]")).toBeNull();
+      // one group alone is centred: no divider, no empty half beside it
+      expect(card).toHaveAttribute("data-groups", "1");
+      expect(card.querySelector("span[aria-hidden].w-px")).toBeNull();
       const pick = within(screen.getByRole("group", { name: /colour legend/i })).getByRole("combobox", { name: "Color by" });
       expect(within(pick).getAllByRole("option").map((o) => o.textContent)).toEqual(["theme", "type", "maturity", "recency", "source count"]);
       await userEvent.click(within(sw).getByRole("radio", { name: "Sources" }));
