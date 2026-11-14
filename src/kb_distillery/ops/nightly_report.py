@@ -226,9 +226,88 @@ def build(root, report, threads, now=None, sync=None, log_tail=None, version=Non
     return m.Doc(TITLE, status, f"{title} — {' · '.join(sub)}", sections, footer, _local(now), links)
 
 
+# what the auto-fix did, most important first: (kind, headline, item status)
+AUTOFIX_HEADLINES = [
+    ("held", "Nightly failed · fix ready, needs your approval{pr}", "warn"),
+    ("merged", "Nightly failed · fixed automatically{pr}", "ok"),
+    ("pending", "Nightly failed · fix opened, merges when CI passes{pr}", "ok"),
+    ("nofix", "Nightly failed · tried to fix, could not{issue}", "error"),
+    ("tried", "Nightly failed again · fix already tried, needs you{issue}", "error"),
+    ("ticket", "Nightly failed · needs you, not auto-fixable{issue}", "error"),
+    ("postponed", "Nightly failed · auto-fix postponed to the next night{issue}", "warn"),
+]
+
+
+def _autofix_kind(r):
+    o = r.get("outcome") or ""
+    if not r.get("fixable"):
+        return "ticket"
+    if o.startswith("held"):
+        return "held"
+    if o.startswith("merged"):
+        return "merged"
+    if o.startswith("merge pending"):
+        return "pending"
+    if o.startswith("skipped: already"):
+        return "tried"
+    if o.startswith(("postponed", "skipped: daily cap")):
+        return "postponed"
+    return "nofix"
+
+
+def _num(text, what):
+    import re
+    hit = re.search(rf"/{what}/(\d+)", text or "")
+    return int(hit.group(1)) if hit else None
+
+
+def autofix_headline(results, error=""):
+    """One line for the mail subject: the most important thing the auto-fix did."""
+    if error or not results:
+        return f"Nightly failed · auto-fix did not run ({error or 'no result'})"
+    kinds = [_autofix_kind(r) for r in results]
+    for kind, line, _ in AUTOFIX_HEADLINES:
+        if kind in kinds:
+            r = results[kinds.index(kind)]
+            pr = _num(r.get("outcome"), "pull")
+            issue = r.get("issue")
+            return line.format(pr=f" (PR #{pr})" if pr else "", issue=f" (issue #{issue})" if issue else "")
+    return "Nightly failed"
+
+
+def apply_autofix(doc, results, error=""):
+    """Put the auto-fix outcome into the nightly `doc`: banner title (hence the subject), an Auto-fix section right
+    after the head, and links to the issue and PR."""
+    head = autofix_headline(results, error)
+    banner = doc.sections[0].blocks[0] if doc.sections and doc.sections[0].blocks else None
+    if isinstance(banner, m.Banner):
+        banner.title = head
+    doc.headline = head + (" — " + doc.headline.split(" — ", 1)[1] if " — " in doc.headline else "")
+    items = []
+    status_of = {k: s for k, _, s in AUTOFIX_HEADLINES}
+    for r in results or []:
+        kind = _autofix_kind(r)
+        repo, issue, pr = r.get("repo") or "", r.get("issue"), _num(r.get("outcome"), "pull")
+        where = " · ".join(x for x in [f"issue #{issue}" if issue else "", f"PR #{pr}" if pr else ""] if x)
+        fix = f"pixi run ship -- approve {pr}   # or approve the review on GitHub" if kind == "held" and pr else ""
+        items.append(m.Item(status_of.get(kind, "warn"), r.get("step", "?"),
+                            f"{r.get('outcome') or ''}{' (' + r.get('why') + ')' if kind == 'ticket' else ''}"
+                            + (f" — {where}" if where else ""), fix))
+        if repo and issue:
+            doc.links.append([f"Issue #{issue}", f"{repo}/issues/{issue}"])
+        if repo and pr:
+            doc.links.append([f"Fix PR #{pr}", f"{repo}/pull/{pr}"])
+    if error:
+        items.append(m.Item("error", "autofix", error, "tail ~/Library/Logs/kb-distillery-autofix.log"))
+    doc.sections.insert(1, m.Section("Auto-fix", [m.Findings(items, empty="nothing to fix")], id="autofix"))
+    return head
+
+
 def subject(doc, report, prefix="[kb-distillery]"):
     kinds = report.kinds()
     tail = (" · " + ", ".join(kinds[:3]) + (", …" if len(kinds) > 3 else "")) if kinds else ""
+    if any(s.id == "autofix" for s in doc.sections):
+        tail = ""                                     # the auto-fix headline already says what happened
     glyph = {"ok": "✓", "warn": "!", "error": "✗"}.get(doc.status, "·")
     banner = doc.sections[0].blocks[0] if doc.sections and doc.sections[0].blocks else None
     title = banner.title if isinstance(banner, m.Banner) else doc.headline

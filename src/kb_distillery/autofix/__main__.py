@@ -48,11 +48,28 @@ def _log_tail():
     return notify.log_tail(NIGHTLY_LOG, n=40)
 
 
-def nightly(kb_root, dry_run=False, root=None, run_gh=issue.gh, fix=None, out=print):
-    """Ticket every failure of the last run; hand the fixable ones to `fix(failure, number)` when given.
-    Returns the list of (failure, issue number, outcome)."""
+def repo_url(root):
+    """https URL of the engine repo's origin, "" when unknown."""
+    import subprocess
+    cp = subprocess.run(["git", "remote", "get-url", "origin"], cwd=root, capture_output=True, text=True, check=False)
+    url = (cp.stdout or "").strip()
+    if url.startswith("git@github.com:"):
+        url = "https://github.com/" + url.split(":", 1)[1]
+    return url[:-4] if url.endswith(".git") else url
+
+
+def summary(done, root):
+    """The results as plain dicts: what `ops.nightly_report.apply_autofix` puts into the nightly mail."""
+    repo = repo_url(root)
+    return [{"signature": f.signature, "step": f.step, "fixable": f.fixable, "why": f.why, "issue": number,
+             "outcome": outcome, "repo": repo} for f, number, outcome in done]
+
+
+def nightly(kb_root, dry_run=False, root=None, run_gh=issue.gh, fix=None, out=print, run=None):
+    """Ticket every failure of the last run (or of `run`); hand the fixable ones to `fix(failure, number)` when
+    given. Returns the list of (failure, issue number, outcome)."""
     root = root or engine_root()
-    run = detect.last_run(kb_root)
+    run = run if run is not None else detect.last_run(kb_root)
     fails = detect.failures(run)
     if not fails:
         out(f"autofix: last run is {(run or {}).get('status', 'missing')}: nothing to do")
@@ -85,6 +102,8 @@ def main(argv=None):
     n.add_argument("--kb-root", default=None, help="the kb whose meta/.ops/runs.jsonl to read (default: $KB's root)")
     n.add_argument("--dry-run", action="store_true", help="print what would happen: no GitHub writes, no LLM calls")
     n.add_argument("--no-fix", action="store_true", help="tickets only: do not start the fixer")
+    n.add_argument("--run-json", help="read the run from this file instead of the last line of runs.jsonl")
+    n.add_argument("--summary", help="write the results as JSON here (the nightly mail reads it)")
     g = sub.add_parser("gate", help="print the diff gate's verdict")
     g.add_argument("--cwd", default=".")
     g.add_argument("--base", default="origin/main")
@@ -103,7 +122,14 @@ def main(argv=None):
 
         def fix(failure, number, state):
             return fixer.fix(failure, number, state, root, save=lambda: save_state(root, state))
-    nightly(kb_root, dry_run=args.dry_run, root=root, fix=fix)
+    run = None
+    if args.run_json:
+        with open(args.run_json, encoding="utf-8") as f:
+            run = json.load(f)
+    done = nightly(kb_root, dry_run=args.dry_run, root=root, fix=fix, run=run)
+    if args.summary:
+        with open(args.summary, "w", encoding="utf-8") as f:
+            json.dump(summary(done, root), f, indent=2)
     return 0
 
 
