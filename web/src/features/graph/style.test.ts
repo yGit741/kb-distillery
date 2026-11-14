@@ -18,7 +18,7 @@ describe("colorOf", () => {
     expect(colorKey(node("z"), "degree")).toBe("0–1 links");
   });
   it("names the key per colouring", () => {
-    expect(colorKey(paper, "depth")).toBe("deep");
+    expect(colorKey(paper, "depth")).toBe("Deep digest");
     expect(colorKey(node("c"), "depth")).toBe("(not a source)");
     assignAreaColors([paper]);
     expect(colorKey(paper, "area")).toBe("Information theory");

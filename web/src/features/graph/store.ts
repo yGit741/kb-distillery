@@ -77,6 +77,9 @@ export interface GraphUiState extends GraphPrefs {
   spotIds: ReadonlySet<string> | null;
   /** The legend's one-click filters (./quickFilters): Recent, Connected, Backbone, Neighbours, Path. */
   quick: QuickFilters;
+  /** The view whose relation kinds are the drawn links (Citations): set by `applyStory`, kept while the legend's
+   * filters change (they clear `story`), dropped by another view or Reset. */
+  edgeStory: string;
   view: GraphView | null;
   /** Link kinds drawn off (free-text shaping: `hide MENTIONS`). Empty = every kind drawn; the layout is unchanged. */
   hiddenLinkKinds: ReadonlySet<string>;
@@ -162,6 +165,7 @@ const INITIAL = loadPrefs();
 export const useGraphUi = create<GraphUiState>((set, get) => ({
   ...INITIAL,
   ...initialView(INITIAL),
+  edgeStory: storyById(INITIAL.story)?.edges?.length ? INITIAL.story : "",
   shownDepths: null,
   hiddenKeys: new Set(),
   hiddenLinkKinds: new Set(),
@@ -226,13 +230,14 @@ export const useGraphUi = create<GraphUiState>((set, get) => ({
   requestFocus: (id, zoom = true) => set({ focusRequest: { id, zoom } }),
   fit: () => set((s) => ({ fitTick: s.fitTick + 1 })),
   openFlyout: (f) => set((s) => ({ flyout: s.flyout === f ? null : f })),
-  resetFilters: () => set({ shownTypes: undefined, shownDepths: null, search: "", rules: [], view: null, revealed: new Set(), predicate: null, story: "", hiddenLinkKinds: new Set() }),
+  resetFilters: () => set({ shownTypes: undefined, shownDepths: null, search: "", rules: [], view: null, revealed: new Set(), predicate: null, story: "", edgeStory: "", hiddenLinkKinds: new Set() }),
   setLab: (patch) => set((s) => ({ lab: { ...s.lab, ...patch }, story: "" })),
   applyStory: (id) => {
     const st = storyById(id);
-    if (!st) return set({ story: "" });
+    if (!st) return set({ story: "", edgeStory: "" });
     set({
       story: st.id,
+      edgeStory: st.edges?.length ? st.id : "",
       lab: storyLab(st),
       colorBy: st.colorBy,
       sizeBy: st.sizeBy,
@@ -244,7 +249,7 @@ export const useGraphUi = create<GraphUiState>((set, get) => ({
       view: null,
       hiddenKeys: new Set(),
       hiddenLinkKinds: new Set(),
-      quick: QUICK_OFF,
+      quick: { ...QUICK_OFF, ...st.quick },
       revealed: new Set(),
     });
   },

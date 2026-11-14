@@ -1,3 +1,4 @@
+import { readCanvasColors } from "./encoding/theme";
 import { depthColor, layerColor, statusColor, supportColor, typeColor, UNKNOWN_COLOR } from "@/theme/palette";
 import { areaDisplay } from "./displayNames";
 import { markOf, RING_BOOST } from "./encoding/spec";
@@ -146,6 +147,20 @@ export function freshness(date: string | undefined | null, now: number = Date.no
   return days <= 7 ? 1 : days <= 30 ? 0.75 : days <= 90 ? 0.5 : days <= 365 ? 0.25 : 0;
 }
 const DEPTH_T: Readonly<Record<string, number>> = { listed: 0, easy: 1 / 3, full: 2 / 3, deep: 1 };
+/** How each depth reads in a colour key: a listed source was ingested but never digested. */
+export const DEPTH_LABEL: Readonly<Record<string, string>> = { listed: "Ingest only", easy: "Easy digest", full: "Full digest", deep: "Deep digest" };
+const depthOf = (n: GNode): string => n.depth || "listed";
+
+/** The --bad status token, read once per theme: an ingested source nobody digested yet stands out on the ramp. */
+const attention = new Map<string, string>();
+function attentionColor(theme: string): string {
+  const hit = attention.get(theme);
+  if (hit) return hit;
+  const bad = readCanvasColors().bad;
+  if (!bad) return UNKNOWN_COLOR;          // the tokens are not there yet: read again next time
+  attention.set(theme, bad);
+  return bad;
+}
 
 /** Where the page sits on an ordered colouring, 0..1; undefined when the colouring does not apply to it. */
 export function ordinalOf(n: GNode, by: ColorBy, metric?: number): number | undefined {
@@ -174,7 +189,7 @@ export const rampStep = (t: number): number => Math.round(Math.max(0, Math.min(1
 export const RAMP_MEANING: Readonly<Partial<Record<ColorBy, { what: string; low: string; high: string }>>> = {
   evidence: { what: "How many digested sources back the page", low: "little", high: "much" },
   score: { what: "How central the page is (importance score)", low: "peripheral", high: "central" },
-  depth: { what: "How deeply the source was read", low: "listed", high: "deep" },
+  depth: { what: "How deeply the source was read", low: "ingest only", high: "deep digest" },
   degree: { what: "How many links the page has", low: "few", high: "many" },
   recency: { what: "How recently the page changed", low: "a year or more", high: "this week" },
   added: { what: "When the page was added", low: "a year or more", high: "this week" },
@@ -202,6 +217,8 @@ const RAMP_DARK = ["#2B4C8C", "#2C7FB8", "#41B6C4", "#7FCDBB", "#D2F0B4"].map(he
  */
 export function colorOf(n: GNode, by: ColorBy, metric?: number, ramp?: "light" | "dark" | null, slots?: AreaSlots): string {
   if (ramp && RAMP_BY.has(by)) {
+    // ingested but never digested is a state to act on, not the low end of the ramp: the status red
+    if (by === "depth" && n.layer === "source" && depthOf(n) === "listed") return attentionColor(ramp);
     const t = ordinalOf(n, by, metric);
     // a continuous signal snaps to the legend bar's steps: neighbours stay apart, and the node matches its step
     return t === undefined ? UNKNOWN_COLOR : neutralRamp(METRIC_COLORS.has(by) ? rampStep(t) : t, ramp === "dark");
@@ -255,7 +272,7 @@ export function colorKey(n: GNode, by: ColorBy, slots: AreaSlots = AREA_SLOT): s
     case "layer":
       return n.layer || "unknown";
     case "depth":
-      return n.layer === "source" ? n.depth || "listed" : "(not a source)";
+      return n.layer === "source" ? (DEPTH_LABEL[depthOf(n)] ?? depthOf(n)) : "(not a source)";
     case "status":
       return n.maturity || "(none)";
     case "area":

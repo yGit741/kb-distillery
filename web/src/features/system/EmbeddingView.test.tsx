@@ -13,6 +13,8 @@ const report: EmbeddingReport = {
   built: true, ok: false, line: "3 vectors for 4 cards, behind (1 changed, 1 missing)", model: "test-model", dim: 1024, cards: 4, vectors: 3,
   missing: [page("new-idea", "New idea")], changed: [page("margin", "Margin")], removed: [], duplicate_cosine: 0.97,
   duplicates: [{ a: page("margin", "Margin"), b: page("margin-2", "Margin again"), cosine: 0.991 }],
+  near: [],
+  isolated: [],
   k: 2, silhouette: 0.31,
   clusters: [
     { id: 0, size: 2, cohesion: 0.82, central: [page("margin", "Margin")] },
