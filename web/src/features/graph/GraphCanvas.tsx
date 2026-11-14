@@ -1188,7 +1188,7 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
         y: n.y,
         r,
         color: col,
-        background: colors.background,
+        background: colors.nodeCentre ?? colors.background,
         font: colors.font,
         ring: colors.ring,
         initials: initials.get(n.id),

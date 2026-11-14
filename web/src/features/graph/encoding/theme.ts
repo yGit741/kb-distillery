@@ -3,6 +3,9 @@ import { rgbaOf } from "@/theme/resolveColor";
 export interface CanvasColors {
   text: string;
   background: string;
+  /** a hollow mark's centre on the graph's ground: one step lighter than the ground (--node-centre); halos and
+   *  badges keep `background` */
+  nodeCentre?: string;
   link: string;
   ring: string;
   muted: string;
@@ -51,8 +54,8 @@ export function readCanvasColors(root: HTMLElement = document.documentElement): 
     const v = (name: string, fb: string) => cs.getPropertyValue(name).trim() || fb;
     return {
       text: v("--foreground", FALLBACK.text),
-      // hollow marks are filled one step above the ground (--node-centre); the card colour where it is not defined
-      background: v("--node-centre", v("--card", FALLBACK.background)),
+      background: v("--card", FALLBACK.background),
+      nodeCentre: v("--node-centre", v("--card", FALLBACK.background)),
       link: v("--muted-foreground", FALLBACK.link),
       ring: v("--primary", FALLBACK.ring),
       muted: v("--muted-foreground", FALLBACK.muted),
