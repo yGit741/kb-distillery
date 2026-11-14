@@ -141,3 +141,8 @@ def test_a_failing_description_backend_still_stores_the_pages(tmp_path, monkeypa
     monkeypatch.setattr(figures, "describe", lambda *a, **k: (_ for _ in ()).throw(RuntimeError("batch down")))
     _path, _eng, res = _run(tmp_path, monkeypatch, fake)
     assert res["pages"] and store.read_page(str(tmp_path / "store"), SHA, 1)["figures"][0]["description"] == ""
+
+
+def test_a_caption_that_opens_the_page_is_read_whole():
+    _md, figs = figures.place("Figure 1. A cap\n![](figure)\n", [(0.2, 0.1, 0.8, 0.3)], SHA, 9)
+    assert figs[0]["label"] == "Figure 1" and figs[0]["caption"] == "Figure 1. A cap"

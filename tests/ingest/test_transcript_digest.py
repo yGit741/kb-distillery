@@ -176,3 +176,15 @@ def test_figures_reach_the_text_and_the_draft_lists_every_one(kb):
 @pytest.mark.flag("parsed-pdf", False)
 def test_flag_off_has_no_figures(kb):
     assert extract.transcript_figures(kb["raw"], (1, 2)) == []
+
+
+@pytest.mark.flag("parsed-pdf", True)
+def test_a_figure_mark_is_not_counted_as_a_formula_mark(kb):
+    from kb_distillery.parse import figures as figs_mod
+    from kb_distillery.parse.transcribe import mark_link
+    fig = {"id": 1, "label": "Figure 1.1", "caption": "", "box": None, "file": "p0001-1.png",
+           "description": "A tree.", "problem": "the parser found no figure region here: the crop is the whole page"}
+    md = "Page one.\n\n%s %s\n" % (figs_mod.link("Figure 1.1", kb["sha"], 1, 1), mark_link("!!", kb["sha"], 1, 1))
+    store.write_transcript_page(kb["proot"], kb["sha"], 1, md, [], figures=[fig])
+    text = extract.extract_text(kb["raw"], pages=(1, 2))        # page 2 keeps its one formula mark
+    assert text.startswith("[transcript of pages 1-2, checked against the page images; 1 formula(s) carry")

@@ -137,7 +137,7 @@
 .kb-prose .kb-src::before { content: "[" attr(data-n) "]"; }
 .kb-prose .kb-src:hover, .kb-prose .kb-src:focus-visible { color: var(--primary); }
 .kb-prose img { max-width: 100%; height: auto; }
-/* a figure cut from a PDF page: white paper behind it (dark theme too), centred, never wider than the column */
+/* a figure cut from a PDF page (an opaque render of the page, so its own paper shows in the dark theme too), centred */
 .kb-prose img.kb-figure { display: block; margin: 1rem auto 0.5rem; max-height: 28rem; border: 1px solid var(--border); border-radius: 0.375rem; }
 .kb-prose .katex-display { overflow-x: auto; overflow-y: hidden; }
 /* a doubt mark after a display formula sits at the right of the equation, like an equation tag */

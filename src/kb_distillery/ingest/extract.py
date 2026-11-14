@@ -16,6 +16,7 @@ FILL_MAX_TOKENS = 16000
 FILL_MAX_TOKENS_EXERCISES = 32000     # a chapter's exercises are copied in full
 MAX_CROPS = 20                        # crops of marked formulas shown to the model in one fill (`!!` first)
 MARK = re.compile(r"\[(!!?)\]\(mark:([0-9a-f]{12})/p(\d{4})/(\d+)\)")
+FIG_MARKED = re.compile(r"\(figure:[0-9a-f]{12}/p\d{4}/\d+\) $")     # text ending in a figure link: its mark follows
 MARKS_NOTE = """
 Marks. The source is a checked transcript. A formula followed by a link `[!](mark:…)` or `[!!](mark:…)` was not settled
 when the page was read (`!`: probably right; `!!`: unsettled). {crops}For every marked formula you copy into the claims:
@@ -122,8 +123,9 @@ def transcript(raw_path, pages=None):
         return None
     from kb_distillery.parse import figures as figs_mod
     figs = store.figures(proot, sha, want)
+    n = sum(1 for m in MARK.finditer(text)                         # a figure's own mark is no formula's
+            if not FIG_MARKED.search(text[max(0, m.start() - 48):m.start()]))
     text = figs_mod.with_descriptions(text, {(sha[:12], f["page"], f["id"]): f for f in figs})
-    n = max(0, len(MARK.findall(text)) - sum(1 for f in figs if f.get("problem")))   # figure marks are not formulas
     head = "[transcript of pages %d-%d, checked against the page images; %s]\n\n" % (
         want[0], want[-1], "%d formula(s) carry a `!` / `!!` mark link" % n if n else "no formula is marked unsure")
     return head + text
@@ -328,7 +330,7 @@ def run_extract(sha, fill=False, backend=None, model=FILL_MODEL):
         return 1
     text = extract_text(raw_path, pages=pages)
     text_path = os.path.join(sdir, "extracted.text")
-    figs = transcript_figures(raw_path, pages) if text else []      # what draft lists under ## Figures, this scope only
+    figs = transcript_figures(raw_path, pages)      # what draft lists under ## Figures, this scope only
     fig_path = os.path.join(sdir, "figures.json")
     if figs:
         with open(fig_path, "w", encoding="utf-8") as f:
@@ -342,7 +344,6 @@ def run_extract(sha, fill=False, backend=None, model=FILL_MODEL):
             f.write(text)
         scope_note = f" · scope: {scope.get('label')}" if scope.get("label") else ""
         print(f"wrote {text_path} ({len(text)} chars){scope_note}")
-
     else:
         print("no text extracted — agent must read PDF directly")
 

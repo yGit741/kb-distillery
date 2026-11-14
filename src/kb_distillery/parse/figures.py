@@ -67,7 +67,8 @@ def _caption_near(md: str, start: int, end: int, taken: int = 0) -> tuple:
     after = PLACEHOLDER.split(after, 1)[0].strip()
     head = md[:start].rstrip("\n")
     cut = head.rfind("\n\n")
-    before = head[cut + 2:].strip() if cut + 2 >= taken else ""
+    start_b = cut + 2 if cut >= 0 else 0
+    before = head[start_b:].strip() if start_b >= taken else ""
     for para, stop in ((after, end + (len(md[end:]) - len(rest)) + len(after)), (before, start)):
         m = CAPTION.match(para + " ") if para and len(para) <= MAX_CAPTION else None
         if m:
