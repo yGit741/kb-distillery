@@ -63,6 +63,8 @@ import { optionId, SearchPanel, type PanelRow, type PanelStatus, type ViewChoice
 import { activeCard, type ViewCard } from "./corners/panelModel";
 import { marker, pillText, sameMarker } from "./shape";
 import { looksLikeShape, parseMode, requestShape, useShellStore } from "./shellStore";
+import type { GraphSubject } from "../colourDimensions";
+import { subjectWord } from "../subject";
 import { useShape } from "./useShape";
 import { usePageResults } from "./usePageResults";
 import { useTextHits } from "./useTextHits";
@@ -112,6 +114,8 @@ interface Props {
   onShowExact: (ids: string[]) => void;
   /** The types drawn now (free-text shaping hides some). */
   shownTypes: ReadonlySet<string> | null;
+  /** `> concepts` / `> sources` (flag graph-intent): switch the graph's view; false when it is already on. */
+  onSubject?: (s: GraphSubject) => boolean;
   /** "Show pages mentioning ...". */
   onShowMentions: (q: string) => void;
   onFit: () => void;
@@ -132,7 +136,7 @@ interface Props {
  * centre unfolds, on focus or Cmd/Ctrl+K, into recent steps and pinned views at rest, live page results while
  * typing, commands after a slash, and two free-text rows (ask the agent, shape the graph).
  */
-export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onShowExact, shownTypes, onShowMentions, onFit, onZoom, onReheat, onRefresh, setParams, top = SHELL_TOP, views, onPickView }: Props) {
+export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onShowExact, shownTypes, onSubject, onShowMentions, onFit, onZoom, onReheat, onRefresh, setParams, top = SHELL_TOP, views, onPickView }: Props) {
   const ds = useDataSource();
   const qc = useQueryClient();
   const host = useToolHost();
@@ -435,6 +439,14 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
           if (parsed.op === "remove") {
             const gone = useLayers.getState().apply("remove", parsed.text);
             useShellStore.getState().say(gone ? "Removed it from the view." : "No layer of the view matches that.");
+            close();
+            return;
+          }
+          // the two view words switch the view itself (the same as the Concepts / Sources switch on the graph)
+          const word = onSubject ? subjectWord(parsed.text) : null;
+          if (word && onSubject) {
+            const changed = onSubject(word);
+            useShellStore.getState().say(changed ? LINE_COPY.subject[word] : LINE_COPY.subjectAlready[word]);
             close();
             return;
           }

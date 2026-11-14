@@ -23,6 +23,8 @@ import { bubbleAim, drawBubble, magnetCursor, pickMagnetic, rgbOf, stepBubble, t
 import { useCites } from "./shell/citeStore";
 import { candidatesOf } from "./shell/replay";
 import { ReplayLegend } from "./shell/ReplayLegend";
+import { drawSourceCount } from "./shell/countDraw";
+import { sideOffset, sourceCounts } from "./subject";
 import { useReplay } from "./shell/replayStore";
 import { useSparkOpen } from "./shell/SparkPanelHost";
 import { SEARCH_LINE_H, useShellTop } from "./shell/layout";
@@ -86,6 +88,11 @@ interface RenderState {
   /** pointer in CSS px of the canvas (the hover lens) */
   pointer: { x: number; y: number } | null;
 }
+
+/** How strongly the Sources view pulls each side to its place, and how big a concept must be on screen to show its count. */
+const SIDE_PULL = 0.3;
+const SIDE_SETTLE_MS = 1400;
+const COUNT_MIN_PX = 9;
 
 const EMPTY_IMPORTANCE: Importance = { score: new Map(), terms: new Map(), qrank: new Map(), maxScore: 1 };
 
@@ -423,9 +430,16 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
   // the anchored layout pins topics on a ring and pulls every page toward its theme; free unpins them
   // the ring is sized once per vault and link distance (from the first drawn set), then stays where it is
   const ringRef = useRef<{ model: GraphModel; linkDistance: number; ring: Map<string, readonly [number, number]> } | null>(null);
+  // flag graph-intent, the Sources view (a source page is drawn): sources sit on the left, concepts on the right
+  const intentOn = useFlag("graph-intent");
+  const sides = useMemo(() => intentOn && data.nodes.some((n) => n.layer === "source"), [intentOn, data]);
+  // ... and in the Concepts view each concept carries a quiet count of its sources, over the whole kb
+  const srcCount = useMemo(() => (intentOn ? sourceCounts(model.nodes, neighbors) : null), [intentOn, model, neighbors]);
+  const viewRef = useRef({ sides, srcCount });
+  viewRef.current = { sides, srcCount };
   const anchors = useMemo(() => {
     const nodes = data.nodes as SimNode[];
-    if (ui.layoutMode !== "anchored") {
+    if (ui.layoutMode !== "anchored" || sides) {
       for (const n of nodes) if (n.type === "topic") n.fx = n.fy = undefined;
       return null;
     }
@@ -435,7 +449,7 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
       ringRef.current = { model, linkDistance: ui.linkDistance, ring: themeRing(topics, nodes.length, ui.linkDistance) };
     }
     return themeAnchors(nodes, ringRef.current!.ring);
-  }, [data, model, ui.layoutMode, ui.linkDistance]);
+  }, [data, model, ui.layoutMode, ui.linkDistance, sides]);
   // several knowledge bases: each is pulled toward its own anchor (a row, left to right), so its pages stay one
   // region and a page with no links cannot drift off; dragging a region's name moves its anchor
   const kbIds = useMemo(() => ((model.kbs?.length ?? 0) > 1 ? model.kbs!.map((k) => k.id) : []), [model]);
@@ -449,6 +463,12 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
     () =>
       kbIds.length
         ? { strength: 0.12, target: (n) => (n.kb ? (kbAnchor.current.get(n.kb) ?? null) : null) }
+        : sides
+        ? {
+            // pulled sideways only: the target keeps the page's own height, so each side settles as a loose column
+            strength: SIDE_PULL,
+            target: (n) => (isPile(n) || n.layer === "collection" ? null : [(n.layer === "source" ? -1 : 1) * sideOffset(ui.linkDistance, data.nodes.length), n.y ?? 0]),
+          }
         : anchors
         ? {
             strength: ui.areaPull,
@@ -458,16 +478,23 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
             },
           }
         : null,
-    [anchors, ui.areaPull, kbIds],
+    [anchors, ui.areaPull, kbIds, sides, ui.linkDistance, data],
   );
   // the first layout already uses the mode and pull (settled off screen); only the user's later change animates
   // (compared by value, so StrictMode's second mount run doesn't count as a change)
   const layoutWas = useRef<string | null>(null);
   useEffect(() => {
-    const now = `${ui.layoutMode}|${ui.areaPull}`;
-    if (layoutWas.current !== null && layoutWas.current !== now) fg.current?.reheat();
+    const now = `${ui.layoutMode}|${ui.areaPull}|${sides}`;
+    const changed = layoutWas.current !== null && layoutWas.current !== now;
+    const sidesChanged = changed && layoutWas.current!.split("|")[2] !== String(sides);
+    if (changed) fg.current?.reheat();
     layoutWas.current = now;
-  }, [ui.layoutMode, ui.areaPull]);
+    // switching between Concepts and Sources is a layout command: once the two sides have moved apart (or back),
+    // the camera frames the new shape
+    if (!sidesChanged) return;
+    const t = setTimeout(() => useGraphUi.getState().fit(), SIDE_SETTLE_MS);
+    return () => clearTimeout(t);
+  }, [ui.layoutMode, ui.areaPull, sides]);
 
   useEffect(() => {
     fg.current?.refresh();
@@ -842,7 +869,9 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
       // an ordered colouring is a neutral ramp (lightness), so it never fights the area hulls
       const role = tk?.view.roles.get(n.id);
       // flag show-thinking: a page that is not part of the answer is grey as well as dim
-      const col = tk && !role ? colors.muted : colorOf(n, by, METRIC_COLORS.has(by) ? metricOf(rs.current.imp, n, by) : undefined, live.current.theme);
+      // the Sources view colours the sources; the concepts beside them stay neutral, so the colour has one meaning
+      const aside = viewRef.current.sides && n.layer !== "source";
+      const col = (tk && !role) || aside ? colors.muted : colorOf(n, by, METRIC_COLORS.has(by) ? metricOf(rs.current.imp, n, by) : undefined, live.current.theme);
       if (role) drawGlow(ctx, n.x, n.y, r, col, role, scale, live.current.theme === "dark");
       // the shared encoding (./encoding): selection ring or hover glow, then the type's mark; a source is a plain dot
       // until it is big enough on screen (zoom) or under the pointer, then its type glyph
@@ -860,6 +889,8 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
         glyph: r * scale >= SOURCE_GLYPH_PX || hover === n.id,
         scale,
       });
+      const sourcesBehind = !viewRef.current.sides && !tk && !live.current.replay && n.layer === "concept" ? viewRef.current.srcCount?.get(n.id) : undefined;
+      if (sourcesBehind && r * scale >= COUNT_MIN_PX) drawSourceCount(ctx, n.x, n.y, r, sourcesBehind, scale, colors, alpha);
       if (live.current.replay) drawReplayMark(ctx, n.id, n.x, n.y, r, scale, alpha, live.current.replay, colors);
       if (role === "cited") {
         const no = tk?.view.citeNo.get(n.id);

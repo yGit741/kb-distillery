@@ -39,6 +39,7 @@ import { computeVisible } from "./rules";
 import { assignAreaColors, colorKey, effectiveColorBy } from "./style";
 import { registerTypeMarks } from "./encoding/spec";
 import { defaultTypes, parseSchema, withDataTypes } from "./schema";
+import { applySubject } from "./subject";
 import { SideReader, type ReaderStep } from "./SideReader";
 import { useGraphUi } from "./store";
 import { Panels } from "./Panels";
@@ -682,6 +683,7 @@ function Loaded({
             onRead={openReader}
             onShowExact={(ids) => showPicked(ids, true)}
             shownTypes={shownTypes}
+            onSubject={(s) => applySubject(s, schema, shownTypes)}
             onShowMentions={(query) => void showMentions(query)}
             onFit={() => ui.fit()}
             onZoom={(f) => canvas.current?.zoomBy(f)}
