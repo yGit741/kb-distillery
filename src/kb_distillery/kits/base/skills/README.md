@@ -22,6 +22,7 @@ The workflow skills every knowledge base gets from the `base` kit. A kb carries 
 | `kb-undo` | none | 0 | only when the user asks to undo a step |
 | `kb-snapshot` | none | 0 | `snapshot`; restore only when the user asks |
 | `propose-relations` | light | ~1–2k per subject (batch) | `propose relations`, `relation proposals` (dry-run first; spends) |
+| `thought-ingest` | heavy | ~10–25k per thought | `thought-ingest <kb>`, `ingest my thought`, `capture this` (preview + owner's yes before writing) |
 | `deep-research` | heavy | ~30–80k | `deep research`, `research this`, `investigate` (read-only; chat agent) |
 
 ## Trigger rules
@@ -53,5 +54,6 @@ Every knowledge operation is one commit on main: `kb(<op>): <summary> (kb-x.y.z)
 | [wiki-edit](wiki-edit/SKILL.md) | Wrap free-form wiki edits in an ops session → one `kb(refine)` commit (0 LLM) |
 | [kb-undo](kb-undo/SKILL.md) | Reverse one knowledge step as a new `kb(undo)` commit — wiki/ only (0 LLM) |
 | [kb-snapshot](kb-snapshot/SKILL.md) | Tag `kb-x.y.z`, list snapshots, restore wiki/ to one (0 LLM) |
+| [thought-ingest](thought-ingest/SKILL.md) | One own thought (reMarkable page, paper photo, screenshot) → `capture-` source page (original + extraction) + concept pages, after a preview and the owner's yes |
 | [deep-research](deep-research/SKILL.md) | Cited multi-source report: sub-questions, KB first, web for gaps, optional read-only subagents |
 | [kb-history](kb-history/SKILL.md) | Version, steps, PRs, sessions — read-only (0 LLM) |

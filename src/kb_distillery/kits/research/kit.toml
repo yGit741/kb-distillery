@@ -12,7 +12,7 @@ focus_slugs = ["focus"]
 
 [types]
 order = ["topic", "idea", "question", "person", "course", "series", "book", "notebook",
-         "paper", "part", "lecture", "article", "blog-post", "video", "ai-chat", "mail"]
+         "paper", "part", "lecture", "article", "blog-post", "video", "ai-chat", "mail", "capture"]
 # No `areas` here on purpose: the `area:` whitelist is a kb's own choice of topics (each needs a theme-<area> page),
 # so a kb adds it under its own [types] (areas, deprecated_areas).
 # Extra frontmatter on source pages, beyond the explorer's common fields.
@@ -60,6 +60,11 @@ color = "#ff9e64"
 label = "Blog post"
 prefix = "blog-"
 color = "#ff79c6"
+
+[types.source.capture]          # my own thought (reMarkable page, photo of paper, screenshot): thought-ingest
+label = "Capture"
+prefix = "capture-"
+color = "#b4f9f8"
 
 # --- Collections: a table grouping sources ---------------------------------------------------------------
 [types.collection.book]

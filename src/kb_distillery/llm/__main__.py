@@ -1,4 +1,4 @@
-"""CLI for kb_distillery.llm: `pixi run llm -- ask "prompt" [--backend api] [--model haiku]`, `submit FILE`, `status ID`, `collect ID`.
+"""CLI for kb_distillery.llm: `pixi run llm -- ask "prompt" [--backend api] [--model haiku] [--image F]`, `submit FILE`, `status ID`, `collect ID`.
 
 FILE for submit is JSONL, one Request per line ({"prompt": ..., "id": ..., "model": ...}) or plain prompt lines."""
 import argparse
@@ -47,6 +47,7 @@ def main(argv=None):
     a.add_argument("--system", default="")
     a.add_argument("--max-tokens", type=int, default=1024)
     a.add_argument("--effort", default="low")
+    a.add_argument("--image", action="append", default=[], help="image file shown to the model before the prompt (repeatable)")
     s = sub.add_parser("submit")
     s.add_argument("file")
     st = sub.add_parser("status")
@@ -61,7 +62,7 @@ def main(argv=None):
         provider, backend = llm.resolve(args.provider, args.backend)
         model = args.model or DEFAULT_MODELS[provider]
         return _print([llm.ask(args.prompt, backend=backend, model=model, system=args.system, provider=provider,
-                               max_tokens=args.max_tokens, effort=args.effort)])
+                               max_tokens=args.max_tokens, effort=args.effort, images=tuple(args.image))])
     if args.cmd == "submit":
         print(llm.submit(_requests(args.file)))
         return 0

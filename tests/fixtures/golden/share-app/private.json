@@ -45,7 +45,7 @@
      "target": "theme-info-theory"
     }
    ],
-   "etag": "0002c2637ce37bf8",
+   "etag": "631b1e2361bc5be5",
    "facets": {
     "areas": [
      "info-theory",
@@ -673,7 +673,8 @@
        "blog-post",
        "video",
        "ai-chat",
-       "mail"
+       "mail",
+       "capture"
       ]
      }
     ],
@@ -681,6 +682,7 @@
      "ai-chat",
      "article",
      "blog-post",
+     "capture",
      "lecture",
      "mail",
      "paper",
@@ -877,6 +879,18 @@
       ]
      },
      {
+      "color": "#b4f9f8",
+      "id": "capture",
+      "label": "Capture",
+      "layer": "source",
+      "prefix": "capture-",
+      "statuses": [
+       "digested",
+       "reading",
+       "to-read"
+      ]
+     },
+     {
       "color": "#e0af68",
       "id": "distilled-think",
       "label": "Distilled",
@@ -902,7 +916,7 @@
     ],
     "version": [
      1,
-     5
+     6
     ]
    }
   },
@@ -1235,8 +1249,8 @@
    "branch": "main",
    "generated_at": "2026-01-02T03:04:05Z",
    "github": null,
-   "head": "0002c2637",
-   "next_version": "1.5.1",
+   "head": "631b1e236",
+   "next_version": "1.6.1",
    "policy": "<policy>",
    "schema": "<schema>",
    "snapshots": [],
@@ -1260,8 +1274,8 @@
      "reverted_by": null,
      "reverts": null,
      "scope": "import",
-     "sha": "0002c2637ce37bf87a263cc1618fe9322fccf92e",
-     "short": "0002c2637",
+     "sha": "631b1e2361bc5be536d4f051fb14caecb5427e19",
+     "short": "631b1e236",
      "snapshot_tag": null,
      "subject": "kb(import): fixture (kb-0.1.1)",
      "summary": "fixture",
@@ -1273,7 +1287,7 @@
   },
   "meta": {
    "built_at": "2026-01-02T03:04:05Z",
-   "content_sha": "0002c2637ce37bf87a263cc1618fe9322fccf92e",
+   "content_sha": "631b1e2361bc5be536d4f051fb14caecb5427e19",
    "kb_version": "0.1.1",
    "profile": "private",
    "viewer_sha": "<viewer>"

@@ -52,11 +52,11 @@ class ResearchKit(unittest.TestCase):
 
     def test_types(self):
         t = kbtypes.load(self.cfg)
-        self.assertEqual(set(t.source_types), {"paper", "part", "lecture", "article", "video", "mail", "ai-chat", "blog-post"})
+        self.assertEqual(set(t.source_types), {"paper", "part", "lecture", "article", "video", "mail", "ai-chat", "blog-post", "capture"})
         self.assertEqual(set(t.partition_collections), {"book", "notebook"})
         self.assertEqual(set(t.contents_collections), {"course", "series"})
         self.assertEqual(set(t.concept_types), {"topic", "idea", "question", "person"})
-        self.assertEqual(len(t.type_order), 18)                              # 16 kb types + the two tool-owned
+        self.assertEqual(len(t.type_order), 19)                              # 17 kb types + the two tool-owned
 
     def test_areas_are_the_kbs_own(self):
         """Each area needs a theme-<area> page, so a kit that listed some would break lint for every kb."""

@@ -47,6 +47,7 @@ SECTIONS = [
     ("video", "Videos", "Video digests."),
     ("ai-chat", "AI chats", "Saved AI chat conversations."),
     ("mail", "Mail", "Email threads."),
+    ("capture", "Captures", "My own thoughts: the original (handwriting, screenshot) with its extraction."),
     ("person", "People", "People: researchers and collaborators, with their papers."),
     ("scope", "Scopes", "A bounded set of sources for a focused question."),
     ("distilled-think", "Distilled thinking (review)", "Distilled thinking notes waiting for review."),

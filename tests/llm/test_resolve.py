@@ -94,6 +94,16 @@ def test_cli_ask_uses_resolve(world, monkeypatch, capsys):
         cli.main(["ask", "hi", "--provider", "gemini", "--backend", "batch"])
 
 
+def test_cli_ask_passes_images(world, monkeypatch, capsys):
+    seen = {}
+    monkeypatch.setattr(llm, "ask", lambda prompt, **kw: seen.update(kw) or llm.Result(id="r0", text="ok"))
+    world.kb = kb_with("claude")
+    assert cli.main(["ask", "read this", "--image", "/tmp/a.png", "--image", "/tmp/b.webp"]) == 0
+    assert seen["images"] == ("/tmp/a.png", "/tmp/b.webp")
+    assert cli.main(["ask", "hi"]) == 0
+    assert seen["images"] == ()
+
+
 def test_not_logged_in_and_no_key_keeps_the_default_backend(world):
     assert llm.resolve("claude") == ("claude", llm.DEFAULT_BACKEND)
 

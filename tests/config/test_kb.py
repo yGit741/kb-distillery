@@ -21,7 +21,7 @@ def _sh(cwd, *args):
     subprocess.run(["git", *args], cwd=cwd, check=True, capture_output=True, env=env)
 
 
-MINIMAL = '[kb]\nid = "demo"\nname = "Demo"\nschema_version = "1.5"\n'
+MINIMAL = '[kb]\nid = "demo"\nname = "Demo"\nschema_version = "1.6"\n'
 
 
 class Discovery(unittest.TestCase):
@@ -84,7 +84,7 @@ class Discovery(unittest.TestCase):
         _write(os.path.join(self.bases, "bad"), '[kb]\nid = "bad"\nname = "Bad"\n')
         with self.assertRaisesRegex(kbconfig.KbConfigError, "schema_version is required"):
             kbconfig.load("bad")
-        _write(os.path.join(self.bases, "old"), MINIMAL.replace('"demo"', '"old"').replace("1.5", "0.9"))
+        _write(os.path.join(self.bases, "old"), MINIMAL.replace('"demo"', '"old"').replace("1.6", "0.9"))
         with self.assertRaisesRegex(kbconfig.KbConfigError, "schema_version 0.9"):
             kbconfig.load("old")
         _write(os.path.join(self.bases, "mismatch"), MINIMAL)                     # folder says mismatch, file says demo
@@ -331,7 +331,7 @@ class UpwardDiscovery(unittest.TestCase):
 class TypesFromConfig(unittest.TestCase):
     def test_defaults_are_the_explorer_type_set(self):
         t = types.build(None)
-        self.assertEqual(t.source_types, frozenset({"paper", "part", "lecture", "article", "video", "mail", "ai-chat", "blog-post"}))
+        self.assertEqual(t.source_types, frozenset({"paper", "part", "lecture", "article", "video", "mail", "ai-chat", "blog-post", "capture"}))
         self.assertEqual(t.partition_collections, frozenset({"book", "notebook"}))
         self.assertEqual(t.concept_types, frozenset({"idea", "topic", "question", "person"}))
         self.assertEqual(t.bare_types, {"idea", "person"})
@@ -345,7 +345,7 @@ class TypesFromConfig(unittest.TestCase):
     def test_a_layer_table_replaces_that_layers_defaults_and_keeps_the_others(self):
         t = types.build({
             "order": ["company", "book", "notebook", "course", "series", "paper", "part", "lecture", "article",
-                      "video", "mail", "ai-chat", "blog-post"],
+                      "video", "mail", "ai-chat", "blog-post", "capture"],
             "concept": {"company": {"label": "Company", "prefix": "company-", "status": ["new", "applied"]}},
         })
         self.assertEqual(t.concept_types, frozenset({"company"}))

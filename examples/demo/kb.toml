@@ -3,7 +3,7 @@
 [kb]
 id = "demo"
 name = "Job Search (demo)"
-schema_version = "1.5"
+schema_version = "1.6"
 kit = "base"
 owner = "dana-levi"           # the id in `generated: {by: human:<owner>}` on pages whose summary you wrote
 
@@ -19,7 +19,7 @@ types = "digest/types.md"
 order = ["topic", "idea", "question", "person", "series", "article", "notes", "document",
          "company", "role", "interview", "skill",
          "process",
-         "posting", "mail", "chat"]
+         "posting", "mail", "chat", "capture"]
 # Extra frontmatter on source pages (a research kb might add authors/venue/arxiv-id; a job search has these).
 source_fields = ["company", "created", "stage"]
 

@@ -31,7 +31,7 @@ class OkfLinks(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.root = self.tmp.name
-        write(self.root, "kb.toml", '[kb]\nid = "t"\nname = "T"\nschema_version = "1.5"\n')
+        write(self.root, "kb.toml", '[kb]\nid = "t"\nname = "T"\nschema_version = "1.6"\n')
         write(self.root, "meta/aliases.tsv", "# mention\tslug\nSGD\tbeta\n")
         write(self.root, "wiki/alpha.md", FM + "# Alpha [one] | two\n\nBody.\n")
         write(self.root, "wiki/beta.md", FM.replace("---\n\n", "aliases: [old-beta]\n---\n\n") + "# Beta\n\n## Why it works\n\nText.\n")

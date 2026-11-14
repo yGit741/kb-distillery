@@ -12,7 +12,7 @@ raw/presentations/      slide decks (pdf, pptx, key)
 raw/llm-chats/          LLM conversation exports (md)
 raw/emails/<YYYY-MM-DD-thread>/  thread.md + attachments + parsed.md sidecar — the only nested folder
 raw/web-clips/          Web Clipper pages (md, html)
-raw/images/             screenshots, figures
+raw/images/             screenshots, figures; `capture-<date>-<slug>.<ext>` is one of my own thoughts (a `capture` page)
 raw/videos/<name>/      video.md + video.json + transcript.vtt + info.json + a-<s>.jpg anchor thumbnails (scrap-youtube) — nests like emails/
 wiki/                   flat agent-owned notes; filename prefix = type
 think/                  human slow space (not linted)

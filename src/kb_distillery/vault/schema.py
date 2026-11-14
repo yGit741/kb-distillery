@@ -183,6 +183,8 @@ def unit_type_for_raw(raw_rel):
         return "mail"
     if fmt == RAW_VIDEOS:
         return "video"
+    if fmt == RAW_IMAGES and parts[-1].startswith("capture-"):
+        return "capture"
     if fmt == RAW_PRINTED and ext == "md" and parts[-1].startswith("blog-"):
         return "blog-post"
     if fmt == RAW_WEB or (fmt == RAW_PRINTED and ext != "pdf"):
@@ -383,7 +385,7 @@ def is_kb_tooling(path):
 # (x, y) changes only inside a schema/paradigm PR (with its migration); z is derived
 # from git (last first-parent KB-Version + 1). Tooling is not versioned — infra work
 # is identified by its PR number (#N). See src/kb_distillery/git/commit_policy.py.
-SCHEMA_VERSION = (1, 5)     # 1.5: OKF v0.2 native bundle in one step (migrations 0013-0015): frontmatter (maturity, description, generated {by}, created, title only when it differs from the H1, sources objects only beyond the url, related paths); pages link with relative markdown links `[Title](slug.md)`, wikilinks only in My notes; index.md and log.md are the OKF reserved files of the bundle root wiki/ (1.4: `relations:` field; 1.3: `summary:` field; 1.2: conversation → mail/ai-chat; 1.1: question H1)
+SCHEMA_VERSION = (1, 6)     # 1.6: `capture` source type, the owner's own thoughts (migration 0016); 1.5: OKF v0.2 native bundle in one step (migrations 0013-0015): frontmatter (maturity, description, generated {by}, created, title only when it differs from the H1, sources objects only beyond the url, related paths); pages link with relative markdown links `[Title](slug.md)`, wikilinks only in My notes; index.md and log.md are the OKF reserved files of the bundle root wiki/ (1.4: `relations:` field; 1.3: `summary:` field; 1.2: conversation → mail/ai-chat; 1.1: question H1)
 from kb_distillery.config.kb import SCHEMA_VERSION as _KB_SCHEMA_VERSION
 assert SCHEMA_VERSION == _KB_SCHEMA_VERSION, "kb_distillery.config.kb.SCHEMA_VERSION must follow this value"
 

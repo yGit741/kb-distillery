@@ -10,7 +10,7 @@ Every wiki page has a `layer:` and a `type:` within it (`src/kb_distillery/vault
 
 | Layer | Types | What it is |
 |-------|-------|------------|
-| **source** | paper, part, lecture, article, video, mail, ai-chat, blog-post | the digest of one raw item, faithful to it; carries `depth:` |
+| **source** | paper, part, lecture, article, video, mail, ai-chat, blog-post, capture | the digest of one raw item, faithful to it; carries `depth:` |
 | **collection** | book, notebook (page partition table) · course, series (Contents table) · aux `scope` | a table grouping sources |
 | **concept** | idea, topic, question, person · aux `distilled-think` | knowledge across sources; ends with `## My notes` |
 
@@ -32,6 +32,7 @@ Every wiki page has a `layer:` and a `type:` within it (`src/kb_distillery/vault
 | article | easy · full | easy |
 | mail, ai-chat | easy · full | easy |
 | video | easy · full | easy or full |
+| capture | full (thought-ingest) | full |
 
 Retired names (schema 1.0, no read compatibility — lint errors and names the replacement):
 `type: theme` → `topic`, `type: concept` → `idea`, `digestion-status` → `depth`, depth `catalog` →
@@ -81,7 +82,7 @@ institution: runi            # course only, plus course_code:, semester:, lectur
 | `video-` | video (source) | `theme-` | topic (concept) — exactly the 10 TOPIC_SLUGS |
 | `mail-` | mail (source; email thread) | `q-` | question (concept) |
 | `chat-` | ai-chat (source; LLM chat) | *(bare)* | idea, person (concept) |
-| `distilled-think-` | distilled-think (concept, aux) | | |
+| `distilled-think-` | distilled-think (concept, aux) | `capture-` | capture (source; my own thought: original image + extraction, `thought-ingest`) |
 
 **`relations:`** (schema 1.4, `src/kb_distillery/graph/relations.py`) — typed links a page states about other pages: `to`
 (a slug), `kind` and a `note`. The kinds a knowledge base accepts are its `kb.toml` `[edges] types` (the thesis kb:

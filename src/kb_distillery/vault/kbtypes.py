@@ -51,6 +51,7 @@ DEFAULT_TYPES = {
         "mail":      {"label": "Mail", "prefix": "mail-", "color": "#73daca"},         # an email thread (raw/emails/)
         "ai-chat":   {"label": "AI chat", "prefix": "chat-", "color": "#ff9e64"},      # an LLM chat (meta/chats/ trees)
         "blog-post": {"label": "Blog post", "prefix": "blog-", "color": "#ff79c6"},    # one post of a blog series
+        "capture":   {"label": "Capture", "prefix": "capture-", "color": "#b4f9f8"},   # my own thought: original + extraction
     },
     "collection": {
         "book":     {"label": "Book", "prefix": "book-", "kind": "partition", "yeared": True, "color": "#d16bd8"},
@@ -66,7 +67,7 @@ DEFAULT_TYPES = {
     },
 }
 DEFAULT_ORDER = ("topic", "idea", "question", "person", "course", "series", "book", "notebook",
-                 "paper", "part", "lecture", "article", "blog-post", "video", "ai-chat", "mail")
+                 "paper", "part", "lecture", "article", "blog-post", "video", "ai-chat", "mail", "capture")
 PALETTE = ("#7aa2ff", "#9ece6a", "#f6c177", "#bb9af7", "#2ac3de", "#ff6b7a", "#4fd6be", "#ffc777",
            "#ff9e64", "#73daca", "#d16bd8", "#7dcfff", "#eab0ee", "#f7768e", "#ff79c6", "#c099ff")
 

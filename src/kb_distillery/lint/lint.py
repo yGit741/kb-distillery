@@ -1353,7 +1353,7 @@ def collect_snapshot(quiet=False):
         1 for _rel, fm, _t in pages.values()
         if fm.get("depth") == "listed"
         and fm.get("type") in ("paper", "part", "lecture", "article", "video", "mail",
-                               "ai-chat", "blog-post"))
+                               "ai-chat", "blog-post", "capture"))
     return snapshot
 
 

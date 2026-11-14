@@ -723,7 +723,8 @@
       "blog-post",
       "video",
       "ai-chat",
-      "mail"
+      "mail",
+      "capture"
      ]
     }
    ],
@@ -731,6 +732,7 @@
     "ai-chat",
     "article",
     "blog-post",
+    "capture",
     "lecture",
     "mail",
     "paper",
@@ -927,6 +929,18 @@
      ]
     },
     {
+     "color": "#b4f9f8",
+     "id": "capture",
+     "label": "Capture",
+     "layer": "source",
+     "prefix": "capture-",
+     "statuses": [
+      "digested",
+      "reading",
+      "to-read"
+     ]
+    },
+    {
      "color": "#e0af68",
      "id": "distilled-think",
      "label": "Distilled",
@@ -952,7 +966,7 @@
    ],
    "version": [
     1,
-    5
+    6
    ]
   }
  },

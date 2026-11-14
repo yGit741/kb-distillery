@@ -29,6 +29,11 @@ label = "Document"
 prefix = "doc-"
 color = "#eab0ee"
 
+[types.source.capture]          # my own thought (reMarkable page, photo of paper, screenshot): thought-ingest
+label = "Capture"
+prefix = "capture-"
+color = "#b4f9f8"
+
 # --- Collections: how sources group ---------------------------------------------------------------------------
 [types.collection.series]
 label = "Series"
