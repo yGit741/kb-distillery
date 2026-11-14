@@ -188,3 +188,9 @@ def test_a_figure_mark_is_not_counted_as_a_formula_mark(kb):
     store.write_transcript_page(kb["proot"], kb["sha"], 1, md, [], figures=[fig])
     text = extract.extract_text(kb["raw"], pages=(1, 2))        # page 2 keeps its one formula mark
     assert text.startswith("[transcript of pages 1-2, checked against the page images; 1 formula(s) carry")
+
+
+def test_tex_prose_in_exercises_becomes_markdown_and_maths_is_kept():
+    ex = draft._exercises_block({"exercises": [{"label": "3.45", "statement":
+          "a ``one-way permutation'' is \\emph{given} $f''(x)$ (Goldreich--Levin, Theorem~3.2; $a--b$), `YES' -- or"}]})
+    assert "a \u201cone-way permutation\u201d is *given* $f''(x)$ (Goldreich\u2013Levin, Theorem 3.2; $a--b$), \u2018YES' \u2013 or" in ex

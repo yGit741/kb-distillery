@@ -90,6 +90,28 @@ export function remarkDoubtTag() {
   };
 }
 
+/** `\tag{N}` numbers a display equation; KaTeX refuses it in inline maths (a numbered equation quoted inside a sentence).
+ * There it becomes ` \qquad(N)`, the number the reader would see. */
+export function inlineTag(tex: string): string {
+  return tex.replace(/\\tag\*?\{([^{}]*)\}/g, "\\qquad($1)");
+}
+
+/** Remark plugin: `inlineTag` on every inline formula (value and the text node mdast-util-math already made from it). */
+export function remarkInlineTag() {
+  type MathNode = { type: string; value?: string; children?: MathNode[]; data?: { hChildren?: { type: string; value: string }[] } };
+  return (tree: Root) => {
+    const walk = (n: MathNode) => {
+      if (n.type === "inlineMath" && typeof n.value === "string") {
+        n.value = inlineTag(n.value);
+        for (const c of n.data?.hChildren ?? []) if (c.type === "text") c.value = inlineTag(c.value);
+        return;
+      }
+      for (const c of n.children ?? []) walk(c);
+    };
+    walk(tree as unknown as MathNode);
+  };
+}
+
 const safeDecode = (s: string): string => {
   try {
     return decodeURIComponent(s);
@@ -238,7 +260,7 @@ export function Markdown({ children, className, resolveSlug, transformUrl, linkS
     [resolveSlug, transformUrl, linkSearch],
   );
   const plugin = marks?.plugin;
-  const remarkPlugins = useMemo(() => [remarkGfm, remarkMath, remarkWikilinks, remarkDoubtTag, ...(plugin ? [plugin] : [])], [plugin]);
+  const remarkPlugins = useMemo(() => [remarkGfm, remarkMath, remarkInlineTag, remarkWikilinks, remarkDoubtTag, ...(plugin ? [plugin] : [])], [plugin]);
   return (
     <div className={cn("kb-prose", className)}>
       <ReactMarkdown
@@ -251,4 +273,22 @@ export function Markdown({ children, className, resolveSlug, transformUrl, linkS
       </ReactMarkdown>
     </div>
   );
+}
+
+const unwrap = { p: ({ children }: { children?: ReactNode }) => <>{children}</> };
+
+/** A short line of text (a page title) with its `$...$` maths typeset, through the same remark-math + KaTeX path as a
+ * page body; text without a `$` is returned as it is. */
+export function MathText({ text }: { text: string }) {
+  if (!text.includes("$")) return <>{text}</>;
+  return (
+    <ReactMarkdown remarkPlugins={[remarkMath, remarkInlineTag]} rehypePlugins={[rehypeKatex]} components={unwrap}>
+      {text}
+    </ReactMarkdown>
+  );
+}
+
+/** A title as plain text (the browser tab): `$W_K^\\top$` reads `W_K^top`. */
+export function plainTitle(text: string): string {
+  return text.replace(/\$([^$]+)\$/g, (_m, tex: string) => tex.replace(/\\([a-zA-Z]+)/g, "$1"));
 }

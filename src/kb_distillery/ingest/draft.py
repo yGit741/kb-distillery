@@ -47,6 +47,30 @@ def _equations_block(equations):
     return "\n".join(lines) if lines else "—"
 
 
+_MATH = re.compile(r"(\$\$.+?\$\$|\$[^$\n]+?\$)", re.S)
+_TEX_PROSE = [
+    (re.compile(r"``"), "\u201c"),                                        # ``quoted'' -> curly quotes, each side
+    (re.compile(r"''"), "\u201d"),                                        # on its own: maths may sit between them
+    (re.compile(r"(?<![`\w])`(?=[^`\s])"), "\u2018"),                      # `single' quote: a lone backtick is code
+    (re.compile(r"\\(?:emph|textit)\{([^{}]*)\}"), r"*\1*"),
+    (re.compile(r"\\textbf\{([^{}]*)\}"), r"**\1**"),
+    (re.compile(r"(?<=\w)~(?=[\w(])"), " "),                              # Theorem~3.2: TeX's tie
+    (re.compile(r"(?<=\w)---(?=\w)"), "\u2014"),
+    (re.compile(r"(?<=\w)--(?=\w)"), "\u2013"),                         # Goldreich--Levin
+    (re.compile(r"(?<= )---?(?= )"), "\u2013"),                           # a spaced dash: T -- with
+]
+
+
+def _tex_prose(text: str) -> str:
+    """TeX prose markup a model copied from a book (``quotes'', \\emph{..}, \\textbf{..}, ~, --) as the Markdown it
+    means; maths (`$..$`, `$$..$$`) is left as it is. A renderer would show the TeX raw, or read `` as code."""
+    parts = _MATH.split(text or "")
+    for i in range(0, len(parts), 2):
+        for pat, rep in _TEX_PROSE:
+            parts[i] = pat.sub(rep, parts[i])
+    return "".join(parts)
+
+
 def _exercises_block(claims):
     """`## Exercises` (a book part's exercises, in full) and `## Notes and references`, each only when claims has it."""
     out = []
@@ -55,10 +79,10 @@ def _exercises_block(claims):
         out.append("## Exercises\n")
         for x in rows:
             label = str(x.get("label") or "").strip()
-            statement = re.sub(r"(?m)^[ \t]*#{1,6}[ \t]+", "", x["statement"].strip())
+            statement = _tex_prose(re.sub(r"(?m)^[ \t]*#{1,6}[ \t]+", "", x["statement"].strip()))
             out.append((f"**{label}.** " if label else "") + statement + "\n")
     if (claims.get("notes") or "").strip():
-        notes = re.sub(r"(?m)^[ \t]*#{1,6}[ \t]+(.*)$", r"**\1**", claims["notes"].strip())     # no headings of its own
+        notes = _tex_prose(re.sub(r"(?m)^[ \t]*#{1,6}[ \t]+(.*)$", r"**\1**", claims["notes"].strip()))     # no headings of its own
         out.append("## Notes and references\n\n" + notes + "\n")
     return ("\n".join(out) + "\n") if out else ""
 

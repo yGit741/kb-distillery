@@ -33,11 +33,18 @@ def test_page_link_groups_and_unescape():
 def test_link_builder_uses_page_path_and_escapes():
     assert links.link("tensor-rank", "Tensor rank") == "[Tensor rank](tensor-rank.md)"
     assert links.link("tensor-rank") == "[tensor-rank](tensor-rank.md)"
-    assert links.link("a", "Why [x] \\ y") == "[Why \\[x\\] \\\\ y](a.md)"
+    assert links.link("a", "Why [x] \\ y") == "[Why \\[x\\] \\ y](a.md)"     # a lone backslash is no escape
     assert links.link("a", "T", "Why it works") == "[T](a.md#why-it-works)"
     assert links.link("a", "two\n lines") == "[two lines](a.md)"
     m = links.PAGE_LINK.fullmatch(links.link("a", "Why [x] \\ y"))
     assert links.link_parts(m)[0] == "Why [x] \\ y"
+
+
+def test_a_tex_label_keeps_one_backslash_and_every_label_round_trips():
+    assert links.link("noise-operator", "Noise operator ($T_\\rho$)") == "[Noise operator ($T_\\rho$)](noise-operator.md)"
+    for label in ["$T_\\rho$", "a\\\\b", "x\\", "c\\]", "\\[x", "[a] b"]:
+        assert links.link_parts(links.PAGE_LINK.fullmatch(links.link("a", label)))[0] == label
+    assert links.link_parts(links.PAGE_LINK.fullmatch("[$T_\\\\rho$](a.md)"))[0] == "$T_\\rho$"    # pages written before
 
 
 def test_page_link_takes_the_title_from_titles():

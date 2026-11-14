@@ -53,8 +53,10 @@ def wikilink_targets(text: str) -> list[str]:
 
 
 def escape_label(label: str) -> str:
-    """Link text that reads as the literal `label`: backslash and square brackets escaped."""
-    return re.sub(r"([\\\[\]])", r"\\\1", str(label))
+    """Link text that reads as the literal `label`: square brackets escaped, and a backslash only where it could be read
+    as an escape (before `[`, `]`, `\\` or at the end). A TeX command such as `$T_\\rho$` keeps its one backslash, since a
+    Markdown renderer reads maths raw: `$T_\\\\rho$` would show a doubled backslash."""
+    return re.sub(r"\\(?=[\\\[\]]|$)|([\[\]])", lambda m: "\\" + (m.group(1) or "\\"), str(label))
 
 
 def link(slug: str, label=None, anchor: str | None = None, up: int = 0) -> str:
@@ -74,7 +76,7 @@ def page_link(slug: str, titles=None, label=None, up: int = 0) -> str:
 
 def link_parts(m) -> tuple[str, str, str]:
     """(unescaped label, slug, anchor) of a PAGE_LINK match."""
-    return re.sub(r"\\(.)", r"\1", m.group(1)), m.group(2), m.group(3) or ""
+    return re.sub(r"\\([\\\[\]])", r"\1", m.group(1)), m.group(2), m.group(3) or ""
 
 
 def slugify(heading: str) -> str:
