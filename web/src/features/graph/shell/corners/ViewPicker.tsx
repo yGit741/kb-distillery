@@ -43,7 +43,6 @@ export function ViewPicker({ open, views, current, onPick }: { open: boolean; vi
       aria-hidden={!open}
       inert={!open}
       data-corners="views"
-      data-tour="graph-subject"
       className={cn("pointer-events-none absolute z-[17] grid grid-cols-2 transition-opacity duration-300 motion-reduce:transition-none", open ? "opacity-100" : "opacity-0")}
       style={{ left: EDGE + 4, top: LOOP_TOP, width: LOOP_W, gap: GAP }}
     >

@@ -405,10 +405,11 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
     () => VIEW_OPTIONS.filter((v) => (v.id === "citations" ? !!citationsStory && storyOffered(citationsStory) : v.id === "embedding" ? !!embedding : true)),
     [citationsStory, embedding],
   );
-  const currentView: GraphView = embedOn === "map" ? "embedding" : edgeOn === "citations" ? "citations" : subject === "sources" ? "sources" : "concepts";
+  const currentView: GraphView = embedOn === "map" ? "embedding" : edgeOn === "citations" ? "citations" : subject === "sources" && shownTypes ? "sources" : "concepts";
   const pickView = (v: GraphView) => {
     setActive(null);
-    if (v === currentView) return;
+    // another embedding lens (missing links) still reads as Concepts: picking Concepts leaves it
+    if (v === currentView && (v === "embedding" || !embedOn)) return;
     if (embedOn) leaveEmbed();
     if (v === "citations") return useGraphUi.getState().applyStory("citations");
     // the meaning map places the concepts; leaving Citations or Sources first puts the concepts back
@@ -450,10 +451,10 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
         <>
           {discs ? (
             <>
-              <ViewPicker open={pinsOpen} views={viewOptions} current={currentView} onPick={pickView} />
+              {intent && <ViewPicker open={pinsOpen} views={viewOptions} current={currentView} onPick={pickView} />}
               <PinLoop
                 open={pinsOpen}
-                offset={viewPickerHeight(viewOptions.length)}
+                offset={intent ? viewPickerHeight(viewOptions.length) : 0}
                 views={views.data ?? []}
                 active={activeView}
                 areaHeight={areaHeight}
@@ -759,7 +760,7 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
       />
       {/* the switch is always Concepts / Sources; Health is a lens on concepts, reached by typing "health" */}
       {intent && !discs && <SubjectToggle subject={subject === "health" ? "concepts" : subject} onPick={(s) => (subject === "health" && s === "concepts" ? undefined : pickSubject(s))} top={shellTop} />}
-      <TypesCard concepts={discs && subject === "sources" ? NO_ROWS : concepts} sources={intent && subject !== "sources" ? NO_ROWS : sources} onToggle={(types, on) => ui.setLayerTypes(types, on, allTypes, [...defaultTypes(schema, nodes)])} keep={keepTypes} onSpot={spot} />
+      <TypesCard concepts={discs && intent && subject === "sources" && shownTypes ? NO_ROWS : concepts} sources={intent && subject !== "sources" ? NO_ROWS : sources} onToggle={(types, on) => ui.setLayerTypes(types, on, allTypes, [...defaultTypes(schema, nodes)])} keep={keepTypes} onSpot={spot} />
     </div>
   );
 }

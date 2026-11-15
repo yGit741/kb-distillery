@@ -105,11 +105,16 @@ function usePinnedX(strip: RefObject<HTMLDivElement | null>, on: boolean): numbe
     };
     measure();
     window.addEventListener("resize", measure);
-    // the line can mount after this strip; measure again once it is there
+    // the line can mount after this strip, and change width as panels open: follow it
     const t = window.setTimeout(measure, 300);
+    const ro = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(measure);
+    const line = strip.current?.parentElement?.querySelector<HTMLElement>("[data-testid=graph-shell]");
+    if (ro && line) ro.observe(line);
+    if (ro && strip.current?.parentElement) ro.observe(strip.current.parentElement);
     return () => {
       window.removeEventListener("resize", measure);
       window.clearTimeout(t);
+      ro?.disconnect();
     };
   }, [strip, on]);
   return x;
