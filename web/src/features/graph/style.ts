@@ -1,7 +1,7 @@
 import { useVariant } from "@/components/variants";
 import { useTheme } from "@/theme/theme";
 import { readCanvasColors } from "./encoding/theme";
-import { AREA_PALETTES, depthColor, layerColor, statusColor, supportColor, topicColor, typeColor, UNKNOWN_COLOR } from "@/theme/palette";
+import { AREA_PALETTES, depthColor, layerColor, PERSON_INK_DARK, statusColor, supportColor, topicColor, typeColor, UNKNOWN_COLOR } from "@/theme/palette";
 import { areaDisplay } from "./displayNames";
 import { markOf, RING_BOOST } from "./encoding/spec";
 import { degreeOf, type GNode } from "./types";
@@ -88,9 +88,8 @@ export const OTHER_GREY = "#7C808B";
 export const NONE_GREY = "#B3B7C3";
 /** People have no area of their own: a deep ink, unlike any area colour and unlike the edges. */
 export const PERSON_INK = "#2F3542";
-/** The deep ink vanishes on graphite: on the dark ground people are a slate that still carries white initials
- *  (5:1) and stands 3:1 off the ground. */
-export const PERSON_INK_DARK = "#606B87";
+/** The deep ink vanishes on graphite: the dark ground has its own value (the palette's, like every new colour). */
+export { PERSON_INK_DARK };
 /** The theme on screen, for the colours that have a value per ground (support, people). The canvas, the legend and
  *  the swatches recompute when the theme changes, so a read at call time is always the theme being drawn. */
 const onDark = (): boolean => useTheme.getState().theme === "dark";

@@ -80,6 +80,10 @@ export const SUPPORT_COLORS_DARK = {
   many: "#8f95a5",
 } as const;
 
+/** People on the dark ground (the graph's deep person ink vanishes on graphite): a slate that still carries white
+ *  initials (5:1) and stands 3:1 off the ground. */
+export const PERSON_INK_DARK = "#606B87";
+
 export const AREA_COLORS = [
   "#7aa2ff", "#ff6b7a", "#9ece6a", "#f6c177", "#bb9af7",
   "#73daca", "#e0af68", "#ff9e64", "#89ddff", "#c792ea",
