@@ -149,6 +149,9 @@ a rule below.**
     topic = ring with lines, collection = double ring, person = initials. Hollow marks drawn ~15% larger.
 15. **Size means importance per layer**: an idea is never smaller than a median paper, a person never smaller than
     a median idea; node screen size grows with √zoom (semantic zoom).
+    A link's weight follows the zoom too (`edgeWeight.ts`): a quiet texture at the whole-graph fit, a drawn line up
+    close; never one fixed hairline. A colour tuned for paper is not reused on graphite: support and people have a
+    value per ground (`SUPPORT_COLORS_DARK`, `PERSON_INK_DARK`), and every key that shows them follows the theme.
 
 ### Legend and filters
 16. **The legend lists every encoding on screen**: "Concepts: … | Sources: …" (collections folded into sources),

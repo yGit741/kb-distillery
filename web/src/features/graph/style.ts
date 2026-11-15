@@ -88,6 +88,13 @@ export const OTHER_GREY = "#7C808B";
 export const NONE_GREY = "#B3B7C3";
 /** People have no area of their own: a deep ink, unlike any area colour and unlike the edges. */
 export const PERSON_INK = "#2F3542";
+/** The deep ink vanishes on graphite: on the dark ground people are a slate that still carries white initials
+ *  (5:1) and stands 3:1 off the ground. */
+export const PERSON_INK_DARK = "#606B87";
+/** The theme on screen, for the colours that have a value per ground (support, people). The canvas, the legend and
+ *  the swatches recompute when the theme changes, so a read at call time is always the theme being drawn. */
+const onDark = (): boolean => useTheme.getState().theme === "dark";
+const personInk = (): string => (onDark() ? PERSON_INK_DARK : PERSON_INK);
 export const PEOPLE = "People";
 export const OTHER_AREAS = "Other areas";
 export const NO_AREA = "No area";
@@ -273,7 +280,7 @@ export function colorOf(n: GNode, by: ColorBy, metric?: number, ramp?: "light" |
     }
     case "support": {
       const s = supportOf(n);
-      return s ? supportColor(s) : n.type === "person" ? PERSON_INK : UNKNOWN_COLOR;
+      return s ? supportColor(s, onDark()) : n.type === "person" ? personInk() : UNKNOWN_COLOR;
     }
     case "layer":
       return layerColor(n.layer);
@@ -282,7 +289,7 @@ export function colorOf(n: GNode, by: ColorBy, metric?: number, ramp?: "light" |
     case "status":
       return statusColor(n.maturity);
     case "area":
-      return n.type === "person" && !n.areas[0] ? PERSON_INK : areaHue(areaOf(n, typeKeyed(slots ?? AREA_SLOT)), slots);
+      return n.type === "person" && !n.areas[0] ? personInk() : areaHue(areaOf(n, typeKeyed(slots ?? AREA_SLOT)), slots);
     case "degree":
       return degreeBand(n).color;
     case "topic": {

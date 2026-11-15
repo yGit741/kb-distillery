@@ -80,7 +80,7 @@ export function outerRadius(type: string, r: number): number {
  * collection's outer ring and a person's initials.
  */
 export const GEOMETRY = {
-  ringStroke: 0.24,
+  ringStroke: 0.19,
   ideaDot: 0.36,
   topicLineGap: 0.36,
   topicLineHalf: 0.42,

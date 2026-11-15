@@ -1,5 +1,5 @@
 import { LAYER_TYPES } from "@/api/model";
-import { areaColor, AREA_COLORS, depthColor, layerColor, statusColor, typeColor, TYPE_COLORS, UNKNOWN_COLOR } from "./palette";
+import { areaColor, AREA_COLORS, depthColor, layerColor, statusColor, supportColor, SUPPORT_COLORS, SUPPORT_COLORS_DARK, typeColor, TYPE_COLORS, UNKNOWN_COLOR } from "./palette";
 
 describe("palette", () => {
   it("colours every type of every layer", () => {
@@ -21,6 +21,13 @@ describe("palette", () => {
     expect(depthColor("bogus")).toBe(UNKNOWN_COLOR);
     expect(depthColor("deep")).not.toBe(UNKNOWN_COLOR);
     expect(statusColor("digested")).toBe("#9ece6a");
+  });
+  it("has a support colour per ground, the light set unless the dark ground is asked for", () => {
+    for (const k of ["none", "one", "many"] as const) {
+      expect(supportColor(k)).toBe(SUPPORT_COLORS[k]);
+      expect(supportColor(k, true)).toBe(SUPPORT_COLORS_DARK[k]);
+      expect(SUPPORT_COLORS_DARK[k]).not.toBe(SUPPORT_COLORS[k]);
+    }
   });
   it("hashes areas stably into the area palette", () => {
     expect(areaColor("info-theory")).toBe(areaColor("info-theory"));

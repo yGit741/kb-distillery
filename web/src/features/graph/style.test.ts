@@ -1,8 +1,9 @@
 import type { GNode } from "./types";
 import { node } from "./fixtures";
-import { AREA_PALETTE, areaHue, areaPalette, areaSlots, useAreaPalette, assignAreaColors, assignSupport, colorKey, colorOf, layeredRadii, nodeRadius, NONE_GREY, OTHER_GREY, PERSON_INK, supportOf } from "./style";
+import { AREA_PALETTE, areaHue, areaPalette, areaSlots, useAreaPalette, assignAreaColors, assignSupport, colorKey, colorOf, layeredRadii, nodeRadius, NONE_GREY, OTHER_GREY, PERSON_INK, PERSON_INK_DARK, supportOf } from "./style";
 import { RING_BOOST } from "./encoding/spec";
-import { TYPE_COLORS, DEPTH_COLORS, LAYER_COLORS, SUPPORT_COLORS, UNKNOWN_COLOR } from "@/theme/palette";
+import { useTheme } from "@/theme/theme";
+import { TYPE_COLORS, DEPTH_COLORS, LAYER_COLORS, SUPPORT_COLORS, SUPPORT_COLORS_DARK, UNKNOWN_COLOR } from "@/theme/palette";
 
 describe("colorOf", () => {
   const paper = node("p", { type: "paper", layer: "source", depth: "deep", status: "digested", areas: ["info-theory"], inDegree: 7, outDegree: 6 });
@@ -139,6 +140,24 @@ describe("colour by source support (the Health view)", () => {
     expect(colorKey(idea("none"), "support")).toBe("No source");
     expect(colorKey(idea("one"), "support")).toBe("One source");
     expect(colorKey(idea("many"), "support")).toBe("Two or more sources");
+  });
+
+  it("on the dark ground the same meanings take the lifted set, and people a slate instead of the deep ink", () => {
+    assignSupport(new Map([["one", 1], ["many", 4]]));
+    useTheme.setState({ theme: "dark" });
+    try {
+      expect(colorOf(idea("none"), "support")).toBe(SUPPORT_COLORS_DARK.none);
+      expect(colorOf(idea("one"), "support")).toBe(SUPPORT_COLORS_DARK.one);
+      expect(colorOf(idea("many"), "support")).toBe(SUPPORT_COLORS_DARK.many);
+      expect(colorOf(node("jane", { type: "person" }), "support")).toBe(PERSON_INK_DARK);
+      expect(colorOf(node("jane", { type: "person" }), "area")).toBe(PERSON_INK_DARK);
+      // the key's words are the theme's business, never the ground's
+      expect(colorKey(idea("one"), "support")).toBe("One source");
+    } finally {
+      useTheme.setState({ theme: "light" });
+    }
+    expect(colorOf(idea("one"), "support")).toBe(SUPPORT_COLORS.one);
+    expect(colorOf(node("jane", { type: "person" }), "area")).toBe(PERSON_INK);
   });
 
   it("sources, collections and people are not counted", () => {
