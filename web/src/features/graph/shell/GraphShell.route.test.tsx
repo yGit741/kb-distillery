@@ -200,4 +200,23 @@ describe("flag line-routing: Enter on a plain line reads it by itself", () => {
       }),
     );
   });
+
+  it("on: an empty line lists lines to try; a row fills the line for Enter", async () => {
+    await on(async () => {
+      setup();
+      await userEvent.click(box());
+      const row = await screen.findByRole("option", { name: /> only orphans/ });
+      expect(screen.getByRole("option", { name: /> only pages within 2 hops of / })).toBeInTheDocument();
+      await userEvent.click(row);
+      expect(box()).toHaveValue("> only orphans");
+    });
+  });
+
+  it("off: graph-intent off lists no lines to try", async () => {
+    await withFlag("graph-intent", false, async () => {
+      setup();
+      await userEvent.click(box());
+      expect(screen.queryByRole("option", { name: /> only orphans/ })).not.toBeInTheDocument();
+    });
+  });
 });

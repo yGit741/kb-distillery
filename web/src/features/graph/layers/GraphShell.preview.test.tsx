@@ -132,7 +132,8 @@ describe("a > sentence is previewed before it applies (graph-intent)", () => {
       listRecent.mockResolvedValue({ recent: [{ at: "2026-11-06T00:00:00Z", text: "colour by depth", spec: { stack, lines: ["style nodes color by depth"] } }] } as never);
       setup();
       await userEvent.click(box());
-      await userEvent.click(await screen.findByRole("option", { name: /colour by depth/ }));
+      // the Recent row, not the "> colour by depth" line to try
+      await userEvent.click(await screen.findByRole("option", { name: /^colour by depth/ }));
       await waitFor(() => expect(layers()).toHaveLength(1));
       expect(useLayers.getState().history).toHaveLength(1);
       expect(useGraphUi.getState().colorBy).toBe("depth");

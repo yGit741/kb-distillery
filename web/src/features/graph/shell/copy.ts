@@ -3,6 +3,19 @@ export type LineMode = "search" | "view" | "command";
 
 export const LINE_COPY = {
   placeholder: "Explore Your Knowledge",
+  /** Lines to try, shown on an empty line; a row fills the line, Enter runs it. `{hub}` is the best-linked concept. */
+  examples: {
+    heading: "Try",
+    lines: [
+      { line: "> only orphans", hint: "pages with no links" },
+      { line: "> exclude all orphans", hint: "hide pages with no links" },
+      { line: "> papers with more than 5 links", hint: "filter by links" },
+      { line: "> only pages within 2 hops of {hub}", hint: "a neighbourhood" },
+      { line: "> colour by depth", hint: "style" },
+      { line: "> size by links", hint: "style" },
+      { line: "papers about transformers, colour by year, hide people", hint: "free text, read by the model", shape: true },
+    ],
+  },
   /** The key caps at the line's right end while it has the focus and nothing is typed yet. */
   keys: [
     { key: ">", label: "change the view" },
