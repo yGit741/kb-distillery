@@ -54,6 +54,21 @@ export const NODE_SPECS: Spec<NodeCond>[] = [
     write: (c) => (c.t === "hops" ? `within ${c.n} hop${c.n === 1 ? "" : "s"} of ${ofWord(c.of)}` : null),
   },
   {
+    re: new RegExp(`^(all )?shortest paths? between ${STR} and ${STR}$`),
+    read: (m) => ({ t: "shortest", a: unquote(m[2]!), b: unquote(m[3]!), ...(m[1] ? { all: true } : {}) }),
+    write: (c) => (c.t === "shortest" ? `${c.all ? "all shortest paths" : "shortest path"} between ${quote(c.a)} and ${quote(c.b)}` : null),
+  },
+  {
+    re: new RegExp(`^common neighbou?rs of ${STR} and ${STR}$`),
+    read: (m) => ({ t: "common", a: unquote(m[1]!), b: unquote(m[2]!) }),
+    write: (c) => (c.t === "common" ? `common neighbours of ${quote(c.a)} and ${quote(c.b)}` : null),
+  },
+  {
+    re: new RegExp(`^(?:largest component|component (\\d+)|component of ${STR})$`),
+    read: (m) => (m[2] !== undefined ? { t: "component", of: unquote(m[2]) } : { t: "component", rank: m[1] ? Number(m[1]) : 1 }),
+    write: (c) => (c.t === "component" ? (c.of ? `component of ${quote(c.of)}` : !c.rank || c.rank === 1 ? "largest component" : `component ${c.rank}`) : null),
+  },
+  {
     re: new RegExp(`^paths between ${STR} and ${STR} up to (\\d+) hops?$`),
     read: (m) => ({ t: "paths", a: unquote(m[1]!), b: unquote(m[2]!), n: Number(m[3]) }),
     write: (c) => (c.t === "paths" ? `paths between ${quote(c.a)} and ${quote(c.b)} up to ${c.n} hops` : null),
@@ -111,7 +126,7 @@ const STYLE_PROPS = ["color", "size", "width", "label"] as const;
 export function print(layer: Layer): string {
   const target = layer.target;
   const conds = target === "nodes" ? printConds(NODE_SPECS, layer.subgraph.nodes) : printConds(EDGE_SPECS, layer.subgraph.edges);
-  if (layer.kind !== "style") return [layer.kind, target, conds].filter(Boolean).join(" ");
+  if (layer.kind !== "style") return [layer.kind, target, conds, layer.expand ? `expand ${layer.expand}` : ""].filter(Boolean).join(" ");
   const s = layer.style ?? {};
   const prop = STYLE_PROPS.find((p) => s[p] !== undefined) ?? "color";
   return [`style ${target} ${prop} by ${styleWord(s[prop])}`, conds && `for ${conds}`].filter(Boolean).join(" ");
@@ -119,7 +134,7 @@ export function print(layer: Layer): string {
 
 // ---- parse
 /** Split on `and` only where a condition starts, so `paths between "A" and "B"` stays whole. */
-const COND_START = /^(?:not |all\b|type |degree |within |paths |having |linked_from |created |in area |about |favorite\b|mentioned_in |text |name |count |direction |between )/;
+const COND_START = /^(?:not |all\b|type |degree |within |paths |shortest |common |largest component|component |having |linked_from |created |in area |about |favorite\b|mentioned_in |text |name |count |direction |between )/;
 
 function splitConds(s: string): string[] {
   const out: string[] = [];
@@ -196,10 +211,13 @@ export function parse(line: string): Layer | ParseError {
   const head = src.match(/^(show|hide) (nodes|edges)(?: (.*))?$/);
   if (head) {
     const target = head[2] as "nodes" | "edges";
+    // a nodes layer may end in `expand <n>`: the pages that many links away join the ones kept
+    const grow = target === "nodes" ? head[3]?.match(/^(.*?)\s*\bexpand (\d+)$/) : null;
+    const body = grow ? grow[1] || undefined : head[3];
     const at = src.length - (head[3]?.length ?? 0);
-    const subgraph = readSubgraph(target, head[3], at);
+    const subgraph = readSubgraph(target, body, at);
     if (isParseError(subgraph)) return subgraph;
-    return { id: newLayerId(), kind: head[1] as "show" | "hide", target, subgraph, text: "" };
+    return { id: newLayerId(), kind: head[1] as "show" | "hide", target, subgraph, ...(grow ? { expand: Number(grow[2]) } : {}), text: "" };
   }
   const st = src.match(new RegExp(`^style (nodes|edges) (color|size|width|label) by (${WORD})(?: for (.*))?$`));
   if (st) {

@@ -2662,6 +2662,36 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
+        /** CommonCond */
+        CommonCond: {
+            /** A */
+            a: string;
+            /** B */
+            b: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            t: "common";
+        };
+        /** ComponentCond */
+        ComponentCond: {
+            /**
+             * Of
+             * @description the component holding this page; absent: by size, `rank`
+             */
+            of?: string | null;
+            /**
+             * Rank
+             * @description 1 is the largest component of the drawn pages
+             */
+            rank?: number | null;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            t: "component";
+        };
         /** ConceptLink */
         ConceptLink: {
             /** Shared */
@@ -4529,6 +4559,11 @@ export interface components {
         };
         /** Layer */
         Layer: {
+            /**
+             * Expand
+             * @description nodes layers: also the pages this many links away from the ones kept
+             */
+            expand?: number | null;
             /** Id */
             id: string;
             /**
@@ -5070,7 +5105,7 @@ export interface components {
         /** NotCond */
         NotCond: {
             /** Cond */
-            cond: components["schemas"]["TypeCond"] | components["schemas"]["DegreeCond"] | components["schemas"]["HopsCond"] | components["schemas"]["NameCond"] | components["schemas"]["TextCond"] | components["schemas"]["FavoriteCond"] | components["schemas"]["AboutCond"] | components["schemas"]["InAreaCond"] | components["schemas"]["CreatedWithinCond"] | components["schemas"]["LinkedFromTypeCond"] | components["schemas"]["PathsCond"] | components["schemas"]["HasEdgeCond"] | components["schemas"]["MentionedInCond"] | components["schemas"]["NotCond"] | components["schemas"]["AllNodesCond"];
+            cond: components["schemas"]["TypeCond"] | components["schemas"]["DegreeCond"] | components["schemas"]["HopsCond"] | components["schemas"]["NameCond"] | components["schemas"]["TextCond"] | components["schemas"]["FavoriteCond"] | components["schemas"]["AboutCond"] | components["schemas"]["InAreaCond"] | components["schemas"]["CreatedWithinCond"] | components["schemas"]["LinkedFromTypeCond"] | components["schemas"]["PathsCond"] | components["schemas"]["ShortestCond"] | components["schemas"]["CommonCond"] | components["schemas"]["ComponentCond"] | components["schemas"]["HasEdgeCond"] | components["schemas"]["MentionedInCond"] | components["schemas"]["NotCond"] | components["schemas"]["AllNodesCond"];
             /**
              * @description discriminator enum property added by openapi-typescript
              * @enum {string}
@@ -6906,6 +6941,23 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
+        /** ShortestCond */
+        ShortestCond: {
+            /** A */
+            a: string;
+            /**
+             * All
+             * @description every shortest path, not one
+             */
+            all?: boolean | null;
+            /** B */
+            b: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            t: "shortest";
+        };
         /** SimilarHit */
         SimilarHit: {
             /**
@@ -7013,7 +7065,7 @@ export interface components {
             /** Edges */
             edges?: (components["schemas"]["EdgeTypeCond"] | components["schemas"]["DirectionCond"] | components["schemas"]["EndpointsCond"] | components["schemas"]["CountCond"] | components["schemas"]["AllEdgesCond"])[] | null;
             /** Nodes */
-            nodes?: (components["schemas"]["TypeCond"] | components["schemas"]["DegreeCond"] | components["schemas"]["HopsCond"] | components["schemas"]["NameCond"] | components["schemas"]["TextCond"] | components["schemas"]["FavoriteCond"] | components["schemas"]["AboutCond"] | components["schemas"]["InAreaCond"] | components["schemas"]["CreatedWithinCond"] | components["schemas"]["LinkedFromTypeCond"] | components["schemas"]["PathsCond"] | components["schemas"]["HasEdgeCond"] | components["schemas"]["MentionedInCond"] | components["schemas"]["NotCond"] | components["schemas"]["AllNodesCond"])[] | null;
+            nodes?: (components["schemas"]["TypeCond"] | components["schemas"]["DegreeCond"] | components["schemas"]["HopsCond"] | components["schemas"]["NameCond"] | components["schemas"]["TextCond"] | components["schemas"]["FavoriteCond"] | components["schemas"]["AboutCond"] | components["schemas"]["InAreaCond"] | components["schemas"]["CreatedWithinCond"] | components["schemas"]["LinkedFromTypeCond"] | components["schemas"]["PathsCond"] | components["schemas"]["ShortestCond"] | components["schemas"]["CommonCond"] | components["schemas"]["ComponentCond"] | components["schemas"]["HasEdgeCond"] | components["schemas"]["MentionedInCond"] | components["schemas"]["NotCond"] | components["schemas"]["AllNodesCond"])[] | null;
         };
         /** SuggestedPage */
         SuggestedPage: {

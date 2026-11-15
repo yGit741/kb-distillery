@@ -80,6 +80,25 @@ class PathsCond(Strict):
     n: int
 
 
+class ShortestCond(Strict):
+    t: Literal["shortest"]
+    a: str
+    b: str
+    all: bool | None = Field(None, description="every shortest path, not one")
+
+
+class CommonCond(Strict):
+    t: Literal["common"]
+    a: str
+    b: str
+
+
+class ComponentCond(Strict):
+    t: Literal["component"]
+    of: str | None = Field(None, description="the component holding this page; absent: by size, `rank`")
+    rank: int | None = Field(None, description="1 is the largest component of the drawn pages")
+
+
 class HasEdgeCond(Strict):
     t: Literal["hasEdge"]
     type: str
@@ -102,7 +121,8 @@ class NotCond(Strict):
 
 NodeCond = Annotated[
     Union[TypeCond, DegreeCond, HopsCond, NameCond, TextCond, FavoriteCond, AboutCond, InAreaCond, CreatedWithinCond,
-          LinkedFromTypeCond, PathsCond, HasEdgeCond, MentionedInCond, NotCond, AllNodesCond],
+          LinkedFromTypeCond, PathsCond, ShortestCond, CommonCond, ComponentCond, HasEdgeCond, MentionedInCond, NotCond,
+          AllNodesCond],
     Field(discriminator="t")]
 NotCond.model_rebuild()
 
@@ -159,6 +179,7 @@ class Layer(Strict):
     target: Literal["nodes", "edges"]
     subgraph: Subgraph
     style: LayerStyle | None = None
+    expand: int | None = Field(None, description="nodes layers: also the pages this many links away from the ones kept")
     text: str = Field(..., description="plain words for the chip; empty lets the app describe the layer")
 
 
