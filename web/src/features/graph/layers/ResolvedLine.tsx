@@ -5,8 +5,8 @@ import type { Layer } from "./model";
 
 const ROW = "flex min-h-6 items-center gap-2 px-1 text-sm text-muted-foreground";
 /** The "Read as" row: as tall before the first Enter as with one line read (a code line and the count under it), so
- * the first Enter does not move the panel. */
-const READ = "flex min-h-12 items-start gap-2 px-1 py-1 text-sm text-muted-foreground";
+ * the first Enter does not move the panel. It sits on the panel's own surface, so graph labels never show through. */
+const READ = "mt-1.5 flex min-h-13 items-start gap-2 rounded-[14px] border bg-popover px-2.5 py-1.5 text-sm text-muted-foreground shadow-[var(--shadow)]";
 /** Lines shown; the rest are counted ("+2 more") and all of them are in the edit field. */
 const READ_MAX = 3;
 
