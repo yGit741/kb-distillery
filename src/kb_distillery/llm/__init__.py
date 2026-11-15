@@ -460,9 +460,16 @@ def _cli(cmd, cwd, env, timeout):
                           text=True, timeout=timeout)
 
 
+# The child `claude` must see only our prompt: no user/project/local settings (their hooks, plugins, env) and no
+# CLAUDE.md, memory, skills or hooks of any kind, else the owner's own rules leak into answers. Not `--bare`: it
+# never reads the OAuth login, so the subscription backend could not sign in.
+_ISOLATED = ("--setting-sources", "", "--safe-mode", "--strict-mcp-config", "--no-session-persistence")
+
+
 def _ask_cli(r, timeout=600, retries=2):
     """No tools and an empty dir; with images, only Read, run from the first image's folder (the CLI takes no
-    image argument, so the model opens the files itself)."""
+    image argument, so the model opens the files itself). Always `_ISOLATED`: no settings, CLAUDE.md, memory or
+    hooks reach the child, whichever folder it runs from."""
     res = Result(id=r.id, backend="subscription", model=model_id(r.model))
     prompt = f"{r.system}\n\n{r.prompt}" if r.system else r.prompt
     tools = ["--tools", ""]
@@ -474,7 +481,7 @@ def _ask_cli(r, timeout=600, retries=2):
         with tempfile.TemporaryDirectory(prefix="kb-llm-") as tmp:
             cwd = os.path.dirname(os.path.abspath(r.images[0])) if r.images else tmp
             cmd = ["claude", "-p", prompt, "--output-format", "json", "--model", res.model, "--effort", r.effort,
-                   *tools, "--strict-mcp-config", "--no-session-persistence"]
+                   *tools, *_ISOLATED]
             try:
                 cp = _cli(cmd, cwd, _env(), timeout)
                 out = json.loads(cp.stdout) if cp.stdout.strip() else None

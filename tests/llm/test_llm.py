@@ -406,6 +406,22 @@ def test_text_only_subscription_keeps_no_tools(monkeypatch):
     assert "--allowedTools" not in seen["cmd"] and seen["cmd"][seen["cmd"].index("--tools") + 1] == ""
 
 
+@pytest.mark.parametrize("with_image", [False, True])
+def test_subscription_child_loads_no_user_config(monkeypatch, tmp_path, with_image):
+    """The owner's CLAUDE.md, memory and hooks once leaked into answers (a sentence about machine load): every call,
+    text or image (which runs from a folder that may hold a CLAUDE.md), loads no settings source and no
+    customizations. Never `--bare`, which drops the OAuth login the subscription backend runs on."""
+    img = tmp_path / "f.jpg"
+    img.write_bytes(JPEG)
+    seen = {}
+    monkeypatch.setattr(llm, "_cli", lambda cmd, cwd, env, timeout: (seen.update(cmd=cmd), cli_ok())[1])
+    assert llm.ask("q", images=[str(img)] if with_image else ()).ok
+    cmd = seen["cmd"]
+    assert cmd[cmd.index("--setting-sources") + 1] == ""
+    assert {"--safe-mode", "--strict-mcp-config", "--no-session-persistence"} <= set(cmd)
+    assert "--bare" not in cmd
+
+
 @pytest.mark.parametrize("name,write,err", [("x.bmp", True, "images must be"), ("gone.jpg", False, "no such image")])
 def test_bad_images_rejected_before_any_call(tmp_path, name, write, err):
     p = tmp_path / name
