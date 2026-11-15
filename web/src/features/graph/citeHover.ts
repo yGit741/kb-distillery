@@ -125,6 +125,8 @@ export function drawEdges(
   radiusOf: (n: SimNode) => number,
   word: (l: SimLink) => string,
   arrow: (l: SimLink) => boolean,
+  /** The line's width in screen pixels: 1.5 for a lit edge, wider for a shortest path (./pathDraw). */
+  width = 1.5,
 ): void {
   const px = (v: number) => v / scale;
   const ends = new Map<string, { n: SimNode; above: boolean }>();
@@ -133,7 +135,7 @@ export function drawEdges(
     const a = l.source as SimNode;
     const b = l.target as SimNode;
     if (!at(a) || !at(b)) continue;
-    drawEdgeLine(ctx, l, scale, colors, radiusOf, word(l), arrow(l));
+    drawEdgeLine(ctx, l, scale, colors, radiusOf, word(l), arrow(l), width);
     const [up, down] = a.y! <= b.y! ? [a, b] : [b, a];
     if (!ends.has(up.id)) ends.set(up.id, { n: up, above: true });
     if (!ends.has(down.id)) ends.set(down.id, { n: down, above: false });
@@ -174,7 +176,7 @@ function halo(ctx: CanvasRenderingContext2D, colors: CanvasColors, scale: number
 }
 
 /** One lit edge: the line (under its two pages, flag graph-corners), its arrow and its words. */
-function drawEdgeLine(ctx: CanvasRenderingContext2D, l: SimLink, scale: number, colors: CanvasColors, radiusOf: (n: SimNode) => number, words: string, arrow: boolean): void {
+function drawEdgeLine(ctx: CanvasRenderingContext2D, l: SimLink, scale: number, colors: CanvasColors, radiusOf: (n: SimNode) => number, words: string, arrow: boolean, width = 1.5): void {
   const a = l.source as SimNode;
   const b = l.target as SimNode;
   const pa = at(a)!;
@@ -201,8 +203,8 @@ function drawEdgeLine(ctx: CanvasRenderingContext2D, l: SimLink, scale: number, 
   ctx.moveTo(pa.x, pa.y);
   if (c) ctx.quadraticCurveTo(c.x, c.y, pb.x, pb.y);
   else ctx.lineTo(pb.x, pb.y);
-  ctx.strokeStyle = withAlpha(colors.text, 0.75);
-  ctx.lineWidth = px(1.5);
+  ctx.strokeStyle = withAlpha(colors.text, width > 1.5 ? 0.9 : 0.75);
+  ctx.lineWidth = px(width);
   ctx.stroke();
   if (under) {
     ctx.restore();

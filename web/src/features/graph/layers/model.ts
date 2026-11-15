@@ -268,6 +268,9 @@ export interface Evaluation {
   /** Colour by community or component (flag graph-algos): each drawn page's group, for the canvas (the store sets it
    * when the stack is drawn or previewed, never while a chat or a count evaluates the stack). */
   groups?: { by: "community" | "component"; of: Map<string, number> };
+  /** The links of a shortest path the stack shows (flag graph-algos), in order from its first page; only links whose
+   * two pages are kept. The canvas draws them bold and brings in a page on them the view hides. */
+  pathLinks?: [string, string][];
 }
 
 // the structure measures of a graph and its drawn pages, kept while both stay the same objects (a preview per keystroke
@@ -321,23 +324,37 @@ export function withinHops(adj: ReadonlyMap<string, ReadonlySet<string>>, from: 
  * `all`, else one path. Empty when no path joins them.
  */
 export function shortestPaths(adj: ReadonlyMap<string, ReadonlySet<string>>, a: string, b: string, all = false): Set<string> {
-  if (a === b) return new Set([a]);
+  return shortestRoute(adj, a, b, all).ids;
+}
+
+/**
+ * The shortest path(s) from `a` to `b` as pages and as the links between them: one path's links run in order from
+ * `a` to `b`; with `all`, every link on some shortest path, nearest `a` first. Empty when no path joins them.
+ */
+export function shortestRoute(adj: ReadonlyMap<string, ReadonlySet<string>>, a: string, b: string, all = false): { ids: Set<string>; links: [string, string][] } {
+  if (a === b) return { ids: new Set([a]), links: [] };
   const da = distances(adj, a, Infinity);
   const target = da.get(b);
-  if (target === undefined) return new Set();
+  if (target === undefined) return { ids: new Set(), links: [] };
   if (all) {
     const db = distances(adj, b, Infinity);
-    return new Set([...da].filter(([id, d]) => d + (db.get(id) ?? Infinity) === target).map(([id]) => id));
+    const on = (id: string) => (da.get(id) ?? Infinity) + (db.get(id) ?? Infinity) === target;
+    const ids = new Set([...da.keys()].filter(on));
+    const links: [string, string][] = [];
+    for (const u of [...ids].sort((x, y) => da.get(x)! - da.get(y)! || x.localeCompare(y)))
+      for (const v of [...(adj.get(u) ?? [])].sort()) if (ids.has(v) && da.get(v) === da.get(u)! + 1) links.push([u, v]);
+    return { ids, links };
   }
   // one path: walk back from b along strictly decreasing distance (the first neighbour found, so it is stable)
-  const path = new Set([b]);
+  const order = [b];
   let at = b;
   for (let d = target; d > 0; d--) {
     const prev = [...(adj.get(at) ?? [])].sort().find((o) => da.get(o) === d - 1)!;
-    path.add(prev);
+    order.push(prev);
     at = prev;
   }
-  return path;
+  order.reverse();
+  return { ids: new Set(order), links: order.slice(1).map((id, i) => [order[i]!, id]) };
 }
 
 /** The connected components of the pages `inside` (links with both ends inside), largest first, ties by first id. */
@@ -428,6 +445,7 @@ export function evaluate(vs: ViewStack, graph: EvalGraph): Evaluation {
   let shownKinds: Set<string> | null = null;
   const patch: KnobPatch = {};
   const legend: LegendRow[] = [];
+  const routes: [string, string][] = [];
 
   const matchNodes = (conds: NodeCond[] | undefined, label: string): Set<string> => {
     let out = new Set(all);
@@ -490,8 +508,11 @@ export function evaluate(vs: ViewStack, graph: EvalGraph): Evaluation {
             keep = () => false;
             break;
           }
-          if (c.t === "shortest") hit = shortestPaths(adj, a, b, !!c.all);
-          else {
+          if (c.t === "shortest") {
+            const r = shortestRoute(adj, a, b, !!c.all);
+            hit = r.ids;
+            routes.push(...r.links);
+          } else {
             const nb = adj.get(b) ?? new Set<string>();
             hit = new Set([...(adj.get(a) ?? [])].filter((o) => nb.has(o)));
           }
@@ -710,7 +731,9 @@ export function evaluate(vs: ViewStack, graph: EvalGraph): Evaluation {
       hiddenKinds = new Set([...presentKinds].filter((x) => !allowed.has(x)));
     }
   }
-  return { nodeIds: cur, hiddenLinkKinds: hiddenKinds ?? new Set(), patch, skipped, legend, ...(groups ? { groups } : {}) };
+  const kept = cur;
+  const pathLinks = routes.filter(([x, y]) => !kept || (kept.has(x) && kept.has(y)));
+  return { nodeIds: cur, hiddenLinkKinds: hiddenKinds ?? new Set(), patch, skipped, legend, ...(groups ? { groups } : {}), ...(pathLinks.length ? { pathLinks } : {}) };
 }
 
 /** Legend rows from a stack alone (no graph needed): its style layers and what it does to links. */

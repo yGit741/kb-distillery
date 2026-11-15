@@ -192,12 +192,20 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
     return [...n].sort((a, b) => b[1] - a[1]).map(([k]) => k);
   }, [links]);
   // the previewed pages a type filter of the current view hides: the preview cannot light them, applying draws them
-  const previewOffScreen = useMemo(() => {
-    if (!preview?.ids) return 0;
+  // (flag graph-algos: a page on a shortest path is brought in, faded, and named instead of counted)
+  const { previewOffScreen, previewVia } = useMemo(() => {
+    if (!preview?.ids) return { previewOffScreen: 0, previewVia: "" };
     const drawnNow = (id: string) => (onScreen ? onScreen.has(id) : !shownTypes || shownTypes.has(byId.get(id)?.type ?? ""));
+    const onPath = new Set((preview.pathLinks ?? []).flat());
     let n = 0;
-    for (const id of preview.ids) if (!drawnNow(id)) n++;
-    return n;
+    const via: string[] = [];
+    for (const id of preview.ids) if (!drawnNow(id)) (onPath.has(id) ? via.push(id) : n++);
+    const ordered = [...onPath].filter((id) => via.includes(id));
+    // named by their page type when they share one ("goes through 1 book: ..."), else as hidden pages
+    const types = new Set(ordered.map((id) => byId.get(id)?.type ?? ""));
+    const type = types.size === 1 ? [...types][0] || null : null;
+    const text = ordered.length ? LINE_COPY.preview.via(ordered.map((id) => byId.get(id)?.title ?? id), type) : "";
+    return { previewOffScreen: n, previewVia: text };
   }, [preview, onScreen, shownTypes, byId]);
   // the sentence (with its op) the preview answers; editing the text retires the preview
   const previewKey = useRef("");
@@ -1169,7 +1177,7 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
         square={lineBox.square}
       />
       {intent && <Chips byId={byId} />}
-      {intent && open && viewMode && <ResolvedLine lines={preview?.lines ?? null} count={preview?.count ?? 0} offScreen={previewOffScreen} editing={editingLine} onEditing={setEditingLine} onApply={applyWritten} readAs={algos} by={readInfo.key === previewKey.current ? readInfo.by : "rules"} note={readInfo.key === previewKey.current ? readInfo.note : ""} display={algos ? readable : undefined} resolve={algos ? resolveWritten : undefined} />}
+      {intent && open && viewMode && <ResolvedLine lines={preview?.lines ?? null} count={preview?.count ?? 0} offScreen={previewOffScreen} via={algos ? previewVia : ""} editing={editingLine} onEditing={setEditingLine} onApply={applyWritten} readAs={algos} by={readInfo.key === previewKey.current ? readInfo.by : "rules"} note={readInfo.key === previewKey.current ? readInfo.note : ""} display={algos ? readable : undefined} resolve={algos ? resolveWritten : undefined} />}
       {open && <SearchPanel rows={rows} idx={idx} onHover={setIdx} empty={empty} status={status} hint={routedHint ?? (sentenceBlocked ? LINE_COPY.sentenceUnavailable : hintMode ? LINE_COPY.hints[hintMode] : undefined)} onMenu={intent ? (i, at) => rows[i]?.actions && openMenu(rows[i]!.actions!, at) : undefined} />}
       {menu &&
         createPortal(
