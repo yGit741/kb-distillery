@@ -9,6 +9,10 @@ export interface MenuContext {
   openReader: (id: string) => void;
   openDetails: (id: string) => void;
   openPage: (id: string) => void;
+  /** Draw the concepts this page links to that are not drawn yet (the whole selection when the page is in it). */
+  addConcepts?: (id: string) => void;
+  /** Draw every source behind this page, of any kind, that is not drawn yet (the whole selection likewise). */
+  addSources?: (id: string) => void;
   /** Result and set actions (flag graph-intent); the plain node menu leaves them out. */
   focus?: (id: string) => void;
   showOnly?: (ids: string[], label: string) => void;
@@ -35,6 +39,8 @@ export interface MenuItem {
   labelOf?: (n: GNode) => string;
   hint?: string;
   when?: (n: GNode) => boolean;
+  /** The context action this entry runs: a menu whose context lacks it leaves the entry out (never a dead entry). */
+  needs?: keyof MenuContext;
   enabled?: (n: GNode) => boolean;
   why?: string;
   run: (n: GNode, ctx: MenuContext) => void;
@@ -43,6 +49,8 @@ export interface MenuItem {
 export const MENU_ITEMS: MenuItem[] = [
   { id: "reader", label: "Open in side reader", hint: "double-click", run: (n, c) => c.openReader(n.id) },
   { id: "details", label: "Show details", hint: "links · sources", run: (n, c) => c.openDetails(n.id) },
+  { id: "add-concepts", label: "Add its concepts", hint: "linked concepts", needs: "addConcepts", run: (n, c) => c.addConcepts?.(n.id) },
+  { id: "add-sources", label: "Add its sources", hint: "of every kind", needs: "addSources", when: (n) => n.layer !== "source", run: (n, c) => c.addSources?.(n.id) },
   { id: "page", label: "Open in Pages", hint: "E", run: (n, c) => c.openPage(n.id) },
 ];
 

@@ -86,7 +86,7 @@ export function viewsTourSteps({ health, fold }: { health: boolean; fold: boolea
       kind: "focus",
       dim: 0.3,
       title: "Sources opens Health",
-      body: "For now **Sources** is the way into Health: concepts coloured by how many sources back them, and this dial of source kinds. Press a kind to open it.",
+      body: "For now **Sources** is the way into Health: concepts coloured by how many sources back them, and this dial of source kinds. Press a kind to draw it on the map with the concepts it feeds.",
       before: openLayer("pins"),
       wait: 3000,
     });
