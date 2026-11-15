@@ -891,15 +891,11 @@ describe("graph-corners: one raised disc per corner, and the theme switch in the
       expect(think().querySelector("[data-icon=think]")?.tagName.toLowerCase()).toBe("svg");
     }));
 
-  it("flag on: the bottom-right disc switches the theme, through the app's one theme store", () =>
-    withFlag("graph-corners", true, async () => {
-      useTheme.getState().set("light");
+  it("flag on: no theme corner (the switch is the app bar's own) and the bar is never told to leave its switch out", () =>
+    withFlag("graph-corners", true, () => {
       mount(fakeServer(), {}, { kind: "http" });
-      await userEvent.click(themeBtn()!);
-      expect(useTheme.getState().theme).toBe("dark");
-      expect(themeBtn()).toHaveAccessibleName("Switch to light theme");
-      expect(useTheme.getState().elsewhere).toBe(true); // the app bar leaves its own switch out meanwhile
-      useTheme.getState().set("light");
+      expect(themeBtn()).toBeNull();
+      expect(useTheme.getState().elsewhere).toBe(false);
     }));
 
   it("flag off: the corners keep their bare icons and there is no theme corner", () =>
@@ -1004,8 +1000,9 @@ describe("graph-corners: the pinned views hang from the pin in a loop", () => {
 describe("graph-corners: the graph's views open the pin's loop", () => {
   const options = () => [...document.querySelectorAll<HTMLButtonElement>("[data-corners=pin-loop] [data-view^='view:']")];
 
-  it("on: the loop starts with the views, then the pinned ones, Concepts on; picking Sources draws the sources alone", () =>
+  it("on: the loop starts with the views, then the pinned ones, Concepts on; picking Sources (no Health) draws the sources alone", () =>
     withFlag("graph-corners", true, () =>
+      withFlag("knowledge-health", false, () =>
       withFlag("graph-intent", true, async () => {
         mount(fakeServer({ views: [{ id: "a", name: "Alpha" }] }), {}, { kind: "http" });
         expect(document.querySelector("[data-corners=subject]")).toBeNull(); // no switch beside the line
@@ -1023,7 +1020,23 @@ describe("graph-corners: the graph's views open the pin's loop", () => {
         const layerOf = new Map(schema.types.map((t) => [t.id, t.layer] as const));
         expect(drawn.length).toBeGreaterThan(0);
         expect(drawn.every((t) => layerOf.get(t) === "source")).toBe(true);
-      }),
+      })),
+    ));
+
+  it("on, with Health: the Sources card is the way into Health (the concepts by source support)", () =>
+    withFlag("graph-corners", true, () =>
+      withFlag("knowledge-health", true, () =>
+        withFlag("graph-intent", true, async () => {
+          mount(fakeServer(), {}, { kind: "http" });
+          await userEvent.click(pins());
+          await waitFor(() => expect(document.querySelector("[data-view='view:sources']")).not.toBeNull());
+          await userEvent.click(document.querySelector<HTMLButtonElement>("[data-view='view:sources']")!);
+          const s = useGraphUi.getState();
+          const layerOf = new Map(schema.types.map((t) => [t.id, t.layer] as const));
+          expect([...s.shownTypes!].every((t) => layerOf.get(t) === "concept")).toBe(true);
+          expect(s.colorBy).toBe("support");
+        }),
+      ),
     ));
 
   it("on: with the sources drawn, Sources is the view marked in the pin", () =>

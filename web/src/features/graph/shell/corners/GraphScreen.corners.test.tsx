@@ -7,7 +7,7 @@ import { withFlag } from "@/flags/testing";
 import { useKb } from "@/lib/store";
 import { mockDataSource } from "@/test/datasource";
 import { sampleSnapshot } from "../../fixtures";
-import { GraphScreen, type GraphHost } from "../../GraphScreen";
+import { GraphScreen, resetOpenedOnConcepts, type GraphHost } from "../../GraphScreen";
 import { DEFAULT_PREFS, useGraphUi } from "../../store";
 import { resetCorners } from "./cornersStore";
 import type { PinnedView } from "@/api";
@@ -57,6 +57,33 @@ beforeEach(() => {
   resetCorners();
   useKb.setState({ selection: new Set() });
   useGraphUi.setState({ ...DEFAULT_PREFS, story: "", shownTypes: undefined, predicate: null, shownDepths: null, search: "", rules: [], typeLabels: new Set(), view: null, revealed: new Set(), flyout: null, detailsOpen: false, readerSlug: null, focusRequest: null, fitTick: 0 });
+});
+
+describe("graph-corners: every page load opens on Concepts by theme", () => {
+  it("on: a view left from an earlier visit gives way to Concepts by theme; a link that names a view still wins", () =>
+    withFlag("graph-corners", true, async () => {
+      resetOpenedOnConcepts();
+      useGraphUi.setState({ story: "sources", colorBy: "format" });
+      const { unmount } = render(wrap(graph(), <GraphScreen search={{}} host={host} />));
+      await screen.findByTestId("graph-corners");
+      expect(useGraphUi.getState().story).toBe("concepts");
+      expect(useGraphUi.getState().colorBy).toBe("area");
+      unmount();
+      // later in the same page load the view is left alone
+      useGraphUi.setState({ story: "sources", colorBy: "format" });
+      render(wrap(graph(), <GraphScreen search={{}} host={host} />));
+      await screen.findByTestId("graph-corners");
+      expect(useGraphUi.getState().story).toBe("sources");
+    }));
+
+  it("off: the view an earlier visit left stays", () =>
+    withFlag("graph-corners", false, async () => {
+      resetOpenedOnConcepts();
+      useGraphUi.setState({ story: "sources", colorBy: "format" });
+      render(wrap(graph(), <GraphScreen search={{}} host={host} />));
+      await screen.findByTestId("graph-corners");
+      expect(useGraphUi.getState().colorBy).toBe("format");
+    }));
 });
 
 describe("graph-shell: the corner controls on the Graph screen", () => {

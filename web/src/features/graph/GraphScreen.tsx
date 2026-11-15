@@ -29,6 +29,7 @@ import { computeImportance } from "./lab/importance";
 import { HoverCard } from "./lab/HoverCard";
 import { LabRail } from "./lab/LabRail";
 import { DIVE_PARAMS, initialView } from "./defaultView";
+import { leaveEmbed, useEmbedView } from "./embedding/store";
 import { CALM_STORY, DEFAULT_STORY, isCalmStory, storyById, storyKnown, storyOffered, storyTypes } from "./lab/views";
 import { viewCards, type ViewCard } from "./shell/corners/panelModel";
 import { applySpecV1 } from "./shell/corners/viewSpec";
@@ -247,6 +248,13 @@ export function GraphScreen({ search, host }: { search: GraphSearch; host: Graph
   );
 }
 
+/** flag graph-corners: Concepts by theme was applied in this page load (module state: a reload starts over) */
+let openedOnConcepts = false;
+/** for tests: start over as on a reload */
+export const resetOpenedOnConcepts = (): void => {
+  openedOnConcepts = false;
+};
+
 /** The screen sits under the 48px header and fills the rest of the viewport (the graph needs the room); while the bar is folded away (flag header-fold) it takes the whole viewport. */
 function FullBleed({ children }: { children: React.ReactNode }) {
   const folded = useHeaderFolded();
@@ -310,6 +318,13 @@ function Loaded({
   const sparkOpen = useSparkOpen();
   const { full: fullChat, folded: foldedChat } = useFullChat();
   const cornersFlag = useFlag("graph-corners");
+  // flag graph-corners: every page load opens on Concepts coloured by theme, whatever view an earlier visit left
+  // (a link that names a view still wins). Set before the first render builds the canvas, like the calm default.
+  if (cornersFlag && firstBare.current && !openedOnConcepts) {
+    openedOnConcepts = true;
+    if (useEmbedView.getState().view) leaveEmbed(false);
+    useGraphUi.getState().applyStory(CALM_STORY);
+  }
   const sparkPanelW = useChatFull((s) => s.panelW);
   const explorerOpen = useChatFull((s) => s.explorerOpen);
   const paneW = useChatFull((s) => s.paneW);
