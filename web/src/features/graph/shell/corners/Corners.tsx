@@ -72,7 +72,11 @@ const LEAD_VIEWS: readonly LoopCard[] = [
   { id: "concepts", name: "Concepts", hint: "Concepts and the links between them", thumb: "concepts" },
   { id: "sources", name: "Sources", hint: "The sources you read, without the concepts", thumb: "sources" },
   { id: "citations", name: "Citations", hint: "Papers joined by who cites whom", thumb: "citations" },
+  // the embedding view: pages placed by meaning (the meaning map), offered once the kb has an embedding
+  { id: "map", name: "Semantics", hint: "Pages placed by meaning, from the embedding", meta: "Embedding based", thumb: "map" },
 ];
+/** flag graph-corners: three placeholder views after the pinned ones, keeping the loop's shape until more are pinned */
+const PLACEHOLDER_VIEWS: readonly LoopCard[] = ["V1", "V2", "V3"].map((name) => ({ id: `placeholder-${name.toLowerCase()}`, name, hint: `${name}: a placeholder for a view to come` }));
 const NO_ROWS: readonly TypeRow[] = [];
 const isTyping = (t: EventTarget | null) => t instanceof HTMLElement && t.matches("input, textarea, select, [contenteditable=true]");
 const BTN_ID = { pins: "corner-pins", think: "corner-think", agent: "corner-agent" } as const;
@@ -401,8 +405,9 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
     [intent, subject, sourcesDrawn, embedding],
   );
   const pickSubject = (s: GraphSubject) => void applySubject(s, schema, shownTypes);
-  // flag graph-corners: the graph's views open the pin's loop (Concepts, Sources, Citations), and the views built on
-  // meaning close it (Topics, Meaning map, Missing links). Which one is on: an embedding view, else the Citations
+  // flag graph-corners: the graph's views open the pin's loop (Concepts, Sources, Citations), and a kb with an
+  // embedding adds Semantics (the meaning map) to them; three placeholders V1–V3 close the loop after the
+  // pinned ones (Topics and Missing links stay in the gallery). Which one is on: an embedding view, else the Citations
   // links, else what the drawn types say (Health is a lens on Concepts)
   const embedOn = useEmbedView((s) => s.view);
   const edgeOn = useGraphUi((s) => liveEdgeStory(s.edgeStory, s.shownTypes, storyById));
@@ -412,14 +417,13 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
   const markView = activeView ? null : currentView;
   const leadCards = useMemo(
     (): LoopCard[] =>
-      LEAD_VIEWS.filter((v) => v.id !== "citations" || (!!citationsStory && storyOffered(citationsStory))).map((v) => ({ ...v, on: v.id === markView })),
-    [citationsStory, markView],
+      LEAD_VIEWS.filter((v) => (v.id === "citations" ? !!citationsStory && storyOffered(citationsStory) : v.id === "map" ? !!embedding : true)).map((v) => ({ ...v, on: v.id === markView })),
+    [citationsStory, embedding, markView],
   );
-  const tailCards = useMemo(
-    (): LoopCard[] => suggestions.map((sg) => ({ id: sg.view, name: sg.name, hint: sg.hint, meta: "Embedding based", suggested: true, on: sg.view === markView, thumb: sg.view })),
-    [suggestions, markView],
-  );
+  const tailCards = PLACEHOLDER_VIEWS;
   const pickView = (v: string) => {
+    const placeholder = PLACEHOLDER_VIEWS.find((p) => p.id === v);
+    if (placeholder) return setNotice(`${placeholder.name} is a placeholder for a view to come`);
     setActive(null);
     // the built-in view already on screen (under a pinned one): the mark moves to it, nothing is applied again
     if (v === currentView) return;
