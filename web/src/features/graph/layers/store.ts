@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { getGroups, setGroups } from "../style";
 import { useKb } from "@/lib/store";
 import { marker, restore, snapshot, type Marker, type Snapshot } from "../shell/shape";
 import { useShellStore } from "../shell/shellStore";
@@ -95,7 +96,13 @@ let restricting = false;
 /** The knobs as they were before a preview tinted them. */
 let previewKnobs: ReturnType<typeof snapshot> | null = null;
 
+/** The groups a preview replaced, given back when it is cancelled. */
+let previewGroups: { by: "community" | "component"; of: ReadonlyMap<string, number> } | null = null;
 function untint() {
+  if (previewGroups) {
+    setGroups(previewGroups.by, previewGroups.of);
+    previewGroups = null;
+  }
   if (!previewKnobs) return;
   const { selection: _selection, ...knobs } = previewKnobs;
   useGraphUi.setState(knobs);
@@ -105,6 +112,7 @@ function untint() {
 function draw(next: ViewStack, g: GraphContext | null): { skipped: string[] } {
   if (!g) return { skipped: [] };
   const ev = evaluate(next, g);
+  if (ev.groups) setGroups(ev.groups.by, ev.groups.of);
   const ui = useGraphUi.getState();
   const set: Record<string, unknown> = {};
   // a knob a removed layer styled goes back to what it was before the stack took it
@@ -154,6 +162,10 @@ export const useLayers = create<LayersState>((set, get) => {
       untint();
       const next = (op === "replace" ? replaceLayers : stackLayers)(s.stack, layers);
       const ev = evaluate(next, s.graph);
+      if (ev.groups) {
+        previewGroups = { by: ev.groups.by, of: getGroups(ev.groups.by) };
+        setGroups(ev.groups.by, ev.groups.of);
+      }
       // a style layer tints through the same knobs, tentatively
       const tint: Record<string, unknown> = { ...ev.patch };
       if (ev.hiddenLinkKinds.size) tint.hiddenLinkKinds = ev.hiddenLinkKinds;

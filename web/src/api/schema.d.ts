@@ -2228,6 +2228,14 @@ export interface components {
             /** Session */
             session: string;
         };
+        /** BridgeCond */
+        BridgeCond: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            t: "bridge";
+        };
         /** By */
         By: {
             /**
@@ -2662,6 +2670,19 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
+        /** CliqueCond */
+        CliqueCond: {
+            /**
+             * Min
+             * @description pages in a maximal clique of at least this many drawn pages
+             */
+            min: number;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            t: "clique";
+        };
         /** CommonCond */
         CommonCond: {
             /** A */
@@ -2673,6 +2694,24 @@ export interface components {
              * @enum {string}
              */
             t: "common";
+        };
+        /** CommunityCond */
+        CommunityCond: {
+            /**
+             * Of
+             * @description the community holding this page; absent: by size, `rank`
+             */
+            of?: string | null;
+            /**
+             * Rank
+             * @description 1 is the largest community of the drawn pages
+             */
+            rank?: number | null;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            t: "community";
         };
         /** ComponentCond */
         ComponentCond: {
@@ -2702,6 +2741,19 @@ export interface components {
             target: string;
         } & {
             [key: string]: unknown;
+        };
+        /** CoreCond */
+        CoreCond: {
+            /**
+             * K
+             * @description the k-core of the drawn pages
+             */
+            k: number;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            t: "core";
         };
         /** CorpusColumn */
         CorpusColumn: {
@@ -2797,6 +2849,14 @@ export interface components {
              * @enum {string}
              */
             t: "createdWithin";
+        };
+        /** CutCond */
+        CutCond: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            t: "cut";
         };
         /** CypherRequest */
         CypherRequest: {
@@ -4587,7 +4647,7 @@ export interface components {
         /** LayerStyle */
         LayerStyle: {
             /** Color */
-            color?: ("type" | "layer" | "depth" | "status" | "area" | "degree" | "evidence" | "score" | "none" | "format" | "recency" | "added" | "support") | components["schemas"]["By"] | null;
+            color?: ("type" | "layer" | "depth" | "status" | "area" | "degree" | "evidence" | "score" | "none" | "format" | "recency" | "added" | "support" | "community" | "component") | components["schemas"]["By"] | null;
             /** Label */
             label?: string | null;
             /** Size */
@@ -5105,7 +5165,7 @@ export interface components {
         /** NotCond */
         NotCond: {
             /** Cond */
-            cond: components["schemas"]["TypeCond"] | components["schemas"]["DegreeCond"] | components["schemas"]["HopsCond"] | components["schemas"]["NameCond"] | components["schemas"]["TextCond"] | components["schemas"]["FavoriteCond"] | components["schemas"]["AboutCond"] | components["schemas"]["InAreaCond"] | components["schemas"]["CreatedWithinCond"] | components["schemas"]["LinkedFromTypeCond"] | components["schemas"]["PathsCond"] | components["schemas"]["ShortestCond"] | components["schemas"]["CommonCond"] | components["schemas"]["ComponentCond"] | components["schemas"]["HasEdgeCond"] | components["schemas"]["MentionedInCond"] | components["schemas"]["NotCond"] | components["schemas"]["AllNodesCond"];
+            cond: components["schemas"]["TypeCond"] | components["schemas"]["DegreeCond"] | components["schemas"]["HopsCond"] | components["schemas"]["NameCond"] | components["schemas"]["TextCond"] | components["schemas"]["FavoriteCond"] | components["schemas"]["AboutCond"] | components["schemas"]["InAreaCond"] | components["schemas"]["CreatedWithinCond"] | components["schemas"]["LinkedFromTypeCond"] | components["schemas"]["PathsCond"] | components["schemas"]["ShortestCond"] | components["schemas"]["CommonCond"] | components["schemas"]["ComponentCond"] | components["schemas"]["CliqueCond"] | components["schemas"]["CoreCond"] | components["schemas"]["CutCond"] | components["schemas"]["BridgeCond"] | components["schemas"]["TopCond"] | components["schemas"]["CommunityCond"] | components["schemas"]["HasEdgeCond"] | components["schemas"]["MentionedInCond"] | components["schemas"]["NotCond"] | components["schemas"]["AllNodesCond"];
             /**
              * @description discriminator enum property added by openapi-typescript
              * @enum {string}
@@ -7065,7 +7125,7 @@ export interface components {
             /** Edges */
             edges?: (components["schemas"]["EdgeTypeCond"] | components["schemas"]["DirectionCond"] | components["schemas"]["EndpointsCond"] | components["schemas"]["CountCond"] | components["schemas"]["AllEdgesCond"])[] | null;
             /** Nodes */
-            nodes?: (components["schemas"]["TypeCond"] | components["schemas"]["DegreeCond"] | components["schemas"]["HopsCond"] | components["schemas"]["NameCond"] | components["schemas"]["TextCond"] | components["schemas"]["FavoriteCond"] | components["schemas"]["AboutCond"] | components["schemas"]["InAreaCond"] | components["schemas"]["CreatedWithinCond"] | components["schemas"]["LinkedFromTypeCond"] | components["schemas"]["PathsCond"] | components["schemas"]["ShortestCond"] | components["schemas"]["CommonCond"] | components["schemas"]["ComponentCond"] | components["schemas"]["HasEdgeCond"] | components["schemas"]["MentionedInCond"] | components["schemas"]["NotCond"] | components["schemas"]["AllNodesCond"])[] | null;
+            nodes?: (components["schemas"]["TypeCond"] | components["schemas"]["DegreeCond"] | components["schemas"]["HopsCond"] | components["schemas"]["NameCond"] | components["schemas"]["TextCond"] | components["schemas"]["FavoriteCond"] | components["schemas"]["AboutCond"] | components["schemas"]["InAreaCond"] | components["schemas"]["CreatedWithinCond"] | components["schemas"]["LinkedFromTypeCond"] | components["schemas"]["PathsCond"] | components["schemas"]["ShortestCond"] | components["schemas"]["CommonCond"] | components["schemas"]["ComponentCond"] | components["schemas"]["CliqueCond"] | components["schemas"]["CoreCond"] | components["schemas"]["CutCond"] | components["schemas"]["BridgeCond"] | components["schemas"]["TopCond"] | components["schemas"]["CommunityCond"] | components["schemas"]["HasEdgeCond"] | components["schemas"]["MentionedInCond"] | components["schemas"]["NotCond"] | components["schemas"]["AllNodesCond"])[] | null;
         };
         /** SuggestedPage */
         SuggestedPage: {
@@ -7312,6 +7372,21 @@ export interface components {
             type?: string | null;
         } & {
             [key: string]: unknown;
+        };
+        /** TopCond */
+        TopCond: {
+            /**
+             * By
+             * @enum {string}
+             */
+            by: "degree" | "betweenness" | "pagerank" | "closeness";
+            /** N */
+            n: number;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            t: "top";
         };
         /**
          * TrustTiers

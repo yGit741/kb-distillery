@@ -11,7 +11,8 @@ from typing import Annotated, Literal, Union
 from pydantic import BaseModel, ConfigDict, Field
 
 Op = Literal[">=", ">", "<=", "<", "="]
-ColorBy = Literal["type", "layer", "depth", "status", "area", "degree", "evidence", "score", "none", "format", "recency", "added", "support"]
+ColorBy = Literal["type", "layer", "depth", "status", "area", "degree", "evidence", "score", "none", "format", "recency", "added", "support",
+                  "community", "component"]
 SizeBy = Literal["connections", "in", "out", "uniform", "tier", "evidence", "score", "gap", "logdeg"]
 Width = Literal["thin", "normal", "thick"]
 
@@ -99,6 +100,36 @@ class ComponentCond(Strict):
     rank: int | None = Field(None, description="1 is the largest component of the drawn pages")
 
 
+class CliqueCond(Strict):
+    t: Literal["clique"]
+    min: int = Field(..., ge=2, description="pages in a maximal clique of at least this many drawn pages")
+
+
+class CoreCond(Strict):
+    t: Literal["core"]
+    k: int = Field(..., ge=1, description="the k-core of the drawn pages")
+
+
+class CutCond(Strict):
+    t: Literal["cut"]
+
+
+class BridgeCond(Strict):
+    t: Literal["bridge"]
+
+
+class TopCond(Strict):
+    t: Literal["top"]
+    by: Literal["degree", "betweenness", "pagerank", "closeness"]
+    n: int = Field(..., ge=1)
+
+
+class CommunityCond(Strict):
+    t: Literal["community"]
+    of: str | None = Field(None, description="the community holding this page; absent: by size, `rank`")
+    rank: int | None = Field(None, description="1 is the largest community of the drawn pages")
+
+
 class HasEdgeCond(Strict):
     t: Literal["hasEdge"]
     type: str
@@ -121,8 +152,8 @@ class NotCond(Strict):
 
 NodeCond = Annotated[
     Union[TypeCond, DegreeCond, HopsCond, NameCond, TextCond, FavoriteCond, AboutCond, InAreaCond, CreatedWithinCond,
-          LinkedFromTypeCond, PathsCond, ShortestCond, CommonCond, ComponentCond, HasEdgeCond, MentionedInCond, NotCond,
-          AllNodesCond],
+          LinkedFromTypeCond, PathsCond, ShortestCond, CommonCond, ComponentCond, CliqueCond, CoreCond, CutCond, BridgeCond,
+          TopCond, CommunityCond, HasEdgeCond, MentionedInCond, NotCond, AllNodesCond],
     Field(discriminator="t")]
 NotCond.model_rebuild()
 

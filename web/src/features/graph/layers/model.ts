@@ -3,6 +3,7 @@ import type { ViewSpecV1 } from "../shell/corners/viewSpec";
 import { LINE_COPY } from "../shell/copy";
 import { LINK_KINDS, planStyle } from "../shell/shape";
 import type { ColorBy, SizeBy } from "../style";
+import { centrality, cliques, communities, cutsAndBridges, kCore, top, within, type Centrality } from "./algos";
 import type { GLink, GNode } from "../types";
 
 /**
@@ -33,6 +34,18 @@ export type NodeCond =
   | { t: "common"; a: string; b: string }
   /** A connected component of the drawn pages: the one holding `of`, else the `rank`-th largest (1 = largest). */
   | { t: "component"; of?: string; rank?: number }
+  /** Pages in a maximal clique of at least `min` drawn pages (flag graph-algos). */
+  | { t: "clique"; min: number }
+  /** The k-core of the drawn pages: what stays when every page with fewer than `k` links is taken away, repeatedly. */
+  | { t: "core"; k: number }
+  /** Cut vertices of the drawn pages: taking one away splits its part of the graph. */
+  | { t: "cut" }
+  /** Pages at either end of a bridge: a drawn link whose removal splits the graph. */
+  | { t: "bridge" }
+  /** The `n` drawn pages that score highest on a centrality. */
+  | { t: "top"; by: Centrality; n: number }
+  /** A community of the drawn pages (Louvain): the one holding `of`, else the `rank`-th largest. */
+  | { t: "community"; of?: string; rank?: number }
   /** Pages with (or, `exists: false`, without) a link of this type. */
   | { t: "hasEdge"; type: string; exists?: false }
   | { t: "mentionedIn"; chat: string }
@@ -141,6 +154,18 @@ export function describeNodeCond(c: NodeCond): string {
       return `common neighbours of ${c.a} and ${c.b}`;
     case "component":
       return c.of ? `the component of ${c.of}` : !c.rank || c.rank === 1 ? "the largest component" : `component ${c.rank} by size`;
+    case "clique":
+      return `in a clique of ${c.min}+`;
+    case "core":
+      return `the ${c.k}-core`;
+    case "cut":
+      return "cut vertices";
+    case "bridge":
+      return "bridge ends";
+    case "top":
+      return `top ${c.n} by ${c.by}`;
+    case "community":
+      return c.of ? `the community of ${c.of}` : !c.rank || c.rank === 1 ? "the largest community" : `community ${c.rank} by size`;
     case "hasEdge":
       return c.exists === false ? `without a ${c.type} link` : `with a ${c.type} link`;
     case "mentionedIn":
@@ -240,6 +265,21 @@ export interface Evaluation {
   /** Conditions and clauses the graph cannot evaluate or draw yet, with the reason: never dropped silently. */
   skipped: string[];
   legend: LegendRow[];
+  /** Colour by community or component (flag graph-algos): each drawn page's group, for the canvas (the store sets it
+   * when the stack is drawn or previewed, never while a chat or a count evaluates the stack). */
+  groups?: { by: "community" | "component"; of: Map<string, number> };
+}
+
+// the structure measures of a graph and its drawn pages, kept while both stay the same objects (a preview per keystroke
+// must not redo a betweenness of a thousand pages)
+const ALL_DRAWN = {};
+const STRUCTURE = new WeakMap<object, WeakMap<object, Map<string, unknown>>>();
+function remember<T>(graph: EvalGraph, key: string, make: () => T): T {
+  const byLinks = STRUCTURE.get(graph.links) ?? STRUCTURE.set(graph.links, new WeakMap()).get(graph.links)!;
+  const drawnKey = graph.drawn ?? ALL_DRAWN;
+  const memo = byLinks.get(drawnKey) ?? byLinks.set(drawnKey, new Map()).get(drawnKey)!;
+  if (!memo.has(key)) memo.set(key, make());
+  return memo.get(key) as T;
 }
 
 const cmp = (v: number, op: Op, n: number) => (op === ">=" ? v >= n : op === ">" ? v > n : op === "<=" ? v <= n : op === "<" ? v < n : v === n);
@@ -355,6 +395,10 @@ const toStyleSpec = (s: LayerStyle): StyleSpec => {
 export function evaluate(vs: ViewStack, graph: EvalGraph): Evaluation {
   const { nodes, links } = graph;
   const all = new Set(nodes.map((n) => n.id));
+  // the drawn pages and the links between them, built once on first use: the structure measures are about what is seen
+  let seenAdjMemo: Map<string, Set<string>> | null = null;
+  let groups: Evaluation["groups"];
+  const seenAdj = () => (seenAdjMemo ??= within(adjacency(graph.links), graph.drawn ?? all));
   const byId = new Map(nodes.map((n) => [n.id, n] as const));
   const adj = adjacency(links);
   // links counted the way the screen shows them: a drawn page counts its links to drawn pages ("orphans" are the pages
@@ -455,6 +499,48 @@ export function evaluate(vs: ViewStack, graph: EvalGraph): Evaluation {
           keep = (n) => hit.has(n.id);
           break;
         }
+        case "clique": {
+          const r = cliques(seenAdj(), c.min);
+          if (r.capped) skip(`${label}: the search stopped early (a large dense part); some cliques may be missing`);
+          if (!r.pages.size) skip(`${label}: no clique of ${c.min} or more among the drawn pages`);
+          keep = (n) => r.pages.has(n.id);
+          break;
+        }
+        case "core": {
+          const core = kCore(seenAdj(), c.k);
+          if (!core.size) skip(`${label}: the drawn pages have no ${c.k}-core`);
+          keep = (n) => core.has(n.id);
+          break;
+        }
+        case "cut":
+        case "bridge": {
+          const r = cutsAndBridges(seenAdj());
+          const hit = c.t === "cut" ? r.cuts : r.bridgeEnds;
+          if (!hit.size) skip(`${label}: none among the drawn pages`);
+          keep = (n) => hit.has(n.id);
+          break;
+        }
+        case "top": {
+          const best = top(remember(graph, `centrality:${c.by}`, () => centrality(seenAdj(), c.by)), c.n);
+          if (!best.size) skip(`${label}: no drawn pages to rank`);
+          keep = (n) => best.has(n.id);
+          break;
+        }
+        case "community": {
+          const groups = remember(graph, "communities", () => communities(seenAdj()));
+          let rank: number | undefined;
+          if (c.of) {
+            const of = pageOf(c.of);
+            rank = of ? groups.get(of) : undefined;
+            if (rank === undefined) skip(`${label}: "${c.of}" is ${of ? "not drawn here" : "not a page here"}`);
+          } else {
+            rank = (c.rank ?? 1) - 1;
+            const count = new Set(groups.values()).size;
+            if (rank >= count) skip(`${label}: the drawn pages have ${count} communit${count === 1 ? "y" : "ies"}`);
+          }
+          keep = (n) => rank !== undefined && groups.get(n.id) === rank;
+          break;
+        }
         case "component": {
           // components of the pages drawn (as seen), over the links between them
           const comps = components(adj, graph.drawn ?? all);
@@ -536,6 +622,19 @@ export function evaluate(vs: ViewStack, graph: EvalGraph): Evaluation {
       const s = layer.style ?? {};
       const scoped = (layer.subgraph.nodes ?? []).some((c) => c.t !== "all") || (layer.subgraph.edges ?? []).some((c) => c.t !== "all");
       if (layer.target === "nodes") {
+        // colour by community or component (flag graph-algos): the groups of the pages the screen draws before the
+        // stack's own filters (the same pages every structure measure reads), handed to the store with the answer
+        if (s.color === "community") groups = { by: "community", of: remember(graph, "communities", () => communities(seenAdj())) };
+        if (s.color === "component") {
+          groups = {
+            by: "component",
+            of: remember(graph, "components", () => {
+              const of = new Map<string, number>();
+              components(seenAdj(), seenAdj().keys()).forEach((k, i) => k.forEach((id) => of.set(id, i)));
+              return of;
+            }),
+          };
+        }
         if (s.color !== undefined || s.size !== undefined) {
           const plan = planStyle(toStyleSpec(s), nodes);
           if (typeof s.color === "string") patch.colorBy = s.color;
@@ -611,7 +710,7 @@ export function evaluate(vs: ViewStack, graph: EvalGraph): Evaluation {
       hiddenKinds = new Set([...presentKinds].filter((x) => !allowed.has(x)));
     }
   }
-  return { nodeIds: cur, hiddenLinkKinds: hiddenKinds ?? new Set(), patch, skipped, legend };
+  return { nodeIds: cur, hiddenLinkKinds: hiddenKinds ?? new Set(), patch, skipped, legend, ...(groups ? { groups } : {}) };
 }
 
 /** Legend rows from a stack alone (no graph needed): its style layers and what it does to links. */
