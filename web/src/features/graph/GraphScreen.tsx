@@ -71,6 +71,8 @@ import { chatPanelWidth, paneWidth, useShellTop } from "./shell/layout";
 import { useFullChat } from "./shell/useFullChat";
 import { chatInPanel, useSparkPanel } from "./shell/sparkPanelStore";
 import { SparkPanelHost, useSparkOpen } from "./shell/SparkPanelHost";
+import { stackCurrent, useLayers } from "./layers/store";
+import { marker } from "./shell/shape";
 
 /** The right pane keeps at least 320px, and the chat (with its list) at least 480px. */
 const clampPane = (w: number, total: number) => Math.round(Math.max(320, Math.min(total - 480, w)));
@@ -349,6 +351,12 @@ function Loaded({
   }, [ui.shownTypes, ui.story, schema, model]);
   // flag knowledge-health (with graph-intent): concepts alone, coloured by source support, is the Health view
   const intentFlag = useFlag("graph-intent");
+  // a `>` view that restricts the pages owns the screen: its chips under the line say what is drawn, so the view
+  // pill does not float over the graph as well (flag graph-intent, the shell)
+  const stackLayers = useLayers((s) => s.stack.layers.length);
+  const stackApplied = useLayers((s) => s.applied);
+  const stackLive = useGraphUi((s) => stackCurrent(stackApplied, marker(s)));
+  const layerView = !!shell && intentFlag && stackLayers > 0 && stackLive;
   const healthOn = useFlag("knowledge-health") && intentFlag;
   const healthView = healthOn && subjectOf(schema, shownTypes, effectiveColorBy(ui.colorBy)) === "health";
   // the Health colouring restored outside Health (a saved view, a typed shape, the flag off) falls back to the view's own
@@ -763,10 +771,10 @@ function Loaded({
         finder
       )}
       {!shell && <ViewsBar model={model} visible={visible} onPick={applyView} />}
-      {(ui.view || note) && (
+      {((ui.view && !layerView) || note) && (
         <div className={cn("pointer-events-auto absolute left-1/2 z-10 flex max-w-[min(28rem,calc(100%-8rem))] -translate-x-1/2 items-center gap-2 rounded-lg border bg-card px-2.5 py-1 text-xs shadow-[var(--shadow)]", shell ? "top-32" : headerSlot ? "top-14" : "top-24")} role="status">
           <span className="min-w-0 truncate">
-            {ui.view ? (
+            {ui.view && !layerView ? (
               <>
                 <b>{ui.view.hits.size}</b>{" "}
                 {ui.view.kind === "search"
