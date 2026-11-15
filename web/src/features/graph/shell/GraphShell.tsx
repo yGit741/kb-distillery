@@ -711,7 +711,8 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
       // Enter applies it. They go first only when the line clearly means the view (./viewSuggest)
       const views = caps.sentences ? suggestViews(text, linkKinds) : { rows: [], first: false };
       const viewRows: PanelRow[] = views.rows.map((s) => ({
-        key: `view-suggest:${s.line}`,
+        // "view-first:" marks rows put first on purpose (the line clearly means the view): only those take Enter
+        key: `${views.first ? "view-first" : "view-suggest"}:${s.line}`,
         section: LINE_COPY.viewSuggest.heading,
         label: s.whole ? (
           <>
@@ -1055,7 +1056,7 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
       // flag line-routing: a row picked with the arrows or the pointer runs as picked
       // a view suggestion on top (only there when the line clearly means the view: "orp", or a sentence the rules read)
       // runs as shown, no routing needed
-      const suggested = idx === 0 && rows[0]?.key.startsWith("view-suggest:");
+      const suggested = idx === 0 && rows[0]?.key.startsWith("view-first:");
       const routed = routing && !e.shiftKey && !picked.current && idx === 0 && !suggested ? routableLine() : null;
       if (routed) lineRoute.route(routed);
       else rows[idx]?.run(e.shiftKey);

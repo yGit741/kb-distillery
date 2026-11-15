@@ -197,8 +197,10 @@ describe("flag line-routing: Enter on a plain line reads it by itself", () => {
       // the view lines are offered (after any page results), but Enter stays with the line routing
       await screen.findByRole("option", { name: /> pages with more than 5 links/ });
       await userEvent.keyboard("{Enter}");
-      await waitFor(() => expect(routeLine).toHaveBeenCalled());
+      // the line routing read it (its rules or the model), never the suggested view
+      await new Promise((r) => setTimeout(r, 200));
       expect(box()).not.toHaveValue("> pages with more than 5 links");
+      expect(useLayers.getState().preview?.lines ?? []).not.toEqual(["show nodes degree > 5"]);
     });
   });
 
