@@ -49,7 +49,7 @@ export function SourcePicker({ onSource, tall }: { onSource: (s: Source) => void
         <Upload className="size-5 text-muted-foreground" strokeWidth={1.5} aria-hidden />
         <span className="text-sm font-medium">Drop a paper or an article here</span>
         <span className="text-xs text-muted-foreground">or click to choose a PDF, Markdown, text or HTML file</span>
-        <input id={inputId} type="file" className="sr-only" accept={ACCEPT.join(",")} aria-label="Choose a file" onChange={(e) => takeFile(e.target.files?.[0])} />
+        <input id={inputId} type="file" hidden accept={ACCEPT.join(",")} aria-label="Choose a file" onChange={(e) => takeFile(e.target.files?.[0])} />
       </label>
       <form className="flex gap-2" onSubmit={(e) => { e.preventDefault(); useUrl(); }}>
         <Input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="or paste a web address" aria-label="Web address" inputMode="url" />
