@@ -65,6 +65,33 @@ describe("flag graph-algos: graph-theory words in a > line", () => {
       expect(run([fromA])).toEqual(["a", "b", "c", "e"]);
     }));
 
+  it("on: a path and its neighbours; a name that is no page answers nothing, never every page", () =>
+    withFlag("graph-algos", true, async () => {
+      expect(fromSentence("shortest path from A to D and their neighbours").lines).toEqual(['show nodes shortest path between "A" and "D" expand 1']);
+      const read = (t: string) => fromSentence(t).layers;
+      expect(run(read("shortest path from A to Zzz"))).toEqual([]);
+      // a hide of a skipped condition hides nothing
+      expect(run([{ ...read("common neighbours of A and Zzz")[0]!, kind: "hide" }])).toEqual(ids);
+    }));
+
+  it("on: components count what is drawn; one not drawn, or past the last, answers nothing", () =>
+    withFlag("graph-algos", true, async () => {
+      const read = (t: string) => fromSentence(t).layers;
+      const noC = new Set(ids.filter((i) => i !== "c"));
+      expect(run(read("component of C"), noC)).toEqual([]);
+      expect(run([makeLayer("show", "nodes", { nodes: [{ t: "component", rank: 9 }] })], noC)).toEqual([]);
+    }));
+
+  it("a bare degree counts drawn pages only; with a page type it may reach a hidden type", () => {
+    const g = { nodes: [node("p1", { type: "paper" }), node("p2", { type: "paper" }), node("i1", { type: "idea" }), node("i2", { type: "idea" })], links: [
+      { source: "p1", target: "p2", kind: "wikilink" as const }, { source: "i1", target: "i2", kind: "wikilink" as const }, { source: "p1", target: "i1", kind: "wikilink" as const },
+    ] };
+    const drawn = new Set(["i1", "i2"]);
+    const ev = (conds: Layer["subgraph"]["nodes"]) => [...evaluate(stack(EMPTY_STACK, [makeLayer("show", "nodes", { nodes: conds })]), { ...g, drawn }).nodeIds!].sort();
+    expect(ev([{ t: "degree", op: ">=", n: 1 }])).toEqual(["i1", "i2"]);
+    expect(ev([{ t: "type", value: "paper" }, { t: "degree", op: ">=", n: 2 }])).toEqual(["p1"]);
+  });
+
   it("off: the words are not read by the rules (they go to the model as before)", () =>
     withFlag("graph-algos", false, async () => {
       for (const t of ["shortest path from A to D", "common neighbours of B and E", "largest component", "show only deg>4 and their neighbors"])

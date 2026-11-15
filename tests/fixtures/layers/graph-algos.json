@@ -1,0 +1,26 @@
+{
+  "name": "graph-theory conditions and expand (flag graph-algos)",
+  "stack": {
+    "v": 2,
+    "layers": [
+      {"id": "L1", "kind": "show", "target": "nodes", "text": "", "subgraph": {"nodes": [{"t": "shortest", "a": "Learning theory", "b": "Juntas"}]}},
+      {"id": "L2", "kind": "show", "target": "nodes", "text": "", "subgraph": {"nodes": [{"t": "shortest", "a": "A", "b": "B", "all": true}]}},
+      {"id": "L3", "kind": "show", "target": "nodes", "text": "", "subgraph": {"nodes": [{"t": "common", "a": "A", "b": "B"}]}},
+      {"id": "L4", "kind": "show", "target": "nodes", "text": "", "subgraph": {"nodes": [{"t": "component", "rank": 1}]}},
+      {"id": "L5", "kind": "show", "target": "nodes", "text": "", "subgraph": {"nodes": [{"t": "component", "rank": 2}]}},
+      {"id": "L6", "kind": "show", "target": "nodes", "text": "", "subgraph": {"nodes": [{"t": "component", "of": "A"}]}},
+      {"id": "L7", "kind": "show", "target": "nodes", "text": "", "subgraph": {"nodes": [{"t": "degree", "op": ">", "n": 4}]}, "expand": 1},
+      {"id": "L8", "kind": "hide", "target": "nodes", "text": "", "subgraph": {"nodes": [{"t": "degree", "op": "=", "n": 0}]}, "expand": 2}
+    ]
+  },
+  "lines": [
+    "show nodes shortest path between \"Learning theory\" and \"Juntas\"",
+    "show nodes all shortest paths between \"A\" and \"B\"",
+    "show nodes common neighbours of \"A\" and \"B\"",
+    "show nodes largest component",
+    "show nodes component 2",
+    "show nodes component of \"A\"",
+    "show nodes degree > 4 expand 1",
+    "hide nodes degree = 0 expand 2"
+  ]
+}

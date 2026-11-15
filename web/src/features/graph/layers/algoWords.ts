@@ -18,7 +18,17 @@ const nameOf = (s: string): string => (/^(?:this|this page|here)$/i.test(unq(s))
 export function algoClause(clause: string, read: Read): Layer[] | null | undefined {
   if (!flag("graph-algos")) return undefined;
   const c = clause.trim();
-  let m = c.match(/^(?:show |find |draw )?(?:me )?(?:the |a )?(all )?shortest paths? (?:between|from) (.+?) (?:and|to) (.+)$/i);
+  // "and their neighbours" / "+2 hops" first: the clause before it, grown ("shortest path from A to D and their
+  // neighbours" grows the path)
+  let m =
+    c.match(/^(.+?)\s+(?:and|with|plus|\+)\s+(?:their|its|the|all)?\s*(?:(\d+)[- ]hops? )?neighbou?rs?(?:hood)?$/i) ??
+    c.match(/^(.+?)\s*(?:\+|and|plus)\s*(\d+)\s*hops?(?: around)?$/i);
+  if (m) {
+    const inner = read(deg(m[1]!));
+    if (!inner || inner.length !== 1 || inner[0]!.target !== "nodes" || inner[0]!.kind === "style") return null;
+    return [{ ...inner[0]!, expand: m[2] ? Number(m[2]) : 1 }];
+  }
+  m = c.match(/^(?:show |find |draw )?(?:me )?(?:the |a )?(all )?shortest paths? (?:between|from) (.+?) (?:and|to) (.+)$/i);
   if (m) return [makeLayer("show", "nodes", { nodes: [{ t: "shortest", a: nameOf(m[2]!), b: nameOf(m[3]!), ...(m[1] ? { all: true } : {}) }] })];
   m = c.match(/^(?:show |find )?(?:me )?(?:the )?(?:common|shared|mutual) neighbou?rs (?:of|between) (.+?) and (.+)$/i);
   if (m) return [makeLayer("show", "nodes", { nodes: [{ t: "common", a: nameOf(m[1]!), b: nameOf(m[2]!) }] })];
@@ -27,15 +37,6 @@ export function algoClause(clause: string, read: Read): Layer[] | null | undefin
   m = c.match(/^(?:show |only )?(?:me )?(?:the )?(?:connected )?component (?:of|with|containing|around) (.+)$/i);
   if (m) return [makeLayer("show", "nodes", { nodes: [{ t: "component", of: nameOf(m[1]!) }] })];
 
-  // "and their neighbours" / "+2 hops": the clause before it, grown
-  m =
-    c.match(/^(.+?)\s+(?:and|with|plus|\+)\s+(?:their|its|the|all)?\s*(?:(\d+)[- ]hops? )?neighbou?rs?(?:hood)?$/i) ??
-    c.match(/^(.+?)\s*(?:\+|and|plus)\s*(\d+)\s*hops?(?: around)?$/i);
-  if (m) {
-    const inner = read(deg(m[1]!));
-    if (!inner || inner.length !== 1 || inner[0]!.target !== "nodes" || inner[0]!.kind === "style") return null;
-    return [{ ...inner[0]!, expand: m[2] ? Number(m[2]) : 1 }];
-  }
   // "deg>4": the rules read "degree > 4"
   if (/\bdeg\b\s*(?:[<>=]|>=|<=)/i.test(c)) return read(deg(c));
   return undefined;

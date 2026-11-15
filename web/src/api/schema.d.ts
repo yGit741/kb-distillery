@@ -4561,7 +4561,7 @@ export interface components {
         Layer: {
             /**
              * Expand
-             * @description nodes layers: also the pages this many links away from the ones kept
+             * @description nodes layers only: also the pages this many links away from the ones kept; ignored on edges layers
              */
             expand?: number | null;
             /** Id */

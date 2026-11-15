@@ -179,7 +179,8 @@ class Layer(Strict):
     target: Literal["nodes", "edges"]
     subgraph: Subgraph
     style: LayerStyle | None = None
-    expand: int | None = Field(None, description="nodes layers: also the pages this many links away from the ones kept")
+    expand: int | None = Field(None, ge=1, description="nodes layers only: also the pages this many links away from the "
+                               "ones kept; ignored on edges layers")
     text: str = Field(..., description="plain words for the chip; empty lets the app describe the layer")
 
 

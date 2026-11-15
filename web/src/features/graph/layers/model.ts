@@ -276,7 +276,6 @@ export function withinHops(adj: ReadonlyMap<string, ReadonlySet<string>>, from: 
   return seen;
 }
 
-/** Hops from `from` to every page within `max` hops, over links in either direction. */
 /**
  * The pages on a shortest path from `a` to `b` (breadth first, links both ways): every page on any shortest path with
  * `all`, else one path. Empty when no path joins them.
@@ -320,6 +319,7 @@ export function components(adj: ReadonlyMap<string, ReadonlySet<string>>, inside
   return out.sort((x, y) => y.length - x.length);
 }
 
+/** Hops from `from` to every page within `max` hops, over links in either direction. */
 function distances(adj: ReadonlyMap<string, ReadonlySet<string>>, from: string, max: number): Map<string, number> {
   const dist = new Map([[from, 0]]);
   let edge = [from];
@@ -387,6 +387,9 @@ export function evaluate(vs: ViewStack, graph: EvalGraph): Evaluation {
 
   const matchNodes = (conds: NodeCond[] | undefined, label: string): Set<string> => {
     let out = new Set(all);
+    // a degree on its own is judged on the drawn pages; with a page type ("papers with more than 5 links") it may reach
+    // a type the view hides, which then counts all its links
+    const typed = (conds ?? []).some((c) => c.t === "type");
     for (const c of conds ?? []) {
       let keep: (n: GNode) => boolean;
       switch (c.t) {
@@ -398,7 +401,7 @@ export function evaluate(vs: ViewStack, graph: EvalGraph): Evaluation {
           break;
         }
         case "degree":
-          keep = (n) => cmp(seenDegree(n.id), c.op, c.n);
+          keep = (n) => (!typed && graph.drawn && !graph.drawn.has(n.id) ? false : cmp(seenDegree(n.id), c.op, c.n));
           break;
         case "hops": {
           if (c.of === FAVORITES) {
@@ -436,11 +439,13 @@ export function evaluate(vs: ViewStack, graph: EvalGraph): Evaluation {
         case "common": {
           const a = pageOf(c.a);
           const b = pageOf(c.b);
-          if (!a || !b) {
-            skip(`${label}: "${a ? c.b : c.a}" is not a page here`);
-            continue;
-          }
           let hit: Set<string>;
+          if (!a || !b) {
+            // a name that is no page answers nothing (never every page, which a hide would turn into a blank graph)
+            skip(`${label}: "${a ? c.b : c.a}" is not a page here`);
+            keep = () => false;
+            break;
+          }
           if (c.t === "shortest") hit = shortestPaths(adj, a, b, !!c.all);
           else {
             const nb = adj.get(b) ?? new Set<string>();
@@ -456,13 +461,13 @@ export function evaluate(vs: ViewStack, graph: EvalGraph): Evaluation {
           let comp: string[] | undefined;
           if (c.of) {
             const of = pageOf(c.of);
-            comp = of ? comps.find((k) => k.includes(of)) ?? [of] : undefined;
-            if (!comp) {
-              skip(`${label}: "${c.of}" is not a page here`);
-              continue;
-            }
-          } else comp = comps[(c.rank ?? 1) - 1] ?? [];
-          const s = new Set(comp);
+            comp = of ? comps.find((k) => k.includes(of)) : undefined;
+            if (!comp) skip(`${label}: "${c.of}" is ${of ? "not drawn here" : "not a page here"}`);
+          } else {
+            comp = comps[(c.rank ?? 1) - 1];
+            if (!comp) skip(`${label}: the drawn pages have ${comps.length} component${comps.length === 1 ? "" : "s"}`);
+          }
+          const s = new Set(comp ?? []);
           keep = (n) => s.has(n.id);
           break;
         }
