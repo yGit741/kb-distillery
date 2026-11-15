@@ -308,14 +308,21 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
   );
 
   // ---- open and close
+  /** Select the whole line once it has rendered, while it still has the focus: typing next replaces it. */
+  const selectLine = useCallback(
+    () =>
+      requestAnimationFrame(() => {
+        const el = input.current;
+        if (el && document.activeElement === el && el.value) el.select();
+      }),
+    [],
+  );
   const close = useCallback((clear = true) => {
     setOpen(false);
     if (clear) setRaw("");
     input.current?.blur();
   }, []);
   const openPanel = useCallback(() => setOpen(true), []);
-  /** Select the whole line once it has rendered: typing next replaces it. */
-  const selectLine = useCallback(() => requestAnimationFrame(() => input.current?.select()), []);
   const focusBar = useCallback((value?: string) => {
     if (value !== undefined) setRaw(value);
     setOpen(true);
@@ -464,6 +471,9 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
           }
           if (useLayers.getState().preview && previewKey.current === `${parsed.op ?? "replace"}:${parsed.text}`) return commitPreview(parsed.text);
           runSentence(parsed.text, parsed.op ?? "replace", {});
+          // a line the rules cannot read waits for the model with the text still in the box: selected, so a new
+          // line typed meanwhile replaces it instead of joining it
+          selectLine();
         },
       });
       return out;
@@ -909,6 +919,7 @@ export function GraphShell({ nodes, links, byId, colorBy, onFocus, onRead, onSho
       focusBar(`> ${r.text}`);
       setRoutedHint(LINE_COPY.route.view(r.text));
       runSentence(r.text, "replace", {});
+      selectLine();
     } else if (r.intent === "ask") {
       useChatDock.getState().ask(chatContextDraft(r.text));
       close();
