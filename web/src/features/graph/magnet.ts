@@ -1,3 +1,5 @@
+import { withAlpha } from "./canvasTheme";
+
 /** The magnetic pointer: the hovered page is the nearest one, not only the one under the pointer. */
 
 export interface ScreenNode {
@@ -94,12 +96,13 @@ export function drawBubble(
   rgb: string,
 ): void {
   if (b.a <= 0.02) return;
+  const hex = hexOf(rgb);
   if (b.r > 2) {
     const R = b.r * 1.12;
     const g = ctx.createRadialGradient(px, py, 0, px, py, R);
-    g.addColorStop(0, `rgba(${rgb},${0.09 * b.a})`);
-    g.addColorStop(0.6, `rgba(${rgb},${0.05 * b.a})`);
-    g.addColorStop(1, `rgba(${rgb},0)`);
+    g.addColorStop(0, withAlpha(hex, 0.09 * b.a));
+    g.addColorStop(0.6, withAlpha(hex, 0.05 * b.a));
+    g.addColorStop(1, withAlpha(hex, 0));
     ctx.fillStyle = g;
     ctx.beginPath();
     ctx.arc(px, py, R, 0, Math.PI * 2);
@@ -109,13 +112,17 @@ export function drawBubble(
   // a thin halo just outside the rim, screen px, so it keeps one size at every zoom
   const outer = target.r + 10;
   const g2 = ctx.createRadialGradient(target.x, target.y, target.r, target.x, target.y, outer);
-  g2.addColorStop(0, `rgba(${rgb},${0.18 * b.a})`);
-  g2.addColorStop(1, `rgba(${rgb},0)`);
+  g2.addColorStop(0, withAlpha(hex, 0.18 * b.a));
+  g2.addColorStop(1, withAlpha(hex, 0));
   ctx.fillStyle = g2;
   ctx.beginPath();
   ctx.arc(target.x, target.y, outer, 0, Math.PI * 2);
   ctx.fill();
 }
+
+/** `#rrggbb` of an "r,g,b" triple, for the shared `withAlpha`. */
+const hexOf = (rgb: string): string =>
+  "#" + rgb.split(",").map((n) => Math.max(0, Math.min(255, Math.round(Number(n) || 0))).toString(16).padStart(2, "0")).join("");
 
 /** "r,g,b" of a CSS colour (#rrggbb or rgb()/rgba()); the blue accent when it cannot be read. */
 export function rgbOf(color: string): string {
