@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { useFlag } from "@/flags/useFlag";
 import { cn } from "@/lib/utils";
+import { useTheme } from "@/theme/theme";
 import { NodeSwatch } from "../encoding/NodeMarkSvg";
 import { CheckField, RangeField, SelectField } from "../controls";
 import { useGraphUi } from "../store";
@@ -204,6 +205,7 @@ function KnobField({ knob, cfg }: { knob: Knob; cfg: LabConfig }) {
 
 function WhyRank({ node, imp, cfg }: { node: GNode; imp: Importance; cfg: LabConfig }) {
   const colorBy = useGraphUi((u) => u.colorBy);
+  useTheme((s) => s.theme); // people and support colours have a value per ground: redraw the swatch with the theme
   const t = imp.terms.get(node.id);
   const s = imp.score.get(node.id);
   if (!t || s === undefined) return <p className="text-xs text-muted-foreground">Not on the graph right now.</p>;

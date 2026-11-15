@@ -27,6 +27,7 @@ import { useCites } from "./shell/citeStore";
 import { candidatesOf } from "./shell/replay";
 import { ReplayLegend } from "./shell/ReplayLegend";
 import { drawSourceCount } from "./shell/countDraw";
+import { calmEdge, edgeWidth } from "./edgeWeight";
 import { sideOffset, sourceCounts } from "./subject";
 import { useReplay } from "./shell/replayStore";
 import { useSparkOpen } from "./shell/SparkPanelHost";
@@ -51,7 +52,7 @@ import { linkKey, popSources } from "./shell/thinking";
 import { drawCiteBadge, drawGlow, drawHotRing, drawWebSource, popScale, THINK_DIM, webSpot } from "./shell/thinkingDraw";
 import { ThinkingLegend } from "./shell/ThinkingLegend";
 import { useThinking } from "./shell/thinkingStore";
-import { personInitials, SOURCE_GLYPH_PX } from "./encoding/spec";
+import { outerRadius, personInitials, SOURCE_GLYPH_PX } from "./encoding/spec";
 import { colorOf, effectiveColorBy, layeredRadii, METRIC_COLORS, nodeRadius, NONE_GREY, semanticRadius, useAreaPalette, type ColorBy, type SizeBy } from "./style";
 import type { GNode, GraphModel, SimLink, SimNode } from "./types";
 import { useChatFull } from "./shell/chatFullStore";
@@ -237,8 +238,6 @@ function drawCandidates(ctx: CanvasRenderingContext2D, nodes: readonly SimNode[]
 
 const endId = (e: string | SimNode) => (typeof e === "string" ? e : e.id);
 
-/** Flag calm-graph: edges rest at this share of the usual opacity (a hovered page still lights its own). */
-const CALM_EDGE = 0.4;
 const DOUBLE_MS = 380;
 
 /**
@@ -1364,7 +1363,7 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
       });
       if (ghost) drawGhostRing(ctx, n.x, n.y, r, scale, colors);
       const sourcesBehind = !viewRef.current.sides && !tk && !live.current.replay && n.layer === "concept" && markOf(n.type) !== "person" ? viewRef.current.srcCount?.get(n.id) : undefined;
-      if (sourcesBehind && r * scale >= COUNT_MIN_PX) drawSourceCount(ctx, n.x, n.y, r, sourcesBehind, scale, colors, alpha);
+      if (sourcesBehind && r * scale >= COUNT_MIN_PX) drawSourceCount(ctx, n.x, n.y, outerRadius(n.type, r), sourcesBehind, scale, colors, alpha);
       if (live.current.replay) drawReplayMark(ctx, n.id, n.x, n.y, r, scale, alpha, live.current.replay, colors);
       if (role === "cited") {
         const no = tk?.view.citeNo.get(n.id);
@@ -1579,10 +1578,11 @@ export const GraphCanvas = forwardRef<CanvasHandle, Props>(function GraphCanvas(
     const tk = live.current.think;
     if (tk && (tk.pop.has(a) || tk.pop.has(b)) && !tk.links.has(linkKey(a, b))) return withAlpha(colors.link, 0);
     const hot = lit().links;
-    const base = (rimRef.current && l.kind === "cites" ? RIM_EDGE : live.current.ui.linkOpacity * (calmOn ? CALM_EDGE : 1) * mapEdge) * (hot.length && !hot.includes(l) ? 0.25 : 1);
+    const base = (rimRef.current && l.kind === "cites" ? RIM_EDGE : live.current.ui.linkOpacity * (calmOn ? calmEdge(k.current) : 1) * mapEdge) * (hot.length && !hot.includes(l) ? 0.25 : 1);
     return withAlpha(colors.link, fade * fadedLinkOpacity(a, b, focus, prevFocus, fadeT, base, l.kind));
   }, [calmOn, lit]);
-  const linkWidth = useCallback((l: SimLink) => (l.kind === "shared" ? 0.35 + Math.min(l.shared ?? 1, 6) * 0.1 : 0.8), []);
+  // read per frame, so a link's weight follows the zoom (./edgeWeight)
+  const linkWidth = useCallback((l: SimLink) => edgeWidth(l.kind, l.shared, k.current), []);
   const linkLabel = useCallback(
     (l: SimLink) => (l.kind === "shared" && !live.current.ui.hiddenLinkKinds.has(l.kind) ? `${l.shared} shared source${l.shared === 1 ? "" : "s"}` : ""),
     [],

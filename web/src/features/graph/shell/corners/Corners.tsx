@@ -369,7 +369,8 @@ export function Corners({ nodes, visible, schema, shownTypes, stats, host, apply
   const areaHues = useAreaPalette(); // the area key follows the chosen area colours
   const key = useMemo(
     () => (by === "type" ? [] : colorChannel(by, { ramp }).rows(nodes.filter((n) => keyPool.has(n.id) && (!sourcesOnly || n.layer === "source")))),
-    [nodes, keyPool, by, ramp, sourcesOnly, topicsLoaded, areaHues],
+    // theme: the support and people colours have a value per ground, also when the colouring is not a ramp
+    [nodes, keyPool, by, ramp, sourcesOnly, topicsLoaded, areaHues, theme],
   );
   // hovering a colour value lights its drawn pages, the rest fade (the canvas' spotIds fade, as the page types do)
   const spotKey = useCallback(

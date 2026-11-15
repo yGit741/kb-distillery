@@ -18,9 +18,9 @@
   --background: #17181c; /* graphite */
   --card: #1f2126; /* --surface-solid (opaque: no glass blur in the shell); one step above graphite */
   --popover: #1f2126;
-  --muted-foreground: #9aa2b6; /* about 5.3:1 on the muted surface over the card */
-  --canvas-dot: rgba(255, 255, 255, 0.06);
-  --node-centre: #232528; /* one step above graphite (6% toward the foreground) */
+  --muted-foreground: #a6aec2; /* about 6.1:1 on the muted surface over the card; also the graph's links and quiet labels */
+  --canvas-dot: rgba(255, 255, 255, 0.075);
+  --node-centre: #2a2d34; /* a clear step above graphite (9% toward the foreground), so a ring reads as a lit mark */
 }
 
 /* The graph's ground: warm paper with dots (light), graphite with dots (dark). Only under the graph. */

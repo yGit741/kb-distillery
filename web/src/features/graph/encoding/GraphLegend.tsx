@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
+import { useTheme } from "@/theme/theme";
 import { NO_AREA, OTHER_AREAS } from "../style";
 import type { GNode } from "../types";
 import type { ColorChannel, KeyRow, SizeChannel } from "./channels";
@@ -78,6 +79,9 @@ interface Props {
  * titled by the surface's colour channel, and a Size row when size varies. One component, two densities.
  */
 export function GraphLegend({ nodes, color, size, density = "full", maxColors = 8, className }: Props) {
+  // some colours have a value per ground (people, source support): the key is read again when the theme changes,
+  // whatever the surface memoised, so a swatch never keeps the other ground's colour
+  useTheme((s) => s.theme);
   const types = typeRows(nodes);
   const glyphs = glyphRows(nodes);
   const all = color.rows(nodes);

@@ -151,7 +151,8 @@ export function Legend({ nodes, visible, schema, shownTypes, stats, quickHidden 
     return pool;
   }, [nodes, visible, shownTypes, ui.hiddenKeys, ui.predicate]);
   const areaHues = useAreaPalette(); // the area key follows the chosen area colours
-  const key = useMemo(() => (by === "type" ? [] : colorChannel(by, { ramp }).rows(nodes.filter((n) => keyPool.has(n.id)))), [nodes, keyPool, by, ramp, areaHues]);
+  // theme: the support and people colours have a value per ground, also when the colouring is not a ramp
+  const key = useMemo(() => (by === "type" ? [] : colorChannel(by, { ramp }).rows(nodes.filter((n) => keyPool.has(n.id)))), [nodes, keyPool, by, ramp, areaHues, theme]);
   const allTypes = useMemo(() => groups.flatMap((g) => g.rows.map((r) => r.id)), [groups]);
   const defaults = useMemo(() => [...defaultTypes(schema, nodes)], [schema, nodes]);
   const hullsOn = by !== "area";
