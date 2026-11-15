@@ -84,9 +84,12 @@ function take(work: { s: string }, re: RegExp): RegExpMatchArray | null {
 function filterClause(clause: string): Layer | null {
   let rest = clause.trim();
   let kind: "show" | "hide" = "show";
-  if (/^hide\s+/i.test(rest)) {
+  // "hide", and the ways people say it: "exclude all orphans", "filter out hubs", "no leaves", "without favorites"
+  // ("no question notes" stays the "with no … notes" condition below, never a hide)
+  const HIDE = /^(?:hide|exclude|remove|drop|filter out|(?:without|no)(?!\s+[\w-]+\s+notes?\b))\s+/i;
+  if (HIDE.test(rest)) {
     kind = "hide";
-    rest = rest.replace(/^hide\s+/i, "");
+    rest = rest.replace(HIDE, "");
   }
   rest = rest.replace(/^(?:only|just|show(?: me)?|find|keep)\s+/i, "");
   const work = { s: rest };
@@ -95,7 +98,8 @@ function filterClause(clause: string): Layer | null {
   const has = rest.match(/^(?:nodes|pages)?\s*(?:that |which )?(?:share|have|has|with|having)\s+an?\s+([\w-]+)\s+(?:edge|link)s?$/i);
   if (has) return makeLayer(kind, "nodes", { nodes: [{ t: "hasEdge", type: has[1]!.toLowerCase() }] });
 
-  const edgeWord = rest.match(/\b([\w-]+)\s+(?:edges?|links?)\b/i);
+  // a link type is a word, never a count: "more than 5 links" counts links
+  const edgeWord = rest.match(/\b([a-z][\w-]*)\s+(?:edges?|links?)\b/i);
   const bareEdge = Object.keys(EDGE_WORDS).find((w) => new RegExp(`^${w}\\b`, "i").test(rest));
   const edges = !!edgeWord || (kind === "hide" && !!bareEdge);
 
