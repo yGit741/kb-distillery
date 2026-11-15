@@ -1,3 +1,4 @@
+import { withFlag } from "@/flags/testing";
 import { fromSentence } from "../layers/sentence";
 import { suggestViews } from "./viewSuggest";
 
@@ -52,4 +53,42 @@ describe("suggestViews", () => {
         expect(r.layers.length, s.line).toBeGreaterThan(0);
       }
   });
+});
+
+describe("flag graph-algos: graph-theory words suggest graph-theory lines", () => {
+  it("on: a graph-theory word offers its lines after the page results; a line that needs names only fills", () =>
+    withFlag("graph-algos", true, () => {
+      expect(lines("communities")).toEqual(["colour by community", "largest community"]);
+      expect(lines("betweenness")).toEqual(["top 10 by betweenness", "top 10 by pagerank"]);
+      expect(lines("bridges")).toEqual(["cut vertices", "bridges"]);
+      expect(lines("cliq")).toEqual(["cliques of 4+", "triangles"]);
+      // these words are search words too: the page results stay first and keep Enter
+      expect(first("communities")).toBe(false);
+      expect(first("core")).toBe(false);
+      const path = suggestViews("shortest path").rows[0]!;
+      expect(path).toMatchObject({ line: "shortest path between ", fill: true });
+      expect(suggestViews("neighbours").rows[0]).toMatchObject({ line: "near ", fill: true });
+      // a whole line the rules read as a graph-theory view goes first
+      expect(suggestViews("top 10 by betweenness").rows[0]).toMatchObject({ whole: true, line: "top 10 by betweenness" });
+      expect(first("top 10 by betweenness")).toBe(true);
+    }));
+
+  it("on: every line it suggests reads as a view (a line that needs names is filled in first)", () =>
+    withFlag("graph-algos", true, () => {
+      const words = ["communities", "betweenness", "bridges", "cliques", "core", "components"];
+      const offered = words.flatMap((w) => suggestViews(w).rows.filter((r) => !r.fill).map((r) => r.line));
+      expect(offered.length).toBeGreaterThanOrEqual(10);
+      for (const l of offered) expect(fromSentence(l).unknown, l).toBeUndefined();
+      expect(fromSentence('shortest path between "A" and "B"').unknown).toBeUndefined();
+      expect(fromSentence('near "A"').unknown).toBeUndefined();
+      // a quoted page name is not a graph-theory word: no whole-line view for a title with "community" in it
+      expect(suggestViews('papers about "community detection"').rows.some((r) => r.whole)).toBe(false);
+    }));
+
+  it("off: no graph-theory lines", () =>
+    withFlag("graph-algos", false, () => {
+      expect(lines("communities")).toEqual([]);
+      expect(lines("shortest path")).toEqual([]);
+      expect(first("top 10 by betweenness")).toBe(false);
+    }));
 });

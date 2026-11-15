@@ -134,3 +134,32 @@ def test_the_prompt_reads_typos_missing_commas_and_the_legend_names():
     assert 'Never answer color "type"' in p
     # a worked example of exactly that kind of line
     assert "only orphnas colour by theams" in p
+
+
+def test_the_prompt_learns_the_graph_theory_words_only_with_the_flag():
+    from kb_distillery.graph.layers_translate import build_prompt
+
+    vocab = {"node_types": {"paper": 3}, "edge_types": {}, "areas": {}, "titles": []}
+    on = build_prompt("the most central pages", vocab, algos=True)
+    assert "top <n> by betweenness" in on and '{"t":"shortest"' in on and "expand <n>" in on
+    assert "important, central, influential, bridging -> top 20 by betweenness" in on
+    assert "pages that would split the graph if removed" in on
+    off = build_prompt("the most central pages", vocab, algos=False)
+    assert "betweenness" not in off and "pages that would split the graph" not in off
+    # both: favorite only when asked, and a request no condition expresses keeps what is true and says what was left out
+    for p in (on, off):
+        assert "Use favorite only when the request says favourite" in p
+        assert "say in the explanation what was left out" in p
+        # and one worked example does exactly that
+        assert "the year is not a condition, so it is left out" in p
+
+
+def test_the_graph_theory_examples_validate_and_print_like_the_browser():
+    from kb_distillery.graph.layers_translate import ALGO_EXAMPLES, _LAYERS, _normalize, print_layer
+
+    lines = [[print_layer(layer) for layer in _LAYERS.validate_python(_normalize(ls))] for _, ls in ALGO_EXAMPLES]
+    assert lines == [
+        ["show nodes type idea and top 20 by betweenness expand 1"],
+        ['show nodes shortest path between "Learning theory" and "Compression"', "style nodes color by community"],
+        ["show nodes cut vertex"],
+    ]
