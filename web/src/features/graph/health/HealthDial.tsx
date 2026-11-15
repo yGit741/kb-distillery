@@ -3,12 +3,16 @@ import { cn } from "@/lib/utils";
 import { SourceIcon } from "../encoding/NodeMarkSvg";
 import type { SourceGlyph } from "../encoding/spec";
 import type { NeighborMap } from "../graphData";
+import { useKb } from "@/lib/store";
+import { useLayer } from "../layerStore";
+import { makeLayer } from "../layers/model";
+import { useLayers } from "../layers/store";
 import { useCorners } from "../shell/corners/cornersStore";
 import { EDGE } from "../shell/corners/geometry";
+import { useShellStore } from "../shell/shellStore";
 import { useGraphUi } from "../store";
 import type { GNode } from "../types";
-import { useHealth } from "./healthStore";
-import { fedConcepts, kindLine, sourceKinds, type KindStat } from "./model";
+import { fedConcepts, kindLine, kindPages, sourceKinds, type KindStat } from "./model";
 
 const RING = "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 const SPOT_IN_MS = 120;
@@ -60,17 +64,30 @@ interface Props {
  * In a narrow area (under 1100px: a split pane, a page open beside the graph) the names fold away and a kind shows
  * its name on a small card while the pointer or the focus is on it, so they never sit on the graph's own labels.
  * It reads health by kind while the map beside it reads health by concept. Resting the pointer on a kind lights the
- * concepts it feeds on the map; pressing it goes inside the kind (./KindView).
+ * concepts it feeds on the map; pressing it draws the kind on the map itself: its digested sources and the concepts they
+ * feed, as one layer of the view (its chip, or undo, goes back), to explore from there with the node menu.
  */
 export function HealthDial({ nodes, neighbors, byId }: Props) {
   const kinds = useMemo(() => sourceKinds(nodes, neighbors, byId), [nodes, neighbors, byId]);
-  const enter = useHealth((s) => s.enter);
   // a fan or the pinned list opening on the left takes the dial's place while it is open
   const covered = useCorners((s) => s.order.includes("pins") || s.order.includes("agent"));
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const spot = (kind: SourceGlyph | null) => {
     if (timer.current) clearTimeout(timer.current);
     timer.current = setTimeout(() => useGraphUi.setState({ spotIds: kind ? fedConcepts(kind, nodes, neighbors, byId) : null }), kind ? SPOT_IN_MS : SPOT_OUT_MS);
+  };
+  const show = (kind: KindStat) => {
+    const ids = kindPages(kind.kind, nodes, neighbors, byId);
+    if (!ids.length) {
+      useShellStore.getState().say(`Nothing in ${kind.label} is digested yet, so there is nothing to draw.`);
+      return;
+    }
+    // the kind is drawn as it is: pages an earlier "Add its concepts / sources" drew do not carry over
+    useGraphUi.setState({ revealed: new Set() });
+    useLayer.setState({ expansions: [] });
+    useLayers.getState().apply("replace", [makeLayer("show", "nodes", { nodes: [{ t: "name", slugs: ids }] }, `${kind.label} and the concepts they feed`)]);
+    // nothing is picked yet: the node menu then acts on the one page under the pointer
+    useKb.getState().clearSelection();
   };
   useEffect(
     () => () => {
@@ -109,11 +126,11 @@ export function HealthDial({ nodes, neighbors, byId }: Props) {
             key={kind.kind}
             type="button"
             data-kind={kind.kind}
-            aria-label={`${kind.label}: ${kind.total} sources, ${kindLine(kind)}. Open`}
-            title={`Open ${kind.label.toLowerCase()}`}
+            aria-label={`${kind.label}: ${kind.total} sources, ${kindLine(kind)}. Show on the map`}
+            title={`Show ${kind.label.toLowerCase()} and the concepts they feed`}
             onClick={() => {
               spot(null);
-              enter(kind.kind);
+              show(kind);
             }}
             onPointerEnter={() => spot(kind.kind)}
             onPointerLeave={() => spot(null)}

@@ -1,13 +1,16 @@
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { useKb } from "@/lib/store";
 import { node } from "../fixtures";
 import { buildNeighborMap } from "../graphData";
 import { resetCorners, useCorners } from "../shell/corners/cornersStore";
+import { useLayer } from "../layerStore";
+import { useLayers } from "../layers/store";
+import { useShellStore } from "../shell/shellStore";
 import { useGraphUi } from "../store";
 import { bulge, HealthDial, ringArc } from "./HealthDial";
 import { HealthLayer } from "./HealthLayer";
-import { useHealth } from "./healthStore";
 
 const src = (id: string, type: string, depth: string) => node(id, { type, layer: "source", depth });
 const nodes = [
@@ -24,15 +27,13 @@ const neighbors = buildNeighborMap([
   { source: "v-used", target: "idea-a" },
 ]);
 const byId = new Map(nodes.map((n) => [n.id, n] as const));
-const support = new Map([["idea-a", 2], ["idea-b", 1]]);
-const onRead = vi.fn();
-const layer = () => render(<HealthLayer nodes={nodes} neighbors={neighbors} byId={byId} support={support} onRead={onRead} />);
+const layer = () => render(<HealthLayer nodes={nodes} neighbors={neighbors} byId={byId} />);
 
 beforeEach(() => {
-  useHealth.setState({ inside: null });
+  useLayers.setState({ stack: { v: 2, layers: [] }, history: [], future: [], graph: null });
+  useKb.getState().clearSelection();
   useGraphUi.setState({ spotIds: null, readerSlug: null });
   resetCorners();
-  onRead.mockClear();
 });
 afterEach(() => vi.useRealTimers());
 
@@ -98,67 +99,57 @@ describe("the Health dial", () => {
   });
 });
 
-describe("inside a source kind", () => {
-  it("pressing a kind opens its sources beside the concepts they feed, least supported first", async () => {
+describe("pressing a source kind", () => {
+  it("draws the kind on the map: its digested sources and the concepts they feed, as one layer of the view", async () => {
     layer();
     await userEvent.click(screen.getByRole("button", { name: /^Papers/ }));
-    const view = screen.getByRole("region", { name: /papers: sources and the concepts they feed/i });
-    expect(within(view).getByText(/3/)).toBeInTheDocument();
-    expect([...view.querySelectorAll("[data-source]")].map((b) => b.getAttribute("data-source"))).toEqual(["p-used"]);
-    expect([...view.querySelectorAll("[data-concept]")].map((b) => b.getAttribute("data-concept"))).toEqual(["idea-b", "idea-a"]);
-    expect(view.querySelectorAll("[data-health=links] > svg path")).toHaveLength(2);
-    expect(within(view.querySelector("[data-idle=Waiting]") as HTMLElement).getByRole("button")).toHaveTextContent("p waiting");
-    expect(within(view.querySelector("[data-idle='Feed no concept']") as HTMLElement).getByRole("button")).toHaveTextContent("p loose");
-    expect(screen.queryByRole("group", { name: "Sources by kind" })).toBeNull();
-  });
-
-  it("a row opens its page; Back and Esc return to the dial, but Esc first closes an open page", async () => {
-    layer();
-    await userEvent.click(screen.getByRole("button", { name: /^Papers/ }));
-    await userEvent.click(screen.getByRole("button", { name: /idea b/i }));
-    expect(onRead).toHaveBeenCalledWith("idea-b");
-    act(() => useGraphUi.setState({ readerSlug: "idea-b" }));
-    await userEvent.keyboard("{Escape}");
-    expect(useHealth.getState().inside).toBe("paper");
-    act(() => useGraphUi.setState({ readerSlug: null }));
-    // the press that leaves the kind does nothing else: the screen's own Esc handler never hears it
-    const screenEsc = vi.fn();
-    window.addEventListener("keydown", screenEsc);
-    await userEvent.keyboard("{Escape}");
-    window.removeEventListener("keydown", screenEsc);
-    expect(useHealth.getState().inside).toBeNull();
-    expect(screenEsc).not.toHaveBeenCalled();
-    await userEvent.click(screen.getByRole("button", { name: /^Papers/ }));
-    await userEvent.click(screen.getByRole("button", { name: "Health" }));
+    const layers = useLayers.getState().stack.layers;
+    expect(layers).toHaveLength(1);
+    expect(layers[0]).toMatchObject({ kind: "show", target: "nodes", text: "Papers and the concepts they feed" });
+    // p-loose feeds no concept and is drawn alone; p-waiting has nothing to show yet
+    expect(layers[0]!.subgraph.nodes).toEqual([{ t: "name", slugs: ["p-used", "idea-a", "idea-b", "p-loose"] }]);
+    // the dial stays: another kind is one press away, and undo goes back
     expect(screen.getByRole("group", { name: "Sources by kind" })).toBeInTheDocument();
+    expect(useLayers.getState().history).toHaveLength(1);
   });
 
-  it("what needs care comes first, a few pages of each list, the rest on demand", async () => {
-    const many = [...Array.from({ length: 7 }, (_, i) => src(`w${i}`, "paper", "listed")), src("p-used", "paper", "full"), node("idea-a", { type: "idea" })];
-    render(<HealthLayer nodes={many} neighbors={neighbors} byId={new Map(many.map((n) => [n.id, n] as const))} support={support} onRead={onRead} />);
+  it("the map is asked to draw exactly those pages, sources included, though the Health view draws concepts alone", async () => {
+    const show = vi.fn();
+    const links = ([["p-used", "idea-a"], ["p-used", "idea-b"], ["v-used", "idea-a"]] as const).map(([source, target]) => ({ source, target, kind: "wikilink" as const }));
+    act(() => useLayers.getState().setGraph({ nodes, links, drawn: new Set(["idea-a", "idea-b"]), show }));
+    layer();
     await userEvent.click(screen.getByRole("button", { name: /^Papers/ }));
-    const view = screen.getByRole("region", { name: /papers/i });
-    const waiting = view.querySelector("[data-idle=Waiting]") as HTMLElement;
-    // above the sources in use
-    expect(waiting.compareDocumentPosition(view.querySelector("[data-health=links]")!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(within(waiting).getAllByRole("listitem")).toHaveLength(5);
-    await userEvent.click(within(waiting).getByRole("button", { name: "Show all 7" }));
-    expect(within(waiting).getAllByRole("listitem")).toHaveLength(7);
-    await userEvent.click(within(waiting).getByRole("button", { name: "Show fewer" }));
-    expect(within(waiting).getAllByRole("listitem")).toHaveLength(5);
+    expect(show).toHaveBeenCalledTimes(1);
+    expect([...show.mock.calls[0]![0]].sort()).toEqual(["idea-a", "idea-b", "p-loose", "p-used"]);
   });
 
-  it("a kind whose sources feed nothing says so", async () => {
+  it("another kind replaces the first, and nothing is left selected", async () => {
+    layer();
+    await userEvent.click(screen.getByRole("button", { name: /^Papers/ }));
+    act(() => useKb.getState().setSelection(["p-used"]));
+    await userEvent.click(screen.getByRole("button", { name: /^Lectures/ }));
+    const layers = useLayers.getState().stack.layers;
+    expect(layers).toHaveLength(1);
+    expect(layers[0]!.subgraph.nodes).toEqual([{ t: "name", slugs: ["v-used", "idea-a"] }]);
+    expect(useKb.getState().selection.size).toBe(0);
+  });
+
+  it("a kind with nothing digested changes nothing", async () => {
     const lone = [src("m1", "mail", "listed")];
-    render(<HealthLayer nodes={lone} neighbors={new Map()} byId={new Map(lone.map((n) => [n.id, n] as const))} support={new Map()} onRead={onRead} />);
+    render(<HealthLayer nodes={lone} neighbors={new Map()} byId={new Map(lone.map((n) => [n.id, n] as const))} />);
     await userEvent.click(screen.getByRole("button", { name: /^Mail/ }));
-    expect(screen.getByText("None of these sources feeds a concept yet.")).toBeInTheDocument();
+    expect(useLayers.getState().stack.layers).toHaveLength(0);
+    expect(useShellStore.getState().notice?.text).toBe("Nothing in Mail is digested yet, so there is nothing to draw.");
   });
 
-  it("leaving the Health view leaves the kind", async () => {
-    const { unmount } = layer();
-    await userEvent.click(screen.getByRole("button", { name: /^Papers/ }));
-    unmount();
-    expect(useHealth.getState().inside).toBeNull();
+  it("pages added by hand for one kind do not carry over to the next", async () => {
+    layer();
+    act(() => {
+      useGraphUi.setState({ revealed: new Set(["idea-b"]) });
+      useLayer.getState().pushExpansion(["idea-b"]);
+    });
+    await userEvent.click(screen.getByRole("button", { name: /^Lectures/ }));
+    expect(useGraphUi.getState().revealed.size).toBe(0);
+    expect(useLayer.getState().expansions).toEqual([]);
   });
 });

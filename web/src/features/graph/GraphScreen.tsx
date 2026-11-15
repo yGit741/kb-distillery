@@ -17,6 +17,8 @@ import { swatchColor } from "./nodeColor";
 import { Finder, FINDER_ID } from "./Finder";
 import { HostContext, type ToolHost } from "./hostContext";
 import { useLayer } from "./layerStore";
+import { neighboursOf } from "./selection";
+import { useShellStore } from "./shell/shellStore";
 import "./tools/register";
 import { askAbout, useChatDock } from "./tools/chatDockStore";
 import "./directions/register";
@@ -360,8 +362,9 @@ function Loaded({
   useMemo(() => assignAreaColors(model.nodes, areaHues), [model, areaHues]);
   const byId = useMemo(() => new Map(model.nodes.map((n) => [n.id, n] as const)), [model]);
   const neighbors = useMemo(() => buildNeighborMap(model.links), [model]);
-  // the source count behind each concept: the "support" colouring and the Health view read it
-  const support = useMemo(() => assignSupport(sourceCounts(model.nodes, neighbors)), [model, neighbors]);
+  // the source count behind each concept, kept in ./style for the "support" colouring; set while rendering (not in
+  // an effect) so the colour memos below already read it
+  useMemo(() => assignSupport(sourceCounts(model.nodes, neighbors)), [model, neighbors]);
   const relations = useMemo(() => (model.relations ? relationIndex(model.relations) : undefined), [model]);
   const shownTypes = useMemo(() => {
     if (ui.shownTypes !== undefined) return ui.shownTypes;
@@ -590,6 +593,26 @@ function Loaded({
   // flag edge-select: the edges kept on the canvas, whose pages are among the selected
   const keptLinks = useEdgeSelect((s) => s.shown);
   const closeMenu = useCallback(() => setMenu(null), []);
+  // node menu: draw what is one link away in one layer, concepts or sources, and not on the canvas yet. It starts from
+  // the page, or from the whole selection when the page is part of it; the Selection panel's Collapse takes it back.
+  const growBy = useCallback(
+    (id: string, layer: "concept" | "source") => {
+      const picked = useKb.getState().selection;
+      const from = picked.has(id) && picked.size > 1 ? [...picked] : [id];
+      const found = neighboursOf(from, neighbors, (m) => byId.get(m)?.layer === layer && !visible.has(m));
+      const what = layer === "concept" ? "concept" : "source";
+      // the shell's own line says it; the old bar's note carries a "Clear view" button that would drop the view
+      const tell = (text: string) => (shell ? useShellStore.getState().say(text) : setNote(text));
+      if (!found.length) {
+        tell(`No more ${what}s to add: all of them are drawn.`);
+        return;
+      }
+      useGraphUi.setState((s) => ({ revealed: new Set([...s.revealed, ...found]) }));
+      useLayer.getState().pushExpansion(found);
+      tell(`Added ${found.length} ${what}${found.length === 1 ? "" : "s"}.`);
+    },
+    [neighbors, byId, visible, shell],
+  );
 
   // the empty-space menu closes like any menu: Escape (even from the search line) or a press outside it
   const bgMenuRef = useRef<HTMLDivElement>(null);
@@ -786,7 +809,7 @@ function Loaded({
           <EmbeddingLayer nodes={model.nodes} neighbors={neighbors} />
           <Corners nodes={model.nodes} visible={visible} schema={schema} shownTypes={shownTypes} stats={stats} host={host} applyView={applyView} showPicked={showPicked} />
           <RimList byId={byId} colorBy={ui.colorBy} />
-          {healthView && <HealthLayer nodes={model.nodes} neighbors={neighbors} byId={byId} support={support} onRead={openReader} />}
+          {healthView && <HealthLayer nodes={model.nodes} neighbors={neighbors} byId={byId} />}
         </div>
       ) : headerSlot ? (
         createPortal(finder, headerSlot)
@@ -915,6 +938,8 @@ function Loaded({
               if (!useKb.getState().selection.has(id)) useKb.getState().setSelection([id]);
               useGraphUi.setState({ detailsOpen: true });
             },
+            addConcepts: (id) => growBy(id, "concept"),
+            addSources: (id) => growBy(id, "source"),
           }}
         />
       )}

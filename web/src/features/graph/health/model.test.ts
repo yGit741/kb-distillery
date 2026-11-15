@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { node } from "../fixtures";
 import { buildNeighborMap } from "../graphData";
-import { fedConcepts, kindDetail, kindLine, sourceKinds, sourceState } from "./model";
+import { fedConcepts, kindLine, kindPages, sourceKinds, sourceState } from "./model";
 
 const src = (id: string, type: string, depth: string) => node(id, { type, layer: "source", depth });
 const nodes = [
@@ -28,7 +28,6 @@ const links = [
 ];
 const neighbors = buildNeighborMap(links);
 const byId = new Map(nodes.map((n) => [n.id, n] as const));
-const support = new Map([["idea-a", 3], ["idea-b", 1], ["topic-c", 1]]);
 
 describe("health by source kind", () => {
   it("puts every source in exactly one state", () => {
@@ -56,25 +55,15 @@ describe("health by source kind", () => {
     expect([...fedConcepts("paper", nodes, neighbors, byId)].sort()).toEqual(["idea-a", "idea-b", "jane"]);
     expect([...fedConcepts("play", nodes, neighbors, byId)].sort()).toEqual(["idea-a", "topic-c"]);
     expect(fedConcepts("mail", nodes, neighbors, byId).size).toBe(0);
-    // topic-c is linked from a waiting paper only: papers do not feed it yet, here or inside the kind
+    // topic-c is linked from a waiting paper only: papers do not feed it yet, on the dial or on the map
     expect(fedConcepts("paper", nodes, neighbors, byId).has("topic-c")).toBe(false);
-    expect(kindDetail("paper", nodes, neighbors, byId, support).concepts.some((c) => c.node.id === "topic-c")).toBe(false);
+    expect(kindPages("paper", nodes, neighbors, byId)).not.toContain("topic-c");
   });
 
-  it("inside a kind: busiest source first, least supported concept first, idle sources apart", () => {
-    const d = kindDetail("paper", nodes, neighbors, byId, support);
-    expect(d.sources.map((s) => [s.node.id, s.concepts.slice().sort()])).toEqual([
-      ["p-two", ["idea-a", "idea-b"]],
-      ["p-used", ["idea-a", "jane"]],
-    ]);
-    // a person is not counted for support, so people close the list whatever their count
-    expect(d.concepts.map((c) => [c.node.id, c.support])).toEqual([
-      ["idea-b", 1],
-      ["idea-a", 3],
-      ["jane", 0],
-    ]);
-    expect(d.waiting.map((n) => n.id)).toEqual(["p-waiting"]);
-    expect(d.unlinked.map((n) => n.id)).toEqual(["p-loose"]);
+  it("a pressed kind is its digested sources and what they feed; a waiting source is left out", () => {
+    expect(kindPages("paper", nodes, neighbors, byId).sort()).toEqual(["idea-a", "idea-b", "jane", "p-loose", "p-two", "p-used"]);
+    expect(kindPages("play", nodes, neighbors, byId).sort()).toEqual(["idea-a", "l-used", "topic-c", "v-used"]);
+    expect(kindPages("mail", nodes, neighbors, byId)).toEqual([]);
   });
 
   it("says the open issues in words", () => {
